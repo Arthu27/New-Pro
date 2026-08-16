@@ -102,6 +102,7 @@ MENU = [
         {'path': '/quiz', 'label': 'Квиз', 'icon': 'fa-brain'},
         {'path': '/counting', 'label': 'Счёт', 'icon': 'fa-list-ol'},
         {'path': '/crown', 'label': 'Зал корон', 'icon': 'fa-crown'},
+        {'path': '/karma', 'label': 'Карма', 'icon': 'fa-hand-holding-heart'},
         {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
     ]},
     {'group': 'Логи', 'key': 'logs', 'icon': 'fa-file-lines', 'pages': [
@@ -181,6 +182,7 @@ PAGE_COGS = {
     # режим в MOD_ONLY, приветствия и дайджест — в полном режиме).
     '/automation': ('anti_alt', 'night_mode', 'welcome_pro', 'mod_digest',
                     'server_stats', 'media_only', 'night_summary'),
+    '/karma': ('karma',),
 }
 
 

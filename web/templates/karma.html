@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}Карма — Панель Aether{% endblock %}
+{% block page_title %}Карма{% endblock %}
+{% block content %}
+<style>
+.km-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;align-items:center}
+.km-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.km-kpi i{color:var(--ac,#e0b04a);font-size:16px}
+.km-kpi b{font-size:18px;color:var(--text-1,#fff)}
+.km-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.km-kpi.hot{border-color:rgba(231,76,60,.4)}
+.km-kpi.hot i,.km-kpi.hot b{color:#ff8a7a}
+.km-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:16px;align-items:start}
+@media (max-width:960px){.km-grid{grid-template-columns:1fr}}
+.km-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.km-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.km-panel h3 i{color:var(--ac,#e0b04a)}
+.km-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
+.km-rank{display:grid;grid-template-columns:34px 1fr auto;gap:4px 10px;align-items:center;padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.km-rank:last-child{border-bottom:none}
+.km-place{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;font-size:12px;font-weight:800;background:rgba(255,255,255,.06);color:var(--text-3,rgba(255,255,255,.5))}
+.km-place.p1{background:linear-gradient(135deg,#e0b04a,#f0cd7a);color:#1a1a1a}
+.km-place.p2{background:rgba(192,192,210,.25);color:#d5d5e0}
+.km-place.p3{background:rgba(205,127,50,.22);color:#e5a06a}
+.km-who{min-width:0}
+.km-who b{display:block;font-size:13px;color:var(--text-2,rgba(255,255,255,.85));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.km-score{font-size:13.5px;font-weight:800;color:var(--ac-2,#f0cd7a);font-variant-numeric:tabular-nums;white-space:nowrap}
+.km-feed{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:9px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.km-feed:last-child{border-bottom:none}
+.km-feed .path{font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85))}
+.km-feed .path i{color:#4ade80;font-size:10px;margin:0 4px}
+.km-feed .reason{display:block;font-size:11.5px;color:var(--text-3,rgba(255,255,255,.5));margin-top:2px}
+.km-date{font-size:11px;font-weight:700;color:var(--ac-2,#f0cd7a);font-variant-numeric:tabular-nums;white-space:nowrap}
+.km-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-2,rgba(255,255,255,.7));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:3px 10px;white-space:nowrap}
+.km-chip.farm{color:#ff8a7a;border-color:rgba(231,76,60,.3);background:rgba(231,76,60,.08)}
+.km-pair{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.km-pair:last-child{border-bottom:none}
+.km-pair b{font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85))}
+.km-pair small{display:block;font-size:11px;color:var(--text-3,rgba(255,255,255,.45));margin-top:2px}
+.km-link{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:8px;padding:5px 10px}
+.km-link:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
+.km-form{display:flex;gap:8px;flex-wrap:wrap}
+.km-form .inp{flex:1;min-width:90px}
+.km-filter{display:flex;gap:8px;margin-bottom:10px}
+.km-filter .inp{flex:1;min-width:0}
+.km-active-filter{font-size:11.5px;color:var(--ac-2,#f0cd7a);margin-bottom:8px;display:none}
+[data-theme="light"] .km-rank,[data-theme="light"] .km-feed,[data-theme="light"] .km-pair{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="km-kpis" id="kmKpis">
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+</div>
+
+<div class="km-grid">
+  <div>
+    <div class="km-panel">
+      <h3><i class="fas fa-hand-holding-heart"></i> Зал благодарностей</h3>
+      <div class="km-sub">Топ по очкам кармы — те же top_rows, что рисует /карматоп в Discord. Очки копятся за «спасибо» и реакции-плюсы.</div>
+      <div id="kmTop"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+      <div style="margin-top:10px">
+        <a class="km-link" id="kmCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузить весь зал (CSV)</a>
+      </div>
+    </div>
+
+    <div class="km-panel" id="kmAdjustPanel" style="display:none">
+      <h3><i class="fas fa-sliders"></i> Корректировка очков</h3>
+      <div class="km-sub">Ручная правка счёта участника (например, срез фермерства). Арифметика — apply_rep кога, разом не больше ±500.</div>
+      <div class="km-form">
+        <input class="inp" id="kmAdjId" maxlength="24" placeholder="ID или @упоминание">
+        <input class="inp" id="kmAdjDelta" type="number" min="-500" max="500" placeholder="+10 / -25" style="max-width:110px">
+        <button class="btn" onclick="kmAdjust()"><i class="fas fa-check"></i> Применить</button>
+      </div>
+      <div class="km-sub" id="kmAdjMsg" style="margin:8px 0 0"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="km-panel">
+      <h3><i class="fas fa-comments"></i> Лента благодарностей</h3>
+      <div class="km-sub">Кто кому и за что говорил спасибо за последние 7 дней (по журналу кога). Можно отфильтровать по участнику.</div>
+      <div class="km-filter">
+        <input class="inp" id="kmFilter" maxlength="24" placeholder="Фильтр: ID участника">
+        <button class="btn" onclick="kmLoad(document.getElementById('kmFilter').value)"><i class="fas fa-filter"></i></button>
+        <button class="btn" onclick="document.getElementById('kmFilter').value='';kmLoad('')"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="km-active-filter" id="kmFilterNote"></div>
+      <div id="kmFeed"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>
+    </div>
+
+    <div class="km-panel">
+      <h3><i class="fas fa-fire"></i> Тёплые пары недели</h3>
+      <div class="km-sub">Кто кого благодарит чаще всего. Взаимный обмен от трёх «спасибо» в обе стороны за неделю подсвечен как возможный фарм — повод присмотреться.</div>
+      <div id="kmPairs"><div class="sk-row" style="width:80%"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/karma';
+var CAN_EDIT = false;
+
+document.getElementById('kmCsv').href = API + '/export.csv';
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function fmtDate(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var p = function (v) { return String(v).padStart(2, '0'); };
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function who(id, name) { return name ? esc(name) : 'ID ' + esc(id); }
+
+function kpi(icon, num, label, hot) {
+  return '<div class="km-kpi' + (hot ? ' hot' : '') + '"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+}
+
+function renderKpis(s) {
+  document.getElementById('kmKpis').innerHTML =
+    kpi('fa-coins', s.points_total, plural(s.points_total, 'очко кармы на сервере', 'очка кармы на сервере', 'очков кармы на сервере'), false) +
+    kpi('fa-users', s.people, plural(s.people, 'человек с очками', 'человека с очками', 'человек с очками'), false) +
+    kpi('fa-bolt', s.thanks_window, plural(s.thanks_window, 'благодарность за неделю', 'благодарности за неделю', 'благодарностей за неделю'), false) +
+    (s.leader
+      ? kpi('fa-crown', esc(s.leader.score), 'у лидера — ' + (s.leader.name ? esc(s.leader.name) : 'ID ' + esc(s.leader.user_id)), false)
+      : kpi('fa-crown', '—', 'лидер не определён', false));
+}
+
+function renderTop(top) {
+  var box = document.getElementById('kmTop');
+  if (!top.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-seedling"></i><p>Очков пока ни у кого нет</p><p class="empty-tip">Первое «спасибо» командой /спасибо откроет зал.</p></div>';
+    return;
+  }
+  box.innerHTML = top.map(function (r, i) {
+    var cls = i === 0 ? 'p1' : (i === 1 ? 'p2' : (i === 2 ? 'p3' : ''));
+    return '<div class="km-rank"><span class="km-place ' + cls + '">' + (i + 1) + '</span>' +
+      '<div class="km-who"><b>' + who(r.user_id, r.name) + '</b></div>' +
+      '<span class="km-score">' + r.score + '</span></div>';
+  }).join('');
+}
+
+function renderFeed(rows, filter) {
+  var note = document.getElementById('kmFilterNote');
+  if (filter) {
+    note.style.display = 'block';
+    note.textContent = 'Лента отфильтрована по ' + filter;
+  } else {
+    note.style.display = 'none';
+  }
+  var box = document.getElementById('kmFeed');
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-moon"></i><p>За неделю благодарностей нет</p>' +
+      (filter ? '<p class="empty-tip">С этим участником в журнале пусто — снимите фильтр.</p>' : '<p class="empty-tip">Тёплые слова появятся здесь сразу после команды /спасибо.</p>') + '</div>';
+    return;
+  }
+  box.innerHTML = rows.map(function (r) {
+    return '<div class="km-feed"><div><span class="path">' + who(r.giver, r.giver_name) +
+      '<i class="fas fa-arrow-right"></i>' + who(r.target, r.target_name) + '</span>' +
+      (r.reason ? '<span class="reason">за «' + esc(r.reason) + '»</span>' : '') + '</div>' +
+      '<span class="km-date">' + fmtDate(r.at) + '</span></div>';
+  }).join('');
+}
+
+function renderPairs(pairs) {
+  var box = document.getElementById('kmPairs');
+  if (!pairs.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-people-arrows"></i><p>Устойчивых пар не видно</p><p class="empty-tip">Связка считается тёплой от двух благодарностей в одну сторону за неделю.</p></div>';
+    return;
+  }
+  box.innerHTML = pairs.map(function (p) {
+    var dir = who(p.giver, p.giver_name) + ' → ' + who(p.target, p.target_name);
+    var detail = p.count + ' ' + plural(p.count, 'благодарность', 'благодарности', 'благодарностей') +
+      (p.back ? ' · в ответ ' + p.back : '');
+    return '<div class="km-pair"><div><b>' + dir + '</b><small>' + esc(detail) + '</small></div>' +
+      (p.farming ? '<span class="km-chip farm"><i class="fas fa-triangle-exclamation"></i> похоже на фарм</span>'
+                 : '<span class="km-chip">' + esc(p.count + p.back) + '</span>') + '</div>';
+  }).join('');
+}
+
+function render(d) {
+  CAN_EDIT = !!d.can_edit;
+  if (CAN_EDIT) { document.getElementById('kmAdjustPanel').style.display = ''; }
+  renderKpis(d.snapshot);
+  renderTop(d.snapshot.top);
+  renderFeed(d.feed, d.feed_filter);
+  renderPairs(d.pairs);
+}
+
+function kmLoad(filter) {
+  var url = API + '/overview' + (filter ? '?user=' + encodeURIComponent(filter) : '');
+  fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) { render(d); }
+  }).catch(function () {});
+}
+
+function kmAdjust() {
+  var msg = document.getElementById('kmAdjMsg');
+  fetch(API + '/adjust', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({user_id: document.getElementById('kmAdjId').value,
+                          delta: document.getElementById('kmAdjDelta').value})
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) {
+      msg.innerHTML = '<i class="fas fa-circle-exclamation" style="color:#ff8a7a"></i> ' + esc(d.error || 'Ошибка');
+      return;
+    }
+    msg.innerHTML = '<i class="fas fa-check" style="color:#4ade80"></i> Новый счёт: <b>' + d.total + '</b>';
+    kmLoad(document.getElementById('kmFilter').value);
+  }).catch(function () {
+    msg.textContent = 'Сеть моргнула — попробуйте ещё раз';
+  });
+}
+
+kmLoad('');
+</script>
+{% endblock %}
