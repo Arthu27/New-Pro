@@ -104,6 +104,7 @@ MENU = [
     ]},
     {'group': 'Контент', 'key': 'content', 'icon': 'fa-palette', 'pages': [
         {'path': '/custom-embeds', 'label': 'Embed-ы', 'icon': 'fa-palette'},
+        {'path': '/webhooks', 'label': 'Вебхуки', 'icon': 'fa-link'},
         {'path': '/channels', 'label': 'Каналы', 'icon': 'fa-hashtag'},
         {'path': '/announcements', 'label': 'Объявления', 'icon': 'fa-bullhorn'},
         {'path': '/execute-command', 'label': 'Команда', 'icon': 'fa-bolt'},
@@ -151,6 +152,7 @@ PAGE_COGS = {
     '/reminders': ('reminders',),
     '/counting': ('counting',),
     '/crown': ('weekly_crown',),
+    '/webhooks': ('webhooks',),
     '/scheduled-messages': ('scheduler',),
     '/schedule': ('scheduler',),
     '/afk-list': ('afk',),

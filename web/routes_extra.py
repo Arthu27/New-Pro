@@ -69,6 +69,7 @@ from web.routes import (
     reminders_panel,
     counting_panel,
     crown_panel,
+    webhooks_panel,
 )
 
 _MODULES = (
@@ -123,6 +124,7 @@ _MODULES = (
     reminders_panel,
     counting_panel,
     crown_panel,
+    webhooks_panel,
 )
 
 
