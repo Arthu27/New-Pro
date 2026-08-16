@@ -116,6 +116,7 @@ MENU = [
         {'path': '/join-to-create', 'label': 'Комнаты J2C', 'icon': 'fa-door-open'},
         {'path': '/staff-rating', 'label': 'Оценки персонала', 'icon': 'fa-star-half-stroke'},
         {'path': '/staff-shifts', 'label': 'Смены персонала', 'icon': 'fa-calendar-week'},
+        {'path': '/meetings', 'label': 'Собрания', 'icon': 'fa-people-group'},
         {'path': '/gamification', 'label': 'Геймификация', 'icon': 'fa-trophy'},
         {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
     ]},
@@ -211,6 +212,7 @@ PAGE_COGS = {
     '/staff-shifts': ('staff_shifts',),
     '/security': ('security',),
     '/replay': ('replay',),
+    '/meetings': ('meeting',),
     '/gamification': ('gamification_cog',),
 }
 

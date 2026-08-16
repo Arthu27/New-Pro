@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Собрания — Панель Aether{% endblock %}
+{% block page_title %}Собрания{% endblock %}
+{% block content %}
+<style>
+.mt-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
+.mt-kpi{flex:1;min-width:170px;background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:13px 16px}
+.mt-kpi .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.mt-kpi .lab i{color:var(--ac,#e0b04a)}
+.mt-kpi .v{font-size:17px;font-weight:800;color:var(--text-1,#fff)}
+.mt-kpi .v small{font-size:11px;font-weight:600;color:var(--text-3,rgba(255,255,255,.5))}
+.mt-kpi .v.on{color:#4ade80}
+.mt-kpi .v.off{color:var(--text-3,rgba(255,255,255,.55))}
+.mt-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:15px 17px;margin-bottom:16px}
+.mt-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.mt-panel h3 i{color:var(--ac,#e0b04a)}
+.mt-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.55}
+.mt-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.mt-row:last-child{margin-bottom:0}
+.mt-inp{background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none;min-width:170px}
+.mt-inp:focus{border-color:var(--ac,#e0b04a)}
+.mt-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
+.mt-btn:hover{filter:brightness(1.08)}
+.mt-btn.danger{background:transparent;color:#ff8a7a;border:1px solid rgba(237,66,69,.45)}
+.mt-btn.danger:hover{background:rgba(237,66,69,.1)}
+.mt-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.mt-msg{font-size:12px;padding:4px 2px;display:none}
+.mt-msg.ok{color:#4ade80}
+.mt-msg.err{color:#ff8a7a}
+.mt-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2,rgba(255,255,255,.14));border-radius:10px;padding:6px 12px;font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85));margin:0 7px 7px 0}
+.mt-chip button{background:transparent;border:none;color:#ff8a7a;cursor:pointer;font-size:12px;padding:0}
+.mt-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.mt-table th{font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.45));text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-2,rgba(255,255,255,.12))}
+.mt-table td{padding:7px 8px;border-bottom:1px dashed rgba(255,255,255,.07);color:var(--text-2,rgba(255,255,255,.85))}
+.mt-table tr:last-child td{border-bottom:none}
+.mt-table td b{color:var(--text-1,#fff);font-weight:600}
+.mt-table td.score{font-weight:800;color:var(--ac,#e0b04a)}
+.mt-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:16px;align-items:start}
+@media (max-width:1000px){.mt-grid{grid-template-columns:1fr}}
+[data-theme="light"] .mt-table td{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="mt-kpis" id="mtKpis">
+  <div class="sk-card" style="width:190px;height:72px"></div>
+  <div class="sk-card" style="width:190px;height:72px"></div>
+  <div class="sk-card" style="width:190px;height:72px"></div>
+  <div class="sk-card" style="width:190px;height:72px"></div>
+</div>
+
+<div class="mt-panel" id="mtCtlPanel" style="display:none">
+  <h3><i class="fas fa-people-group"></i> Управление собранием</h3>
+  <div class="mt-sub">Те же шаги, что у кнопок «Запустить/Завершить» в Discord: старт фиксирует голосовой снимок, финиш считает окно и сбрасывает состояние. Время — UTC, формат ДД.ММ.ГГГГ ЧЧ:ММ; пусто — «сейчас».</div>
+  <div class="mt-row">
+    <input class="mt-inp" id="mtStartTime" placeholder="12.04.2026 22:00 (необязательно)">
+    <button class="mt-btn" id="mtStart"><i class="fas fa-play"></i> Запустить</button>
+    <button class="mt-btn danger" id="mtEnd"><i class="fas fa-flag-checkered"></i> Завершить</button>
+  </div>
+  <div class="mt-msg" id="mtMsg"></div>
+</div>
+
+<div class="mt-grid">
+  <div>
+    <div class="mt-panel">
+      <h3><i class="fas fa-user-tag"></i> Роли в отчёте</h3>
+      <div class="mt-sub">По этим ролям отчёт строит Top-4 блоки. Пусто — подтянутся роли из конфига мод-отчётов, как делает и бот.</div>
+      <div class="mt-row" id="mtRoleCtl" style="display:none">
+        <input class="mt-inp" id="mtRoleInp" placeholder="ID роли">
+        <button class="mt-btn" id="mtRoleAdd"><i class="fas fa-plus"></i> Добавить</button>
+      </div>
+      <div id="mtRoles"></div>
+      <div class="mt-msg" id="mtRoleMsg"></div>
+    </div>
+    <div class="mt-panel">
+      <h3><i class="fas fa-circle-question"></i> Как считается</h3>
+      <div class="mt-sub" style="margin-bottom:6px" id="mtFormula">Очки: Сообщение×1 + Звук мин×2 + Приглашение×5</div>
+      <div class="mt-sub" id="mtNote" style="margin-bottom:0"></div>
+      <div style="margin-top:10px"><button class="mt-btn ghost" id="mtCsv"><i class="fas fa-file-csv"></i> Предпросмотр в CSV</button></div>
+    </div>
+  </div>
+  <div class="mt-panel">
+    <h3><i class="fas fa-binoculars"></i> Что соберёт отчёт прямо сейчас</h3>
+    <div class="mt-sub" id="mtWindow"></div>
+    <div id="mtPrev">
+      <div class="sk-card" style="height:44px;margin-bottom:8px"></div>
+      <div class="sk-card" style="height:44px;margin-bottom:8px"></div>
+      <div class="sk-card" style="height:44px"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/meetings';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+var STATUS = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function post(path, body, cb) {
+  fetch(API + path, {method: 'POST', headers: {'Content-Type': 'application/json'},
+                     body: JSON.stringify(body)})
+    .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+    .then(cb).catch(function () { cb({status: 0, d: {success: false, error: 'Сеть моргнула — попробуйте ещё раз'}}); });
+}
+
+function showMsg(id, ok, text) {
+  var m = document.getElementById(id);
+  m.style.display = 'block';
+  m.className = 'mt-msg ' + (ok ? 'ok' : 'err');
+  m.textContent = text;
+}
+
+function fmtIso(iso) {
+  if (!iso) { return '—'; }
+  var d = new Date(iso);
+  return d.toLocaleString('ru-RU', {day: '2-digit', month: '2-digit', year: 'numeric',
+                                    hour: '2-digit', minute: '2-digit', hour12: false});
+}
+
+function renderKpis(st, botOnline) {
+  var state = st.active
+    ? '<div class="v on">идёт · ' + (st.elapsed_min == null ? '?' : st.elapsed_min) + ' <small>мин</small></div>'
+    : '<div class="v off">не идёт</div>';
+  document.getElementById('mtKpis').innerHTML =
+    '<div class="mt-kpi"><div class="lab"><i class="fas fa-satellite-dish"></i> статус</div>' + state + '</div>' +
+    '<div class="mt-kpi"><div class="lab"><i class="fas fa-hourglass-start"></i> ' + (st.active ? 'старт' : 'последнее') + '</div>' +
+      '<div class="v" style="font-size:13.5px">' + esc(fmtIso(st.active ? st.meeting_start : st.last_meeting)) + '</div></div>' +
+    '<div class="mt-kpi"><div class="lab"><i class="fas fa-user-tag"></i> ролей в отчёте</div><div class="v">' + st.staff_roles.length + '</div></div>' +
+    '<div class="mt-kpi"><div class="lab"><i class="fas fa-robot"></i> бот</div>' +
+      '<div class="v ' + (botOnline ? 'on' : 'off') + '" style="font-size:13.5px">' + (botOnline ? 'онлайн — финиш шлёт отчёт в канал панели' : 'офлайн — финиш без отчёта') + '</div></div>';
+}
+
+function renderRoles(st) {
+  var box = document.getElementById('mtRoles');
+  if (!st.staff_roles.length) {
+    box.innerHTML = '<div class="mt-sub" style="margin-bottom:0">Добавленные роли отсутствуют.</div>';
+    return;
+  }
+  box.innerHTML = st.staff_roles.map(function (rid) {
+    var name = (st.role_names && st.role_names[rid]) || rid;
+    var del = CAN_EDIT ? ' <button onclick="mtRoleDel(\'' + rid + '\')" title="Убрать"><i class="fas fa-xmark"></i></button>' : '';
+    return '<span class="mt-chip"><i class="fas fa-tag" style="color:var(--ac,#e0b04a)"></i> ' + esc(name) + del + '</span>';
+  }).join('');
+}
+
+function loadStatus() {
+  fetch(API + '/status').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    STATUS = d.status;
+    if (CAN_EDIT) {
+      document.getElementById('mtCtlPanel').style.display = '';
+      document.getElementById('mtRoleCtl').style.display = '';
+    }
+    renderKpis(d.status, d.bot_online);
+    renderRoles(d.status);
+  }).catch(function () {});
+}
+
+function loadPreview() {
+  fetch(API + '/preview').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    document.getElementById('mtNote').textContent = d.note;
+    document.getElementById('mtWindow').textContent = d.window
+      ? 'Окно: ' + d.window + (d.since ? ' (' + fmtIso(d.since) + ')' : '') +
+        ' · отсчётов: ' + d.totals.participants + ' · войс: ' + d.totals.voice_min + ' мин · инвайтов: ' + d.totals.invites + ' · всего очков: ' + d.totals.score
+      : 'Собрание еще не проводилось — окна нет, отчёт соберётся после первого старта.';
+    var box = document.getElementById('mtPrev');
+    if (!d.rows.length) {
+      box.innerHTML = '<div class="empty-state" style="margin:6px 0"><i class="fas fa-people-group"></i><div>За окно никто не отметился ни голосом, ни инвайтом.</div></div>';
+      return;
+    }
+    box.innerHTML = '<table class="mt-table"><tr><th>участник</th><th>войс</th><th>инвайты</th><th>очки</th></tr>' +
+      d.rows.map(function (r) {
+        return '<tr><td><b>' + esc(r.name) + '</b></td><td>' + esc(r.voice_txt) + '</td><td>' + r.inv + '</td><td class="score">' + r.score + '</td></tr>';
+      }).join('') + '</table>';
+  }).catch(function () {});
+}
+
+function afterAction(res, msgId) {
+  showMsg(msgId, res.d.success, res.d.success ? res.d.message : (res.d.error || 'Ошибка'));
+  if (res.d.success) {
+    loadStatus();
+    loadPreview();
+  }
+}
+
+document.getElementById('mtStart').onclick = function () {
+  post('/start', {time: document.getElementById('mtStartTime').value}, function (res) {
+    afterAction(res, 'mtMsg');
+  });
+};
+
+document.getElementById('mtEnd').onclick = function () {
+  askConfirm('Завершить собрание?', 'Состояние сбросится как в Discord: окно закроется, «последнее собрание» станет текущим моментом.', function () {
+    post('/end', {}, function (res) {
+      afterAction(res, 'mtMsg');
+    });
+  }, {danger: true, okText: 'Завершить', icon_fa: 'fa-flag-checkered'});
+};
+
+document.getElementById('mtRoleAdd').onclick = function () {
+  post('/roles', {role: document.getElementById('mtRoleInp').value}, function (res) {
+    if (res.d.success) { document.getElementById('mtRoleInp').value = ''; }
+    afterAction(res, 'mtRoleMsg');
+  });
+};
+
+function mtRoleDel(rid) {
+  post('/roles/remove', {role: rid}, function (res) {
+    afterAction(res, 'mtRoleMsg');
+  });
+}
+
+document.getElementById('mtCsv').onclick = function () { location.href = API + '/export.csv'; };
+
+loadStatus();
+loadPreview();
+</script>
+{% endblock %}
