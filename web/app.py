@@ -1074,6 +1074,35 @@ def api_send_announcement ():
     if not title or not message :
         return jsonify ({'error':'Недостаточно данных'})
 
+    # Опциональная доставка в Discord-канал (объявление живёт не только в панели).
+    # Доставку ждём честно: ошибка уйдёт в ответ, а не в никуда.
+    guild_id =str (data .get ('guild_id')or '')
+    channel_id =str (data .get ('channel_id')or '')
+    delivered =False
+    deliver_error =None
+    if channel_id :
+        if not bot_instance :
+            deliver_error ='Бот Discord не в сети'
+        else :
+            try :
+                guild =next ((g for g in bot_instance .guilds if str (g .id )==guild_id ),None )
+                channel =guild .get_channel (int (channel_id ))if guild else None
+                if not channel :
+                    deliver_error ='Канал не найден'
+                else :
+                    embed =discord .Embed (title =title ,description =message ,color =0xF2B33D ,
+                    timestamp =datetime .now (timezone .utc ))
+                    embed .set_footer (text =f"Объявление · {session .get ('username','панель')}")
+
+                    async def _send_ann ():
+                        await channel .send (embed =embed )
+
+                    import asyncio 
+                    asyncio .run_coroutine_threadsafe (_send_ann (),bot_instance .loop ).result (timeout =10 )
+                    delivered =True
+            except Exception as e :
+                deliver_error =str (e )
+
     ann_file ='data/announcements.json'
     os .makedirs ('data',exist_ok =True )
     anns =[]
@@ -1084,11 +1113,20 @@ def api_send_announcement ():
     'title':title ,
     'message':message ,
     'from':session .get ('username'),
+    'channel_id':channel_id or None ,
+    'delivered':delivered ,
+    'deliver_error':deliver_error ,
     'created_at':datetime.now(timezone.utc).isoformat ()
     })
     with open (ann_file ,'w',encoding ='utf-8')as f :
         json .dump (anns ,f ,indent =2 ,ensure_ascii =False )
-    return jsonify ({'success':True })
+    if not channel_id :
+        text ='Объявление опубликовано в ленте панели'
+    elif delivered :
+        text ='Объявление опубликовано и доставлено в Discord'
+    else :
+        text =f'Опубликовано в ленте, но в Discord не ушло: {deliver_error}'
+    return jsonify ({'success':True ,'delivered':delivered ,'deliver_error':deliver_error ,'message':text })
 
 @app .route ('/users')
 @login_required 

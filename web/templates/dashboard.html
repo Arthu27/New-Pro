@@ -433,6 +433,10 @@
     <input type="text" id="ann-title" placeholder="Заголовок" class="form-input" aria-label="Заголовок">
     <label class="form-label">Содержание</label>
     <textarea id="ann-message" class="form-input"   style="min-height: 70px;" aria-label="Текст объявления"></textarea>
+    <label class="form-label">Куда публиковать</label>
+    <select id="ann-channel" class="form-input" aria-label="Куда публиковать объявление">
+      <option value="">Только в ленте панели</option>
+    </select>
     <button type="button" id="btnSendAnn" class="form-btn"><i class="fas fa-bullhorn"></i> Опубликовать</button>
     <div id="ann-result" class="result-msg"></div>
   </div>
@@ -770,17 +774,49 @@
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
 
+  async function loadAnnChannels() {
+    var sel = $('ann-channel');
+    if (!sel) return;
+    try {
+      var guilds = await window.fetchCachedJSON('/api/guilds');
+      if (!Array.isArray(guilds) || !guilds.length) return;
+      var main = '{{ main_guild_id }}';
+      var g = null;
+      for (var i = 0; i < guilds.length; i++) {
+        if (String(guilds[i].id) === String(main)) { g = guilds[i]; break; }
+      }
+      if (!g) g = guilds[0];
+      if (!g) return;
+      var data = await window.fetchCachedJSON('/api/guild/' + g.id + '/channels');
+      var channels = Array.isArray(data) ? data : (data.channels || []);
+      channels.filter(function (c) { return c.type === 'text'; }).forEach(function (c) {
+        var o = document.createElement('option');
+        o.value = c.id;
+        o.dataset.guild = g.id;
+        o.textContent = '#' + c.name;
+        sel.appendChild(o);
+      });
+    } catch (e) { /* список каналов анонсов не загрузился — остаётся лента панели */ }
+  }
+
   async function sendAnnouncement() {
     var title = $('ann-title').value.trim();
     var msg = $('ann-message').value.trim();
     var el = $('ann-result');
     if (!title || !msg) { showToast('Заголовок и содержание обязательны!', false); return; }
+    var sel = $('ann-channel');
+    var channelId = sel ? sel.value : '';
+    var guildId = '';
+    if (channelId && sel.selectedOptions && sel.selectedOptions[0]) {
+      guildId = sel.selectedOptions[0].dataset.guild || '';
+    }
     try {
       var d = await fetch('/api/send-announcement', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title, message: msg })
+        body: JSON.stringify({ title: title, message: msg, guild_id: guildId, channel_id: channelId })
       }).then(function (r) { return r.json(); });
-      setResult(el, d.success, d.success ? 'Объявление опубликовано!' : ((d.error || 'Ошибка')));
+      var okFlag = d.success ? !(channelId && d.delivered === false) : false;
+      setResult(el, okFlag, d.success ? (d.message || 'Объявление опубликовано!') : ((d.error || 'Ошибка')));
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
 
@@ -803,6 +839,7 @@
     loadLoginLog();
     loadThreatIndex();
     loadHealth();
+    loadAnnChannels();
     if (window.setLiveRefresh) {
       window.setLiveRefresh(loadStats, 2500);
       window.setLiveRefresh(loadQuickStats, 5000);

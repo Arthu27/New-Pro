@@ -156,7 +156,7 @@ _check_env_backup = os.environ.pop('MAIN_GUILD_ID', None)
 page = client.get('/send-command')
 html = page.get_data(as_text=True)
 check(page.status_code == 200, f'страница открывается ({page.status_code})')
-check("const GUILD_ID = '777'" in html,
+check("const PREFERRED_GUILD = '777'" in html,
       'без MAIN_GUILD_ID в .env страница берёт первый сервер бота, а не пустой id')
 if _check_env_backup:
     os.environ['MAIN_GUILD_ID'] = _check_env_backup
