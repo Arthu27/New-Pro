@@ -43,6 +43,10 @@ EVENTS = {
     'warn': ('event_warn', 'Выдано предупреждение', '⚠️'),
     'mod_action': ('event_mod_action', 'Действие модерации', '🔨'),
     'staff_apply': ('event_staff_apply', 'Новая заявка в персонал', '📝'),
+    'karma': ('event_karma', 'Карма: корректировка очков', '🎖'),
+    'birthdays': ('event_birthdays', 'Дни рождения: записи и настройки', '🎂'),
+    'social': ('event_social', 'События и поиски: уборка из панели', '🎉'),
+    'anime_daily': ('event_anime_daily', 'Аниме дня: настройки рассылки', '📺'),
     'test': (None, 'Тестовое уведомление', '🧪'),
 }
 
@@ -56,6 +60,10 @@ EVENT_LINKS = {
     'warn': '/warnings',
     'mod_action': '/logs',
     'staff_apply': '/staff-apps',
+    'karma': '/karma',
+    'birthdays': '/birthdays',
+    'social': '/social',
+    'anime_daily': '/anime-daily',
     'test': '/notifications',
 }
 
@@ -71,6 +79,10 @@ DEFAULT_SETTINGS = {
     'event_warn': True,
     'event_mod_action': True,
     'event_staff_apply': True,
+    'event_karma': True,
+    'event_birthdays': True,
+    'event_social': True,
+    'event_anime_daily': True,
     'discord_channel': '',
     'webhook_url': '',
     'smtp_server': '',
@@ -272,3 +284,91 @@ def send_test(discord_sender=None):
         'Если вы видите это сообщение — канал уведомлений настроен правильно. ✅',
         discord_sender=discord_sender,
     )
+
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Чистые помощники центра уведомлений (идеи #71-75)
+# ─────────────────────────────────────────────────────────────────────
+BOOL_KEYS = ('web_enabled', 'discord_enabled', 'email_enabled') + tuple(
+    flag for flag, _label, _icon in EVENTS.values() if flag)
+STR_LIMITS = {'discord_channel': 30, 'webhook_url': 300, 'smtp_server': 120,
+              'smtp_email': 120, 'smtp_password': 200}
+
+
+def validate_settings(payload, base=None):
+    """Нормализовать настройки из POST панели.
+
+    Переключатели — строго bool (иначе «да» навсегда включит событие),
+    smtp_port — целое 1..65535, строки подрезаны по лимитам. Ключи,
+    которых панель не прислала (и посторонние), живут как были — base.
+    -> (settings | None, err)
+    """
+    if not isinstance(payload, dict):
+        return None, 'Ожидается объект настроек'
+    settings = dict(base or {})
+    for key in BOOL_KEYS:
+        if key not in payload:
+            continue
+        value = payload[key]
+        if not isinstance(value, bool):
+            return None, f'Переключатель {key} — true или false'
+        settings[key] = value
+    if 'smtp_port' in payload:
+        port = payload['smtp_port']
+        if isinstance(port, bool):
+            return None, 'Порт SMTP — целое число от 1 до 65535'
+        try:
+            port = int(str(port).strip())
+        except (TypeError, ValueError):
+            return None, 'Порт SMTP — целое число от 1 до 65535'
+        if not (1 <= port <= 65535):
+            return None, 'Порт SMTP — целое число от 1 до 65535'
+        settings['smtp_port'] = port
+    for key, limit in STR_LIMITS.items():
+        if key not in payload:
+            continue
+        value = payload[key]
+        settings[key] = ('' if value is None else str(value)).strip()[:limit]
+    return settings, ''
+
+
+def filter_history(items, event=None, outcome=None):
+    """Фильтр истории: по событию и по исходу.
+
+    outcome 'ok' — хотя бы один канал доставил; 'fail' — хотя бы один
+    настроенный канал упал (запись может попасть в оба фильтра).
+    """
+    out = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        if event and str(item.get('event') or '') != event:
+            continue
+        channels = item.get('channels') or {}
+        if outcome == 'ok' and not any(v is True for v in channels.values()):
+            continue
+        if outcome == 'fail' and not any(v is False for v in channels.values()):
+            continue
+        out.append(item)
+    return out
+
+
+def delivery_stats(items):
+    """Сводка доставки по каналам за всю историю: ok/fail на канал."""
+    stats = {'web': {'ok': 0, 'fail': 0},
+             'discord': {'ok': 0, 'fail': 0},
+             'email': {'ok': 0, 'fail': 0},
+             'total': 0}
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        stats['total'] += 1
+        channels = item.get('channels') or {}
+        for channel in ('web', 'discord', 'email'):
+            value = channels.get(channel)
+            if value is True:
+                stats[channel]['ok'] += 1
+            elif value is False:
+                stats[channel]['fail'] += 1
+    return stats

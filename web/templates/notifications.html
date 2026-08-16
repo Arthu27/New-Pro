@@ -80,6 +80,23 @@
           <input type="checkbox" id="event-staff-apply" checked style="width: 20px; height: 20px;">
           <span>Новая заявка в персонал</span>
         </label>
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">Панельные правки</div>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-karma" checked style="width: 20px; height: 20px;">
+          <span>Карма: корректировка очков</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-birthdays" checked style="width: 20px; height: 20px;">
+          <span>Дни рождения: записи и настройки</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-social" checked style="width: 20px; height: 20px;">
+          <span>События и поиски: уборка из панели</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-anime-daily" checked style="width: 20px; height: 20px;">
+          <span>Аниме дня: настройки рассылки</span>
+        </label>
       </div>
     </div>
   </div>
@@ -125,17 +142,30 @@
 </div>
 
 <div class="section">
-  <div class="bs-title"><i class="fas fa-history"></i> Последние уведомления</div>
+  <div class="bs-title"><i class="fas fa-history"></i> Последние уведомления <span id="notifTotal" style="font-weight: 400; font-size: 12px; color: var(--text-muted);"></span></div>
+  <div id="notifDelivery" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center;"></div>
+  <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+    <select id="notifFilterEvent" class="form-input" style="max-width: 260px;" onchange="loadNotificationHistory()">
+      <option value="">Все события</option>
+    </select>
+    <select id="notifFilterOutcome" class="form-input" style="max-width: 200px;" onchange="loadNotificationHistory()">
+      <option value="">Любой результат</option>
+      <option value="ok">Хоть один канал доставил</option>
+      <option value="fail">Есть упавший канал</option>
+    </select>
+  </div>
   <div id="notificationHistory" style="max-height: 400px; overflow-y: auto;">
     <p style="text-align: center; color: var(--text-muted); padding: 40px;">Загрузка...</p>
   </div>
 </div>
 
 <div class="section">
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+  <div style="display: grid; grid-template-columns: {% if role in ('admin', 'owner') %}1fr 1fr{% else %}1fr{% endif %}; gap: 12px;">
+    {% if role in ('admin', 'owner') %}
     <button class="control-btn primary" onclick="saveNotificationSettings()" style="padding: 12px;">
       <i class="fas fa-save"></i> Сохранить настройки
     </button>
+    {% endif %}
     <button class="control-btn" id="testNotifBtn" onclick="sendTestNotification()" style="padding: 12px;">
       <i class="fas fa-paper-plane"></i> Тестовое уведомление
     </button>
@@ -175,6 +205,10 @@ async function loadNotificationSettings() {
       document.getElementById('event-warn').checked = settings.event_warn !== false;
       document.getElementById('event-mod-action').checked = settings.event_mod_action !== false;
       document.getElementById('event-staff-apply').checked = settings.event_staff_apply !== false;
+      document.getElementById('event-karma').checked = settings.event_karma !== false;
+      document.getElementById('event-birthdays').checked = settings.event_birthdays !== false;
+      document.getElementById('event-social').checked = settings.event_social !== false;
+      document.getElementById('event-anime-daily').checked = settings.event_anime_daily !== false;
 
       // Discord
       window._savedNotifChannel = settings.discord_channel || '';
@@ -226,10 +260,34 @@ function channelChip(label, state) {
 
 async function loadNotificationHistory() {
   try {
-    const response = await fetch('/api/notifications/history');
+    const evSel = document.getElementById('notifFilterEvent');
+    const outSel = document.getElementById('notifFilterOutcome');
+    const params = [];
+    if (evSel && evSel.value) params.push('event=' + encodeURIComponent(evSel.value));
+    if (outSel && outSel.value) params.push('outcome=' + encodeURIComponent(outSel.value));
+    const response = await fetch('/api/notifications/history' + (params.length ? '?' + params.join('&') : ''));
     const data = await response.json();
 
     if (data.success) {
+      if (evSel && evSel.options.length <= 1 && data.events) {
+        Object.keys(data.events).forEach(function (key) {
+          const opt = document.createElement('option');
+          opt.value = key;
+          opt.textContent = data.events[key];
+          evSel.appendChild(opt);
+        });
+      }
+      const dlv = document.getElementById('notifDelivery');
+      if (dlv && data.delivery) {
+        const chip = function (name, st) {
+          if (!st.ok && !st.fail) return '';
+          return '<span style="font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.12);color:var(--text-muted);">' +
+            name + ': <b style="color:#2ecc71">' + st.ok + '</b> · <b style="color:' + (st.fail ? '#e74c3c' : 'inherit') + '">' + st.fail + '</b></span>';
+        };
+        dlv.innerHTML = chip('Веб', data.delivery.web) + chip('Discord', data.delivery.discord) + chip('Email', data.delivery.email);
+      }
+      const total = document.getElementById('notifTotal');
+      if (total) total.textContent = '(записей: ' + (data.total || 0) + ')';
       const container = document.getElementById('notificationHistory');
       const notifications = data.notifications || [];
 
@@ -287,6 +345,10 @@ async function saveNotificationSettings() {
     event_warn: document.getElementById('event-warn').checked,
     event_mod_action: document.getElementById('event-mod-action').checked,
     event_staff_apply: document.getElementById('event-staff-apply').checked,
+    event_karma: document.getElementById('event-karma').checked,
+    event_birthdays: document.getElementById('event-birthdays').checked,
+    event_social: document.getElementById('event-social').checked,
+    event_anime_daily: document.getElementById('event-anime-daily').checked,
     discord_channel: document.getElementById('discord-channel').value,
     webhook_url: document.getElementById('webhook-url').value,
     smtp_server: document.getElementById('smtp-server').value,
