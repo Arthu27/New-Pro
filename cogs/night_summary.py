@@ -115,7 +115,8 @@ class NightSummary(commands.Cog):
     # ────────────────────────────────────────────────────────────
     # Сбор статистики за день
     # ────────────────────────────────────────────────────────────
-    def collect_day(self, guild_id: int, day: datetime, tz_offset: int) -> dict:
+    @staticmethod
+    def collect_day(guild_id: int, day: datetime, tz_offset: int) -> dict:
         """Статистика сервера за календарный день (в локальной зоне)."""
         day_key = day.strftime('%Y-%m-%d')
 

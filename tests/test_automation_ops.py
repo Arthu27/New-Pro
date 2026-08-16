@@ -52,6 +52,8 @@ def check(ok, msg):
 
 from web.routes import automation as AU  # noqa: E402
 
+EMOJI_RE = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
+
 print('== 1. #41: parse_counters — правила строк 1:1 с когом ==')
 ch, issues = AU.parse_counters('123 | Участники: {members}')
 check(ch == {'123': 'Участники: {members}'} and issues == [], 'валидная строка принята')
@@ -270,16 +272,122 @@ d = r.get_json()
 check(d['added'] == 0 and 'максимум 50 триггеров' in d['skipped'][0]['reason'],
       'лимит бьёт словами кога')
 
-print('== 7. Шаблон, меню, коги страницы ==')
+print('== 7. #45: медиа-лок каналов ==')
+with client.session_transaction() as s:
+    s.clear()
+check(client.get('/api/automation/medialock').status_code in (302, 401, 403),
+      'гостю медиа-лок закрыт')
+check(client.post('/api/automation/medialock/set', json={}).status_code in (302, 401, 403),
+      'гостю нельзя ставить замки')
+login('mod')
+check(client.get('/api/automation/medialock').status_code == 403,
+      'моду медиа-лок закрыт (admin-only)')
+login('owner')
+r = client.get('/api/automation/medialock')
+d = r.get_json()
+check(d['success'] and d['channels'] == []
+      and [m['key'] for m in d['modes']] == ['media', 'text', 'link'],
+      'пустой список + три режима кога')
+check(all('label' in m and 'desc' in m for m in d['modes'])
+      and not any(EMOJI_RE.search(m['label']) for m in d['modes']),
+      'панельные подписи режимов без эмодзи')
+
+r = client.post('/api/automation/medialock/set', json={'channel_id': 'abc', 'mode': 'media'})
+check(r.status_code == 400 and r.get_json()['error'] == 'ID канала должен быть числом',
+      'буквенный канал — 400')
+r = client.post('/api/automation/medialock/set', json={'channel_id': '55', 'mode': 'даже'})
+check(r.status_code == 400 and r.get_json()['error'] == 'Неизвестный режим канала',
+      'левый режим — 400')
+r = client.post('/api/automation/medialock/set', json={'channel_id': '55', 'mode': 'media'})
+d = r.get_json()
+check(d['success'] and len(d['channels']) == 1
+      and d['channels'][0]['mode_label'] == 'Только медиа'
+      and d['channels'][0]['exempt_mods'] is True,
+      'замок поставлен, моды свободны по умолчанию (1:1 с ml_set)')
+stored = json.load(open('data/media_only.json', encoding='utf-8'))
+check(stored == {'777': {'55': {'mode': 'media', 'exempt_mods': True}}},
+      'файл 1:1 со структурой кога media_only')
+r = client.post('/api/automation/medialock/set', json={'channel_id': '55', 'mode': 'text',
+                                                       'exempt_mods': False})
+d = r.get_json()
+check(len(d['channels']) == 1 and d['channels'][0]['mode'] == 'text'
+      and d['channels'][0]['exempt_mods'] is False, 'перестановка режима без дубля')
+r = client.post('/api/automation/medialock/remove', json={'channel_id': '99'})
+check(r.status_code == 404 and r.get_json()['error'] == 'На канале замка не было',
+      'честный 404, слова как у кога')
+r = client.post('/api/automation/medialock/remove', json={'channel_id': '55'})
+d = r.get_json()
+check(d['success'] and d['removed']['mode'] == 'text'
+      and d['removed']['exempt_mods'] is False and d['channels'] == [],
+      'снятие возвращает снапшот для undo, список пуст')
+
+print('== 8. #46-47: ночная сводка ==')
+with client.session_transaction() as s:
+    s.clear()
+check(client.get('/api/automation/night-summary').status_code in (302, 401, 403),
+      'гостю сводка закрыта')
+login('mod')
+check(client.get('/api/automation/night-summary').status_code == 403,
+      'моду сводка закрыта (admin-only)')
+login('owner')
+with open('data/night_summary.json', 'w', encoding='utf-8') as fh:
+    json.dump({'777': {'last_date': '2026-08-15'}}, fh)
+r = client.get('/api/automation/night-summary')
+d = r.get_json()
+check(d['success'] and d['enabled'] is True and d['channel_id'] == 0
+      and d['tz_offset'] == 3, 'дефолты 1:1 с cfg() кога')
+check(d['last_sent'] == '2026-08-15' and bool(d['today']),
+      'последняя отправка читается, дата дня есть')
+
+r = client.post('/api/automation/night-summary', json={})
+check(r.status_code == 400 and r.get_json()['error'] == 'Нечего сохранять', 'пустой POST — 400')
+r = client.post('/api/automation/night-summary', json={'tz_offset': 'полночь'})
+check(r.status_code == 400 and r.get_json()['error'] == 'Смещение — число часов', 'tz не число — 400')
+r = client.post('/api/automation/night-summary', json={'tz_offset': 99})
+check(r.status_code == 400 and r.get_json()['error'] == 'Смещение: от -12 до +14 часов',
+      'tz вне диапазона — 400')
+r = client.post('/api/automation/night-summary', json={'channel_id': -5})
+check(r.status_code == 400 and r.get_json()['error'] == 'ID канала — число (0 — авто)',
+      'отрицательный канал — 400')
+r = client.post('/api/automation/night-summary', json={'enabled': False, 'channel_id': 123,
+                                                       'tz_offset': 0})
+d = r.get_json()
+check(d['success'] and d['enabled'] is False and d['channel_id'] == 123
+      and d['tz_offset'] == 0, 'настройки сохранены')
+stored = json.load(open('data/night_summary.json', encoding='utf-8'))
+check(stored['777'].get('last_date') == '2026-08-15'
+      and stored['777']['enabled'] is False,
+      'last_date кога не затёрт правкой панели')
+
+now_ts = datetime.now(timezone.utc).timestamp()
+with open('data/mod_data.json', 'w', encoding='utf-8') as fh:
+    json.dump({'cases': {'777': [
+        {'action': 'warn', 'timestamp': now_ts, 'mod_id': '42'},
+        {'action': 'ban', 'timestamp': now_ts - 10 * 86400, 'mod_id': '42'},
+    ]}}, fh)
+r = client.get('/api/automation/night-summary/preview')
+d = r.get_json()
+check(r.status_code == 200 and d['success'] and d['tz_offset'] == 0
+      and d['enabled'] is False, 'предпросмотр живёт, эхо настроек')
+s = d['stats']
+check(s['warns'] == 1 and s['bans'] == 0 and s['top_mod_id'] == 42
+      and s['top_mod_count'] == 1,
+      'collect_day кога: варн сегодня учтён, старый бан за днём, модератор дня')
+
+print('== 9. Шаблон, меню, коги страницы ==')
 tpl = open(os.path.join(ROOT, 'web/templates/automation.html'), encoding='utf-8').read()
-emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
-check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
+check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
 for needle in ("id=\"trg-test-text\"", "id=\"trg-import-box\"", "id=\"trg-import-mode\"",
                'triggers/test', 'triggers/export', 'triggers/import', 'counters-preview',
-               'askConfirm', "data-kind=\"counters\"", 'server_stats'):
+               'askConfirm', "data-kind=\"counters\"", 'server_stats',
+               "id=\"medialock-sec\"", "id=\"nightsum-sec\"", "id=\"ml-mode\"", "id=\"ns-tz\"",
+               'medialock/set', 'medialock/remove', 'night-summary/preview', 'uxUndo'):
     check(needle in tpl, f'в шаблоне есть {needle}')
 import services.panel_menu as PM
 check('server_stats' in PM.PAGE_COGS['/automation'], 'счётчики учтены в когах страницы автоматики')
+check('media_only' in PM.PAGE_COGS['/automation']
+      and 'night_summary' in PM.PAGE_COGS['/automation'],
+      'медиа-лок и ночная сводка учтены в когах страницы')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

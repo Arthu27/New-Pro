@@ -18,7 +18,11 @@ from web.routes._common import (
     os, json, time, math, discord, datetime, timezone,
 )
 
-from cogs import anti_alt, night_mode, welcome_pro, mod_digest, server_stats
+from cogs import anti_alt, night_mode, welcome_pro, mod_digest, server_stats, night_summary
+
+from datetime import timedelta
+
+from json_store import load_json as _js_load, save_json as _js_save
 
 # Реестр редактируемых модулей. kind: bool|int|select|text|channels|templates
 MODULE_EDITORS = {
@@ -134,6 +138,18 @@ def parse_counters(text):
             continue
         channels[cid] = tpl[:80]
     return channels, issues
+
+
+MEDIALOCK_PATH = 'data/media_only.json'
+# Панельные подписи режимов — без эмодзи (в Discord-боках они есть в MODES кога)
+MEDIALOCK_MODES = {
+    'media': {'label': 'Только медиа', 'desc': 'картинки и видео'},
+    'text': {'label': 'Только текст', 'desc': 'без вложений и ссылок'},
+    'link': {'label': 'Только ссылки', 'desc': 'сообщение должно содержать ссылку'},
+}
+
+NIGHT_SUMMARY_PATH = 'data/night_summary.json'
+NIGHT_TZ_MIN, NIGHT_TZ_MAX = -12, 14
 
 
 def _db(ns):
@@ -517,3 +533,203 @@ def register(ctx):
         return jsonify({'success': True, 'state': state, 'max': _triggers_max(),
                         'added': added, 'skipped': skipped[:20],
                         'skipped_total': len(skipped), 'mode': mode})
+
+    # ── #45: медиа-лок каналов (cogs/media_only.py, data/media_only.json) ───
+    def _medialock_all():
+        raw = _js_load(MEDIALOCK_PATH, {})
+        return raw if isinstance(raw, dict) else {}
+
+    def _medialock_list(gid):
+        guild = None
+        import web.app as _app
+        bot = _app.bot_instance
+        if bot is not None:
+            try:
+                guild = bot.get_guild(int(gid))
+            except (TypeError, ValueError) as _ex:
+                _log.debug('medialock: битый gid %r: %s', gid, _ex)
+        items = []
+        gmap = _medialock_all().get(str(gid))
+        if not isinstance(gmap, dict):
+            gmap = {}
+        for cid, rec in sorted(gmap.items(), key=lambda kv: str(kv[0])):
+            if not isinstance(rec, dict):
+                continue
+            mode = str(rec.get('mode') or 'media')
+            meta = MEDIALOCK_MODES.get(mode)
+            if meta is None:
+                continue  # неизвестный режим не выдумываем — пропускаем
+            ch = guild.get_channel(int(cid)) if guild and str(cid).isdigit() else None
+            items.append({'channel_id': str(cid), 'mode': mode,
+                          'mode_label': meta['label'], 'desc': meta['desc'],
+                          'exempt_mods': bool(rec.get('exempt_mods', True)),
+                          'channel_name': getattr(ch, 'name', None)})
+        return items
+
+    def _medialock_save(store):
+        _js_save(MEDIALOCK_PATH, store)
+
+    @app.route('/api/automation/medialock')
+    @login_required
+    @role_required('admin')
+    def api_medialock_list():
+        return jsonify({'success': True,
+                        'modes': [{'key': k, 'label': v['label'], 'desc': v['desc']}
+                                  for k, v in MEDIALOCK_MODES.items()],
+                        'channels': _medialock_list(active_guild_id())})
+
+    @app.route('/api/automation/medialock/set', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_medialock_set():
+        data = request.get_json(silent=True) or {}
+        cid = str(data.get('channel_id') or '').strip()
+        if not cid.isdigit():
+            return jsonify({'success': False,
+                            'error': 'ID канала должен быть числом'}), 400
+        mode = str(data.get('mode') or '')
+        if mode not in MEDIALOCK_MODES:
+            return jsonify({'success': False,
+                            'error': 'Неизвестный режим канала'}), 400
+        gid = active_guild_id()
+        store = _medialock_all()
+        # запись 1:1 с ml_set кога: mode + exempt_mods (дефолт «моды свободны»)
+        store.setdefault(str(gid), {})[cid] = {
+            'mode': mode,
+            'exempt_mods': bool(data.get('exempt_mods', True)),
+        }
+        _medialock_save(store)
+        try:
+            _fire_panel_notification(
+                'automation', f'Медиа-лок: канал {cid} — {MEDIALOCK_MODES[mode]["label"]}',
+                f'Через панель ({session.get("username", "?")}), сервер {gid}')
+        except Exception as _ex:
+            _log.debug('medialock: уведомление не ушло: %s', _ex)
+        return jsonify({'success': True, 'channels': _medialock_list(gid)})
+
+    @app.route('/api/automation/medialock/remove', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_medialock_remove():
+        data = request.get_json(silent=True) or {}
+        cid = str(data.get('channel_id') or '').strip()
+        gid = active_guild_id()
+        store = _medialock_all()
+        gmap = store.get(str(gid)) if isinstance(store.get(str(gid)), dict) else {}
+        removed = gmap.pop(cid, None)
+        if removed is None:
+            return jsonify({'success': False,
+                            'error': 'На канале замка не было'}), 404
+        store[str(gid)] = gmap
+        _medialock_save(store)
+        try:
+            _fire_panel_notification(
+                'automation', f'Медиа-лок: замок с канала {cid} снят',
+                f'Через панель ({session.get("username", "?")}), сервер {gid}')
+        except Exception as _ex:
+            _log.debug('medialock: уведомление не ушло: %s', _ex)
+        return jsonify({'success': True,
+                        'removed': {'channel_id': cid,
+                                    'mode': str(removed.get('mode') or 'media'),
+                                    'exempt_mods': bool(removed.get('exempt_mods', True))},
+                        'channels': _medialock_list(gid)})
+
+    # ── #46-47: ночная сводка (cogs/night_summary.py) ────────────────────
+    def _night_state():
+        raw = _js_load(NIGHT_SUMMARY_PATH, {})
+        return raw if isinstance(raw, dict) else {}
+
+    def _night_cfg(gid):
+        # дефолты + слияние 1:1 с NightSummary.cfg(); last_date не трогаем
+        cfg = {'enabled': True, 'channel_id': 0, 'tz_offset': 3}
+        saved = _night_state().get(str(gid))
+        if isinstance(saved, dict):
+            cfg.update(saved)
+        return cfg
+
+    def _night_today(tz_offset):
+        local = datetime.now(timezone.utc) + timedelta(hours=tz_offset)
+        return local.strftime('%Y-%m-%d')
+
+    def _night_public(gid):
+        cfg = _night_cfg(gid)
+        saved = _night_state().get(str(gid))
+        last_sent = saved.get('last_date') if isinstance(saved, dict) else None
+        return {'enabled': bool(cfg['enabled']),
+                'channel_id': int(cfg.get('channel_id') or 0),
+                'tz_offset': int(cfg.get('tz_offset') or 0),
+                'today': _night_today(int(cfg.get('tz_offset') or 0)),
+                'last_sent': last_sent or None}
+
+    @app.route('/api/automation/night-summary')
+    @login_required
+    @role_required('admin')
+    def api_night_summary_get():
+        return jsonify(dict(_night_public(active_guild_id()), success=True))
+
+    @app.route('/api/automation/night-summary', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_night_summary_save():
+        data = request.get_json(silent=True) or {}
+        updates = {}
+        if 'enabled' in data:
+            updates['enabled'] = bool(data['enabled'])
+        if 'channel_id' in data:
+            try:
+                cid = int(data['channel_id'])
+            except (TypeError, ValueError):
+                return jsonify({'success': False,
+                                'error': 'ID канала — число (0 — авто)'}), 400
+            if cid < 0:
+                return jsonify({'success': False,
+                                'error': 'ID канала — число (0 — авто)'}), 400
+            updates['channel_id'] = cid
+        if 'tz_offset' in data:
+            try:
+                tz = int(data['tz_offset'])
+            except (TypeError, ValueError):
+                return jsonify({'success': False,
+                                'error': 'Смещение — число часов'}), 400
+            if not NIGHT_TZ_MIN <= tz <= NIGHT_TZ_MAX:
+                return jsonify({'success': False,
+                                'error': 'Смещение: от -12 до +14 часов'}), 400
+            updates['tz_offset'] = tz
+        if not updates:
+            return jsonify({'success': False, 'error': 'Нечего сохранять'}), 400
+        gid = active_guild_id()
+        state = _night_state()
+        saved = state.get(str(gid))
+        cur = dict(saved) if isinstance(saved, dict) else {}
+        cur.update(updates)
+        state[str(gid)] = cur
+        _js_save(NIGHT_SUMMARY_PATH, state)
+        try:
+            _fire_panel_notification(
+                'automation', 'Ночная сводка: настройки обновлены',
+                f'Через панель ({session.get("username", "?")}), сервер {gid}')
+        except Exception as _ex:
+            _log.debug('night-summary: уведомление не ушло: %s', _ex)
+        return jsonify(dict(_night_public(gid), success=True))
+
+    @app.route('/api/automation/night-summary/preview')
+    @login_required
+    @role_required('admin')
+    def api_night_summary_preview():
+        """Статистика «золотой карты дня» — тот же collect_day, что рисует
+        картинку для Discord. Работает и без бота: источники — файлы/БД."""
+        gid = active_guild_id()
+        cfg = _night_cfg(gid)
+        try:
+            gid_int = int(gid)
+        except (TypeError, ValueError) as _ex:
+            _log.debug('night-summary preview: битый gid %r: %s', gid, _ex)
+            return jsonify({'success': False,
+                            'error': 'Некорректный сервер'}), 400
+        tz = int(cfg.get('tz_offset') or 0)
+        day = datetime.now(timezone.utc) + timedelta(hours=tz)
+        stats = night_summary.NightSummary.collect_day(gid_int, day, tz)
+        return jsonify({'success': True,
+                        'date': day.strftime('%Y-%m-%d'), 'tz_offset': tz,
+                        'enabled': bool(cfg['enabled']),
+                        'stats': stats})

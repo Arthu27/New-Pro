@@ -172,6 +172,45 @@
     </div>
   </div>
 
+  <!-- #45: режимы каналов (медиа-лок) -->
+  <div class="au-sec" id="medialock-sec">
+    <div class="au-sec-title"><i class="fas fa-images"></i> Режимы каналов (медиа-лок)</div>
+    <div class="au-sec-sub">Каналы под автоконтролем: «только медиа», «только текст», «только ссылки». Нарушение бот удаляет и вежливо пишет автору в ЛС (не чаще раза в минуту). Одно хранилище с командой /medialock.</div>
+    <div class="au-panel">
+      <div id="ml-list"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Загружаем…</div></div>
+      <div class="trg-form" style="grid-template-columns:1.2fr 1.1fr auto auto">
+        <input type="text" class="au-input" id="ml-channel" placeholder="ID канала" aria-label="ID канала" maxlength="20">
+        <select class="au-input" id="ml-mode" aria-label="Режим"></select>
+        <label class="trg-exact-lbl" title="Модераторы и администраторы не подпадают под замок"><input type="checkbox" id="ml-exempt" checked> моды свободны</label>
+        <button class="au-save" onclick="mlSet()"><i class="fas fa-lock"></i> Поставить</button>
+      </div>
+      <div id="ml-msg" class="au-sec-sub" style="margin:8px 0 0"></div>
+    </div>
+  </div>
+
+  <!-- #46-47: ночная сводка -->
+  <div class="au-sec" id="nightsum-sec">
+    <div class="au-sec-title"><i class="fas fa-moon"></i> Ночная сводка</div>
+    <div class="au-sec-sub">Раз в сутки (в 00:00 по выбранному смещению) бот рисует «золотую карту дня» в заданный канал. Настройки и предпросмотр статистики — здесь.</div>
+    <div class="au-panel">
+      <div class="trg-head-row" style="margin-bottom:8px">
+        <span class="trg-count" id="ns-status">—</span>
+        <span class="trg-cool" id="ns-last"></span>
+      </div>
+      <div class="trg-form" style="grid-template-columns:auto 1fr 1fr auto;align-items:center">
+        <label class="trg-exact-lbl"><input type="checkbox" id="ns-enabled"> включена</label>
+        <input type="number" class="au-input" id="ns-channel" placeholder="ID канала (0 — канал логов)" min="0" aria-label="ID канала сводки">
+        <input type="number" class="au-input" id="ns-tz" placeholder="UTC+… (напр. 3)" min="-12" max="14" aria-label="Смещение часового пояса">
+        <button class="au-save" onclick="nsSave()"><i class="fas fa-check"></i> Сохранить</button>
+      </div>
+      <div id="ns-msg" class="au-sec-sub" style="margin:8px 0 0"></div>
+      <div style="margin-top:12px">
+        <button class="au-save" onclick="nsPreview()"><i class="fas fa-rotate"></i> Статистика дня</button>
+        <div id="ns-preview" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- v3: предпросмотр мод-дайджеста -->
   <div class="au-sec" id="digest-sec">
     <div class="au-sec-title"><i class="fas fa-newspaper"></i> Мод-дайджест · предпросмотр</div>
@@ -525,8 +564,119 @@ async function countersPreview(modKey){
   box.innerHTML = html;
 }
 
+/* ── #45: медиа-лок каналов ── */
+function mlRender(items){
+  var box = document.getElementById('ml-list');
+  if(!items.length){
+    box.innerHTML = '<div class="au-sec-sub" style="margin:0">Замков нет — все каналы живут обычной жизнью.</div>';
+    return;
+  }
+  box.innerHTML = items.map(function(r){
+    return '<div class="trg-row" style="grid-template-columns:minmax(110px,1fr) 2fr auto auto">'
+      + '<div class="trg-trig">' + (r.channel_name ? '#'+esc(r.channel_name) : 'ID '+esc(r.channel_id)) + '</div>'
+      + '<div class="trg-resp">' + esc(r.mode_label) + ' — ' + esc(r.desc) + (r.exempt_mods ? ' · моды свободны' : ' · моды тоже под замком') + '</div>'
+      + '<span></span>'
+      + '<button class="trg-del" title="Снять замок" onclick="mlRemove(\'' + esc(r.channel_id) + '\')"><i class="fas fa-xmark"></i></button></div>';
+  }).join('');
+}
+
+async function mlLoad(){
+  var d = await fetch('/api/automation/medialock').then(function(r){ return r.json(); });
+  if(!d.success){ return; }
+  var sel = document.getElementById('ml-mode');
+  sel.innerHTML = d.modes.map(function(m){ return '<option value="'+esc(m.key)+'">'+esc(m.label)+'</option>'; }).join('');
+  mlRender(d.channels);
+}
+
+async function mlSet(){
+  var msg = document.getElementById('ml-msg');
+  var cid = document.getElementById('ml-channel').value.trim();
+  var d = await fetch('/api/automation/medialock/set', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({channel_id: cid,
+                          mode: document.getElementById('ml-mode').value,
+                          exempt_mods: document.getElementById('ml-exempt').checked})
+  }).then(function(x){ return x.json(); });
+  if(!d.success){ msg.textContent = d.error || 'Ошибка'; return; }
+  document.getElementById('ml-channel').value = '';
+  msg.textContent = '';
+  mlRender(d.channels);
+}
+
+async function mlRemove(cid){
+  var d = await fetch('/api/automation/medialock/remove', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({channel_id: cid})
+  }).then(function(x){ return x.json(); });
+  if(!d.success){ document.getElementById('ml-msg').textContent = d.error || 'Ошибка'; return; }
+  mlRender(d.channels);
+  if(window.uxUndo && d.removed){
+    window.uxUndo('Замок с канала снят', async function(){
+      await fetch('/api/automation/medialock/set', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: d.removed.channel_id, mode: d.removed.mode,
+                              exempt_mods: d.removed.exempt_mods})
+      });
+      mlLoad();
+    });
+  }
+}
+
+/* ── #46-47: ночная сводка ── */
+var NS_LABELS = [['warns','Варны'],['bans','Баны'],['kicks','Кики'],['mutes','Муты'],
+                 ['tagjail','Tag Jail'],['ghost','Ghost-пинги'],['errors','Ошибки бота']];
+
+function nsRender(d){
+  document.getElementById('ns-enabled').checked = !!d.enabled;
+  document.getElementById('ns-channel').value = d.channel_id;
+  document.getElementById('ns-tz').value = d.tz_offset;
+  document.getElementById('ns-status').textContent = (d.enabled ? 'Включена' : 'На паузе') + ' · UTC' + (d.tz_offset >= 0 ? '+' : '') + d.tz_offset;
+  document.getElementById('ns-last').textContent = d.last_sent ? 'Последняя: ' + d.last_sent : 'Ещё ни разу не уходила';
+}
+
+async function nsLoad(){
+  var d = await fetch('/api/automation/night-summary').then(function(r){ return r.json(); });
+  if(d.success){ nsRender(d); }
+}
+
+async function nsSave(){
+  var msg = document.getElementById('ns-msg');
+  var d = await fetch('/api/automation/night-summary', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({enabled: document.getElementById('ns-enabled').checked,
+                          channel_id: document.getElementById('ns-channel').value,
+                          tz_offset: document.getElementById('ns-tz').value})
+  }).then(function(x){ return x.json(); });
+  if(!d.success){ msg.textContent = d.error || 'Ошибка сохранения'; return; }
+  msg.textContent = 'Сохранено — бот подхватит сам';
+  nsRender(d);
+}
+
+async function nsPreview(){
+  var box = document.getElementById('ns-preview');
+  box.innerHTML = '<div class="au-sec-sub" style="margin:0">Считаем день…</div>';
+  var x = await fetch('/api/automation/night-summary/preview');
+  var d = await x.json();
+  if(!x.ok || !d.success){
+    box.innerHTML = '<div class="au-sec-sub" style="margin:0">' + esc(d.error || 'Недоступно') + '</div>';
+    return;
+  }
+  var s = d.stats || {};
+  var tz = 'UTC' + (d.tz_offset >= 0 ? '+' : '') + d.tz_offset;
+  var html = '<div class="au-sec-sub" style="margin:0 0 6px">День ' + esc(d.date) + ' (' + tz + ')' + (d.enabled ? '' : ' · модуль на паузе') + ':</div>';
+  html += '<div class="au-strip" style="margin:0">' + NS_LABELS.map(function(p){
+    return '<div class="cell"><div><div class="num">' + (s[p[0]] || 0) + '</div><div class="lbl">' + esc(p[1]) + '</div></div></div>';
+  }).join('') + '</div>';
+  if(s.top_mod_id){
+    html += '<div class="au-sec-sub" style="margin:8px 0 0">Модератор дня: ID ' + esc(s.top_mod_id) + ' (' + s.top_mod_count + ' дел)</div>';
+  }
+  box.innerHTML = html;
+}
+
 loadAutomation();
 loadTriggers();
 loadDigestPreview();
+mlLoad();
+nsLoad();
 </script>
 {% endblock %}

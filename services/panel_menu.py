@@ -180,7 +180,7 @@ PAGE_COGS = {
     # Автоматика живёт, пока жив хотя бы один её модуль (анти-альт/ночной
     # режим в MOD_ONLY, приветствия и дайджест — в полном режиме).
     '/automation': ('anti_alt', 'night_mode', 'welcome_pro', 'mod_digest',
-                    'server_stats'),
+                    'server_stats', 'media_only', 'night_summary'),
 }
 
 
