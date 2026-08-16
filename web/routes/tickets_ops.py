@@ -13,6 +13,8 @@ cogs/ticket.py (статусы/поля не переизобретаются; �
 назначить/заметить) — mod+, как существующий /tickets/<id>/close.
 Массовое закрытие — admin+: масштаб больше точечного действия.
 """
+import csv
+import io
 import json
 import os
 import tempfile
@@ -20,7 +22,7 @@ from datetime import datetime, timezone
 
 from web.routes._common import (
     _log,
-    render_template, session, request, jsonify,
+    render_template, session, request, jsonify, Response,
 )
 
 DEFAULT_SLA_HOURS = 24
@@ -114,14 +116,35 @@ def sla_snapshot(tickets, now=None, sla_hours=DEFAULT_SLA_HOURS):
                 close_hours.append((closed - created).total_seconds() / 3600)
     open_items.sort(key=lambda x: -(x['age_h'] or -1))
     avg_close = round(sum(close_hours) / len(close_hours), 1) if close_hours else None
+    reopened = sum(1 for t in (tickets or {}).values()
+                   if isinstance(t, dict) and t.get('reopened_at'))
     return {
         'sla_hours': sla,
         'open_count': len(open_items),
         'overdue_count': sum(1 for i in open_items if i['overdue']),
+        'overdue_ids': [i['id'] for i in open_items if i['overdue']],
         'avg_close_hours': avg_close,
         'closed_total': len(close_hours),
+        'reopened_total': reopened,
         'items': open_items,
     }
+
+
+def tickets_csv(tickets):
+    """Плоский список тикетов для выгрузки: строки по всем статусам."""
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=';')
+    w.writerow(['ID', 'Категория', 'Автор ID', 'Статус', 'Создан', 'Закрыт',
+                'Закрыл', 'Ответственный', 'Заметок'])
+    for tid in sorted(tickets or {}):
+        t = tickets[tid]
+        if not isinstance(t, dict):
+            continue
+        w.writerow([tid, t.get('category') or '', t.get('user_id') or '',
+                    t.get('status') or '', t.get('created_at') or '',
+                    t.get('closed_at') or '', t.get('closed_by') or '',
+                    t.get('assigned_to') or '', len(t.get('notes') or [])])
+    return buf.getvalue()
 
 
 def bulk_close(tickets, ids, by, now=None):
@@ -186,8 +209,27 @@ def assign_ticket(tickets, tid, name, by):
     return True, ''
 
 
+def author_history(tickets, user_id, exclude=None, limit=5):
+    """История автора: всего тикетов + последние по дате создания (без текущего)."""
+    uid = str(user_id or '')
+    own = []
+    for tid, t in (tickets or {}).items():
+        if not isinstance(t, dict) or str(t.get('user_id') or '') != uid:
+            continue
+        if exclude is not None and str(tid) == str(exclude):
+            continue
+        own.append((str(t.get('created_at') or ''), str(tid),
+                    t.get('category') or 'Другое', t.get('status') or 'open'))
+    own.sort(reverse=True)
+    return {
+        'total': len(own) + (1 if exclude is not None else 0),
+        'last': [{'id': tid, 'category': cat, 'status': st, 'created_at': day}
+                 for day, tid, cat, st in own[:limit]],
+    }
+
+
 def ticket_card(tickets, tid):
-    """Карточка тикета для модалки: заметки, назначение, статус."""
+    """Карточка тикета для модалки: заметки, назначение, статус, история автора."""
     t = (tickets or {}).get(str(tid))
     if not isinstance(t, dict):
         return None
@@ -200,6 +242,8 @@ def ticket_card(tickets, tid):
         'closed_at': t.get('closed_at') or '',
         'closed_by': t.get('closed_by') or '',
         'assigned_to': t.get('assigned_to') or '',
+        'reopened_at': t.get('reopened_at') or '',
+        'history': author_history(tickets, t.get('user_id'), exclude=tid),
         'notes': [{'text': n.get('text', ''), 'by': n.get('by', ''), 'at': n.get('at', '')}
                   for n in (t.get('notes') or []) if isinstance(n, dict)],
     }
@@ -297,3 +341,16 @@ def register(ctx):
             return jsonify({'success': False, 'error': err}), 404
         save_tickets(gid, tickets)
         return jsonify({'success': True})
+
+    @app.route('/api/tickets-ops/export.csv')
+    @login_required
+    @role_required('mod')
+    def api_ops_export():
+        """Плоская выгрузка всех тикетов сервера (идея #29)."""
+        gid = int(ctx.active_guild_id())
+        filename = 'tickets_%s_%s.csv' % (gid, datetime.now(timezone.utc).date().isoformat())
+        return Response(
+            '﻿' + tickets_csv(load_tickets(gid)),
+            mimetype='text/csv; charset=utf-8',
+            headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+        )

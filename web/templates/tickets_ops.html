@@ -60,6 +60,10 @@
     <span id="tpBulkCount"></span>
     <button class="tp-btn danger" onclick="tpBulkClose()"><i class="fas fa-lock"></i> Закрыть выбранные</button>
   </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+    <input type="text" class="tp-ta" id="tpFilter" style="min-height:0;max-width:260px" placeholder="Фильтр: ID, категория, автор..." aria-label="Фильтр" oninput="renderList(STATE)">
+    <button class="tp-act" id="tpCloseOverdue" style="display:none" onclick="tpCloseOverdue()"></button>
+  </div>
   <div id="tpList">
     <div class="sk-row"></div>
     <div class="sk-row" style="width:80%"></div>
@@ -70,6 +74,7 @@
 <div class="tp-panel tp-detail" id="tpDetailWrap">
   <h3><i class="fas fa-address-card"></i> Тикет <span class="tp-id" id="tpCardId"></span></h3>
   <div class="tp-sub" id="tpCardMeta"></div>
+  <div id="tpHistory" style="display:none"></div>
   <div id="tpNotes"></div>
   <textarea class="tp-ta" id="tpNoteText" placeholder="Заметка для команды (видна только модераторам)..." maxlength="300" aria-label="Заметка"></textarea>
   <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
@@ -96,9 +101,11 @@ function renderKpis(d) {
     '<div class="tp-kpi"><i class="fas fa-inbox"></i><div><b>' + d.open_count + '</b> <span>открыто</span></div></div>' +
     '<div class="tp-kpi' + (hot ? ' hot' : '') + '"><i class="fas fa-fire"></i><div><b>' + d.overdue_count + '</b> <span>просрочено</span></div></div>' +
     '<div class="tp-kpi"><i class="fas fa-hourglass-half"></i><div><b>' + (d.avg_close_hours == null ? '—' : d.avg_close_hours + ' ч') + '</b> <span>среднее закрытие · закрыто ' + d.closed_total + '</span></div></div>' +
+    '<div class="tp-kpi"><i class="fas fa-rotate-right"></i><div><b>' + (d.reopened_total || 0) + '</b> <span>переоткрыто</span></div></div>' +
     '<div class="tp-sla">SLA: <select class="tp-select" id="tpSlaSel" onchange="SLA_H=this.value;loadState()">' +
       d.sla_choices.map(function (h) { return '<option value="' + h + '"' + (h == d.sla_hours ? ' selected' : '') + '>' + h + ' ч</option>'; }).join('') +
-    '</select></div>';
+    '</select>' +
+      ' <a class="tp-act" href="/api/tickets-ops/export.csv" download style="text-decoration:none"><i class="fas fa-file-csv"></i> CSV</a></div>';
 }
 
 function renderList(d) {
@@ -111,7 +118,22 @@ function renderList(d) {
       '<p class="empty-tip">Очередь чиста — пришло спокойное время.</p></div>';
     return;
   }
-  var rows = d.items.map(function (t) {
+  var fEl = document.getElementById('tpFilter');
+  var fq = fEl ? fEl.value.trim().toLowerCase() : '';
+  var od = document.getElementById('tpCloseOverdue');
+  if (od) {
+    od.style.display = (CAN_EDIT && d.overdue_count > 0) ? '' : 'none';
+    od.innerHTML = '<i class="fas fa-fire-extinguisher"></i> Закрыть просроченные (' + d.overdue_count + ')';
+  }
+  var items = fq ? d.items.filter(function (t) {
+    return (t.id + ' ' + t.category + ' ' + t.user_id).toLowerCase().indexOf(fq) !== -1;
+  }) : d.items;
+  if (!items.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-magnifying-glass"></i><p>Ничего не найдено по фильтру</p></div>';
+    renderBulk();
+    return;
+  }
+  var rows = items.map(function (t) {
     var checked = SELECTED[t.id] ? ' checked' : '';
     var cb = CAN_EDIT ? '<input type="checkbox"' + checked + ' onchange="tpToggleSel(\x27' + esc(t.id) + '\x27,this.checked)" aria-label="Выбрать">' : '';
     var age = t.age_h == null ? '—' : t.age_h + ' ч';
@@ -154,6 +176,18 @@ async function tpOpen(id) {
   document.getElementById('tpCardId').textContent = d.id;
   document.getElementById('tpCardMeta').textContent =
     d.category + ' · автор ' + (d.user_id || '—') + ' · создан ' + String(d.created_at).slice(0, 16).replace('T', ' ');
+  var hist = document.getElementById('tpHistory');
+  if (d.history && d.history.total > 1) {
+    hist.style.display = '';
+    hist.innerHTML = '<div class="tp-sub" style="margin:8px 0 6px">История автора: ' + d.history.total + ' тикетов всего</div>' +
+      d.history.last.map(function (h) {
+        return '<div class="tp-note"><div class="t">' + esc(h.category) + ' · ' + esc(h.status) + '</div>' +
+          '<div class="m">' + esc(String(h.created_at).slice(0, 16).replace('T', ' ')) + ' · ' + esc(h.id.slice(0, 10)) + '</div></div>';
+      }).join('');
+  } else if (hist) {
+    hist.style.display = 'none';
+    hist.innerHTML = '';
+  }
   document.getElementById('tpNotes').innerHTML = d.notes.length
     ? d.notes.map(function (n) {
         return '<div class="tp-note"><div class="t">' + esc(n.text) + '</div>' +
@@ -222,6 +256,10 @@ function bulkByIds(ids) {
 }
 
 function tpBulkClose() { bulkByIds(Object.keys(SELECTED)); }
+
+function tpCloseOverdue() {
+  if (STATE && STATE.overdue_ids && STATE.overdue_ids.length) bulkByIds(STATE.overdue_ids);
+}
 
 async function loadState() {
   var r = await fetch('/api/tickets-ops/sla?h=' + encodeURIComponent(SLA_H));

@@ -177,6 +177,46 @@ paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
 check('/tickets-ops' in paths, 'пункт меню «OPS-центр» есть')
 check(PM.PAGE_COGS.get('/tickets-ops') == ('ticket',), 'PAGE_COGS привязан к ticket')
 
+print('== 5. История автора, переоткрытые, экспорт (#26-30) ==')
+TO.save_tickets(GID, fixture)
+hist = TO.author_history(fixture, 222, exclude='t2')
+check(hist['total'] == 1 and hist['last'] == [], 'единственный тикет автора исключён корректно')
+# делаем у 222 ещё один, более свежий
+fx = json.loads(json.dumps(fixture))
+fx['t9'] = {'user_id': 222, 'category': 'Вопрос', 'status': 'closed',
+            'created_at': (NOW - timedelta(hours=5)).isoformat(),
+            'closed_at': (NOW - timedelta(hours=1)).isoformat()}
+hist2 = TO.author_history(fx, 222, exclude='t2')
+check(hist2['total'] == 2 and hist2['last'][0]['id'] == 't9', 'история: свежий первым, счёт с текущим')
+card = TO.ticket_card(fx, 't2')
+check(card['history']['total'] == 2 and isinstance(card['history']['last'], list),
+      'карточка везёт историю автора')
+
+snap = TO.sla_snapshot(fx, now=NOW, sla_hours=24)
+check('t1' in snap['overdue_ids'] and snap['reopened_total'] == 0, 'overdue_ids и reopened_total в снимке')
+fx['t1']['reopened_at'] = NOW.isoformat()
+snap2 = TO.sla_snapshot(fx, now=NOW, sla_hours=24)
+check(snap2['reopened_total'] == 1, 'переоткрытый учтён в KPI')
+
+csv_text = TO.tickets_csv(fx)
+check(csv_text.splitlines()[0].startswith('ID;Категория'), 'шапка CSV')
+check('t1;Жалоба;111;ai_handling' in csv_text, 'строка открытого тикета в CSV')
+check('t3;Баг;333;closed' in csv_text and 'panel:X' in csv_text, 'закрытый с закрывающим в CSV')
+
+r = client.get('/api/tickets-ops/export.csv')
+check(r.status_code == 200 and 'tickets_777_' in r.headers.get('Content-Disposition', ''),
+      'мод скачивает выгрузку')
+login('uye')
+check(client.get('/api/tickets-ops/export.csv').status_code == 403, 'uye нельзя выгрузку')
+login('mod')
+
+tpl = open(os.path.join(ROOT, 'web/templates/tickets_ops.html'), encoding='utf-8').read()
+check('tpCloseOverdue' in tpl and 'overdue_ids' in tpl, 'кнопка «закрыть просроченные» смонтирована')
+check('tpFilter' in tpl, 'фильтр таблицы смонтирован')
+check('tpHistory' in tpl and 'author_history' in open(os.path.join(ROOT, 'web/routes/tickets_ops.py'), encoding="utf-8").read(),
+      'история автора смонтирована')
+check('export.csv' in tpl, 'ссылка выгрузки на месте')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)
