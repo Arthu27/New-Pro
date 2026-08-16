@@ -24,6 +24,7 @@ MENU = [
         {'path': '/advanced-analytics', 'label': 'Про-аналитика', 'icon': 'fa-chart-pie'},
         {'path': '/bot-stats', 'label': 'Статистика бота', 'icon': 'fa-robot'},
         {'path': '/server-health', 'label': 'Состояние', 'icon': 'fa-heartbeat'},
+        {'path': '/recap', 'label': 'Рекап канала', 'icon': 'fa-clock-rotate-left'},
     ]},
     {'group': 'Модерация', 'key': 'mod', 'icon': 'fa-shield-halved', 'pages': [
         {'path': '/logs', 'label': 'Логи модерации', 'icon': 'fa-clipboard-list'},
@@ -199,6 +200,7 @@ PAGE_COGS = {
     '/join-to-create': ('join_to_create',),
     '/staff-rating': ('staff_rating',),
     '/member-card': ('profile', 'karma', 'birthday'),
+    '/recap': ('recap',),
     '/gamification': ('gamification_cog',),
 }
 
