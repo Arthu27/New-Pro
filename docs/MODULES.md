@@ -50,7 +50,7 @@
 | `verification` | Aether — Верификация — режим наблюдателя / opt-in |
 | `warnings` | Warnings Cog |
 
-## Комьюнити и развлечения — 64
+## Комьюнити и развлечения — 65
 
 | Модуль | Что делает |
 | --- | --- |
@@ -106,6 +106,7 @@
 | `social` | Aether Social Cog |
 | `staff_apply` | Staff Apply — Набор в команду сервера |
 | `staff_rating` | Рейтинг стаффа (Staff Rating Cog) |
+| `staff_shifts` | Стафф-смены (Staff Shifts) |
 | `staff_stats` | Staff Stats — таблица активности модераторов. |
 | `starboard` | Starboard — зал славы (звёздная доска). |
 | `stats` | stats |
@@ -129,4 +130,4 @@
 | `icons` | Aether — фирменные иконки (assets/icons/) — помощник embed-миниатюр |
 | `leveling_engagement` | Leveling & Engagement System |
 
-**Всего:** 106 файлов в `cogs/`.
+**Всего:** 107 файлов в `cogs/`.
