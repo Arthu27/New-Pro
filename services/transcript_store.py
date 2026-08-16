@@ -182,8 +182,43 @@ def _norm(text):
     return str(text or '').strip().lower()
 
 
+SNIPPET_CTX = 48
+
+
+def snippets(record, query, limit=2):
+    """Сниппеты совпадений запроса по тексту переписки (для карточек поиска).
+
+    Ищет подстроку без учёта регистра (кириллица тоже), возвращает до limit
+    кусков «контекст + совпадение + контекст». Совпадение берётся из
+    ОРИГИНАЛА (регистр сохранён), переносы строк схлопнуты в пробелы.
+    UI обязан экранировать поля — здесь хранится сырой текст.
+    """
+    q = _norm(query)
+    if not q:
+        return []
+    out = []
+    for m in record.get('messages') or []:
+        content = str(m.get('content') or '')
+        idx = content.lower().find(q)
+        if idx < 0:
+            continue
+        start = max(0, idx - SNIPPET_CTX)
+        end = min(len(content), idx + len(q) + SNIPPET_CTX)
+        out.append({
+            'author': m.get('author', 'Неизвестный'),
+            'timestamp': m.get('timestamp', ''),
+            'before': ('…' if start > 0 else '') + content[start:idx].replace('\n', ' '),
+            'match': content[idx:idx + len(q)].replace('\n', ' '),
+            'after': content[idx + len(q):end].replace('\n', ' ') + ('…' if end < len(content) else ''),
+        })
+        if len(out) >= limit:
+            break
+    return out
+
+
 def filter_records(records, search='', days='', category=''):
     """Применить фильтры поиска/периода/категории (все необязательные).
+    Поиск покрывает мета-поля И текст сообщений (глубокий поиск).
     Странные значения (days='abc') фильтр мягко игнорирует, а не роняет запрос."""
     search = _norm(search)
     category = _norm(category)
@@ -205,7 +240,10 @@ def filter_records(records, search='', days='', category=''):
             hay = (str(t.get('id', '')), t.get('user_name', ''),
                    t.get('channel_name', ''), t.get('category', ''))
             if not any(search in _norm(field) for field in hay):
-                continue
+                deep = any(search in str(m.get('content') or '').lower()
+                           for m in (t.get('messages') or []))
+                if not deep:
+                    continue
         out.append(t)
     out.sort(key=lambda x: str(x.get('closed_at', '')), reverse=True)
     return out

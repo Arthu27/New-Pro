@@ -28,15 +28,24 @@ def register(ctx):
         if not _staff_only():
             return jsonify({'success': False, 'error': 'Нет доступа'}), 403
         data = request.get_json(silent=True) or {}
+        query = str(data.get('search', '') or '')
         records = _ts.filter_records(
             _ts.load(),
-            search=str(data.get('search', '') or ''),
+            search=query,
             days=str(data.get('days', '') or ''),
             category=str(data.get('category', '') or ''),
         )
+        items = []
+        for t in records[:100]:
+            item = _ts.summary(t)
+            if query.strip():
+                found = _ts.snippets(t, query)
+                if found:
+                    item['snippets'] = found
+            items.append(item)
         return jsonify({
             'success': True,
-            'transcripts': [_ts.summary(t) for t in records[:100]],
+            'transcripts': items,
             'total': len(records),
         })
 
