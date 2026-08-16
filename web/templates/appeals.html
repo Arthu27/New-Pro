@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}Апелляции — Панель Aether{% endblock %}
+{% block page_title %}Апелляции{% endblock %}
+{% block content %}
+<style>
+.ap-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
+.ap-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.ap-kpi i{color:var(--ac,#e0b04a);font-size:16px}
+.ap-kpi b{font-size:17px;color:var(--text-1,#fff)}
+.ap-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.ap-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.ap-grid{grid-template-columns:1fr}}
+.ap-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.ap-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.ap-panel h3 i{color:var(--ac,#e0b04a)}
+.ap-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
+.ap-card{border:1px solid var(--line-2,rgba(255,255,255,.1));border-left:4px solid #FEE75C;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:rgba(254,231,92,.04)}
+.ap-card .meta{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;color:var(--text-3,rgba(255,255,255,.5));margin-bottom:6px;flex-wrap:wrap}
+.ap-card .meta b{color:var(--text-2,rgba(255,255,255,.85))}
+.ap-card .txt{font-size:13px;color:var(--text-2,rgba(255,255,255,.85));white-space:pre-wrap;word-break:break-word;line-height:1.5}
+.ap-act{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.ap-inp{flex:1;min-width:180px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:8px 12px;color:var(--text-1,#fff);font-size:12.5px;outline:none}
+.ap-inp:focus{border-color:var(--ac,#e0b04a)}
+.ap-btn{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer}
+.ap-btn.ok{background:rgba(87,242,135,.15);color:#57F287;border:1px solid rgba(87,242,135,.4)}
+.ap-btn.ok:hover{background:rgba(87,242,135,.25)}
+.ap-btn.no{background:rgba(237,66,69,.12);color:#ED4245;border:1px solid rgba(237,66,69,.4)}
+.ap-btn.no:hover{background:rgba(237,66,69,.22)}
+.ap-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.ap-row{display:flex;justify-content:space-between;gap:10px;padding:9px 4px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85));align-items:flex-start}
+.ap-row:last-child{border-bottom:none}
+.ap-row .who{min-width:0}
+.ap-row .who b{display:block;font-size:12.5px}
+.ap-row small{display:block;font-size:11px;color:var(--text-3,rgba(255,255,255,.5));margin-top:2px;word-break:break-word}
+.ap-tag{flex-shrink:0;font-size:10.5px;font-weight:800;border-radius:8px;padding:3px 9px}
+.ap-tag.pending{color:#FEE75C;border:1px solid rgba(254,231,92,.4)}
+.ap-tag.accepted{color:#57F287;border:1px solid rgba(87,242,135,.4)}
+.ap-tag.rejected{color:#ED4245;border:1px solid rgba(237,66,69,.4)}
+.ap-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.ap-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;background:transparent;color:var(--text-2,rgba(255,255,255,.75));border:1px solid var(--line-2,rgba(255,255,255,.14));border-radius:9px;padding:5px 11px;cursor:pointer}
+.ap-chip:hover{border-color:var(--ac,#e0b04a)}
+.ap-chip.on{background:var(--ac-soft,rgba(224,176,74,.12));border-color:var(--ac,#e0b04a);color:var(--ac,#e0b04a)}
+.ap-ready{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2,rgba(255,255,255,.8));margin-bottom:10px;flex-wrap:wrap}
+.ap-ready i{color:var(--ac,#e0b04a)}
+.ap-sel{width:100%;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none;margin-bottom:10px}
+.ap-msg{font-size:12px;padding:6px 2px;display:none}
+.ap-msg.ok{color:#4ade80}
+.ap-msg.err{color:#ff8a7a}
+[data-theme="light"] .ap-row{border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .ap-card{background:rgba(254,231,92,.1)}
+</style>
+
+<div class="ap-kpis" id="apKpis">
+  <div class="sk-card" style="width:150px;height:56px"></div>
+  <div class="sk-card" style="width:150px;height:56px"></div>
+  <div class="sk-card" style="width:150px;height:56px"></div>
+  <div class="sk-card" style="width:150px;height:56px"></div>
+</div>
+
+<div class="ap-grid">
+  <div class="ap-panel">
+    <h3><i class="fas fa-inbox"></i> Очередь ожидания</h3>
+    <div class="ap-sub">В порядке подачи — как в «/апелляции список». Решение фиксируется кодом кога; при живом боте добавляются разбан и ЛС пользователю.</div>
+    <div id="apQueue"></div>
+  </div>
+  <div>
+    <div class="ap-panel">
+      <h3><i class="fas fa-clock-rotate-left"></i> История</h3>
+      <div class="ap-sub">Свежие сверху. Фильтр по статусу и строке: ник, текст, ID, комментарий.</div>
+      <div class="ap-filters">
+        <button class="ap-chip on" data-st="">все</button>
+        <button class="ap-chip" data-st="pending">ожидают</button>
+        <button class="ap-chip" data-st="accepted">принятые</button>
+        <button class="ap-chip" data-st="rejected">отклонённые</button>
+        <input class="ap-inp" id="apQ" placeholder="поиск..." style="flex:2">
+      </div>
+      <div id="apHistory"></div>
+      <div style="margin-top:10px"><button class="ap-btn ghost" id="apCsv"><i class="fas fa-file-csv"></i> Выгрузить журнал</button></div>
+    </div>
+    <div class="ap-panel">
+      <h3><i class="fas fa-tower-broadcast"></i> Канал карточек</h3>
+      <div class="ap-sub">Куда бот шлёт новые апелляции — как «/апелляции канал». Не задан — улетит в системный.</div>
+      <div class="ap-ready" id="apReady"></div>
+      <div id="apSetBox" style="display:none">
+        <select class="ap-sel" id="apChanSel"></select>
+        <button class="ap-btn ghost" id="apChanSave"><i class="fas fa-floppy-disk"></i> Сохранить канал</button>
+        <div class="ap-msg" id="apChanMsg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/appeals';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+var STATUS = '';
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function kpi(icon, num, label) {
+  return '<div class="ap-kpi"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+}
+
+function loadOverview() {
+  fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    var s = d.stats;
+    var last = s.last_resolved
+      ? kpi('fa-gavel', '#' + esc(s.last_resolved.id), 'последняя: ' + esc(s.last_resolved.status_label) + ' · ' + esc(s.last_resolved.reviewed_by))
+      : kpi('fa-gavel', '—', 'решений ещё не было');
+    document.getElementById('apKpis').innerHTML =
+      kpi('fa-inbox', s.pending, 'ожидают решения') +
+      kpi('fa-circle-check', s.accepted, 'принятых') +
+      kpi('fa-circle-xmark', s.rejected, 'отклонённых') + last;
+
+    var rd = d.readiness, rb = document.getElementById('apReady');
+    if (rd.channel_name) {
+      rb.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80"></i> карточки падают в <b>#' + esc(rd.channel_name) + '</b>' +
+        (rd.falls_to === 'system' ? ' (системный — свой не задан)' : '') +
+        (rd.log_channel_id && rd.falls_to === 'own' ? ' <small style="color:var(--text-3)">ID ' + rd.log_channel_id + '</small>' : '');
+    } else if (rd.log_channel_id) {
+      rb.innerHTML = '<i class="fas fa-circle-pause" style="color:#f0cd7a"></i> задан канал ID ' + rd.log_channel_id + ' — бот офлайн, имя проверится при старте';
+    } else {
+      rb.innerHTML = '<i class="fas fa-circle-question" style="color:#f0cd7a"></i> свой канал не задан — при живом боте карточки уйдут в системный';
+    }
+    if (CAN_EDIT) {
+      document.getElementById('apSetBox').style.display = '';
+      loadChannels();
+    }
+
+    var q = document.getElementById('apQueue');
+    if (!d.pending.length) {
+      q.innerHTML = '<div class="empty-state" style="margin:6px 0"><i class="fas fa-mug-hot"></i><div>Ожидающих апелляций нет — очередь чиста.</div></div>';
+      return;
+    }
+    q.innerHTML = d.pending.map(function (it) {
+      var act = CAN_EDIT
+        ? '<div class="ap-act">' +
+          '<input class="ap-inp" id="apReply' + it.id + '" placeholder="комментарий для ЛС (необязательно, до 300 знаков)" maxlength="300">' +
+          '<button class="ap-btn ok" onclick="apResolve(' + it.id + ', true)"><i class="fas fa-check"></i> Принять</button>' +
+          '<button class="ap-btn no" onclick="apResolve(' + it.id + ', false)"><i class="fas fa-xmark"></i> Отклонить</button></div>'
+        : '';
+      return '<div class="ap-card"><div class="meta"><span><b>#' + it.id + '</b> · ' + esc(it.user_name || 'Без имени') + ' · ID ' + esc(it.user_id) + '</span><span>' + esc(it.created_at) + '</span></div>' +
+        '<div class="txt">' + esc(it.text) + '</div>' + act + '</div>';
+    }).join('');
+  }).catch(function () {});
+}
+
+function loadHistory() {
+  var url = API + '/history?' + (STATUS ? 'status=' + STATUS + '&' : '') + 'q=' + encodeURIComponent(document.getElementById('apQ').value);
+  fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    var h = document.getElementById('apHistory');
+    if (!d.items.length) {
+      h.innerHTML = '<div class="ap-sub" style="margin:4px 0">по фильтру пусто</div>';
+      return;
+    }
+    h.innerHTML = d.items.map(function (it) {
+      var det = it.reviewed_at ? (it.status_label + ' · ' + it.reviewed_by + ' · ' + it.reviewed_at) : 'подана ' + it.created_at;
+      var rep = it.reply ? ' · комментарий: ' + it.reply : '';
+      return '<div class="ap-row"><div class="who"><b>#' + it.id + ' · ' + esc(it.user_name || 'Без имени') + '</b>' +
+        '<small>' + esc(it.text) + '</small>' +
+        '<small>' + esc(det + rep) + '</small></div>' +
+        '<span class="ap-tag ' + esc(it.status) + '">' + esc(it.status_label) + '</span></div>';
+    }).join('');
+  }).catch(function () {});
+}
+
+function apResolve(id, accept) {
+  var rep = document.getElementById('apReply' + id);
+  var reply = rep ? rep.value : '';
+  askConfirm(accept ? 'Принять апелляцию #' + id + '?' : 'Отклонить апелляцию #' + id + '?',
+    accept ? 'При живом боте: бан будет снят, пользователь получит добрую весть в ЛС.' : 'Пользователь получит отказ в ЛС с вашим комментарием (если бот онлайн).',
+    function () {
+      fetch(API + '/resolve', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({appeal_id: String(id), accept: accept, reply: reply})
+      }).then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+      .then(function (res) {
+        if (!res.d.success) { alert(res.d.error || 'Ошибка'); return; }
+        var eff = res.d.effects || {};
+        if (eff.offline && typeof uxUndo === 'function') {
+          uxUndo('Решение записано. Бот офлайн: разбан и ЛС не выполнялись', function () {});
+        }
+        loadOverview(); loadHistory();
+      })
+      .catch(function () { alert('Сеть моргнула — попробуйте ещё раз'); });
+    },
+    {danger: !accept, okText: accept ? 'Принять' : 'Отклонить', icon_fa: accept ? 'fa-check' : 'fa-xmark'});
+}
+
+function loadChannels() {
+  fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); }).then(function (d) {
+    var list = (d.channels || []).filter(function (c) { return c.type === 'text'; });
+    document.getElementById('apChanSel').innerHTML = list.length
+      ? list.map(function (c) { return '<option value="' + esc(c.id) + '"># ' + esc(c.name) + '</option>'; }).join('')
+      : '<option value="">бот офлайн — список недоступен</option>';
+  }).catch(function () {});
+}
+
+document.getElementById('apChanSave').onclick = function () {
+  var msg = document.getElementById('apChanMsg');
+  fetch(API + '/channel', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({channel_id: document.getElementById('apChanSel').value})
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    msg.className = 'ap-msg ' + (d.success ? 'ok' : 'err');
+    msg.textContent = d.message || d.error || 'Ошибка';
+    msg.style.display = 'block';
+    if (d.success) { loadOverview(); }
+  }).catch(function () {
+    msg.className = 'ap-msg err'; msg.textContent = 'Сеть моргнула'; msg.style.display = 'block';
+  });
+};
+
+Array.prototype.forEach.call(document.querySelectorAll('.ap-chip'), function (b) {
+  b.onclick = function () {
+    Array.prototype.forEach.call(document.querySelectorAll('.ap-chip'), function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    STATUS = b.getAttribute('data-st');
+    loadHistory();
+  };
+});
+var apQT = null;
+document.getElementById('apQ').addEventListener('input', function () {
+  clearTimeout(apQT); apQT = setTimeout(loadHistory, 250);
+});
+document.getElementById('apCsv').onclick = function () {
+  location.href = API + '/export.csv';
+};
+
+loadOverview();
+loadHistory();
+</script>
+{% endblock %}

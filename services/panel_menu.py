@@ -40,6 +40,7 @@ MENU = [
         {'path': '/mod-report', 'label': 'Отчёт модерации', 'icon': 'fa-chart-simple'},
         {'path': '/mod-control', 'label': 'Мод-контроль', 'icon': 'fa-clipboard-check'},
         {'path': '/mod-insights', 'label': 'Мод-анализ', 'icon': 'fa-user-shield'},
+        {'path': '/appeals', 'label': 'Апелляции', 'icon': 'fa-scale-balanced'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},
@@ -201,6 +202,7 @@ PAGE_COGS = {
     '/staff-rating': ('staff_rating',),
     '/member-card': ('profile', 'karma', 'birthday'),
     '/recap': ('recap',),
+    '/appeals': ('appeals',),
     '/gamification': ('gamification_cog',),
 }
 
