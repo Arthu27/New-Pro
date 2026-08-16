@@ -120,6 +120,7 @@ MENU = [
     {'group': 'Система', 'key': 'ops', 'icon': 'fa-server', 'pages': [
         {'path': '/bot-diagnostics', 'label': 'Диагностика', 'icon': 'fa-heartbeat'},
         {'path': '/leveling-admin', 'label': 'Leveling', 'icon': 'fa-trophy'},
+        {'path': '/feature-flags', 'label': 'Флаги', 'icon': 'fa-flag'},
     ]},
     {'group': 'Утилиты', 'key': 'utility', 'icon': 'fa-toolbox', 'pages': [
         {'path': '/todo', 'label': 'Задачи', 'icon': 'fa-check-square'},
