@@ -150,7 +150,9 @@ class AutoCloseService:
             
             # Сохранить транскрипт
             messages = []
+            full_msgs = []
             async for msg in channel.history(limit=200, oldest_first=True):
+                full_msgs.append(msg)
                 if not msg.author.bot:
                     messages.append(
                         f"[{msg.created_at.strftime('%d.%m.%Y %H:%M:%S')}] "
@@ -173,7 +175,23 @@ class AutoCloseService:
                     filename=f"{channel.name}_auto_closed.txt"
                 )
                 await log_channel.send(embed=log_embed, file=file)
-            
+
+            # Транскрипт — в хранилище панели (поиск/просмотр/экспорт на /transcripts)
+            try:
+                from services import transcript_store as _tstore
+                tstate = cog._get_ticket_state(channel.guild.id, channel.id)
+                member = channel.guild.get_member(owner_id) if owner_id else None
+                _tstore.record(
+                    guild_id=channel.guild.id, channel_id=channel.id, channel_name=channel.name,
+                    user_id=owner_id, user_name=member.display_name if member else None,
+                    category=tstate.get('category'), status=tstate.get('status'),
+                    closed_by='Автозакрытие · неактивность',
+                    opened_at=getattr(channel, 'created_at', None),
+                    messages=[{'timestamp': m.created_at, 'author': m.author.display_name,
+                               'content': m.content, 'is_bot': m.author.bot} for m in full_msgs])
+            except Exception as _tex:
+                logger.debug(f"[AutoClose] транскрипт в файл не записался: {_tex}")
+
             # Очистить состояние
             cog._delete_ticket_state(channel.guild.id, channel.id)
             

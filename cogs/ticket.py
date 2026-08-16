@@ -838,6 +838,7 @@ class CloseTicketView (discord .ui .View ):
             await interaction .response .send_message ("Это не канал тикета.",ephemeral =True )
             return 
 
+        state ={}
         cog =interaction .client .get_cog ('Ticket')
         if cog :
             state =cog ._get_ticket_state (interaction .guild .id ,channel .id )
@@ -858,17 +859,35 @@ class CloseTicketView (discord .ui .View ):
         f"Закрыл: {interaction .user .display_name }")
 
         messages =[]
+        full_msgs =[]
         async for msg in channel .history (limit =200 ,oldest_first =True ):
+            full_msgs .append (msg )
             if not msg .author .bot :
                 messages .append (f"[{msg.created_at.strftime('%d.%m.%Y %H:%M:%S')}] {msg.author.display_name}: {msg.content}")
         transcript ="\n".join (messages )if messages else "Сообщения не найдены."
 
-        owner_id =None 
+        owner_id =None
         if channel .topic and "Ticket sahibi:"in channel .topic :
             try :
                 owner_id =int (channel .topic .split ("Ticket sahibi:")[-1 ].strip ())
             except Exception as _ex:
                 log.debug("close_ticket(): подавлено: %s", _ex)
+
+        # Транскрипт — в хранилище панели (поиск/просмотр/экспорт на /transcripts).
+        # Лента в ticket-log остаётся как раньше; здесь — полная версия с флагом is_bot.
+        try :
+            from services import transcript_store as _tstore
+            _owner =interaction .guild .get_member (owner_id )if owner_id else None
+            _tstore .record (
+            guild_id =interaction .guild .id ,channel_id =channel .id ,channel_name =channel .name ,
+            user_id =owner_id ,user_name =_owner .display_name if _owner else None ,
+            category =state .get ('category'),status =state .get ('status'),
+            closed_by =interaction .user .display_name ,
+            opened_at =getattr (channel ,'created_at',None ),
+            messages =[{'timestamp':m .created_at ,'author':m .author .display_name ,
+            'content':m .content ,'is_bot':m .author .bot }for m in full_msgs ])
+        except Exception as _tex :
+            log .debug ("close_ticket(): транскрипт в файл не записался: %s",_tex )
 
         ts =int (datetime.datetime.now(datetime.timezone.utc).timestamp ())
 

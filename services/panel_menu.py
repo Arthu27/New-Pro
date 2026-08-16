@@ -61,6 +61,7 @@ MENU = [
         {'path': '/ai-tickets', 'label': 'AI Тикеты', 'icon': 'fa-ticket-alt'},
         {'path': '/ai_ticket_stats', 'label': 'Статистика', 'icon': 'fa-chart-pie'},
         {'path': '/ticket-search', 'label': 'Поиск тикетов', 'icon': 'fa-magnifying-glass'},
+        {'path': '/transcripts', 'label': 'Транскрипты', 'icon': 'fa-file-lines'},
         {'path': '/ticket-settings', 'label': 'Настройки', 'icon': 'fa-cogs'},
         {'path': '/staff-apps', 'label': 'Заявки', 'icon': 'fa-file-signature'},
     ]},
