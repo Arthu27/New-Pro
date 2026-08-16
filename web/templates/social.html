@@ -44,6 +44,7 @@
     <div class="so-panel">
       <h3><i class="fas fa-calendar-days"></i> Афиша событий</h3>
       <div class="so-sub">Предстоящие — по дате, минувшие приглушены. Запись идёт кнопкой «Участвую» в Discord, здесь — составы и уборка. Создание события — командой /activity, там оно сразу получает кнопку записи.</div>
+      <input class="inp" id="soEventSearch" placeholder="Поиск по событиям" style="margin-bottom:10px">
       <div id="soEvents"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
     </div>
   </div>
@@ -52,11 +53,13 @@
     <div class="so-panel">
       <h3><i class="fas fa-gamepad"></i> Поиск игроков</h3>
       <div class="so-sub">Активные поиски /game-find: моложе двух часов и состав не полон. Полные и устаревшие приглушены — их можно закрыть, чтобы файлы не пухли.</div>
+      <input class="inp" id="soMatchSearch" placeholder="Поиск по играм и игрокам" style="margin-bottom:10px">
       <div id="soMatches"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>
     </div>
   </div>
 </div>
 
+<script src="/static/pickers.js?v=1"></script>
 <script>
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/social';
@@ -185,6 +188,10 @@ function soCloseMatch(id) {
       }).catch(function () {});
   }, {danger: true, okText: 'Закрыть', icon_fa: 'fa-xmark'});
 }
+
+attachListFilter(document.getElementById('soEventSearch'), 'soEvents', '.so-row');
+attachListFilter(document.getElementById('soMatchSearch'), 'soMatches', '.so-row');
+bindCopyId(document);
 
 soLoad();
 </script>

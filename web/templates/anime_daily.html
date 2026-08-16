@@ -54,11 +54,11 @@
       <div class="an-sub">Та же запись, что пишет /anime-setup: канал, категория из списка, роль упоминания. Пустой канал ставит рассылку на паузу.</div>
       <div class="an-fields">
         <div><label for="anChannel">ID канала</label>
-          <input class="inp" id="anChannel" maxlength="24" placeholder="например 1234567890"></div>
+          <input class="inp" id="anChannel" maxlength="24" placeholder="например 1234567890"><div id="anChannelStatus"></div></div>
         <div><label for="anCategory">Категория</label>
           <select class="inp" id="anCategory"></select></div>
         <div><label for="anRole">ID роли упоминания</label>
-          <input class="inp" id="anRole" maxlength="24" placeholder="пусто — без упоминания"></div>
+          <input class="inp" id="anRole" maxlength="24" placeholder="пусто — без упоминания"><div id="anRoleStatus"></div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn" onclick="anSave(false)"><i class="fas fa-check"></i> Сохранить</button>
           <button class="btn btn-ghost" id="anToggle" onclick="anSave(true)"><i class="fas fa-power-off"></i> Переключить</button>
@@ -77,6 +77,7 @@
   </div>
 </div>
 
+<script src="/static/pickers.js?v=1"></script>
 <script>
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/anime-daily';
@@ -152,6 +153,12 @@ function render(d) {
   if (CAN_EDIT) {
     document.getElementById('anForm').style.display = '';
     fillForm(d);
+    if (!window._anPickers) {
+      window._anPickers = true;
+      attachIdPicker(document.getElementById('anChannel'), {gid: GID, kind: 'text', statusEl: document.getElementById('anChannelStatus')});
+      attachIdPicker(document.getElementById('anRole'), {gid: GID, kind: 'role', statusEl: document.getElementById('anRoleStatus')});
+      bindCtrlS(function () { anSave(false); });
+    }
   }
   renderKpis(d);
   renderStatus(d);

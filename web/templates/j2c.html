@@ -54,6 +54,7 @@
     <div class="j2-panel">
       <h3><i class="fas fa-door-open"></i> Реестр комнат</h3>
       <div class="j2-sub">Комнаты, которые бот создал и помнит (реестр переживает рестарт). Сироты — записи, чьих каналов на сервере уже нет.</div>
+      <input class="inp" id="j2RoomSearch" placeholder="Поиск по комнатам — канал или владелец" style="margin-bottom:10px">
       <div id="j2Rooms"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>
       <div style="margin-top:10px;display:none" id="j2PruneWrap">
         <button class="btn btn-ghost" id="j2Prune" onclick="j2PruneNow()"><i class="fas fa-broom"></i> Вычистить сирот</button>
@@ -74,9 +75,9 @@
       <div class="j2-fields">
         <label class="j2-check"><input type="checkbox" id="j2Enabled"> Система включена</label>
         <div><label for="j2Lobby">ID канала-лобби</label>
-          <input class="inp" id="j2Lobby" maxlength="24" placeholder="0 — без лобби"></div>
+          <input class="inp" id="j2Lobby" maxlength="24" placeholder="0 — без лобби"><div id="j2LobbyStatus"></div></div>
         <div><label for="j2Category">ID категории для комнат</label>
-          <input class="inp" id="j2Category" maxlength="24" placeholder="0 — как у лобби"></div>
+          <input class="inp" id="j2Category" maxlength="24" placeholder="0 — как у лобби"><div id="j2CategoryStatus"></div></div>
         <div><label for="j2Limit">Лимит мест по умолчанию</label>
           <input class="inp" id="j2Limit" type="number" min="0" max="99" placeholder="0"></div>
         <div><label for="j2Template">Шаблон имени ({user} — владелец)</label>
@@ -90,6 +91,7 @@
   </div>
 </div>
 
+<script src="/static/pickers.js?v=1"></script>
 <script>
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/j2c';
@@ -148,8 +150,8 @@ function renderRooms(d) {
       ? '<span class="j2-chip ok"><i class="fas fa-tower-broadcast"></i> живая' + (r.members != null ? ' · ' + r.members : '') + '</span>'
       : (r.live === false ? '<span class="j2-chip dead"><i class="fas fa-ghost"></i> сирота</span>'
                           : '<span class="j2-chip">не проверить</span>');
-    return '<div class="j2-row' + (r.live === false ? ' dead' : '') + '"><div class="j2-who"><b>#' + esc(r.channel_id) + '</b>' +
-      '<small>владелец: ' + (r.owner_name ? esc(r.owner_name) : 'ID ' + esc(r.owner_id)) + '</small></div>' +
+    return '<div class="j2-row' + (r.live === false ? ' dead' : '') + '"><div class="j2-who"><b data-copy-id="' + esc(r.channel_id) + '" title="Нажмите — скопировать ID канала">#' + esc(r.channel_id) + '</b>' +
+      '<small>владелец: ' + (r.owner_name ? esc(r.owner_name) : 'ID ' + esc(r.owner_id)) + ' <span class="j2-chip" data-copy-id="' + esc(r.owner_id) + '" title="Нажмите — скопировать ID владельца"><i class="fas fa-copy"></i></span></small></div>' +
       '<span>' + state + '</span></div>';
   }).join('');
   var hasDead = d.rooms.some(function (r) { return r.live === false; });
@@ -169,6 +171,12 @@ function render(d) {
   if (CAN_EDIT) {
     document.getElementById('j2Form').style.display = '';
     fillForm(d);
+    if (!window._j2Pickers) {
+      window._j2Pickers = true;
+      attachIdPicker(document.getElementById('j2Lobby'), {gid: GID, kind: 'voice', statusEl: document.getElementById('j2LobbyStatus')});
+      attachIdPicker(document.getElementById('j2Category'), {gid: GID, kind: 'category', statusEl: document.getElementById('j2CategoryStatus')});
+      bindCtrlS(j2Save);
+    }
   }
   renderKpis(d);
   renderStatus(d);
@@ -211,6 +219,9 @@ function j2PruneNow() {
       }).catch(function () {});
   }, {danger: true, okText: 'Вычистить', icon_fa: 'fa-broom'});
 }
+
+attachListFilter(document.getElementById('j2RoomSearch'), 'j2Rooms', '.j2-row');
+bindCopyId(document);
 
 j2Load();
 </script>

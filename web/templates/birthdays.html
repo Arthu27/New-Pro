@@ -60,6 +60,7 @@
     <div class="bd-panel">
       <h3><i class="fas fa-cake-candles"></i> Ближайшие дни рождения</h3>
       <div class="bd-sub">Порядок и числа дней — ровно как у команды /birthdays в Discord. Сегодняшние именинники подсвечены, значок торта — уже поздравлены в этом году.</div>
+      <input class="inp" id="bdSearch" placeholder="Поиск по календарю — имя или дата" style="margin-bottom:10px">
       <div id="bdList"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
       <div style="margin-top:10px">
         <a class="bd-link" id="bdCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузить календарь (CSV)</a>
@@ -95,9 +96,9 @@
       <div class="bd-sub">Канал — обязателен, без него ког поздравлять не станет. Роль именинника выдаётся на день. Монеты уходят подарком в экономику. Шаблон — заготовка: ког пока шлёт фирменный эмбед, плейсхолдер один — {user}.</div>
       <div class="bd-fields">
         <div><label for="bdSetChannel">ID канала поздравлений</label>
-          <input class="inp" id="bdSetChannel" maxlength="24" placeholder="например 1234567890"></div>
+          <input class="inp" id="bdSetChannel" maxlength="24" placeholder="например 1234567890"><div id="bdSetChannelStatus"></div></div>
         <div><label for="bdSetRole">ID роли именинника</label>
-          <input class="inp" id="bdSetRole" maxlength="24" placeholder="пусто — роль не выдаётся"></div>
+          <input class="inp" id="bdSetRole" maxlength="24" placeholder="пусто — роль не выдаётся"><div id="bdSetRoleStatus"></div></div>
         <div><label for="bdSetGift">Подарок в монетах (0 — без подарка)</label>
           <input class="inp" id="bdSetGift" type="number" min="0" max="100000" placeholder="0"></div>
         <div><label for="bdSetMsg">Шаблон сообщения</label>
@@ -109,6 +110,7 @@
   </div>
 </div>
 
+<script src="/static/pickers.js?v=1"></script>
 <script>
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/birthdays';
@@ -179,6 +181,12 @@ function render(d) {
     document.getElementById('bdAddPanel').style.display = '';
     document.getElementById('bdSetPanel').style.display = '';
     fillSettings(d.settings);
+    if (!window._bdPickers) {
+      window._bdPickers = true;
+      attachIdPicker(document.getElementById('bdSetChannel'), {gid: GID, kind: 'text', statusEl: document.getElementById('bdSetChannelStatus')});
+      attachIdPicker(document.getElementById('bdSetRole'), {gid: GID, kind: 'role', statusEl: document.getElementById('bdSetRoleStatus')});
+      bindCtrlS(bdSaveSettings);
+    }
   }
   LAST_ENTRIES = d.entries;
   renderKpis(d.stats);
@@ -278,6 +286,8 @@ function bdPreviewLoad() {
         '<div class="tpl">Сохранённый шаблон сообщения:<code>' + esc(p.template) + '</code></div>';
     }).catch(function () {});
 }
+
+attachListFilter(document.getElementById('bdSearch'), 'bdList', '.bd-row');
 
 bdLoad();
 bdPreviewLoad();
