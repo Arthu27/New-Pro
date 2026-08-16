@@ -137,6 +137,24 @@ def cancel_item(state, item_id, user_id):
     return False
 
 
+def cancel_any(state, item_id):
+    """Отмена ЛЮБОЙ записи (модераторская — из панели). True, если активная нашлась."""
+    for item in state['items']:
+        if item['id'] == item_id and not item.get('done'):
+            item['done'] = True
+            return True
+    return False
+
+
+def restore_item(state, item_id):
+    """Вернуть отменённую запись в активные (undo из панели). True, если была done."""
+    for item in state['items']:
+        if item['id'] == item_id and item.get('done'):
+            item['done'] = False
+            return True
+    return False
+
+
 def user_items(state, user_id):
     """Активные записи пользователя, ближайшие первыми."""
     rows = [i for i in state['items']

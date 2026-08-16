@@ -116,6 +116,7 @@ MENU = [
     ]},
     {'group': 'Утилиты', 'key': 'utility', 'icon': 'fa-toolbox', 'pages': [
         {'path': '/todo', 'label': 'Задачи', 'icon': 'fa-check-square'},
+        {'path': '/reminders', 'label': 'Напоминания', 'icon': 'fa-bell'},
         {'path': '/yardim', 'label': 'Справка', 'icon': 'fa-question-circle'},
     ]},
 ]
@@ -145,6 +146,7 @@ PAGE_COGS = {
     '/voice-stats': ('voice_tracker',),
     '/duty-panel-web': ('duty',),
     '/quiz': ('quiz',),
+    '/reminders': ('reminders',),
     '/scheduled-messages': ('scheduler',),
     '/schedule': ('scheduler',),
     '/afk-list': ('afk',),
