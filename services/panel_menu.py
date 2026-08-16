@@ -105,6 +105,7 @@ MENU = [
         {'path': '/karma', 'label': 'Карма', 'icon': 'fa-hand-holding-heart'},
         {'path': '/birthdays', 'label': 'Дни рождения', 'icon': 'fa-cake-candles'},
         {'path': '/social', 'label': 'События', 'icon': 'fa-calendar-days'},
+        {'path': '/anime-daily', 'label': 'Аниме дня', 'icon': 'fa-tv'},
         {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
     ]},
     {'group': 'Логи', 'key': 'logs', 'icon': 'fa-file-lines', 'pages': [
@@ -187,6 +188,7 @@ PAGE_COGS = {
     '/karma': ('karma',),
     '/birthdays': ('birthday',),
     '/social': ('social',),
+    '/anime-daily': ('anime_daily',),
 }
 
 
