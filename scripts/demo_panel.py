@@ -186,6 +186,13 @@ seed()
 import web.app as wapp  # noqa: E402
 from flask import redirect  # noqa: E402
 
+# Arena показывает preview внутри HTTPS iframe. Для такой схемы браузеру нужны
+# SameSite=None + Secure, иначе пароль принимается, но cookie не возвращается
+# после редиректа и пользователь снова видит Welcome. Только demo-процесс —
+# production-конфигурация web/app.py не меняется.
+wapp.app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+wapp.app.config['SESSION_COOKIE_SECURE'] = True
+
 # Отдельная учётная запись действует только в памяти demo-процесса. Файл
 # production-credentials не перезаписывается, а вход проходит через обычную
 # форму /login со штатной проверкой хэша и созданием сессии.

@@ -106,6 +106,9 @@ check("@app.route('/demo-login')" in demo and "return redirect('/login')" in dem
       'старый preview-адрес перенаправляет на обычную форму без создания сессии')
 check("session['logged_in']" not in demo and 'wapp.USERS.clear()' in demo,
       'беспарольный обход удалён, demo-вход проверяет пароль')
+check("SESSION_COOKIE_SAMESITE'] = 'None'" in demo and
+      "SESSION_COOKIE_SECURE'] = True" in demo,
+      'сессия demo-preview сохраняется внутри HTTPS iframe Arena')
 
 print('== 6. Синтаксис и ролевой HTTP-рендер ==')
 from jinja2 import Environment  # noqa: E402
