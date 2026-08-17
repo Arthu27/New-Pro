@@ -136,8 +136,14 @@ class SLAManager:
     
     def create_policy(self, name: str, description: str = '') -> SLAPolicy:
         """Politika создать"""
-        policy_id = f"sla_{len(self.policies) + 1}"
-        
+        # id — за максимальным номером: удаление в середине не задвоит ключи.
+        top = 0
+        for policy_id in self.policies:
+            tail = policy_id.rsplit('_', 1)[-1]
+            if tail.isdigit():
+                top = max(top, int(tail))
+
+        policy_id = f"sla_{top + 1}"
         policy = SLAPolicy(
             policy_id=policy_id,
             name=name,
@@ -251,9 +257,88 @@ class SLACalculator:
             deadline = self._add_business_hours(created_dt, resolution_minutes, policy.business_hours)
         else:
             deadline = created_dt + timedelta(minutes=resolution_minutes)
-        
+
         return deadline
-    
+
+    @staticmethod
+    def _fmt_duration(delta: timedelta) -> str:
+        """«2 ч 15 мин» / «1 д 3 ч» — короткая человеческая запись интервала."""
+        seconds = max(0, int(delta.total_seconds()))
+        days, seconds = divmod(seconds, 86400)
+        hours, seconds = divmod(seconds, 3600)
+        minutes = seconds // 60
+        if days:
+            return f'{days} д {hours} ч'
+        if hours:
+            return f'{hours} ч {minutes} мин'
+        return f'{minutes} мин'
+
+    def calculate_sla(self, ticket: Dict[str, Any]) -> Dict[str, Any]:
+        """Полный статус SLA тикета: дедлайны, остаток, не сорвано ли.
+
+        Композиция готовых методов выше (политика → оба дедлайна →
+        is_breached/get_time_remaining); этим пользуется /sla-status в коге
+        и карточка тикета в панели. Строки — человекочитаемые, дедлайны —
+        isoformat (ког показывает их срез [:16]).
+        """
+        policy = self.sla_manager.get_applicable_policy(ticket)
+        info = {
+            'policy_name': policy.name if policy else 'Нет политики',
+            'policy_id': policy.policy_id if policy else None,
+            'priority': ticket.get('priority', 'medium'),
+            'status': 'Нет политики',
+            'response_deadline': None,
+            'resolution_deadline': None,
+            'response_breached': False,
+            'resolution_breached': False,
+            'time_remaining': None,
+        }
+        if not policy:
+            return info
+
+        response_deadline = self.calculate_response_deadline(ticket, policy)
+        resolution_deadline = self.calculate_resolution_deadline(ticket, policy)
+        if response_deadline:
+            info['response_deadline'] = response_deadline.isoformat()
+        if resolution_deadline:
+            info['resolution_deadline'] = resolution_deadline.isoformat()
+        if response_deadline is None and resolution_deadline is None:
+            info['status'] = 'Нет дедлайнов'
+            return info
+
+        # «Ответ» карается, только пока ответа не было; «решение» — пока
+        # тикет не закрыт (та же семантика, что у детектора нарушений).
+        waiting_response = not ticket.get('first_response_at')
+        opened = ticket.get('status') != 'closed'
+
+        info['response_breached'] = bool(
+            waiting_response and response_deadline
+            and self.is_breached(response_deadline))
+        info['resolution_breached'] = bool(
+            opened and resolution_deadline
+            and self.is_breached(resolution_deadline))
+
+        active = None
+        if waiting_response and response_deadline:
+            active = response_deadline
+        elif opened and resolution_deadline:
+            active = resolution_deadline
+        if active:
+            remaining = self.get_time_remaining(active)
+            if remaining.total_seconds() >= 0:
+                info['time_remaining'] = self._fmt_duration(remaining)
+            else:
+                info['time_remaining'] = ('просрочено на '
+                                          + self._fmt_duration(-remaining))
+
+        if info['response_breached'] or info['resolution_breached']:
+            info['status'] = 'Нарушён'
+        elif not opened:
+            info['status'] = 'Закрыт в срок'
+        else:
+            info['status'] = 'В рамках SLA'
+        return info
+
     def _add_business_hours(self, start: datetime, minutes: int,
                             business_hours: Dict[str, Any]) -> datetime:
         """Работа saatleri ekleyerek zaman hesapla"""

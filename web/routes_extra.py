@@ -99,6 +99,7 @@ from web.routes import (
     counting_panel,
     crown_panel,
     webhooks_panel,
+    sla_panel,
 )
 
 _MODULES = (
@@ -183,6 +184,7 @@ _MODULES = (
     counting_panel,
     crown_panel,
     webhooks_panel,
+    sla_panel,
 )
 
 

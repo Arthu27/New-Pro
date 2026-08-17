@@ -72,6 +72,7 @@ MENU = [
         {'path': '/ai_ticket_stats', 'label': 'Статистика', 'icon': 'fa-chart-pie'},
         {'path': '/ticket-search', 'label': 'Поиск тикетов', 'icon': 'fa-magnifying-glass'},
         {'path': '/transcripts', 'label': 'Транскрипты', 'icon': 'fa-file-lines'},
+        {'path': '/sla', 'label': 'SLA-контроль', 'icon': 'fa-handshake'},
         {'path': '/ticket-settings', 'label': 'Настройки', 'icon': 'fa-cogs'},
         {'path': '/staff-apps', 'label': 'Заявки', 'icon': 'fa-file-signature'},
     ]},
@@ -169,6 +170,7 @@ CONFIGURABLE = ('mod', 'admin')
 # в карту НЕ входят: они живы и без когов.
 PAGE_COGS = {
     '/tickets-ops': ('ticket',),
+    '/sla': ('sla_cog',),
     '/economy': ('economy_cog',),
     '/shop': ('economy_cog',),
     '/music': ('music_cog',),
