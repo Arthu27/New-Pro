@@ -63,7 +63,8 @@ function renderStatus(d) {
   box.innerHTML = d.toggles.map(function (t) {
     return '<div class="af-tog"><span class="l">' + esc(t.label) + '</span>' +
       '<button type="button" class="af-sw' + (t.on ? ' on' : '') + '" data-key="' + esc(t.key) + '"' +
-      (CAN_EDIT ? '' : ' disabled') + ' aria-label="' + esc(t.label) + '"></button></div>';
+      (CAN_EDIT ? '' : ' disabled') + ' aria-label="' + esc(t.label) + ': ' + (t.on ? 'активно' : 'на паузе') + '">' +
+      (t.on ? 'Активно' : 'На паузе') + '</button></div>';
   }).join('');
   if (CAN_EDIT) {
     Array.prototype.forEach.call(box.querySelectorAll('.af-sw'), function (sw) {

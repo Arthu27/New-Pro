@@ -634,25 +634,8 @@ body.mod-suite-open { overflow: hidden; }
   .mod-suite-open { transition: none !important; }
 }
 
-/* ── Moderation OS · индивидуальные комнаты v2 ─────────────────────── */
-[data-mod-accent="amber"]{--mod-accent:#f4c15d;--mod-accent-2:#f59e0b}
-[data-mod-accent="orange"]{--mod-accent:#fb923c;--mod-accent-2:#f97316}
-[data-mod-accent="gold"]{--mod-accent:#eab308;--mod-accent-2:#facc15}
-[data-mod-accent="red"]{--mod-accent:#f87171;--mod-accent-2:#ef4444}
-[data-mod-accent="crimson"]{--mod-accent:#ef4444;--mod-accent-2:#b91c1c}
-[data-mod-accent="rose"]{--mod-accent:#fb7185;--mod-accent-2:#e11d48}
-[data-mod-accent="cyan"]{--mod-accent:#22d3ee;--mod-accent-2:#0891b2}
-[data-mod-accent="blue"]{--mod-accent:#60a5fa;--mod-accent-2:#2563eb}
-[data-mod-accent="indigo"]{--mod-accent:#818cf8;--mod-accent-2:#4f46e5}
-[data-mod-accent="violet"]{--mod-accent:#a78bfa;--mod-accent-2:#7c3aed}
-[data-mod-accent="emerald"]{--mod-accent:#34d399;--mod-accent-2:#059669}
-[data-mod-accent="mint"]{--mod-accent:#5eead4;--mod-accent-2:#0d9488}
-[data-mod-accent="lime"]{--mod-accent:#a3e635;--mod-accent-2:#65a30d}
-[data-mod-accent="teal"]{--mod-accent:#2dd4bf;--mod-accent-2:#0f766e}
-[data-mod-accent="sky"]{--mod-accent:#38bdf8;--mod-accent-2:#0284c7}
-[data-mod-accent="azure"]{--mod-accent:#0ea5e9;--mod-accent-2:#0369a1}
-[data-mod-accent="purple"]{--mod-accent:#c084fc;--mod-accent-2:#9333ea}
-[data-mod-accent="magenta"]{--mod-accent:#e879f9;--mod-accent-2:#c026d3}
+/* ── Moderation OS · единая золотая система комнат v4 ─────────────── */
+[data-mod-accent="gold"]{--mod-accent:#d4a843;--mod-accent-2:#e0b04a}
 
 .mod-command-room.mod-suite-bar{
   position:relative;

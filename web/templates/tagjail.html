@@ -34,7 +34,7 @@ function ago(ts){ const d = Math.max(0, Date.now()/1000 - ts);
   return Math.floor(d/86400) + ' дн назад'; }
 
 const FIELDS = [
-  {k:'enabled', l:'Система ВКЛ', t:'bool', d:'Авто-джейл и возрастная граница активны'},
+  {k:'enabled', l:'Основной контур', t:'bool', d:'Авто-джейл и возрастная граница активны'},
   {k:'auto_release', l:'Авто-освобождение', t:'bool', d:'Убрал тег из ника — выходит сам'},
   {k:'on_join', l:'Проверка входов', t:'bool', d:'Проверять при входе на сервер'},
   {k:'on_name_change', l:'Проверка смен имён', t:'bool', d:'Следить за ником и именем профиля'},
@@ -53,7 +53,7 @@ async function loadState(){
     if(!d.ok){ toast(d.error || 'Модуль офлайн', false); return; }
     TJ = d;
     document.getElementById('v-status').innerHTML = d.config.enabled
-      ? '<span class="tj-pill tj-pill-on">ВКЛ</span>' : '<span class="tj-pill tj-pill-off">ВЫКЛ</span>';
+      ? '<span class="tj-pill tj-pill-on">Система активна</span>' : '<span class="tj-pill tj-pill-off">Система на паузе</span>';
     document.getElementById('v-jailed').textContent = d.jailed.length;
     document.getElementById('v-tags').textContent = (d.config.banned_tags||[]).length;
     document.getElementById('v-age').innerHTML = d.config.min_account_days > 0
@@ -160,6 +160,7 @@ async function runScan(){
 }
 
 loadState();
-setInterval(loadState, 10000);
+setInterval(() => { if (!window.__modLivePaused) loadState(); }, 10000);
+document.addEventListener('moderation:live-resume', loadState);
 </script>
 {% endblock %}

@@ -58,8 +58,13 @@ check(all(profile_required <= set(profile) for profile in profiles.values()),
 check(len({profile['code'] for profile in profiles.values()}) == 18 and
       len({profile['name'] for profile in profiles.values()}) == 18,
       'коды и продуктовые имена всех комнат уникальны')
+check({profile['accent'] for profile in profiles.values()} == {'gold'},
+      'все комнаты используют единый премиальный золотой акцент')
 check(all(len(profile['features']) == 3 for profile in profiles.values()),
       'у каждой комнаты ровно три собственные опорные возможности')
+check(set(pm.MODERATION_QUICK_ACTIONS) == set(profiles)
+      and all(len(actions) == 3 for actions in pm.MODERATION_QUICK_ACTIONS.values()),
+      'каждая комната получила три реальные быстрые функции')
 check([pm.moderation_profile_for(page['path'])['position'] for page in raw_pages] == list(range(1, 19)),
       'профили знают точную позицию в маршруте 01–18')
 
@@ -85,15 +90,19 @@ print('== 3. Общий UI подключён ко всем страницам =
 base_path = os.path.join(ROOT, 'web', 'templates', 'base.html')
 base = open(base_path, encoding='utf-8').read()
 for marker, label in [
-    ('moderation-suite.css?v=3', 'новая версия shell без старого browser-cache'),
-    ('moderation-rooms.css?v=3', 'полная дизайн-система 18 новых рабочих комнат'),
+    ('moderation-suite.css?v=4', 'золотая версия shell без старого browser-cache'),
+    ('moderation-rooms.css?v=4', 'стабильная дизайн-система 18 рабочих комнат'),
     ('moderation-suite.js?v=2', 'отдельный JS-контроллер без старого browser-cache'),
+    ('moderation-rooms.js?v=4', 'утилиты фокуса, плотности и быстрых действий'),
     ('data-mod-suite', 'контекстная панель'),
     ('mod-command-room', 'полноценная командная комната'),
     ('data-mod-workspace', 'единая рабочая поверхность'),
     ('mod-command-features', 'индивидуальные возможности страницы'),
     ('mod-command-rail', 'маршрут четырёх контуров'),
     ('data-mod-enter', 'переход к рабочей области'),
+    ('data-room-live', 'пауза фоновых live-обновлений'),
+    ('data-room-density', 'переключатель плотности'),
+    ('data-room-focus', 'рабочий фокус-режим'),
     ('data-mod-overlay', 'полноэкранный центр'),
     ('data-mod-search', 'поиск инструментов'),
     ('data-mod-prev', 'переход назад'),
@@ -105,16 +114,18 @@ for marker, label in [
 css_path = os.path.join(ROOT, 'web', 'static', 'moderation-suite.css')
 rooms_css_path = os.path.join(ROOT, 'web', 'static', 'moderation-rooms.css')
 js_path = os.path.join(ROOT, 'web', 'static', 'moderation-suite.js')
-check(os.path.isfile(css_path) and os.path.isfile(rooms_css_path) and os.path.isfile(js_path),
-      'shell CSS, room CSS и JS существуют')
+rooms_js_path = os.path.join(ROOT, 'web', 'static', 'moderation-rooms.js')
+check(all(os.path.isfile(path) for path in (css_path, rooms_css_path, js_path, rooms_js_path)),
+      'shell CSS/JS и room CSS/JS существуют')
 css = open(css_path, encoding='utf-8').read()
 rooms_css = open(rooms_css_path, encoding='utf-8').read()
 js = open(js_path, encoding='utf-8').read()
+rooms_js = open(rooms_js_path, encoding='utf-8').read()
 check(css.count('{') == css.count('}') and css.count('{') >= 100,
       f'CSS целый и содержательный ({css.count("{")} блоков)')
 for marker in ('.nav-subgroup', '.mod-suite-bar', '.mod-suite-dialog',
                '.mod-suite-grid', '.mod-command-room', '.mod-command-rail',
-               '.mod-page-workspace', '[data-mod-accent="crimson"]',
+               '.mod-page-workspace', '[data-mod-accent="gold"]',
                '@media (max-width:760px)', 'prefers-reduced-motion'):
     check(marker in css, f'CSS содержит {marker}')
 check(rooms_css.count('{') == rooms_css.count('}') and rooms_css.count('{') >= 250,
@@ -125,9 +136,16 @@ for marker in ('.ops-caseboard', '.ops-time-control', '.ops-field-kit',
                '.ops-review-chamber', '.ops-security-radar', '.ops-content-shield',
                '.ops-raid-sentinel', '.ops-identity-guard', '.ops-team-desk',
                '.ops-performance-brief', '.ops-risk-intelligence',
-               '.ops-escalation-map', '[data-theme="light"]',
-               '@media (max-width:720px)', 'prefers-reduced-motion'):
+               '.ops-escalation-map', '.mod-utility-bar',
+               '.tm-action-countdown', 'font-variant-numeric:tabular-nums',
+               'data-state-label', 'mod-density-compact',
+               '[data-theme="light"]', '@media (max-width:720px)',
+               'prefers-reduced-motion'):
     check(marker in rooms_css, f'room CSS содержит {marker}')
+for marker in ('LIVE_KEY', 'DENSITY_KEY', 'FOCUS_KEY', 'data-room-jump',
+               'paintClock', 'syncStateControls', 'MutationObserver',
+               'navigator.clipboard', '__modLivePaused', 'wasPaused && !paused'):
+    check(marker in rooms_js, f'room JS содержит {marker}')
 for marker in ('Alt+M', 'RECENT_KEY', 'filterCards', 'focusable',
                'data-mod-section', 'sidebarSearch', 'enterWorkspace',
                'prefers-reduced-motion: reduce'):
@@ -158,9 +176,23 @@ for page in raw_pages:
           f'{page["path"]}: старая рабочая поверхность удалена полностью')
 check(len(room_kinds) == 18 and len(set(room_kinds)) == 18,
       'все 18 шаблонов имеют собственную уникальную композицию')
+temp_source = open(os.path.join(ROOT, 'web', 'templates', 'temp_moderation.html'),
+                   encoding='utf-8').read()
+check('container.dataset.signature' in temp_source
+      and 'el.textContent = fmtRem(until)' in temp_source
+      and "padStart(2, '0')" in temp_source
+      and 'data-until="${item.run_at}"' in temp_source,
+      'live-таймеры фиксированы и не пересобирают экран каждую секунду')
+check(temp_source.count('if (!window.__modLivePaused)') == 2
+      and "moderation:live-resume" in temp_source
+      and "moderation:live-resume" in open(os.path.join(ROOT, 'web', 'templates', 'tagjail.html'),
+                                           encoding='utf-8').read(),
+      'пауза live останавливает и корректно возобновляет прямой polling')
 
 node = subprocess.run(['node', '--check', js_path], capture_output=True, text=True, timeout=30)
-check(node.returncode == 0, f'JS проходит node --check ({node.stderr.strip() or "OK"})')
+rooms_node = subprocess.run(['node', '--check', rooms_js_path], capture_output=True, text=True, timeout=30)
+check(node.returncode == 0 and rooms_node.returncode == 0,
+      f'оба JS проходят node --check ({node.stderr.strip() or rooms_node.stderr.strip() or "OK"})')
 
 print('== 4. Рендер всех 18 страниц ==')
 import web.app as wa  # noqa: E402
@@ -176,12 +208,26 @@ def login(role):
         session['role'] = role
 
 
+def quick_target_exists(html, target):
+    if target.startswith('#'):
+        return f'id="{target[1:]}"' in html
+    if target.startswith('.'):
+        return any(target[1:] in value.split()
+                   for value in re.findall(r'class="([^"]*)"', html))
+    match = re.fullmatch(r'\[([\w-]+)="([^"]+)"\]', target)
+    return bool(match and f'{match.group(1)}="{match.group(2)}"' in html)
+
+
 login('owner')
 rendered = 0
+quick_targets = 0
 for page in raw_pages:
     response = client.get(page['path'])
     html = response.get_data(as_text=True)
     profile = pm.moderation_profile_for(page['path'])
+    quick_actions = profile['quick_actions']
+    targets_ok = all(quick_target_exists(html, action[1]) for action in quick_actions)
+    quick_targets += sum(quick_target_exists(html, action[1]) for action in quick_actions)
     ok = (response.status_code == 200
           and f'data-current-path="{page["path"]}"' in html
           and 'class="mod-suite-bar mod-command-room"' in html
@@ -191,12 +237,18 @@ for page in raw_pages:
           and profile['headline'] in html
           and 'data-room-version="3"' in html
           and f'data-room-kind="{room_kinds[raw_pages.index(page)]}"' in html
-          and 'moderation-rooms.css?v=3' in html
+          and 'moderation-rooms.css?v=4' in html
+          and 'moderation-rooms.js?v=4' in html
+          and 'class="mod-utility-bar"' in html
+          and 'data-room-live' in html
+          and len(re.findall(r'<button[^>]+data-room-jump=', html)) == 3
+          and targets_ok
           and len(re.findall(r'<a[^>]+data-mod-card(?:\s|=)', html)) == 18)
     if ok:
         rendered += 1
     check(ok, f'{page["path"]}: уникальная комната {profile["code"]} и 18 карточек')
 check(rendered == 18, 'все 18 страниц получили единый PRO-интерфейс')
+check(quick_targets == 54, f'все 54 быстрых действия ведут к реальным элементам ({quick_targets}/54)')
 
 login('mod')
 response = client.get('/logs')

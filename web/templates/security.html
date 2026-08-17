@@ -36,9 +36,9 @@ function loadOverview() {
     var c = d.cfg;
     document.getElementById('scKpis').innerHTML = c.features.map(function (f) {
       var sw = CAN_EDIT
-        ? '<div class="sw"><button type="button" class="sc-sw" onclick="scToggle(\'' + f.key + '\', ' + (!f.enabled) + ')"><i class="fas fa-power-off"></i> ' + (f.enabled ? 'выключить' : 'включить') + '</button></div>' : '';
+        ? '<div class="sw"><button type="button" class="sc-sw' + (f.enabled ? ' on' : '') + '" onclick="scToggle(\'' + f.key + '\', ' + (!f.enabled) + ')">' + (f.enabled ? 'Приостановить' : 'Запустить') + '</button></div>' : '';
       return '<div class="sc-card"><div class="lab"><i class="fas fa-shield-halved"></i> ' + esc(f.label) + '</div>' +
-        '<div class="v ' + (f.enabled ? 'on' : 'off') + '">' + (f.enabled ? 'включён' : 'выключен') + '</div>' + sw + '</div>';
+        '<div class="v ' + (f.enabled ? 'on' : 'off') + '">' + (f.enabled ? 'Активно' : 'На паузе') + '</div>' + sw + '</div>';
     }).join('');
     if (CAN_EDIT) {
       document.getElementById('scNewPanel').style.display = '';
