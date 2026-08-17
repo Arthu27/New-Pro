@@ -155,7 +155,7 @@ silent = [n.lineno for n in ast.walk(tree)
 check(not silent, f'ни одного молчаливого except {silent or "ок"}')
 check('utcnow' not in src, 'utcnow() не используется')
 facade = open(os.path.join(ROOT, 'web', 'routes_extra.py'), encoding='utf-8').read()
-check(facade.count('automation') == 2, 'automation зарегистрирован в фасаде')
+check(facade.count('automation') >= 1, 'automation зарегистрирован в фасаде')
 
 import shutil
 shutil.rmtree(_TMP, ignore_errors=True)

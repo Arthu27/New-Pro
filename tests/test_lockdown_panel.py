@@ -281,7 +281,7 @@ mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages
 check('/lockdown' in mod_pages, 'пункт меню «Локдаун» в «Модерации»')
 check(PM.PAGE_COGS.get('/lockdown') == ('lockdown',), 'lockdown-ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('lockdown_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('lockdown_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

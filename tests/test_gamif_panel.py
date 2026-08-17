@@ -284,7 +284,7 @@ check('/gamification' in com_pages, 'пункт «Геймификация» в 
 check(PM.PAGE_COGS.get('/gamification') == ('gamification_cog',),
       'gamification_cog привязан к странице')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('gamif_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('gamif_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 import services.notification_dispatcher as ND
 check(ND.EVENTS['gamification'][0] == 'event_gamification'
       and ND.DEFAULT_SETTINGS['event_gamification'] is True

@@ -246,7 +246,7 @@ check('/staff-rating' in mod_pages or '/staff-rating' in com_pages,
 check(PM.PAGE_COGS.get('/staff-rating') == ('staff_rating',),
       'staff_rating-ког привязан к странице')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('staff_rating_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('staff_rating_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

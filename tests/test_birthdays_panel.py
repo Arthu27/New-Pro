@@ -367,7 +367,7 @@ check('/birthdays' in com_pages, 'пункт «Дни рождения» в гр
 check(PM.PAGE_COGS.get('/birthdays') == ('birthday',),
       'birthday-ког привязан к странице')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('birthdays_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('birthdays_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

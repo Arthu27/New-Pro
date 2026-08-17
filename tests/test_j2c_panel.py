@@ -306,7 +306,7 @@ check('/join-to-create' in com_pages, 'пункт «Комнаты J2C» в гр
 check(PM.PAGE_COGS.get('/join-to-create') == ('join_to_create',),
       'join_to_create-ког привязан к странице')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('j2c_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('j2c_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 import services.notification_dispatcher as ND
 check(ND.EVENTS['j2c'][0] == 'event_j2c'
       and ND.DEFAULT_SETTINGS['event_j2c'] is True

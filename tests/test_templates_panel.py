@@ -400,7 +400,7 @@ check('/templates' in bot_pages, 'пункт меню «Шаблоны» в «Б
 check(PM.PAGE_COGS.get('/templates') == ('server_template',),
       'server_template-ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('templates_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('templates_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

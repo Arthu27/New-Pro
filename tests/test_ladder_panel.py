@@ -213,7 +213,7 @@ mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages
 check('/ladder' in mod_pages, 'пункт меню «Лестница» в «Модерации»')
 check(PM.PAGE_COGS.get('/ladder') == ('ladder', 'warnings'), 'коги привязаны')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('ladder_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('ladder_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

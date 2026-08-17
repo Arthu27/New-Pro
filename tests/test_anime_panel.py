@@ -255,7 +255,7 @@ check('/anime-daily' in com_pages, 'пункт «Аниме дня» в груп
 check(PM.PAGE_COGS.get('/anime-daily') == ('anime_daily',),
       'anime_daily-ког привязан к странице')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('anime_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('anime_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

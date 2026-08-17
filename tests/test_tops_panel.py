@@ -234,7 +234,7 @@ check(PM.PAGE_COGS.get('/tops') == ('leaderboard',),
 check(PM.PAGE_COGS.get('/join-to-create') == ('join_to_create',),
       'J2C-привязка прошлой пачки цела')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('tops_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('tops_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

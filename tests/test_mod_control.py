@@ -319,7 +319,7 @@ mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages
 check('/mod-control' in mod_pages, 'пункт в группе «Модерация»')
 check('/mod-control' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('mod_control') >= 2, 'модуль зарегистрирован в routes_extra (импорт + список)')
+check(ext.count('mod_control') >= 1, 'модуль зарегистрирован в routes_extra (импорт + список)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

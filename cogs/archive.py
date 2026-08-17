@@ -45,7 +45,7 @@ class Archive (commands .Cog ):
 </head>
 <body>
     <h1>Архив #{channel.name}</h1>
-    <p>Всего Сообщение: {len(messages)}</p>
+    <p>Всего сообщений: {len(messages)}</p>
     <hr>
 """
         for msg in messages :
@@ -62,7 +62,7 @@ class Archive (commands .Cog ):
 """
             for attachment in msg .attachments :
                 if attachment .content_type and attachment .content_type .startswith ('image'):
-                    html +=f'        <img src="{attachment.url}" низ="image"><br>\n'
+                    html +=f'        <img src="{attachment.url}" alt="image"><br>\n'
                 else :
                     html +=f'        <a href="{attachment.url}">{attachment.filename}</a><br>\n'
 
@@ -90,7 +90,7 @@ class Archive (commands .Cog ):
         filename =f"backup_{interaction.channel.name}_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d')}.txt"
         )
 
-        await interaction .followup .send (f" {len(messages)} message yedaddndi.",file =file ,ephemeral =True )
+        await interaction .followup .send (f" {len(messages)} сообщений скопировано.",file =file ,ephemeral =True )
 
 async def setup (bot ):
     await bot .add_cog (Archive (bot ),guilds =Config .guild_objects ())

@@ -130,6 +130,7 @@ MENU = [
         {'path': '/panel-logs', 'label': 'Панель', 'icon': 'fa-list'},
         {'path': '/replay', 'label': 'Инцидент-лента', 'icon': 'fa-film'},
         {'path': '/reports', 'label': 'Отчёты поддержки', 'icon': 'fa-chart-pie'},
+        {'path': '/archive', 'label': 'Архиватор', 'icon': 'fa-box-archive'},
         {'path': '/backup', 'label': 'Бэкапы', 'icon': 'fa-database'},
     ]},
     {'group': 'Контент', 'key': 'content', 'icon': 'fa-palette', 'pages': [
@@ -172,6 +173,7 @@ CONFIGURABLE = ('mod', 'admin')
 PAGE_COGS = {
     '/tickets-ops': ('ticket',),
     '/reports': ('report_cog',),
+    '/archive': ('archive',),
     '/sla': ('sla_cog',),
     '/economy': ('economy_cog',),
     '/shop': ('economy_cog',),

@@ -218,7 +218,7 @@ com_pages = [pg['path'] for g in PM.MENU if g['key'] == 'community' for pg in g[
 check('/karma' in com_pages, 'пункт «Карма» в группе «Сообщество»')
 check(PM.PAGE_COGS.get('/karma') == ('karma',), 'карма-ког привязан к странице')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('karma_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('karma_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

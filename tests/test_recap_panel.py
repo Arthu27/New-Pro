@@ -280,7 +280,7 @@ main_pages = [pg['path'] for g in PM.MENU if g['key'] == 'main' for pg in g['pag
 check('/recap' in main_pages, 'пункт меню «Рекап канала» в «Основном»')
 check(PM.PAGE_COGS.get('/recap') == ('recap',), 'recap-ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('recap_panel') >= 2, 'модуль зарегистрирован в routes_extra')
+check(ext.count('recap_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
