@@ -283,30 +283,59 @@
 </div>
 
 <script>
-// ETag fetch cache
+// ETag-кэш для частых GET-опросов. 304 — штатный «данные не изменились»:
+// возвращаем сохранённый JSON и не заставляем страницы разбирать пустое тело.
 (function () {
-  var _etagStore = {};
-  window.fetchCached = function (url, opts) {
+  var _etagStore = Object.create(null);
+
+  function requestOptions(opts) {
     opts = opts || {};
-    var _init = Object.assign({}, opts);
-    _init.headers = Object.assign({}, opts.headers || {});
-    if (_etagStore[url]) _init.headers['If-None-Match'] = _etagStore[url];
-    return fetch(url, _init).then(function (r) {
-      var et = r.headers.get('ETag');
-      if (et) _etagStore[url] = et;
+    var init = Object.assign({}, opts);
+    var headers = new Headers(opts.headers || {});
+    init.headers = headers;
+    return init;
+  }
+
+  window.fetchCached = function (url, opts) {
+    var init = requestOptions(opts);
+    if (_etagStore[url]) init.headers.set('If-None-Match', _etagStore[url]);
+    return fetch(url, init).then(function (r) {
+      var etag = r.headers.get('ETag');
+      if (etag) _etagStore[url] = etag;
       return r;
     });
   };
-  window._etagCache = { _d: {}, get: function (u) { return this._d[u]; }, set: function (u, d) { this._d[u] = d; return d; } };
+
+  window._etagCache = {
+    _d: Object.create(null),
+    get: function (url) { return this._d[url]; },
+    has: function (url) { return Object.prototype.hasOwnProperty.call(this._d, url); },
+    set: function (url, data) { this._d[url] = data; return data; }
+  };
+
   window.fetchCachedJSON = function (url, opts) {
-    return window.fetchCached(url, opts).then(function (r) {
-      if (r.status === 304) {
-        var c = window._etagCache.get(url);
-        if (c !== undefined) return c;
-        return r.json();
+    function consume(response, retried) {
+      if (response.status === 304) {
+        if (window._etagCache.has(url)) return window._etagCache.get(url);
+
+        // После перезагрузки страницы браузер/прокси иногда помнит ETag, а
+        // JS-память с JSON уже пуста. Один раз повторяем без валидатора.
+        if (!retried) {
+          delete _etagStore[url];
+          var fresh = requestOptions(opts);
+          fresh.cache = 'no-store';
+          fresh.headers.delete('If-None-Match');
+          return window.fetchCached(url, fresh).then(function (r) { return consume(r, true); });
+        }
+        throw new Error('HTTP 304 получен без сохранённых данных: ' + url);
       }
-      return r.json().then(function (d) { window._etagCache.set(url, d); return d; });
-    });
+      if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + url);
+      return response.json().then(function (data) {
+        return window._etagCache.set(url, data);
+      });
+    }
+
+    return window.fetchCached(url, opts).then(function (r) { return consume(r, false); });
   };
 })();
 
@@ -1240,8 +1269,8 @@ window.addEventListener('pageshow', function (e) {
 
 <!-- WebSocket Client для real-time обновлений -->
 <script src="/static/websocket-client.js"></script>
-<!-- API Guard: тост на любой не-OK ответ fetch — причина видна без консоли -->
-<script src="/static/api-guard.js?v=1"></script>
+<!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
+<script src="/static/api-guard.js?v=2"></script>
 <!-- UX-kit: глобальный поиск, хоткеи, избранное, плотные таблицы, undo-тосты -->
 <script src="/static/ux-kit.js?v=1"></script>
 <script>

@@ -1,7 +1,8 @@
 /* ═══ API Guard — единый показ ошибок HTTP-запросов панели ═══
- * Оборачивает window.fetch один раз: любой не-OK ответ показывает тост
- * «МЕТОД /путь · HTTP код — текст ошибки сервера». Больше не надо
- * открывать консоль, чтобы понять, что скрывалось за «400 BAD REQUEST».
+ * Оборачивает window.fetch один раз: настоящий HTTP-сбой показывает тост
+ * «МЕТОД /путь · HTTP код — текст ошибки сервера». Ответ 304 не является
+ * сбоем: это штатный ответ на условный GET, его обрабатывает ETag-кэш панели.
+ * Больше не надо открывать консоль, чтобы понять причину «400 BAD REQUEST».
  *
  * Отключить для конкретного вызова:
  *   fetch(url, { guardSilent: true })              — опция
@@ -60,7 +61,10 @@
     var silent = isSilent(init);
     var label = describe(input, init);
     return _original(input, init).then(function (resp) {
-      if (!silent && resp && !resp.ok) {
+      // Fetch считает 304 `ok === false`, хотя для условного GET это успех:
+      // тело уже есть в памяти fetchCachedJSON. Не показываем ложный error-тост.
+      var isError = resp && !resp.ok && resp.status !== 304;
+      if (!silent && isError) {
         var status = resp.status;
         try {
           resp.clone().json().then(function (data) {

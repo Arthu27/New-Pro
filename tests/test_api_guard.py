@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-"""API Guard (web/static/api-guard.js): тост на любой не-OK fetch-ответ.
+"""API Guard (web/static/api-guard.js): тост на настоящий сбой fetch.
 
 История: пользователь видел в консоли голое «Failed to load resource: 400»
-и не понимал, что панель ему сказала. Теперь каждый не-2xx ответ любого
-запроса сам всплывает тостом «МЕТОД /путь · HTTP код — причина».
+и не понимал, что панель ему сказала. Теперь каждый ошибочный HTTP-ответ
+сам всплывает тостом «МЕТОД /путь · HTTP код — причина». Штатный 304 от
+условных GET-запросов ETag-кэша ошибкой не считается.
 
 Тест: статика (подключён в base.html, ключевые механики на месте) +
 функциональный прогон скрипта в Node (vm-песочница с моками fetch/showToast,
@@ -86,7 +87,18 @@ const flush = () => new Promise(r => setTimeout(r, 20));
   await flush();
   note(okFetch && env.toasts.length === 0, '200 OK -> тоста нет');
 
-  // 2) 400 с JSON-ошибкой — тост с причиной, методом и путём
+  // 2) 304 — штатный ответ ETag-кэша, а не ошибка. Fetch выставляет ok=false,
+  // поэтому этот случай проверяем отдельно от настоящих 4xx/5xx.
+  const notModified = { ok: false, status: 304 };
+  env = makeEnv(() => Promise.resolve(notModified));
+  const cachedResp = await env.sandbox.window.fetch('/api/logs', {
+    headers: { 'If-None-Match': '"logs-v1"' },
+  });
+  await flush();
+  note(cachedResp === notModified, '304 возвращён вызывающему без изменений');
+  note(env.toasts.length === 0, '304 Not Modified -> ложного error-тоста нет');
+
+  // 3) 400 с JSON-ошибкой — тост с причиной, методом и путём
   env = makeEnv(() => Promise.resolve({
     ok: false, status: 400,
     clone() { return { json: () => Promise.resolve({ error: 'Пустое сообщение' }) }; },
@@ -151,7 +163,7 @@ else:
         print('  ' + l.replace('GUARD_FAIL', 'FAIL').replace('GUARD_PASS', 'PASS'))
     check(proc.returncode == 0 and not node_fail,
           f'node-прогон: {node_pass} сценариев зелёные' + (f'; упало: {node_fail}' if node_fail else ''))
-    check(node_pass >= 11, f'покрыто сценариев API Guard: {node_pass} (>= 11)')
+    check(node_pass >= 13, f'покрыто сценариев API Guard: {node_pass} (>= 13)')
     check('HARNESS_ERROR' not in proc.stderr, 'харнесс node не падал')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
