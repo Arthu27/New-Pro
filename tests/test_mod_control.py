@@ -470,6 +470,58 @@ login('uye')
 check(client.get('/api/guild/777/mod-center/warns.csv').status_code == 403,
       'uye CSV закрыт')
 
+print('== 5b. Консоль: вкладки Журнал/Варны/Временные/История ==')
+login('mod')
+jr = client.get('/api/guild/777/mod-center/journal').get_json()
+check(jr['success'] and jr['total'] == 3, 'журнал: три разборчивых события')
+check([r['action'] for r in jr['rows']] == ['Мут снят', 'Кик', 'Бан'],
+      'журнал: новые сверху')
+check(jr['categories'] == {'mod': 3}, 'журнал: счётчики категорий')
+jr2 = client.get('/api/guild/777/mod-center/journal?query=рейд').get_json()
+check(jr2['total'] == 2 and jr2['rows'][0]['action'] == 'Мут снят',
+      'журнал: поиск цепляет и причину («рейд»), и имя (Рейдер)')
+jr3 = client.get('/api/guild/777/mod-center/journal?mod=ст2').get_json()
+check(jr3['total'] == 1 and jr3['rows'][0]['action'] == 'Кик',
+      'журнал: фильтр по модератору подстрокой')
+
+tf = client.get('/api/guild/777/mod-center/temp-full').get_json()
+check(tf['success'] and len(tf['rows']) == 4, 'временные: все четыре активных')
+check([r['user_id'] for r in tf['rows']] == ['u2', 'u1', 'u5', 'u6'],
+      'временные: сортировка по сроку')
+check(tf['counts']['overdue'] == 4 and tf['counts']['later'] == 0,
+      'временные: фикстура 1970 года просрочена целиком — сводка честная')
+
+wl = client.get('/api/guild/777/mod-center/warns-list').get_json()
+check(wl['success'] and wl['total_warns'] == 8, 'варны: всего восемь')
+check([r['user_id'] for r in wl['rows']] == ['104', '100', '101'],
+      'варны: сначала у кого больше')
+check(len(wl['rows'][0]['items']) == 5, 'варны: последние пять причин')
+check([(s['count'], s['action']) for s in wl['steps']] == [(3, 'mute'), (5, 'ban')],
+      'варны: пороги в выдаче')
+
+hs = client.get('/api/guild/777/mod-center/history').get_json()
+check(hs['success'] and [r['action'] for r in hs['rows']] == ['Мут снят', 'Кик', 'Бан'],
+      'история: кары и снятия, новые сверху')
+check(hs['rows'][1]['kind'] == 'punish' and hs['rows'][0]['kind'] == 'lift',
+      'история: типы punish/lift')
+
+check(client.get('/api/guild/777/mod-center/journal').status_code == 200,
+      'журнал доступен моду')
+login('uye')
+check(client.get('/api/guild/777/mod-center/journal').status_code == 403,
+      'uye журнал закрыт')
+check(client.get('/api/guild/777/mod-center/history').status_code == 403,
+      'uye история закрыта')
+
+print('== 5c. Старые страницы ведут в консоль ==')
+login('mod')
+for path, tab in (('/logs', 'journal'), ('/warnings', 'warns'),
+                  ('/temp-moderation', 'temp'), ('/mod-history', 'history')):
+    r = client.get(path)
+    check(r.status_code in (301, 302)
+          and ('/mod-center?tab=' + tab) in (r.headers.get('Location') or ''),
+          f'{path} -> Центр, вкладка {tab}')
+
 print('== 6. Шаблон Центра, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/mod_center.html'), encoding='utf-8').read()
 emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
@@ -477,7 +529,8 @@ check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
 check('[data-theme="light"]' in tpl, 'светлая тема учтена')
 for fid in ('mzCounters', 'mzRing', 'mzRadar', 'mzRecent', 'mzTrend', 'mzRepeat',
             'mzCheck', 'mzRisk', 'mzWarnId', 'mzWarnText', 'mzReasons', 'mzAmnesty',
-            'mzPanelLog', 'mzNotes', 'mzFind', 'mzDossier', 'mzSubjects'):
+            'mzPanelLog', 'mzNotes', 'mzFind', 'mzDossier', 'mzSubjects',
+            'mzJournal', 'mzWarnsList', 'mzTempFull', 'mzHistory'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check('/warn-config' in tpl, 'ссылка на настройку порогов')
 check('mzNotify' in tpl and 'mz-ncard' in tpl,
@@ -487,6 +540,7 @@ check('/mod-center/warns.csv' in tpl and '/mod-center/radar.csv' in tpl,
 check('mzWarnAsk' in tpl and 'mzUnwarnAsk' in tpl and 'mzAmnestyAsk' in tpl,
       'варн/анварн/амнистия на кнопках')
 check("get('uid')" in tpl, 'префилл по ?uid= из досье')
+check("get('tab')" in tpl, 'deep-link по ?tab= из меню и редиректов')
 check(not os.path.exists(os.path.join(ROOT, 'web/templates/mod_control.html'))
       and not os.path.exists(os.path.join(ROOT, 'web/templates/mod_insights.html')),
       'старые страницы удалены без следа')

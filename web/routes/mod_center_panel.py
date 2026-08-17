@@ -12,6 +12,8 @@
 Своих хранилищ у модуля нет — только склейка. Чтение mod+,
 мутации admin+ (как в предшественниках).
 """
+import time
+
 from web.routes._common import (
     render_template, session, request, jsonify, Response,
 )
@@ -178,6 +180,115 @@ def register(ctx):
         resp.headers['Content-Disposition'] = (
             f'attachment; filename=modcenter_radar_{MC._gid_str(gid)}.csv')
         return resp
+
+
+    @app.route('/api/guild/<gid>/mod-center/journal')
+    @login_required
+    @role_required('mod')
+    def api_mod_center_journal(gid):
+        """Журнал гильдии: категории/поиск/модератор, новые сверху."""
+        q = str(request.args.get('query') or '').strip().lower()
+        cat = str(request.args.get('category') or '').strip().lower()
+        mod = str(request.args.get('mod') or '').strip().lower()
+        events = []
+        cat_counts = {}
+        for ev in MC._read_audit(gid):
+            if not isinstance(ev, dict):
+                continue
+            cat_e = str(ev.get('category') or '').strip()
+            dt = MC._parse_ts(ev.get('timestamp'))
+            if dt is None:
+                continue
+            if cat and cat_e.lower() != cat:
+                continue
+            mod_name = str(ev.get('mod_name') or '').strip()
+            if mod and mod not in mod_name.lower():
+                continue
+            hay = ' '.join(str(ev.get(k) or '') for k in
+                           ('action', 'user_name', 'reason', 'detail', 'channel'))
+            if q and q not in hay.lower():
+                continue
+            cat_counts[cat_e] = cat_counts.get(cat_e, 0) + 1
+            events.append((dt, {
+                'category': cat_e,
+                'action': str(ev.get('action') or ''),
+                'user_id': str(ev.get('user_id') or '').strip(),
+                'name': str(ev.get('user_name') or '').strip(),
+                'mod_name': mod_name,
+                'reason': str(ev.get('reason') or ev.get('detail') or '').strip(),
+                'at': dt.isoformat(timespec='minutes'),
+            }))
+        events.sort(key=lambda t: t[0], reverse=True)
+        return jsonify({'success': True,
+                        'rows': [r for _dt, r in events[:250]],
+                        'total': len(events),
+                        'categories': cat_counts})
+
+    @app.route('/api/guild/<gid>/mod-center/temp-full')
+    @login_required
+    @role_required('mod')
+    def api_mod_center_temp_full(gid):
+        """Все активные временные наказания (не только срочные)."""
+        names = MC.names_from_audit(gid)
+        rows = []
+        counts = {'overdue': 0, 'soon': 0, 'week': 0, 'later': 0}
+        for r in sorted(MC.load_temp_actions(gid), key=lambda x: x['until']):
+            row = dict(r)
+            row['name'] = names.get(r['user_id'], '')
+            left = row['until'] - time.time()
+            row['remaining_s'] = int(left)
+            if left <= 0:
+                counts['overdue'] += 1
+            elif left <= 86400:
+                counts['soon'] += 1
+            elif left <= 3 * 86400:
+                counts['week'] += 1
+            else:
+                counts['later'] += 1
+            rows.append(row)
+        return jsonify({'success': True, 'rows': rows, 'counts': counts})
+
+    @app.route('/api/guild/<gid>/mod-center/warns-list')
+    @login_required
+    @role_required('mod')
+    def api_mod_center_warns_list(gid):
+        """Варны по участникам: счёт, последние причины, пороги."""
+        names = MC.names_from_audit(gid)
+        rows = []
+        for uid, warns in MC.load_warns_map(gid).items():
+            items = [{'reason': str(w.get('reason') or '').strip() or 'Без причины',
+                      'mod': str(w.get('mod') or ''),
+                      'at': str(w.get('timestamp') or '')[:10]}
+                     for w in warns[-5:][::-1]]
+            rows.append({'user_id': uid, 'name': names.get(uid, ''),
+                         'count': len(warns), 'items': items})
+        rows.sort(key=lambda r: (-r['count'], r['user_id']))
+        return jsonify({'success': True, 'rows': rows,
+                        'total_warns': sum(r['count'] for r in rows),
+                        'steps': MC.load_warn_steps(gid)})
+
+    @app.route('/api/guild/<gid>/mod-center/history')
+    @login_required
+    @role_required('mod')
+    def api_mod_center_history(gid):
+        """Таймлайн кар и снятий, новые сверху."""
+        names = MC.names_from_audit(gid)
+        rows = []
+        for dt, action, uid, ev in reversed(MI.mod_events(gid)):
+            if action not in MI.PUNISH_ACTIONS + MI.LIFT_ACTIONS:
+                continue
+            rows.append({
+                'action': action,
+                'kind': 'punish' if action in MI.PUNISH_ACTIONS else 'lift',
+                'user_id': uid,
+                'name': names.get(uid, ''),
+                'mod_name': str(ev.get('mod_name') or '').strip(),
+                'reason': str(ev.get('reason') or '').strip(),
+                'at': dt.isoformat(timespec='minutes'),
+            })
+            if len(rows) >= 250:
+                break
+        return jsonify({'success': True, 'rows': rows})
 
     @app.route('/api/guild/<gid>/mod-center/dossier')
     @login_required

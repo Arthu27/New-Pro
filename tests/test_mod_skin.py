@@ -79,11 +79,16 @@ with client.session_transaction() as s:
     s['logged_in'] = True
     s['username'] = 'admin'
     s['role'] = 'owner'
-for path in ('/mod-center', '/warnings', '/mod-history', '/bulk-actions'):
+for path in ('/mod-center', '/antiraid', '/autofilter', '/bulk-actions'):
     r = client.get(path)
     body = r.get_data(as_text=True)
     check(r.status_code == 200 and 'mz-skin' in body and 'modskin.css' in body,
           f'{path} отдаётся со скином')
+for path, tab in (('/warnings', 'warns'), ('/mod-history', 'history')):
+    r = client.get(path)
+    check(r.status_code in (301, 302)
+          and ('/mod-center?tab=' + tab) in (r.headers.get('Location') or ''),
+          f'{path} ведёт в консоль на вкладку {tab}')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

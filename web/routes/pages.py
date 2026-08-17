@@ -40,7 +40,8 @@ def register(ctx):
     @login_required 
     @role_required ('mod')
     def modhistory_page ():
-        return render_template ('modhistory.html',role =session .get ('role'),username =session .get ('username'))
+        # История живёт в Центре модерации (вкладка «История»).
+        return redirect ('/mod-center?tab=history')
 
 
     @app .route ('/welcome-editor')
@@ -235,7 +236,8 @@ def register(ctx):
     @login_required 
     @role_required ('mod')
     def temp_moderation_page ():
-        return render_template ('temp_moderation.html',role =session .get ('role'),username =session .get ('username'))
+        # Временные наказания живут в Центре модерации (вкладка «Временные»).
+        return redirect ('/mod-center?tab=temp')
 
 
     @app .route ('/cog-manager')

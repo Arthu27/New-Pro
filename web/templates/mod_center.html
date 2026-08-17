@@ -126,6 +126,10 @@
 <div class="mz-tabs" id="mzTabs">
   <button class="mz-tab on" data-tab="pulse" onclick="mzTab('pulse')"><i class="fas fa-heart-pulse"></i> Пульт <span class="n" id="mzTabPulseN">0</span></button>
   <button class="mz-tab" data-tab="control" onclick="mzTab('control')"><i class="fas fa-sliders"></i> Контроль <span class="n" id="mzTabControlN">0</span></button>
+  <button class="mz-tab" data-tab="journal" onclick="mzTab('journal')"><i class="fas fa-clipboard-list"></i> Журнал</button>
+  <button class="mz-tab" data-tab="warns" onclick="mzTab('warns')"><i class="fas fa-triangle-exclamation"></i> Варны <span class="n" id="mzTabWarnsN">0</span></button>
+  <button class="mz-tab" data-tab="temp" onclick="mzTab('temp')"><i class="fas fa-clock"></i> Временные <span class="n" id="mzTabTempN">0</span></button>
+  <button class="mz-tab" data-tab="history" onclick="mzTab('history')"><i class="fas fa-clock-rotate-left"></i> История</button>
   <button class="mz-tab" data-tab="stats" onclick="mzTab('stats')"><i class="fas fa-chart-line"></i> Аналитика</button>
   <button class="mz-tab" data-tab="dossier" onclick="mzTab('dossier')"><i class="fas fa-folder-open"></i> Досье</button>
 </div>
@@ -233,6 +237,62 @@
   </div>
 </div>
 
+<div id="mzPane-journal" style="display:none">
+  <div class="mz-card">
+    <h4><i class="fas fa-clipboard-list"></i> Журнал сервера <span class="mz-hact" id="mzJournalOff"></span></h4>
+    <div class="mz-form" style="margin-bottom:9px">
+      <input class="inp" id="mzJournalSearch" placeholder="Поиск: имя, причина, канал" oninput="mzJournalReload()">
+      <input class="inp" id="mzJournalMod" placeholder="Модератор" oninput="mzJournalReload()">
+    </div>
+    <div class="mz-mini-tabs" id="mzJournalCats"></div>
+    <div id="mzJournal"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+  </div>
+</div>
+
+<div id="mzPane-warns" style="display:none">
+  <div class="mz-grid thirds">
+    <div class="mz-card">
+      <h4><i class="fas fa-triangle-exclamation"></i> Варны по участникам <span class="mz-hact" id="mzWarnsOff"></span></h4>
+      <input class="inp" id="mzWarnsSearch" placeholder="Поиск по имени или ID" oninput="renderWarnsList()" style="margin-bottom:9px">
+      <div id="mzWarnsList"><div class="sk-row"></div></div>
+    </div>
+    <div>
+      <div class="mz-card"><h4><i class="fas fa-stairs"></i> Пороги авто-наказаний</h4><div id="mzWarnsSteps"></div></div>
+      <div class="mz-card"><h4><i class="fas fa-gavel"></i> Действия</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="mz-act" onclick="mzTab('control')"><i class="fas fa-gavel"></i> Выдать варн</button>
+          <a class="mz-act" href="/api/guild/{{ guild_id }}/mod-center/warns.csv"><i class="fas fa-file-csv"></i> CSV варнов</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mzPane-temp" style="display:none">
+  <div class="mz-grid thirds">
+    <div class="mz-card">
+      <h4><i class="fas fa-clock"></i> Активные временные наказания <span class="mz-hact" id="mzTempOff"></span></h4>
+      <div id="mzTempFull"><div class="sk-row"></div></div>
+    </div>
+    <div>
+      <div class="mz-card"><h4><i class="fas fa-layer-group"></i> Сводка</h4><div id="mzTempCounts"></div></div>
+      <div class="mz-card"><h4><i class="fas fa-toolbox"></i> Инструменты</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <a class="mz-act" href="/api/guild/{{ guild_id }}/mod-center/radar.csv"><i class="fas fa-file-csv"></i> CSV наказаний</a>
+          <a class="mz-act" href="/warn-config"><i class="fas fa-stairs"></i> Пороги варнов</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mzPane-history" style="display:none">
+  <div class="mz-card">
+    <h4><i class="fas fa-clock-rotate-left"></i> История кар и снятий <span class="mz-hact" id="mzHistoryOff"></span></h4>
+    <div id="mzHistory"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>
+  </div>
+</div>
+
 <div id="mzPane-dossier" style="display:none">
   <div class="mz-grid thirds">
     <div>
@@ -265,6 +325,8 @@
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/mod-center';
 var OV = null, CAN = false, DAYS = 90, KIND = 'warn', RADAR_F = 'all', PICKED = null;
+var TAB_DATA = { journal: null, warns: null, temp: null, history: null };
+var JCAT = '', _jTimer = null;
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function plural(n, one, few, many) {
@@ -307,7 +369,7 @@ function mzNotify(title, body, kind, icon, undoFn) {
 }
 
 function mzTab(name) {
-  var panes = ['pulse', 'control', 'stats', 'dossier'];
+  var panes = ['pulse', 'control', 'stats', 'dossier', 'journal', 'warns', 'temp', 'history'];
   for (var i = 0; i < panes.length; i++) {
     document.getElementById('mzPane-' + panes[i]).style.display = panes[i] === name ? '' : 'none';
   }
@@ -315,6 +377,10 @@ function mzTab(name) {
   for (var j = 0; j < tabs.length; j++) {
     tabs[j].className = 'mz-tab' + (tabs[j].getAttribute('data-tab') === name ? ' on' : '');
   }
+  if (name === 'journal' && !TAB_DATA.journal) mzLoadJournal();
+  if (name === 'warns' && !TAB_DATA.warns) mzLoadWarnsList();
+  if (name === 'temp' && !TAB_DATA.temp) mzLoadTemp();
+  if (name === 'history' && !TAB_DATA.history) mzLoadHistory();
 }
 
 function mzFindGo() {
@@ -745,10 +811,194 @@ function mzDossier(uid) {
 
 function mzDays(n) { DAYS = n; renderDaysTabs(); load(); }
 
+/* ── Вкладка «Журнал» ───────────────────────────────────────── */
+var CAT_META = {
+  'mod': ['Модерация', 'fa-gavel', 'hot'],
+  'warn': ['Варны', 'fa-triangle-exclamation', 'hot'],
+  'message': ['Сообщения', 'fa-message', ''],
+  'msg': ['Сообщения', 'fa-message', ''],
+  'join': ['Заходы', 'fa-door-open', ''],
+  'voice': ['Голос', 'fa-microphone', ''],
+  'ticket': ['Тикеты', 'fa-ticket', ''],
+  'proof': ['Демки', 'fa-folder-open', ''],
+  'member': ['Участники', 'fa-user', ''],
+  'role': ['Роли', 'fa-user-tag', ''],
+  'channel': ['Каналы', 'fa-hashtag', '']
+};
+
+function mzLoadJournal() {
+  var q = (document.getElementById('mzJournalSearch').value || '').trim();
+  var m = (document.getElementById('mzJournalMod').value || '').trim();
+  var url = API + '/journal?query=' + encodeURIComponent(q) + '&mod=' + encodeURIComponent(m) +
+    (JCAT ? '&category=' + encodeURIComponent(JCAT) : '');
+  document.getElementById('mzJournal').innerHTML = '<div class="sk-row"></div>';
+  fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TAB_DATA.journal = d;
+    renderJournal();
+  }).catch(function () {});
+}
+
+function mzJournalReload() {
+  clearTimeout(_jTimer);
+  _jTimer = setTimeout(mzLoadJournal, 250);
+}
+
+function mzJournalCat(c) { JCAT = (JCAT === c ? '' : c); mzLoadJournal(); }
+
+function renderJournal() {
+  var d = TAB_DATA.journal;
+  if (!d) return;
+  document.getElementById('mzJournalOff').textContent = d.total + ' событий';
+  var cats = Object.keys(d.categories).sort(function (a, b) {
+    return d.categories[b] - d.categories[a];
+  });
+  document.getElementById('mzJournalCats').innerHTML =
+    '<button class="mz-chip' + (JCAT === '' ? ' on' : '') + '" onclick="mzJournalCat(\'\')">Все ' + d.total + '</button>' +
+    cats.map(function (c) {
+      var meta = CAT_META[c.toLowerCase()] || [c, 'fa-circle', ''];
+      return '<button class="mz-chip' + (JCAT === c ? ' on' : '') + '" onclick="mzJournalCat(\'' + esc(c) + '\')">' +
+        esc(meta[0]) + ' ' + d.categories[c] + '</button>';
+    }).join('');
+  var box = document.getElementById('mzJournal');
+  if (!d.rows.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>По запросу пусто</p></div>';
+    return;
+  }
+  box.innerHTML = d.rows.map(function (r) {
+    var meta = CAT_META[(r.category || '').toLowerCase()] || [r.category || '?', 'fa-circle', ''];
+    var clickable = r.user_id ? ' onclick="mzFromList(\'' + esc(r.user_id) + '\')"' : '';
+    return '<div class="mz-row tri' + (r.user_id ? ' click' : '') + '"' + clickable + '>' +
+      '<span class="mz-chip' + (meta[2] ? ' ' + meta[2] : '') + '"><i class="fas ' + meta[1] + '"></i> ' + esc(meta[0]) + '</span>' +
+      '<div class="mz-who"><b>' + esc(r.action || '—') + ' · ' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>' + esc(r.reason || '') + (r.mod_name ? (r.reason ? ' · ' : '') + esc(r.mod_name) : '') + '</small></div>' +
+      '<span class="mz-time">' + esc(fmtDate(r.at)) + '</span></div>';
+  }).join('');
+}
+
+/* ── Вкладка «Варны» ────────────────────────────────────────── */
+function mzLoadWarnsList() {
+  fetch(API + '/warns-list').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TAB_DATA.warns = d;
+    document.getElementById('mzTabWarnsN').textContent = d.total_warns;
+    renderWarnsList();
+    renderWarnsSteps();
+  }).catch(function () {});
+}
+
+function renderWarnsList() {
+  var d = TAB_DATA.warns;
+  if (!d) return;
+  document.getElementById('mzWarnsOff').textContent = d.total_warns + ' у ' + d.rows.length + ' чел.';
+  var q = (document.getElementById('mzWarnsSearch').value || '').trim().toLowerCase();
+  var rows = d.rows.filter(function (r) {
+    return !q || (r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.user_id).indexOf(q) !== -1;
+  });
+  var box = document.getElementById('mzWarnsList');
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-face-smile"></i><p>Варнов нет</p></div>';
+    return;
+  }
+  box.innerHTML = rows.map(function (r) {
+    var last = r.items.slice(0, 2).map(function (w) {
+      return esc(w.reason) + (w.mod ? ' · ' + esc(w.mod) : '');
+    }).join('<br>');
+    return '<div class="mz-row click" onclick="mzFromList(\'' + esc(r.user_id) + '\')">' +
+      '<div class="mz-who"><b>' + esc(r.name || ('ID ' + r.user_id)) + '</b>' +
+      '<small>' + last + '</small></div>' +
+      '<span class="mz-chip' + (r.count >= 3 ? ' hot' : '') + '">' + r.count + ' ' +
+      plural(r.count, 'варн', 'варна', 'варнов') + '</span></div>';
+  }).join('');
+}
+
+function renderWarnsSteps() {
+  var d = TAB_DATA.warns;
+  var box = document.getElementById('mzWarnsSteps');
+  if (!d || !d.steps.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-stairs"></i><p>Пороги не заданы</p>' +
+      '<p class="empty-tip"><a class="mz-act" href="/warn-config">Настроить</a></p></div>';
+    return;
+  }
+  box.innerHTML = d.steps.map(function (s) {
+    return '<div class="mz-row"><div class="mz-who"><b>' + s.count + ' ' +
+      plural(s.count, 'варн', 'варна', 'варнов') + '</b></div>' +
+      '<span class="mz-chip">' + esc(s.action_name) + '</span></div>';
+  }).join('');
+}
+
+/* ── Вкладка «Временные» ────────────────────────────────────── */
+function mzLoadTemp() {
+  fetch(API + '/temp-full').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TAB_DATA.temp = d;
+    document.getElementById('mzTabTempN').textContent = d.counts.overdue;
+    renderTempFull();
+  }).catch(function () {});
+}
+
+function renderTempFull() {
+  var d = TAB_DATA.temp;
+  if (!d) return;
+  document.getElementById('mzTempOff').textContent = d.rows.length + ' активных';
+  var c = d.counts;
+  document.getElementById('mzTempCounts').innerHTML =
+    '<div class="mz-row"><div class="mz-who"><b>Просрочено</b></div><span class="mz-chip' + (c.overdue ? ' hot' : '') + '">' + c.overdue + '</span></div>' +
+    '<div class="mz-row"><div class="mz-who"><b>Истекает за 24 ч</b></div><span class="mz-chip">' + c.soon + '</span></div>' +
+    '<div class="mz-row"><div class="mz-who"><b>В течение 3 суток</b></div><span class="mz-chip">' + c.week + '</span></div>' +
+    '<div class="mz-row"><div class="mz-who"><b>Дальше</b></div><span class="mz-chip">' + c.later + '</span></div>';
+  var box = document.getElementById('mzTempFull');
+  if (!d.rows.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-clock"></i><p>Активных наказаний нет</p></div>';
+    return;
+  }
+  var now = Date.now() / 1000;
+  box.innerHTML = d.rows.map(function (r) {
+    var hot = r.remaining_s <= 0;
+    var frac = null;
+    if (r.created_at != null && r.until > r.created_at) {
+      frac = Math.max(0, Math.min(1, (now - r.created_at) / (r.until - r.created_at)));
+    }
+    var pct = frac == null ? 0 : Math.round(frac * 100);
+    return '<div class="mz-row tri click" onclick="mzFromList(\'' + esc(r.user_id) + '\')">' + badge(r.kind_name) +
+      '<div class="mz-who"><b>' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>' + esc(r.reason || 'без причины') + (r.mod_id ? ' · мод #' + esc(r.mod_id) : '') + '</small>' +
+      '<div class="mz-track' + (hot ? ' hot' : '') + '"><i style="width:' + pct + '%"></i></div></div>' +
+      '<span class="mz-time' + (hot ? ' hot' : '') + '">' + esc(fmtLeft(r.remaining_s)) + '</span></div>';
+  }).join('');
+}
+
+/* ── Вкладка «История» ──────────────────────────────────────── */
+function mzLoadHistory() {
+  fetch(API + '/history').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TAB_DATA.history = d;
+    renderHistory();
+  }).catch(function () {});
+}
+
+function renderHistory() {
+  var d = TAB_DATA.history;
+  if (!d) return;
+  document.getElementById('mzHistoryOff').textContent = d.rows.length + ' записей';
+  var box = document.getElementById('mzHistory');
+  if (!d.rows.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p>История пуста</p></div>';
+    return;
+  }
+  box.innerHTML = d.rows.map(function (r) {
+    return '<div class="mz-row tri click" onclick="mzFromList(\'' + esc(r.user_id) + '\')">' + badge(r.action) +
+      '<div class="mz-who"><b>' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>' + esc(r.reason || 'без причины') + (r.mod_name ? ' · ' + esc(r.mod_name) : '') + '</small></div>' +
+      '<span class="mz-time">' + esc(fmtDate(r.at)) + '</span></div>';
+  }).join('');
+}
+
 function load() {
   fetch(API + '/overview?days=' + DAYS).then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) return;
     OV = d; CAN = !!d.can_edit;
+    TAB_DATA.warns = null; TAB_DATA.history = null;
     document.getElementById('mzWarnBody').style.display = CAN ? '' : 'none';
     document.getElementById('mzWarnDenied').style.display = CAN ? 'none' : '';
     var render = function () {
@@ -762,7 +1012,11 @@ function load() {
 }
 
 (function () {
-  var uid = new URLSearchParams(location.search).get('uid');
+  var params = new URLSearchParams(location.search);
+  var valid = ['pulse', 'control', 'stats', 'dossier', 'journal', 'warns', 'temp', 'history'];
+  var tab = params.get('tab');
+  if (tab && valid.indexOf(tab) !== -1) mzTab(tab);
+  var uid = params.get('uid');
   if (uid) {
     mzTab('control');
     document.getElementById('mzWarnId').value = uid;

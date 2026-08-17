@@ -174,8 +174,9 @@ check('.action-badge' in logs_html and 'uppercase' in logs_html,
 
 login_as('owner')
 r = client.get('/logs')
-check(r.status_code == 200 and 'Logs polish' in r.get_data(as_text=True),
-      'страница /logs рендерится со слоем')
+check(r.status_code in (301, 302)
+      and '/mod-center?tab=journal' in (r.headers.get('Location') or ''),
+      '/logs ведёт в Центр модерации (вкладка «Журнал»)')
 r = client.get('/roles')
 check(r.status_code == 200 and 'polish.css' in r.get_data(as_text=True),
       'страница /roles рендерится со слоем')
