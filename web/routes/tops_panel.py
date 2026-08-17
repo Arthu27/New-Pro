@@ -313,7 +313,7 @@ def register(ctx):
             lines.append('{};{};{};{};{}'.format(
                 row['rank'], row['user_id'], name,
                 row['display'], row['value']))
-        body = '﻿' + '\n'.join(lines) + '\n'
+        body = '\ufeff' + '\n'.join(lines) + '\n'
         return Response(
             body, mimetype='text/csv; charset=utf-8',
             headers={'Content-Disposition':

@@ -226,7 +226,7 @@ body = csv_r.get_data(as_text=True)
 check(csv_r.status_code == 200
       and 'event_100_777.csv' in csv_r.headers.get('Content-Disposition', ''),
       'CSV состава с именем файла события и сервера')
-check(body.startswith('﻿user_id;name'), 'BOM + шапка')
+check(body.startswith('\ufeffuser_id;name'), 'BOM + шапка')
 check('2;Борислав' in body and '1;1' in body,
       'имя из аудита; без имени — голый ID')
 r = client.get('/api/guild/777/social/events/999/participants.csv')

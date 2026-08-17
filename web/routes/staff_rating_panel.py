@@ -215,7 +215,7 @@ def register(ctx):
             lines.append('%d;%s;%s;%s;%s;%d' % (
                 r['rank'], r['staff_id'], name, r['avg'], r['stars'],
                 r['votes']))
-        body = '﻿' + '\n'.join(lines) + '\n'
+        body = '\ufeff' + '\n'.join(lines) + '\n'
         return Response(body, mimetype='text/csv; charset=utf-8',
                         headers={'Content-Disposition':
                                  'attachment; filename="staff_rating_%s.csv"'

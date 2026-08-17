@@ -212,7 +212,7 @@ body = csv_r.get_data(as_text=True)
 check(csv_r.status_code == 200
       and 'tops_messages_777.csv' in csv_r.headers.get('Content-Disposition', ''),
       'CSV с именем категории и сервера')
-check(body.startswith('﻿rank;user_id;name;display;value'), 'BOM + шапка')
+check(body.startswith('\ufeffrank;user_id;name;display;value'), 'BOM + шапка')
 check('1;9;ID 9;1 000 000 СООБЩЕНИЙ;1000000' in body, 'лидер первой строкой')
 r = client.get('/api/guild/777/tops/zzz.csv')
 check(r.status_code == 404 and r.get_json()['error'] == 'Нет такой категории',

@@ -350,7 +350,7 @@ def register(ctx):
         gid = int(ctx.active_guild_id())
         filename = 'tickets_%s_%s.csv' % (gid, datetime.now(timezone.utc).date().isoformat())
         return Response(
-            '﻿' + tickets_csv(load_tickets(gid)),
+            '\ufeff' + tickets_csv(load_tickets(gid)),
             mimetype='text/csv; charset=utf-8',
             headers={'Content-Disposition': f'attachment; filename="{filename}"'},
         )

@@ -149,7 +149,7 @@ check(r.status_code == 200 and r.mimetype == 'text/csv', 'mod качает CSV')
 check(r.headers.get('Content-Disposition', '').startswith('attachment; filename="analytics_777_'),
       'CSV скачивается файлом с датой')
 body = r.get_data(as_text=True)
-check(body.startswith('﻿'), 'BOM для Excel на месте')
+check(body.startswith('\ufeff'), 'BOM для Excel на месте')
 check('Мира;3' in body and 'общий;3' in body, 'данные в ответе')
 
 print('== 5. Монтаж шаблона ==')

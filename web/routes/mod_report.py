@@ -119,7 +119,7 @@ def register(ctx):
         filename = 'mod_report_%s_%s.csv' % (
             ctx.active_guild_id(), date.today().isoformat())
         return Response(
-            '﻿' + mod_report_csv(int(ctx.active_guild_id()), days=days),
+            '\ufeff' + mod_report_csv(int(ctx.active_guild_id()), days=days),
             mimetype='text/csv; charset=utf-8',
             headers={'Content-Disposition': f'attachment; filename="{filename}"'},
         )

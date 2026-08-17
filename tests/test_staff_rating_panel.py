@@ -222,7 +222,7 @@ body = csv_r.get_data(as_text=True)
 check(csv_r.status_code == 200
       and 'staff_rating_777.csv' in csv_r.headers.get('Content-Disposition', ''),
       'CSV с именем сервера')
-check(body.startswith('﻿rank;staff_id;name;avg;stars;votes'), 'BOM + шапка')
+check(body.startswith('\ufeffrank;staff_id;name;avg;stars;votes'), 'BOM + шапка')
 check('★★★★☆' in body, 'звёзды 4.0 в CSV — данные, а не шаблон')
 
 login('mod')

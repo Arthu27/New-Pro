@@ -343,7 +343,7 @@ body = csv_r.get_data(as_text=True)
 check(csv_r.status_code == 200
       and 'birthdays_777.csv' in csv_r.headers.get('Content-Disposition', ''),
       'mod скачивает CSV с именем сервера')
-check(body.startswith('﻿user_id;name;date;year;age;days_until;celebrated'),
+check(body.startswith('\ufeffuser_id;name;date;year;age;days_until;celebrated'),
       'BOM + шапка календаря')
 check(f';Аня;{rel(0)};2000;{real_now.year - 2000};0;{real_now.year}' in body,
       'сегодняшняя: возраст и год поздравления')

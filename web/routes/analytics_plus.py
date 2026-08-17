@@ -369,7 +369,7 @@ def register(ctx):
     def api_guild_analytics_csv(guild_id):
         filename = f'analytics_{guild_id}_{date.today().isoformat()}.csv'
         return Response(
-            '﻿' + analytics_csv(guild_id),
+            '\ufeff' + analytics_csv(guild_id),
             mimetype='text/csv; charset=utf-8',
             headers={'Content-Disposition': f'attachment; filename="{filename}"'},
         )
@@ -452,7 +452,7 @@ def register(ctx):
     def api_guild_analytics_full_csv(guild_id):
         filename = f'analytics_full_{guild_id}_{date.today().isoformat()}.csv'
         return Response(
-            '﻿' + analytics_full_csv(guild_id),
+            '\ufeff' + analytics_full_csv(guild_id),
             mimetype='text/csv; charset=utf-8',
             headers={'Content-Disposition': f'attachment; filename="{filename}"'},
         )

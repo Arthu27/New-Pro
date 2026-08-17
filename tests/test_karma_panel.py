@@ -201,7 +201,7 @@ csv_r = client.get('/api/guild/777/karma/export.csv')
 body = csv_r.get_data(as_text=True)
 check(csv_r.status_code == 200 and 'karma_777.csv' in csv_r.headers.get('Content-Disposition', ''),
       'CSV скачивается с именем сервера')
-check(body.startswith('﻿rank;user_id;name;score'), 'BOM + шапка для Excel')
+check(body.startswith('\ufeffrank;user_id;name;score'), 'BOM + шапка для Excel')
 check('1;1;Аня;7' in body and '3;3;Вик,а;3' in body,
       'строки с рангами; точка с запятой в имени обезврежена')
 

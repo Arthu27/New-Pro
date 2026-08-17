@@ -255,17 +255,17 @@ check((svc['level'], svc['name'], svc['points_to_next'], svc['progress']) ==
 
 csv_r = client.get('/api/guild/777/gamification/export.csv?kind=points')
 body = csv_r.get_data(as_text=True)
-check(csv_r.status_code == 200 and body.startswith('﻿rank;user_id;name;points'),
+check(csv_r.status_code == 200 and body.startswith('\ufeffrank;user_id;name;points'),
       'CSV очков: BOM + шапка')
 check('1;9;ID 9;5000' in body and 'gamif_points.csv'
       in csv_r.headers.get('Content-Disposition', ''), 'лидер + имя файла')
 csv_r = client.get('/api/guild/777/gamification/export.csv?kind=streaks')
 body = csv_r.get_data(as_text=True)
-check(body.startswith('﻿rank;user_id;name;current;longest;last_date'),
+check(body.startswith('\ufeffrank;user_id;name;current;longest;last_date'),
       'CSV серий: BOM + шапка')
 check('1;12;Олег;9;9;' in body, 'серия Олега первой (имя из аудита)')
 csv_r = client.get('/api/guild/777/gamification/export.csv')
-check(csv_r.get_data(as_text=True).startswith('﻿rank;user_id;name;points'),
+check(csv_r.get_data(as_text=True).startswith('\ufeffrank;user_id;name;points'),
       'без kind — очки по умолчанию')
 
 print('== 7. Шаблон, меню, регистрация ==')
