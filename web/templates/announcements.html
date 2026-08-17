@@ -1,124 +1,723 @@
 {% extends "base.html" %}
 {% block title %}Объявления — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-bullhorn" ></i> Объявления{% endblock %}
+{% block page_title %}<i class="fas fa-bullhorn"></i> Объявления{% endblock %}
 {% block content %}
 {% block page_hero %}
-<style>
-.ann-hero-title{
-  background:linear-gradient(120deg,var(--ac-2) 10%,#fff3d6 35%,var(--ac) 55%,var(--ac-3) 90%);
-  background-size:200% 100%;
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  animation:annShimmer 5.5s ease-in-out infinite;
-}
-@keyframes annShimmer{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
-.ann-hero-av{animation:annAvFloat 4s ease-in-out infinite}
-@keyframes annAvFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-</style>
-<div class="page-hero welcome-hero" data-reveal="up">
+<div class="page-hero welcome-hero ann-hero" data-reveal="up">
   <div class="page-hero-content">
     <div class="page-hero-greeting">
       <span class="dot"></span>
-      <span>Объявления сервера</span>
+      <span>Центр коммуникаций</span>
     </div>
     <div class="hero-guild-row">
       <div class="hero-guild-av ann-hero-av"><i class="fas fa-bullhorn"></i></div>
       <div>
         <h1 class="ann-hero-title">Объявления</h1>
-        <p>Все важные новости и объявления сервера в одном месте.</p>
+        <p>Создание, доставка в Discord и прозрачная история важных сообщений.</p>
       </div>
+    </div>
+    <div class="ann-hero-chips" aria-label="Возможности раздела">
+      <span><i class="fas fa-clock-rotate-left"></i> История публикаций</span>
+      <span><i class="fab fa-discord"></i> Статус доставки</span>
+      <span><i class="fas fa-rotate"></i> Повторная отправка</span>
     </div>
   </div>
 </div>
 {% endblock %}
 
 <style>
-.ann-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.ann-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:18px;backdrop-filter:blur(14px)}
-.ann-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.ann-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;font-size:18px;color:#1a1a1a;flex:0 0 auto}
-.ann-meta{font-size:12px;color:var(--text-3)}
-.ann-body{font-size:13.5px;color:var(--text-2);line-height:1.6}
-.ann-foot{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--line-2)}
-.ann-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid var(--line-2);color:var(--text-3)}
-.ann-chip.ok{color:#8fd6a0;border-color:rgba(143,214,160,.35);background:rgba(143,214,160,.08)}
+/* ── Объявления PRO: отдельный рабочий центр ───────────────────────── */
+.ann-hero{position:relative;overflow:hidden;border-color:var(--ac-line)!important}
+.ann-hero::before{content:'';position:absolute;right:-80px;bottom:-110px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,var(--ac-soft),transparent 68%);pointer-events:none}
+.ann-hero-title{background:linear-gradient(120deg,var(--ac-2) 10%,#fff3d6 35%,var(--ac) 55%,var(--ac-3) 90%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:annShimmer 5.5s ease-in-out infinite}
+@keyframes annShimmer{0%,100%{background-position:0 0}50%{background-position:100% 0}}
+.ann-hero-av{animation:annAvFloat 4s ease-in-out infinite}
+@keyframes annAvFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.ann-hero-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.ann-hero-chips span{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line);border-radius:99px;background:rgba(255,255,255,.025);color:var(--text-3);font-size:11.5px;font-weight:650}
+.ann-hero-chips i{color:var(--ac)}
+
+.ann-command{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;padding:12px 14px;border:1px solid var(--line-2);border-radius:16px;background:linear-gradient(145deg,color-mix(in srgb,var(--surface-2) 88%,transparent),color-mix(in srgb,var(--surface) 94%,transparent));box-shadow:var(--shadow-sm)}
+.ann-command-main{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.ann-search{position:relative;flex:1;max-width:470px;min-width:220px}
+.ann-search > i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:12px;pointer-events:none}
+.ann-search input{width:100%;min-height:42px;padding:9px 40px 9px 36px;border:1px solid var(--line-2);border-radius:11px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;transition:border-color .18s,box-shadow .18s}
+.ann-search input:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft);outline:none}
+.ann-search-clear{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--text-3);cursor:pointer;display:none}
+.ann-search-clear:hover{color:var(--err);background:rgba(248,113,113,.08)}
+.ann-command-side{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.ann-live{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid rgba(74,222,128,.25);border-radius:99px;color:var(--ok);background:rgba(74,222,128,.07);font-size:9.5px;font-weight:800;letter-spacing:.09em}
+.ann-live::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 7px currentColor}
+.ann-create{min-height:42px;padding:9px 15px;border:1px solid var(--ac-line);border-radius:11px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));color:#18140d;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 7px 18px var(--ac-glow);transition:transform .18s,filter .18s}
+.ann-create:hover{transform:translateY(-1px);filter:brightness(1.06)}
+
+.ann-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:14px}
+.ann-stat{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;min-height:82px;padding:14px;border:1px solid var(--line-2);border-radius:15px;background:linear-gradient(150deg,var(--surface-2),var(--surface));box-shadow:inset 0 1px 0 rgba(255,255,255,.04);transition:transform .18s,border-color .18s}
+.ann-stat:hover{transform:translateY(-2px);border-color:var(--ac-line)}
+.ann-stat::after{content:'';position:absolute;right:-24px;top:-30px;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,var(--stat-glow,var(--ac-soft)),transparent 70%)}
+.ann-stat-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;color:var(--stat-color,var(--ac));background:color-mix(in srgb,var(--stat-color,var(--ac)) 12%,transparent);border:1px solid color-mix(in srgb,var(--stat-color,var(--ac)) 28%,transparent)}
+.ann-stat[data-tone="discord"]{--stat-color:#5865f2}
+.ann-stat[data-tone="panel"]{--stat-color:var(--info)}
+.ann-stat[data-tone="failed"]{--stat-color:var(--err)}
+.ann-stat-value{font-size:23px;font-weight:850;line-height:1;color:var(--text);font-variant-numeric:tabular-nums}
+.ann-stat-label{margin-top:5px;color:var(--text-3);font-size:10px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+
+.ann-filterbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+.ann-filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ann-filter{min-height:34px;padding:6px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text-3);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.ann-filter:hover{color:var(--text);border-color:var(--ac-line)}
+.ann-filter.is-active{color:var(--ac-2);border-color:var(--ac-line);background:var(--ac-soft);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.ann-filter b{min-width:18px;padding:1px 5px;border-radius:99px;background:rgba(255,255,255,.05);font-size:9.5px;text-align:center}
+.ann-result-meta{color:var(--text-3);font-size:11.5px;white-space:nowrap}
+
+.ann-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:13px}
+.ann-card{--ann-tone:var(--ac);position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:230px;padding:17px;border:1px solid var(--line-2);border-radius:16px;background:linear-gradient(155deg,color-mix(in srgb,var(--surface-2) 94%,var(--ann-tone) 2%),var(--surface));box-shadow:var(--shadow-sm),inset 0 1px 0 rgba(255,255,255,.04);transition:transform .2s var(--ease),border-color .2s var(--ease),box-shadow .2s var(--ease)}
+.ann-card::before{content:'';position:absolute;left:0;top:18px;bottom:18px;width:3px;border-radius:0 4px 4px 0;background:var(--ann-tone);box-shadow:0 0 12px color-mix(in srgb,var(--ann-tone) 45%,transparent)}
+.ann-card:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--ann-tone) 35%,var(--line));box-shadow:var(--shadow-md)}
+.ann-card[data-status="delivered"]{--ann-tone:#5865f2}
+.ann-card[data-status="panel"]{--ann-tone:var(--info)}
+.ann-card[data-status="failed"]{--ann-tone:var(--err)}
+.ann-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+.ann-icon{width:42px;height:42px;border-radius:12px;background:color-mix(in srgb,var(--ann-tone) 14%,transparent);border:1px solid color-mix(in srgb,var(--ann-tone) 30%,transparent);display:grid;place-items:center;font-size:15px;color:var(--ann-tone);flex:0 0 auto}
+.ann-head-copy{min-width:0;flex:1}
+.ann-title{color:var(--text);font-size:15px;font-weight:780;line-height:1.35;overflow-wrap:anywhere}
+.ann-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:5px;font-size:10.5px;color:var(--text-3)}
+.ann-meta i{color:var(--ann-tone)}
+.ann-status-mark{width:9px;height:9px;border-radius:50%;margin-top:5px;background:var(--ann-tone);box-shadow:0 0 8px color-mix(in srgb,var(--ann-tone) 65%,transparent);flex:0 0 auto}
+.ann-body{position:relative;flex:1;color:var(--text-2);font-size:13px;line-height:1.65;white-space:normal;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
+.ann-card.is-expanded .ann-body{display:block;overflow:visible}
+.ann-expand{align-self:flex-start;margin-top:7px;padding:0;border:0;background:transparent;color:var(--ac-2);font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.ann-expand:hover{text-decoration:underline}
+.ann-foot{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:13px;padding-top:11px;border-top:1px dashed var(--line-2)}
+.ann-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;font-size:10.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--line-2);color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ann-chip.ok{color:#9ca8ff;border-color:rgba(88,101,242,.35);background:rgba(88,101,242,.09)}
 .ann-chip.err{color:#ff9a9f;border-color:rgba(255,154,159,.35);background:rgba(255,154,159,.08);cursor:help}
-.ann-retry{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px solid rgba(242,179,61,.45);background:rgba(242,179,61,.08);color:var(--ac-2);cursor:pointer;transition:filter .15s ease,transform .15s ease}
-.ann-retry:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px)}
-.ann-retry:disabled{opacity:.45;cursor:not-allowed}
+.ann-retry,.ann-copy{display:inline-flex;align-items:center;gap:6px;min-height:29px;padding:4px 9px;border-radius:8px;font:inherit;font-size:10.5px;font-weight:700;cursor:pointer;transition:filter .15s,transform .15s}
+.ann-retry{border:1px solid rgba(242,179,61,.45);background:rgba(242,179,61,.08);color:var(--ac-2)}
+.ann-copy{margin-left:auto;border:1px solid var(--line);background:var(--surface);color:var(--text-3)}
+.ann-retry:hover:not(:disabled),.ann-copy:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.ann-retry:disabled{opacity:.5;cursor:wait}
 .ann-retry.busy i{animation:annSpin 1s linear infinite}
 @keyframes annSpin{to{transform:rotate(360deg)}}
+
+.ann-empty,.ann-error{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;padding:30px;text-align:center;border:1px dashed var(--line-2);border-radius:16px;background:color-mix(in srgb,var(--surface-2) 62%,transparent);color:var(--text-3)}
+.ann-empty > i,.ann-error > i{width:54px;height:54px;border-radius:17px;display:grid;place-items:center;margin-bottom:13px;background:var(--ac-soft);border:1px solid var(--ac-line);color:var(--ac);font-size:19px}
+.ann-empty strong,.ann-error strong{color:var(--text);font-size:15px;margin-bottom:5px}
+.ann-empty p,.ann-error p{margin:0;max-width:430px;font-size:12px;line-height:1.6}
+.ann-error > i{color:var(--err);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.08)}
+.ann-reload{margin-top:13px;padding:8px 12px;border:1px solid var(--ac-line);border-radius:9px;background:var(--ac-soft);color:var(--ac-2);font:inherit;font-size:11.5px;font-weight:750;cursor:pointer}
+.ann-loading{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:13px}
+.ann-loading .sk-card{height:230px;border-radius:16px}
+
+/* ── Композитор объявления ────────────────────────────────────────── */
+.ann-modal{position:fixed;inset:0;z-index:100100;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(5,5,8,.72);backdrop-filter:blur(9px)}
+.ann-modal.open{display:flex}
+.ann-modal-card{width:min(900px,100%);max-height:min(760px,92vh);overflow:auto;border:1px solid var(--ac-line);border-radius:20px;background:linear-gradient(155deg,var(--surface-2),var(--surface));box-shadow:0 28px 90px rgba(0,0,0,.58);animation:annModalIn .2s var(--ease)}
+@keyframes annModalIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.ann-modal-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface-2) 92%,transparent);backdrop-filter:blur(14px)}
+.ann-modal-mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#18140d;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));box-shadow:0 7px 18px var(--ac-glow)}
+.ann-modal-head-copy{min-width:0}
+.ann-modal-head h2{margin:0;color:var(--text);font-size:17px}
+.ann-modal-head p{margin:3px 0 0;color:var(--text-3);font-size:10.5px}
+.ann-modal-close{margin-left:auto;width:36px;height:36px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text-3);cursor:pointer}
+.ann-modal-close:hover{color:var(--err);border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.07)}
+.ann-compose-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(270px,.8fr);gap:18px;padding:18px}
+.ann-form-field{margin-bottom:14px}
+.ann-form-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;color:var(--text-2);font-size:11.5px;font-weight:750}
+.ann-char{color:var(--text-3);font-size:9.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.ann-form-input{width:100%;padding:10px 12px;border:1px solid var(--line-2);border-radius:11px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;transition:border-color .18s,box-shadow .18s}
+.ann-form-input:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+textarea.ann-form-input{min-height:150px;resize:vertical;line-height:1.55}
+.ann-delivery-options{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.ann-delivery-option{position:relative;display:flex;align-items:flex-start;gap:9px;padding:11px;border:1px solid var(--line-2);border-radius:11px;background:var(--surface);cursor:pointer;transition:border-color .15s,background .15s}
+.ann-delivery-option:has(input:checked){border-color:var(--ac);background:var(--ac-soft);box-shadow:0 0 0 2px var(--ac-soft)}
+.ann-delivery-option input{margin-top:2px;accent-color:var(--ac)}
+.ann-delivery-option i{margin-top:2px;color:var(--ac)}
+.ann-delivery-option strong{display:block;color:var(--text);font-size:11.5px}
+.ann-delivery-option small{display:block;margin-top:3px;color:var(--text-3);font-size:9.5px;line-height:1.4}
+.ann-destination[hidden]{display:none!important}
+.ann-destination-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.ann-form-result{display:none;margin-top:10px;padding:9px 11px;border-radius:9px;font-size:11.5px}
+.ann-form-result.show{display:block}
+.ann-form-result.ok{color:var(--ok);border:1px solid rgba(74,222,128,.3);background:rgba(74,222,128,.08)}
+.ann-form-result.err{color:var(--err);border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08)}
+.ann-form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.ann-cancel,.ann-submit{min-height:39px;padding:8px 14px;border-radius:10px;font:inherit;font-size:11.5px;font-weight:800;cursor:pointer}
+.ann-cancel{border:1px solid var(--line);background:var(--surface);color:var(--text-2)}
+.ann-submit{border:1px solid var(--ac-line);background:linear-gradient(135deg,var(--ac-2),var(--ac-3));color:#18140d;display:inline-flex;align-items:center;gap:7px}
+.ann-preview{position:sticky;top:76px;align-self:start;padding:14px;border:1px solid var(--line-2);border-radius:15px;background:color-mix(in srgb,var(--bg-2) 88%,transparent)}
+.ann-preview-label{margin-bottom:10px;color:var(--text-3);font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.ann-preview-embed{overflow:hidden;border-radius:10px;background:#2b2d31;box-shadow:0 10px 28px rgba(0,0,0,.26)}
+.ann-preview-accent{height:3px;background:linear-gradient(90deg,var(--ac-3),var(--ac-2))}
+.ann-preview-body{padding:13px 14px 14px;border-left:3px solid var(--ac)}
+.ann-preview-title{color:#f2f3f5;font-size:13.5px;font-weight:700;overflow-wrap:anywhere}
+.ann-preview-message{margin-top:7px;color:#dbdee1;font-size:11.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.ann-preview-foot{display:flex;align-items:center;gap:6px;margin-top:12px;color:#949ba4;font-size:9.5px}
+.ann-preview-mode{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;color:var(--text-3);font-size:9.5px}
+body.ann-modal-open{overflow:hidden}
+
+@media(max-width:900px){
+  .ann-summary{grid-template-columns:1fr 1fr}
+  .ann-compose-grid{grid-template-columns:1fr}
+  .ann-preview{position:relative;top:auto}
+}
+@media(max-width:680px){
+  .ann-command{align-items:stretch;flex-direction:column}
+  .ann-command-main,.ann-search{width:100%;max-width:none;min-width:0}
+  .ann-command-side{justify-content:space-between}
+  .ann-filterbar{align-items:flex-start;flex-direction:column}
+  .ann-grid,.ann-loading{grid-template-columns:1fr}
+  .ann-delivery-options,.ann-destination-grid{grid-template-columns:1fr}
+  .ann-modal{padding:8px}
+  .ann-modal-card{max-height:96vh;border-radius:16px}
+  .ann-compose-grid{padding:14px}
+}
+@media(max-width:440px){
+  .ann-summary{grid-template-columns:1fr}
+  .ann-live{display:none}
+  .ann-create{flex:1;justify-content:center}
+  .ann-card{min-height:0}
+}
+@media(prefers-reduced-motion:reduce){
+  .ann-hero-title,.ann-hero-av,.ann-retry.busy i{animation:none!important}
+  .ann-card:hover,.ann-stat:hover,.ann-create:hover{transform:none!important}
+}
 </style>
 
-<div id="ann-list"><div style="display:grid;gap:12px"><div class="sk-card" style="height:96px"></div><div class="sk-card" style="height:96px;width:78%"></div><div class="sk-card" style="height:96px;width:58%"></div></div></div>
+<section class="ann-command" aria-label="Инструменты объявлений">
+  <div class="ann-command-main">
+    <div class="ann-search">
+      <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+      <input type="search" id="annSearch" placeholder="Найти по заголовку, тексту или автору…" autocomplete="off" aria-label="Поиск объявлений">
+      <button type="button" class="ann-search-clear" id="annSearchClear" aria-label="Очистить поиск"><i class="fas fa-xmark"></i></button>
+    </div>
+  </div>
+  <div class="ann-command-side">
+    <span class="ann-live" title="Автообновление каждые 30 секунд">LIVE</span>
+    {% if can_manage %}
+    <button type="button" class="ann-create" id="annCreate"><i class="fas fa-plus"></i> Новое объявление</button>
+    {% endif %}
+  </div>
+</section>
+
+<section class="ann-summary" aria-label="Статистика объявлений" data-reveal="up">
+  <article class="ann-stat" data-tone="all">
+    <span class="ann-stat-icon"><i class="fas fa-layer-group"></i></span>
+    <div><div class="ann-stat-value" id="annStatAll">—</div><div class="ann-stat-label">Всего</div></div>
+  </article>
+  <article class="ann-stat" data-tone="discord">
+    <span class="ann-stat-icon"><i class="fab fa-discord"></i></span>
+    <div><div class="ann-stat-value" id="annStatDelivered">—</div><div class="ann-stat-label">В Discord</div></div>
+  </article>
+  <article class="ann-stat" data-tone="panel">
+    <span class="ann-stat-icon"><i class="fas fa-display"></i></span>
+    <div><div class="ann-stat-value" id="annStatPanel">—</div><div class="ann-stat-label">Только панель</div></div>
+  </article>
+  <article class="ann-stat" data-tone="failed">
+    <span class="ann-stat-icon"><i class="fas fa-triangle-exclamation"></i></span>
+    <div><div class="ann-stat-value" id="annStatFailed">—</div><div class="ann-stat-label">Не доставлено</div></div>
+  </article>
+</section>
+
+<div class="ann-filterbar">
+  <div class="ann-filters" role="group" aria-label="Фильтр объявлений">
+    <button type="button" class="ann-filter is-active" data-ann-filter="all" aria-pressed="true"><i class="fas fa-border-all"></i> Все <b data-filter-count="all">0</b></button>
+    <button type="button" class="ann-filter" data-ann-filter="delivered" aria-pressed="false"><i class="fab fa-discord"></i> Discord <b data-filter-count="delivered">0</b></button>
+    <button type="button" class="ann-filter" data-ann-filter="panel" aria-pressed="false"><i class="fas fa-display"></i> Панель <b data-filter-count="panel">0</b></button>
+    <button type="button" class="ann-filter" data-ann-filter="failed" aria-pressed="false"><i class="fas fa-circle-exclamation"></i> Ошибки <b data-filter-count="failed">0</b></button>
+  </div>
+  <span class="ann-result-meta" id="annResultMeta" aria-live="polite">Загрузка…</span>
+</div>
+
+<div id="ann-list" class="ann-loading" aria-live="polite" aria-busy="true">
+  <div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div>
+</div>
+
+{% if can_manage %}
+<div class="ann-modal" id="annModal" role="dialog" aria-modal="true" aria-labelledby="annModalTitle" aria-hidden="true">
+  <div class="ann-modal-card" tabindex="-1">
+    <header class="ann-modal-head">
+      <span class="ann-modal-mark"><i class="fas fa-bullhorn"></i></span>
+      <div class="ann-modal-head-copy">
+        <h2 id="annModalTitle">Новое объявление</h2>
+        <p>Сообщение попадёт в историю панели и, при выборе канала, в Discord.</p>
+      </div>
+      <button type="button" class="ann-modal-close" id="annModalClose" aria-label="Закрыть редактор"><i class="fas fa-xmark"></i></button>
+    </header>
+    <div class="ann-compose-grid">
+      <form id="annForm" novalidate>
+        <div class="ann-form-field">
+          <label class="ann-form-label" for="annTitle">Заголовок <span class="ann-char" id="annTitleCount">0 / 256</span></label>
+          <input class="ann-form-input" type="text" id="annTitle" maxlength="256" required placeholder="Например: Обновление правил">
+        </div>
+        <div class="ann-form-field">
+          <label class="ann-form-label" for="annMessage">Сообщение <span class="ann-char" id="annMessageCount">0 / 4000</span></label>
+          <textarea class="ann-form-input" id="annMessage" maxlength="4000" required placeholder="Коротко и понятно расскажите участникам, что изменилось…"></textarea>
+        </div>
+        <div class="ann-form-field">
+          <span class="ann-form-label">Куда опубликовать</span>
+          <div class="ann-delivery-options">
+            <label class="ann-delivery-option">
+              <input type="radio" name="annDelivery" value="panel" checked>
+              <i class="fas fa-display"></i>
+              <span><strong>Только панель</strong><small>Сохранить в общей истории</small></span>
+            </label>
+            <label class="ann-delivery-option">
+              <input type="radio" name="annDelivery" value="discord">
+              <i class="fab fa-discord"></i>
+              <span><strong>Панель + Discord</strong><small>Отправить embed в канал</small></span>
+            </label>
+          </div>
+          <div class="ann-destination" id="annDestination" hidden>
+            <div class="ann-destination-grid">
+              <select class="ann-form-input" id="annGuild" aria-label="Сервер"><option value="">Выберите сервер…</option></select>
+              <select class="ann-form-input" id="annChannel" aria-label="Канал" disabled><option value="">Сначала выберите сервер</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="ann-form-result" id="annFormResult" role="status" aria-live="polite"></div>
+        <div class="ann-form-actions">
+          <button type="button" class="ann-cancel" id="annCancel">Отмена</button>
+          <button type="submit" class="ann-submit" id="annSubmit"><i class="fas fa-paper-plane"></i> Опубликовать</button>
+        </div>
+      </form>
+      <aside class="ann-preview" aria-label="Предпросмотр объявления">
+        <div class="ann-preview-label">Предпросмотр Discord</div>
+        <div class="ann-preview-embed">
+          <div class="ann-preview-accent"></div>
+          <div class="ann-preview-body">
+            <div class="ann-preview-title" id="annPreviewTitle">Заголовок объявления</div>
+            <div class="ann-preview-message" id="annPreviewMessage">Здесь появится текст сообщения.</div>
+            <div class="ann-preview-foot"><i class="fas fa-bolt"></i> Aether Control System</div>
+          </div>
+        </div>
+        <div class="ann-preview-mode" id="annPreviewMode"><i class="fas fa-display"></i> Только история панели</div>
+      </aside>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <script>
 var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
 
-function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+(function () {
+  'use strict';
 
-function chipHtml(a) {
-  if (!CAN_MANAGE) return '';
-  if (!a.channel_id) {
-    return '<span class="ann-chip"><i class="fas fa-desktop"></i> Только в панели</span>';
+  var allAnnouncements = [];
+  var activeFilter = 'all';
+  var searchQuery = '';
+  var lastFingerprint = '';
+  var loadInFlight = false;
+  var modalReturnFocus = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  function statusOf(announcement) {
+    if (!announcement.channel_id) return 'panel';
+    return announcement.delivered ? 'delivered' : 'failed';
   }
-  if (a.delivered) {
-    var where = a.channel_name ? ' &middot; #' + esc(a.channel_name) : '';
-    var extra = a.redelivered_at ? ' &middot; дослал ' + esc(a.redelivered_by || '') : '';
-    return '<span class="ann-chip ok"><i class="fas fa-check-circle"></i> В Discord' + where + extra + '</span>';
+
+  function validDate(value) {
+    var date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
   }
-  var err = a.deliver_error ? ' title="' + esc(a.deliver_error) + '"' : '';
-  var retry = a.id
-    ? '<button type="button" class="ann-retry" data-retry="' + esc(a.id) + '"><i class="fas fa-rotate-right"></i> Дослать</button>'
-    : '';
-  return '<span class="ann-chip err"' + err + '><i class="fas fa-exclamation-circle"></i> Не доставлено</span>' + retry;
-}
 
-function cardHtml(a) {
-  var d = new Date(a.created_at);
-  var foot = chipHtml(a);
-  return '<div class="ann-card">' +
-    '<div class="ann-header">' +
-      '<div class="ann-icon"><i class="fas fa-bullhorn"></i></div>' +
-      '<div><div class="ann-title">' + esc(a.title) + '</div><div class="ann-meta"><i class="fas fa-user"></i> ' + esc(a.from) + ' <span>&middot;</span> <i class="fas fa-clock"></i> ' + d.toLocaleString('ru-RU') + '</div></div>' +
-    '</div>' +
-    '<div class="ann-body">' + esc(a.message).replace(/\n/g, '<br>') + '</div>' +
-    (foot ? '<div class="ann-foot">' + foot + '</div>' : '') +
-  '</div>';
-}
-
-async function loadAnns() {
-  var r = await fetch('/api/announcements');
-  var anns = await r.json();
-  var box = document.getElementById('ann-list');
-  if (!anns.length) {
-    box.className = '';
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-bullhorn"></i><p>Пока объявлений нет</p>' + (CAN_MANAGE ? '<p class="empty-tip">Создать первое можно на <a href="/">дашборде</a> — раздел «Объявление серверу»</p>' : '') + '</div>';
-    return;
+  function relativeDate(value) {
+    var date = validDate(value);
+    if (!date) return 'Дата не указана';
+    var seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+    if (seconds < 60) return 'только что';
+    if (seconds < 3600) return Math.floor(seconds / 60) + ' мин назад';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + ' ч назад';
+    if (seconds < 604800) return Math.floor(seconds / 86400) + ' дн назад';
+    return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
   }
-  box.className = 'ann-grid';
-  box.innerHTML = anns.map(cardHtml).join('');
-}
 
-async function retryAnn(id, btn) {
-  btn.disabled = true;
-  btn.classList.add('busy');
-  try {
-    await fetch('/api/announcements/retry', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: id })
+  function exactDate(value) {
+    var date = validDate(value);
+    return date ? date.toLocaleString('ru-RU') : 'Дата не указана';
+  }
+
+  function chipHtml(a) {
+    if (!CAN_MANAGE) return '';
+    if (!a.channel_id) {
+      return '<span class="ann-chip"><i class="fas fa-desktop"></i> Только в панели</span>';
+    }
+    if (a.delivered) {
+      var where = a.channel_name ? ' &middot; #' + esc(a.channel_name) : '';
+      var extra = a.redelivered_at ? ' &middot; дослал ' + esc(a.redelivered_by || '') : '';
+      return '<span class="ann-chip ok"><i class="fab fa-discord"></i> Доставлено' + where + extra + '</span>';
+    }
+    var err = a.deliver_error ? ' title="' + esc(a.deliver_error) + '"' : '';
+    var retry = a.id
+      ? '<button type="button" class="ann-retry" data-retry="' + esc(a.id) + '"><i class="fas fa-rotate-right"></i> Дослать</button>'
+      : '';
+    return '<span class="ann-chip err"' + err + '><i class="fas fa-exclamation-circle"></i> Не доставлено</span>' + retry;
+  }
+
+  function cardHtml(a) {
+    var status = statusOf(a);
+    var foot = chipHtml(a);
+    var message = String(a.message || '');
+    var canExpand = message.length > 220 || message.split('\n').length > 4;
+    return '<article class="ann-card" data-status="' + status + '" data-ann-id="' + esc(a.id || '') + '">' +
+      '<header class="ann-header">' +
+        '<span class="ann-icon" aria-hidden="true"><i class="fas fa-bullhorn"></i></span>' +
+        '<div class="ann-head-copy"><div class="ann-title">' + esc(a.title || 'Без заголовка') + '</div>' +
+          '<div class="ann-meta"><span><i class="fas fa-user"></i> ' + esc(a.from || 'Система') + '</span><span>·</span>' +
+          '<time datetime="' + esc(a.created_at || '') + '" title="' + esc(exactDate(a.created_at)) + '"><i class="fas fa-clock"></i> ' + esc(relativeDate(a.created_at)) + '</time></div></div>' +
+        '<span class="ann-status-mark" aria-hidden="true"></span>' +
+      '</header>' +
+      '<div class="ann-body">' + esc(message).replace(/\n/g, '<br>') + '</div>' +
+      (canExpand ? '<button type="button" class="ann-expand" data-expand>Показать полностью</button>' : '') +
+      '<footer class="ann-foot">' + foot +
+        '<button type="button" class="ann-copy" data-copy-ann aria-label="Скопировать объявление"><i class="fas fa-copy"></i> Копировать</button>' +
+      '</footer>' +
+    '</article>';
+  }
+
+  function counts() {
+    var result = { all: allAnnouncements.length, delivered: 0, panel: 0, failed: 0 };
+    allAnnouncements.forEach(function (item) { result[statusOf(item)] += 1; });
+    return result;
+  }
+
+  function updateSummary() {
+    var c = counts();
+    $('annStatAll').textContent = c.all;
+    $('annStatDelivered').textContent = c.delivered;
+    $('annStatPanel').textContent = c.panel;
+    $('annStatFailed').textContent = c.failed;
+    Object.keys(c).forEach(function (key) {
+      var badge = document.querySelector('[data-filter-count="' + key + '"]');
+      if (badge) badge.textContent = c[key];
     });
-  } finally {
-    await loadAnns();
   }
-}
 
-document.addEventListener('click', function (e) {
-  var b = e.target.closest('[data-retry]');
-  if (b && b.dataset.retry) retryAnn(b.dataset.retry, b);
-});
+  function filteredAnnouncements() {
+    return allAnnouncements.filter(function (item) {
+      if (activeFilter !== 'all' && statusOf(item) !== activeFilter) return false;
+      if (!searchQuery) return true;
+      var haystack = [item.title, item.message, item.from, item.channel_name].join(' ').toLowerCase();
+      return haystack.indexOf(searchQuery) !== -1;
+    });
+  }
 
-loadAnns();
-setInterval(function () { if (!document.hidden) loadAnns(); }, 30000);
+  function renderAnnouncements() {
+    var box = $('ann-list');
+    var items = filteredAnnouncements();
+    box.setAttribute('aria-busy', 'false');
+    if (!allAnnouncements.length) {
+      box.className = 'ann-grid';
+      box.innerHTML = '<div class="empty-state ann-empty"><i class="fas fa-bullhorn"></i><strong>Пока объявлений нет</strong><p>История появится после первой публикации.</p>' + (CAN_MANAGE ? '<p class="empty-tip">Создать первое можно прямо здесь или на <a href="/">дашборде</a>.</p>' : '') + '</div>';
+      $('annResultMeta').textContent = 'Нет публикаций';
+      return;
+    }
+    if (!items.length) {
+      box.className = 'ann-grid';
+      box.innerHTML = '<div class="ann-empty"><i class="fas fa-magnifying-glass"></i><strong>Ничего не найдено</strong><p>Измените поисковый запрос или выберите другой статус доставки.</p></div>';
+      $('annResultMeta').textContent = 'Совпадений нет';
+      return;
+    }
+    box.className = 'ann-grid';
+    box.innerHTML = items.map(cardHtml).join('');
+    $('annResultMeta').textContent = 'Показано ' + items.length + ' из ' + allAnnouncements.length;
+  }
+
+  function showLoadError(message) {
+    var box = $('ann-list');
+    box.className = 'ann-grid';
+    box.setAttribute('aria-busy', 'false');
+    box.innerHTML = '<div class="ann-error"><i class="fas fa-cloud-arrow-down"></i><strong>Лента временно недоступна</strong><p>' + esc(message || 'Не удалось получить объявления.') + '</p><button type="button" class="ann-reload" data-ann-reload><i class="fas fa-rotate"></i> Повторить</button></div>';
+    $('annResultMeta').textContent = 'Ошибка загрузки';
+  }
+
+  async function loadAnns(silent) {
+    if (loadInFlight) return false;
+    loadInFlight = true;
+    try {
+      var response = await fetch('/api/announcements');
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      var anns = await response.json();
+      if (!Array.isArray(anns)) throw new Error('Некорректный формат ответа');
+      var fingerprint = JSON.stringify(anns);
+      if (silent && fingerprint === lastFingerprint) return false;
+      lastFingerprint = fingerprint;
+      allAnnouncements = anns;
+      updateSummary();
+      renderAnnouncements();
+      return true;
+    } catch (error) {
+      if (!silent || !allAnnouncements.length) showLoadError(error.message);
+      return false;
+    } finally {
+      loadInFlight = false;
+    }
+  }
+
+  async function retryAnn(id, button) {
+    if (!button || button.disabled) return;
+    if (window.qualitySetLoading) window.qualitySetLoading(button, true);
+    else { button.disabled = true; button.classList.add('busy'); }
+    try {
+      var response = await fetch('/api/announcements/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id })
+      });
+      var data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Не удалось доставить объявление');
+      if (typeof window.showToast === 'function') window.showToast(data.message || 'Объявление доставлено', true);
+      lastFingerprint = '';
+      await loadAnns(false);
+    } catch (error) {
+      if (typeof window.showToast === 'function') window.showToast(error.message, false);
+    } finally {
+      if (window.qualitySetLoading) window.qualitySetLoading(button, false);
+      else { button.disabled = false; button.classList.remove('busy'); }
+    }
+  }
+
+  async function copyAnnouncement(card) {
+    var item = allAnnouncements.find(function (announcement) {
+      return String(announcement.id || '') === String(card.getAttribute('data-ann-id') || '');
+    });
+    if (!item) {
+      var title = card.querySelector('.ann-title');
+      var body = card.querySelector('.ann-body');
+      item = { title: title ? title.textContent : '', message: body ? body.innerText : '' };
+    }
+    var text = String(item.title || '') + '\n\n' + String(item.message || '');
+    try {
+      await navigator.clipboard.writeText(text);
+      if (typeof window.showToast === 'function') window.showToast('Объявление скопировано', true);
+    } catch (error) {
+      if (typeof window.showToast === 'function') window.showToast('Не удалось скопировать', false);
+    }
+  }
+
+  function setFilter(value) {
+    activeFilter = value;
+    document.querySelectorAll('[data-ann-filter]').forEach(function (button) {
+      var active = button.getAttribute('data-ann-filter') === value;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    renderAnnouncements();
+  }
+
+  function setFormResult(ok, message) {
+    var result = $('annFormResult');
+    if (!result) return;
+    result.className = 'ann-form-result show ' + (ok ? 'ok' : 'err');
+    result.textContent = message;
+  }
+
+  function clearFormResult() {
+    var result = $('annFormResult');
+    if (!result) return;
+    result.className = 'ann-form-result';
+    result.textContent = '';
+  }
+
+  function updatePreview() {
+    if (!CAN_MANAGE) return;
+    var title = $('annTitle').value.trim();
+    var message = $('annMessage').value.trim();
+    $('annTitleCount').textContent = $('annTitle').value.length + ' / 256';
+    $('annMessageCount').textContent = $('annMessage').value.length + ' / 4000';
+    $('annPreviewTitle').textContent = title || 'Заголовок объявления';
+    $('annPreviewMessage').textContent = message || 'Здесь появится текст сообщения.';
+    var mode = document.querySelector('input[name="annDelivery"]:checked');
+    var discord = mode && mode.value === 'discord';
+    $('annPreviewMode').innerHTML = discord ? '<i class="fab fa-discord"></i> Панель + Discord' : '<i class="fas fa-display"></i> Только история панели';
+    $('annDestination').hidden = !discord;
+  }
+
+  async function fetchJSON(url) {
+    var response = await fetch(url);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return response.json();
+  }
+
+  async function loadGuilds() {
+    if (!CAN_MANAGE) return;
+    var guildSelect = $('annGuild');
+    var channelSelect = $('annChannel');
+    guildSelect.innerHTML = '<option value="">Загрузка серверов…</option>';
+    guildSelect.disabled = true;
+    channelSelect.innerHTML = '<option value="">Сначала выберите сервер</option>';
+    channelSelect.disabled = true;
+    try {
+      var guilds = await fetchJSON('/api/guilds');
+      if (!Array.isArray(guilds) || !guilds.length) {
+        guildSelect.innerHTML = '<option value="">Серверы не найдены</option>';
+        return;
+      }
+      guildSelect.innerHTML = '<option value="">Выберите сервер…</option>' + guilds.map(function (guild) {
+        return '<option value="' + esc(guild.id) + '">' + esc(guild.name || guild.id) + '</option>';
+      }).join('');
+      guildSelect.disabled = false;
+      if (guilds.length === 1) {
+        guildSelect.value = String(guilds[0].id);
+        await loadChannels(guildSelect.value);
+      }
+    } catch (error) {
+      guildSelect.innerHTML = '<option value="">Не удалось загрузить</option>';
+      setFormResult(false, 'Не удалось получить список серверов.');
+    }
+  }
+
+  async function loadChannels(guildId) {
+    if (!CAN_MANAGE) return;
+    var select = $('annChannel');
+    if (!guildId) {
+      select.innerHTML = '<option value="">Сначала выберите сервер</option>';
+      select.disabled = true;
+      return;
+    }
+    select.innerHTML = '<option value="">Загрузка каналов…</option>';
+    select.disabled = true;
+    try {
+      var data = await fetchJSON('/api/guild/' + encodeURIComponent(guildId) + '/channels');
+      var channels = Array.isArray(data) ? data : (data.channels || []);
+      channels = channels.filter(function (channel) {
+        return channel.type === 'text' || channel.type === 'news' || channel.news;
+      });
+      select.innerHTML = channels.length ? '<option value="">Выберите канал…</option>' + channels.map(function (channel) {
+        return '<option value="' + esc(channel.id) + '">#' + esc(channel.name) + '</option>';
+      }).join('') : '<option value="">Текстовые каналы не найдены</option>';
+      select.disabled = !channels.length;
+    } catch (error) {
+      select.innerHTML = '<option value="">Не удалось загрузить</option>';
+      setFormResult(false, 'Не удалось получить каналы сервера.');
+    }
+  }
+
+  function openComposer() {
+    if (!CAN_MANAGE) return;
+    modalReturnFocus = document.activeElement;
+    $('annForm').reset();
+    clearFormResult();
+    updatePreview();
+    $('annModal').classList.add('open');
+    $('annModal').setAttribute('aria-hidden', 'false');
+    document.body.classList.add('ann-modal-open');
+    loadGuilds();
+    window.setTimeout(function () { $('annTitle').focus(); }, 40);
+  }
+
+  function closeComposer() {
+    if (!CAN_MANAGE) return;
+    $('annModal').classList.remove('open');
+    $('annModal').setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('ann-modal-open');
+    if (modalReturnFocus && modalReturnFocus.focus) modalReturnFocus.focus({ preventScroll: true });
+  }
+
+  async function submitAnnouncement(event) {
+    event.preventDefault();
+    var title = $('annTitle').value.trim();
+    var message = $('annMessage').value.trim();
+    var delivery = document.querySelector('input[name="annDelivery"]:checked');
+    var discord = delivery && delivery.value === 'discord';
+    var guildId = $('annGuild').value;
+    var channelId = $('annChannel').value;
+    if (!title) { setFormResult(false, 'Укажите заголовок объявления.'); $('annTitle').focus(); return; }
+    if (!message) { setFormResult(false, 'Добавьте текст объявления.'); $('annMessage').focus(); return; }
+    if (discord && (!guildId || !channelId)) { setFormResult(false, 'Выберите сервер и канал для доставки.'); return; }
+
+    var button = $('annSubmit');
+    if (window.qualitySetLoading) window.qualitySetLoading(button, true);
+    else button.disabled = true;
+    clearFormResult();
+    try {
+      var payload = { title: title, message: message };
+      if (discord) { payload.guild_id = guildId; payload.channel_id = channelId; }
+      var response = await fetch('/api/send-announcement', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+      });
+      var data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Не удалось опубликовать');
+      if (discord && data.delivered === false) {
+        setFormResult(false, data.message || data.deliver_error || 'Объявление сохранено, но не доставлено в Discord.');
+      } else {
+        if (typeof window.showToast === 'function') window.showToast(data.message || 'Объявление опубликовано', true);
+        closeComposer();
+      }
+      lastFingerprint = '';
+      await loadAnns(false);
+    } catch (error) {
+      setFormResult(false, error.message);
+    } finally {
+      if (window.qualitySetLoading) window.qualitySetLoading(button, false);
+      else button.disabled = false;
+    }
+  }
+
+  function bindComposer() {
+    if (!CAN_MANAGE) return;
+    $('annCreate').addEventListener('click', openComposer);
+    $('annModalClose').addEventListener('click', closeComposer);
+    $('annCancel').addEventListener('click', closeComposer);
+    $('annModal').addEventListener('click', function (event) { if (event.target === this) closeComposer(); });
+    $('annForm').addEventListener('submit', submitAnnouncement);
+    $('annTitle').addEventListener('input', updatePreview);
+    $('annMessage').addEventListener('input', updatePreview);
+    document.querySelectorAll('input[name="annDelivery"]').forEach(function (input) { input.addEventListener('change', updatePreview); });
+    $('annGuild').addEventListener('change', function () { clearFormResult(); loadChannels(this.value); });
+
+    document.addEventListener('keydown', function (event) {
+      if (!$('annModal').classList.contains('open')) return;
+      if (event.key === 'Escape') { closeComposer(); return; }
+      if (event.key !== 'Tab') return;
+      var focusable = $('annModal').querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),[tabindex]:not([tabindex="-1"])');
+      if (!focusable.length) return;
+      var first = focusable[0], last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
+  }
+
+  function bindPage() {
+    $('annSearch').addEventListener('input', function () {
+      searchQuery = this.value.trim().toLowerCase();
+      $('annSearchClear').style.display = this.value ? 'grid' : 'none';
+      renderAnnouncements();
+    });
+    $('annSearchClear').addEventListener('click', function () {
+      $('annSearch').value = '';
+      searchQuery = '';
+      this.style.display = 'none';
+      renderAnnouncements();
+      $('annSearch').focus();
+    });
+    document.querySelectorAll('[data-ann-filter]').forEach(function (button) {
+      button.addEventListener('click', function () { setFilter(button.getAttribute('data-ann-filter')); });
+    });
+    $('ann-list').addEventListener('click', function (event) {
+      var retry = event.target.closest('[data-retry]');
+      if (retry && retry.dataset.retry) { retryAnn(retry.dataset.retry, retry); return; }
+      var expand = event.target.closest('[data-expand]');
+      if (expand) {
+        var card = expand.closest('.ann-card');
+        var open = card.classList.toggle('is-expanded');
+        expand.textContent = open ? 'Свернуть' : 'Показать полностью';
+        return;
+      }
+      var copy = event.target.closest('[data-copy-ann]');
+      if (copy) copyAnnouncement(copy.closest('.ann-card'));
+      var reload = event.target.closest('[data-ann-reload]');
+      if (reload) loadAnns(false);
+    });
+    bindComposer();
+  }
+
+  bindPage();
+  loadAnns(false);
+  setInterval(function () { if (!document.hidden) loadAnns(true); }, 30000);
+})();
 </script>
 {% endblock %}
