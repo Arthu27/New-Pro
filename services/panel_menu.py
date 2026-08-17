@@ -83,6 +83,7 @@ MENU = [
         {'path': '/theme-settings', 'label': 'Тема панели', 'icon': 'fa-palette'},
         {'path': '/anticrash', 'label': 'Анти-краш', 'icon': 'fa-life-ring'},
         {'path': '/backups', 'label': 'Бэкапы', 'icon': 'fa-save'},
+        {'path': '/templates', 'label': 'Шаблоны', 'icon': 'fa-clone'},
         {'path': '/konsol', 'label': 'Консоль', 'icon': 'fa-terminal'},
         {'path': '/cog-manager', 'label': 'Модули', 'icon': 'fa-cubes'},
         {'path': '/automation', 'label': 'Автоматика', 'icon': 'fa-wand-magic-sparkles'},
@@ -215,6 +216,7 @@ PAGE_COGS = {
     '/replay': ('replay',),
     '/meetings': ('meeting',),
     '/leaderboards': ('leaderboard',),
+    '/templates': ('server_template',),
     '/gamification': ('gamification_cog',),
 }
 

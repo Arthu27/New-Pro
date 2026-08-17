@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Шаблоны — Панель Aether{% endblock %}
+{% block page_title %}Шаблоны сервера{% endblock %}
+{% block content %}
+<style>
+.tp-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
+.tp-kpi{flex:1;min-width:180px;background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:13px 16px}
+.tp-kpi .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.tp-kpi .lab i{color:var(--ac,#e0b04a)}
+.tp-kpi .v{font-size:19px;font-weight:800;color:var(--text-1,#fff)}
+.tp-kpi .v small{font-size:11px;font-weight:600;color:var(--text-3,rgba(255,255,255,.5))}
+.tp-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:15px 17px;margin-bottom:16px}
+.tp-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.tp-panel h3 i{color:var(--ac,#e0b04a)}
+.tp-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.55}
+.tp-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tp-inp{flex:1;min-width:150px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.tp-inp:focus{border-color:var(--ac,#e0b04a)}
+.tp-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
+.tp-btn:hover{filter:brightness(1.08)}
+.tp-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.tp-btn.danger{background:transparent;color:#ff8a7a;border:1px solid rgba(255,138,122,.4)}
+.tp-msg{font-size:12px;padding:6px 2px 0;display:none}
+.tp-msg.ok{color:#4ade80}
+.tp-msg.err{color:#ff8a7a}
+.tp-card{border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:12px;padding:13px 15px;margin-bottom:10px}
+.tp-card .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tp-card .nm{font-size:14px;font-weight:800;color:var(--text-1,#fff)}
+.tp-card .mt{font-size:11.5px;color:var(--ac,#e0b04a);font-weight:700}
+.tp-card .ds{font-size:12px;color:var(--text-2,rgba(255,255,255,.75));margin-top:4px;line-height:1.5}
+.tp-card .cr{font-size:11px;color:var(--text-3,rgba(255,255,255,.45));margin-top:4px}
+.tp-card .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.tp-mini{font-size:11px;border-radius:8px;padding:5px 10px;cursor:pointer;border:1px solid var(--line-2,rgba(255,255,255,.14));background:transparent;color:var(--text-2,rgba(255,255,255,.8));display:inline-flex;align-items:center;gap:5px;text-decoration:none}
+.tp-mini:hover{border-color:var(--ac,#e0b04a);color:var(--ac,#e0b04a)}
+.tp-detail{display:none;margin-top:10px;border-top:1px dashed rgba(255,255,255,.09);padding-top:10px;font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85));line-height:1.65}
+.tp-detail b{color:var(--text-1,#fff)}
+.tp-cat{margin:5px 0}
+.tp-cat .cn{font-weight:700;color:var(--text-1,#fff)}
+.tp-cat .chs{color:var(--text-2,rgba(255,255,255,.7))}
+.tp-tag{display:inline-block;margin:2px;padding:3px 9px;border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:8px;font-size:11px;color:var(--text-2,rgba(255,255,255,.8))}
+.tp-tag.new{border-color:rgba(74,222,128,.4);color:#4ade80}
+[data-theme="light"] .tp-detail{border-top-color:rgba(0,0,0,.1)}
+</style>
+
+<div class="tp-kpis" id="tpKpis">
+  <div class="sk-card" style="width:190px;height:70px"></div>
+  <div class="sk-card" style="width:190px;height:70px"></div>
+</div>
+
+<div class="tp-panel" id="tpSavePanel" style="display:none">
+  <h3><i class="fas fa-camera"></i> Снять снимок текущего сервера</h3>
+  <div class="tp-sub">Как «/шаблон сохранить»: роли (без системных и ботовских), категории и каналы — без перезаписей прав и без ID. Имя приводится к нижнему регистру, до 30 знаков.</div>
+  <div class="tp-row">
+    <input class="tp-inp" id="tpSaveName" maxlength="60" placeholder="имя шаблона, напр. main">
+    <input class="tp-inp" id="tpSaveDesc" maxlength="200" placeholder="описание (необязательно)">
+    <button class="tp-btn" id="tpSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
+  </div>
+  <div class="tp-msg" id="tpSaveMsg"></div>
+</div>
+
+<div class="tp-panel">
+  <h3><i class="fas fa-clone"></i> Библиотека</h3>
+  <div class="tp-sub">Применение консервативное — только создаёт то, чего нет; существующие роли и каналы не трогаются никогда. <button class="tp-btn ghost" id="tpCsv" style="padding:5px 11px;font-size:11.5px"><i class="fas fa-file-csv"></i> Список в CSV</button></div>
+  <div id="tpList">
+    <div class="sk-card" style="height:76px;margin-bottom:8px"></div>
+    <div class="sk-card" style="height:76px"></div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/templates';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function post(path, body, cb) {
+  fetch(API + path, {method: 'POST', headers: {'Content-Type': 'application/json'},
+                     body: JSON.stringify(body)})
+    .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+    .then(cb).catch(function () { cb({status: 0, d: {success: false, error: 'Сеть моргнула — попробуйте ещё раз'}}); });
+}
+
+function flashMsg(text, ok) {
+  var m = document.getElementById('tpSaveMsg');
+  m.style.display = 'block';
+  m.className = 'tp-msg ' + (ok ? 'ok' : 'err');
+  m.textContent = text;
+}
+
+function load() {
+  fetch(API + '/list').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    document.getElementById('tpKpis').innerHTML =
+      '<div class="tp-kpi"><div class="lab"><i class="fas fa-clone"></i> шаблонов</div><div class="v">' + d.count + ' <small>из ' + d.max + '</small></div></div>' +
+      '<div class="tp-kpi"><div class="lab"><i class="fas fa-bolt"></i> действия</div><div class="v" style="font-size:13px;line-height:1.6">снимок · план · применить · JSON</div></div>';
+    var box = document.getElementById('tpList');
+    if (!d.templates.length) {
+      box.innerHTML = '<div class="empty-state" style="margin:6px 0"><i class="fas fa-clone"></i><div>' + esc(d.empty_text) + '</div></div>';
+      return;
+    }
+    box.innerHTML = d.templates.map(function (t) {
+      return '<div class="tp-card"><div class="top"><span class="nm">' + esc(t.name) + '</span>' +
+        '<span class="mt">' + esc(t.meta) + '</span></div>' +
+        (t.description ? '<div class="ds">' + esc(t.description) + '</div>' : '') +
+        '<div class="cr">снят ' + esc(t.created_at.slice(0, 10)) +
+        (t.created_by ? ' · ' + esc(t.created_by) : '') +
+        (t.source_guild ? ' · с сервера «' + esc(t.source_guild) + '»' : '') + '</div>' +
+        '<div class="acts">' +
+        '<button class="tp-mini" onclick="tpInfo(\'' + esc(t.name) + '\', this)"><i class="fas fa-circle-info"></i> инфо</button>' +
+        '<button class="tp-mini" onclick="tpPlan(\'' + esc(t.name) + '\', this)"><i class="fas fa-code-compare"></i> план</button>' +
+        (CAN_EDIT ? '<button class="tp-mini" onclick="tpApply(\'' + esc(t.name) + '\')"><i class="fas fa-play"></i> применить</button>' : '') +
+        '<a class="tp-mini" href="' + API + '/export.json?name=' + encodeURIComponent(t.name) + '"><i class="fas fa-file-export"></i> JSON</a>' +
+        (CAN_EDIT ? '<button class="tp-mini" onclick="tpDelete(\'' + esc(t.name) + '\')"><i class="fas fa-trash"></i></button>' : '') +
+        '</div><div class="tp-detail" id="tpDet-' + esc(t.name) + '"></div></div>';
+    }).join('');
+  }).catch(function () {});
+}
+
+function detail(name) {
+  return document.getElementById('tpDet-' + name);
+}
+
+function tpInfo(name, btn) {
+  var box = detail(name);
+  if (box.style.display === 'block') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  fetch(API + '/info?name=' + encodeURIComponent(name)).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { box.innerHTML = esc(d.error || 'Ошибка'); return; }
+    var i = d.info;
+    var html = '<b>' + esc(i.title) + '</b><br>';
+    html += '<div class="tp-cat"><span class="cn">Роли:</span> <span class="chs">' +
+      (i.roles.length ? i.roles.map(function (r) { return '<span class="tp-tag">' + esc(r) + '</span>'; }).join('') : '—') + '</span></div>';
+    i.categories.forEach(function (c) {
+      html += '<div class="tp-cat"><span class="cn">' + esc(c.name) + ':</span> <span class="chs">' +
+        (c.channels.length ? esc(c.channels.join(', ')) : '—') + '</span></div>';
+    });
+    if (i.channels.length) { html += '<div class="tp-cat"><span class="cn">Без категории:</span> <span class="chs">' + esc(i.channels.join(', ')) + '</span></div>'; }
+    html += '<div class="cr">' + esc(i.footer) + '</div>';
+    box.innerHTML = html;
+  }).catch(function () { box.innerHTML = 'Сеть моргнула'; });
+}
+
+function tpPlan(name, btn) {
+  var box = detail(name);
+  if (box.style.display === 'block') { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  fetch(API + '/plan?name=' + encodeURIComponent(name)).then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); }).then(function (x) {
+    if (!x.d.success) { box.innerHTML = esc(x.d.error || 'Ошибка'); return; }
+    if (x.d.nothing) { box.innerHTML = esc(x.d.nothing_text); return; }
+    var p = x.d.plan;
+    function grp(t, arr) { return arr.length ? '<div class="tp-cat"><span class="cn">' + t + ':</span> ' + arr.map(function (n) { return '<span class="tp-tag new">' + esc(n) + '</span>'; }).join('') + '</div>' : ''; }
+    box.innerHTML = '<b>Создаст: ' + x.d.counts.roles + ' ролей · ' + x.d.counts.categories + ' категорий · ' + x.d.counts.channels + ' каналов</b>' +
+      grp('Роли', p.roles) + grp('Категории', p.categories) + grp('Каналы', p.channels);
+  }).catch(function () { box.innerHTML = 'Сеть моргнула'; });
+}
+
+function tpApply(name) {
+  askConfirm('Применить шаблон «' + name + '»?',
+    'Будут созданы только отсутствующие роли, категории и каналы из шаблона — существующие не трогаются.',
+    function () {
+      post('/apply', {name: name}, function (res) {
+        flashMsg(res.d.success ? res.d.message : (res.d.error || 'Ошибка'), res.d.success);
+        if (res.d.success) { load(); }
+      });
+    }, {okText: 'Применить', icon_fa: 'fa-play'});
+}
+
+function tpDelete(name) {
+  askConfirm('Удалить шаблон «' + name + '»?',
+    'Снимок структуры будет убран из библиотеки сервера. Сервер это никак не меняет.',
+    function () {
+      post('/delete', {name: name}, function (res) {
+        flashMsg(res.d.success ? res.d.message : (res.d.error || 'Ошибка'), res.d.success);
+        if (res.d.success) { load(); }
+      });
+    }, {danger: true, okText: 'Удалить', icon_fa: 'fa-trash'});
+}
+
+if (CAN_EDIT) {
+  document.getElementById('tpSavePanel').style.display = '';
+  document.getElementById('tpSave').onclick = function () {
+    post('/save', {name: document.getElementById('tpSaveName').value,
+                   description: document.getElementById('tpSaveDesc').value}, function (res) {
+      flashMsg(res.d.success ? res.d.message : (res.d.error || 'Ошибка'), res.d.success);
+      if (res.d.success) { document.getElementById('tpSaveName').value = ''; load(); }
+    });
+  };
+}
+
+document.getElementById('tpCsv').onclick = function () {
+  location.href = API + '/export.csv';
+};
+
+load();
+</script>
+{% endblock %}
