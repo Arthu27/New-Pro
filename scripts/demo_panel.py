@@ -64,6 +64,24 @@ def seed():
         with open(audit_path, 'w', encoding='utf-8') as f:
             json.dump({str(GID): events}, f, ensure_ascii=False, indent=1)
 
+    message_log_path = f'data/message_logs_{GID}.json'
+    if not os.path.exists(message_log_path):
+        authors = ('Arthur', 'Moder_Nika', 'Meloman', 'Novichok', 'Luna', 'Vortex', 'Mira', 'Spectre')
+        channels = ('общий', 'медиа', 'поиск-команды', 'оффтоп')
+        messages = []
+        for day in range(30):
+            daily_total = 14 + ((day * 7 + 11) % 24)
+            for index in range(daily_total):
+                messages.append({
+                    'author': authors[(index * 3 + day) % len(authors)],
+                    'channel': channels[(index + day // 3) % len(channels)],
+                    'timestamp': _iso(NOW - timedelta(
+                        days=day, hours=(index * 5 + day) % 20,
+                        minutes=(index * 13) % 60)),
+                })
+        with open(message_log_path, 'w', encoding='utf-8') as f:
+            json.dump(messages, f, ensure_ascii=False)
+
     announcements_path = 'data/announcements.json'
     if not os.path.exists(announcements_path):
         announcements = [

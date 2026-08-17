@@ -156,6 +156,18 @@ print('== 5. Монтаж шаблона ==')
 tpl = open(os.path.join(ROOT, 'web/templates/analytics.html'), encoding='utf-8').read()
 check('anHeatmap' in tpl and 'loadHeatmap' in tpl, 'теплокарта смонтирована на /analytics')
 check('anCsvBtn' in tpl and 'analytics.csv' in tpl, 'CSV-кнопка смонтирована')
+check('analytics-cockpit' in tpl and 'analytics-pulse-ring' in tpl,
+      'оперативный analytics-cockpit смонтирован')
+check('analytics-brief' in tpl and 'anKpiMessages' in tpl and 'anKpiGrowth' in tpl,
+      'ключевые показатели вынесены над графиками')
+check('analytics-jump' in tpl and 'anOperations' in tpl and 'anChannel' in tpl,
+      'быстрая навигация охватывает аналитические контуры')
+check('function updateCockpit' in tpl and '_lastSummary' in tpl and '_lastFlow' in tpl,
+      'динамический индекс объединяет активность и поток аудитории')
+demo_source = open(os.path.join(ROOT, 'scripts', 'demo_panel.py'), encoding='utf-8').read()
+check("message_log_path = f'data/message_logs_{GID}.json'" in demo_source and
+      'for day in range(30)' in demo_source,
+      'demo-preview получает наглядную 30-дневную историю активности')
 emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
 check(tpl.count('an-rowl') >= 2, 'стили теплокарты на месте')

@@ -3,24 +3,80 @@
 {% block page_title %}<i class="fas fa-chart-line"  ></i> Аналитика сервера{% endblock %}
 {% block content %}
 {% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Аналитика сервера</span>
+<section class="analytics-cockpit" aria-labelledby="analyticsTitle">
+  <div class="analytics-cockpit-main">
+    <div class="analytics-eyebrow"><span></span> LIVE INTELLIGENCE · 7 ДНЕЙ</div>
+    <h1 id="analyticsTitle">Сигналы сервера,<br><em>а не просто графики.</em></h1>
+    <p>Единый командный экран активности, роста аудитории и нагрузки команды. От общего импульса до конкретного канала — без переходов между отчётами.</p>
+    <div class="analytics-controlbar">
+      <label class="analytics-server-control" for="guild-select">
+        <i class="fas fa-server"></i>
+        <span><small>Контекст</small><select id="guild-select" class="guild-select" onchange="window.__analytics && window.__analytics.load()" aria-label="Выбор сервера"><option value="">Выберите сервер...</option></select></span>
+      </label>
+      <button type="button" class="analytics-refresh" id="anRefresh"><i class="fas fa-rotate"></i><span>Обновить</span></button>
+      <div class="analytics-updated"><span></span><div><small>Синхронизация</small><strong id="anUpdated">Загрузка…</strong></div></div>
     </div>
-    <h1>Аналитика сервера</h1>
-    <p>Графики активности, топ участников и каналов за последнюю неделю.</p>
   </div>
-</div>
+  <aside class="analytics-pulse" aria-label="Оперативный индекс">
+    <div class="analytics-pulse-ring"><span id="anPulseValue">—</span><small>INDEX</small></div>
+    <strong id="anPulseLabel">Собираем сигнал</strong>
+    <p id="anPulseNote">Оцениваем активность и динамику аудитории.</p>
+  </aside>
+</section>
 {% endblock %}
 
-
-
 <style>
-.analytics-wrap { display: flex; flex-direction: column; gap: 16px; }
+.analytics-cockpit{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:24px;margin:0 0 16px;padding:30px;border:1px solid rgba(114,137,255,.24);border-radius:22px;overflow:hidden;background:radial-gradient(circle at 84% 16%,rgba(88,101,242,.18),transparent 30%),radial-gradient(circle at 12% 100%,rgba(34,211,238,.1),transparent 34%),linear-gradient(145deg,#11131c 0%,#0b0d13 62%,#10121a 100%);box-shadow:0 24px 70px rgba(0,0,0,.28)}
+.analytics-cockpit:before{content:"";position:absolute;inset:0;z-index:-1;opacity:.16;background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(90deg,#000,transparent 78%)}
+.analytics-eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:14px;color:#9aa7ff;font-size:9px;font-weight:850;letter-spacing:.16em}
+.analytics-eyebrow span,.analytics-updated>span{width:7px;height:7px;border-radius:50%;background:#55e6a5;box-shadow:0 0 0 5px rgba(85,230,165,.1),0 0 18px rgba(85,230,165,.65)}
+.analytics-cockpit h1{margin:0;max-width:720px;color:#f5f7ff;font-size:clamp(30px,4vw,52px);font-weight:820;letter-spacing:-.045em;line-height:.98}
+.analytics-cockpit h1 em{color:#8c9aff;font-style:normal}
+.analytics-cockpit-main>p{max-width:720px;margin:17px 0 23px;color:#a9aec0;font-size:13px;line-height:1.65}
+.analytics-controlbar{display:flex;align-items:stretch;gap:9px;flex-wrap:wrap}
+.analytics-server-control{min-width:260px;display:flex;align-items:center;gap:11px;padding:8px 12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.045)}
+.analytics-server-control>i{color:#8794ff}
+.analytics-server-control>span{display:flex;flex:1;flex-direction:column;min-width:0}
+.analytics-server-control small,.analytics-updated small{color:#6f7587;font-size:7px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.analytics-server-control .guild-select{min-height:21px;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;font-size:11px!important}
+.analytics-server-control .guild-select option{background:#171923;color:#fff}
+.analytics-refresh{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:48px;padding:0 15px;border:1px solid rgba(129,140,248,.28);border-radius:12px;background:rgba(99,102,241,.12);color:#b7bfff;font:inherit;font-size:10px;font-weight:750;cursor:pointer}
+.analytics-refresh:hover{background:rgba(99,102,241,.22);border-color:rgba(129,140,248,.5)}
+.analytics-refresh.busy i{animation:anSpin 1s linear infinite}@keyframes anSpin{to{transform:rotate(360deg)}}
+.analytics-updated{display:flex;align-items:center;gap:10px;min-height:48px;padding:7px 12px}
+.analytics-updated>span{width:6px;height:6px;flex:0 0 auto}
+.analytics-updated>div{display:flex;flex-direction:column}
+.analytics-updated strong{color:#d9ddeb;font-size:9.5px;font-weight:650}
+.analytics-pulse{align-self:stretch;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:20px;border:1px solid rgba(255,255,255,.08);border-radius:17px;background:rgba(255,255,255,.035);text-align:center;backdrop-filter:blur(10px)}
+.analytics-pulse-ring{width:112px;height:112px;display:grid;place-content:center;border-radius:50%;background:radial-gradient(circle at center,#10131d 57%,transparent 59%),conic-gradient(#7181ff var(--pulse,12%),rgba(255,255,255,.07) 0);box-shadow:inset 0 0 28px rgba(113,129,255,.12),0 0 35px rgba(88,101,242,.12)}
+.analytics-pulse-ring span{color:#f4f6ff;font:800 30px/1 'JetBrains Mono',monospace}
+.analytics-pulse-ring small{margin-top:3px;color:#747d99;font-size:7px;font-weight:850;letter-spacing:.18em}
+.analytics-pulse>strong{margin-top:14px;color:#dfe3f5;font-size:11px}
+.analytics-pulse>p{margin:5px 0 0;color:#777e91;font-size:9px;line-height:1.45}
+.analytics-brief{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:11px}
+.analytics-kpi{position:relative;min-height:105px;padding:15px 16px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:linear-gradient(145deg,var(--surface-2),color-mix(in srgb,var(--surface) 92%,#5865f2 3%))}
+.analytics-kpi:after{content:"";position:absolute;right:-16px;bottom:-28px;width:74px;height:74px;border-radius:50%;background:var(--kpi-tone,#7181ff);opacity:.08;filter:blur(2px)}
+.analytics-kpi-head{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--text-3);font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.analytics-kpi-head i{color:var(--kpi-tone,#7181ff)}
+.analytics-kpi strong{display:block;margin-top:13px;overflow:hidden;color:var(--text);font:780 25px/1 'JetBrains Mono',monospace;text-overflow:ellipsis;white-space:nowrap}
+.analytics-kpi p{margin:7px 0 0;color:var(--text-3);font-size:9px;line-height:1.4}
+.analytics-kpi[data-tone="green"]{--kpi-tone:#55e6a5}.analytics-kpi[data-tone="cyan"]{--kpi-tone:#38d8f0}.analytics-kpi[data-tone="amber"]{--kpi-tone:#f6c75c}
+.analytics-insight{display:flex;align-items:center;gap:13px;margin:0 0 14px;padding:12px 14px;border:1px solid rgba(113,129,255,.2);border-radius:13px;background:rgba(88,101,242,.065)}
+.analytics-insight>i{width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;border-radius:10px;background:rgba(113,129,255,.13);color:#91a0ff}
+.analytics-insight div{min-width:0}.analytics-insight strong{display:block;color:var(--text-2);font-size:10.5px}.analytics-insight p{margin:3px 0 0;color:var(--text-3);font-size:9.5px;line-height:1.5}
+.analytics-jump{position:sticky;top:8px;z-index:8;display:flex;gap:5px;margin-bottom:15px;padding:6px;border:1px solid var(--line);border-radius:12px;overflow:auto;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(16px)}
+.analytics-jump a{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:5px 9px;border-radius:8px;color:var(--text-3);font-size:9px;font-weight:700;text-decoration:none;white-space:nowrap}.analytics-jump a:hover{color:#abb4ff;background:rgba(88,101,242,.11)}
+.analytics-wrap { display: flex; flex-direction: column; gap: 16px; scroll-behavior:smooth; }
 .analytics-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 900px) { .analytics-grid-2 { grid-template-columns: 1fr; } }
+@media (max-width: 900px) {
+  .analytics-cockpit{grid-template-columns:1fr;padding:22px}.analytics-pulse{display:none}
+  .analytics-brief{grid-template-columns:1fr 1fr}.analytics-grid-2{grid-template-columns:1fr}
+}
+@media (max-width: 560px) {
+  .analytics-cockpit{padding:19px 16px}.analytics-cockpit h1{font-size:31px}.analytics-server-control{width:100%;min-width:0}
+  .analytics-refresh{flex:1}.analytics-updated{flex:1}.analytics-brief{grid-template-columns:1fr}.analytics-kpi{min-height:92px}
+}
+@media (prefers-reduced-motion:reduce){.analytics-refresh.busy i,.leader-row,.bar-fill:after{animation:none!important}}
 
 .guild-select {
   width: 100%;
@@ -161,12 +217,24 @@
 }
 </style>
 
-<div class="analytics-wrap">
-  <select id="guild-select" class="guild-select" onchange="window.__analytics && window.__analytics.load()" aria-label="Выбор сервера">
-    <option value="">Выберите сервер...</option>
-  </select>
+<div class="analytics-brief" aria-label="Ключевые показатели">
+  <article class="analytics-kpi"><div class="analytics-kpi-head"><span>Сообщения · 7д</span><i class="fas fa-message"></i></div><strong id="anKpiMessages">—</strong><p id="anKpiMessagesNote">Сравниваем с прошлой неделей</p></article>
+  <article class="analytics-kpi" data-tone="cyan"><div class="analytics-kpi-head"><span>Активные авторы</span><i class="fas fa-users"></i></div><strong id="anKpiAuthors">—</strong><p id="anKpiAuthorsNote">Уникальные участники за неделю</p></article>
+  <article class="analytics-kpi" data-tone="green"><div class="analytics-kpi-head"><span>Рост аудитории</span><i class="fas fa-arrow-trend-up"></i></div><strong id="anKpiGrowth">—</strong><p id="anKpiGrowthNote">Чистый поток за 14 дней</p></article>
+  <article class="analytics-kpi" data-tone="amber"><div class="analytics-kpi-head"><span>Главный канал</span><i class="fas fa-hashtag"></i></div><strong id="anKpiChannel">—</strong><p id="anKpiChannelNote">Ожидаем данные активности</p></article>
+</div>
+<div class="analytics-insight" id="anInsight"><i class="fas fa-wand-magic-sparkles"></i><div><strong>Оперативная заметка</strong><p>Собираем данные и готовим короткий вывод для команды.</p></div></div>
+<nav class="analytics-jump" aria-label="Разделы аналитики">
+  <a href="#anLeaders"><i class="fas fa-ranking-star"></i> Лидеры</a>
+  <a href="#anTrends"><i class="fas fa-chart-column"></i> Динамика</a>
+  <a href="#anAudience"><i class="fas fa-user-plus"></i> Аудитория</a>
+  <a href="#anHeat"><i class="fas fa-fire"></i> Теплокарта</a>
+  <a href="#anOperations"><i class="fas fa-user-shield"></i> Команда</a>
+  <a href="#anChannel"><i class="fas fa-magnifying-glass-chart"></i> Канал</a>
+</nav>
 
-  <div class="analytics-grid-2" data-reveal="up">
+<div class="analytics-wrap">
+  <div class="analytics-grid-2" id="anLeaders" data-reveal="up">
     <div class="section">
       <h2><i class="fas fa-trophy"></i> Самые активные участники</h2>
       <div id="top-members"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
@@ -177,7 +245,7 @@
     </div>
   </div>
 
-  <div class="section">
+  <div class="section" id="anTrends">
     <h2><i class="fas fa-scale-balanced"></i> Неделя к неделе</h2>
     <div class="an-sumgrid" id="anWeekSum">
       <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
@@ -192,7 +260,7 @@
     </div>
   </div>
 
-  <div class="section">
+  <div class="section" id="anAudience">
     <h2><i class="fas fa-user-plus"></i> Рост участников</h2>
     <div   style="height: 240px; position: relative;">
       <canvas id="memberChart"></canvas>
@@ -207,11 +275,11 @@
     </div>
   </div>
 
-  <div class="section">
+  <div class="section" id="anHeat">
     <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-fire"></i> Теплокарта активности<span id="anHeatPeak" class="an-peak"></span></h2>
     <div id="anHeatmap"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
   </div>
-  <div class="an-pair">
+  <div class="an-pair" id="anOperations">
     <div class="section">
       <h2><i class="fas fa-gavel"></i> Модерация за 30 дней</h2>
       <div id="anModLoad"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
@@ -223,7 +291,7 @@
     </div>
   </div>
 
-  <div class="section">
+  <div class="section" id="anChannel">
     <h2><i class="fas fa-magnifying-glass-chart"></i> Детализация по каналу</h2>
     <div class="an-drillbar">
       <select id="anDrillSel" class="an-select" onchange="onDrillChange()"></select>
@@ -285,6 +353,45 @@
   var MAIN_GID = '{{ main_guild_id }}';
   var msgChart, memberChart;
   var _loaded = false;
+  var _loading = false;
+  var _lastSummary = null;
+  var _lastFlow = null;
+  var _topChannel = null;
+
+  function kpi(id, value, note) {
+    var valueEl = $id(id), noteEl = $id(id + 'Note');
+    if (valueEl) valueEl.textContent = value;
+    if (noteEl && note) noteEl.textContent = note;
+  }
+
+  function signed(value) {
+    value = Number(value || 0);
+    return (value > 0 ? '+' : '') + num(value);
+  }
+
+  function updateCockpit() {
+    var week = _lastSummary || {};
+    var flow = _lastFlow || {};
+    var volume = Number(week.week_msgs || 0);
+    var delta = Number(week.msgs_delta || 0);
+    var net = Number(flow.net || 0);
+    var score = Math.round(Math.max(18, Math.min(96,
+      38 + Math.min(32, Math.sqrt(volume) * 2.2) + Math.max(-12, Math.min(12, delta / 2)) + Math.max(-8, Math.min(8, net)))));
+    var ring = document.querySelector('.analytics-pulse-ring');
+    if (ring) ring.style.setProperty('--pulse', score + '%');
+    if ($id('anPulseValue')) $id('anPulseValue').textContent = score;
+    var label = score >= 80 ? 'Сильный импульс' : score >= 60 ? 'Стабильная активность' : score >= 42 ? 'Спокойный ритм' : 'Нужен фокус';
+    if ($id('anPulseLabel')) $id('anPulseLabel').textContent = label;
+    if ($id('anPulseNote')) $id('anPulseNote').textContent = volume
+      ? num(volume) + ' сообщений · поток ' + signed(net)
+      : 'Недостаточно событий для уверенной оценки.';
+    var insight = $id('anInsight');
+    if (insight) {
+      var channel = _topChannel ? '#' + _topChannel.name : 'главный канал';
+      var trend = delta > 0 ? 'активность растёт на ' + delta + '%' : delta < 0 ? 'активность снизилась на ' + Math.abs(delta) + '%' : 'активность держится ровно';
+      insight.querySelector('p').textContent = 'Сейчас ' + channel + ' задаёт темп; ' + trend + ', чистый поток аудитории ' + signed(net) + '.';
+    }
+  }
 
   function getInitial(name) {
     name = String(name || '?').trim();
@@ -494,16 +601,26 @@
   function renderSummary(d) {
     var box = $id('anWeekSum');
     if (!d || !box) return;
+    _lastSummary = d;
     box.innerHTML =
       deltaChip(d.week_msgs, d.msgs_delta, 'сообщений за 7 дней') +
       deltaChip(d.week_users, d.users_delta, 'активных авторов за 7 дней');
+    var msgDelta = d.msgs_delta == null ? 'Нет базы для сравнения' : signed(d.msgs_delta) + '% к прошлой неделе';
+    var usersDelta = d.users_delta == null ? 'Собираем недельную базу' : signed(d.users_delta) + '% к прошлой неделе';
+    kpi('anKpiMessages', num(d.week_msgs), msgDelta);
+    kpi('anKpiAuthors', num(d.week_users), usersDelta);
+    updateCockpit();
   }
 
   function renderFlow(d) {
-    if (typeof Chart === 'undefined' || !d || !d.labels) return;
-    var net = $id('anFlowNet');
-    if (net) net.textContent = 'пришло ' + d.joined_total + ' · ушло ' + d.left_total +
+    if (!d || !d.labels) return;
+    _lastFlow = d;
+    kpi('anKpiGrowth', signed(d.net), 'Пришло ' + num(d.joined_total) + ' · ушло ' + num(d.left_total));
+    updateCockpit();
+    var netEl = $id('anFlowNet');
+    if (netEl) netEl.textContent = 'пришло ' + d.joined_total + ' · ушло ' + d.left_total +
       ' · ' + (d.net >= 0 ? '+' : '') + d.net;
+    if (typeof Chart === 'undefined') return;
     var el = $id('flowChart');
     if (!el) return;
     if (flowChart) flowChart.destroy();
@@ -676,7 +793,11 @@
   async function load() {
     var sel = $id('guild-select');
     var gid = (sel && sel.value) || MAIN_GID;
-    if (!gid) return;
+    if (!gid || _loading) return;
+    _loading = true;
+    var refresh = $id('anRefresh');
+    if (refresh) { refresh.disabled = true; refresh.classList.add('busy'); }
+    if ($id('anUpdated')) $id('anUpdated').textContent = 'Синхронизация…';
     try {
       var res = await fetch('/api/guild/' + gid + '/analytics');
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -684,6 +805,9 @@
       renderMembers(d.top_members || []);
       renderChannels(d.top_channels || []);
       renderCharts(d);
+      _topChannel = (d.top_channels || [])[0] || null;
+      kpi('anKpiChannel', _topChannel ? '#' + _topChannel.name : '—', _topChannel ? num(_topChannel.messages) + ' сообщений в выборке' : 'Канальная активность не записана');
+      updateCockpit();
       loadHeatmap(gid);
       loadFlow(gid);
       loadSummary(gid);
@@ -703,14 +827,21 @@
       if (csvFull) csvFull.href = '/api/guild/' + gid + '/analytics_full.csv';
       loadExtras(gid);
       _loaded = true;
+      if ($id('anUpdated')) $id('anUpdated').textContent = 'Только что · ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
-      var mb = $id('top-members'); if (mb) mb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"  ></i><p  >Не удалось загрузить</p></div>';
-      var cb = $id('top-channels'); if (cb) cb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"  ></i><p  >Не удалось загрузить</p></div>';
+      var mb = $id('top-members'); if (mb) mb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Не удалось загрузить</p></div>';
+      var cb = $id('top-channels'); if (cb) cb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Не удалось загрузить</p></div>';
+      if ($id('anUpdated')) $id('anUpdated').textContent = 'Ошибка синхронизации';
+    } finally {
+      _loading = false;
+      if (refresh) { refresh.disabled = false; refresh.classList.remove('busy'); }
     }
   }
 
   // Auto-load on ready + live refresh (списки часто, графики реже)
   function start() {
+    var refresh = $id('anRefresh');
+    if (refresh) refresh.addEventListener('click', load);
     load();
     if (window.setLiveRefresh) {
       window.setLiveRefresh(load, 5000);
