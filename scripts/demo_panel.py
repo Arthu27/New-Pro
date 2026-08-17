@@ -9,9 +9,11 @@
 
 Запуск:  python3 scripts/demo_panel.py  ->  http://127.0.0.1:8090/login
 """
+import hashlib
 import json
 import os
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -184,7 +186,7 @@ def seed():
 seed()
 
 import web.app as wapp  # noqa: E402
-from flask import redirect  # noqa: E402
+from flask import redirect, request, session  # noqa: E402
 
 # Arena показывает preview внутри HTTPS iframe. Для такой схемы браузеру нужны
 # SameSite=None + Secure, иначе пароль принимается, но cookie не возвращается
@@ -296,6 +298,49 @@ class FakeBot:
 
 wapp.set_bot_instance(FakeBot())
 app = wapp.app
+
+# Некоторые браузеры полностью запрещают cookies в iframe даже с
+# SameSite=None/Partitioned. После успешной штатной проверки пароля держим
+# короткую server-side demo-сессию, привязанную к адресу прокси и User-Agent.
+# Это fallback только запущенного demo-процесса: после рестарта всё исчезает.
+_DEMO_AUTH_TTL = 8 * 60 * 60
+_demo_authorized = {}
+
+
+def _demo_client_key():
+    forwarded = (request.headers.get('X-Forwarded-For') or '').split(',')[0].strip()
+    address = forwarded or request.remote_addr or 'preview'
+    agent = request.headers.get('User-Agent') or 'browser'
+    return hashlib.sha256(f'{address}\0{agent}'.encode('utf-8')).hexdigest()
+
+
+@app.before_request
+def restore_demo_session():
+    if session.get('logged_in'):
+        return None
+    expires = _demo_authorized.get(_demo_client_key(), 0)
+    if expires <= time.time():
+        return None
+    session.permanent = True
+    session['logged_in'] = True
+    session['username'] = DEMO_USERNAME
+    session['role'] = 'owner'
+    session['avatar'] = ''
+    return None
+
+
+@app.after_request
+def remember_demo_session(response):
+    key = _demo_client_key()
+    location = response.headers.get('Location', '')
+    if (request.path == '/login' and request.method == 'POST' and
+            response.status_code in (301, 302, 303, 307, 308) and
+            location.rstrip('/') == ''):
+        _demo_authorized[key] = time.time() + _DEMO_AUTH_TTL
+        response.headers['Location'] = '/announcements'
+    elif request.path == '/logout':
+        _demo_authorized.pop(key, None)
+    return response
 
 
 @app.route('/demo-login')

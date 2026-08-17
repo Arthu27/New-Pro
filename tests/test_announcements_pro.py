@@ -104,12 +104,20 @@ check("DEMO_USERNAME = 'owner'" in demo and "DEMO_PASSWORD = '123321'" in demo,
       'demo-preview использует запрошенную отдельную учётную запись')
 check("@app.route('/demo-login')" in demo and "return redirect('/login')" in demo,
       'старый preview-адрес перенаправляет на обычную форму без создания сессии')
-check("session['logged_in']" not in demo and 'wapp.USERS.clear()' in demo,
-      'беспарольный обход удалён, demo-вход проверяет пароль')
+check("request.path == '/login'" in demo and "request.method == 'POST'" in demo and
+      'response.status_code in (301, 302, 303, 307, 308)' in demo,
+      'резервная сессия включается только после успешной проверки пароля')
 check("SESSION_COOKIE_SAMESITE'] = 'None'" in demo and
       "SESSION_COOKIE_SECURE'] = True" in demo and
       "SESSION_COOKIE_PARTITIONED'] = True" in demo,
       'partitioned-сессия demo-preview сохраняется внутри HTTPS iframe Arena')
+check('@app.before_request' in demo and '_demo_authorized' in demo and
+      'restore_demo_session' in demo,
+      'server-side fallback сохраняет вход при полной блокировке iframe-cookie')
+check("response.headers['Location'] = '/announcements'" in demo,
+      'после demo-входа открывается рабочий раздел, а не Welcome-экран')
+check("request.path == '/logout'" in demo and '_demo_authorized.pop' in demo,
+      'выход очищает резервную demo-сессию')
 
 print('== 6. Синтаксис и ролевой HTTP-рендер ==')
 from jinja2 import Environment  # noqa: E402
