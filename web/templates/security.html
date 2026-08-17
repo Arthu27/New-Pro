@@ -1,122 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Безопасность — Панель Aether{% endblock %}
-{% block page_title %}Центр безопасности{% endblock %}
+{% block title %}Security Radar — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-radar"></i> Security Radar{% endblock %}
 {% block content %}
-<style>
-.sc-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
-.sc-card{flex:1;min-width:230px;background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:14px 16px}
-.sc-card .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:6px;display:flex;align-items:center;gap:7px}
-.sc-card .lab i{color:var(--ac,#e0b04a)}
-.sc-card .v{font-size:14.5px;font-weight:800;color:var(--text-1,#fff)}
-.sc-card .v.on{color:#4ade80}
-.sc-card .v.off{color:#ff8a7a}
-.sc-card .sw{margin-top:9px}
-.sc-sw{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;border-radius:9px;padding:5px 11px;cursor:pointer;border:1px solid var(--line-2,rgba(255,255,255,.15));background:transparent;color:var(--text-2,rgba(255,255,255,.8))}
-.sc-sw:hover{border-color:var(--ac,#e0b04a)}
-.sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-@media (max-width:960px){.sc-grid{grid-template-columns:1fr}}
-.sc-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
-.sc-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
-.sc-panel h3 i{color:var(--ac,#e0b04a)}
-.sc-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
-.sc-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
-.sc-inp{flex:1;min-width:150px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
-.sc-inp:focus{border-color:var(--ac,#e0b04a)}
-.sc-sel{background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
-.sc-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
-.sc-btn:hover{filter:brightness(1.08)}
-.sc-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
-.sc-msg{font-size:12px;padding:4px 2px;display:none}
-.sc-msg.ok{color:#4ade80}
-.sc-msg.err{color:#ff8a7a}
-.sc-result{border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:12px;padding:12px 14px;font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85));display:none;margin-top:8px;line-height:1.6}
-.sc-result.bad{border-color:rgba(237,66,69,.45);background:rgba(237,66,69,.06)}
-.sc-result.good{border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.05)}
-.sc-result b{color:var(--text-1,#fff)}
-.sc-domain{display:inline-block;margin:2px;padding:3px 9px;background:rgba(237,66,69,.12);color:#ff8a7a;border-radius:8px;font-size:11.5px;font-family:monospace}
-.sc-warn{padding:7px 4px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:12.5px}
-.sc-warn:last-child{border-bottom:none}
-.sc-score{display:inline-block;min-width:52px;text-align:center;font-weight:800;border-radius:9px;padding:4px 8px;margin-right:8px}
-.sc-score.hi{background:rgba(237,66,69,.15);color:#ff8a7a}
-.sc-score.mid{background:rgba(240,205,122,.13);color:#f0cd7a}
-.sc-score.lo{background:rgba(74,222,128,.12);color:#4ade80}
-.sc-rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media (max-width:700px){.sc-rules{grid-template-columns:1fr}}
-.sc-tag{display:inline-block;margin:2px;padding:2px 8px;border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:7px;font-size:10.5px;color:var(--text-3,rgba(255,255,255,.6));font-family:monospace}
-.sc-trail{display:flex;gap:8px;align-items:flex-end;height:70px;margin-top:8px}
-.sc-bar{flex:1;background:linear-gradient(180deg,var(--ac,#e0b04a),#9b59b6);border-radius:4px 4px 0 0;min-height:3px;position:relative}
-[data-theme="light"] .sc-warn{border-bottom-color:rgba(0,0,0,.08)}
-</style>
 
-<div class="sc-kpis" id="scKpis">
-  <div class="sk-card" style="width:230px;height:76px"></div>
-  <div class="sk-card" style="width:230px;height:76px"></div>
-  <div class="sk-card" style="width:230px;height:76px"></div>
-</div>
-
-<div class="sc-panel" id="scNewPanel" style="display:none">
-  <h3><i class="fas fa-baby"></i> Новые аккаунты</h3>
-  <div class="sc-sub">Как «/security-newaccount»: аккаунты младше порога — под подозрением, действие из списка бота.</div>
-  <div class="sc-row">
-    <input class="sc-inp" id="scDays" type="number" min="1" max="365" placeholder="порог, дней" style="max-width:140px">
-    <select class="sc-sel" id="scAction">
-      <option value="warn">warn — только сообщить</option>
-      <option value="kick">kick — выгнать</option>
-      <option value="ban">ban — забанить</option>
-    </select>
-    <button type="button" class="sc-btn" id="scNewSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
-  </div>
-  <div class="sc-msg" id="scNewMsg"></div>
-</div>
-
-<div class="sc-grid">
-  <div>
-    <div class="sc-panel">
-      <h3><i class="fas fa-magnifying-glass"></i> Сканер ссылок</h3>
-      <div class="sc-sub">Вставьте подозрительный текст — домены проверит тот самый сканер бота (точное совпадение и поддомены).</div>
-      <div class="sc-row">
-        <input class="sc-inp" id="scScanText" placeholder="напр. лови нитро https://discord-nitro.gift/claim">
-        <button type="button" class="sc-btn" id="scScan"><i class="fas fa-radar"></i> Проверить</button>
-      </div>
-      <div class="sc-result" id="scScanRes"></div>
-    </div>
-    <div class="sc-panel">
-      <h3><i class="fas fa-user-secret"></i> Песочница фейк-аккаунта</h3>
-      <div class="sc-sub">Соберите профиль — оценку даст настоящий _fake_account_score с нынешним порогом сервера.</div>
-      <div class="sc-row">
-        <input class="sc-inp" id="scFakeAge" type="number" min="0" max="3650" placeholder="возраст, дней" style="max-width:140px">
-        <input class="sc-inp" id="scFakeName" placeholder="имя, напр. Free Nitro Gift1234">
-        <select class="sc-sel" id="scFakeAva">
-          <option value="1">стандартный аватар</option>
-          <option value="0">свой аватар</option>
-        </select>
-        <button type="button" class="sc-btn" id="scFake"><i class="fas fa-flask"></i> Оценить</button>
-      </div>
-      <div id="scFakeRes"></div>
-    </div>
-  </div>
-  <div>
-    <div class="sc-panel">
-      <h3><i class="fas fa-bolt"></i> Симулятор спам-очереди</h3>
-      <div class="sc-sub">Сколько одинаковых сообщений подряд выдержит фильтр? Скор считает живой _ai_spam_score.</div>
-      <div class="sc-row">
-        <input class="sc-inp" id="scSpamText" placeholder="текст спама" value="зайди на мой сайт">
-        <select class="sc-sel" id="scSpamN">
-          <option value="3">3 сообщения</option>
-          <option value="5" selected>5 сообщений</option>
-          <option value="8">8 сообщений</option>
-          <option value="12">12 сообщений</option>
-        </select>
-        <button type="button" class="sc-btn" id="scSpam"><i class="fas fa-forward-fast"></i> Прогнать</button>
-      </div>
-      <div id="scSpamRes"></div>
-    </div>
-    <div class="sc-panel">
-      <h3><i class="fas fa-book-skull"></i> Справочник правил</h3>
-      <div class="sc-sub">Списки бота как есть: с какими доменами и именами боремся. CSV — с настройками.</div>
-      <div class="sc-rules" id="scRules"></div>
-      <div style="margin-top:10px"><button type="button" class="sc-btn ghost" id="scCsv"><i class="fas fa-file-csv"></i> Настройки и правила в CSV</button></div>
-    </div>
+<style>[data-theme="light"] .ops-security-radar{color-scheme:light}</style>
+<div class="ops-canvas ops-security-radar" data-room-kind="radar" data-room-version="3">
+  <div class="ops-room-label"><span>PRT / SECURITY RADAR</span><b>Радар угроз</b><em>проверить риск до реального инцидента</em></div>
+  <section class="ops-radar-overview"><div class="ops-radar-scope"><span class="ops-radar-ring r1"></span><span class="ops-radar-ring r2"></span><span class="ops-radar-ring r3"></span><i class="fas fa-shield-halved"></i><b></b></div><div class="ops-radar-copy"><span class="ops-kicker">ACTIVE THREAT MODEL</span><h2>Защитный периметр</h2><p>Сканеры ссылок, профилей и спам-волн используют те же правила, что работают внутри бота.</p></div><div class="sc-kpis ops-radar-kpis" id="scKpis"><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div></div></section>
+  <section class="ops-radar-policy" id="scNewPanel" style="display:none"><div><span class="ops-kicker">NEW ACCOUNT POLICY</span><h2>Барьер новых аккаунтов</h2></div><label class="ops-field"><span>Возраст, дней</span><input id="scDays" type="number" min="1" max="365"></label><label class="ops-field"><span>Реакция</span><select id="scAction"><option value="warn">Только сигнал</option><option value="kick">Исключить</option><option value="ban">Заблокировать</option></select></label><button type="button" class="ops-primary" id="scNewSave"><i class="fas fa-floppy-disk"></i> Применить</button><div class="sc-msg" id="scNewMsg"></div></section>
+  <div class="ops-radar-grid">
+    <section class="ops-radar-module ops-radar-link"><header><i class="fas fa-link-slash"></i><div><span>VECTOR 01</span><h3>Сканер ссылок</h3></div></header><p>Проверяет точные домены и поддомены по боевому справочнику.</p><div class="ops-inline"><input id="scScanText" placeholder="Вставьте подозрительный текст"><button type="button" class="ops-primary" id="scScan"><i class="fas fa-radar"></i> Скан</button></div><div class="sc-result" id="scScanRes"></div></section>
+    <section class="ops-radar-module ops-radar-fake"><header><i class="fas fa-user-secret"></i><div><span>VECTOR 02</span><h3>Модель фейка</h3></div></header><p>Соберите профиль и получите реальный risk-score до входа пользователя.</p><div class="ops-form-grid"><label class="ops-field"><span>Возраст</span><input id="scFakeAge" type="number" min="0" max="3650" placeholder="дней"></label><label class="ops-field"><span>Имя</span><input id="scFakeName" placeholder="Display name"></label><label class="ops-field"><span>Аватар</span><select id="scFakeAva"><option value="1">Стандартный</option><option value="0">Собственный</option></select></label></div><button type="button" class="ops-secondary" id="scFake"><i class="fas fa-flask"></i> Рассчитать</button><div id="scFakeRes"></div></section>
+    <section class="ops-radar-module ops-radar-spam"><header><i class="fas fa-bolt"></i><div><span>VECTOR 03</span><h3>Спам-волна</h3></div></header><p>Симуляция повторяющихся сообщений без отправки в Discord.</p><div class="ops-inline"><input id="scSpamText" value="зайди на мой сайт" placeholder="Текст волны"><select id="scSpamN"><option value="3">3 раза</option><option value="5" selected>5 раз</option><option value="8">8 раз</option><option value="12">12 раз</option></select><button type="button" class="ops-primary" id="scSpam"><i class="fas fa-forward-fast"></i> Прогон</button></div><div id="scSpamRes"></div></section>
+    <section class="ops-radar-module ops-radar-rules"><header><i class="fas fa-book-skull"></i><div><span>INTEL BASE</span><h3>Справочник сигналов</h3></div></header><div class="sc-rules" id="scRules"></div><button type="button" class="ops-secondary" id="scCsv"><i class="fas fa-file-csv"></i> Экспорт правил</button></section>
   </div>
 </div>
 

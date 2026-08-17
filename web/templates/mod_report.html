@@ -1,69 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Отчёт модерации — Панель Aether{% endblock %}
-{% block page_title %}Отчёт модерации{% endblock %}
+{% block title %}Performance Brief — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-chart-simple"></i> Performance Brief{% endblock %}
 {% block content %}
-<style>
-.mr-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;align-items:center}
-.mr-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
-.mr-kpi i{color:var(--ac,#e0b04a);font-size:16px}
-.mr-kpi b{font-size:18px;color:var(--text-1,#fff)}
-.mr-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
-.mr-kpi.hot{border-color:rgba(231,76,60,.4)}
-.mr-kpi.hot i,.mr-kpi.hot b{color:#ff8a7a}
-.mr-ctl{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.mr-seg{display:inline-flex;border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;overflow:hidden}
-.mr-seg button{background:none;border:none;color:var(--text-3,rgba(255,255,255,.5));padding:8px 14px;font-size:12.5px;font-weight:600;cursor:pointer}
-.mr-seg button.on{background:var(--ac,#e0b04a);color:#1a1a1a}
-.mr-exp{font-size:11.5px;font-weight:600;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:8px;padding:7px 12px;white-space:nowrap;transition:background .15s}
-.mr-exp:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
-.mr-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start}
-@media (max-width:960px){.mr-grid{grid-template-columns:1fr}}
-.mr-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
-.mr-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
-.mr-panel h3 i{color:var(--ac,#e0b04a)}
-.mr-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
-.mr-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
-.mr-row:last-child{border-bottom:none}
-.mr-pos{font-weight:700;color:var(--ac,#e0b04a);width:26px;font-size:12px;font-variant-numeric:tabular-nums}
-.mr-name{font-size:13px;color:var(--text-2,rgba(255,255,255,.85))}
-.mr-cnt{font-size:12.5px;font-weight:700;color:var(--text-2,rgba(255,255,255,.8));font-variant-numeric:tabular-nums}
-.mr-cnt small{color:var(--text-3,rgba(255,255,255,.4));font-weight:500}
-.mr-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-2,rgba(255,255,255,.7));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:2px 9px;margin:2px 4px 2px 0;white-space:nowrap}
-.mr-chip.hot{color:#ff8a7a;border-color:rgba(231,76,60,.3);background:rgba(231,76,60,.08)}
-.mr-bars{display:flex;align-items:flex-end;gap:2px;height:70px;padding-top:4px}
-.mr-bar{flex:1;background:linear-gradient(180deg,var(--ac-2,#f0cd7a),var(--ac,#e0b04a));border-radius:2px 2px 0 0;min-height:2px;opacity:.85}
-.mr-bar:hover{opacity:1}
-[data-theme="light"] .mr-row{border-bottom-color:rgba(0,0,0,.08)}
-</style>
 
-<div class="mr-kpis" id="mrKpis">
-  <div class="sk-card" style="width:170px;height:56px"></div>
-  <div class="sk-card" style="width:170px;height:56px"></div>
-  <div class="sk-card" style="width:170px;height:56px"></div>
-</div>
-
-<div class="mr-grid">
-  <div class="mr-panel">
-    <h3><i class="fas fa-user-shield"></i> Команда модераторов</h3>
-    <div class="mr-sub">Действий по журналу за выбранный период. Безымянные действия (без mod_name) не попадают в таблицу, но идут в общий зачёт.</div>
-    <div id="mrMods">
-      <div class="sk-row"></div>
-      <div class="sk-row" style="width:75%"></div>
-    </div>
-    <h3 style="margin-top:18px"><i class="fas fa-chart-column"></i> По дням</h3>
-    <div class="mr-bars" id="mrBars"></div>
-  </div>
-
-  <div>
-    <div class="mr-panel">
-      <h3><i class="fas fa-list-ol"></i> По типам</h3>
-      <div id="mrActions"><div class="sk-row" style="width:70%"></div></div>
-    </div>
-    <div class="mr-panel">
-      <h3><i class="fas fa-triangle-exclamation"></i> Рецидивисты</h3>
-      <div class="mr-sub">Участники с 3+ мод-действиями за период — на них стоит посмотреть внимательнее.</div>
-      <div id="mrRec"><div class="sk-row" style="width:65%"></div></div>
-    </div>
+<style>[data-theme="light"] .ops-performance-brief{color-scheme:light}</style>
+<div class="ops-canvas ops-performance-brief" data-room-kind="brief" data-room-version="3">
+  <div class="ops-room-label"><span>MGT / PERFORMANCE BRIEF</span><b>Управленческий бриф</b><em>нагрузка команды без лишнего шума</em></div>
+  <section class="ops-brief-cover"><div><span class="ops-kicker">MODERATION PERFORMANCE</span><h2>Пульс команды</h2><p>Действия, динамика и повторные нарушения за выбранное окно.</p></div><div class="ops-brief-stamp"><i class="fas fa-file-shield"></i><span>READ ONLY</span></div></section>
+  <div class="ops-brief-kpis" id="mrKpis"><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div></div>
+  <div class="ops-brief-layout">
+    <section class="ops-brief-main"><header><span class="ops-kicker">TEAM CONTRIBUTION</span><h2>Команда модераторов</h2><p>Распределение действий по журналу за выбранный период.</p></header><div id="mrMods" class="ops-brief-table"><div class="sk-row"></div><div class="sk-row"></div></div><div class="ops-brief-chart-head"><div><span class="ops-kicker">DAILY TEMPO</span><h3>Ритм по дням</h3></div><i class="fas fa-chart-column"></i></div><div class="mr-bars ops-brief-bars" id="mrBars"></div></section>
+    <aside class="ops-brief-side"><section><header><span class="ops-kicker">ACTION MIX</span><h3>Структура мер</h3></header><div id="mrActions"></div></section><section class="ops-brief-watch"><header><span class="ops-kicker">WATCHLIST</span><h3>Повторные нарушения</h3><p>Участники с тремя и более действиями за период.</p></header><div id="mrRec"></div></section></aside>
   </div>
 </div>
 

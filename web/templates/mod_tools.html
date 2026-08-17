@@ -1,94 +1,35 @@
 {% extends "base.html" %}
-{% block title %}Липкие и Паника — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-thumbtack"></i> Липкие сообщения и паника{% endblock %}
+{% block title %}Field Kit — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-toolbox"></i> Field Kit{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Инструменты модератора</span>
-    </div>
-    <h1>Липкие сообщения · Паника</h1>
-    <p>Липкие баннеры каналов и экстренный локдаун — прямо из браузера.</p>
-  </div>
-</div>
-{% endblock %}
 
-<div class="pw-wrap">
-  {% if role in ['admin', 'owner'] %}
-  <div class="pw-card" id="panic-card">
-    <h2><i class="fas fa-radiation"></i> Panic-локдаун сервера</h2>
-    <div class="pw-hint" style="margin-bottom:12px"><i class="fas fa-info-circle"></i>
-      Одной кнопкой запрещает @everyone писать во всех текстовых каналах.
-      «Снять» возвращает прежние права каждому каналу.
-    </div>
-    <div id="panic-status" style="margin-bottom:12px;font-weight:600"></div>
-    <div id="panic-form">
-      <div class="form-group">
-        <label>Причина</label>
-        <input type="text" id="panic-reason" placeholder="Например: рейдят" maxlength="300">
-      </div>
-      <div class="form-group">
-        <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
-          <input type="checkbox" id="panic-boost"> Поднять проверку сервера до High
-        </label>
-      </div>
-      <button type="button" class="btn-save" style="background:#c0392b" id="panic-on-btn" onclick="panicToggle('on')">
-        <i class="fas fa-lock"></i> ВКЛЮЧИТЬ ЛОКДАУН</button>
-      <button type="button" class="btn-save" style="background:#2ecc71" id="panic-off-btn" onclick="panicToggle('off')">
-        <i class="fas fa-unlock"></i> СНЯТЬ ЛОКДАУН</button>
-    </div>
-    <div class="msg" id="panic-msg"></div>
-  </div>
-  {% endif %}
-
-  <div class="pw-card">
-    <h2><i class="fas fa-thumbtack"></i> Липкие сообщения</h2>
-    <div class="pw-hint" style="margin-bottom:12px"><i class="fas fa-info-circle"></i>
-      Липкое всегда остаётся последней строкой канала: бот пересылает его после
-      каждого сообщения участников (не чаще раза в 3 секунды).
-    </div>
-    <div class="form-group">
-      <label>Канал</label>
-      <select id="sticky-channel" style="width:100%"></select>
-    </div>
-    <div class="form-group">
-      <label>Текст</label>
-      <input type="text" id="sticky-text" placeholder="Например: Сначала прочитайте правила!" maxlength="1900">
-    </div>
-    <button type="button" class="btn-save" onclick="stickySave()"><i class="fas fa-thumbtack"></i> Закрепить</button>
-    <div class="msg" id="sticky-msg"></div>
-
-    <hr style="opacity:.15;margin:18px 0">
-    <div id="sticky-list"><i>Загружаю…</i></div>
-  </div>
-
-  <div class="pw-card">
-    <h2><i class="fas fa-ghost"></i> Тихий мут (призрак)</h2>
-    <div class="pw-hint" style="margin-bottom:12px"><i class="fas fa-info-circle"></i>
-      Сообщения участника исчезают мгновенно и <b>незаметно</b> — он думает, что его видно.
-      Модераторам всё, что он пытался написать, приходит в мод-лог.
-    </div>
-    <div class="form-group">
-      <label>Участник (начните вводить имя — подскажет)</label>
-      <input type="text" id="ghost-user" list="ghost-users" placeholder="ID или ник участника">
-      <datalist id="ghost-users"></datalist>
-    </div>
-    <div class="form-group">
-      <label>Время (пусто — бессрочно)</label>
-      <input type="text" id="ghost-duration" placeholder="30м, 2ч, 1д 12ч">
-    </div>
-    <div class="form-group">
-      <label>Причина</label>
-      <input type="text" id="ghost-reason" placeholder="За что (видно только составу)" maxlength="300">
-    </div>
-    <button type="button" class="btn-save" style="background:#8e44ad" onclick="ghostAdd()">
-      <i class="fas fa-ghost"></i> Сделать призраком</button>
-    <div class="msg" id="ghost-msg"></div>
-
-    <hr style="opacity:.15;margin:18px 0">
-    <div id="ghost-list"><i>Загружаю…</i></div>
+<div class="ops-canvas ops-field-kit" data-room-kind="toolbelt" data-room-version="3">
+  <div class="ops-room-label"><span>RSP / FIELD KIT</span><b>Полевой комплект</b><em>три независимых контура быстрого ответа</em></div>
+  <div class="ops-toolbelt">
+    {% if role in ['admin', 'owner'] %}
+    <section class="ops-tool ops-tool-panic" id="panic-card">
+      <div class="ops-tool-index">01</div><div class="ops-tool-icon"><i class="fas fa-radiation"></i></div>
+      <header><span class="ops-kicker">EMERGENCY CORE</span><h2>Panic-контур</h2><p>Мгновенно закрывает запись для @everyone и хранит снимок прав для безопасного восстановления.</p></header>
+      <div class="ops-tool-status" id="panic-status"><i class="fas fa-circle-notch fa-spin"></i> Проверяем периметр</div>
+      <div class="ops-panic-console" id="panic-form">
+        <label class="ops-field"><span>Причина запуска</span><input type="text" id="panic-reason" maxlength="300" placeholder="Что произошло"></label>
+        <label class="ops-check"><input type="checkbox" id="panic-boost"><span><i class="fas fa-shield-halved"></i> Поднять проверку сервера до High</span></label>
+        <div class="ops-danger-pair"><button type="button" class="ops-critical" id="panic-on-btn" onclick="panicToggle('on')"><i class="fas fa-lock"></i> Закрыть периметр</button><button type="button" class="ops-safe" id="panic-off-btn" onclick="panicToggle('off')"><i class="fas fa-lock-open"></i> Восстановить</button></div>
+      </div><div class="msg" id="panic-msg"></div>
+    </section>
+    {% endif %}
+    <section class="ops-tool ops-tool-sticky">
+      <div class="ops-tool-index">02</div><div class="ops-tool-icon"><i class="fas fa-thumbtack"></i></div>
+      <header><span class="ops-kicker">CHANNEL SIGNAL</span><h2>Sticky-маяк</h2><p>Сообщение возвращается в конец канала и не теряется в потоке обсуждения.</p></header>
+      <div class="ops-tool-form"><label class="ops-field"><span>Канал</span><select id="sticky-channel"></select></label><label class="ops-field"><span>Текст маяка</span><textarea id="sticky-text" maxlength="1900" rows="3" placeholder="Важная инструкция для участников"></textarea></label><button type="button" class="ops-primary" onclick="stickySave()"><i class="fas fa-satellite-dish"></i> Установить маяк</button></div>
+      <div class="msg" id="sticky-msg"></div><div class="ops-tool-list" id="sticky-list"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i> Загружаем маяки</div></div>
+    </section>
+    <section class="ops-tool ops-tool-ghost">
+      <div class="ops-tool-index">03</div><div class="ops-tool-icon"><i class="fas fa-ghost"></i></div>
+      <header><span class="ops-kicker">STEALTH LAYER</span><h2>Ghost-контур</h2><p>Сообщения исчезают незаметно для автора, а попытки остаются в модерационном журнале.</p></header>
+      <div class="ops-form-grid"><label class="ops-field ops-field-wide"><span>Участник</span><input id="ghost-user" list="ghost-users" placeholder="ID или начните вводить ник"><datalist id="ghost-users"></datalist></label><label class="ops-field"><span>Срок</span><input id="ghost-duration" placeholder="30м, 2ч или пусто"></label><label class="ops-field"><span>Причина</span><input id="ghost-reason" maxlength="300" placeholder="Только для команды"></label></div>
+      <button type="button" class="ops-stealth" onclick="ghostAdd()"><i class="fas fa-eye-slash"></i> Перевести в тень</button><div class="msg" id="ghost-msg"></div><div class="ops-tool-list" id="ghost-list"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i> Сканируем тени</div></div>
+    </section>
   </div>
 </div>
 

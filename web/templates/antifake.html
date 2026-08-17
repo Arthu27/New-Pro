@@ -1,121 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Антифейк — Панель Aether{% endblock %}
-{% block page_title %}Антифейк — защита от подделок{% endblock %}
+{% block title %}Identity Guard — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-user-shield"></i> Identity Guard{% endblock %}
 {% block content %}
-<style>
-.af-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:15px 17px;margin-bottom:16px}
-.af-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
-.af-panel h3 i{color:var(--ac,#e0b04a)}
-.af-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.55}
-.af-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.af-inp,.af-sel{flex:1;min-width:160px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
-.af-inp:focus,.af-sel:focus{border-color:var(--ac,#e0b04a)}
-.af-num{width:110px;flex:0 0 auto}
-.af-sel option{background:#1c1f26;color:#eee}
-.af-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
-.af-btn:hover{filter:brightness(1.08)}
-.af-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
-.af-msg{font-size:12px;padding:8px 2px 0;display:none}
-.af-msg.ok{color:#4ade80}
-.af-msg.err{color:#ff8a7a}
-.af-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-.af-tog{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.09));border-radius:12px;padding:10px 12px}
-.af-tog .l{font-size:12px;color:var(--text-2,rgba(255,255,255,.75))}
-.af-sw{position:relative;width:38px;height:21px;border-radius:20px;border:1px solid var(--line-2,rgba(255,255,255,.2));background:rgba(255,255,255,.06);cursor:pointer;flex:0 0 auto;padding:0}
-.af-sw::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#8b8f98;transition:all .18s}
-.af-sw.on{background:var(--ac-line,rgba(224,176,74,.3));border-color:var(--ac,#e0b04a)}
-.af-sw.on::after{left:19px;background:var(--ac,#e0b04a)}
-.af-sw:disabled{cursor:not-allowed;opacity:.55}
-.af-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-2,rgba(255,255,255,.15));border-radius:20px;padding:4px 11px;font-size:12px;color:var(--text-1,#fff);margin:0 6px 6px 0}
-.af-chip button{background:none;border:none;color:#ff8a7a;cursor:pointer;font-size:12px;padding:0}
-.af-res{display:none;margin-top:12px;border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:11px 13px;font-size:12.5px;color:var(--text-2,rgba(255,255,255,.8));line-height:1.65;word-break:break-word}
-.af-res.show{display:block}
-.af-res.hit{border-left:3px solid #ff8a7a}
-.af-res.clean{border-left:3px solid #4ade80}
-.af-mono{font-family:ui-monospace,Consolas,monospace;background:var(--surface-2,rgba(255,255,255,.07));border-radius:6px;padding:1px 7px}
-.af-table{width:100%;border-collapse:collapse;font-size:12.5px}
-.af-table th{text-align:left;padding:8px 10px;color:var(--text-3,rgba(255,255,255,.5));font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--line-2,rgba(255,255,255,.1))}
-.af-table td{padding:8px 10px;border-bottom:1px solid var(--line-2,rgba(255,255,255,.06));color:var(--text-2,rgba(255,255,255,.8))}
-.af-table tr:last-child td{border-bottom:none}
-.af-del{background:transparent;border:1px solid rgba(255,138,122,.35);color:#ff8a7a;border-radius:8px;padding:5px 10px;font-size:11.5px;cursor:pointer;white-space:nowrap}
-.af-del:hover{background:rgba(255,138,122,.08)}
-.af-empty{border:1px dashed var(--line-2,rgba(255,255,255,.15));border-radius:10px;padding:14px 16px;font-size:12.5px;color:var(--text-3,rgba(255,255,255,.55));text-align:center}
-.af-pill{display:inline-block;font-size:10.5px;border-radius:20px;padding:2px 9px;border:1px solid var(--line-2,rgba(255,255,255,.15));color:var(--text-3,rgba(255,255,255,.6))}
-.af-pill.hot{color:#ff8a7a;border-color:rgba(255,138,122,.45)}
-[data-theme="light"] .af-tog .l,[data-theme="light"] .af-res{color:#333}
-[data-theme="light"] .af-table td{color:#333}
-[data-theme="light"] .af-chip{color:#111}
-[data-theme="light"] .af-sel option{background:#fff;color:#222}
-</style>
 
-<div class="af-panel">
-  <h3><i class="fas fa-user-secret"></i> Статус и действие</h3>
-  <div class="af-sub">Карточка «/antifake status»: система, действие при подделке, порог похожести, лог-канал.
-    Настройки действуют сразу — это та же память, что читает бот.</div>
-  <div class="af-row">
-    <span style="font-size:12.5px;color:var(--text-2,rgba(255,255,255,.8))">Действие:</span>
-    <select class="af-sel" id="afAction" style="max-width:230px"></select>
-    <span style="font-size:12.5px;color:var(--text-2,rgba(255,255,255,.8))">Порог, %:</span>
-    <input class="af-inp af-num" id="afThr" type="number" min="60" max="100" step="1">
-    <button type="button" class="af-btn" id="afThrGo"><i class="fas fa-check"></i> Порог</button>
-    <button type="button" class="af-btn ghost" id="afReload"><i class="fas fa-rotate"></i> Обновить</button>
+<style>[data-theme="light"] .ops-identity-guard{color-scheme:light}</style>
+<div class="ops-canvas ops-identity-guard" data-room-kind="identity" data-room-version="3">
+  <div class="ops-room-label"><span>PRT / IDENTITY GUARD</span><b>Контроль подлинности</b><em>от сходства строки до истории страйков</em></div>
+  <section class="ops-identity-console">
+    <div class="ops-identity-scan"><span class="ops-id-ring r1"></span><span class="ops-id-ring r2"></span><i class="fas fa-fingerprint"></i></div>
+    <div class="ops-identity-main"><span class="ops-kicker">MATCHING ENGINE</span><h2>Порог идентичности</h2><p>Настройки используют ту же память, что и боевой детектор.</p><div class="ops-inline"><label class="ops-field"><span>Действие</span><select id="afAction"></select></label><label class="ops-field"><span>Похожесть, %</span><input id="afThr" type="number" min="60" max="100"></label><button type="button" class="ops-primary" id="afThrGo"><i class="fas fa-check"></i> Применить</button><button type="button" class="ops-icon-button" id="afReload" aria-label="Обновить настройки"><i class="fas fa-rotate"></i></button></div><div class="af-msg" id="afStatMsg"></div></div>
+    <div class="ops-identity-pills"><span id="afLogPill">Лог-канал: …</span><span id="afProtPill">Строк: …</span><span id="afStrikePill">Страйки: …</span></div>
+  </section>
+  <div class="ops-identity-grid">
+    <section class="ops-panel ops-identity-toggles"><header class="ops-panel-head"><div><span class="ops-kicker">DETECTION MATRIX</span><h2>Слои проверки</h2><p>Вход, смена имени, реклама, иммунитет и автоматическая реакция.</p></div><i class="fas fa-toggle-on"></i></header><div class="af-grid" id="afToggles"></div></section>
+    <section class="ops-panel ops-identity-protected"><header class="ops-panel-head"><div><span class="ops-kicker">PROTECTED NAMES</span><h2>Эталоны бренда</h2><p>Канонические строки, подделку которых нельзя пропустить.</p></div><i class="fas fa-copyright"></i></header><div class="ops-inline"><input id="afProtIn" maxlength="60" placeholder="Новая защищаемая строка"><button type="button" class="ops-primary" id="afProtGo"><i class="fas fa-plus"></i> Защитить</button></div><div id="afProtList" class="ops-protected-list"></div><div class="af-msg" id="afProtMsg"></div></section>
+    <section class="ops-panel ops-identity-member" id="afTestPanel"><header class="ops-panel-head"><div><span class="ops-kicker">MEMBER DRY RUN</span><h2>Скан участника</h2><p>Проверка имени и аватара без наказания.</p></div><i class="fas fa-user-magnifying-glass"></i></header><div class="ops-inline"><input id="afTestUid" maxlength="24" placeholder="ID участника"><button type="button" class="ops-primary" id="afTestGo"><i class="fas fa-play"></i> Сканировать</button></div><div class="af-msg" id="afTestMsg"></div><div class="af-res" id="afTestRes"></div></section>
+    <section class="ops-panel ops-identity-lab"><header class="ops-panel-head"><div><span class="ops-kicker">STRING LAB</span><h2>Лаборатория имени</h2><p>Каноническая форма и процент сходства с эталонами.</p></div><i class="fas fa-flask-vial"></i></header><div class="ops-inline"><input id="afLabText" maxlength="80" placeholder="Строка для разбора"><button type="button" class="ops-primary" id="afLabGo"><i class="fas fa-play"></i> Разобрать</button></div><div class="af-msg" id="afLabMsg"></div><div class="af-res" id="afLabRes"></div></section>
+    <section class="ops-panel ops-identity-strikes"><header class="ops-panel-head"><div><span class="ops-kicker">STRIKE LEDGER</span><h2>Страйки маскировки</h2><p>Активные совпадения и вся накопленная история.</p></div><div class="ops-inline"><button type="button" class="ops-icon-button" id="afStrikesReload" aria-label="Обновить страйки"><i class="fas fa-rotate"></i></button><button type="button" class="ops-secondary" id="afStrikesCsv"><i class="fas fa-file-csv"></i> CSV</button></div></header><div id="afStrikesBox"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i> Загружаем журнал</div></div><div class="af-msg" id="afStMsg"></div></section>
   </div>
-  <div class="af-row" style="margin-top:10px">
-    <span class="af-pill" id="afLogPill">Лог-канал: …</span>
-    <span class="af-pill" id="afProtPill">Защищаемых строк: …</span>
-    <span class="af-pill" id="afStrikePill">Страйки: …</span>
-  </div>
-  <div class="af-msg" id="afStatMsg"></div>
-</div>
-
-<div class="af-panel">
-  <h3><i class="fas fa-toggle-on"></i> Переключатели</h3>
-  <div class="af-sub">Флаги из конфига кога: вход и смена имени, замаскированная реклама, иммунитет персонала, DM и авто-таймаут за страйки.</div>
-  <div class="af-grid" id="afToggles"></div>
-</div>
-
-<div class="af-panel">
-  <h3><i class="fas fa-list-check"></i> Защищаемые строки</h3>
-  <div class="af-sub">Как «/antifake protect»: бренды и ключевые слова, которые нельзя подделывать (короче 4 канонических букв в защиту не берутся — правило кога).</div>
-  <div class="af-row">
-    <input class="af-inp" id="afProtIn" placeholder="Новая строка, напр. AetherBank" maxlength="60">
-    <button type="button" class="af-btn" id="afProtGo"><i class="fas fa-plus"></i> Защитить</button>
-  </div>
-  <div style="margin-top:10px" id="afProtList"></div>
-  <div class="af-msg" id="afProtMsg"></div>
-</div>
-
-<div class="af-panel" id="afTestPanel">
-  <h3><i class="fas fa-magnifying-glass"></i> Сухой прогон участника</h3>
-  <div class="af-sub">Как «/antifake test»: проверка имени и аватара без наказания — те же функции детекции.</div>
-  <div class="af-row">
-    <input class="af-inp" id="afTestUid" placeholder="ID участника" maxlength="24">
-    <button type="button" class="af-btn" id="afTestGo"><i class="fas fa-play"></i> Проверить</button>
-  </div>
-  <div class="af-msg" id="afTestMsg"></div>
-  <div class="af-res" id="afTestRes"></div>
-</div>
-
-<div class="af-panel">
-  <h3><i class="fas fa-flask"></i> Лаборатория строки</h3>
-  <div class="af-sub">Каноническая форма и похожесть — те же normalize/similarity кога. Видно, поймает ли строка защиту и насколько она близка к защищаемым именам.</div>
-  <div class="af-row">
-    <input class="af-inp" id="afLabText" placeholder="Строка для разбора…" maxlength="80">
-    <button type="button" class="af-btn" id="afLabGo"><i class="fas fa-play"></i> Разобрать</button>
-  </div>
-  <div class="af-msg" id="afLabMsg"></div>
-  <div class="af-res" id="afLabRes"></div>
-</div>
-
-<div class="af-panel">
-  <h3><i class="fas fa-triangle-exclamation"></i> Страйки рекламы</h3>
-  <div class="af-sub">Кто ловил страйки за замаскированную рекламу: активные за окно / всего записей. Обнуление — с подтверждением.</div>
-  <div class="af-row" style="margin-bottom:10px">
-    <button type="button" class="af-btn ghost" id="afStrikesReload"><i class="fas fa-rotate"></i> Обновить</button>
-    <button type="button" class="af-btn ghost" id="afStrikesCsv"><i class="fas fa-file-csv"></i> В CSV</button>
-  </div>
-  <div id="afStrikesBox"><div class="af-empty">Загружаю…</div></div>
-  <div class="af-msg" id="afStMsg"></div>
 </div>
 
 <script>

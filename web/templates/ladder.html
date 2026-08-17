@@ -1,97 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Лестница наказаний — Панель Aether{% endblock %}
-{% block page_title %}Лестница наказаний{% endblock %}
+{% block title %}Escalation Map — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-stairs"></i> Escalation Map{% endblock %}
 {% block content %}
-<style>
-.ld-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
-.ld-kpi{flex:1;min-width:170px;background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:13px 16px}
-.ld-kpi .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:5px;display:flex;align-items:center;gap:7px}
-.ld-kpi .lab i{color:var(--ac,#e0b04a)}
-.ld-kpi .v{font-size:19px;font-weight:800;color:var(--text-1,#fff)}
-.ld-kpi .v small{font-size:11px;font-weight:600;color:var(--text-3,rgba(255,255,255,.5))}
-.ld-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}
-@media (max-width:1000px){.ld-grid{grid-template-columns:1fr}}
-.ld-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:15px 17px;margin-bottom:16px}
-.ld-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
-.ld-panel h3 i{color:var(--ac,#e0b04a)}
-.ld-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.55}
-.ld-step{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line-2,rgba(255,255,255,.09));border-radius:12px;margin-bottom:8px}
-.ld-step .n{flex:0 0 56px;text-align:center;font-weight:800;font-size:15px;color:var(--ac,#e0b04a)}
-.ld-step .n small{display:block;font-size:10px;font-weight:600;color:var(--text-3,rgba(255,255,255,.5))}
-.ld-step .lbl{flex:1;font-size:13px;font-weight:700;color:var(--text-1,#fff)}
-.ld-step .hot{font-size:11px;color:var(--text-3,rgba(255,255,255,.5))}
-.ld-step .hot b{color:#f0cd7a}
-.ld-del{border:none;background:transparent;color:#ff8a7a;cursor:pointer;font-size:13px;padding:4px 6px;border-radius:7px}
-.ld-del:hover{background:rgba(255,138,122,.12)}
-.ld-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.ld-inp{min-width:90px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
-.ld-inp.wide{flex:1;min-width:170px}
-.ld-sel{background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
-.ld-inp:focus,.ld-sel:focus{border-color:var(--ac,#e0b04a)}
-.ld-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
-.ld-btn:hover{filter:brightness(1.08)}
-.ld-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
-.ld-msg{font-size:12px;padding:6px 2px 0;display:none}
-.ld-msg.ok{color:#4ade80}
-.ld-msg.err{color:#ff8a7a}
-.ld-sim{border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.8;color:var(--text-2,rgba(255,255,255,.85));display:none;margin-top:8px}
-.ld-sim b{color:var(--text-1,#fff)}
-.ld-card{width:100%;border-radius:12px;border:1px solid var(--line-2,rgba(255,255,255,.1));display:block}
-[data-theme="light"] .ld-sim{border-color:rgba(0,0,0,.12)}
-</style>
 
-<div class="ld-kpis" id="ldKpis">
-  <div class="sk-card" style="width:180px;height:70px"></div>
-  <div class="sk-card" style="width:180px;height:70px"></div>
-</div>
-
-<div class="ld-panel" id="ldAddPanel" style="display:none">
-  <h3><i class="fas fa-plus"></i> Новая ступень</h3>
-  <div class="ld-sub">Как «/ladder-add»: число варнов 1–100, длительность 0–10000; кик идёт без длительности (тот же барьер подтёрт). Ступень на это число уже есть — будет заменена, как в команде.</div>
-  <div class="ld-row">
-    <input class="ld-inp" id="ldCount" type="number" min="1" max="100" placeholder="варнов">
-    <select class="ld-sel" id="ldAction">
-      <option value="mute">мут</option>
-      <option value="kick">кик</option>
-      <option value="ban">бан</option>
-    </select>
-    <input class="ld-inp" id="ldDuration" type="number" min="0" max="10000" value="10" placeholder="длит.">
-    <select class="ld-sel" id="ldUnit">
-      <option value="minute">минут</option>
-      <option value="hour">часов</option>
-      <option value="day">дней</option>
-    </select>
-    <button type="button" class="ld-btn" id="ldAdd"><i class="fas fa-floppy-disk"></i> Добавить</button>
-  </div>
-  <div class="ld-msg" id="ldAddMsg"></div>
-</div>
-
-<div class="ld-grid">
-  <div class="ld-panel">
-    <h3><i class="fas fa-stairs"></i> Ступени</h3>
-    <div class="ld-sub">Порядок и подписи — как в /ladder. Число справа — сколько участников сейчас стоит на этой ступени или выше (по зеркалу варнов).</div>
-    <div id="ldSteps">
-      <div class="sk-card" style="height:52px;margin-bottom:8px"></div>
-      <div class="sk-card" style="height:52px"></div>
-    </div>
-  </div>
-  <div>
-    <div class="ld-panel">
-      <h3><i class="fas fa-vial"></i> Симулятор</h3>
-      <div class="ld-sub">Что грозит участнику прямо сейчас — логика /ladder-test. Наказание не применяется.</div>
-      <div class="ld-row">
-        <input class="ld-inp wide" id="ldUser" placeholder="ID участника">
-        <button type="button" class="ld-btn" id="ldSimGo"><i class="fas fa-play"></i> Проверить</button>
-      </div>
-      <div class="ld-sim" id="ldSim"></div>
-      <div class="ld-msg" id="ldSimMsg"></div>
-    </div>
-    <div class="ld-panel">
-      <h3><i class="fas fa-image"></i> Карточка лестницы</h3>
-      <div class="ld-sub">Та самая картинка, что шлёт команда /ladder.</div>
-      <img class="ld-card" id="ldCard" alt="Карточка лестницы">
-      <div style="margin-top:10px"><button type="button" class="ld-btn ghost" id="ldCsv"><i class="fas fa-file-csv"></i> Ступени в CSV</button></div>
-    </div>
+<style>[data-theme="light"] .ops-escalation-map{color-scheme:light}</style>
+<div class="ops-canvas ops-escalation-map" data-room-kind="escalation" data-room-version="3">
+  <div class="ops-room-label"><span>MGT / ESCALATION MAP</span><b>Карта эскалации</b><em>одинаковое нарушение — предсказуемая мера</em></div>
+  <section class="ops-ladder-overview"><div class="ops-ladder-symbol"><i class="fas fa-stairs"></i><span></span></div><div><span class="ops-kicker">POLICY PATH</span><h2>Маршрут наказаний</h2><p>Каждая ступень показывает порог, действие, срок и текущую аудиторию.</p></div><div class="ops-ladder-kpis" id="ldKpis"><div class="sk-card"></div><div class="sk-card"></div></div></section>
+  <section class="ops-ladder-builder" id="ldAddPanel" style="display:none"><header><span class="ops-kicker">NEW POLICY STEP</span><h3>Добавить ступень</h3></header><div class="ops-ladder-form"><label><span>Варнов</span><input id="ldCount" type="number" min="1" max="100"></label><label><span>Действие</span><select id="ldAction"><option value="mute">Мьют</option><option value="kick">Кик</option><option value="ban">Бан</option></select></label><label><span>Длительность</span><input id="ldDuration" type="number" min="0" max="10000" value="10"></label><label><span>Единица</span><select id="ldUnit"><option value="minute">Минуты</option><option value="hour">Часы</option><option value="day">Дни</option></select></label><button type="button" class="ops-primary" id="ldAdd"><i class="fas fa-plus"></i> В маршрут</button></div><div class="ld-msg" id="ldAddMsg"></div></section>
+  <div class="ops-ladder-layout">
+    <section class="ops-ladder-path"><header><div><span class="ops-kicker">ESCALATION SEQUENCE</span><h2>Ступени политики</h2></div><i class="fas fa-route"></i></header><div id="ldSteps" class="ops-ladder-steps"><div class="sk-card"></div><div class="sk-card"></div></div></section>
+    <aside class="ops-ladder-lab"><section><header><span class="ops-kicker">SAFE SIMULATION</span><h3>Проверка участника</h3><p>Показывает следующую меру, ничего не применяя.</p></header><div class="ops-inline"><input id="ldUser" placeholder="ID участника"><button type="button" class="ops-primary" id="ldSimGo"><i class="fas fa-play"></i> Рассчитать</button></div><div class="ld-sim" id="ldSim"></div><div class="ld-msg" id="ldSimMsg"></div></section><section><header><span class="ops-kicker">POLICY ARTIFACT</span><h3>Карточка маршрута</h3></header><img class="ld-card ops-ladder-card" id="ldCard" alt="Карточка лестницы"><button type="button" class="ops-secondary" id="ldCsv"><i class="fas fa-file-csv"></i> Экспорт ступеней</button></section></aside>
   </div>
 </div>
 

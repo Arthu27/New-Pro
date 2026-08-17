@@ -1,53 +1,20 @@
 {% extends "base.html" %}
-{% block title %}История модерации — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-history"></i> История модерации{% endblock %}
+{% block title %}Decision Timeline — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-timeline"></i> Decision Timeline{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>История модерации</span>
-    </div>
-    <h1>История модерации</h1>
-    <p>Полная история модерационных действий на сервере (реальные данные бота).</p>
-  </div>
-</div>
-{% endblock %}
 
-<style>
-
-.mh-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-.mh-search{flex:1;min-width:160px}
-
-</style>
-
-<div class="mh-toolbar">
-  <input type="text" id="search" class="mh-search" placeholder="Поиск (пользователь, модератор, причина)..." aria-label="Поиск (пользователь, модератор, причина)...">
-  <select id="filter" class="mh-search" style="flex:0 0 auto;min-width:150px;" aria-label="Фильтр">
-    <option value="">Все действия</option>
-    <option value="ban">Бан</option>
-    <option value="kick">Кик</option>
-    <option value="warn">Варн</option>
-    <option value="mute">Мьют</option>
-  </select>
-  <span id="mh-count" class="mh-count" style="margin-left:auto">0</span>
-</div>
-
-<div class="mh-stats">
-  <div class="mh-stat"><div class="mh-stat-num total" id="stat-total" data-countup>-</div><div class="mh-stat-lbl">Всего</div></div>
-  <div class="mh-stat"><div class="mh-stat-num danger" id="stat-bans" data-countup>-</div><div class="mh-stat-lbl">Банов</div></div>
-  <div class="mh-stat"><div class="mh-stat-num accent" id="mh-kicks" data-countup>-</div><div class="mh-stat-lbl">Киков</div></div>
-  <div class="mh-stat"><div class="mh-stat-num warn" id="mh-warns" data-countup>-</div><div class="mh-stat-lbl">Варнов</div></div>
-</div>
-
-<div class="mh-box">
-  <div class="mh-head">
-    <div class="mh-title"><i class="fas fa-history"></i> История модерации</div>
-    <span class="mh-count" id="mh-count2">-</span>
-  </div>
-  <div class="mh-body" id="mh-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
+<div class="ops-canvas ops-decision-timeline" data-room-kind="timeline" data-room-version="3">
+  <div class="ops-room-label"><span>INV / DECISION TIMELINE</span><b>Хронология решений</b><em>восстановить ход кейса от причины до результата</em></div>
+  <div class="ops-timeline-layout">
+    <aside class="ops-timeline-side">
+      <div class="ops-timeline-mark"><i class="fas fa-clock-rotate-left"></i><span></span></div>
+      <div class="ops-timeline-kpi"><span>Все события</span><strong id="stat-total">—</strong></div><div class="ops-timeline-kpi hot"><span>Баны</span><strong id="stat-bans">—</strong></div><div class="ops-timeline-kpi"><span>Кики</span><strong id="mh-kicks">—</strong></div><div class="ops-timeline-kpi"><span>Варны</span><strong id="mh-warns">—</strong></div>
+    </aside>
+    <section class="ops-panel ops-timeline-feed">
+      <header class="ops-panel-head"><div><span class="ops-kicker">AUDIT RECONSTRUCTION</span><h2>Линия решений</h2><p>Найдите человека, модератора или основание и проследите последовательность.</p></div><span class="ops-counter" id="mh-count2">—</span></header>
+      <div class="ops-command-strip"><label class="ops-field ops-field-grow"><span>Поиск</span><input type="search" id="search" placeholder="Участник, модератор, причина"></label><label class="ops-field"><span>Тип события</span><select id="filter"><option value="">Все действия</option><option value="ban">Бан</option><option value="kick">Кик</option><option value="warn">Варн</option><option value="mute">Мьют</option></select></label><b id="mh-count" class="ops-counter">0</b></div>
+      <div class="ops-history-surface" id="mh-body"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i> Восстанавливаем историю</div></div>
+    </section>
   </div>
 </div>
 

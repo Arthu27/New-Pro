@@ -1,49 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Предупреждения - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-exclamation-triangle" ></i> Предупреждения{% endblock %}
+{% block title %}Case Signal — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-triangle-exclamation"></i> Case Signal{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Предупреждения</span>
-    </div>
-    <h1>Предупреждения</h1>
-    <p>Все предупреждения участников: история, причины, модераторы.</p>
-  </div>
-</div>
-{% endblock %}
 
-<style>
-
-.warn-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-.warn-select{flex:1;min-width:150px}
-.warn-search{flex:2;min-width:180px}
-.warn-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:5px 14px;border-radius:99px;font-size:13px;font-weight:700;margin-left:auto}
-
-</style>
-
-
-
-<div class="warn-toolbar">
-  <select id="guild-filter" class="warn-select" aria-label="Фильтр сервера"><option value="">Все серверы</option></select>
-  <input type="text" id="search" class="warn-search" placeholder="Поиск (пользователь, причина)..." aria-label="Поиск (пользователь, причина)...">
-  <span id="warn-count" class="warn-count"   style="margin-left: auto;">0</span>
-</div>
-
-<div class="warn-stats">
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-total" data-countup>-</div><div class="warn-stat-lbl">Всего</div></div>
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-users" data-countup>-</div><div class="warn-stat-lbl">Участников</div></div>
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-top" data-countup>-</div><div class="warn-stat-lbl">Топ</div></div>
-</div>
-
-<div class="warn-box">
-  <div class="warn-head">
-    <div class="warn-title"><i class="fas fa-exclamation-triangle"></i> Предупреждения</div>
-  </div>
-  <div class="warn-body" id="warn-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
+<div class="ops-canvas ops-caseboard" data-room-kind="caseboard" data-room-version="3">
+  <div class="ops-room-label"><span>RSP / CASEBOARD</span><b>Очередь предупреждений</b><em>живой контроль повторов</em></div>
+  <div class="ops-case-layout">
+    <section class="ops-panel ops-case-feed">
+      <header class="ops-panel-head">
+        <div><span class="ops-kicker">LIVE CASE FEED</span><h2>Сигналы участников</h2><p>Причина, автор решения и история повторов в одной непрерывной ленте.</p></div>
+        <span id="warn-count" class="ops-counter">0 кейсов</span>
+      </header>
+      <div class="ops-command-strip">
+        <label class="ops-field"><span>Периметр</span><select id="guild-filter" aria-label="Фильтр сервера"><option value="">Все серверы</option></select></label>
+        <label class="ops-field ops-field-grow"><span>Поиск сигнала</span><input type="search" id="search" placeholder="Участник, причина или модератор" aria-label="Поиск предупреждений"></label>
+      </div>
+      <div class="ops-live-surface" id="warn-body"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i><span>Собираем очередь решений</span></div></div>
+    </section>
+    <aside class="ops-signal-column" aria-label="Сводка предупреждений">
+      <div class="ops-orbit-card"><span class="ops-kicker">TOTAL SIGNALS</span><strong id="stat-total" data-countup>—</strong><small>всего решений</small><i class="fas fa-wave-square"></i></div>
+      <div class="ops-orbit-card"><span class="ops-kicker">SUBJECTS</span><strong id="stat-users" data-countup>—</strong><small>участников в поле</small><i class="fas fa-users-viewfinder"></i></div>
+      <div class="ops-orbit-card ops-orbit-hot"><span class="ops-kicker">PEAK RISK</span><strong id="stat-top" data-countup>—</strong><small>максимум повторов</small><i class="fas fa-arrow-trend-up"></i></div>
+      <div class="ops-micro-note"><i class="fas fa-circle-info"></i><span>Нажмите на строку, чтобы не потерять контекст перед следующим действием.</span></div>
+    </aside>
   </div>
 </div>
 

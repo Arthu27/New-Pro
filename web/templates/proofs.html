@@ -1,108 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Демки — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-folder-open"></i> Доказательства к наказаниям{% endblock %}
+{% block title %}Proof Vault — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-vault"></i> Proof Vault{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>История наказаний</span>
-    </div>
-    <h1>Демки</h1>
-    <p>Все доказательства к наказаниям: кто, кого, за что — со скринами и ссылками.</p>
+
+<div class="ops-canvas ops-proof-vault" data-room-kind="proofvault" data-room-version="3">
+  <div class="ops-room-label"><span>INV / PROOF VAULT</span><b>Хранилище доказательств</b><em>медиа и контекст решения рядом</em></div>
+  <div class="ops-vault-layout">
+    <aside class="ops-vault-sidebar"><div class="ops-vault-seal"><i class="fas fa-fingerprint"></i><strong>VAULT</strong><small>encrypted evidence index</small></div><label class="ops-vault-search"><span>Поиск по архиву</span><i class="fas fa-magnifying-glass"></i><input type="search" id="pf-q" placeholder="Ник, причина, модератор или ID"></label><div class="ops-vault-filters"><span class="ops-kicker">CASE FILTERS</span><div id="pf-chips" class="pf-chips"></div></div><div class="ops-vault-count"><span>Найдено материалов</span><strong id="pf-count">0</strong></div><button type="button" class="ops-secondary" onclick="pfReload()"><i class="fas fa-rotate"></i> Синхронизировать архив</button><div class="msg" id="pf-msg"></div></aside>
+    <section class="ops-vault-gallery"><header><div><span class="ops-kicker">EVIDENCE INDEX</span><h2>Материалы кейсов</h2></div><div class="ops-vault-view"><i class="fas fa-grid-2"></i><span>визуальный индекс</span></div></header><div class="pf-grid ops-proof-grid" id="pf-grid"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i> Открываем хранилище</div></div></section>
   </div>
-</div>
-{% endblock %}
-
-<style>
-/* ── Галерея демок ─────────────────────────────────────────── */
-.pf-toolbar{
-  position:sticky;top:74px;z-index:25;
-  display:flex;gap:10px;flex-wrap:wrap;align-items:center;
-  background:color-mix(in srgb, var(--bg) 84%, transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  padding:10px 12px;border-radius:14px;border:1px solid var(--line);
-  box-shadow:var(--shadow-sm);margin-bottom:12px;
-}
-.pf-search{flex:1;min-width:220px}
-.pf-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);
-  padding:5px 14px;border-radius:99px;font-size:13px;font-weight:700;
-  font-variant-numeric:tabular-nums;white-space:nowrap}
-.pf-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.pf-chip{padding:6px 14px;border-radius:99px;font-size:12.5px;font-weight:600;
-  border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--text-2);
-  cursor:pointer;transition:all .16s var(--ease);user-select:none}
-.pf-chip:hover{border-color:var(--ac-line);color:var(--text)}
-.pf-chip.on{background:var(--ac-soft);border-color:var(--ac-line);color:var(--ac-2)}
-.pf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
-.pf-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.55));
-  border:1px solid var(--line-2);border-radius:16px;overflow:hidden;
-  display:flex;flex-direction:column;transition:all .16s var(--ease);
-  animation:fadeUp .3s var(--ease-out) both}
-.pf-card:hover{transform:translateY(-3px);border-color:var(--ac-line);box-shadow:var(--shadow-md)}
-.pf-thumb{position:relative;height:168px;background:rgba(0,0,0,.28);
-  display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:zoom-in}
-.pf-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.pf-thumb .pf-nomedia{width:100%;height:100%;display:flex;flex-direction:column;gap:6px;
-  align-items:center;justify-content:center;color:var(--text-3);font-size:12px;cursor:default}
-.pf-thumb .pf-nomedia i{font-size:26px;opacity:.6}
-.pf-body{padding:12px 14px 13px;display:flex;flex-direction:column;gap:8px;flex:1}
-.pf-row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.pf-badge{border-radius:8px;letter-spacing:.05em;text-transform:uppercase;
-  font-size:10px;font-weight:800;padding:3px 9px}
-.pf-id{color:var(--text-3);font-size:12px;font-weight:700}
-.pf-user{font-weight:800;font-size:14.5px;cursor:pointer;word-break:break-word}
-.pf-user:hover{color:var(--ac-2)}
-.pf-uid{color:var(--text-3);font-size:11.5px}
-.pf-reason{color:var(--text-2);font-size:13px;line-height:1.45;
-  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
-  word-break:break-word}
-.pf-meta{display:flex;justify-content:space-between;gap:8px;align-items:center;
-  margin-top:auto;padding-top:8px;border-top:1px solid var(--line);
-  color:var(--text-3);font-size:12px}
-.pf-actions{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 13px}
-.pf-btn{padding:6px 11px;border-radius:9px;font-size:12px;font-weight:700;
-  border:1px solid var(--line-2);background:rgba(255,255,255,.04);color:var(--text-2);
-  text-decoration:none;cursor:pointer;display:inline-flex;gap:6px;align-items:center;
-  transition:all .15s var(--ease)}
-.pf-btn:hover{border-color:var(--ac-line);color:var(--text)}
-.pf-btn.danger:hover{border-color:var(--err);color:var(--err)}
-.pf-empty{padding:38px 16px;text-align:center;color:var(--text-3)}
-.pf-empty i{font-size:30px;display:block;margin-bottom:10px;opacity:.5}
-/* лайтбокс */
-.pf-modal{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.82);
-  display:none;align-items:center;justify-content:center;padding:3vh 3vw;
-  backdrop-filter:blur(6px)}
-.pf-modal.open{display:flex}
-.pf-modal img{max-width:92vw;max-height:82vh;border-radius:12px;
-  box-shadow:0 24px 80px rgba(0,0,0,.6)}
-.pf-modal .pf-cap{position:absolute;bottom:3.5vh;left:50%;transform:translateX(-50%);
-  background:rgba(0,0,0,.65);border:1px solid var(--line-2);border-radius:12px;
-  padding:8px 16px;font-size:13px;max-width:90vw;text-align:center}
-.pf-modal .pf-x{position:absolute;top:18px;right:22px;font-size:26px;color:#fff;
-  cursor:pointer;opacity:.75;transition:opacity .15s}
-.pf-modal .pf-x:hover{opacity:1}
-</style>
-
-<div class="pf-toolbar" data-reveal="up">
-  <input type="text" id="pf-q" class="search-input pf-search"
-         placeholder="Поиск по нику, модератору, причине или ID — без /proofs и поиска по человеку"
-         aria-label="Поиск по демкам">
-  <span id="pf-count" class="pf-count">0</span>
-  <button type="button" class="pf-btn" onclick="pfReload()" title="Обновить"><i class="fas fa-rotate"></i></button>
-</div>
-
-<div class="pf-chips" id="pf-chips" data-reveal="up"></div>
-<div class="msg" id="pf-msg"></div>
-<div class="pf-grid" id="pf-grid">
-  <div class="pf-empty"><i class="fas fa-spinner fa-spin"></i>Загружаю…</div>
-</div>
-
-<div class="pf-modal" id="pf-modal" onclick="if (event.target === this || event.target.classList.contains('pf-x')) pfClose()">
-  <span class="pf-x" title="Закрыть"><i class="fas fa-xmark"></i></span>
-  <img id="pf-modal-img" alt="Демка">
-  <div class="pf-cap" id="pf-modal-cap"></div>
+  <div class="pf-modal ops-proof-modal" id="pf-modal" onclick="if (event.target === this || event.target.classList.contains('pf-x')) pfClose()"><button type="button" class="pf-x" aria-label="Закрыть"><i class="fas fa-xmark"></i></button><img id="pf-modal-img" alt="Доказательство"><div class="pf-cap" id="pf-modal-cap"></div></div>
 </div>
 
 <script>

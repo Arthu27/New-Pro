@@ -1,111 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Мод-анализ — Панель Aether{% endblock %}
-{% block page_title %}Мод-анализ{% endblock %}
+{% block title %}Risk Intelligence — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-brain"></i> Risk Intelligence{% endblock %}
 {% block content %}
-<style>
-.mi-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;align-items:center}
-.mi-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
-.mi-kpi i{color:var(--ac,#e0b04a);font-size:16px}
-.mi-kpi b{font-size:18px;color:var(--text-1,#fff)}
-.mi-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
-.mi-kpi.hot{border-color:rgba(231,76,60,.4)}
-.mi-kpi.hot i,.mi-kpi.hot b{color:#ff8a7a}
-.mi-grid{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;align-items:start}
-@media (max-width:960px){.mi-grid{grid-template-columns:1fr}}
-.mi-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
-.mi-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
-.mi-panel h3 i{color:var(--ac,#e0b04a)}
-.mi-panel h3 .mi-off{margin-left:auto;font-size:11px;font-weight:500;color:var(--text-3,rgba(255,255,255,.4))}
-.mi-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
-.mi-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:9px 6px;border-bottom:1px dashed rgba(255,255,255,.07);cursor:pointer;border-radius:8px}
-.mi-row:last-child{border-bottom:none}
-.mi-row:hover{background:rgba(255,255,255,.04)}
-.mi-row.on{background:var(--ac-soft,rgba(224,176,74,.1));outline:1px solid var(--ac-line,rgba(224,176,74,.35))}
-.mi-who{min-width:0}
-.mi-who b{display:block;font-size:13px;color:var(--text-2,rgba(255,255,255,.85));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mi-who small{display:block;font-size:11px;color:var(--text-3,rgba(255,255,255,.45));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
-.mi-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-2,rgba(255,255,255,.7));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:3px 10px;white-space:nowrap}
-.mi-chip.hot{color:#ff8a7a;border-color:rgba(231,76,60,.3);background:rgba(231,76,60,.08)}
-.mi-chip.ok{color:#4ade80;border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.07)}
-.mi-badge{display:inline-flex;align-items:center;justify-content:center;min-width:64px;font-size:10.5px;font-weight:700;border-radius:8px;padding:4px 8px;text-transform:uppercase;letter-spacing:.04em}
-.mi-badge.k-mute{color:#fbbf24;background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.3)}
-.mi-badge.k-ban{color:#f87171;background:rgba(248,113,113,.10);border:1px solid rgba(248,113,113,.3)}
-.mi-badge.k-vmute{color:#60a5fa;background:rgba(96,165,250,.10);border:1px solid rgba(96,165,250,.3)}
-.mi-badge.k-kick{color:#f97316;background:rgba(249,115,22,.10);border:1px solid rgba(249,115,22,.3)}
-.mi-badge.k-lift{color:#4ade80;background:rgba(74,222,128,.10);border:1px solid rgba(74,222,128,.3)}
-.mi-line{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;padding:9px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
-.mi-line:last-child{border-bottom:none}
-.mi-date{font-size:11.5px;font-weight:700;color:var(--ac-2,#f0cd7a);font-variant-numeric:tabular-nums;white-space:nowrap}
-.mi-tabs{display:inline-flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-.mi-tab{background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;color:var(--text-3,rgba(255,255,255,.5));padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer}
-.mi-tab.on{background:var(--ac,#e0b04a);border-color:transparent;color:#1a1a1a}
-.mi-form{display:flex;gap:8px;margin-bottom:12px}
-.mi-form .inp{flex:1;min-width:0}
-.mi-eff{display:grid;grid-template-columns:1fr repeat(3,auto);gap:6px 12px;align-items:center;padding:9px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
-.mi-eff:last-child{border-bottom:none}
-.mi-eff.head{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3,rgba(255,255,255,.4));padding-bottom:4px}
-.mi-eff .v{font-size:12.5px;font-weight:700;color:var(--text-2,rgba(255,255,255,.85));font-variant-numeric:tabular-nums;text-align:right;min-width:44px}
-.mi-eff .v.dim{color:var(--text-3,rgba(255,255,255,.4));font-weight:500}
-.mi-eff.total{background:rgba(255,255,255,.03);border-radius:8px}
-.mi-check{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:9px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
-.mi-check:last-child{border-bottom:none}
-.mi-dot{width:10px;height:10px;border-radius:50%}
-.mi-dot.ok{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,.5)}
-.mi-dot.warn{background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,.5)}
-.mi-dot.missing{background:#f87171;box-shadow:0 0 8px rgba(248,113,113,.5)}
-.mi-link-chip{font-size:11px;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:8px;padding:4px 9px;white-space:nowrap}
-.mi-link-chip:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
-.mi-dhead{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-.mi-sect{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3,rgba(255,255,255,.4));margin:14px 0 4px}
-.mi-note{padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85))}
-.mi-note:last-child{border-bottom:none}
-.mi-note small{display:block;font-size:11px;color:var(--text-3,rgba(255,255,255,.45));margin-top:2px}
-[data-theme="light"] .mi-row,[data-theme="light"] .mi-line,[data-theme="light"] .mi-eff,[data-theme="light"] .mi-check,[data-theme="light"] .mi-note{border-bottom-color:rgba(0,0,0,.08)}
-[data-theme="light"] .mi-row:hover{background:rgba(0,0,0,.04)}
-[data-theme="light"] .mi-eff.total{background:rgba(0,0,0,.03)}
-</style>
 
-<div class="mi-kpis" id="miKpis">
-  <div class="sk-card" style="width:190px;height:56px"></div>
-  <div class="sk-card" style="width:190px;height:56px"></div>
-  <div class="sk-card" style="width:190px;height:56px"></div>
-  <div class="sk-card" style="width:190px;height:56px"></div>
-</div>
-
-<div class="mi-grid">
-  <div>
-    <div class="mi-panel">
-      <h3><i class="fas fa-users-viewfinder"></i> Кто чаще наказывается <span class="mi-off" id="miSubjectsOff"></span></h3>
-      <div class="mi-sub">Участники с варнами или наказаниями в журнале, по тяжести следа. Клик по строке открывает досье ниже.</div>
-      <div id="miSubjects"><div class="sk-row"></div><div class="sk-row" style="width:75%"></div></div>
-    </div>
-
-    <div class="mi-panel">
-      <h3><i class="fas fa-id-card"></i> Досье участника</h3>
-      <div class="mi-sub">Всё о человеке в одном месте: варны и ближайший порог, наказания таймлайном, активные временные статусы, амнистии и заметки команды.</div>
-      <div class="mi-form">
-        <input class="inp" id="miDossierId" maxlength="24" placeholder="ID участника или @упоминание">
-        <button type="button" class="btn" onclick="miDossierAsk()"><i class="fas fa-search"></i> Найти</button>
-      </div>
-      <div id="miDossier">
-        <div class="empty-state"><i class="fas fa-folder-open"></i><p>Досье пока не открыто</p><p class="empty-tip">Выберите участника из списка выше или введите ID вручную.</p></div>
-      </div>
-    </div>
-  </div>
-
-  <div>
-    <div class="mi-panel">
-      <h3><i class="fas fa-rotate"></i> Эффективность наказаний</h3>
-      <div class="mi-sub" id="miEffectSub">Помогает ли кара: доля участников, получивших новое наказание после первого за окно.</div>
-      <div class="mi-tabs" id="miDaysTabs"></div>
-      <div id="miEffect"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
-    </div>
-
-    <div class="mi-panel">
-      <h3><i class="fas fa-list-check"></i> Чек-лист готовности <span class="mi-off" id="miCheckOff"></span></h3>
-      <div class="mi-sub">Что уже настроено в защите сервера, а что стоит докрутить. Проверки читают те же файлы, что и бот.</div>
-      <div id="miCheck"><div class="sk-row" style="width:80%"></div><div class="sk-row" style="width:60%"></div></div>
-    </div>
+<style>[data-theme="light"] .ops-risk-intelligence{color-scheme:light}</style>
+<div class="ops-canvas ops-risk-intelligence" data-room-kind="intelligence" data-room-version="3">
+  <div class="ops-room-label"><span>MGT / RISK INTELLIGENCE</span><b>Разведка рисков</b><em>из истории нарушений в конкретное решение</em></div>
+  <div class="ops-intel-kpis" id="miKpis"><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div></div>
+  <div class="ops-intel-map">
+    <section class="ops-intel-subjects"><header><div><span class="ops-kicker">SUBJECT CLUSTERS</span><h2>Карта участников</h2><p>Тяжесть следа, количество мер и текущий риск.</p></div><b id="miSubjectsOff"></b></header><div id="miSubjects" class="ops-intel-list"><div class="sk-row"></div><div class="sk-row"></div></div></section>
+    <section class="ops-intel-dossier"><header><span class="ops-kicker">SUBJECT DOSSIER</span><h2>Досье участника</h2><p>Варны, пороги, временные статусы, амнистии и заметки в одном профиле.</p></header><div class="ops-inline"><input id="miDossierId" maxlength="24" placeholder="ID участника или @упоминание"><button type="button" class="ops-primary" onclick="miDossierAsk()"><i class="fas fa-magnifying-glass"></i> Открыть</button></div><div id="miDossier" class="ops-intel-dossier-body"><div class="ops-empty"><i class="fas fa-fingerprint"></i><span>Выберите участника на карте</span></div></div></section>
+    <aside class="ops-intel-analysis"><section><header><span class="ops-kicker">OUTCOME MODEL</span><h3>Эффективность мер</h3><p id="miEffectSub">Возвращается ли участник к нарушению после первой меры.</p></header><div class="mi-tabs" id="miDaysTabs"></div><div id="miEffect"></div></section><section><header><span class="ops-kicker">READINESS CHECK</span><h3>Готовность защиты <b id="miCheckOff"></b></h3></header><div id="miCheck"></div></section></aside>
   </div>
 </div>
 

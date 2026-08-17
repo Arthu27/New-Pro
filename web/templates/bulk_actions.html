@@ -1,69 +1,27 @@
 {% extends "base.html" %}
-{% block title %}Массовые действия - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-layer-group" ></i> Массовые действия{% endblock %}
+{% block title %}Bulk Command — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-layer-group"></i> Bulk Command{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Массовые действия</span>
-    </div>
-    <h1>Массовые действия</h1>
-    <p>Массовые действия: мут, кик, бан, выдача ролей по списку.</p>
-  </div>
-</div>
-{% endblock %}
 
-
-
-<div class="ba-grid">
-  <!-- Рассылка сообщений -->
-  <div class="ba-card">
-    <div class="ba-head">
-      <div class="ba-icon"><i class="fas fa-bullhorn"></i></div>
-      <div class="ba-title">Рассылка сообщений</div>
-    </div>
-    <div class="warning-box"><i class="fas fa-info-circle"></i> Сообщение будет отправлено всем участникам с выбранной ролью в личные сообщения.</div>
-    <div class="row"><label>Сервер</label><select id="dm-guild" class="ba-guild" aria-label="Выбор сервера"></select></div>
-    <div class="row"><label>Роль</label><select id="dm-role" class="ba-roles" data-from="dm-guild" aria-label="Фильтр по роли"></select></div>
-    <div class="row"><label>Сообщение</label><textarea id="dm-msg" rows="3" placeholder="Текст сообщения..." aria-label="Текст сообщения..."></textarea></div>
-    <button class="btn btn-primary" id="btn-dm" type="button"><i class="fas fa-paper-plane"></i> Отправить всем</button>
-    <div class="result" id="dm-result"></div>
-  </div>
-
-  <!-- Массовое назначение ролей -->
-  <div class="ba-card">
-    <div class="ba-head">
-      <div class="ba-icon"><i class="fas fa-user-tag"></i></div>
-      <div class="ba-title">Массовые роли</div>
-    </div>
-    <div class="warning-box"><i class="fas fa-info-circle"></i> Действие будет применено ко всем участникам с целевой ролью.</div>
-    <div class="row"><label>Сервер</label><select id="role-guild" class="ba-guild" aria-label="Выбор сервера"></select></div>
-    <div class="row"><label>Целевая роль</label><select id="role-target" class="ba-roles" data-from="role-guild" aria-label="Целевая роль"></select></div>
-    <div class="row"><label>Назначаемая роль</label><select id="role-action-sel" class="ba-roles" data-from="role-guild" aria-label="Действие с ролью"></select></div>
-    <div class="row"><label>Действие</label>
-      <select id="role-op" aria-label="Операция с ролью"><option value="add">Добавить</option><option value="remove">Убрать</option></select>
-    </div>
-    <button class="btn btn-warn" id="btn-role" type="button"><i class="fas fa-user-plus"></i> Применить</button>
-    <div class="result" id="role-result"></div>
-  </div>
-
-  <!-- Массовое наказание -->
-  <div class="ba-card">
-    <div class="ba-head">
-      <div class="ba-icon" ><i class="fas fa-gavel"></i></div>
-      <div class="ba-title">Массовое наказание</div>
-    </div>
-    <div class="warning-box danger"><i class="fas fa-exclamation-triangle"></i> Действие необратимо!</div>
-    <div class="row"><label>Сервер</label><select id="punish-guild" class="ba-guild" aria-label="Выбор сервера"></select></div>
-    <div class="row"><label>Целевая роль</label><select id="punish-role" class="ba-roles" data-from="punish-guild" aria-label="Фильтр по роли"></select></div>
-    <div class="row"><label>Длительность (мин)</label><input type="number" id="punish-duration" value="60" min="1" aria-label="Длительность (мин)"></div>
-    <div class="row"><label>Действие</label>
-      <select id="punish-op" aria-label="Наказание"><option value="mute">Мут (заглушить)</option><option value="kick">Кик (исключить)</option><option value="ban">Бан (забанить)</option></select>
-    </div>
-    <button class="btn btn-danger" id="btn-punish" type="button"><i class="fas fa-gavel"></i> Применить</button>
-    <div class="result" id="punish-result"></div>
+<div class="ops-canvas ops-bulk-command" data-room-kind="bulkconsole" data-room-version="3">
+  <div class="ops-room-label"><span>RSP / BULK COMMAND</span><b>Массовые операции</b><em>масштаб всегда виден до запуска</em></div>
+  <div class="ops-blast-warning"><i class="fas fa-shield-exclamation"></i><div><strong>Контур повышенной ответственности</strong><span>Каждая операция требует выбранного сервера, точной аудитории и подтверждения.</span></div><b>ADMIN ONLY</b></div>
+  <div class="ops-bulk-pipeline">
+    <section class="ops-bulk-lane ops-bulk-message">
+      <header><span>01 / COMMUNICATION</span><i class="fas fa-paper-plane"></i><h2>Личная рассылка</h2><p>Передайте одно сообщение всем участникам выбранной роли.</p></header>
+      <div class="ops-lane-body"><label class="ops-field"><span>Сервер</span><select id="dm-guild" class="ba-guild"></select></label><label class="ops-field"><span>Аудитория</span><select id="dm-role" class="ba-roles" data-from="dm-guild"></select></label><label class="ops-field"><span>Сообщение</span><textarea id="dm-msg" rows="5" placeholder="Текст личного сообщения"></textarea></label></div>
+      <footer><div class="result" id="dm-result"></div><button type="button" class="ops-primary" id="btn-dm"><i class="fas fa-paper-plane"></i> Начать отправку</button></footer>
+    </section>
+    <section class="ops-bulk-lane ops-bulk-role">
+      <header><span>02 / ACCESS</span><i class="fas fa-user-tag"></i><h2>Матрица ролей</h2><p>Добавьте или удалите роль сразу у целевого сегмента.</p></header>
+      <div class="ops-lane-body"><label class="ops-field"><span>Сервер</span><select id="role-guild" class="ba-guild"></select></label><label class="ops-field"><span>Целевая группа</span><select id="role-target" class="ba-roles" data-from="role-guild"></select></label><label class="ops-field"><span>Изменяемая роль</span><select id="role-action-sel" class="ba-roles" data-from="role-guild"></select></label><label class="ops-field"><span>Операция</span><select id="role-op"><option value="add">Добавить доступ</option><option value="remove">Удалить доступ</option></select></label></div>
+      <footer><div class="result" id="role-result"></div><button type="button" class="ops-primary" id="btn-role"><i class="fas fa-arrows-rotate"></i> Применить матрицу</button></footer>
+    </section>
+    <section class="ops-bulk-lane ops-bulk-punish">
+      <header><span>03 / ENFORCEMENT</span><i class="fas fa-gavel"></i><h2>Пакетное наказание</h2><p>Необратимая мера для всех участников выбранной роли.</p></header>
+      <div class="ops-lane-body"><label class="ops-field"><span>Сервер</span><select id="punish-guild" class="ba-guild"></select></label><label class="ops-field"><span>Целевая группа</span><select id="punish-role" class="ba-roles" data-from="punish-guild"></select></label><label class="ops-field"><span>Мера</span><select id="punish-op"><option value="mute">Мьют</option><option value="kick">Кик</option><option value="ban">Бан</option></select></label><label class="ops-field"><span>Срок мьюта, минут</span><input type="number" id="punish-duration" value="60" min="1"></label></div>
+      <footer><div class="result" id="punish-result"></div><button type="button" class="ops-critical" id="btn-punish"><i class="fas fa-triangle-exclamation"></i> Запустить меру</button></footer>
+    </section>
   </div>
 </div>
 

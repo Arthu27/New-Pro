@@ -720,16 +720,8 @@ body.mod-suite-open { overflow: hidden; }
 .mod-suite-overlay[data-mod-accent] .mod-suite-dialog-mark,.mod-suite-overlay[data-mod-accent] .mod-suite-section-icon{color:var(--mod-accent);border-color:color-mix(in srgb,var(--mod-accent) 26%,transparent);background:color-mix(in srgb,var(--mod-accent) 10%,transparent)}
 .mod-suite-overlay[data-mod-accent] .mod-suite-search:focus-within{border-color:color-mix(in srgb,var(--mod-accent) 45%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--mod-accent) 9%,transparent)}
 
-/* Рабочая поверхность всех 18 комнат — общий quality-каркас, свой акцент. */
-.mod-page-workspace{position:relative;min-height:240px;padding:2px 0 30px;--ac:var(--mod-accent);--ac-2:color-mix(in srgb,var(--mod-accent) 78%,white);--ac-3:var(--mod-accent-2);--ac-soft:color-mix(in srgb,var(--mod-accent) 10%,transparent);--ac-line:color-mix(in srgb,var(--mod-accent) 28%,transparent)}
-.mod-page-workspace>.page-hero,.mod-page-workspace .page-hero.compact{display:none!important}
-.mod-page-workspace:before{content:"WORKSPACE · " attr(data-mod-workspace);display:block;margin:0 0 9px;color:color-mix(in srgb,var(--mod-accent) 62%,var(--text-3));font-size:7px;font-weight:850;letter-spacing:.16em}
-.mod-page-workspace :is(.section,.tm-section,.pw-card,.ba-card,.ld-panel,.tj-card,.tj-box,.ap-panel,.sc-panel,.af-card,.ar-card,.af-panel,.mc-panel,.mr-panel,.mi-panel){border-color:color-mix(in srgb,var(--mod-accent) 18%,var(--line))!important;border-radius:15px!important;background:radial-gradient(circle at 100% 0,color-mix(in srgb,var(--mod-accent) 5%,transparent),transparent 28%),linear-gradient(145deg,var(--surface-2),var(--surface))!important;box-shadow:0 14px 38px rgba(0,0,0,.08)!important}
-.mod-page-workspace :is(.section,.tm-section,.pw-card,.ba-card,.ld-panel,.tj-card,.tj-box,.ap-panel,.sc-panel,.af-card,.ar-card,.af-panel,.mc-panel,.mr-panel,.mi-panel):hover{border-color:color-mix(in srgb,var(--mod-accent) 30%,var(--line))!important}
-.mod-page-workspace :is(.warn-stat,.log-stat,.mh-stat,.tm-stat,.tj-card,.ap-kpis>*,.mr-kpi,.ld-kpi){border-color:color-mix(in srgb,var(--mod-accent) 20%,var(--line))!important;background:linear-gradient(145deg,color-mix(in srgb,var(--mod-accent) 7%,var(--surface-2)),var(--surface))!important}
-.mod-page-workspace :is(h2,h3) i:first-child{color:var(--mod-accent)!important}.mod-page-workspace :is(input,select,textarea):focus{border-color:var(--mod-accent)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--mod-accent) 11%,transparent)!important}
-.mod-page-workspace :is(button,.btn,.pf-btn,.ap-btn,.sc-btn,.af-btn,.ar-btn,.mc-btn,.ld-btn,.tj-btn):focus-visible{outline:2px solid var(--mod-accent)!important;outline-offset:2px}
-.mod-page-workspace table{border-color:color-mix(in srgb,var(--mod-accent) 16%,var(--line))!important}.mod-page-workspace thead{background:color-mix(in srgb,var(--mod-accent) 7%,var(--surface-2))!important}
+/* Mount point for the rebuilt room products; each room owns its visual system. */
+.mod-page-workspace{position:relative;min-height:240px;padding:2px 0 30px;scroll-margin-top:18px;--ac:var(--mod-accent);--ac-2:color-mix(in srgb,var(--mod-accent) 78%,white);--ac-3:var(--mod-accent-2);--ac-soft:color-mix(in srgb,var(--mod-accent) 10%,transparent);--ac-line:color-mix(in srgb,var(--mod-accent) 28%,transparent)}
 
 @media (max-width:1100px){
   .mod-command-main{grid-template-columns:minmax(0,1fr) 72px}.mod-command-room .mod-suite-actions{grid-column:1/-1;display:grid;grid-template-columns:90px 1fr 1fr}.mod-command-stepper{grid-template-columns:1fr 1fr}.mod-command-index{width:68px;height:68px}.mod-command-copy h2{font-size:30px}

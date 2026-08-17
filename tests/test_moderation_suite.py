@@ -85,7 +85,8 @@ print('== 3. Общий UI подключён ко всем страницам =
 base_path = os.path.join(ROOT, 'web', 'templates', 'base.html')
 base = open(base_path, encoding='utf-8').read()
 for marker, label in [
-    ('moderation-suite.css?v=2', 'отдельный CSS-слой без старого browser-cache'),
+    ('moderation-suite.css?v=3', 'новая версия shell без старого browser-cache'),
+    ('moderation-rooms.css?v=3', 'полная дизайн-система 18 новых рабочих комнат'),
     ('moderation-suite.js?v=2', 'отдельный JS-контроллер без старого browser-cache'),
     ('data-mod-suite', 'контекстная панель'),
     ('mod-command-room', 'полноценная командная комната'),
@@ -102,9 +103,12 @@ for marker, label in [
     check(marker in base, f'base.html содержит: {label}')
 
 css_path = os.path.join(ROOT, 'web', 'static', 'moderation-suite.css')
+rooms_css_path = os.path.join(ROOT, 'web', 'static', 'moderation-rooms.css')
 js_path = os.path.join(ROOT, 'web', 'static', 'moderation-suite.js')
-check(os.path.isfile(css_path) and os.path.isfile(js_path), 'CSS и JS существуют')
+check(os.path.isfile(css_path) and os.path.isfile(rooms_css_path) and os.path.isfile(js_path),
+      'shell CSS, room CSS и JS существуют')
 css = open(css_path, encoding='utf-8').read()
+rooms_css = open(rooms_css_path, encoding='utf-8').read()
 js = open(js_path, encoding='utf-8').read()
 check(css.count('{') == css.count('}') and css.count('{') >= 100,
       f'CSS целый и содержательный ({css.count("{")} блоков)')
@@ -113,10 +117,47 @@ for marker in ('.nav-subgroup', '.mod-suite-bar', '.mod-suite-dialog',
                '.mod-page-workspace', '[data-mod-accent="crimson"]',
                '@media (max-width:760px)', 'prefers-reduced-motion'):
     check(marker in css, f'CSS содержит {marker}')
+check(rooms_css.count('{') == rooms_css.count('}') and rooms_css.count('{') >= 250,
+      f'дизайн-система комнат целая и глубокая ({rooms_css.count("{")} блоков)')
+for marker in ('.ops-caseboard', '.ops-time-control', '.ops-field-kit',
+               '.ops-bulk-command', '.ops-lockdown-core', '.ops-tag-isolation',
+               '.ops-evidence-stream', '.ops-decision-timeline', '.ops-proof-vault',
+               '.ops-review-chamber', '.ops-security-radar', '.ops-content-shield',
+               '.ops-raid-sentinel', '.ops-identity-guard', '.ops-team-desk',
+               '.ops-performance-brief', '.ops-risk-intelligence',
+               '.ops-escalation-map', '[data-theme="light"]',
+               '@media (max-width:720px)', 'prefers-reduced-motion'):
+    check(marker in rooms_css, f'room CSS содержит {marker}')
 for marker in ('Alt+M', 'RECENT_KEY', 'filterCards', 'focusable',
                'data-mod-section', 'sidebarSearch', 'enterWorkspace',
                'prefers-reduced-motion: reduce'):
     check(marker in js, f'JS содержит {marker}')
+
+room_templates = {
+    '/warnings': 'warnings', '/temp-moderation': 'temp_moderation',
+    '/mod-tools': 'mod_tools', '/bulk-actions': 'bulk_actions',
+    '/lockdown': 'lockdown', '/tagjail': 'tagjail', '/logs': 'logs',
+    '/mod-history': 'modhistory', '/proofs': 'proofs', '/appeals': 'appeals',
+    '/security': 'security', '/autofilter': 'autofilter',
+    '/antiraid': 'antiraid', '/antifake': 'antifake',
+    '/mod-control': 'mod_control', '/mod-report': 'mod_report',
+    '/mod-insights': 'mod_insights', '/ladder': 'ladder',
+}
+room_kinds = []
+legacy_surfaces = ('page-hero', 'pw-card', 'ba-card', 'tj-box', 'logs-box',
+                   'mh-box', 'ap-panel', 'sc-panel', 'mc-panel', 'mr-panel',
+                   'mi-panel')
+for page in raw_pages:
+    source = open(os.path.join(ROOT, 'web', 'templates', room_templates[page['path']] + '.html'),
+                  encoding='utf-8').read()
+    visible = source.split('<script>', 1)[0]
+    match = re.search(r'data-room-kind="([^"]+)"', visible)
+    if match:
+        room_kinds.append(match.group(1))
+    check('data-room-version="3"' in visible and not any(old in visible for old in legacy_surfaces),
+          f'{page["path"]}: старая рабочая поверхность удалена полностью')
+check(len(room_kinds) == 18 and len(set(room_kinds)) == 18,
+      'все 18 шаблонов имеют собственную уникальную композицию')
 
 node = subprocess.run(['node', '--check', js_path], capture_output=True, text=True, timeout=30)
 check(node.returncode == 0, f'JS проходит node --check ({node.stderr.strip() or "OK"})')
@@ -148,6 +189,9 @@ for page in raw_pages:
           and f'data-mod-workspace="{profile["code"]}"' in html
           and f'data-mod-accent="{profile["accent"]}"' in html
           and profile['headline'] in html
+          and 'data-room-version="3"' in html
+          and f'data-room-kind="{room_kinds[raw_pages.index(page)]}"' in html
+          and 'moderation-rooms.css?v=3' in html
           and len(re.findall(r'<a[^>]+data-mod-card(?:\s|=)', html)) == 18)
     if ok:
         rendered += 1

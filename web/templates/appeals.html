@@ -1,92 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Апелляции — Панель Aether{% endblock %}
-{% block page_title %}Апелляции{% endblock %}
+{% block title %}Review Chamber — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-scale-balanced"></i> Review Chamber{% endblock %}
 {% block content %}
-<style>
-.ap-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
-.ap-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
-.ap-kpi i{color:var(--ac,#e0b04a);font-size:16px}
-.ap-kpi b{font-size:17px;color:var(--text-1,#fff)}
-.ap-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
-.ap-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
-@media (max-width:960px){.ap-grid{grid-template-columns:1fr}}
-.ap-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px;margin-bottom:16px}
-.ap-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
-.ap-panel h3 i{color:var(--ac,#e0b04a)}
-.ap-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.5}
-.ap-card{border:1px solid var(--line-2,rgba(255,255,255,.1));border-left:4px solid #FEE75C;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:rgba(254,231,92,.04)}
-.ap-card .meta{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;color:var(--text-3,rgba(255,255,255,.5));margin-bottom:6px;flex-wrap:wrap}
-.ap-card .meta b{color:var(--text-2,rgba(255,255,255,.85))}
-.ap-card .txt{font-size:13px;color:var(--text-2,rgba(255,255,255,.85));white-space:pre-wrap;word-break:break-word;line-height:1.5}
-.ap-act{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.ap-inp{flex:1;min-width:180px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:8px 12px;color:var(--text-1,#fff);font-size:12.5px;outline:none}
-.ap-inp:focus{border-color:var(--ac,#e0b04a)}
-.ap-btn{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer}
-.ap-btn.ok{background:rgba(87,242,135,.15);color:#57F287;border:1px solid rgba(87,242,135,.4)}
-.ap-btn.ok:hover{background:rgba(87,242,135,.25)}
-.ap-btn.no{background:rgba(237,66,69,.12);color:#ED4245;border:1px solid rgba(237,66,69,.4)}
-.ap-btn.no:hover{background:rgba(237,66,69,.22)}
-.ap-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
-.ap-row{display:flex;justify-content:space-between;gap:10px;padding:9px 4px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85));align-items:flex-start}
-.ap-row:last-child{border-bottom:none}
-.ap-row .who{min-width:0}
-.ap-row .who b{display:block;font-size:12.5px}
-.ap-row small{display:block;font-size:11px;color:var(--text-3,rgba(255,255,255,.5));margin-top:2px;word-break:break-word}
-.ap-tag{flex-shrink:0;font-size:10.5px;font-weight:800;border-radius:8px;padding:3px 9px}
-.ap-tag.pending{color:#FEE75C;border:1px solid rgba(254,231,92,.4)}
-.ap-tag.accepted{color:#57F287;border:1px solid rgba(87,242,135,.4)}
-.ap-tag.rejected{color:#ED4245;border:1px solid rgba(237,66,69,.4)}
-.ap-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
-.ap-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;background:transparent;color:var(--text-2,rgba(255,255,255,.75));border:1px solid var(--line-2,rgba(255,255,255,.14));border-radius:9px;padding:5px 11px;cursor:pointer}
-.ap-chip:hover{border-color:var(--ac,#e0b04a)}
-.ap-chip.on{background:var(--ac-soft,rgba(224,176,74,.12));border-color:var(--ac,#e0b04a);color:var(--ac,#e0b04a)}
-.ap-ready{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2,rgba(255,255,255,.8));margin-bottom:10px;flex-wrap:wrap}
-.ap-ready i{color:var(--ac,#e0b04a)}
-.ap-sel{width:100%;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none;margin-bottom:10px}
-.ap-msg{font-size:12px;padding:6px 2px;display:none}
-.ap-msg.ok{color:#4ade80}
-.ap-msg.err{color:#ff8a7a}
-[data-theme="light"] .ap-row{border-bottom-color:rgba(0,0,0,.08)}
-[data-theme="light"] .ap-card{background:rgba(254,231,92,.1)}
-</style>
 
-<div class="ap-kpis" id="apKpis">
-  <div class="sk-card" style="width:150px;height:56px"></div>
-  <div class="sk-card" style="width:150px;height:56px"></div>
-  <div class="sk-card" style="width:150px;height:56px"></div>
-  <div class="sk-card" style="width:150px;height:56px"></div>
-</div>
-
-<div class="ap-grid">
-  <div class="ap-panel">
-    <h3><i class="fas fa-inbox"></i> Очередь ожидания</h3>
-    <div class="ap-sub">В порядке подачи — как в «/апелляции список». Решение фиксируется кодом кога; при живом боте добавляются разбан и ЛС пользователю.</div>
-    <div id="apQueue"></div>
-  </div>
-  <div>
-    <div class="ap-panel">
-      <h3><i class="fas fa-clock-rotate-left"></i> История</h3>
-      <div class="ap-sub">Свежие сверху. Фильтр по статусу и строке: ник, текст, ID, комментарий.</div>
-      <div class="ap-filters">
-        <button type="button" class="ap-chip on" data-st="">все</button>
-        <button type="button" class="ap-chip" data-st="pending">ожидают</button>
-        <button type="button" class="ap-chip" data-st="accepted">принятые</button>
-        <button type="button" class="ap-chip" data-st="rejected">отклонённые</button>
-        <input class="ap-inp" id="apQ" placeholder="поиск..." style="flex:2">
-      </div>
-      <div id="apHistory"></div>
-      <div style="margin-top:10px"><button type="button" class="ap-btn ghost" id="apCsv"><i class="fas fa-file-csv"></i> Выгрузить журнал</button></div>
-    </div>
-    <div class="ap-panel">
-      <h3><i class="fas fa-tower-broadcast"></i> Канал карточек</h3>
-      <div class="ap-sub">Куда бот шлёт новые апелляции — как «/апелляции канал». Не задан — улетит в системный.</div>
-      <div class="ap-ready" id="apReady"></div>
-      <div id="apSetBox" style="display:none">
-        <select class="ap-sel" id="apChanSel"></select>
-        <button type="button" class="ap-btn ghost" id="apChanSave"><i class="fas fa-floppy-disk"></i> Сохранить канал</button>
-        <div class="ap-msg" id="apChanMsg"></div>
-      </div>
-    </div>
+<style>[data-theme="light"] .ops-review-chamber{color-scheme:light}</style>
+<div class="ops-canvas ops-review-chamber" data-room-kind="review" data-room-version="3">
+  <div class="ops-room-label"><span>INV / REVIEW CHAMBER</span><b>Палата пересмотра</b><em>факты, позиция заявителя и вердикт в одном поле</em></div>
+  <div class="ops-review-kpis" id="apKpis"><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div></div>
+  <div class="ops-review-layout">
+    <section class="ops-review-docket"><header><div class="ops-review-emblem"><i class="fas fa-scale-balanced"></i></div><div><span class="ops-kicker">OPEN DOCKET</span><h2>Дела на рассмотрении</h2><p>Очередь строго по времени подачи. Решение фиксируется вместе с ответом команды.</p></div></header><div id="apQueue" class="ops-review-queue"></div></section>
+    <aside class="ops-review-side">
+      <section class="ops-panel"><header class="ops-panel-head"><div><span class="ops-kicker">VERDICT ARCHIVE</span><h2>Архив вердиктов</h2></div><i class="fas fa-gavel"></i></header><div class="ops-review-filters"><button type="button" class="ap-chip on" data-st="">Все</button><button type="button" class="ap-chip" data-st="pending">Ожидают</button><button type="button" class="ap-chip" data-st="accepted">Приняты</button><button type="button" class="ap-chip" data-st="rejected">Отклонены</button></div><label class="ops-field"><span>Поиск по делу</span><input id="apQ" placeholder="Ник, ID, текст или комментарий"></label><div id="apHistory" class="ops-review-history"></div><button type="button" class="ops-secondary" id="apCsv"><i class="fas fa-file-csv"></i> Выгрузить архив</button></section>
+      <section class="ops-panel ops-review-delivery"><header class="ops-panel-head"><div><span class="ops-kicker">DELIVERY ROUTE</span><h2>Канал новых дел</h2></div><i class="fas fa-tower-broadcast"></i></header><div class="ap-ready" id="apReady"></div><div id="apSetBox" style="display:none"><div class="ops-inline"><select id="apChanSel"></select><button type="button" class="ops-primary" id="apChanSave"><i class="fas fa-floppy-disk"></i> Сохранить</button></div><div class="ap-msg" id="apChanMsg"></div></div></section>
+    </aside>
   </div>
 </div>
 

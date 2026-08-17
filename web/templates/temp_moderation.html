@@ -1,208 +1,50 @@
 {% extends "base.html" %}
-{% block title %}Временная модерация — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-clock" ></i> Временная модерация{% endblock %}
+{% block title %}Time Control — Aether{% endblock %}
+{% block page_title %}<i class="fas fa-stopwatch"></i> Time Control{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot" id="heroDot"></span>
-      <span id="heroStatus">Система активна</span>
-    </div>
-    <h1>Временная модерация</h1>
-    <p>Мьют, бан и кик с произвольной длительностью. Предустановленные интервалы или свободный ввод (1ч, 30м, 7д, 2д 5ч и т.д.).</p>
+
+<div class="ops-canvas ops-time-control" data-room-kind="timegrid" data-room-version="3">
+  <div class="ops-room-label"><span>RSP / TEMPORAL GRID</span><b>Временные меры</b><em>каждый таймер под наблюдением</em></div>
+  <div class="ops-time-ticker" id="statsBar">
+    <div><i class="fas fa-comment-slash"></i><span>Мьюты</span><strong id="statMuts">—</strong></div>
+    <div><i class="fas fa-ban"></i><span>Баны</span><strong id="statBans">—</strong></div>
+    <div><i class="fas fa-user-minus"></i><span>Кики</span><strong id="statKicks">—</strong></div>
+    <div><i class="fas fa-calendar-clock"></i><span>В очереди</span><strong id="statScheduled">—</strong></div>
+    <div class="ops-time-total"><i class="fas fa-stopwatch"></i><span>Активный контур</span><strong id="statTotal">—</strong></div>
   </div>
-</div>
-{% endblock %}
-
-<style>
-.tm-tabs { display: flex; gap: 6px; margin-bottom: 18px; padding: 6px; background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px; width: fit-content; }
-.tm-tab { padding: 9px 18px; background: transparent; border: none; color: var(--text-2); font-size: var(--fs-sm); font-weight: 700; border-radius: 8px; cursor: pointer; transition: all 0.18s; display: flex; align-items: center; gap: 6px; }
-.tm-tab.active { background: linear-gradient(135deg, var(--ac), var(--ac-3)); color: var(--bg); }
-.tm-tab:not(.active):hover { background: var(--ac-soft); color: var(--text); }
-.tm-tab .count { background: rgba(0,0,0,0.2); padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 700; }
-.tm-section { display: none; }
-.tm-section.active { display: block; animation: fadeUp 0.3s var(--ease-out) both; }
-.tm-action-card { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 10px; position: relative; overflow: hidden; transition: all 0.2s; }
-.tm-action-card:hover { border-color: var(--ac-line); transform: translateY(-1px); }
-.tm-action-card.mut { border-left: 3px solid var(--warn); }
-.tm-action-card.ban { border-left: 3px solid var(--err); }
-.tm-action-card.kick { border-left: 3px solid #f97316; }
-.tm-action-card.scheduled { border-left: 3px solid var(--info); }
-.tm-action-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-.tm-action-card.mut .tm-action-icon { background: rgba(251,191,36,0.15); color: var(--warn); }
-.tm-action-card.ban .tm-action-icon { background: rgba(248,113,113,0.15); color: var(--err); }
-.tm-action-card.kick .tm-action-icon { background: rgba(249,115,22,0.15); color: #f97316; }
-.tm-action-card.scheduled .tm-action-icon { background: rgba(96,165,250,0.15); color: var(--info); }
-.tm-action-info { flex: 1; min-width: 0; }
-.tm-action-user { font-size: var(--fs-md) !important; font-weight: 700 !important; color: var(--text) !important; margin-bottom: 2px; }
-.tm-action-meta { font-size: 11px; color: var(--text-3); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.tm-action-meta i { color: var(--ac); font-size: 9px; }
-.tm-action-reason { font-size: var(--fs-sm) !important; color: var(--text-2) !important; margin-top: 4px; }
-.tm-action-countdown { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md) !important; font-weight: 700 !important; color: var(--ac) !important; padding: 6px 12px; background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 8px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
-.tm-action-countdown.urgent { color: var(--err) !important; background: rgba(248,113,113,0.10) !important; border-color: rgba(248,113,113,0.30) !important; animation: pulse 2s ease-in-out infinite; }
-.tm-action-controls { display: flex; gap: 4px; flex-shrink: 0; }
-.tm-btn-sm { padding: 6px 10px; font-size: 11px !important; font-weight: 700 !important; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s; }
-.tm-btn-cancel { background: var(--ok); color: #fff; }
-.tm-btn-cancel:hover { background: #22c55e; }
-.tm-btn-remove { background: rgba(248,113,113,0.12); color: var(--err); border: 1px solid rgba(248,113,113,0.30); }
-.tm-btn-remove:hover { background: rgba(248,113,113,0.25); }
-.tm-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.tm-preset { padding: 6px 12px; background: var(--bg-3); border: 1px solid var(--line-2); color: var(--text-2); font-size: 11px; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
-.tm-preset:hover { background: var(--ac-soft); border-color: var(--ac); color: var(--ac); }
-.tm-preset.selected { background: var(--ac); color: var(--bg); border-color: var(--ac); }
-.tm-input-group { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-.tm-input-group label { font-size: var(--fs-xs) !important; font-weight: 700 !important; color: var(--text-2) !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; min-width: 100px; margin: 0 !important; }
-.tm-input-group input { flex: 1; padding: 9px 12px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); font-size: var(--fs-sm); font-family: 'JetBrains Mono', monospace; }
-.tm-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
-}
-.tm-stat {
-  position: relative;
-  display: flex !important;
-  align-items: center !important;
-  gap: 14px !important;
-  background: linear-gradient(135deg, rgba(212, 168, 67, 0.06) 0%, rgba(224, 176, 74, 0.02) 100%);
-  border: 1px solid rgba(212, 168, 67, 0.18);
-  border-radius: 14px;
-  padding: 18px 18px !important;
-  text-align: left !important;
-  overflow: hidden;
-  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
-}
-.tm-stat:hover { transform: translateY(-2px); border-color: rgba(212, 168, 67, 0.45); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(212, 168, 67, 0.25); }
-.tm-stat .stat-icon {
-  flex: 0 0 48px;
-  width: 48px; height: 48px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  color: #1a1a1a;
-  background: linear-gradient(135deg, #d4a843 0%, #e0b04a 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(212, 168, 67, 0.35);
-}
-.tm-stat .stat-body { flex: 1; min-width: 0; }
-.tm-stat .num { font-size: 30px !important; font-weight: 800 !important; color: #f4f1e8 !important; font-variant-numeric: tabular-nums; line-height: 1.05; letter-spacing: -0.02em; }
-.tm-stat .lbl { font-size: 11px !important; color: #b8b3a3 !important; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px !important; font-weight: 600 !important; }
-.tm-stat.warn .num { color: #fcd34d !important; }
-.tm-stat.warn .stat-icon { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); color: #fff; }
-.tm-stat.err .num { color: #fca5a5 !important; }
-.tm-stat.err .stat-icon { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: #fff; }
-.tm-stat.info .num { color: #7dd3fc !important; }
-.tm-stat.info .stat-icon { background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); color: #fff; }
-.tm-empty { padding: 60px 20px; text-align: center; color: var(--text-3); }
-.tm-empty i { font-size: 36px; color: var(--ac); opacity: 0.4; display: block; margin-bottom: 12px; }
-</style>
-
-<!-- Stats -->
-<div class="tm-stats" id="statsBar">
-  <div class="tm-stat">
-    <div class="stat-icon"><i class="fas fa-microphone-slash"></i></div>
-    <div class="stat-body"><div class="num" id="statMuts" data-countup>—</div><div class="lbl">Активных мьютов</div></div>
-  </div>
-  <div class="tm-stat warn">
-    <div class="stat-icon"><i class="fas fa-gavel"></i></div>
-    <div class="stat-body"><div class="num" id="statBans" data-countup>—</div><div class="lbl">Врем. банов</div></div>
-  </div>
-  <div class="tm-stat err">
-    <div class="stat-icon"><i class="fas fa-sign-out-alt"></i></div>
-    <div class="stat-body"><div class="num" id="statKicks" data-countup>—</div><div class="lbl">Врем. киков</div></div>
-  </div>
-  <div class="tm-stat info">
-    <div class="stat-icon"><i class="fas fa-clock"></i></div>
-    <div class="stat-body"><div class="num" id="statScheduled" data-countup>—</div><div class="lbl">Запланировано</div></div>
-  </div>
-  <div class="tm-stat">
-    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
-    <div class="stat-body"><div class="num" id="statTotal" data-countup>—</div><div class="lbl">Всего за 24ч</div></div>
-  </div>
-</div>
-
-<!-- Tabs -->
-<div class="tm-tabs">
-  <button type="button" class="tm-tab active" data-tab="muts" onclick="switchTab('muts')"><i class="fas fa-comment-slash"></i> Мьюты <span class="count" id="cntMuts">0</span></button>
-  <button type="button" class="tm-tab" data-tab="bans" onclick="switchTab('bans')"><i class="fas fa-ban"></i> Баны <span class="count" id="cntBans">0</span></button>
-  <button type="button" class="tm-tab" data-tab="kicks" onclick="switchTab('kicks')"><i class="fas fa-user-minus"></i> Кики <span class="count" id="cntKicks">0</span></button>
-  <button type="button" class="tm-tab" data-tab="scheduled" onclick="switchTab('scheduled')"><i class="fas fa-clock"></i> Запланировано <span class="count" id="cntScheduled">0</span></button>
-  <button type="button" class="tm-tab" data-tab="new" onclick="switchTab('new')"><i class="fas fa-plus"></i> Новое</button>
-</div>
-
-<!-- Muts list -->
-<div class="tm-section active" id="tab-muts">
-  <div id="mutsList"></div>
-</div>
-
-<!-- Bans list -->
-<div class="tm-section" id="tab-bans">
-  <div id="bansList"></div>
-</div>
-
-<!-- Kicks list -->
-<div class="tm-section" id="tab-kicks">
-  <div id="kicksList"></div>
-</div>
-
-<!-- Scheduled list -->
-<div class="tm-section" id="tab-scheduled">
-  <div id="scheduledList"></div>
-</div>
-
-<!-- New action form -->
-<div class="tm-section" id="tab-new">
-  <div class="dash-box">
-    <div class="dash-box-head">
-      <div class="dash-box-title"><i class="fas fa-plus"></i> Создать временное наказание</div>
-    </div>
-    <div class="dash-box-body" >
-      <!-- Type selector -->
-      <label style="display:block !important; font-weight:700 !important; margin-bottom:8px !important;">Тип действия</label>
-      <div class="tm-presets">
-        <button class="tm-preset" data-type="mut" onclick="setActionType('mut')"><i class="fas fa-comment-slash"></i> Мьют</button>
-        <button class="tm-preset" data-type="ban" onclick="setActionType('ban')"><i class="fas fa-ban"></i> Бан</button>
-        <button class="tm-preset" data-type="kick" onclick="setActionType('kick')"><i class="fas fa-user-minus"></i> Кик</button>
-      </div>
-
-      <div class="tm-input-group">
-        <label>ID или @user</label>
-        <input type="text" id="newUser" placeholder="@user или 123456789012345678" aria-label="@user или 123456789012345678">
-      </div>
-
-      <!-- Duration presets -->
-      <label style="display:block !important; font-weight:700 !important; margin:8px 0 !important;">Длительность</label>
-      <div class="tm-presets" id="durationPresets">
-        <button type="button" class="tm-preset" data-dur="30s" onclick="setDuration('30s', this)">30с</button>
-        <button type="button" class="tm-preset" data-dur="1m" onclick="setDuration('1m', this)">1м</button>
-        <button type="button" class="tm-preset" data-dur="5m" onclick="setDuration('5m', this)">5м</button>
-        <button type="button" class="tm-preset" data-dur="15m" onclick="setDuration('15m', this)">15м</button>
-        <button type="button" class="tm-preset" data-dur="30m" onclick="setDuration('30m', this)">30м</button>
-        <button type="button" class="tm-preset" data-dur="1h" onclick="setDuration('1h', this)">1ч</button>
-        <button type="button" class="tm-preset" data-dur="3h" onclick="setDuration('3h', this)">3ч</button>
-        <button type="button" class="tm-preset" data-dur="6h" onclick="setDuration('6h', this)">6ч</button>
-        <button type="button" class="tm-preset" data-dur="12h" onclick="setDuration('12h', this)">12ч</button>
-        <button type="button" class="tm-preset" data-dur="1d" onclick="setDuration('1d', this)">1д</button>
-        <button type="button" class="tm-preset" data-dur="3d" onclick="setDuration('3d', this)">3д</button>
-        <button type="button" class="tm-preset" data-dur="7d" onclick="setDuration('7d', this)">7д</button>
-        <button type="button" class="tm-preset" data-dur="14d" onclick="setDuration('14d', this)">14д</button>
-        <button type="button" class="tm-preset" data-dur="30d" onclick="setDuration('30d', this)">30д</button>
-      </div>
-      <div class="tm-input-group"   style="margin-top: 10px;">
-        <label>Своё (1ч, 2д 5ч, 30м)</label>
-        <input type="text" id="newDuration" placeholder="например: 1ч 30м" oninput="clearPresets()" aria-label="например: 1ч 30м">
-      </div>
-
-      <div class="tm-input-group">
-        <label>Причина</label>
-        <input type="text" id="newReason" placeholder="Нарушение правил, спам..." aria-label="Нарушение правил, спам...">
-      </div>
-
-      <div  >
-        <button type="button" class="form-btn" onclick="applyAction()"><i class="fas fa-check"></i> Применить</button>
-        <button type="button" class="btn-ghost" onclick="resetForm()"   style="font-weight: 700; background: transparent;"><i class="fas fa-times"></i> Сбросить</button>
-      </div>
-    </div>
+  <div class="ops-time-shell">
+    <nav class="ops-time-tabs" aria-label="Тип временной меры">
+      <button type="button" class="tm-tab active" data-tab="muts" onclick="switchTab('muts')"><i class="fas fa-comment-slash"></i><span>Мьюты</span><b id="cntMuts">0</b></button>
+      <button type="button" class="tm-tab" data-tab="bans" onclick="switchTab('bans')"><i class="fas fa-ban"></i><span>Баны</span><b id="cntBans">0</b></button>
+      <button type="button" class="tm-tab" data-tab="kicks" onclick="switchTab('kicks')"><i class="fas fa-user-minus"></i><span>Кики</span><b id="cntKicks">0</b></button>
+      <button type="button" class="tm-tab" data-tab="scheduled" onclick="switchTab('scheduled')"><i class="fas fa-clock-rotate-left"></i><span>План</span><b id="cntScheduled">0</b></button>
+      <button type="button" class="tm-tab ops-time-create" data-tab="new" onclick="switchTab('new')"><i class="fas fa-plus"></i><span>Новая мера</span></button>
+    </nav>
+    <main class="ops-time-stage">
+      <section class="tm-section active" id="tab-muts"><div class="ops-stage-head"><div><span class="ops-kicker">ACTIVE / MUTES</span><h2>Карта мьютов</h2></div><i class="fas fa-microphone-slash"></i></div><div id="mutsList" class="ops-time-list"></div></section>
+      <section class="tm-section" id="tab-bans"><div class="ops-stage-head"><div><span class="ops-kicker">ACTIVE / BANS</span><h2>Карта банов</h2></div><i class="fas fa-shield-halved"></i></div><div id="bansList" class="ops-time-list"></div></section>
+      <section class="tm-section" id="tab-kicks"><div class="ops-stage-head"><div><span class="ops-kicker">RECENT / KICKS</span><h2>Последние исключения</h2></div><i class="fas fa-door-open"></i></div><div id="kicksList" class="ops-time-list"></div></section>
+      <section class="tm-section" id="tab-scheduled"><div class="ops-stage-head"><div><span class="ops-kicker">SCHEDULED</span><h2>Запланированные меры</h2></div><i class="fas fa-calendar-days"></i></div><div id="scheduledList" class="ops-time-list"></div></section>
+      <section class="tm-section" id="tab-new">
+        <div class="ops-stage-head"><div><span class="ops-kicker">NEW TEMPORAL ACTION</span><h2>Собрать временную меру</h2><p>Выберите действие, участника и точный срок. Перед запуском параметры остаются видимыми.</p></div><i class="fas fa-wand-magic-sparkles"></i></div>
+        <div class="ops-action-selector">
+          <button type="button" class="tm-preset selected" data-type="mut" onclick="setActionType('mut')"><i class="fas fa-comment-slash"></i> Мьют</button>
+          <button type="button" class="tm-preset" data-type="ban" onclick="setActionType('ban')"><i class="fas fa-ban"></i> Бан</button>
+          <button type="button" class="tm-preset" data-type="kick" onclick="setActionType('kick')"><i class="fas fa-user-minus"></i> Кик</button>
+        </div>
+        <div class="ops-form-grid">
+          <label class="ops-field"><span>Участник</span><input id="newUser" placeholder="ID участника"></label>
+          <label class="ops-field"><span>Точный срок</span><input id="newDuration" placeholder="2ч 30м"></label>
+          <label class="ops-field ops-field-wide"><span>Основание решения</span><input id="newReason" maxlength="300" placeholder="Причина, которая останется в журнале"></label>
+        </div>
+        <div class="ops-duration-bank" id="durationPresets">
+          {% for dur, label in [('30s','30 сек'),('1m','1 мин'),('5m','5 мин'),('15m','15 мин'),('30m','30 мин'),('1h','1 час'),('3h','3 часа'),('6h','6 часов'),('12h','12 часов'),('1d','1 день'),('3d','3 дня'),('7d','7 дней'),('14d','14 дней'),('30d','30 дней')] %}
+          <button type="button" class="tm-preset" data-dur="{{ dur }}" onclick="setDuration('{{ dur }}', this)" aria-label="Выбрать срок {{ label }}">{{ label }}</button>
+          {% endfor %}
+        </div>
+        <div class="ops-form-actions"><button type="button" class="ops-primary" onclick="applyAction()"><i class="fas fa-bolt"></i> Запустить таймер</button><button type="button" class="ops-secondary" onclick="resetForm()"><i class="fas fa-rotate-left"></i> Сбросить</button></div>
+      </section>
+    </main>
   </div>
 </div>
 
