@@ -26,6 +26,9 @@ HELPER_COGS = frozenset({
     'embed_utils.py',
     'icons.py',
     'leveling_engagement.py',
+    # CRUD-хранилище магазина: импортируют economy_cog и shop_panel,
+    # само по себе когом не является (setup нет и не нужен).
+    'economy_shop.py',
 })
 
 # ─── системные модули — живут всегда, даже в MOD_ONLY ─────────────────────

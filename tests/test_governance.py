@@ -353,6 +353,48 @@ if shutil.which('node'):
 else:
     check(True, 'node недоступен в песочнице — JS покрыт ручным аудитом')
 
+print('== 10. Каждый загружаемый ког имеет setup ==')
+import cogs_policy as CP  # noqa: E402
+no_setup = []
+helpers_missing = []
+for f in sorted(os.listdir(os.path.join(ROOT, 'cogs'))):
+    if not f.endswith('.py'):
+        continue
+    path = os.path.join(ROOT, 'cogs', f)
+    tree = ast.parse(open(path, encoding='utf-8').read())
+    has_setup = any(isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and n.name == 'setup' for n in tree.body)
+    if f in CP.HELPER_COGS:
+        continue
+    if not has_setup:
+        no_setup.append(f)
+for h in CP.HELPER_COGS:
+    if not os.path.exists(os.path.join(ROOT, 'cogs', h)):
+        helpers_missing.append(h)
+check(not no_setup,
+      f'вне HELPER_COGS у каждого модуля есть setup (сироты: {no_setup})')
+check(not helpers_missing,
+      f'HELPER_COGS не ссылается на несуществующие файлы ({helpers_missing})')
+en, dis = CP.select_from_environment(
+    sorted(os.listdir(os.path.join(ROOT, 'cogs'))), environ={})
+check('economy_shop.py' not in en and 'economy_shop.py' not in dis,
+      'economy_shop — хелпер: политика его больше не грузит как ког')
+check('economy_cog.py' in en, 'сам ког экономики по-прежнему грузится')
+
+print('== 11. Все загружаемые коги импортируются с setup ==')
+import importlib  # noqa: E402
+bad_imp = []
+for f in en:
+    name = 'cogs.' + f[:-3]
+    try:
+        m = importlib.import_module(name)
+        if not callable(getattr(m, 'setup', None)):
+            bad_imp.append((f, 'setup не callable'))
+    except Exception as ex:
+        bad_imp.append((f, f'{type(ex).__name__}: {str(ex)[:60]}'))
+check(not bad_imp,
+      f'все {len(en)} загружаемых когов живо импортируются (упали: {bad_imp[:3]})')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)
