@@ -164,10 +164,22 @@ check('analytics-jump' in tpl and 'anOperations' in tpl and 'anChannel' in tpl,
       'быстрая навигация охватывает аналитические контуры')
 check('function updateCockpit' in tpl and '_lastSummary' in tpl and '_lastFlow' in tpl,
       'динамический индекс объединяет активность и поток аудитории')
+check('analytics-signal-grid' in tpl and 'anSignalActivity' in tpl and 'anSignalPeak' in tpl,
+      'сигнальная комната формирует отдельные выводы для команды')
+check('data-an-lens="content"' in tpl and 'function setLens' in tpl and
+      "localStorage.setItem('analytics_lens'" in tpl,
+      'рабочие линзы переключают контент, аудиторию и команду')
+check('analytics-chart-shell' in tpl and 'analytics-chart-panel' in tpl,
+      'графики получили собственную полноэкранную визуальную систему')
+check('id="anPrint"' in tpl and 'window.print()' in tpl,
+      'снимок аналитики готовится штатной печатью/PDF')
 demo_source = open(os.path.join(ROOT, 'scripts', 'demo_panel.py'), encoding='utf-8').read()
 check("message_log_path = f'data/message_logs_{GID}.json'" in demo_source and
       'for day in range(30)' in demo_source,
       'demo-preview получает наглядную 30-дневную историю активности')
+check("('member', 'Участник вошёл'" in demo_source and
+      "('invite', 'Приглашение создано'" in demo_source,
+      'demo-preview показывает поток аудитории и инвайт-сигналы')
 emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
 check(tpl.count('an-rowl') >= 2, 'стили теплокарты на месте')

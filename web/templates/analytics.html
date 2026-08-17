@@ -64,19 +64,44 @@
 .analytics-insight{display:flex;align-items:center;gap:13px;margin:0 0 14px;padding:12px 14px;border:1px solid rgba(113,129,255,.2);border-radius:13px;background:rgba(88,101,242,.065)}
 .analytics-insight>i{width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;border-radius:10px;background:rgba(113,129,255,.13);color:#91a0ff}
 .analytics-insight div{min-width:0}.analytics-insight strong{display:block;color:var(--text-2);font-size:10.5px}.analytics-insight p{margin:3px 0 0;color:var(--text-3);font-size:9.5px;line-height:1.5}
+.analytics-signal-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:13px}
+.analytics-signal-grid article{display:flex;align-items:center;gap:11px;min-width:0;padding:12px 13px;border:1px solid var(--line);border-radius:13px;background:linear-gradient(135deg,color-mix(in srgb,var(--surface-2) 92%,#7181ff 3%),var(--surface));transition:transform .18s,border-color .18s}
+.analytics-signal-grid article:hover{transform:translateY(-2px);border-color:rgba(113,129,255,.3)}
+.analytics-signal-icon{width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto;border-radius:10px;color:#9da8ff;background:rgba(113,129,255,.11)}
+.analytics-signal-icon.green{color:#55e6a5;background:rgba(85,230,165,.1)}.analytics-signal-icon.amber{color:#f6c75c;background:rgba(246,199,92,.1)}
+.analytics-signal-grid article>div{min-width:0}.analytics-signal-grid small{display:block;margin-bottom:4px;color:var(--text-3);font-size:7px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.analytics-signal-grid strong{display:block;overflow:hidden;color:var(--text-2);font-size:9.5px;text-overflow:ellipsis;white-space:nowrap}
+.analytics-signal-arrow{margin-left:auto;color:var(--text-3);font-size:9px}
+.analytics-lensbar{display:flex;align-items:center;gap:12px;margin-bottom:9px;padding:10px 11px;border:1px solid rgba(113,129,255,.18);border-radius:13px;background:linear-gradient(90deg,rgba(88,101,242,.07),transparent 70%)}
+.analytics-lensbar>div:first-child{min-width:165px}.analytics-lensbar small{display:block;color:#77809c;font-size:7px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.analytics-lensbar strong{display:block;margin-top:3px;color:var(--text-2);font-size:9.5px}
+.analytics-lenses{display:flex;align-items:center;gap:5px;flex:1}.analytics-lenses button,.analytics-print{min-height:31px;padding:5px 9px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text-3);font:inherit;font-size:8.5px;font-weight:700;cursor:pointer;white-space:nowrap}.analytics-lenses button i,.analytics-print i{margin-right:4px}.analytics-lenses button:hover,.analytics-lenses button.is-active{border-color:rgba(113,129,255,.26);background:rgba(88,101,242,.12);color:#b4bdff}.analytics-print{border-color:var(--line);background:var(--surface);color:var(--text-2)}.analytics-print:hover{border-color:rgba(113,129,255,.3);color:#b4bdff}
 .analytics-jump{position:sticky;top:8px;z-index:8;display:flex;gap:5px;margin-bottom:15px;padding:6px;border:1px solid var(--line);border-radius:12px;overflow:auto;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(16px)}
-.analytics-jump a{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:5px 9px;border-radius:8px;color:var(--text-3);font-size:9px;font-weight:700;text-decoration:none;white-space:nowrap}.analytics-jump a:hover{color:#abb4ff;background:rgba(88,101,242,.11)}
-.analytics-wrap { display: flex; flex-direction: column; gap: 16px; scroll-behavior:smooth; }
-.analytics-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.analytics-jump a{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:5px 9px;border-radius:8px;color:var(--text-3);font-size:9px;font-weight:700;text-decoration:none;white-space:nowrap}.analytics-jump a:hover{color:#abb4ff;background:rgba(88,101,242,.11)}.analytics-jump a.an-link-hidden{display:none}
+.analytics-wrap{display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
+.analytics-wrap [data-an-section]{transition:opacity .2s,transform .2s}.analytics-wrap [data-an-section].an-lens-hidden{display:none!important}
+.analytics-wrap .section{position:relative;padding:19px;border:1px solid color-mix(in srgb,var(--line) 80%,#7181ff 20%);border-radius:16px;overflow:hidden;background:radial-gradient(circle at 100% 0,rgba(113,129,255,.055),transparent 28%),linear-gradient(145deg,var(--surface-2),var(--surface));box-shadow:0 13px 34px rgba(0,0,0,.08);transition:border-color .2s,transform .2s,box-shadow .2s}
+.analytics-wrap .section:before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:2px;border-radius:99px;background:linear-gradient(#7181ff,#38d8f0);opacity:.58}
+.analytics-wrap .section:hover{border-color:rgba(113,129,255,.25);box-shadow:0 18px 45px rgba(0,0,0,.13)}
+.analytics-wrap .section>h2{margin:0 0 15px;padding-left:2px;color:var(--text);font-size:12px;font-weight:760;letter-spacing:-.01em}.analytics-wrap .section>h2>i:first-child{width:27px;height:27px;display:inline-grid;place-items:center;margin-right:7px;border-radius:8px;background:rgba(113,129,255,.1);color:#9aa6ff;font-size:10px}
+.analytics-chart-shell{position:relative;height:var(--chart-height,240px);padding:12px;border:1px solid rgba(255,255,255,.055);border-radius:12px;background:linear-gradient(rgba(113,129,255,.025),rgba(113,129,255,.025)),repeating-linear-gradient(0deg,transparent 0,transparent 39px,rgba(255,255,255,.025) 40px)}
+.analytics-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.analytics-grid-2 .section:first-child{background:radial-gradient(circle at 0 0,rgba(246,199,92,.07),transparent 30%),linear-gradient(145deg,var(--surface-2),var(--surface))}
+.analytics-grid-2 .section:last-child{background:radial-gradient(circle at 100% 0,rgba(56,216,240,.07),transparent 30%),linear-gradient(145deg,var(--surface-2),var(--surface))}
+.analytics-chart-panel{min-height:330px}
+.analytics-wrap .leader-row{background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.065)}.analytics-wrap .leader-row:hover{background:rgba(113,129,255,.07);border-color:rgba(113,129,255,.22)}
+.analytics-wrap .leader-count{color:#aab4ff!important;border-color:rgba(113,129,255,.22);background:rgba(113,129,255,.09)}.analytics-wrap .bar-fill{background:linear-gradient(90deg,#7181ff,#3bd5ea)}
+.an-sumgrid{display:grid!important;grid-template-columns:1fr 1fr!important}.an-sum{min-width:0!important;border-color:rgba(113,129,255,.16)!important;background:rgba(113,129,255,.045)!important}
 @media (max-width: 900px) {
   .analytics-cockpit{grid-template-columns:1fr;padding:22px}.analytics-pulse{display:none}
-  .analytics-brief{grid-template-columns:1fr 1fr}.analytics-grid-2{grid-template-columns:1fr}
+  .analytics-brief{grid-template-columns:1fr 1fr}.analytics-grid-2{grid-template-columns:1fr}.analytics-signal-grid{grid-template-columns:1fr}
+  .analytics-lensbar{align-items:flex-start;flex-wrap:wrap}.analytics-lenses{order:3;width:100%;overflow:auto}
 }
 @media (max-width: 560px) {
   .analytics-cockpit{padding:19px 16px}.analytics-cockpit h1{font-size:31px}.analytics-server-control{width:100%;min-width:0}
   .analytics-refresh{flex:1}.analytics-updated{flex:1}.analytics-brief{grid-template-columns:1fr}.analytics-kpi{min-height:92px}
+  .analytics-lensbar>div:first-child{min-width:0;flex:1}.analytics-print{margin-left:auto}.analytics-wrap .section{padding:15px}.an-sumgrid{grid-template-columns:1fr!important}
 }
-@media (prefers-reduced-motion:reduce){.analytics-refresh.busy i,.leader-row,.bar-fill:after{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.analytics-refresh.busy i,.leader-row,.bar-fill:after,.analytics-signal-grid article{animation:none!important;transition:none!important}}
+@media print{.analytics-controlbar,.analytics-lensbar,.analytics-jump,.an-csv{display:none!important}.analytics-cockpit{grid-template-columns:1fr;background:#11131c!important}.analytics-brief{grid-template-columns:repeat(4,1fr)}.analytics-wrap [data-an-section].an-lens-hidden{display:block!important}}
 
 .guild-select {
   width: 100%;
@@ -224,6 +249,21 @@
   <article class="analytics-kpi" data-tone="amber"><div class="analytics-kpi-head"><span>Главный канал</span><i class="fas fa-hashtag"></i></div><strong id="anKpiChannel">—</strong><p id="anKpiChannelNote">Ожидаем данные активности</p></article>
 </div>
 <div class="analytics-insight" id="anInsight"><i class="fas fa-wand-magic-sparkles"></i><div><strong>Оперативная заметка</strong><p>Собираем данные и готовим короткий вывод для команды.</p></div></div>
+<section class="analytics-signal-grid" aria-label="Сигналы для команды">
+  <article><span class="analytics-signal-icon violet"><i class="fas fa-wave-square"></i></span><div><small>Сигнал активности</small><strong id="anSignalActivity">Собираем недельную динамику</strong></div><i class="fas fa-arrow-trend-up analytics-signal-arrow"></i></article>
+  <article><span class="analytics-signal-icon green"><i class="fas fa-user-group"></i></span><div><small>Сигнал аудитории</small><strong id="anSignalAudience">Проверяем приходы и уходы</strong></div><i class="fas fa-arrow-right analytics-signal-arrow"></i></article>
+  <article><span class="analytics-signal-icon amber"><i class="fas fa-clock"></i></span><div><small>Лучшее окно</small><strong id="anSignalPeak">Ищем пик сообщений</strong></div><i class="fas fa-arrow-right analytics-signal-arrow"></i></article>
+</section>
+<div class="analytics-lensbar">
+  <div><small>Рабочая линза</small><strong id="anLensLabel">Полная картина сервера</strong></div>
+  <div class="analytics-lenses" role="group" aria-label="Режим аналитики">
+    <button type="button" class="is-active" data-an-lens="all" aria-pressed="true"><i class="fas fa-table-cells-large"></i> Обзор</button>
+    <button type="button" data-an-lens="content" aria-pressed="false"><i class="fas fa-message"></i> Контент</button>
+    <button type="button" data-an-lens="audience" aria-pressed="false"><i class="fas fa-user-group"></i> Аудитория</button>
+    <button type="button" data-an-lens="team" aria-pressed="false"><i class="fas fa-user-shield"></i> Команда</button>
+  </div>
+  <button type="button" class="analytics-print" id="anPrint"><i class="fas fa-file-arrow-down"></i> Снимок</button>
+</div>
 <nav class="analytics-jump" aria-label="Разделы аналитики">
   <a href="#anLeaders"><i class="fas fa-ranking-star"></i> Лидеры</a>
   <a href="#anTrends"><i class="fas fa-chart-column"></i> Динамика</a>
@@ -233,8 +273,8 @@
   <a href="#anChannel"><i class="fas fa-magnifying-glass-chart"></i> Канал</a>
 </nav>
 
-<div class="analytics-wrap">
-  <div class="analytics-grid-2" id="anLeaders" data-reveal="up">
+<div class="analytics-wrap" id="anWorkspace">
+  <div class="analytics-grid-2" id="anLeaders" data-an-section="content" data-reveal="up">
     <div class="section">
       <h2><i class="fas fa-trophy"></i> Самые активные участники</h2>
       <div id="top-members"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
@@ -245,7 +285,7 @@
     </div>
   </div>
 
-  <div class="section" id="anTrends">
+  <div class="section" id="anTrends" data-an-section="content">
     <h2><i class="fas fa-scale-balanced"></i> Неделя к неделе</h2>
     <div class="an-sumgrid" id="anWeekSum">
       <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>
@@ -253,33 +293,33 @@
     <div class="an-recs" id="anRecords"></div>
   </div>
 
-  <div class="section">
+  <div class="section analytics-chart-panel" data-an-section="content">
     <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-chart-bar"></i> Сообщений в день (последние 7 дней)<a id="anCsvBtn" class="an-csv" href="#" download><i class="fas fa-file-csv"></i> CSV · 30 дней</a><a id="anCsvFullBtn" class="an-csv" href="#" download style="margin-left:8px"><i class="fas fa-file-lines"></i> Полный отчёт</a></h2>
-    <div   style="height: 240px; position: relative;">
+    <div class="analytics-chart-shell" style="--chart-height:250px">
       <canvas id="msgChart"></canvas>
     </div>
   </div>
 
-  <div class="section" id="anAudience">
+  <div class="section analytics-chart-panel" id="anAudience" data-an-section="audience">
     <h2><i class="fas fa-user-plus"></i> Рост участников</h2>
-    <div   style="height: 240px; position: relative;">
+    <div class="analytics-chart-shell" style="--chart-height:250px">
       <canvas id="memberChart"></canvas>
     </div>
   </div>
 
-  <div class="section">
+  <div class="section analytics-chart-panel" data-an-section="audience">
     <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-right-left"></i> Приходы и уходы (14 дней)<span id="anFlowNet" class="an-peak"></span></h2>
     <div class="an-recs" id="anInvites" style="margin:0 0 10px"></div>
-    <div   style="height: 220px; position: relative;">
+    <div class="analytics-chart-shell" style="--chart-height:230px">
       <canvas id="flowChart"></canvas>
     </div>
   </div>
 
-  <div class="section" id="anHeat">
+  <div class="section" id="anHeat" data-an-section="content">
     <h2 style="display:flex;align-items:center;gap:10px"><i class="fas fa-fire"></i> Теплокарта активности<span id="anHeatPeak" class="an-peak"></span></h2>
     <div id="anHeatmap"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
   </div>
-  <div class="an-pair" id="anOperations">
+  <div class="an-pair" id="anOperations" data-an-section="team">
     <div class="section">
       <h2><i class="fas fa-gavel"></i> Модерация за 30 дней</h2>
       <div id="anModLoad"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div></div>
@@ -291,7 +331,7 @@
     </div>
   </div>
 
-  <div class="section" id="anChannel">
+  <div class="section" id="anChannel" data-an-section="content">
     <h2><i class="fas fa-magnifying-glass-chart"></i> Детализация по каналу</h2>
     <div class="an-drillbar">
       <select id="anDrillSel" class="an-select" onchange="onDrillChange()"></select>
@@ -306,13 +346,13 @@
 .an-wd{font-size:10.5px;color:var(--text-3,rgba(255,255,255,.4));text-align:right;font-weight:700}
 .an-cells{display:grid;grid-template-columns:repeat(24,1fr);gap:2px}
 .an-cell{aspect-ratio:1/1;border-radius:3px;min-height:12px;transition:transform .1s}
-.an-cell:hover{transform:scale(1.35);outline:1px solid var(--ac,#e0b04a)}
+.an-cell:hover{transform:scale(1.35);outline:1px solid #8190ff}
 .an-h{font-size:9px;color:var(--text-3,rgba(255,255,255,.3));text-align:center;line-height:1.4}
 .an-legend{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--text-3,rgba(255,255,255,.4));margin-top:8px;justify-content:flex-end}
 .an-legend i{width:14px;height:10px;border-radius:2px;display:inline-block}
-.an-peak{font-size:11px;color:var(--ac-2,#f0cd7a);font-weight:600;margin-left:auto}
-.an-csv{font-size:11.5px;font-weight:600;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:8px;padding:4px 10px;margin-left:auto;white-space:nowrap;transition:background .15s}
-.an-csv:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
+.an-peak{font-size:11px;color:#aeb7ff;font-weight:600;margin-left:auto}
+.an-csv{font-size:11.5px;font-weight:600;color:#8190ff;text-decoration:none;border:1px solid var(--ac-line,rgba(113,129,255,.3));border-radius:8px;padding:4px 10px;margin-left:auto;white-space:nowrap;transition:background .15s}
+.an-csv:hover{background:var(--ac-soft,rgba(113,129,255,.12))}
 .an-sumgrid{display:flex;flex-wrap:wrap;gap:12px}
 .an-sum{background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:12px 18px;min-width:180px}
 .an-sumv{font-size:22px;font-weight:700;color:var(--text-1,#fff);font-variant-numeric:tabular-nums}
@@ -322,8 +362,8 @@
 .an-sumd.down{color:#ff8a7a}
 .an-recs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .an-rechip{font-size:11.5px;color:var(--text-2,rgba(255,255,255,.75));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:3px 11px;font-variant-numeric:tabular-nums}
-.an-rechip i{color:var(--ac,#e0b04a)}
-.an-rechip.today{color:var(--ac-2,#f0cd7a);border-color:var(--ac-line,rgba(224,176,74,.3))}
+.an-rechip i{color:#8190ff}
+.an-rechip.today{color:#b6beff;border-color:rgba(113,129,255,.3)}
 .an-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media (max-width:960px){.an-pair{grid-template-columns:1fr}}
 .an-subnote{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.4));margin:-4px 0 10px}
@@ -332,7 +372,7 @@
 .an-select option{background:#1c1f27;color:#e8e8e8}
 .an-drillmeta{font-size:12px;color:var(--text-3,rgba(255,255,255,.45))}
 .an-bars{display:flex;align-items:flex-end;gap:2px;height:96px;padding-top:6px}
-.an-bar{flex:1;background:linear-gradient(180deg,var(--ac-2,#f0cd7a),var(--ac,#e0b04a));border-radius:2px 2px 0 0;min-height:2px;opacity:.85}
+.an-bar{flex:1;background:linear-gradient(180deg,#46d9ed,#8190ff);border-radius:2px 2px 0 0;min-height:2px;opacity:.85}
 .an-bar:hover{opacity:1}
 [data-theme="light"] .an-select{background:rgba(0,0,0,.04)}
 [data-theme="light"] .an-select option{background:#fff;color:#2a2d35}
@@ -393,6 +433,32 @@
     }
   }
 
+  var lensLabels = {
+    all: 'Полная картина сервера',
+    content: 'Контент и активность каналов',
+    audience: 'Рост и удержание аудитории',
+    team: 'Нагрузка и работа команды'
+  };
+
+  function setLens(lens, shouldStore) {
+    if (!lensLabels[lens]) lens = 'all';
+    document.querySelectorAll('[data-an-lens]').forEach(function (button) {
+      var active = button.getAttribute('data-an-lens') === lens;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-an-section]').forEach(function (section) {
+      section.classList.toggle('an-lens-hidden', lens !== 'all' && section.getAttribute('data-an-section') !== lens);
+    });
+    document.querySelectorAll('.analytics-jump a').forEach(function (link) {
+      var target = document.querySelector(link.getAttribute('href'));
+      var targetLens = target && target.getAttribute('data-an-section');
+      link.classList.toggle('an-link-hidden', lens !== 'all' && targetLens && targetLens !== lens);
+    });
+    if ($id('anLensLabel')) $id('anLensLabel').textContent = lensLabels[lens];
+    if (shouldStore) try { localStorage.setItem('analytics_lens', lens); } catch (e) {}
+  }
+
   function getInitial(name) {
     name = String(name || '?').trim();
     return name.charAt(0).toUpperCase() || '?';
@@ -451,10 +517,10 @@
 
   function renderCharts(d) {
     if (typeof Chart === 'undefined') return;
-    Chart.defaults.color = '#c4b48c';
+    Chart.defaults.color = '#aeb6d0';
     Chart.defaults.font.family = 'Inter';
     Chart.defaults.font.size = 12;
-    Chart.defaults.borderColor = 'rgba(224, 176, 74, 0.08)';
+    Chart.defaults.borderColor = 'rgba(113, 129, 255, 0.10)';
 
     var msgLabels = d.daily_labels || [];
     var msgData = d.daily_messages || [];
@@ -469,9 +535,9 @@
           datasets: [{
             label: 'Сообщения',
             data: msgData,
-            backgroundColor: 'rgba(224, 176, 74, 0.55)',
-            hoverBackgroundColor: 'rgba(244, 204, 106, 0.75)',
-            borderColor: '#e0b04a',
+            backgroundColor: 'rgba(113, 129, 255, 0.48)',
+            hoverBackgroundColor: 'rgba(56, 216, 240, 0.68)',
+            borderColor: '#8190ff',
             borderWidth: 2,
             borderRadius: 8,
             borderSkipped: false
@@ -483,10 +549,10 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: 'rgba(20, 17, 12, 0.95)',
-              titleColor: '#f0e6d0',
-              bodyColor: '#c4b48c',
-              borderColor: '#e0b04a',
+              backgroundColor: 'rgba(13, 15, 24, 0.96)',
+              titleColor: '#f1f3ff',
+              bodyColor: '#b8bfd8',
+              borderColor: '#7181ff',
               borderWidth: 1,
               padding: 10,
               cornerRadius: 8,
@@ -496,12 +562,12 @@
           },
           scales: {
             y: {
-              ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
-              grid: { color: 'rgba(224, 176, 74, 0.06)' },
+              ticks: { color: '#7f879f', font: { size: 11, family: 'Inter' } },
+              grid: { color: 'rgba(113, 129, 255, 0.07)' },
               beginAtZero: true
             },
             x: {
-              ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
+              ticks: { color: '#7f879f', font: { size: 11, family: 'Inter' } },
               grid: { display: false }
             }
           }
@@ -537,11 +603,11 @@
           plugins: { legend: { display: false } },
           scales: {
             y: {
-              ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
-              grid: { color: 'rgba(224, 176, 74, 0.06)' }
+              ticks: { color: '#7f879f', font: { size: 11, family: 'Inter' } },
+              grid: { color: 'rgba(113, 129, 255, 0.07)' }
             },
             x: {
-              ticks: { color: '#8a7d5f', font: { size: 11, family: 'Inter' } },
+              ticks: { color: '#7f879f', font: { size: 11, family: 'Inter' } },
               grid: { display: false }
             }
           }
@@ -555,6 +621,9 @@
     if (!d || !d.matrix) return;
     var peak = $id('anHeatPeak');
     if (peak) peak.textContent = d.peak ? ('пик: ' + d.peak.weekday + ' ' + String(d.peak.hour).padStart(2, '0') + ':00 · ' + d.peak.count) : '';
+    if ($id('anSignalPeak')) $id('anSignalPeak').textContent = d.peak
+      ? d.peak.weekday + ' · ' + String(d.peak.hour).padStart(2, '0') + ':00 — лучший слот'
+      : 'Пик появится после новых событий';
     if (!d.total) {
       box.innerHTML = '<div class="empty-state"><i class="fas fa-fire"></i><p>Пока нет сообщений с метками времени</p>' +
         '<p class="empty-tip">Теплокарта заполнится по мере активности чата.</p></div>';
@@ -565,15 +634,15 @@
     var rows = d.matrix.map(function (row, wd) {
       var cells = row.map(function (c, h) {
         var a = d.max ? (c / d.max) : 0;
-        var bg = c ? ('rgba(224,176,74,' + (0.12 + 0.88 * a).toFixed(2) + ')') : 'rgba(255,255,255,.045)';
+        var bg = c ? ('rgba(113,129,255,' + (0.12 + 0.88 * a).toFixed(2) + ')') : 'rgba(255,255,255,.045)';
         return '<div class="an-cell" style="background:' + bg + '" title="' + d.weekdays[wd] + ' ' +
           String(h).padStart(2, '0') + ':00-' + String(h).padStart(2, '0') + ':59 · ' + c + ' сообщ."></div>';
       }).join('');
       return '<div class="an-rowl"><span class="an-wd">' + d.weekdays[wd] + '</span><div class="an-cells">' + cells + '</div></div>';
     }).join('');
     box.innerHTML = '<div class="an-rowl"><span class="an-wd"></span><div class="an-cells">' + hours + '</div></div>' + rows +
-      '<div class="an-legend"><span>тише</span><i style="background:rgba(224,176,74,.12)"></i><i style="background:rgba(224,176,74,.4)"></i>' +
-      '<i style="background:rgba(224,176,74,.7)"></i><i style="background:rgba(224,176,74,1)"></i><span>жарче</span></div>';
+      '<div class="an-legend"><span>тише</span><i style="background:rgba(113,129,255,.12)"></i><i style="background:rgba(113,129,255,.4)"></i>' +
+      '<i style="background:rgba(113,129,255,.7)"></i><i style="background:rgba(113,129,255,1)"></i><span>жарче</span></div>';
   }
 
   async function loadHeatmap(gid) {
@@ -609,6 +678,9 @@
     var usersDelta = d.users_delta == null ? 'Собираем недельную базу' : signed(d.users_delta) + '% к прошлой неделе';
     kpi('anKpiMessages', num(d.week_msgs), msgDelta);
     kpi('anKpiAuthors', num(d.week_users), usersDelta);
+    if ($id('anSignalActivity')) $id('anSignalActivity').textContent = d.msgs_delta == null
+      ? num(d.week_msgs) + ' сообщений — формируем базу'
+      : (d.msgs_delta >= 0 ? 'Рост ' + signed(d.msgs_delta) + '%' : 'Снижение ' + Math.abs(d.msgs_delta) + '%') + ' к прошлой неделе';
     updateCockpit();
   }
 
@@ -616,6 +688,9 @@
     if (!d || !d.labels) return;
     _lastFlow = d;
     kpi('anKpiGrowth', signed(d.net), 'Пришло ' + num(d.joined_total) + ' · ушло ' + num(d.left_total));
+    if ($id('anSignalAudience')) $id('anSignalAudience').textContent = d.net > 0
+      ? 'Аудитория выросла на ' + num(d.net)
+      : d.net < 0 ? 'Отток ' + num(Math.abs(d.net)) + ' — нужен разбор' : 'Баланс без чистого прироста';
     updateCockpit();
     var netEl = $id('anFlowNet');
     if (netEl) netEl.textContent = 'пришло ' + d.joined_total + ' · ушло ' + d.left_total +
@@ -842,6 +917,14 @@
   function start() {
     var refresh = $id('anRefresh');
     if (refresh) refresh.addEventListener('click', load);
+    document.querySelectorAll('[data-an-lens]').forEach(function (button) {
+      button.addEventListener('click', function () { setLens(button.getAttribute('data-an-lens'), true); });
+    });
+    var savedLens = 'all';
+    try { savedLens = localStorage.getItem('analytics_lens') || 'all'; } catch (e) {}
+    setLens(savedLens, false);
+    var printButton = $id('anPrint');
+    if (printButton) printButton.addEventListener('click', function () { window.print(); });
     load();
     if (window.setLiveRefresh) {
       window.setLiveRefresh(load, 5000);

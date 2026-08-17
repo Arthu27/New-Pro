@@ -49,10 +49,21 @@ def seed():
             ('voice',  'Зашёл в голосовой',  'Meloman',  '',           'Общий голосовой',               500),
             ('mod',    'Бан',                'Griever',  'Arthur',     'Рейд-бот, возраст акка 2 часа', 1400),
             ('ticket', 'Тикет закрыт',       'Novichok', 'Moder_Nika', 'вопрос решён',                  2600),
+            ('member', 'Участник вошёл',      'Mira',     '',            'organic',                        5400),
+            ('member', 'Участник вошёл',      'Vortex',   '',            'invite:Arthur',                 18200),
+            ('member', 'Участник вышел',      'OldPlayer','',            'leave',                         26600),
+            ('member', 'Участник вошёл',      'Spectre',  '',            'organic',                       74000),
+            ('member', 'Участник вошёл',      'Luna',     '',            'invite:Mira',                  158000),
+            ('member', 'Участник вышел',      'Ghost',    '',            'leave',                        241000),
+            ('voice',  'Зашёл в голосовой',  'Mira',     '',            'Лаунж',                         32000),
+            ('voice',  'Зашёл в голосовой',  'Vortex',   '',            'Игровая',                       88000),
+            ('voice',  'Зашёл в голосовой',  'Luna',     '',            'Лаунж',                        176000),
+            ('invite', 'Приглашение создано','Arthur',   '',            'aether-pro',                    41000),
+            ('invite', 'Приглашение создано','Mira',     '',            'community',                    126000),
         ]
         events = []
         for i, (cat, action, user, mod, detail, sec) in enumerate(rows):
-            events.append({
+            event = {
                 'category': cat,
                 'action': action,
                 'user_id': str(1000000 + i),
@@ -60,7 +71,10 @@ def seed():
                 'mod_name': mod,
                 'detail': detail,
                 'timestamp': _iso(NOW - timedelta(seconds=sec)),
-            })
+            }
+            if cat == 'voice':
+                event['channel'] = detail
+            events.append(event)
         with open(audit_path, 'w', encoding='utf-8') as f:
             json.dump({str(GID): events}, f, ensure_ascii=False, indent=1)
 
