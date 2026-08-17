@@ -102,8 +102,10 @@ check("'delivered': True" in demo and "'deliver_error': 'Missing Access" in demo
       'в демо представлены успешная и проблемная доставки')
 check("DEMO_USERNAME = 'owner'" in demo and "DEMO_PASSWORD = '123321'" in demo,
       'demo-preview использует запрошенную отдельную учётную запись')
-check("@app.route('/demo-login')" not in demo and 'wapp.USERS.clear()' in demo,
-      'беспарольный обход удалён, demo-вход проходит через обычную форму')
+check("@app.route('/demo-login')" in demo and "return redirect('/login')" in demo,
+      'старый preview-адрес перенаправляет на обычную форму без создания сессии')
+check("session['logged_in']" not in demo and 'wapp.USERS.clear()' in demo,
+      'беспарольный обход удалён, demo-вход проверяет пароль')
 
 print('== 6. Синтаксис и ролевой HTTP-рендер ==')
 from jinja2 import Environment  # noqa: E402

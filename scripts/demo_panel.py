@@ -184,6 +184,7 @@ def seed():
 seed()
 
 import web.app as wapp  # noqa: E402
+from flask import redirect  # noqa: E402
 
 # Отдельная учётная запись действует только в памяти demo-процесса. Файл
 # production-credentials не перезаписывается, а вход проходит через обычную
@@ -287,6 +288,12 @@ class FakeBot:
 
 wapp.set_bot_instance(FakeBot())
 app = wapp.app
+
+
+@app.route('/demo-login')
+def demo_login_redirect():
+    """Совместимый адрес preview: показывает обычную форму, не создавая сессию."""
+    return redirect('/login')
 
 
 if __name__ == '__main__':
