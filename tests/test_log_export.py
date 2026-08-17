@@ -43,7 +43,10 @@ def check(ok, msg):
 UTC = timezone.utc
 from services import log_export as lx  # noqa: E402
 
-NOW = datetime(2026, 8, 16, 12, 0, 0, tzinfo=UTC)
+# Фикстура привязана к реальному «сейчас»: бот-команда /логи-экспорт
+# фильтрует от datetime.now(UTC), и захардкоженная дата протухала бы
+# через сутки, выталкивая пограничные события из окна (гонка часов).
+NOW = datetime.now(UTC).replace(microsecond=0)
 
 
 def ev(cat, act, days_ago, mod='Страж', target='Нарушитель', **extra):

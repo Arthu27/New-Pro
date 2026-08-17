@@ -258,64 +258,70 @@ def git_show(path):
     return proc.stdout if proc.returncode == 0 else None
 
 
-from cogs import fun_cog as FC  # noqa: E402
-from cogs import minigames as MG  # noqa: E402
-from cogs import impersonation as IM  # noqa: E402
+_base_probe = subprocess.run(['git', 'cat-file', '-t', BASE], cwd=ROOT,
+                             capture_output=True, text=True)
+if _base_probe.returncode != 0:
+    print('  SKIP: коммит базы марафона недоступен в этом клоне '
+          '(нет истории) — паритет не проверяется')
+else:
+    from cogs import fun_cog as FC  # noqa: E402
+    from cogs import minigames as MG  # noqa: E402
+    from cogs import impersonation as IM  # noqa: E402
 
-old_fun = git_show('cogs/fun_cog.py')
-check(old_fun is not None and len(old_fun) > 1000, 'база fun_cog читается')
-old_jokes = re.findall(r'"([^"]*)"', re.search(
-    r'jokes = \[(.*?)\]', old_fun, re.S).group(1))
-old_quotes = re.findall(r'"([^"]*)"', re.search(
-    r'quotes = \[(.*?)\]', old_fun, re.S).group(1))
-check(old_jokes == FC.JOKES, 'список шуток побайтово тот, что в базе')
-check(old_quotes == FC.QUOTES, 'список цитат побайтово тот, что в базе')
-for url in ('https://meme-api.com/gimme', 'https://aws.random.cat/meow',
-            'https://dog.ceo/api/breeds/image/random'):
-    check(url in old_fun and url in (FC.MEME_URL, FC.CAT_URL, FC.DOG_URL),
-          f'адрес {url} сохранён')
+    old_fun = git_show('cogs/fun_cog.py')
+    check(old_fun is not None and len(old_fun) > 1000, 'база fun_cog читается')
+    old_jokes = re.findall(r'"([^"]*)"', re.search(
+        r'jokes = \[(.*?)\]', old_fun, re.S).group(1))
+    old_quotes = re.findall(r'"([^"]*)"', re.search(
+        r'quotes = \[(.*?)\]', old_fun, re.S).group(1))
+    check(old_jokes == FC.JOKES, 'список шуток побайтово тот, что в базе')
+    check(old_quotes == FC.QUOTES, 'список цитат побайтово тот, что в базе')
+    for url in ('https://meme-api.com/gimme', 'https://aws.random.cat/meow',
+                'https://dog.ceo/api/breeds/image/random'):
+        check(url in old_fun and url in (FC.MEME_URL, FC.CAT_URL, FC.DOG_URL),
+              f'адрес {url} сохранён')
 
-old_mini = git_show('cogs/minigames.py')
-old_ball = [(t, int(h, 16)) for t, h in re.findall(
-    r"\('([^']+)', 0x([0-9A-Fa-f]{6})\)",
-    re.search(r'responses = \[(.*?)\]', old_mini, re.S).group(1))]
-check(old_ball == MG.EIGHT_BALL, 'двенадцать ответов шара с цветами 1:1 базе')
-FORMULA = ("user_pick = 'Орёл' if norm in ['орёл', 'orel', 'орел'] else "
-           "'Решка' if norm in ['решка', 'reshka'] else None")
-check(FORMULA in old_mini, 'старую формулу монетки видно в базе — не выдумка')
-
-
-def old_norm(pick):
-    norm = pick.lower().strip()
-    return ('Орёл' if norm in ['орёл', 'orel', 'орел']
-            else 'Решка' if norm in ['решка', 'reshka'] else None)
+    old_mini = git_show('cogs/minigames.py')
+    old_ball = [(t, int(h, 16)) for t, h in re.findall(
+        r"\('([^']+)', 0x([0-9A-Fa-f]{6})\)",
+        re.search(r'responses = \[(.*?)\]', old_mini, re.S).group(1))]
+    check(old_ball == MG.EIGHT_BALL, 'двенадцать ответов шара с цветами 1:1 базе')
+    FORMULA = ("user_pick = 'Орёл' if norm in ['орёл', 'orel', 'орел'] else "
+               "'Решка' if norm in ['решка', 'reshka'] else None")
+    check(FORMULA in old_mini, 'старую формулу монетки видно в базе — не выдумка')
 
 
-import random as _rnd  # noqa: E402
-rnd = _rnd.Random(186190)
-alphabet = 'орёлORLекшtрешкаEs 0123456789аб'
-samples = ['орёл', 'orel', 'ОРЕЛ', 'решка', 'reshka', '', '  ', 'камень',
-           'орёл ', ' Решка']
-samples += [''.join(rnd.choice(alphabet) for _ in range(rnd.randint(0, 8)))
-            for _ in range(400)]
-mismatch = [s for s in samples
-            if MG.norm_coin_pick(s) != old_norm(s)]
-check(not mismatch, f'нормализация 1:1 на {len(samples)} входах '
-                    f'(расходятся: {mismatch[:3]})')
-check(MG._DICE == {1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅'},
-      'таблица граней кубиков не поехала')
+    def old_norm(pick):
+        norm = pick.lower().strip()
+        return ('Орёл' if norm in ['орёл', 'orel', 'орел']
+                else 'Решка' if norm in ['решка', 'reshka'] else None)
 
-old_imp = git_show('cogs/impersonation.py')
-old_choices = re.findall(r'app_commands\.Choice\(name="([^"]+)", value="([^"]+)"\)',
-                         re.search(r'@app_commands\.choices\(действие=\[(.*?)\]\)',
-                                   old_imp, re.S).group(1))
-new_choices = [(c.name, c.value) for c in IM.ACTION_CHOICES]
-check(old_choices == new_choices,
-      'Action-choices побайтово те, что были в декораторе базы')
-check('def _add_strike' in old_imp
-      and open(os.path.join(ROOT, 'cogs/impersonation.py'),
-               encoding='utf-8').read().count('_add_strike') >= 2,
-      'район страйков кога на месте')
+
+    import random as _rnd  # noqa: E402
+    rnd = _rnd.Random(186190)
+    alphabet = 'орёлORLекшtрешкаEs 0123456789аб'
+    samples = ['орёл', 'orel', 'ОРЕЛ', 'решка', 'reshka', '', '  ', 'камень',
+               'орёл ', ' Решка']
+    samples += [''.join(rnd.choice(alphabet) for _ in range(rnd.randint(0, 8)))
+                for _ in range(400)]
+    mismatch = [s for s in samples
+                if MG.norm_coin_pick(s) != old_norm(s)]
+    check(not mismatch, f'нормализация 1:1 на {len(samples)} входах '
+                        f'(расходятся: {mismatch[:3]})')
+    check(MG._DICE == {1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅'},
+          'таблица граней кубиков не поехала')
+
+    old_imp = git_show('cogs/impersonation.py')
+    old_choices = re.findall(r'app_commands\.Choice\(name="([^"]+)", value="([^"]+)"\)',
+                             re.search(r'@app_commands\.choices\(действие=\[(.*?)\]\)',
+                                       old_imp, re.S).group(1))
+    new_choices = [(c.name, c.value) for c in IM.ACTION_CHOICES]
+    check(old_choices == new_choices,
+          'Action-choices побайтово те, что были в декораторе базы')
+    check('def _add_strike' in old_imp
+          and open(os.path.join(ROOT, 'cogs/impersonation.py'),
+                   encoding='utf-8').read().count('_add_strike') >= 2,
+          'район страйков кога на месте')
 
 print('== 8. Приложение собирается, новые страницы в url_map ==')
 appmod = __import__('web.app', fromlist=['app'])
