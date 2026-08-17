@@ -21,6 +21,17 @@ if REPO not in sys.path:
 
 os.environ.setdefault('MAIN_GUILD_ID', '4242')
 os.environ.setdefault('SECRET_KEY', 'demo-preview-key-not-real')
+# Демо-пароль владельца: простой и известный, чтобы не набирать случайные
+# 16 символов. Живой сервер это не трогает — только демо-запуск.
+os.environ.setdefault('PANEL_PASSWORD', 'demo-owner')
+_cred = os.path.join('data', 'panel_credentials.json')
+if os.path.exists(_cred):
+    # Старый сохранённый хэш имеет приоритет над PANEL_PASSWORD —
+    # убираем его, чтобы демо-пароль применился (пересоздастся при старте).
+    try:
+        os.remove(_cred)
+    except OSError as _ex:
+        print(f'[demo] не удалось убрать старые креды: {_ex}')
 
 GID = 4242
 NOW = datetime.now(timezone.utc)
@@ -347,6 +358,26 @@ class FakeBot:
 
 wapp.set_bot_instance(FakeBot())
 app = wapp.app
+
+
+@app.before_request
+def _demo_autologin():
+    """Авто-вход владельцем на каждый запрос.
+
+    В iframe-превью браузеры могут резать cookies (third-party контекст) —
+    тогда обычная сессия не живёт и панель бесконечно возвращает на логин.
+    Хук чинит это: нет сессии — считаем, что это владелец Arthur.
+    Только демо-режим, живой сервер так не умеет.
+    """
+    if os.environ.get('DEMO_AUTOLOGIN', '1') != '1':
+        return None
+    if session.get('logged_in'):
+        return None
+    session['logged_in'] = True
+    session['username'] = 'Arthur'
+    session['role'] = 'owner'
+    session['avatar'] = ''
+    return None
 
 
 @app.route('/demo-login')
