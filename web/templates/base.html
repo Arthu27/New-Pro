@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/static/style.css?v=12">
     <link rel="stylesheet" href="/static/polish.css?v=5">
     <link rel="stylesheet" href="/static/moderation-suite.css?v=4">
-    {% if moderation_profile %}<link rel="stylesheet" href="/static/moderation-rooms.css?v=4">{% endif %}
+    {% if moderation_profile %}<link rel="stylesheet" href="/static/moderation-rooms.css?v=5">{% endif %}
     <link rel="stylesheet" href="/static/quality-suite.css?v=1">
     <script>
       // Apply theme + accent before render to prevent FOUC
@@ -342,24 +342,18 @@
             </nav>
         </section>
 
-        <section class="mod-utility-bar" data-mod-utility aria-label="Быстрые действия комнаты">
-            <div class="mod-utility-status">
-                <span class="mod-utility-dot" aria-hidden="true"></span>
-                <div><strong>Золотой контур</strong><small>{{ moderation_profile.code }} · готов к работе</small></div>
-            </div>
-            <nav class="mod-utility-quick" aria-label="Действия текущей комнаты">
+        <section class="mod-utility-bar" data-mod-utility aria-label="Быстрые действия">
+            <nav class="mod-utility-quick" aria-label="Действия текущего раздела">
                 {% for label, target, mode in moderation_profile.quick_actions %}
                 <button type="button" data-room-jump="{{ target }}" data-room-mode="{{ mode }}"><span>0{{ loop.index }}</span>{{ label }}</button>
                 {% endfor %}
             </nav>
             <div class="mod-utility-view">
-                <button type="button" data-room-live aria-pressed="false">Live: активно</button>
-                <button type="button" data-room-density aria-pressed="false">Плотность: обычная</button>
-                <button type="button" data-room-focus aria-pressed="false">Фокус: выключен</button>
-                <button type="button" data-room-copy>Скопировать ссылку</button>
-                <button type="button" data-room-refresh>Обновить данные</button>
+                <button type="button" data-room-live aria-pressed="false" aria-label="Приостановить автообновление">Автообновление</button>
+                <button type="button" data-room-density aria-pressed="false">Компактный вид</button>
+                <button type="button" data-room-copy>Ссылка</button>
+                <button type="button" data-room-refresh>Обновить</button>
             </div>
-            <output class="mod-utility-clock" data-room-clock aria-label="Текущее время">00:00:00</output>
         </section>
 
         <div class="mod-suite-overlay" data-mod-overlay data-mod-accent="{{ moderation_profile.accent }}" hidden>
@@ -1464,7 +1458,7 @@ window.addEventListener('pageshow', function (e) {
 <script src="/static/ux-kit.js?v=1"></script>
 <!-- Единый центр навигации по 18 инструментам модерации -->
 <script src="/static/moderation-suite.js?v=2"></script>
-{% if moderation_profile %}<script src="/static/moderation-rooms.js?v=4"></script>{% endif %}
+{% if moderation_profile %}<script src="/static/moderation-rooms.js?v=5"></script>{% endif %}
 <!-- Сквозной quality-слой: доступность, навигация, сеть и состояния -->
 <script src="/static/quality-suite.js?v=1"></script>
 <script>

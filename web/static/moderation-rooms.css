@@ -1,4 +1,4 @@
-/* Moderation Rooms v3
+/* Moderation Rooms v5
    Complete workspace rebuild for all 18 moderation products.
    Every room owns its composition; only controls and accessibility primitives are shared. */
 
@@ -9,54 +9,52 @@
 .ops-identity-guard,.ops-team-desk,.ops-performance-brief,
 .ops-risk-intelligence,.ops-escalation-map { min-width: 0; }
 
-/* Gold utility dock — always the same accent in every moderation room. */
+/* Compact action row. It participates in document flow and never overlays navigation. */
 .mod-utility-bar {
   --utility-gold: #d4a843;
-  position: sticky;
-  top: 8px;
-  z-index: 72;
-  min-height: 52px;
-  display: grid;
-  grid-template-columns: auto minmax(260px,1fr) auto auto;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+  display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 7px;
   margin: 0 0 13px;
-  padding: 7px 9px;
-  border: 1px solid rgba(212,168,67,.24);
-  border-radius: 14px;
-  background: rgba(10,12,17,.9);
-  box-shadow: 0 14px 35px rgba(0,0,0,.2), inset 0 1px rgba(255,255,255,.035);
-  backdrop-filter: blur(18px);
+  padding: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(212,168,67,.16);
+  border-radius: 12px;
+  background: rgba(255,255,255,.018);
 }
-.mod-utility-status { display:flex; align-items:center; gap:9px; min-width:145px; padding:0 7px; }
-.mod-utility-dot { width:8px; height:8px; flex:0 0 auto; border-radius:50%; background:var(--utility-gold); box-shadow:0 0 0 5px rgba(212,168,67,.08),0 0 15px rgba(212,168,67,.45); }
-.mod-utility-status div { display:grid; gap:2px; }
-.mod-utility-status strong { color:#ece4cf; font-size:8px; letter-spacing:.04em; }
-.mod-utility-status small { color:#707789; font:700 6.5px/1 'JetBrains Mono',monospace; }
-.mod-utility-quick { display:flex; align-items:center; gap:5px; min-width:0; overflow-x:auto; scrollbar-width:none; }
-.mod-utility-quick::-webkit-scrollbar { display:none; }
+.mod-utility-quick {
+  min-width: 0;
+  flex: 1 1 390px;
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 5px;
+}
 .mod-utility-quick button,.mod-utility-view button {
-  min-height:34px;
-  padding:6px 9px;
-  border:1px solid rgba(255,255,255,.075);
-  border-radius:8px;
-  background:rgba(255,255,255,.025);
-  color:#9ba2b1;
-  font:700 7.5px/1 inherit;
-  white-space:nowrap;
-  cursor:pointer;
-  transition:background .15s,border-color .15s,color .15s,transform .15s;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 9px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px;
+  background: rgba(255,255,255,.022);
+  color: #9ba2b1;
+  font: 700 7.5px/1 inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s,border-color .15s,color .15s;
 }
-.mod-utility-quick button { display:flex; align-items:center; gap:6px; }
-.mod-utility-quick button span { color:var(--utility-gold); font:800 6px/1 'JetBrains Mono',monospace; }
-.mod-utility-quick button:hover,.mod-utility-view button:hover { border-color:rgba(212,168,67,.3); background:rgba(212,168,67,.07); color:#e4dac0; transform:translateY(-1px); }
-.mod-utility-view { display:flex; align-items:center; gap:5px; }
+.mod-utility-quick button { display:flex; align-items:center; justify-content:center; gap:6px; }
+.mod-utility-quick button span { flex:0 0 auto; color:var(--utility-gold); font:800 6px/1 'JetBrains Mono',monospace; }
+.mod-utility-quick button:hover,.mod-utility-view button:hover { border-color:rgba(212,168,67,.3); background:rgba(212,168,67,.07); color:#e4dac0; }
+.mod-utility-view { min-width:0; display:flex; align-items:center; flex-wrap:wrap; gap:5px; }
 .mod-utility-view button[aria-pressed="true"] { border-color:rgba(212,168,67,.38); background:rgba(212,168,67,.11); color:#e8d49f; }
 .mod-utility-view button.is-confirmed { border-color:rgba(74,222,128,.32); color:#79dfa1; }
-.mod-utility-clock { width:8ch; min-width:8ch; color:#d9bd72; font:800 10px/1 'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; letter-spacing:.04em; text-align:center; contain:layout inline-size; }
-body.mod-live-paused .mod-utility-dot { background:#687080; box-shadow:0 0 0 5px rgba(104,112,128,.08); }
-body.mod-focus-workspace .mod-command-room { display:none!important; }
-body.mod-focus-workspace .mod-utility-bar { border-color:rgba(212,168,67,.4); box-shadow:0 15px 45px rgba(0,0,0,.25),0 0 30px rgba(212,168,67,.06); }
 .mod-jump-highlight { animation:modGoldHighlight 1.05s ease!important; }
 @keyframes modGoldHighlight { 0%,100%{box-shadow:none} 35%{box-shadow:0 0 0 3px rgba(212,168,67,.18),0 0 28px rgba(212,168,67,.16)} }
 
@@ -864,7 +862,7 @@ body.mod-density-compact .ops-performance-brief .mr-row { padding-top:6px; paddi
 @keyframes opsSpin { to { transform:rotate(360deg) } }
 
 @media (max-width:1180px) {
-  .mod-utility-bar{grid-template-columns:auto minmax(220px,1fr) auto}.mod-utility-view{grid-column:1/-1;justify-content:flex-end;padding-top:6px;border-top:1px solid rgba(255,255,255,.055)}
+  .mod-utility-view{flex:1 1 100%;justify-content:flex-end;padding-top:6px;border-top:1px solid rgba(255,255,255,.055)}
   .ops-bulk-pipeline { grid-template-columns:1fr 1fr; }.ops-bulk-punish{grid-column:1/-1;min-height:400px}.ops-bulk-punish .ops-lane-body{grid-template-columns:repeat(2,1fr)}
   .ops-radar-overview { grid-template-columns:100px 1fr }.ops-radar-kpis{grid-column:1/-1}
   .ops-sentinel-sector { grid-column:span 6; }.ops-sentinel-route,.ops-sentinel-whitelist{grid-column:span 6}
@@ -883,7 +881,7 @@ body.mod-density-compact .ops-performance-brief .mr-row { padding-top:6px; paddi
   .ops-ladder-overview { grid-template-columns:65px 1fr }.ops-ladder-kpis{grid-column:1/-1}
 }
 @media (max-width:720px) {
-  .mod-utility-bar{top:4px;grid-template-columns:1fr auto;padding:7px}.mod-utility-status{min-width:0}.mod-utility-quick{grid-column:1/-1;grid-row:2}.mod-utility-view{grid-column:1/-1;grid-row:3;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}.mod-utility-clock{grid-column:2;grid-row:1}.mod-utility-view button{min-height:32px}
+  .mod-utility-quick{flex-basis:100%}.mod-utility-view{flex:1 1 100%;justify-content:flex-start}.mod-utility-view button{flex:1 1 auto;min-height:32px}
   .ops-time-list .tm-action-card{grid-template-columns:36px minmax(0,1fr);gap:8px}.ops-time-list .tm-action-countdown{grid-column:2;width:118px}.ops-time-list .tm-action-controls{grid-column:2;grid-row:3;width:auto;justify-content:flex-start}
   .ops-room-label { grid-template-columns:1fr auto }.ops-room-label em{display:none}
   .ops-panel-head { padding:15px }.ops-command-strip{align-items:stretch;flex-direction:column;padding:12px}
@@ -903,7 +901,7 @@ body.mod-density-compact .ops-performance-brief .mr-row { padding-top:6px; paddi
   .ops-ladder-form { grid-template-columns:1fr 1fr }.ops-ladder-form button{grid-column:1/-1}
 }
 @media (max-width:460px) {
-  .mod-utility-status strong{font-size:7px}.mod-utility-status small{display:none}.mod-utility-quick button,.mod-utility-view button{min-height:31px;padding:6px 8px}.mod-utility-view button[data-room-copy]{display:none}
+  .mod-utility-quick button,.mod-utility-view button{min-height:31px;padding:6px}.mod-utility-quick button span{display:none}.mod-utility-view{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
   .ops-canvas { padding-bottom:32px }.ops-room-label b{display:none}
   .ops-signal-column,.ops-policy-grid,.ops-radar-kpis,.ops-review-kpis,.ops-desk-kpis,.ops-brief-kpis,.ops-intel-kpis,.ops-ladder-form { grid-template-columns:1fr }
   .ops-time-ticker { grid-template-columns:1fr 1fr }.ops-tool,.ops-lane-body,.ops-radar-module,.ops-filter-module,.ops-desk-lane{padding:14px}

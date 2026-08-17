@@ -91,9 +91,9 @@ base_path = os.path.join(ROOT, 'web', 'templates', 'base.html')
 base = open(base_path, encoding='utf-8').read()
 for marker, label in [
     ('moderation-suite.css?v=4', 'золотая версия shell без старого browser-cache'),
-    ('moderation-rooms.css?v=4', 'стабильная дизайн-система 18 рабочих комнат'),
+    ('moderation-rooms.css?v=5', 'стабильная дизайн-система без перекрытия навигации'),
     ('moderation-suite.js?v=2', 'отдельный JS-контроллер без старого browser-cache'),
-    ('moderation-rooms.js?v=4', 'утилиты фокуса, плотности и быстрых действий'),
+    ('moderation-rooms.js?v=5', 'компактные быстрые действия и live-контроль'),
     ('data-mod-suite', 'контекстная панель'),
     ('mod-command-room', 'полноценная командная комната'),
     ('data-mod-workspace', 'единая рабочая поверхность'),
@@ -102,7 +102,6 @@ for marker, label in [
     ('data-mod-enter', 'переход к рабочей области'),
     ('data-room-live', 'пауза фоновых live-обновлений'),
     ('data-room-density', 'переключатель плотности'),
-    ('data-room-focus', 'рабочий фокус-режим'),
     ('data-mod-overlay', 'полноэкранный центр'),
     ('data-mod-search', 'поиск инструментов'),
     ('data-mod-prev', 'переход назад'),
@@ -142,10 +141,15 @@ for marker in ('.ops-caseboard', '.ops-time-control', '.ops-field-kit',
                '[data-theme="light"]', '@media (max-width:720px)',
                'prefers-reduced-motion'):
     check(marker in rooms_css, f'room CSS содержит {marker}')
-for marker in ('LIVE_KEY', 'DENSITY_KEY', 'FOCUS_KEY', 'data-room-jump',
-               'paintClock', 'syncStateControls', 'MutationObserver',
-               'navigator.clipboard', '__modLivePaused', 'wasPaused && !paused'):
+for marker in ('LIVE_KEY', 'DENSITY_KEY', 'data-room-jump',
+               'syncStateControls', 'MutationObserver', 'navigator.clipboard',
+               '__modLivePaused', 'wasPaused && !paused'):
     check(marker in rooms_js, f'room JS содержит {marker}')
+check('data-room-focus' not in base and 'applyFocus' not in rooms_js
+      and 'position: sticky' not in rooms_css.split('.ops-canvas', 1)[0],
+      'панель действий не меняет геометрию и не перекрывает навигацию')
+check('Золотой контур' not in base and 'готов к работе' not in base,
+      'техническая подпись контура полностью удалена')
 for marker in ('Alt+M', 'RECENT_KEY', 'filterCards', 'focusable',
                'data-mod-section', 'sidebarSearch', 'enterWorkspace',
                'prefers-reduced-motion: reduce'):
@@ -237,8 +241,8 @@ for page in raw_pages:
           and profile['headline'] in html
           and 'data-room-version="3"' in html
           and f'data-room-kind="{room_kinds[raw_pages.index(page)]}"' in html
-          and 'moderation-rooms.css?v=4' in html
-          and 'moderation-rooms.js?v=4' in html
+          and 'moderation-rooms.css?v=5' in html
+          and 'moderation-rooms.js?v=5' in html
           and 'class="mod-utility-bar"' in html
           and 'data-room-live' in html
           and len(re.findall(r'<button[^>]+data-room-jump=', html)) == 3

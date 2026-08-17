@@ -1,4 +1,4 @@
-/* Moderation Rooms v4 — workspace utilities, explicit state controls and stable live UI. */
+/* Moderation Rooms v5 — compact actions, explicit state controls and stable live UI. */
 (function () {
   'use strict';
 
@@ -8,13 +8,15 @@
 
   var LIVE_KEY = 'aether_mod_live_paused_v1';
   var DENSITY_KEY = 'aether_mod_density_v1';
-  var FOCUS_KEY = 'aether_mod_focus_v1';
   var liveButton = utility.querySelector('[data-room-live]');
   var densityButton = utility.querySelector('[data-room-density]');
-  var focusButton = utility.querySelector('[data-room-focus]');
   var copyButton = utility.querySelector('[data-room-copy]');
   var refreshButton = utility.querySelector('[data-room-refresh]');
-  var clock = utility.querySelector('[data-room-clock]');
+
+  // v4 focus mode changed the page geometry and could hide navigation context.
+  // Remove its old persisted value and guarantee the normal layout.
+  document.body.classList.remove('mod-focus-workspace');
+  try { localStorage.removeItem('aether_mod_focus_v1'); } catch (_) {}
 
   function read(key) {
     try { return localStorage.getItem(key) === '1'; } catch (_) { return false; }
@@ -29,7 +31,8 @@
     window.__modLivePaused = paused;
     document.body.classList.toggle('mod-live-paused', paused);
     liveButton.setAttribute('aria-pressed', String(paused));
-    liveButton.textContent = paused ? 'Live: на паузе' : 'Live: активно';
+    liveButton.setAttribute('aria-label', paused ? 'Возобновить автообновление' : 'Приостановить автообновление');
+    liveButton.textContent = paused ? 'Обновление на паузе' : 'Автообновление';
     write(LIVE_KEY, paused);
     if (wasPaused && !paused) {
       document.dispatchEvent(new CustomEvent('moderation:live-resume'));
@@ -39,16 +42,8 @@
   function applyDensity(compact) {
     document.body.classList.toggle('mod-density-compact', compact);
     densityButton.setAttribute('aria-pressed', String(compact));
-    densityButton.textContent = compact ? 'Плотность: компактная' : 'Плотность: обычная';
+    densityButton.textContent = compact ? 'Обычный вид' : 'Компактный вид';
     write(DENSITY_KEY, compact);
-  }
-
-  function applyFocus(focused, shouldScroll) {
-    document.body.classList.toggle('mod-focus-workspace', focused);
-    focusButton.setAttribute('aria-pressed', String(focused));
-    focusButton.textContent = focused ? 'Фокус: включён' : 'Фокус: выключен';
-    write(FOCUS_KEY, focused);
-    if (focused && shouldScroll !== false) workspace.scrollIntoView({block: 'start'});
   }
 
   function flash(button, text) {
@@ -92,10 +87,6 @@
     applyDensity(!document.body.classList.contains('mod-density-compact'));
   });
 
-  focusButton.addEventListener('click', function () {
-    applyFocus(!document.body.classList.contains('mod-focus-workspace'));
-  });
-
   copyButton.addEventListener('click', function () {
     var done = function () { flash(copyButton, 'Ссылка скопирована'); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -115,12 +106,6 @@
     refreshButton.textContent = 'Обновляем…';
     window.location.reload();
   });
-
-  function paintClock() {
-    var now = new Date();
-    clock.textContent = [now.getHours(), now.getMinutes(), now.getSeconds()]
-      .map(function (part) { return String(part).padStart(2, '0'); }).join(':');
-  }
 
   function stateIsOn(control) {
     if (control.matches('label.tj-switch')) {
@@ -166,19 +151,12 @@
     if (event.altKey && event.key.toLowerCase() === 'l') {
       event.preventDefault(); applyLive(!window.__modLivePaused);
     }
-    if (event.altKey && event.key.toLowerCase() === 'f') {
-      event.preventDefault(); applyFocus(!document.body.classList.contains('mod-focus-workspace'));
-    }
     if (event.altKey && event.key.toLowerCase() === 'd') {
       event.preventDefault(); applyDensity(!document.body.classList.contains('mod-density-compact'));
     }
-    if (event.key === 'Escape' && document.body.classList.contains('mod-focus-workspace')) applyFocus(false);
   });
 
   applyLive(read(LIVE_KEY));
   applyDensity(read(DENSITY_KEY));
-  applyFocus(read(FOCUS_KEY), false);
   syncStateControls(document);
-  paintClock();
-  window.setInterval(paintClock, 1000);
 })();
