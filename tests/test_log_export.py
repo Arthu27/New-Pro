@@ -140,6 +140,18 @@ r2 = client.get('/logs/export?days=7&mod=Ночной')
 check('warn' in r2.get_data(as_text=True), 'параметр mod фильтрует')
 
 print('== 6. Команда /логи-экспорт ==')
+# Команда использует реальное текущее UTC, тогда как unit-проверки выше намеренно
+# привязаны к фиксированному NOW. Обновляем только временные метки командного
+# сценария, чтобы тест не становился красным после смены календарного дня.
+command_now = datetime.now(UTC)
+command_events = []
+for source, days_ago in zip(EVENTS, (1, 3, 9, 40)):
+    item = dict(source)
+    item['timestamp'] = (command_now - timedelta(days=days_ago)).isoformat()
+    command_events.append(item)
+json.dump({'777': command_events}, open('data/audit_log.json', 'w', encoding='utf-8'),
+          ensure_ascii=False)
+
 from cogs.logs import Logs  # noqa: E402
 
 
