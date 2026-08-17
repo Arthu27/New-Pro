@@ -109,6 +109,7 @@ from web.routes import (
     search_panel,
     fun_panel,
     antifake_panel,
+    staff_stats_panel,
 )
 
 _MODULES = tuple(
