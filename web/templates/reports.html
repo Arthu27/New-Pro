@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+{% block title %}Отчёты поддержки — Панель Aether{% endblock %}
+{% block page_title %}Отчёты поддержки{% endblock %}
+{% block content %}
+<style>
+.rep-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
+.rep-kpi{flex:1;min-width:150px;background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:13px 16px}
+.rep-kpi .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.rep-kpi .lab i{color:var(--ac,#e0b04a)}
+.rep-kpi .v{font-size:19px;font-weight:800;color:var(--text-1,#fff)}
+.rep-kpi .v small{font-size:11px;font-weight:600;color:var(--text-3,rgba(255,255,255,.5))}
+.rep-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+@media (max-width:1000px){.rep-grid{grid-template-columns:1fr}}
+.rep-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:15px 17px;margin-bottom:16px}
+.rep-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.rep-panel h3 i{color:var(--ac,#e0b04a)}
+.rep-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.55}
+.rep-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.rep-stat{background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.09));border-radius:10px;padding:9px 12px}
+.rep-stat .l{font-size:10.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:3px}
+.rep-stat .n{font-size:16px;font-weight:800;color:var(--text-1,#fff)}
+.rep-bar{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12px}
+.rep-bar .d{flex:0 0 92px;color:var(--text-3,rgba(255,255,255,.55))}
+.rep-bar .track{flex:1;height:8px;border-radius:6px;background:var(--surface-2,rgba(255,255,255,.06));overflow:hidden}
+.rep-bar .fill{height:100%;border-radius:6px;background:var(--ac,#e0b04a)}
+.rep-bar .c{flex:0 0 34px;text-align:right;font-weight:800;color:var(--text-1,#fff)}
+.rep-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rep-inp{min-width:80px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.rep-inp.wide{flex:1;min-width:160px}
+.rep-sel{background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.rep-inp:focus,.rep-sel:focus{border-color:var(--ac,#e0b04a)}
+.rep-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
+.rep-btn:hover{filter:brightness(1.08)}
+.rep-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.rep-msg{font-size:12px;padding:6px 2px 0;display:none}
+.rep-msg.ok{color:#4ade80}
+.rep-msg.err{color:#ff8a7a}
+.rep-err{border:1px dashed rgba(255,138,122,.4);border-radius:10px;padding:10px 12px;font-size:12px;color:#ff8a7a}
+.rep-item{border:1px solid var(--line-2,rgba(255,255,255,.09));border-radius:12px;padding:11px 13px;margin-bottom:9px}
+.rep-item .head{display:flex;align-items:center;gap:10px}
+.rep-item .nm{flex:1;font-size:13.5px;font-weight:800;color:var(--text-1,#fff)}
+.rep-item .nm small{display:block;font-size:11px;font-weight:600;color:var(--text-3,rgba(255,255,255,.5))}
+.rep-del{border:none;background:transparent;color:#ff8a7a;cursor:pointer;font-size:13px;padding:4px 6px;border-radius:7px}
+.rep-del:hover{background:rgba(255,138,122,.12)}
+.rep-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.rep-chips label{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:8px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));color:var(--text-2,rgba(255,255,255,.85));cursor:pointer}
+.rep-chips input{accent-color:var(--ac,#e0b04a)}
+.rep-data{border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:12px;padding:12px 14px;font-size:12.5px;line-height:1.8;color:var(--text-2,rgba(255,255,255,.85));display:none;margin-top:10px}
+.rep-data b{color:var(--text-1,#fff)}
+.rep-perf{display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px dashed var(--line-2,rgba(255,255,255,.1));font-size:12.5px}
+.rep-perf:last-child{border-bottom:none}
+.rep-perf .who{flex:1;font-weight:700;color:var(--text-1,#fff)}
+.rep-perf .n{color:var(--text-3,rgba(255,255,255,.55))}
+.rep-perf .n b{color:var(--ac,#e0b04a)}
+[data-theme="light"] .rep-item,[data-theme="light"] .rep-data{border-color:rgba(0,0,0,.12)}
+</style>
+
+<div class="rep-kpis" id="repKpis">
+  <div class="sk-card" style="width:170px;height:70px"></div>
+  <div class="sk-card" style="width:170px;height:70px"></div>
+  <div class="sk-card" style="width:170px;height:70px"></div>
+  <div class="sk-card" style="width:170px;height:70px"></div>
+</div>
+
+<div class="rep-grid">
+  <div>
+    <div class="rep-panel">
+      <h3><i class="fas fa-calendar-day"></i> Сегодня</h3>
+      <div class="rep-sub">Как /report-daily: шесть метрик за текущие сутки из общего файла тикетов.</div>
+      <div id="repDaily"><div class="sk-card" style="height:120px"></div></div>
+    </div>
+    <div class="rep-panel">
+      <h3><i class="fas fa-calendar-week"></i> Неделя</h3>
+      <div class="rep-sub">Как /report-weekly: последние 7 дней с разбивкой по дням.</div>
+      <div id="repWeek"><div class="sk-card" style="height:120px"></div></div>
+      <div style="margin-top:10px"><button class="rep-btn ghost" id="repCsvW"><i class="fas fa-file-csv"></i> Неделя в CSV</button></div>
+    </div>
+    <div class="rep-panel">
+      <h3><i class="fas fa-magnifying-glass-chart"></i> Специальный отчёт</h3>
+      <div class="rep-sub">Как /report-custom: период в днях и один из трёх типов — tickets, sla, performance.</div>
+      <div class="rep-row">
+        <input class="rep-inp" id="repDays" type="number" min="1" max="3650" value="30" placeholder="дней">
+        <select class="rep-sel" id="repType">
+          <option value="tickets">tickets</option>
+          <option value="sla">sla</option>
+          <option value="performance">performance</option>
+        </select>
+        <button class="rep-btn" id="repCustomGo"><i class="fas fa-play"></i> Собрать</button>
+        <button class="rep-btn ghost" id="repCsvC"><i class="fas fa-file-csv"></i> CSV</button>
+      </div>
+      <div id="repCustom" style="margin-top:10px"><div class="empty-state" style="margin:4px 0"><i class="fas fa-chart-simple"></i><div>Нажмите «Собрать» — статистика появится здесь в том виде, как её показывает команда.</div></div></div>
+      <div class="rep-msg" id="repCustomMsg"></div>
+    </div>
+  </div>
+  <div>
+    <div class="rep-panel">
+      <h3><i class="fas fa-chart-pie"></i> Аналитика за 30 дней</h3>
+      <div class="rep-sub">Как /report-analytics: обзор, топ категорий и лучшие сотрудники.</div>
+      <div id="repAna"><div class="sk-card" style="height:120px"></div></div>
+      <div id="repAnaCats" style="margin-top:10px"></div>
+      <div id="repAnaTop" style="margin-top:10px"></div>
+    </div>
+    <div class="rep-panel">
+      <h3><i class="fas fa-folder-open"></i> Библиотека отчётов</h3>
+      <div class="rep-sub">Пользовательские отчёты из общего файла: набор метрик, фильтры, генерация за период. Создавать и удалять — только админам.</div>
+      <div id="repLib"><div class="sk-card" style="height:52px"></div></div>
+      <div id="repLibNew" style="display:none;margin-top:12px">
+        <div class="rep-row">
+          <input class="rep-inp wide" id="repName" maxlength="80" placeholder="Название отчёта">
+        </div>
+        <div class="rep-chips" id="repMetrics"></div>
+        <div class="rep-row">
+          <select class="rep-sel" id="repFStatus"><option value="">статус: любой</option><option value="open">open</option><option value="closed">closed</option></select>
+          <select class="rep-sel" id="repFCat"><option value="">категория: любая</option><option value="support">support</option><option value="billing">billing</option><option value="other">other</option></select>
+          <select class="rep-sel" id="repFPrio"><option value="">приоритет: любой</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option><option value="critical">critical</option></select>
+          <button class="rep-btn" id="repCreate"><i class="fas fa-floppy-disk"></i> Сохранить</button>
+        </div>
+      </div>
+      <div class="rep-data" id="repData"></div>
+      <div class="rep-msg" id="repLibMsg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/reports';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+
+var METRIC_LABELS = {
+  total_tickets: 'Всего тикетов', tickets_by_status: 'По статусам',
+  tickets_by_category: 'По категориям', tickets_by_priority: 'По приоритетам',
+  avg_resolution_time: 'Среднее время решения', tickets_by_day: 'По дням',
+  tickets_by_hour: 'По часам', top_categories: 'Топ категорий'
+};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function f2(x) { return Number(x || 0).toFixed(2); }
+
+function statGrid(rep, dateLine) {
+  return (dateLine ? '<div class="rep-sub" style="margin-bottom:8px">' + esc(dateLine) + '</div>' : '') +
+    '<div class="rep-stats">' +
+    '<div class="rep-stat"><div class="l">Всего тикетов</div><div class="n">' + rep.total_tickets + '</div></div>' +
+    '<div class="rep-stat"><div class="l">Открыто</div><div class="n">' + rep.open_tickets + '</div></div>' +
+    '<div class="rep-stat"><div class="l">Закрыто</div><div class="n">' + rep.closed_tickets + '</div></div>' +
+    '<div class="rep-stat"><div class="l">Среднее время решения</div><div class="n">' + f2(rep.avg_resolution_time) + ' ч</div></div>' +
+    '<div class="rep-stat"><div class="l">Соблюдение SLA</div><div class="n">' + f2(rep.sla_compliance) + '%</div></div>' +
+    '<div class="rep-stat"><div class="l">Удовлетворённость</div><div class="n">' + f2(rep.customer_satisfaction) + '/5</div></div>' +
+    '</div>';
+}
+
+function errBox(text) { return '<div class="rep-err">' + esc(text) + '</div>'; }
+
+function bars(map) {
+  var days = Object.keys(map).sort();
+  if (!days.length) { return '<div class="empty-state" style="margin:4px 0"><i class="fas fa-calendar-xmark"></i><div>За период тикетов нет.</div></div>'; }
+  var max = Math.max.apply(null, days.map(function (d) { return map[d]; }));
+  return days.map(function (d) {
+    var w = max ? Math.round(map[d] / max * 100) : 0;
+    return '<div class="rep-bar"><span class="d">' + esc(d) + '</span>' +
+      '<div class="track"><div class="fill" style="width:' + w + '%"></div></div>' +
+      '<span class="c">' + map[d] + '</span></div>';
+  }).join('');
+}
+
+function renderKpis(d) {
+  var today = d.daily ? d.daily.total_tickets : '—';
+  var week = d.weekly ? d.weekly.total_tickets : '—';
+  var sla = d.analytics ? f2(d.analytics.sla_compliance) + '%' : '—';
+  document.getElementById('repKpis').innerHTML =
+    '<div class="rep-kpi"><div class="lab"><i class="fas fa-calendar-day"></i> сегодня</div><div class="v">' + today + ' <small>тикетов</small></div></div>' +
+    '<div class="rep-kpi"><div class="lab"><i class="fas fa-calendar-week"></i> за неделю</div><div class="v">' + week + ' <small>тикетов</small></div></div>' +
+    '<div class="rep-kpi"><div class="lab"><i class="fas fa-bullseye"></i> SLA за 30 дн</div><div class="v">' + sla + '</div></div>' +
+    '<div class="rep-kpi"><div class="lab"><i class="fas fa-folder-open"></i> в библиотеке</div><div class="v">' + d.reports.length + ' <small>отчётов</small></div></div>';
+}
+
+function renderLib(list) {
+  var box = document.getElementById('repLib');
+  if (!list.length) {
+    box.innerHTML = '<div class="empty-state" style="margin:4px 0"><i class="fas fa-folder-open"></i><div>Сохранённых отчётов нет.<div class="empty-tip">Соберите набор метрик и фильтров ниже — отчёт появится и в файле бота.</div></div></div>';
+    return;
+  }
+  box.innerHTML = list.map(function (r) {
+    var filters = Object.keys(r.filters || {}).map(function (k) { return k + '=' + r.filters[k]; }).join(', ');
+    return '<div class="rep-item"><div class="head"><div class="nm">' + esc(r.name) +
+      '<small>' + esc(r.report_id) + (r.last_generated ? ' · последний прогон: ' + esc(String(r.last_generated).slice(0, 16).replace('T', ' ')) : ' · ещё не генерировался') + '</small></div>' +
+      (CAN_EDIT ? '<select class="rep-sel" id="repGenDays-' + esc(r.report_id) + '"><option value="7">за 7 дней</option><option value="30" selected>за 30 дней</option><option value="90">за 90 дней</option></select>' +
+        '<button class="rep-btn ghost" onclick="repGenerate(\'' + esc(r.report_id) + '\')"><i class="fas fa-play"></i></button>' +
+        '<button class="rep-del" title="Удалить" onclick="repDelete(\'' + esc(r.report_id) + '\', \'' + esc(r.name) + '\')"><i class="fas fa-trash"></i></button>' : '') +
+      '</div><div class="rep-sub" style="margin:6px 0 0">' + esc((r.metrics || []).map(function (m) { return METRIC_LABELS[m] || m; }).join(', ')) + (filters ? ' · ' + esc(filters) : '') + '</div></div>';
+  }).join('');
+}
+
+function load() {
+  fetch(API + '/view').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    renderKpis(d);
+    document.getElementById('repDaily').innerHTML = d.daily
+      ? statGrid(d.daily, 'Дата: ' + d.daily.date) : errBox(d.daily_error || 'Ошибка');
+    document.getElementById('repWeek').innerHTML = d.weekly
+      ? statGrid(d.weekly, 'Неделя: ' + d.weekly.week_start + ' — ' + d.weekly.week_end) + bars(d.weekly.daily_breakdown || {})
+      : errBox(d.weekly_error || 'Ошибка');
+    if (d.analytics) {
+      document.getElementById('repAna').innerHTML = statGrid(d.analytics);
+      document.getElementById('repAnaCats').innerHTML = (d.analytics.top_categories || []).length
+        ? '<div class="rep-sub" style="margin-bottom:8px">Топ категорий</div>' + d.analytics.top_categories.map(function (c) {
+            return '<div class="rep-bar"><span class="d" style="flex-basis:110px">' + esc(c.category) + '</span>' +
+              '<div class="track"><div class="fill" style="width:' + Math.round(c.count / d.analytics.top_categories[0].count * 100) + '%"></div></div>' +
+              '<span class="c">' + c.count + '</span></div>';
+          }).join('') : '';
+      document.getElementById('repAnaTop').innerHTML = (d.analytics.top_performers || []).length
+        ? '<div class="rep-sub" style="margin-bottom:4px">Лучшие сотрудники</div>' + d.analytics.top_performers.map(function (p) {
+            return '<div class="rep-perf"><span class="who">' + esc(p.user_name) + '</span><span class="n">закрыто: <b>' + p.closed_tickets + '</b></span></div>';
+          }).join('') : '';
+    } else {
+      document.getElementById('repAna').innerHTML = errBox(d.analytics_error || 'Ошибка');
+      document.getElementById('repAnaCats').innerHTML = '';
+      document.getElementById('repAnaTop').innerHTML = '';
+    }
+    renderLib(d.reports);
+  }).catch(function () {});
+}
+
+function showMsg(id, ok, text) {
+  var m = document.getElementById(id);
+  m.style.display = 'block'; m.className = 'rep-msg ' + (ok ? 'ok' : 'err');
+  m.textContent = text;
+}
+
+document.getElementById('repCustomGo').onclick = function () {
+  var box = document.getElementById('repCustom');
+  var msg = document.getElementById('repCustomMsg');
+  msg.style.display = 'none';
+  var days = document.getElementById('repDays').value;
+  var type = document.getElementById('repType').value;
+  fetch(API + '/custom?days=' + encodeURIComponent(days) + '&type=' + encodeURIComponent(type))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success) { showMsg('repCustomMsg', false, d.error || 'Ошибка'); return; }
+      var rows = Object.keys(d.stats || {}).map(function (k) {
+        var v = d.stats[k];
+        if (typeof v === 'number' && v % 1 !== 0) { v = f2(v); }
+        return '<div class="rep-stat"><div class="l">' + esc(METRIC_LABELS[k] || k) + '</div><div class="n">' + esc(v) + '</div></div>';
+      }).join('');
+      box.innerHTML = '<div class="rep-sub" style="margin-bottom:8px">Период: ' + esc(d.period_start) + ' — ' + esc(d.period_end) + ' (' + d.period_days + ' дн., ' + esc(d.report_type) + ')</div>' +
+        '<div class="rep-stats">' + rows + '</div>';
+    })
+    .catch(function () { showMsg('repCustomMsg', false, 'Сеть моргнула — попробуйте ещё раз'); });
+};
+
+document.getElementById('repCsvW').onclick = function () { location.href = API + '/weekly.csv'; };
+document.getElementById('repCsvC').onclick = function () {
+  location.href = API + '/custom.csv?days=' + encodeURIComponent(document.getElementById('repDays').value) +
+    '&type=' + encodeURIComponent(document.getElementById('repType').value);
+};
+
+function repGenerate(rid) {
+  var sel = document.getElementById('repGenDays-' + rid);
+  fetch(API + '/generate', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({report_id: rid, days: sel ? sel.value : '30'})})
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success) { showMsg('repLibMsg', false, d.error || 'Ошибка'); return; }
+      showMsg('repLibMsg', true, 'Отчёт собран: ' + rid);
+      var rep = d.report;
+      var lines = Object.keys(rep.data || {}).map(function (k) {
+        var v = rep.data[k];
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          v = Object.keys(v).map(function (sk) { return sk + ': ' + v[sk]; }).join(', ');
+        } else if (Array.isArray(v)) {
+          v = v.map(function (it) { return Array.isArray(it) ? it.join(': ') : String(it); }).join(', ');
+        } else if (typeof v === 'number' && v % 1 !== 0) { v = f2(v); }
+        return '<b>' + esc(METRIC_LABELS[k] || k) + ':</b> ' + esc(v);
+      });
+      var box = document.getElementById('repData');
+      box.style.display = 'block';
+      box.innerHTML = '<b>' + esc(rep.name) + '</b> · период ' + esc(rep.period.start.slice(0, 10)) + ' — ' + esc(rep.period.end.slice(0, 10)) + '<br>' + lines.join('<br>');
+      renderLib(d.reports);
+    })
+    .catch(function () { showMsg('repLibMsg', false, 'Сеть моргнула — попробуйте ещё раз'); });
+}
+
+function repDelete(rid, name) {
+  askConfirm('Удалить отчёт «' + name + '»?',
+    'Файл общий с ботом — библиотека обновится сразу.',
+    function () {
+      fetch(API + '/delete', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                              body: JSON.stringify({report_id: rid})})
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          showMsg('repLibMsg', d.success, d.success ? d.message : (d.error || 'Ошибка'));
+          if (d.success) { document.getElementById('repData').style.display = 'none'; renderLib(d.reports); load(); }
+        })
+        .catch(function () { showMsg('repLibMsg', false, 'Сеть моргнула — попробуйте ещё раз'); });
+    }, {danger: true, okText: 'Удалить', icon_fa: 'fa-trash'});
+}
+
+if (CAN_EDIT) {
+  document.getElementById('repLibNew').style.display = '';
+  document.getElementById('repMetrics').innerHTML = Object.keys(METRIC_LABELS).map(function (m) {
+    return '<label><input type="checkbox" value="' + m + '"' + (m === 'total_tickets' ? ' checked' : '') + '> ' + esc(METRIC_LABELS[m]) + '</label>';
+  }).join('');
+  document.getElementById('repCreate').onclick = function () {
+    var metrics = Array.prototype.map.call(document.querySelectorAll('#repMetrics input:checked'), function (c) { return c.value; });
+    var filters = {};
+    if (document.getElementById('repFStatus').value) { filters.status = document.getElementById('repFStatus').value; }
+    if (document.getElementById('repFCat').value) { filters.category = document.getElementById('repFCat').value; }
+    if (document.getElementById('repFPrio').value) { filters.priority = document.getElementById('repFPrio').value; }
+    fetch(API + '/create', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({name: document.getElementById('repName').value, metrics: metrics, filters: filters})})
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        showMsg('repLibMsg', d.success, d.success ? d.message : (d.error || 'Ошибка'));
+        if (d.success) { document.getElementById('repName').value = ''; renderLib(d.reports); load(); }
+      })
+      .catch(function () { showMsg('repLibMsg', false, 'Сеть моргнула — попробуйте ещё раз'); });
+  };
+}
+
+load();
+</script>
+{% endblock %}

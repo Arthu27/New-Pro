@@ -129,6 +129,7 @@ MENU = [
         {'path': '/message-logs', 'label': 'Сообщения', 'icon': 'fa-comment-alt'},
         {'path': '/panel-logs', 'label': 'Панель', 'icon': 'fa-list'},
         {'path': '/replay', 'label': 'Инцидент-лента', 'icon': 'fa-film'},
+        {'path': '/reports', 'label': 'Отчёты поддержки', 'icon': 'fa-chart-pie'},
         {'path': '/backup', 'label': 'Бэкапы', 'icon': 'fa-database'},
     ]},
     {'group': 'Контент', 'key': 'content', 'icon': 'fa-palette', 'pages': [
@@ -170,6 +171,7 @@ CONFIGURABLE = ('mod', 'admin')
 # в карту НЕ входят: они живы и без когов.
 PAGE_COGS = {
     '/tickets-ops': ('ticket',),
+    '/reports': ('report_cog',),
     '/sla': ('sla_cog',),
     '/economy': ('economy_cog',),
     '/shop': ('economy_cog',),
