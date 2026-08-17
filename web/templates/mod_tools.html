@@ -34,9 +34,9 @@
           <input type="checkbox" id="panic-boost"> Поднять проверку сервера до High
         </label>
       </div>
-      <button class="btn-save" style="background:#c0392b" id="panic-on-btn" onclick="panicToggle('on')">
+      <button type="button" class="btn-save" style="background:#c0392b" id="panic-on-btn" onclick="panicToggle('on')">
         <i class="fas fa-lock"></i> ВКЛЮЧИТЬ ЛОКДАУН</button>
-      <button class="btn-save" style="background:#2ecc71" id="panic-off-btn" onclick="panicToggle('off')">
+      <button type="button" class="btn-save" style="background:#2ecc71" id="panic-off-btn" onclick="panicToggle('off')">
         <i class="fas fa-unlock"></i> СНЯТЬ ЛОКДАУН</button>
     </div>
     <div class="msg" id="panic-msg"></div>
@@ -57,7 +57,7 @@
       <label>Текст</label>
       <input type="text" id="sticky-text" placeholder="Например: Сначала прочитайте правила!" maxlength="1900">
     </div>
-    <button class="btn-save" onclick="stickySave()"><i class="fas fa-thumbtack"></i> Закрепить</button>
+    <button type="button" class="btn-save" onclick="stickySave()"><i class="fas fa-thumbtack"></i> Закрепить</button>
     <div class="msg" id="sticky-msg"></div>
 
     <hr style="opacity:.15;margin:18px 0">
@@ -83,7 +83,7 @@
       <label>Причина</label>
       <input type="text" id="ghost-reason" placeholder="За что (видно только составу)" maxlength="300">
     </div>
-    <button class="btn-save" style="background:#8e44ad" onclick="ghostAdd()">
+    <button type="button" class="btn-save" style="background:#8e44ad" onclick="ghostAdd()">
       <i class="fas fa-ghost"></i> Сделать призраком</button>
     <div class="msg" id="ghost-msg"></div>
 
@@ -133,8 +133,8 @@ async function stickyLoad() {
         '<div style="opacity:.85;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">' +
           (it.text || '').replace(/[<>&"]/g, s => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[s])) +
         '</div></div>' +
-      '<button class="btn-save" style="background:#c0392b;padding:8px 14px;flex:none" ' +
-      'onclick="stickyDel(\'' + it.channel_id + '\')"><i class="fas fa-trash"></i></button>';
+      '<button type="button" class="btn-save" style="background:#c0392b;padding:8px 14px;flex:none" ' +
+      'onclick="stickyDel(\'' + it.channel_id + '\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>';
     box.appendChild(row);
   }
 }
@@ -252,7 +252,7 @@ async function ghostLoad() {
           (it.reason ? ' · ' + esc(it.reason) : '') +
           (it.by ? ' · от ' + esc(it.by) : '') + '</div>' +
       '</div>' +
-      '<button class="btn-save" style="background:#2ecc71;padding:8px 14px;flex:none" ' +
+      '<button type="button" class="btn-save" style="background:#2ecc71;padding:8px 14px;flex:none" ' +
         'onclick="ghostDel(\'' + it.user_id + '\')"><i class="fas fa-eye"></i> Снять</button>';
     box.appendChild(row);
   }

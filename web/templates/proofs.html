@@ -90,7 +90,7 @@
          placeholder="Поиск по нику, модератору, причине или ID — без /proofs и поиска по человеку"
          aria-label="Поиск по демкам">
   <span id="pf-count" class="pf-count">0</span>
-  <button class="pf-btn" onclick="pfReload()" title="Обновить"><i class="fas fa-rotate"></i></button>
+  <button type="button" class="pf-btn" onclick="pfReload()" title="Обновить"><i class="fas fa-rotate"></i></button>
 </div>
 
 <div class="pf-chips" id="pf-chips" data-reveal="up"></div>
@@ -211,7 +211,7 @@
            ${it.url ? `<a class="pf-btn" href="${esc(it.url)}" target="_blank"><i class="fas fa-image"></i>Файл</a>` : ''}
            ${it.link ? `<a class="pf-btn" href="${esc(it.link)}" target="_blank"><i class="fas fa-link"></i>Ссылка</a>` : ''}
            ${it.jump ? `<a class="pf-btn" href="${esc(it.jump)}" target="_blank"><i class="fas fa-arrow-up-right-from-square"></i>В Discord</a>` : ''}
-           ${CAN_DEL ? `<button class="pf-btn danger" data-del="${it.id}"><i class="fas fa-trash"></i></button>` : ''}
+           ${CAN_DEL ? `<button type="button" class="pf-btn danger" data-del="${it.id}" aria-label="Удалить"><i class="fas fa-trash"></i></button>` : ''}
          </div>`;
       if (hasImg) card.querySelector('.pf-thumb').addEventListener('click', () => openModal(it));
       card.querySelectorAll('.pf-user').forEach(el =>

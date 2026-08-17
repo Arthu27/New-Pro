@@ -104,8 +104,8 @@
     <h3><i class="fas fa-users-cog"></i> РОЛИ</h3>
     <p class="sel-hint">Отметьте роли — можно несколько</p>
     <div class="role-actions">
-      <button class="rp-btn rp-btn-small" onclick="selectAllRoles()"><i class="fas fa-check-double"></i> Выбрать все</button>
-      <button class="rp-btn rp-btn-small" onclick="clearAllRoles()"><i class="fas fa-times"></i> Сбросить</button>
+      <button type="button" class="rp-btn rp-btn-small" onclick="selectAllRoles()"><i class="fas fa-check-double"></i> Выбрать все</button>
+      <button type="button" class="rp-btn rp-btn-small" onclick="clearAllRoles()"><i class="fas fa-times"></i> Сбросить</button>
     </div>
     <div class="sel-count" id="sel-count">Выбрано: 0</div>
     <div id="role-list"></div>
@@ -117,7 +117,7 @@
         <h2><i class="fas fa-user-tag"></i> <span id="sel-role-name">Выберите роли</span></h2>
         <div class="sub" id="sel-role-sub">Отметьте роли слева, затем настройте доступ к командам</div>
       </div>
-      <button class="rp-btn rp-btn-red" onclick="resetAll()"><i class="fas fa-undo-alt"></i> Сбросить всё</button>
+      <button type="button" class="rp-btn rp-btn-red" onclick="resetAll()"><i class="fas fa-undo-alt"></i> Сбросить всё</button>
     </div>
 
     <div id="category-list"></div>
@@ -130,8 +130,8 @@
     <div class="m-title" id="m-title">Подтверждение</div>
     <div class="m-desc" id="m-desc">Вы уверены?</div>
     <div class="m-btns">
-      <button class="rp-btn" onclick="closeConfirm()">Отмена</button>
-      <button class="rp-btn rp-btn-green" id="m-confirm-btn">Подтвердить</button>
+      <button type="button" class="rp-btn" onclick="closeConfirm()">Отмена</button>
+      <button type="button" class="rp-btn rp-btn-green" id="m-confirm-btn">Подтвердить</button>
     </div>
   </div>
 </div>
@@ -284,18 +284,18 @@ function renderCategories(){
       + '<div class="cat-body">'
       + '<div class="everyone-row">'
       + '<span class="er-label"><i class="fas fa-globe"></i> Снять все ограничения категории (для всех):</span>'
-      + '<button class="rp-btn rp-btn-green" onclick="categoryEveryone(\''+cat+'\')"><i class="fas fa-users"></i> Сделать «Для всех»</button>'
+      + '<button type="button" class="rp-btn rp-btn-green" onclick="categoryEveryone(\''+cat+'\')"><i class="fas fa-users"></i> Сделать «Для всех»</button>'
       + '</div>'
       + '<div class="everyone-row">'
       + '<span class="er-label"><i class="fas fa-check-double"></i> Выдать эту категорию '+selectedRoleIds.length+' отмеченным ролям:</span>'
-      + '<button class="rp-btn" onclick="categoryAssign(\''+cat+'\')"><i class="fas fa-check-double"></i> Дать ролям</button>'
+      + '<button type="button" class="rp-btn" onclick="categoryAssign(\''+cat+'\')"><i class="fas fa-check-double"></i> Дать ролям</button>'
       + '</div>'
       + '<div class="cmd-grid">'
       + cmds.map(function(cmd){
           var granted = anySelectedIn(cmd);
           return '<div class="cmd-item">'
             + '<span class="cname">'+cmd+'</span>'
-            + '<button class="cbtn '+(granted?'grant':'')+'" '
+            + '<button type="button" class="cbtn '+(granted?'grant':'')+'" '
             + 'onclick="toggleCommand(\''+cat+'\',\''+cmd+'\')">'
             + (granted?'<i class="fas fa-check"></i> Доступ':'<i class="fas fa-lock-open"></i> Открыть')
             + '</button>'

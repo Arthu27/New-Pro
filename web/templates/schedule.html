@@ -87,7 +87,7 @@
         <div class="sc-field"><label>Текст embed (не обязательно)</label><input id="f-edesc" type="text" placeholder="Подробности события…" aria-label="Подробности события…"></div>
       </div>
       <div class="sc-actions">
-        <button class="sc-btn" onclick="saveItem()"><i class="fas fa-calendar-plus"></i> Запланировать</button>
+        <button type="button" class="sc-btn" onclick="saveItem()"><i class="fas fa-calendar-plus"></i> Запланировать</button>
       </div>
     </div>
   </div>
@@ -134,9 +134,9 @@ async function loadState(){
           <div class="sc-next">Следующая отправка: <b>${esc(it.next)}</b></div>
         </div>
         <div class="sc-item-actions">
-          <button class="sc-btn mini ghost" onclick="act('toggle',${it.id})"><i class="fas fa-${it.enabled?'pause':'play'}"></i> ${it.enabled?'Пауза':'Старт'}</button>
-          <button class="sc-btn mini ghost" onclick="act('test',${it.id})"><i class="fas fa-paper-plane"></i> Тест</button>
-          <button class="sc-btn mini danger" onclick="delItem(${it.id})"><i class="fas fa-trash"></i></button>
+          <button type="button" class="sc-btn mini ghost" onclick="act('toggle',${it.id})"><i class="fas fa-${it.enabled?'pause':'play'}"></i> ${it.enabled?'Пауза':'Старт'}</button>
+          <button type="button" class="sc-btn mini ghost" onclick="act('test',${it.id})"><i class="fas fa-paper-plane"></i> Тест</button>
+          <button type="button" class="sc-btn mini danger" onclick="delItem(${it.id})" aria-label="Удалить"><i class="fas fa-trash"></i></button>
         </div>
       </div>`).join('');
   }catch(e){}

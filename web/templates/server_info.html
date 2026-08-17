@@ -55,11 +55,11 @@
       <div class="si-row" id="siPairForm" style="display:none">
         <input class="si-inp" id="siPairKey" maxlength="50" placeholder="Заголовок">
         <input class="si-inp wide" id="siPairVal" maxlength="500" placeholder="Содержимое">
-        <button class="si-btn" id="siPairAdd"><i class="fas fa-plus"></i> Добавить</button>
+        <button type="button" class="si-btn" id="siPairAdd"><i class="fas fa-plus"></i> Добавить</button>
       </div>
       <div class="si-msg" id="siPairMsg"></div>
       <div class="si-row" id="siClearRow" style="display:none;margin-top:14px">
-        <button class="si-btn danger" id="siClear"><i class="fas fa-broom"></i> Очистить всю базу</button>
+        <button type="button" class="si-btn danger" id="siClear"><i class="fas fa-broom"></i> Очистить всю базу</button>
       </div>
     </div>
   </div>
@@ -93,8 +93,8 @@ function render(v) {
   fb.innerHTML = v.fields.map(function (f) {
     var body = CAN_EDIT
       ? '<textarea class="si-ta" id="siF-' + esc(f.key) + '" maxlength="1000">' + esc(f.value) + '</textarea>' +
-        '<div class="si-row"><button class="si-btn" onclick="siSaveField(\'' + esc(f.key) + '\')"><i class="fas fa-floppy-disk"></i> Сохранить</button>' +
-        '<button class="si-btn ghost" onclick="siClearField(\'' + esc(f.key) + '\')"><i class="fas fa-eraser"></i> Стереть</button></div>'
+        '<div class="si-row"><button type="button" class="si-btn" onclick="siSaveField(\'' + esc(f.key) + '\')"><i class="fas fa-floppy-disk"></i> Сохранить</button>' +
+        '<button type="button" class="si-btn ghost" onclick="siClearField(\'' + esc(f.key) + '\')"><i class="fas fa-eraser"></i> Стереть</button></div>'
       : (f.card ? '<div class="txt">' + esc(f.card) + '</div>' : '<div class="none">пока пусто</div>');
     return '<div class="si-field"><div class="t"><i class="fas ' + (FIELD_ICONS[f.key] || 'fa-circle-info') + '"></i> ' + esc(f.title) + '</div>' + body + '</div>';
   }).join('');
@@ -105,7 +105,7 @@ function render(v) {
   } else {
     pb.innerHTML = v.pairs.map(function (p) {
       return '<div class="si-pair"><div class="k">' + esc(p.key) + '</div><div class="v">' + esc(p.value) + '</div>' +
-        (CAN_EDIT ? '<button class="si-del" title="Убрать пару" onclick="siDelPair(\'' + esc(p.key) + '\')"><i class="fas fa-trash"></i></button>' : '') + '</div>';
+        (CAN_EDIT ? '<button type="button" class="si-del" title="Убрать пару" onclick="siDelPair(\'' + esc(p.key) + '\')"><i class="fas fa-trash"></i></button>' : '') + '</div>';
     }).join('');
   }
 

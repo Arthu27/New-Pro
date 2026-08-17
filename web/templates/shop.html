@@ -66,8 +66,8 @@
       <input type="text" class="sh-input wide" id="shDesc" placeholder="Описание (необязательно)" maxlength="100" aria-label="Описание">
       <div class="sh-err" id="shErr"></div>
       <div style="display:flex;gap:8px;grid-column:1/-1">
-        <button class="sh-btn" id="shSubmit" onclick="shSubmit()"><i class="fas fa-plus"></i> Добавить предмет</button>
-        <button class="sh-btn ghost" id="shCancel" onclick="shResetForm()" style="display:none"><i class="fas fa-xmark"></i> Отмена</button>
+        <button type="button" class="sh-btn" id="shSubmit" onclick="shSubmit()"><i class="fas fa-plus"></i> Добавить предмет</button>
+        <button type="button" class="sh-btn ghost" id="shCancel" onclick="shResetForm()" style="display:none"><i class="fas fa-xmark"></i> Отмена</button>
       </div>
     </div>
     {% endif %}
@@ -164,8 +164,8 @@ function renderCustom() {
     if (it.by) meta.push(esc(String(it.by).replace(/^panel:/, '')));
     if (it.updated_at) meta.push(esc(String(it.updated_at).slice(0, 10)));
     var acts = CAN_EDIT
-      ? '<div class="sh-actions"><button class="sh-act" onclick="shEdit(\x27' + esc(it.name) + '\x27)" title="Изменить" aria-label="Изменить"><i class="fas fa-pen"></i></button>' +
-        '<button class="sh-act del" onclick="shRemove(\x27' + esc(it.name) + '\x27)" title="Удалить" aria-label="Удалить"><i class="fas fa-trash-can"></i></button></div>'
+      ? '<div class="sh-actions"><button type="button" class="sh-act" onclick="shEdit(\x27' + esc(it.name) + '\x27)" title="Изменить" aria-label="Изменить"><i class="fas fa-pen"></i></button>' +
+        '<button type="button" class="sh-act del" onclick="shRemove(\x27' + esc(it.name) + '\x27)" title="Удалить" aria-label="Удалить"><i class="fas fa-trash-can"></i></button></div>'
       : '';
     return '<div class="sh-item"><div><div class="sh-name">' + esc(it.name) + ' ' + rarityChip(it.rarity) +
       ' <span class="sh-cat">' + esc(it.category) + '</span> ' + pet + '</div>' +

@@ -51,8 +51,8 @@
     <small id="ldSummary">загружаем…</small>
   </div>
   <div style="margin-left:auto;display:flex;gap:8px">
-    <button class="ld-btn ghost" id="ldCsv"><i class="fas fa-file-csv"></i> CSV</button>
-    <button class="ld-btn" style="background:transparent;color:var(--text-2);border:1px solid var(--line-2)" onclick="ldLoad()"><i class="fas fa-arrows-rotate"></i></button>
+    <button type="button" class="ld-btn ghost" id="ldCsv"><i class="fas fa-file-csv"></i> CSV</button>
+    <button type="button" class="ld-btn" style="background:transparent;color:var(--text-2);border:1px solid var(--line-2)" onclick="ldLoad()" aria-label="Обновить"><i class="fas fa-arrows-rotate"></i></button>
   </div>
 </div>
 
@@ -67,15 +67,15 @@
     <div class="ld-sub">Цель: <b>all</b> — весь сервер, или ID/имя канала (алиасы как у /lockdown). Сначала посмотрите предпросмотр.</div>
     <div class="ld-row">
       <input class="ld-inp" id="ldSpec" placeholder="all" value="all">
-      <button class="ld-btn ghost" id="ldPreview"><i class="fas fa-eye"></i> Что тронет?</button>
+      <button type="button" class="ld-btn ghost" id="ldPreview"><i class="fas fa-eye"></i> Что тронет?</button>
     </div>
     <div class="ld-prev" id="ldPrev"></div>
     <div class="ld-row">
       <input class="ld-inp" id="ldReason" placeholder="причина, напр. «рейд извне» (до 200 знаков)" maxlength="200">
     </div>
     <div class="ld-row">
-      <button class="ld-btn lock" id="ldLock"><i class="fas fa-lock"></i> Закрыть</button>
-      <button class="ld-btn open" id="ldUnlock"><i class="fas fa-lock-open"></i> Открыть обратно</button>
+      <button type="button" class="ld-btn lock" id="ldLock"><i class="fas fa-lock"></i> Закрыть</button>
+      <button type="button" class="ld-btn open" id="ldUnlock"><i class="fas fa-lock-open"></i> Открыть обратно</button>
     </div>
     <div class="ld-msg" id="ldMsg"></div>
   </div>
@@ -128,7 +128,7 @@ function ldLoad() {
           return '<span class="ld-perm ' + (PERM_ICONS[p.label] || '') + '">' + esc(p.perm) + ': ' + esc(p.label) + '</span>';
         }).join('');
         var btn = (CAN_EDIT && d.bot_online)
-          ? '<button class="ld-btn open mini" onclick="ldUnlockOne(\'' + esc(c.id) + '\')"><i class="fas fa-lock-open"></i> открыть</button>' : '';
+          ? '<button type="button" class="ld-btn open mini" onclick="ldUnlockOne(\'' + esc(c.id) + '\')"><i class="fas fa-lock-open"></i> открыть</button>' : '';
         return '<div class="ld-chan"><div class="top"><b># ' + esc(c.name || 'ID ' + c.id) + '</b>' + btn + '</div>' +
           '<div class="ld-perms">' + perms + '</div></div>';
       }).join('') + meta;

@@ -56,7 +56,7 @@
     <div class="qz-form">
       <input type="text" class="qz-input" id="qzNewQ" placeholder="Вопрос: Столица Франции?" aria-label="Вопрос">
       <input type="text" class="qz-input" id="qzNewA" placeholder="Ответы через «;»: париж ; city of paris" aria-label="Ответы">
-      <button class="qz-btn" onclick="qzAdd()"><i class="fas fa-plus"></i> Добавить вопрос</button>
+      <button type="button" class="qz-btn" onclick="qzAdd()"><i class="fas fa-plus"></i> Добавить вопрос</button>
     </div>
     {% endif %}
     <div id="qzList">
@@ -75,7 +75,7 @@
     </div>
     {% if role == 'admin' or role == 'owner' %}
     <div style="margin-top:14px">
-      <button class="qz-btn danger" onclick="qzReset()"><i class="fas fa-rotate-left"></i> Обнулить зачёт</button>
+      <button type="button" class="qz-btn danger" onclick="qzReset()"><i class="fas fa-rotate-left"></i> Обнулить зачёт</button>
     </div>
     {% endif %}
   </div>
@@ -115,7 +115,7 @@ function renderList(d) {
     return;
   }
   box.innerHTML = d.questions.map(function (q) {
-    var del = CAN_EDIT ? '<button class="qz-del" onclick="qzRemove(' + q.n + ')" title="Удалить №' + q.n + '" aria-label="Удалить"><i class="fas fa-trash-can"></i></button>' : '';
+    var del = CAN_EDIT ? '<button type="button" class="qz-del" onclick="qzRemove(' + q.n + ')" title="Удалить №' + q.n + '" aria-label="Удалить"><i class="fas fa-trash-can"></i></button>' : '';
     var by = q.added_by ? '<div class="qz-by">добавил ' + esc(q.added_by) + '</div>' : '';
     return '<div class="qz-row"><span class="qz-num">' + q.n + '</span>' +
       '<div><div class="qz-q">' + esc(q.q) + '</div>' +

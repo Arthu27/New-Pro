@@ -46,10 +46,10 @@
 </div>
 
 <div class="app-tabs">
-  <button class="app-tab active" data-tab="all">Все</button>
-  <button class="app-tab" data-tab="pending">Ожидание</button>
-  <button class="app-tab" data-tab="approved">Одобрено</button>
-  <button class="app-tab" data-tab="rejected">Отклонено</button>
+  <button type="button" class="app-tab active" data-tab="all">Все</button>
+  <button type="button" class="app-tab" data-tab="pending">Ожидание</button>
+  <button type="button" class="app-tab" data-tab="approved">Одобрено</button>
+  <button type="button" class="app-tab" data-tab="rejected">Отклонено</button>
 </div>
 
 <div class="app-box">
@@ -101,8 +101,8 @@
     </div>
 
     <div id="modal-decision-box" style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 18px;">
-      <button class="btn btn-ok" id="btn-modal-approve" style="background: #10b981; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-check"></i> Одобрить</button>
-      <button class="btn btn-no" id="btn-modal-reject" style="background: #ef4444; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-times"></i> Отклонить</button>
+      <button type="button" class="btn btn-ok" id="btn-modal-approve" style="background: #10b981; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-check"></i> Одобрить</button>
+      <button type="button" class="btn btn-no" id="btn-modal-reject" style="background: #ef4444; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-times"></i> Отклонить</button>
     </div>
   </div>
 </div>
@@ -154,13 +154,13 @@
     list.forEach(function (a) {
       var statusLabel = a.status === 'pending' ? 'Ожидание' : a.status === 'approved' ? 'Одобрено' : 'Отклонено';
       var keyId = a.app_id || a.user_id;
-      var actions = '<div class="app-actions"><button class="btn btn-secondary inspect-btn" style="background:#139492; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-app-key="' + esc(keyId) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
+      var actions = '<div class="app-actions"><button type="button" class="btn btn-secondary inspect-btn" style="background:#139492; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-app-key="' + esc(keyId) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
       
       var avatar = a.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
       var roleName = a.role || 'Moderator';
       html += '<div class="app-row" style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid rgba(255,255,255,0.05);">' +
         '<div style="display:flex; align-items:center; gap:14px;">' +
-        '<img class="app-av" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:44px; height:44px; border-radius:50%; border:2px solid rgba(19,148,146,0.3);">' +
+        '<img alt="" class="app-av" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:44px; height:44px; border-radius:50%; border:2px solid rgba(19,148,146,0.3);">' +
         '<div class="app-info"><div class="app-name" style="font-weight:bold; font-size:16px; color:#fff;">' + esc(a.display_name || a.username || a.user_name) + ' <span style="font-size:12px; color:#139492; background:rgba(19,148,146,0.1); padding:2px 8px; border-radius:4px; margin-left:6px;">' + esc(roleName) + '</span></div><div class="app-meta" style="font-size:12px; color:#888; margin-top:4px;">Отправлена: ' + fmtDate(a.submitted_at || a.timestamp) + ' • Статус: <span class="app-status ' + a.status + '" style="font-weight:bold;">' + statusLabel + '</span></div></div>' +
         '</div>' +
         actions + '</div>';

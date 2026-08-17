@@ -57,8 +57,8 @@
     <select class="af-sel" id="afAction" style="max-width:230px"></select>
     <span style="font-size:12.5px;color:var(--text-2,rgba(255,255,255,.8))">Порог, %:</span>
     <input class="af-inp af-num" id="afThr" type="number" min="60" max="100" step="1">
-    <button class="af-btn" id="afThrGo"><i class="fas fa-check"></i> Порог</button>
-    <button class="af-btn ghost" id="afReload"><i class="fas fa-rotate"></i> Обновить</button>
+    <button type="button" class="af-btn" id="afThrGo"><i class="fas fa-check"></i> Порог</button>
+    <button type="button" class="af-btn ghost" id="afReload"><i class="fas fa-rotate"></i> Обновить</button>
   </div>
   <div class="af-row" style="margin-top:10px">
     <span class="af-pill" id="afLogPill">Лог-канал: …</span>
@@ -79,7 +79,7 @@
   <div class="af-sub">Как «/antifake protect»: бренды и ключевые слова, которые нельзя подделывать (короче 4 канонических букв в защиту не берутся — правило кога).</div>
   <div class="af-row">
     <input class="af-inp" id="afProtIn" placeholder="Новая строка, напр. AetherBank" maxlength="60">
-    <button class="af-btn" id="afProtGo"><i class="fas fa-plus"></i> Защитить</button>
+    <button type="button" class="af-btn" id="afProtGo"><i class="fas fa-plus"></i> Защитить</button>
   </div>
   <div style="margin-top:10px" id="afProtList"></div>
   <div class="af-msg" id="afProtMsg"></div>
@@ -90,7 +90,7 @@
   <div class="af-sub">Как «/antifake test»: проверка имени и аватара без наказания — те же функции детекции.</div>
   <div class="af-row">
     <input class="af-inp" id="afTestUid" placeholder="ID участника" maxlength="24">
-    <button class="af-btn" id="afTestGo"><i class="fas fa-play"></i> Проверить</button>
+    <button type="button" class="af-btn" id="afTestGo"><i class="fas fa-play"></i> Проверить</button>
   </div>
   <div class="af-msg" id="afTestMsg"></div>
   <div class="af-res" id="afTestRes"></div>
@@ -101,7 +101,7 @@
   <div class="af-sub">Каноническая форма и похожесть — те же normalize/similarity кога. Видно, поймает ли строка защиту и насколько она близка к защищаемым именам.</div>
   <div class="af-row">
     <input class="af-inp" id="afLabText" placeholder="Строка для разбора…" maxlength="80">
-    <button class="af-btn" id="afLabGo"><i class="fas fa-play"></i> Разобрать</button>
+    <button type="button" class="af-btn" id="afLabGo"><i class="fas fa-play"></i> Разобрать</button>
   </div>
   <div class="af-msg" id="afLabMsg"></div>
   <div class="af-res" id="afLabRes"></div>
@@ -111,8 +111,8 @@
   <h3><i class="fas fa-triangle-exclamation"></i> Страйки рекламы</h3>
   <div class="af-sub">Кто ловил страйки за замаскированную рекламу: активные за окно / всего записей. Обнуление — с подтверждением.</div>
   <div class="af-row" style="margin-bottom:10px">
-    <button class="af-btn ghost" id="afStrikesReload"><i class="fas fa-rotate"></i> Обновить</button>
-    <button class="af-btn ghost" id="afStrikesCsv"><i class="fas fa-file-csv"></i> В CSV</button>
+    <button type="button" class="af-btn ghost" id="afStrikesReload"><i class="fas fa-rotate"></i> Обновить</button>
+    <button type="button" class="af-btn ghost" id="afStrikesCsv"><i class="fas fa-file-csv"></i> В CSV</button>
   </div>
   <div id="afStrikesBox"><div class="af-empty">Загружаю…</div></div>
   <div class="af-msg" id="afStMsg"></div>
@@ -160,7 +160,7 @@ function renderStatus(d) {
   var box = document.getElementById('afToggles');
   box.innerHTML = d.toggles.map(function (t) {
     return '<div class="af-tog"><span class="l">' + esc(t.label) + '</span>' +
-      '<button class="af-sw' + (t.on ? ' on' : '') + '" data-key="' + esc(t.key) + '"' +
+      '<button type="button" class="af-sw' + (t.on ? ' on' : '') + '" data-key="' + esc(t.key) + '"' +
       (CAN_EDIT ? '' : ' disabled') + ' aria-label="' + esc(t.label) + '"></button></div>';
   }).join('');
   if (CAN_EDIT) {
@@ -185,7 +185,7 @@ function renderProtected(names) {
   }
   box.innerHTML = names.map(function (n) {
     return '<span class="af-chip">' + esc(n) +
-      (CAN_EDIT ? ' <button data-unprot="' + esc(n) + '" title="Убрать"><i class="fas fa-xmark"></i></button>' : '') +
+      (CAN_EDIT ? ' <button type="button" data-unprot="' + esc(n) + '" title="Убрать"><i class="fas fa-xmark"></i></button>' : '') +
       '</span>';
   }).join('');
   if (CAN_EDIT) {
@@ -274,7 +274,7 @@ function renderStrikes(d) {
     return '<tr><td><b>' + esc(e.name || 'покинул сервер') + '</b></td>' +
       '<td><span class="af-mono">' + esc(e.user_id) + '</span></td>' +
       '<td>' + e.active + ' / ' + d.limit + '</td><td>' + e.total + '</td><td>' + esc(e.last_at) + '</td>' +
-      (CAN_EDIT ? '<td><button class="af-del" data-clear="' + esc(e.user_id) + '"><i class="fas fa-eraser"></i> Обнулить</button></td>' : '') +
+      (CAN_EDIT ? '<td><button type="button" class="af-del" data-clear="' + esc(e.user_id) + '"><i class="fas fa-eraser"></i> Обнулить</button></td>' : '') +
       '</tr>';
   }).join('');
   box.innerHTML = html + '</tbody></table>';

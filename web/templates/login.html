@@ -542,10 +542,10 @@
 
     <div class="auth-card">
         <div class="tab-switcher">
-            <button class="tab-btn active" id="tabBtnPass" onclick="switchTab('pass')">
+            <button type="button" class="tab-btn active" id="tabBtnPass" onclick="switchTab('pass')">
                 <i class="fas fa-key"></i> Вход по паролю
             </button>
-            <button class="tab-btn" id="tabBtnPin" onclick="switchTab('pin')">
+            <button type="button" class="tab-btn" id="tabBtnPin" onclick="switchTab('pin')">
                 <i class="fab fa-discord"></i> Discord ID (PIN)
             </button>
         </div>
@@ -751,7 +751,7 @@ function showSuggest(inputEl, popupId) {
                     const mentionVal = (item.name === 'Owner' || item.name === 'owner') ? 'owner' : '@' + item.name;
                     const idVal = item.id;
                     return `<div class="suggest-item" onclick="selectSuggestItem('${inputEl.id}', '${popupId}', '${mentionVal}', '${idVal}')">
-                        <img src="${item.avatar}" class="suggest-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'"/>
+                        <img alt="" src="${item.avatar}" class="suggest-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'"/>
                         <div>
                             <div class="suggest-name">${disp}</div>
                             <div class="suggest-id">ID: ${idVal}</div>
@@ -826,7 +826,7 @@ async function doCheck() {
         await sleep(500);
 
         const card = document.getElementById('userCard');
-        card.innerHTML = '<img class="user-avatar" src="' + (d.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'"><div><div class="user-name">' + d.display_name + '</div><div class="user-id">Discord ID: ' + d.discord_id + '</div></div>';
+        card.innerHTML = '<img alt="" class="user-avatar" src="' + (d.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'"><div><div class="user-name">' + d.display_name + '</div><div class="user-id">Discord ID: ' + d.discord_id + '</div></div>';
         showStep(3);
         document.getElementById('progressBar').classList.remove('active');
         document.getElementById('pinInput').focus();

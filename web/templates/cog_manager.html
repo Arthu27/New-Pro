@@ -86,7 +86,7 @@
       <input type="text" id="cm-search-input" placeholder="Поиск модуля..." oninput="render()" aria-label="Поиск модуля...">
     </div>
     <span class="spacer"></span>
-    <button class="cm-btn cm-btn-blue" onclick="reloadAll()"><i class="fas fa-sync"></i> Обновить всё</button>
+    <button type="button" class="cm-btn cm-btn-blue" onclick="reloadAll()"><i class="fas fa-sync"></i> Обновить всё</button>
   </div>
 
   <div class="cm-grid" id="cm-grid"></div>
@@ -112,9 +112,9 @@ function render(){
       + '</div>'
       + '<div class="cm-path">cogs.' + esc(c.name) + '</div>'
       + '<div class="cm-actions">'
-      + (loaded ? '<button class="cm-act reload" onclick="reloadCog(\''+esc(c.name)+'\')"><i class="fas fa-redo"></i> Перезагрузить</button>' : '')
-      + (loaded ? '<button class="cm-act unload" onclick="toggleCog(\''+esc(c.name)+'\',true)"><i class="fas fa-power-off"></i> Выкл.</button>'
-                 : '<button class="cm-act load" onclick="toggleCog(\''+esc(c.name)+'\',false)"><i class="fas fa-play"></i> Вкл.</button>')
+      + (loaded ? '<button type="button" class="cm-act reload" onclick="reloadCog(\''+esc(c.name)+'\')"><i class="fas fa-redo"></i> Перезагрузить</button>' : '')
+      + (loaded ? '<button type="button" class="cm-act unload" onclick="toggleCog(\''+esc(c.name)+'\',true)"><i class="fas fa-power-off"></i> Выкл.</button>'
+                 : '<button type="button" class="cm-act load" onclick="toggleCog(\''+esc(c.name)+'\',false)"><i class="fas fa-play"></i> Вкл.</button>')
       + '</div>'
       + '</div>';
   }).join('');

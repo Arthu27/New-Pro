@@ -101,7 +101,7 @@
 <div class="section">
   <div class="bs-title">
     <i class="fas fa-chart-area"></i> Тренд тикетов
-    <button class="control-btn" onclick="exportChart('tickets-trend')" style="margin-left: auto;">
+    <button type="button" class="control-btn" onclick="exportChart('tickets-trend')" style="margin-left: auto;">
       <i class="fas fa-download"></i> Экспорт
     </button>
   </div>
@@ -138,13 +138,13 @@
 <div class="section">
   <div class="bs-title"><i class="fas fa-file-export"></i> Экспорт отчетов</div>
   <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-    <button class="control-btn primary" onclick="exportReport('pdf')">
+    <button type="button" class="control-btn primary" onclick="exportReport('pdf')">
       <i class="fas fa-file-pdf"></i> PDF отчет
     </button>
-    <button class="control-btn" onclick="exportReport('excel')">
+    <button type="button" class="control-btn" onclick="exportReport('excel')">
       <i class="fas fa-file-excel"></i> Excel отчет
     </button>
-    <button class="control-btn" onclick="exportReport('csv')">
+    <button type="button" class="control-btn" onclick="exportReport('csv')">
       <i class="fas fa-file-csv"></i> CSV данные
     </button>
   </div>

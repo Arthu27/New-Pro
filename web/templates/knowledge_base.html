@@ -19,7 +19,7 @@
   <div class="bs-title"><i class="fas fa-search"></i> Поиск по базе знаний</div>
   <div style="display: flex; gap: 12px;">
     <input type="text" id="searchInput" class="form-input" placeholder="Введите ключевые слова..." style="flex: 1;" aria-label="Введите ключевые слова...">
-    <button class="control-btn primary" onclick="searchArticles()">
+    <button type="button" class="control-btn primary" onclick="searchArticles()">
       <i class="fas fa-search"></i> Искать
     </button>
   </div>
@@ -47,7 +47,7 @@
 <div class="section">
   <div class="bs-title">
     <i class="fas fa-folder-open"></i> Категории
-    <button class="control-btn primary" onclick="showCreateCategoryModal()" style="margin-left: auto;">
+    <button type="button" class="control-btn primary" onclick="showCreateCategoryModal()" style="margin-left: auto;">
       <i class="fas fa-plus"></i> Новая категория
     </button>
   </div>
@@ -85,7 +85,7 @@
   <div style="max-width: 600px; margin: 50px auto; background: var(--bg-primary); border-radius: 12px; padding: 24px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0;">Новая категория</h2>
-      <button class="control-btn" onclick="closeCreateCategoryModal()">
+      <button type="button" class="control-btn" onclick="closeCreateCategoryModal()" aria-label="Создать">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -102,10 +102,10 @@
       <input type="text" id="categoryIcon" class="form-input" placeholder="fa-question-circle" value="fa-folder" aria-label="fa-question-circle">
     </div>
     <div style="display: flex; gap: 12px;">
-      <button class="control-btn primary" onclick="createCategory()" style="flex: 1;">
+      <button type="button" class="control-btn primary" onclick="createCategory()" style="flex: 1;">
         <i class="fas fa-plus"></i> Создать
       </button>
-      <button class="control-btn" onclick="closeCreateCategoryModal()">
+      <button type="button" class="control-btn" onclick="closeCreateCategoryModal()">
         Отмена
       </button>
     </div>
@@ -117,7 +117,7 @@
   <div style="max-width: 800px; margin: 50px auto; background: var(--bg-primary); border-radius: 12px; padding: 24px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <h2 style="margin: 0;">Новая статья</h2>
-      <button class="control-btn" onclick="closeCreateArticleModal()">
+      <button type="button" class="control-btn" onclick="closeCreateArticleModal()" aria-label="Создать">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -146,10 +146,10 @@
       <input type="text" id="articleTags" class="form-input" placeholder="faq, помощь, инструкция" aria-label="faq, помощь, инструкция">
     </div>
     <div style="display: flex; gap: 12px;">
-      <button class="control-btn primary" onclick="createArticle()" style="flex: 1;">
+      <button type="button" class="control-btn primary" onclick="createArticle()" style="flex: 1;">
         <i class="fas fa-plus"></i> Создать
       </button>
-      <button class="control-btn" onclick="closeCreateArticleModal()">
+      <button type="button" class="control-btn" onclick="closeCreateArticleModal()">
         Отмена
       </button>
     </div>

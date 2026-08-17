@@ -33,7 +33,7 @@
   <div class="wh-form">
     <select class="wh-select" id="whChannel" aria-label="Канал"><option value="">— загрузка каналов… —</option></select>
     <input type="text" class="wh-input" id="whName" placeholder="Имя вебхука: GitHub, Релизы..." maxlength="80" aria-label="Имя вебхука">
-    <button class="wh-btn" onclick="whCreate()"><i class="fas fa-bolt"></i> Создать</button>
+    <button type="button" class="wh-btn" onclick="whCreate()"><i class="fas fa-bolt"></i> Создать</button>
   </div>
 </div>
 {% endif %}
@@ -64,8 +64,8 @@ function render(d) {
   box.innerHTML = d.hooks.map(function (h) {
     var acts = CAN_EDIT
       ? '<div class="wh-actions">' +
-        '<button class="wh-icon-btn" onclick="whTest(\'' + esc(h.id) + '\', \'' + esc(h.name) + '\')" title="Тестовое сообщение"><i class="fas fa-paper-plane"></i></button>' +
-        '<button class="wh-icon-btn danger" onclick="whDelete(\'' + esc(h.id) + '\', \'' + esc(h.name) + '\')" title="Удалить"><i class="fas fa-trash-can"></i></button></div>'
+        '<button type="button" class="wh-icon-btn" onclick="whTest(\'' + esc(h.id) + '\', \'' + esc(h.name) + '\')" title="Тестовое сообщение"><i class="fas fa-paper-plane"></i></button>' +
+        '<button type="button" class="wh-icon-btn danger" onclick="whDelete(\'' + esc(h.id) + '\', \'' + esc(h.name) + '\')" title="Удалить"><i class="fas fa-trash-can"></i></button></div>'
       : '';
     return '<div class="wh-row"><div><div class="wh-name">' + esc(h.name) + '</div>' +
       '<div class="wh-meta"><i class="fas fa-hashtag"></i> ' + esc(h.channel_name || h.channel_id) + ' · ID ' + esc(h.id) + '</div>' +

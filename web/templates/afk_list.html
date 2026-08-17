@@ -62,7 +62,7 @@ async function loadAFK(gid) {
     el.innerHTML = d.map(function(u) {
       return '<div class="afk-card">' +
         '<div class="afk-head">' +
-          (u.avatar ? '<img src="' + esc(u.avatar) + '" class="afk-avatar" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div class="afk-avatar"  ><i class="fas fa-moon"></i></div>') +
+          (u.avatar ? '<img alt="" src="' + esc(u.avatar) + '" class="afk-avatar" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div class="afk-avatar"  ><i class="fas fa-moon"></i></div>') +
           '<div   style="min-width: 0;"><div class="afk-name">' + esc(u.name) + '</div><div class="afk-id">' + esc(u.id) + '</div></div>' +
         '</div>' +
         '<div class="afk-reason">' + esc(u.reason || 'AFK') + '</div>' +

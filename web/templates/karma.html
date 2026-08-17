@@ -71,7 +71,7 @@
       <div class="km-form">
         <input class="inp" id="kmAdjId" maxlength="24" placeholder="ID или @упоминание">
         <input class="inp" id="kmAdjDelta" type="number" min="-500" max="500" placeholder="+10 / -25" style="max-width:110px">
-        <button class="btn" onclick="kmAdjust()"><i class="fas fa-check"></i> Применить</button>
+        <button type="button" class="btn" onclick="kmAdjust()"><i class="fas fa-check"></i> Применить</button>
       </div>
       <div class="km-sub" id="kmAdjMsg" style="margin:8px 0 0"></div>
     </div>
@@ -83,8 +83,8 @@
       <div class="km-sub">Кто кому и за что говорил спасибо за последние 7 дней (по журналу кога). Можно отфильтровать по участнику.</div>
       <div class="km-filter">
         <input class="inp" id="kmFilter" maxlength="24" placeholder="Фильтр: ID участника">
-        <button class="btn" onclick="kmLoad(document.getElementById('kmFilter').value)"><i class="fas fa-filter"></i></button>
-        <button class="btn" onclick="document.getElementById('kmFilter').value='';kmLoad('')"><i class="fas fa-xmark"></i></button>
+        <button type="button" class="btn" onclick="kmLoad(document.getElementById('kmFilter').value)" aria-label="Обновить"><i class="fas fa-filter"></i></button>
+        <button type="button" class="btn" onclick="document.getElementById('kmFilter').value='';kmLoad('')" aria-label="Обновить"><i class="fas fa-xmark"></i></button>
       </div>
       <div class="km-active-filter" id="kmFilterNote"></div>
       <div id="kmFeed"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>

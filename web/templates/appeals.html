@@ -68,14 +68,14 @@
       <h3><i class="fas fa-clock-rotate-left"></i> История</h3>
       <div class="ap-sub">Свежие сверху. Фильтр по статусу и строке: ник, текст, ID, комментарий.</div>
       <div class="ap-filters">
-        <button class="ap-chip on" data-st="">все</button>
-        <button class="ap-chip" data-st="pending">ожидают</button>
-        <button class="ap-chip" data-st="accepted">принятые</button>
-        <button class="ap-chip" data-st="rejected">отклонённые</button>
+        <button type="button" class="ap-chip on" data-st="">все</button>
+        <button type="button" class="ap-chip" data-st="pending">ожидают</button>
+        <button type="button" class="ap-chip" data-st="accepted">принятые</button>
+        <button type="button" class="ap-chip" data-st="rejected">отклонённые</button>
         <input class="ap-inp" id="apQ" placeholder="поиск..." style="flex:2">
       </div>
       <div id="apHistory"></div>
-      <div style="margin-top:10px"><button class="ap-btn ghost" id="apCsv"><i class="fas fa-file-csv"></i> Выгрузить журнал</button></div>
+      <div style="margin-top:10px"><button type="button" class="ap-btn ghost" id="apCsv"><i class="fas fa-file-csv"></i> Выгрузить журнал</button></div>
     </div>
     <div class="ap-panel">
       <h3><i class="fas fa-tower-broadcast"></i> Канал карточек</h3>
@@ -83,7 +83,7 @@
       <div class="ap-ready" id="apReady"></div>
       <div id="apSetBox" style="display:none">
         <select class="ap-sel" id="apChanSel"></select>
-        <button class="ap-btn ghost" id="apChanSave"><i class="fas fa-floppy-disk"></i> Сохранить канал</button>
+        <button type="button" class="ap-btn ghost" id="apChanSave"><i class="fas fa-floppy-disk"></i> Сохранить канал</button>
         <div class="ap-msg" id="apChanMsg"></div>
       </div>
     </div>
@@ -138,8 +138,8 @@ function loadOverview() {
       var act = CAN_EDIT
         ? '<div class="ap-act">' +
           '<input class="ap-inp" id="apReply' + it.id + '" placeholder="комментарий для ЛС (необязательно, до 300 знаков)" maxlength="300">' +
-          '<button class="ap-btn ok" onclick="apResolve(' + it.id + ', true)"><i class="fas fa-check"></i> Принять</button>' +
-          '<button class="ap-btn no" onclick="apResolve(' + it.id + ', false)"><i class="fas fa-xmark"></i> Отклонить</button></div>'
+          '<button type="button" class="ap-btn ok" onclick="apResolve(' + it.id + ', true)"><i class="fas fa-check"></i> Принять</button>' +
+          '<button type="button" class="ap-btn no" onclick="apResolve(' + it.id + ', false)"><i class="fas fa-xmark"></i> Отклонить</button></div>'
         : '';
       return '<div class="ap-card"><div class="meta"><span><b>#' + it.id + '</b> · ' + esc(it.user_name || 'Без имени') + ' · ID ' + esc(it.user_id) + '</span><span>' + esc(it.created_at) + '</span></div>' +
         '<div class="txt">' + esc(it.text) + '</div>' + act + '</div>';

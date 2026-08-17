@@ -29,7 +29,7 @@
 
 
 
-{% if role == 'owner' %}<button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
+{% if role == 'owner' %}<button type="button" class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
 
 <select  id="guild-select" class="guild-select" onchange="loadCommands()" aria-label="Выбор сервера">
   <option value="">Выберите сервер...</option>
@@ -54,8 +54,8 @@
       <option value="embed">Эмбед</option>
     </select>
     <div   style="margin-top: 5px;">
-      <button class="modal-btn" onclick="createCommand()" >Создать</button>
-      <button class="modal-btn" onclick="closeModal()" >Отмена</button>
+      <button type="button" class="modal-btn" onclick="createCommand()" >Создать</button>
+      <button type="button" class="modal-btn" onclick="closeModal()" >Отмена</button>
     </div>
   </div>
 </div>
@@ -98,7 +98,7 @@ async function loadCommands() {
   var box = document.getElementById('cmd-list');
   if(!cmds.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-terminal"   style="opacity: 0.3; margin-bottom: 10px;"></i>Пока пользователь команда yok.</div>'; return; }
   box.innerHTML = cmds.map(function(cmd){
-    var delBtn = role === 'owner' ? '<button class="del-btn" onclick="deleteCmd(\''+cmd.id+'\')"><i class="fas fa-trash"></i></button>' : '';
+    var delBtn = role === 'owner' ? '<button type="button" class="del-btn" onclick="deleteCmd(\''+cmd.id+'\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>' : '';
     return '<div class="cmd-card">'+
       '<div  >'+
         '<div class="cmd-trigger">!'+cmd.trigger+'</div>'+

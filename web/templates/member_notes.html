@@ -45,19 +45,19 @@
 
 <div class="search-box">
   <input type="text" id="search-id" class="search-input" placeholder="Discord ID или имя..." aria-label="Discord ID или имя...">
-  <button onclick="searchMember()" class="search-btn"><i class="fas fa-search"></i> Поиск</button>
+  <button type="button" onclick="searchMember()" class="search-btn"><i class="fas fa-search"></i> Поиск</button>
 </div>
 
 <div id="member-result"  class="member-result-box">
   <div class="note-user">
-    <img class="note-avatar" id="res-avatar" src="">
+    <img alt="" class="note-avatar" id="res-avatar" src="">
     <div><div class="note-name" id="res-name"></div><div class="note-id" id="res-id"></div></div>
   </div>
   <div class="section-title"><i class="fas fa-sticky-note"></i> Заметки</div>
   <div id="notes-list"></div>
   <div class="add-note-row">
     <textarea id="new-note" class="note-textarea" placeholder="Добавить заметку..." aria-label="Добавить заметку..."></textarea>
-    <button onclick="addNote()" class="add-note-btn"><i class="fas fa-plus"></i> Добавить</button>
+    <button type="button" onclick="addNote()" class="add-note-btn"><i class="fas fa-plus"></i> Добавить</button>
   </div>
 </div>
 
@@ -99,7 +99,7 @@ async function loadNotes(id) {
     notes.map(function(n){
       return '<div class="note-item"><div class="note-text">'+n.text+'</div>'+
         '<div class="note-meta"><i class="fas fa-user"   style="margin-right: 4px;"></i>'+n.author+' &nbsp;·&nbsp; '+new Date(n.created_at).toLocaleString('tr-TR')+'</div>'+
-        '<button class="note-del" onclick="deleteNote(\''+n.id+'\',\''+id+'\')">×</button></div>';
+        '<button type="button" class="note-del" onclick="deleteNote(\''+n.id+'\',\''+id+'\')">×</button></div>';
     }).join('') :
     '<p >Пока нет заметок.</p>';
 }
@@ -129,7 +129,7 @@ async function loadAllNotes() {
   if(!all.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-sticky-note"   style="opacity: 0.3; margin-bottom: 10px;"></i>Пока нет заметок.</div>'; return; }
   box.innerHTML = all.map(function(entry){
     return '<div class="note-card"><div class="note-user">'+
-      '<img class="note-avatar" src="'+entry.avatar+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+      '<img alt="" class="note-avatar" src="'+entry.avatar+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
       '<div><div class="note-name">'+entry.name+'</div><div class="note-id">'+entry.id+'</div></div></div>'+
       entry.notes.map(function(n){
         return '<div class="note-item"><div class="note-text">'+n.text+'</div>'+

@@ -25,9 +25,9 @@
   <div class="re-box">
     <div class="re-title"><i class="fas fa-edit"></i> Редактирование правил</div>
     <div id="rules-list"></div>
-    <button class="btn-add" onclick="addRule()"><i class="fas fa-plus"></i> Добавить правило</button>
+    <button type="button" class="btn-add" onclick="addRule()"><i class="fas fa-plus"></i> Добавить правило</button>
     <div  >
-      <button class="save-btn" onclick="saveRules()" ><i class="fas fa-save"></i> Сохранить</button>
+      <button type="button" class="save-btn" onclick="saveRules()" ><i class="fas fa-save"></i> Сохранить</button>
     </div>
   </div>
 
@@ -36,7 +36,7 @@
     <div id="preview"   style="min-height: 150px; margin-bottom: 15px;"></div>
     <label class="field-label">Канал публикации</label>
     <select id="rules-channel" class="field-sel" aria-label="Канал правил"></select>
-    <button class="publish-btn" onclick="publishRules()">
+    <button type="button" class="publish-btn" onclick="publishRules()">
       <i class="fas fa-paper-plane"></i> Discord'a Опубликовать
     </button>
   </div>
@@ -99,7 +99,7 @@ function renderRules() {
     return '<div class="rule-row">'+
       '<span class="rule-num">'+(i+1)+'.</span>'+
       '<input class="rule-input" name="rule-input" value="'+r.replace(/"/g,'&quot;')+'" oninput="rules['+i+']=this.value;updatePreview()">'+
-      '<button class="rule-del" onclick="removeRule('+i+')">×</button>'+
+      '<button type="button" class="rule-del" onclick="removeRule('+i+')">×</button>'+
     '</div>';
   }).join('');
   updatePreview();

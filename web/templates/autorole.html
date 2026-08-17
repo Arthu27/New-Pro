@@ -44,9 +44,9 @@
     <div id="member-roles-list"></div>
     <div class="add-row">
       <select id="member-role-add" aria-label="Роль для участников"></select>
-      <button onclick="addRole('member')"><i class="fas fa-plus"></i> Добавить</button>
+      <button type="button" onclick="addRole('member')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
-    <button class="save-btn" onclick="saveSettings('member')"><i class="fas fa-save"></i> Сохранить</button>
+    <button type="button" class="save-btn" onclick="saveSettings('member')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-venus" ></i> Авто-роль для девушек</div>
@@ -54,9 +54,9 @@
     <div id="girl-roles-list"></div>
     <div class="add-row">
       <select id="girl-role-add" aria-label="Роль для девушек"></select>
-      <button onclick="addRole('girl')"><i class="fas fa-plus"></i> Добавить</button>
+      <button type="button" onclick="addRole('girl')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
-    <button class="save-btn" onclick="saveSettings('girl')"><i class="fas fa-save"></i> Сохранить</button>
+    <button type="button" class="save-btn" onclick="saveSettings('girl')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-mars"></i> Авто-роль для парней</div>
@@ -64,9 +64,9 @@
     <div id="boy-roles-list"></div>
     <div class="add-row">
       <select id="boy-role-add" aria-label="Роль для парней"></select>
-      <button onclick="addRole('boy')"><i class="fas fa-plus"></i> Добавить</button>
+      <button type="button" onclick="addRole('boy')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
-    <button class="save-btn" onclick="saveSettings('boy')"><i class="fas fa-save"></i> Сохранить</button>
+    <button type="button" class="save-btn" onclick="saveSettings('boy')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
   <div class="ar-box">
     <div class="ar-title"><i class="fas fa-robot"></i> Бот Авто-роль</div>
@@ -74,9 +74,9 @@
     <div id="bot-roles-list"></div>
     <div class="add-row">
       <select id="bot-role-add" aria-label="Роль для ботов"></select>
-      <button onclick="addRole('bot')"><i class="fas fa-plus"></i> Добавить</button>
+      <button type="button" onclick="addRole('bot')"><i class="fas fa-plus"></i> Добавить</button>
     </div>
-    <button class="save-btn" onclick="saveSettings('bot')"><i class="fas fa-save"></i> Сохранить</button>
+    <button type="button" class="save-btn" onclick="saveSettings('bot')"><i class="fas fa-save"></i> Сохранить</button>
   </div>
 </div>
 
@@ -153,7 +153,7 @@ function renderType(type) {
     var role = allRoles.find(function (r) { return r.id === id; });
     var name = role ? role.name : ('(удалён: ' + id + ')');
     return '<span class="role-tag">' + name +
-      '<button onclick="removeRole(\'' + type + '\',\'' + id + '\')">×</button></span>';
+      '<button type="button" onclick="removeRole(\'' + type + '\',\'' + id + '\')">×</button></span>';
   }).join('');
 }
 

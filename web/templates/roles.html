@@ -39,7 +39,7 @@
 
 <div class="action-bar" data-reveal="up">
   <div class="info-pill"><i class="fas fa-user-tag"></i> Все роли этого сервера</div>
-  <button class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Создать новую роль</button>
+  <button type="button" class="btn-add" onclick="openNameModal()"><i class="fas fa-plus"></i> Создать новую роль</button>
 </div>
 
 <div id="roles-list" data-reveal="up">
@@ -58,8 +58,8 @@
       <input type="color" id="role-color" class="color-picker" value="#d4a843" aria-label="Цвет роли">
     </div>
     <div class="modal-actions">
-      <button onclick="createRole()" class="btn-exec"><i class="fas fa-check"></i> Создать</button>
-      <button onclick="closeModal()" class="btn-cancel">Отмена</button>
+      <button type="button" onclick="createRole()" class="btn-exec"><i class="fas fa-check"></i> Создать</button>
+      <button type="button" onclick="closeModal()" class="btn-cancel">Отмена</button>
     </div>
   </div>
 </div>
@@ -109,7 +109,7 @@ async function loadRoles() {
           '<div class="roles-members"><i class="fas fa-users"></i> ' + (role.members || 0) + ' участников</div></div>' +
         '</div>' +
         '<div class="roles-actions">' +
-          '<button class="btn-sm btn-delete" onclick="deleteRole(\'' + role.id + '\',\'' + esc(role.name).replace(/'/g, "\\'") + '\')" title="Удалить"><i class="fas fa-trash"></i></button>' +
+          '<button type="button" class="btn-sm btn-delete" onclick="deleteRole(\'' + role.id + '\',\'' + esc(role.name).replace(/'/g, "\\'") + '\')" title="Удалить"><i class="fas fa-trash"></i></button>' +
         '</div>' +
       '</div>';
     }).join('');

@@ -53,7 +53,7 @@
         <option value="Орёл">Орёл</option>
         <option value="Решка">Решка</option>
       </select>
-      <button class="fn-btn" id="fnCoinGo"><i class="fas fa-play"></i> Подбросить</button>
+      <button type="button" class="fn-btn" id="fnCoinGo"><i class="fas fa-play"></i> Подбросить</button>
     </div>
     <div class="fn-res" id="fnCoinRes"></div>
   </div>
@@ -63,7 +63,7 @@
     <div class="fn-sub">Как /dice: от 1 до 5 костей; сумма появляется, когда костей больше одной.</div>
     <div class="fn-row">
       <input class="fn-inp" id="fnDiceN" type="number" min="1" max="5" value="1" style="max-width:90px">
-      <button class="fn-btn" id="fnDiceGo"><i class="fas fa-play"></i> Бросить</button>
+      <button type="button" class="fn-btn" id="fnDiceGo"><i class="fas fa-play"></i> Бросить</button>
     </div>
     <div class="fn-res" id="fnDiceRes"></div>
   </div>
@@ -72,9 +72,9 @@
     <h3><i class="fas fa-hand-scissors"></i> Камень-ножницы-бумага</h3>
     <div class="fn-sub">Как /rps: бот выбирает честно случайно, таблица побед — командная.</div>
     <div class="fn-row">
-      <button class="fn-btn ghost" data-choice="камень"><i class="fas fa-hand-back-fist"></i> Камень</button>
-      <button class="fn-btn ghost" data-choice="бумага"><i class="fas fa-hand"></i> Бумага</button>
-      <button class="fn-btn ghost" data-choice="ножницы"><i class="fas fa-hand-scissors"></i> Ножницы</button>
+      <button type="button" class="fn-btn ghost" data-choice="камень"><i class="fas fa-hand-back-fist"></i> Камень</button>
+      <button type="button" class="fn-btn ghost" data-choice="бумага"><i class="fas fa-hand"></i> Бумага</button>
+      <button type="button" class="fn-btn ghost" data-choice="ножницы"><i class="fas fa-hand-scissors"></i> Ножницы</button>
     </div>
     <div class="fn-res" id="fnRpsRes"></div>
   </div>
@@ -84,7 +84,7 @@
     <div class="fn-sub">Как /8ball: двенадцать ответов, тон ответа — как цвет эмбеда команды.</div>
     <div class="fn-row">
       <input class="fn-inp" id="fnBallQ" placeholder="Твой вопрос…" maxlength="200">
-      <button class="fn-btn" id="fnBallGo"><i class="fas fa-play"></i> Спросить</button>
+      <button type="button" class="fn-btn" id="fnBallGo"><i class="fas fa-play"></i> Спросить</button>
     </div>
     <div class="fn-res" id="fnBallRes"></div>
   </div>
@@ -93,8 +93,8 @@
     <h3><i class="fas fa-comment-dots"></i> Шутки и цитаты</h3>
     <div class="fn-sub">Списки команд !joke и !quote без изменений — те же десять шуток и двенадцать цитат.</div>
     <div class="fn-row">
-      <button class="fn-btn" id="fnJokeGo"><i class="fas fa-face-laugh"></i> Шутку</button>
-      <button class="fn-btn ghost" id="fnQuoteGo"><i class="fas fa-quote-left"></i> Цитату</button>
+      <button type="button" class="fn-btn" id="fnJokeGo"><i class="fas fa-face-laugh"></i> Шутку</button>
+      <button type="button" class="fn-btn ghost" id="fnQuoteGo"><i class="fas fa-quote-left"></i> Цитату</button>
     </div>
     <div class="fn-res" id="fnTextRes"></div>
   </div>
@@ -104,7 +104,7 @@
     <div class="fn-sub">Как /random-member: боты не участвуют, фильтр по роли — тот же. Нужен живой бот.</div>
     <div class="fn-row">
       <select class="fn-sel" id="fnRole"><option value="">Все участники</option></select>
-      <button class="fn-btn" id="fnMemberGo"><i class="fas fa-dice-d20"></i> Тянуть</button>
+      <button type="button" class="fn-btn" id="fnMemberGo"><i class="fas fa-dice-d20"></i> Тянуть</button>
     </div>
     <div class="fn-hint" id="fnMemberHint">Загружаю роли…</div>
     <div class="fn-res" id="fnMemberRes"></div>
@@ -114,9 +114,9 @@
     <h3><i class="fas fa-image"></i> Галерея</h3>
     <div class="fn-sub">Как !meme / !cat / !dog — те же внешние сервисы и те же тексты при сбое.</div>
     <div class="fn-row">
-      <button class="fn-btn" id="fnMemeGo"><i class="fas fa-face-grin-squint"></i> Мем</button>
-      <button class="fn-btn ghost" id="fnCatGo"><i class="fas fa-cat"></i> Кот</button>
-      <button class="fn-btn ghost" id="fnDogGo"><i class="fas fa-dog"></i> Собака</button>
+      <button type="button" class="fn-btn" id="fnMemeGo"><i class="fas fa-face-grin-squint"></i> Мем</button>
+      <button type="button" class="fn-btn ghost" id="fnCatGo"><i class="fas fa-cat"></i> Кот</button>
+      <button type="button" class="fn-btn ghost" id="fnDogGo"><i class="fas fa-dog"></i> Собака</button>
     </div>
     <div class="fn-res" id="fnGal">
       <img class="fn-img" id="fnGalImg" alt="Картинка из галереи">

@@ -65,7 +65,7 @@
   <div class="sl-row">
     <input class="sl-inp wide" id="slName" maxlength="80" placeholder="Название политики">
     <input class="sl-inp wide" id="slDesc" maxlength="200" placeholder="Описание (необязательно)">
-    <button class="sl-btn" id="slCreate"><i class="fas fa-floppy-disk"></i> Создать</button>
+    <button type="button" class="sl-btn" id="slCreate"><i class="fas fa-floppy-disk"></i> Создать</button>
   </div>
   <div class="sl-msg" id="slNewMsg"></div>
 </div>
@@ -83,7 +83,7 @@
     </select>
     <input class="sl-inp" id="slCfgResp" type="number" min="0" max="100000" placeholder="ответ, мин">
     <input class="sl-inp" id="slCfgRes" type="number" min="0" max="100000" placeholder="решение, мин">
-    <button class="sl-btn" id="slCfgGo"><i class="fas fa-check"></i> Применить</button>
+    <button type="button" class="sl-btn" id="slCfgGo"><i class="fas fa-check"></i> Применить</button>
   </div>
   <div class="sl-msg" id="slCfgMsg"></div>
 </div>
@@ -102,7 +102,7 @@
       <h3><i class="fas fa-triangle-exclamation"></i> Нарушения</h3>
       <div class="sl-sub">Что детектор уже записал — то же, что отвечает /sla-breaches, свежие сверху. «Перепроверить» прогоняет детектор по всем тикетам заново.</div>
       <div class="sl-row" id="slScanRow" style="display:none;margin-bottom:10px">
-        <button class="sl-btn ghost" id="slScan"><i class="fas fa-rotate"></i> Перепроверить тикеты</button>
+        <button type="button" class="sl-btn ghost" id="slScan"><i class="fas fa-rotate"></i> Перепроверить тикеты</button>
       </div>
       <div id="slBreaches">
         <div class="sk-card" style="height:48px;margin-bottom:8px"></div>
@@ -117,7 +117,7 @@
       <div class="sl-sub">Как /sla-status: политика, дедлайны и остаток времени по одному тикету.</div>
       <div class="sl-row">
         <input class="sl-inp wide" id="slTid" placeholder="ID тикета">
-        <button class="sl-btn" id="slTicketGo"><i class="fas fa-play"></i> Проверить</button>
+        <button type="button" class="sl-btn" id="slTicketGo"><i class="fas fa-play"></i> Проверить</button>
       </div>
       <div class="sl-card" id="slTicket"></div>
       <div class="sl-msg" id="slTicketMsg"></div>
@@ -131,7 +131,7 @@
           <option value="30" selected>за 30 дней</option>
           <option value="90">за 90 дней</option>
         </select>
-        <button class="sl-btn" id="slReportGo"><i class="fas fa-play"></i> Считать</button>
+        <button type="button" class="sl-btn" id="slReportGo"><i class="fas fa-play"></i> Считать</button>
       </div>
       <div class="sl-rep" id="slReport"></div>
       <div class="sl-msg" id="slRepMsg"></div>
@@ -140,8 +140,8 @@
       <h3><i class="fas fa-file-csv"></i> Выгрузки</h3>
       <div class="sl-sub">Политики и нарушения — в CSV для таблиц.</div>
       <div class="sl-row">
-        <button class="sl-btn ghost" id="slCsvP"><i class="fas fa-file-csv"></i> Политики</button>
-        <button class="sl-btn ghost" id="slCsvB"><i class="fas fa-file-csv"></i> Нарушения</button>
+        <button type="button" class="sl-btn ghost" id="slCsvP"><i class="fas fa-file-csv"></i> Политики</button>
+        <button type="button" class="sl-btn ghost" id="slCsvB"><i class="fas fa-file-csv"></i> Нарушения</button>
       </div>
     </div>
   </div>
@@ -185,7 +185,7 @@ function renderPolicies(list) {
       return '<div class="sl-pol"><div class="head"><div class="nm">' + esc(pol.name) +
         '<small>' + esc(pol.description || 'без описания') + '</small></div>' +
         '<span class="pid">' + esc(pol.policy_id) + '</span>' +
-        (CAN_EDIT ? '<button class="sl-del" title="Удалить политику" onclick="slDelete(\'' + esc(pol.policy_id) + '\', \'' + esc(pol.name) + '\')"><i class="fas fa-trash"></i></button>' : '') +
+        (CAN_EDIT ? '<button type="button" class="sl-del" title="Удалить политику" onclick="slDelete(\'' + esc(pol.policy_id) + '\', \'' + esc(pol.name) + '\')"><i class="fas fa-trash"></i></button>' : '') +
         '</div><div class="sl-lims">' + (prioLims(pol) || '<span class="sl-chip cond">лимиты не заданы</span>') + conds + '</div></div>';
     }).join('');
   }

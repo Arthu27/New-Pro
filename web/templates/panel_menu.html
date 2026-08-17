@@ -86,11 +86,11 @@
   </div>
 
   <div class="pm-tabs">
-    <button class="pm-tab active" id="tab-mod" onclick="selectPanel('mod')">
+    <button type="button" class="pm-tab active" id="tab-mod" onclick="selectPanel('mod')">
       <span class="pico" style="background:rgba(46,204,113,0.16);color:#2ecc71;"><i class="fas fa-shield-halved"></i></span>
       Модератор
     </button>
-    <button class="pm-tab" id="tab-admin" onclick="selectPanel('admin')">
+    <button type="button" class="pm-tab" id="tab-admin" onclick="selectPanel('admin')">
       <span class="pico" style="background:rgba(231,76,60,0.16);color:#e74c3c;"><i class="fas fa-user-tie"></i></span>
       Администратор
     </button>
@@ -111,9 +111,9 @@
     </div>
     <div id="pm-list"></div>
     <div class="pm-actions" style="margin-top:18px; justify-content:flex-end;">
-      <button class="pm-btn pm-btn-blue" onclick="selectAll()"><i class="fas fa-check-double"></i> Выбрать всё</button>
-      <button class="pm-btn pm-btn-red" onclick="clearAll()"><i class="fas fa-times"></i> Сбросить</button>
-      <button class="pm-btn pm-btn-green" onclick="savePanel()"><i class="fas fa-save"></i> Сохранить</button>
+      <button type="button" class="pm-btn pm-btn-blue" onclick="selectAll()"><i class="fas fa-check-double"></i> Выбрать всё</button>
+      <button type="button" class="pm-btn pm-btn-red" onclick="clearAll()"><i class="fas fa-times"></i> Сбросить</button>
+      <button type="button" class="pm-btn pm-btn-green" onclick="savePanel()"><i class="fas fa-save"></i> Сохранить</button>
     </div>
   </div>
 </div>

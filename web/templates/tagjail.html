@@ -89,7 +89,7 @@
       <div id="tag-chips"><span style="opacity:.55;font-size:13px">Загрузка…</span></div>
       <div class="tj-add-row">
         <input class="tj-input" id="new-tag" placeholder="Тег чужого сервера, .gg/, discord.gg …" maxlength="50" aria-label="Тег чужого сервера, .gg/, discord.gg …">
-        <button class="tj-btn" onclick="addTag()"><i class="fas fa-plus"></i> Добавить</button>
+        <button type="button" class="tj-btn" onclick="addTag()"><i class="fas fa-plus"></i> Добавить</button>
       </div>
     </div>
   </div>
@@ -99,9 +99,9 @@
     <div class="tj-body">
       <div class="tj-form-grid" id="cfg-grid"><div style="opacity:.55;font-size:13px">Загрузка…</div></div>
       <div class="tj-actions">
-        <button class="tj-btn" onclick="saveConfig()"><i class="fas fa-save"></i> Сохранить</button>
-        <button class="tj-btn ghost" onclick="loadState()"><i class="fas fa-rotate"></i> Обновить</button>
-        <button class="tj-btn danger" onclick="runScan()"><i class="fas fa-radar"></i> Обход сервера</button>
+        <button type="button" class="tj-btn" onclick="saveConfig()"><i class="fas fa-save"></i> Сохранить</button>
+        <button type="button" class="tj-btn ghost" onclick="loadState()"><i class="fas fa-rotate"></i> Обновить</button>
+        <button type="button" class="tj-btn danger" onclick="runScan()"><i class="fas fa-radar"></i> Обход сервера</button>
       </div>
     </div>
   </div>
@@ -233,7 +233,7 @@ function renderJail(){
           <div class="tj-jmeta">${ago(j.since)} · ролей сохранено: ${j.roles_saved}
             ${j.tag ? ' · тег <span class="tj-jtag">'+esc(j.tag)+'</span>' : ''}</div>
         </div>
-        <button class="tj-btn small ghost" onclick="unjail('${j.user_id}')"><i class="fas fa-door-open"></i> Выпустить</button>
+        <button type="button" class="tj-btn small ghost" onclick="unjail('${j.user_id}')"><i class="fas fa-door-open"></i> Выпустить</button>
       </div>`).join('')
     : '<div style="opacity:.55;font-size:13px">Джейл пуст — чисто</div>';
 }

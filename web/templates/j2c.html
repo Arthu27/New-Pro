@@ -58,7 +58,7 @@
       <input class="inp" id="j2RoomSearch" placeholder="Поиск по комнатам — канал или владелец" style="margin-bottom:10px">
       <div id="j2Rooms"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>
       <div style="margin-top:10px;display:none" id="j2PruneWrap">
-        <button class="btn btn-ghost" id="j2Prune" aria-label="Вычистить сирот из реестра" onclick="j2PruneNow()"><i class="fas fa-broom"></i> Вычистить сирот</button>
+        <button type="button" class="btn btn-ghost" id="j2Prune" aria-label="Вычистить сирот из реестра" onclick="j2PruneNow()"><i class="fas fa-broom"></i> Вычистить сирот</button>
       </div>
     </div>
   </div>
@@ -84,7 +84,7 @@
         <div><label for="j2Template">Шаблон имени ({user} — владелец)</label>
           <input class="inp" id="j2Template" maxlength="120" placeholder="Комната {user}"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn" onclick="j2Save()"><i class="fas fa-check"></i> Сохранить</button>
+          <button type="button" class="btn" onclick="j2Save()"><i class="fas fa-check"></i> Сохранить</button>
         </div>
       </div>
       <div class="j2-sub" id="j2Msg" style="margin:8px 0 0"></div>

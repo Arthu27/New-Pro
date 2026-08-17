@@ -89,7 +89,7 @@ function renderKpis(d) {
     '<div class="mr-kpi' + (hot ? ' hot' : '') + '"><i class="fas fa-triangle-exclamation"></i><div><b>' + d.recidivists_total + '</b> <span>рецидивистов (3+)</span></div></div>' +
     '<div class="mr-ctl"><div class="mr-seg">' +
       [7, 14, 30].map(function (n) {
-        return '<button class="' + (n === d.days ? 'on' : '') + '" onclick="mrSetDays(' + n + ')">' + n + ' дн</button>';
+        return '<button type="button" class="' + (n === d.days ? 'on' : '') + '" onclick="mrSetDays(' + n + ')">' + n + ' дн</button>';
       }).join('') + '</div>' +
       '<a class="mr-exp" id="mrCsv" href="/api/mod-report.csv?days=' + d.days + '" download><i class="fas fa-file-csv"></i> CSV</a></div>';
 }

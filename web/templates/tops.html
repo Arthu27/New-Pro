@@ -89,7 +89,7 @@ function renderKpis(s) {
 function renderTabs() {
   var icons = {messages: 'fa-message', voice: 'fa-microphone', balance: 'fa-coins'};
   document.getElementById('tpTabs').innerHTML = Object.keys(CATS).map(function (key) {
-    return '<button class="tp-tab' + (key === CAT ? ' on' : '') + '" onclick="tpGo(\'' + key + '\')">' +
+    return '<button type="button" class="tp-tab' + (key === CAT ? ' on' : '') + '" onclick="tpGo(\'' + key + '\')">' +
       '<i class="fas ' + icons[key] + '"></i> ' + esc(CATS[key]) + '</button>';
   }).join('');
 }

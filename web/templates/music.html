@@ -114,13 +114,13 @@ function renderControls() {
   if (!CAN_EDIT || STATE.offline) { box.innerHTML = ''; return; }
   var d = STATE;
   var pp = d.paused
-    ? '<button class="mu-btn main" onclick="muAction(\x27resume\x27)"><i class="fas fa-play"></i> Продолжить</button>'
-    : '<button class="mu-btn main" onclick="muAction(\x27pause\x27)"><i class="fas fa-pause"></i> Пауза</button>';
+    ? '<button type="button" class="mu-btn main" onclick="muAction(\x27resume\x27)"><i class="fas fa-play"></i> Продолжить</button>'
+    : '<button type="button" class="mu-btn main" onclick="muAction(\x27pause\x27)"><i class="fas fa-pause"></i> Пауза</button>';
   box.innerHTML = pp +
-    '<button class="mu-btn" onclick="muAction(\x27skip\x27)"><i class="fas fa-forward"></i> Дальше</button>' +
-    '<button class="mu-btn" onclick="muAction(\x27shuffle\x27)"><i class="fas fa-shuffle"></i> Перемешать</button>' +
-    '<button class="mu-btn" onclick="muClear()"><i class="fas fa-broom"></i> Очистить очередь</button>' +
-    '<button class="mu-btn danger" onclick="muLeave()"><i class="fas fa-door-open"></i> Отключить бота</button>';
+    '<button type="button" class="mu-btn" onclick="muAction(\x27skip\x27)"><i class="fas fa-forward"></i> Дальше</button>' +
+    '<button type="button" class="mu-btn" onclick="muAction(\x27shuffle\x27)"><i class="fas fa-shuffle"></i> Перемешать</button>' +
+    '<button type="button" class="mu-btn" onclick="muClear()"><i class="fas fa-broom"></i> Очистить очередь</button>' +
+    '<button type="button" class="mu-btn danger" onclick="muLeave()"><i class="fas fa-door-open"></i> Отключить бота</button>';
 }
 
 function renderQueue() {
@@ -137,7 +137,7 @@ function renderQueue() {
     return;
   }
   box.innerHTML = d.queue.map(function (s) {
-    var del = CAN_EDIT ? '<button class="mu-del" onclick="muRemove(' + s.n + ')" title="Убрать №' + s.n + '" aria-label="Убрать"><i class="fas fa-xmark"></i></button>' : '';
+    var del = CAN_EDIT ? '<button type="button" class="mu-del" onclick="muRemove(' + s.n + ')" title="Убрать №' + s.n + '" aria-label="Убрать"><i class="fas fa-xmark"></i></button>' : '';
     return '<div class="mu-row' + (s.n === 1 ? ' first' : '') + '"><span class="mu-num">' + s.n + '</span>' +
       '<div class="mu-q">' + esc(s.query) + '</div>' +
       '<span class="mu-by">' + esc(s.requester) + '</span>' + del + '</div>';

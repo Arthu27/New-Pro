@@ -64,7 +64,7 @@
       <option value="kick">kick — выгнать</option>
       <option value="ban">ban — забанить</option>
     </select>
-    <button class="sc-btn" id="scNewSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
+    <button type="button" class="sc-btn" id="scNewSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
   </div>
   <div class="sc-msg" id="scNewMsg"></div>
 </div>
@@ -76,7 +76,7 @@
       <div class="sc-sub">Вставьте подозрительный текст — домены проверит тот самый сканер бота (точное совпадение и поддомены).</div>
       <div class="sc-row">
         <input class="sc-inp" id="scScanText" placeholder="напр. лови нитро https://discord-nitro.gift/claim">
-        <button class="sc-btn" id="scScan"><i class="fas fa-radar"></i> Проверить</button>
+        <button type="button" class="sc-btn" id="scScan"><i class="fas fa-radar"></i> Проверить</button>
       </div>
       <div class="sc-result" id="scScanRes"></div>
     </div>
@@ -90,7 +90,7 @@
           <option value="1">стандартный аватар</option>
           <option value="0">свой аватар</option>
         </select>
-        <button class="sc-btn" id="scFake"><i class="fas fa-flask"></i> Оценить</button>
+        <button type="button" class="sc-btn" id="scFake"><i class="fas fa-flask"></i> Оценить</button>
       </div>
       <div id="scFakeRes"></div>
     </div>
@@ -107,7 +107,7 @@
           <option value="8">8 сообщений</option>
           <option value="12">12 сообщений</option>
         </select>
-        <button class="sc-btn" id="scSpam"><i class="fas fa-forward-fast"></i> Прогнать</button>
+        <button type="button" class="sc-btn" id="scSpam"><i class="fas fa-forward-fast"></i> Прогнать</button>
       </div>
       <div id="scSpamRes"></div>
     </div>
@@ -115,7 +115,7 @@
       <h3><i class="fas fa-book-skull"></i> Справочник правил</h3>
       <div class="sc-sub">Списки бота как есть: с какими доменами и именами боремся. CSV — с настройками.</div>
       <div class="sc-rules" id="scRules"></div>
-      <div style="margin-top:10px"><button class="sc-btn ghost" id="scCsv"><i class="fas fa-file-csv"></i> Настройки и правила в CSV</button></div>
+      <div style="margin-top:10px"><button type="button" class="sc-btn ghost" id="scCsv"><i class="fas fa-file-csv"></i> Настройки и правила в CSV</button></div>
     </div>
   </div>
 </div>
@@ -140,7 +140,7 @@ function loadOverview() {
     var c = d.cfg;
     document.getElementById('scKpis').innerHTML = c.features.map(function (f) {
       var sw = CAN_EDIT
-        ? '<div class="sw"><button class="sc-sw" onclick="scToggle(\'' + f.key + '\', ' + (!f.enabled) + ')"><i class="fas fa-power-off"></i> ' + (f.enabled ? 'выключить' : 'включить') + '</button></div>' : '';
+        ? '<div class="sw"><button type="button" class="sc-sw" onclick="scToggle(\'' + f.key + '\', ' + (!f.enabled) + ')"><i class="fas fa-power-off"></i> ' + (f.enabled ? 'выключить' : 'включить') + '</button></div>' : '';
       return '<div class="sc-card"><div class="lab"><i class="fas fa-shield-halved"></i> ' + esc(f.label) + '</div>' +
         '<div class="v ' + (f.enabled ? 'on' : 'off') + '">' + (f.enabled ? 'включён' : 'выключен') + '</div>' + sw + '</div>';
     }).join('');

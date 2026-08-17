@@ -61,7 +61,7 @@
       <option value="hour">часов</option>
       <option value="day">дней</option>
     </select>
-    <button class="ld-btn" id="ldAdd"><i class="fas fa-floppy-disk"></i> Добавить</button>
+    <button type="button" class="ld-btn" id="ldAdd"><i class="fas fa-floppy-disk"></i> Добавить</button>
   </div>
   <div class="ld-msg" id="ldAddMsg"></div>
 </div>
@@ -81,7 +81,7 @@
       <div class="ld-sub">Что грозит участнику прямо сейчас — логика /ladder-test. Наказание не применяется.</div>
       <div class="ld-row">
         <input class="ld-inp wide" id="ldUser" placeholder="ID участника">
-        <button class="ld-btn" id="ldSimGo"><i class="fas fa-play"></i> Проверить</button>
+        <button type="button" class="ld-btn" id="ldSimGo"><i class="fas fa-play"></i> Проверить</button>
       </div>
       <div class="ld-sim" id="ldSim"></div>
       <div class="ld-msg" id="ldSimMsg"></div>
@@ -90,7 +90,7 @@
       <h3><i class="fas fa-image"></i> Карточка лестницы</h3>
       <div class="ld-sub">Та самая картинка, что шлёт команда /ladder.</div>
       <img class="ld-card" id="ldCard" alt="Карточка лестницы">
-      <div style="margin-top:10px"><button class="ld-btn ghost" id="ldCsv"><i class="fas fa-file-csv"></i> Ступени в CSV</button></div>
+      <div style="margin-top:10px"><button type="button" class="ld-btn ghost" id="ldCsv"><i class="fas fa-file-csv"></i> Ступени в CSV</button></div>
     </div>
   </div>
 </div>
@@ -127,7 +127,7 @@ function load() {
         return '<div class="ld-step"><div class="n">' + s.count + '<small>' + plural(s.count, 'варн', 'варна', 'варнов') + '</small></div>' +
           '<div class="lbl">' + esc(s.label) + '</div>' +
           '<div class="hot">на ступени: <b>' + hot + '</b></div>' +
-          (CAN_EDIT ? '<button class="ld-del" title="Убрать ступень" onclick="ldRemove(' + s.count + ')"><i class="fas fa-trash"></i></button>' : '') + '</div>';
+          (CAN_EDIT ? '<button type="button" class="ld-del" title="Убрать ступень" onclick="ldRemove(' + s.count + ')"><i class="fas fa-trash"></i></button>' : '') + '</div>';
       }).join('');
     }
   }).catch(function () {});

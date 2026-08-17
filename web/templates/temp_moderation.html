@@ -123,11 +123,11 @@
 
 <!-- Tabs -->
 <div class="tm-tabs">
-  <button class="tm-tab active" data-tab="muts" onclick="switchTab('muts')"><i class="fas fa-comment-slash"></i> Мьюты <span class="count" id="cntMuts">0</span></button>
-  <button class="tm-tab" data-tab="bans" onclick="switchTab('bans')"><i class="fas fa-ban"></i> Баны <span class="count" id="cntBans">0</span></button>
-  <button class="tm-tab" data-tab="kicks" onclick="switchTab('kicks')"><i class="fas fa-user-minus"></i> Кики <span class="count" id="cntKicks">0</span></button>
-  <button class="tm-tab" data-tab="scheduled" onclick="switchTab('scheduled')"><i class="fas fa-clock"></i> Запланировано <span class="count" id="cntScheduled">0</span></button>
-  <button class="tm-tab" data-tab="new" onclick="switchTab('new')"><i class="fas fa-plus"></i> Новое</button>
+  <button type="button" class="tm-tab active" data-tab="muts" onclick="switchTab('muts')"><i class="fas fa-comment-slash"></i> Мьюты <span class="count" id="cntMuts">0</span></button>
+  <button type="button" class="tm-tab" data-tab="bans" onclick="switchTab('bans')"><i class="fas fa-ban"></i> Баны <span class="count" id="cntBans">0</span></button>
+  <button type="button" class="tm-tab" data-tab="kicks" onclick="switchTab('kicks')"><i class="fas fa-user-minus"></i> Кики <span class="count" id="cntKicks">0</span></button>
+  <button type="button" class="tm-tab" data-tab="scheduled" onclick="switchTab('scheduled')"><i class="fas fa-clock"></i> Запланировано <span class="count" id="cntScheduled">0</span></button>
+  <button type="button" class="tm-tab" data-tab="new" onclick="switchTab('new')"><i class="fas fa-plus"></i> Новое</button>
 </div>
 
 <!-- Muts list -->
@@ -173,20 +173,20 @@
       <!-- Duration presets -->
       <label style="display:block !important; font-weight:700 !important; margin:8px 0 !important;">Длительность</label>
       <div class="tm-presets" id="durationPresets">
-        <button class="tm-preset" data-dur="30s" onclick="setDuration('30s', this)">30с</button>
-        <button class="tm-preset" data-dur="1m" onclick="setDuration('1m', this)">1м</button>
-        <button class="tm-preset" data-dur="5m" onclick="setDuration('5m', this)">5м</button>
-        <button class="tm-preset" data-dur="15m" onclick="setDuration('15m', this)">15м</button>
-        <button class="tm-preset" data-dur="30m" onclick="setDuration('30m', this)">30м</button>
-        <button class="tm-preset" data-dur="1h" onclick="setDuration('1h', this)">1ч</button>
-        <button class="tm-preset" data-dur="3h" onclick="setDuration('3h', this)">3ч</button>
-        <button class="tm-preset" data-dur="6h" onclick="setDuration('6h', this)">6ч</button>
-        <button class="tm-preset" data-dur="12h" onclick="setDuration('12h', this)">12ч</button>
-        <button class="tm-preset" data-dur="1d" onclick="setDuration('1d', this)">1д</button>
-        <button class="tm-preset" data-dur="3d" onclick="setDuration('3d', this)">3д</button>
-        <button class="tm-preset" data-dur="7d" onclick="setDuration('7d', this)">7д</button>
-        <button class="tm-preset" data-dur="14d" onclick="setDuration('14d', this)">14д</button>
-        <button class="tm-preset" data-dur="30d" onclick="setDuration('30d', this)">30д</button>
+        <button type="button" class="tm-preset" data-dur="30s" onclick="setDuration('30s', this)">30с</button>
+        <button type="button" class="tm-preset" data-dur="1m" onclick="setDuration('1m', this)">1м</button>
+        <button type="button" class="tm-preset" data-dur="5m" onclick="setDuration('5m', this)">5м</button>
+        <button type="button" class="tm-preset" data-dur="15m" onclick="setDuration('15m', this)">15м</button>
+        <button type="button" class="tm-preset" data-dur="30m" onclick="setDuration('30m', this)">30м</button>
+        <button type="button" class="tm-preset" data-dur="1h" onclick="setDuration('1h', this)">1ч</button>
+        <button type="button" class="tm-preset" data-dur="3h" onclick="setDuration('3h', this)">3ч</button>
+        <button type="button" class="tm-preset" data-dur="6h" onclick="setDuration('6h', this)">6ч</button>
+        <button type="button" class="tm-preset" data-dur="12h" onclick="setDuration('12h', this)">12ч</button>
+        <button type="button" class="tm-preset" data-dur="1d" onclick="setDuration('1d', this)">1д</button>
+        <button type="button" class="tm-preset" data-dur="3d" onclick="setDuration('3d', this)">3д</button>
+        <button type="button" class="tm-preset" data-dur="7d" onclick="setDuration('7d', this)">7д</button>
+        <button type="button" class="tm-preset" data-dur="14d" onclick="setDuration('14d', this)">14д</button>
+        <button type="button" class="tm-preset" data-dur="30d" onclick="setDuration('30d', this)">30д</button>
       </div>
       <div class="tm-input-group"   style="margin-top: 10px;">
         <label>Своё (1ч, 2д 5ч, 30м)</label>
@@ -199,8 +199,8 @@
       </div>
 
       <div  >
-        <button class="form-btn" onclick="applyAction()"><i class="fas fa-check"></i> Применить</button>
-        <button class="btn-ghost" onclick="resetForm()"   style="font-weight: 700; background: transparent;"><i class="fas fa-times"></i> Сбросить</button>
+        <button type="button" class="form-btn" onclick="applyAction()"><i class="fas fa-check"></i> Применить</button>
+        <button type="button" class="btn-ghost" onclick="resetForm()"   style="font-weight: 700; background: transparent;"><i class="fas fa-times"></i> Сбросить</button>
       </div>
     </div>
   </div>
@@ -247,7 +247,7 @@
       </div>
       <div class="tm-action-countdown${urgent}" data-until="${item.until}">${fmtRem(item.until)}</div>
       <div class="tm-action-controls">
-        <button class="tm-btn-sm tm-btn-cancel" onclick="cancelAction('${type}', '${item.user_id}')" title="Снять досрочно">↩</button>
+        <button type="button" class="tm-btn-sm tm-btn-cancel" onclick="cancelAction('${type}', '${item.user_id}')" title="Снять досрочно">↩</button>
       </div>
     </div>`;
   }
@@ -271,7 +271,7 @@
       </div>
       <div class="tm-action-countdown"   style="background: rgba(96,165,250,0.10);">через ${fmtRem(item.run_at)}</div>
       <div class="tm-action-controls">
-        <button class="tm-btn-sm tm-btn-remove" onclick="cancelScheduled('${item.id}')" title="Отменить">×</button>
+        <button type="button" class="tm-btn-sm tm-btn-remove" onclick="cancelScheduled('${item.id}')" title="Отменить">×</button>
       </div>
     </div>`;
   }

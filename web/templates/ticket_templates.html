@@ -55,10 +55,10 @@
   </div>
   
   <div style="margin-top: 16px; display: flex; gap: 12px;">
-    <button class="control-btn primary" onclick="createTemplate()">
+    <button type="button" class="control-btn primary" onclick="createTemplate()">
       <i class="fas fa-plus"></i> Создать шаблон
     </button>
-    <button class="control-btn" onclick="clearForm()">
+    <button type="button" class="control-btn" onclick="clearForm()">
       <i class="fas fa-times"></i> Очистить
     </button>
   </div>
@@ -109,10 +109,10 @@ function displayTemplates(templates) {
           <div style="font-size: 12px; color: var(--text-muted);">${template.category}</div>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button class="control-btn" onclick="editTemplate('${template.id}')" style="padding: 6px 10px;">
+          <button type="button" class="control-btn" onclick="editTemplate('${template.id}')" style="padding: 6px 10px;" aria-label="Редактировать">
             <i class="fas fa-edit"></i>
           </button>
-          <button class="control-btn" onclick="deleteTemplate('${template.id}')" style="padding: 6px 10px;">
+          <button type="button" class="control-btn" onclick="deleteTemplate('${template.id}')" style="padding: 6px 10px;" aria-label="Удалить">
             <i class="fas fa-trash"></i>
           </button>
         </div>

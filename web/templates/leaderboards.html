@@ -42,9 +42,9 @@
 </style>
 
 <div class="lb-tabs" id="lbTabs">
-  <button class="lb-tab on" data-cat="messages" onclick="setCat('messages', this)"><i class="fas fa-comments"></i> Сообщения</button>
-  <button class="lb-tab" data-cat="voice" onclick="setCat('voice', this)"><i class="fas fa-microphone"></i> Голос</button>
-  <button class="lb-tab" data-cat="balance" onclick="setCat('balance', this)"><i class="fas fa-coins"></i> Баланс</button>
+  <button type="button" class="lb-tab on" data-cat="messages" onclick="setCat('messages', this)"><i class="fas fa-comments"></i> Сообщения</button>
+  <button type="button" class="lb-tab" data-cat="voice" onclick="setCat('voice', this)"><i class="fas fa-microphone"></i> Голос</button>
+  <button type="button" class="lb-tab" data-cat="balance" onclick="setCat('balance', this)"><i class="fas fa-coins"></i> Баланс</button>
 </div>
 
 <div class="lb-grid">
@@ -64,7 +64,7 @@
       <div class="lb-sub">Место по полным спискам — не только в семёрке. Значения теми мерками, что у бота: сообщения, время войса, сумма кошелька и банка.</div>
       <div class="lb-rowline" style="margin-top:0">
         <input class="lb-inp" id="lbRankInp" placeholder="ID участника">
-        <button class="lb-btn" id="lbRankGo"><i class="fas fa-magnifying-glass"></i> Найти</button>
+        <button type="button" class="lb-btn" id="lbRankGo"><i class="fas fa-magnifying-glass"></i> Найти</button>
       </div>
       <div class="lb-rankres" id="lbRankRes"></div>
       <div class="lb-msg" id="lbRankMsg"></div>
@@ -77,7 +77,7 @@
       <img class="lb-card" id="lbCard" alt="Карточка рейтинга">
       <div class="lb-rowline">
         <a class="lb-btn ghost" id="lbDl" download="leaderboard_card.png"><i class="fas fa-download"></i> Скачать PNG</a>
-        <button class="lb-btn ghost" id="lbCsv"><i class="fas fa-file-csv"></i> Весь рейтинг в CSV</button>
+        <button type="button" class="lb-btn ghost" id="lbCsv"><i class="fas fa-file-csv"></i> Весь рейтинг в CSV</button>
       </div>
     </div>
     <div class="lb-panel" id="lbSendPanel" style="display:none">
@@ -85,7 +85,7 @@
       <div class="lb-sub">Как команда !leaderboard: файл карточки + селектор категорий под ним.</div>
       <div class="lb-rowline" style="margin-top:0">
         <input class="lb-inp" id="lbSendCh" placeholder="ID текстового канала">
-        <button class="lb-btn" id="lbSend"><i class="fas fa-paper-plane"></i> Отправить</button>
+        <button type="button" class="lb-btn" id="lbSend"><i class="fas fa-paper-plane"></i> Отправить</button>
       </div>
       <div class="lb-msg" id="lbSendMsg"></div>
     </div>

@@ -107,7 +107,7 @@
     <select id="guild-select" class="guild-sel" onchange="loadMessages()" aria-label="Выбор сервера">
       <option value="">Выберите сервер...</option>
     </select>
-    <button class="sm-btn sm-btn-green" onclick="openModal()"><i class="fas fa-plus"></i> Новое сообщение</button>
+    <button type="button" class="sm-btn sm-btn-green" onclick="openModal()"><i class="fas fa-plus"></i> Новое сообщение</button>
   </div>
 
   <div id="sm-list" class="sm-grid"></div>
@@ -136,8 +136,8 @@
       </div>
     </div>
     <div class="sm-modal-actions">
-      <button class="sm-btn" onclick="closeModal()">Отмена</button>
-      <button class="sm-btn sm-btn-green" id="sm-submit" onclick="createMessage()"><i class="fas fa-save"></i> Создать</button>
+      <button type="button" class="sm-btn" onclick="closeModal()">Отмена</button>
+      <button type="button" class="sm-btn sm-btn-green" id="sm-submit" onclick="createMessage()"><i class="fas fa-save"></i> Создать</button>
     </div>
   </div>
 </div>
@@ -149,8 +149,8 @@
     <div class="sm-modal-title" style="justify-content:center;">Удалить сообщение?</div>
     <p style="opacity:.7; font-size:13px; margin:0 0 18px;">Это действие нельзя отменить.</p>
     <div class="sm-modal-actions" style="justify-content:center;">
-      <button class="sm-btn" onclick="closeDelModal()">Отмена</button>
-      <button class="sm-btn sm-btn-red" id="del-confirm"><i class="fas fa-trash"></i> Удалить</button>
+      <button type="button" class="sm-btn" onclick="closeDelModal()">Отмена</button>
+      <button type="button" class="sm-btn sm-btn-red" id="del-confirm"><i class="fas fa-trash"></i> Удалить</button>
     </div>
   </div>
 </div>
@@ -223,8 +223,8 @@ async function loadMessages(){
         + '<div class="sm-meta-item"><div class="sm-meta-val"><i class="fas fa-hourglass-half"></i>'+esc(nextRun)+'</div><div class="sm-meta-lbl">Следующий запуск</div></div>'
         + '</div>'
         + '<div class="sm-card-foot">'
-        + '<button class="sm-btn-sm" onclick="toggleMessage(\''+m.id+'\')"><i class="fas '+(m.active?'fa-pause':'fa-play')+'"></i>'+(m.active?'Пауза':'Возобновить')+'</button>'
-        + '<button class="sm-btn-sm" style="color:#ff6b6b;" onclick="askDelete(\''+m.id+'\')"><i class="fas fa-trash"></i> Удалить</button>'
+        + '<button type="button" class="sm-btn-sm" onclick="toggleMessage(\''+m.id+'\')"><i class="fas '+(m.active?'fa-pause':'fa-play')+'"></i>'+(m.active?'Пауза':'Возобновить')+'</button>'
+        + '<button type="button" class="sm-btn-sm" style="color:#ff6b6b;" onclick="askDelete(\''+m.id+'\')"><i class="fas fa-trash"></i> Удалить</button>'
         + '</div>'
         + '</div>';
     }).join('');

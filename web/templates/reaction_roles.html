@@ -53,7 +53,7 @@
   <select  id="guild-select" class="guild-sel" onchange="loadRR()" aria-label="Выбор сервера">
     <option value="">Выберите сервер...</option>
   </select>
-  <button class="btn-new" onclick="openModal()"><i class="fas fa-plus"></i> Новая панель</button>
+  <button type="button" class="btn-new" onclick="openModal()"><i class="fas fa-plus"></i> Новая панель</button>
 </div>
 
 <div class="rr-type-hint">
@@ -84,10 +84,10 @@
     <div id="rr-emoji-label" class="form-label" style="margin-bottom: 10px;">Emoji → Роль</div>
     <div id="rr-select-label" class="form-label" style="margin-bottom: 10px; display:none;">Роль (для select-menu)</div>
     <div id="rr-entries"></div>
-    <button class="btn-add-entry" onclick="addEntry()"><i class="fas fa-plus"></i> Добавить роль</button>
+    <button type="button" class="btn-add-entry" onclick="addEntry()"><i class="fas fa-plus"></i> Добавить роль</button>
     <div class="modal-actions">
-      <button class="btn-submit" onclick="createRR()">Создать и отправить</button>
-      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+      <button type="button" class="btn-submit" onclick="createRR()">Создать и отправить</button>
+      <button type="button" class="btn-cancel" onclick="closeModal()">Отмена</button>
     </div>
   </div>
 </div>
@@ -154,7 +154,7 @@ async function loadRR() {
     return '<div class="rr-card" >'+
       '<div class="rr-title">🎭 '+rr.title+'</div>'+ (isSelect ? '<span class="rr-type-badge select">📋 Select-menu</span>' : '<span class="rr-type-badge emoji">😀 Реакции</span>') + entries +
       '<div class="rr-footer"><span >'+rr.entries.length+' роль</span>'+
-      '<button class="btn-del" onclick="deleteRR(\''+rr.id+'\')">🗑 Удалить</button></div></div>';
+      '<button type="button" class="btn-del" onclick="deleteRR(\''+rr.id+'\')">🗑 Удалить</button></div></div>';
   }).join('');
 }
 
@@ -170,7 +170,7 @@ function addEntry() {
   }
   div.innerHTML = field +
     '<select class="entry-role form-input" name="entry-role" aria-label="Роль">'+roles+'</select>'+
-    '<button class="entry-del" onclick="this.parentElement.remove()">×</button>';
+    '<button type="button" class="entry-del" onclick="this.parentElement.remove()">×</button>';
   document.getElementById('rr-entries').appendChild(div);
 }
 

@@ -147,7 +147,7 @@ function renderCard(c) {
   }
   var voters = (c.voters || []).map(function (v) {
     var rm = c.can_edit
-      ? '<button class="sr-mini" title="Снять голос" onclick="srRemoveVote(\'' + esc(c.staff_id) + '\',\'' + esc(v.voter) + '\')"><i class="fas fa-xmark"></i></button>' : '';
+      ? '<button type="button" class="sr-mini" title="Снять голос" onclick="srRemoveVote(\'' + esc(c.staff_id) + '\',\'' + esc(v.voter) + '\')"><i class="fas fa-xmark"></i></button>' : '';
     return '<div class="sr-vote"><span class="vot-avg">' + esc(v.score) + '</span>' +
       '<span>' + who(v.voter, v.name) + '</span>' + rm + '</div>';
   }).join('');
@@ -156,7 +156,7 @@ function renderCard(c) {
       ' · ' + esc(m.score) + '/5 · ' + esc(m.at) + '</div><div class="txt">' + esc(m.text) + '</div></div>';
   }).join('');
   var wipe = c.can_edit
-    ? ' <button class="sr-mini" style="width:auto;padding:0 8px" title="Очистить зачётку целиком" onclick="srWipe(\'' + esc(c.staff_id) + '\')"><i class="fas fa-trash"></i></button>' : '';
+    ? ' <button type="button" class="sr-mini" style="width:auto;padding:0 8px" title="Очистить зачётку целиком" onclick="srWipe(\'' + esc(c.staff_id) + '\')"><i class="fas fa-trash"></i></button>' : '';
   box.innerHTML =
     '<div class="sr-card-head"><b>' + who(c.staff_id, c.name) + wipe + '</b>' +
     '<span><span class="sr-stars">' + esc(c.stars || starsOf(c.avg)) + '</span> <b class="sr-avg">' + esc(c.avg) + '</b> ' +

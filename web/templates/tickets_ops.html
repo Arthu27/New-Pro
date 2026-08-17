@@ -58,11 +58,11 @@
     Клик по тикету — карточка с заметками и назначением.</div>
   <div class="tp-bulkbar" id="tpBulk">
     <span id="tpBulkCount"></span>
-    <button class="tp-btn danger" onclick="tpBulkClose()"><i class="fas fa-lock"></i> Закрыть выбранные</button>
+    <button type="button" class="tp-btn danger" onclick="tpBulkClose()"><i class="fas fa-lock"></i> Закрыть выбранные</button>
   </div>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
     <input type="text" class="tp-ta" id="tpFilter" style="min-height:0;max-width:260px" placeholder="Фильтр: ID, категория, автор..." aria-label="Фильтр" oninput="renderList(STATE)">
-    <button class="tp-act" id="tpCloseOverdue" style="display:none" onclick="tpCloseOverdue()"></button>
+    <button type="button" class="tp-act" id="tpCloseOverdue" style="display:none" onclick="tpCloseOverdue()" aria-label="Закрыть просроченные тикеты"></button>
   </div>
   <div id="tpList">
     <div class="sk-row"></div>
@@ -78,9 +78,9 @@
   <div id="tpNotes"></div>
   <textarea class="tp-ta" id="tpNoteText" placeholder="Заметка для команды (видна только модераторам)..." maxlength="300" aria-label="Заметка"></textarea>
   <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-    <button class="tp-btn" onclick="tpSaveNote()"><i class="fas fa-note-sticky"></i> Сохранить заметку</button>
-    <button class="tp-act" id="tpAssignBtn" onclick="tpToggleAssign()"></button>
-    <button class="tp-act" id="tpCloseBtn" onclick="tpCloseOne()"><i class="fas fa-lock"></i> Закрыть тикет</button>
+    <button type="button" class="tp-btn" onclick="tpSaveNote()"><i class="fas fa-note-sticky"></i> Сохранить заметку</button>
+    <button type="button" class="tp-act" id="tpAssignBtn" onclick="tpToggleAssign()" aria-label="Изменить назначение тикета"></button>
+    <button type="button" class="tp-act" id="tpCloseBtn" onclick="tpCloseOne()"><i class="fas fa-lock"></i> Закрыть тикет</button>
   </div>
 </div>
 
@@ -148,7 +148,7 @@ function renderList(d) {
       '<td class="tp-id">' + esc(t.user_id || '—') + '</td>' +
       '<td class="tp-age' + (t.overdue ? ' over' : '') + '">' + age + (t.overdue ? ' просрочен' : '') + '</td>' +
       '<td>' + assign + ' ' + notes + '</td>' +
-      '<td><button class="tp-act" onclick="tpOpen(\x27' + esc(t.id) + '\x27)"><i class="fas fa-arrow-right"></i> Карточка</button></td></tr>';
+      '<td><button type="button" class="tp-act" onclick="tpOpen(\x27' + esc(t.id) + '\x27)"><i class="fas fa-arrow-right"></i> Карточка</button></td></tr>';
   }).join('');
   box.innerHTML = '<table class="tp-tb"><thead><tr><th></th><th>ID</th><th>Категория</th><th>Автор</th><th>Возраст</th><th>Ответственный</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
   renderBulk();

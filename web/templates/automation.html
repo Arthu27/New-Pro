@@ -148,7 +148,7 @@
         <span class="trg-count" id="trg-count">—</span>
         <span class="trg-cool">Кулдаун:
           <input type="number" class="au-input" id="trg-cooldown" min="0" max="3600" value="30" aria-label="Кулдаун в секундах"> сек
-          <button class="au-save" onclick="trgCooldown()"><i class="fas fa-check"></i></button>
+          <button type="button" class="au-save" onclick="trgCooldown()" aria-label="Подтвердить"><i class="fas fa-check"></i></button>
         </span>
       </div>
       <div id="trg-list"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Загружаем…</div></div>
@@ -156,16 +156,16 @@
         <input type="text" class="au-input" id="trg-new-trigger" placeholder="Триггер: правила" aria-label="Триггер">
         <input type="text" class="au-input" id="trg-new-response" placeholder="Ответ: ссылка на правила…" aria-label="Ответ">
         <label class="trg-exact-lbl" title="Срабатывать только на слово целиком, а не на подстроку"><input type="checkbox" id="trg-new-exact"> точное слово</label>
-        <button class="au-save" onclick="trgAdd()"><i class="fas fa-plus"></i> Добавить</button>
+        <button type="button" class="au-save" onclick="trgAdd()"><i class="fas fa-plus"></i> Добавить</button>
       </div>
       <div class="trg-test">
         <input type="text" class="au-input" id="trg-test-text" placeholder="Сухой прогон: напишите сообщение, напр. «скиньте правила»" aria-label="Тестовое сообщение">
-        <button class="au-save" onclick="trgTest()"><i class="fas fa-flask"></i> Прогнать</button>
+        <button type="button" class="au-save" onclick="trgTest()"><i class="fas fa-flask"></i> Прогнать</button>
       </div>
       <div id="trg-test-result"></div>
       <div class="trg-io">
         <a class="au-save au-link-btn" href="/api/automation/triggers/export" download><i class="fas fa-download"></i> Экспорт JSON</a>
-        <button class="au-save" onclick="trgImportToggle()"><i class="fas fa-upload"></i> Импорт</button>
+        <button type="button" class="au-save" onclick="trgImportToggle()"><i class="fas fa-upload"></i> Импорт</button>
       </div>
       <div class="trg-io-box" id="trg-import-box" style="display:none">
         <textarea class="au-input" id="trg-import-text" rows="5" placeholder='Вставьте JSON экспорта: {"items": [{"trigger": ..., "response": ...}]}' aria-label="JSON импорта"></textarea>
@@ -173,7 +173,7 @@
           <option value="merge">Объединить с текущими</option>
           <option value="replace">Заменить все триггеры</option>
         </select>
-        <button class="au-save" onclick="trgImportRun()"><i class="fas fa-check"></i> Импортировать</button>
+        <button type="button" class="au-save" onclick="trgImportRun()"><i class="fas fa-check"></i> Импортировать</button>
         <div class="au-sec-sub" id="trg-import-result" style="margin:0"></div>
       </div>
     </div>
@@ -189,7 +189,7 @@
         <input type="text" class="au-input" id="ml-channel" placeholder="ID канала" aria-label="ID канала" maxlength="20">
         <select class="au-input" id="ml-mode" aria-label="Режим"></select>
         <label class="trg-exact-lbl" title="Модераторы и администраторы не подпадают под замок"><input type="checkbox" id="ml-exempt" checked> моды свободны</label>
-        <button class="au-save" onclick="mlSet()"><i class="fas fa-lock"></i> Поставить</button>
+        <button type="button" class="au-save" onclick="mlSet()"><i class="fas fa-lock"></i> Поставить</button>
       </div>
       <div id="ml-msg" class="au-sec-sub" style="margin:8px 0 0"></div>
     </div>
@@ -208,11 +208,11 @@
         <label class="trg-exact-lbl"><input type="checkbox" id="ns-enabled"> включена</label>
         <input type="number" class="au-input" id="ns-channel" placeholder="ID канала (0 — канал логов)" min="0" aria-label="ID канала сводки">
         <input type="number" class="au-input" id="ns-tz" placeholder="UTC+… (напр. 3)" min="-12" max="14" aria-label="Смещение часового пояса">
-        <button class="au-save" onclick="nsSave()"><i class="fas fa-check"></i> Сохранить</button>
+        <button type="button" class="au-save" onclick="nsSave()"><i class="fas fa-check"></i> Сохранить</button>
       </div>
       <div id="ns-msg" class="au-sec-sub" style="margin:8px 0 0"></div>
       <div style="margin-top:12px">
-        <button class="au-save" onclick="nsPreview()"><i class="fas fa-rotate"></i> Статистика дня</button>
+        <button type="button" class="au-save" onclick="nsPreview()"><i class="fas fa-rotate"></i> Статистика дня</button>
         <div id="ns-preview" style="margin-top:10px"></div>
       </div>
     </div>
@@ -224,7 +224,7 @@
     <div class="au-sec-sub">Каждый шаблон, подставленный тем же рендером, что шлёт бот новичку. Пример — участник «Новенький».</div>
     <div class="au-panel">
       <div class="dg-controls">
-        <button class="au-save" onclick="welcomePreview()"><i class="fas fa-rotate"></i> Обновить</button>
+        <button type="button" class="au-save" onclick="welcomePreview()"><i class="fas fa-rotate"></i> Обновить</button>
         <span class="au-sec-sub" id="wp-note" style="margin:0"></span>
       </div>
       <div id="wp-list"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Рендерим…</div></div>
@@ -242,7 +242,7 @@
           <option value="14">за 14 дней</option>
           <option value="30">за 30 дней</option>
         </select>
-        <button class="au-save" onclick="loadDigestPreview()"><i class="fas fa-rotate"></i> Обновить</button>
+        <button type="button" class="au-save" onclick="loadDigestPreview()"><i class="fas fa-rotate"></i> Обновить</button>
       </div>
       <div class="dg-grid" id="dg-grid"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Считаем сводку…</div></div>
     </div>
@@ -254,11 +254,11 @@
     <div class="au-panel">
       <div class="trg-io" style="margin-top:0">
         <a class="au-save au-link-btn" href="/api/automation/export-all" download><i class="fas fa-download"></i> Экспорт всего</a>
-        <button class="au-save" onclick="trImportToggle()"><i class="fas fa-upload"></i> Импорт</button>
+        <button type="button" class="au-save" onclick="trImportToggle()"><i class="fas fa-upload"></i> Импорт</button>
       </div>
       <div class="trg-io-box" id="tr-import-box" style="display:none;margin-top:10px">
         <textarea class="au-input" id="tr-import-text" rows="6" placeholder='Вставьте JSON из «Экспорт всего»' aria-label="JSON переноса автоматики"></textarea>
-        <button class="au-save" onclick="trImportDo()"><i class="fas fa-check"></i> Применить перенос</button>
+        <button type="button" class="au-save" onclick="trImportDo()"><i class="fas fa-check"></i> Применить перенос</button>
         <div class="au-sec-sub" id="tr-import-result" style="margin:0"></div>
       </div>
     </div>
@@ -299,7 +299,7 @@ async function loadAutomation(){
         + '<span class="au-badge '+(on?'on':'off')+'">'+(on?'ВКЛЮЧЁН':'ВЫКЛЮЧЕН')+'</span></div>'
         + '<div class="au-desc">'+esc(m.desc)+'</div></div></div>'
         + rows
-        + '<div class="au-foot"><button class="au-save" onclick="saveModule(\''+esc(key)+'\')"><i class="fas fa-check"></i> Сохранить</button>'
+        + '<div class="au-foot"><button type="button" class="au-save" onclick="saveModule(\''+esc(key)+'\')"><i class="fas fa-check"></i> Сохранить</button>'
         + '<span class="au-msg" id="au-msg-'+esc(key)+'"></span></div>'
         + '</div>';
     }).join('');
@@ -418,7 +418,7 @@ async function loadTriggers(){
         + '<div class="trg-trig">№'+t.id+' · '+esc(t.trigger)+(t.exact?'<span class="trg-exact">ТОЧНО</span>':'')+'</div>'
         + '<div class="trg-resp">'+esc(t.response)+'</div>'
         + '<div class="trg-uses">'+esc(t.uses)+' сраб.</div>'
-        + '<button class="trg-del" onclick="trgRemove('+t.id+')" title="Удалить №'+t.id+'" aria-label="Удалить"><i class="fas fa-trash-can"></i></button>'
+        + '<button type="button" class="trg-del" onclick="trgRemove('+t.id+')" title="Удалить №'+t.id+'" aria-label="Удалить"><i class="fas fa-trash-can"></i></button>'
         + '</div>';
     }).join('') : '<div class="au-sec-sub" style="margin:6px 0 2px">Триггеров пока нет — добавьте первый ниже.</div>';
   } catch(e){
@@ -612,7 +612,7 @@ function mlRender(items){
       + '<div class="trg-trig">' + (r.channel_name ? '#'+esc(r.channel_name) : 'ID '+esc(r.channel_id)) + '</div>'
       + '<div class="trg-resp">' + esc(r.mode_label) + ' — ' + esc(r.desc) + (r.exempt_mods ? ' · моды свободны' : ' · моды тоже под замком') + '</div>'
       + '<span></span>'
-      + '<button class="trg-del" title="Снять замок" onclick="mlRemove(\'' + esc(r.channel_id) + '\')"><i class="fas fa-xmark"></i></button></div>';
+      + '<button type="button" class="trg-del" title="Снять замок" onclick="mlRemove(\'' + esc(r.channel_id) + '\')"><i class="fas fa-xmark"></i></button></div>';
   }).join('');
 }
 

@@ -72,7 +72,7 @@
         </select>
         <input class="ss-inp" id="ssTime" placeholder="18:00-22:00" style="max-width:150px">
       </div>
-      <button class="ss-btn" id="ssAdd"><i class="fas fa-plus"></i> Назначить</button>
+      <button type="button" class="ss-btn" id="ssAdd"><i class="fas fa-plus"></i> Назначить</button>
       <div class="ss-msg" id="ssAddMsg"></div>
     </div>
     <div class="ss-panel" id="ssSetPanel" style="display:none">
@@ -81,7 +81,7 @@
       <div class="ss-row">
         <input class="ss-inp" id="ssChan" placeholder="ID канала (пусто — молча)">
         <input class="ss-inp" id="ssTz" placeholder="пояс, напр. 3" style="max-width:110px">
-        <button class="ss-btn ghost" id="ssSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
+        <button type="button" class="ss-btn ghost" id="ssSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
       </div>
       <div class="ss-msg" id="ssSetMsg"></div>
     </div>
@@ -91,7 +91,7 @@
       <h3><i class="fas fa-scale-balanced"></i> Нагрузка недели</h3>
       <div class="ss-sub">Часов дежурства на человека — честно посчитано из смен (перенос через полночь учтён).</div>
       <div id="ssWork"></div>
-      <div style="margin-top:10px"><button class="ss-btn ghost" id="ssCsv"><i class="fas fa-file-csv"></i> Выгрузить расписание</button></div>
+      <div style="margin-top:10px"><button type="button" class="ss-btn ghost" id="ssCsv"><i class="fas fa-file-csv"></i> Выгрузить расписание</button></div>
     </div>
     <div class="ss-panel">
       <h3><i class="fas fa-terminal"></i> Как отвечает бот</h3>
@@ -147,7 +147,7 @@ function load() {
     var today = (new Date().getDay() + 6) % 7;
     document.getElementById('ssWeek').innerHTML = d.week.map(function (day) {
       var slots = day.slots.length ? day.slots.map(function (sl) {
-        var x = CAN_EDIT ? '<button class="x" title="Снять смену" onclick="ssRemove(\'' + esc(sl.id) + '\')"><i class="fas fa-xmark"></i></button>' : '';
+        var x = CAN_EDIT ? '<button type="button" class="x" title="Снять смену" onclick="ssRemove(\'' + esc(sl.id) + '\')"><i class="fas fa-xmark"></i></button>' : '';
         return '<div class="ss-slot">' + x + '<span class="t">' + esc(sl.start) + '–' + esc(sl.end) + '</span>' +
           '<div class="w">' + who(sl) + '</div></div>';
       }).join('') : '<div class="ss-empty">—</div>';

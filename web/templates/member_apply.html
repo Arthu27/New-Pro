@@ -57,7 +57,7 @@
         </div>
       </div>
       <div id="member-card" class="member-card">
-        <img id="member-avatar" src="">
+        <img alt="" id="member-avatar" src="">
         <div>
           <div id="member-name" ></div>
           <div><i class="fas fa-check" style="color:#2ecc71"></i> Подтверждено как участник сервера</div>
@@ -94,7 +94,7 @@
         </div>
       </div>
 
-      <button class="submit-btn" id="submit-btn" onclick="submitForm()">
+      <button type="button" class="submit-btn" id="submit-btn" onclick="submitForm()">
         <i class="fas fa-paper-plane"></i> &nbsp; ОТПРАВИТЬ ЗАЯВКУ
       </button>
     </div>
@@ -121,7 +121,7 @@ async function loadServers() {
   grid.innerHTML = guilds.map(function(g) {
     var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
     return '<div class="server-card" onclick="selectGuild(\''+g.id+'\',\''+g.name.replace(/'/g,"\\'")+'\',\''+icon+'\')" id="sc-'+g.id+'">' +
-      '<img src="'+icon+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+      '<img alt="" src="'+icon+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
       '<div><div class="sname">'+g.name+'</div><div class="smem">'+g.members+' участников</div></div></div>';
   }).join('');
 }

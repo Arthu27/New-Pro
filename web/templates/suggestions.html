@@ -102,14 +102,14 @@ function renderSuggestions() {
       '<span class="sg-status '+(statusClass[s.status]||'status-pending')+'">'+(statusMap[s.status]||'Ожидание')+'</span>'+
       '<div class="sg-text">'+esc(s.content)+'</div>'+
       '<div class="sg-author">'+
-        '<img class="sg-avatar" src="'+esc(s.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+        '<img alt="" class="sg-avatar" src="'+esc(s.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
         '<div><div class="sg-name">'+esc(s.author||'Неизвестно')+'</div><div class="sg-date">'+esc(date)+'</div></div>'+
       '</div>'+
       '<div class="vote-bar"><div class="vote-up"><i class="fas fa-thumbs-up"></i> '+(s.upvotes||0)+'</div><div class="vote-down"><i class="fas fa-thumbs-down"></i> '+(s.downvotes||0)+'</div></div>'+
       (s.status === 'pending' ?
         '<div class="sg-actions">'+
-          '<button class="btn-approve" onclick="updateSuggestion(\''+s.id+'\',\'approved\')"><i class="fas fa-check"></i> Подтвердить</button>'+
-          '<button class="btn-deny" onclick="updateSuggestion(\''+s.id+'\',\'denied\')"><i class="fas fa-xmark"></i> Отклонить</button>'+
+          '<button type="button" class="btn-approve" onclick="updateSuggestion(\''+s.id+'\',\'approved\')"><i class="fas fa-check"></i> Подтвердить</button>'+
+          '<button type="button" class="btn-deny" onclick="updateSuggestion(\''+s.id+'\',\'denied\')"><i class="fas fa-xmark"></i> Отклонить</button>'+
         '</div>' : '') +
     '</div>';
   }).join('');

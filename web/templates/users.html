@@ -115,7 +115,7 @@
       // filtered card always opened the wrong member.
       html += '<div class="member-card" data-id="' + esc(m.id) + '">' +
         '<div class="av-wrap">' +
-          '<img class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+          '<img alt="" class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
           '<span class="status-dot ' + sc + '"></span>' +
         '</div>' +
         '<div class="member-meta">' +
@@ -153,7 +153,7 @@
     }).join('');
     $('modal-content').innerHTML =
       '<div class="member-detail-info">' +
-        '<img class="member-detail-av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+        '<img alt="" class="member-detail-av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
         '<div class="member-detail-name">' + esc(m.display_name) + '</div>' +
         (m.nick ? '<div class="member-detail-sub">Ник: ' + esc(m.nick) + '</div>' : '') +
         '<div class="member-detail-sub">@' + esc(m.name) + '</div>' +

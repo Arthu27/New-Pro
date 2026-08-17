@@ -138,28 +138,28 @@
       <div class="text">Hot Reload Cogs
         <small>Перезагрузить все cog'ы, чьи файлы изменились с последней загрузки</small>
       </div>
-      <button onclick="hotReload()">Reload</button>
+      <button type="button" onclick="hotReload()">Reload</button>
     </div>
     <div class="diag-action warn">
       <div class="icon"><i class="fas fa-broom"></i></div>
       <div class="text">Garbage Collect
         <small>Принудительная очистка памяти Python (освобождает ~50-200MB)</small>
       </div>
-      <button onclick="gc()">GC</button>
+      <button type="button" onclick="gc()">GC</button>
     </div>
     <div class="diag-action">
       <div class="icon"><i class="fas fa-search"></i></div>
       <div class="text">Полная диагностика
         <small>Проверить все системы и автоматически починить что можно</small>
       </div>
-      <button onclick="diagnose()">Запустить</button>
+      <button type="button" onclick="diagnose()">Запустить</button>
     </div>
     <div class="diag-action danger">
       <div class="icon"><i class="fas fa-power-off"></i></div>
       <div class="text">Перезагрузить весь бот
         <small><i class="fas fa-triangle-exclamation"></i> Прервёт работу бота на ~5-15 секунд. Только для критических случаев.</small>
       </div>
-      <button onclick="confirmRestart()">Restart</button>
+      <button type="button" onclick="confirmRestart()">Restart</button>
     </div>
   </div>
 </div>
@@ -168,7 +168,7 @@
 <div class="dash-box aimod-section">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-list"></i> Последние ошибки</div>
-    <button onclick="loadErrors()"   style="background: none; border-radius: 6px;"><i class="fas fa-sync"></i> Обновить</button>
+    <button type="button" onclick="loadErrors()"   style="background: none; border-radius: 6px;"><i class="fas fa-sync"></i> Обновить</button>
   </div>
   <div class="dash-box-body" id="errorsBox"   style="max-height: 300px; overflow-y: auto;">
     <div   style="text-align: center;">

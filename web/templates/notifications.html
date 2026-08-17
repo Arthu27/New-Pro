@@ -170,11 +170,11 @@
 <div class="section">
   <div style="display: grid; grid-template-columns: {% if role in ('admin', 'owner') %}1fr 1fr{% else %}1fr{% endif %}; gap: 12px;">
     {% if role in ('admin', 'owner') %}
-    <button class="control-btn primary" onclick="saveNotificationSettings()" style="padding: 12px;">
+    <button type="button" class="control-btn primary" onclick="saveNotificationSettings()" style="padding: 12px;">
       <i class="fas fa-save"></i> Сохранить настройки
     </button>
     {% endif %}
-    <button class="control-btn" id="testNotifBtn" onclick="sendTestNotification()" style="padding: 12px;">
+    <button type="button" class="control-btn" id="testNotifBtn" onclick="sendTestNotification()" style="padding: 12px;">
       <i class="fas fa-paper-plane"></i> Тестовое уведомление
     </button>
   </div>

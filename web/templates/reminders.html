@@ -79,7 +79,7 @@ function render(d) {
   }
   box.innerHTML = d.items.map(function (it) {
     var rep = fmtRepeat(it.repeat_seconds);
-    var btn = CAN_EDIT ? '<button class="rm-cancel" onclick="rmCancel(' + it.id + ')" title="Отменить №' + it.id + '" aria-label="Отменить"><i class="fas fa-ban"></i></button>' : '';
+    var btn = CAN_EDIT ? '<button type="button" class="rm-cancel" onclick="rmCancel(' + it.id + ')" title="Отменить №' + it.id + '" aria-label="Отменить"><i class="fas fa-ban"></i></button>' : '';
     return '<div class="rm-row">' +
       '<span class="rm-id">#' + it.id + '</span>' +
       '<span class="rm-when' + (it.overdue ? ' overdue' : '') + '" title="' + esc(it.due_at) + '">' + fmtWhen(it.due_at) +

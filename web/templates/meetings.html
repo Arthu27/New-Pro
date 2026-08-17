@@ -52,8 +52,8 @@
   <div class="mt-sub">Те же шаги, что у кнопок «Запустить/Завершить» в Discord: старт фиксирует голосовой снимок, финиш считает окно и сбрасывает состояние. Время — UTC, формат ДД.ММ.ГГГГ ЧЧ:ММ; пусто — «сейчас».</div>
   <div class="mt-row">
     <input class="mt-inp" id="mtStartTime" placeholder="12.04.2026 22:00 (необязательно)">
-    <button class="mt-btn" id="mtStart"><i class="fas fa-play"></i> Запустить</button>
-    <button class="mt-btn danger" id="mtEnd"><i class="fas fa-flag-checkered"></i> Завершить</button>
+    <button type="button" class="mt-btn" id="mtStart"><i class="fas fa-play"></i> Запустить</button>
+    <button type="button" class="mt-btn danger" id="mtEnd"><i class="fas fa-flag-checkered"></i> Завершить</button>
   </div>
   <div class="mt-msg" id="mtMsg"></div>
 </div>
@@ -65,7 +65,7 @@
       <div class="mt-sub">По этим ролям отчёт строит Top-4 блоки. Пусто — подтянутся роли из конфига мод-отчётов, как делает и бот.</div>
       <div class="mt-row" id="mtRoleCtl" style="display:none">
         <input class="mt-inp" id="mtRoleInp" placeholder="ID роли">
-        <button class="mt-btn" id="mtRoleAdd"><i class="fas fa-plus"></i> Добавить</button>
+        <button type="button" class="mt-btn" id="mtRoleAdd"><i class="fas fa-plus"></i> Добавить</button>
       </div>
       <div id="mtRoles"></div>
       <div class="mt-msg" id="mtRoleMsg"></div>
@@ -74,7 +74,7 @@
       <h3><i class="fas fa-circle-question"></i> Как считается</h3>
       <div class="mt-sub" style="margin-bottom:6px" id="mtFormula">Очки: Сообщение×1 + Звук мин×2 + Приглашение×5</div>
       <div class="mt-sub" id="mtNote" style="margin-bottom:0"></div>
-      <div style="margin-top:10px"><button class="mt-btn ghost" id="mtCsv"><i class="fas fa-file-csv"></i> Предпросмотр в CSV</button></div>
+      <div style="margin-top:10px"><button type="button" class="mt-btn ghost" id="mtCsv"><i class="fas fa-file-csv"></i> Предпросмотр в CSV</button></div>
     </div>
   </div>
   <div class="mt-panel">
@@ -138,7 +138,7 @@ function renderRoles(st) {
   }
   box.innerHTML = st.staff_roles.map(function (rid) {
     var name = (st.role_names && st.role_names[rid]) || rid;
-    var del = CAN_EDIT ? ' <button onclick="mtRoleDel(\'' + rid + '\')" title="Убрать"><i class="fas fa-xmark"></i></button>' : '';
+    var del = CAN_EDIT ? ' <button type="button" onclick="mtRoleDel(\'' + rid + '\')" title="Убрать"><i class="fas fa-xmark"></i></button>' : '';
     return '<span class="mt-chip"><i class="fas fa-tag" style="color:var(--ac,#e0b04a)"></i> ' + esc(name) + del + '</span>';
   }).join('');
 }

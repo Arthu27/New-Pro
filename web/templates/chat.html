@@ -350,7 +350,7 @@
       <div class="chat-header-sep" id="ch-sep" ></div>
       <span class="chat-header-topic" id="ch-topic"></span>
       <div class="chat-header-actions">
-        <button class="hdr-btn" onclick="loadMessages()"><i class="fas fa-sync-alt"></i></button>
+        <button type="button" class="hdr-btn" onclick="loadMessages()" aria-label="Обновить"><i class="fas fa-sync-alt"></i></button>
       </div>
     </div>
 
@@ -375,10 +375,10 @@
             oninput="handleInput(this)"
             disabled aria-label="Сообщение напишите..."></textarea>
           <div class="input-actions">
-            <button class="dm-btn" id="dm-open-btn" onclick="openDmFromInput()" title="DM отправить" >
+            <button type="button" class="dm-btn" id="dm-open-btn" onclick="openDmFromInput()" title="DM отправить" >
               <i class="fas fa-user"></i> DM
             </button>
-            <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>
+            <button type="button" class="send-btn" id="send-btn" onclick="sendMessage()" disabled aria-label="Отправить сообщение">
               <i class="fas fa-paper-plane"></i>
             </button>
           </div>
@@ -412,11 +412,11 @@
     <div class="profs-section-title">Takma Isim</div>
     <div class="profs-nick-row">
       <input class="profs-nick-input" id="pp-nick-input" placeholder="Ник не задан" aria-label="Ник не задан">
-      <button class="profs-nick-btn" onclick="saveNick()">Сохранить</button>
+      <button type="button" class="profs-nick-btn" onclick="saveNick()">Сохранить</button>
     </div>
     <div class="profs-action-row">
-      <button class="profs-action-btn dm" onclick="dmFromprofile()"><i class="fas fa-envelope"></i> ЛС</button>
-      <button class="profs-action-btn" onclick="etiketFromprofile()"><i class="fas fa-at"></i> Упомянуть</button>
+      <button type="button" class="profs-action-btn dm" onclick="dmFromprofile()"><i class="fas fa-envelope"></i> ЛС</button>
+      <button type="button" class="profs-action-btn" onclick="etiketFromprofile()"><i class="fas fa-at"></i> Упомянуть</button>
     </div>
   </div>
 </div>
@@ -436,8 +436,8 @@
     <div class="cm-title" id="cm-title">Подтверждение</div>
     <div class="cm-desc" id="cm-desc"></div>
     <div class="chat-modal-actions">
-      <button class="chat-modal-btn" onclick="closeConfirmModal()">Отмена</button>
-      <button class="chat-modal-btn red" id="cm-confirm"><i class="fas fa-check"></i> Подтвердить</button>
+      <button type="button" class="chat-modal-btn" onclick="closeConfirmModal()">Отмена</button>
+      <button type="button" class="chat-modal-btn red" id="cm-confirm"><i class="fas fa-check"></i> Подтвердить</button>
     </div>
   </div>
 </div>
@@ -602,7 +602,7 @@ function renderMsg(m, continued) {
   var content = parseContent(m.content);
 
   var avatarHtml = m.avatar
-    ? '<img class="msg-avatar" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=msg-avatar-placeholder>👤</div>\'">'
+    ? '<img alt="" class="msg-avatar" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=msg-avatar-placeholder>👤</div>\'">'
     : (m.bot ? '<div class="msg-avatar-placeholder" ><i class="fas fa-robot"></i></div>'
              : '<div class="msg-avatar-placeholder"><i class="fas fa-user"></i></div>');
 
@@ -617,7 +617,7 @@ function renderMsg(m, continued) {
       if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) {
         var isGif = /\.gif(\?|$)/i.test(url);
         attachHtml += '<div   style="position: relative;">' +
-          '<img class="msg-img" src="' + url + '" loading="lazy" onclick="openLightbox(\'' + url + '\')">' +
+          '<img alt="Вложение сообщения" class="msg-img" src="' + url + '" loading="lazy" onclick="openLightbox(\'' + url + '\')">' +
           (isGif ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div>';
       } else {
         var fname = url.split('/').pop().split('?')[0];
@@ -633,7 +633,7 @@ function renderMsg(m, continued) {
     if (urlMatch) {
       var isGif = /\.gif(\?|$)/i.test(urlMatch[0]);
       inlineMedia = '<div class="msg-attachments"><div   style="position: relative;">' +
-        '<img class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
+        '<img alt="Вложение сообщения" class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
         (isGif ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>';
     }
   }
@@ -654,8 +654,8 @@ function renderMsg(m, continued) {
       attachHtml + inlineMedia +
     '</div>' +
     '<div class="msg-actions">' +
-      '<button class="msg-act-btn" onclick="startReply(\'' + m.id + '\',\'' + safeAuthor + '\',\'' + safeContent + '\')"><i class="fas fa-reply"></i></button>' +
-      '<button class="msg-act-btn del" onclick="deleteMsg(\'' + m.id + '\')"><i class="fas fa-trash"></i></button>' +
+      '<button type="button" class="msg-act-btn" onclick="startReply(\'' + m.id + '\',\'' + safeAuthor + '\',\'' + safeContent + '\')" aria-label="Ответить"><i class="fas fa-reply"></i></button>' +
+      '<button type="button" class="msg-act-btn del" onclick="deleteMsg(\'' + m.id + '\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>' +
     '</div>' +
   '</div>';
 }
@@ -737,7 +737,7 @@ async function loadRecentDms(gid) {
     dmList.innerHTML = r.length ? r.map(function(u) {
       var t = '';
       try { t = new Date(u.timestamp).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); } catch(e){}
-      var avIcon = u.avatar ? '<img src="' + u.avatar + '" style="width:20px;height:20px;border-radius:50%;flex-shrink:0;">'
+      var avIcon = u.avatar ? '<img alt="" src="' + u.avatar + '" style="width:20px;height:20px;border-radius:50%;flex-shrink:0;">'
                             : '<i class="fas fa-user ch-icon"></i>';
       return '<div class="ch-item" id="dm-' + u.id + '" onclick="openDm(\'' + u.id + '\',\'' + escJs(u.name) + '\')">' +
         avIcon +
@@ -760,7 +760,7 @@ async function searchDmUser(q) {
     }).slice(0, 8);
     res.innerHTML = filtered.map(function(m) {
       return '<div class="ch-item" onclick="openDm(\'' + m.id + '\',\'' + escJs(m.display_name) + '\')">' +
-        (m.avatar ? '<img src="' + m.avatar + '"   style="width: 20px; height: 20px;">' : '<i class="fas fa-user ch-icon"></i>') +
+        (m.avatar ? '<img alt="" src="' + m.avatar + '"   style="width: 20px; height: 20px;">' : '<i class="fas fa-user ch-icon"></i>') +
         '<span class="ch-name">' + escHtml(m.display_name) + '</span></div>';
     }).join('');
   } catch(e) {}
@@ -837,7 +837,7 @@ async function loadDmMessages() {
                      : '<div class="msg-avatar-placeholder"><i class="fas fa-user"></i></div>';
       var urlMatch = (m.content||'').match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
       var inlineMedia = urlMatch ? '<div class="msg-attachments"><div   style="position: relative;">' +
-        '<img class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
+        '<img alt="Вложение сообщения" class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
         (/\.gif(\?|$)/i.test(urlMatch[0]) ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>' : '';
       return '<div class="msg-group">' + av + '<div class="msg-body">' +
         '<div class="msg-meta"><span class="msg-author' + (isBot?' is-bot':'') + '">' + escHtml(m.author) + (isBot?'<span class="bot-badge">BOT</span>':'') + '</span>' +
@@ -903,7 +903,7 @@ function renderMentionPopup() {
   var popup = document.getElementById('etiket-popup');
   popup.style.display = 'block';
   popup.innerHTML = _mentionMatches.map(function(m, i) {
-    var av = m.avatar ? '<img src="' + m.avatar + '">' : '<i class="fas fa-user"   style="opacity: .5;"></i>';
+    var av = m.avatar ? '<img alt="" src="' + m.avatar + '">' : '<i class="fas fa-user"   style="opacity: .5;"></i>';
     return '<div class="mention-item' + (i===_mentionIdx?' selected':'') + '" onclick="selectMention(' + i + ')">' + av + escHtml(m.name) + '</div>';
   }).join('');
 }
@@ -962,7 +962,7 @@ function renderMemberList(members) {
 }
 
 function renderMemberItem(m) {
-  var av = m.avatar ? '<img class="member-av" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=member-av-placeholder>\u{1F464}</div>\'">': '<div class="member-av-placeholder">' + (m.bot ? '\u{1F916}' : '\u{1F464}') + '</div>';
+  var av = m.avatar ? '<img alt="" class="member-av" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=member-av-placeholder>\u{1F464}</div>\'">': '<div class="member-av-placeholder">' + (m.bot ? '\u{1F916}' : '\u{1F464}') + '</div>';
   var st = m.status === 'online' ? 'online' : m.status === 'idle' ? 'idle' : m.status === 'dnd' ? 'dnd' : 'offline';
   var dn = m.nick || m.display_name || m.name;
   return '<div class="member-item" id="mi-' + m.id + '" onclick="openprofile(event,\'' + m.id + '\')">' +
@@ -977,7 +977,7 @@ function openprofile(event, memberId) {
   _profsMember = m;
   var popup = document.getElementById('profs-popup');
   var dn = m.nick || m.display_name || m.name;
-  var avHtml = m.avatar ? '<img src="' + m.avatar + '" class="profs-av">' : '<div class="profs-av-placeholder">\u{1F464}</div>';
+  var avHtml = m.avatar ? '<img alt="" src="' + m.avatar + '" class="profs-av">' : '<div class="profs-av-placeholder">\u{1F464}</div>';
   document.getElementById('pp-avatar').innerHTML = avHtml;
   document.getElementById('pp-displayname').textContent = dn;
   document.getElementById('pp-username').textContent = '@' + m.name + (m.discriminator && m.discriminator !== '0' ? '#' + m.discriminator : '');

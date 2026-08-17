@@ -66,9 +66,9 @@
 </div>
 
 <div class="inv-tabs" data-reveal="up">
-  <button class="tab-btn active" onclick="showTab('leaderboard',this)"><i class="fas fa-trophy"></i> Лидеры</button>
-  <button class="tab-btn" onclick="showTab('joins',this)"><i class="fas fa-user-plus"></i> Использованные</button>
-  <button class="tab-btn" onclick="showTab('invites',this)"><i class="fas fa-link"></i> Активные</button>
+  <button type="button" class="tab-btn active" onclick="showTab('leaderboard',this)"><i class="fas fa-trophy"></i> Лидеры</button>
+  <button type="button" class="tab-btn" onclick="showTab('joins',this)"><i class="fas fa-user-plus"></i> Использованные</button>
+  <button type="button" class="tab-btn" onclick="showTab('invites',this)"><i class="fas fa-link"></i> Активные</button>
 </div>
 
 <div class="inv-box" id="tab-leaderboard" data-reveal="up">
@@ -112,7 +112,7 @@ async function loadInvites() {
   document.getElementById('leaderboard-list').innerHTML = lb.length ? lb.map(function(u,i){
     return '<div class="inv-card">'+
       '<div class="inv-rank">'+(medals[i]||'#'+(i+1))+'</div>'+
-      '<img class="inv-avatar" src="'+esc(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+      '<img alt="" class="inv-avatar" src="'+esc(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
       '<div style="flex:1;min-width:0"><div class="inv-name">'+esc(u.name)+'</div>'+
       '<div class="inv-detail">'+(u.joins||0)+' входящих · '+(u.leaves||0)+' выходов · '+(u.fake||0)+' фейковых</div></div>'+
       '<div class="inv-count">'+(u.total||0)+'</div>'+
@@ -123,7 +123,7 @@ async function loadInvites() {
   document.getElementById('joins-list').innerHTML = joins.length ? joins.map(function(j){
     var t = j.joined_at ? new Date(j.joined_at).toLocaleString('ru-RU') : '';
     return '<div class="join-card">'+
-      '<img class="join-avatar" src="'+esc(j.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+      '<img alt="" class="join-avatar" src="'+esc(j.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
       '<div style="flex:1;min-width:0"><div class="join-name">'+esc(j.name)+'</div>'+
       '<div class="join-inviter">Пригласил: <span>'+esc(j.inviter||'Неизвестно')+'</span>'+(j.invite_code?' ('+esc(j.invite_code)+')':'')+'</div></div>'+
       '<div class="join-time">'+esc(t)+'</div>'+

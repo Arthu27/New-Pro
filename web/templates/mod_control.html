@@ -77,7 +77,7 @@
       <div class="mc-sub">Обнуляет все варны участника. Запись попадает в журнал — любую амнистию можно откатить, пока после неё не появились новые варны.</div>
       <div class="mc-form" id="mcAmnestyForm" style="display:none;margin-top:0;margin-bottom:12px">
         <input class="inp" id="mcAmnestyId" maxlength="24" placeholder="ID участника или @упоминание">
-        <button class="btn danger-btn" onclick="mcAmnestyAsk()"><i class="fas fa-dove"></i> Обнулить</button>
+        <button type="button" class="btn danger-btn" onclick="mcAmnestyAsk()"><i class="fas fa-dove"></i> Обнулить</button>
       </div>
       <div id="mcAmnesty"><div class="sk-row" style="width:65%"></div></div>
     </div>
@@ -98,7 +98,7 @@
       <div id="mcReasonForm" style="display:none">
         <div class="mc-form">
           <input class="inp" id="mcReasonText" maxlength="120" placeholder="Новая причина, например: флуд в чате">
-          <button class="btn" onclick="mcReasonAdd()"><i class="fas fa-plus"></i> Добавить</button>
+          <button type="button" class="btn" onclick="mcReasonAdd()"><i class="fas fa-plus"></i> Добавить</button>
         </div>
         <div class="mc-hint">До 20 причин на каждый тип; длина — до 120 символов.</div>
       </div>
@@ -204,7 +204,7 @@ function renderReasons(d) {
   var tabs = document.getElementById('mcTabs');
   tabs.innerHTML = d.reason_kinds.map(function (k) {
     var n = (d.reasons[k.key] || []).length;
-    return '<button class="mc-tab' + (k.key === KIND ? ' on' : '') + '" onclick="mcKindSet(\'' + k.key + '\')">' +
+    return '<button type="button" class="mc-tab' + (k.key === KIND ? ' on' : '') + '" onclick="mcKindSet(\'' + k.key + '\')">' +
       esc(k.label) + ' · ' + n + '</button>';
   }).join('');
   var items = d.reasons[KIND] || [];
@@ -216,7 +216,7 @@ function renderReasons(d) {
   } else {
     box.innerHTML = items.map(function (it) {
       var del = CAN_EDIT
-        ? '<button title="Удалить" onclick="mcReasonDel(' + it.id + ')"><i class="fas fa-xmark"></i></button>'
+        ? '<button type="button" title="Удалить" onclick="mcReasonDel(' + it.id + ')"><i class="fas fa-xmark"></i></button>'
         : '';
       return '<span class="mc-qchip"><span>' + esc(it.text) + '</span>' + del + '</span>';
     }).join('');
@@ -235,7 +235,7 @@ function renderAmnesty(d) {
   box.innerHTML = d.amnesty.map(function (a) {
     var tail;
     if (a.restored_at) tail = '<span class="ok-badge"><i class="fas fa-rotate-left"></i> откачена</span>';
-    else if (CAN_EDIT) tail = '<button class="btn btn-ghost" onclick="mcAmnestyUndo(' + a.id + ')"><i class="fas fa-rotate-left"></i> Откатить</button>';
+    else if (CAN_EDIT) tail = '<button type="button" class="btn btn-ghost" onclick="mcAmnestyUndo(' + a.id + ')"><i class="fas fa-rotate-left"></i> Откатить</button>';
     else tail = '<span class="mc-chip">активна</span>';
     return '<div class="mc-amn"><div class="mc-who"><b>#' + esc(a.user_id) + ' · ' + a.count + ' ' +
       plural(a.count, 'варн', 'варна', 'варнов') + '</b>' +

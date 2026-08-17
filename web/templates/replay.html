@@ -60,8 +60,8 @@
     </select>
     <input class="rp-inp" id="rpMin" type="number" min="5" max="1440" placeholder="своё окно, мин">
     <input class="rp-inp uid" id="rpUser" placeholder="ID участника — только его след (необязательно)">
-    <button class="rp-btn" id="rpGo"><i class="fas fa-play"></i> Показать</button>
-    <button class="rp-btn ghost" id="rpCsv"><i class="fas fa-file-csv"></i> CSV</button>
+    <button type="button" class="rp-btn" id="rpGo"><i class="fas fa-play"></i> Показать</button>
+    <button type="button" class="rp-btn ghost" id="rpCsv"><i class="fas fa-file-csv"></i> CSV</button>
   </div>
   <div class="rp-hint">Окно клампится как в команде: минимум 5, максимум 1440. Фильтр по участнику ищет его ID в любом поле события — как фильтр /replay в боте.</div>
 </div>
@@ -125,9 +125,9 @@ function renderKpis(d) {
 }
 
 function renderChips() {
-  var html = '<button class="rp-chip' + (FILTER_CAT ? '' : ' on') + '" onclick="setCat(null)">Все <span class="n">' + LAST_TOTAL + '</span></button>';
+  var html = '<button type="button" class="rp-chip' + (FILTER_CAT ? '' : ' on') + '" onclick="setCat(null)">Все <span class="n">' + LAST_TOTAL + '</span></button>';
   html += LAST_CATS.map(function (c) {
-    return '<button class="rp-chip' + (FILTER_CAT === c.cat ? ' on' : '') + '" onclick="setCat(\'' + encodeURIComponent(c.cat) + '\')">' +
+    return '<button type="button" class="rp-chip' + (FILTER_CAT === c.cat ? ' on' : '') + '" onclick="setCat(\'' + encodeURIComponent(c.cat) + '\')">' +
       esc(c.label) + ' <span class="n">' + c.count + '</span></button>';
   }).join('');
   document.getElementById('rpChips').innerHTML = html;

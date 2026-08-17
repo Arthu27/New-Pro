@@ -76,7 +76,7 @@
         <input class="inp" id="bdAddDay" type="number" min="1" max="31" placeholder="День">
         <input class="inp" id="bdAddMonth" type="number" min="1" max="12" placeholder="Месяц">
         <input class="inp" id="bdAddYear" type="number" min="1900" max="2100" placeholder="Год">
-        <button class="btn" onclick="bdSet()"><i class="fas fa-check"></i> Записать</button>
+        <button type="button" class="btn" onclick="bdSet()"><i class="fas fa-check"></i> Записать</button>
       </div>
       <div class="bd-sub" id="bdAddMsg" style="margin:8px 0 0"></div>
     </div>
@@ -88,7 +88,7 @@
       <div class="bd-sub">Структура эмбеда, который бот пошлёт в 9:00 UTC в день рождения: шапка, строка с упоминанием, возраст, поля. Образец — @Мария, 20 лет.</div>
       <div class="bd-preview" id="bdPreviewBox"><div class="sk-row"></div><div class="sk-row" style="width:55%"></div></div>
       <div style="margin-top:10px">
-        <button class="btn btn-ghost" id="bdPreviewBtn" onclick="bdPreviewLoad()"><i class="fas fa-rotate"></i> Обновить превью</button>
+        <button type="button" class="btn btn-ghost" id="bdPreviewBtn" onclick="bdPreviewLoad()"><i class="fas fa-rotate"></i> Обновить превью</button>
       </div>
     </div>
 
@@ -104,7 +104,7 @@
           <input class="inp" id="bdSetGift" type="number" min="0" max="100000" placeholder="0"></div>
         <div><label for="bdSetMsg">Шаблон сообщения</label>
           <textarea class="inp" id="bdSetMsg" rows="2" maxlength="200" placeholder="С днём рождения, {user}!"></textarea></div>
-        <div><button class="btn" onclick="bdSaveSettings()"><i class="fas fa-check"></i> Сохранить настройки</button></div>
+        <div><button type="button" class="btn" onclick="bdSaveSettings()"><i class="fas fa-check"></i> Сохранить настройки</button></div>
       </div>
       <div class="bd-sub" id="bdSetMsgNote" style="margin:8px 0 0"></div>
     </div>
@@ -161,7 +161,7 @@ function renderList(entries) {
     var badges = e.celebrated_this_year
       ? '<span class="bd-chip cake" title="Поздравлен в этом году"><i class="fas fa-cake-candles"></i> ' + esc(e.celebrated) + '</span> ' : '';
     var del = CAN_EDIT
-      ? ' <button class="bd-mini" title="Удалить запись" aria-label="Удалить запись" onclick="bdDelete(\'' + esc(e.user_id) + '\')"><i class="fas fa-trash"></i></button>' : '';
+      ? ' <button type="button" class="bd-mini" title="Удалить запись" aria-label="Удалить запись" onclick="bdDelete(\'' + esc(e.user_id) + '\')"><i class="fas fa-trash"></i></button>' : '';
     return '<div class="bd-row' + (e.today ? ' today' : '') + '"><div class="bd-who"><b>' + esc(e.name) +
       '</b><small>' + esc(sub) + '</small></div>' +
       '<span class="bd-when ' + w.cls + '">' + esc(w.text) + '</span>' +

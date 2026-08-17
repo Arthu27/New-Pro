@@ -27,24 +27,67 @@ MENU = [
         {'path': '/recap', 'label': 'Рекап канала', 'icon': 'fa-clock-rotate-left'},
     ]},
     {'group': 'Модерация', 'key': 'mod', 'icon': 'fa-shield-halved', 'pages': [
-        {'path': '/logs', 'label': 'Логи модерации', 'icon': 'fa-clipboard-list'},
-        {'path': '/temp-moderation', 'label': 'Временная модерация', 'icon': 'fa-clock'},
-        {'path': '/warnings', 'label': 'Предупреждения', 'icon': 'fa-exclamation-triangle'},
-        {'path': '/mod-history', 'label': 'История', 'icon': 'fa-history'},
-        {'path': '/autofilter', 'label': 'Автофильтр чата', 'icon': 'fa-filter'},
-        {'path': '/antiraid', 'label': 'Анти-рейд', 'icon': 'fa-shield-virus'},
-        {'path': '/tagjail', 'label': 'Tag Jail', 'icon': 'fa-lock'},
-        {'path': '/mod-tools', 'label': 'Липкие & Паника', 'icon': 'fa-thumbtack'},
-        {'path': '/proofs', 'label': 'Демки', 'icon': 'fa-folder-open'},
-        {'path': '/bulk-actions', 'label': 'Массовые действия', 'icon': 'fa-layer-group'},
-        {'path': '/mod-report', 'label': 'Отчёт модерации', 'icon': 'fa-chart-simple'},
-        {'path': '/mod-control', 'label': 'Мод-контроль', 'icon': 'fa-clipboard-check'},
-        {'path': '/mod-insights', 'label': 'Мод-анализ', 'icon': 'fa-user-shield'},
-        {'path': '/appeals', 'label': 'Апелляции', 'icon': 'fa-scale-balanced'},
-        {'path': '/lockdown', 'label': 'Локдаун', 'icon': 'fa-house-lock'},
-        {'path': '/security', 'label': 'Безопасность', 'icon': 'fa-shield-virus'},
-        {'path': '/antifake', 'label': 'Антифейк', 'icon': 'fa-user-secret'},
-        {'path': '/ladder', 'label': 'Лестница', 'icon': 'fa-stairs'},
+        # Оперативная работа: от мягкой меры к аварийному сценарию.
+        {'path': '/warnings', 'label': 'Варны и досье', 'icon': 'fa-triangle-exclamation',
+         'section': 'response', 'description': 'Предупреждения, причины и история участника',
+         'access': 'Мод+', 'tone': 'warning'},
+        {'path': '/temp-moderation', 'label': 'Временные меры', 'icon': 'fa-clock',
+         'section': 'response', 'description': 'Мьюты и баны с автоматическим завершением',
+         'access': 'Мод+', 'tone': 'warning'},
+        {'path': '/mod-tools', 'label': 'Оперативные инструменты', 'icon': 'fa-thumbtack',
+         'section': 'response', 'description': 'Липкие сообщения, panic и быстрые действия',
+         'access': 'Мод+', 'tone': 'warning'},
+        {'path': '/bulk-actions', 'label': 'Массовые операции', 'icon': 'fa-layer-group',
+         'section': 'response', 'description': 'Пакетные роли, сообщения и действия с участниками',
+         'access': 'Админ', 'min_role': 'admin', 'tone': 'critical'},
+        {'path': '/lockdown', 'label': 'Экстренный локдаун', 'icon': 'fa-house-lock',
+         'section': 'response', 'description': 'Изоляция каналов и контролируемый откат прав',
+         'access': 'Мод+', 'tone': 'critical'},
+        {'path': '/tagjail', 'label': 'Tag Jail', 'icon': 'fa-lock',
+         'section': 'response', 'description': 'Изоляция подозрительных тегов и возврат ролей',
+         'access': 'Админ', 'min_role': 'admin', 'tone': 'critical'},
+
+        # Разбор инцидента: факты, доказательства и итоговое решение.
+        {'path': '/logs', 'label': 'Журнал модерации', 'icon': 'fa-clipboard-list',
+         'section': 'investigation', 'description': 'Единая лента действий с фильтрами и экспортом',
+         'access': 'Мод+', 'tone': 'info'},
+        {'path': '/mod-history', 'label': 'История решений', 'icon': 'fa-clock-rotate-left',
+         'section': 'investigation', 'description': 'Хронология наказаний и решений команды',
+         'access': 'Мод+', 'tone': 'info'},
+        {'path': '/proofs', 'label': 'Доказательства', 'icon': 'fa-folder-open',
+         'section': 'investigation', 'description': 'Скриншоты, видео и привязка к наказаниям',
+         'access': 'Мод+', 'tone': 'info'},
+        {'path': '/appeals', 'label': 'Апелляции', 'icon': 'fa-scale-balanced',
+         'section': 'investigation', 'description': 'Очередь пересмотра наказаний и решения',
+         'access': 'Мод+', 'tone': 'info'},
+
+        # Превентивный контур безопасности.
+        {'path': '/security', 'label': 'Центр безопасности', 'icon': 'fa-shield-halved',
+         'section': 'protection', 'description': 'Сводный риск, политики и готовность защиты',
+         'access': 'Мод+', 'tone': 'security'},
+        {'path': '/autofilter', 'label': 'Автофильтр', 'icon': 'fa-filter',
+         'section': 'protection', 'description': 'Слова, ссылки, капс, флуд и исключения',
+         'access': 'Мод+', 'tone': 'security'},
+        {'path': '/antiraid', 'label': 'Анти-рейд', 'icon': 'fa-shield-virus',
+         'section': 'protection', 'description': 'Защита от массовых входов и атак',
+         'access': 'Админ', 'min_role': 'admin', 'tone': 'security'},
+        {'path': '/antifake', 'label': 'Антифейк', 'icon': 'fa-user-secret',
+         'section': 'protection', 'description': 'Поиск подделок профилей и impersonation',
+         'access': 'Мод+', 'tone': 'security'},
+
+        # Управление качеством и нагрузкой команды.
+        {'path': '/mod-control', 'label': 'Контроль команды', 'icon': 'fa-clipboard-check',
+         'section': 'management', 'description': 'Очереди, заметки и контроль исполнения',
+         'access': 'Мод+', 'tone': 'analytics'},
+        {'path': '/mod-report', 'label': 'Отчёты', 'icon': 'fa-chart-simple',
+         'section': 'management', 'description': 'Нагрузка, рецидивисты и выгрузка результатов',
+         'access': 'Мод+', 'tone': 'analytics'},
+        {'path': '/mod-insights', 'label': 'Аналитика рисков', 'icon': 'fa-user-shield',
+         'section': 'management', 'description': 'Причины нарушений, тренды и рекомендации',
+         'access': 'Мод+', 'tone': 'analytics'},
+        {'path': '/ladder', 'label': 'Лестница наказаний', 'icon': 'fa-stairs',
+         'section': 'management', 'description': 'Единые ступени эскалации и контроль сроков',
+         'access': 'Мод+', 'tone': 'analytics'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},
@@ -160,6 +203,22 @@ MENU = [
         {'path': '/search', 'label': 'Поиск по серверу', 'icon': 'fa-magnifying-glass'},
     ]},
 ]
+
+# Внутренняя навигация PRO-центра модерации. Порядок задаёт рабочий сценарий:
+# действие -> расследование -> защита -> контроль качества.
+MODERATION_SECTIONS = (
+    {'key': 'response', 'label': 'Оперативная работа', 'short': 'Операции',
+     'icon': 'fa-bolt', 'description': 'Наказания и аварийные действия'},
+    {'key': 'investigation', 'label': 'Инциденты и решения', 'short': 'Инциденты',
+     'icon': 'fa-magnifying-glass', 'description': 'Факты, доказательства и апелляции'},
+    {'key': 'protection', 'label': 'Автоматическая защита', 'short': 'Защита',
+     'icon': 'fa-shield-halved', 'description': 'Превентивные политики сервера'},
+    {'key': 'management', 'label': 'Команда и аналитика', 'short': 'Контроль',
+     'icon': 'fa-chart-line', 'description': 'Качество, нагрузка и эскалация'},
+)
+
+_ROLE_LEVEL = {'uye': 0, 'mod': 1, 'admin': 2, 'owner': 3}
+
 
 # Defaults applied if a role has no stored config yet.
 DEFAULT_GROUPS = {
@@ -304,31 +363,58 @@ def save_config(cfg):
     _save(cfg)
 
 
-def panel_groups_for(role):
-    """Return the list of visible groups (with visible items) for a panel role.
+def _role_can_open(role, page):
+    """Не показывать ссылку, которая гарантированно закончится HTTP 403."""
+    required = page.get('min_role', 'uye')
+    return _ROLE_LEVEL.get(role, -1) >= _ROLE_LEVEL.get(required, 99)
 
-    owner -> everything. mod/admin -> from config (with defaults).
+
+def _moderation_sections(items):
+    """Сгруппировать видимые мод-инструменты без изменения их URL/настроек."""
+    sections = []
+    for meta in MODERATION_SECTIONS:
+        pages = [page for page in items if page.get('section') == meta['key']]
+        if pages:
+            sections.append({**meta, 'pages': pages})
+    return sections
+
+
+def panel_groups_for(role):
+    """Return visible sidebar groups with role-safe, workflow-aware pages.
+
+    Owner sees everything. Mod/admin visibility still follows panel_menu.json,
+    while `min_role` removes dead links that would inevitably return HTTP 403.
+    The moderation group additionally receives `sections` for compact PRO nav.
     """
+    cfg = _load().get(role, {}) if role != 'owner' else {}
+    if not isinstance(cfg, dict):
+        cfg = {}
+    allowed_groups = (cfg.get('groups') or DEFAULT_GROUPS.get(role, []))
     if role == 'owner':
-        return MENU
-    cfg = _load().get(role, {})
-    allowed_groups = cfg.get('groups') or DEFAULT_GROUPS.get(role, [])
+        allowed_groups = [g['key'] for g in MENU]
     allowed_items = cfg.get('items') or []
     if not isinstance(allowed_groups, list):
         allowed_groups = []
     if not isinstance(allowed_items, list):
         allowed_items = []
+
     out = []
     has_items_filter = bool(allowed_items)
-    for g in MENU:
-        if g['key'] not in allowed_groups:
+    for group in MENU:
+        if group['key'] not in allowed_groups:
             continue
+        pages = [page for page in group['pages'] if _role_can_open(role, page)]
         if has_items_filter:
-            items = [it for it in g['pages'] if it['path'] in allowed_items]
-        else:
-            # No explicit page filter -> show all pages of an allowed group.
-            items = list(g['pages'])
-        if not items:
+            pages = [page for page in pages if page['path'] in allowed_items]
+        if not pages:
             continue
-        out.append({'group': g['group'], 'key': g['key'], 'icon': g['icon'], 'pages': items})
+        payload = {
+            'group': group['group'],
+            'key': group['key'],
+            'icon': group['icon'],
+            'pages': pages,
+        }
+        if group['key'] == 'mod':
+            payload['sections'] = _moderation_sections(pages)
+        out.append(payload)
     return out

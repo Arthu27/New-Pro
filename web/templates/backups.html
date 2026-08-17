@@ -23,7 +23,7 @@
       ключ сессий) в бэкап <b>не включаются</b> — носить архив можно спокойно.
     </div>
     <div id="bk-stats" style="margin-bottom:12px;font-weight:600"></div>
-    <button class="btn-save" id="bk-create-btn" onclick="bkCreate()">
+    <button type="button" class="btn-save" id="bk-create-btn" onclick="bkCreate()">
       <i class="fas fa-plus"></i> Создать бэкап сейчас</button>
     <span class="msg" id="bk-msg"></span>
 
@@ -69,8 +69,8 @@ async function bkLoad() {
         '<a class="btn-save" style="padding:8px 14px;text-decoration:none" ' +
           'href="/api/backups/download/' + encodeURIComponent(it.name) + '">' +
           '<i class="fas fa-download"></i></a>' +
-        '<button class="btn-save" style="background:#c0392b;padding:8px 14px" ' +
-          'onclick="bkDel(\'' + esc(it.name) + '\')"><i class="fas fa-trash"></i></button>' +
+        '<button type="button" class="btn-save" style="background:#c0392b;padding:8px 14px" ' +
+          'onclick="bkDel(\'' + esc(it.name) + '\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>' +
       '</div>';
     list.appendChild(row);
   }

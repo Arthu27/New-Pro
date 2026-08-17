@@ -304,7 +304,7 @@
       var name = String(m.name || m.username || m.id || '?');
       var avatarUrl = m.avatar || '';
       var avatarHtml = avatarUrl
-        ? '<img class="leader-avatar" src="' + esc(avatarUrl) + '" onerror="this.outerHTML=\'<div class=&quot;leader-avatar-fallback&quot;>' + esc(getInitial(name)) + '</div>\'" />'
+        ? '<img alt="" class="leader-avatar" src="' + esc(avatarUrl) + '" onerror="this.outerHTML=\'<div class=&quot;leader-avatar-fallback&quot;>' + esc(getInitial(name)) + '</div>\'" />'
         : '<div class="leader-avatar-fallback">' + esc(getInitial(name)) + '</div>';
       return '<div class="leader-row"   style="animation-delay:' + (i * 0.04) + 's;">' +
         '<div class="leader-rank ' + rank + '">#' + (i + 1) + '</div>' +

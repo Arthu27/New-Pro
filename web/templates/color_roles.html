@@ -40,7 +40,7 @@
       <input type="text" id="color-emoji" placeholder="🎨" class="field-input" aria-label="🎨">
     </div>
   </div>
-  <button onclick="addColor()" class="save-btn"><i class="fas fa-plus"   style="margin-right: 6px;"></i>Добавить</button>
+  <button type="button" onclick="addColor()" class="save-btn"><i class="fas fa-plus"   style="margin-right: 6px;"></i>Добавить</button>
 </div>
 
 <div class="cr-box" data-reveal="up">
@@ -57,7 +57,7 @@
       <label class="field-label">Канал панели</label>
       <select id="panel-channel" class="field-input" aria-label="Канал панели"></select>
     </div>
-    <button onclick="publishPanel()" class="save-btn" >
+    <button type="button" onclick="publishPanel()" class="save-btn" >
       <i class="fas fa-paper-plane"   style="margin-right: 6px;"></i>Опубликовать
     </button>
   </div>
@@ -123,7 +123,7 @@ function renderColors() {
   if(!colors.length) { box.innerHTML='<p >Цветов пока нет</p>'; return; }
   box.innerHTML = colors.map(function(c,i){
     return '<div class="color-card">'+
-      '<button class="del-btn" onclick="removeColor('+i+')">×</button>'+
+      '<button type="button" class="del-btn" onclick="removeColor('+i+')">×</button>'+
       '<div class="color-swatch" style="--swatch-color:' + c.hex + '"></div>'+
       '<div   style="margin-bottom: 4px;">'+(c.emoji||'🎨')+'</div>'+
       '<div class="color-name">'+c.name+'</div>'+

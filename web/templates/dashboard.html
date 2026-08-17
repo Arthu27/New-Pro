@@ -449,11 +449,11 @@
         <input type="text" class="sh-input sh-time" id="shStart" placeholder="18:00" aria-label="Начало">
         <span style="color:var(--text-3)">–</span>
         <input type="text" class="sh-input sh-time" id="shEnd" placeholder="22:00" aria-label="Конец">
-        <button class="sh-btn" onclick="shiftAdd()" title="Добавить смену"><i class="fas fa-plus"></i></button>
+        <button type="button" class="sh-btn" onclick="shiftAdd()" title="Добавить смену"><i class="fas fa-plus"></i></button>
       </div>
       <div class="shift-tz-row">Пояс расписания:
         <select class="sh-input" id="shTz" aria-label="Часовой пояс"></select>
-        <button class="sh-btn" onclick="shiftTzSave()" title="Сохранить пояс"><i class="fas fa-check"></i></button>
+        <button type="button" class="sh-btn" onclick="shiftTzSave()" title="Сохранить пояс"><i class="fas fa-check"></i></button>
         <span class="shift-msg" id="shiftMsg"></span>
       </div>
     </details>
@@ -727,7 +727,7 @@
         var rc = roleColors[l.roles || l.role] || 'var(--text-3)';
         var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
         return '<div class="login-item">' +
-          '<img src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+          '<img alt="" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
           '<div class="login-item-info">' +
             '<div class="login-item-name">' + esc(l.username) + '</div>' +
             '<div class="login-item-time">' + esc(t) + '</div>' +
@@ -953,7 +953,7 @@
       return '<div class="shift-edit-row"><span class="shift-edit-day">' + esc(s.weekday_ru) + '</span>' +
         '<span class="shift-edit-name">' + esc(s.name) + '</span>' +
         '<span class="shift-edit-time">' + esc(s.start) + '–' + esc(s.end) + '</span>' +
-        '<button class="shift-del" onclick="shiftRemove(\'' + esc(s.id) + '\')" title="Убрать смену"><i class="fas fa-xmark"></i></button></div>';
+        '<button type="button" class="shift-del" onclick="shiftRemove(\'' + esc(s.id) + '\')" title="Убрать смену"><i class="fas fa-xmark"></i></button></div>';
     }).join('') || '<div class="shift-now-sub" style="padding:4px 8px">Смен пока нет — добавьте первую ниже.</div>';
     var tzSel = $('shTz');
     if (tzSel && !tzSel.dataset.ready) {

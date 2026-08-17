@@ -94,7 +94,7 @@
       <input type="text" id="lv-msg" class="form-input" placeholder="{user} достиг уровня {level}! 🎉" aria-label="{user} достиг уровня {level}! 🎉">
     </div>
 
-    <button class="btn-save" onclick="saveLeveling()"><i class="fas fa-floppy-disk"></i> СОХРАНИТЬ</button>
+    <button type="button" class="btn-save" onclick="saveLeveling()"><i class="fas fa-floppy-disk"></i> СОХРАНИТЬ</button>
     <div id="lv-status"   style="margin-top: 10px;"></div>
   </div>
 
@@ -173,7 +173,7 @@ async function loadLeveling() {
     var pct = u.level ? Math.min(100, Math.round((u.xp % (u.level * 100)) / (u.level * 100) * 100)) : 0;
     return '<div class="lb-row" >' +
       '<div class="lb-rank">' + (medals[i] || '#' + (i + 1)) + '</div>' +
-      '<img class="lb-avatar" src="' + (u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+      '<img alt="" class="lb-avatar" src="' + (u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
       '<div >' +
         '<div  >' +
           '<span class="lb-name">' + (u.name || '?') + '</span>' +

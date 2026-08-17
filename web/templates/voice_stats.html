@@ -90,7 +90,7 @@ async function loadVoiceStats(gid) {
       var pct = Math.round(((u.seconds||0)/maxSecs)*100);
       return '<div class="vc-row">'+
         '<div class="vc-rank">'+(medals[i]||'#'+(i+1))+'</div>'+
-        '<img class="vc-avatar" src="'+esc(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+        '<img alt="" class="vc-avatar" src="'+esc(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
         '<div style="flex:1;min-width:0"><div class="vc-name">'+esc(u.name)+'</div>'+
         '<div class="vc-bar"><div class="vc-bar-fill" style="width: '+pct+'%;"></div></div></div>'+
         '<div class="vc-time">'+esc(u.time)+'</div>'+

@@ -27,7 +27,7 @@
     <div class="ch-search">
       <i class="fas fa-search"></i>
       <input type="text" id="ch-search" placeholder="Поиск каналов..." aria-label="Поиск каналов...">
-      <button id="ch-search-clear" title="Очистить" class="ch-search-clear"><i class="fas fa-times"></i></button>
+      <button type="button" id="ch-search-clear" title="Очистить" class="ch-search-clear"><i class="fas fa-times"></i></button>
     </div>
   </div>
   <div class="ch-toolbar-right">
@@ -124,7 +124,7 @@
   <div class="modal-card">
     <div class="modal-head">
       <h3><i class="fas fa-plus-circle"></i>Новый канал</h3>
-      <button class="modal-close" id="btnCloseCreate" type="button"><i class="fas fa-times"></i></button>
+      <button class="modal-close" id="btnCloseCreate" type="button" aria-label="Закрыть окно создания"><i class="fas fa-times"></i></button>
     </div>
 
     <label class="field-label">Тип канала</label>
@@ -190,7 +190,7 @@
   <div class="modal-card">
     <div class="modal-head">
       <h3><i class="fas fa-pen"></i>Редактировать&nbsp;<i class="fas" id="edit-title-icon" style="color:var(--text-3)"></i><span id="edit-title-name" style="color:var(--ac-2)"></span>&nbsp;<span id="edit-title-badge" class="ch-badge"></span></h3>
-      <button class="modal-close" id="btnCloseEdit" type="button"><i class="fas fa-times"></i></button>
+      <button class="modal-close" id="btnCloseEdit" type="button" aria-label="Закрыть окно редактирования"><i class="fas fa-times"></i></button>
     </div>
 
     <label class="field-label">Название канала</label>
@@ -465,8 +465,8 @@ textarea.field-input{resize:vertical;min-height:52px}
         (c.topic ? '<div class="ch-topic"><i class="fas fa-quote-left"></i>' + esc(c.topic) + '</div>' : '') +
       '</div>' +
       '<div class="ch-actions">' +
-        '<button class="icon-btn" data-action="edit" title="Редактировать"><i class="fas fa-pen"></i></button>' +
-        '<button class="icon-btn danger" data-action="delete" title="Удалить"><i class="fas fa-trash"></i></button>' +
+        '<button type="button" class="icon-btn" data-action="edit" title="Редактировать"><i class="fas fa-pen"></i></button>' +
+        '<button type="button" class="icon-btn danger" data-action="delete" title="Удалить"><i class="fas fa-trash"></i></button>' +
       '</div>' +
     '</div>';
   }

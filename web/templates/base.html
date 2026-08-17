@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css?v=12">
     <link rel="stylesheet" href="/static/polish.css?v=5">
+    <link rel="stylesheet" href="/static/moderation-suite.css?v=1">
+    <link rel="stylesheet" href="/static/quality-suite.css?v=1">
     <script>
       // Apply theme + accent before render to prevent FOUC
       (function(){
@@ -37,11 +39,15 @@
     </script>
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Перейти к содержимому</a>
+    <div class="route-progress" id="routeProgress" role="progressbar" aria-label="Загрузка страницы" aria-hidden="true"><span></span></div>
+
+    {% if request.path == '/' %}
     <!-- ============================================================
-         WELCOME / SPLASH SCREEN (показывается один раз за сессию)
+         WELCOME / SPLASH SCREEN (только на главной, один раз за сессию)
          Full-screen hero → переход в панель по клику/скроллу/клавише.
          ============================================================ -->
-    <div class="welcome-screen" id="welcomeScreen" aria-hidden="true">
+    <div class="welcome-screen" id="welcomeScreen" aria-hidden="false">
       <div class="bg-ambient" aria-hidden="true">
         <span class="orb orb-1"></span>
         <span class="orb orb-2"></span>
@@ -63,7 +69,7 @@
             <a href="#w-about" class="wn-link">О системе</a>
           </div>
           <button class="welcome-nav-cta" id="welcomeEnterTop" type="button"><i class="fas fa-arrow-right"></i> Войти</button>
-          <button class="welcome-burger" id="welcomeBurger" aria-label="Меню"><i class="fas fa-bars"></i></button>
+          <button class="welcome-burger" id="welcomeBurger" type="button" aria-label="Меню"><i class="fas fa-bars"></i></button>
         </div>
       </nav>
 
@@ -89,6 +95,7 @@
         <div class="wf-item"><i class="fas fa-robot"></i><b>AI-помощник</b><span>Автоматическая поддержка</span></div>
       </div>
     </div>
+    {% endif %}
 
     <!-- Futuristic ambient background layer -->
     <div class="bg-ambient" aria-hidden="true">
@@ -99,7 +106,7 @@
         <div class="bg-grid-plane"></div>
     </div>
 
-    <button class="mobile-menu" id="mobileMenu" aria-label="Меню"><i class="fas fa-bars"></i></button>
+    <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Открыть меню"><i class="fas fa-bars"></i></button>
 
     <aside class="sidebar" id="sidebar">
         <a href="/" class="brand">
@@ -134,7 +141,7 @@
 
             {% elif role == 'owner' or role == 'admin' or role == 'mod' %}
             {% for grp in panel_menu %}
-                {% if grp.items %}
+                {% if grp.pages %}
                 <div class="nav-group" data-group="{{ grp.key }}">
                     <div class="nav-group-title" data-toggle role="button" tabindex="0" aria-expanded="true">
                         <span class="nav-group-icon"><i class="fas {{ grp.icon }}"></i></span>
@@ -144,9 +151,27 @@
                     </div>
                     <div class="nav-group-items">
                         <div class="nav-group-inner">
-                        {% for it in grp.pages %}
-                        <a href="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}"{% if it.path in panel_off_paths %} title="Модуль выключен (MOD_ONLY / DISABLED_COGS)"{% endif %}><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
-                        {% endfor %}
+                        {% if grp.sections %}
+                            {% for section in grp.sections %}
+                            <div class="nav-subgroup{% if section.pages|selectattr('path', 'equalto', request.path)|list %} has-active{% endif %}" data-mod-section="{{ section.key }}">
+                                <button class="nav-subgroup-title" type="button" aria-expanded="false" title="{{ section.description }}">
+                                    <span class="nav-subgroup-icon"><i class="fas {{ section.icon }}"></i></span>
+                                    <span>{{ section.short }}</span>
+                                    <span class="nav-subgroup-count">{{ section.pages|length }}</span>
+                                    <i class="fas fa-chevron-right nav-subgroup-caret"></i>
+                                </button>
+                                <div class="nav-subgroup-items">
+                                {% for it in section.pages %}
+                                    <a href="{{ it.path }}" data-mod-path="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}" title="{{ it.description }}{% if it.path in panel_off_paths %} · Модуль выключен{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
+                                {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            {% for it in grp.pages %}
+                            <a href="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}"{% if it.path in panel_off_paths %} title="Модуль выключен (MOD_ONLY / DISABLED_COGS)"{% endif %}><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
+                            {% endfor %}
+                        {% endif %}
                         </div>
                     </div>
                 </div>
@@ -160,7 +185,7 @@
                 <div class="sys-status-row">
                     <span class="sys-dot"></span>
                     <span class="sys-label">Система</span>
-                    <span class="sys-val">Online</span>
+                    <span class="sys-val" id="sysConnection">Online</span>
                 </div>
                 <div class="sys-status-row">
                     <i class="fas fa-microchip sys-ico"></i>
@@ -209,16 +234,20 @@
                     <i class="fas fa-clock"></i>
                     <span id="navClock">--:--:--</span>
                 </div>
-                <button class="nav-icon-btn" title="Поиск (Ctrl+K)" id="globalSearchBtn"><i class="fas fa-search"></i></button>
-                <button class="activity-btn" title="Лента активности" id="activityBtn" aria-label="Activity">
+                <div class="quality-connection is-online" id="qualityConnection" role="status" aria-live="polite" title="Соединение с панелью">
+                    <span class="quality-connection-dot"></span>
+                    <span class="quality-connection-label">В сети</span>
+                </div>
+                <button class="nav-icon-btn" type="button" title="Поиск (Ctrl+K)" aria-label="Открыть глобальный поиск" id="globalSearchBtn"><i class="fas fa-search"></i></button>
+                <button class="activity-btn" type="button" title="Лента активности" id="activityBtn" aria-label="Открыть ленту активности">
                     <i class="fas fa-stream"></i>
                 </button>
-                <button class="theme-toggle" title="Сменить тему" id="themeToggle" aria-label="Theme">
+                <button class="theme-toggle" type="button" title="Сменить тему" id="themeToggle" aria-label="Сменить тему">
                     <i class="fas fa-sun icon-sun icon-swap" ></i>
                     <i class="fas fa-moon icon-moon icon-swap" ></i>
                 </button>
-                <button class="nav-icon-btn" title="Уведомления" id="notifBtn"><i class="fas fa-bell"></i><span class="nav-badge live" style="display:none">0</span></button>
-                <button class="nav-icon-btn" title="Полный экран" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
+                <button class="nav-icon-btn" type="button" title="Уведомления" aria-label="Открыть уведомления" id="notifBtn"><i class="fas fa-bell"></i><span class="nav-badge live" style="display:none">0</span></button>
+                <button class="nav-icon-btn" type="button" title="Полный экран" aria-label="Переключить полноэкранный режим" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
                 <div class="user-pill">
                     <div class="user-avatar">{{ (username or 'U')[0]|upper }}</div>
                     <div class="user-info">
@@ -236,6 +265,109 @@
             </div>
         </div>
 
+        {# Единая PRO-навигация для всех страниц модерации. #}
+        {% set modnav = namespace(active=none, active_section=none, sections=[], pages=[]) %}
+        {% for grp in panel_menu|default([], true) %}
+            {% if grp.key == 'mod' %}
+                {% set modnav.sections = grp.sections|default([]) %}
+                {% set modnav.pages = grp.pages %}
+                {% for it in grp.pages %}
+                    {% if it.path == request.path %}{% set modnav.active = it %}{% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+        {% if modnav.active %}
+            {% for section in modnav.sections %}
+                {% if section.key == modnav.active.section %}{% set modnav.active_section = section %}{% endif %}
+            {% endfor %}
+
+        <section class="mod-suite-bar" data-mod-suite data-current-path="{{ request.path }}">
+            <div class="mod-suite-brand" aria-hidden="true"><i class="fas fa-shield-halved"></i></div>
+            <div class="mod-suite-context">
+                <div class="mod-suite-eyebrow">
+                    <span>MODERATION OPS</span>
+                    <i class="fas fa-chevron-right"></i>
+                    <span>{{ modnav.active_section.short if modnav.active_section else 'Центр' }}</span>
+                </div>
+                <div class="mod-suite-current">{{ modnav.active.label }}</div>
+                <div class="mod-suite-description">{{ modnav.active.description }}</div>
+            </div>
+            <div class="mod-suite-state">
+                <span class="mod-suite-live"><span></span> Система активна</span>
+                <span class="mod-suite-role"><i class="fas fa-user-shield"></i> {{ modnav.active.access }}</span>
+            </div>
+            <div class="mod-suite-actions">
+                <a class="mod-suite-step" href="#" data-mod-prev title="Предыдущий инструмент" aria-label="Предыдущий инструмент"><i class="fas fa-chevron-left"></i></a>
+                <button class="mod-suite-open" type="button" data-mod-open aria-haspopup="dialog">
+                    <i class="fas fa-table-cells-large"></i>
+                    <span>Все инструменты</span>
+                    <b>{{ modnav.pages|length }}</b>
+                    <kbd>Alt M</kbd>
+                </button>
+                <a class="mod-suite-step" href="#" data-mod-next title="Следующий инструмент" aria-label="Следующий инструмент"><i class="fas fa-chevron-right"></i></a>
+            </div>
+        </section>
+
+        <div class="mod-suite-overlay" data-mod-overlay hidden>
+            <div class="mod-suite-dialog" role="dialog" aria-modal="true" aria-labelledby="modSuiteTitle">
+                <div class="mod-suite-dialog-head">
+                    <div class="mod-suite-dialog-mark"><i class="fas fa-shield-halved"></i></div>
+                    <div>
+                        <div class="mod-suite-dialog-kicker">AETHER CONTROL SYSTEM</div>
+                        <h2 id="modSuiteTitle">Центр модерации</h2>
+                        <p>{{ modnav.pages|length }} инструментов, собранных по рабочему сценарию</p>
+                    </div>
+                    <button type="button" class="mod-suite-close" data-mod-close aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
+                </div>
+                <div class="mod-suite-search">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input type="search" data-mod-search placeholder="Найти инструмент или задачу..." autocomplete="off" aria-label="Поиск инструмента модерации">
+                    <span data-mod-result-count>{{ modnav.pages|length }}</span>
+                </div>
+                <div class="mod-suite-recent" data-mod-recent hidden></div>
+                <div class="mod-suite-sections" data-mod-sections>
+                    {% for section in modnav.sections %}
+                    <section class="mod-suite-section" data-mod-dialog-section="{{ section.key }}">
+                        <div class="mod-suite-section-head">
+                            <span class="mod-suite-section-icon"><i class="fas {{ section.icon }}"></i></span>
+                            <div><h3>{{ section.label }}</h3><p>{{ section.description }}</p></div>
+                            <span>{{ section.pages|length }}</span>
+                        </div>
+                        <div class="mod-suite-grid">
+                            {% for it in section.pages %}
+                            <a href="{{ it.path }}" class="mod-suite-card tone-{{ it.tone }}{% if request.path == it.path %} is-current{% endif %}"
+                               data-mod-card data-mod-card-path="{{ it.path }}" data-mod-card-label="{{ it.label }}"
+                               data-mod-search-text="{{ it.label }} {{ it.description }} {{ section.label }}">
+                                <span class="mod-suite-card-icon"><i class="fas {{ it.icon }}"></i></span>
+                                <span class="mod-suite-card-copy">
+                                    <strong>{{ it.label }}</strong>
+                                    <small>{{ it.description }}</small>
+                                </span>
+                                <span class="mod-suite-card-meta">
+                                    <em>{{ it.access }}</em>
+                                    {% if request.path == it.path %}<b>Открыто</b>{% endif %}
+                                </span>
+                                <i class="fas fa-arrow-right mod-suite-card-arrow"></i>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    {% endfor %}
+                </div>
+                <div class="mod-suite-empty" data-mod-empty hidden>
+                    <i class="fas fa-magnifying-glass"></i>
+                    <strong>Инструмент не найден</strong>
+                    <span>Попробуйте другое название или задачу</span>
+                </div>
+                <div class="mod-suite-dialog-foot">
+                    <span><kbd>Esc</kbd> закрыть</span>
+                    <span><kbd>Alt M</kbd> открыть центр</span>
+                    <span><i class="fas fa-lock"></i> Пункты учитывают вашу роль доступа</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         {% block content %}
 {% block page_hero %}{% endblock %}
 {% endblock %}
@@ -250,7 +382,7 @@
       Активность
       <span class="live-pill"><span class="dot"></span>LIVE</span>
     </h3>
-    <button class="activity-drawer-close" id="activityClose" title="Закрыть"><i class="fas fa-times"></i></button>
+    <button class="activity-drawer-close" id="activityClose" type="button" title="Закрыть" aria-label="Закрыть ленту активности"><i class="fas fa-times"></i></button>
   </div>
   <div class="activity-drawer-body" id="activityBody">
     <div class="activity-drawer-empty">
@@ -260,7 +392,7 @@
   </div>
   <div class="activity-drawer-foot">
     <div><span class="pulse-dot"></span><span id="activityLastUpdate">Только что</span></div>
-    <button class="btn-link" id="activityRefresh"><i class="fas fa-sync-alt"></i> Обновить</button>
+    <button class="btn-link" id="activityRefresh" type="button"><i class="fas fa-sync-alt"></i> Обновить</button>
   </div>
 </aside>
 
@@ -1273,6 +1405,10 @@ window.addEventListener('pageshow', function (e) {
 <script src="/static/api-guard.js?v=2"></script>
 <!-- UX-kit: глобальный поиск, хоткеи, избранное, плотные таблицы, undo-тосты -->
 <script src="/static/ux-kit.js?v=1"></script>
+<!-- Единый центр навигации по 18 инструментам модерации -->
+<script src="/static/moderation-suite.js?v=1"></script>
+<!-- Сквозной quality-слой: доступность, навигация, сеть и состояния -->
+<script src="/static/quality-suite.js?v=1"></script>
 <script>
 // Инициализация WebSocket клиента
 (function() {
@@ -1397,8 +1533,8 @@ window.addEventListener('pageshow', function (e) {
     <div id="acTitle" style="font-size:16px;font-weight:700;margin-bottom:8px;">Подтверждение</div>
     <div id="acDesc" style="font-size:13px;opacity:.7;margin-bottom:20px;line-height:1.5;"></div>
     <div style="display:flex;gap:10px;justify-content:center;">
-      <button id="acCancel" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);cursor:pointer;font-size:13px;font-weight:600;">Отмена</button>
-      <button id="acOk" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(231,76,60,0.4);background:rgba(231,76,60,0.15);color:#ff6b6b;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">Подтвердить</button>
+      <button id="acCancel" type="button" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);cursor:pointer;font-size:13px;font-weight:600;">Отмена</button>
+      <button id="acOk" type="button" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(231,76,60,0.4);background:rgba(231,76,60,0.15);color:#ff6b6b;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">Подтвердить</button>
     </div>
   </div>
 </div>

@@ -53,10 +53,10 @@
 </div>
 
 <div class="at-tabs">
-  <button class="at-tab active" data-tab="all">Все</button>
-  <button class="at-tab" data-tab="open">Открытые</button>
-  <button class="at-tab" data-tab="ai">AI активные</button>
-  <button class="at-tab" data-tab="closed">Закрытые</button>
+  <button type="button" class="at-tab active" data-tab="all">Все</button>
+  <button type="button" class="at-tab" data-tab="open">Открытые</button>
+  <button type="button" class="at-tab" data-tab="ai">AI активные</button>
+  <button type="button" class="at-tab" data-tab="closed">Закрытые</button>
 </div>
 
 <div class="at-box">
@@ -102,7 +102,7 @@
       var meta = t.ai_message_count ? esc(t.ai_message_count + ' AI') : '';
       var av = 'https://cdn.discordapp.com/embed/avatars/0.png';
       html += '<div class="tk-item">' +
-        '<img class="tk-av" src="' + av + '" onerror="this.src=\'' + av + '\'">' +
+        '<img alt="" class="tk-av" src="' + av + '" onerror="this.src=\'' + av + '\'">' +
         '<div class="tk-info"><div class="tk-name">' + esc(t.user_name || t.user_id || '—') + '</div>' +
         '<div class="tk-topic">' + esc(topic) + (meta ? ' • <span class="tk-ai-count">' + meta + '</span>' : '') + '</div></div>' +
         '<span class="tk-status ' + st + '">' + label + '</span></div>';
