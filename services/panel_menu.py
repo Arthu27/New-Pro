@@ -43,6 +43,7 @@ MENU = [
         {'path': '/appeals', 'label': 'Апелляции', 'icon': 'fa-scale-balanced'},
         {'path': '/lockdown', 'label': 'Локдаун', 'icon': 'fa-house-lock'},
         {'path': '/security', 'label': 'Безопасность', 'icon': 'fa-shield-virus'},
+        {'path': '/antifake', 'label': 'Антифейк', 'icon': 'fa-user-secret'},
         {'path': '/ladder', 'label': 'Лестница', 'icon': 'fa-stairs'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
@@ -226,6 +227,7 @@ PAGE_COGS = {
     '/lockdown': ('lockdown',),
     '/staff-shifts': ('staff_shifts',),
     '/security': ('security',),
+    '/antifake': ('impersonation',),
     '/ladder': ('ladder', 'warnings'),
     '/replay': ('replay',),
     '/meetings': ('meeting',),

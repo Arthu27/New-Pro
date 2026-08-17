@@ -64,6 +64,15 @@ ACTIONS_META = {
     "alert": "Только журнал",
 }
 
+# Варианты действий — те самые Choice из слеш-команды /antifake action;
+# на них же опирается веб-панель (имена/значения не расходятся никогда).
+ACTION_CHOICES = [
+    app_commands.Choice(name="Снять ник (по умолч.)", value="strip"),
+    app_commands.Choice(name="В джейл (Tag Jail)", value="jail"),
+    app_commands.Choice(name="Кикнуть", value="kick"),
+    app_commands.Choice(name="Только журнал", value="alert"),
+]
+
 # Кириллица/греческие/цифры, визуально похожие на латиницу
 _CONFUSABLES = str.maketrans({
     'а': 'a', 'А': 'a', 'ɑ': 'a', 'α': 'a',
@@ -367,6 +376,18 @@ class AntiFake(commands.Cog):
         _save_json(STRIKES_PATH, self._strikes)
         return len(arr)
 
+    def strike_view(self, guild_id: int) -> dict:
+        """Страйки рекламы гильдии: {user_id: [метки времени]} (копия)."""
+        return {u: list(a) for u, a
+                in self._strikes.get(str(guild_id), {}).items()}
+
+    def clear_strikes(self, guild_id: int, user_id: int) -> int:
+        """Обнулить страйки пользователя. Возвращает, сколько снято."""
+        g = self._strikes.setdefault(str(guild_id), {})
+        arr = g.pop(str(user_id), [])
+        _save_json(STRIKES_PATH, self._strikes)
+        return len(arr)
+
     # ────────────────────────────────────────────────────────────
     # Слушатели
     # ────────────────────────────────────────────────────────────
@@ -488,12 +509,7 @@ class AntiFake(commands.Cog):
 
     @antifake.command(name="action", description="Что делать с подделкой")
     @app_commands.describe(действие="Реакция на подделку")
-    @app_commands.choices(действие=[
-        app_commands.Choice(name="Снять ник (по умолч.)", value="strip"),
-        app_commands.Choice(name="В джейл (Tag Jail)", value="jail"),
-        app_commands.Choice(name="Кикнуть", value="kick"),
-        app_commands.Choice(name="Только журнал", value="alert"),
-    ])
+    @app_commands.choices(действие=ACTION_CHOICES)
     @app_commands.checks.has_permissions(administrator=True)
     async def af_action(self, interaction: discord.Interaction, действие: app_commands.Choice[str]):
         self.set_cfg(interaction.guild.id, 'action', действие.value)

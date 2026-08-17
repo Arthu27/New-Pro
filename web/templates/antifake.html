@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% block title %}Антифейк — Панель Aether{% endblock %}
+{% block page_title %}Антифейк — защита от подделок{% endblock %}
+{% block content %}
+<style>
+.af-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:15px 17px;margin-bottom:16px}
+.af-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.af-panel h3 i{color:var(--ac,#e0b04a)}
+.af-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.55}
+.af-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.af-inp,.af-sel{flex:1;min-width:160px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.af-inp:focus,.af-sel:focus{border-color:var(--ac,#e0b04a)}
+.af-num{width:110px;flex:0 0 auto}
+.af-sel option{background:#1c1f26;color:#eee}
+.af-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
+.af-btn:hover{filter:brightness(1.08)}
+.af-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.af-msg{font-size:12px;padding:8px 2px 0;display:none}
+.af-msg.ok{color:#4ade80}
+.af-msg.err{color:#ff8a7a}
+.af-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.af-tog{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.09));border-radius:12px;padding:10px 12px}
+.af-tog .l{font-size:12px;color:var(--text-2,rgba(255,255,255,.75))}
+.af-sw{position:relative;width:38px;height:21px;border-radius:20px;border:1px solid var(--line-2,rgba(255,255,255,.2));background:rgba(255,255,255,.06);cursor:pointer;flex:0 0 auto;padding:0}
+.af-sw::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#8b8f98;transition:all .18s}
+.af-sw.on{background:var(--ac-line,rgba(224,176,74,.3));border-color:var(--ac,#e0b04a)}
+.af-sw.on::after{left:19px;background:var(--ac,#e0b04a)}
+.af-sw:disabled{cursor:not-allowed;opacity:.55}
+.af-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-2,rgba(255,255,255,.15));border-radius:20px;padding:4px 11px;font-size:12px;color:var(--text-1,#fff);margin:0 6px 6px 0}
+.af-chip button{background:none;border:none;color:#ff8a7a;cursor:pointer;font-size:12px;padding:0}
+.af-res{display:none;margin-top:12px;border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:11px 13px;font-size:12.5px;color:var(--text-2,rgba(255,255,255,.8));line-height:1.65;word-break:break-word}
+.af-res.show{display:block}
+.af-res.hit{border-left:3px solid #ff8a7a}
+.af-res.clean{border-left:3px solid #4ade80}
+.af-mono{font-family:ui-monospace,Consolas,monospace;background:var(--surface-2,rgba(255,255,255,.07));border-radius:6px;padding:1px 7px}
+.af-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.af-table th{text-align:left;padding:8px 10px;color:var(--text-3,rgba(255,255,255,.5));font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--line-2,rgba(255,255,255,.1))}
+.af-table td{padding:8px 10px;border-bottom:1px solid var(--line-2,rgba(255,255,255,.06));color:var(--text-2,rgba(255,255,255,.8))}
+.af-table tr:last-child td{border-bottom:none}
+.af-del{background:transparent;border:1px solid rgba(255,138,122,.35);color:#ff8a7a;border-radius:8px;padding:5px 10px;font-size:11.5px;cursor:pointer;white-space:nowrap}
+.af-del:hover{background:rgba(255,138,122,.08)}
+.af-empty{border:1px dashed var(--line-2,rgba(255,255,255,.15));border-radius:10px;padding:14px 16px;font-size:12.5px;color:var(--text-3,rgba(255,255,255,.55));text-align:center}
+.af-pill{display:inline-block;font-size:10.5px;border-radius:20px;padding:2px 9px;border:1px solid var(--line-2,rgba(255,255,255,.15));color:var(--text-3,rgba(255,255,255,.6))}
+.af-pill.hot{color:#ff8a7a;border-color:rgba(255,138,122,.45)}
+[data-theme="light"] .af-tog .l,[data-theme="light"] .af-res{color:#333}
+[data-theme="light"] .af-table td{color:#333}
+[data-theme="light"] .af-chip{color:#111}
+[data-theme="light"] .af-sel option{background:#fff;color:#222}
+</style>
+
+<div class="af-panel">
+  <h3><i class="fas fa-user-secret"></i> Статус и действие</h3>
+  <div class="af-sub">Карточка «/antifake status»: система, действие при подделке, порог похожести, лог-канал.
+    Настройки действуют сразу — это та же память, что читает бот.</div>
+  <div class="af-row">
+    <span style="font-size:12.5px;color:var(--text-2,rgba(255,255,255,.8))">Действие:</span>
+    <select class="af-sel" id="afAction" style="max-width:230px"></select>
+    <span style="font-size:12.5px;color:var(--text-2,rgba(255,255,255,.8))">Порог, %:</span>
+    <input class="af-inp af-num" id="afThr" type="number" min="60" max="100" step="1">
+    <button class="af-btn" id="afThrGo"><i class="fas fa-check"></i> Порог</button>
+    <button class="af-btn ghost" id="afReload"><i class="fas fa-rotate"></i> Обновить</button>
+  </div>
+  <div class="af-row" style="margin-top:10px">
+    <span class="af-pill" id="afLogPill">Лог-канал: …</span>
+    <span class="af-pill" id="afProtPill">Защищаемых строк: …</span>
+    <span class="af-pill" id="afStrikePill">Страйки: …</span>
+  </div>
+  <div class="af-msg" id="afStatMsg"></div>
+</div>
+
+<div class="af-panel">
+  <h3><i class="fas fa-toggle-on"></i> Переключатели</h3>
+  <div class="af-sub">Флаги из конфига кога: вход и смена имени, замаскированная реклама, иммунитет персонала, DM и авто-таймаут за страйки.</div>
+  <div class="af-grid" id="afToggles"></div>
+</div>
+
+<div class="af-panel">
+  <h3><i class="fas fa-list-check"></i> Защищаемые строки</h3>
+  <div class="af-sub">Как «/antifake protect»: бренды и ключевые слова, которые нельзя подделывать (короче 4 канонических букв в защиту не берутся — правило кога).</div>
+  <div class="af-row">
+    <input class="af-inp" id="afProtIn" placeholder="Новая строка, напр. AetherBank" maxlength="60">
+    <button class="af-btn" id="afProtGo"><i class="fas fa-plus"></i> Защитить</button>
+  </div>
+  <div style="margin-top:10px" id="afProtList"></div>
+  <div class="af-msg" id="afProtMsg"></div>
+</div>
+
+<div class="af-panel" id="afTestPanel">
+  <h3><i class="fas fa-magnifying-glass"></i> Сухой прогон участника</h3>
+  <div class="af-sub">Как «/antifake test»: проверка имени и аватара без наказания — те же функции детекции.</div>
+  <div class="af-row">
+    <input class="af-inp" id="afTestUid" placeholder="ID участника" maxlength="24">
+    <button class="af-btn" id="afTestGo"><i class="fas fa-play"></i> Проверить</button>
+  </div>
+  <div class="af-msg" id="afTestMsg"></div>
+  <div class="af-res" id="afTestRes"></div>
+</div>
+
+<div class="af-panel">
+  <h3><i class="fas fa-flask"></i> Лаборатория строки</h3>
+  <div class="af-sub">Каноническая форма и похожесть — те же normalize/similarity кога. Видно, поймает ли строка защиту и насколько она близка к защищаемым именам.</div>
+  <div class="af-row">
+    <input class="af-inp" id="afLabText" placeholder="Строка для разбора…" maxlength="80">
+    <button class="af-btn" id="afLabGo"><i class="fas fa-play"></i> Разобрать</button>
+  </div>
+  <div class="af-msg" id="afLabMsg"></div>
+  <div class="af-res" id="afLabRes"></div>
+</div>
+
+<div class="af-panel">
+  <h3><i class="fas fa-triangle-exclamation"></i> Страйки рекламы</h3>
+  <div class="af-sub">Кто ловил страйки за замаскированную рекламу: активные за окно / всего записей. Обнуление — с подтверждением.</div>
+  <div class="af-row" style="margin-bottom:10px">
+    <button class="af-btn ghost" id="afStrikesReload"><i class="fas fa-rotate"></i> Обновить</button>
+    <button class="af-btn ghost" id="afStrikesCsv"><i class="fas fa-file-csv"></i> В CSV</button>
+  </div>
+  <div id="afStrikesBox"><div class="af-empty">Загружаю…</div></div>
+  <div class="af-msg" id="afStMsg"></div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/antifake';
+var CAN_EDIT = {{ 'true' if role in ('admin', 'owner') else 'false' }};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;'); }
+
+function showMsg(id, ok, text) {
+  var m = document.getElementById(id);
+  m.style.display = 'block'; m.className = 'af-msg ' + (ok ? 'ok' : 'err');
+  m.textContent = text;
+}
+
+function post(path, body, onOk, msgId) {
+  fetch(API + path, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body || {})
+  })
+    .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+    .then(function (res) {
+      if (!res.d.success) { if (msgId) showMsg(msgId, false, res.d.error || 'Ошибка'); return; }
+      onOk(res.d);
+    })
+    .catch(function () { if (msgId) showMsg(msgId, false, 'Сеть моргнула — попробуйте ещё раз'); });
+}
+
+function renderStatus(d) {
+  var sel = document.getElementById('afAction');
+  sel.innerHTML = d.actions.map(function (a) {
+    return '<option value="' + esc(a.value) + '"' + (a.value === d.action ? ' selected' : '') + '>' + esc(a.name) + '</option>';
+  }).join('');
+  sel.disabled = !CAN_EDIT;
+  document.getElementById('afThr').value = d.threshold_pct;
+  document.getElementById('afThr').disabled = !CAN_EDIT;
+  document.getElementById('afThrGo').style.display = CAN_EDIT ? '' : 'none';
+  document.getElementById('afLogPill').textContent = 'Лог-канал: ' + (d.log_channel_name ? '#' + d.log_channel_name : 'авто (мод-логи)');
+  document.getElementById('afProtPill').textContent = 'Защищаемых строк: ' + d.protected_count;
+  document.getElementById('afStrikePill').textContent = 'Страйки: ' + d.strike_limit + ' за ' + d.strike_window_days + ' дн — таймаут';
+  var box = document.getElementById('afToggles');
+  box.innerHTML = d.toggles.map(function (t) {
+    return '<div class="af-tog"><span class="l">' + esc(t.label) + '</span>' +
+      '<button class="af-sw' + (t.on ? ' on' : '') + '" data-key="' + esc(t.key) + '"' +
+      (CAN_EDIT ? '' : ' disabled') + ' aria-label="' + esc(t.label) + '"></button></div>';
+  }).join('');
+  if (CAN_EDIT) {
+    Array.prototype.forEach.call(box.querySelectorAll('.af-sw'), function (sw) {
+      sw.onclick = function () {
+        post('/toggle', {key: sw.getAttribute('data-key')}, function (r) {
+          showMsg('afStatMsg', true, r.message);
+          renderStatus(r.status);
+        }, 'afStatMsg');
+      };
+    });
+  }
+  renderProtected(d.protected_names);
+}
+
+function renderProtected(names) {
+  var box = document.getElementById('afProtList');
+  document.getElementById('afProtPill').textContent = 'Защищаемых строк: ' + names.length;
+  if (!names.length) {
+    box.innerHTML = '<span style="font-size:12px;color:var(--text-3,rgba(255,255,255,.5))">Своих строк нет — защищаются имена персонала.</span>';
+    return;
+  }
+  box.innerHTML = names.map(function (n) {
+    return '<span class="af-chip">' + esc(n) +
+      (CAN_EDIT ? ' <button data-unprot="' + esc(n) + '" title="Убрать"><i class="fas fa-xmark"></i></button>' : '') +
+      '</span>';
+  }).join('');
+  if (CAN_EDIT) {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-unprot]'), function (btn) {
+      btn.onclick = function () {
+        var name = btn.getAttribute('data-unprot');
+        askConfirm('Убрать «' + name + '» из защиты?', 'Строку снова можно будет подделать.', function () {
+          post('/unprotect', {text: name}, function (r) {
+            showMsg('afProtMsg', true, r.message);
+            renderProtected(r.protected_names);
+            renderStatus(r.status);
+          }, 'afProtMsg');
+        }, {danger: true, okText: 'Убрать', icon_fa: 'fa-xmark'});
+      };
+    });
+  }
+}
+
+document.getElementById('afAction').onchange = function () {
+  post('/action', {action: this.value}, function (r) {
+    showMsg('afStatMsg', true, r.message);
+    renderStatus(r.status);
+  }, 'afStatMsg');
+};
+
+document.getElementById('afThrGo').onclick = function () {
+  post('/threshold', {percent: document.getElementById('afThr').value}, function (r) {
+    showMsg('afStatMsg', true, r.message);
+    renderStatus(r.status);
+  }, 'afStatMsg');
+};
+
+document.getElementById('afProtGo').onclick = function () {
+  post('/protect', {text: document.getElementById('afProtIn').value}, function (r) {
+    showMsg('afProtMsg', true, r.message);
+    document.getElementById('afProtIn').value = '';
+    renderProtected(r.protected_names);
+    renderStatus(r.status);
+  }, 'afProtMsg');
+};
+
+document.getElementById('afTestGo').onclick = function () {
+  document.getElementById('afTestMsg').style.display = 'none';
+  post('/test', {user_id: document.getElementById('afTestUid').value}, function (d) {
+    var box = document.getElementById('afTestRes');
+    var html = '<b>' + esc(d.member.name) + '</b> <span class="af-mono">' + esc(d.member.id) + '</span><br>';
+    if (d.clean) {
+      html += esc(d.verdict);
+    } else {
+      html += d.findings.map(function (f) { return '• ' + esc(f.text); }).join('<br>');
+    }
+    box.className = 'af-res show ' + (d.clean ? 'clean' : 'hit');
+    box.innerHTML = html;
+  }, 'afTestMsg');
+};
+
+document.getElementById('afLabGo').onclick = function () {
+  document.getElementById('afLabMsg').style.display = 'none';
+  post('/lab', {text: document.getElementById('afLabText').value}, function (d) {
+    var box = document.getElementById('afLabRes');
+    var html = 'Каноническая форма: <span class="af-mono">' + esc(d.norm || '(пусто)') + '</span>' +
+      ' · хамелеоны: <b>' + (d.confusables ? 'да' : 'нет') + '</b>' +
+      ' · порог: <b>' + d.threshold_pct + '%</b><br>';
+    html += d.catch
+      ? '<b style="color:#ff8a7a">Поймана — похоже на защищаемое имя.</b><br>'
+      : '<b style="color:#4ade80">Не поймана — ниже порога.</b><br>';
+    html += d.matches.map(function (m) {
+      return '<span class="af-pill' + (m.catch ? ' hot' : '') + '">' + esc(m.name) + ' — ' + m.score_pct + '%' +
+        (m.source === 'string' ? ' · строка' : '') + '</span>';
+    }).join(' ');
+    if (!d.protected_total) { html += '<span style="font-size:12px">Защищаемых имён нет.</span>'; }
+    box.className = 'af-res show ' + (d.catch ? 'hit' : 'clean');
+    box.innerHTML = html;
+  }, 'afLabMsg');
+};
+
+function renderStrikes(d) {
+  var box = document.getElementById('afStrikesBox');
+  if (!d.entries.length) {
+    box.innerHTML = '<div class="af-empty">Страйков нет — реклама не ловилась.</div>';
+    return;
+  }
+  var html = '<table class="af-table"><thead><tr><th>Участник</th><th>ID</th><th>Активные</th><th>Всего</th><th>Последний (UTC)</th>' +
+    (CAN_EDIT ? '<th></th>' : '') + '</tr></thead><tbody>';
+  html += d.entries.map(function (e) {
+    return '<tr><td><b>' + esc(e.name || 'покинул сервер') + '</b></td>' +
+      '<td><span class="af-mono">' + esc(e.user_id) + '</span></td>' +
+      '<td>' + e.active + ' / ' + d.limit + '</td><td>' + e.total + '</td><td>' + esc(e.last_at) + '</td>' +
+      (CAN_EDIT ? '<td><button class="af-del" data-clear="' + esc(e.user_id) + '"><i class="fas fa-eraser"></i> Обнулить</button></td>' : '') +
+      '</tr>';
+  }).join('');
+  box.innerHTML = html + '</tbody></table>';
+  if (CAN_EDIT) {
+    Array.prototype.forEach.call(box.querySelectorAll('[data-clear]'), function (btn) {
+      btn.onclick = function () {
+        var uid = btn.getAttribute('data-clear');
+        askConfirm('Обнулить страйки участника?', 'Счётчик рекламы начнётся с нуля.', function () {
+          post('/strikes/clear', {user_id: Number(uid)}, function (r) {
+            showMsg('afStMsg', true, r.message);
+            renderStrikes(r.strikes);
+          }, 'afStMsg');
+        }, {danger: true, okText: 'Обнулить', icon_fa: 'fa-eraser'});
+      };
+    });
+  }
+}
+
+function loadStrikes() {
+  fetch(API + '/strikes')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success) { showMsg('afStMsg', false, d.error || 'Ошибка'); return; }
+      renderStrikes(d);
+    })
+    .catch(function () { showMsg('afStMsg', false, 'Сеть моргнула — попробуйте ещё раз'); });
+}
+
+function loadStatus() {
+  fetch(API + '/status')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success) { showMsg('afStatMsg', false, d.error || 'Ошибка'); return; }
+      renderStatus(d);
+    })
+    .catch(function () { showMsg('afStatMsg', false, 'Сеть моргнула — попробуйте ещё раз'); });
+}
+
+if (!CAN_EDIT) {
+  document.getElementById('afProtGo').style.display = 'none';
+  document.getElementById('afProtIn').disabled = true;
+  document.getElementById('afTestPanel').style.display = 'none';
+}
+document.getElementById('afReload').onclick = function () { loadStatus(); loadStrikes(); };
+document.getElementById('afStrikesReload').onclick = loadStrikes;
+document.getElementById('afStrikesCsv').onclick = function () {
+  location.href = API + '/strikes.csv';
+};
+
+loadStatus();
+loadStrikes();
+</script>
+{% endblock %}
