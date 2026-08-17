@@ -58,6 +58,10 @@ WARN_REASON_MAX = 200
 WARN_CSV_HEADER = 'ID;Имя;Варнов;Последняя причина;Модератор;Дата'
 RADAR_CSV_HEADER = 'Тип;ID;Имя;Истекает;Причина;Модератор'
 
+PANEL_LOG_KEEP = 100
+PANEL_LOG_LIMIT = 8
+PANEL_OPS = ('warn', 'unwarn', 'amnesty', 'amnesty_undo', 'reason_add', 'reason_del')
+
 _USER_REF_RE = re.compile(r'^(?:<@!?(\d{1,20})>|(\d{1,20}))$')
 
 
@@ -615,6 +619,39 @@ def radar_csv_rows(gid, now=None):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Журнал действий из панели: кто и что сделал руками (прозрачность)
+# ─────────────────────────────────────────────────────────────────────
+def _panel_log_path(gid):
+    return 'data/mod_panel_log_%s.json' % _gid_str(gid)
+
+
+def panel_log(gid, limit=PANEL_LOG_LIMIT):
+    """Последние операции из панели, новые сверху."""
+    raw = _load_json(_panel_log_path(gid), [])
+    items = [it for it in raw if isinstance(it, dict)] if isinstance(raw, list) else []
+    try:
+        lim = int(limit)
+    except (TypeError, ValueError) as _ex:
+        _log.debug("mod_control: битый лимит журнала панели: %s", _ex)
+        lim = PANEL_LOG_LIMIT
+    return items[-max(1, lim):][::-1]
+
+
+def panel_log_add(gid, op, user_id='', detail='', by=''):
+    """Записать операцию панели (не больше PANEL_LOG_KEEP записей)."""
+    if op not in PANEL_OPS:
+        return None
+    raw = _load_json(_panel_log_path(gid), [])
+    items = [it for it in raw if isinstance(it, dict)] if isinstance(raw, list) else []
+    entry = {'id': _next_id(items), 'op': op, 'user_id': str(user_id or ''),
+             'detail': str(detail or '')[:REASON_TEXT_MAX], 'by': str(by or ''),
+             'at': _now_iso()}
+    items.append(entry)
+    _save_json(_panel_log_path(gid), items[-PANEL_LOG_KEEP:])
+    return entry
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Маршруты
 # ─────────────────────────────────────────────────────────────────────
 def register(ctx):
@@ -660,6 +697,7 @@ def register(ctx):
             'amnesty_total': len(amnesty_log),
             'recent': recent_actions(gid),
             'recent7': recent_punish_count(gid),
+            'panel_log': panel_log(gid),
             'can_edit': session.get('role') in ('admin', 'owner'),
         })
 
@@ -672,6 +710,8 @@ def register(ctx):
                                   by=session.get('username'))
         if not ok:
             return jsonify({'success': False, 'error': err}), 400
+        _ok, _err, uid = validate_user_id(data.get('user_id'))
+        panel_log_add(gid, 'warn', uid, res['entry']['reason'], by=session.get('username'))
         return jsonify({'success': True, 'total': res['total'], 'entry': res['entry']})
 
     @app.route('/api/guild/<gid>/mod-control/unwarn', methods=['POST'])
@@ -682,6 +722,9 @@ def register(ctx):
         ok, err, res = panel_unwarn(gid, data.get('user_id'))
         if not ok:
             return jsonify({'success': False, 'error': err}), 400
+        _ok, _err, uid = validate_user_id(data.get('user_id'))
+        panel_log_add(gid, 'unwarn', uid,
+                      str(res['removed'].get('reason') or ''), by=session.get('username'))
         return jsonify({'success': True, 'removed': res['removed'], 'left': res['left']})
 
     @app.route('/api/guild/<gid>/mod-control/warns.csv')
@@ -713,6 +756,7 @@ def register(ctx):
                                    by=session.get('username'))
         if not ok:
             return jsonify({'success': False, 'error': err}), 400
+        panel_log_add(gid, 'reason_add', '', item['text'], by=session.get('username'))
         return jsonify({'success': True, 'item': item, 'reasons': load_reasons(gid)})
 
     @app.route('/api/guild/<gid>/mod-control/reasons/<kind>/<int:rid>/delete', methods=['POST'])
@@ -723,6 +767,7 @@ def register(ctx):
         if not ok:
             code = 404 if err == 'Причина не найдена' else 400
             return jsonify({'success': False, 'error': err}), code
+        panel_log_add(gid, 'reason_del', '', removed['text'], by=session.get('username'))
         return jsonify({'success': True, 'removed': removed, 'reasons': load_reasons(gid)})
 
     @app.route('/api/guild/<gid>/mod-control/amnesty', methods=['POST'])
@@ -733,6 +778,8 @@ def register(ctx):
         ok, err, entry = amnesty_user(gid, data.get('user_id'), by=session.get('username'))
         if not ok:
             return jsonify({'success': False, 'error': err}), 400
+        panel_log_add(gid, 'amnesty', entry['user_id'], 'списано варнов: %d' % entry['count'],
+                      by=session.get('username'))
         return jsonify({'success': True, 'amnesty': public_amnesty(entry)})
 
     @app.route('/api/guild/<gid>/mod-control/amnesty/<int:aid>/undo', methods=['POST'])
@@ -743,4 +790,6 @@ def register(ctx):
         if not ok:
             code = 404 if err == 'Запись амнистии не найдена' else 400
             return jsonify({'success': False, 'error': err}), code
+        panel_log_add(gid, 'amnesty_undo', '', 'возвращено варнов: %d' % restored,
+                      by=session.get('username'))
         return jsonify({'success': True, 'restored': restored})

@@ -47,6 +47,9 @@ TEAM_LIMIT = 15
 TREND_MAX_BUCKETS = 12
 TREND_MIN_BUCKETS = 4
 
+REPEAT_MIN_COUNT = 2
+REPEAT_LIMIT = 8
+
 CHECK_AUDIT_FRESH_DAYS = 14
 
 ANTIRAID_TOGGLES = ('join_raid', 'bot_protection', 'webhook_protection',
@@ -368,6 +371,45 @@ def punishment_trend(gid, days=EFFECT_DEFAULT_DAYS, now=None):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Рецидивисты: две и более кары за окно — первые кандидаты на досье
+# ─────────────────────────────────────────────────────────────────────
+def repeat_offenders(gid, days=EFFECT_DEFAULT_DAYS, now=None, limit=REPEAT_LIMIT):
+    """Участники с несколькими карами за окно: счёт, последняя кара и когда."""
+    days = _norm_days(days, EFFECT_DEFAULT_DAYS)
+    now = now or datetime.now()
+    cutoff = now - timedelta(days=days)
+    names = names_from_audit(gid)
+    per = {}
+    for dt, action, uid, _ev in mod_events(gid):
+        if dt < cutoff or action not in PUNISH_ACTIONS or not uid:
+            continue
+        rec = per.setdefault(uid, {'count': 0, 'last_at': None, 'last_action': ''})
+        rec['count'] += 1
+        if rec['last_at'] is None or dt >= rec['last_at']:
+            rec['last_at'] = dt
+            rec['last_action'] = action
+    rows = []
+    for uid, rec in per.items():
+        if rec['count'] < REPEAT_MIN_COUNT:
+            continue
+        rows.append({
+            'user_id': uid,
+            'name': str(names.get(uid) or ''),
+            'count': rec['count'],
+            'last_action': rec['last_action'],
+            'last_at': rec['last_at'].isoformat(timespec='minutes') if rec['last_at'] else None,
+        })
+    rows.sort(key=lambda r: (-r['count'], r['user_id']))
+    try:
+        lim = int(limit)
+    except (TypeError, ValueError) as _ex:
+        _log.debug("mod_insights: битый лимит рецидивистов: %s", _ex)
+        lim = REPEAT_LIMIT
+    return {'days': days, 'min_count': REPEAT_MIN_COUNT,
+            'items': rows[:max(1, lim)], 'total': len(rows)}
+
+
+# ─────────────────────────────────────────────────────────────────────
 # #40: Чек-лист готовности модерации
 # ─────────────────────────────────────────────────────────────────────
 def _autofilter_check(gid):
@@ -495,6 +537,7 @@ def register(ctx):
             'effectiveness': punishment_effectiveness(events, days=days),
             'team': team_activity(gid, days=days),
             'trend': punishment_trend(gid, days=days),
+            'repeat': repeat_offenders(gid, days=days),
             'checklist': readiness_checklist(gid),
         })
 

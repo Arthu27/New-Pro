@@ -55,10 +55,34 @@ def seed():
                 'user_name': user,
                 'mod_name': mod,
                 'detail': detail,
+                'reason': detail if cat == 'mod' else '',
                 'timestamp': _iso(NOW - timedelta(seconds=sec)),
+            })
+        # История модерации за месяц: тренд, команда, рецидивисты
+        history = [
+            # (action, user_id, user_name, mod_name, reason, days_ago)
+            ('Мут',      '1000000', 'Zhulik',   'Arthur',     'Флуд в #общий', 24),
+            ('Кик',      '1000000', 'Zhulik',   'Moder_Nika', 'Повторный флуд после варнов', 12),
+            ('Мут',      '1000004', 'Spammer',  'Guard_Bot',  'Реклама в трёх каналах', 18),
+            ('Мут',      '1000004', 'Spammer',  'Moder_Nika', 'Спам ссылками', 3),
+            ('Кик',      '1000002', 'Troll_228', 'Moder_Nika', 'Оскорбления участников', 6),
+            ('Мут снят', '1000002', 'Troll_228', 'Arthur',     'Срок истёк', 5),
+            ('Мут',      '1000006', 'Griever',  'Arthur',     'Провокация рейда', 30),
+            ('Бан',      '1000101', 'RaidBoss', 'Arthur',     'Рейд-бот: 30 аккаунтов за минуту', 8),
+            ('Мут',      '1000102', 'CapsLock', 'Guard_Bot',  'КАПС без остановки', 2),
+            ('Бан',      '1000103', 'FishBot',  'Moder_Nika', 'Фишинговая ссылка', 1),
+            ('Мут снят', '1000102', 'CapsLock', 'Moder_Nika', 'Больше не повторял', 0.5),
+        ]
+        for action, uid, uname, mname, reason, days_ago in history:
+            events.append({
+                'category': 'mod', 'action': action,
+                'user_id': uid, 'user_name': uname, 'mod_name': mname,
+                'reason': reason, 'detail': reason,
+                'timestamp': _iso(NOW - timedelta(days=days_ago)),
             })
         with open(audit_path, 'w', encoding='utf-8') as f:
             json.dump({str(GID): events}, f, ensure_ascii=False, indent=1)
+
 
     proof_path = f'data/modproof_{GID}.json'
     if not os.path.exists(proof_path):
@@ -131,7 +155,101 @@ def seed():
             store.set(GID, 'settings', demo_settings)
 
 
+
+def seed_moderation():
+    """Демо-данные для страниц модерации (Мод-контроль, Мод-анализ, Варны).
+
+    Только если файлов ещё нет — живые данные не затираем.
+    """
+    os.makedirs('data', exist_ok=True)
+    now_ts = NOW.timestamp()
+
+    def _dump(path, data):
+        if not os.path.exists(path):
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=1)
+
+    # Пороги авто-наказаний (страница /warn-config, формат бота)
+    _dump(f'data/warn_config_{GID}.json', {'thresholds': [
+        {'count': 3, 'action': 'mute'},
+        {'count': 5, 'action': 'kick'},
+        {'count': 7, 'action': 'ban'},
+    ]})
+
+    # Зеркало варнов — формат 1:1 с cogs/warnings.py
+    def _warn(n, reason, mod, days_ago):
+        return {'id': n, 'reason': reason, 'mod': mod, 'mod_id': '',
+                'timestamp': _iso(NOW - timedelta(days=days_ago))}
+
+    _dump('data/warnings.json', {str(GID): {
+        '1000000': [_warn(1, 'Флуд в #общий', 'Arthur', 24),
+                    _warn(2, 'Капс после мута', 'Moder_Nika', 13),
+                    _warn(3, 'Оскорбления', 'Moder_Nika', 12),
+                    _warn(4, 'Спам стикерами', 'Guard_Bot', 2)],
+        '1000004': [_warn(1, 'Реклама', 'Guard_Bot', 18),
+                    _warn(2, 'Спам ссылками', 'Moder_Nika', 3)],
+        '1000102': [_warn(1, 'КАПС', 'Guard_Bot', 2)],
+    }})
+
+    # Временные наказания: просроченный, истекает через 20 минут, пара дней, неделя
+    _dump('data/temp_mutes.json', {str(GID): {
+        '1000000': {'until': now_ts + 2 * 3600, 'reason': 'Флуд в #общий',
+                    'mod_id': '7', 'created_at': now_ts - 22 * 3600},
+        '1000102': {'until': now_ts + 20 * 60, 'reason': 'КАПС без остановки',
+                    'mod_id': '9', 'created_at': now_ts - 40 * 60},
+        '1000004': {'until': now_ts - 30 * 60, 'reason': 'Спам ссылками',
+                    'mod_id': '9', 'created_at': now_ts - 24 * 3600},
+    }})
+    _dump('data/temp_bans.json', {str(GID): {
+        '1000101': {'until': now_ts + 6 * 86400, 'reason': 'Рейд-бот',
+                    'mod_id': '7', 'created_at': now_ts - 86400},
+    }})
+
+    # Быстрые причины для Мод-контроля
+    def _reason(n, text, by, days_ago):
+        return {'id': n, 'text': text, 'by': by,
+                'at': _iso(NOW - timedelta(days=days_ago))}
+
+    _dump(f'data/mod_reasons_{GID}.json', {
+        'warn': [_reason(1, 'Флуд в чате', 'Arthur', 20),
+                 _reason(2, 'Оскорбления участников', 'Arthur', 20),
+                 _reason(3, 'Реклама и спам', 'Moder_Nika', 15)],
+        'mute': [_reason(1, 'Обход фильтра', 'Arthur', 18),
+                 _reason(2, 'Срыв ивента', 'Moder_Nika', 10)],
+        'kick': [_reason(1, 'Повторные нарушения', 'Arthur', 18)],
+        'ban': [_reason(1, 'Рейд-бот', 'Arthur', 18),
+                _reason(2, 'Фишинг/скам', 'Arthur', 12)],
+    })
+
+    # Анти-рейд и автофильтр — чтобы чек-лист готовности был живым
+    _dump(f'data/antiraid_{GID}.json', {
+        'join_raid': True, 'bot_protection': True, 'webhook_protection': False,
+        'delete_protection': True, 'age_filter': True,
+    })
+    _dump(f'data/autofilter_{GID}.json', {
+        'enabled': True,
+        'words': {'enabled': True, 'action': 'warn',
+                  'list': ['скам', 'бесплатные нитро', 'перейди по ссылке']},
+        'links': {'enabled': True}, 'caps': {'enabled': True},
+        'flood': {'enabled': False},
+    })
+
+    # Заметки модераторов (досье)
+    _dump('data/member_notes.json', {
+        '1000000': {'name': 'Zhulik', 'notes': [
+            {'note': 'После кика обещал не флудить — следим',
+             'timestamp': _iso(NOW - timedelta(days=11)), 'mod': 'Moder_Nika'},
+            {'note': 'Снова флуд, выдан варн', 'timestamp': _iso(NOW - timedelta(days=2)),
+             'mod': 'Guard_Bot'},
+        ]},
+        '1000004': {'name': 'Spammer', 'notes': [
+            {'note': 'Похоже на промо-аккаунт, проверить переписку',
+             'timestamp': _iso(NOW - timedelta(days=3)), 'mod': 'Arthur'},
+        ]},
+    })
+
 seed()
+seed_moderation()
 
 import web.app as wapp  # noqa: E402
 from flask import redirect, session  # noqa: E402

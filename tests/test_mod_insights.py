@@ -181,6 +181,34 @@ check(long_t['total'] == 5 and len(long_t['buckets']) == MI.TREND_MAX_BUCKETS,
       '365 дней: 12 бакетов, кара за пределами 90 тоже видна')
 check(MI.punishment_trend(424242)['total'] == 0, 'пустой журнал — нулевой тренд')
 
+print('== 2d. Рецидивисты ==')
+
+
+def rev(uid, action, days_ago):
+    return {'category': 'mod', 'action': action, 'user_id': uid, 'user_name': 'n' + uid,
+            'mod_name': 'Ст', 'timestamp': iso(days_ago)}
+
+
+rep = MI.repeat_offenders(780, days=90, now=NOW)
+check(rep['total'] == 1 and rep['items'][0]['count'] == 4
+      and rep['items'][0]['last_at'] == iso(1)[:16],
+      'повторник: четыре кары за окно, последняя метка верна')
+check(rep['min_count'] == MI.REPEAT_MIN_COUNT and rep['days'] == 90,
+      'порог и окно видны в выдаче')
+jdump('data/audit_log.json', {'781': [
+    rev('a', 'Мут', 1), rev('a', 'Кик', 2), rev('a', 'Бан', 3),
+    rev('b', 'Мут', 1),
+]})
+rep2 = MI.repeat_offenders(781, days=90, now=NOW)
+check(rep2['total'] == 1 and rep2['items'][0]['user_id'] == 'a'
+      and rep2['items'][0]['count'] == 3,
+      'одна кара — не рецидив; у повторника три кары')
+check(rep2['items'][0]['last_action'] == 'Мут' and rep2['items'][0]['name'] == 'na',
+      'последняя кара по времени — свежий мут, имя из аудита')
+short_rep = MI.repeat_offenders(781, days=90, now=NOW, limit=1)
+check(len(short_rep['items']) == 1, 'лимит работает')
+check(MI.repeat_offenders(424242)['total'] == 0, 'пустой сервер — рецидивистов нет')
+
 print('== 3. Досье участника ==')
 jdump('data/warnings.json', {'777': {
     '900': [
@@ -368,6 +396,8 @@ check(ovj['team']['total_mods'] == 1 and ovj['team']['items'][0]['punishments'] 
       'команда в снимке: один модератор, две кары')
 check(ovj['trend']['total'] == 2 and len(ovj['trend']['buckets']) == 12,
       'тренд в снимке: две кары по 12 бакетам')
+check(ovj['repeat']['total'] == 1 and ovj['repeat']['items'][0]['count'] == 2,
+      'рецидивисты в снимке: участник 100 с двумя карами')
 ov30 = client.get(OV + '?days=30').get_json()
 check(ov30['effectiveness']['days'] == 30 and ov30['team']['days'] == 30
       and ov30['trend']['days'] == 30, 'переключатель окна работает')
@@ -395,7 +425,8 @@ emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
 check('[data-theme="light"]' in tpl, 'светлая тема учтена')
 for fid in ('miKpis', 'miSubjects', 'miDossier', 'miEffect', 'miCheck',
-            'miDaysTabs', 'miDossierId', 'miTeam', 'miTrend', 'miSubjectsSearch'):
+            'miDaysTabs', 'miDossierId', 'miTeam', 'miTrend', 'miRepeat',
+            'miSubjectsSearch'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check('mod-insights' in tpl, 'API-путь модуля в шаблоне')
 check('/member-card?user=' in tpl, 'из досье есть мост в карточку участника')

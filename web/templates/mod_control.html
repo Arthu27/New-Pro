@@ -118,6 +118,12 @@
       <div class="mc-sub">Свежие кары и снятия из журнала модерации — пульс команды за последние дни.</div>
       <div id="mcRecent"><div class="sk-row" style="width:70%"></div></div>
     </div>
+
+    <div class="mc-panel" id="mcPanelLogPanel">
+      <h3><i class="fas fa-clipboard-user"></i> Журнал панели</h3>
+      <div class="mc-sub">Каждая операция руками (варн, амнистия, причины) записывается с именем — чтобы в команде всё было прозрачно.</div>
+      <div id="mcPanelLog"><div class="sk-row" style="width:60%"></div></div>
+    </div>
   </div>
 
   <div>
@@ -314,6 +320,33 @@ function renderRecent(d) {
   }).join('');
 }
 
+var OP_META = {
+  warn: {label: 'Варн', icon: 'fa-gavel', cls: 'hot'},
+  unwarn: {label: 'Варн снят', icon: 'fa-rotate-left', cls: ''},
+  amnesty: {label: 'Амнистия', icon: 'fa-dove', cls: ''},
+  amnesty_undo: {label: 'Откат амнистии', icon: 'fa-rotate-left', cls: 'hot'},
+  reason_add: {label: 'Причина добавлена', icon: 'fa-bolt', cls: ''},
+  reason_del: {label: 'Причина удалена', icon: 'fa-xmark', cls: ''}
+};
+
+function renderPanelLog(d) {
+  var box = document.getElementById('mcPanelLog');
+  if (!d.panel_log.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-user"></i><p>Операций пока нет</p>' +
+      '<p class="empty-tip">Варны, амнистии и правка причин из панели будут видны здесь.</p></div>';
+    return;
+  }
+  box.innerHTML = d.panel_log.map(function (e) {
+    var m = OP_META[e.op] || {label: e.op, icon: 'fa-circle-info', cls: ''};
+    var who = e.user_id ? ' · #' + e.user_id : '';
+    return '<div class="mc-recent">' +
+      '<span class="mc-chip' + (m.cls ? ' ' + m.cls : '') + '"><i class="fas ' + m.icon + '"></i> ' + esc(m.label) + '</span>' +
+      '<div class="mc-who"><b>' + esc(e.by || '—') + ' <small style="color:var(--text-3)">' + esc(who) + '</small></b>' +
+      (e.detail ? '<small>' + esc(e.detail) + '</small>' : '') + '</div>' +
+      '<span class="mc-time">' + esc(fmtDate(e.at)) + '</span></div>';
+  }).join('');
+}
+
 function renderWarnPanel(d) {
   var can = !!d.can_edit;
   document.getElementById('mcWarnBody').style.display = can ? '' : 'none';
@@ -427,7 +460,7 @@ async function mcLoad() {
   CAN_EDIT = !!d.can_edit;
   var render = function () {
     renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d);
-    renderAmnesty(d); renderRecent(d); renderWarnPanel(d);
+    renderAmnesty(d); renderRecent(d); renderPanelLog(d); renderWarnPanel(d);
   };
   if (window.renderSafe) window.renderSafe(render); else render();
 }

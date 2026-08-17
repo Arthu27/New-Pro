@@ -294,6 +294,27 @@ check(rrows and rrows[0][0] == 'Мут' and rrows[0][1] == 'u2',
       'радар-CSV: сортировка по сроку, просроченный первый')
 check('1970' in rrows[0][3], 'дата истечения в читаемом виде')
 
+print('== 4e. Журнал панели ==')
+check(MC.panel_log(777) == [], 'журнал пуст, пока операций не было')
+if os.path.exists('data/mod_panel_log_777.json'):
+    os.remove('data/mod_panel_log_777.json')
+check(MC.panel_log(777) == [], 'нет файла — пусто без падения')
+e1 = MC.panel_log_add(777, 'warn', '600', 'флуд', by='Ст')
+e2 = MC.panel_log_add(777, 'amnesty', '600', 'списано варнов: 2', by='Админ')
+check(e1['id'] == 1 and e2['id'] == 2, 'id журнала растут')
+log = MC.panel_log(777)
+check(log[0]['op'] == 'amnesty' and log[1]['op'] == 'warn', 'новые сверху')
+check(log[0]['by'] == 'Админ' and log[0]['detail'] == 'списано варнов: 2'
+      and log[0]['user_id'] == '600', 'поля записи на месте')
+check(MC.panel_log_add(777, 'левая-операция') is None, 'неизвестная операция не пишется')
+for i in range(120):
+    MC.panel_log_add(777, 'reason_add', '', f'причина {i}', by='бот')
+log_full = MC.panel_log(777, limit=1000)
+check(len(log_full) == MC.PANEL_LOG_KEEP, 'журнал обрезан лимитом, не разрастается')
+check(log_full[0]['detail'] == 'причина 119', 'голова журнала — свежайшая запись')
+check(all(it['op'] != 'warn' for it in log_full), 'старейшие записи вытеснены')
+os.remove('data/mod_panel_log_777.json')
+
 print('== 5. API: права и потоки ==')
 # Свежие фикстуры с известным состоянием
 jdump('data/warnings.json', {'777': {
@@ -424,6 +445,14 @@ check(client.post('/api/guild/777/mod-control/unwarn',
       'unwarn: честный отказ без варнов')
 check(client.get(OV).get_json()['risk']['edge'] == 1, 'unwarn: картина на грани восстановлена')
 
+ovlog = client.get(OV).get_json()
+ops = [e['op'] for e in ovlog['panel_log']]
+check(ops and ops[0] == 'unwarn' and 'warn' in ops and 'amnesty' in ops
+      and 'amnesty_undo' in ops and 'reason_add' in ops and 'reason_del' in ops,
+      f'журнал панели записал все операции (сверху: {ops[0]})')
+check(all(e['by'] == 'admin' for e in ovlog['panel_log']),
+      'в журнале видно, кто действовал')
+
 login('mod')
 csv_r = client.get('/api/guild/777/mod-control/warns.csv')
 check(csv_r.status_code == 200 and 'text/csv' in (csv_r.headers.get('Content-Type') or ''),
@@ -447,7 +476,7 @@ emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
 check('[data-theme="light"]' in tpl, 'светлая тема учтена')
 for fid in ('mcKpis', 'mcRisk', 'mcRadar', 'mcReasons', 'mcAmnesty', 'mcTabs', 'mcAmnestyId',
-            'mcRecent', 'mcWarnPanel', 'mcWarnId', 'mcWarnText', 'mcRiskSearch'):
+            'mcRecent', 'mcPanelLog', 'mcWarnPanel', 'mcWarnId', 'mcWarnText', 'mcRiskSearch'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check('/warn-config' in tpl, 'ссылка на настройку порогов')
 check('uxUndo' in tpl, 'амнистия с 6.5-секундным откатом через uxUndo')
