@@ -105,6 +105,7 @@ from web.routes import (
     sla_panel,
     reports_panel,
     archive_panel,
+    server_info_panel,
 )
 
 _MODULES = tuple(

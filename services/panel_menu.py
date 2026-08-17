@@ -143,6 +143,7 @@ MENU = [
     {'group': 'AI', 'key': 'ai', 'icon': 'fa-brain', 'pages': [
         {'path': '/ai-chat', 'label': 'AI Чат', 'icon': 'fa-comments'},
         {'path': '/ai-moderation', 'label': 'AI Модерация', 'icon': 'fa-robot'},
+        {'path': '/server-info', 'label': 'Инфо-база', 'icon': 'fa-circle-info'},
     ]},
     {'group': 'Система', 'key': 'ops', 'icon': 'fa-server', 'pages': [
         {'path': '/bot-diagnostics', 'label': 'Диагностика', 'icon': 'fa-heartbeat'},
@@ -174,6 +175,7 @@ PAGE_COGS = {
     '/tickets-ops': ('ticket',),
     '/reports': ('report_cog',),
     '/archive': ('archive',),
+    '/server-info': ('server_info',),
     '/sla': ('sla_cog',),
     '/economy': ('economy_cog',),
     '/shop': ('economy_cog',),
