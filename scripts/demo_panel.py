@@ -4,8 +4,8 @@
 Для разработки/превью (песочница Arena, локальный UI-просмотр):
 - фейковый сервер (guild id 4242) с парой каналов;
 - /demo-login — вход как owner (Arthur) без пароля — ТОЛЬКО для демо!;
-- засевает data/audit_log.json (логи) и data/modproof_4242.json (галерея демок)
-  aware-UTC метками, как пишет бот после fix(time); живые данные не затирает.
+- засевает логи, доказательства и наглядную историю объявлений;
+- все временные метки aware-UTC, как пишет бот после fix(time); живые данные не затирает.
 
 Запуск:  python3 scripts/demo_panel.py  ->  http://127.0.0.1:8090/demo-login
 """
@@ -59,6 +59,54 @@ def seed():
             })
         with open(audit_path, 'w', encoding='utf-8') as f:
             json.dump({str(GID): events}, f, ensure_ascii=False, indent=1)
+
+    announcements_path = 'data/announcements.json'
+    if not os.path.exists(announcements_path):
+        announcements = [
+            {
+                'id': 'ann-demo-001',
+                'title': 'Добро пожаловать в обновлённую панель',
+                'message': 'Мы собрали управление сервером, модерацию и коммуникации в едином рабочем пространстве. Теперь важные операции выполняются быстрее и прозрачнее.',
+                'from': 'Arthur', 'guild_id': None, 'channel_id': None,
+                'channel_name': None, 'delivered': False, 'deliver_error': None,
+                'created_at': _iso(NOW - timedelta(days=4)),
+            },
+            {
+                'id': 'ann-demo-002',
+                'title': 'Плановые технические работы',
+                'message': 'Сегодня с 22:00 до 22:30 пройдёт обновление инфраструктуры.\n\nВо время работ голосовая статистика может обновляться с небольшой задержкой.',
+                'from': 'Moder_Nika', 'guild_id': str(GID), 'channel_id': '777002',
+                'channel_name': 'общий', 'delivered': True, 'deliver_error': None,
+                'created_at': _iso(NOW - timedelta(days=2, hours=3)),
+            },
+            {
+                'id': 'ann-demo-003',
+                'title': 'Новая система доказательств',
+                'message': 'Для модераторов открыт обновлённый раздел доказательств. Каждая запись теперь связана с участником, причиной и решением команды.',
+                'from': 'Arthur', 'guild_id': str(GID), 'channel_id': '777001',
+                'channel_name': 'доказательства', 'delivered': True, 'deliver_error': None,
+                'created_at': _iso(NOW - timedelta(hours=18)),
+            },
+            {
+                'id': 'ann-demo-004',
+                'title': 'Турнир сообщества в субботу',
+                'message': 'Открываем регистрацию на командный турнир.\n\nДата: суббота, 19:00\nФормат: команды по 3 участника\nРегистрация: в канале #общий\n\nПобедители получат уникальную роль и награду профиля.',
+                'from': 'EventTeam', 'guild_id': str(GID), 'channel_id': '777002',
+                'channel_name': 'общий', 'delivered': False,
+                'deliver_error': 'Missing Access: бот временно потерял право Embed Links',
+                'created_at': _iso(NOW - timedelta(hours=5)),
+            },
+            {
+                'id': 'ann-demo-005',
+                'title': 'Обновление правил безопасности',
+                'message': 'Мы уточнили правила публикации ссылок и защиты личных данных.\n\nПожалуйста, ознакомьтесь с изменениями перед следующей публикацией. Если останутся вопросы, обратитесь к модераторам.',
+                'from': 'Arthur', 'guild_id': str(GID), 'channel_id': '777002',
+                'channel_name': 'общий', 'delivered': True, 'deliver_error': None,
+                'created_at': _iso(NOW - timedelta(minutes=35)),
+            },
+        ]
+        with open(announcements_path, 'w', encoding='utf-8') as f:
+            json.dump(announcements, f, ensure_ascii=False, indent=2)
 
     proof_path = f'data/modproof_{GID}.json'
     if not os.path.exists(proof_path):

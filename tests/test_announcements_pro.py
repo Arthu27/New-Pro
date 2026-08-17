@@ -45,6 +45,9 @@ for marker, label in [
     ('data-ann-view="timeline"', 'переключатель карточки/хронология'),
     ('ann-featured-label', 'акцент на последней публикации'),
     ('function updateHealth', 'динамическая оценка качества доставки'),
+    ('id="annInspector" role="dialog"', 'детальная карточка публикации'),
+    ('id="annInspectorReuse"', 'повторное использование контента'),
+    ('data-open-ann', 'явный переход к деталям'),
     ('function filteredAnnouncements', 'единая фильтрация истории'),
 ]:
     check(marker in source, f'реализовано: {label}')
@@ -79,6 +82,8 @@ for marker, label in [
     ('aria-live="polite"', 'озвучивание результатов'),
     ('data-copy-ann', 'копирование объявления'),
     ('data-expand', 'раскрытие длинного сообщения'),
+    ('announcementFromCard', 'точный выбор записи даже без legacy-id'),
+    ("$('annInspector').classList.contains('open')", 'live-refresh не сбивает просмотр деталей'),
     ('@media(max-width:680px)', 'мобильная компоновка'),
     ('prefers-reduced-motion', 'уважение системной анимации'),
 ]:
@@ -89,7 +94,16 @@ for marker in ('ann-chip', 'data-retry', '/api/announcements/retry',
                'redelivered_by', 'deliver_error', 'setInterval'):
     check(marker in source, f'контракт {marker} на месте')
 
-print('== 5. Синтаксис и ролевой HTTP-рендер ==')
+print('== 5. Наглядное demo-preview ==')
+demo = open(os.path.join(ROOT, 'scripts', 'demo_panel.py'), encoding='utf-8').read()
+check("announcements_path = 'data/announcements.json'" in demo,
+      'демо засеивает историю объявлений только при пустом файле')
+check("'delivered': True" in demo and "'deliver_error': 'Missing Access" in demo,
+      'в демо представлены успешная и проблемная доставки')
+check("@app.route('/demo-login')" in demo,
+      'для локального просмотра доступен demo-login без пароля')
+
+print('== 6. Синтаксис и ролевой HTTP-рендер ==')
 from jinja2 import Environment  # noqa: E402
 try:
     Environment().parse(source)

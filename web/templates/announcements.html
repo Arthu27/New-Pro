@@ -129,10 +129,11 @@
 .ann-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;font-size:10.5px;padding:4px 9px;border-radius:999px;border:1px solid var(--line-2);color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ann-chip.ok{color:#9ca8ff;border-color:rgba(88,101,242,.35);background:rgba(88,101,242,.09)}
 .ann-chip.err{color:#ff9a9f;border-color:rgba(255,154,159,.35);background:rgba(255,154,159,.08);cursor:help}
-.ann-retry,.ann-copy{display:inline-flex;align-items:center;gap:6px;min-height:29px;padding:4px 9px;border-radius:8px;font:inherit;font-size:10.5px;font-weight:700;cursor:pointer;transition:filter .15s,transform .15s}
+.ann-retry,.ann-copy,.ann-open{display:inline-flex;align-items:center;gap:6px;min-height:29px;padding:4px 9px;border-radius:8px;font:inherit;font-size:10.5px;font-weight:700;cursor:pointer;transition:filter .15s,transform .15s}
 .ann-retry{border:1px solid rgba(242,179,61,.45);background:rgba(242,179,61,.08);color:var(--ac-2)}
-.ann-copy{margin-left:auto;border:1px solid var(--line);background:var(--surface);color:var(--text-3)}
-.ann-retry:hover:not(:disabled),.ann-copy:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.ann-open{margin-left:auto;border:1px solid var(--ac-line);background:var(--ac-soft);color:var(--ac-2)}
+.ann-copy{border:1px solid var(--line);background:var(--surface);color:var(--text-3)}
+.ann-retry:hover:not(:disabled),.ann-copy:hover,.ann-open:hover{filter:brightness(1.15);transform:translateY(-1px)}
 .ann-retry:disabled{opacity:.5;cursor:wait}
 .ann-retry.busy i{animation:annSpin 1s linear infinite}
 @keyframes annSpin{to{transform:rotate(360deg)}}
@@ -154,6 +155,43 @@
 .ann-reload{margin-top:13px;padding:8px 12px;border:1px solid var(--ac-line);border-radius:9px;background:var(--ac-soft);color:var(--ac-2);font:inherit;font-size:11.5px;font-weight:750;cursor:pointer}
 .ann-loading{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:13px}
 .ann-loading .sk-card{height:230px;border-radius:16px}
+
+/* ── Инспектор одной публикации ───────────────────────────────────── */
+.ann-inspector{position:fixed;inset:0;z-index:100090;display:none;overflow:hidden}
+.ann-inspector.open{display:block}
+.ann-inspector-backdrop{position:absolute;inset:0;background:rgba(4,4,7,.64);backdrop-filter:blur(6px);animation:annFadeIn .18s ease both}
+@keyframes annFadeIn{from{opacity:0}to{opacity:1}}
+.ann-inspector-panel{--inspector-tone:var(--info);position:absolute;right:0;top:0;bottom:0;width:min(500px,94vw);display:flex;flex-direction:column;border-left:1px solid color-mix(in srgb,var(--inspector-tone) 32%,var(--line));background:linear-gradient(155deg,color-mix(in srgb,var(--surface-2) 96%,var(--inspector-tone) 2%),var(--surface));box-shadow:-28px 0 80px rgba(0,0,0,.5);animation:annInspectorIn .26s var(--ease) both}
+@keyframes annInspectorIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+.ann-inspector-panel[data-status="delivered"]{--inspector-tone:#5865f2}
+.ann-inspector-panel[data-status="failed"]{--inspector-tone:var(--err)}
+.ann-inspector-head{display:flex;align-items:center;gap:12px;padding:17px 18px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,color-mix(in srgb,var(--inspector-tone) 8%,transparent),transparent)}
+.ann-inspector-status{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;flex:0 0 auto;color:var(--inspector-tone);background:color-mix(in srgb,var(--inspector-tone) 12%,transparent);border:1px solid color-mix(in srgb,var(--inspector-tone) 28%,transparent)}
+.ann-inspector-head > div:nth-child(2){min-width:0}
+.ann-inspector-head span{display:block;margin-bottom:3px;color:var(--inspector-tone);font-size:8px;font-weight:850;letter-spacing:.14em}
+.ann-inspector-head h2{margin:0;overflow:hidden;color:var(--text);font-size:16px;text-overflow:ellipsis;white-space:nowrap}
+.ann-inspector-close{margin-left:auto;width:36px;height:36px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text-3);cursor:pointer}
+.ann-inspector-close:hover{color:var(--err);border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.08)}
+.ann-inspector-body{flex:1;overflow:auto;padding:18px}
+.ann-inspector-route{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text-3);font-size:10px}
+.ann-inspector-route span{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ann-inspector-route span i{color:var(--inspector-tone)}
+.ann-inspector-route time{flex:0 0 auto;font-variant-numeric:tabular-nums}
+.ann-inspector-message{min-height:150px;padding:17px;border-left:3px solid var(--inspector-tone);border-radius:4px 13px 13px 4px;background:color-mix(in srgb,var(--surface-2) 88%,var(--inspector-tone) 2%);color:var(--text-2);font-size:13px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.ann-inspector-error{display:flex;align-items:flex-start;gap:10px;margin-top:13px;padding:11px;border:1px solid rgba(248,113,113,.28);border-radius:11px;background:rgba(248,113,113,.07);color:var(--err)}
+.ann-inspector-error[hidden]{display:none!important}
+.ann-inspector-error > i{margin-top:2px}
+.ann-inspector-error strong{display:block;font-size:10.5px}
+.ann-inspector-error p{margin:3px 0 0;color:color-mix(in srgb,var(--err) 75%,var(--text-2));font-size:10px;line-height:1.5}
+.ann-inspector-meta{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0 0}
+.ann-inspector-meta > div{min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.ann-inspector-meta dt{margin-bottom:4px;color:var(--text-3);font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.ann-inspector-meta dd{margin:0;overflow:hidden;color:var(--text-2);font-size:10.5px;text-overflow:ellipsis;white-space:nowrap}
+.ann-inspector-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface-2) 92%,transparent);backdrop-filter:blur(12px)}
+.ann-inspector-btn{min-height:36px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text-2);font:inherit;font-size:10px;font-weight:750;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.ann-inspector-btn:hover{color:var(--ac-2);border-color:var(--ac-line);background:var(--ac-soft)}
+.ann-inspector-btn.primary{color:#18140d;border-color:var(--ac-line);background:linear-gradient(135deg,var(--ac-2),var(--ac-3))}
+.ann-inspector-btn[hidden]{display:none!important}
 
 /* ── Композитор объявления ────────────────────────────────────────── */
 .ann-modal{position:fixed;inset:0;z-index:100100;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(5,5,8,.72);backdrop-filter:blur(9px)}
@@ -251,9 +289,13 @@ body.ann-modal-open{overflow:hidden}
   .ann-health-facts{width:100%}
   .ann-card{min-height:0}
   .ann-presets > span,.ann-formatbar > span{display:none}
+  .ann-inspector-panel{width:100vw}
+  .ann-inspector-meta{grid-template-columns:1fr}
+  .ann-inspector-actions{justify-content:stretch}
+  .ann-inspector-btn{flex:1;justify-content:center}
 }
 @media(prefers-reduced-motion:reduce){
-  .ann-hero-title,.ann-hero-av,.ann-retry.busy i,.ann-card{animation:none!important}
+  .ann-hero-title,.ann-hero-av,.ann-retry.busy i,.ann-card,.ann-inspector-backdrop,.ann-inspector-panel{animation:none!important}
   .ann-card:hover,.ann-stat:hover,.ann-create:hover{transform:none!important}
 }
 </style>
@@ -323,7 +365,7 @@ body.ann-modal-open{overflow:hidden}
   <div class="ann-filter-side">
     <span class="ann-result-meta" id="annResultMeta" aria-live="polite">Загрузка…</span>
     <div class="ann-view-switch" role="group" aria-label="Вид истории">
-      <button type="button" class="is-active" data-ann-view="grid" aria-label="Карточки" aria-pressed="true"><i class="fas fa-grid-2"></i></button>
+      <button type="button" class="is-active" data-ann-view="grid" aria-label="Карточки" aria-pressed="true"><i class="fas fa-table-cells-large"></i></button>
       <button type="button" data-ann-view="timeline" aria-label="Хронология" aria-pressed="false"><i class="fas fa-bars-staggered"></i></button>
     </div>
   </div>
@@ -331,6 +373,45 @@ body.ann-modal-open{overflow:hidden}
 
 <div id="ann-list" class="ann-loading" aria-live="polite" aria-busy="true">
   <div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div>
+</div>
+
+<!-- Детальная карточка одной публикации -->
+<div class="ann-inspector" id="annInspector" role="dialog" aria-modal="true" aria-labelledby="annInspectorTitle" aria-hidden="true">
+  <div class="ann-inspector-backdrop" data-inspector-close></div>
+  <aside class="ann-inspector-panel" tabindex="-1">
+    <header class="ann-inspector-head">
+      <div class="ann-inspector-status" id="annInspectorStatus"><i class="fas fa-display"></i></div>
+      <div>
+        <span>PUBLICATION DETAILS</span>
+        <h2 id="annInspectorTitle">Объявление</h2>
+      </div>
+      <button type="button" class="ann-inspector-close" data-inspector-close aria-label="Закрыть карточку"><i class="fas fa-xmark"></i></button>
+    </header>
+    <div class="ann-inspector-body">
+      <div class="ann-inspector-route">
+        <span id="annInspectorRoute"><i class="fas fa-display"></i> История панели</span>
+        <time id="annInspectorDate"></time>
+      </div>
+      <div class="ann-inspector-message" id="annInspectorMessage"></div>
+      <div class="ann-inspector-error" id="annInspectorError" hidden>
+        <i class="fas fa-triangle-exclamation"></i>
+        <div><strong>Ошибка доставки</strong><p></p></div>
+      </div>
+      <dl class="ann-inspector-meta">
+        <div><dt>Автор</dt><dd id="annInspectorAuthor">—</dd></div>
+        <div><dt>Назначение</dt><dd id="annInspectorDestination">—</dd></div>
+        <div><dt>Идентификатор</dt><dd id="annInspectorId">—</dd></div>
+        <div><dt>Повторная доставка</dt><dd id="annInspectorRetryMeta">Не выполнялась</dd></div>
+      </dl>
+    </div>
+    <footer class="ann-inspector-actions">
+      <button type="button" class="ann-inspector-btn" id="annInspectorCopy"><i class="fas fa-copy"></i> Копировать</button>
+      {% if can_manage %}
+      <button type="button" class="ann-inspector-btn" id="annInspectorReuse"><i class="fas fa-clone"></i> Использовать снова</button>
+      <button type="button" class="ann-inspector-btn primary" id="annInspectorRetry" hidden><i class="fas fa-rotate-right"></i> Дослать</button>
+      {% endif %}
+    </footer>
+  </aside>
 </div>
 
 {% if can_manage %}
@@ -350,7 +431,7 @@ body.ann-modal-open{overflow:hidden}
           <span>Быстрый старт</span>
           <button type="button" data-ann-preset="update"><i class="fas fa-wand-magic-sparkles"></i> Обновление</button>
           <button type="button" data-ann-preset="maintenance"><i class="fas fa-screwdriver-wrench"></i> Техработы</button>
-          <button type="button" data-ann-preset="event"><i class="fas fa-calendar-star"></i> Событие</button>
+          <button type="button" data-ann-preset="event"><i class="fas fa-calendar-days"></i> Событие</button>
           <button type="button" data-ann-preset="important"><i class="fas fa-circle-exclamation"></i> Важно</button>
         </div>
         <div class="ann-form-field">
@@ -427,6 +508,8 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
   var activeView = 'grid';
   var searchQuery = '';
   var lastFingerprint = '';
+  var inspectedAnnouncement = null;
+  var inspectorReturnFocus = null;
   try { activeView = localStorage.getItem('ann_history_view') === 'timeline' ? 'timeline' : 'grid'; } catch (e) {}
   var loadInFlight = false;
   var modalReturnFocus = null;
@@ -482,7 +565,7 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
     var foot = chipHtml(a);
     var message = String(a.message || '');
     var canExpand = message.length > 220 || message.split('\n').length > 4;
-    return '<article class="ann-card' + (featured ? ' is-featured' : '') + '" style="--ann-index:' + index + '" data-status="' + status + '" data-ann-id="' + esc(a.id || '') + '">' +
+    return '<article class="ann-card' + (featured ? ' is-featured' : '') + '" style="--ann-index:' + index + '" data-status="' + status + '" data-ann-index="' + index + '" data-ann-id="' + esc(a.id || '') + '">' +
       '<header class="ann-header">' +
         '<span class="ann-icon" aria-hidden="true"><i class="fas fa-bullhorn"></i></span>' +
         '<div class="ann-head-copy">' + (featured ? '<span class="ann-featured-label"><i class="fas fa-sparkles"></i> Последнее объявление</span>' : '') + '<div class="ann-title">' + esc(a.title || 'Без заголовка') + '</div>' +
@@ -493,6 +576,7 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
       '<div class="ann-body">' + esc(message).replace(/\n/g, '<br>') + '</div>' +
       (canExpand ? '<button type="button" class="ann-expand" data-expand>Показать полностью</button>' : '') +
       '<footer class="ann-foot">' + foot +
+        '<button type="button" class="ann-open" data-open-ann><i class="fas fa-arrow-up-right-from-square"></i> Подробнее</button>' +
         '<button type="button" class="ann-copy" data-copy-ann aria-label="Скопировать объявление"><i class="fas fa-copy"></i> Копировать</button>' +
       '</footer>' +
     '</article>';
@@ -605,6 +689,7 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
 
   async function loadAnns(silent) {
     if (loadInFlight) return false;
+    if (silent && ($('annInspector').classList.contains('open') || ($('annModal') && $('annModal').classList.contains('open')))) return false;
     loadInFlight = true;
     try {
       var response = await fetch('/api/announcements');
@@ -627,7 +712,8 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
   }
 
   async function retryAnn(id, button) {
-    if (!button || button.disabled) return;
+    if (!button || button.disabled) return false;
+    var success = false;
     if (window.qualitySetLoading) window.qualitySetLoading(button, true);
     else { button.disabled = true; button.classList.add('busy'); }
     try {
@@ -641,23 +727,29 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
       if (typeof window.showToast === 'function') window.showToast(data.message || 'Объявление доставлено', true);
       lastFingerprint = '';
       await loadAnns(false);
+      success = true;
     } catch (error) {
       if (typeof window.showToast === 'function') window.showToast(error.message, false);
     } finally {
       if (window.qualitySetLoading) window.qualitySetLoading(button, false);
       else { button.disabled = false; button.classList.remove('busy'); }
     }
+    return success;
   }
 
-  async function copyAnnouncement(card) {
-    var item = allAnnouncements.find(function (announcement) {
+  function announcementFromCard(card) {
+    if (!card) return null;
+    var index = Number(card.getAttribute('data-ann-index'));
+    var visible = filteredAnnouncements();
+    if (Number.isInteger(index) && visible[index]) return visible[index];
+    return allAnnouncements.find(function (announcement) {
       return String(announcement.id || '') === String(card.getAttribute('data-ann-id') || '');
-    });
-    if (!item) {
-      var title = card.querySelector('.ann-title');
-      var body = card.querySelector('.ann-body');
-      item = { title: title ? title.textContent : '', message: body ? body.innerText : '' };
-    }
+    }) || null;
+  }
+
+  async function copyAnnouncement(cardOrItem) {
+    var item = cardOrItem && cardOrItem.nodeType ? announcementFromCard(cardOrItem) : cardOrItem;
+    if (!item) return;
     var text = String(item.title || '') + '\n\n' + String(item.message || '');
     try {
       await navigator.clipboard.writeText(text);
@@ -665,6 +757,52 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
     } catch (error) {
       if (typeof window.showToast === 'function') window.showToast('Не удалось скопировать', false);
     }
+  }
+
+  function openInspector(item, trigger) {
+    if (!item) return;
+    inspectedAnnouncement = item;
+    inspectorReturnFocus = trigger || document.activeElement;
+    var status = statusOf(item);
+    var panel = document.querySelector('.ann-inspector-panel');
+    panel.setAttribute('data-status', status);
+    var statusIcon = status === 'delivered' ? 'fab fa-discord' : status === 'failed' ? 'fas fa-triangle-exclamation' : 'fas fa-display';
+    $('annInspectorStatus').innerHTML = '<i class="' + statusIcon + '"></i>';
+    $('annInspectorTitle').textContent = item.title || 'Без заголовка';
+    $('annInspectorMessage').textContent = item.message || 'Текст отсутствует';
+    $('annInspectorDate').textContent = exactDate(item.created_at);
+    $('annInspectorDate').setAttribute('datetime', item.created_at || '');
+    var destination = item.channel_name ? '#' + item.channel_name : item.channel_id ? 'Discord-канал ' + item.channel_id : 'История панели';
+    $('annInspectorDestination').textContent = destination;
+    $('annInspectorAuthor').textContent = item.from || 'Система';
+    $('annInspectorId').textContent = item.id || 'legacy-запись';
+    $('annInspectorRetryMeta').textContent = item.redelivered_at
+      ? exactDate(item.redelivered_at) + (item.redelivered_by ? ' · ' + item.redelivered_by : '')
+      : 'Не выполнялась';
+    $('annInspectorRoute').innerHTML = status === 'delivered'
+      ? '<i class="fab fa-discord"></i> Доставлено · ' + esc(destination)
+      : status === 'failed' ? '<i class="fas fa-triangle-exclamation"></i> Не доставлено · ' + esc(destination)
+      : '<i class="fas fa-display"></i> Только история панели';
+    var errorBox = $('annInspectorError');
+    errorBox.hidden = !item.deliver_error;
+    var errorText = errorBox.querySelector('p');
+    if (errorText) errorText.textContent = item.deliver_error || '';
+    if (CAN_MANAGE) {
+      var retryButton = $('annInspectorRetry');
+      retryButton.hidden = !(status === 'failed' && item.id);
+    }
+    $('annInspector').classList.add('open');
+    $('annInspector').setAttribute('aria-hidden', 'false');
+    document.body.classList.add('ann-modal-open');
+    window.setTimeout(function () { document.querySelector('.ann-inspector-panel').focus(); }, 30);
+  }
+
+  function closeInspector() {
+    $('annInspector').classList.remove('open');
+    $('annInspector').setAttribute('aria-hidden', 'true');
+    if (!$('annModal') || !$('annModal').classList.contains('open')) document.body.classList.remove('ann-modal-open');
+    inspectedAnnouncement = null;
+    if (inspectorReturnFocus && inspectorReturnFocus.focus) inspectorReturnFocus.focus({ preventScroll: true });
   }
 
   function setFilter(value) {
@@ -831,11 +969,16 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
     updatePreview();
   }
 
-  function openComposer() {
+  function openComposer(source) {
     if (!CAN_MANAGE) return;
     modalReturnFocus = document.activeElement;
     $('annForm').reset();
     clearFormResult();
+    if (source && source.title) {
+      $('annTitle').value = source.title;
+      $('annMessage').value = source.message || '';
+      setFormResult(true, 'Контент скопирован в новое объявление. Проверьте назначение перед публикацией.');
+    }
     updatePreview();
     $('annModal').classList.add('open');
     $('annModal').setAttribute('aria-hidden', 'false');
@@ -894,7 +1037,7 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
 
   function bindComposer() {
     if (!CAN_MANAGE) return;
-    $('annCreate').addEventListener('click', openComposer);
+    $('annCreate').addEventListener('click', function () { openComposer(); });
     $('annModalClose').addEventListener('click', closeComposer);
     $('annCancel').addEventListener('click', closeComposer);
     $('annModal').addEventListener('click', function (event) { if (event.target === this) closeComposer(); });
@@ -921,6 +1064,37 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
       if (event.key === 'Escape') { closeComposer(); return; }
       if (event.key !== 'Tab') return;
       var focusable = $('annModal').querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),[tabindex]:not([tabindex="-1"])');
+      if (!focusable.length) return;
+      var first = focusable[0], last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
+  }
+
+  function bindInspector() {
+    document.querySelectorAll('[data-inspector-close]').forEach(function (element) {
+      element.addEventListener('click', closeInspector);
+    });
+    $('annInspectorCopy').addEventListener('click', function () {
+      if (inspectedAnnouncement) copyAnnouncement(inspectedAnnouncement);
+    });
+    if (CAN_MANAGE) {
+      $('annInspectorReuse').addEventListener('click', function () {
+        var source = inspectedAnnouncement;
+        closeInspector();
+        openComposer(source);
+      });
+      $('annInspectorRetry').addEventListener('click', async function () {
+        if (!inspectedAnnouncement || !inspectedAnnouncement.id) return;
+        var ok = await retryAnn(inspectedAnnouncement.id, this);
+        if (ok) closeInspector();
+      });
+    }
+    document.addEventListener('keydown', function (event) {
+      if (!$('annInspector').classList.contains('open')) return;
+      if (event.key === 'Escape') { closeInspector(); return; }
+      if (event.key !== 'Tab') return;
+      var focusable = $('annInspector').querySelectorAll('button:not(:disabled):not([hidden]),[tabindex]:not([tabindex="-1"])');
       if (!focusable.length) return;
       var first = focusable[0], last = focusable[focusable.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
@@ -957,6 +1131,8 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
     $('ann-list').addEventListener('click', function (event) {
       var retry = event.target.closest('[data-retry]');
       if (retry && retry.dataset.retry) { retryAnn(retry.dataset.retry, retry); return; }
+      var open = event.target.closest('[data-open-ann]');
+      if (open) { openInspector(announcementFromCard(open.closest('.ann-card')), open); return; }
       var expand = event.target.closest('[data-expand]');
       if (expand) {
         var card = expand.closest('.ann-card');
@@ -970,6 +1146,7 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
       if (reload) loadAnns(false);
     });
     bindComposer();
+    bindInspector();
   }
 
   bindPage();
