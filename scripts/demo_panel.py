@@ -192,6 +192,7 @@ from flask import redirect  # noqa: E402
 # production-конфигурация web/app.py не меняется.
 wapp.app.config['SESSION_COOKIE_SAMESITE'] = 'None'
 wapp.app.config['SESSION_COOKIE_SECURE'] = True
+wapp.app.config['SESSION_COOKIE_PARTITIONED'] = True
 
 # Отдельная учётная запись действует только в памяти demo-процесса. Файл
 # production-credentials не перезаписывается, а вход проходит через обычную
