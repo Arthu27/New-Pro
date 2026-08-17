@@ -323,6 +323,31 @@ class FakeUser:
         return 'Aether#0'
 
 
+class FakeTempMod:
+    """Суррогат кога TempModeration для демо: читает те же data/temp_*.json.
+
+    Реальный ког держит словари в памяти, но /api/temp-mod/active смотрит
+    только на атрибуты _mutes/_bans/_kicks/_scheduled — этого хватает,
+    чтобы страница «Временная модерация» была живой в превью.
+    """
+
+    def __init__(self):
+        def _load(name):
+            path = os.path.join('data', name)
+            if not os.path.exists(path):
+                return {}
+            try:
+                with open(path, 'r', encoding='utf-8') as fh:
+                    return json.load(fh)
+            except (OSError, json.JSONDecodeError):
+                return {}
+
+        self._mutes = _load('temp_mutes.json')
+        self._bans = _load('temp_bans.json')
+        self._kicks = _load('temp_kicks.json')
+        self._scheduled = []
+
+
 class FakeBot:
     """Минимальный суррогат discord.Client для панели."""
 
@@ -341,6 +366,8 @@ class FakeBot:
         return next((g for g in self.guilds if g.id == gid), None)
 
     def get_cog(self, name):
+        if name == 'TempModeration':
+            return FakeTempMod()
         return None
 
     def get_channel(self, cid):

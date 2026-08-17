@@ -1,0 +1,158 @@
+/* ============================================================
+   modskin.css — единый стиль категории «Модерация» (Mod Ops).
+
+   Подключается на всех страницах группы через body.mz-skin.
+   Идея: один узнаваемый вид раздела — щит в заголовке, золотая
+   линия панелей, плотные таблицы, чипы-бейджи, фокус-кольца —
+   вместо разнобоя legacy-страниц. Ничего не ломает: только
+   переопределяет универсальные селекторы style.css под скоупом.
+   ============================================================ */
+
+/* ── Идентичность категории: заголовок страницы ─────────────── */
+body.mz-skin .main-content h1 {
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+body.mz-skin .main-content h1::before {
+  content: '\f3ed'; /* fa-shield-halved */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: .82em;
+  color: var(--ac, #e0b04a);
+  background: var(--ac-soft, rgba(224, 176, 74, .12));
+  border: 1px solid var(--ac-line, rgba(224, 176, 74, .25));
+  border-radius: 12px;
+  width: 1.7em;
+  height: 1.7em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 18px var(--ac-glow, rgba(224, 176, 74, .2));
+}
+body.mz-skin .main-content h1::after {
+  content: 'MOD OPS';
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .18em;
+  color: var(--ac, #e0b04a);
+  border: 1px solid var(--ac-line, rgba(224, 176, 74, .3));
+  background: var(--ac-soft, rgba(224, 176, 74, .08));
+  border-radius: 999px;
+  padding: 3px 10px;
+  align-self: center;
+}
+
+/* ── Панели/карточки: одна форма во всём разделе ────────────── */
+body.mz-skin .section, body.mz-skin .box, body.mz-skin .panel,
+body.mz-skin .card, body.mz-skin .dash-box, body.mz-skin .logs-box,
+body.mz-skin .warn-box, body.mz-skin .stat-card {
+  border-radius: 14px !important;
+  border: 1px solid var(--line-2, rgba(255, 255, 255, .09)) !important;
+  overflow: hidden;
+}
+body.mz-skin .section::before, body.mz-skin .box::before,
+body.mz-skin .panel::before, body.mz-skin .card::before {
+  height: 2px !important;
+  background: linear-gradient(90deg, transparent, var(--ac, #e0b04a) 30%, transparent) !important;
+  opacity: .55;
+}
+body.mz-skin .section > h2, body.mz-skin .box h2, body.mz-skin .panel h2,
+body.mz-skin .card h2, body.mz-skin h3.mz-sec {
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  font-size: 12.5px !important;
+}
+body.mz-skin .section > h2::after, body.mz-skin .box h2::after,
+body.mz-skin .panel h2::after, body.mz-skin .card h2::after {
+  background: linear-gradient(90deg, var(--ac, #e0b04a), transparent) !important;
+}
+
+/* ── Таблицы: плотные, с акцентной шапкой ───────────────────── */
+body.mz-skin table, body.mz-skin .data-table, body.mz-skin .tk-table,
+body.mz-skin .x-table, body.mz-skin .pl-table, body.mz-skin .aw-table {
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+body.mz-skin table th, body.mz-skin .data-table th, body.mz-skin .tk-table th,
+body.mz-skin .x-table th, body.mz-skin .pl-table th, body.mz-skin .aw-table th {
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  font-size: 10px !important;
+  color: var(--ac, #e0b04a) !important;
+  background: var(--ac-soft, rgba(224, 176, 74, .07)) !important;
+}
+body.mz-skin table tbody tr, body.mz-skin .data-table tbody tr {
+  transition: background .15s ease;
+}
+body.mz-skin table tbody tr:hover, body.mz-skin .data-table tbody tr:hover {
+  background: var(--ac-soft, rgba(224, 176, 74, .06)) !important;
+}
+
+/* ── Кнопки: один характер нажатия ──────────────────────────── */
+body.mz-skin .btn, body.mz-skin button.btn,
+body.mz-skin input[type="submit"] {
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: .02em;
+}
+body.mz-skin .btn:focus-visible, body.mz-skin button:focus-visible,
+body.mz-skin input:focus-visible, body.mz-skin select:focus-visible,
+body.mz-skin textarea:focus-visible {
+  outline: 2px solid var(--ac-line, rgba(224, 176, 74, .45)) !important;
+  outline-offset: 1px;
+}
+
+/* ── Инпуты: золотое фокус-кольцо ───────────────────────────── */
+body.mz-skin .inp, body.mz-skin input[type="text"],
+body.mz-skin input[type="number"], body.mz-skin input[type="search"],
+body.mz-skin select, body.mz-skin textarea {
+  border-radius: 10px !important;
+}
+body.mz-skin .inp:focus, body.mz-skin input:focus,
+body.mz-skin select:focus, body.mz-skin textarea:focus {
+  border-color: var(--ac-line, rgba(224, 176, 74, .4)) !important;
+  box-shadow: 0 0 0 3px var(--ac-soft, rgba(224, 176, 74, .12)) !important;
+}
+
+/* ── Бейджи и чипы: пилюли ──────────────────────────────────── */
+body.mz-skin .badge, body.mz-skin .action-badge, body.mz-skin .status-badge,
+body.mz-skin .user-badge, body.mz-skin .rank-badge {
+  border-radius: 999px !important;
+  letter-spacing: .04em;
+}
+
+/* ── Пустые состояния: щит вместо пустоты ───────────────────── */
+body.mz-skin .empty-state {
+  border: 1px dashed var(--line-2, rgba(255, 255, 255, .12));
+  border-radius: 14px;
+  background: var(--surface-2, rgba(255, 255, 255, .02));
+}
+body.mz-skin .empty-state i {
+  color: var(--ac, #e0b04a);
+}
+
+/* ── Скроллбары раздела ─────────────────────────────────────── */
+body.mz-skin ::-webkit-scrollbar { width: 9px; height: 9px; }
+body.mz-skin ::-webkit-scrollbar-thumb {
+  background: var(--line-3, rgba(255, 255, 255, .2));
+  border-radius: 99px;
+}
+body.mz-skin ::-webkit-scrollbar-thumb:hover {
+  background: var(--ac-line, rgba(224, 176, 74, .35));
+}
+
+/* ── Светлая тема ───────────────────────────────────────────── */
+[data-theme="light"] body.mz-skin .section::before,
+[data-theme="light"] body.mz-skin .box::before,
+[data-theme="light"] body.mz-skin .panel::before,
+[data-theme="light"] body.mz-skin .card::before {
+  opacity: .7;
+}
+[data-theme="light"] body.mz-skin .empty-state {
+  border-color: rgba(0, 0, 0, .12);
+  background: rgba(0, 0, 0, .02);
+}
