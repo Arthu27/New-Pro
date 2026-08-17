@@ -53,7 +53,19 @@
 .mc-amn .ok-badge{color:#4ade80;font-size:11px;font-weight:700;white-space:nowrap}
 .mc-link-chip{font-size:11px;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:8px;padding:4px 9px}
 .mc-link-chip:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
-[data-theme="light"] .mc-row,[data-theme="light"] .mc-radar,[data-theme="light"] .mc-amn{border-bottom-color:rgba(0,0,0,.08)}
+.mc-badge.k-lift{color:#4ade80;background:rgba(74,222,128,.10);border:1px solid rgba(74,222,128,.3)}
+.mc-head{display:flex;align-items:center;gap:9px;margin:0 0 4px}
+.mc-head h3{margin:0}
+.mc-hact{margin-left:auto;font-size:11px;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:8px;padding:4px 9px;white-space:nowrap}
+.mc-hact:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
+.mc-search{margin-bottom:10px}
+.mc-recent{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;padding:9px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.mc-recent:last-child{border-bottom:none}
+.mc-chips{margin:6px 0 2px}
+.mc-twoform{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:640px){.mc-twoform{grid-template-columns:1fr}}
+.mc-warnbtns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+[data-theme="light"] .mc-row,[data-theme="light"] .mc-radar,[data-theme="light"] .mc-amn,[data-theme="light"] .mc-recent{border-bottom-color:rgba(0,0,0,.08)}
 [data-theme="light"] .mc-track{background:rgba(0,0,0,.08)}
 </style>
 
@@ -67,8 +79,10 @@
 <div class="mc-grid">
   <div>
     <div class="mc-panel" id="mcRiskPanel">
-      <h3><i class="fas fa-triangle-exclamation"></i> На грани авто-наказания</h3>
+      <div class="mc-head"><h3><i class="fas fa-triangle-exclamation"></i> На грани авто-наказания</h3>
+        <a class="mc-hact" href="/api/guild/{{ guild_id }}/mod-control/warns.csv" title="Скачать список варнов"><i class="fas fa-file-csv"></i> CSV варнов</a></div>
       <div class="mc-sub" id="mcRiskSub">Участники с варнами, которым до следующего авто-наказания (пороги со страницы «Варны») не хватает один-два предупреждения.</div>
+      <input class="inp mc-search" id="mcRiskSearch" placeholder="Поиск по имени или ID" oninput="renderRisk(STATE)">
       <div id="mcRisk"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
     </div>
 
@@ -81,11 +95,35 @@
       </div>
       <div id="mcAmnesty"><div class="sk-row" style="width:65%"></div></div>
     </div>
+
+    <div class="mc-panel" id="mcWarnPanel">
+      <h3><i class="fas fa-gavel"></i> Варн из панели</h3>
+      <div class="mc-sub">Запись попадает в тот же журнал варнов, что читает бот. Важно: авто-наказание по порогам бот применяет только к варнам, выданным его командой — панельная запись ведёт учёт.</div>
+      <div id="mcWarnBody">
+        <div class="mc-twoform">
+          <input class="inp" id="mcWarnId" maxlength="24" placeholder="ID участника или @упоминание">
+          <input class="inp" id="mcWarnText" maxlength="200" placeholder="Причина, например: флуд в чате">
+        </div>
+        <div class="mc-chips" id="mcWarnChips"></div>
+        <div class="mc-warnbtns">
+          <button class="btn danger-btn" onclick="mcWarnAsk()"><i class="fas fa-gavel"></i> Выдать варн</button>
+          <button class="btn btn-ghost" onclick="mcUnwarnAsk()"><i class="fas fa-rotate-left"></i> Снять последний</button>
+        </div>
+      </div>
+      <div id="mcWarnDenied" style="display:none" class="mc-hint">Выдавать и снимать варны из панели могут администраторы.</div>
+    </div>
+
+    <div class="mc-panel" id="mcRecentPanel">
+      <h3><i class="fas fa-clock-rotate-left"></i> Последние действия</h3>
+      <div class="mc-sub">Свежие кары и снятия из журнала модерации — пульс команды за последние дни.</div>
+      <div id="mcRecent"><div class="sk-row" style="width:70%"></div></div>
+    </div>
   </div>
 
   <div>
     <div class="mc-panel" id="mcRadarPanel">
-      <h3><i class="fas fa-tower-broadcast"></i> Радар истечений</h3>
+      <div class="mc-head"><h3><i class="fas fa-tower-broadcast"></i> Радар истечений</h3>
+        <a class="mc-hact" href="/api/guild/{{ guild_id }}/mod-control/radar.csv" title="Скачать все активные наказания"><i class="fas fa-file-csv"></i> CSV</a></div>
       <div class="mc-sub">Временные наказания, которые просрочены или закончатся в ближайшие трое суток. Бот сам снимает их по таймеру — список нужен для контроля.</div>
       <div id="mcRadar"><div class="sk-row"></div><div class="sk-row" style="width:80%"></div></div>
     </div>
@@ -148,10 +186,12 @@ function renderKpis(d) {
     kpi('fa-triangle-exclamation', d.risk.edge, 'в одном варне от порога', d.risk.edge > 0) +
     kpi('fa-hourglass-end', c.overdue, plural(c.overdue, 'просроченное наказание', 'просроченных наказания', 'просроченных наказаний'), c.overdue > 0) +
     kpi('fa-bolt', c.soon + c.week, 'истекает в ближайшие трое суток', false) +
-    kpi('fa-shield-halved', d.radar.active_total, 'активных временных наказаний', false);
+    kpi('fa-shield-halved', d.radar.active_total, 'активных временных наказаний', false) +
+    kpi('fa-gavel', d.recent7, 'кар за последние 7 дней', false);
 }
 
 function renderRisk(d) {
+  if (!d) return;
   var sub = document.getElementById('mcRiskSub');
   var box = document.getElementById('mcRisk');
   if (!d.risk.tuned) {
@@ -161,12 +201,22 @@ function renderRisk(d) {
   }
   sub.textContent = 'Участники с варнами, которым до следующего авто-наказания не хватает один-два предупреждения. Пороги: ' +
     d.risk.steps.map(function (s) { return s.count + ' — ' + s.action_name; }).join(', ') + '.';
+  var q = (document.getElementById('mcRiskSearch').value || '').trim().toLowerCase();
+  var items = d.risk.items.filter(function (r) {
+    if (!q) return true;
+    return (r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.user_id).indexOf(q) !== -1;
+  });
   if (!d.risk.items.length) {
     box.innerHTML = '<div class="empty-state"><i class="fas fa-face-smile"></i><p>Все далеки от порогов</p>' +
       '<p class="empty-tip">Ни у кого с варнами сейчас нет риска пропустить авто-наказание.</p></div>';
     return;
   }
-  box.innerHTML = d.risk.items.map(function (r) {
+  if (!items.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-magnifying-glass"></i><p>Никого не нашлось</p>' +
+      '<p class="empty-tip">По запросу «' + esc(q) + '» среди участников на грани никого нет.</p></div>';
+    return;
+  }
+  box.innerHTML = items.map(function (r) {
     var pct = Math.min(100, Math.round(100 * r.warns / r.next_count));
     var label = r.name || ('#' + r.user_id);
     var gap = 'ещё ' + r.gap + ' ' + plural(r.gap, 'варн', 'варна', 'варнов') + ' → ' + r.action_name;
@@ -243,6 +293,75 @@ function renderAmnesty(d) {
   }).join('');
 }
 
+function badge(action) {
+  var map = {'Мут': 'k-mute', 'Кик': 'k-kick', 'Бан': 'k-ban', 'Мут снят': 'k-lift', 'Бан снят': 'k-lift'};
+  return '<span class="mc-badge ' + (map[action] || 'k-mute') + '">' + esc(action) + '</span>';
+}
+
+function renderRecent(d) {
+  var box = document.getElementById('mcRecent');
+  if (!d.recent.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p>Действий пока нет</p>' +
+      '<p class="empty-tip">Когда команда вынесет первую кару, она появится здесь.</p></div>';
+    return;
+  }
+  box.innerHTML = d.recent.map(function (r) {
+    var label = r.name || ('#' + r.user_id);
+    return '<div class="mc-recent">' + badge(r.action) +
+      '<div class="mc-who"><b>' + esc(label) + ' <small style="color:var(--text-3)">#' + esc(r.user_id) + '</small></b>' +
+      '<small>' + esc(r.reason || 'Без причины') + (r.mod_name ? ' · ' + esc(r.mod_name) : '') + '</small></div>' +
+      '<span class="mc-time">' + esc(fmtDate(r.at)) + '</span></div>';
+  }).join('');
+}
+
+function renderWarnPanel(d) {
+  var can = !!d.can_edit;
+  document.getElementById('mcWarnBody').style.display = can ? '' : 'none';
+  document.getElementById('mcWarnDenied').style.display = can ? 'none' : '';
+  if (!can) return;
+  var chips = (d.reasons.warn || []).slice(0, 8).map(function (it) {
+    return '<span class="mc-qchip" style="cursor:pointer" onclick="mcWarnChip(this)" title="Подставить в причину"><span>' + esc(it.text) + '</span></span>';
+  }).join('');
+  document.getElementById('mcWarnChips').innerHTML = chips;
+}
+
+function mcWarnChip(el) {
+  document.getElementById('mcWarnText').value = el.textContent;
+}
+
+function mcWarnAsk() {
+  var uid = document.getElementById('mcWarnId').value.trim();
+  var reason = document.getElementById('mcWarnText').value.trim();
+  window.askConfirm('Варн из панели', 'Выдать варн участнику ' + (uid || '(ID не указан)') +
+    ' с причиной «' + (reason || 'не указана') + '»? Запись попадёт в журнал варнов.', function () {
+    mcWarnRun(uid, reason);
+  }, { danger: true, okText: 'Выдать', icon_fa: 'fa-gavel' });
+}
+
+function mcWarnRun(uid, reason) {
+  mcPost(API + '/warn', { user_id: uid, reason: reason }).then(function (res) {
+    if (!res.data.success) { window.showToast(res.data.error || 'Не удалось выдать варн', false); return; }
+    document.getElementById('mcWarnText').value = '';
+    window.showToast('Варн выдан: всего ' + res.data.total, true);
+    mcLoad();
+  });
+}
+
+function mcUnwarnAsk() {
+  var uid = document.getElementById('mcWarnId').value.trim();
+  window.askConfirm('Снятие варна', 'Снять последний варн участника ' + (uid || '(ID не указан)') + '?', function () {
+    mcUnwarnRun(uid);
+  }, { danger: false, okText: 'Снять', icon_fa: 'fa-rotate-left' });
+}
+
+function mcUnwarnRun(uid) {
+  mcPost(API + '/unwarn', { user_id: uid }).then(function (res) {
+    if (!res.data.success) { window.showToast(res.data.error || 'Не удалось снять варн', false); return; }
+    window.showToast('Варн снят, осталось: ' + res.data.left, true);
+    mcLoad();
+  });
+}
+
 function mcKindSet(k) { KIND = k; renderReasons(STATE); }
 
 async function mcPost(url, obj) {
@@ -306,9 +425,20 @@ async function mcLoad() {
   if (!d.success) return;
   STATE = d;
   CAN_EDIT = !!d.can_edit;
-  var render = function () { renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d); };
+  var render = function () {
+    renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d);
+    renderAmnesty(d); renderRecent(d); renderWarnPanel(d);
+  };
   if (window.renderSafe) window.renderSafe(render); else render();
 }
+
+(function () {
+  var uid = new URLSearchParams(location.search).get('uid');
+  if (uid) {
+    document.getElementById('mcAmnestyId').value = uid;
+    document.getElementById('mcWarnId').value = uid;
+  }
+})();
 
 mcLoad();
 if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(mcLoad, 30000);

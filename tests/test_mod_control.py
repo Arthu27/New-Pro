@@ -217,6 +217,83 @@ empty = MC.expiry_radar([], now=NOW)
 check(empty['active_total'] == 0 and empty['counts']['overdue'] == 0 and empty['rows'] == [],
       'пустой радар — нули')
 
+print('== 4b. Последние действия ==')
+jdump('data/audit_log.json', {'779': [
+    {'category': 'mod', 'action': 'Мут', 'user_id': '1', 'user_name': 'А',
+     'mod_name': 'Ст', 'reason': 'флуд', 'timestamp': '2026-08-15T10:00:00'},
+    {'category': 'mod', 'action': 'Бан', 'user_id': '2', 'user_name': 'Б',
+     'mod_name': 'Ст2', 'timestamp': '2026-08-16T09:00:00'},
+    {'category': 'mod', 'action': 'Мут снят', 'user_id': '1', 'user_name': 'А',
+     'timestamp': '2026-08-16T12:00:00'},
+    {'category': 'member', 'action': 'Мут', 'user_id': '3',
+     'timestamp': '2026-08-16T13:00:00'},
+    {'category': 'mod', 'action': 'Предупреждение', 'user_id': '4',
+     'timestamp': '2026-08-16T14:00:00'},
+    {'category': 'mod', 'action': 'Кик', 'user_id': '5', 'timestamp': 'мусор'},
+]})
+rec = MC.recent_actions(779)
+check([r['action'] for r in rec] == ['Мут снят', 'Бан', 'Мут'],
+      'новые сверху; только кары и снятия, чужие категории и мусор мимо')
+check(rec[0]['kind'] == 'lift' and rec[1]['kind'] == 'punish', 'типы lift/punish')
+check(rec[1]['name'] == 'Б' and rec[1]['mod_name'] == 'Ст2' and rec[1]['reason'] == '',
+      'имя, модератор и пустая причина сохранены')
+check(rec[2]['at'] == '2026-08-15T10:00', 'метка без секунд')
+check(len(MC.recent_actions(779, limit=1)) == 1, 'лимит режет список')
+check(MC.recent_actions(424242) == [], 'пустой сервер — пусто без падения')
+
+from datetime import datetime as _dt, timedelta as _td, timezone as _tz  # noqa: E402
+_PULSE_NOW = _dt(2026, 8, 17, 0, 0, tzinfo=_tz.utc)
+check(MC.recent_punish_count(779, days=7, now=_PULSE_NOW) == 2,
+      'пульс: две кары за 7 дней (снятие не считается)')
+check(MC.recent_punish_count(779, days=1, now=_PULSE_NOW) == 1,
+      'пульс: за сутки — только бан')
+
+print('== 4c. Варн из панели ==')
+jdump('data/warnings.json', {'777': {'600': [{'id': 1, 'reason': 'старый'}]}})
+ok, err, res = MC.panel_warn(777, '<@600>', '  флуд   в чате  ', by='Ст', at='t-warn')
+check(ok and res['total'] == 2 and res['entry']['id'] == 2, 'варн добавлен, id растёт')
+check(res['entry']['reason'] == 'флуд в чате', 'причина нормализована')
+check(res['entry']['mod'] == 'Ст (панель)' and res['entry']['mod_id'] == ''
+      and res['entry']['timestamp'] == 't-warn',
+      'формат записи 1:1 с ботом + панельная пометка мода')
+raw = json.load(open('data/warnings.json', encoding='utf-8'))
+check(len(raw['777']['600']) == 2, 'зеркало на диске обновлено')
+check(MC.panel_warn(777, '600', '   ')[1] == 'Укажите причину варна', 'пустая причина — отказ')
+check(MC.panel_warn(777, '600', 'x' * (MC.WARN_REASON_MAX + 1))[1].startswith('Причина длиннее'),
+      'длинная причина — отказ')
+check(MC.panel_warn(777, 'мусор', 'x')[1] == 'Некорректный ID пользователя',
+      'мусорный ID — отказ')
+ok, err, res = MC.panel_warn(777, '601', 'первый', at='t2')
+check(ok and res['entry']['id'] == 1 and res['total'] == 1, 'новому участнику id=1')
+
+ok, err, res = MC.panel_unwarn(777, '600')
+check(ok and res['left'] == 1 and res['removed']['reason'] == 'флуд в чате',
+      'снят последний варн')
+ok, err, res = MC.panel_unwarn(777, '600')
+check(ok and res['left'] == 0, 'второе снятие забрало остаток')
+raw = json.load(open('data/warnings.json', encoding='utf-8'))
+check('600' not in raw.get('777', {}), 'пустой список не оставляет следа в зеркале')
+check(MC.panel_unwarn(777, '600')[1] == 'У участника нет варнов', 'снимать нечего — честный отказ')
+check(MC.panel_unwarn(777, 'мусор')[1] == 'Некорректный ID пользователя', 'мусорный ID в unwarn')
+
+print('== 4d. CSV-выгрузки ==')
+jdump('data/warnings.json', {'777': {
+    '100': [{'id': 1, 'reason': 'капс', 'mod': 'Ст', 'timestamp': '2026-08-10T10:00:00'},
+            {'id': 2, 'reason': 'флуд;спам', 'mod': 'Ст2', 'timestamp': '2026-08-12T10:00:00'}],
+    '101': [{'id': 1, 'reason': 'спам', 'mod': 'Ст', 'timestamp': '2026-08-11T10:00:00'}],
+}})
+rows = MC.warns_csv_rows(777)
+check([r[0] for r in rows] == ['100', '101'], 'сначала у кого больше варнов')
+check(rows[0][2] == 2 and rows[0][3] == 'флуд;спам' and rows[0][4] == 'Ст2'
+      and rows[0][5] == '2026-08-12', 'последние причина/мод/дата по участнику')
+body = MC.csv_body(MC.WARN_CSV_HEADER, rows)
+check(body.startswith('\ufeff' + MC.WARN_CSV_HEADER), 'BOM и шапка — как в других выгрузках')
+check('"флуд;спам"' in body, 'ячейка с точкой с запятой экранируется кавычками')
+rrows = MC.radar_csv_rows(777, now=NOW)
+check(rrows and rrows[0][0] == 'Мут' and rrows[0][1] == 'u2',
+      'радар-CSV: сортировка по сроку, просроченный первый')
+check('1970' in rrows[0][3], 'дата истечения в читаемом виде')
+
 print('== 5. API: права и потоки ==')
 # Свежие фикстуры с известным состоянием
 jdump('data/warnings.json', {'777': {
@@ -224,9 +301,23 @@ jdump('data/warnings.json', {'777': {
     '101': [{'id': 1}],
     '104': [{'id': i} for i in range(1, 6)],
 }})
+_pulse_now = _dt.now(_tz.utc)
+
+
+def _iso_h(hours_ago):
+    return (_pulse_now - _td(hours=hours_ago)).isoformat()
+
+
 jdump('data/audit_log.json', {'777': [
     {'category': 'mod', 'action': 'Мут', 'mod_name': 'Ст',
      'user_id': '100', 'user_name': 'Хулиган', 'timestamp': 't'},
+    {'category': 'mod', 'action': 'Бан', 'mod_name': 'Ст',
+     'user_id': '300', 'user_name': 'Рейдер', 'reason': 'рейд',
+     'timestamp': _iso_h(3)},
+    {'category': 'mod', 'action': 'Кик', 'mod_name': 'Ст2',
+     'user_id': '301', 'user_name': 'Флудер', 'timestamp': _iso_h(1)},
+    {'category': 'mod', 'action': 'Мут снят', 'mod_name': 'Ст',
+     'user_id': '300', 'user_name': 'Рейдер', 'timestamp': _iso_h(0.2)},
 ]})
 if os.path.exists('data/mod_reasons_777.json'):
     os.remove('data/mod_reasons_777.json')
@@ -264,6 +355,9 @@ check(ov['risk']['items'][0]['name'] == 'Хулиган', 'имя подтяну
 check(ov['radar']['counts']['overdue'] >= 0 and 'rows' in ov['radar'], 'радар в снимке')
 check(ov['reasons']['warn'] == [] and ov['amnesty'] == [], 'причины и амнистии пусты')
 check(ov['risk']['tuned'] is True, 'пороги настроены (фикстура warn_config_777)')
+check(len(ov['recent']) == 3 and ov['recent'][0]['action'] == 'Мут снят',
+      'последние действия в снимке: снятие самым свежим, битые метки не в счёт')
+check(ov['recent7'] == 2, 'пульс: две кары за последние 7 дней')
 
 check(client.post('/api/guild/777/mod-control/reasons', json={'kind': 'warn', 'text': 'x'}).status_code == 403,
       'mod не добавляет причины')
@@ -303,15 +397,64 @@ check(no_warns.status_code == 400 and no_warns.get_json()['error'] == 'У уча
       'честный отказ без варнов')
 check(len(client.get(OV).get_json()['risk']['items']) == 2, 'после отката картина восстановлена')
 
+login('mod')
+check(client.post('/api/guild/777/mod-control/warn',
+                   json={'user_id': '100', 'reason': 'флуд'}).status_code == 403,
+      'mod не выдаёт варны из панели')
+check(client.post('/api/guild/777/mod-control/unwarn',
+                   json={'user_id': '100'}).status_code == 403,
+      'mod не снимает варны из панели')
+login('admin')
+bad = client.post('/api/guild/777/mod-control/warn', json={'user_id': '100', 'reason': '   '})
+check(bad.status_code == 400 and bad.get_json()['error'] == 'Укажите причину варна',
+      'warn: 400 на пустую причину')
+bad = client.post('/api/guild/777/mod-control/warn', json={'user_id': 'мусор', 'reason': 'флуд'})
+check(bad.status_code == 400 and bad.get_json()['error'] == 'Некорректный ID пользователя',
+      'warn: 400 на мусорный ID')
+warned = client.post('/api/guild/777/mod-control/warn', json={'user_id': '100', 'reason': ' флуд '})
+check(warned.status_code == 200 and warned.get_json()['total'] == 3,
+      'warn: у участника теперь 3 варна')
+ov3 = client.get(OV).get_json()
+check(ov3['risk']['edge'] == 0, 'warn: после третьего варна участник ушёл с волоска (порог 3)')
+unw = client.post('/api/guild/777/mod-control/unwarn', json={'user_id': '<@100>'})
+check(unw.status_code == 200 and unw.get_json()['left'] == 2,
+      'unwarn: по упоминанию, осталось 2')
+check(client.post('/api/guild/777/mod-control/unwarn',
+                   json={'user_id': '424242'}).get_json()['error'] == 'У участника нет варнов',
+      'unwarn: честный отказ без варнов')
+check(client.get(OV).get_json()['risk']['edge'] == 1, 'unwarn: картина на грани восстановлена')
+
+login('mod')
+csv_r = client.get('/api/guild/777/mod-control/warns.csv')
+check(csv_r.status_code == 200 and 'text/csv' in (csv_r.headers.get('Content-Type') or ''),
+      'CSV варнов отдаётся моду')
+check(csv_r.headers.get('Content-Disposition') == 'attachment; filename=modcontrol_warns_777.csv',
+      'CSV варнов: заголовок вложения')
+csv_body = csv_r.get_data(as_text=True)
+check(csv_body.startswith('\ufeff' + MC.WARN_CSV_HEADER), 'CSV варнов: BOM + шапка')
+check('100' in csv_body and '104' in csv_body, 'CSV варнов: участники на месте')
+radar_r = client.get('/api/guild/777/mod-control/radar.csv')
+check(radar_r.status_code == 200
+      and radar_r.headers.get('Content-Disposition') == 'attachment; filename=modcontrol_radar_777.csv',
+      'CSV радара отдаётся с правильным именем')
+login('uye')
+check(client.get('/api/guild/777/mod-control/warns.csv').status_code == 403,
+      'uye CSV закрыт')
+
 print('== 6. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/mod_control.html'), encoding='utf-8').read()
 emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
 check('[data-theme="light"]' in tpl, 'светлая тема учтена')
-for fid in ('mcKpis', 'mcRisk', 'mcRadar', 'mcReasons', 'mcAmnesty', 'mcTabs', 'mcAmnestyId'):
+for fid in ('mcKpis', 'mcRisk', 'mcRadar', 'mcReasons', 'mcAmnesty', 'mcTabs', 'mcAmnestyId',
+            'mcRecent', 'mcWarnPanel', 'mcWarnId', 'mcWarnText', 'mcRiskSearch'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check('/warn-config' in tpl, 'ссылка на настройку порогов')
 check('uxUndo' in tpl, 'амнистия с 6.5-секундным откатом через uxUndo')
+check('/mod-control/warns.csv' in tpl and '/mod-control/radar.csv' in tpl,
+      'CSV-кнопки варнов и радара в шаблоне')
+check('mcWarnAsk' in tpl and 'mcUnwarnAsk' in tpl, 'варн/анварн из панели на кнопках')
+check("get('uid')" in tpl, 'префилл по ?uid= из мод-анализа')
 import services.panel_menu as PM
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
 check('/mod-control' in paths, 'пункт меню «Мод-контроль» есть')

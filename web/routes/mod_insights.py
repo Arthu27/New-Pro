@@ -43,6 +43,10 @@ DOSSIER_WARNS_LIMIT = 3
 EFFECT_MIN_SAMPLE = 5
 EFFECT_DEFAULT_DAYS = 90
 
+TEAM_LIMIT = 15
+TREND_MAX_BUCKETS = 12
+TREND_MIN_BUCKETS = 4
+
 CHECK_AUDIT_FRESH_DAYS = 14
 
 ANTIRAID_TOGGLES = ('join_raid', 'bot_protection', 'webhook_protection',
@@ -295,6 +299,75 @@ def punishment_effectiveness(events, now=None, days=EFFECT_DEFAULT_DAYS):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Команда: кто из модераторов сколько карал и снимал за окно
+# ─────────────────────────────────────────────────────────────────────
+def team_activity(gid, days=EFFECT_DEFAULT_DAYS, now=None, limit=TEAM_LIMIT):
+    """Вклад каждого модератора за окно: кары, снятия, последнее действие.
+
+    Сортировка — по числу кар (затем снятий), события без mod_name
+    не приписываются никому.
+    """
+    days = _norm_days(days, EFFECT_DEFAULT_DAYS)
+    now = now or datetime.now()
+    cutoff = now - timedelta(days=days)
+    per = {}
+    for dt, action, _uid, ev in mod_events(gid):
+        if dt < cutoff or action not in PUNISH_ACTIONS + LIFT_ACTIONS:
+            continue
+        mod = str(ev.get('mod_name') or '').strip()
+        if not mod:
+            continue
+        rec = per.setdefault(mod, {'punishments': 0, 'lifts': 0, 'last_at': None})
+        if action in PUNISH_ACTIONS:
+            rec['punishments'] += 1
+        else:
+            rec['lifts'] += 1
+        rec['last_at'] = dt
+    rows = []
+    for mod, rec in per.items():
+        rows.append({
+            'mod': mod,
+            'punishments': rec['punishments'],
+            'lifts': rec['lifts'],
+            'total': rec['punishments'] + rec['lifts'],
+            'last_at': rec['last_at'].isoformat(timespec='minutes') if rec['last_at'] else None,
+        })
+    rows.sort(key=lambda r: (-r['punishments'], -r['lifts'], r['mod']))
+    try:
+        lim = int(limit)
+    except (TypeError, ValueError) as _ex:
+        _log.debug("mod_insights: битый лимит team: %s", _ex)
+        lim = TEAM_LIMIT
+    return {'days': days, 'items': rows[:max(1, lim)], 'total_mods': len(rows)}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Тренд: кары по равным долям окна (недели) — для графика
+# ─────────────────────────────────────────────────────────────────────
+def punishment_trend(gid, days=EFFECT_DEFAULT_DAYS, now=None):
+    """Кары по бакетам за окно: недели для больших окон, равные доли
+    для коротких. Метка бакета — дата его начала (ДД.ММ)."""
+    days = _norm_days(days, EFFECT_DEFAULT_DAYS)
+    now = now or datetime.now()
+    buckets_n = min(TREND_MAX_BUCKETS, max(TREND_MIN_BUCKETS, days // 7))
+    step_s = days * 86400.0 / buckets_n
+    start = now - timedelta(days=days)
+    counts = [0] * buckets_n
+    for dt, action, _uid, _ev in mod_events(gid):
+        if action not in PUNISH_ACTIONS or dt < start or dt > now:
+            continue
+        idx = int((dt - start).total_seconds() // step_s)
+        if idx >= buckets_n:  # событие ровно на границе «сейчас»
+            idx = buckets_n - 1
+        counts[idx] += 1
+    buckets = []
+    for i, c in enumerate(counts):
+        b_start = start + timedelta(seconds=step_s * i)
+        buckets.append({'label': b_start.strftime('%d.%m'), 'count': c})
+    return {'days': days, 'buckets': buckets, 'total': sum(counts)}
+
+
+# ─────────────────────────────────────────────────────────────────────
 # #40: Чек-лист готовности модерации
 # ─────────────────────────────────────────────────────────────────────
 def _autofilter_check(gid):
@@ -415,10 +488,13 @@ def register(ctx):
     @role_required('mod')
     def api_mod_insights_overview(gid):
         days = _norm_days(request.args.get('days'), EFFECT_DEFAULT_DAYS)
+        events = mod_events(gid)
         return jsonify({
             'success': True,
             'subjects': subjects(gid),
-            'effectiveness': punishment_effectiveness(mod_events(gid), days=days),
+            'effectiveness': punishment_effectiveness(events, days=days),
+            'team': team_activity(gid, days=days),
+            'trend': punishment_trend(gid, days=days),
             'checklist': readiness_checklist(gid),
         })
 

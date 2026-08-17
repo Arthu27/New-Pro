@@ -20,14 +20,14 @@ import os
 import re
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from web.routes._common import (
     _log,
-    render_template, session, request, jsonify,
+    render_template, session, request, jsonify, Response,
 )
 
-from web.routes.analytics_plus import _read_audit
+from web.routes.analytics_plus import _parse_ts, _read_audit
 
 REASON_KINDS = ('warn', 'mute', 'kick', 'ban')
 REASON_KIND_LABELS = {'warn': 'Варн', 'mute': 'Мут', 'kick': 'Кик', 'ban': 'Бан'}
@@ -47,6 +47,16 @@ TEMP_KIND_FILES = (
 )
 RADAR_SOON_S = 24 * 3600
 RADAR_WEEK_S = 3 * 86400
+
+RECENT_LIMIT = 10
+RECENT_DAYS = 7
+# Единственные кары/снятия, которые бот пишет в аудит (1:1 с mod_insights).
+MOD_PUNISH_ACTIONS = ('Мут', 'Кик', 'Бан')
+MOD_LIFT_ACTIONS = ('Мут снят', 'Бан снят')
+
+WARN_REASON_MAX = 200
+WARN_CSV_HEADER = 'ID;Имя;Варнов;Последняя причина;Модератор;Дата'
+RADAR_CSV_HEADER = 'Тип;ID;Имя;Истекает;Причина;Модератор'
 
 _USER_REF_RE = re.compile(r'^(?:<@!?(\d{1,20})>|(\d{1,20}))$')
 
@@ -448,6 +458,163 @@ def expiry_radar(rows, now=None):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Последние действия: свежий пульс модерации из журнала аудита
+# ─────────────────────────────────────────────────────────────────────
+def recent_actions(gid, limit=RECENT_LIMIT):
+    """Свежие кары и снятия из журнала аудита, новые сверху."""
+    rows = []
+    for ev in _read_audit(gid):
+        action = str(ev.get('action') or '')
+        if ev.get('category') != 'mod' or action not in MOD_PUNISH_ACTIONS + MOD_LIFT_ACTIONS:
+            continue
+        dt = _parse_ts(ev.get('timestamp'))
+        if dt is None:
+            continue
+        rows.append((dt, {
+            'action': action,
+            'kind': 'punish' if action in MOD_PUNISH_ACTIONS else 'lift',
+            'user_id': str(ev.get('user_id') or '').strip(),
+            'name': str(ev.get('user_name') or '').strip(),
+            'mod_name': str(ev.get('mod_name') or '').strip(),
+            'reason': str(ev.get('reason') or '').strip(),
+            'at': dt.isoformat(timespec='minutes'),
+        }))
+    rows.sort(key=lambda t: t[0], reverse=True)
+    try:
+        lim = int(limit)
+    except (TypeError, ValueError) as _ex:
+        _log.debug("mod_control: битый лимит recent: %s", _ex)
+        lim = RECENT_LIMIT
+    return [r for _dt, r in rows[:max(1, lim)]]
+
+
+def recent_punish_count(gid, days=RECENT_DAYS, now=None):
+    """Сколько кар вынесено за окно (для KPI «пульс модерации»).
+
+    _parse_ts приводит метки к naive-local — окно считаем в тех же координатах.
+    """
+    now = now or datetime.now()
+    if now.tzinfo is not None:
+        now = now.astimezone().replace(tzinfo=None)
+    cutoff = now - timedelta(days=max(1, int(days)))
+    count = 0
+    for ev in _read_audit(gid):
+        if ev.get('category') != 'mod' or ev.get('action') not in MOD_PUNISH_ACTIONS:
+            continue
+        dt = _parse_ts(ev.get('timestamp'))
+        if dt is not None and dt >= cutoff:
+            count += 1
+    return count
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Варн из панели: то же зеркало data/warnings.json, что пишет бот
+# ─────────────────────────────────────────────────────────────────────
+def _load_warnings_raw():
+    raw = _load_json('data/warnings.json', {})
+    return raw if isinstance(raw, dict) else {}
+
+
+def panel_warn(gid, user_id, reason, by='', at=None):
+    """Варн из панели. Формат записи 1:1 с cogs/warnings.py (id/reason/
+    mod/mod_id/timestamp), чтобы бот, досье и зеркала не заметили разницы."""
+    ok, err, uid = validate_user_id(user_id)
+    if not ok:
+        return False, err, None
+    text = ' '.join(str(reason or '').split())
+    if not text:
+        return False, 'Укажите причину варна', None
+    if len(text) > WARN_REASON_MAX:
+        return False, f'Причина длиннее {WARN_REASON_MAX} символов', None
+    gid = _gid_str(gid)
+    raw = _load_warnings_raw()
+    gmap = raw.get(gid)
+    if not isinstance(gmap, dict):
+        gmap = {}
+        raw[gid] = gmap
+    cur = gmap.get(uid)
+    warns = [w for w in cur if isinstance(w, dict)] if isinstance(cur, list) else []
+    entry = {
+        'id': len(warns) + 1,
+        'reason': text,
+        'mod': f'{by} (панель)' if by else 'панель',
+        'mod_id': '',
+        'timestamp': at or _now_iso(),
+    }
+    warns.append(entry)
+    gmap[uid] = warns
+    _save_json('data/warnings.json', raw)
+    return True, '', {'entry': entry, 'total': len(warns)}
+
+
+def panel_unwarn(gid, user_id):
+    """Снять последний варн (аналог /unwarn бота) из того же зеркала."""
+    ok, err, uid = validate_user_id(user_id)
+    if not ok:
+        return False, err, None
+    gid = _gid_str(gid)
+    raw = _load_warnings_raw()
+    gmap = raw.get(gid)
+    cur = gmap.get(uid) if isinstance(gmap, dict) else None
+    warns = [w for w in cur if isinstance(w, dict)] if isinstance(cur, list) else []
+    if not warns:
+        return False, 'У участника нет варнов', None
+    removed = warns.pop()
+    if not isinstance(gmap, dict):
+        gmap = {}
+        raw[gid] = gmap
+    if warns:
+        gmap[uid] = warns
+    else:
+        gmap.pop(uid, None)
+        if not gmap:
+            raw.pop(gid, None)
+    _save_json('data/warnings.json', raw)
+    return True, '', {'removed': removed, 'left': len(warns)}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# CSV-выгрузки: варны и радар истечений
+# ─────────────────────────────────────────────────────────────────────
+def _csv_cell(value):
+    text = str(value if value is not None else '')
+    if any(ch in text for ch in ';"\n\r'):
+        text = '"' + text.replace('"', '""') + '"'
+    return text
+
+
+def csv_body(header, rows):
+    return '\ufeff' + header + '\n' + '\n'.join(
+        ';'.join(_csv_cell(c) for c in row) for row in rows) + '\n'
+
+
+def warns_csv_rows(gid):
+    """По участнику: сколько варнов, последняя причина/мод/дата."""
+    names = names_from_audit(gid)
+    rows = []
+    for uid, warns in sorted(load_warns_map(gid).items(),
+                             key=lambda kv: (-len(kv[1]), kv[0])):
+        last = warns[-1] if warns else {}
+        rows.append([uid, names.get(uid, ''), len(warns),
+                     str(last.get('reason') or ''), str(last.get('mod') or ''),
+                     str(last.get('timestamp') or '')[:10]])
+    return rows
+
+
+def radar_csv_rows(gid, now=None):
+    """Все активные временные наказания (включая дальние) по сроку."""
+    now = float(now if now is not None else time.time())
+    names = names_from_audit(gid)
+    rows = []
+    for r in sorted(load_temp_actions(gid), key=lambda x: x['until']):
+        until = datetime.fromtimestamp(r['until'], tz=timezone.utc)
+        rows.append([r['kind_name'], r['user_id'], names.get(r['user_id'], ''),
+                     until.strftime('%Y-%m-%d %H:%M'),
+                     r['reason'], r['mod_id']])
+    return rows
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Маршруты
 # ─────────────────────────────────────────────────────────────────────
 def register(ctx):
@@ -491,8 +658,51 @@ def register(ctx):
             'radar': expiry_radar(radar_rows),
             'amnesty': [public_amnesty(a) for a in reversed(amnesty_log)][:10],
             'amnesty_total': len(amnesty_log),
+            'recent': recent_actions(gid),
+            'recent7': recent_punish_count(gid),
             'can_edit': session.get('role') in ('admin', 'owner'),
         })
+
+    @app.route('/api/guild/<gid>/mod-control/warn', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_mod_control_warn(gid):
+        data = _json()
+        ok, err, res = panel_warn(gid, data.get('user_id'), data.get('reason'),
+                                  by=session.get('username'))
+        if not ok:
+            return jsonify({'success': False, 'error': err}), 400
+        return jsonify({'success': True, 'total': res['total'], 'entry': res['entry']})
+
+    @app.route('/api/guild/<gid>/mod-control/unwarn', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_mod_control_unwarn(gid):
+        data = _json()
+        ok, err, res = panel_unwarn(gid, data.get('user_id'))
+        if not ok:
+            return jsonify({'success': False, 'error': err}), 400
+        return jsonify({'success': True, 'removed': res['removed'], 'left': res['left']})
+
+    @app.route('/api/guild/<gid>/mod-control/warns.csv')
+    @login_required
+    @role_required('mod')
+    def api_mod_control_warns_csv(gid):
+        resp = Response(csv_body(WARN_CSV_HEADER, warns_csv_rows(gid)),
+                        mimetype='text/csv; charset=utf-8')
+        resp.headers['Content-Disposition'] = (
+            f'attachment; filename=modcontrol_warns_{_gid_str(gid)}.csv')
+        return resp
+
+    @app.route('/api/guild/<gid>/mod-control/radar.csv')
+    @login_required
+    @role_required('mod')
+    def api_mod_control_radar_csv(gid):
+        resp = Response(csv_body(RADAR_CSV_HEADER, radar_csv_rows(gid)),
+                        mimetype='text/csv; charset=utf-8')
+        resp.headers['Content-Disposition'] = (
+            f'attachment; filename=modcontrol_radar_{_gid_str(gid)}.csv')
+        return resp
 
     @app.route('/api/guild/<gid>/mod-control/reasons', methods=['POST'])
     @login_required

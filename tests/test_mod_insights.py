@@ -136,6 +136,51 @@ check(empty['overall']['count'] == 0 and empty['overall']['repeat7'] is None
       and empty['overall']['median_days'] is None and empty['overall']['thin'] is True,
       'пустой журнал — нули и «мало данных» без делений на ноль')
 
+print('== 2b. Команда модераторов ==')
+
+
+def tev(mod, action, days_ago):
+    return {'category': 'mod', 'action': action, 'user_id': 'x', 'user_name': 'x',
+            'mod_name': mod, 'timestamp': iso(days_ago)}
+
+
+jdump('data/audit_log.json', {'780': [
+    tev('Ст', 'Мут', 1), tev('Ст', 'Бан', 2), tev('Ст', 'Мут снят', 1),
+    tev('Ст2', 'Кик', 3),
+    tev('', 'Мут', 1),            # без модератора — никому не приписывается
+    tev('Ст3', 'Мут', 200),       # за окном 90 дней
+    {'category': 'member', 'action': 'Мут', 'mod_name': 'Ст9', 'timestamp': iso(1)},
+]})
+team = MI.team_activity(780, days=90, now=NOW)
+check([r['mod'] for r in team['items']] == ['Ст', 'Ст2'],
+      'сортировка по числу кар; безымянный и чужая категория мимо')
+check(team['items'][0]['punishments'] == 2 and team['items'][0]['lifts'] == 1
+      and team['items'][0]['total'] == 3, 'вклад первого: 2 кары + 1 снятие')
+check(team['items'][0]['last_at'] is not None
+      and team['items'][1]['last_at'] == iso(3)[:16], 'последние действия на месте')
+check(team['total_mods'] == 2 and team['days'] == 90, 'итог: два активных, окно 90')
+check(all(r['mod'] != 'Ст3' for r in MI.team_activity(780, days=90, now=NOW)['items']),
+      'события за окном не считаются')
+check(len(MI.team_activity(780, days=90, now=NOW, limit=1)['items']) == 1, 'лимит работает')
+check(MI.team_activity(424242)['items'] == [] and MI.team_activity(424242)['total_mods'] == 0,
+      'пустой сервер — пустая команда без падения')
+
+print('== 2c. Тренд наказаний ==')
+trend = MI.punishment_trend(780, days=90, now=NOW)
+check(trend['total'] == 4 and len(trend['buckets']) == 12,
+      'окно 90 дн.: четыре кары (анонимная тоже кара) по 12 бакетам')
+check(trend['buckets'][-1]['count'] == 4 and trend['buckets'][0]['count'] == 0,
+      'свежие кары в последнем бакете, дальние пусты')
+check(re.match(r'^\d{2}\.\d{2}$', trend['buckets'][0]['label']) is not None,
+      'метка бакета — дата ДД.ММ')
+short = MI.punishment_trend(780, days=7, now=NOW)
+check(len(short['buckets']) == MI.TREND_MIN_BUCKETS, 'короткое окно — минимум 4 бакета')
+check(short['total'] == 4, 'за 7 дней все свежие кары внутри')
+long_t = MI.punishment_trend(780, days=365, now=NOW)
+check(long_t['total'] == 5 and len(long_t['buckets']) == MI.TREND_MAX_BUCKETS,
+      '365 дней: 12 бакетов, кара за пределами 90 тоже видна')
+check(MI.punishment_trend(424242)['total'] == 0, 'пустой журнал — нулевой тренд')
+
 print('== 3. Досье участника ==')
 jdump('data/warnings.json', {'777': {
     '900': [
@@ -319,8 +364,13 @@ check(ovj['success'] and ovj['subjects']['total'] == 1
 check(ovj['subjects']['items'][0]['user_id'] == '100'
       and ovj['subjects']['items'][0]['weight'] == 3, 'у участника вес 3 (варн + 2 кары)')
 check(ovj['effectiveness']['days'] == 90, 'окно эффективности по умолчанию — 90 дней')
-check(client.get(OV + '?days=30').get_json()['effectiveness']['days'] == 30,
-      'переключатель окна работает')
+check(ovj['team']['total_mods'] == 1 and ovj['team']['items'][0]['punishments'] == 2,
+      'команда в снимке: один модератор, две кары')
+check(ovj['trend']['total'] == 2 and len(ovj['trend']['buckets']) == 12,
+      'тренд в снимке: две кары по 12 бакетам')
+ov30 = client.get(OV + '?days=30').get_json()
+check(ov30['effectiveness']['days'] == 30 and ov30['team']['days'] == 30
+      and ov30['trend']['days'] == 30, 'переключатель окна работает')
 check(client.get(OV + '?days=бред').get_json()['effectiveness']['days'] == 90,
       'мусорное окно — дефолт без падения')
 clj = ovj['checklist']
@@ -345,9 +395,12 @@ emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
 check('[data-theme="light"]' in tpl, 'светлая тема учтена')
 for fid in ('miKpis', 'miSubjects', 'miDossier', 'miEffect', 'miCheck',
-            'miDaysTabs', 'miDossierId'):
+            'miDaysTabs', 'miDossierId', 'miTeam', 'miTrend', 'miSubjectsSearch'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check('mod-insights' in tpl, 'API-путь модуля в шаблоне')
+check('/member-card?user=' in tpl, 'из досье есть мост в карточку участника')
+check('/mod-control?uid=' in tpl, 'из досье есть мост в мод-контроль')
+check('miCopyId' in tpl, 'копирование ID из досье')
 import services.panel_menu as PM
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
 check('/mod-insights' in paths, 'пункт меню «Мод-анализ» есть')
