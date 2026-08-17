@@ -100,8 +100,10 @@ check("announcements_path = 'data/announcements.json'" in demo,
       'демо засеивает историю объявлений только при пустом файле')
 check("'delivered': True" in demo and "'deliver_error': 'Missing Access" in demo,
       'в демо представлены успешная и проблемная доставки')
-check("@app.route('/demo-login')" in demo,
-      'для локального просмотра доступен demo-login без пароля')
+check("DEMO_USERNAME = 'owner'" in demo and "DEMO_PASSWORD = '123321'" in demo,
+      'demo-preview использует запрошенную отдельную учётную запись')
+check("@app.route('/demo-login')" not in demo and 'wapp.USERS.clear()' in demo,
+      'беспарольный обход удалён, demo-вход проходит через обычную форму')
 
 print('== 6. Синтаксис и ролевой HTTP-рендер ==')
 from jinja2 import Environment  # noqa: E402

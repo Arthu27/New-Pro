@@ -3,11 +3,11 @@
 
 Для разработки/превью (песочница Arena, локальный UI-просмотр):
 - фейковый сервер (guild id 4242) с парой каналов;
-- /demo-login — вход как owner (Arthur) без пароля — ТОЛЬКО для демо!;
+- обычная форма входа с отдельной demo-учётной записью owner / 123321;
 - засевает логи, доказательства и наглядную историю объявлений;
 - все временные метки aware-UTC, как пишет бот после fix(time); живые данные не затирает.
 
-Запуск:  python3 scripts/demo_panel.py  ->  http://127.0.0.1:8090/demo-login
+Запуск:  python3 scripts/demo_panel.py  ->  http://127.0.0.1:8090/login
 """
 import json
 import os
@@ -24,6 +24,8 @@ os.environ.setdefault('SECRET_KEY', 'demo-preview-key-not-real')
 
 GID = 4242
 NOW = datetime.now(timezone.utc)
+DEMO_USERNAME = 'owner'
+DEMO_PASSWORD = '123321'
 
 
 def _iso(dt):
@@ -182,7 +184,15 @@ def seed():
 seed()
 
 import web.app as wapp  # noqa: E402
-from flask import redirect, session  # noqa: E402
+
+# Отдельная учётная запись действует только в памяти demo-процесса. Файл
+# production-credentials не перезаписывается, а вход проходит через обычную
+# форму /login со штатной проверкой хэша и созданием сессии.
+wapp.USERS.clear()
+wapp.USERS[DEMO_USERNAME] = {
+    'password_hash': wapp._hash_pw(DEMO_PASSWORD),
+    'role': 'owner',
+}
 
 
 class FakeChannel:
@@ -279,16 +289,7 @@ wapp.set_bot_instance(FakeBot())
 app = wapp.app
 
 
-@app.route('/demo-login')
-def demo_login():
-    """Вход в демо одним кликом (без пароля — только песочница!)."""
-    session['logged_in'] = True
-    session['username'] = 'Arthur'
-    session['role'] = 'owner'
-    session['avatar'] = ''
-    return redirect('/')
-
-
 if __name__ == '__main__':
-    print('[demo] Панель: http://0.0.0.0:8090/demo-login')
+    print('[demo] Панель: http://0.0.0.0:8090/login')
+    print(f'[demo] Вход: {DEMO_USERNAME} / {DEMO_PASSWORD}')
     app.run(host='0.0.0.0', port=8090, debug=False, use_reloader=False, threaded=True)
