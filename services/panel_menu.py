@@ -154,6 +154,7 @@ MENU = [
         {'path': '/todo', 'label': 'Задачи', 'icon': 'fa-check-square'},
         {'path': '/reminders', 'label': 'Напоминания', 'icon': 'fa-bell'},
         {'path': '/yardim', 'label': 'Справка', 'icon': 'fa-question-circle'},
+        {'path': '/search', 'label': 'Поиск по серверу', 'icon': 'fa-magnifying-glass'},
     ]},
 ]
 
@@ -176,6 +177,7 @@ PAGE_COGS = {
     '/reports': ('report_cog',),
     '/archive': ('archive',),
     '/server-info': ('server_info',),
+    '/search': ('search_cog',),
     '/sla': ('sla_cog',),
     '/economy': ('economy_cog',),
     '/shop': ('economy_cog',),
