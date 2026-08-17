@@ -49,6 +49,20 @@ check({page['section'] for page in raw_pages} ==
       {section['key'] for section in pm.MODERATION_SECTIONS},
       'каждый инструмент входит в известный рабочий раздел')
 
+profiles = pm.MODERATION_PAGE_PROFILES
+check(set(profiles) == {page['path'] for page in raw_pages},
+      'индивидуальный профиль существует у каждой из 18 комнат')
+profile_required = {'code', 'accent', 'name', 'headline', 'mission', 'features'}
+check(all(profile_required <= set(profile) for profile in profiles.values()),
+      'все профили содержат полный визуальный и смысловой контракт')
+check(len({profile['code'] for profile in profiles.values()}) == 18 and
+      len({profile['name'] for profile in profiles.values()}) == 18,
+      'коды и продуктовые имена всех комнат уникальны')
+check(all(len(profile['features']) == 3 for profile in profiles.values()),
+      'у каждой комнаты ровно три собственные опорные возможности')
+check([pm.moderation_profile_for(page['path'])['position'] for page in raw_pages] == list(range(1, 19)),
+      'профили знают точную позицию в маршруте 01–18')
+
 admin_group = next(group for group in pm.panel_groups_for('admin') if group['key'] == 'mod')
 section_counts = [len(section['pages']) for section in admin_group['sections']]
 check(section_counts == [6, 4, 4, 4], f'workflow разбит 6/4/4/4 ({section_counts})')
@@ -71,9 +85,14 @@ print('== 3. Общий UI подключён ко всем страницам =
 base_path = os.path.join(ROOT, 'web', 'templates', 'base.html')
 base = open(base_path, encoding='utf-8').read()
 for marker, label in [
-    ('moderation-suite.css?v=1', 'отдельный CSS-слой'),
-    ('moderation-suite.js?v=1', 'отдельный JS-контроллер'),
+    ('moderation-suite.css?v=2', 'отдельный CSS-слой без старого browser-cache'),
+    ('moderation-suite.js?v=2', 'отдельный JS-контроллер без старого browser-cache'),
     ('data-mod-suite', 'контекстная панель'),
+    ('mod-command-room', 'полноценная командная комната'),
+    ('data-mod-workspace', 'единая рабочая поверхность'),
+    ('mod-command-features', 'индивидуальные возможности страницы'),
+    ('mod-command-rail', 'маршрут четырёх контуров'),
+    ('data-mod-enter', 'переход к рабочей области'),
     ('data-mod-overlay', 'полноэкранный центр'),
     ('data-mod-search', 'поиск инструментов'),
     ('data-mod-prev', 'переход назад'),
@@ -90,11 +109,13 @@ js = open(js_path, encoding='utf-8').read()
 check(css.count('{') == css.count('}') and css.count('{') >= 100,
       f'CSS целый и содержательный ({css.count("{")} блоков)')
 for marker in ('.nav-subgroup', '.mod-suite-bar', '.mod-suite-dialog',
-               '.mod-suite-grid', '@media (max-width: 760px)',
-               'prefers-reduced-motion'):
+               '.mod-suite-grid', '.mod-command-room', '.mod-command-rail',
+               '.mod-page-workspace', '[data-mod-accent="crimson"]',
+               '@media (max-width:760px)', 'prefers-reduced-motion'):
     check(marker in css, f'CSS содержит {marker}')
 for marker in ('Alt+M', 'RECENT_KEY', 'filterCards', 'focusable',
-               'data-mod-section', 'sidebarSearch'):
+               'data-mod-section', 'sidebarSearch', 'enterWorkspace',
+               'prefers-reduced-motion: reduce'):
     check(marker in js, f'JS содержит {marker}')
 
 node = subprocess.run(['node', '--check', js_path], capture_output=True, text=True, timeout=30)
@@ -119,13 +140,18 @@ rendered = 0
 for page in raw_pages:
     response = client.get(page['path'])
     html = response.get_data(as_text=True)
+    profile = pm.moderation_profile_for(page['path'])
     ok = (response.status_code == 200
           and f'data-current-path="{page["path"]}"' in html
-          and 'class="mod-suite-bar"' in html
+          and 'class="mod-suite-bar mod-command-room"' in html
+          and f'data-mod-profile="{profile["code"]}"' in html
+          and f'data-mod-workspace="{profile["code"]}"' in html
+          and f'data-mod-accent="{profile["accent"]}"' in html
+          and profile['headline'] in html
           and len(re.findall(r'<a[^>]+data-mod-card(?:\s|=)', html)) == 18)
     if ok:
         rendered += 1
-    check(ok, f'{page["path"]}: общий центр и 18 карточек')
+    check(ok, f'{page["path"]}: уникальная комната {profile["code"]} и 18 карточек')
 check(rendered == 18, 'все 18 страниц получили единый PRO-интерфейс')
 
 login('mod')

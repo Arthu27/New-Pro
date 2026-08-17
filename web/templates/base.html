@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css?v=12">
     <link rel="stylesheet" href="/static/polish.css?v=5">
-    <link rel="stylesheet" href="/static/moderation-suite.css?v=1">
+    <link rel="stylesheet" href="/static/moderation-suite.css?v=2">
     <link rel="stylesheet" href="/static/quality-suite.css?v=1">
     <script>
       // Apply theme + accent before render to prevent FOUC
@@ -281,34 +281,67 @@
                 {% if section.key == modnav.active.section %}{% set modnav.active_section = section %}{% endif %}
             {% endfor %}
 
-        <section class="mod-suite-bar" data-mod-suite data-current-path="{{ request.path }}">
-            <div class="mod-suite-brand" aria-hidden="true"><i class="fas fa-shield-halved"></i></div>
-            <div class="mod-suite-context">
-                <div class="mod-suite-eyebrow">
-                    <span>MODERATION OPS</span>
-                    <i class="fas fa-chevron-right"></i>
-                    <span>{{ modnav.active_section.short if modnav.active_section else 'Центр' }}</span>
+        <section class="mod-suite-bar mod-command-room" data-mod-suite data-current-path="{{ request.path }}"
+                 data-mod-profile="{{ moderation_profile.code }}" data-mod-accent="{{ moderation_profile.accent }}">
+            <div class="mod-command-glow" aria-hidden="true"></div>
+            <header class="mod-command-top">
+                <div class="mod-suite-brand" aria-hidden="true"><i class="fas {{ modnav.active.icon }}"></i></div>
+                <div class="mod-command-identity">
+                    <div class="mod-suite-eyebrow">
+                        <span>MODERATION OS</span><i class="fas fa-chevron-right"></i>
+                        <span>{{ moderation_profile.code }}</span><i class="fas fa-chevron-right"></i>
+                        <span>{{ moderation_profile.name }}</span>
+                    </div>
+                    <div class="mod-suite-current">{{ modnav.active.label }}</div>
                 </div>
-                <div class="mod-suite-current">{{ modnav.active.label }}</div>
-                <div class="mod-suite-description">{{ modnav.active.description }}</div>
+                <div class="mod-suite-state">
+                    <span class="mod-suite-live"><span></span> Контур активен</span>
+                    <span class="mod-suite-role"><i class="fas fa-user-shield"></i> {{ modnav.active.access }}</span>
+                </div>
+            </header>
+
+            <div class="mod-command-main">
+                <div class="mod-command-copy">
+                    <span class="mod-command-section"><i class="fas {{ modnav.active_section.icon }}"></i> {{ modnav.active_section.label }}</span>
+                    <h2>{{ moderation_profile.headline }}</h2>
+                    <p>{{ moderation_profile.mission }}</p>
+                </div>
+                <div class="mod-command-index" aria-label="Инструмент {{ moderation_profile.position }} из {{ moderation_profile.total }}">
+                    <span>{{ '%02d'|format(moderation_profile.position) }}</span>
+                    <i></i>
+                    <small>{{ '%02d'|format(moderation_profile.total) }}</small>
+                </div>
+                <div class="mod-suite-actions">
+                    <div class="mod-command-stepper">
+                        <a class="mod-suite-step" href="#" data-mod-prev title="Предыдущий инструмент" aria-label="Предыдущий инструмент"><i class="fas fa-chevron-left"></i></a>
+                        <a class="mod-suite-step" href="#" data-mod-next title="Следующий инструмент" aria-label="Следующий инструмент"><i class="fas fa-chevron-right"></i></a>
+                    </div>
+                    <button class="mod-command-enter" type="button" data-mod-enter><i class="fas fa-arrow-down"></i> К рабочей области</button>
+                    <button class="mod-suite-open" type="button" data-mod-open aria-haspopup="dialog">
+                        <i class="fas fa-table-cells-large"></i><span>Все 18 комнат</span><kbd>Alt M</kbd>
+                    </button>
+                </div>
             </div>
-            <div class="mod-suite-state">
-                <span class="mod-suite-live"><span></span> Система активна</span>
-                <span class="mod-suite-role"><i class="fas fa-user-shield"></i> {{ modnav.active.access }}</span>
+
+            <div class="mod-command-features" aria-label="Возможности раздела">
+                {% for feature in moderation_profile.features %}
+                <span><i class="fas fa-check"></i> {{ feature }}</span>
+                {% endfor %}
             </div>
-            <div class="mod-suite-actions">
-                <a class="mod-suite-step" href="#" data-mod-prev title="Предыдущий инструмент" aria-label="Предыдущий инструмент"><i class="fas fa-chevron-left"></i></a>
-                <button class="mod-suite-open" type="button" data-mod-open aria-haspopup="dialog">
-                    <i class="fas fa-table-cells-large"></i>
-                    <span>Все инструменты</span>
-                    <b>{{ modnav.pages|length }}</b>
-                    <kbd>Alt M</kbd>
-                </button>
-                <a class="mod-suite-step" href="#" data-mod-next title="Следующий инструмент" aria-label="Следующий инструмент"><i class="fas fa-chevron-right"></i></a>
-            </div>
+
+            <nav class="mod-command-rail" aria-label="Маршрут модерации">
+                {% for section in modnav.sections %}
+                <a href="{{ section.pages[0].path }}" class="{% if section.key == modnav.active.section %}is-active{% endif %}">
+                    <span><i class="fas {{ section.icon }}"></i></span>
+                    <div><small>0{{ loop.index }}</small><strong>{{ section.short }}</strong></div>
+                    <em>{{ section.pages|length }}</em>
+                </a>
+                {% if not loop.last %}<i class="fas fa-chevron-right mod-command-rail-arrow" aria-hidden="true"></i>{% endif %}
+                {% endfor %}
+            </nav>
         </section>
 
-        <div class="mod-suite-overlay" data-mod-overlay hidden>
+        <div class="mod-suite-overlay" data-mod-overlay data-mod-accent="{{ moderation_profile.accent }}" hidden>
             <div class="mod-suite-dialog" role="dialog" aria-modal="true" aria-labelledby="modSuiteTitle">
                 <div class="mod-suite-dialog-head">
                     <div class="mod-suite-dialog-mark"><i class="fas fa-shield-halved"></i></div>
@@ -368,9 +401,11 @@
         </div>
         {% endif %}
 
+        {% if modnav.active %}<div class="mod-page-workspace" id="mod-page-workspace" data-mod-workspace="{{ moderation_profile.code }}" data-mod-accent="{{ moderation_profile.accent }}">{% endif %}
         {% block content %}
 {% block page_hero %}{% endblock %}
 {% endblock %}
+        {% if modnav.active %}</div>{% endif %}
     </main>
 
 <!-- Activity Feed Drawer -->
@@ -1406,7 +1441,7 @@ window.addEventListener('pageshow', function (e) {
 <!-- UX-kit: глобальный поиск, хоткеи, избранное, плотные таблицы, undo-тосты -->
 <script src="/static/ux-kit.js?v=1"></script>
 <!-- Единый центр навигации по 18 инструментам модерации -->
-<script src="/static/moderation-suite.js?v=1"></script>
+<script src="/static/moderation-suite.js?v=2"></script>
 <!-- Сквозной quality-слой: доступность, навигация, сеть и состояния -->
 <script src="/static/quality-suite.js?v=1"></script>
 <script>

@@ -96,7 +96,17 @@
     var cards = Array.prototype.slice.call(overlay.querySelectorAll('[data-mod-card]'));
     var sections = Array.prototype.slice.call(overlay.querySelectorAll('[data-mod-dialog-section]'));
     var currentPath = bar.getAttribute('data-current-path') || window.location.pathname;
+    var enterButton = bar.querySelector('[data-mod-enter]');
+    var workspace = document.querySelector('[data-mod-workspace]');
     var previousFocus = null;
+
+    function enterWorkspace() {
+      if (!workspace) return;
+      var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      workspace.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      var target = workspace.querySelector('input:not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),a[href]');
+      if (target) window.setTimeout(function () { target.focus({ preventScroll: true }); }, 350);
+    }
 
     function rememberCurrent() {
       var current = cards.filter(function (card) {
@@ -203,6 +213,7 @@
     }
 
     if (openButton) openButton.addEventListener('click', openSuite);
+    if (enterButton) enterButton.addEventListener('click', enterWorkspace);
     if (closeButton) closeButton.addEventListener('click', closeSuite);
     if (search) search.addEventListener('input', filterCards);
     overlay.addEventListener('mousedown', function (event) {
