@@ -337,6 +337,7 @@ app = wapp.app
 # Это fallback только запущенного demo-процесса: после рестарта всё исчезает.
 _DEMO_AUTH_TTL = 8 * 60 * 60
 _demo_authorized = {}
+_demo_requested_page = {}
 
 
 def _demo_client_key():
@@ -350,8 +351,12 @@ def _demo_client_key():
 def restore_demo_session():
     if session.get('logged_in'):
         return None
-    expires = _demo_authorized.get(_demo_client_key(), 0)
+    key = _demo_client_key()
+    expires = _demo_authorized.get(key, 0)
     if expires <= time.time():
+        if (request.method == 'GET' and request.path not in ('/', '/login', '/demo-login') and
+                not request.path.startswith(('/api/', '/static/'))):
+            _demo_requested_page[key] = request.full_path.rstrip('?')
         return None
     session.permanent = True
     session['logged_in'] = True
@@ -369,9 +374,10 @@ def remember_demo_session(response):
             response.status_code in (301, 302, 303, 307, 308) and
             location.rstrip('/') == ''):
         _demo_authorized[key] = time.time() + _DEMO_AUTH_TTL
-        response.headers['Location'] = '/announcements'
+        response.headers['Location'] = _demo_requested_page.pop(key, '/announcements')
     elif request.path == '/logout':
         _demo_authorized.pop(key, None)
+        _demo_requested_page.pop(key, None)
     return response
 
 

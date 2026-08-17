@@ -114,8 +114,8 @@ check("SESSION_COOKIE_SAMESITE'] = 'None'" in demo and
 check('@app.before_request' in demo and '_demo_authorized' in demo and
       'restore_demo_session' in demo,
       'server-side fallback сохраняет вход при полной блокировке iframe-cookie')
-check("response.headers['Location'] = '/announcements'" in demo,
-      'после demo-входа открывается рабочий раздел, а не Welcome-экран')
+check("_demo_requested_page.pop(key, '/announcements')" in demo,
+      'после demo-входа открывается запрошенный рабочий раздел, а не Welcome-экран')
 check("request.path == '/logout'" in demo and '_demo_authorized.pop' in demo,
       'выход очищает резервную demo-сессию')
 
