@@ -15,7 +15,7 @@ import re
 import shutil
 import sys
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 
 _TMP = tempfile.mkdtemp(prefix='aether_birthdays_test_')
 os.chdir(_TMP)
@@ -175,8 +175,29 @@ check(view['template'] == 'Именинник: @Мария! {неизвестн�
       'неизвестный плейсхолдер остаётся литералом (SafeDict)')
 
 print('== 7. API: права и потоки ==')
+# API-раздел идёт против настоящего now панели — даты делаем относительными
+# (чистая математика календаря выше в секции 1 закреплена фиксированным NOW).
+real_now = datetime.now()
+
+
+def rel(days):
+    return (real_now + timedelta(days=days)).strftime('%m-%d')
+
+
+api_birthdays = {
+    '1': {'date': rel(0), 'name': 'Аня', 'year': 2000,
+          'celebrated': str(real_now.year)},
+    '2': {'date': rel(4), 'name': 'Боря'},
+    '6': {'date': rel(4), 'name': 'Анна', 'year': 1998},
+    '3': {'date': rel(130), 'name': 'Вик;а',
+          'celebrated': str(real_now.year - 1)},
+    '4': {'date': rel(200), 'name': 'Гриша', 'year': 1995},
+    '5': {'date': rel(-1), 'name': 'Дима', 'year': 2001},
+    '7': {'date': 'плохая', 'name': 'Слом'},
+    '8': 'не словарь',
+}
 with open('data/birthdays_777.json', 'w', encoding='utf-8') as fh:
-    json.dump(seed_birthdays(), fh)
+    json.dump(api_birthdays, fh)
 with open('data/birthday_settings_777.json', 'w', encoding='utf-8') as fh:
     json.dump({'channel_id': '555', 'gift_coins': 300,
                'message': 'Именинник: {user}!', 'zapas': 'храни меня'}, fh)
@@ -324,7 +345,8 @@ check(csv_r.status_code == 200
       'mod скачивает CSV с именем сервера')
 check(body.startswith('﻿user_id;name;date;year;age;days_until;celebrated'),
       'BOM + шапка календаря')
-check(';Аня;08-16;2000;26;0;2026' in body, 'сегодняшняя: возраст и год поздравления')
+check(f';Аня;{rel(0)};2000;{real_now.year - 2000};0;{real_now.year}' in body,
+      'сегодняшняя: возраст и год поздравления')
 check('Вик,а' in body, 'точка с запятой в имени обезврежена')
 check('Борислав' in body, 'в выгрузке имена из аудита')
 
