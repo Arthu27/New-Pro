@@ -87,60 +87,76 @@
   </div>
 </div>
 
-<!-- Список каналов -->
-<div class="ch-box" id="ch-box" data-reveal="up">
-  <div class="ch-box-header">
-    <div class="ch-box-title"><i class="fas fa-list"></i> Каналы сервера</div>
-    <div class="ch-box-meta">
-      <span class="ch-box-count" id="ch-count">—</span>
+<!-- Рабочая область: категории слева, один выбранный канал справа -->
+<div class="ch-workspace" data-reveal="up">
+  <div class="ch-box" id="ch-box">
+    <div class="ch-box-header">
+      <div>
+        <div class="ch-box-eyebrow">Структура сервера</div>
+        <div class="ch-box-title"><i class="fas fa-layer-group"></i> Категории и каналы</div>
+      </div>
+      <div class="ch-box-meta">
+        <span class="ch-box-count" id="ch-count" aria-live="polite">—</span>
+      </div>
+    </div>
+    <div id="channel-list" aria-label="Каналы сервера">
+      <div class="ch-empty"><i class="fas fa-hashtag"></i><p>Выберите сервер</p></div>
     </div>
   </div>
-  <div id="channel-list">
-    <div class="ch-empty"><i class="fas fa-hashtag"></i><p>Выберите сервер</p></div>
-  </div>
-</div>
 
-<!-- Панель деталей канала -->
-<div class="ch-detail" id="ch-detail" style="display:none;">
-  <div class="ch-detail-head">
-    <div class="ch-detail-title"><span id="detail-icon"></span> <span id="detail-name"></span></div>
-    <button class="ch-detail-close" id="btnDetailClose" type="button" title="Закрыть"><i class="fas fa-times"></i></button>
-  </div>
-  <div class="ch-detail-body">
-    <div class="ch-detail-grid" id="ch-detail-grid"></div>
-    <div class="ch-detail-topic" id="ch-detail-topic" style="display:none;">
-      <div class="ch-detail-sub"><i class="fas fa-align-left"></i> Описание</div>
-      <p id="detail-topic-text"></p>
+  <!-- Показываем только один выбранный канал: без перегруженной общей выдачи -->
+  <aside class="ch-detail is-empty" id="ch-detail" aria-label="Карточка выбранного канала">
+    <div class="ch-detail-placeholder" id="ch-detail-placeholder">
+      <span class="ch-detail-placeholder-icon"><i class="fas fa-arrow-pointer"></i></span>
+      <strong>Выберите канал</strong>
+      <p>Откройте одну категорию и выберите канал — здесь появятся его параметры и действия.</p>
+      <span class="ch-detail-hint"><kbd>↑</kbd><kbd>↓</kbd> выбор <kbd>Enter</kbd> открыть</span>
     </div>
-    <div class="ch-detail-actions">
-      <button class="btn-confirm" id="btnEditFromDetail" type="button"><i class="fas fa-pen"></i> Редактировать</button>
-      <button class="btn-cancel btn-red" id="btnDeleteFromDetail" type="button"><i class="fas fa-trash"></i> Удалить</button>
+    <div class="ch-detail-content" id="ch-detail-content" hidden>
+      <div class="ch-detail-head">
+        <div>
+          <div class="ch-detail-eyebrow">Выбранный канал</div>
+          <div class="ch-detail-title"><span id="detail-icon"></span> <span id="detail-name"></span></div>
+        </div>
+        <button class="ch-detail-close" id="btnDetailClose" type="button" title="Закрыть" aria-label="Закрыть карточку канала"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="ch-detail-body">
+        <div class="ch-detail-grid" id="ch-detail-grid"></div>
+        <div class="ch-detail-topic" id="ch-detail-topic" hidden>
+          <div class="ch-detail-sub"><i class="fas fa-align-left"></i> Описание</div>
+          <p id="detail-topic-text"></p>
+        </div>
+        <div class="ch-detail-actions">
+          <button class="btn-confirm" id="btnEditFromDetail" type="button"><i class="fas fa-pen"></i> Редактировать</button>
+          <button class="btn-cancel btn-red" id="btnDeleteFromDetail" type="button"><i class="fas fa-trash"></i> Удалить</button>
+        </div>
+      </div>
     </div>
-  </div>
+  </aside>
 </div>
 
 <!-- Модальное окно создания -->
-<div id="modal-create" class="modal-overlay">
-  <div class="modal-card">
+<div id="modal-create" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="createChannelTitle" aria-hidden="true">
+  <div class="modal-card" tabindex="-1">
     <div class="modal-head">
-      <h3><i class="fas fa-plus-circle"></i>Новый канал</h3>
+      <h3 id="createChannelTitle"><i class="fas fa-plus-circle"></i> Новый канал</h3>
       <button class="modal-close" id="btnCloseCreate" type="button" aria-label="Закрыть окно создания"><i class="fas fa-times"></i></button>
     </div>
 
     <label class="field-label">Тип канала</label>
-    <div class="type-grid">
-      <div class="type-opt selected" data-type="text" id="type-text">
-        <div class="type-opt-icon">#</div>
-        <div class="type-opt-lbl">Текст</div>
-      </div>
-      <div class="type-opt" data-type="voice" id="type-voice">
-        <div class="type-opt-icon"><i class="fas fa-volume-up"></i></div>
-        <div class="type-opt-lbl">Голосовой</div>
-      </div>
-      <div class="type-opt" data-type="category" id="type-category">
-        <div class="type-opt-icon"><i class="fas fa-folder"></i></div>
-        <div class="type-opt-lbl">Категория</div>
-      </div>
+    <div class="type-grid" role="group" aria-label="Тип нового канала">
+      <button type="button" class="type-opt selected" data-type="text" id="type-text" aria-pressed="true">
+        <span class="type-opt-icon">#</span>
+        <span class="type-opt-lbl">Текст</span>
+      </button>
+      <button type="button" class="type-opt" data-type="voice" id="type-voice" aria-pressed="false">
+        <span class="type-opt-icon"><i class="fas fa-volume-up"></i></span>
+        <span class="type-opt-lbl">Голосовой</span>
+      </button>
+      <button type="button" class="type-opt" data-type="category" id="type-category" aria-pressed="false">
+        <span class="type-opt-icon"><i class="fas fa-folder"></i></span>
+        <span class="type-opt-lbl">Категория</span>
+      </button>
     </div>
     <input type="hidden" id="create-type" value="text">
 
@@ -186,10 +202,10 @@
 </div>
 
 <!-- Модальное окно редактирования -->
-<div id="modal-edit" class="modal-overlay">
-  <div class="modal-card">
+<div id="modal-edit" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="editChannelTitle" aria-hidden="true">
+  <div class="modal-card" tabindex="-1">
     <div class="modal-head">
-      <h3><i class="fas fa-pen"></i>Редактировать&nbsp;<i class="fas" id="edit-title-icon" style="color:var(--text-3)"></i><span id="edit-title-name" style="color:var(--ac-2)"></span>&nbsp;<span id="edit-title-badge" class="ch-badge"></span></h3>
+      <h3 id="editChannelTitle"><i class="fas fa-pen"></i> Редактировать&nbsp;<i class="fas" id="edit-title-icon" style="color:var(--text-3)"></i><span id="edit-title-name" style="color:var(--ac-2)"></span>&nbsp;<span id="edit-title-badge" class="ch-badge"></span></h3>
       <button class="modal-close" id="btnCloseEdit" type="button" aria-label="Закрыть окно редактирования"><i class="fas fa-times"></i></button>
     </div>
 
@@ -276,17 +292,23 @@
 .ch-stat-val{font-size:24px;font-weight:800;color:var(--text);line-height:1;font-variant-numeric:tabular-nums}
 .ch-stat-lbl{font-size:11px;color:var(--text-3);margin-top:3px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
 
-.ch-box{background:linear-gradient(135deg,rgba(224,176,74,0.03),rgba(224,176,74,0.005));border:1px solid var(--line-2);border-radius:16px;padding:16px}
-.ch-box-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.ch-box-title{font-weight:700;color:var(--text);font-size:15px;display:flex;align-items:center;gap:9px}
+/* Один аккуратный workspace вместо длинного полотна всех каналов */
+.ch-workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.75fr);gap:16px;align-items:start}
+.ch-workspace > *{min-width:0}
+.ch-box{background:linear-gradient(145deg,color-mix(in srgb,var(--surface-2) 86%,transparent),color-mix(in srgb,var(--surface) 96%,transparent));border:1px solid var(--line-2);border-radius:18px;padding:16px;box-shadow:var(--shadow-sm),inset 0 1px 0 rgba(255,255,255,.04)}
+.ch-box:hover{transform:none!important}
+.ch-box-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:2px 2px 13px;border-bottom:1px solid var(--line)}
+.ch-box-eyebrow,.ch-detail-eyebrow{margin-bottom:4px;color:var(--text-3);font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.ch-box-title{font-weight:750;color:var(--text);font-size:15px;display:flex;align-items:center;gap:9px}
 .ch-box-title i{color:var(--ac)}
 .ch-box-meta{display:flex;align-items:center;gap:10px}
 .ch-box-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:3px 12px;border-radius:99px;font-size:12px;font-weight:700}
 
 /* Категории — плавная аккордеон-анимация */
-.cat-group{border:1px solid var(--line-2);border-radius:12px;margin-bottom:10px;overflow:hidden;background:rgba(255,255,255,.012)}
+.cat-group{border:1px solid var(--line-2);border-radius:13px;margin-bottom:10px;overflow:hidden;background:rgba(255,255,255,.012);transition:border-color .18s var(--ease),box-shadow .18s var(--ease)}
+.cat-group:not(.collapsed){border-color:var(--ac-line);box-shadow:0 10px 26px rgba(0,0,0,.13)}
 .cat-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:linear-gradient(90deg,rgba(224,176,74,0.06),transparent);transition:.15s;user-select:none}
-.cat-header:hover{background:rgba(224,176,74,0.09)}
+.cat-header:hover,.cat-header:focus-visible{background:rgba(224,176,74,0.09)}
 .cat-icon{color:var(--ac-3);font-size:12px;transition:transform .3s var(--ease);width:14px}
 .cat-group.collapsed .cat-icon{transform:rotate(-90deg)}
 .cat-name{font-weight:700;color:var(--ac-2);flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -299,8 +321,10 @@
 .cat-empty{color:var(--text-3);font-size:13px;padding:10px;text-align:center;font-style:italic}
 
 /* Строка канала */
-.ch-row{display:flex;align-items:center;gap:12px;padding:11px 12px;background:linear-gradient(135deg,rgba(255,255,255,.02),rgba(255,255,255,.005));border:1px solid var(--line);border-radius:10px;margin-bottom:6px;transition:all .16s var(--ease);cursor:pointer}
-.ch-row:hover{background:linear-gradient(135deg,rgba(224,176,74,0.08),rgba(224,176,74,0.02));border-color:var(--ac-line);transform:translateX(2px)}
+.ch-row{display:flex;align-items:center;gap:12px;padding:11px 12px;background:linear-gradient(135deg,rgba(255,255,255,.02),rgba(255,255,255,.005));border:1px solid var(--line);border-radius:10px;margin-bottom:6px;transition:all .16s var(--ease);cursor:pointer;outline:none}
+.ch-row:hover,.ch-row:focus-visible{background:linear-gradient(135deg,rgba(224,176,74,0.08),rgba(224,176,74,0.02));border-color:var(--ac-line);transform:translateX(2px)}
+.ch-row.is-selected{border-color:var(--ac);background:linear-gradient(135deg,var(--ac-soft),rgba(224,176,74,.025));box-shadow:0 0 0 1px var(--ac-line),0 9px 22px rgba(0,0,0,.17)}
+.ch-row.is-selected .ch-name{color:var(--ac-2)}
 .ch-row-root{border-left:3px solid var(--ac)}
 .ch-type-icon{width:36px;height:36px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));color:#1a1a1a;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
 .ch-type-icon.icon-voice{background:linear-gradient(135deg,#38bdf8,#0284c7);color:#fff}
@@ -333,8 +357,15 @@
 .ch-empty i{font-size:38px;color:var(--text-4);display:block;margin-bottom:12px;opacity:.7}
 .ch-empty p{font-size:15px}
 
-/* Детали */
-.ch-detail{margin-top:16px;background:linear-gradient(135deg,rgba(224,176,74,0.06),rgba(224,176,74,0.01));border:1px solid var(--ac-line);border-radius:16px;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+/* Детали одного выбранного канала */
+.ch-detail{position:sticky;top:82px;min-height:300px;margin:0;background:linear-gradient(145deg,color-mix(in srgb,var(--surface-2) 90%,var(--ac-soft)),var(--surface));border:1px solid var(--ac-line);border-radius:18px;padding:18px;box-shadow:0 14px 36px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}
+.ch-detail::before{content:'';position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,var(--ac-3),var(--ac-2),transparent);opacity:.75}
+.ch-detail-placeholder{min-height:264px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--text-3)}
+.ch-detail-placeholder-icon{width:56px;height:56px;border-radius:17px;display:grid;place-items:center;margin-bottom:15px;color:var(--ac);font-size:19px;background:var(--ac-soft);border:1px solid var(--ac-line);box-shadow:0 10px 26px var(--ac-glow)}
+.ch-detail-placeholder strong{color:var(--text);font-size:16px;margin-bottom:7px}
+.ch-detail-placeholder p{max-width:270px;font-size:12.5px;line-height:1.6;margin:0}
+.ch-detail-hint{display:flex;align-items:center;gap:4px;margin-top:16px;font-size:10px;color:var(--text-4)}
+.ch-detail-content[hidden],.ch-detail-placeholder[hidden],.ch-detail-topic[hidden]{display:none!important}
 .ch-detail-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .ch-detail-title{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;color:var(--text)}
 .ch-detail-title i{color:var(--ac)}
@@ -361,7 +392,7 @@
 .toggle-label i{color:#f43f5e}
 .ch-toggle{width:18px;height:18px;accent-color:var(--ac);cursor:pointer}
 .type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-.type-opt{border:1.5px solid var(--line-2);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:.18s var(--ease);background:var(--surface)}
+.type-opt{border:1.5px solid var(--line-2);border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;transition:.18s var(--ease);background:var(--surface);font:inherit;color:inherit;display:flex;flex-direction:column;align-items:center}
 .type-opt:hover{border-color:var(--ac-line);transform:translateY(-1px)}
 .type-opt.selected{border-color:var(--ac);background:var(--ac-soft);box-shadow:0 0 0 3px var(--ac-soft)}
 .type-opt-icon{font-size:20px;margin-bottom:4px;color:var(--ac)}
@@ -376,7 +407,29 @@ textarea.field-input{resize:vertical;min-height:52px}
 .modal-overlay.open .modal-card{animation:modalPop .22s var(--ease)}
 @keyframes modalPop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
 #btnSaveEdit:disabled{opacity:.7;cursor:wait}
-@media(max-width:600px){.form-row-2{grid-template-columns:1fr}.ch-search{min-width:0;width:100%}.ch-select{width:100%}}
+@media(max-width:1050px){
+  .ch-workspace{grid-template-columns:1fr}
+  .ch-detail{position:relative;top:auto;min-height:0}
+  .ch-detail-placeholder{min-height:170px}
+}
+@media(max-width:600px){
+  .form-row-2{grid-template-columns:1fr}
+  .ch-toolbar,.ch-toolbar-left,.ch-toolbar-right{align-items:stretch;width:100%}
+  .ch-toolbar-left{display:grid;grid-template-columns:1fr}
+  .ch-toolbar-right{justify-content:space-between}
+  .ch-sel-wrap,.ch-search,.ch-select{min-width:0;width:100%}
+  .ch-stats{grid-template-columns:1fr 1fr}
+  .ch-stat{padding:11px}
+  .ch-row{align-items:flex-start;flex-wrap:wrap}
+  .ch-actions{width:100%;justify-content:flex-end;padding-top:2px}
+  .icon-btn{width:40px;height:36px}
+  .ch-row-meta{gap:8px 12px}
+  .ch-detail-actions{display:grid;grid-template-columns:1fr}
+  .type-grid{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  .cat-channels,.cat-icon,.ch-row,.ch-detail{transition:none!important}
+}
 </style>
 
 <script>
@@ -389,6 +442,8 @@ textarea.field-input{resize:vertical;min-height:52px}
   var activeType = 'text';
   var detailId = null;
   var editingId = null;
+  var lastFingerprint = '';
+  var modalReturnFocus = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -454,9 +509,10 @@ textarea.field-input{resize:vertical;min-height:52px}
   function renderRow(c, isRoot) {
     var t = channelType(c);
     var tm = typeMeta(t);
+    var selected = detailId != null && String(detailId) === String(c.id);
     var rootClass = isRoot ? ' ch-row-root' : '';
-    return '<div class="ch-row' + rootClass + '" data-id="' + c.id + '" data-name="' + esc(c.name) + '">' +
-      '<div class="ch-type-icon ' + tm.cls + '"><i class="fas ' + tm.icon + '"></i></div>' +
+    return '<div class="ch-row' + rootClass + (selected ? ' is-selected' : '') + '" data-id="' + c.id + '" data-name="' + esc(c.name) + '" role="button" tabindex="0" aria-selected="' + (selected ? 'true' : 'false') + '" aria-label="Открыть канал ' + esc(c.name) + '">' +
+      '<div class="ch-type-icon ' + tm.cls + '" aria-hidden="true"><i class="fas ' + tm.icon + '"></i></div>' +
       '<div class="ch-row-main">' +
         '<div class="ch-row-top">' +
           '<span class="ch-name">' + esc(c.name) + '</span>' + badgeHtml(c) +
@@ -471,62 +527,87 @@ textarea.field-input{resize:vertical;min-height:52px}
     '</div>';
   }
 
+  function channelWord(count) {
+    var n = Math.abs(Number(count) || 0) % 100;
+    var n1 = n % 10;
+    if (n > 10 && n < 20) return 'каналов';
+    if (n1 === 1) return 'канал';
+    if (n1 > 1 && n1 < 5) return 'канала';
+    return 'каналов';
+  }
+
+  function categoryBlock(key, name, icon, children, activeKey) {
+    var isOpen = key === activeKey;
+    var html = '<section class="cat-group' + (isOpen ? '' : ' collapsed') + '" data-cat-name="' + esc(key) + '">';
+    html += '<div class="cat-header" data-toggle-cat role="button" tabindex="0" aria-expanded="' + (isOpen ? 'true' : 'false') + '">';
+    html += '<i class="fas fa-chevron-down cat-icon" aria-hidden="true"></i>';
+    html += '<span class="cat-name"><i class="fas ' + icon + '" style="margin-right:7px;color:var(--ac-3)" aria-hidden="true"></i>' + esc(name) + '</span>';
+    html += '<span class="cat-count">' + children.length + ' ' + channelWord(children.length) + '</span>';
+    html += '</div>';
+    html += '<div class="cat-channels"><div class="cat-channels-inner">';
+    if (children.length) children.forEach(function (channel) { html += renderRow(channel, key === '__root__'); });
+    else html += '<div class="cat-empty">В этой категории пока нет каналов</div>';
+    html += '</div></div></section>';
+    return html;
+  }
+
   function renderList(filter) {
     var list = $('channel-list');
     if (!selectedGuild) { list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>Выберите сервер</p></div>'; return; }
     if (!allChannels.length) { list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>На этом сервере нет каналов.</p></div>'; return; }
 
     var q = (filter || '').trim().toLowerCase();
-    var visible = allChannels.filter(function (c) {
+    var channels = allChannels.filter(function (c) { return c.type !== 'category'; });
+    var visible = channels.filter(function (c) {
       if (!q) return true;
-      return (c.name && c.name.toLowerCase().indexOf(q) !== -1) || (c.topic && c.topic.toLowerCase().indexOf(q) !== -1);
+      return (c.name && c.name.toLowerCase().indexOf(q) !== -1) ||
+        (c.topic && c.topic.toLowerCase().indexOf(q) !== -1) ||
+        (c.category && c.category.toLowerCase().indexOf(q) !== -1);
     });
-
-    var cats = allChannels.filter(function (c) { return c.type === 'category'; });
-    var grouped = {};
-    cats.forEach(function (c) { grouped[c.name] = []; });
-    var uncategorized = [];
-    allChannels.forEach(function (c) {
-      if (c.type === 'category') return;
-      if (q) {
-        if ((c.name && c.name.toLowerCase().indexOf(q) !== -1) || (c.topic && c.topic.toLowerCase().indexOf(q) !== -1)) uncategorized.push(c);
-        return;
-      }
-      if (c.category) { if (!grouped[c.category]) grouped[c.category] = []; grouped[c.category].push(c); }
-      else uncategorized.push(c);
-    });
-
-    var openState = {};
-    try { openState = JSON.parse(localStorage.getItem('ch_open_cats_' + selectedGuild) || '{}') || {}; } catch (e) {}
 
     var html = '';
     if (q) {
-      if (uncategorized.length) uncategorized.forEach(function (c) { html += renderRow(c, true); });
-      if (!uncategorized.length) html = '<div class="ch-empty"><i class="fas fa-search"></i><p>«' + esc(filter) + '» — ничего не найдено.</p></div>';
+      visible.forEach(function (c) { html += renderRow(c, true); });
+      if (!visible.length) html = '<div class="ch-empty"><i class="fas fa-search"></i><p>«' + esc(filter) + '» — ничего не найдено.</p></div>';
     } else {
-      if (uncategorized.length) uncategorized.forEach(function (c) { html += renderRow(c, true); });
-      cats.forEach(function (cat) {
-        var children = grouped[cat.name] || [];
-        var isOpen = openState[cat.name] !== false;
-        var collapsed = isOpen ? '' : ' collapsed';
-        html += '<div class="cat-group' + collapsed + '" data-cat-name="' + esc(cat.name) + '">';
-        html += '<div class="cat-header" data-toggle-cat>';
-        html += '<i class="fas fa-chevron-down cat-icon"></i>';
-        html += '<span class="cat-name"><i class="fas fa-folder" style="margin-right:7px;color:var(--ac-3)"></i>' + esc(cat.name) + '</span>';
-        html += '<span class="cat-count">' + children.length + ' каналов</span>';
-        html += '</div>';
-        html += '<div class="cat-channels"><div class="cat-channels-inner">';
-        if (children.length) children.forEach(function (c) { html += renderRow(c, false); });
-        else html += '<div class="cat-empty">Пустая категория</div>';
-        html += '</div></div></div>';
+      var categories = allChannels.filter(function (c) { return c.type === 'category'; });
+      var groups = [];
+      var knownCategories = {};
+      categories.forEach(function (category) { knownCategories[category.name] = true; });
+      var root = channels.filter(function (c) { return !c.category; });
+      var orphaned = channels.filter(function (c) { return c.category && !knownCategories[c.category]; });
+      if (root.length) groups.push({ key: '__root__', name: 'Без категории', icon: 'fa-inbox', children: root });
+      categories.forEach(function (category) {
+        groups.push({
+          key: category.name,
+          name: category.name,
+          icon: 'fa-folder',
+          children: channels.filter(function (channel) { return channel.category === category.name; })
+        });
+      });
+      if (orphaned.length) groups.push({ key: '__orphaned__', name: 'Вне структуры', icon: 'fa-triangle-exclamation', children: orphaned });
+
+      var activeKey = '';
+      try { activeKey = localStorage.getItem('ch_active_cat_' + selectedGuild) || ''; } catch (e) {}
+      if (!groups.some(function (group) { return group.key === activeKey; })) activeKey = groups.length ? groups[0].key : '';
+      try { if (activeKey) localStorage.setItem('ch_active_cat_' + selectedGuild, activeKey); } catch (e) {}
+      groups.forEach(function (group) {
+        html += categoryBlock(group.key, group.name, group.icon, group.children, activeKey);
       });
     }
 
+    var focusedId = document.activeElement && document.activeElement.closest && document.activeElement.closest('.ch-row')
+      ? document.activeElement.closest('.ch-row').getAttribute('data-id') : null;
     var tmp = document.createElement('div');
     tmp.innerHTML = html;
-    list.innerHTML = '';
-    while (tmp.firstChild) list.appendChild(tmp.firstChild);
-    $('ch-count').textContent = visible.length + ' каналов';
+    list.replaceChildren.apply(list, Array.prototype.slice.call(tmp.childNodes));
+    $('ch-count').textContent = visible.length + ' ' + channelWord(visible.length);
+    if (focusedId) {
+      var restored = Array.prototype.find.call(list.querySelectorAll('.ch-row'), function (row) {
+        return row.getAttribute('data-id') === String(focusedId);
+      });
+      if (restored) restored.focus({ preventScroll: true });
+    }
   }
 
   function renderStats() {
@@ -555,6 +636,17 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('edit-category').innerHTML = opts;
   }
 
+  function setDetailEmpty() {
+    detailId = null;
+    $('ch-detail').classList.add('is-empty');
+    $('ch-detail-placeholder').hidden = false;
+    $('ch-detail-content').hidden = true;
+    document.querySelectorAll('#channel-list .ch-row').forEach(function (row) {
+      row.classList.remove('is-selected');
+      row.setAttribute('aria-selected', 'false');
+    });
+  }
+
   // Render a detail panel from a channel object
   function renderDetail(c) {
     var t = channelType(c);
@@ -576,11 +668,18 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('ch-detail-grid').innerHTML = grid;
     if (c.topic) {
       $('detail-topic-text').textContent = c.topic;
-      $('ch-detail-topic').style.display = '';
+      $('ch-detail-topic').hidden = false;
     } else {
-      $('ch-detail-topic').style.display = 'none';
+      $('ch-detail-topic').hidden = true;
     }
-    $('ch-detail').style.display = '';
+    $('ch-detail').classList.remove('is-empty');
+    $('ch-detail-placeholder').hidden = true;
+    $('ch-detail-content').hidden = false;
+    document.querySelectorAll('#channel-list .ch-row').forEach(function (row) {
+      var selected = row.getAttribute('data-id') === String(c.id);
+      row.classList.toggle('is-selected', selected);
+      row.setAttribute('aria-selected', selected ? 'true' : 'false');
+    });
   }
   function item(k, v) {
     return '<div class="ch-detail-item"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>';
@@ -589,16 +688,17 @@ textarea.field-input{resize:vertical;min-height:52px}
   function openDetail(c) {
     detailId = c.id;
     renderDetail(c);
-    $('ch-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (window.matchMedia('(max-width: 1050px)').matches) {
+      $('ch-detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   }
 
   function refreshOpenDetail() {
     if (!detailId) return;
     for (var i = 0; i < allChannels.length; i++) {
-      if (allChannels[i].id === detailId) { renderDetail(allChannels[i]); return; }
+      if (String(allChannels[i].id) === String(detailId)) { renderDetail(allChannels[i]); return; }
     }
-    $('ch-detail').style.display = 'none';
-    detailId = null;
+    setDetailEmpty();
   }
 
   function setLoading() {
@@ -607,23 +707,34 @@ textarea.field-input{resize:vertical;min-height:52px}
 
   function loadChannels(live) {
     if (!selectedGuild) return;
+    if (live && document.querySelector('.modal-overlay.open')) return;
     if (!live) setLoading();
-    fetch('/api/guild/' + selectedGuild + '/channels')
-      .then(function (r) { return r.json(); })
+    return fetch('/api/guild/' + selectedGuild + '/channels')
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
       .then(function (data) {
-        allChannels = Array.isArray(data) ? data : (data.channels || []);
+        var nextChannels = Array.isArray(data) ? data : (data.channels || []);
+        var fingerprint = JSON.stringify(nextChannels);
+        if (live && fingerprint === lastFingerprint) return false;
+        lastFingerprint = fingerprint;
+        allChannels = nextChannels;
         renderStats();
         populateCategorySelects();
         renderList($('ch-search').value);
         refreshOpenDetail();
+        return true;
       })
       .catch(function (e) {
         if (!live) $('channel-list').innerHTML = '<div class="ch-empty"><i class="fas fa-exclamation-triangle"></i><p>Ошибка: ' + esc(e.message) + '</p></div>';
+        return false;
       });
   }
 
   // ── Создание ──
   function openCreate() {
+    modalReturnFocus = document.activeElement;
     $('create-name').value = '';
     $('create-topic').value = '';
     $('create-slowmode').value = '0';
@@ -635,13 +746,24 @@ textarea.field-input{resize:vertical;min-height:52px}
     syncCreateTypeFields();
     populateCategorySelects();
     $('modal-create').classList.add('open');
+    $('modal-create').setAttribute('aria-hidden', 'false');
     setTimeout(function () { $('create-name').focus(); }, 50);
   }
-  function closeCreate() { $('modal-create').classList.remove('open'); }
+  function closeCreate() {
+    $('modal-create').classList.remove('open');
+    $('modal-create').setAttribute('aria-hidden', 'true');
+    if (modalReturnFocus && modalReturnFocus.focus) modalReturnFocus.focus({ preventScroll: true });
+  }
 
   function setTypeUI(val, el) {
-    document.querySelectorAll('#modal-create .type-opt').forEach(function (o) { o.classList.remove('selected'); });
-    if (el) el.classList.add('selected');
+    document.querySelectorAll('#modal-create .type-opt').forEach(function (o) {
+      o.classList.remove('selected');
+      o.setAttribute('aria-pressed', 'false');
+    });
+    if (el) {
+      el.classList.add('selected');
+      el.setAttribute('aria-pressed', 'true');
+    }
     activeType = val;
     $('create-type').value = val;
   }
@@ -659,7 +781,11 @@ textarea.field-input{resize:vertical;min-height:52px}
 
   async function createChannel() {
     var name = $('create-name').value.trim();
-    if (!name) { showToast('Название канала не может быть пустым!', false); return; }
+    if (!name) { showToast('Название канала не может быть пустым!', false); $('create-name').focus(); return; }
+    var button = $('btnCreateChannel');
+    if (button.disabled) return;
+    if (window.qualitySetLoading) window.qualitySetLoading(button, true);
+    else button.disabled = true;
     var payload = { name: name, type: activeType, category: $('create-category').value, nsfw: $('create-nsfw').checked };
     if (activeType === 'text') {
       payload.topic = $('create-topic').value.trim();
@@ -677,10 +803,13 @@ textarea.field-input{resize:vertical;min-height:52px}
       if (d.success) { closeCreate(); loadChannels(); showToast('Канал «' + name + '» создан!', true); }
       else showToast('Ошибка: ' + (d.error || 'Неизвестно'), false);
     } catch (e) { showToast('Ошибка запроса: ' + e.message, false); }
+    if (window.qualitySetLoading) window.qualitySetLoading(button, false);
+    else button.disabled = false;
   }
 
   // ── Редактирование ──
   function openEdit(c) {
+    modalReturnFocus = document.activeElement;
     editingId = c.id;
     $('edit-name').value = c.name || '';
     $('edit-category').value = c.category || '';
@@ -708,8 +837,15 @@ textarea.field-input{resize:vertical;min-height:52px}
     populateCategorySelects();
     $('edit-category').value = c.category || '';
     $('modal-edit').classList.add('open');
+    $('modal-edit').setAttribute('aria-hidden', 'false');
+    setTimeout(function () { $('edit-name').focus(); $('edit-name').select(); }, 50);
   }
-  function closeEdit() { $('modal-edit').classList.remove('open'); editingId = null; }
+  function closeEdit() {
+    $('modal-edit').classList.remove('open');
+    $('modal-edit').setAttribute('aria-hidden', 'true');
+    editingId = null;
+    if (modalReturnFocus && modalReturnFocus.focus) modalReturnFocus.focus({ preventScroll: true });
+  }
 
   async function saveEdit() {
     if (!editingId) return;
@@ -718,7 +854,7 @@ textarea.field-input{resize:vertical;min-height:52px}
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
     var ch = null;
-    for (var i = 0; i < allChannels.length; i++) { if (allChannels[i].id === editingId) { ch = allChannels[i]; break; } }
+    for (var i = 0; i < allChannels.length; i++) { if (String(allChannels[i].id) === String(editingId)) { ch = allChannels[i]; break; } }
     var t = ch ? channelType(ch) : 'text';
     var isVoice = t === 'voice' || t === 'stage';
     var payload = { name: $('edit-name').value.trim(), category: $('edit-category').value };
@@ -746,12 +882,21 @@ textarea.field-input{resize:vertical;min-height:52px}
     btn.innerHTML = '<i class="fas fa-check"></i> Сохранить';
   }
 
-  // Esc закрывает любую открытую модалку страницы
+  // Esc закрывает модалку, Tab остаётся внутри активного диалога.
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape') {
-      if ($('modal-edit').classList.contains('open')) closeEdit();
-      if ($('modal-create').classList.contains('open')) closeCreate();
+    var opened = document.querySelector('.modal-overlay.open');
+    if (ev.key === 'Escape' && opened) {
+      if (opened.id === 'modal-edit') closeEdit();
+      if (opened.id === 'modal-create') closeCreate();
+      return;
     }
+    if (ev.key !== 'Tab' || !opened) return;
+    var focusable = opened.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    var first = focusable[0];
+    var last = focusable[focusable.length - 1];
+    if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
   });
 
   // ── Удаление (глобальный confirmAction) ──
@@ -809,12 +954,12 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('btnSaveEdit').addEventListener('click', saveEdit);
     $('modal-edit').addEventListener('click', function (e) { if (e.target === this) closeEdit(); });
 
-    $('btnDetailClose').addEventListener('click', function () { $('ch-detail').style.display = 'none'; detailId = null; });
+    $('btnDetailClose').addEventListener('click', setDetailEmpty);
     $('btnEditFromDetail').addEventListener('click', function () {
-      for (var i = 0; i < allChannels.length; i++) if (allChannels[i].id === detailId) { openEdit(allChannels[i]); break; }
+      for (var i = 0; i < allChannels.length; i++) if (String(allChannels[i].id) === String(detailId)) { openEdit(allChannels[i]); break; }
     });
     $('btnDeleteFromDetail').addEventListener('click', function () {
-      for (var i = 0; i < allChannels.length; i++) if (allChannels[i].id === detailId) { askDelete(allChannels[i].id, allChannels[i].name); break; }
+      for (var i = 0; i < allChannels.length; i++) if (String(allChannels[i].id) === String(detailId)) { askDelete(allChannels[i].id, allChannels[i].name); break; }
     });
 
     $('ch-guild-select').addEventListener('change', function () {
@@ -822,12 +967,22 @@ textarea.field-input{resize:vertical;min-height:52px}
       if (next === selectedGuild) return;
       selectedGuild = next;
       $('ch-search').value = '';
-      $('ch-detail').style.display = 'none';
-      detailId = null;
+      lastFingerprint = '';
+      setDetailEmpty();
       loadChannels();
     });
 
-    $('btnRefresh').addEventListener('click', function () { loadChannels(); showToast('Список обновлён', true); });
+    $('btnRefresh').addEventListener('click', function () {
+      var button = this;
+      if (window.qualitySetLoading) window.qualitySetLoading(button, true);
+      else button.disabled = true;
+      Promise.resolve(loadChannels()).then(function (ok) {
+        showToast(ok ? 'Список обновлён' : 'Не удалось обновить список', !!ok);
+      }).finally(function () {
+        if (window.qualitySetLoading) window.qualitySetLoading(button, false);
+        else button.disabled = false;
+      });
+    });
 
     $('ch-search').addEventListener('input', function () {
       $('ch-search-clear').style.display = this.value ? 'inline-flex' : 'none';
@@ -850,7 +1005,7 @@ textarea.field-input{resize:vertical;min-height:52px}
         var name = row ? row.getAttribute('data-name') : '';
         var action = btn.getAttribute('data-action');
         if (action === 'edit') {
-          for (var i = 0; i < allChannels.length; i++) if (allChannels[i].id === id) { openEdit(allChannels[i]); break; }
+          for (var i = 0; i < allChannels.length; i++) if (String(allChannels[i].id) === String(id)) { openEdit(allChannels[i]); break; }
         } else if (action === 'delete') {
           askDelete(id, name);
         }
@@ -860,29 +1015,57 @@ textarea.field-input{resize:vertical;min-height:52px}
       if (hdr) {
         var group = hdr.closest('.cat-group');
         if (!group) return;
-        group.classList.toggle('collapsed');
-        try {
-          var key = 'ch_open_cats_' + selectedGuild;
-          var state = {};
-          var saved = localStorage.getItem(key);
-          if (saved) state = JSON.parse(saved) || {};
-          state[group.getAttribute('data-cat-name')] = !group.classList.contains('collapsed');
-          localStorage.setItem(key, JSON.stringify(state));
-        } catch (err) {}
+        // В рабочей области открыта ровно одна категория — длинного полотна нет.
+        list.querySelectorAll('.cat-group').forEach(function (item) {
+          var active = item === group;
+          item.classList.toggle('collapsed', !active);
+          var itemHeader = item.querySelector('[data-toggle-cat]');
+          if (itemHeader) itemHeader.setAttribute('aria-expanded', active ? 'true' : 'false');
+        });
+        try { localStorage.setItem('ch_active_cat_' + selectedGuild, group.getAttribute('data-cat-name')); } catch (err) {}
         return;
       }
       var row = e.target.closest('.ch-row');
       if (row) {
-        for (var i = 0; i < allChannels.length; i++) if (allChannels[i].id === row.getAttribute('data-id')) { openDetail(allChannels[i]); break; }
+        for (var i = 0; i < allChannels.length; i++) if (String(allChannels[i].id) === row.getAttribute('data-id')) { openDetail(allChannels[i]); break; }
       }
+    });
+
+    list.addEventListener('keydown', function (event) {
+      var header = event.target.closest('[data-toggle-cat]');
+      if (header && (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowRight')) {
+        event.preventDefault();
+        header.click();
+        if (event.key === 'ArrowRight') {
+          var firstRow = header.closest('.cat-group').querySelector('.ch-row');
+          if (firstRow) firstRow.focus();
+        }
+        return;
+      }
+      var row = event.target.closest('.ch-row');
+      if (!row || event.target.closest('button')) return;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        row.click();
+        return;
+      }
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      var rows = Array.prototype.filter.call(list.querySelectorAll('.ch-row'), function (item) {
+        return !item.closest('.cat-group.collapsed');
+      });
+      var index = rows.indexOf(row);
+      if (event.key === 'Home') index = 0;
+      else if (event.key === 'End') index = rows.length - 1;
+      else index = Math.max(0, Math.min(rows.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)));
+      if (rows[index]) rows[index].focus();
     });
   }
 
   function init() {
     bindEvents();
     populateGuildSelect();
-    if (selectedGuild) loadChannels();
-    // Живое обновление каждые 2.5 сек (без потери прокрутки)
+    // Живое обновление каждые 2.5 сек без повторного рендера неизменившихся данных.
     if (window.setLiveRefresh) {
       window.setLiveRefresh(function () {
         if (document.hidden) return;
