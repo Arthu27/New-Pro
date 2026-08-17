@@ -18,10 +18,7 @@ import time
 from collections import Counter
 from datetime import datetime, timedelta
 
-from web.routes._common import (
-    _log,
-    render_template, session, request, jsonify,
-)
+from web.routes._common import _log
 
 from web.routes.analytics_plus import _parse_ts, _read_audit
 from web.routes.mod_control import (
@@ -495,7 +492,7 @@ def readiness_checklist(gid, now=None):
         'status': 'ok' if reasons else 'warn',
         'detail': '%d шабл.' % len(reasons) if reasons else 'Пусто',
         'hint': 'Шаблоны причин ускоряют выдачу и делают журнал читаемым.',
-        'link': '/mod-control', 'link_label': 'Добавить',
+        'link': '/mod-center', 'link_label': 'Добавить',
     })
 
     items.append(_autofilter_check(gid))
@@ -511,41 +508,3 @@ def readiness_checklist(gid, now=None):
 # ─────────────────────────────────────────────────────────────────────
 # Маршруты
 # ─────────────────────────────────────────────────────────────────────
-def register(ctx):
-    app = ctx.app
-    login_required = ctx.login_required
-    role_required = ctx.role_required
-    active_guild_id = ctx.active_guild_id
-
-    @app.route('/mod-insights')
-    @login_required
-    @role_required('mod')
-    def mod_insights_page():
-        return render_template('mod_insights.html', role=session.get('role'),
-                               username=session.get('username'),
-                               guild_id=active_guild_id())
-
-    @app.route('/api/guild/<gid>/mod-insights/overview')
-    @login_required
-    @role_required('mod')
-    def api_mod_insights_overview(gid):
-        days = _norm_days(request.args.get('days'), EFFECT_DEFAULT_DAYS)
-        events = mod_events(gid)
-        return jsonify({
-            'success': True,
-            'subjects': subjects(gid),
-            'effectiveness': punishment_effectiveness(events, days=days),
-            'team': team_activity(gid, days=days),
-            'trend': punishment_trend(gid, days=days),
-            'repeat': repeat_offenders(gid, days=days),
-            'checklist': readiness_checklist(gid),
-        })
-
-    @app.route('/api/guild/<gid>/mod-insights/dossier')
-    @login_required
-    @role_required('mod')
-    def api_mod_insights_dossier(gid):
-        ok, err, data = dossier(gid, request.args.get('user_id'))
-        if not ok:
-            return jsonify({'success': False, 'error': err}), 400
-        return jsonify({'success': True, 'dossier': data})

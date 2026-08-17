@@ -358,14 +358,14 @@ def login(role='owner'):
         s['role'] = role
 
 
-OV = '/api/guild/777/mod-control/overview'
-check(client.get('/mod-control').status_code in (302, 401, 403), 'гостю страница закрыта')
+OV = '/api/guild/777/mod-center/overview'
+check(client.get('/mod-center').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get(OV).status_code in (302, 401, 403), 'гостю API закрыто')
 login('uye')
-check(client.get('/mod-control').status_code == 403, 'uye нельзя')
+check(client.get('/mod-center').status_code == 403, 'uye нельзя')
 check(client.get(OV).status_code == 403, 'uye нельзя API')
 login('mod')
-page = client.get('/mod-control')
+page = client.get('/mod-center')
 check(page.status_code == 200 and 'На грани авто-наказания' in page.get_data(as_text=True),
       'mod открывает страницу')
 check("var GID = '777'" in page.get_data(as_text=True), 'страница знает активный сервер')
@@ -380,26 +380,26 @@ check(len(ov['recent']) == 3 and ov['recent'][0]['action'] == 'Мут снят',
       'последние действия в снимке: снятие самым свежим, битые метки не в счёт')
 check(ov['recent7'] == 2, 'пульс: две кары за последние 7 дней')
 
-check(client.post('/api/guild/777/mod-control/reasons', json={'kind': 'warn', 'text': 'x'}).status_code == 403,
+check(client.post('/api/guild/777/mod-center/reasons', json={'kind': 'warn', 'text': 'x'}).status_code == 403,
       'mod не добавляет причины')
 login('admin')
 check(client.get(OV).get_json()['can_edit'] is True, 'admin с правом правки')
-bad = client.post('/api/guild/777/mod-control/reasons', json={'kind': 'nope', 'text': 'x'})
+bad = client.post('/api/guild/777/mod-center/reasons', json={'kind': 'nope', 'text': 'x'})
 check(bad.status_code == 400 and bad.get_json()['error'] == 'Неизвестный тип причины',
       '400 на плохой тип')
-bad2 = client.post('/api/guild/777/mod-control/reasons', json={'kind': 'mute', 'text': '  '})
+bad2 = client.post('/api/guild/777/mod-center/reasons', json={'kind': 'mute', 'text': '  '})
 check(bad2.status_code == 400 and bad2.get_json()['error'] == 'Укажите текст причины',
       '400 на пустой текст')
-good = client.post('/api/guild/777/mod-control/reasons', json={'kind': 'mute', 'text': ' Флуд в голосе '})
+good = client.post('/api/guild/777/mod-center/reasons', json={'kind': 'mute', 'text': ' Флуд в голосе '})
 check(good.status_code == 200 and good.get_json()['item']['text'] == 'Флуд в голосе',
       'причина добавлена (нормализация)')
 check(len(client.get(OV).get_json()['reasons']['mute']) == 1, 'причина видна в снимке')
-rm = client.post('/api/guild/777/mod-control/reasons/mute/1/delete')
+rm = client.post('/api/guild/777/mod-center/reasons/mute/1/delete')
 check(rm.status_code == 200 and rm.get_json()['removed']['text'] == 'Флуд в голосе', 'удалена')
-check(client.post('/api/guild/777/mod-control/reasons/mute/1/delete').status_code == 404,
+check(client.post('/api/guild/777/mod-center/reasons/mute/1/delete').status_code == 404,
       'повторное удаление — 404')
 
-am = client.post('/api/guild/777/mod-control/amnesty', json={'user_id': '<@100>'})
+am = client.post('/api/guild/777/mod-center/amnesty', json={'user_id': '<@100>'})
 check(am.status_code == 200 and am.get_json()['amnesty']['count'] == 2,
       'амнистия по упоминанию: 2 варна')
 aid = am.get_json()['amnesty']['id']
@@ -407,40 +407,40 @@ ov2 = client.get(OV).get_json()
 check(len(ov2['risk']['items']) == 1 and ov2['risk']['edge'] == 0,
       'после амнистии «на грани» пересчитан')
 check(ov2['amnesty'][0]['count'] == 2 and ov2['amnesty_total'] == 1, 'журнал амнистий в снимке')
-un = client.post(f'/api/guild/777/mod-control/amnesty/{aid}/undo')
+un = client.post(f'/api/guild/777/mod-center/amnesty/{aid}/undo')
 check(un.status_code == 200 and un.get_json()['restored'] == 2, 'откат вернул варны')
-check(client.post(f'/api/guild/777/mod-control/amnesty/{aid}/undo').status_code == 400,
+check(client.post(f'/api/guild/777/mod-center/amnesty/{aid}/undo').status_code == 400,
       'двойной откат — 400')
-check(client.post('/api/guild/777/mod-control/amnesty/999/undo').status_code == 404,
+check(client.post('/api/guild/777/mod-center/amnesty/999/undo').status_code == 404,
       'откат несуществующей — 404')
-no_warns = client.post('/api/guild/777/mod-control/amnesty', json={'user_id': '424242'})
+no_warns = client.post('/api/guild/777/mod-center/amnesty', json={'user_id': '424242'})
 check(no_warns.status_code == 400 and no_warns.get_json()['error'] == 'У участника нет варнов',
       'честный отказ без варнов')
 check(len(client.get(OV).get_json()['risk']['items']) == 2, 'после отката картина восстановлена')
 
 login('mod')
-check(client.post('/api/guild/777/mod-control/warn',
+check(client.post('/api/guild/777/mod-center/warn',
                    json={'user_id': '100', 'reason': 'флуд'}).status_code == 403,
       'mod не выдаёт варны из панели')
-check(client.post('/api/guild/777/mod-control/unwarn',
+check(client.post('/api/guild/777/mod-center/unwarn',
                    json={'user_id': '100'}).status_code == 403,
       'mod не снимает варны из панели')
 login('admin')
-bad = client.post('/api/guild/777/mod-control/warn', json={'user_id': '100', 'reason': '   '})
+bad = client.post('/api/guild/777/mod-center/warn', json={'user_id': '100', 'reason': '   '})
 check(bad.status_code == 400 and bad.get_json()['error'] == 'Укажите причину варна',
       'warn: 400 на пустую причину')
-bad = client.post('/api/guild/777/mod-control/warn', json={'user_id': 'мусор', 'reason': 'флуд'})
+bad = client.post('/api/guild/777/mod-center/warn', json={'user_id': 'мусор', 'reason': 'флуд'})
 check(bad.status_code == 400 and bad.get_json()['error'] == 'Некорректный ID пользователя',
       'warn: 400 на мусорный ID')
-warned = client.post('/api/guild/777/mod-control/warn', json={'user_id': '100', 'reason': ' флуд '})
+warned = client.post('/api/guild/777/mod-center/warn', json={'user_id': '100', 'reason': ' флуд '})
 check(warned.status_code == 200 and warned.get_json()['total'] == 3,
       'warn: у участника теперь 3 варна')
 ov3 = client.get(OV).get_json()
 check(ov3['risk']['edge'] == 0, 'warn: после третьего варна участник ушёл с волоска (порог 3)')
-unw = client.post('/api/guild/777/mod-control/unwarn', json={'user_id': '<@100>'})
+unw = client.post('/api/guild/777/mod-center/unwarn', json={'user_id': '<@100>'})
 check(unw.status_code == 200 and unw.get_json()['left'] == 2,
       'unwarn: по упоминанию, осталось 2')
-check(client.post('/api/guild/777/mod-control/unwarn',
+check(client.post('/api/guild/777/mod-center/unwarn',
                    json={'user_id': '424242'}).get_json()['error'] == 'У участника нет варнов',
       'unwarn: честный отказ без варнов')
 check(client.get(OV).get_json()['risk']['edge'] == 1, 'unwarn: картина на грани восстановлена')
@@ -454,44 +454,54 @@ check(all(e['by'] == 'admin' for e in ovlog['panel_log']),
       'в журнале видно, кто действовал')
 
 login('mod')
-csv_r = client.get('/api/guild/777/mod-control/warns.csv')
+csv_r = client.get('/api/guild/777/mod-center/warns.csv')
 check(csv_r.status_code == 200 and 'text/csv' in (csv_r.headers.get('Content-Type') or ''),
       'CSV варнов отдаётся моду')
-check(csv_r.headers.get('Content-Disposition') == 'attachment; filename=modcontrol_warns_777.csv',
+check(csv_r.headers.get('Content-Disposition') == 'attachment; filename=modcenter_warns_777.csv',
       'CSV варнов: заголовок вложения')
 csv_body = csv_r.get_data(as_text=True)
 check(csv_body.startswith('\ufeff' + MC.WARN_CSV_HEADER), 'CSV варнов: BOM + шапка')
 check('100' in csv_body and '104' in csv_body, 'CSV варнов: участники на месте')
-radar_r = client.get('/api/guild/777/mod-control/radar.csv')
+radar_r = client.get('/api/guild/777/mod-center/radar.csv')
 check(radar_r.status_code == 200
-      and radar_r.headers.get('Content-Disposition') == 'attachment; filename=modcontrol_radar_777.csv',
+      and radar_r.headers.get('Content-Disposition') == 'attachment; filename=modcenter_radar_777.csv',
       'CSV радара отдаётся с правильным именем')
 login('uye')
-check(client.get('/api/guild/777/mod-control/warns.csv').status_code == 403,
+check(client.get('/api/guild/777/mod-center/warns.csv').status_code == 403,
       'uye CSV закрыт')
 
-print('== 6. Шаблон, меню, регистрация ==')
-tpl = open(os.path.join(ROOT, 'web/templates/mod_control.html'), encoding='utf-8').read()
+print('== 6. Шаблон Центра, меню, регистрация ==')
+tpl = open(os.path.join(ROOT, 'web/templates/mod_center.html'), encoding='utf-8').read()
 emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
 check('[data-theme="light"]' in tpl, 'светлая тема учтена')
-for fid in ('mcKpis', 'mcRisk', 'mcRadar', 'mcReasons', 'mcAmnesty', 'mcTabs', 'mcAmnestyId',
-            'mcRecent', 'mcPanelLog', 'mcWarnPanel', 'mcWarnId', 'mcWarnText', 'mcRiskSearch'):
+for fid in ('mzCounters', 'mzRing', 'mzRadar', 'mzRecent', 'mzTrend', 'mzRepeat',
+            'mzCheck', 'mzRisk', 'mzWarnId', 'mzWarnText', 'mzReasons', 'mzAmnesty',
+            'mzPanelLog', 'mzNotes', 'mzFind', 'mzDossier', 'mzSubjects'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check('/warn-config' in tpl, 'ссылка на настройку порогов')
-check('uxUndo' in tpl, 'амнистия с 6.5-секундным откатом через uxUndo')
-check('/mod-control/warns.csv' in tpl and '/mod-control/radar.csv' in tpl,
+check('mzNotify' in tpl and 'mz-ncard' in tpl,
+      'действия отзываются карточками-уведомлениями, а не тостами')
+check('/mod-center/warns.csv' in tpl and '/mod-center/radar.csv' in tpl,
       'CSV-кнопки варнов и радара в шаблоне')
-check('mcWarnAsk' in tpl and 'mcUnwarnAsk' in tpl, 'варн/анварн из панели на кнопках')
-check("get('uid')" in tpl, 'префилл по ?uid= из мод-анализа')
+check('mzWarnAsk' in tpl and 'mzUnwarnAsk' in tpl and 'mzAmnestyAsk' in tpl,
+      'варн/анварн/амнистия на кнопках')
+check("get('uid')" in tpl, 'префилл по ?uid= из досье')
+check(not os.path.exists(os.path.join(ROOT, 'web/templates/mod_control.html'))
+      and not os.path.exists(os.path.join(ROOT, 'web/templates/mod_insights.html')),
+      'старые страницы удалены без следа')
 import services.panel_menu as PM
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
-check('/mod-control' in paths, 'пункт меню «Мод-контроль» есть')
+check('/mod-center' in paths, 'пункт меню «Центр модерации» есть')
+check('/mod-control' not in paths and '/mod-insights' not in paths,
+      'старых пунктов в меню больше нет')
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
-check('/mod-control' in mod_pages, 'пункт в группе «Модерация»')
-check('/mod-control' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
+check('/mod-center' in mod_pages, 'пункт в группе «Модерация»')
+check('/mod-center' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('mod_control') >= 1, 'модуль зарегистрирован в routes_extra (импорт + список)')
+check('mod_center_panel' in ext, 'модуль Центра зарегистрирован в routes_extra')
+check('mod_control,' not in ext and 'mod_insights,' not in ext,
+      'старые страницы сняты с регистрации (логика осталась модулям)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

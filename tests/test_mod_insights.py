@@ -304,7 +304,7 @@ check(by_key0['autofilter']['status'] == 'warn'
 check(by_key0['antiraid']['status'] == 'missing'
       and by_key0['audit_fresh']['status'] == 'missing', 'антирейд и журнал отсутствуют')
 check(by_key0['warn_steps']['link'] == '/warn-config'
-      and by_key0['warn_reasons']['link'] == '/mod-control', 'ссылки ведут на настройку')
+      and by_key0['warn_reasons']['link'] == '/mod-center', 'ссылки ведут на настройку')
 
 jdump('data/autofilter_998.json', {'enabled': False})
 cl998 = {c['key']: c for c in MI.readiness_checklist(998, now=NOW)['items']}
@@ -373,17 +373,17 @@ def login(role='owner'):
         s['role'] = role
 
 
-OV = '/api/guild/777/mod-insights/overview'
-DS = '/api/guild/777/mod-insights/dossier'
-check(client.get('/mod-insights').status_code in (302, 401, 403), 'гостю страница закрыта')
+OV = '/api/guild/777/mod-center/overview'
+DS = '/api/guild/777/mod-center/dossier'
+check(client.get('/mod-center').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get(OV).status_code in (302, 401, 403), 'гостю снимок закрыт')
 check(client.get(DS + '?user_id=100').status_code in (302, 401, 403), 'гостю досье закрыто')
 login('uye')
-check(client.get('/mod-insights').status_code == 403, 'uye нельзя на страницу')
+check(client.get('/mod-center').status_code == 403, 'uye нельзя на страницу')
 check(client.get(OV).status_code == 403, 'uye нельзя в снимок')
 login('mod')
-page = client.get('/mod-insights')
-check(page.status_code == 200 and 'Досье участника' in page.get_data(as_text=True),
+page = client.get('/mod-center')
+check(page.status_code == 200 and 'Центр модерации' in page.get_data(as_text=True),
       'mod открывает страницу')
 check("var GID = '777'" in page.get_data(as_text=True), 'страница знает активный сервер')
 ovj = client.get(OV).get_json()
@@ -419,27 +419,23 @@ check(client.get(DS).status_code == 400, '400 без параметра')
 clean = client.get(DS + '?user_id=555555').get_json()
 check(clean['success'] and clean['dossier']['known'] is False, 'чужой ID — пустое досье, не ошибка')
 
-print('== 6. Шаблон, меню, регистрация ==')
-tpl = open(os.path.join(ROOT, 'web/templates/mod_insights.html'), encoding='utf-8').read()
-emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
-check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
-for fid in ('miKpis', 'miSubjects', 'miDossier', 'miEffect', 'miCheck',
-            'miDaysTabs', 'miDossierId', 'miTeam', 'miTrend', 'miRepeat',
-            'miSubjectsSearch'):
+print('== 6. Центр: досье-блоки, меню ==')
+tpl = open(os.path.join(ROOT, 'web/templates/mod_center.html'), encoding='utf-8').read()
+for fid in ('mzTrend', 'mzRepeat', 'mzTeam', 'mzEffect', 'mzSubjects',
+            'mzSubjectsSearch', 'mzDossier', 'mzDaysTabs'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
-check('mod-insights' in tpl, 'API-путь модуля в шаблоне')
+check('/mod-center' in tpl, 'API-путь Центра в шаблоне')
 check('/member-card?user=' in tpl, 'из досье есть мост в карточку участника')
-check('/mod-control?uid=' in tpl, 'из досье есть мост в мод-контроль')
-check('miCopyId' in tpl, 'копирование ID из досье')
+check('mzUseInControl' in tpl, 'из досье есть мост в быстрые действия')
+check('mzCopy' in tpl, 'копирование ID из досье')
 import services.panel_menu as PM
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
-check('/mod-insights' in paths, 'пункт меню «Мод-анализ» есть')
+check('/mod-center' in paths, 'пункт меню «Центр модерации» есть')
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
-check('/mod-insights' in mod_pages, 'пункт в группе «Модерация»')
-check('/mod-insights' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
+check('/mod-center' in mod_pages, 'пункт в группе «Модерация»')
+check('/mod-center' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('mod_insights') >= 1, 'модуль зарегистрирован в routes_extra (импорт + список)')
+check('mod_center_panel' in ext, 'модуль Центра зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

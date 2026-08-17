@@ -1,0 +1,773 @@
+{% extends "base.html" %}
+{% block title %}Центр модерации — Панель Aether{% endblock %}
+{% block page_title %}Центр модерации{% endblock %}
+{% block content %}
+<style>
+.mz-hero{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;background:radial-gradient(120% 180% at 12% 0%,rgba(224,176,74,.10),transparent 55%),var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.09));border-radius:16px;padding:16px 20px;margin:12px 0 14px}
+@media (max-width:900px){.mz-hero{grid-template-columns:1fr;gap:12px}}
+.mz-ring{position:relative;width:86px;height:86px}
+.mz-ring svg{transform:rotate(-90deg)}
+.mz-ring .rz-bg{fill:none;stroke:rgba(255,255,255,.08);stroke-width:8}
+.mz-ring .rz-fg{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dasharray .6s ease}
+.mz-ring b{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;color:var(--text-1,#fff)}
+.mz-ring b small{font-size:9px;font-weight:600;color:var(--text-3,rgba(255,255,255,.45));letter-spacing:.06em;text-transform:uppercase}
+.mz-counters{display:flex;flex-wrap:wrap;gap:8px 22px}
+.mz-cnt{display:flex;flex-direction:column;gap:2px;min-width:74px}
+.mz-cnt b{font-size:21px;color:var(--text-1,#fff);font-variant-numeric:tabular-nums;line-height:1}
+.mz-cnt b.hot{color:#ff8a7a}
+.mz-cnt span{font-size:10px;color:var(--text-3,rgba(255,255,255,.45));letter-spacing:.05em;text-transform:uppercase}
+.mz-find{display:flex;gap:8px;min-width:250px}
+.mz-find .inp{flex:1;min-width:0}
+.mz-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.mz-tab{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--line-2,rgba(255,255,255,.1));color:var(--text-3,rgba(255,255,255,.55));border-radius:11px;padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;letter-spacing:.02em}
+.mz-tab i{font-size:12px}
+.mz-tab.on{background:linear-gradient(135deg,var(--ac,#e0b04a),var(--ac-2,#f0cd7a));border-color:transparent;color:#1a1a1a;box-shadow:0 4px 18px rgba(224,176,74,.25)}
+.mz-tab .n{font-size:10px;background:rgba(0,0,0,.18);border-radius:99px;padding:1px 7px;font-variant-numeric:tabular-nums}
+.mz-tab.on .n{background:rgba(0,0,0,.22);color:#fff}
+.mz-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.mz-grid.thirds{grid-template-columns:1.25fr 1fr}
+@media (max-width:960px){.mz-grid,.mz-grid.thirds{grid-template-columns:1fr}}
+.mz-card{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.mz-card h4{margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--text-2,rgba(255,255,255,.8));display:flex;align-items:center;gap:8px}
+.mz-card h4 i{color:var(--ac,#e0b04a);font-size:12px}
+.mz-card h4 .mz-hact{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:7px;padding:3px 8px;text-transform:none;letter-spacing:.02em}
+.mz-card h4 .mz-hact:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
+.mz-row{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center;padding:8px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.mz-row:last-child{border-bottom:none}
+.mz-row.click{cursor:pointer;border-radius:8px}
+.mz-row.click:hover{background:rgba(255,255,255,.04)}
+.mz-row.on{background:var(--ac-soft,rgba(224,176,74,.1));outline:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.mz-row.tri{grid-template-columns:auto 1fr auto}
+.mz-who{min-width:0}
+.mz-who b{display:block;font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mz-who small{display:block;font-size:10.5px;color:var(--text-3,rgba(255,255,255,.45));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.mz-track{height:4px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:5px}
+.mz-track i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--ac-2,#f0cd7a),var(--ac,#e0b04a))}
+.mz-track.hot i{background:linear-gradient(90deg,#ff8a7a,#e74c3c)}
+.mz-badge{display:inline-flex;align-items:center;justify-content:center;min-width:60px;font-size:9.5px;font-weight:800;border-radius:7px;padding:3px 7px;text-transform:uppercase;letter-spacing:.05em}
+.mz-badge.k-mute{color:#fbbf24;background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.3)}
+.mz-badge.k-ban{color:#f87171;background:rgba(248,113,113,.10);border:1px solid rgba(248,113,113,.3)}
+.mz-badge.k-vmute{color:#60a5fa;background:rgba(96,165,250,.10);border:1px solid rgba(96,165,250,.3)}
+.mz-badge.k-kick{color:#f97316;background:rgba(249,115,22,.10);border:1px solid rgba(249,115,22,.3)}
+.mz-badge.k-lift{color:#4ade80;background:rgba(74,222,128,.10);border:1px solid rgba(74,222,128,.3)}
+.mz-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--text-2,rgba(255,255,255,.7));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:3px 10px;white-space:nowrap}
+.mz-chip.hot{color:#ff8a7a;border-color:rgba(231,76,60,.35);background:rgba(231,76,60,.09)}
+.mz-chip.ok{color:#4ade80;border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.07)}
+.mz-chip.on{background:var(--ac,#e0b04a);border-color:transparent;color:#1a1a1a}
+.mz-time{font-size:11px;font-weight:700;color:var(--ac-2,#f0cd7a);font-variant-numeric:tabular-nums;white-space:nowrap}
+.mz-time.hot{color:#ff8a7a}
+.mz-spark{width:100%;height:74px;display:block}
+.mz-spark .bar{fill:url(#mzGrad)}
+.mz-spark .lbl{fill:var(--text-3,rgba(255,255,255,.4));font-size:8.5px}
+.mz-spark .val{fill:var(--text-2,rgba(255,255,255,.8));font-size:9px;font-weight:700}
+.mz-form{display:flex;gap:8px;flex-wrap:wrap}
+.mz-form .inp{flex:1;min-width:120px}
+.mz-qchip{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:var(--text-2,rgba(255,255,255,.8));background:rgba(255,255,255,.05);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:999px;padding:5px 8px 5px 12px;margin:3px 4px 3px 0;max-width:100%}
+.mz-qchip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mz-qchip button{background:none;border:none;color:var(--text-3,rgba(255,255,255,.4));cursor:pointer;font-size:11px;padding:2px 4px;border-radius:6px}
+.mz-qchip button:hover{color:#ff8a7a;background:rgba(231,76,60,.12)}
+.mz-mini-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+.mz-btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.mz-sect{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.4));margin:12px 0 4px}
+.mz-note{padding:7px 6px;border-bottom:1px dashed rgba(255,255,255,.07);font-size:12px;color:var(--text-2,rgba(255,255,255,.85))}
+.mz-note:last-child{border-bottom:none}
+.mz-note small{display:block;font-size:10.5px;color:var(--text-3,rgba(255,255,255,.45));margin-top:1px}
+.mz-eff{display:grid;grid-template-columns:1fr repeat(3,auto);gap:5px 12px;align-items:center;padding:7px 6px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.mz-eff:last-child{border-bottom:none}
+.mz-eff.head{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3,rgba(255,255,255,.4))}
+.mz-eff .v{font-size:12px;font-weight:800;color:var(--text-2,rgba(255,255,255,.85));font-variant-numeric:tabular-nums;text-align:right;min-width:44px}
+.mz-eff .v.dim{color:var(--text-3,rgba(255,255,255,.4));font-weight:500}
+.mz-eff.total{background:rgba(255,255,255,.03);border-radius:8px}
+.mz-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.mz-dot.ok{background:#4ade80;box-shadow:0 0 7px rgba(74,222,128,.5)}
+.mz-dot.warn{background:#fbbf24;box-shadow:0 0 7px rgba(251,191,36,.5)}
+.mz-dot.missing{background:#f87171;box-shadow:0 0 7px rgba(248,113,113,.5)}
+.mz-act{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--ac,#e0b04a);text-decoration:none;border:1px solid var(--ac-line,rgba(224,176,74,.3));border-radius:8px;padding:4px 9px;cursor:pointer;background:none;white-space:nowrap}
+.mz-act:hover{background:var(--ac-soft,rgba(224,176,74,.12))}
+.mz-notes{position:fixed;top:16px;right:16px;z-index:9500;display:flex;flex-direction:column;gap:8px;width:min(340px,90vw)}
+.mz-ncard{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:var(--surface-1,#1d1f24);border:1px solid var(--line-2,rgba(255,255,255,.12));border-left:3px solid var(--ac,#e0b04a);border-radius:12px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.35);animation:mzIn .25s ease}
+.mz-ncard.ok{border-left-color:#4ade80}
+.mz-ncard.err{border-left-color:#f87171}
+.mz-ncard i{color:var(--ac,#e0b04a);font-size:15px}
+.mz-ncard.ok i{color:#4ade80}
+.mz-ncard.err i{color:#f87171}
+.mz-ncard b{display:block;font-size:12px;color:var(--text-1,#fff)}
+.mz-ncard small{display:block;font-size:11px;color:var(--text-3,rgba(255,255,255,.5));margin-top:1px}
+.mz-ncard button{background:none;border:1px solid var(--line-2,rgba(255,255,255,.15));color:var(--text-2,rgba(255,255,255,.75));border-radius:8px;font-size:10.5px;font-weight:700;padding:5px 9px;cursor:pointer;white-space:nowrap}
+.mz-ncard button:hover{border-color:var(--ac-line,rgba(224,176,74,.4));color:var(--ac,#e0b04a)}
+@keyframes mzIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+[data-theme="light"] .mz-row,[data-theme="light"] .mz-eff,[data-theme="light"] .mz-note{border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .mz-row.click:hover{background:rgba(0,0,0,.04)}
+[data-theme="light"] .mz-track{background:rgba(0,0,0,.08)}
+[data-theme="light"] .mz-eff.total{background:rgba(0,0,0,.03)}
+[data-theme="light"] .mz-ncard{box-shadow:0 10px 30px rgba(0,0,0,.18)}
+</style>
+
+<div class="mz-hero">
+  <div class="mz-ring" id="mzRing" title="Готовность модерации: пройдено проверок чек-листа">
+    <svg width="86" height="86" viewBox="0 0 86 86">
+      <circle class="rz-bg" cx="43" cy="43" r="36"></circle>
+      <circle class="rz-fg" id="mzRingFg" cx="43" cy="43" r="36" stroke="#4ade80" stroke-dasharray="0 226"></circle>
+    </svg>
+    <b><span id="mzRingNum">–</span><small>готовность</small></b>
+  </div>
+  <div class="mz-counters" id="mzCounters">
+    <div class="sk-card" style="width:74px;height:40px"></div><div class="sk-card" style="width:74px;height:40px"></div>
+    <div class="sk-card" style="width:74px;height:40px"></div><div class="sk-card" style="width:74px;height:40px"></div>
+  </div>
+  <div class="mz-find">
+    <input class="inp" id="mzFind" maxlength="24" placeholder="ID — сразу в досье" onkeydown="if(event.key==='Enter')mzFindGo()">
+    <button class="btn" onclick="mzFindGo()"><i class="fas fa-crosshairs"></i></button>
+  </div>
+</div>
+
+<div class="mz-tabs" id="mzTabs">
+  <button class="mz-tab on" data-tab="pulse" onclick="mzTab('pulse')"><i class="fas fa-heart-pulse"></i> Пульт <span class="n" id="mzTabPulseN">0</span></button>
+  <button class="mz-tab" data-tab="control" onclick="mzTab('control')"><i class="fas fa-sliders"></i> Контроль <span class="n" id="mzTabControlN">0</span></button>
+  <button class="mz-tab" data-tab="stats" onclick="mzTab('stats')"><i class="fas fa-chart-line"></i> Аналитика</button>
+  <button class="mz-tab" data-tab="dossier" onclick="mzTab('dossier')"><i class="fas fa-folder-open"></i> Досье</button>
+</div>
+
+<div id="mzPane-pulse">
+  <div class="mz-grid thirds">
+    <div>
+      <div class="mz-card">
+        <h4><i class="fas fa-tower-broadcast"></i> Радар истечений
+          <a class="mz-hact" href="/api/guild/{{ guild_id }}/mod-center/radar.csv"><i class="fas fa-file-csv"></i> CSV</a></h4>
+        <div class="mz-mini-tabs" id="mzRadarFilters"></div>
+        <div id="mzRadar"><div class="sk-row"></div><div class="sk-row" style="width:75%"></div></div>
+      </div>
+      <div class="mz-card">
+        <h4><i class="fas fa-clock-rotate-left"></i> Последние действия</h4>
+        <div id="mzRecent"><div class="sk-row" style="width:65%"></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="mz-card">
+        <h4><i class="fas fa-chart-column"></i> Тренд кар <span class="mz-hact" id="mzTrendOff"></span></h4>
+        <div id="mzTrend"><div class="sk-row" style="height:70px"></div></div>
+      </div>
+      <div class="mz-card">
+        <h4><i class="fas fa-user-clock"></i> Рецидивисты <span class="mz-hact" id="mzRepeatOff"></span></h4>
+        <div id="mzRepeat"><div class="sk-row" style="width:70%"></div></div>
+      </div>
+      <div class="mz-card">
+        <h4><i class="fas fa-list-check"></i> Готовность <span class="mz-hact" id="mzCheckOff"></span></h4>
+        <div id="mzCheck"><div class="sk-row" style="width:60%"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mzPane-control" style="display:none">
+  <div class="mz-grid">
+    <div>
+      <div class="mz-card">
+        <h4><i class="fas fa-triangle-exclamation"></i> На грани авто-наказания
+          <a class="mz-hact" href="/api/guild/{{ guild_id }}/mod-center/warns.csv"><i class="fas fa-file-csv"></i> CSV варнов</a></h4>
+        <input class="inp" id="mzRiskSearch" placeholder="Поиск по имени или ID" oninput="renderRisk()" style="margin-bottom:9px">
+        <div id="mzRisk"><div class="sk-row"></div></div>
+      </div>
+      <div class="mz-card" id="mzWarnCard">
+        <h4><i class="fas fa-gavel"></i> Быстрые действия</h4>
+        <div id="mzWarnBody">
+          <div class="mz-form">
+            <input class="inp" id="mzWarnId" maxlength="24" placeholder="ID или @упоминание">
+            <input class="inp" id="mzWarnText" maxlength="200" placeholder="Причина">
+          </div>
+          <div id="mzWarnChips" style="margin-top:6px"></div>
+          <div class="mz-btnrow">
+            <button class="btn danger-btn" onclick="mzWarnAsk()"><i class="fas fa-gavel"></i> Варн</button>
+            <button class="btn btn-ghost" onclick="mzUnwarnAsk()"><i class="fas fa-rotate-left"></i> Снять варн</button>
+            <button class="btn btn-ghost" onclick="mzAmnestyAsk()"><i class="fas fa-dove"></i> Амнистия</button>
+          </div>
+        </div>
+        <div id="mzWarnDenied" style="display:none;font-size:11px;color:var(--text-3,rgba(255,255,255,.45))">Действия доступны администраторам.</div>
+      </div>
+      <div class="mz-card">
+        <h4><i class="fas fa-bolt"></i> Быстрые причины</h4>
+        <div class="mz-mini-tabs" id="mzKindTabs"></div>
+        <div id="mzReasons"><div class="sk-row" style="width:60%"></div></div>
+        <div id="mzReasonForm" style="display:none">
+          <div class="mz-form" style="margin-top:10px">
+            <input class="inp" id="mzReasonText" maxlength="120" placeholder="Новая причина">
+            <button class="btn" onclick="mzReasonAdd()"><i class="fas fa-plus"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="mz-card">
+        <h4><i class="fas fa-dove"></i> Амнистии <span class="mz-hact" id="mzAmnOff"></span></h4>
+        <div id="mzAmnesty"><div class="sk-row" style="width:65%"></div></div>
+      </div>
+      <div class="mz-card">
+        <h4><i class="fas fa-clipboard-user"></i> Журнал панели</h4>
+        <div id="mzPanelLog"><div class="sk-row" style="width:60%"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mzPane-stats" style="display:none">
+  <div class="mz-mini-tabs" id="mzDaysTabs" style="margin-bottom:12px"></div>
+  <div class="mz-grid thirds">
+    <div>
+      <div class="mz-card">
+        <h4><i class="fas fa-rotate"></i> Эффективность наказаний</h4>
+        <div id="mzEffect"><div class="sk-row"></div></div>
+      </div>
+      <div class="mz-card">
+        <h4><i class="fas fa-chart-column"></i> Тренд кар</h4>
+        <div id="mzTrendBig"></div>
+      </div>
+    </div>
+    <div>
+      <div class="mz-card">
+        <h4><i class="fas fa-people-group"></i> Команда <span class="mz-hact" id="mzTeamOff"></span></h4>
+        <div id="mzTeam"><div class="sk-row" style="width:70%"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mzPane-dossier" style="display:none">
+  <div class="mz-grid thirds">
+    <div>
+      <div class="mz-card">
+        <h4><i class="fas fa-users-viewfinder"></i> Под приглядом <span class="mz-hact" id="mzSubjectsOff"></span></h4>
+        <input class="inp" id="mzSubjectsSearch" placeholder="Поиск по имени или ID" oninput="renderSubjects()" style="margin-bottom:9px">
+        <div id="mzSubjects"><div class="sk-row"></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="mz-card">
+        <h4><i class="fas fa-id-card"></i> Досье</h4>
+        <div id="mzDossier">
+          <div class="empty-state"><i class="fas fa-folder-open"></i><p>Выберите участника слева</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mz-notes" id="mzNotes"></div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="mzGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f0cd7a"></stop><stop offset="100%" stop-color="#e0b04a" stop-opacity=".55"></stop>
+  </linearGradient>
+</defs></svg>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/mod-center';
+var OV = null, CAN = false, DAYS = 90, KIND = 'warn', RADAR_F = 'all', PICKED = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+function fmtDate(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var p = function (v) { return String(v).padStart(2, '0'); };
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function fmtLeft(sec) {
+  var s = Math.abs(sec);
+  var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  var t = d > 0 ? d + 'д ' + h + 'ч' : (h > 0 ? h + 'ч ' + m + 'м' : Math.max(m, s > 30 ? 1 : 0) + 'м');
+  return sec < 0 ? 'просрочено ' + t : 'ещё ' + t;
+}
+function badge(action) {
+  var map = {'Мут': 'k-mute', 'Кик': 'k-kick', 'Бан': 'k-ban', 'Мут снят': 'k-lift', 'Бан снят': 'k-lift'};
+  return '<span class="mz-badge ' + (map[action] || 'k-mute') + '">' + esc(action) + '</span>';
+}
+
+function mzNotify(title, body, kind, icon, undoFn) {
+  var stack = document.getElementById('mzNotes');
+  var el = document.createElement('div');
+  el.className = 'mz-ncard ' + (kind || '');
+  el.innerHTML = '<i class="fas ' + (icon || 'fa-circle-info') + '"></i>' +
+    '<div><b>' + esc(title) + '</b>' + (body ? '<small>' + esc(body) + '</small>' : '') + '</div>' +
+    (undoFn ? '<button>Откатить</button>' : '');
+  if (undoFn) {
+    el.querySelector('button').onclick = function () { undoFn(); el.remove(); };
+  }
+  stack.appendChild(el);
+  setTimeout(function () { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; }, 6100);
+  setTimeout(function () { el.remove(); }, 6600);
+}
+
+function mzTab(name) {
+  var panes = ['pulse', 'control', 'stats', 'dossier'];
+  for (var i = 0; i < panes.length; i++) {
+    document.getElementById('mzPane-' + panes[i]).style.display = panes[i] === name ? '' : 'none';
+  }
+  var tabs = document.querySelectorAll('#mzTabs .mz-tab');
+  for (var j = 0; j < tabs.length; j++) {
+    tabs[j].className = 'mz-tab' + (tabs[j].getAttribute('data-tab') === name ? ' on' : '');
+  }
+}
+
+function mzFindGo() {
+  var v = document.getElementById('mzFind').value.trim();
+  if (!v) return;
+  mzTab('dossier');
+  mzDossier(v);
+}
+
+function renderHero(d) {
+  var c = d.checklist, ring = document.getElementById('mzRingFg');
+  var frac = c.total ? c.ok / c.total : 0;
+  var circ = 226;
+  ring.setAttribute('stroke-dasharray', Math.round(frac * circ) + ' ' + circ);
+  ring.setAttribute('stroke', c.missing ? '#f87171' : (c.warn ? '#fbbf24' : '#4ade80'));
+  document.getElementById('mzRingNum').textContent = c.ok + '/' + c.total;
+  var cnt = function (num, label, hot) {
+    return '<div class="mz-cnt"><b class="' + (hot ? 'hot' : '') + '">' + num + '</b><span>' + esc(label) + '</span></div>';
+  };
+  document.getElementById('mzCounters').innerHTML =
+    cnt(d.warns_total, 'открытых варнов', d.warns_total > 0) +
+    cnt(d.risk.edge, 'на волоске', d.risk.edge > 0) +
+    cnt(d.radar.counts.overdue, 'просрочено', d.radar.counts.overdue > 0) +
+    cnt(d.radar.active_total, 'активных кар', false) +
+    cnt(d.recent7, 'кар за 7 дн.', false) +
+    cnt(d.team.total_mods, 'модов в бою', false);
+  document.getElementById('mzTabPulseN').textContent = d.radar.counts.overdue + d.risk.edge;
+  document.getElementById('mzTabControlN').textContent = d.risk.items.length;
+}
+
+function sparkHtml(t, tall) {
+  var h = tall ? 110 : 70, max = 1;
+  for (var i = 0; i < t.buckets.length; i++) max = Math.max(max, t.buckets[i].count);
+  var n = t.buckets.length, w = 100, bw = w / n;
+  var bars = '';
+  for (var k = 0; k < n; k++) {
+    var b = t.buckets[k];
+    var bh = b.count ? Math.max(4, Math.round((h - 22) * b.count / max)) : 2;
+    var x = k * bw + bw * 0.16, bwid = bw * 0.68;
+    bars += '<rect class="bar" x="' + x.toFixed(1) + '" y="' + (h - 12 - bh) + '" width="' + bwid.toFixed(1) + '" height="' + bh + '" rx="1.5"></rect>';
+    if (b.count) bars += '<text class="val" x="' + (x + bwid / 2).toFixed(1) + '" y="' + (h - 16 - bh) + '" text-anchor="middle">' + b.count + '</text>';
+    bars += '<text class="lbl" x="' + (x + bwid / 2).toFixed(1) + '" y="' + (h - 2) + '" text-anchor="middle">' + esc(b.label) + '</text>';
+  }
+  return '<svg class="mz-spark" viewBox="0 0 100 ' + h + '" preserveAspectRatio="none" style="height:' + h + 'px">' + bars + '</svg>';
+}
+
+function renderTrend(d, big) {
+  document.getElementById('mzTrendOff').textContent = d.trend.total + ' за ' + d.trend.days + ' дн.';
+  document.getElementById('mzTrend').innerHTML = sparkHtml(d.trend, false);
+  if (big) document.getElementById('mzTrendBig').innerHTML = sparkHtml(d.trend, true);
+}
+
+function renderRadar(d) {
+  var filters = [['all', 'Все'], ['overdue', 'Просрочено'], ['soon', '24 часа'], ['week', '3 суток']];
+  document.getElementById('mzRadarFilters').innerHTML = filters.map(function (f) {
+    return '<button class="mz-chip' + (RADAR_F === f[0] ? ' on' : '') + '" onclick="mzRadarSet(\'' + f[0] + '\')">' + f[1] + '</button>';
+  }).join('');
+  var box = document.getElementById('mzRadar');
+  var rows = (d.radar.rows || []).filter(function (r) {
+    if (RADAR_F === 'all') return true;
+    if (RADAR_F === 'overdue') return r.remaining_s <= 0;
+    if (RADAR_F === 'soon') return r.remaining_s > 0 && r.remaining_s <= 86400;
+    return r.remaining_s > 86400 && r.remaining_s <= 259200;
+  });
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-satellite-dish"></i><p>В этом срезе пусто</p></div>';
+    return;
+  }
+  box.innerHTML = rows.map(function (r) {
+    var label = r.name || ('#' + r.user_id);
+    var hot = r.remaining_s <= 0;
+    var pct = r.frac == null ? 0 : Math.round(r.frac * 100);
+    return '<div class="mz-row tri">' + badge(r.kind_name) +
+      '<div class="mz-who"><b>' + esc(label) + '</b><small>' + esc(r.reason || 'без причины') + '</small>' +
+      '<div class="mz-track' + (hot ? ' hot' : '') + '"><i style="width:' + pct + '%"></i></div></div>' +
+      '<span class="mz-time' + (hot ? ' hot' : '') + '">' + esc(fmtLeft(r.remaining_s)) + '</span></div>';
+  }).join('');
+}
+function mzRadarSet(f) { RADAR_F = f; if (OV) renderRadar(OV); }
+
+function renderRecent(d) {
+  var box = document.getElementById('mzRecent');
+  if (!d.recent.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p>Действий пока нет</p></div>';
+    return;
+  }
+  box.innerHTML = d.recent.map(function (r) {
+    return '<div class="mz-row tri">' + badge(r.action) +
+      '<div class="mz-who"><b>' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>' + esc(r.reason || '—') + (r.mod_name ? ' · ' + esc(r.mod_name) : '') + '</small></div>' +
+      '<span class="mz-time">' + esc(fmtDate(r.at)) + '</span></div>';
+  }).join('');
+}
+
+function renderRepeat(d) {
+  document.getElementById('mzRepeatOff').textContent = d.repeat.total ? d.repeat.total + ' за ' + d.repeat.days + ' дн.' : '';
+  var box = document.getElementById('mzRepeat');
+  if (!d.repeat.items.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-user-clock"></i><p>Повторников нет</p></div>';
+    return;
+  }
+  box.innerHTML = d.repeat.items.map(function (r) {
+    return '<div class="mz-row click" onclick="mzFromList(\'' + esc(r.user_id) + '\')">' +
+      '<div class="mz-who"><b>' + esc(r.name || ('ID ' + r.user_id)) + '</b>' +
+      '<small>последняя: ' + esc(r.last_action) + ' · ' + esc(fmtDate(r.last_at)) + '</small></div>' +
+      '<span class="mz-chip hot">' + r.count + ' ' + plural(r.count, 'кара', 'кары', 'кар') + '</span></div>';
+  }).join('');
+}
+
+function renderCheck(d) {
+  var c = d.checklist;
+  document.getElementById('mzCheckOff').textContent = c.ok + '/' + c.total;
+  document.getElementById('mzCheck').innerHTML = c.items.map(function (it) {
+    return '<div class="mz-row tri"><span class="mz-dot ' + esc(it.status) + '" title="' + esc(it.hint) + '"></span>' +
+      '<div class="mz-who"><b>' + esc(it.title) + '</b><small>' + esc(it.hint) + '</small></div>' +
+      '<a class="mz-act" href="' + esc(it.link) + '">' + esc(it.link_label) + '</a></div>';
+  }).join('');
+}
+
+function renderRisk() {
+  if (!OV) return;
+  var box = document.getElementById('mzRisk');
+  if (!OV.risk.tuned) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation"></i><p>Пороги не заданы</p><p class="empty-tip"><a class="mz-act" href="/warn-config">Настроить</a></p></div>';
+    return;
+  }
+  var q = (document.getElementById('mzRiskSearch').value || '').trim().toLowerCase();
+  var items = OV.risk.items.filter(function (r) {
+    return !q || (r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.user_id).indexOf(q) !== -1;
+  });
+  if (!items.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-face-smile"></i><p>Никого нет</p></div>';
+    return;
+  }
+  box.innerHTML = items.map(function (r) {
+    var pct = Math.min(100, Math.round(100 * r.warns / r.next_count));
+    return '<div class="mz-row click" onclick="mzFromList(\'' + esc(r.user_id) + '\')">' +
+      '<div class="mz-who"><b>' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>' + r.warns + '/' + r.next_count + ' → ' + esc(r.action_name) + '</small>' +
+      '<div class="mz-track' + (r.gap === 1 ? ' hot' : '') + '"><i style="width:' + pct + '%"></i></div></div>' +
+      '<span class="mz-chip' + (r.gap === 1 ? ' hot' : '') + '">ещё ' + r.gap + '</span></div>';
+  }).join('');
+}
+
+function renderReasons() {
+  if (!OV) return;
+  document.getElementById('mzKindTabs').innerHTML = OV.reason_kinds.map(function (k) {
+    var n = (OV.reasons[k.key] || []).length;
+    return '<button class="mz-chip' + (k.key === KIND ? ' on' : '') + '" onclick="mzKindSet(\'' + k.key + '\')">' + esc(k.label) + ' ' + n + '</button>';
+  }).join('');
+  var items = OV.reasons[KIND] || [];
+  var box = document.getElementById('mzReasons');
+  box.innerHTML = items.length ? items.map(function (it) {
+    var del = CAN ? '<button onclick="mzReasonDel(' + it.id + ')"><i class="fas fa-xmark"></i></button>' : '';
+    return '<span class="mz-qchip"><span>' + esc(it.text) + '</span>' + del + '</span>';
+  }).join('') : '<div class="empty-state"><i class="fas fa-bolt"></i><p>Пусто</p></div>';
+  document.getElementById('mzReasonForm').style.display = CAN ? '' : 'none';
+  document.getElementById('mzWarnChips').innerHTML = (OV.reasons.warn || []).slice(0, 8).map(function (it) {
+    return '<span class="mz-qchip" style="cursor:pointer" onclick="mzChipFill(this)"><span>' + esc(it.text) + '</span></span>';
+  }).join('');
+}
+function mzKindSet(k) { KIND = k; renderReasons(); }
+function mzChipFill(el) { document.getElementById('mzWarnText').value = el.textContent; }
+
+function renderAmnesty(d) {
+  document.getElementById('mzAmnOff').textContent = d.amnesty_total ? 'всего ' + d.amnesty_total : '';
+  var box = document.getElementById('mzAmnesty');
+  if (!d.amnesty.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-dove"></i><p>Амнистий не было</p></div>';
+    return;
+  }
+  box.innerHTML = d.amnesty.map(function (a) {
+    var tail = a.restored_at ? '<span class="mz-chip ok">откачена</span>'
+      : (CAN ? '<button class="mz-act" onclick="mzAmnestyUndo(' + a.id + ')"><i class="fas fa-rotate-left"></i> Откатить</button>'
+             : '<span class="mz-chip">активна</span>');
+    return '<div class="mz-row"><div class="mz-who"><b>#' + esc(a.user_id) + ' · ' + a.count + ' ' +
+      plural(a.count, 'варн', 'варна', 'варнов') + '</b><small>' + esc(a.by || '—') + ' · ' + esc(fmtDate(a.at)) + '</small></div>' + tail + '</div>';
+  }).join('');
+}
+
+function renderPanelLog(d) {
+  var META = {
+    warn: ['Варн', 'fa-gavel'], unwarn: ['Варн снят', 'fa-rotate-left'],
+    amnesty: ['Амнистия', 'fa-dove'], amnesty_undo: ['Откат амнистии', 'fa-rotate-left'],
+    reason_add: ['Причина +', 'fa-bolt'], reason_del: ['Причина −', 'fa-xmark']
+  };
+  var box = document.getElementById('mzPanelLog');
+  if (!d.panel_log.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-user"></i><p>Операций пока нет</p></div>';
+    return;
+  }
+  box.innerHTML = d.panel_log.map(function (e) {
+    var m = META[e.op] || [e.op, 'fa-circle-info'];
+    return '<div class="mz-row"><div class="mz-who"><b><i class="fas ' + m[1] + '" style="color:var(--ac);margin-right:5px"></i>' + esc(m[0]) +
+      (e.user_id ? ' · #' + esc(e.user_id) : '') + '</b>' +
+      '<small>' + esc(e.by || '—') + (e.detail ? ' · ' + esc(e.detail) : '') + '</small></div>' +
+      '<span class="mz-time">' + esc(fmtDate(e.at)) + '</span></div>';
+  }).join('');
+}
+
+function renderDaysTabs() {
+  document.getElementById('mzDaysTabs').innerHTML = [30, 90, 180].map(function (n) {
+    return '<button class="mz-chip' + (n === DAYS ? ' on' : '') + '" onclick="mzDays(' + n + ')">' + n + ' дн.</button>';
+  }).join('');
+}
+
+function renderEffect(d) {
+  var eff = d.effectiveness;
+  var box = document.getElementById('mzEffect');
+  if (!eff.overall.count) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-rotate"></i><p>Наказаний за окно нет</p></div>';
+    return;
+  }
+  var rows = eff.types.concat([eff.overall]);
+  var html = '<div class="mz-eff head"><span>Тип</span><span style="text-align:right">7 дн.</span><span style="text-align:right">30 дн.</span><span style="text-align:right">медиана</span></div>';
+  html += rows.map(function (r) {
+    var name = r.action === 'all' ? 'Любая кара' : r.action;
+    var pct7 = r.repeat7 == null ? '—' : r.repeat7 + '%', pct30 = r.repeat30 == null ? '—' : r.repeat30 + '%';
+    return '<div class="mz-eff' + (r.action === 'all' ? ' total' : '') + '">' +
+      '<span style="font-size:12px"><b>' + esc(name) + '</b> <small style="color:var(--text-3)">' + r.count + ' чел.' + (r.thin ? ' · мало данных' : '') + '</small></span>' +
+      '<span class="v' + (r.thin ? ' dim' : '') + '">' + pct7 + '</span>' +
+      '<span class="v' + (r.thin ? ' dim' : '') + '">' + pct30 + '</span>' +
+      '<span class="v' + (r.thin ? ' dim' : '') + '">' + (r.median_days == null ? '—' : r.median_days + ' дн.') + '</span></div>';
+  }).join('');
+  box.innerHTML = html;
+}
+
+function renderTeam(d) {
+  var t = d.team;
+  document.getElementById('mzTeamOff').textContent = t.total_mods + ' за ' + t.days + ' дн.';
+  var box = document.getElementById('mzTeam');
+  if (!t.items.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-people-group"></i><p>За окно действий нет</p></div>';
+    return;
+  }
+  var max = 1;
+  for (var i = 0; i < t.items.length; i++) max = Math.max(max, t.items[i].total);
+  box.innerHTML = t.items.map(function (r) {
+    var pct = Math.round(100 * r.total / max);
+    return '<div class="mz-row"><div class="mz-who"><b>' + esc(r.mod) + '</b>' +
+      '<small>' + r.punishments + ' кар' + (r.lifts ? ' · ' + r.lifts + ' снят.' : '') + (r.last_at ? ' · посл. ' + esc(fmtDate(r.last_at)) : '') + '</small>' +
+      '<div class="mz-track"><i style="width:' + pct + '%"></i></div></div>' +
+      '<span class="mz-chip">' + r.total + '</span></div>';
+  }).join('');
+}
+
+function renderSubjects() {
+  if (!OV) return;
+  var q = (document.getElementById('mzSubjectsSearch').value || '').trim().toLowerCase();
+  var items = OV.subjects.items.filter(function (r) {
+    return !q || (r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.user_id).indexOf(q) !== -1;
+  });
+  document.getElementById('mzSubjectsOff').textContent = items.length + '/' + OV.subjects.total;
+  var box = document.getElementById('mzSubjects');
+  if (!items.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-face-smile"></i><p>Никого нет</p></div>';
+    return;
+  }
+  box.innerHTML = items.map(function (r) {
+    return '<div class="mz-row click' + (PICKED === r.user_id ? ' on' : '') + '" onclick="mzFromList(\'' + esc(r.user_id) + '\')">' +
+      '<div class="mz-who"><b>' + esc(r.name || ('ID ' + r.user_id)) + '</b>' +
+      '<small>' + r.warns + ' варн. · ' + r.punishments + ' кар' + (r.last_at ? ' · посл. ' + esc(fmtDate(r.last_at)) : '') + '</small></div>' +
+      '<span class="mz-chip' + (r.weight >= 5 ? ' hot' : '') + '">вес ' + r.weight + '</span></div>';
+  }).join('');
+}
+
+function mzFromList(uid) {
+  PICKED = uid;
+  mzTab('dossier');
+  if (OV) renderSubjects();
+  mzDossier(uid);
+}
+
+function renderDossier(ds) {
+  var box = document.getElementById('mzDossier');
+  if (!ds.known) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-ghost"></i><p>Следов не найдено</p><p class="empty-tip">ID ' + esc(ds.user_id) + ' чист.</p></div>';
+    return;
+  }
+  var name = ds.name || ('ID ' + ds.user_id);
+  var html = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+  html += '<span class="mz-chip ok"><i class="fas fa-user"></i> ' + esc(name) + '</span>';
+  html += '<span class="mz-chip' + (ds.warns.count ? ' hot' : '') + '">' + ds.warns.count + ' варн.</span>';
+  html += '<span class="mz-chip">' + ds.stats.punishments + ' кар</span>';
+  if (ds.warns.gap != null) html += '<span class="mz-chip' + (ds.warns.gap === 1 ? ' hot' : '') + '">до «' + esc(ds.warns.action_name) + '»: ' + ds.warns.gap + '</span>';
+  html += '</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">' +
+    '<button class="mz-act" onclick="mzCopy(\'' + esc(ds.user_id) + '\')"><i class="fas fa-copy"></i> ID</button>' +
+    '<a class="mz-act" href="/member-card?user=' + encodeURIComponent(ds.user_id) + '"><i class="fas fa-id-card"></i> Карточка</a>' +
+    '<button class="mz-act" onclick="mzUseInControl(\'' + esc(ds.user_id) + '\')"><i class="fas fa-gavel"></i> Действия</button>' +
+    '</div>';
+  if (ds.temp_active.length) {
+    html += '<div class="mz-sect">Активные статусы</div>' + ds.temp_active.map(function (r) {
+      return '<div class="mz-row tri">' + badge(r.kind_name) +
+        '<div class="mz-who"><b>' + esc(fmtLeft(r.remaining_s)) + '</b>' + (r.reason ? '<small>' + esc(r.reason) + '</small>' : '') + '</div>' +
+        '<span class="mz-time">' + fmtDate(r.until * 1000) + '</span></div>';
+    }).join('');
+  }
+  if (ds.warns.items.length) {
+    html += '<div class="mz-sect">Последние варны</div>' + ds.warns.items.map(function (w) {
+      return '<div class="mz-note">' + esc(w.reason) + '<small>' + esc(w.at) + (w.mod ? ' · ' + esc(w.mod) : '') + '</small></div>';
+    }).join('');
+  }
+  if (ds.amnesty.length) {
+    html += '<div class="mz-sect">Амнистии</div>' + ds.amnesty.map(function (a) {
+      return '<div class="mz-note">Списано ' + a.count + ' ' + plural(a.count, 'варн', 'варна', 'варнов') +
+        '<small>' + esc(a.at) + (a.by ? ' · ' + esc(a.by) : '') + (a.restored_at ? ' · откачена' : '') + '</small></div>';
+    }).join('');
+  }
+  if (ds.timeline.length) {
+    html += '<div class="mz-sect">Таймлайн (' + ds.timeline_total + ')</div>' + ds.timeline.map(function (t) {
+      return '<div class="mz-row tri">' + badge(t.action) +
+        '<div class="mz-who"><b>' + esc(t.reason || 'Без причины') + '</b>' + (t.mod_name ? '<small>' + esc(t.mod_name) + '</small>' : '') + '</div>' +
+        '<span class="mz-time">' + fmtDate(t.at) + '</span></div>';
+    }).join('');
+  }
+  if (ds.notes.length) {
+    html += '<div class="mz-sect">Заметки</div>' + ds.notes.map(function (n) {
+      return '<div class="mz-note">' + esc(n.note) + '<small>' + esc(n.at) + (n.mod ? ' · ' + esc(n.mod) : '') + '</small></div>';
+    }).join('');
+  }
+  box.innerHTML = html;
+}
+
+function mzCopy(uid) {
+  var done = function () { mzNotify('ID скопирован', uid, 'ok', 'fa-copy'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(uid).then(done, function () { mzCopyFb(uid, done); });
+  } else { mzCopyFb(uid, done); }
+}
+function mzCopyFb(uid, done) {
+  var ta = document.createElement('textarea');
+  ta.value = uid; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); }
+  catch (e) { mzNotify('Не удалось скопировать', '', 'err', 'fa-circle-exclamation'); }
+  document.body.removeChild(ta);
+}
+
+function mzUseInControl(uid) {
+  mzTab('control');
+  document.getElementById('mzWarnId').value = uid;
+}
+
+function mzPost(url, obj) {
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj || {}) })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { code: r.status, data: d }; }); });
+}
+
+function mzWarnAsk() {
+  var uid = document.getElementById('mzWarnId').value.trim();
+  var reason = document.getElementById('mzWarnText').value.trim();
+  window.askConfirm('Варн', 'Участник ' + (uid || '—') + ', причина «' + (reason || 'не указана') + '»?', function () {
+    mzPost(API + '/warn', { user_id: uid, reason: reason }).then(function (res) {
+      if (!res.data.success) { mzNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+      document.getElementById('mzWarnText').value = '';
+      mzNotify('Варн выдан', 'Участник ' + uid + ' · всего ' + res.data.total, 'ok', 'fa-gavel');
+      load();
+    });
+  }, { danger: true, okText: 'Выдать', icon_fa: 'fa-gavel' });
+}
+
+function mzUnwarnAsk() {
+  var uid = document.getElementById('mzWarnId').value.trim();
+  window.askConfirm('Снятие варна', 'Снять последний варн ' + (uid || '—') + '?', function () {
+    mzPost(API + '/unwarn', { user_id: uid }).then(function (res) {
+      if (!res.data.success) { mzNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+      mzNotify('Варн снят', 'Осталось: ' + res.data.left, 'ok', 'fa-rotate-left');
+      load();
+    });
+  }, { okText: 'Снять', icon_fa: 'fa-rotate-left' });
+}
+
+function mzAmnestyAsk() {
+  var uid = document.getElementById('mzWarnId').value.trim();
+  window.askConfirm('Амнистия', 'Обнулить все варны ' + (uid || '—') + '? Откат доступен в журнале.', function () {
+    mzPost(API + '/amnesty', { user_id: uid }).then(function (res) {
+      if (!res.data.success) { mzNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+      var aid = res.data.amnesty.id;
+      mzNotify('Амнистия проведена', 'Списано варнов: ' + res.data.amnesty.count, 'ok', 'fa-dove', function () { mzAmnestyUndo(aid); });
+      load();
+    });
+  }, { danger: true, okText: 'Обнулить', icon_fa: 'fa-dove' });
+}
+
+function mzAmnestyUndo(aid) {
+  mzPost(API + '/amnesty/' + aid + '/undo').then(function (res) {
+    if (!res.data.success) { mzNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+    mzNotify('Амнистия откачена', 'Возвращено варнов: ' + res.data.restored, 'ok', 'fa-rotate-left');
+    load();
+  });
+}
+
+function mzReasonAdd() {
+  var inp = document.getElementById('mzReasonText');
+  mzPost(API + '/reasons', { kind: KIND, text: inp.value }).then(function (res) {
+    if (!res.data.success) { mzNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+    inp.value = '';
+    OV.reasons = res.data.reasons;
+    renderReasons();
+    mzNotify('Причина добавлена', '', 'ok', 'fa-bolt');
+  });
+}
+
+function mzReasonDel(id) {
+  mzPost(API + '/reasons/' + KIND + '/' + id + '/delete').then(function (res) {
+    if (!res.data.success) { mzNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+    OV.reasons = res.data.reasons;
+    renderReasons();
+    mzNotify('Причина удалена', '', 'ok', 'fa-xmark');
+  });
+}
+
+function mzDossier(uid) {
+  var box = document.getElementById('mzDossier');
+  box.innerHTML = '<div class="sk-row"></div><div class="sk-row" style="width:60%"></div>';
+  fetch(API + '/dossier?user_id=' + encodeURIComponent(uid)).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-circle-exclamation"></i><p>' + esc(d.error || 'Ошибка') + '</p></div>';
+      return;
+    }
+    PICKED = d.dossier.user_id;
+    if (OV) renderSubjects();
+    renderDossier(d.dossier);
+  }).catch(function () {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-plug-circle-xmark"></i><p>Не загрузилось</p></div>';
+  });
+}
+
+function mzDays(n) { DAYS = n; renderDaysTabs(); load(); }
+
+function load() {
+  fetch(API + '/overview?days=' + DAYS).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    OV = d; CAN = !!d.can_edit;
+    document.getElementById('mzWarnBody').style.display = CAN ? '' : 'none';
+    document.getElementById('mzWarnDenied').style.display = CAN ? 'none' : '';
+    var render = function () {
+      renderHero(d); renderRadar(d); renderRecent(d); renderTrend(d, true);
+      renderRepeat(d); renderCheck(d); renderRisk(); renderReasons();
+      renderAmnesty(d); renderPanelLog(d); renderDaysTabs();
+      renderEffect(d); renderTeam(d); renderSubjects();
+    };
+    if (window.renderSafe) window.renderSafe(render); else render();
+  }).catch(function () {});
+}
+
+(function () {
+  var uid = new URLSearchParams(location.search).get('uid');
+  if (uid) {
+    mzTab('control');
+    document.getElementById('mzWarnId').value = uid;
+  }
+})();
+
+load();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(load, 30000);
+</script>
+{% endblock %}
