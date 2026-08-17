@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}Развлечения — Панель Aether{% endblock %}
+{% block page_title %}Развлечения{% endblock %}
+{% block content %}
+<style>
+.fn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;align-items:start}
+.fn-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:15px 17px}
+.fn-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.fn-panel h3 i{color:var(--ac,#e0b04a)}
+.fn-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:12px;line-height:1.55}
+.fn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fn-inp,.fn-sel{flex:1;min-width:130px;background:var(--surface-2,rgba(255,255,255,.05));border:1px solid var(--line-2,rgba(255,255,255,.12));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.fn-inp:focus,.fn-sel:focus{border-color:var(--ac,#e0b04a)}
+.fn-sel option{background:#1c1f26;color:#eee}
+.fn-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
+.fn-btn:hover{filter:brightness(1.08)}
+.fn-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,rgba(224,176,74,.35))}
+.fn-res{display:none;margin-top:12px;border:1px solid var(--line-2,rgba(255,255,255,.1));border-left:3px solid var(--ac,#e0b04a);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--text-1,#fff);line-height:1.6;word-break:break-word}
+.fn-res.show{display:block}
+.fn-res.fn-tone-ok{border-left-color:#4ade80}
+.fn-res.fn-tone-mid{border-left-color:#f5b74a}
+.fn-res.fn-tone-bad{border-left-color:#ff8a7a}
+.fn-big{font-size:19px;font-weight:800;letter-spacing:.3px}
+.fn-line{font-size:12.5px;color:var(--text-2,rgba(255,255,255,.75));margin-top:4px}
+.fn-line b{color:var(--text-1,#fff)}
+.fn-faces{font-size:30px;line-height:1.2;margin:2px 0 6px}
+.fn-hint{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.5));margin-top:8px}
+.fn-hint.err{color:#ff8a7a}
+.fn-quote{font-style:italic;color:var(--text-2,rgba(255,255,255,.8))}
+.fn-img{display:block;max-width:100%;max-height:320px;border-radius:10px;margin:4px auto 8px}
+[data-theme="light"] .fn-res{color:#222}
+[data-theme="light"] .fn-line{color:#444}
+[data-theme="light"] .fn-line b{color:#111}
+[data-theme="light"] .fn-quote{color:#333}
+[data-theme="light"] .fn-sel option{background:#fff;color:#222}
+</style>
+
+<div class="fn-panel" style="margin-bottom:16px">
+  <h3><i class="fas fa-circle-info"></i> Что здесь и как</h3>
+  <div class="fn-sub" style="margin-bottom:0">Игровые команды бота — с той же логикой и теми же текстами: монетка и кубики,
+    КНБ и магический шар, шутки-цитаты из списков команд, жребий по участникам и галерея картинок.
+    «Угадай число» живёт в памяти бота и остаётся в Discord (/guess-start и /guess) — панель честно не дублирует
+    это состояние. Жребий требует живого бота, галерея — доступа панели в интернет.</div>
+</div>
+
+<div class="fn-grid">
+  <div class="fn-panel">
+    <h3><i class="fas fa-coins"></i> Монетка</h3>
+    <div class="fn-sub">Как /coinflip: прогноз необязателен, а orel/орел/орёл считаются орлом — нормализация та же.</div>
+    <div class="fn-row">
+      <select class="fn-sel" id="fnPick">
+        <option value="">Без прогноза</option>
+        <option value="Орёл">Орёл</option>
+        <option value="Решка">Решка</option>
+      </select>
+      <button class="fn-btn" id="fnCoinGo"><i class="fas fa-play"></i> Подбросить</button>
+    </div>
+    <div class="fn-res" id="fnCoinRes"></div>
+  </div>
+
+  <div class="fn-panel">
+    <h3><i class="fas fa-dice"></i> Кубики</h3>
+    <div class="fn-sub">Как /dice: от 1 до 5 костей; сумма появляется, когда костей больше одной.</div>
+    <div class="fn-row">
+      <input class="fn-inp" id="fnDiceN" type="number" min="1" max="5" value="1" style="max-width:90px">
+      <button class="fn-btn" id="fnDiceGo"><i class="fas fa-play"></i> Бросить</button>
+    </div>
+    <div class="fn-res" id="fnDiceRes"></div>
+  </div>
+
+  <div class="fn-panel">
+    <h3><i class="fas fa-hand-scissors"></i> Камень-ножницы-бумага</h3>
+    <div class="fn-sub">Как /rps: бот выбирает честно случайно, таблица побед — командная.</div>
+    <div class="fn-row">
+      <button class="fn-btn ghost" data-choice="камень"><i class="fas fa-hand-back-fist"></i> Камень</button>
+      <button class="fn-btn ghost" data-choice="бумага"><i class="fas fa-hand"></i> Бумага</button>
+      <button class="fn-btn ghost" data-choice="ножницы"><i class="fas fa-hand-scissors"></i> Ножницы</button>
+    </div>
+    <div class="fn-res" id="fnRpsRes"></div>
+  </div>
+
+  <div class="fn-panel">
+    <h3><i class="fas fa-circle-question"></i> Магический шар</h3>
+    <div class="fn-sub">Как /8ball: двенадцать ответов, тон ответа — как цвет эмбеда команды.</div>
+    <div class="fn-row">
+      <input class="fn-inp" id="fnBallQ" placeholder="Твой вопрос…" maxlength="200">
+      <button class="fn-btn" id="fnBallGo"><i class="fas fa-play"></i> Спросить</button>
+    </div>
+    <div class="fn-res" id="fnBallRes"></div>
+  </div>
+
+  <div class="fn-panel">
+    <h3><i class="fas fa-comment-dots"></i> Шутки и цитаты</h3>
+    <div class="fn-sub">Списки команд !joke и !quote без изменений — те же десять шуток и двенадцать цитат.</div>
+    <div class="fn-row">
+      <button class="fn-btn" id="fnJokeGo"><i class="fas fa-face-laugh"></i> Шутку</button>
+      <button class="fn-btn ghost" id="fnQuoteGo"><i class="fas fa-quote-left"></i> Цитату</button>
+    </div>
+    <div class="fn-res" id="fnTextRes"></div>
+  </div>
+
+  <div class="fn-panel">
+    <h3><i class="fas fa-user-check"></i> Жребий</h3>
+    <div class="fn-sub">Как /random-member: боты не участвуют, фильтр по роли — тот же. Нужен живой бот.</div>
+    <div class="fn-row">
+      <select class="fn-sel" id="fnRole"><option value="">Все участники</option></select>
+      <button class="fn-btn" id="fnMemberGo"><i class="fas fa-dice-d20"></i> Тянуть</button>
+    </div>
+    <div class="fn-hint" id="fnMemberHint">Загружаю роли…</div>
+    <div class="fn-res" id="fnMemberRes"></div>
+  </div>
+
+  <div class="fn-panel">
+    <h3><i class="fas fa-image"></i> Галерея</h3>
+    <div class="fn-sub">Как !meme / !cat / !dog — те же внешние сервисы и те же тексты при сбое.</div>
+    <div class="fn-row">
+      <button class="fn-btn" id="fnMemeGo"><i class="fas fa-face-grin-squint"></i> Мем</button>
+      <button class="fn-btn ghost" id="fnCatGo"><i class="fas fa-cat"></i> Кот</button>
+      <button class="fn-btn ghost" id="fnDogGo"><i class="fas fa-dog"></i> Собака</button>
+    </div>
+    <div class="fn-res" id="fnGal">
+      <img class="fn-img" id="fnGalImg" alt="Картинка из галереи">
+      <div class="fn-line" id="fnGalCap"></div>
+    </div>
+    <div class="fn-res" id="fnGalMsg"></div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/fun';
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;'); }
+
+function setRes(id, html, tone) {
+  var box = document.getElementById(id);
+  box.className = 'fn-res show' + (tone ? ' fn-tone-' + tone : '');
+  box.innerHTML = html;
+}
+
+function post(path, body, resId, onOk) {
+  fetch(API + path, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body || {})
+  })
+    .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+    .then(function (res) {
+      if (!res.d.success) { setRes(resId, '<b>' + esc(res.d.error || 'Ошибка') + '</b>', 'bad'); return; }
+      onOk(res.d);
+    })
+    .catch(function () { setRes(resId, '<b>Сеть моргнула — попробуйте ещё раз</b>', 'bad'); });
+}
+
+document.getElementById('fnCoinGo').onclick = function () {
+  var pick = document.getElementById('fnPick').value;
+  post('/coinflip', {pick: pick || null}, 'fnCoinRes', function (d) {
+    var html = '<div class="fn-big">' + esc(d.result) + '</div>';
+    if (d.guessed) {
+      html += '<div class="fn-line">Твой прогноз: <b>' + esc(d.pick || '?') + '</b> — ' + esc(d.status) + '</div>';
+    }
+    setRes('fnCoinRes', html, d.guessed ? (d.correct ? 'ok' : 'bad') : '');
+  });
+};
+
+document.getElementById('fnDiceGo').onclick = function () {
+  var n = document.getElementById('fnDiceN').value;
+  post('/dice', {count: n}, 'fnDiceRes', function (d) {
+    var html = '<div class="fn-faces">' + esc(d.faces) + '</div>';
+    html += '<div class="fn-line">Выпало: <b>' + d.results.join(' | ') + '</b></div>';
+    if (d.total !== null) {
+      html += '<div class="fn-line">Сумма: <b>' + d.total + '</b></div>';
+    }
+    setRes('fnDiceRes', html, '');
+  });
+};
+
+Array.prototype.forEach.call(document.querySelectorAll('[data-choice]'), function (btn) {
+  btn.onclick = function () {
+    post('/rps', {choice: btn.getAttribute('data-choice')}, 'fnRpsRes', function (d) {
+      var html = '<div class="fn-line">Ты: <b>' + esc(d.choice_emoji) + ' ' + esc(d.choice_name) + '</b> · Бот: <b>' +
+        esc(d.bot_emoji) + ' ' + esc(d.bot_name) + '</b></div>';
+      html += '<div class="fn-big">' + esc(d.result) + '</div>';
+      var tone = d.outcome === 'win' ? 'ok' : d.outcome === 'draw' ? 'mid' : 'bad';
+      setRes('fnRpsRes', html, tone);
+    });
+  };
+});
+
+function askBall() {
+  var q = document.getElementById('fnBallQ').value.trim();
+  post('/eightball', {question: q}, 'fnBallRes', function (d) {
+    var html = '<div class="fn-quote">&laquo;' + esc(d.question) + '&raquo;</div>';
+    html += '<div class="fn-big">' + esc(d.answer) + '</div>';
+    var tone = d.tone === 'yes' ? 'ok' : d.tone === 'maybe' ? 'mid' : 'bad';
+    setRes('fnBallRes', html, tone);
+  });
+}
+document.getElementById('fnBallGo').onclick = askBall;
+document.getElementById('fnBallQ').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') { askBall(); }
+});
+
+document.getElementById('fnJokeGo').onclick = function () {
+  post('/joke', {}, 'fnTextRes', function (d) {
+    setRes('fnTextRes', '<div class="fn-line">' + esc(d.text) + '</div><div class="fn-hint">' + esc(d.footer) + '</div>', '');
+  });
+};
+document.getElementById('fnQuoteGo').onclick = function () {
+  post('/quote', {}, 'fnTextRes', function (d) {
+    setRes('fnTextRes', '<div class="fn-quote">&laquo;' + esc(d.text) + '&raquo;</div>', '');
+  });
+};
+
+function loadRoles() {
+  var hint = document.getElementById('fnMemberHint');
+  fetch(API + '/roles')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success) {
+        hint.textContent = d.error || 'Ошибка загрузки ролей';
+        hint.className = 'fn-hint err';
+        return;
+      }
+      var sel = document.getElementById('fnRole');
+      d.roles.forEach(function (r) {
+        var o = document.createElement('option');
+        o.value = r.id;
+        o.textContent = r.name;
+        sel.appendChild(o);
+      });
+      hint.textContent = 'Ролей доступно: ' + d.roles.length;
+      hint.className = 'fn-hint';
+    })
+    .catch(function () {
+      hint.textContent = 'Сеть моргнула — попробуйте ещё раз';
+      hint.className = 'fn-hint err';
+    });
+}
+loadRoles();
+
+document.getElementById('fnMemberGo').onclick = function () {
+  var roleId = document.getElementById('fnRole').value;
+  post('/random-member', {role_id: roleId || null}, 'fnMemberRes', function (d) {
+    var html = '<div class="fn-big">' + esc(d.member.name) + '</div>';
+    html += '<div class="fn-line">ID: ' + esc(d.member.id) + ' · Кандидатов: <b>' + d.candidates + '</b></div>';
+    if (d.role) {
+      html += '<div class="fn-line">Фильтр роли: <b>' + esc(d.role.name) + '</b></div>';
+    }
+    setRes('fnMemberRes', html, 'ok');
+  });
+};
+
+function gallery(kind) {
+  document.getElementById('fnGal').className = 'fn-res';
+  fetch(API + '/gallery', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({kind: kind})
+  })
+    .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+    .then(function (res) {
+      var msg = document.getElementById('fnGalMsg');
+      if (!res.d.success) {
+        setRes('fnGalMsg', '<b>' + esc(res.d.error || 'Ошибка') + '</b>', 'bad');
+        return;
+      }
+      var d = res.d;
+      msg.className = 'fn-res';
+      var cap = d.kind === 'meme'
+        ? esc(d.title) + ' — r/' + esc(d.subreddit) + ' · лайков: ' + d.ups
+        : esc(d.text || '');
+      var gal = document.getElementById('fnGal');
+      gal.innerHTML = '<img class="fn-img" id="fnGalImg" src="' + esc(d.image) + '" alt="Картинка из галереи">' +
+        '<div class="fn-line" id="fnGalCap">' + cap + '</div>';
+      gal.className = 'fn-res show fn-tone-ok';
+    })
+    .catch(function () { setRes('fnGalMsg', '<b>Сеть моргнула — попробуйте ещё раз</b>', 'bad'); });
+}
+document.getElementById('fnMemeGo').onclick = function () { gallery('meme'); };
+document.getElementById('fnCatGo').onclick = function () { gallery('cat'); };
+document.getElementById('fnDogGo').onclick = function () { gallery('dog'); };
+</script>
+{% endblock %}

@@ -5,9 +5,130 @@ from discord.ext import commands
 from discord import app_commands
 import random
 from cogs.embed_utils import _divider
-from config import Config 
+from config import Config
 
 _DICE = {1: "⚀", 2: "⚁", 3: "⚂", 4: "⚃", 5: "⚄", 6: "⚅"}
+
+COIN_SIDES = ('Орёл', 'Решка')
+
+RPS_CHOICES = ['камень', 'бумага', 'ножницы']
+RPS_EMOJIS = {'камень': '🪨', 'бумага': '📄', 'ножницы': '✂️'}
+RPS_NAMES = {'камень': 'Камень', 'бумага': 'Бумага', 'ножницы': 'Ножницы'}
+RPS_WINS = {'камень': 'ножницы', 'бумага': 'камень', 'ножницы': 'бумага'}
+RPS_RESULTS = {
+    'draw': ('Ничья!', 0xF39C12),
+    'win': ('Победа!', 0x2ECC71),
+    'lose': ('Поражение!', 0xE74C3C),
+}
+
+EIGHT_BALL = [
+    ('Определённо да!', 0x2ECC71),
+    ('Да, так и есть.', 0x2ECC71),
+    ('Скорее всего да.', 0x2ECC71),
+    ('Можешь верить.', 0x2ECC71),
+    ('Пока трудно сказать.', 0xF39C12),
+    ('Спроси ещё раз.', 0xF39C12),
+    ('Сейчас не могу ответить.', 0xF39C12),
+    ('Сосредоточься и спроси снова.', 0xF39C12),
+    ('Не думаю.', 0xE74C3C),
+    ('Нет.', 0xE74C3C),
+    ('Определённо нет.', 0xE74C3C),
+    ('Судя по всему, нет.', 0xE74C3C),
+]
+EIGHT_BALL_TONES = {0x2ECC71: 'yes', 0xF39C12: 'maybe', 0xE74C3C: 'no'}
+
+
+def norm_coin_pick(pick):
+    """Нормализация прогноза 1:1 команде /coinflip."""
+    if not pick:
+        return None
+    norm = str(pick).lower().strip()
+    if norm in ('орёл', 'orel', 'орел'):
+        return 'Орёл'
+    if norm in ('решка', 'reshka'):
+        return 'Решка'
+    return None
+
+
+def flip_coin(pick=None, chooser=None):
+    """Подброс монетки 1:1 /coinflip (chooser — только для тестов)."""
+    choose = chooser or random.choice
+    result = choose(list(COIN_SIDES))
+    user_pick = norm_coin_pick(pick)
+    return {
+        'result': result,
+        'pick': user_pick,
+        'guessed': bool(pick),
+        'correct': user_pick is not None and user_pick == result,
+    }
+
+
+def roll_dice(count=1, randint=None):
+    """Бросок костей 1:1 /dice: кламп 1..5, сумма — только при n>1."""
+    rnd = randint or random.randint
+    n = max(1, min(5, int(count)))
+    results = [rnd(1, 6) for _ in range(n)]
+    return {
+        'count': n,
+        'results': results,
+        'faces': ' '.join(_DICE[r] for r in results),
+        'total': sum(results) if n > 1 else None,
+    }
+
+
+def play_rps(choice, chooser=None):
+    """Партия 1:1 /rps; choice обязан быть из RPS_CHOICES (как Discord choices)."""
+    if choice not in RPS_CHOICES:
+        raise ValueError(f'unknown rps choice: {choice!r}')
+    choose = chooser or random.choice
+    bot_choice = choose(RPS_CHOICES)
+    if choice == bot_choice:
+        outcome = 'draw'
+    elif RPS_WINS[choice] == bot_choice:
+        outcome = 'win'
+    else:
+        outcome = 'lose'
+    result, color = RPS_RESULTS[outcome]
+    return {
+        'choice': choice,
+        'bot_choice': bot_choice,
+        'outcome': outcome,
+        'result': result,
+        'color': color,
+        'choice_name': RPS_NAMES[choice],
+        'bot_name': RPS_NAMES[bot_choice],
+        'choice_emoji': RPS_EMOJIS[choice],
+        'bot_emoji': RPS_EMOJIS[bot_choice],
+    }
+
+
+def ask_8ball(question, chooser=None):
+    """Ответ магического шара 1:1 /8ball — те же 12 ответов и цвета."""
+    choose = chooser or random.choice
+    answer, color = choose(EIGHT_BALL)
+    return {
+        'question': str(question or '').strip(),
+        'answer': answer,
+        'color': color,
+        'tone': EIGHT_BALL_TONES[color],
+    }
+
+
+def member_candidates(guild, role=None):
+    """Отбор кандидатов 1:1 /random-member: без ботов, опционально по роли."""
+    members = [m for m in guild.members if not m.bot]
+    if role is not None:
+        members = [m for m in members if role in m.roles]
+    return members
+
+
+def pick_random_member(guild, role=None, chooser=None):
+    """(кандидаты, выбранный); выбранный None, если кандидатов нет."""
+    candidates = member_candidates(guild, role)
+    if not candidates:
+        return candidates, None
+    choose = chooser or random.choice
+    return candidates, choose(candidates)
 
 
 class MiniGames(commands.Cog):
@@ -21,7 +142,8 @@ class MiniGames(commands.Cog):
     @app_commands.command(name='coinflip', description='Подбросить монету')
     async def coin_flip(self, interaction: discord.Interaction, выбор: str = None):
         """Подбросить монету — угадаешь, победишь"""
-        result = random.choice(['Орёл', 'Решка'])
+        game = flip_coin(выбор)
+        result = game['result']
         e = discord.Embed(title="🪙 Монетка", color=0xF1C40F, timestamp=datetime.now(timezone.utc))
         e.description = (
             f"```ansi\n\u001b[1;33m МОНЕТА ПОДБРОШЕНА\u001b[0m\n```\n{_divider()}\n\n"
@@ -29,12 +151,9 @@ class MiniGames(commands.Cog):
         )
         e.add_field(name="Результат", value=f"```{result}```", inline=True)
         if выбор:
-            norm = выбор.lower().strip()
-            user_pick = 'Орёл' if norm in ['орёл', 'orel', 'орел'] else 'Решка' if norm in ['решка', 'reshka'] else None
-            correct = user_pick is not None and user_pick == result
             e.add_field(name="Твой выбор", value=f"```{выбор.capitalize()}```", inline=True)
-            e.add_field(name="Статус", value=f"```{'✅ Верно!' if correct else '❌ Неверно!'}```", inline=True)
-            e.color = 0x2ECC71 if correct else 0xE74C3C
+            e.add_field(name="Статус", value=f"```{'✅ Верно!' if game['correct'] else '❌ Неверно!'}```", inline=True)
+            e.color = 0x2ECC71 if game['correct'] else 0xE74C3C
         e.set_footer(text=f"Просил: {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=e)
 
@@ -42,16 +161,16 @@ class MiniGames(commands.Cog):
     @app_commands.describe(количество='Сколько костей (1-5)')
     async def roll_dice(self, interaction: discord.Interaction, количество: int = 1):
         """Бросить кость — от 1 до 5 костей"""
-        n = max(1, min(5, количество))
-        results = [random.randint(1, 6) for _ in range(n)]
+        game = roll_dice(количество)
+        results = game['results']
         e = discord.Embed(title="🎲 Бросок кости!", color=0x9B59B6, timestamp=datetime.now(timezone.utc))
         e.description = (
             f"```ansi\n\u001b[1;35m РЕЗУЛЬТАТ КОСТИ\u001b[0m\n```\n{_divider()}\n\n"
-            f"# {' '.join(_DICE[r] for r in results)}\n\n{_divider()}"
+            f"# {game['faces']}\n\n{_divider()}"
         )
         e.add_field(name="Результат", value=f"```{' | '.join(str(r) for r in results)}```", inline=True)
-        if n > 1:
-            e.add_field(name="Сумма", value=f"```{sum(results)}```", inline=True)
+        if game['count'] > 1:
+            e.add_field(name="Сумма", value=f"```{game['total']}```", inline=True)
         e.set_footer(text=f"Просил: {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=e)
 
@@ -63,22 +182,14 @@ class MiniGames(commands.Cog):
     ])
     async def rps(self, interaction: discord.Interaction, выбор: str):
         """Камень-ножницы-бумага против бота"""
-        choices = ['камень', 'бумага', 'ножницы']
-        emojis = {'камень': '🪨', 'бумага': '📄', 'ножницы': '✂️'}
-        names = {'камень': 'Камень', 'бумага': 'Бумага', 'ножницы': 'Ножницы'}
-        bot_choice = random.choice(choices)
-        wins = {'камень': 'ножницы', 'бумага': 'камень', 'ножницы': 'бумага'}
-        if выбор == bot_choice:
-            result, color, badge, ansi = 'Ничья!', 0xF39C12, "НИЧЬЯ", "\u001b[1;33m"
-        elif wins[выбор] == bot_choice:
-            result, color, badge, ansi = 'Победа!', 0x2ECC71, "ПОБЕДА", "\u001b[1;32m"
-        else:
-            result, color, badge, ansi = 'Поражение!', 0xE74C3C, "ПОРАЖЕНИЕ", "\u001b[1;31m"
-        e = discord.Embed(title="🪨📄✂️ Камень-ножницы-бумага", color=color, timestamp=datetime.now(timezone.utc))
+        game = play_rps(выбор)
+        badge = {'draw': 'НИЧЬЯ', 'win': 'ПОБЕДА', 'lose': 'ПОРАЖЕНИЕ'}[game['outcome']]
+        ansi = {'draw': '\u001b[1;33m', 'win': '\u001b[1;32m', 'lose': '\u001b[1;31m'}[game['outcome']]
+        e = discord.Embed(title="🪨📄✂️ Камень-ножницы-бумага", color=game['color'], timestamp=datetime.now(timezone.utc))
         e.description = f"```ansi\n{ansi}{badge}\u001b[0m\n```\n{_divider()}"
-        e.add_field(name="Твой выбор", value=f"# {emojis[выбор]} {names[выбор]}", inline=True)
-        e.add_field(name="Выбор бота", value=f"# {emojis[bot_choice]} {names[bot_choice]}", inline=True)
-        e.add_field(name="Результат", value=f"```{result}```", inline=False)
+        e.add_field(name="Твой выбор", value=f"# {game['choice_emoji']} {game['choice_name']}", inline=True)
+        e.add_field(name="Выбор бота", value=f"# {game['bot_emoji']} {game['bot_name']}", inline=True)
+        e.add_field(name="Результат", value=f"```{game['result']}```", inline=False)
         e.set_footer(text=f"Просил: {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=e)
 
@@ -143,38 +254,21 @@ class MiniGames(commands.Cog):
     @app_commands.describe(вопрос='Твой вопрос')
     async def magic_8ball(self, interaction: discord.Interaction, вопрос: str):
         """Магический шар — отвечает на вопросы да/нет"""
-        responses = [
-            ('Определённо да!', 0x2ECC71),
-            ('Да, так и есть.', 0x2ECC71),
-            ('Скорее всего да.', 0x2ECC71),
-            ('Можешь верить.', 0x2ECC71),
-            ('Пока трудно сказать.', 0xF39C12),
-            ('Спроси ещё раз.', 0xF39C12),
-            ('Сейчас не могу ответить.', 0xF39C12),
-            ('Сосредоточься и спроси снова.', 0xF39C12),
-            ('Не думаю.', 0xE74C3C),
-            ('Нет.', 0xE74C3C),
-            ('Определённо нет.', 0xE74C3C),
-            ('Судя по всему, нет.', 0xE74C3C),
-        ]
-        answer, color = random.choice(responses)
-        e = discord.Embed(title="🎱 Магический шар", color=color, timestamp=datetime.now(timezone.utc))
+        game = ask_8ball(вопрос)
+        e = discord.Embed(title="🎱 Магический шар", color=game['color'], timestamp=datetime.now(timezone.utc))
         e.description = f"```ansi\n\u001b[1;35m ОТВЕТ ПОЯВЛЯЕТСЯ...\u001b[0m\n```\n{_divider()}"
         e.add_field(name="Вопрос", value=f"*{вопрос}*", inline=False)
-        e.add_field(name="Ответ", value=f"```{answer}```", inline=False)
+        e.add_field(name="Ответ", value=f"```{game['answer']}```", inline=False)
         e.set_footer(text=f"Просил: {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
         await interaction.response.send_message(embed=e)
 
     @app_commands.command(name='random-member', description='Выбрать случайного участника сервера')
     async def random_member(self, interaction: discord.Interaction, роль: discord.Role = None):
         """Выбрать случайного участника (можно с фильтром по роли)"""
-        members = [m for m in interaction.guild.members if not m.bot]
-        if роль:
-            members = [m for m in members if роль in m.roles]
-        if not members:
+        members, выбранный = pick_random_member(interaction.guild, роль)
+        if выбранный is None:
             await interaction.response.send_message('Подходящих участников не найдено!', ephemeral=True)
             return
-        выбранный = random.choice(members)
         e = discord.Embed(title="🎯 Случайный участник выбран!", color=0xDC143C, timestamp=datetime.now(timezone.utc))
         e.description = (
             f"```ansi\n\u001b[1;31m ВЫБОР СДЕЛАН\u001b[0m\n```\n{_divider()}\n\n"
