@@ -7,109 +7,212 @@
 
 <style>
 /* ════════════════════════════════════════════════════════════
-   ЖУРНАЛ МОДЕРАЦИИ — новая лента. Карточки статистики, живые
-   фильтры-чипсы и таймлайн событий вместо таблицы.
+   ЖУРНАЛ МОДЕРАЦИИ · PREMIUM. Утончённый командный центр:
+   градиентный фон-сетка, стеклянные карточки с внутренним
+   свечением, градиентная типографика, палитра индиго.
    ════════════════════════════════════════════════════════════ */
-.lg-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:18px;margin:6px 0 30px}
-.lg-stat{position:relative;display:flex;align-items:center;gap:16px;background:var(--surface-2,rgba(255,255,255,.02));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:18px;padding:20px 22px;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
-.lg-stat:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(15,18,30,.10);border-color:var(--ac-line,rgba(224,176,74,.25))}
-.lg-stat .ic{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:19px;flex:none}
-.lg-stat b{display:block;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
-.lg-stat span{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.42));margin-top:5px}
-.lg-stat.total .ic{background:rgba(124,108,240,.13);color:#8f84f0}
-.lg-stat.ban .ic{background:rgba(242,109,95,.13);color:#f26d5f}
-.lg-stat.kick .ic{background:rgba(242,130,60,.13);color:#f2823c}
-.lg-stat.warn .ic{background:rgba(242,163,60,.13);color:#f2a33c}
-.lg-stat.mute .ic{background:rgba(91,155,240,.13);color:#5b9bf0}
+body.mz-skin.lg-scope .main-content{position:relative}
 
-/* Панель фильтров */
-.lg-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--surface-2,rgba(255,255,255,.02));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:16px;padding:16px 18px;margin-bottom:26px;position:sticky;top:74px;z-index:25;backdrop-filter:blur(12px)}
-.lg-search{flex:1;min-width:220px;position:relative}
-.lg-search i{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--text-3,rgba(255,255,255,.4));font-size:14px}
-.lg-search input{width:100%;padding:12px 16px 12px 42px;border-radius:12px;border:1px solid var(--line-2,rgba(255,255,255,.1));background:transparent;color:var(--text,#fff);font-size:13.5px}
-.lg-search input:focus{outline:none;border-color:var(--ac-line,rgba(224,176,74,.4));box-shadow:0 0 0 3px var(--ac-soft,rgba(224,176,74,.1))}
+/* Премиум палитра */
+.lg-wrap{
+  --p-ind:#7c74f4; --p-ind2:#a78bfa; --p-vio:#8b6cf0;
+  --p-rose:#f4655f; --p-org:#f2823c; --p-amb:#f0a33c; --p-sky:#4f8df5; --p-mint:#33b07d;
+  --p-glass:rgba(255,255,255,.035);
+  --p-glass2:rgba(255,255,255,.06);
+  --p-line:rgba(255,255,255,.09);
+  --p-line2:rgba(255,255,255,.14);
+  --p-txt:rgba(240,241,248,.94);
+  --p-txt2:rgba(240,241,248,.6);
+  --p-txt3:rgba(240,241,248,.4);
+  position:relative;
+  margin:-12px -6px 0;
+  padding:26px 18px 40px;
+  border-radius:24px;
+  background:
+    radial-gradient(900px 420px at 14% -8%, rgba(124,116,244,.16), transparent 60%),
+    radial-gradient(760px 400px at 96% 2%, rgba(139,108,240,.12), transparent 62%),
+    radial-gradient(700px 380px at 50% 112%, rgba(79,141,245,.08), transparent 65%);
+}
+[data-theme="light"] .lg-wrap{
+  --p-glass:rgba(255,255,255,.72); --p-glass2:rgba(255,255,255,.9);
+  --p-line:rgba(24,26,40,.09); --p-line2:rgba(24,26,40,.14);
+  --p-txt:#191b26; --p-txt2:rgba(25,27,38,.62); --p-txt3:rgba(25,27,38,.42);
+  background:
+    radial-gradient(900px 420px at 14% -8%, rgba(124,116,244,.12), transparent 60%),
+    radial-gradient(760px 400px at 96% 2%, rgba(139,108,240,.09), transparent 62%);
+}
+/* тонкая сетка поверх фона */
+.lg-wrap::before{content:"";position:absolute;inset:0;border-radius:24px;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:42px 42px;mask-image:linear-gradient(180deg,rgba(0,0,0,.5),transparent 70%);}
+[data-theme="light"] .lg-wrap::before{background-image:linear-gradient(rgba(24,26,40,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(24,26,40,.035) 1px,transparent 1px)}
+
+/* ── Шапка ─────────────────────────────────────────────────── */
+.lg-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin:6px 4px 30px;position:relative;z-index:1}
+.lg-title{display:flex;align-items:center;gap:18px}
+.lg-mark{width:56px;height:56px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:23px;color:#fff;flex:none;
+  background:linear-gradient(140deg,var(--p-ind),var(--p-vio));
+  box-shadow:0 10px 26px rgba(124,116,244,.4), inset 0 1px 0 rgba(255,255,255,.3)}
+.lg-kicker{display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--p-txt3);margin-bottom:7px}
+.lg-live{display:inline-flex;align-items:center;gap:6px;color:var(--p-mint);letter-spacing:.14em}
+.lg-live i{width:7px;height:7px;border-radius:50%;background:var(--p-mint);box-shadow:0 0 0 0 rgba(51,176,125,.5);animation:lgPulse 2s infinite}
+@keyframes lgPulse{0%{box-shadow:0 0 0 0 rgba(51,176,125,.45)}70%{box-shadow:0 0 0 7px rgba(51,176,125,0)}100%{box-shadow:0 0 0 0 rgba(51,176,125,0)}}
+.lg-h1{font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.1;color:var(--p-txt);margin:0;
+  background:linear-gradient(120deg,var(--p-txt),var(--p-ind2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lg-sub{font-size:13px;color:var(--p-txt3);margin-top:7px;max-width:520px}
+.lg-head-actions{display:flex;gap:10px}
+.lg-btn{display:inline-flex;align-items:center;gap:9px;font-size:12.5px;font-weight:700;color:var(--p-txt);
+  background:var(--p-glass2);border:1px solid var(--p-line2);border-radius:13px;padding:12px 18px;text-decoration:none;
+  backdrop-filter:blur(10px);transition:transform .16s ease,border-color .16s ease,background .16s ease}
+.lg-btn:hover{transform:translateY(-2px);border-color:var(--p-ind2);background:rgba(124,116,244,.12)}
+.lg-btn.pri{background:linear-gradient(120deg,var(--p-ind),var(--p-vio));border-color:transparent;color:#fff;box-shadow:0 8px 20px rgba(124,116,244,.35)}
+.lg-btn.pri:hover{filter:brightness(1.08)}
+
+/* ── Статистика ────────────────────────────────────────────── */
+.lg-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px;margin:0 0 28px;position:relative;z-index:1}
+.lg-stat{position:relative;display:flex;align-items:center;gap:17px;border-radius:20px;padding:22px 22px;overflow:hidden;
+  background:linear-gradient(160deg,var(--p-glass2),var(--p-glass));border:1px solid var(--p-line);
+  backdrop-filter:blur(14px);transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}
+.lg-stat::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent)}
+.lg-stat::after{content:"";position:absolute;right:-34px;top:-34px;width:110px;height:110px;border-radius:50%;
+  background:radial-gradient(circle,var(--p-glow,rgba(124,116,244,.14)),transparent 70%)}
+.lg-stat:hover{transform:translateY(-4px);border-color:var(--p-line2);box-shadow:0 16px 34px rgba(10,12,24,.22)}
+.lg-stat .ic{width:50px;height:50px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;flex:none;
+  background:linear-gradient(140deg,var(--p-ga),var(--p-gb));box-shadow:0 7px 16px var(--p-glow,rgba(0,0,0,.2)),inset 0 1px 0 rgba(255,255,255,.28)}
+.lg-stat b{display:block;font-size:29px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;
+  background:linear-gradient(150deg,var(--p-txt),var(--p-gb));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lg-stat span{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--p-txt3);margin-top:7px}
+.lg-stat.total{--p-ga:#7c74f4;--p-gb:#a78bfa;--p-glow:rgba(124,116,244,.2)}
+.lg-stat.ban{--p-ga:#f4655f;--p-gb:#f28a7a;--p-glow:rgba(244,101,95,.2)}
+.lg-stat.kick{--p-ga:#f2823c;--p-gb:#f5a468;--p-glow:rgba(242,130,60,.2)}
+.lg-stat.warn{--p-ga:#f0a33c;--p-gb:#f5c46e;--p-glow:rgba(240,163,60,.2)}
+.lg-stat.mute{--p-ga:#4f8df5;--p-gb:#7fb1f8;--p-glow:rgba(79,141,245,.2)}
+
+/* ── Панель фильтров ───────────────────────────────────────── */
+.lg-bar{display:flex;align-items:center;gap:13px;flex-wrap:wrap;position:sticky;top:74px;z-index:25;
+  background:linear-gradient(160deg,var(--p-glass2),var(--p-glass));border:1px solid var(--p-line);
+  border-radius:18px;padding:15px 16px;margin-bottom:26px;backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(10,12,24,.14)}
+.lg-search{flex:1;min-width:230px;position:relative}
+.lg-search i{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--p-txt3);font-size:14px}
+.lg-search input{width:100%;padding:13px 16px 13px 44px;border-radius:13px;border:1px solid var(--p-line);
+  background:rgba(255,255,255,.02);color:var(--p-txt);font-size:13.5px;transition:border-color .15s,box-shadow .15s}
+[data-theme="light"] .lg-search input{background:rgba(255,255,255,.8)}
+.lg-search input::placeholder{color:var(--p-txt3)}
+.lg-search input:focus{outline:none;border-color:var(--p-ind2);box-shadow:0 0 0 3px rgba(124,116,244,.16)}
 .lg-chips{display:flex;gap:8px;flex-wrap:wrap}
-.lg-chip{border:1px solid var(--line-2,rgba(255,255,255,.12));background:transparent;color:var(--text-2,rgba(255,255,255,.6));border-radius:99px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s ease;display:inline-flex;align-items:center;gap:7px}
-.lg-chip:hover{border-color:var(--ac-line,rgba(224,176,74,.35));color:var(--text,#fff)}
-.lg-chip.on{background:linear-gradient(120deg,var(--ac,#e0b04a),var(--ac-2,#f0cd7a));border-color:transparent;color:#1c1a12;font-weight:700;box-shadow:0 4px 12px var(--ac-glow,rgba(224,176,74,.25))}
-.lg-guild{padding:11px 14px;border-radius:12px;border:1px solid var(--line-2,rgba(255,255,255,.1));background:transparent;color:var(--text,#fff);font-size:13px;cursor:pointer}
+.lg-chip{border:1px solid var(--p-line);background:rgba(255,255,255,.02);color:var(--p-txt2);border-radius:99px;
+  padding:9px 16px;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  transition:all .16s ease}
+.lg-chip:hover{border-color:var(--p-ind2);color:var(--p-txt)}
+.lg-chip.on{background:linear-gradient(120deg,var(--p-ind),var(--p-vio));border-color:transparent;color:#fff;
+  font-weight:700;box-shadow:0 6px 16px rgba(124,116,244,.35)}
+.lg-guild{padding:12px 15px;border-radius:13px;border:1px solid var(--p-line);background:rgba(255,255,255,.02);color:var(--p-txt);font-size:13px;cursor:pointer}
+[data-theme="light"] .lg-guild{background:rgba(255,255,255,.8)}
+.lg-count{margin-left:auto;font-size:12px;font-weight:700;color:var(--p-txt2);background:rgba(255,255,255,.03);
+  border:1px solid var(--p-line);border-radius:99px;padding:7px 15px;font-variant-numeric:tabular-nums}
+[data-theme="light"] .lg-count{background:rgba(255,255,255,.7)}
 
-/* Лента событий */
-.lg-feed{display:flex;flex-direction:column;gap:14px}
-.lg-item{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;background:var(--surface-2,rgba(255,255,255,.02));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:16px;padding:18px 22px 18px 26px;overflow:hidden;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;animation:lgIn .35s cubic-bezier(.22,1,.36,1) both}
-.lg-item:hover{transform:translateX(4px);box-shadow:0 8px 24px rgba(15,18,30,.09);border-color:var(--ac-line,rgba(224,176,74,.22))}
-.lg-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--lg-c,var(--ac,#e0b04a))}
-@keyframes lgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.lg-ava{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff;background:var(--lg-c,var(--ac,#e0b04a));flex:none}
+/* ── Лента ─────────────────────────────────────────────────── */
+.lg-feed{display:flex;flex-direction:column;gap:14px;position:relative;z-index:1}
+.lg-item{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:17px;align-items:center;overflow:hidden;
+  background:linear-gradient(160deg,var(--p-glass2),var(--p-glass));border:1px solid var(--p-line);
+  border-radius:18px;padding:18px 22px 18px 28px;backdrop-filter:blur(12px);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:lgIn .4s cubic-bezier(.22,1,.36,1) both}
+.lg-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--lg-c),transparent 140%)}
+.lg-item::after{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+.lg-item:hover{transform:translateY(-3px);border-color:var(--p-line2);box-shadow:0 14px 32px rgba(10,12,24,.2);border-left-color:var(--lg-c)}
+@keyframes lgIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.lg-ava{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;flex:none;
+  background:linear-gradient(140deg,var(--lg-c),var(--lg-c2,var(--lg-c)));box-shadow:0 6px 14px var(--lg-glow,rgba(0,0,0,.2)),inset 0 1px 0 rgba(255,255,255,.26)}
 .lg-main{min-width:0}
-.lg-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.lg-user{font-size:14.5px;font-weight:700;color:var(--text,#fff)}
-.lg-act{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:99px;color:#fff;background:var(--lg-c,var(--ac,#e0b04a))}
-.lg-reason{font-size:12.5px;color:var(--text-2,rgba(255,255,255,.6));margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lg-meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-3,rgba(255,255,255,.4));margin-top:6px}
+.lg-top{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.lg-user{font-size:15px;font-weight:700;color:var(--p-txt)}
+.lg-act{font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:5px 11px;border-radius:99px;color:#fff;
+  background:linear-gradient(120deg,var(--lg-c),var(--lg-c2,var(--lg-c)));box-shadow:0 3px 9px var(--lg-glow,rgba(0,0,0,.18))}
+.lg-reason{font-size:13px;color:var(--p-txt2);margin-top:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lg-meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--p-txt3);margin-top:8px}
 .lg-meta i{font-size:10px}
 .lg-side{text-align:right;flex:none}
-.lg-time{font-size:12px;font-weight:600;color:var(--text-2,rgba(255,255,255,.6));font-variant-numeric:tabular-nums}
-.lg-ago{display:block;font-size:10.5px;color:var(--text-3,rgba(255,255,255,.38));margin-top:4px}
-.lg-count{margin-left:auto;font-size:12px;font-weight:700;color:var(--text-2,rgba(255,255,255,.55));background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.09));border-radius:99px;padding:6px 14px;font-variant-numeric:tabular-nums}
-.lg-export{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--ac-2,#f0cd7a);background:var(--ac-soft,rgba(224,176,74,.1));border:1px solid var(--ac-line,rgba(224,176,74,.28));border-radius:12px;padding:10px 16px;text-decoration:none;transition:filter .15s ease,transform .15s ease;text-transform:uppercase;letter-spacing:.04em}
-.lg-export:hover{filter:brightness(1.15);transform:translateY(-1px)}
-.lg-empty{text-align:center;padding:60px 20px;color:var(--text-3,rgba(255,255,255,.4));border:1px dashed var(--line-2,rgba(255,255,255,.14));border-radius:18px}
-.lg-empty i{font-size:34px;color:var(--ac,#e0b04a);opacity:.6;display:block;margin-bottom:14px}
+.lg-time{font-size:12.5px;font-weight:700;color:var(--p-txt2);font-variant-numeric:tabular-nums}
+.lg-ago{display:block;font-size:10.5px;color:var(--p-txt3);margin-top:5px}
+.lg-empty{text-align:center;padding:64px 24px;color:var(--p-txt3);border:1px dashed var(--p-line2);border-radius:20px;background:var(--p-glass)}
+.lg-empty i{font-size:36px;color:var(--p-ind2);opacity:.6;display:block;margin-bottom:15px}
 @media (max-width:760px){
-  .lg-item{grid-template-columns:auto 1fr;grid-template-rows:auto auto}
-  .lg-side{grid-column:1/-1;text-align:left;display:flex;gap:10px;align-items:center}
+  .lg-item{grid-template-columns:auto 1fr}
+  .lg-side{grid-column:1/-1;text-align:left;display:flex;gap:11px;align-items:center}
   .lg-ago{margin-top:0}
+}
+@media (prefers-reduced-motion:reduce){
+  .lg-item,.lg-stat,.lg-btn,.lg-chip,.lg-live i{animation:none !important;transition:none !important}
+  .lg-item:hover,.lg-stat:hover,.lg-btn:hover{transform:none}
 }
 </style>
 
-<!-- Карточки статистики -->
-<div class="lg-stats">
-  <div class="lg-stat total"><div class="ic"><i class="fas fa-layer-group"></i></div><div><b id="stat-total">—</b><span>Всего записей</span></div></div>
-  <div class="lg-stat ban"><div class="ic"><i class="fas fa-ban"></i></div><div><b id="stat-bans">—</b><span>Блокировки</span></div></div>
-  <div class="lg-stat kick"><div class="ic"><i class="fas fa-user-minus"></i></div><div><b id="stat-kicks">—</b><span>Исключения</span></div></div>
-  <div class="lg-stat warn"><div class="ic"><i class="fas fa-triangle-exclamation"></i></div><div><b id="stat-warns">—</b><span>Предупреждения</span></div></div>
-  <div class="lg-stat mute"><div class="ic"><i class="fas fa-microphone-slash"></i></div><div><b id="stat-muts">—</b><span>Ограничения</span></div></div>
-</div>
-
-<!-- Панель фильтров -->
-<div class="lg-bar">
-  <div class="lg-search">
-    <i class="fas fa-magnifying-glass"></i>
-    <input type="text" id="search" placeholder="Найти по имени, причине или действию…" aria-label="Поиск по журналу">
+<div class="lg-wrap">
+  <!-- Шапка -->
+  <div class="lg-head">
+    <div class="lg-title">
+      <div class="lg-mark"><i class="fas fa-shield-halved"></i></div>
+      <div>
+        <div class="lg-kicker"><span class="lg-live"><i></i>LIVE</span><span>Центр наблюдения</span></div>
+        <h1 class="lg-h1">Журнал модерации</h1>
+        <div class="lg-sub">Все действия команды в одном потоке — блокировки, предупреждения и ограничения в реальном времени.</div>
+      </div>
+    </div>
+    <div class="lg-head-actions">
+      <a class="lg-btn" href="/logs/export?days=7"><i class="fas fa-file-arrow-down"></i>Отчёт · 7 дней</a>
+      <a class="lg-btn pri" href="/logs/export?days=30"><i class="fas fa-file-arrow-down"></i>Полный · 30 дней</a>
+    </div>
   </div>
-  <div class="lg-chips" id="type-chips">
-    <button class="lg-chip on" data-f=""><i class="fas fa-border-all"></i>Все</button>
-    <button class="lg-chip" data-f="ban"><i class="fas fa-ban"></i>Баны</button>
-    <button class="lg-chip" data-f="kick"><i class="fas fa-user-minus"></i>Кики</button>
-    <button class="lg-chip" data-f="warn"><i class="fas fa-triangle-exclamation"></i>Варны</button>
-    <button class="lg-chip" data-f="mute"><i class="fas fa-microphone-slash"></i>Муты</button>
-  </div>
-  <select id="guild-filter" class="lg-guild" aria-label="Сервер"><option value="">Все серверы</option></select>
-  <span class="lg-count" id="logs-count">0</span>
-  <a class="lg-export" href="/logs/export?days=7" title="Скачать автономный HTML-отчёт за 7 дней"><i class="fas fa-file-arrow-down"></i>Отчёт</a>
-  <a class="lg-export" href="/logs/export?days=30" title="Отчёт за 30 дней"><i class="fas fa-file-arrow-down"></i>30 дн.</a>
-</div>
 
-<!-- Лента -->
-<div class="lg-feed" id="feed">
-  <div class="lg-empty"><i class="fas fa-spinner fa-spin"></i>Загружаем журнал…</div>
+  <!-- Статистика -->
+  <div class="lg-stats">
+    <div class="lg-stat total"><div class="ic"><i class="fas fa-layer-group"></i></div><div><b id="stat-total">—</b><span>Всего записей</span></div></div>
+    <div class="lg-stat ban"><div class="ic"><i class="fas fa-ban"></i></div><div><b id="stat-bans">—</b><span>Блокировки</span></div></div>
+    <div class="lg-stat kick"><div class="ic"><i class="fas fa-user-minus"></i></div><div><b id="stat-kicks">—</b><span>Исключения</span></div></div>
+    <div class="lg-stat warn"><div class="ic"><i class="fas fa-triangle-exclamation"></i></div><div><b id="stat-warns">—</b><span>Предупреждения</span></div></div>
+    <div class="lg-stat mute"><div class="ic"><i class="fas fa-microphone-slash"></i></div><div><b id="stat-muts">—</b><span>Ограничения</span></div></div>
+  </div>
+
+  <!-- Фильтры -->
+  <div class="lg-bar">
+    <div class="lg-search"><i class="fas fa-magnifying-glass"></i>
+      <input type="text" id="search" placeholder="Найти по имени, причине или действию…" aria-label="Поиск по журналу">
+    </div>
+    <div class="lg-chips" id="type-chips">
+      <button class="lg-chip on" data-f=""><i class="fas fa-border-all"></i>Все</button>
+      <button class="lg-chip" data-f="ban"><i class="fas fa-ban"></i>Баны</button>
+      <button class="lg-chip" data-f="kick"><i class="fas fa-user-minus"></i>Кики</button>
+      <button class="lg-chip" data-f="warn"><i class="fas fa-triangle-exclamation"></i>Варны</button>
+      <button class="lg-chip" data-f="mute"><i class="fas fa-microphone-slash"></i>Муты</button>
+    </div>
+    <select id="guild-filter" class="lg-guild" aria-label="Сервер"><option value="">Все серверы</option></select>
+    <span class="lg-count" id="logs-count">0</span>
+  </div>
+
+  <!-- Лента -->
+  <div class="lg-feed" id="feed">
+    <div class="lg-empty"><i class="fas fa-spinner fa-spin"></i>Загружаем журнал…</div>
+  </div>
 </div>
 
 <script>
 (function () {
   'use strict';
+  document.querySelector('.lg-wrap') && document.body.classList.add('lg-scope');
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function fmtDate(iso){ if(!iso) return '—'; try{ return new Date(iso).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){ return '—'; } }
   function fmtAgo(iso){ if(!iso) return ''; try{ var s=(Date.now()-new Date(iso).getTime())/1000; if(s<60)return 'только что'; if(s<3600)return Math.floor(s/60)+' мин назад'; if(s<86400)return Math.floor(s/3600)+' ч назад'; return Math.floor(s/86400)+' дн назад'; }catch(e){ return ''; } }
 
-  var PALETTE={ban:'#f26d5f',kick:'#f2823c',warn:'#f2a33c',mute:'#5b9bf0',timeout:'#5b9bf0',unban:'#2f9e6e',unmute:'#2f9e6e',lock:'#8f84f0',unlock:'#2f9e6e'};
-  var KIND={ban:'ban',kick:'kick',warn:'warn',mute:'mute',timeout:'mute'};
+  var C={ban:['#f4655f','#f28a7a','rgba(244,101,95,.24)'],kick:['#f2823c','#f5a468','rgba(242,130,60,.24)'],
+         warn:['#f0a33c','#f5c46e','rgba(240,163,60,.24)'],mute:['#4f8df5','#7fb1f8','rgba(79,141,245,.24)'],
+         ok:['#33b07d','#5ecf9d','rgba(51,176,125,.24)'],sys:['#7c74f4','#a78bfa','rgba(124,116,244,.24)']};
+  var KIND={ban:'ban',kick:'kick',warn:'warn',mute:'mute',timeout:'mute',unban:'ok',unmute:'ok',unlock:'ok',lock:'sys'};
   var allLogs=[], typeFilter='', guildFilter='';
 
-  function colorFor(a){ return PALETTE[(a||'').toLowerCase()]||'#8f84f0'; }
-  function kindOf(a){ return KIND[(a||'').toLowerCase()]||''; }
+  function pal(a){ var k=KIND[(a||'').toLowerCase()]||'sys'; return C[k]||C.sys; }
+  function kindOf(a){ var k=KIND[(a||'').toLowerCase()]; return (k==='ban'||k==='kick'||k==='warn'||k==='mute')?k:''; }
 
   function loadGuilds(){
     fetch('/api/guilds').then(function(r){return r.json();}).then(function(gs){
@@ -145,14 +248,14 @@
     $('logs-count').textContent=rows.length+' из '+allLogs.length;
     if(!rows.length){ $('feed').innerHTML='<div class="lg-empty"><i class="fas fa-inbox"></i>Ничего не найдено.<br>Попробуйте изменить фильтры.</div>'; return; }
     $('feed').innerHTML=rows.slice(0,120).map(function(l,i){
-      var c=colorFor(l.action);
+      var p=pal(l.action);
       var who=l.user_name||l.channel_name||l.role_name||l.user_id||'—';
       var init=(String(who).trim().charAt(0)||'?').toUpperCase();
-      return '<div class="lg-item" style="--lg-c:'+c+';animation-delay:'+(Math.min(i,12)*0.03)+'s">' +
+      return '<div class="lg-item" style="--lg-c:'+p[0]+';--lg-c2:'+p[1]+';--lg-glow:'+p[2]+';animation-delay:'+(Math.min(i,12)*0.035)+'s">' +
         '<div class="lg-ava">'+esc(init)+'</div>' +
         '<div class="lg-main"><div class="lg-top"><span class="lg-user">'+esc(who)+'</span><span class="lg-act">'+esc(l.action||'?')+'</span></div>' +
         (l.reason?'<div class="lg-reason">'+esc(l.reason)+'</div>':'') +
-        '<div class="lg-meta"><i class="fas fa-user-shield"></i>'+(esc(l.mod_name||l.mod_id||'система'))+(l.guild_name?'&nbsp;·&nbsp;'+esc(l.guild_name):'')+'</div></div>' +
+        '<div class="lg-meta"><i class="fas fa-user-shield"></i>'+esc(l.mod_name||l.mod_id||'система')+(l.guild_name?'&nbsp;&nbsp;·&nbsp;&nbsp;'+esc(l.guild_name):'')+'</div></div>' +
         '<div class="lg-side"><div class="lg-time">'+esc(fmtDate(l.timestamp))+'</div><span class="lg-ago">'+esc(fmtAgo(l.timestamp))+'</span></div>' +
         '</div>';
     }).join('');
