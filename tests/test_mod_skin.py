@@ -85,15 +85,11 @@ for path in ('/antiraid', '/autofilter', '/bulk-actions'):
     body = r.get_data(as_text=True)
     check(r.status_code == 200 and 'mz-skin' in body and 'modskin.css' in body,
           f'{path} отдаётся со скином')
-r = client.get('/mod-studio')
-body = r.get_data(as_text=True)
-check(r.status_code == 200 and 'sd-hero' in body and 'sdFeed' in body,
-      '/mod-studio отдаётся со своим светлым слоем')
-for path, tab in (('/warnings', 'warns'), ('/mod-history', 'history')):
+# Студия удалена: /warnings и /mod-history снова реальные страницы
+for path in ('/warnings', '/mod-history'):
     r = client.get(path)
-    check(r.status_code in (301, 302)
-          and ('/mod-studio?tab=' + tab) in (r.headers.get('Location') or ''),
-          f'{path} ведёт в консоль на вкладку {tab}')
+    check(r.status_code == 200, f'{path} — реальная страница (Студия удалена)')
+check(client.get('/mod-studio').status_code == 404, '/mod-studio удалена (404)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

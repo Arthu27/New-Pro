@@ -27,9 +27,6 @@ MENU = [
         {'path': '/recap', 'label': 'Рекап канала', 'icon': 'fa-clock-rotate-left'},
     ]},
     {'group': 'Модерация', 'key': 'mod', 'icon': 'fa-shield-halved', 'pages': [
-        # Студия — общий хаб (сводка/лента/отчёт), но каждый раздел
-        # модерации доступен и отдельным пунктом меню.
-        {'path': '/mod-studio', 'label': 'Студия модерации', 'icon': 'fa-wand-magic-sparkles'},
         {'path': '/logs', 'label': 'Логи модерации', 'icon': 'fa-clipboard-list'},
         {'path': '/temp-moderation', 'label': 'Временная модерация', 'icon': 'fa-clock'},
         {'path': '/warnings', 'label': 'Предупреждения', 'icon': 'fa-exclamation-triangle'},

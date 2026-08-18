@@ -77,7 +77,6 @@ from web.routes import (
     analytics_plus,
     tickets_ops,
     mod_report,
-    mod_studio_panel,
     karma_panel,
     gamif_panel,
     tops_panel,

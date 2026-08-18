@@ -74,7 +74,7 @@ PUBLIC_API = {('status.py', '/api/status-public')}
 
 MARATHON_MODULES = [
     'analytics_plus.py', 'tickets_ops.py', 'mod_report.py',
-    'mod_control.py', 'mod_insights.py',
+    'mod_control.py',
 ] + [f for f in sorted(os.listdir(os.path.join(ROOT, 'web/routes')))
      if f.endswith('_panel.py')]
 

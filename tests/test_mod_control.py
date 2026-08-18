@@ -315,36 +315,7 @@ check(log_full[0]['detail'] == 'причина 119', 'голова журнал�
 check(all(it['op'] != 'warn' for it in log_full), 'старейшие записи вытеснены')
 os.remove('data/mod_panel_log_777.json')
 
-print('== 5. API: права и потоки ==')
-# Свежие фикстуры с известным состоянием
-jdump('data/warnings.json', {'777': {
-    '100': [{'id': 1}, {'id': 2}],
-    '101': [{'id': 1}],
-    '104': [{'id': i} for i in range(1, 6)],
-}})
-_pulse_now = _dt.now(_tz.utc)
-
-
-def _iso_h(hours_ago):
-    return (_pulse_now - _td(hours=hours_ago)).isoformat()
-
-
-jdump('data/audit_log.json', {'777': [
-    {'category': 'mod', 'action': 'Мут', 'mod_name': 'Ст',
-     'user_id': '100', 'user_name': 'Хулиган', 'timestamp': 't'},
-    {'category': 'mod', 'action': 'Бан', 'mod_name': 'Ст',
-     'user_id': '300', 'user_name': 'Рейдер', 'reason': 'рейд',
-     'timestamp': _iso_h(3)},
-    {'category': 'mod', 'action': 'Кик', 'mod_name': 'Ст2',
-     'user_id': '301', 'user_name': 'Флудер', 'timestamp': _iso_h(1)},
-    {'category': 'mod', 'action': 'Мут снят', 'mod_name': 'Ст',
-     'user_id': '300', 'user_name': 'Рейдер', 'timestamp': _iso_h(0.2)},
-]})
-if os.path.exists('data/mod_reasons_777.json'):
-    os.remove('data/mod_reasons_777.json')
-if os.path.exists('data/mod_amnesty_777.json'):
-    os.remove('data/mod_amnesty_777.json')
-
+print('== 5. Студия удалена: реальные страницы восстановлены ==')
 appmod = importlib.import_module('web.app')
 appmod.app.config['TESTING'] = True
 client = appmod.app.test_client()
@@ -358,278 +329,28 @@ def login(role='owner'):
         s['role'] = role
 
 
-OV = '/api/guild/777/mod-studio/overview'
-check(client.get('/mod-studio').status_code in (302, 401, 403), 'гостю страница закрыта')
-check(client.get(OV).status_code in (302, 401, 403), 'гостю API закрыто')
-login('uye')
-check(client.get('/mod-studio').status_code == 403, 'uye нельзя')
-check(client.get(OV).status_code == 403, 'uye нельзя API')
+check(client.get('/mod-studio').status_code == 404, 'страница Студии удалена (404)')
 login('mod')
-page = client.get('/mod-studio')
-check(page.status_code == 200 and 'На грани авто-наказания' in page.get_data(as_text=True),
-      'mod открывает страницу')
-check("var GID = '777'" in page.get_data(as_text=True), 'страница знает активный сервер')
-ov = client.get(OV).get_json()
-check(ov['success'] and ov['can_edit'] is False, 'mod читает снимок без права правки')
-check(len(ov['risk']['items']) == 2 and ov['risk']['edge'] == 1, 'снимок: двое на грани, один на волоске')
-check(ov['risk']['items'][0]['name'] == 'Хулиган', 'имя подтянуто из журнала аудита')
-check(ov['radar']['counts']['overdue'] >= 0 and 'rows' in ov['radar'], 'радар в снимке')
-check(ov['reasons']['warn'] == [] and ov['amnesty'] == [], 'причины и амнистии пусты')
-check(ov['risk']['tuned'] is True, 'пороги настроены (фикстура warn_config_777)')
-check(len(ov['recent']) == 3 and ov['recent'][0]['action'] == 'Мут снят',
-      'последние действия в снимке: снятие самым свежим, битые метки не в счёт')
-check(ov['recent7'] == 2, 'пульс: две кары за последние 7 дней')
-
-check(client.post('/api/guild/777/mod-studio/reasons', json={'kind': 'warn', 'text': 'x'}).status_code == 403,
-      'mod не добавляет причины')
-login('admin')
-check(client.get(OV).get_json()['can_edit'] is True, 'admin с правом правки')
-bad = client.post('/api/guild/777/mod-studio/reasons', json={'kind': 'nope', 'text': 'x'})
-check(bad.status_code == 400 and bad.get_json()['error'] == 'Неизвестный тип причины',
-      '400 на плохой тип')
-bad2 = client.post('/api/guild/777/mod-studio/reasons', json={'kind': 'mute', 'text': '  '})
-check(bad2.status_code == 400 and bad2.get_json()['error'] == 'Укажите текст причины',
-      '400 на пустой текст')
-good = client.post('/api/guild/777/mod-studio/reasons', json={'kind': 'mute', 'text': ' Флуд в голосе '})
-check(good.status_code == 200 and good.get_json()['item']['text'] == 'Флуд в голосе',
-      'причина добавлена (нормализация)')
-check(len(client.get(OV).get_json()['reasons']['mute']) == 1, 'причина видна в снимке')
-rm = client.post('/api/guild/777/mod-studio/reasons/mute/1/delete')
-check(rm.status_code == 200 and rm.get_json()['removed']['text'] == 'Флуд в голосе', 'удалена')
-check(client.post('/api/guild/777/mod-studio/reasons/mute/1/delete').status_code == 404,
-      'повторное удаление — 404')
-
-am = client.post('/api/guild/777/mod-studio/amnesty', json={'user_id': '<@100>'})
-check(am.status_code == 200 and am.get_json()['amnesty']['count'] == 2,
-      'амнистия по упоминанию: 2 варна')
-aid = am.get_json()['amnesty']['id']
-ov2 = client.get(OV).get_json()
-check(len(ov2['risk']['items']) == 1 and ov2['risk']['edge'] == 0,
-      'после амнистии «на грани» пересчитан')
-check(ov2['amnesty'][0]['count'] == 2 and ov2['amnesty_total'] == 1, 'журнал амнистий в снимке')
-un = client.post(f'/api/guild/777/mod-studio/amnesty/{aid}/undo')
-check(un.status_code == 200 and un.get_json()['restored'] == 2, 'откат вернул варны')
-check(client.post(f'/api/guild/777/mod-studio/amnesty/{aid}/undo').status_code == 400,
-      'двойной откат — 400')
-check(client.post('/api/guild/777/mod-studio/amnesty/999/undo').status_code == 404,
-      'откат несуществующей — 404')
-no_warns = client.post('/api/guild/777/mod-studio/amnesty', json={'user_id': '424242'})
-check(no_warns.status_code == 400 and no_warns.get_json()['error'] == 'У участника нет варнов',
-      'честный отказ без варнов')
-check(len(client.get(OV).get_json()['risk']['items']) == 2, 'после отката картина восстановлена')
-
-login('mod')
-check(client.post('/api/guild/777/mod-studio/warn',
-                   json={'user_id': '100', 'reason': 'флуд'}).status_code == 403,
-      'mod не выдаёт варны из панели')
-check(client.post('/api/guild/777/mod-studio/unwarn',
-                   json={'user_id': '100'}).status_code == 403,
-      'mod не снимает варны из панели')
-login('admin')
-bad = client.post('/api/guild/777/mod-studio/warn', json={'user_id': '100', 'reason': '   '})
-check(bad.status_code == 400 and bad.get_json()['error'] == 'Укажите причину варна',
-      'warn: 400 на пустую причину')
-bad = client.post('/api/guild/777/mod-studio/warn', json={'user_id': 'мусор', 'reason': 'флуд'})
-check(bad.status_code == 400 and bad.get_json()['error'] == 'Некорректный ID пользователя',
-      'warn: 400 на мусорный ID')
-warned = client.post('/api/guild/777/mod-studio/warn', json={'user_id': '100', 'reason': ' флуд '})
-check(warned.status_code == 200 and warned.get_json()['total'] == 3,
-      'warn: у участника теперь 3 варна')
-ov3 = client.get(OV).get_json()
-check(ov3['risk']['edge'] == 0, 'warn: после третьего варна участник ушёл с волоска (порог 3)')
-unw = client.post('/api/guild/777/mod-studio/unwarn', json={'user_id': '<@100>'})
-check(unw.status_code == 200 and unw.get_json()['left'] == 2,
-      'unwarn: по упоминанию, осталось 2')
-check(client.post('/api/guild/777/mod-studio/unwarn',
-                   json={'user_id': '424242'}).get_json()['error'] == 'У участника нет варнов',
-      'unwarn: честный отказ без варнов')
-check(client.get(OV).get_json()['risk']['edge'] == 1, 'unwarn: картина на грани восстановлена')
-
-ovlog = client.get(OV).get_json()
-ops = [e['op'] for e in ovlog['panel_log']]
-check(ops and ops[0] == 'unwarn' and 'warn' in ops and 'amnesty' in ops
-      and 'amnesty_undo' in ops and 'reason_add' in ops and 'reason_del' in ops,
-      f'журнал панели записал все операции (сверху: {ops[0]})')
-check(all(e['by'] == 'admin' for e in ovlog['panel_log']),
-      'в журнале видно, кто действовал')
-
-login('mod')
-csv_r = client.get('/api/guild/777/mod-studio/warns.csv')
-check(csv_r.status_code == 200 and 'text/csv' in (csv_r.headers.get('Content-Type') or ''),
-      'CSV варнов отдаётся моду')
-check(csv_r.headers.get('Content-Disposition') == 'attachment; filename=modcenter_warns_777.csv',
-      'CSV варнов: заголовок вложения')
-csv_body = csv_r.get_data(as_text=True)
-check(csv_body.startswith('\ufeff' + MC.WARN_CSV_HEADER), 'CSV варнов: BOM + шапка')
-check('100' in csv_body and '104' in csv_body, 'CSV варнов: участники на месте')
-radar_r = client.get('/api/guild/777/mod-studio/radar.csv')
-check(radar_r.status_code == 200
-      and radar_r.headers.get('Content-Disposition') == 'attachment; filename=modcenter_radar_777.csv',
-      'CSV радара отдаётся с правильным именем')
-login('uye')
-check(client.get('/api/guild/777/mod-studio/warns.csv').status_code == 403,
-      'uye CSV закрыт')
-
-print('== 5b. Консоль: вкладки Журнал/Варны/Временные/История ==')
-login('mod')
-jr = client.get('/api/guild/777/mod-studio/journal').get_json()
-check(jr['success'] and jr['total'] == 3, 'журнал: три разборчивых события')
-check([r['action'] for r in jr['rows']] == ['Мут снят', 'Кик', 'Бан'],
-      'журнал: новые сверху')
-check(jr['categories'] == {'mod': 3}, 'журнал: счётчики категорий')
-jr2 = client.get('/api/guild/777/mod-studio/journal?query=рейд').get_json()
-check(jr2['total'] == 2 and jr2['rows'][0]['action'] == 'Мут снят',
-      'журнал: поиск цепляет и причину («рейд»), и имя (Рейдер)')
-jr3 = client.get('/api/guild/777/mod-studio/journal?mod=ст2').get_json()
-check(jr3['total'] == 1 and jr3['rows'][0]['action'] == 'Кик',
-      'журнал: фильтр по модератору подстрокой')
-
-tf = client.get('/api/guild/777/mod-studio/temp-full').get_json()
-check(tf['success'] and len(tf['rows']) == 4, 'временные: все четыре активных')
-check([r['user_id'] for r in tf['rows']] == ['u2', 'u1', 'u5', 'u6'],
-      'временные: сортировка по сроку')
-check(tf['counts']['overdue'] == 4 and tf['counts']['later'] == 0,
-      'временные: фикстура 1970 года просрочена целиком — сводка честная')
-
-wl = client.get('/api/guild/777/mod-studio/warns-list').get_json()
-check(wl['success'] and wl['total_warns'] == 8, 'варны: всего восемь')
-check([r['user_id'] for r in wl['rows']] == ['104', '100', '101'],
-      'варны: сначала у кого больше')
-check(len(wl['rows'][0]['items']) == 5, 'варны: последние пять причин')
-check([(s['count'], s['action']) for s in wl['steps']] == [(3, 'mute'), (5, 'ban')],
-      'варны: пороги в выдаче')
-
-hs = client.get('/api/guild/777/mod-studio/history').get_json()
-check(hs['success'] and [r['action'] for r in hs['rows']] == ['Мут снят', 'Кик', 'Бан'],
-      'история: кары и снятия, новые сверху')
-check(hs['rows'][1]['kind'] == 'punish' and hs['rows'][0]['kind'] == 'lift',
-      'история: типы punish/lift')
-
-check(client.get('/api/guild/777/mod-studio/journal').status_code == 200,
-      'журнал доступен моду')
-login('uye')
-check(client.get('/api/guild/777/mod-studio/journal').status_code == 403,
-      'uye журнал закрыт')
-check(client.get('/api/guild/777/mod-studio/history').status_code == 403,
-      'uye история закрыта')
-
-print('== 5d. Консоль забрал Щит, Демки и Апелляции ==')
-login('mod')
-jdump('data/antiraid_777.json', {'join_raid': True, 'bot_protection': True})
-jdump('data/autofilter_777.json', {'enabled': True,
-                                    'words': {'enabled': True, 'action': 'warn', 'list': ['фу']}})
-sh = client.get('/api/guild/777/mod-studio/shield').get_json()
-check(sh['success'] and sh['autofilter']['status'] == 'ok'
-      and '1 слов' in sh['autofilter']['detail'], 'щит: автофильтр включён со словарём')
-check(sh['antiraid']['status'] == 'ok' and '2 из 5' in sh['antiraid']['detail'],
-      'щит: анти-рейд с двумя защитами')
-check(sh['lockdown']['active'] is False, 'щит: локдаун не активен')
-check(sh['security']['tuned'] is False, 'щит: безопасность не настроена')
-jdump('data/security_777.json', {'panel_login_guard': True})
-sh2 = client.get('/api/guild/777/mod-studio/shield').get_json()
-check(sh2['security']['tuned'] is True, 'щит: безопасность появилась после настройки')
-
-jdump('data/modproof_777.json', {'next': 3, 'items': {
-    '1': {'id': 1, 'user_id': '100', 'user_name': 'Хулиган', 'mod_id': '7',
-          'mod_name': 'Ст', 'action': 'бан', 'reason': 'рейд',
-          'link': 'https://example.com/p1', 'set_at': '2026-08-15T10:00:00'},
-    '2': {'id': 2, 'user_id': '101', 'user_name': 'Флудер', 'mod_id': '8',
-          'mod_name': 'Ст2', 'action': 'мут', 'reason': 'флуд',
-          'link': '', 'set_at': '2026-08-16T09:00:00'},
-    'x': 'мусор',
-}})
-pr = client.get('/api/guild/777/mod-studio/proofs').get_json()
-check(pr['success'] and pr['total'] == 2, 'демки: два доказательства, мусор мимо')
-check(pr['rows'][0]['user_name'] == 'Флудер', 'демки: свежие сверху')
-check(pr['rows'][1]['action'] == 'бан' and pr['rows'][1]['link'], 'демки: поля на месте')
-
-from db import GuildData  # noqa: E402
-GuildData('appeals').set('777', 'state', {'items': [
-    {'id': 1, 'status': 'pending', 'user_name': 'Хулиган', 'reason': 'бан за рейд',
-     'created_at': '2026-08-16T10:00:00', 'reviewed_at': None},
-    {'id': 2, 'status': 'accepted', 'user_name': 'Флудер', 'reason': 'мут',
-     'created_at': '2026-08-15T09:00:00', 'reviewed_at': '2026-08-15T12:00:00',
-     'reviewed_by': 'admin'},
-]})
-ap = client.get('/api/guild/777/mod-studio/appeals').get_json()
-check(ap['success'] and ap['stats']['pending'] == 1 and ap['stats']['accepted'] == 1,
-      'апелляции: счётчики очереди верны')
-check(ap['rows'][0]['user'] == 'Хулиган' and ap['rows'][0]['status'] == 'pending',
-      'апелляции: свежие сверху, статусы на месте')
-login('uye')
-check(client.get('/api/guild/777/mod-studio/shield').status_code == 403,
-      'uye щит закрыт')
-check(client.get('/api/guild/777/mod-studio/proofs').status_code == 403,
-      'uye демки закрыты')
-
-print('== 5c. Старые страницы ведут в консоль ==')
-login('mod')
-for path, tab in (('/logs', 'journal'), ('/warnings', 'warns'),
-                  ('/temp-moderation', 'temp'), ('/mod-history', 'history')):
+for path in ('/logs', '/warnings'):
     r = client.get(path)
-    check(r.status_code in (301, 302)
-          and ('/mod-studio?tab=' + tab) in (r.headers.get('Location') or ''),
-          f'{path} -> Центр, вкладка {tab}')
-
-print('== 5e. Закладки студии ==')
-login('mod')
-pins = client.get('/api/guild/777/mod-studio/pins').get_json()
-check(pins['success'] and pins['pins'] == [], 'закладки изначально пусты')
-t1 = client.post('/api/guild/777/mod-studio/pins/toggle', json={'user_id': '100'}).get_json()
-check(t1['success'] and t1['pinned'] is True and len(t1['pins']) == 1,
-      'закладка добавлена')
-check(t1['pins'][0]['name'] == 'Хулиган', 'имя в закладке подтянуто из аудита')
-t2 = client.post('/api/guild/777/mod-studio/pins/toggle', json={'user_id': '<@100>'}).get_json()
-check(t2['success'] and t2['pinned'] is False and t2['pins'] == [],
-      'повторный клик убирает закладку (по упоминанию)')
-bad = client.post('/api/guild/777/mod-studio/pins/toggle', json={'user_id': 'мусор'})
-check(bad.status_code == 400, 'мусорный ID в закладках — 400')
+    check(r.status_code == 200, f'{path} снова рендерится для mod')
 login('uye')
-check(client.get('/api/guild/777/mod-studio/pins').status_code == 403,
-      'uye закладки закрыты')
+check(client.get('/logs').status_code == 403, 'uye /logs закрыт')
+check(client.get('/warnings').status_code == 403, 'uye /warnings закрыт')
 
-print('== 6. Шаблон Студии, меню, регистрация ==')
-tpl = open(os.path.join(ROOT, 'web/templates/mod_studio.html'), encoding='utf-8').read()
-emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
-check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
-for fid in ('sdFeed', 'sdStats', 'sdFind', 'sdRisk', 'sdWarnId', 'sdWarnText',
-            'sdReasons', 'sdAmnesty', 'sdPanelLog', 'sdNotes', 'sdDossier',
-            'sdJournal', 'sdWarnsList', 'sdTempFull', 'sdHistory',
-            'sdShield', 'sdLockdown', 'sdProofs', 'sdAppeals', 'sdSubjects',
-            'sdPins', 'sdDigest', 'sdDigestQuick', 'sdReportTotals'):
-    check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
-check('/warn-config' in tpl, 'ссылка на настройку порогов')
-check('sdNotify' in tpl and 'sd-ncard' in tpl,
-      'действия отзываются карточками-уведомлениями, а не тостами')
-check('/mod-studio/warns.csv' in tpl and '/mod-studio/radar.csv' in tpl,
-      'CSV-кнопки варнов и радара в шаблоне')
-check('sdWarnAsk' in tpl and 'sdUnwarnAsk' in tpl and 'sdAmnestyAsk' in tpl,
-      'варн/анварн/амнистия на кнопках')
-check("get('uid')" in tpl, 'префилл по ?uid= из досье')
-check('SD_TAB_KEYS' in tpl, 'горячие клавиши 1-0 переключают вкладки')
-check('sdTogglePin' in tpl and 'sdCopyDigest' in tpl,
-      'закладки и копирование отчёта на месте')
-check("get('tab')" in tpl, 'deep-link по ?tab= из меню и редиректов')
-check(not os.path.exists(os.path.join(ROOT, 'web/templates/mod_control.html'))
-      and not os.path.exists(os.path.join(ROOT, 'web/templates/mod_insights.html')),
-      'старые страницы удалены без следа')
-import services.panel_menu as PM
+print('== 6. Меню: Студии нет, разделы модерации отдельно ==')
+import services.panel_menu as PM  # noqa: E402
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
-check('/mod-studio' in paths, 'пункт меню «Студия модерации» есть')
+check('/mod-studio' not in paths, 'пункта «Студия модерации» в меню больше нет')
 check('/mod-control' not in paths and '/mod-insights' not in paths,
-      'старых пунктов в меню больше нет')
+      'старых хабов в меню нет')
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
-check('/mod-studio' in mod_pages, 'Студия — хаб группы «Модерация»')
-check('/antiraid' in paths and '/autofilter' in paths
-      and '/appeals' in paths and '/proofs' in paths,
-      'разделы модерации доступны отдельными пунктами меню')
-check(mod_pages[0] == '/mod-studio', 'Центр — первый пункт группы «Модерация»')
-check('/mod-studio' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
+for p_ in ('/logs', '/warnings', '/temp-moderation', '/mod-history', '/autofilter',
+           '/antiraid', '/appeals', '/lockdown', '/security', '/antifake', '/ladder',
+           '/proofs', '/mod-report'):
+    check(p_ in mod_pages, f'раздел {p_} отдельным пунктом меню')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check('mod_studio_panel' in ext, 'модуль Студии зарегистрирован в routes_extra')
-check('mod_control,' not in ext and 'mod_insights,' not in ext,
-      'старые страницы сняты с регистрации (логика осталась модулям)')
+check('mod_studio_panel' not in ext, 'модуль Студии снят с регистрации')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
