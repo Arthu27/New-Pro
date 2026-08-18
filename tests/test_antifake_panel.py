@@ -398,8 +398,8 @@ check(AF.IM is IM, 'панель зовёт сам модуль кога, не �
 import services.panel_menu as PM
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod'
              for pg in g['pages']]
-check('/antifake' in mod_pages, 'пункт меню «Антифейк» в «Модерации»')
-check(PM.PAGE_COGS.get('/antifake') == ('impersonation',), 'ког привязан')
+check(mod_pages == ['/mod-studio'], '«Антифейк» внутри Студии (единая точка входа)')
+check('/antifake' not in PM.PAGE_COGS, 'привязка снята осознанно — раздел в Студии')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check(ext.count('antifake_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 

@@ -571,7 +571,24 @@ for path, tab in (('/logs', 'journal'), ('/warnings', 'warns'),
           and ('/mod-studio?tab=' + tab) in (r.headers.get('Location') or ''),
           f'{path} -> Центр, вкладка {tab}')
 
-print('== 6. Шаблон Центра, меню, регистрация ==')
+print('== 5e. Закладки студии ==')
+login('mod')
+pins = client.get('/api/guild/777/mod-studio/pins').get_json()
+check(pins['success'] and pins['pins'] == [], 'закладки изначально пусты')
+t1 = client.post('/api/guild/777/mod-studio/pins/toggle', json={'user_id': '100'}).get_json()
+check(t1['success'] and t1['pinned'] is True and len(t1['pins']) == 1,
+      'закладка добавлена')
+check(t1['pins'][0]['name'] == 'Хулиган', 'имя в закладке подтянуто из аудита')
+t2 = client.post('/api/guild/777/mod-studio/pins/toggle', json={'user_id': '<@100>'}).get_json()
+check(t2['success'] and t2['pinned'] is False and t2['pins'] == [],
+      'повторный клик убирает закладку (по упоминанию)')
+bad = client.post('/api/guild/777/mod-studio/pins/toggle', json={'user_id': 'мусор'})
+check(bad.status_code == 400, 'мусорный ID в закладках — 400')
+login('uye')
+check(client.get('/api/guild/777/mod-studio/pins').status_code == 403,
+      'uye закладки закрыты')
+
+print('== 6. Шаблон Студии, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/mod_studio.html'), encoding='utf-8').read()
 emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
@@ -579,7 +596,8 @@ check('[data-theme="light"]' in tpl, 'светлая тема учтена')
 for fid in ('sdFeed', 'sdStats', 'sdFind', 'sdRisk', 'sdWarnId', 'sdWarnText',
             'sdReasons', 'sdAmnesty', 'sdPanelLog', 'sdNotes', 'sdDossier',
             'sdJournal', 'sdWarnsList', 'sdTempFull', 'sdHistory',
-            'sdShield', 'sdLockdown', 'sdProofs', 'sdAppeals', 'sdSubjects'):
+            'sdShield', 'sdLockdown', 'sdProofs', 'sdAppeals', 'sdSubjects',
+            'sdPins', 'sdDigest', 'sdDigestQuick', 'sdReportTotals'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check('/warn-config' in tpl, 'ссылка на настройку порогов')
 check('sdNotify' in tpl and 'sd-ncard' in tpl,
@@ -589,6 +607,9 @@ check('/mod-studio/warns.csv' in tpl and '/mod-studio/radar.csv' in tpl,
 check('sdWarnAsk' in tpl and 'sdUnwarnAsk' in tpl and 'sdAmnestyAsk' in tpl,
       'варн/анварн/амнистия на кнопках')
 check("get('uid')" in tpl, 'префилл по ?uid= из досье')
+check('SD_TAB_KEYS' in tpl, 'горячие клавиши 1-0 переключают вкладки')
+check('sdTogglePin' in tpl and 'sdCopyDigest' in tpl,
+      'закладки и копирование отчёта на месте')
 check("get('tab')" in tpl, 'deep-link по ?tab= из меню и редиректов')
 check(not os.path.exists(os.path.join(ROOT, 'web/templates/mod_control.html'))
       and not os.path.exists(os.path.join(ROOT, 'web/templates/mod_insights.html')),
@@ -599,7 +620,11 @@ check('/mod-studio' in paths, 'пункт меню «Студия модерац
 check('/mod-control' not in paths and '/mod-insights' not in paths,
       'старых пунктов в меню больше нет')
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
-check('/mod-studio' in mod_pages, 'пункт в группе «Модерация»')
+check(mod_pages == ['/mod-studio'],
+      'группа «Модерация» — одна Студия, всё в одном месте')
+check('/antiraid' not in paths and '/autofilter' not in paths
+      and '/appeals' not in paths and '/proofs' not in paths,
+      'легаси-страницы убраны из меню (живут внутри Студии)')
 check(mod_pages[0] == '/mod-studio', 'Центр — первый пункт группы «Модерация»')
 check('/mod-studio' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()

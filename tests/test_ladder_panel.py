@@ -210,8 +210,8 @@ check("'/view'" in tpl and "'/card.png?t='" in tpl and "'/simulate?user='" in tp
 check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
 import services.panel_menu as PM
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
-check('/ladder' in mod_pages, 'пункт меню «Лестница» в «Модерации»')
-check(PM.PAGE_COGS.get('/ladder') == ('ladder', 'warnings'), 'коги привязаны')
+check(mod_pages == ['/mod-studio'], '«Лестница» внутри Студии (единая точка входа)')
+check('/ladder' not in PM.PAGE_COGS, 'привязка снята осознанно — раздел в Студии')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check(ext.count('ladder_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 

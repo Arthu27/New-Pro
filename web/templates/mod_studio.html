@@ -190,6 +190,11 @@
 .sd-ncard button{background:var(--sd-line-soft);border:none;color:var(--sd-t2);border-radius:9px;font-size:10.5px;font-weight:800;padding:6px 10px;cursor:pointer}
 .sd-ncard button:hover{background:rgba(124,108,240,.14);color:var(--sd-ind)}
 @keyframes sdPop{from{opacity:0;transform:translateX(26px) scale(.96)}to{opacity:1;transform:none}}
+.sd-pin{cursor:pointer}
+.sd-pin .star{color:#e6a700;margin-right:2px}
+.sd-pin button{background:none;border:none;color:var(--sd-t3);cursor:pointer;padding:0 2px;font-size:10px;border-radius:5px}
+.sd-pin button:hover{color:var(--sd-rose)}
+.sd-kbd-hint{font-size:10px;color:var(--sd-t3);align-self:center;margin-left:auto;letter-spacing:.04em}
 @media (prefers-reduced-motion:reduce){.sd *{animation:none !important;transition:none !important}}
 </style>
 
@@ -208,6 +213,8 @@
     </div>
   </div>
 
+  <div class="sd-chips" id="sdPins" style="margin:12px 0 0"></div>
+
   <div class="sd-stats" id="sdStats"></div>
 
   <div class="sd-tabs" id="sdTabs">
@@ -220,6 +227,8 @@
     <button class="sd-tab" data-tab="proofs" onclick="sdTab('proofs')"><i class="fas fa-images"></i> Демки</button>
     <button class="sd-tab" data-tab="appeals" onclick="sdTab('appeals')"><i class="fas fa-scale-balanced"></i> Апелляции</button>
     <button class="sd-tab" data-tab="stats" onclick="sdTab('stats')"><i class="fas fa-chart-pie"></i> Аналитика</button>
+    <button class="sd-tab" data-tab="report" onclick="sdTab('report')"><i class="fas fa-file-lines"></i> Отчёт</button>
+    <span class="sd-kbd-hint">клавиши 1–0 переключают вкладки</span>
     <button class="sd-tab" data-tab="history" onclick="sdTab('history')"><i class="fas fa-clock-rotate-left"></i> История</button>
     <button class="sd-tab" data-tab="people" onclick="sdTab('people')"><i class="fas fa-user-group"></i> Люди</button>
   </div>
@@ -241,6 +250,11 @@
       </header>
       <div class="sd-chips" id="sdFeedChips"></div>
       <div id="sdFeed"></div>
+    </div>
+    <div class="sd-card">
+      <header><div class="ic mint"><i class="fas fa-wand-magic-sparkles"></i></div><b>Умная сводка</b>
+        <div class="meta"><button class="sd-btn" onclick="sdCopyDigest()"><i class="fas fa-copy"></i> Скопировать отчёт</button></div></header>
+      <div id="sdDigestQuick" style="font-size:12.5px;color:var(--sd-t2);line-height:1.75"></div>
     </div>
   </div>
 
@@ -406,6 +420,36 @@
     </div>
   </div>
 
+  <div id="sdPane-report" style="display:none">
+    <div class="sd-grid2 wide">
+      <div>
+        <div class="sd-card">
+          <header><div class="ic ind"><i class="fas fa-file-lines"></i></div><b>Итоги за окно</b>
+            <div class="meta"><span class="sd-pill ghost" id="sdReportOff">0</span></div></header>
+          <div id="sdReportTotals"></div>
+        </div>
+        <div class="sd-card">
+          <header><div class="ic sky"><i class="fas fa-chart-column"></i></div><b>Динамика наказаний</b></header>
+          <div id="sdReportTrend"></div>
+        </div>
+      </div>
+      <div>
+        <div class="sd-card">
+          <header><div class="ic mint"><i class="fas fa-file-pen"></i></div><b>Текст для отчёта</b>
+            <div class="meta"><button class="sd-btn pri" onclick="sdCopyDigest()"><i class="fas fa-copy"></i> Скопировать</button></div></header>
+          <pre id="sdDigest" style="white-space:pre-wrap;font-family:inherit;font-size:12.5px;color:var(--sd-t2);margin:0;line-height:1.75"></pre>
+        </div>
+        <div class="sd-card">
+          <header><div class="ic amber"><i class="fas fa-file-csv"></i></div><b>Выгрузки</b></header>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="sd-btn" href="/api/guild/{{ guild_id }}/mod-studio/warns.csv"><i class="fas fa-file-csv"></i> Варны CSV</a>
+            <a class="sd-btn" href="/api/guild/{{ guild_id }}/mod-studio/radar.csv"><i class="fas fa-file-csv"></i> Наказания CSV</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="sdPane-history" style="display:none">
     <div class="sd-card">
       <header><div class="ic amber"><i class="fas fa-clock-rotate-left"></i></div><b>История наказаний и снятий</b><div class="meta"><span class="sd-pill ghost" id="sdHistoryOff">0</span></div></header>
@@ -486,11 +530,18 @@ function sdNotify(title, body, kind, icon, undoFn) {
   setTimeout(function () { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; }, 6100);
   setTimeout(function () { el.remove(); }, 6600);
 }
-document.addEventListener('keydown', function (e) { if (e.key === 'Escape') sdCloseCtx(); });
+var SD_TAB_KEYS = { '1': 'feed', '2': 'control', '3': 'journal', '4': 'warns', '5': 'temp',
+  '6': 'shield', '7': 'proofs', '8': 'appeals', '9': 'stats', '0': 'report' };
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') sdCloseCtx();
+  var tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (SD_TAB_KEYS[e.key]) sdTab(SD_TAB_KEYS[e.key]);
+});
 
 /* ── Навигация ──────────────────────────────────────────────── */
 function sdTab(name) {
-  var panes = ['feed', 'control', 'journal', 'warns', 'temp', 'shield', 'proofs', 'appeals', 'stats', 'history', 'people'];
+  var panes = ['feed', 'control', 'journal', 'warns', 'temp', 'shield', 'proofs', 'appeals', 'stats', 'report', 'history', 'people'];
   for (var i = 0; i < panes.length; i++) {
     document.getElementById('sdPane-' + panes[i]).style.display = panes[i] === name ? '' : 'none';
   }
@@ -507,6 +558,7 @@ function sdTab(name) {
   if (name === 'shield' && !TDATA.shield) sdLoadShield();
   if (name === 'proofs' && !TDATA.proofs) sdLoadProofs();
   if (name === 'appeals' && !TDATA.appeals) sdLoadAppeals();
+  if (name === 'report') sdRenderReport();
 }
 
 /* ── Досье ──────────────────────────────────────────────────── */
@@ -525,7 +577,51 @@ function sdFromAny(uid) {
 }
 function sdFindGo() {
   var v = document.getElementById('sdFind').value.trim();
-  if (v) sdFromAny(v);
+  if (!v) return;
+  var hit = null;
+  if (OV) {
+    var lv = v.toLowerCase();
+    OV.subjects.items.forEach(function (r) {
+      if (!hit && (r.name || '').toLowerCase() === lv) hit = r.user_id;
+    });
+    OV.subjects.items.forEach(function (r) {
+      if (!hit && (r.name || '').toLowerCase().indexOf(lv) !== -1) hit = r.user_id;
+    });
+  }
+  sdFromAny(hit || v);
+}
+
+/* ── Закладки ───────────────────────────────────────────────── */
+var PINS = [];
+function sdLoadPins() {
+  fetch(API + '/pins').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    PINS = d.pins || [];
+    renderPins();
+  }).catch(function () {});
+}
+function sdPinned(uid) {
+  for (var i = 0; i < PINS.length; i++) if (PINS[i].user_id === String(uid)) return true;
+  return false;
+}
+function renderPins() {
+  var box = document.getElementById('sdPins');
+  if (!PINS.length) { box.innerHTML = ''; return; }
+  box.innerHTML = '<span style="font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--sd-t3);align-self:center;margin-right:4px">Закладки</span>' +
+    PINS.map(function (p) {
+      return '<span class="sd-chip sd-pin" onclick="sdFromAny(\'' + esc(p.user_id) + '\')" title="Открыть досье">' +
+        '<i class="fas fa-star star"></i>' + esc(p.name || ('ID ' + p.user_id)) +
+        '<button onclick="event.stopPropagation();sdTogglePin(\'' + esc(p.user_id) + '\')" title="Убрать"><i class="fas fa-xmark"></i></button></span>';
+    }).join('');
+}
+function sdTogglePin(uid) {
+  sdPost(API + '/pins/toggle', { user_id: uid }).then(function (res) {
+    if (!res.data.success) { sdNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+    PINS = res.data.pins || [];
+    renderPins();
+    sdNotify(res.data.pinned ? 'Закладка добавлена' : 'Закладка убрана', uid, 'ok', 'fa-star');
+    if (PICKED === String(uid)) sdDossier(uid);
+  });
 }
 
 /* ── Статы ──────────────────────────────────────────────────── */
@@ -1035,6 +1131,7 @@ function renderDossier(ds) {
     '<button class="sd-btn" onclick="sdCopy(\'' + esc(ds.user_id) + '\')"><i class="fas fa-copy"></i> Копировать ID</button>' +
     '<a class="sd-btn" href="/member-card?user=' + encodeURIComponent(ds.user_id) + '"><i class="fas fa-id-card"></i> Карточка</a>' +
     '<button class="sd-btn pri" onclick="sdUseInControl(\'' + esc(ds.user_id) + '\')"><i class="fas fa-hand-sparkles"></i> Действия</button>' +
+    '<button class="sd-btn" onclick="sdTogglePin(\'' + esc(ds.user_id) + '\')"><i class="fas fa-star"></i> ' + (sdPinned(ds.user_id) ? 'Убрать закладку' : 'В закладки') + '</button>' +
     '</div>';
   if (ds.temp_active.length) {
     var P = { 'Мут': 'amber', 'Бан': 'rose', 'Войс-мут': 'sky', 'Кик': 'ind' };
@@ -1156,6 +1253,69 @@ function sdReasonDel(id) {
   });
 }
 
+/* ── Умная сводка и отчёт ───────────────────────────────────── */
+function buildDigest(d) {
+  var top = d.team.items.length ? (d.team.items[0].mod + ' — ' + d.team.items[0].total + ' действий') : '—';
+  var p = function (v) { return String(v).padStart(2, '0'); };
+  var now = new Date();
+  var lines = [
+    'Сводка модерации на ' + p(now.getDate()) + '.' + p(now.getMonth() + 1) + '.' + now.getFullYear(),
+    '',
+    'Открытых варнов: ' + d.warns_total + ' у ' + d.subjects.total + ' ' + plural(d.subjects.total, 'участника', 'участников', 'участников'),
+    'На волоске от авто-наказания: ' + d.risk.edge,
+    'Просроченных снятий: ' + d.radar.counts.overdue,
+    'Активных временных наказаний: ' + d.radar.active_total,
+    'Наказаний за 7 дней: ' + d.recent7,
+    'Повторников за ' + d.repeat.days + ' дн.: ' + d.repeat.total,
+    'Готовность защит: ' + d.checklist.ok + ' из ' + d.checklist.total,
+    'Самый активный модератор (' + d.team.days + ' дн.): ' + top
+  ];
+  return lines.join('\n');
+}
+function renderDigest(d) {
+  var txt = buildDigest(d);
+  var q = document.getElementById('sdDigestQuick');
+  var r = document.getElementById('sdDigest');
+  if (q) q.innerHTML = esc(txt).replace(/\n/g, '<br>');
+  if (r) r.textContent = txt;
+}
+function sdCopyDigest() {
+  if (!OV) return;
+  var txt = buildDigest(OV);
+  var done = function () { sdNotify('Отчёт скопирован', 'Текст сводки в буфере обмена', 'ok', 'fa-copy'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(done, function () { sdCopyFb(txt, done); });
+  } else { sdCopyFb(txt, done); }
+}
+function sdRenderReport() {
+  if (!OV) return;
+  renderDigest(OV);
+  document.getElementById('sdReportTrend').innerHTML = sparkHtml(OV.trend, 96);
+  var draw = function () {
+    var rows = TDATA.history ? TDATA.history.rows : [];
+    var cnt = { 'Мут': 0, 'Кик': 0, 'Бан': 0, 'lift': 0 };
+    rows.forEach(function (r) {
+      if (r.kind === 'lift') cnt.lift++;
+      else if (cnt[r.action] != null) cnt[r.action]++;
+    });
+    document.getElementById('sdReportOff').textContent = rows.length + ' записей';
+    var tot = function (label, num, cls) {
+      return '<div class="sd-row"><div class="sd-who"><b>' + label + '</b></div><span class="sd-pill ' + cls + '">' + num + '</span></div>';
+    };
+    document.getElementById('sdReportTotals').innerHTML =
+      tot('Муты', cnt['Мут'], cnt['Мут'] ? 'amber' : 'ghost') +
+      tot('Кики', cnt['Кик'], cnt['Кик'] ? 'ind' : 'ghost') +
+      tot('Баны', cnt['Бан'], cnt['Бан'] ? 'rose' : 'ghost') +
+      tot('Снятия', cnt.lift, cnt.lift ? 'mint' : 'ghost');
+  };
+  if (TDATA.history) { draw(); }
+  else { fetch(API + '/history').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.history = d;
+    draw();
+  }).catch(function () {}); }
+}
+
 /* ── Загрузка ───────────────────────────────────────────────── */
 function sdDays(n) { DAYS = n; renderDaysTabs(); load(); }
 function load() {
@@ -1165,9 +1325,10 @@ function load() {
     document.getElementById('sdWarnBody').style.display = CAN ? '' : 'none';
     document.getElementById('sdWarnDenied').style.display = CAN ? 'none' : '';
     var render = function () {
-      renderStats(d); renderFeedChips(); renderFeed();
+      renderStats(d); renderFeedChips(); renderFeed(); renderDigest(d);
       renderRisk(); renderReasons(); renderAmnesty(d); renderPanelLog(d);
       renderDaysTabs(); renderEffect(d); renderTrend(d); renderTeam(d); renderSubjects();
+      if (document.getElementById('sdPane-report').style.display !== 'none') sdRenderReport();
     };
     if (window.renderSafe) window.renderSafe(render); else render();
   }).catch(function () {});
@@ -1175,7 +1336,7 @@ function load() {
 
 (function () {
   var params = new URLSearchParams(location.search);
-  var valid = ['feed', 'control', 'journal', 'warns', 'temp', 'shield', 'proofs', 'appeals', 'stats', 'history', 'people'];
+  var valid = ['feed', 'control', 'journal', 'warns', 'temp', 'shield', 'proofs', 'appeals', 'stats', 'report', 'history', 'people'];
   var tab = params.get('tab');
   if (tab && valid.indexOf(tab) !== -1) sdTab(tab);
   var uid = params.get('uid');
@@ -1187,6 +1348,7 @@ function load() {
 })();
 
 load();
+sdLoadPins();
 if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(load, 30000);
 </script>
 {% endblock %}

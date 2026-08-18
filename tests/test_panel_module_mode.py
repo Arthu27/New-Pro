@@ -95,7 +95,7 @@ check(bool(m), 'пункт «Экономика» приглушён (is-off)')
 check(bool(re.search(r'<a href="/economy".*?nav-off-chip">выкл<', html, re.S)),
       'у приглушённого пункта чип «выкл»')
 proofs_m = re.search(r'<a href="/proofs"[^>]*class="([^"]*)"', html)
-check(proofs_m and 'is-off' not in proofs_m.group(1), '«Демки» без is-off')
+check(proofs_m is None, '«Демки» переехали в Студию — отдельного пункта нет')
 menu_paths = {it['path'] for g in pm.MENU for it in g['pages']}
 expected_off = menu_paths & set(off)
 check(html.count('is-off') == len(expected_off) and len(expected_off) >= 8,

@@ -13,6 +13,7 @@
 мутации admin+ (как в предшественниках).
 """
 import time
+from datetime import datetime, timezone
 
 from web.routes._common import (
     _log,
@@ -379,6 +380,57 @@ def register(ctx):
                             'stats': {'pending': 0, 'accepted': 0, 'rejected': 0,
                                       'last': None},
                             'rows': [], 'total': 0})
+
+    # ── Закладки: участники под личным присмотром ──────────────
+    def _pins_path(gid):
+        return 'data/mod_studio_pins_%s.json' % MC._gid_str(gid)
+
+    def _load_pins(gid):
+        raw = MC._load_json(_pins_path(gid), {})
+        pins = raw.get('pins') if isinstance(raw, dict) else None
+        if not isinstance(pins, list):
+            return []
+        out = []
+        for p in pins:
+            if isinstance(p, dict) and str(p.get('user_id') or '').isdigit():
+                out.append({'user_id': str(p['user_id']),
+                            'by': str(p.get('by') or ''),
+                            'at': str(p.get('at') or '')})
+        return out
+
+    def _save_pins(gid, pins):
+        MC._save_json(_pins_path(gid), {'pins': pins[-30:]})
+
+    def _pins_view(gid):
+        names = MC.names_from_audit(gid)
+        return [{'user_id': p['user_id'], 'name': names.get(p['user_id'], ''),
+                 'by': p['by'], 'at': p['at']} for p in _load_pins(gid)]
+
+    @app.route('/api/guild/<gid>/mod-studio/pins')
+    @login_required
+    @role_required('mod')
+    def api_mod_studio_pins(gid):
+        return jsonify({'success': True, 'pins': _pins_view(gid)})
+
+    @app.route('/api/guild/<gid>/mod-studio/pins/toggle', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_mod_studio_pins_toggle(gid):
+        data = request.get_json(silent=True) or {}
+        ok, err, uid = MC.validate_user_id(data.get('user_id'))
+        if not ok:
+            return jsonify({'success': False, 'error': err}), 400
+        pins = _load_pins(gid)
+        existed = [p for p in pins if p['user_id'] == uid]
+        if existed:
+            pins = [p for p in pins if p['user_id'] != uid]
+            pinned = False
+        else:
+            pins.append({'user_id': uid, 'by': str(session.get('username') or ''),
+                         'at': datetime.now(timezone.utc).isoformat()})
+            pinned = True
+        _save_pins(gid, pins)
+        return jsonify({'success': True, 'pinned': pinned, 'pins': _pins_view(gid)})
 
     @app.route('/api/guild/<gid>/mod-studio/dossier')
     @login_required

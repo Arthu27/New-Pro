@@ -514,8 +514,8 @@ r = client.get('/proofs')
 check(r.status_code in (302, 403), f'uye на /proofs не пускают ({r.status_code})')
 
 from services.panel_menu import MENU as _MENU2  # noqa: E402
-check(any(p['path'] == '/proofs' for g in _MENU2 for p in g['pages']),
-      'в меню панели есть пункт «Демки»')
+check(any(p['path'] == '/mod-studio' for g in _MENU2 for p in g['pages']),
+      'демки живут в Студии модерации (единая точка входа)')
 
 # ─── финал ───────────────────────────────────────────────────────────────
 import shutil  # noqa: E402
