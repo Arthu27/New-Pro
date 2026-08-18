@@ -1,182 +1,178 @@
 {% extends "base.html" %}
 {% block body_class %}mz-skin{% endblock %}
 {% block head_extra %}<link rel="stylesheet" href="/static/modskin.css?v=1">{% endblock %}
-{% block title %}Логи - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-clipboard-list" ></i> Логи модерации{% endblock %}
+{% block title %}Журнал модерации — Aether{% endblock %}
+{% block page_title %}Журнал модерации{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Логи модерации</span>
-    </div>
-    <h1>Логи модерации</h1>
-    <p>Журнал всех действий модерации и бота.</p>
-  </div>
-  <div class="page-hero-actions">
-    <a class="logs-export-btn" href="/logs/export?days=7" title="Скачать автономный HTML-отчёт за 7 дней"><i class="fas fa-file-arrow-down"></i> HTML-отчёт</a>
-    <a class="logs-export-btn" href="/logs/export?days=30" title="Скачать автономный HTML-отчёт за 30 дней"><i class="fas fa-file-arrow-down"></i> 30 дней</a>
-  </div>
-</div>
-{% endblock %}
 
 <style>
-/* Логи модерации — premium gold */
-.page-hero.compact{position:relative}
-.page-hero-actions{position:absolute;right:24px;top:50%;transform:translateY(-50%);display:flex;gap:8px;flex-wrap:wrap}
-.logs-export-btn{display:inline-flex;align-items:center;gap:8px;background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:8px 16px;border-radius:10px;font-weight:700;font-size:13px;text-decoration:none;transition:filter .15s}
-.logs-export-btn:hover{filter:brightness(1.15)}
-.logs-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-.logs-toolbar .filter-select{flex:1;min-width:150px}
-.logs-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:5px 14px;border-radius:99px;font-size:13px;font-weight:700;margin-left:auto;font-variant-numeric:tabular-nums}
-.logs-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
-.log-stat{background:linear-gradient(160deg,rgba(224,176,74,.05),rgba(224,176,74,.01));border:1px solid var(--line-2);border-radius:14px;padding:14px;text-align:center;transition:border-color .2s var(--ease)}
-.log-stat:hover{border-color:var(--ac-line)}
-.log-stat-num{font-size:26px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;font-family:'Poppins',sans-serif}
-.log-stat-lbl{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;font-weight:600}
-.logs-box{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:16px;backdrop-filter:blur(14px)}
-.logs-head{margin-bottom:12px}
-.logs-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;padding-bottom:10px;border-bottom:1px solid var(--line)}
-.logs-title i{color:var(--ac)}
-.logs-body{}
+/* ════════════════════════════════════════════════════════════
+   ЖУРНАЛ МОДЕРАЦИИ — новая лента. Карточки статистики, живые
+   фильтры-чипсы и таймлайн событий вместо таблицы.
+   ════════════════════════════════════════════════════════════ */
+.lg-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:18px;margin:6px 0 30px}
+.lg-stat{position:relative;display:flex;align-items:center;gap:16px;background:var(--surface-2,rgba(255,255,255,.02));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:18px;padding:20px 22px;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.lg-stat:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(15,18,30,.10);border-color:var(--ac-line,rgba(224,176,74,.25))}
+.lg-stat .ic{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:19px;flex:none}
+.lg-stat b{display:block;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.lg-stat span{display:block;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3,rgba(255,255,255,.42));margin-top:5px}
+.lg-stat.total .ic{background:rgba(124,108,240,.13);color:#8f84f0}
+.lg-stat.ban .ic{background:rgba(242,109,95,.13);color:#f26d5f}
+.lg-stat.kick .ic{background:rgba(242,130,60,.13);color:#f2823c}
+.lg-stat.warn .ic{background:rgba(242,163,60,.13);color:#f2a33c}
+.lg-stat.mute .ic{background:rgba(91,155,240,.13);color:#5b9bf0}
 
-/* ── Logs polish: липкая панель фильтров + живые строки ─────── */
-.logs-toolbar{
-  position:sticky;top:74px;z-index:25;
-  background:color-mix(in srgb, var(--bg) 82%, transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  padding:10px 12px;border-radius:14px;border:1px solid var(--line);
-  box-shadow:var(--shadow-sm);
+/* Панель фильтров */
+.lg-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--surface-2,rgba(255,255,255,.02));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:16px;padding:16px 18px;margin-bottom:26px;position:sticky;top:74px;z-index:25;backdrop-filter:blur(12px)}
+.lg-search{flex:1;min-width:220px;position:relative}
+.lg-search i{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--text-3,rgba(255,255,255,.4));font-size:14px}
+.lg-search input{width:100%;padding:12px 16px 12px 42px;border-radius:12px;border:1px solid var(--line-2,rgba(255,255,255,.1));background:transparent;color:var(--text,#fff);font-size:13.5px}
+.lg-search input:focus{outline:none;border-color:var(--ac-line,rgba(224,176,74,.4));box-shadow:0 0 0 3px var(--ac-soft,rgba(224,176,74,.1))}
+.lg-chips{display:flex;gap:8px;flex-wrap:wrap}
+.lg-chip{border:1px solid var(--line-2,rgba(255,255,255,.12));background:transparent;color:var(--text-2,rgba(255,255,255,.6));border-radius:99px;padding:8px 16px;font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s ease;display:inline-flex;align-items:center;gap:7px}
+.lg-chip:hover{border-color:var(--ac-line,rgba(224,176,74,.35));color:var(--text,#fff)}
+.lg-chip.on{background:linear-gradient(120deg,var(--ac,#e0b04a),var(--ac-2,#f0cd7a));border-color:transparent;color:#1c1a12;font-weight:700;box-shadow:0 4px 12px var(--ac-glow,rgba(224,176,74,.25))}
+.lg-guild{padding:11px 14px;border-radius:12px;border:1px solid var(--line-2,rgba(255,255,255,.1));background:transparent;color:var(--text,#fff);font-size:13px;cursor:pointer}
+
+/* Лента событий */
+.lg-feed{display:flex;flex-direction:column;gap:14px}
+.lg-item{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;background:var(--surface-2,rgba(255,255,255,.02));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:16px;padding:18px 22px 18px 26px;overflow:hidden;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;animation:lgIn .35s cubic-bezier(.22,1,.36,1) both}
+.lg-item:hover{transform:translateX(4px);box-shadow:0 8px 24px rgba(15,18,30,.09);border-color:var(--ac-line,rgba(224,176,74,.22))}
+.lg-item::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--lg-c,var(--ac,#e0b04a))}
+@keyframes lgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.lg-ava{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff;background:var(--lg-c,var(--ac,#e0b04a));flex:none}
+.lg-main{min-width:0}
+.lg-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lg-user{font-size:14.5px;font-weight:700;color:var(--text,#fff)}
+.lg-act{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:99px;color:#fff;background:var(--lg-c,var(--ac,#e0b04a))}
+.lg-reason{font-size:12.5px;color:var(--text-2,rgba(255,255,255,.6));margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lg-meta{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-3,rgba(255,255,255,.4));margin-top:6px}
+.lg-meta i{font-size:10px}
+.lg-side{text-align:right;flex:none}
+.lg-time{font-size:12px;font-weight:600;color:var(--text-2,rgba(255,255,255,.6));font-variant-numeric:tabular-nums}
+.lg-ago{display:block;font-size:10.5px;color:var(--text-3,rgba(255,255,255,.38));margin-top:4px}
+.lg-count{margin-left:auto;font-size:12px;font-weight:700;color:var(--text-2,rgba(255,255,255,.55));background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.09));border-radius:99px;padding:6px 14px;font-variant-numeric:tabular-nums}
+.lg-export{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--ac-2,#f0cd7a);background:var(--ac-soft,rgba(224,176,74,.1));border:1px solid var(--ac-line,rgba(224,176,74,.28));border-radius:12px;padding:10px 16px;text-decoration:none;transition:filter .15s ease,transform .15s ease;text-transform:uppercase;letter-spacing:.04em}
+.lg-export:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.lg-empty{text-align:center;padding:60px 20px;color:var(--text-3,rgba(255,255,255,.4));border:1px dashed var(--line-2,rgba(255,255,255,.14));border-radius:18px}
+.lg-empty i{font-size:34px;color:var(--ac,#e0b04a);opacity:.6;display:block;margin-bottom:14px}
+@media (max-width:760px){
+  .lg-item{grid-template-columns:auto 1fr;grid-template-rows:auto auto}
+  .lg-side{grid-column:1/-1;text-align:left;display:flex;gap:10px;align-items:center}
+  .lg-ago{margin-top:0}
 }
-.log-stat{transition:all .18s var(--ease)}
-.log-stat:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
-.log-stat-num{text-shadow:0 2px 14px rgba(0,0,0,.28)}
-.logs-body table{width:100%}
-.logs-body tbody tr{animation:fadeUp .3s var(--ease-out) both}
-.action-badge{border-radius:8px !important;letter-spacing:.04em;text-transform:uppercase;font-size:10px !important;padding:3px 9px !important}
 </style>
 
-<div class="logs-toolbar" data-reveal="up">
-  <select id="guild-filter" class="filter-select" aria-label="Фильтр сервера"><option value="">Все серверы</option></select>
-  <input type="text" id="search" class="search-input" placeholder="Поиск по логам (пользователь, причина, действие)..." aria-label="Поиск по логам (пользователь, причина, действие)...">
-  <span id="logs-count" class="logs-count">0</span>
+<!-- Карточки статистики -->
+<div class="lg-stats">
+  <div class="lg-stat total"><div class="ic"><i class="fas fa-layer-group"></i></div><div><b id="stat-total">—</b><span>Всего записей</span></div></div>
+  <div class="lg-stat ban"><div class="ic"><i class="fas fa-ban"></i></div><div><b id="stat-bans">—</b><span>Блокировки</span></div></div>
+  <div class="lg-stat kick"><div class="ic"><i class="fas fa-user-minus"></i></div><div><b id="stat-kicks">—</b><span>Исключения</span></div></div>
+  <div class="lg-stat warn"><div class="ic"><i class="fas fa-triangle-exclamation"></i></div><div><b id="stat-warns">—</b><span>Предупреждения</span></div></div>
+  <div class="lg-stat mute"><div class="ic"><i class="fas fa-microphone-slash"></i></div><div><b id="stat-muts">—</b><span>Ограничения</span></div></div>
 </div>
 
-<div class="logs-stats" id="logs-stats" data-reveal="up">
-  <div class="log-stat"><div class="log-stat-num" id="stat-total" data-countup>-</div><div class="log-stat-lbl">Всего</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-bans" data-countup>-</div><div class="log-stat-lbl">Банов</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-kicks" data-countup>-</div><div class="log-stat-lbl">Киков</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-warns" data-countup>-</div><div class="log-stat-lbl">Варн</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-muts" data-countup>-</div><div class="log-stat-lbl">Мутов</div></div>
+<!-- Панель фильтров -->
+<div class="lg-bar">
+  <div class="lg-search">
+    <i class="fas fa-magnifying-glass"></i>
+    <input type="text" id="search" placeholder="Найти по имени, причине или действию…" aria-label="Поиск по журналу">
+  </div>
+  <div class="lg-chips" id="type-chips">
+    <button class="lg-chip on" data-f=""><i class="fas fa-border-all"></i>Все</button>
+    <button class="lg-chip" data-f="ban"><i class="fas fa-ban"></i>Баны</button>
+    <button class="lg-chip" data-f="kick"><i class="fas fa-user-minus"></i>Кики</button>
+    <button class="lg-chip" data-f="warn"><i class="fas fa-triangle-exclamation"></i>Варны</button>
+    <button class="lg-chip" data-f="mute"><i class="fas fa-microphone-slash"></i>Муты</button>
+  </div>
+  <select id="guild-filter" class="lg-guild" aria-label="Сервер"><option value="">Все серверы</option></select>
+  <span class="lg-count" id="logs-count">0</span>
+  <a class="lg-export" href="/logs/export?days=7" title="Скачать автономный HTML-отчёт за 7 дней"><i class="fas fa-file-arrow-down"></i>Отчёт</a>
+  <a class="lg-export" href="/logs/export?days=30" title="Отчёт за 30 дней"><i class="fas fa-file-arrow-down"></i>30 дн.</a>
 </div>
 
-<div class="logs-box" data-reveal="up">
-  <div class="logs-head">
-    <div class="logs-title"><i class="fas fa-list"></i> Список действий</div>
-  </div>
-  <div class="logs-body" id="logs-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
-  </div>
+<!-- Лента -->
+<div class="lg-feed" id="feed">
+  <div class="lg-empty"><i class="fas fa-spinner fa-spin"></i>Загружаем журнал…</div>
 </div>
 
 <script>
 (function () {
   'use strict';
-  function $(id) { return document.getElementById(id); }
-  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function fmtDate(iso) {
-    if (!iso) return '-';
-    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); } catch (e) { return '-'; }
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fmtDate(iso){ if(!iso) return '—'; try{ return new Date(iso).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}catch(e){ return '—'; } }
+  function fmtAgo(iso){ if(!iso) return ''; try{ var s=(Date.now()-new Date(iso).getTime())/1000; if(s<60)return 'только что'; if(s<3600)return Math.floor(s/60)+' мин назад'; if(s<86400)return Math.floor(s/3600)+' ч назад'; return Math.floor(s/86400)+' дн назад'; }catch(e){ return ''; } }
+
+  var PALETTE={ban:'#f26d5f',kick:'#f2823c',warn:'#f2a33c',mute:'#5b9bf0',timeout:'#5b9bf0',unban:'#2f9e6e',unmute:'#2f9e6e',lock:'#8f84f0',unlock:'#2f9e6e'};
+  var KIND={ban:'ban',kick:'kick',warn:'warn',mute:'mute',timeout:'mute'};
+  var allLogs=[], typeFilter='', guildFilter='';
+
+  function colorFor(a){ return PALETTE[(a||'').toLowerCase()]||'#8f84f0'; }
+  function kindOf(a){ return KIND[(a||'').toLowerCase()]||''; }
+
+  function loadGuilds(){
+    fetch('/api/guilds').then(function(r){return r.json();}).then(function(gs){
+      var sel=$('guild-filter');
+      (gs||[]).forEach(function(g){ var o=document.createElement('option'); o.value=g.id; o.textContent=g.name; sel.appendChild(o); });
+    }).catch(function(){});
   }
 
-  var allLogs = [];
-  var guilds = [];
-
-  var colors = { ban: 'var(--err)', kick: '#f97316', warn: 'var(--warn)', mute: '#a78bfa', timeout: '#a78bfa', unban: 'var(--ok)', unmute: 'var(--ok)', lock: 'var(--info)', unlock: 'var(--ok)' };
-
-  async function loadGuilds() {
-    try {
-      guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
-      var sel = $('guild-filter');
-      guilds.forEach(function (g) {
-        var opt = document.createElement('option');
-        opt.value = g.id;
-        opt.textContent = g.name;
-        sel.appendChild(opt);
-      });
-    } catch (e) { /* sessiz */ }
-  }
-
-  async function loadLogs(live) {
-    if (!live) $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
-    try {
-      allLogs = await window.fetchCachedJSON('/api/logs');
-      if (window.keepScroll) window.keepScroll(render); else render();
-      updateStats();
-    } catch (e) {
-      if (!live) $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить</p>';
-    }
-  }
-
-  function updateStats() {
-    var bans = 0, kicks = 0, warns = 0, muts = 0;
-    allLogs.forEach(function (l) {
-      var a = (l.action || '').toLowerCase();
-      if (a === 'ban') bans++;
-      else if (a === 'kick') kicks++;
-      else if (a === 'warn' || a.indexOf('warning') !== -1) warns++;
-      else if (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1) muts++;
+  function loadLogs(live){
+    if(!live) $('feed').innerHTML='<div class="lg-empty"><i class="fas fa-spinner fa-spin"></i>Загружаем журнал…</div>';
+    var p = window.fetchCachedJSON ? window.fetchCachedJSON('/api/logs') : fetch('/api/logs').then(function(r){return r.json();});
+    p.then(function(data){ allLogs=data||[]; render(); stats(); }).catch(function(){
+      if(!live) $('feed').innerHTML='<div class="lg-empty"><i class="fas fa-plug-circle-xmark"></i>Не удалось загрузить журнал</div>';
     });
-    $('stat-total').textContent = allLogs.length;
-    $('stat-bans').textContent = bans;
-    $('stat-kicks').textContent = kicks;
-    $('stat-warns').textContent = warns;
-    $('stat-muts').textContent = muts;
   }
 
-  function render() {
-    var guildFilter = $('guild-filter').value;
-    var q = ($('search').value || '').toLowerCase();
-    var filtered = allLogs.filter(function (l) {
-      if (guildFilter && String(l.guild_id || '') !== guildFilter) return false;
-      if (q) {
-        var hay = ((l.action || '') + ' ' + (l.user_name || '') + ' ' + (l.mod_name || '') + ' ' + (l.reason || '')).toLowerCase();
-        if (hay.indexOf(q) === -1) return false;
-      }
+  function stats(){
+    var b=0,k=0,w=0,m=0;
+    allLogs.forEach(function(l){ var t=kindOf(l.action); if(t==='ban')b++; else if(t==='kick')k++; else if(t==='warn')w++; else if(t==='mute')m++; });
+    $('stat-total').textContent=allLogs.length; $('stat-bans').textContent=b;
+    $('stat-kicks').textContent=k; $('stat-warns').textContent=w; $('stat-muts').textContent=m;
+  }
+
+  function render(){
+    var q=($('search').value||'').toLowerCase();
+    var rows=allLogs.filter(function(l){
+      if(guildFilter && String(l.guild_id||'')!==guildFilter) return false;
+      var kd=kindOf(l.action);
+      if(typeFilter && kd!==typeFilter) return false;
+      if(q){ var hay=((l.action||'')+' '+(l.user_name||'')+' '+(l.mod_name||'')+' '+(l.reason||'')).toLowerCase(); if(hay.indexOf(q)===-1) return false; }
       return true;
     });
-    $('logs-count').textContent = filtered.length + ' / ' + allLogs.length;
-    if (!filtered.length) {
-      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Логи не найдены</p>';
-      return;
-    }
-    var rows = filtered.slice(0, 200).map(function (l) {
-      var a = (l.action || '?').toLowerCase();
-      var c = colors[a] || 'var(--text-3)';
-      return '<tr><td><span class="action-badge" >' + esc(l.action || '?') + '</span></td>' +
-        '<td >' + esc(l.user_name || l.channel_name || l.role_name || l.user_id || '-') + '</td>' +
-        '<td >' + esc(l.mod_name || l.mod_id || '-') + '</td>' +
-        '<td   style="max-width: 160px; overflow: hidden;">' + esc(l.reason || '-') + '</td>' +
-        '<td >' + esc(fmtDate(l.timestamp)) + '</td></tr>';
+    $('logs-count').textContent=rows.length+' из '+allLogs.length;
+    if(!rows.length){ $('feed').innerHTML='<div class="lg-empty"><i class="fas fa-inbox"></i>Ничего не найдено.<br>Попробуйте изменить фильтры.</div>'; return; }
+    $('feed').innerHTML=rows.slice(0,120).map(function(l,i){
+      var c=colorFor(l.action);
+      var who=l.user_name||l.channel_name||l.role_name||l.user_id||'—';
+      var init=(String(who).trim().charAt(0)||'?').toUpperCase();
+      return '<div class="lg-item" style="--lg-c:'+c+';animation-delay:'+(Math.min(i,12)*0.03)+'s">' +
+        '<div class="lg-ava">'+esc(init)+'</div>' +
+        '<div class="lg-main"><div class="lg-top"><span class="lg-user">'+esc(who)+'</span><span class="lg-act">'+esc(l.action||'?')+'</span></div>' +
+        (l.reason?'<div class="lg-reason">'+esc(l.reason)+'</div>':'') +
+        '<div class="lg-meta"><i class="fas fa-user-shield"></i>'+(esc(l.mod_name||l.mod_id||'система'))+(l.guild_name?'&nbsp;·&nbsp;'+esc(l.guild_name):'')+'</div></div>' +
+        '<div class="lg-side"><div class="lg-time">'+esc(fmtDate(l.timestamp))+'</div><span class="lg-ago">'+esc(fmtAgo(l.timestamp))+'</span></div>' +
+        '</div>';
     }).join('');
-    $('logs-body').innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  function bind() {
-    $('guild-filter').addEventListener('change', render);
-    $('search').addEventListener('input', render);
+  function bind(){
+    $('search').addEventListener('input',render);
+    $('guild-filter').addEventListener('change',function(){ guildFilter=this.value; render(); });
+    var chips=document.querySelectorAll('#type-chips .lg-chip');
+    chips.forEach(function(ch){ ch.addEventListener('click',function(){
+      chips.forEach(function(x){x.classList.remove('on');}); ch.classList.add('on');
+      typeFilter=ch.getAttribute('data-f')||''; render();
+    });});
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadLogs(); startLive(); });
-  } else {
-    bind(); loadGuilds(); loadLogs(); startLive();
+  function start(){ bind(); loadGuilds(); loadLogs();
+    var tick=function(){ loadLogs(true); };
+    if(window.setLiveRefresh) window.setLiveRefresh(tick,3000); else setInterval(tick,3000);
   }
-  function startLive() {
-    if (window.setLiveRefresh) window.setLiveRefresh(function () { loadLogs(true); }, 2500);
-    else setInterval(function () { loadLogs(true); }, 2500);
-  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',start); } else { start(); }
 })();
 </script>
 {% endblock %}
