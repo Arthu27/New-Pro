@@ -80,6 +80,14 @@ def register(ctx):
         })
 
 
+    # ── Оперативный центр ───────────────────────────────────────────────
+    @app.route('/ops-center')
+    @login_required
+    @role_required('admin')
+    def ops_center_page():
+        return render_template('ops_center.html', role=session.get('role'), username=session.get('username'))
+
+
     # ── Живая консоль логов ──────────────────────────────────────────────
     @app.route('/konsol')
     @login_required

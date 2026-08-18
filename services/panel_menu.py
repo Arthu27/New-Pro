@@ -27,6 +27,7 @@ MENU = [
         {'path': '/advanced-analytics', 'label': 'Про-аналитика', 'icon': 'fa-chart-pie'},
         {'path': '/bot-stats', 'label': 'Статистика бота', 'icon': 'fa-robot'},
         {'path': '/server-health', 'label': 'Состояние', 'icon': 'fa-heartbeat'},
+        {'path': '/ops-center', 'label': 'Оперативный центр', 'icon': 'fa-gauge-high'},
         {'path': '/recap', 'label': 'Рекап канала', 'icon': 'fa-clock-rotate-left'},
     ]},
     {'group': 'Модерация', 'key': 'mod', 'icon': 'fa-shield-halved', 'pages': [

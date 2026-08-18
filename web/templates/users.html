@@ -1,63 +1,40 @@
 {% extends "base.html" %}
-{% block title %}Пользователи - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-users" ></i> Пользователи{% endblock %}
+{% block title %}Пользователи — Aether{% endblock %}
+{% block page_title %}Пользователи{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Пользователи</span>
-    </div>
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Участники <span class="sep">·</span> Список</div>
     <h1>Пользователи</h1>
-    <p>Полный список участников сервера с фильтрами и поиском.</p>
+    <p class="lead">Полный список участников сервера с фильтрами и поиском.</p>
   </div>
 </div>
-{% endblock %}
 
-<style>
-/* Пользователи — premium gold */
-.users-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-.users-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:4px 13px;border-radius:99px;font-size:12.5px;font-weight:700;margin-left:auto;font-variant-numeric:tabular-nums}
-.members-section{}
-.members-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:14px}
-.member-card{display:flex;align-items:center;gap:12px;padding:14px 16px;background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:13px;backdrop-filter:blur(12px);transition:all .18s var(--ease);cursor:pointer}
-.member-card:hover{transform:translateY(-2px);border-color:var(--ac-line);box-shadow:0 10px 26px rgba(0,0,0,.3)}
-.av-wrap{position:relative;flex-shrink:0}
-.av-wrap .av{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--ac-line);object-fit:cover}
-.av-wrap .status-dot{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border:2px solid var(--bg);border-radius:50%}
-.member-name{font-weight:600;color:var(--text);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.member-username{font-size:12px;color:var(--text-3);font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.member-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-/* модалка деталей */
-.member-modal-overlay{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px}
-.member-modal-overlay.open{display:flex}
-.member-modal{background:linear-gradient(165deg,rgba(30,26,20,.98),rgba(18,15,12,.98));border:1px solid var(--ac-line);border-radius:18px;padding:26px;width:min(94vw,520px);max-height:86vh;overflow-y:auto;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.7)}
-.member-modal-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:8px;background:var(--surface);border:1px solid var(--line);color:var(--text-3);font-size:18px;cursor:pointer;transition:.15s}
-.member-modal-close:hover{background:rgba(239,68,68,.15);color:var(--err)}
-.member-detail-info{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:16px}
-.member-detail-av{width:80px;height:80px;border-radius:50%;border:2px solid var(--ac);object-fit:cover;margin-bottom:10px;box-shadow:0 6px 20px var(--ac-glow)}
-.member-detail-name{font-size:18px;font-weight:800;color:var(--text);font-family:'Poppins',sans-serif}
-.member-detail-sub{font-size:13px;color:var(--text-3);margin-top:2px}
-.roles-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ac-2);margin:14px 0 8px;display:flex;align-items:center;gap:8px}
-.roles-section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--ac-line),transparent)}
-</style>
-
-<div class="users-toolbar">
-  <select id="guild-select" class="guild-select" aria-label="Выбор сервера"><option value="">Выберите сервер...</option></select>
-  <input type="text" id="search" class="search-input" placeholder="Поиск участника..." aria-label="Поиск участника...">
-  <span class="users-count" id="member-count" data-countup>0</span>
+<div class="panel">
+  <div class="toolbar">
+    <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Сервер</span>
+      <select id="guild-select" aria-label="Выбор сервера"><option value="">Выберите сервер...</option></select>
+    </label>
+    <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="search" placeholder="Поиск участника..." aria-label="Поиск участника...">
+    </label>
+    <span class="spacer"></span>
+    <span class="badge neutral" id="member-count">0</span>
+  </div>
+  <div class="panel-body">
+    <div id="members-list"><div class="empty"><i class="fas fa-user-friends"></i><span>Выберите сервер для просмотра участников</span></div></div>
+  </div>
 </div>
 
-<div id="members-section" data-reveal="up">
-  <div id="members-list"><div class="empty-state"><i class="fas fa-user-friends"></i><p>Выберите сервер для просмотра участников</p></div></div>
-</div>
-
-<!-- Modal -->
-<div id="modal" class="member-modal-overlay">
-  <div class="member-modal">
-    <button class="member-modal-close" id="modalClose" type="button">&times;</button>
-    <div id="modal-content"></div>
+<!-- Модалка деталей -->
+<div class="modal-overlay" id="modal" style="display:none">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-head">
+      <div id="modal-head-content"><h3>Участник</h3></div>
+      <button type="button" class="close" id="modalClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="modal-body" id="modal-content"></div>
   </div>
 </div>
 
@@ -68,75 +45,69 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   var allMembers = [];
-  var statusClass = { online: 'online', idle: 'idle', dnd: 'dnd' };
+  var statusClass = { online: 'ok', idle: 'warn', dnd: 'err' };
   var statusLabel = { online: 'В сети', idle: 'Неактивен', dnd: 'Не беспокоить', offline: 'Не в сети' };
 
   async function loadGuilds() {
     try {
       var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
       var sel = $('guild-select');
-      guilds.forEach(function (g) {
+      (Array.isArray(guilds) ? guilds : []).forEach(function (g) {
         var opt = document.createElement('option');
         opt.value = g.id;
         opt.textContent = g.name;
         sel.appendChild(opt);
       });
-    } catch (e) { /* sessiz */ }
+    } catch (e) { /* тихо */ }
   }
 
   async function loadMembers() {
     var guildId = $('guild-select').value;
     if (!guildId) {
-      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-user-friends"></i><p>Выберите сервер для просмотра участников</p></div>';
+      $('members-list').innerHTML = '<div class="empty"><i class="fas fa-user-friends"></i><span>Выберите сервер для просмотра участников</span></div>';
       return;
     }
-    $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" ></i><p>Загрузка...</p></div>';
+    $('members-list').innerHTML = '<div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div>';
     try {
       var res = await fetch('/api/guild/' + guildId + '/members?limit=500');
-      allMembers = await res.json();
+      var data = await res.json();
+      allMembers = Array.isArray(data) ? data : (data.members || []);
       $('member-count').textContent = allMembers.length + ' чел.';
       renderMembers(allMembers);
     } catch (e) {
-      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" ></i><p >Не удалось загрузить: ' + esc(e.message) + '</p></div>';
+      $('members-list').innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить: ' + esc(e.message) + '</span></div>';
     }
   }
 
   function renderMembers(members) {
     if (!members.length) {
-      $('members-list').innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><p>Участники не найдены</p></div>';
+      $('members-list').innerHTML = '<div class="empty"><i class="fas fa-user-slash"></i><span>Участники не найдены</span></div>';
       return;
     }
     var html = '';
-    members.forEach(function (m, i) {
+    members.forEach(function (m) {
       var sc = statusClass[m.status] || 'offline';
-      // Use m.id as the data-id so filtering doesn't break the click handler.
-      // Previously we used `data-idx="i"` which was the FILTERED array's
-      // index, but showDetail() looked up `allMembers[i]` — so clicking a
-      // filtered card always opened the wrong member.
       html += '<div class="member-card" data-id="' + esc(m.id) + '">' +
         '<div class="av-wrap">' +
           '<img alt="" class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
           '<span class="status-dot ' + sc + '"></span>' +
         '</div>' +
         '<div class="member-meta">' +
-          '<div class="member-name">' + esc(m.display_name) + '</div>' +
+          '<div class="member-name">' + esc(m.display_name || m.name) + '</div>' +
           '<div class="member-username">@' + esc(m.name) + '</div>' +
         '</div>' +
-        (m.bot ? '<span class="bot-badge">BOT</span>' : '') +
+        (m.bot ? '<span class="badge neutral">BOT</span>' : '') +
       '</div>';
     });
     $('members-list').innerHTML = '<div class="members-grid">' + html + '</div>';
   }
 
   function showDetail(idOrIdx) {
-    // Accept either a Discord id (string) or a numeric index into allMembers.
     var m = null;
     if (typeof idOrIdx === 'string' || (typeof idOrIdx === 'number' && idOrIdx > 1000000000000000)) {
-      // Treat as Discord id
       var wantedId = String(idOrIdx);
       m = allMembers.find(function (x) { return String(x.id) === wantedId; });
     } else {
-      // Legacy index lookup
       m = allMembers[idOrIdx];
     }
     if (!m) return;
@@ -149,27 +120,28 @@
       if (c && c.charAt(0) !== '#') c = '#' + c;
       if (!/^#[0-9a-fA-F]{6}$/.test(c) || c.toLowerCase() === '#000000') c = '';
       var acc = c ? ' style="border-color:' + c + ';color:' + c + ';"' : '';
-      return '<span class="role-chip"' + acc + '>' + esc(r.name) + '</span>';
-    }).join('');
+      return '<span class="badge neutral"' + acc + '>' + esc(r.name) + '</span>';
+    }).join(' ');
+    $('modal-head-content').innerHTML = '<h3>' + esc(m.display_name || m.name) + '</h3><div class="sub">@' + esc(m.name) + ' · ' + esc(st) + '</div>';
     $('modal-content').innerHTML =
       '<div class="member-detail-info">' +
         '<img alt="" class="member-detail-av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-        '<div class="member-detail-name">' + esc(m.display_name) + '</div>' +
+        '<div class="member-detail-name">' + esc(m.display_name || m.name) + '</div>' +
         (m.nick ? '<div class="member-detail-sub">Ник: ' + esc(m.nick) + '</div>' : '') +
         '<div class="member-detail-sub">@' + esc(m.name) + '</div>' +
-        '<div><span class="status-dot ' + sc + '"   style="position: static; margin-right: 6px; width: 9px; height: 9px;"></span> ' + st + (m.bot ? ' <span class="bot-badge"   style="margin-left: 6px;">BOT</span>' : '') + '</div>' +
+        '<div><span class="status-dot ' + sc + '" style="display:inline-block;margin-right:6px;width:9px;height:9px;vertical-align:middle"></span> ' + st + (m.bot ? ' <span class="badge neutral" style="margin-left:6px">BOT</span>' : '') + '</div>' +
       '</div>' +
       '<div class="detail-grid">' +
-        '<div class="detail-cell"><i class="fas fa-id-card"></i><div class="detail-cell-label">ID</div><div class="detail-cell-val">' + esc(m.id) + '</div></div>' +
+        '<div class="detail-cell"><i class="fas fa-id-card"></i><div class="detail-cell-label">ID</div><div class="detail-cell-val mono">' + esc(m.id) + '</div></div>' +
         '<div class="detail-cell"><i class="fas fa-crown"></i><div class="detail-cell-label">Главная роль</div><div class="detail-cell-val">' + esc(m.top_role || 'Нет') + '</div></div>' +
         '<div class="detail-cell"><i class="fas fa-calendar-plus"></i><div class="detail-cell-label">Аккаунт создан</div><div class="detail-cell-val">' + cr.toLocaleDateString('ru-RU') + '</div></div>' +
         '<div class="detail-cell"><i class="fas fa-sign-in-alt"></i><div class="detail-cell-label">Вход на сервер</div><div class="detail-cell-val">' + (jo ? jo.toLocaleDateString('ru-RU') : '—') + '</div></div>' +
       '</div>' +
-      ((m.roles || []).length ? '<div><div class="roles-section-title">Роли (' + m.roles.length + ')</div>' + roles + '</div>' : '');
-    $('modal').classList.add('open');
+      ((m.roles || []).length ? '<div class="section-title" style="margin-top:12px">Роли (' + m.roles.length + ')</div><div class="chip-row">' + roles + '</div>' : '');
+    $('modal').style.display = 'flex';
   }
 
-  function closeModal() { $('modal').classList.remove('open'); }
+  function closeModal() { $('modal').style.display = 'none'; }
 
   function filterMembers() {
     var q = $('search').value.toLowerCase();
@@ -194,8 +166,8 @@
 
   function start() {
     bind(); loadGuilds();
-    if (window.setLiveRefresh) window.setLiveRefresh(loadMembers, 5000);
-    else setInterval(loadMembers, 5000);
+    if (window.setLiveRefresh) window.setLiveRefresh(loadMembers, 30000);
+    else setInterval(loadMembers, 30000);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start);

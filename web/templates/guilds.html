@@ -1,130 +1,86 @@
 {% extends "base.html" %}
 {% block title %}Серверы — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-server"></i> Серверы{% endblock %}
+{% block page_title %}Серверы{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Серверы</span>
-    </div>
-    <h1><i class="fas fa-server"></i> Серверы</h1>
-    <p>Список серверов, к которым подключён бот, и их живая статистика.</p>
-  </div>
-</div>
-{% endblock %}
 
-<!-- Статистика -->
-<div class="stat-row" id="g-stats" data-reveal="up">
-  <div class="stat-box">
-    <div class="stat-icon gold"><i class="fas fa-server"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-total" data-countup>-</div><div class="stat-lbl">Всего серверов</div></div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-icon cyan"><i class="fas fa-users"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-users" data-countup>-</div><div class="stat-lbl">Участников</div></div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-icon green"><i class="fas fa-signal"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-online" data-countup>-</div><div class="stat-lbl">Онлайн</div></div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-icon purple"><i class="fas fa-gem"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-boosts" data-countup>-</div><div class="stat-lbl">Бустов</div></div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Основное <span class="sep">·</span> Серверы</div>
+    <h1>Серверы</h1>
+    <p class="lead">Серверы, к которым подключён бот, и их живая статистика.</p>
   </div>
 </div>
 
-<!-- Список серверов -->
-<div id="guilds-list" data-reveal="up">
-  <div class="skeleton-grid">
-    <div class="skeleton-card"></div>
-    <div class="skeleton-card"></div>
-    <div class="skeleton-card"></div>
-    <div class="skeleton-card"></div>
-  </div>
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-server"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Всего серверов</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-users"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-users">—</div><div class="kpi-label">Участников</div></div></div>
+  <div class="kpi tone-ok"><div class="kpi-icon"><i class="fas fa-signal"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-online">—</div><div class="kpi-label">Онлайн</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-gem"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-boosts">—</div><div class="kpi-label">Бустов</div></div></div>
 </div>
 
-<style>
-.g-card{
-  display:flex; align-items:center; gap:16px; padding:18px 20px;
-  background:var(--surface);
-  border:1px solid var(--line); border-radius:var(--r-lg); margin-bottom:10px;
-  color:var(--text); font-size:14.5px; font-weight:500;
-  box-shadow:var(--shadow-1); transition:all .2s var(--ease); cursor:pointer;
-}
-.g-card:hover{ transform:translateX(4px); border-color:var(--ac-line); box-shadow:var(--shadow-2); }
-.g-icon{ width:52px; height:52px; border-radius:14px; flex-shrink:0; border:1px solid var(--line); object-fit:cover; background:var(--surface-3); box-shadow:var(--shadow-1); }
-.g-info{ flex:1; min-width:0; }
-.g-name{ font-weight:700; color:var(--text); font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.g-meta{ display:flex; align-items:center; gap:16px; margin-top:8px; flex-wrap:wrap; }
-.gm{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-3); }
-.gm i{ color:var(--text-4); font-size:11px; }
-.gm b{ color:var(--text-2); font-weight:600; font-variant-numeric:tabular-nums; }
-.gm.on{ color:#86efac; } .gm.on b{ color:#4ade80; } .gm.on i{ color:#4ade80; text-shadow:0 0 8px #4ade80; }
-.gm.boost{ color:#fcd34d; } .gm.boost b{ color:#fcd34d; } .gm.boost i{ color:#fbbf24; }
-.g-id{ font-size:11px; color:var(--text-3); font-family:'JetBrains Mono',monospace; background:var(--surface-3); border:1px solid var(--line); padding:3px 9px; border-radius:6px; flex-shrink:0; }
-</style>
+<div id="guilds-list">
+  <div class="sk-card"><div class="sk-row"><div class="sk-line" style="width:52px;height:52px;border-radius:14px"></div><div class="sk-line" style="width:40%"></div></div></div>
+  <div class="sk-card"><div class="sk-row"><div class="sk-line" style="width:52px;height:52px;border-radius:14px"></div><div class="sk-line" style="width:40%"></div></div></div>
+  <div class="sk-card"><div class="sk-row"><div class="sk-line" style="width:52px;height:52px;border-radius:14px"></div><div class="sk-line" style="width:40%"></div></div></div>
+</div>
 
 <script>
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  var _counted = {};
 
-  async function load() {
+  function setNum(id, val) {
+    var el = $(id);
+    if (!el) return;
+    var target = Number(val) || 0;
+    if (_counted[id]) { el.textContent = target.toLocaleString('ru-RU'); return; }
+    _counted[id] = true;
+    if (window.countUp) window.countUp(el, target); else el.textContent = target.toLocaleString('ru-RU');
+  }
+
+  async function loadGuilds() {
+    var list = $('guilds-list');
     try {
       var guilds = await window.fetchCachedJSON('/api/guilds');
-      var list = $('guilds-list');
-      if (!guilds.length) {
-        list.innerHTML = '<div class="empty"><i class="fas fa-server"></i><p>Серверы не найдены</p></div>';
-        $('stat-total').textContent = '0';
-        $('stat-users').textContent = '0';
-        $('stat-online').textContent = '0';
-        $('stat-boosts').textContent = '0';
+      if (!Array.isArray(guilds) || !guilds.length) {
+        list.innerHTML = '<div class="empty"><i class="fas fa-server"></i><span>Бот пока не подключён ни к одному серверу</span></div>';
         return;
       }
-      var totalUsers = 0, totalOnline = 0, totalBoosts = 0;
-      var html = '<div class="g-grid">';
-      guilds.forEach(function (g) {
-        totalUsers += g.members || 0;
-        totalOnline += g.online || 0;
-        totalBoosts += g.boost || 0;
-        var icon = g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
-        html += '<div class="g-card">' +
-          '<img alt="" class="g-icon" src="' + esc(icon) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+      setNum('stat-total', guilds.length);
+      setNum('stat-users', guilds.reduce(function (acc, g) { return acc + (Number(g.member_count) || Number(g.members) || 0); }, 0));
+      setNum('stat-online', guilds.reduce(function (acc, g) { return acc + (Number(g.online) || 0); }, 0));
+      setNum('stat-boosts', guilds.reduce(function (acc, g) { return acc + (Number(g.premium_subscription_count) || Number(g.boosts) || 0); }, 0));
+      list.innerHTML = guilds.map(function (g) {
+        var icon = g.icon || '';
+        var members = Number(g.member_count) || Number(g.members) || 0;
+        var online = Number(g.online) || 0;
+        var boosts = Number(g.premium_subscription_count) || Number(g.boosts) || 0;
+        return '<div class="g-card">' +
+          (icon
+            ? '<img alt="" class="g-icon" src="' + esc(icon) + '" onerror="this.style.display=\'none\'">'
+            : '<div class="g-icon" style="display:grid;place-items:center;color:var(--ac);font-weight:800;font-size:20px">' + esc((g.name || '?').charAt(0).toUpperCase()) + '</div>') +
           '<div class="g-info">' +
-            '<div class="g-name">' + esc(g.name) + '</div>' +
+            '<div class="g-name">' + esc(g.name || 'Без имени') + '</div>' +
             '<div class="g-meta">' +
-              '<span class="gm"><i class="fas fa-users"></i> <b>' + (g.members || 0).toLocaleString() + '</b></span>' +
-              '<span class="gm on"><i class="fas fa-circle"></i> <b>' + (g.online || 0).toLocaleString() + '</b> онлайн</span>' +
-              '<span class="gm"><i class="fas fa-hashtag"></i> <b>' + (g.channels || 0) + '</b></span>' +
-              '<span class="gm"><i class="fas fa-user-tag"></i> <b>' + (g.roles || 0) + '</b></span>' +
-              '<span class="gm boost"><i class="fas fa-gem"></i> <b>' + (g.boost || 0) + '</b></span>' +
+              '<span class="gm"><i class="fas fa-users"></i> <b>' + members.toLocaleString('ru-RU') + '</b></span>' +
+              '<span class="gm on"><i class="fas fa-signal"></i> <b>' + online.toLocaleString('ru-RU') + '</b> онлайн</span>' +
+              (boosts ? '<span class="gm boost"><i class="fas fa-gem"></i> <b>' + boosts + '</b> бустов</span>' : '') +
+              '<span class="gm"><i class="fas fa-fingerprint"></i> ' + esc(g.id) + '</span>' +
             '</div>' +
           '</div>' +
           '<span class="g-id">' + esc(g.id) + '</span>' +
         '</div>';
-      });
-      html += '</div>';
-      list.innerHTML = html;
-      $('stat-total').textContent = guilds.length;
-      $('stat-users').textContent = totalUsers.toLocaleString();
-      $('stat-online').textContent = totalOnline.toLocaleString();
-      $('stat-boosts').textContent = totalBoosts.toLocaleString();
+      }).join('');
     } catch (e) {
-      $('guilds-list').innerHTML = '<div class="empty"><i class="fas fa-exclamation-triangle"></i><p>Не удалось загрузить серверы</p></div>';
+      list.innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить серверы</span></div>';
     }
   }
 
-  function start() {
-    load();
-    if (window.setLiveRefresh) window.setLiveRefresh(load, 2500);
-    else setInterval(load, 2500);
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
-  else start();
+  loadGuilds();
+  if (window.setLiveRefresh) window.setLiveRefresh(loadGuilds, 30000);
+  else setInterval(loadGuilds, 30000);
 })();
 </script>
 {% endblock %}
