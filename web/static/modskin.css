@@ -1,158 +1,203 @@
 /* ============================================================
-   modskin.css — единый стиль категории «Модерация» (Mod Ops).
-
+   modskin.css — профессиональный стиль категории «Модерация».
    Подключается на всех страницах группы через body.mz-skin.
-   Идея: один узнаваемый вид раздела — щит в заголовке, золотая
-   линия панелей, плотные таблицы, чипы-бейджи, фокус-кольца —
-   вместо разнобоя legacy-страниц. Ничего не ломает: только
-   переопределяет универсальные селекторы style.css под скоупом.
+
+   Направление: ПРОФИ + МНОГО ВОЗДУХА.
+   Щедрые отступы, чистые плоские панели с мягкой тенью, аккуратная
+   типографика, спокойный акцент, просторные таблицы и кнопки.
+   Ничего не ломает: только переопределяет универсальные селекторы
+   style.css под скоупом body.mz-skin.
    ============================================================ */
 
-/* ── Идентичность категории: заголовок страницы ─────────────── */
+/* ── Токены профессии ──────────────────────────────────────── */
+body.mz-skin {
+  --mz-pad-card: 30px 32px;      /* воздух внутри карточек */
+  --mz-gap: 26px;                 /* воздух между блоками */
+  --mz-row-pad: 15px 18px;        /* воздух в строках таблиц */
+  --mz-radius: 16px;
+}
+
+/* ── Воздух в основе: отступы контента ─────────────────────── */
+body.mz-skin .main-content {
+  padding-left: 34px !important;
+  padding-right: 34px !important;
+  padding-top: 10px !important;
+}
+@media (max-width: 900px) {
+  body.mz-skin .main-content { padding-left: 18px !important; padding-right: 18px !important; }
+}
+
+/* ── Заголовок страницы: крупный, спокойный, с воздухом ────── */
 body.mz-skin .main-content h1 {
-  text-transform: uppercase;
-  letter-spacing: .06em;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
+  letter-spacing: -.01em;
+  font-weight: 700;
+  margin: 8px 0 30px !important;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line-2, rgba(255,255,255,.08));
 }
 body.mz-skin .main-content h1::before {
   content: '\f3ed'; /* fa-shield-halved */
   font-family: 'Font Awesome 6 Free';
   font-weight: 900;
-  font-size: .82em;
+  font-size: .78em;
   color: var(--ac, #e0b04a);
-  background: var(--ac-soft, rgba(224, 176, 74, .12));
-  border: 1px solid var(--ac-line, rgba(224, 176, 74, .25));
-  border-radius: 12px;
-  width: 1.7em;
-  height: 1.7em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 18px var(--ac-glow, rgba(224, 176, 74, .2));
+  background: var(--ac-soft, rgba(224,176,74,.12));
+  border: 1px solid var(--ac-line, rgba(224,176,74,.22));
+  border-radius: 14px;
+  width: 1.9em; height: 1.9em;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 body.mz-skin .main-content h1::after {
-  content: 'MOD OPS';
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .18em;
-  color: var(--ac, #e0b04a);
-  border: 1px solid var(--ac-line, rgba(224, 176, 74, .3));
-  background: var(--ac-soft, rgba(224, 176, 74, .08));
+  content: 'MODERATION';
+  font-size: 9px; font-weight: 700; letter-spacing: .22em;
+  color: var(--text-3, rgba(255,255,255,.4));
+  border: 1px solid var(--line-2, rgba(255,255,255,.12));
   border-radius: 999px;
-  padding: 3px 10px;
+  padding: 4px 12px;
   align-self: center;
+  margin-left: auto;
 }
 
-/* ── Панели/карточки: одна форма во всём разделе ────────────── */
+/* ── Карточки: чистые, плоские, мягкая тень, много воздуха ─── */
 body.mz-skin .section, body.mz-skin .box, body.mz-skin .panel,
 body.mz-skin .card, body.mz-skin .dash-box, body.mz-skin .logs-box,
 body.mz-skin .warn-box, body.mz-skin .stat-card {
-  border-radius: 14px !important;
-  border: 1px solid var(--line-2, rgba(255, 255, 255, .09)) !important;
-  overflow: hidden;
+  border-radius: var(--mz-radius) !important;
+  border: 1px solid var(--line-2, rgba(255,255,255,.08)) !important;
+  padding: var(--mz-pad-card) !important;
+  margin-bottom: var(--mz-gap) !important;
+  box-shadow: 0 6px 24px rgba(15,18,30,.06) !important;
+  overflow: visible;
 }
+/* убираем золотую полоску сверху — чище без неё */
 body.mz-skin .section::before, body.mz-skin .box::before,
 body.mz-skin .panel::before, body.mz-skin .card::before {
-  height: 2px !important;
-  background: linear-gradient(90deg, transparent, var(--ac, #e0b04a) 30%, transparent) !important;
-  opacity: .55;
+  display: none !important;
 }
 body.mz-skin .section > h2, body.mz-skin .box h2, body.mz-skin .panel h2,
 body.mz-skin .card h2, body.mz-skin h3.mz-sec {
-  text-transform: uppercase;
-  letter-spacing: .07em;
-  font-size: 12.5px !important;
+  letter-spacing: .01em;
+  font-weight: 700;
+  font-size: 15px !important;
+  margin: 0 0 20px !important;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line-2, rgba(255,255,255,.07));
 }
 body.mz-skin .section > h2::after, body.mz-skin .box h2::after,
 body.mz-skin .panel h2::after, body.mz-skin .card h2::after {
-  background: linear-gradient(90deg, var(--ac, #e0b04a), transparent) !important;
+  display: none !important;
 }
 
-/* ── Таблицы: плотные, с акцентной шапкой ───────────────────── */
+/* ── Воздух в сетках/флекс-контейнерах раздела ─────────────── */
+body.mz-skin .grid, body.mz-skin .cards-grid, body.mz-skin .stats-grid,
+body.mz-skin .row, body.mz-skin .flex-row {
+  gap: var(--mz-gap);
+}
+
+/* ── Таблицы: просторные, спокойная шапка ──────────────────── */
 body.mz-skin table, body.mz-skin .data-table, body.mz-skin .tk-table,
 body.mz-skin .x-table, body.mz-skin .pl-table, body.mz-skin .aw-table {
   border-radius: 12px !important;
   overflow: hidden;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 body.mz-skin table th, body.mz-skin .data-table th, body.mz-skin .tk-table th,
 body.mz-skin .x-table th, body.mz-skin .pl-table th, body.mz-skin .aw-table th {
   text-transform: uppercase;
-  letter-spacing: .07em;
-  font-size: 10px !important;
-  color: var(--ac, #e0b04a) !important;
-  background: var(--ac-soft, rgba(224, 176, 74, .07)) !important;
+  letter-spacing: .06em;
+  font-size: 10.5px !important;
+  font-weight: 700;
+  color: var(--text-3, rgba(255,255,255,.45)) !important;
+  background: var(--surface-2, rgba(255,255,255,.03)) !important;
+  padding: var(--mz-row-pad) !important;
+}
+body.mz-skin table td, body.mz-skin .data-table td, body.mz-skin .tk-table td,
+body.mz-skin .x-table td, body.mz-skin .pl-table td, body.mz-skin .aw-table td {
+  padding: var(--mz-row-pad) !important;
 }
 body.mz-skin table tbody tr, body.mz-skin .data-table tbody tr {
   transition: background .15s ease;
 }
 body.mz-skin table tbody tr:hover, body.mz-skin .data-table tbody tr:hover {
-  background: var(--ac-soft, rgba(224, 176, 74, .06)) !important;
+  background: var(--ac-soft, rgba(224,176,74,.05)) !important;
 }
 
-/* ── Кнопки: один характер нажатия ──────────────────────────── */
+/* ── Кнопки: просторные, уверенные ─────────────────────────── */
 body.mz-skin .btn, body.mz-skin button.btn,
 body.mz-skin input[type="submit"] {
-  border-radius: 10px !important;
-  font-weight: 700 !important;
-  letter-spacing: .02em;
+  border-radius: 11px !important;
+  font-weight: 600 !important;
+  padding: 11px 20px !important;
+  letter-spacing: .01em;
+  transition: transform .14s ease, box-shadow .14s ease, filter .14s ease !important;
+}
+body.mz-skin .btn:hover, body.mz-skin button.btn:hover {
+  transform: translateY(-1px);
 }
 body.mz-skin .btn:focus-visible, body.mz-skin button:focus-visible,
 body.mz-skin input:focus-visible, body.mz-skin select:focus-visible,
 body.mz-skin textarea:focus-visible {
-  outline: 2px solid var(--ac-line, rgba(224, 176, 74, .45)) !important;
-  outline-offset: 1px;
+  outline: 2px solid var(--ac-line, rgba(224,176,74,.4)) !important;
+  outline-offset: 2px;
 }
 
-/* ── Инпуты: золотое фокус-кольцо ───────────────────────────── */
+/* ── Инпуты: выше и просторнее ─────────────────────────────── */
 body.mz-skin .inp, body.mz-skin input[type="text"],
 body.mz-skin input[type="number"], body.mz-skin input[type="search"],
 body.mz-skin select, body.mz-skin textarea {
-  border-radius: 10px !important;
+  border-radius: 11px !important;
+  padding: 11px 14px !important;
 }
 body.mz-skin .inp:focus, body.mz-skin input:focus,
 body.mz-skin select:focus, body.mz-skin textarea:focus {
-  border-color: var(--ac-line, rgba(224, 176, 74, .4)) !important;
-  box-shadow: 0 0 0 3px var(--ac-soft, rgba(224, 176, 74, .12)) !important;
+  border-color: var(--ac-line, rgba(224,176,74,.4)) !important;
+  box-shadow: 0 0 0 3px var(--ac-soft, rgba(224,176,74,.10)) !important;
 }
 
-/* ── Бейджи и чипы: пилюли ──────────────────────────────────── */
+/* ── Бейджи и чипы: аккуратные пилюли с воздухом ───────────── */
 body.mz-skin .badge, body.mz-skin .action-badge, body.mz-skin .status-badge,
 body.mz-skin .user-badge, body.mz-skin .rank-badge {
   border-radius: 999px !important;
-  letter-spacing: .04em;
+  letter-spacing: .03em;
+  padding: 5px 12px !important;
 }
 
-/* ── Пустые состояния: щит вместо пустоты ───────────────────── */
+/* ── Пустые состояния: просторные ──────────────────────────── */
 body.mz-skin .empty-state {
-  border: 1px dashed var(--line-2, rgba(255, 255, 255, .12));
-  border-radius: 14px;
-  background: var(--surface-2, rgba(255, 255, 255, .02));
+  border: 1px dashed var(--line-2, rgba(255,255,255,.12));
+  border-radius: var(--mz-radius);
+  background: var(--surface-2, rgba(255,255,255,.02));
+  padding: 48px 24px;
 }
-body.mz-skin .empty-state i {
-  color: var(--ac, #e0b04a);
-}
+body.mz-skin .empty-state i { color: var(--ac, #e0b04a); }
 
-/* ── Скроллбары раздела ─────────────────────────────────────── */
-body.mz-skin ::-webkit-scrollbar { width: 9px; height: 9px; }
+/* ── Скроллбары раздела ────────────────────────────────────── */
+body.mz-skin ::-webkit-scrollbar { width: 10px; height: 10px; }
 body.mz-skin ::-webkit-scrollbar-thumb {
-  background: var(--line-3, rgba(255, 255, 255, .2));
-  border-radius: 99px;
+  background: var(--line-3, rgba(255,255,255,.18));
+  border-radius: 99px; border: 2px solid transparent;
 }
 body.mz-skin ::-webkit-scrollbar-thumb:hover {
-  background: var(--ac-line, rgba(224, 176, 74, .35));
+  background: var(--ac-line, rgba(224,176,74,.35));
 }
 
-/* ── Светлая тема ───────────────────────────────────────────── */
-[data-theme="light"] body.mz-skin .section::before,
-[data-theme="light"] body.mz-skin .box::before,
-[data-theme="light"] body.mz-skin .panel::before,
-[data-theme="light"] body.mz-skin .card::before {
-  opacity: .7;
+/* ── Светлая тема: мягче тени ──────────────────────────────── */
+[data-theme="light"] body.mz-skin .section, [data-theme="light"] body.mz-skin .box,
+[data-theme="light"] body.mz-skin .panel, [data-theme="light"] body.mz-skin .card,
+[data-theme="light"] body.mz-skin .dash-box, [data-theme="light"] body.mz-skin .stat-card {
+  box-shadow: 0 4px 18px rgba(20,22,30,.06) !important;
 }
 [data-theme="light"] body.mz-skin .empty-state {
-  border-color: rgba(0, 0, 0, .12);
-  background: rgba(0, 0, 0, .02);
+  border-color: rgba(0,0,0,.12);
+  background: rgba(0,0,0,.015);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.mz-skin .btn, body.mz-skin button.btn { transition: none !important; }
+  body.mz-skin .btn:hover { transform: none; }
 }
