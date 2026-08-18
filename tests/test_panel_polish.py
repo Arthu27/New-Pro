@@ -167,10 +167,10 @@ check('.wf-item:hover' in css and '.wn-link::after' in css, 'v3: фичи и с�
 check('border-color: var(--ac-line) !important' in css, 'v3: единая акцентная рамка при наведении')
 
 logs_html = open(os.path.join(ROOT, 'web', 'templates', 'logs.html'), encoding='utf-8').read()
-check('lg-feed' in logs_html and 'position:sticky' in logs_html.replace(' ', ''),
-      'логи: лента событий + липкая панель фильтров')
-check('.lg-act' in logs_html and 'uppercase' in logs_html,
-      'логи: аккуратные пилюли действий')
+check('lg-table' in logs_html and 'position:sticky' in logs_html.replace(' ', ''),
+      'логи: детальная таблица + липкая шапка/фильтры')
+check('.b-act' in logs_html and 'uppercase' in logs_html,
+      'логи: цветные бейджи действий в таблице')
 
 login_as('owner')
 r = client.get('/logs')
