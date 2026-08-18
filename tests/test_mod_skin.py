@@ -47,7 +47,7 @@ SKIN_TEMPLATES = (
     'lockdown.html', 'security.html', 'antifake.html', 'ladder.html',
     'warn_config.html',
 )
-# Штаб модерации — самодостаточный HUD-дизайн, общий скин ему не нужен.
+# Студия модерации — самодостаточный HUD-дизайн, общий скин ему не нужен.
 
 print('== 1. Файл скина ==')
 skin_path = os.path.join(ROOT, 'web/static/modskin.css')
@@ -85,14 +85,14 @@ for path in ('/antiraid', '/autofilter', '/bulk-actions'):
     body = r.get_data(as_text=True)
     check(r.status_code == 200 and 'mz-skin' in body and 'modskin.css' in body,
           f'{path} отдаётся со скином')
-r = client.get('/mod-hq')
+r = client.get('/mod-studio')
 body = r.get_data(as_text=True)
-check(r.status_code == 200 and 'hq-ticker' in body and 'hqFeed' in body,
-      '/mod-hq отдаётся со своим HUD-слоем')
+check(r.status_code == 200 and 'sd-hero' in body and 'sdFeed' in body,
+      '/mod-studio отдаётся со своим светлым слоем')
 for path, tab in (('/warnings', 'warns'), ('/mod-history', 'history')):
     r = client.get(path)
     check(r.status_code in (301, 302)
-          and ('/mod-hq?tab=' + tab) in (r.headers.get('Location') or ''),
+          and ('/mod-studio?tab=' + tab) in (r.headers.get('Location') or ''),
           f'{path} ведёт в консоль на вкладку {tab}')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

@@ -1226,7 +1226,7 @@ def guilds_page ():
 @role_required ('mod')
 def logs_page ():
     # Логи живут в Центре модерации (вкладка «Журнал»).
-    return redirect ('/mod-hq?tab=journal')
+    return redirect ('/mod-studio?tab=journal')
 
 @app .route ('/logs/export')
 @login_required 
@@ -1259,7 +1259,7 @@ def logs_export_download ():
 @role_required ('mod')
 def warnings_page ():
     # Варны живут в Центре модерации (вкладка «Варны»).
-    return redirect ('/mod-hq?tab=warns')
+    return redirect ('/mod-studio?tab=warns')
 
 @app .route ('/commands')
 @login_required 

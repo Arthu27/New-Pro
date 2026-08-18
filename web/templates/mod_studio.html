@@ -1,0 +1,1192 @@
+{% extends "base.html" %}
+{% block title %}Студия модерации — Панель Aether{% endblock %}
+{% block page_title %}Студия модерации{% endblock %}
+{% block content %}
+<style>
+/* ════════════════════════════════════════════════════════════
+   СТУДИЯ МОДЕРАЦИИ — светлая, мягкая, пастельная рабочая среда.
+   Противоположность тёмным HUD: воздух, округлости, градиенты,
+   дружелюбная типографика, аккуратные сетки.
+   ════════════════════════════════════════════════════════════ */
+.sd{
+  --sd-ind:#7c6cf0; --sd-ind2:#a78bfa; --sd-pink:#ef8fb8;
+  --sd-rose:#e5484d; --sd-rose-bg:#fdebec; --sd-rose-ln:#f5c2c4;
+  --sd-amber:#d9930d; --sd-amber-bg:#fdf3e0; --sd-amber-ln:#f2d9a4;
+  --sd-sky:#3d7ff0; --sd-sky-bg:#e8f0fe; --sd-sky-ln:#bcd4f7;
+  --sd-mint:#2f9e6e; --sd-mint-bg:#e5f6ee; --sd-mint-ln:#b6e2cd;
+  --sd-card:#ffffff; --sd-page:#f3f4fb;
+  --sd-t1:#23252d; --sd-t2:rgba(35,37,45,.72); --sd-t3:rgba(35,37,45,.45);
+  --sd-line:#e7e8f2; --sd-line-soft:#eff0f7;
+  --sd-shadow:0 10px 30px rgba(90,100,150,.10);
+  font-variant-numeric:tabular-nums;color:var(--sd-t1);
+}
+[data-theme="light"] .sd{--sd-page:#f3f4fb;--sd-card:#ffffff}
+[data-theme="dark"] .sd{
+  --sd-rose-bg:rgba(229,72,77,.12); --sd-rose-ln:rgba(229,72,77,.35);
+  --sd-amber-bg:rgba(217,147,13,.12); --sd-amber-ln:rgba(217,147,13,.35);
+  --sd-sky-bg:rgba(61,127,240,.12); --sd-sky-ln:rgba(61,127,240,.35);
+  --sd-mint-bg:rgba(47,158,110,.12); --sd-mint-ln:rgba(47,158,110,.35);
+  --sd-card:#1e2027; --sd-page:#141519;
+  --sd-t1:#eceef4; --sd-t2:rgba(236,238,244,.72); --sd-t3:rgba(236,238,244,.45);
+  --sd-line:#2c2e38; --sd-line-soft:#262831;
+  --sd-shadow:0 10px 30px rgba(0,0,0,.30);
+}
+.sd{position:relative;margin:-8px -6px 0;padding:14px;border-radius:22px;background:var(--sd-page);min-height:70vh}
+.sd ::selection{background:rgba(124,108,240,.22)}
+
+/* ── Хиро-баннер ────────────────────────────────────────────── */
+.sd-hero{position:relative;overflow:hidden;border-radius:20px;padding:22px 26px;color:#fff;
+  background:linear-gradient(120deg,#7c6cf0 0%,#9a7bf5 45%,#ef8fb8 100%);
+  box-shadow:0 14px 34px rgba(124,108,240,.30)}
+.sd-hero::before{content:"";position:absolute;right:-60px;top:-90px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,.14)}
+.sd-hero::after{content:"";position:absolute;right:70px;bottom:-110px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.10)}
+.sd-hero-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:relative;z-index:1}
+.sd-hero-ico{width:46px;height:46px;border-radius:15px;background:rgba(255,255,255,.20);display:flex;align-items:center;justify-content:center;font-size:19px;backdrop-filter:blur(4px)}
+.sd-hero h2{margin:0;font-size:19px;font-weight:800;letter-spacing:-.01em}
+.sd-hero p{margin:2px 0 0;font-size:11.5px;opacity:.85}
+.sd-hero-find{margin-left:auto;display:flex;gap:8px}
+.sd-hero-find input{width:210px;border:none;border-radius:12px;padding:9px 14px;font-size:12.5px;background:rgba(255,255,255,.92);color:#333}
+.sd-hero-find input:focus{outline:2px solid rgba(255,255,255,.7)}
+.sd-hero-find button{border:none;border-radius:12px;padding:0 15px;background:rgba(255,255,255,.22);color:#fff;cursor:pointer;font-size:13px;transition:background .15s ease}
+.sd-hero-find button:hover{background:rgba(255,255,255,.34)}
+
+/* ── Статы под хиро ─────────────────────────────────────────── */
+.sd-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:14px 0}
+@media (max-width:1100px){.sd-stats{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:700px){.sd-stats{grid-template-columns:repeat(2,1fr)}}
+.sd-stat{background:var(--sd-card);border:1px solid var(--sd-line);border-radius:16px;padding:13px 15px;box-shadow:var(--sd-shadow);display:flex;flex-direction:column;gap:6px;transition:transform .16s ease}
+.sd-stat:hover{transform:translateY(-2px)}
+.sd-stat .ic{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.sd-stat b{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.sd-stat span{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--sd-t3)}
+.ic.ind{background:rgba(124,108,240,.13);color:var(--sd-ind)}
+.ic.rose{background:var(--sd-rose-bg);color:var(--sd-rose)}
+.ic.amber{background:var(--sd-amber-bg);color:var(--sd-amber)}
+.ic.sky{background:var(--sd-sky-bg);color:var(--sd-sky)}
+.ic.mint{background:var(--sd-mint-bg);color:var(--sd-mint)}
+
+/* ── Вкладки-пилюли ─────────────────────────────────────────── */
+.sd-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px}
+.sd-tab{border:1px solid var(--sd-line);background:var(--sd-card);color:var(--sd-t2);border-radius:999px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .15s ease;box-shadow:0 2px 8px rgba(90,100,150,.05)}
+.sd-tab i{font-size:11px;color:var(--sd-ind)}
+.sd-tab:hover{border-color:var(--sd-ind2);color:var(--sd-t1)}
+.sd-tab.on{background:linear-gradient(120deg,var(--sd-ind),var(--sd-ind2));border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(124,108,240,.35)}
+.sd-tab.on i{color:#fff}
+.sd-tab .n{font-size:10px;font-weight:800;background:var(--sd-rose-bg);color:var(--sd-rose);border-radius:99px;padding:1px 7px}
+.sd-tab.on .n{background:rgba(255,255,255,.25);color:#fff}
+
+/* ── Карточки ───────────────────────────────────────────────── */
+.sd-card{background:var(--sd-card);border:1px solid var(--sd-line);border-radius:18px;padding:16px 18px;margin-bottom:14px;box-shadow:var(--sd-shadow)}
+.sd-card > header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sd-card > header .ic{width:30px;height:30px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;flex:none}
+.sd-card > header b{font-size:13.5px;font-weight:800;letter-spacing:-.01em}
+.sd-card > header .meta{margin-left:auto;display:flex;gap:8px;align-items:center}
+.sd-fade{animation:sdIn .25s ease}
+@keyframes sdIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+
+/* ── Строки списков ─────────────────────────────────────────── */
+.sd-row{display:grid;grid-template-columns:1fr auto;gap:3px 12px;align-items:center;padding:10px 10px;border-bottom:1px solid var(--sd-line-soft);border-radius:12px}
+.sd-row:last-child{border-bottom:none}
+.sd-row.tri{grid-template-columns:auto minmax(0,1fr) auto}
+.sd-row.click{cursor:pointer;transition:background .14s ease}
+.sd-row.click:hover{background:var(--sd-line-soft)}
+.sd-row.on{background:rgba(124,108,240,.08);box-shadow:inset 0 0 0 1px rgba(124,108,240,.30)}
+.sd-ava{width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex:none}
+.sd-ava.rose{background:linear-gradient(135deg,#f2757a,#e5484d)}
+.sd-ava.amber{background:linear-gradient(135deg,#f0b245,#d9930d)}
+.sd-ava.sky{background:linear-gradient(135deg,#6a9df5,#3d7ff0)}
+.sd-ava.ind{background:linear-gradient(135deg,var(--sd-ind2),var(--sd-ind))}
+.sd-ava.mint{background:linear-gradient(135deg,#54c08d,#2f9e6e)}
+.sd-who{min-width:0}
+.sd-who b{display:block;font-size:13px;font-weight:700;color:var(--sd-t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sd-who small{display:block;font-size:11px;color:var(--sd-t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.sd-pill{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:4px 11px;font-size:10.5px;font-weight:800;white-space:nowrap}
+.sd-pill.rose{background:var(--sd-rose-bg);color:var(--sd-rose)}
+.sd-pill.amber{background:var(--sd-amber-bg);color:var(--sd-amber)}
+.sd-pill.sky{background:var(--sd-sky-bg);color:var(--sd-sky)}
+.sd-pill.mint{background:var(--sd-mint-bg);color:var(--sd-mint)}
+.sd-pill.ind{background:rgba(124,108,240,.12);color:var(--sd-ind)}
+.sd-pill.ghost{background:var(--sd-line-soft);color:var(--sd-t3)}
+.sd-when{font-size:11px;font-weight:700;color:var(--sd-t3);white-space:nowrap}
+.sd-when.hot{color:var(--sd-rose)}
+.sd-when.ind{color:var(--sd-ind)}
+.sd-track{height:5px;border-radius:99px;background:var(--sd-line-soft);overflow:hidden;margin-top:6px}
+.sd-track i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--sd-ind2),var(--sd-ind))}
+.sd-track.hot i{background:linear-gradient(90deg,#f2757a,var(--sd-rose))}
+.sd-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.sd-dot.ok{background:var(--sd-mint)}
+.sd-dot.warn{background:var(--sd-amber)}
+.sd-dot.missing{background:var(--sd-rose)}
+.sd-empty{padding:26px 14px;text-align:center;color:var(--sd-t3);font-size:12.5px;background:var(--sd-line-soft);border-radius:14px;line-height:1.6}
+.sd-empty i{display:block;font-size:20px;color:var(--sd-ind2);margin-bottom:8px}
+.sd-note{padding:9px 8px;border-bottom:1px solid var(--sd-line-soft);font-size:12.5px;color:var(--sd-t2)}
+.sd-note:last-child{border-bottom:none}
+.sd-note small{display:block;font-size:10.5px;color:var(--sd-t3);margin-top:2px}
+.sd-sect{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--sd-t3);margin:13px 0 6px}
+.sd-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.sd-grid2.wide{grid-template-columns:1.45fr 1fr}
+@media (max-width:900px){.sd-grid2,.sd-grid2.wide{grid-template-columns:1fr}}
+
+/* ── Формы/кнопки ───────────────────────────────────────────── */
+.sd-form{display:flex;gap:8px;flex-wrap:wrap}
+.sd-form input{flex:1;min-width:130px;border:1px solid var(--sd-line);border-radius:12px;background:var(--sd-card);color:var(--sd-t1);padding:9px 13px;font-size:12.5px;transition:all .15s ease}
+.sd-form input:focus{outline:none;border-color:var(--sd-ind2);box-shadow:0 0 0 3px rgba(124,108,240,.15)}
+.sd-btn{display:inline-flex;align-items:center;gap:6px;border-radius:12px;padding:8px 15px;font-size:12px;font-weight:800;cursor:pointer;text-decoration:none;border:1px solid var(--sd-line);background:var(--sd-card);color:var(--sd-t2);transition:all .15s ease}
+.sd-btn:hover{transform:translateY(-1px);border-color:var(--sd-ind2);color:var(--sd-ind)}
+.sd-btn.pri{background:linear-gradient(120deg,var(--sd-ind),var(--sd-ind2));border-color:transparent;color:#fff;box-shadow:0 6px 16px rgba(124,108,240,.3)}
+.sd-btn.pri:hover{color:#fff;filter:brightness(1.06)}
+.sd-btn.rose{border-color:var(--sd-rose-ln);color:var(--sd-rose);background:var(--sd-rose-bg)}
+.sd-btn.rose:hover{border-color:var(--sd-rose);color:var(--sd-rose)}
+.sd-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.sd-chip{border:1px solid var(--sd-line);background:var(--sd-card);border-radius:99px;color:var(--sd-t2);font-size:11px;font-weight:700;padding:6px 13px;cursor:pointer;transition:all .14s ease;display:inline-flex;align-items:center;gap:6px}
+.sd-chip:hover{border-color:var(--sd-ind2);color:var(--sd-ind)}
+.sd-chip.on{background:linear-gradient(120deg,var(--sd-ind),var(--sd-ind2));border-color:transparent;color:#fff}
+.sd-qchip{display:inline-flex;align-items:center;gap:7px;height:28px;font-size:11.5px;color:var(--sd-t2);background:var(--sd-line-soft);border:1px solid transparent;border-radius:999px;padding:0 9px 0 13px;margin:3px 5px 3px 0;max-width:100%;cursor:default;transition:all .14s ease}
+.sd-qchip:hover{border-color:var(--sd-ind2)}
+.sd-qchip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sd-qchip button{background:none;border:none;color:var(--sd-t3);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:6px}
+.sd-qchip button:hover{color:var(--sd-rose)}
+.sd-predict{display:none;margin-top:10px;border:1px dashed var(--sd-ind2);border-radius:12px;padding:10px 13px;font-size:12px;color:var(--sd-t2);background:rgba(124,108,240,.06)}
+.sd-predict i{color:var(--sd-ind);margin-right:7px}
+.sd-predict.warn-hot{border-color:var(--sd-rose-ln);background:var(--sd-rose-bg)}
+.sd-predict.warn-hot i{color:var(--sd-rose)}
+
+/* ── Досье-карточка (появляется над контентом) ──────────────── */
+.sd-ctx{display:none;background:linear-gradient(150deg,rgba(124,108,240,.07),rgba(239,143,184,.05)),var(--sd-card);border:1px solid rgba(124,108,240,.28);border-radius:18px;padding:16px 18px;margin-bottom:14px;box-shadow:0 12px 34px rgba(124,108,240,.16)}
+.sd-ctx-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sd-ctx-head b{font-size:13px;font-weight:800}
+.sd-ctx-head button{margin-left:auto;border:1px solid var(--sd-line);background:var(--sd-card);color:var(--sd-t3);border-radius:10px;font-size:11px;padding:4px 10px;cursor:pointer}
+.sd-ctx-head button:hover{color:var(--sd-rose);border-color:var(--sd-rose-ln)}
+
+/* ── Графики ────────────────────────────────────────────────── */
+.sd-spark{width:100%;display:block;overflow:visible}
+.sd-spark .area{fill:url(#sdGrad);opacity:.95}
+.sd-spark .line{fill:none;stroke:var(--sd-ind);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:420;stroke-dashoffset:420;animation:sdDraw 1.1s .1s ease forwards}
+@keyframes sdDraw{to{stroke-dashoffset:0}}
+.sd-spark .dot{fill:var(--sd-ind2)}
+.sd-spark .lbl{fill:var(--sd-t3);font-size:8px}
+.sd-eff{display:grid;grid-template-columns:1fr repeat(3,52px);gap:5px 13px;align-items:center;padding:9px 8px;border-bottom:1px solid var(--sd-line-soft)}
+.sd-eff:last-child{border-bottom:none}
+.sd-eff.head{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--sd-t3);font-weight:800}
+.sd-eff .v{font-size:12.5px;font-weight:800;color:var(--sd-t1);text-align:right}
+.sd-eff .v.dim{color:var(--sd-t3);font-weight:500}
+.sd-eff.total{background:rgba(124,108,240,.06);border-radius:10px}
+.sd-stairs{display:flex;align-items:flex-end;gap:10px;padding:8px 2px 0}
+.sd-stair{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;min-width:0}
+.sd-stair i{display:block;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,var(--sd-ind2),var(--sd-ind))}
+.sd-stair b{font-size:11px;font-weight:800;color:var(--sd-t1);text-align:center}
+.sd-stair span{font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--sd-t3);text-align:center;font-weight:700;white-space:nowrap;overflow:hidden}
+
+/* ── Уведомления ────────────────────────────────────────────── */
+.sd-notes{position:fixed;top:14px;right:14px;z-index:9500;display:flex;flex-direction:column;gap:9px;width:min(340px,90vw)}
+.sd-ncard{display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:center;background:var(--sd-card);border:1px solid var(--sd-line);border-left:4px solid var(--sd-ind);border-radius:14px;padding:12px 14px;box-shadow:0 16px 44px rgba(60,70,120,.22);animation:sdPop .3s cubic-bezier(.34,1.45,.64,1)}
+.sd-ncard.ok{border-left-color:var(--sd-mint)}
+.sd-ncard.err{border-left-color:var(--sd-rose)}
+.sd-ncard i{color:var(--sd-ind);font-size:16px}
+.sd-ncard.ok i{color:var(--sd-mint)}
+.sd-ncard.err i{color:var(--sd-rose)}
+.sd-ncard b{display:block;font-size:12.5px;font-weight:800;color:var(--sd-t1)}
+.sd-ncard small{display:block;font-size:11px;color:var(--sd-t3);margin-top:2px}
+.sd-ncard button{background:var(--sd-line-soft);border:none;color:var(--sd-t2);border-radius:9px;font-size:10.5px;font-weight:800;padding:6px 10px;cursor:pointer}
+.sd-ncard button:hover{background:rgba(124,108,240,.14);color:var(--sd-ind)}
+@keyframes sdPop{from{opacity:0;transform:translateX(26px) scale(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.sd *{animation:none !important;transition:none !important}}
+</style>
+
+<div class="sd">
+  <div class="sd-hero">
+    <div class="sd-hero-top">
+      <div class="sd-hero-ico"><i class="fas fa-wand-magic-sparkles"></i></div>
+      <div>
+        <h2>Студия модерации</h2>
+        <p>Спокойная рабочая среда: порядок, контроль и ничего лишнего</p>
+      </div>
+      <div class="sd-hero-find">
+        <input id="sdFind" maxlength="24" placeholder="Найти участника по ID…" onkeydown="if(event.key==='Enter')sdFindGo()">
+        <button onclick="sdFindGo()" title="Открыть досье"><i class="fas fa-magnifying-glass"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sd-stats" id="sdStats"></div>
+
+  <div class="sd-tabs" id="sdTabs">
+    <button class="sd-tab on" data-tab="feed" onclick="sdTab('feed')"><i class="fas fa-house"></i> Сводка <span class="n" id="sdTabFeedN" style="display:none"></span></button>
+    <button class="sd-tab" data-tab="control" onclick="sdTab('control')"><i class="fas fa-hand-sparkles"></i> Действия</button>
+    <button class="sd-tab" data-tab="journal" onclick="sdTab('journal')"><i class="fas fa-book-open"></i> Журнал</button>
+    <button class="sd-tab" data-tab="warns" onclick="sdTab('warns')"><i class="fas fa-circle-exclamation"></i> Варны</button>
+    <button class="sd-tab" data-tab="temp" onclick="sdTab('temp')"><i class="fas fa-hourglass-half"></i> Временные</button>
+    <button class="sd-tab" data-tab="shield" onclick="sdTab('shield')"><i class="fas fa-shield-heart"></i> Защиты</button>
+    <button class="sd-tab" data-tab="proofs" onclick="sdTab('proofs')"><i class="fas fa-images"></i> Демки</button>
+    <button class="sd-tab" data-tab="appeals" onclick="sdTab('appeals')"><i class="fas fa-scale-balanced"></i> Апелляции</button>
+    <button class="sd-tab" data-tab="stats" onclick="sdTab('stats')"><i class="fas fa-chart-pie"></i> Аналитика</button>
+    <button class="sd-tab" data-tab="history" onclick="sdTab('history')"><i class="fas fa-clock-rotate-left"></i> История</button>
+    <button class="sd-tab" data-tab="people" onclick="sdTab('people')"><i class="fas fa-user-group"></i> Люди</button>
+  </div>
+
+  <div class="sd-ctx" id="sdCtx">
+    <div class="sd-ctx-head">
+      <div class="sd-ava ind" id="sdCtxAva"><i class="fas fa-user"></i></div>
+      <b>Досье участника</b>
+      <button onclick="sdCloseCtx()" title="Закрыть (Esc)"><i class="fas fa-xmark"></i> Закрыть</button>
+    </div>
+    <div id="sdDossier"></div>
+  </div>
+
+  <div id="sdPane-feed">
+    <div class="sd-card">
+      <header>
+        <div class="ic ind"><i class="fas fa-stream"></i></div><b>Что происходит сейчас</b>
+        <div class="meta"><span class="sd-pill ind" id="sdFeedOff">0</span></div>
+      </header>
+      <div class="sd-chips" id="sdFeedChips"></div>
+      <div id="sdFeed"></div>
+    </div>
+  </div>
+
+  <div id="sdPane-control" style="display:none">
+    <div class="sd-grid2">
+      <div>
+        <div class="sd-card">
+          <header><div class="ic ind"><i class="fas fa-hand-sparkles"></i></div><b>Быстрые действия</b></header>
+          <div id="sdWarnBody">
+            <div class="sd-form">
+              <input id="sdWarnId" maxlength="24" placeholder="ID или @упоминание" oninput="sdPredictQueue()">
+              <input id="sdWarnText" maxlength="200" placeholder="Причина">
+            </div>
+            <div class="sd-predict" id="sdPredict"></div>
+            <div id="sdWarnChips" style="margin-top:8px"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+              <button class="sd-btn rose" onclick="sdWarnAsk()"><i class="fas fa-circle-exclamation"></i> Выдать варн</button>
+              <button class="sd-btn" onclick="sdUnwarnAsk()"><i class="fas fa-rotate-left"></i> Снять варн</button>
+              <button class="sd-btn" onclick="sdAmnestyAsk()"><i class="fas fa-dove"></i> Амнистия</button>
+            </div>
+          </div>
+          <div id="sdWarnDenied" style="display:none;font-size:11.5px;color:var(--sd-t3)">Выдавать наказания могут администраторы.</div>
+        </div>
+        <div class="sd-card">
+          <header><div class="ic amber"><i class="fas fa-triangle-exclamation"></i></div><b>На грани авто-наказания</b>
+            <div class="meta"><a class="sd-btn" href="/api/guild/{{ guild_id }}/mod-studio/warns.csv"><i class="fas fa-file-csv"></i> CSV</a></div></header>
+          <div class="sd-form" style="margin-bottom:10px"><input id="sdRiskSearch" placeholder="Поиск по имени или ID" oninput="renderRisk()"></div>
+          <div id="sdRisk"></div>
+        </div>
+        <div class="sd-card">
+          <header><div class="ic sky"><i class="fas fa-bolt"></i></div><b>Быстрые причины</b></header>
+          <div class="sd-chips" id="sdKindTabs"></div>
+          <div id="sdReasons"></div>
+          <div id="sdReasonForm" style="display:none">
+            <div class="sd-form" style="margin-top:10px">
+              <input id="sdReasonText" maxlength="120" placeholder="Новая причина">
+              <button class="sd-btn pri" onclick="sdReasonAdd()"><i class="fas fa-plus"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="sd-card">
+          <header><div class="ic mint"><i class="fas fa-dove"></i></div><b>Амнистии</b><div class="meta"><span class="sd-pill ghost" id="sdAmnOff">0</span></div></header>
+          <div id="sdAmnesty"></div>
+        </div>
+        <div class="sd-card">
+          <header><div class="ic ind"><i class="fas fa-clipboard-user"></i></div><b>Журнал панели</b></header>
+          <div id="sdPanelLog"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sdPane-journal" style="display:none">
+    <div class="sd-card">
+      <header><div class="ic ind"><i class="fas fa-book-open"></i></div><b>Журнал сервера</b><div class="meta"><span class="sd-pill ghost" id="sdJournalOff">0</span></div></header>
+      <div class="sd-form" style="margin-bottom:10px">
+        <input id="sdJournalSearch" placeholder="Поиск: имя, причина, канал" oninput="sdJournalReload()">
+        <input id="sdJournalMod" placeholder="Модератор" oninput="sdJournalReload()">
+      </div>
+      <div class="sd-chips" id="sdJournalCats"></div>
+      <div id="sdJournal"></div>
+    </div>
+  </div>
+
+  <div id="sdPane-warns" style="display:none">
+    <div class="sd-grid2 wide">
+      <div class="sd-card">
+        <header><div class="ic amber"><i class="fas fa-circle-exclamation"></i></div><b>Варны по участникам</b><div class="meta"><span class="sd-pill ghost" id="sdWarnsOff">0</span></div></header>
+        <div class="sd-form" style="margin-bottom:10px"><input id="sdWarnsSearch" placeholder="Поиск по имени или ID" oninput="renderWarnsList()"></div>
+        <div id="sdWarnsList"></div>
+      </div>
+      <div>
+        <div class="sd-card">
+          <header><div class="ic ind"><i class="fas fa-stairs"></i></div><b>Лестница порогов</b></header>
+          <div id="sdSteps"></div>
+        </div>
+        <div class="sd-card">
+          <header><div class="ic sky"><i class="fas fa-toolbox"></i></div><b>Инструменты</b></header>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="sd-btn pri" onclick="sdTab('control')"><i class="fas fa-hand-sparkles"></i> Выдать варн</button>
+            <a class="sd-btn" href="/api/guild/{{ guild_id }}/mod-studio/warns.csv"><i class="fas fa-file-csv"></i> CSV варнов</a>
+            <a class="sd-btn" href="/warn-config"><i class="fas fa-stairs"></i> Пороги</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sdPane-temp" style="display:none">
+    <div class="sd-grid2 wide">
+      <div class="sd-card">
+        <header><div class="ic sky"><i class="fas fa-hourglass-half"></i></div><b>Активные временные наказания</b>
+          <div class="meta"><span class="sd-pill ghost" id="sdTempOff">0</span><a class="sd-btn" href="/api/guild/{{ guild_id }}/mod-studio/radar.csv"><i class="fas fa-file-csv"></i> CSV</a></div></header>
+        <div id="sdTempFull"></div>
+      </div>
+      <div class="sd-card">
+        <header><div class="ic mint"><i class="fas fa-layer-group"></i></div><b>Сводка истечений</b></header>
+        <div id="sdTempCounts"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sdPane-shield" style="display:none">
+    <div class="sd-grid2">
+      <div class="sd-card">
+        <header><div class="ic mint"><i class="fas fa-shield-heart"></i></div><b>Защиты сервера</b></header>
+        <div id="sdShield"></div>
+      </div>
+      <div>
+        <div class="sd-card">
+          <header><div class="ic rose"><i class="fas fa-house-lock"></i></div><b>Локдаун</b></header>
+          <div id="sdLockdown"></div>
+        </div>
+        <div class="sd-card">
+          <header><div class="ic sky"><i class="fas fa-toolbox"></i></div><b>Настройки защит</b></header>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a class="sd-btn" href="/autofilter"><i class="fas fa-filter"></i> Автофильтр</a>
+            <a class="sd-btn" href="/antiraid"><i class="fas fa-shield-virus"></i> Анти-рейд</a>
+            <a class="sd-btn" href="/security"><i class="fas fa-user-shield"></i> Безопасность</a>
+            <a class="sd-btn" href="/lockdown"><i class="fas fa-house-lock"></i> Локдаун</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sdPane-proofs" style="display:none">
+    <div class="sd-card">
+      <header><div class="ic sky"><i class="fas fa-images"></i></div><b>Демки модерации</b>
+        <div class="meta"><span class="sd-pill ghost" id="sdProofsOff">0</span><a class="sd-btn" href="/proofs">Галерея</a></div></header>
+      <div id="sdProofs"></div>
+    </div>
+  </div>
+
+  <div id="sdPane-appeals" style="display:none">
+    <div class="sd-card">
+      <header><div class="ic ind"><i class="fas fa-scale-balanced"></i></div><b>Апелляции</b>
+        <div class="meta"><span class="sd-pill ghost" id="sdAppealsOff">0</span><a class="sd-btn" href="/appeals">Полный раздел</a></div></header>
+      <div class="sd-chips" id="sdAppealStats"></div>
+      <div id="sdAppeals"></div>
+    </div>
+  </div>
+
+  <div id="sdPane-stats" style="display:none">
+    <div class="sd-chips" id="sdDaysTabs" style="margin-bottom:10px"></div>
+    <div class="sd-grid2 wide">
+      <div>
+        <div class="sd-card">
+          <header><div class="ic ind"><i class="fas fa-rotate"></i></div><b>Эффективность наказаний</b></header>
+          <div id="sdEffect"></div>
+        </div>
+        <div class="sd-card">
+          <header><div class="ic sky"><i class="fas fa-chart-column"></i></div><b>Тренд наказаний</b><div class="meta"><span class="sd-pill ghost" id="sdTrendOff"></span></div></header>
+          <div id="sdTrend"></div>
+        </div>
+      </div>
+      <div class="sd-card">
+        <header><div class="ic mint"><i class="fas fa-user-group"></i></div><b>Команда модераторов</b><div class="meta"><span class="sd-pill ghost" id="sdTeamOff">0</span></div></header>
+        <div id="sdTeam"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sdPane-history" style="display:none">
+    <div class="sd-card">
+      <header><div class="ic amber"><i class="fas fa-clock-rotate-left"></i></div><b>История наказаний и снятий</b><div class="meta"><span class="sd-pill ghost" id="sdHistoryOff">0</span></div></header>
+      <div id="sdHistory"></div>
+    </div>
+  </div>
+
+  <div id="sdPane-people" style="display:none">
+    <div class="sd-card">
+      <header><div class="ic ind"><i class="fas fa-user-group"></i></div><b>Под приглядом</b><div class="meta"><span class="sd-pill ghost" id="sdSubjectsOff">0</span></div></header>
+      <div class="sd-form" style="margin-bottom:10px"><input id="sdSubjectsSearch" placeholder="Поиск по имени или ID" oninput="renderSubjects()"></div>
+      <div id="sdSubjects"></div>
+    </div>
+  </div>
+</div>
+
+<div class="sd-notes" id="sdNotes"></div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="sdGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#a78bfa"></stop><stop offset="100%" stop-color="#7c6cf0" stop-opacity=".35"></stop>
+  </linearGradient>
+</defs></svg>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/mod-studio';
+var OV = null, CAN = false, DAYS = 90, KIND = 'warn', FEED_F = 'all', PICKED = null;
+var TDATA = { journal: null, warns: null, temp: null, history: null, shield: null, proofs: null, appeals: null };
+var AVA = ['ind', 'rose', 'amber', 'sky', 'mint'];
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+function fmtDate(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var p = function (v) { return String(v).padStart(2, '0'); };
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function fmtAgo(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var s = Math.max(0, (Date.now() - d.getTime()) / 1000);
+  if (s < 60) return 'только что';
+  if (s < 3600) return Math.floor(s / 60) + ' мин назад';
+  if (s < 86400) return Math.floor(s / 3600) + ' ч назад';
+  var days = Math.floor(s / 86400);
+  return days + ' ' + plural(days, 'день', 'дня', 'дней') + ' назад';
+}
+function fmtLeft(sec) {
+  var s = Math.abs(sec);
+  var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  var t = d > 0 ? d + 'д ' + h + 'ч' : (h > 0 ? h + 'ч ' + m + 'м' : Math.max(m, s > 30 ? 1 : 0) + 'м');
+  return sec < 0 ? 'просрочено ' + t : 'осталось ' + t;
+}
+function avaFor(uid, cls) {
+  var sum = 0, s = String(uid || 'x');
+  for (var i = 0; i < s.length; i++) sum += s.charCodeAt(i);
+  var c = cls || AVA[sum % AVA.length];
+  var ch = (s.replace(/[^a-zа-яёA-ZА-ЯЁ0-9]/g, '').charAt(0) || '?').toUpperCase();
+  return '<span class="sd-ava ' + c + '">' + esc(ch) + '</span>';
+}
+function sdNotify(title, body, kind, icon, undoFn) {
+  var stack = document.getElementById('sdNotes');
+  var el = document.createElement('div');
+  el.className = 'sd-ncard ' + (kind || '');
+  el.innerHTML = '<i class="fas ' + (icon || 'fa-circle-info') + '"></i>' +
+    '<div><b>' + esc(title) + '</b>' + (body ? '<small>' + esc(body) + '</small>' : '') + '</div>' +
+    (undoFn ? '<button>Откатить</button>' : '');
+  if (undoFn) el.querySelector('button').onclick = function () { undoFn(); el.remove(); };
+  stack.appendChild(el);
+  setTimeout(function () { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; }, 6100);
+  setTimeout(function () { el.remove(); }, 6600);
+}
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') sdCloseCtx(); });
+
+/* ── Навигация ──────────────────────────────────────────────── */
+function sdTab(name) {
+  var panes = ['feed', 'control', 'journal', 'warns', 'temp', 'shield', 'proofs', 'appeals', 'stats', 'history', 'people'];
+  for (var i = 0; i < panes.length; i++) {
+    document.getElementById('sdPane-' + panes[i]).style.display = panes[i] === name ? '' : 'none';
+  }
+  var tabs = document.querySelectorAll('#sdTabs .sd-tab');
+  for (var j = 0; j < tabs.length; j++) {
+    tabs[j].className = 'sd-tab' + (tabs[j].getAttribute('data-tab') === name ? ' on' : '');
+  }
+  var pane = document.getElementById('sdPane-' + name);
+  if (pane) { pane.classList.remove('sd-fade'); void pane.offsetWidth; pane.classList.add('sd-fade'); }
+  if (name === 'journal' && !TDATA.journal) sdLoadJournal();
+  if (name === 'warns' && !TDATA.warns) sdLoadWarns();
+  if (name === 'temp' && !TDATA.temp) sdLoadTemp();
+  if (name === 'history' && !TDATA.history) sdLoadHistory();
+  if (name === 'shield' && !TDATA.shield) sdLoadShield();
+  if (name === 'proofs' && !TDATA.proofs) sdLoadProofs();
+  if (name === 'appeals' && !TDATA.appeals) sdLoadAppeals();
+}
+
+/* ── Досье ──────────────────────────────────────────────────── */
+function sdOpenCtx() { document.getElementById('sdCtx').style.display = ''; }
+function sdCloseCtx() {
+  document.getElementById('sdCtx').style.display = 'none';
+  PICKED = null;
+  if (OV) { renderFeed(); renderSubjects(); }
+}
+function sdFromAny(uid) {
+  PICKED = uid;
+  sdOpenCtx();
+  sdDossier(uid);
+  if (OV) { renderFeed(); renderSubjects(); }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function sdFindGo() {
+  var v = document.getElementById('sdFind').value.trim();
+  if (v) sdFromAny(v);
+}
+
+/* ── Статы ──────────────────────────────────────────────────── */
+function renderStats(d) {
+  var c = d.radar.counts;
+  var st = function (ic, cls, num, label) {
+    return '<div class="sd-stat"><div class="ic ' + cls + '"><i class="fas ' + ic + '"></i></div><b>' + num + '</b><span>' + esc(label) + '</span></div>';
+  };
+  document.getElementById('sdStats').innerHTML =
+    st('fa-circle-exclamation', 'amber', d.warns_total, 'открытых варнов') +
+    st('fa-person-running', 'rose', d.risk.edge, 'на волоске') +
+    st('fa-hourglass-end', 'rose', c.overdue, 'просрочено') +
+    st('fa-hourglass-half', 'sky', d.radar.active_total, 'активных наказаний') +
+    st('fa-gavel', 'ind', d.recent7, 'кар за 7 дней') +
+    st('fa-heart', 'mint', d.checklist.ok + '/' + d.checklist.total, 'готовность защит');
+  var tb = document.getElementById('sdTabFeedN');
+  var urgent = c.overdue + d.risk.edge;
+  tb.style.display = urgent ? '' : 'none';
+  tb.textContent = urgent;
+}
+
+/* ── Сводка (лента) ─────────────────────────────────────────── */
+var FEED_CHIPS = [['all', 'Всё'], ['urgent', 'Срочное'], ['radar', 'Истечения'], ['edge', 'На грани'], ['repeat', 'Повторники'], ['punish', 'Наказания']];
+function renderFeedChips() {
+  document.getElementById('sdFeedChips').innerHTML = FEED_CHIPS.map(function (c) {
+    return '<button class="sd-chip' + (FEED_F === c[0] ? ' on' : '') + '" onclick="sdFeedSet(\'' + c[0] + '\')">' + c[1] + '</button>';
+  }).join('');
+}
+function sdFeedSet(f) { FEED_F = f; renderFeedChips(); renderFeed(); }
+function renderFeed() {
+  if (!OV) return;
+  var d = OV, items = [];
+  d.radar.rows.forEach(function (r) {
+    items.push({ f: r.remaining_s <= 0 ? ['urgent', 'radar'] : ['radar'],
+      ava: r.remaining_s <= 0 ? 'rose' : (r.remaining_s <= 21600 ? 'amber' : 'sky'),
+      pill: [r.kind_name, r.remaining_s <= 0 ? 'rose' : (r.remaining_s <= 21600 ? 'amber' : 'sky')],
+      title: r.name || ('#' + r.user_id), sub: r.reason || 'без причины',
+      when: fmtLeft(r.remaining_s), hot: r.remaining_s <= 0, uid: r.user_id });
+  });
+  d.risk.items.forEach(function (r) {
+    if (r.gap !== 1) return;
+    items.push({ f: ['urgent', 'edge'], ava: 'amber', pill: ['на грани', 'amber'],
+      title: r.name || ('#' + r.user_id),
+      sub: r.warns + '/' + r.next_count + ' варнов → ' + r.action_name,
+      when: 'остался 1 варн', hot: true, uid: r.user_id });
+  });
+  d.repeat.items.forEach(function (r) {
+    items.push({ f: ['repeat'], ava: 'sky', pill: ['повторник', 'sky'],
+      title: r.name || ('ID ' + r.user_id),
+      sub: r.count + ' ' + plural(r.count, 'кара', 'кары', 'кар') + ' за ' + d.repeat.days + ' дн.',
+      when: fmtAgo(r.last_at), hot: false, uid: r.user_id });
+  });
+  d.recent.forEach(function (r) {
+    items.push({ f: ['punish'], ava: r.kind === 'lift' ? 'mint' : 'ind',
+      pill: [r.action, r.kind === 'lift' ? 'mint' : 'ind'],
+      title: r.name || ('#' + r.user_id),
+      sub: (r.reason || '—') + (r.mod_name ? ' · ' + r.mod_name : ''),
+      when: fmtAgo(r.at), hot: false, uid: r.user_id });
+  });
+  var order = { urgent: 0, radar: 1, edge: 2, repeat: 3, punish: 4 };
+  var rows = items.filter(function (it) { return FEED_F === 'all' || it.f.indexOf(FEED_F) !== -1; });
+  rows.sort(function (a, b) { return (order[a.f[0]] || 9) - (order[b.f[0]] || 9); });
+  rows = rows.slice(0, 40);
+  document.getElementById('sdFeedOff').textContent = rows.length;
+  var box = document.getElementById('sdFeed');
+  if (!rows.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-mug-hot"></i>Сейчас спокойно</div>'; return; }
+  box.innerHTML = rows.map(function (it) {
+    return '<div class="sd-row tri click' + (PICKED === it.uid ? ' on' : '') + '" onclick="sdFromAny(\'' + esc(it.uid) + '\')">' +
+      avaFor(it.uid, it.ava) +
+      '<div class="sd-who"><b>' + esc(it.title) + ' <span class="sd-pill ' + it.pill[1] + '">' + esc(it.pill[0]) + '</span></b>' +
+      '<small>' + esc(it.sub) + '</small></div>' +
+      '<span class="sd-when' + (it.hot ? ' hot' : '') + '">' + esc(it.when) + '</span></div>';
+  }).join('');
+}
+
+/* ── Действия ───────────────────────────────────────────────── */
+function renderRisk() {
+  if (!OV) return;
+  var box = document.getElementById('sdRisk');
+  if (!OV.risk.tuned) {
+    box.innerHTML = '<div class="sd-empty"><i class="fas fa-stairs"></i>Пороги не заданы — <a class="sd-btn" href="/warn-config">настроить</a></div>';
+    return;
+  }
+  var q = (document.getElementById('sdRiskSearch').value || '').trim().toLowerCase();
+  var items = OV.risk.items.filter(function (r) {
+    return !q || (r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.user_id).indexOf(q) !== -1;
+  });
+  if (!items.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-face-smile"></i>Никого нет</div>'; return; }
+  box.innerHTML = items.map(function (r) {
+    var pct = Math.min(100, Math.round(100 * r.warns / r.next_count));
+    return '<div class="sd-row tri click" onclick="sdFromAny(\'' + esc(r.user_id) + '\')">' + avaFor(r.user_id, r.gap === 1 ? 'rose' : 'amber') +
+      '<div class="sd-who"><b>' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>' + r.warns + '/' + r.next_count + ' варнов · дальше «' + esc(r.action_name) + '»</small>' +
+      '<div class="sd-track' + (r.gap === 1 ? ' hot' : '') + '"><i style="width:' + pct + '%"></i></div></div>' +
+      '<span class="sd-pill ' + (r.gap === 1 ? 'rose' : 'amber') + '">ещё ' + r.gap + '</span></div>';
+  }).join('');
+}
+function renderReasons() {
+  if (!OV) return;
+  document.getElementById('sdKindTabs').innerHTML = OV.reason_kinds.map(function (k) {
+    var n = (OV.reasons[k.key] || []).length;
+    return '<button class="sd-chip' + (k.key === KIND ? ' on' : '') + '" onclick="sdKindSet(\'' + k.key + '\')">' + esc(k.label) + ' · ' + n + '</button>';
+  }).join('');
+  var items = OV.reasons[KIND] || [];
+  var box = document.getElementById('sdReasons');
+  box.innerHTML = items.length ? items.map(function (it) {
+    var del = CAN ? '<button onclick="sdReasonDel(' + it.id + ')"><i class="fas fa-xmark"></i></button>' : '';
+    return '<span class="sd-qchip"><span>' + esc(it.text) + '</span>' + del + '</span>';
+  }).join('') : '<div class="sd-empty"><i class="fas fa-bolt"></i>Причин пока нет</div>';
+  document.getElementById('sdReasonForm').style.display = CAN ? '' : 'none';
+  document.getElementById('sdWarnChips').innerHTML = (OV.reasons.warn || []).slice(0, 8).map(function (it) {
+    return '<span class="sd-qchip" style="cursor:pointer" onclick="sdChipFill(this)" title="Подставить"><span>' + esc(it.text) + '</span></span>';
+  }).join('');
+}
+function sdKindSet(k) { KIND = k; renderReasons(); }
+function sdChipFill(el) { document.getElementById('sdWarnText').value = el.textContent; }
+var _pTimer = null;
+function sdPredictQueue() { clearTimeout(_pTimer); _pTimer = setTimeout(sdPredict, 350); }
+function sdPredict() {
+  var box = document.getElementById('sdPredict');
+  var raw = (document.getElementById('sdWarnId').value || '').trim();
+  if (!raw || !OV) { box.style.display = 'none'; return; }
+  fetch(API + '/dossier?user_id=' + encodeURIComponent(raw)).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { box.style.display = 'none'; return; }
+    var ds = d.dossier, txt, hot = false;
+    var name = ds.name || ('ID ' + ds.user_id);
+    if (!OV.risk.tuned) {
+      txt = '<i class="fas fa-circle-info"></i>' + esc(name) + ' · ' + ds.warns.count + ' варн. · пороги не настроены';
+    } else if (ds.warns.gap == null) {
+      txt = '<i class="fas fa-flag-checkered"></i>' + esc(name) + ' · последний порог уже пройден';
+    } else if (ds.warns.gap === 1) {
+      hot = true;
+      txt = '<i class="fas fa-triangle-exclamation"></i>' + esc(name) + ' · следующий варн включит «' + esc(ds.warns.action_name) + '»';
+    } else {
+      txt = '<i class="fas fa-circle-info"></i>' + esc(name) + ' · до «' + esc(ds.warns.action_name) + '» ещё ' + ds.warns.gap + ' ' + plural(ds.warns.gap, 'варн', 'варна', 'варнов');
+    }
+    box.innerHTML = txt;
+    box.className = 'sd-predict' + (hot ? ' warn-hot' : '');
+    box.style.display = '';
+  }).catch(function () { box.style.display = 'none'; });
+}
+function renderAmnesty(d) {
+  document.getElementById('sdAmnOff').textContent = d.amnesty_total;
+  var box = document.getElementById('sdAmnesty');
+  if (!d.amnesty.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-dove"></i>Амнистий не было</div>'; return; }
+  box.innerHTML = d.amnesty.map(function (a) {
+    var tail = a.restored_at ? '<span class="sd-pill mint">откачена</span>'
+      : (CAN ? '<button class="sd-btn" onclick="sdAmnestyUndo(' + a.id + ')"><i class="fas fa-rotate-left"></i></button>'
+             : '<span class="sd-pill ghost">активна</span>');
+    return '<div class="sd-row"><div class="sd-who"><b>#' + esc(a.user_id) + ' · списано ' + a.count + '</b>' +
+      '<small>' + esc(a.by || '—') + ' · ' + esc(fmtAgo(a.at)) + '</small></div>' + tail + '</div>';
+  }).join('');
+}
+function renderPanelLog(d) {
+  var META = { warn: 'Варн', unwarn: 'Варн снят', amnesty: 'Амнистия', amnesty_undo: 'Откат амнистии', reason_add: 'Причина добавлена', reason_del: 'Причина удалена' };
+  var box = document.getElementById('sdPanelLog');
+  if (!d.panel_log.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-clipboard-user"></i>Операций пока нет</div>'; return; }
+  box.innerHTML = d.panel_log.map(function (e) {
+    return '<div class="sd-row"><div class="sd-who"><b>' + esc(META[e.op] || e.op) + (e.user_id ? ' · #' + esc(e.user_id) : '') + '</b>' +
+      '<small>' + esc(e.by || '—') + (e.detail ? ' · ' + esc(e.detail) : '') + '</small></div>' +
+      '<span class="sd-when">' + esc(fmtAgo(e.at)) + '</span></div>';
+  }).join('');
+}
+
+/* ── Журнал ─────────────────────────────────────────────────── */
+var JCAT = '', _jTimer = null;
+function sdLoadJournal() {
+  var q = (document.getElementById('sdJournalSearch').value || '').trim();
+  var m = (document.getElementById('sdJournalMod').value || '').trim();
+  var url = API + '/journal?query=' + encodeURIComponent(q) + '&mod=' + encodeURIComponent(m) +
+    (JCAT ? '&category=' + encodeURIComponent(JCAT) : '');
+  document.getElementById('sdJournal').innerHTML = '<div class="sd-empty">Загрузка…</div>';
+  fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.journal = d;
+    renderJournal();
+  }).catch(function () {});
+}
+function sdJournalReload() { clearTimeout(_jTimer); _jTimer = setTimeout(sdLoadJournal, 250); }
+function sdJournalCat(c) { JCAT = (JCAT === c ? '' : c); sdLoadJournal(); }
+function renderJournal() {
+  var d = TDATA.journal;
+  if (!d) return;
+  document.getElementById('sdJournalOff').textContent = d.total + ' событий';
+  var cats = Object.keys(d.categories).sort(function (a, b) { return d.categories[b] - d.categories[a]; });
+  document.getElementById('sdJournalCats').innerHTML =
+    '<button class="sd-chip' + (JCAT === '' ? ' on' : '') + '" onclick="sdJournalCat(\'\')">Все · ' + d.total + '</button>' +
+    cats.map(function (c) {
+      return '<button class="sd-chip' + (JCAT === c ? ' on' : '') + '" onclick="sdJournalCat(\'' + esc(c) + '\')">' + esc(c) + ' · ' + d.categories[c] + '</button>';
+    }).join('');
+  var box = document.getElementById('sdJournal');
+  if (!d.rows.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-book-open"></i>По запросу пусто</div>'; return; }
+  box.innerHTML = d.rows.map(function (r) {
+    return '<div class="sd-row tri' + (r.user_id ? ' click' : '') + '" ' + (r.user_id ? 'onclick="sdFromAny(\'' + esc(r.user_id) + '\')"' : '') + '>' +
+      avaFor(r.user_id || r.action, 'ind') +
+      '<div class="sd-who"><b>' + esc(r.action || '—') + ' · ' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>' + esc(r.reason || '') + (r.mod_name ? (r.reason ? ' · ' : '') + esc(r.mod_name) : '') + '</small></div>' +
+      '<span class="sd-when">' + esc(fmtAgo(r.at)) + '</span></div>';
+  }).join('');
+}
+
+/* ── Варны ──────────────────────────────────────────────────── */
+function sdLoadWarns() {
+  fetch(API + '/warns-list').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.warns = d;
+    renderWarnsList();
+    renderSteps();
+  }).catch(function () {});
+}
+function renderWarnsList() {
+  var d = TDATA.warns;
+  if (!d) return;
+  document.getElementById('sdWarnsOff').textContent = d.total_warns + ' варнов у ' + d.rows.length;
+  var q = (document.getElementById('sdWarnsSearch').value || '').trim().toLowerCase();
+  var rows = d.rows.filter(function (r) {
+    return !q || (r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.user_id).indexOf(q) !== -1;
+  });
+  var box = document.getElementById('sdWarnsList');
+  if (!rows.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-face-smile"></i>Варнов нет</div>'; return; }
+  box.innerHTML = rows.map(function (r) {
+    var last = r.items.slice(0, 2).map(function (w) {
+      return esc(w.reason) + (w.mod ? ' · ' + esc(w.mod) : '');
+    }).join('<br>');
+    return '<div class="sd-row tri click" onclick="sdFromAny(\'' + esc(r.user_id) + '\')">' +
+      avaFor(r.user_id, r.count >= 3 ? 'rose' : 'amber') +
+      '<div class="sd-who"><b>' + esc(r.name || ('ID ' + r.user_id)) + '</b><small>' + last + '</small></div>' +
+      '<span class="sd-pill ' + (r.count >= 3 ? 'rose' : 'amber') + '">' + r.count + ' ' + plural(r.count, 'варн', 'варна', 'варнов') + '</span></div>';
+  }).join('');
+}
+function renderSteps() {
+  var d = TDATA.warns;
+  var box = document.getElementById('sdSteps');
+  if (!d || !d.steps.length) {
+    box.innerHTML = '<div class="sd-empty"><i class="fas fa-stairs"></i>Не заданы — <a class="sd-btn" href="/warn-config">настроить</a></div>';
+    return;
+  }
+  var max = d.steps[d.steps.length - 1].count;
+  box.innerHTML = '<div class="sd-stairs">' + d.steps.map(function (s) {
+    var h = Math.max(14, Math.round(54 * s.count / max));
+    return '<div class="sd-stair"><b>' + s.count + '</b><i style="height:' + h + 'px"></i><span>' + esc(s.action_name) + '</span></div>';
+  }).join('') + '</div>';
+}
+
+/* ── Временные ──────────────────────────────────────────────── */
+function sdLoadTemp() {
+  fetch(API + '/temp-full').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.temp = d;
+    renderTemp();
+  }).catch(function () {});
+}
+function renderTemp() {
+  var d = TDATA.temp;
+  if (!d) return;
+  document.getElementById('sdTempOff').textContent = d.rows.length + ' активных';
+  var c = d.counts;
+  var row = function (label, num, cls) {
+    return '<div class="sd-row"><div class="sd-who"><b>' + label + '</b></div><span class="sd-pill ' + cls + '">' + num + '</span></div>';
+  };
+  document.getElementById('sdTempCounts').innerHTML =
+    row('Просрочено снятие', c.overdue, c.overdue ? 'rose' : 'ghost') +
+    row('Истекает за 24 часа', c.soon, c.soon ? 'amber' : 'ghost') +
+    row('В течение 3 суток', c.week, c.week ? 'sky' : 'ghost') +
+    row('Дальше', c.later, 'ghost');
+  var box = document.getElementById('sdTempFull');
+  if (!d.rows.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-hourglass-half"></i>Активных наказаний нет</div>'; return; }
+  var now = Date.now() / 1000;
+  var P = { 'Мут': 'amber', 'Бан': 'rose', 'Войс-мут': 'sky', 'Кик': 'ind' };
+  box.innerHTML = d.rows.map(function (r) {
+    var hot = r.remaining_s <= 0, frac = null;
+    if (r.created_at != null && r.until > r.created_at) {
+      frac = Math.max(0, Math.min(1, (now - r.created_at) / (r.until - r.created_at)));
+    }
+    var pct = frac == null ? 0 : Math.round(frac * 100);
+    return '<div class="sd-row tri click" onclick="sdFromAny(\'' + esc(r.user_id) + '\')">' +
+      avaFor(r.user_id, P[r.kind_name] || 'ind') +
+      '<div class="sd-who"><b>' + esc(r.name || ('#' + r.user_id)) + ' <span class="sd-pill ' + (P[r.kind_name] || 'ghost') + '">' + esc(r.kind_name) + '</span></b>' +
+      '<small>' + esc(r.reason || 'без причины') + '</small>' +
+      '<div class="sd-track' + (hot ? ' hot' : '') + '"><i style="width:' + pct + '%"></i></div></div>' +
+      '<span class="sd-when' + (hot ? ' hot' : '') + '">' + esc(fmtLeft(r.remaining_s)) + '</span></div>';
+  }).join('');
+}
+
+/* ── Защиты ─────────────────────────────────────────────────── */
+function sdLoadShield() {
+  fetch(API + '/shield').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.shield = d;
+    renderShield();
+  }).catch(function () {});
+}
+function renderShield() {
+  var d = TDATA.shield;
+  if (!d) return;
+  var rows = [
+    { t: 'Автофильтр чата', c: d.autofilter, link: '/autofilter' },
+    { t: 'Анти-рейд', c: d.antiraid, link: '/antiraid' },
+    { t: 'Безопасность', c: { status: d.security.tuned ? 'ok' : 'missing', detail: d.security.detail, hint: 'Правила и контроль панели' }, link: '/security' }
+  ];
+  document.getElementById('sdShield').innerHTML = rows.map(function (r) {
+    return '<div class="sd-row tri"><span class="sd-dot ' + esc(r.c.status || 'missing') + '"></span>' +
+      '<div class="sd-who"><b>' + esc(r.t) + ' · ' + esc(r.c.detail || '') + '</b><small>' + esc(r.c.hint || '') + '</small></div>' +
+      '<a class="sd-btn" href="' + r.link + '">Открыть</a></div>';
+  }).join('');
+  var lk = d.lockdown;
+  document.getElementById('sdLockdown').innerHTML = lk.active
+    ? ('<div class="sd-row"><div class="sd-who"><b>Активен · закрыто каналов: ' + lk.count + '</b>' +
+       '<small>' + esc(lk.summary || '') + (lk.by ? ' · ввёл: ' + esc(lk.by) : '') + '</small></div>' +
+       '<a class="sd-btn rose" href="/lockdown">Управлять</a></div>')
+    : ('<div class="sd-row"><div class="sd-who"><b>Не активен</b><small>Все каналы открыты</small></div>' +
+       '<a class="sd-btn" href="/lockdown">Открыть раздел</a></div>');
+}
+
+/* ── Демки ──────────────────────────────────────────────────── */
+function sdLoadProofs() {
+  fetch(API + '/proofs').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.proofs = d;
+    renderProofs();
+  }).catch(function () {});
+}
+function renderProofs() {
+  var d = TDATA.proofs;
+  if (!d) return;
+  document.getElementById('sdProofsOff').textContent = d.total;
+  var box = document.getElementById('sdProofs');
+  if (!d.rows.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-images"></i>Демок пока нет</div>'; return; }
+  var P = { 'бан': 'rose', 'мут': 'amber', 'предупреждение': 'sky', 'кик': 'ind' };
+  box.innerHTML = d.rows.map(function (r) {
+    var cls = P[(r.action || '').toLowerCase()] || 'ind';
+    return '<div class="sd-row tri click" onclick="sdFromAny(\'' + esc(r.user_id) + '\')">' +
+      avaFor(r.user_id, cls) +
+      '<div class="sd-who"><b>' + esc(r.user_name || ('ID ' + r.user_id)) + ' <span class="sd-pill ' + cls + '">' + esc(r.action || 'демка') + '</span></b>' +
+      '<small>' + esc(r.reason || 'без причины') + (r.mod_name ? ' · ' + esc(r.mod_name) : '') + '</small></div>' +
+      (r.link ? '<a class="sd-btn" href="' + esc(r.link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="fas fa-image"></i></a>'
+              : '<span class="sd-when">' + esc(fmtAgo(r.at)) + '</span>') + '</div>';
+  }).join('');
+}
+
+/* ── Апелляции ──────────────────────────────────────────────── */
+function sdLoadAppeals() {
+  fetch(API + '/appeals').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.appeals = d;
+    renderAppeals();
+  }).catch(function () {});
+}
+function renderAppeals() {
+  var d = TDATA.appeals;
+  if (!d) return;
+  document.getElementById('sdAppealsOff').textContent = d.total;
+  var s = d.stats || {};
+  document.getElementById('sdAppealStats').innerHTML =
+    '<span class="sd-chip' + (s.pending ? ' on' : '') + '">В очереди · ' + (s.pending || 0) + '</span>' +
+    '<span class="sd-chip">Принято · ' + (s.accepted || 0) + '</span>' +
+    '<span class="sd-chip">Отклонено · ' + (s.rejected || 0) + '</span>';
+  var box = document.getElementById('sdAppeals');
+  if (!d.rows.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-scale-balanced"></i>Апелляций нет</div>'; return; }
+  var M = { pending: ['в очереди', 'amber'], accepted: ['принята', 'mint'], rejected: ['отклонена', 'rose'] };
+  box.innerHTML = d.rows.map(function (r) {
+    var m = M[r.status] || [r.status || '?', 'ghost'];
+    return '<div class="sd-row"><div class="sd-who"><b>' + esc(r.user || '—') + '</b>' +
+      '<small>' + esc(r.reason || '') + ' · ' + esc(r.created_at ? r.created_at.slice(0, 16).replace('T', ' ') : '') + '</small></div>' +
+      '<span class="sd-pill ' + m[1] + '">' + esc(m[0]) + '</span></div>';
+  }).join('');
+}
+
+/* ── Аналитика ──────────────────────────────────────────────── */
+function renderDaysTabs() {
+  document.getElementById('sdDaysTabs').innerHTML = [30, 90, 180].map(function (n) {
+    return '<button class="sd-chip' + (n === DAYS ? ' on' : '') + '" onclick="sdDays(' + n + ')">' + n + ' дней</button>';
+  }).join('');
+}
+function sparkHtml(t, h) {
+  var max = 1;
+  for (var i = 0; i < t.buckets.length; i++) max = Math.max(max, t.buckets[i].count);
+  var n = t.buckets.length, base = h - 13, amp = h - 26;
+  var pts = [], labels = '';
+  for (var k = 0; k < n; k++) {
+    var b = t.buckets[k];
+    var x = n > 1 ? (k * 100 / (n - 1)) : 50;
+    var y = base - amp * b.count / max;
+    pts.push([x, y]);
+    labels += '<text class="lbl" x="' + x.toFixed(1) + '" y="' + (h - 2) + '" text-anchor="middle">' + esc(b.label) + '</text>';
+  }
+  var line = pts.map(function (p, idx) { return (idx ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+  var area = line + ' L ' + pts[pts.length - 1][0].toFixed(1) + ' ' + base + ' L ' + pts[0][0].toFixed(1) + ' ' + base + ' Z';
+  var dots = '';
+  for (var m = 0; m < n; m++) {
+    if (t.buckets[m].count) dots += '<circle class="dot" cx="' + pts[m][0].toFixed(1) + '" cy="' + pts[m][1].toFixed(1) + '" r="1.6"></circle>';
+  }
+  return '<svg class="sd-spark" viewBox="0 0 100 ' + h + '" preserveAspectRatio="none" style="height:' + h + 'px">' +
+    '<path class="area" d="' + area + '"></path><path class="line" d="' + line + '"></path>' + dots + labels + '</svg>';
+}
+function renderEffect(d) {
+  var eff = d.effectiveness;
+  var box = document.getElementById('sdEffect');
+  if (!eff.overall.count) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-rotate"></i>Наказаний за окно нет</div>'; return; }
+  var rows = eff.types.concat([eff.overall]);
+  var html = '<div class="sd-eff head"><span>Тип первого</span><span style="text-align:right">7 дн.</span><span style="text-align:right">30 дн.</span><span style="text-align:right">медиана</span></div>';
+  html += rows.map(function (r) {
+    var name = r.action === 'all' ? 'Любое наказание' : r.action;
+    var p7 = r.repeat7 == null ? '—' : r.repeat7 + '%', p30 = r.repeat30 == null ? '—' : r.repeat30 + '%';
+    return '<div class="sd-eff' + (r.action === 'all' ? ' total' : '') + '">' +
+      '<span style="font-size:12.5px"><b>' + esc(name) + '</b> <small style="color:var(--sd-t3)">' + r.count + ' чел.' + (r.thin ? ' · мало данных' : '') + '</small></span>' +
+      '<span class="v' + (r.thin ? ' dim' : '') + '">' + p7 + '</span>' +
+      '<span class="v' + (r.thin ? ' dim' : '') + '">' + p30 + '</span>' +
+      '<span class="v' + (r.thin ? ' dim' : '') + '">' + (r.median_days == null ? '—' : r.median_days + ' дн.') + '</span></div>';
+  }).join('');
+  box.innerHTML = html;
+}
+function renderTrend(d) {
+  document.getElementById('sdTrendOff').textContent = d.trend.total + ' за ' + d.trend.days + ' дн.';
+  document.getElementById('sdTrend').innerHTML = sparkHtml(d.trend, 96);
+}
+function renderTeam(d) {
+  var t = d.team;
+  document.getElementById('sdTeamOff').textContent = t.total_mods + ' активных';
+  var box = document.getElementById('sdTeam');
+  if (!t.items.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-user-group"></i>За окно действий нет</div>'; return; }
+  var max = 1;
+  for (var i = 0; i < t.items.length; i++) max = Math.max(max, t.items[i].total);
+  box.innerHTML = t.items.map(function (r) {
+    var pct = Math.round(100 * r.total / max);
+    return '<div class="sd-row tri click">' + avaFor(r.mod, 'ind') +
+      '<div class="sd-who"><b>' + esc(r.mod) + '</b>' +
+      '<small>' + r.punishments + ' ' + plural(r.punishments, 'кара', 'кары', 'кар') + (r.lifts ? ' · ' + r.lifts + ' снятий' : '') + '</small>' +
+      '<div class="sd-track"><i style="width:' + pct + '%"></i></div></div>' +
+      '<span class="sd-pill ind">' + r.total + '</span></div>';
+  }).join('');
+}
+
+/* ── История ────────────────────────────────────────────────── */
+function sdLoadHistory() {
+  fetch(API + '/history').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.history = d;
+    renderHistory();
+  }).catch(function () {});
+}
+function renderHistory() {
+  var d = TDATA.history;
+  if (!d) return;
+  document.getElementById('sdHistoryOff').textContent = d.rows.length + ' записей';
+  var box = document.getElementById('sdHistory');
+  if (!d.rows.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-clock-rotate-left"></i>История пуста</div>'; return; }
+  var P = { 'Мут': 'amber', 'Кик': 'ind', 'Бан': 'rose', 'Мут снят': 'mint', 'Бан снят': 'mint' };
+  box.innerHTML = d.rows.map(function (r) {
+    return '<div class="sd-row tri click" onclick="sdFromAny(\'' + esc(r.user_id) + '\')">' +
+      avaFor(r.user_id, P[r.action] || 'ind') +
+      '<div class="sd-who"><b>' + esc(r.name || ('#' + r.user_id)) + ' <span class="sd-pill ' + (P[r.action] || 'ghost') + '">' + esc(r.action) + '</span></b>' +
+      '<small>' + esc(r.reason || 'без причины') + (r.mod_name ? ' · ' + esc(r.mod_name) : '') + '</small></div>' +
+      '<span class="sd-when">' + esc(fmtAgo(r.at)) + '</span></div>';
+  }).join('');
+}
+
+/* ── Люди/досье ─────────────────────────────────────────────── */
+function renderSubjects() {
+  if (!OV) return;
+  var q = (document.getElementById('sdSubjectsSearch').value || '').trim().toLowerCase();
+  var items = OV.subjects.items.filter(function (r) {
+    return !q || (r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.user_id).indexOf(q) !== -1;
+  });
+  document.getElementById('sdSubjectsOff').textContent = items.length + ' из ' + OV.subjects.total;
+  var box = document.getElementById('sdSubjects');
+  if (!items.length) { box.innerHTML = '<div class="sd-empty"><i class="fas fa-face-smile"></i>Никого нет</div>'; return; }
+  box.innerHTML = items.map(function (r) {
+    return '<div class="sd-row tri click' + (PICKED === r.user_id ? ' on' : '') + '" onclick="sdFromAny(\'' + esc(r.user_id) + '\')">' +
+      avaFor(r.user_id, r.weight >= 5 ? 'rose' : 'ind') +
+      '<div class="sd-who"><b>' + esc(r.name || ('ID ' + r.user_id)) + '</b>' +
+      '<small>' + r.warns + ' ' + plural(r.warns, 'варн', 'варна', 'варнов') + ' · ' + r.punishments + ' ' + plural(r.punishments, 'кара', 'кары', 'кар') +
+      (r.last_at ? ' · посл. ' + esc(fmtAgo(r.last_at)) : '') + '</small></div>' +
+      '<span class="sd-pill ' + (r.weight >= 5 ? 'rose' : 'ghost') + '">вес ' + r.weight + '</span></div>';
+  }).join('');
+}
+function sdDossier(uid) {
+  var box = document.getElementById('sdDossier');
+  box.innerHTML = '<div class="sd-empty">Загрузка…</div>';
+  fetch(API + '/dossier?user_id=' + encodeURIComponent(uid)).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) {
+      box.innerHTML = '<div class="sd-empty"><i class="fas fa-circle-exclamation"></i>' + esc(d.error || 'Ошибка') + '</div>';
+      return;
+    }
+    PICKED = d.dossier.user_id;
+    renderDossier(d.dossier);
+    if (OV) { renderFeed(); renderSubjects(); }
+  }).catch(function () {
+    box.innerHTML = '<div class="sd-empty"><i class="fas fa-plug-circle-xmark"></i>Не загрузилось</div>';
+  });
+}
+function renderDossier(ds) {
+  var box = document.getElementById('sdDossier');
+  document.getElementById('sdCtxAva').outerHTML = avaFor(ds.user_id, null).replace('sd-ava', 'sd-ava').replace('class="sd-ava', 'id="sdCtxAva" class="sd-ava');
+  if (!ds.known) {
+    box.innerHTML = '<div class="sd-empty"><i class="fas fa-feather"></i>Следов не найдено — ID ' + esc(ds.user_id) + ' чист</div>';
+    return;
+  }
+  var name = ds.name || ('ID ' + ds.user_id);
+  var html = '<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px;align-items:center">';
+  html += '<span class="sd-pill ind" style="font-size:12px;padding:6px 13px">' + esc(name) + '</span>';
+  html += '<span class="sd-pill ' + (ds.warns.count ? 'amber' : 'ghost') + '">' + ds.warns.count + ' ' + plural(ds.warns.count, 'варн', 'варна', 'варнов') + '</span>';
+  html += '<span class="sd-pill ' + (ds.stats.punishments ? 'rose' : 'ghost') + '">' + ds.stats.punishments + ' ' + plural(ds.stats.punishments, 'кара', 'кары', 'кар') + '</span>';
+  if (ds.warns.gap != null) html += '<span class="sd-pill ' + (ds.warns.gap === 1 ? 'rose' : 'sky') + '">до «' + esc(ds.warns.action_name) + '»: ' + ds.warns.gap + '</span>';
+  html += '</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px">' +
+    '<button class="sd-btn" onclick="sdCopy(\'' + esc(ds.user_id) + '\')"><i class="fas fa-copy"></i> Копировать ID</button>' +
+    '<a class="sd-btn" href="/member-card?user=' + encodeURIComponent(ds.user_id) + '"><i class="fas fa-id-card"></i> Карточка</a>' +
+    '<button class="sd-btn pri" onclick="sdUseInControl(\'' + esc(ds.user_id) + '\')"><i class="fas fa-hand-sparkles"></i> Действия</button>' +
+    '</div>';
+  if (ds.temp_active.length) {
+    var P = { 'Мут': 'amber', 'Бан': 'rose', 'Войс-мут': 'sky', 'Кик': 'ind' };
+    html += '<div class="sd-sect">Активные статусы</div>' + ds.temp_active.map(function (r) {
+      return '<div class="sd-row tri"><span class="sd-pill ' + (P[r.kind_name] || 'ghost') + '">' + esc(r.kind_name) + '</span>' +
+        '<div class="sd-who"><b>' + esc(fmtLeft(r.remaining_s)) + '</b>' + (r.reason ? '<small>' + esc(r.reason) + '</small>' : '') + '</div>' +
+        '<span class="sd-when">' + fmtDate(r.until * 1000) + '</span></div>';
+    }).join('');
+  }
+  if (ds.warns.items.length) {
+    html += '<div class="sd-sect">Последние варны</div>' + ds.warns.items.map(function (w) {
+      return '<div class="sd-note">' + esc(w.reason) + '<small>' + esc(w.at) + (w.mod ? ' · ' + esc(w.mod) : '') + '</small></div>';
+    }).join('');
+  }
+  if (ds.amnesty.length) {
+    html += '<div class="sd-sect">Амнистии</div>' + ds.amnesty.map(function (a) {
+      return '<div class="sd-note">Списано ' + a.count + ' ' + plural(a.count, 'варн', 'варна', 'варнов') +
+        '<small>' + esc(a.at) + (a.by ? ' · ' + esc(a.by) : '') + (a.restored_at ? ' · откачена' : '') + '</small></div>';
+    }).join('');
+  }
+  if (ds.timeline.length) {
+    var T = { 'Мут': 'amber', 'Кик': 'ind', 'Бан': 'rose', 'Мут снят': 'mint', 'Бан снят': 'mint' };
+    html += '<div class="sd-sect">Таймлайн (' + ds.timeline_total + ')</div>' + ds.timeline.map(function (t) {
+      return '<div class="sd-row tri"><span class="sd-pill ' + (T[t.action] || 'ghost') + '">' + esc(t.action) + '</span>' +
+        '<div class="sd-who"><b>' + esc(t.reason || 'Без причины') + '</b>' + (t.mod_name ? '<small>' + esc(t.mod_name) + '</small>' : '') + '</div>' +
+        '<span class="sd-when">' + fmtDate(t.at) + '</span></div>';
+    }).join('');
+  }
+  if (ds.notes.length) {
+    html += '<div class="sd-sect">Заметки команды</div>' + ds.notes.map(function (n) {
+      return '<div class="sd-note">' + esc(n.note) + '<small>' + esc(n.at) + (n.mod ? ' · ' + esc(n.mod) : '') + '</small></div>';
+    }).join('');
+  }
+  box.innerHTML = html;
+}
+function sdCopy(uid) {
+  var done = function () { sdNotify('ID скопирован', uid, 'ok', 'fa-copy'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(uid).then(done, function () { sdCopyFb(uid, done); });
+  } else { sdCopyFb(uid, done); }
+}
+function sdCopyFb(uid, done) {
+  var ta = document.createElement('textarea');
+  ta.value = uid; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); }
+  catch (e) { sdNotify('Не удалось скопировать', '', 'err', 'fa-circle-exclamation'); }
+  document.body.removeChild(ta);
+}
+function sdUseInControl(uid) {
+  sdTab('control');
+  document.getElementById('sdWarnId').value = uid;
+  sdPredict();
+}
+
+/* ── Мутации ────────────────────────────────────────────────── */
+function sdPost(url, obj) {
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj || {}) })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { code: r.status, data: d }; }); });
+}
+function sdWarnAsk() {
+  var uid = document.getElementById('sdWarnId').value.trim();
+  var reason = document.getElementById('sdWarnText').value.trim();
+  window.askConfirm('Варн', 'Участник ' + (uid || '—') + ', причина «' + (reason || 'не указана') + '»?', function () {
+    sdPost(API + '/warn', { user_id: uid, reason: reason }).then(function (res) {
+      if (!res.data.success) { sdNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+      document.getElementById('sdWarnText').value = '';
+      sdNotify('Варн выдан', 'Участник ' + uid + ' · всего ' + res.data.total, 'ok', 'fa-circle-exclamation');
+      sdPredict();
+      load();
+    });
+  }, { danger: true, okText: 'Выдать', icon_fa: 'fa-circle-exclamation' });
+}
+function sdUnwarnAsk() {
+  var uid = document.getElementById('sdWarnId').value.trim();
+  window.askConfirm('Снятие варна', 'Снять последний варн ' + (uid || '—') + '?', function () {
+    sdPost(API + '/unwarn', { user_id: uid }).then(function (res) {
+      if (!res.data.success) { sdNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+      sdNotify('Варн снят', 'Осталось: ' + res.data.left, 'ok', 'fa-rotate-left');
+      sdPredict();
+      load();
+    });
+  }, { okText: 'Снять', icon_fa: 'fa-rotate-left' });
+}
+function sdAmnestyAsk() {
+  var uid = document.getElementById('sdWarnId').value.trim();
+  window.askConfirm('Амнистия', 'Обнулить все варны ' + (uid || '—') + '?', function () {
+    sdPost(API + '/amnesty', { user_id: uid }).then(function (res) {
+      if (!res.data.success) { sdNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+      var aid = res.data.amnesty.id;
+      sdNotify('Амнистия проведена', 'Списано: ' + res.data.amnesty.count, 'ok', 'fa-dove', function () { sdAmnestyUndo(aid); });
+      sdPredict();
+      load();
+    });
+  }, { danger: true, okText: 'Обнулить', icon_fa: 'fa-dove' });
+}
+function sdAmnestyUndo(aid) {
+  sdPost(API + '/amnesty/' + aid + '/undo').then(function (res) {
+    if (!res.data.success) { sdNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+    sdNotify('Амнистия откачена', 'Возвращено: ' + res.data.restored, 'ok', 'fa-rotate-left');
+    load();
+  });
+}
+function sdReasonAdd() {
+  var inp = document.getElementById('sdReasonText');
+  sdPost(API + '/reasons', { kind: KIND, text: inp.value }).then(function (res) {
+    if (!res.data.success) { sdNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+    inp.value = '';
+    OV.reasons = res.data.reasons;
+    renderReasons();
+    sdNotify('Причина добавлена', '', 'ok', 'fa-bolt');
+  });
+}
+function sdReasonDel(id) {
+  sdPost(API + '/reasons/' + KIND + '/' + id + '/delete').then(function (res) {
+    if (!res.data.success) { sdNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+    OV.reasons = res.data.reasons;
+    renderReasons();
+    sdNotify('Причина удалена', '', 'ok', 'fa-xmark');
+  });
+}
+
+/* ── Загрузка ───────────────────────────────────────────────── */
+function sdDays(n) { DAYS = n; renderDaysTabs(); load(); }
+function load() {
+  fetch(API + '/overview?days=' + DAYS).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    OV = d; CAN = !!d.can_edit;
+    document.getElementById('sdWarnBody').style.display = CAN ? '' : 'none';
+    document.getElementById('sdWarnDenied').style.display = CAN ? 'none' : '';
+    var render = function () {
+      renderStats(d); renderFeedChips(); renderFeed();
+      renderRisk(); renderReasons(); renderAmnesty(d); renderPanelLog(d);
+      renderDaysTabs(); renderEffect(d); renderTrend(d); renderTeam(d); renderSubjects();
+    };
+    if (window.renderSafe) window.renderSafe(render); else render();
+  }).catch(function () {});
+}
+
+(function () {
+  var params = new URLSearchParams(location.search);
+  var valid = ['feed', 'control', 'journal', 'warns', 'temp', 'shield', 'proofs', 'appeals', 'stats', 'history', 'people'];
+  var tab = params.get('tab');
+  if (tab && valid.indexOf(tab) !== -1) sdTab(tab);
+  var uid = params.get('uid');
+  if (uid) {
+    sdTab('control');
+    document.getElementById('sdWarnId').value = uid;
+    sdPredict();
+  }
+})();
+
+load();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(load, 30000);
+</script>
+{% endblock %}
