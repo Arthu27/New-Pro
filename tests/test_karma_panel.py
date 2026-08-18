@@ -70,6 +70,32 @@ def seed_state():
     }
 
 
+# HTTP-обзор считает окно от реального datetime.now(), а не от фиксированного
+# NOW. Если сеять от NOW (прошлое), записи на границе 7-дневного окна
+# «плывут» и тест становится гонкой часов. Для HTTP сеем от реального времени
+# с теми же смещениями — они с запасом внутри/снаружи окна, без границы.
+def ago_real(**kw):
+    return (datetime.now() - timedelta(**kw)).isoformat()
+
+
+def seed_state_real():
+    return {
+        'scores': {'1': 7, '2': 5, '3': 5, '4': 0},
+        'thanks': [
+            {'giver': '1', 'target': '2', 'at': ago_real(days=3), 'reason': 'помог с боссом'},
+            {'giver': '1', 'target': '2', 'at': ago_real(days=2), 'reason': 'снова выручил'},
+            {'giver': '2', 'target': '1', 'at': ago_real(days=1), 'reason': ''},
+            {'giver': '5', 'target': '6', 'at': ago_real(days=5), 'reason': 'спасибо'},
+            {'giver': '5', 'target': '6', 'at': ago_real(hours=36), 'reason': 'угостил'},
+            {'giver': '6', 'target': '5', 'at': ago_real(days=4), 'reason': ''},
+            {'giver': '6', 'target': '5', 'at': ago_real(days=2), 'reason': ''},
+            {'giver': '6', 'target': '5', 'at': ago_real(days=1), 'reason': ''},
+            {'giver': '5', 'target': '6', 'at': ago_real(hours=12), 'reason': 'держал слово'},
+            {'giver': '9', 'target': '8', 'at': ago_real(days=10), 'reason': 'старое'},
+        ],
+    }
+
+
 print('== 1. Сводка зала благодарностей ==')
 snap = KP.karma_snapshot(seed_state(), names=NAMES, now=NOW)
 check([r['user_id'] for r in snap['top']] == ['1', '2', '3'],
@@ -130,7 +156,7 @@ check(KP.adjust_score(st, 'куку', 5)[1] == 'Некорректный ID по
       'битый ID — ошибка 1:1 с мод-контролем')
 
 print('== 5. API: права и потоки ==')
-GuildData('karma').set(777, 'state', seed_state())
+GuildData('karma').set(777, 'state', seed_state_real())
 with open('data/audit_log.json', 'w', encoding='utf-8') as fh:
     json.dump({'777': [
         {'category': 'mod', 'action': 'Мут', 'user_id': '1', 'user_name': 'Аня',
