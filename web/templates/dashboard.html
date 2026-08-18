@@ -4,6 +4,7 @@
 {% block content %}
 
 <div class="page-hero" id="ccHero">
+  <button type="button" class="btn btn-icon btn-ghost" id="ccSettings" style="position:absolute;top:14px;right:16px;z-index:2" title="Настроить виджеты главной" aria-label="Настроить виджеты главной"><i class="fas fa-sliders"></i></button>
   <div class="page-hero-content">
     <div class="page-hero-greeting" id="heroGreeting"><span class="dot"></span> Панель управления</div>
     <h1 id="heroTitle">Добро пожаловать</h1>
@@ -18,8 +19,19 @@
   </div>
 </div>
 
+<!-- Живой пульс панели -->
+<div class="panel" data-widget="pulse" style="margin-bottom:14px">
+  <div class="panel-head">
+    <div><h2><i class="fas fa-wave-square"></i> Пульс панели</h2><div class="sub">Последние события в реальном времени.</div></div>
+    <span class="live-chip" style="margin-left:auto"><span class="dot"></span> LIVE</span>
+  </div>
+  <div class="panel-body" id="pulseStrip">
+    <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку событий</span></div>
+  </div>
+</div>
+
 <!-- Быстрые действия -->
-<div class="cc-quick">
+<div class="cc-quick" data-widget="quick">
   <a class="cc-tile" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Варны</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Временные меры</b><small>Мьюты и баны с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   <a class="cc-tile" href="/logs"><span class="cc-ico"><i class="fas fa-clipboard-list"></i></span><span><b>Журнал</b><small>Лента действий команды</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
@@ -51,7 +63,7 @@
 </div>
 
 <!-- Глубокие метрики: лидеры, доли мер, часы -->
-<div class="grid-3" style="align-items:start">
+<div class="grid-3" data-widget="metrics" style="align-items:start">
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-medal"></i> Топ модераторов</h2>
       <div class="sub">Действия за 7 дней.</div></div></div>
@@ -71,7 +83,7 @@
 </div>
 
 <!-- Аналитика модерации: графики -->
-<div class="grid-2" style="align-items:start">
+<div class="grid-2" data-widget="charts" style="align-items:start">
   <div class="panel">
     <div class="panel-head">
       <div><h2><i class="fas fa-chart-area"></i> Активность модерации</h2><div class="sub">Действия команды за последние 7 дней.</div></div>
@@ -88,7 +100,7 @@
   </div>
 </div>
 
-<div class="grid-2" style="align-items:start">
+<div class="grid-2" data-widget="today" style="align-items:start">
   <!-- Модерация сегодня -->
   <div class="panel">
     <div class="panel-head">
@@ -137,6 +149,10 @@
           <div class="donut-cap" id="pingCap" style="position:relative">—</div>
           <div class="kpi-label" style="margin-top:6px">Пинг</div>
         </div>
+        <div style="flex:1;min-width:130px">
+          <div class="kpi-label" style="margin-bottom:6px">Пинг за сессию</div>
+          <div class="chart-box" id="pingSpark"></div>
+        </div>
         <div style="text-align:center">
           <div id="cpuDonut"></div>
           <div class="donut-cap" id="cpuCap" style="position:relative">—</div>
@@ -152,7 +168,7 @@
   </div>
 </div>
 
-<div class="grid-2" style="align-items:start;margin-top:14px">
+<div class="grid-2" data-widget="logins" style="align-items:start;margin-top:14px">
   <!-- Входы в панель -->
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-user-clock"></i> Входы в панель</h2>
@@ -198,7 +214,7 @@
 
 {% if role != 'uye' %}
 <!-- Дежурства -->
-<div class="panel" id="shiftBox" style="margin-top:14px">
+<div class="panel" id="shiftBox" data-widget="shifts" style="margin-top:14px">
   <div class="panel-head">
     <div><h2><i class="fas fa-user-clock"></i> Дежурства</h2><div class="sub">Кто на смене сейчас и что запланировано.</div></div>
     <a class="btn-link" href="/staff-shifts" style="margin-left:auto">Смены <i class="fas fa-arrow-right"></i></a>
@@ -210,6 +226,7 @@
       <div style="flex:1;min-width:0"><div class="sk-line" style="width:52%"></div><div class="sk-line" style="width:34%"></div></div>
     </div>
     <div class="shift-today-row" id="shiftToday"><span class="sk-chip"></span><span class="sk-chip"></span><span class="sk-chip" style="width:72px"></span></div>
+    <div class="wgrid" id="shiftWeek"></div>
     {% if role == 'admin' or role == 'owner' %}
     <details class="shift-manage" id="shiftManage" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
       <summary style="cursor:pointer;font-weight:600;font-size:var(--fs-md);color:var(--ac)"><i class="fas fa-pen-to-square"></i> Управлять расписанием</summary>
@@ -248,6 +265,8 @@
     catch (e) { return '—'; }
   }
   var _counted = {};
+  var pingHistory = [];
+  var PING_MAX = 40;
 
   function setNum(id, val) {
     var el = $(id);
@@ -295,6 +314,11 @@
       setNum('user-count', d.users || 0);
       setNum('sum-online', d.online || 0);
       var lat = d.latency || 0;
+      pingHistory.push(lat);
+      if (pingHistory.length > PING_MAX) pingHistory.shift();
+      if (window.AetherChart && pingHistory.length > 1) {
+        window.AetherChart.sparkline($('pingSpark'), pingHistory, { height: 42, color: '#0284c7', title: 'Пинг, мс' });
+      }
       $('latency').innerHTML = lat.toLocaleString() + '<small style="font-size:12px;color:var(--text-3)">ms</small>';
       var sEl = $('status');
       var chip = $('chipBot');
@@ -632,6 +656,125 @@
     if (e.target.closest('#btnSendAnn')) sendAnnouncement();
   });
 
+  /* ── Пульс панели (живая лента событий) ─────────────── */
+  var PULSE_TONES = {
+    auth: ['fa-right-to-bracket', 'security'],
+    mod: ['fa-gavel', 'tone-warning'],
+    system: ['fa-bell', 'neutral'],
+    notify: ['fa-bell', 'neutral'],
+    ticket: ['fa-ticket-alt', 'security']
+  };
+  function timeAgo(ts) {
+    if (!ts) return '';
+    var diff = Math.max(0, (Date.now() / 1000) - ts);
+    if (diff < 60) return 'только что';
+    if (diff < 3600) return Math.floor(diff / 60) + ' мин назад';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' ч назад';
+    return Math.floor(diff / 86400) + ' дн назад';
+  }
+  async function loadPulse() {
+    var box = $('pulseStrip');
+    if (!box) return;
+    try {
+      var d = await fetch('/api/activity-feed').then(function (r) { return r.json(); });
+      var items = Array.isArray(d) ? d : (d.items || []);
+      if (!items.length) {
+        box.innerHTML = '<div class="empty"><i class="fas fa-wave-square"></i><span>Событий пока нет</span></div>';
+        return;
+      }
+      box.innerHTML = items.slice(0, 5).map(function (it) {
+        var tone = PULSE_TONES[it.type] || ['fa-circle', 'neutral'];
+        var icon = /^fa-/.test(it.icon || '') ? it.icon : tone[0];
+        return '<div class="feed-item" style="border-bottom:1px solid var(--line);padding:7px 0">' +
+          '<div class="feed-item-icon" style="width:28px;height:28px;flex-basis:28px;font-size:11px"><i class="fas ' + esc(icon) + '"></i></div>' +
+          '<div style="min-width:0;flex:1"><div class="feed-item-title" style="font-size:var(--fs-sm)">' + esc(it.title || '') +
+          (it.user ? ' <span class="muted" style="font-weight:500">— ' + esc(it.user) + '</span>' : '') + '</div>' +
+          (it.detail ? '<div class="feed-item-sub" style="font-size:var(--fs-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(it.detail) + '</div>' : '') + '</div>' +
+          '<span class="feed-item-time" style="flex:0 0 auto">' + esc(timeAgo(it.ts)) + '</span></div>';
+      }).join('');
+    } catch (e) { /* пульс опционален */ }
+  }
+
+  /* ── Настройки виджетов главной ──────────────────────── */
+  function widgetSettingsInit() {
+    var btn = $('ccSettings');
+    if (!btn) return;
+    var pop = document.createElement('div');
+    pop.className = 'accent-pop';
+    pop.style.width = '270px';
+    pop.hidden = true;
+    btn.parentNode.appendChild(pop);
+
+    function stored() {
+      try { return JSON.parse(localStorage.getItem('cc_widgets') || '{}'); }
+      catch (e) { return {}; }
+    }
+    function apply() {
+      var cfg = stored();
+      document.querySelectorAll('[data-widget]').forEach(function (sec) {
+        var key = sec.dataset.widget;
+        if (cfg[key] === false) sec.style.display = 'none';
+        else sec.style.display = '';
+      });
+    }
+    function build() {
+      var cfg = stored();
+      var html = '<div class="accent-pop-title">Виджеты главной</div>';
+      document.querySelectorAll('[data-widget]').forEach(function (sec) {
+        var h = sec.querySelector('h2');
+        var label = h ? h.textContent.trim() : sec.dataset.widget;
+        var on = cfg[sec.dataset.widget] !== false;
+        html += '<label class="switch" style="margin-bottom:9px;justify-content:space-between;font-size:var(--fs-sm)"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(label) + '</span>' +
+          '<input type="checkbox" data-w="' + esc(sec.dataset.widget) + '" ' + (on ? 'checked' : '') + '><span class="track"></span></label>';
+      });
+      html += '<button type="button" class="btn btn-sm" id="ccReset" style="width:100%"><i class="fas fa-rotate-left"></i> Показать все виджеты</button>';
+      pop.innerHTML = html;
+      Array.prototype.forEach.call(pop.querySelectorAll('input[data-w]'), function (inp) {
+        inp.addEventListener('change', function () {
+          var cfg = stored();
+          cfg[inp.dataset.w] = inp.checked;
+          try { localStorage.setItem('cc_widgets', JSON.stringify(cfg)); } catch (e) {}
+          apply();
+        });
+      });
+      var reset = pop.querySelector('#ccReset');
+      if (reset) reset.addEventListener('click', function () {
+        try { localStorage.removeItem('cc_widgets'); } catch (e) {}
+        apply();
+        build();
+      });
+    }
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      pop.hidden = !pop.hidden;
+      if (!pop.hidden) build();
+    });
+    document.addEventListener('click', function (e) {
+      if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) pop.hidden = true;
+    });
+    apply();
+  }
+
+  /* ── Мини-расписание недели ──────────────────────────── */
+  var WEEK_DAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+  function renderShiftWeek(d) {
+    var box = $('shiftWeek');
+    if (!box) return;
+    var all = d.all || [];
+    if (!all.length) { box.innerHTML = ''; return; }
+    box.innerHTML = WEEK_DAYS.map(function (day, wd) {
+      var shifts = all.filter(function (s) { return Number(s.weekday) === wd; });
+      return '<div class="wday">' +
+        '<span class="wday-lbl">' + day + '</span>' +
+        (shifts.length
+          ? shifts.map(function (s) {
+              return '<span class="wday-chip" title="' + esc(s.name) + '">' + esc(s.start) + '–' + esc(s.end) + ' <b>' + esc(s.name) + '</b></span>';
+            }).join('')
+          : '<span class="wday-empty">—</span>') +
+        '</div>';
+    }).join('');
+  }
+
   /* ── Дежурства ───────────────────────────────────────── */
   var SHIFT_EMPTY_HINT = {% if role == 'admin' or role == 'owner' %}'добавьте первую смену в редакторе ниже'{% else %}'задайте смены командой /дежурства'{% endif %};
 
@@ -680,6 +823,7 @@
       var chip = $('chipShift');
       if (chip) chip.innerHTML = '<i class="fas fa-user-clock"></i> смен: ' + (d.all ? d.all.length : 0);
       renderShiftEditor(d);
+      renderShiftWeek(d);
     } catch (e) {
       nowBox.innerHTML = '<span class="shift-dot"></span><div class="shift-now-txt">Не удалось загрузить дежурства</div>';
     }
@@ -792,12 +936,17 @@
   loadAnnChannels();
   loadShifts();
   bindShiftEditor();
+  loadPulse();
+  widgetSettingsInit();
+  if (window.tiltCards) window.tiltCards(document, '.kpi, .stat-box, .cc-tile');
   if (window.setLiveRefresh) {
     window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 10000);
     window.setLiveRefresh(loadShifts, 30000);
+    window.setLiveRefresh(loadPulse, 5000);
   } else {
     setInterval(loadStats, 2500);
     setInterval(loadShifts, 30000);
+    setInterval(loadPulse, 5000);
   }
 })();
 </script>

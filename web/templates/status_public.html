@@ -1,120 +1,103 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="dark">
+<html lang="ru" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
   <title>Статус — Aether</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/static/style.css?v=63">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@600&display=swap');
-    :root {
-      --bg: #0a0907; --text: #f0e6d0; --text-2: #c4b48c; --text-3: #8a7d5f;
-      --ac: #e0b04a; --ac-2: #f4cc6a; --ac-line: rgba(224,176,74,.22); --ac-soft: rgba(224,176,74,.12);
-      --ok: #2ecc71; --bad: #e74c3c; --mid: #f39c12;
-    }
-    * { margin: 0; box-sizing: border-box; }
-    body {
-      min-height: 100vh; display: flex; align-items: center; justify-content: center;
-      font-family: 'Inter', system-ui, sans-serif; color: var(--text); padding: 28px 16px;
-      background:
-        radial-gradient(ellipse 70% 40% at 50% -5%, var(--ac-soft), transparent 70%),
-        radial-gradient(ellipse 50% 35% at 85% 110%, rgba(139,92,246,.07), transparent 70%),
-        var(--bg);
-    }
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 28px 16px; }
     .st { width: 100%; max-width: 560px; }
+    .st-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+    .st-brand .brand-icon { width: 42px; height: 42px; font-size: 16px; border-radius: 12px; }
+    .st-brand b { display: block; font-size: 15px; font-weight: 800; letter-spacing: .12em; }
+    .st-brand span { font-size: 11px; color: var(--text-3); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 
-    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 26px; }
-    .brand-mark {
-      width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center;
-      background: linear-gradient(135deg, var(--ac), #b88a2e); color: #1a1206; font-size: 18px;
-      box-shadow: 0 6px 22px rgba(224,176,74,.35), inset 0 1px 0 rgba(255,255,255,.25);
+    .st-hero {
+      position: relative; overflow: hidden;
+      border-radius: 20px; padding: 30px 28px 24px; text-align: center;
+      background: linear-gradient(160deg, var(--ac-soft), transparent 55%), var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-2);
     }
-    .brand-name { font-weight: 800; letter-spacing: .14em; font-size: 15px; }
-    .brand-sub { font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: .08em; }
+    .st-hero::after {
+      content: ''; position: absolute; top: -70px; left: 50%; transform: translateX(-50%);
+      width: 300px; height: 190px; border-radius: 50%; pointer-events: none;
+      background: radial-gradient(circle, var(--ok-soft), transparent 65%);
+    }
+    .st-hero[data-state="off"]::after { background: radial-gradient(circle, var(--err-soft), transparent 65%); }
 
-    .hero {
-      position: relative; border-radius: 22px; padding: 30px 28px 26px; overflow: hidden;
-      border: 1px solid rgba(255,255,255,.09);
-      background: linear-gradient(160deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
-      box-shadow: 0 20px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
-      text-align: center;
-    }
-    .hero::before {
-      content: ''; position: absolute; top: -80px; left: 50%; transform: translateX(-50%);
-      width: 300px; height: 200px; border-radius: 50%; pointer-events: none;
-      background: radial-gradient(circle, rgba(46,204,113,.14), transparent 65%); transition: .4s;
-    }
-    .hero[data-state="off"]::before { background: radial-gradient(circle, rgba(231,76,60,.16), transparent 65%); }
-
-    .ring-wrap { width: 108px; height: 108px; margin: 0 auto 18px; position: relative; }
-    .ring, .ring::after {
+    .st-ring { width: 108px; height: 108px; margin: 0 auto 18px; position: relative; }
+    .st-pulse, .st-pulse::after {
       content: ''; position: absolute; inset: 0; border-radius: 50%;
-      border: 2px solid rgba(46,204,113,.5);
-      animation: ringPulse 2.4s ease-out infinite;
+      border: 2px solid var(--ok);
+      animation: stPulse 2.4s ease-out infinite;
     }
-    .ring::after { animation-delay: 1.2s; }
-    .hero[data-state="off"] .ring, .hero[data-state="off"] .ring::after { border-color: rgba(231,76,60,.5); animation: none; }
-    @keyframes ringPulse { 0% { transform: scale(.72); opacity: 0; } 30% { opacity: .85; } 100% { transform: scale(1.25); opacity: 0; } }
-    .core {
+    .st-pulse::after { animation-delay: 1.2s; }
+    .st-hero[data-state="off"] .st-pulse, .st-hero[data-state="off"] .st-pulse::after { border-color: var(--err); animation: none; opacity: .5; }
+    @keyframes stPulse { 0% { transform: scale(.72); opacity: 0; } 30% { opacity: .8; } 100% { transform: scale(1.25); opacity: 0; } }
+    .st-core {
       position: absolute; inset: 22px; border-radius: 50%; display: grid; place-items: center;
-      font-size: 30px; color: var(--ok);
-      background: rgba(46,204,113,.12); border: 1px solid rgba(46,204,113,.35);
-      transition: .3s;
+      font-size: 28px; color: var(--ok);
+      background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent);
     }
-    .hero[data-state="off"] .core { color: var(--bad); background: rgba(231,76,60,.12); border-color: rgba(231,76,60,.35); }
+    .st-hero[data-state="off"] .st-core { color: var(--err); background: var(--err-soft); border-color: color-mix(in srgb, var(--err) 35%, transparent); }
 
-    .state { font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
-    .hero[data-state="on"] .state { color: var(--ok); }
-    .hero[data-state="off"] .state { color: var(--bad); }
-    .state-sub { font-size: 12.5px; color: var(--text-3); font-weight: 600; margin-top: 6px; }
+    .st-state { font-size: 26px; font-weight: 800; letter-spacing: -.01em; position: relative; z-index: 1; }
+    .st-hero[data-state="on"] .st-state { color: var(--ok); }
+    .st-hero[data-state="off"] .st-state { color: var(--err); }
+    .st-sub { font-size: 12.5px; color: var(--text-3); font-weight: 600; margin-top: 6px; position: relative; z-index: 1; }
 
-    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 26px; }
-    .m {
-      border-radius: 16px; padding: 14px 10px 12px;
-      border: 1px solid rgba(255,255,255,.09);
-      background: rgba(255,255,255,.03);
+    .st-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 26px; position: relative; z-index: 1; }
+    .st-m {
+      border-radius: 14px; padding: 14px 10px 12px;
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      transition: transform .15s var(--ease), box-shadow .15s var(--ease);
     }
-    .m i { color: var(--ac); font-size: 13px; }
-    .m-val { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 7px; letter-spacing: -.02em; }
-    .m-val small { font-size: 11px; color: var(--text-3); font-weight: 700; }
-    .m-lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
-    .m.warn .m-val { color: var(--mid); }
+    .st-m:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+    .st-m i { color: var(--ac); font-size: 13px; }
+    .st-m-val { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 7px; letter-spacing: -.02em; }
+    .st-m-val small { font-size: 11px; color: var(--text-3); font-weight: 700; }
+    .st-m-lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
+    .st-m.warn .st-m-val { color: var(--warn); }
 
-    .foot { text-align: center; margin-top: 18px; font-size: 11.5px; color: var(--text-3); font-weight: 600; }
-    .foot .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
-      margin-right: 7px; animation: livePulse 2s infinite; }
-    @keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(46,204,113,.45); } 100% { box-shadow: 0 0 0 8px rgba(46,204,113,0); } }
-    .foot a { color: var(--ac-2); text-decoration: none; }
-    @media (prefers-reduced-motion: reduce) { .ring, .ring::after, .foot .dot { animation: none !important; } }
+    .st-foot { text-align: center; margin-top: 18px; font-size: 11.5px; color: var(--text-3); font-weight: 600; }
+    .st-foot .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 7px; animation: pulse 2s infinite; }
+    .st-foot a { color: var(--ac); text-decoration: none; font-weight: 700; }
+    @media (prefers-reduced-motion: reduce) { .st-pulse, .st-pulse::after, .st-foot .dot { animation: none !important; } }
   </style>
 </head>
 <body>
+  <div class="bg-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
   <div class="st">
-    <div class="brand">
-      <div class="brand-mark"><i class="fas fa-bolt"></i></div>
+    <div class="st-brand">
+      <div class="brand-icon"><i class="fas fa-bolt"></i></div>
       <div>
-        <div class="brand-name">AETHER</div>
-        <div class="brand-sub">СТАТУС БОТА · LIVE</div>
+        <b>AETHER</b>
+        <span>Статус бота · Live</span>
       </div>
     </div>
 
-    <div class="hero" id="hero" data-state="on">
-      <div class="ring-wrap">
-        <span class="ring"></span>
-        <div class="core"><i class="fas fa-bolt"></i></div>
+    <div class="st-hero" id="hero" data-state="on">
+      <div class="st-ring">
+        <span class="st-pulse"></span>
+        <div class="st-core"><i class="fas fa-bolt"></i></div>
       </div>
-      <div class="state" id="st-state">Проверяем…</div>
-      <div class="state-sub" id="st-sub">загрузка телеметрии</div>
+      <div class="st-state" id="st-state">Проверяем…</div>
+      <div class="st-sub" id="st-sub">загрузка телеметрии</div>
 
-      <div class="metrics">
-        <div class="m"><i class="fas fa-signal"></i><div class="m-val" id="m-ping">—</div><div class="m-lbl">Пинг</div></div>
-        <div class="m"><i class="fas fa-clock"></i><div class="m-val" id="m-uptime">—</div><div class="m-lbl">Аптайм</div></div>
-        <div class="m"><i class="fas fa-server"></i><div class="m-val" id="m-guilds">—</div><div class="m-lbl">Серверов</div></div>
+      <div class="st-metrics">
+        <div class="st-m"><i class="fas fa-signal"></i><div class="st-m-val" id="m-ping">—</div><div class="st-m-lbl">Пинг</div></div>
+        <div class="st-m"><i class="fas fa-clock"></i><div class="st-m-val" id="m-uptime">—</div><div class="st-m-lbl">Аптайм</div></div>
+        <div class="st-m"><i class="fas fa-server"></i><div class="st-m-val" id="m-guilds">—</div><div class="st-m-lbl">Серверов</div></div>
       </div>
     </div>
 
-    <div class="foot"><span class="dot"></span>обновлено <span id="st-upd">—</span> · обновление каждые 5 сек · <a href="/login">вход в панель</a></div>
+    <div class="st-foot"><span class="dot"></span>обновлено <span id="st-upd">—</span> · обновление каждые 5 сек · <a href="/login">вход в панель</a></div>
   </div>
 
 <script>
@@ -137,7 +120,7 @@ async function tick(){
       : 'бот не отвечает — уже чиним';
     const [w, cls] = pingWord(d.latency_ms);
     $('m-ping').innerHTML = `${d.latency_ms} <small>мс${w ? ' · ' + w : ''}</small>`;
-    $('m-ping').closest('.m').classList.toggle('warn', cls === 'warn');
+    $('m-ping').closest('.st-m').classList.toggle('warn', cls === 'warn');
     $('m-uptime').textContent = d.uptime_human;
     $('m-guilds').textContent = d.guilds;
     $('st-upd').textContent = new Date().toLocaleTimeString('ru-RU');

@@ -1775,6 +1775,88 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
 }
 
+
+/* ── Подсветка совпадений в палитре ───────────────────────── */
+.kbd-palette-item .mark {
+  background: var(--ac-soft);
+  color: var(--ac);
+  border-radius: 3px;
+  padding: 0 1px;
+  font-weight: 700;
+}
+
+/* ── Тултип графика ──────────────────────────────────────── */
+.chart-tooltip {
+  position: absolute;
+  z-index: 5;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-2);
+  padding: 6px 10px;
+  display: flex; gap: 8px; align-items: center;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.chart-tooltip b { color: var(--text-2); font-weight: 600; }
+.chart-tooltip span { font-family: var(--mono); font-weight: 800; color: var(--ac); }
+.chart-guide { stroke: var(--ac-line); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
+.chart-box svg rect[fill="transparent"] { cursor: crosshair; }
+
+/* ── 3D-tilt ─────────────────────────────────────────────── */
+.kpi, .stat-box, .cc-tile {
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: transform 0.12s ease-out, box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+
+/* ── Ripple ──────────────────────────────────────────────── */
+.btn, .cc-tile, .kbd-palette-item { position: relative; overflow: hidden; }
+.btn:focus-visible, .cc-tile:focus-visible, .kbd-palette-item:focus-visible { outline-offset: -2px; }
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ac) 24%, transparent);
+  transform: scale(0);
+  animation: ripple 0.65s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
+
+/* ── Мини-расписание недели (дежурства) ──────────────────── */
+.wgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
+.wday {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 7px;
+  display: flex; flex-direction: column; gap: 5px;
+  min-width: 0;
+}
+.wday-lbl {
+  font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-3);
+  text-align: center;
+}
+.wday-chip {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--ac-soft);
+  color: var(--ac);
+  border-radius: 6px;
+  padding: 4px 6px;
+  text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wday-chip b { display: block; font-family: var(--font); font-size: 10px; font-weight: 700; }
+.wday-empty { text-align: center; color: var(--text-3); font-size: 11px; padding: 6px 0; }
+@media (max-width: 860px) { .wgrid { grid-template-columns: repeat(4, 1fr); } }
+
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.

@@ -314,8 +314,17 @@
     }).slice(0, 24);
   }
 
+  function markMatch(text, q) {
+    if (!q) return esc(text);
+    var idx = String(text || '').toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return esc(text);
+    return esc(text.slice(0, idx)) + '<span class="mark">' + esc(text.slice(idx, idx + q.length)) + '</span>' + esc(text.slice(idx + q.length));
+  }
+
   function palettePaint(matches, hasRemotePending) {
     var box = paletteBuild();
+    var input = box.querySelector('input');
+    var q = (input.value || '').trim();
     var results = box.querySelector('.kbd-palette-results');
     paletteMatches = matches;
     paletteIndex = matches.length ? 0 : -1;
@@ -333,9 +342,9 @@
     Object.keys(byGroup).forEach(function (g) {
       html += '<div class="kbd-palette-group"><div class="kbd-palette-group-title">' + esc(g) + '</div>';
       byGroup[g].forEach(function (p) {
-        html += '<button type="button" class="kbd-palette-item" data-path="' + esc(p.path) + '">' +
+        html += '<button type="button" class="kbd-palette-item" data-path="' + esc(p.path) + '"' + (p.run ? ' data-action="1"' : '') + '>' +
           '<i class="fas ' + esc(p.icon2 || 'fa-circle') + '"></i>' +
-          '<span style="min-width:0;flex:1">' + esc(p.label) +
+          '<span style="min-width:0;flex:1">' + markMatch(p.label, q) +
           (p.sub ? ' <small style="display:block;color:var(--text-3);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.sub) + '</small>' : '') +
           '</span>' +
           '<span class="kpi-path">' + esc(p.path) + '</span></button>';
@@ -345,6 +354,12 @@
     results.innerHTML = html;
     Array.prototype.forEach.call(results.querySelectorAll('.kbd-palette-item'), function (node, i) {
       node.addEventListener('click', function () {
+        var item = paletteMatches[i];
+        if (item && item.run) {
+          paletteClose();
+          try { item.run(); } catch (e) { /* действие опционально */ }
+          return;
+        }
         paletteClose();
         window.location.href = node.dataset.path;
       });
@@ -353,11 +368,36 @@
     paletteHighlight();
   }
 
+  /* ── Действия палитры (команды, а не только страницы) ── */
+  var PALETTE_ACTIONS = [
+    { label: 'Сменить тему', icon: 'fa-circle-half-stroke', sub: 'переключить светлая/тёмная', run: function () { window.toggleTheme(); window.showToast('Тема переключена', true); } },
+    { label: 'Светлая тема', icon: 'fa-sun', sub: 'включить светлый режим', run: function () { document.documentElement.setAttribute('data-theme', 'light'); try { localStorage.setItem('aether_theme', 'light'); } catch (e) {} } },
+    { label: 'Тёмная тема', icon: 'fa-moon', sub: 'включить тёмный режим', run: function () { document.documentElement.setAttribute('data-theme', 'dark'); try { localStorage.setItem('aether_theme', 'dark'); } catch (e) {} } },
+    { label: 'Скопировать ссылку страницы', icon: 'fa-link', sub: 'в буфер обмена', run: function () {
+      var done = function () { window.showToast('Ссылка скопирована', true); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(window.location.href).then(done, function () {});
+      else done();
+    } },
+    { label: 'Журнал: выгрузка CSV', icon: 'fa-file-csv', sub: 'последние 7 дней', run: function () { window.open('/logs/export?days=7', '_self'); } },
+    { label: 'Отчёт модерации: CSV', icon: 'fa-file-csv', sub: 'статистика команды', run: function () { window.open('/api/mod-report.csv?days=7', '_self'); } },
+    { label: 'Досье участника', icon: 'fa-id-card', sub: 'аналитика рисков по ID', run: function () { window.location.href = '/mod-insights'; } },
+    { label: 'Центр безопасности', icon: 'fa-shield-halved', sub: 'политики и лаборатория', run: function () { window.location.href = '/security'; } }
+  ];
+
+  function paletteActionMatches(q) {
+    return PALETTE_ACTIONS.filter(function (a) {
+      if (!q) return true;
+      return (a.label + ' ' + (a.sub || '')).toLowerCase().indexOf(q.toLowerCase()) !== -1;
+    }).map(function (a) {
+      return { group: 'Действия', path: '#', label: a.label, icon2: a.icon, sub: a.sub, run: a.run };
+    }).slice(0, 8);
+  }
+
   function paletteRender() {
     var box = paletteBuild();
     var input = box.querySelector('input');
     var q = (input.value || '').toLowerCase().trim();
-    var local = paletteLocalMatches(q);
+    var local = paletteActionMatches(q).concat(paletteLocalMatches(q));
     palettePaint(local, false);
     clearTimeout(paletteRemoteTimer);
     if (q.length < 2) return;
@@ -994,6 +1034,9 @@
       });
       el.innerHTML = '';
       el.appendChild(svg);
+      if (opts.tooltip !== false && typeof window.attachChartTooltip === 'function') {
+        window.attachChartTooltip(el, data, { labels: opts.labels, color: color, height: h });
+      }
       // Рисование линии слева направо
       if (!reducedMotion()) {
         try {
@@ -1276,5 +1319,135 @@
     initAccentPicker(doc.getElementById('accentBtn'));
     sessionTimer();
     globalKeys();
+  });
+})();
+
+// ============================================================
+// AETHER PREMIUM KIT 3 — тултипы, tilt, ripple
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+
+  function reducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /* ── Тултип для площадных графиков ───────────────────────
+     Вызывается из AetherChart.area при opts.tooltip !== false. */
+  window.attachChartTooltip = function (box, values, opts) {
+    var svg = box.querySelector('svg');
+    if (!svg || !values || !values.length || reducedMotion() && false) return;
+    var w = 640, h = Number(opts.height) || 180, pad = 22;
+    var step = values.length > 1 ? (w - pad * 2) / (values.length - 1) : 0;
+    var min = Math.min.apply(null, values.concat([0]));
+    var max = Math.max.apply(null, values.concat([1]));
+    if (max === min) max = min + 1;
+
+    var tip = doc.createElement('div');
+    tip.className = 'chart-tooltip';
+    tip.hidden = true;
+    box.style.position = box.style.position || 'relative';
+    box.appendChild(tip);
+
+    var guide = doc.createElementNS('http://www.w3.org/2000/svg', 'line');
+    guide.setAttribute('class', 'chart-guide');
+    guide.setAttribute('y1', pad - 8);
+    guide.setAttribute('y2', h - pad + 8);
+    guide.setAttribute('opacity', '0');
+    svg.appendChild(guide);
+
+    var dot = doc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('r', 5);
+    dot.setAttribute('opacity', '0');
+    svg.appendChild(dot);
+
+    var overlay = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    overlay.setAttribute('x', pad - 4);
+    overlay.setAttribute('y', 0);
+    overlay.setAttribute('width', w - pad * 2 + 8);
+    overlay.setAttribute('height', h);
+    overlay.setAttribute('fill', 'transparent');
+    svg.appendChild(overlay);
+
+    function show(i) {
+      var x = pad + step * i;
+      var val = values[i];
+      var y = h - pad - ((val - min) / (max - min)) * (h - pad * 2);
+      guide.setAttribute('x1', x);
+      guide.setAttribute('x2', x);
+      guide.setAttribute('opacity', '0.5');
+      dot.setAttribute('cx', x);
+      dot.setAttribute('cy', y);
+      dot.setAttribute('fill', opts.color || 'var(--ac)');
+      dot.setAttribute('opacity', '1');
+      tip.innerHTML = '<b>' + (opts.labels && opts.labels[i] != null ? String(opts.labels[i]) : '') + '</b><span>' + val + '</span>';
+      tip.hidden = false;
+      var bw = box.getBoundingClientRect().width;
+      var ratio = bw / w;
+      var lx = x * ratio;
+      tip.style.left = Math.min(Math.max(0, lx - tip.offsetWidth / 2), bw - tip.offsetWidth - 4) + 'px';
+      tip.style.top = Math.max(0, y * ratio - tip.offsetHeight - 10) + 'px';
+    }
+    function hide() {
+      guide.setAttribute('opacity', '0');
+      dot.setAttribute('opacity', '0');
+      tip.hidden = true;
+    }
+
+    overlay.addEventListener('mousemove', function (e) {
+      var rect = svg.getBoundingClientRect();
+      var x = (e.clientX - rect.left) / rect.width * w;
+      var i = Math.round((x - pad) / step);
+      i = Math.max(0, Math.min(values.length - 1, i));
+      show(i);
+    });
+    overlay.addEventListener('mouseleave', hide);
+    box.addEventListener('mouseleave', hide);
+  };
+})();
+
+// ============================================================
+// AETHER PREMIUM KIT 4 — 3D-tilt и ripple
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── Лёгкий 3D-tilt у карточек ─────────────────────────── */
+  window.tiltCards = function (root, selector) {
+    if (coarse || reduced) return;
+    var els = (root || doc).querySelectorAll(selector || '.kpi, .stat-box, .cc-tile');
+    Array.prototype.forEach.call(els, function (el) {
+      if (el.dataset.tilt) return;
+      el.dataset.tilt = '1';
+      el.addEventListener('mousemove', function (e) {
+        var r = el.getBoundingClientRect();
+        var px = (e.clientX - r.left) / r.width - 0.5;
+        var py = (e.clientY - r.top) / r.height - 0.5;
+        el.style.transform = 'perspective(600px) rotateX(' + (-py * 5).toFixed(2) + 'deg) rotateY(' + (px * 5).toFixed(2) + 'deg) translateY(-2px)';
+      });
+      el.addEventListener('mouseleave', function () {
+        el.style.transform = '';
+      });
+    });
+  };
+
+  /* ── Ripple-эффект кнопок ─────────────────────────────── */
+  doc.addEventListener('pointerdown', function (e) {
+    if (reduced) return;
+    var target = e.target.closest ? e.target.closest('.btn, .cc-tile, .kbd-palette-item') : null;
+    if (!target) return;
+    var r = target.getBoundingClientRect();
+    var span = doc.createElement('span');
+    span.className = 'ripple';
+    var size = Math.max(r.width, r.height) * 1.4;
+    span.style.width = span.style.height = size + 'px';
+    span.style.left = (e.clientX - r.left - size / 2) + 'px';
+    span.style.top = (e.clientY - r.top - size / 2) + 'px';
+    target.appendChild(span);
+    setTimeout(function () { span.remove(); }, 650);
   });
 })();

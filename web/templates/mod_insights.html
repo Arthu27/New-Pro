@@ -17,10 +17,17 @@
 <div class="kpi-row" id="miKpis"></div>
 
 <div class="grid-2" style="align-items:start">
-  <div class="panel">
-    <div class="panel-head"><div><h2><i class="fas fa-users-viewfinder"></i> Карта участников</h2>
-      <div class="sub" id="miSubjectsOff"></div></div></div>
-    <div class="panel-body" id="miSubjects"></div>
+  <div>
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-head"><div><h2><i class="fas fa-users-viewfinder"></i> Карта участников</h2>
+        <div class="sub" id="miSubjectsOff"></div></div></div>
+      <div class="panel-body" id="miSubjects"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h2><i class="fas fa-bullseye"></i> Топ причин</h2>
+        <div class="sub">Самые частые основания предупреждений.</div></div></div>
+      <div class="panel-body" id="miReasons"><div class="sk-line" style="height:12px"></div></div>
+    </div>
   </div>
 
   <div class="grid-2" style="align-items:start">
@@ -254,6 +261,21 @@ $('miDossierGo').addEventListener('click', function () {
 });
 $('miDossierId').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('miDossierGo').click(); });
 
+function loadReasons() {
+  fetch('/api/warnings').then(function (r) { return r.json(); }).then(function (warns) {
+    if (!window.AetherChart || !Array.isArray(warns)) return;
+    var counts = {};
+    warns.forEach(function (w) {
+      var key = String(w.reason || 'Без причины').toLowerCase();
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    var items = Object.keys(counts).map(function (k) {
+      return { label: k.charAt(0).toUpperCase() + k.slice(1), value: counts[k] };
+    }).sort(function (a, b) { return b.value - a.value; }).slice(0, 6);
+    window.AetherChart.vbars($('miReasons'), items);
+  }).catch(function () {});
+}
+
 function load() {
   fetch(API + '/overview?days=' + DAYS).then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
@@ -265,5 +287,6 @@ function load() {
 
 renderDaysTabs();
 load();
+loadReasons();
 </script>
 {% endblock %}

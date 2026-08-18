@@ -218,7 +218,9 @@ for token in ('paletteOpen', 'guardSilent' if 'guardSilent' in js else 'fetchCac
               'uxUndo', 'confirmAction', 'qualitySetLoading', 'showToast'):
     assert token in js, token
 check(True, 'палитра, undo, подтверждения, тосты и live-кит на месте')
-check('esc(p.label)' in js and 'innerHTML' in js, 'выдача палитры экранируется esc()')
+check('markMatch(p.label, q)' in js and 'function markMatch' in js
+      and 'esc(text.slice' in js and 'innerHTML' in js,
+      'выдача палитры экранируется esc() через markMatch')
 css = open(os.path.join(ROOT, 'web', 'static', 'style.css'), encoding='utf-8').read()
 for token in ('.crumbs', '.kbd-palette', '.nav-link.active', '.toast',
               '.user-menu a:hover', '.page-hero'):
