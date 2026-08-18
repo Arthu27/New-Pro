@@ -132,8 +132,30 @@ def _throttle_failed_login (username ):
     _login_fails [key ]=fails
     _time .sleep (min (3.0 ,0.5 *len (fails )))
 
+def _demo_mode ():
+    """Демо-режим предпросмотра: вход в панель без пароля (DEMO_MODE=1).
+
+    Только для показа панели. В боевом запуске флаг должен быть выключен —
+    тогда работает обычная авторизация.
+    """
+    return str (os .environ .get ('DEMO_MODE','')).strip ().lower ()in ('1','true','yes','on')
+
+@app .context_processor
+def inject_demo_mode ():
+    return {'demo_mode':_demo_mode ()}
+
 @app .before_request 
 def before_request ():
+    # Демо-режим: автоматический вход владельцем без логина и пароля.
+    # Авторизация при этом не удаляется — она просто не требуется, пока
+    # поднят флаг DEMO_MODE=1.
+    if _demo_mode ()and 'logged_in'not in session :
+        session .permanent =True 
+        session ['logged_in']=True 
+        session ['username']='demo'
+        session ['role']='owner'
+        session .modified =True 
+
     # CSRF-защита без токенов во всех шаблонах: запросы на запись (POST/PUT/
     # DELETE/PATCH) с чужим Origin/Referer отклоняются. Браузер всегда шлёт
     # Origin на cross-site POST, а панель же работает same-origin, поэтому
