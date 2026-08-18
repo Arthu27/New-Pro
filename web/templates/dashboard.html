@@ -3,12 +3,31 @@
 {% block page_title %}Обзор сервера{% endblock %}
 {% block content %}
 
-<div class="page-hero">
+<div class="page-hero" id="ccHero">
   <div class="page-hero-content">
     <div class="page-hero-greeting" id="heroGreeting"><span class="dot"></span> Панель управления</div>
     <h1 id="heroTitle">Добро пожаловать</h1>
     <p id="heroWelcomeMsg">Логи, демки, тикеты и быстрые действия — в одном месте. Управляйте сервером без лишних кликов.</p>
+    <div class="cc-date" id="ccDate"></div>
+    <div class="cc-chips">
+      <span class="live-chip" id="chipBot"><span class="dot"></span> бот: проверка…</span>
+      <span class="live-chip" id="chipThreat"><i class="fas fa-shield-halved"></i> угрозы: —</span>
+      <span class="live-chip" id="chipMod"><i class="fas fa-gavel"></i> действий за 7 дн: —</span>
+      <span class="live-chip" id="chipShift"><i class="fas fa-user-clock"></i> смен: —</span>
+    </div>
   </div>
+</div>
+
+<!-- Быстрые действия -->
+<div class="cc-quick">
+  <a class="cc-tile" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Варны</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Временные меры</b><small>Мьюты и баны с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile" href="/logs"><span class="cc-ico"><i class="fas fa-clipboard-list"></i></span><span><b>Журнал</b><small>Лента действий команды</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-ok" href="/proofs"><span class="cc-ico"><i class="fas fa-folder-open"></i></span><span><b>Доказательства</b><small>Архив демок</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-info" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Автофильтр</b><small>Слова, ссылки, флуд</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-warn" href="/antiraid"><span class="cc-ico"><i class="fas fa-shield-virus"></i></span><span><b>Анти-рейд</b><small>Защита от волн входов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-info" href="/mod-report"><span class="cc-ico"><i class="fas fa-chart-simple"></i></span><span><b>Отчёты</b><small>Нагрузка команды</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
 </div>
 
 <!-- KPI -->
@@ -31,6 +50,24 @@
   </div>
 </div>
 
+<!-- Аналитика модерации: графики -->
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head">
+      <div><h2><i class="fas fa-chart-area"></i> Активность модерации</h2><div class="sub">Действия команды за последние 7 дней.</div></div>
+      <a class="btn-link" href="/mod-report" style="margin-left:auto">Отчёт <i class="fas fa-arrow-right"></i></a>
+    </div>
+    <div class="panel-body">
+      <div class="chart-box" id="modArea"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-list-ol"></i> Типы действий</h2>
+      <div class="sub">Распределение мер за 7 дней.</div></div></div>
+    <div class="panel-body" id="modTypes"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+</div>
+
 <div class="grid-2" style="align-items:start">
   <!-- Модерация сегодня -->
   <div class="panel">
@@ -43,7 +80,7 @@
         <div class="sk-card" style="height:64px"></div><div class="sk-card" style="height:64px"></div>
         <div class="sk-card" style="height:64px"></div><div class="sk-card" style="height:64px"></div>
       </div>
-      <div class="section-title" style="margin-top:12px">Последние действия</div>
+      <div class="section-title" style="margin-top:12px">Последние действия <span class="hint">— клик по заголовку сортирует</span></div>
       <div class="table-wrap" id="recent-activity"></div>
     </div>
   </div>
@@ -103,36 +140,8 @@
     <div class="panel-body" id="login-log"></div>
   </div>
 
-  <!-- Быстрые переходы -->
-  <div class="panel">
-    <div class="panel-head"><div><h2><i class="fas fa-bolt"></i> Быстрые переходы</h2>
-      <div class="sub">Частые задачи модерации.</div></div></div>
-    <div class="panel-body">
-      <div class="grid-2" style="gap:10px">
-        <a class="card" href="/warnings" style="padding:14px;display:flex;align-items:center;gap:10px;color:var(--text)"><i class="fas fa-triangle-exclamation" style="color:var(--warn)"></i><div><b>Варны</b><div class="hint">Очередь предупреждений</div></div></a>
-        <a class="card" href="/temp-moderation" style="padding:14px;display:flex;align-items:center;gap:10px;color:var(--text)"><i class="fas fa-clock" style="color:var(--info)"></i><div><b>Временные меры</b><div class="hint">Мьюты и баны с таймером</div></div></a>
-        <a class="card" href="/logs" style="padding:14px;display:flex;align-items:center;gap:10px;color:var(--text)"><i class="fas fa-clipboard-list" style="color:var(--ac)"></i><div><b>Журнал модерации</b><div class="hint">Лента действий</div></div></a>
-        <a class="card" href="/proofs" style="padding:14px;display:flex;align-items:center;gap:10px;color:var(--text)"><i class="fas fa-folder-open" style="color:var(--ok)"></i><div><b>Доказательства</b><div class="hint">Архив демок</div></div></a>
-      </div>
-    </div>
-  </div>
-</div>
-
-{% if role == 'owner' %}
-<!-- Отправка уведомлений и объявлений -->
-<div class="grid-2" style="align-items:start;margin-top:14px">
-  <div class="panel">
-    <div class="panel-head"><div><h2><i class="fas fa-bell"></i> Отправить уведомление</h2>
-      <div class="sub">Личное сообщение участнику через бота.</div></div></div>
-    <div class="panel-body">
-      <label class="form-group"><span class="form-label">Discord ID</span><input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input" aria-label="Discord ID получателя"></label>
-      <label class="form-group"><span class="form-label">Заголовок</span><input type="text" id="notif-title" placeholder="Заголовок" class="form-input" aria-label="Заголовок"></label>
-      <label class="form-group"><span class="form-label">Сообщение</span><textarea id="notif-message" class="form-input" style="min-height:70px" aria-label="Текст уведомления"></textarea></label>
-      <button type="button" class="btn btn-primary" id="btnSendNotif"><i class="fas fa-paper-plane"></i> Отправить</button>
-      <div class="hint" id="notif-result" style="margin-top:8px"></div>
-    </div>
-  </div>
-
+  {% if role == 'owner' %}
+  <!-- Отправка уведомлений и объявлений -->
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-bullhorn"></i> Опубликовать объявление</h2>
       <div class="sub">Объявление в канал сервера или в ленту панели.</div></div></div>
@@ -146,6 +155,23 @@
       <button type="button" class="btn btn-primary" id="btnSendAnn"><i class="fas fa-bullhorn"></i> Опубликовать</button>
       <div class="hint" id="ann-result" style="margin-top:8px"></div>
     </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if role == 'owner' %}
+<!-- Отправка уведомления -->
+<div class="panel" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-bell"></i> Отправить уведомление</h2>
+    <div class="sub">Личное сообщение участнику через бота.</div></div></div>
+  <div class="panel-body">
+    <div class="form-row">
+      <label class="form-group"><span class="form-label">Discord ID</span><input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input" aria-label="Discord ID получателя"></label>
+      <label class="form-group"><span class="form-label">Заголовок</span><input type="text" id="notif-title" placeholder="Заголовок" class="form-input" aria-label="Заголовок"></label>
+      <label class="form-group" style="flex:2"><span class="form-label">Сообщение</span><input type="text" id="notif-message" class="form-input" aria-label="Текст уведомления"></label>
+      <button type="button" class="btn btn-primary" id="btnSendNotif" style="align-self:flex-end"><i class="fas fa-paper-plane"></i> Отправить</button>
+    </div>
+    <div class="hint" id="notif-result" style="margin-top:8px"></div>
   </div>
 </div>
 {% endif %}
@@ -201,13 +227,25 @@
     try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
     catch (e) { return '—'; }
   }
+  var _counted = {};
 
-  /* Приветствие по времени */
+  function setNum(id, val) {
+    var el = $(id);
+    if (!el) return;
+    var target = Number(val) || 0;
+    if (_counted[id]) { el.textContent = target.toLocaleString('ru-RU'); return; }
+    _counted[id] = true;
+    if (window.countUp) window.countUp(el, target); else el.textContent = target.toLocaleString('ru-RU');
+  }
+
+  /* Приветствие и дата */
   (function setGreeting() {
     var h = new Date().getHours();
     var g = h < 6 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
     var el = $('heroGreeting');
     if (el) el.innerHTML = '<span class="dot"></span> ' + g + ', {{ username }}';
+    var d = $('ccDate');
+    if (d) d.textContent = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
   })();
 
   /* Информация об основном сервере */
@@ -233,14 +271,20 @@
   async function loadStats() {
     try {
       var d = await window.fetchCachedJSON('/api/stats');
-      $('guild-count').textContent = (d.guilds || 0).toLocaleString();
-      $('user-count').textContent = (d.users || 0).toLocaleString();
-      $('sum-online').textContent = (d.online || 0).toLocaleString();
+      setNum('guild-count', d.guilds || 0);
+      setNum('user-count', d.users || 0);
+      setNum('sum-online', d.online || 0);
       var lat = d.latency || 0;
       $('latency').innerHTML = lat.toLocaleString() + '<small style="font-size:12px;color:var(--text-3)">ms</small>';
       var sEl = $('status');
-      if (d.error) { sEl.textContent = 'ОФФЛАЙН'; sEl.style.color = 'var(--err)'; }
-      else { sEl.textContent = 'ОНЛАЙН'; sEl.style.color = 'var(--ok)'; }
+      var chip = $('chipBot');
+      if (d.error) {
+        sEl.textContent = 'ОФФЛАЙН'; sEl.style.color = 'var(--err)';
+        if (chip) { chip.innerHTML = '<span class="dot" style="background:var(--err);animation:none"></span> бот офлайн'; }
+      } else {
+        sEl.textContent = 'ОНЛАЙН'; sEl.style.color = 'var(--ok)';
+        if (chip) { chip.innerHTML = '<span class="dot"></span> бот онлайн · ' + lat.toLocaleString('ru-RU') + ' мс'; }
+      }
       if (window.drawDonut) {
         var ppct = Math.max(0, Math.min(100, Math.round(lat / 200 * 100)));
         window.drawDonut($('pingDonut'), ppct, lat < 80 ? '#16a34a' : lat < 150 ? '#d97706' : '#dc2626');
@@ -255,6 +299,58 @@
     }
   }
 
+  /* Графики модерации: площадь за 7 дней + типы действий */
+  var ACTION_TONES = {
+    ban: { color: '#dc2626', label: 'Баны' },
+    kick: { color: '#ea580c', label: 'Кики' },
+    warn: { color: '#d97706', label: 'Варны' },
+    mute: { color: '#7c3aed', label: 'Мьюты' },
+    timeout: { color: '#7c3aed', label: 'Таймауты' },
+    unban: { color: '#16a34a', label: 'Разбаны' },
+    unmute: { color: '#16a34a', label: 'Размуты' }
+  };
+
+  async function loadModCharts() {
+    try {
+      var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
+      var days = [];
+      var now = new Date();
+      for (var i = 6; i >= 0; i--) {
+        var dt = new Date(now.getTime() - i * 86400000);
+        days.push({
+          key: dt.toDateString(),
+          label: String(dt.getDate()).padStart(2, '0') + '.' + String(dt.getMonth() + 1).padStart(2, '0'),
+          count: 0
+        });
+      }
+      var types = {};
+      logs.forEach(function (l) {
+        var a = String(l.action || '').toLowerCase();
+        var k = a.indexOf('warning') !== -1 ? 'warn' : (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1 ? (a.indexOf('un') === 0 ? 'unmute' : 'mute') : a);
+        var t = ACTION_TONES[k];
+        if (t) types[k] = (types[k] || 0) + 1;
+        try {
+          var d = new Date(l.timestamp).toDateString();
+          for (var j = 0; j < days.length; j++) {
+            if (days[j].key === d) days[j].count++;
+          }
+        } catch (e) { /* метка без даты */ }
+      });
+      if (window.AetherChart) {
+        window.AetherChart.area($('modArea'), days.map(function (d) { return d.count; }), {
+          labels: days.map(function (d) { return d.label; }),
+          height: 170
+        });
+        var items = Object.keys(types).map(function (k) {
+          return { label: ACTION_TONES[k].label, value: types[k], color: ACTION_TONES[k].color };
+        }).sort(function (a, b) { return b.value - a.value; });
+        window.AetherChart.vbars($('modTypes'), items);
+      }
+      var chip = $('chipMod');
+      if (chip) chip.innerHTML = '<i class="fas fa-gavel"></i> действий за 7 дн: ' + logs.length.toLocaleString('ru-RU');
+    } catch (e) { /* графики опциональны */ }
+  }
+
   /* Модерация сегодня */
   async function loadQuickStats() {
     try {
@@ -264,20 +360,20 @@
       var kicks = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'kick'; }).length;
       var muts = logs.filter(function (l) {
         var a = (l.action || '').toLowerCase();
-        return a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1;
+        return (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1) && a.indexOf('un') !== 0;
       }).length;
       $('quick-stats').innerHTML =
-        '<div class="kpi"><div class="kpi-icon"><i class="fas fa-gavel"></i></div><div class="kpi-copy"><div class="kpi-value">' + logs.length + '</div><div class="kpi-label">Мод. действий</div></div></div>' +
-        '<div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value">' + warns.length + '</div><div class="kpi-label">Варнов</div></div></div>' +
-        '<div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value">' + bans + '</div><div class="kpi-label">Банов</div></div></div>' +
-        '<div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value">' + kicks + '</div><div class="kpi-label">Киков</div></div></div>' +
-        '<div class="kpi"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value">' + muts + '</div><div class="kpi-label">Мутов</div></div></div>';
+        '<div class="kpi"><div class="kpi-icon"><i class="fas fa-gavel"></i></div><div class="kpi-copy"><div class="kpi-value">' + logs.length.toLocaleString('ru-RU') + '</div><div class="kpi-label">Мод. действий</div></div></div>' +
+        '<div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value">' + warns.length.toLocaleString('ru-RU') + '</div><div class="kpi-label">Варнов</div></div></div>' +
+        '<div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value">' + bans.toLocaleString('ru-RU') + '</div><div class="kpi-label">Банов</div></div></div>' +
+        '<div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value">' + kicks.toLocaleString('ru-RU') + '</div><div class="kpi-label">Киков</div></div></div>' +
+        '<div class="kpi"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value">' + muts.toLocaleString('ru-RU') + '</div><div class="kpi-label">Мутов</div></div></div>';
     } catch (e) {
       $('quick-stats').innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить</span></div>';
     }
   }
 
-  /* Последние действия */
+  /* Последние действия (сортируемая таблица) */
   async function loadRecentActivity() {
     try {
       var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
@@ -292,13 +388,14 @@
         var tg = log.user_name || log.target_name || log.user_id || '—';
         var m = log.mod_name || log.mod_id || '—';
         var r = log.reason || '—';
-        return '<tr><td><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(log.action || '?') + '</span></td>' +
+        return '<tr><td data-sort="' + esc(log.action || '') + '"><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(log.action || '?') + '</span></td>' +
           '<td>' + esc(tg) + '</td>' +
           '<td>' + esc(m) + '</td>' +
           '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(r) + '">' + esc(r) + '</td>' +
-          '<td class="muted">' + esc(fmtDate(log.timestamp)) + '</td></tr>';
+          '<td data-sort="' + esc(log.timestamp || '') + '" class="muted">' + esc(fmtDate(log.timestamp)) + '</td></tr>';
       }).join('');
-      box.innerHTML = '<table class="data-table"><thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      box.innerHTML = '<table class="data-table" data-sortable><thead><tr><th class="sortable">Действие</th><th class="sortable">Цель</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      if (window.attachTableSort) window.attachTableSort(box.querySelector('table'));
     } catch (e) {
       $('recent-activity').innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить</span></div>';
     }
@@ -347,6 +444,8 @@
       $('threatIconWrap').style.color = color;
       $('threatFill').style.width = Math.min(100, score) + '%';
       $('threatFill').style.background = color;
+      var chip = $('chipThreat');
+      if (chip) { chip.innerHTML = '<i class="fas fa-shield-halved"></i> угрозы: ' + level.toLowerCase() + ' · ' + score + '/100'; }
       var btn = $('btnLockdown');
       var btnText = $('btnLockdownText');
       if (btn && btnText) {
@@ -438,11 +537,11 @@
       var data = await window.fetchCachedJSON('/api/guild/' + g.id + '/channels');
       var channels = Array.isArray(data) ? data : (data.channels || []);
       channels.filter(function (c) { return c.type === 'text'; }).forEach(function (c) {
-        var o = document.createElement('option');
-        o.value = c.id;
-        o.dataset.guild = g.id;
-        o.textContent = '#' + c.name;
-        sel.appendChild(o);
+        var opt = document.createElement('option');
+        opt.value = c.id;
+        opt.dataset.guild = g.id;
+        opt.textContent = '#' + c.name;
+        sel.appendChild(opt);
       });
     } catch (e) { /* остаётся только лента панели */ }
   }
@@ -518,6 +617,8 @@
           '<span class="t">' + esc(s.start) + '–' + esc(s.end) + '</span> ' + esc(s.name) + '</span>';
       }).join('');
       window._shiftData = d;
+      var chip = $('chipShift');
+      if (chip) chip.innerHTML = '<i class="fas fa-user-clock"></i> смен: ' + (d.all ? d.all.length : 0);
       renderShiftEditor(d);
     } catch (e) {
       nowBox.innerHTML = '<span class="shift-dot"></span><div class="shift-now-txt">Не удалось загрузить дежурства</div>';
@@ -621,6 +722,7 @@
 
   loadGuildInfo();
   loadStats();
+  loadModCharts();
   loadQuickStats();
   loadRecentActivity();
   loadLoginLog();
@@ -630,9 +732,10 @@
   loadShifts();
   bindShiftEditor();
   if (window.setLiveRefresh) {
-    window.setLiveRefresh(function () { loadStats(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 10000);
+    window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 10000);
     window.setLiveRefresh(loadShifts, 30000);
   } else {
+    setInterval(loadStats, 2500);
     setInterval(loadShifts, 30000);
   }
 })();

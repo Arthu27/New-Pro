@@ -36,8 +36,8 @@
     <span class="badge neutral" id="mh-count">0</span>
   </div>
   <div class="table-wrap" style="min-height:120px">
-    <table class="data-table">
-      <thead><tr><th>Действие</th><th>Пользователь</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
+    <table class="data-table" data-sortable>
+      <thead><tr><th class="sortable">Действие</th><th class="sortable">Пользователь</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
       <tbody id="mh-body"><tr><td colspan="5"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Восстанавливаем историю</span></div></td></tr></tbody>
     </table>
   </div>
@@ -94,12 +94,16 @@
     body.innerHTML = list.slice(0, 300).map(function (c) {
       var cat = normalize(c.action);
       var label = RU[cat] || esc(c.action || '?');
-      return '<tr><td><span class="badge ' + (TONE[cat] || 'neutral') + '">' + label + '</span></td>' +
+      return '<tr><td data-sort="' + esc(cat) + '"><span class="badge ' + (TONE[cat] || 'neutral') + '">' + label + '</span></td>' +
         '<td>' + esc(c.target_name || c.target_id || '—') + '</td>' +
         '<td>' + esc(c.mod_name || c.mod_id || '—') + '</td>' +
         '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(c.reason || '') + '">' + esc(c.reason || '—') + '</td>' +
-        '<td class="muted">' + esc(fmtDate(c.created_at)) + '</td></tr>';
+        '<td data-sort="' + esc(c.created_at || '') + '" class="muted">' + esc(fmtDate(c.created_at)) + '</td></tr>';
     }).join('');
+    if (window.attachTableSort && !window._mhSortReady) {
+      window._mhSortReady = true;
+      window.attachTableSort(document.querySelector('#mh-body').closest('table'));
+    }
   }
 
   async function load() {

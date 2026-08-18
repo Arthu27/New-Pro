@@ -15,6 +15,7 @@
   <div class="kpi"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Всего решений</div></div></div>
   <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-users-viewfinder"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-users">—</div><div class="kpi-label">Участников в поле</div></div></div>
   <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-arrow-trend-up"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-top">—</div><div class="kpi-label">Максимум повторов</div></div></div>
+  <div class="kpi" style="grid-column:1/-1"><div class="kpi-icon"><i class="fas fa-wave-square"></i></div><div class="kpi-copy" style="flex:1;min-width:0"><div class="kpi-label" style="margin-bottom:6px">Варны за 7 дней</div><div class="chart-box" id="warn-spark"></div></div></div>
 </div>
 
 <div class="panel">
@@ -29,8 +30,8 @@
     <span class="badge neutral" id="warn-count">0 кейсов</span>
   </div>
   <div class="table-wrap" style="min-height:120px">
-    <table class="data-table" id="warn-table">
-      <thead><tr><th>Участник</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
+    <table class="data-table" id="warn-table" data-sortable>
+      <thead><tr><th class="sortable">Участник</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
       <tbody id="warn-body"><tr><td colspan="4"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Собираем очередь решений</span></div></td></tr></tbody>
     </table>
   </div>
@@ -79,6 +80,21 @@
     $('stat-total').textContent = allWarnings.length;
     $('stat-users').textContent = Object.keys(users).length;
     $('stat-top').textContent = top;
+    if (window.AetherChart) {
+      var days = [];
+      var now = new Date();
+      for (var i = 6; i >= 0; i--) {
+        var dt = new Date(now.getTime() - i * 86400000);
+        days.push({ key: dt.toDateString(), label: String(dt.getDate()).padStart(2, '0') + '.' + String(dt.getMonth() + 1).padStart(2, '0'), count: 0 });
+      }
+      allWarnings.forEach(function (w) {
+        try {
+          var k = new Date(w.timestamp).toDateString();
+          for (var j = 0; j < days.length; j++) if (days[j].key === k) days[j].count++;
+        } catch (e) { /* метка без даты */ }
+      });
+      window.AetherChart.sparkline($('warn-spark'), days.map(function (d) { return d.count; }), { height: 48, title: 'Предупреждения по дням' });
+    }
   }
 
   function render() {
@@ -99,11 +115,15 @@
       return;
     }
     body.innerHTML = filtered.slice(0, 200).map(function (w) {
-      return '<tr><td><span class="id-pill">' + esc(w.user_id || '—') + '</span></td>' +
+      return '<tr><td data-sort="' + esc(w.user_id || '') + '"><span class="id-pill">' + esc(w.user_id || '—') + '</span></td>' +
         '<td>' + esc(w.moderator || '—') + '</td>' +
         '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(w.reason || '') + '">' + esc(w.reason || '—') + '</td>' +
-        '<td class="muted">' + esc(fmtDate(w.timestamp)) + '</td></tr>';
+        '<td data-sort="' + esc(w.timestamp || '') + '" class="muted">' + esc(fmtDate(w.timestamp)) + '</td></tr>';
     }).join('');
+    if (window.attachTableSort && !window._warnSortReady) {
+      window._warnSortReady = true;
+      window.attachTableSort($('warn-table'));
+    }
   }
 
   function bind() {

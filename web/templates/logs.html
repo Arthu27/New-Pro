@@ -23,6 +23,13 @@
   <div class="kpi"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-muts">—</div><div class="kpi-label">Мьюты</div></div></div>
 </div>
 
+<div class="grid-2" style="align-items:start">
+<div class="panel">
+  <div class="panel-head"><div><h2><i class="fas fa-chart-simple"></i> Типы действий</h2>
+    <div class="sub">Распределение событий в журнале.</div></div></div>
+  <div class="panel-body" id="logs-types"><div class="sk-line" style="height:12px"></div></div>
+</div>
+
 <div class="panel">
   <div class="toolbar">
     <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Сервер</span>
@@ -35,11 +42,12 @@
     <span class="badge neutral" id="logs-count">0 событий</span>
   </div>
   <div class="table-wrap" style="min-height:120px">
-    <table class="data-table">
-      <thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
+    <table class="data-table" data-sortable>
+      <thead><tr><th class="sortable">Действие</th><th class="sortable">Цель</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
       <tbody id="logs-body"><tr><td colspan="5"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span></div></td></tr></tbody>
     </table>
   </div>
+</div>
 </div>
 
 <script>
@@ -92,6 +100,20 @@
     $('stat-kicks').textContent = kicks;
     $('stat-warns').textContent = warns;
     $('stat-muts').textContent = muts;
+    if (window.AetherChart) {
+      var counts = {};
+      allLogs.forEach(function (l) {
+        var a = (l.action || '?').toLowerCase();
+        var k = a.indexOf('warning') !== -1 ? 'warn' : a;
+        counts[k] = (counts[k] || 0) + 1;
+      });
+      var tones = { ban: ['Баны', '#dc2626'], kick: ['Кики', '#ea580c'], warn: ['Варны', '#d97706'], mute: ['Мьюты', '#7c3aed'], timeout: ['Таймауты', '#7c3aed'], unban: ['Разбаны', '#16a34a'], unmute: ['Размуты', '#16a34a'] };
+      var items = Object.keys(counts).map(function (k) {
+        var meta = tones[k] || [k, null];
+        return { label: meta[0], value: counts[k], color: meta[1] || undefined };
+      }).sort(function (a, b) { return b.value - a.value; });
+      window.AetherChart.vbars($('logs-types'), items);
+    }
   }
 
   function render() {
@@ -113,12 +135,16 @@
     }
     body.innerHTML = filtered.slice(0, 200).map(function (l) {
       var a = (l.action || '?').toLowerCase();
-      return '<tr><td><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(l.action || '?') + '</span></td>' +
+      return '<tr><td data-sort="' + esc(l.action || '') + '"><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(l.action || '?') + '</span></td>' +
         '<td>' + esc(l.user_name || l.channel_name || l.role_name || l.user_id || '—') + '</td>' +
         '<td>' + esc(l.mod_name || l.mod_id || '—') + '</td>' +
         '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(l.reason || '') + '">' + esc(l.reason || '—') + '</td>' +
-        '<td class="muted">' + esc(fmtDate(l.timestamp)) + '</td></tr>';
+        '<td data-sort="' + esc(l.timestamp || '') + '" class="muted">' + esc(fmtDate(l.timestamp)) + '</td></tr>';
     }).join('');
+    if (window.attachTableSort && !window._logsSortReady) {
+      window._logsSortReady = true;
+      window.attachTableSort(document.querySelector('#logs-body').closest('table'));
+    }
   }
 
   function bind() {

@@ -297,28 +297,35 @@
     return el;
   }
 
-  function paletteRender() {
-    var box = paletteBuild();
-    var input = box.querySelector('input');
-    var q = (input.value || '').toLowerCase().trim();
-    var results = box.querySelector('.kbd-palette-results');
+  var paletteReqToken = 0;
+  var paletteRemoteTimer = null;
+
+  function paletteLocalMatches(q) {
     var flat = [];
     paletteData.forEach(function (grp) {
       grp.pages.forEach(function (p) {
-        flat.push({ group: grp.group, icon: grp.icon, path: p.path, label: p.label, icon2: p.icon, desc: p.description || '' });
+        flat.push({ group: 'Разделы панели', path: p.path, label: p.label, icon2: p.icon, desc: p.description || '', sub: p.path });
       });
     });
-    paletteMatches = flat.filter(function (p) {
+    return flat.filter(function (p) {
       if (!q) return true;
-      return (p.label + ' ' + p.desc + ' ' + p.group).toLowerCase().indexOf(q) !== -1;
-    }).slice(0, 30);
-    paletteIndex = paletteMatches.length ? 0 : -1;
-    if (!paletteMatches.length) {
-      results.innerHTML = '<div class="kbd-palette-empty">Ничего не найдено</div>';
+      return (p.label + ' ' + p.desc).toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 24);
+  }
+
+  function palettePaint(matches, hasRemotePending) {
+    var box = paletteBuild();
+    var results = box.querySelector('.kbd-palette-results');
+    paletteMatches = matches;
+    paletteIndex = matches.length ? 0 : -1;
+    if (!matches.length) {
+      results.innerHTML = '<div class="kbd-palette-empty">' +
+        (hasRemotePending ? 'Ищем по участникам, транскриптам и объявлениям…' : 'Ничего не найдено — попробуйте другой запрос') +
+        '</div>';
       return;
     }
     var byGroup = {};
-    paletteMatches.forEach(function (p) {
+    matches.forEach(function (p) {
       (byGroup[p.group] = byGroup[p.group] || []).push(p);
     });
     var html = '';
@@ -327,7 +334,9 @@
       byGroup[g].forEach(function (p) {
         html += '<button type="button" class="kbd-palette-item" data-path="' + esc(p.path) + '">' +
           '<i class="fas ' + esc(p.icon2 || 'fa-circle') + '"></i>' +
-          '<span>' + esc(p.label) + '</span>' +
+          '<span style="min-width:0;flex:1">' + esc(p.label) +
+          (p.sub ? ' <small style="display:block;color:var(--text-3);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.sub) + '</small>' : '') +
+          '</span>' +
           '<span class="kpi-path">' + esc(p.path) + '</span></button>';
       });
       html += '</div>';
@@ -341,6 +350,40 @@
       node.addEventListener('mousemove', function () { paletteIndex = i; paletteHighlight(); });
     });
     paletteHighlight();
+  }
+
+  function paletteRender() {
+    var box = paletteBuild();
+    var input = box.querySelector('input');
+    var q = (input.value || '').toLowerCase().trim();
+    var local = paletteLocalMatches(q);
+    palettePaint(local, false);
+    clearTimeout(paletteRemoteTimer);
+    if (q.length < 2) return;
+    palettePaint(local, true);
+    paletteRemoteTimer = setTimeout(function () {
+      var token = ++paletteReqToken;
+      fetch('/api/ux/search?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (token !== paletteReqToken) return;
+          var remote = [];
+          ((d && d.groups) || []).forEach(function (grp) {
+            if (grp.key === 'pages') return; // локальные страницы уже показаны
+            (grp.items || []).forEach(function (it) {
+              remote.push({
+                group: grp.title || 'Результаты',
+                path: it.href || '/',
+                label: it.title || '—',
+                icon2: it.icon || 'fa-circle',
+                sub: it.sub || ''
+              });
+            });
+          });
+          palettePaint(local.concat(remote).slice(0, 40), false);
+        })
+        .catch(function () { palettePaint(local, false); });
+    }, 180);
   }
 
   function paletteHighlight() {
@@ -420,13 +463,24 @@
   /* ── 11. Верхняя панель ─────────────────────────────────── */
   function topbarInit() {
     var clock = doc.getElementById('navClock');
-    if (clock) {
-      var tick = function () {
-        clock.textContent = new Date().toLocaleTimeString('ru-RU');
-      };
-      tick();
-      setInterval(tick, 1000);
-    }
+    var sysClock = doc.getElementById('sysClock');
+    var tick = function () {
+      var t = new Date().toLocaleTimeString('ru-RU');
+      if (clock) clock.textContent = t;
+      if (sysClock) sysClock.textContent = t;
+    };
+    tick();
+    setInterval(tick, 1000);
+    // Тонкий индикатор прокрутки страницы
+    var prog = document.createElement('div');
+    prog.className = 'scroll-progress';
+    doc.body.appendChild(prog);
+    var onScroll = function () {
+      var max = doc.documentElement.scrollHeight - window.innerHeight;
+      prog.style.width = (max > 0 ? Math.min(100, (window.scrollY / max) * 100) : 0) + '%';
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
     var fsBtn = doc.getElementById('fullscreenBtn');
     if (fsBtn) {
       fsBtn.addEventListener('click', function () {
@@ -754,3 +808,227 @@
 // GLOBAL LIVE REFRESH — страницы регистрируют свои загрузчики,
 // общий интервал обновляет их каждые 2.5s (реализован в app.js).
 // ============================================================
+
+// ============================================================
+// AETHER PREMIUM KIT — счётчики, сортировка таблиц, графики
+// ============================================================
+(function () {
+  'use strict';
+
+  var doc = document;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function cssVar(name, fallback) {
+    try {
+      var v = getComputedStyle(doc.documentElement).getPropertyValue(name).trim();
+      return v || fallback;
+    } catch (e) { return fallback; }
+  }
+
+  /* ── Анимированный счётчик числа ─────────────────────── */
+  window.countUp = function (el, target, opts) {
+    opts = opts || {};
+    if (!el) return;
+    var dur = opts.duration || 700;
+    var start = 0;
+    var m = /([\d\s.,]+)/.exec(el.textContent || '');
+    if (m) start = parseFloat(m[1].replace(/\\s/g, '').replace(',', '.')) || 0;
+    target = Number(target) || 0;
+    var fmt = opts.fmt || function (v) { return Math.round(v).toLocaleString('ru-RU'); };
+    if (reduced || Math.abs(target - start) < 1) { el.textContent = fmt(target); return; }
+    var t0 = null;
+    function step(ts) {
+      if (t0 == null) t0 = ts;
+      var pr = Math.min(1, (ts - t0) / dur);
+      var e = 1 - Math.pow(1 - pr, 3);
+      el.textContent = fmt(start + (target - start) * e);
+      if (pr < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  };
+
+  /* ── Клиентская сортировка таблиц ────────────────────── */
+  function readSortVal(cell) {
+    var raw = cell.getAttribute('data-sort');
+    if (raw != null && raw !== '') return raw;
+    return (cell.textContent || '').trim();
+  }
+
+  window.attachTableSort = function (table) {
+    if (!table || table.dataset.sortReady) return;
+    table.dataset.sortReady = '1';
+    Array.prototype.forEach.call(table.querySelectorAll('thead th.sortable'), function (th) {
+      var ico = doc.createElement('i');
+      ico.className = 'fas fa-sort sort-ico';
+      ico.setAttribute('aria-hidden', 'true');
+      th.appendChild(ico);
+      th.addEventListener('click', function () {
+        var tbody = table.tBodies && table.tBodies[0];
+        if (!tbody) return;
+        var rows = Array.prototype.slice.call(tbody.rows);
+        var col = Array.prototype.indexOf.call(th.parentNode.children, th);
+        var key = th.getAttribute('data-sort-key') || null;
+        var dir = th.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
+        Array.prototype.forEach.call(table.querySelectorAll('thead th.sortable'), function (other) {
+          if (other !== th) other.removeAttribute('aria-sort');
+          var oi = other.querySelector('.sort-ico');
+          if (oi) oi.className = 'fas fa-sort sort-ico';
+        });
+        th.setAttribute('aria-sort', dir);
+        ico.className = 'fas ' + (dir === 'ascending' ? 'fa-sort-up' : 'fa-sort-down') + ' sort-ico';
+        rows.sort(function (a, b) {
+          var ca = a.children[col], cb = b.children[col];
+          var va = ca ? (key ? readSortVal(ca.querySelector('[data-sort="' + key + '"]') || ca) : readSortVal(ca)) : '';
+          var vb = cb ? (key ? readSortVal(cb.querySelector('[data-sort="' + key + '"]') || cb) : readSortVal(cb)) : '';
+          var na = parseFloat(String(va).replace(/\\s/g, '').replace(',', '.'));
+          var nb = parseFloat(String(vb).replace(/\\s/g, '').replace(',', '.'));
+          var res;
+          if (!isNaN(na) && !isNaN(nb) && String(va).replace(/\\D/g, '') && String(vb).replace(/\\D/g, '')) {
+            res = na - nb;
+          } else {
+            res = String(va).localeCompare(String(vb), 'ru', { numeric: true, sensitivity: 'base' });
+          }
+          return dir === 'ascending' ? res : -res;
+        });
+        rows.forEach(function (r) { tbody.appendChild(r); });
+      });
+    });
+  };
+
+  /* ── Графический движок (чистый SVG, без внешних библиотек) ── */
+  function colorWithAlpha(hex, alpha) {
+    var s = String(hex || '').replace('#', '');
+    if (s.length === 3) s = s.split('').map(function (c) { return c + c; }).join('');
+    var n = parseInt(s, 16);
+    if (isNaN(n)) return 'rgba(79,70,229,' + alpha + ')';
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
+  }
+
+  function svgEl(tag, attrs) {
+    var el = doc.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.keys(attrs || {}).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+    return el;
+  }
+
+  function numPath(values, w, h, pad) {
+    var v = values.map(function (x) { return Number(x) || 0; });
+    var min = Math.min.apply(null, v.concat([0]));
+    var max = Math.max.apply(null, v.concat([1]));
+    if (max === min) max = min + 1;
+    var step = v.length > 1 ? (w - pad * 2) / (v.length - 1) : 0;
+    return v.map(function (val, i) {
+      var x = pad + step * i;
+      var y = h - pad - ((val - min) / (max - min)) * (h - pad * 2);
+      return [x, y];
+    });
+  }
+
+  function axisLabels(values) {
+    var v = values.map(function (x) { return Number(x) || 0; });
+    var max = Math.max.apply(null, v.concat([1]));
+    return { max: max, mid: Math.round(max / 2) };
+  }
+
+  /* Спарклайн: линия + заливка + точка на последнем значении */
+  window.AetherChart = {
+    sparkline: function (el, values, opts) {
+      opts = opts || {};
+      if (!el) return;
+      var data = (values || []).map(function (x) { return Number(x) || 0; });
+      var w = 260, h = Number(opts.height) || 64, pad = 8;
+      var color = opts.color || cssVar('--ac', '#4f46e5');
+      if (!data.length) { el.innerHTML = '<span class="muted" style="font-size:11px">нет данных</span>'; return; }
+      var pts = numPath(data, w, h, pad);
+      var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+      var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + (h - pad) + ' L' + pts[0][0].toFixed(1) + ' ' + (h - pad) + ' Z';
+      var svg = svgEl('svg', { viewBox: '0 0 ' + w + ' ' + h, preserveAspectRatio: 'none', style: 'width:100%;height:' + h + 'px' });
+      svg.appendChild(svgEl('path', { d: area, fill: colorWithAlpha(color, 0.16), 'class': 'area-fill' }));
+      svg.appendChild(svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.5', 'class': 'line-path' }));
+      var last = pts[pts.length - 1];
+      svg.appendChild(svgEl('circle', { cx: last[0], cy: last[1], r: 4, fill: color, 'class': 'last-dot' }));
+      if (opts.title) svg.appendChild(svgEl('title', {}));
+      if (opts.title) svg.querySelector('title').textContent = opts.title;
+      el.innerHTML = '';
+      el.appendChild(svg);
+      if (opts.axis) {
+        var ax = doc.createElement('div');
+        ax.className = 'chart-axis';
+        var lab = axisLabels(data);
+        ax.innerHTML = '<span>' + (opts.axisMin || '0') + '</span><span>' + lab.mid + '</span><span>' + lab.max + '</span>';
+        el.appendChild(ax);
+      }
+    },
+
+    /* Площадной график с сеткой (для крупных блоков) */
+    area: function (el, values, opts) {
+      opts = opts || {};
+      if (!el) return;
+      var data = (values || []).map(function (x) { return Number(x) || 0; });
+      var w = 640, h = Number(opts.height) || 180, pad = 14;
+      var color = opts.color || cssVar('--ac', '#4f46e5');
+      if (!data.length) { el.innerHTML = '<div class="empty" style="padding:20px"><i class="fas fa-chart-area"></i><span>нет данных</span></div>'; return; }
+      var pts = numPath(data, w, h, pad + 8);
+      var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+      var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + (h - pad - 8) + ' L' + pts[0][0].toFixed(1) + ' ' + (h - pad - 8) + ' Z';
+      var svg = svgEl('svg', { viewBox: '0 0 ' + w + ' ' + h, preserveAspectRatio: 'none', style: 'width:100%;height:' + h + 'px' });
+      [0.25, 0.5, 0.75].forEach(function (f) {
+        var y = pad + (h - pad * 2) * f;
+        svg.appendChild(svgEl('line', { x1: pad, y1: y.toFixed(1), x2: w - pad, y2: y.toFixed(1), 'class': 'grid-line' }));
+      });
+      svg.appendChild(svgEl('path', { d: area, fill: colorWithAlpha(color, 0.16), 'class': 'area-fill' }));
+      svg.appendChild(svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.5', 'class': 'line-path' }));
+      pts.forEach(function (p, i) {
+        var dot = svgEl('circle', { cx: p[0], cy: p[1], r: 3, fill: color, opacity: i === pts.length - 1 ? 1 : 0.55 });
+        if (opts.labels && opts.labels[i] != null) {
+          var t = svgEl('title', {});
+          t.textContent = opts.labels[i] + ': ' + data[i];
+          dot.appendChild(t);
+        }
+        svg.appendChild(dot);
+      });
+      el.innerHTML = '';
+      el.appendChild(svg);
+      if (opts.labels && opts.labels.length) {
+        var ax = doc.createElement('div');
+        ax.className = 'chart-axis';
+        var lab = axisLabels(data);
+        ax.innerHTML = '<span>' + esc0(opts.labels[0]) + '</span><span>' + lab.mid + '</span><span>' + esc0(opts.labels[opts.labels.length - 1]) + '</span>';
+        el.appendChild(ax);
+      }
+    },
+
+    /* Горизонтальные бары-распределения */
+    vbars: function (el, items, opts) {
+      opts = opts || {};
+      if (!el) return;
+      var list = (items || []).filter(function (x) { return x && x.label != null; });
+      if (!list.length) { el.innerHTML = '<span class="muted">нет данных</span>'; return; }
+      var max = Math.max.apply(null, list.map(function (x) { return Number(x.value) || 0; }).concat([1]));
+      var color = opts.color || cssVar('--ac', '#4f46e5');
+      el.innerHTML = list.slice(0, opts.limit || 8).map(function (x) {
+        var v = Number(x.value) || 0;
+        var pct = Math.round((v / max) * 100);
+        return '<div class="vbar-row" title="' + esc0(x.label) + ': ' + v + '">' +
+          '<span class="vbar-label">' + esc0(x.label) + '</span>' +
+          '<span class="vbar-track"><span class="vbar-fill" style="width:' + pct + '%;' + (x.color ? 'background:' + x.color : '') + '"></span></span>' +
+          '<span class="vbar-val">' + v.toLocaleString('ru-RU') + '</span></div>';
+      }).join('');
+    }
+  };
+
+  function esc0(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* Авто-подключение сортировки на страницах с data-sortable */
+  ready0(function () {
+    doc.querySelectorAll('table[data-sortable]').forEach(function (t) { window.attachTableSort(t); });
+  });
+
+  function ready0(fn) {
+    if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+})();

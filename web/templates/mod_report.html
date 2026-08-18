@@ -32,14 +32,14 @@
     <div class="panel-head"><div><h2><i class="fas fa-chart-column"></i> Ритм по дням</h2>
       <div class="sub">Количество действий в день.</div></div></div>
     <div class="panel-body">
-      <div class="row" id="mrBars" style="align-items:flex-end;gap:3px;min-height:70px"></div>
+      <div class="chart-box" id="mrArea"></div>
     </div>
   </div>
 
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-list-ol"></i> Типы действий</h2>
       <div class="sub">Что чаще всего применяет команда.</div></div></div>
-    <div class="panel-body"><div class="chip-row" id="mrActions"></div></div>
+    <div class="panel-body" id="mrActions"></div>
   </div>
 
   <div class="panel">
@@ -93,17 +93,21 @@ function renderMods(d) {
         '<span class="mono" style="font-weight:700">' + m.cnt + ' <small class="muted">· ' + m.pct + '%</small></span></div>';
     }).join('');
   }
-  var max = Math.max.apply(null, d.per_day.counts.concat([1]));
-  $('mrBars').innerHTML = d.per_day.counts.map(function (c, i) {
-    var h = Math.round((c / max) * 62);
-    return '<div title="' + esc(String(d.per_day.labels[i] || '').slice(5).split('-').reverse().join('.')) + ' · ' + c + '" style="flex:1;height:' + Math.max(h, c ? 3 : 2) + 'px;background:var(--ac);opacity:' + (0.35 + 0.65 * c / max) + ';border-radius:3px 3px 0 0"></div>';
-  }).join('');
+  if (window.AetherChart) {
+    var labels = d.per_day.labels.map(function (l) { return String(l || '').slice(5).split('-').reverse().join('.'); });
+    window.AetherChart.area($('mrArea'), d.per_day.counts, { labels: labels, height: 150 });
+  }
 }
 
 function renderActions(d) {
-  $('mrActions').innerHTML = d.by_action.length
-    ? d.by_action.map(function (a) { return '<span class="chip">' + esc(a[0]) + ' · ' + a[1] + '</span>'; }).join('')
-    : '<span class="muted">Типов нет</span>';
+  if (window.AetherChart && d.by_action.length) {
+    var max = Math.max.apply(null, d.by_action.map(function (a) { return a[1]; }).concat([1]));
+    window.AetherChart.vbars($('mrActions'), d.by_action.map(function (a) {
+      return { label: a[0], value: a[1] };
+    }));
+  } else {
+    $('mrActions').innerHTML = '<span class="muted">Типов нет</span>';
+  }
 }
 
 function renderRec(d) {
