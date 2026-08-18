@@ -27,6 +27,7 @@ MENU = [
         {'path': '/recap', 'label': 'Рекап канала', 'icon': 'fa-clock-rotate-left'},
     ]},
     {'group': 'Модерация', 'key': 'mod', 'icon': 'fa-shield-halved', 'pages': [
+        {'path': '/mod-center', 'label': 'Центр модерации', 'icon': 'fa-satellite-dish'},
         {'path': '/logs', 'label': 'Логи модерации', 'icon': 'fa-clipboard-list'},
         {'path': '/temp-moderation', 'label': 'Временная модерация', 'icon': 'fa-clock'},
         {'path': '/warnings', 'label': 'Предупреждения', 'icon': 'fa-exclamation-triangle'},
@@ -38,7 +39,6 @@ MENU = [
         {'path': '/proofs', 'label': 'Демки', 'icon': 'fa-folder-open'},
         {'path': '/bulk-actions', 'label': 'Массовые действия', 'icon': 'fa-layer-group'},
         {'path': '/mod-report', 'label': 'Отчёт модерации', 'icon': 'fa-chart-simple'},
-        {'path': '/mod-center', 'label': 'Центр модерации', 'icon': 'fa-satellite-dish'},
         {'path': '/appeals', 'label': 'Апелляции', 'icon': 'fa-scale-balanced'},
         {'path': '/lockdown', 'label': 'Локдаун', 'icon': 'fa-house-lock'},
         {'path': '/security', 'label': 'Безопасность', 'icon': 'fa-shield-virus'},

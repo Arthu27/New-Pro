@@ -15,6 +15,7 @@
 import time
 
 from web.routes._common import (
+    _log,
     render_template, session, request, jsonify, Response,
 )
 
@@ -289,6 +290,95 @@ def register(ctx):
             if len(rows) >= 250:
                 break
         return jsonify({'success': True, 'rows': rows})
+
+    @app.route('/api/guild/<gid>/mod-center/shield')
+    @login_required
+    @role_required('mod')
+    def api_mod_center_shield(gid):
+        """Щит сервера: сводный статус всех защит одним снимком."""
+        autofilter = MI._autofilter_check(gid)
+        antiraid = MI._antiraid_check(gid)
+        lockdown = {'active': False, 'count': 0, 'summary': '',
+                    'since': '', 'by': '', 'reason': ''}
+        try:
+            from web.routes import lockdown_panel as LP
+            state = LP._state(MC._gid_str(gid))
+            view = LP.status_view(None, state)
+            lockdown = {'active': view.get('count', 0) > 0,
+                        'count': view.get('count', 0),
+                        'summary': str(view.get('summary') or ''),
+                        'since': str(view.get('since') or ''),
+                        'by': str(view.get('by') or ''),
+                        'reason': str(view.get('reason') or '')}
+        except Exception as _ex:
+            _log.debug('mod_center: lockdown-статус недоступен: %s', _ex)
+        security = {'tuned': False, 'detail': 'Не настроена'}
+        sec_raw = MC._load_json('data/security_%s.json' % MC._gid_str(gid), None)
+        if isinstance(sec_raw, dict) and sec_raw:
+            on = sum(1 for v in sec_raw.values() if v)
+            security = {'tuned': on > 0,
+                        'detail': ('включено: %d' % on) if on else 'всё выключено'}
+        return jsonify({'success': True,
+                        'autofilter': autofilter,
+                        'antiraid': antiraid,
+                        'lockdown': lockdown,
+                        'security': security})
+
+    @app.route('/api/guild/<gid>/mod-center/proofs')
+    @login_required
+    @role_required('mod')
+    def api_mod_center_proofs(gid):
+        """Галерея демок: кто, кого, за что и доказательство."""
+        raw = MC._load_json('data/modproof_%s.json' % MC._gid_str(gid), {})
+        items = raw.get('items') if isinstance(raw, dict) else None
+        rows = []
+        if isinstance(items, dict):
+            for pid, it in items.items():
+                if not isinstance(it, dict):
+                    continue
+                rows.append({
+                    'id': pid,
+                    'user_name': str(it.get('user_name') or ''),
+                    'user_id': str(it.get('user_id') or ''),
+                    'mod_name': str(it.get('mod_name') or ''),
+                    'action': str(it.get('action') or ''),
+                    'reason': str(it.get('reason') or ''),
+                    'link': str(it.get('link') or it.get('url') or ''),
+                    'at': str(it.get('set_at') or ''),
+                })
+        rows.sort(key=lambda r: r['at'], reverse=True)
+        return jsonify({'success': True, 'rows': rows[:60], 'total': len(rows)})
+
+    @app.route('/api/guild/<gid>/mod-center/appeals')
+    @login_required
+    @role_required('mod')
+    def api_mod_center_appeals(gid):
+        """Апелляции: счётчики очереди и последние заявки."""
+        try:
+            from web.routes import appeals_panel as AP
+            state = AP._state(MC._gid_str(gid))
+            stats = AP.overview_stats(state)
+            items = state.get('items') if isinstance(state, dict) else []
+            rows = []
+            for it in (items or []):
+                if not isinstance(it, dict):
+                    continue
+                rows.append({
+                    'id': it.get('id'),
+                    'status': str(it.get('status') or ''),
+                    'user': str(it.get('user_name') or it.get('user_id') or ''),
+                    'reason': str(it.get('reason') or it.get('punishment_reason') or ''),
+                    'created_at': str(it.get('created_at') or ''),
+                })
+            rows.sort(key=lambda r: r['created_at'], reverse=True)
+            return jsonify({'success': True, 'stats': stats,
+                            'rows': rows[:20], 'total': len(rows)})
+        except Exception as _ex:
+            _log.debug('mod_center: апелляции недоступны: %s', _ex)
+            return jsonify({'success': True,
+                            'stats': {'pending': 0, 'accepted': 0, 'rejected': 0,
+                                      'last': None},
+                            'rows': [], 'total': 0})
 
     @app.route('/api/guild/<gid>/mod-center/dossier')
     @login_required

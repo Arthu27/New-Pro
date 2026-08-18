@@ -513,6 +513,55 @@ check(client.get('/api/guild/777/mod-center/journal').status_code == 403,
 check(client.get('/api/guild/777/mod-center/history').status_code == 403,
       'uye история закрыта')
 
+print('== 5d. Консоль забрал Щит, Демки и Апелляции ==')
+login('mod')
+jdump('data/antiraid_777.json', {'join_raid': True, 'bot_protection': True})
+jdump('data/autofilter_777.json', {'enabled': True,
+                                    'words': {'enabled': True, 'action': 'warn', 'list': ['фу']}})
+sh = client.get('/api/guild/777/mod-center/shield').get_json()
+check(sh['success'] and sh['autofilter']['status'] == 'ok'
+      and '1 слов' in sh['autofilter']['detail'], 'щит: автофильтр включён со словарём')
+check(sh['antiraid']['status'] == 'ok' and '2 из 5' in sh['antiraid']['detail'],
+      'щит: анти-рейд с двумя защитами')
+check(sh['lockdown']['active'] is False, 'щит: локдаун не активен')
+check(sh['security']['tuned'] is False, 'щит: безопасность не настроена')
+jdump('data/security_777.json', {'panel_login_guard': True})
+sh2 = client.get('/api/guild/777/mod-center/shield').get_json()
+check(sh2['security']['tuned'] is True, 'щит: безопасность появилась после настройки')
+
+jdump('data/modproof_777.json', {'next': 3, 'items': {
+    '1': {'id': 1, 'user_id': '100', 'user_name': 'Хулиган', 'mod_id': '7',
+          'mod_name': 'Ст', 'action': 'бан', 'reason': 'рейд',
+          'link': 'https://example.com/p1', 'set_at': '2026-08-15T10:00:00'},
+    '2': {'id': 2, 'user_id': '101', 'user_name': 'Флудер', 'mod_id': '8',
+          'mod_name': 'Ст2', 'action': 'мут', 'reason': 'флуд',
+          'link': '', 'set_at': '2026-08-16T09:00:00'},
+    'x': 'мусор',
+}})
+pr = client.get('/api/guild/777/mod-center/proofs').get_json()
+check(pr['success'] and pr['total'] == 2, 'демки: два доказательства, мусор мимо')
+check(pr['rows'][0]['user_name'] == 'Флудер', 'демки: свежие сверху')
+check(pr['rows'][1]['action'] == 'бан' and pr['rows'][1]['link'], 'демки: поля на месте')
+
+from db import GuildData  # noqa: E402
+GuildData('appeals').set('777', 'state', {'items': [
+    {'id': 1, 'status': 'pending', 'user_name': 'Хулиган', 'reason': 'бан за рейд',
+     'created_at': '2026-08-16T10:00:00', 'reviewed_at': None},
+    {'id': 2, 'status': 'accepted', 'user_name': 'Флудер', 'reason': 'мут',
+     'created_at': '2026-08-15T09:00:00', 'reviewed_at': '2026-08-15T12:00:00',
+     'reviewed_by': 'admin'},
+]})
+ap = client.get('/api/guild/777/mod-center/appeals').get_json()
+check(ap['success'] and ap['stats']['pending'] == 1 and ap['stats']['accepted'] == 1,
+      'апелляции: счётчики очереди верны')
+check(ap['rows'][0]['user'] == 'Хулиган' and ap['rows'][0]['status'] == 'pending',
+      'апелляции: свежие сверху, статусы на месте')
+login('uye')
+check(client.get('/api/guild/777/mod-center/shield').status_code == 403,
+      'uye щит закрыт')
+check(client.get('/api/guild/777/mod-center/proofs').status_code == 403,
+      'uye демки закрыты')
+
 print('== 5c. Старые страницы ведут в консоль ==')
 login('mod')
 for path, tab in (('/logs', 'journal'), ('/warnings', 'warns'),
@@ -530,7 +579,8 @@ check('[data-theme="light"]' in tpl, 'светлая тема учтена')
 for fid in ('mzCounters', 'mzRing', 'mzRadar', 'mzRecent', 'mzTrend', 'mzRepeat',
             'mzCheck', 'mzRisk', 'mzWarnId', 'mzWarnText', 'mzReasons', 'mzAmnesty',
             'mzPanelLog', 'mzNotes', 'mzFind', 'mzDossier', 'mzSubjects',
-            'mzJournal', 'mzWarnsList', 'mzTempFull', 'mzHistory'):
+            'mzJournal', 'mzWarnsList', 'mzTempFull', 'mzHistory',
+            'mzShield', 'mzLockdown', 'mzProofs', 'mzAppeals'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check('/warn-config' in tpl, 'ссылка на настройку порогов')
 check('mzNotify' in tpl and 'mz-ncard' in tpl,
@@ -551,6 +601,7 @@ check('/mod-control' not in paths and '/mod-insights' not in paths,
       'старых пунктов в меню больше нет')
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
 check('/mod-center' in mod_pages, 'пункт в группе «Модерация»')
+check(mod_pages[0] == '/mod-center', 'Центр — первый пункт группы «Модерация»')
 check('/mod-center' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check('mod_center_panel' in ext, 'модуль Центра зарегистрирован в routes_extra')

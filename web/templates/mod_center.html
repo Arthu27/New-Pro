@@ -264,6 +264,9 @@
       <button class="cx-rbtn" data-tab="warns" onclick="mzTab('warns')" title="Варны"><i class="fas fa-triangle-exclamation"></i><small>Варны</small><span class="cx-dot amber" id="cxRailWarns" style="display:none"></span></button>
       <button class="cx-rbtn" data-tab="temp" onclick="mzTab('temp')" title="Временные"><i class="fas fa-clock"></i><small>Время</small><span class="cx-dot" id="cxRailTemp" style="display:none"></span></button>
       <button class="cx-rbtn" data-tab="history" onclick="mzTab('history')" title="История"><i class="fas fa-clock-rotate-left"></i><small>История</small></button>
+      <button class="cx-rbtn" data-tab="shield" onclick="mzTab('shield')" title="Щит: статус всех защит"><i class="fas fa-shield-halved"></i><small>Щит</small></button>
+      <button class="cx-rbtn" data-tab="proofs" onclick="mzTab('proofs')" title="Демки модерации"><i class="fas fa-folder-open"></i><small>Демки</small></button>
+      <button class="cx-rbtn" data-tab="appeals" onclick="mzTab('appeals')" title="Апелляции"><i class="fas fa-scale-balanced"></i><small>Апелл</small></button>
       <button class="cx-rbtn" data-tab="stats" onclick="mzTab('stats')" title="Аналитика"><i class="fas fa-chart-line"></i><small>Аналит</small></button>
       <button class="cx-rbtn" data-tab="dossier" onclick="mzTab('dossier')" title="Досье: список под приглядом"><i class="fas fa-users-viewfinder"></i><small>Досье</small></button>
     </nav>
@@ -414,6 +417,50 @@
         </div>
       </div>
 
+      <div id="mzPane-shield" style="display:none">
+        <div class="cx-grid2">
+          <div>
+            <div class="cx-card">
+              <header><i class="fas fa-shield-halved"></i><b>Защиты сервера</b></header>
+              <div id="mzShield"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+            </div>
+          </div>
+          <div>
+            <div class="cx-card">
+              <header><i class="fas fa-house-lock"></i><b>Локдаун</b></header>
+              <div id="mzLockdown"><div class="sk-row" style="width:60%"></div></div>
+            </div>
+            <div class="cx-card">
+              <header><i class="fas fa-toolbox"></i><b>Настройки защит</b></header>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <a class="cx-act" href="/autofilter"><i class="fas fa-filter"></i> Автофильтр</a>
+                <a class="cx-act" href="/antiraid"><i class="fas fa-shield-virus"></i> Анти-рейд</a>
+                <a class="cx-act" href="/security"><i class="fas fa-user-shield"></i> Безопасность</a>
+                <a class="cx-act" href="/lockdown"><i class="fas fa-house-lock"></i> Локдаун</a>
+                <a class="cx-act" href="/warn-config"><i class="fas fa-stairs"></i> Пороги варнов</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="mzPane-proofs" style="display:none">
+        <div class="cx-card">
+          <header><i class="fas fa-folder-open"></i><b>Демки модерации</b>
+            <div class="cx-meta"><span class="cx-chip" id="mzProofsOff">0</span><a class="cx-hact" href="/proofs">Полная галерея</a></div></header>
+          <div id="mzProofs"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+        </div>
+      </div>
+
+      <div id="mzPane-appeals" style="display:none">
+        <div class="cx-card">
+          <header><i class="fas fa-scale-balanced"></i><b>Апелляции</b>
+            <div class="cx-meta"><span class="cx-chip" id="mzAppealsOff">0</span><a class="cx-hact" href="/appeals">Полный раздел</a></div></header>
+          <div class="cx-mini" id="mzAppealStats"></div>
+          <div id="mzAppeals"><div class="sk-row"></div></div>
+        </div>
+      </div>
+
       <div id="mzPane-history" style="display:none">
         <div class="cx-card">
           <header><i class="fas fa-clock-rotate-left"></i><b>История кар и снятий</b><div class="cx-meta"><span class="cx-chip" id="mzHistoryOff"></span></div></header>
@@ -477,7 +524,7 @@
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/mod-center';
 var OV = null, CAN = false, DAYS = 90, KIND = 'warn', RADAR_F = 'all', PICKED = null;
-var TAB_DATA = { journal: null, warns: null, temp: null, history: null };
+var TAB_DATA = { journal: null, warns: null, temp: null, history: null, shield: null, proofs: null, appeals: null };
 var JCAT = '', _jTimer = null, _pTimer = null;
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -531,7 +578,7 @@ function mzNotify(title, body, kind, icon, undoFn) {
 
 /* ── Навигация ──────────────────────────────────────────────── */
 function mzTab(name) {
-  var panes = ['pulse', 'control', 'stats', 'dossier', 'journal', 'warns', 'temp', 'history'];
+  var panes = ['pulse', 'control', 'stats', 'dossier', 'journal', 'warns', 'temp', 'history', 'shield', 'proofs', 'appeals'];
   for (var i = 0; i < panes.length; i++) {
     document.getElementById('mzPane-' + panes[i]).style.display = panes[i] === name ? '' : 'none';
   }
@@ -549,6 +596,9 @@ function mzTab(name) {
   if (name === 'warns' && !TAB_DATA.warns) mzLoadWarnsList();
   if (name === 'temp' && !TAB_DATA.temp) mzLoadTemp();
   if (name === 'history' && !TAB_DATA.history) mzLoadHistory();
+  if (name === 'shield' && !TAB_DATA.shield) mzLoadShield();
+  if (name === 'proofs' && !TAB_DATA.proofs) mzLoadProofs();
+  if (name === 'appeals' && !TAB_DATA.appeals) mzLoadAppeals();
 }
 
 /* ── Досье-панель справа ────────────────────────────────────── */
@@ -1172,6 +1222,102 @@ function mzUseInControl(uid) {
   mzPredict();
 }
 
+/* ── Щит: сводный статус защит ─────────────────────────────── */
+function mzLoadShield() {
+  fetch(API + '/shield').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TAB_DATA.shield = d;
+    renderShield();
+  }).catch(function () {});
+}
+
+function renderShield() {
+  var d = TAB_DATA.shield;
+  if (!d) return;
+  var rows = [
+    { t: 'Автофильтр чата', c: d.autofilter, icon: 'fa-filter', link: '/autofilter' },
+    { t: 'Анти-рейд', c: d.antiraid, icon: 'fa-shield-virus', link: '/antiraid' },
+    { t: 'Безопасность', c: { status: d.security.tuned ? 'ok' : 'missing', detail: d.security.detail, hint: 'Правила и контроль панели' }, icon: 'fa-user-shield', link: '/security' }
+  ];
+  document.getElementById('mzShield').innerHTML = rows.map(function (r) {
+    return '<div class="cx-row tri"><span class="cx-dotst ' + esc(r.c.status || 'missing') + '"></span>' +
+      '<div class="cx-who"><b><i class="fas ' + r.icon + '" style="color:var(--cx-acc);margin-right:6px"></i>' + esc(r.t) + ' · ' + esc(r.c.detail || '') + '</b>' +
+      '<small>' + esc(r.c.hint || '') + '</small></div>' +
+      '<a class="cx-act" href="' + r.link + '">Открыть</a></div>';
+  }).join('');
+  var lk = d.lockdown;
+  document.getElementById('mzLockdown').innerHTML = lk.active
+    ? ('<div class="cx-row"><div class="cx-who"><b><i class="fas fa-lock" style="color:var(--cx-danger);margin-right:6px"></i>Активен · каналов: ' + lk.count + '</b>' +
+       '<small>' + esc(lk.summary || '') + (lk.by ? ' · ввёл: ' + esc(lk.by) : '') + (lk.reason ? ' · ' + esc(lk.reason) : '') + '</small></div>' +
+       '<a class="cx-act" href="/lockdown">Управлять</a></div>')
+    : ('<div class="cx-row"><div class="cx-who"><b><i class="fas fa-lock-open" style="color:var(--cx-ok);margin-right:6px"></i>Не активен</b>' +
+       '<small>Каналы открыты, экстренное закрытие доступно в разделе локдауна</small></div>' +
+       '<a class="cx-act" href="/lockdown">Открыть</a></div>');
+}
+
+/* ── Демки ─────────────────────────────────────────────────── */
+function mzLoadProofs() {
+  fetch(API + '/proofs').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TAB_DATA.proofs = d;
+    renderProofs();
+  }).catch(function () {});
+}
+
+function renderProofs() {
+  var d = TAB_DATA.proofs;
+  if (!d) return;
+  document.getElementById('mzProofsOff').textContent = d.total;
+  var box = document.getElementById('mzProofs');
+  if (!d.rows.length) {
+    box.innerHTML = '<div class="cx-empty"><i class="fas fa-folder-open"></i>Демок пока нет</div>';
+    return;
+  }
+  var B = { 'бан': 'k-ban', 'мут': 'k-mute', 'предупреждение': 'k-kick', 'кик': 'k-kick' };
+  box.innerHTML = d.rows.map(function (r) {
+    var cls = B[(r.action || '').toLowerCase()] || 'k-mute';
+    return '<div class="cx-row tri click" onclick="mzFromList(\'' + esc(r.user_id) + '\')">' +
+      '<span class="cx-badge ' + cls + '">' + esc(r.action || 'демка') + '</span>' +
+      '<div class="cx-who"><b>' + esc(r.user_name || ('ID ' + r.user_id)) + '</b>' +
+      '<small>' + esc(r.reason || 'без причины') + (r.mod_name ? ' · ' + esc(r.mod_name) : '') + '</small></div>' +
+      (r.link ? '<a class="cx-act" href="' + esc(r.link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="fas fa-link"></i> Демка</a>'
+              : '<span class="cx-time dim">' + esc(fmtAgo(r.at)) + '</span>') + '</div>';
+  }).join('');
+}
+
+/* ── Апелляции ─────────────────────────────────────────────── */
+function mzLoadAppeals() {
+  fetch(API + '/appeals').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TAB_DATA.appeals = d;
+    renderAppeals();
+  }).catch(function () {});
+}
+
+function renderAppeals() {
+  var d = TAB_DATA.appeals;
+  if (!d) return;
+  document.getElementById('mzAppealsOff').textContent = d.total;
+  var s = d.stats || {};
+  document.getElementById('mzAppealStats').innerHTML =
+    '<span class="cx-chip' + (s.pending ? ' hot' : '') + '"><i class="fas fa-hourglass-half"></i> в очереди ' + (s.pending || 0) + '</span>' +
+    '<span class="cx-chip ok"><i class="fas fa-check"></i> принято ' + (s.accepted || 0) + '</span>' +
+    '<span class="cx-chip"><i class="fas fa-xmark"></i> отклонено ' + (s.rejected || 0) + '</span>';
+  var box = document.getElementById('mzAppeals');
+  if (!d.rows.length) {
+    box.innerHTML = '<div class="cx-empty"><i class="fas fa-scale-balanced"></i>Апелляций нет</div>';
+    return;
+  }
+  var M = { pending: ['в очереди', 'hot'], accepted: ['принята', 'ok'], rejected: ['отклонена', ''] };
+  box.innerHTML = d.rows.map(function (r) {
+    var m = M[r.status] || [r.status || '?', ''];
+    return '<div class="cx-row">' +
+      '<div class="cx-who"><b>' + esc(r.user || '—') + '</b>' +
+      '<small>' + esc(r.reason || '') + ' · ' + esc(r.created_at ? r.created_at.slice(0, 16).replace('T', ' ') : '') + '</small></div>' +
+      '<span class="cx-chip ' + m[1] + '">' + esc(m[0]) + '</span></div>';
+  }).join('');
+}
+
 function mzDossier(uid) {
   var box = document.getElementById('mzDossier');
   box.innerHTML = '<div class="sk-row"></div><div class="sk-row" style="width:60%"></div>';
@@ -1283,7 +1429,7 @@ function load() {
 
 (function () {
   var params = new URLSearchParams(location.search);
-  var valid = ['pulse', 'control', 'stats', 'dossier', 'journal', 'warns', 'temp', 'history'];
+  var valid = ['pulse', 'control', 'stats', 'dossier', 'journal', 'warns', 'temp', 'history', 'shield', 'proofs', 'appeals'];
   var tab = params.get('tab');
   if (tab && valid.indexOf(tab) !== -1) mzTab(tab);
   var uid = params.get('uid');
