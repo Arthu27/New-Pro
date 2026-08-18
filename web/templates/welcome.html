@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aether — Умная панель для Discord-сервера</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=63">
+    <link rel="stylesheet" href="/static/style.css?v=64">
     <style>
         html { scroll-behavior: smooth; }
         body { overflow-x: hidden; }
@@ -55,18 +55,23 @@
         }
         .w-eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pulse 2s infinite; }
         .w-title {
-            font-size: clamp(44px, 8vw, 84px);
-            font-weight: 800;
-            letter-spacing: -.03em;
-            line-height: 1.02;
+            font-family: var(--font-display);
+            font-size: clamp(40px, 7.4vw, 76px);
+            font-weight: 700;
+            letter-spacing: -.02em;
+            line-height: 1.08;
             margin-bottom: 18px;
         }
         .w-title .grad {
-            background: var(--ac-grad);
+            background: linear-gradient(90deg, var(--ac), var(--ac-2), var(--ac));
+            background-size: 200% 100%;
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+            animation: gradShift 3.6s linear infinite;
         }
+        @keyframes gradShift { to { background-position: 200% 0; } }
+        @media (prefers-reduced-motion: reduce) { .w-title .grad { animation: none; } }
         .w-ticker { display: inline-block; position: relative; height: 1.4em; overflow: hidden; vertical-align: bottom; }
         .w-ticker span { display: block; animation: ticker 8s ease-in-out infinite; }
         @keyframes ticker {
@@ -146,7 +151,7 @@
             text-transform: uppercase; letter-spacing: .1em; color: var(--ac);
             margin-bottom: 10px;
         }
-        .w-sec-title { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -.02em; }
+        .w-sec-title { font-family: var(--font-display); font-size: clamp(22px, 3.4vw, 32px); font-weight: 700; letter-spacing: -.01em; }
         .w-sec-sub { color: var(--text-2); max-width: 620px; margin-top: 10px; line-height: 1.6; }
 
         .w-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; margin-top: 34px; }

@@ -1451,3 +1451,35 @@
     setTimeout(function () { span.remove(); }, 650);
   });
 })();
+
+// ============================================================
+// AETHER PREMIUM KIT 5 — курсор-прожектор (свечение за мышкой)
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) return;
+
+  var SEL = '.panel, .card, .kpi, .stat-box, .cc-tile, .member-card, .g-card, .auth-card';
+  var current = null;
+
+  doc.addEventListener('mousemove', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest(SEL) : null;
+    if (el !== current) {
+      if (current) current.classList.remove('spot-on');
+      current = el;
+      if (el) el.classList.add('spot-on');
+    }
+    if (el) {
+      var r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    }
+  });
+
+  doc.addEventListener('mouseleave', function () {
+    if (current) { current.classList.remove('spot-on'); current = null; }
+  });
+})();
