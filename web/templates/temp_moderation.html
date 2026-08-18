@@ -1,244 +1,263 @@
 {% extends "base.html" %}
-{% block title %}Time Control — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-stopwatch"></i> Time Control{% endblock %}
+{% block title %}Временные меры · Модерация — Aether{% endblock %}
+{% block page_title %}Временные меры{% endblock %}
 {% block content %}
 
-<div class="ops-canvas ops-time-control" data-room-kind="timegrid" data-room-version="3">
-  <div class="ops-room-label"><span>RSP / TEMPORAL GRID</span><b>Временные меры</b><em>каждый таймер под наблюдением</em></div>
-  <div class="ops-time-ticker" id="statsBar">
-    <div><i class="fas fa-comment-slash"></i><span>Мьюты</span><strong id="statMuts">—</strong></div>
-    <div><i class="fas fa-ban"></i><span>Баны</span><strong id="statBans">—</strong></div>
-    <div><i class="fas fa-user-minus"></i><span>Кики</span><strong id="statKicks">—</strong></div>
-    <div><i class="fas fa-calendar-clock"></i><span>В очереди</span><strong id="statScheduled">—</strong></div>
-    <div class="ops-time-total"><i class="fas fa-stopwatch"></i><span>Активный контур</span><strong id="statTotal">—</strong></div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Реагирование</div>
+    <h1>Временные меры</h1>
+    <p class="lead">Мьюты и баны с точным сроком: каждый таймер под наблюдением, снятие — в один клик.</p>
   </div>
-  <div class="ops-time-shell">
-    <nav class="ops-time-tabs" aria-label="Тип временной меры">
-      <button type="button" class="tm-tab active" data-tab="muts" onclick="switchTab('muts')"><i class="fas fa-comment-slash"></i><span>Мьюты</span><b id="cntMuts">0</b></button>
-      <button type="button" class="tm-tab" data-tab="bans" onclick="switchTab('bans')"><i class="fas fa-ban"></i><span>Баны</span><b id="cntBans">0</b></button>
-      <button type="button" class="tm-tab" data-tab="kicks" onclick="switchTab('kicks')"><i class="fas fa-user-minus"></i><span>Кики</span><b id="cntKicks">0</b></button>
-      <button type="button" class="tm-tab" data-tab="scheduled" onclick="switchTab('scheduled')"><i class="fas fa-clock-rotate-left"></i><span>План</span><b id="cntScheduled">0</b></button>
-      <button type="button" class="tm-tab ops-time-create" data-tab="new" onclick="switchTab('new')"><i class="fas fa-plus"></i><span>Новая мера</span></button>
-    </nav>
-    <main class="ops-time-stage">
-      <section class="tm-section active" id="tab-muts"><div class="ops-stage-head"><div><span class="ops-kicker">ACTIVE / MUTES</span><h2>Карта мьютов</h2></div><i class="fas fa-microphone-slash"></i></div><div id="mutsList" class="ops-time-list"></div></section>
-      <section class="tm-section" id="tab-bans"><div class="ops-stage-head"><div><span class="ops-kicker">ACTIVE / BANS</span><h2>Карта банов</h2></div><i class="fas fa-shield-halved"></i></div><div id="bansList" class="ops-time-list"></div></section>
-      <section class="tm-section" id="tab-kicks"><div class="ops-stage-head"><div><span class="ops-kicker">RECENT / KICKS</span><h2>Последние исключения</h2></div><i class="fas fa-door-open"></i></div><div id="kicksList" class="ops-time-list"></div></section>
-      <section class="tm-section" id="tab-scheduled"><div class="ops-stage-head"><div><span class="ops-kicker">SCHEDULED</span><h2>Запланированные меры</h2></div><i class="fas fa-calendar-days"></i></div><div id="scheduledList" class="ops-time-list"></div></section>
-      <section class="tm-section" id="tab-new">
-        <div class="ops-stage-head"><div><span class="ops-kicker">NEW TEMPORAL ACTION</span><h2>Собрать временную меру</h2><p>Выберите действие, участника и точный срок. Перед запуском параметры остаются видимыми.</p></div><i class="fas fa-wand-magic-sparkles"></i></div>
-        <div class="ops-action-selector">
-          <button type="button" class="tm-preset selected" data-type="mut" onclick="setActionType('mut')"><i class="fas fa-comment-slash"></i> Мьют</button>
-          <button type="button" class="tm-preset" data-type="ban" onclick="setActionType('ban')"><i class="fas fa-ban"></i> Бан</button>
-          <button type="button" class="tm-preset" data-type="kick" onclick="setActionType('kick')"><i class="fas fa-user-minus"></i> Кик</button>
-        </div>
-        <div class="ops-form-grid">
-          <label class="ops-field"><span>Участник</span><input id="newUser" placeholder="ID участника"></label>
-          <label class="ops-field"><span>Точный срок</span><input id="newDuration" placeholder="2ч 30м"></label>
-          <label class="ops-field ops-field-wide"><span>Основание решения</span><input id="newReason" maxlength="300" placeholder="Причина, которая останется в журнале"></label>
-        </div>
-        <div class="ops-duration-bank" id="durationPresets">
-          {% for dur, label in [('30s','30 сек'),('1m','1 мин'),('5m','5 мин'),('15m','15 мин'),('30m','30 мин'),('1h','1 час'),('3h','3 часа'),('6h','6 часов'),('12h','12 часов'),('1d','1 день'),('3d','3 дня'),('7d','7 дней'),('14d','14 дней'),('30d','30 дней')] %}
-          <button type="button" class="tm-preset" data-dur="{{ dur }}" onclick="setDuration('{{ dur }}', this)" aria-label="Выбрать срок {{ label }}">{{ label }}</button>
-          {% endfor %}
-        </div>
-        <div class="ops-form-actions"><button type="button" class="ops-primary" onclick="applyAction()"><i class="fas fa-bolt"></i> Запустить таймер</button><button type="button" class="ops-secondary" onclick="resetForm()"><i class="fas fa-rotate-left"></i> Сбросить</button></div>
-      </section>
-    </main>
+  <div class="page-head-actions">
+    <button type="button" class="btn" id="refreshBtn"><i class="fas fa-arrows-rotate"></i> Обновить</button>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value" id="statMuts">—</div><div class="kpi-label">Активные мьюты</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value" id="statBans">—</div><div class="kpi-label">Активные баны</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-user-minus"></i></div><div class="kpi-copy"><div class="kpi-value" id="statKicks">—</div><div class="kpi-label">Последние кики</div></div></div>
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-calendar-clock"></i></div><div class="kpi-copy"><div class="kpi-value" id="statScheduled">—</div><div class="kpi-label">Запланировано</div></div></div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button type="button" class="tab-btn active" data-tab="muts"><i class="fas fa-comment-slash"></i> Мьюты <span class="count" id="cntMuts">0</span></button>
+  <button type="button" class="tab-btn" data-tab="bans"><i class="fas fa-ban"></i> Баны <span class="count" id="cntBans">0</span></button>
+  <button type="button" class="tab-btn" data-tab="kicks"><i class="fas fa-user-minus"></i> Кики <span class="count" id="cntKicks">0</span></button>
+  <button type="button" class="tab-btn" data-tab="scheduled"><i class="fas fa-clock-rotate-left"></i> План <span class="count" id="cntScheduled">0</span></button>
+  <button type="button" class="tab-btn" data-tab="new" style="margin-left:auto"><i class="fas fa-plus"></i> Новая мера</button>
+</div>
+
+<div class="panel" id="tab-muts">
+  <div class="panel-body" id="mutsList"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div></div>
+</div>
+<div class="panel hidden" id="tab-bans">
+  <div class="panel-body" id="bansList"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div></div>
+</div>
+<div class="panel hidden" id="tab-kicks">
+  <div class="panel-body" id="kicksList"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div></div>
+</div>
+<div class="panel hidden" id="tab-scheduled">
+  <div class="panel-body" id="scheduledList"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div></div>
+</div>
+
+<div class="panel hidden" id="tab-new">
+  <div class="panel-body">
+    <div class="seg" style="margin-bottom:14px" id="actionSeg">
+      <button type="button" class="seg-btn active" data-type="mut"><i class="fas fa-comment-slash"></i> Мьют</button>
+      <button type="button" class="seg-btn" data-type="ban"><i class="fas fa-ban"></i> Бан</button>
+      <button type="button" class="seg-btn" data-type="kick"><i class="fas fa-user-minus"></i> Кик</button>
+    </div>
+    <div class="form-row">
+      <label class="form-group"><span class="form-label">Участник</span><input class="form-input" id="newUser" placeholder="ID участника"></label>
+      <label class="form-group"><span class="form-label">Точный срок</span><input class="form-input" id="newDuration" placeholder="2ч 30м"></label>
+    </div>
+    <label class="form-group"><span class="form-label">Основание решения</span><input class="form-input" id="newReason" maxlength="300" placeholder="Причина, которая останется в журнале"></label>
+    <div class="chip-row" style="margin-bottom:16px" id="durationPresets">
+      {% for dur, label in [('30s','30 сек'),('1m','1 мин'),('5m','5 мин'),('15m','15 мин'),('30m','30 мин'),('1h','1 час'),('3h','3 часа'),('6h','6 часов'),('12h','12 часов'),('1d','1 день'),('3d','3 дня'),('7d','7 дней'),('14d','14 дней'),('30d','30 дней')] %}
+      <button type="button" class="chip selectable" data-dur="{{ dur }}" aria-label="Выбрать срок {{ label }}">{{ label }}</button>
+      {% endfor %}
+    </div>
+    <div class="row">
+      <button type="button" class="btn btn-primary" id="applyBtn"><i class="fas fa-bolt"></i> Запустить таймер</button>
+      <button type="button" class="btn" id="resetBtn"><i class="fas fa-rotate-left"></i> Сбросить</button>
+    </div>
   </div>
 </div>
 
 <script>
-(function() {
+(function () {
   'use strict';
-  let currentTab = 'muts';
-  let actionType = 'mut';
-  let currentData = {muts: [], bans: [], kicks: [], scheduled: []};
+  var currentTab = 'muts';
+  var actionType = 'mut';
+  var currentData = { muts: [], bans: [], kicks: [], scheduled: [] };
 
-  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
   function fmtRem(until) {
-    const rem = Math.max(0, Math.floor(until - Date.now()/1000));
+    var rem = Math.max(0, Math.floor(until - Date.now() / 1000));
     if (rem <= 0) return 'завершено';
-    const days = Math.floor(rem / 86400);
-    const hours = Math.floor((rem % 86400) / 3600);
-    const minutes = Math.floor((rem % 3600) / 60);
-    const seconds = rem % 60;
-    const pad = value => String(value).padStart(2, '0');
+    var days = Math.floor(rem / 86400), hours = Math.floor((rem % 86400) / 3600),
+        minutes = Math.floor((rem % 3600) / 60), seconds = rem % 60;
+    var pad = function (v) { return String(v).padStart(2, '0'); };
     return pad(days) + 'д ' + pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
   }
   function isUrgent(until) {
-    const rem = until - Date.now()/1000;
-    return rem > 0 && rem < 300;  // <5min
-  }
-  function renderAction(item, type) {
-    const urgent = isUrgent(item.until) ? ' urgent' : '';
-    return `<div class="tm-action-card ${type}">
-      <div class="tm-action-icon"><i class="fas fa-${type === 'mut' ? 'volume-mut' : type === 'ban' ? 'gavel' : 'user-slash'}"></i></div>
-      <div class="tm-action-info">
-        <div class="tm-action-user">${item.user_id ? '<@' + item.user_id + '>' : esc(item.user_name || '?')}</div>
-        <div class="tm-action-meta">
-          <span><i class="fas fa-user-shield"></i> <@${item.mod_id || '?'}></span>
-          <span><i class="fas fa-clock"></i> ${new Date(item.created_at*1000).toLocaleString('ru-RU')}</span>
-          <span><i class="fas fa-hourglass-half"></i> ${formatDurationSimple(item.duration || 0)}</span>
-        </div>
-        <div class="tm-action-reason">${esc(item.reason || 'Без причины')}</div>
-      </div>
-      <div class="tm-action-countdown${urgent}" data-until="${item.until}">${fmtRem(item.until)}</div>
-      <div class="tm-action-controls">
-        <button type="button" class="tm-btn-sm tm-btn-cancel" onclick="cancelAction('${type}', '${item.user_id}')" title="Снять досрочно">↩</button>
-      </div>
-    </div>`;
+    var rem = until - Date.now() / 1000;
+    return rem > 0 && rem < 300;
   }
   function formatDurationSimple(sec) {
     if (sec < 60) return sec + 'с';
-    if (sec < 3600) return Math.floor(sec/60) + 'м';
-    if (sec < 86400) return Math.floor(sec/3600) + 'ч ' + Math.floor((sec%3600)/60) + 'м';
-    return Math.floor(sec/86400) + 'д ' + Math.floor((sec%86400)/3600) + 'ч';
+    if (sec < 3600) return Math.floor(sec / 60) + 'м';
+    if (sec < 86400) return Math.floor(sec / 3600) + 'ч ' + Math.floor((sec % 3600) / 60) + 'м';
+    return Math.floor(sec / 86400) + 'д ' + Math.floor((sec % 86400) / 3600) + 'ч';
   }
+
+  function renderAction(item, type) {
+    var icon = type === 'mut' ? 'fa-comment-slash' : type === 'ban' ? 'fa-gavel' : 'fa-user-slash';
+    var urgent = isUrgent(item.until);
+    return '<div class="feed-item" style="align-items:flex-start">' +
+      '<div class="feed-item-icon" style="' + (urgent ? 'background:var(--warn-soft);color:var(--warn)' : '') + '"><i class="fas ' + icon + '"></i></div>' +
+      '<div style="min-width:0;flex:1">' +
+        '<div class="feed-item-title">' + (item.user_id ? '<span class="id-pill">' + item.user_id + '</span>' : esc(item.user_name || '?')) +
+          ' <span class="badge neutral">' + (type === 'mut' ? 'мьют' : type === 'ban' ? 'бан' : 'кик') + '</span></div>' +
+        '<div class="feed-item-sub">модератор: ' + (item.mod_id || '?') + ' · ' + new Date(item.created_at * 1000).toLocaleString('ru-RU') +
+          ' · длительность ' + formatDurationSimple(item.duration || 0) + '</div>' +
+        '<div class="feed-item-sub">' + esc(item.reason || 'Без причины') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right">' +
+        '<div class="mono" style="font-weight:600;' + (urgent ? 'color:var(--warn)' : '') + '" data-until="' + item.until + '">' + fmtRem(item.until) + '</div>' +
+        '<button type="button" class="btn btn-sm btn-ghost" data-cancel="' + type + '" data-uid="' + esc(item.user_id) + '" title="Снять досрочно"><i class="fas fa-rotate-left"></i></button>' +
+      '</div></div>';
+  }
+
   function renderScheduled(item) {
-    return `<div class="tm-action-card scheduled">
-      <div class="tm-action-icon"><i class="fas fa-clock"></i></div>
-      <div class="tm-action-info">
-        <div class="tm-action-user">${item.user_name ? esc(item.user_name) : '<@' + item.user_id + '>'}</div>
-        <div class="tm-action-meta">
-          <span><i class="fas fa-bolt"></i> ${item.action.toUpperCase()}</span>
-          <span><i class="fas fa-hourglass-half"></i> ${formatDurationSimple(item.duration)}</span>
-          <span><i class="fas fa-calendar"></i> <t:${Math.floor(item.run_at)}:R></span>
-        </div>
-        <div class="tm-action-reason">${esc(item.reason)}</div>
-      </div>
-      <div class="tm-action-countdown" data-until="${item.run_at}">${fmtRem(item.run_at)}</div>
-      <div class="tm-action-controls">
-        <button type="button" class="tm-btn-sm tm-btn-remove" onclick="cancelScheduled('${item.id}')" title="Отменить">×</button>
-      </div>
-    </div>`;
+    return '<div class="feed-item" style="align-items:flex-start">' +
+      '<div class="feed-item-icon tone-info" style="background:var(--info-soft);color:var(--info)"><i class="fas fa-clock"></i></div>' +
+      '<div style="min-width:0;flex:1">' +
+        '<div class="feed-item-title">' + esc(item.user_name || item.user_id) + ' <span class="badge neutral">' + esc((item.action || '').toUpperCase()) + '</span></div>' +
+        '<div class="feed-item-sub">срок ' + formatDurationSimple(item.duration) + ' · запуск <t:' + Math.floor(item.run_at) + ':R></div>' +
+        '<div class="feed-item-sub">' + esc(item.reason || '') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right">' +
+        '<div class="mono" style="font-weight:600" data-until="' + item.run_at + '">' + fmtRem(item.run_at) + '</div>' +
+        '<button type="button" class="btn btn-sm btn-ghost" data-unschedule="' + esc(item.id) + '" title="Отменить"><i class="fas fa-xmark"></i></button>' +
+      '</div></div>';
   }
+
   function renderList(container, items, type) {
-    // Не пересобираем одинаковый DOM каждые 15 секунд: таймер обновляется
-    // отдельно, поэтому строка и позиция экрана остаются неподвижными.
-    const signature = JSON.stringify(items || []);
+    var signature = JSON.stringify(items || []);
     if (container.dataset.signature === signature) return;
     container.dataset.signature = signature;
-    const previousHeight = container.offsetHeight;
-    if (previousHeight) container.style.minHeight = previousHeight + 'px';
     if (!items.length) {
-      container.innerHTML = '<div class="tm-empty"><i class="fas fa-inbox"></i><p>Нет активных наказаний</p></div>';
+      container.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><span>Нет активных наказаний</span></div>';
     } else {
-      container.innerHTML = items.map(item => type === 'scheduled' ? renderScheduled(item) : renderAction(item, type)).join('');
+      container.innerHTML = items.map(function (item) { return type === 'scheduled' ? renderScheduled(item) : renderAction(item, type); }).join('');
     }
-    requestAnimationFrame(() => requestAnimationFrame(() => { container.style.minHeight = ''; }));
   }
+
   function load() {
-    fetch('/api/temp-mod/active').then(r => {
-      if (!r.ok) {
-        document.getElementById('mutsList').innerHTML = '<div class="tm-empty"><i class="fas fa-exclamation-triangle"></i><p>Модуль временной модерации не загружен</p></div>';
-        document.getElementById('bansList').innerHTML = '';
-        document.getElementById('kicksList').innerHTML = '';
-        document.getElementById('scheduledList').innerHTML = '';
-        return null;
-      }
+    fetch('/api/temp-mod/active').then(function (r) {
+      if (!r.ok) return null;
       return r.json();
-    }).then(data => {
+    }).then(function (data) {
       if (!data) return;
       currentData = data;
-      renderList(document.getElementById('mutsList'), data.muts || [], 'mut');
-      renderList(document.getElementById('bansList'), data.bans || [], 'ban');
-      renderList(document.getElementById('kicksList'), data.kicks || [], 'kick');
-      renderList(document.getElementById('scheduledList'), data.scheduled || [], 'scheduled');
-      document.getElementById('cntMuts').textContent = (data.muts || []).length;
-      document.getElementById('cntBans').textContent = (data.bans || []).length;
-      document.getElementById('cntKicks').textContent = (data.kicks || []).length;
-      document.getElementById('cntScheduled').textContent = (data.scheduled || []).length;
-      document.getElementById('statMuts').textContent = (data.muts || []).length;
-      document.getElementById('statBans').textContent = (data.bans || []).length;
-      document.getElementById('statKicks').textContent = (data.kicks || []).length;
-      document.getElementById('statScheduled').textContent = (data.scheduled || []).length;
-      const total = (data.muts || []).length + (data.bans || []).length + (data.kicks || []).length;
-      document.getElementById('statTotal').textContent = total;
-    });
+      renderList($('mutsList'), data.muts || [], 'mut');
+      renderList($('bansList'), data.bans || [], 'ban');
+      renderList($('kicksList'), data.kicks || [], 'kick');
+      renderList($('scheduledList'), data.scheduled || [], 'scheduled');
+      $('cntMuts').textContent = (data.muts || []).length;
+      $('cntBans').textContent = (data.bans || []).length;
+      $('cntKicks').textContent = (data.kicks || []).length;
+      $('cntScheduled').textContent = (data.scheduled || []).length;
+      $('statMuts').textContent = (data.muts || []).length;
+      $('statBans').textContent = (data.bans || []).length;
+      $('statKicks').textContent = (data.kicks || []).length;
+      $('statScheduled').textContent = (data.scheduled || []).length;
+    }).catch(function () {});
   }
+
   function updateCountdowns() {
-    document.querySelectorAll('.tm-action-countdown[data-until]').forEach(el => {
-      const until = parseFloat(el.dataset.until);
+    document.querySelectorAll('[data-until]').forEach(function (el) {
+      var until = parseFloat(el.dataset.until);
       el.textContent = fmtRem(until);
-      if (isUrgent(until)) el.classList.add('urgent'); else el.classList.remove('urgent');
+      el.style.color = isUrgent(until) ? 'var(--warn)' : '';
     });
   }
-  window.switchTab = function(t) {
+
+  function switchTab(t) {
     currentTab = t;
-    document.querySelectorAll('.tm-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-    document.querySelectorAll('.tm-section').forEach(s => s.classList.remove('active'));
-    document.getElementById('tab-' + t).classList.add('active');
-  };
-  window.setActionType = function(t) {
+    document.querySelectorAll('#tabs .tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === t); });
+    ['muts', 'bans', 'kicks', 'scheduled', 'new'].forEach(function (name) {
+      var el = $('tab-' + name);
+      if (el) el.classList.toggle('hidden', name !== t);
+    });
+  }
+
+  function setActionType(t) {
     actionType = t;
-    document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('selected', b.dataset.type === t));
-  };
-  window.setDuration = function(d, el) {
-    document.getElementById('newDuration').value = d;
-    document.querySelectorAll('[data-dur]').forEach(b => b.classList.remove('selected'));
-    el.classList.add('selected');
-  };
-  window.clearPresets = function() {
-    document.querySelectorAll('[data-dur]').forEach(b => b.classList.remove('selected'));
-  };
-  window.resetForm = function() {
-    document.getElementById('newUser').value = '';
-    document.getElementById('newDuration').value = '';
-    document.getElementById('newReason').value = '';
-    document.querySelectorAll('[data-dur]').forEach(b => b.classList.remove('selected'));
-  };
-  window.applyAction = function() {
-    const user = document.getElementById('newUser').value.trim();
-    const dur = document.getElementById('newDuration').value.trim();
-    const reason = document.getElementById('newReason').value.trim() || 'Без причины';
-    if (!user) { showToast('Укажите пользователя', false); return; }
-    if (!dur) { showToast('Укажите длительность', false); return; }
+    document.querySelectorAll('#actionSeg .seg-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.type === t); });
+  }
+
+  function resetForm() {
+    $('newUser').value = ''; $('newDuration').value = ''; $('newReason').value = '';
+    document.querySelectorAll('#durationPresets .chip').forEach(function (b) { b.classList.remove('active'); });
+  }
+
+  function applyAction() {
+    var user = $('newUser').value.trim();
+    var dur = $('newDuration').value.trim();
+    var reason = $('newReason').value.trim() || 'Без причины';
+    if (!user) { window.showToast('Укажите пользователя', false); return; }
+    if (!dur) { window.showToast('Укажите длительность', false); return; }
     fetch('/api/temp-mod/' + actionType, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({user_id: user, duration: dur, reason: reason})
-    }).then(r => r.json()).then(d => {
-      if (d.error) showToast(d.error, false);
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: user, duration: dur, reason: reason })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.error) window.showToast(d.error, false);
       else {
-        showToast('Применено', true);
+        window.showToast('Мера применена', true);
         resetForm();
         switchTab(actionType + 's');
         load();
       }
     });
-  };
-  window.cancelAction = function(type, userId) {
-    const endpoint = type === 'mut' ? 'unmut' : type === 'ban' ? 'unban' : 'unkick';
-    fetch('/api/temp-mod/' + endpoint, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({user_id: userId})
-    }).then(r => r.json()).then(d => {
-      if (d.error) showToast(d.error, false);
-      else { showToast('Снято', true); load(); }
-    });
-  };
-  window.cancelScheduled = function(id) {
-    fetch('/api/temp-mod/unschedule', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({id: id})
-    }).then(r => r.json()).then(d => {
-      if (d.error) showToast(d.error, false);
-      else { showToast('Отменено', true); load(); }
-    });
-  };
-  function showToast(msg, ok) {
-    const t = document.createElement('div');
-    t.className = 'toast ' + (ok ? 'ok' : 'err');
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3000);
   }
-  // Init
+
+  function cancelAction(type, userId) {
+    var endpoint = type === 'mut' ? 'unmut' : type === 'ban' ? 'unban' : 'unkick';
+    window.confirmAction('Снять досрочно?', 'Мера завершится сейчас, запись останется в журнале.', function () {
+      fetch('/api/temp-mod/' + endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.error) window.showToast(d.error, false);
+        else { window.showToast('Снято', true); load(); }
+      });
+    }, { okText: 'Снять' });
+  }
+
+  function cancelScheduled(id) {
+    window.confirmAction('Отменить запланированную меру?', 'Таймер будет удалён из плана.', function () {
+      fetch('/api/temp-mod/unschedule', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.error) window.showToast(d.error, false);
+        else { window.showToast('Отменено', true); load(); }
+      });
+    }, { danger: true, okText: 'Отменить' });
+  }
+
+  document.addEventListener('click', function (e) {
+    var cancel = e.target.closest('[data-cancel]');
+    if (cancel) { cancelAction(cancel.dataset.cancel, cancel.dataset.uid); return; }
+    var uns = e.target.closest('[data-unschedule]');
+    if (uns) { cancelScheduled(uns.dataset.unschedule); return; }
+    var chip = e.target.closest('#durationPresets .chip');
+    if (chip) {
+      $('newDuration').value = chip.dataset.dur;
+      document.querySelectorAll('#durationPresets .chip').forEach(function (b) { b.classList.toggle('active', b === chip); });
+    }
+  });
+
+  document.querySelectorAll('#tabs .tab-btn').forEach(function (b) {
+    b.addEventListener('click', function () { switchTab(b.dataset.tab); });
+  });
+  document.querySelectorAll('#actionSeg .seg-btn').forEach(function (b) {
+    b.addEventListener('click', function () { setActionType(b.dataset.type); });
+  });
+  $('applyBtn').addEventListener('click', applyAction);
+  $('resetBtn').addEventListener('click', resetForm);
+  $('refreshBtn').addEventListener('click', load);
+
   setActionType('mut');
   load();
-  setInterval(() => { if (!window.__modLivePaused) load(); }, 15000);
-  setInterval(() => { if (!window.__modLivePaused) updateCountdowns(); }, 1000);
-  document.addEventListener('moderation:live-resume', () => { load(); updateCountdowns(); });
+  setInterval(load, 15000);
+  setInterval(updateCountdowns, 1000);
 })();
 </script>
 {% endblock %}

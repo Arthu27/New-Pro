@@ -367,7 +367,8 @@ tpl = open(os.path.join(ROOT, 'web/templates/sla.html'), encoding='utf-8').read(
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
 src = open(os.path.join(ROOT, 'web/routes/sla_panel.py'), encoding='utf-8').read()
 check(not EMOJI_RE.search(src), 'в модуле нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('slKpis', 'slNew', 'slName', 'slDesc', 'slCreate', 'slNewMsg',
             'slCfg', 'slCfgPolicy', 'slCfgPrio', 'slCfgResp', 'slCfgRes',
             'slCfgGo', 'slCfgMsg', 'slPolicies', 'slBreaches', 'slScanRow',

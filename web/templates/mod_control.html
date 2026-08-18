@@ -1,17 +1,61 @@
 {% extends "base.html" %}
-{% block title %}Team Desk — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-table-list"></i> Team Desk{% endblock %}
+{% block title %}Контроль команды · Модерация — Aether{% endblock %}
+{% block page_title %}Контроль команды{% endblock %}
 {% block content %}
 
-<style>[data-theme="light"] .ops-team-desk{color-scheme:light}</style>
-<div class="ops-canvas ops-team-desk" data-room-kind="teamdesk" data-room-version="3">
-  <div class="ops-room-label"><span>MGT / TEAM DESK</span><b>Операционный стол</b><em>очередь, риск и исполнение в одном обзоре</em></div>
-  <div class="ops-desk-kpis" id="mcKpis"><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div></div>
-  <div class="ops-desk-board">
-    <section class="ops-desk-lane ops-desk-risk" id="mcRiskPanel"><header><span>LANE 01 / ESCALATION</span><i class="fas fa-triangle-exclamation"></i><h2>На грани авто-наказания</h2><p id="mcRiskSub">До следующего автоматического наказания остался один-два шага.</p></header><div id="mcRisk" class="ops-desk-items"><div class="sk-row"></div></div><a class="ops-desk-link" href="/warn-config"><i class="fas fa-arrow-up-right-from-square"></i> Настроить пороги</a></section>
-    <section class="ops-desk-lane ops-desk-radar" id="mcRadarPanel"><header><span>LANE 02 / EXPIRATION</span><i class="fas fa-tower-broadcast"></i><h2>Радар истечений</h2><p>Просроченные меры и таймеры, которые закончатся в ближайшие трое суток.</p></header><div id="mcRadar" class="ops-desk-items"><div class="sk-row"></div></div></section>
-    <section class="ops-desk-lane ops-desk-reasons" id="mcReasonsPanel"><header><span>LANE 03 / PLAYBOOK</span><i class="fas fa-bolt"></i><h2>Быстрые причины</h2><p>Единый язык решений для всей команды.</p></header><div class="mc-tabs ops-desk-tabs" id="mcTabs"></div><div id="mcReasons" class="ops-desk-items"><div class="sk-row"></div></div><div id="mcReasonForm" style="display:none"><div class="ops-inline"><input id="mcReasonText" maxlength="120" placeholder="Новая формулировка"><button type="button" class="ops-primary" onclick="mcReasonAdd()"><i class="fas fa-plus"></i> Добавить</button></div><small>До 20 причин на тип.</small></div></section>
-    <section class="ops-desk-lane ops-desk-amnesty" id="mcAmnestyPanel"><header><span>LANE 04 / AMNESTY</span><i class="fas fa-dove"></i><h2>Амнистия</h2><p>Обнуление с записью в журнал и быстрым откатом.</p></header><div class="ops-inline" id="mcAmnestyForm" style="display:none"><input id="mcAmnestyId" maxlength="24" placeholder="ID или @упоминание"><button type="button" class="ops-critical" onclick="mcAmnestyAsk()"><i class="fas fa-dove"></i> Обнулить</button></div><div id="mcAmnesty" class="ops-desk-items"><div class="sk-row"></div></div></section>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Команда и аналитика</div>
+    <h1>Контроль команды</h1>
+    <p class="lead">Управлять очередью, а не догонять её: риск эскалации, истечения, единые причины и амнистии.</p>
+  </div>
+</div>
+
+<div class="kpi-row" id="mcKpis">
+  <div class="skeleton-card" style="height:68px"></div><div class="skeleton-card" style="height:68px"></div>
+  <div class="skeleton-card" style="height:68px"></div><div class="skeleton-card" style="height:68px"></div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-triangle-exclamation" style="color:var(--warn)"></i> На грани авто-наказания</h2>
+      <div class="sub" id="mcRiskSub">До следующего автоматического наказания остался один-два шага.</div></div></div>
+    <div class="panel-body" id="mcRisk"></div>
+    <div class="panel-foot"><a class="btn-link" href="/warn-config"><i class="fas fa-arrow-up-right-from-square"></i> Настроить пороги</a></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-tower-broadcast"></i> Радар истечений</h2>
+      <div class="sub">Просроченные меры и таймеры, которые закончатся в ближайшие трое суток.</div></div></div>
+    <div class="panel-body" id="mcRadar"></div>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start;margin-top:14px">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-bolt"></i> Быстрые причины</h2>
+      <div class="sub">Единый язык решений для всей команды.</div></div></div>
+    <div class="panel-body">
+      <div class="tabs" id="mcTabs" style="margin-bottom:10px"></div>
+      <div class="chip-row" id="mcReasons" style="margin-bottom:12px"></div>
+      <div class="row" id="mcReasonForm" style="display:none">
+        <input class="form-input" id="mcReasonText" maxlength="120" placeholder="Новая формулировка" style="flex:1">
+        <button type="button" class="btn btn-primary" id="mcReasonAddBtn"><i class="fas fa-plus"></i> Добавить</button>
+      </div>
+      <div class="hint">До 20 причин на тип.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-dove"></i> Амнистия</h2>
+      <div class="sub">Обнуление с записью в журнал и быстрым откатом.</div></div></div>
+    <div class="panel-body">
+      <div class="row" id="mcAmnestyForm" style="display:none;margin-bottom:12px">
+        <input class="form-input" id="mcAmnestyId" maxlength="24" placeholder="ID участника" style="flex:1">
+        <button type="button" class="btn btn-danger" id="mcAmnestyBtn"><i class="fas fa-dove"></i> Обнулить</button>
+      </div>
+      <div id="mcAmnesty"></div>
+    </div>
   </div>
 </div>
 
@@ -22,6 +66,7 @@ var STATE = null;
 var CAN_EDIT = false;
 var KIND = 'warn';
 
+function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 function plural(n, one, few, many) {
@@ -48,12 +93,13 @@ function fmtLeft(sec) {
 }
 
 function kpi(icon, num, label, hot) {
-  return '<div class="mc-kpi' + (hot ? ' hot' : '') + '"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+  return '<div class="kpi ' + (hot ? 'tone-warn' : '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
+    '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
 }
 
 function renderKpis(d) {
   var c = d.radar.counts;
-  document.getElementById('mcKpis').innerHTML =
+  $('mcKpis').innerHTML =
     kpi('fa-triangle-exclamation', d.risk.edge, 'в одном варне от порога', d.risk.edge > 0) +
     kpi('fa-hourglass-end', c.overdue, plural(c.overdue, 'просроченное наказание', 'просроченных наказания', 'просроченных наказаний'), c.overdue > 0) +
     kpi('fa-bolt', c.soon + c.week, 'истекает в ближайшие трое суток', false) +
@@ -61,98 +107,88 @@ function renderKpis(d) {
 }
 
 function renderRisk(d) {
-  var sub = document.getElementById('mcRiskSub');
-  var box = document.getElementById('mcRisk');
+  var sub = $('mcRiskSub');
+  var box = $('mcRisk');
   if (!d.risk.tuned) {
-    sub.innerHTML = 'Пороги авто-наказаний не заданы. Настройте их на странице <a class="mc-link-chip" href="/warn-config"><i class="fas fa-exclamation"></i> Варны</a> — тогда здесь появятся участники у грани.';
-    box.innerHTML = '';
+    sub.textContent = 'Пороги авто-наказаний не заданы. Настройте их на странице «Варны» — тогда здесь появятся участники у грани.';
+    box.innerHTML = '<div class="empty"><i class="fas fa-sliders"></i><span>Пороги не настроены</span></div>';
     return;
   }
-  sub.textContent = 'Участники с варнами, которым до следующего авто-наказания не хватает один-два предупреждения. Пороги: ' +
-    d.risk.steps.map(function (s) { return s.count + ' — ' + s.action_name; }).join(', ') + '.';
+  sub.textContent = 'Участники с варнами, которым до следующего авто-наказания не хватает один-два предупреждения.';
   if (!d.risk.items.length) {
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-face-smile"></i><p>Все далеки от порогов</p>' +
-      '<p class="empty-tip">Ни у кого с варнами сейчас нет риска пропустить авто-наказание.</p></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-face-smile"></i><span>Все далеки от порогов</span></div>';
     return;
   }
   box.innerHTML = d.risk.items.map(function (r) {
     var pct = Math.min(100, Math.round(100 * r.warns / r.next_count));
     var label = r.name || ('#' + r.user_id);
     var gap = 'ещё ' + r.gap + ' ' + plural(r.gap, 'варн', 'варна', 'варнов') + ' → ' + r.action_name;
-    return '<div class="mc-row">' +
-      '<div class="mc-who"><b>' + esc(label) + ' <small style="color:var(--text-3)">#' + esc(r.user_id) + '</small></b>' +
-      '<small>' + r.warns + ' ' + plural(r.warns, 'варн', 'варна', 'варнов') + ' из порога ' + r.next_count + '</small>' +
-      '<div class="mc-track' + (r.gap === 1 ? ' hot' : '') + '"><i style="width:' + pct + '%"></i></div></div>' +
-      '<span class="mc-chip' + (r.gap === 1 ? ' hot' : '') + '">' + esc(gap) + '</span></div>';
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon" style="' + (r.gap === 1 ? 'background:var(--warn-soft);color:var(--warn)' : '') + '"><i class="fas fa-user"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(label) + ' <span class="id-pill">' + esc(r.user_id) + '</span></div>' +
+      '<div class="feed-item-sub">' + r.warns + ' ' + plural(r.warns, 'варн', 'варна', 'варнов') + ' из порога ' + r.next_count + '</div>' +
+      '<div class="modern-progress" style="margin-top:6px;max-width:260px"><span style="width:' + pct + '%;' + (r.gap === 1 ? 'background:var(--warn)' : '') + '"></span></div></div>' +
+      '<span class="badge ' + (r.gap === 1 ? 'tone-warning' : 'neutral') + '">' + esc(gap) + '</span></div>';
   }).join('');
 }
 
 function renderRadar(d) {
-  var box = document.getElementById('mcRadar');
+  var box = $('mcRadar');
   if (!d.radar.rows.length) {
-    var msg = d.radar.active_total
-      ? 'Все активные наказания заканчиваются позже трёх суток'
-      : 'Активных временных наказаний нет';
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-satellite-dish"></i><p>' + msg + '</p></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-satellite-dish"></i><span>' +
+      (d.radar.active_total ? 'Все активные наказания заканчиваются позже трёх суток' : 'Активных временных наказаний нет') + '</span></div>';
     return;
   }
   box.innerHTML = d.radar.rows.map(function (r) {
     var label = r.name || ('#' + r.user_id);
     var pct = r.frac == null ? 0 : Math.round(r.frac * 100);
     var hot = r.remaining_s <= 0;
-    return '<div class="mc-radar">' +
-      '<span class="mc-badge k-' + esc(r.kind) + '">' + esc(r.kind_name) + '</span>' +
-      '<div class="mc-who"><b>' + esc(label) + ' <small style="color:var(--text-3)">#' + esc(r.user_id) + '</small></b>' +
-      (r.reason ? '<small>' + esc(r.reason) + '</small>' : '') +
-      '<div class="mc-track' + (hot ? ' hot' : '') + '"><i style="width:' + pct + '%"></i></div></div>' +
-      '<span class="mc-time' + (hot ? ' hot' : '') + '">' + esc(fmtLeft(r.remaining_s)) + '</span></div>';
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-hourglass"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title"><span class="badge neutral">' + esc(r.kind_name) + '</span> ' + esc(label) +
+        ' <span class="id-pill">' + esc(r.user_id) + '</span></div>' +
+      (r.reason ? '<div class="feed-item-sub">' + esc(r.reason) + '</div>' : '') +
+      '<div class="modern-progress" style="margin-top:6px;max-width:260px"><span style="width:' + pct + '%;' + (hot ? 'background:var(--err)' : '') + '"></span></div></div>' +
+      '<span class="mono" style="font-weight:600;' + (hot ? 'color:var(--err)' : '') + '">' + esc(fmtLeft(r.remaining_s)) + '</span></div>';
   }).join('');
 }
 
 function renderReasons(d) {
-  var tabs = document.getElementById('mcTabs');
+  var tabs = $('mcTabs');
   tabs.innerHTML = d.reason_kinds.map(function (k) {
     var n = (d.reasons[k.key] || []).length;
-    return '<button type="button" class="mc-tab' + (k.key === KIND ? ' on' : '') + '" onclick="mcKindSet(\'' + k.key + '\')">' +
-      esc(k.label) + ' · ' + n + '</button>';
+    return '<button type="button" class="tab-btn' + (k.key === KIND ? ' active' : '') + '" data-kind="' + esc(k.key) + '">' +
+      esc(k.label) + ' <span class="count">' + n + '</span></button>';
   }).join('');
   var items = d.reasons[KIND] || [];
-  var box = document.getElementById('mcReasons');
+  var box = $('mcReasons');
   if (!items.length) {
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-bolt"></i><p>Причин пока нет</p>' +
-      (CAN_EDIT ? '<p class="empty-tip">Добавьте первую — она станет подсказкой для всей команды.</p>'
-                : '<p class="empty-tip">Их добавляет администратор сервера.</p>') + '</div>';
+    box.innerHTML = '<span class="muted">Причин пока нет' + (CAN_EDIT ? ' — добавьте первую, она станет подсказкой для команды.' : '.') + '</span>';
   } else {
     box.innerHTML = items.map(function (it) {
-      var del = CAN_EDIT
-        ? '<button type="button" title="Удалить" onclick="mcReasonDel(' + it.id + ')"><i class="fas fa-xmark"></i></button>'
-        : '';
-      return '<span class="mc-qchip"><span>' + esc(it.text) + '</span>' + del + '</span>';
+      return '<span class="chip">' + esc(it.text) +
+        (CAN_EDIT ? ' <span class="x" data-reason-del="' + it.id + '" title="Удалить">×</span>' : '') + '</span>';
     }).join('');
   }
-  document.getElementById('mcReasonForm').style.display = CAN_EDIT ? '' : 'none';
+  $('mcReasonForm').style.display = CAN_EDIT ? '' : 'none';
 }
 
 function renderAmnesty(d) {
-  document.getElementById('mcAmnestyForm').style.display = CAN_EDIT ? 'flex' : 'none';
-  var box = document.getElementById('mcAmnesty');
+  $('mcAmnestyForm').style.display = CAN_EDIT ? '' : 'none';
+  var box = $('mcAmnesty');
   if (!d.amnesty.length) {
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-dove"></i><p>Амнистий ещё не было</p>' +
-      '<p class="empty-tip">' + (d.amnesty_total ? 'Записей в журнале: ' + d.amnesty_total + '.' : 'Журнал амнистий пуст.') + '</p></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-dove"></i><span>Амнистий ещё не было</span>' +
+      (d.amnesty_total ? '<div class="hint">Записей в журнале: ' + d.amnesty_total + '.</div>' : '') + '</div>';
     return;
   }
   box.innerHTML = d.amnesty.map(function (a) {
     var tail;
-    if (a.restored_at) tail = '<span class="ok-badge"><i class="fas fa-rotate-left"></i> откачена</span>';
-    else if (CAN_EDIT) tail = '<button type="button" class="btn btn-ghost" onclick="mcAmnestyUndo(' + a.id + ')"><i class="fas fa-rotate-left"></i> Откатить</button>';
-    else tail = '<span class="mc-chip">активна</span>';
-    return '<div class="mc-amn"><div class="mc-who"><b>#' + esc(a.user_id) + ' · ' + a.count + ' ' +
-      plural(a.count, 'варн', 'варна', 'варнов') + '</b>' +
-      '<small>' + esc(a.by || '—') + ' · ' + esc(fmtDate(a.at)) + '</small></div>' + tail + '</div>';
+    if (a.restored_at) tail = '<span class="badge ok"><i class="fas fa-rotate-left"></i> откачена</span>';
+    else if (CAN_EDIT) tail = '<button type="button" class="btn btn-sm" data-amnesty-undo="' + a.id + '"><i class="fas fa-rotate-left"></i> Откатить</button>';
+    else tail = '<span class="badge neutral">активна</span>';
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-dove"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">#' + esc(a.user_id) + ' · ' + a.count + ' ' + plural(a.count, 'варн', 'варна', 'варнов') + '</div>' +
+      '<div class="feed-item-sub">' + esc(a.by || '—') + ' · ' + esc(fmtDate(a.at)) + '</div></div>' + tail + '</div>';
   }).join('');
 }
-
-function mcKindSet(k) { KIND = k; renderReasons(STATE); }
 
 async function mcPost(url, obj) {
   var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj || {}) });
@@ -162,8 +198,10 @@ async function mcPost(url, obj) {
 }
 
 function mcReasonAdd() {
-  var inp = document.getElementById('mcReasonText');
-  mcPost(API + '/reasons', { kind: KIND, text: inp.value }).then(function (res) {
+  var inp = $('mcReasonText');
+  var v = inp.value.trim();
+  if (!v) return;
+  mcPost(API + '/reasons', { kind: KIND, text: v }).then(function (res) {
     if (!res.data.success) { window.showToast(res.data.error || 'Не удалось добавить', false); return; }
     inp.value = '';
     STATE.reasons = res.data.reasons;
@@ -182,23 +220,17 @@ function mcReasonDel(id) {
 }
 
 function mcAmnestyAsk() {
-  var uid = document.getElementById('mcAmnestyId').value.trim();
-  window.askConfirm('Амнистия', 'Обнулить все варны участника ' + (uid || '(ID не указан)') + '? Откат возможен кнопкой «Откатить».', function () {
-    mcAmnestyRun(uid);
-  }, { danger: true, okText: 'Обнулить', icon_fa: 'fa-dove' });
-}
-
-function mcAmnestyRun(uid) {
-  mcPost(API + '/amnesty', { user_id: uid }).then(function (res) {
-    if (!res.data.success) { window.showToast(res.data.error || 'Не удалось провести амнистию', false); return; }
-    document.getElementById('mcAmnestyId').value = '';
-    window.showToast('Варны обнулены', true);
-    var aid = res.data.amnesty.id;
-    if (window.uxUndo) {
+  var uid = $('mcAmnestyId').value.trim();
+  if (!uid) { window.showToast('Укажите ID участника', false); return; }
+  window.confirmAction('Амнистия', 'Обнулить все варны участника ' + uid + '? Откат возможен кнопкой «Откатить».', function () {
+    mcPost(API + '/amnesty', { user_id: uid }).then(function (res) {
+      if (!res.data.success) { window.showToast(res.data.error || 'Не удалось провести амнистию', false); return; }
+      $('mcAmnestyId').value = '';
+      var aid = res.data.amnesty.id;
       window.uxUndo('Амнистия проведена', function () { mcAmnestyUndo(aid); });
-    }
-    mcLoad();
-  });
+      mcLoad();
+    });
+  }, { danger: true, okText: 'Обнулить' });
 }
 
 function mcAmnestyUndo(id) {
@@ -209,17 +241,36 @@ function mcAmnestyUndo(id) {
   });
 }
 
+document.addEventListener('click', function (e) {
+  var d = e.target.closest('[data-reason-del]');
+  if (d) { mcReasonDel(d.dataset.reasonDel); return; }
+  var u = e.target.closest('[data-amnesty-undo]');
+  if (u) { mcAmnestyUndo(u.dataset.amnestyUndo); return; }
+  var k = e.target.closest('[data-kind]');
+  if (k) {
+    KIND = k.dataset.kind;
+    renderReasons(STATE);
+  }
+});
+
+$('mcReasonAddBtn').addEventListener('click', mcReasonAdd);
+$('mcReasonText').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); mcReasonAdd(); } });
+$('mcAmnestyBtn').addEventListener('click', mcAmnestyAsk);
+$('mcAmnestyId').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); mcAmnestyAsk(); } });
+
 async function mcLoad() {
-  var r = await fetch(API + '/overview');
-  var d = await r.json();
-  if (!d.success) return;
-  STATE = d;
-  CAN_EDIT = !!d.can_edit;
-  var render = function () { renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d); };
-  if (window.renderSafe) window.renderSafe(render); else render();
+  try {
+    var r = await fetch(API + '/overview');
+    var d = await r.json();
+    if (!d.success) return;
+    STATE = d;
+    CAN_EDIT = !!d.can_edit;
+    var render = function () { renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d); };
+    if (window.renderSafe) window.renderSafe(render); else render();
+  } catch (e) {}
 }
 
 mcLoad();
-if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(mcLoad, 30000);
+if (window.setLiveRefresh) window.setLiveRefresh(mcLoad, 30000);
 </script>
 {% endblock %}

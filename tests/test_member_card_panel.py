@@ -212,7 +212,8 @@ check(client.get('/api/guild/777/member-card/export?user=111').status_code == 40
 print('== 7. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/member_card.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('mcQ', 'mcGo', 'mcSug', 'mcKpis', 'mcWarns', 'mcCsv'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check("'/lookup?user='" in tpl and "'/suggest?q='" in tpl and "'/export?user='" in tpl,

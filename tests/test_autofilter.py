@@ -234,13 +234,13 @@ r = client.get('/autofilter')
 check(r.status_code == 200, 'mod: страница рендерится (200)')
 page = r.get_data(as_text=True)
 
-MARKERS = ('id="af-hero"', 'id="hero-state"', 'id="hero-chips"', 'id="master-switch"',
+MARKERS = ('id="hero-state"', 'id="hero-chips"', 'id="master-switch"',
            'id="fw-tog"', 'id="fw-action"', 'id="fw-input"', 'id="fw-add"', 'id="fw-chips"',
            'id="fl-tog"', 'id="fl-action"', 'id="wl-input"', 'id="wl-add"', 'id="wl-chips"',
            'id="fc-tog"', 'id="fc-action"', 'id="fc-percent"', 'id="fc-percent-val"', 'id="fc-minlen"',
            'id="ff-tog"', 'id="ff-action"', 'id="ff-limit"', 'id="ff-seconds"', 'id="ff-dupe"', 'id="ff-timeout"',
-           'id="af-channels"', 'id="af-roles"', 'id="af-test-text"', 'id="af-test-run"', 'id="af-test-out"',
-           'id="af-savebar"', 'id="af-note"', 'id="af-toast"', 'id="af-save"')
+           'id="af-channels"', 'id="af-roles"', 'id="af-test-text"', 'id="af-test-btn"', 'id="af-test-out"',
+           'id="af-note"', 'id="saveBtn"')
 missing = [m for m in MARKERS if m not in page]
 check(not missing, f'разметка: все {len(MARKERS)} контейнеров на месте ({missing or "ок"})')
 check('/api/autofilter/save' in page and '/api/autofilter/test' in page and "'/api/autofilter'" in page,

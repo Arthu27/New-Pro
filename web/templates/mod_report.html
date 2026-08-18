@@ -1,23 +1,59 @@
 {% extends "base.html" %}
-{% block title %}Performance Brief — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-chart-simple"></i> Performance Brief{% endblock %}
+{% block title %}Отчёты · Модерация — Aether{% endblock %}
+{% block page_title %}Отчёты{% endblock %}
 {% block content %}
 
-<style>[data-theme="light"] .ops-performance-brief{color-scheme:light}</style>
-<div class="ops-canvas ops-performance-brief" data-room-kind="brief" data-room-version="3">
-  <div class="ops-room-label"><span>MGT / PERFORMANCE BRIEF</span><b>Управленческий бриф</b><em>нагрузка команды без лишнего шума</em></div>
-  <section class="ops-brief-cover"><div><span class="ops-kicker">MODERATION PERFORMANCE</span><h2>Пульс команды</h2><p>Действия, динамика и повторные нарушения за выбранное окно.</p></div><div class="ops-brief-stamp"><i class="fas fa-file-shield"></i><span>READ ONLY</span></div></section>
-  <div class="ops-brief-kpis" id="mrKpis"><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div></div>
-  <div class="ops-brief-layout">
-    <section class="ops-brief-main"><header><span class="ops-kicker">TEAM CONTRIBUTION</span><h2>Команда модераторов</h2><p>Распределение действий по журналу за выбранный период.</p></header><div id="mrMods" class="ops-brief-table"><div class="sk-row"></div><div class="sk-row"></div></div><div class="ops-brief-chart-head"><div><span class="ops-kicker">DAILY TEMPO</span><h3>Ритм по дням</h3></div><i class="fas fa-chart-column"></i></div><div class="mr-bars ops-brief-bars" id="mrBars"></div></section>
-    <aside class="ops-brief-side"><section><header><span class="ops-kicker">ACTION MIX</span><h3>Структура мер</h3></header><div id="mrActions"></div></section><section class="ops-brief-watch"><header><span class="ops-kicker">WATCHLIST</span><h3>Повторные нарушения</h3><p>Участники с тремя и более действиями за период.</p></header><div id="mrRec"></div></section></aside>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Команда и аналитика</div>
+    <h1>Отчёты</h1>
+    <p class="lead">Нагрузка команды, ритм по дням и рецидивисты — понятный отчёт для управленческого разбора.</p>
+  </div>
+  <div class="page-head-actions">
+    <div class="seg" id="mrSeg">
+      <button type="button" class="seg-btn" data-days="7">7 дн</button>
+      <button type="button" class="seg-btn active" data-days="14">14 дн</button>
+      <button type="button" class="seg-btn" data-days="30">30 дн</button>
+    </div>
+    <a class="btn" id="mrCsv" href="/api/mod-report.csv?days=14" download><i class="fas fa-file-csv"></i> CSV</a>
+  </div>
+</div>
+
+<div class="kpi-row" id="mrKpis"></div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-user-shield"></i> Вклад команды</h2>
+      <div class="sub">Действия по модераторам за период.</div></div></div>
+    <div class="panel-body" id="mrMods"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-chart-column"></i> Ритм по дням</h2>
+      <div class="sub">Количество действий в день.</div></div></div>
+    <div class="panel-body">
+      <div class="row" id="mrBars" style="align-items:flex-end;gap:3px;min-height:70px"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-list-ol"></i> Типы действий</h2>
+      <div class="sub">Что чаще всего применяет команда.</div></div></div>
+    <div class="panel-body"><div class="chip-row" id="mrActions"></div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-repeat" style="color:var(--err)"></i> Повторные нарушения</h2>
+      <div class="sub">Участники с тремя и более действиями за период.</div></div></div>
+    <div class="panel-body"><div class="chip-row" id="mrRec"></div></div>
   </div>
 </div>
 
 <script>
-var DAYS = 7;
+var DAYS = 14;
 var STATE = null;
 
+function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 function mrPlural(n, one, few, many) {
@@ -30,54 +66,52 @@ function mrPlural(n, one, few, many) {
 
 function renderKpis(d) {
   var hot = d.recidivists_total > 0;
-  document.getElementById('mrKpis').innerHTML =
-    '<div class="mr-kpi"><i class="fas fa-gavel"></i><div><b>' + d.total + '</b> <span>' + mrPlural(d.total, 'действие', 'действия', 'действий') + '</span></div></div>' +
-    '<div class="mr-kpi"><i class="fas fa-user-shield"></i><div><b>' + d.mods_total + '</b> <span>' + mrPlural(d.mods_total, 'модератор', 'модератора', 'модераторов') + '</span></div></div>' +
-    '<div class="mr-kpi' + (hot ? ' hot' : '') + '"><i class="fas fa-triangle-exclamation"></i><div><b>' + d.recidivists_total + '</b> <span>рецидивистов (3+)</span></div></div>' +
-    '<div class="mr-ctl"><div class="mr-seg">' +
-      [7, 14, 30].map(function (n) {
-        return '<button type="button" class="' + (n === d.days ? 'on' : '') + '" onclick="mrSetDays(' + n + ')">' + n + ' дн</button>';
-      }).join('') + '</div>' +
-      '<a class="mr-exp" id="mrCsv" href="/api/mod-report.csv?days=' + d.days + '" download><i class="fas fa-file-csv"></i> CSV</a></div>';
+  $('mrKpis').innerHTML =
+    '<div class="kpi"><div class="kpi-icon"><i class="fas fa-gavel"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.total + '</div><div class="kpi-label">' + mrPlural(d.total, 'действие', 'действия', 'действий') + '</div></div></div>' +
+    '<div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-user-shield"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.mods_total + '</div><div class="kpi-label">' + mrPlural(d.mods_total, 'модератор', 'модератора', 'модераторов') + '</div></div></div>' +
+    '<div class="kpi ' + (hot ? 'tone-err' : '') + '"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.recidivists_total + '</div><div class="kpi-label">рецидивистов (3+)</div></div></div>';
+  document.querySelectorAll('#mrSeg .seg-btn').forEach(function (b) {
+    b.classList.toggle('active', parseInt(b.dataset.days, 10) === DAYS);
+  });
+  $('mrCsv').href = '/api/mod-report.csv?days=' + DAYS;
 }
 
 function renderMods(d) {
-  var box = document.getElementById('mrMods');
+  var box = $('mrMods');
   if (!d.per_mod.length) {
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-user-shield"></i><p>Записей с именем модератора нет</p>' +
-      '<p class="empty-tip">События появятся, когда бот запишет мод-действия в журнал.</p></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-user-shield"></i><span>Записей с именем модератора нет</span></div>';
   } else {
     var share = d.per_mod.map(function (m) {
       var pct = d.total ? Math.round(100 * m[1] / d.total) : 0;
       return { name: m[0], cnt: m[1], pct: pct };
     });
     box.innerHTML = share.map(function (m, i) {
-      return '<div class="mr-row"><span class="mr-pos">' + (i + 1) + '</span>' +
-        '<span class="mr-name">' + esc(m.name) + '</span>' +
-        '<span class="mr-cnt">' + m.cnt + ' <small>· ' + m.pct + '%</small></span></div>';
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)">' +
+        '<div class="feed-item-icon" style="' + (i === 0 ? 'background:var(--ac-soft);color:var(--ac)' : '') + '">' + (i + 1) + '</div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(m.name) + '</div>' +
+        '<div class="modern-progress" style="margin-top:6px"><span style="width:' + m.pct + '%"></span></div></div>' +
+        '<span class="mono" style="font-weight:700">' + m.cnt + ' <small class="muted">· ' + m.pct + '%</small></span></div>';
     }).join('');
   }
   var max = Math.max.apply(null, d.per_day.counts.concat([1]));
-  document.getElementById('mrBars').innerHTML = d.per_day.counts.map(function (c, i) {
+  $('mrBars').innerHTML = d.per_day.counts.map(function (c, i) {
     var h = Math.round((c / max) * 62);
-    return '<div class="mr-bar" style="height:' + Math.max(h, c ? 3 : 2) + 'px" title="' +
-      esc(d.per_day.labels[i].slice(5).split('-').reverse().join('.')) + ' · ' + c + '"></div>';
+    return '<div title="' + esc(String(d.per_day.labels[i] || '').slice(5).split('-').reverse().join('.')) + ' · ' + c + '" style="flex:1;height:' + Math.max(h, c ? 3 : 2) + 'px;background:var(--ac);opacity:' + (0.35 + 0.65 * c / max) + ';border-radius:3px 3px 0 0"></div>';
   }).join('');
 }
 
 function renderActions(d) {
-  document.getElementById('mrActions').innerHTML = d.by_action.length
-    ? d.by_action.map(function (a) { return '<span class="mr-chip">' + esc(a[0]) + ' · ' + a[1] + '</span>'; }).join('')
-    : '<div class="empty-state"><i class="fas fa-list-ol"></i><p>Типов нет</p></div>';
+  $('mrActions').innerHTML = d.by_action.length
+    ? d.by_action.map(function (a) { return '<span class="chip">' + esc(a[0]) + ' · ' + a[1] + '</span>'; }).join('')
+    : '<span class="muted">Типов нет</span>';
 }
 
 function renderRec(d) {
-  document.getElementById('mrRec').innerHTML = d.recidivists.length
+  $('mrRec').innerHTML = d.recidivists.length
     ? d.recidivists.map(function (r) {
-        return '<span class="mr-chip hot"><i class="fas fa-repeat"></i> ' + esc(r.name) + ' · ' + r.count + '</span>';
+        return '<span class="chip danger"><i class="fas fa-repeat"></i> ' + esc(r.name) + ' · ' + r.count + '</span>';
       }).join('')
-    : '<div class="empty-state"><i class="fas fa-face-smile"></i><p>Рецидивистов нет</p>' +
-      '<p class="empty-tip">За период ни у кого не набралось трёх действий.</p></div>';
+    : '<span class="muted">Рецидивистов нет — за период ни у кого не набралось трёх действий.</span>';
 }
 
 function mrSetDays(n) {
@@ -86,15 +120,22 @@ function mrSetDays(n) {
 }
 
 async function mrLoad() {
-  var r = await fetch('/api/mod-report?days=' + DAYS);
-  var d = await r.json();
-  if (!d.success) return;
-  STATE = d;
-  var render = function () { renderKpis(d); renderMods(d); renderActions(d); renderRec(d); };
-  if (window.renderSafe) window.renderSafe(render); else render();
+  try {
+    var r = await fetch('/api/mod-report?days=' + DAYS);
+    var d = await r.json();
+    if (!d.success) return;
+    STATE = d;
+    var render = function () { renderKpis(d); renderMods(d); renderActions(d); renderRec(d); };
+    if (window.renderSafe) window.renderSafe(render); else render();
+  } catch (e) {}
 }
 
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('#mrSeg .seg-btn');
+  if (b) { mrSetDays(parseInt(b.dataset.days, 10)); }
+});
+
 mrLoad();
-if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(mrLoad, 30000);
+if (window.setLiveRefresh) window.setLiveRefresh(mrLoad, 30000);
 </script>
 {% endblock %}

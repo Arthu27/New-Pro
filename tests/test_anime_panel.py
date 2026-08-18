@@ -244,7 +244,8 @@ check(ov['readiness']['ready'] is True and ov['readiness']['issues'] == [],
 print('== 7. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/anime_daily.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('anKpis', 'anStatus', 'anForm', 'anChannel', 'anCategory', 'anRole',
             'anToggle', 'anMsg', 'anPreview'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')

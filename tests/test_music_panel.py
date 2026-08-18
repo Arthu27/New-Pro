@@ -236,7 +236,8 @@ check('var CAN_EDIT = false' in html_mod, 'mod: CAN_EDIT=false')
 tpl = open(os.path.join(ROOT, 'web/templates/music.html'), encoding='utf-8').read()
 emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 check('askConfirm' in tpl and 'setLiveRefresh' in tpl, 'confirm и live-refresh на месте')
 import services.panel_menu as PM
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]

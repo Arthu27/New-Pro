@@ -1,20 +1,45 @@
 {% extends "base.html" %}
-{% block title %}Evidence Stream — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-wave-square"></i> Evidence Stream{% endblock %}
+{% block title %}Журнал модерации · Модерация — Aether{% endblock %}
+{% block page_title %}Журнал модерации{% endblock %}
 {% block content %}
 
-<!-- Logs polish v3: полностью новая терминальная лента -->
-<style>.ops-stream-toolbar{position:sticky;top:72px}.action-badge{text-transform:uppercase}</style>
-<div class="ops-canvas ops-evidence-stream" data-room-kind="stream" data-room-version="3">
-  <div class="ops-room-label"><span>INV / EVIDENCE STREAM</span><b>Поток доказательств</b><em>непрерывная хронология действий</em></div>
-  <div class="ops-stream-deck" id="logs-stats">
-    <div><span>ALL</span><strong id="stat-total">—</strong><i class="fas fa-infinity"></i></div><div><span>BAN</span><strong id="stat-bans">—</strong><i class="fas fa-ban"></i></div><div><span>KICK</span><strong id="stat-kicks">—</strong><i class="fas fa-door-open"></i></div><div><span>WARN</span><strong id="stat-warns">—</strong><i class="fas fa-triangle-exclamation"></i></div><div><span>MUTE</span><strong id="stat-muts">—</strong><i class="fas fa-comment-slash"></i></div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Расследование</div>
+    <h1>Журнал модерации</h1>
+    <p class="lead">Единая лента действий команды: каждый шаг оставляет проверяемый след.</p>
   </div>
-  <section class="ops-terminal">
-    <header class="ops-stream-toolbar"><div class="ops-terminal-lights"><i></i><i></i><i></i></div><label><i class="fas fa-server"></i><select id="guild-filter"><option value="">Все серверы</option></select></label><label class="ops-terminal-search"><i class="fas fa-magnifying-glass"></i><input type="search" id="search" placeholder="grep: участник / причина / действие"></label><b id="logs-count">0 EVENT</b><div class="ops-export-pair"><a href="/logs/export?days=7"><i class="fas fa-file-arrow-down"></i> 7D</a><a href="/logs/export?days=30"><i class="fas fa-file-arrow-down"></i> 30D</a></div></header>
-    <div class="ops-terminal-caption"><span>timestamp</span><span>action stream</span><span>source: moderation.audit</span></div>
-    <div class="ops-terminal-body" id="logs-body"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i> Подключаемся к потоку</div></div>
-  </section>
+  <div class="page-head-actions">
+    <a class="btn" href="/logs/export?days=7"><i class="fas fa-file-arrow-down"></i> 7 дней</a>
+    <a class="btn" href="/logs/export?days=30"><i class="fas fa-file-arrow-down"></i> 30 дней</a>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-infinity"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Всего событий</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-bans">—</div><div class="kpi-label">Баны</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-kicks">—</div><div class="kpi-label">Кики</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-warns">—</div><div class="kpi-label">Варны</div></div></div>
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-muts">—</div><div class="kpi-label">Мьюты</div></div></div>
+</div>
+
+<div class="panel">
+  <div class="toolbar">
+    <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Сервер</span>
+      <select id="guild-filter"><option value="">Все серверы</option></select>
+    </label>
+    <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="search" placeholder="Участник / причина / действие" aria-label="Поиск по журналу">
+    </label>
+    <span class="spacer"></span>
+    <span class="badge neutral" id="logs-count">0 событий</span>
+  </div>
+  <div class="table-wrap" style="min-height:120px">
+    <table class="data-table">
+      <thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
+      <tbody id="logs-body"><tr><td colspan="5"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span></div></td></tr></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
@@ -23,37 +48,34 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function fmtDate(iso) {
-    if (!iso) return '-';
-    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); } catch (e) { return '-'; }
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return '—'; }
   }
 
   var allLogs = [];
-  var guilds = [];
-
-  var colors = { ban: 'var(--err)', kick: '#f97316', warn: 'var(--warn)', mute: '#a78bfa', timeout: '#a78bfa', unban: 'var(--ok)', unmute: 'var(--ok)', lock: 'var(--info)', unlock: 'var(--ok)' };
+  var TONE = {
+    ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral',
+    timeout: 'neutral', unban: 'ok', unmute: 'ok', lock: 'security', unlock: 'ok'
+  };
 
   async function loadGuilds() {
     try {
-      guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+      var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
       var sel = $('guild-filter');
-      guilds.forEach(function (g) {
+      (Array.isArray(guilds) ? guilds : []).forEach(function (g) {
         var opt = document.createElement('option');
-        opt.value = g.id;
-        opt.textContent = g.name;
+        opt.value = g.id; opt.textContent = g.name;
         sel.appendChild(opt);
       });
-    } catch (e) { /* sessiz */ }
+    } catch (e) { /* тихо */ }
   }
 
-  async function loadLogs(live) {
-    if (!live) $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
+  async function loadLogs() {
     try {
       allLogs = await window.fetchCachedJSON('/api/logs');
-      if (window.keepScroll) window.keepScroll(render); else render();
-      updateStats();
-    } catch (e) {
-      if (!live) $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить</p>';
-    }
+    } catch (e) { allLogs = []; }
+    window.renderSafe(function () { render(); updateStats(); });
   }
 
   function updateStats() {
@@ -83,21 +105,20 @@
       }
       return true;
     });
-    $('logs-count').textContent = filtered.length + ' / ' + allLogs.length;
+    $('logs-count').textContent = filtered.length + ' из ' + allLogs.length;
+    var body = $('logs-body');
     if (!filtered.length) {
-      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Логи не найдены</p>';
+      body.innerHTML = '<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><span>Логи не найдены</span></div></td></tr>';
       return;
     }
-    var rows = filtered.slice(0, 200).map(function (l) {
+    body.innerHTML = filtered.slice(0, 200).map(function (l) {
       var a = (l.action || '?').toLowerCase();
-      var c = colors[a] || 'var(--text-3)';
-      return '<tr><td><span class="action-badge" >' + esc(l.action || '?') + '</span></td>' +
-        '<td >' + esc(l.user_name || l.channel_name || l.role_name || l.user_id || '-') + '</td>' +
-        '<td >' + esc(l.mod_name || l.mod_id || '-') + '</td>' +
-        '<td   style="max-width: 160px; overflow: hidden;">' + esc(l.reason || '-') + '</td>' +
-        '<td >' + esc(fmtDate(l.timestamp)) + '</td></tr>';
+      return '<tr><td><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(l.action || '?') + '</span></td>' +
+        '<td>' + esc(l.user_name || l.channel_name || l.role_name || l.user_id || '—') + '</td>' +
+        '<td>' + esc(l.mod_name || l.mod_id || '—') + '</td>' +
+        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(l.reason || '') + '">' + esc(l.reason || '—') + '</td>' +
+        '<td class="muted">' + esc(fmtDate(l.timestamp)) + '</td></tr>';
     }).join('');
-    $('logs-body').innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function bind() {
@@ -105,15 +126,13 @@
     $('search').addEventListener('input', render);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadLogs(); startLive(); });
-  } else {
-    bind(); loadGuilds(); loadLogs(); startLive();
+  function start() {
+    bind(); loadGuilds(); loadLogs();
+    if (window.setLiveRefresh) window.setLiveRefresh(loadLogs, 5000);
   }
-  function startLive() {
-    if (window.setLiveRefresh) window.setLiveRefresh(function () { loadLogs(true); }, 2500);
-    else setInterval(function () { loadLogs(true); }, 2500);
-  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 {% endblock %}

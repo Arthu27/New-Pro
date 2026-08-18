@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Сквозные регрессии глобального quality-pass веб-панели.
+"""Сквозные регрессии качества веб-панели (Light Edition).
 
-Проверяет базовый shell, доступность исходных шаблонов, CSS/JS quality-слой
-и HTTP-рендер всех 116 пунктов owner-меню.
+Проверяет доступность исходных шаблонов, целостность дизайн-системы
+и клиентского кита, Jinja-синтаксис и HTTP-рендер всех пунктов owner-меню.
 
 Запуск: python3 tests/test_quality_suite.py
 """
@@ -74,33 +74,38 @@ check(not unlabelled_icons,
 print('== 2. Глобальный shell и ассеты ==')
 base = (TEMPLATES / 'base.html').read_text(encoding='utf-8')
 for marker, label in [
-    ('quality-suite.css?v=1', 'финальный CSS quality-слой'),
-    ('quality-suite.js?v=1', 'глобальный JS-контроллер'),
+    ('/static/style.css', 'дизайн-система'),
+    ('/static/app.js', 'единый клиентский кит'),
     ('class="skip-link"', 'skip-link к содержимому'),
-    ('id="routeProgress"', 'индикатор перехода'),
-    ('id="qualityConnection"', 'индикатор сети'),
     ('id="main-content"', 'цель keyboard-навигации'),
-    ("{% if request.path == '/' %}", 'splash ограничен главной страницей'),
+    ('id="sidebarSearch"', 'фильтр меню'),
+    ('id="palette-data"', 'данные палитры команд'),
+    ('id="notifDrawer"', 'дровер уведомлений'),
+    ('data-theme="light"', 'светлая тема по умолчанию'),
 ]:
     check(marker in base, f'base.html содержит: {label}')
+for dead in ('quality-suite.css', 'quality-suite.js', 'ux-kit.js', 'polish.css',
+             'moderation-suite.css', 'moderation-rooms.css', 'welcomeScreen'):
+    check(dead not in base, f'старый ассет удалён из base.html: {dead}')
 
-css_path = STATIC / 'quality-suite.css'
-js_path = STATIC / 'quality-suite.js'
-check(css_path.is_file() and js_path.is_file(), 'оба quality-ассета существуют')
+css_path = STATIC / 'style.css'
+js_path = STATIC / 'app.js'
+check(css_path.is_file() and js_path.is_file(), 'дизайн-система и кит существуют')
 css = css_path.read_text(encoding='utf-8')
 js = js_path.read_text(encoding='utf-8')
-check(css.count('{') == css.count('}') and css.count('{') >= 65,
-      f'CSS структурно целый и содержательный ({css.count("{")} блоков)')
-for marker in ('.route-progress', '.quality-connection', '.quality-table-shell',
-               '@media print', 'prefers-reduced-motion', 'forced-colors'):
+check(css.count('{') == css.count('}') and css.count('{') >= 200,
+      f'CSS структурно целый и содержательный ({css.count("{{")} блоков)')
+for marker in ('.kbd-palette', '.drawer', '.toast', '.modal-overlay',
+               '.data-table', '.switch', '@media (max-width: 1080px)',
+               'prefers-reduced-motion', ':focus-visible'):
     check(marker in css, f'CSS реализует {marker}')
-for marker in ('setupFetchHealth', 'setupNavigationProgress', 'MutationObserver',
-               'enhanceTable', 'qualitySetLoading', "addEventListener('offline'"):
-    check(marker in js, f'JS реализует {marker}')
+for marker in ('showToast', 'confirmAction', 'fetchCachedJSON', 'setLiveRefresh',
+               'qualitySetLoading', 'revealInit', "addEventListener('click'"):
+    check(marker in js, f'app.js реализует {marker}')
 node = subprocess.run(['node', '--check', str(js_path)], capture_output=True,
                       text=True, timeout=30)
 check(node.returncode == 0,
-      f'quality-suite.js проходит node --check ({node.stderr.strip() or "OK"})')
+      f'app.js проходит node --check ({node.stderr.strip() or "OK"})')
 
 print('== 3. Jinja-синтаксис и HTTP-рендер ==')
 from jinja2 import Environment  # noqa: E402
@@ -125,12 +130,12 @@ with client.session_transaction() as session:
     session['username'] = 'QualityTester'
     session['role'] = 'owner'
 
-asset_css = client.get('/static/quality-suite.css?v=1')
-asset_js = client.get('/static/quality-suite.js?v=1')
-check(asset_css.status_code == 200 and b'.quality-table-shell' in asset_css.data,
-      'quality CSS отдаётся Flask static')
-check(asset_js.status_code == 200 and b'setupNavigationProgress' in asset_js.data,
-      'quality JS отдаётся Flask static')
+asset_css = client.get('/static/style.css')
+asset_js = client.get('/static/app.js')
+check(asset_css.status_code == 200 and b'.kbd-palette' in asset_css.data,
+      'CSS отдаётся Flask static')
+check(asset_js.status_code == 200 and b'fetchCachedJSON' in asset_js.data,
+      'app.js отдаётся Flask static')
 
 pages = [page for group in panel_groups_for('owner') for page in group['pages']]
 paths = [page['path'] for page in pages]
@@ -143,23 +148,22 @@ for route in paths:
         response = client.get(route, follow_redirects=True)
         body = response.get_data(as_text=True)
         ok = (response.status_code == 200
-              and 'quality-suite.css?v=1' in body
-              and 'quality-suite.js?v=1' in body
+              and 'style.css' in body
+              and 'app.js' in body
               and 'class="skip-link"' in body
-              and 'id="routeProgress"' in body)
+              and 'id="main-content"' in body)
     except Exception as exc:
         ok = False
         body = f'{type(exc).__name__}: {exc}'
     if ok:
         rendered += 1
-    check(ok, f'{route}: HTTP 200 + общий quality-shell')
+    check(ok, f'{route}: HTTP 200 + общий shell')
 check(rendered == len(paths),
-      f'quality-shell есть на всех маршрутах ({rendered}/{len(paths)})')
+      f'shell есть на всех маршрутах ({rendered}/{len(paths)})')
 
 home = client.get('/').get_data(as_text=True)
-logs = client.get('/logs').get_data(as_text=True)
-check('id="welcomeScreen"' in home, 'welcome/splash сохранён на главной')
-check('id="welcomeScreen"' not in logs, 'welcome/splash не блокирует рабочие страницы')
+check('welcomeScreen' not in home, 'старый splash-экран удалён с главной')
+check('class="page-hero"' in home, 'главная использует светлую шапку')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

@@ -31,19 +31,23 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
+app_js_path = os.path.join(ROOT, 'web', 'static', 'app.js')
+app_js = open(app_js_path, encoding='utf-8').read()
+start = app_js.find('// ETag-кэш для частых GET-опросов')
+end = app_js.find('// ============================================================\n// GLOBAL LIVE REFRESH', start)
+helper = app_js[start:end] if start >= 0 and end > start else ''
+
 base_path = os.path.join(ROOT, 'web', 'templates', 'base.html')
 base = open(base_path, encoding='utf-8').read()
-start = base.find('// ETag-кэш для частых GET-опросов')
-end = base.find('// ============================================================\n// GLOBAL LIVE REFRESH', start)
-helper = base[start:end] if start >= 0 and end > start else ''
 
-print('== 1. Контракт хелпера в base.html ==')
+print('== 1. Контракт хелпера в app.js ==')
 check(bool(helper), 'блок ETag-кэша найден')
 check('response.status === 304' in helper, '304 обрабатывается отдельно от HTTP-ошибок')
 check('_etagCache.has(url)' in helper, 'наличие кэша проверяется без путаницы с undefined')
 check("fresh.cache = 'no-store'" in helper, 'при потере JSON выполняется свежий запрос')
 check("fresh.headers.delete('If-None-Match')" in helper, 'повторный запрос уходит без старого ETag')
 check('/static/api-guard.js?v=2' in base, 'браузер получает новую версию API Guard')
+check('/static/app.js' in base, 'кит с ETag-хелпером подключён в base.html')
 
 print('== 2. Функциональный прогон ETag-кэша (Node vm) ==')
 NODE_SCENARIO = r'''

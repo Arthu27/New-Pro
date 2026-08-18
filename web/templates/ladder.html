@@ -1,16 +1,68 @@
 {% extends "base.html" %}
-{% block title %}Escalation Map — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-stairs"></i> Escalation Map{% endblock %}
+{% block title %}Лестница наказаний · Модерация — Aether{% endblock %}
+{% block page_title %}Лестница наказаний{% endblock %}
 {% block content %}
 
-<style>[data-theme="light"] .ops-escalation-map{color-scheme:light}</style>
-<div class="ops-canvas ops-escalation-map" data-room-kind="escalation" data-room-version="3">
-  <div class="ops-room-label"><span>MGT / ESCALATION MAP</span><b>Карта эскалации</b><em>одинаковое нарушение — предсказуемая мера</em></div>
-  <section class="ops-ladder-overview"><div class="ops-ladder-symbol"><i class="fas fa-stairs"></i><span></span></div><div><span class="ops-kicker">POLICY PATH</span><h2>Маршрут наказаний</h2><p>Каждая ступень показывает порог, действие, срок и текущую аудиторию.</p></div><div class="ops-ladder-kpis" id="ldKpis"><div class="sk-card"></div><div class="sk-card"></div></div></section>
-  <section class="ops-ladder-builder" id="ldAddPanel" style="display:none"><header><span class="ops-kicker">NEW POLICY STEP</span><h3>Добавить ступень</h3></header><div class="ops-ladder-form"><label><span>Варнов</span><input id="ldCount" type="number" min="1" max="100"></label><label><span>Действие</span><select id="ldAction"><option value="mute">Мьют</option><option value="kick">Кик</option><option value="ban">Бан</option></select></label><label><span>Длительность</span><input id="ldDuration" type="number" min="0" max="10000" value="10"></label><label><span>Единица</span><select id="ldUnit"><option value="minute">Минуты</option><option value="hour">Часы</option><option value="day">Дни</option></select></label><button type="button" class="ops-primary" id="ldAdd"><i class="fas fa-plus"></i> В маршрут</button></div><div class="ld-msg" id="ldAddMsg"></div></section>
-  <div class="ops-ladder-layout">
-    <section class="ops-ladder-path"><header><div><span class="ops-kicker">ESCALATION SEQUENCE</span><h2>Ступени политики</h2></div><i class="fas fa-route"></i></header><div id="ldSteps" class="ops-ladder-steps"><div class="sk-card"></div><div class="sk-card"></div></div></section>
-    <aside class="ops-ladder-lab"><section><header><span class="ops-kicker">SAFE SIMULATION</span><h3>Проверка участника</h3><p>Показывает следующую меру, ничего не применяя.</p></header><div class="ops-inline"><input id="ldUser" placeholder="ID участника"><button type="button" class="ops-primary" id="ldSimGo"><i class="fas fa-play"></i> Рассчитать</button></div><div class="ld-sim" id="ldSim"></div><div class="ld-msg" id="ldSimMsg"></div></section><section><header><span class="ops-kicker">POLICY ARTIFACT</span><h3>Карточка маршрута</h3></header><img class="ld-card ops-ladder-card" id="ldCard" alt="Карточка лестницы"><button type="button" class="ops-secondary" id="ldCsv"><i class="fas fa-file-csv"></i> Экспорт ступеней</button></section></aside>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Команда и аналитика</div>
+    <h1>Лестница наказаний</h1>
+    <p class="lead">Единая мера для одинаковых нарушений: ступени эскалации с понятными сроками.</p>
+  </div>
+  <div class="page-head-actions">
+    <a class="btn" id="ldCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузка CSV</a>
+  </div>
+</div>
+
+<div class="kpi-row" id="ldKpis"></div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-stairs"></i> Ступени</h2>
+      <div class="sub">Что происходит при каждом количестве варнов.</div></div></div>
+    <div class="panel-body" id="ldSteps"></div>
+  </div>
+
+  <div class="grid-2" style="align-items:start">
+    <div class="panel" id="ldAddPanel" {% if not can_edit %}hidden{% endif %}>
+      <div class="panel-head"><div><h2><i class="fas fa-plus"></i> Новая ступень</h2>
+        <div class="sub">Добавляется сразу и для бота, и для панели.</div></div></div>
+      <div class="panel-body">
+        <div class="form-row">
+          <label class="form-group"><span class="form-label">Варнов</span><input class="form-input" id="ldCount" type="number" min="1" value="3"></label>
+          <label class="form-group"><span class="form-label">Действие</span>
+            <select class="form-input" id="ldAction"><option value="mute">Мьют</option><option value="kick">Кик</option><option value="ban">Бан</option></select></label>
+        </div>
+        <div class="form-row">
+          <label class="form-group"><span class="form-label">Длительность</span><input class="form-input" id="ldDuration" type="number" min="0" value="0"></label>
+          <label class="form-group"><span class="form-label">Единица</span>
+            <select class="form-input" id="ldUnit"><option value="m">минут</option><option value="h">часов</option><option value="d">дней</option></select></label>
+        </div>
+        <button type="button" class="btn btn-primary" id="ldAdd"><i class="fas fa-plus"></i> Добавить ступень</button>
+        <div class="hint" id="ldAddMsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><div><h2><i class="fas fa-flask"></i> Симулятор</h2>
+        <div class="sub">Что грозит участнику прямо сейчас.</div></div></div>
+      <div class="panel-body">
+        <div class="row">
+          <input class="form-input" id="ldUser" placeholder="ID участника" style="flex:1">
+          <button type="button" class="btn" id="ldSimGo"><i class="fas fa-play"></i> Проверить</button>
+        </div>
+        <div class="alert alert-info" id="ldSim" style="display:none;margin-top:10px"></div>
+        <div class="hint" id="ldSimMsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-id-card"></i> Карточка лестницы</h2>
+    <div class="sub">Визуальная схема для команды (PNG).</div></div></div>
+  <div class="panel-body">
+    <img id="ldCard" src="" alt="Карточка лестницы наказаний" style="max-width:100%;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)">
   </div>
 </div>
 
@@ -19,6 +71,7 @@ var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/ladder';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
 
+function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 function plural(n, one, few, many) {
@@ -32,89 +85,95 @@ function plural(n, one, few, many) {
 function load() {
   fetch(API + '/view').then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
-    document.getElementById('ldKpis').innerHTML =
-      '<div class="ld-kpi"><div class="lab"><i class="fas fa-stairs"></i> ступеней</div><div class="v">' + d.steps.length + '</div></div>' +
-      '<div class="ld-kpi"><div class="lab"><i class="fas fa-user-shield"></i> с варнами</div><div class="v">' + d.impact.warned_users + ' <small>' + plural(d.impact.warned_users, 'участник', 'участника', 'участников') + '</small></div></div>';
+    $('ldKpis').innerHTML =
+      '<div class="kpi"><div class="kpi-icon"><i class="fas fa-stairs"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.steps.length + '</div><div class="kpi-label">ступеней</div></div></div>' +
+      '<div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-user-shield"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.impact.warned_users + '</div><div class="kpi-label">' + plural(d.impact.warned_users, 'участник', 'участника', 'участников') + ' с варнами</div></div></div>';
     var usersByCount = {};
     d.impact.steps.forEach(function (s) { usersByCount[s.count] = s.users; });
-    var box = document.getElementById('ldSteps');
+    var box = $('ldSteps');
     if (!d.steps.length) {
-      box.innerHTML = '<div class="empty-state" style="margin:6px 0"><i class="fas fa-stairs"></i><div>Пока не настроена. Добавьте ступени формой выше или командой /ladder-add.<div class="empty-tip">Старая схема «thresholds» тоже читается — файл один.</div></div></div>';
+      box.innerHTML = '<div class="empty"><i class="fas fa-stairs"></i><span>Пока не настроена. Добавьте ступени формой выше или командой /ladder-add.</span></div>';
     } else {
       box.innerHTML = d.steps.map(function (s) {
         var hot = usersByCount[s.count] || 0;
-        return '<div class="ld-step"><div class="n">' + s.count + '<small>' + plural(s.count, 'варн', 'варна', 'варнов') + '</small></div>' +
-          '<div class="lbl">' + esc(s.label) + '</div>' +
-          '<div class="hot">на ступени: <b>' + hot + '</b></div>' +
-          (CAN_EDIT ? '<button type="button" class="ld-del" title="Убрать ступень" onclick="ldRemove(' + s.count + ')"><i class="fas fa-trash"></i></button>' : '') + '</div>';
+        return '<div class="feed-item" style="border-bottom:1px solid var(--line)">' +
+          '<div class="feed-item-icon" style="' + (hot ? 'background:var(--warn-soft);color:var(--warn)' : '') + '">' + s.count + '</div>' +
+          '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(s.label) + '</div>' +
+          '<div class="feed-item-sub">на ступени: <b>' + hot + '</b></div></div>' +
+          (CAN_EDIT ? '<button type="button" class="btn btn-sm btn-ghost" data-ld-remove="' + s.count + '" title="Убрать ступень"><i class="fas fa-trash" style="color:var(--err)"></i></button>' : '') +
+          '</div>';
       }).join('');
     }
   }).catch(function () {});
 }
 
 function ldRemove(count) {
-  askConfirm('Убрать ступень на ' + count + ' варнов?',
-    'Правила авто-наказания обновятся сразу и для бота, и для панели — файл общий.',
-    function () {
-      fetch(API + '/remove', {method: 'POST', headers: {'Content-Type': 'application/json'},
-                              body: JSON.stringify({count: count})})
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          var m = document.getElementById('ldAddMsg');
-          m.style.display = 'block'; m.className = 'ld-msg ' + (d.success ? 'ok' : 'err');
-          m.textContent = d.success ? d.message : (d.error || 'Ошибка');
-          if (d.success) { load(); loadCard(); }
-        })
-        .catch(function () {});
-    }, {danger: true, okText: 'Убрать', icon_fa: 'fa-trash'});
+  window.confirmAction('Убрать ступень на ' + count + ' варнов?', 'Правила авто-наказания обновятся сразу и для бота, и для панели — файл общий.', function () {
+    fetch(API + '/remove', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count: count })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      var m = $('ldAddMsg');
+      m.className = 'hint ' + (d.success ? '' : 'error');
+      m.textContent = d.success ? d.message : (d.error || 'Ошибка');
+      if (d.success) { load(); loadCard(); }
+    }).catch(function () {});
+  }, { danger: true, okText: 'Убрать' });
 }
 
-if (CAN_EDIT) {
-  document.getElementById('ldAddPanel').style.display = '';
-  document.getElementById('ldAdd').onclick = function () {
-    var m = document.getElementById('ldAddMsg');
-    fetch(API + '/add', {method: 'POST', headers: {'Content-Type': 'application/json'},
-                         body: JSON.stringify({count: document.getElementById('ldCount').value,
-                                               action: document.getElementById('ldAction').value,
-                                               duration: document.getElementById('ldDuration').value,
-                                               unit: document.getElementById('ldUnit').value})})
-      .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
-      .then(function (res) {
-        m.style.display = 'block'; m.className = 'ld-msg ' + (res.d.success ? 'ok' : 'err');
-        m.textContent = res.d.success ? res.d.message : (res.d.error || 'Ошибка');
-        if (res.d.success) { load(); loadCard(); }
-      })
-      .catch(function () { m.style.display = 'block'; m.className = 'ld-msg err'; m.textContent = 'Сеть моргнула — попробуйте ещё раз'; });
-  };
-}
+document.addEventListener('click', function (e) {
+  var r = e.target.closest('[data-ld-remove]');
+  if (r) { ldRemove(r.dataset.ldRemove); }
+});
 
-document.getElementById('ldSimGo').onclick = function () {
-  var box = document.getElementById('ldSim');
-  var msg = document.getElementById('ldSimMsg');
-  msg.style.display = 'none';
-  fetch(API + '/simulate?user=' + encodeURIComponent(document.getElementById('ldUser').value.trim()))
-    .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+$('ldAdd').addEventListener('click', function () {
+  var m = $('ldAddMsg');
+  fetch(API + '/add', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      count: $('ldCount').value,
+      action: $('ldAction').value,
+      duration: $('ldDuration').value,
+      unit: $('ldUnit').value
+    })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    m.className = 'hint ' + (d.success ? '' : 'error');
+    m.textContent = d.success ? d.message : (d.error || 'Ошибка');
+    if (d.success) { load(); loadCard(); }
+  }).catch(function () { m.className = 'hint error'; m.textContent = 'Сеть моргнула — попробуйте ещё раз'; });
+});
+
+$('ldSimGo').addEventListener('click', function () {
+  var box = $('ldSim');
+  var msg = $('ldSimMsg');
+  msg.className = 'hint';
+  msg.textContent = '';
+  var uid = $('ldUser').value.trim();
+  if (!uid) { msg.textContent = 'Введите ID участника'; msg.className = 'hint error'; return; }
+  fetch(API + '/simulate?user=' + encodeURIComponent(uid))
+    .then(function (r) { return r.json(); })
     .then(function (res) {
-      if (!res.d.success) {
+      if (!res.success) {
         box.style.display = 'none';
-        msg.style.display = 'block'; msg.className = 'ld-msg err';
-        msg.textContent = res.d.error || 'Ошибка';
+        msg.textContent = res.error || 'Ошибка';
+        msg.className = 'hint error';
         return;
       }
-      box.style.display = 'block';
-      box.innerHTML = res.d.lines.map(function (ln, i) {
+      box.style.display = '';
+      box.innerHTML = res.lines.map(function (ln, i) {
         return i === 0 ? '<b>' + esc(ln) + '</b>' : esc(ln);
       }).join('<br>');
     })
-    .catch(function () { msg.style.display = 'block'; msg.className = 'ld-msg err'; msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; });
-};
+    .catch(function () { msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; msg.className = 'hint error'; });
+});
 
 function loadCard() {
-  document.getElementById('ldCard').src = API + '/card.png?t=' + Date.now();
+  $('ldCard').src = API + '/card.png?t=' + Date.now();
 }
-document.getElementById('ldCsv').onclick = function () { location.href = API + '/export.csv'; };
+$('ldCsv').addEventListener('click', function (e) { e.preventDefault(); location.href = API + '/export.csv'; });
 
 load();
 loadCard();
+if (window.setLiveRefresh) window.setLiveRefresh(load, 15000);
 </script>
 {% endblock %}

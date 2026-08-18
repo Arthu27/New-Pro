@@ -58,7 +58,7 @@ check("getElementById('scrollTopBtn')" in js and 'aria-label' in js
       and 'behavior' in js and 'smooth' in js,
       'кнопка «наверх» самозапускается, с aria-label')
 check(not EMOJI_RE.search(js), 'эмодзи не появились в хелпере')
-css = open(os.path.join(ROOT, 'web/static/polish.css'), encoding='utf-8').read()
+css = open(os.path.join(ROOT, 'web/static/style.css'), encoding='utf-8').read()
 check('.scroll-top-btn' in css and '.scroll-top-btn.show' in css
       and '.fresh-chip' in css, 'стили кнопки и чипа свежести')
 

@@ -343,7 +343,8 @@ print('== 6. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/mod_insights.html'), encoding='utf-8').read()
 emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('miKpis', 'miSubjects', 'miDossier', 'miEffect', 'miCheck',
             'miDaysTabs', 'miDossierId'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')

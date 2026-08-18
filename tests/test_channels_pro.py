@@ -113,7 +113,7 @@ body = response.get_data(as_text=True)
 check(response.status_code == 200, '/channels возвращает HTTP 200')
 check('class="ch-workspace"' in body and 'id="ch-detail-placeholder"' in body,
       'новая рабочая область присутствует в реальном рендере')
-check('quality-suite.js?v=1' in body, 'страница сохраняет глобальный quality-shell')
+check('app.js' in body and 'style.css' in body, 'страница сохраняет глобальный shell')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

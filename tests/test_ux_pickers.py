@@ -56,9 +56,9 @@ check('Array.isArray(d)' in js and 'd.channels' in js,
 check(('(' + chr(92) + 'd{5,24})') in js and (chr(92) * 2 + 'd{5,24}') not in js,
       'вытаскивание цифр из <#123> (одиночный слэш — живая регулярка)')
 check(not EMOJI_RE.search(js), 'в хелпере нет эмодзи')
-css = open(os.path.join(ROOT, 'web/static/polish.css'), encoding='utf-8').read()
+css = open(os.path.join(ROOT, 'web/static/style.css'), encoding='utf-8').read()
 check('.picker-chip.ok' in css and '.picker-chip.bad' in css
-      and '[data-copy-id]' in css, 'стили чипов и копирования в polish.css')
+      and '[data-copy-id]' in css, 'стили чипов и копирования в style.css')
 
 print('== 2. Контракты живых списков (FakeBot) ==')
 import discord  # noqa: E402

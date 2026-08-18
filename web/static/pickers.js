@@ -1,40 +1,39 @@
-/* Aether — живые пикеры ID и мелкий UX (идеи #91-95).
- *
- * #91 pickerLoad/attachIdPicker — datalist-подсказки «#имя — id» из живых
- *     списков сервера (/api/guild/<gid>/channels, /roles), статус-чип под
- *     полем: нашёлся / не найден / бот офлайн.
- * #92 подключения — в шаблонах страниц с ID-полями.
- * #93 attachListFilter — клиентский поиск по длинным спискам.
- * #94 bindCopyId — клик по элементу с data-copy-id копирует ID.
- * #95 bindCtrlS — Ctrl+S сохраняет форму, не отправляя страницу.
- *
- * Без декоративных эмодзи — иконки Font Awesome.
- */
+/* ============================================================
+   Aether Panel — Picker Kit (Light Edition)
+   Живые пикеры ID и мелкий UX для страниц с ID-полями:
+   - pickerLoad / attachIdPicker — datalist-подсказки «#имя — id»
+   - attachListFilter — клиентский поиск по длинным спискам
+   - bindCopyId — клик по data-copy-id копирует ID
+   - bindCtrlS — Ctrl+S сохраняет форму без перезагрузки
+   - bindSlashFocus, dirtyTrack, freshStamp, кнопка «наверх»
+   ============================================================ */
 (function () {
   'use strict';
-  var _cache = {};  /* gid -> Promise({channels, roles, online}) */
 
   function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  /* Живые списки сервера: каналы при ошибке приходят словарём с error —
-     по нему отличаем «бот офлайн» от «пусто». */
+  /* ── Живые списки сервера ─────────────────────────────── */
+  var _cache = {}; /* gid -> Promise({channels, roles, online}) */
+
   window.pickerLoad = function (gid) {
     if (!_cache[gid]) {
       var chP = fetch('/api/guild/' + gid + '/channels')
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          if (Array.isArray(d)) return {list: d, online: true};
-          return {list: (d && d.channels) || [], online: false};
+          if (Array.isArray(d)) return { list: d, online: true };
+          return { list: (d && d.channels) || [], online: false };
         })
-        .catch(function () { return {list: [], online: false}; });
+        .catch(function () { return { list: [], online: false }; });
       var roP = fetch('/api/guild/' + gid + '/roles')
         .then(function (r) { return r.json(); })
         .then(function (d) { return Array.isArray(d) ? d : []; })
         .catch(function () { return []; });
       _cache[gid] = Promise.all([chP, roP]).then(function (both) {
-        return {channels: both[0].list, roles: both[1], online: both[0].online};
+        return { channels: both[0].list, roles: both[1], online: both[0].online };
       });
     }
     return _cache[gid];
@@ -72,7 +71,7 @@
 
     function paint(data) {
       if (!statusEl) return;
-      var id = pickerExtractId(input.value);
+      var id = window.pickerExtractId(input.value);
       if (!id) { statusEl.innerHTML = ''; return; }
       if (!data.online) {
         statusEl.innerHTML = '<span class="picker-chip warn"><i class="fas fa-satellite-dish"></i> бот офлайн — не проверить</span>';
@@ -87,16 +86,16 @@
       }
     }
 
-    pickerLoad(gid).then(render);
-    input.addEventListener('input', function () { pickerLoad(gid).then(paint); });
+    window.pickerLoad(gid).then(render);
+    input.addEventListener('input', function () { window.pickerLoad(gid).then(paint); });
     input.addEventListener('change', function () {
-      var id = pickerExtractId(input.value);
+      var id = window.pickerExtractId(input.value);
       if (id) input.value = id;
-      pickerLoad(gid).then(paint);
+      window.pickerLoad(gid).then(paint);
     });
   };
 
-  /* Клиентский поиск по списку: прячет строки без совпадения с запросом. */
+  /* Клиентский поиск по списку. */
   window.attachListFilter = function (input, containerId, rowSelector) {
     var box = document.getElementById(containerId);
     if (!box) return;
@@ -121,22 +120,22 @@
     }
     input.addEventListener('input', apply);
     input._pkApply = apply;
-    /* строки подгружаются заново — перефильтровываем по текущему запросу */
     var mo = new MutationObserver(function () {
       if (String(input.value || '').trim()) apply();
     });
-    mo.observe(box, {childList: true});
+    mo.observe(box, { childList: true });
   };
 
-  /* Клик по элементу с data-copy-id копирует ID в буфер. */
+  /* Клик по data-copy-id копирует ID. */
   window.bindCopyId = function (root) {
     (root || document).addEventListener('click', function (e) {
-      var el = e.target.closest ? e.target.closest('[data-copy-id]') : null;
+      var el = e.target && e.target.closest ? e.target.closest('[data-copy-id]') : null;
       if (!el) return;
       var id = el.getAttribute('data-copy-id');
       function done() {
         el.classList.add('copied');
         setTimeout(function () { el.classList.remove('copied'); }, 700);
+        if (typeof window.showToast === 'function') window.showToast('ID скопирован', true);
       }
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(id).then(done, function () {});
@@ -151,7 +150,7 @@
     });
   };
 
-  /* Ctrl+S / Cmd+S — сохранить форму без перезагрузки страницы. */
+  /* Ctrl+S / Cmd+S — сохранить форму. */
   window.bindCtrlS = function (saveFn) {
     document.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 's') {
@@ -160,33 +159,22 @@
       }
     });
   };
-})();
 
-/* ── #96-100: фокус, черновики, свежесть, «наверх» ──────────────
- * bindSlashFocus — клавиша «/» фокусирует поиск списка (как GitHub).
- * dirtyTrack — сторож незакрытых черновиков: beforeunload + reset после
- *   удачного сохранения.
- * freshStamp — чип «обновлено HH:MM:SS» у списка после каждой загрузки.
- * initScrollTop — плавающая кнопка «наверх» на длинных страницах.
- */
-(function () {
-  'use strict';
-
+  /* Клавиша «/» фокусирует поиск списка. */
   window.bindSlashFocus = function (input) {
     if (!input) return;
     document.addEventListener('keydown', function (e) {
       if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
       var t = e.target;
       var tag = (t && t.tagName) ? t.tagName.toLowerCase() : '';
-      if (tag === 'input' || tag === 'textarea' || tag === 'select'
-          || (t && t.isContentEditable)) return;
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable)) return;
       e.preventDefault();
       input.focus();
       input.select();
     });
   };
 
-  /* fields — список полей формы; возвращает {is(), reset()}. */
+  /* Сторож незакрытых черновиков. */
   window.dirtyTrack = function (fields) {
     var dirty = false;
     function mark() { dirty = true; }
@@ -196,10 +184,7 @@
       el.addEventListener('change', mark);
     });
     window.addEventListener('beforeunload', function (e) {
-      if (dirty) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
+      if (dirty) { e.preventDefault(); e.returnValue = ''; }
     });
     return {
       is: function () { return dirty; },
@@ -225,13 +210,9 @@
     btn.setAttribute('aria-label', 'Наверх');
     btn.innerHTML = '<i class="fas fa-arrow-up"></i>';
     document.body.appendChild(btn);
-    function paint() {
-      btn.classList.toggle('show', window.scrollY > 600);
-    }
-    window.addEventListener('scroll', paint, {passive: true});
-    btn.addEventListener('click', function () {
-      window.scrollTo({top: 0, behavior: 'smooth'});
-    });
+    function paint() { btn.classList.toggle('show', window.scrollY > 600); }
+    window.addEventListener('scroll', paint, { passive: true });
+    btn.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
     paint();
   });
 })();

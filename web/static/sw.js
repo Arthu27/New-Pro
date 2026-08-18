@@ -1,7 +1,9 @@
-﻿// Aether Panel Service Worker
-const CACHE_NAME = 'Aether-v1';
+// Aether Panel Service Worker (Light Edition)
+const CACHE_NAME = 'Aether-light-v3';
 const STATIC_ASSETS = [
   '/static/style.css',
+  '/static/app.js',
+  '/static/pickers.js',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
@@ -22,11 +24,9 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Только static asset'leri cache'le, API желание каждый время network'ten al
   if (event.request.url.includes('/api/') || event.request.method !== 'GET') {
     return;
   }
-
   if (event.request.url.includes('/static/')) {
     event.respondWith(
       caches.match(event.request).then(cached => cached || fetch(event.request))

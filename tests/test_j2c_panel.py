@@ -293,7 +293,8 @@ check(r.get_json()['removed'] == 0, 'повтор — чисто')
 print('== 8. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/j2c.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('j2Kpis', 'j2Status', 'j2Rooms', 'j2Form', 'j2Enabled', 'j2Lobby',
             'j2Category', 'j2Limit', 'j2Template', 'j2Msg', 'j2PreviewBox',
             'j2Prune', 'j2PruneWrap'):

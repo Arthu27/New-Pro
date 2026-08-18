@@ -353,7 +353,8 @@ check('Борислав' in body, 'в выгрузке имена из ауди�
 print('== 8. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/birthdays.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('bdKpis', 'bdList', 'bdCsv', 'bdAddPanel', 'bdAddId', 'bdAddDay',
             'bdAddMonth', 'bdAddYear', 'bdAddMsg', 'bdSetPanel', 'bdSetChannel',
             'bdSetRole', 'bdSetGift', 'bdSetMsg', 'bdSetMsgNote',

@@ -236,7 +236,8 @@ check(r.status_code == 404 and r.get_json()['error'] == 'Событие не н�
 print('== 5. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/social.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('soKpis', 'soEvents', 'soMatches'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check("'/overview'" in tpl and 'participants.csv' in tpl, 'API-пути в шаблоне')

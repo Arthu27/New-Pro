@@ -1,165 +1,167 @@
 {% extends "base.html" %}
-{% block title %}Proof Vault — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-vault"></i> Proof Vault{% endblock %}
+{% block title %}Доказательства · Модерация — Aether{% endblock %}
+{% block page_title %}Доказательства{% endblock %}
 {% block content %}
 
-<div class="ops-canvas ops-proof-vault" data-room-kind="proofvault" data-room-version="3">
-  <div class="ops-room-label"><span>INV / PROOF VAULT</span><b>Хранилище доказательств</b><em>медиа и контекст решения рядом</em></div>
-  <div class="ops-vault-layout">
-    <aside class="ops-vault-sidebar"><div class="ops-vault-seal"><i class="fas fa-fingerprint"></i><strong>VAULT</strong><small>encrypted evidence index</small></div><label class="ops-vault-search"><span>Поиск по архиву</span><i class="fas fa-magnifying-glass"></i><input type="search" id="pf-q" placeholder="Ник, причина, модератор или ID"></label><div class="ops-vault-filters"><span class="ops-kicker">CASE FILTERS</span><div id="pf-chips" class="pf-chips"></div></div><div class="ops-vault-count"><span>Найдено материалов</span><strong id="pf-count">0</strong></div><button type="button" class="ops-secondary" onclick="pfReload()"><i class="fas fa-rotate"></i> Синхронизировать архив</button><div class="msg" id="pf-msg"></div></aside>
-    <section class="ops-vault-gallery"><header><div><span class="ops-kicker">EVIDENCE INDEX</span><h2>Материалы кейсов</h2></div><div class="ops-vault-view"><i class="fas fa-grid-2"></i><span>визуальный индекс</span></div></header><div class="pf-grid ops-proof-grid" id="pf-grid"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i> Открываем хранилище</div></div></section>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Расследование</div>
+    <h1>Доказательства</h1>
+    <p class="lead">Демки, привязанные к наказаниям: скриншоты и видео рядом с решением.</p>
   </div>
-  <div class="pf-modal ops-proof-modal" id="pf-modal" onclick="if (event.target === this || event.target.classList.contains('pf-x')) pfClose()"><button type="button" class="pf-x" aria-label="Закрыть"><i class="fas fa-xmark"></i></button><img id="pf-modal-img" alt="Доказательство"><div class="pf-cap" id="pf-modal-cap"></div></div>
+  <div class="page-head-actions">
+    <span class="badge neutral" id="pf-count">0</span>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="toolbar">
+    <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="pf-q" placeholder="Участник, причина, модератор, ID" aria-label="Поиск доказательств">
+    </label>
+    <span class="spacer"></span>
+    <div class="chip-row" id="pf-chips"></div>
+  </div>
+  <div class="panel-body">
+    <div class="grid-3" id="pf-grid" style="gap:12px">
+      <div class="empty" style="grid-column:1/-1"><i class="fas fa-circle-notch fa-spin"></i><span>Загружаем архив</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Лайтбокс -->
+<div class="modal-overlay" id="pf-modal" style="display:none">
+  <div class="modal-box" style="max-width:720px">
+    <div class="modal-head">
+      <div><h3>Доказательство</h3><div class="sub" id="pf-modal-cap"></div></div>
+      <button type="button" class="close" id="pf-modal-close" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <img id="pf-modal-img" src="" alt="Демка" style="width:100%;border-radius:var(--r);background:var(--surface-3)">
+    </div>
+  </div>
 </div>
 
 <script>
 (function () {
   'use strict';
-  const esc = s => String(s ?? '').replace(/[<>&"]/g, c =>
-    ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-  const IS_IMG = u => /\.(png|jpe?g|gif|webp|bmp)(\?|&|$)/i.test(u || '')
-                    || /media\.discordapp\.|cdn\.discordapp\.com\/attachments/i.test(u || '');
-  const COLORS = {'варн':'var(--warn)','мут':'#e67e22','тихий мут':'#a78bfa',
-                  'таймаут':'#e67e22','кик':'#f97316','бан':'var(--err)',
-                  'разбан':'var(--ok)'};
-  const CAN_DEL = {{ 'true' if role in ['admin', 'owner'] else 'false' }};
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  let all = [];
-  let chip = '';
+  var CAN_DEL = {{ 'true' if role in ['admin', 'owner'] else 'false' }};
+  var all = [];
+  var chip = '';
 
-  function msg(text, type) {
-    const el = document.getElementById('pf-msg');
-    el.textContent = text; el.className = 'msg ' + type; el.style.display = 'inline-block';
-    if (type === 'ok') setTimeout(() => { el.style.display = 'none'; }, 3000);
-  }
+  var TONE = { 'варн': 'tone-warning', 'мут': 'tone-warning', 'тихий мут': 'neutral', 'таймаут': 'tone-warning', 'кик': 'tone-warning', 'бан': 'danger', 'разбан': 'ok' };
 
   function fmt(ts) {
     if (!ts) return '—';
-    const d = new Date(ts);
+    var d = new Date(ts);
     if (isNaN(d)) return String(ts).slice(0, 16).replace('T', ' ');
-    const diff = Date.now() - d.getTime();
-    if (diff >= 0 && diff < 3600e3)  return Math.max(1, Math.round(diff / 60e3)) + ' мин назад';
+    var diff = Date.now() - d.getTime();
+    if (diff >= 0 && diff < 3600e3) return Math.max(1, Math.round(diff / 60e3)) + ' мин назад';
     if (diff >= 0 && diff < 86400e3) return Math.round(diff / 3600e3) + ' ч назад';
-    return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+    return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
 
   function matches(it, q) {
     if (!q) return true;
-    const h = [it.user_name, it.mod_name, it.reason, it.action,
-               String(it.user_id || ''), '#' + it.id].join(' ').toLowerCase();
-    return q.toLowerCase().split(/\s+/).every(w => h.includes(w));
+    var h = [it.user_name, it.mod_name, it.reason, it.action, String(it.user_id || ''), '#' + it.id].join(' ').toLowerCase();
+    return q.toLowerCase().split(/\s+/).every(function (w) { return h.indexOf(w) !== -1; });
   }
 
   function renderChips() {
-    const acts = [];
-    for (const it of all) {
-      const a = (it.action || '').toLowerCase();
-      if (a && !acts.includes(a)) acts.push(a);
-    }
-    const box = document.getElementById('pf-chips');
+    var acts = [];
+    all.forEach(function (it) {
+      var a = (it.action || '').toLowerCase();
+      if (a && acts.indexOf(a) === -1) acts.push(a);
+    });
+    var box = $('pf-chips');
     box.innerHTML = '';
-    const mk = (label, val) => {
-      const b = document.createElement('button');
-      b.className = 'pf-chip' + (chip === val ? ' on' : '');
+    var mk = function (label, val) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip selectable' + (chip === val ? ' active' : '');
       b.textContent = label;
-      b.onclick = () => { chip = (chip === val ? '' : val); renderChips(); render(); };
+      b.addEventListener('click', function () { chip = (chip === val ? '' : val); renderChips(); render(); });
       box.appendChild(b);
     };
     mk('Все', '');
-    acts.forEach(a => mk(a, a));
+    acts.forEach(function (a) { mk(a, a); });
   }
-
-  function openModal(it) {
-    document.getElementById('pf-modal-img').src = it.url;
-    document.getElementById('pf-modal-cap').textContent =
-      `#${it.id} · ${it.action} · ${it.user_name} — ${it.reason || '—'}`;
-    document.getElementById('pf-modal').classList.add('open');
-  }
-  window.pfClose = () => document.getElementById('pf-modal').classList.remove('open');
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') pfClose(); });
 
   function render() {
-    const q = document.getElementById('pf-q').value.trim();
-    const items = all.filter(it => matches(it, q) &&
-      (!chip || (it.action || '').toLowerCase() === chip));
-    document.getElementById('pf-count').textContent =
-      items.length === all.length ? `${all.length}` : `${items.length} из ${all.length}`;
-    const grid = document.getElementById('pf-grid');
-    grid.innerHTML = '';
+    var q = $('pf-q').value.trim();
+    var items = all.filter(function (it) {
+      return matches(it, q) && (!chip || (it.action || '').toLowerCase() === chip);
+    });
+    $('pf-count').textContent = items.length === all.length ? String(all.length) : (items.length + ' из ' + all.length);
+    var grid = $('pf-grid');
     if (!items.length) {
-      grid.innerHTML = '<div class="pf-empty"><i class="fas fa-folder-open"></i>' +
-        (all.length ? 'Ничего не подходит под фильтр.' :
-         'Демок пока нет. Демка добавляется через /proof или прямо в наказании ' +
-         '(параметр «демка» у /warn и /moderate). Фото не обязательно.') + '</div>';
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="fas fa-folder-open"></i><span>' +
+        (all.length ? 'Ничего не подходит под фильтр.' : 'Демок пока нет. Добавьте демку через /proof или параметр «демка» в /warn и /moderate.') + '</span></div>';
       return;
     }
-    for (const it of items) {
-      const card = document.createElement('div');
-      card.className = 'pf-card';
-      const col = COLORS[(it.action || '').toLowerCase()] || 'var(--ac)';
-      const hasImg = it.url && IS_IMG(it.url);
-      const thumb = hasImg
-        ? `<div class="pf-thumb" data-full="1"><img src="${esc(it.url)}" loading="lazy" alt="демка #${it.id}"></div>`
-        : `<div class="pf-thumb"><div class="pf-nomedia"><i class="fas fa-file-lines"></i>без медиа</div></div>`;
-      card.innerHTML =
-        thumb +
-        `<div class="pf-body">
-           <div class="pf-row1">
-             <span class="pf-badge" style="background:${col}22;color:${col};border:1px solid ${col}55">${esc(it.action || '—')}</span>
-             <span class="pf-id">#${it.id}</span>
-           </div>
-           <div><span class="pf-user" data-q="${esc(it.user_name)}" title="Показать все демки этого юзера">${esc(it.user_name)}</span>
-             <span class="pf-uid"> ${esc(it.user_id)}</span></div>
-           <div class="pf-reason" title="${esc(it.reason || '')}">${esc(it.reason || '—')}</div>
-           <div class="pf-meta"><span><i class="fas fa-user-shield"></i> ${esc(it.mod_name)}</span>
-             <span title="${esc(it.set_at || '')}">${fmt(it.set_at)}</span></div>
-         </div>
-         <div class="pf-actions">
-           ${it.url ? `<a class="pf-btn" href="${esc(it.url)}" target="_blank"><i class="fas fa-image"></i>Файл</a>` : ''}
-           ${it.link ? `<a class="pf-btn" href="${esc(it.link)}" target="_blank"><i class="fas fa-link"></i>Ссылка</a>` : ''}
-           ${it.jump ? `<a class="pf-btn" href="${esc(it.jump)}" target="_blank"><i class="fas fa-arrow-up-right-from-square"></i>В Discord</a>` : ''}
-           ${CAN_DEL ? `<button type="button" class="pf-btn danger" data-del="${it.id}" aria-label="Удалить"><i class="fas fa-trash"></i></button>` : ''}
-         </div>`;
-      if (hasImg) card.querySelector('.pf-thumb').addEventListener('click', () => openModal(it));
-      card.querySelectorAll('.pf-user').forEach(el =>
-        el.addEventListener('click', () => {
-          document.getElementById('pf-q').value = it.user_name; render();
-        }));
-      card.querySelectorAll('[data-del]').forEach(el =>
-        el.addEventListener('click', () => pfDel(it.id)));
-      grid.appendChild(card);
-    }
+    grid.innerHTML = items.map(function (it) {
+      var tone = TONE[(it.action || '').toLowerCase()] || 'neutral';
+      var hasImg = it.url && /\.(png|jpe?g|gif|webp|bmp)(\?|&|$)/i.test(it.url);
+      return '<div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">' +
+        (hasImg
+          ? '<div style="aspect-ratio:16/10;background:var(--surface-3);cursor:zoom-in" data-full="' + esc(it.url) + '"><img src="' + esc(it.url) + '" loading="lazy" alt="демка #' + it.id + '" style="width:100%;height:100%;object-fit:cover"></div>'
+          : '<div style="aspect-ratio:16/10;background:var(--surface-3);display:grid;place-items:center;color:var(--text-3)"><i class="fas fa-file-lines" style="font-size:22px"></i></div>') +
+        '<div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1">' +
+          '<div class="row"><span class="badge ' + tone + '">' + esc(it.action || '—') + '</span><span class="mono muted" style="font-size:11px">#' + esc(it.id) + '</span></div>' +
+          '<div class="feed-item-title" style="cursor:pointer" data-q="' + esc(it.user_name || '') + '" title="Показать все демки этого участника">' + esc(it.user_name || '—') + ' <span class="id-pill">' + esc(it.user_id || '') + '</span></div>' +
+          '<div class="feed-item-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(it.reason || '') + '">' + esc(it.reason || '—') + '</div>' +
+          '<div class="feed-item-time"><i class="fas fa-user-shield"></i> ' + esc(it.mod_name || '—') + ' · ' + esc(fmt(it.set_at)) + '</div>' +
+          '<div class="row" style="margin-top:auto;padding-top:6px">' +
+            (it.url ? '<a class="btn btn-sm" href="' + esc(it.url) + '" target="_blank"><i class="fas fa-image"></i> Файл</a>' : '') +
+            (it.link ? '<a class="btn btn-sm" href="' + esc(it.link) + '" target="_blank"><i class="fas fa-link"></i> Ссылка</a>' : '') +
+            '<span class="spacer"></span>' +
+            (CAN_DEL ? '<button type="button" class="btn btn-sm btn-ghost" data-del="' + esc(it.id) + '" title="Удалить"><i class="fas fa-trash" style="color:var(--err)"></i></button>' : '') +
+          '</div></div></div>';
+    }).join('');
   }
 
-  async function load() {
-    const grid = document.getElementById('pf-grid');
-    grid.innerHTML = '<div class="pf-empty"><i class="fas fa-spinner fa-spin"></i>Загружаю…</div>';
-    try {
-      const r = await fetch('/api/proofs');
-      const d = await r.json();
-      if (!d.success) throw new Error(d.error || 'err');
-      all = d.items || [];
+  function load() {
+    fetch('/api/proofs').then(function (r) { return r.json(); }).then(function (d) {
+      all = Array.isArray(d) ? d : [];
       renderChips();
       render();
-    } catch (e) {
-      grid.innerHTML = '<div class="pf-empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить демки.</div>';
+    }).catch(function () {});
+  }
+
+  document.addEventListener('click', function (e) {
+    var full = e.target.closest('[data-full]');
+    if (full) {
+      $('pf-modal-img').src = full.dataset.full;
+      $('pf-modal').style.display = 'flex';
+      return;
     }
-  }
-  window.pfReload = load;
+    var q = e.target.closest('[data-q]');
+    if (q) {
+      $('pf-q').value = q.dataset.q;
+      render();
+      return;
+    }
+    var del = e.target.closest('[data-del]');
+    if (del) {
+      window.confirmAction('Удалить доказательство #' + del.dataset.del + '?', 'Материал исчезнет из архива. Наказания останутся.', function () {
+        fetch('/api/proofs/' + del.dataset.del, { method: 'DELETE' }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d && (d.success || d.ok)) { window.showToast('Удалено', true); load(); }
+          else window.showToast((d && (d.error || d.message)) || 'Ошибка', false);
+        });
+      }, { danger: true, okText: 'Удалить' });
+    }
+  });
 
-  async function pfDel(pid) {
-    if (!confirm('Удалить демку #' + pid + ' (запись и сообщение в канале)?')) return;
-    const r = await fetch('/api/proofs/' + pid, {method: 'DELETE'});
-    const d = await r.json();
-    if (d.success) {
-      msg('Демка #' + pid + ' удалена' + (d.msg_deleted ? ' вместе с сообщением в канале.' : '.'), 'ok');
-      all = all.filter(x => x.id !== pid);
-      renderChips(); render();
-    } else msg('Ошибка: ' + (d.error || 'не вышло'), 'err');
-  }
+  $('pf-modal-close').addEventListener('click', function () { $('pf-modal').style.display = 'none'; });
+  $('pf-modal').addEventListener('click', function (e) { if (e.target === $('pf-modal')) $('pf-modal').style.display = 'none'; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('pf-modal').style.display = 'none'; });
+  $('pf-q').addEventListener('input', render);
 
-  document.getElementById('pf-q').addEventListener('input', render);
   load();
+  if (window.setLiveRefresh) window.setLiveRefresh(load, 15000);
 })();
 </script>
 {% endblock %}

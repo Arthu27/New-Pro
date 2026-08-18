@@ -1,460 +1,189 @@
 {% extends "base.html" %}
-{% block title %}Панель — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-home" ></i> Панель управления{% endblock %}
+{% block title %}Обзор — Aether{% endblock %}
+{% block page_title %}Обзор сервера{% endblock %}
 {% block content %}
 
-<style>
-/* Dashboard — uses .page-hero (defined globally in style.css) */
-
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 18px;
-}
-@media (max-width: 1100px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 600px)  { .stat-grid { grid-template-columns: 1fr; } }
-
-.stat-card-big {
-  background: var(--surface) !important;
-  border: 1px solid var(--line) !important;
-  border-radius: var(--r-lg) !important;
-  padding: 20px 22px !important;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.25s var(--ease) !important;
-  animation: fadeUp 0.45s var(--ease-out) both;
-}
-.stat-card-big::after {
-  content: '';
-  position: absolute;
-  top: 0; right: 0;
-  width: 140px; height: 140px;
-  background: radial-gradient(circle at top right, var(--ac-soft), transparent 70%);
-  pointer-events: none;
-}
-.stat-card-big:hover { transform: translateY(-3px); border-color: var(--ac-line) !important; box-shadow: var(--shadow-md), 0 0 30px rgba(224, 176, 74, 0.12) !important; }
-.stat-card-big .stat-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: var(--fs-xs) !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.10em !important;
-  text-transform: uppercase !important;
-  color: var(--text-3) !important;
-  margin-bottom: 12px;
-  position: relative;
-  z-index: 1;
-}
-.stat-card-big .stat-label i { font-size: 14px; }
-.stat-card-big.purple .stat-label i { color: var(--violet); }
-.stat-card-big.pink   .stat-label i { color: var(--pink); }
-.stat-card-big.cyan   .stat-label i { color: var(--cyan); }
-.stat-card-big.green  .stat-label i { color: var(--emerald); }
-.stat-card-big .stat-value {
-  font-size: 32px !important;
-  font-weight: 800 !important;
-  line-height: 1 !important;
-  letter-spacing: -0.025em !important;
-  color: var(--text) !important;
-  font-variant-numeric: tabular-nums !important;
-  position: relative;
-  z-index: 1;
-}
-.stat-card-big .stat-value small { font-size: 14px !important; color: var(--text-3) !important; font-weight: 600 !important; margin-left: 2px; }
-.stat-card-big.green .stat-value { font-size: 24px !important; }
-.stat-card-big .stat-trend {
-  font-size: 11px !important;
-  font-weight: 500 !important;
-  color: var(--text-3) !important;
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  position: relative;
-  z-index: 1;
-}
-.stat-card-big .stat-trend i.ok { color: var(--ok); }
-
-/* Threat index bar */
-.threat-card {
-  background: var(--surface-2) !important;
-  border: 1px solid var(--ac-line) !important;
-  border-radius: var(--r-lg) !important;
-  padding: 20px 22px !important;
-  margin-bottom: 18px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.threat-icon {
-  width: 46px; height: 46px;
-  border-radius: 12px;
-  background: var(--ac-soft);
-  border: 1px solid var(--ok);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  color: var(--ok);
-  flex-shrink: 0;
-  transition: all 0.3s var(--ease);
-}
-.threat-body { flex: 1; min-width: 220px; }
-.threat-label {
-  font-size: var(--fs-xs) !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.10em !important;
-  color: var(--text-2) !important;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.threat-score-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.threat-score {
-  font-size: 22px !important;
-  font-weight: 800 !important;
-  color: var(--text) !important;
-  font-variant-numeric: tabular-nums !important;
-  letter-spacing: -0.02em !important;
-}
-.threat-badge {
-  font-size: var(--fs-xs) !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.06em !important;
-  padding: 3px 10px;
-  border-radius: 99px;
-  background: rgba(74, 222, 128, 0.12);
-  color: var(--ok);
-  border: 1px solid rgba(74, 222, 128, 0.30);
-}
-.threat-bar-track {
-  height: 6px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 99px;
-  overflow: hidden;
-}
-.threat-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--ok), #22c55e);
-  border-radius: 99px;
-  transition: width 0.6s var(--ease-out), background 0.3s;
-}
-.lockdown-btn {
-  padding: 11px 20px;
-  border-radius: 99px;
-  font-size: var(--fs-sm) !important;
-  font-weight: 700 !important;
-  cursor: pointer;
-  background: linear-gradient(135deg, #4ade80, #22c55e);
-  color: var(--bg);
-  border: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(74, 222, 128, 0.30);
-  transition: all 0.2s var(--ease);
-}
-.lockdown-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(74, 222, 128, 0.40); filter: brightness(1.05); }
-.lockdown-btn.danger { background: linear-gradient(135deg, var(--err), #dc2626); color: #fff; box-shadow: 0 4px 14px rgba(248, 113, 113, 0.30); }
-
-/* Summary strip */
-.dash-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
-.sum-item{display:flex;align-items:center;gap:12px;padding:16px 18px;background:linear-gradient(165deg,rgba(224,176,74,.05),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;backdrop-filter:blur(14px);transition:transform .2s var(--ease),border-color .2s var(--ease)}
-.sum-item:hover{transform:translateY(-2px);border-color:var(--ac-line)}
-.sum-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.sum-ico.gold{background:linear-gradient(135deg,var(--ac-2),var(--ac-3));color:#1a1a1a}
-.sum-ico.green{background:rgba(74,222,128,.14);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
-.sum-ico.cyan{background:rgba(56,189,248,.14);color:#38bdf8;border:1px solid rgba(56,189,248,.3)}
-.sum-ico.red{background:rgba(248,113,113,.14);color:#f87171;border:1px solid rgba(248,113,113,.3)}
-.sum-val{font-family:'Poppins',sans-serif;font-size:24px;font-weight:800;color:var(--text);line-height:1;font-variant-numeric:tabular-nums}
-.sum-val small{font-size:13px;color:var(--text-3);font-weight:600}
-.sum-lbl{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;font-weight:600}
-
-/* Quick grid */
-.quick-grid-loading, .quick-grid-empty {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 20px;
-  color: var(--text-3);
-  font-size: var(--fs-md);
-}
-
-/* Two-column layout for recent activity + login лог */
-.dash-cols {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-@media (max-width: 900px) { .dash-cols { grid-template-columns: 1fr; } }
-
-/* Quick action cards */
-.quick-action {
-  padding: 22px !important;
-}
-.quick-action .form-input { width: 100%; }
-
-/* Animation delays */
-.stat-card-big:nth-child(1) { animation-delay: 0.04s; }
-.stat-card-big:nth-child(2) { animation-delay: 0.08s; }
-.stat-card-big:nth-child(3) { animation-delay: 0.12s; }
-.stat-card-big:nth-child(4) { animation-delay: 0.16s; }
-.threat-card { animation: fadeUp 0.45s var(--ease-out) 0.2s both; }
-.dash-box { animation: fadeUp 0.45s var(--ease-out) 0.24s both; }
-.grid-2 { animation: fadeUp 0.45s var(--ease-out) 0.28s both; }
-
-/* Centered spinner */
-.centered-spinner {
-  text-align: center;
-  padding: 20px;
-  color: var(--text-3);
-}
-.centered-spinner i { color: var(--ac); font-size: 18px; }
-
-/* Action badge variant colors */
-.action-badge-err { color: var(--err) !important; }
-.action-badge-warn { color: var(--warn) !important; }
-.action-badge-ok { color: var(--ok) !important; }
-.action-badge-info { color: var(--info) !important; }
-
-/* Welcome hero — о сервере */
-.welcome-hero{ position:relative; overflow:hidden; }
-.hero-guild-row{ display:flex; align-items:center; gap:18px; margin-bottom:14px; }
-.hero-guild-av{ width:64px; height:64px; border-radius:16px; background:linear-gradient(135deg,var(--ac-2),var(--ac-3)); display:flex; align-items:center; justify-content:center; font-size:30px; color:#1a1a1a; flex-shrink:0; box-shadow:0 8px 24px var(--ac-glow); position:relative; }
-.hero-guild-av img{ width:100%; height:100%; border-radius:16px; object-fit:cover; }
-.hero-guild-row h1{ margin-bottom:6px !important; }
-.hero-guild-row p{ margin:0 !important; }
-.hero-welcome-msg{ display:flex; align-items:flex-start; gap:11px; padding:13px 16px; background:linear-gradient(90deg,var(--ac-soft),transparent); border:1px solid var(--ac-line); border-radius:13px; font-size:13.5px; color:var(--text-2); line-height:1.6; margin-top:4px; }
-.hero-welcome-msg i{ color:var(--ac); margin-top:2px; }
-
-/* Штрихи в стиле нового дизайна welcome */
-#heroTitle{
-  background:linear-gradient(120deg,var(--ac-2) 10%,#fff3d6 35%,var(--ac) 55%,var(--ac-3) 90%);
-  background-size:200% 100%;
-  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-  animation:dashShimmer 5.5s ease-in-out infinite;
-}
-@keyframes dashShimmer{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
-#heroGuildAv{animation:heroAvFloat 4s ease-in-out infinite}
-@keyframes heroAvFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-.hero-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-.hero-chips .chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--text-2);padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
-.hero-chips .chip i{color:var(--ac-2);font-size:10.5px}
-.hero-chips .chip .chip-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 7px var(--ok);animation:dashDotPulse 2s infinite}
-@keyframes dashDotPulse{0%,100%{opacity:1}50%{opacity:.35}}
-
-@media (max-width:560px){
-  .hero-guild-row{ flex-direction:column; align-items:flex-start; gap:12px; }
-  .hero-guild-av{ width:52px; height:52px; font-size:24px; }
-}
-</style>
-
-<!-- Hero section — приветствие + о сервере -->
-<div class="page-hero welcome-hero" id="dashHero">
+<div class="page-hero">
   <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span id="heroGreeting">Добро пожаловать, {{ username }}</span>
+    <div class="page-hero-greeting" id="heroGreeting"><span class="dot"></span> Панель управления</div>
+    <h1 id="heroTitle">Добро пожаловать</h1>
+    <p id="heroWelcomeMsg">Логи, демки, тикеты и быстрые действия — в одном месте. Управляйте сервером без лишних кликов.</p>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="stat-grid">
+  <div class="stat-box">
+    <div class="stat-icon"><i class="fas fa-server"></i></div>
+    <div class="stat-body"><div class="stat-value" id="guild-count">—</div><div class="stat-label">Серверов</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon"><i class="fas fa-users"></i></div>
+    <div class="stat-body"><div class="stat-value" id="user-count">—</div><div class="stat-label">Участников</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon" style="background:var(--ok-soft);color:var(--ok)"><i class="fas fa-user-check"></i></div>
+    <div class="stat-body"><div class="stat-value" id="sum-online">—</div><div class="stat-label">Онлайн</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon" style="background:var(--info-soft);color:var(--info)"><i class="fas fa-gauge-high"></i></div>
+    <div class="stat-body"><div class="stat-value" id="latency">—<small>ms</small></div><div class="stat-label">Пинг бота · <span id="status">—</span></div></div>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <!-- Модерация сегодня -->
+  <div class="panel">
+    <div class="panel-head">
+      <div><h2><i class="fas fa-shield-halved"></i> Модерация сегодня</h2><div class="sub">Сводка последних действий команды.</div></div>
+      <a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a>
     </div>
-    <div class="hero-guild-row">
-      <div class="hero-guild-av" id="heroGuildAv"><i class="fas fa-bolt"></i></div>
-      <div>
-        <h1 id="heroTitle">Добро пожаловать</h1>
-        <p id="heroDesc">Обзор сервера: активность, модерация и быстрые действия — всё под рукой.</p>
+    <div class="panel-body">
+      <div class="kpi-row" id="quick-stats" style="margin-bottom:6px">
+        <div class="sk-card" style="height:64px"></div><div class="sk-card" style="height:64px"></div>
+        <div class="sk-card" style="height:64px"></div><div class="sk-card" style="height:64px"></div>
+      </div>
+      <div class="section-title" style="margin-top:12px">Последние действия</div>
+      <div class="table-wrap" id="recent-activity"></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="align-items:start">
+    <!-- Безопасность -->
+    <div class="panel">
+      <div class="panel-head"><div><h2><i class="fas fa-shield-halved"></i> Безопасность</h2>
+        <div class="sub">Индекс угроз сервера.</div></div></div>
+      <div class="panel-body">
+        <div class="row" style="margin-bottom:12px">
+          <div class="kpi-icon" id="threatIconWrap" style="width:44px;height:44px;font-size:18px"><i class="fas fa-shield" id="threatIcon"></i></div>
+          <div style="flex:1">
+            <div class="kpi-value" id="threatScoreVal">—</div>
+            <div class="kpi-label">Индекс угроз</div>
+          </div>
+          <span class="badge" id="threatLevelBadge">—</span>
+        </div>
+        <div class="modern-progress"><span id="threatFill" style="width:0%"></span></div>
+        <div class="row" style="margin-top:14px">
+          <button type="button" class="btn" id="btnLockdown"><i class="fas fa-house-lock"></i> <span id="btnLockdownText">Lockdown</span></button>
+          <a class="btn-link" href="/security">Центр безопасности <i class="fas fa-arrow-right"></i></a>
+        </div>
       </div>
     </div>
-    <div class="hero-welcome-msg">
-      <i class="fas fa-heart"></i>
-      <span id="heroWelcomeMsg">Логи, демки, тикеты и быстрые действия собраны в одном месте — управляй сервером без лишних кликов.</span>
-    </div>
-    <div class="hero-chips">
-      <span class="chip"><span class="chip-dot"></span> Панель онлайн 24/7</span>
-      <span class="chip"><i class="fas fa-robot"></i> AI-ассистент активен</span>
-      <span class="chip"><i class="fas fa-shield-halved"></i> Антирейд включён</span>
-      <span class="chip"><i class="fas fa-terminal"></i> 70+ команд</span>
+
+    <!-- Здоровье -->
+    <div class="panel">
+      <div class="panel-head"><div><h2><i class="fas fa-heartbeat"></i> Здоровье</h2>
+        <div class="sub">Пинг, CPU и память бота.</div></div></div>
+      <div class="panel-body" style="display:flex;gap:20px;justify-content:space-around;flex-wrap:wrap">
+        <div style="text-align:center">
+          <div id="pingDonut"></div>
+          <div class="donut-cap" id="pingCap" style="position:relative">—</div>
+          <div class="kpi-label" style="margin-top:6px">Пинг</div>
+        </div>
+        <div style="text-align:center">
+          <div id="cpuDonut"></div>
+          <div class="donut-cap" id="cpuCap" style="position:relative">—</div>
+          <div class="kpi-label" style="margin-top:6px">CPU</div>
+        </div>
+        <div style="text-align:center">
+          <div id="ramDonut"></div>
+          <div class="donut-cap" id="ramCap" style="position:relative">—</div>
+          <div class="kpi-label" style="margin-top:6px">RAM</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Ключевые показатели (summary strip) -->
-<div class="dash-summary" id="dashSummary" data-reveal="up">
-  <div class="sum-item"><span class="sum-ico gold"><i class="fas fa-users"></i></span><div><div class="sum-val" id="sum-members">—</div><div class="sum-lbl">Участников</div></div></div>
-  <div class="sum-item"><span class="sum-ico green"><i class="fas fa-circle"></i></span><div><div class="sum-val" id="sum-online">—</div><div class="sum-lbl">Онлайн</div></div></div>
-  <div class="sum-item"><span class="sum-ico cyan"><i class="fas fa-signal"></i></span><div><div class="sum-val" id="sum-latency">—</div><div class="sum-lbl">Ping</div></div></div>
-  <div class="sum-item"><span class="sum-ico red"><i class="fas fa-shield-halved"></i></span><div><div class="sum-val" id="sum-threat">—</div><div class="sum-lbl">Угроза</div></div></div>
-</div>
+<div class="grid-2" style="align-items:start;margin-top:14px">
+  <!-- Входы в панель -->
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-user-clock"></i> Входы в панель</h2>
+      <div class="sub">Последние логины команды.</div></div></div>
+    <div class="panel-body" id="login-log"></div>
+  </div>
 
-<!-- 4 stat cards -->
-<div class="stat-grid">
-  <div class="stat-card-big purple">
-    <div class="stat-label">
-      <i class="fas fa-server"></i>
-      <span>Сервера</span>
+  <!-- Быстрые переходы -->
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-bolt"></i> Быстрые переходы</h2>
+      <div class="sub">Частые задачи модерации.</div></div></div>
+    <div class="panel-body">
+      <div class="grid-2" style="gap:10px">
+        <a class="card" href="/warnings" style="padding:14px;display:flex;align-items:center;gap:10px;color:var(--text)"><i class="fas fa-triangle-exclamation" style="color:var(--warn)"></i><div><b>Варны</b><div class="hint">Очередь предупреждений</div></div></a>
+        <a class="card" href="/temp-moderation" style="padding:14px;display:flex;align-items:center;gap:10px;color:var(--text)"><i class="fas fa-clock" style="color:var(--info)"></i><div><b>Временные меры</b><div class="hint">Мьюты и баны с таймером</div></div></a>
+        <a class="card" href="/logs" style="padding:14px;display:flex;align-items:center;gap:10px;color:var(--text)"><i class="fas fa-clipboard-list" style="color:var(--ac)"></i><div><b>Журнал модерации</b><div class="hint">Лента действий</div></div></a>
+        <a class="card" href="/proofs" style="padding:14px;display:flex;align-items:center;gap:10px;color:var(--text)"><i class="fas fa-folder-open" style="color:var(--ok)"></i><div><b>Доказательства</b><div class="hint">Архив демок</div></div></a>
+      </div>
     </div>
-    <div class="stat-value" id="guild-count">—</div>
-    <div class="stat-trend"><i class="fas fa-circle ok"></i> Активных подключений</div>
-  </div>
-  <div class="stat-card-big pink">
-    <div class="stat-label">
-      <i class="fas fa-users"></i>
-      <span>Пользователи</span>
-    </div>
-    <div class="stat-value" id="user-count">—</div>
-    <div class="stat-trend"><i class="fas fa-chart-line ok"></i> В кэше бота</div>
-  </div>
-  <div class="stat-card-big cyan">
-    <div class="stat-label">
-      <i class="fas fa-signal"></i>
-      <span>Ping</span>
-    </div>
-    <div class="stat-value" id="latency">—<small>ms</small></div>
-    <div class="stat-trend"><i class="fas fa-wave-square"></i> Задержка API</div>
-  </div>
-  <div class="stat-card-big green">
-    <div class="stat-label">
-      <i class="fas fa-heartbeat"></i>
-      <span>Состояние</span>
-    </div>
-    <div class="stat-value" id="status">ОНЛАЙН</div>
-    <div class="stat-trend"><i class="fas fa-check ok"></i> Система работает</div>
   </div>
 </div>
 
-<!-- Живые датчики: пинг / CPU / RAM / онлайн -->
-<div class="donut-grid" data-reveal="up" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-top:16px">
-  <div class="donut-card">
-    <div class="donut" id="pingDonut" data-size="96"></div>
-    <div class="donut-cap" id="pingCap">—</div>
+{% if role == 'owner' %}
+<!-- Отправка уведомлений и объявлений -->
+<div class="grid-2" style="align-items:start;margin-top:14px">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-bell"></i> Отправить уведомление</h2>
+      <div class="sub">Личное сообщение участнику через бота.</div></div></div>
+    <div class="panel-body">
+      <label class="form-group"><span class="form-label">Discord ID</span><input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input" aria-label="Discord ID получателя"></label>
+      <label class="form-group"><span class="form-label">Заголовок</span><input type="text" id="notif-title" placeholder="Заголовок" class="form-input" aria-label="Заголовок"></label>
+      <label class="form-group"><span class="form-label">Сообщение</span><textarea id="notif-message" class="form-input" style="min-height:70px" aria-label="Текст уведомления"></textarea></label>
+      <button type="button" class="btn btn-primary" id="btnSendNotif"><i class="fas fa-paper-plane"></i> Отправить</button>
+      <div class="hint" id="notif-result" style="margin-top:8px"></div>
+    </div>
   </div>
-  <div class="donut-card">
-    <div class="donut" id="cpuDonut" data-size="96"></div>
-    <div class="donut-cap" id="cpuCap">—</div>
-  </div>
-  <div class="donut-card">
-    <div class="donut" id="ramDonut" data-size="96"></div>
-    <div class="donut-cap" id="ramCap">—</div>
-  </div>
-  <div class="donut-card">
-    <div class="donut" id="onlineDonut" data-size="96"></div>
-    <div class="donut-cap" id="onlineCap">—</div>
-  </div>
-</div>
 
-<!-- Threat index -->
-<div class="threat-card">
-  <div class="threat-icon" id="threatIconWrap">
-    <i class="fas fa-shield-alt" id="threatIcon"></i>
-  </div>
-  <div class="threat-body">
-    <div class="threat-label"><i class="fas fa-shield-halved"></i> Индекс угрозы</div>
-    <div class="threat-score-row">
-      <span class="threat-score" id="threatScoreVal">15/100</span>
-      <span class="threat-badge" id="threatLevelBadge">Низкая</span>
-    </div>
-    <div class="threat-bar-track">
-      <div class="threat-bar-fill" id="threatFill"   style="width: 15%;"></div>
-    </div>
-  </div>
-  <button class="lockdown-btn" id="btnLockdown" type="button">
-    <i class="fas fa-lock"></i>
-    <span id="btnLockdownText">Lockdown</span>
-  </button>
-</div>
-
-<!-- Quick stats -->
-<div class="dash-box">
-  <div class="dash-box-head">
-    <div class="dash-box-title"><i class="fas fa-chart-line"></i> Быстрая статистика</div>
-    <span class="text-mut text-xs fw-700" >в реальном времени</span>
-  </div>
-  <div class="dash-box-body" >
-    <div class="quick-grid" id="quick-stats">
-      <div class="sk-card"></div>
-      <div class="sk-card"></div>
-      <div class="sk-card"></div>
-      <div class="sk-card"></div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-bullhorn"></i> Опубликовать объявление</h2>
+      <div class="sub">Объявление в канал сервера или в ленту панели.</div></div></div>
+    <div class="panel-body">
+      <label class="form-group"><span class="form-label">Заголовок</span><input type="text" id="ann-title" placeholder="Заголовок" class="form-input" aria-label="Заголовок объявления"></label>
+      <label class="form-group"><span class="form-label">Содержание</span><textarea id="ann-message" class="form-input" style="min-height:70px" aria-label="Текст объявления"></textarea></label>
+      <label class="form-group"><span class="form-label">Куда публиковать</span>
+        <select id="ann-channel" class="form-input" aria-label="Куда публиковать объявление">
+          <option value="">Только в ленте панели</option>
+        </select></label>
+      <button type="button" class="btn btn-primary" id="btnSendAnn"><i class="fas fa-bullhorn"></i> Опубликовать</button>
+      <div class="hint" id="ann-result" style="margin-top:8px"></div>
     </div>
   </div>
 </div>
+{% endif %}
 
 {% if role != 'uye' %}
-<!-- Дежурства персонала (зеркало расписания /дежурства из Discord) -->
-<style>
-.shift-now-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--line-2)}
-.shift-dot{width:10px;height:10px;border-radius:50%;background:#5a5346;flex:0 0 auto}
-.shift-dot.on{background:#7bd88f;box-shadow:0 0 0 0 rgba(123,216,143,.5);animation:shiftPulse 2s ease-out infinite}
-@keyframes shiftPulse{0%{box-shadow:0 0 0 0 rgba(123,216,143,.45)}70%{box-shadow:0 0 0 9px rgba(123,216,143,0)}100%{box-shadow:0 0 0 0 rgba(123,216,143,0)}}
-.shift-now-txt{font-size:13.5px;color:var(--text-2)}
-.shift-now-txt b{color:var(--text-1)}
-.shift-now-sub{font-size:11.5px;color:var(--text-3);margin-top:2px}
-.shift-today-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.shift-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:4px 11px;border-radius:999px;border:1px solid var(--line-2);color:var(--text-2)}
-.shift-chip .t{color:var(--text-3);font-variant-numeric:tabular-nums}
-.shift-chip.on{border-color:rgba(123,216,143,.4);background:rgba(123,216,143,.08)}
-.shift-manage{margin-top:10px}
-.shift-manage summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--text-3);user-select:none;list-style:none;display:flex;align-items:center;gap:7px}
-.shift-manage summary::-webkit-details-marker{display:none}
-.shift-manage summary:hover{color:var(--ac-2)}
-.shift-manage[open] summary{color:var(--ac-2);margin-bottom:10px}
-.shift-edit-row{display:grid;grid-template-columns:auto minmax(80px,1fr) auto auto;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px dashed rgba(255,255,255,.08);font-size:12.5px}
-.shift-edit-row:last-child{border-bottom:none}
-.shift-edit-day{font-weight:700;color:var(--text-2);width:28px}
-.shift-edit-name{color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.shift-edit-time{color:var(--text-3);font-variant-numeric:tabular-nums;white-space:nowrap}
-.shift-del{background:none;border:1px solid rgba(255,138,138,.35);color:#ff8a8a;border-radius:7px;width:24px;height:24px;cursor:pointer;font-size:11px}
-.shift-del:hover{background:rgba(255,138,138,.12)}
-.shift-add-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px}
-.sh-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--text-1);padding:6px 9px;font-size:12.5px;font-family:inherit}
-.sh-input:focus{outline:none;border-color:rgba(242,179,61,.5)}
-.sh-member{width:170px}.sh-time{width:58px;text-align:center}
-.sh-btn{background:rgba(242,179,61,.12);border:1px solid rgba(242,179,61,.45);color:var(--ac-2);border-radius:8px;min-width:28px;height:28px;padding:0 10px;cursor:pointer;font-size:12px;font-weight:700}
-.sh-btn:hover{filter:brightness(1.15)}
-.shift-tz-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--text-3)}
-.shift-msg{font-size:12px;color:var(--ac-2);margin-left:6px}
-</style>
-<div class="dash-box" id="shiftBox" data-reveal="up">
-  <div class="dash-box-head">
-    <div class="dash-box-title"><i class="fas fa-user-clock"></i> Дежурства</div>
-    <span class="text-mut text-xs fw-700" id="shiftTz"></span>
+<!-- Дежурства -->
+<div class="panel" id="shiftBox" style="margin-top:14px">
+  <div class="panel-head">
+    <div><h2><i class="fas fa-user-clock"></i> Дежурства</h2><div class="sub">Кто на смене сейчас и что запланировано.</div></div>
+    <a class="btn-link" href="/staff-shifts" style="margin-left:auto">Смены <i class="fas fa-arrow-right"></i></a>
+    <span class="hint" id="shiftTz"></span>
   </div>
-  <div class="dash-box-body">
+  <div class="panel-body">
     <div class="shift-now-row" id="shiftNow">
       <span class="shift-dot"></span>
       <div style="flex:1;min-width:0"><div class="sk-line" style="width:52%"></div><div class="sk-line" style="width:34%"></div></div>
     </div>
     <div class="shift-today-row" id="shiftToday"><span class="sk-chip"></span><span class="sk-chip"></span><span class="sk-chip" style="width:72px"></span></div>
     {% if role == 'admin' or role == 'owner' %}
-    <details class="shift-manage" id="shiftManage">
-      <summary><i class="fas fa-pen-to-square"></i> Управлять расписанием</summary>
-      <div id="shiftEditList"></div>
-      <div class="shift-add-row">
-        <input type="text" class="sh-input sh-member" id="shMember" list="shMemberList" placeholder="Модератор (поиск)…" autocomplete="off" aria-label="Модератор">
+    <details class="shift-manage" id="shiftManage" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+      <summary style="cursor:pointer;font-weight:600;font-size:var(--fs-md);color:var(--ac)"><i class="fas fa-pen-to-square"></i> Управлять расписанием</summary>
+      <div id="shiftEditList" style="margin-top:10px"></div>
+      <div class="shift-add-row" style="margin-top:10px">
+        <input type="text" class="form-input sh-member" id="shMember" list="shMemberList" placeholder="Модератор (поиск)…" autocomplete="off" aria-label="Модератор" style="flex:1;min-width:170px">
         <datalist id="shMemberList"></datalist>
-        <select class="sh-input" id="shWeekday" aria-label="День недели">
+        <select class="form-input" id="shWeekday" aria-label="День недели" style="width:auto">
           <option value="0">пн</option><option value="1">вт</option><option value="2">ср</option>
           <option value="3">чт</option><option value="4">пт</option><option value="5" selected>сб</option><option value="6">вс</option>
         </select>
-        <input type="text" class="sh-input sh-time" id="shStart" placeholder="18:00" aria-label="Начало">
+        <input type="text" class="form-input sh-time" id="shStart" placeholder="18:00" aria-label="Начало" style="width:82px">
         <span style="color:var(--text-3)">–</span>
-        <input type="text" class="sh-input sh-time" id="shEnd" placeholder="22:00" aria-label="Конец">
-        <button type="button" class="sh-btn" onclick="shiftAdd()" title="Добавить смену"><i class="fas fa-plus"></i></button>
+        <input type="text" class="form-input sh-time" id="shEnd" placeholder="22:00" aria-label="Конец" style="width:82px">
+        <button type="button" class="btn" onclick="shiftAdd()" title="Добавить смену"><i class="fas fa-plus"></i></button>
       </div>
-      <div class="shift-tz-row">Пояс расписания:
-        <select class="sh-input" id="shTz" aria-label="Часовой пояс"></select>
-        <button type="button" class="sh-btn" onclick="shiftTzSave()" title="Сохранить пояс"><i class="fas fa-check"></i></button>
-        <span class="shift-msg" id="shiftMsg"></span>
+      <div class="shift-tz-row" style="margin-top:10px">Пояс расписания:
+        <select class="form-input" id="shTz" aria-label="Часовой пояс" style="width:auto"></select>
+        <button type="button" class="btn" onclick="shiftTzSave()" title="Сохранить пояс"><i class="fas fa-check"></i></button>
+        <span class="hint" id="shiftMsg" style="margin-left:6px"></span>
       </div>
     </details>
     {% endif %}
@@ -462,141 +191,26 @@
 </div>
 {% endif %}
 
-<!-- Two columns: Recent activity + Login лог -->
-<div class="dash-cols">
-  <div class="dash-box">
-    <div class="dash-box-head">
-      <div class="dash-box-title"><i class="fas fa-history"></i> Последние действия</div>
-      <a href="/logs" class="text-accent text-xs fw-700" >Все →</a>
-    </div>
-    <div class="dash-box-body" id="recent-activity">
-      <div class="centered-spinner"><i class="fas fa-spinner fa-spin"></i></div>
-    </div>
-  </div>
-
-  {% if role == 'owner' %}
-  <div class="dash-box">
-    <div class="dash-box-head">
-      <div class="dash-box-title"><i class="fas fa-sign-in-alt"></i> Входы в панель</div>
-      <a href="/panel-logs" class="text-accent text-xs fw-700" >Все →</a>
-    </div>
-    <div class="dash-box-body" id="login-log">
-      <div class="centered-spinner"><i class="fas fa-spinner fa-spin"></i></div>
-    </div>
-  </div>
-  {% endif %}
-</div>
-
-{% if role == 'owner' %}
-<!-- Send notification + announcement (owner only) -->
-<div class="grid-2">
-  <div class="dash-card quick-action">
-    <div class="dash-box-title" ><i class="fas fa-bell"></i> Отправить уведомление</div>
-    <label class="form-label">Discord ID</label>
-    <input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input" aria-label="123456789012345678">
-    <label class="form-label">Заголовок</label>
-    <input type="text" id="notif-title" placeholder="Заголовок" class="form-input" aria-label="Заголовок">
-    <label class="form-label">Сообщение</label>
-    <textarea id="notif-message" class="form-input"   style="min-height: 70px;" aria-label="Текст уведомления"></textarea>
-    <button type="button" id="btnSendNotif" class="form-btn"><i class="fas fa-paper-plane"></i> Отправить</button>
-    <div id="notif-result" class="result-msg"></div>
-  </div>
-  <div class="dash-card quick-action">
-    <div class="dash-box-title" ><i class="fas fa-bullhorn"></i> Опубликовать объявление</div>
-    <label class="form-label">Заголовок</label>
-    <input type="text" id="ann-title" placeholder="Заголовок" class="form-input" aria-label="Заголовок">
-    <label class="form-label">Содержание</label>
-    <textarea id="ann-message" class="form-input"   style="min-height: 70px;" aria-label="Текст объявления"></textarea>
-    <label class="form-label">Куда публиковать</label>
-    <select id="ann-channel" class="form-input" aria-label="Куда публиковать объявление">
-      <option value="">Только в ленте панели</option>
-    </select>
-    <button type="button" id="btnSendAnn" class="form-btn"><i class="fas fa-bullhorn"></i> Опубликовать</button>
-    <div id="ann-result" class="result-msg"></div>
-  </div>
-</div>
-{% endif %}
-
-<style>
-/* Result message */
-.result-msg {
-  margin-top: 8px;
-  display: none;
-  font-size: var(--fs-sm) !important;
-  font-weight: 600 !important;
-  padding: 8px 12px;
-  border-radius: 8px;
-}
-.result-msg.show { display: block; }
-.result-msg.ok  { background: rgba(74, 222, 128, 0.10); color: var(--ok); border: 1px solid rgba(74, 222, 128, 0.30); }
-.result-msg.err { background: rgba(248, 113, 113, 0.10); color: var(--err); border: 1px solid rgba(248, 113, 113, 0.30); }
-</style>
-
 <script>
 (function () {
   'use strict';
-
   function $(id) { return document.getElementById(id); }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function fmtDate(iso) {
     if (!iso) return '—';
-    try {
-      var d = new Date(iso);
-      var now = new Date();
-      var diff = (now - d) / 1000;
-      if (diff < 60) return 'только что';
-      if (diff < 3600) return Math.floor(diff / 60) + ' мин назад';
-      if (diff < 86400) return Math.floor(diff / 3600) + ' ч назад';
-      return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-    } catch (e) { return '—'; }
-  }
-  function animateNumber(el, target) {
-    if (!el) return;
-    var start = parseInt((el.textContent || '0').replace(/\D/g, ''), 10) || 0;
-    if (start === target) { el.firstChild ? el.firstChild.nodeValue = target.toLocaleString() : el.textContent = target.toLocaleString(); return; }
-    var duration = 800;
-    var startTime = null;
-    function step(ts) {
-      if (!startTime) startTime = ts;
-      var p = Math.min(1, (ts - startTime) / duration);
-      var eased = 1 - Math.pow(1 - p, 3);
-      var val = Math.round(start + (target - start) * eased);
-      if (el.firstChild) el.firstChild.nodeValue = val.toLocaleString();
-      else el.textContent = val.toLocaleString();
-      if (p < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }
-  function showToast(msg, ok) {
-    var t = document.createElement('div');
-    t.className = 'toast ' + (ok ? 'ok' : 'err');
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(function () {
-      t.style.transition = 'all 0.3s ease';
-      t.style.opacity = '0';
-      t.style.transform = 'translateX(20px)';
-      setTimeout(function () { t.remove(); }, 300);
-    }, 2200);
-  }
-  function setResult(el, ok, msg) {
-    if (!el) return;
-    el.className = 'result-msg show ' + (ok ? 'ok' : 'err');
-    el.textContent = msg;
-    setTimeout(function () { el.className = 'result-msg'; }, 3000);
+    try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return '—'; }
   }
 
-  // ── Greeting by time ──
-  function setGreeting() {
+  /* Приветствие по времени */
+  (function setGreeting() {
     var h = new Date().getHours();
     var g = h < 6 ? 'Доброй ночи' : h < 12 ? 'Доброе утро' : h < 18 ? 'Добрый день' : 'Добрый вечер';
     var el = $('heroGreeting');
     if (el) el.innerHTML = '<span class="dot"></span> ' + g + ', {{ username }}';
-  }
+  })();
 
-  // ── Load main guild info into hero (name, icon, welcome msg) ──
+  /* Информация об основном сервере */
   async function loadGuildInfo() {
     try {
       var guilds = await window.fetchCachedJSON('/api/guilds');
@@ -608,60 +222,40 @@
       }
       if (!g) g = guilds[0];
       if (!g || !g.name) return;
-      var av = $('heroGuildAv');
-      if (av && g.icon) av.innerHTML = '<img src="' + esc(g.icon) + '" alt="" onerror="this.parentNode.innerHTML=\'<i class=&quot;fas fa-bolt&quot;></i>\'">';
       var t = $('heroTitle');
       if (t) t.textContent = 'Добро пожаловать в ' + g.name;
       var m = $('heroWelcomeMsg');
-      if (m) m.textContent = 'Добро пожаловать в ' + g.name + '! Логи, демки, тикеты и быстрые действия — в одном месте. Управляй сервером без лишних кликов.';
-    } catch (e) { /* keep defaults */ }
+      if (m) m.textContent = 'Логи, демки, тикеты и быстрые действия — в одном месте. Управляйте «' + g.name + '» без лишних кликов.';
+    } catch (e) { /* остаёмся с дефолтом */ }
   }
 
-  // ── Main stats ──
+  /* Основная статистика */
   async function loadStats() {
     try {
       var d = await window.fetchCachedJSON('/api/stats');
-      var gEl = $('guild-count');
-      var uEl = $('user-count');
-      var lEl = $('latency');
-      var sEl = $('status');
-
-      animateNumber(gEl, d.guilds || 0);
-      animateNumber(uEl, d.users || 0);
+      $('guild-count').textContent = (d.guilds || 0).toLocaleString();
+      $('user-count').textContent = (d.users || 0).toLocaleString();
+      $('sum-online').textContent = (d.online || 0).toLocaleString();
       var lat = d.latency || 0;
-      lEl.innerHTML = lat.toLocaleString() + '<small>ms</small>';
-
-      // Summary strip
-      var sm = $('sum-members'), so = $('sum-online'), sl = $('sum-latency');
-      if (sm) sm.textContent = (d.users || 0).toLocaleString();
-      if (so) so.textContent = (d.online || 0).toLocaleString();
-      if (sl) sl.innerHTML = Math.round(lat) + '<small>ms</small>';
-
-      // Живой датчик пинга
+      $('latency').innerHTML = lat.toLocaleString() + '<small style="font-size:12px;color:var(--text-3)">ms</small>';
+      var sEl = $('status');
+      if (d.error) { sEl.textContent = 'ОФФЛАЙН'; sEl.style.color = 'var(--err)'; }
+      else { sEl.textContent = 'ОНЛАЙН'; sEl.style.color = 'var(--ok)'; }
       if (window.drawDonut) {
         var ppct = Math.max(0, Math.min(100, Math.round(lat / 200 * 100)));
-        window.drawDonut(document.getElementById('pingDonut'), ppct, lat < 80 ? '#4ade80' : lat < 150 ? '#fbbf24' : '#f87171');
-        var pcap = document.getElementById('pingCap');
-        if (pcap) { pcap.textContent = lat + ' ms'; pcap.className = 'donut-cap ' + (lat < 80 ? 'ok' : lat < 150 ? 'warn' : 'bad'); }
-      }
-
-      if (d.error) {
-        sEl.textContent = 'ОФФЛАЙН';
-        sEl.style.color = 'var(--err)';
-      } else {
-        sEl.textContent = 'ОНЛАЙН';
-        sEl.style.color = 'var(--ok)';
+        window.drawDonut($('pingDonut'), ppct, lat < 80 ? '#16a34a' : lat < 150 ? '#d97706' : '#dc2626');
+        var pcap = $('pingCap');
+        if (pcap) pcap.textContent = lat + ' ms';
+        var pct = d.users ? Math.round((d.online || 0) / d.users * 100) : 0;
+        window.drawDonut($('onlineDonut'), pct, '#4f46e5');
       }
     } catch (e) {
       var sEl2 = $('status');
-      if (sEl2) {
-        sEl2.textContent = 'ОФФЛАЙН';
-        sEl2.style.color = 'var(--err)';
-      }
+      if (sEl2) { sEl2.textContent = 'ОФФЛАЙН'; sEl2.style.color = 'var(--err)'; }
     }
   }
 
-  // ── Quick stats ──
+  /* Модерация сегодня */
   async function loadQuickStats() {
     try {
       var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
@@ -673,72 +267,67 @@
         return a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1;
       }).length;
       $('quick-stats').innerHTML =
-        '<div class="quick-item"><h3>' + logs.length + '</h3><p>Мод. действий</p></div>' +
-        '<div class="quick-item"><h3>' + warns.length + '</h3><p>Предупр.</p></div>' +
-        '<div class="quick-item"><h3>' + bans + '</h3><p>Банов</p></div>' +
-        '<div class="quick-item"><h3>' + kicks + '</h3><p>Киков</p></div>' +
-        '<div class="quick-item"><h3>' + muts + '</h3><p>Мутов</p></div>' +
-        '<div class="quick-item"><h3><i class="fas fa-check"></i></h3><p>Активен</p></div>';
+        '<div class="kpi"><div class="kpi-icon"><i class="fas fa-gavel"></i></div><div class="kpi-copy"><div class="kpi-value">' + logs.length + '</div><div class="kpi-label">Мод. действий</div></div></div>' +
+        '<div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value">' + warns.length + '</div><div class="kpi-label">Варнов</div></div></div>' +
+        '<div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value">' + bans + '</div><div class="kpi-label">Банов</div></div></div>' +
+        '<div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value">' + kicks + '</div><div class="kpi-label">Киков</div></div></div>' +
+        '<div class="kpi"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value">' + muts + '</div><div class="kpi-label">Мутов</div></div></div>';
     } catch (e) {
-      $('quick-stats').innerHTML = '<div class="quick-grid-empty" >Не удалось загрузить</div>';
+      $('quick-stats').innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить</span></div>';
     }
   }
 
-  // ── Recent activity ──
+  /* Последние действия */
   async function loadRecentActivity() {
     try {
       var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
       var box = $('recent-activity');
       if (!logs.length) {
-        box.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Пока действий нет</p></div>';
+        box.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><span>Пока действий нет</span></div>';
         return;
       }
+      var TONE = { ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral', timeout: 'neutral', unban: 'ok', unmute: 'ok' };
       var rows = logs.slice(0, 12).map(function (log) {
         var a = (log.action || '?').toLowerCase();
-        var cls = a === 'ban' ? 'action-badge-err' : (a === 'warn' || a.indexOf('mute') !== -1) ? 'action-badge-warn' : (a.indexOf('unban') !== -1 || a.indexOf('unmute') !== -1) ? 'action-badge-ok' : 'action-badge-info';
         var tg = log.user_name || log.target_name || log.user_id || '—';
         var m = log.mod_name || log.mod_id || '—';
         var r = log.reason || '—';
-        return '<tr><td><span class="action-badge ' + cls + '">' + esc(log.action || '?') + '</span></td>' +
-               '<td>' + esc(tg) + '</td>' +
-               '<td class="text-2">' + esc(m) + '</td>' +
-               '<td class="text-3"   style="max-width: 160px; overflow: hidden;">' + esc(r) + '</td>' +
-               '<td class="text-3" >' + esc(fmtDate(log.timestamp)) + '</td></tr>';
+        return '<tr><td><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(log.action || '?') + '</span></td>' +
+          '<td>' + esc(tg) + '</td>' +
+          '<td>' + esc(m) + '</td>' +
+          '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(r) + '">' + esc(r) + '</td>' +
+          '<td class="muted">' + esc(fmtDate(log.timestamp)) + '</td></tr>';
       }).join('');
-      box.innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      box.innerHTML = '<table class="data-table"><thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
     } catch (e) {
-      $('recent-activity').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" ></i><p >Не удалось загрузить</p></div>';
+      $('recent-activity').innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить</span></div>';
     }
   }
 
-  // ── Login лог ──
+  /* Входы в панель */
   async function loadLoginLog() {
     var box = $('login-log');
     if (!box) return;
     try {
       var logs = await window.fetchCachedJSON('/api/login-log');
       if (!logs.length) {
-        box.innerHTML = '<div class="empty-state"><i class="fas fa-user-clock"></i><p>Пока входов нет</p></div>';
+        box.innerHTML = '<div class="empty"><i class="fas fa-user-clock"></i><span>Пока входов нет</span></div>';
         return;
       }
-      var roleColors = { owner: 'var(--err)', admin: 'var(--ac)', mod: 'var(--ok)', uye: 'var(--text-3)' };
+      var roleTones = { owner: 'danger', admin: 'security', mod: 'ok', uye: 'neutral' };
       box.innerHTML = logs.slice(0, 15).map(function (l) {
         var t = fmtDate(l.timestamp);
-        var rc = roleColors[l.roles || l.role] || 'var(--text-3)';
         var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
-        return '<div class="login-item">' +
-          '<img alt="" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-          '<div class="login-item-info">' +
-            '<div class="login-item-name">' + esc(l.username) + '</div>' +
-            '<div class="login-item-time">' + esc(t) + '</div>' +
-          '</div>' +
-          '<span class="role-chip" >' + esc(((l.roles || l.role) || '').toUpperCase()) + '</span>' +
-        '</div>';
+        return '<div class="feed-item" style="border-bottom:1px solid var(--line)">' +
+          '<img alt="" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:30px;height:30px;border-radius:50%;flex:0 0 30px">' +
+          '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(l.username) + '</div>' +
+          '<div class="feed-item-time">' + esc(t) + '</div></div>' +
+          '<span class="badge ' + (roleTones[l.roles || l.role] || 'neutral') + '">' + esc(((l.roles || l.role) || '').toUpperCase()) + '</span></div>';
       }).join('');
-    } catch (e) { /* skip */ }
+    } catch (e) { /* пропускаем */ }
   }
 
-  // ── Threat index ──
+  /* Индекс угроз */
   async function loadThreatIndex() {
     try {
       var res = await fetch('/api/security/threat-index');
@@ -746,43 +335,28 @@
       if (!d || !d.success) return;
       var score = d.threat_score || 15;
       var level = d.threat_level || 'Низкая';
-      var color = d.threat_color || '#4ade80';
+      var color = d.threat_color || '#16a34a';
       var active = d.lockdown_active || false;
-
       $('threatScoreVal').textContent = score + '/100';
       var badge = $('threatLevelBadge');
       badge.textContent = level;
       badge.style.color = color;
-      badge.style.borderColor = color + '55';
-      badge.style.background = color + '15';
-
-      $('threatIconWrap').style.borderColor = color;
-      $('threatIconWrap').style.background = color + '15';
-      $('threatIcon').style.color = color;
+      badge.style.borderColor = color;
+      badge.style.background = color + '22';
+      $('threatIconWrap').style.background = color + '22';
+      $('threatIconWrap').style.color = color;
       $('threatFill').style.width = Math.min(100, score) + '%';
       $('threatFill').style.background = color;
-
-      updateThreatSummary();
-
       var btn = $('btnLockdown');
       var btnText = $('btnLockdownText');
-      if (active) {
-        btn.classList.add('danger');
-        btnText.textContent = 'Активен';
-      } else {
-        btn.classList.remove('danger');
-        btnText.textContent = 'Lockdown';
+      if (btn && btnText) {
+        btn.className = 'btn ' + (active ? 'btn-danger' : '');
+        btnText.textContent = active ? 'Lockdown активен' : 'Lockdown';
       }
-    } catch (e) { /* skip */ }
+    } catch (e) { /* пропускаем */ }
   }
 
-  // ── CPU / RAM / online gauges + threat summary ──
-  function updateThreatSummary() {
-    try {
-      var t = $('threatScoreVal'), s = $('sum-threat');
-      if (t && s) s.textContent = t.textContent;
-    } catch (e) {}
-  }
+  /* Здоровье бота */
   async function loadHealth() {
     var health = {};
     try { health = await fetch('/api/bot/health').then(function (r) { return r.json(); }); } catch (e) {}
@@ -791,31 +365,20 @@
     var ram = cur.memory_percent != null ? cur.memory_percent : (cur.ram_percent != null ? cur.ram_percent : null);
     if (window.drawDonut) {
       if (cpu != null) {
-        window.drawDonut(document.getElementById('cpuDonut'), Math.min(100, cpu), cpu < 60 ? '#4ade80' : cpu < 85 ? '#fbbf24' : '#f87171');
-        var cc = document.getElementById('cpuCap');
-        if (cc) { cc.textContent = Math.round(cpu) + '%'; cc.className = 'donut-cap ' + (cpu < 60 ? 'ok' : cpu < 85 ? 'warn' : 'bad'); }
+        window.drawDonut($('cpuDonut'), Math.min(100, cpu), cpu < 60 ? '#16a34a' : cpu < 85 ? '#d97706' : '#dc2626');
+        $('cpuCap').textContent = Math.round(cpu) + '%';
       }
       if (ram != null) {
-        window.drawDonut(document.getElementById('ramDonut'), Math.min(100, ram), ram < 70 ? '#38bdf8' : ram < 90 ? '#fbbf24' : '#f87171');
-        var rc = document.getElementById('ramCap');
-        if (rc) { rc.textContent = Math.round(ram) + '%'; rc.className = 'donut-cap ' + (ram < 70 ? 'ok' : ram < 90 ? 'warn' : 'bad'); }
+        window.drawDonut($('ramDonut'), Math.min(100, ram), ram < 70 ? '#0284c7' : ram < 90 ? '#d97706' : '#dc2626');
+        $('ramCap').textContent = Math.round(ram) + '%';
       }
     }
-    try {
-      var st = await window.fetchCachedJSON('/api/stats');
-      if (st && st.users && window.drawDonut) {
-        var pct = Math.round((st.online || 0) / st.users * 100);
-        window.drawDonut(document.getElementById('onlineDonut'), pct, '#a78bfa');
-        var oc = document.getElementById('onlineCap');
-        if (oc) oc.textContent = pct + '%';
-      }
-    } catch (e) {}
   }
 
   async function toggleLockdown() {
     var btn = $('btnLockdown');
     if (!btn) return;
-    btn.disabled = true;
+    window.qualitySetLoading(btn, true);
     try {
       var res = await fetch('/api/security/toggle-lockdown', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -823,29 +386,40 @@
       });
       var d = await res.json();
       if (d && d.success) {
-        showToast(d.message || 'Статус карантина изменён', true);
+        window.showToast(d.message || 'Статус карантина изменён', true);
         loadThreatIndex();
       } else {
-        showToast((d && d.error) || 'Ошибка', false);
+        window.showToast((d && d.error) || 'Ошибка', false);
       }
-    } catch (e) { showToast('Ошибка: ' + e.message, false); }
-    btn.disabled = false;
+    } catch (e) { window.showToast('Ошибка: ' + e.message, false); }
+    window.qualitySetLoading(btn, false);
   }
 
-  // ── Send notification ──
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('#btnLockdown')) toggleLockdown();
+  });
+
+  /* ── Уведомления и объявления ───────────────────────── */
+  function setResult(el, ok, msgText) {
+    if (!el) return;
+    el.className = 'hint ' + (ok ? '' : 'error');
+    el.textContent = msgText;
+    if (msgText) setTimeout(function () { el.textContent = ''; }, 4000);
+  }
+
   async function sendNotification() {
     var id = $('notif-discord-id').value.trim();
     var title = $('notif-title').value.trim();
-    var msg = $('notif-message').value.trim();
+    var msgText = $('notif-message').value.trim();
     var el = $('notif-result');
-    if (!id || !msg) { showToast('Discord ID и сообщение обязательны!', false); return; }
+    if (!id || !msgText) { window.showToast('Discord ID и сообщение обязательны!', false); return; }
     try {
       var d = await fetch('/api/send-notification', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discord_id: id, title: title, message: msg })
+        body: JSON.stringify({ discord_id: id, title: title, message: msgText })
       }).then(function (r) { return r.json(); });
-      setResult(el, d.success, d.success ? 'Уведомление отправлено!' : ((d.error || 'Ошибка')));
-    } catch (e) { showToast('Ошибка: ' + e.message, false); }
+      setResult(el, d.success, d.success ? 'Уведомление отправлено!' : (d.error || 'Ошибка'));
+    } catch (e) { window.showToast('Ошибка: ' + e.message, false); }
   }
 
   async function loadAnnChannels() {
@@ -870,14 +444,14 @@
         o.textContent = '#' + c.name;
         sel.appendChild(o);
       });
-    } catch (e) { /* список каналов анонсов не загрузился — остаётся лента панели */ }
+    } catch (e) { /* остаётся только лента панели */ }
   }
 
   async function sendAnnouncement() {
     var title = $('ann-title').value.trim();
-    var msg = $('ann-message').value.trim();
+    var msgText = $('ann-message').value.trim();
     var el = $('ann-result');
-    if (!title || !msg) { showToast('Заголовок и содержание обязательны!', false); return; }
+    if (!title || !msgText) { window.showToast('Заголовок и содержание обязательны!', false); return; }
     var sel = $('ann-channel');
     var channelId = sel ? sel.value : '';
     var guildId = '';
@@ -887,28 +461,32 @@
     try {
       var d = await fetch('/api/send-announcement', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title, message: msg, guild_id: guildId, channel_id: channelId })
+        body: JSON.stringify({ title: title, message: msgText, guild_id: guildId, channel_id: channelId })
       }).then(function (r) { return r.json(); });
       var okFlag = d.success ? !(channelId && d.delivered === false) : false;
-      setResult(el, okFlag, d.success ? (d.message || 'Объявление опубликовано!') : ((d.error || 'Ошибка')));
-    } catch (e) { showToast('Ошибка: ' + e.message, false); }
+      setResult(el, okFlag, d.success ? (d.message || 'Объявление опубликовано!') : (d.error || 'Ошибка'));
+    } catch (e) { window.showToast('Ошибка: ' + e.message, false); }
   }
 
-  function bindButtons() {
-    var bl = $('btnLockdown');
-    if (bl) bl.addEventListener('click', toggleLockdown);
-    var bn = $('btnSendNotif');
-    if (bn) bn.addEventListener('click', sendNotification);
-    var ba = $('btnSendAnn');
-    if (ba) ba.addEventListener('click', sendAnnouncement);
-  }
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('#btnSendNotif')) sendNotification();
+    if (e.target.closest('#btnSendAnn')) sendAnnouncement();
+  });
 
+  /* ── Дежурства ───────────────────────────────────────── */
   var SHIFT_EMPTY_HINT = {% if role == 'admin' or role == 'owner' %}'добавьте первую смену в редакторе ниже'{% else %}'задайте смены командой /дежурства'{% endif %};
+
+  function fmtLeft(iso) {
+    var ms = new Date(iso).getTime() - Date.now();
+    if (ms <= 0) return '0 мин';
+    var h = Math.floor(ms / 3600000), m = Math.floor(ms % 3600000 / 60000);
+    return h ? h + ' ч ' + m + ' мин' : m + ' мин';
+  }
 
   async function loadShifts() {
     var nowBox = $('shiftNow');
     var todayBox = $('shiftToday');
-    if (!nowBox || !todayBox) return;  // uye — виджета нет в DOM
+    if (!nowBox || !todayBox) return;
     try {
       var guilds = await window.fetchCachedJSON('/api/guilds');
       if (!Array.isArray(guilds) || !guilds.length) return;
@@ -948,13 +526,13 @@
 
   function renderShiftEditor(d) {
     var list = $('shiftEditList');
-    if (!list) return;  // только admin/owner
+    if (!list) return;
     list.innerHTML = (d.all || []).map(function (s) {
       return '<div class="shift-edit-row"><span class="shift-edit-day">' + esc(s.weekday_ru) + '</span>' +
         '<span class="shift-edit-name">' + esc(s.name) + '</span>' +
         '<span class="shift-edit-time">' + esc(s.start) + '–' + esc(s.end) + '</span>' +
-        '<button type="button" class="shift-del" onclick="shiftRemove(\'' + esc(s.id) + '\')" title="Убрать смену"><i class="fas fa-xmark"></i></button></div>';
-    }).join('') || '<div class="shift-now-sub" style="padding:4px 8px">Смен пока нет — добавьте первую ниже.</div>';
+        '<button type="button" class="btn btn-sm btn-ghost" onclick="shiftRemove(\'' + esc(s.id) + '\')" title="Убрать смену"><i class="fas fa-xmark" style="color:var(--err)"></i></button></div>';
+    }).join('') || '<div class="hint" style="padding:4px 0">Смен пока нет — добавьте первую ниже.</div>';
     var tzSel = $('shTz');
     if (tzSel && !tzSel.dataset.ready) {
       var opts = '';
@@ -1041,85 +619,22 @@
     if (r.ok && d.success) { shiftMsgOk('Пояс сохранён'); loadShifts(); }
   }
 
-  function fmtLeft(iso) {
-    var ms = new Date(iso).getTime() - Date.now();
-    if (ms <= 0) return '0 мин';
-    var h = Math.floor(ms / 3600000), m = Math.floor(ms % 3600000 / 60000);
-    return h ? h + ' ч ' + m + ' мин' : m + ' мин';
+  loadGuildInfo();
+  loadStats();
+  loadQuickStats();
+  loadRecentActivity();
+  loadLoginLog();
+  loadThreatIndex();
+  loadHealth();
+  loadAnnChannels();
+  loadShifts();
+  bindShiftEditor();
+  if (window.setLiveRefresh) {
+    window.setLiveRefresh(function () { loadStats(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 10000);
+    window.setLiveRefresh(loadShifts, 30000);
+  } else {
+    setInterval(loadShifts, 30000);
   }
-
-  function init() {
-    setGreeting();
-    bindButtons();
-    loadGuildInfo();
-    loadStats();
-    loadQuickStats();
-    loadRecentActivity();
-    loadLoginLog();
-    loadThreatIndex();
-    loadHealth();
-    loadAnnChannels();
-    loadShifts();
-    bindShiftEditor();
-    if (window.setLiveRefresh) {
-      window.setLiveRefresh(loadStats, 2500);
-      window.setLiveRefresh(loadQuickStats, 5000);
-      window.setLiveRefresh(loadRecentActivity, 2500);
-      window.setLiveRefresh(loadLoginLog, 2500);
-      window.setLiveRefresh(loadThreatIndex, 5000);
-      window.setLiveRefresh(loadHealth, 3000);
-      window.setLiveRefresh(loadShifts, 30000);
-    } else {
-      setInterval(loadStats, 2500);
-      setInterval(loadQuickStats, 5000);
-      setInterval(loadRecentActivity, 2500);
-      setInterval(loadLoginLog, 2500);
-      setInterval(loadThreatIndex, 5000);
-      setInterval(loadHealth, 3000);
-      setInterval(loadShifts, 30000);
-    }
-    setInterval(setGreeting, 60000);
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
-
-  window.toggleLockdown = toggleLockdown;
 })();
 </script>
-
-<style>
-/* ── Dashboard polish (аддитивный слой, JS не тронут) ─────────────── */
-.welcome-hero { border: 1px solid var(--ac-line) !important; box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255,255,255,.06) !important; }
-.hero-chips .chip { backdrop-filter: blur(8px); border-color: var(--ac-line) !important; transition: all .18s var(--ease); }
-.hero-chips .chip:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.3); background: var(--ac-soft) !important; }
-.hero-guild-av { box-shadow: 0 6px 22px var(--ac-glow); transition: transform .25s var(--ease-spring); }
-.welcome-hero:hover .hero-guild-av { transform: scale(1.05) rotate(-4deg); }
-
-.dash-summary .sum-item { transition: all .18s var(--ease); }
-.dash-summary .sum-item:hover { transform: translateY(-2px); border-color: var(--ac-line) !important; }
-.sum-ico { box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 4px 14px rgba(0,0,0,.25); }
-
-.stat-card-big:hover { transform: translateY(-3px) !important; box-shadow: var(--shadow-md), 0 0 0 1px var(--ac-line) !important; }
-.stat-card-big.purple::after { background: radial-gradient(circle at top right, color-mix(in srgb, var(--violet) 20%, transparent) 0%, transparent 70%); }
-.stat-card-big.pink::after   { background: radial-gradient(circle at top right, color-mix(in srgb, var(--pink) 20%, transparent) 0%, transparent 70%); }
-.stat-card-big.cyan::after   { background: radial-gradient(circle at top right, color-mix(in srgb, var(--cyan) 20%, transparent) 0%, transparent 70%); }
-.stat-card-big.green::after  { background: radial-gradient(circle at top right, color-mix(in srgb, var(--ok) 20%, transparent) 0%, transparent 70%); }
-.stat-card-big .stat-value { text-shadow: 0 2px 16px rgba(0,0,0,.30); }
-
-.donut-card { transition: all .18s var(--ease); }
-.donut-card:hover { transform: translateY(-2px); border-color: var(--ac-line) !important; }
-.donut-card:hover .donut { filter: drop-shadow(0 0 10px var(--ac-glow)); }
-.threat-card:hover { border-color: var(--ac-line) !important; }
-.threat-bar-fill { transition: width .6s var(--ease); }
-
-.dash-box-head { border-bottom: 1px solid transparent !important; border-image: linear-gradient(90deg, var(--ac-line), transparent 70%) 1 !important; }
-.quick-grid > *, .dash-card.quick-action { transition: all .18s var(--ease); }
-.quick-grid > *:hover, .dash-card.quick-action:hover { transform: translateY(-2px); border-color: var(--ac-line) !important; }
-
-@media (prefers-reduced-motion: reduce) {
-  .welcome-hero:hover .hero-guild-av { transform: none; }
-  .dash-summary .sum-item:hover, .stat-card-big:hover { transform: none !important; }
-}
-</style>
 {% endblock %}

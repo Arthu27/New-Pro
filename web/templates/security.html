@@ -1,18 +1,77 @@
 {% extends "base.html" %}
-{% block title %}Security Radar — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-radar"></i> Security Radar{% endblock %}
+{% block title %}Центр безопасности · Модерация — Aether{% endblock %}
+{% block page_title %}Центр безопасности{% endblock %}
 {% block content %}
 
-<style>[data-theme="light"] .ops-security-radar{color-scheme:light}</style>
-<div class="ops-canvas ops-security-radar" data-room-kind="radar" data-room-version="3">
-  <div class="ops-room-label"><span>PRT / SECURITY RADAR</span><b>Радар угроз</b><em>проверить риск до реального инцидента</em></div>
-  <section class="ops-radar-overview"><div class="ops-radar-scope"><span class="ops-radar-ring r1"></span><span class="ops-radar-ring r2"></span><span class="ops-radar-ring r3"></span><i class="fas fa-shield-halved"></i><b></b></div><div class="ops-radar-copy"><span class="ops-kicker">ACTIVE THREAT MODEL</span><h2>Защитный периметр</h2><p>Сканеры ссылок, профилей и спам-волн используют те же правила, что работают внутри бота.</p></div><div class="sc-kpis ops-radar-kpis" id="scKpis"><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div></div></section>
-  <section class="ops-radar-policy" id="scNewPanel" style="display:none"><div><span class="ops-kicker">NEW ACCOUNT POLICY</span><h2>Барьер новых аккаунтов</h2></div><label class="ops-field"><span>Возраст, дней</span><input id="scDays" type="number" min="1" max="365"></label><label class="ops-field"><span>Реакция</span><select id="scAction"><option value="warn">Только сигнал</option><option value="kick">Исключить</option><option value="ban">Заблокировать</option></select></label><button type="button" class="ops-primary" id="scNewSave"><i class="fas fa-floppy-disk"></i> Применить</button><div class="sc-msg" id="scNewMsg"></div></section>
-  <div class="ops-radar-grid">
-    <section class="ops-radar-module ops-radar-link"><header><i class="fas fa-link-slash"></i><div><span>VECTOR 01</span><h3>Сканер ссылок</h3></div></header><p>Проверяет точные домены и поддомены по боевому справочнику.</p><div class="ops-inline"><input id="scScanText" placeholder="Вставьте подозрительный текст"><button type="button" class="ops-primary" id="scScan"><i class="fas fa-radar"></i> Скан</button></div><div class="sc-result" id="scScanRes"></div></section>
-    <section class="ops-radar-module ops-radar-fake"><header><i class="fas fa-user-secret"></i><div><span>VECTOR 02</span><h3>Модель фейка</h3></div></header><p>Соберите профиль и получите реальный risk-score до входа пользователя.</p><div class="ops-form-grid"><label class="ops-field"><span>Возраст</span><input id="scFakeAge" type="number" min="0" max="3650" placeholder="дней"></label><label class="ops-field"><span>Имя</span><input id="scFakeName" placeholder="Display name"></label><label class="ops-field"><span>Аватар</span><select id="scFakeAva"><option value="1">Стандартный</option><option value="0">Собственный</option></select></label></div><button type="button" class="ops-secondary" id="scFake"><i class="fas fa-flask"></i> Рассчитать</button><div id="scFakeRes"></div></section>
-    <section class="ops-radar-module ops-radar-spam"><header><i class="fas fa-bolt"></i><div><span>VECTOR 03</span><h3>Спам-волна</h3></div></header><p>Симуляция повторяющихся сообщений без отправки в Discord.</p><div class="ops-inline"><input id="scSpamText" value="зайди на мой сайт" placeholder="Текст волны"><select id="scSpamN"><option value="3">3 раза</option><option value="5" selected>5 раз</option><option value="8">8 раз</option><option value="12">12 раз</option></select><button type="button" class="ops-primary" id="scSpam"><i class="fas fa-forward-fast"></i> Прогон</button></div><div id="scSpamRes"></div></section>
-    <section class="ops-radar-module ops-radar-rules"><header><i class="fas fa-book-skull"></i><div><span>INTEL BASE</span><h3>Справочник сигналов</h3></div></header><div class="sc-rules" id="scRules"></div><button type="button" class="ops-secondary" id="scCsv"><i class="fas fa-file-csv"></i> Экспорт правил</button></section>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Защита</div>
+    <h1>Центр безопасности</h1>
+    <p class="lead">Сводный контур защиты: политики, лаборатория проверок и экспорт отчёта.</p>
+  </div>
+  <div class="page-head-actions">
+    <a class="btn" id="scCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузка CSV</a>
+  </div>
+</div>
+
+<div class="panel" style="margin-bottom:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-shield-halved"></i> Политики защиты</h2>
+    <div class="sub">Каждый контур включается и выключается отдельно.</div></div></div>
+  <div class="panel-body">
+    <div class="grid-3" id="scKpis" style="gap:12px">
+      <div class="empty" style="grid-column:1/-1"><i class="fas fa-circle-notch fa-spin"></i><span>Загружаем контуры</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-vial"></i> Лаборатория</h2>
+      <div class="sub">Сухие прогоны без последствий: ссылки, фейк-профили, спам-волны.</div></div></div>
+    <div class="panel-body">
+      <label class="form-group"><span class="form-label">Скан ссылки</span>
+        <div class="row"><input class="form-input" id="scScanText" placeholder="Вставьте текст со ссылкой" style="flex:1"><button type="button" class="btn" id="scScan"><i class="fas fa-link"></i> Проверить</button></div></label>
+      <div class="alert" id="scScanRes" style="display:none"></div>
+
+      <label class="form-group"><span class="form-label">Модель фейк-профиля</span>
+        <div class="row">
+          <input class="form-input" id="scFakeAge" type="number" value="3" min="0" placeholder="возраст, дн" style="max-width:130px">
+          <input class="form-input" id="scFakeName" placeholder="имя профиля" style="flex:1">
+          <select class="form-input" id="scFakeAva" style="max-width:180px"><option value="0">свой аватар</option><option value="1">дефолтный аватар</option></select>
+          <button type="button" class="btn" id="scFake"><i class="fas fa-user-secret"></i> Оценить</button>
+        </div></label>
+      <div id="scFakeRes"></div>
+
+      <label class="form-group"><span class="form-label">Симуляция спам-волны</span>
+        <div class="row">
+          <input class="form-input" id="scSpamText" placeholder="текст повторяемого сообщения" style="flex:1">
+          <input class="form-input" id="scSpamN" type="number" value="5" min="1" style="max-width:90px">
+          <button type="button" class="btn" id="scSpam"><i class="fas fa-water"></i> Прогнать</button>
+        </div></label>
+      <div id="scSpamRes"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-shield-virus"></i> Правила и новые аккаунты</h2>
+      <div class="sub">Списки вредоносных доменов и паттернов, политика новичков.</div></div></div>
+    <div class="panel-body">
+      <div id="scRules"></div>
+      <div id="scNewPanel" {% if not can_edit %}hidden{% endif %} style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <div class="section-title"><i class="fas fa-user-clock"></i> Политика новых аккаунтов</div>
+        <div class="form-row">
+          <label class="form-group"><span class="form-label">Возраст аккаунта, дней</span><input class="form-input" id="scDays" type="number" min="0"></label>
+          <label class="form-group"><span class="form-label">Действие</span>
+            <select class="form-input" id="scAction">
+              <option value="alert">Только тревога</option>
+              <option value="kick">Кик</option>
+              <option value="ban">Бан</option>
+            </select></label>
+          <button type="button" class="btn btn-primary" id="scNewSave" style="align-self:flex-end"><i class="fas fa-save"></i> Сохранить</button>
+        </div>
+        <div class="hint" id="scNewMsg"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -21,106 +80,116 @@ var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/security-center';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
 
+function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 function post(path, body, cb) {
-  fetch(API + path, {method: 'POST', headers: {'Content-Type': 'application/json'},
-                     body: JSON.stringify(body)})
-    .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
-    .then(cb).catch(function () { cb({status: 0, d: {success: false, error: 'Сеть моргнула — попробуйте ещё раз'}}); });
+  fetch(API + path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function (r) { return r.json(); }).then(cb)
+    .catch(function () { cb({ success: false, error: 'Сеть моргнула — попробуйте ещё раз' }); });
 }
+
+function scoreTone(s) { return s >= 0.7 ? 'danger' : (s >= 0.3 ? 'tone-warning' : 'ok'); }
 
 function loadOverview() {
   fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
     var c = d.cfg;
-    document.getElementById('scKpis').innerHTML = c.features.map(function (f) {
-      var sw = CAN_EDIT
-        ? '<div class="sw"><button type="button" class="sc-sw' + (f.enabled ? ' on' : '') + '" onclick="scToggle(\'' + f.key + '\', ' + (!f.enabled) + ')">' + (f.enabled ? 'Приостановить' : 'Запустить') + '</button></div>' : '';
-      return '<div class="sc-card"><div class="lab"><i class="fas fa-shield-halved"></i> ' + esc(f.label) + '</div>' +
-        '<div class="v ' + (f.enabled ? 'on' : 'off') + '">' + (f.enabled ? 'Активно' : 'На паузе') + '</div>' + sw + '</div>';
+    $('scKpis').innerHTML = c.features.map(function (f) {
+      return '<div class="card" style="padding:14px">' +
+        '<div class="row"><i class="fas fa-shield-halved" style="color:' + (f.enabled ? 'var(--ok)' : 'var(--text-3)') + '"></i>' +
+        '<b style="flex:1">' + esc(f.label) + '</b>' +
+        '<span class="badge ' + (f.enabled ? 'ok' : 'neutral') + '">' + (f.enabled ? 'Активно' : 'На паузе') + '</span></div>' +
+        (CAN_EDIT ? '<div class="row" style="margin-top:10px"><button type="button" class="btn btn-sm ' + (f.enabled ? '' : 'btn-primary') + '" data-sc-toggle="' + esc(f.key) + '" data-sc-val="' + (!f.enabled) + '">' +
+          (f.enabled ? '<i class="fas fa-pause"></i> Приостановить' : '<i class="fas fa-play"></i> Запустить') + '</button></div>' : '') +
+        '</div>';
     }).join('');
     if (CAN_EDIT) {
-      document.getElementById('scNewPanel').style.display = '';
-      document.getElementById('scDays').value = c.new_account_days;
-      document.getElementById('scAction').value = c.new_account_action;
+      $('scNewPanel').hidden = false;
+      $('scDays').value = c.new_account_days;
+      $('scAction').value = c.new_account_action;
     }
     var r = d.rules;
-    document.getElementById('scRules').innerHTML =
-      '<div><div class="sc-sub" style="margin-bottom:6px">Вредоносные домены (' + r.domains_total + ')</div>' +
-      r.domains.map(function (x) { return '<span class="sc-tag">' + esc(x) + '</span>'; }).join('') + '</div>' +
-      '<div><div class="sc-sub" style="margin-bottom:6px">Паттерны подозрительных имён (' + r.patterns_total + ')</div>' +
-      r.name_patterns.map(function (x) { return '<span class="sc-tag">' + esc(x) + '</span>'; }).join('') + '</div>';
+    $('scRules').innerHTML =
+      '<div class="section-title">Вредоносные домены (' + r.domains_total + ')</div>' +
+      '<div class="chip-row" style="margin-bottom:14px">' + (r.domains.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') || '<span class="muted">нет</span>') + '</div>' +
+      '<div class="section-title">Паттерны подозрительных имён (' + r.patterns_total + ')</div>' +
+      '<div class="chip-row">' + (r.name_patterns.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') || '<span class="muted">нет</span>') + '</div>';
   }).catch(function () {});
 }
 
-function scToggle(feature, enabled) {
-  post('/toggle', {feature: feature, enabled: enabled}, function (res) {
-    if (!res.d.success) { alert(res.d.error || 'Ошибка'); return; }
-    loadOverview();
-  });
-}
+document.addEventListener('click', function (e) {
+  var t = e.target.closest('[data-sc-toggle]');
+  if (t) {
+    post('/toggle', { feature: t.dataset.scToggle, enabled: t.dataset.scVal === 'true' }, function (res) {
+      if (!res.success) { window.showToast(res.error || 'Ошибка', false); return; }
+      window.showToast('Обновлено', true);
+      loadOverview();
+    });
+  }
+});
 
-document.getElementById('scNewSave').onclick = function () {
-  var m = document.getElementById('scNewMsg');
-  post('/newaccount', {days: document.getElementById('scDays').value,
-                       action: document.getElementById('scAction').value}, function (res) {
-    m.style.display = 'block';
-    m.className = 'sc-msg ' + (res.d.success ? 'ok' : 'err');
-    m.textContent = res.d.success ? (res.d.message + ' — сохранено') : (res.d.error || 'Ошибка');
+$('scNewSave').addEventListener('click', function () {
+  var m = $('scNewMsg');
+  post('/newaccount', { days: $('scDays').value, action: $('scAction').value }, function (res) {
+    m.className = 'hint ' + (res.success ? '' : 'error');
+    m.textContent = res.success ? (res.message + ' — сохранено') : (res.error || 'Ошибка');
   });
-};
+});
 
-document.getElementById('scScan').onclick = function () {
-  var box = document.getElementById('scScanRes');
-  post('/scan', {text: document.getElementById('scScanText').value}, function (res) {
-    box.style.display = 'block';
-    if (!res.d.success) { box.className = 'sc-result bad'; box.innerHTML = esc(res.d.error || 'Ошибка'); return; }
-    if (res.d.malicious) {
-      box.className = 'sc-result bad';
-      box.innerHTML = '<b>Вредоносная ссылка!</b><br>Найденные домены: ' +
-        res.d.domains.map(function (x) { return '<span class="sc-domain">' + esc(x) + '</span>'; }).join(' ');
+$('scScan').addEventListener('click', function () {
+  var box = $('scScanRes');
+  post('/scan', { text: $('scScanText').value }, function (res) {
+    box.style.display = '';
+    if (!res.success) { box.className = 'alert alert-err'; box.innerHTML = esc(res.error || 'Ошибка'); return; }
+    if (res.malicious) {
+      box.className = 'alert alert-err';
+      box.innerHTML = '<div><b>Вредоносная ссылка!</b><br>Найденные домены: ' +
+        res.domains.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join(' ') + '</div>';
     } else {
-      box.className = 'sc-result good';
-      box.innerHTML = '<b>Ссылка чиста</b> — в списках вредоносных не найдена.' +
-        (res.d.extracted.length ? '<br>Домены в тексте: ' + res.d.extracted.map(esc).join(', ') : '<br>URL с префиксом не нашлись.');
+      box.className = 'alert alert-ok';
+      box.innerHTML = '<div><b>Ссылка чиста</b> — в списках вредоносных не найдена.' +
+        (res.extracted && res.extracted.length ? '<br>Домены в тексте: ' + res.extracted.map(esc).join(', ') : '') + '</div>';
     }
   });
-};
+});
 
-document.getElementById('scFake').onclick = function () {
-  var box = document.getElementById('scFakeRes');
-  post('/fake-score', {age_days: document.getElementById('scFakeAge').value,
-                       name: document.getElementById('scFakeName').value,
-                       avatar_default: document.getElementById('scFakeAva').value === '1'}, function (res) {
-    if (!res.d.success) { box.innerHTML = '<div class="sc-msg err" style="display:block">' + esc(res.d.error || 'Ошибка') + '</div>'; return; }
-    var s = res.d.score, cls = s >= 0.7 ? 'hi' : (s >= 0.3 ? 'mid' : 'lo');
-    box.innerHTML = '<div class="sc-result good" style="display:block">' +
-      '<span class="sc-score ' + cls + '">' + s + '</span><b>риск фейка</b> ' +
-      (res.d.suspicious_name ? '· имя в чёрных паттернах' : '') +
-      (res.d.warnings.length
-        ? '<div style="margin-top:8px">' + res.d.warnings.map(function (w) { return '<div class="sc-warn">' + esc(w) + '</div>'; }).join('') + '</div>'
-        : '<div style="margin-top:8px" class="sc-sub" style="margin-bottom:0">замечаний нет — профиль выглядит обычным</div>') + '</div>';
+$('scFake').addEventListener('click', function () {
+  var box = $('scFakeRes');
+  post('/fake-score', {
+    age_days: $('scFakeAge').value,
+    name: $('scFakeName').value,
+    avatar_default: $('scFakeAva').value === '1'
+  }, function (res) {
+    if (!res.success) { box.innerHTML = '<div class="alert alert-err">' + esc(res.error || 'Ошибка') + '</div>'; return; }
+    var s = res.score;
+    box.innerHTML = '<div class="alert" style="align-items:center"><span class="badge ' + scoreTone(s) + '" style="font-size:13px;padding:4px 12px">' + s + '</span>' +
+      '<b>риск фейка</b> ' + (res.suspicious_name ? '· имя в чёрных паттернах' : '') +
+      (res.warnings.length
+        ? '<div style="width:100%;margin-top:6px">' + res.warnings.map(function (w) { return '<div class="hint error">' + esc(w) + '</div>'; }).join('') + '</div>'
+        : '<div class="hint" style="width:100%">замечаний нет — профиль выглядит обычным</div>') + '</div>';
   });
-};
+});
 
-document.getElementById('scSpam').onclick = function () {
-  var box = document.getElementById('scSpamRes');
-  post('/spam-sim', {content: document.getElementById('scSpamText').value,
-                     times: document.getElementById('scSpamN').value}, function (res) {
-    if (!res.d.success) { box.innerHTML = '<div class="sc-msg err" style="display:block">' + esc(res.d.error || 'Ошибка') + '</div>'; return; }
-    var maxH = 60, bars = res.d.trail.map(function (t, i) {
+$('scSpam').addEventListener('click', function () {
+  var box = $('scSpamRes');
+  post('/spam-sim', { content: $('scSpamText').value, times: $('scSpamN').value }, function (res) {
+    if (!res.success) { box.innerHTML = '<div class="alert alert-err">' + esc(res.error || 'Ошибка') + '</div>'; return; }
+    var maxH = 60;
+    var bars = res.trail.map(function (t, i) {
       var h = Math.max(3, Math.round(t.score * maxH));
-      return '<div class="sc-bar" style="height:' + h + 'px" title="#' + (i + 1) + ': ' + t.score + '"></div>';
+      return '<div title="#' + (i + 1) + ': ' + t.score + '" style="width:10px;height:' + h + 'px;border-radius:3px;background:var(--ac);opacity:' + (0.35 + 0.65 * t.score) + '"></div>';
     }).join('');
-    var f = res.d.final, cls = f.score >= 0.7 ? 'hi' : (f.score >= 0.3 ? 'mid' : 'lo');
-    box.innerHTML = '<div class="sc-result" style="display:block">' +
-      '<span class="sc-score ' + cls + '">' + f.score + '</span><b>после ' + res.d.trail.length + ' сообщений</b> — сигналы: ' + esc(f.reason) +
-      '<div class="sc-trail">' + bars + '</div></div>';
+    var f = res.final;
+    box.innerHTML = '<div class="alert" style="align-items:center"><span class="badge ' + scoreTone(f.score) + '" style="font-size:13px;padding:4px 12px">' + f.score + '</span>' +
+      '<b>после ' + res.trail.length + ' сообщений</b> — сигналы: ' + esc(f.reason) +
+      '<div class="row" style="width:100%;margin-top:8px;align-items:flex-end;gap:3px">' + bars + '</div></div>';
   });
-};
+});
 
-document.getElementById('scCsv').onclick = function () { location.href = API + '/export.csv'; };
+$('scCsv').addEventListener('click', function (e) { e.preventDefault(); location.href = API + '/export.csv'; });
 
 loadOverview();
 </script>

@@ -1,127 +1,201 @@
 {% extends "base.html" %}
-{% block title %}Content Shield — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-filter-circle-dollar"></i> Content Shield{% endblock %}
+{% block title %}Автофильтр · Модерация — Aether{% endblock %}
+{% block page_title %}Автофильтр{% endblock %}
 {% block content %}
 
-<div class="ops-canvas ops-content-shield" data-room-kind="filterlab" data-room-version="3" id="af-wrap">
-  <div class="ops-room-label"><span>PRT / CONTENT SHIELD</span><b>Матрица контента</b><em>каждое правило прозрачно и проверяемо</em></div>
-  <section class="ops-filter-master af-hero" id="af-hero" data-state="on">
-    <div class="ops-filter-reactor"><i class="fas fa-filter"></i><span></span></div><div><span class="ops-kicker">REAL-TIME FILTER ENGINE</span><h2 id="hero-state">Загружаем контур…</h2><p>Настройки применяются ботом мгновенно, без перезапуска.</p></div><div class="ops-filter-switch"><span>MASTER</span><button type="button" class="af-switch on" id="master-switch" aria-label="Состояние автофильтра" role="switch" aria-checked="true"></button></div><div class="af-chips ops-filter-summary" id="hero-chips"></div>
-  </section>
-  <div class="ops-filter-matrix">
-    <section class="ops-filter-module" id="card-words"><header><div class="ops-filter-code">01</div><i class="fas fa-ban"></i><div><span>LEXICAL</span><h3>Запрещённые слова</h3></div><button type="button" class="af-switch sm" id="fw-tog" aria-label="Фильтр запрещённых слов" role="switch"></button></header><p>Нормализация л33т-символов, повторов букв и раздельного ввода.</p><label class="ops-field"><span>Реакция</span><select id="fw-action"><option value="delete">Удалить</option><option value="warn">Удалить + варн</option></select></label><div class="ops-inline"><input id="fw-input" maxlength="60" placeholder="Слово или фраза"><button type="button" class="ops-secondary" id="fw-add" aria-label="Добавить запрещённое слово"><i class="fas fa-plus"></i></button></div><div class="af-chipbox" id="fw-chips"></div><span class="af-count" id="fw-count"></span></section>
-    <section class="ops-filter-module" id="card-links"><header><div class="ops-filter-code">02</div><i class="fas fa-link"></i><div><span>NETWORK</span><h3>Контроль ссылок</h3></div><button type="button" class="af-switch sm" id="fl-tog" aria-label="Контроль ссылок" role="switch"></button></header><p>Любые URL и Discord-инвайты вне белого списка доменов.</p><label class="ops-field"><span>Реакция</span><select id="fl-action"><option value="delete">Удалить</option><option value="warn">Удалить + варн</option></select></label><div class="ops-inline"><input id="wl-input" maxlength="60" placeholder="Разрешённый домен"><button type="button" class="ops-secondary" id="wl-add" aria-label="Добавить разрешённый домен"><i class="fas fa-plus"></i></button></div><div class="af-chipbox" id="wl-chips"></div></section>
-    <section class="ops-filter-module" id="card-caps"><header><div class="ops-filter-code">03</div><i class="fas fa-text-height"></i><div><span>VOLUME</span><h3>Анти-КАПС</h3></div><button type="button" class="af-switch sm" id="fc-tog" aria-label="Контроль капса" role="switch"></button></header><p>Порог заглавных символов только для достаточно длинных сообщений.</p><label class="ops-field"><span>Реакция</span><select id="fc-action"><option value="delete">Удалить</option><option value="warn">Удалить + варн</option></select></label><div class="ops-range"><span>Порог</span><input type="range" id="fc-percent" min="20" max="100" step="5" value="70"><b id="fc-percent-val">70%</b></div><label class="ops-field"><span>Минимальная длина</span><input type="number" id="fc-minlen" min="4" max="120" value="12"></label></section>
-    <section class="ops-filter-module" id="card-flood"><header><div class="ops-filter-code">04</div><i class="fas fa-water"></i><div><span>VELOCITY</span><h3>Анти-флуд</h3></div><button type="button" class="af-switch sm" id="ff-tog" aria-label="Контроль флуда" role="switch"></button></header><p>Скорость потока, повторы и длительность автоматического таймаута.</p><label class="ops-field"><span>Реакция</span><select id="ff-action"><option value="timeout">Очистка + таймаут</option><option value="warn">Удалить + варн</option><option value="delete">Только удалить</option></select></label><div class="ops-number-grid"><label><span>Лимит</span><input type="number" id="ff-limit" min="3" max="15" value="5"></label><label><span>Секунд</span><input type="number" id="ff-seconds" min="2" max="30" value="5"></label><label><span>Повторов</span><input type="number" id="ff-dupe" min="2" max="10" value="3"></label><label><span>Таймаут</span><input type="number" id="ff-timeout" min="1" max="120" value="10"></label></div></section>
-    <section class="ops-filter-module ops-filter-exceptions" id="card-exc"><header><div class="ops-filter-code">05</div><i class="fas fa-shield-heart"></i><div><span>BYPASS</span><h3>Исключения</h3></div></header><p>Каналы и роли, которым политика не мешает работать.</p><span class="ops-mini-label">Каналы</span><div class="af-pick" id="af-channels"></div><span class="ops-mini-label">Иммунные роли</span><div class="af-pick" id="af-roles"></div><span class="af-count" id="af-exc-note">Администраторы исключены всегда</span></section>
-    <section class="ops-filter-module ops-filter-test" id="card-test"><header><div class="ops-filter-code">06</div><i class="fas fa-flask"></i><div><span>DRY RUN</span><h3>Лаборатория текста</h3></div></header><p>Проверьте сообщение по текущей боевой политике без наказания.</p><textarea id="af-test-text" rows="5" maxlength="500" placeholder="Вставьте подозрительное сообщение"></textarea><button type="button" class="ops-primary" id="af-test-run"><i class="fas fa-vial"></i> Проверить правилами</button><div class="af-test-out" id="af-test-out"></div></section>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Защита</div>
+    <h1>Автофильтр</h1>
+    <p class="lead">Слова, ссылки, капс и флуд как прозрачные политики. Изменения применяются мгновенно.</p>
   </div>
-  <div class="af-savebar ops-filter-save" id="af-savebar"><div><strong>POLICY BUFFER</strong><span id="af-note"></span></div><button type="button" class="ops-secondary" id="af-reload"><i class="fas fa-rotate-left"></i> Отменить</button><button type="button" class="ops-primary" id="af-save"><i class="fas fa-floppy-disk"></i> Применить</button></div><div class="af-toast ops-toast" id="af-toast"></div>
+  <div class="page-head-actions">
+    <span class="badge" id="hero-state">…</span>
+    <button type="button" class="btn btn-primary" id="saveBtn"><i class="fas fa-save"></i> Сохранить</button>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-power-off"></i></div><div class="kpi-copy"><div class="kpi-value" id="af-note">—</div><div class="kpi-label">Состояние</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value" id="fw-count">—</div><div class="kpi-label">Словарь</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-link"></i></div><div class="kpi-copy"><div class="kpi-value" id="wl-count">—</div><div class="kpi-label">Whitelist ссылок</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-sliders"></i></div><div class="kpi-copy"><div class="kpi-value" id="fc-percent-val">—</div><div class="kpi-label">Порог капса</div></div></div>
+</div>
+
+<div class="panel" style="margin-bottom:14px">
+  <div class="toolbar">
+    <label class="switch"><input type="checkbox" id="master-switch"><span class="track"></span> <b>Автофильтр</b></label>
+    <span class="spacer"></span>
+    <div class="chip-row" id="hero-chips"></div>
+  </div>
+  <div class="panel-body">
+    <div class="grid-2" style="align-items:start">
+      <!-- Слова -->
+      <div class="card" id="card-words">
+        <div class="card-head"><label class="switch"><input type="checkbox" id="fw-tog"><span class="track"></span></label>
+          <div><h3>Запрещённые слова</h3><div class="sub">Ловит l33t, повторы букв и раздельный ввод.</div></div>
+          <select class="form-input" id="fw-action" style="width:auto;margin-left:auto"><option value="delete">Удалить</option><option value="warn">Удалить + варн</option></select></div>
+        <div class="row" style="margin-bottom:10px">
+          <input class="form-input" id="fw-input" placeholder="слово или фраза" style="flex:1">
+          <button type="button" class="btn" id="fw-add"><i class="fas fa-plus"></i> Добавить</button>
+        </div>
+        <div class="chip-row" id="fw-chips"></div>
+      </div>
+
+      <!-- Ссылки -->
+      <div class="card" id="card-links">
+        <div class="card-head"><label class="switch"><input type="checkbox" id="fl-tog"><span class="track"></span></label>
+          <div><h3>Анти-ссылки</h3><div class="sub">Запрет ссылок с белым списком доменов.</div></div>
+          <select class="form-input" id="fl-action" style="width:auto;margin-left:auto"><option value="delete">Удалить</option><option value="warn">Удалить + варн</option></select></div>
+        <div class="row" style="margin-bottom:10px">
+          <input class="form-input" id="wl-input" placeholder="разрешённый домен" style="flex:1">
+          <button type="button" class="btn" id="wl-add"><i class="fas fa-plus"></i> Разрешить</button>
+        </div>
+        <div class="chip-row" id="wl-chips"></div>
+      </div>
+
+      <!-- Капс -->
+      <div class="card" id="card-caps">
+        <div class="card-head"><label class="switch"><input type="checkbox" id="fc-tog"><span class="track"></span></label>
+          <div><h3>Анти-капс</h3><div class="sub">Доля заглавных букв в сообщении.</div></div>
+          <select class="form-input" id="fc-action" style="width:auto;margin-left:auto"><option value="delete">Удалить</option><option value="warn">Удалить + варн</option></select></div>
+        <div class="form-row">
+          <label class="form-group"><span class="form-label">Порог, %</span><input class="form-input" id="fc-percent" type="number" min="0" max="100"></label>
+          <label class="form-group"><span class="form-label">Минимум символов</span><input class="form-input" id="fc-minlen" type="number" min="0"></label>
+        </div>
+      </div>
+
+      <!-- Флуд -->
+      <div class="card" id="card-flood">
+        <div class="card-head"><label class="switch"><input type="checkbox" id="ff-tog"><span class="track"></span></label>
+          <div><h3>Анти-флуд</h3><div class="sub">Серия сообщений за короткое окно.</div></div>
+          <select class="form-input" id="ff-action" style="width:auto;margin-left:auto">
+            <option value="timeout">Очистка + таймаут</option><option value="warn">Удалить + варн</option><option value="delete">Только удалить</option></select></div>
+        <div class="form-row">
+          <label class="form-group"><span class="form-label">Сообщений</span><input class="form-input" id="ff-limit" type="number" min="1"></label>
+          <label class="form-group"><span class="form-label">За секунд</span><input class="form-input" id="ff-seconds" type="number" min="1"></label>
+          <label class="form-group"><span class="form-label">Дубликатов</span><input class="form-input" id="ff-dupe" type="number" min="1"></label>
+          <label class="form-group"><span class="form-label">Таймаут, мин</span><input class="form-input" id="ff-timeout" type="number" min="1"></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:18px"><i class="fas fa-circle-minus"></i> Исключения</div>
+    <div class="grid-2" style="align-items:start">
+      <div>
+        <div class="hint" style="margin-bottom:8px">Каналы, которые автофильтр не проверяет:</div>
+        <div class="chip-row" id="af-channels"></div>
+      </div>
+      <div>
+        <div class="hint" style="margin-bottom:8px">Роли с иммунитетом:</div>
+        <div class="chip-row" id="af-roles"></div>
+      </div>
+    </div>
+  </div>
+  <div class="panel-foot">
+    <label class="field has-icon" style="flex:1"><i class="fas fa-vial"></i>
+      <input type="search" id="af-test-text" placeholder="Проверить текст: вставьте сообщение и посмотрите, что сработает">
+    </label>
+    <button type="button" class="btn" id="af-test-btn"><i class="fas fa-flask"></i> Тест</button>
+  </div>
+  <div class="panel-body" style="border-top:1px solid var(--line)">
+    <div class="alert" id="af-test-out" style="display:none"></div>
+  </div>
 </div>
 
 <script>
 (function () {
   'use strict';
-  var $ = function (id) { return document.getElementById(id); };
-  var CFG = null;            // текущее состояние (редактируется)
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  var CFG = null;
   var DIRTY = false;
 
-  function toast(msg, ok) {
-    var t = $('af-toast');
-    t.textContent = msg;
-    t.className = 'af-toast ops-toast show ' + (ok === false ? 'bad' : 'ok');
-    setTimeout(function () { t.className = 'af-toast ops-toast'; }, 2600);
-  }
-  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-  function note() {
-    $('af-note').textContent = DIRTY ? '● есть несохранённые изменения' : '';
-  }
+  function toast(msg, ok) { window.showToast(msg, ok === false ? false : true); }
+  function note() { $('af-note').textContent = DIRTY ? 'Есть несохранённые изменения' : 'Всё сохранено'; }
 
-  /* ── переключатели ──────────────────────────────────────── */
   function bindSwitch(id, get, set) {
-    var el = $(id);
-    el.addEventListener('click', function () {
-      set(!get()); DIRTY = true; render();
-    });
+    $(id).addEventListener('change', function () { set($(id).checked); DIRTY = true; render(); });
   }
-  function paintSwitch(id, on) { $(id).classList.toggle('on', !!on); $(id).setAttribute('aria-checked', !!on); }
 
-  /* ── чипы слов / whitelist ──────────────────────────────── */
   function paintChips(boxId, list, wl) {
     var box = $(boxId);
     box.innerHTML = '';
     list.forEach(function (w, i) {
       var tag = document.createElement('span');
-      tag.className = 'af-tag' + (wl ? ' wl' : '');
-      tag.innerHTML = esc(w) + ' <button type="button" data-i="' + i + '" aria-label="Удалить"><i class="fas fa-xmark"></i></button>';
-      tag.querySelector('button').addEventListener('click', function () {
-        list.splice(i, 1); DIRTY = true; render();
-      });
+      tag.className = 'chip';
+      tag.innerHTML = esc(w) + ' <span class="x" data-chip="' + boxId + ':' + i + '">×</span>';
       box.appendChild(tag);
     });
   }
+
   function addWord(inputId, list, max, msg) {
     var inp = $(inputId);
     var v = (inp.value || '').trim();
     if (!v) return;
     if (list.length >= max) { toast('Лимит: не больше ' + max, false); return; }
-    if (list.some(function (w) { return w.toLowerCase() === v.toLowerCase(); })) {
-      toast('Уже в списке', false); return;
-    }
+    if (list.some(function (w) { return w.toLowerCase() === v.toLowerCase(); })) { toast('Уже в списке', false); return; }
     list.push(v); inp.value = ''; DIRTY = true;
     toast(msg || 'Добавлено', true); render();
   }
 
-  /* ── исключения (каналы/роли) ───────────────────────────── */
   function paintPick(boxId, items, selectedIds) {
     var box = $(boxId);
     box.innerHTML = '';
     items.forEach(function (it) {
       var el = document.createElement('span');
-      el.className = 'af-opt' + (selectedIds.indexOf(it.id) >= 0 ? ' on' : '');
+      var on = selectedIds.indexOf(it.id) >= 0;
+      el.className = 'chip selectable' + (on ? ' active' : '');
       el.textContent = it.name;
       el.addEventListener('click', function () {
         var i = selectedIds.indexOf(it.id);
         if (i >= 0) selectedIds.splice(i, 1); else selectedIds.push(it.id);
-        DIRTY = true; paintPick(boxId, items, selectedIds);
+        DIRTY = true;
+        paintPick(boxId, items, selectedIds);
+        note();
       });
       box.appendChild(el);
     });
   }
+
   function loadPicks() {
-    fetch('/api/channels').then(function (r) { return r.json(); }).then(function (chs) {
-      var items = (chs || []).map(function (c) { return { id: String(c.id), name: '#' + c.name }; });
-      window._afChannels = items; paintPick('af-channels', items, CFG.ignore_channels);
+    fetch('/api/channels').then(function (r) { return r.json(); }).then(function (d) {
+      var items = (Array.isArray(d) ? d : (d && d.channels) || []).map(function (c) { return { id: String(c.id), name: '#' + (c.name || c.id) }; });
+      window._afChannels = items;
+      paintPick('af-channels', items, CFG.ignore_channels);
     }).catch(function () {});
-    fetch('/api/guild/' + encodeURIComponent(window._afGuild || '') + '/roles').then(function (r) { return r.json(); }).then(function (roles) {
-      var items = (roles || []).map(function (c) { return { id: String(c.id), name: '@' + c.name }; });
-      window._afRoles = items; paintPick('af-roles', items, CFG.immune_roles);
+    fetch('/api/guild/' + encodeURIComponent(window._afGuild || '') + '/roles').then(function (r) { return r.json(); }).then(function (d) {
+      var items = (Array.isArray(d) ? d : (d && d.roles) || []).map(function (c) { return { id: String(c.id), name: '@' + (c.name || c.id) }; });
+      window._afRoles = items;
+      paintPick('af-roles', items, CFG.immune_roles);
     }).catch(function () {});
   }
 
-  /* ── рендер ─────────────────────────────────────────────── */
   function render() {
-    var f;
-    $('af-hero').dataset.state = CFG.enabled ? 'on' : 'off';
+    $('master-switch').checked = !!CFG.enabled;
     $('hero-state').textContent = CFG.enabled ? 'Автофильтр работает' : 'Автофильтр на паузе';
-    paintSwitch('master-switch', CFG.enabled);
+    $('hero-state').className = 'badge ' + (CFG.enabled ? 'ok' : 'neutral');
 
     var chips = '';
-    [['words', 'fa-ban', CFG.words], ['links', 'fa-link', CFG.links],
-     ['caps', 'fa-text-height', CFG.caps], ['flood', 'fa-water', CFG.flood]].forEach(function (p) {
-      var names = { words: 'слова', links: 'ссылки', caps: 'капс', flood: 'флуд' };
-      chips += '<span class="af-chip' + (CFG.enabled && p[2].enabled ? ' on' : '') + '"><i class="fas ' + p[1] + '"></i> ' + names[p[0]] + '</span>';
+    [['words', 'fa-ban', 'слова'], ['links', 'fa-link', 'ссылки'], ['caps', 'fa-text-height', 'капс'], ['flood', 'fa-water', 'флуд']].forEach(function (p) {
+      var part = CFG[p[0]];
+      chips += '<span class="chip ' + (CFG.enabled && part.enabled ? '' : '') + '"><i class="fas ' + p[1] + '" style="color:' + (CFG.enabled && part.enabled ? 'var(--ok)' : 'var(--text-3)') + '"></i> ' + p[2] + '</span>';
     });
-    chips += '<span class="af-chip"><i class="fas fa-list"></i> слов: <b>' + CFG.words.list.length + '</b></span>';
+    chips += '<span class="chip"><i class="fas fa-list"></i> слов: <b>' + CFG.words.list.length + '</b></span>';
     $('hero-chips').innerHTML = chips;
 
-    ['words', 'links', 'caps', 'flood'].forEach(function (name) {
-      var prefix = { words: 'fw', links: 'fl', caps: 'fc', flood: 'ff' }[name];
-      var part = CFG[name];
-      paintSwitch(prefix + '-tog', part.enabled);
-      $('card-' + name).classList.toggle('off', !part.enabled);
-      $(prefix + '-action').value = part.action;
-    });
+    $('fw-tog').checked = CFG.words.enabled;
+    $('fl-tog').checked = CFG.links.enabled;
+    $('fc-tog').checked = CFG.caps.enabled;
+    $('ff-tog').checked = CFG.flood.enabled;
+    $('card-words').style.opacity = CFG.words.enabled ? '' : '0.65';
+    $('card-links').style.opacity = CFG.links.enabled ? '' : '0.65';
+    $('card-caps').style.opacity = CFG.caps.enabled ? '' : '0.65';
+    $('card-flood').style.opacity = CFG.flood.enabled ? '' : '0.65';
+    $('fw-action').value = CFG.words.action;
+    $('fl-action').value = CFG.links.action;
+    $('fc-action').value = CFG.caps.action;
+    $('ff-action').value = CFG.flood.action;
     $('fc-percent').value = CFG.caps.percent;
     $('fc-percent-val').textContent = CFG.caps.percent + '%';
     $('fc-minlen').value = CFG.caps.min_length;
@@ -131,39 +205,45 @@
     $('ff-timeout').value = CFG.flood.timeout_minutes;
     paintChips('fw-chips', CFG.words.list, false);
     paintChips('wl-chips', CFG.links.whitelist, true);
-    $('fw-count').textContent = 'слов: ' + CFG.words.list.length + ' / 200 · whitelist: ' + CFG.links.whitelist.length + ' / 50';
+    $('fw-count').textContent = CFG.words.list.length + ' / 200';
+    $('wl-count').textContent = CFG.links.whitelist.length + ' / 50';
     if (window._afChannels) paintPick('af-channels', window._afChannels, CFG.ignore_channels);
     if (window._afRoles) paintPick('af-roles', window._afRoles, CFG.immune_roles);
     note();
   }
 
-  /* ── загрузка / сохранение ──────────────────────────────── */
   function load(showOk) {
     fetch('/api/autofilter').then(function (r) { return r.json(); }).then(function (d) {
       if (!d.ok) { toast('Не удалось загрузить настройки', false); return; }
-      CFG = d.config; window._afGuild = d.guild_id; DIRTY = false;
-      render(); loadPicks();
+      CFG = d.config;
+      window._afGuild = d.guild_id;
+      DIRTY = false;
+      render();
+      loadPicks();
       if (showOk) toast('Настройки перечитаны', true);
     }).catch(function () { toast('API недоступен', false); });
   }
 
   function save() {
+    if (!CFG) return;
+    var btn = $('saveBtn');
+    window.qualitySetLoading(btn, true);
     fetch('/api/autofilter/save', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(CFG)
-    }).then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
-      .then(function (res) {
-        if (res.s === 200 && res.d.ok) {
-          CFG = res.d.config; DIRTY = false; render();
-          toast('Сохранено — бот уже применяет', true);
-          $('af-note').textContent = 'применено мгновенно, перезапуск не нужен';
-        } else {
-          toast('' + ((res.d.errors || ['ошибка сохранения']).join(' · ')), false);
-        }
-      }).catch(function () { toast('Сеть недоступна', false); });
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      window.qualitySetLoading(btn, false);
+      if (d.ok) {
+        CFG = d.config;
+        DIRTY = false;
+        render();
+        toast('Сохранено — бот уже применяет', true);
+      } else {
+        toast((d.errors || ['ошибка сохранения']).join(' · '), false);
+      }
+    }).catch(function () { window.qualitySetLoading(btn, false); toast('Сеть недоступна', false); });
   }
 
-  /* ── тестер ─────────────────────────────────────────────── */
   function runTest() {
     var text = $('af-test-text').value || '';
     if (!text.trim()) return;
@@ -173,51 +253,59 @@
     }).then(function (r) { return r.json(); }).then(function (d) {
       var out = $('af-test-out');
       var v = (d && d.violations) || [];
+      out.style.display = '';
       if (!v.length) {
-        out.className = 'af-test-out show clean';
+        out.className = 'alert alert-ok';
         out.innerHTML = '<i class="fas fa-check-circle"></i> Чисто — ни один фильтр не сработал';
       } else {
         var names = { words: 'Слова', links: 'Ссылки', caps: 'Капс', flood: 'Флуд' };
-        out.className = 'af-test-out show hit';
+        out.className = 'alert alert-err';
         out.innerHTML = v.map(function (x) {
-          return '<i class="fas fa-triangle-exclamation" style="color:var(--err,#f87171)"></i> <b>' +
-                 names[x.filter] + '</b> — совпадение: <code>' + esc(x.detail) + '</code>';
-        }).join('<br>');
+          return '<div><b>' + (names[x.filter] || x.filter) + '</b> — совпадение: <code>' + esc(x.detail) + '</code></div>';
+        }).join('');
       }
     }).catch(function () { toast('Тест не удался', false); });
   }
 
-  /* ── привязки ───────────────────────────────────────────── */
-  function bind() {
-    bindSwitch('master-switch', function () { return CFG.enabled; }, function (v) { CFG.enabled = v; });
-    bindSwitch('fw-tog', function () { return CFG.words.enabled; },  function (v) { CFG.words.enabled = v; });
-    bindSwitch('fl-tog', function () { return CFG.links.enabled; },  function (v) { CFG.links.enabled = v; });
-    bindSwitch('fc-tog', function () { return CFG.caps.enabled; },   function (v) { CFG.caps.enabled = v; });
-    bindSwitch('ff-tog', function () { return CFG.flood.enabled; },  function (v) { CFG.flood.enabled = v; });
-    $('fw-action').addEventListener('change', function () { CFG.words.action = this.value; DIRTY = true; note(); });
-    $('fl-action').addEventListener('change', function () { CFG.links.action = this.value; DIRTY = true; note(); });
-    $('fc-action').addEventListener('change', function () { CFG.caps.action = this.value; DIRTY = true; note(); });
-    $('ff-action').addEventListener('change', function () { CFG.flood.action = this.value; DIRTY = true; note(); });
-    $('fc-percent').addEventListener('input', function () { $('fc-percent-val').textContent = this.value + '%'; });
-    $('fc-percent').addEventListener('change', function () { CFG.caps.percent = +this.value; DIRTY = true; note(); });
-    $('fc-minlen').addEventListener('change', function () { CFG.caps.min_length = +this.value; DIRTY = true; note(); });
-    $('ff-limit').addEventListener('change', function () { CFG.flood.limit = +this.value; DIRTY = true; note(); });
-    $('ff-seconds').addEventListener('change', function () { CFG.flood.seconds = +this.value; DIRTY = true; note(); });
-    $('ff-dupe').addEventListener('change', function () { CFG.flood.dupe_count = +this.value; DIRTY = true; note(); });
-    $('ff-timeout').addEventListener('change', function () { CFG.flood.timeout_minutes = +this.value; DIRTY = true; note(); });
-    $('fw-add').addEventListener('click', function () { addWord('fw-input', CFG.words.list, 200); });
-    $('fw-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addWord('fw-input', CFG.words.list, 200); } });
-    $('wl-add').addEventListener('click', function () { addWord('wl-input', CFG.links.whitelist, 50, 'Домен разрешён'); });
-    $('wl-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addWord('wl-input', CFG.links.whitelist, 50, 'Домен разрешён'); } });
-    $('af-save').addEventListener('click', save);
-    $('af-reload').addEventListener('click', function () { load(true); });
-    $('af-test-run').addEventListener('click', runTest);
-    $('af-test-text').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); runTest(); } });
-    window.addEventListener('beforeunload', function (e) { if (DIRTY) { e.preventDefault(); e.returnValue = ''; } });
-  }
+  document.addEventListener('click', function (e) {
+    var x = e.target.closest('[data-chip]');
+    if (x) {
+      var parts = x.dataset.chip.split(':');
+      var boxId = parts[0];
+      var i = parseInt(parts[1], 10);
+      if (boxId === 'fw-chips') { CFG.words.list.splice(i, 1); }
+      else if (boxId === 'wl-chips') { CFG.links.whitelist.splice(i, 1); }
+      DIRTY = true;
+      render();
+    }
+  });
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); load(); });
-  else { bind(); load(); }
+  bindSwitch('master-switch', function () { return CFG.enabled; }, function (v) { CFG.enabled = v; });
+  bindSwitch('fw-tog', function () { return CFG.words.enabled; }, function (v) { CFG.words.enabled = v; });
+  bindSwitch('fl-tog', function () { return CFG.links.enabled; }, function (v) { CFG.links.enabled = v; });
+  bindSwitch('fc-tog', function () { return CFG.caps.enabled; }, function (v) { CFG.caps.enabled = v; });
+  bindSwitch('ff-tog', function () { return CFG.flood.enabled; }, function (v) { CFG.flood.enabled = v; });
+  $('fw-action').addEventListener('change', function () { CFG.words.action = this.value; DIRTY = true; note(); });
+  $('fl-action').addEventListener('change', function () { CFG.links.action = this.value; DIRTY = true; note(); });
+  $('fc-action').addEventListener('change', function () { CFG.caps.action = this.value; DIRTY = true; note(); });
+  $('ff-action').addEventListener('change', function () { CFG.flood.action = this.value; DIRTY = true; note(); });
+  $('fc-percent').addEventListener('input', function () { $('fc-percent-val').textContent = this.value + '%'; });
+  $('fc-percent').addEventListener('change', function () { CFG.caps.percent = +this.value; DIRTY = true; note(); });
+  $('fc-minlen').addEventListener('change', function () { CFG.caps.min_length = +this.value; DIRTY = true; note(); });
+  $('ff-limit').addEventListener('change', function () { CFG.flood.limit = +this.value; DIRTY = true; note(); });
+  $('ff-seconds').addEventListener('change', function () { CFG.flood.seconds = +this.value; DIRTY = true; note(); });
+  $('ff-dupe').addEventListener('change', function () { CFG.flood.dupe_count = +this.value; DIRTY = true; note(); });
+  $('ff-timeout').addEventListener('change', function () { CFG.flood.timeout_minutes = +this.value; DIRTY = true; note(); });
+  $('fw-add').addEventListener('click', function () { addWord('fw-input', CFG.words.list, 200); });
+  $('fw-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addWord('fw-input', CFG.words.list, 200); } });
+  $('wl-add').addEventListener('click', function () { addWord('wl-input', CFG.links.whitelist, 50, 'Домен разрешён'); });
+  $('wl-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addWord('wl-input', CFG.links.whitelist, 50, 'Домен разрешён'); } });
+  $('saveBtn').addEventListener('click', save);
+  $('af-test-btn').addEventListener('click', runTest);
+  $('af-test-text').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); runTest(); } });
+  if (window.bindCtrlS) window.bindCtrlS(save);
+
+  load();
 })();
 </script>
 {% endblock %}

@@ -186,7 +186,8 @@ check('id="shForm"' not in html_mod and 'var CAN_EDIT = false' in html_mod,
 tpl = open(os.path.join(ROOT, 'web/templates/shop.html'), encoding='utf-8').read()
 emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 check('uxUndo' in tpl and 'askConfirm' in tpl, 'undo и confirm-проводка на месте')
 import services.panel_menu as PM
 paths = [p['path'] for g in PM.MENU for p in g['pages']]

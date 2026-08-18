@@ -1,16 +1,51 @@
 {% extends "base.html" %}
-{% block title %}Risk Intelligence — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-brain"></i> Risk Intelligence{% endblock %}
+{% block title %}Аналитика рисков · Модерация — Aether{% endblock %}
+{% block page_title %}Аналитика рисков{% endblock %}
 {% block content %}
 
-<style>[data-theme="light"] .ops-risk-intelligence{color-scheme:light}</style>
-<div class="ops-canvas ops-risk-intelligence" data-room-kind="intelligence" data-room-version="3">
-  <div class="ops-room-label"><span>MGT / RISK INTELLIGENCE</span><b>Разведка рисков</b><em>из истории нарушений в конкретное решение</em></div>
-  <div class="ops-intel-kpis" id="miKpis"><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div></div>
-  <div class="ops-intel-map">
-    <section class="ops-intel-subjects"><header><div><span class="ops-kicker">SUBJECT CLUSTERS</span><h2>Карта участников</h2><p>Тяжесть следа, количество мер и текущий риск.</p></div><b id="miSubjectsOff"></b></header><div id="miSubjects" class="ops-intel-list"><div class="sk-row"></div><div class="sk-row"></div></div></section>
-    <section class="ops-intel-dossier"><header><span class="ops-kicker">SUBJECT DOSSIER</span><h2>Досье участника</h2><p>Варны, пороги, временные статусы, амнистии и заметки в одном профиле.</p></header><div class="ops-inline"><input id="miDossierId" maxlength="24" placeholder="ID участника или @упоминание"><button type="button" class="ops-primary" onclick="miDossierAsk()"><i class="fas fa-magnifying-glass"></i> Открыть</button></div><div id="miDossier" class="ops-intel-dossier-body"><div class="ops-empty"><i class="fas fa-fingerprint"></i><span>Выберите участника на карте</span></div></div></section>
-    <aside class="ops-intel-analysis"><section><header><span class="ops-kicker">OUTCOME MODEL</span><h3>Эффективность мер</h3><p id="miEffectSub">Возвращается ли участник к нарушению после первой меры.</p></header><div class="mi-tabs" id="miDaysTabs"></div><div id="miEffect"></div></section><section><header><span class="ops-kicker">READINESS CHECK</span><h3>Готовность защиты <b id="miCheckOff"></b></h3></header><div id="miCheck"></div></section></aside>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Команда и аналитика</div>
+    <h1>Аналитика рисков</h1>
+    <p class="lead">Из истории нарушений — в решение: участники со следами, эффект наказаний и готовность защиты.</p>
+  </div>
+  <div class="page-head-actions">
+    <div class="seg" id="miDaysTabs"></div>
+  </div>
+</div>
+
+<div class="kpi-row" id="miKpis"></div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-users-viewfinder"></i> Карта участников</h2>
+      <div class="sub" id="miSubjectsOff"></div></div></div>
+    <div class="panel-body" id="miSubjects"></div>
+  </div>
+
+  <div class="grid-2" style="align-items:start">
+    <div class="panel">
+      <div class="panel-head"><div><h2><i class="fas fa-rotate"></i> Эффект первого наказания</h2>
+        <div class="sub">Как часто после первой кары случается повтор.</div></div></div>
+      <div class="panel-body" id="miEffect"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h2><i class="fas fa-list-check"></i> Готовность защиты</h2>
+        <div class="sub" id="miCheckOff"></div></div></div>
+      <div class="panel-body" id="miCheck"></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-id-card"></i> Досье участника</h2>
+    <div class="sub">Полный след: варны, наказания, амнистии и заметки по ID.</div></div>
+    <div class="row" style="margin-left:auto">
+      <input class="form-input" id="miDossierId" placeholder="ID участника" style="width:200px">
+      <button type="button" class="btn btn-primary" id="miDossierGo"><i class="fas fa-magnifying-glass"></i> Открыть досье</button>
+    </div></div>
+  <div class="panel-body" id="miDossier">
+    <div class="empty"><i class="fas fa-id-card"></i><span>Введите ID участника, чтобы открыть досье.</span></div>
   </div>
 </div>
 
@@ -19,9 +54,8 @@ var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/mod-insights';
 var DAYS = 90;
 var PICKED = null;
-var OV = null;
-var BADGE = {'Мут': 'k-mute', 'Кик': 'k-kick', 'Бан': 'k-ban', 'Мут снят': 'k-lift', 'Бан снят': 'k-lift'};
 
+function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 function plural(n, one, few, many) {
@@ -49,12 +83,13 @@ function fmtLeft(sec) {
 function pct(v) { return v == null ? '—' : v + '%'; }
 
 function kpi(icon, num, label, hot) {
-  return '<div class="mi-kpi' + (hot ? ' hot' : '') + '"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+  return '<div class="kpi ' + (hot ? 'tone-warn' : '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
+    '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
 }
 
 function renderKpis(d) {
   var eff = d.effectiveness.overall;
-  document.getElementById('miKpis').innerHTML =
+  $('miKpis').innerHTML =
     kpi('fa-users-viewfinder', d.subjects.total, plural(d.subjects.total, 'участник со следами', 'участника со следами', 'участников со следами'), false) +
     kpi('fa-triangle-exclamation', d.subjects.warns_open, plural(d.subjects.warns_open, 'открытый варн', 'открытых варна', 'открытых варнов'), d.subjects.warns_open > 0) +
     kpi('fa-gavel', eff.count, plural(eff.count, 'первое наказание за ' + d.effectiveness.days + ' дн.', 'первых наказания за ' + d.effectiveness.days + ' дн.', 'первых наказаний за ' + d.effectiveness.days + ' дн.'), false) +
@@ -62,17 +97,17 @@ function renderKpis(d) {
 }
 
 function renderDaysTabs() {
-  document.getElementById('miDaysTabs').innerHTML = [30, 90, 180].map(function (n) {
-    return '<button type="button" class="mi-tab' + (n === DAYS ? ' on' : '') + '" onclick="miDays(' + n + ')">' + n + ' дней</button>';
+  $('miDaysTabs').innerHTML = [30, 90, 180].map(function (n) {
+    return '<button type="button" class="seg-btn' + (n === DAYS ? ' active' : '') + '" data-days="' + n + '">' + n + ' дней</button>';
   }).join('');
 }
 
 function renderSubjects(d) {
-  var box = document.getElementById('miSubjects');
-  document.getElementById('miSubjectsOff').textContent = d.subjects.total
+  var box = $('miSubjects');
+  $('miSubjectsOff').textContent = d.subjects.total
     ? 'показаны ' + d.subjects.items.length + ' из ' + d.subjects.total : '';
   if (!d.subjects.items.length) {
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-face-smile"></i><p>Ни варнов, ни наказаний</p><p class="empty-tip">Когда бот запишет первую кару, здесь появится список.</p></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-face-smile"></i><span>Ни варнов, ни наказаний</span></div>';
     return;
   }
   box.innerHTML = d.subjects.items.map(function (r) {
@@ -81,140 +116,151 @@ function renderSubjects(d) {
     if (r.warns) bits.push(r.warns + ' ' + plural(r.warns, 'варн', 'варна', 'варнов'));
     if (r.punishments) bits.push(r.punishments + ' ' + plural(r.punishments, 'наказание', 'наказания', 'наказаний'));
     if (r.last_at) bits.push('последнее: ' + fmtDate(r.last_at));
-    return '<div class="mi-row' + (PICKED === r.user_id ? ' on' : '') + '" onclick="miPick(\'' + esc(r.user_id) + '\')">' +
-      '<div class="mi-who"><b>' + esc(label) + ' <small style="color:var(--text-3)">#' + esc(r.user_id) + '</small></b>' +
-      '<small>' + esc(bits.join(' · ')) + '</small></div>' +
-      '<span class="mi-chip' + (r.weight >= 5 ? ' hot' : '') + '">вес ' + r.weight + '</span></div>';
+    return '<div class="feed-item' + (PICKED === r.user_id ? '" style="background:var(--ac-soft);border-radius:var(--r)"' : '" style="border-bottom:1px solid var(--line);cursor:pointer"') + '" data-pick="' + esc(r.user_id) + '">' +
+      '<div class="feed-item-icon"><i class="fas fa-user"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(label) + ' <span class="id-pill">' + esc(r.user_id) + '</span></div>' +
+      '<div class="feed-item-sub">' + esc(bits.join(' · ')) + '</div></div>' +
+      '<span class="badge ' + (r.weight >= 5 ? 'danger' : 'neutral') + '">вес ' + r.weight + '</span></div>';
   }).join('');
 }
 
 function renderEffect(d) {
   var eff = d.effectiveness;
-  var box = document.getElementById('miEffect');
+  var box = $('miEffect');
   if (!eff.overall.count) {
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-rotate"></i><p>За ' + eff.days + ' дн. наказаний нет</p><p class="empty-tip">Как только появятся первые кары, здесь будет статистика рецидива.</p></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-rotate"></i><span>За ' + eff.days + ' дн. наказаний нет</span></div>';
     return;
   }
   var rows = eff.types.concat([eff.overall]);
-  var html = '<div class="mi-eff head"><span>Тип первого</span><span style="text-align:right">за 7 дн.</span><span style="text-align:right">за 30 дн.</span><span style="text-align:right">медиана</span></div>';
+  var html = '<div class="feed-item" style="font-weight:700;font-size:var(--fs-sm);color:var(--text-3)">' +
+    '<span style="flex:1">Тип первого</span><span style="width:56px;text-align:right">за 7 дн.</span>' +
+    '<span style="width:56px;text-align:right">за 30 дн.</span><span style="width:64px;text-align:right">медиана</span></div>';
   html += rows.map(function (r) {
     var name = r.action === 'all' ? 'Любое наказание' : r.action;
     var who = r.count + ' ' + plural(r.count, 'человек', 'человека', 'человек');
     var dim = r.thin;
-    return '<div class="mi-eff' + (r.action === 'all' ? ' total' : '') + '">' +
-      '<span style="font-size:12.5px;color:var(--text-2,rgba(255,255,255,.85))"><b>' + esc(name) + '</b> <small style="color:var(--text-3)">' + who + (dim ? ' · мало данных' : '') + '</small></span>' +
-      '<span class="v' + (dim ? ' dim' : '') + '">' + pct(r.repeat7) + '</span>' +
-      '<span class="v' + (dim ? ' dim' : '') + '">' + pct(r.repeat30) + '</span>' +
-      '<span class="v' + (dim ? ' dim' : '') + '">' + (r.median_days == null ? '—' : r.median_days + ' дн.') + '</span></div>';
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line);' + (r.action === 'all' ? 'font-weight:700' : '') + '">' +
+      '<span style="flex:1;min-width:0"><b>' + esc(name) + '</b> <span class="hint">' + who + (dim ? ' · мало данных' : '') + '</span></span>' +
+      '<span class="mono" style="width:56px;text-align:right;' + (dim ? 'opacity:.4' : '') + '">' + pct(r.repeat7) + '</span>' +
+      '<span class="mono" style="width:56px;text-align:right;' + (dim ? 'opacity:.4' : '') + '">' + pct(r.repeat30) + '</span>' +
+      '<span class="mono" style="width:64px;text-align:right;' + (dim ? 'opacity:.4' : '') + '">' + (r.median_days == null ? '—' : r.median_days + ' дн.') + '</span></div>';
   }).join('');
   box.innerHTML = html;
 }
 
 function renderCheck(d) {
   var c = d.checklist;
-  document.getElementById('miCheckOff').textContent =
-    c.ok + ' из ' + c.total + ' в порядке' + (c.warn ? ', ' + c.warn + ' с заметками' : '') + (c.missing ? ', ' + c.missing + ' не настроено' : '');
-  document.getElementById('miCheck').innerHTML = c.items.map(function (it) {
-    return '<div class="mi-check">' +
-      '<span class="mi-dot ' + esc(it.status) + '" title="' + esc(it.status) + '"></span>' +
-      '<div class="mi-who"><b>' + esc(it.title) + ' <small style="color:var(--text-3)">' + esc(it.detail) + '</small></b>' +
-      '<small>' + esc(it.hint) + '</small></div>' +
-      '<a class="mi-link-chip" href="' + esc(it.link) + '">' + esc(it.link_label) + '</a></div>';
+  $('miCheckOff').textContent = c.ok + ' из ' + c.total + ' в порядке' +
+    (c.warn ? ', ' + c.warn + ' с заметками' : '') + (c.missing ? ', ' + c.missing + ' не настроено' : '');
+  $('miCheck').innerHTML = c.items.map(function (it) {
+    var dot = it.status === 'ok' ? 'ok' : it.status === 'warn' ? 'warn' : 'err';
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line)">' +
+      '<span class="dot ' + dot + '" style="margin-top:6px"></span>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(it.title) + '</div>' +
+      '<div class="feed-item-sub">' + esc(it.detail || '') + '</div>' +
+      '<div class="hint">' + esc(it.hint || '') + '</div></div>' +
+      (it.link ? '<a class="btn btn-sm" href="' + esc(it.link) + '">' + esc(it.link_label || 'Открыть') + '</a>' : '') + '</div>';
   }).join('');
 }
 
-function badge(action) {
-  var cls = BADGE[action] || 'k-mute';
-  return '<span class="mi-badge ' + cls + '">' + esc(action) + '</span>';
-}
-
 function renderDossier(ds) {
-  var box = document.getElementById('miDossier');
+  var box = $('miDossier');
   if (!ds.known) {
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-ghost"></i><p>Следов не найдено</p><p class="empty-tip">Ни варнов, ни наказаний, ни заметок по ID ' + esc(ds.user_id) + ' — чистый человек или не с этого сервера.</p></div>';
+    box.innerHTML = '<div class="empty"><i class="fas fa-ghost"></i><span>Следов не найдено</span>' +
+      '<div class="hint">Ни варнов, ни наказаний, ни заметок по ID ' + esc(ds.user_id) + ' — чистый человек или не с этого сервера.</div></div>';
     return;
   }
   var name = ds.name || ('ID ' + ds.user_id);
-  var html = '<div class="mi-dhead">';
-  html += '<span class="mi-chip ok"><i class="fas fa-user"></i> ' + esc(name) + ' <small style="opacity:.65">#' + esc(ds.user_id) + '</small></span>';
-  html += '<span class="mi-chip' + (ds.warns.count ? ' hot' : '') + '">' + ds.warns.count + ' ' + plural(ds.warns.count, 'варн', 'варна', 'варнов') + '</span>';
+  var html = '<div class="chip-row" style="margin-bottom:12px">' +
+    '<span class="chip"><i class="fas fa-user"></i> ' + esc(name) + ' <span class="id-pill">#' + esc(ds.user_id) + '</span></span>' +
+    '<span class="chip ' + (ds.warns.count ? 'danger' : '') + '">' + ds.warns.count + ' ' + plural(ds.warns.count, 'варн', 'варна', 'варнов') + '</span>';
   if (ds.warns.gap != null) {
-    html += '<span class="mi-chip' + (ds.warns.gap === 1 ? ' hot' : '') + '">ещё ' + ds.warns.gap + ' до ' + esc(ds.warns.action_name.toLowerCase()) + 'а</span>';
+    html += '<span class="chip ' + (ds.warns.gap === 1 ? 'danger' : '') + '">ещё ' + ds.warns.gap + ' до ' + esc(ds.warns.action_name.toLowerCase()) + 'а</span>';
   }
-  html += '<span class="mi-chip">' + ds.stats.punishments + ' ' + plural(ds.stats.punishments, 'наказание', 'наказания', 'наказаний') + '</span>';
+  html += '<span class="chip">' + ds.stats.punishments + ' ' + plural(ds.stats.punishments, 'наказание', 'наказания', 'наказаний') + '</span>';
   if (ds.stats.days_since != null) {
-    html += '<span class="mi-chip">последнее: ' + ds.stats.days_since + ' ' + plural(ds.stats.days_since, 'день', 'дня', 'дней') + ' назад</span>';
+    html += '<span class="chip">последнее: ' + ds.stats.days_since + ' ' + plural(ds.stats.days_since, 'день', 'дня', 'дней') + ' назад</span>';
   }
   html += '</div>';
 
   if (ds.temp_active.length) {
-    html += '<div class="mi-sect">Активные временные статусы</div>' + ds.temp_active.map(function (r) {
-      return '<div class="mi-line">' + badge(r.kind_name) +
-        '<div class="mi-who"><b>' + esc(fmtLeft(r.remaining_s)) + '</b>' + (r.reason ? '<small>' + esc(r.reason) + '</small>' : '') + '</div>' +
-        '<span class="mi-date">' + fmtDate(r.until * 1000) + '</span></div>';
+    html += '<div class="section-title">Активные временные статусы</div>' + ds.temp_active.map(function (r) {
+      return '<div class="feed-item"><div class="feed-item-icon"><i class="fas fa-hourglass"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title"><span class="badge neutral">' + esc(r.kind_name) + '</span> ' + esc(fmtLeft(r.remaining_s)) + '</div>' +
+        (r.reason ? '<div class="feed-item-sub">' + esc(r.reason) + '</div>' : '') + '</div>' +
+        '<span class="muted">' + fmtDate(r.until * 1000) + '</span></div>';
     }).join('');
   }
   if (ds.warns.items.length) {
-    html += '<div class="mi-sect">Последние варны' + (ds.warns.next_count ? ' · порог ' + ds.warns.next_count : '') + '</div>' + ds.warns.items.map(function (w) {
-      return '<div class="mi-note">' + esc(w.reason) + '<small>' + esc(w.at) + (w.mod ? ' · ' + esc(w.mod) : '') + '</small></div>';
-    }).join('');
+    html += '<div class="section-title">Последние варны' + (ds.warns.next_count ? ' · порог ' + ds.warns.next_count : '') + '</div>' +
+      ds.warns.items.map(function (w) {
+        return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon" style="background:var(--warn-soft);color:var(--warn)"><i class="fas fa-triangle-exclamation"></i></div>' +
+          '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(w.reason) + '</div>' +
+          '<div class="feed-item-time">' + esc(w.at) + (w.mod ? ' · ' + esc(w.mod) : '') + '</div></div></div>';
+      }).join('');
   }
   if (ds.amnesty.length) {
-    html += '<div class="mi-sect">Амнистии</div>' + ds.amnesty.map(function (a) {
-      return '<div class="mi-note">Списано ' + a.count + ' ' + plural(a.count, 'варн', 'варна', 'варнов') +
-        '<small>' + esc(a.at) + (a.by ? ' · ' + esc(a.by) : '') + (a.restored_at ? ' · откачена' : '') + '</small></div>';
+    html += '<div class="section-title">Амнистии</div>' + ds.amnesty.map(function (a) {
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-dove"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title">Списано ' + a.count + ' ' + plural(a.count, 'варн', 'варна', 'варнов') + '</div>' +
+        '<div class="feed-item-time">' + esc(a.at) + (a.by ? ' · ' + esc(a.by) : '') + (a.restored_at ? ' · откачена' : '') + '</div></div></div>';
     }).join('');
   }
   if (ds.timeline.length) {
-    html += '<div class="mi-sect">Таймлайн наказаний (' + ds.timeline_total + ')</div>' + ds.timeline.map(function (t) {
-      return '<div class="mi-line">' + badge(t.action) +
-        '<div class="mi-who"><b>' + esc(t.reason || 'Без причины') + '</b>' + (t.mod_name ? '<small>' + esc(t.mod_name) + '</small>' : '') + '</div>' +
-        '<span class="mi-date">' + fmtDate(t.at) + '</span></div>';
+    html += '<div class="section-title">Таймлайн наказаний (' + ds.timeline_total + ')</div>' + ds.timeline.map(function (t) {
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-gavel"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title"><span class="badge neutral">' + esc(t.action) + '</span> ' + esc(t.reason || 'Без причины') + '</div>' +
+        (t.mod_name ? '<div class="feed-item-time">' + esc(t.mod_name) + '</div>' : '') + '</div>' +
+        '<span class="muted">' + fmtDate(t.at) + '</span></div>';
     }).join('');
   }
   if (ds.notes.length) {
-    html += '<div class="mi-sect">Заметки команды</div>' + ds.notes.map(function (n) {
-      return '<div class="mi-note">' + esc(n.note) + '<small>' + esc(n.at) + (n.mod ? ' · ' + esc(n.mod) : '') + '</small></div>';
+    html += '<div class="section-title">Заметки команды</div>' + ds.notes.map(function (n) {
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-sticky-note"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(n.note) + '</div>' +
+        '<div class="feed-item-time">' + esc(n.at) + (n.mod ? ' · ' + esc(n.mod) : '') + '</div></div></div>';
     }).join('');
   }
   box.innerHTML = html;
 }
 
+function miPick(uid) {
+  PICKED = uid;
+  renderSubjects(OV);
+  fetch(API + '/dossier?user_id=' + encodeURIComponent(uid))
+    .then(function (r) { return r.json(); })
+    .then(function (ds) {
+      if (!ds.success) {
+        window.showToast(ds.error || 'Досье недоступно', false);
+        return;
+      }
+      renderDossier(ds);
+      var box = $('miDossier');
+      if (box.scrollIntoView) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }).catch(function () {});
+}
+
+document.addEventListener('click', function (e) {
+  var p = e.target.closest('[data-pick]');
+  if (p) { miPick(p.dataset.pick); return; }
+  var d = e.target.closest('[data-days]');
+  if (d) { DAYS = parseInt(d.dataset.days, 10); renderDaysTabs(); load(); }
+});
+
+$('miDossierGo').addEventListener('click', function () {
+  var uid = $('miDossierId').value.trim();
+  if (!uid) { window.showToast('Введите ID участника', false); return; }
+  miPick(uid);
+});
+$('miDossierId').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('miDossierGo').click(); });
+
 function load() {
   fetch(API + '/overview?days=' + DAYS).then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
     OV = d;
-    renderKpis(d); renderSubjects(d); renderEffect(d); renderCheck(d);
+    var render = function () { renderKpis(d); renderSubjects(d); renderEffect(d); renderCheck(d); };
+    if (window.renderSafe) window.renderSafe(render); else render();
   }).catch(function () {});
-}
-
-function miDays(n) { DAYS = n; renderDaysTabs(); load(); }
-
-function miPick(uid) {
-  PICKED = uid;
-  document.getElementById('miDossierId').value = uid;
-  if (OV) { renderSubjects(OV); }
-  miDossier(uid);
-}
-
-function miDossierAsk() {
-  miDossier(document.getElementById('miDossierId').value);
-}
-
-function miDossier(uid) {
-  var box = document.getElementById('miDossier');
-  box.innerHTML = '<div class="sk-row"></div><div class="sk-row" style="width:60%"></div>';
-  fetch(API + '/dossier?user_id=' + encodeURIComponent(uid)).then(function (r) { return r.json(); }).then(function (d) {
-    if (!d.success) {
-      box.innerHTML = '<div class="empty-state"><i class="fas fa-circle-exclamation"></i><p>' + esc(d.error || 'Ошибка') + '</p><p class="empty-tip">Подойдёт чистый ID или упоминание вида @участник.</p></div>';
-      return;
-    }
-    PICKED = d.dossier.user_id;
-    if (OV) { renderSubjects(OV); }
-    renderDossier(d.dossier);
-  }).catch(function () {
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-plug-circle-xmark"></i><p>Не удалось загрузить досье</p></div>';
-  });
 }
 
 renderDaysTabs();

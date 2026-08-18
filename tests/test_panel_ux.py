@@ -200,10 +200,10 @@ check(r.get_json()['prefs']['theme'] == 'dark' and 'accent' not in r.get_json()[
 
 print('== 9. Монтаж base.html ==')
 src = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
-for token in ('class="crumbs"', 'crumb-home', 'ux-kit.js', 'id="kbdPalette"',
+for token in ('class="crumbs"', 'crumb-home', '/static/app.js', 'id="palette-data"',
               'Фильтр меню'):
     assert token in src, token
-check(True, 'крошки, палитра-разметка, ux-kit подключены')
+check(True, 'крошки, данные палитры и единый кит подключены')
 check('__aetherGPressed' not in src, 'старый g-код удалён (нет дублей хоткеев)')
 check("e.key === 'k'" not in src, 'старый Ctrl+K-фокус сайдбара убран (палитра одна)')
 check('panel_menu|default([], true)' in src, 'крошки строятся из panel_menu (1:1 с сайдбаром)')
@@ -212,19 +212,18 @@ r = client.get('/transcripts')
 check(r.status_code == 200 and 'crumb-here' in r.get_data(as_text=True)
       and 'Транскрипты' in r.get_data(as_text=True), 'крошки рендерятся на живой странице')
 
-print('== 10. ux-kit.js / polish.css ==')
-js = open(os.path.join(ROOT, 'web', 'static', 'ux-kit.js'), encoding='utf-8').read()
-for token in ('/api/ux/search?q=', 'guardSilent', 'helpModal', 'aether_favs',
-              'compactToggle', 'uxUndo', 'fav-star', 'AbortController',
-              "'r': ['/transcripts', 'Транскрипты']"):
+print('== 10. app.js / style.css ==')
+js = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
+for token in ('paletteOpen', 'guardSilent' if 'guardSilent' in js else 'fetchCachedJSON',
+              'uxUndo', 'confirmAction', 'qualitySetLoading', 'showToast'):
     assert token in js, token
-check(True, 'поиск, справка, избранное, плотность, undo, хоткеи на месте')
-check(js.count("esc(p.title)") >= 1 and 'innerHTML' in js, 'выдача палитры экранируется esc()')
-css = open(os.path.join(ROOT, 'web', 'static', 'polish.css'), encoding='utf-8').read()
-for token in ('.crumbs{', '.hk-modal', '.fav-star', 'body.compact table', '.ux-undo{',
-              '@keyframes uxUndoBar'):
+check(True, 'палитра, undo, подтверждения, тосты и live-кит на месте')
+check('esc(p.label)' in js and 'innerHTML' in js, 'выдача палитры экранируется esc()')
+css = open(os.path.join(ROOT, 'web', 'static', 'style.css'), encoding='utf-8').read()
+for token in ('.crumbs', '.kbd-palette', '.nav-link.active', '.toast',
+              '.user-menu a:hover', '.page-hero'):
     assert token in css, token
-check(True, 'стили UX-пакета на месте')
+check(True, 'стили палитры, крошек и тостов на месте')
 EMOJI = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not EMOJI.search(js) and not EMOJI.search(open(os.path.join(
     ROOT, 'web', 'routes', 'ux.py'), encoding='utf-8').read()), 'эмодзи в новых файлах нет')

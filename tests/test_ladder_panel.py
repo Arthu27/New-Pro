@@ -200,7 +200,8 @@ tpl = open(os.path.join(ROOT, 'web/templates/ladder.html'), encoding='utf-8').re
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
 src = open(os.path.join(ROOT, 'web/routes/ladder_panel.py'), encoding='utf-8').read()
 check(not EMOJI_RE.search(src), 'в модуле нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('ldKpis', 'ldAddPanel', 'ldCount', 'ldAction', 'ldDuration', 'ldUnit',
             'ldAdd', 'ldSteps', 'ldUser', 'ldSimGo', 'ldSim', 'ldCard', 'ldCsv'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')

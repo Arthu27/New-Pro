@@ -2289,14 +2289,13 @@ def inject_panel_menu ():
     чьи коги выключены (приглушаются в меню с чипом «выкл»).
     """
     from services .panel_menu import (panel_groups_for, module_mode_active,
-    module_off_paths, moderation_profile_for)
+    module_off_paths)
     role =session .get ('role','uye')
     menu =panel_groups_for (role )if role in ('owner','admin','mod')else []
     off_paths =module_off_paths ()
     return {'panel_menu':menu ,'panel_role':role ,
             'panel_mod_only':module_mode_active (),
-            'panel_off_paths':off_paths,
-            'moderation_profile':moderation_profile_for (request .path)}
+            'panel_off_paths':off_paths}
 
 def set_bot_instance (bot ):
     global bot_instance 

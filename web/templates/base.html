@@ -1,214 +1,124 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="dark">
+<html lang="ru" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=12">
-    <link rel="stylesheet" href="/static/polish.css?v=5">
-    <link rel="stylesheet" href="/static/moderation-suite.css?v=4">
-    {% if moderation_profile %}<link rel="stylesheet" href="/static/moderation-rooms.css?v=5">{% endif %}
-    <link rel="stylesheet" href="/static/quality-suite.css?v=1">
+    <link rel="stylesheet" href="/static/style.css?v=60">
     <script>
-      // Apply theme + accent before render to prevent FOUC
-      (function(){
-        function hexToRgb(hex){ hex=String(hex||'#e0b04a').replace('#',''); if(hex.length===3) hex=hex.split('').map(function(x){return x+x;}).join(''); var n=parseInt(hex,16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
-        function applyAccent(hex){
-          if(!hex) return;
-          var c=hexToRgb(hex); var st=document.documentElement.style;
-          var rgba=function(a){return 'rgba('+c.r+','+c.g+','+c.b+','+a+')';};
-          var light=function(f){return 'rgb('+Math.min(255,Math.round(c.r+(255-c.r)*f))+','+Math.min(255,Math.round(c.g+(255-c.g)*f))+','+Math.min(255,Math.round(c.b+(255-c.b)*f))+')';};
-          var dark=function(f){return 'rgb('+Math.round(c.r*f)+','+Math.round(c.g*f)+','+Math.round(c.b*f)+')';};
-          st.setProperty('--ac', '#'+String(hex).replace('#','').toLowerCase());
-          st.setProperty('--ac-2', light(0.35));
-          st.setProperty('--ac-3', dark(0.72));
-          st.setProperty('--ac-soft', rgba(0.12));
-          st.setProperty('--ac-glow', rgba(0.30));
-          st.setProperty('--ac-line', rgba(0.22));
-          st.setProperty('--line', rgba(0.10));
-          st.setProperty('--line-2', rgba(0.18));
-          st.setProperty('--line-3', rgba(0.30));
-        }
-        window.applyAccent = applyAccent;
+      // Тема применяется до отрисовки, чтобы не было «вспышки»
+      (function () {
         try {
-          var t = localStorage.getItem('aether_theme') || 'dark';
+          var t = localStorage.getItem('aether_theme');
+          if (t !== 'dark' && t !== 'light') t = 'light';
           document.documentElement.setAttribute('data-theme', t);
-          applyAccent(localStorage.getItem('aether_accent'));
-        } catch(e) {}
+        } catch (e) {}
       })();
     </script>
 </head>
 <body>
     <a class="skip-link" href="#main-content">Перейти к содержимому</a>
-    <div class="route-progress" id="routeProgress" role="progressbar" aria-label="Загрузка страницы" aria-hidden="true"><span></span></div>
 
-    {% if request.path == '/' %}
-    <!-- ============================================================
-         WELCOME / SPLASH SCREEN (только на главной, один раз за сессию)
-         Full-screen hero → переход в панель по клику/скроллу/клавише.
-         ============================================================ -->
-    <div class="welcome-screen" id="welcomeScreen" aria-hidden="false">
-      <div class="bg-ambient" aria-hidden="true">
-        <span class="orb orb-1"></span>
-        <span class="orb orb-2"></span>
-        <span class="orb orb-3"></span>
-        <span class="orb orb-4"></span>
-        <div class="bg-grid-plane"></div>
-      </div>
+    <div class="app-shell">
+        <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Открыть меню"><i class="fas fa-bars"></i></button>
 
-      <!-- Site-style top nav (sticky) -->
-      <nav class="welcome-nav">
-        <div class="welcome-nav-inner">
-          <div class="welcome-nav-logo">
-            <div class="welcome-nav-mark"><i class="fas fa-bolt"></i></div>
-            <span class="welcome-nav-name">AETHER</span>
-          </div>
-          <div class="welcome-nav-links" id="welcomeNavLinks">
-            <a href="#w-features" class="wn-link">Возможности</a>
-            <a href="#w-stats" class="wn-link">Статистика</a>
-            <a href="#w-about" class="wn-link">О системе</a>
-          </div>
-          <button class="welcome-nav-cta" id="welcomeEnterTop" type="button"><i class="fas fa-arrow-right"></i> Войти</button>
-          <button class="welcome-burger" id="welcomeBurger" type="button" aria-label="Меню"><i class="fas fa-bars"></i></button>
-        </div>
-      </nav>
+        <!-- ── Сайдбар ─────────────────────────────────────── -->
+        <aside class="sidebar" id="sidebar">
+            <a href="/" class="brand">
+                <div class="brand-icon"><i class="fas fa-bolt"></i></div>
+                <div class="brand-text">
+                    <div class="brand-title">Aether</div>
+                    <div class="brand-sub">Панель управления</div>
+                </div>
+            </a>
 
-      <!-- Hero content -->
-      <div class="welcome-inner">
-        <div class="welcome-eyebrow"><span class="dot"></span> Панель управления сервером</div>
-        <div class="welcome-title">AETHER</div>
-        <div class="welcome-sub">Умная система модерации, аналитики и автоматизации<br>для вашего Discord-сообщества</div>
-        <div class="welcome-tag">Модерация · Аналитика · AI · Автоматизация</div>
-        <div class="welcome-actions">
-          <button class="welcome-btn" id="welcomeEnter" type="button">
-            <span>Войти в панель</span><i class="fas fa-arrow-right"></i>
-          </button>
-          <a class="welcome-btn ghost" href="#w-features" data-scroll>Узнать больше</a>
-        </div>
-        <div class="welcome-hint"><i class="fas fa-chevron-down"></i> нажмите или прокрутите вниз</div>
-      </div>
+            {% if panel_mod_only %}
+            <a href="/cog-manager" class="mode-banner" title="Режим «только модерация»: часть модулей выключена (MOD_ONLY=1). Открыть менеджер модулей">
+                <i class="fas fa-shield-halved"></i>
+                <span>Только модерация</span>
+                <i class="fas fa-chevron-right mode-banner-arrow"></i>
+            </a>
+            {% endif %}
 
-      <!-- Feature highlights -->
-      <div class="welcome-features" id="w-features">
-        <div class="wf-item"><i class="fas fa-shield-halved"></i><b>Модерация</b><span>Варны, баны, мьюты, автомод</span></div>
-        <div class="wf-item"><i class="fas fa-chart-line"></i><b>Аналитика</b><span>Графики и живая статистика</span></div>
-        <div class="wf-item"><i class="fas fa-robot"></i><b>AI-помощник</b><span>Автоматическая поддержка</span></div>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- Futuristic ambient background layer -->
-    <div class="bg-ambient" aria-hidden="true">
-        <span class="orb orb-1"></span>
-        <span class="orb orb-2"></span>
-        <span class="orb orb-3"></span>
-        <span class="orb orb-4"></span>
-        <div class="bg-grid-plane"></div>
-    </div>
-
-    <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Открыть меню"><i class="fas fa-bars"></i></button>
-
-    <aside class="sidebar" id="sidebar">
-        <a href="/" class="brand">
-            <div class="brand-icon"><i class="fas fa-bolt"></i></div>
-            <div class="brand-text">
-                <div class="brand-title">AETHER</div>
-                <div class="brand-sub">Панель управления</div>
-            </div>
-        </a>
-
-        {% if panel_mod_only %}
-        <a href="/cog-manager" class="mode-banner" title="Режим «только модерация»: часть модулей выключена (MOD_ONLY=1). Открыть менеджер модулей">
-            <i class="fas fa-shield-halved"></i>
-            <span>Только модерация</span>
-            <i class="fas fa-chevron-right mode-banner-arrow"></i>
-        </a>
-        {% endif %}
-
-        <div class="sidebar-search">
-            <i class="fas fa-search"></i>
-            <input type="text" id="sidebarSearch" placeholder="Фильтр меню..." aria-label="Фильтр меню">
-        </div>
-
-        <nav class="sidebar-nav" id="sidebarNav">
-            {% if role == 'uye' %}
-            <div class="nav-group">
-                <a href="/member-apply" class="nav-link {% if request.path == '/member-apply' %}active{% endif %}">
-                    <i class="fas fa-user-shield"></i>
-                    <span>Заявка в администрацию</span>
-                </a>
+            <div class="sidebar-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="sidebarSearch" placeholder="Фильтр меню..." aria-label="Фильтр меню">
             </div>
 
-            {% elif role == 'owner' or role == 'admin' or role == 'mod' %}
-            {% for grp in panel_menu %}
-                {% if grp.pages %}
-                <div class="nav-group" data-group="{{ grp.key }}">
-                    <div class="nav-group-title" data-toggle role="button" tabindex="0" aria-expanded="true">
-                        <span class="nav-group-icon"><i class="fas {{ grp.icon }}"></i></span>
-                        <span class="nav-group-label">{{ grp.group }}</span>
-                        <span class="nav-group-count" data-count></span>
-                        <i class="fas fa-chevron-down nav-caret"></i>
-                    </div>
-                    <div class="nav-group-items">
-                        <div class="nav-group-inner">
-                        {% if grp.sections %}
-                            {% for section in grp.sections %}
-                            <div class="nav-subgroup{% if section.pages|selectattr('path', 'equalto', request.path)|list %} has-active{% endif %}" data-mod-section="{{ section.key }}">
-                                <button class="nav-subgroup-title" type="button" aria-expanded="false" title="{{ section.description }}">
-                                    <span class="nav-subgroup-icon"><i class="fas {{ section.icon }}"></i></span>
-                                    <span>{{ section.short }}</span>
-                                    <span class="nav-subgroup-count">{{ section.pages|length }}</span>
-                                    <i class="fas fa-chevron-right nav-subgroup-caret"></i>
-                                </button>
-                                <div class="nav-subgroup-items">
-                                {% for it in section.pages %}
-                                    <a href="{{ it.path }}" data-mod-path="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}" title="{{ it.description }}{% if it.path in panel_off_paths %} · Модуль выключен{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
-                                {% endfor %}
+            <nav class="sidebar-nav" id="sidebarNav">
+                {% if role == 'uye' %}
+                <div class="nav-group">
+                    <a href="/member-apply" class="nav-link {% if request.path == '/member-apply' %}active{% endif %}">
+                        <i class="fas fa-user-shield"></i>
+                        <span>Заявка в администрацию</span>
+                    </a>
+                </div>
+
+                {% elif role == 'owner' or role == 'admin' or role == 'mod' %}
+                {% for grp in panel_menu %}
+                    {% if grp.pages %}
+                    <div class="nav-group" data-group="{{ grp.key }}">
+                        <div class="nav-group-title" data-toggle role="button" tabindex="0" aria-expanded="true">
+                            <span class="nav-group-icon"><i class="fas {{ grp.icon }}"></i></span>
+                            <span class="nav-group-label">{{ grp.group }}</span>
+                            <span class="nav-group-count" data-count></span>
+                            <i class="fas fa-chevron-down nav-caret"></i>
+                        </div>
+                        <div class="nav-group-items">
+                            <div class="nav-group-inner">
+                            {% if grp.sections %}
+                                {% for section in grp.sections %}
+                                <div class="nav-subgroup{% if section.pages|selectattr('path', 'equalto', request.path)|list %} has-active{% endif %}" data-mod-section="{{ section.key }}">
+                                    <button class="nav-subgroup-title" type="button" aria-expanded="false" title="{{ section.description }}">
+                                        <span class="nav-subgroup-icon"><i class="fas {{ section.icon }}"></i></span>
+                                        <span>{{ section.short }}</span>
+                                        <span class="nav-subgroup-count">{{ section.pages|length }}</span>
+                                        <i class="fas fa-chevron-right nav-subgroup-caret"></i>
+                                    </button>
+                                    <div class="nav-subgroup-items">
+                                    {% for it in section.pages %}
+                                        <a href="{{ it.path }}" data-mod-path="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}" title="{{ it.description }}{% if it.path in panel_off_paths %} · Модуль выключен{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
+                                    {% endfor %}
+                                    </div>
                                 </div>
+                                {% endfor %}
+                            {% else %}
+                                {% for it in grp.pages %}
+                                <a href="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}"{% if it.path in panel_off_paths %} title="Модуль выключен (MOD_ONLY / DISABLED_COGS)"{% endif %}><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
+                                {% endfor %}
+                            {% endif %}
                             </div>
-                            {% endfor %}
-                        {% else %}
-                            {% for it in grp.pages %}
-                            <a href="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}"{% if it.path in panel_off_paths %} title="Модуль выключен (MOD_ONLY / DISABLED_COGS)"{% endif %}><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
-                            {% endfor %}
-                        {% endif %}
                         </div>
                     </div>
-                </div>
+                    {% endif %}
+                {% endfor %}
                 {% endif %}
-            {% endfor %}
-            {% endif %}
-        </nav>
+            </nav>
 
-        <div class="sidebar-foot">
-            <div class="sys-status">
-                <div class="sys-status-row">
-                    <span class="sys-dot"></span>
-                    <span class="sys-label">Система</span>
-                    <span class="sys-val" id="sysConnection">Online</span>
+            <div class="sidebar-foot">
+                <div class="sys-status">
+                    <div class="sys-status-row">
+                        <span class="sys-dot"></span>
+                        <span class="sys-label">Система</span>
+                        <span class="sys-val" id="sysConnection">Online</span>
+                    </div>
+                    <div class="sys-status-row">
+                        <i class="fas fa-clock sys-ico"></i>
+                        <span class="sys-label">Время</span>
+                        <span class="sys-val mono" id="sysClock">--:--:--</span>
+                    </div>
                 </div>
-                <div class="sys-status-row">
-                    <i class="fas fa-microchip sys-ico"></i>
-                    <span class="sys-label">Uptime</span>
-                    <span class="sys-val mono" id="sysUptime">00:00:00</span>
-                </div>
-                <div class="sys-status-row">
-                    <i class="fas fa-clock sys-ico"></i>
-                    <span class="sys-label">Время</span>
-                    <span class="sys-val mono" id="sysClock">--:--:--</span>
+                <div class="sidebar-version">
+                    <i class="fas fa-bolt"></i>
+                    AETHER <span class="mono">v3.0</span> · Light
                 </div>
             </div>
-            <div class="sidebar-version">
-                <i class="fas fa-bolt" ></i>
-                AETHER <span class="mono">v2.0</span> · Core
-            </div>
-        </div>
-    </aside>
+        </aside>
 
-    <main id="main-content" class="main-content">
-        <div class="navbar">
-            <div class="navbar-left">
+        <!-- ── Основная область ────────────────────────────── -->
+        <div class="main-wrap">
+            <header class="topbar">
                 <nav class="crumbs" aria-label="Хлебные крошки">
                     <a class="crumb-home" href="/" title="Обзор сервера"><i class="fas fa-house"></i></a>
                     {% set ns = namespace(c_group='', c_label='', c_icon='') %}
@@ -228,1393 +138,96 @@
                     <span class="crumb-here"><i class="fas {{ ns.c_icon }}"></i> {{ ns.c_label }}</span>
                     {% endif %}
                 </nav>
-                <h1>{% block page_title %}Панель управления{% endblock %}</h1>
-            </div>
-            <div class="navbar-right">
-                <div class="navbar-clock" title="Текущее время">
-                    <i class="fas fa-clock"></i>
-                    <span id="navClock">--:--:--</span>
-                </div>
-                <div class="quality-connection is-online" id="qualityConnection" role="status" aria-live="polite" title="Соединение с панелью">
-                    <span class="quality-connection-dot"></span>
-                    <span class="quality-connection-label">В сети</span>
-                </div>
-                <button class="nav-icon-btn" type="button" title="Поиск (Ctrl+K)" aria-label="Открыть глобальный поиск" id="globalSearchBtn"><i class="fas fa-search"></i></button>
-                <button class="activity-btn" type="button" title="Лента активности" id="activityBtn" aria-label="Открыть ленту активности">
-                    <i class="fas fa-stream"></i>
-                </button>
-                <button class="theme-toggle" type="button" title="Сменить тему" id="themeToggle" aria-label="Сменить тему">
-                    <i class="fas fa-sun icon-sun icon-swap" ></i>
-                    <i class="fas fa-moon icon-moon icon-swap" ></i>
-                </button>
-                <button class="nav-icon-btn" type="button" title="Уведомления" aria-label="Открыть уведомления" id="notifBtn"><i class="fas fa-bell"></i><span class="nav-badge live" style="display:none">0</span></button>
-                <button class="nav-icon-btn" type="button" title="Полный экран" aria-label="Переключить полноэкранный режим" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
-                <div class="user-pill">
-                    <div class="user-avatar">{{ (username or 'U')[0]|upper }}</div>
-                    <div class="user-info">
-                        <div class="user-name">{{ username }}</div>
-                        <div class="user-role">{{ role }}</div>
-                    </div>
-                    <i class="fas fa-chevron-down user-caret"></i>
-                    <div class="user-menu">
-                        <a href="/change-password"><i class="fas fa-key"></i> Сменить пароль</a>
-                        <a href="/panel-logs"><i class="fas fa-list"></i> Логи панели</a>
-                        <hr>
-                        <a href="/logout" class="logout"><i class="fas fa-sign-out-alt"></i> Выход</a>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        {# Единая PRO-навигация для всех страниц модерации. #}
-        {% set modnav = namespace(active=none, active_section=none, sections=[], pages=[]) %}
-        {% for grp in panel_menu|default([], true) %}
-            {% if grp.key == 'mod' %}
-                {% set modnav.sections = grp.sections|default([]) %}
-                {% set modnav.pages = grp.pages %}
-                {% for it in grp.pages %}
-                    {% if it.path == request.path %}{% set modnav.active = it %}{% endif %}
-                {% endfor %}
-            {% endif %}
-        {% endfor %}
-        {% if modnav.active %}
-            {% for section in modnav.sections %}
-                {% if section.key == modnav.active.section %}{% set modnav.active_section = section %}{% endif %}
-            {% endfor %}
-
-        <section class="mod-suite-bar mod-command-room" data-mod-suite data-current-path="{{ request.path }}"
-                 data-mod-profile="{{ moderation_profile.code }}" data-mod-accent="{{ moderation_profile.accent }}">
-            <div class="mod-command-glow" aria-hidden="true"></div>
-            <header class="mod-command-top">
-                <div class="mod-suite-brand" aria-hidden="true"><i class="fas {{ modnav.active.icon }}"></i></div>
-                <div class="mod-command-identity">
-                    <div class="mod-suite-eyebrow">
-                        <span>MODERATION OS</span><i class="fas fa-chevron-right"></i>
-                        <span>{{ moderation_profile.code }}</span><i class="fas fa-chevron-right"></i>
-                        <span>{{ moderation_profile.name }}</span>
+                <div class="navbar-right">
+                    <div class="navbar-clock" title="Текущее время">
+                        <i class="fas fa-clock"></i>
+                        <span id="navClock">--:--:--</span>
                     </div>
-                    <div class="mod-suite-current">{{ modnav.active.label }}</div>
-                </div>
-                <div class="mod-suite-state">
-                    <span class="mod-suite-live"><span></span> Контур активен</span>
-                    <span class="mod-suite-role"><i class="fas fa-user-shield"></i> {{ modnav.active.access }}</span>
+                    <button class="nav-icon-btn" type="button" title="Поиск (Ctrl+K)" aria-label="Открыть глобальный поиск" id="globalSearchBtn"><i class="fas fa-search"></i></button>
+                    <button class="nav-icon-btn" type="button" title="Лента активности" aria-label="Открыть ленту активности" id="activityBtn"><i class="fas fa-stream"></i></button>
+                    <button class="nav-icon-btn theme-toggle" type="button" title="Сменить тему" id="themeToggle" aria-label="Сменить тему">
+                        <i class="fas fa-sun icon-sun icon-swap"></i>
+                        <i class="fas fa-moon icon-moon icon-swap"></i>
+                    </button>
+                    <button class="nav-icon-btn" type="button" title="Уведомления" aria-label="Открыть уведомления" id="notifBtn"><i class="fas fa-bell"></i><span class="nav-badge" id="notifBadge" style="display:none">0</span></button>
+                    <button class="nav-icon-btn" type="button" title="Полный экран" aria-label="Переключить полноэкранный режим" id="fullscreenBtn"><i class="fas fa-expand"></i></button>
+                    <div class="user-pill">
+                        <div class="user-avatar">{{ (username or 'U')[0]|upper }}</div>
+                        <div class="user-info">
+                            <div class="user-name">{{ username }}</div>
+                            <div class="user-role">{{ role }}</div>
+                        </div>
+                        <i class="fas fa-chevron-down user-caret"></i>
+                        <div class="user-menu">
+                            <a href="/change-password"><i class="fas fa-key"></i> Сменить пароль</a>
+                            <a href="/panel-logs"><i class="fas fa-list"></i> Логи панели</a>
+                            <hr>
+                            <a href="/logout" class="logout"><i class="fas fa-sign-out-alt"></i> Выход</a>
+                        </div>
+                    </div>
                 </div>
             </header>
 
-            <div class="mod-command-main">
-                <div class="mod-command-copy">
-                    <span class="mod-command-section"><i class="fas {{ modnav.active_section.icon }}"></i> {{ modnav.active_section.label }}</span>
-                    <h2>{{ moderation_profile.headline }}</h2>
-                    <p>{{ moderation_profile.mission }}</p>
-                </div>
-                <div class="mod-command-index" aria-label="Инструмент {{ moderation_profile.position }} из {{ moderation_profile.total }}">
-                    <span>{{ '%02d'|format(moderation_profile.position) }}</span>
-                    <i></i>
-                    <small>{{ '%02d'|format(moderation_profile.total) }}</small>
-                </div>
-                <div class="mod-suite-actions">
-                    <div class="mod-command-stepper">
-                        <a class="mod-suite-step" href="#" data-mod-prev title="Предыдущий инструмент" aria-label="Предыдущий инструмент"><i class="fas fa-chevron-left"></i></a>
-                        <a class="mod-suite-step" href="#" data-mod-next title="Следующий инструмент" aria-label="Следующий инструмент"><i class="fas fa-chevron-right"></i></a>
+            <main id="main-content" class="main-content">
+                <div class="navbar">
+                    <div class="navbar-left">
+                        <h1>{% block page_title %}Панель управления{% endblock %}</h1>
                     </div>
-                    <button class="mod-command-enter" type="button" data-mod-enter><i class="fas fa-arrow-down"></i> К рабочей области</button>
-                    <button class="mod-suite-open" type="button" data-mod-open aria-haspopup="dialog">
-                        <i class="fas fa-table-cells-large"></i><span>Все 18 комнат</span><kbd>Alt M</kbd>
-                    </button>
-                </div>
-            </div>
-
-            <div class="mod-command-features" aria-label="Возможности раздела">
-                {% for feature in moderation_profile.features %}
-                <span><i class="fas fa-check"></i> {{ feature }}</span>
-                {% endfor %}
-            </div>
-
-            <nav class="mod-command-rail" aria-label="Маршрут модерации">
-                {% for section in modnav.sections %}
-                <a href="{{ section.pages[0].path }}" class="{% if section.key == modnav.active.section %}is-active{% endif %}">
-                    <span><i class="fas {{ section.icon }}"></i></span>
-                    <div><small>0{{ loop.index }}</small><strong>{{ section.short }}</strong></div>
-                    <em>{{ section.pages|length }}</em>
-                </a>
-                {% if not loop.last %}<i class="fas fa-chevron-right mod-command-rail-arrow" aria-hidden="true"></i>{% endif %}
-                {% endfor %}
-            </nav>
-        </section>
-
-        <section class="mod-utility-bar" data-mod-utility aria-label="Быстрые действия">
-            <nav class="mod-utility-quick" aria-label="Действия текущего раздела">
-                {% for label, target, mode in moderation_profile.quick_actions %}
-                <button type="button" data-room-jump="{{ target }}" data-room-mode="{{ mode }}"><span>0{{ loop.index }}</span>{{ label }}</button>
-                {% endfor %}
-            </nav>
-            <div class="mod-utility-view">
-                <button type="button" data-room-live aria-pressed="false" aria-label="Приостановить автообновление">Автообновление</button>
-                <button type="button" data-room-density aria-pressed="false">Компактный вид</button>
-                <button type="button" data-room-copy>Ссылка</button>
-                <button type="button" data-room-refresh>Обновить</button>
-            </div>
-        </section>
-
-        <div class="mod-suite-overlay" data-mod-overlay data-mod-accent="{{ moderation_profile.accent }}" hidden>
-            <div class="mod-suite-dialog" role="dialog" aria-modal="true" aria-labelledby="modSuiteTitle">
-                <div class="mod-suite-dialog-head">
-                    <div class="mod-suite-dialog-mark"><i class="fas fa-shield-halved"></i></div>
-                    <div>
-                        <div class="mod-suite-dialog-kicker">AETHER CONTROL SYSTEM</div>
-                        <h2 id="modSuiteTitle">Центр модерации</h2>
-                        <p>{{ modnav.pages|length }} инструментов, собранных по рабочему сценарию</p>
+                    <div class="navbar-right">
+                        {% block page_actions %}{% endblock %}
                     </div>
-                    <button type="button" class="mod-suite-close" data-mod-close aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
                 </div>
-                <div class="mod-suite-search">
-                    <i class="fas fa-magnifying-glass"></i>
-                    <input type="search" data-mod-search placeholder="Найти инструмент или задачу..." autocomplete="off" aria-label="Поиск инструмента модерации">
-                    <span data-mod-result-count>{{ modnav.pages|length }}</span>
-                </div>
-                <div class="mod-suite-recent" data-mod-recent hidden></div>
-                <div class="mod-suite-sections" data-mod-sections>
-                    {% for section in modnav.sections %}
-                    <section class="mod-suite-section" data-mod-dialog-section="{{ section.key }}">
-                        <div class="mod-suite-section-head">
-                            <span class="mod-suite-section-icon"><i class="fas {{ section.icon }}"></i></span>
-                            <div><h3>{{ section.label }}</h3><p>{{ section.description }}</p></div>
-                            <span>{{ section.pages|length }}</span>
-                        </div>
-                        <div class="mod-suite-grid">
-                            {% for it in section.pages %}
-                            <a href="{{ it.path }}" class="mod-suite-card tone-{{ it.tone }}{% if request.path == it.path %} is-current{% endif %}"
-                               data-mod-card data-mod-card-path="{{ it.path }}" data-mod-card-label="{{ it.label }}"
-                               data-mod-search-text="{{ it.label }} {{ it.description }} {{ section.label }}">
-                                <span class="mod-suite-card-icon"><i class="fas {{ it.icon }}"></i></span>
-                                <span class="mod-suite-card-copy">
-                                    <strong>{{ it.label }}</strong>
-                                    <small>{{ it.description }}</small>
-                                </span>
-                                <span class="mod-suite-card-meta">
-                                    <em>{{ it.access }}</em>
-                                    {% if request.path == it.path %}<b>Открыто</b>{% endif %}
-                                </span>
-                                <i class="fas fa-arrow-right mod-suite-card-arrow"></i>
-                            </a>
-                            {% endfor %}
-                        </div>
-                    </section>
-                    {% endfor %}
-                </div>
-                <div class="mod-suite-empty" data-mod-empty hidden>
-                    <i class="fas fa-magnifying-glass"></i>
-                    <strong>Инструмент не найден</strong>
-                    <span>Попробуйте другое название или задачу</span>
-                </div>
-                <div class="mod-suite-dialog-foot">
-                    <span><kbd>Esc</kbd> закрыть</span>
-                    <span><kbd>Alt M</kbd> открыть центр</span>
-                    <span><i class="fas fa-lock"></i> Пункты учитывают вашу роль доступа</span>
-                </div>
-            </div>
+                {% block content %}
+                {% block page_hero %}{% endblock %}
+                {% endblock %}
+            </main>
         </div>
-        {% endif %}
-
-        {% if modnav.active %}<div class="mod-page-workspace" id="mod-page-workspace" data-mod-workspace="{{ moderation_profile.code }}" data-mod-accent="{{ moderation_profile.accent }}">{% endif %}
-        {% block content %}
-{% block page_hero %}{% endblock %}
-{% endblock %}
-        {% if modnav.active %}</div>{% endif %}
-    </main>
-
-<!-- Activity Feed Drawer -->
-<div class="drawer-backdrop" id="drawerBackdrop"></div>
-<aside class="activity-drawer" id="activityDrawer" aria-label="Лента активности">
-  <div class="activity-drawer-head">
-    <h3>
-      <i class="fas fa-stream"></i>
-      Активность
-      <span class="live-pill"><span class="dot"></span>LIVE</span>
-    </h3>
-    <button class="activity-drawer-close" id="activityClose" type="button" title="Закрыть" aria-label="Закрыть ленту активности"><i class="fas fa-times"></i></button>
-  </div>
-  <div class="activity-drawer-body" id="activityBody">
-    <div class="activity-drawer-empty">
-      <i class="fas fa-circle-notch fa-spin"></i>
-      <p>Загрузка событий...</p>
     </div>
-  </div>
-  <div class="activity-drawer-foot">
-    <div><span class="pulse-dot"></span><span id="activityLastUpdate">Только что</span></div>
-    <button class="btn-link" id="activityRefresh" type="button"><i class="fas fa-sync-alt"></i> Обновить</button>
-  </div>
-</aside>
 
-<!-- Keyboard shortcut palette -->
-<div class="kbd-palette" id="kbdPalette">
-  <div class="kbd-palette-panel">
-    <div class="kbd-palette-search">
-      <i class="fas fa-search"></i>
-      <input type="text" id="kbdPaletteInput" placeholder="Введите команду или название страницы..." autocomplete="off" aria-label="Введите команду или название страницы...">
-      <span class="kbd-hint">ESC</span>
-    </div>
-    <div class="kbd-palette-results" id="kbdPaletteResults"></div>
-    <div class="kbd-palette-foot">
-      <div><span class="kbd-hint">↑↓</span> Навигация</div>
-      <div><span class="kbd-hint">↵</span> Открыть</div>
-      <div><span class="kbd-hint">Ctrl K</span> Вызов</div>
-      <div><span class="kbd-hint">?</span> Справка</div>
-    </div>
-  </div>
-</div>
-
-<script>
-// ETag-кэш для частых GET-опросов. 304 — штатный «данные не изменились»:
-// возвращаем сохранённый JSON и не заставляем страницы разбирать пустое тело.
-(function () {
-  var _etagStore = Object.create(null);
-
-  function requestOptions(opts) {
-    opts = opts || {};
-    var init = Object.assign({}, opts);
-    var headers = new Headers(opts.headers || {});
-    init.headers = headers;
-    return init;
-  }
-
-  window.fetchCached = function (url, opts) {
-    var init = requestOptions(opts);
-    if (_etagStore[url]) init.headers.set('If-None-Match', _etagStore[url]);
-    return fetch(url, init).then(function (r) {
-      var etag = r.headers.get('ETag');
-      if (etag) _etagStore[url] = etag;
-      return r;
-    });
-  };
-
-  window._etagCache = {
-    _d: Object.create(null),
-    get: function (url) { return this._d[url]; },
-    has: function (url) { return Object.prototype.hasOwnProperty.call(this._d, url); },
-    set: function (url, data) { this._d[url] = data; return data; }
-  };
-
-  window.fetchCachedJSON = function (url, opts) {
-    function consume(response, retried) {
-      if (response.status === 304) {
-        if (window._etagCache.has(url)) return window._etagCache.get(url);
-
-        // После перезагрузки страницы браузер/прокси иногда помнит ETag, а
-        // JS-память с JSON уже пуста. Один раз повторяем без валидатора.
-        if (!retried) {
-          delete _etagStore[url];
-          var fresh = requestOptions(opts);
-          fresh.cache = 'no-store';
-          fresh.headers.delete('If-None-Match');
-          return window.fetchCached(url, fresh).then(function (r) { return consume(r, true); });
-        }
-        throw new Error('HTTP 304 получен без сохранённых данных: ' + url);
-      }
-      if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + url);
-      return response.json().then(function (data) {
-        return window._etagCache.set(url, data);
-      });
-    }
-
-    return window.fetchCached(url, opts).then(function (r) { return consume(r, false); });
-  };
-})();
-
-// ============================================================
-// GLOBAL LIVE REFRESH — страницы регистрируют свои загрузчики,
-// общий интервал обновляет их каждые 2.5s (без перезагрузки сервера).
-// ============================================================
-(function () {
-  var fns = [];
-  var MAX = 60;
-  window.setLiveRefresh = function (fn, ms) {
-    if (typeof fn !== 'function') return;
-    ms = ms || 2500;
-    fns.push({ fn: fn, ms: ms, last: 0 });
-    if (fns.length > MAX) fns.shift();
-  };
-  setInterval(function () {
-    if (window.__modLivePaused) return;
-    var now = Date.now();
-    fns.forEach(function (e) {
-      if (now - e.last >= e.ms) { e.last = now; try { e.fn(); } catch (err) {} }
-    });
-  }, 500);
-})();
-
-// Scroll-safe re-render: обновляет контент, не двигая позицию прокрутки.
-window.renderSafe = function (renderFn) {
-  var y = window.scrollY, x = window.scrollX;
-  if (typeof renderFn === 'function') { try { renderFn(); } catch (e) {} }
-  requestAnimationFrame(function () { window.scrollTo(x, y); });
-};
-
-// ============================================================
-// WELCOME / SPLASH SCREEN — показывается один раз за сессию.
-// body заблокирован (overflow:hidden), переход по клику / скроллу
-// / клавише → плавное скрытие + снятие блокировки скролла.
-// ============================================================
-(function () {
-  var screen = document.getElementById('welcomeScreen');
-  if (!screen) return;
-  var KEY = 'aether_welcome_seen';
-
-  // Уже входили в этой сессии? Не показываем снова.
-  var seen = false;
-  try { seen = sessionStorage.getItem(KEY) === '1'; } catch (e) {}
-  if (seen) { screen.remove(); return; }
-
-  // Блокируем скролл body, пока welcome открыт (site-hero: только клик/кнопка).
-  document.body.classList.add('welcome-lock');
-
-  var entered = false;
-  function enter() {
-    if (entered) return;
-    entered = true;
-    screen.classList.add('hide');
-    document.body.classList.remove('welcome-lock');
-    try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
-    document.removeEventListener('keydown', onKey);
-    setTimeout(function () { screen.remove(); }, 600);
-  }
-  function onKey(e) {
-    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') { e.preventDefault(); enter(); }
-  }
-
-  function bind(id, fn){ var el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
-  bind('welcomeEnter', function (e) { e.preventDefault(); enter(); });
-  bind('welcomeEnterTop', function (e) { e.preventDefault(); enter(); });
-
-  // Anchor links scroll within welcome hero (site-style)
-  document.querySelectorAll('#welcomeScreen a[data-scroll], #welcomeScreen .wn-link').forEach(function (a) {
-    a.addEventListener('click', function (e) {
-      var href = a.getAttribute('href') || '';
-      if (href.charAt(0) !== '#') return;
-      e.preventDefault();
-      var target = document.querySelector(href);
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-  });
-
-  // Burger menu (mobile)
-  var burger = document.getElementById('welcomeBurger');
-  var nav = document.querySelector('.welcome-nav');
-  if (burger && nav) {
-    burger.addEventListener('click', function (e) {
-      e.stopPropagation();
-      nav.classList.toggle('open');
-    });
-    document.addEventListener('click', function (e) {
-      if (nav.classList.contains('open') && !nav.contains(e.target)) nav.classList.remove('open');
-    });
-  }
-
-  document.addEventListener('keydown', onKey);
-})();
-
-// Mobile menu (с бэкдропом, лок-скроллом и Esc)
-document.addEventListener('DOMContentLoaded', function () {
-  var btn = document.getElementById('mobileMenu');
-  var sb  = document.getElementById('sidebar');
-  if (btn && sb) {
-    var bd = document.createElement('div');
-    bd.className = 'sidebar-backdrop';
-    bd.id = 'sidebarBackdrop';
-    document.body.appendChild(bd);
-    function setOpen(open) {
-      sb.classList.toggle('open', open);
-      bd.classList.toggle('show', open);
-      document.body.classList.toggle('sb-open', open);
-      var ic = btn.querySelector('i');
-      if (ic) ic.className = open ? 'fas fa-xmark' : 'fas fa-bars';
-    }
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      setOpen(!sb.classList.contains('open'));
-    });
-    bd.addEventListener('click', function () { setOpen(false); });
-    document.addEventListener('click', function (e) {
-      if (sb.classList.contains('open') && !sb.contains(e.target) && e.target !== btn) setOpen(false);
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && sb.classList.contains('open')) setOpen(false);
-    });
-    sb.querySelectorAll('.nav-link').forEach(function (a) {
-      a.addEventListener('click', function () { setOpen(false); });
-    });
-  }
-});
-
-// Collapsible sidebar groups (with localStorage persistence)
-(function () {
-  var KEY = 'aether_sidebar_state';
-  var state = {};
-  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) { state = {}; }
-
-  document.querySelectorAll('.nav-group').forEach(function (g) {
-    var key = g.getAttribute('data-group');
-    if (!key) return;
-    var items = g.querySelector('.nav-group-items');
-    var caret = g.querySelector('.nav-caret');
-    var title = g.querySelector('[data-toggle]');
-    var hasActive = !!g.querySelector('.nav-link.active');
-    var countEl = g.querySelector('[data-count]');
-    if (countEl) countEl.textContent = g.querySelectorAll('.nav-link').length;
-    // Default: open if state[key] === true OR state[key] undefined AND has active child
-    var open = (state[key] === true) || (state[key] === undefined && hasActive);
-    if (!open) g.classList.add('collapsed');
-    if (title) title.setAttribute('aria-expanded', open ? 'true' : 'false');
-
-    var toggle = g.querySelector('[data-toggle]');
-    if (toggle) {
-      function setOpen(isOpen) {
-        g.classList.toggle('collapsed', !isOpen);
-        if (title) title.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        state[key] = isOpen;
-        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(err) {}
-      }
-      toggle.addEventListener('click', function (e) {
-        e.preventDefault();
-        setOpen(g.classList.contains('collapsed'));
-      });
-      // Keyboard accessibility: Enter / Space toggles
-      toggle.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(g.classList.contains('collapsed')); }
-      });
-    }
-  });
-
-  // Search filter in sidebar
-  var search = document.getElementById('sidebarSearch');
-  if (search) {
-    function escHtml(s) {
-      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-    // Store each link's original label once, then highlight matches on search.
-    function highlightLabel(a, q) {
-      var span = a.querySelector('span');
-      if (!span) return;
-      var orig = span.getAttribute('data-orig');
-      if (orig == null) { orig = span.textContent; span.setAttribute('data-orig', orig); }
-      if (!q) { span.textContent = orig; return; }
-      var idx = orig.toLowerCase().indexOf(q);
-      if (idx === -1) { span.textContent = orig; return; }
-      span.innerHTML = escHtml(orig.slice(0, idx)) + '<mark>' + escHtml(orig.slice(idx, idx + q.length)) + '</mark>' + escHtml(orig.slice(idx + q.length));
-    }
-    function applySidebarFilter() {
-      var q = search.value.toLowerCase().trim();
-      var groups = document.querySelectorAll('.nav-group');
-      var totalVisible = 0;
-      groups.forEach(function (g) {
-        var items = g.querySelectorAll('.nav-link');
-        var visibleInGroup = 0;
-        items.forEach(function (a) {
-          var txt = a.textContent.toLowerCase();
-          var match = !q || txt.indexOf(q) !== -1;
-          highlightLabel(a, q);
-          a.style.display = match ? '' : 'none';
-          if (match) visibleInGroup++;
-        });
-        if (q && visibleInGroup > 0) {
-          g.classList.remove('collapsed');
-          var itemsContainer = g.querySelector('.nav-group-items');
-          var caret = g.querySelector('.nav-caret');
-          if (itemsContainer) itemsContainer.style.display = '';
-          if (caret) caret.style.transform = '';
-          var title = g.querySelector('[data-toggle]');
-          if (title) title.setAttribute('aria-expanded', 'true');
-          g.style.display = '';
-          totalVisible += visibleInGroup;
-        } else if (q) {
-          g.style.display = 'none';
-        } else {
-          g.style.display = '';
-        }
-      });
-      var noResults = document.getElementById('navNoResults');
-      if (q && totalVisible === 0) {
-        if (!noResults) {
-          noResults = document.createElement('div');
-          noResults.id = 'navNoResults';
-          noResults.className = 'nav-no-results';
-          noResults.innerHTML = '<i class="fas fa-search"></i><div>Ничего не найдено</div>';
-          var nav = document.getElementById('sidebarNav');
-          if (nav) nav.appendChild(noResults);
-        }
-      } else if (noResults) {
-        noResults.remove();
-      }
-    }
-    search.addEventListener('input', applySidebarFilter);
-    search.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); applySidebarFilter(); }
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && document.activeElement === search) {
-        search.value = '';
-        applySidebarFilter();
-        search.blur();
-      }
-    });
-  }
-})();
-
-// User menu dropdown
-(function () {
-  var pill = document.querySelector('.user-pill');
-  if (pill) {
-    pill.addEventListener('click', function (e) {
-      e.stopPropagation();
-      pill.classList.toggle('open');
-    });
-    document.addEventListener('click', function () { pill.classList.remove('open'); });
-  }
-})();
-
-// Fullscreen toggle
-(function () {
-  var btn = document.getElementById('fullscreenBtn');
-  if (btn) btn.addEventListener('click', function () {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-    else document.exitFullscreen();
-  });
-})();
-
-// Notifications dropdown
-(function () {
-  var btn = document.getElementById('notifBtn');
-  if (!btn) return;
-
-  // Create dropdown panel once
-  var panel = document.createElement('div');
-  panel.className = 'notif-dropdown';
-  panel.innerHTML =
-    '<div class="notif-dropdown-head">' +
-      '<span>Уведомления</span>' +
-      '<a href="/notifications" >Все →</a>' +
-    '</div>' +
-    '<div class="notif-dropdown-body" id="notifDropBody">' +
-      '<div class="empty-state" ><i class="fas fa-spinner fa-spin"></i><p>Загрузка...</p></div>' +
-    '</div>';
-  document.body.appendChild(panel);
-
-  function position() {
-    var r = btn.getBoundingClientRect();
-    panel.style.top = (r.bottom + 8) + 'px';
-    panel.style.right = (window.innerWidth - r.right) + 'px';
-  }
-
-  btn.addEventListener('click', function (e) {
-    e.stopPropagation();
-    position();
-    panel.classList.toggle('open');
-    if (panel.classList.contains('open')) loadNotifs();
-  });
-  document.addEventListener('click', function (e) {
-    if (!panel.contains(e.target) && e.target !== btn) panel.classList.remove('open');
-  });
-
-  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-
-  function loadNotifs() {
-    var body = document.getElementById('notifDropBody');
-    fetch('/api/my-notifications')
-      .then(function (r) { return r.json(); })
-      .then(function (notifs) {
-        if (!Array.isArray(notifs) || !notifs.length) {
-          body.innerHTML = '<div class="empty-state" ><i class="fas fa-bell-slash"></i><p>Нет уведомлений</p></div>';
-          return;
-        }
-        body.innerHTML = notifs.slice(0, 8).map(function (n) {
-          var d = new Date(n.created_at);
-          var unread = !n.read;
-          var link = n.link || '';
-          var inner =
-            '<div class="notif-dropdown-icon"><i class="fas ' + (n.system ? 'fa-bullhorn' : 'fa-bell') + '"></i></div>' +
-            '<div style="flex: 1; min-width: 0">' +
-              '<div class="notif-dropdown-title">' + esc(n.title) + '</div>' +
-              '<div class="notif-dropdown-msg">' + esc(n.message) + '</div>' +
-              '<div class="notif-dropdown-time">' + (n.from ? esc(n.from) + ' · ' : '') + d.toLocaleString('ru-RU') + '</div>' +
-            '</div>' +
-            (link ? '<div style="align-self:center;color:var(--text-muted)"><i class="fas fa-chevron-right"></i></div>' : '');
-          if (link) {
-            return '<a href="' + esc(link) + '" class="notif-dropdown-item notif-link' + (unread ? ' unread' : '') + '">' + inner + '</a>';
-          }
-          return '<div class="notif-dropdown-item' + (unread ? ' unread' : '') + '">' + inner + '</div>';
-        }).join('');
-        var badge = btn.querySelector('.nav-badge');
-        if (badge) {
-          var unread = notifs.filter(function (n) { return !n.read; }).length;
-          badge.textContent = unread > 99 ? '99+' : unread;
-          badge.style.display = unread > 0 ? 'flex' : 'none';
-        }
-      })
-      .catch(function () {
-        body.innerHTML = '<div class="empty-state" ><i class="fas fa-exclamation-triangle"></i><p>Ошибка загрузки</p></div>';
-      });
-  }
-})();
-
-// Guild select (from old logic)
-document.addEventListener('DOMContentLoaded', async function () {
-  var select = document.getElementById('guild-select');
-  if (!select) return;
-  try {
-    var response = await fetch('/api/guilds');
-    if (!response.ok) return;
-    var guilds = await response.json();
-    if (!Array.isArray(guilds) || !guilds.length) return;
-    var desired = '{{ main_guild_id }}';
-    select.innerHTML = guilds.map(function (g) { return '<option value="' + g.id + '">' + g.name + '</option>'; }).join('');
-    select.value = guilds.some(function (g) { return g.id === desired; }) ? desired : guilds[0].id;
-    if (guilds.length === 1) select.style.display = 'none';
-    select.dispatchEvent(new Event('change'));
-  } catch (e) { console.error('Guild error:', e); }
-});
-
-// Theme toggle (light/dark)
-(function () {
-  var btn = document.getElementById('themeToggle');
-  if (!btn) return;
-  btn.addEventListener('click', function () {
-    var current = document.documentElement.getAttribute('data-theme') || 'dark';
-    var next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem('aether_theme', next); } catch (e) {}
-    showToast(next === 'light' ? 'Светлая тема' : 'Тёмная тема', true);
-  });
-})();
-
-// Global toast notification (used everywhere in the panel)
-window.showToast = function (message, success) {  try {
-    var host = document.getElementById('toastHost');
-    if (!host) {
-      host = document.createElement('div');
-      host.id = 'toastHost';
-      host.style.cssText = 'position:fixed;top:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;';
-      document.body.appendChild(host);
-    }
-    var el = document.createElement('div');
-    var bg = success === false
-      ? 'linear-gradient(135deg,#dc2626,#b91c1c)'
-      : 'linear-gradient(135deg,#d4a843,#e0b04a)';
-    var fg = success === false ? '#fff' : '#1a1a1a';
-    el.style.cssText = 'background:' + bg + ';color:' + fg + ';padding:12px 18px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.4);min-width:240px;max-width:380px;pointer-events:auto;animation:toastIn .25s ease;';
-    el.textContent = message;
-    host.appendChild(el);
-    setTimeout(function () {
-      el.style.transition = 'opacity .3s, transform .3s';
-      el.style.opacity = '0';
-      el.style.transform = 'translateX(20px)';
-      setTimeout(function () { el.remove(); }, 300);
-    }, 3200);
-  } catch (e) { /* toast host unavailable */ }
-};
-
-// Keyboard shortcut palette (Ctrl+K / Cmd+K)
-// ============================================================
-// GLOBAL: замена нативного alert() на красивый toast во всём панели
-// ============================================================
-(function () {
-  var nativeAlert = window.alert;
-  window.alert = function (msg) {
-    try {
-      if (typeof window.showToast === 'function') { window.showToast(String(msg == null ? '' : msg), false); return; }
-      if (window.__pendingAlerts) { window.__pendingAlerts.push(String(msg)); return; }
-    } catch (e) {}
-    // Fallback: нативный alert, если showToast ещё не готов
-    nativeAlert(msg);
-  };
-})();
-
-// ============================================================
-// GLOBAL: удобная обёртка для подтверждения действий.
-// Использует красивый confirmAction-модал; fallback на confirm().
-// ============================================================
-window.askConfirm = function (title, desc, onOk, opts) {
-  opts = opts || {};
-  if (typeof window.confirmAction === 'function') {
-    window.confirmAction(title, desc, onOk, opts);
-  } else if (window.confirm(desc)) {
-    if (typeof onOk === 'function') onOk();
-  }
-};
-
-// ============================================================
-// VISUAL POLISH — button ripple + count-up + donut gauges
-// ============================================================
-(function () {
-  // ── Button ripple (по клику по .btn / button с классом) ──
-  document.addEventListener('pointerdown', function (e) {
-    var t = e.target;
-    var btn = t.closest ? t.closest('.btn, button, .icon-btn, .tab-btn') : null;
-    if (!btn || btn.disabled) return;
-    if (btn.classList.contains('no-ripple')) return;
-    var rect = btn.getBoundingClientRect();
-    var d = Math.max(rect.width, rect.height) * 1.2;
-    var span = document.createElement('span');
-    span.className = 'ripple-ink';
-    span.style.width = span.style.height = d + 'px';
-    span.style.left = (e.clientX - rect.left - d / 2) + 'px';
-    span.style.top = (e.clientY - rect.top - d / 2) + 'px';
-    btn.style.position = 'relative';
-    btn.style.overflow = 'hidden';
-    btn.appendChild(span);
-    setTimeout(function () { span.remove(); }, 700);
-  });
-
-  // ── Count-up: плавная анимация чисел для [data-countup] ──
-  // (один раз при первом появлении числа — безопасно для live-refresh)
-  function numOf(v) { var n = parseFloat(String(v == null ? '' : v).replace(/[^\d.\-]/g, '')); return isNaN(n) ? null : n; }
-  function animateOnce(el) {
-    if (el.getAttribute('data-counted') === '1') return;
-    var n = numOf(el.textContent);
-    if (n == null) return;
-    var suffix = (String(el.textContent).match(/[^\d.\-]+$/) || [''])[0];
-    el.setAttribute('data-counted', '1');
-    var t0 = null, dur = 850;
-    function step(ts) {
-      if (t0 == null) t0 = ts;
-      var p = Math.min((ts - t0) / dur, 1);
-      var e = 1 - Math.pow(1 - p, 3);
-      el.textContent = Math.round(n * e) + suffix;
-      if (p < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }
-  var obs = new MutationObserver(function (muts) {
-    muts.forEach(function (mu) {
-      if (mu.type === 'characterData') {
-        var p = mu.target.parentElement;
-        if (p && p.matches && p.matches('[data-countup]')) animateOnce(p);
-      } else if (mu.addedNodes) {
-        mu.addedNodes.forEach(function (n) {
-          if (n && n.nodeType === 1 && n.querySelectorAll) {
-            n.querySelectorAll('[data-countup]').forEach(animateOnce);
-            if (n.matches && n.matches('[data-countup]')) animateOnce(n);
-          }
-        });
-      }
-    });
-  });
-  if (document.body) obs.observe(document.body, { subtree: true, characterData: true, childList: true });
-  document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('[data-countup]').forEach(animateOnce);
-  });
-
-  // ── Donut gauge: window.drawDonut(el, percent, color) ──
-  window.drawDonut = function (el, percent, color) {
-    if (!el) return;
-    var r = 15.9155, c = 2 * Math.PI * r;
-    var size = el.getAttribute('data-size') || '96';
-    var p = Math.max(0, Math.min(100, percent));
-    el.innerHTML =
-      '<svg viewBox="0 0 36 36" style="width:' + size + 'px;height:' + size + 'px;transform:rotate(-90deg)">' +
-      '<circle cx="18" cy="18" r="' + r + '" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3.4"/>' +
-      '<circle class="donut-fill" cx="18" cy="18" r="' + r + '" fill="none" stroke="' + (color || '#e0b04a') + '" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + c + '"/>' +
-      '</svg>';
-    var fill = el.querySelector('.donut-fill');
-    if (!fill) return;
-    var cur = parseFloat(el.getAttribute('data-val')) || 0;
-    var t0 = null, dur = 900;
-    function step(ts) {
-      if (t0 == null) t0 = ts;
-      var pr = Math.min((ts - t0) / dur, 1);
-      var e = 1 - Math.pow(1 - pr, 3);
-      var v = cur + (p - cur) * e;
-      fill.style.strokeDashoffset = c * (1 - v / 100);
-      if (pr < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-    el.setAttribute('data-val', p);
-  };
-})();
-
-// ============================================================
-// SCROLL REVEAL — элементы с [data-reveal] появляются при прокрутке
-// Поддерживает динамически добавленные элементы (live-refresh).
-// ============================================================
-(function () {
-  if (!('IntersectionObserver' in window)) {
-    document.querySelectorAll('[data-reveal]').forEach(function (e) { e.classList.add('in'); });
-    return;
-  }
-  function revealEl(el) { el.classList.add('in'); io.unobserve(el); }
-  var io = new IntersectionObserver(function (entries) {
-    entries.forEach(function (en) { if (en.isIntersecting) revealEl(en.target); });
-  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-
-  function observe(el) { if (el && !el.classList.contains('in')) io.observe(el); }
-  document.querySelectorAll('[data-reveal]').forEach(observe);
-
-  // Live-refresh: наблюдать за новыми элементами
-  var mo = new MutationObserver(function (muts) {
-    muts.forEach(function (mu) {
-      (mu.addedNodes || []).forEach(function (n) {
-        if (n.nodeType !== 1) return;
-        if (n.matches && n.matches('[data-reveal]')) observe(n);
-        if (n.querySelectorAll) n.querySelectorAll('[data-reveal]').forEach(observe);
-      });
-    });
-  });
-  mo.observe(document.body, { subtree: true, childList: true });
-})();
-
-// ============================================================
-// MOUSE PARALLAX — лёгкое движение ambient-фона за курсором
-// (GSAP/Apple-style parallax feel; безопасно, весь фон)
-// ============================================================
-(function () {
-  var layers = [].slice.call(document.querySelectorAll('.bg-ambient'));
-  var layer = layers.filter(function (el) { return !(el.closest && el.closest('#welcomeScreen')); })[0];
-  if (!layer) return;
-  var mx = 0, my = 0, tx = 0, ty = 0;
-  document.addEventListener('mousemove', function (e) {
-    tx = (e.clientX / window.innerWidth - 0.5) * 24;
-    ty = (e.clientY / window.innerHeight - 0.5) * 16;
-  }, { passive: true });
-  (function raf() {
-    mx += (tx - mx) * 0.06;
-    my += (ty - my) * 0.06;
-    layer.style.transform = 'translate(' + mx.toFixed(2) + 'px,' + my.toFixed(2) + 'px)';
-    requestAnimationFrame(raf);
-  })();
-})();
-// Удерживает позицию прокрутки при любых перерисовках DOM,
-// кликах по якорным ссылкам и открытии/закрытии меню.
-// ============================================================
-(function () {
-  var KEY = 'aether_scroll_pos';
-  var pageKey = location.pathname;
-
-  // 1) Save scroll on unload (full reloads)
-  window.addEventListener('beforeunload', function () {
-    try {
-      var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
-      store[pageKey] = { x: window.scrollX, y: window.scrollY };
-      sessionStorage.setItem(KEY, JSON.stringify(store));
-    } catch (e) {}
-  });
-
-  // 2) Restore scroll after load / bfcache
-  //    Повторяем несколько раз, т.к. контент страниц часто подгружается
-  //    асинхронно (fetch) уже ПОСЛЕ DOMContentLoaded — scroll иначе теряется.
-  function restore() {
-    try {
-      var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
-      var pos = store[pageKey];
-      if (!pos || !(pos.y > 0 || pos.x > 0)) return;
-      var attempts = [0, 50, 150, 350, 700, 1200, 2000, 3000];
-      attempts.forEach(function (delay) {
-        setTimeout(function () {
-          // Восстанавливаем только если пользователь сам не начал скроллить.
-          if (window.__userScrolled) return;
-          window.scrollTo(pos.x, pos.y);
-        }, delay);
-      });
-      // сбрасываем флаг через пару секунд после рестайла
-      setTimeout(function () { window.__userScrolled = false; }, 3500);
-    } catch (e) {}
-  }
-  window.addEventListener('pageshow', restore);
-  if (document.readyState === 'complete') restore();
-  else window.addEventListener('DOMContentLoaded', restore);
-
-  // Помечаем, что пользователь начал скроллить сам (не мешаем ему).
-  window.addEventListener('wheel', function () { window.__userScrolled = true; }, { passive: true });
-  window.addEventListener('touchmove', function () { window.__userScrolled = true; }, { passive: true });
-  document.addEventListener('keydown', function (e) {
-    if (['ArrowDown','ArrowUp','PageDown','PageUp','Home','End'].indexOf(e.key) !== -1) {
-      window.__userScrolled = true;
-    }
-  });
-
-  // 3) При любом клике по якорю '#' не прыгать вверх (а остаться на месте)
-  document.addEventListener('click', function (e) {
-    var a = e.target.closest ? e.target.closest('a[href="#"]') : null;
-    if (a) { e.preventDefault(); }
-  });
-
-  // 4) Универсальный хелпер: перерисовать контент, сохранив scroll.
-  //    Любая страница может вызывать window.keepScroll(fn).
-  //    ВАЖНО: renderFn часто асинхронный (fetch + перерисовка DOM уже ПОСЛЕ
-  //    возврата), поэтому простого requestAnimationFrame недостаточно — scroll
-  //    теряется, как только вернётся fetch. Повторяем scrollTo с задержками.
-  window.keepScroll = function (renderFn, opts) {
-    opts = opts || {};
-    var y = window.scrollY, x = window.scrollX;
-    try {
-      if (typeof renderFn === 'function') renderFn();
-    } catch (e) {}
-    // Repeat scrollTo over a longer window — many loaders fetch async AFTER
-    // returning, so the DOM re-renders late and wipes the scroll position.
-    var attempts = opts.attempts || [0, 40, 120, 300, 600, 1000, 1800, 3000, 5000, 8000];
-    var guard = 0;
-    function tryRestore() {
-      guard++;
-      if (window.__userScrolled || guard > 30) return;
-      window.scrollTo(x, y);
-      try {
-        var store = JSON.parse(sessionStorage.getItem(KEY) || '{}');
-        store[pageKey] = { x: x, y: y };
-        sessionStorage.setItem(KEY, JSON.stringify(store));
-      } catch (err) {}
-    }
-    attempts.forEach(function (delay) { setTimeout(tryRestore, delay); });
-    // Extra insurance: restore repeatedly while content height is still
-    // settling (covers slow fetch renders beyond the fixed schedule).
-    var interval = setInterval(function () {
-      tryRestore();
-      if (window.__userScrolled) clearInterval(interval);
-    }, 1500);
-    setTimeout(function () { clearInterval(interval); }, 12000);
-  };
-})();
-
-
-// Smooth page enter animation (already in CSS, but trigger on load)
-window.addEventListener('pageshow', function (e) {
-  if (e.persisted) {
-    document.querySelector('.main-content').style.animation = 'none';
-    void document.querySelector('.main-content').offsetWidth;
-    document.querySelector('.main-content').style.animation = '';
-  }
-});
-
-// ============================================================
-// ACTIVITY FEED DRAWER + REAL-TIME POLLING
-// ============================================================
-(function () {
-  var btn      = document.getElementById('activityBtn');
-  var drawer   = document.getElementById('activityDrawer');
-  var backdrop = document.getElementById('drawerBackdrop');
-  var closeBtn = document.getElementById('activityClose');
-  var body     = document.getElementById('activityBody');
-  var refresh  = document.getElementById('activityRefresh');
-  var lastUpd  = document.getElementById('activityLastUpdate');
-  if (!btn || !drawer) return;
-
-  var lastEventId = null;
-  var pollInterval = null;
-  var isOpen = false;
-
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  function fmtTime(ts) {
-    if (!ts) return '';
-    var d = new Date(ts * 1000);
-    var now = new Date();
-    var diff = (now - d) / 1000;
-    if (diff < 5)   return 'только что';
-    if (diff < 60)  return Math.floor(diff) + ' сек назад';
-    if (diff < 3600) return Math.floor(diff/60) + ' мин назад';
-    if (diff < 86400) return Math.floor(diff/3600) + ' ч назад';
-    return d.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
-  }
-
-  // Визуальные настройки типов событий (иконка уже от бэка)
-  var TYPE_STYLE = {
-    'auth':   { icon: 'fa-key',      cls: 'type-auth',   label: 'Вход' },
-    'mod':    { icon: 'fa-shield-halved', cls: 'type-mod', label: 'Модерация' },
-    'warn':   { icon: 'fa-triangle-exclamation', cls: 'type-warn', label: 'Варн' },
-    'ticket': { icon: 'fa-ticket',   cls: 'type-ticket', label: 'Тикет' },
-    'panel':  { icon: 'fa-display',  cls: 'type-panel',  label: 'Панель' },
-    'system': { icon: 'fa-circle',   cls: 'type-system', label: 'Система' }
-  };
-
-  function renderEvent(ev, prepend) {
-    var live = ev.live ? ' live' : '';
-    var t = TYPE_STYLE[ev.type] || TYPE_STYLE.system;
-    // Иконка: используем emoji от бэка, иначе font-awesome по типу
-    var iconHtml;
-    if (ev.icon && !ev.icon.startsWith('fa-')) {
-      iconHtml = '<span class="act-emoji">' + esc(ev.icon) + '</span>';
-    } else {
-      iconHtml = '<i class="fas ' + esc(ev.icon && ev.icon.startsWith('fa-') ? ev.icon : t.icon) + '"></i>';
-    }
-    var innerEv =
-      '<div class="activity-event-icon">' + iconHtml + '</div>' +
-      '<div class="activity-event-content">' +
-        '<div class="activity-event-head">' +
-          '<span class="activity-event-type">' + esc(t.label) + '</span>' +
-          '<span class="activity-event-time">' + esc(fmtTime(ev.ts)) + '</span>' +
-        '</div>' +
-        '<div class="activity-event-text">' +
-          (ev.user && ev.user !== '—' ? '<strong>' + esc(ev.user) + '</strong> · ' : '') +
-          '<span class="act-title">' + esc(ev.title || '') + '</span>' +
-        '</div>' +
-        (ev.detail ? '<div class="activity-event-detail">' + esc(ev.detail) + '</div>' : '') +
-      '</div>' +
-      (ev.link ? '<div class="activity-event-go"><i class="fas fa-chevron-right"></i></div>' : '');
-    var html = ev.link
-      ? '<a href="' + esc(ev.link) + '" class="activity-event activity-link ' + t.cls + live + '">' + innerEv + '</a>'
-      : '<div class="activity-event ' + t.cls + live + '">' + innerEv + '</div>';
-    if (prepend && body.firstChild) {
-      body.insertAdjacentHTML('afterbegin', html);
-    } else {
-      body.insertAdjacentHTML('beforeend', html);
-    }
-  }
-
-  async function loadFeed(showLoader) {
-    if (showLoader) {
-      body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-circle-notch fa-spin"></i><p>Загрузка событий...</p></div>';
-    }
-    try {
-      var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/json' } });
-      var data = await r.json();
-      var events = (data && data.items) ? data.items : [];
-      if (!events.length) {
-        body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-inbox"></i><p>Нет событий</p></div>';
-        return;
-      }
-      body.innerHTML = '';
-      events.forEach(function (ev) { renderEvent(ev, false); });
-      lastEventId = events[0] ? events[0].id : null;
-      if (lastUpd) lastUpd.textContent = 'Только что';
-    } catch (e) {
-      body.innerHTML = '<div class="activity-drawer-empty"><i class="fas fa-exclamation-triangle" style="color: var(--err);"></i><p>Ошибка загрузки</p></div>';
-    }
-  }
-
-  function open() {
-    isOpen = true;
-    drawer.classList.add('open');
-    backdrop.classList.add('open');
-    btn.classList.add('active');
-    loadFeed(true);
-    startPolling();
-  }
-  function close() {
-    isOpen = false;
-    drawer.classList.remove('open');
-    backdrop.classList.remove('open');
-    btn.classList.remove('active');
-    stopPolling();
-  }
-
-  function startPolling() {
-    stopPolling();
-    pollInterval = setInterval(async function () {
-      if (!isOpen) return;
-      try {
-        var r = await fetch('/api/activity-feed', { headers: { 'Accept': 'application/json' } });
-        var data = await r.json();
-        var events = (data && data.items) ? data.items : [];
-        if (!events.length) return;
-        // Prepend any new events
-        var newOnes = events.filter(function (e) { return e.id !== lastEventId && e.id > (lastEventId || ''); });
-        if (newOnes.length) {
-          newOnes.reverse().forEach(function (ev) { renderEvent(ev, true); });
-          lastEventId = newOnes[0].id;
-          // Limit total events in DOM to 50
-          var all = body.querySelectorAll('.activity-event');
-          if (all.length > 50) {
-            for (var i = 50; i < all.length; i++) all[i].remove();
-          }
-        }
-        if (lastUpd) lastUpd.textContent = 'Только что';
-      } catch (e) { /* ignore */ }
-    }, 15000); // 15s polling
-  }
-  function stopPolling() {
-    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
-  }
-
-  btn.addEventListener('click', function (e) {
-    e.stopPropagation();
-    if (isOpen) close(); else open();
-  });
-  if (closeBtn) closeBtn.addEventListener('click', close);
-  if (backdrop) backdrop.addEventListener('click', close);
-  if (refresh) refresh.addEventListener('click', function () { loadFeed(true); });
-
-  // Global shortcut: Shift+A
-  document.addEventListener('keydown', function (e) {
-    if (e.shiftKey && (e.key === 'A' || e.key === 'a') && !e.ctrlKey && !e.metaKey) {
-      var tag = (document.activeElement && document.activeElement.tagName) || '';
-      if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
-        e.preventDefault();
-        if (isOpen) close(); else open();
-      }
-    }
-    if (e.key === 'Escape' && isOpen) close();
-  });
-})();
-
-// ============================================================
-// REAL-TIME NOTIFICATIONS POLLING (badge + toast on new)
-// ============================================================
-(function () {
-  var lastUnread = -1;
-  var pollInterval = null;
-
-  async function pollNotifs() {
-    try {
-      var r = await fetch('/api/notifications/poll', { headers: { 'Accept': 'application/json' } });
-      var d = await r.json();
-      var unread = d.unread || 0;
-      var badge = document.querySelector('#notifBtn .nav-badge');
-      if (badge) {
-        badge.textContent = unread > 99 ? '99+' : unread;
-        badge.style.display = unread > 0 ? 'flex' : 'none';
-        if (unread > lastUnread && lastUnread >= 0) {
-          // New notification!
-          badge.classList.add('live');
-          setTimeout(function () { badge.classList.remove('live'); }, 5000);
-          // Тост с текстом новейшего события
-          var items = d.notifications || [];
-          if (items.length && typeof window.showToast === 'function') {
-            try {
-              var t = items[0].title || 'Уведомление';
-              window.showToast(t + (items[0].body ? ' — ' + items[0].body : ''), true);
-            } catch (e2) { /* ignore */ }
-          }
-        }
-      }
-      lastUnread = unread;
-    } catch (e) { /* удалитьent */ }
-  }
-
-  // Initial poll + every 20s
-  pollNotifs();
-  pollInterval = setInterval(pollNotifs, 20000);
-
-  // Cleanup on page hide
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) {
-      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
-    } else {
-      if (!pollInterval) {
-        pollNotifs();
-        pollInterval = setInterval(pollNotifs, 20000);
-      }
-    }
-  });
-})();
-
-// ============================================================
-// LIVE CLOCK + SESSION UPTIME
-// ============================================================
-(function () {
-  var pageStart = Date.now();
-  var navClock = document.getElementById('navClock');
-  var sysClock = document.getElementById('sysClock');
-  var sysUp = document.getElementById('sysUptime');
-
-  function pad(n) { return n < 10 ? '0' + n : '' + n; }
-
-  function tick() {
-    var now = new Date();
-    var hh = pad(now.getHours());
-    var mm = pad(now.getMinutes());
-    var ss = pad(now.getSeconds());
-    var str = hh + ':' + mm + ':' + ss;
-    if (navClock) navClock.textContent = str;
-    if (sysClock) sysClock.textContent = str;
-
-    var up = Math.floor((Date.now() - pageStart) / 1000);
-    var h = Math.floor(up / 3600);
-    var m = Math.floor((up % 3600) / 60);
-    var s = up % 60;
-    if (sysUp) sysUp.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
-  }
-  tick();
-  setInterval(tick, 1000);
-})();
-
-// ============================================================
-// RATE LIMITING (client-side safety net for AI chat etc.)
-// ============================================================
-(function () {
-  var BUDGET = {}; // { endpoint: { count, windowStart } }
-  var WINDOW_MS = 60000; // 1 min
-
-  window.__rateLimit = function (endpoint, maxPerMin) {
-    maxPerMin = maxPerMin || 10;
-    var now = Date.now();
-    var b = BUDGET[endpoint];
-    if (!b || (now - b.windowStart) > WINDOW_MS) {
-      BUDGET[endpoint] = { count: 1, windowStart: now };
-      return { allowed: true, remaining: maxPerMin - 1 };
-    }
-    b.count++;
-    if (b.count > maxPerMin) {
-      return { allowed: false, remaining: 0, retryAfter: Math.ceil((WINDOW_MS - (now - b.windowStart)) / 1000) };
-    }
-    return { allowed: true, remaining: maxPerMin - b.count };
-  };
-})();
-</script>
-
-<!-- WebSocket Client для real-time обновлений -->
-<script src="/static/websocket-client.js"></script>
-<!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
-<script src="/static/api-guard.js?v=2"></script>
-<!-- UX-kit: глобальный поиск, хоткеи, избранное, плотные таблицы, undo-тосты -->
-<script src="/static/ux-kit.js?v=1"></script>
-<!-- Единый центр навигации по 18 инструментам модерации -->
-<script src="/static/moderation-suite.js?v=2"></script>
-{% if moderation_profile %}<script src="/static/moderation-rooms.js?v=5"></script>{% endif %}
-<!-- Сквозной quality-слой: доступность, навигация, сеть и состояния -->
-<script src="/static/quality-suite.js?v=1"></script>
-<script>
-// Инициализация WebSocket клиента
-(function() {
-  // Проверка поддержки WebSocket
-  if (typeof WebSocket === 'undefined') {
-    console.log('[WebSocket] Браузер не поддерживает WebSocket');
-    return;
-  }
-  
-  // Получение информации о текущем пользователе
-  const userId = '{{ session.get("user_id", "") }}';
-  const roomId = userId ? `user_${userId}` : 'global';
-  
-  // Создание WebSocket клиента
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsHost = window.location.hostname || 'localhost';
-  const wsUrl = wsProtocol + '//' + wsHost + ':8765';
-
-  window.wsClient = new WebSocketClient({
-    url: wsUrl,
-    roomId: roomId,
-    userId: userId,
-    autoConnect: true
-  });
-  
-  // Обработка подключения
-  window.wsClient.on('connected', function(data) {
-    console.log('[WebSocket] Подключено к серверу');
-    showToast('Real-time соединение установлено', true);
-  });
-  
-  // Обработка отключения
-  window.wsClient.on('disconnected', function(data) {
-    console.log('[WebSocket] Отключено от сервера');
-  });
-  
-  // Обработка ошибок
-  window.wsClient.on('error', function(error) {
-    console.error('[WebSocket] Ошибка:', error);
-  });
-  
-  // Обработка обновлений тикетов
-  window.wsClient.on('ticket_update', function(data) {
-    console.log('[WebSocket] Обновление тикета:', data);
-    // Вызов пользовательского обработчика если есть
-    if (typeof window.handleTicketUpdate === 'function') {
-      window.handleTicketUpdate(data);
-    }
-  });
-  
-  // Обработка новых тикетов
-  window.wsClient.on('new_ticket', function(data) {
-    console.log('[WebSocket] Новый тикет:', data);
-    showToast('Новый тикет создан', true);
-    // Вызов пользовательского обработчика если есть
-    if (typeof window.handleNewTicket === 'function') {
-      window.handleNewTicket(data);
-    }
-  });
-  
-  // Обработка обновлений статистики
-  window.wsClient.on('stats_update', function(data) {
-    console.log('[WebSocket] Обновление статистики:', data);
-    // Вызов пользовательского обработчика если есть
-    if (typeof window.handleStatsUpdate === 'function') {
-      window.handleStatsUpdate(data);
-    }
-  });
-  
-  // Обработка уведомлений
-  window.wsClient.on('notification', function(data) {
-    console.log('[WebSocket] Уведомление:', data);
-    if (data.data && data.data.title) {
-      showToast(data.data.title, true);
-    }
-    // Вызов пользовательского обработчика если есть
-    if (typeof window.handleNotification === 'function') {
-      window.handleNotification(data);
-    }
-  });
-  
-  // Обработка индикатора набора текста
-  window.wsClient.on('typing', function(data) {
-    console.log('[WebSocket] Индикатор набора:', data);
-    // Вызов пользовательского обработчика если есть
-    if (typeof window.handleTypingIndicator === 'function') {
-      window.handleTypingIndicator(data);
-    }
-  });
-  
-  // Обработка статуса присутствия
-  window.wsClient.on('presence', function(data) {
-    console.log('[WebSocket] Статус присутствия:', data);
-    // Вызов пользовательского обработчика если есть
-    if (typeof window.handlePresenceStatus === 'function') {
-      window.handlePresenceStatus(data);
-    }
-  });
-  
-  // Отправка статуса присутствия при загрузке страницы
-  window.wsClient.on('connected', function() {
-    window.wsClient.sendPresence('online');
-  });
-  
-  // Отправка статуса отсутствия при уходе со страницы
-  window.addEventListener('beforeunload', function() {
-    if (window.wsClient && window.wsClient.isConnected) {
-      window.wsClient.sendPresence('offline');
-    }
-  });
-  
-  console.log('[WebSocket] Клиент инициализирован');
-})();
-</script>
-
-<div id="toastHost" style="position:fixed;top:24px;right:24px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;"></div>
-
-<!-- Global confirm modal -->
-<div id="aetherConfirm" style="position:fixed;inset:0;background:rgba(0,0,0,0.65);display:none;align-items:center;justify-content:center;z-index:100000;padding:20px;">
-  <div style="background:linear-gradient(165deg,#1f1f26,#141419);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:26px 28px;max-width:360px;width:100%;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,0.65);">
-    <div id="acIcon" style="font-size:32px;margin-bottom:10px;color:var(--ac,#e0b04a);"><i class="fas fa-triangle-exclamation"></i></div>
-    <div id="acTitle" style="font-size:16px;font-weight:700;margin-bottom:8px;">Подтверждение</div>
-    <div id="acDesc" style="font-size:13px;opacity:.7;margin-bottom:20px;line-height:1.5;"></div>
-    <div style="display:flex;gap:10px;justify-content:center;">
-      <button id="acCancel" type="button" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);cursor:pointer;font-size:13px;font-weight:600;">Отмена</button>
-      <button id="acOk" type="button" style="padding:9px 16px;border-radius:10px;border:1px solid rgba(231,76,60,0.4);background:rgba(231,76,60,0.15);color:#ff6b6b;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">Подтвердить</button>
-    </div>
-  </div>
-</div>
-<script>
-(function () {
-  var box = document.getElementById('aetherConfirm');
-  if (!box) return;
-  var ok = document.getElementById('acOk');
-  var cancel = document.getElementById('acCancel');
-  var cb = null;
-  window.confirmAction = function (title, desc, onOk, opts) {
-    opts = opts || {};
-    var _fa = String(opts.icon_fa || 'fa-triangle-exclamation').replace(/[^a-z0-9\- ]/gi, '');
-    document.getElementById('acIcon').innerHTML = '<i class="fas ' + _fa + '"></i>';
-    document.getElementById('acTitle').textContent = title || 'Подтверждение';
-    document.getElementById('acDesc').textContent = desc || '';
-    ok.textContent = opts.okText || 'Подтвердить';
-    ok.style.background = opts.danger ? 'rgba(231,76,60,0.15)' : 'var(--ac, #e0b04a)';
-    ok.style.color = opts.danger ? '#ff6b6b' : '#fff';
-    ok.style.borderColor = opts.danger ? 'rgba(231,76,60,0.4)' : 'transparent';
-    cb = onOk || null;
-    box.style.display = 'flex';
-  };
-  function close() { box.style.display = 'none'; cb = null; }
-  ok.addEventListener('click', function () { var f = cb; close(); if (f) f(); });
-  cancel.addEventListener('click', close);
-  box.addEventListener('click', function (e) { if (e.target === box) close(); });
-})();
-</script>
+    <!-- ── Дровер уведомлений ─────────────────────────────── -->
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    <aside class="drawer" id="notifDrawer" aria-label="Уведомления">
+        <div class="drawer-head">
+            <h3><i class="fas fa-bell"></i> Уведомления</h3>
+            <button class="drawer-close" id="notifClose" type="button" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="drawer-body" id="notifBody">
+            <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div>
+        </div>
+        <div class="drawer-foot">
+            <span><span class="pulse-dot" style="margin-right:7px"></span>Обновляется автоматически</span>
+        </div>
+    </aside>
+
+    <!-- ── Лента активности ───────────────────────────────── -->
+    <div class="drawer-backdrop" id="activityBackdrop"></div>
+    <aside class="drawer" id="activityDrawer" aria-label="Лента активности">
+        <div class="drawer-head">
+            <h3><i class="fas fa-stream"></i> Активность <span class="live-pill" style="margin-left:6px"><span class="dot"></span>LIVE</span></h3>
+            <button class="drawer-close" id="activityClose" type="button" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
+        </div>
+        <div class="drawer-body" id="activityBody">
+            <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка событий...</span></div>
+        </div>
+        <div class="drawer-foot">
+            <span id="activityLastUpdate">—</span>
+            <button class="btn-link" id="activityRefresh" type="button"><i class="fas fa-sync-alt"></i> Обновить</button>
+        </div>
+    </aside>
+
+    <!-- ── Данные для палитры Ctrl+K ───────────────────────── -->
+    {% if role == 'owner' or role == 'admin' or role == 'mod' %}
+    <script type="application/json" id="palette-data">
+    {{ panel_menu|tojson }}
+    </script>
+    {% endif %}
+
+    <script>window.__panelUserId = '{{ session.get("user_id", "") }}';</script>
+    <script src="/static/websocket-client.js"></script>
+    <!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
+    <script src="/static/api-guard.js?v=2"></script>
+    <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
+    <script src="/static/app.js?v=6"></script>
 </body>
 </html>

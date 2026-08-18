@@ -1,42 +1,95 @@
 {% extends "base.html" %}
-{% block title %}Raid Sentinel — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-satellite"></i> Raid Sentinel{% endblock %}
+{% block title %}Анти-рейд · Модерация — Aether{% endblock %}
+{% block page_title %}Анти-рейд{% endblock %}
 {% block content %}
 
-<div class="ops-canvas ops-raid-sentinel" data-room-kind="sentinel" data-room-version="3">
-  <div class="ops-room-label"><span>PRT / RAID SENTINEL</span><b>Наблюдатель входов</b><em>волна распознаётся, решение остаётся у команды</em></div>
-  <section class="ops-sentinel-head" id="observer-banner"><div class="ops-sentinel-eye"><i class="fas fa-eye"></i><span></span></div><div><span class="ops-kicker">OBSERVER MODE / NO AUTO-PUNISH</span><h2>Периметр только наблюдает</h2><p>При срабатывании правил отправляется сигнал. Кик, бан и блокировка не запускаются автоматически.</p></div><div class="ops-sentinel-server" id="guild-picker"><label><span>Сервер</span><select id="guild-select"><option value="">Загрузка…</option></select></label>{% if role == 'owner' %}<button type="button" class="ops-icon-button" id="btn-reload" title="Перезагрузить конфигурацию"><i class="fas fa-sync"></i></button>{% endif %}<b id="save-status"></b></div></section>
-  <div class="ops-sentinel-grid">
-    <section class="ops-sentinel-sector ops-sector-wave"><header><span>SECTOR 01</span><i class="fas fa-people-group"></i><h3>Волна входов</h3><button type="button" class="toggle" id="tog-raid" aria-label="Обнаружение волны входов" data-key="join_raid"></button></header><p>Сколько людей за короткое окно считаются рейдом.</p><div class="ops-number-grid"><label><span>Участников</span><input type="number" id="join_threshold" data-key="join_threshold" min="2" max="50" value="5"></label><label><span>Секунд</span><input type="number" id="join_window" data-key="join_window" min="5" max="120" value="10"></label></div></section>
-    <section class="ops-sentinel-sector"><header><span>SECTOR 02</span><i class="fas fa-user-clock"></i><h3>Возраст профиля</h3><button type="button" class="toggle" id="tog-age" aria-label="Проверка возраста аккаунта" data-key="age_filter"></button></header><p>Новые аккаунты ниже порога создают отдельный сигнал риска.</p><label class="ops-field"><span>Минимум дней</span><input type="number" id="min_age" data-key="min_age" min="0" max="365" value="5"></label></section>
-    <section class="ops-sentinel-sector"><header><span>SECTOR 03</span><i class="fas fa-robot"></i><h3>Вход бота</h3><button type="button" class="toggle" id="tog-bot" aria-label="Контроль входа ботов" data-key="bot_protection"></button></header><p>Отдельное оповещение при добавлении нового бота на сервер.</p></section>
-    <section class="ops-sentinel-sector"><header><span>SECTOR 04</span><i class="fas fa-trash-can-arrow-up"></i><h3>Массовое удаление</h3><button type="button" class="toggle" id="tog-delete" aria-label="Контроль массового удаления" data-key="delete_protection"></button></header><p>Сигнал при удалении пяти и более сообщений за одну операцию.</p></section>
-    <section class="ops-sentinel-sector ops-sentinel-route"><header><span>SIGNAL ROUTE</span><i class="fas fa-tower-broadcast"></i><h3>Маршрут тревоги</h3></header><label class="ops-field"><span>ID канала</span><input id="alert_channel_id" data-key="alert_channel_id" placeholder="Пусто — мод-лог"></label><label class="ops-field"><span>Действие</span><select id="raid_action" data-key="raid_action"><option value="alert">Только оповещение</option></select></label></section>
-    <section class="ops-sentinel-sector ops-sentinel-whitelist"><header><span>TRUSTED IDENTITIES</span><i class="fas fa-user-shield"></i><h3>Белый список</h3></header><div class="ops-inline"><input id="wl-input" placeholder="Discord ID пользователя"><button type="button" class="ops-primary" id="btn-add-wl"><i class="fas fa-plus"></i> Добавить</button></div><ul class="wl-list" id="wl-list"></ul></section>
-    <section class="ops-sentinel-events"><header><div><span class="ops-kicker">DETECTED WAVES</span><h2>Журнал тревог</h2></div><button type="button" class="ops-secondary" id="btn-clear"><i class="fas fa-broom"></i> Очистить</button></header><div class="alert-list" id="alerts"><div class="ops-empty"><i class="fas fa-check"></i><span>Периметр спокоен</span></div></div></section>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Защита</div>
+    <h1>Анти-рейд</h1>
+    <p class="lead">Наблюдатель входов: волна распознаётся, решение остаётся у команды. Автокары не запускаются.</p>
+  </div>
+  <div class="page-head-actions">
+    <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Сервер</span>
+      <select id="guild-select"><option value="">Загрузка…</option></select></label>
+    {% if role == 'owner' %}
+    <button type="button" class="btn" id="btn-reload" title="Перезагрузить конфигурацию"><i class="fas fa-sync"></i></button>
+    {% endif %}
+    <span class="hint" id="save-status"></span>
+  </div>
+</div>
+
+<div class="alert alert-info" id="observer-banner">
+  <i class="fas fa-eye"></i>
+  <div><b>Режим наблюдения.</b> При срабатывании правил отправляется сигнал. Кик, бан и блокировка не запускаются автоматически.</div>
+</div>
+
+<div class="grid-3" style="align-items:start">
+  <div class="card">
+    <div class="card-head"><label class="switch"><input type="checkbox" id="tog-raid" data-key="join_raid"><span class="track"></span></label>
+      <div><h3>Волна входов</h3><div class="sub">Сколько людей за короткое окно считаются рейдом.</div></div></div>
+    <div class="form-row">
+      <label class="form-group"><span class="form-label">Участников</span><input class="form-input" type="number" id="join_threshold" data-key="join_threshold" min="2" max="50" value="5"></label>
+      <label class="form-group"><span class="form-label">Секунд</span><input class="form-input" type="number" id="join_window" data-key="join_window" min="5" max="120" value="10"></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><label class="switch"><input type="checkbox" id="tog-age" data-key="age_filter"><span class="track"></span></label>
+      <div><h3>Возраст профиля</h3><div class="sub">Новые аккаунты ниже порога создают сигнал риска.</div></div></div>
+    <label class="form-group"><span class="form-label">Минимум дней</span><input class="form-input" type="number" id="min_age" data-key="min_age" min="0" max="365" value="5"></label>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><label class="switch"><input type="checkbox" id="tog-bot" data-key="bot_protection"><span class="track"></span></label>
+      <div><h3>Вход бота</h3><div class="sub">Отдельное оповещение при добавлении нового бота.</div></div></div>
+    <div style="padding:12px 0 4px">
+      <label class="switch" style="margin-bottom:14px"><input type="checkbox" id="tog-delete" data-key="delete_protection"><span class="track"></span> <b>Массовое удаление</b></label>
+      <div class="hint">Сигнал при удалении пяти и более сообщений за одну операцию.</div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start;margin-top:14px">
+  <div class="card">
+    <div class="card-head"><div><h3><i class="fas fa-tower-broadcast"></i> Маршрут тревоги</h3>
+      <div class="sub">Куда приходят сигналы. Действие — всегда только оповещение.</div></div></div>
+    <label class="form-group"><span class="form-label">ID канала</span><input class="form-input" id="alert_channel_id" data-key="alert_channel_id" placeholder="Пусто — мод-лог"></label>
+    <div class="row" style="margin-top:14px">
+      <input class="form-input" id="wl-input" placeholder="Discord ID пользователя" style="flex:1">
+      <button type="button" class="btn btn-primary" id="btn-add-wl"><i class="fas fa-plus"></i> В белый список</button>
+    </div>
+    <div class="chip-row" id="wl-list" style="margin-top:10px"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-bell"></i> Журнал тревог</h2>
+      <div class="sub">Последние события периметра.</div></div>
+      <button type="button" class="btn" id="btn-clear" style="margin-left:auto"><i class="fas fa-broom"></i> Очистить</button></div>
+    <div class="panel-body" id="alerts"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка…</span></div></div>
   </div>
 </div>
 
 <script>
 (function () {
   'use strict';
-
   var currentGuildId = null;
   var currentConfig = null;
   var saveTimer = null;
 
   function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
   function setSaveStatus(text, isError) {
     var el = $('save-status');
     el.textContent = text || '';
-    el.classList.toggle('error', !!isError);
+    el.className = 'hint ' + (isError ? 'error' : '');
     if (text) {
       clearTimeout(setSaveStatus._t);
       setSaveStatus._t = setTimeout(function () { el.textContent = ''; }, 1800);
     }
   }
 
-  // ── Загрузка списка серверов ──────────────────────────────────────────────
   function loadGuilds() {
     fetch('/api/guilds', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
@@ -56,117 +109,81 @@
         currentGuildId = sel.value;
         loadConfig();
       })
-      .catch(function (e) {
+      .catch(function () {
         $('guild-select').innerHTML = '<option value="">Не удалось загрузить</option>';
-        console.error(e);
       });
   }
 
-  // ── Загрузка конфигурации ─────────────────────────────────────────────────
   function loadConfig() {
     if (!currentGuildId) return;
     fetch('/api/guild/' + currentGuildId + '/antiraid', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
-      .then(function (cfg) {
-        currentConfig = cfg || {};
-        // значения по умолчанию
-        ['join_raid','age_filter','bot_protection','delete_protection'].forEach(function (k) {
-          if (typeof currentConfig[k] !== 'boolean') currentConfig[k] = false;
-        });
-        if (typeof currentConfig.join_threshold !== 'number') currentConfig.join_threshold = 5;
-        if (typeof currentConfig.join_window !== 'number') currentConfig.join_window = 10;
-        if (typeof currentConfig.min_age !== 'number') currentConfig.min_age = 5;
+      .then(function (d) {
+        currentConfig = d.config || d;
         if (!Array.isArray(currentConfig.whitelist)) currentConfig.whitelist = [];
         if (!Array.isArray(currentConfig.recent_events)) currentConfig.recent_events = [];
-        renderUI();
+        renderConfig();
       })
-      .catch(function (e) {
-        console.error(e);
-        setSaveStatus('Не удалось загрузить', true);
-      });
+      .catch(function () { setSaveStatus('Не удалось загрузить', true); });
   }
 
-  function renderUI() {
-    if (!currentConfig) return;
-    // toggles
-    ['tog-raid','tog-age','tog-bot','tog-delete'].forEach(function (id) {
-      var el = $(id); if (!el) return;
+  function renderConfig() {
+    ['tog-raid', 'tog-age', 'tog-bot', 'tog-delete'].forEach(function (id) {
+      var el = $(id);
       var key = el.getAttribute('data-key');
-      el.classList.toggle('on', !!currentConfig[key]);
+      el.checked = !!currentConfig[key];
     });
-    // numeric/text
-    ['join_threshold','join_window','min_age','alert_channel_id'].forEach(function (key) {
-      var el = document.querySelector('[data-key="' + key + '"]');
-      if (el) el.value = currentConfig[key] != null ? currentConfig[key] : '';
+    document.querySelectorAll('[data-key]').forEach(function (el) {
+      if (el.tagName === 'INPUT' && el.type === 'number' && el.id !== 'wl-input') {
+        el.value = currentConfig[el.getAttribute('data-key')];
+      } else if (el.tagName === 'INPUT' && el.id === 'alert_channel_id') {
+        el.value = currentConfig[el.getAttribute('data-key')] || '';
+      }
     });
-    $('raid_action').value = 'alert';
-
-    renderWhitelist();
-    renderEvents();
-  }
-
-  function renderWhitelist() {
-    var ul = $('wl-list');
-    ul.innerHTML = '';
+    var wl = $('wl-list');
     if (!currentConfig.whitelist.length) {
-      ul.innerHTML = '<li style="background:transparent;border:none;color:#7d8593;">Исключенных пользователей пока нет.</li>';
-      return;
+      wl.innerHTML = '<span class="muted">Белый список пуст</span>';
+    } else {
+      wl.innerHTML = currentConfig.whitelist.map(function (uid, idx) {
+        return '<span class="chip">' + esc(uid) + ' <span class="x" data-wl="' + idx + '">×</span></span>';
+      }).join('');
     }
-    currentConfig.whitelist.forEach(function (uid, idx) {
-      var li = document.createElement('li');
-      li.innerHTML = '<span><i class="fas fa-user"></i> <code>' + uid + '</code></span>' +
-                     '<button type="button" title="Удалить"><i class="fas fa-times"></i></button>';
-      li.querySelector('button').addEventListener('click', function () {
-        currentConfig.whitelist.splice(idx, 1);
-        saveConfig();
-      });
-      ul.appendChild(li);
-    });
+    renderEvents();
   }
 
   function renderEvents() {
     var box = $('alerts');
-    box.innerHTML = '';
     if (!currentConfig.recent_events.length) {
-      box.innerHTML = '<p class="muted">Событий пока нет.</p>';
+      box.innerHTML = '<div class="empty"><i class="fas fa-check"></i><span>Периметр спокоен</span></div>';
       return;
     }
-    currentConfig.recent_events.forEach(function (ev) {
-      var div = document.createElement('div');
-      div.className = 'alert-item';
-      var cls = '';
+    box.innerHTML = currentConfig.recent_events.map(function (ev) {
       var icon = 'fas fa-exclamation-circle';
       var label = ev.type;
-      if (ev.type === 'young_account') { cls = 'young'; icon = 'fas fa-user-clock'; label = 'Новый аккаунт'; }
-      else if (ev.type === 'join_raid') { cls = ''; icon = 'fas fa-exclamation-triangle'; label = 'Волна рейда'; }
-      else if (ev.type === 'bot_join') { cls = 'bot'; icon = 'fas fa-robot'; label = 'Бот присоединился'; }
-      else if (ev.type === 'bulk_delete') { cls = 'bulk'; icon = 'fas fa-trash-alt'; label = 'Массовое удаление'; }
-      div.className = 'alert-item ' + cls;
-
+      var cls = '';
+      if (ev.type === 'young_account') { icon = 'fas fa-user-clock'; label = 'Новый аккаунт'; cls = 'tone-warning'; }
+      else if (ev.type === 'join_raid') { icon = 'fas fa-triangle-exclamation'; label = 'Волна рейда'; cls = 'danger'; }
+      else if (ev.type === 'bot_join') { icon = 'fas fa-robot'; label = 'Бот присоединился'; cls = 'security'; }
+      else if (ev.type === 'bulk_delete') { icon = 'fas fa-trash-alt'; label = 'Массовое удаление'; cls = 'neutral'; }
       var main = '';
       if (ev.type === 'join_raid') {
-        main = '<b>' + (ev.count || '?') + '</b> человек / ' + (ev.window || '?') + 'сек (порог ' + (ev.threshold || '?') + ')';
-        if (ev.last_user) main += ' — последний: ' + ev.last_user;
+        main = '<b>' + (ev.count || '?') + '</b> человек / ' + (ev.window || '?') + ' сек (порог ' + (ev.threshold || '?') + ')' +
+          (ev.last_user ? ' — последний: ' + esc(ev.last_user) : '');
       } else if (ev.type === 'young_account') {
-        main = (ev.user_tag || ev.user_id) + ' — возраст аккаунта: <b>' + (ev.account_age_days || '?') + ' дней</b>';
+        main = esc(ev.user_tag || ev.user_id) + ' — возраст аккаунта: <b>' + (ev.account_age_days || '?') + ' дней</b>';
       } else if (ev.type === 'bot_join') {
-        main = ev.user_tag || ev.user_id;
+        main = esc(ev.user_tag || ev.user_id);
       } else if (ev.type === 'bulk_delete') {
-        main = 'Канал <code>' + (ev.channel_id || '?') + '</code> — <b>' + (ev.count || '?') + '</b> сообщений';
-      } else {
-        main = JSON.stringify(ev);
+        main = 'Канал <code>' + esc(ev.channel_id || '?') + '</code> — <b>' + (ev.count || '?') + '</b> сообщений';
       }
       var t = ev.timestamp ? new Date(ev.timestamp).toLocaleString('ru-RU') : '';
-      div.innerHTML = '<i class="' + icon + '"></i>' +
-                      '<span class="badge">' + label + '</span>' +
-                      '<span>' + main + '</span>' +
-                      '<span class="alert-time">' + t + '</span>';
-      box.appendChild(div);
-    });
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="' + icon + '"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title"><span class="badge ' + cls + '">' + esc(label) + '</span></div>' +
+        '<div class="feed-item-sub">' + main + '</div><div class="feed-item-time">' + esc(t) + '</div></div></div>';
+    }).join('');
   }
 
-  // ── Сохранение конфигурации (с задержкой) ─────────────────────────────────
-  function saveConfig() {
+  function scheduleSave() {
     if (!currentGuildId || !currentConfig) return;
     setSaveStatus('Сохранение…');
     clearTimeout(saveTimer);
@@ -175,95 +192,78 @@
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentConfig),
+        body: JSON.stringify(currentConfig)
       })
         .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data && data.success) setSaveStatus('Сохранено');
-          else setSaveStatus('Ошибка: ' + (data && data.error || 'неизвестно'), true);
+        .then(function (d) {
+          if (d.success || d.ok) {
+            setSaveStatus('Сохранено');
+            currentConfig = d.config || currentConfig;
+            renderConfig();
+          } else {
+            setSaveStatus(d.error || 'Ошибка сохранения', true);
+          }
         })
-        .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
-    }, 250);
+        .catch(function () { setSaveStatus('Сеть недоступна', true); });
+    }, 400);
   }
 
-  // ── Привязка событий ──────────────────────────────────────────────────────
-  function bind() {
-    loadGuilds();
+  document.addEventListener('change', function (e) {
+    var el = e.target;
+    if (!currentConfig) return;
+    if (el.type === 'checkbox' && el.dataset.key) {
+      currentConfig[el.dataset.key] = el.checked;
+      scheduleSave();
+      return;
+    }
+    if (el.dataset && el.dataset.key) {
+      currentConfig[el.dataset.key] = el.value;
+      scheduleSave();
+    }
+  });
 
-    $('guild-select').addEventListener('change', function () {
-      currentGuildId = this.value;
-      loadConfig();
-    });
+  document.addEventListener('click', function (e) {
+    var x = e.target.closest('[data-wl]');
+    if (x) {
+      currentConfig.whitelist.splice(parseInt(x.dataset.wl, 10), 1);
+      renderConfig();
+      scheduleSave();
+    }
+  });
 
-    $('btn-reload').addEventListener('click', function () {
-      if (!currentGuildId) return;
-      fetch('/api/cogs/antiraid/reload', { method: 'POST', credentials: 'same-origin' })
-        .then(function (r) { return r.json(); })
-        .then(function (d) { setSaveStatus(d && d.success ? 'Обновлено' : 'Ошибка', !(d && d.success)); })
-        .catch(function (e) { setSaveStatus('Ошибка: ' + e.message, true); });
-    });
-
-    // переключатели
-    ['tog-raid','tog-age','tog-bot','tog-delete'].forEach(function (id) {
-      var el = $(id);
-      el.addEventListener('click', function () {
-        if (!currentConfig) return;
-        var key = this.getAttribute('data-key');
-        currentConfig[key] = !this.classList.contains('on');
-        this.classList.toggle('on', currentConfig[key]);
-        saveConfig();
-      });
-    });
-
-    // числовые/текстовые поля
-    ['join_threshold','join_window','min_age','alert_channel_id'].forEach(function (key) {
-      var el = document.querySelector('[data-key="' + key + '"]');
-      if (!el) return;
-      el.addEventListener('change', function () {
-        if (!currentConfig) return;
-        var v = this.value;
-        if (key === 'alert_channel_id') {
-          currentConfig[key] = v ? String(v) : null;
-        } else {
-          currentConfig[key] = parseInt(v, 10) || 0;
-        }
-        saveConfig();
-      });
-    });
-
-    // добавление в белый список
-    $('btn-add-wl').addEventListener('click', function () {
-      if (!currentConfig) return;
-      var inp = $('wl-input');
-      var v = (inp.value || '').trim();
-      if (!/^\d{15,22}$/.test(v)) {
-        setSaveStatus('Неверный ID пользователя', true);
-        return;
-      }
-      if (currentConfig.whitelist.indexOf(v) !== -1) {
-        setSaveStatus('Уже в списке', true);
-        return;
-      }
-      currentConfig.whitelist.push(v);
-      inp.value = '';
-      renderWhitelist();
-      saveConfig();
-    });
-    $('wl-input').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); $('btn-add-wl').click(); }
-    });
-
-    // очистить события
-    $('btn-clear').addEventListener('click', function () {
-      if (!currentConfig) return;
+  $('guild-select').addEventListener('change', function () {
+    currentGuildId = this.value;
+    loadConfig();
+  });
+  $('btn-add-wl').addEventListener('click', function () {
+    var v = $('wl-input').value.trim();
+    if (!v) return;
+    if (!/^\d{5,24}$/.test(v)) { setSaveStatus('Похоже на неверный ID', true); return; }
+    if (currentConfig.whitelist.indexOf(v) === -1) currentConfig.whitelist.push(v);
+    $('wl-input').value = '';
+    renderConfig();
+    scheduleSave();
+  });
+  $('wl-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('btn-add-wl').click(); });
+  $('btn-clear').addEventListener('click', function () {
+    window.confirmAction('Очистить журнал тревог?', 'События исчезнут из списка.', function () {
       currentConfig.recent_events = [];
-      renderEvents();
-      saveConfig();
+      renderConfig();
+      scheduleSave();
+    }, { danger: true, okText: 'Очистить' });
+  });
+  var reloadBtn = $('btn-reload');
+  if (reloadBtn) {
+    reloadBtn.addEventListener('click', function () {
+      window.qualitySetLoading(reloadBtn, true);
+      fetch('/api/cogs/antiraid/reload', { method: 'POST', credentials: 'same-origin' })
+        .then(function () { setSaveStatus('Конфигурация перезагружена'); loadConfig(); })
+        .catch(function () { setSaveStatus('Не удалось перезагрузить', true); })
+        .finally(function () { window.qualitySetLoading(reloadBtn, false); });
     });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
-  else bind();
+  loadGuilds();
 })();
 </script>
 {% endblock %}

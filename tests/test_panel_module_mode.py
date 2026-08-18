@@ -142,12 +142,12 @@ base = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8
 check('panel_off_paths' in base and 'is-off' in base and 'nav-off-chip' in base,
       'base.html: механика гашения подключена')
 check('panel_mod_only' in base, 'base.html: баннер режима подключен')
-check('/static/polish.css?v=5' in base, 'версия polish.css поднята (сброс кэша)')
+check('/static/style.css' in base, 'базовая дизайн-система подключена')
 
-css = open(os.path.join(ROOT, 'web', 'static', 'polish.css'), encoding='utf-8').read()
+css = open(os.path.join(ROOT, 'web', 'static', 'style.css'), encoding='utf-8').read()
 for marker in ('.mode-banner', '.nav-link.is-off', '.nav-off-chip'):
     assert marker in css, marker
-check(css.count('{') == css.count('}'), 'polish.css: стили режима добавлены, скобки сбалансированы')
+check(css.count('{') == css.count('}'), 'style.css: стили режима добавлены, скобки сбалансированы')
 
 import shutil
 shutil.rmtree(_TMP, ignore_errors=True)

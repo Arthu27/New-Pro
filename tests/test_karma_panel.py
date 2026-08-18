@@ -208,7 +208,8 @@ check('1;1;Аня;7' in body and '3;3;Вик,а;3' in body,
 print('== 6. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/karma.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('kmKpis', 'kmTop', 'kmFeed', 'kmPairs', 'kmAdjId', 'kmAdjDelta',
             'kmCsv', 'kmFilter', 'kmAdjustPanel'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')

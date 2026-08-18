@@ -4,6 +4,9 @@ are shown for each panel role (mod / admin / owner).
 - owner always sees everything.
 - mod / admin visibility is stored in data/panel_menu.json.
 - member (uye) panel is managed separately by the user later.
+
+Moderation section metadata (section / tone / access) is used by the sidebar
+sub-groups and by the moderation pages themselves (badges, colors).
 """
 
 from logger import get_logger
@@ -27,29 +30,29 @@ MENU = [
         {'path': '/recap', 'label': 'Рекап канала', 'icon': 'fa-clock-rotate-left'},
     ]},
     {'group': 'Модерация', 'key': 'mod', 'icon': 'fa-shield-halved', 'pages': [
-        # Оперативная работа: от мягкой меры к аварийному сценарию.
-        {'path': '/warnings', 'label': 'Варны и досье', 'icon': 'fa-triangle-exclamation',
+        # Реагирование: от мягкой меры к аварийному сценарию.
+        {'path': '/warnings', 'label': 'Варны', 'icon': 'fa-triangle-exclamation',
          'section': 'response', 'description': 'Предупреждения, причины и история участника',
          'access': 'Мод+', 'tone': 'warning'},
         {'path': '/temp-moderation', 'label': 'Временные меры', 'icon': 'fa-clock',
-         'section': 'response', 'description': 'Мьюты и баны с автоматическим завершением',
+         'section': 'response', 'description': 'Мьюты и баны с автоматическим снятием',
          'access': 'Мод+', 'tone': 'warning'},
-        {'path': '/mod-tools', 'label': 'Оперативные инструменты', 'icon': 'fa-thumbtack',
-         'section': 'response', 'description': 'Липкие сообщения, panic и быстрые действия',
+        {'path': '/mod-tools', 'label': 'Инструменты', 'icon': 'fa-thumbtack',
+         'section': 'response', 'description': 'Sticky-сообщения, panic и быстрые действия',
          'access': 'Мод+', 'tone': 'warning'},
         {'path': '/bulk-actions', 'label': 'Массовые операции', 'icon': 'fa-layer-group',
          'section': 'response', 'description': 'Пакетные роли, сообщения и действия с участниками',
          'access': 'Админ', 'min_role': 'admin', 'tone': 'critical'},
-        {'path': '/lockdown', 'label': 'Экстренный локдаун', 'icon': 'fa-house-lock',
-         'section': 'response', 'description': 'Изоляция каналов и контролируемый откат прав',
+        {'path': '/lockdown', 'label': 'Локдаун', 'icon': 'fa-house-lock',
+         'section': 'response', 'description': 'Экстренное закрытие каналов и контролируемый откат',
          'access': 'Мод+', 'tone': 'critical'},
         {'path': '/tagjail', 'label': 'Tag Jail', 'icon': 'fa-lock',
-         'section': 'response', 'description': 'Изоляция подозрительных тегов и возврат ролей',
+         'section': 'response', 'description': 'Изоляция опасных тегов и возврат ролей',
          'access': 'Админ', 'min_role': 'admin', 'tone': 'critical'},
 
-        # Разбор инцидента: факты, доказательства и итоговое решение.
+        # Расследование: факты, доказательства и пересмотр решений.
         {'path': '/logs', 'label': 'Журнал модерации', 'icon': 'fa-clipboard-list',
-         'section': 'investigation', 'description': 'Единая лента действий с фильтрами и экспортом',
+         'section': 'investigation', 'description': 'Лента действий с фильтрами и экспортом',
          'access': 'Мод+', 'tone': 'info'},
         {'path': '/mod-history', 'label': 'История решений', 'icon': 'fa-clock-rotate-left',
          'section': 'investigation', 'description': 'Хронология наказаний и решений команды',
@@ -58,10 +61,10 @@ MENU = [
          'section': 'investigation', 'description': 'Скриншоты, видео и привязка к наказаниям',
          'access': 'Мод+', 'tone': 'info'},
         {'path': '/appeals', 'label': 'Апелляции', 'icon': 'fa-scale-balanced',
-         'section': 'investigation', 'description': 'Очередь пересмотра наказаний и решения',
+         'section': 'investigation', 'description': 'Очередь пересмотра наказаний и вердикты',
          'access': 'Мод+', 'tone': 'info'},
 
-        # Превентивный контур безопасности.
+        # Защита: превентивные политики безопасности.
         {'path': '/security', 'label': 'Центр безопасности', 'icon': 'fa-shield-halved',
          'section': 'protection', 'description': 'Сводный риск, политики и готовность защиты',
          'access': 'Мод+', 'tone': 'security'},
@@ -75,7 +78,7 @@ MENU = [
          'section': 'protection', 'description': 'Поиск подделок профилей и impersonation',
          'access': 'Мод+', 'tone': 'security'},
 
-        # Управление качеством и нагрузкой команды.
+        # Команда и аналитика: качество, нагрузка и эскалация.
         {'path': '/mod-control', 'label': 'Контроль команды', 'icon': 'fa-clipboard-check',
          'section': 'management', 'description': 'Очереди, заметки и контроль исполнения',
          'access': 'Мод+', 'tone': 'analytics'},
@@ -86,7 +89,7 @@ MENU = [
          'section': 'management', 'description': 'Причины нарушений, тренды и рекомендации',
          'access': 'Мод+', 'tone': 'analytics'},
         {'path': '/ladder', 'label': 'Лестница наказаний', 'icon': 'fa-stairs',
-         'section': 'management', 'description': 'Единые ступени эскалации и контроль сроков',
+         'section': 'management', 'description': 'Ступени эскалации и контроль сроков',
          'access': 'Мод+', 'tone': 'analytics'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
@@ -204,154 +207,18 @@ MENU = [
     ]},
 ]
 
-# Внутренняя навигация PRO-центра модерации. Порядок задаёт рабочий сценарий:
-# действие -> расследование -> защита -> контроль качества.
+# Рабочие подразделы модерации. Порядок задаёт сценарий работы команды:
+# реагирование -> расследование -> защита -> команда и аналитика.
 MODERATION_SECTIONS = (
-    {'key': 'response', 'label': 'Оперативная работа', 'short': 'Операции',
-     'icon': 'fa-bolt', 'description': 'Наказания и аварийные действия'},
-    {'key': 'investigation', 'label': 'Инциденты и решения', 'short': 'Инциденты',
-     'icon': 'fa-magnifying-glass', 'description': 'Факты, доказательства и апелляции'},
-    {'key': 'protection', 'label': 'Автоматическая защита', 'short': 'Защита',
-     'icon': 'fa-shield-halved', 'description': 'Превентивные политики сервера'},
-    {'key': 'management', 'label': 'Команда и аналитика', 'short': 'Контроль',
-     'icon': 'fa-chart-line', 'description': 'Качество, нагрузка и эскалация'},
+    {'key': 'response', 'label': 'Реагирование', 'short': 'Реагирование',
+     'icon': 'fa-bolt', 'description': 'Наказания и экстренные действия'},
+    {'key': 'investigation', 'label': 'Расследование', 'short': 'Расследование',
+     'icon': 'fa-magnifying-glass', 'description': 'Факты, доказательства и пересмотр решений'},
+    {'key': 'protection', 'label': 'Защита', 'short': 'Защита',
+     'icon': 'fa-shield-halved', 'description': 'Превентивные политики безопасности'},
+    {'key': 'management', 'label': 'Команда и аналитика', 'short': 'Команда',
+     'icon': 'fa-chart-line', 'description': 'Нагрузка, качество и эскалация'},
 )
-
-# Индивидуальность каждой комнаты Moderation OS. Общий workflow и премиальный
-# золотой акцент едины; заголовок, миссия и опорные возможности различаются.
-MODERATION_PAGE_PROFILES = {
-    '/warnings': {
-        'code': 'RSP-01', 'accent': 'gold', 'name': 'CASE SIGNAL',
-        'headline': 'Остановить повтор до эскалации.',
-        'mission': 'Живая очередь предупреждений, контекст участника и последовательность решений в одном рабочем поле.',
-        'features': ('Досье участника', 'Повторные причины', 'Контроль эскалации'),
-    },
-    '/temp-moderation': {
-        'code': 'RSP-02', 'accent': 'gold', 'name': 'TIME CONTROL',
-        'headline': 'Временная мера с точным финалом.',
-        'mission': 'Контроль активных мьютов и банов, сроков завершения и безопасного досрочного снятия.',
-        'features': ('Активные таймеры', 'Пресеты сроков', 'Автозавершение'),
-    },
-    '/mod-tools': {
-        'code': 'RSP-03', 'accent': 'gold', 'name': 'FIELD KIT',
-        'headline': 'Быстрые действия без потери контекста.',
-        'mission': 'Оперативный набор модератора: sticky-сообщения, panic-контур и точечные действия по каналам.',
-        'features': ('Sticky-контроль', 'Panic-сценарий', 'Ghost-инструменты'),
-    },
-    '/bulk-actions': {
-        'code': 'RSP-04', 'accent': 'gold', 'name': 'BULK COMMAND',
-        'headline': 'Массовое действие под полным контролем.',
-        'mission': 'Пакетные роли, сообщения и операции с обязательной проверкой масштаба перед запуском.',
-        'features': ('Предпросмотр охвата', 'Пакетные роли', 'Итог операции'),
-    },
-    '/lockdown': {
-        'code': 'RSP-05', 'accent': 'gold', 'name': 'LOCKDOWN CORE',
-        'headline': 'Изолировать угрозу. Сохранить управление.',
-        'mission': 'Аварийное закрытие выбранных каналов с понятным состоянием и контролируемым возвратом прав.',
-        'features': ('Периметр каналов', 'Аварийный запуск', 'Безопасный откат'),
-    },
-    '/tagjail': {
-        'code': 'RSP-06', 'accent': 'gold', 'name': 'TAG ISOLATION',
-        'headline': 'Изоляция подозрительного признака.',
-        'mission': 'Работа с опасными тегами, временным ограничением ролей и прозрачным восстановлением доступа.',
-        'features': ('Сканирование тегов', 'Хранилище ролей', 'Возврат доступа'),
-    },
-    '/logs': {
-        'code': 'INV-01', 'accent': 'gold', 'name': 'EVIDENCE STREAM',
-        'headline': 'Каждое действие оставляет проверяемый след.',
-        'mission': 'Единая лента фактов с быстрым поиском, временной осью и выгрузкой для внешнего разбора.',
-        'features': ('Живая хронология', 'Фильтры событий', 'Экспорт журнала'),
-    },
-    '/mod-history': {
-        'code': 'INV-02', 'accent': 'gold', 'name': 'DECISION TIMELINE',
-        'headline': 'Восстановить ход решения за секунды.',
-        'mission': 'История наказаний и действий команды, собранная вокруг участника, причины и результата.',
-        'features': ('Хронология решений', 'Поиск участника', 'Связанные наказания'),
-    },
-    '/proofs': {
-        'code': 'INV-03', 'accent': 'gold', 'name': 'PROOF VAULT',
-        'headline': 'Доказательство рядом с решением.',
-        'mission': 'Защищённая библиотека изображений и видео с привязкой к участникам и кейсам модерации.',
-        'features': ('Медиа-галерея', 'Привязка к кейсу', 'Быстрый просмотр'),
-    },
-    '/appeals': {
-        'code': 'INV-04', 'accent': 'gold', 'name': 'REVIEW CHAMBER',
-        'headline': 'Пересмотр без потери исходных фактов.',
-        'mission': 'Очередь апелляций, аргументы сторон и итоговое решение в едином пространстве проверки.',
-        'features': ('Очередь пересмотра', 'Контекст наказания', 'Фиксация вердикта'),
-    },
-    '/security': {
-        'code': 'PRT-01', 'accent': 'gold', 'name': 'SECURITY RADAR',
-        'headline': 'Увидеть риск до инцидента.',
-        'mission': 'Сводный радар угроз, готовность политик и быстрый переход к проблемному защитному контуру.',
-        'features': ('Индекс риска', 'Готовность политик', 'Карта защиты'),
-    },
-    '/autofilter': {
-        'code': 'PRT-02', 'accent': 'gold', 'name': 'CONTENT SHIELD',
-        'headline': 'Фильтрация, которую можно объяснить.',
-        'mission': 'Слова, ссылки, флуд и исключения как прозрачные политики с контролируемой строгостью.',
-        'features': ('Политики контента', 'Исключения каналов', 'Точная строгость'),
-    },
-    '/antiraid': {
-        'code': 'PRT-03', 'accent': 'gold', 'name': 'RAID SENTINEL',
-        'headline': 'Распознать волну входов в момент атаки.',
-        'mission': 'Пороговые правила, автоматический ответ и состояние периметра для массовых входов.',
-        'features': ('Детектор волны', 'Автоответ', 'Периметр сервера'),
-    },
-    '/antifake': {
-        'code': 'PRT-04', 'accent': 'gold', 'name': 'IDENTITY GUARD',
-        'headline': 'Настоящий профиль должен отличаться.',
-        'mission': 'Поиск impersonation, анализ совпадений и управляемая реакция на подделки профилей.',
-        'features': ('Сканер сходства', 'История страйков', 'Защита персонала'),
-    },
-    '/mod-control': {
-        'code': 'MGT-01', 'accent': 'gold', 'name': 'TEAM DESK',
-        'headline': 'Управлять очередью, а не догонять её.',
-        'mission': 'Задачи команды, ответственные, заметки и контроль исполнения в одном операционном столе.',
-        'features': ('Очередь команды', 'Ответственные', 'Контроль исполнения'),
-    },
-    '/mod-report': {
-        'code': 'MGT-02', 'accent': 'gold', 'name': 'PERFORMANCE BRIEF',
-        'headline': 'Показать нагрузку понятным отчётом.',
-        'mission': 'Сводка действий, рецидивистов и вклада команды для регулярного управленческого разбора.',
-        'features': ('Нагрузка команды', 'Рецидивисты', 'Готовый отчёт'),
-    },
-    '/mod-insights': {
-        'code': 'MGT-03', 'accent': 'gold', 'name': 'RISK INTELLIGENCE',
-        'headline': 'Из истории нарушений — в решение.',
-        'mission': 'Тренды причин, проблемные зоны и практические рекомендации для следующего шага команды.',
-        'features': ('Тренды причин', 'Зоны риска', 'Рекомендации'),
-    },
-    '/ladder': {
-        'code': 'MGT-04', 'accent': 'gold', 'name': 'ESCALATION MAP',
-        'headline': 'Единая мера для одинаковых нарушений.',
-        'mission': 'Настраиваемая лестница наказаний, сроки ступеней и предсказуемая эскалация повторов.',
-        'features': ('Ступени наказаний', 'Сроки эскалации', 'Единая политика'),
-    },
-}
-
-# Быстрые действия рабочей панели: ведут к реальным формам и данным текущей
-# комнаты, не дублируя API и не создавая фиктивных кнопок.
-MODERATION_QUICK_ACTIONS = {
-    '/warnings': (('Найти кейс', '#search', 'focus'), ('Выбрать сервер', '#guild-filter', 'focus'), ('К очереди', '#warn-body', 'scroll')),
-    '/temp-moderation': (('Новая мера', '.ops-time-create', 'click'), ('Активные мьюты', '[data-tab="muts"]', 'click'), ('План', '[data-tab="scheduled"]', 'click')),
-    '/mod-tools': (('Panic-контур', '#panic-card', 'scroll'), ('Sticky-маяк', '#sticky-channel', 'focus'), ('Ghost-контур', '#ghost-user', 'focus')),
-    '/bulk-actions': (('Рассылка', '#dm-guild', 'focus'), ('Матрица ролей', '#role-guild', 'focus'), ('Пакетная мера', '#punish-guild', 'focus')),
-    '/lockdown': (('Карта возврата', '#ldList', 'scroll'), ('Предпросмотр', '#ldSpec', 'focus'), ('Снимок CSV', '#ldCsv', 'click')),
-    '/tagjail': (('Добавить признак', '#new-tag', 'focus'), ('Политика', '#cfg-grid', 'scroll'), ('Изоляция', '#jail-list', 'scroll')),
-    '/logs': (('Поиск в потоке', '#search', 'focus'), ('Выбрать сервер', '#guild-filter', 'focus'), ('К событиям', '#logs-body', 'scroll')),
-    '/mod-history': (('Найти решение', '#search', 'focus'), ('Тип события', '#filter', 'focus'), ('К линии', '#mh-body', 'scroll')),
-    '/proofs': (('Поиск архива', '#pf-q', 'focus'), ('Фильтры кейсов', '#pf-chips', 'scroll'), ('К материалам', '#pf-grid', 'scroll')),
-    '/appeals': (('Открытые дела', '#apQueue', 'scroll'), ('Поиск вердикта', '#apQ', 'focus'), ('Канал карточек', '#apReady', 'scroll')),
-    '/security': (('Скан ссылки', '#scScanText', 'focus'), ('Модель профиля', '#scFakeAge', 'focus'), ('Спам-волна', '#scSpamText', 'focus')),
-    '/autofilter': (('Словарь', '#fw-input', 'focus'), ('Исключения', '#card-exc', 'scroll'), ('Тест текста', '#af-test-text', 'focus')),
-    '/antiraid': (('Порог волны', '#join_threshold', 'focus'), ('Белый список', '#wl-input', 'focus'), ('Журнал тревог', '#alerts', 'scroll')),
-    '/antifake': (('Скан участника', '#afTestUid', 'focus'), ('Лаборатория имени', '#afLabText', 'focus'), ('Журнал страйков', '#afStrikesBox', 'scroll')),
-    '/mod-control': (('Риск эскалации', '#mcRisk', 'scroll'), ('Быстрые причины', '#mcReasons', 'scroll'), ('Амнистия', '#mcAmnestyId', 'focus')),
-    '/mod-report': (('Команда', '#mrMods', 'scroll'), ('Ритм по дням', '#mrBars', 'scroll'), ('Повторные нарушения', '#mrRec', 'scroll')),
-    '/mod-insights': (('Карта участников', '#miSubjects', 'scroll'), ('Открыть досье', '#miDossierId', 'focus'), ('Готовность защиты', '#miCheck', 'scroll')),
-    '/ladder': (('Ступени', '#ldSteps', 'scroll'), ('Симулятор', '#ldUser', 'focus'), ('Новая ступень', '#ldAddPanel', 'scroll')),
-}
 
 _ROLE_LEVEL = {'uye': 0, 'mod': 1, 'admin': 2, 'owner': 3}
 
@@ -505,20 +372,6 @@ def _role_can_open(role, page):
     return _ROLE_LEVEL.get(role, -1) >= _ROLE_LEVEL.get(required, 99)
 
 
-def moderation_profile_for(path):
-    """Индивидуальный профиль комнаты Moderation OS с позицией в маршруте."""
-    profile = MODERATION_PAGE_PROFILES.get(str(path or ''))
-    if not profile:
-        return None
-    mod_pages = next(group['pages'] for group in MENU if group['key'] == 'mod')
-    paths = [page['path'] for page in mod_pages]
-    payload = dict(profile)
-    payload['position'] = paths.index(path) + 1
-    payload['total'] = len(paths)
-    payload['quick_actions'] = MODERATION_QUICK_ACTIONS.get(path, ())
-    return payload
-
-
 def _moderation_sections(items):
     """Сгруппировать видимые мод-инструменты без изменения их URL/настроек."""
     sections = []
@@ -529,12 +382,17 @@ def _moderation_sections(items):
     return sections
 
 
+def moderation_pages():
+    """Плоский список всех инструментов раздела модерации (для тестов и API)."""
+    return list(next(group['pages'] for group in MENU if group['key'] == 'mod'))
+
+
 def panel_groups_for(role):
     """Return visible sidebar groups with role-safe, workflow-aware pages.
 
     Owner sees everything. Mod/admin visibility still follows panel_menu.json,
     while `min_role` removes dead links that would inevitably return HTTP 403.
-    The moderation group additionally receives `sections` for compact PRO nav.
+    The moderation group additionally receives `sections` for grouped nav.
     """
     cfg = _load().get(role, {}) if role != 'owner' else {}
     if not isinstance(cfg, dict):

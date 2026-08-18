@@ -221,7 +221,8 @@ check(r.status_code == 404 and r.get_json()['error'] == 'Нет такой ка�
 print('== 4. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/tops.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('tpKpis', 'tpTabs', 'tpRows', 'tpCsv', 'tpState', 'tpFresh'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check('/overview?category=' in tpl and '.csv' in tpl,

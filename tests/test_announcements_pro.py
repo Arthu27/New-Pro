@@ -167,7 +167,7 @@ check(member.status_code == 200 and 'id="annCreate"' not in member_html,
       'участник видит чистую ленту без создания')
 check('id="annModal"' not in member_html and 'CAN_MANAGE = false' in member_html,
       'композитор не попадает роли uye')
-check('quality-suite.js?v=1' in member_html, 'глобальный quality-shell сохранён')
+check('app.js' in member_html and 'style.css' in member_html, 'глобальный shell сохранён')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

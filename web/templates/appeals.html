@@ -1,18 +1,60 @@
 {% extends "base.html" %}
-{% block title %}Review Chamber — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-scale-balanced"></i> Review Chamber{% endblock %}
+{% block title %}Апелляции · Модерация — Aether{% endblock %}
+{% block page_title %}Апелляции{% endblock %}
 {% block content %}
 
-<style>[data-theme="light"] .ops-review-chamber{color-scheme:light}</style>
-<div class="ops-canvas ops-review-chamber" data-room-kind="review" data-room-version="3">
-  <div class="ops-room-label"><span>INV / REVIEW CHAMBER</span><b>Палата пересмотра</b><em>факты, позиция заявителя и вердикт в одном поле</em></div>
-  <div class="ops-review-kpis" id="apKpis"><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div><div class="sk-card"></div></div>
-  <div class="ops-review-layout">
-    <section class="ops-review-docket"><header><div class="ops-review-emblem"><i class="fas fa-scale-balanced"></i></div><div><span class="ops-kicker">OPEN DOCKET</span><h2>Дела на рассмотрении</h2><p>Очередь строго по времени подачи. Решение фиксируется вместе с ответом команды.</p></div></header><div id="apQueue" class="ops-review-queue"></div></section>
-    <aside class="ops-review-side">
-      <section class="ops-panel"><header class="ops-panel-head"><div><span class="ops-kicker">VERDICT ARCHIVE</span><h2>Архив вердиктов</h2></div><i class="fas fa-gavel"></i></header><div class="ops-review-filters"><button type="button" class="ap-chip on" data-st="">Все</button><button type="button" class="ap-chip" data-st="pending">Ожидают</button><button type="button" class="ap-chip" data-st="accepted">Приняты</button><button type="button" class="ap-chip" data-st="rejected">Отклонены</button></div><label class="ops-field"><span>Поиск по делу</span><input id="apQ" placeholder="Ник, ID, текст или комментарий"></label><div id="apHistory" class="ops-review-history"></div><button type="button" class="ops-secondary" id="apCsv"><i class="fas fa-file-csv"></i> Выгрузить архив</button></section>
-      <section class="ops-panel ops-review-delivery"><header class="ops-panel-head"><div><span class="ops-kicker">DELIVERY ROUTE</span><h2>Канал новых дел</h2></div><i class="fas fa-tower-broadcast"></i></header><div class="ap-ready" id="apReady"></div><div id="apSetBox" style="display:none"><div class="ops-inline"><select id="apChanSel"></select><button type="button" class="ops-primary" id="apChanSave"><i class="fas fa-floppy-disk"></i> Сохранить</button></div><div class="ap-msg" id="apChanMsg"></div></div></section>
-    </aside>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Расследование</div>
+    <h1>Апелляции</h1>
+    <p class="lead">Пересмотр наказаний без потери исходных фактов: очередь, аргументы сторон и вердикт в одном месте.</p>
+  </div>
+  <div class="page-head-actions">
+    <a class="btn" id="apCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузка CSV</a>
+  </div>
+</div>
+
+<div class="kpi-row" id="apKpis">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-circle-notch fa-spin"></i></div><div class="kpi-copy"><div class="kpi-value">…</div><div class="kpi-label">Загрузка</div></div></div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-inbox"></i> Ожидают решения</h2>
+      <div class="sub">Очередь пересмотра — принимайте или отклоняйте с комментарием.</div></div></div>
+    <div class="panel-body" id="apQueue">
+      <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка очереди</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-clock-rotate-left"></i> История</h2>
+      <div class="sub">Все обращения и вынесенные вердикты.</div></div></div>
+    <div class="toolbar">
+      <div class="seg" id="apChips">
+        <button type="button" class="seg-btn active" data-st="">Все</button>
+        <button type="button" class="seg-btn" data-st="pending">Ожидают</button>
+        <button type="button" class="seg-btn" data-st="accepted">Приняты</button>
+        <button type="button" class="seg-btn" data-st="rejected">Отклонены</button>
+      </div>
+      <span class="spacer"></span>
+      <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+        <input type="search" id="apQ" placeholder="Поиск по истории">
+      </label>
+    </div>
+    <div class="panel-body" id="apHistory"></div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px" id="apSetBox" {% if not can_edit %}hidden{% endif %}>
+  <div class="panel-head"><div><h2><i class="fas fa-gear"></i> Канал карточек</h2>
+    <div class="sub">Куда приходят карточки апелляций. Статус: <span id="apReady">проверяем…</span></div></div></div>
+  <div class="panel-body">
+    <div class="form-row" style="max-width:560px">
+      <select class="form-input" id="apChanSel"></select>
+      <button type="button" class="btn btn-primary" id="apChanSave"><i class="fas fa-save"></i> Сохранить</button>
+    </div>
+    <div class="hint" id="apChanMsg"></div>
   </div>
 </div>
 
@@ -22,10 +64,12 @@ var API = '/api/guild/' + GID + '/appeals';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
 var STATUS = '';
 
+function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-function kpi(icon, num, label) {
-  return '<div class="ap-kpi"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+function kpi(icon, num, label, tone) {
+  return '<div class="kpi ' + (tone || '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
+    '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
 }
 
 function loadOverview() {
@@ -33,130 +77,139 @@ function loadOverview() {
     if (!d.success) { return; }
     var s = d.stats;
     var last = s.last_resolved
-      ? kpi('fa-gavel', '#' + esc(s.last_resolved.id), 'последняя: ' + esc(s.last_resolved.status_label) + ' · ' + esc(s.last_resolved.reviewed_by))
-      : kpi('fa-gavel', '—', 'решений ещё не было');
-    document.getElementById('apKpis').innerHTML =
-      kpi('fa-inbox', s.pending, 'ожидают решения') +
-      kpi('fa-circle-check', s.accepted, 'принятых') +
-      kpi('fa-circle-xmark', s.rejected, 'отклонённых') + last;
+      ? kpi('fa-gavel', '#' + esc(s.last_resolved.id), 'последняя: ' + esc(s.last_resolved.status_label) + ' · ' + esc(s.last_resolved.reviewed_by), 'tone-info')
+      : kpi('fa-gavel', '—', 'решений ещё не было', 'tone-info');
+    $('apKpis').innerHTML =
+      kpi('fa-inbox', s.pending, 'ожидают решения', 'tone-warn') +
+      kpi('fa-circle-check', s.accepted, 'принятых', 'tone-ok') +
+      kpi('fa-circle-xmark', s.rejected, 'отклонённых', 'tone-err') + last;
 
-    var rd = d.readiness, rb = document.getElementById('apReady');
+    var rd = d.readiness;
+    var rb = $('apReady');
     if (rd.channel_name) {
-      rb.innerHTML = '<i class="fas fa-circle-check" style="color:#4ade80"></i> карточки падают в <b>#' + esc(rd.channel_name) + '</b>' +
-        (rd.falls_to === 'system' ? ' (системный — свой не задан)' : '') +
-        (rd.log_channel_id && rd.falls_to === 'own' ? ' <small style="color:var(--text-3)">ID ' + rd.log_channel_id + '</small>' : '');
+      rb.innerHTML = '<span class="badge ok">#' + esc(rd.channel_name) + '</span>' +
+        (rd.falls_to === 'system' ? ' (системный — свой не задан)' : '');
     } else if (rd.log_channel_id) {
-      rb.innerHTML = '<i class="fas fa-circle-pause" style="color:#f0cd7a"></i> задан канал ID ' + rd.log_channel_id + ' — бот офлайн, имя проверится при старте';
+      rb.innerHTML = '<span class="badge neutral">задан канал ID ' + esc(rd.log_channel_id) + ' — бот офлайн, имя проверится при старте</span>';
     } else {
-      rb.innerHTML = '<i class="fas fa-circle-question" style="color:#f0cd7a"></i> свой канал не задан — при живом боте карточки уйдут в системный';
+      rb.innerHTML = '<span class="badge tone-warning">свой канал не задан — при живом боте карточки уйдут в системный</span>';
     }
-    if (CAN_EDIT) {
-      document.getElementById('apSetBox').style.display = '';
-      loadChannels();
-    }
+    if (CAN_EDIT) { $('apSetBox').hidden = false; loadChannels(); }
 
-    var q = document.getElementById('apQueue');
+    var q = $('apQueue');
     if (!d.pending.length) {
-      q.innerHTML = '<div class="empty-state" style="margin:6px 0"><i class="fas fa-mug-hot"></i><div>Ожидающих апелляций нет — очередь чиста.</div></div>';
+      q.innerHTML = '<div class="empty"><i class="fas fa-mug-hot"></i><span>Ожидающих апелляций нет — очередь чиста.</span></div>';
       return;
     }
     q.innerHTML = d.pending.map(function (it) {
       var act = CAN_EDIT
-        ? '<div class="ap-act">' +
-          '<input class="ap-inp" id="apReply' + it.id + '" placeholder="комментарий для ЛС (необязательно, до 300 знаков)" maxlength="300">' +
-          '<button type="button" class="ap-btn ok" onclick="apResolve(' + it.id + ', true)"><i class="fas fa-check"></i> Принять</button>' +
-          '<button type="button" class="ap-btn no" onclick="apResolve(' + it.id + ', false)"><i class="fas fa-xmark"></i> Отклонить</button></div>'
+        ? '<div class="row" style="margin-top:10px">' +
+          '<input class="form-input" id="apReply' + it.id + '" placeholder="Комментарий для ЛС (до 300 знаков)" maxlength="300" style="flex:1">' +
+          '<button type="button" class="btn btn-primary btn-sm" data-ap="' + it.id + ':1"><i class="fas fa-check"></i> Принять</button>' +
+          '<button type="button" class="btn btn-danger btn-sm" data-ap="' + it.id + ':0"><i class="fas fa-xmark"></i> Отклонить</button></div>'
         : '';
-      return '<div class="ap-card"><div class="meta"><span><b>#' + it.id + '</b> · ' + esc(it.user_name || 'Без имени') + ' · ID ' + esc(it.user_id) + '</span><span>' + esc(it.created_at) + '</span></div>' +
-        '<div class="txt">' + esc(it.text) + '</div>' + act + '</div>';
+      return '<div class="card" style="margin-bottom:10px">' +
+        '<div class="row" style="margin-bottom:6px"><b>#' + esc(it.id) + '</b> · ' + esc(it.user_name || 'Без имени') +
+          ' · <span class="id-pill">' + esc(it.user_id) + '</span><span class="spacer"></span><span class="muted">' + esc(it.created_at) + '</span></div>' +
+        '<div style="white-space:pre-wrap">' + esc(it.text) + '</div>' + act + '</div>';
     }).join('');
   }).catch(function () {});
 }
 
 function loadHistory() {
-  var url = API + '/history?' + (STATUS ? 'status=' + STATUS + '&' : '') + 'q=' + encodeURIComponent(document.getElementById('apQ').value);
+  var url = API + '/history?' + (STATUS ? 'status=' + STATUS + '&' : '') + 'q=' + encodeURIComponent($('apQ').value);
   fetch(url).then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
-    var h = document.getElementById('apHistory');
+    var h = $('apHistory');
     if (!d.items.length) {
-      h.innerHTML = '<div class="ap-sub" style="margin:4px 0">по фильтру пусто</div>';
+      h.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><span>По фильтру пусто</span></div>';
       return;
     }
     h.innerHTML = d.items.map(function (it) {
       var det = it.reviewed_at ? (it.status_label + ' · ' + it.reviewed_by + ' · ' + it.reviewed_at) : 'подана ' + it.created_at;
       var rep = it.reply ? ' · комментарий: ' + it.reply : '';
-      return '<div class="ap-row"><div class="who"><b>#' + it.id + ' · ' + esc(it.user_name || 'Без имени') + '</b>' +
-        '<small>' + esc(it.text) + '</small>' +
-        '<small>' + esc(det + rep) + '</small></div>' +
-        '<span class="ap-tag ' + esc(it.status) + '">' + esc(it.status_label) + '</span></div>';
+      var tone = it.status === 'accepted' ? 'ok' : it.status === 'rejected' ? 'danger' : 'tone-warning';
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-scale-balanced"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title">#' + esc(it.id) + ' · ' + esc(it.user_name || 'Без имени') + '</div>' +
+        '<div class="feed-item-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(it.text) + '</div>' +
+        '<div class="feed-item-time">' + esc(det + rep) + '</div></div>' +
+        '<span class="badge ' + tone + '">' + esc(it.status_label) + '</span></div>';
     }).join('');
   }).catch(function () {});
 }
 
 function apResolve(id, accept) {
-  var rep = document.getElementById('apReply' + id);
+  var rep = $('apReply' + id);
   var reply = rep ? rep.value : '';
-  askConfirm(accept ? 'Принять апелляцию #' + id + '?' : 'Отклонить апелляцию #' + id + '?',
+  window.confirmAction(accept ? 'Принять апелляцию #' + id + '?' : 'Отклонить апелляцию #' + id + '?',
     accept ? 'При живом боте: бан будет снят, пользователь получит добрую весть в ЛС.' : 'Пользователь получит отказ в ЛС с вашим комментарием (если бот онлайн).',
     function () {
       fetch(API + '/resolve', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({appeal_id: String(id), accept: accept, reply: reply})
-      }).then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
-      .then(function (res) {
-        if (!res.d.success) { alert(res.d.error || 'Ошибка'); return; }
-        var eff = res.d.effects || {};
-        if (eff.offline && typeof uxUndo === 'function') {
-          uxUndo('Решение записано. Бот офлайн: разбан и ЛС не выполнялись', function () {});
-        }
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appeal_id: String(id), accept: accept, reply: reply })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.success) { window.showToast(d.error || 'Ошибка', false); return; }
+        var eff = d.effects || {};
+        if (eff.offline) window.showToast('Решение записано. Бот офлайн: разбан и ЛС не выполнялись', 'warn');
+        else window.showToast('Вердикт вынесен', true);
         loadOverview(); loadHistory();
-      })
-      .catch(function () { alert('Сеть моргнула — попробуйте ещё раз'); });
+      }).catch(function () { window.showToast('Сеть моргнула — попробуйте ещё раз', false); });
     },
-    {danger: !accept, okText: accept ? 'Принять' : 'Отклонить', icon_fa: accept ? 'fa-check' : 'fa-xmark'});
+    { danger: !accept, okText: accept ? 'Принять' : 'Отклонить' });
 }
 
 function loadChannels() {
   fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); }).then(function (d) {
     var list = (d.channels || []).filter(function (c) { return c.type === 'text'; });
-    document.getElementById('apChanSel').innerHTML = list.length
+    $('apChanSel').innerHTML = list.length
       ? list.map(function (c) { return '<option value="' + esc(c.id) + '"># ' + esc(c.name) + '</option>'; }).join('')
       : '<option value="">бот офлайн — список недоступен</option>';
   }).catch(function () {});
 }
 
-document.getElementById('apChanSave').onclick = function () {
-  var msg = document.getElementById('apChanMsg');
-  fetch(API + '/channel', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({channel_id: document.getElementById('apChanSel').value})
-  }).then(function (r) { return r.json(); }).then(function (d) {
-    msg.className = 'ap-msg ' + (d.success ? 'ok' : 'err');
-    msg.textContent = d.message || d.error || 'Ошибка';
-    msg.style.display = 'block';
-    if (d.success) { loadOverview(); }
-  }).catch(function () {
-    msg.className = 'ap-msg err'; msg.textContent = 'Сеть моргнула'; msg.style.display = 'block';
-  });
-};
-
-Array.prototype.forEach.call(document.querySelectorAll('.ap-chip'), function (b) {
-  b.onclick = function () {
-    Array.prototype.forEach.call(document.querySelectorAll('.ap-chip'), function (x) { x.classList.remove('on'); });
-    b.classList.add('on');
-    STATUS = b.getAttribute('data-st');
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-ap]');
+  if (b) {
+    var parts = b.dataset.ap.split(':');
+    apResolve(parts[0], parts[1] === '1');
+    return;
+  }
+  var chipBtn = e.target.closest('#apChips .seg-btn');
+  if (chipBtn) {
+    document.querySelectorAll('#apChips .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+    chipBtn.classList.add('active');
+    STATUS = chipBtn.dataset.st;
     loadHistory();
-  };
+  }
 });
+
+$('apChanSave').addEventListener('click', function () {
+  var msg = $('apChanMsg');
+  fetch(API + '/channel', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel_id: $('apChanSel').value })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    msg.className = 'hint ' + (d.success ? '' : 'error');
+    msg.textContent = d.message || d.error || 'Ошибка';
+    if (d.success) loadOverview();
+  }).catch(function () {
+    msg.className = 'hint error';
+    msg.textContent = 'Сеть моргнула';
+  });
+});
+
 var apQT = null;
-document.getElementById('apQ').addEventListener('input', function () {
-  clearTimeout(apQT); apQT = setTimeout(loadHistory, 250);
+$('apQ').addEventListener('input', function () {
+  clearTimeout(apQT);
+  apQT = setTimeout(loadHistory, 250);
 });
-document.getElementById('apCsv').onclick = function () {
+$('apCsv').addEventListener('click', function (e) {
+  e.preventDefault();
   location.href = API + '/export.csv';
-};
+});
 
 loadOverview();
 loadHistory();
+if (window.setLiveRefresh) window.setLiveRefresh(function () { loadOverview(); }, 15000);
 </script>
 {% endblock %}

@@ -21,7 +21,7 @@ web/
 ├── routes_extra.py     # тонкий фасад: register_extra_routes(...) дёргает
 │                       # register(ctx) всех доменов по порядку
 ├── templates/          # Jinja-шаблоны (base.html — каркас и сайдбар)
-└── static/             # css/js/иконки (polish.css — финальный лоск)
+└── static/             # css/js/иконки (style.css — дизайн-система, app.js — клиентский кит)
 ```
 
 ## Как добавить страницу

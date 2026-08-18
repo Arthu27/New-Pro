@@ -119,9 +119,9 @@ check('sk-card' in ann and '<p>Загрузка...</p>' not in ann, 'анонс�
 check('sk-line' in dash and 'sk-chip' in dash and 'class="sk-card"' in dash,
       'дашборд: скелетоны виджета дежурств и быстрой статистики')
 check('quick-grid-loading">\n        <i class="fas fa-spinner' not in dash, 'дашборд: спиннер статистики убран')
-css = open(os.path.join(ROOT, 'web', 'static', 'polish.css'), encoding='utf-8').read()
-check('@keyframes skShine' in css and '.sk-card{' in css and '[data-theme="light"] .sk-card' in css,
-      'стили скелетонов + светлая тема')
+css = open(os.path.join(ROOT, 'web', 'static', 'style.css'), encoding='utf-8').read()
+check('@keyframes shimmer' in css and '.sk-card' in css and 'skeleton-card' in css,
+      'стили скелетонов в дизайн-системе')
 
 print('== 5. Пустые состояния со следующим шагом ==')
 check('empty-tip' in trx and '/ticket-settings' in trx, 'транскрипты: подсказка + ссылка на настройки')

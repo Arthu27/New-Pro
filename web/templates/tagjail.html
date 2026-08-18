@@ -1,166 +1,224 @@
 {% extends "base.html" %}
-{% block title %}Tag Isolation — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-fingerprint"></i> Tag Isolation{% endblock %}
+{% block title %}Tag Jail · Модерация — Aether{% endblock %}
+{% block page_title %}Tag Jail{% endblock %}
 {% block content %}
 
-<div class="ops-canvas ops-tag-isolation" data-room-kind="tagisolation" data-room-version="3">
-  <div class="ops-room-label"><span>RSP / TAG ISOLATION</span><b>Изоляция признаков</b><em>тег обнаружен — роли сохранены — доступ ограничен</em></div>
-  <div class="ops-isolation-dashboard">
-    <section class="ops-isolation-status">
-      <div class="ops-isolation-radar"><span></span><i class="fas fa-fingerprint"></i></div>
-      <div><span class="ops-kicker">ISOLATION STATUS</span><strong id="v-status">—</strong><p>Автоматический контроль ников и возраста аккаунтов.</p></div>
-      <div class="ops-isolation-metrics"><div><span id="v-jailed">—</span><small>в изоляции</small></div><div><span id="v-tags">—</span><small>признаков</small></div><div><span id="v-age">—</span><small>возрастной порог</small></div></div>
-    </section>
-    <div class="ops-isolation-columns">
-      <section class="ops-panel ops-tag-bank"><header class="ops-panel-head"><div><span class="ops-kicker">SIGNATURE BANK</span><h2>Запрещённые признаки</h2><p>Подстроки в имени, которые запускают автоматическую изоляцию.</p></div><i class="fas fa-tags"></i></header><div id="tag-chips" class="ops-tag-cloud"><span>Загрузка сигнатур…</span></div><div class="ops-inline"><input id="new-tag" maxlength="50" placeholder="Новая сигнатура"><button type="button" class="ops-primary" onclick="addTag()"><i class="fas fa-plus"></i> В банк</button></div></section>
-      <section class="ops-panel ops-jail-roster"><header class="ops-panel-head"><div><span class="ops-kicker">ACTIVE ISOLATION</span><h2>Камеры</h2><p>Участники, чьи роли сохранены до освобождения.</p></div><b id="jail-count">—</b></header><div id="jail-list" class="ops-roster"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i> Проверяем камеры</div></div></section>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Реагирование</div>
+    <h1>Tag Jail</h1>
+    <p class="lead">Изоляция участников с опасными тегами в нике: роли сохраняются и возвращаются при выходе.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn btn-primary" id="scanBtn"><i class="fas fa-magnifying-glass"></i> Сканировать сервер</button>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi" id="kpi-status"><div class="kpi-icon"><i class="fas fa-circle-info"></i></div><div class="kpi-copy"><div class="kpi-value" id="v-status">—</div><div class="kpi-label">Состояние системы</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-lock"></i></div><div class="kpi-copy"><div class="kpi-value" id="v-jailed">—</div><div class="kpi-label">В изоляции</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-tag"></i></div><div class="kpi-copy"><div class="kpi-value" id="v-tags">—</div><div class="kpi-label">Запрещённых тегов</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-user-clock"></i></div><div class="kpi-copy"><div class="kpi-value" id="v-age">—</div><div class="kpi-label">Возрастная граница</div></div></div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-tag"></i> Запрещённые теги</h2>
+      <div class="sub">Ник с таким тегом автоматически ведёт в изоляцию.</div></div></div>
+    <div class="panel-body">
+      <div class="row" style="margin-bottom:10px">
+        <input class="form-input" id="new-tag" placeholder="новый тег, например: 18+" style="max-width:260px">
+        <button type="button" class="btn btn-primary" id="addTagBtn"><i class="fas fa-plus"></i> Добавить</button>
+      </div>
+      <div class="chip-row" id="tag-chips"></div>
     </div>
-    <section class="ops-panel ops-isolation-config"><header class="ops-panel-head"><div><span class="ops-kicker">POLICY MATRIX</span><h2>Политика изоляции</h2><p>Все условия контроля в единой матрице, без скрытых параметров.</p></div><i class="fas fa-sliders"></i></header><div class="tj-form-grid ops-policy-grid" id="cfg-grid"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i> Загружаем политику</div></div><footer class="ops-panel-actions"><button type="button" class="ops-primary" onclick="saveConfig()"><i class="fas fa-floppy-disk"></i> Применить политику</button><button type="button" class="ops-secondary" onclick="loadState()"><i class="fas fa-rotate"></i> Перечитать</button><button type="button" class="ops-critical" onclick="runScan()"><i class="fas fa-radar"></i> Полный скан</button></footer></section>
-  </div><div class="tj-toast ops-toast" id="tj-toast"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-door-closed"></i> В изоляции</h2>
+      <div class="sub">Текущие заключённые и сохранённые роли.</div></div></div>
+    <div class="panel-body" id="jail-list"></div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-sliders"></i> Политика</h2>
+    <div class="sub">Параметры джейла — сохраняются кнопкой внизу.</div></div>
+    <button type="button" class="btn btn-primary" id="saveBtn" style="margin-left:auto"><i class="fas fa-save"></i> Сохранить</button></div>
+  <div class="panel-body">
+    <div class="grid-2" id="cfg-grid" style="gap:10px 22px"></div>
+  </div>
 </div>
 
 <script>
-let TJ = { config: {}, jailed: [] };
-function toast(msg, ok=true){
-  const t = document.getElementById('tj-toast');
-  t.textContent = msg;
-  t.className = 'tj-toast ops-toast show ' + (ok ? 'ok' : 'bad');
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function ago(ts){ const d = Math.max(0, Date.now()/1000 - ts);
-  if(d < 3600) return Math.floor(d/60) + ' мин назад';
-  if(d < 86400) return Math.floor(d/3600) + ' ч назад';
-  return Math.floor(d/86400) + ' дн назад'; }
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function toast(msg, ok) { window.showToast(msg, ok === false ? false : true); }
+  function ago(ts) {
+    var d = Math.max(0, Date.now() / 1000 - ts);
+    if (d < 3600) return Math.floor(d / 60) + ' мин назад';
+    if (d < 86400) return Math.floor(d / 3600) + ' ч назад';
+    return Math.floor(d / 86400) + ' дн назад';
+  }
 
-const FIELDS = [
-  {k:'enabled', l:'Основной контур', t:'bool', d:'Авто-джейл и возрастная граница активны'},
-  {k:'auto_release', l:'Авто-освобождение', t:'bool', d:'Убрал тег из ника — выходит сам'},
-  {k:'on_join', l:'Проверка входов', t:'bool', d:'Проверять при входе на сервер'},
-  {k:'on_name_change', l:'Проверка смен имён', t:'bool', d:'Следить за ником и именем профиля'},
-  {k:'dm_notify', l:'DM-уведомления', t:'bool', d:'Писать пользователю в личку'},
-  {k:'jail_style', l:'Режим джейла', t:'select', opts:[['remove','снимать роли'],['keep','только jail-роль']], d:'remove — роли сохраняются и вернутся'},
-  {k:'age_action', l:'Действие к новичкам', t:'select', opts:[['kick','kick — выгнать'],['jail','jail — посадить']], d:'Если аккаунт младше лимита'},
-  {k:'min_account_days', l:'Возраст аккаунта (дн)', t:'num', d:'0 — проверка выключена'},
-  {k:'jail_role_id', l:'ID jail-роли', t:'num', d:'ID роли заключённых (правый клик по роли → копировать ID)'},
-  {k:'log_channel_id', l:'ID лог-канала', t:'num', d:'Куда слать логи джейла'},
-];
+  var TJ = null;
 
-async function loadState(){
-  try{
-    const r = await fetch('/api/tagjail/state');
-    const d = await r.json();
-    if(!d.ok){ toast(d.error || 'Модуль офлайн', false); return; }
-    TJ = d;
-    document.getElementById('v-status').innerHTML = d.config.enabled
-      ? '<span class="tj-pill tj-pill-on">Система активна</span>' : '<span class="tj-pill tj-pill-off">Система на паузе</span>';
-    document.getElementById('v-jailed').textContent = d.jailed.length;
-    document.getElementById('v-tags').textContent = (d.config.banned_tags||[]).length;
-    document.getElementById('v-age').innerHTML = d.config.min_account_days > 0
-      ? d.config.min_account_days + ' <small>дн · ' + esc(d.config.age_action) + '</small>' : '<small>выкл</small>';
+  var FIELDS = [
+    { k: 'enabled', l: 'Основной контур', t: 'bool', d: 'Авто-джейл и возрастная граница активны' },
+    { k: 'auto_release', l: 'Авто-освобождение', t: 'bool', d: 'Убрал тег из ника — выходит сам' },
+    { k: 'on_join', l: 'Проверка входов', t: 'bool', d: 'Проверять при входе на сервер' },
+    { k: 'on_name_change', l: 'Проверка смен имён', t: 'bool', d: 'Следить за ником и именем профиля' },
+    { k: 'dm_notify', l: 'DM-уведомления', t: 'bool', d: 'Писать пользователю в личку' },
+    { k: 'jail_style', l: 'Режим джейла', t: 'select', opts: [['remove', 'снимать роли'], ['keep', 'только jail-роль']], d: 'remove — роли сохраняются и вернутся' },
+    { k: 'age_action', l: 'Действие к новичкам', t: 'select', opts: [['kick', 'kick — выгнать'], ['jail', 'jail — посадить']], d: 'Если аккаунт младше лимита' },
+    { k: 'min_account_days', l: 'Возраст аккаунта (дн)', t: 'num', d: '0 — проверка выключена' },
+    { k: 'jail_role_id', l: 'ID jail-роли', t: 'num', d: 'ID роли заключённых' },
+    { k: 'log_channel_id', l: 'ID лог-канала', t: 'num', d: 'Куда слать логи джейла' }
+  ];
 
-    renderChips();
-    renderForm();
-    renderJail();
-  }catch(e){ toast('Ошибка загрузки', false); }
-}
+  function loadState() {
+    fetch('/api/tagjail/state').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) { toast(d.error || 'Модуль офлайн', false); return; }
+      TJ = d;
+      var kpi = $('kpi-status');
+      var on = d.config.enabled;
+      kpi.querySelector('.kpi-icon').style.background = on ? 'var(--ok-soft)' : 'var(--surface-3)';
+      kpi.querySelector('.kpi-icon').style.color = on ? 'var(--ok)' : 'var(--text-3)';
+      $('v-status').innerHTML = on ? '<span class="badge ok">Система активна</span>' : '<span class="badge neutral">Система на паузе</span>';
+      $('v-jailed').textContent = d.jailed.length;
+      $('v-tags').textContent = (d.config.banned_tags || []).length;
+      $('v-age').innerHTML = d.config.min_account_days > 0
+        ? d.config.min_account_days + ' <small style="font-size:11px">дн · ' + esc(d.config.age_action) + '</small>'
+        : '<small style="font-size:11px">выкл</small>';
+      renderChips();
+      renderForm();
+      renderJail();
+    }).catch(function () { toast('Ошибка загрузки', false); });
+  }
 
-function renderChips(){
-  const tags = TJ.config.banned_tags || [];
-  document.getElementById('tag-chips').innerHTML = tags.length
-    ? tags.map(t => `<span class="tj-chip">${esc(t)} <b onclick="delTag('${encodeURIComponent(t)}')" title="Удалить">×</b></span>`).join('')
-    : '<span style="opacity:.55;font-size:13px">Список пуст — добавьте хотя бы один тег.</span>';
-}
+  function renderChips() {
+    var tags = TJ.config.banned_tags || [];
+    $('tag-chips').innerHTML = tags.length
+      ? tags.map(function (t) {
+          return '<span class="chip">' + esc(t) + ' <span class="x" data-del-tag="' + esc(t) + '" title="Удалить">×</span></span>';
+        }).join('')
+      : '<span class="muted">Список пуст — добавьте хотя бы один тег.</span>';
+  }
 
-async function addTag(){
-  const inp = document.getElementById('new-tag');
-  const tag = inp.value.trim();
-  if(!tag) return;
-  const r = await fetch('/api/tagjail/tag', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({action:'add', tag})});
-  const d = await r.json();
-  if(d.ok){ inp.value=''; toast('Тег добавлен'); loadState(); }
-  else toast('Ошибка: ' + (d.error||''), false);
-}
-async function delTag(enc){
-  const tag = decodeURIComponent(enc);
-  if(!confirm(`Убрать тег «${tag}» из запрещённых?`)) return;
-  const r = await fetch('/api/tagjail/tag', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({action:'del', tag})});
-  const d = await r.json();
-  if(d.ok){ toast('Тег удалён'); loadState(); }
-  else toast('Ошибка: ' + (d.error||''), false);
-}
+  function addTag() {
+    var inp = $('new-tag');
+    var tag = inp.value.trim();
+    if (!tag) return;
+    fetch('/api/tagjail/tag', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'add', tag: tag })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.ok) { inp.value = ''; toast('Тег добавлен'); loadState(); }
+      else toast('Ошибка: ' + (d.error || ''), false);
+    });
+  }
 
-function renderForm(){
-  document.getElementById('cfg-grid').innerHTML = FIELDS.map(f => {
-    const v = TJ.config[f.k];
-    let input;
-    if(f.t === 'bool'){
-      input = `<label class="tj-switch"><input type="checkbox" name="cfg-${f.k}" data-cfg="${f.k}" ${v?'checked':''}><span></span></label>`;
-    } else if(f.t === 'select'){
-      input = `<select name="cfg-${f.k}" data-cfg="${f.k}" aria-label="Параметр настройки">` + f.opts.map(([val,lbl]) =>
-        `<option value="${val}" ${v===val?'selected':''}>${lbl}</option>`).join('') + `</select>`;
-    } else {
-      input = `<input type="number" min="0" name="cfg-${f.k}" data-cfg="${f.k}" value="${esc(v ?? 0)}" aria-label="Параметр настройки">`;
+  function delTag(tag) {
+    window.confirmAction('Убрать тег «' + tag + '»?', 'Участники с этим тегом больше не будут попадать в изоляцию.', function () {
+      fetch('/api/tagjail/tag', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'del', tag: tag })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.ok) { toast('Тег удалён'); loadState(); }
+        else toast('Ошибка: ' + (d.error || ''), false);
+      });
+    }, { danger: true, okText: 'Убрать' });
+  }
+
+  function renderForm() {
+    $('cfg-grid').innerHTML = FIELDS.map(function (f) {
+      var v = TJ.config[f.k];
+      var input;
+      if (f.t === 'bool') {
+        input = '<label class="switch" style="justify-content:flex-end"><input type="checkbox" data-cfg="' + f.k + '" ' + (v ? 'checked' : '') + '><span class="track"></span></label>';
+      } else if (f.t === 'select') {
+        input = '<select class="form-input" data-cfg="' + f.k + '" style="max-width:220px">' + f.opts.map(function (o) {
+          return '<option value="' + o[0] + '" ' + (String(v) === o[0] ? 'selected' : '') + '>' + esc(o[1]) + '</option>';
+        }).join('') + '</select>';
+      } else {
+        input = '<input class="form-input" type="number" min="0" data-cfg="' + f.k + '" value="' + esc(v ?? 0) + '" style="max-width:160px">';
+      }
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px solid var(--line)">' +
+        '<div><div style="font-weight:600;font-size:var(--fs-md)">' + esc(f.l) + '</div>' +
+        '<div class="hint">' + esc(f.d) + '</div></div>' + input + '</div>';
+    }).join('');
+  }
+
+  function saveConfig() {
+    var payload = {};
+    document.querySelectorAll('[data-cfg]').forEach(function (el) {
+      var k = el.getAttribute('data-cfg');
+      if (el.type === 'checkbox') payload[k] = el.checked;
+      else if (el.tagName === 'SELECT') payload[k] = el.value;
+      else payload[k] = parseInt(el.value || '0', 10);
+    });
+    fetch('/api/tagjail/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.ok) toast('Настройки сохранены');
+      else toast('Ошибка: ' + (Object.values(d.errors || { e: d.error }).join('; ')), false);
+      loadState();
+    });
+  }
+
+  function renderJail() {
+    var box = $('jail-list');
+    if (!TJ.jailed.length) {
+      box.innerHTML = '<div class="empty"><i class="fas fa-dove"></i><span>В изоляции никого нет</span></div>';
+      return;
     }
-    return `<div class="tj-field">
-      <div class="tj-field-top"><div class="tj-field-label">${f.l}</div>${input}</div>
-      <div class="tj-field-desc">${f.d} <code style="opacity:.6">${f.k}</code></div>
-    </div>`;
-  }).join('');
-}
+    box.innerHTML = TJ.jailed.map(function (j) {
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon" style="background:var(--warn-soft);color:var(--warn)"><i class="fas fa-lock"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(j.name) +
+          (j.in_guild ? '' : ' <span class="badge danger">покинул</span>') + '</div>' +
+        '<div class="feed-item-sub">' + esc(ago(j.since)) + ' · ролей сохранено: ' + (j.roles_saved || 0) +
+          (j.tag ? ' · тег <span class="chip">' + esc(j.tag) + '</span>' : '') + '</div></div>' +
+        '<button type="button" class="btn btn-sm" data-unjail="' + esc(j.user_id) + '"><i class="fas fa-door-open"></i> Выпустить</button></div>';
+    }).join('');
+  }
 
-async function saveConfig(){
-  const payload = {};
-  document.querySelectorAll('[data-cfg]').forEach(el => {
-    const k = el.getAttribute('data-cfg');
-    if(el.type === 'checkbox') payload[k] = el.checked;
-    else if(el.tagName === 'SELECT') payload[k] = el.value;
-    else payload[k] = parseInt(el.value || '0', 10);
+  function unjail(uid) {
+    window.confirmAction('Выпустить участника?', 'Роли вернутся из хранилища.', function () {
+      fetch('/api/tagjail/unjail', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: uid })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.ok) { toast('Выпущен'); loadState(); }
+        else toast(d.error || 'Ошибка', false);
+      });
+    });
+  }
+
+  function runScan() {
+    var btn = $('scanBtn');
+    window.qualitySetLoading(btn, true);
+    fetch('/api/tagjail/scan', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
+      window.qualitySetLoading(btn, false);
+      if (d.ok) { toast(d.message || 'Сканирование завершено'); loadState(); }
+      else toast(d.error || 'Ошибка', false);
+    }).catch(function () { window.qualitySetLoading(btn, false); toast('Сеть моргнула', false); });
+  }
+
+  document.addEventListener('click', function (e) {
+    var x = e.target.closest('[data-del-tag]');
+    if (x) { delTag(x.dataset.delTag); return; }
+    var u = e.target.closest('[data-unjail]');
+    if (u) { unjail(u.dataset.unjail); return; }
   });
-  const r = await fetch('/api/tagjail/config', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(payload)});
-  const d = await r.json();
-  if(d.ok) toast('Настройки сохранены');
-  else toast('Ошибка: ' + Object.values(d.errors||{e:d.error}).join('; '), false);
+  $('addTagBtn').addEventListener('click', addTag);
+  $('saveBtn').addEventListener('click', saveConfig);
+  $('scanBtn').addEventListener('click', runScan);
+  $('new-tag').addEventListener('keydown', function (e) { if (e.key === 'Enter') addTag(); });
+
   loadState();
-}
-
-function renderJail(){
-  const list = TJ.jailed || [];
-  document.getElementById('jail-count').textContent = list.length + ' чел.';
-  document.getElementById('jail-list').innerHTML = list.length
-    ? list.map(j => `
-      <div class="tj-jrow">
-        <div style="flex:1">
-          <div class="tj-jname">${esc(j.name)} ${j.in_guild ? '' : '<span style="color:#e74c3c">(покинул)</span>'}</div>
-          <div class="tj-jmeta">${ago(j.since)} · ролей сохранено: ${j.roles_saved}
-            ${j.tag ? ' · тег <span class="tj-jtag">'+esc(j.tag)+'</span>' : ''}</div>
-        </div>
-        <button type="button" class="tj-btn small ghost" onclick="unjail('${j.user_id}')"><i class="fas fa-door-open"></i> Выпустить</button>
-      </div>`).join('')
-    : '<div style="opacity:.55;font-size:13px">Джейл пуст — чисто</div>';
-}
-
-async function unjail(uid){
-  const r = await fetch('/api/tagjail/unjail', {method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({user_id: uid})});
-  const d = await r.json();
-  if(d.ok){ toast('Освобождён'); loadState(); }
-  else toast('Ошибка: ' + (d.error||''), false);
-}
-
-async function runScan(){
-  if(!confirm('Проверить ВСЕХ участников сервера? Тегнутых отправит в джейл.')) return;
-  const r = await fetch('/api/tagjail/scan', {method:'POST'});
-  const d = await r.json();
-  if(d.ok){ toast('Обход запущен — результаты в лог-канале'); setTimeout(loadState, 6000); }
-  else toast('Ошибка: ' + (d.error||''), false);
-}
-
-loadState();
-setInterval(() => { if (!window.__modLivePaused) loadState(); }, 10000);
-document.addEventListener('moderation:live-resume', loadState);
+})();
 </script>
 {% endblock %}

@@ -48,22 +48,22 @@
 <style>
 .g-card{
   display:flex; align-items:center; gap:16px; padding:18px 20px;
-  background:linear-gradient(165deg,rgba(224,176,74,0.05),rgba(20,18,14,0.7));
-  border:1px solid var(--line-2); border-radius:16px; margin-bottom:10px;
-  color:#e8e6df; font-size:14.5px; font-weight:500;
-  backdrop-filter:blur(14px); transition:all .2s var(--ease); cursor:pointer;
+  background:var(--surface);
+  border:1px solid var(--line); border-radius:var(--r-lg); margin-bottom:10px;
+  color:var(--text); font-size:14.5px; font-weight:500;
+  box-shadow:var(--shadow-1); transition:all .2s var(--ease); cursor:pointer;
 }
-.g-card:hover{ transform:translateX(4px); border-color:var(--ac-line); box-shadow:0 10px 32px rgba(0,0,0,.35); }
-.g-icon{ width:52px; height:52px; border-radius:14px; flex-shrink:0; border:1.5px solid var(--ac-line); object-fit:cover; background:linear-gradient(135deg,#d4a843,#e0b04a); box-shadow:0 4px 14px var(--ac-soft); }
+.g-card:hover{ transform:translateX(4px); border-color:var(--ac-line); box-shadow:var(--shadow-2); }
+.g-icon{ width:52px; height:52px; border-radius:14px; flex-shrink:0; border:1px solid var(--line); object-fit:cover; background:var(--surface-3); box-shadow:var(--shadow-1); }
 .g-info{ flex:1; min-width:0; }
-.g-name{ font-weight:700; color:#f4f1e8; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.g-name{ font-weight:700; color:var(--text); font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .g-meta{ display:flex; align-items:center; gap:16px; margin-top:8px; flex-wrap:wrap; }
 .gm{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-3); }
 .gm i{ color:var(--text-4); font-size:11px; }
 .gm b{ color:var(--text-2); font-weight:600; font-variant-numeric:tabular-nums; }
 .gm.on{ color:#86efac; } .gm.on b{ color:#4ade80; } .gm.on i{ color:#4ade80; text-shadow:0 0 8px #4ade80; }
 .gm.boost{ color:#fcd34d; } .gm.boost b{ color:#fcd34d; } .gm.boost i{ color:#fbbf24; }
-.g-id{ font-size:11px; color:var(--text-4); font-family:'JetBrains Mono',monospace; background:rgba(224,176,74,.05); border:1px solid var(--line); padding:3px 9px; border-radius:6px; flex-shrink:0; }
+.g-id{ font-size:11px; color:var(--text-3); font-family:'JetBrains Mono',monospace; background:var(--surface-3); border:1px solid var(--line); padding:3px 9px; border-radius:6px; flex-shrink:0; }
 </style>
 
 <script>

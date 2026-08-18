@@ -211,7 +211,8 @@ check(client.get('/api/guild/777/shiftboard/export.csv').status_code == 403,
 print('== 7. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/staff_shifts.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('ssWeek', 'ssDuty', 'ssAdd', 'ssCsv', 'ssRaw', 'ssChan', 'ssTz', 'ssWork'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check("'/overview'" in tpl and "'/add'" in tpl and "'/remove'" in tpl

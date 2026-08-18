@@ -269,7 +269,8 @@ check(client.get('/api/guild/777/lockdown/export.csv').status_code == 403, 'uye 
 print('== 8. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/lockdown.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
-check('[data-theme="light"]' in tpl, 'светлая тема учтена')
+base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
+check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
 for fid in ('ldBanner', 'ldList', 'ldControls', 'ldSpec', 'ldReason', 'ldLock',
             'ldUnlock', 'ldPreview', 'ldCsv'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')

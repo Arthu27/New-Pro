@@ -1,20 +1,45 @@
 {% extends "base.html" %}
-{% block title %}Decision Timeline — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-timeline"></i> Decision Timeline{% endblock %}
+{% block title %}История решений · Модерация — Aether{% endblock %}
+{% block page_title %}История решений{% endblock %}
 {% block content %}
 
-<div class="ops-canvas ops-decision-timeline" data-room-kind="timeline" data-room-version="3">
-  <div class="ops-room-label"><span>INV / DECISION TIMELINE</span><b>Хронология решений</b><em>восстановить ход кейса от причины до результата</em></div>
-  <div class="ops-timeline-layout">
-    <aside class="ops-timeline-side">
-      <div class="ops-timeline-mark"><i class="fas fa-clock-rotate-left"></i><span></span></div>
-      <div class="ops-timeline-kpi"><span>Все события</span><strong id="stat-total">—</strong></div><div class="ops-timeline-kpi hot"><span>Баны</span><strong id="stat-bans">—</strong></div><div class="ops-timeline-kpi"><span>Кики</span><strong id="mh-kicks">—</strong></div><div class="ops-timeline-kpi"><span>Варны</span><strong id="mh-warns">—</strong></div>
-    </aside>
-    <section class="ops-panel ops-timeline-feed">
-      <header class="ops-panel-head"><div><span class="ops-kicker">AUDIT RECONSTRUCTION</span><h2>Линия решений</h2><p>Найдите человека, модератора или основание и проследите последовательность.</p></div><span class="ops-counter" id="mh-count2">—</span></header>
-      <div class="ops-command-strip"><label class="ops-field ops-field-grow"><span>Поиск</span><input type="search" id="search" placeholder="Участник, модератор, причина"></label><label class="ops-field"><span>Тип события</span><select id="filter"><option value="">Все действия</option><option value="ban">Бан</option><option value="kick">Кик</option><option value="warn">Варн</option><option value="mute">Мьют</option></select></label><b id="mh-count" class="ops-counter">0</b></div>
-      <div class="ops-history-surface" id="mh-body"><div class="ops-loading"><i class="fas fa-circle-notch fa-spin"></i> Восстанавливаем историю</div></div>
-    </section>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Расследование</div>
+    <h1>История решений</h1>
+    <p class="lead">Хронология наказаний: восстановите ход кейса от причины до результата.</p>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-clock-rotate-left"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Все события</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-bans">—</div><div class="kpi-label">Баны</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value" id="mh-kicks">—</div><div class="kpi-label">Кики</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value" id="mh-warns">—</div><div class="kpi-label">Варны</div></div></div>
+</div>
+
+<div class="panel">
+  <div class="toolbar">
+    <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="search" placeholder="Участник, модератор, причина" aria-label="Поиск">
+    </label>
+    <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Тип события</span>
+      <select id="filter">
+        <option value="">Все действия</option>
+        <option value="ban">Бан</option>
+        <option value="kick">Кик</option>
+        <option value="warn">Варн</option>
+        <option value="mute">Мьют</option>
+      </select>
+    </label>
+    <span class="spacer"></span>
+    <span class="badge neutral" id="mh-count">0</span>
+  </div>
+  <div class="table-wrap" style="min-height:120px">
+    <table class="data-table">
+      <thead><tr><th>Действие</th><th>Пользователь</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead>
+      <tbody id="mh-body"><tr><td colspan="5"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Восстанавливаем историю</span></div></td></tr></tbody>
+    </table>
   </div>
 </div>
 
@@ -24,12 +49,13 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function fmtDate(iso) {
-    if (!iso) return '-';
-    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch (e) { return '-'; }
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return '—'; }
   }
 
   var allCases = [];
-  var colorMap = { ban: 'var(--err)', kick: 'var(--orange)', warn: 'var(--warn)', mute: '#a78bfa', timeout: '#a78bfa', unban: 'var(--ok)', unmute: 'var(--ok)' };
+  var TONE = { ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral', timeout: 'neutral', unban: 'ok', unmute: 'ok' };
 
   function normalize(a) {
     a = String(a || '').toLowerCase();
@@ -55,36 +81,34 @@
       }
       return true;
     });
-    $('mh-count').textContent = list.length + ' / ' + allCases.length;
-    $('mh-count2').textContent = list.length;
+    $('mh-count').textContent = list.length + ' из ' + allCases.length;
     $('stat-total').textContent = allCases.length;
     $('stat-bans').textContent = allCases.filter(function (c) { return normalize(c.action) === 'ban'; }).length;
     $('mh-kicks').textContent = allCases.filter(function (c) { return normalize(c.action) === 'kick'; }).length;
     $('mh-warns').textContent = allCases.filter(function (c) { return normalize(c.action) === 'warn'; }).length;
-    if (!list.length) { $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Записей нет</p>'; return; }
-    var rows = list.slice(0, 300).map(function (c) {
+    var body = $('mh-body');
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><span>Записей нет</span></div></td></tr>';
+      return;
+    }
+    body.innerHTML = list.slice(0, 300).map(function (c) {
       var cat = normalize(c.action);
-      var c1 = colorMap[cat] || 'var(--text-3)';
       var label = RU[cat] || esc(c.action || '?');
-      return '<tr><td><span class="case-badge" style="border-color:' + c1 + ';color:' + c1 + '">' + label + '</span></td>' +
-        '<td>' + esc(c.target_name || c.target_id || '-') + '</td>' +
-        '<td>' + esc(c.mod_name || c.mod_id || '-') + '</td>' +
-        '<td style="max-width:200px;overflow:hidden">' + esc(c.reason || '-') + '</td>' +
-        '<td>' + esc(fmtDate(c.created_at)) + '</td></tr>';
+      return '<tr><td><span class="badge ' + (TONE[cat] || 'neutral') + '">' + label + '</span></td>' +
+        '<td>' + esc(c.target_name || c.target_id || '—') + '</td>' +
+        '<td>' + esc(c.mod_name || c.mod_id || '—') + '</td>' +
+        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(c.reason || '') + '">' + esc(c.reason || '—') + '</td>' +
+        '<td class="muted">' + esc(fmtDate(c.created_at)) + '</td></tr>';
     }).join('');
-    $('mh-body').innerHTML = '<table><thead><tr><th>Действие</th><th>Пользователь</th><th>Модератор</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  async function load(live) {
-    if (!live) $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
+  async function load() {
     try {
       var r = await fetch('/api/mod-history');
       var d = await r.json();
       allCases = Array.isArray(d) ? d : [];
-      if (window.keepScroll) window.keepScroll(render); else render();
-    } catch (e) {
-      if (!live) $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить</p>';
-    }
+    } catch (e) { allCases = []; }
+    window.renderSafe(render);
   }
 
   function bind() {
@@ -94,8 +118,7 @@
 
   function start() {
     bind(); load();
-    if (window.setLiveRefresh) window.setLiveRefresh(function () { load(true); }, 2500);
-    else setInterval(function () { load(true); }, 2500);
+    if (window.setLiveRefresh) window.setLiveRefresh(load, 5000);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
