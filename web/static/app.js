@@ -88,6 +88,8 @@
     var el = doc.createElement('div');
     el.className = 'toast' + (ok === false ? ' err' : (ok === 'warn' ? ' warn' : ''));
     var icon = ok === false ? 'fa-circle-exclamation' : (ok === 'warn' ? 'fa-triangle-exclamation' : 'fa-circle-check');
+    var ttl = opts.ttl || (opts.undo ? 6000 : 3200);
+    el.style.setProperty('--toast-ttl', (ttl / 1000) + 's');
     el.innerHTML = '<i class="fas ' + icon + '"></i><span>' + esc(msg) + '</span>' +
       (opts.undo ? '<button type="button" class="undo-btn">Отменить</button>' : '');
     if (opts.undo) {
@@ -97,7 +99,6 @@
       });
     }
     host.appendChild(el);
-    var ttl = opts.ttl || (opts.undo ? 6000 : 3200);
     var timer = setTimeout(function () { dismiss(el); }, ttl);
     function dismiss(node) {
       clearTimeout(timer);
@@ -825,6 +826,10 @@
     } catch (e) { return fallback; }
   }
 
+  function reducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
   /* ── Анимированный счётчик числа ─────────────────────── */
   window.countUp = function (el, target, opts) {
     opts = opts || {};
@@ -976,7 +981,8 @@
         svg.appendChild(svgEl('line', { x1: pad, y1: y.toFixed(1), x2: w - pad, y2: y.toFixed(1), 'class': 'grid-line' }));
       });
       svg.appendChild(svgEl('path', { d: area, fill: colorWithAlpha(color, 0.16), 'class': 'area-fill' }));
-      svg.appendChild(svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.5', 'class': 'line-path' }));
+      var linePath = svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.5', 'class': 'line-path' });
+      svg.appendChild(linePath);
       pts.forEach(function (p, i) {
         var dot = svgEl('circle', { cx: p[0], cy: p[1], r: 3, fill: color, opacity: i === pts.length - 1 ? 1 : 0.55 });
         if (opts.labels && opts.labels[i] != null) {
@@ -988,6 +994,18 @@
       });
       el.innerHTML = '';
       el.appendChild(svg);
+      // Рисование линии слева направо
+      if (!reducedMotion()) {
+        try {
+          var len = linePath.getTotalLength();
+          linePath.style.strokeDasharray = len;
+          linePath.style.strokeDashoffset = len;
+          linePath.style.transition = 'stroke-dashoffset 0.9s cubic-bezier(0.25, 0.6, 0.3, 1)';
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { linePath.style.strokeDashoffset = 0; });
+          });
+        } catch (e) { /* SVG-анимация опциональна */ }
+      }
       if (opts.labels && opts.labels.length) {
         var ax = doc.createElement('div');
         ax.className = 'chart-axis';
@@ -1031,4 +1049,232 @@
     if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
     else fn();
   }
+})();
+
+// ============================================================
+// AETHER PREMIUM KIT 2 — кольца, теплокарта, CSV, акценты
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+
+  function esc0(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function svgEl(tag, attrs) {
+    var el = doc.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.keys(attrs || {}).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+    return el;
+  }
+
+  /* ── Кольцевой график (доли мер) ─────────────────────── */
+  window.AetherRing = function (el, segments, opts) {
+    opts = opts || {};
+    if (!el) return;
+    var list = (segments || []).filter(function (x) { return x && (Number(x.value) || 0) > 0; });
+    if (!list.length) { el.innerHTML = '<span class="muted">нет данных</span>'; return; }
+    var total = list.reduce(function (acc, x) { return acc + (Number(x.value) || 0); }, 0);
+    var size = Number(opts.size) || 118;
+    var stroke = Number(opts.stroke) || 13;
+    var r = (size - stroke) / 2;
+    var c = 2 * Math.PI * r;
+    var svg = svgEl('svg', { viewBox: '0 0 ' + size + ' ' + size, style: 'width:' + size + 'px;height:' + size + 'px' });
+    var track = svgEl('circle', {
+      cx: size / 2, cy: size / 2, r: r, fill: 'none',
+      stroke: getComputedStyle(doc.documentElement).getPropertyValue('--surface-3').trim() || '#eef0f3',
+      'stroke-width': stroke
+    });
+    svg.appendChild(track);
+    var off = 0;
+    list.forEach(function (seg) {
+      var v = Number(seg.value) || 0;
+      var frac = v / total;
+      var dash = frac * c - 1.5; // зазор между сегментами
+      if (dash < 0) dash = 0;
+      var circle = svgEl('circle', {
+        cx: size / 2, cy: size / 2, r: r, fill: 'none',
+        stroke: seg.color || '#4f46e5',
+        'stroke-width': stroke,
+        'stroke-dasharray': dash + ' ' + (c - dash),
+        'stroke-dashoffset': -(off * c),
+        'stroke-linecap': 'butt'
+      });
+      var t = svgEl('title', {});
+      t.textContent = seg.label + ': ' + v;
+      circle.appendChild(t);
+      svg.appendChild(circle);
+      off += frac;
+    });
+    var wrap = doc.createElement('div');
+    wrap.className = 'ring-wrap';
+    var box = doc.createElement('div');
+    box.className = 'ring-box';
+    var center = doc.createElement('div');
+    center.className = 'ring-center';
+    center.innerHTML = '<div><b>' + total.toLocaleString('ru-RU') + '</b><small>' + esc0(opts.totalLabel || 'всего') + '</small></div>';
+    box.appendChild(svg);
+    box.appendChild(center);
+    wrap.appendChild(box);
+    if (opts.legend !== false) {
+      var leg = doc.createElement('div');
+      leg.className = 'ring-legend';
+      list.slice(0, 7).forEach(function (seg) {
+        var v = Number(seg.value) || 0;
+        var pct = total ? Math.round((v / total) * 100) : 0;
+        var li = doc.createElement('div');
+        li.className = 'ring-li';
+        li.innerHTML = '<span class="sw" style="background:' + esc0(seg.color || '#4f46e5') + '"></span>' +
+          '<span class="nm">' + esc0(seg.label) + '</span>' +
+          '<span class="vl">' + v.toLocaleString('ru-RU') + '</span>' +
+          '<span class="pc">' + pct + '%</span>';
+        leg.appendChild(li);
+      });
+      wrap.appendChild(leg);
+    }
+    el.innerHTML = '';
+    el.appendChild(wrap);
+  };
+
+  /* ── Тепловая карта (24 часа) ────────────────────────── */
+  window.AetherHeat = function (el, values, opts) {
+    opts = opts || {};
+    if (!el) return;
+    var vals = (values || []).map(function (v) { return Number(v) || 0; });
+    var max = Math.max.apply(null, vals.concat([1]));
+    var grid = doc.createElement('div');
+    grid.className = 'heat-grid';
+    vals.forEach(function (v, i) {
+      var cell = doc.createElement('div');
+      var level = Math.max(0, Math.min(4, Math.round((v / max) * 4)));
+      cell.className = 'heat-cell' + (level ? ' h' + level : '');
+      if (opts.labels && opts.labels[i] != null) cell.title = opts.labels[i] + ': ' + v;
+      grid.appendChild(cell);
+    });
+    el.innerHTML = '';
+    el.appendChild(grid);
+    if (opts.labels && opts.labels.length) {
+      var ax = doc.createElement('div');
+      ax.className = 'heat-axis';
+      ax.innerHTML = '<span>' + esc0(opts.labels[0]) + '</span><span>' + esc0(opts.labels[Math.floor(opts.labels.length / 2)]) + '</span><span>' + esc0(opts.labels[opts.labels.length - 1]) + '</span>';
+      el.appendChild(ax);
+    }
+  };
+
+  /* ── Клиентский CSV-экспорт таблиц ───────────────────── */
+  window.csvDownload = function (filename, rows) {
+    try {
+      var csv = rows.map(function (r) {
+        return r.map(function (cell) {
+          var v = String(cell == null ? '' : cell);
+          if (/[;"\\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+          return v;
+        }).join(';');
+      }).join('\\r\\n');
+      var blob = new Blob(['\\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+      var a = doc.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      doc.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+      return true;
+    } catch (e) { return false; }
+  };
+
+  /* ── Пресеты акцентов + попап ────────────────────────── */
+  var ACCENTS = [
+    { name: 'Индиго', hex: '#4f46e5' },
+    { name: 'Фиолет', hex: '#7c3aed' },
+    { name: 'Небо', hex: '#0284c7' },
+    { name: 'Изумруд', hex: '#059669' },
+    { name: 'Роза', hex: '#e11d48' },
+    { name: 'Янтарь', hex: '#d97706' }
+  ];
+  window.accentPresets = ACCENTS;
+
+  window.initAccentPicker = function (btn) {
+    if (!btn || btn.dataset.accentReady) return;
+    btn.dataset.accentReady = '1';
+    var pop = doc.createElement('div');
+    pop.className = 'accent-pop';
+    pop.hidden = true;
+    pop.innerHTML = '<div class="accent-pop-title">Акцент панели</div><div class="accent-grid"></div>';
+    btn.parentNode.appendChild(pop);
+    var grid = pop.querySelector('.accent-grid');
+    ACCENTS.forEach(function (a) {
+      var sw = doc.createElement('button');
+      sw.type = 'button';
+      sw.className = 'accent-swatch';
+      sw.title = a.name;
+      sw.style.background = 'linear-gradient(135deg, ' + a.hex + ', ' + a.hex + 'cc)';
+      sw.innerHTML = '<i class="fas fa-check"></i>';
+      sw.addEventListener('click', function () {
+        if (typeof window.applyAccent === 'function') window.applyAccent(a.hex);
+        paint();
+      });
+      grid.appendChild(sw);
+    });
+    function paint() {
+      var cur = '';
+      try { cur = localStorage.getItem('aether_accent') || '#4f46e5'; } catch (e) {}
+      cur = String(cur).toLowerCase();
+      Array.prototype.forEach.call(grid.children, function (sw, i) {
+        sw.classList.toggle('active', ACCENTS[i].hex.toLowerCase() === cur);
+      });
+    }
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      pop.hidden = !pop.hidden;
+      if (!pop.hidden) paint();
+    });
+    doc.addEventListener('click', function (e) {
+      if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) pop.hidden = true;
+    });
+    paint();
+  };
+
+  /* ── Таймер сессии в сайдбаре ────────────────────────── */
+  function sessionTimer() {
+    var el = doc.getElementById('sysSession');
+    if (!el) return;
+    var t0 = Date.now();
+    var tick = function () {
+      var s = Math.floor((Date.now() - t0) / 1000);
+      var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+      var p = function (v) { return String(v).padStart(2, '0'); };
+      el.textContent = p(h) + ':' + p(m) + ':' + p(sec);
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  /* ── Глобальные горячие клавиши ──────────────────────── */
+  function globalKeys() {
+    doc.addEventListener('keydown', function (e) {
+      // Alt+M — палитра команд
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'm' || e.key === 'M' || e.key === 'ь' || e.key === 'Ь')) {
+        e.preventDefault();
+        if (typeof window.uxPaletteOpen === 'function') window.uxPaletteOpen();
+      }
+      // Escape закрывает открытые дроверы/меню
+      if (e.key === 'Escape') {
+        var userPill = doc.querySelector('.user-pill.open');
+        if (userPill) userPill.classList.remove('open');
+      }
+    });
+  }
+
+  function ready(fn) {
+    if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+
+  ready(function () {
+    initAccentPicker(doc.getElementById('accentBtn'));
+    sessionTimer();
+    globalKeys();
+  });
 })();

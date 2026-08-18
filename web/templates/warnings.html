@@ -27,6 +27,7 @@
       <input type="search" id="search" placeholder="Участник, причина или модератор" aria-label="Поиск предупреждений">
     </label>
     <span class="spacer"></span>
+    <button type="button" class="btn" id="warn-csv" title="Выгрузить текущую выборку в CSV"><i class="fas fa-file-csv"></i> CSV</button>
     <span class="badge neutral" id="warn-count">0 кейсов</span>
   </div>
   <div class="table-wrap" style="min-height:120px">
@@ -98,16 +99,7 @@
   }
 
   function render() {
-    var guildFilter = $('guild-filter').value;
-    var q = ($('search').value || '').toLowerCase();
-    var filtered = allWarnings.filter(function (w) {
-      if (guildFilter && String(w.guild_id || '') !== guildFilter) return false;
-      if (q) {
-        var hay = ((w.user_id || '') + ' ' + (w.reason || '') + ' ' + (w.moderator || '')).toLowerCase();
-        if (hay.indexOf(q) === -1) return false;
-      }
-      return true;
-    });
+    var filtered = currentFiltered();
     $('warn-count').textContent = filtered.length + ' из ' + allWarnings.length;
     var body = $('warn-body');
     if (!filtered.length) {
@@ -126,9 +118,32 @@
     }
   }
 
+  function currentFiltered() {
+    var guildFilter = $('guild-filter').value;
+    var q = ($('search').value || '').toLowerCase();
+    return allWarnings.filter(function (w) {
+      if (guildFilter && String(w.guild_id || '') !== guildFilter) return false;
+      if (q) {
+        var hay = ((w.user_id || '') + ' ' + (w.reason || '') + ' ' + (w.moderator || '')).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function exportCsv() {
+    var rows = [['Участник', 'Модератор', 'Причина', 'Время', 'Сервер']];
+    currentFiltered().forEach(function (w) {
+      rows.push([w.user_id || '', w.moderator || '', w.reason || '', w.timestamp || '', w.guild_id || '']);
+    });
+    var ok = window.csvDownload ? window.csvDownload('warnings.csv', rows) : false;
+    window.showToast(ok ? 'Выборка выгружена' : 'Не удалось выгрузить', ok);
+  }
+
   function bind() {
     $('guild-filter').addEventListener('change', render);
     $('search').addEventListener('input', render);
+    $('warn-csv').addEventListener('click', exportCsv);
   }
 
   function start() {

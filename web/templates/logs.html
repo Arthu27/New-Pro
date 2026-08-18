@@ -24,10 +24,17 @@
 </div>
 
 <div class="grid-2" style="align-items:start">
-<div class="panel">
-  <div class="panel-head"><div><h2><i class="fas fa-chart-simple"></i> Типы действий</h2>
-    <div class="sub">Распределение событий в журнале.</div></div></div>
-  <div class="panel-body" id="logs-types"><div class="sk-line" style="height:12px"></div></div>
+<div>
+  <div class="panel" style="margin-bottom:14px">
+    <div class="panel-head"><div><h2><i class="fas fa-chart-simple"></i> Типы действий</h2>
+      <div class="sub">Распределение событий в журнале.</div></div></div>
+    <div class="panel-body" id="logs-types"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-fire"></i> Часы активности</h2>
+      <div class="sub">Распределение событий по часам.</div></div></div>
+    <div class="panel-body" id="logs-heat"><div class="sk-line" style="height:12px"></div></div>
+  </div>
 </div>
 
 <div class="panel">
@@ -39,6 +46,7 @@
       <input type="search" id="search" placeholder="Участник / причина / действие" aria-label="Поиск по журналу">
     </label>
     <span class="spacer"></span>
+    <button type="button" class="btn" id="logs-csv" title="Выгрузить текущую выборку в CSV"><i class="fas fa-file-csv"></i> CSV</button>
     <span class="badge neutral" id="logs-count">0 событий</span>
   </div>
   <div class="table-wrap" style="min-height:120px">
@@ -113,20 +121,21 @@
         return { label: meta[0], value: counts[k], color: meta[1] || undefined };
       }).sort(function (a, b) { return b.value - a.value; });
       window.AetherChart.vbars($('logs-types'), items);
+      if (window.AetherHeat) {
+        var hours = new Array(24).fill(0);
+        allLogs.forEach(function (l) {
+          try {
+            var h = new Date(l.timestamp).getHours();
+            if (!isNaN(h)) hours[h]++;
+          } catch (e) { /* метка без времени */ }
+        });
+        window.AetherHeat($('logs-heat'), hours, { labels: ['00:00', '12:00', '23:00'] });
+      }
     }
   }
 
   function render() {
-    var guildFilter = $('guild-filter').value;
-    var q = ($('search').value || '').toLowerCase();
-    var filtered = allLogs.filter(function (l) {
-      if (guildFilter && String(l.guild_id || '') !== guildFilter) return false;
-      if (q) {
-        var hay = ((l.action || '') + ' ' + (l.user_name || '') + ' ' + (l.mod_name || '') + ' ' + (l.reason || '')).toLowerCase();
-        if (hay.indexOf(q) === -1) return false;
-      }
-      return true;
-    });
+    var filtered = currentFiltered();
     $('logs-count').textContent = filtered.length + ' из ' + allLogs.length;
     var body = $('logs-body');
     if (!filtered.length) {
@@ -147,9 +156,32 @@
     }
   }
 
+  function currentFiltered() {
+    var guildFilter = $('guild-filter').value;
+    var q = ($('search').value || '').toLowerCase();
+    return allLogs.filter(function (l) {
+      if (guildFilter && String(l.guild_id || '') !== guildFilter) return false;
+      if (q) {
+        var hay = ((l.action || '') + ' ' + (l.user_name || '') + ' ' + (l.mod_name || '') + ' ' + (l.reason || '')).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function exportCsv() {
+    var rows = [['Действие', 'Цель', 'Модератор', 'Причина', 'Время', 'Сервер']];
+    currentFiltered().forEach(function (l) {
+      rows.push([l.action || '', l.user_name || l.channel_name || l.role_name || l.user_id || '', l.mod_name || l.mod_id || '', l.reason || '', l.timestamp || '', l.guild_id || '']);
+    });
+    var ok = window.csvDownload ? window.csvDownload('moderation_log.csv', rows) : false;
+    window.showToast(ok ? 'Выборка выгружена' : 'Не удалось выгрузить', ok);
+  }
+
   function bind() {
     $('guild-filter').addEventListener('change', render);
     $('search').addEventListener('input', render);
+    $('logs-csv').addEventListener('click', exportCsv);
   }
 
   function start() {

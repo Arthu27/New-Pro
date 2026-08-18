@@ -80,17 +80,18 @@ function renderMods(d) {
   var box = $('mrMods');
   if (!d.per_mod.length) {
     box.innerHTML = '<div class="empty"><i class="fas fa-user-shield"></i><span>Записей с именем модератора нет</span></div>';
+  } else if (window.AetherChart) {
+    var total = d.total || 1;
+    window.AetherChart.vbars(box, d.per_mod.map(function (m, i) {
+      var pct = Math.round(100 * m[1] / total);
+      return { label: m[0] + ' (' + pct + '%)', value: m[1] };
+    }), { limit: 8 });
   } else {
-    var share = d.per_mod.map(function (m) {
-      var pct = d.total ? Math.round(100 * m[1] / d.total) : 0;
-      return { name: m[0], cnt: m[1], pct: pct };
-    });
-    box.innerHTML = share.map(function (m, i) {
+    box.innerHTML = d.per_mod.map(function (m, i) {
       return '<div class="feed-item" style="border-bottom:1px solid var(--line)">' +
-        '<div class="feed-item-icon" style="' + (i === 0 ? 'background:var(--ac-soft);color:var(--ac)' : '') + '">' + (i + 1) + '</div>' +
-        '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(m.name) + '</div>' +
-        '<div class="modern-progress" style="margin-top:6px"><span style="width:' + m.pct + '%"></span></div></div>' +
-        '<span class="mono" style="font-weight:700">' + m.cnt + ' <small class="muted">· ' + m.pct + '%</small></span></div>';
+        '<div class="feed-item-icon">' + (i + 1) + '</div>' +
+        '<div class="feed-item-title" style="flex:1">' + esc(m[0]) + '</div>' +
+        '<span class="mono" style="font-weight:700">' + m[1] + '</span></div>';
     }).join('');
   }
   if (window.AetherChart) {

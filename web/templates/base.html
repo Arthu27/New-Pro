@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=61">
+    <link rel="stylesheet" href="/static/style.css?v=62">
     <script>
       // Тема применяется до отрисовки, чтобы не было «вспышки»
       (function () {
@@ -19,6 +19,8 @@
 </head>
 <body>
     <a class="skip-link" href="#main-content">Перейти к содержимому</a>
+
+    <div class="bg-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
     <div class="app-shell">
         <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Открыть меню"><i class="fas fa-bars"></i></button>
@@ -104,6 +106,11 @@
                         <span class="sys-val" id="sysConnection">Online</span>
                     </div>
                     <div class="sys-status-row">
+                        <i class="fas fa-hourglass-half sys-ico"></i>
+                        <span class="sys-label">Сессия</span>
+                        <span class="sys-val mono" id="sysSession">00:00:00</span>
+                    </div>
+                    <div class="sys-status-row">
                         <i class="fas fa-clock sys-ico"></i>
                         <span class="sys-label">Время</span>
                         <span class="sys-val mono" id="sysClock">--:--:--</span>
@@ -146,6 +153,9 @@
                     </div>
                     <button class="nav-icon-btn" type="button" title="Поиск (Ctrl+K)" aria-label="Открыть глобальный поиск" id="globalSearchBtn"><i class="fas fa-search"></i></button>
                     <button class="nav-icon-btn" type="button" title="Лента активности" aria-label="Открыть ленту активности" id="activityBtn"><i class="fas fa-stream"></i></button>
+                    <span style="position:relative">
+                      <button class="nav-icon-btn" type="button" title="Акцент панели" aria-label="Выбрать акцент панели" id="accentBtn"><i class="fas fa-droplet"></i></button>
+                    </span>
                     <button class="nav-icon-btn theme-toggle" type="button" title="Сменить тему" id="themeToggle" aria-label="Сменить тему">
                         <i class="fas fa-sun icon-sun icon-swap"></i>
                         <i class="fas fa-moon icon-moon icon-swap"></i>
@@ -231,6 +241,6 @@
     <!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
     <script src="/static/api-guard.js?v=2"></script>
     <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
-    <script src="/static/app.js?v=7"></script>
+    <script src="/static/app.js?v=8"></script>
 </body>
 </html>

@@ -50,6 +50,26 @@
   </div>
 </div>
 
+<!-- Глубокие метрики: лидеры, доли мер, часы -->
+<div class="grid-3" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-medal"></i> Топ модераторов</h2>
+      <div class="sub">Действия за 7 дней.</div></div></div>
+    <div class="panel-body" id="modTop"><div class="sk-line" style="height:12px"></div></div>
+    <div class="panel-foot" id="modRec" style="border-top:1px solid var(--line)"><span class="hint">рецидивисты: —</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-chart-pie"></i> Доля мер</h2>
+      <div class="sub">Структура наказаний за 7 дней.</div></div></div>
+    <div class="panel-body" id="modRing"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-fire"></i> Часы активности</h2>
+      <div class="sub">Когда команда чаще всего действует.</div></div></div>
+    <div class="panel-body" id="modHeat"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+</div>
+
 <!-- Аналитика модерации: графики -->
 <div class="grid-2" style="align-items:start">
   <div class="panel">
@@ -345,10 +365,50 @@
           return { label: ACTION_TONES[k].label, value: types[k], color: ACTION_TONES[k].color };
         }).sort(function (a, b) { return b.value - a.value; });
         window.AetherChart.vbars($('modTypes'), items);
+        // Кольцо долей мер
+        if (window.AetherRing) {
+          window.AetherRing($('modRing'), items.slice(0, 6).map(function (x) {
+            return { label: x.label, value: x.value, color: x.color };
+          }), { totalLabel: 'мер за 7 дн' });
+        }
+        // Тепловая карта по часам
+        if (window.AetherHeat) {
+          var hours = new Array(24).fill(0);
+          logs.forEach(function (l) {
+            try {
+              var h = new Date(l.timestamp).getHours();
+              if (!isNaN(h)) hours[h]++;
+            } catch (e) { /* метка без времени */ }
+          });
+          window.AetherHeat($('modHeat'), hours, { labels: ['00:00', '12:00', '23:00'] });
+        }
       }
       var chip = $('chipMod');
       if (chip) chip.innerHTML = '<i class="fas fa-gavel"></i> действий за 7 дн: ' + logs.length.toLocaleString('ru-RU');
     } catch (e) { /* графики опциональны */ }
+  }
+
+  /* Топ модераторов + рецидивисты (из отчёта) */
+  async function loadModLeaders() {
+    try {
+      var d = await fetch('/api/mod-report?days=7').then(function (r) { return r.json(); });
+      if (!d.success) return;
+      if (window.AetherChart && d.per_mod.length) {
+        window.AetherChart.vbars($('modTop'), d.per_mod.map(function (m, i) {
+          return { label: m[0], value: m[1] };
+        }), { limit: 6 });
+      }
+      var rec = $('modRec');
+      if (rec) {
+        if (d.recidivists && d.recidivists.length) {
+          rec.innerHTML = '<div class="chip-row">' + d.recidivists.slice(0, 6).map(function (r) {
+            return '<span class="chip danger"><i class="fas fa-repeat"></i> ' + esc(r.name) + ' · ' + r.count + '</span>';
+          }).join('') + '</div>';
+        } else {
+          rec.innerHTML = '<span class="hint">рецидивистов нет</span>';
+        }
+      }
+    } catch (e) { /* опционально */ }
   }
 
   /* Модерация сегодня */
@@ -723,6 +783,7 @@
   loadGuildInfo();
   loadStats();
   loadModCharts();
+  loadModLeaders();
   loadQuickStats();
   loadRecentActivity();
   loadLoginLog();
@@ -732,7 +793,7 @@
   loadShifts();
   bindShiftEditor();
   if (window.setLiveRefresh) {
-    window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 10000);
+    window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 10000);
     window.setLiveRefresh(loadShifts, 30000);
   } else {
     setInterval(loadStats, 2500);

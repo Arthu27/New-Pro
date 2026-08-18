@@ -7,6 +7,13 @@
    (Linear / Notion / Vercel).
    ============================================================ */
 
+/* Анимация смены акцента: @property регистрирует --ac как цвет */
+@property --ac {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #4f46e5;
+}
+
 /* ── 1. Токены ─────────────────────────────────────────────── */
 :root {
   --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -171,6 +178,41 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 }
 .skip-link:focus { top: 12px; }
 
+/* ── 2a. Aurora-фон: медленно плывущие пятна света ─────────── */
+.bg-aurora { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+.bg-aurora i {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+}
+[data-theme="dark"] .bg-aurora i { mix-blend-mode: screen; opacity: 0.22; }
+.bg-aurora i:nth-child(1) {
+  width: 46vw; height: 46vw;
+  left: -12vw; top: -16vw;
+  background: color-mix(in srgb, var(--ac) 32%, transparent);
+  animation: auroraFloat1 26s ease-in-out infinite alternate;
+}
+.bg-aurora i:nth-child(2) {
+  width: 38vw; height: 38vw;
+  right: -10vw; top: 12vh;
+  background: color-mix(in srgb, var(--ac-2) 26%, transparent);
+  animation: auroraFloat2 32s ease-in-out infinite alternate;
+}
+.bg-aurora i:nth-child(3) {
+  width: 34vw; height: 34vw;
+  left: 24vw; bottom: -18vw;
+  background: color-mix(in srgb, var(--info) 20%, transparent);
+  animation: auroraFloat3 38s ease-in-out infinite alternate;
+}
+@keyframes auroraFloat1 { from { transform: translate(0, 0) scale(1); } to { transform: translate(9vw, 7vh) scale(1.15); } }
+@keyframes auroraFloat2 { from { transform: translate(0, 0) scale(1.1); } to { transform: translate(-8vw, 9vh) scale(0.95); } }
+@keyframes auroraFloat3 { from { transform: translate(0, 0) scale(0.95); } to { transform: translate(7vw, -6vh) scale(1.12); } }
+@media (prefers-reduced-motion: reduce) {
+  .bg-aurora i { animation: none; }
+}
+
 /* ── 3. Каркас ─────────────────────────────────────────────── */
 .app-shell { display: flex; min-height: 100vh; }
 
@@ -281,9 +323,19 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   color: var(--text-3);
   border-radius: var(--r-sm);
   text-align: left;
+  transition: color 0.15s;
 }
 .nav-group-title:hover { color: var(--text-2); }
-.nav-group-icon { width: 18px; text-align: center; font-size: var(--fs-sm); }
+.nav-group-icon {
+  width: 22px; height: 22px; flex: 0 0 22px;
+  border-radius: 6px;
+  display: grid; place-items: center;
+  background: var(--surface-3);
+  color: var(--text-3);
+  font-size: 10px;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-group:hover .nav-group-icon { background: var(--ac-soft); color: var(--ac); }
 .nav-group-label { flex: 1; }
 .nav-group-count {
   font-size: 10px; color: var(--text-3);
@@ -311,11 +363,24 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .nav-link i { width: 16px; text-align: center; font-size: var(--fs-sm); color: var(--text-3); flex: 0 0 16px; }
 .nav-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-link.active {
-  background: var(--ac-soft);
+  background: linear-gradient(90deg, var(--ac-soft), color-mix(in srgb, var(--ac-soft) 30%, transparent));
   color: var(--ac);
   font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--ac);
 }
 .nav-link.active i { color: var(--ac); }
+.nav-link { position: relative; }
+.nav-link::before {
+  content: '';
+  position: absolute; left: 0; top: 50%;
+  width: 3px; height: 0;
+  border-radius: 3px;
+  background: var(--ac-grad);
+  transform: translateY(-50%);
+  transition: height 0.16s var(--ease);
+}
+.nav-link:hover::before { height: 60%; }
+.nav-link.active::before { height: 0; }
 .nav-link.is-off { opacity: 0.45; }
 .nav-off-chip {
   margin-left: auto; flex: 0 0 auto;
@@ -596,11 +661,21 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 
 /* Панель с заголовком/действиями (workbench-компонент) */
 .panel {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
+  border-radius: 16px;
   box-shadow: var(--shadow-1);
   overflow: hidden;
+  transition: box-shadow 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.panel:hover { border-color: var(--line-2); box-shadow: 0 6px 22px rgba(16, 24, 40, 0.07); }
+[data-theme="dark"] .panel:hover { box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4); }
+.panel::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ac) 30%, transparent), transparent);
 }
 .panel-head {
   display: flex; align-items: center; gap: 12px;
@@ -1051,18 +1126,39 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   max-width: 360px;
 }
 .toast {
+  position: relative;
   display: flex; align-items: center; gap: 10px;
-  background: var(--surface);
+  background: var(--glass);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--line);
   border-left: 3px solid var(--ok);
   border-radius: var(--r);
-  padding: 10px 14px;
+  padding: 10px 14px 12px;
   box-shadow: var(--shadow-2);
   font-size: var(--fs-md); font-weight: 500;
-  animation: toastIn 0.22s var(--ease) both;
+  animation: toastIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   pointer-events: auto;
+  overflow: hidden;
 }
-.toast i { color: var(--ok); }
+.toast > i {
+  width: 26px; height: 26px; flex: 0 0 26px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--ok-soft); color: var(--ok);
+  font-size: 12px;
+}
+.toast::after {
+  content: '';
+  position: absolute; left: 0; bottom: 0;
+  height: 2px; width: 100%;
+  background: var(--ok);
+  animation: toastbar var(--toast-ttl, 3.2s) linear forwards;
+}
+.toast.err > i { background: var(--err-soft); color: var(--err); }
+.toast.err::after { background: var(--err); }
+.toast.warn > i { background: var(--warn-soft); color: var(--warn); }
+.toast.warn::after { background: var(--warn); }
+@keyframes toastbar { from { width: 100%; } to { width: 0; } }
 .toast.err { border-left-color: var(--err); }
 .toast.err i { color: var(--err); }
 .toast.warn { border-left-color: var(--warn); }
@@ -1095,13 +1191,20 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 .modal-box {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
+  border-radius: 16px;
   box-shadow: var(--shadow-3);
   width: 100%;
   max-width: 520px;
-  animation: modalIn 0.2s var(--ease) both;
+  animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   overflow: hidden;
 }
+.modal-box::before {
+  content: '';
+  display: block;
+  height: 2px;
+  background: var(--ac-grad);
+}
+
 @keyframes modalIn {
   from { opacity: 0; transform: translateY(10px) scale(0.985); }
   to { opacity: 1; transform: none; }
@@ -1508,6 +1611,75 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 /* ============================================================
    26a. ПРЕМИУМ-СЛОЙ: графики и командный центр
    ============================================================ */
+
+/* Тепловая карта активности (24 ячейки) */
+.heat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11px, 1fr)); gap: 3px; }
+.heat-cell {
+  height: 24px;
+  border-radius: 4px;
+  background: var(--surface-3);
+  transition: transform 0.12s var(--ease);
+  cursor: default;
+}
+.heat-cell:hover { transform: scale(1.18); }
+.heat-cell.h1 { background: color-mix(in srgb, var(--ac) 22%, var(--surface-3)); }
+.heat-cell.h2 { background: color-mix(in srgb, var(--ac) 40%, var(--surface-3)); }
+.heat-cell.h3 { background: color-mix(in srgb, var(--ac) 60%, var(--surface-3)); }
+.heat-cell.h4 { background: color-mix(in srgb, var(--ac) 82%, var(--surface-3)); }
+.heat-axis { display: flex; justify-content: space-between; margin-top: 5px; font-family: var(--mono); font-size: 10px; color: var(--text-3); }
+
+/* Кольцевой график */
+.ring-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.ring-box { position: relative; flex: 0 0 auto; }
+.ring-box svg { display: block; transform: rotate(-90deg); }
+.ring-center {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  text-align: center;
+  line-height: 1.15;
+}
+.ring-center b { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ring-center small { display: block; font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.ring-legend { display: flex; flex-direction: column; gap: 7px; flex: 1; min-width: 140px; }
+.ring-li { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); }
+.ring-li .sw { width: 9px; height: 9px; border-radius: 3px; flex: 0 0 9px; }
+.ring-li .nm { flex: 1; color: var(--text-2); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ring-li .vl { font-family: var(--mono); font-weight: 700; color: var(--text); }
+.ring-li .pc { font-family: var(--mono); font-size: 10px; color: var(--text-3); width: 34px; text-align: right; }
+
+/* Попап выбора акцента */
+.accent-pop {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-3);
+  padding: 14px;
+  z-index: 300;
+  width: 232px;
+  animation: modalIn 0.18s var(--ease) both;
+}
+.accent-pop-title {
+  font-size: var(--fs-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+.accent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.accent-swatch {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: grid; place-items: center;
+  color: #fff; font-size: 11px;
+  box-shadow: var(--shadow-1);
+  transition: transform 0.12s var(--ease), border-color 0.12s;
+}
+.accent-swatch:hover { transform: scale(1.06); }
+.accent-swatch.active { border-color: var(--text); }
+[data-theme="dark"] .accent-swatch { color: #14152a; }
 
 /* Командный центр (дашборд) */
 /* Премиум-герой командного центра (обёрнут в .page-hero) */
