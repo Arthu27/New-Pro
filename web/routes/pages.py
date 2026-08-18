@@ -41,7 +41,7 @@ def register(ctx):
     @role_required ('mod')
     def modhistory_page ():
         # История живёт в Центре модерации (вкладка «История»).
-        return redirect ('/mod-center?tab=history')
+        return redirect ('/mod-hq?tab=history')
 
 
     @app .route ('/welcome-editor')
@@ -237,7 +237,7 @@ def register(ctx):
     @role_required ('mod')
     def temp_moderation_page ():
         # Временные наказания живут в Центре модерации (вкладка «Временные»).
-        return redirect ('/mod-center?tab=temp')
+        return redirect ('/mod-hq?tab=temp')
 
 
     @app .route ('/cog-manager')

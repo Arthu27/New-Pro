@@ -492,7 +492,7 @@ def readiness_checklist(gid, now=None):
         'status': 'ok' if reasons else 'warn',
         'detail': '%d шабл.' % len(reasons) if reasons else 'Пусто',
         'hint': 'Шаблоны причин ускоряют выдачу и делают журнал читаемым.',
-        'link': '/mod-center', 'link_label': 'Добавить',
+        'link': '/mod-hq', 'link_label': 'Добавить',
     })
 
     items.append(_autofilter_check(gid))

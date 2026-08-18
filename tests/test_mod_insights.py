@@ -304,7 +304,7 @@ check(by_key0['autofilter']['status'] == 'warn'
 check(by_key0['antiraid']['status'] == 'missing'
       and by_key0['audit_fresh']['status'] == 'missing', 'антирейд и журнал отсутствуют')
 check(by_key0['warn_steps']['link'] == '/warn-config'
-      and by_key0['warn_reasons']['link'] == '/mod-center', 'ссылки ведут на настройку')
+      and by_key0['warn_reasons']['link'] == '/mod-hq', 'ссылки ведут на настройку')
 
 jdump('data/autofilter_998.json', {'enabled': False})
 cl998 = {c['key']: c for c in MI.readiness_checklist(998, now=NOW)['items']}
@@ -373,17 +373,17 @@ def login(role='owner'):
         s['role'] = role
 
 
-OV = '/api/guild/777/mod-center/overview'
-DS = '/api/guild/777/mod-center/dossier'
-check(client.get('/mod-center').status_code in (302, 401, 403), 'гостю страница закрыта')
+OV = '/api/guild/777/mod-hq/overview'
+DS = '/api/guild/777/mod-hq/dossier'
+check(client.get('/mod-hq').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get(OV).status_code in (302, 401, 403), 'гостю снимок закрыт')
 check(client.get(DS + '?user_id=100').status_code in (302, 401, 403), 'гостю досье закрыто')
 login('uye')
-check(client.get('/mod-center').status_code == 403, 'uye нельзя на страницу')
+check(client.get('/mod-hq').status_code == 403, 'uye нельзя на страницу')
 check(client.get(OV).status_code == 403, 'uye нельзя в снимок')
 login('mod')
-page = client.get('/mod-center')
-check(page.status_code == 200 and 'Центр модерации' in page.get_data(as_text=True),
+page = client.get('/mod-hq')
+check(page.status_code == 200 and 'Штаб модерации' in page.get_data(as_text=True),
       'mod открывает страницу')
 check("var GID = '777'" in page.get_data(as_text=True), 'страница знает активный сервер')
 ovj = client.get(OV).get_json()
@@ -420,22 +420,22 @@ clean = client.get(DS + '?user_id=555555').get_json()
 check(clean['success'] and clean['dossier']['known'] is False, 'чужой ID — пустое досье, не ошибка')
 
 print('== 6. Центр: досье-блоки, меню ==')
-tpl = open(os.path.join(ROOT, 'web/templates/mod_center.html'), encoding='utf-8').read()
-for fid in ('mzTrend', 'mzRepeat', 'mzTeam', 'mzEffect', 'mzSubjects',
-            'mzSubjectsSearch', 'mzDossier', 'mzDaysTabs'):
+tpl = open(os.path.join(ROOT, 'web/templates/mod_hq.html'), encoding='utf-8').read()
+for fid in ('hqTrend', 'hqTeam', 'hqEffect', 'hqSubjects',
+            'hqSubjectsSearch', 'hqDossier', 'hqDaysTabs', 'hqFeed'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
-check('/mod-center' in tpl, 'API-путь Центра в шаблоне')
+check('/mod-hq' in tpl, 'API-путь Центра в шаблоне')
 check('/member-card?user=' in tpl, 'из досье есть мост в карточку участника')
-check('mzUseInControl' in tpl, 'из досье есть мост в быстрые действия')
-check('mzCopy' in tpl, 'копирование ID из досье')
+check('hqUseInControl' in tpl, 'из досье есть мост в быстрые действия')
+check('hqCopy' in tpl, 'копирование ID из досье')
 import services.panel_menu as PM
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
-check('/mod-center' in paths, 'пункт меню «Центр модерации» есть')
+check('/mod-hq' in paths, 'пункт меню «Штаб модерации» есть')
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
-check('/mod-center' in mod_pages, 'пункт в группе «Модерация»')
-check('/mod-center' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
+check('/mod-hq' in mod_pages, 'пункт в группе «Модерация»')
+check('/mod-hq' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check('mod_center_panel' in ext, 'модуль Центра зарегистрирован в routes_extra')
+check('mod_hq_panel' in ext, 'модуль Штаба зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

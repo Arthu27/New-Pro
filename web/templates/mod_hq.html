@@ -1,0 +1,1243 @@
+{% extends "base.html" %}
+{% block title %}Штаб модерации — Панель Aether{% endblock %}
+{% block page_title %}Штаб модерации{% endblock %}
+{% block content %}
+<style>
+/* ════════════════════════════════════════════════════════════
+   ШТАБ — оперативный HUD модерации. Другой язык: графит, сетка,
+   LED-статусы, моноширинные данные, угловые скобки, тикер.
+   ════════════════════════════════════════════════════════════ */
+.hq{
+  --hq-acc:var(--ac,#e0b04a); --hq-acc2:var(--ac-2,#f0cd7a);
+  --hq-danger:#f26d5f; --hq-warn:#f2a33c; --hq-info:#5b9bf0; --hq-ok:#46c07d;
+  --hq-t1:#eef0f3; --hq-t2:rgba(238,240,243,.8); --hq-t3:rgba(238,240,243,.44);
+  --hq-line:rgba(255,255,255,.10); --hq-line-soft:rgba(255,255,255,.055);
+  --hq-panel:rgba(255,255,255,.035);
+  --hq-mono:ui-monospace,'Cascadia Mono','JetBrains Mono',Consolas,monospace;
+  position:relative;font-variant-numeric:tabular-nums;
+}
+[data-theme="light"] .hq{
+  --hq-t1:#191b1f; --hq-t2:rgba(25,27,31,.82); --hq-t3:rgba(25,27,31,.48);
+  --hq-line:rgba(20,22,26,.14); --hq-line-soft:rgba(20,22,26,.08);
+  --hq-panel:rgba(255,255,255,.72);
+}
+/* фоновая сетка штаба */
+.hq::before{content:"";position:absolute;left:-14px;right:-14px;top:-10px;bottom:0;z-index:-1;pointer-events:none;
+  background:
+   repeating-linear-gradient(0deg,transparent 0 34px,rgba(255,255,255,.022) 34px 35px),
+   repeating-linear-gradient(90deg,transparent 0 34px,rgba(255,255,255,.022) 34px 35px),
+   radial-gradient(900px 300px at 18% -4%,var(--ac-soft,rgba(224,176,74,.09)),transparent 65%);
+  border-radius:14px}
+[data-theme="light"] .hq::before{background:
+   repeating-linear-gradient(0deg,transparent 0 34px,rgba(20,22,26,.045) 34px 35px),
+   repeating-linear-gradient(90deg,transparent 0 34px,rgba(20,22,26,.045) 34px 35px),
+   radial-gradient(900px 300px at 18% -4%,rgba(224,176,74,.12),transparent 65%)}
+.hq ::selection{background:var(--ac-soft,rgba(224,176,74,.28))}
+
+/* ── Командная панель ───────────────────────────────────────── */
+.hq-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;border:1px solid var(--hq-line);border-radius:10px;background:var(--hq-panel);padding:10px 16px;margin:4px 0 12px;position:relative}
+.hq-top::before,.hq-top::after{content:"";position:absolute;width:14px;height:14px;border:2px solid var(--hq-acc);opacity:.65}
+.hq-top::before{left:-2px;top:-2px;border-right:none;border-bottom:none;border-radius:4px 0 0 0}
+.hq-top::after{right:-2px;bottom:-2px;border-left:none;border-top:none;border-radius:0 0 4px 0}
+.hq-title{display:flex;align-items:center;gap:10px;min-width:max-content}
+.hq-title i{color:var(--hq-acc);font-size:17px}
+.hq-title b{font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--hq-t1);font-weight:800}
+.hq-title small{font-family:var(--hq-mono);font-size:9px;letter-spacing:.18em;color:var(--hq-t3);text-transform:uppercase;display:block;margin-top:2px}
+.hq-leds{display:flex;gap:12px;align-items:center}
+.hq-led{display:flex;align-items:center;gap:6px;font-family:var(--hq-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--hq-t3)}
+.hq-led i{width:7px;height:7px;border-radius:50%}
+.hq-led.ok i{background:var(--hq-ok);box-shadow:0 0 8px var(--hq-ok)}
+.hq-led.warn i{background:var(--hq-warn);box-shadow:0 0 8px var(--hq-warn)}
+.hq-led.bad i{background:var(--hq-danger);box-shadow:0 0 8px var(--hq-danger);animation:hqBlink 1.4s ease-in-out infinite}
+@keyframes hqBlink{0%,100%{opacity:1}50%{opacity:.35}}
+.hq-clock{margin-left:auto;font-family:var(--hq-mono);font-size:13px;color:var(--hq-acc2);letter-spacing:.14em;border:1px solid var(--hq-line);border-radius:8px;padding:5px 12px;background:rgba(0,0,0,.14)}
+[data-theme="light"] .hq-clock{background:rgba(20,22,26,.05)}
+.hq-find{display:flex;gap:7px}
+.hq-find input{width:190px;background:rgba(0,0,0,.16);border:1px solid var(--hq-line);border-radius:8px;color:var(--hq-t1);padding:7px 11px;font-family:var(--hq-mono);font-size:11.5px}
+[data-theme="light"] .hq-find input{background:rgba(20,22,26,.05)}
+.hq-find input:focus{outline:none;border-color:var(--hq-acc);box-shadow:0 0 0 3px var(--ac-soft,rgba(224,176,74,.14))}
+.hq-find button{border:1px solid var(--hq-acc);background:transparent;color:var(--hq-acc);border-radius:8px;padding:0 12px;cursor:pointer;transition:all .15s ease}
+.hq-find button:hover{background:var(--ac-soft,rgba(224,176,74,.14))}
+
+/* ── Каркас ─────────────────────────────────────────────────── */
+.hq-body{display:grid;grid-template-columns:56px minmax(0,1fr) 330px;gap:12px;align-items:start}
+.hq-body.no-ctx{grid-template-columns:56px minmax(0,1fr)}
+@media (max-width:1180px){.hq-body,.hq-body.no-ctx{grid-template-columns:56px minmax(0,1fr)}.hq-ctx{grid-column:1/-1;position:static}}
+@media (max-width:760px){.hq-body,.hq-body.no-ctx{grid-template-columns:1fr}.hq-rail{flex-direction:row !important;position:static !important;overflow-x:auto}}
+.hq-rail{display:flex;flex-direction:column;gap:6px;position:sticky;top:92px;z-index:40;padding:8px 6px;border:1px solid var(--hq-line);border-radius:10px;background:var(--hq-panel)}
+.hq-rbtn{position:relative;min-width:44px;height:46px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--hq-t3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-size:14px;transition:all .15s ease}
+.hq-rbtn small{font-size:6.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;font-family:var(--hq-mono)}
+.hq-rbtn:hover{color:var(--hq-t1);background:rgba(255,255,255,.05)}
+.hq-rbtn.on{color:#171a1f;background:linear-gradient(135deg,var(--hq-acc2),var(--hq-acc));box-shadow:0 5px 16px var(--ac-glow,rgba(224,176,74,.3))}
+.hq-rbtn .dot{position:absolute;top:-2px;right:-2px;min-width:15px;height:15px;border-radius:99px;background:var(--hq-danger);color:#fff;font-family:var(--hq-mono);font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 3px}
+.hq-rbtn .dot.amber{background:var(--hq-warn);color:#241a02}
+.hq-main{min-width:0}
+.hq-fade{animation:hqIn .25s ease}
+@keyframes hqIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── Блоки с угловыми скобками ──────────────────────────────── */
+.hq-block{position:relative;border:1px solid var(--hq-line);border-radius:10px;background:var(--hq-panel);padding:14px 16px;margin-bottom:12px}
+.hq-block::before,.hq-block::after{content:"";position:absolute;width:12px;height:12px;border:2px solid var(--hq-acc);opacity:.5;pointer-events:none}
+.hq-block::before{left:-1px;top:-1px;border-right:none;border-bottom:none;border-radius:3px 0 0 0}
+.hq-block::after{right:-1px;bottom:-1px;border-left:none;border-top:none;border-radius:0 0 3px 0}
+.hq-block > header{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.hq-block > header i{color:var(--hq-acc);font-size:12px;width:14px;text-align:center}
+.hq-block > header b{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--hq-t2);font-weight:800}
+.hq-block > header .meta{margin-left:auto;display:flex;gap:7px;align-items:center}
+
+/* ── Лента происшествий ─────────────────────────────────────── */
+.hq-item{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 8px;border-bottom:1px solid var(--hq-line-soft);cursor:pointer;border-radius:8px;transition:background .13s ease,transform .13s ease}
+.hq-item:last-child{border-bottom:none}
+.hq-item:hover{background:rgba(255,255,255,.045);transform:translateX(3px)}
+[data-theme="light"] .hq-item:hover{background:rgba(20,22,26,.04)}
+.hq-item.on{background:var(--ac-soft,rgba(224,176,74,.1));box-shadow:inset 0 0 0 1px var(--ac-line,rgba(224,176,74,.35))}
+.hq-led2{width:8px;height:8px;border-radius:50%}
+.hq-led2.s1{background:var(--hq-danger);box-shadow:0 0 9px var(--hq-danger);animation:hqBlink 1.4s infinite}
+.hq-led2.s2{background:var(--hq-warn);box-shadow:0 0 8px var(--hq-warn)}
+.hq-led2.s3{background:var(--hq-info);box-shadow:0 0 8px var(--hq-info)}
+.hq-led2.s0{background:var(--hq-ok);box-shadow:0 0 8px var(--hq-ok)}
+.hq-tag{font-family:var(--hq-mono);font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--hq-line);border-radius:5px;padding:3px 7px;color:var(--hq-t3);white-space:nowrap}
+.hq-tag.hot{color:var(--hq-danger);border-color:rgba(242,109,95,.4)}
+.hq-tag.gold{color:var(--hq-acc);border-color:var(--ac-line,rgba(224,176,74,.35))}
+.hq-who b{display:block;font-size:12.5px;font-weight:650;color:var(--hq-t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hq-who small{display:block;font-size:10.5px;color:var(--hq-t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.hq-when{font-family:var(--hq-mono);font-size:10.5px;font-weight:700;color:var(--hq-acc2);white-space:nowrap}
+.hq-when.hot{color:var(--hq-danger)}
+.hq-when.dim{color:var(--hq-t3);font-weight:500}
+.hq-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.hq-chip{font-family:var(--hq-mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--hq-t3);border:1px solid var(--hq-line);border-radius:999px;background:transparent;padding:4px 12px;cursor:pointer;transition:all .14s ease}
+.hq-chip:hover{color:var(--hq-t1);border-color:var(--hq-acc)}
+.hq-chip.on{color:#171a1f;background:linear-gradient(135deg,var(--hq-acc2),var(--hq-acc));border-color:transparent}
+
+/* ── Контекст-панель (досье) ────────────────────────────────── */
+.hq-ctx{position:sticky;top:92px;max-height:calc(100vh - 108px);overflow:auto;border:1px solid var(--hq-line);border-radius:10px;background:var(--hq-panel);padding:14px 15px}
+.hq-ctx::-webkit-scrollbar{width:7px}
+.hq-ctx::-webkit-scrollbar-thumb{background:rgba(128,130,135,.3);border-radius:99px}
+.hq-ctx-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.hq-ctx-head b{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--hq-t2);font-weight:800}
+.hq-ctx-head button{margin-left:auto;background:none;border:1px solid var(--hq-line);color:var(--hq-t3);border-radius:6px;font-size:11px;padding:2px 8px;cursor:pointer}
+.hq-ctx-head button:hover{color:var(--hq-danger);border-color:rgba(242,109,95,.4)}
+
+/* ── Тикер ──────────────────────────────────────────────────── */
+.hq-ticker{display:flex;gap:0;align-items:center;border:1px solid var(--hq-line);border-radius:10px;background:var(--hq-panel);padding:9px 16px;margin-top:2px;flex-wrap:wrap}
+.hq-tk{display:flex;align-items:baseline;gap:7px;padding:0 16px;border-left:1px solid var(--hq-line-soft)}
+.hq-tk:first-child{border-left:none;padding-left:0}
+.hq-tk b{font-family:var(--hq-mono);font-size:16px;font-weight:700;color:var(--hq-t1)}
+.hq-tk b.hot{color:var(--hq-danger)}
+.hq-tk b.gold{color:var(--hq-acc2)}
+.hq-tk span{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--hq-t3);font-weight:700}
+
+/* ── Общие элементы данных ──────────────────────────────────── */
+.hq-row{display:grid;grid-template-columns:1fr auto;gap:3px 11px;align-items:center;padding:9px 8px;border-bottom:1px solid var(--hq-line-soft)}
+.hq-row:last-child{border-bottom:none}
+.hq-row.tri{grid-template-columns:64px minmax(0,1fr) auto}
+.hq-row.click{cursor:pointer;border-radius:8px;transition:background .13s ease,transform .13s ease}
+.hq-row.click:hover{background:rgba(255,255,255,.045);transform:translateX(3px)}
+[data-theme="light"] .hq-row.click:hover{background:rgba(20,22,26,.04)}
+.hq-badge{display:inline-flex;align-items:center;justify-content:center;width:64px;font-family:var(--hq-mono);font-size:8.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;border-radius:5px;padding:4px 6px;border:1px solid var(--hq-line);color:var(--hq-t3);white-space:nowrap;overflow:hidden}
+.hq-badge.k-mute{color:var(--hq-warn);border-color:rgba(242,163,60,.4)}
+.hq-badge.k-ban{color:var(--hq-danger);border-color:rgba(242,109,95,.4)}
+.hq-badge.k-vmute{color:var(--hq-info);border-color:rgba(91,155,240,.4)}
+.hq-badge.k-kick{color:#f2823c;border-color:rgba(242,130,60,.4)}
+.hq-badge.k-lift{color:var(--hq-ok);border-color:rgba(70,192,125,.4)}
+.hq-mini{font-family:var(--hq-mono);font-size:10.5px;font-weight:700;color:var(--hq-t3);border:1px solid var(--hq-line);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.hq-mini.hot{color:var(--hq-danger);border-color:rgba(242,109,95,.4)}
+.hq-mini.ok{color:var(--hq-ok);border-color:rgba(70,192,125,.4)}
+.hq-mini.gold{color:var(--hq-acc);border-color:var(--ac-line,rgba(224,176,74,.4))}
+.hq-time{font-family:var(--hq-mono);font-size:10.5px;font-weight:700;color:var(--hq-acc2);white-space:nowrap}
+.hq-time.hot{color:var(--hq-danger)}
+.hq-time.dim{color:var(--hq-t3);font-weight:500}
+.hq-track{height:4px;border-radius:99px;background:var(--hq-line);overflow:hidden;margin-top:6px}
+.hq-track i{display:block;height:100%;background:linear-gradient(90deg,var(--hq-acc2),var(--hq-acc))}
+.hq-track.hot i{background:linear-gradient(90deg,#f79a8e,var(--hq-danger))}
+.hq-dotst{width:9px;height:9px;border-radius:50%;display:inline-block}
+.hq-dotst.ok{background:var(--hq-ok);box-shadow:0 0 8px var(--hq-ok)}
+.hq-dotst.warn{background:var(--hq-warn);box-shadow:0 0 8px var(--hq-warn)}
+.hq-dotst.missing{background:var(--hq-danger);box-shadow:0 0 8px var(--hq-danger)}
+.hq-empty{padding:22px 12px;text-align:center;color:var(--hq-t3);font-size:12px;border:1px dashed var(--hq-line);border-radius:8px;line-height:1.6}
+.hq-empty i{display:block;font-size:18px;color:var(--hq-acc);margin-bottom:7px;opacity:.8}
+.hq-note{padding:8px 7px;border-bottom:1px solid var(--hq-line-soft);font-size:12px;color:var(--hq-t2)}
+.hq-note:last-child{border-bottom:none}
+.hq-note small{display:block;font-size:10.5px;color:var(--hq-t3);margin-top:2px}
+.hq-sect{font-family:var(--hq-mono);font-size:8.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--hq-t3);margin:12px 0 5px}
+.hq-form{display:flex;gap:8px;flex-wrap:wrap}
+.hq-form input{flex:1;min-width:130px;background:rgba(0,0,0,.16);border:1px solid var(--hq-line);border-radius:8px;color:var(--hq-t1);padding:8px 11px;font-size:12px}
+[data-theme="light"] .hq-form input{background:rgba(20,22,26,.05)}
+.hq-form input:focus{outline:none;border-color:var(--hq-acc);box-shadow:0 0 0 3px var(--ac-soft,rgba(224,176,74,.14))}
+.hq-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hq-acc);background:transparent;color:var(--hq-acc);border-radius:8px;padding:7px 13px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;transition:all .15s ease}
+.hq-btn:hover{background:var(--ac-soft,rgba(224,176,74,.14));transform:translateY(-1px)}
+.hq-btn.red{border-color:rgba(242,109,95,.5);color:var(--hq-danger)}
+.hq-btn.red:hover{background:rgba(242,109,95,.1)}
+.hq-btn.solid{background:linear-gradient(135deg,var(--hq-acc2),var(--hq-acc));color:#171a1f;border-color:transparent}
+.hq-qchip{display:inline-flex;align-items:center;gap:7px;height:26px;font-size:11px;color:var(--hq-t2);background:rgba(255,255,255,.04);border:1px solid var(--hq-line);border-radius:999px;padding:0 9px 0 12px;margin:3px 5px 3px 0;max-width:100%}
+.hq-qchip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hq-qchip button{background:none;border:none;color:var(--hq-t3);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:6px}
+.hq-qchip button:hover{color:var(--hq-danger)}
+.hq-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.hq-grid2.wide{grid-template-columns:1.45fr 1fr}
+@media (max-width:900px){.hq-grid2,.hq-grid2.wide{grid-template-columns:1fr}}
+.hq-spark{width:100%;display:block;overflow:visible}
+.hq-spark .area{fill:url(#hqGrad);opacity:.9}
+.hq-spark .line{fill:none;stroke:var(--hq-acc);stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:420;stroke-dashoffset:420;animation:hqDraw 1.1s .1s ease forwards}
+@keyframes hqDraw{to{stroke-dashoffset:0}}
+.hq-spark .dot{fill:var(--hq-acc2)}
+.hq-spark .lbl{fill:var(--hq-t3);font-family:var(--hq-mono);font-size:8px}
+.hq-eff{display:grid;grid-template-columns:1fr repeat(3,52px);gap:5px 13px;align-items:center;padding:8px 7px;border-bottom:1px solid var(--hq-line-soft)}
+.hq-eff:last-child{border-bottom:none}
+.hq-eff.head{font-family:var(--hq-mono);font-size:8.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--hq-t3);font-weight:800}
+.hq-eff .v{font-family:var(--hq-mono);font-size:12px;font-weight:800;color:var(--hq-t2);text-align:right}
+.hq-eff .v.dim{color:var(--hq-t3);font-weight:500}
+.hq-eff.total{background:rgba(255,255,255,.03);border-radius:6px}
+.hq-stairs{display:flex;align-items:flex-end;gap:10px;padding:8px 2px 0}
+.hq-stair{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;min-width:0}
+.hq-stair i{display:block;border-radius:4px 4px 2px 2px;background:linear-gradient(180deg,var(--hq-acc2),var(--hq-acc))}
+.hq-stair b{font-family:var(--hq-mono);font-size:10.5px;font-weight:800;color:var(--hq-t1);text-align:center}
+.hq-stair span{font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--hq-t3);text-align:center;font-weight:700;white-space:nowrap;overflow:hidden}
+.hq-predict{display:none;margin-top:10px;border:1px dashed var(--ac-line,rgba(224,176,74,.45));border-radius:8px;padding:9px 12px;font-size:11.5px;color:var(--hq-t2)}
+.hq-predict i{color:var(--hq-acc);margin-right:7px}
+.hq-predict.warn-hot{border-color:rgba(242,109,95,.5)}
+.hq-predict.warn-hot i{color:var(--hq-danger)}
+
+/* ── Уведомления штаба ──────────────────────────────────────── */
+.hq-notes{position:fixed;top:14px;right:14px;z-index:9500;display:flex;flex-direction:column;gap:9px;width:min(340px,90vw)}
+.hq-ncard{display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:center;background:var(--hq-panel);backdrop-filter:blur(14px);border:1px solid var(--hq-line);border-left:3px solid var(--hq-acc);border-radius:10px;padding:11px 13px;box-shadow:0 14px 40px rgba(0,0,0,.4);animation:hqPop .3s cubic-bezier(.34,1.45,.64,1)}
+.hq-ncard.ok{border-left-color:var(--hq-ok)}
+.hq-ncard.err{border-left-color:var(--hq-danger)}
+.hq-ncard i{color:var(--hq-acc);font-size:15px}
+.hq-ncard.ok i{color:var(--hq-ok)}
+.hq-ncard.err i{color:var(--hq-danger)}
+.hq-ncard b{display:block;font-size:12px;font-weight:750;color:var(--hq-t1)}
+.hq-ncard small{display:block;font-size:10.5px;color:var(--hq-t3);margin-top:2px}
+.hq-ncard button{background:none;border:1px solid var(--hq-line);color:var(--hq-t2);border-radius:6px;font-size:10px;font-weight:700;padding:5px 9px;cursor:pointer}
+.hq-ncard button:hover{border-color:var(--hq-acc);color:var(--hq-acc)}
+@keyframes hqPop{from{opacity:0;transform:translateX(26px) scale(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.hq *{animation:none !important;transition:none !important}}
+</style>
+
+<div class="hq">
+  <div class="hq-top">
+    <div class="hq-title">
+      <i class="fas fa-broadcast-tower"></i>
+      <div><b>Штаб модерации</b><small>incident ops · live feed</small></div>
+    </div>
+    <div class="hq-leds">
+      <span class="hq-led ok" id="hqLedSys"><i></i>система</span>
+      <span class="hq-led" id="hqLedThreat"><i></i>угрозы</span>
+    </div>
+    <div class="hq-clock" id="hqClock">--:--:--</div>
+    <div class="hq-find">
+      <input id="hqFind" maxlength="24" placeholder="ID → досье [Enter]" onkeydown="if(event.key==='Enter')hqFindGo()">
+      <button onclick="hqFindGo()" title="Открыть досье"><i class="fas fa-crosshairs"></i></button>
+    </div>
+  </div>
+
+  <div class="hq-body no-ctx" id="hqBody">
+    <nav class="hq-rail">
+      <button class="hq-rbtn on" data-tab="feed" onclick="hqTab('feed')" title="Лента происшествий"><i class="fas fa-satellite-dish"></i><small>Лента</small><span class="dot" id="hqDotFeed" style="display:none"></span></button>
+      <button class="hq-rbtn" data-tab="control" onclick="hqTab('control')" title="Быстрые действия"><i class="fas fa-sliders"></i><small>Контроль</small><span class="dot amber" id="hqDotControl" style="display:none"></span></button>
+      <button class="hq-rbtn" data-tab="journal" onclick="hqTab('journal')" title="Журнал сервера"><i class="fas fa-clipboard-list"></i><small>Журнал</small></button>
+      <button class="hq-rbtn" data-tab="warns" onclick="hqTab('warns')" title="Варны"><i class="fas fa-triangle-exclamation"></i><small>Варны</small><span class="dot amber" id="hqDotWarns" style="display:none"></span></button>
+      <button class="hq-rbtn" data-tab="temp" onclick="hqTab('temp')" title="Временные наказания"><i class="fas fa-clock"></i><small>Время</small><span class="dot" id="hqDotTemp" style="display:none"></span></button>
+      <button class="hq-rbtn" data-tab="shield" onclick="hqTab('shield')" title="Щит: защиты сервера"><i class="fas fa-shield-halved"></i><small>Щит</small></button>
+      <button class="hq-rbtn" data-tab="proofs" onclick="hqTab('proofs')" title="Демки"><i class="fas fa-folder-open"></i><small>Демки</small></button>
+      <button class="hq-rbtn" data-tab="appeals" onclick="hqTab('appeals')" title="Апелляции"><i class="fas fa-scale-balanced"></i><small>Апелл</small></button>
+      <button class="hq-rbtn" data-tab="stats" onclick="hqTab('stats')" title="Аналитика"><i class="fas fa-chart-line"></i><small>Аналит</small></button>
+      <button class="hq-rbtn" data-tab="history" onclick="hqTab('history')" title="История кар"><i class="fas fa-clock-rotate-left"></i><small>История</small></button>
+      <button class="hq-rbtn" data-tab="dossier" onclick="hqTab('dossier')" title="Под приглядом"><i class="fas fa-users-viewfinder"></i><small>Досье</small></button>
+    </nav>
+
+    <main class="hq-main">
+
+      <div id="hqPane-feed">
+        <div class="hq-block">
+          <header><i class="fas fa-rss"></i><b>Лента происшествий</b>
+            <div class="meta"><span class="hq-mini" id="hqFeedOff">0</span></div></header>
+          <div class="hq-chips" id="hqFeedChips"></div>
+          <div id="hqFeed"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+        </div>
+      </div>
+
+      <div id="hqPane-control" style="display:none">
+        <div class="hq-grid2">
+          <div>
+            <div class="hq-block">
+              <header><i class="fas fa-gavel"></i><b>Быстрые действия</b></header>
+              <div id="hqWarnBody">
+                <div class="hq-form">
+                  <input id="hqWarnId" maxlength="24" placeholder="ID или @упоминание" oninput="hqPredictQueue()">
+                  <input id="hqWarnText" maxlength="200" placeholder="Причина">
+                </div>
+                <div class="hq-predict" id="hqPredict"></div>
+                <div id="hqWarnChips" style="margin-top:7px"></div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:11px">
+                  <button class="hq-btn red" onclick="hqWarnAsk()"><i class="fas fa-gavel"></i> Варн</button>
+                  <button class="hq-btn" onclick="hqUnwarnAsk()"><i class="fas fa-rotate-left"></i> Снять варн</button>
+                  <button class="hq-btn" onclick="hqAmnestyAsk()"><i class="fas fa-dove"></i> Амнистия</button>
+                </div>
+              </div>
+              <div id="hqWarnDenied" style="display:none;font-size:11px;color:var(--hq-t3)">Действия доступны администраторам.</div>
+            </div>
+            <div class="hq-block">
+              <header><i class="fas fa-triangle-exclamation"></i><b>На грани авто-наказания</b>
+                <div class="meta"><a class="hq-btn" href="/api/guild/{{ guild_id }}/mod-hq/warns.csv"><i class="fas fa-file-csv"></i> CSV</a></div></header>
+              <div class="hq-form" style="margin-bottom:9px"><input id="hqRiskSearch" placeholder="Поиск по имени или ID" oninput="renderRisk()"></div>
+              <div id="hqRisk"><div class="sk-row"></div></div>
+            </div>
+            <div class="hq-block">
+              <header><i class="fas fa-bolt"></i><b>Быстрые причины</b></header>
+              <div class="hq-chips" id="hqKindTabs"></div>
+              <div id="hqReasons"><div class="sk-row" style="width:60%"></div></div>
+              <div id="hqReasonForm" style="display:none">
+                <div class="hq-form" style="margin-top:10px">
+                  <input id="hqReasonText" maxlength="120" placeholder="Новая причина">
+                  <button class="hq-btn" onclick="hqReasonAdd()"><i class="fas fa-plus"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="hq-block">
+              <header><i class="fas fa-dove"></i><b>Амнистии</b><div class="meta"><span class="hq-mini" id="hqAmnOff">0</span></div></header>
+              <div id="hqAmnesty"><div class="sk-row" style="width:65%"></div></div>
+            </div>
+            <div class="hq-block">
+              <header><i class="fas fa-clipboard-user"></i><b>Журнал панели</b></header>
+              <div id="hqPanelLog"><div class="sk-row" style="width:60%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="hqPane-journal" style="display:none">
+        <div class="hq-block">
+          <header><i class="fas fa-clipboard-list"></i><b>Журнал сервера</b><div class="meta"><span class="hq-mini" id="hqJournalOff">0</span></div></header>
+          <div class="hq-form" style="margin-bottom:9px">
+            <input id="hqJournalSearch" placeholder="Поиск: имя, причина, канал" oninput="hqJournalReload()">
+            <input id="hqJournalMod" placeholder="Модератор" oninput="hqJournalReload()">
+          </div>
+          <div class="hq-chips" id="hqJournalCats"></div>
+          <div id="hqJournal"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+        </div>
+      </div>
+
+      <div id="hqPane-warns" style="display:none">
+        <div class="hq-grid2 wide">
+          <div class="hq-block">
+            <header><i class="fas fa-triangle-exclamation"></i><b>Варны по участникам</b><div class="meta"><span class="hq-mini" id="hqWarnsOff">0</span></div></header>
+            <div class="hq-form" style="margin-bottom:9px"><input id="hqWarnsSearch" placeholder="Поиск по имени или ID" oninput="renderWarnsList()"></div>
+            <div id="hqWarnsList"><div class="sk-row"></div></div>
+          </div>
+          <div>
+            <div class="hq-block">
+              <header><i class="fas fa-stairs"></i><b>Лестница порогов</b></header>
+              <div id="hqSteps"></div>
+            </div>
+            <div class="hq-block">
+              <header><i class="fas fa-toolbox"></i><b>Инструменты</b></header>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="hq-btn" onclick="hqTab('control')"><i class="fas fa-gavel"></i> Выдать варн</button>
+                <a class="hq-btn" href="/api/guild/{{ guild_id }}/mod-hq/warns.csv"><i class="fas fa-file-csv"></i> CSV варнов</a>
+                <a class="hq-btn" href="/warn-config"><i class="fas fa-stairs"></i> Пороги</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="hqPane-temp" style="display:none">
+        <div class="hq-grid2 wide">
+          <div class="hq-block">
+            <header><i class="fas fa-clock"></i><b>Активные временные наказания</b><div class="meta"><span class="hq-mini" id="hqTempOff">0</span>
+              <a class="hq-btn" href="/api/guild/{{ guild_id }}/mod-hq/radar.csv"><i class="fas fa-file-csv"></i> CSV</a></div></header>
+            <div id="hqTempFull"><div class="sk-row"></div></div>
+          </div>
+          <div class="hq-block">
+            <header><i class="fas fa-layer-group"></i><b>Сводка истечений</b></header>
+            <div id="hqTempCounts"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="hqPane-shield" style="display:none">
+        <div class="hq-grid2">
+          <div class="hq-block">
+            <header><i class="fas fa-shield-halved"></i><b>Защиты сервера</b></header>
+            <div id="hqShield"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+          </div>
+          <div>
+            <div class="hq-block">
+              <header><i class="fas fa-house-lock"></i><b>Локдаун</b></header>
+              <div id="hqLockdown"><div class="sk-row" style="width:60%"></div></div>
+            </div>
+            <div class="hq-block">
+              <header><i class="fas fa-toolbox"></i><b>Настройки защит</b></header>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <a class="hq-btn" href="/autofilter"><i class="fas fa-filter"></i> Автофильтр</a>
+                <a class="hq-btn" href="/antiraid"><i class="fas fa-shield-virus"></i> Анти-рейд</a>
+                <a class="hq-btn" href="/security"><i class="fas fa-user-shield"></i> Безопасность</a>
+                <a class="hq-btn" href="/lockdown"><i class="fas fa-house-lock"></i> Локдаун</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="hqPane-proofs" style="display:none">
+        <div class="hq-block">
+          <header><i class="fas fa-folder-open"></i><b>Демки модерации</b>
+            <div class="meta"><span class="hq-mini" id="hqProofsOff">0</span><a class="hq-btn" href="/proofs">Галерея</a></div></header>
+          <div id="hqProofs"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+        </div>
+      </div>
+
+      <div id="hqPane-appeals" style="display:none">
+        <div class="hq-block">
+          <header><i class="fas fa-scale-balanced"></i><b>Апелляции</b>
+            <div class="meta"><span class="hq-mini" id="hqAppealsOff">0</span><a class="hq-btn" href="/appeals">Полный раздел</a></div></header>
+          <div class="hq-chips" id="hqAppealStats"></div>
+          <div id="hqAppeals"><div class="sk-row"></div></div>
+        </div>
+      </div>
+
+      <div id="hqPane-stats" style="display:none">
+        <div class="hq-chips" id="hqDaysTabs" style="margin-bottom:10px"></div>
+        <div class="hq-grid2 wide">
+          <div>
+            <div class="hq-block">
+              <header><i class="fas fa-rotate"></i><b>Эффективность наказаний</b></header>
+              <div id="hqEffect"><div class="sk-row"></div></div>
+            </div>
+            <div class="hq-block">
+              <header><i class="fas fa-chart-column"></i><b>Тренд кар</b><div class="meta"><span class="hq-mini" id="hqTrendOff"></span></div></header>
+              <div id="hqTrend"><div class="sk-row" style="height:66px"></div></div>
+            </div>
+          </div>
+          <div class="hq-block">
+            <header><i class="fas fa-people-group"></i><b>Команда</b><div class="meta"><span class="hq-mini" id="hqTeamOff">0</span></div></header>
+            <div id="hqTeam"><div class="sk-row" style="width:70%"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="hqPane-history" style="display:none">
+        <div class="hq-block">
+          <header><i class="fas fa-clock-rotate-left"></i><b>История кар и снятий</b><div class="meta"><span class="hq-mini" id="hqHistoryOff">0</span></div></header>
+          <div id="hqHistory"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>
+        </div>
+      </div>
+
+      <div id="hqPane-dossier" style="display:none">
+        <div class="hq-block">
+          <header><i class="fas fa-users-viewfinder"></i><b>Под приглядом</b><div class="meta"><span class="hq-mini" id="hqSubjectsOff">0</span></div></header>
+          <div class="hq-form" style="margin-bottom:9px"><input id="hqSubjectsSearch" placeholder="Поиск по имени или ID" oninput="renderSubjects()"></div>
+          <div id="hqSubjects"><div class="sk-row"></div></div>
+        </div>
+      </div>
+
+      <div class="hq-ticker" id="hqTicker"></div>
+    </main>
+
+    <aside class="hq-ctx" id="hqCtx" style="display:none">
+      <div class="hq-ctx-head">
+        <i class="fas fa-id-card" style="color:var(--hq-acc)"></i><b>Досье</b>
+        <button onclick="hqCloseCtx()" title="Закрыть (Esc)"><i class="fas fa-xmark"></i></button>
+      </div>
+      <div id="hqDossier">
+        <div class="hq-empty"><i class="fas fa-folder-open"></i>Выберите участника в ленте</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="hq-notes" id="hqNotes"></div>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="hqGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#f0cd7a"></stop><stop offset="100%" stop-color="#e0b04a" stop-opacity=".5"></stop>
+  </linearGradient>
+</defs></svg>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/mod-hq';
+var OV = null, CAN = false, DAYS = 90, KIND = 'warn', FEED_F = 'all', PICKED = null;
+var TDATA = { journal: null, warns: null, temp: null, history: null, shield: null, proofs: null, appeals: null };
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+function fmtDate(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var p = function (v) { return String(v).padStart(2, '0'); };
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function fmtAgo(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var s = Math.max(0, (Date.now() - d.getTime()) / 1000);
+  if (s < 60) return 'только что';
+  if (s < 3600) return Math.floor(s / 60) + ' мин назад';
+  if (s < 86400) return Math.floor(s / 3600) + ' ч назад';
+  var days = Math.floor(s / 86400);
+  return days + ' ' + plural(days, 'день', 'дня', 'дней') + ' назад';
+}
+function fmtLeft(sec) {
+  var s = Math.abs(sec);
+  var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  var t = d > 0 ? d + 'д ' + h + 'ч' : (h > 0 ? h + 'ч ' + m + 'м' : Math.max(m, s > 30 ? 1 : 0) + 'м');
+  return sec < 0 ? 'просрочено ' + t : 'ещё ' + t;
+}
+function hqNotify(title, body, kind, icon, undoFn) {
+  var stack = document.getElementById('hqNotes');
+  var el = document.createElement('div');
+  el.className = 'hq-ncard ' + (kind || '');
+  el.innerHTML = '<i class="fas ' + (icon || 'fa-circle-info') + '"></i>' +
+    '<div><b>' + esc(title) + '</b>' + (body ? '<small>' + esc(body) + '</small>' : '') + '</div>' +
+    (undoFn ? '<button>Откатить</button>' : '');
+  if (undoFn) el.querySelector('button').onclick = function () { undoFn(); el.remove(); };
+  stack.appendChild(el);
+  setTimeout(function () { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; }, 6100);
+  setTimeout(function () { el.remove(); }, 6600);
+}
+
+/* часы штаба */
+setInterval(function () {
+  var el = document.getElementById('hqClock');
+  if (el) {
+    var d = new Date(), p = function (v) { return String(v).padStart(2, '0'); };
+    el.textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+}, 1000);
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') hqCloseCtx();
+});
+
+/* ── Навигация ──────────────────────────────────────────────── */
+function hqTab(name) {
+  var panes = ['feed', 'control', 'journal', 'warns', 'temp', 'shield', 'proofs', 'appeals', 'stats', 'history', 'dossier'];
+  for (var i = 0; i < panes.length; i++) {
+    document.getElementById('hqPane-' + panes[i]).style.display = panes[i] === name ? '' : 'none';
+  }
+  var btns = document.querySelectorAll('.hq-rail .hq-rbtn');
+  for (var j = 0; j < btns.length; j++) {
+    btns[j].className = 'hq-rbtn' + (btns[j].getAttribute('data-tab') === name ? ' on' : '');
+  }
+  var pane = document.getElementById('hqPane-' + name);
+  if (pane) { pane.classList.remove('hq-fade'); void pane.offsetWidth; pane.classList.add('hq-fade'); }
+  if (name === 'journal' && !TDATA.journal) hqLoadJournal();
+  if (name === 'warns' && !TDATA.warns) hqLoadWarns();
+  if (name === 'temp' && !TDATA.temp) hqLoadTemp();
+  if (name === 'history' && !TDATA.history) hqLoadHistory();
+  if (name === 'shield' && !TDATA.shield) hqLoadShield();
+  if (name === 'proofs' && !TDATA.proofs) hqLoadProofs();
+  if (name === 'appeals' && !TDATA.appeals) hqLoadAppeals();
+}
+
+/* ── Контекст-панель ────────────────────────────────────────── */
+function hqOpenCtx() {
+  document.getElementById('hqCtx').style.display = '';
+  var b = document.getElementById('hqBody');
+  b.className = b.className.replace(' no-ctx', '');
+}
+function hqCloseCtx() {
+  document.getElementById('hqCtx').style.display = 'none';
+  var b = document.getElementById('hqBody');
+  if (b.className.indexOf('no-ctx') === -1) b.className += ' no-ctx';
+  PICKED = null;
+  if (OV) { renderFeed(); renderSubjects(); }
+}
+function hqFromAny(uid) {
+  PICKED = uid;
+  hqOpenCtx();
+  if (OV) { renderFeed(); renderSubjects(); }
+  hqDossier(uid);
+}
+function hqFindGo() {
+  var v = document.getElementById('hqFind').value.trim();
+  if (v) hqFromAny(v);
+}
+
+/* ── Лента происшествий ─────────────────────────────────────── */
+var FEED_CHIPS = [['all', 'Все'], ['urgent', 'Срочно'], ['radar', 'Радар'], ['edge', 'На грани'], ['repeat', 'Повторы'], ['punish', 'Кары']];
+function renderFeedChips() {
+  document.getElementById('hqFeedChips').innerHTML = FEED_CHIPS.map(function (c) {
+    return '<button class="hq-chip' + (FEED_F === c[0] ? ' on' : '') + '" onclick="hqFeedSet(\'' + c[0] + '\')">' + c[1] + '</button>';
+  }).join('');
+}
+function hqFeedSet(f) { FEED_F = f; renderFeedChips(); renderFeed(); }
+
+function renderFeed() {
+  if (!OV) return;
+  var d = OV, items = [];
+  d.radar.rows.forEach(function (r) {
+    items.push({ f: r.remaining_s <= 0 ? ['urgent', 'radar'] : ['radar'],
+      led: r.remaining_s <= 0 ? 's1' : (r.remaining_s <= 21600 ? 's2' : 's3'),
+      tag: r.kind_name, hot: r.remaining_s <= 0,
+      title: r.name || ('#' + r.user_id), sub: r.reason || 'без причины',
+      when: fmtLeft(r.remaining_s), whenHot: r.remaining_s <= 0, uid: r.user_id });
+  });
+  d.risk.items.forEach(function (r) {
+    if (r.gap !== 1) return;
+    items.push({ f: ['urgent', 'edge'], led: 's2', tag: 'порог', hot: true,
+      title: r.name || ('#' + r.user_id),
+      sub: r.warns + '/' + r.next_count + ' варнов → ' + r.action_name,
+      when: '1 варн', whenHot: true, uid: r.user_id });
+  });
+  d.repeat.items.forEach(function (r) {
+    items.push({ f: ['repeat'], led: 's3', tag: 'повтор', hot: false,
+      title: r.name || ('ID ' + r.user_id),
+      sub: r.count + ' ' + plural(r.count, 'кара', 'кары', 'кар') + ' за ' + d.repeat.days + ' дн.',
+      when: fmtAgo(r.last_at), whenHot: false, uid: r.user_id });
+  });
+  d.recent.forEach(function (r) {
+    items.push({ f: ['punish'], led: r.kind === 'lift' ? 's0' : 's2', tag: r.action, hot: false,
+      title: r.name || ('#' + r.user_id),
+      sub: (r.reason || '—') + (r.mod_name ? ' · ' + r.mod_name : ''),
+      when: fmtAgo(r.at), whenHot: false, uid: r.user_id });
+  });
+  var order = { urgent: 0, radar: 1, edge: 2, repeat: 3, punish: 4 };
+  var rows = items.filter(function (it) { return FEED_F === 'all' || it.f.indexOf(FEED_F) !== -1; });
+  rows.sort(function (a, b) { return (order[a.f[0]] || 9) - (order[b.f[0]] || 9); });
+  rows = rows.slice(0, 40);
+  document.getElementById('hqFeedOff').textContent = rows.length;
+  var box = document.getElementById('hqFeed');
+  if (!rows.length) {
+    box.innerHTML = '<div class="hq-empty"><i class="fas fa-satellite-dish"></i>В эфире тихо</div>';
+    return;
+  }
+  box.innerHTML = rows.map(function (it) {
+    return '<div class="hq-item' + (PICKED === it.uid ? ' on' : '') + '" onclick="hqFromAny(\'' + esc(it.uid) + '\')">' +
+      '<span class="hq-led2 ' + it.led + '"></span>' +
+      '<span class="hq-tag' + (it.hot ? ' hot' : ' gold') + '">' + esc(it.tag) + '</span>' +
+      '<div class="hq-who"><b>' + esc(it.title) + '</b><small>' + esc(it.sub) + '</small></div>' +
+      '<span class="hq-when' + (it.whenHot ? ' hot' : ' dim') + '">' + esc(it.when) + '</span></div>';
+  }).join('');
+}
+
+/* ── Тикер ──────────────────────────────────────────────────── */
+function renderTicker(d) {
+  var c = d.radar.counts;
+  var tk = function (num, label, cls) {
+    return '<div class="hq-tk"><b class="' + (cls || '') + '">' + num + '</b><span>' + esc(label) + '</span></div>';
+  };
+  document.getElementById('hqTicker').innerHTML =
+    tk(d.warns_total, 'открытых варнов', d.warns_total ? 'gold' : '') +
+    tk(d.risk.edge, 'на волоске', d.risk.edge ? 'hot' : '') +
+    tk(c.overdue, 'просрочено', c.overdue ? 'hot' : '') +
+    tk(d.radar.active_total, 'активных кар') +
+    tk(d.recent7, 'кар за 7 дней') +
+    tk(d.team.total_mods, 'модераторов') +
+    tk(d.checklist.ok + '/' + d.checklist.total, 'готовность', 'gold');
+  var led = document.getElementById('hqLedThreat');
+  var bad = c.overdue + d.risk.edge;
+  led.className = 'hq-led ' + (bad ? 'bad' : 'ok');
+  led.innerHTML = '<i></i>' + (bad ? ('угрозы: ' + bad) : 'угроз нет');
+  var fd = document.getElementById('hqDotFeed');
+  fd.style.display = bad ? '' : 'none'; fd.textContent = bad;
+  var cd = document.getElementById('hqDotControl');
+  cd.style.display = d.risk.items.length ? '' : 'none'; cd.textContent = d.risk.items.length;
+}
+
+/* ── Контроль ───────────────────────────────────────────────── */
+function renderRisk() {
+  if (!OV) return;
+  var box = document.getElementById('hqRisk');
+  if (!OV.risk.tuned) {
+    box.innerHTML = '<div class="hq-empty"><i class="fas fa-stairs"></i>Пороги не заданы — <a class="hq-btn" href="/warn-config">настроить</a></div>';
+    return;
+  }
+  var q = (document.getElementById('hqRiskSearch').value || '').trim().toLowerCase();
+  var items = OV.risk.items.filter(function (r) {
+    return !q || (r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.user_id).indexOf(q) !== -1;
+  });
+  if (!items.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-face-smile"></i>Никого нет</div>'; return; }
+  box.innerHTML = items.map(function (r) {
+    var pct = Math.min(100, Math.round(100 * r.warns / r.next_count));
+    return '<div class="hq-row tri click" onclick="hqFromAny(\'' + esc(r.user_id) + '\')">' +
+      '<span class="hq-badge' + (r.gap === 1 ? ' k-ban' : '') + '">' + r.warns + '/' + r.next_count + '</span>' +
+      '<div class="hq-who"><b>' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>до «' + esc(r.action_name) + '»: ' + r.gap + '</small>' +
+      '<div class="hq-track' + (r.gap === 1 ? ' hot' : '') + '"><i style="width:' + pct + '%"></i></div></div>' +
+      '<span class="hq-time' + (r.gap === 1 ? ' hot' : '') + '">-' + r.gap + '</span></div>';
+  }).join('');
+}
+
+function renderReasons() {
+  if (!OV) return;
+  document.getElementById('hqKindTabs').innerHTML = OV.reason_kinds.map(function (k) {
+    var n = (OV.reasons[k.key] || []).length;
+    return '<button class="hq-chip' + (k.key === KIND ? ' on' : '') + '" onclick="hqKindSet(\'' + k.key + '\')">' + esc(k.label) + ' ' + n + '</button>';
+  }).join('');
+  var items = OV.reasons[KIND] || [];
+  var box = document.getElementById('hqReasons');
+  box.innerHTML = items.length ? items.map(function (it) {
+    var del = CAN ? '<button onclick="hqReasonDel(' + it.id + ')"><i class="fas fa-xmark"></i></button>' : '';
+    return '<span class="hq-qchip"><span>' + esc(it.text) + '</span>' + del + '</span>';
+  }).join('') : '<div class="hq-empty"><i class="fas fa-bolt"></i>Пусто</div>';
+  document.getElementById('hqReasonForm').style.display = CAN ? '' : 'none';
+  document.getElementById('hqWarnChips').innerHTML = (OV.reasons.warn || []).slice(0, 8).map(function (it) {
+    return '<span class="hq-qchip" style="cursor:pointer" onclick="hqChipFill(this)"><span>' + esc(it.text) + '</span></span>';
+  }).join('');
+}
+function hqKindSet(k) { KIND = k; renderReasons(); }
+function hqChipFill(el) { document.getElementById('hqWarnText').value = el.textContent; }
+
+var _pTimer = null;
+function hqPredictQueue() { clearTimeout(_pTimer); _pTimer = setTimeout(hqPredict, 350); }
+function hqPredict() {
+  var box = document.getElementById('hqPredict');
+  var raw = (document.getElementById('hqWarnId').value || '').trim();
+  if (!raw || !OV) { box.style.display = 'none'; return; }
+  fetch(API + '/dossier?user_id=' + encodeURIComponent(raw)).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { box.style.display = 'none'; return; }
+    var ds = d.dossier, txt, hot = false;
+    var name = ds.name || ('ID ' + ds.user_id);
+    if (!OV.risk.tuned) {
+      txt = '<i class="fas fa-circle-info"></i>' + esc(name) + ' · ' + ds.warns.count + ' варн. · пороги не настроены';
+    } else if (ds.warns.gap == null) {
+      txt = '<i class="fas fa-flag-checkered"></i>' + esc(name) + ' · последний порог пройден';
+    } else if (ds.warns.gap === 1) {
+      hot = true;
+      txt = '<i class="fas fa-triangle-exclamation"></i>' + esc(name) + ' · следующий варн включит «' + esc(ds.warns.action_name) + '»';
+    } else {
+      txt = '<i class="fas fa-circle-info"></i>' + esc(name) + ' · до «' + esc(ds.warns.action_name) + '» ещё ' + ds.warns.gap;
+    }
+    box.innerHTML = txt;
+    box.className = 'hq-predict' + (hot ? ' warn-hot' : '');
+    box.style.display = '';
+  }).catch(function () { box.style.display = 'none'; });
+}
+
+function renderAmnesty(d) {
+  document.getElementById('hqAmnOff').textContent = d.amnesty_total;
+  var box = document.getElementById('hqAmnesty');
+  if (!d.amnesty.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-dove"></i>Амнистий не было</div>'; return; }
+  box.innerHTML = d.amnesty.map(function (a) {
+    var tail = a.restored_at ? '<span class="hq-mini ok">откачена</span>'
+      : (CAN ? '<button class="hq-btn" onclick="hqAmnestyUndo(' + a.id + ')"><i class="fas fa-rotate-left"></i></button>'
+             : '<span class="hq-mini">активна</span>');
+    return '<div class="hq-row"><div class="hq-who"><b>#' + esc(a.user_id) + ' · ' + a.count + ' ' +
+      plural(a.count, 'варн', 'варна', 'варнов') + '</b><small>' + esc(a.by || '—') + ' · ' + esc(fmtAgo(a.at)) + '</small></div>' + tail + '</div>';
+  }).join('');
+}
+
+function renderPanelLog(d) {
+  var META = { warn: 'варн', unwarn: '-варн', amnesty: 'амнистия', amnesty_undo: 'откат', reason_add: '+причина', reason_del: '-причина' };
+  var box = document.getElementById('hqPanelLog');
+  if (!d.panel_log.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-clipboard-user"></i>Операций нет</div>'; return; }
+  box.innerHTML = d.panel_log.map(function (e) {
+    return '<div class="hq-row"><div class="hq-who"><b>' + esc(META[e.op] || e.op) + (e.user_id ? ' · #' + esc(e.user_id) : '') + '</b>' +
+      '<small>' + esc(e.by || '—') + (e.detail ? ' · ' + esc(e.detail) : '') + '</small></div>' +
+      '<span class="hq-time dim">' + esc(fmtAgo(e.at)) + '</span></div>';
+  }).join('');
+}
+
+/* ── Журнал ─────────────────────────────────────────────────── */
+var CAT_META = { 'mod': ['мод', 'hot'], 'warn': ['варн', 'hot'], 'message': ['сообщ', ''], 'msg': ['сообщ', ''],
+  'join': ['заход', ''], 'voice': ['голос', ''], 'ticket': ['тикет', ''], 'proof': ['демка', ''],
+  'member': ['участник', ''], 'role': ['роль', ''], 'channel': ['канал', ''] };
+function hqLoadJournal() {
+  var q = (document.getElementById('hqJournalSearch').value || '').trim();
+  var m = (document.getElementById('hqJournalMod').value || '').trim();
+  var url = API + '/journal?query=' + encodeURIComponent(q) + '&mod=' + encodeURIComponent(m) +
+    (JCAT ? '&category=' + encodeURIComponent(JCAT) : '');
+  document.getElementById('hqJournal').innerHTML = '<div class="sk-row"></div>';
+  fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.journal = d;
+    renderJournal();
+  }).catch(function () {});
+}
+var JCAT = '', _jTimer = null;
+function hqJournalReload() { clearTimeout(_jTimer); _jTimer = setTimeout(hqLoadJournal, 250); }
+function hqJournalCat(c) { JCAT = (JCAT === c ? '' : c); hqLoadJournal(); }
+function renderJournal() {
+  var d = TDATA.journal;
+  if (!d) return;
+  document.getElementById('hqJournalOff').textContent = d.total;
+  var cats = Object.keys(d.categories).sort(function (a, b) { return d.categories[b] - d.categories[a]; });
+  document.getElementById('hqJournalCats').innerHTML =
+    '<button class="hq-chip' + (JCAT === '' ? ' on' : '') + '" onclick="hqJournalCat(\'\')">все ' + d.total + '</button>' +
+    cats.map(function (c) {
+      return '<button class="hq-chip' + (JCAT === c ? ' on' : '') + '" onclick="hqJournalCat(\'' + esc(c) + '\')">' + esc(c) + ' ' + d.categories[c] + '</button>';
+    }).join('');
+  var box = document.getElementById('hqJournal');
+  if (!d.rows.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-clipboard-list"></i>Пусто</div>'; return; }
+  box.innerHTML = d.rows.map(function (r) {
+    var meta = CAT_META[(r.category || '').toLowerCase()] || [r.category || '?', ''];
+    return '<div class="hq-item' + (r.user_id ? '' : '') + '" ' + (r.user_id ? 'onclick="hqFromAny(\'' + esc(r.user_id) + '\')"' : '') + '>' +
+      '<span class="hq-led2 s0"></span>' +
+      '<span class="hq-tag' + (meta[1] ? ' ' + meta[1] : '') + '">' + esc(meta[0]) + '</span>' +
+      '<div class="hq-who"><b>' + esc(r.action || '—') + ' · ' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>' + esc(r.reason || '') + (r.mod_name ? (r.reason ? ' · ' : '') + esc(r.mod_name) : '') + '</small></div>' +
+      '<span class="hq-when dim">' + esc(fmtAgo(r.at)) + '</span></div>';
+  }).join('');
+}
+
+/* ── Варны ──────────────────────────────────────────────────── */
+function hqLoadWarns() {
+  fetch(API + '/warns-list').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.warns = d;
+    var dw = document.getElementById('hqDotWarns');
+    dw.style.display = d.total_warns ? '' : 'none'; dw.textContent = d.total_warns;
+    renderWarnsList();
+    renderSteps();
+  }).catch(function () {});
+}
+function renderWarnsList() {
+  var d = TDATA.warns;
+  if (!d) return;
+  document.getElementById('hqWarnsOff').textContent = d.total_warns + ' у ' + d.rows.length;
+  var q = (document.getElementById('hqWarnsSearch').value || '').trim().toLowerCase();
+  var rows = d.rows.filter(function (r) {
+    return !q || (r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.user_id).indexOf(q) !== -1;
+  });
+  var box = document.getElementById('hqWarnsList');
+  if (!rows.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-face-smile"></i>Варнов нет</div>'; return; }
+  box.innerHTML = rows.map(function (r) {
+    var last = r.items.slice(0, 2).map(function (w) {
+      return esc(w.reason) + (w.mod ? ' · ' + esc(w.mod) : '');
+    }).join('<br>');
+    return '<div class="hq-row tri click" onclick="hqFromAny(\'' + esc(r.user_id) + '\')">' +
+      '<span class="hq-badge' + (r.count >= 3 ? ' k-ban' : ' k-mute') + '">' + r.count + '</span>' +
+      '<div class="hq-who"><b>' + esc(r.name || ('ID ' + r.user_id)) + '</b><small>' + last + '</small></div>' +
+      '<span class="hq-time dim">→</span></div>';
+  }).join('');
+}
+function renderSteps() {
+  var d = TDATA.warns;
+  var box = document.getElementById('hqSteps');
+  if (!d || !d.steps.length) {
+    box.innerHTML = '<div class="hq-empty"><i class="fas fa-stairs"></i>Не заданы — <a class="hq-btn" href="/warn-config">настроить</a></div>';
+    return;
+  }
+  var max = d.steps[d.steps.length - 1].count;
+  box.innerHTML = '<div class="hq-stairs">' + d.steps.map(function (s) {
+    var h = Math.max(14, Math.round(54 * s.count / max));
+    return '<div class="hq-stair"><b>' + s.count + '</b><i style="height:' + h + 'px"></i><span>' + esc(s.action_name) + '</span></div>';
+  }).join('') + '</div>';
+}
+
+/* ── Временные ──────────────────────────────────────────────── */
+function hqLoadTemp() {
+  fetch(API + '/temp-full').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.temp = d;
+    var dt = document.getElementById('hqDotTemp');
+    dt.style.display = d.counts.overdue ? '' : 'none'; dt.textContent = d.counts.overdue;
+    renderTemp();
+  }).catch(function () {});
+}
+function renderTemp() {
+  var d = TDATA.temp;
+  if (!d) return;
+  document.getElementById('hqTempOff').textContent = d.rows.length;
+  var c = d.counts;
+  var row = function (label, num, hot) {
+    return '<div class="hq-row"><div class="hq-who"><b>' + label + '</b></div>' +
+      '<span class="hq-mini' + (hot && num ? ' hot' : '') + '">' + num + '</span></div>';
+  };
+  document.getElementById('hqTempCounts').innerHTML =
+    row('Просрочено', c.overdue, true) + row('Истекает за 24 ч', c.soon, true) +
+    row('В течение 3 суток', c.week, false) + row('Дальше', c.later, false);
+  var box = document.getElementById('hqTempFull');
+  if (!d.rows.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-clock"></i>Активных нет</div>'; return; }
+  var now = Date.now() / 1000;
+  box.innerHTML = d.rows.map(function (r) {
+    var hot = r.remaining_s <= 0, frac = null;
+    if (r.created_at != null && r.until > r.created_at) {
+      frac = Math.max(0, Math.min(1, (now - r.created_at) / (r.until - r.created_at)));
+    }
+    var pct = frac == null ? 0 : Math.round(frac * 100);
+    var B = { 'Мут': 'k-mute', 'Бан': 'k-ban', 'Войс-мут': 'k-vmute', 'Кик': 'k-kick' };
+    return '<div class="hq-row tri click" onclick="hqFromAny(\'' + esc(r.user_id) + '\')">' +
+      '<span class="hq-badge ' + (B[r.kind_name] || '') + '">' + esc(r.kind_name) + '</span>' +
+      '<div class="hq-who"><b>' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>' + esc(r.reason || 'без причины') + '</small>' +
+      '<div class="hq-track' + (hot ? ' hot' : '') + '"><i style="width:' + pct + '%"></i></div></div>' +
+      '<span class="hq-time' + (hot ? ' hot' : '') + '">' + esc(fmtLeft(r.remaining_s)) + '</span></div>';
+  }).join('');
+}
+
+/* ── Щит ────────────────────────────────────────────────────── */
+function hqLoadShield() {
+  fetch(API + '/shield').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.shield = d;
+    renderShield();
+  }).catch(function () {});
+}
+function renderShield() {
+  var d = TDATA.shield;
+  if (!d) return;
+  var rows = [
+    { t: 'Автофильтр чата', c: d.autofilter, link: '/autofilter' },
+    { t: 'Анти-рейд', c: d.antiraid, link: '/antiraid' },
+    { t: 'Безопасность', c: { status: d.security.tuned ? 'ok' : 'missing', detail: d.security.detail, hint: 'Правила и контроль панели' }, link: '/security' }
+  ];
+  document.getElementById('hqShield').innerHTML = rows.map(function (r) {
+    return '<div class="hq-row tri"><span class="hq-dotst ' + esc(r.c.status || 'missing') + '"></span>' +
+      '<div class="hq-who"><b>' + esc(r.t) + ' · ' + esc(r.c.detail || '') + '</b><small>' + esc(r.c.hint || '') + '</small></div>' +
+      '<a class="hq-btn" href="' + r.link + '">Открыть</a></div>';
+  }).join('');
+  var lk = d.lockdown;
+  document.getElementById('hqLockdown').innerHTML = lk.active
+    ? ('<div class="hq-row"><div class="hq-who"><b><i class="fas fa-lock" style="color:var(--hq-danger);margin-right:6px"></i>Активен · каналов: ' + lk.count + '</b>' +
+       '<small>' + esc(lk.summary || '') + (lk.by ? ' · ввёл: ' + esc(lk.by) : '') + '</small></div>' +
+       '<a class="hq-btn" href="/lockdown">Управлять</a></div>')
+    : ('<div class="hq-row"><div class="hq-who"><b><i class="fas fa-lock-open" style="color:var(--hq-ok);margin-right:6px"></i>Не активен</b>' +
+       '<small>Каналы открыты</small></div><a class="hq-btn" href="/lockdown">Открыть</a></div>');
+}
+
+/* ── Демки ──────────────────────────────────────────────────── */
+function hqLoadProofs() {
+  fetch(API + '/proofs').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.proofs = d;
+    renderProofs();
+  }).catch(function () {});
+}
+function renderProofs() {
+  var d = TDATA.proofs;
+  if (!d) return;
+  document.getElementById('hqProofsOff').textContent = d.total;
+  var box = document.getElementById('hqProofs');
+  if (!d.rows.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-folder-open"></i>Демок нет</div>'; return; }
+  var B = { 'бан': 'k-ban', 'мут': 'k-mute', 'предупреждение': 'k-kick', 'кик': 'k-kick' };
+  box.innerHTML = d.rows.map(function (r) {
+    return '<div class="hq-row tri click" onclick="hqFromAny(\'' + esc(r.user_id) + '\')">' +
+      '<span class="hq-badge ' + (B[(r.action || '').toLowerCase()] || '') + '">' + esc(r.action || 'демка') + '</span>' +
+      '<div class="hq-who"><b>' + esc(r.user_name || ('ID ' + r.user_id)) + '</b>' +
+      '<small>' + esc(r.reason || 'без причины') + (r.mod_name ? ' · ' + esc(r.mod_name) : '') + '</small></div>' +
+      (r.link ? '<a class="hq-btn" href="' + esc(r.link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="fas fa-link"></i></a>'
+              : '<span class="hq-time dim">' + esc(fmtAgo(r.at)) + '</span>') + '</div>';
+  }).join('');
+}
+
+/* ── Апелляции ──────────────────────────────────────────────── */
+function hqLoadAppeals() {
+  fetch(API + '/appeals').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.appeals = d;
+    renderAppeals();
+  }).catch(function () {});
+}
+function renderAppeals() {
+  var d = TDATA.appeals;
+  if (!d) return;
+  document.getElementById('hqAppealsOff').textContent = d.total;
+  var s = d.stats || {};
+  document.getElementById('hqAppealStats').innerHTML =
+    '<span class="hq-chip' + (s.pending ? ' on' : '') + '">в очереди ' + (s.pending || 0) + '</span>' +
+    '<span class="hq-chip">принято ' + (s.accepted || 0) + '</span>' +
+    '<span class="hq-chip">отклонено ' + (s.rejected || 0) + '</span>';
+  var box = document.getElementById('hqAppeals');
+  if (!d.rows.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-scale-balanced"></i>Апелляций нет</div>'; return; }
+  var M = { pending: ['в очереди', 'hot'], accepted: ['принята', 'ok'], rejected: ['отклонена', ''] };
+  box.innerHTML = d.rows.map(function (r) {
+    var m = M[r.status] || [r.status || '?', ''];
+    return '<div class="hq-row"><div class="hq-who"><b>' + esc(r.user || '—') + '</b>' +
+      '<small>' + esc(r.reason || '') + ' · ' + esc(r.created_at ? r.created_at.slice(0, 16).replace('T', ' ') : '') + '</small></div>' +
+      '<span class="hq-mini ' + m[1] + '">' + esc(m[0]) + '</span></div>';
+  }).join('');
+}
+
+/* ── Аналитика ──────────────────────────────────────────────── */
+function renderDaysTabs() {
+  document.getElementById('hqDaysTabs').innerHTML = [30, 90, 180].map(function (n) {
+    return '<button class="hq-chip' + (n === DAYS ? ' on' : '') + '" onclick="hqDays(' + n + ')">' + n + ' дн.</button>';
+  }).join('');
+}
+function sparkHtml(t, h) {
+  var max = 1;
+  for (var i = 0; i < t.buckets.length; i++) max = Math.max(max, t.buckets[i].count);
+  var n = t.buckets.length, base = h - 13, amp = h - 26;
+  var pts = [], labels = '';
+  for (var k = 0; k < n; k++) {
+    var b = t.buckets[k];
+    var x = n > 1 ? (k * 100 / (n - 1)) : 50;
+    var y = base - amp * b.count / max;
+    pts.push([x, y]);
+    labels += '<text class="lbl" x="' + x.toFixed(1) + '" y="' + (h - 2) + '" text-anchor="middle">' + esc(b.label) + '</text>';
+  }
+  var line = pts.map(function (p, idx) { return (idx ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+  var area = line + ' L ' + pts[pts.length - 1][0].toFixed(1) + ' ' + base + ' L ' + pts[0][0].toFixed(1) + ' ' + base + ' Z';
+  var dots = '';
+  for (var m = 0; m < n; m++) {
+    if (t.buckets[m].count) dots += '<circle class="dot" cx="' + pts[m][0].toFixed(1) + '" cy="' + pts[m][1].toFixed(1) + '" r="1.6"></circle>';
+  }
+  return '<svg class="hq-spark" viewBox="0 0 100 ' + h + '" preserveAspectRatio="none" style="height:' + h + 'px">' +
+    '<path class="area" d="' + area + '"></path><path class="line" d="' + line + '"></path>' + dots + labels + '</svg>';
+}
+function renderEffect(d) {
+  var eff = d.effectiveness;
+  var box = document.getElementById('hqEffect');
+  if (!eff.overall.count) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-rotate"></i>Наказаний за окно нет</div>'; return; }
+  var rows = eff.types.concat([eff.overall]);
+  var html = '<div class="hq-eff head"><span>Тип</span><span style="text-align:right">7 дн.</span><span style="text-align:right">30 дн.</span><span style="text-align:right">медиана</span></div>';
+  html += rows.map(function (r) {
+    var name = r.action === 'all' ? 'Любая кара' : r.action;
+    var p7 = r.repeat7 == null ? '—' : r.repeat7 + '%', p30 = r.repeat30 == null ? '—' : r.repeat30 + '%';
+    return '<div class="hq-eff' + (r.action === 'all' ? ' total' : '') + '">' +
+      '<span style="font-size:12px"><b>' + esc(name) + '</b> <small style="color:var(--hq-t3)">' + r.count + ' чел.' + (r.thin ? ' · мало данных' : '') + '</small></span>' +
+      '<span class="v' + (r.thin ? ' dim' : '') + '">' + p7 + '</span>' +
+      '<span class="v' + (r.thin ? ' dim' : '') + '">' + p30 + '</span>' +
+      '<span class="v' + (r.thin ? ' dim' : '') + '">' + (r.median_days == null ? '—' : r.median_days + ' дн.') + '</span></div>';
+  }).join('');
+  box.innerHTML = html;
+}
+function renderTrend(d, big) {
+  document.getElementById('hqTrendOff').textContent = d.trend.total + ' за ' + d.trend.days + ' дн.';
+  document.getElementById('hqTrend').innerHTML = sparkHtml(d.trend, big ? 100 : 66);
+}
+function renderTeam(d) {
+  var t = d.team;
+  document.getElementById('hqTeamOff').textContent = t.total_mods;
+  var box = document.getElementById('hqTeam');
+  if (!t.items.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-people-group"></i>За окно действий нет</div>'; return; }
+  var max = 1;
+  for (var i = 0; i < t.items.length; i++) max = Math.max(max, t.items[i].total);
+  box.innerHTML = t.items.map(function (r) {
+    var pct = Math.round(100 * r.total / max);
+    return '<div class="hq-row"><div class="hq-who"><b>' + esc(r.mod) + '</b>' +
+      '<small>' + r.punishments + ' кар' + (r.lifts ? ' · ' + r.lifts + ' снят.' : '') + '</small>' +
+      '<div class="hq-track"><i style="width:' + pct + '%"></i></div></div>' +
+      '<span class="hq-time">' + r.total + '</span></div>';
+  }).join('');
+}
+
+/* ── История ────────────────────────────────────────────────── */
+function hqLoadHistory() {
+  fetch(API + '/history').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    TDATA.history = d;
+    renderHistory();
+  }).catch(function () {});
+}
+function renderHistory() {
+  var d = TDATA.history;
+  if (!d) return;
+  document.getElementById('hqHistoryOff').textContent = d.rows.length;
+  var box = document.getElementById('hqHistory');
+  if (!d.rows.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-clock-rotate-left"></i>История пуста</div>'; return; }
+  var B = { 'Мут': 'k-mute', 'Кик': 'k-kick', 'Бан': 'k-ban', 'Мут снят': 'k-lift', 'Бан снят': 'k-lift' };
+  box.innerHTML = d.rows.map(function (r) {
+    return '<div class="hq-row tri click" onclick="hqFromAny(\'' + esc(r.user_id) + '\')">' +
+      '<span class="hq-badge ' + (B[r.action] || '') + '">' + esc(r.action) + '</span>' +
+      '<div class="hq-who"><b>' + esc(r.name || ('#' + r.user_id)) + '</b>' +
+      '<small>' + esc(r.reason || 'без причины') + (r.mod_name ? ' · ' + esc(r.mod_name) : '') + '</small></div>' +
+      '<span class="hq-time dim">' + esc(fmtAgo(r.at)) + '</span></div>';
+  }).join('');
+}
+
+/* ── Досье ──────────────────────────────────────────────────── */
+function renderSubjects() {
+  if (!OV) return;
+  var q = (document.getElementById('hqSubjectsSearch').value || '').trim().toLowerCase();
+  var items = OV.subjects.items.filter(function (r) {
+    return !q || (r.name || '').toLowerCase().indexOf(q) !== -1 || String(r.user_id).indexOf(q) !== -1;
+  });
+  document.getElementById('hqSubjectsOff').textContent = items.length + '/' + OV.subjects.total;
+  var box = document.getElementById('hqSubjects');
+  if (!items.length) { box.innerHTML = '<div class="hq-empty"><i class="fas fa-face-smile"></i>Никого нет</div>'; return; }
+  box.innerHTML = items.map(function (r) {
+    return '<div class="hq-row click' + (PICKED === r.user_id ? '' : '') + '" onclick="hqFromAny(\'' + esc(r.user_id) + '\')">' +
+      '<div class="hq-who"><b>' + esc(r.name || ('ID ' + r.user_id)) + '</b>' +
+      '<small>' + r.warns + ' варн. · ' + r.punishments + ' кар' + (r.last_at ? ' · посл. ' + esc(fmtAgo(r.last_at)) : '') + '</small></div>' +
+      '<span class="hq-mini' + (r.weight >= 5 ? ' hot' : '') + '">вес ' + r.weight + '</span></div>';
+  }).join('');
+}
+function hqDossier(uid) {
+  var box = document.getElementById('hqDossier');
+  box.innerHTML = '<div class="sk-row"></div><div class="sk-row" style="width:60%"></div>';
+  fetch(API + '/dossier?user_id=' + encodeURIComponent(uid)).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) {
+      box.innerHTML = '<div class="hq-empty"><i class="fas fa-circle-exclamation"></i>' + esc(d.error || 'Ошибка') + '</div>';
+      return;
+    }
+    PICKED = d.dossier.user_id;
+    renderDossier(d.dossier);
+    if (OV) { renderFeed(); renderSubjects(); }
+  }).catch(function () {
+    box.innerHTML = '<div class="hq-empty"><i class="fas fa-plug-circle-xmark"></i>Не загрузилось</div>';
+  });
+}
+function renderDossier(ds) {
+  var box = document.getElementById('hqDossier');
+  if (!ds.known) {
+    box.innerHTML = '<div class="hq-empty"><i class="fas fa-ghost"></i>Следов нет<br><small>ID ' + esc(ds.user_id) + ' чист</small></div>';
+    return;
+  }
+  var name = ds.name || ('ID ' + ds.user_id);
+  var html = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px">';
+  html += '<span class="hq-mini gold">' + esc(name) + '</span>';
+  html += '<span class="hq-mini' + (ds.warns.count ? ' hot' : '') + '">' + ds.warns.count + ' варн.</span>';
+  html += '<span class="hq-mini">' + ds.stats.punishments + ' кар</span>';
+  if (ds.warns.gap != null) html += '<span class="hq-mini' + (ds.warns.gap === 1 ? ' hot' : '') + '">до «' + esc(ds.warns.action_name) + '»: ' + ds.warns.gap + '</span>';
+  html += '</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px">' +
+    '<button class="hq-btn" onclick="hqCopy(\'' + esc(ds.user_id) + '\')"><i class="fas fa-copy"></i> ID</button>' +
+    '<a class="hq-btn" href="/member-card?user=' + encodeURIComponent(ds.user_id) + '"><i class="fas fa-id-card"></i></a>' +
+    '<button class="hq-btn" onclick="hqUseInControl(\'' + esc(ds.user_id) + '\')"><i class="fas fa-gavel"></i> Действия</button>' +
+    '</div>';
+  if (ds.temp_active.length) {
+    html += '<div class="hq-sect">Активные статусы</div>' + ds.temp_active.map(function (r) {
+      var B = { 'Мут': 'k-mute', 'Бан': 'k-ban', 'Войс-мут': 'k-vmute', 'Кик': 'k-kick' };
+      return '<div class="hq-row tri"><span class="hq-badge ' + (B[r.kind_name] || '') + '">' + esc(r.kind_name) + '</span>' +
+        '<div class="hq-who"><b>' + esc(fmtLeft(r.remaining_s)) + '</b>' + (r.reason ? '<small>' + esc(r.reason) + '</small>' : '') + '</div>' +
+        '<span class="hq-time dim">' + fmtDate(r.until * 1000) + '</span></div>';
+    }).join('');
+  }
+  if (ds.warns.items.length) {
+    html += '<div class="hq-sect">Последние варны</div>' + ds.warns.items.map(function (w) {
+      return '<div class="hq-note">' + esc(w.reason) + '<small>' + esc(w.at) + (w.mod ? ' · ' + esc(w.mod) : '') + '</small></div>';
+    }).join('');
+  }
+  if (ds.amnesty.length) {
+    html += '<div class="hq-sect">Амнистии</div>' + ds.amnesty.map(function (a) {
+      return '<div class="hq-note">Списано ' + a.count + '<small>' + esc(a.at) + (a.by ? ' · ' + esc(a.by) : '') + (a.restored_at ? ' · откачена' : '') + '</small></div>';
+    }).join('');
+  }
+  if (ds.timeline.length) {
+    html += '<div class="hq-sect">Таймлайн (' + ds.timeline_total + ')</div>' + ds.timeline.map(function (t) {
+      var B = { 'Мут': 'k-mute', 'Кик': 'k-kick', 'Бан': 'k-ban', 'Мут снят': 'k-lift', 'Бан снят': 'k-lift' };
+      return '<div class="hq-row tri"><span class="hq-badge ' + (B[t.action] || '') + '">' + esc(t.action) + '</span>' +
+        '<div class="hq-who"><b>' + esc(t.reason || 'Без причины') + '</b>' + (t.mod_name ? '<small>' + esc(t.mod_name) + '</small>' : '') + '</div>' +
+        '<span class="hq-time dim">' + fmtDate(t.at) + '</span></div>';
+    }).join('');
+  }
+  if (ds.notes.length) {
+    html += '<div class="hq-sect">Заметки</div>' + ds.notes.map(function (n) {
+      return '<div class="hq-note">' + esc(n.note) + '<small>' + esc(n.at) + (n.mod ? ' · ' + esc(n.mod) : '') + '</small></div>';
+    }).join('');
+  }
+  box.innerHTML = html;
+}
+function hqCopy(uid) {
+  var done = function () { hqNotify('ID скопирован', uid, 'ok', 'fa-copy'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(uid).then(done, function () { hqCopyFb(uid, done); });
+  } else { hqCopyFb(uid, done); }
+}
+function hqCopyFb(uid, done) {
+  var ta = document.createElement('textarea');
+  ta.value = uid; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); }
+  catch (e) { hqNotify('Не удалось скопировать', '', 'err', 'fa-circle-exclamation'); }
+  document.body.removeChild(ta);
+}
+function hqUseInControl(uid) {
+  hqTab('control');
+  document.getElementById('hqWarnId').value = uid;
+  hqPredict();
+}
+
+/* ── Мутации ────────────────────────────────────────────────── */
+function hqPost(url, obj) {
+  return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj || {}) })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { code: r.status, data: d }; }); });
+}
+function hqWarnAsk() {
+  var uid = document.getElementById('hqWarnId').value.trim();
+  var reason = document.getElementById('hqWarnText').value.trim();
+  window.askConfirm('Варн', 'Участник ' + (uid || '—') + ', причина «' + (reason || 'не указана') + '»?', function () {
+    hqPost(API + '/warn', { user_id: uid, reason: reason }).then(function (res) {
+      if (!res.data.success) { hqNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+      document.getElementById('hqWarnText').value = '';
+      hqNotify('Варн выдан', 'Участник ' + uid + ' · всего ' + res.data.total, 'ok', 'fa-gavel');
+      hqPredict();
+      load();
+    });
+  }, { danger: true, okText: 'Выдать', icon_fa: 'fa-gavel' });
+}
+function hqUnwarnAsk() {
+  var uid = document.getElementById('hqWarnId').value.trim();
+  window.askConfirm('Снятие варна', 'Снять последний варн ' + (uid || '—') + '?', function () {
+    hqPost(API + '/unwarn', { user_id: uid }).then(function (res) {
+      if (!res.data.success) { hqNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+      hqNotify('Варн снят', 'Осталось: ' + res.data.left, 'ok', 'fa-rotate-left');
+      hqPredict();
+      load();
+    });
+  }, { okText: 'Снять', icon_fa: 'fa-rotate-left' });
+}
+function hqAmnestyAsk() {
+  var uid = document.getElementById('hqWarnId').value.trim();
+  window.askConfirm('Амнистия', 'Обнулить все варны ' + (uid || '—') + '?', function () {
+    hqPost(API + '/amnesty', { user_id: uid }).then(function (res) {
+      if (!res.data.success) { hqNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+      var aid = res.data.amnesty.id;
+      hqNotify('Амнистия проведена', 'Списано: ' + res.data.amnesty.count, 'ok', 'fa-dove', function () { hqAmnestyUndo(aid); });
+      hqPredict();
+      load();
+    });
+  }, { danger: true, okText: 'Обнулить', icon_fa: 'fa-dove' });
+}
+function hqAmnestyUndo(aid) {
+  hqPost(API + '/amnesty/' + aid + '/undo').then(function (res) {
+    if (!res.data.success) { hqNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+    hqNotify('Амнистия откачена', 'Возвращено: ' + res.data.restored, 'ok', 'fa-rotate-left');
+    load();
+  });
+}
+function hqReasonAdd() {
+  var inp = document.getElementById('hqReasonText');
+  hqPost(API + '/reasons', { kind: KIND, text: inp.value }).then(function (res) {
+    if (!res.data.success) { hqNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+    inp.value = '';
+    OV.reasons = res.data.reasons;
+    renderReasons();
+    hqNotify('Причина добавлена', '', 'ok', 'fa-bolt');
+  });
+}
+function hqReasonDel(id) {
+  hqPost(API + '/reasons/' + KIND + '/' + id + '/delete').then(function (res) {
+    if (!res.data.success) { hqNotify('Не вышло', res.data.error || 'Ошибка', 'err', 'fa-circle-exclamation'); return; }
+    OV.reasons = res.data.reasons;
+    renderReasons();
+    hqNotify('Причина удалена', '', 'ok', 'fa-xmark');
+  });
+}
+
+/* ── Загрузка ───────────────────────────────────────────────── */
+function hqDays(n) { DAYS = n; renderDaysTabs(); load(); }
+function load() {
+  fetch(API + '/overview?days=' + DAYS).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    OV = d; CAN = !!d.can_edit;
+    document.getElementById('hqWarnBody').style.display = CAN ? '' : 'none';
+    document.getElementById('hqWarnDenied').style.display = CAN ? 'none' : '';
+    var render = function () {
+      renderFeedChips(); renderFeed(); renderTicker(d);
+      renderRisk(); renderReasons(); renderAmnesty(d); renderPanelLog(d);
+      renderDaysTabs(); renderEffect(d); renderTrend(d, true); renderTeam(d); renderSubjects();
+    };
+    if (window.renderSafe) window.renderSafe(render); else render();
+  }).catch(function () {});
+}
+
+(function () {
+  var params = new URLSearchParams(location.search);
+  var valid = ['feed', 'control', 'journal', 'warns', 'temp', 'shield', 'proofs', 'appeals', 'stats', 'history', 'dossier'];
+  var tab = params.get('tab');
+  if (tab && valid.indexOf(tab) !== -1) hqTab(tab);
+  var uid = params.get('uid');
+  if (uid) {
+    hqTab('control');
+    document.getElementById('hqWarnId').value = uid;
+    hqPredict();
+  }
+})();
+
+load();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(load, 30000);
+</script>
+{% endblock %}

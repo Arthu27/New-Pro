@@ -27,7 +27,7 @@ MENU = [
         {'path': '/recap', 'label': 'Рекап канала', 'icon': 'fa-clock-rotate-left'},
     ]},
     {'group': 'Модерация', 'key': 'mod', 'icon': 'fa-shield-halved', 'pages': [
-        {'path': '/mod-center', 'label': 'Центр модерации', 'icon': 'fa-satellite-dish'},
+        {'path': '/mod-hq', 'label': 'Штаб модерации', 'icon': 'fa-broadcast-tower'},
         {'path': '/logs', 'label': 'Логи модерации', 'icon': 'fa-clipboard-list'},
         {'path': '/temp-moderation', 'label': 'Временная модерация', 'icon': 'fa-clock'},
         {'path': '/warnings', 'label': 'Предупреждения', 'icon': 'fa-exclamation-triangle'},

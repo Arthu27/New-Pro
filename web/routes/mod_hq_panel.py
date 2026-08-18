@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Центр модерации — единая страница модерации нового поколения.
+"""Штаб модерации — оперативный HUD модерации (лента происшествий).
 
 Заменил пары «Мод-контроль»/«Мод-анализ»: один экран, четыре вкладки
 (Пульт / Контроль / Аналитика / Досье), меньше пояснений — больше
@@ -32,18 +32,18 @@ def register(ctx):
     def _json():
         return request.get_json(silent=True) or {}
 
-    @app.route('/mod-center')
+    @app.route('/mod-hq')
     @login_required
     @role_required('mod')
     def mod_center_page():
-        return render_template('mod_center.html', role=session.get('role'),
+        return render_template('mod_hq.html', role=session.get('role'),
                                username=session.get('username'),
                                guild_id=active_guild_id())
 
-    @app.route('/api/guild/<gid>/mod-center/overview')
+    @app.route('/api/guild/<gid>/mod-hq/overview')
     @login_required
     @role_required('mod')
-    def api_mod_center_overview(gid):
+    def api_mod_hq_overview(gid):
         days = MI._norm_days(request.args.get('days'), MI.EFFECT_DEFAULT_DAYS)
         events = MI.mod_events(gid)
         names = MC.names_from_audit(gid)
@@ -81,10 +81,10 @@ def register(ctx):
             'can_edit': session.get('role') in ('admin', 'owner'),
         })
 
-    @app.route('/api/guild/<gid>/mod-center/warn', methods=['POST'])
+    @app.route('/api/guild/<gid>/mod-hq/warn', methods=['POST'])
     @login_required
     @role_required('admin')
-    def api_mod_center_warn(gid):
+    def api_mod_hq_warn(gid):
         data = _json()
         ok, err, res = MC.panel_warn(gid, data.get('user_id'), data.get('reason'),
                                      by=session.get('username'))
@@ -95,10 +95,10 @@ def register(ctx):
                          by=session.get('username'))
         return jsonify({'success': True, 'total': res['total'], 'entry': res['entry']})
 
-    @app.route('/api/guild/<gid>/mod-center/unwarn', methods=['POST'])
+    @app.route('/api/guild/<gid>/mod-hq/unwarn', methods=['POST'])
     @login_required
     @role_required('admin')
-    def api_mod_center_unwarn(gid):
+    def api_mod_hq_unwarn(gid):
         data = _json()
         ok, err, res = MC.panel_unwarn(gid, data.get('user_id'))
         if not ok:
@@ -109,10 +109,10 @@ def register(ctx):
                          by=session.get('username'))
         return jsonify({'success': True, 'removed': res['removed'], 'left': res['left']})
 
-    @app.route('/api/guild/<gid>/mod-center/amnesty', methods=['POST'])
+    @app.route('/api/guild/<gid>/mod-hq/amnesty', methods=['POST'])
     @login_required
     @role_required('admin')
-    def api_mod_center_amnesty(gid):
+    def api_mod_hq_amnesty(gid):
         data = _json()
         ok, err, entry = MC.amnesty_user(gid, data.get('user_id'),
                                          by=session.get('username'))
@@ -123,10 +123,10 @@ def register(ctx):
                          by=session.get('username'))
         return jsonify({'success': True, 'amnesty': MC.public_amnesty(entry)})
 
-    @app.route('/api/guild/<gid>/mod-center/amnesty/<int:aid>/undo', methods=['POST'])
+    @app.route('/api/guild/<gid>/mod-hq/amnesty/<int:aid>/undo', methods=['POST'])
     @login_required
     @role_required('admin')
-    def api_mod_center_amnesty_undo(gid, aid):
+    def api_mod_hq_amnesty_undo(gid, aid):
         ok, err, restored = MC.undo_amnesty(gid, aid)
         if not ok:
             code = 404 if err == 'Запись амнистии не найдена' else 400
@@ -135,10 +135,10 @@ def register(ctx):
                          by=session.get('username'))
         return jsonify({'success': True, 'restored': restored})
 
-    @app.route('/api/guild/<gid>/mod-center/reasons', methods=['POST'])
+    @app.route('/api/guild/<gid>/mod-hq/reasons', methods=['POST'])
     @login_required
     @role_required('admin')
-    def api_mod_center_reason_add(gid):
+    def api_mod_hq_reason_add(gid):
         data = _json()
         ok, err, item = MC.add_reason(gid, data.get('kind'), data.get('text'),
                                       by=session.get('username'))
@@ -148,11 +148,11 @@ def register(ctx):
                          by=session.get('username'))
         return jsonify({'success': True, 'item': item, 'reasons': MC.load_reasons(gid)})
 
-    @app.route('/api/guild/<gid>/mod-center/reasons/<kind>/<int:rid>/delete',
+    @app.route('/api/guild/<gid>/mod-hq/reasons/<kind>/<int:rid>/delete',
                methods=['POST'])
     @login_required
     @role_required('admin')
-    def api_mod_center_reason_delete(gid, kind, rid):
+    def api_mod_hq_reason_delete(gid, kind, rid):
         ok, err, removed = MC.remove_reason(gid, kind, rid)
         if not ok:
             code = 404 if err == 'Причина не найдена' else 400
@@ -162,20 +162,20 @@ def register(ctx):
         return jsonify({'success': True, 'removed': removed,
                         'reasons': MC.load_reasons(gid)})
 
-    @app.route('/api/guild/<gid>/mod-center/warns.csv')
+    @app.route('/api/guild/<gid>/mod-hq/warns.csv')
     @login_required
     @role_required('mod')
-    def api_mod_center_warns_csv(gid):
+    def api_mod_hq_warns_csv(gid):
         resp = Response(MC.csv_body(MC.WARN_CSV_HEADER, MC.warns_csv_rows(gid)),
                         mimetype='text/csv; charset=utf-8')
         resp.headers['Content-Disposition'] = (
             f'attachment; filename=modcenter_warns_{MC._gid_str(gid)}.csv')
         return resp
 
-    @app.route('/api/guild/<gid>/mod-center/radar.csv')
+    @app.route('/api/guild/<gid>/mod-hq/radar.csv')
     @login_required
     @role_required('mod')
-    def api_mod_center_radar_csv(gid):
+    def api_mod_hq_radar_csv(gid):
         resp = Response(MC.csv_body(MC.RADAR_CSV_HEADER, MC.radar_csv_rows(gid)),
                         mimetype='text/csv; charset=utf-8')
         resp.headers['Content-Disposition'] = (
@@ -183,10 +183,10 @@ def register(ctx):
         return resp
 
 
-    @app.route('/api/guild/<gid>/mod-center/journal')
+    @app.route('/api/guild/<gid>/mod-hq/journal')
     @login_required
     @role_required('mod')
-    def api_mod_center_journal(gid):
+    def api_mod_hq_journal(gid):
         """Журнал гильдии: категории/поиск/модератор, новые сверху."""
         q = str(request.args.get('query') or '').strip().lower()
         cat = str(request.args.get('category') or '').strip().lower()
@@ -225,10 +225,10 @@ def register(ctx):
                         'total': len(events),
                         'categories': cat_counts})
 
-    @app.route('/api/guild/<gid>/mod-center/temp-full')
+    @app.route('/api/guild/<gid>/mod-hq/temp-full')
     @login_required
     @role_required('mod')
-    def api_mod_center_temp_full(gid):
+    def api_mod_hq_temp_full(gid):
         """Все активные временные наказания (не только срочные)."""
         names = MC.names_from_audit(gid)
         rows = []
@@ -249,10 +249,10 @@ def register(ctx):
             rows.append(row)
         return jsonify({'success': True, 'rows': rows, 'counts': counts})
 
-    @app.route('/api/guild/<gid>/mod-center/warns-list')
+    @app.route('/api/guild/<gid>/mod-hq/warns-list')
     @login_required
     @role_required('mod')
-    def api_mod_center_warns_list(gid):
+    def api_mod_hq_warns_list(gid):
         """Варны по участникам: счёт, последние причины, пороги."""
         names = MC.names_from_audit(gid)
         rows = []
@@ -268,10 +268,10 @@ def register(ctx):
                         'total_warns': sum(r['count'] for r in rows),
                         'steps': MC.load_warn_steps(gid)})
 
-    @app.route('/api/guild/<gid>/mod-center/history')
+    @app.route('/api/guild/<gid>/mod-hq/history')
     @login_required
     @role_required('mod')
-    def api_mod_center_history(gid):
+    def api_mod_hq_history(gid):
         """Таймлайн кар и снятий, новые сверху."""
         names = MC.names_from_audit(gid)
         rows = []
@@ -291,10 +291,10 @@ def register(ctx):
                 break
         return jsonify({'success': True, 'rows': rows})
 
-    @app.route('/api/guild/<gid>/mod-center/shield')
+    @app.route('/api/guild/<gid>/mod-hq/shield')
     @login_required
     @role_required('mod')
-    def api_mod_center_shield(gid):
+    def api_mod_hq_shield(gid):
         """Щит сервера: сводный статус всех защит одним снимком."""
         autofilter = MI._autofilter_check(gid)
         antiraid = MI._antiraid_check(gid)
@@ -311,7 +311,7 @@ def register(ctx):
                         'by': str(view.get('by') or ''),
                         'reason': str(view.get('reason') or '')}
         except Exception as _ex:
-            _log.debug('mod_center: lockdown-статус недоступен: %s', _ex)
+            _log.debug('mod_hq: lockdown-статус недоступен: %s', _ex)
         security = {'tuned': False, 'detail': 'Не настроена'}
         sec_raw = MC._load_json('data/security_%s.json' % MC._gid_str(gid), None)
         if isinstance(sec_raw, dict) and sec_raw:
@@ -324,10 +324,10 @@ def register(ctx):
                         'lockdown': lockdown,
                         'security': security})
 
-    @app.route('/api/guild/<gid>/mod-center/proofs')
+    @app.route('/api/guild/<gid>/mod-hq/proofs')
     @login_required
     @role_required('mod')
-    def api_mod_center_proofs(gid):
+    def api_mod_hq_proofs(gid):
         """Галерея демок: кто, кого, за что и доказательство."""
         raw = MC._load_json('data/modproof_%s.json' % MC._gid_str(gid), {})
         items = raw.get('items') if isinstance(raw, dict) else None
@@ -349,10 +349,10 @@ def register(ctx):
         rows.sort(key=lambda r: r['at'], reverse=True)
         return jsonify({'success': True, 'rows': rows[:60], 'total': len(rows)})
 
-    @app.route('/api/guild/<gid>/mod-center/appeals')
+    @app.route('/api/guild/<gid>/mod-hq/appeals')
     @login_required
     @role_required('mod')
-    def api_mod_center_appeals(gid):
+    def api_mod_hq_appeals(gid):
         """Апелляции: счётчики очереди и последние заявки."""
         try:
             from web.routes import appeals_panel as AP
@@ -374,16 +374,16 @@ def register(ctx):
             return jsonify({'success': True, 'stats': stats,
                             'rows': rows[:20], 'total': len(rows)})
         except Exception as _ex:
-            _log.debug('mod_center: апелляции недоступны: %s', _ex)
+            _log.debug('mod_hq: апелляции недоступны: %s', _ex)
             return jsonify({'success': True,
                             'stats': {'pending': 0, 'accepted': 0, 'rejected': 0,
                                       'last': None},
                             'rows': [], 'total': 0})
 
-    @app.route('/api/guild/<gid>/mod-center/dossier')
+    @app.route('/api/guild/<gid>/mod-hq/dossier')
     @login_required
     @role_required('mod')
-    def api_mod_center_dossier(gid):
+    def api_mod_hq_dossier(gid):
         ok, err, data = MI.dossier(gid, request.args.get('user_id'))
         if not ok:
             return jsonify({'success': False, 'error': err}), 400
