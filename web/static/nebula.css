@@ -1,191 +1,218 @@
 /* ============================================================
-   NEBULA — глобальный скин панели Aether.
-   Подключается в base.html после polish.css.
-   Направление: ЧИСТЫЙ МИНИМАЛИЗМ (Stripe / Notion / Linear).
-   Плоские поверхности, тонкие линии, много воздуха, мягкие
-   пастельные акценты. Без стекла, градиентов и свечения.
-   Правки только визуальные — разметка и логика не тронуты.
+   NOVA — глобальная дизайн-система панели Aether.
+   Подключается в base.html после polish.css и трансформирует
+   ВСЮ панель, переопределяя корневые переменные, на которые
+   ссылается каждый компонент.
+
+   Направление: НЕОНОВЫЙ КОМАНДНЫЙ ЦЕНТР.
+   Холодный графитовый фон с аврора-подсветкой, электрический
+   цианово-бирюзовый акцент, стеклянные поверхности с мягким
+   свечением, уверенная типографика. Полный уход от тёплого золота.
    ============================================================ */
 
-/* ── Токены минимализма ────────────────────────────────────── */
-html[data-theme="dark"] {
-  --nb-bg:#0e0f12;
-  --nb-surface:#16171c;
-  --nb-surface-2:#1c1d23;
-  --nb-line:rgba(255,255,255,.07);
-  --nb-line-strong:rgba(255,255,255,.12);
-  --nb-text:#eceef2;
-  --nb-text-2:rgba(236,238,242,.62);
-  --nb-text-3:rgba(236,238,242,.38);
-  --nb-accent:#8f84f0;
-  --nb-accent-soft:rgba(143,132,240,.14);
-  --nb-shadow:0 1px 2px rgba(0,0,0,.3);
-}
-html[data-theme="light"] {
-  --nb-bg:#f7f7f9;
-  --nb-surface:#ffffff;
-  --nb-surface-2:#fafafb;
-  --nb-line:#e9e9ee;
-  --nb-line-strong:#dcdce4;
-  --nb-text:#1c1d22;
-  --nb-text-2:rgba(28,29,34,.64);
-  --nb-text-3:rgba(28,29,34,.4);
-  --nb-accent:#7a6ff0;
-  --nb-accent-soft:rgba(122,111,240,.10);
-  --nb-shadow:0 1px 2px rgba(20,22,26,.05);
+/* ── 1. ПЕРЕОПРЕДЕЛЕНИЕ КОРНЕВЫХ ПЕРЕМЕННЫХ — меняет всё ───── */
+:root {
+  /* Акцент: электрический циан вместо золота */
+  --ac:      #34d3c3 !important;
+  --ac-2:    #6ef0e2 !important;
+  --ac-3:    #1fae9f !important;
+  --ac-soft: rgba(52, 211, 195, 0.12) !important;
+  --ac-glow: rgba(52, 211, 195, 0.35) !important;
+  --ac-line: rgba(52, 211, 195, 0.25) !important;
+
+  /* Вторичные неоновые акценты */
+  --violet:  #a78bfa !important;
+  --pink:    #f472b6 !important;
+  --cyan:    #67e8f9 !important;
+  --emerald: #6ee7b7 !important;
+
+  /* Холодный графитовый фон */
+  --bg:   #0b0f14 !important;
+  --bg-2: #10161d !important;
+  --bg-3: #161e27 !important;
+
+  /* Поверхности */
+  --surface:   rgba(20, 28, 36, 0.72) !important;
+  --surface-2: rgba(27, 37, 47, 0.80) !important;
+  --surface-3: rgba(35, 47, 59, 0.90) !important;
+
+  /* Линии */
+  --line:   rgba(110, 240, 226, 0.08) !important;
+  --line-2: rgba(110, 240, 226, 0.16) !important;
+  --line-3: rgba(110, 240, 226, 0.28) !important;
+
+  /* Холодный текст */
+  --text:   #e8f2f4 !important;
+  --text-2: #9fb8bd !important;
+  --text-3: #63808a !important;
+  --text-4: #3d545e !important;
+
+  /* Статусы — яркие неоновые */
+  --ok:     #4ade80 !important;
+  --warn:   #fbbf24 !important;
+  --err:    #f87171 !important;
+  --info:   #60a5fa !important;
+  --orange: #fb923c !important;
 }
 
-/* ── Фон: ровный, без градиентов ───────────────────────────── */
-html[data-theme="dark"] body,
+/* ── 2. ФОН: аврора-подсветка командного центра ────────────── */
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(52, 211, 195, 0.10), transparent 60%),
+    radial-gradient(1000px 500px at 95% 0%, rgba(167, 139, 250, 0.09), transparent 62%),
+    radial-gradient(900px 500px at 50% 115%, rgba(103, 232, 249, 0.06), transparent 65%),
+    var(--bg) !important;
+  background-attachment: fixed !important;
+}
+html[data-theme="dark"] body::before { opacity: .5 !important; }
 html[data-theme="light"] body {
-  background: var(--nb-bg) !important;
-  background-attachment: scroll !important;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(52, 211, 195, 0.10), transparent 60%),
+    radial-gradient(1000px 500px at 95% 0%, rgba(167, 139, 250, 0.08), transparent 62%),
+    #f4f8f9 !important;
+  background-attachment: fixed !important;
 }
-html[data-theme="dark"] body::before,
-html[data-theme="light"] body::before { opacity: 0 !important; }
 
-/* ── Сайдбар: плоский, чистый ──────────────────────────────── */
-html[data-theme="dark"] .sidebar,
+/* ── 3. САЙДБАР: стеклянный с неоновым активным пунктом ────── */
+html[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, rgba(16, 22, 29, 0.86), rgba(11, 15, 20, 0.92)) !important;
+  backdrop-filter: blur(18px) saturate(1.2);
+  border-right: 1px solid var(--line) !important;
+  box-shadow: 6px 0 34px rgba(0, 0, 0, 0.30);
+}
 html[data-theme="light"] .sidebar {
-  background: var(--nb-surface) !important;
-  backdrop-filter: none;
-  border-right: 1px solid var(--nb-line) !important;
-  box-shadow: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.80)) !important;
+  backdrop-filter: blur(18px);
+  border-right: 1px solid rgba(20, 22, 26, 0.08) !important;
+  box-shadow: 6px 0 30px rgba(20, 22, 26, 0.08);
 }
-.sidebar .nav-group-title {
-  border-radius: 8px;
-  transition: background .15s ease, color .15s ease;
-}
-.sidebar .nav-group-title:hover { background: var(--nb-accent-soft); }
+.sidebar .nav-group-title { border-radius: 10px; transition: background .15s ease, color .15s ease; }
+.sidebar .nav-group-title:hover { background: var(--ac-soft); }
 .sidebar .nav-link {
-  border-radius: 8px !important;
-  margin: 1px 0;
-  transition: background .15s ease, color .15s ease;
+  border-radius: 11px !important;
+  margin: 2px 0;
+  position: relative;
+  transition: background .16s ease, color .16s ease, transform .16s ease;
 }
-.sidebar .nav-link:hover {
-  background: var(--nb-accent-soft) !important;
-  color: var(--nb-text) !important;
-}
+.sidebar .nav-link:hover { background: var(--ac-soft) !important; color: var(--text) !important; transform: translateX(2px); }
 html[data-theme="dark"] .sidebar .nav-link.active,
 html[data-theme="light"] .sidebar .nav-link.active {
-  background: var(--nb-accent-soft) !important;
-  color: var(--nb-accent) !important;
-  box-shadow: none;
-  font-weight: 600;
-  position: relative;
+  background: linear-gradient(120deg, var(--ac), var(--ac-2)) !important;
+  color: #06211e !important;
+  box-shadow: 0 6px 18px var(--ac-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  font-weight: 700;
 }
-.sidebar .nav-link.active::before {
-  content: "";
-  position: absolute;
-  left: 0; top: 20%; bottom: 20%;
-  width: 3px; border-radius: 99px;
-  background: var(--nb-accent);
-}
+.sidebar .nav-link.active::before { display: none; }
 .sidebar ::-webkit-scrollbar { width: 6px; }
-.sidebar ::-webkit-scrollbar-thumb { background: var(--nb-line-strong); border-radius: 99px; }
-.sidebar ::-webkit-scrollbar-thumb:hover { background: var(--nb-accent); }
+.sidebar ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 99px; }
+.sidebar ::-webkit-scrollbar-thumb:hover { background: var(--ac-line); }
 
-/* ── Верхняя панель: плоская, тонкая линия снизу ───────────── */
-html[data-theme="dark"] .navbar,
-html[data-theme="light"] .navbar {
-  background: var(--nb-bg) !important;
-  backdrop-filter: none;
-  border: none;
-  border-bottom: 1px solid var(--nb-line);
-  border-radius: 0;
-  box-shadow: none;
-  padding-left: 4px !important;
-  padding-right: 4px !important;
+/* ── 4. ВЕРХНЯЯ ПАНЕЛЬ ─────────────────────────────────────── */
+html[data-theme="dark"] .navbar {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)) !important;
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
-.navbar .crumb-here { color: var(--nb-accent); font-weight: 600; }
+html[data-theme="light"] .navbar {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72)) !important;
+  border-color: rgba(20, 22, 26, 0.09);
+  box-shadow: 0 10px 26px rgba(20, 22, 26, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.navbar .crumb-here { color: var(--ac); font-weight: 700; }
 .navbar-clock {
-  border: 1px solid var(--nb-line);
-  border-radius: 8px;
-  padding: 5px 12px;
-  background: var(--nb-surface);
-  color: var(--nb-text-2);
+  border: 1px solid var(--line-2); border-radius: 999px;
+  padding: 4px 12px; background: var(--ac-soft); color: var(--ac-2);
   font-variant-numeric: tabular-nums;
 }
 .nav-icon-btn {
-  border-radius: 9px !important;
-  border: 1px solid var(--nb-line);
-  background: var(--nb-surface);
-  transition: background .15s ease, border-color .15s ease;
+  border-radius: 11px !important;
+  transition: background .15s ease, transform .15s ease, border-color .15s ease;
 }
-.nav-icon-btn:hover {
-  background: var(--nb-accent-soft) !important;
-  border-color: var(--nb-accent);
-}
+.nav-icon-btn:hover { background: var(--ac-soft) !important; transform: translateY(-1px); border-color: var(--ac-line); }
 
-/* ── Заголовки страниц: крупная чистая типографика ─────────── */
-.main-content h1 {
-  letter-spacing: -.01em;
-  font-weight: 700;
-  color: var(--nb-text);
-}
+/* ── 5. ЗАГОЛОВКИ СТРАНИЦ ──────────────────────────────────── */
+.main-content h1 { letter-spacing: -.01em; font-weight: 800; color: var(--text); }
 
-/* ── Карточки/панели всех страниц: плоские, тонкая линия ───── */
+/* ── 6. КАРТОЧКИ/ПАНЕЛИ: стекло с неоновой кромкой ─────────── */
 html[data-theme="dark"] .section, html[data-theme="dark"] .box,
 html[data-theme="dark"] .panel, html[data-theme="dark"] .card,
 html[data-theme="dark"] .dash-box, html[data-theme="dark"] .stat-card,
-html[data-theme="dark"] .logs-box, html[data-theme="dark"] .warn-box,
+html[data-theme="dark"] .logs-box, html[data-theme="dark"] .warn-box {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+}
 html[data-theme="light"] .section, html[data-theme="light"] .box,
 html[data-theme="light"] .panel, html[data-theme="light"] .card,
 html[data-theme="light"] .dash-box, html[data-theme="light"] .stat-card,
 html[data-theme="light"] .logs-box, html[data-theme="light"] .warn-box {
-  background: var(--nb-surface) !important;
-  border: 1px solid var(--nb-line) !important;
-  border-radius: 14px !important;
-  box-shadow: var(--nb-shadow);
-  backdrop-filter: none;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.66)) !important;
+  border: 1px solid rgba(20, 22, 26, 0.10) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(20, 22, 26, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+/* Неоновая кромка сверху карточек */
+.section::before, .box::before, .panel::before, .card::before {
+  background: linear-gradient(90deg, transparent, var(--ac) 30%, transparent) !important;
+  opacity: .5;
 }
 
-/* ── Таблицы: тонкие разделители ───────────────────────────── */
+/* ── 7. ТАБЛИЦЫ ────────────────────────────────────────────── */
 html[data-theme="dark"] table tbody tr, html[data-theme="dark"] .data-table tbody tr,
 html[data-theme="light"] table tbody tr, html[data-theme="light"] .data-table tbody tr {
-  border-bottom: 1px solid var(--nb-line);
+  border-bottom: 1px solid var(--line);
   transition: background .14s ease;
 }
 html[data-theme="dark"] table tbody tr:hover, html[data-theme="dark"] .data-table tbody tr:hover,
 html[data-theme="light"] table tbody tr:hover, html[data-theme="light"] .data-table tbody tr:hover {
-  background: var(--nb-accent-soft) !important;
+  background: var(--ac-soft) !important;
 }
 
-/* ── Кнопки: чистые, мягкий подъём ──────────────────────────── */
+/* ── 8. КНОПКИ ─────────────────────────────────────────────── */
 .btn, button.btn {
-  border-radius: 10px !important;
-  transition: transform .15s ease, filter .15s ease, background .15s ease !important;
+  border-radius: 11px !important;
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease !important;
 }
 .btn:hover, button.btn:hover { transform: translateY(-1px); }
-.btn-primary, input[type="submit"] { box-shadow: none; }
+.btn-primary, input[type="submit"] { box-shadow: 0 6px 18px var(--ac-glow); }
 
-/* ── Инпуты: аккуратное фокус-кольцо ───────────────────────── */
+/* ── 9. ИНПУТЫ ─────────────────────────────────────────────── */
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--nb-accent) !important;
-  box-shadow: 0 0 0 3px var(--nb-accent-soft) !important;
+  border-color: var(--ac-line) !important;
+  box-shadow: 0 0 0 3px var(--ac-soft) !important;
 }
 
-/* ── Лента активности: плоская ─────────────────────────────── */
-html[data-theme="dark"] .activity-drawer,
+/* ── 10. ЛЕНТА АКТИВНОСТИ ──────────────────────────────────── */
+html[data-theme="dark"] .activity-drawer {
+  background: linear-gradient(180deg, rgba(16, 22, 29, 0.92), rgba(11, 15, 20, 0.94)) !important;
+  backdrop-filter: blur(18px);
+  border-left: 1px solid var(--line) !important;
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.32);
+}
 html[data-theme="light"] .activity-drawer {
-  background: var(--nb-surface) !important;
-  backdrop-filter: none;
-  border-left: 1px solid var(--nb-line) !important;
-  box-shadow: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.86)) !important;
+  backdrop-filter: blur(18px);
+  border-left: 1px solid rgba(20, 22, 26, 0.09) !important;
+  box-shadow: -12px 0 36px rgba(20, 22, 26, 0.1);
 }
 
-/* ── Скроллбары и выделение: нейтральные ───────────────────── */
+/* ── 11. СКРОЛЛБАРЫ / ВЫДЕЛЕНИЕ ────────────────────────────── */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--nb-line-strong); border-radius: 99px; border: 2px solid transparent; }
-::-webkit-scrollbar-thumb:hover { background: var(--nb-accent); }
-::selection { background: var(--nb-accent-soft); }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 99px; border: 2px solid transparent; }
+::-webkit-scrollbar-thumb:hover { background: var(--ac-line); }
+::selection { background: var(--ac-soft); }
 
-/* ── Появление страницы: мягкое ────────────────────────────── */
-.main-content { animation: nebulaIn .3s cubic-bezier(.4, 0, .2, 1) both; }
-@keyframes nebulaIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* ── 12. ПОЯВЛЕНИЕ СТРАНИЦЫ ────────────────────────────────── */
+.main-content { animation: novaIn .35s cubic-bezier(.4, 0, .2, 1) both; }
+@keyframes novaIn { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   .main-content, .btn, .nav-link, .nav-icon-btn { animation: none !important; transition: none !important; }
+  .sidebar .nav-link:hover { transform: none; }
 }
