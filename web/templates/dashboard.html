@@ -938,6 +938,8 @@
   bindShiftEditor();
   loadPulse();
   widgetSettingsInit();
+  // Живые события WebSocket ускоряют пульс (не ждём поллинга)
+  document.addEventListener('aether:live', function () { loadPulse(); });
   if (window.tiltCards) window.tiltCards(document, '.kpi, .stat-box, .cc-tile');
   if (window.setLiveRefresh) {
     window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 10000);

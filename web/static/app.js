@@ -745,7 +745,10 @@
         window.showToast('Новый тикет создан', true);
         if (typeof window.handleNewTicket === 'function') window.handleNewTicket(d);
       });
-      ws.on('stats_update', function (d) { if (typeof window.handleStatsUpdate === 'function') window.handleStatsUpdate(d); });
+      ws.on('stats_update', function (d) {
+        if (typeof window.handleStatsUpdate === 'function') window.handleStatsUpdate(d);
+        try { doc.dispatchEvent(new CustomEvent('aether:live', { detail: d || {} })); } catch (e) {}
+      });
       ws.on('notification', function (d) {
         if (d && d.data && d.data.title) window.showToast(d.data.title, true);
         if (typeof window.handleNotification === 'function') window.handleNotification(d);

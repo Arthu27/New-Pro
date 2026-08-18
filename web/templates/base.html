@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=65">
+    <link rel="stylesheet" href="/static/style.css?v=66">
     <script>
       // Тема применяется до отрисовки, чтобы не было «вспышки»
       (function () {
@@ -34,6 +34,14 @@
                     <div class="brand-sub">Панель управления</div>
                 </div>
             </a>
+
+            {% if role == 'owner' or role == 'admin' or role == 'mod' %}
+            <a href="/guilds" class="sidebar-guild" id="sidebarGuild" title="Серверы бота">
+                <span class="ico"><i class="fas fa-server"></i></span>
+                <span style="min-width:0"><b>Серверы</b><small id="sidebarGuildName">загрузка…</small></span>
+                <span class="cnt" id="sidebarGuildCount">—</span>
+            </a>
+            {% endif %}
 
             {% if panel_mod_only %}
             <a href="/cog-manager" class="mode-banner" title="Режим «только модерация»: часть модулей выключена (MOD_ONLY=1). Открыть менеджер модулей">
@@ -198,6 +206,17 @@
         </div>
     </div>
 
+    <!-- ── Мобильная нижняя навигация ─────────────────────── -->
+    {% if role == 'owner' or role == 'admin' or role == 'mod' %}
+    <nav class="mobile-nav" aria-label="Мобильная навигация">
+        <a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class="fas fa-house"></i> Главная</a>
+        <a href="/warnings" class="{% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-shield-halved"></i> Варны</a>
+        <a href="/logs" class="{% if request.path == '/logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> Журнал</a>
+        <a href="/tickets-ops" class="{% if request.path == '/tickets-ops' %}active{% endif %}"><i class="fas fa-ticket-alt"></i> Тикеты</a>
+        <a href="/team-board" class="{% if request.path == '/team-board' %}active{% endif %}"><i class="fas fa-table-columns"></i> Доска</a>
+    </nav>
+    {% endif %}
+
     <!-- ── Дровер уведомлений ─────────────────────────────── -->
     <div class="drawer-backdrop" id="drawerBackdrop"></div>
     <aside class="drawer" id="notifDrawer" aria-label="Уведомления">
@@ -247,6 +266,6 @@
     <!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
     <script src="/static/api-guard.js?v=2"></script>
     <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
-    <script src="/static/app.js?v=11"></script>
+    <script src="/static/app.js?v=12"></script>
 </body>
 </html>
