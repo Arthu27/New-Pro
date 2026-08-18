@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+{% block title %}Доска команды — Aether{% endblock %}
+{% block page_title %}Доска команды{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Утилиты <span class="sep">·</span> Команда</div>
+    <h1>Доска команды</h1>
+    <p class="lead">Операционный стол модерации: задачи команды в трёх колонках. Перетаскивайте карточки между колонками — всё сохраняется на сервере.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn" id="boardRefresh"><i class="fas fa-arrows-rotate"></i> Обновить</button>
+  </div>
+</div>
+
+<!-- Быстрое добавление -->
+<div class="panel" style="margin-bottom:14px">
+  <div class="panel-body">
+    <div class="form-row">
+      <label class="form-group" style="flex:2"><span class="form-label">Задача</span>
+        <input class="form-input" id="newTitle" maxlength="120" placeholder="Что нужно сделать команде?"></label>
+      <label class="form-group"><span class="form-label">Приоритет</span>
+        <select class="form-input" id="newPriority">
+          <option value="mid">Средний</option>
+          <option value="low">Низкий</option>
+          <option value="high">Высокий</option>
+          <option value="urgent">Срочный</option>
+        </select></label>
+      <label class="form-group"><span class="form-label">Ответственный</span>
+        <input class="form-input" id="newAssignee" maxlength="48" placeholder="имя или ник"></label>
+      <label class="form-group"><span class="form-label">Срок</span>
+        <input class="form-input" id="newDue" placeholder="до 20.08" maxlength="20"></label>
+      <button type="button" class="btn btn-primary" id="boardAdd" style="align-self:flex-end"><i class="fas fa-plus"></i> Добавить</button>
+    </div>
+    <div class="hint" id="addMsg"></div>
+  </div>
+</div>
+
+<!-- Поиск -->
+<div class="toolbar panel" style="margin-bottom:14px">
+  <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+    <input type="search" id="boardSearch" placeholder="Поиск по задачам..." aria-label="Поиск по задачам">
+  </label>
+  <div class="seg" id="prioFilter">
+    <button type="button" class="seg-btn active" data-p="">Все</button>
+    <button type="button" class="seg-btn" data-p="urgent">Срочные</button>
+    <button type="button" class="seg-btn" data-p="high">Высокие</button>
+    <button type="button" class="seg-btn" data-p="mid">Средние</button>
+    <button type="button" class="seg-btn" data-p="low">Низкие</button>
+  </div>
+  <span class="spacer"></span>
+  <span class="hint" id="boardMeta"></span>
+</div>
+
+<!-- Доска -->
+<div class="board" id="board">
+  <div class="board-col" data-col="todo">
+    <div class="board-col-head">
+      <span class="board-col-ico" style="background:var(--info-soft);color:var(--info)"><i class="fas fa-inbox"></i></span>
+      <b>Очередь</b>
+      <span class="badge neutral" data-count="todo">0</span>
+      <button type="button" class="btn btn-sm btn-ghost" data-quick="todo" title="Быстрое добавление в очередь"><i class="fas fa-plus"></i></button>
+    </div>
+    <div class="board-col-body" data-drop="todo"></div>
+  </div>
+  <div class="board-col" data-col="doing">
+    <div class="board-col-head">
+      <span class="board-col-ico" style="background:var(--warn-soft);color:var(--warn)"><i class="fas fa-arrows-spin"></i></span>
+      <b>В работе</b>
+      <span class="badge neutral" data-count="doing">0</span>
+      <button type="button" class="btn btn-sm btn-ghost" data-quick="doing" title="Быстрое добавление в работу"><i class="fas fa-plus"></i></button>
+    </div>
+    <div class="board-col-body" data-drop="doing"></div>
+  </div>
+  <div class="board-col" data-col="done">
+    <div class="board-col-head">
+      <span class="board-col-ico" style="background:var(--ok-soft);color:var(--ok)"><i class="fas fa-circle-check"></i></span>
+      <b>Готово</b>
+      <span class="badge neutral" data-count="done">0</span>
+      <button type="button" class="btn btn-sm btn-ghost" data-quick="done" title="Быстрое добавление в готовое"><i class="fas fa-plus"></i></button>
+    </div>
+    <div class="board-col-body" data-drop="done"></div>
+  </div>
+</div>
+
+<!-- Модалка редактирования -->
+<div class="modal-overlay" id="taskModal" style="display:none">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-head">
+      <div><h3>Задача</h3><div class="sub" id="taskModalSub"></div></div>
+      <button type="button" class="close" id="taskModalClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <label class="form-group"><span class="form-label">Заголовок</span><input class="form-input" id="editTitle" maxlength="120"></label>
+      <div class="form-row">
+        <label class="form-group"><span class="form-label">Приоритет</span>
+          <select class="form-input" id="editPriority">
+            <option value="low">Низкий</option>
+            <option value="mid">Средний</option>
+            <option value="high">Высокий</option>
+            <option value="urgent">Срочный</option>
+          </select></label>
+        <label class="form-group"><span class="form-label">Ответственный</span><input class="form-input" id="editAssignee" maxlength="48"></label>
+        <label class="form-group"><span class="form-label">Срок</span><input class="form-input" id="editDue" maxlength="20"></label>
+      </div>
+      <label class="form-group"><span class="form-label">Заметка</span><textarea class="form-input" id="editNote" rows="3" maxlength="500" placeholder="Контекст для команды"></textarea></label>
+      <div class="hint" id="editMsg"></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-danger" id="taskDel" style="margin-right:auto"><i class="fas fa-trash"></i> Удалить</button>
+      <button type="button" class="btn" id="taskModalClose2">Отмена</button>
+      <button type="button" class="btn btn-primary" id="taskSave"><i class="fas fa-save"></i> Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  var DATA = null;
+  var filterPrio = '';
+  var editId = null;
+  var draggedId = null;
+
+  var PRIO = {
+    low:    { label: 'Низкий',  cls: 'neutral' },
+    mid:    { label: 'Средний', cls: 'security' },
+    high:   { label: 'Высокий', cls: 'tone-warning' },
+    urgent: { label: 'Срочный', cls: 'danger' }
+  };
+
+  function setMsg(id, text, ok) {
+    var el = $(id);
+    el.className = 'hint ' + (text ? (ok === false ? 'error' : '') : '');
+    el.textContent = text || '';
+  }
+
+  function cardHtml(t) {
+    var p = PRIO[t.priority] || PRIO.mid;
+    var over = t.due && new Date(t.due + 'T23:59:59') < new Date();
+    return '<div class="board-card" draggable="true" data-id="' + t.id + '" data-prio="' + esc(t.priority) + '">' +
+      '<div class="board-card-top">' +
+        '<span class="badge ' + p.cls + '">' + p.label + '</span>' +
+        (over ? '<span class="badge danger" title="Срок истёк"><i class="fas fa-hourglass-end"></i> просрочено</span>' : '') +
+        '<span class="spacer"></span>' +
+        '<button type="button" class="btn btn-sm btn-ghost" data-del="' + t.id + '" title="Удалить"><i class="fas fa-trash" style="color:var(--err)"></i></button>' +
+      '</div>' +
+      '<div class="board-card-title">' + esc(t.title) + '</div>' +
+      (t.note ? '<div class="board-card-note">' + esc(t.note) + '</div>' : '') +
+      '<div class="board-card-meta">' +
+        (t.assignee ? '<span class="chip"><i class="fas fa-user"></i> ' + esc(t.assignee) + '</span>' : '') +
+        (t.due ? '<span class="chip ' + (over ? 'danger' : '') + '"><i class="fas fa-calendar"></i> ' + esc(t.due) + '</span>' : '') +
+        '<span class="board-card-author" title="Создал: ' + esc(t.author) + ' · ' + esc(t.created) + '">' + esc(t.author || '—') + '</span>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function visible(t) {
+    var q = $('boardSearch').value.toLowerCase().trim();
+    if (filterPrio && t.priority !== filterPrio) return false;
+    if (q) {
+      var hay = (t.title + ' ' + (t.note || '') + ' ' + (t.assignee || '')).toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  }
+
+  function render() {
+    if (!DATA) return;
+    ['todo', 'doing', 'done'].forEach(function (st) {
+      var col = DATA.columns[st];
+      var box = document.querySelector('[data-drop="' + st + '"]');
+      var tasks = col.tasks.filter(visible);
+      box.innerHTML = tasks.length
+        ? tasks.map(cardHtml).join('')
+        : '<div class="board-empty">Перетащите задачу сюда</div>';
+      var cnt = document.querySelector('[data-count="' + st + '"]');
+      if (cnt) cnt.textContent = tasks.length;
+    });
+    var total = DATA.tasks.length;
+    var done = (DATA.counts.done || 0);
+    var pct = total ? Math.round(done / total * 100) : 0;
+    $('boardMeta').textContent = 'задач: ' + total + ' · готово: ' + done + ' (' + pct + '%)';
+    bindCards();
+  }
+
+  function bindCards() {
+    document.querySelectorAll('.board-card').forEach(function (card) {
+      card.addEventListener('dragstart', function (e) {
+        draggedId = card.dataset.id;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', draggedId); } catch (err) {}
+      });
+      card.addEventListener('dragend', function () {
+        card.classList.remove('dragging');
+        document.querySelectorAll('.board-col-body').forEach(function (b) { b.classList.remove('drag-over'); });
+      });
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('[data-del]')) return;
+        openEdit(card.dataset.id);
+      });
+    });
+    document.querySelectorAll('.board-col-body').forEach(function (body) {
+      body.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        body.classList.add('drag-over');
+      });
+      body.addEventListener('dragleave', function () {
+        body.classList.remove('drag-over');
+      });
+      body.addEventListener('drop', function (e) {
+        e.preventDefault();
+        body.classList.remove('drag-over');
+        if (!draggedId) return;
+        var st = body.dataset.drop;
+        moveTask(draggedId, st);
+        draggedId = null;
+      });
+    });
+    document.querySelectorAll('[data-del]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        deleteTask(btn.dataset.del);
+      });
+    });
+  }
+
+  async function load() {
+    try {
+      var d = await fetch('/api/team-board').then(function (r) { return r.json(); });
+      if (!d.ok) return;
+      DATA = d;
+      render();
+    } catch (e) { /* сеть */ }
+  }
+
+  async function moveTask(id, status) {
+    try {
+      await fetch('/api/team-board/' + id, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: status })
+      });
+      var t = DATA.tasks.find(function (x) { return String(x.id) === String(id); });
+      if (t) t.status = status;
+      // пересчитать колонки локально
+      ['todo', 'doing', 'done'].forEach(function (st) {
+        DATA.columns[st].tasks = DATA.tasks.filter(function (x) { return x.status === st; });
+        DATA.counts[st] = DATA.columns[st].tasks.length;
+      });
+      render();
+      window.showToast('Задача перемещена', true);
+    } catch (e) { window.showToast('Не удалось переместить', false); }
+  }
+
+  function openEdit(id) {
+    var t = DATA.tasks.find(function (x) { return String(x.id) === String(id); });
+    if (!t) return;
+    editId = id;
+    $('taskModalSub').textContent = '#' + t.id + ' · создал ' + (t.author || '—') + ' · ' + (t.created || '');
+    $('editTitle').value = t.title;
+    $('editPriority').value = t.priority;
+    $('editAssignee').value = t.assignee || '';
+    $('editDue').value = t.due || '';
+    $('editNote').value = t.note || '';
+    setMsg('editMsg', '');
+    $('taskModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    $('taskModal').style.display = 'none';
+    editId = null;
+  }
+
+  async function saveEdit() {
+    var title = $('editTitle').value.trim();
+    if (!title) { setMsg('editMsg', 'Пустой заголовок', false); return; }
+    try {
+      var r = await fetch('/api/team-board/' + editId, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title,
+          priority: $('editPriority').value,
+          assignee: $('editAssignee').value.trim(),
+          due: $('editDue').value.trim(),
+          note: $('editNote').value.trim()
+        })
+      });
+      var d = await r.json();
+      if (!d.ok) { setMsg('editMsg', d.error || 'Ошибка', false); return; }
+      closeModal();
+      await load();
+      window.showToast('Задача сохранена', true);
+    } catch (e) { setMsg('editMsg', 'Сеть недоступна', false); }
+  }
+
+  async function deleteTask(id) {
+    window.confirmAction('Удалить задачу?', 'Карточка исчезнет с доски команды.', function () {
+      fetch('/api/team-board/' + id, { method: 'DELETE' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.ok) { window.showToast('Удалено', true); load(); }
+          else window.showToast(d.error || 'Ошибка', false);
+        });
+    }, { danger: true, okText: 'Удалить' });
+  }
+
+  function addTask(status) {
+    var title = $('newTitle').value.trim();
+    if (!title) { setMsg('addMsg', 'Напишите задачу', false); return; }
+    fetch('/api/team-board', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title,
+        status: status || 'todo',
+        priority: $('newPriority').value,
+        assignee: $('newAssignee').value.trim(),
+        due: $('newDue').value.trim()
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) { setMsg('addMsg', d.error || 'Ошибка', false); return; }
+      $('newTitle').value = '';
+      $('newAssignee').value = '';
+      $('newDue').value = '';
+      setMsg('addMsg', 'Добавлено в «' + (status === 'doing' ? 'В работе' : status === 'done' ? 'Готово' : 'Очередь') + '»', true);
+      window.showToast('Задача добавлена', true);
+      load();
+    }).catch(function () { setMsg('addMsg', 'Сеть недоступна', false); });
+  }
+
+  /* привязки */
+  $('boardAdd').addEventListener('click', function () { addTask('todo'); });
+  $('newTitle').addEventListener('keydown', function (e) { if (e.key === 'Enter') addTask('todo'); });
+  document.querySelectorAll('[data-quick]').forEach(function (btn) {
+    btn.addEventListener('click', function () { addTask(btn.dataset.quick); });
+  });
+  $('boardSearch').addEventListener('input', render);
+  document.querySelectorAll('#prioFilter .seg-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('#prioFilter .seg-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      filterPrio = btn.dataset.p;
+      render();
+    });
+  });
+  $('boardRefresh').addEventListener('click', load);
+  $('taskSave').addEventListener('click', saveEdit);
+  $('taskDel').addEventListener('click', function () { if (editId) { closeModal(); deleteTask(editId); } });
+  $('taskModalClose').addEventListener('click', closeModal);
+  $('taskModalClose2').addEventListener('click', closeModal);
+  $('taskModal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+
+  load();
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { if (!editId) load(); }, 15000);
+})();
+</script>
+{% endblock %}

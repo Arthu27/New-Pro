@@ -88,6 +88,86 @@ def register(ctx):
         return render_template('ops_center.html', role=session.get('role'), username=session.get('username'))
 
 
+    # ── Канбан-доска команды ─────────────────────────────────────────────
+    @app.route('/team-board')
+    @login_required
+    @role_required('mod')
+    def team_board_page():
+        return render_template('team_board.html', role=session.get('role'),
+                               username=session.get('username'))
+
+
+    @app.route('/api/team-board')
+    @login_required
+    @role_required('mod')
+    def api_team_board():
+        from services.team_board import board_view
+        return jsonify({'ok': True, **board_view()})
+
+
+    @app.route('/api/team-board', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_team_board_add():
+        from services.team_board import add_task
+        payload = request.get_json(silent=True) or {}
+        task, err = add_task(
+            title=payload.get('title', ''),
+            status=payload.get('status', 'todo'),
+            priority=payload.get('priority', 'mid'),
+            assignee=payload.get('assignee', ''),
+            due=payload.get('due', ''),
+            note=payload.get('note', ''),
+            author=session.get('username', ''),
+        )
+        if err:
+            return jsonify({'ok': False, 'error': err}), 400
+        return jsonify({'ok': True, 'task': task})
+
+
+    @app.route('/api/team-board/<int:task_id>', methods=['PATCH'])
+    @login_required
+    @role_required('mod')
+    def api_team_board_patch(task_id):
+        from services.team_board import update_task
+        patch = request.get_json(silent=True) or {}
+        task, err = update_task(task_id, patch)
+        if err:
+            return jsonify({'ok': False, 'error': err}), 400
+        return jsonify({'ok': True, 'task': task})
+
+
+    @app.route('/api/team-board/<int:task_id>', methods=['DELETE'])
+    @login_required
+    @role_required('mod')
+    def api_team_board_delete(task_id):
+        from services.team_board import delete_task
+        ok, err = delete_task(task_id)
+        if err:
+            return jsonify({'ok': False, 'error': err}), 404
+        return jsonify({'ok': True})
+
+
+    @app.route('/api/team-board/reorder', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_team_board_reorder():
+        from services.team_board import reorder
+        payload = request.get_json(silent=True) or {}
+        ok, err = reorder(payload.get('columns', {}))
+        if err:
+            return jsonify({'ok': False, 'error': err}), 400
+        return jsonify({'ok': ok})
+
+
+    # ── Студия темы ──────────────────────────────────────────────────────
+    @app.route('/theme-studio')
+    @login_required
+    def theme_studio_page():
+        return render_template('theme_studio.html', role=session.get('role'),
+                               username=session.get('username'))
+
+
     # ── Живая консоль логов ──────────────────────────────────────────────
     @app.route('/konsol')
     @login_required

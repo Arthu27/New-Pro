@@ -554,8 +554,9 @@
     if (searchBtn) searchBtn.addEventListener('click', paletteOpen);
   }
 
-  /* ── 12. Уведомления и лента активности ─────────────────── */
+  /* ── 12. Уведомления (v2) и лента активности ───────────── */
   var notifLastSeen = 0;
+  var notifTab = 'all';
 
   function notifInit() {
     var bell = doc.getElementById('notifBtn');
@@ -583,34 +584,75 @@
     if (backdrop) backdrop.addEventListener('click', closeDrawer);
     var closeBtn = drawer.querySelector('.drawer-close');
     if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+    var markAll = doc.getElementById('notifMarkAll');
+    if (markAll) markAll.addEventListener('click', function () {
+      fetch('/api/my-notifications').catch(function () {});
+      notifLastSeen = Date.now() / 1000;
+      loadNotifs();
+      window.showToast('Все уведомления отмечены прочитанными', true);
+    });
+
+    function notifIcon(n) {
+      var raw = String(n.icon || 'fa-bell');
+      return /^fa-/.test(raw) ? raw : 'fa-bell';
+    }
 
     function loadNotifs() {
       var body = doc.getElementById('notifBody');
       if (!body) return;
-      fetch('/api/notifications/poll')
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          var list = d.notifications || [];
-          if (!list.length) {
-            body.innerHTML = '<div class="empty"><i class="fas fa-bell-slash"></i><span>Уведомлений нет</span></div>';
-          } else {
-            body.innerHTML = list.map(function (n) {
-              var t = n.ts ? timeAgo(n.ts) : '';
-              return '<div class="feed-item">' +
-                '<div class="feed-item-icon">' + esc(n.icon || '<i class="fas fa-bell"></i>') + '</div>' +
-                '<div style="min-width:0"><div class="feed-item-title">' + esc(n.title || '') + '</div>' +
-                '<div class="feed-item-sub">' + esc(n.body || '') + '</div>' +
-                '<div class="feed-item-time">' + esc(t) + '</div></div></div>';
-            }).join('');
-          }
-          var unread = (d.unread || 0) - (d.ts > notifLastSeen ? 0 : 0);
-          if (unread > 0 && badge && !drawer.classList.contains('open')) {
-            badge.textContent = unread > 99 ? '99+' : unread;
-            badge.style.display = 'grid';
-          }
-        })
-        .catch(function () {});
+      var sysP = fetch('/api/notifications/poll').then(function (r) { return r.json(); }).catch(function () { return { notifications: [], unread: 0 }; });
+      var ownP = fetch('/api/my-notifications').then(function (r) { return r.json(); }).catch(function () { return []; });
+      Promise.all([sysP, ownP]).then(function (both) {
+        var sys = both[0].notifications || [];
+        var own = Array.isArray(both[1]) ? both[1] : [];
+        var sysItems = sys.map(function (n) {
+          return { title: n.title, body: n.body, icon: notifIcon(n), ts: n.ts, kind: 'system' };
+        });
+        var ownItems = own.map(function (n) {
+          return {
+            title: n.title || n.action || 'Уведомление',
+            body: n.body || n.detail || '',
+            icon: /^fa-/.test(n.icon || '') ? n.icon : 'fa-bell',
+            ts: n.ts || n.created_at || n.timestamp || 0,
+            kind: 'personal'
+          };
+        });
+        var all = sysItems.concat(ownItems).sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
+        var list = notifTab === 'system' ? sysItems : notifTab === 'personal' ? ownItems : all;
+        if (!list.length) {
+          body.innerHTML = '<div class="empty"><i class="fas fa-bell-slash"></i><span>Уведомлений нет</span></div>';
+        } else {
+          body.innerHTML = list.slice(0, 30).map(function (n) {
+            var t = n.ts ? timeAgo(n.ts) : '';
+            return '<div class="feed-item">' +
+              '<div class="feed-item-icon"><i class="fas ' + esc(n.icon) + '"></i></div>' +
+              '<div style="min-width:0"><div class="feed-item-title">' + esc(n.title || '') + '</div>' +
+              (n.body ? '<div class="feed-item-sub">' + esc(n.body) + '</div>' : '') +
+              '<div class="feed-item-time">' +
+                (n.kind === 'personal'
+                  ? '<span class="badge neutral" style="font-size:9px;padding:0 6px">личное</span> '
+                  : '<span class="badge security" style="font-size:9px;padding:0 6px">система</span> ') +
+                esc(t) + '</div></div></div>';
+          }).join('');
+        }
+        var unread = both[0].unread || 0;
+        if (unread > 0 && badge && !drawer.classList.contains('open')) {
+          badge.textContent = unread > 99 ? '99+' : unread;
+          badge.style.display = 'grid';
+        }
+      });
     }
+
+    Array.prototype.forEach.call(doc.querySelectorAll('[data-notif-tab]'), function (tab) {
+      tab.addEventListener('click', function () {
+        notifTab = tab.dataset.notifTab;
+        Array.prototype.forEach.call(doc.querySelectorAll('[data-notif-tab]'), function (t) {
+          t.classList.toggle('active', t === tab);
+        });
+        loadNotifs();
+      });
+    });
+
     loadNotifs();
     setInterval(loadNotifs, 30000);
   }

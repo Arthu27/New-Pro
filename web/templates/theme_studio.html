@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Студия темы — Aether{% endblock %}
+{% block page_title %}Студия темы{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Оформление</div>
+    <h1>Студия темы</h1>
+    <p class="lead">Соберите панель под себя: цвет акцента, скругления, плотность и масштаб интерфейса. Всё сохраняется за вашей учёткой и применяется мгновенно.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn" id="studioReset"><i class="fas fa-rotate-left"></i> Сбросить</button>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-sliders"></i> Параметры</h2>
+      <div class="sub">Живое применение ко всей панели.</div></div></div>
+    <div class="panel-body" style="display:flex;flex-direction:column;gap:22px">
+
+      <!-- Тема -->
+      <div class="studio-control">
+        <div class="lbl"><span>Тема</span></div>
+        <div class="seg" id="studioTheme">
+          <button type="button" class="seg-btn" data-theme="light"><i class="fas fa-sun"></i> Светлая</button>
+          <button type="button" class="seg-btn" data-theme="dark"><i class="fas fa-moon"></i> Тёмная</button>
+        </div>
+      </div>
+
+      <!-- Акцент -->
+      <div class="studio-control">
+        <div class="lbl"><span>Акцент</span><span class="val" id="accentVal">—</span></div>
+        <div class="studio-color-wheel" id="accentGrid"></div>
+        <input type="color" class="studio-custom" id="accentCustom" value="#4f46e5" aria-label="Свой цвет акцента">
+      </div>
+
+      <!-- Скругления -->
+      <div class="studio-control">
+        <div class="lbl"><span>Скругления углов</span><span class="val" id="radiusVal">—</span></div>
+        <input type="range" id="radiusRange" min="8" max="24" step="2" value="10" aria-label="Скругления углов">
+      </div>
+
+      <!-- Масштаб -->
+      <div class="studio-control">
+        <div class="lbl"><span>Масштаб интерфейса</span><span class="val" id="scaleVal">—</span></div>
+        <input type="range" id="scaleRange" min="0.85" max="1.15" step="0.01" value="1" aria-label="Масштаб интерфейса">
+      </div>
+
+      <!-- Плотность -->
+      <div class="studio-control">
+        <div class="lbl"><span>Компактный режим</span></div>
+        <label class="switch"><input type="checkbox" id="compactToggle"><span class="track"></span> Плотнее таблицы и списки</label>
+      </div>
+
+      <div class="hint" id="studioMsg"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-eye"></i> Превью</h2>
+      <div class="sub">Так панель выглядит прямо сейчас.</div></div></div>
+    <div class="panel-body">
+      <div class="studio-preview" id="preview">
+        <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="mono" style="font-size:11px;color:var(--text-3)">aether · панель</span></div>
+        <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
+          <div class="kpi"><div class="kpi-icon"><i class="fas fa-server"></i></div><div class="kpi-copy"><div class="kpi-value">248</div><div class="kpi-label">Участников</div></div></div>
+          <div class="kpi tone-ok"><div class="kpi-icon"><i class="fas fa-signal"></i></div><div class="kpi-copy"><div class="kpi-value">36</div><div class="kpi-label">Онлайн</div></div></div>
+          <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-shield-halved"></i></div><div class="kpi-copy"><div class="kpi-value">12</div><div class="kpi-label">Тикетов</div></div></div>
+        </div>
+        <div class="prog"></div>
+        <div class="ln w1"></div>
+        <div class="ln w2"></div>
+        <div class="chip-row">
+          <span class="chip">Варны</span><span class="chip">Мьюты</span><span class="chip danger">Баны</span>
+        </div>
+        <button type="button" class="btn btn-primary"><i class="fas fa-bolt"></i> Действие</button>
+        <button type="button" class="btn"><i class="fas fa-gear"></i> Вторичное</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+
+  var ACCENTS = [
+    ['#4f46e5', 'Индиго'], ['#7c3aed', 'Фиолет'], ['#0284c7', 'Небо'],
+    ['#059669', 'Изумруд'], ['#e11d48', 'Роза'], ['#d97706', 'Янтарь'],
+    ['#ea580c', 'Оранж'], ['#0d9488', 'Бирюза']
+  ];
+
+  var state = { theme: 'light', accent: '#4f46e5', radius: 10, scale: 1, compact: false };
+  var saving = false;
+
+  function save() {
+    if (saving) return;
+    saving = true;
+    fetch('/api/ux/prefs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      saving = false;
+      if (d.success) {
+        $('studioMsg').className = 'hint';
+        $('studioMsg').textContent = 'Сохранено за вашей учёткой';
+        setTimeout(function () { $('studioMsg').textContent = ''; }, 2500);
+      } else {
+        $('studioMsg').className = 'hint error';
+        $('studioMsg').textContent = d.error || 'Ошибка сохранения';
+      }
+    }).catch(function () {
+      saving = false;
+      $('studioMsg').className = 'hint error';
+      $('studioMsg').textContent = 'Сеть недоступна';
+    });
+  }
+
+  function apply() {
+    document.documentElement.setAttribute('data-theme', state.theme);
+    if (window.applyAccent) window.applyAccent(state.accent);
+    document.documentElement.style.setProperty('--r-sm', state.radius + 'px');
+    document.documentElement.style.setProperty('--r', (state.radius + 4) + 'px');
+    document.documentElement.style.setProperty('--r-lg', (state.radius + 8) + 'px');
+    document.documentElement.style.fontSize = Math.round(state.scale * 100) + '%';
+    if (window.applyCompact) window.applyCompact(state.compact);
+    try {
+      localStorage.setItem('aether_theme', state.theme);
+      localStorage.setItem('aether_accent', state.accent);
+    } catch (e) {}
+  }
+
+  function paintControls() {
+    document.querySelectorAll('#studioTheme .seg-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.theme === state.theme);
+    });
+    $('accentVal').textContent = state.accent;
+    $('accentCustom').value = state.accent;
+    document.querySelectorAll('#accentGrid .studio-color-swatch').forEach(function (sw) {
+      sw.classList.toggle('active', sw.dataset.hex.toLowerCase() === String(state.accent).toLowerCase());
+    });
+    $('radiusRange').value = state.radius;
+    $('radiusVal').textContent = state.radius + 'px';
+    $('scaleRange').value = state.scale;
+    $('scaleVal').textContent = Math.round(state.scale * 100) + '%';
+    $('compactToggle').checked = state.compact;
+  }
+
+  /* построение сетки акцентов */
+  var grid = $('accentGrid');
+  ACCENTS.forEach(function (a) {
+    var sw = document.createElement('button');
+    sw.type = 'button';
+    sw.className = 'studio-color-swatch';
+    sw.dataset.hex = a[0];
+    sw.title = a[1];
+    sw.style.background = 'linear-gradient(135deg, ' + a[0] + ', ' + a[0] + 'cc)';
+    sw.innerHTML = '<i class="fas fa-check"></i>';
+    sw.addEventListener('click', function () {
+      state.accent = a[0];
+      paintControls();
+      apply();
+      save();
+    });
+    grid.appendChild(sw);
+  });
+
+  document.querySelectorAll('#studioTheme .seg-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      state.theme = b.dataset.theme;
+      paintControls();
+      apply();
+      save();
+    });
+  });
+  $('accentCustom').addEventListener('input', function () {
+    state.accent = this.value;
+    paintControls();
+    apply();
+  });
+  $('accentCustom').addEventListener('change', save);
+  $('radiusRange').addEventListener('input', function () {
+    state.radius = parseInt(this.value, 10);
+    paintControls();
+    apply();
+  });
+  $('radiusRange').addEventListener('change', save);
+  $('scaleRange').addEventListener('input', function () {
+    state.scale = parseFloat(this.value);
+    paintControls();
+    apply();
+  });
+  $('scaleRange').addEventListener('change', save);
+  $('compactToggle').addEventListener('change', function () {
+    state.compact = this.checked;
+    paintControls();
+    apply();
+    save();
+  });
+  $('studioReset').addEventListener('click', function () {
+    state = { theme: 'light', accent: '#4f46e5', radius: 10, scale: 1, compact: false };
+    paintControls();
+    apply();
+    save();
+    window.showToast('Тема сброшена', true);
+  });
+
+  /* загрузить сохранённые префы */
+  fetch('/api/ux/prefs').then(function (r) { return r.json(); }).then(function (d) {
+    var p = (d && d.prefs) || {};
+    if (p.theme) state.theme = p.theme;
+    if (p.accent) state.accent = p.accent;
+    if (p.radius) state.radius = p.radius;
+    if (p.scale) state.scale = p.scale;
+    if (typeof p.compact === 'boolean') state.compact = p.compact;
+    paintControls();
+    apply();
+  }).catch(function () {
+    paintControls();
+    apply();
+  });
+})();
+</script>
+{% endblock %}

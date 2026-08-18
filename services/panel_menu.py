@@ -131,6 +131,7 @@ MENU = [
         {'path': '/schedule', 'label': 'Расписание', 'icon': 'fa-calendar-alt'},
         {'path': '/bot-settings', 'label': 'Настройки', 'icon': 'fa-sliders-h'},
         {'path': '/theme-settings', 'label': 'Тема панели', 'icon': 'fa-palette'},
+        {'path': '/theme-studio', 'label': 'Студия темы', 'icon': 'fa-wand-magic-sparkles'},
         {'path': '/anticrash', 'label': 'Анти-краш', 'icon': 'fa-life-ring'},
         {'path': '/backups', 'label': 'Бэкапы', 'icon': 'fa-save'},
         {'path': '/templates', 'label': 'Шаблоны', 'icon': 'fa-clone'},
@@ -201,6 +202,7 @@ MENU = [
         {'path': '/feature-flags', 'label': 'Флаги', 'icon': 'fa-flag'},
     ]},
     {'group': 'Утилиты', 'key': 'utility', 'icon': 'fa-toolbox', 'pages': [
+        {'path': '/team-board', 'label': 'Доска команды', 'icon': 'fa-table-columns'},
         {'path': '/todo', 'label': 'Задачи', 'icon': 'fa-check-square'},
         {'path': '/reminders', 'label': 'Напоминания', 'icon': 'fa-bell'},
         {'path': '/yardim', 'label': 'Справка', 'icon': 'fa-question-circle'},

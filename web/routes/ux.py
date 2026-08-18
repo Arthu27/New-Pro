@@ -70,8 +70,24 @@ def validate_prefs_patch(patch):
         clean['accent'] = a
     if 'compact' in patch:
         clean['compact'] = bool(patch['compact'])
+    if 'radius' in patch:
+        try:
+            radius = int(patch['radius'])
+        except (TypeError, ValueError):
+            return None, 'radius: число 8..24'
+        if not 8 <= radius <= 24:
+            return None, 'radius: число 8..24'
+        clean['radius'] = radius
+    if 'scale' in patch:
+        try:
+            scale = float(patch['scale'])
+        except (TypeError, ValueError):
+            return None, 'scale: число 0.85..1.15'
+        if not 0.85 <= scale <= 1.15:
+            return None, 'scale: число 0.85..1.15'
+        clean['scale'] = round(scale, 2)
     if not clean:
-        return None, 'пустой патч (theme/accent/compact)'
+        return None, 'пустой патч (theme/accent/compact/radius/scale)'
     return clean, None
 
 

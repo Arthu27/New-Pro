@@ -224,6 +224,30 @@ panel_logs = [
      'detail': 'Апелляция #12 принята модератором lina.mod', 'ts': int(NOW.timestamp()) - 3600 * 72, 'broadcast': True},
 ]
 
+# ── 8. Канбан-доска команды ─────────────────────────────────────────────
+team_board = {'next_id': 6, 'tasks': {
+    '1': {'id': 1, 'title': 'Разобрать апелляцию toxicguy — запросить контекст у lina.mod',
+          'status': 'doing', 'priority': 'urgent', 'assignee': 'artem.mods',
+          'due': 'до 19.08', 'note': 'Есть скриншоты в доказательствах #5.',
+          'author': 'lina.mod', 'created': '2026-08-16 14:20', 'updated': '2026-08-18 09:10', 'order': 0},
+    '2': {'id': 2, 'title': 'Обновить чёрный список автофильтра (новый спам-домен)',
+          'status': 'doing', 'priority': 'high', 'assignee': 'sonya.staff',
+          'due': '', 'note': 'Домен видели в трёх тикетах за сутки.',
+          'author': 'artem.mods', 'created': '2026-08-17 11:05', 'updated': '2026-08-18 08:40', 'order': 1},
+    '3': {'id': 3, 'title': 'Проверить волну входов с 17.08 — отчёт по анти-рейду',
+          'status': 'todo', 'priority': 'mid', 'assignee': 'artem.mods',
+          'due': 'до 21.08', 'note': '12 входов за 2 минуты, возможно фолс-позитив.',
+          'author': 'sonya.staff', 'created': '2026-08-17 22:30', 'updated': '2026-08-17 22:30', 'order': 0},
+    '4': {'id': 4, 'title': 'Созвониться по правилам войса — обсудить музыку в чатах',
+          'status': 'todo', 'priority': 'low', 'assignee': 'lina.mod',
+          'due': '', 'note': '',
+          'author': 'artem.mods', 'created': '2026-08-18 09:00', 'updated': '2026-08-18 09:00', 'order': 1},
+    '5': {'id': 5, 'title': 'Проверить тикеты без ответа старше 24 часов',
+          'status': 'done', 'priority': 'high', 'assignee': 'sonya.staff',
+          'due': 'до 18.08', 'note': 'Закрыто: 3 тикета отвечены, 1 эскалирован.',
+          'author': 'lina.mod', 'created': '2026-08-17 12:15', 'updated': '2026-08-18 10:20', 'order': 0},
+}}
+
 files = {
     'data/warnings.json': warnings,
     'data/audit_log.json': audit,
@@ -232,6 +256,7 @@ files = {
     f'data/warn_config_{GID}.json': warn_config,
     'data/login_log.json': login_log,
     'data/panel_logs.json': panel_logs,
+    'data/team_board.json': team_board,
 }
 
 for path, payload in files.items():
