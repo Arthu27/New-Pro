@@ -229,12 +229,12 @@ function miPick(uid) {
   renderSubjects(OV);
   fetch(API + '/dossier?user_id=' + encodeURIComponent(uid))
     .then(function (r) { return r.json(); })
-    .then(function (ds) {
-      if (!ds.success) {
-        window.showToast(ds.error || 'Досье недоступно', false);
+    .then(function (d) {
+      if (!d.success) {
+        window.showToast(d.error || 'Досье недоступно', false);
         return;
       }
-      renderDossier(ds);
+      renderDossier(d.dossier);
       var box = $('miDossier');
       if (box.scrollIntoView) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }).catch(function () {});
