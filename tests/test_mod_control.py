@@ -620,11 +620,10 @@ check('/mod-studio' in paths, 'пункт меню «Студия модерац
 check('/mod-control' not in paths and '/mod-insights' not in paths,
       'старых пунктов в меню больше нет')
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
-check(mod_pages == ['/mod-studio'],
-      'группа «Модерация» — одна Студия, всё в одном месте')
-check('/antiraid' not in paths and '/autofilter' not in paths
-      and '/appeals' not in paths and '/proofs' not in paths,
-      'легаси-страницы убраны из меню (живут внутри Студии)')
+check('/mod-studio' in mod_pages, 'Студия — хаб группы «Модерация»')
+check('/antiraid' in paths and '/autofilter' in paths
+      and '/appeals' in paths and '/proofs' in paths,
+      'разделы модерации доступны отдельными пунктами меню')
 check(mod_pages[0] == '/mod-studio', 'Центр — первый пункт группы «Модерация»')
 check('/mod-studio' not in PM.PAGE_COGS, 'файловая страница — не в PAGE_COGS')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()

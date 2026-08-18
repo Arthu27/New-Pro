@@ -202,8 +202,8 @@ check("'/overview'" in tpl and "'/toggle'" in tpl and "'/scan'" in tpl
 check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
 import services.panel_menu as PM
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
-check(mod_pages == ['/mod-studio'], 'раздел «Безопасность» внутри Студии (вкладка «Защиты»)')
-check('/security' not in PM.PAGE_COGS, 'страница ушла в Студию — привязка снята осознанно')
+check('/security' in mod_pages, 'пункт меню «Безопасность» в «Модерации»')
+check(PM.PAGE_COGS.get('/security') == ('security',), 'security-ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check(ext.count('security_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 

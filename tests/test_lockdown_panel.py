@@ -278,8 +278,8 @@ check("'/status'" in tpl and "'/preview'" in tpl and "API + '/' + action" in tpl
 check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
 import services.panel_menu as PM
 mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
-check(mod_pages == ['/mod-studio'], '«Локдаун» внутри Студии (вкладка «Защиты»)')
-check('/lockdown' not in PM.PAGE_COGS, 'привязка снята осознанно — раздел в Студии')
+check('/lockdown' in mod_pages, 'пункт меню «Локдаун» в «Модерации»')
+check(PM.PAGE_COGS.get('/lockdown') == ('lockdown',), 'lockdown-ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check(ext.count('lockdown_panel') >= 1, 'модуль зарегистрирован в routes_extra')
 

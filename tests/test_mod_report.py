@@ -130,7 +130,7 @@ check('[data-theme="light"]' in tpl, 'светлая тема учтена')
 check("method: 'POST'" not in tpl, 'честно read-only: ни одного POST')
 import services.panel_menu as PM
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
-check('/mod-studio' in paths, 'отчёт живёт в Студии модерации (единая точка входа)')
+check('/mod-report' in paths, 'пункт меню «Отчёт модерации» есть')
 check('/mod-report' not in PM.PAGE_COGS, 'отчёт — от аудит-файла, в PAGE_COGS не входит')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

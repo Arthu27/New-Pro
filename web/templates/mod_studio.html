@@ -196,18 +196,14 @@
 .sd-pin button:hover{color:var(--sd-rose)}
 .sd-kbd-hint{font-size:10px;color:var(--sd-t3);align-self:center;margin-left:auto;letter-spacing:.04em}
 /* ── Анимации и эффекты ─────────────────────────────────────── */
-/* живой градиент хиро */
-.sd-hero{background:linear-gradient(120deg,#7c6cf0,#9a7bf5,#ef8fb8,#7c6cf0);background-size:280% 280%;animation:sdHeroShift 14s ease infinite}
-@keyframes sdHeroShift{0%{background-position:0% 40%}50%{background-position:100% 60%}100%{background-position:0% 40%}}
-/* парящие сферы в хиро */
-.sd-orb{position:absolute;border-radius:50%;pointer-events:none;filter:blur(2px);animation:sdFloat 9s ease-in-out infinite}
-.sd-orb.o1{width:110px;height:110px;right:14%;top:-30px;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.5),rgba(255,255,255,.06) 70%)}
-.sd-orb.o2{width:64px;height:64px;right:6%;bottom:-18px;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.45),rgba(255,255,255,.05) 70%);animation-duration:7s;animation-delay:1.2s}
-.sd-orb.o3{width:34px;height:34px;right:26%;top:14px;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.55),rgba(255,255,255,.06) 70%);animation-duration:6s;animation-delay:.6s}
-@keyframes sdFloat{0%,100%{transform:translateY(0) translateX(0)}50%{transform:translateY(-14px) translateX(6px)}}
-/* мерцание заголовка */
-.sd-hero h2{background:linear-gradient(90deg,#fff 30%,#ffe9f3 50%,#fff 70%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:sdShine 5s linear infinite}
-@keyframes sdShine{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* хиро: плоский, чистый, без градиентов и анимаций */
+.sd-hero{background:var(--sd-card);border:1px solid var(--sd-line);border-radius:18px;box-shadow:0 1px 2px rgba(20,22,26,.05)}
+.sd-hero h2{color:var(--sd-t1);background:none;-webkit-text-fill-color:var(--sd-t1);letter-spacing:-.01em}
+.sd-hero p{color:var(--sd-t3)}
+.sd-orb{display:none}
+.sd-hero-ico{background:var(--sd-ind-soft,rgba(124,108,240,.12));color:var(--sd-ind)}
+.sd-hero-find input{border:1px solid var(--sd-line);background:var(--sd-surface,#fff)}
+.sd-hero-find button{background:var(--sd-ind);color:#fff;border:none}
 /* каскадное появление стат-карточек */
 .sd-stat{animation:sdRise .45s cubic-bezier(.22,1,.36,1) both}
 .sd-stat:nth-child(1){animation-delay:.02s}.sd-stat:nth-child(2){animation-delay:.07s}
@@ -226,19 +222,15 @@
 /* карточки: подъём и свечение при наведении */
 .sd-card{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
 .sd-card:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(90,100,150,.16);border-color:rgba(124,108,240,.30)}
-/* пульс срочных пилюль */
-.sd-pill.rose{animation:sdPulse 2.2s ease-in-out infinite}
-@keyframes sdPulse{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.30)}50%{box-shadow:0 0 0 6px rgba(229,72,77,0)}}
+/* срочные пилюли: без пульсации, чистый цвет */
 /* прогресс-бары: плавное наполнение */
 .sd-track i{transition:width .8s cubic-bezier(.22,1,.36,1)}
 /* звёзды закладок мерцают */
-.sd-pin .star{animation:sdTwinkle 2.6s ease-in-out infinite}
-@keyframes sdTwinkle{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.86)}}
+.sd-pin .star{color:#e6a700}
 /* кнопки: нажатие и свечение главных */
 .sd-btn{transition:all .15s ease}
 .sd-btn:active{transform:scale(.96)}
-.sd-btn.pri{animation:sdPriGlow 3s ease-in-out infinite}
-@keyframes sdPriGlow{0%,100%{box-shadow:0 6px 16px rgba(124,108,240,.30)}50%{box-shadow:0 6px 22px rgba(124,108,240,.48)}}
+.sd-btn.pri{box-shadow:none}
 /* вкладки: пружина при переключении */
 .sd-tab{transition:all .18s cubic-bezier(.34,1.4,.64,1)}
 .sd-tab.on{animation:sdTabPop .3s cubic-bezier(.34,1.5,.64,1)}
@@ -247,9 +239,7 @@
 .sd-row:hover .sd-ava,.sd-item:hover .sd-ava{transform:rotate(-4deg) scale(1.06)}
 .sd-ava{transition:transform .18s ease}
 /* уведомления: искра при появлении */
-.sd-ncard{position:relative;overflow:hidden}
-.sd-ncard::after{content:"";position:absolute;top:0;left:-70%;width:45%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);animation:sdSpark .9s .15s ease forwards;pointer-events:none}
-@keyframes sdSpark{to{left:130%}}
+.sd-ncard{position:relative}
 /* лёгкий вход досье-карточки */
 .sd-ctx{animation:sdRise .35s cubic-bezier(.22,1,.36,1) both}
 @media (prefers-reduced-motion:reduce){.sd *{animation:none !important;transition:none !important}}

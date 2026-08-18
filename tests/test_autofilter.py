@@ -251,7 +251,7 @@ check('{%' not in page and '{{' not in page, 'страница: без сыры�
 from services.panel_menu import MENU  # noqa: E402
 mod_group = next(g for g in MENU if g['key'] == 'mod')
 paths = [p['path'] for p in mod_group['pages']]
-check(paths == ['/mod-studio'], 'меню: автофильтр внутри Студии (вкладка «Защиты»)')
+check('/autofilter' in paths, 'меню: «Автофильтр чата» в группе Модерация')
 check('/automod-settings' not in paths, 'меню: старая заглушка убрана')
 
 # API

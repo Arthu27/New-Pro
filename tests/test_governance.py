@@ -151,8 +151,7 @@ check(not bad_cogs, f'PAGE_COGS ссылается на живые коги (б�
 check(all(isinstance(v, tuple) and v and all(isinstance(c, str) for c in v)
           for v in PM.PAGE_COGS.values()),
       'PAGE_COGS — непустые кортежи строк')
-# 52: appeals/lockdown/security/antifake/ladder осознанно ушли в Студию
-check(len(PM.PAGE_COGS) >= 50, f'карта когов не сдулась ({len(PM.PAGE_COGS)})')
+check(len(PM.PAGE_COGS) >= 55, f'карта когов не сдулась ({len(PM.PAGE_COGS)})')
 
 print('== 4. Шаблоны: ссылки живые, синтаксис валиден ==')
 ref_re = re.compile(r"render_template\(\s*['\"]([^'\"]+)['\"]")

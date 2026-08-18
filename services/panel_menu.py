@@ -27,10 +27,25 @@ MENU = [
         {'path': '/recap', 'label': 'Рекап канала', 'icon': 'fa-clock-rotate-left'},
     ]},
     {'group': 'Модерация', 'key': 'mod', 'icon': 'fa-shield-halved', 'pages': [
-        # Всё живёт в Студии: журналы, варны, временные, защиты, демки,
-        # апелляции, отчёты. Тонкая настройка защит доступна из Студии
-        # прямыми ссылками (/autofilter, /antiraid, /security, /lockdown).
+        # Студия — общий хаб (сводка/лента/отчёт), но каждый раздел
+        # модерации доступен и отдельным пунктом меню.
         {'path': '/mod-studio', 'label': 'Студия модерации', 'icon': 'fa-wand-magic-sparkles'},
+        {'path': '/logs', 'label': 'Логи модерации', 'icon': 'fa-clipboard-list'},
+        {'path': '/temp-moderation', 'label': 'Временная модерация', 'icon': 'fa-clock'},
+        {'path': '/warnings', 'label': 'Предупреждения', 'icon': 'fa-exclamation-triangle'},
+        {'path': '/mod-history', 'label': 'История', 'icon': 'fa-history'},
+        {'path': '/autofilter', 'label': 'Автофильтр чата', 'icon': 'fa-filter'},
+        {'path': '/antiraid', 'label': 'Анти-рейд', 'icon': 'fa-shield-virus'},
+        {'path': '/tagjail', 'label': 'Tag Jail', 'icon': 'fa-lock'},
+        {'path': '/mod-tools', 'label': 'Липкие & Паника', 'icon': 'fa-thumbtack'},
+        {'path': '/proofs', 'label': 'Демки', 'icon': 'fa-folder-open'},
+        {'path': '/bulk-actions', 'label': 'Массовые действия', 'icon': 'fa-layer-group'},
+        {'path': '/mod-report', 'label': 'Отчёт модерации', 'icon': 'fa-chart-simple'},
+        {'path': '/appeals', 'label': 'Апелляции', 'icon': 'fa-scale-balanced'},
+        {'path': '/lockdown', 'label': 'Локдаун', 'icon': 'fa-house-lock'},
+        {'path': '/security', 'label': 'Безопасность', 'icon': 'fa-shield-virus'},
+        {'path': '/antifake', 'label': 'Антифейк', 'icon': 'fa-user-secret'},
+        {'path': '/ladder', 'label': 'Лестница', 'icon': 'fa-stairs'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},
@@ -217,6 +232,11 @@ PAGE_COGS = {
     '/leaderboards': ('leaderboard',),
     '/templates': ('server_template',),
     '/gamification': ('gamification_cog',),
+    '/appeals': ('appeals',),
+    '/lockdown': ('lockdown',),
+    '/security': ('security',),
+    '/antifake': ('impersonation',),
+    '/ladder': ('ladder', 'warnings'),
 }
 
 
