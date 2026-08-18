@@ -262,6 +262,12 @@ def seed_moderation():
 seed()
 seed_moderation()
 
+# Реал-тайм в демо не нужен: порт 8765 из превью недоступен. Подмена
+# модуля пустым -> web/app.py получит ImportError и выключит WS чисто.
+import sys as _sys  # noqa: E402
+import types as _types  # noqa: E402
+_sys.modules['web.websocket_server'] = _types.ModuleType('web.websocket_server')
+
 import web.app as wapp  # noqa: E402
 from flask import redirect, session  # noqa: E402
 
@@ -323,6 +329,21 @@ class FakeUser:
         return 'Aether#0'
 
 
+class FakeDiagnostics:
+    """Стаб Diagnostics, чтобы /api/bot/health не сыпал 404 в демо."""
+
+    def get_health_snapshot(self):
+        try:
+            import psutil
+            cpu = round(psutil.cpu_percent(interval=None) or 8.0, 1)
+            ram = round(psutil.virtual_memory().percent or 32.0, 1)
+        except Exception:
+            cpu, ram = 8.0, 32.0
+        return {'status': 'online', 'demo': True, 'connected': True,
+                'cpu_percent': cpu, 'memory_percent': ram,
+                'latency_ms': 12.0, 'guilds': 1}
+
+
 class FakeTempMod:
     """Суррогат кога TempModeration для демо: читает те же data/temp_*.json.
 
@@ -368,6 +389,8 @@ class FakeBot:
     def get_cog(self, name):
         if name == 'TempModeration':
             return FakeTempMod()
+        if name == 'Diagnostics':
+            return FakeDiagnostics()
         return None
 
     def get_channel(self, cid):

@@ -1249,6 +1249,12 @@ window.addEventListener('pageshow', function (e) {
 <script>
 // Инициализация WebSocket клиента
 (function() {
+  // Флаг с сервера: нет real-time на бэкенде — не долбим порт впустую
+  var WS_ON = {{ ws_enabled|default(false)|tojson }};
+  if (!WS_ON) {
+    console.log('[WebSocket] Real-time отключён на сервере — клиент не стартует');
+    return;
+  }
   // Проверка поддержки WebSocket
   if (typeof WebSocket === 'undefined') {
     console.log('[WebSocket] Браузер не поддерживает WebSocket');

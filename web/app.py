@@ -73,6 +73,12 @@ def _load_secret_key ():
         return _secrets .token_urlsafe (48)
 
 app .secret_key =_load_secret_key ()
+
+# Реал-тайм доступен не всегда (демо/без websockets) — шаблоны не должны
+# пытаться подключаться к мёртвому порту.
+@app .context_processor
+def _inject_ws_flag ():
+    return {'ws_enabled': WEBSOCKET_ENABLED }
 # Усиление защиты сессии (cookie) панели
 app .config ['SESSION_COOKIE_HTTPONLY']=True   # JS не может прочитать cookie (anti-XSS кражи)
 app .config ['SESSION_COOKIE_SAMESITE']='Lax'  # cookie не уходит с cross-site формами (anti-CSRF)
