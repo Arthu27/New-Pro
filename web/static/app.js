@@ -763,6 +763,25 @@
     } catch (e) { /* вебсокет недоступен — панель работает без real-time */ }
   }
 
+  /* ── 14a. Плавные переходы между страницами ─────────────── */
+  function pageTransitions() {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    doc.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      if (!href || href.charAt(0) !== '/' || href.charAt(1) === '/') return;
+      if (href.charAt(1) === '#') return;
+      if (a.target === '_blank' || a.hasAttribute('download')) return;
+      if (href === window.location.pathname + window.location.search) return;
+      e.preventDefault();
+      doc.body.classList.add('page-leaving');
+      setTimeout(function () { window.location.href = href; }, 150);
+    });
+  }
+
   /* ── 15. Хоткеи ─────────────────────────────────────────── */
   function hotkeysInit() {
     doc.addEventListener('keydown', function (e) {
@@ -826,6 +845,7 @@
     activityInit();
     copyInit();
     hotkeysInit();
+    pageTransitions();
     revealInit();
     wsInit();
   });

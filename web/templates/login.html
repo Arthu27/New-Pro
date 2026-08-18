@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aether — Вход в панель управления</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=64">
+    <link rel="stylesheet" href="/static/style.css?v=66">
     <style>
       html, body { min-height: 100%; }
       body {
@@ -17,20 +17,20 @@
       }
       .auth-card {
         position: relative;
-        width: 100%; max-width: 400px;
+        width: 100%; max-width: 860px;
+        display: grid; grid-template-columns: 0.9fr 1.1fr;
         background: var(--glass);
         backdrop-filter: blur(18px) saturate(150%);
         border: 1px solid var(--line);
-        border-radius: 22px;
+        border-radius: 26px;
         box-shadow: 0 30px 90px rgba(16, 24, 40, 0.18), var(--shadow-1);
-        padding: 32px 30px 26px;
-        animation: fadeUp 0.4s var(--ease) both;
         overflow: hidden;
+        animation: fadeUp 0.4s var(--ease) both;
       }
       .auth-card::before {
         content: '';
         position: absolute; top: 0; left: 0; right: 0;
-        height: 2px;
+        height: 2px; z-index: 3;
         background: linear-gradient(90deg, transparent, var(--ac), var(--ac-2), transparent);
         background-size: 200% 100%;
         animation: hairline 4s linear infinite;
@@ -38,7 +38,7 @@
       .auth-card::after {
         content: '';
         position: absolute; inset: 0;
-        background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--ac) 9%, transparent), transparent 70%);
+        background: radial-gradient(340px circle at var(--mx, 85%) var(--my, 10%), color-mix(in srgb, var(--ac) 9%, transparent), transparent 70%);
         opacity: 0;
         transition: opacity 0.3s var(--ease);
         pointer-events: none;
@@ -47,33 +47,81 @@
       }
       [data-theme="dark"] .auth-card::after { mix-blend-mode: screen; }
       .auth-card.spot-on::after { opacity: 1; }
-      .auth-card > * { position: relative; z-index: 1; }
-      .auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
-      .auth-brand .brand-icon {
-        width: 34px; height: 34px; border-radius: 10px;
-        background: var(--ac-grad); color: #fff;
-        display: grid; place-items: center; font-size: 14px;
-        box-shadow: 0 4px 16px color-mix(in srgb, var(--ac) 40%, transparent);
+
+      /* ── Левая бренд-панель ── */
+      .auth-side {
+        position: relative;
+        padding: 44px 36px;
+        display: flex; flex-direction: column;
+        color: #fff;
+        background: linear-gradient(150deg, #4338ca 0%, #4f46e5 45%, #7c3aed 100%);
+        overflow: hidden;
       }
-      .auth-brand b {
+      .auth-side::before, .auth-side::after {
+        content: '';
+        position: absolute; border-radius: 50%;
+        filter: blur(70px);
+        opacity: 0.5;
+        pointer-events: none;
+      }
+      .auth-side::before {
+        width: 260px; height: 260px; left: -80px; top: -90px;
+        background: rgba(255, 255, 255, 0.22);
+        animation: sideFloat1 14s ease-in-out infinite alternate;
+      }
+      .auth-side::after {
+        width: 220px; height: 220px; right: -70px; bottom: -60px;
+        background: rgba(165, 180, 252, 0.35);
+        animation: sideFloat2 18s ease-in-out infinite alternate;
+      }
+      @keyframes sideFloat1 { from { transform: translate(0,0) scale(1); } to { transform: translate(24px, 28px) scale(1.15); } }
+      @keyframes sideFloat2 { from { transform: translate(0,0) scale(1.1); } to { transform: translate(-20px, -24px) scale(0.95); } }
+      .auth-side > * { position: relative; z-index: 1; }
+      .auth-side .brand {
+        display: flex; align-items: center; gap: 10px;
+        color: #fff; margin-bottom: 40px;
+      }
+      .auth-side .brand .ico {
+        width: 36px; height: 36px; border-radius: 11px;
+        background: rgba(255,255,255,.16);
+        backdrop-filter: blur(8px);
+        display: grid; place-items: center;
+        font-size: 15px;
+        border: 1px solid rgba(255,255,255,.25);
+        box-shadow: 0 4px 16px rgba(0,0,0,.25);
+      }
+      .auth-side .brand b {
         font-family: var(--font-display);
-        font-size: 15px; font-weight: 700; letter-spacing: .02em;
-        background: linear-gradient(120deg, var(--text) 20%, color-mix(in srgb, var(--ac) 65%, var(--text)) 90%);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
+        font-size: 15px; font-weight: 700; letter-spacing: .05em;
       }
-      .auth-brand span { display: block; font-size: var(--fs-xs); color: var(--text-3); }
+      .auth-side .brand span { display: block; font-size: 10px; opacity: .75; letter-spacing: .08em; }
+      .auth-side h1 {
+        font-family: var(--font-display);
+        font-size: 25px; font-weight: 700;
+        line-height: 1.3; letter-spacing: -.01em;
+        margin: 0 0 12px;
+      }
+      .auth-side .lead { font-size: 13.5px; line-height: 1.6; opacity: .88; margin: 0 0 30px; }
+      .auth-feats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+      .auth-feats li { display: flex; align-items: center; gap: 11px; font-size: 13px; font-weight: 600; }
+      .auth-feats li i {
+        width: 30px; height: 30px; flex: 0 0 30px;
+        border-radius: 9px;
+        background: rgba(255,255,255,.14);
+        border: 1px solid rgba(255,255,255,.22);
+        display: grid; place-items: center;
+        font-size: 12px;
+      }
+      .auth-side .foot { margin-top: auto; padding-top: 26px; font-size: 11px; opacity: .72; letter-spacing: .04em; }
+
+      /* ── Правая форма ── */
+      .auth-main { position: relative; z-index: 1; padding: 36px 34px 28px; }
+      .auth-main .mobile-brand { display: none; }
       .auth-title { font-size: 19px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px; }
       .auth-sub { color: var(--text-3); font-size: var(--fs-md); margin-bottom: 20px; }
       .auth-error {
         background: var(--err-soft); border: 1px solid color-mix(in srgb, var(--err) 25%, transparent);
         color: var(--err); border-radius: var(--r); padding: 10px 13px;
-        font-size: var(--fs-md); margin-bottom: 16px; display: none;
-      }
-      .auth-ok {
-        background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 25%, transparent);
-        color: var(--ok); border-radius: var(--r); padding: 10px 13px;
         font-size: var(--fs-md); margin-bottom: 16px; display: none;
       }
       .auth-field { position: relative; margin-bottom: 14px; }
@@ -96,9 +144,8 @@
                     inset 0 1px 0 rgba(255,255,255,.30);
         transition: transform .15s var(--ease), box-shadow .2s var(--ease), filter .2s;
       }
-      .auth-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px color-mix(in srgb, var(--ac) 42%, transparent), inset 0 1px 0 rgba(255,255,255,.32); filter: brightness(1.04); }
       [data-theme="dark"] .auth-btn { color: #14152a; }
-      .auth-btn:hover { background: var(--ac-3); border-color: var(--ac-3); }
+      .auth-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px color-mix(in srgb, var(--ac) 42%, transparent), inset 0 1px 0 rgba(255,255,255,.32); filter: brightness(1.04); }
       .auth-foot { text-align: center; margin-top: 18px; font-size: var(--fs-sm); color: var(--text-3); }
       .autocomplete-popup {
         position: absolute; top: 100%; left: 0; right: 0;
@@ -117,62 +164,103 @@
       }
       .pin-box input:focus { outline: none; border-color: var(--ac); box-shadow: 0 0 0 3px var(--ac-soft); }
       .step-hint { font-size: var(--fs-sm); color: var(--text-3); text-align: center; margin-bottom: 14px; }
+
+      @media (max-width: 760px) {
+        .auth-card { grid-template-columns: 1fr; max-width: 420px; }
+        .auth-side { display: none; }
+        .auth-main { padding: 26px 24px 22px; }
+        .auth-main .mobile-brand { display: flex; align-items: center; gap: 9px; margin-bottom: 18px; }
+        .auth-main .mobile-brand .ico {
+          width: 32px; height: 32px; border-radius: 10px;
+          background: var(--ac-grad); color: #fff;
+          display: grid; place-items: center; font-size: 13px;
+        }
+        [data-theme="dark"] .auth-main .mobile-brand .ico { color: #14152a; }
+        .auth-main .mobile-brand b {
+          font-family: var(--font-display); font-size: 14px; font-weight: 700;
+          background: linear-gradient(120deg, var(--text) 20%, color-mix(in srgb, var(--ac) 65%, var(--text)) 90%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+        }
+      }
     </style>
 </head>
 <body>
   <div class="bg-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
   <div class="auth-card">
-    <div class="auth-brand">
-      <div class="brand-icon"><i class="fas fa-bolt"></i></div>
-      <div><b>Aether</b><span>Панель управления</span></div>
-    </div>
-
-    <div class="tabs" style="margin-bottom:20px">
-      <button type="button" class="tab-btn active" id="tabBtnPass" data-auth-tab="pass"><i class="fas fa-key"></i> Пароль</button>
-      <button type="button" class="tab-btn" id="tabBtnPin" data-auth-tab="pin"><i class="fas fa-shield-halved"></i> Discord PIN</button>
-    </div>
-
-    <!-- Вход по паролю -->
-    <div id="tabPass">
-      <div class="auth-error" id="passError" {% if error %}style="display:block"{% endif %}>{{ error|e }}</div>
-      <form method="POST" action="/login" autocomplete="off">
-        <div class="auth-field">
-          <label class="lbl" for="passUsername">Логин</label>
-          <input type="text" name="username" id="passUsername" placeholder="owner, @username или ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Логин">
-          <div class="autocomplete-popup" id="passPopup"></div>
-        </div>
-        <div class="auth-field">
-          <label class="lbl" for="passPassword">Пароль</label>
-          <input type="password" name="password" id="passPassword" placeholder="••••••••" required aria-label="Пароль">
-        </div>
-        <button type="submit" class="auth-btn"><i class="fas fa-arrow-right"></i> Войти</button>
-      </form>
-    </div>
-
-    <!-- Вход по Discord PIN -->
-    <div id="tabPin" style="display:none">
-      <div class="auth-error" id="pinError"></div>
-      <div id="step1">
-        <div class="auth-title">Шаг 1 · Найти аккаунт</div>
-        <div class="auth-sub">Введите ID или @username, привязанный к панели.</div>
-        <div class="auth-field">
-          <label class="lbl" for="discordQuery">Discord</label>
-          <input type="text" id="discordQuery" placeholder="123456789012345678 или @username" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')" aria-label="Discord">
-          <div class="autocomplete-popup" id="pinPopup"></div>
-        </div>
-        <button type="button" class="auth-btn" id="pinCheckBtn"><i class="fas fa-magnifying-glass"></i> Проверить</button>
-        <div class="step-hint" id="step1-error" style="color:var(--err)"></div>
+    <!-- Левая бренд-панель -->
+    <div class="auth-side">
+      <div class="brand">
+        <span class="ico"><i class="fas fa-bolt"></i></span>
+        <div><b>AETHER</b><span>Панель управления</span></div>
       </div>
-      <div id="step2" style="display:none">
-        <div class="auth-title">Шаг 2 · PIN</div>
-        <div class="auth-sub" id="step2-who">Введите 6 цифр, которые вы получили от бота.</div>
-        <div class="pin-box" id="pinBox"></div>
-        <button type="button" class="auth-btn" id="pinConfirmBtn"><i class="fas fa-arrow-right"></i> Подтвердить</button>
-        <div class="step-hint" id="step2-error" style="color:var(--err)"></div>
-      </div>
+      <h1>Управляй сервером красиво</h1>
+      <p class="lead">Один вход — и весь сервер под контролем: модерация, аналитика, AI и автоматика.</p>
+      <ul class="auth-feats">
+        <li><i class="fas fa-shield-halved"></i> Модерация без хаоса</li>
+        <li><i class="fas fa-chart-line"></i> Живая аналитика</li>
+        <li><i class="fas fa-robot"></i> AI-ассистент</li>
+        <li><i class="fas fa-gauge-high"></i> Оперативный центр</li>
+      </ul>
+      <div class="foot">AETHER · LIGHT EDITION · v3.0</div>
     </div>
 
-    <div class="auth-foot">Нет доступа? Заявка — <a href="/member-apply">страница набора</a> · <a href="/register">регистрация</a></div>
+    <!-- Правая форма -->
+    <div class="auth-main">
+      <div class="mobile-brand">
+        <span class="ico"><i class="fas fa-bolt"></i></span>
+        <b>AETHER</b>
+      </div>
+
+      <div class="tabs" style="margin-bottom:20px">
+        <button type="button" class="tab-btn active" id="tabBtnPass" data-auth-tab="pass"><i class="fas fa-key"></i> Пароль</button>
+        <button type="button" class="tab-btn" id="tabBtnPin" data-auth-tab="pin"><i class="fas fa-shield-halved"></i> Discord PIN</button>
+      </div>
+
+      <!-- Вход по паролю -->
+      <div id="tabPass">
+        <div class="auth-error" id="passError" {% if error %}style="display:block"{% endif %}>{{ error|e }}</div>
+        <form method="POST" action="/login" autocomplete="off">
+          <div class="auth-field">
+            <label class="lbl" for="passUsername">Логин</label>
+            <input type="text" name="username" id="passUsername" placeholder="owner, @username или ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Логин">
+            <div class="autocomplete-popup" id="passPopup"></div>
+          </div>
+          <div class="auth-field">
+            <label class="lbl" for="passPassword">Пароль</label>
+            <input type="password" name="password" id="passPassword" placeholder="••••••••" required aria-label="Пароль">
+          </div>
+          <button type="submit" class="auth-btn"><i class="fas fa-arrow-right"></i> Войти</button>
+        </form>
+      </div>
+
+      <!-- Вход по Discord PIN -->
+      <div id="tabPin" style="display:none">
+        <div class="auth-error" id="pinError"></div>
+        <div id="step1">
+          <div class="auth-title">Шаг 1 · Найти аккаунт</div>
+          <div class="auth-sub">Введите ID или @username, привязанный к панели.</div>
+          <div class="auth-field">
+            <label class="lbl" for="discordQuery">Discord</label>
+            <input type="text" id="discordQuery" placeholder="123456789012345678 или @username" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')" aria-label="Discord">
+            <div class="autocomplete-popup" id="pinPopup"></div>
+          </div>
+          <button type="button" class="auth-btn" id="pinCheckBtn"><i class="fas fa-magnifying-glass"></i> Проверить</button>
+          <div class="step-hint" id="step1-error" style="color:var(--err)"></div>
+        </div>
+        <div id="step2" style="display:none">
+          <div class="auth-title">Шаг 2 · PIN</div>
+          <div class="auth-sub" id="step2-who">Введите 6 цифр, которые вы получили от бота.</div>
+          <div class="pin-box" id="pinBox"></div>
+          <button type="button" class="auth-btn" id="pinConfirmBtn"><i class="fas fa-arrow-right"></i> Подтвердить</button>
+          <div class="step-hint" id="step2-error" style="color:var(--err)"></div>
+        </div>
+      </div>
+
+      <div class="auth-foot">Нет доступа? Заявка — <a href="/member-apply">страница набора</a> · <a href="/register">регистрация</a></div>
+    </div>
   </div>
 
 <script>
@@ -255,7 +343,6 @@
     }).catch(function () { window.qualitySetLoading(btn, false); showError('step1-error', 'Сеть недоступна'); });
   });
 
-  /* PIN: поле из 6 клеток */
   function buildPinBox() {
     var box = $('pinBox');
     box.innerHTML = '';
@@ -301,7 +388,6 @@
       }
     }).catch(function () { window.qualitySetLoading(btn, false); showError('step2-error', 'Сеть недоступна'); });
   });
-
 })();
 </script>
 </body>
