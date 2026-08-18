@@ -1,0 +1,180 @@
+/* ============================================================
+   NEBULA — глобальный скин панели Aether.
+   Подключается в base.html после polish.css и приводит ВЕСЬ
+   интерфейс к одному премиальному виду: космический фон,
+   стеклянные поверхности, золотые градиенты, мягкие тени.
+   Правки только визуальные — разметка и логика не тронуты.
+   ============================================================ */
+
+/* ── Космос: фон всего приложения ──────────────────────────── */
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(1100px 520px at 12% -6%, rgba(224, 176, 74, .09), transparent 60%),
+    radial-gradient(900px 480px at 92% 4%, rgba(91, 155, 240, .07), transparent 62%),
+    radial-gradient(760px 420px at 55% 108%, rgba(167, 139, 250, .06), transparent 65%),
+    #0c0d10 !important;
+  background-attachment: fixed !important;
+}
+html[data-theme="dark"] body::before { opacity: .5 !important; }
+html[data-theme="light"] body {
+  background:
+    radial-gradient(1100px 520px at 12% -6%, rgba(224, 176, 74, .12), transparent 60%),
+    radial-gradient(900px 480px at 92% 4%, rgba(91, 155, 240, .08), transparent 62%),
+    #f4f5f8 !important;
+  background-attachment: fixed !important;
+}
+
+/* ── Сайдбар: стекло и глубина ─────────────────────────────── */
+html[data-theme="dark"] .sidebar {
+  background: linear-gradient(180deg, rgba(22, 24, 29, .82), rgba(15, 16, 20, .9)) !important;
+  backdrop-filter: blur(16px) saturate(1.2);
+  border-right: 1px solid rgba(255, 255, 255, .07) !important;
+  box-shadow: 8px 0 34px rgba(0, 0, 0, .28);
+}
+html[data-theme="light"] .sidebar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(255, 255, 255, .78)) !important;
+  backdrop-filter: blur(16px);
+  border-right: 1px solid rgba(20, 22, 26, .08) !important;
+  box-shadow: 8px 0 30px rgba(20, 22, 26, .08);
+}
+.sidebar .nav-group-title { border-radius: 10px; transition: background .15s ease, color .15s ease; }
+.sidebar .nav-group-title:hover { background: rgba(255, 255, 255, .05); }
+html[data-theme="light"] .sidebar .nav-group-title:hover { background: rgba(20, 22, 26, .05); }
+.sidebar .nav-link {
+  border-radius: 10px !important;
+  margin: 2px 0;
+  transition: background .15s ease, transform .15s ease, color .15s ease;
+}
+.sidebar .nav-link:hover { background: rgba(255, 255, 255, .06) !important; transform: translateX(2px); }
+html[data-theme="light"] .sidebar .nav-link:hover { background: rgba(20, 22, 26, .05) !important; }
+html[data-theme="dark"] .sidebar .nav-link.active {
+  background: linear-gradient(135deg, var(--ac-2, #f0cd7a), var(--ac, #e0b04a)) !important;
+  color: #171a1f !important;
+  box-shadow: 0 6px 18px var(--ac-glow, rgba(224, 176, 74, .32)), inset 0 1px 0 rgba(255, 255, 255, .32);
+  font-weight: 700;
+}
+html[data-theme="light"] .sidebar .nav-link.active {
+  background: linear-gradient(135deg, var(--ac-2, #f0cd7a), var(--ac, #e0b04a)) !important;
+  color: #171a1f !important;
+  box-shadow: 0 6px 16px rgba(224, 176, 74, .3);
+  font-weight: 700;
+}
+.sidebar ::-webkit-scrollbar { width: 7px; }
+.sidebar ::-webkit-scrollbar-thumb { background: rgba(128, 130, 135, .25); border-radius: 99px; }
+.sidebar ::-webkit-scrollbar-thumb:hover { background: var(--ac-line, rgba(224, 176, 74, .4)); }
+
+/* ── Верхняя панель (хлебные крошки, часы, кнопки) ─────────── */
+.navbar {
+  background: linear-gradient(120deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .015)) !important;
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .05);
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+}
+html[data-theme="light"] .navbar {
+  background: linear-gradient(120deg, rgba(255, 255, 255, .9), rgba(255, 255, 255, .7)) !important;
+  border-color: rgba(20, 22, 26, .09);
+  box-shadow: 0 10px 26px rgba(20, 22, 26, .08), inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+.navbar .crumb-here { color: var(--ac, #e0b04a); font-weight: 700; }
+.navbar-clock {
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, .04);
+  font-variant-numeric: tabular-nums;
+}
+html[data-theme="light"] .navbar-clock { border-color: rgba(20, 22, 26, .12); background: rgba(20, 22, 26, .04); }
+.nav-icon-btn {
+  border-radius: 11px !important;
+  transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.nav-icon-btn:hover { background: rgba(255, 255, 255, .07) !important; transform: translateY(-1px); }
+html[data-theme="light"] .nav-icon-btn:hover { background: rgba(20, 22, 26, .06) !important; }
+
+/* ── Заголовки страниц ─────────────────────────────────────── */
+.main-content h1 {
+  letter-spacing: .04em;
+  font-weight: 800;
+}
+
+/* ── Общие карточки/панели всех страниц ────────────────────── */
+html[data-theme="dark"] .section, html[data-theme="dark"] .box,
+html[data-theme="dark"] .panel, html[data-theme="dark"] .card,
+html[data-theme="dark"] .dash-box, html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .logs-box, html[data-theme="dark"] .warn-box {
+  background: linear-gradient(165deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .016)) !important;
+  border: 1px solid rgba(255, 255, 255, .09) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .16), inset 0 1px 0 rgba(255, 255, 255, .05);
+  backdrop-filter: blur(10px);
+}
+html[data-theme="light"] .section, html[data-theme="light"] .box,
+html[data-theme="light"] .panel, html[data-theme="light"] .card,
+html[data-theme="light"] .dash-box, html[data-theme="light"] .stat-card,
+html[data-theme="light"] .logs-box, html[data-theme="light"] .warn-box {
+  background: linear-gradient(165deg, rgba(255, 255, 255, .9), rgba(255, 255, 255, .66)) !important;
+  border: 1px solid rgba(20, 22, 26, .1) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(20, 22, 26, .07), inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+/* ── Таблицы: аккуратные строки ────────────────────────────── */
+html[data-theme="dark"] table tbody tr, html[data-theme="dark"] .data-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  transition: background .14s ease;
+}
+html[data-theme="dark"] table tbody tr:hover, html[data-theme="dark"] .data-table tbody tr:hover {
+  background: rgba(224, 176, 74, .05) !important;
+}
+html[data-theme="light"] table tbody tr:hover, html[data-theme="light"] .data-table tbody tr:hover {
+  background: rgba(224, 176, 74, .08) !important;
+}
+
+/* ── Кнопки: один характер ─────────────────────────────────── */
+.btn, button.btn {
+  border-radius: 11px !important;
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease !important;
+}
+.btn:hover, button.btn:hover { transform: translateY(-1px); }
+.btn-primary, input[type="submit"] {
+  box-shadow: 0 6px 18px var(--ac-glow, rgba(224, 176, 74, .28));
+}
+
+/* ── Инпуты: фокус-кольцо ──────────────────────────────────── */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--ac-line, rgba(224, 176, 74, .5)) !important;
+  box-shadow: 0 0 0 3px var(--ac-soft, rgba(224, 176, 74, .13)) !important;
+}
+
+/* ── Лента активности: стекло ──────────────────────────────── */
+html[data-theme="dark"] .activity-drawer {
+  background: linear-gradient(180deg, rgba(22, 24, 29, .92), rgba(15, 16, 20, .94)) !important;
+  backdrop-filter: blur(18px);
+  border-left: 1px solid rgba(255, 255, 255, .08) !important;
+  box-shadow: -12px 0 40px rgba(0, 0, 0, .32);
+}
+html[data-theme="light"] .activity-drawer {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .94), rgba(255, 255, 255, .86)) !important;
+  backdrop-filter: blur(18px);
+  border-left: 1px solid rgba(20, 22, 26, .09) !important;
+  box-shadow: -12px 0 36px rgba(20, 22, 26, .1);
+}
+
+/* ── Скроллбары и выделение ────────────────────────────────── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(128, 130, 135, .28); border-radius: 99px; border: 2px solid transparent; }
+::-webkit-scrollbar-thumb:hover { background: var(--ac-line, rgba(224, 176, 74, .45)); }
+::selection { background: var(--ac-soft, rgba(224, 176, 74, .28)); }
+
+/* ── Появление страницы ────────────────────────────────────── */
+.main-content { animation: nebulaIn .35s cubic-bezier(.4, 0, .2, 1) both; }
+@keyframes nebulaIn { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .main-content, .btn, .nav-link, .nav-icon-btn { animation: none !important; transition: none !important; }
+}
