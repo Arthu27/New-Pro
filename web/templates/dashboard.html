@@ -103,6 +103,14 @@
   </div>
 </div>
 
+<!-- Календарь активности (90 дней) -->
+<div class="panel" data-widget="calendar" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-calendar-days"></i> Календарь активности</h2>
+    <div class="sub">Интенсивность мод-действий за последние 90 дней.</div></div>
+    <a class="btn-link" href="/mod-center" style="margin-left:auto">Центр модерации <i class="fas fa-arrow-right"></i></a></div>
+  <div class="panel-body" id="dashCalendar"><div class="sk-line" style="height:12px"></div></div>
+</div>
+
 <div class="grid-2" data-widget="today" style="align-items:start">
   <!-- Модерация сегодня -->
   <div class="panel">
@@ -409,6 +417,17 @@
           });
           window.AetherHeat($('modHeat'), hours, { labels: ['00:00', '12:00', '23:00'] });
         }
+      }
+      if (window.AetherCalendar) {
+        var counts = {};
+        logs.forEach(function (l) {
+          try {
+            var d = new Date(l.timestamp);
+            var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            counts[key] = (counts[key] || 0) + 1;
+          } catch (e) {}
+        });
+        window.AetherCalendar($('dashCalendar'), counts, { days: 90 });
       }
       var chip = $('chipMod');
       if (chip) chip.innerHTML = '<i class="fas fa-gavel"></i> действий за 7 дн: ' + logs.length.toLocaleString('ru-RU');

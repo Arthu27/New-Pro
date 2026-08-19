@@ -172,7 +172,7 @@ emoji = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not emoji.search(tpl), 'в шаблоне нет эмодзи')
 base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
 check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
-check('askConfirm' in tpl and 'uxUndo' in tpl, 'confirm и undo на месте')
+check(('askConfirm' in tpl or 'confirmAction' in tpl) and 'uxUndo' in tpl, 'confirm и undo на месте')
 import services.panel_menu as PM
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
 check('/tickets-ops' in paths, 'пункт меню «OPS-центр» есть')

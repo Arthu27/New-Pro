@@ -2998,6 +2998,54 @@ body.dense .kpi { padding: 10px 13px; }
 .id-pill.copyable:hover { color: var(--ac); background: var(--ac-soft); }
 .id-pill.copyable.copied { color: var(--ok); }
 
+
+/* ── Поиск участников (премиум-стиль) ────────────────────── */
+.ms-results { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; max-width: 960px; }
+.ms-results .feed-item {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 12px 15px;
+  box-shadow: var(--shadow-1);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.ms-results .feed-item:hover { border-color: var(--ac-line); box-shadow: var(--shadow-2); }
+.ms-results .feed-item.active { border-color: var(--ac); background: var(--ac-soft); }
+.ms-results .av-wrap .av { border: none; }
+.ms-profile { display: none; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ms-profile > div { display: flex; flex-direction: column; gap: 14px; }
+@media (max-width: 720px) { .ms-profile { grid-template-columns: 1fr; } }
+.ms-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-md);
+}
+.ms-row:last-child { border-bottom: none; }
+.ms-key { color: var(--text-3); flex-shrink: 0; }
+.ms-val { color: var(--text); font-weight: 600; text-align: right; word-break: break-word; }
+.ms-val.ok { color: var(--ok); }
+.ms-val.danger { color: var(--err); font-weight: 700; }
+.ms-val.id { font-family: var(--mono); font-size: 13px; cursor: pointer; border-bottom: 1px dotted var(--text-3); }
+.ms-val.id:hover { color: var(--ac); border-bottom-color: var(--ac); }
+.ms-note {
+  padding: 26px; text-align: center; color: var(--text-3); font-size: 14px;
+  background: var(--surface); border: 1px dashed var(--line-2); border-radius: var(--r);
+  max-width: 960px;
+}
+.ms-note.error { border-color: var(--err); color: var(--err); border-style: solid; }
+.ms-av-fb {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--ac-soft); border-radius: 50%; color: var(--ac); flex-shrink: 0;
+  width: 100%; height: 100%;
+}
+.status-dot.big { width: 16px; height: 16px; border-width: 3px; }
+.warn-item, .case-item { font-size: var(--fs-md); padding: 9px 0; border-bottom: 1px solid var(--line); }
+.warn-item:last-child, .case-item:last-child { border-bottom: none; }
+.warn-mod { color: var(--text-3); }
+.empty-ok { color: var(--ok); font-size: var(--fs-md); }
+.ms-meta { color: var(--text-3); font-size: var(--fs-sm); }
+
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.
