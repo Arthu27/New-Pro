@@ -2502,6 +2502,140 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
 .warn-reason { font-size: var(--fs-sm); color: var(--text-2); padding: 2px 0; }
 .warn-reason i { color: var(--warn); font-size: 9px; margin-right: 3px; }
 
+
+/* ============================================================
+   FX-СЛОЙ — частицы, свечение, сплэш, аура, вспышки
+   ============================================================ */
+
+/* ── Канвас частиц (созвездие) ───────────────────────────── */
+#fx-particles {
+  position: fixed; inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) { #fx-particles { display: none; } }
+
+/* ── Свечение за курсором ────────────────────────────────── */
+#fxCursor {
+  position: fixed;
+  width: 480px; height: 480px;
+  margin: -240px 0 0 -240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ac) 9%, transparent), transparent 62%);
+  pointer-events: none;
+  z-index: 2;
+  mix-blend-mode: multiply;
+  will-change: transform;
+}
+[data-theme="dark"] #fxCursor {
+  mix-blend-mode: screen;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ac) 14%, transparent), transparent 62%);
+}
+@media (pointer: coarse), (prefers-reduced-motion: reduce) { #fxCursor { display: none; } }
+
+/* ── Загрузочный сплэш ───────────────────────────────────── */
+#bootSplash {
+  position: fixed; inset: 0;
+  z-index: 1000000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.55s var(--ease), visibility 0.55s;
+}
+#bootSplash.out { opacity: 0; visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { #bootSplash { display: none; } }
+.boot-wrap { position: relative; display: flex; flex-direction: column; align-items: center; }
+.boot-logo {
+  width: 74px; height: 74px;
+  border-radius: 22px;
+  background: var(--ac-grad);
+  display: grid; place-items: center;
+  color: #fff; font-size: 30px;
+  box-shadow: 0 0 70px color-mix(in srgb, var(--ac) 55%, transparent),
+              inset 0 1px 0 rgba(255,255,255,.4);
+  animation: bootPulse 1.3s ease-in-out infinite;
+}
+[data-theme="dark"] .boot-logo { color: #14152a; }
+@keyframes bootPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}
+.boot-ring {
+  position: absolute; top: 50%; left: 50%;
+  width: 74px; height: 74px;
+  margin: -37px 0 0 -37px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--ac) 70%, transparent);
+  opacity: 0;
+  animation: bootRing 1.7s ease-out infinite;
+  pointer-events: none;
+}
+.boot-ring:nth-of-type(2) { animation-delay: 0.55s; }
+@keyframes bootRing {
+  0% { transform: scale(1); opacity: .9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.boot-name {
+  margin-top: 22px;
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: 700;
+  letter-spacing: .3em;
+  background: linear-gradient(120deg, var(--text) 20%, color-mix(in srgb, var(--ac) 70%, var(--text)) 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.boot-sub {
+  margin-top: 7px;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+/* ── Вращающаяся аура-рамка (светящиеся дуги по контуру) ──── */
+@property --aura-ang {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.aura { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0; }
+.aura::before {
+  content: '';
+  position: absolute; inset: -1px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--aura-ang, 0deg),
+    transparent 0deg,
+    color-mix(in srgb, var(--ac) 80%, transparent) 46deg,
+    transparent 100deg,
+    transparent 195deg,
+    color-mix(in srgb, var(--ac-2) 70%, transparent) 250deg,
+    transparent 305deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask-composite: exclude;
+  animation: auraSpin 5.5s linear infinite;
+}
+@keyframes auraSpin { to { --aura-ang: 360deg; } }
+@media (prefers-reduced-motion: reduce) { .aura::before { animation: none; } }
+
+/* ── Вспышка обновлённого значения ───────────────────────── */
+.kpi-value, .stat-value, .stat-val { display: inline-block; transform-origin: left center; }
+.value-flash { animation: valueFlash 0.9s var(--ease); }
+@keyframes valueFlash {
+  0% { transform: scale(1.14); color: var(--ac); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .value-flash { animation: none; } }
+
+/* ── Параллакс aurora-фона ───────────────────────────────── */
+.bg-aurora { will-change: transform; }
+@media (prefers-reduced-motion: reduce) { .bg-aurora { transform: none !important; } }
+
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.

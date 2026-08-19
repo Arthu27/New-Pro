@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=68">
+    <link rel="stylesheet" href="/static/style.css?v=69">
     <script>
       // Тема применяется до отрисовки, чтобы не было «вспышки»
       (function () {
@@ -20,6 +20,19 @@
 <body>
     <a class="skip-link" href="#main-content">Перейти к содержимому</a>
 
+    <!-- Загрузочный сплэш -->
+    <div id="bootSplash" aria-hidden="true">
+        <div class="boot-wrap">
+            <span class="boot-ring"></span>
+            <span class="boot-ring"></span>
+            <div class="boot-logo"><i class="fas fa-bolt"></i></div>
+            <div class="boot-name">AETHER</div>
+            <div class="boot-sub">загрузка панели</div>
+        </div>
+    </div>
+
+    <canvas id="fx-particles" aria-hidden="true"></canvas>
+    <div id="fxCursor" aria-hidden="true"></div>
     <div class="bg-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
     <div class="app-shell">
@@ -266,6 +279,6 @@
     <!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
     <script src="/static/api-guard.js?v=2"></script>
     <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
-    <script src="/static/app.js?v=14"></script>
+    <script src="/static/app.js?v=15"></script>
 </body>
 </html>

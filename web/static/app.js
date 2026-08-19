@@ -1548,3 +1548,190 @@
     if (current) { current.classList.remove('spot-on'); current = null; }
   });
 })();
+
+// ============================================================
+// AETHER FX KIT — частицы, курсор-свечение, сплэш, вспышки,
+// параллакс фона
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+
+  function accentRGB() {
+    try {
+      var v = getComputedStyle(doc.documentElement).getPropertyValue('--ac').trim() || '#4f46e5';
+      v = v.replace('#', '');
+      if (v.length === 3) v = v.split('').map(function (c) { return c + c; }).join('');
+      var n = parseInt(v, 16);
+      if (isNaN(n)) return { r: 79, g: 70, b: 229 };
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    } catch (e) { return { r: 79, g: 70, b: 229 }; }
+  }
+
+  /* ── 1. Созвездие частиц на фоне ───────────────────────── */
+  function fxParticles() {
+    var canvas = doc.getElementById('fx-particles');
+    if (!canvas || reduced) return;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    var W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+    function resize() {
+      W = window.innerWidth; H = window.innerHeight;
+      canvas.width = W * DPR; canvas.height = H * DPR;
+      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    var N = W < 860 ? 22 : 40;
+    var pts = [];
+    for (var i = 0; i < N; i++) {
+      pts.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.22, vy: (Math.random() - 0.5) * 0.22,
+        r: Math.random() * 1.3 + 0.5
+      });
+    }
+    var LINK = 110;
+    function step() {
+      ctx.clearRect(0, 0, W, H);
+      var c = accentRGB();
+      var dark = doc.documentElement.getAttribute('data-theme') === 'dark';
+      var alphaBase = dark ? 0.5 : 0.32;
+      var i, j, p;
+      for (i = 0; i < N; i++) {
+        p = pts[i];
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < -12) p.x = W + 12; else if (p.x > W + 12) p.x = -12;
+        if (p.y < -12) p.y = H + 12; else if (p.y > H + 12) p.y = -12;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + alphaBase + ')';
+        ctx.fill();
+      }
+      for (i = 0; i < N; i++) {
+        for (j = i + 1; j < N; j++) {
+          var dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+          var d2 = dx * dx + dy * dy;
+          if (d2 < LINK * LINK) {
+            var alpha = (1 - Math.sqrt(d2) / LINK) * 0.16 * (dark ? 1 : 0.8);
+            ctx.strokeStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + alpha + ')';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(pts[i].x, pts[i].y);
+            ctx.lineTo(pts[j].x, pts[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(step);
+    }
+    step();
+  }
+
+  /* ── 2. Мягкое свечение за курсором ────────────────────── */
+  function fxCursorGlow() {
+    var glow = doc.getElementById('fxCursor');
+    if (!glow || reduced || coarse) return;
+    var tx = window.innerWidth / 2, ty = window.innerHeight / 3;
+    var x = tx, y = ty;
+    doc.addEventListener('mousemove', function (e) {
+      tx = e.clientX; ty = e.clientY;
+    }, { passive: true });
+    function loop() {
+      x += (tx - x) * 0.09;
+      y += (ty - y) * 0.09;
+      glow.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+      requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  /* ── 3. Загрузочный сплэш ──────────────────────────────── */
+  function fxBoot() {
+    var el = doc.getElementById('bootSplash');
+    if (!el) return;
+    if (reduced) { el.remove(); return; }
+    setTimeout(function () {
+      el.classList.add('out');
+      setTimeout(function () { el.remove(); }, 620);
+    }, 950);
+  }
+
+  /* ── 4. Вспышка обновлённых значений ───────────────────── */
+  function fxValueFlash() {
+    if (reduced) return;
+    var last = {};
+    var COOLDOWN = 3000;
+    function flash(el) {
+      var now = Date.now();
+      if (now - (last[el] || 0) < COOLDOWN) return;
+      last[el] = now;
+      el.classList.remove('value-flash');
+      void el.offsetWidth;
+      el.classList.add('value-flash');
+    }
+    function scan(node) {
+      if (!node || node.nodeType !== 1) return;
+      if (node.matches && node.matches('.kpi-value, .stat-value, .stat-val')) {
+        node.classList.add('fx-watch');
+      }
+      if (node.querySelectorAll) {
+        node.querySelectorAll('.kpi-value, .stat-value, .stat-val').forEach(function (el) {
+          el.classList.add('fx-watch');
+        });
+      }
+    }
+    var mo = new MutationObserver(function (muts) {
+      muts.forEach(function (m) {
+        if (m.type === 'characterData' && m.target && m.target.parentElement) {
+          var el = m.target.parentElement;
+          if (el.classList && el.classList.contains('fx-watch')) flash(el);
+        }
+        m.addedNodes && Array.prototype.forEach.call(m.addedNodes, function (n) {
+          if (n.nodeType === 1 && n.matches && n.matches('.kpi-value, .stat-value, .stat-val')) {
+            n.classList.add('fx-watch');
+            flash(n);
+          }
+          if (n.nodeType === 1 && n.querySelectorAll) {
+            n.querySelectorAll('.kpi-value, .stat-value, .stat-val').forEach(function (el) {
+              el.classList.add('fx-watch');
+            });
+          }
+        });
+      });
+    });
+    scan(doc.body);
+    mo.observe(doc.body, { childList: true, subtree: true, characterData: true });
+  }
+
+  /* ── 5. Параллакс aurora-фона при прокрутке ────────────── */
+  function fxParallax() {
+    var bg = doc.querySelector('.bg-aurora');
+    if (!bg || reduced) return;
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        bg.style.transform = 'translateY(' + (window.scrollY * -0.04) + 'px)';
+        ticking = false;
+      });
+    }, { passive: true });
+  }
+
+  /* ── Старт ────────────────────────────────────────────── */
+  function ready(fn) {
+    if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    fxBoot();
+    fxParticles();
+    fxCursorGlow();
+    fxValueFlash();
+    fxParallax();
+  });
+})();
