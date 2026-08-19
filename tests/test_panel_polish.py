@@ -736,6 +736,25 @@ check(r.status_code == 200 and 'Управляй сервером' in html and '
 r = client.get('/welcome')
 check(r.status_code == 200 and 'Управляй сервером' in r.get_data(as_text=True),
       '/welcome — публичная страница-визитка (видна и в демо с автовходом)')
+# ═══ 25. Welcome: живые эффекты ═══════════════════════════════════════════
+print('== welcome: живые эффекты ==')
+w2 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('w-stars' in w2 and 'stars()' in w2 and 'document.hidden' in w2,
+      'welcome: звёздное небо на canvas (с паузой в фоне)')
+check('orb1' in w2 and "orb1.style.transform" in w2,
+      'welcome: параллакс свечений за мышью')
+check('w-reveal' in w2 and 'IntersectionObserver' in w2,
+      'welcome: reveal-анимации секций при скролле')
+check('typing()' in w2 and 'w-title.typing' in w2 and 'wCaret' in w2,
+      'welcome: печатающийся заголовок с мигающим курсором')
+check('data-count' in w2 and "fetch('/api/stats'" in w2,
+      'welcome: живые счётчики (реальные цифры бота с фолбэком)')
+check('w-marquee' in w2 and 'wMarqueeTrack' in w2,
+      'welcome: бегущая лента фич с паузой при наведении')
+check('btn-primary::after' in w2 and 'skewX(-20deg)' in w2,
+      'welcome: блеск пробегает по primary-кнопкам')
+check('w-card::after' in w2 and 'conic-gradient' in w2,
+      'welcome: градиентное кольцо карточек при hover')
 check('app.js?v=47' in base and 'style.css?v=102' in base,
       'версии ассетов (102/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,

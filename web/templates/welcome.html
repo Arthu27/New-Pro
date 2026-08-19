@@ -155,6 +155,14 @@
       font-weight: 800; letter-spacing: -0.03em;
       line-height: 1.08; margin: 20px 0 14px;
     }
+    .w-title.typing { min-height: 1.1em; }
+    .w-title.typing::after {
+      content: ''; display: inline-block;
+      width: 3px; height: .9em; margin-left: 6px;
+      background: var(--ac3); vertical-align: -0.08em;
+      animation: wCaret .8s steps(1) infinite;
+    }
+    @keyframes wCaret { 50% { opacity: 0; } }
     .w-title .grad {
       background: linear-gradient(90deg, #818cf8, #a78bfa 45%, #22d3ee);
       -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -296,15 +304,94 @@
     }
     .w-foot img { width: 26px; height: 26px; border-radius: 8px; vertical-align: -7px; margin-right: 6px; }
 
+    /* ── Звёздное небо ── */
+    #w-stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+    /* ── Reveal-анимации секций ── */
+    .w-reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+    .w-reveal.on { opacity: 1; transform: none; }
+
+    /* ── Параллакс свечений ── */
+    .bg-fx .orb { transition: none; will-change: transform; }
+
+    /* ── Живые счётчики ── */
+    .w-stats {
+      display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+      max-width: 760px; margin: 34px auto 0;
+    }
+    .w-stat {
+      min-width: 150px; flex: 1;
+      background: rgba(13, 16, 25, .7);
+      border: 1px solid var(--line); border-radius: 16px;
+      padding: 16px 18px; text-align: center;
+      transition: border-color .18s, transform .18s ease;
+    }
+    .w-stat:hover { border-color: var(--ac); transform: translateY(-2px); }
+    .w-stat .n {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 26px; font-weight: 800;
+      background: linear-gradient(90deg, #818cf8, #a78bfa 50%, #22d3ee);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .w-stat .l {
+      font-size: 10.5px; color: var(--text3);
+      text-transform: uppercase; letter-spacing: .1em;
+      font-weight: 700; margin-top: 5px;
+    }
+
+    /* ── Бегущая лента фич ── */
+    .w-marquee {
+      margin: 56px 0 0; overflow: hidden; position: relative;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+              mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    }
+    .w-marquee-track { display: flex; gap: 14px; width: max-content; animation: wMarquee 32s linear infinite; }
+    .w-marquee:hover .w-marquee-track { animation-play-state: paused; }
+    @keyframes wMarquee { to { transform: translateX(-50%); } }
+    .w-marquee .item {
+      display: inline-flex; align-items: center; gap: 9px;
+      padding: 10px 18px; border-radius: 99px;
+      background: var(--surface); border: 1px solid var(--line);
+      color: var(--text2); font-size: 13px; font-weight: 600;
+      white-space: nowrap;
+    }
+    .w-marquee .item i { color: var(--ac2); }
+    .w-marquee .item .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--ok); box-shadow: 0 0 8px rgba(74, 222, 128, .6);
+    }
+
+    /* ── Блеск primary-кнопок ── */
+    .btn-primary { position: relative; overflow: hidden; }
+    .btn-primary::after {
+      content: ''; position: absolute; top: 0; left: -80%; width: 45%; height: 100%;
+      background: linear-gradient(100deg, transparent, rgba(255,255,255,.28), transparent);
+      transform: skewX(-20deg);
+      transition: left .55s ease;
+    }
+    .btn-primary:hover::after { left: 135%; }
+
+    /* ── Градиентное кольцо карточек при hover ── */
+    .w-card { position: relative; }
+    .w-card::after {
+      content: ''; position: absolute; inset: -1px; border-radius: 17px; padding: 1px;
+      background: conic-gradient(#4f46e5, #7c3aed, #22d3ee, #4f46e5);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      opacity: 0; transition: opacity .25s ease; pointer-events: none;
+    }
+    .w-card:hover::after { opacity: 1; }
+
     @media (max-width: 860px) {
       .w-grid, .w-steps { grid-template-columns: 1fr; }
       .w-nav-links { display: none; }
       .w-hero { padding-top: 120px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .w-dragon, .w-dragon-halo, .w-dragon-ring { animation: none; }
-      .w-card, .w-search input, .w-chips .chip { transition: none; }
+      .w-dragon, .w-dragon-halo, .w-dragon-ring, .w-marquee-track, .w-title.typing::after { animation: none; }
+      .w-card, .w-search input, .w-chips .chip, .w-reveal, .btn-primary::after { transition: none; }
       .w-card:hover { transform: none; }
+      .w-reveal { opacity: 1; transform: none; }
     }
   </style>
 </head>
@@ -316,6 +403,7 @@
     <span class="orb orb3"></span>
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
+  <canvas id="w-stars" aria-hidden="true"></canvas>
 
   <!-- Навигация -->
   <nav class="w-nav" aria-label="Навигация">
@@ -368,10 +456,31 @@
       <a class="btn btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти в панель</a>
       <a class="btn" href="#members"><i class="fas fa-arrow-down"></i> Что внутри</a>
     </div>
+    <div class="w-stats">
+      <div class="w-stat"><div class="n" data-count="128">0</div><div class="l">Серверов на панели</div></div>
+      <div class="w-stat"><div class="n" data-count="46000">0</div><div class="l">Участников сообществ</div></div>
+      <div class="w-stat"><div class="n" data-count="99">0</div><div class="l">% Аптайм бота</div></div>
+    </div>
   </header>
 
+  <!-- Бегущая лента фич -->
+  <div class="w-marquee" aria-label="Возможности панели">
+    <div class="w-marquee-track" id="wMarqueeTrack">
+      <span class="item"><span class="dot"></span> Центр модерации</span>
+      <span class="item"><i class="fas fa-chart-line"></i> Живая аналитика</span>
+      <span class="item"><i class="fas fa-robot"></i> AI-ассистент</span>
+      <span class="item"><i class="fas fa-ticket"></i> Обращения</span>
+      <span class="item"><i class="fas fa-ranking-star"></i> Уровни и награды</span>
+      <span class="item"><i class="fas fa-file-signature"></i> Заявки в команду</span>
+      <span class="item"><i class="fas fa-tv"></i> Экран дежурного</span>
+      <span class="item"><i class="fas fa-shield-halved"></i> Анти-рейд и защита</span>
+      <span class="item"><i class="fas fa-calendar-days"></i> Расписание и ивенты</span>
+      <span class="item"><i class="fas fa-keyboard"></i> @-поиск и хоткеи</span>
+    </div>
+  </div>
+
   <!-- Участникам -->
-  <section class="w-section" id="members">
+  <section class="w-section w-reveal" id="members">
     <div class="w-sec-head">
       <h2 class="w-sec-title">Всё для участников</h2>
       <p class="w-sec-sub">Твоя жизнь на сервере — в одном окне. Не нужно листать сотни сообщений.</p>
@@ -411,7 +520,7 @@
   </section>
 
   <!-- Как начать -->
-  <section class="w-section" id="start">
+  <section class="w-section w-reveal" id="start">
     <div class="w-sec-head">
       <h2 class="w-sec-title">Как начать — 3 шага</h2>
       <p class="w-sec-sub">Никакой регистрации и мучений: вход через твой Discord-аккаунт.</p>
@@ -436,7 +545,7 @@
   </section>
 
   <!-- Команде -->
-  <section class="w-section" id="staff">
+  <section class="w-section w-reveal" id="staff">
     <div class="w-sec-head">
       <h2 class="w-sec-title">А для команды — полный штаб</h2>
       <p class="w-sec-sub">Модерация, аналитика и автоматика — те же руки, та же панель.</p>
@@ -452,7 +561,7 @@
   </section>
 
   <!-- CTA -->
-  <div class="w-cta">
+  <div class="w-cta w-reveal">
     <div class="w-cta-box">
       <h2>Готов? Всё уже настроено.</h2>
       <p>Один клик — и ты в панели. А дальше — просто нажми @.</p>
@@ -464,6 +573,169 @@
     <img src="/static/brand/emblem-dragon.png" alt="">AETHER · панель твоего сервера · сделано с душой
   </footer>
 
+  <script>
+  (function () {
+    'use strict';
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ── 1. Звёздное небо (лёгкий canvas, пауза в фоне) ── */
+    (function stars() {
+      var cv = document.getElementById('w-stars');
+      if (!cv || reduced) return;
+      var ctx = cv.getContext('2d');
+      var W, H, stars = [];
+      var last = 0;
+      function resize() {
+        W = cv.width = window.innerWidth;
+        H = cv.height = window.innerHeight;
+        stars = [];
+        var n = Math.min(90, Math.floor(W * H / 16000));
+        for (var i = 0; i < n; i++) {
+          stars.push({
+            x: Math.random() * W, y: Math.random() * H,
+            r: Math.random() * 1.1 + 0.3,
+            p: Math.random() * Math.PI * 2,
+            s: 0.4 + Math.random() * 0.9
+          });
+        }
+      }
+      function step(now) {
+        requestAnimationFrame(step);
+        if (document.hidden) return;
+        if (now - last < 60) return;
+        last = now;
+        ctx.clearRect(0, 0, W, H);
+        for (var i = 0; i < stars.length; i++) {
+          var st = stars[i];
+          var a = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(st.p + now * 0.001 * st.s));
+          ctx.beginPath();
+          ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(200, 210, 255, ' + a.toFixed(2) + ')';
+          ctx.fill();
+        }
+      }
+      resize();
+      window.addEventListener('resize', resize, { passive: true });
+      requestAnimationFrame(step);
+    })();
+
+    /* ── 2. Параллакс свечений за мышью ── */
+    (function orbs() {
+      if (reduced) return;
+      var orb1 = document.querySelector('.orb1');
+      var orb2 = document.querySelector('.orb2');
+      if (!orb1 || !orb2) return;
+      var tx = 0, ty = 0, x = 0, y = 0, tick = false;
+      document.addEventListener('mousemove', function (e) {
+        tx = (e.clientX / window.innerWidth - 0.5) * 26;
+        ty = (e.clientY / window.innerHeight - 0.5) * 18;
+        if (!tick) {
+          tick = true;
+          requestAnimationFrame(function () {
+            tick = false;
+            x += (tx - x) * 0.06;
+            y += (ty - y) * 0.06;
+            orb1.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
+            orb2.style.transform = 'translate(' + (-x * 0.6).toFixed(1) + 'px,' + (-y * 0.6).toFixed(1) + 'px)';
+          });
+        }
+      }, { passive: true });
+    })();
+
+    /* ── 3. Reveal секций при скролле ── */
+    (function reveal() {
+      var els = document.querySelectorAll('.w-reveal');
+      if (!els.length) return;
+      if (!('IntersectionObserver' in window) || reduced) {
+        els.forEach(function (el) { el.classList.add('on'); });
+        return;
+      }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('on'); io.unobserve(en.target); }
+        });
+      }, { threshold: 0.12 });
+      els.forEach(function (el) { io.observe(el); });
+    })();
+
+    /* ── 4. Печатающийся заголовок ── */
+    (function typing() {
+      var el = document.querySelector('.w-title');
+      if (!el || reduced) return;
+      var done = false;
+      function run() {
+        if (done) return;
+        done = true;
+        var html = el.innerHTML;
+        var text = el.textContent.trim();
+        el.textContent = '';
+        el.classList.add('typing');
+        var i = 0;
+        var iv = setInterval(function () {
+          i += 2;
+          el.textContent = text.slice(0, i);
+          if (i >= text.length) { clearInterval(iv); el.classList.remove('typing'); el.innerHTML = html; }
+        }, 26);
+      }
+      var io = new IntersectionObserver(function (en) {
+        if (en[0].isIntersecting) { run(); io.disconnect(); }
+      }, { threshold: 0.4 });
+      io.observe(el);
+      if (el.getBoundingClientRect().top < window.innerHeight) run();
+    })();
+
+    /* ── 5. Живые счётчики ── */
+    (function counters() {
+      var nums = document.querySelectorAll('[data-count]');
+      if (!nums.length) return;
+      function animate(el, target) {
+        if (reduced) { el.textContent = target.toLocaleString('ru-RU'); return; }
+        var start = performance.now(), dur = 1400;
+        function frame(now) {
+          var p = Math.min(1, (now - start) / dur);
+          var eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(target * eased).toLocaleString('ru-RU');
+          if (p < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+      var fired = false;
+      function run() {
+        if (fired) return;
+        fired = true;
+        nums.forEach(function (el) { animate(el, Number(el.dataset.count) || 0); });
+      }
+      /* если бот онлайн — берём реальные цифры */
+      fetch('/api/stats', { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && d.guilds != null && !d.error) {
+            var stats = document.querySelector('.w-stats');
+            if (stats) {
+              stats.innerHTML =
+                '<div class="w-stat"><div class="n" data-count="' + (d.guilds || 0) + '">0</div><div class="l">Серверов на панели</div></div>' +
+                '<div class="w-stat"><div class="n" data-count="' + (d.users || 0) + '">0</div><div class="l">Участников сообществ</div></div>' +
+                '<div class="w-stat"><div class="n" data-count="' + (Math.round(d.latency || 0)) + '">0</div><div class="l">Пинг, мс</div></div>';
+              nums = stats.querySelectorAll('[data-count]');
+            }
+          }
+          run();
+        })
+        .catch(run);
+      var io = new IntersectionObserver(function (en) {
+        if (en[0].isIntersecting) { run(); io.disconnect(); }
+      }, { threshold: 0.3 });
+      if (nums[0]) io.observe(nums[0].closest('.w-stats') || nums[0]);
+    })();
+
+    /* ── 6. Лента фич: дублируем контент для бесшовного цикла ── */
+    (function marquee() {
+      var track = document.getElementById('wMarqueeTrack');
+      if (!track || reduced) return;
+      track.innerHTML += track.innerHTML;
+    })();
+  })();
+  </script>
   <script>
   (function () {
     'use strict';

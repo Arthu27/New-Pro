@@ -69,7 +69,7 @@ check(len(DECOS) >= 370, f'распарсено {len(DECOS)} эндпоинто�
 # быть ОСОЗНАННО публичным (auth-флоу, статус, заявка). Новый эндпоинт без
 # декоратора уронит этот тест → решение принимает человек.
 PUBLIC = {
-    'index', 'login', 'logout', 'register',
+    'index', 'welcome_page', 'login', 'logout', 'register',
     'api_forgot_password', 'api_reset_password', 'api_discord_login',
     'api_discord_check', 'api_check_member', 'api_login_suggest',
     'api_public_apply', 'api_public_guilds', 'public_apply',
