@@ -177,9 +177,6 @@ for marker, label in [
     ('@property --fx-ang', 'регистрация угла градиента'),
 ]:
     check(marker in css, f'style.css: {label}')
-check('app.js?v=30' in base and 'style.css?v=84' in base,
-      'версии ассетов забумплены (84/30)')
-
 # ═══ 6. Аналитика и FX-слой 10 ═══════════════════════════════════════════
 print('== аналитика и FX-слой 10 ==')
 an = open(os.path.join(ROOT, 'web', 'templates', 'analytics.html'), encoding='utf-8').read()
@@ -196,13 +193,26 @@ check('analytics-cockpit' in an and 'window.__analytics' in an,
 for marker, label in [
     ('fx-scroll-progress', 'полоса прогресса прокрутки'),
     ('fx-topbtn', 'кнопка «наверх» с кольцом'),
-    ('fx-click-spark', 'искры клика'),
     ('fx-shine', 'блик панелей'),
-    ('fx-star-spark', 'звёздный бурст избранного'),
     ('fabBreathe', 'дыхание FAB'),
     ('fxMagnetic', 'магнитные кнопки'),
 ]:
     check(marker in css or marker in js, f'FX-слой 10: {label}')
+
+# ═══ 7. Чистота интерфейса: без искр клика и света за мышкой ═════════════
+print('== чистота интерфейса ==')
+check('fx-click-spark' not in css and 'fx-click-spark' not in js,
+      'искры-точки после клика удалены')
+check('fx-star-spark' not in css and 'fx-star-spark' not in js,
+      'звёздный бурст избранного удалён')
+check('fxCursor' not in css and 'fxCursor' not in js and 'fxCursor' not in base,
+      'глобальное свечение за курсором удалено')
+check('spot-on' not in css and 'spot-on' not in js,
+      'спотлайт, следующий за мышью внутри карточек, отключён')
+check('tickerDrift' in open(os.path.join(ROOT, 'web', 'templates', 'mod_center.html'), encoding='utf-8').read(),
+      'лента событий мод-центра стала живой (авто-дрейф с паузой)')
+check('app.js?v=31' in base and 'style.css?v=85' in base,
+      'версии ассетов забумплены (85/31)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil

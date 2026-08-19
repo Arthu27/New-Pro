@@ -1728,38 +1728,6 @@
 })();
 
 // ============================================================
-// AETHER PREMIUM KIT 5 — курсор-прожектор (свечение за мышкой)
-// ============================================================
-(function () {
-  'use strict';
-  var doc = document;
-  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return;
-  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduced) return;
-
-  var SEL = '.panel, .card, .kpi, .stat-box, .cc-tile, .member-card, .g-card, .auth-card';
-  var current = null;
-
-  doc.addEventListener('mousemove', function (e) {
-    var el = e.target && e.target.closest ? e.target.closest(SEL) : null;
-    if (el !== current) {
-      if (current) current.classList.remove('spot-on');
-      current = el;
-      if (el) el.classList.add('spot-on');
-    }
-    if (el) {
-      var r = el.getBoundingClientRect();
-      el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-      el.style.setProperty('--my', (e.clientY - r.top) + 'px');
-    }
-  });
-
-  doc.addEventListener('mouseleave', function () {
-    if (current) { current.classList.remove('spot-on'); current = null; }
-  });
-})();
-
-// ============================================================
 // AETHER FX KIT — частицы, курсор-свечение, сплэш, вспышки,
 // параллакс фона
 // ============================================================
@@ -1843,23 +1811,6 @@
   }
 
   /* ── 2. Мягкое свечение за курсором ────────────────────── */
-  function fxCursorGlow() {
-    var glow = doc.getElementById('fxCursor');
-    if (!glow || reduced || coarse) return;
-    var tx = window.innerWidth / 2, ty = window.innerHeight / 3;
-    var x = tx, y = ty;
-    doc.addEventListener('mousemove', function (e) {
-      tx = e.clientX; ty = e.clientY;
-    }, { passive: true });
-    function loop() {
-      x += (tx - x) * 0.09;
-      y += (ty - y) * 0.09;
-      glow.style.transform = 'translate(' + x + 'px,' + y + 'px)';
-      requestAnimationFrame(loop);
-    }
-    loop();
-  }
-
   /* ── 3. Загрузочный сплэш ──────────────────────────────── */
   function fxBoot() {
     var el = doc.getElementById('bootSplash');
@@ -1923,15 +1874,9 @@
     var bg = doc.querySelector('.bg-aurora');
     if (!bg) return;
     var scrollY = 0;
-    var mx = 0, my = 0;
     if (!reduced) {
       window.addEventListener('scroll', function () {
         scrollY = window.scrollY * -0.04;
-        paint();
-      }, { passive: true });
-      doc.addEventListener('mousemove', function (e) {
-        mx = (e.clientX / window.innerWidth - 0.5) * 14;
-        my = (e.clientY / window.innerHeight - 0.5) * 10;
         paint();
       }, { passive: true });
     }
@@ -1940,7 +1885,7 @@
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(function () {
-        bg.style.transform = 'translate(' + mx + 'px, ' + (scrollY + my) + 'px)';
+        bg.style.transform = 'translate(0px, ' + scrollY + 'px)';
         ticking = false;
       });
     }
@@ -1984,7 +1929,6 @@
     fxBoot();
     fxParticles();
     fxParticlesRepulse();
-    fxCursorGlow();
     fxValueFlash();
     fxParallax();
   });
@@ -2942,8 +2886,7 @@
 
 // ============================================================
 // AETHER KIT 8 — FX слой 10: прогресс прокрутки, кнопка
-// «наверх» с кольцом, искры клика, магнитные кнопки,
-// блик панелей, звёздный бурст избранного
+// «наверх» с кольцом, магнитные кнопки, блик панелей
 // ============================================================
 (function () {
   'use strict';
@@ -3004,34 +2947,6 @@
     paint();
   }
 
-  /* ── 3. Искры клика ── */
-  function fxClickSparks() {
-    if (reduced || narrow()) return;
-    var last = 0;
-    var COLORS = ['#4f46e5', '#7c3aed', '#a78bfa', '#22d3ee'];
-    doc.addEventListener('pointerdown', function (e) {
-      if (e.button !== 0) return;
-      if (e.target.closest && e.target.closest('button, a, input, textarea, select, label, [role="button"]')) return;
-      var now = Date.now();
-      if (now - last < 240) return;
-      last = now;
-      var count = 7;
-      for (var i = 0; i < count; i++) {
-        var s = doc.createElement('span');
-        s.className = 'fx-click-spark';
-        var ang = (Math.PI * 2 / count) * i + Math.random() * 0.6;
-        var dist = 18 + Math.random() * 26;
-        s.style.left = e.clientX + 'px';
-        s.style.top = e.clientY + 'px';
-        s.style.background = COLORS[i % COLORS.length];
-        s.style.setProperty('--sx', Math.cos(ang) * dist + 'px');
-        s.style.setProperty('--sy', Math.sin(ang) * dist + 'px');
-        doc.body.appendChild(s);
-        s.addEventListener('animationend', function () { s.remove(); });
-      }
-    }, { passive: true });
-  }
-
   /* ── 4. Магнитные кнопки ── */
   function fxMagnetic() {
     if (reduced || narrow()) return;
@@ -3081,37 +2996,11 @@
     }
   }
 
-  /* ── 6. Звёздный бурст избранного ── */
-  function fxStarBurst() {
-    if (reduced) return;
-    doc.addEventListener('click', function (e) {
-      var b = e.target.closest && e.target.closest('[data-fav], .nav-star');
-      if (!b) return;
-      var r = b.getBoundingClientRect();
-      var x = r.left + r.width / 2;
-      var y = r.top + r.height / 2;
-      for (var i = 0; i < 10; i++) {
-        var s = doc.createElement('span');
-        s.className = 'fx-star-spark';
-        var ang = (Math.PI * 2 / 10) * i + Math.random() * 0.5;
-        var dist = 16 + Math.random() * 22;
-        s.style.left = x + 'px';
-        s.style.top = y + 'px';
-        s.style.setProperty('--sx', Math.cos(ang) * dist + 'px');
-        s.style.setProperty('--sy', Math.sin(ang) * dist + 'px');
-        doc.body.appendChild(s);
-        s.addEventListener('animationend', function () { s.remove(); });
-      }
-    });
-  }
-
   ready(function () {
     fxScrollProgress();
     fxTopButton();
-    fxClickSparks();
     fxMagnetic();
     fxPanelShine();
-    fxStarBurst();
   });
 })();
 

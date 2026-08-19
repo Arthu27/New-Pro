@@ -36,6 +36,17 @@
   scrollbar-width: none; -ms-overflow-style: none;
 }
 .mod-ticker-scroll::-webkit-scrollbar { display: none; }
+.mod-ticker-inner { display: flex; gap: 7px; align-items: center; }
+.mod-ticker-scroll.marquee { overflow: hidden; }
+.mod-ticker-scroll.marquee .mod-ticker-inner {
+  width: max-content;
+  animation: tickerDrift 26s linear infinite;
+}
+.mod-ticker-scroll.marquee:hover .mod-ticker-inner { animation-play-state: paused; }
+@keyframes tickerDrift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
 .mod-ticker-chip {
   flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 11px; border-radius: 20px; font-size: 11.5px;
@@ -69,6 +80,7 @@
 @media (prefers-reduced-motion: reduce) {
   .mod-ticker-chip { animation: none; }
   .mod-bar-fill { transition: none; }
+  .mod-ticker-scroll.marquee .mod-ticker-inner { animation: none; }
 }
 </style>
 
@@ -384,10 +396,11 @@
     var box = $('mcTickerScroll');
     if (!box) return;
     if (!items.length) {
+      box.classList.remove('marquee');
       box.innerHTML = '<div class="mod-ticker-empty">Событий пока нет — журнал наполнится с первыми мерами.</div>';
       return;
     }
-    box.innerHTML = items.map(function (ev) {
+    var chips = items.map(function (ev) {
       var a = String(ev.action || '').toLowerCase();
       var tone = TICKER_TONE[a] || 'neutral';
       var icon = TICKER_ICON[a] || 'fa-circle';
@@ -396,6 +409,14 @@
       return '<span class="mod-ticker-chip ' + tone + '"><i class="fas ' + icon + '"></i><b>' + esc(ev.action || '?') + '</b> ' +
         esc(ev.target || '—') + ' <span class="t-time">' + esc(when) + '</span></span>';
     }).join('');
+    /* живая лента: если чипов больше ширины — плавный дрейф с паузой при наведении */
+    box.innerHTML = '<div class="mod-ticker-inner">' + chips + '</div>';
+    var inner = box.firstChild;
+    box.classList.remove('marquee');
+    if (inner.scrollWidth > box.clientWidth + 4) {
+      inner.innerHTML += chips;
+      box.classList.add('marquee');
+    }
   }
 
   async function loadPeople() {

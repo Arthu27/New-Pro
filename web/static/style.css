@@ -761,7 +761,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   mix-blend-mode: multiply;
 }
 [data-theme="dark"] .card::after { mix-blend-mode: screen; }
-.card.spot-on::after { opacity: 1; }
 .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line-2); }
 .card-head {
   display: flex; align-items: center; gap: 12px;
@@ -806,7 +805,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   z-index: 0;
 }
 [data-theme="dark"] .panel::after { mix-blend-mode: screen; }
-.panel.spot-on::after { opacity: 1; }
 .panel > * { position: relative; z-index: 1; }
 [data-theme="dark"] .panel:hover {
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4),
@@ -878,7 +876,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   transition: opacity 0.3s var(--ease);
   pointer-events: none;
 }
-.kpi.spot-on::after { opacity: 1; }
 .kpi:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line-2); }
 .kpi-icon {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 3px 10px color-mix(in srgb, var(--ac) 16%, transparent);
@@ -926,7 +923,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   transition: opacity 0.3s var(--ease);
   pointer-events: none;
 }
-.stat-box.spot-on::after { opacity: 1; }
 .stat-box:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line-2); }
 .stat-icon {
   width: 36px; height: 36px; flex: 0 0 36px;
@@ -2306,7 +2302,6 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 [data-theme="dark"] .cc-tile::after,
 [data-theme="dark"] .member-card::after,
 [data-theme="dark"] .g-card::after { mix-blend-mode: screen; }
-.cc-tile.spot-on::after, .member-card.spot-on::after, .g-card.spot-on::after { opacity: 1; }
 
 
 /* ── Канбан-доска команды ────────────────────────────────── */
@@ -2691,23 +2686,6 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
 @media (prefers-reduced-motion: reduce) { #fx-particles { display: none; } }
 
 /* ── Свечение за курсором ────────────────────────────────── */
-#fxCursor {
-  position: fixed;
-  width: 480px; height: 480px;
-  margin: -240px 0 0 -240px;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--ac) 9%, transparent), transparent 62%);
-  pointer-events: none;
-  z-index: 2;
-  mix-blend-mode: multiply;
-  will-change: transform;
-}
-[data-theme="dark"] #fxCursor {
-  mix-blend-mode: screen;
-  background: radial-gradient(circle, color-mix(in srgb, var(--ac) 14%, transparent), transparent 62%);
-}
-@media (pointer: coarse), (prefers-reduced-motion: reduce) { #fxCursor { display: none; } }
-
 /* ── Загрузочный сплэш ───────────────────────────────────── */
 #bootSplash {
   position: fixed; inset: 0;
@@ -3664,7 +3642,7 @@ body.reorder-mode .reorder-hint { display: block; }
 /* ── Печать ─────────────────────────────────────────────── */
 @media print {
   .sidebar, .topbar, .mobile-nav, #fabHost, .fab, .fab.backdrop,
-  .bg-aurora, #fx-particles, #fxCursor, .scroll-top-btn,
+  .bg-aurora, #fx-particles, .scroll-top-btn,
   .drawer, .drawer-backdrop, .kbd-palette, .confetti-host {
     display: none !important;
   }
@@ -3940,17 +3918,6 @@ body.reorder-mode .reorder-hint { display: block; }
           mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
 }
 
-/* ── Искры клика ── */
-.fx-click-spark {
-  position: fixed; z-index: 2601; pointer-events: none;
-  width: 5px; height: 5px; border-radius: 50%;
-  animation: fxSparkFly .7s var(--ease-out) forwards;
-}
-@keyframes fxSparkFly {
-  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--sx, 0px)), calc(-50% + var(--sy, 0px))) scale(.2); }
-}
-
 /* ── Блик, пробегающий по панели при наведении ── */
 .fx-shine {
   position: absolute; top: 0; bottom: 0; left: 0;
@@ -3960,19 +3927,6 @@ body.reorder-mode .reorder-hint { display: block; }
   transition: transform .85s var(--ease);
 }
 .fx-ring-host:hover .fx-shine { transform: translateX(300%) skewX(-14deg); }
-
-/* ── Звёздный бурст избранного ── */
-.fx-star-spark {
-  position: fixed; z-index: 2602; pointer-events: none;
-  width: 4px; height: 4px; border-radius: 50%;
-  background: #fbbf24;
-  box-shadow: 0 0 6px #fbbf24;
-  animation: fxStarFly .6s var(--ease-out) forwards;
-}
-@keyframes fxStarFly {
-  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--sx, 0px)), calc(-50% + var(--sy, 0px))) scale(.1); }
-}
 
 /* ── Дыхание FAB ── */
 .fab-main { position: relative; }
@@ -3989,7 +3943,7 @@ body.reorder-mode .reorder-hint { display: block; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fx-click-spark, .fx-star-spark, .fab-main::after { animation: none; display: none; }
+  .fab-main::after { animation: none; display: none; }
   .fx-shine { transition: none; }
 }
 
