@@ -34,8 +34,14 @@
 
   /* ── 2. Тема ────────────────────────────────────────────── */
   function bootTheme() {
-    var t = 'light';
-    try { t = localStorage.getItem('aether_theme') || 'light'; } catch (e) {}
+    var t = '';
+    try { t = localStorage.getItem('aether_theme') || ''; } catch (e) {}
+    if (!t) {
+      // первый визит — следуем за системной темой
+      try {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      } catch (e) { t = 'light'; }
+    }
     if (t !== 'light' && t !== 'dark') t = 'light';
     doc.documentElement.setAttribute('data-theme', t);
   }
@@ -619,6 +625,17 @@
       return /^fa-/.test(raw) ? raw : 'fa-bell';
     }
 
+    function paintTitle(unread) {
+      try {
+        var base = doc.title.replace(/^\(\d+\)\s*/, "");
+        if (unread > 0 && !drawer.classList.contains("open")) {
+          doc.title = "(" + (unread > 99 ? "99+" : unread) + ") " + base;
+        } else {
+          doc.title = base;
+        }
+      } catch (e) {}
+    }
+
     function loadNotifs() {
       var body = doc.getElementById('notifBody');
       if (!body) return;
@@ -664,6 +681,7 @@
           badge.textContent = unread > 99 ? '99+' : unread;
           badge.style.display = 'grid';
         }
+        paintTitle(unread);
       });
     }
 
@@ -787,6 +805,29 @@
     } catch (e) { /* вебсокет недоступен — панель работает без real-time */ }
   }
 
+  /* ── 13a. Анимация переключения вкладок ─────────────────── */
+  function tabTransitions() {
+    doc.addEventListener('click', function (e) {
+      var tab = e.target && e.target.closest ? e.target.closest('.tab-btn, .seg-btn, .eco-tab, .tm-tab') : null;
+      if (!tab) return;
+      doc.querySelectorAll('.tab-content').forEach(function (el) {
+        if (el.style.display !== 'none' && el.offsetParent !== null) el.dataset.tabWas = '1';
+        else delete el.dataset.tabWas;
+      });
+      setTimeout(function () {
+        doc.querySelectorAll('.tab-content').forEach(function (el) {
+          var visible = el.style.display !== 'none' && el.offsetParent !== null;
+          if (visible && !el.dataset.tabWas) {
+            el.classList.remove('tab-switch');
+            void el.offsetWidth;
+            el.classList.add('tab-switch');
+          }
+          delete el.dataset.tabWas;
+        });
+      }, 40);
+    });
+  }
+
   /* ── 14a. Плавные переходы между страницами ─────────────── */
   function pageTransitions() {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -870,6 +911,7 @@
     copyInit();
     hotkeysInit();
     pageTransitions();
+    tabTransitions();
     revealInit();
     wsInit();
   });

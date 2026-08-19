@@ -3367,6 +3367,98 @@ body.dense .kpi { padding: 10px 13px; }
 .kpi-row > *:nth-child(6) { animation-delay: 0.22s; }
 @media (prefers-reduced-motion: reduce) { .kpi-row > * { animation: none; } }
 
+
+/* ============================================================
+   FX-СЛОЙ 4 — сетка hero, авто-тема, вкладки, полировка
+   ============================================================ */
+
+/* ── Дрейфующая сетка в hero командного центра ──────────── */
+.cc-grid {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--ac) 9%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--ac) 9%, transparent) 1px, transparent 1px);
+  background-size: 46px 46px;
+  opacity: 0.7;
+  -webkit-mask-image: radial-gradient(ellipse at 72% 18%, #000 25%, transparent 72%);
+          mask-image: radial-gradient(ellipse at 72% 18%, #000 25%, transparent 72%);
+  animation: gridDrift 16s linear infinite;
+}
+@keyframes gridDrift {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 46px 46px, 46px 46px; }
+}
+@media (prefers-reduced-motion: reduce) { .cc-grid { animation: none; } }
+
+/* ── Живой градиент бренда в сайдбаре ───────────────────── */
+.brand-title {
+  background: linear-gradient(120deg, var(--text) 20%, color-mix(in srgb, var(--ac) 65%, var(--text)) 90%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: brandTextShift 5.5s ease-in-out infinite;
+}
+@keyframes brandTextShift {
+  0%, 100% { background-position: 0% 0; }
+  50% { background-position: 100% 0; }
+}
+@media (prefers-reduced-motion: reduce) { .brand-title { animation: none; } }
+
+/* ── Стеклянные кнопки шапки при наведении ──────────────── */
+.nav-icon-btn {
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s;
+}
+.nav-icon-btn:hover {
+  background: linear-gradient(150deg, var(--ac-soft), transparent 130%);
+  border-color: var(--ac-line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 2px 12px color-mix(in srgb, var(--ac) 16%, transparent);
+}
+[data-theme="dark"] .nav-icon-btn:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 2px 12px color-mix(in srgb, var(--ac) 22%, transparent); }
+
+/* ── Плавное переключение вкладок ───────────────────────── */
+.tab-switch { animation: tabIn 0.32s var(--ease) both; }
+@keyframes tabIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .tab-switch { animation: none; } }
+
+/* ── Свечение строк таблиц при наведении ────────────────── */
+table.data-table tbody tr:hover td:first-child {
+  box-shadow: inset 2px 0 0 var(--ac), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ── Фокус-ринг кнопок ──────────────────────────────────── */
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ac-soft), 0 0 0 1px var(--ac);
+}
+
+/* ── Кнопка «Загрузить ещё» ─────────────────────────────── */
+.load-more-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px;
+  background: var(--surface-2);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--r);
+  color: var(--ac);
+  font-size: var(--fs-md);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.load-more-btn:hover {
+  background: var(--ac-soft);
+  border-color: var(--ac-line);
+  transform: translateY(-1px);
+}
+
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.

@@ -157,7 +157,8 @@
     }
     var q = ($('search').value || '');
     var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
-    body.innerHTML = filtered.slice(0, 200).map(function (l) {
+    var shown = logsShown();
+    body.innerHTML = filtered.slice(0, shown).map(function (l) {
       var a = (l.action || '?').toLowerCase();
       var key = rowKey(l);
       var on = !!selected[key];
@@ -169,12 +170,20 @@
         '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(l.reason || '') + '">' + H(l.reason || '—') + '</td>' +
         '<td data-sort="' + esc(l.timestamp || '') + '" class="muted">' + esc(fmtDate(l.timestamp)) + '</td></tr>';
     }).join('');
+    if (filtered.length > shown) {
+      body.innerHTML += '<tr><td colspan="6"><button type="button" class="load-more-btn" id="logsMore">' +
+        '<i class="fas fa-chevron-down"></i> Показать ещё ' + Math.min(100, filtered.length - shown) +
+        ' из ' + (filtered.length - shown) + '</button></td></tr>';
+    }
     paintSelectAll();
     if (window.attachTableSort && !window._logsSortReady) {
       window._logsSortReady = true;
       window.attachTableSort(document.querySelector('#logs-body').closest('table'));
     }
   }
+
+  var LOGS_PAGE = 100;
+  function logsShown() { return LOGS_PAGE; }
 
   function selectedCount() {
     return Object.keys(selected).filter(function (k) { return selected[k]; }).length;
@@ -270,6 +279,13 @@
     $('mod-filter').addEventListener('change', function () {
       filterMod = this.value;
       render();
+    });
+    // «Загрузить ещё» — клиентская пагинация
+    $('logs-body').addEventListener('click', function (e) {
+      if (e.target.closest('#logsMore')) {
+        LOGS_PAGE += 100;
+        render();
+      }
     });
     // выбор строк
     $('sel-all').addEventListener('change', function () {
