@@ -113,7 +113,8 @@
     $('warn-count').textContent = filtered.length + ' из ' + allWarnings.length;
     var body = $('warn-body');
     if (!filtered.length) {
-      body.innerHTML = '<tr><td colspan="4"><div class="empty"><i class="fas fa-inbox"></i><span>Предупреждения не найдены</span></div></td></tr>';
+      body.innerHTML = '<tr><td colspan="4"><div class="empty"><i class="fas fa-inbox"></i><span>Предупреждения не найдены</span>' +
+        '<span class="empty-hint-chip" data-focus="#search"><i class="fas fa-keyboard"></i> Enter — поиск</span></div></td></tr>';
       return;
     }
     if (viewMode === 'grouped') {

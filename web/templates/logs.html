@@ -62,7 +62,7 @@
   <div class="table-wrap" style="min-height:120px">
     <table class="data-table" data-sortable>
       <thead><tr><th class="col-sel"><input type="checkbox" id="sel-all" aria-label="Выбрать все строки"></th><th class="sortable">Действие</th><th class="sortable">Цель</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
-      <tbody id="logs-body"><tr><td colspan="5"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span></div></td></tr></tbody>
+      <tbody id="logs-body"><tr><td colspan="6"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span></div></td></tr></tbody>
     </table>
   </div>
 </div>
@@ -152,7 +152,8 @@
     $('logs-count').textContent = filtered.length + ' из ' + allLogs.length;
     var body = $('logs-body');
     if (!filtered.length) {
-      body.innerHTML = '<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><span>Логи не найдены</span></div></td></tr>';
+      body.innerHTML = '<tr><td colspan="6"><div class="empty"><i class="fas fa-inbox"></i><span>Логи не найдены</span>' +
+        '<span class="empty-hint-chip" data-focus="#search"><i class="fas fa-keyboard"></i> Enter — поиск</span></div></td></tr>';
       return;
     }
     var q = ($('search').value || '');

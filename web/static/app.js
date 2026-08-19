@@ -548,6 +548,47 @@
   function topbarInit() {
     var clock = doc.getElementById('navClock');
     var sysClock = doc.getElementById('sysClock');
+
+    // Живой пинг в шапке
+    var pingPill = doc.getElementById('pingPill');
+    if (pingPill) {
+      function paintPing() {
+        try {
+          var v = localStorage.getItem('aether_last_ping');
+          if (v === null) return;
+          var parts = v.split('|');
+          var ms = parseInt(parts[0], 10) || 0;
+          var age = Date.now() - (parseInt(parts[1], 10) || 0);
+          if (age > 8000) {
+            pingPill.className = 'ping-pill lat-off';
+            pingPill.innerHTML = '<span class="ping-dot"></span>—<small>мс</small>';
+          } else {
+            var cls = ms < 80 ? '' : ms < 150 ? 'lat-warn' : 'lat-bad';
+            pingPill.className = 'ping-pill ' + cls;
+            pingPill.innerHTML = '<span class="ping-dot"></span>' + ms + '<small>мс</small>';
+          }
+        } catch (e) {}
+      }
+      paintPing();
+      setInterval(paintPing, 2000);
+      pingPill.addEventListener('click', function () {
+        window.location.href = '/bot-stats';
+      });
+    }
+
+    // Сохранение пинга из /api/stats
+    function trackPing() {
+      fetch('/api/stats', { guardSilent: true })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && typeof d.latency === 'number') {
+            try { localStorage.setItem('aether_last_ping', Math.round(d.latency) + '|' + Date.now()); } catch (e) {}
+          }
+        })
+        .catch(function () {});
+    }
+    trackPing();
+    setInterval(trackPing, 3000);
     var tick = function () {
       var t = new Date().toLocaleTimeString('ru-RU');
       if (clock) clock.textContent = t;
@@ -879,6 +920,25 @@
     });
   }
 
+  /* ── 14b. Автопоиск: Enter в пустом списке фокусирует поиск ── */
+  function autoSearchInit() {
+    doc.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var t = e.target;
+      var tag = t && t.tagName ? t.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable)) return;
+      // если пользователь стоит на пустом состоянии — фокус на поиск
+      var panel = document.querySelector('.panel:has(.empty)');
+      var search = document.querySelector('#search, #logs-search, #pf-q');
+      if (search && panel) {
+        search.focus();
+        search.classList.remove('search-flash');
+        void search.offsetWidth;
+        search.classList.add('search-flash');
+      }
+    });
+  }
+
   /* ── 15. Хоткеи ─────────────────────────────────────────── */
   function hotkeysInit() {
     doc.addEventListener('keydown', function (e) {
@@ -944,6 +1004,7 @@
     hotkeysInit();
     pageTransitions();
     tabTransitions();
+    autoSearchInit();
     revealInit();
     wsInit();
   });
@@ -2036,7 +2097,7 @@
     doc.body.appendChild(tip);
     var cur = null;
     function show(el) {
-      tip.textContent = el.getAttribute('data-tip') || '';
+      tip.textContent = el.getAttribute('data-tip') || el.getAttribute('title') || '';
       tip.classList.add('show');
     }
     function move(e) {
