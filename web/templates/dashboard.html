@@ -7,7 +7,7 @@
   <span class="aura" aria-hidden="true"></span>
   <div class="cc-mesh" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="cc-grid" aria-hidden="true"></div>
-  <button type="button" class="btn btn-icon btn-ghost" id="ccSettings" style="position:absolute;top:14px;right:16px;z-index:2" title="Настроить виджеты главной" aria-label="Настроить виджеты главной"><i class="fas fa-sliders"></i></button>
+  <button type="button" class="btn btn-icon btn-ghost" id="ccSettings" style="position:absolute;top:14px;right:16px;z-index:5;cursor:pointer" title="Настроить виджеты главной" aria-label="Настроить виджеты главной"><i class="fas fa-sliders"></i></button>
   <div class="page-hero-content">
     <div class="page-hero-greeting" id="heroGreeting"><span class="dot"></span> Панель управления</div>
     <h1 id="heroTitle">Добро пожаловать</h1>
@@ -746,8 +746,15 @@
     var pop = document.createElement('div');
     pop.className = 'accent-pop';
     pop.style.width = '270px';
+    pop.style.position = 'fixed';
     pop.hidden = true;
     btn.parentNode.appendChild(pop);
+    function placePop() {
+      var r = btn.getBoundingClientRect();
+      pop.style.top = (r.bottom + 8) + 'px';
+      pop.style.left = Math.max(8, Math.min(window.innerWidth - 286, r.right - 270)) + 'px';
+      pop.style.right = 'auto';
+    }
 
     function stored() {
       try { return JSON.parse(localStorage.getItem('cc_widgets') || '{}'); }
@@ -845,9 +852,12 @@
     }
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
+      e.preventDefault();
       pop.hidden = !pop.hidden;
-      if (!pop.hidden) build();
+      if (!pop.hidden) { placePop(); build(); }
     });
+    window.addEventListener('resize', function () { if (!pop.hidden) placePop(); });
+    window.addEventListener('scroll', function () { if (!pop.hidden) placePop(); }, { passive: true });
     document.addEventListener('click', function (e) {
       if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) pop.hidden = true;
     });
@@ -1090,21 +1100,17 @@
     if (r.ok && d.success) { shiftMsgOk('Пояс сохранён'); loadShifts(); }
   }
 
-  loadGuildInfo();
-  loadStats();
-  loadModCharts();
-  loadModLeaders();
-  loadQuickStats();
-  loadRecentActivity();
-  loadLoginLog();
-  loadThreatIndex();
-  loadHealth();
-  loadAnnChannels();
-  loadShifts();
-  bindShiftEditor();
-  loadPulse();
-  widgetSettingsInit();
-  initWidgetDrag();
+  /* Настройки виджетов биндятся первыми — даже если какой-то
+     загрузчик данных упадёт, кнопка останется рабочей */
+  try { widgetSettingsInit(); } catch (e) { console.error('widgetSettingsInit', e); }
+  try { initWidgetDrag(); } catch (e) { console.error('initWidgetDrag', e); }
+  [
+    loadGuildInfo, loadStats, loadModCharts, loadModLeaders, loadQuickStats,
+    loadRecentActivity, loadLoginLog, loadThreatIndex, loadHealth,
+    loadAnnChannels, loadShifts, bindShiftEditor, loadPulse
+  ].forEach(function (fn) {
+    try { fn(); } catch (e) { console.error('dashboard init:', fn && fn.name, e); }
+  });
   // Живые события WebSocket ускоряют пульс (не ждём поллинга)
   document.addEventListener('aether:live', function () { loadPulse(); });
   if (window.tiltCards) window.tiltCards(document, '.kpi, .stat-box, .cc-tile');

@@ -224,10 +224,15 @@ check('@view-transition' not in css and 'снапшот всего DOM' in css,
       'переходы View Transitions выключены ради 60-120 FPS (без рывков на навигации)')
 check(os.path.isfile(os.path.join(ROOT, 'web', 'static', 'favicon.ico')),
       'фавикон Aether создан')
-check(os.path.isfile(os.path.join(ROOT, 'web', 'static', 'brand', 'emblem-square.png')),
-      'эмблема Aether создана')
-check('emblem-square.png' in base,
-      'эмблема в бренд-шапке панели')
+check(os.path.isfile(os.path.join(ROOT, 'web', 'static', 'brand', 'emblem-dragon.png')),
+      'эмблема Aether (белый дракон) создана')
+check('emblem-dragon.png' in base,
+      'дракон в бренд-шапке панели')
+dash_t = open(os.path.join(ROOT, 'web', 'templates', 'dashboard.html'), encoding='utf-8').read()
+check('placePop' in dash_t and 'Настройки виджетов биндятся первыми' in dash_t,
+      'настройки виджетов главной: попап позиционируется у кнопки и биндится первым')
+check('z-index:5' in dash_t,
+      'кнопка настроек поднята над слоями героя')
 kiosk = open(os.path.join(ROOT, 'web', 'templates', 'mod_kiosk.html'), encoding='utf-8').read()
 check('kioskTime' in kiosk and 'kioskMain' in kiosk and 'kioskDrift' in kiosk,
       'экран дежурного: часы, стена и лента на месте')
@@ -425,8 +430,8 @@ proc = subprocess.run([sys.executable, '-c', hide_script], capture_output=True,
                       text=True, timeout=120, cwd=ROOT)
 check('OK' in (proc.stdout or ''),
       'API: owner скрывает канал (hidden:true), возвращает обратно; модератору — 403')
-check('app.js?v=42' in base and 'style.css?v=95' in base,
-      'версии ассетов забумплены (95/42)')
+check('app.js?v=43' in base and 'style.css?v=96' in base,
+      'версии ассетов забумплены (96/43)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil
