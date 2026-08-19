@@ -440,8 +440,8 @@ check('w-dragon' in welcome and 'emblem-dragon.png' in welcome,
       'welcome: белый дракон в герое')
 check('Участникам' in welcome and 'wSearch' in welcome and 'w-steps' in welcome,
       'welcome: инфо для участников, поиск и «как начать»')
-check('для всех участников' in welcome and 'Нажми' in welcome and '@' in welcome,
-      'welcome: акцент на участников и подсказка про @')
+check('для всех участников' in welcome and '@ уже ждёт тебя' in welcome,
+      'welcome: акцент на участников и автоматическая подсказка про @')
 # ═══ 15. Страницы заявок и каналов — единый премиум-вид ═══════════════════
 print('== заявки и каналы ==')
 ma = open(os.path.join(ROOT, 'web', 'templates', 'member_apply.html'), encoding='utf-8').read()
@@ -755,6 +755,21 @@ check('btn-primary::after' in w2 and 'skewX(-20deg)' in w2,
       'welcome: блеск пробегает по primary-кнопкам')
 check('w-card::after' in w2 and 'conic-gradient' in w2,
       'welcome: градиентное кольцо карточек при hover')
+# ═══ 26. Welcome: @ автоматический + ротация фраз ═══════════════════════════
+print('== welcome: @-автомат ==')
+w3 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('PHRASES' in w3 and 'Управляй сервером красиво' in w3 and 'Модерация без хаоса' in w3,
+      'welcome: заголовок печатается с ротацией фраз')
+check('@ уже ждёт тебя' in w3 and 'Просто печатай' in w3,
+      'welcome: @ подан как автоматика, а не обязательный шаг')
+check("inp.focus({ preventScroll: true })" in w3 and "matchMedia('(pointer: fine)')" in w3,
+      'welcome: поле поиска само ждёт ввода (автофокус на desktop)')
+check("fetch('/api/ux/search?q=' + encodeURIComponent(q)" in w3,
+      'welcome: поиск бьёт в живую панель (страницы/участники/каналы)')
+check('PANEL_ICONS' in w3 and 'transcripts' in w3,
+      'welcome: живые результаты с иконками групп')
+check('Начни печатать' in w3,
+      'welcome: placeholder подсказывает автоматику @')
 check('app.js?v=47' in base and 'style.css?v=102' in base,
       'версии ассетов (102/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,

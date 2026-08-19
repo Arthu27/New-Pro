@@ -224,6 +224,9 @@
     }
     .w-search-results a:hover { background: rgba(79, 70, 229, .12); color: #a5b4fc; }
     .w-search-results a i { width: 18px; text-align: center; color: var(--ac2); }
+    .w-search-results a span { flex: 1; min-width: 0; }
+    .w-search-results a b { display: block; font-size: 13.5px; }
+    .w-search-results a small { display: block; font-size: 11px; color: var(--text3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .w-hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
     /* ── Секции ── */
@@ -444,11 +447,11 @@
     </div>
     <div class="w-at-hint">
       <span class="kbd">@</span>
-      <span>Нажми <b>@</b> в любом месте панели — мгновенный поиск: страницы, участники, каналы</span>
+      <span><b>@ уже ждёт тебя</b> — просто начни печатать в поле ниже: страницы, участники и каналы найдутся сами</span>
     </div>
     <div class="w-search">
       <span class="at-ico">@</span>
-      <input type="text" id="wSearch" placeholder="Что хочешь найти? Профиль, заявки, правила…" aria-label="Быстрый поиск по панели">
+      <input type="text" id="wSearch" placeholder="Начни печатать — @ найдёт всё сам…" aria-label="Быстрый поиск по панели">
       <button type="button" class="go" aria-label="Очистить поиск" title="Очистить" onclick="document.getElementById('wSearch').value=''; wSearchHide();"><i class="fas fa-xmark"></i></button>
     </div>
     <div class="w-search-results" id="wResults"></div>
@@ -533,8 +536,8 @@
       </div>
       <div class="w-step">
         <div class="num">2</div>
-        <b>Нажми @</b>
-        <p>Откроется мгновенный поиск — найди любую страницу, участника или канал за секунду.</p>
+        <b>Просто печатай</b>
+        <p>@ работает автоматически — поиск откроется сам, как только начнёшь вводить запрос.</p>
       </div>
       <div class="w-step">
         <div class="num">3</div>
@@ -658,24 +661,40 @@
       els.forEach(function (el) { io.observe(el); });
     })();
 
-    /* ── 4. Печатающийся заголовок ── */
+    /* ── 4. Печатающийся заголовок с ротацией фраз ── */
     (function typing() {
       var el = document.querySelector('.w-title');
       if (!el || reduced) return;
-      var done = false;
-      function run() {
-        if (done) return;
-        done = true;
-        var html = el.innerHTML;
-        var text = el.textContent.trim();
-        el.textContent = '';
+      var PHRASES = [
+        'Управляй сервером красиво',
+        'Найди всё за секунду',
+        'Модерация без хаоса',
+        'Живая аналитика 24/7'
+      ];
+      var started = false;
+      function type(text, then) {
         el.classList.add('typing');
         var i = 0;
         var iv = setInterval(function () {
           i += 2;
           el.textContent = text.slice(0, i);
-          if (i >= text.length) { clearInterval(iv); el.classList.remove('typing'); el.innerHTML = html; }
-        }, 26);
+          if (i >= text.length) {
+            clearInterval(iv);
+            el.classList.remove('typing');
+            setTimeout(then, 2200);
+          }
+        }, 30);
+      }
+      function run() {
+        if (started) return;
+        started = true;
+        var idx = 0;
+        (function next() {
+          var text = PHRASES[idx % PHRASES.length];
+          idx++;
+          el.textContent = '';
+          type(text, next);
+        })();
       }
       var io = new IntersectionObserver(function (en) {
         if (en[0].isIntersecting) { run(); io.disconnect(); }
@@ -739,7 +758,9 @@
   <script>
   (function () {
     'use strict';
-    /* ── Локальный быстрый поиск по странице приветствия ── */
+    /* ── Поиск welcome: живая панель + фолбэк на разделы ── */
+    var PANEL_ICONS = { pages: 'fa-file', members: 'fa-user', channels: 'fa-hashtag',
+                        transcripts: 'fa-file-lines', triggers: 'fa-filter', announcements: 'fa-bullhorn' };
     var LINKS = [
       { q: ['профиль', 'profile', 'статус'], label: 'Твой профиль', href: '/login', icon: 'fa-user' },
       { q: ['карточка', '360', 'активность'], label: 'Карточка 360°', href: '/login', icon: 'fa-id-card-clip' },
@@ -754,20 +775,63 @@
     ];
     var inp = document.getElementById('wSearch');
     var box = document.getElementById('wResults');
+    var timer = null;
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function row(href, icon, label, sub) {
+      return '<a href="' + esc(href) + '"><i class="fas ' + esc(icon) + '"></i><span><b>' + esc(label) + '</b>' +
+        (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span></a>';
+    }
     function show(list) {
       if (!list.length) { box.classList.remove('show'); return; }
-      box.innerHTML = list.map(function (l) {
-        return '<a href="' + l.href + '"><i class="fas ' + l.icon + '"></i> ' + l.label + '</a>';
-      }).join('');
+      box.innerHTML = list.join('');
       box.classList.add('show');
     }
     function wSearchHide() { box.classList.remove('show'); }
+
     inp.addEventListener('input', function () {
       var q = this.value.replace(/^@/, '').trim().toLowerCase();
       if (!q) { wSearchHide(); return; }
-      show(LINKS.filter(function (l) {
+      /* статичные разделы — мгновенно, живая панель — следом */
+      var local = LINKS.filter(function (l) {
         return l.q.some(function (k) { return k.indexOf(q) !== -1 || q.indexOf(k) !== -1; });
-      }).slice(0, 6));
+      }).slice(0, 4).map(function (l) {
+        return row(l.href, l.icon, l.label);
+      });
+      show(local);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () {
+        fetch('/api/ux/search?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d || !d.groups || !d.groups.length) return;
+            var items = [];
+            d.groups.forEach(function (g) {
+              (g.items || []).forEach(function (it) {
+                var href = it.path || it.url || it.href || (it.page_path || '');
+                if (!href) return;
+                items.push(row(href, PANEL_ICONS[g.key] || 'fa-file', it.label || it.name || it.title || '—',
+                                   it.description || it.sub || ''));
+              });
+            });
+            /* локальные не дублируем */
+            var hrefs = {};
+            box.querySelectorAll('a').forEach(function (a) { hrefs[a.getAttribute('href')] = 1; });
+            var fresh = items.filter(function (a, i) {
+              var m = /href="([^"]*)"/.exec(a);
+              return m && !hrefs[m[1]] && i < 8;
+            });
+            if (fresh.length) {
+              var cur = box.innerHTML;
+              box.innerHTML = cur + fresh.join('');
+              box.classList.add('show');
+            }
+          }).catch(function () {});
+      }, 220);
     });
     inp.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') {
@@ -781,6 +845,12 @@
       if (!e.target.closest('.w-search')) wSearchHide();
     });
     window.wSearchHide = wSearchHide;
+
+    /* ── @ автоматически: поле сразу ждёт ввода (desktop) ── */
+    var fine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+    if (fine) {
+      setTimeout(function () { inp.focus({ preventScroll: true }); }, 900);
+    }
   })();
   </script>
 </body>
