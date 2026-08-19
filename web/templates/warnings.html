@@ -132,10 +132,12 @@
       }).join('');
       return;
     }
+    var q = ($('search').value || '');
+    var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
     body.innerHTML = filtered.slice(0, 200).map(function (w) {
-      return '<tr><td data-sort="' + esc(w.user_id || '') + '"><span class="id-pill">' + esc(w.user_id || '—') + '</span></td>' +
-        '<td>' + esc(w.moderator || '—') + '</td>' +
-        '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(w.reason || '') + '">' + esc(w.reason || '—') + '</td>' +
+      return '<tr><td data-sort="' + esc(w.user_id || '') + '"><span class="id-pill">' + H(w.user_id || '—') + '</span></td>' +
+        '<td>' + H(w.moderator || '—') + '</td>' +
+        '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(w.reason || '') + '">' + H(w.reason || '—') + '</td>' +
         '<td data-sort="' + esc(w.timestamp || '') + '" class="muted">' + esc(fmtDate(w.timestamp)) + '</td></tr>';
     }).join('');
     if (window.attachTableSort && !window._warnSortReady) {

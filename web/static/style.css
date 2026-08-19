@@ -2636,6 +2636,198 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
 .bg-aurora { will-change: transform; }
 @media (prefers-reduced-motion: reduce) { .bg-aurora { transform: none !important; } }
 
+
+/* ============================================================
+   FX-СЛОЙ 2 — календарь, свёрнутый сайдбар, фокус, избранное,
+   конфетти, подсветка, тултипы, справка, тонировка разделов
+   ============================================================ */
+
+/* ── Календарь активности (GitHub-стиль, 90 дней) ────────── */
+.cal-months {
+  display: flex;
+  padding-left: 26px;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-3);
+}
+.cal-months span { flex: 1; }
+.cal-body { display: flex; gap: 3px; overflow-x: auto; padding: 2px 2px 4px; }
+.cal-week { display: flex; flex-direction: column; gap: 3px; }
+.cal-cell {
+  width: 12px; height: 12px;
+  border-radius: 3px;
+  background: var(--surface-3);
+  transition: transform 0.12s var(--ease);
+}
+.cal-cell:hover { transform: scale(1.3); }
+.cal-cell.c1 { background: color-mix(in srgb, var(--ac) 26%, var(--surface-3)); }
+.cal-cell.c2 { background: color-mix(in srgb, var(--ac) 45%, var(--surface-3)); }
+.cal-cell.c3 { background: color-mix(in srgb, var(--ac) 66%, var(--surface-3)); }
+.cal-cell.c4 { background: var(--ac); box-shadow: 0 0 6px color-mix(in srgb, var(--ac) 45%, transparent); }
+.cal-legend {
+  display: flex; align-items: center; gap: 4px;
+  justify-content: flex-end;
+  margin-top: 8px;
+  font-size: 10px; color: var(--text-3);
+}
+.cal-legend .cal-cell { width: 10px; height: 10px; }
+.cal-legend .cal-cell:hover { transform: none; }
+
+/* ── Свёрнутый сайдбар (иконки) ──────────────────────────── */
+@media (min-width: 1081px) {
+  .sidebar { transition: width 0.25s var(--ease), flex-basis 0.25s var(--ease); }
+  .sidebar.collapsed { width: 64px; flex-basis: 64px; }
+  .sidebar.collapsed .brand-text,
+  .sidebar.collapsed .sidebar-search,
+  .sidebar.collapsed .mode-banner span:not(:first-child),
+  .sidebar.collapsed .sidebar-guild span:not(.ico),
+  .sidebar.collapsed .nav-group-label,
+  .sidebar.collapsed .nav-group-count,
+  .sidebar.collapsed .nav-caret,
+  .sidebar.collapsed .nav-group-items,
+  .sidebar.collapsed .sys-status,
+  .sidebar.collapsed .sidebar-version span { display: none; }
+  .sidebar.collapsed .brand { justify-content: center; padding: 15px 0 13px; }
+  .sidebar.collapsed .mode-banner { justify-content: center; margin: 10px 8px 0; padding: 8px 0; }
+  .sidebar.collapsed .nav-group-title { justify-content: center; padding: 8px 0; }
+  .sidebar.collapsed .sidebar-guild { justify-content: center; margin: 6px 8px 0; padding: 8px 0; }
+  .sidebar.collapsed .sidebar-foot { text-align: center; padding: 10px 4px; }
+  .sidebar.collapsed .sidebar-version i { font-size: 13px; }
+}
+
+/* ── Фокус-режим (zen) ───────────────────────────────────── */
+body.zen .sidebar,
+body.zen .topbar,
+body.zen .mobile-nav,
+body.zen .sidebar-guild { display: none; }
+body.zen .main-content { max-width: none; padding-top: 28px; }
+body.zen .main-wrap { width: 100%; }
+
+/* ── Избранное в меню ────────────────────────────────────── */
+.nav-favs { margin: 2px 10px 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.nav-favs-title {
+  font-size: var(--fs-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-3);
+  padding: 4px 8px 6px;
+  display: flex; align-items: center; gap: 7px;
+}
+.nav-favs-title i { color: var(--warn); font-size: 10px; }
+.nav-favs-links { display: flex; flex-direction: column; gap: 1px; }
+.nav-star {
+  position: absolute; right: 6px; top: 50%;
+  transform: translateY(-50%);
+  width: 20px; height: 20px;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-3); font-size: 10px;
+  opacity: 0;
+  padding: 0;
+  border-radius: 6px;
+  transition: opacity 0.12s, color 0.12s, background 0.12s;
+}
+.nav-link:hover .nav-star { opacity: 1; }
+.nav-star:hover { background: var(--surface-3); }
+.nav-star.on { opacity: 1; color: var(--warn); }
+.nav-link.faved .nav-star { opacity: 1; color: var(--warn); }
+.nav-link { padding-right: 26px; }
+.nav-favs-links .nav-link { padding-right: 26px; }
+
+/* ── Конфетти ────────────────────────────────────────────── */
+.confetti-host { position: fixed; inset: 0; pointer-events: none; z-index: 999998; overflow: hidden; }
+.confetti-piece {
+  position: absolute; top: -18px;
+  width: 9px; height: 14px;
+  border-radius: 2px;
+  animation: confettiFall var(--dur, 1.5s) cubic-bezier(0.25, 0.6, 0.4, 1) forwards;
+}
+@keyframes confettiFall {
+  to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; }
+}
+
+/* ── Подсветка совпадений поиска в таблицах ──────────────── */
+.hl {
+  background: color-mix(in srgb, var(--warn) 30%, transparent);
+  border-radius: 3px;
+  padding: 0 1px;
+  font-weight: 700;
+}
+[data-theme="dark"] .hl { background: color-mix(in srgb, var(--warn) 42%, transparent); }
+
+/* ── Тултипы data-tip ────────────────────────────────────── */
+.ui-tip {
+  position: fixed;
+  z-index: 999999;
+  background: #16181d;
+  color: #f3f4f6;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow-2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s var(--ease);
+}
+.ui-tip.show { opacity: 1; }
+
+/* ── Справка по горячим клавишам ─────────────────────────── */
+.hk-grid { display: grid; grid-template-columns: 1fr auto; gap: 9px 18px; font-size: var(--fs-sm); align-items: center; }
+.hk-grid .kbd-hint { font-size: 10px; padding: 3px 7px; }
+.hk-grid .k { color: var(--text-2); font-weight: 600; }
+
+/* ── Ступенчатый заголовок страницы ──────────────────────── */
+.title-stagger span { display: inline-block; animation: fadeUp 0.45s var(--ease) both; }
+@media (prefers-reduced-motion: reduce) { .title-stagger span { animation: none; } }
+
+/* ── Тонировка фона по разделам ──────────────────────────── */
+body[data-section="mod"]::before {
+  background:
+    radial-gradient(ellipse 55% 36% at 16% -8%, color-mix(in srgb, var(--err) 6%, transparent), transparent 70%),
+    radial-gradient(ellipse 46% 30% at 88% -6%, color-mix(in srgb, var(--err) 4%, transparent), transparent 65%);
+}
+body[data-section="members"]::before {
+  background:
+    radial-gradient(ellipse 55% 36% at 16% -8%, color-mix(in srgb, var(--info) 6%, transparent), transparent 70%),
+    radial-gradient(ellipse 46% 30% at 88% -6%, color-mix(in srgb, var(--info) 4%, transparent), transparent 65%);
+}
+body[data-section="community"]::before {
+  background:
+    radial-gradient(ellipse 55% 36% at 16% -8%, color-mix(in srgb, var(--ok) 6%, transparent), transparent 70%),
+    radial-gradient(ellipse 46% 30% at 88% -6%, color-mix(in srgb, var(--ok) 4%, transparent), transparent 65%);
+}
+body[data-section="tickets"]::before {
+  background:
+    radial-gradient(ellipse 55% 36% at 16% -8%, rgba(8, 145, 178, 0.06), transparent 70%),
+    radial-gradient(ellipse 46% 30% at 88% -6%, rgba(8, 145, 178, 0.04), transparent 65%);
+}
+body[data-section="ai"]::before {
+  background:
+    radial-gradient(ellipse 55% 36% at 16% -8%, rgba(124, 58, 237, 0.06), transparent 70%),
+    radial-gradient(ellipse 46% 30% at 88% -6%, rgba(124, 58, 237, 0.04), transparent 65%);
+}
+body[data-section="content"]::before {
+  background:
+    radial-gradient(ellipse 55% 36% at 16% -8%, rgba(236, 72, 153, 0.06), transparent 70%),
+    radial-gradient(ellipse 46% 30% at 88% -6%, rgba(236, 72, 153, 0.04), transparent 65%);
+}
+body[data-section="ops"]::before {
+  background:
+    radial-gradient(ellipse 55% 36% at 16% -8%, rgba(234, 88, 12, 0.06), transparent 70%),
+    radial-gradient(ellipse 46% 30% at 88% -6%, rgba(234, 88, 12, 0.04), transparent 65%);
+}
+body[data-section="access"]::before {
+  background:
+    radial-gradient(ellipse 55% 36% at 16% -8%, color-mix(in srgb, var(--warn) 6%, transparent), transparent 70%),
+    radial-gradient(ellipse 46% 30% at 88% -6%, color-mix(in srgb, var(--warn) 4%, transparent), transparent 65%);
+}
+body[data-section="utility"]::before {
+  background:
+    radial-gradient(ellipse 55% 36% at 16% -8%, rgba(13, 148, 136, 0.06), transparent 70%),
+    radial-gradient(ellipse 46% 30% at 88% -6%, rgba(13, 148, 136, 0.04), transparent 65%);
+}
+
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.

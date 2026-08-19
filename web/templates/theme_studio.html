@@ -105,6 +105,7 @@
     }).then(function (r) { return r.json(); }).then(function (d) {
       saving = false;
       if (d.success) {
+        if (typeof window.celebrate === 'function') window.celebrate();
         $('studioMsg').className = 'hint';
         $('studioMsg').textContent = 'Сохранено за вашей учёткой';
         setTimeout(function () { $('studioMsg').textContent = ''; }, 2500);

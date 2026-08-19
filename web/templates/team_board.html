@@ -254,6 +254,7 @@
         DATA.counts[st] = DATA.columns[st].tasks.length;
       });
       render();
+      if (status === 'done' && typeof window.celebrate === 'function') window.celebrate();
       window.showToast('Задача перемещена', true);
     } catch (e) { window.showToast('Не удалось переместить', false); }
   }

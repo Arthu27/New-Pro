@@ -162,6 +162,40 @@ mod_data = {'case': {GID: [
      'reason': 'Оскорбления в адрес модерации', 'timestamp': iso(8, 19, 50)},
 ]}}
 
+# ── 3b. Исторические события за 90 дней (для календаря активности) ───────
+import random as _rnd
+_rnd.seed(777)
+HIST_USERS = ['toxicguy', 'spammer_228', 'caps_forever', 'voice_troll', 'night_flooder',
+              'emoji_spam', 'invite_hunter', 'offtopic_king', 'nsfw_poster', 'ping_spammer',
+              'dehoisted', 'music_abuser', 'scam_links', 'sleeper_alt', 'tag_abuser']
+HIST_MODS = ['artem.mods', 'sonya.staff', 'lina.mod']
+HIST_ACTIONS = [('warn', 'Нарушение правил чата', 34), ('mute', 'Флуд в общем канале', 22),
+                ('timeout', 'Спам в течение часа', 9), ('kick', 'Повторное нарушение', 13),
+                ('ban', 'Систематические нарушения', 8), ('unmute', 'Срок мьюта истёк', 5),
+                ('unban', 'Апелляция принята', 3)]
+# веса через повторение
+HIST_POOL = []
+for act, reason, weight in HIST_ACTIONS:
+    HIST_POOL += [(act, reason)] * weight
+
+hist = []
+for days_ago in range(89, 7, -1):
+    d = NOW - timedelta(days=days_ago)
+    wd = d.weekday()  # 0=пн
+    if wd >= 5:  # выходные — спокойнее
+        n = _rnd.choices([0, 1, 2, 3], weights=[30, 40, 22, 8])[0]
+    else:
+        n = _rnd.choices([0, 1, 2, 3, 4], weights=[16, 30, 30, 16, 8])[0]
+    for _ in range(n):
+        act, reason = _rnd.choice(HIST_POOL)
+        hour = _rnd.choices([10, 12, 14, 16, 18, 19, 20, 21, 22, 23], weights=[5, 6, 8, 10, 12, 14, 13, 10, 8, 5])[0]
+        minute = _rnd.randint(0, 59)
+        dt = d.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        hist.append(A(action=act, user_name=_rnd.choice(HIST_USERS),
+                      mod_name=_rnd.choice(HIST_MODS), reason=reason,
+                      timestamp=dt.isoformat()))
+
+audit[GID] = hist + audit[GID]
 # ── 4. Доказательства (демки) ───────────────────────────────────────────
 proofs = {'next': 6, 'items': {
     '1': {'id': 1, 'user_id': 823456789012345680, 'user_name': 'toxicguy',

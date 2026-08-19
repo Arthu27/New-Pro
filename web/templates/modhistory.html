@@ -91,13 +91,15 @@
       body.innerHTML = '<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><span>Записей нет</span></div></td></tr>';
       return;
     }
+    var q = ($('search').value || '');
+    var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
     body.innerHTML = list.slice(0, 300).map(function (c) {
       var cat = normalize(c.action);
       var label = RU[cat] || esc(c.action || '?');
       return '<tr><td data-sort="' + esc(cat) + '"><span class="badge ' + (TONE[cat] || 'neutral') + '">' + label + '</span></td>' +
-        '<td>' + esc(c.target_name || c.target_id || '—') + '</td>' +
-        '<td>' + esc(c.mod_name || c.mod_id || '—') + '</td>' +
-        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(c.reason || '') + '">' + esc(c.reason || '—') + '</td>' +
+        '<td>' + H(c.target_name || c.target_id || '—') + '</td>' +
+        '<td>' + H(c.mod_name || c.mod_id || '—') + '</td>' +
+        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(c.reason || '') + '">' + H(c.reason || '—') + '</td>' +
         '<td data-sort="' + esc(c.created_at || '') + '" class="muted">' + esc(fmtDate(c.created_at)) + '</td></tr>';
     }).join('');
     if (window.attachTableSort && !window._mhSortReady) {

@@ -56,6 +56,12 @@
       <div class="sub">Когда команда чаще всего действует.</div></div></div>
     <div class="panel-body" id="mcHeat"><div class="sk-line" style="height:12px"></div></div>
   </div>
+  <div class="panel" style="grid-column:1/-1">
+    <div class="panel-head"><div><h2><i class="fas fa-calendar-days"></i> Календарь активности</h2>
+      <div class="sub">Интенсивность мод-действий за последние 90 дней.</div></div>
+      <span class="live-chip" style="margin-left:auto"><span class="dot"></span> LIVE</span></div>
+    <div class="panel-body" id="mcCalendar"><div class="sk-line" style="height:12px"></div></div>
+  </div>
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-clipboard-list"></i> Последние действия</h2>
       <div class="sub">Хвост журнала модерации — клик по заголовку сортирует.</div></div>
@@ -196,6 +202,17 @@
         }).sort(function (a, b) { return b.value - a.value; });
         if (window.AetherRing) window.AetherRing($('mcRing'), items.slice(0, 6), { totalLabel: 'мер за 7 дн' });
         if (window.AetherHeat) window.AetherHeat($('mcHeat'), hours, { labels: ['00:00', '12:00', '23:00'] });
+      }
+      if (window.AetherCalendar) {
+        var counts = {};
+        logs.forEach(function (l) {
+          try {
+            var d = new Date(l.timestamp);
+            var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            counts[key] = (counts[key] || 0) + 1;
+          } catch (e) {}
+        });
+        window.AetherCalendar($('mcCalendar'), counts, { days: 90 });
       }
       // лента
       var TONE = { ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral', timeout: 'neutral', unban: 'ok', unmute: 'ok' };

@@ -301,17 +301,26 @@
   var paletteReqToken = 0;
   var paletteRemoteTimer = null;
 
+  function paletteFavs() {
+    try { return JSON.parse(localStorage.getItem('aether_favs') || '[]'); } catch (e) { return []; }
+  }
+
   function paletteLocalMatches(q) {
+    var favs = paletteFavs();
     var flat = [];
     paletteData.forEach(function (grp) {
       grp.pages.forEach(function (p) {
-        flat.push({ group: 'Разделы панели', path: p.path, label: p.label, icon2: p.icon, desc: p.description || '', sub: p.path });
+        flat.push({
+          group: favs.indexOf(p.path) !== -1 ? 'Избранное' : 'Разделы панели',
+          path: p.path, label: p.label, icon2: p.icon, desc: p.description || '', sub: p.path,
+          fav: favs.indexOf(p.path) !== -1
+        });
       });
     });
     return flat.filter(function (p) {
       if (!q) return true;
       return (p.label + ' ' + p.desc).toLowerCase().indexOf(q) !== -1;
-    }).slice(0, 24);
+    }).sort(function (a, b) { return (b.fav ? 1 : 0) - (a.fav ? 1 : 0); }).slice(0, 24);
   }
 
   function markMatch(text, q) {
@@ -381,7 +390,9 @@
     { label: 'Журнал: выгрузка CSV', icon: 'fa-file-csv', sub: 'последние 7 дней', run: function () { window.open('/logs/export?days=7', '_self'); } },
     { label: 'Отчёт модерации: CSV', icon: 'fa-file-csv', sub: 'статистика команды', run: function () { window.open('/api/mod-report.csv?days=7', '_self'); } },
     { label: 'Досье участника', icon: 'fa-id-card', sub: 'аналитика рисков по ID', run: function () { window.location.href = '/mod-insights'; } },
-    { label: 'Центр безопасности', icon: 'fa-shield-halved', sub: 'политики и лаборатория', run: function () { window.location.href = '/security'; } }
+    { label: 'Центр безопасности', icon: 'fa-shield-halved', sub: 'политики и лаборатория', run: function () { window.location.href = '/security'; } },
+    { label: 'Справка по горячим клавишам', icon: 'fa-keyboard', sub: 'все сочетания панели', run: function () { if (typeof window.openHelp === 'function') window.openHelp(); } },
+    { label: 'Фокус-режим', icon: 'fa-eye', sub: 'только контент, без панелей', run: function () { document.body.classList.toggle('zen'); } }
   ];
 
   function paletteActionMatches(q) {
@@ -1733,5 +1744,370 @@
     fxCursorGlow();
     fxValueFlash();
     fxParallax();
+  });
+})();
+
+// ============================================================
+// AETHER FX KIT 2 — календарь, свёрнутый сайдбар, фокус-режим,
+// избранное, конфетти, тултипы, справка, тонировка разделов
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function esc0(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ── 1. Календарь активности (GitHub-стиль, 90 дней) ────── */
+  window.AetherCalendar = function (el, counts, opts) {
+    opts = opts || {};
+    if (!el) return;
+    var map = counts || {};
+    var days = Number(opts.days) || 90;
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var start = new Date(today.getTime() - (days - 1) * 86400000);
+    // выровнять на понедельник
+    while (start.getDay() !== 1) start = new Date(start.getTime() - 86400000);
+
+    var max = 1;
+    Object.keys(map).forEach(function (k) { max = Math.max(max, Number(map[k]) || 0); });
+
+    var cell = function (d) {
+      var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      var v = Number(map[key]) || 0;
+      var lvl = Math.max(0, Math.min(4, Math.round((v / max) * 4)));
+      var label = String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + ' · ' + v + ' действий';
+      return '<span class="cal-cell' + (lvl ? ' c' + lvl : '') + '" title="' + esc0(label) + '"></span>';
+    };
+
+    // недели: столбцы по 7 дней
+    var weeks = [];
+    var cur = new Date(start.getTime());
+    while (cur <= today) {
+      var week = [];
+      for (var i = 0; i < 7; i++) {
+        week.push(new Date(cur.getTime()));
+        cur = new Date(cur.getTime() + 86400000);
+      }
+      weeks.push(week);
+    }
+    var bodyHtml = weeks.map(function (w) {
+      return '<span class="cal-week">' + w.map(function (d) {
+        return d <= today ? cell(d) : '<span class="cal-cell" style="visibility:hidden"></span>';
+      }).join('') + '</span>';
+    }).join('');
+
+    // подписи месяцев над колонками
+    var monthMarks = [];
+    weeks.forEach(function (w, i) {
+      var d = w[0];
+      var keyM = d.getFullYear() + '-' + d.getMonth();
+      if (!monthMarks.length || monthMarks[monthMarks.length - 1].key !== keyM) {
+        monthMarks.push({ key: keyM, label: d.toLocaleDateString('ru-RU', { month: 'short' }).replace('.', ''), col: i });
+      }
+    });
+    var total = Math.max(weeks.length, 1);
+    var monthsHtml = '<div class="cal-months">' + monthMarks.map(function (m, idx) {
+      var flex = (idx === monthMarks.length - 1)
+        ? Math.max(m.col, total - m.col)
+        : (monthMarks[idx + 1].col - m.col);
+      return '<span style="flex:' + Math.max(flex, 1) + '">' + esc0(m.label) + '</span>';
+    }).join('') + '</div>';
+
+    el.innerHTML = monthsHtml +
+      '<div class="cal-body">' + bodyHtml + '</div>' +
+      '<div class="cal-legend">меньше <span class="cal-cell"></span><span class="cal-cell c1"></span><span class="cal-cell c2"></span><span class="cal-cell c3"></span><span class="cal-cell c4"></span> больше</div>';
+  };
+
+  /* ── 2. Подсветка совпадений (для таблиц с поиском) ─────── */
+  window.hlEsc = function (raw, q) {
+    var e = esc0(raw);
+    if (!q) return e;
+    var qe = esc0(q);
+    if (!qe) return e;
+    var re = new RegExp('(' + qe.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return e.replace(re, '<span class="hl">$1</span>');
+  };
+
+  /* ── 3. Конфетти ───────────────────────────────────────── */
+  window.celebrate = function () {
+    if (reduced) return;
+    var colors = ['#4f46e5', '#7c3aed', '#0284c7', '#059669', '#e11d48', '#d97706', '#16a34a', '#ec4899'];
+    var host = doc.createElement('div');
+    host.className = 'confetti-host';
+    doc.body.appendChild(host);
+    var cx = window.innerWidth / 2;
+    var n = 42;
+    for (var i = 0; i < n; i++) {
+      var piece = doc.createElement('span');
+      piece.className = 'confetti-piece';
+      piece.style.left = cx + 'px';
+      piece.style.background = colors[i % colors.length];
+      var angle = (Math.random() * Math.PI) - Math.PI;      // вверх веером
+      var power = 260 + Math.random() * 320;
+      var dx = Math.cos(angle) * power;
+      var dy = -Math.abs(Math.sin(angle)) * power - 120 - Math.random() * 200;
+      piece.style.setProperty('--dx', dx + 'px');
+      piece.style.setProperty('--dy', dy + 'px');
+      piece.style.setProperty('--rot', (Math.random() * 900 - 450) + 'deg');
+      piece.style.setProperty('--dur', (1.2 + Math.random() * 0.9) + 's');
+      host.appendChild(piece);
+    }
+    setTimeout(function () { host.remove(); }, 2400);
+  };
+
+  /* ── 4. Тултипы data-tip ───────────────────────────────── */
+  function tipInit() {
+    var tip = doc.createElement('div');
+    tip.className = 'ui-tip';
+    doc.body.appendChild(tip);
+    var cur = null;
+    function show(el) {
+      tip.textContent = el.getAttribute('data-tip') || '';
+      tip.classList.add('show');
+    }
+    function move(e) {
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top = (e.clientY + 16) + 'px';
+    }
+    doc.addEventListener('mouseover', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+      if (el && el !== cur) {
+        cur = el;
+        show(el);
+        move(e);
+      } else if (!el) {
+        tip.classList.remove('show');
+        cur = null;
+      }
+    });
+    doc.addEventListener('mousemove', function (e) {
+      if (cur) move(e);
+    });
+    doc.addEventListener('mouseout', function (e) {
+      var el = e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+      if (!el || el === cur) { tip.classList.remove('show'); cur = null; }
+    });
+  }
+
+  /* ── 5. Свёрнутый сайдбар ──────────────────────────────── */
+  function sidebarCollapseInit() {
+    var btn = doc.getElementById('sidebarCollapseBtn');
+    var sidebar = doc.getElementById('sidebar');
+    if (!btn || !sidebar) return;
+    try {
+      if (localStorage.getItem('aether_sidebar') === 'collapsed') sidebar.classList.add('collapsed');
+    } catch (e) {}
+    btn.addEventListener('click', function () {
+      var collapsed = sidebar.classList.toggle('collapsed');
+      try { localStorage.setItem('aether_sidebar', collapsed ? 'collapsed' : 'full'); } catch (e) {}
+    });
+  }
+
+  /* ── 6. Фокус-режим ────────────────────────────────────── */
+  function focusInit() {
+    var btn = doc.getElementById('focusBtn');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        var on = doc.body.classList.toggle('zen');
+        window.showToast(on ? 'Фокус-режим: Esc — вернуться' : 'Фокус-режим выключен', true);
+      });
+    }
+    doc.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && doc.body.classList.contains('zen')) {
+        doc.body.classList.remove('zen');
+      }
+      // Shift+F — фокус-режим
+      if (e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'F' || e.key === 'f' || e.key === 'а' || e.key === 'А')) {
+        var t = e.target;
+        var tag = t && t.tagName ? t.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable)) return;
+        e.preventDefault();
+        doc.body.classList.toggle('zen');
+      }
+    });
+  }
+
+  /* ── 7. Избранное ──────────────────────────────────────── */
+  function favsInit() {
+    var nav = doc.getElementById('sidebarNav');
+    if (!nav) return;
+    var container = doc.getElementById('navFavs');
+    function loadFavs() {
+      try { return JSON.parse(localStorage.getItem('aether_favs') || '[]'); }
+      catch (e) { return []; }
+    }
+    function saveFavs(list) {
+      try { localStorage.setItem('aether_favs', JSON.stringify(list)); } catch (e) {}
+    }
+    function star(path) {
+      var list = loadFavs();
+      var idx = list.indexOf(path);
+      if (idx === -1) list.push(path); else list.splice(idx, 1);
+      saveFavs(list);
+      renderFavs();
+      paintStars();
+    }
+    function renderFavs() {
+      if (!container) return;
+      var list = loadFavs();
+      var favs = [];
+      var all = doc.getElementById('palette-data');
+      if (all) {
+        try {
+          JSON.parse(all.textContent || '[]').forEach(function (grp) {
+            grp.pages.forEach(function (p) {
+              if (list.indexOf(p.path) !== -1) favs.push(p);
+            });
+          });
+        } catch (e) {}
+      }
+      if (!favs.length) { container.hidden = true; return; }
+      container.hidden = false;
+      container.innerHTML = '<div class="nav-favs-title"><i class="fas fa-star"></i> Избранное</div>' +
+        '<div class="nav-favs-links">' + favs.map(function (p) {
+          var active = window.location.pathname === p.path ? ' active' : '';
+          return '<a href="' + esc0(p.path) + '" class="nav-link' + active + '"><i class="fas ' + esc0(p.icon) + '"></i> <span>' + esc0(p.label) + '</span>' +
+            '<button type="button" class="nav-star on" data-fav="' + esc0(p.path) + '" aria-label="Убрать из избранного"><i class="fas fa-star"></i></button></a>';
+        }).join('') + '</div>';
+    }
+    function paintStars() {
+      var list = loadFavs();
+      nav.querySelectorAll('.nav-link').forEach(function (link) {
+        var path = link.getAttribute('href') || '';
+        if (!path || path.charAt(0) !== '/') return;
+        if (link.querySelector('.nav-star')) return;
+        if (link.closest('.nav-favs-links')) return;
+        var star = doc.createElement('button');
+        star.type = 'button';
+        star.className = 'nav-star' + (list.indexOf(path) !== -1 ? ' on' : '');
+        star.setAttribute('aria-label', 'В избранное');
+        star.innerHTML = '<i class="fas fa-star"></i>';
+        star.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          star(path);
+        });
+        link.appendChild(star);
+      });
+    }
+    if (container) container.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-fav]');
+      if (b) { e.preventDefault(); star(b.dataset.fav); }
+    });
+    renderFavs();
+    paintStars();
+  }
+
+  /* ── 8. Справка по горячим клавишам ────────────────────── */
+  window.openHelp = function () {
+    var existing = doc.getElementById('hkModal');
+    if (existing) { existing.style.display = 'flex'; return; }
+    var overlay = doc.createElement('div');
+    overlay.id = 'hkModal';
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+    var rows = [
+      ['Ctrl + K', 'Палитра команд и поиск'],
+      ['Alt + M', 'Палитра команд'],
+      ['?', 'Эта справка'],
+      ['Shift + F', 'Фокус-режим'],
+      ['Ctrl + S', 'Сохранить форму'],
+      ['/', 'Фокус на поиск списка'],
+      ['Esc', 'Закрыть окна и режимы']
+    ];
+    overlay.innerHTML =
+      '<div class="modal-box" style="max-width:460px">' +
+      '  <div class="modal-head">' +
+      '    <div><h3><i class="fas fa-keyboard"></i> Горячие клавиши</h3><div class="sub">Всё управление панелью с клавиатуры.</div></div>' +
+      '    <button type="button" class="close" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>' +
+      '  </div>' +
+      '  <div class="modal-body">' +
+      '    <div class="hk-grid">' + rows.map(function (r) {
+        return '<span class="k">' + esc0(r[1]) + '</span><span class="kbd-hint">' + esc0(r[0]) + '</span>';
+      }).join('') + '</div>' +
+      '  </div>' +
+      '  <div class="modal-actions"><button type="button" class="btn btn-primary" id="hkClose"><i class="fas fa-check"></i> Понятно</button></div>' +
+      '</div>';
+    doc.body.appendChild(overlay);
+    function close() { overlay.remove(); }
+    overlay.querySelector('.close').addEventListener('click', close);
+    overlay.querySelector('#hkClose').addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    doc.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape') { close(); doc.removeEventListener('keydown', esc); }
+    });
+  };
+
+  /* ── 9. Тонировка фона по разделу ──────────────────────── */
+  function sectionTint() {
+    try {
+      var node = doc.getElementById('palette-data');
+      if (!node) return;
+      var groups = JSON.parse(node.textContent || '[]');
+      var path = window.location.pathname;
+      for (var i = 0; i < groups.length; i++) {
+        for (var j = 0; j < groups[i].pages.length; j++) {
+          if (groups[i].pages[j].path === path) {
+            doc.body.dataset.section = groups[i].key;
+            return;
+          }
+        }
+      }
+    } catch (e) { /* опционально */ }
+  }
+
+  /* ── 10. Ступенчатый заголовок ─────────────────────────── */
+  function titleStagger() {
+    if (reduced) return;
+    doc.querySelectorAll('.page-head h1, .navbar h1').forEach(function (h) {
+      if (h.querySelector('i') || h.querySelector('span') || h.dataset.staggered) return;
+      var words = (h.textContent || '').trim().split(/\s+/);
+      if (words.length < 2 || words.length > 8) return;
+      h.dataset.staggered = '1';
+      h.classList.add('title-stagger');
+      h.innerHTML = words.map(function (w, i) {
+        return '<span style="animation-delay:' + (i * 55) + 'ms">' + esc0(w) + '</span>';
+      }).join(' ');
+    });
+  }
+
+  /* ── 11. Справка по «?» ────────────────────────────────── */
+  doc.addEventListener('keydown', function (e) {
+    if (e.key !== '?' && e.key !== '/') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var t = e.target;
+    var tag = t && t.tagName ? t.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable)) return;
+    if (e.key === '?') {
+      e.preventDefault();
+      window.openHelp();
+    }
+  });
+
+  /* ── Старт ────────────────────────────────────────────── */
+  function ready(fn) {
+    if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    sidebarCollapseInit();
+    focusInit();
+    favsInit();
+    tipInit();
+    sectionTint();
+    titleStagger();
+    var helpLink = doc.getElementById('helpLink');
+    if (helpLink) {
+      helpLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        window.openHelp();
+      });
+    }
   });
 })();

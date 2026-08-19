@@ -151,12 +151,14 @@
       body.innerHTML = '<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><span>Логи не найдены</span></div></td></tr>';
       return;
     }
+    var q = ($('search').value || '');
+    var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
     body.innerHTML = filtered.slice(0, 200).map(function (l) {
       var a = (l.action || '?').toLowerCase();
-      return '<tr><td data-sort="' + esc(l.action || '') + '"><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(l.action || '?') + '</span></td>' +
-        '<td>' + esc(l.user_name || l.channel_name || l.role_name || l.user_id || '—') + '</td>' +
-        '<td>' + esc(l.mod_name || l.mod_id || '—') + '</td>' +
-        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(l.reason || '') + '">' + esc(l.reason || '—') + '</td>' +
+      return '<tr><td data-sort="' + esc(l.action || '') + '"><span class="badge ' + (TONE[a] || 'neutral') + '">' + H(l.action || '?') + '</span></td>' +
+        '<td>' + H(l.user_name || l.channel_name || l.role_name || l.user_id || '—') + '</td>' +
+        '<td>' + H(l.mod_name || l.mod_id || '—') + '</td>' +
+        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(l.reason || '') + '">' + H(l.reason || '—') + '</td>' +
         '<td data-sort="' + esc(l.timestamp || '') + '" class="muted">' + esc(fmtDate(l.timestamp)) + '</td></tr>';
     }).join('');
     if (window.attachTableSort && !window._logsSortReady) {
