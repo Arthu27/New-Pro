@@ -874,8 +874,40 @@ check('href="#look"' in w5 and 'href="#faq"' in w5,
       'welcome: пункты «Витрина» и «FAQ» в навигации')
 check('Так' in w5 and 'выглядит' in w5,
       'welcome: заголовок витрины «Так выглядит панель»')
-check('app.js?v=47' in base and 'style.css?v=102' in base,
-      'версии ассетов (102/47)')
+# ═══ 31. Баг-фиксы и красота ═══════════════════════════════════════════════
+print('== баг-фиксы ==')
+w6 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('paintText' in w6 and "words[words.length - 1]" in w6,
+      'welcome: заголовок после печати сохраняет градиент (баг исправлен)')
+check('scroll-margin-top: 92px' in w6,
+      'welcome: секции не прячутся под фикс-навигацией (баг исправлен)')
+check('w-top' in w6 and 'wTop' in w6 and '--top-p' in w6,
+      'welcome: кнопка «наверх» с кольцом прогресса')
+reg = open(os.path.join(ROOT, 'web', 'templates', 'register.html'), encoding='utf-8').read()
+check('data-theme="dark"' in reg and '#05060a' in reg and 'rg-stars' in reg,
+      'register: чёрная тема в стиле логина (баг консистентности исправлен)')
+check('@keyframes fadeUp' in reg,
+      'register: анимация карточки самодостаточна (без style.css)')
+check('emblem-dragon.png' in reg,
+      'register: дракон в бренде')
+check('ПРЕМИУМ-СКРОЛЛБАРЫ' in css,
+      'панель: градиентные скроллбары сайдбара и контента')
+check('scrollbar-color: var(--ac)' in css,
+      'панель: Firefox scrollbar-width thin')
+r = client.get('/register')
+check(r.status_code == 200 and 'rg-stars' in r.get_data(as_text=True),
+      '/register открывается в чёрной теме')
+sp = open(os.path.join(ROOT, 'web', 'templates', 'status_public.html'), encoding='utf-8').read()
+check('data-theme="dark"' in sp and '#05060a' in sp and 'st-stars' in sp,
+      'статус-страница: чёрная тема со звёздами (как welcome и логин)')
+check('emblem-dragon.png' in sp,
+      'статус-страница: дракон в бренде')
+check('st-state' in sp and 'm-ping' in sp and 'status-public' in sp,
+      'статус-страница: живая телеметрия сохранена')
+r = client.get('/status')
+check(r.status_code == 200, '/status открывается')
+check('app.js?v=47' in base and 'style.css?v=104' in base,
+      'версии ассетов (104/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,

@@ -4452,6 +4452,25 @@ input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
 }
 .ms-result-card:hover { transform: translateY(-2px); border-color: var(--ac-line); }
 
+/* ПРЕМИУМ-СКРОЛЛБАРЫ: градиентные, тонкие */
+.sidebar-nav::-webkit-scrollbar { width: 5px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--ac), var(--ac-2), var(--ac-3));
+  border-radius: 99px;
+}
+.sidebar-nav { scrollbar-width: thin; scrollbar-color: var(--ac) transparent; }
+
+.main-content::-webkit-scrollbar { width: 8px; }
+.main-content::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 99px;
+  border: 2px solid var(--bg);
+}
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--ac), var(--ac-2));
+}
+
 /* Кнопки-сохранения страниц */
 
 .save-btn, .sc-btn, .si-btn, .pf-btn, .au-save, .bs-save, .rp-btn, .sl-btn,

@@ -230,7 +230,12 @@
     .w-hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
     /* ── Секции ── */
-    .w-section { max-width: 1080px; margin: 60px auto 0; padding: 0 20px; position: relative; z-index: 1; }
+    .w-section {
+      max-width: 1080px; margin: 60px auto 0; padding: 0 20px;
+      position: relative; z-index: 1;
+      scroll-margin-top: 92px;
+    }
+    .w-cta { scroll-margin-top: 92px; }
     .w-sec-head { text-align: center; margin-bottom: 26px; }
     .w-sec-title {
       font-family: 'Unbounded', sans-serif;
@@ -623,6 +628,28 @@
       background: rgba(79, 70, 229, .16); color: #a5b4fc;
       padding: 2px 7px; border-radius: 6px;
       font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    }
+
+    /* ── Кнопка «наверх» ── */
+    .w-top {
+      position: fixed; right: 26px; bottom: 26px; z-index: 120;
+      width: 46px; height: 46px; border-radius: 50%;
+      border: 1px solid var(--line2);
+      background: var(--surface);
+      color: #a5b4fc; cursor: pointer;
+      display: grid; place-items: center; font-size: 14px;
+      box-shadow: var(--shadow);
+      opacity: 0; transform: translateY(14px);
+      pointer-events: none;
+      transition: opacity .25s ease, transform .25s ease, border-color .2s;
+    }
+    .w-top.show { opacity: 1; transform: none; pointer-events: auto; }
+    .w-top:hover { border-color: var(--ac); box-shadow: 0 10px 30px -8px rgba(124, 58, 237, .6); }
+    .w-top::before {
+      content: ''; position: absolute; inset: -2px; border-radius: 50%;
+      background: conic-gradient(#4f46e5 calc(var(--top-p, 0) * 1%), var(--line) 0);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
     }
 
     @media (max-width: 860px) {
@@ -1036,17 +1063,36 @@
         'Живая аналитика 24/7'
       ];
       var started = false;
+      /* последнее слово фразы — градиентное: печать не должна его терять */
+      function paintText(text, upto) {
+        var words = text.split(' ');
+        var shown = words.slice(0, upto).join(' ');
+        var done = upto >= words.length;
+        if (done) {
+          var last = words[words.length - 1];
+          var rest = words.slice(0, -1).join(' ');
+          el.innerHTML = (rest ? rest + ' ' : '') + '<span class="grad">' + last + '</span>';
+        } else {
+          el.textContent = shown;
+        }
+      }
       function type(text, then) {
         el.classList.add('typing');
-        var i = 0;
+        var words = text.split(' ');
+        var w = 0, ch = 0, chars = 0;
+        var total = text.length;
         var iv = setInterval(function () {
-          i += 2;
-          el.textContent = text.slice(0, i);
-          if (i >= text.length) {
+          chars += 2;
+          if (chars >= total) {
             clearInterval(iv);
             el.classList.remove('typing');
+            paintText(text, words.length);
             setTimeout(then, 2200);
+            return;
           }
+          paintText(text, w + 1);
+          ch += 2;
+          if (ch >= (words[w] || '').length && w < words.length - 1) { w++; ch = 0; }
         }, 30);
       }
       function run() {
@@ -1300,6 +1346,32 @@
       }, { passive: true });
     })();
 
+    /* ── 12. Кнопка «наверх» с кольцом прогресса ── */
+    (function topBtn() {
+      var btn = document.getElementById('wTop');
+      if (!btn) return;
+      var ticking = false;
+      var lastRing = 0;
+      function paint(now) {
+        ticking = false;
+        now = now || performance.now();
+        var max = document.documentElement.scrollHeight - window.innerHeight;
+        var p = max > 0 ? window.scrollY / max : 0;
+        btn.classList.toggle('show', window.scrollY > 500);
+        if (now - lastRing >= 120) {
+          lastRing = now;
+          btn.style.setProperty('--top-p', Math.round(p * 100));
+        }
+      }
+      window.addEventListener('scroll', function () {
+        if (!ticking) { ticking = true; requestAnimationFrame(paint); }
+      }, { passive: true });
+      btn.addEventListener('click', function () {
+        window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+      });
+      paint();
+    })();
+
     /* ── 11. Scrollspy: активный пункт навигации ── */
     (function spy() {
       var links = Array.prototype.slice.call(document.querySelectorAll('.w-nav-links a[href^="#"]'));
@@ -1328,6 +1400,8 @@
     })();
   })();
   </script>
+  <button type="button" class="w-top" id="wTop" aria-label="Наверх" title="Наверх"><i class="fas fa-arrow-up"></i></button>
+
   <script>
   (function () {
     'use strict';

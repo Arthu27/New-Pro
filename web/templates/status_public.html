@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-theme="light">
+<html lang="ru" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,10 +9,41 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@500;700;900&display=swap" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="/static/style.css?v=102">
+    <link rel="stylesheet" href="/static/style.css?v=104">
   <style>
-    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 28px 16px; }
-    .st { width: 100%; max-width: 560px; }
+    :root {
+      --bg: #05060a; --surface: #0d1019; --surface2: #121624;
+      --line: #1d2333; --line2: #2a3247;
+      --text: #e8ecf6; --text2: #9aa3ba; --text3: #5f6880;
+      --ac: #4f46e5; --ac2: #7c3aed; --ac3: #22d3ee;
+      --ok: #4ade80; --err: #f87171; --warn: #fbbf24;
+      --shadow-2: 0 24px 70px rgba(0,0,0,.6);
+    }
+    body {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 28px 16px;
+      margin: 0;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(79, 70, 229, .22), transparent 45%),
+        radial-gradient(circle at 90% 100%, rgba(34, 211, 238, .12), transparent 40%),
+        var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .st-brand b {
+      font-family: 'Unbounded', sans-serif;
+      background: linear-gradient(120deg, #e8ecf6 20%, #a5b4fc 90%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .st-hero {
+      background: linear-gradient(160deg, rgba(79, 70, 229, .14), transparent 55%), var(--surface);
+      box-shadow: var(--shadow-2), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .st-m { background: var(--surface2); }
+    .st-m:hover { box-shadow: 0 12px 30px -10px rgba(124, 58, 237, .5); }
+    .st-foot a { color: #a5b4fc; }
+    .st { width: 100%; max-width: 560px; position: relative; z-index: 1; }
     .st-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
     .st-brand .brand-icon { width: 42px; height: 42px; font-size: 16px; border-radius: 12px; }
     .st-brand b { display: block; font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: .1em; }
@@ -74,11 +105,11 @@
   </style>
 </head>
 <body>
-  <div class="bg-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+  <canvas id="st-stars" aria-hidden="true" style="position:fixed;inset:0;pointer-events:none;z-index:0"></canvas>
 
   <div class="st">
     <div class="st-brand">
-      <div class="brand-icon"><i class="fas fa-bolt"></i></div>
+      <div class="brand-icon" style="overflow:hidden"><img src="/static/brand/emblem-dragon.png" alt="Aether" style="width:100%;height:100%;object-fit:cover"></div>
       <div>
         <b>AETHER</b>
         <span>Статус бота · Live</span>
@@ -103,6 +134,46 @@
     <div class="st-foot"><span class="dot"></span>обновлено <span id="st-upd">—</span> · обновление каждые 5 сек · <a href="/login">вход в панель</a></div>
   </div>
 
+<script>
+/* Звёздный фон статуса */
+(function () {
+  var cv = document.getElementById('st-stars');
+  if (!cv) return;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) return;
+  var ctx = cv.getContext('2d');
+  var W, H, stars = [];
+  var last = 0;
+  function resize() {
+    W = cv.width = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    stars = [];
+    var n = Math.min(50, Math.floor(W * H / 24000));
+    for (var i = 0; i < n; i++) {
+      stars.push({ x: Math.random() * W, y: Math.random() * H,
+        r: Math.random() * 1.1 + 0.3, p: Math.random() * Math.PI * 2, s: 0.4 + Math.random() * 0.9 });
+    }
+  }
+  function step(now) {
+    requestAnimationFrame(step);
+    if (document.hidden) return;
+    if (now - last < 60) return;
+    last = now;
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < stars.length; i++) {
+      var st = stars[i];
+      var a = 0.22 + 0.5 * (0.5 + 0.5 * Math.sin(st.p + now * 0.001 * st.s));
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(200, 210, 255, ' + a.toFixed(2) + ')';
+      ctx.fill();
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+  requestAnimationFrame(step);
+})();
+</script>
 <script>
 const $ = id => document.getElementById(id);
 function pingWord(ms){
