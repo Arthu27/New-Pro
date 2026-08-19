@@ -598,8 +598,25 @@ login_as('owner')
 r = client.get('/rules-editor')
 check(r.status_code == 200 and 'rules-panel' in r.get_data(as_text=True),
       '/rules-editor открывается под owner')
-check('app.js?v=47' in base and 'style.css?v=100' in base,
-      'версии ассетов (100/47)')
+# ═══ 20. Канальные страницы — финальная проверка стилей ═══════════════════
+print('== каналы: все классы стилизованы ==')
+check('.stat-row {' in css and '.btn-new {' in css,
+      'дизайн-система: .stat-row и .btn-new получили стили')
+check('.profs-role {' in css and '.ann-meta {' in css,
+      'дизайн-система: .profs-role и .ann-meta получили стили')
+check('.stat-icon.gold' in css and '.stat-icon.cyan' in css and '.stat-icon.purple' in css,
+      'дизайн-система: тонированные иконки статистики (gold/cyan/purple)')
+trx = open(os.path.join(ROOT, 'web', 'templates', 'transcripts.html'), encoding='utf-8').read()
+check('242,179,61' not in trx and '#171410' not in trx and '#ffe1a1' not in trx,
+      'транскрипты: золото, тёмная модалка и светлый текст убраны')
+check('242,179,61' not in open(os.path.join(ROOT, 'web', 'templates', 'announcements.html'), encoding='utf-8').read(),
+      'объявления: остатки золота убраны')
+login_as('owner')
+for path in ('/channels', '/chat', '/message-logs', '/transcripts', '/archive', '/voice-stats'):
+    r = client.get(path)
+    check(r.status_code == 200, f'{path} → {r.status_code}')
+check('app.js?v=47' in base and 'style.css?v=101' in base,
+      'версии ассетов (101/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,
