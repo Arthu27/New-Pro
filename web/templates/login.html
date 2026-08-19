@@ -288,15 +288,17 @@
         <span class="ico"><img src="/static/brand/emblem-dragon.png" alt="Aether" style="width:100%;height:100%;object-fit:cover;border-radius:9px"></span>
         <div><b>AETHER</b><span>Панель управления</span></div>
       </div>
-      <h1>Управляй сервером <span class="grad">красиво</span></h1>
-      <p class="lead">Один вход — и весь сервер под контролем: модерация, аналитика, AI и автоматика.</p>
+      <h1>Твой сервер — <span class="grad">твоя жизнь</span></h1>
+      <p class="lead">Войди и получи всё своё: профиль, заявки, обращения, уровни и события — без поисков по чатам. Команда сервера работает в той же панели — ты просто видишь свою часть.</p>
       <ul class="auth-feats">
-        <li><i class="fas fa-shield-halved"></i> Модерация без хаоса</li>
-        <li><i class="fas fa-chart-line"></i> Живая аналитика</li>
-        <li><i class="fas fa-robot"></i> AI-ассистент</li>
-        <li><i class="fas fa-gauge-high"></i> Оперативный центр</li>
+        <li><i class="fas fa-user"></i> Твой профиль и роли</li>
+        <li><i class="fas fa-id-card-clip"></i> Карточка 360° — вся активность</li>
+        <li><i class="fas fa-file-signature"></i> Заявки в команду</li>
+        <li><i class="fas fa-ticket"></i> Обращения без потерь</li>
+        <li><i class="fas fa-ranking-star"></i> Уровни и награды</li>
+        <li><i class="fas fa-calendar-days"></i> События сервера</li>
       </ul>
-      <div class="foot">AETHER · DARK EDITION · v3.0</div>
+      <div class="foot">AETHER · MEMBER EDITION · v3.0</div>
     </div>
 
     <!-- Правая форма -->
@@ -317,7 +319,7 @@
         <form method="POST" action="/login" autocomplete="off">
           <div class="auth-field">
             <label class="lbl" for="passUsername">Логин</label>
-            <input type="text" name="username" id="passUsername" placeholder="owner, @username или ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Логин">
+            <input type="text" name="username" id="passUsername" placeholder="Логин, @username или Discord ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Логин">
             <div class="autocomplete-popup" id="passPopup"></div>
           </div>
           <div class="auth-field">
@@ -351,7 +353,7 @@
         </div>
       </div>
 
-      <div class="auth-foot">Нет доступа? Заявка — <a href="/member-apply">страница набора</a> · <a href="/register">регистрация</a></div>
+      <div class="auth-foot">Первый раз здесь? <a href="/register">Создай доступ</a> · Хочешь в команду — <a href="/member-apply">подай заявку</a></div>
     </div>
   </div>
 

@@ -826,10 +826,16 @@ check('data-theme="dark"' in lg and '#05060a' in lg,
       'логин: тёмная тема с глубоким чёрным фоном')
 check('bg-fx' in lg and 'orb1' in lg and 'bg-grid' in lg and 'lg-stars' in lg,
       'логин: свечения, сетка и звёздный canvas')
-check('DARK EDITION' in lg,
-      'логин: бренд-панель в тёмном издании')
-check('Управляй сервером' in lg and 'красиво' in lg,
-      'логин: заголовок «Управляй сервером красиво»')
+check('MEMBER EDITION' in lg,
+      'логин: бренд-панель в издании для участников')
+check('Твой сервер' in lg and 'твоя жизнь' in lg,
+      'логин: заголовок «Твой сервер — твоя жизнь»')
+check('Твой профиль и роли' in lg and 'Карточка 360°' in lg
+      and 'Заявки в команду' in lg and 'Обращения без потерь' in lg
+      and 'Уровни и награды' in lg and 'События сервера' in lg,
+      'логин: фичи — участнические (профиль/карточка/заявки/обращения/уровни/события)')
+check('Модерация без хаоса' not in lg and 'Оперативный центр' not in lg,
+      'логин: штабные фичи убраны — вход презентуется участникам')
 check('auth-card::after' in lg and 'conic-gradient' in lg,
       'логин: градиентная рамка карточки при hover')
 check('auth-btn::after' in lg and 'skewX(-20deg)' in lg,
@@ -845,8 +851,8 @@ check('emblem-dragon.png' in lg,
 check('auth-feats' in lg and 'rgba(255, 255, 255, .05)' in lg,
       'логин: фичи в стеклянных плашках')
 r = client.get('/login')
-check(r.status_code == 200 and 'DARK EDITION' in r.get_data(as_text=True),
-      '/login открывается в чёрной теме')
+check(r.status_code == 200 and 'MEMBER EDITION' in r.get_data(as_text=True),
+      '/login открывается в чёрной теме для участников')
 check('app.js?v=47' in base and 'style.css?v=102' in base,
       'версии ассетов (102/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
