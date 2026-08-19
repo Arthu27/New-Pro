@@ -442,8 +442,42 @@ check('Участникам' in welcome and 'wSearch' in welcome and 'w-steps' i
       'welcome: инфо для участников, поиск и «как начать»')
 check('для всех участников' in welcome and 'Нажми' in welcome and '@' in welcome,
       'welcome: акцент на участников и подсказка про @')
-check('app.js?v=45' in base and 'style.css?v=98' in base,
-      'версии ассетов забумплены (98/45)')
+# ═══ 15. Страницы заявок и каналов — единый премиум-вид ═══════════════════
+print('== заявки и каналы ==')
+ma = open(os.path.join(ROOT, 'web', 'templates', 'member_apply.html'), encoding='utf-8').read()
+check('class="page-head"' in ma and 'apply-steps' in ma and 'apply-step' in ma,
+      'заявка в администрацию: премиум-шапка и индикатор шагов')
+check('server-card' in ma and 'member-card' in ma and 'success-screen' in ma,
+      'заявка: карточки серверов, верификация Discord и экран успеха')
+check('paintSteps' in ma and 'step-srv' in ma and 'step-form' in ma,
+      'заявка: шаги подсвечиваются по прогрессу')
+check('rgba(20,18,14' not in ma and '⏳' not in ma and '✅' not in ma and '❌' not in ma,
+      'заявка: без тёмных фонов и эмодзи (только Font Awesome)')
+mya = open(os.path.join(ROOT, 'web', 'templates', 'my_applications.html'), encoding='utf-8').read()
+check('apps-list' in mya and 'status-approved' in mya and 'fa-hourglass-half' in mya,
+      'мои заявки: статусная лента с иконками')
+check('⏳' not in mya,
+      'мои заявки: эмодзи заменены иконками')
+sa = open(os.path.join(ROOT, 'web', 'templates', 'staff_apps.html'), encoding='utf-8').read()
+check('139492' not in sa and '1a1a20' not in sa and '#d4a843' not in sa,
+      'рассмотрение заявок: тёмная модалка и золотые градиенты заменены палитрой')
+pa = open(os.path.join(ROOT, 'web', 'templates', 'public_apply.html'), encoding='utf-8').read()
+check('/static/style.css' in pa and 'emblem-dragon.png' in pa and 'data-theme="light"' in pa,
+      'публичная заявка: подключена дизайн-система и дракон')
+check('⏳' not in pa and '✅' not in pa and '❌' not in pa and '⚠' not in pa,
+      'публичная заявка: статусы ID на иконках')
+login_as('owner')
+for path in ('/member-apply', '/staff-apps', '/apply', '/channels', '/chat'):
+    r = client.get(path)
+    check(r.status_code == 200, f'{path} → {r.status_code}')
+# «Мои заявки» — страница участника (role uye)
+with client.session_transaction() as s:
+    s['logged_in'] = True; s['username'] = 'MemberApply'; s['role'] = 'uye'
+r = client.get('/my-applications')
+check(r.status_code == 200 and 'apps-list' in r.get_data(as_text=True),
+      '/my-applications → 200 для участника')
+check('app.js?v=46' in base and 'style.css?v=99' in base,
+      'версии ассетов забумплены (99/46)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,

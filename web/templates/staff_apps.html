@@ -2,23 +2,23 @@
 {% block title %}Заявки - Aether{% endblock %}
 {% block page_title %}<i class="fas fa-user-shield" ></i> Заявки в администрацию{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Заявки в администрацию</span>
-    </div>
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество <span class="sep">·</span> Набор команды</div>
     <h1>Заявки в администрацию</h1>
-    <p>Заявки на роль модератора: детальное рассмотрение, проверка анкет и одобрение кандидатов.</p>
+    <p class="lead">Рассмотрение анкет кандидатов: проверка профиля, детальный просмотр и решение по каждому.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn" onclick="loadApps()" title="Обновить список"><i class="fas fa-arrows-rotate"></i> Обновить</button>
   </div>
 </div>
-{% endblock %}
 
 <style>
 
 .app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.app-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:16px}
+.app-card{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow-1);transition:border-color .18s var(--ease),box-shadow .18s}
+.app-card:hover{border-color:var(--ac-line);box-shadow:var(--shadow-lift)}
 .app-icon{width:42px;height:42px;border-radius:11px;background:var(--ac-soft);color:var(--ac);border:1px solid var(--ac-line);display:flex;align-items:center;justify-content:center;font-size:16px}
 .app-info{font-size:13px;color:var(--text-2);line-height:1.5}
 .app-actions{display:flex;gap:9px;margin-top:12px;flex-wrap:wrap}
@@ -28,19 +28,19 @@
 
 <div class="app-stats">
   <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #d4a843, #e0b04a) !important;"><i class="fas fa-list"></i></div>
+    <div class="app-icon" style="background: var(--ac-grad) !important; color: #fff;"><i class="fas fa-list"></i></div>
     <div><div class="app-stat-num" id="stat-total">-</div><div class="app-stat-lbl">Всего</div></div>
   </div>
   <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #fbbf24, #b45309) !important;"><i class="fas fa-hourglass-half"></i></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #fbbf24, #d97706) !important; color: #fff;"><i class="fas fa-hourglass-half"></i></div>
     <div><div class="app-stat-num" id="stat-pending">-</div><div class="app-stat-lbl">Ожидание</div></div>
   </div>
   <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #4ade80, #16a34a) !important;"><i class="fas fa-check-circle"></i></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #4ade80, #16a34a) !important; color: #fff;"><i class="fas fa-check-circle"></i></div>
     <div><div class="app-stat-num" id="stat-approved">-</div><div class="app-stat-lbl">Одобрено</div></div>
   </div>
   <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #ef4444, #b91c1c) !important;"><i class="fas fa-times-circle"></i></div>
+    <div class="app-icon" style="background: linear-gradient(135deg, #f87171, #dc2626) !important; color: #fff;"><i class="fas fa-times-circle"></i></div>
     <div><div class="app-stat-num" id="stat-rejected">-</div><div class="app-stat-lbl">Отклонено</div></div>
   </div>
 </div>
@@ -63,46 +63,46 @@
 </div>
 
 <!-- Модальное окно детального просмотра заявки -->
-<div id="app-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); align-items: center; justify-content: center;">
-  <div class="modal-content" style="background-color: #1a1a20; margin: auto; padding: 28px; border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); width: 90%; max-width: 650px; border-radius: 14px; color: #fff; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-    <span class="close-modal" style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; position: absolute; right: 20px; top: 12px;">&times;</span>
-    <h3 id="modal-user-title" style="margin-top: 0; border-bottom: 1px solid color-mix(in srgb, var(--text) 10%, transparent); padding-bottom: 12px; color: #139492;"><i class="fas fa-address-card"></i> Детальная анкета кандидата</h3>
+<div id="app-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(15, 23, 42, 0.45); align-items: center; justify-content: center;">
+  <div class="modal-content" style="background-color: var(--surface); margin: auto; padding: 28px; border: 1px solid var(--line); width: 90%; max-width: 650px; border-radius: 18px; color: var(--text); position: relative; box-shadow: var(--shadow-3);">
+    <span class="close-modal" style="color: var(--text-3); float: right; font-size: 26px; font-weight: bold; cursor: pointer; position: absolute; right: 18px; top: 12px;">&times;</span>
+    <h3 id="modal-user-title" style="margin-top: 0; border-bottom: 1px solid var(--line); padding-bottom: 12px; color: var(--ac);"><i class="fas fa-address-card"></i> Детальная анкета кандидата</h3>
     
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; margin-top: 14px;">
       <div>
-        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Имя пользователя</label>
-        <span id="modal-username" style="font-weight: bold; font-size: 17px; color: #fff;"></span>
+        <label style="font-size: 11px; color: var(--text-3); display: block; text-transform: uppercase;">Имя пользователя</label>
+        <span id="modal-username" style="font-weight: bold; font-size: 17px; color: var(--text);"></span>
       </div>
       <div>
-        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Желаемая должность</label>
-        <span id="modal-role" class="badge-role" style="background-color: #139492; padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 4px;"></span>
+        <label style="font-size: 11px; color: var(--text-3); display: block; text-transform: uppercase;">Желаемая должность</label>
+        <span id="modal-role" class="badge-role" style="background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 4px;"></span>
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; background: color-mix(in srgb, var(--text) 3%, transparent); padding: 14px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--text) 5%, transparent);">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; background: var(--surface-2); padding: 14px; border-radius: 12px; border: 1px solid var(--line);">
       <div>
-        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Возраст кандидата</label>
-        <span id="modal-age" style="font-weight: bold; font-size: 15px; color: #3498db;"></span>
+        <label style="font-size: 11px; color: var(--text-3); display: block; text-transform: uppercase;">Возраст кандидата</label>
+        <span id="modal-age" style="font-weight: bold; font-size: 15px; color: var(--info);"></span>
       </div>
       <div>
-        <label style="font-size: 11px; color: #888; display: block; text-transform: uppercase;">Активность на сервере</label>
-        <span id="modal-activity" style="font-weight: bold; font-size: 15px; color: #2ecc71;"></span>
+        <label style="font-size: 11px; color: var(--text-3); display: block; text-transform: uppercase;">Активность на сервере</label>
+        <span id="modal-activity" style="font-weight: bold; font-size: 15px; color: var(--ok);"></span>
       </div>
     </div>
 
     <div style="margin-bottom: 18px;">
       <label style="font-size: 11px; color: #888; display: block; margin-bottom: 6px; text-transform: uppercase;">Опыт модерации и администрирования</label>
-      <div id="modal-experience" style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; font-size: 14px; border: 1px solid color-mix(in srgb, var(--text) 8%, transparent); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: #e2e8f0;"></div>
+      <div id="modal-experience" style="background: var(--bg); padding: 14px; border-radius: 10px; font-size: 14px; border: 1px solid var(--line); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: var(--text);"></div>
     </div>
 
     <div style="margin-bottom: 24px;">
       <label style="font-size: 11px; color: #888; display: block; margin-bottom: 6px; text-transform: uppercase;">Почему выбирает именно наш сервер?</label>
-      <div id="modal-reason" style="background: rgba(0,0,0,0.3); padding: 14px; border-radius: 8px; font-size: 14px; border: 1px solid color-mix(in srgb, var(--text) 8%, transparent); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: #e2e8f0;"></div>
+      <div id="modal-reason" style="background: var(--bg); padding: 14px; border-radius: 10px; font-size: 14px; border: 1px solid var(--line); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: var(--text);"></div>
     </div>
 
-    <div id="modal-decision-box" style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid color-mix(in srgb, var(--text) 10%, transparent); padding-top: 18px;">
-      <button type="button" class="btn btn-ok" id="btn-modal-approve" style="background: #10b981; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-check"></i> Одобрить</button>
-      <button type="button" class="btn btn-no" id="btn-modal-reject" style="background: #ef4444; border: none; padding: 12px 24px; border-radius: 8px; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-times"></i> Отклонить</button>
+    <div id="modal-decision-box" style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid var(--line); padding-top: 18px;">
+      <button type="button" class="btn btn-ok" id="btn-modal-approve" style="background: var(--ok); border: none; padding: 12px 24px; border-radius: 10px; color: #fff; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-check"></i> Одобрить</button>
+      <button type="button" class="btn btn-no" id="btn-modal-reject" style="background: var(--err); border: none; padding: 12px 24px; border-radius: 10px; color: #fff; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-times"></i> Отклонить</button>
     </div>
   </div>
 </div>
@@ -154,14 +154,14 @@
     list.forEach(function (a) {
       var statusLabel = a.status === 'pending' ? 'Ожидание' : a.status === 'approved' ? 'Одобрено' : 'Отклонено';
       var keyId = a.app_id || a.user_id;
-      var actions = '<div class="app-actions"><button type="button" class="btn btn-secondary inspect-btn" style="background:#139492; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-app-key="' + esc(keyId) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
+      var actions = '<div class="app-actions"><button type="button" class="btn btn-secondary inspect-btn" style="background:var(--ac); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-app-key="' + esc(keyId) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
       
       var avatar = a.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
       var roleName = a.role || 'Moderator';
       html += '<div class="app-row" style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid color-mix(in srgb, var(--text) 5%, transparent);">' +
         '<div style="display:flex; align-items:center; gap:14px;">' +
         '<img alt="" class="app-av" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:44px; height:44px; border-radius:50%; border:2px solid rgba(19,148,146,0.3);">' +
-        '<div class="app-info"><div class="app-name" style="font-weight:bold; font-size:16px; color:#fff;">' + esc(a.display_name || a.username || a.user_name) + ' <span style="font-size:12px; color:#139492; background:rgba(19,148,146,0.1); padding:2px 8px; border-radius:4px; margin-left:6px;">' + esc(roleName) + '</span></div><div class="app-meta" style="font-size:12px; color:#888; margin-top:4px;">Отправлена: ' + fmtDate(a.submitted_at || a.timestamp) + ' • Статус: <span class="app-status ' + a.status + '" style="font-weight:bold;">' + statusLabel + '</span></div></div>' +
+        '<div class="app-info"><div class="app-name" style="font-weight:bold; font-size:16px; color:var(--text);">' + esc(a.display_name || a.username || a.user_name) + ' <span style="font-size:12px; color:var(--ac); background:var(--ac-soft); padding:2px 8px; border-radius:6px; margin-left:6px;">' + esc(roleName) + '</span></div><div class="app-meta" style="font-size:12px; color:var(--text-3); margin-top:4px;">Отправлена: ' + fmtDate(a.submitted_at || a.timestamp) + ' • Статус: <span class="app-status ' + a.status + '" style="font-weight:bold;">' + statusLabel + '</span></div></div>' +
         '</div>' +
         actions + '</div>';
     });
