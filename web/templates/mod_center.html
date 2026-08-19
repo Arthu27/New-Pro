@@ -284,10 +284,14 @@
     }
   }
 
+  var _chartsFp = '';
   async function loadCharts() {
     try {
       var logs = await window.fetchCachedJSON('/api/logs');
       if (!Array.isArray(logs)) return;
+      var fp = logs.length + ':' + (logs.length ? ((logs[0].timestamp || '') + '|' + (logs[0].action || '') + '|' + (logs[logs.length - 1].timestamp || '')) : '');
+      if (fp === _chartsFp) return;
+      _chartsFp = fp;
       var days = [];
       var now = new Date();
       for (var i = 6; i >= 0; i--) {

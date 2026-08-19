@@ -38,7 +38,7 @@ css = open(css_path, encoding='utf-8').read()
 check(css.count('{') == css.count('}'), f'сбалансированные скобки ({css.count("{{")} пар)')
 check('/*' in css and '*/' in css and css.count('/*') == css.count('*/'),
       'комментарии закрыты корректно')
-check('@import' in css, 'шрифты подключаются из style.css')
+check('@import' not in css, 'шрифты не блокируют рендер (асинхронно из base.html)')
 check(len(css) > 20000, f'дизайн-система содержательная ({len(css)} символов)')
 
 # Светлая тема по умолчанию и тёмная как опция
@@ -323,8 +323,22 @@ check('lastRing' in js and 'now - lastRing >= 120' in js,
       'кольцо кнопки «наверх» перерисовывается не чаще 8 раз/сек')
 check('i < 12' in js,
       'параллакс карточек ограничен 12 слоями')
-check('app.js?v=39' in base and 'style.css?v=92' in base,
-      'версии ассетов забумплены (92/39)')
+
+# ═══ 12. Стабильность и плавность ═════════════════════════════════════════
+print('== стабильность ==')
+check('@import' not in css and 'неблокирующе из base.html' in css,
+      'блокирующий @import шрифтов убран из CSS')
+check('media="print" onload="this.media=' in base,
+      'шрифты грузятся асинхронно (не блокируют рендер)')
+check('aether_splash_done' in js and 'сплэш показываем один раз за сессию' in js,
+      'сплэш загрузки — один раз за сессию (без вспышек на навигации)')
+check('_logsFp' in open(os.path.join(ROOT, 'web', 'templates', 'logs.html'), encoding='utf-8').read()
+      and 'не перерисовываем (стабильность, без мерцания)' in open(os.path.join(ROOT, 'web', 'templates', 'logs.html'), encoding='utf-8').read(),
+      'журнал не мерцает при live-обновлении без изменений')
+check('_chartsFp' in open(os.path.join(ROOT, 'web', 'templates', 'mod_center.html'), encoding='utf-8').read(),
+      'графики мод-центра не перерисовываются при тех же данных')
+check('app.js?v=40' in base and 'style.css?v=93' in base,
+      'версии ассетов забумплены (93/40)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil

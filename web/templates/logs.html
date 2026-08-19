@@ -97,10 +97,18 @@
     } catch (e) { /* тихо */ }
   }
 
+  var _logsFp = '';
   async function loadLogs() {
+    var raw = [];
     try {
-      allLogs = await window.fetchCachedJSON('/api/logs');
-    } catch (e) { allLogs = []; }
+      raw = await window.fetchCachedJSON('/api/logs');
+    } catch (e) { raw = []; }
+    if (!Array.isArray(raw)) raw = [];
+    /* данные не изменились — не перерисовываем (стабильность, без мерцания) */
+    var fp = raw.length + ':' + (raw.length ? ((raw[0].timestamp || '') + '|' + (raw[0].action || '')) : '');
+    if (fp === _logsFp) return;
+    _logsFp = fp;
+    allLogs = raw;
     window.renderSafe(function () { render(); updateStats(); updateFilters(); });
     if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('logs-stamp'));
   }

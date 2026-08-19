@@ -1819,7 +1819,12 @@
   function fxBoot() {
     var el = doc.getElementById('bootSplash');
     if (!el) return;
-    if (reduced) { el.remove(); return; }
+    /* сплэш показываем один раз за сессию — на каждой навигации
+       он давал вспышку и воспринимался как нестабильность */
+    var seen = false;
+    try { seen = !!window.sessionStorage.getItem('aether_splash_done'); } catch (e) {}
+    if (reduced || seen) { el.remove(); return; }
+    try { window.sessionStorage.setItem('aether_splash_done', '1'); } catch (e) {}
     setTimeout(function () {
       el.classList.add('out');
       setTimeout(function () { el.remove(); }, 620);
