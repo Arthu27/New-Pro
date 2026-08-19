@@ -2925,3 +2925,178 @@
   }
   doc.addEventListener('aether:live', function () { win.__fxRingForce = true; fxRingSchedule(); });
 })();
+
+// ============================================================
+// AETHER KIT 8 — FX слой 10: прогресс прокрутки, кнопка
+// «наверх» с кольцом, искры клика, магнитные кнопки,
+// блик панелей, звёздный бурст избранного
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  var win = window;
+  var reduced = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var narrow = function () { return win.innerWidth < 900; };
+
+  function ready(fn) {
+    if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+
+  /* ── 1. Полоса прогресса прокрутки ── */
+  function fxScrollProgress() {
+    var bar = doc.createElement('div');
+    bar.id = 'fx-scroll-progress';
+    doc.body.appendChild(bar);
+    var ticking = false;
+    function paint() {
+      ticking = false;
+      var max = doc.documentElement.scrollHeight - win.innerHeight;
+      var p = max > 0 ? win.scrollY / max : 0;
+      bar.style.transform = 'scaleX(' + Math.min(1, Math.max(0, p)) + ')';
+    }
+    win.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; win.requestAnimationFrame(paint); }
+    }, { passive: true });
+    win.addEventListener('resize', function () {
+      if (!ticking) { ticking = true; win.requestAnimationFrame(paint); }
+    }, { passive: true });
+    paint();
+  }
+
+  /* ── 2. Кнопка «наверх» с кольцом прогресса ── */
+  function fxTopButton() {
+    var btn = doc.createElement('button');
+    btn.type = 'button';
+    btn.id = 'fx-topbtn';
+    btn.setAttribute('aria-label', 'Наверх');
+    btn.title = 'Наверх';
+    btn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+    doc.body.appendChild(btn);
+    var ticking = false;
+    function paint() {
+      ticking = false;
+      var max = doc.documentElement.scrollHeight - win.innerHeight;
+      var p = max > 0 ? win.scrollY / max : 0;
+      btn.classList.toggle('show', win.scrollY > 480);
+      btn.style.setProperty('--top-progress', Math.round(p * 100));
+    }
+    win.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; win.requestAnimationFrame(paint); }
+    }, { passive: true });
+    btn.addEventListener('click', function () {
+      win.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+    });
+    paint();
+  }
+
+  /* ── 3. Искры клика ── */
+  function fxClickSparks() {
+    if (reduced || narrow()) return;
+    var last = 0;
+    var COLORS = ['#4f46e5', '#7c3aed', '#a78bfa', '#22d3ee'];
+    doc.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      if (e.target.closest && e.target.closest('button, a, input, textarea, select, label, [role="button"]')) return;
+      var now = Date.now();
+      if (now - last < 240) return;
+      last = now;
+      var count = 7;
+      for (var i = 0; i < count; i++) {
+        var s = doc.createElement('span');
+        s.className = 'fx-click-spark';
+        var ang = (Math.PI * 2 / count) * i + Math.random() * 0.6;
+        var dist = 18 + Math.random() * 26;
+        s.style.left = e.clientX + 'px';
+        s.style.top = e.clientY + 'px';
+        s.style.background = COLORS[i % COLORS.length];
+        s.style.setProperty('--sx', Math.cos(ang) * dist + 'px');
+        s.style.setProperty('--sy', Math.sin(ang) * dist + 'px');
+        doc.body.appendChild(s);
+        s.addEventListener('animationend', function () { s.remove(); });
+      }
+    }, { passive: true });
+  }
+
+  /* ── 4. Магнитные кнопки ── */
+  function fxMagnetic() {
+    if (reduced || narrow()) return;
+    var SEL = '.btn, .send-btn, .fab-main, .hdr-btn, .analytics-refresh, .prompt-chip';
+    doc.addEventListener('mousemove', function (e) {
+      var target = e.target && e.target.closest ? e.target.closest(SEL) : null;
+      if (!target) return;
+      var r = target.getBoundingClientRect();
+      var cx = r.left + r.width / 2;
+      var cy = r.top + r.height / 2;
+      var dx = e.clientX - cx;
+      var dy = e.clientY - cy;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var R = Math.max(60, r.width / 2 + 20);
+      if (dist > R) { target.style.transform = ''; return; }
+      var pull = (1 - dist / R) * 5;
+      target.style.transform = 'translate(' + (dx / dist * pull).toFixed(1) + 'px,' + (dy / dist * pull).toFixed(1) + 'px)';
+    }, { passive: true });
+    doc.addEventListener('mouseleave', function () {
+      doc.querySelectorAll(SEL).forEach(function (el) { el.style.transform = ''; });
+    }, true);
+  }
+
+  /* ── 5. Блик панелей при наведении ── */
+  function fxPanelShine() {
+    var total = 0;
+    function scan() {
+      if (narrow()) return;
+      doc.querySelectorAll('.panel').forEach(function (el) {
+        if (total > 60) return;
+        if (el.querySelector('.fx-shine')) return;
+        var shine = doc.createElement('i');
+        shine.className = 'fx-shine';
+        shine.setAttribute('aria-hidden', 'true');
+        el.appendChild(shine);
+        total++;
+      });
+    }
+    ready(scan);
+    var timer = null;
+    if (typeof win.MutationObserver !== 'undefined') {
+      var mo = new win.MutationObserver(function () {
+        if (timer) return;
+        timer = setTimeout(function () { timer = null; scan(); }, 700);
+      });
+      mo.observe(doc.body, { childList: true, subtree: true });
+    }
+  }
+
+  /* ── 6. Звёздный бурст избранного ── */
+  function fxStarBurst() {
+    if (reduced) return;
+    doc.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-fav], .nav-star');
+      if (!b) return;
+      var r = b.getBoundingClientRect();
+      var x = r.left + r.width / 2;
+      var y = r.top + r.height / 2;
+      for (var i = 0; i < 10; i++) {
+        var s = doc.createElement('span');
+        s.className = 'fx-star-spark';
+        var ang = (Math.PI * 2 / 10) * i + Math.random() * 0.5;
+        var dist = 16 + Math.random() * 22;
+        s.style.left = x + 'px';
+        s.style.top = y + 'px';
+        s.style.setProperty('--sx', Math.cos(ang) * dist + 'px');
+        s.style.setProperty('--sy', Math.sin(ang) * dist + 'px');
+        doc.body.appendChild(s);
+        s.addEventListener('animationend', function () { s.remove(); });
+      }
+    });
+  }
+
+  ready(function () {
+    fxScrollProgress();
+    fxTopButton();
+    fxClickSparks();
+    fxMagnetic();
+    fxPanelShine();
+    fxStarBurst();
+  });
+})();

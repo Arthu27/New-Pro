@@ -177,8 +177,32 @@ for marker, label in [
     ('@property --fx-ang', 'регистрация угла градиента'),
 ]:
     check(marker in css, f'style.css: {label}')
-check('app.js?v=28' in base and 'style.css?v=82' in base,
-      'версии ассетов забумплены (82/28)')
+check('app.js?v=29' in base and 'style.css?v=83' in base,
+      'версии ассетов забумплены (83/29)')
+
+# ═══ 6. Аналитика и FX-слой 10 ═══════════════════════════════════════════
+print('== аналитика и FX-слой 10 ==')
+an = open(os.path.join(ROOT, 'web', 'templates', 'analytics.html'), encoding='utf-8').read()
+check('#11131c' not in an and '#0b0d13' not in an and '#10121a' not in an,
+      'тёмный кокпит аналитики переведён на светлую систему')
+check('var(--ac-line)' in an and 'color-mix(in srgb, var(--ac)' in an,
+      'аналитика использует токены панели')
+login_as('owner')
+r = client.get('/analytics')
+check(r.status_code == 200 and 'analytics-cockpit' in r.get_data(as_text=True),
+      '/analytics открывается под owner')
+check('analytics-cockpit' in an and 'window.__analytics' in an,
+      'хуки JS аналитики сохранены')
+for marker, label in [
+    ('fx-scroll-progress', 'полоса прогресса прокрутки'),
+    ('fx-topbtn', 'кнопка «наверх» с кольцом'),
+    ('fx-click-spark', 'искры клика'),
+    ('fx-shine', 'блик панелей'),
+    ('fx-star-spark', 'звёздный бурст избранного'),
+    ('fabBreathe', 'дыхание FAB'),
+    ('fxMagnetic', 'магнитные кнопки'),
+]:
+    check(marker in css or marker in js, f'FX-слой 10: {label}')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil

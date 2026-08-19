@@ -189,7 +189,7 @@ function displayCategories(categories) {
   }
   
   container.innerHTML = categories.map(category => `
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewCategory('${category.id}')">
+    <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewCategory('${category.id}')">
       <div style="display: flex; align-items: start; gap: 12px; margin-bottom: 12px;">
         <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(155,89,182,0.2); display: flex; align-items: center; justify-content: center;">
           <i class="fas ${category.icon || 'fa-folder'}" style="color: #9b59b6; font-size: 18px;"></i>
@@ -215,7 +215,7 @@ function displayPopularArticles(articles) {
   }
   
   container.innerHTML = articles.map(article => `
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
+    <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
         <div style="font-weight: 600; font-size: 16px;">${article.title}</div>
         <div style="background: rgba(241,196,15,0.2); color: #f1c40f; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
@@ -227,7 +227,7 @@ function displayPopularArticles(articles) {
       </div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         ${(article.tags || []).slice(0, 3).map(tag => `
-          <span style="background: rgba(255,255,255,0.05); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 11px;">${tag}</span>
+          <span style="background: color-mix(in srgb, var(--text) 5%, transparent); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-size: 11px;">${tag}</span>
         `).join('')}
       </div>
     </div>
@@ -245,7 +245,7 @@ function displayRecentArticles(articles) {
   container.innerHTML = articles.map(article => {
     const updatedDate = new Date(article.updated_at).toLocaleString('ru-RU');
     return `
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
+      <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
         <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${article.title}</div>
         <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
           ${article.summary || 'Без описания'}
@@ -292,7 +292,7 @@ function displaySearchResults(results) {
   }
   
   container.innerHTML = results.map(article => `
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
+    <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="viewArticle('${article.id}')">
       <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${article.title}</div>
       <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
         ${article.summary || 'Без описания'}

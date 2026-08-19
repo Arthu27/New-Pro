@@ -22,9 +22,9 @@
     background:linear-gradient(135deg, rgba(212,175,55,.16), rgba(212,175,55,.06)); border:1px solid rgba(212,175,55,.35);
     color:#e8c96a; font-weight:700; font-size:12.5px; cursor:pointer; transition:.15s; }
   .kn-btn:hover { background:rgba(212,175,55,.22); transform:translateY(-1px); }
-  .kn-btn.ghost { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.14); color:#fff; }
+  .kn-btn.ghost { background:color-mix(in srgb, var(--text) 4%, transparent); border-color:color-mix(in srgb, var(--text) 14%, transparent); color:#fff; }
   .kn-btn.paused { background:rgba(231,76,60,.14); border-color:rgba(231,76,60,.4); color:#e74c3c; }
-  .kn-select { background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.14); color:#fff;
+  .kn-select { background:rgba(0,0,0,.3); border:1px solid color-mix(in srgb, var(--text) 14%, transparent); color:#fff;
     border-radius:10px; padding:9px 12px; font-size:12.5px; font-weight:600; outline:none; cursor:pointer; }
   .kn-status { margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12px; opacity:.75; font-weight:600; }
   .kn-dot { width:9px; height:9px; border-radius:50%; background:#2ecc71; box-shadow:0 0 8px rgba(46,204,113,.7); animation:knpulse 1.6s infinite; }
@@ -32,9 +32,9 @@
   @keyframes knpulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
   .kn-term { background:linear-gradient(180deg, #070b14, #0b1020); border:1px solid rgba(212,175,55,.22);
-    border-radius:14px; overflow:hidden; box-shadow:0 14px 44px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04); }
+    border-radius:14px; overflow:hidden; box-shadow:0 14px 44px rgba(0,0,0,.45), inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent); }
   .kn-term-head { display:flex; align-items:center; gap:8px; padding:10px 14px;
-    background:rgba(255,255,255,.03); border-bottom:1px solid rgba(255,255,255,.06); font-size:12px; font-weight:700; color:#9aa2b5; }
+    background:color-mix(in srgb, var(--text) 3%, transparent); border-bottom:1px solid color-mix(in srgb, var(--text) 6%, transparent); font-size:12px; font-weight:700; color:#9aa2b5; }
   .kn-term-head .tl { width:10px; height:10px; border-radius:50%; }
   .kn-term-head .r1 { background:#e74c3c; } .kn-term-head .r2 { background:#f39c12; } .kn-term-head .r3 { background:#2ecc71; }
   .kn-term-head span.title { margin-left:6px; letter-spacing:.4px; }
@@ -43,9 +43,9 @@
     font-size:12.5px; line-height:1.75; }
   .kn-body::-webkit-scrollbar { width:8px; }
   .kn-body::-webkit-scrollbar-thumb { background:rgba(212,175,55,.3); border-radius:6px; }
-  .kn-body::-webkit-scrollbar-track { background:rgba(255,255,255,.02); }
+  .kn-body::-webkit-scrollbar-track { background:color-mix(in srgb, var(--text) 2%, transparent); }
   .kn-line { display:flex; gap:10px; padding:1px 10px; border-radius:6px; white-space:pre-wrap; word-break:break-word; }
-  .kn-line:hover { background:rgba(255,255,255,.03); }
+  .kn-line:hover { background:color-mix(in srgb, var(--text) 3%, transparent); }
   .kn-time { color:#5b6376; flex-shrink:0; font-variant-numeric:tabular-nums; }
   .kn-lvl { flex-shrink:0; width:74px; font-weight:800; font-size:11px; padding-top:1px; }
   .kn-lvl.DEBUG { color:#8b93a7; } .kn-lvl.INFO { color:#4aa3ff; }

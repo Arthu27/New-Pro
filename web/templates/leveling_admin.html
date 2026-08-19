@@ -20,7 +20,7 @@
 .lvl-toggle-card { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; transition: all 0.2s; }
 .lvl-toggle-card:hover { border-color: var(--ac-line); }
 .lvl-toggle-card.active { border-color: var(--ac); background: var(--ac-soft); }
-.lvl-toggle-card .switch { position: relative; width: 42px; height: 22px; background: rgba(255,255,255,0.08); border-radius: 99px; cursor: pointer; flex-shrink: 0; border: 1px solid var(--line); transition: background 0.25s; }
+.lvl-toggle-card .switch { position: relative; width: 42px; height: 22px; background: color-mix(in srgb, var(--text) 8%, transparent); border-radius: 99px; cursor: pointer; flex-shrink: 0; border: 1px solid var(--line); transition: background 0.25s; }
 .lvl-toggle-card .switch.on { background: linear-gradient(135deg, var(--ac), var(--ac-3)); border-color: var(--ac); }
 .lvl-toggle-card .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--text-3); border-radius: 50%; transition: all 0.25s var(--ease-spring); }
 .lvl-toggle-card .switch.on::after { left: 22px; background: #1a1a1a; }

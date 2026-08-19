@@ -3,10 +3,10 @@
 {% block page_title %}<i class="fas fa-smile"></i> РОЛИ ПО РЕАКЦИЯМ{% endblock %}
 {% block content %}
 <style>
-.rr-type-hint { background: rgba(224,176,74,0.07); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 10px 14px; font-size: 12.5px; color: #d8d0bb; margin: 10px 0 16px; }
+.rr-type-hint { background: color-mix(in srgb, var(--ac) 7%, transparent); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 10px 14px; font-size: 12.5px; color: var(--text); margin: 10px 0 16px; }
 .rr-type-badge { display: inline-block; font-size: 10.5px; padding: 2px 9px; border-radius: 20px; margin-bottom: 8px; font-weight: var(--fw-semibold); }
 .rr-type-badge.emoji { background: rgba(96,165,250,0.15); color: var(--info); }
-.rr-type-badge.select { background: rgba(224,176,74,0.15); color: var(--ac); }
+.rr-type-badge.select { background: color-mix(in srgb, var(--ac) 15%, transparent); color: var(--ac); }
 .rr-badge { color: var(--ac); }
 .entry-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .entry-emoji { width: 90px; background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 10px; color: var(--text); font-size: 13px; text-align: center; }
@@ -15,13 +15,13 @@
 .btn-add-entry { background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 8px 14px; cursor: pointer; font-size: 12.5px; }
 .btn-add-entry:hover { background: var(--ac-glow); }
 
-.rr-hero{display:flex;align-items:center;gap:14px;padding:18px 22px;background:linear-gradient(135deg,rgba(224,176,74,.10),rgba(224,176,74,.03));border:1px solid var(--ac-line);border-radius:14px;margin-bottom:16px}
+.rr-hero{display:flex;align-items:center;gap:14px;padding:18px 22px;background:linear-gradient(135deg,color-mix(in srgb, var(--ac) 10%, transparent),color-mix(in srgb, var(--ac) 3%, transparent));border:1px solid var(--ac-line);border-radius:14px;margin-bottom:16px}
 .rr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.rr-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:16px}
+.rr-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:16px}
 .rr-title{font-weight:700;color:var(--text);font-size:14px;margin-bottom:12px}
 .rr-type-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
 .rr-type-badge.select{background:rgba(167,139,250,.14);color:#c4b5fd;border:1px solid rgba(167,139,250,.3)}
-.rr-type-badge.emoji{background:rgba(224,176,74,.14);color:var(--ac-2);border:1px solid var(--ac-line)}
+.rr-type-badge.emoji{background:color-mix(in srgb, var(--ac) 14%, transparent);color:var(--ac-2);border:1px solid var(--ac-line)}
 .rr-entry{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--text-2)}
 .rr-emoji{font-size:18px}
 .rr-role{color:var(--ac-2);font-weight:600}

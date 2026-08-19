@@ -16,7 +16,7 @@
 {% endblock %}
 
 <style>
-.sg-hero{display:flex;align-items:center;gap:16px;padding:20px 24px;background:linear-gradient(135deg,rgba(224,176,74,.10),rgba(224,176,74,.03));border:1px solid var(--ac-line);border-radius:16px;margin-bottom:18px}
+.sg-hero{display:flex;align-items:center;gap:16px;padding:20px 24px;background:linear-gradient(135deg,color-mix(in srgb, var(--ac) 10%, transparent),color-mix(in srgb, var(--ac) 3%, transparent));border:1px solid var(--ac-line);border-radius:16px;margin-bottom:18px}
 .sg-hero .hero-title{font-family:'Poppins',sans-serif;font-size:19px;font-weight:800;color:var(--text)}
 .sg-hero .hero-sub{font-size:13px;color:var(--text-2);margin-top:3px}
 .filter-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:6px;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:12px}
@@ -24,7 +24,7 @@
 .filter-tabs .tab:hover{background:var(--ac-soft);color:var(--text)}
 .filter-tabs .tab.active{background:linear-gradient(135deg,var(--ac),var(--ac-3));color:#1a1a1a;box-shadow:0 4px 12px var(--ac-glow)}
 .sg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.sg-card{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:16px;padding:18px;backdrop-filter:blur(14px);transition:all .2s var(--ease)}
+.sg-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:16px;padding:18px;backdrop-filter:blur(14px);transition:all .2s var(--ease)}
 .sg-card:hover{border-color:var(--ac-line);transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.3)}
 .sg-status{display:inline-block;padding:3px 11px;border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
 .sg-status.status-pending{background:rgba(251,191,36,.14);color:#fcd34d;border:1px solid rgba(251,191,36,.3)}

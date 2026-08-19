@@ -3904,6 +3904,96 @@ body.reorder-mode .reorder-hint { display: block; }
 }
 
 /* ============================================================
+   27.6 FX-СЛОЙ 10 — прогресс прокрутки, кнопка «наверх»,
+   искры клика, магнитные кнопки, блик панелей, звёздный бурст
+   ============================================================ */
+
+/* ── Тонкая градиентная полоса прогресса прокрутки ── */
+#fx-scroll-progress {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px;
+  z-index: 2600; pointer-events: none;
+  background: linear-gradient(90deg, var(--ac), #7c3aed, #22d3ee);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  box-shadow: 0 1px 8px color-mix(in srgb, var(--ac) 45%, transparent);
+}
+
+/* ── Кнопка «наверх» с кольцом прогресса ── */
+#fx-topbtn {
+  position: fixed; right: 28px; bottom: 96px; z-index: 1490;
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 1px solid var(--line); cursor: pointer;
+  display: grid; place-items: center;
+  color: var(--ac); font-size: 15px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  opacity: 0; transform: translateY(12px) scale(.92);
+  pointer-events: none;
+  transition: opacity .25s var(--ease), transform .25s var(--ease), box-shadow .2s;
+}
+#fx-topbtn.show { opacity: 1; transform: none; pointer-events: auto; }
+#fx-topbtn:hover { box-shadow: 0 10px 24px color-mix(in srgb, var(--ac) 35%, transparent); }
+#fx-topbtn::before {
+  content: ''; position: absolute; inset: -2px; border-radius: 50%;
+  background: conic-gradient(var(--ac) calc(var(--top-progress, 0) * 1%), var(--line) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+}
+
+/* ── Искры клика ── */
+.fx-click-spark {
+  position: fixed; z-index: 2601; pointer-events: none;
+  width: 5px; height: 5px; border-radius: 50%;
+  animation: fxSparkFly .7s var(--ease-out) forwards;
+}
+@keyframes fxSparkFly {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--sx, 0px)), calc(-50% + var(--sy, 0px))) scale(.2); }
+}
+
+/* ── Блик, пробегающий по панели при наведении ── */
+.fx-shine {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  width: 46%; z-index: 3; pointer-events: none;
+  background: linear-gradient(105deg, transparent 12%, color-mix(in srgb, var(--ac) 10%, transparent) 45%, transparent 82%);
+  transform: translateX(-130%) skewX(-14deg);
+  transition: transform .85s var(--ease);
+}
+.fx-ring-host:hover .fx-shine { transform: translateX(300%) skewX(-14deg); }
+
+/* ── Звёздный бурст избранного ── */
+.fx-star-spark {
+  position: fixed; z-index: 2602; pointer-events: none;
+  width: 4px; height: 4px; border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 6px #fbbf24;
+  animation: fxStarFly .6s var(--ease-out) forwards;
+}
+@keyframes fxStarFly {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--sx, 0px)), calc(-50% + var(--sy, 0px))) scale(.1); }
+}
+
+/* ── Дыхание FAB ── */
+.fab-main { position: relative; }
+.fab-main::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--ac) 45%, transparent);
+  opacity: 0; pointer-events: none;
+  animation: fabBreathe 3s var(--ease) infinite;
+}
+@keyframes fabBreathe {
+  0%   { transform: scale(.9); opacity: 0; }
+  35%  { opacity: .8; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-click-spark, .fx-star-spark, .fab-main::after { animation: none; display: none; }
+  .fx-shine { transition: none; }
+}
+
+/* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.
    Ниже они отображаются на новую дизайн-систему: одинаковые

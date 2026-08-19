@@ -17,38 +17,38 @@
 
 <style>
   .pa-wrap { padding:6px 2px 34px; max-width: 980px; }
-  .info-bar { background:linear-gradient(90deg, rgba(224,176,74,0.14), rgba(224,176,74,0.05)); border:1px solid rgba(224,176,74,0.3); border-radius:12px; padding:13px 16px; font-size:12.5px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; }
+  .info-bar { background:linear-gradient(90deg, color-mix(in srgb, var(--ac) 14%, transparent), color-mix(in srgb, var(--ac) 5%, transparent)); border:1px solid color-mix(in srgb, var(--ac) 30%, transparent); border-radius:12px; padding:13px 16px; font-size:12.5px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; }
   .info-bar i { color:var(--ac); margin-top:1px; }
 
   .pa-legend { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
-  .pa-legend .lg { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; padding:6px 13px; border-radius:20px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.03); }
+  .pa-legend .lg { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:600; padding:6px 13px; border-radius:20px; border:1px solid color-mix(in srgb, var(--text) 12%, transparent); background:color-mix(in srgb, var(--text) 3%, transparent); }
   .pa-legend .lg i { font-size:12px; }
 
   .pa-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:18px; }
-  .pa-stat { background:linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
+  .pa-stat { background:linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
   .pa-stat .ico { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
   .pa-stat .num { font-size:20px; font-weight:800; }
   .pa-stat .lbl { font-size:11px; opacity:.6; margin-top:1px; }
   .p-owner { color:#f1c40f; background:rgba(241,196,15,0.16); border:1px solid rgba(241,196,15,0.35); }
   .p-admin { color:#ff7a6b; background:rgba(231,76,60,0.16); border:1px solid rgba(231,76,60,0.35); }
   .p-mod   { color:#7fe0a8; background:rgba(46,204,113,0.16); border:1px solid rgba(46,204,113,0.35); }
-  .p-uye   { color:var(--ac-2); background:rgba(224,176,74,0.16); border:1px solid rgba(224,176,74,0.35); }
+  .p-uye   { color:var(--ac-2); background:color-mix(in srgb, var(--ac) 16%, transparent); border:1px solid color-mix(in srgb, var(--ac) 35%, transparent); }
 
-  .pa-panel { background: linear-gradient(160deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:16px; padding:18px; }
+  .pa-panel { background: linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:16px; padding:18px; }
   .pa-search { position:relative; max-width:360px; margin-bottom:16px; }
   .pa-search i { position:absolute; left:13px; top:50%; transform:translateY(-50%); opacity:.5; font-size:13px; }
-  .pa-search input { width:100%; background:#1b1b22; color:#e6e6e6; border:1px solid rgba(255,255,255,0.16); border-radius:11px; padding:12px 14px 12px 36px; font-size:13.5px; outline:none; }
-  .pa-search input:focus { border-color:var(--ac); box-shadow:0 0 0 3px rgba(224,176,74,0.15); }
+  .pa-search input { width:100%; background:#1b1b22; color:#e6e6e6; border:1px solid color-mix(in srgb, var(--text) 16%, transparent); border-radius:11px; padding:12px 14px 12px 36px; font-size:13.5px; outline:none; }
+  .pa-search input:focus { border-color:var(--ac); box-shadow:0 0 0 3px color-mix(in srgb, var(--ac) 15%, transparent); }
 
   /* роли — компактные карточки (не один длинный столбец, как Discord) */
   #pa-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; }
-  .pa-role { display:flex; flex-direction:column; gap:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:12px 13px; transition:.15s; }
-  .pa-role:hover { background:rgba(255,255,255,0.05); border-color:var(--ac); }
+  .pa-role { display:flex; flex-direction:column; gap:10px; background:color-mix(in srgb, var(--text) 3%, transparent); border:1px solid color-mix(in srgb, var(--text) 7%, transparent); border-radius:12px; padding:12px 13px; transition:.15s; }
+  .pa-role:hover { background:color-mix(in srgb, var(--text) 5%, transparent); border-color:var(--ac); }
   .pa-role-top { display:flex; align-items:center; gap:10px; min-width:0; }
-  .pa-role .swatch { width:24px; height:24px; border-radius:8px; flex-shrink:0; border:1px solid rgba(255,255,255,0.3); box-shadow:0 0 10px rgba(0,0,0,0.3); }
+  .pa-role .swatch { width:24px; height:24px; border-radius:8px; flex-shrink:0; border:1px solid color-mix(in srgb, var(--text) 30%, transparent); box-shadow:0 0 10px rgba(0,0,0,0.3); }
   .pa-role .rname { flex:1; font-size:13.5px; font-weight:700; line-height:1.3; word-break:break-word; min-width:0; color:var(--text) !important; display:block; }
-  .pa-role .rcount { font-size:11px; opacity:.55; padding:3px 9px; border-radius:20px; background:rgba(255,255,255,0.08); white-space:nowrap; display:inline-flex; align-items:center; gap:5px; flex-shrink:0; }
-  .pa-role select { width:100%; background:#17171d; color:#e6e6e6; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:7px 10px; font-size:12.5px; cursor:pointer; outline:none; font-weight:600; }
+  .pa-role .rcount { font-size:11px; opacity:.55; padding:3px 9px; border-radius:20px; background:color-mix(in srgb, var(--text) 8%, transparent); white-space:nowrap; display:inline-flex; align-items:center; gap:5px; flex-shrink:0; }
+  .pa-role select { width:100%; background:#17171d; color:#e6e6e6; border:1px solid color-mix(in srgb, var(--text) 20%, transparent); border-radius:8px; padding:7px 10px; font-size:12.5px; cursor:pointer; outline:none; font-weight:600; }
   .pa-role select:hover { border-color:var(--ac); }
   .pa-role select.owner { border-color:rgba(241,196,15,0.6); color:#f1c40f; }
   .pa-role select.admin { border-color:rgba(231,76,60,0.6); color:#ff8a80; }

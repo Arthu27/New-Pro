@@ -296,7 +296,7 @@
 }
 .send-btn::after {
   content: ''; position: absolute; top: 0; left: -80%; width: 50%; height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent);
+  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--text) 35%, transparent), transparent);
   transform: skewX(-20deg); transition: left .5s;
 }
 .send-btn:hover::after { left: 130%; }
@@ -380,7 +380,7 @@
 }
 .profs-banner::after {
   content: ''; position: absolute; inset: 0;
-  background: radial-gradient(circle at 80% 20%, rgba(255,255,255,.35), transparent 45%);
+  background: radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--text) 35%, transparent), transparent 45%);
 }
 .profs-popup > div:nth-child(2) { height: 42px; }
 .profs-av, .profs-av-placeholder {

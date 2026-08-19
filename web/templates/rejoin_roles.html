@@ -97,12 +97,12 @@
 
   .rejoin-toolbar {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    background: color-mix(in srgb, var(--text) 4%, transparent); border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
     border-radius: 10px; padding: 12px 16px; margin: 8px 0 18px;
   }
   .rejoin-toolbar label { color: #cfd6e4; font-weight: 600; font-size: 13px; }
   .rejoin-toolbar select {
-    background: #1f2530; color: #e6e9ef; border: 1px solid rgba(255,255,255,0.12);
+    background: #1f2530; color: #e6e9ef; border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
     border-radius: 6px; padding: 6px 10px; min-width: 220px; font-size: 14px;
   }
   .rejoin-toolbar .save-status { color: #2ecc71; font-size: 13px; }
@@ -115,7 +115,7 @@
   @media (max-width: 900px) { .rejoin-grid { grid-template-columns: 1fr; } }
 
   .rejoin-card {
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
     border-radius: 12px; padding: 18px;
   }
   .rejoin-head {
@@ -146,7 +146,7 @@
   .role-search input {
     width: 100%; padding: 9px 12px 9px 34px;
     background: #1a1f29; color: #e6e9ef;
-    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px;
     font-size: 13.5px;
   }
   .role-search input:focus {
@@ -159,11 +159,11 @@
   .role-pill {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 6px 12px; border-radius: 99px; font-size: 12.5px;
-    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+    background: color-mix(in srgb, var(--text) 5%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
     color: #b0b6c1; cursor: pointer; transition: all 0.15s;
     user-select: none;
   }
-  .role-pill:hover { background: rgba(255,255,255,0.10); }
+  .role-pill:hover { background: color-mix(in srgb, var(--text) 10%, transparent); }
   .role-pill.tracked {
     background: rgba(46, 204, 113, 0.18);
     border-color: rgba(46, 204, 113, 0.45);
@@ -176,7 +176,7 @@
   .role-actions { margin-top: 12px; display: flex; gap: 8px; }
   .btn {
     padding: 7px 12px; border-radius: 7px; font-size: 13px; cursor: pointer;
-    border: 1px solid rgba(255,255,255,0.12);
+    border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
     display: inline-flex; align-items: center; gap: 6px;
   }
   .btn-primary {
@@ -184,11 +184,11 @@
     border: none; font-weight: 600;
   }
   .btn-ghost { background: transparent; color: #cfd6e4; }
-  .btn-ghost:hover { background: rgba(255,255,255,0.06); }
+  .btn-ghost:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
 
   .log-list { max-height: 460px; overflow-y: auto; }
   .log-item {
-    background: rgba(0,0,0,0.20); border: 1px solid rgba(255,255,255,0.06);
+    background: var(--bg); border: 1px solid color-mix(in srgb, var(--text) 6%, transparent);
     border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
     font-size: 12.5px;
   }
@@ -203,7 +203,7 @@
   .log-item .when { color: #7d8593; font-size: 11.5px; }
   .log-item .roles { color: #b0b6c1; font-size: 12px; }
   .log-item .roles code {
-    background: rgba(255,255,255,0.06); padding: 1px 5px;
+    background: color-mix(in srgb, var(--text) 6%, transparent); padding: 1px 5px;
     border-radius: 3px; font-size: 11.5px; margin-right: 3px;
   }
   .log-item .status {

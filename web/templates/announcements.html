@@ -34,7 +34,7 @@
 .ann-hero-av{animation:annAvFloat 4s ease-in-out infinite}
 @keyframes annAvFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 .ann-hero-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-.ann-hero-chips span{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line);border-radius:99px;background:rgba(255,255,255,.025);color:var(--text-3);font-size:11.5px;font-weight:650}
+.ann-hero-chips span{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line);border-radius:99px;background:color-mix(in srgb, var(--text) 2%, transparent);color:var(--text-3);font-size:11.5px;font-weight:650}
 .ann-hero-chips i{color:var(--ac)}
 
 .ann-command{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;padding:12px 14px;border:1px solid var(--line-2);border-radius:16px;background:linear-gradient(145deg,color-mix(in srgb,var(--surface-2) 88%,transparent),color-mix(in srgb,var(--surface) 94%,transparent));box-shadow:var(--shadow-sm)}
@@ -52,7 +52,7 @@
 .ann-create:hover{transform:translateY(-1px);filter:brightness(1.06)}
 
 .ann-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:14px}
-.ann-stat{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;min-height:82px;padding:14px;border:1px solid var(--line-2);border-radius:15px;background:linear-gradient(150deg,var(--surface-2),var(--surface));box-shadow:inset 0 1px 0 rgba(255,255,255,.04);transition:transform .18s,border-color .18s}
+.ann-stat{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;min-height:82px;padding:14px;border:1px solid var(--line-2);border-radius:15px;background:linear-gradient(150deg,var(--surface-2),var(--surface));box-shadow:inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent);transition:transform .18s,border-color .18s}
 .ann-stat:hover{transform:translateY(-2px);border-color:var(--ac-line)}
 .ann-stat::after{content:'';position:absolute;right:-24px;top:-30px;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,var(--stat-glow,var(--ac-soft)),transparent 70%)}
 .ann-stat-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;color:var(--stat-color,var(--ac));background:color-mix(in srgb,var(--stat-color,var(--ac)) 12%,transparent);border:1px solid color-mix(in srgb,var(--stat-color,var(--ac)) 28%,transparent)}
@@ -62,7 +62,7 @@
 .ann-stat-value{font-size:23px;font-weight:850;line-height:1;color:var(--text);font-variant-numeric:tabular-nums}
 .ann-stat-label{margin-top:5px;color:var(--text-3);font-size:10px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
 
-.ann-health{position:relative;overflow:hidden;display:grid;grid-template-columns:auto minmax(190px,1fr) minmax(180px,.75fr) auto;align-items:center;gap:17px;margin-bottom:14px;padding:15px 17px;border:1px solid var(--line-2);border-radius:17px;background:linear-gradient(120deg,color-mix(in srgb,var(--surface-2) 94%,var(--ok) 2%),var(--surface));box-shadow:var(--shadow-sm),inset 0 1px 0 rgba(255,255,255,.04)}
+.ann-health{position:relative;overflow:hidden;display:grid;grid-template-columns:auto minmax(190px,1fr) minmax(180px,.75fr) auto;align-items:center;gap:17px;margin-bottom:14px;padding:15px 17px;border:1px solid var(--line-2);border-radius:17px;background:linear-gradient(120deg,color-mix(in srgb,var(--surface-2) 94%,var(--ok) 2%),var(--surface));box-shadow:var(--shadow-sm),inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent)}
 .ann-health::after{content:'';position:absolute;right:12%;top:-90px;width:230px;height:180px;background:radial-gradient(circle,var(--ac-soft),transparent 68%);pointer-events:none}
 .ann-health[data-state="warning"]{border-color:rgba(251,191,36,.25)}
 .ann-health[data-state="critical"]{border-color:rgba(248,113,113,.3)}
@@ -90,8 +90,8 @@
 .ann-filters{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .ann-filter{min-height:34px;padding:6px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text-3);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
 .ann-filter:hover{color:var(--text);border-color:var(--ac-line)}
-.ann-filter.is-active{color:var(--ac-2);border-color:var(--ac-line);background:var(--ac-soft);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-.ann-filter b{min-width:18px;padding:1px 5px;border-radius:99px;background:rgba(255,255,255,.05);font-size:9.5px;text-align:center}
+.ann-filter.is-active{color:var(--ac-2);border-color:var(--ac-line);background:var(--ac-soft);box-shadow:inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent)}
+.ann-filter b{min-width:18px;padding:1px 5px;border-radius:99px;background:color-mix(in srgb, var(--text) 5%, transparent);font-size:9.5px;text-align:center}
 .ann-filter-side{display:flex;align-items:center;gap:9px}
 .ann-result-meta{color:var(--text-3);font-size:11.5px;white-space:nowrap}
 .ann-view-switch{display:flex;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
@@ -100,7 +100,7 @@
 .ann-view-switch button.is-active{color:var(--ac-2);background:var(--ac-soft);box-shadow:inset 0 0 0 1px var(--ac-line)}
 
 .ann-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:13px}
-.ann-card{--ann-tone:var(--ac);position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:230px;padding:17px;border:1px solid var(--line-2);border-radius:16px;background:linear-gradient(155deg,color-mix(in srgb,var(--surface-2) 94%,var(--ann-tone) 2%),var(--surface));box-shadow:var(--shadow-sm),inset 0 1px 0 rgba(255,255,255,.04);transition:transform .2s var(--ease),border-color .2s var(--ease),box-shadow .2s var(--ease)}
+.ann-card{--ann-tone:var(--ac);position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:230px;padding:17px;border:1px solid var(--line-2);border-radius:16px;background:linear-gradient(155deg,color-mix(in srgb,var(--surface-2) 94%,var(--ann-tone) 2%),var(--surface));box-shadow:var(--shadow-sm),inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent);transition:transform .2s var(--ease),border-color .2s var(--ease),box-shadow .2s var(--ease)}
 .ann-card::before{content:'';position:absolute;left:0;top:18px;bottom:18px;width:3px;border-radius:0 4px 4px 0;background:var(--ann-tone);box-shadow:0 0 12px color-mix(in srgb,var(--ann-tone) 45%,transparent)}
 .ann-card{animation:annCardIn .38s var(--ease-out) both;animation-delay:min(calc(var(--ann-index,0)*35ms),280ms)}
 @keyframes annCardIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}

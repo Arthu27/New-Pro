@@ -291,7 +291,7 @@ async function loadNotificationHistory() {
       if (dlv && data.delivery) {
         const chip = function (name, st) {
           if (!st.ok && !st.fail) return '';
-          return '<span style="font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.12);color:var(--text-muted);">' +
+          return '<span style="font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid color-mix(in srgb, var(--text) 12%, transparent);color:var(--text-muted);">' +
             name + ': <b style="color:#2ecc71">' + st.ok + '</b> · <b style="color:' + (st.fail ? '#e74c3c' : 'inherit') + '">' + st.fail + '</b></span>';
         };
         dlv.innerHTML = chip('Веб', data.delivery.web) + chip('Discord', data.delivery.discord) + chip('Email', data.delivery.email);
@@ -320,10 +320,10 @@ async function loadNotificationHistory() {
         }
 
         const link = notif.link || '';
-        const cardStyle = 'background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; margin-bottom: 8px;' +
+        const cardStyle = 'background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 12px; margin-bottom: 8px;' +
           (link ? ' cursor: pointer; transition: border-color 0.15s;' : '');
         const card = `
-          <div style="${cardStyle}" ${link ? `onclick="window.location.href='${link}'"` : ''} ${link ? 'onmouseover="this.style.borderColor=\'rgba(200,146,42,0.5)\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,0.1)\'"' : ''}>
+          <div style="${cardStyle}" ${link ? `onclick="window.location.href='${link}'"` : ''} ${link ? 'onmouseover="this.style.borderColor=\'rgba(200,146,42,0.5)\'" onmouseout="this.style.borderColor=\'color-mix(in srgb, var(--text) 10%, transparent)\'"' : ''}>
             <div style="display: flex; align-items: start; gap: 12px;">
               <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(200,146,42,0.15); display: flex; align-items: center; justify-content: center; font-size: 16px;">${icon}</div>
               <div style="flex: 1; min-width: 0;">

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aether — Регистрация в панели</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=82">
+    <link rel="stylesheet" href="/static/style.css?v=83">
     <style>
       html, body { min-height: 100%; }
       body {
@@ -93,10 +93,10 @@
         font-size: var(--fs-md); font-weight: 700; cursor: pointer;
         display: inline-flex; align-items: center; justify-content: center; gap: 8px;
         box-shadow: 0 3px 14px color-mix(in srgb, var(--ac) 32%, transparent),
-                    inset 0 1px 0 rgba(255,255,255,.30);
+                    inset 0 1px 0 color-mix(in srgb, var(--text) 30%, transparent);
         transition: transform .15s var(--ease), box-shadow .2s var(--ease), filter .2s;
       }
-      .auth-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px color-mix(in srgb, var(--ac) 42%, transparent), inset 0 1px 0 rgba(255,255,255,.32); filter: brightness(1.04); }
+      .auth-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px color-mix(in srgb, var(--ac) 42%, transparent), inset 0 1px 0 color-mix(in srgb, var(--text) 32%, transparent); filter: brightness(1.04); }
       [data-theme="dark"] .auth-btn { color: #14152a; }
       .auth-btn:hover { background: var(--ac-3); border-color: var(--ac-3); }
       .auth-foot { text-align: center; margin-top: 18px; font-size: var(--fs-sm); color: var(--text-3); }

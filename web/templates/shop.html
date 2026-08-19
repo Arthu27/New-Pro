@@ -4,42 +4,42 @@
 {% block content %}
 <style>
 .sh-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px}
-.sh-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.sh-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:10px 16px}
 .sh-kpi i{color:var(--ac,#e0b04a);font-size:16px}
 .sh-kpi b{font-size:18px;color:var(--text-1,#fff)}
-.sh-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
+.sh-kpi span{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
 .sh-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
 @media (max-width:960px){.sh-grid{grid-template-columns:1fr}}
-.sh-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px}
+.sh-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px 18px}
 .sh-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
 .sh-panel h3 i{color:var(--ac,#e0b04a)}
-.sh-sub{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:14px;line-height:1.5}
+.sh-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:14px;line-height:1.5}
 .sh-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
 .sh-form .wide{grid-column:1/-1}
-.sh-input,.sh-select{background:rgba(0,0,0,.25);border:1px solid var(--line-2,rgba(255,255,255,.1));border-radius:10px;padding:10px 14px;color:var(--text-1,#fff);font-size:13.5px;outline:none;transition:border-color .15s,box-shadow .15s}
-.sh-input:focus,.sh-select:focus{border-color:var(--ac,#e0b04a);box-shadow:0 0 0 3px var(--ac-soft,rgba(224,176,74,.12))}
+.sh-input,.sh-select{background: var(--bg);border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:10px;padding:10px 14px;color:var(--text-1,#fff);font-size:13.5px;outline:none;transition:border-color .15s,box-shadow .15s}
+.sh-input:focus,.sh-select:focus{border-color:var(--ac,#e0b04a);box-shadow:0 0 0 3px var(--ac-soft,color-mix(in srgb, var(--ac) 12%, transparent))}
 .sh-select option{background:#1c1f27;color:#e8e8e8}
 .sh-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:filter .15s}
 .sh-btn:hover{filter:brightness(1.1)}
-.sh-btn.ghost{background:rgba(255,255,255,.06);color:var(--text-2,rgba(255,255,255,.8));border:1px solid var(--line-2,rgba(255,255,255,.14))}
+.sh-btn.ghost{background:color-mix(in srgb, var(--text) 6%, transparent);color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 14%, transparent))}
 .sh-err{display:none;font-size:12.5px;color:#ff8a7a;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:10px;padding:8px 12px;grid-column:1/-1}
 .sh-toolbar{display:flex;gap:8px;margin-bottom:12px}
 .sh-toolbar .sh-input{flex:1;padding:8px 12px;font-size:13px}
-.sh-item{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:10px 8px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.sh-item{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:10px 8px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
 .sh-item:last-child{border-bottom:none}
-.sh-name{font-size:13.5px;font-weight:600;color:var(--text-2,rgba(255,255,255,.85));display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.sh-desc{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));grid-column:1/-1;line-height:1.45}
+.sh-name{font-size:13.5px;font-weight:600;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sh-desc{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));grid-column:1/-1;line-height:1.45}
 .sh-price{font-size:13px;color:var(--ac-2,#f0cd7a);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-.sh-sell{font-size:11px;color:var(--text-3,rgba(255,255,255,.4));text-align:right;font-variant-numeric:tabular-nums}
+.sh-sell{font-size:11px;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));text-align:right;font-variant-numeric:tabular-nums}
 .sh-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 9px;border:1px solid}
-.sh-cat{font-size:10.5px;color:var(--text-3,rgba(255,255,255,.5));background:rgba(255,255,255,.05);border-radius:999px;padding:2px 9px}
+.sh-cat{font-size:10.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));background:color-mix(in srgb, var(--text) 5%, transparent);border-radius:999px;padding:2px 9px}
 .sh-pet{font-size:10.5px;color:#7bd88f;background:rgba(123,216,143,.08);border:1px solid rgba(123,216,143,.25);border-radius:999px;padding:2px 9px}
-.sh-meta{font-size:11px;color:var(--text-3,rgba(255,255,255,.35));grid-column:1/-1}
+.sh-meta{font-size:11px;color:var(--text-3,color-mix(in srgb, var(--text) 35%, transparent));grid-column:1/-1}
 .sh-actions{display:flex;gap:2px;align-items:start}
-.sh-act{background:none;border:none;color:var(--text-3,rgba(255,255,255,.35));cursor:pointer;padding:6px;border-radius:8px;transition:color .15s,background .15s}
-.sh-act:hover{color:var(--ac,#e0b04a);background:var(--ac-soft,rgba(224,176,74,.1))}
+.sh-act{background:none;border:none;color:var(--text-3,color-mix(in srgb, var(--text) 35%, transparent));cursor:pointer;padding:6px;border-radius:8px;transition:color .15s,background .15s}
+.sh-act:hover{color:var(--ac,#e0b04a);background:var(--ac-soft,color-mix(in srgb, var(--ac) 10%, transparent))}
 .sh-act.del:hover{color:#ff6b6b;background:rgba(231,76,60,.12)}
-[data-theme="light"] .sh-input,[data-theme="light"] .sh-select{background:rgba(0,0,0,.04)}
+[data-theme="light"] .sh-input,[data-theme="light"] .sh-select{background: var(--bg)}
 [data-theme="light"] .sh-select option{background:#fff;color:#2a2d35}
 [data-theme="light"] .sh-item{border-bottom-color:rgba(0,0,0,.08)}
 </style>

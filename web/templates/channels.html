@@ -279,10 +279,10 @@
 .btn-refresh:hover{background:var(--ac-soft);transform:rotate(180deg)}
 
 .ch-stats{display:none;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
-.ch-stat{background:linear-gradient(135deg,rgba(224,176,74,0.05),rgba(224,176,74,0.01));border:1px solid var(--line-2);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;transition:.2s var(--ease);position:relative;overflow:hidden}
+.ch-stat{background:linear-gradient(135deg,color-mix(in srgb, var(--ac) 5%, transparent),color-mix(in srgb, var(--ac) 1%, transparent));border:1px solid var(--line-2);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;transition:.2s var(--ease);position:relative;overflow:hidden}
 .ch-stat::after{content:'';position:absolute;top:-30px;right:-30px;width:80px;height:80px;background:radial-gradient(circle,var(--ac-soft),transparent 70%);pointer-events:none}
 .ch-stat:hover{border-color:var(--ac-line);transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.25)}
-.ch-stat-icon{width:40px;height:40px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.ch-stat-icon{width:40px;height:40px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;box-shadow:inset 0 1px 0 color-mix(in srgb, var(--text) 20%, transparent)}
 .ch-stat-icon.icon-text{background:linear-gradient(135deg,var(--ac-2),var(--ac-3));color:#1a1a1a}
 .ch-stat-icon.icon-voice{background:linear-gradient(135deg,#38bdf8,#0284c7);color:#fff}
 .ch-stat-icon.icon-category{background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff}
@@ -295,7 +295,7 @@
 /* Один аккуратный workspace вместо длинного полотна всех каналов */
 .ch-workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.75fr);gap:16px;align-items:start}
 .ch-workspace > *{min-width:0}
-.ch-box{background:linear-gradient(145deg,color-mix(in srgb,var(--surface-2) 86%,transparent),color-mix(in srgb,var(--surface) 96%,transparent));border:1px solid var(--line-2);border-radius:18px;padding:16px;box-shadow:var(--shadow-sm),inset 0 1px 0 rgba(255,255,255,.04)}
+.ch-box{background:linear-gradient(145deg,color-mix(in srgb,var(--surface-2) 86%,transparent),color-mix(in srgb,var(--surface) 96%,transparent));border:1px solid var(--line-2);border-radius:18px;padding:16px;box-shadow:var(--shadow-sm),inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent)}
 .ch-box:hover{transform:none!important}
 .ch-box-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:2px 2px 13px;border-bottom:1px solid var(--line)}
 .ch-box-eyebrow,.ch-detail-eyebrow{margin-bottom:4px;color:var(--text-3);font-size:9.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
@@ -305,10 +305,10 @@
 .ch-box-count{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:3px 12px;border-radius:99px;font-size:12px;font-weight:700}
 
 /* Категории — плавная аккордеон-анимация */
-.cat-group{border:1px solid var(--line-2);border-radius:13px;margin-bottom:10px;overflow:hidden;background:rgba(255,255,255,.012);transition:border-color .18s var(--ease),box-shadow .18s var(--ease)}
+.cat-group{border:1px solid var(--line-2);border-radius:13px;margin-bottom:10px;overflow:hidden;background:color-mix(in srgb, var(--text) 2%, transparent);transition:border-color .18s var(--ease),box-shadow .18s var(--ease)}
 .cat-group:not(.collapsed){border-color:var(--ac-line);box-shadow:0 10px 26px rgba(0,0,0,.13)}
-.cat-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:linear-gradient(90deg,rgba(224,176,74,0.06),transparent);transition:.15s;user-select:none}
-.cat-header:hover,.cat-header:focus-visible{background:rgba(224,176,74,0.09)}
+.cat-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:linear-gradient(90deg,color-mix(in srgb, var(--ac) 6%, transparent),transparent);transition:.15s;user-select:none}
+.cat-header:hover,.cat-header:focus-visible{background:color-mix(in srgb, var(--ac) 9%, transparent)}
 .cat-icon{color:var(--ac-3);font-size:12px;transition:transform .3s var(--ease);width:14px}
 .cat-group.collapsed .cat-icon{transform:rotate(-90deg)}
 .cat-name{font-weight:700;color:var(--ac-2);flex:1;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -321,12 +321,12 @@
 .cat-empty{color:var(--text-3);font-size:13px;padding:10px;text-align:center;font-style:italic}
 
 /* Строка канала */
-.ch-row{display:flex;align-items:center;gap:12px;padding:11px 12px;background:linear-gradient(135deg,rgba(255,255,255,.02),rgba(255,255,255,.005));border:1px solid var(--line);border-radius:10px;margin-bottom:6px;transition:all .16s var(--ease);cursor:pointer;outline:none}
-.ch-row:hover,.ch-row:focus-visible{background:linear-gradient(135deg,rgba(224,176,74,0.08),rgba(224,176,74,0.02));border-color:var(--ac-line);transform:translateX(2px)}
-.ch-row.is-selected{border-color:var(--ac);background:linear-gradient(135deg,var(--ac-soft),rgba(224,176,74,.025));box-shadow:0 0 0 1px var(--ac-line),0 9px 22px rgba(0,0,0,.17)}
+.ch-row{display:flex;align-items:center;gap:12px;padding:11px 12px;background:linear-gradient(135deg,color-mix(in srgb, var(--text) 2%, transparent),color-mix(in srgb, var(--text) 2%, transparent));border:1px solid var(--line);border-radius:10px;margin-bottom:6px;transition:all .16s var(--ease);cursor:pointer;outline:none}
+.ch-row:hover,.ch-row:focus-visible{background:linear-gradient(135deg,color-mix(in srgb, var(--ac) 8%, transparent),color-mix(in srgb, var(--ac) 2%, transparent));border-color:var(--ac-line);transform:translateX(2px)}
+.ch-row.is-selected{border-color:var(--ac);background:linear-gradient(135deg,var(--ac-soft),color-mix(in srgb, var(--ac) 2%, transparent));box-shadow:0 0 0 1px var(--ac-line),0 9px 22px rgba(0,0,0,.17)}
 .ch-row.is-selected .ch-name{color:var(--ac-2)}
 .ch-row-root{border-left:3px solid var(--ac)}
-.ch-type-icon{width:36px;height:36px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));color:#1a1a1a;box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.ch-type-icon{width:36px;height:36px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));color:#1a1a1a;box-shadow:inset 0 1px 0 color-mix(in srgb, var(--text) 20%, transparent)}
 .ch-type-icon.icon-voice{background:linear-gradient(135deg,#38bdf8,#0284c7);color:#fff}
 .ch-type-icon.icon-category{background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff}
 .ch-type-icon.icon-news{background:linear-gradient(135deg,#34d399,#059669);color:#fff}
@@ -358,7 +358,7 @@
 .ch-empty p{font-size:15px}
 
 /* Детали одного выбранного канала */
-.ch-detail{position:sticky;top:82px;min-height:300px;margin:0;background:linear-gradient(145deg,color-mix(in srgb,var(--surface-2) 90%,var(--ac-soft)),var(--surface));border:1px solid var(--ac-line);border-radius:18px;padding:18px;box-shadow:0 14px 36px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}
+.ch-detail{position:sticky;top:82px;min-height:300px;margin:0;background:linear-gradient(145deg,color-mix(in srgb,var(--surface-2) 90%,var(--ac-soft)),var(--surface));border:1px solid var(--ac-line);border-radius:18px;padding:18px;box-shadow:0 14px 36px rgba(0,0,0,.22),inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent);overflow:hidden}
 .ch-detail::before{content:'';position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,var(--ac-3),var(--ac-2),transparent);opacity:.75}
 .ch-detail-placeholder{min-height:264px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--text-3)}
 .ch-detail-placeholder-icon{width:56px;height:56px;border-radius:17px;display:grid;place-items:center;margin-bottom:15px;color:var(--ac);font-size:19px;background:var(--ac-soft);border:1px solid var(--ac-line);box-shadow:0 10px 26px var(--ac-glow)}

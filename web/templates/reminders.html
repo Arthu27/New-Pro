@@ -4,20 +4,20 @@
 {% block content %}
 <style>
 .rm-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px}
-.rm-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,rgba(255,255,255,.04));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:12px;padding:10px 16px}
+.rm-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:10px 16px}
 .rm-kpi i{color:var(--ac,#e0b04a);font-size:16px}
 .rm-kpi b{font-size:18px;color:var(--text-1,#fff)}
-.rm-kpi span{font-size:11.5px;color:var(--text-3,rgba(255,255,255,.45))}
-.rm-panel{background:var(--surface-2,rgba(255,255,255,.03));border:1px solid var(--line-2,rgba(255,255,255,.08));border-radius:14px;padding:16px 18px}
-.rm-row{display:grid;grid-template-columns:auto auto 1fr auto auto;gap:12px;align-items:center;padding:10px 8px;border-bottom:1px dashed rgba(255,255,255,.07)}
+.rm-kpi span{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
+.rm-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px 18px}
+.rm-row{display:grid;grid-template-columns:auto auto 1fr auto auto;gap:12px;align-items:center;padding:10px 8px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
 .rm-row:last-child{border-bottom:none}
-.rm-id{font-size:12px;font-weight:700;color:var(--text-3,rgba(255,255,255,.4));min-width:34px;font-variant-numeric:tabular-nums}
+.rm-id{font-size:12px;font-weight:700;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));min-width:34px;font-variant-numeric:tabular-nums}
 .rm-when{font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ac-2,#f0cd7a)}
 .rm-when.overdue{color:#ff8a7a}
-.rm-when .rm-repeat{display:inline-block;margin-left:6px;font-size:10.5px;color:var(--text-3,rgba(255,255,255,.4));border:1px solid var(--line-2,rgba(255,255,255,.14));border-radius:999px;padding:1px 7px}
-.rm-text{font-size:13.5px;color:var(--text-2,rgba(255,255,255,.85));line-height:1.45;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.rm-who{font-size:12px;color:var(--text-3,rgba(255,255,255,.45));white-space:nowrap}
-.rm-cancel{background:none;border:none;color:var(--text-3,rgba(255,255,255,.35));cursor:pointer;padding:6px;border-radius:8px;transition:color .15s,background .15s}
+.rm-when .rm-repeat{display:inline-block;margin-left:6px;font-size:10.5px;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 14%, transparent));border-radius:999px;padding:1px 7px}
+.rm-text{font-size:13.5px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));line-height:1.45;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.rm-who{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));white-space:nowrap}
+.rm-cancel{background:none;border:none;color:var(--text-3,color-mix(in srgb, var(--text) 35%, transparent));cursor:pointer;padding:6px;border-radius:8px;transition:color .15s,background .15s}
 .rm-cancel:hover{color:#ff6b6b;background:rgba(231,76,60,.12)}
 @media (max-width:860px){.rm-row{grid-template-columns:auto 1fr auto}.rm-when{grid-column:2;grid-row:2}}
 [data-theme="light"] .rm-row{border-bottom-color:rgba(0,0,0,.08)}
@@ -29,7 +29,7 @@
 </div>
 
 <div class="rm-panel">
-  <div style="font-size:12px;color:var(--text-3,rgba(255,255,255,.45));margin-bottom:10px">
+  <div style="font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:10px">
     Все активные напоминания сервера — то же хранилище, что читает команда <code>/напомни</code>.
     Доставка продолжается сама, журнал только смотрит и (у admin) отменяет.
   </div>

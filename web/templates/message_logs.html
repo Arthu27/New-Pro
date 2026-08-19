@@ -17,18 +17,18 @@
 
 <style>
 /* Логи сообщений — premium gold */
-.ml-hero{display:flex;align-items:center;gap:16px;padding:22px 26px;background:linear-gradient(135deg,rgba(224,176,74,.10),rgba(224,176,74,.03));border:1px solid var(--ac-line);border-radius:16px;margin-bottom:18px}
+.ml-hero{display:flex;align-items:center;gap:16px;padding:22px 26px;background:linear-gradient(135deg,color-mix(in srgb, var(--ac) 10%, transparent),color-mix(in srgb, var(--ac) 3%, transparent));border:1px solid var(--ac-line);border-radius:16px;margin-bottom:18px}
 .hero-icon{font-size:34px;width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 18px var(--ac-glow)}
 .hero-title{font-family:'Poppins',sans-serif;font-size:20px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.02em}
 .hero-sub{font-size:13px;color:var(--text-2);margin-top:3px}
-.ml-filter-box{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:14px 16px;margin-bottom:16px;backdrop-filter:blur(12px)}
+.ml-filter-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:14px 16px;margin-bottom:16px;backdrop-filter:blur(12px)}
 .filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .filter-row .field-input{flex:1;min-width:150px}
-.ml-log-box{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:16px;backdrop-filter:blur(12px)}
+.ml-log-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:16px;backdrop-filter:blur(12px)}
 .box-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .box-title i{color:var(--ac)}
 /* логи */
-.log-row{background:linear-gradient(160deg,rgba(255,255,255,.02),transparent);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:9px;transition:all .16s var(--ease)}
+.log-row{background:linear-gradient(160deg,color-mix(in srgb, var(--text) 2%, transparent),transparent);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:9px;transition:all .16s var(--ease)}
 .log-row:hover{border-color:var(--ac-line);transform:translateX(2px)}
 .log-row.log-deleted{border-left:3px solid var(--err)}
 .log-row.log-edited{border-left:3px solid var(--warn)}
@@ -40,7 +40,7 @@
 .type-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .type-badge.badge-del{background:rgba(248,113,113,.14);color:#fca5a5;border:1px solid rgba(248,113,113,.3)}
 .type-badge.badge-edit{background:rgba(251,191,36,.14);color:#fcd34d;border:1px solid rgba(251,191,36,.3)}
-.log-content{font-size:13.5px;color:var(--text-2);line-height:1.55;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:8px;padding:9px 12px;word-break:break-word}
+.log-content{font-size:13.5px;color:var(--text-2);line-height:1.55;background: var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;word-break:break-word}
 .log-before{font-size:13px;color:var(--text-2);padding:8px 12px;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.15);border-radius:8px;margin-bottom:6px;word-break:break-word}
 .log-after{font-size:13px;color:var(--text-2);padding:8px 12px;background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.15);border-radius:8px;word-break:break-word}
 .log-empty{text-align:center;padding:40px 20px;color:var(--text-3)}

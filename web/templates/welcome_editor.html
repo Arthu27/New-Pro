@@ -17,12 +17,12 @@
 
 <style>
 /* Приветствие / Пока-пока — premium gold styling */
-.vars-box{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px;background:linear-gradient(90deg,rgba(224,176,74,.08),rgba(224,176,74,.02));border:1px dashed var(--ac-line);border-radius:12px;font-size:13px;color:var(--text-2);margin-bottom:16px}
+.vars-box{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px;background:linear-gradient(90deg,color-mix(in srgb, var(--ac) 8%, transparent),color-mix(in srgb, var(--ac) 2%, transparent));border:1px dashed var(--ac-line);border-radius:12px;font-size:13px;color:var(--text-2);margin-bottom:16px}
 .vars-box i{color:var(--ac)}
 .vars-box span{background:var(--ac-soft);border:1px solid var(--ac-line);color:var(--ac-2);padding:2px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
 .editor-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:900px){.editor-grid{grid-template-columns:1fr}}
-.editor-box{background:linear-gradient(165deg,rgba(224,176,74,.04),rgba(20,18,14,.72));border:1px solid var(--line-2);border-radius:16px;padding:20px;backdrop-filter:blur(16px);transition:transform .2s var(--ease),border-color .2s var(--ease)}
+.editor-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),rgba(20,18,14,.72));border:1px solid var(--line-2);border-radius:16px;padding:20px;backdrop-filter:blur(16px);transition:transform .2s var(--ease),border-color .2s var(--ease)}
 .editor-box:hover{border-color:var(--ac-line);transform:translateY(-2px)}
 .editor-box .section-title{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .editor-box .section-title i{color:var(--ac)}
@@ -31,7 +31,7 @@
 .editor-box input[type=text],.editor-box textarea,.editor-box select{width:100%;padding:10px 12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font-size:13.5px;outline:none;font-family:inherit}
 .editor-box input[type=text]:focus,.editor-box textarea:focus,.editor-box select:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
 .editor-box input[type=color]{width:60px;height:38px;border:none;background:transparent;cursor:pointer;border-radius:8px;padding:0}
-.preview-box{margin:14px 0;padding:12px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:12px}
+.preview-box{margin:14px 0;padding:12px;background: var(--bg);border:1px solid var(--line);border-radius:12px}
 .preview-box>div{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);font-weight:700;margin-bottom:8px}
 .preview-embed{background:var(--surface-2);border:1px solid var(--line);border-left:4px solid var(--ac);border-radius:8px;padding:14px 16px}
 .preview-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px}

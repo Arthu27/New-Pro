@@ -16,15 +16,15 @@
 {% endblock %}
 
 <style>
-.vs-box{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:18px;backdrop-filter:blur(14px)}
+.vs-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:18px;backdrop-filter:blur(14px)}
 .vs-title{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .vs-title i{color:var(--ac)}
-.vc-row{display:flex;align-items:center;gap:13px;padding:11px 13px;background:linear-gradient(160deg,rgba(255,255,255,.02),transparent);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;transition:all .16s var(--ease)}
+.vc-row{display:flex;align-items:center;gap:13px;padding:11px 13px;background:linear-gradient(160deg,color-mix(in srgb, var(--text) 2%, transparent),transparent);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;transition:all .16s var(--ease)}
 .vc-row:hover{border-color:var(--ac-line);transform:translateX(2px)}
 .vc-rank{font-size:20px;width:32px;text-align:center;flex-shrink:0}
 .vc-avatar{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--ac-line);object-fit:cover;flex-shrink:0}
 .vc-name{font-weight:600;color:var(--text);font-size:14px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vc-bar{height:6px;background:rgba(255,255,255,.05);border-radius:99px;overflow:hidden}
+.vc-bar{height:6px;background:color-mix(in srgb, var(--text) 5%, transparent);border-radius:99px;overflow:hidden}
 .vc-bar-fill{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac-2));border-radius:99px;transition:width .6s var(--ease-out)}
 .vc-time{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--ac-2);font-family:'JetBrains Mono',monospace;white-space:nowrap;flex-shrink:0}
 </style>

@@ -59,7 +59,7 @@ async function bkLoad() {
   for (const it of d.items) {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:10px;align-items:center;justify-content:space-between;' +
-      'padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;margin-bottom:8px;flex-wrap:wrap';
+      'padding:10px;border:1px solid color-mix(in srgb, var(--text) 8%, transparent);border-radius:10px;margin-bottom:8px;flex-wrap:wrap';
     row.innerHTML =
       '<div style="min-width:0;overflow:hidden">' +
         '<b>' + esc(it.name) + '</b>' +

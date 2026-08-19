@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aether — Вход в панель управления</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=82">
+    <link rel="stylesheet" href="/static/style.css?v=83">
     <style>
       html, body { min-height: 100%; }
       body {
@@ -66,7 +66,7 @@
       }
       .auth-side::before {
         width: 260px; height: 260px; left: -80px; top: -90px;
-        background: rgba(255, 255, 255, 0.22);
+        background: color-mix(in srgb, var(--text) 22%, transparent);
         animation: sideFloat1 14s ease-in-out infinite alternate;
       }
       .auth-side::after {
@@ -83,11 +83,11 @@
       }
       .auth-side .brand .ico {
         width: 36px; height: 36px; border-radius: 11px;
-        background: rgba(255,255,255,.16);
+        background: color-mix(in srgb, var(--text) 16%, transparent);
         backdrop-filter: blur(8px);
         display: grid; place-items: center;
         font-size: 15px;
-        border: 1px solid rgba(255,255,255,.25);
+        border: 1px solid color-mix(in srgb, var(--text) 25%, transparent);
         box-shadow: 0 4px 16px rgba(0,0,0,.25);
       }
       .auth-side .brand b {
@@ -107,8 +107,8 @@
       .auth-feats li i {
         width: 30px; height: 30px; flex: 0 0 30px;
         border-radius: 9px;
-        background: rgba(255,255,255,.14);
-        border: 1px solid rgba(255,255,255,.22);
+        background: color-mix(in srgb, var(--text) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--text) 22%, transparent);
         display: grid; place-items: center;
         font-size: 12px;
       }
@@ -141,11 +141,11 @@
         font-size: var(--fs-md); font-weight: 700; cursor: pointer;
         display: inline-flex; align-items: center; justify-content: center; gap: 8px;
         box-shadow: 0 3px 14px color-mix(in srgb, var(--ac) 32%, transparent),
-                    inset 0 1px 0 rgba(255,255,255,.30);
+                    inset 0 1px 0 color-mix(in srgb, var(--text) 30%, transparent);
         transition: transform .15s var(--ease), box-shadow .2s var(--ease), filter .2s;
       }
       [data-theme="dark"] .auth-btn { color: #14152a; }
-      .auth-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px color-mix(in srgb, var(--ac) 42%, transparent), inset 0 1px 0 rgba(255,255,255,.32); filter: brightness(1.04); }
+      .auth-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px color-mix(in srgb, var(--ac) 42%, transparent), inset 0 1px 0 color-mix(in srgb, var(--text) 32%, transparent); filter: brightness(1.04); }
       .auth-foot { text-align: center; margin-top: 18px; font-size: var(--fs-sm); color: var(--text-3); }
       .autocomplete-popup {
         position: absolute; top: 100%; left: 0; right: 0;

@@ -18,7 +18,7 @@
 <style>
 .todo-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
 .todo-list{display:flex;flex-direction:column;gap:8px}
-.todo-item{display:flex;align-items:center;gap:12px;padding:12px 15px;background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:12px;transition:.15s}
+.todo-item{display:flex;align-items:center;gap:12px;padding:12px 15px;background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:12px;transition:.15s}
 .todo-item:hover{border-color:color-mix(in srgb, var(--ac) 30%, transparent)}
 .todo-item.done{opacity:.66}
 .todo-text{flex:1;font-size:14px;color:var(--text);font-weight:600}
@@ -31,11 +31,11 @@
 .todo-del:hover{transform:scale(1.06)}
 .todo-input{flex:1;min-width:180px}
 .todo-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-.todo-stat{background:linear-gradient(165deg,rgba(224,176,74,.05),rgba(20,18,14,.5));border:1px solid var(--line-2);border-radius:12px;padding:12px 20px;text-align:center;min-width:90px}
+.todo-stat{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 5%, transparent),rgba(20,18,14,.5));border:1px solid var(--line-2);border-radius:12px;padding:12px 20px;text-align:center;min-width:90px}
 .todo-stat-num{font-size:22px;font-weight:800;color:var(--ac)}
 .todo-stat-lbl{font-size:11px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .todo-body .empty{padding:26px;text-align:center;color:var(--text-3);font-weight:600}
-.todo-card{background:linear-gradient(165deg,rgba(224,176,74,.03),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:16px}
+.todo-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:16px}
 .todo-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .todo-title{font-weight:800;color:var(--text);font-size:14px}
 .todo-count{font-size:11.5px;color:var(--text-3);font-weight:700}

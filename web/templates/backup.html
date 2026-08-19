@@ -79,7 +79,7 @@
     $('stat-last').textContent = '2ч';
     var html = '';
     backups.forEach(function (b, i) {
-      html += '<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 12px;">' +
+      html += '<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid color-mix(in srgb, var(--text) 5%, transparent); gap: 12px;">' +
         '<div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(155,89,182,0.15); display: flex; align-items: center; justify-content: center;"><i class="fas fa-file-archive" style="color: #9b59b6; font-size: 18px;"></i></div>' +
         '<div style="flex: 1;">' +
           '<div style="font-weight: 500; margin-bottom: 4px;">' + esc(b.name) + '</div>' +

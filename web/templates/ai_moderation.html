@@ -34,7 +34,7 @@
   position: relative;
   width: 44px;
   height: 24px;
-  background: rgba(255,255,255,0.08);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
   border-radius: 99px;
   cursor: pointer;
   flex-shrink: 0;
@@ -90,7 +90,7 @@
   display: flex !important;
   align-items: center !important;
   gap: 14px !important;
-  background: linear-gradient(135deg, rgba(212, 168, 67, 0.06) 0%, rgba(224, 176, 74, 0.02) 100%);
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.06) 0%, color-mix(in srgb, var(--ac) 2%, transparent) 100%);
   border: 1px solid rgba(212, 168, 67, 0.18);
   border-radius: 14px;
   padding: 18px 18px !important;
@@ -111,22 +111,22 @@
   font-size: 20px;
   color: #1a1a1a;
   background: linear-gradient(135deg, #d4a843 0%, #e0b04a 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(212, 168, 67, 0.35);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 25%, transparent), 0 2px 8px rgba(212, 168, 67, 0.35);
 }
 .aimod-stat.stat-bans .stat-icon {
   background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
   color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(239, 68, 68, 0.35);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 25%, transparent), 0 2px 8px rgba(239, 68, 68, 0.35);
 }
 .aimod-stat.stat-muts .stat-icon {
   background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
   color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(245, 158, 11, 0.35);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 25%, transparent), 0 2px 8px rgba(245, 158, 11, 0.35);
 }
 .aimod-stat.stat-24h .stat-icon {
   background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
   color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(56, 189, 248, 0.35);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 25%, transparent), 0 2px 8px rgba(56, 189, 248, 0.35);
 }
 .aimod-stat .stat-body { flex: 1; min-width: 0; }
 .aimod-stat .num {
