@@ -1774,7 +1774,12 @@
       });
     }
     var LINK = 110;
-    function step() {
+    var lastStep = 0;
+    function step(now) {
+      requestAnimationFrame(step);
+      if (doc.hidden) return;
+      if (now - lastStep < 34) return;
+      lastStep = now;
       ctx.clearRect(0, 0, W, H);
       var c = accentRGB();
       var dark = doc.documentElement.getAttribute('data-theme') === 'dark';
@@ -1805,9 +1810,8 @@
           }
         }
       }
-      requestAnimationFrame(step);
     }
-    step();
+    requestAnimationFrame(step);
   }
 
   /* ── 2. Мягкое свечение за курсором ────────────────────── */
@@ -2743,7 +2747,7 @@
       ticking = false;
       var mid = win.innerHeight / 2;
       var items = doc.querySelectorAll('.panel');
-      for (var i = 0; i < items.length && i < 40; i++) {
+      for (var i = 0; i < items.length && i < 12; i++) {
         var el = items[i];
         var r = el.getBoundingClientRect();
         if (r.bottom < 0 || r.top > win.innerHeight) continue;
@@ -2951,10 +2955,14 @@
   function fxMagnetic() {
     if (reduced || narrow()) return;
     var SEL = '.btn, .send-btn, .fab-main, .hdr-btn, .analytics-refresh, .prompt-chip';
-    doc.addEventListener('mousemove', function (e) {
+    var tick = false, lastE = null, lastTarget = null, lastRect = null;
+    function apply(e) {
+      tick = false;
+      if (!e) return;
       var target = e.target && e.target.closest ? e.target.closest(SEL) : null;
-      if (!target) return;
-      var r = target.getBoundingClientRect();
+      if (target !== lastTarget) { lastTarget = target; lastRect = target ? target.getBoundingClientRect() : null; }
+      if (!target || !lastRect) return;
+      var r = lastRect;
       var cx = r.left + r.width / 2;
       var cy = r.top + r.height / 2;
       var dx = e.clientX - cx;
@@ -2964,10 +2972,16 @@
       if (dist > R) { target.style.transform = ''; return; }
       var pull = (1 - dist / R) * 5;
       target.style.transform = 'translate(' + (dx / dist * pull).toFixed(1) + 'px,' + (dy / dist * pull).toFixed(1) + 'px)';
+    }
+    doc.addEventListener('mousemove', function (e) {
+      lastE = e;
+      if (!tick) { tick = true; requestAnimationFrame(function () { apply(lastE); }); }
     }, { passive: true });
     doc.addEventListener('mouseleave', function () {
+      lastTarget = null; lastRect = null;
       doc.querySelectorAll(SEL).forEach(function (el) { el.style.transform = ''; });
     }, true);
+    window.addEventListener('scroll', function () { lastTarget = null; lastRect = null; }, { passive: true });
   }
 
   /* ── 5. Блик панелей при наведении ── */

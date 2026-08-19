@@ -211,9 +211,6 @@ check('spot-on' not in css and 'spot-on' not in js,
       'спотлайт, следующий за мышью внутри карточек, отключён')
 check('tickerDrift' in open(os.path.join(ROOT, 'web', 'templates', 'mod_center.html'), encoding='utf-8').read(),
       'лента событий мод-центра стала живой (авто-дрейф с паузой)')
-check('app.js?v=35' in base and 'style.css?v=88' in base,
-      'версии ассетов забумплены (88/35)')
-
 # ═══ 8. Комбо-красота: шапки, эмблема, переходы, киоск ════════════════════
 print('== комбо-красота ==')
 check('.main-content:has(> .page-hero) .navbar { display: none; }' in css,
@@ -283,6 +280,25 @@ m = re.search(r'shell\.appendChild\(orig\).*?orig\.parentNode\.replaceChild\(she
 check(m is None, 'дропдаун: запрещённый порядок (replaceChild по предку) отсутствует')
 check('tryEnhance' in js and 'removeAttribute(\'data-aes\')' in js,
       'дропдаун: сбой одного селекта не ломает остальные')
+
+# ═══ 11. Производительность: нет вечных анимаций и тяжёлого блюра ═════════
+print('== производительность ==')
+check(re.search(r'\.fx-ring-el \{[^}]*animation: none;', css, re.S) is not None,
+      'кольца карточек по умолчанию не анимируются')
+check(re.search(r'\.fx-ring-host:hover \.fx-ring-el,[^}]*animation: fxRingAng', css, re.S) is not None,
+      'кольца крутятся только при наведении')
+check('.panel:hover::before { animation: hairline 4.5s linear infinite; }' in css,
+      'хаирлайн панелей анимируется только при наведении')
+check('blur(20px)' not in css and 'blur(24px)' not in css and 'blur(16px)' not in css,
+      'тяжёлый backdrop-blur (16px+) снижен')
+check('lastRect' in js and 'requestAnimationFrame(function () { apply(lastE); })' in js,
+      'магнитные кнопки: rAF-троттлинг и кэш rect (без layout на mousemove)')
+check('lastStep' in js and 'doc.hidden' in js,
+      'частицы: 30 fps и пауза в фоновой вкладке')
+check('i < 12' in js,
+      'параллакс карточек ограничен 12 слоями')
+check('app.js?v=36' in base and 'style.css?v=89' in base,
+      'версии ассетов забумплены (89/36)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil

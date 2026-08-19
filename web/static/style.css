@@ -268,8 +268,8 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);
   background: var(--glass);
-  backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(8px) saturate(160%);
+  -webkit-backdrop-filter: blur(8px) saturate(160%);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -520,8 +520,8 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   display: flex; align-items: center; gap: 14px;
   padding: 0 28px;
   background: var(--glass);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
   border-bottom: 1px solid var(--line);
   position: sticky; top: 0; z-index: 90;
   transition: box-shadow 0.25s var(--ease);
@@ -763,8 +763,8 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   position: relative;
   overflow: hidden;
   background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   padding: 18px 20px;
@@ -801,8 +801,8 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .panel {
   position: relative;
   background: var(--glass);
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(6px) saturate(150%);
+  -webkit-backdrop-filter: blur(6px) saturate(150%);
   border: 1px solid var(--line);
   border-radius: 16px;
   box-shadow: var(--shadow-1);
@@ -836,8 +836,9 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   height: 2px;
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ac) 55%, transparent), color-mix(in srgb, var(--ac-2) 40%, transparent), transparent);
   background-size: 220% 100%;
-  animation: hairline 4.5s linear infinite;
+  animation: none;
 }
+.panel:hover::before { animation: hairline 4.5s linear infinite; }
 @keyframes hairline { from { background-position: 0% 0; } to { background-position: 220% 0; } }
 @media (prefers-reduced-motion: reduce) { .panel::before { animation: none; } }
 .panel-head {
@@ -867,8 +868,8 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   position: relative;
   overflow: hidden;
   background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   padding: 14px 16px 14px 19px;
@@ -1391,7 +1392,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   position: relative;
   display: flex; align-items: center; gap: 10px;
   background: var(--glass);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--line);
   border-left: 3px solid var(--ok);
   border-radius: var(--r);
@@ -1535,8 +1536,8 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 .kbd-palette[hidden] { display: none; }
 .kbd-palette-panel {
   background: var(--glass);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(10px) saturate(160%);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-3);
@@ -1966,7 +1967,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 .accent-pop {
   position: absolute; top: calc(100% + 8px); right: 0;
   background: var(--glass);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-3);
@@ -2585,7 +2586,7 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
   position: fixed; left: 0; right: 0; bottom: 0;
   z-index: 500;
   background: var(--glass);
-  backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(8px) saturate(150%);
   border-top: 1px solid var(--line);
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   justify-content: space-around;
@@ -3114,8 +3115,8 @@ table.data-table tbody tr:hover td { background: var(--surface-2); }
   position: sticky; top: var(--topbar-h);
   z-index: 6;
   background: var(--glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 /* выбранные строки */
@@ -3140,7 +3141,7 @@ body.dense .kpi { padding: 10px 13px; }
 }
 
 /* ── Дроверы и модалки: глубже стекло ────────────────────── */
-.drawer { background: var(--glass); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); }
+.drawer { background: var(--glass); backdrop-filter: blur(8px) saturate(150%); -webkit-backdrop-filter: blur(8px) saturate(150%); }
 .modal-overlay { backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
 
 /* ── Подчёркивание заголовка страницы ────────────────────── */
@@ -3283,7 +3284,7 @@ body.dense .kpi { padding: 10px 13px; }
 .fab-item {
   display: flex; align-items: center; gap: 10px;
   background: var(--glass);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--line);
   border-radius: 99px;
   padding: 8px 16px 8px 8px;
@@ -3886,11 +3887,14 @@ body.reorder-mode .reorder-hint { display: block; }
           mask-composite: exclude;
   opacity: 0; transition: opacity .25s var(--ease);
   pointer-events: none; z-index: 2;
-  animation: fxRingAng 3.5s linear infinite;
+  animation: none;
 }
 @keyframes fxRingAng { to { --fx-ang: 360deg; } }
 .fx-ring-host:hover .fx-ring-el,
-.fx-ring-host:focus-within .fx-ring-el { opacity: 1; }
+.fx-ring-host:focus-within .fx-ring-el {
+  opacity: 1;
+  animation: fxRingAng 3.5s linear infinite;
+}
 
 /* ── Параллакс карточек при прокрутке ── */
 .fx-parallax-card { will-change: transform; }
