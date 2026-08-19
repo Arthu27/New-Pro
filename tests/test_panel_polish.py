@@ -906,8 +906,29 @@ check('st-state' in sp and 'm-ping' in sp and 'status-public' in sp,
       'статус-страница: живая телеметрия сохранена')
 r = client.get('/status')
 check(r.status_code == 200, '/status открывается')
-check('app.js?v=47' in base and 'style.css?v=104' in base,
-      'версии ассетов (104/47)')
+# ═══ 32. Живой дракон ═══════════════════════════════════════════════════════
+print('== живой дракон ==')
+check('.dragon-live' in css and 'dragonBreath' in css,
+      'дизайн-система: класс дыхания дракона')
+check('dragonSmoke' in css and 'translateY(-54px)' in css,
+      'дизайн-система: дымок выдоха с ритмом дыхания')
+w7 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('dragon-live' in w7 and 'dragon-smoke' in w7 and 'dragonBreath' in w7,
+      'welcome: дракон дышит и выдыхает дымок')
+check("'.dragon-smoke { display: none; }'" in w7.replace('"', "'").replace(" ", '') or '.dragon-smoke { display: none; }' in w7,
+      'welcome: дым скрыт при reduced-motion')
+for name, path in [('base', 'web/templates/base.html'), ('login', 'web/templates/login.html'),
+                   ('register', 'web/templates/register.html'), ('status', 'web/templates/status_public.html'),
+                   ('kiosk', 'web/templates/mod_kiosk.html')]:
+    t = open(os.path.join(ROOT, path), encoding='utf-8').read()
+    check('dragon-live' in t, f'{name}: дракон дышит')
+    check('dragonBreath' in t or path.endswith('base.html') or path.endswith('status_public.html') or path.endswith('mod_kiosk.html'),
+          f'{name}: keyframes доступны (локально или из style.css)')
+check('dragonBreath' in open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
+      and 'dragonBreath' in open(os.path.join(ROOT, 'web', 'templates', 'register.html'), encoding='utf-8').read(),
+      'login/register: keyframes локально (без style.css)')
+check('app.js?v=47' in base and 'style.css?v=105' in base,
+      'версии ассетов (105/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,

@@ -657,10 +657,37 @@
       .w-nav-links { display: none; }
       .w-hero { padding-top: 120px; }
     }
+
+        .dragon-live { animation: dragonBreath 4.6s ease-in-out infinite; }
+        @keyframes dragonBreath {
+          0%, 100% { transform: scale(1); }
+          42% { transform: scale(1.045); }
+          58% { transform: scale(1.045); }
+          78% { transform: scale(0.99); }
+        }
+        .dragon-smoke { position: absolute; pointer-events: none; z-index: 5; }
+        .dragon-smoke span {
+          position: absolute; left: 50%; bottom: 0;
+          width: 16px; height: 16px; margin-left: -8px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(165, 180, 252, .55), rgba(34, 211, 238, .18) 60%, transparent 72%);
+          filter: blur(3px);
+          opacity: 0;
+          animation: dragonSmoke 4.6s ease-out infinite;
+        }
+        .dragon-smoke span:nth-child(2) { animation-delay: 1.53s; margin-left: -14px; }
+        .dragon-smoke span:nth-child(3) { animation-delay: 3.06s; margin-left: -2px; }
+        @keyframes dragonSmoke {
+          0%   { opacity: 0; transform: translateY(0) translateX(0) scale(.45); }
+          18%  { opacity: .8; }
+          100% { opacity: 0; transform: translateY(-54px) translateX(-7px) scale(1.7); }
+        }
+
     @media (prefers-reduced-motion: reduce) {
       .w-dragon, .w-dragon-halo, .w-dragon-ring, .w-marquee-track,
       .w-title.typing::after, .w-term-caret, .w-scroll-hint .mouse::after,
-      .btn-primary-wrap::before { animation: none; }
+      .btn-primary-wrap::before, .dragon-live, .dragon-smoke span { animation: none; }
+      .dragon-smoke { display: none; }
       .w-term-line { animation: none; }
       .w-chart-bars .b, .w-feed-line { animation: none; }
       .w-card, .w-step, .w-stat { transition: none; }
@@ -704,7 +731,8 @@
     <div class="w-dragon-wrap">
       <div class="w-dragon-ring" aria-hidden="true"></div>
       <div class="w-dragon-halo" aria-hidden="true"></div>
-      <div class="w-dragon"><img src="/static/brand/emblem-dragon.png" alt="Белый дракон Aether"></div>
+      <div class="dragon-smoke" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="w-dragon"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Белый дракон Aether"></div>
     </div>
     <div class="w-eyebrow"><span class="dot"></span> Панель сервера · для всех участников</div>
     <h1 class="w-title">Управляй сервером <span class="grad">красиво</span></h1>
