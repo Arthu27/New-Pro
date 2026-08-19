@@ -90,7 +90,10 @@
     var icon = ok === false ? 'fa-circle-exclamation' : (ok === 'warn' ? 'fa-triangle-exclamation' : 'fa-circle-check');
     var ttl = opts.ttl || (opts.undo ? 6000 : 3200);
     el.style.setProperty('--toast-ttl', (ttl / 1000) + 's');
-    el.innerHTML = '<i class="fas ' + icon + '"></i><span>' + esc(msg) + '</span>' +
+    var iconHtml = (ok === false || ok === 'warn')
+      ? '<i class="fas ' + icon + '"></i>'
+      : '<svg class="toast-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>';
+    el.innerHTML = iconHtml + '<span>' + esc(msg) + '</span>' +
       (opts.undo ? '<button type="button" class="undo-btn">Отменить</button>' : '');
     if (opts.undo) {
       el.querySelector('.undo-btn').addEventListener('click', function () {

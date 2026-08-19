@@ -298,7 +298,22 @@
     if (d) d.textContent = new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
   })();
 
+  /* Эффект печати для заголовка */
+  function typeTitle(text) {
+    var el = $('heroTitle');
+    if (!el) return;
+    var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) { el.textContent = text; return; }
+    var i = 0;
+    el.textContent = '';
+    var timer = setInterval(function () {
+      el.textContent = text.slice(0, ++i);
+      if (i >= text.length) clearInterval(timer);
+    }, 26);
+  }
+
   /* Информация об основном сервере */
+  var _typedTitle = false;
   async function loadGuildInfo() {
     try {
       var guilds = await window.fetchCachedJSON('/api/guilds');
@@ -310,8 +325,14 @@
       }
       if (!g) g = guilds[0];
       if (!g || !g.name) return;
-      var t = $('heroTitle');
-      if (t) t.textContent = 'Добро пожаловать в ' + g.name;
+      var title = 'Добро пожаловать в ' + g.name;
+      if (!_typedTitle) {
+        _typedTitle = true;
+        typeTitle(title);
+      } else {
+        var t = $('heroTitle');
+        if (t) t.textContent = title;
+      }
       var m = $('heroWelcomeMsg');
       if (m) m.textContent = 'Логи, демки, тикеты и быстрые действия — в одном месте. Управляйте «' + g.name + '» без лишних кликов.';
     } catch (e) { /* остаёмся с дефолтом */ }
