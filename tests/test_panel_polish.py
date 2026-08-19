@@ -1017,6 +1017,25 @@ login_as('owner')
 r = client.get('/apply')
 check(r.status_code == 200 and '.header .logo' in r.get_data(as_text=True),
       '/apply открывается с видимым лого')
+# ═══ 37. Welcome: фиксы пустых блоков ══════════════════════════════════════
+print('== welcome: фиксы ==')
+w11 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('.w-title { opacity: 1; }' in w11,
+      'welcome: заголовок виден сразу (убран из stagger — был невидим первые 0.8с)')
+check('.w-title, .w-lead' not in w11.replace(' .w-lead,', ''),
+      'welcome: stagger-список не включает заголовок')
+check('setTimeout(start, 900)' in w11,
+      'welcome: терминал стартует сразу после загрузки (не пустая коробка)')
+check('function restart()' in w11 and 'restart();' in w11,
+      'welcome: терминал перезапускается при попадании в зону видимости')
+check('barsBox.innerHTML = vals.map' in w11,
+      'welcome: бары витрины вставляются сразу (не пустые до скролла)')
+check("el.dataset.live = String(Number(el.dataset.count2) || 0)" in w11,
+      'welcome: KPI витрины показывают значения сразу (не нули до скролла)')
+check('lastStart' in w11 and 'lastPart' in w11,
+      'welcome: заголовок печатается посимвольно (не целыми словами)')
+check('barsShown' in w11 and 'barsIo' in w11,
+      'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
 check('app.js?v=47' in base and 'style.css?v=109' in base,
       'версии ассетов (109/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,

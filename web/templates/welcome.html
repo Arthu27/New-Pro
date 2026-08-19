@@ -669,14 +669,15 @@
     }
 
     /* ── Stagger-появление hero при загрузке ── */
-    .w-dragon-wrap, .w-eyebrow, .w-title, .w-lead,
+    .w-dragon-wrap, .w-eyebrow, .w-lead,
     .w-chips, .w-at-hint, .w-search, .w-hero-actions, .w-stats {
       opacity: 0;
       animation: wHeroIn .6s var(--ease) forwards;
     }
+    /* заголовок НЕ в stagger: он печатается сам и должен быть виден сразу */
+    .w-title { opacity: 1; }
     .w-dragon-wrap { animation-delay: .05s; }
     .w-eyebrow { animation-delay: .15s; }
-    .w-title { animation-delay: .22s; }
     .w-lead { animation-delay: .3s; }
     .w-chips { animation-delay: .38s; }
     .w-at-hint { animation-delay: .46s; }
@@ -782,7 +783,7 @@
       .dragon-smoke { display: none; }
       .w-section::before, .w-sec-title::after, .w-step .num,
       .w-terminal, .w-chips .chip { transition: none; }
-      .w-dragon-wrap, .w-eyebrow, .w-title, .w-lead,
+      .w-dragon-wrap, .w-eyebrow, .w-lead,
       .w-chips, .w-at-hint, .w-search, .w-hero-actions, .w-stats {
         opacity: 1; animation: none;
       }
@@ -1191,35 +1192,36 @@
       ];
       var started = false;
       /* последнее слово фразы — градиентное: печать не должна его терять */
-      function paintText(text, upto) {
+      function paintText(text, chars) {
+        /* последнее слово градиентное только когда напечатано полностью */
         var words = text.split(' ');
-        var shown = words.slice(0, upto).join(' ');
-        var done = upto >= words.length;
-        if (done) {
+        var lastStart = text.length - words[words.length - 1].length;
+        if (chars >= text.length) {
           var last = words[words.length - 1];
           var rest = words.slice(0, -1).join(' ');
           el.innerHTML = (rest ? rest + ' ' : '') + '<span class="grad">' + last + '</span>';
+        } else if (chars >= lastStart) {
+          var shownRest = words.slice(0, -1).join(' ');
+          var lastPart = words[words.length - 1].slice(0, chars - lastStart);
+          el.textContent = (shownRest ? shownRest + ' ' : '') + lastPart;
         } else {
-          el.textContent = shown;
+          el.textContent = text.slice(0, chars);
         }
       }
       function type(text, then) {
         el.classList.add('typing');
-        var words = text.split(' ');
-        var w = 0, ch = 0, chars = 0;
+        var chars = 0;
         var total = text.length;
         var iv = setInterval(function () {
           chars += 2;
           if (chars >= total) {
             clearInterval(iv);
             el.classList.remove('typing');
-            paintText(text, words.length);
+            paintText(text, total);
             setTimeout(then, 2200);
             return;
           }
-          paintText(text, w + 1);
-          ch += 2;
-          if (ch >= (words[w] || '').length && w < words.length - 1) { w++; ch = 0; }
+          paintText(text, chars);
         }, 30);
       }
       function run() {
@@ -1359,13 +1361,23 @@
           })();
         })();
       }
+      /* терминал живёт сразу после загрузки — пустая коробка = плохо;
+         при попадании в зону видимости перезапускаем цикл с начала */
+      var restarting = false;
+      function restart() {
+        if (restarting) return;
+        restarting = true;
+        started = false;
+        start();
+        setTimeout(function () { restarting = false; }, 600);
+      }
+      setTimeout(start, 900);
       if ('IntersectionObserver' in window) {
         var io = new IntersectionObserver(function (en) {
-          if (en[0].isIntersecting) { start(); io.disconnect(); }
+          if (en[0].isIntersecting) { io.disconnect(); restart(); }
         }, { threshold: 0.3 });
         io.observe(body);
       }
-      if (body.getBoundingClientRect().top < window.innerHeight) start();
     })();
 
     /* ── 8. Витрина: бары графика и лента событий ── */
@@ -1373,11 +1385,29 @@
       var barsBox = document.getElementById('wShowBars');
       var feedBox = document.getElementById('wShowFeed');
       if (!barsBox || !feedBox) return;
-      /* бары */
+      /* бары: вставляем сразу (без ожидания скролла) */
       var vals = [42, 68, 55, 90, 74, 96, 60];
       barsBox.innerHTML = vals.map(function (v, i) {
         return '<span class="b" style="height:' + v + '%;animation-delay:' + (i * 90) + 'ms"></span>';
       }).join('');
+      /* если бары вне экрана — анимация проигралась впустую: при показе
+         перезапустим рост */
+      var barsShown = false;
+      if ('IntersectionObserver' in window) {
+        var barsIo = new IntersectionObserver(function (en) {
+          if (en[0].isIntersecting && !barsShown) {
+            barsShown = true;
+            barsBox.querySelectorAll('.b').forEach(function (b, i) {
+              b.style.animation = 'none';
+              void b.offsetWidth;
+              b.style.animation = '';
+              b.style.animationDelay = (i * 90) + 'ms';
+            });
+            barsIo.disconnect();
+          }
+        }, { threshold: 0.3 });
+        barsIo.observe(barsBox);
+      }
       /* лента событий */
       var FEED = [
         { tag: 'warn', cls: 'warn', text: 'Варн: @spammer', when: '2 мин' },
@@ -1450,6 +1480,11 @@
         }
         requestAnimationFrame(frame);
       }
+      /* конечные значения сразу — без нулей до скролла */
+      nums.forEach(function (el) {
+        el.textContent = (Number(el.dataset.count2) || 0).toLocaleString('ru-RU');
+        el.dataset.live = String(Number(el.dataset.count2) || 0);
+      });
       var fired = false;
       function run() {
         if (fired) return;
