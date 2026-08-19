@@ -160,6 +160,15 @@ def register(ctx):
         return jsonify({'ok': ok})
 
 
+    # ── Центр модерации (сводный штаб раздела) ───────────────────────────
+    @app.route('/mod-center')
+    @login_required
+    @role_required('mod')
+    def mod_center_page():
+        return render_template('mod_center.html', role=session.get('role'),
+                               username=session.get('username'))
+
+
     # ── Студия темы ──────────────────────────────────────────────────────
     @app.route('/theme-studio')
     @login_required

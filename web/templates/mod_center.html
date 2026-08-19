@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}Центр модерации — Aether{% endblock %}
+{% block page_title %}Центр модерации{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Штаб</div>
+    <h1>Центр модерации</h1>
+    <p class="lead">Вся модерация с одного экрана: живые метрики, тренды нарушений и быстрый вход в любой из инструментов.</p>
+  </div>
+  <div class="page-head-actions">
+    <span class="live-chip"><span class="dot"></span> LIVE</span>
+    <button type="button" class="btn" id="mcRefresh"><i class="fas fa-arrows-rotate"></i> Обновить</button>
+  </div>
+</div>
+
+<!-- Сводные метрики -->
+<div class="kpi-row">
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcMutes">—</div><div class="kpi-label">Активных мьютов</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcBans">—</div><div class="kpi-label">Активных банов</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcWarns">—</div><div class="kpi-label">Варнов всего</div></div></div>
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-scale-balanced"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcAppeals">—</div><div class="kpi-label">Апелляций в очереди</div></div></div>
+  <div class="kpi tone-ok"><div class="kpi-icon"><i class="fas fa-folder-open"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcProofs">—</div><div class="kpi-label">Демок в архиве</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-arrow-trend-up"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcEdge">—</div><div class="kpi-label">Участников на грани</div></div></div>
+</div>
+
+<!-- Быстрые действия -->
+<div class="cc-quick" style="margin-bottom:14px">
+  <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Новая мера</b><small>Мьют или бан с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-warn" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Выдать варн</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-err" href="/lockdown"><span class="cc-ico"><i class="fas fa-house-lock"></i></span><span><b>Локдаун</b><small>Экстренное закрытие</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile" href="/antifake"><span class="cc-ico"><i class="fas fa-user-secret"></i></span><span><b>Скан профиля</b><small>Проверка на подделку</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-info" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Проверить текст</b><small>Тест автофильтра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-ok" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+</div>
+
+<!-- Аналитика -->
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-chart-area"></i> Активность за 7 дней</h2>
+      <div class="sub">Все мод-действия команды.</div></div>
+      <a class="btn-link" href="/mod-report" style="margin-left:auto">Отчёт <i class="fas fa-arrow-right"></i></a></div>
+    <div class="panel-body"><div class="chart-box" id="mcArea"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-chart-pie"></i> Структура мер</h2>
+      <div class="sub">Доли наказаний за 7 дней.</div></div></div>
+    <div class="panel-body" id="mcRing"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start;margin-top:14px">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-fire"></i> Часы активности</h2>
+      <div class="sub">Когда команда чаще всего действует.</div></div></div>
+    <div class="panel-body" id="mcHeat"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-clipboard-list"></i> Последние действия</h2>
+      <div class="sub">Хвост журнала модерации — клик по заголовку сортирует.</div></div>
+      <a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a></div>
+    <div class="table-wrap" style="padding:0 18px 14px" id="mcFeed"></div>
+  </div>
+</div>
+
+<!-- Все инструменты -->
+<div class="panel" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-table-cells-large"></i> Инструменты раздела</h2>
+    <div class="sub">Все доступные вам инструменты модерации.</div></div></div>
+  <div class="panel-body">
+    {% set ns = namespace(sec=None) %}
+    {% for grp in panel_menu %}
+      {% if grp.key == 'mod' %}
+        {% for section in grp.sections %}
+        <div class="section-title" style="margin-top:14px"><i class="fas {{ section.icon }}"></i> {{ section.label }}</div>
+        <div class="cc-quick" style="margin-bottom:8px">
+          {% for it in section.pages %}
+          <a class="cc-tile tone-{{ it.tone }} tool-card" href="{{ it.path }}">
+            <span class="cc-ico"><i class="fas {{ it.icon }}"></i></span>
+            <span style="min-width:0"><b>{{ it.label }}</b><small style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.description }}</small></span>
+            <span class="badge neutral" style="flex:0 0 auto">{{ it.access }}</span>
+          </a>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return '—'; }
+  }
+  var _counted = {};
+
+  function setNum(id, val) {
+    var el = $(id);
+    if (!el) return;
+    var target = Number(val) || 0;
+    if (_counted[id]) { el.textContent = target.toLocaleString('ru-RU'); return; }
+    _counted[id] = true;
+    if (window.countUp) window.countUp(el, target); else el.textContent = target.toLocaleString('ru-RU');
+  }
+
+  /* активный сервер для per-guild API */
+  async function activeGid() {
+    try {
+      var guilds = await window.fetchCachedJSON('/api/guilds');
+      if (!Array.isArray(guilds) || !guilds.length) return null;
+      var main = '{{ main_guild_id }}';
+      for (var i = 0; i < guilds.length; i++) {
+        if (String(guilds[i].id) === String(main)) return guilds[i].id;
+      }
+      return guilds[0].id;
+    } catch (e) { return null; }
+  }
+
+  var ACTION_TONES = {
+    ban: { color: '#dc2626', label: 'Баны' },
+    kick: { color: '#ea580c', label: 'Кики' },
+    warn: { color: '#d97706', label: 'Варны' },
+    mute: { color: '#7c3aed', label: 'Мьюты' },
+    timeout: { color: '#7c3aed', label: 'Таймауты' },
+    unban: { color: '#16a34a', label: 'Разбаны' },
+    unmute: { color: '#16a34a', label: 'Размуты' }
+  };
+
+  async function loadMetrics() {
+    // временные меры
+    try {
+      var d = await fetch('/api/temp-mod/active').then(function (r) { return r.ok ? r.json() : null; });
+      if (d) {
+        setNum('mcMutes', (d.muts || []).length);
+        setNum('mcBans', (d.bans || []).length);
+      }
+    } catch (e) {}
+    // варны
+    try {
+      var w = await window.fetchCachedJSON('/api/warnings');
+      if (Array.isArray(w)) setNum('mcWarns', w.length);
+    } catch (e) {}
+    // демки
+    try {
+      var p = await fetch('/api/proofs').then(function (r) { return r.json(); });
+      if (p && p.items) setNum('mcProofs', p.items.length);
+    } catch (e) {}
+    // апелляции + на грани
+    var gid = await activeGid();
+    if (gid) {
+      try {
+        var a = await fetch('/api/guild/' + gid + '/appeals/overview').then(function (r) { return r.json(); });
+        if (a && a.stats) setNum('mcAppeals', a.stats.pending);
+      } catch (e) {}
+      try {
+        var c = await fetch('/api/guild/' + gid + '/mod-control/overview').then(function (r) { return r.json(); });
+        if (c && c.risk) setNum('mcEdge', c.risk.edge);
+      } catch (e) {}
+    }
+  }
+
+  async function loadCharts() {
+    try {
+      var logs = await window.fetchCachedJSON('/api/logs');
+      if (!Array.isArray(logs)) return;
+      var days = [];
+      var now = new Date();
+      for (var i = 6; i >= 0; i--) {
+        var dt = new Date(now.getTime() - i * 86400000);
+        days.push({ key: dt.toDateString(), label: String(dt.getDate()).padStart(2, '0') + '.' + String(dt.getMonth() + 1).padStart(2, '0'), count: 0 });
+      }
+      var types = {};
+      var hours = new Array(24).fill(0);
+      logs.forEach(function (l) {
+        var a = String(l.action || '').toLowerCase();
+        var k = a.indexOf('warning') !== -1 ? 'warn' : (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1 ? (a.indexOf('un') === 0 ? 'unmute' : 'mute') : a);
+        if (ACTION_TONES[k]) types[k] = (types[k] || 0) + 1;
+        try {
+          var d = new Date(l.timestamp);
+          for (var j = 0; j < days.length; j++) if (days[j].key === d.toDateString()) days[j].count++;
+          var h = d.getHours();
+          if (!isNaN(h)) hours[h]++;
+        } catch (e) {}
+      });
+      if (window.AetherChart) {
+        window.AetherChart.area($('mcArea'), days.map(function (d) { return d.count; }), { labels: days.map(function (d) { return d.label; }), height: 170 });
+        var items = Object.keys(types).map(function (k) {
+          return { label: ACTION_TONES[k].label, value: types[k], color: ACTION_TONES[k].color };
+        }).sort(function (a, b) { return b.value - a.value; });
+        if (window.AetherRing) window.AetherRing($('mcRing'), items.slice(0, 6), { totalLabel: 'мер за 7 дн' });
+        if (window.AetherHeat) window.AetherHeat($('mcHeat'), hours, { labels: ['00:00', '12:00', '23:00'] });
+      }
+      // лента
+      var TONE = { ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral', timeout: 'neutral', unban: 'ok', unmute: 'ok' };
+      var rows = logs.slice(0, 10).map(function (log) {
+        var a = (log.action || '?').toLowerCase();
+        return '<tr><td data-sort="' + esc(log.action || '') + '"><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(log.action || '?') + '</span></td>' +
+          '<td>' + esc(log.user_name || log.target_name || log.user_id || '—') + '</td>' +
+          '<td>' + esc(log.mod_name || log.mod_id || '—') + '</td>' +
+          '<td data-sort="' + esc(log.timestamp || '') + '" class="muted">' + esc(fmtDate(log.timestamp)) + '</td></tr>';
+      }).join('');
+      $('mcFeed').innerHTML = '<table class="data-table" data-sortable><thead><tr><th class="sortable">Действие</th><th class="sortable">Цель</th><th class="sortable">Модератор</th><th class="sortable">Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      if (window.attachTableSort) window.attachTableSort($('mcFeed').querySelector('table'));
+    } catch (e) { /* графики опциональны */ }
+  }
+
+  function refresh() { loadMetrics(); loadCharts(); }
+  $('mcRefresh').addEventListener('click', refresh);
+
+  refresh();
+  if (window.setLiveRefresh) {
+    window.setLiveRefresh(loadMetrics, 15000);
+    window.setLiveRefresh(loadCharts, 30000);
+  }
+  document.addEventListener('aether:live', refresh);
+  if (window.tiltCards) window.tiltCards(document, '.cc-tile');
+})();
+</script>
+{% endblock %}

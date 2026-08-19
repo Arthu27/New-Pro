@@ -38,8 +38,8 @@ from services import panel_menu as pm  # noqa: E402
 
 raw_group = next(group for group in pm.MENU if group['key'] == 'mod')
 raw_pages = raw_group['pages']
-check(len(raw_pages) == 18, f'в разделе модерации ровно 18 инструментов ({len(raw_pages)})')
-check(len({page['path'] for page in raw_pages}) == 18, 'URL всех инструментов уникальны')
+check(len(raw_pages) == 19, f'в разделе модерации ровно 19 инструментов ({len(raw_pages)})')
+check(len({page['path'] for page in raw_pages}) == 19, 'URL всех инструментов уникальны')
 required = {'path', 'label', 'icon', 'section', 'description', 'access', 'tone'}
 missing = [(page.get('path'), sorted(required - set(page))) for page in raw_pages
            if not required <= set(page)]
@@ -70,7 +70,7 @@ check(not hasattr(pm, 'moderation_profile_for'),
 
 admin_group = next(group for group in pm.panel_groups_for('admin') if group['key'] == 'mod')
 section_counts = [len(section['pages']) for section in admin_group['sections']]
-check(section_counts == [6, 4, 4, 4], f'workflow разбит 6/4/4/4 ({section_counts})')
+check(section_counts == [7, 4, 4, 4], f'workflow разбит 7/4/4/4 ({section_counts})')
 check([section['key'] for section in admin_group['sections']] ==
       ['response', 'investigation', 'protection', 'management'],
       'подгруппы сайдбара следуют рабочему сценарию')
@@ -79,12 +79,12 @@ print('== 2. Роли: ни одной ссылки, ведущей в гара�
 mod_group = next(group for group in pm.panel_groups_for('mod') if group['key'] == 'mod')
 mod_paths = {page['path'] for page in mod_group['pages']}
 admin_only = {'/bulk-actions', '/tagjail', '/antiraid'}
-check(len(mod_group['pages']) == 15, f'модератор видит 15 доступных инструментов ({len(mod_group["pages"])})')
+check(len(mod_group['pages']) == 16, f'модератор видит 16 доступных инструментов ({len(mod_group["pages"])})')
 check(not (mod_paths & admin_only), 'админские операции скрыты от роли mod')
 check(admin_only <= {page['path'] for page in admin_group['pages']},
       'администратор видит все рискованные операции')
 owner_group = next(group for group in pm.panel_groups_for('owner') if group['key'] == 'mod')
-check(len(owner_group['pages']) == 18, 'owner видит полный набор из 18 инструментов')
+check(len(owner_group['pages']) == 19, 'owner видит полный набор из 19 инструментов')
 
 print('== 3. Общий каркас: светлый shell + единый кит ==')
 base_path = os.path.join(ROOT, 'web', 'templates', 'base.html')
@@ -131,6 +131,7 @@ for dead in ('moderation:live-resume', 'data-room-jump', 'LIVE_KEY', 'DENSITY_KE
 
 print('== 4. Страницы модерации: новая композиция без наследия ==')
 room_templates = {
+    '/mod-center': 'mod_center',
     '/warnings': 'warnings', '/temp-moderation': 'temp_moderation',
     '/mod-tools': 'mod_tools', '/bulk-actions': 'bulk_actions',
     '/lockdown': 'lockdown', '/tagjail': 'tagjail', '/logs': 'logs',

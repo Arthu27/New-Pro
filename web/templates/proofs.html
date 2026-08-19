@@ -20,6 +20,12 @@
       <input type="search" id="pf-q" placeholder="Участник, причина, модератор, ID" aria-label="Поиск доказательств">
     </label>
     <span class="spacer"></span>
+    <div class="seg" id="pf-period">
+      <button type="button" class="seg-btn active" data-period="all">Всё время</button>
+      <button type="button" class="seg-btn" data-period="1">24 часа</button>
+      <button type="button" class="seg-btn" data-period="7">7 дней</button>
+      <button type="button" class="seg-btn" data-period="30">30 дней</button>
+    </div>
     <div class="chip-row" id="pf-chips"></div>
   </div>
   <div class="panel-body">
@@ -51,6 +57,15 @@
   var CAN_DEL = {{ 'true' if role in ['admin', 'owner'] else 'false' }};
   var all = [];
   var chip = '';
+  var period = 'all';
+
+  function inPeriod(ts) {
+    if (period === 'all') return true;
+    var days = parseInt(period, 10);
+    var t = new Date(ts).getTime();
+    if (isNaN(t)) return true;
+    return (Date.now() - t) <= days * 86400000;
+  }
 
   var TONE = { 'варн': 'tone-warning', 'мут': 'tone-warning', 'тихий мут': 'neutral', 'таймаут': 'tone-warning', 'кик': 'tone-warning', 'бан': 'danger', 'разбан': 'ok' };
 
@@ -93,7 +108,7 @@
   function render() {
     var q = $('pf-q').value.trim();
     var items = all.filter(function (it) {
-      return matches(it, q) && (!chip || (it.action || '').toLowerCase() === chip);
+      return matches(it, q) && (!chip || (it.action || '').toLowerCase() === chip) && inPeriod(it.set_at);
     });
     $('pf-count').textContent = items.length === all.length ? String(all.length) : (items.length + ' из ' + all.length);
     var grid = $('pf-grid');
@@ -159,6 +174,14 @@
   $('pf-modal').addEventListener('click', function (e) { if (e.target === $('pf-modal')) $('pf-modal').style.display = 'none'; });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('pf-modal').style.display = 'none'; });
   $('pf-q').addEventListener('input', render);
+  document.querySelectorAll('#pf-period .seg-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#pf-period .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      period = b.dataset.period;
+      render();
+    });
+  });
 
   load();
   if (window.setLiveRefresh) window.setLiveRefresh(load, 15000);

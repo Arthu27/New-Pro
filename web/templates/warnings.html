@@ -20,6 +20,10 @@
 
 <div class="panel">
   <div class="toolbar">
+    <div class="seg" id="viewMode">
+      <button type="button" class="seg-btn active" data-view="table"><i class="fas fa-table"></i> Таблица</button>
+      <button type="button" class="seg-btn" data-view="grouped"><i class="fas fa-user-group"></i> По участникам</button>
+    </div>
     <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Сервер</span>
       <select id="guild-filter" aria-label="Фильтр сервера"><option value="">Все серверы</option></select>
     </label>
@@ -98,12 +102,34 @@
     }
   }
 
+  var viewMode = 'table';
+
   function render() {
     var filtered = currentFiltered();
     $('warn-count').textContent = filtered.length + ' из ' + allWarnings.length;
     var body = $('warn-body');
     if (!filtered.length) {
       body.innerHTML = '<tr><td colspan="4"><div class="empty"><i class="fas fa-inbox"></i><span>Предупреждения не найдены</span></div></td></tr>';
+      return;
+    }
+    if (viewMode === 'grouped') {
+      var byUser = {};
+      filtered.forEach(function (w) {
+        (byUser[w.user_id] = byUser[w.user_id] || []).push(w);
+      });
+      var users = Object.keys(byUser).sort(function (a, b) { return byUser[b].length - byUser[a].length; });
+      body.innerHTML = users.slice(0, 60).map(function (uid) {
+        var list = byUser[uid];
+        var last = list[0];
+        var reasons = list.slice(0, 4).map(function (w) {
+          return '<div class="warn-reason"><i class="fas fa-chevron-right"></i> ' + esc(w.reason || '—') + ' <span class="muted">· ' + esc(fmtDate(w.timestamp)) + '</span></div>';
+        }).join('');
+        var more = list.length > 4 ? '<div class="hint" style="margin-top:4px">+ ещё ' + (list.length - 4) + '</div>' : '';
+        return '<tr><td><span class="id-pill">' + esc(uid) + '</span> <span class="badge danger">' + list.length + '</span>' +
+          (last.user_name ? ' <b>' + esc(last.user_name) + '</b>' : '') + '</td>' +
+          '<td colspan="2">' + reasons + more + '</td>' +
+          '<td><a class="btn btn-sm" href="/mod-insights?user=' + esc(uid) + '"><i class="fas fa-id-card"></i> Досье</a></td></tr>';
+      }).join('');
       return;
     }
     body.innerHTML = filtered.slice(0, 200).map(function (w) {
@@ -144,6 +170,14 @@
     $('guild-filter').addEventListener('change', render);
     $('search').addEventListener('input', render);
     $('warn-csv').addEventListener('click', exportCsv);
+    document.querySelectorAll('#viewMode .seg-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        document.querySelectorAll('#viewMode .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        viewMode = b.dataset.view;
+        render();
+      });
+    });
   }
 
   function start() {

@@ -288,5 +288,13 @@ function load() {
 renderDaysTabs();
 load();
 loadReasons();
+// Глубокая ссылка ?user=ID — сразу открывает досье
+try {
+  var q = new URLSearchParams(window.location.search).get('user');
+  if (q) {
+    $('miDossierId').value = q;
+    miPick(q);
+  }
+} catch (e) { /* параметр опционален */ }
 </script>
 {% endblock %}

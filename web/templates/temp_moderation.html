@@ -21,6 +21,14 @@
   <div class="kpi"><div class="kpi-icon"><i class="fas fa-calendar-clock"></i></div><div class="kpi-copy"><div class="kpi-value" id="statScheduled">—</div><div class="kpi-label">Запланировано</div></div></div>
 </div>
 
+<div class="toolbar panel" style="margin-bottom:14px">
+  <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+    <input type="search" id="tm-search" placeholder="Поиск по участнику, причине или модератору" aria-label="Поиск по временным мерам">
+  </label>
+  <span class="spacer"></span>
+  <span class="hint" id="tm-search-count"></span>
+</div>
+
 <div class="tabs" id="tabs">
   <button type="button" class="tab-btn active" data-tab="muts"><i class="fas fa-comment-slash"></i> Мьюты <span class="count" id="cntMuts">0</span></button>
   <button type="button" class="tab-btn" data-tab="bans"><i class="fas fa-ban"></i> Баны <span class="count" id="cntBans">0</span></button>
@@ -127,7 +135,17 @@
       '</div></div>';
   }
 
+  function filteredItems(items) {
+    var q = ($('tm-search').value || '').toLowerCase().trim();
+    if (!q || !items) return items;
+    return items.filter(function (it) {
+      var hay = ((it.user_name || '') + ' ' + (it.user_id || '') + ' ' + (it.reason || '') + ' ' + (it.mod_id || '') + ' ' + (it.action || '')).toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+  }
+
   function renderList(container, items, type) {
+    items = filteredItems(items);
     var signature = JSON.stringify(items || []);
     if (container.dataset.signature === signature) return;
     container.dataset.signature = signature;
@@ -145,6 +163,11 @@
     }).then(function (data) {
       if (!data) return;
       currentData = data;
+      var vis = (data.muts || []).length + (data.bans || []).length + (data.kicks || []).length + (data.scheduled || []).length;
+      var flt = (filteredItems(data.muts || []).length + filteredItems(data.bans || []).length +
+                 filteredItems(data.kicks || []).length + filteredItems(data.scheduled || []).length);
+      var cnt = $('tm-search-count');
+      if (cnt) cnt.textContent = ($('tm-search').value || '').trim() ? ('показано ' + flt + ' из ' + vis) : '';
       renderList($('mutsList'), data.muts || [], 'mut');
       renderList($('bansList'), data.bans || [], 'ban');
       renderList($('kicksList'), data.kicks || [], 'kick');
@@ -250,6 +273,7 @@
   document.querySelectorAll('#actionSeg .seg-btn').forEach(function (b) {
     b.addEventListener('click', function () { setActionType(b.dataset.type); });
   });
+  $('tm-search').addEventListener('input', function () { load(); });
   $('applyBtn').addEventListener('click', applyAction);
   $('resetBtn').addEventListener('click', resetForm);
   $('refreshBtn').addEventListener('click', load);

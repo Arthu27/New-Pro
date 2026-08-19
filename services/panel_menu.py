@@ -31,6 +31,11 @@ MENU = [
         {'path': '/recap', 'label': 'Рекап канала', 'icon': 'fa-clock-rotate-left'},
     ]},
     {'group': 'Модерация', 'key': 'mod', 'icon': 'fa-shield-halved', 'pages': [
+        # Сводный штаб раздела.
+        {'path': '/mod-center', 'label': 'Центр модерации', 'icon': 'fa-shield-halved',
+         'section': 'response', 'description': 'Сводный штаб: метрики, графики и все инструменты раздела',
+         'access': 'Мод+', 'tone': 'security'},
+
         # Реагирование: от мягкой меры к аварийному сценарию.
         {'path': '/warnings', 'label': 'Варны', 'icon': 'fa-triangle-exclamation',
          'section': 'response', 'description': 'Предупреждения, причины и история участника',
