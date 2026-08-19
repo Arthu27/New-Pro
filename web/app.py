@@ -154,6 +154,8 @@ def before_request ():
         session ['logged_in']=True 
         session ['username']='demo'
         session ['role']='owner'
+        session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
+        session ['main_guild_id']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else ''
         session .modified =True 
 
     # CSRF-защита без токенов во всех шаблонах: запросы на запись (POST/PUT/

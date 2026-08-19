@@ -4,9 +4,9 @@
 {% block content %}
 <style>
 .search-box { display: flex; gap: 8px; margin-bottom: 14px; }
-.search-input { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; }
+.search-input { flex: 1; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; }
 .search-input:focus { border-color: var(--ac); box-shadow: 0 0 0 3px var(--ac-soft); }
-.search-btn { background: linear-gradient(135deg, var(--ac), #c8972f); color: #1a1405; border: none; border-radius: var(--r-sm); padding: 0 18px; font-weight: var(--fw-bold); cursor: pointer; }
+.search-btn { background: var(--ac-grad); color: #fff; border: none; border-radius: var(--r-sm); padding: 0 18px; font-weight: var(--fw-bold); cursor: pointer; }
 .member-result-box { display: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; margin-bottom: 14px; }
 .note-user { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .note-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--ac-soft); }
@@ -19,7 +19,7 @@
 .note-meta { font-size: 11px; color: var(--text-3); margin-top: 6px; }
 .note-del { position: absolute; top: 8px; right: 8px; background: transparent; border: none; color: var(--err); cursor: pointer; font-size: 16px; opacity: 0; transition: opacity .15s; }
 .note-item:hover .note-del { opacity: 1; }
-.note-textarea { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; color: var(--text); font-size: 13px; resize: vertical; min-height: 60px; outline: none; }
+.note-textarea { width: 100%; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 10px 12px; color: var(--text); font-size: 13px; resize: vertical; min-height: 60px; outline: none; }
 .note-textarea:focus { border-color: var(--ac); }
 .add-note-row { margin-top: 10px; }
 .add-note-btn { background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 9px 16px; font-weight: var(--fw-medium); cursor: pointer; margin-top: 8px; }

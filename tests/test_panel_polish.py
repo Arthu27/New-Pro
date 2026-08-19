@@ -521,8 +521,33 @@ for _f in _glob.glob(os.path.join(ROOT, 'web', 'templates', '*.html')):
         if _p in _t:
             dirty.append(os.path.basename(_f) + ':' + _p)
 check(not dirty, f'все шаблоны чистые: без эмодзи и тёмного наследия ({dirty[:4]}…)')
+# ═══ 17. Финал: белые письма, золото и синтаксис вычищены ══════════════════
+print('== финальная чистота ==')
+all_tpl = ''
+for _f in _glob.glob(os.path.join(ROOT, 'web', 'templates', '*.html')):
+    all_tpl += open(_f, encoding='utf-8').read()
+check('212,175,55' not in all_tpl and '#e8c96a' not in all_tpl and '#d4af37' not in all_tpl,
+      'золотая старая палитра полностью удалена из шаблонов')
+check('86efac' not in all_tpl and 'fca5a5' not in all_tpl and 'a5f3fc' not in all_tpl,
+      'светлые нечитаемые тексты заменены тёмными тонами палитры')
+check('background: rgba(0,0,0,0.3)' not in all_tpl
+      and 'background:rgba(0,0,0,0.3)' not in all_tpl
+      and 'background: rgba(0, 0, 0, 0.3)' not in all_tpl,
+      'тёмные инпуты (чёрные дыры на светлой теме) заменены светлыми')
+check('selected_guild' in app_src and "session ['selected_guild']=str (MAIN_GUILD_ID )" in app_src,
+      'демо-сессия подставляет selected_guild (страницы с выбором сервера открываются)')
+auto_js = open(os.path.join(ROOT, 'web', 'templates', 'automation.html'), encoding='utf-8').read()
+check('var items = (d.state && d.state.items) || [];' in auto_js
+      and 'window._trgItems; =' not in auto_js,
+      'automation.html: синтаксис-ошибка JS исправлена')
+konsol = open(os.path.join(ROOT, 'web', 'templates', 'konsol.html'), encoding='utf-8').read()
+check('var(--ac-soft); border:1px solid var(--ac-line)' in konsol and '#fff' not in konsol.split('.kn-term')[0],
+      'консоль: кнопки и селекты на палитре (белых писем нет)')
+sched = open(os.path.join(ROOT, 'web', 'templates', 'schedule.html'), encoding='utf-8').read()
+check('var(--ac-soft); border:1px solid var(--ac-line)' in sched and 'color:#fff' not in sched.split('.sc-toast')[0],
+      'расписание: кнопки и формы на палитре (белых писем нет)')
 check('app.js?v=47' in base and 'style.css?v=100' in base,
-      'версии ассетов забумплены (100/47)')
+      'версии ассетов (100/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,

@@ -410,7 +410,7 @@ async function loadTriggers(){
     var d = await fetch('/api/automation/triggers/state').then(function(r){ return r.json(); });
     if(!d.success){ throw new Error(d.error || 'ошибка'); }
     window._trgItems = (d.state && d.state.items) || [];
-    var items = window._trgItems; = (d.state && d.state.items) || [];
+    var items = (d.state && d.state.items) || [];
     document.getElementById('trg-count').textContent = items.length + ' / ' + d.max;
     document.getElementById('trg-cooldown').value = (d.state && d.state.cooldown) || 30;
     box.innerHTML = items.length ? items.map(function(t){

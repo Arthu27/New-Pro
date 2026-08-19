@@ -92,12 +92,12 @@
     gap:5px; height:100%; min-width:0; }
   .ac-chart .bar-val { font-size:12px; font-weight:800; color:var(--ac-2); min-height:15px; font-variant-numeric:tabular-nums; }
   .ac-chart .bar { width:100%; max-width:46px; border-radius:8px 8px 2px 2px; min-height:3px; position:relative;
-    background:linear-gradient(180deg, rgba(212,175,55,.95), rgba(212,175,55,.30));
-    box-shadow:0 0 14px rgba(212,175,55,.22); transition:height .5s ease; }
+    background:linear-gradient(180deg, color-mix(in srgb, var(--ac) 95%, transparent), color-mix(in srgb, var(--ac) 30%, transparent));
+    box-shadow:0 0 14px color-mix(in srgb, var(--ac) 22%, transparent); transition:height .5s ease; }
   .ac-chart .bar.zero { background:color-mix(in srgb, var(--text) 8%, transparent); box-shadow:none; }
   .ac-chart .bar-lbl { font-size:11px; color:var(--text-3); letter-spacing:.4px; white-space:nowrap; }
   .ac-chart .bar-wrap.today .bar-lbl { color:var(--ac-2); font-weight:800; }
-  .ac-chart .bar-wrap.today .bar { box-shadow:0 0 18px rgba(212,175,55,.45); }
+  .ac-chart .bar-wrap.today .bar { box-shadow:0 0 18px color-mix(in srgb, var(--ac) 45%, transparent); }
 
   /* ── строки топов / breaker ────────────────────────────────── */
   .ac-cols { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px; }
