@@ -770,6 +770,25 @@ check('PANEL_ICONS' in w3 and 'transcripts' in w3,
       'welcome: живые результаты с иконками групп')
 check('Начни печатать' in w3,
       'welcome: placeholder подсказывает автоматику @')
+# ═══ 27. Welcome: терминал-демо и созвездие ════════════════════════════════
+print('== welcome: терминал и созвездие ==')
+w4 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('w-terminal' in w4 and 'wTerminal' in w4 and 'SCENES' in w4,
+      'welcome: живой терминал-демо с печатающимися командами')
+check('typeLine' in w4 and 'w-term-caret' in w4,
+      'welcome: команды набираются с курсором')
+check('aether warn' in w4 and 'lockdown' in w4 and 'апелляции' in w4,
+      'welcome: сценарии показывают модерацию, локдаун и @-поиск')
+check('LINK = 120' in w4 and 'strokeStyle' in w4,
+      'welcome: созвездие — линии между звёздами')
+check('w-scroll-hint' in w4 and 'wWheel' in w4,
+      'welcome: scroll-индикатор с бегущим колесом')
+check('btn-primary-wrap' in w4,
+      'welcome: анимированная градиентная рамка кнопки входа')
+check('В деле' in w4 and 'href="#demo"' in w4,
+      'welcome: секция «Панель в деле» в навигации')
+check('w-sec-title .grad' in w4 or 'class="w-sec-title">' in w4 and '<span class="grad">' in w4,
+      'welcome: градиентные акценты заголовков секций')
 check('app.js?v=47' in base and 'style.css?v=102' in base,
       'версии ассетов (102/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,

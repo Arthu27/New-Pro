@@ -374,6 +374,86 @@
     }
     .btn-primary:hover::after { left: 135%; }
 
+    /* ── Живой терминал-демо панели ── */
+    .w-terminal-section { max-width: 860px; }
+    .w-terminal {
+      background: #070910;
+      border: 1px solid var(--line);
+      border-radius: 18px; overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .65), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .w-terminal-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 11px 16px;
+      background: rgba(255,255,255,.03);
+      border-bottom: 1px solid var(--line);
+    }
+    .w-terminal-bar .t-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .w-terminal-bar .t-dot.r { background: #f87171; }
+    .w-terminal-bar .t-dot.y { background: #fbbf24; }
+    .w-terminal-bar .t-dot.g { background: #4ade80; }
+    .w-terminal-bar .t-title {
+      margin-left: 8px; font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--text3); letter-spacing: .04em;
+    }
+    .w-terminal-body {
+      padding: 18px 20px; min-height: 190px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; line-height: 1.9;
+    }
+    .w-term-line { display: flex; gap: 9px; align-items: baseline; animation: wTermIn .25s ease both; }
+    @keyframes wTermIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+    .w-term-line .prompt { color: var(--ac3); font-weight: 700; }
+    .w-term-line .cmd { color: #c7d2fe; }
+    .w-term-line .out { color: var(--text2); }
+    .w-term-line .ok-ico { color: var(--ok); }
+    .w-term-line .dim { color: var(--text3); }
+    .w-term-caret {
+      display: inline-block; width: 8px; height: 15px;
+      background: var(--ac3); vertical-align: -2px;
+      animation: wCaret .8s steps(1) infinite;
+    }
+
+    /* ── Созвездие: линии между звёздами ── */
+    #w-stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+    /* ── Scroll-индикатор hero ── */
+    .w-scroll-hint {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      margin-top: 26px; color: var(--text3); font-size: 11px;
+      letter-spacing: .1em; text-transform: uppercase;
+    }
+    .w-scroll-hint .mouse {
+      width: 22px; height: 34px; border: 2px solid var(--line2);
+      border-radius: 12px; position: relative;
+    }
+    .w-scroll-hint .mouse::after {
+      content: ''; position: absolute; top: 6px; left: 50%;
+      width: 3px; height: 7px; margin-left: -1.5px;
+      border-radius: 2px; background: var(--ac3);
+      animation: wWheel 1.6s ease-in-out infinite;
+    }
+    @keyframes wWheel { 0% { opacity: 1; transform: translateY(0); } 70% { opacity: 0; transform: translateY(10px); } 100% { opacity: 0; } }
+
+    /* ── Градиентные заголовки секций ── */
+    .w-sec-title .grad {
+      background: linear-gradient(90deg, #818cf8, #a78bfa 45%, #22d3ee);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+
+    /* ── Анимированная рамка primary-кнопки ── */
+    .btn-primary-wrap { position: relative; display: inline-block; }
+    .btn-primary-wrap::before {
+      content: ''; position: absolute; inset: -2px; border-radius: 16px;
+      background: conic-gradient(#4f46e5, #7c3aed, #22d3ee, #4f46e5);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude;
+      padding: 2px;
+      animation: wSpin 6s linear infinite;
+      opacity: 0; transition: opacity .3s ease;
+    }
+    .btn-primary-wrap:hover::before { opacity: 1; }
+
     /* ── Градиентное кольцо карточек при hover ── */
     .w-card { position: relative; }
     .w-card::after {
@@ -391,7 +471,10 @@
       .w-hero { padding-top: 120px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .w-dragon, .w-dragon-halo, .w-dragon-ring, .w-marquee-track, .w-title.typing::after { animation: none; }
+      .w-dragon, .w-dragon-halo, .w-dragon-ring, .w-marquee-track,
+      .w-title.typing::after, .w-term-caret, .w-scroll-hint .mouse::after,
+      .btn-primary-wrap::before { animation: none; }
+      .w-term-line { animation: none; }
       .w-card, .w-search input, .w-chips .chip, .w-reveal, .btn-primary::after { transition: none; }
       .w-card:hover { transform: none; }
       .w-reveal { opacity: 1; transform: none; }
@@ -415,6 +498,7 @@
       <span><b>AETHER</b><small>панель сервера</small></span>
     </a>
     <div class="w-nav-links">
+      <a href="#demo">В деле</a>
       <a href="#members">Участникам</a>
       <a href="#start">Как начать</a>
       <a href="#staff">Команде</a>
@@ -456,13 +540,17 @@
     </div>
     <div class="w-search-results" id="wResults"></div>
     <div class="w-hero-actions">
-      <a class="btn btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти в панель</a>
+      <span class="btn-primary-wrap"><a class="btn btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти в панель</a></span>
       <a class="btn" href="#members"><i class="fas fa-arrow-down"></i> Что внутри</a>
     </div>
     <div class="w-stats">
       <div class="w-stat"><div class="n" data-count="128">0</div><div class="l">Серверов на панели</div></div>
       <div class="w-stat"><div class="n" data-count="46000">0</div><div class="l">Участников сообществ</div></div>
       <div class="w-stat"><div class="n" data-count="99">0</div><div class="l">% Аптайм бота</div></div>
+    </div>
+    <div class="w-scroll-hint" aria-hidden="true">
+      <span class="mouse"></span>
+      <span>Листай ниже</span>
     </div>
   </header>
 
@@ -482,10 +570,25 @@
     </div>
   </div>
 
+  <!-- Панель в деле: живой терминал -->
+  <section class="w-section w-reveal w-terminal-section" id="demo">
+    <div class="w-sec-head">
+      <h2 class="w-sec-title">Панель <span class="grad">в деле</span></h2>
+      <p class="w-sec-sub">Вот так команды выполняются из панели — быстро, наглядно и с тостами.</p>
+    </div>
+    <div class="w-terminal">
+      <div class="w-terminal-bar">
+        <span class="t-dot r"></span><span class="t-dot y"></span><span class="t-dot g"></span>
+        <span class="t-title">aether — панель управления</span>
+      </div>
+      <div class="w-terminal-body" id="wTerminal"></div>
+    </div>
+  </section>
+
   <!-- Участникам -->
   <section class="w-section w-reveal" id="members">
     <div class="w-sec-head">
-      <h2 class="w-sec-title">Всё для участников</h2>
+      <h2 class="w-sec-title">Всё для <span class="grad">участников</span></h2>
       <p class="w-sec-sub">Твоя жизнь на сервере — в одном окне. Не нужно листать сотни сообщений.</p>
     </div>
     <div class="w-grid">
@@ -525,7 +628,7 @@
   <!-- Как начать -->
   <section class="w-section w-reveal" id="start">
     <div class="w-sec-head">
-      <h2 class="w-sec-title">Как начать — 3 шага</h2>
+      <h2 class="w-sec-title">Как <span class="grad">начать</span></h2>
       <p class="w-sec-sub">Никакой регистрации и мучений: вход через твой Discord-аккаунт.</p>
     </div>
     <div class="w-steps">
@@ -550,7 +653,7 @@
   <!-- Команде -->
   <section class="w-section w-reveal" id="staff">
     <div class="w-sec-head">
-      <h2 class="w-sec-title">А для команды — полный штаб</h2>
+      <h2 class="w-sec-title">А для <span class="grad">команды</span></h2>
       <p class="w-sec-sub">Модерация, аналитика и автоматика — те же руки, та же панель.</p>
     </div>
     <div class="w-staff">
@@ -568,7 +671,7 @@
     <div class="w-cta-box">
       <h2>Готов? Всё уже настроено.</h2>
       <p>Один клик — и ты в панели. А дальше — просто нажми @.</p>
-      <a class="btn btn-primary" href="/login" style="padding:13px 26px;font-size:14px"><i class="fas fa-right-to-bracket"></i> Войти в панель</a>
+      <span class="btn-primary-wrap"><a class="btn btn-primary" href="/login" style="padding:13px 26px;font-size:14px"><i class="fas fa-right-to-bracket"></i> Войти в панель</a></span>
     </div>
   </div>
 
@@ -592,7 +695,7 @@
         W = cv.width = window.innerWidth;
         H = cv.height = window.innerHeight;
         stars = [];
-        var n = Math.min(90, Math.floor(W * H / 16000));
+        var n = Math.min(52, Math.floor(W * H / 28000));
         for (var i = 0; i < n; i++) {
           stars.push({
             x: Math.random() * W, y: Math.random() * H,
@@ -602,14 +705,32 @@
           });
         }
       }
+      var LINK = 120;
       function step(now) {
         requestAnimationFrame(step);
         if (document.hidden) return;
         if (now - last < 60) return;
         last = now;
         ctx.clearRect(0, 0, W, H);
+        /* линии созвездия между ближними звёздами */
         for (var i = 0; i < stars.length; i++) {
-          var st = stars[i];
+          for (var j = i + 1; j < stars.length; j++) {
+            var dx = stars[i].x - stars[j].x;
+            var dy = stars[i].y - stars[j].y;
+            var d2 = dx * dx + dy * dy;
+            if (d2 < LINK * LINK) {
+              var alpha = (1 - Math.sqrt(d2) / LINK) * 0.14;
+              ctx.strokeStyle = 'rgba(148, 163, 255, ' + alpha.toFixed(3) + ')';
+              ctx.lineWidth = 0.6;
+              ctx.beginPath();
+              ctx.moveTo(stars[i].x, stars[i].y);
+              ctx.lineTo(stars[j].x, stars[j].y);
+              ctx.stroke();
+            }
+          }
+        }
+        for (var k = 0; k < stars.length; k++) {
+          var st = stars[k];
           var a = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(st.p + now * 0.001 * st.s));
           ctx.beginPath();
           ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
@@ -752,6 +873,83 @@
       var track = document.getElementById('wMarqueeTrack');
       if (!track || reduced) return;
       track.innerHTML += track.innerHTML;
+    })();
+
+    /* ── 7. Живой терминал-демо ── */
+    (function terminal() {
+      var body = document.getElementById('wTerminal');
+      if (!body || reduced) return;
+      var SCENES = [
+        [
+          { type: 'cmd', text: 'aether warn @spammer спам в #general' },
+          { type: 'out', text: 'Проверяю участника…', icon: 'fa-circle-notch fa-spin dim' },
+          { type: 'ok',  text: 'Варн №3 выдан: «спам в #general»', icon: 'fa-circle-check ok-ico' }
+        ],
+        [
+          { type: 'cmd', text: 'aether lockdown причина: рейд' },
+          { type: 'out', text: 'Закрываю текстовые каналы…', icon: 'fa-circle-notch fa-spin dim' },
+          { type: 'ok',  text: '24 канала закрыты за 0.8 сек', icon: 'fa-shield-halved ok-ico' }
+        ],
+        [
+          { type: 'cmd', text: '@ апелляции в очереди' },
+          { type: 'out', text: 'Ищу в панели…', icon: 'fa-magnifying-glass dim' },
+          { type: 'ok',  text: 'Найдено: 2 апелляции ждут решения', icon: 'fa-scale-balanced ok-ico' }
+        ],
+        [
+          { type: 'cmd', text: 'aether announce "Ивент в субботу 20:00"' },
+          { type: 'ok',  text: 'Анонс отправлен в #announcements', icon: 'fa-bullhorn ok-ico' }
+        ]
+      ];
+      function typeLine(line, done) {
+        var div = document.createElement('div');
+        div.className = 'w-term-line';
+        body.appendChild(div);
+        if (line.type === 'cmd') {
+          div.innerHTML = '<span class="prompt">&gt;</span><span class="cmd"></span><span class="w-term-caret"></span>';
+          var target = div.querySelector('.cmd');
+          var i = 0;
+          var iv = setInterval(function () {
+            i += 2;
+            target.textContent = line.text.slice(0, i);
+            if (i >= line.text.length) {
+              clearInterval(iv);
+              var caret = div.querySelector('.w-term-caret');
+              if (caret) caret.remove();
+              setTimeout(done, 350);
+            }
+          }, 22);
+        } else {
+          div.innerHTML = (line.icon ? '<i class="fas ' + line.icon + '"></i>' : '') +
+                         '<span class="' + (line.type === 'ok' ? 'ok-ico' : 'out') + '">' + line.text + '</span>';
+          setTimeout(done, line.type === 'out' ? 500 : 900);
+        }
+      }
+      var started = false;
+      function start() {
+        if (started) return;
+        started = true;
+        var scene = 0;
+        (function next() {
+          var lines = SCENES[scene % SCENES.length];
+          scene++;
+          body.innerHTML = '';
+          var li = 0;
+          (function step() {
+            if (li >= lines.length) {
+              setTimeout(next, 4200);
+              return;
+            }
+            typeLine(lines[li], function () { li++; step(); });
+          })();
+        })();
+      }
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (en) {
+          if (en[0].isIntersecting) { start(); io.disconnect(); }
+        }, { threshold: 0.3 });
+        io.observe(body);
+      }
+      if (body.getBoundingClientRect().top < window.innerHeight) start();
     })();
   })();
   </script>
