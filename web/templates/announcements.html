@@ -159,7 +159,7 @@
 /* ── Инспектор одной публикации ───────────────────────────────────── */
 .ann-inspector{position:fixed;inset:0;z-index:100090;display:none;overflow:hidden}
 .ann-inspector.open{display:block}
-.ann-inspector-backdrop{position:absolute;inset:0;background:rgba(4,4,7,.64);backdrop-filter:blur(6px);animation:annFadeIn .18s ease both}
+.ann-inspector-backdrop{position:absolute;inset:0;background:rgba(4,4,7,.64);animation:annFadeIn .18s ease both}
 @keyframes annFadeIn{from{opacity:0}to{opacity:1}}
 .ann-inspector-panel{--inspector-tone:var(--info);position:absolute;right:0;top:0;bottom:0;width:min(500px,94vw);display:flex;flex-direction:column;border-left:1px solid color-mix(in srgb,var(--inspector-tone) 32%,var(--line));background:linear-gradient(155deg,color-mix(in srgb,var(--surface-2) 96%,var(--inspector-tone) 2%),var(--surface));box-shadow:-28px 0 80px rgba(0,0,0,.5);animation:annInspectorIn .26s var(--ease) both}
 @keyframes annInspectorIn{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
@@ -187,18 +187,18 @@
 .ann-inspector-meta > div{min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
 .ann-inspector-meta dt{margin-bottom:4px;color:var(--text-3);font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .ann-inspector-meta dd{margin:0;overflow:hidden;color:var(--text-2);font-size:10.5px;text-overflow:ellipsis;white-space:nowrap}
-.ann-inspector-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface-2) 92%,transparent);backdrop-filter:blur(12px)}
+.ann-inspector-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface-2) 92%,transparent);}
 .ann-inspector-btn{min-height:36px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text-2);font:inherit;font-size:10px;font-weight:750;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .ann-inspector-btn:hover{color:var(--ac-2);border-color:var(--ac-line);background:var(--ac-soft)}
 .ann-inspector-btn.primary{color:#18140d;border-color:var(--ac-line);background:linear-gradient(135deg,var(--ac-2),var(--ac-3))}
 .ann-inspector-btn[hidden]{display:none!important}
 
 /* ── Композитор объявления ────────────────────────────────────────── */
-.ann-modal{position:fixed;inset:0;z-index:100100;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(5,5,8,.72);backdrop-filter:blur(9px)}
+.ann-modal{position:fixed;inset:0;z-index:100100;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(5,5,8,.72);}
 .ann-modal.open{display:flex}
 .ann-modal-card{width:min(900px,100%);max-height:min(760px,92vh);overflow:auto;border:1px solid var(--ac-line);border-radius:20px;background:linear-gradient(155deg,var(--surface-2),var(--surface));box-shadow:0 28px 90px rgba(0,0,0,.58);animation:annModalIn .2s var(--ease)}
 @keyframes annModalIn{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
-.ann-modal-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface-2) 92%,transparent);backdrop-filter:blur(14px)}
+.ann-modal-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--surface-2) 92%,transparent);}
 .ann-modal-mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#18140d;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));box-shadow:0 7px 18px var(--ac-glow)}
 .ann-modal-head-copy{min-width:0}
 .ann-modal-head h2{margin:0;color:var(--text);font-size:17px}

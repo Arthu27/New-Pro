@@ -268,8 +268,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);
   background: var(--glass);
-  backdrop-filter: blur(8px) saturate(160%);
-  -webkit-backdrop-filter: blur(8px) saturate(160%);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -520,8 +518,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   display: flex; align-items: center; gap: 14px;
   padding: 0 28px;
   background: var(--glass);
-  backdrop-filter: blur(8px) saturate(150%);
-  -webkit-backdrop-filter: blur(8px) saturate(150%);
   border-bottom: 1px solid var(--line);
   position: sticky; top: 0; z-index: 90;
   transition: box-shadow 0.25s var(--ease);
@@ -763,8 +759,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   position: relative;
   overflow: hidden;
   background: var(--glass);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   padding: 18px 20px;
@@ -801,8 +795,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .panel {
   position: relative;
   background: var(--glass);
-  backdrop-filter: blur(6px) saturate(150%);
-  -webkit-backdrop-filter: blur(6px) saturate(150%);
   border: 1px solid var(--line);
   border-radius: 16px;
   box-shadow: var(--shadow-1);
@@ -868,8 +860,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   position: relative;
   overflow: hidden;
   background: var(--glass);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   padding: 14px 16px 14px 19px;
@@ -1392,7 +1382,6 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   position: relative;
   display: flex; align-items: center; gap: 10px;
   background: var(--glass);
-  backdrop-filter: blur(6px);
   border: 1px solid var(--line);
   border-left: 3px solid var(--ok);
   border-radius: var(--r);
@@ -1473,7 +1462,6 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(17, 19, 24, 0.44);
-  backdrop-filter: blur(2px);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 9vh 20px 20px;
   z-index: 2000;
@@ -1529,15 +1517,12 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   position: fixed; inset: 0;
   z-index: 3000;
   background: rgba(17, 19, 24, 0.44);
-  backdrop-filter: blur(2px);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 12vh 20px 20px;
 }
 .kbd-palette[hidden] { display: none; }
 .kbd-palette-panel {
   background: var(--glass);
-  backdrop-filter: blur(10px) saturate(160%);
-  -webkit-backdrop-filter: blur(10px) saturate(160%);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-3);
@@ -1967,7 +1952,6 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 .accent-pop {
   position: absolute; top: calc(100% + 8px); right: 0;
   background: var(--glass);
-  backdrop-filter: blur(8px);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-3);
@@ -2586,7 +2570,6 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
   position: fixed; left: 0; right: 0; bottom: 0;
   z-index: 500;
   background: var(--glass);
-  backdrop-filter: blur(8px) saturate(150%);
   border-top: 1px solid var(--line);
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
   justify-content: space-around;
@@ -2699,12 +2682,7 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
    ============================================================ */
 
 /* ── Канвас частиц (созвездие) ───────────────────────────── */
-#fx-particles {
-  position: fixed; inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-@media (prefers-reduced-motion: reduce) { #fx-particles { display: none; } }
+
 
 /* ── Свечение за курсором ────────────────────────────────── */
 /* ── Загрузочный сплэш ───────────────────────────────────── */
@@ -3115,8 +3093,6 @@ table.data-table tbody tr:hover td { background: var(--surface-2); }
   position: sticky; top: var(--topbar-h);
   z-index: 6;
   background: var(--glass);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
 }
 
 /* выбранные строки */
@@ -3141,8 +3117,8 @@ body.dense .kpi { padding: 10px 13px; }
 }
 
 /* ── Дроверы и модалки: глубже стекло ────────────────────── */
-.drawer { background: var(--glass); backdrop-filter: blur(8px) saturate(150%); -webkit-backdrop-filter: blur(8px) saturate(150%); }
-.modal-overlay { backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+.drawer { background: var(--glass); }
+.modal-overlay { }
 
 /* ── Подчёркивание заголовка страницы ────────────────────── */
 .page-head { position: relative; }
@@ -3284,7 +3260,6 @@ body.dense .kpi { padding: 10px 13px; }
 .fab-item {
   display: flex; align-items: center; gap: 10px;
   background: var(--glass);
-  backdrop-filter: blur(6px);
   border: 1px solid var(--line);
   border-radius: 99px;
   padding: 8px 16px 8px 8px;
@@ -3675,7 +3650,7 @@ body.reorder-mode .reorder-hint { display: block; }
 /* ── Печать ─────────────────────────────────────────────── */
 @media print {
   .sidebar, .topbar, .mobile-nav, #fabHost, .fab, .fab.backdrop,
-  .bg-aurora, #fx-particles, .scroll-top-btn,
+  .bg-aurora, .scroll-top-btn,
   .drawer, .drawer-backdrop, .kbd-palette, .confetti-host {
     display: none !important;
   }

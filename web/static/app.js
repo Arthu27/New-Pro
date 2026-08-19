@@ -1931,8 +1931,8 @@
   }
   ready(function () {
     fxBoot();
-    fxParticles();
-    fxParticlesRepulse();
+    /* фоновый canvas частиц отключён: постоянная перерисовка фона
+       заставляла перекомпоновывать все стеклянные поверхности */
     fxValueFlash();
     fxParallax();
   });

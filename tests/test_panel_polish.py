@@ -293,12 +293,14 @@ check('blur(20px)' not in css and 'blur(24px)' not in css and 'blur(16px)' not i
       'тяжёлый backdrop-blur (16px+) снижен')
 check('lastRect' in js and 'requestAnimationFrame(function () { apply(lastE); })' in js,
       'магнитные кнопки: rAF-троттлинг и кэш rect (без layout на mousemove)')
-check('lastStep' in js and 'doc.hidden' in js,
-      'частицы: 30 fps и пауза в фоновой вкладке')
+check('fx-particles' not in base and 'canvas частиц отключён' in js,
+      'фоновый canvas частиц отключён (не перерисовывает стекло 30 раз/сек)')
+check('backdrop-filter' not in css,
+      'backdrop-blur полностью убран — стекло на полупрозрачности без GPU-блюра')
 check('i < 12' in js,
       'параллакс карточек ограничен 12 слоями')
-check('app.js?v=36' in base and 'style.css?v=89' in base,
-      'версии ассетов забумплены (89/36)')
+check('app.js?v=37' in base and 'style.css?v=90' in base,
+      'версии ассетов забумплены (90/37)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil
