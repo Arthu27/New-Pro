@@ -1,419 +1,409 @@
 <!DOCTYPE html>
 <html lang="ru" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aether — Умная панель для Discord-сервера</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@500;700;900&display=swap" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="/static/style.css?v=96">
-    <style>
-        html { scroll-behavior: smooth; }
-        body { overflow-x: hidden; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aether — панель твоего сервера</title>
+  <link rel="icon" href="/static/favicon.ico">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@500;700;900&display=swap" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="/static/style.css?v=97">
+  <style>
+    html { scroll-behavior: smooth; }
+    body { overflow-x: hidden; }
 
-        /* ── Навигация ── */
-        .w-nav {
-            position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
-            width: min(1080px, calc(100% - 28px));
-            display: flex; align-items: center; gap: 14px;
-            padding: 10px 16px;
-            background: var(--glass);
-            
-            border: 1px solid var(--line);
-            border-radius: 99px;
-            box-shadow: var(--shadow-2);
-            z-index: 100;
-        }
-        .w-nav .brand-icon { width: 30px; height: 30px; font-size: 12px; }
-        .w-nav b { font-weight: 800; letter-spacing: .1em; font-size: 14px; }
-        .w-nav-links { display: flex; gap: 4px; margin-left: 12px; }
-        .w-nav-links a {
-            padding: 6px 12px; border-radius: 99px;
-            color: var(--text-2); font-size: var(--fs-sm); font-weight: 600;
-            transition: background .12s, color .12s;
-        }
-        .w-nav-links a:hover { background: var(--surface-3); color: var(--text); }
-        .w-nav-actions { margin-left: auto; display: flex; gap: 8px; }
+    /* ── Навигация ── */
+    .w-nav {
+      position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+      width: min(1080px, calc(100% - 28px));
+      display: flex; align-items: center; gap: 12px;
+      padding: 9px 14px;
+      background: var(--glass);
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      box-shadow: var(--shadow-2);
+      z-index: 100;
+    }
+    .w-nav .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+    .w-nav .brand img { width: 34px; height: 34px; border-radius: 10px; box-shadow: 0 4px 14px color-mix(in srgb, var(--ac) 35%, transparent); }
+    .w-nav .brand b { font-weight: 800; letter-spacing: .08em; font-size: 14px; }
+    .w-nav .brand small { display: block; font-size: 9px; color: var(--text-3); letter-spacing: .12em; text-transform: uppercase; }
+    .w-nav-links { display: flex; gap: 4px; margin-left: 12px; }
+    .w-nav-links a {
+      padding: 6px 12px; border-radius: 99px;
+      color: var(--text-2); font-size: var(--fs-sm); font-weight: 600; text-decoration: none;
+      transition: background .12s, color .12s;
+    }
+    .w-nav-links a:hover { background: var(--surface-3); color: var(--text); }
+    .w-nav-actions { margin-left: auto; display: flex; gap: 8px; }
 
-        /* ── Hero ── */
-        .w-hero {
-            position: relative;
-            padding: 168px 20px 90px;
-            text-align: center;
-            max-width: 1080px;
-            margin: 0 auto;
-        }
-        .w-eyebrow {
-            display: inline-flex; align-items: center; gap: 8px;
-            font-size: var(--fs-xs); font-weight: 700;
-            text-transform: uppercase; letter-spacing: .1em;
-            color: var(--ac);
-            background: var(--ac-soft);
-            border: 1px solid var(--ac-line);
-            padding: 5px 14px;
-            border-radius: 99px;
-            margin-bottom: 18px;
-        }
-        .w-eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pulse 2s infinite; }
-        .w-title {
-            font-family: var(--font-display);
-            font-size: clamp(40px, 7.4vw, 76px);
-            font-weight: 700;
-            letter-spacing: -.02em;
-            line-height: 1.08;
-            margin-bottom: 18px;
-        }
-        .w-title .grad {
-            background: linear-gradient(90deg, var(--ac), var(--ac-2), var(--ac));
-            background-size: 200% 100%;
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            animation: gradShift 3.6s linear infinite;
-        }
-        @keyframes gradShift { to { background-position: 200% 0; } }
-        @media (prefers-reduced-motion: reduce) { .w-title .grad { animation: none; } }
-        .w-ticker { display: inline-block; position: relative; height: 1.4em; overflow: hidden; vertical-align: bottom; }
-        .w-ticker span { display: block; animation: ticker 8s ease-in-out infinite; }
-        @keyframes ticker {
-            0%, 20% { transform: translateY(0); }
-            28%, 48% { transform: translateY(-1.4em); }
-            56%, 76% { transform: translateY(-2.8em); }
-            84%, 100% { transform: translateY(0); }
-        }
-        .w-sub {
-            max-width: 620px; margin: 0 auto 28px;
-            color: var(--text-2); font-size: 17px; line-height: 1.6;
-        }
-        .w-chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px; }
-        .w-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-        .w-actions .btn { padding: 11px 22px; font-size: var(--fs-lg); border-radius: 12px; }
-        .w-hint { margin-top: 22px; color: var(--text-3); font-size: var(--fs-sm); font-weight: 600; }
-        .w-hint i { animation: bob 2s ease-in-out infinite; }
-        @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+    /* ── Hero ── */
+    .w-hero {
+      position: relative;
+      padding: 150px 20px 60px;
+      text-align: center;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
+    .w-hero::before, .w-hero::after {
+      content: ''; position: absolute; border-radius: 50%;
+      pointer-events: none;
+    }
+    .w-hero::before {
+      width: 460px; height: 460px; left: 50%; top: 20px; transform: translateX(-50%);
+      background: radial-gradient(circle, color-mix(in srgb, var(--ac) 14%, transparent), transparent 65%);
+      z-index: -1;
+    }
+    .w-dragon {
+      width: 132px; height: 132px; margin: 0 auto 22px;
+      border-radius: 34px;
+      background: linear-gradient(135deg, var(--ac), #7c3aed 60%, #22d3ee 130%);
+      display: grid; place-items: center;
+      box-shadow: 0 18px 48px color-mix(in srgb, var(--ac) 40%, transparent);
+      animation: wFloat 5s ease-in-out infinite;
+    }
+    .w-dragon img { width: 104px; height: 104px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(15, 23, 42, 0.35)); }
+    @keyframes wFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+    .w-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: var(--fs-xs); font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--ac); background: var(--ac-soft);
+      border: 1px solid var(--ac-line);
+      padding: 6px 14px; border-radius: 99px;
+    }
+    .w-eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 60%, transparent); }
+    .w-title {
+      font-family: var(--font-display);
+      font-size: clamp(30px, 5vw, 54px);
+      font-weight: 800; letter-spacing: -0.03em;
+      line-height: 1.08; margin: 20px 0 14px;
+    }
+    .w-title .grad {
+      background: linear-gradient(90deg, var(--ac), #7c3aed 55%, #22d3ee);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .w-lead { max-width: 640px; margin: 0 auto 26px; color: var(--text-2); font-size: 15px; line-height: 1.65; }
+    .w-lead b { color: var(--text); }
+    .w-at-hint {
+      display: inline-flex; align-items: center; gap: 9px;
+      margin: 0 auto 24px; padding: 10px 18px;
+      border: 1px dashed var(--ac-line); border-radius: 14px;
+      background: var(--surface); color: var(--text-2); font-size: 13px;
+    }
+    .w-at-hint .kbd {
+      font-family: 'JetBrains Mono', monospace; font-weight: 700;
+      background: var(--ac-grad); color: #fff;
+      border-radius: 8px; padding: 3px 10px; font-size: 13px;
+      box-shadow: 0 3px 10px color-mix(in srgb, var(--ac) 40%, transparent);
+    }
+    .w-search {
+      max-width: 560px; margin: 0 auto 30px; text-align: left;
+      position: relative;
+    }
+    .w-search input {
+      width: 100%; padding: 15px 46px 15px 48px;
+      border: 1.5px solid var(--line-2); border-radius: 16px;
+      background: var(--surface); color: var(--text); font-size: 15px;
+      box-shadow: var(--shadow-2); outline: none;
+      transition: border-color .18s, box-shadow .2s;
+    }
+    .w-search input:focus { border-color: var(--ac); box-shadow: 0 0 0 4px var(--ac-soft), var(--shadow-2); }
+    .w-search .at-ico {
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      color: var(--ac); font-weight: 800; font-size: 17px;
+    }
+    .w-search .go { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); }
+    .w-search-results {
+      max-width: 560px; margin: -18px auto 0; text-align: left;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 0 0 16px 16px; box-shadow: var(--shadow-2);
+      display: none; padding: 8px; max-height: 300px; overflow: auto;
+    }
+    .w-search-results.show { display: block; }
+    .w-search-results a {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 10px;
+      color: var(--text); text-decoration: none; font-size: 13.5px;
+    }
+    .w-search-results a:hover { background: var(--ac-soft); color: var(--ac); }
+    .w-search-results a i { width: 18px; text-align: center; color: var(--ac); }
+    .w-hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .w-hero-actions .btn { padding: 12px 22px; font-size: 14px; border-radius: 14px; }
 
-        /* ── Превью-карточка ── */
-        .w-preview {
-            position: relative;
-            max-width: 640px; margin: 60px auto 0;
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: 20px;
-            box-shadow: var(--shadow-3);
-            overflow: hidden;
-            text-align: left;
-            transform: perspective(1200px) rotateX(4deg);
-            transition: transform .5s var(--ease);
-        }
-        .w-preview:hover { transform: perspective(1200px) rotateX(0); }
-        .w-pc-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
-        .w-pc-head i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-3); }
-        .w-pc-head .t { margin-left: 8px; font-size: var(--fs-xs); color: var(--text-3); font-family: var(--mono); }
-        .w-pc-body { padding: 20px 22px; }
-        .w-pc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
-        .w-pc-stat { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
-        .w-pc-stat .v { font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
-        .w-pc-stat .k { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
-        .w-pc-chart { display: flex; align-items: flex-end; gap: 6px; height: 86px; padding: 8px 0 0; }
-        .w-pc-chart i {
-            flex: 1; border-radius: 4px 4px 0 0;
-            background: var(--ac-grad);
-            opacity: .9;
-            transition: height .6s var(--ease);
-        }
-        .w-pc-members { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
-        .w-pc-member { display: flex; align-items: center; gap: 10px; font-size: var(--fs-sm); }
-        .w-pc-av { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 800; }
-        .w-pc-member .n { font-weight: 700; }
-        .w-pc-member .r { color: var(--text-3); font-size: var(--fs-xs); }
+    /* ── Секции ── */
+    .w-section { max-width: 1080px; margin: 60px auto 0; padding: 0 20px; }
+    .w-sec-head { text-align: center; margin-bottom: 26px; }
+    .w-sec-title {
+      font-family: var(--font-display);
+      font-size: clamp(22px, 3vw, 30px); font-weight: 800; letter-spacing: -0.02em;
+      margin: 0 0 8px;
+    }
+    .w-sec-sub { color: var(--text-2); font-size: 14px; }
+    .w-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .w-card {
+      position: relative; overflow: hidden;
+      background: var(--glass); border: 1px solid var(--line);
+      border-radius: 16px; padding: 20px;
+      transition: transform .18s var(--ease), border-color .18s, box-shadow .18s;
+    }
+    .w-card:hover { transform: translateY(-3px); border-color: var(--ac-line); box-shadow: var(--shadow-lift); }
+    .w-card .ico {
+      width: 44px; height: 44px; border-radius: 13px;
+      background: linear-gradient(135deg, var(--ac), #7c3aed);
+      color: #fff; display: grid; place-items: center;
+      font-size: 17px; margin-bottom: 14px;
+      box-shadow: 0 8px 18px -6px var(--ac-glow);
+    }
+    .w-card .ico.cyan { background: linear-gradient(135deg, #0891b2, #22d3ee); }
+    .w-card .ico.ok { background: linear-gradient(135deg, #16a34a, #4ade80); }
+    .w-card .ico.amber { background: linear-gradient(135deg, #d97706, #fbbf24); }
+    .w-card .ico.violet { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+    .w-card b { font-size: 15px; }
+    .w-card p { margin: 7px 0 0; color: var(--text-2); font-size: 13px; line-height: 1.6; }
+    .w-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; counter-reset: step; }
+    .w-step {
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 16px; padding: 22px 20px; position: relative;
+    }
+    .w-step .num {
+      width: 34px; height: 34px; border-radius: 11px;
+      background: var(--ac-grad); color: #fff; font-weight: 800;
+      display: grid; place-items: center; margin-bottom: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .w-step b { font-size: 15px; }
+    .w-step p { margin: 6px 0 0; color: var(--text-2); font-size: 13px; line-height: 1.6; }
+    .w-staff {
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    }
+    .w-staff .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 16px; border-radius: 99px;
+      border: 1px solid var(--line); background: var(--surface);
+      color: var(--text-2); font-size: 13px; font-weight: 600;
+    }
+    .w-staff .chip i { color: var(--ac); }
+    .w-cta {
+      max-width: 1080px; margin: 70px auto 0; padding: 0 20px;
+      text-align: center;
+    }
+    .w-cta-box {
+      background: linear-gradient(120deg, var(--ac-soft), transparent 60%), var(--surface);
+      border: 1px solid var(--line); border-radius: 22px;
+      padding: 40px 24px; position: relative; overflow: hidden;
+    }
+    .w-cta-box::after {
+      content: ''; position: absolute; right: -60px; top: -60px;
+      width: 220px; height: 220px; border-radius: 50%;
+      background: radial-gradient(circle, color-mix(in srgb, var(--ac) 16%, transparent), transparent 70%);
+      pointer-events: none;
+    }
+    .w-cta-box h2 { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin: 0 0 10px; }
+    .w-cta-box p { color: var(--text-2); font-size: 14px; margin: 0 0 20px; }
+    .w-foot {
+      text-align: center; color: var(--text-3);
+      font-size: 12px; padding: 34px 20px 44px;
+    }
+    .w-foot img { width: 26px; height: 26px; border-radius: 8px; vertical-align: -7px; margin-right: 6px; }
 
-        .w-float {
-            position: absolute;
-            display: inline-flex; align-items: center; gap: 7px;
-            background: var(--glass);
-            
-            border: 1px solid var(--line);
-            border-radius: 99px;
-            padding: 7px 13px;
-            font-size: var(--fs-sm); font-weight: 700;
-            box-shadow: var(--shadow-2);
-            animation: floaty 5s ease-in-out infinite;
-        }
-        .w-float.f1 { top: -18px; left: -30px; color: var(--ok); }
-        .w-float.f2 { top: 30%; right: -42px; color: var(--ac); animation-delay: 1.4s; }
-        .w-float.f3 { bottom: -16px; left: 14%; color: var(--warn); animation-delay: 2.6s; }
-        @keyframes floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
-
-        /* ── Секции ── */
-        .w-section { max-width: 1080px; margin: 90px auto 0; padding: 0 20px; }
-        .w-sec-eyebrow {
-            display: inline-flex; align-items: center; gap: 8px;
-            font-size: var(--fs-xs); font-weight: 700;
-            text-transform: uppercase; letter-spacing: .1em; color: var(--ac);
-            margin-bottom: 10px;
-        }
-        .w-sec-title { font-family: var(--font-display); font-size: clamp(22px, 3.4vw, 32px); font-weight: 700; letter-spacing: -.01em; }
-        .w-sec-sub { color: var(--text-2); max-width: 620px; margin-top: 10px; line-height: 1.6; }
-
-        .w-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; margin-top: 34px; }
-        .w-card {
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            padding: 22px;
-            transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s;
-        }
-        .w-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lift); border-color: var(--ac-line); }
-        .w-card .ico {
-            width: 42px; height: 42px;
-            border-radius: 12px;
-            background: var(--ac-soft); color: var(--ac);
-            display: grid; place-items: center;
-            font-size: 16px;
-            margin-bottom: 14px;
-        }
-        .w-card h3 { font-size: var(--fs-lg); margin-bottom: 6px; }
-        .w-card p { color: var(--text-2); font-size: var(--fs-md); line-height: 1.55; }
-
-        .w-band { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 34px; }
-        .w-stat {
-            background: linear-gradient(160deg, var(--ac-soft), transparent 60%), var(--surface);
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            padding: 22px;
-            text-align: center;
-        }
-        .w-stat .v { font-size: 34px; font-weight: 800; letter-spacing: -.03em; }
-        .w-stat .l { font-size: var(--fs-sm); color: var(--text-3); font-weight: 600; margin-top: 4px; }
-
-        .w-about { display: grid; grid-template-columns: 1.2fr 1fr; gap: 26px; margin-top: 34px; align-items: center; }
-        .w-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-        .w-item:last-child { border-bottom: none; }
-        .w-item i { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; background: var(--ac-soft); color: var(--ac); display: grid; place-items: center; font-size: 13px; }
-        .w-item b { display: block; font-size: var(--fs-md); }
-        .w-item span { color: var(--text-2); font-size: var(--fs-sm); line-height: 1.5; }
-
-        .w-mock {
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            box-shadow: var(--shadow-2);
-            padding: 22px;
-            position: relative;
-            overflow: hidden;
-        }
-        .w-mock::after {
-            content: ''; position: absolute; top: -40%; right: -20%;
-            width: 220px; height: 220px;
-            background: radial-gradient(circle, var(--ac-soft), transparent 70%);
-            pointer-events: none;
-        }
-        .w-mock-bar { display: flex; gap: 6px; margin-bottom: 18px; }
-        .w-mock-bar span { width: 10px; height: 10px; border-radius: 50%; background: var(--line-3); }
-        .w-mline { height: 10px; border-radius: 99px; background: var(--surface-3); margin-bottom: 12px; }
-        .w-mline.accent { background: var(--ac-grad); opacity: .85; }
-        .w-mcols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .w-mcol { height: 64px; border-radius: 10px; background: var(--surface-3); }
-        .w-mcol:first-child { background: var(--ac-soft); }
-
-        .w-cta {
-            margin: 90px auto 0;
-            max-width: 1080px;
-            padding: 48px 24px;
-            text-align: center;
-            border-radius: 24px;
-            background: linear-gradient(140deg, var(--ac-soft), transparent 55%), var(--surface);
-            border: 1px solid var(--line);
-            position: relative;
-            overflow: hidden;
-        }
-        .w-cta::after {
-            content: ''; position: absolute; top: -60%; right: -10%;
-            width: 340px; height: 340px;
-            background: radial-gradient(circle, color-mix(in srgb, var(--ac) 14%, transparent), transparent 70%);
-            pointer-events: none;
-        }
-        .w-cta h2 { font-size: clamp(24px, 4vw, 34px); font-weight: 800; letter-spacing: -.02em; }
-        .w-cta p { color: var(--text-2); margin: 10px auto 24px; max-width: 480px; }
-
-        .w-foot {
-            border-top: 1px solid var(--line);
-            margin-top: 80px;
-            padding: 26px 20px 34px;
-            text-align: center;
-            color: var(--text-3);
-            font-size: var(--fs-sm);
-        }
-        .w-foot .brand-icon { width: 26px; height: 26px; font-size: 10px; margin: 0 auto 10px; }
-        .w-foot a { color: var(--ac); font-weight: 600; }
-
-        @media (max-width: 860px) {
-            .w-band { grid-template-columns: repeat(2, 1fr); }
-            .w-about { grid-template-columns: 1fr; }
-            .w-nav-links { display: none; }
-            .w-float { display: none; }
-            .w-hero { padding-top: 140px; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .w-ticker span, .w-float, .w-hint i, .w-eyebrow .dot { animation: none !important; }
-        }
-    </style>
+    @media (max-width: 860px) {
+      .w-grid, .w-steps { grid-template-columns: 1fr; }
+      .w-nav-links { display: none; }
+      .w-hero { padding-top: 120px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .w-dragon { animation: none; }
+      .w-card, .w-search input { transition: none; }
+    }
+  </style>
 </head>
 <body>
-    <div class="bg-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
-    <nav class="w-nav">
-        <div class="brand-icon"><i class="fas fa-bolt"></i></div>
-        <b>AETHER</b>
-        <div class="w-nav-links">
-            <a href="#features">Возможности</a>
-            <a href="#stats">Статистика</a>
-            <a href="#about">О системе</a>
-        </div>
-        <div class="w-nav-actions">
-            <a href="/login" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Войти</a>
-            <a href="/register" class="btn"><i class="fas fa-user-plus"></i> Создать аккаунт</a>
-        </div>
-    </nav>
-
-    <header class="w-hero">
-        <div class="w-eyebrow"><span class="dot"></span> Панель управления Discord-сервером</div>
-        <h1 class="w-title">Управляй сервером<br>в <span class="w-ticker"><span>режиме <span class="grad">модерации</span><br>режиме <span class="grad">аналитики</span><br>режиме <span class="grad">автоматики</span></span></span></h1>
-        <p class="w-sub">От модерации до AI-ассистента — всё для сервера в одном месте. Русский интерфейс, живая аналитика и защита от рейдов.</p>
-        <div class="w-chips">
-            <span class="chip"><i class="fas fa-shield-halved" style="color:var(--ok)"></i> Антирейд активен</span>
-            <span class="chip"><i class="fas fa-robot" style="color:var(--ac)"></i> AI онлайн</span>
-            <span class="chip"><i class="fas fa-bolt" style="color:var(--warn)"></i> Ответ &lt; 1 сек</span>
-        </div>
-        <div class="w-actions">
-            <a href="/login" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Войти в панель</a>
-            <a href="/register" class="btn"><i class="fas fa-user-plus"></i> Создать аккаунт</a>
-        </div>
-        <div class="w-hint"><i class="fas fa-chevron-down"></i> прокрутите вниз — покажем всё, что умеет бот</div>
-
-        <div class="w-preview">
-            <span class="w-float f1"><i class="fas fa-shield-halved"></i> Антирейд активен</span>
-            <span class="w-float f2"><i class="fas fa-robot"></i> AI онлайн</span>
-            <span class="w-float f3"><i class="fas fa-bolt"></i> Ответ &lt; 1 сек</span>
-            <div class="w-pc-head"><i></i><i></i><i></i><span class="t">aether · командный центр</span></div>
-            <div class="w-pc-body">
-                <div class="w-pc-stats">
-                    <div class="w-pc-stat"><div class="v">248</div><div class="k">Участников</div></div>
-                    <div class="w-pc-stat"><div class="v">36</div><div class="k">Каналов</div></div>
-                    <div class="w-pc-stat"><div class="v">12</div><div class="k">Тикетов</div></div>
-                </div>
-                <div class="w-sec-eyebrow" style="margin-bottom:6px"><i class="fas fa-chart-column"></i> Активность за неделю</div>
-                <div class="w-pc-chart">
-                    <i style="height:34%"></i><i style="height:52%"></i><i style="height:44%"></i>
-                    <i style="height:70%"></i><i style="height:58%"></i><i style="height:82%"></i><i style="height:64%"></i>
-                </div>
-                <div class="w-pc-members">
-                    <div class="w-pc-member"><div class="w-pc-av" style="background:linear-gradient(135deg,#f472b6,#ec4899)">A</div><div><div class="n">Anya</div><div class="r">сейчас в сети</div></div></div>
-                    <div class="w-pc-member"><div class="w-pc-av" style="background:linear-gradient(135deg,#fbbf24,#d97706)">K</div><div><div class="n">Kira</div><div class="r">модерирует тикеты</div></div></div>
-                    <div class="w-pc-member"><div class="w-pc-av" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">D</div><div><div class="n">Den</div><div class="r">новый участник</div></div></div>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <section class="w-section" id="features">
-        <div class="w-sec-eyebrow">Возможности</div>
-        <h2 class="w-sec-title">Всё для управления сервером в одном месте</h2>
-        <p class="w-sec-sub">От модерации до полноценного AI-ассистента — инструменты, которые обычно собирают из пяти разных ботов.</p>
-        <div class="w-grid">
-            <div class="w-card"><div class="ico"><i class="fas fa-shield-halved"></i></div><h3>Модерация</h3><p>Варны, мьюты, баны, временные наказания, история действий и карточки нарушителей — на русском языке.</p></div>
-            <div class="w-card"><div class="ico"><i class="fas fa-robot"></i></div><h3>AI-ассистент</h3><p>Отвечает на вопросы участников, принимает жалобы с доказательствами и готовит резюме для персонала.</p></div>
-            <div class="w-card"><div class="ico"><i class="fas fa-ticket-alt"></i></div><h3>AI-тикеты</h3><p>Умная категоризация обращений, многосторонний разбор конфликтов и эскалация к staff с контекстом.</p></div>
-            <div class="w-card"><div class="ico"><i class="fas fa-chart-line"></i></div><h3>Аналитика</h3><p>Живая статистика сервера, графики активности, индекс угрозы и отчёты по модерации в реальном времени.</p></div>
-            <div class="w-card"><div class="ico"><i class="fas fa-coins"></i></div><h3>Экономика и уровни</h3><p>Валюта, магазин, ежедневные награды, уровни и таблицы лидеров — вовлечение участников на автопилоте.</p></div>
-            <div class="w-card"><div class="ico"><i class="fas fa-shield-virus"></i></div><h3>Антирейд и автомод</h3><p>Автоматическая защита от рейдов, флуда и спама с гибкой настройкой чувствительности под ваш сервер.</p></div>
-        </div>
-    </section>
-
-    <section class="w-section" id="stats">
-        <div class="w-sec-eyebrow">Статистика</div>
-        <h2 class="w-sec-title">Растём вместе с вашим сообществом</h2>
-        <div class="w-band">
-            <div class="w-stat"><div class="v" data-count="70" data-suffix="+">0</div><div class="l">Команд бота</div></div>
-            <div class="w-stat"><div class="v" data-count="62">0</div><div class="l">Модулей системы</div></div>
-            <div class="w-stat"><div class="v" data-count="84">0</div><div class="l">Страниц веб-панели</div></div>
-            <div class="w-stat"><div class="v" data-count="24" data-suffix="/7">0</div><div class="l">Онлайн-контроль</div></div>
-        </div>
-    </section>
-
-    <section class="w-section" id="about">
-        <div class="w-about">
-            <div>
-                <div class="w-sec-eyebrow">О системе</div>
-                <h2 class="w-sec-title">Сделано для администраторов</h2>
-                <p class="w-sec-sub">Aether объединяет бота и веб-панель в единую экосистему. Всё на русском языке, с продуманными деталями.</p>
-                <div class="w-item"><i class="fas fa-bolt"></i><div><b>Мгновенный отклик</b><span>Slash-команды, кнопки и меню — быстрая работа без задержек.</span></div></div>
-                <div class="w-item"><i class="fas fa-lock"></i><div><b>Безопасность</b><span>Хешированные пароли, роли доступа и детальные логи каждого действия.</span></div></div>
-                <div class="w-item"><i class="fas fa-puzzle-piece"></i><div><b>Модульность</b><span>62 независимых модуля — включайте только то, что нужно вашему серверу.</span></div></div>
-                <div class="w-item"><i class="fas fa-language"></i><div><b>Полностью на русском</b><span>Интерфейс бота и все 84 страницы веб-панели — на русском языке.</span></div></div>
-            </div>
-            <div class="w-mock">
-                <div class="w-mock-bar"><span></span><span></span><span></span></div>
-                <div class="w-mline accent" style="width:62%"></div>
-                <div class="w-mline" style="width:88%"></div>
-                <div class="w-mline" style="width:45%"></div>
-                <div class="w-mline accent" style="width:74%"></div>
-                <div class="w-mline" style="width:55%"></div>
-                <div class="w-mcols"><div class="w-mcol"></div><div class="w-mcol"></div><div class="w-mcol"></div></div>
-            </div>
-        </div>
-    </section>
-
-    <div class="w-cta">
-        <h2>Готовы взять сервер под контроль?</h2>
-        <p>Войдите в панель или создайте аккаунт через Discord — займёт меньше минуты.</p>
-        <div class="w-actions">
-            <a href="/login" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Войти в панель</a>
-            <a href="/register" class="btn"><i class="fas fa-user-plus"></i> Создать аккаунт</a>
-        </div>
+  <!-- Навигация -->
+  <nav class="w-nav" aria-label="Навигация">
+    <a class="brand" href="/">
+      <img src="/static/brand/emblem-dragon.png" alt="Aether">
+      <span><b>AETHER</b><small>панель сервера</small></span>
+    </a>
+    <div class="w-nav-links">
+      <a href="#members">Участникам</a>
+      <a href="#start">Как начать</a>
+      <a href="#staff">Команде</a>
     </div>
+    <div class="w-nav-actions">
+      <a class="btn" href="/login"><i class="fas fa-right-to-bracket"></i> Войти</a>
+    </div>
+  </nav>
 
-    <footer class="w-foot">
-        <div class="brand-icon"><i class="fas fa-bolt"></i></div>
-        <b>AETHER</b> · панель управления Discord-сервером<br>
-        <a href="/login">Вход в панель</a> · <a href="/register">Регистрация</a> · <a href="/status">Статус бота</a>
-    </footer>
+  <!-- Hero -->
+  <header class="w-hero">
+    <div class="w-dragon"><img src="/static/brand/emblem-dragon.png" alt="Белый дракон Aether"></div>
+    <div class="w-eyebrow"><span class="dot"></span> Панель сервера · для всех участников</div>
+    <h1 class="w-title">Зайди — и <span class="grad">всё найдётся</span><br>за секунду</h1>
+    <p class="w-lead">
+      Aether — это не только штаб для команды. Здесь <b>каждый участник</b> находит своё:
+      профиль, статусы, заявки, обращения и события сервера — без страданий и поисков по чатам.
+    </p>
+    <div class="w-at-hint">
+      <span class="kbd">@</span>
+      <span>Нажми <b>@</b> в любом месте панели — откроется мгновенный поиск: страницы, участники, каналы, команды</span>
+    </div>
+    <div class="w-search">
+      <span class="at-ico">@</span>
+      <input type="text" id="wSearch" placeholder="Что хочешь найти? Например: профиль, заявки, правила…" aria-label="Быстрый поиск по панели">
+      <button type="button" class="btn btn-sm go" aria-label="Очистить поиск" title="Очистить" onclick="document.getElementById('wSearch').value=''; wSearchHide();"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="w-search-results" id="wResults"></div>
+    <div class="w-hero-actions">
+      <a class="btn btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти в панель</a>
+      <a class="btn" href="#members"><i class="fas fa-arrow-down"></i> Что внутри</a>
+    </div>
+  </header>
 
-<script>
-(function () {
-  'use strict';
-  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  <!-- Участникам -->
+  <section class="w-section" id="members">
+    <div class="w-sec-head">
+      <h2 class="w-sec-title">Всё для участников</h2>
+      <p class="w-sec-sub">Твоя жизнь на сервере — в одном окне. Не нужно листать сотни сообщений.</p>
+    </div>
+    <div class="w-grid">
+      <div class="w-card">
+        <div class="ico"><i class="fas fa-user"></i></div>
+        <b>Твой профиль</b>
+        <p>Роли, статусы, предупреждения и история — прозрачно и всегда под рукой.</p>
+      </div>
+      <div class="w-card">
+        <div class="ico cyan"><i class="fas fa-id-card-clip"></i></div>
+        <b>Карточка 360°</b>
+        <p>Вся активность на сервере: сообщения, голос, события — в одной карточке.</p>
+      </div>
+      <div class="w-card">
+        <div class="ico ok"><i class="fas fa-file-signature"></i></div>
+        <b>Заявки в команду</b>
+        <p>Хочешь в модераторы или ивент-команду? Подай заявку в два клика и следи за статусом.</p>
+      </div>
+      <div class="w-card">
+        <div class="ico amber"><i class="fas fa-ticket"></i></div>
+        <b>Обращения</b>
+        <p>Вопрос к команде? Создай обращение — ответ придёт прямо в панель, без потерь в чатах.</p>
+      </div>
+      <div class="w-card">
+        <div class="ico violet"><i class="fas fa-ranking-star"></i></div>
+        <b>Уровни и награды</b>
+        <p>Твой прогресс, опыт и достижения сервера — наглядно и честно.</p>
+      </div>
+      <div class="w-card">
+        <div class="ico"><i class="fas fa-calendar-days"></i></div>
+        <b>События и расписание</b>
+        <p>Ивенты, стримы и дежурства — календарь сервера всегда перед глазами.</p>
+      </div>
+    </div>
+  </section>
 
-  /* Анимированные счётчики */
-  var counted = false;
-  function runCounters() {
-    if (counted) return;
-    var els = document.querySelectorAll('[data-count]');
-    if (!els.length) return;
-    var first = els[0];
-    var rect = first.getBoundingClientRect();
-    if (rect.top > window.innerHeight) return;
-    counted = true;
-    els.forEach(function (el) {
-      var target = parseInt(el.getAttribute('data-count'), 10) || 0;
-      var suffix = el.getAttribute('data-suffix') || '';
-      if (reduced) { el.textContent = target + suffix; return; }
-      var t0 = null, dur = 1100;
-      function step(ts) {
-        if (t0 == null) t0 = ts;
-        var pr = Math.min(1, (ts - t0) / dur);
-        var e = 1 - Math.pow(1 - pr, 3);
-        el.textContent = Math.round(target * e) + suffix;
-        if (pr < 1) requestAnimationFrame(step);
-      }
-      requestAnimationFrame(step);
+  <!-- Как начать -->
+  <section class="w-section" id="start">
+    <div class="w-sec-head">
+      <h2 class="w-sec-title">Как начать — 3 шага</h2>
+      <p class="w-sec-sub">Никакой регистрации и мучений: вход через твой Discord-аккаунт.</p>
+    </div>
+    <div class="w-steps">
+      <div class="w-step">
+        <div class="num">1</div>
+        <b>Войди</b>
+        <p>Кнопка «Войти» — авторизация через Discord. Паролей придумывать не нужно.</p>
+      </div>
+      <div class="w-step">
+        <div class="num">2</div>
+        <b>Нажми @</b>
+        <p>Откроется мгновенный поиск — найди любую страницу, участника или канал за секунду.</p>
+      </div>
+      <div class="w-step">
+        <div class="num">3</div>
+        <b>Живи на сервере</b>
+        <p>Профиль, заявки, обращения и события — всё обновляется само, без перезагрузок.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Команде -->
+  <section class="w-section" id="staff">
+    <div class="w-sec-head">
+      <h2 class="w-sec-title">А для команды — полный штаб</h2>
+      <p class="w-sec-sub">Модерация, аналитика и автоматика — те же руки, та же панель.</p>
+    </div>
+    <div class="w-staff">
+      <span class="chip"><i class="fas fa-shield-halved"></i> Центр модерации</span>
+      <span class="chip"><i class="fas fa-chart-line"></i> Живая аналитика</span>
+      <span class="chip"><i class="fas fa-robot"></i> AI-ассистент</span>
+      <span class="chip"><i class="fas fa-gauge-high"></i> Оперативный центр</span>
+      <span class="chip"><i class="fas fa-tv"></i> Экран дежурного</span>
+      <span class="chip"><i class="fas fa-keyboard"></i> Быстрые команды</span>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="w-cta">
+    <div class="w-cta-box">
+      <h2>Готов? Всё уже настроено.</h2>
+      <p>Один клик — и ты в панели. А дальше — просто нажми @.</p>
+      <a class="btn btn-primary" href="/login" style="padding:13px 26px;font-size:14px"><i class="fas fa-right-to-bracket"></i> Войти в панель</a>
+    </div>
+  </div>
+
+  <footer class="w-foot">
+    <img src="/static/brand/emblem-dragon.png" alt="">AETHER · панель твоего сервера · сделано с душой
+  </footer>
+
+  <script>
+  (function () {
+    'use strict';
+    /* ── Локальный быстрый поиск по странице приветствия ── */
+    var LINKS = [
+      { q: ['профиль', 'profile', 'статус'], label: 'Твой профиль', href: '/login', icon: 'fa-user' },
+      { q: ['карточка', '360', 'активность'], label: 'Карточка 360°', href: '/login', icon: 'fa-id-card-clip' },
+      { q: ['заявк', 'apply', 'команда', 'модератор'], label: 'Заявки в команду', href: '/login', icon: 'fa-file-signature' },
+      { q: ['обращени', 'тикет', 'ticket', 'вопрос'], label: 'Обращения', href: '/login', icon: 'fa-ticket' },
+      { q: ['уровн', 'наград', 'опыт', 'level'], label: 'Уровни и награды', href: '/login', icon: 'fa-ranking-star' },
+      { q: ['событи', 'ивент', 'календар', 'event'], label: 'События и расписание', href: '/login', icon: 'fa-calendar-days' },
+      { q: ['войти', 'вход', 'login', 'регистраци'], label: 'Войти в панель', href: '/login', icon: 'fa-right-to-bracket' },
+      { q: ['правил', 'rules'], label: 'Правила сервера', href: '/login', icon: 'fa-book' },
+      { q: ['модерац', 'штаб', 'mod'], label: 'Центр модерации (для команды)', href: '/login', icon: 'fa-shield-halved' },
+      { q: ['аналитик', 'график', 'stats'], label: 'Аналитика (для команды)', href: '/login', icon: 'fa-chart-line' }
+    ];
+    var inp = document.getElementById('wSearch');
+    var box = document.getElementById('wResults');
+    function show(list) {
+      if (!list.length) { box.classList.remove('show'); return; }
+      box.innerHTML = list.map(function (l) {
+        return '<a href="' + l.href + '"><i class="fas ' + l.icon + '"></i> ' + l.label + '</a>';
+      }).join('');
+      box.classList.add('show');
+    }
+    function wSearchHide() { box.classList.remove('show'); }
+    inp.addEventListener('input', function () {
+      var q = this.value.replace(/^@/, '').trim().toLowerCase();
+      if (!q) { wSearchHide(); return; }
+      show(LINKS.filter(function (l) {
+        return l.q.some(function (k) { return k.indexOf(q) !== -1 || q.indexOf(k) !== -1; });
+      }).slice(0, 6));
     });
-  }
-  window.addEventListener('scroll', runCounters, { passive: true });
-  runCounters();
-})();
-</script>
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        var first = box.querySelector('a');
+        if (first) window.location.href = first.getAttribute('href');
+        else window.location.href = '/login';
+      }
+      if (e.key === 'Escape') wSearchHide();
+    });
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.w-search')) wSearchHide();
+    });
+    window.wSearchHide = wSearchHide;
+  })();
+  </script>
+  <script src="/static/app.js?v=44"></script>
 </body>
 </html>

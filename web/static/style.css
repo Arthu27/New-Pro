@@ -1384,6 +1384,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 .toast .undo-btn:hover { text-decoration: underline; }
 
 /* ── 17. Модальные окна ────────────────────────────────────── */
+.modal-overlay:not(.open) { display: none; }
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(17, 19, 24, 0.44);
@@ -4391,3 +4392,33 @@ input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
    ============================================================ */
 /* Переходы между страницами (View Transitions) выключены ради 60-120 FPS:
    снапшот всего DOM на каждой навигации давал рывки. */
+
+/* ── @-поиск: мгновенный поиск по панели ─────────────────── */
+.at-finder .modal-box { align-self: flex-start; margin-top: 6vh; }
+.at-group {
+  padding: 10px 4px 4px;
+  font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--text-3);
+}
+.at-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 10px; border-radius: var(--r-sm);
+  color: var(--text); text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+}
+.at-item:hover, .at-item.active { background: var(--ac-soft); color: var(--ac); }
+.at-item-ico {
+  width: 32px; height: 32px; flex: 0 0 32px;
+  display: grid; place-items: center;
+  border-radius: 9px; background: var(--ac-soft); color: var(--ac);
+  font-size: 13px;
+}
+.at-item-copy { flex: 1; min-width: 0; }
+.at-item-copy b { display: block; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.at-item-copy small { display: block; font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.at-item-arrow { color: var(--text-3); font-size: 11px; opacity: 0; transition: opacity 0.12s, transform 0.12s; }
+.at-item:hover .at-item-arrow, .at-item.active .at-item-arrow { opacity: 1; transform: translateX(2px); }
+.at-empty { padding: 22px 12px; text-align: center; color: var(--text-3); font-size: 13px; }
+.at-loading { padding: 22px 12px; text-align: center; color: var(--text-3); font-size: 13px; }
+.at-loading i { margin-right: 7px; color: var(--ac); }

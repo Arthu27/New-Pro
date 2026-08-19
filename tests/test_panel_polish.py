@@ -229,10 +229,10 @@ check(os.path.isfile(os.path.join(ROOT, 'web', 'static', 'brand', 'emblem-dragon
 check('emblem-dragon.png' in base,
       'дракон в бренд-шапке панели')
 dash_t = open(os.path.join(ROOT, 'web', 'templates', 'dashboard.html'), encoding='utf-8').read()
-check('placePop' in dash_t and 'Настройки виджетов биндятся первыми' in dash_t,
-      'настройки виджетов главной: попап позиционируется у кнопки и биндится первым')
-check('z-index:5' in dash_t,
-      'кнопка настроек поднята над слоями героя')
+check('ccSettingsModal' in dash_t and 'Настройки виджетов биндятся первыми' in dash_t,
+      'настройки виджетов главной: полноценная модалка и привязка первой')
+check('.modal-overlay:not(.open) { display: none; }' in css,
+      'модалки скрыты по умолчанию и показываются только по .open')
 kiosk = open(os.path.join(ROOT, 'web', 'templates', 'mod_kiosk.html'), encoding='utf-8').read()
 check('kioskTime' in kiosk and 'kioskMain' in kiosk and 'kioskDrift' in kiosk,
       'экран дежурного: часы, стена и лента на месте')
@@ -430,8 +430,20 @@ proc = subprocess.run([sys.executable, '-c', hide_script], capture_output=True,
                       text=True, timeout=120, cwd=ROOT)
 check('OK' in (proc.stdout or ''),
       'API: owner скрывает канал (hidden:true), возвращает обратно; модератору — 403')
-check('app.js?v=43' in base and 'style.css?v=96' in base,
-      'версии ассетов забумплены (96/43)')
+# @-поиск и welcome
+check('AETHER KIT 12' in js and 'atFinderInput' in js and 'at-finder' in css,
+      '@-поиск: мгновенный поиск по панели (страницы, участники, каналы)')
+check('at-item' in css and 'at-group' in css,
+      'стили результатов @-поиска на месте')
+welcome = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('w-dragon' in welcome and 'emblem-dragon.png' in welcome,
+      'welcome: белый дракон в герое')
+check('Участникам' in welcome and 'wSearch' in welcome and 'w-steps' in welcome,
+      'welcome: инфо для участников, поиск и «как начать»')
+check('для всех участников' in welcome and 'Нажми' in welcome and '@' in welcome,
+      'welcome: акцент на участников и подсказка про @')
+check('app.js?v=44' in base and 'style.css?v=97' in base,
+      'версии ассетов забумплены (97/44)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil

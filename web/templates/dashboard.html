@@ -739,22 +739,22 @@
     } catch (e) { /* пульс опционален */ }
   }
 
-  /* ── Настройки виджетов главной ──────────────────────── */
+  /* ── Настройки виджетов главной (модальное окно — поверх всего) ── */
   function widgetSettingsInit() {
     var btn = $('ccSettings');
     if (!btn) return;
-    var pop = document.createElement('div');
-    pop.className = 'accent-pop';
-    pop.style.width = '270px';
-    pop.style.position = 'fixed';
-    pop.hidden = true;
-    btn.parentNode.appendChild(pop);
-    function placePop() {
-      var r = btn.getBoundingClientRect();
-      pop.style.top = (r.bottom + 8) + 'px';
-      pop.style.left = Math.max(8, Math.min(window.innerWidth - 286, r.right - 270)) + 'px';
-      pop.style.right = 'auto';
-    }
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'ccSettingsModal';
+    overlay.hidden = true;
+    overlay.innerHTML =
+      '<div class="modal-box" style="max-width:420px">' +
+        '<div class="modal-head"><b><i class="fas fa-sliders"></i> Виджеты главной</b>' +
+        '<button type="button" class="icon-btn" id="ccSettingsClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button></div>' +
+        '<div class="modal-body" id="ccSettingsBody"></div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    var body = overlay.querySelector('#ccSettingsBody');
 
     function stored() {
       try { return JSON.parse(localStorage.getItem('cc_widgets') || '{}'); }
@@ -790,7 +790,7 @@
     }
     function build() {
       var cfg = stored();
-      var html = '<div class="accent-pop-title">Виджеты главной</div>';
+      var html = '';
       document.querySelectorAll('[data-widget]').forEach(function (sec) {
         var h = sec.querySelector('h2');
         var label = h ? h.textContent.trim() : sec.dataset.widget;
@@ -803,10 +803,10 @@
           '</div>';
       });
       html += '<button type="button" class="btn btn-sm" id="ccReorder" style="width:100%;margin-top:8px"><i class="fas fa-grip-vertical"></i> Переставить виджеты</button>';
-      html += '<div class="reorder-hint hint" id="ccReorderHint">Тяните виджеты за ручки «⠿» — порядок сохранится сам.</div>';
+      html += '<div class="reorder-hint hint" id="ccReorderHint" style="display:none">Тяните виджеты за ручки «⠿» — порядок сохранится сам.</div>';
       html += '<button type="button" class="btn btn-sm" id="ccReset" style="width:100%;margin-top:8px"><i class="fas fa-rotate-left"></i> Показать все виджеты</button>';
-      pop.innerHTML = html;
-      Array.prototype.forEach.call(pop.querySelectorAll('input[data-w]'), function (inp) {
+      body.innerHTML = html;
+      Array.prototype.forEach.call(body.querySelectorAll('input[data-w]'), function (inp) {
         inp.addEventListener('change', function () {
           var cfg = stored();
           cfg[inp.dataset.w] = inp.checked;
@@ -814,14 +814,14 @@
           apply();
         });
       });
-      var reorder = pop.querySelector('#ccReorder');
+      var reorder = body.querySelector('#ccReorder');
       if (reorder) {
         function paintReorder() {
           var on = document.body.classList.contains('reorder-mode');
           reorder.innerHTML = on
             ? '<i class="fas fa-check"></i> Готово — порядок сохранён'
             : '<i class="fas fa-grip-vertical"></i> Переставить виджеты';
-          var hint = pop.querySelector('#ccReorderHint');
+          var hint = body.querySelector('#ccReorderHint');
           if (hint) hint.style.display = on ? '' : 'none';
         }
         reorder.addEventListener('click', function () {
@@ -833,7 +833,7 @@
         });
         paintReorder();
       }
-      var reset = pop.querySelector('#ccReset');
+      var reset = body.querySelector('#ccReset');
       if (reset) reset.addEventListener('click', function () {
         try {
           localStorage.removeItem('cc_widgets');
@@ -843,23 +843,23 @@
         if (window.widgetOrderApply) window.widgetOrderApply();
         build();
       });
-      Array.prototype.forEach.call(pop.querySelectorAll('[data-mv]'), function (b) {
+      Array.prototype.forEach.call(body.querySelectorAll('[data-mv]'), function (b) {
         b.addEventListener('click', function () {
           var parts = b.dataset.mv.split(':');
           moveWidget(parts[0], parseInt(parts[1], 10));
         });
       });
     }
+    function open() { overlay.classList.add('open'); build(); }
+    function close() { overlay.classList.remove('open'); document.body.classList.remove('reorder-mode'); }
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      e.preventDefault();
-      pop.hidden = !pop.hidden;
-      if (!pop.hidden) { placePop(); build(); }
+      if (overlay.classList.contains('open')) close(); else open();
     });
-    window.addEventListener('resize', function () { if (!pop.hidden) placePop(); });
-    window.addEventListener('scroll', function () { if (!pop.hidden) placePop(); }, { passive: true });
-    document.addEventListener('click', function (e) {
-      if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) pop.hidden = true;
+    overlay.querySelector('#ccSettingsClose').addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && overlay.classList.contains('open')) close();
     });
     apply();
     if (window.widgetOrderApply) window.widgetOrderApply();

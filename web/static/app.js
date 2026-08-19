@@ -3460,3 +3460,173 @@
   }
   win.aetherSelect = { rescan: function () { scan(doc); } };
 })();
+
+// ============================================================
+// AETHER KIT 12 — @-поиск: мгновенно найти всё в панели.
+// Нажми @ в любом месте — откроется быстрый поиск по страницам,
+// участникам, каналам, расшифровкам, триггерам и анонсам.
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  var win = window;
+  var overlay = null;
+  var input = null;
+  var listEl = null;
+  var timer = null;
+  var lastQ = '';
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function ensure() {
+    if (overlay) return;
+    overlay = doc.createElement('div');
+    overlay.className = 'modal-overlay at-finder';
+    overlay.innerHTML =
+      '<div class="modal-box" style="max-width:580px">' +
+        '<div class="modal-head"><b><i class="fas fa-magnifying-glass"></i> Поиск по панели</b>' +
+        '<button type="button" class="icon-btn" id="atFinderClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button></div>' +
+        '<div class="modal-body">' +
+          '<input type="text" id="atFinderInput" class="form-input" placeholder="@ страница, участник, канал…" style="font-size:15px;padding:12px 14px" autocomplete="off" aria-label="Быстрый поиск">' +
+          '<div id="atFinderList" style="margin-top:10px;max-height:46vh;overflow:auto"></div>' +
+          '<div class="hint" style="margin-top:10px"><i class="fas fa-keyboard"></i> Вверх/Вниз — выбор · Enter — открыть · Esc — закрыть · Ctrl+K — меню панели</div>' +
+        '</div>' +
+      '</div>';
+    doc.body.appendChild(overlay);
+    input = overlay.querySelector('#atFinderInput');
+    listEl = overlay.querySelector('#atFinderList');
+    overlay.querySelector('#atFinderClose').addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    input.addEventListener('input', function () { schedule(); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        move(e.key === 'ArrowDown' ? 1 : -1);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        var act = listEl.querySelector('.at-item.active') || listEl.querySelector('.at-item');
+        if (act) { var href = act.getAttribute('href'); if (href) win.location.href = href; }
+      } else if (e.key === 'Escape') {
+        close();
+      }
+    });
+  }
+
+  function open() {
+    ensure();
+    overlay.classList.add('open');
+    input.value = '@';
+    schedule();
+    setTimeout(function () { input.focus({ preventScroll: true }); }, 30);
+  }
+  function close() {
+    if (overlay) overlay.classList.remove('open');
+    lastQ = '';
+  }
+  function schedule() {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(render, 160);
+  }
+  function move(dir) {
+    var items = listEl.querySelectorAll('.at-item');
+    if (!items.length) return;
+    var idx = -1;
+    items.forEach(function (el, i) { if (el.classList.contains('active')) idx = i; });
+    items.forEach(function (el) { el.classList.remove('active'); });
+    idx = (idx + dir + items.length) % items.length;
+    items[idx].classList.add('active');
+    if (items[idx].scrollIntoView) items[idx].scrollIntoView({ block: 'nearest' });
+  }
+
+  function itemHtml(label, sub, href, icon) {
+    return '<a class="at-item" href="' + esc(href) + '">' +
+      '<span class="at-item-ico"><i class="fas ' + esc(icon || 'fa-file') + '"></i></span>' +
+      '<span class="at-item-copy"><b>' + esc(label) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' +
+      '<i class="fas fa-arrow-right at-item-arrow" aria-hidden="true"></i></a>';
+  }
+
+  function groupHtml(title, items) {
+    if (!items.length) return '';
+    return '<div class="at-group">' + esc(title) + '</div>' + items.join('');
+  }
+
+  function pickHref(it) {
+    return it.path || it.url || it.href || (it.page_path ? it.page_path : '');
+  }
+
+  async function render() {
+    if (!listEl) return;
+    var q = String(input.value || '').replace(/^@/, '').trim().toLowerCase();
+    if (q === lastQ) return;
+    lastQ = q;
+    if (!q) {
+      listEl.innerHTML = '<div class="at-empty">Начните печатать — найдём страницы, участников, каналы и команды.</div>';
+      return;
+    }
+    listEl.innerHTML = '<div class="at-loading"><i class="fas fa-circle-notch fa-spin"></i> Ищем «' + esc(q) + '»…</div>';
+    var html = '';
+    var found = 0;
+    try {
+      var r = await fetch('/api/ux/search?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } });
+      if (r.status === 401) {
+        listEl.innerHTML = '<div class="at-empty"><i class="fas fa-lock"></i> Поиск доступен после входа — <a href="/login" style="color:var(--ac);font-weight:700">войдите в панель</a></div>';
+        return;
+      }
+      if (r.ok) {
+        var d = await r.json();
+        (d.groups || []).forEach(function (g) {
+          var items = [];
+          (g.items || []).forEach(function (it) {
+            var href = pickHref(it);
+            if (!href) return;
+            items.push(itemHtml(it.label || it.name || it.title || '—', it.sub || it.description || '', href, it.icon || 'fa-file'));
+            found++;
+          });
+          html += groupHtml(g.title || g.key, items);
+        });
+      }
+    } catch (e) { /* офлайн — только каналы ниже */ }
+
+    /* Каналы сервера — быстрое дополнение к поиску */
+    try {
+      var cr = await fetch('/api/channels', { headers: { 'Accept': 'application/json' } });
+      if (cr.ok) {
+        var chans = await cr.json();
+        chans = Array.isArray(chans) ? chans : (chans.channels || []);
+        var chanItems = [];
+        chans.forEach(function (c) {
+          if (c.type === 'category' || c.hidden) return;
+          var name = String(c.name || '').toLowerCase();
+          var cat = String(c.category || '').toLowerCase();
+          if (name.indexOf(q) !== -1 || cat.indexOf(q) !== -1) {
+            chanItems.push(itemHtml('#' + c.name, c.category ? ('Категория: ' + c.category) : 'Канал сервера', '/chat', 'fa-hashtag'));
+            found++;
+          }
+        });
+        html += groupHtml('Каналы', chanItems.slice(0, 6));
+      }
+    } catch (e) {}
+
+    listEl.innerHTML = html || '<div class="at-empty">Ничего не нашлось по «' + esc(q) + '» — попробуйте короче.</div>';
+  }
+
+  doc.addEventListener('keydown', function (e) {
+    if (e.key === '@' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      var t = e.target;
+      var typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' ||
+        (t.isContentEditable));
+      if (!typing) {
+        e.preventDefault();
+        if (overlay && overlay.classList.contains('open')) close(); else open();
+      }
+    }
+    if (e.key === 'Escape' && overlay && overlay.classList.contains('open')) {
+      e.stopPropagation();
+      close();
+    }
+  });
+})();
