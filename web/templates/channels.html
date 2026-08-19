@@ -557,7 +557,11 @@ textarea.field-input{resize:vertical;min-height:52px}
     if (!allChannels.length) { list.innerHTML = '<div class="ch-empty"><i class="fas fa-hashtag"></i><p>На этом сервере нет каналов.</p></div>'; return; }
 
     var q = (filter || '').trim().toLowerCase();
-    var channels = allChannels.filter(function (c) { return c.type !== 'category'; });
+    var byPos = function (a, b) {
+      return ((a.position || 0) - (b.position || 0)) ||
+        String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+    };
+    var channels = allChannels.filter(function (c) { return c.type !== 'category'; }).sort(byPos);
     var visible = channels.filter(function (c) {
       if (!q) return true;
       return (c.name && c.name.toLowerCase().indexOf(q) !== -1) ||
@@ -570,7 +574,7 @@ textarea.field-input{resize:vertical;min-height:52px}
       visible.forEach(function (c) { html += renderRow(c, true); });
       if (!visible.length) html = '<div class="ch-empty"><i class="fas fa-search"></i><p>«' + esc(filter) + '» — ничего не найдено.</p></div>';
     } else {
-      var categories = allChannels.filter(function (c) { return c.type === 'category'; });
+      var categories = allChannels.filter(function (c) { return c.type === 'category'; }).sort(byPos);
       var groups = [];
       var knownCategories = {};
       categories.forEach(function (category) { knownCategories[category.name] = true; });

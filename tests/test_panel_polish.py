@@ -8,6 +8,7 @@
 """
 import os
 import re
+import subprocess
 import sys
 import tempfile
 
@@ -337,8 +338,49 @@ check('_logsFp' in open(os.path.join(ROOT, 'web', 'templates', 'logs.html'), enc
       'журнал не мерцает при live-обновлении без изменений')
 check('_chartsFp' in open(os.path.join(ROOT, 'web', 'templates', 'mod_center.html'), encoding='utf-8').read(),
       'графики мод-центра не перерисовываются при тех же данных')
-check('app.js?v=40' in base and 'style.css?v=93' in base,
-      'версии ассетов забумплены (93/40)')
+
+# ═══ 13. Порядок в каналах ═════════════════════════════════════════════════
+print('== порядок каналов ==')
+seed = open(os.path.join(ROOT, 'scripts', 'seed_demo_panel.py'), encoding='utf-8').read()
+check('demo_channels' in seed and 'data/demo_channels.json' in seed,
+      'сид демо создаёт структуру каналов')
+gadmin = open(os.path.join(ROOT, 'web', 'routes', 'guild_admin.py'), encoding='utf-8').read()
+check('demo_channels.json' in gadmin and 'отдаём демо-структуру каналов' in gadmin,
+      'API каналов отдаёт демо-структуру, когда бот офлайн')
+channels_t = open(os.path.join(ROOT, 'web', 'templates', 'channels.html'), encoding='utf-8').read()
+check("((a.position || 0) - (b.position || 0))" in channels_t,
+      'страница каналов сортирует по позиции и имени')
+chat_t = open(os.path.join(ROOT, 'web', 'templates', 'chat.html'), encoding='utf-8').read()
+check('groups.push({ name: key, items: [] })' in chat_t
+      and "if (!a.name) return 1;" in chat_t
+      and "var head = g.name ?" in chat_t,
+      'чат группирует каналы по категориям, внекатегорийные — в конце без заголовка')
+# демо-режим: API отдаёт структуру каналов (проверяем в сабпроцессе)
+demo_script = '''
+import os, sys
+os.environ["DEMO_MODE"] = "1"
+sys.path.insert(0, %r)
+from web.app import app
+c = app.test_client()
+with c.session_transaction() as s:
+    s["logged_in"] = True; s["username"] = "DemoCh"; s["role"] = "owner"
+r = c.get("/api/guild/987654321098765432/channels")
+d = r.get_json(silent=True) or []
+print(len(d) if isinstance(d, list) else -1)
+''' % ROOT
+if not os.path.isfile(os.path.join(ROOT, 'data', 'demo_channels.json')):
+    subprocess.run([sys.executable, os.path.join(ROOT, 'scripts', 'seed_demo_panel.py')],
+                   capture_output=True, text=True, timeout=120)
+proc = subprocess.run([sys.executable, '-c', demo_script], capture_output=True,
+                      text=True, timeout=120, cwd=ROOT)
+n_demo = -1
+for _line in (proc.stdout or '').splitlines():
+    if _line.strip().isdigit():
+        n_demo = int(_line.strip())
+check(n_demo >= 10,
+      f'API каналов в демо-режиме отдаёт структуру ({n_demo} шт.)')
+check('app.js?v=41' in base and 'style.css?v=94' in base,
+      'версии ассетов забумплены (94/41)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil

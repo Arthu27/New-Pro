@@ -313,6 +313,17 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import discord as _discord 
         if not bot :
+            if _app ._demo_mode ():
+                print ('[WEB][WARN] /channels: bot is None — отдаём демо-структуру каналов')
+                demo_file =os .path .join (os .path .dirname (os .path .dirname (os .path .dirname (os .path .abspath (__file__ )))),'data','demo_channels.json')
+                if os .path .exists (demo_file ):
+                    try :
+                        with open (demo_file ,'r',encoding ='utf-8')as fp :
+                            demo =json .load (fp )
+                        demo =sorted (demo ,key =lambda x :((9999 if (x .get ('category_pos')is None or x .get ('category_pos')<0 )else x .get ('category_pos',0 )),x .get ('position',0 ),x .get ('name','')))
+                        return jsonify (demo )
+                    except Exception as e :
+                        print (f'[WEB][WARN] /channels: demo_channels.json ошибка: {e}')
             print ('[WEB][WARN] /channels: bot is None')
             return jsonify ({'error':'Бот офлайн','channels':[]})
 

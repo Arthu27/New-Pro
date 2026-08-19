@@ -714,10 +714,29 @@ async function loadChannels(gid) {
   try {
     var chs = await fetch('/api/guild/' + gid + '/channels').then(r => r.json());
     var text = chs.filter(function(c){ return c.type === 'text'; });
+    /* порядок: каналы по позиции, категории по алфавиту, «Без категории» в конце */
+    text.sort(function(a, b){
+      return ((a.position || 0) - (b.position || 0)) ||
+        String(a.name || '').localeCompare(String(b.name || ''));
+    });
+    var groups = [], index = {};
+    text.forEach(function(c){
+      var key = c.category || '';
+      if (!(key in index)) { index[key] = groups.length; groups.push({ name: key, items: [] }); }
+      groups[index[key]].items.push(c);
+    });
+    groups.sort(function(a, b){
+      if (!a.name) return 1;
+      if (!b.name) return -1;
+      return a.name.localeCompare(b.name, 'ru');
+    });
     var el = document.getElementById('ch-list');
-    el.innerHTML = text.map(function(c) {
-      return '<div class="ch-item" id="ch-' + c.id + '" onclick="selectChannel(\'' + c.id + '\',\'' + escJs(c.name) + '\')">' +
-        '<i class="fas fa-hashtag ch-icon"></i><span class="ch-name">' + escHtml(c.name) + '</span></div>';
+    el.innerHTML = groups.map(function(g){
+      var head = g.name ? '<div class="sidebar-section"><span>' + escHtml(g.name) + '</span></div>' : '';
+      return head + g.items.map(function(c) {
+        return '<div class="ch-item" id="ch-' + c.id + '" onclick="selectChannel(\'' + c.id + '\',\'' + escJs(c.name) + '\')">' +
+          '<i class="fas fa-hashtag ch-icon"></i><span class="ch-name">' + escHtml(c.name) + '</span></div>';
+      }).join('');
     }).join('');
     if (text.length) selectChannel(text[0].id, text[0].name);
   } catch(e) {}
