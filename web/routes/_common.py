@@ -349,6 +349,69 @@ import re as _ms_re
 # нормализаторы записей. Чистые функции — покрыты тестами (tests/test_member_search).
 # ═══════════════════════════════════════════════════════════════════════════
 
+# ── Демо-участники (когда бот офлайн: поиск, @-пикер, подсказки) ─────────
+DEMO_MEMBERS = [
+    {'id': '1001', 'name': 'sonya.staff', 'display_name': 'Sonya',
+     'avatar': 'https://cdn.discordapp.com/embed/avatars/1.png', 'status': 'online',
+     'roles': [], 'joined_at': '2025-11-02T10:00:00+00:00'},
+    {'id': '1002', 'name': 'artem.mods', 'display_name': 'Artem',
+     'avatar': 'https://cdn.discordapp.com/embed/avatars/2.png', 'status': 'idle',
+     'roles': [], 'joined_at': '2025-11-03T12:00:00+00:00'},
+    {'id': '1003', 'name': 'lina.mod', 'display_name': 'Lina',
+     'avatar': 'https://cdn.discordapp.com/embed/avatars/3.png', 'status': 'dnd',
+     'roles': [], 'joined_at': '2025-11-05T18:00:00+00:00'},
+    {'id': '1004', 'name': 'max.gg', 'display_name': 'Max',
+     'avatar': 'https://cdn.discordapp.com/embed/avatars/4.png', 'status': 'online',
+     'roles': [], 'joined_at': '2025-11-10T09:00:00+00:00'},
+    {'id': '1005', 'name': 'dasha.live', 'display_name': 'Dasha',
+     'avatar': 'https://cdn.discordapp.com/embed/avatars/5.png', 'status': 'offline',
+     'roles': [], 'joined_at': '2025-12-01T14:00:00+00:00'},
+    {'id': '1006', 'name': 'kolyan.tv', 'display_name': 'Kolyan',
+     'avatar': 'https://cdn.discordapp.com/embed/avatars/0.png', 'status': 'online',
+     'roles': [], 'joined_at': '2025-12-05T20:00:00+00:00'},
+    {'id': '1007', 'name': 'nastya.chat', 'display_name': 'Nastya',
+     'avatar': 'https://cdn.discordapp.com/embed/avatars/2.png', 'status': 'idle',
+     'roles': [], 'joined_at': '2026-01-10T11:00:00+00:00'},
+    {'id': '1008', 'name': 'vanya.voice', 'display_name': 'Vanya',
+     'avatar': 'https://cdn.discordapp.com/embed/avatars/3.png', 'status': 'online',
+     'roles': [], 'joined_at': '2026-02-14T16:00:00+00:00'},
+    {'id': '1009', 'name': 'aether.bot', 'display_name': 'Aether',
+     'avatar': '', 'status': 'online', 'bot': True,
+     'roles': [], 'joined_at': '2025-10-01T00:00:00+00:00'},
+]
+
+
+def demo_members_search (query ,limit =25 ):
+    """Демо-поиск участников: по имени/нику/ID — как ms_search_members, но без бота."""
+    q =str (query or '').strip ().lower ()
+    if not q :
+        return list (DEMO_MEMBERS )[:limit ]
+    out =[]
+    for m in DEMO_MEMBERS :
+        hay =f"{m.get('name','')} {m.get('display_name','')} {m.get('id','')}".lower ()
+        if q in hay :
+            out .append (m )
+        if len (out )>=limit :
+            break
+    return out
+
+
+def demo_member_payload (m ):
+    """Формат участника для панели (совпадает с ms_member_payload)."""
+    return {
+        'id':str (m .get ('id','')),
+        'name':m .get ('display_name')or m .get ('name',''),
+        'display_name':m .get ('display_name')or m .get ('name',''),
+        'username':m .get ('name',''),
+        'avatar':m .get ('avatar',''),
+        'status':m .get ('status','offline'),
+        'bot':bool (m .get ('bot',False )),
+        'mention':f"<@{m.get('id','')}>",
+        'joined_at':m .get ('joined_at',''),
+        'roles':m .get ('roles',[]),
+    }
+
+
 def ms_normalize_query(raw) -> str:
     """Почистить поисковый запрос: пробелы, регистр, '@', упоминание <@123>."""
     q = (raw or '')

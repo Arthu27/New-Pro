@@ -789,6 +789,36 @@ check('В деле' in w4 and 'href="#demo"' in w4,
       'welcome: секция «Панель в деле» в навигации')
 check('w-sec-title .grad' in w4 or 'class="w-sec-title">' in w4 and '<span class="grad">' in w4,
       'welcome: градиентные акценты заголовков секций')
+# ═══ 28. Подсказки ников при вводе (@ и поиск участников) ═════════════════
+print('== ники отображаются ==')
+common_src = open(os.path.join(ROOT, 'web', 'routes', '_common.py'), encoding='utf-8').read()
+check('DEMO_MEMBERS' in common_src and 'demo_members_search' in common_src,
+      'общий источник демо-участников в _common')
+members_src = open(os.path.join(ROOT, 'web', 'routes', 'members.py'), encoding='utf-8').read()
+check('demo_members_search' in members_src,
+      'member-search: демо-поиск, когда бот офлайн')
+ux_src = open(os.path.join(ROOT, 'web', 'routes', 'ux.py'), encoding='utf-8').read()
+check('demo_members_search' in ux_src and "search_members" in ux_src,
+      '@-поиск панели: участники из демо-источника')
+mc_src = open(os.path.join(ROOT, 'web', 'routes', 'member_card_panel.py'), encoding='utf-8').read()
+check('DEMO_MEMBERS' in mc_src and "pool.setdefault" in mc_src,
+      'карточка 360: подсказки дополнены демо-участниками')
+login_as('owner')
+r = client.get('/api/member-search/987654321098765432?q=art')
+d = r.get_json(silent=True)
+check(r.status_code == 200 and isinstance(d, list) and any(str(m.get('display_name', '')).lower().startswith('art') for m in d),
+      f'поиск участников находит «art» → {[m.get("display_name") for m in d] if isinstance(d, list) else d}')
+r = client.get('/api/ux/search?q=art')
+uxd = r.get_json(silent=True) or {}
+names = [i.get('title') for g in uxd.get('groups', []) if g.get('key') == 'members' for i in g.get('items', [])]
+check('Artem' in names, f'@-поиск находит участника Artem → {names}')
+r = client.get('/api/guild/987654321098765432/member-card/suggest?q=so')
+sd = r.get_json(silent=True) or {}
+check(any(str(i.get('name', '')).lower().startswith('so') for i in sd.get('items', [])),
+      f'подсказки карточки 360 находят «so» → {sd.get("items")}')
+r = client.get('/api/chat/987654321098765432/members')
+cm = r.get_json(silent=True)
+check(isinstance(cm, list) and len(cm) >= 5, f'чат-пикер видит участников ({len(cm) if isinstance(cm, list) else 0})')
 check('app.js?v=47' in base and 'style.css?v=102' in base,
       'версии ассетов (102/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,

@@ -191,6 +191,10 @@ def suggest(gid, query, limit=SUGGEST_LIMIT):
     if not q:
         return []
     pool = names_from_audit(gid)
+    # демо: добавляем участников, чтобы подсказки работали без бота
+    from web.routes._common import DEMO_MEMBERS
+    for dm in DEMO_MEMBERS:
+        pool.setdefault(str(dm.get('id')), str(dm.get('display_name') or dm.get('name')))
     for uid, info in load_birthdays(gid).items():
         if isinstance(info, dict) and info.get('name'):
             pool.setdefault(str(uid), str(info['name']))

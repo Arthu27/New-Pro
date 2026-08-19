@@ -129,7 +129,15 @@ def search_pages(role, query, limit=SEARCH_LIMIT):
 def search_members(bot, guild_id, query, limit=SEARCH_LIMIT):
     """Участники сервера через ms_search_members (та же выдача, что у member-search)."""
     if not bot or not guild_id:
-        return []
+        from web .routes ._common import demo_members_search
+        from urllib.parse import quote
+        q = quote(str(query or ''), safe='')
+        return [{
+            'type': 'member', 'icon': 'fa-user',
+            'title': str(m.get('display_name') or m.get('name') or m.get('id')),
+            'sub': 'ID ' + str(m.get('id', '')),
+            'href': '/member-search?q=' + q,
+        } for m in demo_members_search(str(query or ''), limit=limit)]
     try:
         guild = bot.get_guild(int(guild_id))
     except (TypeError, ValueError):

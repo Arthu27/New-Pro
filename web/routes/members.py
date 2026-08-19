@@ -104,7 +104,11 @@ def register(ctx):
         # с релевантной сортировкой и понятными ошибками вместо молчаливых [].
         import web .app as _app ;bot =_app .bot_instance 
         if not bot :
-            return jsonify ({'error':'Бот сейчас не в сети — поиск участников недоступен.'}),503 
+            from web .routes ._common import demo_members_search ,demo_member_payload
+            q =ms_normalize_query (request .args .get ('q',''))
+            if not q :
+                return jsonify ({'error':'Введите имя, никнейм или ID участника.'}),400 
+            return jsonify ([demo_member_payload (m )for m in demo_members_search (q )])
         guild =bot .get_guild (int (guild_id )if str (guild_id ).isdigit ()else 0 )
         if not guild :
             return jsonify ({'error':'Сервер не найден: проверьте выбор сервера на панели.'}),404 
