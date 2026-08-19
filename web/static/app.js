@@ -2936,12 +2936,19 @@
     btn.innerHTML = '<i class="fas fa-arrow-up"></i>';
     doc.body.appendChild(btn);
     var ticking = false;
-    function paint() {
+    var lastRing = 0;
+    function paint(now) {
       ticking = false;
+      now = now || performance.now();
       var max = doc.documentElement.scrollHeight - win.innerHeight;
       var p = max > 0 ? win.scrollY / max : 0;
       btn.classList.toggle('show', win.scrollY > 480);
-      btn.style.setProperty('--top-progress', Math.round(p * 100));
+      /* кольцо прогресса перерисовывается не чаще 8 раз/сек —
+         conic-градиент не должен краситься на каждый кадр скролла */
+      if (now - lastRing >= 120) {
+        lastRing = now;
+        btn.style.setProperty('--top-progress', Math.round(p * 100));
+      }
     }
     win.addEventListener('scroll', function () {
       if (!ticking) { ticking = true; win.requestAnimationFrame(paint); }

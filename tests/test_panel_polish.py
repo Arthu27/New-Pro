@@ -219,8 +219,8 @@ check('.page-hero.compact h1 > i:first-child' in css,
       'старый компактный hero переведён на премиум-вид (иконка-плитка)')
 check('pageHeadAuto' in js and 'fx-built' in js,
       'страницы без шапки автоматически получают премиум page-head')
-check('@view-transition' in css and 'navigation: auto' in css,
-      'плавные переходы между страницами включены (View Transitions)')
+check('@view-transition' not in css and 'снапшот всего DOM' in css,
+      'переходы View Transitions выключены ради 60-120 FPS (без рывков на навигации)')
 check(os.path.isfile(os.path.join(ROOT, 'web', 'static', 'favicon.ico')),
       'фавикон Aether создан')
 check(os.path.isfile(os.path.join(ROOT, 'web', 'static', 'brand', 'emblem-square.png')),
@@ -285,8 +285,8 @@ check('tryEnhance' in js and 'removeAttribute(\'data-aes\')' in js,
 print('== производительность ==')
 check(re.search(r'\.fx-ring-el \{[^}]*animation: none;', css, re.S) is not None,
       'кольца карточек по умолчанию не анимируются')
-check(re.search(r'\.fx-ring-host:hover \.fx-ring-el,[^}]*animation: fxRingAng', css, re.S) is not None,
-      'кольца крутятся только при наведении')
+check(re.search(r'\.fx-ring-host:hover \.fx-ring-el,\n\.fx-ring-host:focus-within \.fx-ring-el \{\n  opacity: 1;\n\}', css) is not None,
+      'кольца при ховере — только появление, без анимации')
 check('.panel:hover::before { animation: hairline 4.5s linear infinite; }' in css,
       'хаирлайн панелей анимируется только при наведении')
 check('blur(20px)' not in css and 'blur(24px)' not in css and 'blur(16px)' not in css,
@@ -313,10 +313,18 @@ check('translateZ(0)' in css,
       'sticky-поверхности вынесены в собственные слои')
 check('Параллакс авроры тоже выключен' in js,
       'трансформация полноэкранного слоя авроры на скролл отключена')
+check('fxRingAng 3.5s linear infinite' not in css,
+      'кольца при ховере — статичный градиент (без вечного вращения)')
+check('brandAura' not in css,
+      'пульс бренда убран (остался hover-эффект)')
+check('transition: all' not in css,
+      'transition: all заменён на точечные свойства')
+check('lastRing' in js and 'now - lastRing >= 120' in js,
+      'кольцо кнопки «наверх» перерисовывается не чаще 8 раз/сек')
 check('i < 12' in js,
       'параллакс карточек ограничен 12 слоями')
-check('app.js?v=38' in base and 'style.css?v=91' in base,
-      'версии ассетов забумплены (91/38)')
+check('app.js?v=39' in base and 'style.css?v=92' in base,
+      'версии ассетов забумплены (92/39)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil

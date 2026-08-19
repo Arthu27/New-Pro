@@ -283,11 +283,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
 .brand:hover .brand-icon { transform: rotate(-6deg) scale(1.06); box-shadow: 0 8px 22px color-mix(in srgb, var(--ac) 45%, transparent); }
-.brand-icon { animation: brandAura 4.5s ease-in-out infinite; }
-@keyframes brandAura {
-  0%, 100% { box-shadow: 0 4px 14px color-mix(in srgb, var(--ac) 30%, transparent); }
-  50% { box-shadow: 0 4px 26px color-mix(in srgb, var(--ac) 52%, transparent); }
-}
 .brand:hover .brand-icon { animation: none; }
 @media (prefers-reduced-motion: reduce) { .brand-icon { animation: none; } }
 .brand-text { line-height: 1.2; }
@@ -1378,7 +1373,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
   to { opacity: 1; transform: none; }
 }
-.toast.leaving { opacity: 0; transform: translateY(6px); transition: all 0.25s var(--ease); }
+.toast.leaving { opacity: 0; transform: translateY(6px); transition: opacity 0.25s var(--ease), transform 0.25s var(--ease); }
 
 /* Undo-тост */
 .toast .undo-btn {
@@ -2377,7 +2372,8 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
   border-radius: 99px;
   font-size: var(--fs-sm); font-weight: 600; color: var(--text-2);
   cursor: pointer;
-  transition: all 0.15s var(--ease);
+  transition: transform 0.15s var(--ease), border-color 0.15s var(--ease),
+              color 0.15s var(--ease), background 0.15s var(--ease);
 }
 .prompt-chip i { color: var(--ac); font-size: 11px; }
 .prompt-chip:hover { border-color: var(--ac-line); color: var(--ac); background: var(--ac-soft); transform: translateY(-1px); }
@@ -3779,7 +3775,6 @@ body.reorder-mode .reorder-hint { display: block; }
 .fx-ring-host:hover .fx-ring-el,
 .fx-ring-host:focus-within .fx-ring-el {
   opacity: 1;
-  animation: fxRingAng 3.5s linear infinite;
 }
 
 /* ── Параллакс карточек при прокрутке ── */
@@ -4394,18 +4389,5 @@ input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
    View Transitions API: мягкий фейд + лёгкий подъём новой
    страницы при навигации. Браузеры без поддержки игнорируют.
    ============================================================ */
-@view-transition {
-  navigation: auto;
-}
-::view-transition-old(root) {
-  animation: vtOld 0.16s ease both;
-}
-::view-transition-new(root) {
-  animation: vtNew 0.24s var(--ease) both;
-}
-@keyframes vtOld { to { opacity: 0; } }
-@keyframes vtNew { from { opacity: 0; transform: translateY(8px); } }
-@media (prefers-reduced-motion: reduce) {
-  @view-transition { navigation: none; }
-  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
-}
+/* Переходы между страницами (View Transitions) выключены ради 60-120 FPS:
+   снапшот всего DOM на каждой навигации давал рывки. */
