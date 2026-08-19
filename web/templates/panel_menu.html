@@ -40,10 +40,10 @@
 
   .pm-btn { padding:9px 15px; border-radius:10px; border:1px solid color-mix(in srgb, var(--text) 16%, transparent); background:color-mix(in srgb, var(--text) 5%, transparent); cursor:pointer; font-size:12.5px; font-weight:600; transition:.15s; display:inline-flex; align-items:center; gap:7px; }
   .pm-btn:hover { background:var(--ac); color:#fff; border-color:transparent; }
-  .pm-btn-green { border-color:rgba(46,204,113,0.4); color:#2ecc71; }
-  .pm-btn-green:hover { background:#2ecc71; color:#fff; box-shadow:0 5px 16px rgba(46,204,113,0.35); }
-  .pm-btn-red { color:#ff6b6b; border-color:rgba(231,76,60,0.4); }
-  .pm-btn-red:hover { background:#e74c3c; color:#fff; }
+  .pm-btn-green { border-color:rgba(46,204,113,0.4); color:var(--ok); }
+  .pm-btn-green:hover { background:var(--ok); color:#fff; box-shadow:0 5px 16px rgba(46,204,113,0.35); }
+  .pm-btn-red { color:var(--err); border-color:rgba(231,76,60,0.4); }
+  .pm-btn-red:hover { background:var(--err); color:#fff; }
   .pm-btn-blue { color:var(--ac-2); border-color:color-mix(in srgb, var(--ac) 40%, transparent); }
   .pm-btn-blue:hover { background:var(--ac); color:#fff; }
 
@@ -69,15 +69,15 @@
   .switch input { opacity:0; width:0; height:0; }
   .switch .sl { position:absolute; inset:0; background:color-mix(in srgb, var(--text) 15%, transparent); border-radius:22px; transition:.2s; cursor:pointer; }
   .switch .sl:before { content:""; position:absolute; height:16px; width:16px; left:3px; top:3px; background:#1a1a1a; border-radius:50%; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
-  .switch input:checked + .sl { background:linear-gradient(90deg,#2ecc71,#27ae60); }
+  .switch input:checked + .sl { background:linear-gradient(90deg,var(--ok),#27ae60); }
   .switch input:checked + .sl:before { transform:translateX(20px); }
 
   .pm-empty { text-align:center; opacity:.5; padding:50px 0; }
   .pm-empty i { font-size:30px; display:block; margin-bottom:12px; }
   .pm-toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(130%); background:rgba(18,18,22,0.95); border:1px solid color-mix(in srgb, var(--text) 16%, transparent); padding:13px 22px; border-radius:12px; font-size:13px; z-index:999; transition:.3s; box-shadow:0 10px 34px rgba(0,0,0,0.55); }
   .pm-toast.show { transform:translateX(-50%) translateY(0); }
-  .pm-toast.ok { border-color:#2ecc71; }
-  .pm-toast.err { border-color:#e74c3c; }
+  .pm-toast.ok { border-color:var(--ok); }
+  .pm-toast.err { border-color:var(--err); }
 </style>
 
 <div class="pm-wrap">
@@ -87,11 +87,11 @@
 
   <div class="pm-tabs">
     <button type="button" class="pm-tab active" id="tab-mod" onclick="selectPanel('mod')">
-      <span class="pico" style="background:rgba(46,204,113,0.16);color:#2ecc71;"><i class="fas fa-shield-halved"></i></span>
+      <span class="pico" style="background:rgba(46,204,113,0.16);color:var(--ok);"><i class="fas fa-shield-halved"></i></span>
       Модератор
     </button>
     <button type="button" class="pm-tab" id="tab-admin" onclick="selectPanel('admin')">
-      <span class="pico" style="background:rgba(231,76,60,0.16);color:#e74c3c;"><i class="fas fa-user-tie"></i></span>
+      <span class="pico" style="background:rgba(231,76,60,0.16);color:var(--err);"><i class="fas fa-user-tie"></i></span>
       Администратор
     </button>
   </div>

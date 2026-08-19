@@ -75,17 +75,17 @@ async function saveBirthday() {
   var day   = parseInt(document.getElementById('bd-day').value);
   var month = parseInt(document.getElementById('bd-month').value);
   var year  = parseInt(document.getElementById('bd-year').value) || null;
-  if (!day || !month) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:#e74c3c"></i> День и месяц обязательны</span>'; return; }
-  if (day < 1 || day > 31 || month < 1 || month > 12) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:#e74c3c"></i> Неверная дата</span>'; return; }
+  if (!day || !month) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:var(--err)"></i> День и месяц обязательны</span>'; return; }
+  if (day < 1 || day > 31 || month < 1 || month > 12) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:var(--err)"></i> Неверная дата</span>'; return; }
   try {
     var r = await fetch('/api/my-birthday/' + GUILD_ID, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({day, month, year})
     }).then(r => r.json());
-    if (r.ok) { msg.innerHTML = '<span ><i class="fas fa-check" style="color:#2ecc71"></i> Сохранено!</span>'; init(); }
-    else msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:#e74c3c"></i> ' + (r.error || 'Ошибка') + '</span>';
-  } catch(e) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:#e74c3c"></i> Ошибка соединения</span>'; }
+    if (r.ok) { msg.innerHTML = '<span ><i class="fas fa-check" style="color:var(--ok)"></i> Сохранено!</span>'; init(); }
+    else msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:var(--err)"></i> ' + (r.error || 'Ошибка') + '</span>';
+  } catch(e) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:var(--err)"></i> Ошибка соединения</span>'; }
 }
 
 init();

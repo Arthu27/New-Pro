@@ -251,7 +251,7 @@ function updateCharts(charts) {
       labels: charts.category.labels,
       datasets: [{
         data: charts.category.data,
-        backgroundColor: ['#9b59b6', '#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c']
+        backgroundColor: ['#4f46e5', '#7c3aed', '#22d3ee', '#a78bfa', '#818cf8', '#0ea5e9']
       }]
     },
     options: {
@@ -268,7 +268,7 @@ function updateCharts(charts) {
   categoryList.innerHTML = charts.category.labels.map((label, i) => {
     const count = charts.category.data[i];
     const percent = ((count / total) * 100).toFixed(1);
-    const colors = ['#9b59b6', '#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c'];
+    const colors = ['#4f46e5', '#7c3aed', '#22d3ee', '#a78bfa', '#818cf8', '#0ea5e9'];
     const color = colors[i % colors.length];
     return `
       <div style="display: flex; align-items: center; padding: 8px; gap: 12px;">

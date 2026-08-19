@@ -2124,13 +2124,13 @@ def api_send_message ():
 
 @app .route ('/staff-apps')
 @login_required 
-@role_required ('admin')
+@role_required ('mod')
 def staff_apps_page ():
     return render_template ('staff_apps.html',role =session .get ('role'),username =session .get ('username'))
 
 @app .route ('/api/staff-apps')
 @login_required 
-@role_required ('admin')
+@role_required ('mod')
 def api_staff_apps ():
     apps_file ='data/staff_apps.json'
     if not os .path .exists (apps_file ):
@@ -2143,7 +2143,7 @@ def api_staff_apps ():
 
 @app .route ('/api/staff-apps/<app_id>/review',methods =['POST'])
 @login_required 
-@role_required ('admin')
+@role_required ('mod')
 def api_review_staff_app (app_id ):
     apps_file ='data/staff_apps.json'
     if not os .path .exists (apps_file ):
@@ -2421,6 +2421,12 @@ def api_public_guilds ():
 @app .route ('/api/public/apply',methods =['POST'])
 def api_public_apply ():
     data =request .get_json (silent =True )or {}
+    # Принимаем ключи формы обеих версий: 'почему'/'why', 'активен'/'activity'
+    if 'почему'not in data and data .get ('why'):
+        data ['почему']=data ['why']
+    if 'активен'not in data and data .get ('activity'):
+        data ['активен']=data ['activity']
+    data ['role']=str (data .get ('role')or 'Модератор').strip ()[:40 ]
     required =['discord_id','discord_name','guild_id','yas','tecrube','почему','активен']
     for field in required :
         if not data .get (field ):
@@ -2453,6 +2459,7 @@ def api_public_apply ():
     'timestamp':datetime.now(timezone.utc).isoformat (),
     'status':'pending',
     'source':'web',
+    'role':data ['role'],
     'answers':{
     'yas':data ['yas'],
     'tecrube':data ['tecrube'],
@@ -2491,6 +2498,7 @@ def api_public_apply ():
                 timestamp =datetime.now(timezone.utc)
                 )
                 embed .add_field (name =" Пользователь",value =f"`{data['discord_name']}` (ID: `{uid}`)",inline =True )
+                embed .add_field (name =" Должность",value =data ['role'],inline =True )
                 embed .add_field (name =" Возраст",value =data ['yas'],inline =True )
                 embed .add_field (name =" Активность",value =data ['активен'],inline =True )
                 embed .add_field (name =" Опыт",value =f"```{data['tecrube']}```",inline =False )

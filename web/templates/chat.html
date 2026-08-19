@@ -308,15 +308,38 @@
 .etiket-popup {
   position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; z-index: 50;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
-  box-shadow: var(--shadow-lg); max-height: 250px; overflow-y: auto; display: none;
-  padding: 5px;
+  box-shadow: var(--shadow-lg); max-height: 260px; overflow-y: auto; display: none;
+  padding: 6px;
   animation: msgIn .15s var(--ease-out);
 }
-.mention-item {
-  display: flex; align-items: center; gap: 9px; padding: 8px 11px; cursor: pointer; font-size: 13px;
-  border-radius: var(--r-sm);
+.etiket-popup::-webkit-scrollbar { width: 6px; }
+.etiket-popup::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+.mention-head {
+  padding: 7px 10px 6px; font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--text-3);
+  display: flex; align-items: center; gap: 7px;
 }
-.mention-item img { width: 26px; height: 26px; border-radius: 50%; }
+.mention-head::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.mention-item {
+  display: flex; align-items: center; gap: 10px; padding: 7px 10px; cursor: pointer; font-size: 13px;
+  border-radius: var(--r-sm);
+  transition: background .12s;
+}
+.mention-av-wrap { position: relative; flex: 0 0 32px; }
+.mention-av-wrap img, .mention-av-fb {
+  width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--ac-soft), color-mix(in srgb, #a78bfa 14%, transparent));
+  color: var(--ac); font-size: 13px;
+}
+.mention-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.mention-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mention-sub { font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mention-name mark, .mention-sub mark { background: var(--ac-soft); color: var(--ac); border-radius: 4px; padding: 0 2px; }
+.mention-bot {
+  align-self: flex-start; font-size: 8.5px; font-weight: 800; letter-spacing: .05em;
+  background: var(--ac-grad); color: #fff; padding: 2px 6px; border-radius: 10px;
+}
 .mention-item.selected, .mention-item:hover { background: var(--ac-soft); color: var(--ac); }
 
 /* ── Members panel ── */
@@ -1106,12 +1129,41 @@ function handleInput(el) {
 function renderMentionPopup() {
   var popup = document.getElementById('etiket-popup');
   popup.style.display = 'block';
-  popup.innerHTML = _mentionMatches.map(function(m, i) {
-    var av = m.avatar ? '<img alt="" src="' + m.avatar + '">' : '<i class="fas fa-user"   style="opacity: .5;"></i>';
-    return '<div class="mention-item' + (i===_mentionIdx?' selected':'') + '" onclick="selectMention(' + i + ')">' + av + escHtml(m.name) + '</div>';
+  var before = document.getElementById('chat-input').value.substring(0, document.getElementById('chat-input').selectionStart);
+  var q = (before.match(/@(\w*)$/) || [,''])[1].toLowerCase();
+  var rows = _mentionMatches.map(function(m, i) {
+    var st = m.status === 'online' ? 'online' : m.status === 'idle' ? 'idle' : m.status === 'dnd' ? 'dnd' : 'offline';
+    var dn = m.nick || m.display_name || m.name;
+    var nm = String(m.name || '');
+    var nameHtml = q ? nm.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'i'), '<mark>$1</mark>') : nm;
+    var av = m.avatar
+      ? '<div class="mention-av-wrap"><img alt="" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=mention-av-fb><i class=\"fas fa-user\"></i></div>\'"><span class="status-dot ' + st + '"></span></div>'
+      : '<div class="mention-av-wrap"><div class="mention-av-fb">' + (m.bot ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>') + '</div><span class="status-dot ' + st + '"></span></div>';
+    return '<div class="mention-item' + (i===_mentionIdx?' selected':'') + '" data-idx="' + i + '" role="option" aria-selected="' + (i===_mentionIdx?'true':'false') + '">' +
+      av +
+      '<span class="mention-copy"><span class="mention-name">' + escHtml(dn) + '</span>' +
+      (dn !== nm ? '<span class="mention-sub">' + nameHtml + '</span>' : '') +
+      (m.bot ? '<span class="mention-bot">БОТ</span>' : '') + '</span>' +
+      '</div>';
   }).join('');
+  popup.innerHTML = '<div class="mention-head">Участники — выберите</div>' + rows;
+  var sel = popup.querySelector('.mention-item.selected');
+  if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: 'nearest' });
 }
 
+(function mentionBind() {
+  var popup = document.getElementById('etiket-popup');
+  popup.addEventListener('click', function (e) {
+    var item = e.target.closest('.mention-item');
+    if (item) selectMention(parseInt(item.dataset.idx, 10));
+  });
+  popup.addEventListener('mousemove', function (e) {
+    var item = e.target.closest('.mention-item');
+    if (!item) return;
+    var idx = parseInt(item.dataset.idx, 10);
+    if (idx !== _mentionIdx) { _mentionIdx = idx; renderMentionPopup(); }
+  });
+})();
 function selectMention(idx) {
   var m = _mentionMatches[idx]; if (!m) return;
   var inp = document.getElementById('chat-input');
@@ -1166,7 +1218,7 @@ function renderMemberList(members) {
 }
 
 function renderMemberItem(m) {
-  var av = m.avatar ? '<img alt="" class="member-av" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=member-av-placeholder>\u{1F464}</div>\'">': '<div class="member-av-placeholder">' + (m.bot ? '\u{1F916}' : '\u{1F464}') + '</div>';
+  var av = m.avatar ? '<img alt="" class="member-av" src="' + m.avatar + '" onerror="this.outerHTML=\'<div class=member-av-placeholder><i class=\"fas fa-user\"></i></div>\'">': '<div class="member-av-placeholder">' + (m.bot ? '<i class="fas fa-robot"></i>' : '<i class="fas fa-user"></i>') + '</div>';
   var st = m.status === 'online' ? 'online' : m.status === 'idle' ? 'idle' : m.status === 'dnd' ? 'dnd' : 'offline';
   var dn = m.nick || m.display_name || m.name;
   return '<div class="member-item" id="mi-' + m.id + '" onclick="openprofile(event,\'' + m.id + '\')">' +
@@ -1181,7 +1233,7 @@ function openprofile(event, memberId) {
   _profsMember = m;
   var popup = document.getElementById('profs-popup');
   var dn = m.nick || m.display_name || m.name;
-  var avHtml = m.avatar ? '<img alt="" src="' + m.avatar + '" class="profs-av">' : '<div class="profs-av-placeholder">\u{1F464}</div>';
+  var avHtml = m.avatar ? '<img alt="" src="' + m.avatar + '" class="profs-av">' : '<div class="profs-av-placeholder"><i class="fas fa-user"></i></div>';
   document.getElementById('pp-avatar').innerHTML = avHtml;
   document.getElementById('pp-displayname').textContent = dn;
   document.getElementById('pp-username').textContent = '@' + m.name + (m.discriminator && m.discriminator !== '0' ? '#' + m.discriminator : '');

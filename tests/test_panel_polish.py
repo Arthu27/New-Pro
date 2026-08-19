@@ -476,8 +476,53 @@ with client.session_transaction() as s:
 r = client.get('/my-applications')
 check(r.status_code == 200 and 'apps-list' in r.get_data(as_text=True),
       '/my-applications → 200 для участника')
-check('app.js?v=46' in base and 'style.css?v=99' in base,
-      'версии ассетов забумплены (99/46)')
+# ═══ 16. Заявки в команду, @-пикер, welcome-hero, чистка каналов ═══════════
+print('== заявки, @-пикер, чистота ==')
+import glob as _glob
+menu_src = open(os.path.join(ROOT, 'services', 'panel_menu.py'), encoding='utf-8').read()
+check("'section': 'management'" in menu_src.split("'path': '/staff-apps'")[1][:200],
+      'меню: заявки в команду — в Модерации → управление')
+check("'path': '/staff-apps'" not in menu_src.split("{'group': 'Тикеты'")[1].split("]},")[0]
+      if "{'group': 'Тикеты'" in menu_src else True,
+      'меню: заявки убраны из группы «Тикеты»')
+app_src = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
+check("data ['role']=str (data .get ('role')or 'Модератор')" in app_src
+      and "'role':data ['role']" in app_src,
+      'API заявки: должность сохраняется (роль хелпер/мод/чат-контроль)')
+check("if 'почему'not in data and data .get ('why')" in app_src,
+      'API заявки: принимает ключи формы (почему/why, активен/activity)')
+ma = open(os.path.join(ROOT, 'web', 'templates', 'member_apply.html'), encoding='utf-8').read()
+check('apply-role' in ma and 'Хелпер' in ma and 'Чат-контроль' in ma and 'role-card' in ma,
+      'форма заявки: выбор должности (хелпер/модератор/чат-контроль)')
+check("role: role," in ma,
+      'форма заявки: должность уходит в API')
+pa = open(os.path.join(ROOT, 'web', 'templates', 'public_apply.html'), encoding='utf-8').read()
+check('apply-role' in pa and 'Чат-контроль' in pa,
+      'публичная заявка: выбор должности тоже есть')
+chat = open(os.path.join(ROOT, 'web', 'templates', 'chat.html'), encoding='utf-8').read()
+check('mention-head' in chat and '<mark>' in chat and 'mention-av-wrap' in chat
+      and 'data-idx' in chat,
+      '@-пикер чата: стиль Discord (шапка, аватары со статусом, подсветка совпадения)')
+check('mousemove' in chat.split('mentionBind')[1][:600] if 'mentionBind' in chat else False,
+      '@-пикер: выбор мышью при наведении')
+welcome = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('w-dragon-ring' in welcome and 'w-chips' in welcome and 'w-dragon-halo' in welcome,
+      'welcome-hero: кольцо с градиентом, гало и фичи-чипы')
+# глобальная чистота: ни эмодзи, ни тёмного наследия ни в одном шаблоне
+import re as _re
+EMOJI = _re.compile(r'[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\u23E9-\u23FF\u2700-\u27BF]')
+dirty = []
+for _f in _glob.glob(os.path.join(ROOT, 'web', 'templates', '*.html')):
+    _t = open(_f, encoding='utf-8').read()
+    if EMOJI.search(_t):
+        dirty.append(os.path.basename(_f) + ':emoji')
+    for _p in ('rgba(20,18,14', '#0a0907', '#1a1a20', '#e2e8f0', '#d4a843', '#139492',
+               '#8a8374', '#d8d0bb', '#2ecc71', '#e74c3c', '#ff6b6b'):
+        if _p in _t:
+            dirty.append(os.path.basename(_f) + ':' + _p)
+check(not dirty, f'все шаблоны чистые: без эмодзи и тёмного наследия ({dirty[:4]}…)')
+check('app.js?v=47' in base and 'style.css?v=100' in base,
+      'версии ассетов забумплены (100/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,

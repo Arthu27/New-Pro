@@ -23,7 +23,7 @@
 .lv-hero .hero-sub{font-size:13px;color:var(--text-2);margin-top:3px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:900px){.grid2{grid-template-columns:1fr}}
-.lv-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:20px;}
+.lv-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:20px;}
 .lv-box .box-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .toggle-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:12px}
 .toggle-label{font-size:13.5px;color:var(--text-2);font-weight:500}
@@ -91,7 +91,7 @@
     </div>
     <div class="form-group">
       <label class="form-label">Сообщение о повышении уровня</label>
-      <input type="text" id="lv-msg" class="form-input" placeholder="{user} достиг уровня {level}! 🎉" aria-label="{user} достиг уровня {level}! 🎉">
+      <input type="text" id="lv-msg" class="form-input" placeholder="{user} достиг уровня {level}!" aria-label="{user} достиг уровня {level}!">
     </div>
 
     <button type="button" class="btn-save" onclick="saveLeveling()"><i class="fas fa-floppy-disk"></i> СОХРАНИТЬ</button>
@@ -195,7 +195,7 @@ async function loadLeveling() {
 async function saveLeveling() {
   if (!selectedGuild) { showToast('Выберите сервер!', false); return; }
   var btn = document.querySelector('.btn-save');
-  btn.textContent = '⏳ СОХРАН...';
+  btn.textContent = 'Сохранение…';
   btn.disabled = true;
 
   var r = await fetch('/api/guild/' + selectedGuild + '/leveling', {

@@ -45,6 +45,39 @@
 .apply-step-line.done { background: color-mix(in srgb, var(--ok) 40%, var(--line)); }
 @media (max-width: 640px) { .apply-step span { display: none; } }
 
+/* ── Выбор должности ── */
+.role-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.role-card {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+  padding: 14px; border-radius: 14px;
+  background: var(--surface); border: 1.5px solid var(--line-2);
+  cursor: pointer; transition: all .18s var(--ease);
+}
+.role-card:hover { border-color: var(--ac-line); transform: translateY(-1px); }
+.role-card input { position: absolute; opacity: 0; width: 0; height: 0; }
+.role-card:has(input:checked) {
+  border-color: var(--ac);
+  background: var(--ac-soft);
+  box-shadow: 0 0 0 3px var(--ac-soft), 0 8px 20px -10px var(--ac-glow);
+}
+.rc-ico {
+  width: 40px; height: 40px; border-radius: 12px;
+  color: #fff; display: grid; place-items: center; font-size: 16px;
+  box-shadow: 0 6px 14px -6px rgba(15, 23, 42, .35);
+}
+.rc-copy b { display: block; font-size: 13.5px; }
+.rc-copy small { display: block; margin-top: 3px; font-size: 11px; color: var(--text-3); line-height: 1.45; }
+.rc-check {
+  position: absolute; top: 12px; right: 12px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--ac-grad); color: #fff;
+  display: grid; place-items: center; font-size: 10px;
+  opacity: 0; transform: scale(.5); transition: all .18s var(--ease);
+}
+.role-card:has(input:checked) .rc-check { opacity: 1; transform: scale(1); }
+@media (max-width: 640px) { .role-pick { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .role-card, .rc-check { transition: none; } }
+
 /* ── Карточка формы ── */
 .form-card {
   background: var(--glass); border: 1px solid var(--line);
@@ -185,6 +218,28 @@
         </div>
       </div>
 
+      <div class="section-title" style="margin-top:18px"><i class="fas fa-user-gear"></i> Желаемая должность</div>
+      <div class="role-pick" id="role-pick">
+        <label class="role-card" data-role="Хелпер">
+          <input type="radio" name="apply-role" value="Хелпер" aria-label="Хелпер">
+          <span class="rc-ico" style="background:linear-gradient(135deg,#0891b2,#22d3ee)"><i class="fas fa-hands-helping"></i></span>
+          <span class="rc-copy"><b>Хелпер</b><small>Помощь новичкам, ответы на вопросы</small></span>
+          <span class="rc-check"><i class="fas fa-check"></i></span>
+        </label>
+        <label class="role-card" data-role="Модератор">
+          <input type="radio" name="apply-role" value="Модератор" checked aria-label="Модератор">
+          <span class="rc-ico" style="background:var(--ac-grad)"><i class="fas fa-shield-halved"></i></span>
+          <span class="rc-copy"><b>Модератор</b><small>Контроль чатов, варны и порядок</small></span>
+          <span class="rc-check"><i class="fas fa-check"></i></span>
+        </label>
+        <label class="role-card" data-role="Чат-контроль">
+          <input type="radio" name="apply-role" value="Чат-контроль" aria-label="Чат-контроль">
+          <span class="rc-ico" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)"><i class="fas fa-comments"></i></span>
+          <span class="rc-copy"><b>Чат-контроль</b><small>Порядок в переписке, культура общения</small></span>
+          <span class="rc-check"><i class="fas fa-check"></i></span>
+        </label>
+      </div>
+
       <div class="section-title" style="margin-top:18px"><i class="fas fa-file-lines"></i> Анкета</div>
       <div class="form-row">
         <div class="form-group">
@@ -322,6 +377,8 @@ async function submitForm() {
   var tecrube = document.getElementById('tecrube').value.trim();
   var why = document.getElementById('why').value.trim();
   var ekstra = document.getElementById('ekstra').value.trim();
+  var rolePick = document.querySelector('input[name="apply-role"]:checked');
+  var role = rolePick ? rolePick.value : 'Модератор';
   if (!yas || !activity || !tecrube || !why) { showAlert('error', 'Заполните все обязательные поля!'); return; }
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Отправляем…';
@@ -332,6 +389,7 @@ async function submitForm() {
         discord_id: document.getElementById('discord_id').value.trim(),
         discord_name: document.getElementById('discord_name').value.trim(),
         guild_id: selectedGuild.id, guild_name: selectedGuild.name,
+        role: role,
         yas: yas, activity: activity, tecrube: tecrube, why: why, ekstra: ekstra
       })
     });

@@ -19,7 +19,7 @@
   .sc-wrap { padding:6px 2px 34px; max-width: 1080px; }
   .sc-box { background:linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:16px; margin-bottom:16px; overflow:hidden; }
   .sc-head { padding:14px 18px; font-weight:700; font-size:14px; display:flex; align-items:center; gap:9px; background:color-mix(in srgb, var(--text) 3%, transparent); border-bottom:1px solid color-mix(in srgb, var(--text) 6%, transparent); }
-  .sc-head i { color:var(--ac, #e0b04a); }
+  .sc-head i { color:var(--ac, var(--ac)); }
   .sc-head .right { margin-left:auto; font-size:11px; opacity:.65; font-weight:600; }
   .sc-body { padding:16px 18px; }
   .sc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; }
@@ -30,24 +30,24 @@
   .sc-btn { display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border-radius:10px; background:linear-gradient(135deg, rgba(212,175,55,.2), rgba(212,175,55,.08)); border:1px solid rgba(212,175,55,.4); color:#e8c96a; font-weight:700; font-size:13px; cursor:pointer; transition:.15s; }
   .sc-btn:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(212,175,55,.15); }
   .sc-btn.ghost { background:color-mix(in srgb, var(--text) 4%, transparent); border-color:color-mix(in srgb, var(--text) 14%, transparent); color:#fff; }
-  .sc-btn.danger { background:rgba(231,76,60,.12); border-color:rgba(231,76,60,.4); color:#e74c3c; }
+  .sc-btn.danger { background:rgba(231,76,60,.12); border-color:rgba(231,76,60,.4); color:var(--err); }
   .sc-btn.mini { padding:6px 12px; font-size:12px; }
   .sc-item { display:flex; gap:14px; align-items:flex-start; padding:14px 16px; border:1px solid color-mix(in srgb, var(--text) 7%, transparent); border-radius:12px; margin-bottom:10px; background:color-mix(in srgb, var(--text) 2%, transparent); transition:.15s; }
   .sc-item:hover { border-color:rgba(212,175,55,.3); }
   .sc-item.paused { opacity:.55; }
-  .sc-id { font-weight:800; color:#e0b04a; font-size:13px; flex-shrink:0; padding-top:2px; }
+  .sc-id { font-weight:800; color:var(--ac); font-size:13px; flex-shrink:0; padding-top:2px; }
   .sc-main { flex:1; min-width:0; }
   .sc-meta { font-size:12.5px; font-weight:700; margin-bottom:4px; }
   .sc-meta .pill { display:inline-block; padding:2px 9px; border-radius:14px; font-size:11px; margin-left:6px; }
-  .sc-pill-on { background:rgba(46,204,113,.14); color:#2ecc71; border:1px solid rgba(46,204,113,.3); }
+  .sc-pill-on { background:rgba(46,204,113,.14); color:var(--ok); border:1px solid rgba(46,204,113,.3); }
   .sc-pill-off { background:rgba(149,165,166,.14); color:#95a5a6; border:1px solid rgba(149,165,166,.3); }
   .sc-text { font-size:12.5px; opacity:.75; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
   .sc-next { font-size:11.5px; opacity:.6; margin-top:5px; }
   .sc-item-actions { display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
   .sc-toast { position:fixed; bottom:22px; right:22px; padding:12px 20px; border-radius:12px; font-weight:700; font-size:13px; background:#1a2332; border:1px solid color-mix(in srgb, var(--text) 15%, transparent); color:#fff; z-index:9999; opacity:0; transform:translateY(12px); transition:.25s; pointer-events:none; }
   .sc-toast.show { opacity:1; transform:none; }
-  .sc-toast.ok { border-color:rgba(46,204,113,.5); color:#2ecc71; }
-  .sc-toast.bad { border-color:rgba(231,76,60,.5); color:#e74c3c; }
+  .sc-toast.ok { border-color:rgba(46,204,113,.5); color:var(--ok); }
+  .sc-toast.bad { border-color:rgba(231,76,60,.5); color:var(--err); }
 </style>
 
 <div class="sc-wrap">
@@ -83,7 +83,7 @@
       <div class="sc-field" style="margin-top:12px"><label>Текст сообщения</label>
         <textarea id="f-content" rows="3" placeholder="Текст анонса (можно оставить пустым, если заполнен embed)" aria-label="Текст анонса (можно оставить пустым, если заполнен embed)"></textarea></div>
       <div class="sc-grid" style="margin-top:12px">
-        <div class="sc-field"><label>Заголовок embed (не обязательно)</label><input id="f-etitle" type="text" placeholder="Например: 🎮 Еженедельный ивент" aria-label="Например: 🎮 Еженедельный ивент"></div>
+        <div class="sc-field"><label>Заголовок embed (не обязательно)</label><input id="f-etitle" type="text" placeholder="Например: Еженедельный ивент" aria-label="Например: Еженедельный ивент"></div>
         <div class="sc-field"><label>Текст embed (не обязательно)</label><input id="f-edesc" type="text" placeholder="Подробности события…" aria-label="Подробности события…"></div>
       </div>
       <div class="sc-actions">

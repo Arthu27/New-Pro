@@ -21,10 +21,10 @@
 .hero-icon{font-size:34px;width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 18px var(--ac-glow)}
 .hero-title{font-family:'Poppins',sans-serif;font-size:20px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.02em}
 .hero-sub{font-size:13px;color:var(--text-2);margin-top:3px}
-.ml-filter-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:14px;padding:14px 16px;margin-bottom:16px;}
+.ml-filter-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:14px;padding:14px 16px;margin-bottom:16px;}
 .filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
 .filter-row .field-input{flex:1;min-width:150px}
-.ml-log-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:16px;}
+.ml-log-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:16px;}
 .box-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .box-title i{color:var(--ac)}
 /* логи */
@@ -70,9 +70,9 @@
       <option value="{{ main_guild_id }}">Текущий сервер</option>
     </select>
     <select id="log-type" onchange="loadLogs()" class="field-input" aria-label="Тип журнала">
-      <option value="all">📋 Все</option>
-      <option value="deleted">🗑 Удалённые</option>
-      <option value="edited">✏️ Изменённые</option>
+      <option value="all">Все</option>
+      <option value="deleted">Удалённые</option>
+      <option value="edited">Изменённые</option>
     </select>
     <input type="text" id="user-filter" placeholder="Поиск пользователя..." class="field-input" style="min-width:160px" oninput="filterLogs()" aria-label="Поиск пользователя...">
   </div>

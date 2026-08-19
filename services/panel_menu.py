@@ -97,6 +97,9 @@ MENU = [
         {'path': '/ladder', 'label': 'Лестница наказаний', 'icon': 'fa-stairs',
          'section': 'management', 'description': 'Ступени эскалации и контроль сроков',
          'access': 'Мод+', 'tone': 'analytics'},
+        {'path': '/staff-apps', 'label': 'Заявки в команду', 'icon': 'fa-file-signature',
+         'section': 'management', 'description': 'Анкеты кандидатов: хелперы, модераторы, чат-контроль',
+         'access': 'Мод+', 'tone': 'analytics'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},
@@ -127,7 +130,6 @@ MENU = [
         {'path': '/transcripts', 'label': 'Транскрипты', 'icon': 'fa-file-lines'},
         {'path': '/sla', 'label': 'SLA-контроль', 'icon': 'fa-handshake'},
         {'path': '/ticket-settings', 'label': 'Настройки', 'icon': 'fa-cogs'},
-        {'path': '/staff-apps', 'label': 'Заявки', 'icon': 'fa-file-signature'},
     ]},
     {'group': 'Бот', 'key': 'bot', 'icon': 'fa-robot', 'pages': [
         {'path': '/commands', 'label': 'Команды', 'icon': 'fa-terminal'},

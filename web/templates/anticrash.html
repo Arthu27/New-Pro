@@ -16,7 +16,7 @@
 {% endblock %}
 
 <style>
-  .ac-wrap { padding:6px 2px 42px; max-width:1080px; --ok:#2ecc71; --bad:#e74c3c; --mid:#f39c12; }
+  .ac-wrap { padding:6px 2px 42px; max-width:1080px; --ok:var(--ok); --bad:var(--err); --mid:#f39c12; }
 
   /* ── герой статуса ─────────────────────────────────────────── */
   .ac-hero { display:flex; align-items:center; gap:18px; flex-wrap:wrap; padding:20px 22px; border-radius:20px;
@@ -184,7 +184,7 @@
   .ac-btn i { margin-right:6px; }
   .ac-btn.ghost { background:color-mix(in srgb, var(--text) 6%, transparent); color:var(--text);
     border-color:color-mix(in srgb, var(--text) 14%, transparent); }
-  .ac-btn.danger { background:linear-gradient(160deg, #e74c3c, #c0392b); color:#fff; border-color:rgba(231,76,60,.4); }
+  .ac-btn.danger { background:linear-gradient(160deg, var(--err), #c0392b); color:#fff; border-color:rgba(231,76,60,.4); }
 
   .ac-toast { position:fixed; bottom:24px; right:24px; padding:13px 20px; border-radius:12px; font-size:13px;
     font-weight:700; z-index:9999; opacity:0; transform:translateY(12px); transition:.25s; pointer-events:none; }

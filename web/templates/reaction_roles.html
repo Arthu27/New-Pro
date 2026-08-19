@@ -17,7 +17,7 @@
 
 .rr-hero{display:flex;align-items:center;gap:14px;padding:18px 22px;background:linear-gradient(135deg,color-mix(in srgb, var(--ac) 10%, transparent),color-mix(in srgb, var(--ac) 3%, transparent));border:1px solid var(--ac-line);border-radius:14px;margin-bottom:16px}
 .rr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.rr-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),rgba(20,18,14,.7));border:1px solid var(--line-2);border-radius:14px;padding:16px}
+.rr-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:14px;padding:16px}
 .rr-title{font-weight:700;color:var(--text);font-size:14px;margin-bottom:12px}
 .rr-type-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
 .rr-type-badge.select{background:rgba(167,139,250,.14);color:#c4b5fd;border:1px solid rgba(167,139,250,.3)}
@@ -77,8 +77,8 @@
     <div class="form-group">
       <label class="form-label">Тип панели</label>
       <select id="rr-type" class="form-input" onchange="setType(this.value)" aria-label="Тип реакционных ролей">
-        <option value="emoji">😀 Emoji-реакции</option>
-        <option value="select">📋 Select-menu (выпадающий список)</option>
+        <option value="emoji">Emoji-реакции</option>
+        <option value="select">Select-menu (выпадающий список)</option>
       </select>
     </div>
     <div id="rr-emoji-label" class="form-label" style="margin-bottom: 10px;">Emoji → Роль</div>
@@ -144,17 +144,17 @@ async function loadRR() {
   document.getElementById('rr-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
 
   var box = document.getElementById('rr-list');
-  if (!rrs.length) { box.innerHTML='<div class="empty-state"><div >🎭</div><p>Панелей пока нет.</p></div>'; return; }
+  if (!rrs.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-face-smile" style="font-size:34px;color:var(--ac)"></i><p>Панелей пока нет.</p></div>'; return; }
   box.innerHTML = rrs.map(function(rr, i) {
     var isSelect = rr.type === 'select';
     var entries = (rr.entries||[]).map(function(e) {
-      var left = isSelect ? '<span class="rr-badge">📋</span>' : '<span class="rr-emoji">'+(e.emoji||'🎭')+'</span><span class="rr-arrow">→</span>';
+      var left = isSelect ? '<span class="rr-badge"><i class="fas fa-bars"></i></span>' : '<span class="rr-emoji">'+(e.emoji||'<i class="fas fa-face-smile"></i>')+'</span><span class="rr-arrow">→</span>';
       return '<div class="rr-entry">'+left+'<span class="rr-role">@'+e.role_name+'</span></div>';
     }).join('');
     return '<div class="rr-card" >'+
-      '<div class="rr-title">🎭 '+rr.title+'</div>'+ (isSelect ? '<span class="rr-type-badge select">📋 Select-menu</span>' : '<span class="rr-type-badge emoji">😀 Реакции</span>') + entries +
+      '<div class="rr-title">'+rr.title+'</div>'+ (isSelect ? '<span class="rr-type-badge select"><i class="fas fa-bars"></i> Select-menu</span>' : '<span class="rr-type-badge emoji"><i class="fas fa-face-smile"></i> Реакции</span>') + entries +
       '<div class="rr-footer"><span >'+rr.entries.length+' роль</span>'+
-      '<button type="button" class="btn-del" onclick="deleteRR(\''+rr.id+'\')">🗑 Удалить</button></div></div>';
+      '<button type="button" class="btn-del" onclick="deleteRR(\''+rr.id+'\')"><i class="fas fa-trash"></i> Удалить</button></div></div>';
   }).join('');
 }
 
@@ -164,9 +164,9 @@ function addEntry() {
   var roles = allRoles.map(r=>'<option value="'+r.id+'">@'+r.name+'</option>').join('');
   var field;
   if (rrType === 'select') {
-    field = '<input type="text" class="entry-emoji" name="entry-emoji" placeholder="🎭 (необязательно)" maxlength="2" aria-label="🎭 (необязательно)">';
+    field = '<input type="text" class="entry-emoji" name="entry-emoji" placeholder="Эмодзи (необязательно)" maxlength="2" aria-label="Эмодзи (необязательно)">';
   } else {
-    field = '<input type="text" class="entry-emoji" name="entry-emoji" value="🎭" maxlength="2" aria-label="Эмодзи">';
+    field = '<input type="text" class="entry-emoji" name="entry-emoji" value="" maxlength="2" aria-label="Эмодзи">';
   }
   div.innerHTML = field +
     '<select class="entry-role form-input" name="entry-role" aria-label="Роль">'+roles+'</select>'+
@@ -205,13 +205,13 @@ async function createRR() {
     return;
   }
   var btn = document.querySelector('.btn-submit');
-  btn.textContent = '⏳ Создание...'; btn.disabled = true;
+  btn.textContent = 'Создание…'; btn.disabled = true;
   var r = await fetch('/api/guild/'+selectedGuild+'/reaction-roles/create', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ title: title, channel_id: channel_id, type: type, entries: entries })
   });
   var d = await r.json();
-  btn.textContent = '🎭 Создать и отправить'; btn.disabled = false;
+  btn.textContent = 'Создать и отправить'; btn.disabled = false;
   if (d.success) { closeModal(); loadRR(); } else alert(d.error||'Ошибка!');
 }
 

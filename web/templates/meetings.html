@@ -6,24 +6,24 @@
 .mt-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
 .mt-kpi{flex:1;min-width:170px;background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:13px 16px}
 .mt-kpi .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:5px;display:flex;align-items:center;gap:7px}
-.mt-kpi .lab i{color:var(--ac,#e0b04a)}
+.mt-kpi .lab i{color:var(--ac,var(--ac))}
 .mt-kpi .v{font-size:17px;font-weight:800;color:var(--text-1,#fff)}
 .mt-kpi .v small{font-size:11px;font-weight:600;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent))}
 .mt-kpi .v.on{color:#4ade80}
 .mt-kpi .v.off{color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent))}
 .mt-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:15px 17px;margin-bottom:16px}
 .mt-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
-.mt-panel h3 i{color:var(--ac,#e0b04a)}
+.mt-panel h3 i{color:var(--ac,var(--ac))}
 .mt-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.55}
 .mt-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
 .mt-row:last-child{margin-bottom:0}
 .mt-inp{background:var(--surface-2,color-mix(in srgb, var(--text) 5%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none;min-width:170px}
-.mt-inp:focus{border-color:var(--ac,#e0b04a)}
-.mt-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
+.mt-inp:focus{border-color:var(--ac,var(--ac))}
+.mt-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,var(--ac));color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
 .mt-btn:hover{filter:brightness(1.08)}
 .mt-btn.danger{background:transparent;color:#ff8a7a;border:1px solid rgba(237,66,69,.45)}
 .mt-btn.danger:hover{background:rgba(237,66,69,.1)}
-.mt-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,color-mix(in srgb, var(--ac) 35%, transparent))}
+.mt-btn.ghost{background:transparent;color:var(--ac,var(--ac));border:1px solid var(--ac-line,color-mix(in srgb, var(--ac) 35%, transparent))}
 .mt-msg{font-size:12px;padding:4px 2px;display:none}
 .mt-msg.ok{color:#4ade80}
 .mt-msg.err{color:#ff8a7a}
@@ -34,7 +34,7 @@
 .mt-table td{padding:7px 8px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent);color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent))}
 .mt-table tr:last-child td{border-bottom:none}
 .mt-table td b{color:var(--text-1,#fff);font-weight:600}
-.mt-table td.score{font-weight:800;color:var(--ac,#e0b04a)}
+.mt-table td.score{font-weight:800;color:var(--ac,var(--ac))}
 .mt-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:16px;align-items:start}
 @media (max-width:1000px){.mt-grid{grid-template-columns:1fr}}
 [data-theme="light"] .mt-table td{border-bottom-color:rgba(0,0,0,.08)}
@@ -139,7 +139,7 @@ function renderRoles(st) {
   box.innerHTML = st.staff_roles.map(function (rid) {
     var name = (st.role_names && st.role_names[rid]) || rid;
     var del = CAN_EDIT ? ' <button type="button" onclick="mtRoleDel(\'' + rid + '\')" title="Убрать"><i class="fas fa-xmark"></i></button>' : '';
-    return '<span class="mt-chip"><i class="fas fa-tag" style="color:var(--ac,#e0b04a)"></i> ' + esc(name) + del + '</span>';
+    return '<span class="mt-chip"><i class="fas fa-tag" style="color:var(--ac,var(--ac))"></i> ' + esc(name) + del + '</span>';
   }).join('');
 }
 

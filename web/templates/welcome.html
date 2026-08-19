@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@500;700;900&display=swap" media="print" onload="this.media='all'">
-  <link rel="stylesheet" href="/static/style.css?v=99">
+  <link rel="stylesheet" href="/static/style.css?v=100">
   <style>
     html { scroll-behavior: smooth; }
     body { overflow-x: hidden; }
@@ -56,15 +56,29 @@
       background: radial-gradient(circle, color-mix(in srgb, var(--ac) 14%, transparent), transparent 65%);
       z-index: -1;
     }
+    .w-dragon-wrap { position: relative; width: 158px; height: 158px; margin: 0 auto 26px; }
+    .w-dragon-ring {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: conic-gradient(var(--ac), #7c3aed, #22d3ee, var(--ac));
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+      opacity: .55;
+    }
+    .w-dragon-halo {
+      position: absolute; inset: 14px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--ac) 22%, transparent), transparent 70%);
+      animation: wHalo 4.5s ease-in-out infinite;
+    }
+    @keyframes wHalo { 0%, 100% { opacity: .5; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.04); } }
     .w-dragon {
-      width: 132px; height: 132px; margin: 0 auto 22px;
-      border-radius: 34px;
+      position: absolute; inset: 16px;
+      border-radius: 38px;
       background: linear-gradient(135deg, var(--ac), #7c3aed 60%, #22d3ee 130%);
       display: grid; place-items: center;
       box-shadow: 0 18px 48px color-mix(in srgb, var(--ac) 40%, transparent);
       animation: wFloat 5s ease-in-out infinite;
     }
-    .w-dragon img { width: 104px; height: 104px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(15, 23, 42, 0.35)); }
+    .w-dragon img { width: 88px; height: 88px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(15, 23, 42, 0.35)); }
     @keyframes wFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
     .w-eyebrow {
       display: inline-flex; align-items: center; gap: 8px;
@@ -85,8 +99,18 @@
       background: linear-gradient(90deg, var(--ac), #7c3aed 55%, #22d3ee);
       -webkit-background-clip: text; background-clip: text; color: transparent;
     }
-    .w-lead { max-width: 640px; margin: 0 auto 26px; color: var(--text-2); font-size: 15px; line-height: 1.65; }
+    .w-lead { max-width: 640px; margin: 0 auto 20px; color: var(--text-2); font-size: 15px; line-height: 1.65; }
     .w-lead b { color: var(--text); }
+    .w-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 22px; }
+    .w-chips .chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 14px; border-radius: 99px;
+      background: var(--surface); border: 1px solid var(--line);
+      color: var(--text-2); font-size: 12.5px; font-weight: 600;
+      transition: border-color .15s, color .15s, transform .15s var(--ease);
+    }
+    .w-chips .chip i { color: var(--ac); }
+    .w-chips .chip:hover { border-color: var(--ac-line); color: var(--ac); transform: translateY(-1px); }
     .w-at-hint {
       display: inline-flex; align-items: center; gap: 9px;
       margin: 0 auto 24px; padding: 10px 18px;
@@ -215,8 +239,8 @@
       .w-hero { padding-top: 120px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .w-dragon { animation: none; }
-      .w-card, .w-search input { transition: none; }
+      .w-dragon, .w-dragon-halo { animation: none; }
+      .w-card, .w-search input, .w-chips .chip { transition: none; }
     }
   </style>
 </head>
@@ -240,13 +264,25 @@
 
   <!-- Hero -->
   <header class="w-hero">
-    <div class="w-dragon"><img src="/static/brand/emblem-dragon.png" alt="Белый дракон Aether"></div>
+    <div class="w-dragon-wrap">
+      <div class="w-dragon-ring" aria-hidden="true"></div>
+      <div class="w-dragon-halo" aria-hidden="true"></div>
+      <div class="w-dragon"><img src="/static/brand/emblem-dragon.png" alt="Белый дракон Aether"></div>
+    </div>
     <div class="w-eyebrow"><span class="dot"></span> Панель сервера · для всех участников</div>
     <h1 class="w-title">Зайди — и <span class="grad">всё найдётся</span><br>за секунду</h1>
     <p class="w-lead">
       Aether — это не только штаб для команды. Здесь <b>каждый участник</b> находит своё:
       профиль, статусы, заявки, обращения и события сервера — без страданий и поисков по чатам.
     </p>
+    <div class="w-chips">
+      <span class="chip"><i class="fas fa-user"></i> Профиль</span>
+      <span class="chip"><i class="fas fa-file-signature"></i> Заявки в команду</span>
+      <span class="chip"><i class="fas fa-ticket"></i> Обращения</span>
+      <span class="chip"><i class="fas fa-ranking-star"></i> Уровни</span>
+      <span class="chip"><i class="fas fa-calendar-days"></i> События</span>
+      <span class="chip"><i class="fas fa-keyboard"></i> @-поиск</span>
+    </div>
     <div class="w-at-hint">
       <span class="kbd">@</span>
       <span>Нажми <b>@</b> в любом месте панели — откроется мгновенный поиск: страницы, участники, каналы, команды</span>
@@ -404,6 +440,6 @@
     window.wSearchHide = wSearchHide;
   })();
   </script>
-  <script src="/static/app.js?v=46"></script>
+  <script src="/static/app.js?v=47"></script>
 </body>
 </html>

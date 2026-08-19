@@ -260,8 +260,8 @@ async function loadDiscordChannels() {
 
 function channelChip(label, state) {
   let color, mark;
-  if (state === true) { color = '#2ecc71'; mark = '<i class="fas fa-check"></i>'; }
-  else if (state === false) { color = '#e74c3c'; mark = '<i class="fas fa-xmark"></i>'; }
+  if (state === true) { color = '#16a34a'; mark = '<i class="fas fa-check"></i>'; }
+  else if (state === false) { color = '#dc2626'; mark = '<i class="fas fa-xmark"></i>'; }
   else { color = 'var(--text-muted)'; mark = '—'; }
   return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:' +
     color + ';border:1px solid ' + color + '33;border-radius:6px;padding:2px 7px;margin-right:6px;">' +
@@ -292,7 +292,7 @@ async function loadNotificationHistory() {
         const chip = function (name, st) {
           if (!st.ok && !st.fail) return '';
           return '<span style="font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid color-mix(in srgb, var(--text) 12%, transparent);color:var(--text-muted);">' +
-            name + ': <b style="color:#2ecc71">' + st.ok + '</b> · <b style="color:' + (st.fail ? '#e74c3c' : 'inherit') + '">' + st.fail + '</b></span>';
+            name + ': <b style="color:var(--ok)">' + st.ok + '</b> · <b style="color:' + (st.fail ? 'var(--err)' : 'inherit') + '">' + st.fail + '</b></span>';
         };
         dlv.innerHTML = chip('Веб', data.delivery.web) + chip('Discord', data.delivery.discord) + chip('Email', data.delivery.email);
       }
@@ -308,7 +308,8 @@ async function loadNotificationHistory() {
 
       container.innerHTML = notifications.map(notif => {
         const date = new Date(notif.created_at).toLocaleString('ru-RU');
-        const icon = notif.icon || '🔔';
+        const rawIcon = notif.icon || 'fa-bell';
+        const icon = String(rawIcon).indexOf('<') === 0 ? rawIcon : '<i class="fas ' + String(rawIcon).replace(/[^a-z0-9-]/gi, '') + '"></i>';
         const body = notif.body != null ? notif.body : (notif.message || '');
         let chips = '';
         if (notif.channels && typeof notif.channels === 'object') {
@@ -325,7 +326,7 @@ async function loadNotificationHistory() {
         const card = `
           <div style="${cardStyle}" ${link ? `onclick="window.location.href='${link}'"` : ''} ${link ? 'onmouseover="this.style.borderColor=\'rgba(200,146,42,0.5)\'" onmouseout="this.style.borderColor=\'color-mix(in srgb, var(--text) 10%, transparent)\'"' : ''}>
             <div style="display: flex; align-items: start; gap: 12px;">
-              <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(200,146,42,0.15); display: flex; align-items: center; justify-content: center; font-size: 16px;">${icon}</div>
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--ac-soft); display: flex; align-items: center; justify-content: center; font-size: 16px;">${icon}</div>
               <div style="flex: 1; min-width: 0;">
                 <div style="font-weight: 600; margin-bottom: 4px;">${escNotif(notif.title)}</div>
                 <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;">${escNotif(body)}</div>
@@ -401,13 +402,13 @@ async function sendTestNotification() {
       resultBox.innerHTML =
         '<div style="font-size: 13px; margin-bottom: 6px; font-weight: 600;">Результат доставки:</div>' +
         channelChip('Веб', ch.web) + channelChip('Discord', ch.discord) + channelChip('Email', ch.email) +
-        '<div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">✓ — доставлено · ✗ — ошибка · — — канал не настроен. Событие записано в историю ниже.</div>';
+        '<div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;"><i class="fas fa-check"></i> — доставлено · <i class="fas fa-xmark"></i> — ошибка · <i class="fas fa-minus"></i> — канал не настроен. Событие записано в историю ниже.</div>';
       loadNotificationHistory();
     } else {
-      resultBox.innerHTML = '<span style="color: #e74c3c; font-size: 13px;">Ошибка: ' + escNotif(data.error || 'неизвестная') + '</span>';
+      resultBox.innerHTML = '<span style="color: var(--err); font-size: 13px;">Ошибка: ' + escNotif(data.error || 'неизвестная') + '</span>';
     }
   } catch (e) {
-    resultBox.innerHTML = '<span style="color: #e74c3c; font-size: 13px;">Ошибка соединения</span>';
+    resultBox.innerHTML = '<span style="color: var(--err); font-size: 13px;">Ошибка соединения</span>';
   } finally {
     btn.disabled = false;
   }

@@ -6,7 +6,7 @@
 .rp-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
 .rp-kpi{flex:1;min-width:150px;background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:13px 16px}
 .rp-kpi .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:5px;display:flex;align-items:center;gap:7px}
-.rp-kpi .lab i{color:var(--ac,#e0b04a)}
+.rp-kpi .lab i{color:var(--ac,var(--ac))}
 .rp-kpi .v{font-size:19px;font-weight:800;color:var(--text-1,#fff)}
 .rp-kpi .v small{font-size:11px;font-weight:600;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent))}
 .rp-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:15px 17px;margin-bottom:16px}
@@ -14,21 +14,21 @@
 .rp-sel,.rp-inp{background:var(--surface-2,color-mix(in srgb, var(--text) 5%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
 .rp-inp{min-width:110px}
 .rp-inp.uid{flex:1;min-width:170px}
-.rp-sel:focus,.rp-inp:focus{border-color:var(--ac,#e0b04a)}
-.rp-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,#e0b04a);color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
+.rp-sel:focus,.rp-inp:focus{border-color:var(--ac,var(--ac))}
+.rp-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,var(--ac));color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
 .rp-btn:hover{filter:brightness(1.08)}
-.rp-btn.ghost{background:transparent;color:var(--ac,#e0b04a);border:1px solid var(--ac-line,color-mix(in srgb, var(--ac) 35%, transparent))}
+.rp-btn.ghost{background:transparent;color:var(--ac,var(--ac));border:1px solid var(--ac-line,color-mix(in srgb, var(--ac) 35%, transparent))}
 .rp-grid{display:grid;grid-template-columns:1.7fr 1fr;gap:16px;align-items:start}
 @media (max-width:1000px){.rp-grid{grid-template-columns:1fr}}
 .rp-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
 .rp-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 14%, transparent));border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));cursor:pointer;background:transparent}
-.rp-chip:hover{border-color:var(--ac,#e0b04a)}
-.rp-chip.on{background:var(--ac,#e0b04a);color:#1a1a1a;border-color:var(--ac,#e0b04a)}
+.rp-chip:hover{border-color:var(--ac,var(--ac))}
+.rp-chip.on{background:var(--ac,var(--ac));color:#1a1a1a;border-color:var(--ac,var(--ac))}
 .rp-chip .n{opacity:.75;font-weight:600}
 .rp-item{display:flex;gap:12px;padding:9px 2px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
 .rp-item:last-child{border-bottom:none}
-.rp-time{flex:0 0 46px;font-family:monospace;font-size:12.5px;font-weight:700;color:var(--ac,#e0b04a);padding-top:2px;text-align:right}
-.rp-dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;margin-top:5px;background:var(--ac,#e0b04a);box-shadow:0 0 8px currentColor}
+.rp-time{flex:0 0 46px;font-family:monospace;font-size:12.5px;font-weight:700;color:var(--ac,var(--ac));padding-top:2px;text-align:right}
+.rp-dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;margin-top:5px;background:var(--ac,var(--ac));box-shadow:0 0 8px currentColor}
 .rp-body{flex:1;min-width:0}
 .rp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:700;color:var(--text-1,#fff)}
 .rp-badge{display:inline-block;border:1px solid;border-radius:7px;padding:1px 8px;font-size:10.5px;font-weight:800;letter-spacing:.3px;opacity:.95}
@@ -36,7 +36,7 @@
 .rp-top-item{display:flex;justify-content:space-between;gap:10px;padding:7px 4px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent);font-size:12.5px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent))}
 .rp-top-item:last-child{border-bottom:none}
 .rp-top-item b{color:var(--text-1,#fff);font-weight:600}
-.rp-top-item .n{font-weight:800;color:var(--ac,#e0b04a);white-space:nowrap}
+.rp-top-item .n{font-weight:800;color:var(--ac,var(--ac));white-space:nowrap}
 .rp-hint{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));line-height:1.55;margin-top:10px}
 [data-theme="light"] .rp-item{border-bottom-color:rgba(0,0,0,.08)}
 [data-theme="light"] .rp-top-item{border-bottom-color:rgba(0,0,0,.08)}
@@ -84,7 +84,7 @@
     </div>
     <div class="rp-panel">
       <div class="rp-hint" style="margin-top:0">
-        <i class="fas fa-circle-info" style="color:var(--ac,#e0b04a)"></i>
+        <i class="fas fa-circle-info" style="color:var(--ac,var(--ac))"></i>
         Источник — та же летопись, что читает /replay: audit_log.json, до 2000 последних событий. Команда рисует карточку-картинку; здесь — текстовая лента для быстрого разбора. Цвета меток — палитра категорий из модулей логов бота.
       </div>
     </div>
@@ -94,8 +94,8 @@
 <script>
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/replay';
-var CAT_COLORS = {mod:'#e74c3c', member:'#2ecc71', message:'#3498db', role:'#9b59b6',
-                  channel:'#f39c12', voice:'#1abc9c', 'сервер':'#e67e22', automod:'#e74c3c',
+var CAT_COLORS = {mod:'#dc2626', member:'#16a34a', message:'#0ea5e9', role:'#7c3aed',
+                  channel:'#f59e0b', voice:'#22d3ee', 'сервер':'#ea580c', automod:'#dc2626',
                   invite:'#95a5a6', proof:'#9b59b6'};
 var FEED = [];
 var FILTER_CAT = null;

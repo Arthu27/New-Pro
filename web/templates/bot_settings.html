@@ -17,7 +17,7 @@
 
 <style>
 .bs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-.bs-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),rgba(20,18,14,.6));border:1px solid var(--line-2);border-radius:16px;padding:20px;}
+.bs-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:20px;}
 .bs-head{display:flex;align-items:center;gap:11px;margin-bottom:14px}
 .bs-icon{width:42px;height:42px;border-radius:11px;background:var(--ac-soft);color:var(--ac);border:1px solid var(--ac-line);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
 .bs-title{font-weight:800;color:var(--text);font-size:15px}
@@ -54,18 +54,18 @@
     </div>
     <div class="row"><label>Статус</label>
       <select id="bs-status" aria-label="Статус бота">
-        <option value="online">🟢 Online</option>
-        <option value="idle">🟡 Idle</option>
-        <option value="dnd">🔴 DND</option>
-        <option value="invisible">⚫ Invisible</option>
+        <option value="online">Online</option>
+        <option value="idle">Idle</option>
+        <option value="dnd">DND</option>
+        <option value="invisible">Invisible</option>
       </select>
     </div>
     <div class="row"><label>Активность</label>
       <select id="bs-activity" aria-label="Тип активности">
-        <option value="listening">🎧 Слушает</option>
-        <option value="playing">🎮 Играет</option>
-        <option value="watching">👀 Смотрит</option>
-        <option value="competing">🏆 Соревнуется</option>
+        <option value="listening">Слушает</option>
+        <option value="playing">Играет</option>
+        <option value="watching">Смотрит</option>
+        <option value="competing">Соревнуется</option>
       </select>
     </div>
     <div class="row"><label>Текст</label>
@@ -128,7 +128,7 @@
       $('bs-activity').value = d.presence.activity_type;
       $('bs-text').value = d.presence.activity_text;
       $('bs-prefix').textContent = d.prefix;
-      $('bs-online').textContent = d.bot_online ? '🟢 да' : '🔴 офлайн';
+      $('bs-online').innerHTML = d.bot_online ? '<i class="fas fa-circle" style="color:var(--ok);font-size:9px"></i> да' : '<i class="fas fa-circle" style="color:var(--err);font-size:9px"></i> офлайн';
       $('bs-guilds').textContent = d.guilds;
       $('bs-version').textContent = d.discord_version;
     }).catch(function () { toast('Не удалось загрузить настройки', false); });
@@ -157,7 +157,7 @@
   function sync() {
     var out = $('bs-sync-out');
     out.className = 'bs-out show';
-    out.textContent = '⏳ Синхронизируем…';
+    out.textContent = 'Синхронизируем…';
     fetch('/api/bot-settings/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
       .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
       .then(function (res) {

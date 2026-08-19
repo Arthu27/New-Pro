@@ -48,8 +48,8 @@ async function bkLoad() {
   if (!d.success) { list.innerHTML = '<i>Ошибка загрузки.</i>'; return; }
   const s = d.settings || {};
   const mode = s.enabled
-    ? `<i class="fas fa-circle" style="color:#2ecc71"></i> Автобэкап включён: ежедневно в <b>${String(s.hour).padStart(2,'0')}:00</b>, храним последние <b>${s.keep}</b>`
-    : '<i class="fas fa-circle" style="color:#e74c3c"></i> Автобэкап выключен (BACKUP_ENABLED=0)';
+    ? `<i class="fas fa-circle" style="color:var(--ok)"></i> Автобэкап включён: ежедневно в <b>${String(s.hour).padStart(2,'0')}:00</b>, храним последние <b>${s.keep}</b>`
+    : '<i class="fas fa-circle" style="color:var(--err)"></i> Автобэкап выключен (BACKUP_ENABLED=0)';
   stats.innerHTML = mode + ` &nbsp;·&nbsp; Всего: <b>${d.stats.total}</b> шт, <b>${d.stats.total_size_h}</b>`;
   if (!d.items.length) {
     list.innerHTML = '<i>Архивов пока нет — создайте первый кнопкой выше.</i>';
@@ -79,7 +79,7 @@ async function bkLoad() {
 async function bkCreate() {
   const btn = document.getElementById('bk-create-btn');
   btn.disabled = true;
-  msg('bk-msg', '⏳ Упаковываю data/…', 'ok');
+  msg('bk-msg', 'Упаковываю data/…', 'ok');
   try {
     const r = await fetch('/api/backups', {method: 'POST'});
     const d = await r.json();

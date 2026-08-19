@@ -273,7 +273,7 @@
     fetch('/api/bot/errors').then(r => r.json()).then(errs => {
       const box = document.getElementById('errorsBox');
       if (!errs.length) {
-        box.innerHTML = '<div   style="text-align: center;"><i class="fas fa-check-circle"></i> Нет ошибок ✨</div>';
+        box.innerHTML = '<div   style="text-align: center;"><i class="fas fa-check-circle"></i> Нет ошибок</div>';
         return;
       }
       box.innerHTML = errs.slice(0, 15).map(e => {

@@ -243,7 +243,7 @@
     // Achievements
     fetch('/api/leveling/achievements').then(r => r.json()).then(d => {
       const grid = document.getElementById('achGrid');
-      const rarityEmoji = {common: '<i class="fas fa-circle" style="color:#aab"></i>', uncommon: '<i class="fas fa-circle" style="color:#2ecc71"></i>', rare: '<i class="fas fa-circle" style="color:#3498db"></i>', epic: '<i class="fas fa-circle" style="color:#9b59b6"></i>', legendary: '🟡'};
+      const rarityEmoji = {common: '<i class="fas fa-circle" style="color:#aab"></i>', uncommon: '<i class="fas fa-circle" style="color:var(--ok)"></i>', rare: '<i class="fas fa-circle" style="color:#3498db"></i>', epic: '<i class="fas fa-circle" style="color:#9b59b6"></i>', legendary: '<i class="fas fa-circle" style="color:#fbbf24"></i>'};
       grid.innerHTML = Object.entries(d.catalog).map(([id, info]) => {
         const unlocked = d.unlocked.includes(id);
         return `<div class="lvl-ach ${unlocked ? 'unlocked' : ''}">

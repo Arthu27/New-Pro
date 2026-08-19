@@ -25,7 +25,7 @@
   .au-strip .num { font-size: 19px; font-weight: 800; line-height: 1.1; }
   .au-strip .lbl { font-size: 11px; opacity: .6; margin-top: 2px; }
   .i-blue  { color: var(--ac-2); background: color-mix(in srgb, var(--ac) 14%, transparent); border: 1px solid color-mix(in srgb, var(--ac) 30%, transparent); }
-  .i-green { color: #2ecc71; background: rgba(46,204,113,0.14); border: 1px solid rgba(46,204,113,0.32); }
+  .i-green { color: var(--ok); background: rgba(46,204,113,0.14); border: 1px solid rgba(46,204,113,0.32); }
   .i-red   { color: #ff8a8a; background: rgba(231,76,60,0.13); border: 1px solid rgba(231,76,60,0.3); }
 
   /* ── карточки модулей ── */
@@ -39,7 +39,7 @@
   .au-title-block { flex: 1; min-width: 0; }
   .au-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 9px; }
   .au-badge { font-size: 10.5px; font-weight: 700; letter-spacing: .4px; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
-  .au-badge.on  { background: rgba(46,204,113,0.14); color: #2ecc71; border: 1px solid rgba(46,204,113,0.35); }
+  .au-badge.on  { background: rgba(46,204,113,0.14); color: var(--ok); border: 1px solid rgba(46,204,113,0.35); }
   .au-badge.off { background: color-mix(in srgb, var(--text) 6%, transparent); color: color-mix(in srgb, var(--text) 45%, transparent); border: 1px solid color-mix(in srgb, var(--text) 12%, transparent); }
   .au-desc { font-size: 12px; opacity: .62; line-height: 1.5; margin-top: 3px; }
 
@@ -69,8 +69,8 @@
   .au-save:disabled { opacity: .5; cursor: default; }
   .au-msg { font-size: 12px; opacity: 0; transform: translateX(-4px); transition: .25s; }
   .au-msg.show { opacity: 1; transform: translateX(0); }
-  .au-msg.ok { color: #2ecc71; }
-  .au-msg.err { color: #ff6b6b; }
+  .au-msg.ok { color: var(--ok); }
+  .au-msg.err { color: var(--err); }
 
   .au-loading, .au-error { grid-column: 1/-1; text-align: center; padding: 42px 20px; opacity: .6; }
   .au-loading i { font-size: 22px; display: block; margin-bottom: 12px; }
@@ -106,8 +106,8 @@
   .dg-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
   .trg-test { display: flex; gap: 8px; margin-top: 14px; }
   .trg-io { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
-  .trg-res { margin-top: 10px; border-left: 3px solid var(--ac,#e0b04a); background: color-mix(in srgb, var(--ac) 6%, transparent); border-radius: 0 8px 8px 0; padding: 10px 12px; font-size: 13px; color: var(--text-1); }
-  .trg-res.warn { border-left-color: #e74c3c; background: rgba(231,76,60,.07); }
+  .trg-res { margin-top: 10px; border-left: 3px solid var(--ac,var(--ac)); background: color-mix(in srgb, var(--ac) 6%, transparent); border-radius: 0 8px 8px 0; padding: 10px 12px; font-size: 13px; color: var(--text-1); }
+  .trg-res.warn { border-left-color: var(--err); background: rgba(231,76,60,.07); }
   .trg-res .rr { color: var(--text-2); white-space: pre-wrap; word-break: break-word; margin-top: 4px; }
   .trg-res small { display: block; color: var(--text-3); margin-top: 6px; font-size: 11.5px; }
   .cnt-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 2px; border-bottom: 1px dashed color-mix(in srgb, var(--text) 8%, transparent); font-size: 13px; }
@@ -739,7 +739,7 @@ async function welcomePreview(){
       + '<div class="wp-src">Шаблон №' + tpl.index + ': ' + esc(tpl.source) + '</div></div>';
   }).join('');
   if(d.dm_enabled && d.dm_rendered){
-    html += '<div class="wp-tpl" style="border-left-color:#e0b04a;background:color-mix(in srgb, var(--ac) 6%, transparent)"><div><i class="fas fa-envelope"></i> ЛС новичку: ' + esc(d.dm_rendered) + '</div></div>';
+    html += '<div class="wp-tpl" style="border-left-color:var(--ac);background:color-mix(in srgb, var(--ac) 6%, transparent)"><div><i class="fas fa-envelope"></i> ЛС новичку: ' + esc(d.dm_rendered) + '</div></div>';
   }
   box.innerHTML = html || '<div class="au-sec-sub" style="margin:0">Шаблонов нет — добавьте их в карточке «Приветствия PRO».</div>';
 }

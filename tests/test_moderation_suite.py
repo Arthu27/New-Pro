@@ -33,13 +33,13 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
-print('== 1. Карта 18 инструментов ==')
+print('== 1. Карта 20 инструментов ==')
 from services import panel_menu as pm  # noqa: E402
 
 raw_group = next(group for group in pm.MENU if group['key'] == 'mod')
 raw_pages = raw_group['pages']
-check(len(raw_pages) == 19, f'в разделе модерации ровно 19 инструментов ({len(raw_pages)})')
-check(len({page['path'] for page in raw_pages}) == 19, 'URL всех инструментов уникальны')
+check(len(raw_pages) == 20, f'в разделе модерации ровно 20 инструментов ({len(raw_pages)})')
+check(len({page['path'] for page in raw_pages}) == 20, 'URL всех инструментов уникальны')
 required = {'path', 'label', 'icon', 'section', 'description', 'access', 'tone'}
 missing = [(page.get('path'), sorted(required - set(page))) for page in raw_pages
            if not required <= set(page)]
@@ -70,7 +70,7 @@ check(not hasattr(pm, 'moderation_profile_for'),
 
 admin_group = next(group for group in pm.panel_groups_for('admin') if group['key'] == 'mod')
 section_counts = [len(section['pages']) for section in admin_group['sections']]
-check(section_counts == [7, 4, 4, 4], f'workflow разбит 7/4/4/4 ({section_counts})')
+check(section_counts == [7, 4, 4, 5], f'workflow разбит 7/4/4/5 ({section_counts})')
 check([section['key'] for section in admin_group['sections']] ==
       ['response', 'investigation', 'protection', 'management'],
       'подгруппы сайдбара следуют рабочему сценарию')
@@ -79,12 +79,12 @@ print('== 2. Роли: ни одной ссылки, ведущей в гара�
 mod_group = next(group for group in pm.panel_groups_for('mod') if group['key'] == 'mod')
 mod_paths = {page['path'] for page in mod_group['pages']}
 admin_only = {'/bulk-actions', '/tagjail', '/antiraid'}
-check(len(mod_group['pages']) == 16, f'модератор видит 16 доступных инструментов ({len(mod_group["pages"])})')
+check(len(mod_group['pages']) == 17, f'модератор видит 17 доступных инструментов ({len(mod_group["pages"])})')
 check(not (mod_paths & admin_only), 'админские операции скрыты от роли mod')
 check(admin_only <= {page['path'] for page in admin_group['pages']},
       'администратор видит все рискованные операции')
 owner_group = next(group for group in pm.panel_groups_for('owner') if group['key'] == 'mod')
-check(len(owner_group['pages']) == 19, 'owner видит полный набор из 19 инструментов')
+check(len(owner_group['pages']) == 20, 'owner видит полный набор из 20 инструментов')
 
 print('== 3. Общий каркас: светлый shell + единый кит ==')
 base_path = os.path.join(ROOT, 'web', 'templates', 'base.html')
@@ -140,6 +140,7 @@ room_templates = {
     '/antiraid': 'antiraid', '/antifake': 'antifake',
     '/mod-control': 'mod_control', '/mod-report': 'mod_report',
     '/mod-insights': 'mod_insights', '/ladder': 'ladder',
+    '/staff-apps': 'staff_apps',
 }
 legacy_surfaces = ('ops-canvas', 'ops-room-label', 'ops-kicker', 'data-room-kind',
                    'data-room-version', 'mod-suite', 'tm-tab', 'ap-kpi', 'ld-kpi')
