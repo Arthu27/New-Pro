@@ -615,6 +615,29 @@ login_as('owner')
 for path in ('/channels', '/chat', '/message-logs', '/transcripts', '/archive', '/voice-stats'):
     r = client.get(path)
     check(r.status_code == 200, f'{path} → {r.status_code}')
+# ═══ 21. Справка — полностью пересобрана ═════════════════════════════════
+print('== справка ==')
+yd = open(os.path.join(ROOT, 'web', 'templates', 'yardim.html'), encoding='utf-8').read()
+check('class="page-head"' in yd and 'yd-search' in yd and 'yd-grid' in yd,
+      'справка: шапка, поиск и сетка карточек')
+check('data-grp="{{ grp.key }}"' in yd and 'href="{{ p.path }}"' in yd,
+      'справка: карточки собираются из реального меню и кликабельны')
+check('--yd-tone' in yd and "_tones = {" in yd,
+      'справка: группы раскрашены тонами палитры')
+check('@' in yd and 'Ctrl' in yd and 'Alt' in yd and 'Shift' in yd and 'Esc' in yd,
+      'справка: реальные горячие клавиши панели (@, Ctrl+K, Alt+M, Alt+N, Shift+F, Esc)')
+check('F12' not in yd and 'инкогнито' not in yd,
+      'справка: бесполезные браузерные хоткеи убраны')
+check('yd-faq' in yd and '<details>' in yd and '<summary>' in yd,
+      'справка: FAQ-аккордеон')
+check('openHelp' in yd,
+      'справка: кнопка клавиш открывает окно подсказки')
+check('map(attribute=' in yd or 'yd-total' in yd,
+      'справка: счётчик инструментов из меню')
+login_as('owner')
+r = client.get('/yardim')
+check(r.status_code == 200 and 'yd-grid' in r.get_data(as_text=True),
+      '/yardim открывается под owner')
 check('app.js?v=47' in base and 'style.css?v=101' in base,
       'версии ассетов (101/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
