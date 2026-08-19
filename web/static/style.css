@@ -686,6 +686,26 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .eyebrow .sep { color: var(--text-3); font-weight: 400; }
 
 /* Совместимость: page-hero — теперь тихая белая шапка-карточка */
+/* Унификация шапок: старый компактный hero выглядит как премиум page-head */
+.main-content:has(> .page-hero) .navbar { display: none; }
+.page-hero.compact {
+  display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+  padding: 18px 20px; margin-bottom: 20px;
+}
+.page-hero.compact .page-hero-content { flex: 1; min-width: 260px; }
+.page-hero.compact .page-hero-greeting { color: var(--text-3); }
+.page-hero.compact h1 {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 22px !important;
+}
+.page-hero.compact h1 > i:first-child {
+  width: 40px; height: 40px; flex: 0 0 40px;
+  display: inline-grid; place-items: center;
+  background: linear-gradient(135deg, var(--ac), #7c3aed);
+  color: #fff; font-size: 16px; border-radius: 12px;
+  box-shadow: 0 6px 16px -6px var(--ac-glow);
+  text-align: center; justify-content: center;
+}
 .page-hero {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -4178,3 +4198,24 @@ body.reorder-mode .reorder-hint { display: block; }
 }
 .copyable { cursor: pointer; }
 .copyable:hover { color: var(--ac); }
+
+/* ============================================================
+   28. ПЛАВНЫЕ ПЕРЕХОДЫ МЕЖДУ СТРАНИЦАМИ
+   View Transitions API: мягкий фейд + лёгкий подъём новой
+   страницы при навигации. Браузеры без поддержки игнорируют.
+   ============================================================ */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root) {
+  animation: vtOld 0.16s ease both;
+}
+::view-transition-new(root) {
+  animation: vtNew 0.24s var(--ease) both;
+}
+@keyframes vtOld { to { opacity: 0; } }
+@keyframes vtNew { from { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}

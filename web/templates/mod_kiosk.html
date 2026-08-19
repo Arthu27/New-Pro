@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Экран дежурного — Aether</title>
+  <link rel="icon" href="/static/favicon.ico">
+  <link rel="stylesheet" href="/static/style.css?v=86">
+  <style>
+    /* ЭКРАН ДЕЖУРНОГО — полноэкранная живая стена модерации */
+    body.kiosk {
+      margin: 0; min-height: 100vh; overflow: hidden;
+      background:
+        radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--ac) 10%, transparent), transparent 42%),
+        radial-gradient(circle at 90% 100%, color-mix(in srgb, #22d3ee 8%, transparent), transparent 38%),
+        var(--bg);
+      font-family: inherit;
+      color: var(--text);
+      display: flex; flex-direction: column;
+    }
+    .kiosk-top {
+      display: flex; align-items: center; gap: 14px;
+      padding: 18px 26px 6px;
+    }
+    .kiosk-brand { display: flex; align-items: center; gap: 10px; }
+    .kiosk-brand img { width: 40px; height: 40px; border-radius: 12px; box-shadow: 0 6px 18px -6px var(--ac-glow); }
+    .kiosk-brand b { font-family: var(--font-display); font-size: 17px; letter-spacing: .06em; }
+    .kiosk-brand small { display: block; font-size: 10px; color: var(--text-3); letter-spacing: .1em; text-transform: uppercase; }
+    .kiosk-clock { margin-left: auto; text-align: right; }
+    .kiosk-clock .t { font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 800; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+    .kiosk-clock .d { font-size: 12px; color: var(--text-3); letter-spacing: .08em; text-transform: uppercase; }
+    .kiosk-top .btn { margin-left: 10px; }
+    .kiosk-main { flex: 1; display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; padding: 8px 26px 26px; min-height: 0; }
+    .kiosk-left, .kiosk-right { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .kiosk-panel {
+      background: var(--glass); border: 1px solid var(--line);
+      border-radius: 18px; padding: 16px 18px; overflow: hidden;
+      box-shadow: var(--shadow-1); display: flex; flex-direction: column;
+    }
+    .kiosk-panel h3 {
+      margin: 0 0 10px; font-size: 11px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .1em; color: var(--text-3);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .kiosk-panel h3 i { color: var(--ac); }
+    .kiosk-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex: 1; }
+    .kiosk-kpi {
+      border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+      background: linear-gradient(145deg, var(--surface), var(--surface-2));
+      display: flex; flex-direction: column; justify-content: center; gap: 2px;
+      position: relative; overflow: hidden;
+    }
+    .kiosk-kpi::after {
+      content: ''; position: absolute; right: -18px; bottom: -24px; width: 70px; height: 70px;
+      border-radius: 50%; background: var(--kpi-tone, var(--ac)); opacity: .07; filter: blur(2px);
+    }
+    .kiosk-kpi .v { font-family: 'JetBrains Mono', monospace; font-size: 34px; font-weight: 800; line-height: 1; }
+    .kiosk-kpi .l { font-size: 10.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+    .kiosk-kpi[data-tone="ok"] { --kpi-tone: var(--ok); }
+    .kiosk-kpi[data-tone="err"] { --kpi-tone: var(--err); }
+    .kiosk-kpi[data-tone="warn"] { --kpi-tone: var(--warn); }
+    .kiosk-kpi[data-tone="info"] { --kpi-tone: var(--info); }
+    .kiosk-ring-box { flex: 1; display: flex; align-items: center; justify-content: center; gap: 26px; }
+    .kiosk-ring-box .ring-wrap { width: 190px; height: 190px; }
+    .kiosk-ring-box .ring-copy { max-width: 240px; }
+    .kiosk-ring-box .ring-copy b { font-size: 16px; }
+    .kiosk-ring-box .ring-copy p { margin: 6px 0 0; font-size: 12px; color: var(--text-2); line-height: 1.5; }
+    .kiosk-feed { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+    .kiosk-feed .data-table { width: 100%; font-size: 12px; }
+    .kiosk-feed .data-table td, .kiosk-feed .data-table th { padding: 8px 6px; }
+    .kiosk-ticker { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; background: var(--surface); overflow: hidden; }
+    .kiosk-ticker .kiosk-ticker-label { flex: 0 0 auto; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--ac); background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 20px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; }
+    .kiosk-ticker .kiosk-ticker-track { flex: 1; overflow: hidden; }
+    .kiosk-ticker .kiosk-ticker-inner { display: flex; gap: 8px; width: max-content; animation: kioskDrift 30s linear infinite; }
+    .kiosk-ticker:hover .kiosk-ticker-inner { animation-play-state: paused; }
+    @keyframes kioskDrift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .kiosk-ticker .chip {
+      flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; padding: 5px 11px; border-radius: 20px;
+      border: 1px solid var(--line); background: var(--surface); white-space: nowrap;
+    }
+    .kiosk-ticker .chip i { font-size: 10px; opacity: .8; }
+    .kiosk-ticker .chip.danger { border-color: color-mix(in srgb, var(--err) 35%, transparent); color: var(--err); }
+    .kiosk-ticker .chip.warn { border-color: color-mix(in srgb, var(--warn) 40%, transparent); color: #b45309; }
+    .kiosk-ticker .chip.ok { border-color: color-mix(in srgb, var(--ok) 35%, transparent); color: var(--ok); }
+    .kiosk-dots { display: flex; gap: 6px; }
+    .kiosk-dots i {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--line-2);
+      cursor: pointer; transition: all .2s var(--ease);
+    }
+    .kiosk-dots i.on { background: var(--ac); transform: scale(1.35); }
+    .kiosk-slide { display: none; flex-direction: column; gap: 14px; flex: 1; min-height: 0; }
+    .kiosk-slide.on { display: flex; animation: kioskIn .4s var(--ease) both; }
+    @keyframes kioskIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .kiosk-bars { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+    .kiosk-bar-row { display: flex; align-items: center; gap: 10px; }
+    .kiosk-bar-row .nm { flex: 0 0 140px; min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kiosk-bar-row .tr { flex: 1; height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; }
+    .kiosk-bar-row .fl { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--ac), #7c3aed); transition: width .6s var(--ease-out); }
+    .kiosk-bar-row .ct { flex: 0 0 auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--ac); min-width: 24px; text-align: right; }
+    @media (max-width: 900px) {
+      .kiosk-main { grid-template-columns: 1fr; overflow-y: auto; }
+      body.kiosk { overflow: auto; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .kiosk-ticker .kiosk-ticker-inner { animation: none; }
+      .kiosk-slide.on { animation: none; }
+    }
+  </style>
+</head>
+<body class="kiosk">
+
+  <div class="kiosk-top">
+    <div class="kiosk-brand">
+      <img src="/static/brand/emblem-square.png" alt="Aether">
+      <div><b>AETHER</b><small>Экран дежурного</small></div>
+    </div>
+    <div class="kiosk-dots" id="kioskDots" aria-label="Слайды">
+      <i class="on" data-slide="0" title="Обзор"></i>
+      <i data-slide="1" title="Команда и нарушители"></i>
+    </div>
+    <div class="kiosk-clock">
+      <div class="t"><span id="kioskTime">--:--:--</span></div>
+      <div class="d" id="kioskDate">—</div>
+    </div>
+    <button type="button" class="btn" id="kioskFull" title="Во весь экран"><i class="fas fa-expand"></i></button>
+    <a class="btn" href="/mod-center" title="Вернуться в центр модерации (Esc)"><i class="fas fa-arrow-left"></i> В штаб</a>
+  </div>
+
+  <div class="kiosk-main" id="kioskMain">
+
+    <div class="kiosk-left">
+      <div class="kiosk-slide on" data-slide="0">
+        <div class="kiosk-panel">
+          <h3><i class="fas fa-gauge-high"></i> Ключевые показатели</h3>
+          <div class="kiosk-kpis">
+            <div class="kiosk-kpi" data-tone="info"><div class="v" id="kkMutes">—</div><div class="l">Активных мьютов</div></div>
+            <div class="kiosk-kpi" data-tone="err"><div class="v" id="kkBans">—</div><div class="l">Активных банов</div></div>
+            <div class="kiosk-kpi" data-tone="warn"><div class="v" id="kkWarns">—</div><div class="l">Варнов всего</div></div>
+            <div class="kiosk-kpi"><div class="v" id="kkAppeals">—</div><div class="l">Апелляций в очереди</div></div>
+            <div class="kiosk-kpi" data-tone="ok"><div class="v" id="kkProofs">—</div><div class="l">Демок в архиве</div></div>
+            <div class="kiosk-kpi" data-tone="err"><div class="v" id="kkEdge">—</div><div class="l">На грани</div></div>
+          </div>
+        </div>
+        <div class="kiosk-panel">
+          <h3><i class="fas fa-chart-pie"></i> Структура мер за 7 дней</h3>
+          <div class="kiosk-ring-box">
+            <div class="ring-wrap" id="kioskRing"><div class="sk-line" style="height:12px"></div></div>
+            <div class="ring-copy">
+              <b id="kioskSerenity">Контур спокойствия</b>
+              <p id="kioskSerenityHint">Оцениваем соотношение снятий и наказаний.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kiosk-slide" data-slide="1">
+        <div class="kiosk-panel">
+          <h3><i class="fas fa-user-slash"></i> ТОП нарушителей · 7 дней</h3>
+          <div class="kiosk-bars" id="kioskOffenders"><div class="sk-line" style="height:12px"></div></div>
+        </div>
+        <div class="kiosk-panel">
+          <h3><i class="fas fa-people-group"></i> Нагрузка команды · 7 дней</h3>
+          <div class="kiosk-bars" id="kioskTeam"><div class="sk-line" style="height:12px"></div></div>
+        </div>
+      </div>
+
+      <div class="kiosk-ticker">
+        <span class="kiosk-ticker-label"><i class="fas fa-bolt"></i> События</span>
+        <div class="kiosk-ticker-track"><div class="kiosk-ticker-inner" id="kioskTicker"><span class="chip">Собираем события…</span></div></div>
+      </div>
+    </div>
+
+    <div class="kiosk-right">
+      <div class="kiosk-panel kiosk-feed">
+        <h3><i class="fas fa-clipboard-list"></i> Последние действия</h3>
+        <div style="overflow:auto;flex:1" id="kioskFeed"><div class="sk-line" style="height:12px"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js?v=32"></script>
+  <script>
+  (function () {
+    'use strict';
+    function $(id) { return document.getElementById(id); }
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+      catch (e) { return '—'; }
+    }
+    var _counted = {};
+    function setNum(id, val) {
+      var el = $(id);
+      if (!el) return;
+      var target = Number(val) || 0;
+      if (_counted[id]) { el.textContent = target.toLocaleString('ru-RU'); return; }
+      _counted[id] = true;
+      if (window.countUp) window.countUp(el, target); else el.textContent = target.toLocaleString('ru-RU');
+    }
+
+    /* Часы */
+    function tickClock() {
+      var now = new Date();
+      $('kioskTime').textContent =
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0') + ':' +
+        String(now.getSeconds()).padStart(2, '0');
+      $('kioskDate').textContent = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    /* Слайды */
+    var slideTimer = null;
+    var current = 0;
+    function showSlide(n) {
+      var slides = document.querySelectorAll('.kiosk-slide');
+      if (!slides.length || n < 0 || n >= slides.length) return;
+      slides.forEach(function (s, i) { s.classList.toggle('on', i === n); });
+      document.querySelectorAll('#kioskDots i').forEach(function (d) {
+        d.classList.toggle('on', parseInt(d.dataset.slide, 10) === n);
+      });
+      current = n;
+    }
+    function schedule() {
+      if (slideTimer) clearInterval(slideTimer);
+      var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced) return;
+      slideTimer = setInterval(function () { showSlide(current + 1); }, 12000);
+    }
+    document.getElementById('kioskDots').addEventListener('click', function (e) {
+      var d = e.target.closest('[data-slide]');
+      if (d) { showSlide(parseInt(d.dataset.slide, 10)); schedule(); }
+    });
+    var main = $('kioskMain');
+    main.addEventListener('mouseenter', function () { if (slideTimer) clearInterval(slideTimer); });
+    main.addEventListener('mouseleave', schedule);
+    schedule();
+
+    /* Данные (те же API, что и мод-центр) */
+    async function activeGid() {
+      try {
+        var guilds = await window.fetchCachedJSON('/api/guilds');
+        if (!Array.isArray(guilds) || !guilds.length) return null;
+        var main = '{{ main_guild_id }}';
+        for (var i = 0; i < guilds.length; i++) {
+          if (String(guilds[i].id) === String(main)) return guilds[i].id;
+        }
+        return guilds[0].id;
+      } catch (e) { return null; }
+    }
+
+    async function loadMetrics() {
+      try {
+        var d = await fetch('/api/temp-mod/active').then(function (r) { return r.ok ? r.json() : null; });
+        if (d) { setNum('kkMutes', (d.muts || []).length); setNum('kkBans', (d.bans || []).length); }
+      } catch (e) {}
+      try {
+        var w = await window.fetchCachedJSON('/api/warnings');
+        if (Array.isArray(w)) setNum('kkWarns', w.length);
+      } catch (e) {}
+      try {
+        var p = await fetch('/api/proofs').then(function (r) { return r.json(); });
+        if (p && p.items) setNum('kkProofs', p.items.length);
+      } catch (e) {}
+      var gid = await activeGid();
+      if (gid) {
+        try {
+          var a = await fetch('/api/guild/' + gid + '/appeals/overview').then(function (r) { return r.json(); });
+          if (a && a.stats) setNum('kkAppeals', a.stats.pending);
+        } catch (e) {}
+        try {
+          var c = await fetch('/api/guild/' + gid + '/mod-control/overview').then(function (r) { return r.json(); });
+          if (c && c.risk) setNum('kkEdge', c.risk.edge);
+        } catch (e) {}
+      }
+    }
+
+    var ACTION_TONES = {
+      ban: { color: '#dc2626', label: 'Баны' }, kick: { color: '#ea580c', label: 'Кики' },
+      warn: { color: '#d97706', label: 'Варны' }, mute: { color: '#7c3aed', label: 'Мьюты' },
+      timeout: { color: '#7c3aed', label: 'Таймауты' }, unban: { color: '#16a34a', label: 'Разбаны' },
+      unmute: { color: '#16a34a', label: 'Размуты' }
+    };
+    var TICKER_TONE = { ban: 'danger', kick: 'danger', warn: 'warn', mute: 'warn', timeout: 'warn', unban: 'ok', unmute: 'ok' };
+    var TICKER_ICON = { ban: 'fa-ban', kick: 'fa-right-from-bracket', warn: 'fa-triangle-exclamation', mute: 'fa-comment-slash', timeout: 'fa-clock', unban: 'fa-check', unmute: 'fa-check' };
+
+    function renderBars(box, counts, emptyText) {
+      var entries = Object.keys(counts).map(function (k) { return { name: k, n: counts[k] }; })
+        .sort(function (a, b) { return b.n - a.n; }).slice(0, 6);
+      if (!entries.length) {
+        box.innerHTML = '<div style="color:var(--text-3);font-size:12px;padding:6px 2px"><i class="fas fa-shield-halved"></i> ' + esc(emptyText) + '</div>';
+        return;
+      }
+      var max = entries[0].n;
+      box.innerHTML = entries.map(function (e) {
+        return '<div class="kiosk-bar-row"><span class="nm" title="' + esc(e.name) + '">' + esc(e.name) + '</span>' +
+          '<span class="tr"><span class="fl" style="width:' + Math.max(4, Math.round(e.n / max * 100)) + '%"></span></span>' +
+          '<span class="ct">' + e.n + '</span></div>';
+      }).join('');
+    }
+
+    async function loadFeed() {
+      var logs = [];
+      try {
+        logs = await window.fetchCachedJSON('/api/logs');
+      } catch (e) { return; }
+      if (!Array.isArray(logs)) return;
+      var TONE = { ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral', timeout: 'neutral', unban: 'ok', unmute: 'ok' };
+      var rows = logs.slice(0, 10).map(function (log) {
+        var a = (log.action || '?').toLowerCase();
+        return '<tr><td><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(log.action || '?') + '</span></td>' +
+          '<td>' + esc(log.user_name || log.target_name || log.user_id || '—') + '</td>' +
+          '<td class="muted">' + esc(log.mod_name || log.mod_id || '—') + '</td>' +
+          '<td class="muted">' + esc(fmtDate(log.timestamp)) + '</td></tr>';
+      }).join('');
+      $('kioskFeed').innerHTML = '<table class="data-table"><thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      if (window.attachTableSort) window.attachTableSort($('kioskFeed').querySelector('table'));
+    }
+
+    async function loadPeople() {
+      var events = [];
+      var gid = await activeGid();
+      try {
+        var h = await fetch('/api/mod-history' + (gid ? '?guild_id=' + encodeURIComponent(gid) : ''), { headers: { 'Accept': 'application/json' } }).then(function (r) { return r.json(); });
+        if (Array.isArray(h)) events = h;
+      } catch (e) {}
+      if (!events.length) {
+        try {
+          var logs = await window.fetchCachedJSON('/api/logs');
+          if (Array.isArray(logs)) events = logs.map(function (l) {
+            return { action: l.action, target: l.user_name || l.user_id || '—', mod: l.mod_name || l.mod_id || '—', at: l.timestamp };
+          });
+        } catch (e) {}
+      }
+      var since = Date.now() - 7 * 86400000;
+      var offenders = {}, mods = {};
+      var ticker = [];
+      var types = {};
+      var good = 0, bad = 0;
+      events.forEach(function (ev) {
+        var a = String(ev.action || '').toLowerCase();
+        if (ev.at) {
+          var t = new Date(ev.at).getTime();
+          if (!isNaN(t)) {
+            if (t >= since) {
+              offenders[String(ev.target || '—')] = (offenders[String(ev.target || '—')] || 0) + 1;
+              mods[String(ev.mod || '—')] = (mods[String(ev.mod || '—')] || 0) + 1;
+            }
+            ticker.push({ action: ev.action, target: ev.target, at: ev.at });
+          }
+        }
+        if (ACTION_TONES[a]) types[a] = (types[a] || 0) + 1;
+        if (a === 'unban' || a === 'unmute') good++;
+        else if (ACTION_TONES[a]) bad++;
+      });
+      ticker.sort(function (a, b) { return new Date(b.at).getTime() - new Date(a.at).getTime(); });
+      var chips = ticker.slice(0, 8).map(function (ev) {
+        var a = String(ev.action || '').toLowerCase();
+        var when = '';
+        try { when = new Date(ev.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+        return '<span class="chip ' + (TICKER_TONE[a] || '') + '"><i class="fas ' + (TICKER_ICON[a] || 'fa-circle') + '"></i><b>' + esc(ev.action || '?') + '</b> ' + esc(ev.target || '—') + ' · ' + esc(when) + '</span>';
+      }).join('');
+      var track = $('kioskTicker');
+      track.innerHTML = chips || '<span class="chip">Событий пока нет</span>';
+      if (chips && track.scrollWidth > track.parentElement.clientWidth + 4) track.innerHTML += chips;
+      renderBars($('kioskOffenders'), offenders, 'За 7 дней мер нет — пока тихо.');
+      renderBars($('kioskTeam'), mods, 'Команда пока не действовала.');
+      if (window.AetherRing) {
+        var items = Object.keys(types).map(function (k) {
+          return { label: ACTION_TONES[k].label, value: types[k], color: ACTION_TONES[k].color };
+        }).sort(function (a, b) { return b.value - a.value; });
+        if (items.length) {
+          window.AetherRing($('kioskRing'), items.slice(0, 6), { totalLabel: 'мер за 7 дн' });
+          if (good + bad > 0) {
+            var pct = Math.round(good / (good + bad) * 100);
+            $('kioskSerenity').textContent = pct >= 70 ? 'Контур спокойствия: ' + pct + '%' : 'Нужен фокус: ' + pct + '%';
+            $('kioskSerenityHint').textContent = 'снятий: ' + good + ' · наказаний: ' + bad + ' — выше доля снятий, спокойнее контур.';
+          }
+        }
+      }
+    }
+
+    function refresh() {
+      loadMetrics(); loadFeed(); loadPeople();
+      if (window.freshStamp && !window.__modLivePaused) window.freshStamp();
+    }
+    refresh();
+    if (window.setLiveRefresh) {
+      window.setLiveRefresh(loadMetrics, 15000);
+      window.setLiveRefresh(loadFeed, 30000);
+      window.setLiveRefresh(loadPeople, 15000);
+    }
+
+    /* Полный экран + Esc */
+    $('kioskFull').addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !document.fullscreenElement) window.location.href = '/mod-center';
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -168,6 +168,15 @@ def register(ctx):
         return render_template('mod_center.html', role=session.get('role'),
                                username=session.get('username'))
 
+    # ── Экран дежурного (полноэкранная живая стена модерации) ────────────
+    @app.route('/mod-kiosk')
+    @login_required
+    @role_required('mod')
+    def mod_kiosk_page():
+        return render_template('mod_kiosk.html', role=session.get('role'),
+                               username=session.get('username'),
+                               main_guild_id=session.get('main_guild_id', ''))
+
 
     # ── Студия темы ──────────────────────────────────────────────────────
     @app.route('/theme-studio')

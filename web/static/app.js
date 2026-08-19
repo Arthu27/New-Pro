@@ -3094,3 +3094,79 @@
     setTimeout(restorePage, 1100);
   });
 })();
+
+// ============================================================
+// AETHER KIT 10 — единые премиум-шапки страниц: страницы без
+// page-head/page-hero автоматически получают иконку-плитку,
+// eyebrow и описание из меню панели (навбар-дубль скрывается)
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  var GROUP_LEADS = {
+    main: 'Главный обзор сервера и ключевые показатели.',
+    mod: 'Инструменты модерации: реагирование, расследование, защита и команда.',
+    members: 'Работа с участниками: профили, поиск, заметки и наблюдение.',
+    roles: 'Роли и права: управление, автоматизация и выдача.',
+    access: 'Доступы: кто видит какие разделы панели.',
+    tickets: 'Тикеты и обращения: очереди, ответы и SLA.',
+    fun: 'Развлечения и игровые механики сервера.',
+    leveling: 'Уровни, опыт и карьерные системы.',
+    economy: 'Экономика: валюта, магазины и награды.',
+    admin: 'Администрирование сервера и бота.',
+    logs: 'Журналы, история и расследования.',
+    music: 'Музыкальные комнаты и плейлисты.',
+    settings: 'Настройки панели и сервера.',
+    other: 'Дополнительные инструменты панели Aether.'
+  };
+
+  function pageHeadAuto() {
+    var main = doc.querySelector('.main-content');
+    if (!main) return;
+    if (main.querySelector(':scope > .page-head')) return;
+    if (main.querySelector(':scope > .page-hero')) return;
+    var navbar = main.querySelector(':scope > .navbar');
+    if (!navbar) return;
+    var data = doc.getElementById('palette-data');
+    if (!data) return;
+    var groups = [];
+    try { groups = JSON.parse(data.textContent || '[]'); } catch (e) {}
+    var path = window.location.pathname;
+    var found = null, grp = null;
+    for (var i = 0; i < groups.length; i++) {
+      var pages = groups[i].pages || [];
+      for (var j = 0; j < pages.length; j++) {
+        if (pages[j].path === path) { found = pages[j]; grp = groups[i]; break; }
+      }
+      if (found) break;
+    }
+    if (!found) return;
+    var h1 = navbar.querySelector('h1');
+    var titleEl = h1 ? h1.cloneNode(true) : null;
+    if (titleEl) titleEl.querySelectorAll('i').forEach(function (el) { el.remove(); });
+    var title = (titleEl ? titleEl.textContent : found.label).trim() || found.label;
+    var icon = (found.icon || (grp && grp.icon) || 'fa-file').replace(/[^a-z0-9-]/gi, '');
+    var lead = found.description || GROUP_LEADS[(grp && grp.key)] || ('Раздел «' + ((grp && grp.group) || 'панель') + '» панели Aether.');
+    var head = doc.createElement('div');
+    head.className = 'page-head fx-built';
+    head.setAttribute('data-fx-head', (grp && grp.key) || 'auto');
+    head.innerHTML =
+      '<div class="page-head-icon"><i class="fas ' + icon + '"></i></div>' +
+      '<div class="page-head-copy">' +
+        '<div class="eyebrow">' + esc((grp && grp.group) || 'Панель') + ' <span class="sep">·</span> ' + esc(found.label) + '</div>' +
+        '<h1>' + esc(title) + '</h1>' +
+        '<p class="lead">' + esc(lead) + '</p>' +
+      '</div>';
+    main.insertBefore(head, navbar);
+  }
+
+  if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', pageHeadAuto);
+  else pageHeadAuto();
+})();

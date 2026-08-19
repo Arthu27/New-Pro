@@ -211,8 +211,34 @@ check('spot-on' not in css and 'spot-on' not in js,
       'спотлайт, следующий за мышью внутри карточек, отключён')
 check('tickerDrift' in open(os.path.join(ROOT, 'web', 'templates', 'mod_center.html'), encoding='utf-8').read(),
       'лента событий мод-центра стала живой (авто-дрейф с паузой)')
-check('app.js?v=31' in base and 'style.css?v=85' in base,
-      'версии ассетов забумплены (85/31)')
+check('app.js?v=32' in base and 'style.css?v=86' in base,
+      'версии ассетов забумплены (86/32)')
+
+# ═══ 8. Комбо-красота: шапки, эмблема, переходы, киоск ════════════════════
+print('== комбо-красота ==')
+check('.main-content:has(> .page-hero) .navbar { display: none; }' in css,
+      'дубль заголовка в навбаре скрыт для hero-страниц')
+check('.page-hero.compact h1 > i:first-child' in css,
+      'старый компактный hero переведён на премиум-вид (иконка-плитка)')
+check('pageHeadAuto' in js and 'fx-built' in js,
+      'страницы без шапки автоматически получают премиум page-head')
+check('@view-transition' in css and 'navigation: auto' in css,
+      'плавные переходы между страницами включены (View Transitions)')
+check(os.path.isfile(os.path.join(ROOT, 'web', 'static', 'favicon.ico')),
+      'фавикон Aether создан')
+check(os.path.isfile(os.path.join(ROOT, 'web', 'static', 'brand', 'emblem-square.png')),
+      'эмблема Aether создана')
+check('emblem-square.png' in base,
+      'эмблема в бренд-шапке панели')
+kiosk = open(os.path.join(ROOT, 'web', 'templates', 'mod_kiosk.html'), encoding='utf-8').read()
+check('kioskTime' in kiosk and 'kioskMain' in kiosk and 'kioskDrift' in kiosk,
+      'экран дежурного: часы, стена и лента на месте')
+login_as('owner')
+r = client.get('/mod-kiosk')
+check(r.status_code == 200 and 'Экран дежурного' in r.get_data(as_text=True),
+      '/mod-kiosk открывается под owner')
+r = client.get('/favicon.ico')
+check(r.status_code == 200, 'фавикон отдаётся сервером')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil
