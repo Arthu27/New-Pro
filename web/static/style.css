@@ -3680,6 +3680,98 @@ body.reorder-mode .reorder-hint { display: block; }
   .panel-head { position: static !important; }
 }
 
+
+/* ============================================================
+   FX-СЛОЙ 7 — кольцо загрузки кнопок, микро-интеракции,
+   быстрые действия, живые тосты
+   ============================================================ */
+
+/* ── Кольцо загрузки в кнопках ──────────────────────────── */
+.btn-spinner {
+  width: 14px; height: 14px; flex: 0 0 14px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+/* ── Иконки KPI слегка увеличиваются при появлении ──────── */
+.kpi-icon i { display: inline-block; }
+.kpi:hover .kpi-icon i { animation: iconWiggle 0.5s var(--ease); }
+@keyframes iconWiggle {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.2); }
+  70% { transform: scale(0.95); }
+}
+@media (prefers-reduced-motion: reduce) { .kpi:hover .kpi-icon i { animation: none; } }
+
+/* ── Командная строка быстрых действий ──────────────────── */
+.quick-cmd {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(150deg, var(--ac-soft), transparent 130%), var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-1);
+}
+.quick-cmd > i {
+  width: 34px; height: 34px; flex: 0 0 34px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  font-size: 13px;
+  background: var(--ac-grad); color: #fff;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--ac) 35%, transparent);
+}
+[data-theme="dark"] .quick-cmd > i { color: #14152a; }
+.quick-cmd input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: var(--fs-lg);
+  color: var(--text);
+  padding: 4px 0;
+}
+.quick-cmd input:focus { outline: none; }
+.quick-cmd input::placeholder { color: var(--text-3); }
+.quick-cmd .kbd-hint { flex: 0 0 auto; }
+
+/* ── Пустой инпут подсказки (большие строки) ────────────── */
+.quick-cmd-suggest {
+  margin-top: 6px;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+.quick-cmd-suggest b { color: var(--ac); font-weight: 700; }
+
+/* ── Живой тост события бота ────────────────────────────── */
+.toast.bot-event { border-left-color: var(--info); }
+.toast.bot-event > i { background: var(--info-soft); color: var(--info); }
+
+/* ── Пульс при наведении на бейдж LIVE ──────────────────── */
+.live-chip { cursor: default; }
+.live-chip:active { transform: scale(0.97); }
+
+/* ── Градиентная окантовка выбранных карточек доски ─────── */
+.board-card { position: relative; }
+.board-card::before {
+  content: '';
+  position: absolute; left: 0; top: 12px; bottom: 12px;
+  width: 3px; border-radius: 0 3px 3px 0;
+  background: var(--ac-grad);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.board-card:hover::before { opacity: 1; }
+
+/* ── Анимация числа в карточках при обновлении ──────────── */
+.flash-grow { animation: flashGrow 0.6s var(--ease); }
+@keyframes flashGrow {
+  0% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.

@@ -221,7 +221,7 @@
       var i = btn.querySelector('i');
       if (i) {
         i.dataset.origClass = i.dataset.origClass || i.className;
-        i.className = 'fas fa-circle-notch fa-spin';
+        i.outerHTML = '<span class="btn-spinner" aria-hidden="true"></span>';
       }
     } else {
       btn.classList.remove('loading');
@@ -807,7 +807,24 @@
         try { doc.dispatchEvent(new CustomEvent('aether:live', { detail: d || {} })); } catch (e) {}
       });
       ws.on('notification', function (d) {
-        if (d && d.data && d.data.title) window.showToast(d.data.title, true);
+        if (d && d.data && d.data.title) {
+          var el = document.createElement('div');
+          el.className = 'toast bot-event';
+          var ttl = 4000;
+          el.style.setProperty('--toast-ttl', (ttl / 1000) + 's');
+          el.innerHTML = '<i class="fas fa-robot"></i><span>' + esc(d.data.title) + '</span>';
+          var host = document.getElementById('toastHost');
+          if (!host) {
+            host = document.createElement('div');
+            host.id = 'toastHost';
+            document.body.appendChild(host);
+          }
+          host.appendChild(el);
+          setTimeout(function () {
+            el.classList.add('leaving');
+            setTimeout(function () { el.remove(); }, 240);
+          }, ttl);
+        }
         if (typeof window.handleNotification === 'function') window.handleNotification(d);
       });
       ws.on('typing', function (d) { if (typeof window.handleTypingIndicator === 'function') window.handleTypingIndicator(d); });

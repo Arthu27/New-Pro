@@ -27,6 +27,14 @@
   <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-arrow-trend-up"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcEdge">—</div><div class="kpi-label">Участников на грани</div></div></div>
 </div>
 
+<!-- Командная строка быстрых действий -->
+<div class="quick-cmd">
+  <i class="fas fa-bolt"></i>
+  <input type="text" id="quickCmd" placeholder="Быстрое действие: найди инструмент или команду…" autocomplete="off" aria-label="Быстрое действие">
+  <span class="kbd-hint">Enter</span>
+</div>
+<div class="quick-cmd-suggest" id="quickCmdSuggest" style="display:none;margin:-6px 0 14px"></div>
+
 <!-- Быстрые действия -->
 <div class="cc-quick" style="margin-bottom:14px">
   <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Новая мера</b><small>Мьют или бан с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
@@ -71,7 +79,8 @@
   <div class="panel" style="grid-column:1/-1">
     <div class="panel-head"><div><h2><i class="fas fa-calendar-days"></i> Календарь активности</h2>
       <div class="sub">Интенсивность мод-действий за последние 90 дней.</div></div>
-      <span class="live-chip" style="margin-left:auto"><span class="dot"></span> LIVE</span></div>
+      <button type="button" class="btn" id="mcCalCsv" style="margin-left:auto"><i class="fas fa-file-csv"></i> CSV</button>
+      <span class="live-chip"><span class="dot"></span> LIVE</span></div>
     <div class="panel-body" id="mcCalendar"><div class="sk-line" style="height:12px"></div></div>
   </div>
   <div class="panel">
@@ -245,6 +254,16 @@
           } catch (e) {}
         });
         window.AetherCalendar($('mcCalendar'), counts, { days: 90 });
+        var csvBtn = $('mcCalCsv');
+        if (csvBtn && !csvBtn.dataset.bound) {
+          csvBtn.dataset.bound = '1';
+          csvBtn.addEventListener('click', function () {
+            var rows = [['Дата', 'Действий']];
+            Object.keys(counts).sort().forEach(function (k) { rows.push([k, counts[k]]); });
+            var ok = window.csvDownload ? window.csvDownload('activity_calendar.csv', rows) : false;
+            window.showToast(ok ? 'Календарь выгружен' : 'Не удалось выгрузить', ok);
+          });
+        }
       }
       // лента
       var TONE = { ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral', timeout: 'neutral', unban: 'ok', unmute: 'ok' };
@@ -264,6 +283,40 @@
     loadMetrics(); loadCharts();
     if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('mc-stamp'));
   }
+
+  /* Командная строка быстрых действий */
+  (function quickCmdInit() {
+    var input = $('quickCmd');
+    if (!input) return;
+    var TOOLS = [];
+    // собрать все инструменты раздела из меню
+    document.querySelectorAll('[data-mod-path]').forEach(function (a) {
+      TOOLS.push({ label: a.textContent.trim(), href: a.getAttribute('href'), el: a });
+    });
+    function suggest(text) {
+      var q = text.toLowerCase();
+      var matches = TOOLS.filter(function (t) { return t.label.toLowerCase().indexOf(q) !== -1; }).slice(0, 5);
+      var box = $('quickCmdSuggest');
+      if (!text || !matches.length) { box.style.display = 'none'; return; }
+      box.style.display = '';
+      box.innerHTML = matches.map(function (t) {
+        return '<div><b>' + esc(t.label) + '</b> — Enter, чтобы открыть</div>';
+      }).join(' · ');
+      box.dataset.target = matches[0].href;
+    }
+    input.addEventListener('input', function () { suggest(this.value); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        var q = input.value.trim();
+        if (!q) return;
+        var match = TOOLS.find(function (t) { return t.label.toLowerCase() === q.toLowerCase(); });
+        if (!match) match = TOOLS.filter(function (t) { return t.label.toLowerCase().indexOf(q.toLowerCase()) !== -1; })[0];
+        if (match) { window.location.href = match.href; }
+        else { window.showToast('Инструмент не найден — попробуйте «варны», «журнал», «локдаун»', false); }
+      }
+      if (e.key === 'Escape') { input.value = ''; suggest(''); }
+    });
+  })();
   $('mcRefresh').addEventListener('click', refresh);
 
   if (window.livePauseButton) window.livePauseButton($('mc-pause'));
