@@ -16,6 +16,7 @@
       <button type="button" class="seg-btn" data-days="30">30 дн</button>
     </div>
     <a class="btn" id="mrCsv" href="/api/mod-report.csv?days=14" download><i class="fas fa-file-csv"></i> CSV</a>
+    <button type="button" class="btn" id="mrPrint" aria-label="Печать отчёта"><i class="fas fa-print"></i> Печать</button>
   </div>
 </div>
 
@@ -139,6 +140,7 @@ document.addEventListener('click', function (e) {
   var b = e.target.closest('#mrSeg .seg-btn');
   if (b) { mrSetDays(parseInt(b.dataset.days, 10)); }
 });
+$('mrPrint').addEventListener('click', function () { window.print(); });
 
 mrLoad();
 if (window.setLiveRefresh) window.setLiveRefresh(mrLoad, 30000);

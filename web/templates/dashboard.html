@@ -795,7 +795,9 @@
           '<button type="button" class="btn btn-sm btn-icon btn-ghost" data-mv="' + esc(sec.dataset.widget) + ':1" title="Ниже" aria-label="Опустить виджет"><i class="fas fa-chevron-down"></i></button>' +
           '</div>';
       });
-      html += '<button type="button" class="btn btn-sm" id="ccReset" style="width:100%"><i class="fas fa-rotate-left"></i> Показать все виджеты</button>';
+      html += '<button type="button" class="btn btn-sm" id="ccReorder" style="width:100%;margin-top:8px"><i class="fas fa-grip-vertical"></i> Переставить виджеты</button>';
+      html += '<div class="reorder-hint hint" id="ccReorderHint">Тяните виджеты за ручки «⠿» — порядок сохранится сам.</div>';
+      html += '<button type="button" class="btn btn-sm" id="ccReset" style="width:100%;margin-top:8px"><i class="fas fa-rotate-left"></i> Показать все виджеты</button>';
       pop.innerHTML = html;
       Array.prototype.forEach.call(pop.querySelectorAll('input[data-w]'), function (inp) {
         inp.addEventListener('change', function () {
@@ -805,6 +807,25 @@
           apply();
         });
       });
+      var reorder = pop.querySelector('#ccReorder');
+      if (reorder) {
+        function paintReorder() {
+          var on = document.body.classList.contains('reorder-mode');
+          reorder.innerHTML = on
+            ? '<i class="fas fa-check"></i> Готово — порядок сохранён'
+            : '<i class="fas fa-grip-vertical"></i> Переставить виджеты';
+          var hint = pop.querySelector('#ccReorderHint');
+          if (hint) hint.style.display = on ? '' : 'none';
+        }
+        reorder.addEventListener('click', function () {
+          document.body.classList.toggle('reorder-mode');
+          paintReorder();
+          if (!document.body.classList.contains('reorder-mode')) {
+            window.showToast('Порядок виджетов сохранён', true);
+          }
+        });
+        paintReorder();
+      }
       var reset = pop.querySelector('#ccReset');
       if (reset) reset.addEventListener('click', function () {
         try {
@@ -832,6 +853,72 @@
     });
     apply();
     if (window.widgetOrderApply) window.widgetOrderApply();
+  }
+
+  /* ── Перетаскивание виджетов ─────────────────────────── */
+  function initWidgetDrag() {
+    var main = document.querySelector('.main-content');
+    var els = Array.prototype.slice.call(document.querySelectorAll('[data-widget]'));
+    if (!main || !els.length) return;
+    function persistOrder() {
+      var order = Array.prototype.map.call(main.querySelectorAll('[data-widget]'), function (x) { return x.dataset.widget; });
+      try { localStorage.setItem('cc_widgets_order', JSON.stringify(order)); } catch (e) {}
+    }
+    function clearMarks() {
+      els.forEach(function (x) { x.classList.remove('drop-above', 'drop-below'); });
+    }
+    els.forEach(function (el) {
+      el.draggable = true;
+      // ручка-держатель в шапке
+      var head = el.querySelector('.panel-head');
+      if (head && !el.querySelector('.widget-handle')) {
+        var handle = document.createElement('button');
+        handle.type = 'button';
+        handle.className = 'btn btn-sm btn-icon btn-ghost widget-handle';
+        handle.innerHTML = '<i class="fas fa-grip-vertical"></i>';
+        handle.title = 'Перетащить виджет';
+        handle.setAttribute('aria-label', 'Перетащить виджет');
+        var auto = head.querySelector('[style*="margin-left:auto"]');
+        if (auto) head.insertBefore(handle, auto);
+        else head.appendChild(handle);
+      }
+      el.addEventListener('dragstart', function (e) {
+        if (!document.body.classList.contains('reorder-mode')) { e.preventDefault(); return; }
+        el.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', el.dataset.widget); } catch (err) {}
+      });
+      el.addEventListener('dragend', function () {
+        el.classList.remove('dragging');
+        clearMarks();
+      });
+      el.addEventListener('dragover', function (e) {
+        if (!document.body.classList.contains('reorder-mode')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        var r = el.getBoundingClientRect();
+        var above = (e.clientY - r.top) < r.height / 2;
+        clearMarks();
+        el.classList.add(above ? 'drop-above' : 'drop-below');
+      });
+      el.addEventListener('dragleave', function () {
+        el.classList.remove('drop-above', 'drop-below');
+      });
+      el.addEventListener('drop', function (e) {
+        if (!document.body.classList.contains('reorder-mode')) return;
+        e.preventDefault();
+        var key = e.dataTransfer.getData('text/plain');
+        var dragged = main.querySelector('[data-widget="' + key + '"]');
+        var r = el.getBoundingClientRect();
+        var above = (e.clientY - r.top) < r.height / 2;
+        clearMarks();
+        if (!dragged || dragged === el) return;
+        if (above) main.insertBefore(dragged, el);
+        else main.insertBefore(dragged, el.nextSibling);
+        persistOrder();
+        if (window.widgetOrderApply) window.widgetOrderApply();
+      });
+    });
   }
 
   /* ── Мини-расписание недели ──────────────────────────── */
@@ -1017,6 +1104,7 @@
   bindShiftEditor();
   loadPulse();
   widgetSettingsInit();
+  initWidgetDrag();
   // Живые события WebSocket ускоряют пульс (не ждём поллинга)
   document.addEventListener('aether:live', function () { loadPulse(); });
   if (window.tiltCards) window.tiltCards(document, '.kpi, .stat-box, .cc-tile');

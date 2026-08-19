@@ -3579,6 +3579,107 @@ table.data-table tbody tr:hover td:first-child {
   to { transform: scale(1); }
 }
 
+
+/* ============================================================
+   FX-СЛОЙ 6 — драг-виджеты, спарклайн сайдбара, оффлайн,
+   контур спокойствия, печать
+   ============================================================ */
+
+/* ── Оффлайн-баннер ─────────────────────────────────────── */
+.offline-banner {
+  position: fixed; top: 66px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 5000;
+  background: var(--warn);
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: 99px;
+  font-size: var(--fs-sm); font-weight: 700;
+  box-shadow: var(--shadow-2);
+  display: none;
+  align-items: center; gap: 8px;
+  white-space: nowrap;
+}
+.offline-banner.show { display: flex; animation: fadeUp 0.25s var(--ease) both; }
+[data-theme="dark"] .offline-banner { color: #14152a; }
+
+/* ── Мини-спарклайн активности в сайдбаре ───────────────── */
+.sidebar-spark-label {
+  font-size: 9px; color: var(--text-3);
+  display: flex; justify-content: space-between;
+  margin: 7px 1px 3px;
+  letter-spacing: .04em; text-transform: uppercase; font-weight: 700;
+}
+.sidebar-spark { display: flex; align-items: flex-end; gap: 2px; height: 20px; }
+.sidebar-spark i {
+  flex: 1; min-width: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--ac-grad);
+  opacity: 0.8;
+  height: 10%;
+  transition: height 0.5s var(--ease);
+}
+
+/* ── Перестановка виджетов (drag) ───────────────────────── */
+.widget-handle { display: none; cursor: grab; }
+.widget-handle:active { cursor: grabbing; }
+body.reorder-mode .widget-handle { display: inline-flex; }
+body.reorder-mode [data-widget] { cursor: grab; position: relative; }
+body.reorder-mode [data-widget].dragging { opacity: 0.45; }
+[data-widget].drop-above::before,
+[data-widget].drop-below::after {
+  content: '';
+  position: absolute; left: 0; right: 0;
+  height: 3px; border-radius: 2px;
+  background: var(--ac-grad);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ac) 60%, transparent);
+  z-index: 5;
+}
+[data-widget].drop-above::before { top: -7px; }
+[data-widget].drop-below::after { bottom: -7px; }
+.reorder-hint { display: none; margin-top: 8px; }
+body.reorder-mode .reorder-hint { display: block; }
+
+/* ── Лёгкий сдвиг строк лент ────────────────────────────── */
+.feed-item { transition: background 0.12s, transform 0.12s var(--ease); }
+.feed-item:hover { transform: translateX(2px); }
+
+/* ── Контур спокойствия ─────────────────────────────────── */
+.serenity-row {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.serenity-ico {
+  width: 34px; height: 34px; flex: 0 0 34px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  font-size: 13px;
+  background: var(--ok-soft); color: var(--ok);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3);
+}
+.serenity-ico.low { background: var(--warn-soft); color: var(--warn); }
+.serenity-track { flex: 1; min-width: 0; }
+
+/* ── Печать ─────────────────────────────────────────────── */
+@media print {
+  .sidebar, .topbar, .mobile-nav, #fabHost, .fab, .fab.backdrop,
+  .bg-aurora, #fx-particles, #fxCursor, .scroll-top-btn,
+  .drawer, .drawer-backdrop, .kbd-palette, .confetti-host {
+    display: none !important;
+  }
+  body { background: #fff !important; }
+  .main-content { max-width: none !important; padding: 0 !important; }
+  .main-wrap { width: 100% !important; }
+  .panel, .card, .kpi, .stat-box {
+    box-shadow: none !important;
+    border-color: #ddd !important;
+    break-inside: avoid;
+    background: #fff !important;
+  }
+  .panel-head { position: static !important; }
+}
+
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.

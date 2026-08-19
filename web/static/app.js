@@ -316,14 +316,29 @@
 
   function paletteLocalMatches(q) {
     var favs = paletteFavs();
+    var recents = paletteRecents();
+    var idx = {};
     var flat = [];
     paletteData.forEach(function (grp) {
       grp.pages.forEach(function (p) {
+        idx[p.path] = p;
         flat.push({
-          group: favs.indexOf(p.path) !== -1 ? 'Избранное' : 'Разделы панели',
+          group: 'Разделы панели',
           path: p.path, label: p.label, icon2: p.icon, desc: p.description || '', sub: p.path,
           fav: favs.indexOf(p.path) !== -1
         });
+      });
+    });
+    // недавние — поверх общего списка
+    recents.forEach(function (path) {
+      var p = idx[path];
+      if (!p) return;
+      var i = flat.findIndex(function (x) { return x.path === path; });
+      if (i !== -1) flat.splice(i, 1);
+      flat.unshift({
+        group: 'Недавние',
+        path: p.path, label: p.label, icon2: p.icon, desc: p.description || '', sub: p.path,
+        fav: false
       });
     });
     return flat.filter(function (p) {
@@ -2599,4 +2614,26 @@
     fabInit();
     widgetOrderApply();
   });
+})();
+
+// ============================================================
+// AETHER KIT 6 — оффлайн-баннер
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  var banner = doc.createElement('div');
+  banner.className = 'offline-banner';
+  banner.innerHTML = '<i class="fas fa-plug-circle-xmark"></i> Соединение потеряно';
+  doc.body.appendChild(banner);
+
+  function show() { banner.classList.add('show'); }
+  function hide() { banner.classList.remove('show'); }
+
+  window.addEventListener('offline', show);
+  window.addEventListener('online', function () {
+    hide();
+    if (typeof window.showToast === 'function') window.showToast('Соединение восстановлено', true);
+  });
+  if (!navigator.onLine) show();
 })();

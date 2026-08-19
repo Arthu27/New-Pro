@@ -48,7 +48,17 @@
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-chart-pie"></i> Структура мер</h2>
       <div class="sub">Доли наказаний за 7 дней.</div></div></div>
-    <div class="panel-body" id="mcRing"><div class="sk-line" style="height:12px"></div></div>
+    <div class="panel-body">
+      <div id="mcRing"><div class="sk-line" style="height:12px"></div></div>
+      <div class="serenity-row" id="serenityRow" style="display:none">
+        <span class="serenity-ico" id="serenityIco"><i class="fas fa-heart"></i></span>
+        <div class="serenity-track">
+          <div class="row"><b style="font-size:var(--fs-md)">Контур спокойствия</b><span class="spacer"></span><span class="mono" id="serenityPct" style="font-weight:700">—</span></div>
+          <div class="modern-progress" style="margin-top:6px"><span id="serenityBar" style="width:0%;background:var(--ok)"></span></div>
+          <div class="hint" id="serenityHint" style="margin-top:4px"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -197,6 +207,26 @@
           if (!isNaN(h)) hours[h]++;
         } catch (e) {}
       });
+      // Контур спокойствия: снятия против наказаний
+      var goodActs = { unban: 1, unmute: 1 };
+      var badActs = { ban: 1, kick: 1, warn: 1, mute: 1, timeout: 1 };
+      var good = 0, bad = 0;
+      logs.forEach(function (l) {
+        var a = String(l.action || '').toLowerCase();
+        if (goodActs[a]) good++;
+        else if (badActs[a]) bad++;
+      });
+      if (good + bad > 0) {
+        var pct = Math.round((good / (good + bad)) * 100);
+        $('serenityRow').style.display = '';
+        $('serenityPct').textContent = pct + '%';
+        var bar = $('serenityBar');
+        bar.style.width = pct + '%';
+        bar.style.background = pct >= 70 ? 'var(--ok)' : pct >= 45 ? 'var(--warn)' : 'var(--err)';
+        var ico = $('serenityIco');
+        ico.className = 'serenity-ico' + (pct < 70 ? ' low' : '');
+        $('serenityHint').textContent = 'снятий: ' + good + ' · наказаний: ' + bad + ' — чем выше доля снятий, тем спокойнее контур.';
+      }
       if (window.AetherChart) {
         window.AetherChart.area($('mcArea'), days.map(function (d) { return d.count; }), { labels: days.map(function (d) { return d.label; }), height: 170 });
         var items = Object.keys(types).map(function (k) {
