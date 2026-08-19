@@ -4488,6 +4488,94 @@ input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
   .dragon-smoke { display: none; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   PANEL SPARKLE: блики, пульс, фокус, появление
+   (всё только при взаимодействии — FPS не страдает)
+   ============================================================ */
+
+/* ── Появление контента при загрузке страницы (однократно) ── */
+.main-content { animation: contentIn .32s var(--ease) both; }
+@keyframes contentIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Пульс-точка в eyebrow (живой индикатор раздела) ── */
+.page-head .eyebrow::before {
+  content: '';
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--ac);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--ac) 40%, transparent);
+  animation: eyebrowPulse 2.6s var(--ease) infinite;
+}
+@keyframes eyebrowPulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ac) 40%, transparent); }
+  55%  { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* ── Блик иконок KPI при наведении ── */
+.kpi .kpi-icon { position: relative; overflow: hidden; }
+.kpi .kpi-icon::after {
+  content: '';
+  position: absolute; top: 0; bottom: 0; left: -70%;
+  width: 50%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.4), transparent);
+  transform: skewX(-20deg);
+  transition: left .5s var(--ease);
+}
+.kpi:hover .kpi-icon::after { left: 140%; }
+
+/* ── Блик на основных кнопках при наведении ── */
+.btn { position: relative; overflow: hidden; }
+.btn::after {
+  content: '';
+  position: absolute; top: 0; bottom: 0; left: -80%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.22), transparent);
+  transform: skewX(-20deg);
+  transition: left .5s var(--ease);
+  pointer-events: none;
+}
+.btn:hover::after { left: 135%; }
+
+/* ── Красивые фокус-кольца для всего интерактивного ── */
+:focus-visible {
+  outline: 2px solid var(--ac);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 35%, transparent), 0 0 0 6px color-mix(in srgb, var(--ac) 12%, transparent);
+}
+
+/* ── Ховер строк таблиц: градиентная полоска слева ── */
+table.data-table tbody tr { position: relative; }
+table.data-table tbody tr::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--ac-grad);
+  border-radius: 0 3px 3px 0;
+  opacity: 0;
+  transition: opacity .15s;
+  pointer-events: none;
+}
+table.data-table tbody tr:hover::before { opacity: 1; }
+
+/* ── Панели: мягкое свечение границы при focus-within ── */
+.panel:focus-within {
+  border-color: var(--ac-line);
+  box-shadow: var(--shadow-lift), 0 0 0 3px color-mix(in srgb, var(--ac) 10%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-content, .page-head .eyebrow::before { animation: none; }
+  .kpi .kpi-icon::after, .btn::after { transition: none; display: none; }
+}
+
 /* ПРЕМИУМ-СКРОЛЛБАРЫ: градиентные, тонкие */
 .sidebar-nav::-webkit-scrollbar { width: 5px; }
 .sidebar-nav::-webkit-scrollbar-track { background: transparent; }

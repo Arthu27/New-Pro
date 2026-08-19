@@ -927,8 +927,34 @@ for name, path in [('base', 'web/templates/base.html'), ('login', 'web/templates
 check('dragonBreath' in open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
       and 'dragonBreath' in open(os.path.join(ROOT, 'web', 'templates', 'register.html'), encoding='utf-8').read(),
       'login/register: keyframes локально (без style.css)')
-check('app.js?v=47' in base and 'style.css?v=105' in base,
-      'версии ассетов (105/47)')
+# ═══ 33. Panel Sparkle ═══════════════════════════════════════════════════
+print('== panel sparkle ==')
+check('PANEL SPARKLE' in css, 'дизайн-система: слой Panel Sparkle')
+check('contentIn' in css and '.main-content { animation: contentIn' in css,
+      'панель: контент плавно появляется при загрузке страницы')
+check('eyebrowPulse' in css and '.page-head .eyebrow::before' in css,
+      'панель: пульс-точка в eyebrow')
+check('.kpi .kpi-icon::after' in css and '.kpi:hover .kpi-icon::after { left: 140%' in css,
+      'панель: блик иконок KPI при наведении')
+check('.btn::after' in css and '.btn:hover::after { left: 135%' in css,
+      'панель: блик на кнопках при наведении')
+check(':focus-visible' in css and 'outline: 2px solid var(--ac)' in css,
+      'панель: красивые фокус-кольца для всего интерактивного')
+check("table.data-table tbody tr::before" in css and 'ac-grad' in css,
+      'панель: градиентная полоска у строк таблиц при hover')
+check('.panel:focus-within' in css,
+      'панель: свечение панели при фокусе внутри')
+w8 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('.w-section:hover::before { width: 180px; }' in w8,
+      'welcome: градиентная кромка секций при hover')
+check('.w-sec-title:hover::after { right: 0; }' in w8,
+      'welcome: градиентная волна заголовков')
+check('.w-step:hover .num' in w8,
+      'welcome: пульс номеров шагов')
+check('.w-terminal:hover' in w8,
+      'welcome: свечение терминала при hover')
+check('app.js?v=47' in base and 'style.css?v=106' in base,
+      'версии ассетов (106/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,

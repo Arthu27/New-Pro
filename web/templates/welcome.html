@@ -630,6 +630,44 @@
       font-family: 'JetBrains Mono', monospace; font-size: 12px;
     }
 
+    /* ── Секции: градиентная кромка при hover ── */
+    .w-section { position: relative; }
+    .w-section::before {
+      content: '';
+      position: absolute; top: -8px; left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 3px; border-radius: 3px;
+      background: var(--ac-grad);
+      transition: width .4s var(--ease);
+      pointer-events: none;
+    }
+    .w-section:hover::before { width: 180px; }
+
+    /* ── Заголовки секций: градиентная волна при hover ── */
+    .w-sec-title { position: relative; display: inline-block; }
+    .w-sec-title::after {
+      content: '';
+      position: absolute; left: 0; right: 100%; bottom: -6px;
+      height: 2px; border-radius: 2px;
+      background: var(--ac-grad);
+      transition: right .45s var(--ease);
+    }
+    .w-sec-title:hover::after { right: 0; }
+
+    /* ── Шаги: пульс-номер при hover ── */
+    .w-step .num { transition: transform .2s var(--ease), box-shadow .2s; }
+    .w-step:hover .num { transform: scale(1.1); box-shadow: 0 8px 22px -6px rgba(124, 58, 237, .8); }
+
+    /* ── Чипы hero: свечение активного hover ── */
+    .w-chips .chip:hover { box-shadow: 0 4px 16px -6px rgba(124, 58, 237, .6); }
+
+    /* ── Терминал: свечение при hover ── */
+    .w-terminal { transition: box-shadow .3s ease, border-color .3s; }
+    .w-terminal:hover {
+      border-color: var(--ac);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .65), 0 0 40px rgba(124, 58, 237, .25);
+    }
+
     /* ── Кнопка «наверх» ── */
     .w-top {
       position: fixed; right: 26px; bottom: 26px; z-index: 120;
@@ -688,6 +726,8 @@
       .w-title.typing::after, .w-term-caret, .w-scroll-hint .mouse::after,
       .btn-primary-wrap::before, .dragon-live, .dragon-smoke span { animation: none; }
       .dragon-smoke { display: none; }
+      .w-section::before, .w-sec-title::after, .w-step .num,
+      .w-terminal, .w-chips .chip { transition: none; }
       .w-term-line { animation: none; }
       .w-chart-bars .b, .w-feed-line { animation: none; }
       .w-card, .w-step, .w-stat { transition: none; }
