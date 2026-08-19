@@ -853,6 +853,27 @@ check('auth-feats' in lg and 'rgba(255, 255, 255, .05)' in lg,
 r = client.get('/login')
 check(r.status_code == 200 and 'MEMBER EDITION' in r.get_data(as_text=True),
       '/login открывается в чёрной теме для участников')
+# ═══ 30. Welcome: витрина, tilt, scrollspy, FAQ ════════════════════════════
+print('== welcome: витрина панели ==')
+w5 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('w-showcase' in w5 and 'w-showcase-kpi' in w5 and 'w-showcase-side' in w5,
+      'welcome: витрина-макет панели (сайдбар + KPI + график)')
+check('w-chart-bars' in w5 and 'wShowBars' in w5 and 'wBarGrow' in w5,
+      'welcome: растущие бары графика в витрине')
+check('w-feed-line' in w5 and 'wShowFeed' in w5,
+      'welcome: живая лента событий в витрине')
+check('data-count2' in w5,
+      'welcome: живые счётчики витрины')
+check("perspective(700px) rotateY" in w5 and "pointer: fine" in w5,
+      'welcome: лёгкий 3D-tilt карточек за курсором (desktop)')
+check('w-nav-links a.on' in w5 and "classList.toggle('on'" in w5,
+      'welcome: scrollspy — активный пункт навигации при скролле')
+check('w-faq' in w5 and 'Частые' in w5 and '<details>' in w5,
+      'welcome: FAQ-аккордеон')
+check('href="#look"' in w5 and 'href="#faq"' in w5,
+      'welcome: пункты «Витрина» и «FAQ» в навигации')
+check('Так' in w5 and 'выглядит' in w5,
+      'welcome: заголовок витрины «Так выглядит панель»')
 check('app.js?v=47' in base and 'style.css?v=102' in base,
       'версии ассетов (102/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,

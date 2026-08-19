@@ -465,6 +465,166 @@
     }
     .w-card:hover::after { opacity: 1; }
 
+    /* ── Витрина: макет панели в окне ── */
+    .w-showcase-section { max-width: 940px; }
+    .w-showcase {
+      position: relative;
+      background: #070910;
+      border: 1px solid var(--line);
+      border-radius: 20px; overflow: hidden;
+      box-shadow: 0 34px 90px rgba(0, 0, 0, .7), var(--glow);
+    }
+    .w-showcase-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 11px 16px;
+      background: rgba(255,255,255,.03);
+      border-bottom: 1px solid var(--line);
+    }
+    .w-showcase-bar .t-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .w-showcase-bar .t-dot.r { background: #f87171; }
+    .w-showcase-bar .t-dot.y { background: #fbbf24; }
+    .w-showcase-bar .t-dot.g { background: #4ade80; }
+    .w-showcase-bar .t-url {
+      flex: 1; margin: 0 10px; padding: 5px 12px;
+      background: rgba(255,255,255,.04); border: 1px solid var(--line);
+      border-radius: 99px; font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px; color: var(--text3); text-align: center;
+    }
+    .w-showcase-grid {
+      display: grid; grid-template-columns: 168px 1fr;
+      min-height: 340px;
+    }
+    .w-showcase-side {
+      padding: 14px 10px; background: rgba(255,255,255,.015);
+      border-right: 1px solid var(--line);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .w-showcase-side .s-brand {
+      display: flex; align-items: center; gap: 7px;
+      padding: 4px 8px 12px; margin-bottom: 6px;
+      border-bottom: 1px solid var(--line);
+      font-size: 11px; font-weight: 800; letter-spacing: .08em;
+    }
+    .w-showcase-side .s-brand img { width: 20px; height: 20px; border-radius: 6px; }
+    .w-showcase-side .s-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 9px; border-radius: 9px;
+      font-size: 11.5px; color: var(--text2);
+    }
+    .w-showcase-side .s-item i { width: 14px; text-align: center; font-size: 11px; color: var(--text3); }
+    .w-showcase-side .s-item.on { background: rgba(79, 70, 229, .18); color: #c7d2fe; border: 1px solid rgba(79, 70, 229, .4); }
+    .w-showcase-side .s-item.on i { color: #a5b4fc; }
+    .w-showcase-main { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+    .w-showcase-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .w-showcase-kpi {
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--line);
+      border-radius: 11px; padding: 10px 12px;
+    }
+    .w-showcase-kpi .k-ico {
+      width: 24px; height: 24px; border-radius: 8px;
+      background: var(--ac-grad); color: #fff;
+      display: grid; place-items: center; font-size: 10px;
+      margin-bottom: 8px;
+    }
+    .w-showcase-kpi .k-n {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px; font-weight: 800; color: var(--text);
+    }
+    .w-showcase-kpi .k-l { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; margin-top: 3px; font-weight: 700; }
+    .w-showcase-panels { display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px; flex: 1; }
+    .w-showcase-panel {
+      background: rgba(255,255,255,.025);
+      border: 1px solid var(--line);
+      border-radius: 11px; padding: 10px 12px;
+      display: flex; flex-direction: column;
+    }
+    .w-showcase-panel .p-head {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 10.5px; font-weight: 800;
+      color: var(--text2); margin-bottom: 8px;
+    }
+    .w-showcase-panel .p-head i { color: var(--ac2); }
+    .w-chart-bars {
+      display: flex; align-items: flex-end; gap: 4px;
+      height: 86px; flex: 1;
+    }
+    .w-chart-bars .b {
+      flex: 1; border-radius: 4px 4px 0 0;
+      background: linear-gradient(180deg, var(--ac2), rgba(124, 58, 237, .25));
+      min-height: 6px;
+      animation: wBarGrow .9s ease both;
+      transform-origin: bottom;
+    }
+    @keyframes wBarGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+    .w-feed-line {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border-radius: 8px;
+      font-size: 10.5px; color: var(--text2);
+      background: rgba(255,255,255,.02);
+      border: 1px solid transparent;
+      animation: wTermIn .3s ease both;
+    }
+    .w-feed-line:nth-child(2n) { background: rgba(255,255,255,.035); }
+    .w-feed-line .tag {
+      font-size: 8.5px; font-weight: 800; letter-spacing: .04em;
+      padding: 2px 7px; border-radius: 6px;
+      background: rgba(79, 70, 229, .2); color: #a5b4fc;
+    }
+    .w-feed-line .tag.warn { background: rgba(217, 119, 6, .22); color: #fbbf24; }
+    .w-feed-line .tag.ok { background: rgba(74, 222, 128, .16); color: #4ade80; }
+    .w-feed-line .when { margin-left: auto; color: var(--text3); font-size: 9.5px; }
+    @media (max-width: 720px) {
+      .w-showcase-grid { grid-template-columns: 1fr; }
+      .w-showcase-side { display: none; }
+      .w-showcase-kpis { grid-template-columns: repeat(2, 1fr); }
+      .w-showcase-panels { grid-template-columns: 1fr; }
+    }
+
+    /* ── 3D-tilt карточек ── */
+    .w-card, .w-step, .w-stat { transform-style: preserve-3d; transition: transform .2s ease, border-color .18s, box-shadow .2s; }
+
+    /* ── Scrollspy: активный пункт навигации ── */
+    .w-nav-links a.on {
+      background: rgba(79, 70, 229, .18); color: #c7d2fe;
+      border: none;
+    }
+
+    /* ── FAQ-аккордеон ── */
+    .w-faq { display: flex; flex-direction: column; gap: 8px; }
+    .w-faq details {
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 14px; overflow: hidden;
+      transition: border-color .15s;
+    }
+    .w-faq details:hover { border-color: var(--ac); }
+    .w-faq summary {
+      list-style: none; cursor: pointer;
+      display: flex; align-items: center; gap: 11px;
+      padding: 14px 16px; font-weight: 700; font-size: 13.5px;
+      transition: background .15s;
+    }
+    .w-faq summary::-webkit-details-marker { display: none; }
+    .w-faq summary:hover { background: rgba(79, 70, 229, .1); }
+    .w-faq summary .q-ico {
+      width: 28px; height: 28px; flex: 0 0 28px; border-radius: 9px;
+      background: rgba(79, 70, 229, .18); color: #a5b4fc;
+      display: grid; place-items: center; font-size: 12px;
+      border: 1px solid rgba(79, 70, 229, .4);
+    }
+    .w-faq summary .chev { margin-left: auto; color: var(--text3); transition: transform .2s ease; }
+    .w-faq details[open] summary .chev { transform: rotate(180deg); }
+    .w-faq .faq-body {
+      padding: 2px 16px 15px 55px;
+      font-size: 13px; color: var(--text2); line-height: 1.65;
+    }
+    .w-faq .faq-body a { color: #a5b4fc; font-weight: 600; }
+    .w-faq .faq-body code {
+      background: rgba(79, 70, 229, .16); color: #a5b4fc;
+      padding: 2px 7px; border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    }
+
     @media (max-width: 860px) {
       .w-grid, .w-steps { grid-template-columns: 1fr; }
       .w-nav-links { display: none; }
@@ -475,6 +635,8 @@
       .w-title.typing::after, .w-term-caret, .w-scroll-hint .mouse::after,
       .btn-primary-wrap::before { animation: none; }
       .w-term-line { animation: none; }
+      .w-chart-bars .b, .w-feed-line { animation: none; }
+      .w-card, .w-step, .w-stat { transition: none; }
       .w-card, .w-search input, .w-chips .chip, .w-reveal, .btn-primary::after { transition: none; }
       .w-card:hover { transform: none; }
       .w-reveal { opacity: 1; transform: none; }
@@ -498,10 +660,12 @@
       <span><b>AETHER</b><small>панель сервера</small></span>
     </a>
     <div class="w-nav-links">
+      <a href="#look">Витрина</a>
       <a href="#demo">В деле</a>
       <a href="#members">Участникам</a>
       <a href="#start">Как начать</a>
       <a href="#staff">Команде</a>
+      <a href="#faq">FAQ</a>
     </div>
     <div class="w-nav-actions">
       <a class="btn btn-primary" href="/login"><i class="fas fa-right-to-bracket"></i> Войти</a>
@@ -585,6 +749,60 @@
     </div>
   </section>
 
+  <!-- Витрина: так выглядит панель -->
+  <section class="w-section w-reveal w-showcase-section" id="look">
+    <div class="w-sec-head">
+      <h2 class="w-sec-title">Так <span class="grad">выглядит</span> панель</h2>
+      <p class="w-sec-sub">Обзор сервера: живые показатели, графики и лента событий — всё обновляется само.</p>
+    </div>
+    <div class="w-showcase">
+      <div class="w-showcase-bar">
+        <span class="t-dot r"></span><span class="t-dot y"></span><span class="t-dot g"></span>
+        <span class="t-url">panel.aether.app/обзор</span>
+      </div>
+      <div class="w-showcase-grid">
+        <div class="w-showcase-side">
+          <div class="s-brand"><img src="/static/brand/emblem-dragon.png" alt="">AETHER</div>
+          <span class="s-item on"><i class="fas fa-home"></i> Обзор</span>
+          <span class="s-item"><i class="fas fa-shield-halved"></i> Модерация</span>
+          <span class="s-item"><i class="fas fa-users"></i> Участники</span>
+          <span class="s-item"><i class="fas fa-ticket"></i> Обращения</span>
+          <span class="s-item"><i class="fas fa-ranking-star"></i> Уровни</span>
+          <span class="s-item"><i class="fas fa-calendar-days"></i> События</span>
+        </div>
+        <div class="w-showcase-main">
+          <div class="w-showcase-kpis">
+            <div class="w-showcase-kpi">
+              <div class="k-ico"><i class="fas fa-users"></i></div>
+              <div class="k-n" data-count2="2480">0</div>
+              <div class="k-l">Участников</div>
+            </div>
+            <div class="w-showcase-kpi">
+              <div class="k-ico"><i class="fas fa-comments"></i></div>
+              <div class="k-n" data-count2="864">0</div>
+              <div class="k-l">Сообщений сегодня</div>
+            </div>
+            <div class="w-showcase-kpi">
+              <div class="k-ico"><i class="fas fa-shield-halved"></i></div>
+              <div class="k-n" data-count2="0">0</div>
+              <div class="k-l">Открытых нарушений</div>
+            </div>
+          </div>
+          <div class="w-showcase-panels">
+            <div class="w-showcase-panel">
+              <div class="p-head"><i class="fas fa-chart-column"></i> Активность за 7 дней</div>
+              <div class="w-chart-bars" id="wShowBars"></div>
+            </div>
+            <div class="w-showcase-panel">
+              <div class="p-head"><i class="fas fa-bolt"></i> События</div>
+              <div id="wShowFeed"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Участникам -->
   <section class="w-section w-reveal" id="members">
     <div class="w-sec-head">
@@ -663,6 +881,31 @@
       <span class="chip"><i class="fas fa-gauge-high"></i> Оперативный центр</span>
       <span class="chip"><i class="fas fa-tv"></i> Экран дежурного</span>
       <span class="chip"><i class="fas fa-keyboard"></i> Быстрые команды</span>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="w-section w-reveal" id="faq">
+    <div class="w-sec-head">
+      <h2 class="w-sec-title">Частые <span class="grad">вопросы</span></h2>
+    </div>
+    <div class="w-faq">
+      <details>
+        <summary><span class="q-ico"><i class="fas fa-user"></i></span> Кому нужна панель — только команде?<i class="fas fa-chevron-down chev"></i></summary>
+        <div class="faq-body">Нет — панель для всех: участники видят свой профиль, заявки, обращения и события, а команда — инструменты модерации. Каждый видит свою часть.</div>
+      </details>
+      <details>
+        <summary><span class="q-ico"><i class="fas fa-key"></i></span> Нужно ли регистрироваться отдельно?<i class="fas fa-chevron-down chev"></i></summary>
+        <div class="faq-body">Нет. Вход через логин панели или Discord PIN — аккаунт уже привязан к твоему Discord. Просто войди.</div>
+      </details>
+      <details>
+        <summary><span class="q-ico"><i class="fas fa-at"></i></span> Что умеет @-поиск?<i class="fas fa-chevron-down chev"></i></summary>
+        <div class="faq-body">Начни печатать в поле сверху — найдутся страницы, участники, каналы и команды. В панели @ работает точно так же в любом месте.</div>
+      </details>
+      <details>
+        <summary><span class="q-ico"><i class="fas fa-file-signature"></i></span> Как попасть в команду сервера?<i class="fas fa-chevron-down chev"></i></summary>
+        <div class="faq-body">Войди в панель и открой «Заявки в команду»: выбери сервер, подтверди Discord ID и заполни анкету. Статус заявки будет виден в панели.</div>
+      </details>
     </div>
   </section>
 
@@ -950,6 +1193,138 @@
         io.observe(body);
       }
       if (body.getBoundingClientRect().top < window.innerHeight) start();
+    })();
+
+    /* ── 8. Витрина: бары графика и лента событий ── */
+    (function showcase() {
+      var barsBox = document.getElementById('wShowBars');
+      var feedBox = document.getElementById('wShowFeed');
+      if (!barsBox || !feedBox) return;
+      /* бары */
+      var vals = [42, 68, 55, 90, 74, 96, 60];
+      barsBox.innerHTML = vals.map(function (v, i) {
+        return '<span class="b" style="height:' + v + '%;animation-delay:' + (i * 90) + 'ms"></span>';
+      }).join('');
+      /* лента событий */
+      var FEED = [
+        { tag: 'warn', cls: 'warn', text: 'Варн: @spammer', when: '2 мин' },
+        { tag: 'ticket', cls: '', text: 'Обращение №14 отвечено', when: '8 мин' },
+        { tag: 'level', cls: 'ok', text: 'Lina достигла уровня 21', when: '14 мин' },
+        { tag: 'event', cls: 'ok', text: 'Ивент «Суббота» создан', when: '26 мин' }
+      ];
+      var started = false;
+      function paint() {
+        if (started) return;
+        started = true;
+        var li = 0;
+        feedBox.innerHTML = '';
+        (function step() {
+          if (li >= FEED.length) {
+            /* цикл: перезапускаем мягко */
+            setTimeout(function () { started = false; paint(); }, 6000);
+            return;
+          }
+          var f = FEED[li];
+          var div = document.createElement('div');
+          div.className = 'w-feed-line';
+          div.innerHTML = '<span class="tag ' + f.cls + '">' + f.tag + '</span><span>' + f.text + '</span><span class="when">' + f.when + '</span>';
+          feedBox.appendChild(div);
+          li++;
+          setTimeout(step, 900);
+        })();
+      }
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (en) {
+          if (en[0].isIntersecting) { paint(); io.disconnect(); }
+        }, { threshold: 0.3 });
+        io.observe(feedBox);
+      }
+      if (feedBox.getBoundingClientRect().top < window.innerHeight) paint();
+    })();
+
+    /* ── 9. Счётчики витрины ── */
+    (function showcaseCounters() {
+      var nums = document.querySelectorAll('[data-count2]');
+      if (!nums.length) return;
+      function animate(el, target) {
+        if (reduced) { el.textContent = target.toLocaleString('ru-RU'); return; }
+        var start = performance.now(), dur = 1100;
+        function frame(now) {
+          var p = Math.min(1, (now - start) / dur);
+          var eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(target * eased).toLocaleString('ru-RU');
+          if (p < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+      var fired = false;
+      function run() {
+        if (fired) return;
+        fired = true;
+        nums.forEach(function (el) { animate(el, Number(el.dataset.count2) || 0); });
+      }
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (en) {
+          if (en[0].isIntersecting) { run(); io.disconnect(); }
+        }, { threshold: 0.3 });
+        io.observe(nums[0]);
+      }
+      if (nums[0].getBoundingClientRect().top < window.innerHeight) run();
+    })();
+
+    /* ── 10. Лёгкий 3D-tilt карточек ── */
+    (function tilt() {
+      if (reduced) return;
+      if (!window.matchMedia('(pointer: fine)').matches) return;
+      var SEL = '.w-card, .w-step, .w-stat';
+      var tick = false, lastE = null, lastT = null;
+      function apply(e) {
+        tick = false;
+        var t = e.target.closest(SEL);
+        if (t !== lastT) {
+          if (lastT) lastT.style.transform = '';
+          lastT = t;
+        }
+        if (!t) return;
+        var r = t.getBoundingClientRect();
+        var dx = (e.clientX - r.left) / r.width - 0.5;
+        var dy = (e.clientY - r.top) / r.height - 0.5;
+        t.style.transform = 'perspective(700px) rotateY(' + (dx * 5).toFixed(1) + 'deg) rotateX(' + (-dy * 5).toFixed(1) + 'deg)';
+      }
+      document.addEventListener('mousemove', function (e) {
+        lastE = e;
+        if (!tick) {
+          tick = true;
+          requestAnimationFrame(function () { apply(lastE); });
+        }
+      }, { passive: true });
+    })();
+
+    /* ── 11. Scrollspy: активный пункт навигации ── */
+    (function spy() {
+      var links = Array.prototype.slice.call(document.querySelectorAll('.w-nav-links a[href^="#"]'));
+      if (!links.length) return;
+      var sections = links.map(function (a) {
+        return document.querySelector(a.getAttribute('href'));
+      }).filter(Boolean);
+      if (!sections.length) return;
+      var tick = false;
+      function paint() {
+        tick = false;
+        var pos = window.scrollY + window.innerHeight * 0.35;
+        var cur = sections[0];
+        sections.forEach(function (sec) {
+          if (sec.offsetTop <= pos) cur = sec;
+        });
+        var id = cur ? '#' + cur.id : '';
+        links.forEach(function (a) {
+          a.classList.toggle('on', a.getAttribute('href') === id);
+        });
+      }
+      window.addEventListener('scroll', function () {
+        if (!tick) { tick = true; requestAnimationFrame(paint); }
+      }, { passive: true });
+      paint();
     })();
   })();
   </script>
