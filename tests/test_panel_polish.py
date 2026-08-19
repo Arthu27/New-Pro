@@ -705,6 +705,34 @@ for path in ('/backups', '/duty-panel-web', '/commands', '/ai-moderation', '/ai-
              '/member-card', '/member-search', '/panel-menu'):
     r = client.get(path)
     check(r.status_code == 200, f'{path} → {r.status_code}')
+# ═══ 24. Welcome — премиальная ЧЁРНАЯ версия ═════════════════════════════
+print('== welcome: чёрная тема ==')
+welcome = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('data-theme="dark"' in welcome and '#05060a' in welcome,
+      'welcome: тёмная тема с глубоким чёрным фоном')
+check('--surface: #0d1019' in welcome and '--ac-grad' in welcome,
+      'welcome: собственная тёмная палитра (стекло, индиго-градиент)')
+check('w-dragon-ring' in welcome and 'wSpin' in welcome and 'w-dragon-halo' in welcome,
+      'welcome: вращающееся градиентное кольцо дракона с гало')
+check('bg-fx' in welcome and 'orb1' in welcome and 'bg-grid' in welcome,
+      'welcome: чёрный фон с цветными свечениями и сеткой')
+check('Управляй сервером' in welcome and 'красиво' in welcome,
+      'welcome: заголовок «Управляй сервером красиво»')
+check('w-chips' in welcome and 'w-at-hint' in welcome and 'wSearch' in welcome,
+      'welcome: чипы, подсказка @ и поиск сохранены')
+check('w-grid' in welcome and 'w-card' in welcome and 'w-steps' in welcome,
+      'welcome: секции участникам/шаги/команде в тёмных стеклянных карточках')
+check('w-foot' in welcome and 'emblem-dragon.png' in welcome,
+      'welcome: дракон в шапке и футере')
+check('transition: transform .18s ease' in welcome or 'transform .18s ease' in welcome,
+      'welcome: плавные анимации карточек')
+# гость видит welcome
+with client.session_transaction() as s:
+    s.clear()
+r = client.get('/')
+html = r.get_data(as_text=True)
+check(r.status_code == 200 and 'Управляй сервером' in html and '#05060a' in html,
+      '/ открывается гостю в чёрной теме')
 check('app.js?v=47' in base and 'style.css?v=102' in base,
       'версии ассетов (102/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
