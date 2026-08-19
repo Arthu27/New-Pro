@@ -3243,6 +3243,130 @@ body.dense .kpi { padding: 10px 13px; }
 /* ── Мягкая тень под hero ────────────────────────────────── */
 #ccHero { box-shadow: 0 18px 50px color-mix(in srgb, var(--ac) 10%, transparent), var(--shadow-1); }
 
+
+/* ============================================================
+   FX-СЛОЙ 3 — FAB, тур, перестановка виджетов, каскад KPI
+   ============================================================ */
+
+/* ── Плавающее меню быстрых действий (FAB) ───────────────── */
+.fab {
+  position: fixed; right: 24px; bottom: 24px;
+  z-index: 1500;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+.fab-main {
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--ac-grad);
+  color: #fff;
+  font-size: 20px;
+  box-shadow: 0 8px 26px color-mix(in srgb, var(--ac) 45%, transparent),
+              inset 0 1px 0 rgba(255,255,255,.35);
+  display: grid; place-items: center;
+  transition: transform 0.2s var(--ease);
+  position: relative;
+}
+[data-theme="dark"] .fab-main { color: #14152a; }
+.fab-main:hover { transform: scale(1.07); }
+.fab.open .fab-main { transform: rotate(45deg); }
+.fab-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 8px 16px 8px 8px;
+  color: var(--text-2);
+  font-size: var(--fs-sm); font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-2);
+  text-decoration: none;
+  opacity: 0;
+  transform: translateY(8px) scale(0.92);
+  pointer-events: none;
+  transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
+}
+.fab.open .fab-item { opacity: 1; transform: none; pointer-events: auto; }
+.fab-item .ico {
+  width: 34px; height: 34px; flex: 0 0 34px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 13px;
+  background: var(--ac-soft); color: var(--ac);
+}
+.fab-item.tone-warn .ico { background: var(--warn-soft); color: var(--warn); }
+.fab-item.tone-err .ico { background: var(--err-soft); color: var(--err); }
+.fab-item.tone-ok .ico { background: var(--ok-soft); color: var(--ok); }
+.fab-item.tone-info .ico { background: var(--info-soft); color: var(--info); }
+.fab-item:hover { transform: translateX(-4px); }
+.fab.backdrop {
+  position: fixed; inset: 0;
+  background: rgba(16, 18, 24, 0.18);
+  z-index: 1490;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.fab.backdrop.show { opacity: 1; pointer-events: auto; }
+@media (max-width: 860px) { .fab { bottom: 84px; } }
+@media (prefers-reduced-motion: reduce) {
+  .fab-item { transition: none; }
+}
+
+/* ── Интерактивный тур ───────────────────────────────────── */
+.tour-mask {
+  position: fixed; inset: 0;
+  z-index: 990000;
+  background: rgba(16, 18, 24, 0.5);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.tour-mask.show { opacity: 1; }
+.tour-target {
+  position: relative;
+  z-index: 990001;
+  box-shadow: 0 0 0 4px var(--surface), 0 0 0 8px var(--ac), 0 0 42px color-mix(in srgb, var(--ac) 45%, transparent);
+  border-radius: var(--r);
+  transition: box-shadow 0.3s var(--ease);
+}
+.tour-card {
+  position: fixed;
+  z-index: 990002;
+  width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow-3);
+  padding: 20px;
+  animation: modalIn 0.25s var(--ease) both;
+}
+.tour-card .step-dots { display: flex; gap: 5px; margin-bottom: 12px; }
+.tour-card .step-dots i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--line-3);
+  transition: background 0.2s, width 0.2s;
+}
+.tour-card .step-dots i.on { background: var(--ac); width: 18px; border-radius: 99px; }
+.tour-card h3 { font-size: var(--fs-lg); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.tour-card h3 i { color: var(--ac); }
+.tour-card p { color: var(--text-2); font-size: var(--fs-md); line-height: 1.55; }
+.tour-card .row { margin-top: 14px; }
+.tour-card .skip { color: var(--text-3); }
+
+/* ── Перестановка виджетов (orderable) ───────────────────── */
+.main-content.cc-orderable { display: flex; flex-direction: column; }
+.main-content.cc-orderable > [data-widget] { transition: transform 0.2s var(--ease); }
+
+/* ── Каскад KPI ──────────────────────────────────────────── */
+.kpi-row > * { animation: fadeUp 0.4s var(--ease) both; }
+.kpi-row > *:nth-child(1) { animation-delay: 0.02s; }
+.kpi-row > *:nth-child(2) { animation-delay: 0.06s; }
+.kpi-row > *:nth-child(3) { animation-delay: 0.10s; }
+.kpi-row > *:nth-child(4) { animation-delay: 0.14s; }
+.kpi-row > *:nth-child(5) { animation-delay: 0.18s; }
+.kpi-row > *:nth-child(6) { animation-delay: 0.22s; }
+@media (prefers-reduced-motion: reduce) { .kpi-row > * { animation: none; } }
+
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.

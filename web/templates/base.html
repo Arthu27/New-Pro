@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Aether{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css?v=75">
+    <link rel="stylesheet" href="/static/style.css?v=76">
     <script>
       // Тема применяется до отрисовки, чтобы не было «вспышки»
       (function () {
@@ -223,6 +223,11 @@
         </div>
     </div>
 
+    <!-- ── Плавающее меню быстрых действий ────────────────── -->
+    {% if role == 'owner' or role == 'admin' or role == 'mod' %}
+    <div id="fabHost"></div>
+    {% endif %}
+
     <!-- ── Мобильная нижняя навигация ─────────────────────── -->
     {% if role == 'owner' or role == 'admin' or role == 'mod' %}
     <nav class="mobile-nav" aria-label="Мобильная навигация">
@@ -283,6 +288,6 @@
     <!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
     <script src="/static/api-guard.js?v=2"></script>
     <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
-    <script src="/static/app.js?v=21"></script>
+    <script src="/static/app.js?v=22"></script>
 </body>
 </html>

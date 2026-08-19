@@ -760,6 +760,26 @@
         else sec.style.display = '';
       });
     }
+    function orderList() {
+      try { return JSON.parse(localStorage.getItem('cc_widgets_order') || '[]'); }
+      catch (e) { return []; }
+    }
+    function saveOrder(list) {
+      try { localStorage.setItem('cc_widgets_order', JSON.stringify(list)); } catch (e) {}
+      if (window.widgetOrderApply) window.widgetOrderApply();
+    }
+    function moveWidget(key, dir) {
+      var keys = Array.prototype.map.call(document.querySelectorAll('[data-widget]'), function (el) { return el.dataset.widget; });
+      var order = orderList();
+      keys.forEach(function (k) { if (order.indexOf(k) === -1) order.push(k); });
+      order = order.filter(function (k) { return keys.indexOf(k) !== -1; });
+      var idx = order.indexOf(key);
+      var swap = idx + dir;
+      if (swap < 0 || swap >= order.length) return;
+      var tmp = order[idx]; order[idx] = order[swap]; order[swap] = tmp;
+      saveOrder(order);
+      build();
+    }
     function build() {
       var cfg = stored();
       var html = '<div class="accent-pop-title">Виджеты главной</div>';
@@ -767,8 +787,12 @@
         var h = sec.querySelector('h2');
         var label = h ? h.textContent.trim() : sec.dataset.widget;
         var on = cfg[sec.dataset.widget] !== false;
-        html += '<label class="switch" style="margin-bottom:9px;justify-content:space-between;font-size:var(--fs-sm)"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(label) + '</span>' +
-          '<input type="checkbox" data-w="' + esc(sec.dataset.widget) + '" ' + (on ? 'checked' : '') + '><span class="track"></span></label>';
+        html += '<div class="row" style="margin-bottom:9px">' +
+          '<label class="switch" style="flex:1;min-width:0;font-size:var(--fs-sm)"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(label) + '</span>' +
+          '<input type="checkbox" data-w="' + esc(sec.dataset.widget) + '" ' + (on ? 'checked' : '') + '><span class="track"></span></label>' +
+          '<button type="button" class="btn btn-sm btn-icon btn-ghost" data-mv="' + esc(sec.dataset.widget) + ':-1" title="Выше" aria-label="Поднять виджет"><i class="fas fa-chevron-up"></i></button>' +
+          '<button type="button" class="btn btn-sm btn-icon btn-ghost" data-mv="' + esc(sec.dataset.widget) + ':1" title="Ниже" aria-label="Опустить виджет"><i class="fas fa-chevron-down"></i></button>' +
+          '</div>';
       });
       html += '<button type="button" class="btn btn-sm" id="ccReset" style="width:100%"><i class="fas fa-rotate-left"></i> Показать все виджеты</button>';
       pop.innerHTML = html;
@@ -782,9 +806,19 @@
       });
       var reset = pop.querySelector('#ccReset');
       if (reset) reset.addEventListener('click', function () {
-        try { localStorage.removeItem('cc_widgets'); } catch (e) {}
+        try {
+          localStorage.removeItem('cc_widgets');
+          localStorage.removeItem('cc_widgets_order');
+        } catch (e) {}
         apply();
+        if (window.widgetOrderApply) window.widgetOrderApply();
         build();
+      });
+      Array.prototype.forEach.call(pop.querySelectorAll('[data-mv]'), function (b) {
+        b.addEventListener('click', function () {
+          var parts = b.dataset.mv.split(':');
+          moveWidget(parts[0], parseInt(parts[1], 10));
+        });
       });
     }
     btn.addEventListener('click', function (e) {
@@ -796,6 +830,7 @@
       if (!pop.hidden && !pop.contains(e.target) && e.target !== btn) pop.hidden = true;
     });
     apply();
+    if (window.widgetOrderApply) window.widgetOrderApply();
   }
 
   /* ── Мини-расписание недели ──────────────────────────── */

@@ -395,7 +395,15 @@
     { label: 'Досье участника', icon: 'fa-id-card', sub: 'аналитика рисков по ID', run: function () { window.location.href = '/mod-insights'; } },
     { label: 'Центр безопасности', icon: 'fa-shield-halved', sub: 'политики и лаборатория', run: function () { window.location.href = '/security'; } },
     { label: 'Справка по горячим клавишам', icon: 'fa-keyboard', sub: 'все сочетания панели', run: function () { if (typeof window.openHelp === 'function') window.openHelp(); } },
-    { label: 'Фокус-режим', icon: 'fa-eye', sub: 'только контент, без панелей', run: function () { document.body.classList.toggle('zen'); } }
+    { label: 'Фокус-режим', icon: 'fa-eye', sub: 'только контент, без панелей', run: function () { document.body.classList.toggle('zen'); } },
+    { label: 'Тур по панели', icon: 'fa-route', sub: 'знакомство с интерфейсом за минуту', run: function () { if (typeof window.tourStart === 'function') window.tourStart(); } },
+    { label: 'Звук уведомлений', icon: 'fa-volume-high', sub: 'переключить вкл/выкл', run: function () {
+      var off = false;
+      try { off = localStorage.getItem('aether_sound') === 'off'; } catch (e) {}
+      try { localStorage.setItem('aether_sound', off ? 'on' : 'off'); } catch (e) {}
+      window.showToast(off ? 'Звук уведомлений включён' : 'Звук уведомлений выключен', true);
+      if (!off && typeof window.notifyDing === 'function') window.notifyDing();
+    } }
   ];
 
   function paletteActionMatches(q) {
@@ -651,6 +659,8 @@
         }
         var unread = both[0].unread || 0;
         if (unread > 0 && badge && !drawer.classList.contains('open')) {
+          var prev = Number(badge.textContent) || 0;
+          if (unread > prev && typeof window.notifyDing === 'function') window.notifyDing();
           badge.textContent = unread > 99 ? '99+' : unread;
           badge.style.display = 'grid';
         }
@@ -2278,5 +2288,216 @@
   ready(function () {
     sectionIcon();
     topbarShadow();
+  });
+})();
+
+// ============================================================
+// AETHER FX KIT 5 — FAB, тур по панели, звук уведомлений,
+// перестановка виджетов
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function esc0(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ── 1. Плавающее меню быстрых действий (FAB) ──────────── */
+  function fabInit() {
+    var host = doc.getElementById('fabHost');
+    if (!host) return;
+
+    var backdrop = doc.createElement('div');
+    backdrop.className = 'fab backdrop';
+    doc.body.appendChild(backdrop);
+
+    var wrap = doc.createElement('div');
+    wrap.className = 'fab';
+    var items = [
+      { icon: 'fa-clock', label: 'Новая мера', href: '/temp-moderation', tone: 'tone-info' },
+      { icon: 'fa-triangle-exclamation', label: 'Выдать варн', href: '/warnings', tone: 'tone-warn' },
+      { icon: 'fa-table-columns', label: 'Задача команде', href: '/team-board', tone: '' },
+      { icon: 'fa-house-lock', label: 'Локдаун', href: '/lockdown', tone: 'tone-err' },
+      { icon: 'fa-user-secret', label: 'Скан профиля', href: '/antifake', tone: '' },
+      { icon: 'fa-palette', label: 'Студия темы', href: '/theme-studio', tone: 'tone-ok' }
+    ];
+    wrap.innerHTML = items.map(function (it) {
+      return '<a class="fab-item ' + it.tone + '" href="' + esc0(it.href) + '">' +
+        '<span class="ico"><i class="fas ' + it.icon + '"></i></span>' + esc0(it.label) + '</a>';
+    }).join('') +
+    '<button type="button" class="fab-main" aria-label="Быстрые действия"><i class="fas fa-plus"></i></button>';
+    host.appendChild(wrap);
+
+    var mainBtn = wrap.querySelector('.fab-main');
+    function close() {
+      wrap.classList.remove('open');
+      backdrop.classList.remove('show');
+    }
+    mainBtn.addEventListener('click', function () {
+      var open = wrap.classList.toggle('open');
+      backdrop.classList.toggle('show', open);
+    });
+    backdrop.addEventListener('click', close);
+    doc.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') close();
+      if (e.altKey && !e.ctrlKey && !e.metaKey && (e.key === 'n' || e.key === 'N' || e.key === 'т' || e.key === 'Т')) {
+        e.preventDefault();
+        mainBtn.click();
+      }
+    });
+  }
+
+  /* ── 2. Интерактивный тур по панели ────────────────────── */
+  var TOUR_STEPS = [
+    { sel: '.sidebar', title: 'Меню панели', icon: 'fa-bars',
+      text: 'Все разделы бота в одном меню. Группы сворачиваются, у пунктов есть звёздочка для избранного.' },
+    { sel: '#globalSearchBtn', title: 'Поиск — Ctrl+K', icon: 'fa-magnifying-glass',
+      text: 'Глобальная палитра: страницы, участники, транскрипты и действия. Начните печатать — остальное она сделает сама.' },
+    { sel: '.kpi-row', title: 'Живые метрики', icon: 'fa-gauge-high',
+      text: 'Карточки KPI обновляются сами. Цифры вспыхивают при изменении, а на карточку можно навести — она подсветится.' },
+    { sel: '#notifBtn', title: 'Уведомления', icon: 'fa-bell',
+      text: 'Системные и личные уведомления в одном колокольчике — с табами и отметкой «прочитано».' },
+    { sel: '#accentBtn', title: 'Свой стиль', icon: 'fa-droplet',
+      text: 'Акцент, тема, скругления и масштаб — в студии темы. Панель выглядит так, как хочется вам.' }
+  ];
+
+  function tourStart() {
+    if (reduced) {
+      window.showToast('Тур недоступен в режиме reduced motion', false);
+      return;
+    }
+    var mask = doc.createElement('div');
+    mask.className = 'tour-mask';
+    doc.body.appendChild(mask);
+
+    var card = doc.createElement('div');
+    card.className = 'tour-card';
+    doc.body.appendChild(card);
+
+    var step = 0;
+    var target = null;
+
+    function highlight(el) {
+      if (target) target.classList.remove('tour-target');
+      target = el || null;
+      if (target) {
+        target.classList.add('tour-target');
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function placeCard() {
+      var r;
+      if (target) {
+        r = target.getBoundingClientRect();
+      } else {
+        r = { left: window.innerWidth / 2 - 160, top: window.innerHeight / 2 - 100, width: 320, height: 200 };
+      }
+      var left = r.left;
+      var top = r.top + r.height + 14;
+      // не вылезаем за экран
+      if (top + 260 > window.innerHeight) top = Math.max(14, r.top - 280);
+      if (left + 320 > window.innerWidth) left = window.innerWidth - 336;
+      left = Math.max(14, left);
+      card.style.left = left + 'px';
+      card.style.top = top + 'px';
+    }
+
+    function paint() {
+      var st = TOUR_STEPS[step];
+      var el = st.sel ? doc.querySelector(st.sel) : null;
+      highlight(el);
+      card.innerHTML =
+        '<div class="step-dots">' + TOUR_STEPS.map(function (s, i) {
+          return '<i class="' + (i === step ? 'on' : '') + '"></i>';
+        }).join('') + '</div>' +
+        '<h3><i class="fas ' + esc0(st.icon) + '"></i> ' + esc0(st.title) + '</h3>' +
+        '<p>' + esc0(st.text) + '</p>' +
+        '<div class="row">' +
+          '<button type="button" class="btn btn-ghost skip" id="tourSkip">Пропустить</button>' +
+          '<span class="spacer"></span>' +
+          (step > 0 ? '<button type="button" class="btn" id="tourPrev"><i class="fas fa-arrow-left"></i> Назад</button>' : '') +
+          (step < TOUR_STEPS.length - 1
+            ? '<button type="button" class="btn btn-primary" id="tourNext">Далее <i class="fas fa-arrow-right"></i></button>'
+            : '<button type="button" class="btn btn-primary" id="tourNext"><i class="fas fa-check"></i> Готово</button>') +
+        '</div>';
+      setTimeout(placeCard, 60);
+
+      var skip = card.querySelector('#tourSkip');
+      var prev = card.querySelector('#tourPrev');
+      var next = card.querySelector('#tourNext');
+      skip.addEventListener('click', finish);
+      if (prev) prev.addEventListener('click', function () { step = Math.max(0, step - 1); paint(); });
+      next.addEventListener('click', function () {
+        if (step < TOUR_STEPS.length - 1) { step++; paint(); }
+        else finish();
+      });
+    }
+
+    function finish() {
+      try { localStorage.setItem('aether_tour', 'done'); } catch (e) {}
+      if (target) target.classList.remove('tour-target');
+      card.remove();
+      mask.remove();
+      window.showToast('Тур завершён — теперь панель ваша', true);
+    }
+
+    paint();
+  }
+  window.tourStart = tourStart;
+
+  /* ── 3. Звук уведомлений (WebAudio, отключаемый) ───────── */
+  var audioCtx = null;
+  function ding() {
+    try {
+      if (localStorage.getItem('aether_sound') === 'off') return;
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      var t = audioCtx.currentTime;
+      [0, 0.12].forEach(function (offset, i) {
+        var o = audioCtx.createOscillator();
+        var g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.value = i === 0 ? 880 : 1174.66;
+        g.gain.setValueAtTime(0.0001, t + offset);
+        g.gain.exponentialRampToValueAtTime(0.08, t + offset + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + offset + 0.35);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(t + offset);
+        o.stop(t + offset + 0.4);
+      });
+    } catch (e) { /* звук опционален */ }
+  }
+  window.notifyDing = ding;
+
+  /* ── 4. Перестановка виджетов главной ──────────────────── */
+  function widgetOrderApply() {
+    try {
+      var order = JSON.parse(localStorage.getItem('cc_widgets_order') || '[]');
+    } catch (e) { order = []; }
+    var main = doc.querySelector('.main-content');
+    var els = doc.querySelectorAll('[data-widget]');
+    if (!main || !els.length) return;
+    main.classList.add('cc-orderable');
+    els.forEach(function (el, i) {
+      var key = el.dataset.widget;
+      var idx = order.indexOf(key);
+      el.style.order = idx === -1 ? String(100 + i) : String(idx);
+    });
+  }
+  window.widgetOrderApply = widgetOrderApply;
+
+  /* ── Старт ────────────────────────────────────────────── */
+  function ready(fn) {
+    if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    fabInit();
+    widgetOrderApply();
   });
 })();

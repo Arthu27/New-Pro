@@ -65,10 +65,15 @@ def register(ctx):
                 proc =psutil .Process ()
                 cpu =psutil .cpu_percent (interval =0.1 )
                 ram =round (proc .memory_info ().rss /1024 /1024 ,1 )
+                try :
+                    ram_percent =round (psutil .virtual_memory ().percent ,1 )
+                except Exception :
+                    ram_percent =0 
                 uptime_sec =int (time .time ()-proc .create_time ())
             except Exception :
                 cpu =0 
                 ram =0 
+                ram_percent =0 
                 uptime_sec =0 
             h =uptime_sec //3600 
             m =(uptime_sec %3600 )//60 
@@ -104,6 +109,7 @@ def register(ctx):
             'uptime':uptime ,
             'cpu':cpu ,
             'ram':ram ,
+            'ram_percent':ram_percent ,
             'history':history ,
             'guild_list':[{'name':g .name ,'members':g .member_count }for g in bot .guilds ] if bot else []
             })
