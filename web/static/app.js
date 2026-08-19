@@ -3342,11 +3342,13 @@
     btn.setAttribute('aria-haspopup', 'listbox');
     btn.innerHTML = '<span class="aes-value"></span><span class="aes-arrow"></span>';
     shell.appendChild(btn);
-    shell.appendChild(orig);
+    var parent = orig.parentNode;
+    if (!parent) return;
+    parent.replaceChild(shell, orig);   /* сначала меняем в исходном родителе… */
+    shell.appendChild(orig);            /* …потом прячем select внутри shell */
     orig.classList.add('aes-native');
     orig.setAttribute('aria-hidden', 'true');
     orig.setAttribute('tabindex', '-1');
-    orig.parentNode.replaceChild(shell, orig);
     syncLabel(orig);
     btn.addEventListener('click', function () { openFor(orig); });
     btn.addEventListener('keydown', function (e) {
@@ -3359,9 +3361,13 @@
     orig._aesValue = orig.value;
   }
 
+  function tryEnhance(el) {
+    try { enhance(el); }
+    catch (e) { el.removeAttribute('data-aes'); }
+  }
   function scan(root) {
     (root || doc).querySelectorAll('select').forEach(function (el) {
-      if (!el.closest('.aes') && !el.matches('[multiple], [size], [data-no-aes]')) enhance(el);
+      if (!el.closest('.aes') && !el.matches('[multiple], [size], [data-no-aes]')) tryEnhance(el);
     });
   }
 
@@ -3369,10 +3375,9 @@
   var mo = new MutationObserver(function (muts) {
     muts.forEach(function (m) {
       m.addedNodes.forEach(function (n) {
-        if (n.nodeType === 1 && (n.tagName === 'SELECT' || n.querySelector)) {
-          if (n.tagName === 'SELECT') enhance(n);
-          else if (n.querySelector) n.querySelectorAll('select').forEach(enhance);
-        }
+        if (n.nodeType !== 1) return;
+        if (n.tagName === 'SELECT') { tryEnhance(n); return; }
+        if (n.firstElementChild) n.querySelectorAll('select').forEach(tryEnhance);
       });
       if (m.target && m.target.tagName === 'SELECT' && m.type === 'childList') {
         syncLabel(m.target);

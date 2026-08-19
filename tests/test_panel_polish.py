@@ -211,8 +211,8 @@ check('spot-on' not in css and 'spot-on' not in js,
       'спотлайт, следующий за мышью внутри карточек, отключён')
 check('tickerDrift' in open(os.path.join(ROOT, 'web', 'templates', 'mod_center.html'), encoding='utf-8').read(),
       'лента событий мод-центра стала живой (авто-дрейф с паузой)')
-check('app.js?v=34' in base and 'style.css?v=88' in base,
-      'версии ассетов забумплены (88/34)')
+check('app.js?v=35' in base and 'style.css?v=88' in base,
+      'версии ассетов забумплены (88/35)')
 
 # ═══ 8. Комбо-красота: шапки, эмблема, переходы, киоск ════════════════════
 print('== комбо-красота ==')
@@ -276,8 +276,13 @@ check('OPTGROUP' in js and 'aes-group' in css,
       'группы опций (optgroup) поддерживаются')
 check('aes-lg' in js and 'aes-inline' in js,
       'варианты оформления: крупный (сервер) и встроенный (кокпит)')
-check('app.js?v=34' in base and 'style.css?v=88' in base,
-      'версии ассетов забумплены (88/34)')
+# регрессия: replaceChild не должен получать узел-предок (HierarchyRequestError)
+m = re.search(r'parent\.replaceChild\(shell, orig\).*?shell\.appendChild\(orig\)', js, re.S)
+check(bool(m), 'дропдаун: замена узла идёт ДО переноса select внутрь shell (фикс зависаний)')
+m = re.search(r'shell\.appendChild\(orig\).*?orig\.parentNode\.replaceChild\(shell, orig\)', js, re.S)
+check(m is None, 'дропдаун: запрещённый порядок (replaceChild по предку) отсутствует')
+check('tryEnhance' in js and 'removeAttribute(\'data-aes\')' in js,
+      'дропдаун: сбой одного селекта не ломает остальные')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil
