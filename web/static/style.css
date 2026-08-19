@@ -61,7 +61,7 @@
 
   --ac-grad: linear-gradient(135deg, var(--ac) 0%, var(--ac-3) 100%);
   --shadow-lift: 0 14px 34px rgba(16, 24, 40, 0.13);
-  --glass: color-mix(in srgb, var(--surface) 78%, transparent);
+  --glass: var(--surface); /* непрозрачное стекло: дешевле в перерисовках */
 
   --fs-xs: 11px;
   --fs-sm: 12px;
@@ -205,34 +205,23 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .bg-aurora i {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
-  opacity: 0.55;
-  mix-blend-mode: multiply;
+  opacity: 0.4;
 }
-[data-theme="dark"] .bg-aurora i { mix-blend-mode: screen; opacity: 0.22; }
+[data-theme="dark"] .bg-aurora i { opacity: 0.18; }
 .bg-aurora i:nth-child(1) {
   width: 46vw; height: 46vw;
   left: -12vw; top: -16vw;
   background: color-mix(in srgb, var(--ac) 32%, transparent);
-  animation: auroraFloat1 26s ease-in-out infinite alternate;
 }
 .bg-aurora i:nth-child(2) {
   width: 38vw; height: 38vw;
   right: -10vw; top: 12vh;
   background: color-mix(in srgb, var(--ac-2) 26%, transparent);
-  animation: auroraFloat2 32s ease-in-out infinite alternate;
 }
 .bg-aurora i:nth-child(3) {
   width: 34vw; height: 34vw;
   left: 24vw; bottom: -18vw;
   background: color-mix(in srgb, var(--info) 20%, transparent);
-  animation: auroraFloat3 38s ease-in-out infinite alternate;
-}
-@keyframes auroraFloat1 { from { transform: translate(0, 0) scale(1); } to { transform: translate(9vw, 7vh) scale(1.15); } }
-@keyframes auroraFloat2 { from { transform: translate(0, 0) scale(1.1); } to { transform: translate(-8vw, 9vh) scale(0.95); } }
-@keyframes auroraFloat3 { from { transform: translate(0, 0) scale(0.95); } to { transform: translate(7vw, -6vh) scale(1.12); } }
-@media (prefers-reduced-motion: reduce) {
-  .bg-aurora i { animation: none; }
 }
 
 /* ── 3. Каркас ─────────────────────────────────────────────── */
@@ -265,6 +254,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 
 /* ── 4. Сайдбар ────────────────────────────────────────────── */
 .sidebar {
+  transform: translateZ(0);
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);
   background: var(--glass);
@@ -659,8 +649,8 @@ code, .mono, .num, kbd { font-family: var(--mono); }
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: titleSheen 7s linear infinite;
   }
+  .page-head h1:hover { animation: titleSheen 7s linear infinite; }
 }
 @keyframes titleSheen { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 @media (prefers-reduced-motion: reduce) {
@@ -765,16 +755,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   box-shadow: var(--shadow-1);
   transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
 }
-.card::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(280px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--ac) 8%, transparent), transparent 70%);
-  opacity: 0;
-  transition: opacity 0.3s var(--ease);
-  pointer-events: none;
-  mix-blend-mode: multiply;
-}
-[data-theme="dark"] .card::after { mix-blend-mode: screen; }
 .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line-2); }
 .card-head {
   display: flex; align-items: center; gap: 12px;
@@ -806,17 +786,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   box-shadow: 0 6px 22px rgba(16, 24, 40, 0.07),
               inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
-.panel::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--ac) 7%, transparent), transparent 70%);
-  opacity: 0;
-  transition: opacity 0.3s var(--ease);
-  pointer-events: none;
-  mix-blend-mode: multiply;
-  z-index: 0;
-}
-[data-theme="dark"] .panel::after { mix-blend-mode: screen; }
 .panel > * { position: relative; z-index: 1; }
 [data-theme="dark"] .panel:hover {
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.4),
@@ -879,14 +848,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .kpi.tone-warn::before { background: linear-gradient(180deg, var(--warn), color-mix(in srgb, var(--warn) 45%, transparent)); }
 .kpi.tone-err::before { background: linear-gradient(180deg, var(--err), color-mix(in srgb, var(--err) 45%, transparent)); }
 .kpi.tone-info::before { background: linear-gradient(180deg, var(--info), color-mix(in srgb, var(--info) 45%, transparent)); }
-.kpi::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(240px circle at var(--mx, 70%) var(--my, 18%), color-mix(in srgb, var(--ac) 11%, transparent), transparent 70%);
-  opacity: 0;
-  transition: opacity 0.3s var(--ease);
-  pointer-events: none;
-}
 .kpi:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line-2); }
 .kpi-icon {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 3px 10px color-mix(in srgb, var(--ac) 16%, transparent);
@@ -926,14 +887,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   box-shadow: var(--shadow-1);
   transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
 }
-.stat-box::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(220px circle at var(--mx, 70%) var(--my, 18%), color-mix(in srgb, var(--ac) 10%, transparent), transparent 70%);
-  opacity: 0;
-  transition: opacity 0.3s var(--ease);
-  pointer-events: none;
-}
 .stat-box:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line-2); }
 .stat-icon {
   width: 36px; height: 36px; flex: 0 0 36px;
@@ -967,22 +920,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn i { font-size: var(--fs-sm); }
-/* Периодический блик пробегает по основным кнопкам */
-.btn-primary::after, .btn.primary::after {
-  content: '';
-  position: absolute; top: 0; bottom: 0;
-  width: 42%; left: -60%;
-  background: linear-gradient(100deg, transparent, rgba(255,255,255,.5), transparent);
-  transform: skewX(-20deg);
-  animation: btnShine 4.4s ease-in-out infinite;
-  pointer-events: none;
-}
-@keyframes btnShine {
-  0%, 55% { left: -60%; }
-  85%, 100% { left: 130%; }
-}
-@media (prefers-reduced-motion: reduce) { .btn-primary::after, .btn.primary::after { animation: none; display: none; } }
-
 .btn-primary, .btn.primary {
   background: var(--ac-grad);
   background-size: 180% 100%;
@@ -992,14 +929,8 @@ code, .mono, .num, kbd { font-family: var(--mono); }
               inset 0 1px 0 rgba(255, 255, 255, 0.30),
               inset 0 -2px 6px rgba(0, 0, 0, 0.12);
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.14);
-  animation: btnGlow 3.4s ease-in-out infinite, gradShift 4s linear infinite;
+  transition: box-shadow 0.2s var(--ease);
 }
-@keyframes gradShift { from { background-position: 0% 0; } to { background-position: 180% 0; } }
-@keyframes btnGlow {
-  0%, 100% { box-shadow: 0 2px 12px color-mix(in srgb, var(--ac) 26%, transparent), inset 0 1px 0 rgba(255,255,255,.3), inset 0 -2px 6px rgba(0,0,0,.12); }
-  50% { box-shadow: 0 3px 22px color-mix(in srgb, var(--ac) 42%, transparent), inset 0 1px 0 rgba(255,255,255,.34), inset 0 -2px 6px rgba(0,0,0,.12); }
-}
-@media (prefers-reduced-motion: reduce) { .btn-primary, .btn.primary { animation: none; background-size: 100% 100%; } }
 [data-theme="dark"] .btn-primary, [data-theme="dark"] .btn.primary { text-shadow: none; }
 .btn-primary:hover, .btn.primary:hover {
   background: var(--ac-grad);
@@ -1341,7 +1272,6 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   position: absolute; inset: 0;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
   background-size: 200% 100%;
-  animation: barShine 2.4s linear infinite;
 }
 @keyframes barShine { from { background-position: -100% 0; } to { background-position: 200% 0; } }
 @media (prefers-reduced-motion: reduce) {
@@ -1790,7 +1720,6 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   background: linear-gradient(90deg, var(--ac-line), transparent 60%);
   background-size: 200% 100%;
   margin-left: 6px;
-  animation: secLine 4s linear infinite;
 }
 @keyframes secLine { from { background-position: 0% 0; } to { background-position: 200% 0; } }
 @media (prefers-reduced-motion: reduce) { .section-title::after { animation: none; } }
@@ -1992,12 +1921,9 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 .cc-mesh { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .cc-mesh i {
   position: absolute; border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.5;
-  mix-blend-mode: multiply;
-  animation: meshFloat 16s ease-in-out infinite alternate;
+  opacity: 0.4;
 }
-[data-theme="dark"] .cc-mesh i { mix-blend-mode: screen; opacity: 0.22; }
+[data-theme="dark"] .cc-mesh i { opacity: 0.18; }
 .cc-mesh i:nth-child(1) {
   width: 320px; height: 320px; left: 6%; top: -130px;
   background: color-mix(in srgb, var(--ac) 50%, transparent);
@@ -2011,10 +1937,6 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   width: 250px; height: 250px; right: 4%; top: -90px;
   background: color-mix(in srgb, #7c3aed 34%, transparent);
   animation-delay: -10s;
-}
-@keyframes meshFloat {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(36px, 44px) scale(1.18); }
 }
 @media (prefers-reduced-motion: reduce) { .cc-mesh i { animation: none; } }
 #ccHero::after {
@@ -2294,19 +2216,6 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 
 
 /* ── Курсор-прожектор для плиток и карточек ───────────────── */
-.cc-tile::after, .member-card::after, .g-card::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), color-mix(in srgb, var(--ac) 10%, transparent), transparent 70%);
-  opacity: 0;
-  transition: opacity 0.3s var(--ease);
-  pointer-events: none;
-  mix-blend-mode: multiply;
-  border-radius: inherit;
-}
-[data-theme="dark"] .cc-tile::after,
-[data-theme="dark"] .member-card::after,
-[data-theme="dark"] .g-card::after { mix-blend-mode: screen; }
 
 
 /* ── Канбан-доска команды ────────────────────────────────── */
@@ -2630,10 +2539,12 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
   width: 46%; left: -70%;
   background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent);
   transform: skewX(-20deg);
-  animation: btnShine 5.5s ease-in-out infinite;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s;
 }
-@media (prefers-reduced-motion: reduce) { .sidebar-guild::after { animation: none; display: none; } }
+.sidebar-guild:hover::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .sidebar-guild::after { display: none; } }
 
 
 /* ── Медали лидербордов ─────────────────────────────────── */

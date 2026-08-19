@@ -297,10 +297,26 @@ check('fx-particles' not in base and 'canvas частиц отключён' in j
       'фоновый canvas частиц отключён (не перерисовывает стекло 30 раз/сек)')
 check('backdrop-filter' not in css,
       'backdrop-blur полностью убран — стекло на полупрозрачности без GPU-блюра')
+check('blur(90px)' not in css and 'blur(70px)' not in css and 'mix-blend-mode' not in css,
+      'гигантские блюры и blend-слои авроры/сетки удалены')
+check('auroraFloat' not in css and 'meshFloat' not in css,
+      'вечные анимации авроры и сетки удалены')
+check('btnGlow' not in css and 'gradShift' not in css and 'btnShine 5.5s' not in css,
+      'вечные блики/свечения кнопок удалены (только hover-эффекты)')
+check('barShine 2.4s' not in css and 'secLine 4s' not in css,
+      'вечные шиммеры прогресс-баров и линий секций удалены')
+check('.page-head h1:hover { animation: titleSheen' in css,
+      'сияние заголовка — только при наведении')
+check('--glass: var(--surface)' in css,
+      'стекло стало непрозрачным — ноль перерисовок при скролле')
+check('translateZ(0)' in css,
+      'sticky-поверхности вынесены в собственные слои')
+check('Параллакс авроры тоже выключен' in js,
+      'трансформация полноэкранного слоя авроры на скролл отключена')
 check('i < 12' in js,
       'параллакс карточек ограничен 12 слоями')
-check('app.js?v=37' in base and 'style.css?v=90' in base,
-      'версии ассетов забумплены (90/37)')
+check('app.js?v=38' in base and 'style.css?v=91' in base,
+      'версии ассетов забумплены (91/38)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil
