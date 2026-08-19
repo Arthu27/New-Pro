@@ -104,7 +104,6 @@ MENU = [
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},
         {'path': '/member-card', 'label': 'Карточка 360°', 'icon': 'fa-id-card-clip'},
-        {'path': '/member-search', 'label': 'Поиск', 'icon': 'fa-search'},
         {'path': '/member-notes', 'label': 'Заметки', 'icon': 'fa-sticky-note'},
         {'path': '/watchlist-panel', 'label': 'Наблюдение', 'icon': 'fa-eye'},
         {'path': '/invite-tracker', 'label': 'Приглашения', 'icon': 'fa-user-plus'},

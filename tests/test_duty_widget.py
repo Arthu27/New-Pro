@@ -78,12 +78,15 @@ def fmt(dt):
 local_now = datetime.now(timezone.utc).astimezone(TZ3)
 active_start = local_now - timedelta(minutes=30)
 active_end = local_now + timedelta(minutes=30)
+# при пересечении полночи смена принадлежит дню СВОЕГО начала,
+# а не сегодняшнему (перенос через полночь в active_shift)
+active_wd = active_start.weekday()
 future_start = local_now + timedelta(hours=2)
 future_end = local_now + timedelta(hours=3)
 
 db = GuildData('staff_shifts')
 db.set(777, 'shifts', {
-    'aaaa': {'user_id': 5, 'weekday': local_now.weekday(),
+    'aaaa': {'user_id': 5, 'weekday': active_wd,
              'start': fmt(active_start), 'end': fmt(active_end),
              'added_by': '1', 'added_at': local_now.isoformat()},
     'bbbb': {'user_id': 7, 'weekday': future_start.weekday(),

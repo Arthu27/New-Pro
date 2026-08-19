@@ -11,6 +11,32 @@ from web.routes._common import (
     os, json, time, math, discord, datetime, timezone,
 )
 
+def _chat_demo_store ():
+    path =os .path .join (_REPO_ROOT ,'data','chat_demo.json')
+    try :
+        with open (path ,'r',encoding ='utf-8')as fp :
+            return json .load (fp )
+    except Exception :
+        return {}
+
+
+def _chat_demo_save (data ):
+    os .makedirs (os .path .join (_REPO_ROOT ,'data'),exist_ok =True )
+    with open (os .path .join (_REPO_ROOT ,'data','chat_demo.json'),'w',encoding ='utf-8')as fp :
+        json .dump (data ,fp ,ensure_ascii =False ,indent =2 )
+
+
+def _demo_members ():
+    return [
+        {'id':'1001','name':'sonya.staff','display_name':'Sonya','avatar':'https://cdn.discordapp.com/embed/avatars/1.png','status':'online','mention':'<@1001>'},
+        {'id':'1002','name':'artem.mods','display_name':'Artem','avatar':'https://cdn.discordapp.com/embed/avatars/2.png','status':'idle','mention':'<@1002>'},
+        {'id':'1003','name':'lina.mod','display_name':'Lina','avatar':'https://cdn.discordapp.com/embed/avatars/3.png','status':'dnd','mention':'<@1003>'},
+        {'id':'1004','name':'max.gg','display_name':'Max','avatar':'https://cdn.discordapp.com/embed/avatars/4.png','status':'online','mention':'<@1004>'},
+        {'id':'1005','name':'dasha.live','display_name':'Dasha','avatar':'https://cdn.discordapp.com/embed/avatars/5.png','status':'offline','mention':'<@1005>'},
+        {'id':'1006','name':'aether.bot','display_name':'Aether','avatar':'','status':'online','bot':True,'mention':'<@1006>'},
+    ]
+
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -29,7 +55,17 @@ def register(ctx):
     def api_chat_messages (guild_id ,channel_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
+        if not bot :
+            store =_chat_demo_store ()
+            key =f'{guild_id}:{channel_id}'
+            if key not in store :
+                store [key ]=[{
+                    'id':'d1','content':'Демо-режим: бот не подключён, сообщения живут только в превью.',
+                    'author':'Aether','author_id':'1006','avatar':'','bot':True,
+                    'timestamp':datetime .now (timezone .utc ).isoformat (),
+                    'edited':None ,'attachments':[] ,'embeds':False }]
+                _chat_demo_save (store )
+            return jsonify (store [key ][-50 :])
         channel =bot .get_channel (int (channel_id ))
         if not channel :return jsonify ({'error':'Канал не найден'}),404 
         async def _fetch ():
@@ -61,7 +97,25 @@ def register(ctx):
     def api_chat_send (guild_id ,channel_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
+        if not bot :
+            d =request .get_json (silent =True )or {}
+            content =str (d .get ('content','')).strip ()
+            if not content :return jsonify ({'error':'Сообщение пусто'}),400
+            store =_chat_demo_store ()
+            key =f'{guild_id}:{channel_id}'
+            msgs =store .get (key ,[])
+            msgs .append ({
+                'id':'d'+str (int (time .time ()*1000 )),
+                'content':content ,
+                'author':'demo',
+                'author_id':'0',
+                'avatar':'https://cdn.discordapp.com/embed/avatars/0.png',
+                'bot':False ,
+                'timestamp':datetime .now (timezone .utc ).isoformat (),
+                'edited':None ,'attachments':[] ,'embeds':False })
+            store [key ]=msgs [-100 :]
+            _chat_demo_save (store )
+            return jsonify ({'ok':True })
         channel =bot .get_channel (int (channel_id ))
         if not channel :return jsonify ({'error':'Канал не найден'}),404 
         d =request .get_json (silent =True )or {}
@@ -82,7 +136,13 @@ def register(ctx):
     def api_chat_delete (guild_id ,channel_id ,message_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
+        if not bot :
+            store =_chat_demo_store ()
+            key =f'{guild_id}:{channel_id}'
+            msgs =[m for m in store .get (key ,[])if str (m .get ('id'))!=str (message_id )]
+            store [key ]=msgs 
+            _chat_demo_save (store )
+            return jsonify ({'ok':True })
         channel =bot .get_channel (int (channel_id ))
         if not channel :return jsonify ({'error':'Канал не найден'}),404 
         def _delete ():
@@ -100,7 +160,7 @@ def register(ctx):
     @role_required ('owner')
     def api_chat_members (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
-        if not bot :return jsonify ([])
+        if not bot :return jsonify (_demo_members ())
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ([])
         return jsonify ([{
@@ -182,7 +242,17 @@ def register(ctx):
     def api_dm_send (guild_id ,user_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio as _asyncio ,datetime as _dt2 
-        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
+        if not bot :
+            d =request .get_json (silent =True )or {}
+            content =str (d .get ('content','')).strip ()
+            if not content :return jsonify ({'error':'Сообщение пусто'}),400
+            log =_load_dm_log ()
+            msgs =log .get (user_id ,[])
+            msgs .append ({'author':'demo','from_bot':True ,'content':content ,
+                           'timestamp':datetime .now (timezone .utc ).isoformat ()})
+            log [user_id ]=msgs 
+            _save_dm_log (log )
+            return jsonify ({'ok':True }) 
         data =request .get_json (silent =True )or {}
         content =data .get ('content','').strip ()
         if not content :return jsonify ({'error':'Сообщение пусто'}),400 

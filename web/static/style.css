@@ -4266,24 +4266,217 @@ input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
 .status-pill.off, .off { background: var(--surface-3); color: var(--text-3); }
 .status-pill.err, .status-pill.danger { background: var(--err-soft); color: var(--err); }
 
+/* ═══════════════════════════════════════════════════════════
+   ЕДИНЫЕ СТИЛИ СТРАНИЦ: бэкапы, дежурства, команды, доступ,
+   роли, пользователи, настройки, AI
+   ============================================================ */
+
+/* ── Бэкапы ── */
+.pw-wrap { max-width: 860px; margin: 0 auto; }
+.pw-card {
+  background: var(--glass); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 22px 24px;
+  box-shadow: var(--shadow-1);
+}
+.pw-card h2 {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 16px; font-weight: 800; margin: 0 0 12px;
+}
+.pw-card h2 i {
+  width: 34px; height: 34px; border-radius: 11px;
+  background: var(--ac-grad); color: #fff;
+  display: grid; place-items: center; font-size: 14px;
+  box-shadow: 0 5px 14px -5px var(--ac-glow);
+}
+.pw-hint {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 11px 14px; border-radius: 12px;
+  background: var(--ac-soft); border: 1px dashed var(--ac-line);
+  color: var(--text-2); font-size: 12.5px; line-height: 1.6;
+}
+.pw-hint i { color: var(--ac); margin-top: 2px; }
+.pw-hint code { background: var(--surface); color: var(--ac); padding: 1px 6px; border-radius: 5px; font-size: 11.5px; }
+
+/* ── Дежурства ── */
+.guild-info {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; margin-bottom: 14px;
+  background: var(--ac-soft); border: 1px solid var(--ac-line);
+  border-radius: 99px; color: var(--ac);
+  font-size: 12.5px; font-weight: 700;
+}
+.dp-table { width: 100%; font-size: 13px; }
+.dp-table td, .dp-table th { padding: 9px 10px; }
+.dp-bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.dp-bar-fill {
+  display: block; height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--ac), #7c3aed);
+}
+.active-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 99px;
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent);
+  font-size: 11px; font-weight: 700;
+}
+
+/* ── Команды ── */
+.cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 11px; }
+.cmd-card {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--glass); border: 1px solid var(--line);
+  border-radius: 15px; padding: 15px; cursor: pointer;
+  box-shadow: var(--shadow-1); position: relative; overflow: hidden;
+  transition: transform .16s var(--ease), border-color .16s, box-shadow .16s;
+}
+.cmd-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--ac-grad); opacity: 0; transition: opacity .16s;
+}
+.cmd-card:hover, .cmd-card:focus-visible {
+  transform: translateY(-3px); border-color: var(--ac-line);
+  box-shadow: 0 12px 26px -12px color-mix(in srgb, var(--ac) 40%, transparent);
+  outline: none;
+}
+.cmd-card:hover::before, .cmd-card:focus-visible::before { opacity: 1; }
+.cmd-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--ac-grad); color: #fff;
+  display: grid; place-items: center; font-size: 15px;
+  box-shadow: 0 6px 14px -6px var(--ac-glow);
+}
+.cmd-name { font-weight: 800; font-size: 14px; }
+.cmd-desc { font-size: 12px; color: var(--text-2); line-height: 1.5; flex: 1; }
+.cmd-tag {
+  align-self: flex-start; font-size: 9.5px; font-weight: 800;
+  letter-spacing: .08em; padding: 3px 9px; border-radius: 99px;
+  background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line);
+}
+.cmd-tag[data-tag="admin"] { background: color-mix(in srgb, var(--err) 10%, transparent); color: var(--err); border-color: color-mix(in srgb, var(--err) 30%, transparent); }
+.cmd-modal-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(15, 23, 42, .5);
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.cmd-modal-overlay.open { display: flex; animation: fadeIn .15s var(--ease) both; }
+.cmd-modal {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 18px; padding: 22px; max-width: 420px; width: 100%;
+  box-shadow: var(--shadow-3); position: relative;
+  animation: modalIn .2s var(--ease) both;
+}
+.cmd-modal-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 30px; height: 30px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--text-3);
+  border-radius: 10px; cursor: pointer; font-size: 15px;
+  transition: color .12s, border-color .12s;
+}
+.cmd-modal-close:hover { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, transparent); }
+
+/* ── Кнопка «Выполнить» ── */
+.btn-exec, .btn-add {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border-radius: 12px;
+  background: var(--ac-grad); color: #fff; border: none;
+  font-weight: 800; font-size: 13px; cursor: pointer;
+  box-shadow: 0 6px 16px -6px var(--ac-glow);
+  transition: transform .15s var(--ease), box-shadow .2s;
+  text-decoration: none;
+}
+.btn-exec:hover, .btn-add:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px -8px var(--ac-glow);
+  color: #fff;
+}
+.btn-exec:active, .btn-add:active { transform: translateY(1px); }
+
+/* ── Роли ── */
+.premium-card {
+  background: var(--glass); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: 20px 22px;
+  box-shadow: var(--shadow-1); margin-bottom: 14px;
+}
+.premium-card h3 {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 15px; font-weight: 800; margin: 0 0 14px;
+}
+.premium-card h3 i {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: var(--ac-soft); color: var(--ac);
+  display: grid; place-items: center; font-size: 13px;
+  border: 1px solid var(--ac-line);
+}
+.action-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.info-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 99px;
+  background: var(--ac-soft); border: 1px solid var(--ac-line);
+  color: var(--ac); font-size: 12.5px; font-weight: 700;
+}
+.color-picker {
+  width: 52px; height: 38px; padding: 2px;
+  border: 1px solid var(--line-2); border-radius: 10px;
+  background: var(--surface); cursor: pointer;
+}
+.skeleton-grid { display: grid; gap: 10px; }
+
+/* ── Настройки ── */
+.status-on {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 4px 12px; border-radius: 99px;
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent);
+  font-size: 11.5px; font-weight: 700;
+}
+.action-row { display: flex; gap: 9px; flex-wrap: wrap; }
+
+/* ── Доступ ── */
+.pa-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 12px; border-radius: 99px;
+  background: var(--surface); border: 1px solid var(--line);
+  color: var(--text-2); font-size: 11.5px; font-weight: 700;
+}
+.pa-badge i { color: var(--ac); }
+
+/* ── Поиск участников ── */
+.ms-result-card {
+  background: var(--glass); border: 1px solid var(--line);
+  border-radius: 14px; padding: 14px 16px;
+  box-shadow: var(--shadow-1);
+  transition: transform .15s var(--ease), border-color .15s;
+}
+.ms-result-card:hover { transform: translateY(-2px); border-color: var(--ac-line); }
+
 /* Кнопки-сохранения страниц */
+
 .save-btn, .sc-btn, .si-btn, .pf-btn, .au-save, .bs-save, .rp-btn, .sl-btn,
 .ss-btn, .sr-btn, .an-save, .at-save, .am-save, .ff-save, .mt-save, .ms-save,
 .lb-save, .gf-save, .ac-save, .dp-save, .km-save, .lg-save, .tv-save,
 .btn-save, .btn-submit {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 14px;
-  background: var(--ac); color: #fff;
-  border: 1px solid var(--ac);
-  border-radius: var(--r-sm);
-  font-size: var(--fs-md); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 18px;
+  background: var(--ac-grad); color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: var(--fs-md); font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 6px 16px -6px var(--ac-glow);
+  transition: transform .15s var(--ease), box-shadow .2s;
 }
 [data-theme="dark"] .save-btn, [data-theme="dark"] .sc-btn,
 [data-theme="dark"] .si-btn, [data-theme="dark"] .pf-btn,
 [data-theme="dark"] .au-save, [data-theme="dark"] .btn-save,
 [data-theme="dark"] .btn-submit { color: #14152a; }
-.save-btn:hover, .btn-save:hover, .btn-submit:hover { background: var(--ac-3); border-color: var(--ac-3); }
+.save-btn:hover, .btn-save:hover, .btn-submit:hover {
+  background: var(--ac-grad);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px -8px var(--ac-glow);
+}
 .btn-cancel {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 7px 14px;

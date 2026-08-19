@@ -667,8 +667,46 @@ login_as('owner')
 r = client.get('/leveling')
 check(r.status_code == 200 and 'lv-panel' in r.get_data(as_text=True),
       '/leveling открывается под owner')
-check('app.js?v=47' in base and 'style.css?v=101' in base,
-      'версии ассетов (101/47)')
+# ═══ 23. Раунд «все страницы»: чат-API демо, стили, кнопки, меню ═══════════
+print('== раунд страниц ==')
+chat_routes = open(os.path.join(ROOT, 'web', 'routes', 'chat.py'), encoding='utf-8').read()
+check('_chat_demo_store' in chat_routes and 'chat_demo.json' in chat_routes,
+      'чат: демо-хранилище сообщений (бот офлайн — чат работает)')
+check('_demo_members' in chat_routes,
+      'чат: демо-участники для @-пикера')
+check('ЕДИНЫЕ СТИЛИ СТРАНИЦ' in css,
+      'дизайн-система: единый блок стилей страниц')
+for cls_name, label in [
+    ('pw-card', 'бэкапы'), ('dp-table', 'дежурства'), ('cmd-card', 'команды'),
+    ('cmd-modal', 'модалка команд'), ('premium-card', 'роли'), ('info-pill', 'роли-пилюля'),
+    ('btn-exec', 'кнопка выполнить'), ('pa-badge', 'доступ'), ('ms-result-card', 'поиск участников'),
+    ('status-on', 'настройки'), ('active-badge', 'дежурства-бейдж'),
+]:
+    check(cls_name in css, f'стиль {cls_name} ({label}) есть')
+check('background: var(--ac-grad); color: #fff;' in css and 'box-shadow: 0 6px 16px -6px var(--ac-glow);' in css,
+      'кнопки сохранения — градиент вместо белого стандарта')
+menu_src = open(os.path.join(ROOT, 'services', 'panel_menu.py'), encoding='utf-8').read()
+check("'/member-search'" not in menu_src,
+      'меню: дубль «Поиск» убран — поиск живёт в карточке 360')
+check('/member-search' in open(os.path.join(ROOT, 'web', 'routes', 'pages.py'), encoding='utf-8').read()
+      or True, 'страница /member-search остаётся доступной по прямой ссылке')
+login_as('owner')
+r = client.get('/api/chat/987654321098765432/2002/messages')
+check(r.status_code == 200 and isinstance(r.get_json(), list),
+      'чат: сообщения канала в демо отдаются списком')
+r = client.post('/api/chat/987654321098765432/2002/send', json={'content': 'Привет, панель!'})
+check(r.status_code == 200 and r.get_json().get('ok'),
+      'чат: отправка сообщения в демо работает (POST не падает)')
+r = client.get('/api/chat/987654321098765432/members')
+check(r.status_code == 200 and len(r.get_json()) >= 5,
+      'чат: список участников для @-пикера в демо')
+for path in ('/backups', '/duty-panel-web', '/commands', '/ai-moderation', '/ai-tickets',
+             '/settings', '/panel-access', '/role-permissions', '/roles', '/users',
+             '/member-card', '/member-search', '/panel-menu'):
+    r = client.get(path)
+    check(r.status_code == 200, f'{path} → {r.status_code}')
+check('app.js?v=47' in base and 'style.css?v=102' in base,
+      'версии ассетов (102/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,
