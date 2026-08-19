@@ -2201,7 +2201,7 @@
       container.innerHTML = '<div class="nav-favs-title"><i class="fas fa-star"></i> Избранное</div>' +
         '<div class="nav-favs-links">' + favs.map(function (p) {
           var active = window.location.pathname === p.path ? ' active' : '';
-          return '<a href="' + esc0(p.path) + '" class="nav-link' + active + '"><i class="fas ' + esc0(p.icon) + '"></i> <span>' + esc0(p.label) + '</span>' +
+          return '<a href="' + esc0(p.path) + '" class="nav-link' + active + '" draggable="true"><i class="fas ' + esc0(p.icon) + '"></i> <span>' + esc0(p.label) + '</span>' +
             '<button type="button" class="nav-star on" data-fav="' + esc0(p.path) + '" aria-label="Убрать из избранного"><i class="fas fa-star"></i></button></a>';
         }).join('') + '</div>';
     }
@@ -2231,6 +2231,9 @@
     });
     renderFavs();
     paintStars();
+    /* хуки для FX-слоя 9 (drag-сортировка избранного) */
+    window.__loadFavs = loadFavs;
+    window.__renderFavs = renderFavs;
   }
 
   /* ── 8. Справка по горячим клавишам ────────────────────── */
@@ -2383,7 +2386,16 @@
     }
     btn.addEventListener('click', function () {
       document.body.classList.toggle('dense');
-      try { localStorage.setItem('aether_dense', document.body.classList.contains('dense') ? '1' : '0'); } catch (e) {}
+      var dense = document.body.classList.contains('dense');
+      try { localStorage.setItem('aether_dense', dense ? '1' : '0'); } catch (e) {}
+      /* плотность следует за учёткой — сохраняем на сервере */
+      try {
+        fetch('/api/ux/prefs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ compact: dense })
+        }).catch(function () {});
+      } catch (e) {}
       paint();
     });
     try {
@@ -2714,4 +2726,202 @@
     if (typeof window.showToast === 'function') window.showToast('Соединение восстановлено', true);
   });
   if (!navigator.onLine) show();
+})();
+
+// ============================================================
+// AETHER KIT 7 — FX слой 9: живой градиентный обод карточек,
+// параллакс при прокрутке, конфетти при входе,
+// drag-сортировка избранного, плотность следует за учёткой
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  var win = window;
+  var reduced = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var narrow = function () { return win.innerWidth < 900; };
+  var PALETTE = ['#4f46e5', '#7c3aed', '#a78bfa', '#22d3ee', '#818cf8', '#c7d2fe'];
+
+  /* ── 1. Регистрация @property для вращения градиента ── */
+  function fxRegisterAngle() {
+    try {
+      if (typeof win.CSS !== 'undefined' && win.CSS.registerProperty) {
+        win.CSS.registerProperty({
+          name: '--fx-ang', syntax: '<angle>', inherits: false, initialValue: '0deg'
+        });
+      }
+    } catch (e) { /* уже зарегистрировано или не поддержано */ }
+  }
+
+  /* ── 2. Живой градиентный обод на .panel и .kpi ── */
+  function fxRingScan() {
+    if (narrow() || doc.body.dataset.fxRings === 'done' && !win.__fxRingForce) return;
+    var total = 0;
+    doc.querySelectorAll('.panel, .kpi').forEach(function (el) {
+      if (total > 80) return;
+      if (el.querySelector('.fx-ring-el')) return;
+      /* KPI внутри панели не обводим — панель уже обведена */
+      if (el.classList.contains('kpi') && el.closest('.panel')) return;
+      var tag = doc.createElement('i');
+      tag.className = 'fx-ring-el';
+      tag.setAttribute('aria-hidden', 'true');
+      el.classList.add('fx-ring-host');
+      el.appendChild(tag);
+      total++;
+    });
+  }
+  var ringTimer = null;
+  function fxRingSchedule() {
+    if (ringTimer) return;
+    ringTimer = setTimeout(function () { ringTimer = null; fxRingScan(); }, 600);
+  }
+  fxRegisterAngle();
+  fxRingSchedule();
+
+  /* ── 3. Параллакс карточек при прокрутке ── */
+  function fxCardParallax() {
+    if (reduced || narrow()) return;
+    var ticking = false;
+    function tick() {
+      ticking = false;
+      var mid = win.innerHeight / 2;
+      var items = doc.querySelectorAll('.panel');
+      for (var i = 0; i < items.length && i < 40; i++) {
+        var el = items[i];
+        var r = el.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > win.innerHeight) continue;
+        var delta = (r.top + r.height / 2 - mid) * 0.02;
+        if (delta > 9) delta = 9; else if (delta < -9) delta = -9;
+        if (Math.abs(delta) < 0.4) delta = 0;
+        el.classList.add('fx-parallax-card');
+        el.style.transform = 'translate3d(0,' + delta.toFixed(1) + 'px,0)';
+      }
+    }
+    win.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; win.requestAnimationFrame(tick); }
+    }, { passive: true });
+    tick();
+  }
+  fxCardParallax();
+
+  /* ── 4. Конфетти при входе (раз за сессию) ── */
+  function fxEntranceConfetti() {
+    if (reduced) return;
+    try {
+      if (win.sessionStorage && win.sessionStorage.getItem('aether_confetti_done')) return;
+      if (win.sessionStorage) win.sessionStorage.setItem('aether_confetti_done', '1');
+    } catch (e) { /* приватный режим */ }
+    var cv = doc.createElement('canvas');
+    cv.id = 'fx-confetti';
+    doc.body.appendChild(cv);
+    var ctx = cv.getContext('2d');
+    var W = cv.width = win.innerWidth;
+    var H = cv.height = win.innerHeight;
+    var parts = [];
+    var count = 46;
+    for (var i = 0; i < count; i++) {
+      parts.push({
+        x: Math.random() * W,
+        y: -20 - Math.random() * H * 0.35,
+        w: 5 + Math.random() * 7,
+        h: 8 + Math.random() * 8,
+        c: PALETTE[i % PALETTE.length],
+        vy: 1.6 + Math.random() * 2.4,
+        vx: (Math.random() - 0.5) * 1.6,
+        rot: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.16,
+        sway: Math.random() * Math.PI * 2
+      });
+    }
+    var start = performance.now();
+    var DUR = 2400;
+    function frame(now) {
+      var t = now - start;
+      if (t > DUR) { cv.remove(); return; }
+      ctx.clearRect(0, 0, W, H);
+      var fade = t > DUR - 500 ? (DUR - t) / 500 : 1;
+      for (var j = 0; j < parts.length; j++) {
+        var p = parts[j];
+        p.y += p.vy;
+        p.x += p.vx + Math.sin(p.sway + t * 0.004) * 0.5;
+        p.rot += p.vr;
+        ctx.save();
+        ctx.globalAlpha = fade * Math.min(1, (p.y + 40) / 140);
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.c;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      }
+      win.requestAnimationFrame(frame);
+    }
+    win.requestAnimationFrame(frame);
+  }
+  function onReady(fn) {
+    if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  onReady(function () { setTimeout(fxEntranceConfetti, 350); });
+
+  /* ── 5. Drag-сортировка избранного ── */
+  function favsDragSort() {
+    var linksBox = doc.querySelector('.nav-favs-links');
+    if (!linksBox) return;
+    var dragEl = null;
+    linksBox.addEventListener('dragstart', function (e) {
+      var a = e.target.closest('a[draggable="true"]');
+      if (!a || !a.closest('.nav-favs-links')) return;
+      dragEl = a;
+      a.classList.add('fx-drag');
+      try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', a.getAttribute('href')); } catch (err) {}
+    });
+    linksBox.addEventListener('dragend', function () {
+      if (dragEl) dragEl.classList.remove('fx-drag');
+      linksBox.querySelectorAll('.fx-drag-over').forEach(function (el) { el.classList.remove('fx-drag-over'); });
+      dragEl = null;
+    });
+    linksBox.addEventListener('dragover', function (e) {
+      if (!dragEl) return;
+      e.preventDefault();
+      var over = e.target.closest('a[draggable="true"]');
+      if (!over || over === dragEl || !over.closest('.nav-favs-links')) return;
+      var box = over.getBoundingClientRect();
+      linksBox.querySelectorAll('.fx-drag-over').forEach(function (el) { el.classList.remove('fx-drag-over'); });
+      if (e.clientY < box.top + box.height / 2) linksBox.insertBefore(dragEl, over);
+      else linksBox.insertBefore(dragEl, over.nextSibling);
+    });
+    linksBox.addEventListener('drop', function (e) {
+      e.preventDefault();
+      if (!dragEl) return;
+      var order = [];
+      linksBox.querySelectorAll('a[draggable="true"]').forEach(function (a) {
+        var path = a.getAttribute('href');
+        if (path) order.push(path);
+      });
+      try { localStorage.setItem('aether_favs', JSON.stringify(order)); } catch (err) {}
+      if (typeof win.__renderFavs === 'function') win.__renderFavs();
+      if (typeof win.showToast === 'function') win.showToast('Порядок избранного сохранён', true);
+    });
+  }
+  favsDragSort();
+
+  /* ── 6. Плотность следует за учёткой ── */
+  function densityFromAccount() {
+    if (!localStorage.getItem('aether_dense')) {
+      fetch('/api/ux/prefs', { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var p = (d && d.prefs) || {};
+          if (p.compact === true) doc.body.classList.add('dense');
+        })
+        .catch(function () {});
+    }
+  }
+  densityFromAccount();
+
+  /* ── 7. Пересканирование колец при живых перерисовках ── */
+  if (typeof win.MutationObserver !== 'undefined') {
+    var mo = new win.MutationObserver(function () { fxRingSchedule(); });
+    mo.observe(doc.body, { childList: true, subtree: true });
+  }
+  doc.addEventListener('aether:live', function () { win.__fxRingForce = true; fxRingSchedule(); });
 })();

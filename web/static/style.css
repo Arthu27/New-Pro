@@ -3855,6 +3855,55 @@ body.reorder-mode .reorder-hint { display: block; }
 }
 
 /* ============================================================
+   27.5 FX-СЛОЙ 9 — живой градиентный обод, параллакс карточек,
+   конфетти при входе, drag-сортировка избранного
+   ============================================================ */
+
+/* ── Анимированная градиентная рамка (JS-инъекция в .panel/.kpi) ── */
+@property --fx-ang {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.fx-ring-host { position: relative; }
+.fx-ring-el {
+  position: absolute; inset: 0; border-radius: inherit; padding: 1.5px;
+  background: conic-gradient(from var(--fx-ang),
+    var(--ac), #a78bfa, #22d3ee, #818cf8, #6366f1, var(--ac));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          mask-composite: exclude;
+  opacity: 0; transition: opacity .25s var(--ease);
+  pointer-events: none; z-index: 2;
+  animation: fxRingAng 3.5s linear infinite;
+}
+@keyframes fxRingAng { to { --fx-ang: 360deg; } }
+.fx-ring-host:hover .fx-ring-el,
+.fx-ring-host:focus-within .fx-ring-el { opacity: 1; }
+
+/* ── Параллакс карточек при прокрутке ── */
+.fx-parallax-card { will-change: transform; }
+
+/* ── Конфетти при входе ── */
+#fx-confetti {
+  position: fixed; inset: 0; pointer-events: none; z-index: 9990;
+}
+
+/* ── Drag-сортировка избранного ── */
+.nav-favs-links a[draggable="true"] { cursor: grab; }
+.nav-favs-links a[draggable="true"]:active { cursor: grabbing; }
+.nav-favs-links a.fx-drag { opacity: .4; }
+.nav-favs-links a.fx-drag-over {
+  box-shadow: inset 3px 0 0 var(--ac);
+  background: var(--ac-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-ring-el { animation: none; }
+}
+
+/* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.
    Ниже они отображаются на новую дизайн-систему: одинаковые

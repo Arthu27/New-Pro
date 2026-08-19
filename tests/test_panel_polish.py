@@ -144,6 +144,42 @@ r = client.get('/')
 check(r.status_code == 200 and 'Обзор сервера' in r.get_data(as_text=True),
       'главная страница открывается в новом виде')
 
+# ═══ 5. Чат и FX-слой 9 ══════════════════════════════════════════════════
+print('== чат и FX-слой 9 ==')
+chat = open(os.path.join(ROOT, 'web', 'templates', 'chat.html'), encoding='utf-8').read()
+check('--ac-soft' in chat and 'var(--surface)' in chat,
+      'чат переведён на токены светлой дизайн-системы')
+check('#d8d0bb' not in chat and '#0a0907' not in chat and '#e0b04a' not in chat,
+      'старое тёмно-золотое наследие из чата удалено')
+check('class="page-head"' in chat, 'у чата появился заголовок страницы')
+for hook in ('guild-bar', 'chat-input', 'members-scroll', 'etiket-popup', 'profs-popup'):
+    check('id="%s"' % hook in chat, f'хук JS сохранён: {hook}')
+check(bool(re.search(r'[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF]', chat)) is False,
+      'в шаблоне чата нет эмодзи')
+login_as('owner')
+r = client.get('/chat')
+check(r.status_code == 200 and 'chat-wrap' in r.get_data(as_text=True),
+      '/chat открывается под owner с новой вёрсткой')
+js = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
+for marker, label in [
+    ('fxEntranceConfetti', 'конфетти при входе'),
+    ('fxCardParallax', 'параллакс карточек'),
+    ('favsDragSort', 'drag-сортировка избранного'),
+    ('__renderFavs', 'хук перерисовки избранного'),
+    ('compact: dense', 'плотность сохраняется в /api/ux/prefs'),
+]:
+    check(marker in js, f'app.js: {label}')
+for marker, label in [
+    ('fx-ring-el', 'живой градиентный обод'),
+    ('fx-parallax-card', 'класс параллакса'),
+    ('#fx-confetti', 'канвас конфетти'),
+    ('fx-drag-over', 'индикатор drag-сортировки'),
+    ('@property --fx-ang', 'регистрация угла градиента'),
+]:
+    check(marker in css, f'style.css: {label}')
+check('app.js?v=28' in base and 'style.css?v=82' in base,
+      'версии ассетов забумплены (82/28)')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil
 shutil.rmtree(_TMP, ignore_errors=True)
