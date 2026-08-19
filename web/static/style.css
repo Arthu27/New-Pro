@@ -3459,6 +3459,126 @@ table.data-table tbody tr:hover td:first-child {
   transform: translateY(-1px);
 }
 
+
+/* ============================================================
+   FX-СЛОЙ 5 — плавающий индикатор меню, растущие бары,
+   рисующиеся кольца, орбиты, живая аврора
+   ============================================================ */
+
+/* ── Плавающий индикатор активного пункта меню ──────────── */
+.sidebar-nav { position: relative; }
+.nav-slider {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 30px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(90deg, var(--ac-soft), color-mix(in srgb, var(--ac-soft) 40%, transparent));
+  border: 1px solid var(--ac-line);
+  box-shadow: inset 2px 0 0 var(--ac), 0 2px 14px color-mix(in srgb, var(--ac) 14%, transparent);
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.24s cubic-bezier(0.34, 1.3, 0.64, 1), opacity 0.2s var(--ease);
+  z-index: 0;
+}
+.nav-slider.on { opacity: 1; }
+.sidebar-nav .nav-group,
+.sidebar-nav .nav-favs,
+.sidebar-nav .nav-subgroup { position: relative; z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .nav-slider { transition: none; } }
+
+/* ── Вырастающие бары (vbars) ───────────────────────────── */
+.vbar-fill {
+  width: 0 !important;
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Рисующееся кольцо ──────────────────────────────────── */
+.ring-box svg circle[data-anim] { transition: stroke-dasharray 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* ── Орбитальные точки у иконок пустых состояний ────────── */
+.empty > i:first-child:not(.fa-spin),
+.empty-state > i:first-child:not(.fa-spin) { position: relative; }
+.empty > i:first-child:not(.fa-spin)::before,
+.empty > i:first-child:not(.fa-spin)::after,
+.empty-state > i:first-child:not(.fa-spin)::before,
+.empty-state > i:first-child:not(.fa-spin)::after {
+  content: '';
+  position: absolute;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--ac);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--ac) 60%, transparent);
+  animation: orbitA 3.2s linear infinite;
+}
+.empty > i:first-child:not(.fa-spin)::after,
+.empty-state > i:first-child:not(.fa-spin)::after {
+  width: 3px; height: 3px;
+  animation: orbitB 4.4s linear infinite;
+  animation-direction: reverse;
+}
+@keyframes orbitA {
+  from { transform: rotate(0deg) translateX(34px) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(34px) rotate(-360deg); }
+}
+@keyframes orbitB {
+  from { transform: rotate(90deg) translateX(26px) rotate(-90deg); }
+  to { transform: rotate(450deg) translateX(26px) rotate(-450deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .empty > i:first-child::before, .empty > i:first-child::after,
+  .empty-state > i:first-child::before, .empty-state > i:first-child::after { display: none; }
+}
+
+/* ── Иконки палитры в градиентных чипах ─────────────────── */
+.kbd-palette-item > i:first-child {
+  width: 28px; height: 28px; flex: 0 0 28px;
+  border-radius: 9px;
+  display: inline-grid; place-items: center;
+  font-size: 12px;
+  background: linear-gradient(150deg, var(--ac-soft), transparent 130%);
+  border: 1px solid var(--ac-line);
+  color: var(--ac);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+[data-theme="dark"] .kbd-palette-item > i:first-child { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+.kbd-palette-item:hover > i:first-child,
+.kbd-palette-item.selected > i:first-child { transform: scale(1.06); }
+.kbd-palette-item > i:first-child { transition: transform 0.16s var(--ease); }
+
+/* ── Дрейфующий градиент бренд-панели логина ────────────── */
+.auth-side {
+  background: linear-gradient(150deg, #4338ca 0%, #4f46e5 35%, #7c3aed 65%, #4338ca 100%);
+  background-size: 220% 220%;
+  animation: sideDrift 14s ease-in-out infinite;
+}
+@keyframes sideDrift {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .auth-side { animation: none; } }
+
+/* ── Линия заголовка страницы рисуется при загрузке ─────── */
+.page-head::after {
+  animation: headLine 0.7s var(--ease) both;
+  transform-origin: left center;
+}
+@keyframes headLine {
+  from { transform: scaleX(0); opacity: 0; }
+  to { transform: scaleX(1); opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) { .page-head::after { animation: none; } }
+
+/* ── Акцентная кромка пузыря бота ───────────────────────── */
+.msg.bot .msg-bubble { border-left: 3px solid var(--ac-line); }
+
+/* ── Появление точек графика ────────────────────────────── */
+.chart-box svg circle[data-pop] { animation: dotPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes dotPop {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); }
+}
+
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.

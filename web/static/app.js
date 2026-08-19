@@ -1298,7 +1298,9 @@
         'stroke-width': stroke,
         'stroke-dasharray': dash + ' ' + (c - dash),
         'stroke-dashoffset': -(off * c),
-        'stroke-linecap': 'round'
+        'stroke-linecap': 'round',
+        'data-anim': '1',
+        'data-final': dash + ' ' + (c - dash)
       });
       var t = svgEl('title', {});
       t.textContent = seg.label + ': ' + v;
@@ -1334,6 +1336,17 @@
     }
     el.innerHTML = '';
     el.appendChild(wrap);
+    // сегменты кольца проявляются волной
+    if (!reducedMotion()) {
+      var segs = svg.querySelectorAll('circle[data-anim]');
+      segs.forEach(function (c2, i) {
+        var finalDash = c2.getAttribute('data-final');
+        c2.setAttribute('stroke-dasharray', '0 ' + c);
+        setTimeout(function () {
+          c2.setAttribute('stroke-dasharray', finalDash);
+        }, 80 + i * 90);
+      });
+    }
   };
 
   /* ── Тепловая карта (24 часа) ────────────────────────── */
@@ -1677,6 +1690,7 @@
     window.addEventListener('resize', resize);
     var N = W < 860 ? 22 : 40;
     var pts = [];
+    window.__fxParticles = { pts: pts };
     for (var i = 0; i < N; i++) {
       pts.push({
         x: Math.random() * W, y: Math.random() * H,
@@ -1797,19 +1811,61 @@
     mo.observe(doc.body, { childList: true, subtree: true, characterData: true });
   }
 
-  /* ── 5. Параллакс aurora-фона при прокрутке ────────────── */
+  /* ── 5. Параллакс aurora: скролл + мышь ───────────────── */
   function fxParallax() {
     var bg = doc.querySelector('.bg-aurora');
-    if (!bg || reduced) return;
+    if (!bg) return;
+    var scrollY = 0;
+    var mx = 0, my = 0;
+    if (!reduced) {
+      window.addEventListener('scroll', function () {
+        scrollY = window.scrollY * -0.04;
+        paint();
+      }, { passive: true });
+      doc.addEventListener('mousemove', function (e) {
+        mx = (e.clientX / window.innerWidth - 0.5) * 14;
+        my = (e.clientY / window.innerHeight - 0.5) * 10;
+        paint();
+      }, { passive: true });
+    }
     var ticking = false;
-    window.addEventListener('scroll', function () {
+    function paint() {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(function () {
-        bg.style.transform = 'translateY(' + (window.scrollY * -0.04) + 'px)';
+        bg.style.transform = 'translate(' + mx + 'px, ' + (scrollY + my) + 'px)';
         ticking = false;
       });
+    }
+  }
+
+  /* ── 5a. Частицы разбегаются от курсора ───────────────── */
+  function fxParticlesRepulse() {
+    if (reduced) return;
+    var mx = -9999, my = -9999;
+    doc.addEventListener('mousemove', function (e) {
+      mx = e.clientX; my = e.clientY;
     }, { passive: true });
+    // встраиваемся в основной цикл частиц через лёгкий шейкер позиций
+    var shaker = setInterval(function () {
+      try {
+        var data = window.__fxParticles;
+        if (!data) return;
+        var pts = data.pts;
+        for (var i = 0; i < pts.length; i++) {
+          var p = pts[i];
+          var dx = p.x - mx, dy = p.y - my;
+          var d2 = dx * dx + dy * dy;
+          var R = 110;
+          if (d2 < R * R && d2 > 0.01) {
+            var d = Math.sqrt(d2);
+            var push = (R - d) / R * 1.6;
+            p.x += (dx / d) * push;
+            p.y += (dy / d) * push;
+          }
+        }
+      } catch (e) { clearInterval(shaker); }
+    }, 30);
   }
 
   /* ── Старт ────────────────────────────────────────────── */
@@ -1820,6 +1876,7 @@
   ready(function () {
     fxBoot();
     fxParticles();
+    fxParticlesRepulse();
     fxCursorGlow();
     fxValueFlash();
     fxParallax();
