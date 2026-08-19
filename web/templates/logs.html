@@ -46,6 +46,9 @@
       <input type="search" id="search" placeholder="Участник / причина / действие" aria-label="Поиск по журналу">
     </label>
     <span class="spacer"></span>
+    <span class="fresh-stamp" id="logs-stamp"></span>
+    <button type="button" class="btn" id="logs-pause" title="Пауза live"></button>
+    <button type="button" class="btn" id="logs-density" title="Плотность таблицы"></button>
     <button type="button" class="btn" id="logs-csv" title="Выгрузить текущую выборку в CSV"><i class="fas fa-file-csv"></i> CSV</button>
     <span class="badge neutral" id="logs-count">0 событий</span>
   </div>
@@ -58,7 +61,7 @@
   </div>
   <div class="table-wrap" style="min-height:120px">
     <table class="data-table" data-sortable>
-      <thead><tr><th class="sortable">Действие</th><th class="sortable">Цель</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
+      <thead><tr><th class="col-sel"><input type="checkbox" id="sel-all" aria-label="Выбрать все строки"></th><th class="sortable">Действие</th><th class="sortable">Цель</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
       <tbody id="logs-body"><tr><td colspan="5"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span></div></td></tr></tbody>
     </table>
   </div>
@@ -99,6 +102,7 @@
       allLogs = await window.fetchCachedJSON('/api/logs');
     } catch (e) { allLogs = []; }
     window.renderSafe(function () { render(); updateStats(); updateFilters(); });
+    if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('logs-stamp'));
   }
 
   function updateFilters() { buildFilters(); }
@@ -155,20 +159,49 @@
     var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
     body.innerHTML = filtered.slice(0, 200).map(function (l) {
       var a = (l.action || '?').toLowerCase();
-      return '<tr><td data-sort="' + esc(l.action || '') + '"><span class="badge ' + (TONE[a] || 'neutral') + '">' + H(l.action || '?') + '</span></td>' +
+      var key = rowKey(l);
+      var on = !!selected[key];
+      return '<tr class="' + (on ? 'sel' : '') + '" data-row-key="' + esc(key) + '">' +
+        '<td class="col-sel"><input type="checkbox" aria-label="Выбрать строку"' + (on ? ' checked' : '') + '></td>' +
+        '<td data-sort="' + esc(l.action || '') + '"><span class="badge ' + (TONE[a] || 'neutral') + '">' + H(l.action || '?') + '</span></td>' +
         '<td>' + H(l.user_name || l.channel_name || l.role_name || l.user_id || '—') + '</td>' +
         '<td>' + H(l.mod_name || l.mod_id || '—') + '</td>' +
         '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(l.reason || '') + '">' + H(l.reason || '—') + '</td>' +
         '<td data-sort="' + esc(l.timestamp || '') + '" class="muted">' + esc(fmtDate(l.timestamp)) + '</td></tr>';
     }).join('');
+    paintSelectAll();
     if (window.attachTableSort && !window._logsSortReady) {
       window._logsSortReady = true;
       window.attachTableSort(document.querySelector('#logs-body').closest('table'));
     }
   }
 
+  function selectedCount() {
+    return Object.keys(selected).filter(function (k) { return selected[k]; }).length;
+  }
+
+  function paintSelectAll() {
+    var all = $('sel-all');
+    if (!all) return;
+    var rows = document.querySelectorAll('#logs-body tr[data-row-key]');
+    var checked = 0;
+    rows.forEach(function (r) { if (selected[r.dataset.rowKey]) checked++; });
+    all.checked = rows.length > 0 && checked === rows.length;
+    all.indeterminate = checked > 0 && checked < rows.length;
+    var btn = $('logs-csv');
+    var n = selectedCount();
+    if (btn) btn.innerHTML = n > 0
+      ? '<i class="fas fa-file-csv"></i> CSV: выбранные (' + n + ')'
+      : '<i class="fas fa-file-csv"></i> CSV';
+  }
+
   var filterAction = '';
   var filterMod = '';
+  var selected = {};
+
+  function rowKey(l) {
+    return (l.timestamp || '') + '|' + (l.user_id || l.user_name || '') + '|' + (l.action || '') + '|' + (l.mod_name || l.mod_id || '');
+  }
 
   function buildFilters() {
     // чипы типов действий
@@ -213,12 +246,14 @@
   }
 
   function exportCsv() {
+    var n = selectedCount();
+    var list = n > 0 ? allLogs.filter(function (l) { return selected[rowKey(l)]; }) : currentFiltered();
     var rows = [['Действие', 'Цель', 'Модератор', 'Причина', 'Время', 'Сервер']];
-    currentFiltered().forEach(function (l) {
+    list.forEach(function (l) {
       rows.push([l.action || '', l.user_name || l.channel_name || l.role_name || l.user_id || '', l.mod_name || l.mod_id || '', l.reason || '', l.timestamp || '', l.guild_id || '']);
     });
     var ok = window.csvDownload ? window.csvDownload('moderation_log.csv', rows) : false;
-    window.showToast(ok ? 'Выборка выгружена' : 'Не удалось выгрузить', ok);
+    window.showToast(ok ? (n > 0 ? 'Выгружено строк: ' + list.length : 'Выборка выгружена') : 'Не удалось выгрузить', ok);
   }
 
   function bind() {
@@ -236,6 +271,30 @@
       filterMod = this.value;
       render();
     });
+    // выбор строк
+    $('sel-all').addEventListener('change', function () {
+      var on = this.checked;
+      document.querySelectorAll('#logs-body tr[data-row-key]').forEach(function (r) {
+        if (on) selected[r.dataset.rowKey] = true; else delete selected[r.dataset.rowKey];
+      });
+      render();
+    });
+    $('logs-body').addEventListener('change', function (e) {
+      if (e.target && e.target.type === 'checkbox') {
+        var row = e.target.closest('tr[data-row-key]');
+        if (!row) return;
+        if (e.target.checked) selected[row.dataset.rowKey] = true;
+        else delete selected[row.dataset.rowKey];
+        paintSelectAll();
+        var btn = $('logs-csv');
+        var n = selectedCount();
+        if (btn) btn.innerHTML = n > 0
+          ? '<i class="fas fa-file-csv"></i> CSV: выбранные (' + n + ')'
+          : '<i class="fas fa-file-csv"></i> CSV';
+      }
+    });
+    if (window.livePauseButton) window.livePauseButton($('logs-pause'));
+    if (window.densityButton) window.densityButton($('logs-density'));
   }
 
   function start() {

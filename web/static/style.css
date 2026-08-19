@@ -395,9 +395,15 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 }
 .nav-caret { font-size: 9px; transition: transform 0.18s var(--ease); }
 .nav-group.collapsed .nav-caret { transform: rotate(-90deg); }
-.nav-group.collapsed .nav-group-items { display: none; }
+.nav-group.collapsed .nav-group-items { max-height: 0; opacity: 0; }
 
-.nav-group-items { margin-top: 2px; }
+.nav-group-items {
+  margin-top: 2px;
+  max-height: 2400px;
+  overflow: hidden;
+  transition: max-height 0.3s var(--ease), opacity 0.22s var(--ease);
+}
+.nav-group.collapsed .nav-group-items { max-height: 0; opacity: 0; }
 .nav-group-inner { display: flex; flex-direction: column; gap: 1px; }
 
 .nav-link {
@@ -407,8 +413,9 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   color: var(--text-2);
   font-size: var(--fs-md);
   font-weight: 500;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, padding-left 0.16s var(--ease);
 }
+.nav-link:hover { padding-left: 11px; }
 .nav-link:hover { background: var(--surface-3); color: var(--text); }
 .nav-link i {
   width: 16px; text-align: center; font-size: var(--fs-sm); color: var(--text-3); flex: 0 0 16px;
@@ -469,8 +476,15 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 }
 .nav-subgroup-caret { font-size: 9px; transition: transform 0.18s var(--ease); color: var(--text-3); }
 .nav-subgroup.open .nav-subgroup-caret { transform: rotate(90deg); }
-.nav-subgroup-items { display: none; padding-left: 24px; }
-.nav-subgroup.open .nav-subgroup-items { display: flex; flex-direction: column; gap: 1px; }
+.nav-subgroup-items {
+  display: flex; flex-direction: column; gap: 1px;
+  padding-left: 24px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.28s var(--ease), opacity 0.2s var(--ease);
+  opacity: 0;
+}
+.nav-subgroup.open .nav-subgroup-items { max-height: 700px; opacity: 1; }
 .nav-subgroup.has-active > .nav-subgroup-title { color: var(--ac); }
 .nav-subgroup.has-active .nav-subgroup-title .nav-subgroup-icon { color: var(--ac); }
 
@@ -2827,6 +2841,162 @@ body[data-section="utility"]::before {
     radial-gradient(ellipse 55% 36% at 16% -8%, rgba(13, 148, 136, 0.06), transparent 70%),
     radial-gradient(ellipse 46% 30% at 88% -6%, rgba(13, 148, 136, 0.04), transparent 65%);
 }
+
+
+/* ── Кастомные чекбоксы/радио/селекты (та же палитра) ─────── */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  border: 1.5px solid var(--line-3);
+  border-radius: 5px;
+  background: var(--surface);
+  cursor: pointer;
+  position: relative;
+  vertical-align: middle;
+  transition: border-color 0.14s, background 0.14s, box-shadow 0.14s, transform 0.1s;
+}
+input[type="checkbox"]:hover { border-color: var(--ac); }
+input[type="checkbox"]:active { transform: scale(0.9); }
+input[type="checkbox"]:checked {
+  background: var(--ac-grad);
+  border-color: transparent;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ac) 30%, transparent);
+}
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute; left: 5px; top: 2px;
+  width: 5px; height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+[data-theme="dark"] input[type="checkbox"]:checked::after { border-color: #14152a; }
+input[type="checkbox"]:focus-visible { box-shadow: 0 0 0 3px var(--ac-soft); }
+
+input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  border: 1.5px solid var(--line-3);
+  border-radius: 50%;
+  background: var(--surface);
+  cursor: pointer;
+  position: relative;
+  vertical-align: middle;
+  transition: border-color 0.14s;
+}
+input[type="radio"]:hover { border-color: var(--ac); }
+input[type="radio"]:checked { border-color: var(--ac); }
+input[type="radio"]:checked::after {
+  content: '';
+  position: absolute; inset: 3px;
+  border-radius: 50%;
+  background: var(--ac-grad);
+}
+
+/* скрытые чекбоксы переключателей остаются невидимыми */
+.switch input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  position: absolute;
+  opacity: 0;
+  width: 0; height: 0;
+  border: none; background: none;
+}
+
+/* кастомная стрелка селектов (двухслойный градиент-шеврон) */
+select, select.form-input, select.guild-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 32px;
+  background-color: var(--surface);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-3) 50%),
+    linear-gradient(135deg, var(--text-3) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 2.5px),
+    calc(100% - 12.5px) calc(50% - 2.5px);
+  background-size: 5.5px 5.5px, 5.5px 5.5px;
+  background-repeat: no-repeat;
+}
+select:hover { border-color: var(--line-3); }
+
+/* подпись поля подсвечивается при фокусе */
+.form-group:focus-within .form-label,
+.auth-field:focus-within .lbl,
+.studio-control:focus-within .lbl { color: var(--ac); }
+
+/* кнопки: тактильное нажатие */
+.btn:active { transform: translateY(1px) scale(0.98); }
+.cc-tile:active { transform: translateY(1px) scale(0.99); }
+
+/* ── Зебра в таблицах и липкие шапки ─────────────────────── */
+table.data-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+table.data-table tbody tr:hover td { background: var(--surface-2); }
+.panel:has(.table-wrap) .panel-head {
+  position: sticky; top: var(--topbar-h);
+  z-index: 6;
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* выбранные строки */
+table.data-table tbody tr.sel td { background: var(--ac-soft) !important; }
+.col-sel { width: 38px; text-align: center; }
+.col-sel input[type="checkbox"] { margin: 0; }
+
+/* ── Компактный режим таблиц ─────────────────────────────── */
+body.dense table.data-table tbody td,
+body.dense table.data-table thead th { padding: 5px 10px; }
+body.dense .feed-item { padding: 7px 0; }
+body.dense .kpi { padding: 10px 13px; }
+
+/* ── Плавное появление меню пользователя ─────────────────── */
+.user-menu {
+  transform-origin: top right;
+  animation: menuIn 0.18s var(--ease) both;
+}
+@keyframes menuIn {
+  from { opacity: 0; transform: scale(0.94) translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── Дроверы и модалки: глубже стекло ────────────────────── */
+.drawer { background: var(--glass); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); }
+.modal-overlay { backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+
+/* ── Подчёркивание заголовка страницы ────────────────────── */
+.page-head { position: relative; }
+.page-head::after {
+  content: '';
+  flex-basis: 100%;
+  height: 1px;
+  margin-top: 2px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ac) 45%, transparent), transparent 70%);
+  opacity: 0.7;
+}
+.page-head .page-head-actions { padding-bottom: 6px; }
+
+/* ── Штамп «обновлено» ───────────────────────────────────── */
+.fresh-stamp {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  font-weight: 600;
+}
+.fresh-stamp i { color: var(--ok); font-size: 10px; }
+
+/* ── Копируемые ID ───────────────────────────────────────── */
+.id-pill.copyable { cursor: pointer; position: relative; transition: color 0.12s, background 0.12s; }
+.id-pill.copyable:hover { color: var(--ac); background: var(--ac-soft); }
+.id-pill.copyable.copied { color: var(--ok); }
 
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ

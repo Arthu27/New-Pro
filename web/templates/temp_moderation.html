@@ -26,6 +26,7 @@
     <input type="search" id="tm-search" placeholder="Поиск по участнику, причине или модератору" aria-label="Поиск по временным мерам">
   </label>
   <span class="spacer"></span>
+  <button type="button" class="btn" id="tm-pause" title="Пауза live"></button>
   <span class="hint" id="tm-search-count"></span>
 </div>
 
@@ -280,7 +281,8 @@
 
   setActionType('mut');
   load();
-  setInterval(load, 15000);
+  if (window.livePauseButton) window.livePauseButton($('tm-pause'));
+  setInterval(function () { if (!window.__modLivePaused) load(); }, 15000);
   setInterval(updateCountdowns, 1000);
 })();
 </script>

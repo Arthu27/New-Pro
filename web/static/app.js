@@ -233,7 +233,7 @@
     el.innerHTML =
       '<svg viewBox="0 0 36 36" style="width:' + size + 'px;height:' + size + 'px">' +
       '<circle cx="18" cy="18" r="' + r + '" fill="none" stroke="' + track + '" stroke-width="3.4"/>' +
-      '<circle class="donut-fill" cx="18" cy="18" r="' + r + '" fill="none" stroke="' + stroke + '" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + c + '"/>' +
+      '<circle class="donut-fill" cx="18" cy="18" r="' + r + '" fill="none" stroke="' + stroke + '" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + c + '" style="filter:drop-shadow(0 2px 3px ' + stroke + '55)"/>' +
       '</svg>';
     var fill = el.querySelector('.donut-fill');
     if (!fill) return;
@@ -1063,10 +1063,22 @@
       var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
       var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + (h - pad) + ' L' + pts[0][0].toFixed(1) + ' ' + (h - pad) + ' Z';
       var svg = svgEl('svg', { viewBox: '0 0 ' + w + ' ' + h, preserveAspectRatio: 'none', style: 'width:100%;height:' + h + 'px' });
-      svg.appendChild(svgEl('path', { d: area, fill: colorWithAlpha(color, 0.16), 'class': 'area-fill' }));
-      svg.appendChild(svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.5', 'class': 'line-path' }));
+      window.__chartUid = (window.__chartUid || 0) + 1;
+      var uid = 's' + window.__chartUid;
+      var defs = svgEl('defs', {});
+      var lg = svgEl('linearGradient', { id: uid + '-fill', x1: '0', y1: '0', x2: '0', y2: '1' });
+      lg.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '0.34' }));
+      lg.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.02' }));
+      defs.appendChild(lg);
+      var flt = svgEl('filter', { id: uid + '-glow', x: '-30%', y: '-30%', width: '160%', height: '160%' });
+      flt.appendChild(svgEl('feDropShadow', { dx: '0', dy: '2', stdDeviation: '2.4', 'flood-color': color, 'flood-opacity': '0.38' }));
+      defs.appendChild(flt);
+      svg.appendChild(defs);
+      svg.appendChild(svgEl('path', { d: area, fill: 'url(#' + uid + '-fill)', 'class': 'area-fill' }));
+      svg.appendChild(svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.5', 'class': 'line-path', filter: 'url(#' + uid + '-glow)' }));
       var last = pts[pts.length - 1];
-      svg.appendChild(svgEl('circle', { cx: last[0], cy: last[1], r: 4, fill: color, 'class': 'last-dot' }));
+      var surf = cssVar('--surface', '#ffffff');
+      svg.appendChild(svgEl('circle', { cx: last[0], cy: last[1], r: 4.2, fill: color, stroke: surf, 'stroke-width': '1.6', 'class': 'last-dot' }));
       if (opts.title) svg.appendChild(svgEl('title', {}));
       if (opts.title) svg.querySelector('title').textContent = opts.title;
       el.innerHTML = '';
@@ -1092,15 +1104,27 @@
       var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
       var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + (h - pad - 8) + ' L' + pts[0][0].toFixed(1) + ' ' + (h - pad - 8) + ' Z';
       var svg = svgEl('svg', { viewBox: '0 0 ' + w + ' ' + h, preserveAspectRatio: 'none', style: 'width:100%;height:' + h + 'px' });
+      window.__chartUid = (window.__chartUid || 0) + 1;
+      var uid = 'g' + window.__chartUid;
+      var defs = svgEl('defs', {});
+      var lg = svgEl('linearGradient', { id: uid + '-fill', x1: '0', y1: '0', x2: '0', y2: '1' });
+      lg.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '0.36' }));
+      lg.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.02' }));
+      defs.appendChild(lg);
+      var flt = svgEl('filter', { id: uid + '-glow', x: '-30%', y: '-30%', width: '160%', height: '160%' });
+      flt.appendChild(svgEl('feDropShadow', { dx: '0', dy: '3', stdDeviation: '3', 'flood-color': color, 'flood-opacity': '0.4' }));
+      defs.appendChild(flt);
+      svg.appendChild(defs);
       [0.25, 0.5, 0.75].forEach(function (f) {
         var y = pad + (h - pad * 2) * f;
         svg.appendChild(svgEl('line', { x1: pad, y1: y.toFixed(1), x2: w - pad, y2: y.toFixed(1), 'class': 'grid-line' }));
       });
-      svg.appendChild(svgEl('path', { d: area, fill: colorWithAlpha(color, 0.16), 'class': 'area-fill' }));
-      var linePath = svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.5', 'class': 'line-path' });
+      svg.appendChild(svgEl('path', { d: area, fill: 'url(#' + uid + '-fill)', 'class': 'area-fill' }));
+      var linePath = svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.5', 'class': 'line-path', filter: 'url(#' + uid + '-glow)' });
       svg.appendChild(linePath);
+      var surf = cssVar('--surface', '#ffffff');
       pts.forEach(function (p, i) {
-        var dot = svgEl('circle', { cx: p[0], cy: p[1], r: 3, fill: color, opacity: i === pts.length - 1 ? 1 : 0.55 });
+        var dot = svgEl('circle', { cx: p[0], cy: p[1], r: i === pts.length - 1 ? 4.5 : 3.2, fill: color, stroke: surf, 'stroke-width': '1.6', opacity: i === pts.length - 1 ? 1 : 0.8 });
         if (opts.labels && opts.labels[i] != null) {
           var t = svgEl('title', {});
           t.textContent = opts.labels[i] + ': ' + data[i];
@@ -1211,7 +1235,7 @@
     list.forEach(function (seg) {
       var v = Number(seg.value) || 0;
       var frac = v / total;
-      var dash = frac * c - 1.5; // зазор между сегментами
+      var dash = frac * c - 3; // зазор между сегментами
       if (dash < 0) dash = 0;
       var circle = svgEl('circle', {
         cx: size / 2, cy: size / 2, r: r, fill: 'none',
@@ -1219,7 +1243,7 @@
         'stroke-width': stroke,
         'stroke-dasharray': dash + ' ' + (c - dash),
         'stroke-dashoffset': -(off * c),
-        'stroke-linecap': 'butt'
+        'stroke-linecap': 'round'
       });
       var t = svgEl('title', {});
       t.textContent = seg.label + ': ' + v;
@@ -2110,4 +2134,56 @@
       });
     }
   });
+})();
+
+// ============================================================
+// AETHER KIT 3 — пауза live-обновлений, плотность, штамп
+// ============================================================
+(function () {
+  'use strict';
+
+  /* Кнопка паузы live-обновлений (работает с setLiveRefresh) */
+  window.livePauseButton = function (btn) {
+    if (!btn || btn.dataset.lpReady) return;
+    btn.dataset.lpReady = '1';
+    function paint() {
+      var paused = !!window.__modLivePaused;
+      btn.innerHTML = paused
+        ? '<i class="fas fa-play"></i> Продолжить live'
+        : '<i class="fas fa-pause"></i> Пауза live';
+      btn.classList.toggle('btn-primary', paused);
+      btn.title = paused ? 'Возобновить автообновление' : 'Приостановить автообновление';
+    }
+    btn.addEventListener('click', function () {
+      window.__modLivePaused = !window.__modLivePaused;
+      paint();
+      if (typeof window.showToast === 'function') {
+        window.showToast(window.__modLivePaused ? 'Live на паузе' : 'Live продолжается', true);
+      }
+      if (!window.__modLivePaused) {
+        try { document.dispatchEvent(new CustomEvent('aether:live')); } catch (e) {}
+      }
+    });
+    paint();
+  };
+
+  /* Кнопка плотности таблиц */
+  window.densityButton = function (btn) {
+    if (!btn || btn.dataset.denReady) return;
+    btn.dataset.denReady = '1';
+    function paint() {
+      var dense = document.body.classList.contains('dense');
+      btn.innerHTML = dense ? '<i class="fas fa-arrows-to-dot"></i> Стандартно' : '<i class="fas fa-compress"></i> Компактно';
+      btn.title = dense ? 'Вернуть стандартную плотность' : 'Включить компактный режим таблиц';
+    }
+    btn.addEventListener('click', function () {
+      document.body.classList.toggle('dense');
+      try { localStorage.setItem('aether_dense', document.body.classList.contains('dense') ? '1' : '0'); } catch (e) {}
+      paint();
+    });
+    try {
+      if (localStorage.getItem('aether_dense') === '1') document.body.classList.add('dense');
+    } catch (e) {}
+    paint();
+  };
 })();

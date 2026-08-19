@@ -31,6 +31,9 @@
       <input type="search" id="search" placeholder="Участник, причина или модератор" aria-label="Поиск предупреждений">
     </label>
     <span class="spacer"></span>
+    <span class="fresh-stamp" id="warn-stamp"></span>
+    <button type="button" class="btn" id="warn-pause" title="Пауза live"></button>
+    <button type="button" class="btn" id="warn-density" title="Плотность таблицы"></button>
     <button type="button" class="btn" id="warn-csv" title="Выгрузить текущую выборку в CSV"><i class="fas fa-file-csv"></i> CSV</button>
     <span class="badge neutral" id="warn-count">0 кейсов</span>
   </div>
@@ -75,6 +78,7 @@
     }
     window.renderSafe(render);
     updateStats();
+    if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('warn-stamp'));
   }
 
   function updateStats() {
@@ -135,7 +139,7 @@
     var q = ($('search').value || '');
     var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
     body.innerHTML = filtered.slice(0, 200).map(function (w) {
-      return '<tr><td data-sort="' + esc(w.user_id || '') + '"><span class="id-pill">' + H(w.user_id || '—') + '</span></td>' +
+      return '<tr><td data-sort="' + esc(w.user_id || '') + '"><span class="id-pill copyable" data-copy="' + esc(w.user_id || '') + '" title="Клик — скопировать ID">' + H(w.user_id || '—') + '</span></td>' +
         '<td>' + H(w.moderator || '—') + '</td>' +
         '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(w.reason || '') + '">' + H(w.reason || '—') + '</td>' +
         '<td data-sort="' + esc(w.timestamp || '') + '" class="muted">' + esc(fmtDate(w.timestamp)) + '</td></tr>';
@@ -172,6 +176,8 @@
     $('guild-filter').addEventListener('change', render);
     $('search').addEventListener('input', render);
     $('warn-csv').addEventListener('click', exportCsv);
+    if (window.livePauseButton) window.livePauseButton($('warn-pause'));
+    if (window.densityButton) window.densityButton($('warn-density'));
     document.querySelectorAll('#viewMode .seg-btn').forEach(function (b) {
       b.addEventListener('click', function () {
         document.querySelectorAll('#viewMode .seg-btn').forEach(function (x) { x.classList.remove('active'); });

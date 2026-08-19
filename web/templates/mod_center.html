@@ -10,6 +10,8 @@
     <p class="lead">Вся модерация с одного экрана: живые метрики, тренды нарушений и быстрый вход в любой из инструментов.</p>
   </div>
   <div class="page-head-actions">
+    <span class="fresh-stamp" id="mc-stamp"></span>
+    <button type="button" class="btn" id="mc-pause" title="Пауза live"></button>
     <span class="live-chip"><span class="dot"></span> LIVE</span>
     <button type="button" class="btn" id="mcRefresh"><i class="fas fa-arrows-rotate"></i> Обновить</button>
   </div>
@@ -228,9 +230,13 @@
     } catch (e) { /* графики опциональны */ }
   }
 
-  function refresh() { loadMetrics(); loadCharts(); }
+  function refresh() {
+    loadMetrics(); loadCharts();
+    if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('mc-stamp'));
+  }
   $('mcRefresh').addEventListener('click', refresh);
 
+  if (window.livePauseButton) window.livePauseButton($('mc-pause'));
   refresh();
   if (window.setLiveRefresh) {
     window.setLiveRefresh(loadMetrics, 15000);
