@@ -574,6 +574,30 @@ check(set(hero_rest) <= {'base.html', 'ai_moderation.html', 'announcements.html'
                          'bot_diagnostics.html', 'leveling_admin.html',
                          'analytics.html'},
       f'block page_hero остался только у страниц с живыми hero ({hero_rest})')
+# ═══ 19. Правила сервера — полностью пересобраны ═══════════════════════════
+print('== правила сервера ==')
+rules_t = open(os.path.join(ROOT, 'web', 'templates', 'rules_editor.html'), encoding='utf-8').read()
+check('class="page-head"' in rules_t and 'Правила сервера' in rules_t,
+      'правила: премиум-шапка страницы')
+check('rules-wrap' in rules_t and 'rules-panel' in rules_t and 'rule-row' in rules_t,
+      'правила: сетка панелей с полноценными стилями (не «голые» классы)')
+check('preview-card' in rules_t and 'preview-rule' in rules_t,
+      'правила: превью в стиле Discord-сообщения')
+check('rule-move' in rules_t and 'data-mv' in rules_t,
+      'правила: порядок меняется кнопками вверх/вниз')
+check('window.showToast' in rules_t and 'alert(' not in rules_t.replace('else alert(', '').replace('alert(msg);', ''),
+      'правила: тосты вместо alert()')
+check('yok' not in rules_t and 'butonuna' not in rules_t and 'Новый правило' not in rules_t,
+      'правила: турецкие фразы заменены русскими')
+check('fa-xmark' in rules_t and 'Правил пока нет' in rules_t,
+      'правила: иконка удаления и стилизованное пустое состояние')
+api_rules = open(os.path.join(ROOT, 'web', 'routes', 'tasks_rules.py'), encoding='utf-8').read()
+check('edenler' not in api_rules and '0x4f46e5' in api_rules,
+      'API публикации: русский текст и индиго-цвет эмбеда')
+login_as('owner')
+r = client.get('/rules-editor')
+check(r.status_code == 200 and 'rules-panel' in r.get_data(as_text=True),
+      '/rules-editor открывается под owner')
 check('app.js?v=47' in base and 'style.css?v=100' in base,
       'версии ассетов (100/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,

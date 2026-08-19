@@ -102,8 +102,8 @@ def register(ctx):
             ch =bot .get_channel (int (data ['channel_id']))
             if ch :
                 desc ='\n'.join ([f"**{i+1}.** {r}"for i ,r in enumerate (data ['rules'])])
-                embed =discord .Embed (title ="📜 Правила сервера",description =desc ,color =0xdc143c )
-                embed .set_footer (text ="Правил нарушение edenler наказание.")
+                embed =discord .Embed (title ="Правила сервера",description =desc ,color =0x4f46e5 )
+                embed .set_footer (text ="Нарушение правил ведёт к наказанию.")
                 _run_async (ch .send (embed =embed ))
         asyncio .run_coroutine_threadsafe (send (),bot .loop ).result (timeout =10 )
         return jsonify ({'success':True })

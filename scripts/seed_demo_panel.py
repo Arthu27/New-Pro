@@ -377,6 +377,15 @@ demo_channels = [
      'created_at': '2025-11-02T10:25:00+00:00', 'mention': ''},
 ]
 
+demo_rules = [
+    'Будьте вежливы и уважайте других участников — без оскорблений и травли.',
+    'Никакого спама, флуда и капса в текстовых каналах.',
+    'Запрещены NSFW-материалы, шок-контент и ссылки на вредоносные ресурсы.',
+    'Реклама других серверов — только с разрешения администрации.',
+    'Спорные ситуации решайте через тикеты, а не в общем чате.',
+    'Следуйте указаниям модераторов — их решения можно обжаловать через апелляции.',
+]
+
 files = {
     'data/warnings.json': warnings,
     'data/audit_log.json': audit,
@@ -388,6 +397,7 @@ files = {
     'data/team_board.json': team_board,
     'data/demo_channels.json': demo_channels,
     'data/hidden_channels.json': {},
+    f'data/rules_{GID}.json': demo_rules,
 }
 
 for path, payload in files.items():
