@@ -211,8 +211,8 @@ check('spot-on' not in css and 'spot-on' not in js,
       'спотлайт, следующий за мышью внутри карточек, отключён')
 check('tickerDrift' in open(os.path.join(ROOT, 'web', 'templates', 'mod_center.html'), encoding='utf-8').read(),
       'лента событий мод-центра стала живой (авто-дрейф с паузой)')
-check('app.js?v=32' in base and 'style.css?v=86' in base,
-      'версии ассетов забумплены (86/32)')
+check('app.js?v=33' in base and 'style.css?v=87' in base,
+      'версии ассетов забумплены (87/33)')
 
 # ═══ 8. Комбо-красота: шапки, эмблема, переходы, киоск ════════════════════
 print('== комбо-красота ==')
@@ -239,6 +239,27 @@ check(r.status_code == 200 and 'Экран дежурного' in r.get_data(as_
       '/mod-kiosk открывается под owner')
 r = client.get('/favicon.ico')
 check(r.status_code == 200, 'фавикон отдаётся сервером')
+
+# ═══ 9. Премиум-формы: селекты и элементы выбора ══════════════════════════
+print('== премиум-формы ==')
+check('27.7 FX-СЛОЙ 11' in css, 'FX-слой 11 «премиум-формы» добавлен')
+check('calc(100% - 21px) calc(50% - 3px)' in css and 'var(--ac) 50%' in css,
+      'стрелка селектов — фирменный градиентный шеврон')
+check('select option:checked' in css and 'select[multiple] option:checked' in css,
+      'опции селектов стилизованы (включая multi-select)')
+check('input[type="checkbox"]:indeterminate' in css and 'checkPop' in css,
+      'чекбоксы: indeterminate-состояние и pop-анимация')
+check('input[type="radio"]:checked::after' in css,
+      'радио-кнопки с градиентной точкой')
+check('input[type="range"]::-webkit-slider-thumb' in css
+      and 'input[type="range"]::-moz-range-thumb' in css,
+      'ползунки с фирменным бегунком')
+check('-webkit-calendar-picker-indicator' in css,
+      'индикатор календаря у date/time оформлен')
+check('.switch input:checked + .track' in css,
+      'переключатели с градиентным треком и свечением')
+check('background-color: var(--surface) !important' in open(os.path.join(ROOT, 'web', 'templates', 'analytics.html'), encoding='utf-8').read(),
+      'аналитика: стрелка селекта больше не скрывается фоном')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil

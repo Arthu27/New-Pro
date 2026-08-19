@@ -3069,22 +3069,34 @@ input[type="radio"]:checked::after {
 }
 
 /* кастомная стрелка селектов (двухслойный градиент-шеврон) */
-select, select.form-input, select.guild-select {
+select, select.form-input, select.guild-select, select.field-input,
+.an-select, .guild-sel, select.ba-roles, select.ba-guild,
+.rep-sel select, .sl-sel select, .sh-select select, .fn-sel select,
+.au-input select, .emb-input select, .form-input.ba-roles, .form-input.ba-guild {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  padding-right: 32px;
+  padding-right: 38px;
+  cursor: pointer;
   background-color: var(--surface);
   background-image:
-    linear-gradient(45deg, transparent 50%, var(--text-3) 50%),
-    linear-gradient(135deg, var(--text-3) 50%, transparent 50%);
+    linear-gradient(45deg, transparent 50%, var(--ac) 50%),
+    linear-gradient(135deg, var(--ac) 50%, transparent 50%);
   background-position:
-    calc(100% - 18px) calc(50% - 2.5px),
-    calc(100% - 12.5px) calc(50% - 2.5px);
-  background-size: 5.5px 5.5px, 5.5px 5.5px;
+    calc(100% - 21px) calc(50% - 3px),
+    calc(100% - 15px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
   background-repeat: no-repeat;
+  transition: border-color 0.15s var(--ease), box-shadow 0.2s var(--ease),
+              background-position 0.15s var(--ease), transform 0.15s var(--ease);
 }
-select:hover { border-color: var(--line-3); }
+select:hover {
+  border-color: var(--ac-line);
+  background-position:
+    calc(100% - 21px) calc(50% - 1.5px),
+    calc(100% - 15px) calc(50% - 1.5px);
+}
+select:disabled, select:disabled:hover { opacity: .55; cursor: not-allowed; }
 
 /* подпись поля подсвечивается при фокусе */
 .form-group:focus-within .form-label,
@@ -3965,6 +3977,150 @@ body.reorder-mode .reorder-hint { display: block; }
 @media (prefers-reduced-motion: reduce) {
   .fab-main::after { animation: none; display: none; }
   .fx-shine { transition: none; }
+}
+
+/* ============================================================
+   27.7 FX-СЛОЙ 11 — ПРЕМИУМ-ФОРМЫ: селекты, ползунки, даты,
+   счётчики и состояния выбора — единый топовый вид
+   ============================================================ */
+
+/* ── 1. Опции селектов ── */
+select option {
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: var(--fs-md);
+}
+select option:checked { color: var(--ac); font-weight: 600; }
+select[multiple] option:checked {
+  background: linear-gradient(90deg, var(--ac-soft), transparent);
+}
+
+/* ── 2. Чекбоксы: pop-анимация, indeterminate, hover-кольцо ── */
+input[type="checkbox"]:checked { animation: checkPop 0.22s var(--ease-out); }
+@keyframes checkPop {
+  0% { transform: scale(0.72); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+input[type="checkbox"]:hover { box-shadow: 0 0 0 3px var(--ac-soft); }
+input[type="checkbox"]:indeterminate {
+  background: var(--ac-soft);
+  border-color: var(--ac);
+}
+input[type="checkbox"]:indeterminate::after {
+  content: '';
+  position: absolute; left: 3px; top: 7px;
+  width: 10px; height: 2px;
+  border: none;
+  border-radius: 2px;
+  background: var(--ac);
+  transform: none;
+}
+
+/* ── 3. Радио: точка с градиентом и свечением ── */
+input[type="radio"] { transition: border-color 0.14s, box-shadow 0.2s var(--ease), transform 0.1s; }
+input[type="radio"]:hover { border-color: var(--ac); box-shadow: 0 0 0 3px var(--ac-soft); }
+input[type="radio"]:checked {
+  border-color: var(--ac);
+  box-shadow: 0 0 0 3px var(--ac-soft);
+  animation: checkPop 0.22s var(--ease-out);
+}
+input[type="radio"]:checked::after {
+  content: '';
+  position: absolute; inset: 3px;
+  border-radius: 50%;
+  background: var(--ac-grad);
+}
+
+/* ── 4. Ползунки: фирменный трек и крупный белый бегунок ── */
+input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 6px;
+  border-radius: 99px;
+  border: none;
+  outline: none;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ac) 30%, transparent), var(--line));
+  box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid var(--ac);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ac) 40%, transparent);
+  cursor: grab;
+  transition: transform 0.12s var(--ease), box-shadow 0.15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.14);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--ac) 55%, transparent);
+}
+input[type="range"]:active::-webkit-slider-thumb { cursor: grabbing; transform: scale(1.2); }
+input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid var(--ac);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ac) 40%, transparent);
+  cursor: grab;
+}
+
+/* ── 5. Даты и время: аккуратный индикатор календаря ── */
+input[type="date"], input[type="time"], input[type="datetime-local"] {
+  min-height: 38px;
+  padding-right: 10px;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.5;
+  padding: 4px;
+  border-radius: 7px;
+  transition: opacity 0.15s, background 0.15s;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background: var(--ac-soft);
+}
+
+/* ── 6. Числа: деликатные спиннеры ── */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+input[type="number"]:hover::-webkit-inner-spin-button,
+input[type="number"]:hover::-webkit-outer-spin-button { opacity: 0.8; }
+
+/* ── 7. Переключатели: градиентный трек и свечение ── */
+.switch .track::after {
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(16, 24, 40, 0.28);
+}
+.switch input:checked + .track {
+  background: var(--ac-grad);
+  box-shadow: 0 0 0 3px var(--ac-soft), 0 2px 10px color-mix(in srgb, var(--ac) 35%, transparent);
+}
+
+/* ── 8. Цветовой выбор ── */
+input[type="color"] {
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.2s var(--ease);
+}
+input[type="color"]:hover { border-color: var(--ac); }
+input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  input[type="checkbox"]:checked, input[type="radio"]:checked { animation: none; }
+  input[type="range"]::-webkit-slider-thumb { transition: none; }
 }
 
 /* ============================================================
