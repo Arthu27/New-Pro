@@ -4576,6 +4576,90 @@ table.data-table tbody tr:hover::before { opacity: 1; }
   .kpi .kpi-icon::after, .btn::after { transition: none; display: none; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   PANEL SPARKLE 2: бренд-волна, spring-модалки, pop-бейджи,
+   подсветка столбцов, свечение иконок шапки
+   ============================================================ */
+
+/* ── Бренд-заголовок: градиентная волна ── */
+.brand-title {
+  background: linear-gradient(105deg,
+    var(--text) 20%, var(--text) 38%,
+    color-mix(in srgb, var(--ac) 82%, var(--text)) 50%,
+    var(--text) 62%, var(--text) 90%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: brandWave 7s linear infinite;
+}
+@keyframes brandWave { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.brand:hover .brand-title { animation-duration: 2.2s; }
+
+/* ── Spring-появление модалок ── */
+.modal-overlay.open .modal-box, .modal-overlay.open .modal-card {
+  animation: modalSpring .32s var(--ease) both;
+}
+@keyframes modalSpring {
+  0%   { opacity: 0; transform: translateY(16px) scale(.94); }
+  60%  { opacity: 1; transform: translateY(-3px) scale(1.01); }
+  100% { transform: none; }
+}
+
+/* ── Pop-появление бейджей и чипов ── */
+.badge, .chip, .status-pill {
+  animation: badgePop .28s var(--ease-out) both;
+}
+@keyframes badgePop {
+  from { opacity: 0; transform: scale(.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Подсветка столбца таблицы при hover на заголовок ── */
+table.data-table th.sortable { position: relative; cursor: pointer; }
+table.data-table th.sortable:hover {
+  color: var(--ac);
+  background: color-mix(in srgb, var(--ac) 7%, transparent);
+}
+
+/* ── Свечение иконок-кнопок шапки ── */
+.nav-icon-btn:hover {
+  background: color-mix(in srgb, var(--ac) 12%, transparent);
+  color: var(--ac);
+  box-shadow: 0 4px 14px -6px var(--ac-glow);
+  transform: translateY(-1px);
+}
+.nav-icon-btn { transition: background .15s, color .15s, box-shadow .2s, transform .15s var(--ease); }
+
+/* ── KPI-значение: градиентный оттенок у основного тона ── */
+.kpi:not(.tone-ok):not(.tone-warn):not(.tone-err):not(.tone-info) .kpi-value {
+  background: linear-gradient(120deg, var(--text), color-mix(in srgb, var(--ac) 45%, var(--text)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ── Инпуты: двухцветное кольцо фокуса ── */
+input:focus, select:focus, textarea:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 22%, transparent),
+              0 0 0 6px color-mix(in srgb, var(--ac) 8%, transparent);
+}
+
+/* ── Панель-head: иконка слегка покачивается при hover ── */
+.panel-head h2 i { transition: transform .2s var(--ease); display: inline-block; }
+.panel-head:hover h2 i { transform: scale(1.12) rotate(-4deg); }
+
+/* ── Логотип дышащего дракона: лёгкое свечение синхронно дыханию ── */
+.brand-icon .dragon-live {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ac) 55%, transparent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-title, .badge, .chip, .status-pill,
+  .modal-overlay.open .modal-box, .modal-overlay.open .modal-card { animation: none; }
+  .nav-icon-btn, .panel-head h2 i { transition: none; }
+}
+
 /* ПРЕМИУМ-СКРОЛЛБАРЫ: градиентные, тонкие */
 .sidebar-nav::-webkit-scrollbar { width: 5px; }
 .sidebar-nav::-webkit-scrollbar-track { background: transparent; }

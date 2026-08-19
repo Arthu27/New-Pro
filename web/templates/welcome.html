@@ -668,6 +668,37 @@
       box-shadow: 0 24px 60px rgba(0, 0, 0, .65), 0 0 40px rgba(124, 58, 237, .25);
     }
 
+    /* ── Stagger-появление hero при загрузке ── */
+    .w-dragon-wrap, .w-eyebrow, .w-title, .w-lead,
+    .w-chips, .w-at-hint, .w-search, .w-hero-actions, .w-stats {
+      opacity: 0;
+      animation: wHeroIn .6s var(--ease) forwards;
+    }
+    .w-dragon-wrap { animation-delay: .05s; }
+    .w-eyebrow { animation-delay: .15s; }
+    .w-title { animation-delay: .22s; }
+    .w-lead { animation-delay: .3s; }
+    .w-chips { animation-delay: .38s; }
+    .w-at-hint { animation-delay: .46s; }
+    .w-search { animation-delay: .54s; }
+    .w-hero-actions { animation-delay: .62s; }
+    .w-stats { animation-delay: .7s; }
+    @keyframes wHeroIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ── CTA-блок: свечение при hover ── */
+    .w-cta-box { transition: box-shadow .3s ease, border-color .3s, transform .3s var(--ease); }
+    .w-cta-box:hover {
+      border-color: var(--ac);
+      box-shadow: 0 0 60px rgba(124, 58, 237, .25);
+      transform: translateY(-2px);
+    }
+
+    /* ── Нав-кнопки: подъём при hover ── */
+    .w-nav-actions .btn:hover { transform: translateY(-2px); }
+
     /* ── Кнопка «наверх» ── */
     .w-top {
       position: fixed; right: 26px; bottom: 26px; z-index: 120;
@@ -728,6 +759,11 @@
       .dragon-smoke { display: none; }
       .w-section::before, .w-sec-title::after, .w-step .num,
       .w-terminal, .w-chips .chip { transition: none; }
+      .w-dragon-wrap, .w-eyebrow, .w-title, .w-lead,
+      .w-chips, .w-at-hint, .w-search, .w-hero-actions, .w-stats {
+        opacity: 1; animation: none;
+      }
+      .w-cta-box { transition: none; }
       .w-term-line { animation: none; }
       .w-chart-bars .b, .w-feed-line { animation: none; }
       .w-card, .w-step, .w-stat { transition: none; }

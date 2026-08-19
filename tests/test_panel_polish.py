@@ -953,8 +953,32 @@ check('.w-step:hover .num' in w8,
       'welcome: пульс номеров шагов')
 check('.w-terminal:hover' in w8,
       'welcome: свечение терминала при hover')
-check('app.js?v=47' in base and 'style.css?v=106' in base,
-      'версии ассетов (106/47)')
+# ═══ 34. Panel Sparkle 2 ═══════════════════════════════════════════════════
+print('== panel sparkle 2 ==')
+check('PANEL SPARKLE 2' in css, 'дизайн-система: слой Panel Sparkle 2')
+check('brandWave' in css and '.brand-title' in css,
+      'панель: бренд-заголовок с градиентной волной (ускоряется при hover)')
+check('modalSpring' in css and 'translateY(16px) scale(.94)' in css,
+      'панель: spring-появление модалок')
+check('badgePop' in css and '.badge, .chip, .status-pill' in css,
+      'панель: pop-появление бейджей и чипов')
+check('th.sortable:hover' in css,
+      'панель: подсветка столбца таблицы при hover на заголовок')
+check('.nav-icon-btn:hover' in css and 'translateY(-1px)' in css,
+      'панель: свечение и подъём иконок шапки')
+check('.panel-head:hover h2 i { transform: scale(1.12) rotate(-4deg); }' in css,
+      'панель: покачивание иконок заголовков панелей')
+check('.kpi:not(.tone-ok)' in css and 'background-clip: text' in css,
+      'панель: градиентные KPI-значения')
+check('drop-shadow' in css and '.brand-icon .dragon-live' in css,
+      'панель: дракон подсвечен в ритме дыхания')
+w9 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('wHeroIn' in w9 and 'animation-delay: .7s' in w9,
+      'welcome: stagger-появление hero при загрузке')
+check('.w-cta-box:hover' in w9 and 'rgba(124, 58, 237, .25)' in w9,
+      'welcome: свечение CTA при hover')
+check('app.js?v=47' in base and 'style.css?v=107' in base,
+      'версии ассетов (107/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,
