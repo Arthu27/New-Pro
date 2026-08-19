@@ -56,8 +56,8 @@ textarea.emb-input{resize:vertical;min-height:100px}
       <div><label class="emb-label">Заголовок</label><input class="emb-input" id="embed-title" placeholder="Заголовок..." aria-label="Заголовок..."></div>
       <div><label class="emb-label">Цвет</label>
         <div style="display:flex;gap:8px;align-items:center">
-          <input type="color" id="custom-color" value="#e0b04a" style="width:46px;height:38px;border:none;background:none;cursor:pointer" aria-label="Свой цвет">
-          <input class="emb-input" id="color-hex" value="#e0b04a" maxlength="7" style="flex:1" aria-label="Цвет (HEX)">
+          <input type="color" id="custom-color" value="#4f46e5" style="width:46px;height:38px;border:none;background:none;cursor:pointer" aria-label="Свой цвет">
+          <input class="emb-input" id="color-hex" value="#4f46e5" maxlength="7" style="flex:1" aria-label="Цвет (HEX)">
         </div>
       </div>
     </div>
@@ -161,7 +161,7 @@ function updatePreview(){
   var desc = $id('description').value || 'Описание будет отображаться здесь...';
   var footer = $id('footer').value || 'Текст футера';
   var author = $id('author').value || '';
-  var color = /^#[0-9a-fA-F]{6}$/.test($id('custom-color').value) ? $id('custom-color').value : '#e0b04a';
+  var color = /^#[0-9a-fA-F]{6}$/.test($id('custom-color').value) ? $id('custom-color').value : '#4f46e5';
   var img = $id('image-url').value.trim();
   var thumb = $id('thumbnail-url').value.trim();
   var aicon = $id('author-icon').value.trim();
@@ -205,7 +205,7 @@ async function sendEmbed(){
         guild_id: guildId, channel_id: channelId,
         title: $id('embed-title').value.trim(),
         description: $id('description').value.trim(),
-        color: /^#[0-9a-fA-F]{6}$/.test($id('custom-color').value) ? $id('custom-color').value : '#e0b04a',
+        color: /^#[0-9a-fA-F]{6}$/.test($id('custom-color').value) ? $id('custom-color').value : '#4f46e5',
         footer: $id('footer').value.trim(),
         image_url: $id('image-url').value.trim(),
         thumbnail_url: $id('thumbnail-url').value.trim(),

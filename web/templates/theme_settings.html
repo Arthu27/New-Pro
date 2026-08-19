@@ -47,7 +47,7 @@
 <div class="section">
   <div class="bs-title"><i class="fas fa-palette"></i> Акцентный цвет</div>
   <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-    <div class="color-option" data-color="#e0b04a" onclick="setAccentColor('#e0b04a')" style="width: 50px; height: 50px; border-radius: 8px; background: var(--ac); cursor: pointer; border: 2px solid transparent;"></div>
+    <div class="color-option" data-color="#4f46e5" onclick="setAccentColor('#4f46e5')" style="width: 50px; height: 50px; border-radius: 8px; background: var(--ac); cursor: pointer; border: 2px solid transparent;"></div>
     <div class="color-option" data-color="#9b59b6" onclick="setAccentColor('#9b59b6')" style="width: 50px; height: 50px; border-radius: 8px; background: #9b59b6; cursor: pointer; border: 2px solid transparent;"></div>
     <div class="color-option" data-color="#dc2626" onclick="setAccentColor('#dc2626')" style="width: 50px; height: 50px; border-radius: 8px; background: var(--err); cursor: pointer; border: 2px solid transparent;"></div>
     <div class="color-option" data-color="#f39c12" onclick="setAccentColor('#f39c12')" style="width: 50px; height: 50px; border-radius: 8px; background: #f39c12; cursor: pointer; border: 2px solid transparent;"></div>
@@ -58,7 +58,7 @@
   </div>
   <div style="margin-top: 16px;">
     <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Пользовательский цвет</label>
-    <input type="color" id="customColor" value="#e0b04a" style="width: 100px; height: 40px; border: none; cursor: pointer;" aria-label="Свой цвет">
+    <input type="color" id="customColor" value="#4f46e5" style="width: 100px; height: 40px; border: none; cursor: pointer;" aria-label="Свой цвет">
     <button type="button" class="control-btn primary" onclick="setAccentColor(document.getElementById('customColor').value)" style="margin-left: 12px;">
       Применить
     </button>
@@ -102,7 +102,7 @@
 
 <script>
 var currentTheme = 'dark';
-var currentAccentColor = '#e0b04a';
+var currentAccentColor = '#4f46e5';
 var currentFontSize = 14;
 
 function resolveTheme(t){
@@ -141,7 +141,7 @@ async function loadThemeSettings() {
     if (data.success && data.settings) {
       var s = data.settings;
       currentTheme = s.theme || 'dark';
-      currentAccentColor = s.accent_color || '#e0b04a';
+      currentAccentColor = s.accent_color || '#4f46e5';
       currentFontSize = s.font_size || 14;
       document.getElementById('fontSize').value = currentFontSize;
       document.getElementById('fontSizeValue').textContent = currentFontSize + 'px';
