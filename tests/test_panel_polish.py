@@ -638,6 +638,35 @@ login_as('owner')
 r = client.get('/yardim')
 check(r.status_code == 200 and 'yd-grid' in r.get_data(as_text=True),
       '/yardim открывается под owner')
+# ═══ 22. Левелинг — пересобран ════════════════════════════════════════════
+print('== левелинг ==')
+lv = open(os.path.join(ROOT, 'web', 'templates', 'leveling.html'), encoding='utf-8').read()
+check('class="page-head"' in lv and '<h1>Система уровней</h1>' in lv,
+      'левелинг: премиум-шапка без капса')
+check('lv-toggle' in lv and 'lv-panel' in lv and 'lb-row' in lv,
+      'левелинг: панели, переключатели и таблица лидеров со стилями')
+check('lv-save' in lv and 'showToast' in lv and 'СОХРАНИТЬ' not in lv,
+      'левелинг: тосты вместо капс-статусов')
+check('loadGuilds' in lv and "fetch('/api/guilds')" in lv,
+      'левелинг: серверы грузятся из API (мёртвый копипаст-фолбэк убран)')
+check('lb-bar-fill' in lv and 'medal gold' in lv and '#f59e0b' in lv,
+      'левелинг: медали и XP-бары на палитре')
+check('rankHtml' in lv,
+      'левелинг: топ-3 с медалями, остальные с номерами')
+lva = open(os.path.join(ROOT, 'web', 'templates', 'leveling_admin.html'), encoding='utf-8').read()
+check('var(--bg-3)' not in lva,
+      'leveling-admin: несуществующий токен --bg-3 заменён на var(--surface)')
+check('#ffd700' not in lva and '#c0c7d1' not in lva and '#1a1a1a' not in lva,
+      'leveling-admin: медали и бегунки переведены на палитру')
+check('#3498db' not in lva and '#9b59b6' not in lva,
+      'leveling-admin: редкости достижений на палитре')
+seed_src = open(os.path.join(ROOT, 'scripts', 'seed_demo_panel.py'), encoding='utf-8').read()
+check('demo_xp' in seed_src and 'demo_leveling' in seed_src,
+      'сид: демо-опыт и настройки левелинга')
+login_as('owner')
+r = client.get('/leveling')
+check(r.status_code == 200 and 'lv-panel' in r.get_data(as_text=True),
+      '/leveling открывается под owner')
 check('app.js?v=47' in base and 'style.css?v=101' in base,
       'версии ассетов (101/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,

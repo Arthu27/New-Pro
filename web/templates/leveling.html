@@ -1,220 +1,367 @@
 {% extends "base.html" %}
-{% block title %}Leveling - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-star"></i> СИСТЕМА УРОВНЕЙ{% endblock %}
+{% block title %}Система уровней — Aether{% endblock %}
+{% block page_title %}Система уровней{% endblock %}
 {% block content %}
+
 <div class="page-head">
   <div class="page-head-copy">
     <div class="eyebrow">Сообщество <span class="sep">·</span> Уровни</div>
-    <h1>СИСТЕМА УРОВНЕЙ</h1>
-    <p class="lead">Система уровней и опыта для участников сервера.</p>
+    <h1>Система уровней</h1>
+    <p class="lead">Опыт за активность, уведомления о повышении и таблица лидеров — всё в одном окне.</p>
+  </div>
+  <div class="page-head-actions">
+    <select id="guild-select" class="form-input" style="width:auto;min-width:200px" aria-label="Выбор сервера">
+      <option value="">Выберите сервер…</option>
+    </select>
+    <button type="button" class="btn" id="lv-refresh" title="Обновить"><i class="fas fa-arrows-rotate"></i> Обновить</button>
   </div>
 </div>
-
 
 <style>
-/* Система уровней — premium gold */
-.lv-hero{display:flex;align-items:center;gap:16px;padding:20px 24px;background:linear-gradient(135deg,color-mix(in srgb, var(--ac) 10%, transparent),color-mix(in srgb, var(--ac) 3%, transparent));border:1px solid var(--ac-line);border-radius:16px;margin-bottom:18px}
-.lv-hero .hero-icon{font-size:30px;width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 18px var(--ac-glow)}
-.lv-hero .hero-title{font-family:'Poppins',sans-serif;font-size:19px;font-weight:800;color:var(--text);text-transform:uppercase}
-.lv-hero .hero-sub{font-size:13px;color:var(--text-2);margin-top:3px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:900px){.grid2{grid-template-columns:1fr}}
-.lv-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:20px;}
-.lv-box .box-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
-.toggle-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:12px}
-.toggle-label{font-size:13.5px;color:var(--text-2);font-weight:500}
-.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
-.toggle input{opacity:0;width:0;height:0}
-.toggle-slider{position:absolute;inset:0;background:color-mix(in srgb, var(--text) 12%, transparent);border-radius:22px;transition:.2s;cursor:pointer}
-.toggle-slider:before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;background:#1a1a1a;border-radius:50%;transition:.2s}
-.toggle input:checked + .toggle-slider{background:linear-gradient(90deg,var(--ac),var(--ac-3))}
-.toggle input:checked + .toggle-slider:before{transform:translateX(20px);background:#fff}
-.lb-row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:linear-gradient(160deg,color-mix(in srgb, var(--text) 2%, transparent),transparent);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;transition:all .16s var(--ease)}
-.lb-row:hover{border-color:var(--ac-line);transform:translateX(2px)}
-.lb-rank{font-size:20px;width:32px;text-align:center;flex-shrink:0}
-.lb-avatar{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--ac-line);object-fit:cover;flex-shrink:0}
-.lb-name{font-weight:700;color:var(--text);font-size:14px}
-.lb-level{font-size:11px;color:var(--ac-2);font-weight:700;margin-left:8px;padding:2px 8px;border-radius:6px;background:var(--ac-soft);border:1px solid var(--ac-line)}
-.lb-xp{font-size:11.5px;color:var(--text-3);margin-left:8px}
-.xp-bar-track{height:6px;background:color-mix(in srgb, var(--text) 5%, transparent);border-radius:99px;overflow:hidden;margin-top:7px}
-.xp-bar-fill{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac-2));border-radius:99px;width:0;transition:width .8s var(--ease-out)}
+/* ═══════ СИСТЕМА УРОВНЕЙ — Aether ═══════ */
+.lv-wrap { display: grid; grid-template-columns: 1.05fr 1fr; gap: 14px; align-items: start; }
+.lv-panel {
+  background: var(--glass); border: 1px solid var(--line);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-1);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.lv-panel-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(135deg, var(--ac-soft), transparent 60%);
+  font-weight: 800; font-size: 14px;
+}
+.lv-panel-head i {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: var(--ac-grad); color: #fff;
+  display: grid; place-items: center; font-size: 13px;
+  box-shadow: 0 5px 14px -5px var(--ac-glow);
+}
+.lv-panel-head .hint { margin-left: auto; font-weight: 600; font-size: 11px; color: var(--text-3); }
+.lv-panel-body { padding: 16px 18px; }
+
+/* ── Переключатели ── */
+.lv-toggle {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 13px; margin-bottom: 8px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 13px; transition: border-color .15s, background .15s;
+}
+.lv-toggle:hover { border-color: var(--ac-line); }
+.lv-toggle:has(input:checked) { border-color: var(--ac); background: var(--ac-soft); }
+.lv-toggle .copy { flex: 1; min-width: 0; }
+.lv-toggle .copy b { display: block; font-size: 13.5px; }
+.lv-toggle .copy small { display: block; font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+.lv-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.lv-toggle .track {
+  position: relative; width: 44px; height: 24px; flex: 0 0 44px;
+  background: var(--line-2); border-radius: 99px;
+  cursor: pointer; transition: background .2s;
+}
+.lv-toggle .track::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 4px rgba(16, 24, 40, .3);
+  transition: transform .2s var(--ease);
+}
+.lv-toggle input:checked + .track { background: var(--ac-grad); box-shadow: 0 0 0 3px var(--ac-soft); }
+.lv-toggle input:checked + .track::after { transform: translateX(20px); }
+
+/* ── Поля ── */
+.lv-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+.lv-fields .full { grid-column: 1/-1; }
+@media (max-width: 640px) { .lv-fields { grid-template-columns: 1fr; } }
+
+/* ── Лидерборд ── */
+.lb-list { display: flex; flex-direction: column; gap: 8px; }
+.lb-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 13px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 13px;
+  transition: border-color .15s, transform .15s var(--ease);
+}
+.lb-row:hover { border-color: var(--ac-line); transform: translateX(2px); }
+.lb-rank {
+  width: 34px; flex: 0 0 34px; text-align: center;
+  font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 14px;
+  color: var(--text-3);
+}
+.lb-rank .medal { font-size: 18px; }
+.lb-rank .medal.gold { color: #f59e0b; }
+.lb-rank .medal.silver { color: #94a3b8; }
+.lb-rank .medal.bronze { color: #b45309; }
+.lb-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 2px solid var(--line-2); object-fit: cover;
+  flex: 0 0 38px;
+}
+.lb-row:nth-child(-n+3) .lb-avatar { border-color: var(--ac-line); }
+.lb-main { flex: 1; min-width: 0; }
+.lb-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.lb-name { font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-level {
+  font-size: 10.5px; font-weight: 800;
+  background: var(--ac-grad); color: #fff;
+  padding: 2px 8px; border-radius: 99px;
+}
+.lb-xp { font-size: 11px; color: var(--text-3); }
+.lb-bar { height: 6px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.lb-bar-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--ac), #7c3aed);
+  width: 0; transition: width .7s var(--ease-out);
+}
+.lb-empty {
+  text-align: center; padding: 34px 16px;
+  color: var(--text-3); font-size: 13px;
+  border: 1.5px dashed var(--line-2); border-radius: 14px;
+}
+.lb-empty i { font-size: 30px; display: block; margin-bottom: 10px; color: var(--line-3); }
+
+@media (max-width: 960px) { .lv-wrap { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+  .lb-bar-fill { transition: none; }
+  .lv-toggle .track::after, .lb-row { transition: none; }
+}
 </style>
 
-<div class="lv-hero" data-reveal="up">
-  <span class="hero-icon"><i class="fas fa-star"></i></span>
-  <div class="hero-title">Система уровней</div>
-  <div class="hero-sub">Настройка получения опыта, канал уведомлений и таблица лидеров</div>
-</div>
+<div class="lv-wrap">
+  <!-- Настройки -->
+  <div class="lv-panel">
+    <div class="lv-panel-head">
+      <i class="fas fa-gear"></i> Настройки опыта
+      <span class="hint" id="lv-state-hint">—</span>
+    </div>
+    <div class="lv-panel-body">
+      <div class="lv-toggle">
+        <label class="copy">
+          <b>Система уровней</b>
+          <small>Участники получают опыт за сообщения</small>
+        </label>
+        <input type="checkbox" id="lv-enabled" aria-label="Система уровней">
+        <span class="track"></span>
+      </div>
+      <div class="lv-toggle">
+        <label class="copy">
+          <b>Уведомление о повышении</b>
+          <small>Сообщение в канал при новом уровне</small>
+        </label>
+        <input type="checkbox" id="lv-notify" aria-label="Уведомление о повышении">
+        <span class="track"></span>
+      </div>
 
-<div class="controls-bar">
-  <select  id="guild-select" class="guild-sel" onchange="loadLeveling()" aria-label="Выбор сервера">
-    <option value="">Выберите сервер...</option>
-  </select>
-</div>
+      <div class="lv-fields">
+        <div class="form-group full">
+          <label class="form-label">Канал уведомлений</label>
+          <select id="lv-channel" class="form-input" aria-label="Канал уведомлений об уровне">
+            <option value="">Пусто — писать в тот же канал</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Мин. опыта за сообщение</label>
+          <input type="number" id="lv-xp-min" class="form-input" value="15" min="1" aria-label="Минимальный опыт">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Макс. опыта за сообщение</label>
+          <input type="number" id="lv-xp-max" class="form-input" value="25" min="1" aria-label="Максимальный опыт">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Задержка, сек.</label>
+          <input type="number" id="lv-cooldown" class="form-input" value="60" min="0" aria-label="Перерыв между начислениями">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Сообщение о повышении</label>
+          <input type="text" id="lv-msg" class="form-input" placeholder="{user} достиг уровня {level}!" aria-label="Сообщение о повышении уровня">
+        </div>
+      </div>
 
-<div class="grid2">
-  <!-- SETTINGS -->
-  <div class="lv-box">
-    <div class="box-title"><i class="fas fa-gear"></i> Настройки</div>
-
-    <div class="toggle-row">
-      <span class="toggle-label">Активность для системы уровней</span>
-      <label class="toggle"><input type="checkbox" id="lv-enabled"><span class="toggle-slider"></span></label>
+      <button type="button" class="btn btn-primary" id="lv-save" style="width:100%;margin-top:6px;justify-content:center">
+        <i class="fas fa-floppy-disk"></i> Сохранить настройки
+      </button>
     </div>
-    <div class="toggle-row">
-      <span class="toggle-label">Уведомление о повышении уровня</span>
-      <label class="toggle"><input type="checkbox" id="lv-notify"><span class="toggle-slider"></span></label>
-    </div>
-
-    <div class="form-group" >
-      <label class="form-label">Канал уведомлений</label>
-      <select id="lv-channel" class="form-input" aria-label="Канал уведомлений об уровне">
-        <option value="">Выберите канал (пусто = сообщение канал)</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Мин. опыта (за сообщение)</label>
-      <input type="number" id="lv-xp-min" class="form-input" value="15" min="1" aria-label="Мин. XP">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Макс. опыта (за сообщение)</label>
-      <input type="number" id="lv-xp-max" class="form-input" value="25" min="1" aria-label="Макс. XP">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Задержка (сек.)</label>
-      <input type="number" id="lv-cooldown" class="form-input" value="60" min="0" aria-label="Перерыв (сек)">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Сообщение о повышении уровня</label>
-      <input type="text" id="lv-msg" class="form-input" placeholder="{user} достиг уровня {level}!" aria-label="{user} достиг уровня {level}!">
-    </div>
-
-    <button type="button" class="btn-save" onclick="saveLeveling()"><i class="fas fa-floppy-disk"></i> СОХРАНИТЬ</button>
-    <div id="lv-status"   style="margin-top: 10px;"></div>
   </div>
 
-  <!-- LEADERBOARD -->
-  <div class="lv-box">
-    <div class="box-title"><i class="fas fa-trophy"></i> Таблица лидеров</div>
-    <div id="lb-list"><p >Выберите сервер...</p></div>
+  <!-- Лидерборд -->
+  <div class="lv-panel">
+    <div class="lv-panel-head">
+      <i class="fas fa-trophy"></i> Таблица лидеров
+      <span class="hint" id="lb-count">—</span>
+    </div>
+    <div class="lv-panel-body">
+      <div class="lb-list" id="lb-list">
+        <div class="lb-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка…</div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-var selectedGuild = '{{ main_guild_id }}';
+(function () {
+  'use strict';
+  var selectedGuild = '{{ main_guild_id }}';
+  var guilds = [];
 
-async function loadGuilds() {
-  // Sabit сервер ID
-  var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
-  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
-  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
-  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
-  if (typeof loadData === 'function') { loadData(gid); return; }
-  if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
-  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
-  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
-  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
-  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
-  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
-  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
-  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
-  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
-  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
-  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
-
-}
-
-async function loadLeveling() {
-  selectedGuild = document.getElementById('guild-select').value;
-  if (!selectedGuild) return;
-
-  var [settings, lb, chRes] = await Promise.all([
-    fetch('/api/guild/' + selectedGuild + '/leveling').then(r => r.json()),
-    fetch('/api/guild/' + selectedGuild + '/leaderboard').then(r => r.json()),
-    fetch('/api/guild/' + selectedGuild + '/channels').then(r => r.json())
-  ]);
-
-  document.getElementById('lv-enabled').checked = settings.enabled || false;
-  document.getElementById('lv-notify').checked = settings.notify || false;
-  document.getElementById('lv-xp-min').value = settings.xp_min || 15;
-  document.getElementById('lv-xp-max').value = settings.xp_max || 25;
-  document.getElementById('lv-cooldown').value = settings.cooldown || 60;
-  document.getElementById('lv-msg').value = settings.level_message || '';
-
-  // Список каналов
-  var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
-  var chSel = document.getElementById('lv-channel');
-  chSel.innerHTML = '<option value="">Выберите канал (пусто = сообщение канал)</option>';
-  channels.filter(c => c.type === 'text').forEach(function(c) {
-    var o = document.createElement('option');
-    o.value = c.id; o.textContent = '#' + c.name;
-    if (settings.notify_channel === c.id) o.selected = true;
-    chSel.appendChild(o);
-  });
-
-  // Leaderboard
-  var medals = ['<i class="fas fa-medal" style="color:#ffd700"></i>','<i class="fas fa-medal" style="color:#c0c7d1"></i>','<i class="fas fa-medal" style="color:#cd7f32"></i>'];
-  var box = document.getElementById('lb-list');
-  if (!lb.length) {
-    box.innerHTML = '<p >Данные отсутствуют</p>';
-    return;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
-  box.innerHTML = lb.map(function(u, i) {
-    var pct = u.level ? Math.min(100, Math.round((u.xp % (u.level * 100)) / (u.level * 100) * 100)) : 0;
-    return '<div class="lb-row" >' +
-      '<div class="lb-rank">' + (medals[i] || '#' + (i + 1)) + '</div>' +
-      '<img alt="" class="lb-avatar" src="' + (u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-      '<div >' +
-        '<div  >' +
-          '<span class="lb-name">' + (u.name || '?') + '</span>' +
-          '<span class="lb-level">Lv.' + (u.level || 0) + '</span>' +
-          '<span class="lb-xp">' + (u.xp || 0) + ' Опыт</span>' +
-        '</div>' +
-        '<div class="xp-bar-track"><div class="xp-bar-fill"   style="width: 0%;" data-pct="' + pct + '"></div></div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
+  function toast(msg, ok) {
+    if (window.showToast) window.showToast(msg, ok);
+  }
 
-  setTimeout(function() {
-    document.querySelectorAll('.xp-bar-fill').forEach(function(el) {
-      el.style.width = el.dataset.pct + '%';
-    });
-  }, 100);
-}
+  function rankHtml(i) {
+    if (i === 0) return '<span class="medal gold"><i class="fas fa-medal"></i></span>';
+    if (i === 1) return '<span class="medal silver"><i class="fas fa-medal"></i></span>';
+    if (i === 2) return '<span class="medal bronze"><i class="fas fa-medal"></i></span>';
+    return '#' + (i + 1);
+  }
 
-async function saveLeveling() {
-  if (!selectedGuild) { showToast('Выберите сервер!', false); return; }
-  var btn = document.querySelector('.btn-save');
-  btn.textContent = 'Сохранение…';
-  btn.disabled = true;
+  async function loadGuilds() {
+    try {
+      var r = await fetch('/api/guilds');
+      guilds = await r.json();
+      if (!Array.isArray(guilds)) guilds = [];
+    } catch (e) { guilds = []; }
+    var sel = $('guild-select');
+    if (!sel) return;
+    var cur = selectedGuild;
+    if (!cur || !guilds.some(function (g) { return String(g.id) === String(cur); })) {
+      cur = guilds.length ? guilds[0].id : '';
+    }
+    selectedGuild = cur;
+    sel.innerHTML = guilds.map(function (g) {
+      return '<option value="' + esc(g.id) + '"' + (String(g.id) === String(cur) ? ' selected' : '') + '>' + esc(g.name) + '</option>';
+    }).join('');
+    if (!guilds.length) {
+      sel.innerHTML = '<option value="' + esc(selectedGuild || '') + '">Главный сервер</option>';
+    }
+    loadAll();
+  }
 
-  var r = await fetch('/api/guild/' + selectedGuild + '/leveling', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      enabled: document.getElementById('lv-enabled').checked,
-      notify: document.getElementById('lv-notify').checked,
-      notify_channel: document.getElementById('lv-channel').value,
-      xp_min: parseInt(document.getElementById('lv-xp-min').value),
-      xp_max: parseInt(document.getElementById('lv-xp-max').value),
-      cooldown: parseInt(document.getElementById('lv-cooldown').value),
-      level_message: document.getElementById('lv-msg').value
-    })
-  });
-  var d = await r.json();
-  btn.innerHTML = '<i class="fas fa-floppy-disk"></i> СОХРАНИТЬ';
-  btn.disabled = false;
-  var st = document.getElementById('lv-status');
-  st.innerHTML = d.success ? '<span >СОХРАНЕНО</span>' : '<span >ОШИБКА</span>';
-  setTimeout(function() { st.innerHTML = ''; }, 3000);
-}
+  async function loadAll() {
+    if (!selectedGuild) return;
+    var stateEl = $('lv-state-hint');
+    var lbEl = $('lb-list');
+    try {
+      var settings = await fetch('/api/guild/' + selectedGuild + '/leveling').then(function (r) { return r.json(); });
+      $('lv-enabled').checked = !!(settings.enabled);
+      $('lv-notify').checked = !!(settings.notify);
+      $('lv-xp-min').value = settings.xp_min != null ? settings.xp_min : 15;
+      $('lv-xp-max').value = settings.xp_max != null ? settings.xp_max : 25;
+      $('lv-cooldown').value = settings.cooldown != null ? settings.cooldown : 60;
+      $('lv-msg').value = settings.level_message || '';
+      if (stateEl) stateEl.textContent = settings.enabled ? 'Включена' : 'Выключена';
+    } catch (e) {
+      if (stateEl) stateEl.textContent = 'Нет данных';
+    }
+    try {
+      var cr = await fetch('/api/guild/' + selectedGuild + '/channels');
+      var chD = await cr.json();
+      var chans = Array.isArray(chD) ? chD : (chD.channels || []);
+      var chSel = $('lv-channel');
+      var prev = chSel.value;
+      chSel.innerHTML = '<option value="">Пусто — писать в тот же канал</option>';
+      chans.filter(function (c) { return c.type === 'text' && !c.hidden; })
+        .sort(function (a, b) { return (a.position || 0) - (b.position || 0); })
+        .forEach(function (c) {
+          var s = String(c.id) === prev ? ' selected' : '';
+          chSel.innerHTML += '<option value="' + esc(c.id) + '"' + s + '>#' + esc(c.name) + '</option>';
+        });
+      if (!prev) {
+        try {
+          var st = await fetch('/api/guild/' + selectedGuild + '/leveling').then(function (r) { return r.json(); });
+          if (st.notify_channel) chSel.value = st.notify_channel;
+        } catch (e) {}
+      }
+    } catch (e) {}
+    try {
+      var lb = await fetch('/api/guild/' + selectedGuild + '/leaderboard').then(function (r) { return r.json(); });
+      if (!Array.isArray(lb)) lb = [];
+      if ($('lb-count')) $('lb-count').textContent = lb.length + ' ' + plural(lb.length);
+      if (!lb.length) {
+        lbEl.innerHTML = '<div class="lb-empty"><i class="fas fa-trophy"></i>Пока нет участников с опытом — первые сообщения запустят таблицу.</div>';
+        return;
+      }
+      lbEl.innerHTML = lb.map(function (u, i) {
+        var level = Number(u.level) || 0;
+        var xp = Number(u.xp) || 0;
+        var pct = level > 0 ? Math.min(100, Math.round((xp % (level * 100)) / (level * 100) * 100)) : Math.min(100, xp);
+        return '<div class="lb-row">' +
+          '<span class="lb-rank">' + rankHtml(i) + '</span>' +
+          '<img alt="Аватар участника" class="lb-avatar" src="' + esc(u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+          '<div class="lb-main">' +
+            '<div class="lb-top">' +
+              '<span class="lb-name">' + esc(u.name || u.username || 'Участник') + '</span>' +
+              '<span class="lb-level">Lv ' + level + '</span>' +
+              '<span class="lb-xp">' + xp.toLocaleString('ru-RU') + ' XP</span>' +
+            '</div>' +
+            '<div class="lb-bar"><div class="lb-bar-fill" data-pct="' + pct + '"></div></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      setTimeout(function () {
+        lbEl.querySelectorAll('.lb-bar-fill').forEach(function (el) {
+          el.style.width = (Number(el.dataset.pct) || 0) + '%';
+        });
+      }, 80);
+    } catch (e) {
+      lbEl.innerHTML = '<div class="lb-empty"><i class="fas fa-triangle-exclamation"></i>Не удалось загрузить таблицу.</div>';
+    }
+  }
 
-loadGuilds();
+  function plural(n) {
+    var m = Number(n) % 100, m1 = m % 10;
+    if (m > 10 && m < 20) return 'участников';
+    if (m1 === 1) return 'участник';
+    if (m1 > 1 && m1 < 5) return 'участника';
+    return 'участников';
+  }
+
+  async function save() {
+    if (!selectedGuild) { toast('Выберите сервер!', false); return; }
+    var btn = $('lv-save');
+    var orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Сохраняем…';
+    try {
+      var r = await fetch('/api/guild/' + selectedGuild + '/leveling', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: $('lv-enabled').checked,
+          notify: $('lv-notify').checked,
+          notify_channel: $('lv-channel').value,
+          xp_min: parseInt($('lv-xp-min').value, 10) || 15,
+          xp_max: parseInt($('lv-xp-max').value, 10) || 25,
+          cooldown: parseInt($('lv-cooldown').value, 10) || 60,
+          level_message: $('lv-msg').value
+        })
+      });
+      var d = await r.json();
+      if (d.success) {
+        toast('Настройки уровней сохранены', true);
+        var hint = $('lv-state-hint');
+        if (hint) hint.textContent = $('lv-enabled').checked ? 'Включена' : 'Выключена';
+      } else {
+        toast(String(d.error || 'Не удалось сохранить'), false);
+      }
+    } catch (e) {
+      toast('Ошибка соединения', false);
+    }
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+
+  $('lv-save').addEventListener('click', save);
+  var refresh = $('lv-refresh');
+  if (refresh) refresh.addEventListener('click', loadAll);
+  var gs = $('guild-select');
+  if (gs) gs.addEventListener('change', function () { selectedGuild = gs.value; loadAll(); });
+
+  loadGuilds();
+})();
 </script>
 {% endblock %}

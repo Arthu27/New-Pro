@@ -24,20 +24,20 @@
 .lvl-toggle-card .switch { position: relative; width: 42px; height: 22px; background: color-mix(in srgb, var(--text) 8%, transparent); border-radius: 99px; cursor: pointer; flex-shrink: 0; border: 1px solid var(--line); transition: background 0.25s; }
 .lvl-toggle-card .switch.on { background: linear-gradient(135deg, var(--ac), var(--ac-3)); border-color: var(--ac); }
 .lvl-toggle-card .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--text-3); border-radius: 50%; transition: all 0.25s var(--ease-spring); }
-.lvl-toggle-card .switch.on::after { left: 22px; background: #1a1a1a; }
+.lvl-toggle-card .switch.on::after { left: 22px; background: #fff; }
 .lvl-toggle-card .info { flex: 1; }
 .lvl-toggle-card h4 { font-size: var(--fs-md) !important; font-weight: 700 !important; color: var(--text) !important; margin: 0 0 3px 0 !important; }
 .lvl-toggle-card p { font-size: var(--fs-sm) !important; color: var(--text-2) !important; margin: 0; line-height: 1.4; }
 .lvl-input-group { display: flex; gap: 8px; align-items: center; }
 .lvl-input-group label { font-size: var(--fs-xs) !important; font-weight: 700 !important; color: var(--text-2) !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; min-width: 100px; margin: 0 !important; }
-.lvl-input-group input { flex: 1; padding: 8px 12px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); font-size: var(--fs-sm); }
-.lvl-reward-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
+.lvl-input-group input { flex: 1; padding: 8px 12px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); font-size: var(--fs-sm); }
+.lvl-reward-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
 .lvl-reward-level { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, var(--ac), var(--ac-3)); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; color: var(--bg); flex-shrink: 0; }
 .lvl-reward-info { flex: 1; }
 .lvl-reward-info .name { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
 .lvl-reward-info .role { font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; }
 .lvl-achievement-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-.lvl-ach { padding: 12px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; transition: all 0.2s; }
+.lvl-ach { padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; transition: all 0.2s; }
 .lvl-ach:hover { transform: translateY(-2px); border-color: var(--ac-line); }
 .lvl-ach .icon { font-size: 28px; margin-bottom: 4px; }
 .lvl-ach .name { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
@@ -45,7 +45,7 @@
 .lvl-ach.unlocked { background: var(--ac-soft); border-color: var(--ac-line); }
 .lvl-ach.unlocked .name { color: var(--ac); }
 .lvl-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-.lvl-stat { padding: 14px 16px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; }
+.lvl-stat { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; }
 .lvl-stat .num { font-size: 24px; font-weight: 800; color: var(--ac); font-variant-numeric: tabular-nums; }
 .lvl-stat .lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; font-weight: 700; }
 </style>
@@ -230,7 +230,7 @@
       document.getElementById('statAchs').textContent = s.total_achievements + ' / ' + s.total_ach_available;
       document.getElementById('achCount').textContent = s.total_ach_available + ' доступно';
       // Leaderboard
-      const medals = ['<i class="fas fa-medal" style="color:#ffd700"></i>','<i class="fas fa-medal" style="color:#c0c7d1"></i>','<i class="fas fa-medal" style="color:#cd7f32"></i>'];
+      const medals = ['<i class="fas fa-medal" style="color:#f59e0b"></i>','<i class="fas fa-medal" style="color:#94a3b8"></i>','<i class="fas fa-medal" style="color:#b45309"></i>'];
       document.getElementById('leaderboardList').innerHTML = s.top.map((u, i) => {
         const medal = i < 3 ? medals[i] : '<span >' + (i+1) + '</span>';
         return `<div class="kv"   style="20px;">
@@ -244,7 +244,7 @@
     // Achievements
     fetch('/api/leveling/achievements').then(r => r.json()).then(d => {
       const grid = document.getElementById('achGrid');
-      const rarityEmoji = {common: '<i class="fas fa-circle" style="color:#aab"></i>', uncommon: '<i class="fas fa-circle" style="color:var(--ok)"></i>', rare: '<i class="fas fa-circle" style="color:#3498db"></i>', epic: '<i class="fas fa-circle" style="color:#9b59b6"></i>', legendary: '<i class="fas fa-circle" style="color:#fbbf24"></i>'};
+      const rarityEmoji = {common: '<i class="fas fa-circle" style="color:#94a3b8"></i>', uncommon: '<i class="fas fa-circle" style="color:var(--ok)"></i>', rare: '<i class="fas fa-circle" style="color:#0ea5e9"></i>', epic: '<i class="fas fa-circle" style="color:#7c3aed"></i>', legendary: '<i class="fas fa-circle" style="color:#fbbf24"></i>'};
       grid.innerHTML = Object.entries(d.catalog).map(([id, info]) => {
         const unlocked = d.unlocked.includes(id);
         return `<div class="lvl-ach ${unlocked ? 'unlocked' : ''}">

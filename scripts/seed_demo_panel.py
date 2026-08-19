@@ -386,6 +386,22 @@ demo_rules = [
     'Следуйте указаниям модераторов — их решения можно обжаловать через апелляции.',
 ]
 
+demo_xp = {
+    '1': {'name': 'sonya.staff', 'xp': 8420, 'level': 28, 'avatar': 'https://cdn.discordapp.com/embed/avatars/1.png'},
+    '2': {'name': 'artem.mods', 'xp': 7630, 'level': 24, 'avatar': 'https://cdn.discordapp.com/embed/avatars/2.png'},
+    '3': {'name': 'lina.mod', 'xp': 6890, 'level': 21, 'avatar': 'https://cdn.discordapp.com/embed/avatars/3.png'},
+    '4': {'name': 'max.gg', 'xp': 5210, 'level': 17, 'avatar': 'https://cdn.discordapp.com/embed/avatars/4.png'},
+    '5': {'name': 'dasha.live', 'xp': 4470, 'level': 15, 'avatar': 'https://cdn.discordapp.com/embed/avatars/5.png'},
+    '6': {'name': 'kolyan.tv', 'xp': 3150, 'level': 11, 'avatar': 'https://cdn.discordapp.com/embed/avatars/0.png'},
+    '7': {'name': 'nastya.chat', 'xp': 2480, 'level': 9, 'avatar': 'https://cdn.discordapp.com/embed/avatars/2.png'},
+    '8': {'name': 'vanya.voice', 'xp': 1730, 'level': 7, 'avatar': 'https://cdn.discordapp.com/embed/avatars/3.png'},
+}
+demo_leveling = {
+    'enabled': True, 'notify': True, 'notify_channel': '4002',
+    'xp_min': 15, 'xp_max': 25, 'cooldown': 60,
+    'level_message': '{user} достиг уровня {level}!',
+}
+
 files = {
     'data/warnings.json': warnings,
     'data/audit_log.json': audit,
@@ -398,6 +414,8 @@ files = {
     'data/demo_channels.json': demo_channels,
     'data/hidden_channels.json': {},
     f'data/rules_{GID}.json': demo_rules,
+    f'data/xp_{GID}.json': demo_xp,
+    f'data/leveling_{GID}.json': demo_leveling,
 }
 
 for path, payload in files.items():
