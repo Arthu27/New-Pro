@@ -4660,6 +4660,97 @@ input:focus, select:focus, textarea:focus {
   .nav-icon-btn, .panel-head h2 i { transition: none; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   PANEL SPARKLE 3: волна шапки, сияние активного пункта,
+   анимированная точка пункта меню, премиум-тосты
+   ============================================================ */
+
+/* ── Шапка: градиентная волна по нижней кромке ── */
+.topbar::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent,
+    var(--ac), var(--ac-2), var(--ac-3),
+    transparent);
+  background-size: 220% 100%;
+  animation: topbarWave 5.5s linear infinite;
+  opacity: .7;
+}
+@keyframes topbarWave { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+/* ── Активный пункт меню: сияние + анимированная точка ── */
+.nav-link.active {
+  position: relative;
+  overflow: hidden;
+}
+.nav-link.active::after {
+  content: '';
+  position: absolute; right: 8px; top: 50%;
+  width: 5px; height: 5px; margin-top: -2.5px;
+  border-radius: 50%;
+  background: var(--ac);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--ac) 45%, transparent);
+  animation: navDotPulse 2.4s var(--ease) infinite;
+}
+@keyframes navDotPulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ac) 45%, transparent); }
+  55%  { box-shadow: 0 0 0 5px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* ── Премиум-тосты: боковое свечение + глянец ── */
+.toast {
+  border-left: 3px solid var(--ac);
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--ac) 10%, var(--surface)),
+    var(--surface) 60%);
+  box-shadow: var(--shadow-2), inset 0 1px 0 color-mix(in srgb, var(--text) 6%, transparent);
+}
+.toast.ok { border-left-color: var(--ok); }
+.toast.err { border-left-color: var(--err); }
+.toast.bot-event { border-left-color: var(--ac-3); }
+
+/* ── Живой чип LIVE: усиленное свечение ── */
+.live-chip {
+  position: relative;
+  overflow: hidden;
+}
+.live-chip::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent,
+    color-mix(in srgb, var(--ok) 14%, transparent), transparent);
+  transform: translateX(-100%);
+  animation: liveSweep 3s var(--ease) infinite;
+}
+@keyframes liveSweep {
+  0%, 55% { transform: translateX(-100%); }
+  85%, 100% { transform: translateX(100%); }
+}
+
+/* ── FAB: подсветка при наведении ── */
+.fab-main { transition: transform .18s var(--ease), box-shadow .25s; }
+.fab-main:hover {
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--ac) 55%, transparent),
+              inset 0 1px 0 rgba(255,255,255,.4);
+}
+
+/* ── Сайдбар-гильдия: свечение при hover ── */
+.sidebar-guild:hover .ico {
+  color: var(--ac);
+  box-shadow: 0 4px 14px -4px var(--ac-glow);
+}
+
+/* ── Пустой поиск в таблицах: анимированные точки ── */
+.empty-state .fa-circle-notch { color: var(--ac); }
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar::after, .nav-link.active::after, .live-chip::before { animation: none; }
+  .fab-main { transition: none; }
+}
+
 /* ПРЕМИУМ-СКРОЛЛБАРЫ: градиентные, тонкие */
 .sidebar-nav::-webkit-scrollbar { width: 5px; }
 .sidebar-nav::-webkit-scrollbar-track { background: transparent; }

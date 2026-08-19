@@ -977,8 +977,26 @@ check('wHeroIn' in w9 and 'animation-delay: .7s' in w9,
       'welcome: stagger-появление hero при загрузке')
 check('.w-cta-box:hover' in w9 and 'rgba(124, 58, 237, .25)' in w9,
       'welcome: свечение CTA при hover')
-check('app.js?v=47' in base and 'style.css?v=107' in base,
-      'версии ассетов (107/47)')
+# ═══ 35. Panel Sparkle 3 ═══════════════════════════════════════════════════
+print('== panel sparkle 3 ==')
+check('PANEL SPARKLE 3' in css, 'дизайн-система: слой Panel Sparkle 3')
+check('topbarWave' in css and '.topbar::after' in css,
+      'панель: градиентная волна по нижней кромке шапки')
+check('.nav-link.active::after' in css and 'navDotPulse' in css,
+      'панель: анимированная точка активного пункта меню')
+check('.toast {' in css and 'border-left: 3px solid var(--ac)' in css,
+      'панель: премиум-тосты с боковым свечением')
+check('liveSweep' in css and '.live-chip::before' in css,
+      'панель: световая волна по LIVE-чипу')
+check('.fab-main:hover' in css and '55%, transparent' in css,
+      'панель: усиленное свечение FAB при hover')
+w10 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
+check('.w-nav-links a.on::after' in w10,
+      'welcome: пульс-точка активного пункта навигации')
+check('showcaseLive' in w10 and 'wKpiTick' in w10 and 'setInterval' in w10,
+      'welcome: живое обновление KPI витрины каждые 4 сек')
+check('app.js?v=47' in base and 'style.css?v=108' in base,
+      'версии ассетов (108/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,

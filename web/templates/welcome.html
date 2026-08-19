@@ -699,6 +699,28 @@
     /* ── Нав-кнопки: подъём при hover ── */
     .w-nav-actions .btn:hover { transform: translateY(-2px); }
 
+    /* ── Пульс-точка активного пункта навигации ── */
+    .w-nav-links a.on {
+      position: relative;
+    }
+    .w-nav-links a.on::after {
+      content: '';
+      position: absolute; left: 50%; bottom: 2px;
+      width: 4px; height: 4px; margin-left: -2px;
+      border-radius: 50%;
+      background: var(--ac3);
+      box-shadow: 0 0 8px rgba(34, 211, 238, .8);
+    }
+
+    /* ── KPI витрины: живое обновление (лёгкое мерцание значения) ── */
+    .w-showcase-kpi .k-n.tick {
+      animation: wKpiTick .5s var(--ease);
+    }
+    @keyframes wKpiTick {
+      0% { color: var(--ac3); transform: scale(1.06); }
+      100% { color: var(--text); transform: scale(1); }
+    }
+
     /* ── Кнопка «наверх» ── */
     .w-top {
       position: fixed; right: 26px; bottom: 26px; z-index: 120;
@@ -755,7 +777,8 @@
     @media (prefers-reduced-motion: reduce) {
       .w-dragon, .w-dragon-halo, .w-dragon-ring, .w-marquee-track,
       .w-title.typing::after, .w-term-caret, .w-scroll-hint .mouse::after,
-      .btn-primary-wrap::before, .dragon-live, .dragon-smoke span { animation: none; }
+      .btn-primary-wrap::before, .dragon-live, .dragon-smoke span,
+      .w-showcase-kpi .k-n.tick { animation: none; }
       .dragon-smoke { display: none; }
       .w-section::before, .w-sec-title::after, .w-step .num,
       .w-terminal, .w-chips .chip { transition: none; }
@@ -1390,6 +1413,26 @@
         io.observe(feedBox);
       }
       if (feedBox.getBoundingClientRect().top < window.innerHeight) paint();
+    })();
+
+    /* ── 9a. Живое обновление KPI витрины ── */
+    (function showcaseLive() {
+      var kpis = document.querySelectorAll('.w-showcase-kpi .k-n');
+      if (!kpis.length || reduced) return;
+      setInterval(function () {
+        if (document.hidden) return;
+        kpis.forEach(function (el) {
+          var cur = parseInt(el.dataset.live || el.textContent.replace(/\s/g, ''), 10);
+          if (isNaN(cur)) return;
+          var drift = Math.round((Math.random() - 0.5) * cur * 0.04);
+          var next = Math.max(0, cur + drift);
+          el.dataset.live = next;
+          el.textContent = next.toLocaleString('ru-RU');
+          el.classList.remove('tick');
+          void el.offsetWidth;
+          el.classList.add('tick');
+        });
+      }, 4000);
     })();
 
     /* ── 9. Счётчики витрины ── */
