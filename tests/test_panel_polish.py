@@ -164,7 +164,6 @@ check(r.status_code == 200 and 'chat-wrap' in r.get_data(as_text=True),
 js = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
 for marker, label in [
     ('fxEntranceConfetti', 'конфетти при входе'),
-    ('fxCardParallax', 'параллакс карточек'),
     ('favsDragSort', 'drag-сортировка избранного'),
     ('__renderFavs', 'хук перерисовки избранного'),
     ('compact: dense', 'плотность сохраняется в /api/ux/prefs'),
@@ -172,7 +171,6 @@ for marker, label in [
     check(marker in js, f'app.js: {label}')
 for marker, label in [
     ('fx-ring-el', 'живой градиентный обод'),
-    ('fx-parallax-card', 'класс параллакса'),
     ('#fx-confetti', 'канвас конфетти'),
     ('fx-drag-over', 'индикатор drag-сортировки'),
     ('@property --fx-ang', 'регистрация угла градиента'),
@@ -315,8 +313,8 @@ check('.page-head h1:hover { animation: titleSheen' in css,
       'сияние заголовка — только при наведении')
 check('--glass: var(--surface)' in css,
       'стекло стало непрозрачным — ноль перерисовок при скролле')
-check('translateZ(0)' in css,
-      'sticky-поверхности вынесены в собственные слои')
+check('translateZ(0)' not in css,
+      'слои translateZ убраны — текст шапки и сайдбара чёткий')
 check('Параллакс авроры тоже выключен' in js,
       'трансформация полноэкранного слоя авроры на скролл отключена')
 check('fxRingAng 3.5s linear infinite' not in css,
@@ -327,8 +325,10 @@ check('transition: all' not in css,
       'transition: all заменён на точечные свойства')
 check('lastRing' in js and 'now - lastRing >= 120' in js,
       'кольцо кнопки «наверх» перерисовывается не чаще 8 раз/сек')
-check('i < 12' in js,
-      'параллакс карточек ограничен 12 слоями')
+check('fxCardParallax' not in js and 'fx-parallax-card' not in css,
+      'параллакс карточек удалён — субпиксельные transform не мылят текст')
+check('translateZ(0)' not in css and 'will-change' not in css,
+      'слои translateZ/will-change убраны — текст и иконки не размываются')
 
 # ═══ 12. Стабильность и плавность ═════════════════════════════════════════
 print('== стабильность ==')
@@ -375,7 +375,7 @@ print(len(d) if isinstance(d, list) else -1)
 ''' % ROOT
 if not os.path.isfile(os.path.join(ROOT, 'data', 'demo_channels.json')):
     subprocess.run([sys.executable, os.path.join(ROOT, 'scripts', 'seed_demo_panel.py')],
-                   capture_output=True, text=True, timeout=120)
+                   capture_output=True, text=True, timeout=120, cwd=ROOT)
 proc = subprocess.run([sys.executable, '-c', demo_script], capture_output=True,
                       text=True, timeout=120, cwd=ROOT)
 n_demo = -1
@@ -442,8 +442,14 @@ check('Участникам' in welcome and 'wSearch' in welcome and 'w-steps' i
       'welcome: инфо для участников, поиск и «как начать»')
 check('для всех участников' in welcome and 'Нажми' in welcome and '@' in welcome,
       'welcome: акцент на участников и подсказка про @')
-check('app.js?v=44' in base and 'style.css?v=97' in base,
-      'версии ассетов забумплены (97/44)')
+check('app.js?v=45' in base and 'style.css?v=98' in base,
+      'версии ассетов забумплены (98/45)')
+check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
+      'сглаживание шрифтов полное (четкий текст на всех платформах)')
+check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,
+      'изображения без мыла при масштабировании')
+check("'translate(' + Math.round(dx / dist * pull)" in js,
+      'магнитные кнопки двигаются целыми пикселями')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil

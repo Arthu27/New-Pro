@@ -2745,31 +2745,8 @@
   fxRegisterAngle();
   fxRingSchedule();
 
-  /* ── 3. Параллакс карточек при прокрутке ── */
-  function fxCardParallax() {
-    if (reduced || narrow()) return;
-    var ticking = false;
-    function tick() {
-      ticking = false;
-      var mid = win.innerHeight / 2;
-      var items = doc.querySelectorAll('.panel');
-      for (var i = 0; i < items.length && i < 12; i++) {
-        var el = items[i];
-        var r = el.getBoundingClientRect();
-        if (r.bottom < 0 || r.top > win.innerHeight) continue;
-        var delta = (r.top + r.height / 2 - mid) * 0.02;
-        if (delta > 9) delta = 9; else if (delta < -9) delta = -9;
-        if (Math.abs(delta) < 0.4) delta = 0;
-        el.classList.add('fx-parallax-card');
-        el.style.transform = 'translate3d(0,' + delta.toFixed(1) + 'px,0)';
-      }
-    }
-    win.addEventListener('scroll', function () {
-      if (!ticking) { ticking = true; win.requestAnimationFrame(tick); }
-    }, { passive: true });
-    tick();
-  }
-  fxCardParallax();
+  /* Параллакс карточек отключён: субпиксельные transform'ы
+     размывали текст панелей («эффект 144p»). */
 
   /* ── 4. Конфетти при входе (раз за сессию) ── */
   function fxEntranceConfetti() {
@@ -2984,7 +2961,7 @@
       var R = Math.max(60, r.width / 2 + 20);
       if (dist > R) { target.style.transform = ''; return; }
       var pull = (1 - dist / R) * 5;
-      target.style.transform = 'translate(' + (dx / dist * pull).toFixed(1) + 'px,' + (dy / dist * pull).toFixed(1) + 'px)';
+      target.style.transform = 'translate(' + Math.round(dx / dist * pull) + 'px,' + Math.round(dy / dist * pull) + 'px)';
     }
     doc.addEventListener('mousemove', function (e) {
       lastE = e;
