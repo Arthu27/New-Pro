@@ -9,11 +9,24 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@500;700;900&display=swap" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="/static/style.css?v=108">
+<link rel="stylesheet" href="/static/style.css?v=109">
 
 </head>
 <body>
 
+<style>
+/* ── Шапка заявки: лого на градиентной плитке ── */
+.header { text-align: center; padding: 8px 0 4px; }
+.header .logo {
+  width: 72px; height: 72px;
+  border-radius: 20px;
+  background: var(--ac-grad);
+  padding: 8px;
+  object-fit: contain;
+  box-shadow: 0 12px 34px -10px var(--ac-glow), 0 0 40px color-mix(in srgb, var(--ac) 30%, transparent);
+}
+.header .logo[src=""], .header .logo:not([src]) { display: none; }
+</style>
 <div class="particles" id="particles"></div>
 
 <div class="container">

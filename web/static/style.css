@@ -4751,6 +4751,20 @@ input:focus, select:focus, textarea:focus {
   .fab-main { transition: none; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   ВИДИМОСТЬ ЛОГО: белый дракон всегда различим — на светлых
+   фонах получает мягкую тень, на тёмных — лёгкое свечение
+   ============================================================ */
+img[src*="emblem-dragon"] {
+  object-fit: contain;
+}
+[data-theme="light"] img[src*="emblem-dragon"] {
+  filter: drop-shadow(0 2px 6px rgba(15, 23, 42, .35));
+}
+[data-theme="dark"] img[src*="emblem-dragon"] {
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ac) 45%, transparent));
+}
+
 /* ПРЕМИУМ-СКРОЛЛБАРЫ: градиентные, тонкие */
 .sidebar-nav::-webkit-scrollbar { width: 5px; }
 .sidebar-nav::-webkit-scrollbar-track { background: transparent; }

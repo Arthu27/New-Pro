@@ -995,8 +995,30 @@ check('.w-nav-links a.on::after' in w10,
       'welcome: пульс-точка активного пункта навигации')
 check('showcaseLive' in w10 and 'wKpiTick' in w10 and 'setInterval' in w10,
       'welcome: живое обновление KPI витрины каждые 4 сек')
-check('app.js?v=47' in base and 'style.css?v=108' in base,
-      'версии ассетов (108/47)')
+# ═══ 36. Видимость лого ════════════════════════════════════════════════════
+print('== видимость лого ==')
+check('ВИДИМОСТЬ ЛОГО' in css and 'img[src*="emblem-dragon"]' in css,
+      'дизайн-система: глобальные правила видимости дракона')
+check('[data-theme="light"] img[src*="emblem-dragon"]' in css and 'drop-shadow' in css,
+      'светлая тема: дракон получает тень — виден на любом светлом фоне')
+check('[data-theme="dark"] img[src*="emblem-dragon"]' in css,
+      'тёмная тема: дракон подсвечен')
+pa = open(os.path.join(ROOT, 'web', 'templates', 'public_apply.html'), encoding='utf-8').read()
+check('.header .logo' in pa and 'var(--ac-grad)' in pa and '72px' in pa,
+      'заявка: лого на градиентной плитке (был белый на белом — невидим)')
+from PIL import Image
+ico = Image.open(os.path.join(ROOT, 'web', 'static', 'favicon.ico'))
+pix = ico.convert('RGB').load()
+# фон фавикона больше не прозрачный/белый — индиго-градиент (проверим углы)
+corners = [pix[1, 1], pix[62, 1], pix[1, 62], pix[62, 62]]
+check(all(sum(c) > 200 for c in corners),
+      f'фавикон: дракон на индиго-градиенте (углы {corners})')
+login_as('owner')
+r = client.get('/apply')
+check(r.status_code == 200 and '.header .logo' in r.get_data(as_text=True),
+      '/apply открывается с видимым лого')
+check('app.js?v=47' in base and 'style.css?v=109' in base,
+      'версии ассетов (109/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,
