@@ -267,7 +267,9 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .sidebar {
   width: var(--sidebar-w);
   flex: 0 0 var(--sidebar-w);
-  background: var(--surface);
+  background: var(--glass);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -428,7 +430,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   background: linear-gradient(90deg, var(--ac-soft), color-mix(in srgb, var(--ac-soft) 30%, transparent));
   color: var(--ac);
   font-weight: 600;
-  box-shadow: inset 2px 0 0 var(--ac);
+  box-shadow: inset 2px 0 0 var(--ac), 0 2px 14px color-mix(in srgb, var(--ac) 14%, transparent);
 }
 .nav-link.active i { color: var(--ac); }
 .nav-link { position: relative; }
@@ -515,7 +517,10 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   border-bottom: 1px solid var(--line);
   position: sticky; top: 0; z-index: 90;
+  transition: box-shadow 0.25s var(--ease);
 }
+.topbar.scrolled { box-shadow: 0 10px 30px rgba(16, 24, 40, 0.10); }
+[data-theme="dark"] .topbar.scrolled { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
 
 /* Тонкий индикатор прокрутки страницы */
 .scroll-progress {
@@ -718,7 +723,9 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .card {
   position: relative;
   overflow: hidden;
-  background: var(--surface);
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   padding: 18px 20px;
@@ -755,7 +762,9 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 /* Панель с заголовком/действиями (workbench-компонент) */
 .panel {
   position: relative;
-  background: var(--surface);
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
   border: 1px solid var(--line);
   border-radius: 16px;
   box-shadow: var(--shadow-1);
@@ -813,14 +822,28 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .kpi {
   position: relative;
   overflow: hidden;
-  background: var(--surface);
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  padding: 14px 16px;
+  padding: 14px 16px 14px 19px;
   display: flex; align-items: center; gap: 12px;
   box-shadow: var(--shadow-1);
   transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
 }
+.kpi::before {
+  content: '';
+  position: absolute; left: 0; top: 14px; bottom: 14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--ac-grad);
+  opacity: 0.85;
+}
+.kpi.tone-ok::before { background: linear-gradient(180deg, var(--ok), color-mix(in srgb, var(--ok) 45%, transparent)); }
+.kpi.tone-warn::before { background: linear-gradient(180deg, var(--warn), color-mix(in srgb, var(--warn) 45%, transparent)); }
+.kpi.tone-err::before { background: linear-gradient(180deg, var(--err), color-mix(in srgb, var(--err) 45%, transparent)); }
+.kpi.tone-info::before { background: linear-gradient(180deg, var(--info), color-mix(in srgb, var(--info) 45%, transparent)); }
 .kpi::after {
   content: '';
   position: absolute; inset: 0;
@@ -1416,7 +1439,9 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 }
 .kbd-palette[hidden] { display: none; }
 .kbd-palette-panel {
-  background: var(--surface);
+  background: var(--glass);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-3);
@@ -3045,6 +3070,34 @@ body.dense .kpi { padding: 10px 13px; }
 .warn-mod { color: var(--text-3); }
 .empty-ok { color: var(--ok); font-size: var(--fs-md); }
 .ms-meta { color: var(--text-3); font-size: var(--fs-sm); }
+
+
+/* ── Авто-иконка раздела в заголовке страницы ─────────────── */
+.page-head-icon {
+  width: 46px; height: 46px; flex: 0 0 46px;
+  border-radius: 14px;
+  background: linear-gradient(150deg, var(--ac-soft), transparent 130%);
+  border: 1px solid var(--ac-line);
+  color: var(--ac);
+  display: grid; place-items: center;
+  font-size: 18px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 4px 16px color-mix(in srgb, var(--ac) 16%, transparent);
+  margin-bottom: 16px;
+}
+[data-theme="dark"] .page-head-icon { box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 4px 16px color-mix(in srgb, var(--ac) 20%, transparent); }
+.page-head { align-items: center; }
+.page-head .page-head-copy { padding-bottom: 10px; }
+
+/* ── Тонированные иконки плиток инструментов ─────────────── */
+.cc-tile.tone-warning .cc-ico { background: var(--warn-soft); color: var(--warn); }
+.cc-tile.tone-critical .cc-ico { background: var(--err-soft); color: var(--err); }
+.cc-tile.tone-info .cc-ico { background: var(--info-soft); color: var(--info); }
+.cc-tile.tone-security .cc-ico { background: var(--ac-soft); color: var(--ac); }
+.cc-tile.tone-analytics .cc-ico { background: var(--surface-3); color: var(--text-2); }
+.cc-tile.tone-ok .cc-ico { background: var(--ok-soft); color: var(--ok); }
+
+/* ── Мягкая тень под hero ────────────────────────────────── */
+#ccHero { box-shadow: 0 18px 50px color-mix(in srgb, var(--ac) 10%, transparent), var(--shadow-1); }
 
 /* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ

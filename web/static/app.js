@@ -2187,3 +2187,93 @@
     paint();
   };
 })();
+
+// ============================================================
+// AETHER KIT 4 — иконка раздела в заголовке, тень шапки,
+// ripple на KPI
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+
+  /* ── 1. Авто-иконка текущего раздела в заголовке страницы ── */
+  function sectionIcon() {
+    try {
+      var node = doc.getElementById('palette-data');
+      var head = doc.querySelector('.page-head');
+      if (!node || !head) return;
+      if (head.querySelector('.page-head-icon')) return;
+      var groups = JSON.parse(node.textContent || '[]');
+      var path = window.location.pathname;
+      for (var i = 0; i < groups.length; i++) {
+        for (var j = 0; j < groups[i].pages.length; j++) {
+          if (groups[i].pages[j].path === path) {
+            var icon = groups[i].pages[j].icon || groups[i].icon || 'fa-file';
+            var chip = doc.createElement('div');
+            chip.className = 'page-head-icon';
+            chip.innerHTML = '<i class="fas ' + icon.replace(/[^a-z0-9-]/gi, '') + '"></i>';
+            head.insertBefore(chip, head.firstChild);
+            return;
+          }
+        }
+      }
+    } catch (e) { /* опционально */ }
+  }
+
+  /* ── 2. Тень шапки при прокрутке ────────────────────────── */
+  function topbarShadow() {
+    var bar = doc.querySelector('.topbar');
+    if (!bar) return;
+    var on = false;
+    var paint = function () {
+      var scrolled = window.scrollY > 8;
+      if (scrolled !== on) {
+        on = scrolled;
+        bar.classList.toggle('scrolled', on);
+      }
+    };
+    window.addEventListener('scroll', paint, { passive: true });
+    paint();
+  }
+
+  /* ── 3. Ripple на KPI ───────────────────────────────────── */
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  doc.addEventListener('pointerdown', function (e) {
+    if (reduced) return;
+    var target = e.target && e.target.closest ? e.target.closest('.kpi, .stat-box') : null;
+    if (!target) return;
+    var r = target.getBoundingClientRect();
+    var span = doc.createElement('span');
+    span.className = 'ripple';
+    var size = Math.max(r.width, r.height) * 1.4;
+    span.style.width = span.style.height = size + 'px';
+    span.style.left = (e.clientX - r.left - size / 2) + 'px';
+    span.style.top = (e.clientY - r.top - size / 2) + 'px';
+    target.appendChild(span);
+    setTimeout(function () { span.remove(); }, 650);
+  });
+
+  /* ── 4. Анимация прогресса на KPI при наведении (бар) ───── */
+  doc.addEventListener('mouseover', function (e) {
+    var bar = e.target && e.target.closest ? e.target.closest('.kpi') : null;
+    if (!bar) return;
+    var fill = bar.querySelector('.modern-progress > span, .modern-progress-bar > span');
+    if (fill) fill.style.filter = 'brightness(1.15)';
+  });
+  doc.addEventListener('mouseout', function (e) {
+    var bar = e.target && e.target.closest ? e.target.closest('.kpi') : null;
+    if (!bar) return;
+    var fill = bar.querySelector('.modern-progress > span, .modern-progress-bar > span');
+    if (fill) fill.style.filter = '';
+  });
+
+  /* ── Старт ─────────────────────────────────────────────── */
+  function ready(fn) {
+    if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  ready(function () {
+    sectionIcon();
+    topbarShadow();
+  });
+})();
