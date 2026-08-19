@@ -136,9 +136,9 @@ check('class="page-hero"' in dash and 'class="kpi-row"' in dash,
 check('.stat-card-big' not in dash and '--ac-glow' not in dash,
       'старый тёмный дашборд с золотыми бликами удалён')
 login = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
-check('auth-card' in login and 'data-theme="light"' in login,
-      'логин — светлая карточка')
-check('#0a0907' not in login, 'тёмный фон старого логина удалён')
+check('auth-card' in login and 'data-theme="dark"' in login,
+      'логин — тёмная карточка (чёрное издание)')
+check('#0a0907' not in login, 'старый тёмный фон заменён фирменным чёрным')
 
 login_as('owner')
 r = client.get('/')
@@ -819,6 +819,34 @@ check(any(str(i.get('name', '')).lower().startswith('so') for i in sd.get('items
 r = client.get('/api/chat/987654321098765432/members')
 cm = r.get_json(silent=True)
 check(isinstance(cm, list) and len(cm) >= 5, f'чат-пикер видит участников ({len(cm) if isinstance(cm, list) else 0})')
+# ═══ 29. Логин — премиальный чёрный ════════════════════════════════════════
+print('== логин: чёрная тема ==')
+lg = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
+check('data-theme="dark"' in lg and '#05060a' in lg,
+      'логин: тёмная тема с глубоким чёрным фоном')
+check('bg-fx' in lg and 'orb1' in lg and 'bg-grid' in lg and 'lg-stars' in lg,
+      'логин: свечения, сетка и звёздный canvas')
+check('DARK EDITION' in lg,
+      'логин: бренд-панель в тёмном издании')
+check('Управляй сервером' in lg and 'красиво' in lg,
+      'логин: заголовок «Управляй сервером красиво»')
+check('auth-card::after' in lg and 'conic-gradient' in lg,
+      'логин: градиентная рамка карточки при hover')
+check('auth-btn::after' in lg and 'skewX(-20deg)' in lg,
+      'логин: блеск пробегает по кнопке входа')
+check('tabBtnPass' in lg and 'tabBtnPin' in lg and 'data-auth-tab' in lg,
+      'логин: табы «Пароль» и «Discord PIN» сохранены')
+check('showSuggest' in lg and 'api/login/suggest' in lg,
+      'логин: автодополнение логинов работает')
+check('pinBox' in lg and 'buildPinBox' in lg and 'discord-login' in lg,
+      'логин: PIN-вход сохранён')
+check('emblem-dragon.png' in lg,
+      'логин: дракон в бренд-панели и мобильном бренде')
+check('auth-feats' in lg and 'rgba(255, 255, 255, .05)' in lg,
+      'логин: фичи в стеклянных плашках')
+r = client.get('/login')
+check(r.status_code == 200 and 'DARK EDITION' in r.get_data(as_text=True),
+      '/login открывается в чёрной теме')
 check('app.js?v=47' in base and 'style.css?v=102' in base,
       'версии ассетов (102/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
