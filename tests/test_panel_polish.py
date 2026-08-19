@@ -211,8 +211,8 @@ check('spot-on' not in css and 'spot-on' not in js,
       'спотлайт, следующий за мышью внутри карточек, отключён')
 check('tickerDrift' in open(os.path.join(ROOT, 'web', 'templates', 'mod_center.html'), encoding='utf-8').read(),
       'лента событий мод-центра стала живой (авто-дрейф с паузой)')
-check('app.js?v=33' in base and 'style.css?v=87' in base,
-      'версии ассетов забумплены (87/33)')
+check('app.js?v=34' in base and 'style.css?v=88' in base,
+      'версии ассетов забумплены (88/34)')
 
 # ═══ 8. Комбо-красота: шапки, эмблема, переходы, киоск ════════════════════
 print('== комбо-красота ==')
@@ -260,6 +260,24 @@ check('.switch input:checked + .track' in css,
       'переключатели с градиентным треком и свечением')
 check('background-color: var(--surface) !important' in open(os.path.join(ROOT, 'web', 'templates', 'analytics.html'), encoding='utf-8').read(),
       'аналитика: стрелка селекта больше не скрывается фоном')
+
+# ═══ 10. Кастомные дропдауны вместо нативных списков ══════════════════════
+print('== кастомные дропдауны ==')
+check('AETHER KIT 11' in js and 'aetherSelect' in js,
+      'AetherSelect: движок кастомных дропдаунов в app.js')
+check('aes-panel' in css and 'aes-opt' in css and 'aes-search' in css,
+      'стили панели, опций и поиска дропдауна в style.css')
+check('27.8 КАСТОМНЫЕ ДРОПДАУНЫ' in css, 'секция 27.8 добавлена в дизайн-систему')
+check('aes-native' in css and 'opacity: 0 !important' in css,
+      'исходный select скрыт без потери form-семантики (не display:none)')
+check("orig.dispatchEvent(new Event('change', { bubbles: true }))" in js,
+      'выбор в дропдауне продолжает запускать change-события страниц')
+check('OPTGROUP' in js and 'aes-group' in css,
+      'группы опций (optgroup) поддерживаются')
+check('aes-lg' in js and 'aes-inline' in js,
+      'варианты оформления: крупный (сервер) и встроенный (кокпит)')
+check('app.js?v=34' in base and 'style.css?v=88' in base,
+      'версии ассетов забумплены (88/34)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil

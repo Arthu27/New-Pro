@@ -4124,6 +4124,150 @@ input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
 }
 
 /* ============================================================
+   27.8 КАСТОМНЫЕ ДРОПДАУНЫ (AetherSelect) — вместо нативных
+   «классических» списков: панель, поиск, галочка, клавиатура
+   ============================================================ */
+
+.aes { position: relative; display: inline-flex; min-width: 0; vertical-align: middle; }
+.aes-full { display: flex; width: 100%; }
+.aes-native {
+  position: absolute !important;
+  width: 1px !important; height: 1px !important;
+  opacity: 0 !important; pointer-events: none !important;
+  margin: 0 !important; padding: 0 !important;
+  overflow: hidden !important;
+}
+.aes .aes-btn {
+  position: relative;
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; min-height: 38px;
+  padding: 8px 36px 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  font: inherit; font-size: var(--fs-md);
+  cursor: pointer; text-align: left;
+  transition: border-color 0.15s var(--ease), box-shadow 0.2s var(--ease), transform 0.15s var(--ease);
+}
+.aes .aes-btn:hover { border-color: var(--ac-line); }
+.aes.open .aes-btn {
+  border-color: var(--ac);
+  box-shadow: 0 0 0 3px var(--ac-soft), 0 6px 18px color-mix(in srgb, var(--ac) 10%, transparent);
+}
+.aes .aes-btn:active { transform: translateY(1px); }
+.aes .aes-value {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.aes .aes-arrow {
+  position: absolute; right: 14px; top: 50%;
+  width: 7px; height: 7px; flex: 0 0 auto;
+  border-right: 2px solid var(--ac);
+  border-bottom: 2px solid var(--ac);
+  transform: translateY(-68%) rotate(45deg);
+  transition: transform 0.18s var(--ease);
+  pointer-events: none;
+}
+.aes.open .aes-arrow { transform: translateY(-26%) rotate(225deg); }
+
+/* крупный вариант (выбор сервера и т.п.) */
+.aes-lg .aes-btn {
+  min-height: 46px;
+  padding: 11px 38px 11px 16px;
+  border-radius: var(--r-md);
+  font-weight: 500;
+}
+/* встроенный вариант (кокпит аналитики) */
+.aes-inline .aes-btn {
+  min-height: 22px;
+  padding: 0 18px 0 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+}
+.aes-inline.open .aes-btn { box-shadow: none; }
+.aes-inline .aes-arrow { right: 4px; width: 5px; height: 5px; border-width: 1.5px; }
+
+/* выпадающая панель */
+.aes-panel {
+  position: fixed; z-index: 2600;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 6px;
+}
+.aes-panel.open { display: flex; animation: aesIn 0.16s var(--ease-out) both; }
+@keyframes aesIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.aes-panel .aes-search {
+  margin: 8px 8px 4px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.2s;
+}
+.aes-panel .aes-search:focus {
+  border-color: var(--ac);
+  box-shadow: 0 0 0 3px var(--ac-soft);
+}
+.aes-list {
+  overflow-y: auto;
+  max-height: 262px;
+  padding: 4px;
+  scrollbar-width: thin;
+}
+.aes-list::-webkit-scrollbar { width: 6px; }
+.aes-list::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; }
+.aes-group {
+  padding: 9px 10px 3px;
+  font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+.aes-opt {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.aes-opt:hover, .aes-opt.active { background: var(--ac-soft); color: var(--ac); }
+.aes-opt.sel { font-weight: 600; }
+.aes-opt.sel .aes-opt-label { color: var(--ac); }
+.aes-opt.dis { opacity: 0.45; cursor: not-allowed; }
+.aes-check { width: 16px; flex: 0 0 16px; text-align: center; color: var(--ac); opacity: 0; font-size: 11px; }
+.aes-opt.sel .aes-check { opacity: 1; }
+.aes-opt-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aes-empty {
+  padding: 12px; text-align: center;
+  color: var(--text-3); font-size: 12px;
+  display: none;
+}
+.aes-list:has(.aes-empty) .aes-empty { display: block; }
+
+@media (prefers-reduced-motion: reduce) {
+  .aes-panel.open { animation: none; }
+  .aes .aes-btn, .aes .aes-arrow, .aes-opt { transition: none; }
+}
+
+/* ============================================================
    27. LEGACY-КАРТА СОВМЕСТИМОСТИ
    Остальные страницы панели используют унаследованные классы.
    Ниже они отображаются на новую дизайн-систему: одинаковые

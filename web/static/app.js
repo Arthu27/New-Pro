@@ -3170,3 +3170,261 @@
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', pageHeadAuto);
   else pageHeadAuto();
 })();
+
+// ============================================================
+// AETHER KIT 11 — AetherSelect: полностью кастомные дропдауны
+// вместо нативных «классических» списков браузера. Стильная
+// панель, поиск, галочка выбора, клавиатура, синхронизация с
+// исходным <select> (change-события продолжают работать).
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  var win = window;
+  var reduced = win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var panel = null;
+  var currentOrig = null;
+  var listEl = null;
+  var searchEl = null;
+  var activeIndex = -1;
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function ensurePanel() {
+    if (panel) return;
+    panel = doc.createElement('div');
+    panel.className = 'aes-panel';
+    panel.setAttribute('role', 'listbox');
+    panel.innerHTML = '<input type="text" class="aes-search" placeholder="Поиск..." aria-label="Поиск в списке">' +
+      '<div class="aes-list"></div>';
+    doc.body.appendChild(panel);
+    listEl = panel.querySelector('.aes-list');
+    searchEl = panel.querySelector('.aes-search');
+    searchEl.addEventListener('input', function () {
+      var q = this.value.toLowerCase();
+      var any = false;
+      listEl.querySelectorAll('.aes-opt').forEach(function (o) {
+        var hit = o.textContent.toLowerCase().indexOf(q) !== -1;
+        o.style.display = hit ? '' : 'none';
+        if (hit) any = true;
+      });
+      var empty = listEl.querySelector('.aes-empty');
+      if (!empty) {
+        empty = doc.createElement('div');
+        empty.className = 'aes-empty';
+        empty.textContent = 'Ничего не найдено';
+        listEl.appendChild(empty);
+      }
+      empty.style.display = any ? 'none' : '';
+    });
+  }
+
+  function optionHtml(o, selected) {
+    var dis = o.disabled ? ' dis' : '';
+    return '<div class="aes-opt' + (selected ? ' sel' : '') + dis + '" role="option" aria-selected="' + (selected ? 'true' : 'false') + '" data-v="' + esc(o.value) + '">' +
+      '<span class="aes-check"><i class="fas fa-check"></i></span>' +
+      '<span class="aes-opt-label">' + esc(o.textContent || o.value || '—') + '</span></div>';
+  }
+
+  function buildList(orig) {
+    var value = orig.value;
+    var html = '';
+    Array.prototype.forEach.call(orig.children, function (child) {
+      if (child.tagName === 'OPTGROUP') {
+        html += '<div class="aes-group">' + esc(child.label || '') + '</div>';
+        Array.prototype.forEach.call(child.children, function (o) {
+          html += optionHtml(o, o.value === value);
+        });
+      } else if (child.tagName === 'OPTION') {
+        html += optionHtml(child, child.value === value);
+      }
+    });
+    return html || optionHtml({ value: '', textContent: 'Нет вариантов', disabled: true }, false);
+  }
+
+  function positionPanel(btn) {
+    var rect = btn.getBoundingClientRect();
+    panel.style.minWidth = Math.max(rect.width, 230) + 'px';
+    panel.style.maxWidth = Math.max(rect.width, 340) + 'px';
+    var below = rect.bottom + 6;
+    var est = Math.min(300, panel.offsetHeight || 300);
+    if (below + est > win.innerHeight - 8 && rect.top - est - 6 > 8) {
+      panel.style.top = Math.max(8, rect.top - est - 6) + 'px';
+    } else {
+      panel.style.top = below + 'px';
+    }
+    var left = Math.min(rect.left, win.innerWidth - (panel.offsetWidth || 260) - 10);
+    panel.style.left = Math.max(8, left) + 'px';
+  }
+
+  function closePanel() {
+    if (!panel) return;
+    panel.classList.remove('open');
+    if (currentOrig) {
+      var shell = currentOrig.closest('.aes');
+      if (shell) shell.classList.remove('open');
+    }
+    currentOrig = null;
+    activeIndex = -1;
+  }
+
+  function setActive(idx) {
+    var opts = listEl.querySelectorAll('.aes-opt:not(.dis)');
+    var visible = [];
+    opts.forEach(function (o) { if (o.style.display !== 'none') visible.push(o); });
+    if (!visible.length) return;
+    if (idx < 0) idx = visible.length - 1;
+    if (idx >= visible.length) idx = 0;
+    activeIndex = idx;
+    visible.forEach(function (o) { o.classList.remove('active'); });
+    visible[idx].classList.add('active');
+    if (visible[idx].scrollIntoView) visible[idx].scrollIntoView({ block: 'nearest' });
+  }
+
+  function chooseValue(v) {
+    var orig = currentOrig;
+    closePanel();
+    if (!orig || orig.disabled) return;
+    if (orig.value === v) return;
+    orig.value = v;
+    syncLabel(orig);
+    try { orig.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+  }
+
+  function openFor(orig) {
+    ensurePanel();
+    var shell = orig.closest('.aes');
+    var btn = shell.querySelector('.aes-btn');
+    if (!btn) return;
+    if (currentOrig === orig && panel.classList.contains('open')) { closePanel(); return; }
+    closePanel();
+    currentOrig = orig;
+    var many = orig.querySelectorAll('option').length > 8;
+    searchEl.style.display = many ? '' : 'none';
+    searchEl.value = '';
+    listEl.innerHTML = buildList(orig);
+    shell.classList.add('open');
+    panel.classList.add('open');
+    positionPanel(btn);
+    var sel = listEl.querySelector('.aes-opt.sel');
+    if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: 'nearest' });
+  }
+
+  function syncLabel(orig) {
+    var shell = orig.closest('.aes');
+    if (!shell) return;
+    var val = shell.querySelector('.aes-value');
+    var sel = orig.selectedOptions && orig.selectedOptions[0];
+    var label = sel ? sel.textContent : (orig.value || '—');
+    if (val) val.textContent = label || '—';
+  }
+
+  function enhance(orig) {
+    if (orig.getAttribute('data-aes') === '1') return;
+    if (orig.matches('[multiple], [size], [data-no-aes]')) return;
+    if (orig.closest('.aes')) return;
+    var inline = !!orig.closest('.analytics-server-control');
+    var cs = getComputedStyle(orig);
+    var full = cs.display === 'block';
+    var big = orig.classList.contains('guild-select') || orig.classList.contains('guild-sel') ||
+              orig.id === 'ch-guild-select' || parseFloat(cs.minHeight) >= 40;
+    orig.setAttribute('data-aes', '1');
+    var shell = doc.createElement('div');
+    shell.className = 'aes' + (inline ? ' aes-inline' : '') + (full ? ' aes-full' : '') + (big ? ' aes-lg' : '');
+    if (parseFloat(cs.minWidth) > 0) shell.style.minWidth = cs.minWidth;
+    var btn = doc.createElement('button');
+    btn.type = 'button';
+    btn.className = 'aes-btn';
+    btn.setAttribute('aria-haspopup', 'listbox');
+    btn.innerHTML = '<span class="aes-value"></span><span class="aes-arrow"></span>';
+    shell.appendChild(btn);
+    shell.appendChild(orig);
+    orig.classList.add('aes-native');
+    orig.setAttribute('aria-hidden', 'true');
+    orig.setAttribute('tabindex', '-1');
+    orig.parentNode.replaceChild(shell, orig);
+    syncLabel(orig);
+    btn.addEventListener('click', function () { openFor(orig); });
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        openFor(orig);
+        setActive(e.key === 'ArrowDown' ? 0 : -1);
+      }
+    });
+    orig._aesValue = orig.value;
+  }
+
+  function scan(root) {
+    (root || doc).querySelectorAll('select').forEach(function (el) {
+      if (!el.closest('.aes') && !el.matches('[multiple], [size], [data-no-aes]')) enhance(el);
+    });
+  }
+
+  /* перерисовка опций из шаблонов (innerHTML) */
+  var mo = new MutationObserver(function (muts) {
+    muts.forEach(function (m) {
+      m.addedNodes.forEach(function (n) {
+        if (n.nodeType === 1 && (n.tagName === 'SELECT' || n.querySelector)) {
+          if (n.tagName === 'SELECT') enhance(n);
+          else if (n.querySelector) n.querySelectorAll('select').forEach(enhance);
+        }
+      });
+      if (m.target && m.target.tagName === 'SELECT' && m.type === 'childList') {
+        syncLabel(m.target);
+        if (currentOrig === m.target) {
+          listEl.innerHTML = buildList(m.target);
+          positionPanel(m.target.closest('.aes').querySelector('.aes-btn'));
+        }
+      }
+    });
+  });
+  mo.observe(doc.body, { childList: true, subtree: true });
+
+  /* программные изменения value — подтягиваем подпись */
+  setInterval(function () {
+    doc.querySelectorAll('select[data-aes="1"]').forEach(function (o) {
+      if (o._aesValue !== o.value) { o._aesValue = o.value; syncLabel(o); }
+    });
+  }, 500);
+
+  /* панель: выбор, клавиатура, закрытие */
+  doc.addEventListener('click', function (e) {
+    if (!panel || !panel.classList.contains('open')) return;
+    var opt = e.target.closest('.aes-opt');
+    if (opt && !opt.classList.contains('dis')) chooseValue(opt.dataset.v);
+    else if (!e.target.closest('.aes-panel') && !e.target.closest('.aes-btn')) closePanel();
+  });
+  doc.addEventListener('keydown', function (e) {
+    if (!panel || !panel.classList.contains('open')) return;
+    if (e.key === 'Escape') { closePanel(); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive(activeIndex + 1); return; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setActive(activeIndex - 1); return; }
+    if (e.key === 'Enter') {
+      var act = listEl.querySelector('.aes-opt.active') || listEl.querySelector('.aes-opt.sel');
+      if (act) chooseValue(act.dataset.v);
+    }
+  });
+  win.addEventListener('scroll', function () {
+    if (panel && panel.classList.contains('open')) closePanel();
+  }, true);
+  win.addEventListener('resize', function () {
+    if (panel && panel.classList.contains('open') && currentOrig) {
+      positionPanel(currentOrig.closest('.aes').querySelector('.aes-btn'));
+    }
+  });
+
+  function onReady(fn) {
+    if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  onReady(function () { scan(doc); });
+  if (!reduced) {
+    doc.addEventListener('aether:live', function () { scan(doc); });
+  }
+  win.aetherSelect = { rescan: function () { scan(doc); } };
+})();
