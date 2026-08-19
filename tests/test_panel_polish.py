@@ -733,6 +733,9 @@ r = client.get('/')
 html = r.get_data(as_text=True)
 check(r.status_code == 200 and 'Управляй сервером' in html and '#05060a' in html,
       '/ открывается гостю в чёрной теме')
+r = client.get('/welcome')
+check(r.status_code == 200 and 'Управляй сервером' in r.get_data(as_text=True),
+      '/welcome — публичная страница-визитка (видна и в демо с автовходом)')
 check('app.js?v=47' in base and 'style.css?v=102' in base,
       'версии ассетов (102/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,

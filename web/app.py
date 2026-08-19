@@ -649,6 +649,12 @@ def health_check ():
         'timestamp':datetime .now (timezone.utc).isoformat ()
         }),500 
 
+@app .route ('/welcome')
+def welcome_page ():
+    """Публичная страница-визитка: доступна всегда, даже в демо-режиме с автовходом."""
+    return render_template ('welcome.html')
+
+
 @app .route ('/')
 def index ():
     if 'logged_in'not in session :
