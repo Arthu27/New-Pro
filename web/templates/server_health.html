@@ -2,18 +2,14 @@
 {% block title %}Состояние сервера — Aether{% endblock %}
 {% block page_title %}<i class="fas fa-heartbeat" style="animation: pulse 2s infinite;"></i> Состояние сервера{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>ЗДОРОВЬЕ СЕРВЕРА И БОТА</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Основное <span class="sep">·</span> Состояние</div>
     <h1>Состояние сервера</h1>
-    <p>Метрики активности, нагрузки и безопасности — обновляются каждые 2.5 секунды.</p>
+    <p class="lead">Метрики активности, нагрузки и безопасности — обновляются каждые 2.5 секунды.</p>
   </div>
 </div>
-{% endblock %}
+
 
 <style>
   .sh-wrap { padding:6px 2px 34px; max-width: 1000px; }

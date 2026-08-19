@@ -546,6 +546,34 @@ check('var(--ac-soft); border:1px solid var(--ac-line)' in konsol and '#fff' not
 sched = open(os.path.join(ROOT, 'web', 'templates', 'schedule.html'), encoding='utf-8').read()
 check('var(--ac-soft); border:1px solid var(--ac-line)' in sched and 'color:#fff' not in sched.split('.sc-toast')[0],
       'расписание: кнопки и формы на палитре (белых писем нет)')
+# ═══ 18. Каждая страница — премиум page-head (или живой hero) ═══════════════
+print('== все страницы с шапками ==')
+import glob as _g
+head_ok = 0; hero_ok = 0; nohdr = []
+for _f in _g.glob(os.path.join(ROOT, 'web', 'templates', '*.html')):
+    _t = open(_f, encoding='utf-8').read()
+    if '{% extends "base.html" %}' not in _t:
+        continue
+    if 'class="page-head"' in _t:
+        head_ok += 1
+    elif 'class="page-hero' in _t:
+        hero_ok += 1
+    else:
+        nohdr.append(os.path.basename(_f))
+check(head_ok >= 125, f'премиум page-head у {head_ok} страниц (>=125)')
+nohdr = [n for n in nohdr if n != 'analytics.html']  # у аналитики свой кокпит-hero
+check(not nohdr, f'без шапки не осталось ни одной страницы ({nohdr[:3]})')
+allt = ''
+for _f in _g.glob(os.path.join(ROOT, 'web', 'templates', '*.html')):
+    allt += open(_f, encoding='utf-8').read()
+check('<div <div' not in allt, 'нигде нет двойных div')
+check('page-hero compact' not in allt, 'старый компактный hero полностью заменён')
+hero_rest = [os.path.basename(_f) for _f in _g.glob(os.path.join(ROOT, 'web', 'templates', '*.html'))
+             if '{% block page_hero' in open(_f, encoding='utf-8').read()]
+check(set(hero_rest) <= {'base.html', 'ai_moderation.html', 'announcements.html',
+                         'bot_diagnostics.html', 'leveling_admin.html',
+                         'analytics.html'},
+      f'block page_hero остался только у страниц с живыми hero ({hero_rest})')
 check('app.js?v=47' in base and 'style.css?v=100' in base,
       'версии ассетов (100/47)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
