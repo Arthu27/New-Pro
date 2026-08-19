@@ -204,7 +204,21 @@
   window.renderSafe = function (renderFn) {
     var y = window.scrollY, x = window.scrollX;
     if (typeof renderFn === 'function') { try { renderFn(); } catch (e) {} }
-    requestAnimationFrame(function () { window.scrollTo(x, y); });
+    var restore = function () { window.scrollTo(x, y); };
+    requestAnimationFrame(restore);
+    setTimeout(restore, 0);
+  };
+
+  /* Асинхронная версия: вернуть прокрутку ПОСЛЕ того, как
+     промис завершился и DOM обновился (фикс прыжка страницы вверх
+     при живых перерисовках списков). */
+  window.keepScrollAsync = function (promise) {
+    var y = window.scrollY, x = window.scrollX;
+    Promise.resolve(promise).then(function () {
+      requestAnimationFrame(function () { window.scrollTo(x, y); });
+      setTimeout(function () { window.scrollTo(x, y); }, 50);
+    }).catch(function () {});
+    return promise;
   };
 
   window.keepScroll = function (renderFn) {
@@ -3098,5 +3112,96 @@
     fxMagnetic();
     fxPanelShine();
     fxStarBurst();
+  });
+})();
+
+// ============================================================
+// AETHER KIT 9 — стабильность прокрутки: сайдбар и страница
+// помнят позицию между переходами; активный пункт меню всегда
+// виден (меню больше не «уезжает в самый вверх»)
+// ============================================================
+(function () {
+  'use strict';
+  var doc = document;
+  var win = window;
+  var SB_KEY = 'aether_sb_scroll';
+  var PG_KEY = 'aether_pg_scroll_';
+
+  function sget(k) { try { return win.sessionStorage.getItem(k); } catch (e) { return null; } }
+  function sset(k, v) { try { win.sessionStorage.setItem(k, v); } catch (e) {} }
+
+  /* ── 1. Сайдбар: восстановление позиции + показ активного пункта ── */
+  function sidebarScroll() {
+    var nav = doc.getElementById('sidebarNav');
+    if (!nav) return;
+    var saved = sget(SB_KEY);
+    if (saved !== null && saved !== '') {
+      nav.scrollTop = parseInt(saved, 10) || 0;
+      return;
+    }
+    /* первый заход на страницу — показываем активный пункт меню */
+    var act = nav.querySelector('.nav-link.active');
+    if (act) {
+      var top = act.offsetTop - nav.clientHeight / 2 + act.offsetHeight / 2;
+      nav.scrollTop = Math.max(0, top);
+    }
+  }
+  var sbTimer = null;
+  function saveSidebar() {
+    var nav = doc.getElementById('sidebarNav');
+    if (!nav) return;
+    if (sbTimer) return;
+    sbTimer = setTimeout(function () {
+      sbTimer = null;
+      sset(SB_KEY, String(nav.scrollTop || 0));
+    }, 120);
+  }
+  function bindSidebar() {
+    var nav = doc.getElementById('sidebarNav');
+    if (!nav) return;
+    nav.addEventListener('scroll', saveSidebar, { passive: true });
+    win.addEventListener('beforeunload', function () {
+      sset(SB_KEY, String(nav.scrollTop || 0));
+    });
+  }
+
+  /* ── 2. Страница: память прокрутки по маршруту ── */
+  var pgKey = PG_KEY + win.location.pathname;
+  var pgSaved = sget(pgKey);
+  var pgTimer = null;
+  function savePage() {
+    if (pgTimer) return;
+    pgTimer = setTimeout(function () {
+      pgTimer = null;
+      sset(pgKey, String(win.scrollY || 0));
+    }, 150);
+  }
+  function restorePage() {
+    if (!pgSaved) return;
+    if (win.scrollY > 4) return; /* пользователь уже прокрутил сам */
+    var y = parseInt(pgSaved, 10) || 0;
+    if (y > 0 && doc.documentElement.scrollHeight > y + win.innerHeight * 0.5) {
+      win.scrollTo(0, y);
+    }
+  }
+  function bindPage() {
+    win.addEventListener('scroll', savePage, { passive: true });
+    win.addEventListener('beforeunload', function () {
+      sset(pgKey, String(win.scrollY || 0));
+    });
+  }
+
+  function onReady(fn) {
+    if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  onReady(function () {
+    sidebarScroll();
+    bindSidebar();
+    bindPage();
+    restorePage();
+    /* страницы догружаются асинхронно — дотягиваем позицию */
+    setTimeout(restorePage, 400);
+    setTimeout(restorePage, 1100);
   });
 })();

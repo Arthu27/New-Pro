@@ -177,8 +177,8 @@ for marker, label in [
     ('@property --fx-ang', 'регистрация угла градиента'),
 ]:
     check(marker in css, f'style.css: {label}')
-check('app.js?v=29' in base and 'style.css?v=83' in base,
-      'версии ассетов забумплены (83/29)')
+check('app.js?v=30' in base and 'style.css?v=84' in base,
+      'версии ассетов забумплены (84/30)')
 
 # ═══ 6. Аналитика и FX-слой 10 ═══════════════════════════════════════════
 print('== аналитика и FX-слой 10 ==')

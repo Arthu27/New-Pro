@@ -861,7 +861,7 @@ function startReply(id, author, content) {
   _replyTo = {id, author, content};
   document.getElementById('reply-bar').classList.add('show');
   document.getElementById('reply-text').textContent = author + ': ' + content + (content.length >= 60 ? '...' : '');
-  document.getElementById('chat-input').focus();
+  document.getElementById('chat-input').focus({ preventScroll: true });
 }
 function cancelReply() {
   _replyTo = null;
@@ -898,7 +898,7 @@ async function sendMessage() {
   }
   btn.disabled = false;
   _sending = false;
-  inp.focus();
+  inp.focus({ preventScroll: true });
 }
 
 async function deleteMsg(msgId) {
@@ -1053,7 +1053,7 @@ async function sendDmMessage() {
   }
   btn.disabled = false;
   _sending = false;
-  inp.focus();
+  inp.focus({ preventScroll: true });
 }
 
 // ── INPUT ─────────────────────────────────────────────────────────────────
@@ -1099,7 +1099,7 @@ function selectMention(idx) {
   var newBefore = inp.value.substring(0, pos).replace(/@\w*$/, '<@' + m.id + '> ');
   inp.value = newBefore + inp.value.substring(pos);
   inp.selectionStart = inp.selectionEnd = newBefore.length;
-  closeMentionPopup(); inp.focus();
+  closeMentionPopup(); inp.focus({ preventScroll: true });
 }
 
 function closeMentionPopup() {
@@ -1219,7 +1219,7 @@ function etiketFromprofile() {
   if (!_profsMember) return;
   var inp = document.getElementById('chat-input');
   inp.value += '<@' + _profsMember.id + '> ';
-  inp.focus();
+  inp.focus({ preventScroll: true });
   closeprofile();
 }
 

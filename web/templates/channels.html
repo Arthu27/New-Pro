@@ -747,7 +747,7 @@ textarea.field-input{resize:vertical;min-height:52px}
     populateCategorySelects();
     $('modal-create').classList.add('open');
     $('modal-create').setAttribute('aria-hidden', 'false');
-    setTimeout(function () { $('create-name').focus(); }, 50);
+    setTimeout(function () { $('create-name').focus({ preventScroll: true }); }, 50);
   }
   function closeCreate() {
     $('modal-create').classList.remove('open');
@@ -781,7 +781,7 @@ textarea.field-input{resize:vertical;min-height:52px}
 
   async function createChannel() {
     var name = $('create-name').value.trim();
-    if (!name) { showToast('Название канала не может быть пустым!', false); $('create-name').focus(); return; }
+    if (!name) { showToast('Название канала не может быть пустым!', false); $('create-name').focus({ preventScroll: true }); return; }
     var button = $('btnCreateChannel');
     if (button.disabled) return;
     if (window.qualitySetLoading) window.qualitySetLoading(button, true);
@@ -838,7 +838,7 @@ textarea.field-input{resize:vertical;min-height:52px}
     $('edit-category').value = c.category || '';
     $('modal-edit').classList.add('open');
     $('modal-edit').setAttribute('aria-hidden', 'false');
-    setTimeout(function () { $('edit-name').focus(); $('edit-name').select(); }, 50);
+    setTimeout(function () { $('edit-name').focus({ preventScroll: true }); $('edit-name').select(); }, 50);
   }
   function closeEdit() {
     $('modal-edit').classList.remove('open');
@@ -895,8 +895,8 @@ textarea.field-input{resize:vertical;min-height:52px}
     if (!focusable.length) return;
     var first = focusable[0];
     var last = focusable[focusable.length - 1];
-    if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
-    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+    if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus({ preventScroll: true }); }
+    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus({ preventScroll: true }); }
   });
 
   // ── Удаление (глобальный confirmAction) ──
@@ -969,14 +969,18 @@ textarea.field-input{resize:vertical;min-height:52px}
       $('ch-search').value = '';
       lastFingerprint = '';
       setDetailEmpty();
-      loadChannels();
+      if (window.keepScrollAsync) window.keepScrollAsync(loadChannels());
+      else loadChannels();
     });
 
     $('btnRefresh').addEventListener('click', function () {
       var button = this;
       if (window.qualitySetLoading) window.qualitySetLoading(button, true);
       else button.disabled = true;
-      Promise.resolve(loadChannels()).then(function (ok) {
+      var task = Promise.resolve(loadChannels());
+      /* держим позицию прокрутки — список не «уезжает» вверх */
+      if (window.keepScrollAsync) task = window.keepScrollAsync(task);
+      task.then(function (ok) {
         showToast(ok ? 'Список обновлён' : 'Не удалось обновить список', !!ok);
       }).finally(function () {
         if (window.qualitySetLoading) window.qualitySetLoading(button, false);
@@ -992,7 +996,7 @@ textarea.field-input{resize:vertical;min-height:52px}
       $('ch-search').value = '';
       $('ch-search-clear').style.display = 'none';
       renderList('');
-      $('ch-search').focus();
+      $('ch-search').focus({ preventScroll: true });
     });
 
     var list = $('channel-list');
@@ -1016,12 +1020,17 @@ textarea.field-input{resize:vertical;min-height:52px}
         var group = hdr.closest('.cat-group');
         if (!group) return;
         // В рабочей области открыта ровно одна категория — длинного полотна нет.
+        var anchorTop = hdr.getBoundingClientRect().top;
         list.querySelectorAll('.cat-group').forEach(function (item) {
           var active = item === group;
           item.classList.toggle('collapsed', !active);
           var itemHeader = item.querySelector('[data-toggle-cat]');
           if (itemHeader) itemHeader.setAttribute('aria-expanded', active ? 'true' : 'false');
         });
+        /* сворачивание других категорий меняет высоту — возвращаем
+           заголовок на прежнее место, чтобы список не прыгал вверх */
+        var delta = hdr.getBoundingClientRect().top - anchorTop;
+        if (delta) window.scrollBy(0, delta);
         try { localStorage.setItem('ch_active_cat_' + selectedGuild, group.getAttribute('data-cat-name')); } catch (err) {}
         return;
       }
@@ -1038,7 +1047,7 @@ textarea.field-input{resize:vertical;min-height:52px}
         header.click();
         if (event.key === 'ArrowRight') {
           var firstRow = header.closest('.cat-group').querySelector('.ch-row');
-          if (firstRow) firstRow.focus();
+          if (firstRow) firstRow.focus({ preventScroll: true });
         }
         return;
       }
@@ -1058,7 +1067,7 @@ textarea.field-input{resize:vertical;min-height:52px}
       if (event.key === 'Home') index = 0;
       else if (event.key === 'End') index = rows.length - 1;
       else index = Math.max(0, Math.min(rows.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)));
-      if (rows[index]) rows[index].focus();
+      if (rows[index]) rows[index].focus({ preventScroll: true });
     });
   }
 
@@ -1069,7 +1078,10 @@ textarea.field-input{resize:vertical;min-height:52px}
     if (window.setLiveRefresh) {
       window.setLiveRefresh(function () {
         if (document.hidden) return;
-        window.keepScroll ? window.keepScroll(function () { loadChannels(true); }) : loadChannels(true);
+        /* асинхронно: вернуть прокрутку ПОСЛЕ перерисовки списка,
+           чтобы клики по каналам и прокрутка не сбрасывались вверх */
+        if (window.keepScrollAsync) window.keepScrollAsync(loadChannels(true));
+        else loadChannels(true);
       }, 2500);
     }
   }

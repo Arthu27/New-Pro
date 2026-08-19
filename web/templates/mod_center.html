@@ -17,6 +17,61 @@
   </div>
 </div>
 
+<style>
+/* ── Лента событий модерации ── */
+.mod-ticker {
+  display: flex; align-items: center; gap: 10px;
+  margin: -4px 0 14px; padding: 8px 12px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--glass); overflow: hidden;
+}
+.mod-ticker-label {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ac); padding: 5px 10px; border-radius: 20px;
+  background: var(--ac-soft); border: 1px solid var(--ac-line);
+}
+.mod-ticker-scroll {
+  flex: 1; display: flex; gap: 7px; overflow-x: auto;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.mod-ticker-scroll::-webkit-scrollbar { display: none; }
+.mod-ticker-chip {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 20px; font-size: 11.5px;
+  border: 1px solid var(--line); background: var(--surface);
+  white-space: nowrap; animation: tickerIn .3s var(--ease-out) both;
+}
+@keyframes tickerIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+.mod-ticker-chip i { font-size: 10px; opacity: .8; }
+.mod-ticker-chip b { font-weight: 700; }
+.mod-ticker-chip.danger { border-color: color-mix(in srgb, var(--err) 35%, transparent); color: var(--err); background: color-mix(in srgb, var(--err) 7%, var(--surface)); }
+.mod-ticker-chip.warn   { border-color: color-mix(in srgb, var(--warn) 40%, transparent); color: #b45309; background: color-mix(in srgb, var(--warn) 8%, var(--surface)); }
+.mod-ticker-chip.ok     { border-color: color-mix(in srgb, var(--ok) 35%, transparent); color: var(--ok); background: color-mix(in srgb, var(--ok) 7%, var(--surface)); }
+.mod-ticker-chip .t-time { opacity: .55; font-size: 10.5px; }
+.mod-ticker-empty { color: var(--text-3); font-size: 12px; padding: 2px 4px; }
+
+/* ── Бары нарушителей и нагрузки команды ── */
+.mod-bar-row { display: flex; align-items: center; gap: 10px; padding: 7px 2px; }
+.mod-bar-rank {
+  flex: 0 0 24px; height: 24px; border-radius: 8px;
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 800; font-family: 'JetBrains Mono', monospace;
+  background: var(--ac-soft); color: var(--ac);
+}
+.mod-bar-row:nth-child(1) .mod-bar-rank { background: linear-gradient(135deg, #fbbf24, #d97706); color: #fff; }
+.mod-bar-row:nth-child(2) .mod-bar-rank { background: linear-gradient(135deg, #94a3b8, #64748b); color: #fff; }
+.mod-bar-row:nth-child(3) .mod-bar-rank { background: linear-gradient(135deg, #d97706, #92400e); color: #fff; }
+.mod-bar-name { flex: 0 0 150px; min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mod-bar-track { flex: 1; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.mod-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--ac), #7c3aed); transition: width .5s var(--ease-out); }
+.mod-bar-count { flex: 0 0 auto; font-size: 12px; font-weight: 700; font-family: 'JetBrains Mono', monospace; color: var(--ac); min-width: 26px; text-align: right; }
+@media (prefers-reduced-motion: reduce) {
+  .mod-ticker-chip { animation: none; }
+  .mod-bar-fill { transition: none; }
+}
+</style>
+
 <!-- Сводные метрики -->
 <div class="kpi-row">
   <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcMutes">—</div><div class="kpi-label">Активных мьютов</div></div></div>
@@ -25,6 +80,14 @@
   <div class="kpi"><div class="kpi-icon"><i class="fas fa-scale-balanced"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcAppeals">—</div><div class="kpi-label">Апелляций в очереди</div></div></div>
   <div class="kpi tone-ok"><div class="kpi-icon"><i class="fas fa-folder-open"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcProofs">—</div><div class="kpi-label">Демок в архиве</div></div></div>
   <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-arrow-trend-up"></i></div><div class="kpi-copy"><div class="kpi-value" id="mcEdge">—</div><div class="kpi-label">Участников на грани</div></div></div>
+</div>
+
+<!-- Живая лента событий модерации -->
+<div class="mod-ticker" id="mcTicker" aria-label="Лента событий модерации">
+  <span class="mod-ticker-label"><i class="fas fa-bolt"></i> События</span>
+  <div class="mod-ticker-scroll" id="mcTickerScroll">
+    <div class="mod-ticker-empty">Собираем события…</div>
+  </div>
 </div>
 
 <!-- Командная строка быстрых действий -->
@@ -67,6 +130,21 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start;margin-top:14px">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-user-slash"></i> ТОП нарушителей</h2>
+      <div class="sub">Больше всего мер за последние 7 дней.</div></div>
+      <a class="btn-link" href="/warnings" style="margin-left:auto">Варны <i class="fas fa-arrow-right"></i></a></div>
+    <div class="panel-body" id="mcTopOffenders"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-people-group"></i> Нагрузка команды</h2>
+      <div class="sub">Кто сколько мер вынес за 7 дней.</div></div>
+      <a class="btn-link" href="/mod-report" style="margin-left:auto">Отчёт <i class="fas fa-arrow-right"></i></a></div>
+    <div class="panel-body" id="mcTeamLoad"><div class="sk-line" style="height:12px"></div></div>
   </div>
 </div>
 
@@ -279,8 +357,88 @@
     } catch (e) { /* графики опциональны */ }
   }
 
+  /* ── ТОП нарушителей · нагрузка команды · лента событий ── */
+  var _peopleFp = '';
+  var TICKER_TONE = { ban: 'danger', kick: 'danger', warn: 'warn', mute: 'warn', timeout: 'warn', unban: 'ok', unmute: 'ok' };
+  var TICKER_ICON = { ban: 'fa-ban', kick: 'fa-right-from-bracket', warn: 'fa-triangle-exclamation', mute: 'fa-comment-slash', timeout: 'fa-clock', unban: 'fa-check', unmute: 'fa-check' };
+
+  function renderBars(box, counts, emptyText) {
+    if (!box) return;
+    var entries = Object.keys(counts).map(function (k) { return { name: k, n: counts[k] }; })
+      .sort(function (a, b) { return b.n - a.n; }).slice(0, 5);
+    if (!entries.length) {
+      box.innerHTML = '<div class="empty-tip" style="padding:8px 2px"><i class="fas fa-shield-halved"></i> ' + esc(emptyText) + '</div>';
+      return;
+    }
+    var max = entries[0].n;
+    box.innerHTML = entries.map(function (e, i) {
+      return '<div class="mod-bar-row">' +
+        '<span class="mod-bar-rank">' + (i + 1) + '</span>' +
+        '<span class="mod-bar-name" title="' + esc(e.name) + '">' + esc(e.name) + '</span>' +
+        '<span class="mod-bar-track"><span class="mod-bar-fill" style="width:' + Math.max(4, Math.round(e.n / max * 100)) + '%"></span></span>' +
+        '<span class="mod-bar-count">' + e.n + '</span></div>';
+    }).join('');
+  }
+
+  function renderTicker(items) {
+    var box = $('mcTickerScroll');
+    if (!box) return;
+    if (!items.length) {
+      box.innerHTML = '<div class="mod-ticker-empty">Событий пока нет — журнал наполнится с первыми мерами.</div>';
+      return;
+    }
+    box.innerHTML = items.map(function (ev) {
+      var a = String(ev.action || '').toLowerCase();
+      var tone = TICKER_TONE[a] || 'neutral';
+      var icon = TICKER_ICON[a] || 'fa-circle';
+      var when = '';
+      try { when = new Date(ev.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+      return '<span class="mod-ticker-chip ' + tone + '"><i class="fas ' + icon + '"></i><b>' + esc(ev.action || '?') + '</b> ' +
+        esc(ev.target || '—') + ' <span class="t-time">' + esc(when) + '</span></span>';
+    }).join('');
+  }
+
+  async function loadPeople() {
+    var events = [];
+    var gid = await activeGid();
+    try {
+      var h = await fetch('/api/mod-history' + (gid ? '?guild_id=' + encodeURIComponent(gid) : ''), { headers: { 'Accept': 'application/json' } }).then(function (r) { return r.json(); });
+      if (Array.isArray(h)) events = h;
+    } catch (e) {}
+    if (!events.length) {
+      try {
+        var logs = await window.fetchCachedJSON('/api/logs');
+        if (Array.isArray(logs)) events = logs.map(function (l) {
+          return { action: l.action, target: l.user_name || l.user_id || '—', mod: l.mod_name || l.mod_id || '—', at: l.timestamp };
+        });
+      } catch (e) {}
+    }
+    var fp = events.length + ':' + (events.length ? events[0].at : '');
+    if (fp === _peopleFp) return;
+    _peopleFp = fp;
+    var since = Date.now() - 7 * 86400000;
+    var offenders = {}, mods = {};
+    var ticker = [];
+    events.forEach(function (ev) {
+      if (ev.at) {
+        var t = new Date(ev.at).getTime();
+        if (!isNaN(t)) {
+          if (t >= since) {
+            offenders[String(ev.target || '—')] = (offenders[String(ev.target || '—')] || 0) + 1;
+            mods[String(ev.mod || '—')] = (mods[String(ev.mod || '—')] || 0) + 1;
+          }
+          ticker.push({ action: ev.action, target: ev.target, at: ev.at });
+        }
+      }
+    });
+    ticker.sort(function (a, b) { return new Date(b.at).getTime() - new Date(a.at).getTime(); });
+    renderTicker(ticker.slice(0, 8));
+    renderBars($('mcTopOffenders'), offenders, 'За 7 дней мер нет — пока тихо.');
+    renderBars($('mcTeamLoad'), mods, 'Команда пока не действовала.');
+  }
+
   function refresh() {
-    loadMetrics(); loadCharts();
+    loadMetrics(); loadCharts(); loadPeople();
     if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('mc-stamp'));
   }
 
@@ -324,6 +482,7 @@
   if (window.setLiveRefresh) {
     window.setLiveRefresh(loadMetrics, 15000);
     window.setLiveRefresh(loadCharts, 30000);
+    window.setLiveRefresh(loadPeople, 15000);
   }
   document.addEventListener('aether:live', refresh);
   if (window.tiltCards) window.tiltCards(document, '.cc-tile');
