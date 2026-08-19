@@ -11,6 +11,31 @@ from web.routes._common import (
     os, json, time, math, discord, datetime, timezone,
 )
 
+def _hidden_store ():
+    path =os .path .join (_REPO_ROOT ,'data','hidden_channels.json')
+    try :
+        with open (path ,'r',encoding ='utf-8')as fp :
+            return json .load (fp )
+    except Exception :
+        return {}
+
+
+def _hidden_save (store ):
+    path =os .path .join (_REPO_ROOT ,'data','hidden_channels.json')
+    with open (path ,'w',encoding ='utf-8')as fp :
+        json .dump (store ,fp ,ensure_ascii =False ,indent =2 )
+
+
+def _annotate_hidden (guild_id ,channels ):
+    """Пометить каналы/категории флагом hidden (сам канал или его категория скрыты владельцем)."""
+    store =_hidden_store ().get (str (guild_id ),{})
+    hch =set (str (x )for x in store .get ('channels',[]))
+    hcat =set (str (x )for x in store .get ('categories',[]))
+    for ch in channels :
+        ch ['hidden']=(str (ch .get ('id',''))in hch )or (str (ch .get ('category_id')or '')in hcat )
+    return channels
+
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -321,7 +346,7 @@ def register(ctx):
                         with open (demo_file ,'r',encoding ='utf-8')as fp :
                             demo =json .load (fp )
                         demo =sorted (demo ,key =lambda x :((9999 if (x .get ('category_pos')is None or x .get ('category_pos')<0 )else x .get ('category_pos',0 )),x .get ('position',0 ),x .get ('name','')))
-                        return jsonify (demo )
+                        return jsonify (_annotate_hidden (guild_id ,demo ))
                     except Exception as e :
                         print (f'[WEB][WARN] /channels: demo_channels.json ошибка: {e}')
             print ('[WEB][WARN] /channels: bot is None')
@@ -407,5 +432,31 @@ def register(ctx):
             return jsonify ({'error':str (e ),'channels':[]})
 
         sorted_channels =sorted (channels_data ,key =lambda x :(x ['category_pos'],x ['position']))
+        _annotate_hidden (guild_id ,sorted_channels )
         print (f'[WEB] /channels guild={guild_id} returned {len(sorted_channels)} channels')
         return jsonify (sorted_channels )
+
+    # ── Владелец: скрыть канал/категорию из панели ─────────────────────────
+    @app .route ('/api/guild/<guild_id>/channels-visibility',methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_channels_visibility (guild_id ):
+        data =request .get_json (silent =True )or {}
+        target =str (data .get ('id')or '').strip ()
+        kind =str (data .get ('kind')or 'channel')
+        hidden =bool (data .get ('hidden'))
+        if not target :
+            return jsonify ({'success':False ,'error':'Не указан id канала/категории'}),400
+        if kind not in ('channel','category'):
+            return jsonify ({'success':False ,'error':'kind должен быть channel или category'}),400
+        store =_hidden_store ()
+        g =store .setdefault (str (guild_id ),{'channels':[],'categories':[]})
+        key ='categories'if kind =='category'else 'channels'
+        lst =[str (x )for x in g .get (key ,[])]
+        if hidden and target not in lst :
+            lst .append (target )
+        if not hidden and target in lst :
+            lst .remove (target )
+        g [key ]=lst
+        _hidden_save (store )
+        return jsonify ({'success':True ,'hidden':hidden ,'id':target ,'kind':kind })

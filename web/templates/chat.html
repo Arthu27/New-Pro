@@ -713,7 +713,8 @@ function selectGuild(gid, scrollTo) {
 async function loadChannels(gid) {
   try {
     var chs = await fetch('/api/guild/' + gid + '/channels').then(r => r.json());
-    var text = chs.filter(function(c){ return c.type === 'text'; });
+    /* скрытые владельцем каналы/категории не показываем в панели */
+    var text = chs.filter(function(c){ return c.type === 'text' && !c.hidden; });
     /* порядок: каналы по позиции, категории по алфавиту, «Без категории» в конце */
     text.sort(function(a, b){
       return ((a.position || 0) - (b.position || 0)) ||

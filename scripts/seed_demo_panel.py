@@ -387,6 +387,7 @@ files = {
     'data/panel_logs.json': panel_logs,
     'data/team_board.json': team_board,
     'data/demo_channels.json': demo_channels,
+    'data/hidden_channels.json': {},
 }
 
 for path, payload in files.items():

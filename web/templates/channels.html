@@ -38,6 +38,11 @@
     <button class="btn-refresh" id="btnRefresh" type="button" title="Обновить">
       <i class="fas fa-sync-alt"></i>
     </button>
+    {% if role == 'owner' %}
+    <button class="btn-toggle-hidden" id="chShowHidden" type="button" title="Показать скрытые каналы и категории">
+      <i class="fas fa-eye-slash"></i> Скрытые <span id="chHiddenCount" class="ch-hidden-count">0</span>
+    </button>
+    {% endif %}
   </div>
 </div>
 
@@ -353,6 +358,17 @@
 .icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s;font-size:13px}
 .icon-btn:hover{background:var(--ac-soft);color:var(--ac-2);transform:translateY(-1px);border-color:var(--ac-line)}
 .icon-btn.danger:hover{background:rgba(239,68,68,.16);color:var(--err);border-color:rgba(239,68,68,.4)}
+.btn-toggle-hidden{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--surface);color:var(--text-2);font-size:12px;font-weight:600;cursor:pointer;transition:border-color .15s,color .15s,background .15s}
+.btn-toggle-hidden:hover{border-color:var(--ac-line);color:var(--ac)}
+.btn-toggle-hidden.active{border-color:var(--ac);color:var(--ac);background:var(--ac-soft)}
+.btn-toggle-hidden .ch-hidden-count{min-width:18px;height:18px;display:inline-grid;place-items:center;border-radius:99px;background:var(--ac-soft);color:var(--ac);font-size:10.5px;font-weight:800;padding:0 5px}
+.ch-row.is-hidden{opacity:.45}
+.ch-row.is-hidden .ch-name{text-decoration:line-through}
+.cat-group.is-hidden-cat .cat-header{opacity:.5}
+.cat-group.is-hidden-cat .cat-header .cat-name{text-decoration:line-through}
+.ch-hide-btn{color:var(--text-3)}
+.ch-hide-btn:hover{color:var(--ac)}
+.cat-hide-btn{opacity:.85}
 .ch-empty{text-align:center;padding:44px 20px;color:var(--text-3)}
 .ch-empty i{font-size:38px;color:var(--text-4);display:block;margin-bottom:12px;opacity:.7}
 .ch-empty p{font-size:15px}
@@ -437,6 +453,8 @@ textarea.field-input{resize:vertical;min-height:52px}
   'use strict';
 
   var MAIN_GID = '{{ main_guild_id }}';
+  var _canHide = {{ 'true' if role == 'owner' else 'false' }};
+  var hiddenChs = {}, hiddenCats = {}, showHidden = false, _catIds = {};
   var selectedGuild = MAIN_GID;
   var allChannels = [];
   var activeType = 'text';
@@ -511,7 +529,8 @@ textarea.field-input{resize:vertical;min-height:52px}
     var tm = typeMeta(t);
     var selected = detailId != null && String(detailId) === String(c.id);
     var rootClass = isRoot ? ' ch-row-root' : '';
-    return '<div class="ch-row' + rootClass + (selected ? ' is-selected' : '') + '" data-id="' + c.id + '" data-name="' + esc(c.name) + '" role="button" tabindex="0" aria-selected="' + (selected ? 'true' : 'false') + '" aria-label="Открыть канал ' + esc(c.name) + '">' +
+    var hiddenCls = hiddenChs[c.id] ? ' is-hidden' : '';
+    return '<div class="ch-row' + rootClass + hiddenCls + (selected ? ' is-selected' : '') + '" data-id="' + c.id + '" data-name="' + esc(c.name) + '" role="button" tabindex="0" aria-selected="' + (selected ? 'true' : 'false') + '" aria-label="Открыть канал ' + esc(c.name) + '">' +
       '<div class="ch-type-icon ' + tm.cls + '" aria-hidden="true"><i class="fas ' + tm.icon + '"></i></div>' +
       '<div class="ch-row-main">' +
         '<div class="ch-row-top">' +
@@ -521,6 +540,7 @@ textarea.field-input{resize:vertical;min-height:52px}
         (c.topic ? '<div class="ch-topic"><i class="fas fa-quote-left"></i>' + esc(c.topic) + '</div>' : '') +
       '</div>' +
       '<div class="ch-actions">' +
+        (_canHide ? '<button type="button" class="icon-btn ch-hide-btn" data-hide-id="' + c.id + '" data-kind="channel" title="' + (hiddenChs[c.id] ? 'Вернуть в панель' : 'Скрыть из панели') + '"><i class="fas ' + (hiddenChs[c.id] ? 'fa-eye' : 'fa-eye-slash') + '"></i></button>' : '') +
         '<button type="button" class="icon-btn" data-action="edit" title="Редактировать"><i class="fas fa-pen"></i></button>' +
         '<button type="button" class="icon-btn danger" data-action="delete" title="Удалить"><i class="fas fa-trash"></i></button>' +
       '</div>' +
@@ -538,11 +558,14 @@ textarea.field-input{resize:vertical;min-height:52px}
 
   function categoryBlock(key, name, icon, children, activeKey) {
     var isOpen = key === activeKey;
-    var html = '<section class="cat-group' + (isOpen ? '' : ' collapsed') + '" data-cat-name="' + esc(key) + '">';
+    var catId = _catIds[key] || '';
+    var catHidden = !!(catId && hiddenCats[catId]);
+    var html = '<section class="cat-group' + (isOpen ? '' : ' collapsed') + (catHidden ? ' is-hidden-cat' : '') + '" data-cat-name="' + esc(key) + '">';
     html += '<div class="cat-header" data-toggle-cat role="button" tabindex="0" aria-expanded="' + (isOpen ? 'true' : 'false') + '">';
     html += '<i class="fas fa-chevron-down cat-icon" aria-hidden="true"></i>';
     html += '<span class="cat-name"><i class="fas ' + icon + '" style="margin-right:7px;color:var(--ac-3)" aria-hidden="true"></i>' + esc(name) + '</span>';
     html += '<span class="cat-count">' + children.length + ' ' + channelWord(children.length) + '</span>';
+    if (_canHide && catId) html += '<button type="button" class="icon-btn ch-hide-btn cat-hide-btn" data-hide-id="' + catId + '" data-kind="category" title="' + (catHidden ? 'Вернуть категорию' : 'Скрыть категорию') + '"><i class="fas ' + (catHidden ? 'fa-eye' : 'fa-eye-slash') + '"></i></button>';
     html += '</div>';
     html += '<div class="cat-channels"><div class="cat-channels-inner">';
     if (children.length) children.forEach(function (channel) { html += renderRow(channel, key === '__root__'); });
@@ -562,6 +585,9 @@ textarea.field-input{resize:vertical;min-height:52px}
         String(a.name || '').localeCompare(String(b.name || ''), 'ru');
     };
     var channels = allChannels.filter(function (c) { return c.type !== 'category'; }).sort(byPos);
+    if (!showHidden) channels = channels.filter(function (c) { return !hiddenChs[c.id]; });
+    var hiddenCatSet = {};
+    Object.keys(hiddenCats).forEach(function (k) { hiddenCatSet[k] = true; });
     var visible = channels.filter(function (c) {
       if (!q) return true;
       return (c.name && c.name.toLowerCase().indexOf(q) !== -1) ||
@@ -575,6 +601,8 @@ textarea.field-input{resize:vertical;min-height:52px}
       if (!visible.length) html = '<div class="ch-empty"><i class="fas fa-search"></i><p>«' + esc(filter) + '» — ничего не найдено.</p></div>';
     } else {
       var categories = allChannels.filter(function (c) { return c.type === 'category'; }).sort(byPos);
+      _catIds = {};
+      categories.forEach(function (cat) { _catIds[cat.name] = String(cat.id); });
       var groups = [];
       var knownCategories = {};
       categories.forEach(function (category) { knownCategories[category.name] = true; });
@@ -582,6 +610,8 @@ textarea.field-input{resize:vertical;min-height:52px}
       var orphaned = channels.filter(function (c) { return c.category && !knownCategories[c.category]; });
       if (root.length) groups.push({ key: '__root__', name: 'Без категории', icon: 'fa-inbox', children: root });
       categories.forEach(function (category) {
+        var cHidden = !!(hiddenCats[String(category.id)] || hiddenCats[category.name]);
+        if (!showHidden && cHidden) return;
         groups.push({
           key: category.name,
           name: category.name,
@@ -724,6 +754,12 @@ textarea.field-input{resize:vertical;min-height:52px}
         if (live && fingerprint === lastFingerprint) return false;
         lastFingerprint = fingerprint;
         allChannels = nextChannels;
+        hiddenChs = {}; hiddenCats = {};
+        nextChannels.forEach(function (c) {
+          if (c.type === 'category') { if (c.hidden) hiddenCats[String(c.id)] = true; }
+          else if (c.hidden) hiddenChs[String(c.id)] = true;
+        });
+        paintHiddenCount();
         renderStats();
         populateCategorySelects();
         renderList($('ch-search').value);
@@ -1005,6 +1041,12 @@ textarea.field-input{resize:vertical;min-height:52px}
 
     var list = $('channel-list');
     list.addEventListener('click', function (e) {
+      var hideBtn = e.target.closest('[data-hide-id]');
+      if (hideBtn) {
+        e.stopPropagation();
+        toggleHide(hideBtn.dataset.hideId, hideBtn.dataset.kind);
+        return;
+      }
       var btn = e.target.closest('button[data-action]');
       if (btn) {
         e.stopPropagation();
@@ -1075,7 +1117,38 @@ textarea.field-input{resize:vertical;min-height:52px}
     });
   }
 
+  function paintHiddenCount() {
+    var el = $('chHiddenCount');
+    if (el) el.textContent = Object.keys(hiddenChs).length + Object.keys(hiddenCats).length;
+  }
+  function toggleHide(id, kind) {
+    if (!_canHide || !selectedGuild) return;
+    var isCat = kind === 'category';
+    var isHidden = isCat ? !!hiddenCats[String(id)] : !!hiddenChs[String(id)];
+    fetch('/api/guild/' + selectedGuild + '/channels-visibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id, kind: kind, hidden: !isHidden })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) { showToast(d.error || 'Не удалось изменить видимость', false); return; }
+      if (isCat) {
+        if (d.hidden) hiddenCats[String(id)] = true; else delete hiddenCats[String(id)];
+      } else {
+        if (d.hidden) hiddenChs[String(id)] = true; else delete hiddenChs[String(id)];
+      }
+      paintHiddenCount();
+      renderList($('ch-search').value);
+      showToast((isCat ? 'Категория' : 'Канал') + (d.hidden ? ' скрыт(а) из панели' : ' возвращён(а) в панель'), true);
+    }).catch(function () { showToast('Ошибка сети', false); });
+  }
   function init() {
+    if (_canHide && $('chShowHidden')) {
+      $('chShowHidden').addEventListener('click', function () {
+        showHidden = !showHidden;
+        this.classList.toggle('active', showHidden);
+        renderList($('ch-search').value);
+      });
+    }
     bindEvents();
     populateGuildSelect();
     // Живое обновление каждые 2.5 сек без повторного рендера неизменившихся данных.

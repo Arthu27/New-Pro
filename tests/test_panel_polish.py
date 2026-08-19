@@ -379,8 +379,54 @@ for _line in (proc.stdout or '').splitlines():
         n_demo = int(_line.strip())
 check(n_demo >= 10,
       f'API каналов в демо-режиме отдаёт структуру ({n_demo} шт.)')
-check('app.js?v=41' in base and 'style.css?v=94' in base,
-      'версии ассетов забумплены (94/41)')
+
+# ═══ 14. Скрытие каналов владельцем ════════════════════════════════════════
+print('== скрытие каналов ==')
+gadmin = open(os.path.join(ROOT, 'web', 'routes', 'guild_admin.py'), encoding='utf-8').read()
+check('channels-visibility' in gadmin and 'hidden_channels.json' in gadmin,
+      'API видимости каналов владельца в guild_admin.py')
+check("role_required ('owner')" in gadmin,
+      'смена видимости доступна только owner')
+ch_t = open(os.path.join(ROOT, 'web', 'templates', 'channels.html'), encoding='utf-8').read()
+check('chShowHidden' in ch_t and 'toggleHide' in ch_t and 'data-hide-id' in ch_t,
+      'страница каналов: кнопки скрытия и режим «показать скрытые»')
+check("role == 'owner'" in ch_t,
+      'кнопки скрытия рендерятся только для owner')
+chat_t = open(os.path.join(ROOT, 'web', 'templates', 'chat.html'), encoding='utf-8').read()
+check("!c.hidden" in chat_t,
+      'чат не показывает скрытые каналы')
+# Поведение API в демо-режиме (сабпроцесс): скрыть → hidden:true → вернуть
+hide_script = '''
+import os, sys, json
+os.environ["DEMO_MODE"] = "1"
+sys.path.insert(0, %r)
+from web.app import app
+c = app.test_client()
+def login(role):
+    with c.session_transaction() as s:
+        s["logged_in"] = True; s["username"] = "H" + role; s["role"] = role
+login("owner")
+r = c.post("/api/guild/987654321098765432/channels-visibility",
+           json={"id": "4003", "kind": "channel", "hidden": True})
+ok1 = r.status_code == 200 and r.get_json().get("success")
+d = c.get("/api/guild/987654321098765432/channels").get_json(silent=True) or []
+ch = next((x for x in d if str(x.get("id")) == "4003"), None) if isinstance(d, list) else None
+ok2 = ch is not None and ch.get("hidden") is True
+r = c.post("/api/guild/987654321098765432/channels-visibility",
+           json={"id": "4003", "kind": "channel", "hidden": False})
+ok3 = r.status_code == 200 and r.get_json().get("success")
+login("mod")
+r = c.post("/api/guild/987654321098765432/channels-visibility",
+           json={"id": "4003", "kind": "channel", "hidden": True})
+ok4 = r.status_code == 403
+print("OK" if (ok1 and ok2 and ok3 and ok4) else "BAD")
+''' % ROOT
+proc = subprocess.run([sys.executable, '-c', hide_script], capture_output=True,
+                      text=True, timeout=120, cwd=ROOT)
+check('OK' in (proc.stdout or ''),
+      'API: owner скрывает канал (hidden:true), возвращает обратно; модератору — 403')
+check('app.js?v=42' in base and 'style.css?v=95' in base,
+      'версии ассетов забумплены (95/42)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 import shutil
