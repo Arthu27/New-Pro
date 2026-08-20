@@ -40,6 +40,13 @@
 .lvl-ach { padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; transition: all 0.2s; }
 .lvl-ach:hover { transform: translateY(-2px); border-color: var(--ac-line); }
 .lvl-ach .icon { font-size: 28px; margin-bottom: 4px; }
+.lvl-ach .icon i { filter: drop-shadow(0 4px 8px rgba(0,0,0,.25)); }
+.lvl-ach .icon i.r-common { color: #94a3b8; }
+.lvl-ach .icon i.r-uncommon { color: var(--ok); }
+.lvl-ach .icon i.r-rare { color: #0ea5e9; }
+.lvl-ach .icon i.r-epic { color: #a78bfa; }
+.lvl-ach .icon i.r-legendary { color: #fbbf24; }
+.lvl-ach.unlocked .icon i.r-common { color: var(--ac-2); }
 .lvl-ach .name { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
 .lvl-ach .rarity { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
 .lvl-ach.unlocked { background: var(--ac-soft); border-color: var(--ac-line); }
@@ -259,10 +266,12 @@
         return;
       }
       const rarityEmoji = {common: '<i class="fas fa-circle" style="color:#94a3b8"></i>', uncommon: '<i class="fas fa-circle" style="color:var(--ok)"></i>', rare: '<i class="fas fa-circle" style="color:#0ea5e9"></i>', epic: '<i class="fas fa-circle" style="color:#7c3aed"></i>', legendary: '<i class="fas fa-circle" style="color:#fbbf24"></i>'};
+      const RARITY_ICONS = { common: 'fa-star', uncommon: 'fa-medal', rare: 'fa-gem', epic: 'fa-bolt', legendary: 'fa-dragon' };
+      function rarityIcon(r) { return RARITY_ICONS[r] || 'fa-star'; }
       grid.innerHTML = Object.entries(d.catalog).map(([id, info]) => {
         const unlocked = (d.unlocked || []).includes(id);
         return `<div class="lvl-ach ${unlocked ? 'unlocked' : ''}">
-          <div class="icon">${info.icon}</div>
+          <div class="icon"><i class="fas ${rarityIcon(info.rarity)} r-${esc(info.rarity)}"></i></div>
           <div class="name">${info.name}</div>
           <div class="rarity">${rarityEmoji[info.rarity]} ${info.rarity}</div>
         </div>`;

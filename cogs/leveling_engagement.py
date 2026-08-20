@@ -28,74 +28,74 @@ os .makedirs (DATA_DIR ,exist_ok =True )
 # ACHIEVEMENTS CATALOG (50+) 
 ACHIEVEMENTS ={
 # Milestone achievements
-"first_message":{"name":"Первые шаги","desc":"Отправить первое сообщение","icon":"","rarity":"common"},
-"messages_100":{"name":"Болтун","desc":"100 сообщений","icon":"","rarity":"common"},
-"messages_500":{"name":"Активист","desc":"500 сообщений","icon":"","rarity":"common"},
-"messages_1000":{"name":"Душа компании","desc":"1,000 сообщений","icon":"","rarity":"uncommon"},
-"messages_5000":{"name":"Легенда чата","desc":"5,000 сообщений","icon":"","rarity":"rare"},
-"messages_10000":{"name":"Миф сервера","desc":"10,000 сообщений","icon":"","rarity":"epic"},
-"messages_50000":{"name":"Бог дискорда","desc":"50,000 сообщений","icon":"","rarity":"legendary"},
+"first_message":{"name":"Первые шаги","desc":"Отправить первое сообщение","icon":"✉️","rarity":"common"},
+"messages_100":{"name":"Болтун","desc":"100 сообщений","icon":"💬","rarity":"common"},
+"messages_500":{"name":"Активист","desc":"500 сообщений","icon":"💬","rarity":"common"},
+"messages_1000":{"name":"Душа компании","desc":"1,000 сообщений","icon":"💬","rarity":"uncommon"},
+"messages_5000":{"name":"Легенда чата","desc":"5,000 сообщений","icon":"💬","rarity":"rare"},
+"messages_10000":{"name":"Миф сервера","desc":"10,000 сообщений","icon":"💬","rarity":"epic"},
+"messages_50000":{"name":"Бог дискорда","desc":"50,000 сообщений","icon":"💬","rarity":"legendary"},
 
 # Voice achievements
-"first_voice":{"name":"Голос","desc":"Зайти в голосовой канал","icon":"","rarity":"common"},
-"voice_1h":{"name":"Чат-компаньон","desc":"1 час в голосе","icon":"","rarity":"common"},
-"voice_10h":{"name":"Завсегдатай","desc":"10 часов в голосе","icon":"","rarity":"uncommon"},
-"voice_50h":{"name":"Радиоведущий","desc":"50 часов в голосе","icon":"","rarity":"rare"},
-"voice_100h":{"name":"Голосовой мастер","desc":"100 часов в голосе","icon":"","rarity":"epic"},
-"voice_500h":{"name":"DJ сервера","desc":"500 часов в голосе","icon":"","rarity":"legendary"},
+"first_voice":{"name":"Голос","desc":"Зайти в голосовой канал","icon":"🎙️","rarity":"common"},
+"voice_1h":{"name":"Чат-компаньон","desc":"1 час в голосе","icon":"🔊","rarity":"common"},
+"voice_10h":{"name":"Завсегдатай","desc":"10 часов в голосе","icon":"🔊","rarity":"uncommon"},
+"voice_50h":{"name":"Радиоведущий","desc":"50 часов в голосе","icon":"🔊","rarity":"rare"},
+"voice_100h":{"name":"Голосовой мастер","desc":"100 часов в голосе","icon":"🔊","rarity":"epic"},
+"voice_500h":{"name":"DJ сервера","desc":"500 часов в голосе","icon":"🔊","rarity":"legendary"},
 
 # Level achievements
-"level_5":{"name":"Новичок+","desc":"Достичь 5 уровня","icon":"","rarity":"common"},
-"level_10":{"name":"Участник","desc":"Достичь 10 уровня","icon":"","rarity":"common"},
-"level_25":{"name":"Ветеран","desc":"Достичь 25 уровня","icon":"","rarity":"uncommon"},
-"level_50":{"name":"Элита","desc":"Достичь 50 уровня","icon":"","rarity":"rare"},
-"level_75":{"name":"Магистр","desc":"Достичь 75 уровня","icon":"","rarity":"epic"},
-"level_100":{"name":"Легенда","desc":"Достичь 100 уровня","icon":"","rarity":"legendary"},
+"level_5":{"name":"Новичок+","desc":"Достичь 5 уровня","icon":"⭐","rarity":"common"},
+"level_10":{"name":"Участник","desc":"Достичь 10 уровня","icon":"⭐","rarity":"common"},
+"level_25":{"name":"Ветеран","desc":"Достичь 25 уровня","icon":"⭐","rarity":"uncommon"},
+"level_50":{"name":"Элита","desc":"Достичь 50 уровня","icon":"⭐","rarity":"rare"},
+"level_75":{"name":"Магистр","desc":"Достичь 75 уровня","icon":"⭐","rarity":"epic"},
+"level_100":{"name":"Легенда","desc":"Достичь 100 уровня","icon":"🏆","rarity":"legendary"},
 
 # Streak achievements
-"streak_3":{"name":"Регулярный","desc":"3 дня подряд активности","icon":"","rarity":"common"},
-"streak_7":{"name":"Постоянный","desc":"7 дней подряд","icon":"","rarity":"uncommon"},
-"streak_14":{"name":"Зависимый","desc":"14 дней подряд","icon":"","rarity":"rare"},
-"streak_30":{"name":"Фанат сервера","desc":"30 дней подряд","icon":"","rarity":"epic"},
-"streak_100":{"name":"Житель сервера","desc":"100 дней подряд","icon":"","rarity":"legendary"},
+"streak_3":{"name":"Регулярный","desc":"3 дня подряд активности","icon":"🔥","rarity":"common"},
+"streak_7":{"name":"Постоянный","desc":"7 дней подряд","icon":"🔥","rarity":"uncommon"},
+"streak_14":{"name":"Зависимый","desc":"14 дней подряд","icon":"🔥","rarity":"rare"},
+"streak_30":{"name":"Фанат сервера","desc":"30 дней подряд","icon":"🔥","rarity":"epic"},
+"streak_100":{"name":"Житель сервера","desc":"100 дней подряд","icon":"🔥","rarity":"legendary"},
 
 # Social achievements
-"first_invite":{"name":"Амбассадор","desc":"Пригласить первого друга","icon":"","rarity":"common"},
-"invites_5":{"name":"Вербовщик","desc":"5 приглашений","icon":"","rarity":"common"},
-"invites_25":{"name":"Маркетолог","desc":"25 приглашений","icon":"","rarity":"uncommon"},
-"invites_100":{"name":"Магнит для людей","desc":"100 приглашений","icon":"","rarity":"rare"},
-"invites_500":{"name":"Рекрутер","desc":"500 приглашений","icon":"","rarity":"legendary"},
+"first_invite":{"name":"Амбассадор","desc":"Пригласить первого друга","icon":"🤝","rarity":"common"},
+"invites_5":{"name":"Вербовщик","desc":"5 приглашений","icon":"🤝","rarity":"common"},
+"invites_25":{"name":"Маркетолог","desc":"25 приглашений","icon":"🤝","rarity":"uncommon"},
+"invites_100":{"name":"Магнит для людей","desc":"100 приглашений","icon":"🤝","rarity":"rare"},
+"invites_500":{"name":"Рекрутер","desc":"500 приглашений","icon":"🤝","rarity":"legendary"},
 
 # Moderation achievements
-"first_warn":{"name":"Под наблюдением","desc":"Получить первое предупреждение","icon":"","rarity":"common"},
-"no_warn_year":{"name":"Безупречный","desc":"Год без предупреждений","icon":"","rarity":"epic"},
+"first_warn":{"name":"Под наблюдением","desc":"Получить первое предупреждение","icon":"⚠️","rarity":"common"},
+"no_warn_year":{"name":"Безупречный","desc":"Год без предупреждений","icon":"🛡️","rarity":"epic"},
 
 # Fun achievements
-"first_reaction":{"name":"Эмоциональный","desc":"Поставить первую реакцию","icon":"","rarity":"common"},
-"night_owl":{"name":"Сова","desc":"Написать сообщение после 3 ночи","icon":"","rarity":"uncommon"},
-"early_bird":{"name":"Жаворонок","desc":"Написать сообщение до 6 утра","icon":"","rarity":"uncommon"},
-"birthday":{"name":"Именинник","desc":"Отпраздновать день рождения","icon":"","rarity":"uncommon"},
+"first_reaction":{"name":"Эмоциональный","desc":"Поставить первую реакцию","icon":"❤️","rarity":"common"},
+"night_owl":{"name":"Сова","desc":"Написать сообщение после 3 ночи","icon":"🦉","rarity":"uncommon"},
+"early_bird":{"name":"Жаворонок","desc":"Написать сообщение до 6 утра","icon":"🐦","rarity":"uncommon"},
+"birthday":{"name":"Именинник","desc":"Отпраздновать день рождения","icon":"🎂","rarity":"uncommon"},
 
 # Special achievements
-"first_command":{"name":"Командующий","desc":"Использовать первую команду","icon":"","rarity":"common"},
-"help_seeker":{"name":"Любопытный","desc":"Открыть /help","icon":"","rarity":"common"},
-"pollster":{"name":"Демократ","desc":"Участвовать в опросе","icon":"","rarity":"common"},
-"trivia_win":{"name":"Эрудит","desc":"Выиграть в викторине","icon":"","rarity":"uncommon"},
-"giveaway_winner":{"name":"Счастливчик","desc":"Выиграть розыгрыш","icon":"","rarity":"uncommon"},
-"economy_rich":{"name":"Богач","desc":"Заработать 10,000 монет","icon":"","rarity":"rare"},
-"ticket_creator":{"name":"Инициатор","desc":"Открыть первый тикет","icon":"","rarity":"common"},
-"afk_artist":{"name":"Творец AFK","desc":"Побывать в AFK 10 раз","icon":"","rarity":"common"},
+"first_command":{"name":"Командующий","desc":"Использовать первую команду","icon":"🤖","rarity":"common"},
+"help_seeker":{"name":"Любопытный","desc":"Открыть /help","icon":"❓","rarity":"common"},
+"pollster":{"name":"Демократ","desc":"Участвовать в опросе","icon":"🗳️","rarity":"common"},
+"trivia_win":{"name":"Эрудит","desc":"Выиграть в викторине","icon":"🧠","rarity":"uncommon"},
+"giveaway_winner":{"name":"Счастливчик","desc":"Выиграть розыгрыш","icon":"🎁","rarity":"uncommon"},
+"economy_rich":{"name":"Богач","desc":"Заработать 10,000 монет","icon":"💰","rarity":"rare"},
+"ticket_creator":{"name":"Инициатор","desc":"Открыть первый тикет","icon":"🎫","rarity":"common"},
+"afk_artist":{"name":"Творец AFK","desc":"Побывать в AFK 10 раз","icon":"😴","rarity":"common"},
 
 # Event achievements
-"event_attendee":{"name":"Участник события","desc":"Принять участие в ивенте","icon":"","rarity":"common"},
-"event_host":{"name":"Организатор","desc":"Создать событие","icon":"","rarity":"uncommon"},
-"first_boost":{"name":"Бустер","desc":"Забустить сервер","icon":"","rarity":"rare"},
-"boost_3":{"name":"Мега-бустер","desc":"3 активных буста","icon":"","rarity":"epic"},
+"event_attendee":{"name":"Участник события","desc":"Принять участие в ивенте","icon":"🎉","rarity":"common"},
+"event_host":{"name":"Организатор","desc":"Создать событие","icon":"📅","rarity":"uncommon"},
+"first_boost":{"name":"Бустер","desc":"Забустить сервер","icon":"🚀","rarity":"rare"},
+"boost_3":{"name":"Мега-бустер","desc":"3 активных буста","icon":"💎","rarity":"epic"},
 
 # Time-based
-"member_30d":{"name":"Адаптировался","desc":"30 дней на сервере","icon":"","rarity":"common"},
-"member_1y":{"name":"Старожил","desc":"1 год на сервере","icon":"","rarity":"epic"},
-"member_3y":{"name":"Памятник","desc":"3 года на сервере","icon":"","rarity":"legendary"},
+"member_30d":{"name":"Адаптировался","desc":"30 дней на сервере","icon":"🏠","rarity":"common"},
+"member_1y":{"name":"Старожил","desc":"1 год на сервере","icon":"🎖️","rarity":"epic"},
+"member_3y":{"name":"Памятник","desc":"3 года на сервере","icon":"🏛️","rarity":"legendary"},
 }
 
 # XP curve: level n requires n² * 100 XP

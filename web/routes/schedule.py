@@ -22,6 +22,60 @@ def register(ctx):
 
 
     # ── SCHEDULER (расписание анонсов) ──────────────────────────
+    def _demo_sched_file():
+        return f"data/schedule_demo_{session.get('selected_guild') or MAIN_GUILD_ID}.json"
+
+    def _demo_sched_seed():
+        """Стартовый анонс для превью: сегодня/завтра в 20:00."""
+        import datetime as _dt
+        _now = _dt.datetime.now()
+        _t = _now.replace(hour=20, minute=0, second=0, microsecond=0)
+        if _t <= _now:
+            _t += _dt.timedelta(days=1)
+        return [{
+            'id': 1,
+            'channel_id': 1002,
+            'content': 'Добро пожаловать на сервер! Читай правила в #rules.',
+            'embed': {},
+            'repeat': 'once',
+            'time': '20:00',
+            'weekday': 0,
+            'tz_offset': 3,
+            'enabled': True,
+            'next_ts': _t.timestamp(),
+        }]
+
+    def _demo_sched_load():
+        f = _demo_sched_file()
+        if os.path.exists(f):
+            try:
+                with open(f, 'r', encoding='utf-8') as fp:
+                    items = json.load(fp)
+                if isinstance(items, list):
+                    return items
+            except Exception as _ex:
+                _log.debug("_demo_sched_load(): подавлено: %s", _ex)
+        items = _demo_sched_seed()
+        _demo_sched_store(items)
+        return items
+
+    def _demo_sched_store(items):
+        try:
+            with open(_demo_sched_file(), 'w', encoding='utf-8') as fp:
+                json.dump(items, fp, ensure_ascii=False, indent=2)
+        except Exception as _ex:
+            _log.debug("_demo_sched_store(): подавлено: %s", _ex)
+
+    def _demo_sched_next(item):
+        """Дата следующего запуска в формате панели («20.08 20:00»)."""
+        import datetime as _dt
+        ts = item.get('next_ts') or 0
+        if not ts:
+            return '—'
+        tz = int(item.get('tz_offset', 3) or 0)
+        d = _dt.datetime.fromtimestamp(ts, tz=_dt.timezone.utc) + _dt.timedelta(hours=tz)
+        return d.strftime('%d.%m %H:%M')
+
     def _sched_ctx():
         import web.app as _app
         bot = _app.bot_instance
@@ -50,8 +104,7 @@ def register(ctx):
         if not cog or not guild:
             import web.app as _app
             if _app._demo_mode():
-                # демо: каналы из демо-структуры + пара примеров анонсов
-                demo_chs = []
+                # демо: хранилище анонсов работает локально — список, пауза, удаление живые
                 try:
                     with open('data/demo_channels.json', 'r', encoding='utf-8') as fp:
                         demo = json.load(fp)
@@ -59,20 +112,24 @@ def register(ctx):
                                 for c in demo if c.get('type') == 'text'][:80]
                 except Exception as _ex:
                     _log.debug("api_schedule_state() demo: подавлено: %s", _ex)
-                return jsonify({
-                    'ok': True,
-                    'channels': demo_chs,
-                    'items': [{
-                        'id': 'demo-1',
-                        'channel_id': demo_chs[0]['id'] if demo_chs else '1002',
-                        'content': 'Добро пожаловать! Читай правила в #инфо.',
-                        'embed_title': '',
-                        'repeat': 'once', 'repeat_label': 'Один раз',
-                        'time': '20:00', 'weekday': 0, 'weekday_label': '',
-                        'tz_offset': 3, 'enabled': True,
-                    }],
-                    'tz_offset': 3,
-                })
+                    demo_chs = []
+                items = []
+                for it in _demo_sched_load():
+                    items.append({
+                        'id': it['id'],
+                        'channel_id': str(it.get('channel_id', '')),
+                        'content': (it.get('content') or '')[:400],
+                        'embed_title': (it.get('embed') or {}).get('title', ''),
+                        'repeat': it.get('repeat', 'once'),
+                        'repeat_label': {'once': 'Один раз', 'daily': 'Каждый день', 'weekly': 'Каждую неделю'}.get(it.get('repeat'), it.get('repeat')),
+                        'time': it.get('time', '12:00'),
+                        'weekday': it.get('weekday', 0),
+                        'weekday_label': ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'][it.get('weekday', 0)] if it.get('repeat') == 'weekly' else '',
+                        'tz_offset': it.get('tz_offset', 3),
+                        'enabled': bool(it.get('enabled', True)),
+                        'next': _demo_sched_next(it),
+                    })
+                return jsonify({'ok': True, 'channels': demo_chs, 'items': items, 'tz_offset': 3})
             return jsonify({'ok': False, 'error': 'Модуль офлайн (бот не запущен)'})
         from cogs.scheduler import REPEAT_LABEL, WEEKDAYS_RU, human_next
         channels = [{'id': str(c.id), 'name': c.name} for c in
@@ -104,6 +161,38 @@ def register(ctx):
     def api_schedule_save():
         bot, cog, guild = _sched_ctx()
         if not cog or not guild:
+            import web.app as _app
+            if _app._demo_mode():
+                import datetime as _dt
+                data = request.get_json(silent=True) or {}
+                content = str(data.get('content', '') or '').strip()
+                etitle = str(data.get('embed_title', '') or '').strip()
+                edesc = str(data.get('embed_desc', '') or '').strip()
+                if not content and not etitle and not edesc:
+                    return jsonify({'ok': False, 'error': 'Пустой анонс — текст или embed обязателен'}), 400
+                repeat = data.get('repeat', 'once')
+                if repeat not in ('once', 'daily', 'weekly'):
+                    return jsonify({'ok': False, 'error': 'repeat: once|daily|weekly'}), 400
+                items = _demo_sched_load()
+                new_id = max([it.get('id', 0) for it in items] + [0]) + 1
+                _now = _dt.datetime.now()
+                _t = _now.replace(hour=20, minute=0, second=0, microsecond=0)
+                if _t <= _now:
+                    _t += _dt.timedelta(days=1)
+                items.append({
+                    'id': new_id,
+                    'channel_id': int(data.get('channel_id', 0) or 0),
+                    'content': content[:400],
+                    'embed': ({'title': etitle[:240], 'description': edesc[:1800]} if (etitle or edesc) else {}),
+                    'repeat': repeat,
+                    'time': str(data.get('time', '20:00')),
+                    'weekday': int(data.get('weekday', 0) or 0),
+                    'tz_offset': int(data.get('tz_offset', 3) or 3),
+                    'enabled': True,
+                    'next_ts': _t.timestamp(),
+                })
+                _demo_sched_store(items)
+                return jsonify({'ok': True, 'id': new_id})
             return jsonify({'ok': False, 'error': 'Модуль офлайн'}), 503
         from cogs.scheduler import parse_time_hhmm
         data = request.get_json(silent=True) or {}
@@ -151,6 +240,20 @@ def register(ctx):
     def api_schedule_toggle():
         bot, cog, guild = _sched_ctx()
         if not cog or not guild:
+            import web.app as _app
+            if _app._demo_mode():
+                data = request.get_json(silent=True) or {}
+                items = _demo_sched_load()
+                try:
+                    aid = int(data.get('id', 0) or 0)
+                except Exception:
+                    aid = 0
+                for it in items:
+                    if it.get('id') == aid:
+                        it['enabled'] = not bool(it.get('enabled', True))
+                        _demo_sched_store(items)
+                        return jsonify({'ok': True, 'enabled': bool(it['enabled'])})
+                return jsonify({'ok': False, 'error': 'Анонс не найден'}), 404
             return jsonify({'ok': False, 'error': 'Модуль офлайн'}), 503
         data = request.get_json(silent=True) or {}
         it = cog.toggle_item(guild.id, int(data.get('id', 0) or 0))
@@ -165,6 +268,19 @@ def register(ctx):
     def api_schedule_delete():
         bot, cog, guild = _sched_ctx()
         if not cog or not guild:
+            import web.app as _app
+            if _app._demo_mode():
+                data = request.get_json(silent=True) or {}
+                try:
+                    aid = int(data.get('id', 0) or 0)
+                except Exception:
+                    aid = 0
+                items = _demo_sched_load()
+                kept = [it for it in items if it.get('id') != aid]
+                if len(kept) == len(items):
+                    return jsonify({'ok': False, 'error': 'Анонс не найден'}), 404
+                _demo_sched_store(kept)
+                return jsonify({'ok': True})
             return jsonify({'ok': False, 'error': 'Модуль офлайн'}), 503
         data = request.get_json(silent=True) or {}
         if cog.remove_item(guild.id, int(data.get('id', 0) or 0)):
@@ -178,6 +294,16 @@ def register(ctx):
     def api_schedule_test():
         bot, cog, guild = _sched_ctx()
         if not cog or not guild:
+            import web.app as _app
+            if _app._demo_mode():
+                data = request.get_json(silent=True) or {}
+                try:
+                    aid = int(data.get('id', 0) or 0)
+                except Exception:
+                    aid = 0
+                if not any(it.get('id') == aid for it in _demo_sched_load()):
+                    return jsonify({'ok': False, 'error': 'Анонс не найден'}), 404
+                return jsonify({'ok': True})
             return jsonify({'ok': False, 'error': 'Модуль офлайн'}), 503
         data = request.get_json(silent=True) or {}
         it = cog.get_item(guild.id, int(data.get('id', 0) or 0))

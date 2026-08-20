@@ -397,6 +397,32 @@ def register(ctx):
         from flask import request as _req
         name = _req.args.get('name', '')
         body = channel_drill(load_message_events(guild_id), name)
+        # Демо-режим: если событий нет (бот офлайн), детализация канала
+        # заполняется правдоподобными данными — график и авторы живые
+        import web.app as _app
+        if _app._demo_mode() and not body.get('total'):
+            seed = 0
+            for ch in (name or ''):
+                seed = (seed * 31 + ord(ch)) % 100000
+            total = 220 + seed % 1200
+            days_row = []
+            today = date.today()
+            for i in range(29, -1, -1):
+                day = (today - timedelta(days=i)).isoformat()
+                base = total // 30
+                wobble = (seed + i * 37) % max(1, base * 2)
+                days_row.append((day, max(0, base - (base // 3) + wobble)))
+            top = max(1, total // 220)
+            authors = [('sonya.staff', top + 18), ('ecobar', top + 9),
+                       ('dragon', top + 4), ('hzdio', max(1, top - 2)),
+                       ('oberaru', max(1, top - 5))]
+            body = {
+                'name': name,
+                'total': total,
+                'days': days_row,
+                'top_authors': authors[:5],
+                'unique_authors': 5,
+            }
         body['success'] = True
         return jsonify(body)
 

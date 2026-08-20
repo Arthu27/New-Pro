@@ -1355,11 +1355,32 @@ check("'Главный сервер'" in _apg_gi and "members':1247" in _apg_gi,
 check('cur = guilds.length ? guilds[0].id : (cur || \'\')' in open(os.path.join(ROOT, 'web', 'templates', 'leveling.html'), encoding='utf-8').read(),
       'leveling: пустой список серверов не обнуляет выбранный сервер')
 _sched = open(os.path.join(ROOT, 'web', 'routes', 'schedule.py'), encoding='utf-8').read()
-check('demo-1' in _sched and 'demo_channels.json' in _sched,
+check('_demo_sched_seed' in _sched and 'demo_channels.json' in _sched,
       'routes schedule: демо-ветка отдаёт каналы и пример анонса (выбор канала работает в превью)')
 _comm = open(os.path.join(ROOT, 'web', 'routes', 'community.py'), encoding='utf-8').read()
 check('top_channels' in _comm.split('api_guild_analytics')[1][:3000] and 'Демо-режим: если статистика пуста' in _comm,
       'routes analytics: в демо топ каналов заполняется из демо-структуры (детализация по каналам живая)')
+# ═══ 37п. Переделка последних правок: визуальное качество демо ═══════════════
+print('== переделка: расписание, ачивки, детализация ==')
+check("'next': _demo_sched_next(it)" in _sched,
+      'расписание: у элементов есть «следующая отправка» (не «undefined»)')
+check("_demo_sched_load" in _sched and "_demo_sched_store" in _sched and "schedule_demo_" in _sched,
+      'расписание: демо-хранилище — сохранение, пауза и удаление работают в превью')
+check("'id': it['id']" in _sched and "'channel_id': str(it.get('channel_id', ''))" in _sched,
+      'расписание: числовые id (кнопки пауза/тест/удаление не ломаются)')
+_apd = open(os.path.join(ROOT, 'web', 'routes', 'analytics_plus.py'), encoding='utf-8').read()
+check('Демо-режим: если событий нет' in _apd and "body['success'] = True" in _apd.split('channel-drill')[1][:2500],
+      'аналитика: детализация канала в демо отдаёт график и авторов (не «в канале тихо»)')
+_lc = open(os.path.join(ROOT, 'cogs', 'leveling_engagement.py'), encoding='utf-8').read()
+check('"icon":""' not in _lc,
+      'ког левелинга: у всех ачивок есть иконки (Discord-эмбеды не пустые)')
+_lva2 = open(os.path.join(ROOT, 'web', 'templates', 'leveling_admin.html'), encoding='utf-8').read()
+check('RARITY_ICONS' in _lva2 and 'fa-dragon' in _lva2 and 'r-legendary' in _lva2,
+      'leveling-admin: ачивки с FA-иконками по редкости (нет пустых квадратов)')
+check('rarityEmoji' in _lva2 and 'rarityIcon(info.rarity)' in _lva2,
+      'leveling-admin: индикатор редкости и иконка определены (карточки рендерятся)')
+check('.lvl-ach .icon i.r-legendary' in _lva2 and 'filter: drop-shadow' in _lva2,
+      'leveling-admin: цвета иконок по редкости с мягкой тенью')
 
 # ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')
