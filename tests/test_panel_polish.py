@@ -1061,8 +1061,16 @@ check('.w-dragon::after' in w11 and 'wGloss' in w11,
       'welcome: глянцевый блик пробегает по плитке дракона')
 check('.w-dragon-floor' in w11 and 'wFloor' in w11,
       'welcome: светящийся пол под драконом дышит в такт полёту')
-check('.w-dragon img' in w11 and '122px' in w11.split('.w-dragon img')[1][:400],
-      'welcome: дракон в hero стал крупнее (122px)')
+check('.w-dragon img' in w11 and '112px' in w11.split('.w-dragon img')[1][:400],
+      'welcome: дракон в hero крупный, но компактный (112px)')
+check('116px 20px 54px' in w11,
+      'welcome: hero ужат — меньше пустого сверху и снизу надписи')
+check('margin: 14px 0 10px' in w11 and '0 auto 14px' in w11,
+      'welcome: отступы вокруг заголовка и описания (характеристики) уменьшены')
+check('margin: 0 auto 20px' in w11 and 'margin: 22px auto 0' in w11,
+      'welcome: поиск и статистика прижаты — нет пустых провалов')
+check('setTimeout(then, 1800)' in w11,
+      'welcome: пауза между фразами короче — надпись всегда живая')
 check('wDragonPar' in w11 and 'requestAnimationFrame' in w11,
       'welcome: параллакс дракона за курсором (rAF, плавный)')
 check('.w-nav .brand img' in w11 and 'dragonBreath' in w11.split('.w-nav .brand img')[1][:600],
