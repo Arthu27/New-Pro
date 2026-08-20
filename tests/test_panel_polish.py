@@ -1190,6 +1190,20 @@ check('cubic-bezier(.34, 1.3, .64, 1)' in lg2.split('.tab-slider')[1][:500] and 
       'login: слайдер вкладок переезжает мягкой пружиной и вспыхивает')
 check('.tab-out-l' in lg2.split('prefers-reduced-motion')[1][:1000],
       'login: слайды вкладок отключены при reduced-motion')
+# ═══ 37ж. Login: редизайн 3 — компактная премиальная карточка ═══════════════
+print('== login: редизайн 3 ==')
+lg3 = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
+check('lg-card-zone' in lg3 and 'lg-glow' in lg3,
+      'login: структура «одна карточка» с мягким свечением за ней')
+check('.lg-dragon-stage' in lg3 and 'top: 0; left: 50%' in lg3.split('.lg-dragon-stage {')[1][:220],
+      'login: медальон дракона парит над кромкой карточки (не внутри, не сверху страницей)')
+check('body::after' in lg3 and 'feTurbulence' in lg3,
+      'login: лёгкая плёнка-зерно для глубины фона (статичная, без нагрузки)')
+check('auth-main { padding: 48px' in lg3,
+      'login: контент карточки освобождает место под парящим медальоном')
+check('max-width: 420px' in lg3 and 'padding: 52px 20px 36px' in lg3,
+      'login: компактная колонна — всё помещается в один экран без скролла')
+
 check('swap-out' in w11 and 'swap-in' in w11 and 'wTitleOut' in w11 and 'wTitleIn' in w11,
       'welcome: смена фраз — старая растворяется, новая вплывает')
 _wto = w11.split('@keyframes wTitleOut')[1].split('}')[0]
