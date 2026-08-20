@@ -128,6 +128,17 @@ login('uye')
 r = client.get('/logs/export')
 check(r.status_code in (302, 403), f'uye не пускают ({r.status_code})')
 login('owner')
+# Панельный роут фильтрует от реального «сейчас» (в отличие от unit-проверок
+# с фиксированным NOW): обновляем метки событий, чтобы окно «7 дней» не
+# «съедало» warn по мере отдаления календарного дня.
+_panel_now = datetime.now(UTC)
+_panel_events = []
+for _src, _d in zip(EVENTS, (1, 3, 9, 40)):
+    _item = dict(_src)
+    _item['timestamp'] = (_panel_now - timedelta(days=_d)).isoformat()
+    _panel_events.append(_item)
+json.dump({'777': _panel_events, '888': [dict(EVENTS[0])]},
+          open('data/audit_log.json', 'w', encoding='utf-8'), ensure_ascii=False)
 r = client.get('/logs/export?days=30')
 body = r.get_data(as_text=True)
 check(r.status_code == 200, 'выгрузка отдаётся 200')

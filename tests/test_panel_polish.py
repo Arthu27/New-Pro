@@ -873,8 +873,8 @@ check('ArrowDown' in lg and 'scrollIntoView({ block: \'nearest\' })' in lg,
       'логин: подсказки автодополнения управляются стрелками и Enter')
 check('window.qualitySetLoading = window.qualitySetLoading || function' in lg,
       'логин: собственный спиннер кнопок (PIN не падает без app.js)')
-check('meteorNext' in lg and 'now - last < 16' in lg,
-      'логин: звёзды на 60 fps и редкие метеоры')
+check('meteorNext' in lg and 'var target = 16' in lg and 'ema' in lg,
+      'логин: звёзды адаптивно 60/30 fps и редкие метеоры')
 check('.auth-side h1 .grad' in lg.split('prefers-reduced-motion')[1][:800]
       and '.auth-card, .auth-side, .auth-main, .auth-feats li' in lg.split('prefers-reduced-motion')[1][:800],
       'логин: новые анимации выключены при reduced-motion')
@@ -1211,10 +1211,22 @@ check('height: 48px' in lg3 and 'border-radius: 12px' in lg3,
       'login: поля выше и мягче (48px, радиус 12)')
 check('height: 50px' in lg3.split('.auth-btn {')[1][:300],
       'login: кнопка входа крупная и ровная (50px)')
-check('border-radius: 24px' in lg3.split('.auth-card {')[1][:300],
+check('border-radius: 24px' in lg3.split('.auth-card {')[1][:520],
       'login: карточка с премиальным радиусом 24')
 check('font-size: 23px' in lg3.split('.auth-side h1 {')[1][:300],
       'login: заголовок крупнее (23px)')
+# ═══ 37з. Login: FPS — стекло и аврора без GPU-блюра ════════════════════════
+print('== login: FPS ==')
+check('backdrop-filter' not in lg3,
+      'login: backdrop-blur полностью убран (блюр над живым канвасом = 15 fps)')
+check('blur(52px)' not in lg3 and 'blur(22px)' not in lg3 and 'rotate(360deg)' not in lg3.split('@keyframes lgAurora')[1].split('}')[0],
+      'login: аврора без гигантского блюра и без вечного вращения (только дыхание прозрачности)')
+check('radial-gradient(circle, rgba(99, 102, 241, .11)' in lg3 and 'from { opacity: .4; }' in lg3,
+      'login: аврора — статичные мягкие радиальные пятна, дешёвые для GPU')
+check('rgba(13, 16, 25, .88)' in lg3,
+      'login: карточка — стекло на полупрозрачности без фильтров')
+check('var target = 16' in lg3 and 'ema > 30 ? 34 : 16' in lg3,
+      'login: канвас звёзд сам сбрасывается на 30 fps на слабых машинах')
 
 check('swap-out' in w11 and 'swap-in' in w11 and 'wTitleOut' in w11 and 'wTitleIn' in w11,
       'welcome: смена фраз — старая растворяется, новая вплывает')
