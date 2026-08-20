@@ -368,6 +368,7 @@
 .ch-empty{text-align:center;padding:44px 20px;color:var(--text-3)}
 .ch-empty i{font-size:38px;color:var(--text-4);display:block;margin-bottom:12px;opacity:.7}
 .ch-empty p{font-size:15px}
+.ch-empty .ch-empty-sub{font-size:12.5px;margin-top:6px;color:var(--text-3);opacity:.8}
 
 /* Детали одного выбранного канала */
 .ch-detail{position:sticky;top:82px;min-height:300px;margin:0;background:linear-gradient(145deg,color-mix(in srgb,var(--surface-2) 90%,var(--ac-soft)),var(--surface));border:1px solid var(--ac-line);border-radius:18px;padding:18px;box-shadow:0 14px 36px rgba(0,0,0,.22),inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent);overflow:hidden}
@@ -745,6 +746,12 @@ textarea.field-input{resize:vertical;min-height:52px}
         return r.json();
       })
       .then(function (data) {
+        /* API может вернуть {error, channels:[]} — показываем причину, а не пустоту */
+        if (data && !Array.isArray(data) && data.error) {
+          if (!live) $('channel-list').innerHTML =
+            '<div class="ch-empty"><i class="fas fa-triangle-exclamation"></i><p>' + esc(data.error) + '</p><p class="ch-empty-sub">Проверьте, что бот онлайн и состоит на этом сервере.</p></div>';
+          return false;
+        }
         var nextChannels = Array.isArray(data) ? data : (data.channels || []);
         var fingerprint = JSON.stringify(nextChannels);
         if (live && fingerprint === lastFingerprint) return false;

@@ -342,9 +342,24 @@
   'use strict';
   // Load config
   function loadConfig() {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
-      document.getElementById('masterSwitch').classList.toggle('on', cfg.enabled);
-      document.getElementById('masterToggle').classList.toggle('active', cfg.enabled);
+    fetch('/api/ai-mod/config').then(r => r.json()).then(function (raw) {
+      /* модуль может быть офлайн или конфиг старого формата:
+         никогда не роняем страницу, а показываем честный статус */
+      if (!raw || raw.error || typeof raw.enabled === 'undefined') {
+        var badge = document.getElementById('statusBadge');
+        if (badge) { badge.textContent = 'НЕДОСТУПНО'; badge.className = 'badge badge-err'; }
+        var hs = document.getElementById('heroStatus');
+        if (hs) hs.textContent = 'Модуль недоступен';
+        var hd = document.getElementById('heroDot');
+        if (hd) hd.className = 'dot err';
+        return;
+      }
+      var cfg = raw;
+      var esc = cfg.escalation || {};
+      var langs = Array.isArray(cfg.languages) ? cfg.languages : ['ru', 'tr', 'en'];
+      var auto = cfg.auto_actions || {};
+      document.getElementById('masterSwitch').classList.toggle('on', !!cfg.enabled);
+      document.getElementById('masterToggle').classList.toggle('active', !!cfg.enabled);
       document.getElementById('statusBadge').textContent = cfg.enabled ? 'ВКЛ' : 'ВЫКЛ';
       document.getElementById('statusBadge').className = 'badge ' + (cfg.enabled ? 'badge-ok' : 'badge-err');
       document.getElementById('heroStatus').textContent = cfg.enabled ? 'AI Активен' : 'AI Выключен';
@@ -352,23 +367,24 @@
       ['ru', 'tr', 'en'].forEach(l => {
         const sw = document.querySelector(`[data-switch="${l}"]`);
         const card = document.querySelector(`[data-lang="${l}"]`);
-        const on = cfg.languages.includes(l);
-        sw.classList.toggle('on', on);
-        card.classList.toggle('active', on);
+        const on = langs.indexOf(l) !== -1;
+        if (sw) sw.classList.toggle('on', on);
+        if (card) card.classList.toggle('active', on);
       });
       ['mild', 'moderate', 'severe', 'spam', 'discrimination'].forEach(s => {
         const card = document.querySelector(`[data-sev="${s}"]`);
-        card.classList.toggle('active', cfg.auto_actions[s] !== false);
+        if (card) card.classList.toggle('active', auto[s] !== false);
       });
-      const sens = Math.round((cfg.sensitivity || 0.7) * 100);
+      const sens = Math.round(((cfg.sensitivity != null ? cfg.sensitivity : 0.7)) * 100);
       document.getElementById('sensSlider').value = sens;
       document.getElementById('sensValue').textContent = sens + '%';
-      document.getElementById('escSwitch').classList.toggle('on', cfg.escalation.enabled);
-      document.getElementById('escToggle').classList.toggle('active', cfg.escalation.enabled);
-      document.getElementById('escBadge').textContent = cfg.escalation.enabled ? 'ВКЛ' : 'ВЫКЛ';
-      document.getElementById('escBadge').className = 'badge ' + (cfg.escalation.enabled ? 'badge-ok' : 'badge-err');
-      document.getElementById('escWindow').value = cfg.escalation.window_hours;
-      document.getElementById('escWarns').value = cfg.escalation.warn_to_mut_after;
+      document.getElementById('escSwitch').classList.toggle('on', !!esc.enabled);
+      document.getElementById('escToggle').classList.toggle('active', !!esc.enabled);
+      document.getElementById('escBadge').textContent = esc.enabled ? 'ВКЛ' : 'ВЫКЛ';
+      document.getElementById('escBadge').className = 'badge ' + (esc.enabled ? 'badge-ok' : 'badge-err');
+      /* значения с фолбэками: старые конфиги без этих полей больше не бросают RangeError */
+      document.getElementById('escWindow').value = esc.window_hours != null ? esc.window_hours : 24;
+      document.getElementById('escWarns').value = esc.warn_to_mut_after != null ? esc.warn_to_mut_after : 3;
     }).catch(e => console.error(e));
   }
   // Load stats
@@ -392,21 +408,26 @@
     saveConfig({enabled: newVal}).then(() => loadConfig());
   };
   window.toggleLang = function(l) {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
-      let langs = cfg.languages.slice();
+    fetch('/api/ai-mod/config').then(r => r.json()).then(function (cfg) {
+      if (!cfg || cfg.error) return;
+      let langs = Array.isArray(cfg.languages) ? cfg.languages.slice() : ['ru', 'tr', 'en'];
       const i = langs.indexOf(l);
       if (i >= 0) langs.splice(i, 1); else langs.push(l);
       saveConfig({languages: langs}).then(() => loadConfig());
     });
   };
   window.toggleSev = function(s) {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+    fetch('/api/ai-mod/config').then(r => r.json()).then(function (cfg) {
+      if (!cfg || cfg.error) return;
+      cfg.auto_actions = cfg.auto_actions || {};
       cfg.auto_actions[s] = !cfg.auto_actions[s];
       saveConfig({auto_actions: cfg.auto_actions}).then(() => loadConfig());
     });
   };
   window.toggleEsc = function() {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+    fetch('/api/ai-mod/config').then(r => r.json()).then(function (cfg) {
+      if (!cfg || cfg.error) return;
+      cfg.escalation = cfg.escalation || {};
       cfg.escalation.enabled = !cfg.escalation.enabled;
       saveConfig({escalation: cfg.escalation}).then(() => loadConfig());
     });

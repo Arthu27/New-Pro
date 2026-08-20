@@ -193,6 +193,25 @@ code, b = post('/api/guild/777/bulk-ban', {'role_id': 201})
 check(code == 200 and b.get('success') and b.get('count') == 1, f'bulk ban -> {code} {str(b)[:120]}')
 check(301 in guild.banned_members, 'бан применён')
 
+print('== устойчивость списка каналов ==')
+# один «битый» объект канала (как повреждённые данные Discord) не должен
+# ронять весь /api/guild/<gid>/channels — остальные каналы остаются в выдаче
+class BrokenChannel:
+    def __init__(self): self.id = 999
+    @property
+    def type(self): raise RuntimeError('boom: corrupted channel object')
+
+guild._channels[999] = BrokenChannel()
+r = client.get('/api/guild/777/channels')
+try: body = r.get_json()
+except Exception: body = None
+check(r.status_code == 200 and isinstance(body, list), f'битый канал не роняет список: {r.status_code} {str(body)[:80]}')
+check(isinstance(body, list) and any(c.get('id') == '101' for c in body),
+      'здоровые каналы остались в выдаче (битый пропущен)')
+check(isinstance(body, list) and not any(c.get('id') == '999' for c in body),
+      'битый канал действительно пропущен, а не сломал JSON')
+del guild._channels[999]
+
 fake_bot.loop.call_soon_threadsafe(fake_bot.loop.stop)
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

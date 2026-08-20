@@ -118,14 +118,29 @@ class AIModeration (commands .Cog ):
         return f"{DATA_DIR}/ai_mod_history_{guild_id}.json"
 
     def load_config (self ,guild_id ):
+        """Конфиг с дефолтами: сохранённый файл глубоко сливается с дефолтным.
+
+        Старые/устаревшие файлы конфигов без новых ключей (escalation и т.п.)
+        больше не отдают undefined-поля на фронт."""
         f =self ._config_file (guild_id )
+        cfg =self ._default_config ()
         if not os .path .exists (f ):
-            return self ._default_config ()
+            return cfg
         try :
             with open (f ,"r",encoding ="utf-8")as fp :
-                return json .load (fp )
+                stored =json .load (fp )
+            if not isinstance (stored ,dict ):
+                return cfg
+            def _merge (dst ,src ):
+                for k ,v in src .items ():
+                    if isinstance (v ,dict )and isinstance (dst .get (k ),dict ):
+                        _merge (dst [k ],v )
+                    else :
+                        dst [k ]=v
+            _merge (cfg ,stored )
+            return cfg
         except Exception :
-            return self ._default_config ()
+            return cfg
 
     def save_config (self ,guild_id ,config ):
         with open (self ._config_file (guild_id ),"w",encoding ="utf-8")as fp :

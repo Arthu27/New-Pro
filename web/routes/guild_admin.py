@@ -372,8 +372,8 @@ def register(ctx):
         }
 
         channels_data =[]
-        try :
-            for c in guild .channels :
+        for c in guild .channels :
+            try :
                 ch_type =type_map .get (c .type ,str (c .type ).split ('.')[-1 ])
                 # Подробная информация о канале — для детального отображения в панели
                 topic =''
@@ -427,9 +427,9 @@ def register(ctx):
                 'created_at':c .created_at .isoformat () if getattr (c ,'created_at',None )else None ,
                 'mention':getattr (c ,'mention','')
                 })
-        except Exception as e :
-            print (f'[WEB][ERR] channels error: {e}')
-            return jsonify ({'error':str (e ),'channels':[]})
+            except Exception as e :
+                # один проблемный канал не должен ронять весь список панели
+                print (f'[WEB][WARN] channels: канал {getattr(c, "id", "?")} пропущен: {e}')
 
         sorted_channels =sorted (channels_data ,key =lambda x :(x ['category_pos'],x ['position']))
         _annotate_hidden (guild_id ,sorted_channels )

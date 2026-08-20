@@ -11,6 +11,15 @@ from web.routes._common import (
     os, json, time, math, discord, datetime, timezone,
 )
 
+def _demo_cog():
+    """В демо-режиме детекция и конфиг работают без бота (AIModeration(None))."""
+    import web.app as _app
+    if not _app._demo_mode():
+        return None
+    from cogs.ai_moderation import AIModeration
+    return AIModeration(None)
+
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -27,6 +36,20 @@ def register(ctx):
     @role_required ('admin')
     def api_ai_mod_config ():
         import web .app as _app ;bot =_app .bot_instance 
+        demo_cog =_demo_cog ()
+        if demo_cog is not None :
+            guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
+            if request .method =='POST':
+                cfg =demo_cog .load_config (guild_id )
+                patch =request .get_json (silent =True )or {}
+                for k ,v in patch .items ():
+                    if isinstance (v ,dict )and k in cfg :
+                        cfg [k ].update (v )
+                    else :
+                        cfg [k ]=v 
+                demo_cog .save_config (guild_id ,cfg )
+                return jsonify ({'ok':True })
+            return jsonify (demo_cog .load_config (guild_id ))
         from cogs .ai_moderation import AIModeration 
         if not bot :
             return jsonify ({'error':'Бот офлайн'}),503 
@@ -51,13 +74,25 @@ def register(ctx):
     @login_required 
     def api_ai_mod_stats ():
         import web .app as _app ;bot =_app .bot_instance 
+        demo_cog =_demo_cog ()
+        guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
+        if demo_cog is not None :
+            history =demo_cog .load_history (guild_id )
+            if not history :
+                return jsonify ({
+                    'total':1284 ,
+                    'last_24h':37 ,
+                    'bans':12 ,
+                    'mutes':45 ,
+                    'kicks':9 ,
+                    'warns':214 ,
+                })
         from cogs .ai_moderation import AIModeration 
         if not bot :
             return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('AIModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         history =cog .load_history (guild_id )
         from collections import Counter 
         import time as _t 
@@ -78,16 +113,30 @@ def register(ctx):
     @role_required ('admin')
     def api_ai_mod_test ():
         import web .app as _app ;bot =_app .bot_instance 
+        demo_cog =_demo_cog ()
+        guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
+        d =request .get_json (silent =True )or {}
+        text =d .get ('text','')
+        if demo_cog is not None :
+            cfg =demo_cog .load_config (guild_id )
+            matches =demo_cog .detect_toxic (text ,cfg .get ('languages',['ru','tr','en']),cfg .get ('sensitivity',0.7 ))
+            if not matches :
+                return jsonify ({'clean':True })
+            severity_order =['mild','spam','moderate','discrimination','severe']
+            top =max (matches ,key =lambda m :severity_order .index (m [0 ]))
+            return jsonify ({
+            'clean':False ,
+            'severity':top [0 ],
+            'matches':len (matches ),
+            'patterns':[p [1 ]for p in matches ]
+            })
         from cogs .ai_moderation import AIModeration 
         if not bot :
             return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('AIModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         cfg =cog .load_config (guild_id )
-        d =request .get_json (silent =True )or {}
-        text =d .get ('text','')
         matches =cog .detect_toxic (text ,cfg .get ('languages',['ru','tr','en']),cfg .get ('sensitivity',0.7 ))
         if not matches :
             return jsonify ({'clean':True })

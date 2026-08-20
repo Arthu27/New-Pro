@@ -1253,6 +1253,27 @@ check('role-card' in pa and ':has(input:checked)' in pa and 'rc-check' in pa,
       'анкета: карточки ролей с галочкой выбора')
 check('.success-screen .check' in pa and 'okPulse' in pa,
       'анкета: экран успеха с пульсирующей галочкой')
+# ═══ 37к. Устойчивость: AI-модерация и каналы ═══════════════════════════════
+print('== устойчивость: ai-модерация и каналы ==')
+_aim = open(os.path.join(ROOT, 'web', 'templates', 'ai_moderation.html'), encoding='utf-8').read()
+check('esc.window_hours != null' in _aim and 'esc.warn_to_mut_after != null' in _aim,
+      'ai-модерация: значения эскалации с фолбэками — старый конфиг больше не бросает RangeError')
+check('raw.error' in _aim and 'НЕДОСТУПНО' in _aim,
+      'ai-модерация: при офлайн-боте/битом конфиге страница не падает, а честно показывает статус')
+check('if (!cfg || cfg.error) return;' in _aim,
+      'ai-модерация: тумблеры языков/уровней/эскалации защищены от undefined')
+_cogaim = open(os.path.join(ROOT, 'cogs', 'ai_moderation.py'), encoding='utf-8').read()
+check('def _merge' in _cogaim and 'Конфиг с дефолтами' in _cogaim,
+      'cog ai_moderation: load_config глубоко сливает сохранённый конфиг с дефолтами')
+_r_aim = open(os.path.join(ROOT, 'web', 'routes', 'ai_mod.py'), encoding='utf-8').read()
+check('def _demo_cog' in _r_aim and 'AIModeration(None)' in _r_aim,
+      'routes ai_mod: демо-режим отдаёт конфиг/статистику/тест без бота')
+_ch = open(os.path.join(ROOT, 'web', 'templates', 'channels.html'), encoding='utf-8').read()
+check('data.error' in _ch and 'ch-empty-sub' in _ch,
+      'каналы: ошибка API показывается пользователю, а не молчаливая пустота')
+_gad = open(os.path.join(ROOT, 'web', 'routes', 'guild_admin.py'), encoding='utf-8').read()
+check('канал пропущен' in _gad or 'один проблемный канал' in _gad,
+      'routes channels: один битый канал не роняет весь список (per-channel защита)')
 
 # ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')
