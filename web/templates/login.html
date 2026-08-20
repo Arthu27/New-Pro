@@ -33,7 +33,7 @@
       html, body { min-height: 100%; }
       body {
         margin: 0;
-        display: flex; align-items: center; justify-content: center;
+        display: flex;
         padding: 24px;
         background: var(--bg);
         color: var(--text);
@@ -65,17 +65,50 @@
       }
       #lg-stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
 
+      /* ── Аврора: два медленных луча за карточкой (окружение, не за курсором) ── */
+      .lg-aurora { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+      .lg-aurora i {
+        position: absolute; left: 50%; top: 46%;
+        width: 110vmax; height: 110vmax; margin: -55vmax 0 0 -55vmax;
+        background: conic-gradient(from 0deg,
+          transparent 0deg 32deg, rgba(99, 102, 241, .13) 40deg, transparent 48deg,
+          transparent 130deg, rgba(34, 211, 238, .10) 140deg, transparent 148deg);
+        filter: blur(52px); opacity: .8;
+        animation: lgAurora 42s linear infinite;
+      }
+      .lg-aurora i:nth-child(2) {
+        animation-duration: 64s; animation-direction: reverse; opacity: .55;
+        background: conic-gradient(from 0deg,
+          transparent 0deg 40deg, rgba(167, 139, 250, .12) 48deg, transparent 56deg,
+          transparent 180deg, rgba(99, 102, 241, .10) 190deg, transparent 198deg);
+      }
+      @keyframes lgAurora { to { transform: rotate(360deg); } }
+
+      /* ── Ссылка назад на приветствие ── */
+      .lg-back {
+        position: fixed; top: 18px; left: 18px; z-index: 20;
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 8px 14px; border-radius: 99px;
+        background: rgba(13, 16, 25, .82);
+        border: 1px solid var(--line);
+        color: var(--text2); font-size: 12.5px; font-weight: 600;
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        transition: border-color .15s, color .15s, transform .15s ease;
+      }
+      .lg-back:hover { border-color: var(--ac); color: #c7d2fe; transform: translateX(-2px); text-decoration: none; }
+
       /* ── Карточка ── */
       .auth-card {
         position: relative; z-index: 1;
         width: 100%; max-width: 880px;
+        margin: auto;
         display: grid; grid-template-columns: 0.9fr 1.1fr;
         background: rgba(13, 16, 25, .9);
         border: 1px solid var(--line);
         border-radius: 26px;
         box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.04);
         overflow: hidden;
-        animation: fadeUp 0.4s var(--ease) both;
+        animation: fadeUp 0.4s var(--ease) backwards;
       }
       /* вход в карточку с каскадом: бренд-панель слева, форма справа */
       .auth-side { animation: slideSide .5s var(--ease) both; }
@@ -137,7 +170,7 @@
       @keyframes sideFloat1 { from { transform: translate(0,0) scale(1); } to { transform: translate(24px, 28px) scale(1.15); } }
       @keyframes sideFloat2 { from { transform: translate(0,0) scale(1.1); } to { transform: translate(-20px, -24px) scale(0.95); } }
       .auth-side > * { position: relative; z-index: 1; }
-      .auth-side .brand { display: flex; align-items: center; gap: 11px; color: #fff; margin-bottom: 36px; }
+      .auth-side .brand { display: flex; align-items: center; gap: 11px; color: #fff; margin-bottom: 16px; }
       .auth-side .brand .ico {
         width: 38px; height: 38px; border-radius: 11px;
         background: var(--ac-grad);
@@ -158,11 +191,73 @@
         font-size: 15px; font-weight: 700; letter-spacing: .05em;
       }
       .auth-side .brand span { display: block; font-size: 10px; opacity: .72; letter-spacing: .08em; }
+
+      /* ── Медальон дракона: кольца, орбиты, блик, дым, светящийся пол ── */
+      .lg-dragon-stage { position: relative; width: 96px; height: 96px; margin: 0 auto 16px; }
+      .lg-dragon-stage .ring {
+        position: absolute; inset: 0; border-radius: 50%;
+        background: conic-gradient(#4f46e5, #7c3aed, #22d3ee, #4f46e5);
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+                mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+        opacity: .9; animation: lgSpin 9s linear infinite;
+      }
+      .lg-dragon-stage .ring2 {
+        position: absolute; inset: -7px; border-radius: 50%;
+        border: 1.5px dashed rgba(129, 140, 248, .35);
+        animation: lgSpin 26s linear infinite reverse;
+      }
+      .lg-dragon-stage .orbits { position: absolute; inset: 0; animation: lgSpin 11s linear infinite; }
+      .lg-dragon-stage .orbits i {
+        position: absolute; left: 50%; top: 50%;
+        width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%;
+        background: #22d3ee;
+        box-shadow: 0 0 8px rgba(34, 211, 238, .9), 0 0 20px rgba(34, 211, 238, .4);
+      }
+      .lg-dragon-stage .orbits i:nth-child(1) { transform: translate(0, -48px); }
+      .lg-dragon-stage .orbits i:nth-child(2) {
+        transform: translate(34px, 34px); background: #a78bfa;
+        box-shadow: 0 0 8px rgba(167, 139, 250, .9), 0 0 20px rgba(167, 139, 250, .4);
+      }
+      .lg-dragon-stage .orbits i:nth-child(3) {
+        transform: translate(-34px, 34px); background: #818cf8;
+        box-shadow: 0 0 8px rgba(129, 140, 248, .9), 0 0 20px rgba(129, 140, 248, .4);
+      }
+      .lg-dragon-stage .tile {
+        position: absolute; inset: 14px; border-radius: 28px;
+        background: var(--ac-grad);
+        display: grid; place-items: center; overflow: hidden;
+        box-shadow: 0 0 34px rgba(124, 58, 237, .6), inset 0 1px 0 rgba(255, 255, 255, .35);
+      }
+      .lg-dragon-stage .tile::before {
+        content: ''; position: absolute; inset: 0;
+        background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, .26), transparent 55%);
+      }
+      .lg-dragon-stage .tile::after {
+        content: ''; position: absolute; top: -35%; bottom: -35%; left: -65%; width: 36%;
+        background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .32), transparent);
+        transform: skewX(-18deg);
+        animation: lgGloss 3.6s ease-in-out infinite;
+      }
+      @keyframes lgGloss { 0%, 55% { left: -65%; } 85%, 100% { left: 135%; } }
+      .lg-dragon-stage .tile img {
+        position: relative; z-index: 1;
+        width: 100%; height: 100%; object-fit: cover; padding: 7px;
+      }
+      .lg-dragon-stage .dragon-smoke { position: absolute; inset: 0; }
+      .lg-dragon-stage .floor {
+        position: absolute; left: 50%; bottom: -14px;
+        width: 76px; height: 16px; margin-left: -38px; border-radius: 50%;
+        background: radial-gradient(ellipse at center, rgba(124, 58, 237, .42), transparent 70%);
+        filter: blur(5px);
+        animation: lgFloor 4.6s ease-in-out infinite;
+      }
+      @keyframes lgFloor { 0%,100% { transform: scaleX(.85); opacity: .55; } 50% { transform: scaleX(1.1); opacity: 1; } }
+      @keyframes lgSpin { to { transform: rotate(360deg); } }
       .auth-side h1 {
         font-family: 'Unbounded', sans-serif;
         font-size: 25px; font-weight: 700;
         line-height: 1.3; letter-spacing: -.01em;
-        margin: 0 0 12px;
+        margin: 0 0 10px;
       }
       .auth-side h1 .grad {
         background: linear-gradient(90deg, #818cf8, #a78bfa 30%, #22d3ee 50%, #a78bfa 70%, #818cf8);
@@ -171,12 +266,12 @@
         animation: lgGradFlow 6s linear infinite;
       }
       @keyframes lgGradFlow { to { background-position: 220% 0; } }
-      .auth-side .lead { font-size: 13.5px; line-height: 1.65; opacity: .85; margin: 0 0 28px; }
-      .auth-feats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+      .auth-side .lead { font-size: 13.5px; line-height: 1.65; opacity: .85; margin: 0 0 18px; }
+      .auth-feats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
       .auth-feats li {
         display: flex; align-items: center; gap: 11px;
         font-size: 13px; font-weight: 600;
-        padding: 9px 12px;
+        padding: 8px 11px;
         background: rgba(255, 255, 255, .05);
         border: 1px solid rgba(255, 255, 255, .08);
         border-radius: 12px;
@@ -184,13 +279,18 @@
       }
       .auth-feats li:hover { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.16); transform: translateX(3px); }
       .auth-feats li i {
-        width: 30px; height: 30px; flex: 0 0 30px;
+        width: 28px; height: 28px; flex: 0 0 28px;
         border-radius: 9px;
         background: rgba(255, 255, 255, .12);
         display: grid; place-items: center;
-        font-size: 12px; color: #c7d2fe;
+        font-size: 11.5px; color: #c7d2fe;
+        transition: background .15s, color .15s, box-shadow .15s;
       }
-      .auth-side .foot { margin-top: auto; padding-top: 26px; font-size: 11px; opacity: .65; letter-spacing: .05em; }
+      .auth-feats li:hover i {
+        background: var(--ac-grad); color: #fff;
+        box-shadow: 0 4px 12px -4px rgba(124, 58, 237, .7);
+      }
+      .auth-side .foot { margin-top: auto; padding-top: 18px; font-size: 11px; opacity: .65; letter-spacing: .05em; }
 
       /* ── Правая форма ── */
       .auth-main { position: relative; z-index: 1; padding: 36px 34px 28px; }
@@ -202,7 +302,15 @@
         color: var(--err); border-radius: 12px; padding: 10px 13px;
         font-size: 13px; margin-bottom: 16px; display: none;
       }
-      .tabs { display: flex; gap: 6px; }
+      .tabs { display: flex; gap: 6px; position: relative; }
+      .tab-slider {
+        position: absolute; bottom: 0; left: 0;
+        height: 3px; width: 0; border-radius: 99px;
+        background: var(--ac-grad);
+        box-shadow: 0 0 10px rgba(124, 58, 237, .6);
+        pointer-events: none;
+        transition: left .25s var(--ease), width .25s var(--ease);
+      }
       .tab-btn {
         flex: 1; padding: 9px 12px;
         display: inline-flex; align-items: center; justify-content: center; gap: 7px;
@@ -219,6 +327,23 @@
       }
       .auth-field { position: relative; margin-bottom: 14px; }
       .auth-field .lbl { font-size: 12px; font-weight: 700; color: var(--text2); display: block; margin-bottom: 6px; }
+      .auth-field .f-ico {
+        position: absolute; left: 12px; bottom: 11px;
+        width: 20px; height: 20px;
+        display: grid; place-items: center;
+        color: var(--text3); font-size: 12px;
+        pointer-events: none;
+        transition: color .15s;
+      }
+      .auth-field.has-ico input { padding-left: 36px; }
+      .auth-field.has-ico:focus-within .f-ico { color: #a5b4fc; }
+      .auth-field .cap-hint {
+        position: absolute; top: 100%; right: 2px; margin-top: 4px;
+        font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+        color: #fbbf24; opacity: 0;
+        transition: opacity .15s;
+        pointer-events: none;
+      }
       .auth-field input {
         width: 100%; padding: 11px 14px;
         background: var(--surface2);
@@ -247,6 +372,28 @@
       }
       .auth-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 30px -8px rgba(124, 58, 237, .75); }
       .auth-btn:hover::after { left: 135%; }
+      .auth-btn i { transition: transform .18s ease; }
+      .auth-btn:not(.loading):hover i { transform: translateX(3px); }
+
+      /* ── Живой статус бота ── */
+      .auth-status {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        margin-top: 14px;
+        font-size: 11.5px; font-weight: 600; color: var(--text3);
+      }
+      .auth-status .dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--ok);
+        --pulse-c: rgba(74, 222, 128, .45);
+        box-shadow: 0 0 0 0 var(--pulse-c);
+        animation: statusPulse 2.6s ease-out infinite;
+      }
+      .auth-status .dot.off { background: #f87171; --pulse-c: rgba(248, 113, 113, .45); }
+      @keyframes statusPulse {
+        0%   { box-shadow: 0 0 0 0 var(--pulse-c); }
+        70%  { box-shadow: 0 0 0 7px transparent; }
+        100% { box-shadow: 0 0 0 0 transparent; }
+      }
       .auth-foot { text-align: center; margin-top: 18px; font-size: 13px; color: var(--text3); }
       .autocomplete-popup {
         position: absolute; top: 100%; left: 0; right: 0;
@@ -369,14 +516,20 @@
         .auth-side::before, .auth-side::after, .auth-btn::after, .dragon-live,
         .auth-card, .auth-side, .auth-main, .auth-feats li,
         .auth-side h1 .grad, #tabPass, #tabPin, .auth-error.shake,
-        .autocomplete-popup.open, .pin-box input.has, .auth-btn .spin { animation: none; }
+        .autocomplete-popup.open, .pin-box input.has, .auth-btn .spin,
+        .lg-aurora i, .lg-dragon-stage .ring, .lg-dragon-stage .ring2,
+        .lg-dragon-stage .orbits, .lg-dragon-stage .tile::after,
+        .lg-dragon-stage .floor, .auth-status .dot, .dragon-smoke span { animation: none; }
         .auth-btn, .tab-btn, .auth-feats li, .auth-field input,
-        .auth-field .eye, .pin-box input { transition: none; }
+        .auth-field .eye, .pin-box input, .tab-slider, .lg-back,
+        .auth-field .f-ico, .auth-field .cap-hint, .auth-btn i { transition: none; }
         .auth-side h1 .grad { background-size: 100% 100%; }
       }
     </style>
 </head>
 <body>
+  <a class="lg-back" href="/welcome"><i class="fas fa-arrow-left"></i> На главную</a>
+  <div class="lg-aurora" aria-hidden="true"><i></i><i></i></div>
   <div class="bg-fx" aria-hidden="true">
     <span class="orb orb1"></span>
     <span class="orb orb2"></span>
@@ -392,8 +545,16 @@
         <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Aether" style="width:100%;height:100%;object-fit:cover;border-radius:9px"></span>
         <div><b>AETHER</b><span>Панель управления</span></div>
       </div>
+      <div class="lg-dragon-stage" aria-hidden="true">
+        <div class="ring"></div>
+        <div class="ring2"></div>
+        <div class="orbits"><i></i><i></i><i></i></div>
+        <div class="dragon-smoke"><span></span><span></span><span></span></div>
+        <div class="tile"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt=""></div>
+        <div class="floor"></div>
+      </div>
       <h1>Твой сервер — <span class="grad">твоя жизнь</span></h1>
-      <p class="lead">Войди и получи всё своё: профиль, заявки, обращения, уровни и события — без поисков по чатам. Команда сервера работает в той же панели — ты просто видишь свою часть.</p>
+      <p class="lead">Войди и получи всё своё: профиль, заявки, обращения, уровни и события. Команда работает в той же панели — ты видишь свою часть.</p>
       <ul class="auth-feats">
         <li><i class="fas fa-user"></i> Твой профиль и роли</li>
         <li><i class="fas fa-id-card-clip"></i> Карточка 360° — вся активность</li>
@@ -413,6 +574,7 @@
       </div>
 
       <div class="tabs" style="margin-bottom:20px">
+        <span class="tab-slider" id="tabSlider" aria-hidden="true"></span>
         <button type="button" class="tab-btn active" id="tabBtnPass" data-auth-tab="pass"><i class="fas fa-key"></i> Пароль</button>
         <button type="button" class="tab-btn" id="tabBtnPin" data-auth-tab="pin"><i class="fas fa-shield-halved"></i> Discord PIN</button>
       </div>
@@ -421,15 +583,18 @@
       <div id="tabPass">
         <div class="auth-error" id="passError" {% if error %}style="display:block"{% endif %}>{{ error|e }}</div>
         <form method="POST" action="/login" autocomplete="off">
-          <div class="auth-field">
+          <div class="auth-field has-ico">
             <label class="lbl" for="passUsername">Логин</label>
+            <i class="fas fa-user f-ico" aria-hidden="true"></i>
             <input type="text" name="username" id="passUsername" placeholder="Логин, @username или Discord ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Логин">
             <div class="autocomplete-popup" id="passPopup"></div>
           </div>
-          <div class="auth-field has-eye">
+          <div class="auth-field has-ico has-eye">
             <label class="lbl" for="passPassword">Пароль</label>
+            <i class="fas fa-lock f-ico" aria-hidden="true"></i>
             <input type="password" name="password" id="passPassword" placeholder="••••••••" required aria-label="Пароль">
             <button type="button" class="eye" id="passEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+            <span class="cap-hint" id="capHint">Caps Lock включён</span>
           </div>
           <button type="submit" class="auth-btn" id="passSubmitBtn"><i class="fas fa-arrow-right"></i> Войти</button>
         </form>
@@ -441,8 +606,9 @@
         <div id="step1">
           <div class="auth-title">Шаг 1 · Найти аккаунт</div>
           <div class="auth-sub">Введите ID или @username, привязанный к панели.</div>
-          <div class="auth-field">
+          <div class="auth-field has-ico">
             <label class="lbl" for="discordQuery">Discord</label>
+            <i class="fab fa-discord f-ico" aria-hidden="true"></i>
             <input type="text" id="discordQuery" placeholder="123456789012345678 или @username" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')" aria-label="Discord">
             <div class="autocomplete-popup" id="pinPopup"></div>
           </div>
@@ -456,6 +622,10 @@
           <button type="button" class="auth-btn" id="pinConfirmBtn"><i class="fas fa-arrow-right"></i> Подтвердить</button>
           <div class="step-hint" id="step2-error" style="color:var(--err)"></div>
         </div>
+      </div>
+
+      <div class="auth-status" id="authStatus" hidden>
+        <span class="dot" id="statusDot"></span><span id="statusText"></span>
       </div>
 
       <div class="auth-foot">Первый раз здесь? <a href="/register">Создай доступ</a> · Хочешь в команду — <a href="/member-apply">подай заявку</a></div>
@@ -591,15 +761,85 @@
     });
   }
 
-  /* Табы */
+  /* Табы: плавный слайдер-индикатор под активной вкладкой */
+  function placeSlider(btn) {
+    var s = $('tabSlider');
+    if (!s || !btn) return;
+    s.style.left = btn.offsetLeft + 'px';
+    s.style.width = btn.offsetWidth + 'px';
+  }
   document.querySelectorAll('[data-auth-tab]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var tab = btn.dataset.authTab;
       document.querySelectorAll('[data-auth-tab]').forEach(function (b) { b.classList.toggle('active', b === btn); });
       $('tabPass').style.display = tab === 'pass' ? '' : 'none';
       $('tabPin').style.display = tab === 'pin' ? '' : 'none';
+      placeSlider(btn);
     });
   });
+  placeSlider(document.querySelector('[data-auth-tab].active'));
+  window.addEventListener('resize', function () { placeSlider(document.querySelector('[data-auth-tab].active')); });
+
+  /* Живой статус бота (пульсирующая точка + пинг) */
+  (function () {
+    var row = $('authStatus');
+    if (!row) return;
+    fetch('/api/status-public', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || d.ok === false) return;
+        row.hidden = false;
+        var dot = $('statusDot'), txt = $('statusText');
+        if (d.online) {
+          dot.classList.remove('off');
+          var g = d.guilds || 0;
+          txt.textContent = 'Бот онлайн · пинг ' + (d.latency_ms || 0) + ' мс · ' + g + ' ' +
+            (g === 1 ? 'сервер' : (g >= 2 && g <= 4 ? 'сервера' : 'серверов'));
+        } else {
+          dot.classList.add('off');
+          txt.textContent = 'Бот офлайн · вход доступен, статус обновится';
+        }
+      })
+      .catch(function () {});
+  })();
+
+  /* Caps Lock: подсказка у пароля */
+  (function () {
+    var pw = $('passPassword'), hint = $('capHint');
+    if (!pw || !hint) return;
+    function capState(e) {
+      var on = !!(e.getModifierState && e.getModifierState('CapsLock'));
+      hint.style.opacity = on ? '1' : '0';
+    }
+    pw.addEventListener('keydown', capState);
+    pw.addEventListener('keyup', capState);
+    pw.addEventListener('blur', function () { hint.style.opacity = '0'; });
+  })();
+
+  /* 3D-наклон карточки за курсором (мягкий, rAF, только точный указатель) */
+  (function () {
+    if (!window.matchMedia || !window.matchMedia('(pointer: fine)').matches) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var card = document.querySelector('.auth-card');
+    if (!card || !('requestAnimationFrame' in window)) return;
+    var rx = 0, ry = 0, tx = 0, ty = 0, raf = null;
+    function tick() {
+      raf = null;
+      rx += (tx - rx) * .12;
+      ry += (ty - ry) * .12;
+      card.style.transform = 'perspective(1100px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg)';
+    }
+    card.addEventListener('mousemove', function (e) {
+      var r = card.getBoundingClientRect();
+      tx = ((e.clientY - r.top) / r.height - .5) * -3.4;
+      ty = ((e.clientX - r.left) / r.width - .5) * 3.4;
+      if (!raf) raf = requestAnimationFrame(tick);
+    });
+    card.addEventListener('mouseleave', function () {
+      tx = 0; ty = 0;
+      if (!raf) raf = requestAnimationFrame(tick);
+    });
+  })();
 
   /* Автодополнение логинов (с клавиатурной навигацией) */
   var suggestTimer = null;

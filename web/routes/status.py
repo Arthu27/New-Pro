@@ -30,6 +30,21 @@ def register(ctx):
     @app.route('/api/status-public')
     def api_status_public():
         import web.app as _app
+        # Демо-режим: бот «живой» (панель показывает типичную картину)
+        if _app._demo_mode():
+            up = 11 * 3600 + int(time.time() % 7200)
+            h2, m2, s2 = up // 3600, (up % 3600) // 60, up % 60
+            return jsonify({
+                'ok': True,
+                'online': True,
+                'latency_ms': 12 + (int(time.time() * 10) % 19),
+                'guilds': 1,
+                'users_cached': 1247,
+                'uptime_sec': up,
+                'uptime_human': f'{h2}ч {m2}м {s2}с',
+                'version': '2.0',
+                'updated': datetime.now(timezone.utc).isoformat(),
+            })
         bot = _app.bot_instance
         online = False
         latency_ms = 0

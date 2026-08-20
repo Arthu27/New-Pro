@@ -1139,6 +1139,38 @@ check('.w-marquee .item:hover' in w11 and 'item:hover i' in w11,
       'welcome: пункты бегущей ленты подсвечиваются при наведении')
 check('.w-title .grad, .w-sec-title .grad' in w11.split('prefers-reduced-motion')[1][:900],
       'welcome: переливы и раскрытия выключены при reduced-motion')
+# ═══ 37д. Login: красота 2 (медальон, наклон, слайдер, статус, капс) ════════
+print('== login: красота 2 ==')
+lg2 = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
+check('lg-dragon-stage' in lg2 and 'ring2' in lg2 and 'orbits' in lg2 and 'lgGloss' in lg2,
+      'login: медальон дракона с кольцами, орбитами и глянцевым бликом')
+check('lg-dragon-stage .tile' in lg2 and 'lgFloor' in lg2,
+      'login: дракон на градиентной плитке со светящимся полом')
+check('lg-aurora' in lg2 and 'lgAurora' in lg2,
+      'login: медленные аврора-лучи на фоне (окружение, не за курсором)')
+check('perspective(1100px)' in lg2 and 'rotateX' in lg2 and 'pointer: fine' in lg2,
+      'login: 3D-наклон карточки за курсором (rAF, только точный указатель)')
+check('tab-slider' in lg2 and 'placeSlider' in lg2 and 'offsetLeft' in lg2,
+      'login: скользящий индикатор вкладок Пароль/Discord PIN')
+check('/api/status-public' in lg2 and 'authStatus' in lg2 and 'statusDot' in lg2,
+      'login: живой статус бота с пульсирующей точкой')
+check('getModifierState' in lg2 and 'CapsLock' in lg2 and 'cap-hint' in lg2,
+      'login: предупреждение о Caps Lock у пароля')
+check('has-ico' in lg2 and 'f-ico' in lg2 and 'fa-lock' in lg2 and 'fab fa-discord' in lg2,
+      'login: иконки в полях ввода (логин/пароль/discord)')
+check('lg-back' in lg2 and '/welcome' in lg2,
+      'login: ссылка назад на приветственную страницу')
+check('margin: auto' in lg2.split('.auth-card {')[1][:200],
+      'login: карточка не обрезается при нехватке высоты (margin:auto)')
+check('.auth-feats li:hover i' in lg2 and 'var(--ac-grad)' in lg2.split('.auth-feats li:hover i')[1][:200],
+      'login: иконки фич заливаются градиентом при наведении')
+check('.lg-aurora i' in lg2.split('prefers-reduced-motion')[1][:900]
+      and '.lg-dragon-stage .ring' in lg2.split('prefers-reduced-motion')[1][:900],
+      'login: новые анимации отключаются при reduced-motion')
+_st = open(os.path.join(ROOT, 'web', 'routes', 'status.py'), encoding='utf-8').read()
+check('api_status_public' in _st and 'Демо-режим: бот «живой»' in _st,
+      'status-api: в демо-режиме бот онлайн — логин показывает живой статус')
+
 
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
