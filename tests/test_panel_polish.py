@@ -1078,8 +1078,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=51' in base and 'style.css?v=112' in base,
-      'версии ассетов (112/51)')
+check('app.js?v=52' in base and 'style.css?v=112' in base,
+      'версии ассетов (112/52)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
@@ -1335,6 +1335,29 @@ check('_demo_leveling_config' in _lv and 'leveling_demo_' in _lv,
       'routes leveling: демо-конфиг левелинга с сохранением (тумблеры работают в превью)')
 check("data/xp_{guild_id}.json" in _lv and 'total_ach_available' in _lv,
       'routes leveling: демо-статистика из XP-файла, ачивки и награды без бота')
+# ═══ 37о. Порядок загрузки: бут-шим + /api/guilds в демо ═════════════════════
+print('== порядок загрузки: бут-шим и guilds ==')
+check('Бут-шим панели' in base and 'simpleJSON' in base and 'if (!W.fetchCachedJSON)' in base,
+      'base: бут-шим до контента — страничные скрипты не падают до загрузки app.js')
+check('if (!W.setLiveRefresh)' in base and '__panelKitReady' in js,
+      'base+app.js: live-refresh шима уступает управление после загрузки кита')
+check('__panelKitReady = true' in js,
+      'app.js: флаг готовности кита в конце файла')
+_ki = open(os.path.join(ROOT, 'web', 'templates', 'mod_kiosk.html'), encoding='utf-8').read()
+check('Бут-шим' in _ki and 'if (!W.fetchCachedJSON)' in _ki,
+      'mod-kiosk: бут-шим на месте (страница самостоятельная, та же проблема порядка)')
+_apg = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
+_apg_gi = _apg.split('def api_guilds')[1][:900]
+check("'Главный сервер'" in _apg_gi and "members':1247" in _apg_gi,
+      'api/guilds: в демо возвращается главный сервер (пустой список ломал выбор сервера на десятках страниц)')
+check('cur = guilds.length ? guilds[0].id : (cur || \'\')' in open(os.path.join(ROOT, 'web', 'templates', 'leveling.html'), encoding='utf-8').read(),
+      'leveling: пустой список серверов не обнуляет выбранный сервер')
+_sched = open(os.path.join(ROOT, 'web', 'routes', 'schedule.py'), encoding='utf-8').read()
+check('demo-1' in _sched and 'demo_channels.json' in _sched,
+      'routes schedule: демо-ветка отдаёт каналы и пример анонса (выбор канала работает в превью)')
+_comm = open(os.path.join(ROOT, 'web', 'routes', 'community.py'), encoding='utf-8').read()
+check('top_channels' in _comm.split('api_guild_analytics')[1][:3000] and 'Демо-режим: если статистика пуста' in _comm,
+      'routes analytics: в демо топ каналов заполняется из демо-структуры (детализация по каналам живая)')
 
 # ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')

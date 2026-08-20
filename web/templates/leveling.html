@@ -229,7 +229,8 @@
     if (!sel) return;
     var cur = selectedGuild;
     if (!cur || !guilds.some(function (g) { return String(g.id) === String(cur); })) {
-      cur = guilds.length ? guilds[0].id : '';
+      /* пустой /api/guilds не должен обнулять сервер — иначе ничего не грузится */
+      cur = guilds.length ? guilds[0].id : (cur || '');
     }
     selectedGuild = cur;
     sel.innerHTML = guilds.map(function (g) {

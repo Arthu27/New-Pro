@@ -3642,3 +3642,7 @@
     }
   });
 })();
+
+/* ── Флаг готовности клиентского кита (бут-шим в base.html
+   перестаёт дублировать live-refresh, когда app.js загружен) ── */
+try { window.__panelKitReady = true; } catch (e) {}

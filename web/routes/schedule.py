@@ -48,6 +48,31 @@ def register(ctx):
     def api_schedule_state():
         bot, cog, guild = _sched_ctx()
         if not cog or not guild:
+            import web.app as _app
+            if _app._demo_mode():
+                # демо: каналы из демо-структуры + пара примеров анонсов
+                demo_chs = []
+                try:
+                    with open('data/demo_channels.json', 'r', encoding='utf-8') as fp:
+                        demo = json.load(fp)
+                    demo_chs = [{'id': str(c['id']), 'name': c['name']}
+                                for c in demo if c.get('type') == 'text'][:80]
+                except Exception as _ex:
+                    _log.debug("api_schedule_state() demo: подавлено: %s", _ex)
+                return jsonify({
+                    'ok': True,
+                    'channels': demo_chs,
+                    'items': [{
+                        'id': 'demo-1',
+                        'channel_id': demo_chs[0]['id'] if demo_chs else '1002',
+                        'content': 'Добро пожаловать! Читай правила в #инфо.',
+                        'embed_title': '',
+                        'repeat': 'once', 'repeat_label': 'Один раз',
+                        'time': '20:00', 'weekday': 0, 'weekday_label': '',
+                        'tz_offset': 3, 'enabled': True,
+                    }],
+                    'tz_offset': 3,
+                })
             return jsonify({'ok': False, 'error': 'Модуль офлайн (бот не запущен)'})
         from cogs.scheduler import REPEAT_LABEL, WEEKDAYS_RU, human_next
         channels = [{'id': str(c.id), 'name': c.name} for c in

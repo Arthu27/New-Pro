@@ -110,6 +110,18 @@ def register(ctx):
         for ch ,count in channel_msg_counts .most_common (10 )
         ]
 
+        # Демо-режим: если статистика пуста (бот офлайн), заполняем её
+        # из демо-структуры каналов — страница аналитики выглядит живой
+        if _app ._demo_mode ()and not result ['top_channels']:
+            try :
+                with open ('data/demo_channels.json','r',encoding ='utf-8')as _fp :
+                    _demo =json .load (_fp )
+                _names =[(c .get ('name')or '')for c in _demo if c .get ('type')=='text'][:8 ]
+                _base =[1420 ,1175 ,986 ,812 ,654 ,510 ,388 ,266 ]
+                result ['top_channels']=[{'name':n ,'messages':_base [i ]if i <len (_base )else 180 }for i ,n in enumerate (_names )]
+            except Exception as _ex :
+                _log.debug("api_guild_analytics() demo: подавлено: %s", _ex)
+
         # Рост участников (последние 7 дней — приблизительные данные, не реального времени)
         result ['member_labels']=result ['daily_labels']
         if bot :

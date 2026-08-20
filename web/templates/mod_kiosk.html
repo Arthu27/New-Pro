@@ -109,6 +109,33 @@
   </style>
 </head>
 <body class="kiosk">
+  <script>
+  /* Бут-шим: страничные скрипты выполняются раньше app.js (в конце body).
+     Без шима init-вызовы fetchCachedJSON падали бы, и данные не грузились. */
+  (function () {
+    'use strict';
+    var W = window;
+    function simpleJSON(url, opts) {
+      var init = opts || {};
+      return W.fetch(url, init).then(function (r) {
+        if (!r.ok && r.status !== 304) throw new Error('HTTP ' + r.status + ': ' + url);
+        return r.json();
+      }).catch(function () {
+        return W.fetch(url, Object.assign({}, init, { cache: 'no-store' })).then(function (r) { return r.json(); });
+      });
+    }
+    if (!W.fetchCachedJSON) W.fetchCachedJSON = simpleJSON;
+    if (!W.fetchCached) W.fetchCached = W.fetch;
+    if (!W.renderSafe) W.renderSafe = function (fn) { if (typeof fn === 'function') { try { fn(); } catch (e) {} } };
+    if (!W.showToast) W.showToast = function () {};
+    if (!W.qualitySetLoading) W.qualitySetLoading = function (btn, on) { if (btn) btn.disabled = !!on; };
+    if (!W.countUp) W.countUp = function (el, target) {
+      if (!el) return;
+      var v = Number(target) || 0;
+      el.textContent = v.toLocaleString ? v.toLocaleString('ru-RU') : String(v);
+    };
+  })();
+  </script>
 
   <div class="kiosk-top">
     <div class="kiosk-brand">
@@ -179,7 +206,7 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=51"></script>
+  <script src="/static/app.js?v=52"></script>
   <script>
   (function () {
     'use strict';

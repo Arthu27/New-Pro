@@ -1343,6 +1343,21 @@ def api_stats ():
 @login_required 
 def api_guilds ():
     if not bot_instance :
+        # Демо-режим: главный сервер с типичными числами.
+        # Пустой список ломал выбор сервера на десятках страниц —
+        # они обнуляли selectedGuild и переставали грузить что-либо.
+        if _demo_mode ():
+            return jsonify ([{
+            'id':str (MAIN_GUILD_ID ),
+            'name':'Главный сервер',
+            'members':1247 ,
+            'icon':None ,
+            'owner_id':'987430047889637426',
+            'online':213 ,
+            'channels':16 ,
+            'roles':24 ,
+            'boost':7 ,
+            }])
         return jsonify ([])
 
     try :

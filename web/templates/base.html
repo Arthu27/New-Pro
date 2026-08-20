@@ -20,6 +20,65 @@
     </script>
 </head>
 <body>
+    <script>
+    /* ── Бут-шим панели ────────────────────────────────────────────
+       Страничные скрипты выполняются РАНЬШЕ app.js (он в конце body).
+       Без шима init-вызовы fetchCachedJSON/renderSafe/… падали бы
+       с «is not a function», и данные молча не загружались.
+       app.js в конце body переопределяет всё полноценными версиями. */
+    (function () {
+      'use strict';
+      var W = window;
+      function simpleJSON(url, opts) {
+        var init = opts || {};
+        return W.fetch(url, init).then(function (r) {
+          if (!r.ok && r.status !== 304) throw new Error('HTTP ' + r.status + ': ' + url);
+          return r.json();
+        }).catch(function () {
+          return W.fetch(url, Object.assign({}, init, { cache: 'no-store' })).then(function (r) { return r.json(); });
+        });
+      }
+      if (!W.fetchCachedJSON) W.fetchCachedJSON = simpleJSON;
+      if (!W.fetchCached) W.fetchCached = W.fetch;
+      if (!W.renderSafe) W.renderSafe = function (fn) { if (typeof fn === 'function') { try { fn(); } catch (e) {} } };
+      if (!W.keepScroll) W.keepScroll = W.renderSafe;
+      if (!W.keepScrollAsync) W.keepScrollAsync = function (p) { return Promise.resolve(p); };
+      if (!W.qualitySetLoading) W.qualitySetLoading = function (btn, on) { if (btn) btn.disabled = !!on; };
+      if (!W.showToast) W.showToast = function () {};
+      if (!W.confirmAction) W.confirmAction = function (o) {
+        var msg = (o && (o.message || o.title)) || 'Продолжить?';
+        return Promise.resolve(W.confirm(msg));
+      };
+      if (!W.askConfirm) W.askConfirm = W.confirmAction;
+      if (!W.countUp) W.countUp = function (el, target) {
+        if (!el) return;
+        var v = Number(target) || 0;
+        el.textContent = v.toLocaleString ? v.toLocaleString('ru-RU') : String(v);
+      };
+      if (!W.attachTableSort) W.attachTableSort = function () {};
+      if (!W.csvDownload) W.csvDownload = function () {};
+      if (!W.drawDonut) W.drawDonut = function () {};
+      if (!W.AetherRing) W.AetherRing = function () {};
+      if (!W.tiltCards) W.tiltCards = function () {};
+      if (!W.densityButton) W.densityButton = function () {};
+      if (!W.livePauseButton) W.livePauseButton = function () {};
+      if (!W.freshStamp) W.freshStamp = function () {};
+      if (!W.uxUndo) W.uxUndo = function () {};
+      if (!W.celebrate) W.celebrate = function () {};
+      if (!W.widgetOrderApply) W.widgetOrderApply = function () {};
+      if (!W.hlEsc) W.hlEsc = function (s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      };
+      if (!W.setLiveRefresh) {
+        var jobs = [];
+        W.setLiveRefresh = function (fn, ms) { if (typeof fn === 'function') jobs.push(fn); };
+        setInterval(function () {
+          if (W.__panelKitReady) return; /* app.js взял управление */
+          jobs.forEach(function (fn) { try { fn(); } catch (e) {} });
+        }, 2500);
+      }
+    })();
+    </script>
     <a class="skip-link" href="#main-content">Перейти к содержимому</a>
 
     <!-- Загрузочный сплэш -->
@@ -294,6 +353,6 @@
     <!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
     <script src="/static/api-guard.js?v=2"></script>
     <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
-    <script src="/static/app.js?v=51"></script>
+    <script src="/static/app.js?v=52"></script>
 </body>
 </html>
