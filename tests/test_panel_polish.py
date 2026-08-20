@@ -1078,8 +1078,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=49' in base and 'style.css?v=111' in base,
-      'версии ассетов (111/49)')
+check('app.js?v=50' in base and 'style.css?v=111' in base,
+      'версии ассетов (111/50)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
@@ -1307,6 +1307,16 @@ for _g in ('login', 'register', 'status_public', 'welcome'):
         _guest_canvas += 1
 check(_guest_canvas == 4,
       f'гостевые страницы: канвас звёзд с null-защитой ({_guest_canvas}/4)')
+# ═══ 37м. Фазз кликов: скрытые ошибки обработчиков ═══════════════════════════
+print('== фазз: ошибки обработчиков ==')
+check('function paletteRecents()' in _js2 and 'aether_recents' in _js2,
+      'app.js: paletteRecents определён (глобальный поиск падал с ReferenceError при открытии)')
+check('function paletteRemember' in _js2 and 'paletteRemember(item.path)' in _js2,
+      'app.js: недавние разделы запоминаются при переходе из поиска')
+check('var starBtn = doc.createElement' in _js2 and 'star(path)' in _js2,
+      'app.js: кнопка-звезда больше не перекрывает функцию star() (был TypeError на каждом клике)')
+check('starBtn.addEventListener' in _js2,
+      'app.js: обработчик клика по звезде привязан к кнопке (starBtn)')
 
 # ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')

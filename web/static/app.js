@@ -314,7 +314,7 @@
       if (e.key === 'Enter') {
         e.preventDefault();
         var item = paletteMatches[paletteIndex];
-        if (item) { paletteClose(); window.location.href = item.path; }
+        if (item) { paletteClose(); paletteRemember(item.path); window.location.href = item.path; }
       }
     });
     el.addEventListener('click', function (e) { if (e.target === el) paletteClose(); });
@@ -326,6 +326,20 @@
 
   function paletteFavs() {
     try { return JSON.parse(localStorage.getItem('aether_favs') || '[]'); } catch (e) { return []; }
+  }
+
+  /* «Недавние» разделы: функция вызывалась, но не была определена —
+     глобальный поиск падал с ReferenceError при каждом открытии */
+  function paletteRecents() {
+    try { return JSON.parse(localStorage.getItem('aether_recents') || '[]'); } catch (e) { return []; }
+  }
+
+  function paletteRemember(path) {
+    try {
+      var list = paletteRecents().filter(function (p) { return p !== path; });
+      list.unshift(path);
+      localStorage.setItem('aether_recents', JSON.stringify(list.slice(0, 8)));
+    } catch (e) {}
   }
 
   function paletteLocalMatches(q) {
@@ -408,6 +422,7 @@
           return;
         }
         paletteClose();
+        paletteRemember(node.dataset.path);
         window.location.href = node.dataset.path;
       });
       node.addEventListener('mousemove', function () { paletteIndex = i; paletteHighlight(); });
@@ -2186,17 +2201,19 @@
         if (!path || path.charAt(0) !== '/') return;
         if (link.querySelector('.nav-star')) return;
         if (link.closest('.nav-favs-links')) return;
-        var star = doc.createElement('button');
-        star.type = 'button';
-        star.className = 'nav-star' + (list.indexOf(path) !== -1 ? ' on' : '');
-        star.setAttribute('aria-label', 'В избранное');
-        star.innerHTML = '<i class="fas fa-star"></i>';
-        star.addEventListener('click', function (e) {
+        /* локальная переменная называлась star и перекрывала функцию star()
+           → клик по звезде давал «star is not a function» на всех страницах */
+        var starBtn = doc.createElement('button');
+        starBtn.type = 'button';
+        starBtn.className = 'nav-star' + (list.indexOf(path) !== -1 ? ' on' : '');
+        starBtn.setAttribute('aria-label', 'В избранное');
+        starBtn.innerHTML = '<i class="fas fa-star"></i>';
+        starBtn.addEventListener('click', function (e) {
           e.preventDefault();
           e.stopPropagation();
           star(path);
         });
-        link.appendChild(star);
+        link.appendChild(starBtn);
       });
     }
     if (container) container.addEventListener('click', function (e) {
