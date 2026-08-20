@@ -1089,6 +1089,31 @@ check('.w-nav .brand img' in w11 and 'dragonBreath' in w11.split('.w-nav .brand 
       'welcome: дракон в навигации на градиентной плитке и дышит')
 check('.w-dragon-ring, .w-dragon-ring2,' in w11.split('prefers-reduced-motion')[1][:900],
       'welcome: новые анимации дракона отключаются при reduced-motion')
+# ═══ 37в. Welcome: красота 4 (метеоры, переливы, прогресс, hover) ════════════
+print('== welcome: красота 4 ==')
+check('meteorNext' in w11 and 'createLinearGradient' in w11 and 'meteor' in w11,
+      'welcome: падающие звёзды на канвасе (редкие, раз в ~7 секунд)')
+check('now - last < 16' in w11,
+      'welcome: звёздное небо на 60 fps — мерцание плавное, не дёрганое')
+check('wGradFlow' in w11 and 'background-size: 220% 100%' in w11,
+      'welcome: заголовки hero и секций переливаются градиентом')
+check('wProgress' in w11 and 'id="wProgress"' in w11,
+      'welcome: градиентная полоса прогресса чтения сверху')
+check('.w-stat::after' in w11 and 'skewX(-20deg)' in w11,
+      'welcome: глянцевый блик пробегает по стат-карточкам при hover')
+check('.w-chips .chip:hover i' in w11 and 'scale(1.18)' in w11,
+      'welcome: иконки чипов подпрыгивают при наведении')
+check('.w-step:hover .num' in w11 and 'rotate(-4deg)' in w11,
+      'welcome: шаги приподнимаются, номер пульсирует кольцом')
+check('faqIn' in w11 and 'details[open] .faq-body' in w11,
+      'welcome: FAQ раскрывается плавной анимацией')
+check('.w-terminal-body::after' in w11 and 'repeating-linear-gradient' in w11,
+      'welcome: терминал получил CRT-сканлайн (статичный, без нагрузки)')
+check('.w-marquee .item:hover' in w11 and 'item:hover i' in w11,
+      'welcome: пункты бегущей ленты подсвечиваются при наведении')
+check('.w-title .grad, .w-sec-title .grad' in w11.split('prefers-reduced-motion')[1][:900],
+      'welcome: переливы и раскрытия выключены при reduced-motion')
+
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,

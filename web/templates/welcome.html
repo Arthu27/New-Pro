@@ -225,10 +225,13 @@
       animation: wCaret .8s steps(1) infinite;
     }
     @keyframes wCaret { 50% { opacity: 0; } }
-    .w-title .grad {
-      background: linear-gradient(90deg, #818cf8, #a78bfa 45%, #22d3ee);
+    .w-title .grad, .w-sec-title .grad {
+      background: linear-gradient(90deg, #818cf8, #a78bfa 30%, #22d3ee 50%, #a78bfa 70%, #818cf8);
+      background-size: 220% 100%;
       -webkit-background-clip: text; background-clip: text; color: transparent;
+      animation: wGradFlow 6s linear infinite;
     }
+    @keyframes wGradFlow { to { background-position: 220% 0; } }
     .w-lead { max-width: 700px; margin: 0 auto 14px; color: var(--text2); font-size: 15px; line-height: 1.7; }
     .w-lead b { color: var(--text); }
     .w-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 16px; }
@@ -507,10 +510,7 @@
     @keyframes wWheel { 0% { opacity: 1; transform: translateY(0); } 70% { opacity: 0; transform: translateY(10px); } 100% { opacity: 0; } }
 
     /* ── Градиентные заголовки секций ── */
-    .w-sec-title .grad {
-      background: linear-gradient(90deg, #818cf8, #a78bfa 45%, #22d3ee);
-      -webkit-background-clip: text; background-clip: text; color: transparent;
-    }
+    /* используют тот же переливающийся градиент, что и hero (wGradFlow) */
 
     /* ── Анимированная рамка primary-кнопки ── */
     .btn-primary-wrap { position: relative; display: inline-block; }
@@ -792,6 +792,67 @@
       100% { color: var(--text); transform: scale(1); }
     }
 
+    /* ── Скролл-прогресс: тонкая градиентная полоса сверху ── */
+    .w-progress {
+      position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+      background: linear-gradient(90deg, #4f46e5, #7c3aed, #22d3ee);
+      box-shadow: 0 0 12px rgba(124, 58, 237, .55);
+      border-radius: 0 3px 3px 0;
+      z-index: 130; pointer-events: none;
+    }
+
+    /* ── Стат-карточки: глянцевый блик и свечение числа при hover ── */
+    .w-stat { position: relative; overflow: hidden; }
+    .w-stat::after {
+      content: ''; position: absolute; top: 0; left: -70%; width: 40%; height: 100%;
+      background: linear-gradient(100deg, transparent, rgba(165, 180, 252, .16), transparent);
+      transform: skewX(-20deg);
+      transition: left .5s ease;
+      pointer-events: none;
+    }
+    .w-stat:hover::after { left: 130%; }
+    .w-stat .n { transition: filter .2s ease; }
+    .w-stat:hover .n { filter: drop-shadow(0 0 12px rgba(129, 140, 248, .55)); }
+
+    /* ── Чипы hero: иконка подпрыгивает при hover ── */
+    .w-chips .chip i { transition: transform .18s var(--ease), color .18s; }
+    .w-chips .chip:hover i { transform: translateY(-2px) scale(1.18); color: #a5b4fc; }
+
+    /* ── Шаги: подъём карточки и пульс номера ── */
+    .w-step:hover {
+      transform: translateY(-3px); border-color: var(--ac);
+      box-shadow: 0 14px 30px -14px rgba(79, 70, 229, .45);
+    }
+    .w-step:hover .num {
+      transform: scale(1.1) rotate(-4deg);
+      box-shadow: 0 8px 20px -6px rgba(124, 58, 237, .8), 0 0 0 6px rgba(124, 58, 237, .12);
+    }
+
+    /* ── FAQ: плавное раскрытие и подсветка иконки ── */
+    .w-faq details[open] { border-color: var(--ac); box-shadow: 0 12px 32px -20px rgba(79, 70, 229, .55); }
+    .w-faq details[open] .faq-body { animation: faqIn .28s var(--ease) both; }
+    @keyframes faqIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+    .w-faq details[open] .q-ico {
+      background: var(--ac-grad); color: #fff; border-color: transparent;
+      box-shadow: 0 4px 12px -4px rgba(124, 58, 237, .7);
+    }
+
+    /* ── Терминал: статичный CRT-сканлайн и мягкий верхний свет ── */
+    .w-terminal-body { position: relative; }
+    .w-terminal-body::after {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .022) 0 1px, transparent 1px 3px);
+    }
+    .w-terminal-body::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(120% 90% at 50% 0%, rgba(129, 140, 248, .07), transparent 60%);
+    }
+
+    /* ── Лента фич: пункты оживают при наведении ── */
+    .w-marquee .item { transition: border-color .18s, color .18s, transform .18s; }
+    .w-marquee .item:hover { border-color: var(--ac); color: var(--text); transform: translateY(-1px); }
+    .w-marquee .item:hover i { color: #a5b4fc; }
+
     /* ── Кнопка «наверх» ── */
     .w-top {
       position: fixed; right: 26px; bottom: 26px; z-index: 120;
@@ -851,7 +912,10 @@
       .w-marquee-track,
       .w-title.typing::after, .w-term-caret, .w-scroll-hint .mouse::after,
       .btn-primary-wrap::before, .dragon-live, .dragon-smoke span,
-      .w-showcase-kpi .k-n.tick { animation: none; }
+      .w-showcase-kpi .k-n.tick,
+      .w-title .grad, .w-sec-title .grad,
+      .w-faq details[open] .faq-body { animation: none; }
+      .w-title .grad, .w-sec-title .grad { background-size: 100% 100%; }
       .dragon-smoke { display: none; }
       .w-dragon-par { transform: none !important; }
       .w-section::before, .w-sec-title::after, .w-step .num,
@@ -864,8 +928,10 @@
       .w-term-line { animation: none; }
       .w-chart-bars .b, .w-feed-line { animation: none; }
       .w-card, .w-step, .w-stat { transition: none; }
-      .w-card, .w-search input, .w-chips .chip, .w-reveal, .btn-primary::after { transition: none; }
+      .w-card, .w-search input, .w-chips .chip, .w-reveal, .btn-primary::after,
+      .w-stat::after, .w-chips .chip i, .w-marquee .item, .w-stat .n { transition: none; }
       .w-card:hover { transform: none; }
+      .w-step:hover { transform: none; box-shadow: none; }
       .w-reveal { opacity: 1; transform: none; }
     }
   </style>
@@ -879,6 +945,7 @@
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
   <canvas id="w-stars" aria-hidden="true"></canvas>
+  <div class="w-progress" id="wProgress" aria-hidden="true"></div>
 
   <!-- Навигация -->
   <nav class="w-nav" aria-label="Навигация">
@@ -1182,12 +1249,45 @@
         }
       }
       var LINK = 120;
+      /* редкий метеор: появляется раз в ~7 секунд */
+      var meteor = null, meteorNext = 4200;
       function step(now) {
         requestAnimationFrame(step);
         if (document.hidden) return;
-        if (now - last < 60) return;
+        if (now - last < 16) return;   /* 60 fps — звёзды мерцают плавно */
         last = now;
         ctx.clearRect(0, 0, W, H);
+        /* падающая звезда */
+        if (!meteor && now > meteorNext) {
+          meteor = {
+            x: 140 + Math.random() * Math.max(80, W - 280),
+            y: 60 + Math.random() * H * 0.3,
+            vx: 5.5 + Math.random() * 3,
+            vy: 2.6 + Math.random() * 1.6,
+            life: 0
+          };
+        }
+        if (meteor) {
+          meteor.life++;
+          meteor.x += meteor.vx; meteor.y += meteor.vy;
+          var tail = 14;
+          var mg = ctx.createLinearGradient(
+            meteor.x, meteor.y,
+            meteor.x - meteor.vx * tail, meteor.y - meteor.vy * tail
+          );
+          mg.addColorStop(0, 'rgba(196, 181, 253, .95)');
+          mg.addColorStop(1, 'rgba(196, 181, 253, 0)');
+          ctx.strokeStyle = mg;
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(meteor.x, meteor.y);
+          ctx.lineTo(meteor.x - meteor.vx * tail, meteor.y - meteor.vy * tail);
+          ctx.stroke();
+          if (meteor.life > 52 || meteor.y > H) {
+            meteor = null;
+            meteorNext = now + 5200 + Math.random() * 6200;
+          }
+        }
         /* линии созвездия между ближними звёздами */
         for (var i = 0; i < stars.length; i++) {
           for (var j = i + 1; j < stars.length; j++) {
@@ -1777,6 +1877,23 @@
         par.style.transform = 'translate3d(' + dx.toFixed(2) + 'px,' + dy.toFixed(2) + 'px,0)';
       });
     });
+  })();
+
+  /* ── Скролл-прогресс: градиентная полоса вверху страницы ── */
+  (function progress() {
+    var bar = document.getElementById('wProgress');
+    if (!bar) return;
+    var raf = null;
+    function upd() {
+      raf = null;
+      var h = document.documentElement;
+      var max = h.scrollHeight - h.clientHeight;
+      bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+    }
+    window.addEventListener('scroll', function () {
+      if (!raf) raf = requestAnimationFrame(upd);
+    }, { passive: true });
+    upd();
   })();
   </script>
 </body>
