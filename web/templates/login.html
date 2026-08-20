@@ -50,12 +50,12 @@
         content: '';
         position: fixed; inset: 0;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-        opacity: .028;
+        opacity: .026;
         pointer-events: none; z-index: 0;
       }
       .lg-glow {
         position: fixed; left: 50%; top: 44%;
-        width: 620px; height: 620px; margin: -310px 0 0 -310px;
+        width: 640px; height: 640px; margin: -320px 0 0 -320px;
         background: radial-gradient(circle, rgba(79, 70, 229, .13), rgba(124, 58, 237, .05) 45%, transparent 70%);
         pointer-events: none; z-index: 0;
       }
@@ -110,16 +110,16 @@
       /* ── Сцена ── */
       .lg-stage {
         position: relative; z-index: 1;
-        width: 100%; max-width: 420px;
+        width: 100%; max-width: 430px;
         margin: 0 auto;
-        padding: 52px 20px 36px;
+        padding: 48px 20px 32px;
       }
-      .lg-card-zone { position: relative; padding-top: 38px; }
+      .lg-card-zone { position: relative; padding-top: 40px; }
 
       /* ── Медальон дракона: парит над кромкой карточки ── */
       .lg-dragon-stage {
         position: absolute; top: 0; left: 50%;
-        width: 76px; height: 76px; margin-left: -38px;
+        width: 84px; height: 84px; margin-left: -42px;
         z-index: 2;
         animation: lgRise .5s var(--ease) backwards;
       }
@@ -142,17 +142,17 @@
         background: #22d3ee;
         box-shadow: 0 0 7px rgba(34, 211, 238, .9), 0 0 16px rgba(34, 211, 238, .4);
       }
-      .lg-dragon-stage .orbits i:nth-child(1) { transform: translate(0, -38px); }
+      .lg-dragon-stage .orbits i:nth-child(1) { transform: translate(0, -42px); }
       .lg-dragon-stage .orbits i:nth-child(2) {
-        transform: translate(27px, 27px); background: #a78bfa;
+        transform: translate(30px, 30px); background: #a78bfa;
         box-shadow: 0 0 7px rgba(167, 139, 250, .9), 0 0 16px rgba(167, 139, 250, .4);
       }
       .lg-dragon-stage .orbits i:nth-child(3) {
-        transform: translate(-27px, 27px); background: #818cf8;
+        transform: translate(-30px, 30px); background: #818cf8;
         box-shadow: 0 0 7px rgba(129, 140, 248, .9), 0 0 16px rgba(129, 140, 248, .4);
       }
       .lg-dragon-stage .tile {
-        position: absolute; inset: 13px; border-radius: 19px;
+        position: absolute; inset: 14px; border-radius: 21px;
         background: var(--ac-grad);
         display: grid; place-items: center; overflow: hidden;
         box-shadow: 0 6px 22px -6px rgba(124, 58, 237, .7), inset 0 1px 0 rgba(255, 255, 255, .3);
@@ -170,13 +170,13 @@
       @keyframes lgGloss { 0%, 55% { left: -65%; } 85%, 100% { left: 135%; } }
       .lg-dragon-stage .tile img {
         position: relative; z-index: 1;
-        width: 100%; height: 100%; object-fit: cover; padding: 7px;
+        width: 100%; height: 100%; object-fit: cover; padding: 8px;
         animation: dragonBreath 4.6s ease-in-out infinite;
       }
       .lg-dragon-stage .dragon-smoke { position: absolute; inset: 0; }
       .lg-dragon-stage .floor {
-        position: absolute; left: 50%; bottom: -13px;
-        width: 64px; height: 14px; margin-left: -32px; border-radius: 50%;
+        position: absolute; left: 50%; bottom: -14px;
+        width: 68px; height: 14px; margin-left: -34px; border-radius: 50%;
         background: radial-gradient(ellipse at center, rgba(124, 58, 237, .4), transparent 70%);
         filter: blur(5px);
         animation: lgFloor 4.6s ease-in-out infinite;
@@ -210,11 +210,11 @@
       /* ── Карточка ── */
       .auth-card {
         position: relative; z-index: 1;
-        width: 100%; max-width: 420px;
+        width: 100%; max-width: 430px;
         margin: auto;
-        background: rgba(13, 16, 25, .74);
+        background: rgba(13, 16, 25, .78);
         border: 1px solid rgba(255, 255, 255, .07);
-        border-radius: 22px;
+        border-radius: 24px;
         backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
         box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .04);
         overflow: hidden;
@@ -225,27 +225,28 @@
         position: absolute; top: 0; left: 0; right: 0;
         height: 2px; z-index: 3;
         background: var(--ac-grad);
-        opacity: .8;
+        opacity: .7;
       }
       .auth-card::after {
         content: '';
-        position: absolute; inset: -1px; border-radius: 23px; padding: 1px;
+        position: absolute; inset: -1px; border-radius: 25px; padding: 1px;
         background: conic-gradient(#4f46e5, #7c3aed, #22d3ee, #4f46e5);
         -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
         -webkit-mask-composite: xor; mask-composite: exclude;
-        opacity: 0; transition: opacity .35s ease; pointer-events: none; z-index: 4;
+        opacity: 0; transition: opacity .4s ease; pointer-events: none; z-index: 4;
       }
-      .auth-card:hover::after { opacity: .3; }
+      .auth-card:hover::after { opacity: .25; }
       @keyframes lgRise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+      .auth-main { padding: 56px 32px 30px; }
       .auth-side { animation: slideSide .5s var(--ease) .12s both; }
-      .auth-main { padding: 48px 28px 24px; animation: tabFade .35s var(--ease) .18s both; }
+      .auth-main { animation: tabFade .35s var(--ease) .18s both; }
       @keyframes slideSide { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
       @keyframes tabFade { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 
       /* ── Бренд-строка ── */
       .auth-side .brand {
         display: flex; align-items: center; gap: 10px;
-        justify-content: center; margin-bottom: 18px;
+        justify-content: center; margin-bottom: 16px;
       }
       .auth-side .brand .ico {
         width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px;
@@ -273,8 +274,8 @@
       }
       .auth-side h1 {
         font-family: 'Unbounded', sans-serif;
-        font-size: 20px; font-weight: 700; letter-spacing: -.02em;
-        line-height: 1.25; margin: 0 0 8px; text-align: center;
+        font-size: 23px; font-weight: 700; letter-spacing: -.02em;
+        line-height: 1.22; margin: 0 0 8px; text-align: center;
       }
       .auth-side h1 .grad {
         background: linear-gradient(90deg, #818cf8, #a78bfa 30%, #22d3ee 50%, #a78bfa 70%, #818cf8);
@@ -284,37 +285,33 @@
       }
       @keyframes lgGradFlow { to { background-position: 220% 0; } }
       .auth-side .lead {
-        margin: 0 auto 20px; max-width: 330px;
+        margin: 0 auto 24px; max-width: 340px;
         font-size: 12.5px; line-height: 1.6; color: var(--text3);
         text-align: center;
       }
       .auth-main .mobile-brand { display: none; }
 
-      /* ── Табы ── */
+      /* ── Табы: чистые подчёркнутые, индикатор-пружина ── */
       .tabs {
-        display: flex; gap: 4px; position: relative;
-        padding: 4px; margin-bottom: 22px;
-        background: rgba(255, 255, 255, .03);
-        border: 1px solid rgba(255, 255, 255, .06);
-        border-radius: 13px;
+        display: flex; gap: 22px; position: relative;
+        margin-bottom: 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, .07);
       }
       .tab-btn {
-        flex: 1; padding: 9px 10px;
-        display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+        padding: 0 2px 12px;
+        display: inline-flex; align-items: center; gap: 7px;
         background: transparent; border: none;
-        color: var(--text2); border-radius: 9px;
-        font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer;
-        transition: background .15s, color .15s, transform .12s ease, box-shadow .2s;
+        color: var(--text3); position: relative;
+        font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+        transition: color .15s, transform .12s ease;
       }
-      .tab-btn:hover { background: rgba(255, 255, 255, .04); color: var(--text); }
-      .tab-btn.active {
-        background: var(--ac-grad); color: #fff;
-        box-shadow: 0 5px 16px -7px rgba(124, 58, 237, .65);
-      }
-      .tab-btn:focus-visible { outline: 2px solid var(--ac3); outline-offset: 2px; }
+      .tab-btn:hover { color: var(--text2); }
+      .tab-btn:active { transform: scale(.97); }
+      .tab-btn.active { color: #c7d2fe; }
+      .tab-btn:focus-visible { outline: 2px solid var(--ac3); outline-offset: 3px; border-radius: 4px; }
       .tab-slider {
-        position: absolute; bottom: -8px; left: 0;
-        height: 3px; width: 0; border-radius: 99px;
+        position: absolute; bottom: -1px; left: 0;
+        height: 2px; width: 0; border-radius: 99px;
         background: var(--ac-grad);
         box-shadow: 0 0 10px rgba(124, 58, 237, .6);
         pointer-events: none;
@@ -331,16 +328,16 @@
       /* ── Поля ── */
       .auth-field { position: relative; margin-bottom: 14px; }
       .auth-field .lbl {
-        font-size: 11.5px; font-weight: 600; color: var(--text2);
-        display: block; margin-bottom: 6px; letter-spacing: .01em;
+        font-size: 11.5px; font-weight: 700; color: var(--text2);
+        display: block; margin-bottom: 7px; letter-spacing: .02em;
       }
       .auth-field input {
-        width: 100%; height: 45px;
-        padding: 12px 14px;
+        width: 100%; height: 48px;
+        padding: 13px 14px;
         background: rgba(255, 255, 255, .035);
         border: 1px solid rgba(255, 255, 255, .09);
-        border-radius: 11px;
-        font-size: 13.5px; font-family: inherit; color: var(--text);
+        border-radius: 12px;
+        font-size: 14px; font-family: inherit; color: var(--text);
         caret-color: var(--ac3);
         transition: border-color .15s, box-shadow .18s, background .15s;
       }
@@ -348,7 +345,7 @@
       .auth-field input:hover { border-color: rgba(255, 255, 255, .16); }
       .auth-field input:focus {
         outline: none; border-color: var(--ac);
-        box-shadow: 0 0 0 3px rgba(79, 70, 229, .18);
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, .2);
         background: rgba(79, 70, 229, .05);
       }
       input:-webkit-autofill,
@@ -359,14 +356,14 @@
         caret-color: #22d3ee;
       }
       .auth-field .f-ico {
-        position: absolute; left: 14px; bottom: 14px;
-        width: 16px; height: 16px;
+        position: absolute; left: 14px; bottom: 15px;
+        width: 17px; height: 17px;
         display: grid; place-items: center;
-        color: var(--text3); font-size: 12px;
+        color: var(--text3); font-size: 12.5px;
         pointer-events: none;
         transition: color .15s;
       }
-      .auth-field.has-ico input { padding-left: 40px; }
+      .auth-field.has-ico input { padding-left: 41px; }
       .auth-field.has-ico:focus-within .f-ico { color: #a5b4fc; }
       .auth-field .cap-hint {
         position: absolute; top: 100%; right: 4px; margin-top: 5px;
@@ -376,8 +373,8 @@
         pointer-events: none;
       }
       .auth-field .eye {
-        position: absolute; right: 8px; bottom: 7px;
-        width: 30px; height: 30px;
+        position: absolute; right: 8px; bottom: 8px;
+        width: 32px; height: 32px;
         display: grid; place-items: center;
         background: transparent; border: none; border-radius: 8px;
         color: var(--text3); font-size: 13px; cursor: pointer;
@@ -385,7 +382,7 @@
       }
       .auth-field .eye:hover { color: #a5b4fc; background: rgba(79, 70, 229, .14); }
       .auth-field .eye[aria-pressed="true"] { color: var(--ac3); }
-      .auth-field.has-eye input { padding-right: 44px; }
+      .auth-field.has-eye input { padding-right: 46px; }
 
       /* ── Ошибки ── */
       .auth-error {
@@ -403,10 +400,11 @@
 
       /* ── Кнопка ── */
       .auth-btn {
-        width: 100%; height: 46px; margin-top: 2px;
+        width: 100%; height: 50px; margin-top: 4px;
         background: var(--ac-grad); color: #fff;
-        border: none; border-radius: 11px;
-        font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+        border: none; border-radius: 12px;
+        font-size: 14px; font-weight: 700; letter-spacing: .01em;
+        font-family: inherit; cursor: pointer;
         display: inline-flex; align-items: center; justify-content: center; gap: 8px;
         box-shadow: 0 8px 22px -8px rgba(124, 58, 237, .6);
         position: relative; overflow: hidden;
@@ -431,7 +429,7 @@
       /* ── Статус и низ ── */
       .auth-status {
         display: flex; align-items: center; justify-content: center; gap: 8px;
-        margin-top: 14px;
+        margin-top: 16px;
         font-family: 'JetBrains Mono', monospace;
         font-size: 10.5px; font-weight: 600; letter-spacing: .03em;
         color: var(--text3);
@@ -449,9 +447,9 @@
         70%  { box-shadow: 0 0 0 7px transparent; }
         100% { box-shadow: 0 0 0 0 transparent; }
       }
-      .auth-foot { text-align: center; margin-top: 14px; font-size: 12px; color: var(--text3); }
+      .auth-foot { text-align: center; margin-top: 16px; font-size: 12px; color: var(--text3); }
 
-      /* ── Фичи: тихая строка под карточкой ── */
+      /* ── Фичи: тихая сетка под карточкой ── */
       .auth-feats {
         list-style: none; margin: 18px 0 0; padding: 0;
         display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
@@ -548,8 +546,8 @@
 
       /* ── Мобильные ── */
       @media (max-width: 640px) {
-        .lg-stage { padding: 46px 14px 28px; }
-        .auth-main { padding: 46px 20px 20px; }
+        .lg-stage { padding: 40px 14px 24px; }
+        .auth-main { padding: 54px 20px 24px; }
         .auth-feats { grid-template-columns: repeat(2, 1fr); }
         .auth-main .mobile-brand {
           display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 16px;
@@ -708,7 +706,10 @@
     <div class="lg-foot-note">AETHER · MEMBER EDITION · v3.0</div>
   </main>
 
+
+</body>
 <script>
+
 
 /* ── Звёздный фон логина (лёгкий canvas, 60 fps, редкие метеоры) ── */
 (function () {
@@ -786,8 +787,10 @@
   requestAnimationFrame(step);
 })();
 
+
 </script>
 <script>
+
 
 (function () {
   'use strict';
@@ -1098,6 +1101,7 @@
     }).catch(function () { window.qualitySetLoading(btn, false); showError('step2-error', 'Сеть недоступна'); });
   });
 })();
+
 
 </script>
 </body>

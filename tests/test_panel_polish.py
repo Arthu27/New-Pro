@@ -1190,8 +1190,8 @@ check('cubic-bezier(.34, 1.3, .64, 1)' in lg2.split('.tab-slider')[1][:500] and 
       'login: слайдер вкладок переезжает мягкой пружиной и вспыхивает')
 check('.tab-out-l' in lg2.split('prefers-reduced-motion')[1][:1000],
       'login: слайды вкладок отключены при reduced-motion')
-# ═══ 37ж. Login: редизайн 3 — компактная премиальная карточка ═══════════════
-print('== login: редизайн 3 ==')
+# ═══ 37ж. Login: редизайн 4 — подчёркнутые табы и премиум-форма ═════════════
+print('== login: редизайн 4 ==')
 lg3 = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
 check('lg-card-zone' in lg3 and 'lg-glow' in lg3,
       'login: структура «одна карточка» с мягким свечением за ней')
@@ -1199,10 +1199,22 @@ check('.lg-dragon-stage' in lg3 and 'top: 0; left: 50%' in lg3.split('.lg-dragon
       'login: медальон дракона парит над кромкой карточки (не внутри, не сверху страницей)')
 check('body::after' in lg3 and 'feTurbulence' in lg3,
       'login: лёгкая плёнка-зерно для глубины фона (статичная, без нагрузки)')
-check('auth-main { padding: 48px' in lg3,
+check('padding: 56px 32px 30px' in lg3,
       'login: контент карточки освобождает место под парящим медальоном')
-check('max-width: 420px' in lg3 and 'padding: 52px 20px 36px' in lg3,
+check('max-width: 430px' in lg3 and 'padding: 48px 20px 32px' in lg3,
       'login: компактная колонна — всё помещается в один экран без скролла')
+check('gap: 22px' in lg3.split('.tabs {')[1][:420] and 'border-bottom: 1px solid rgba(255, 255, 255, .07)' in lg3.split('.tabs {')[1][:420],
+      'login: табы — чистые подчёркнутые (Linear-стиль), без коробок-пилюль')
+check('.tab-btn.active { color: #c7d2fe; }' in lg3,
+      'login: активная вкладка выделена цветом, а не заливкой')
+check('height: 48px' in lg3 and 'border-radius: 12px' in lg3,
+      'login: поля выше и мягче (48px, радиус 12)')
+check('height: 50px' in lg3.split('.auth-btn {')[1][:300],
+      'login: кнопка входа крупная и ровная (50px)')
+check('border-radius: 24px' in lg3.split('.auth-card {')[1][:300],
+      'login: карточка с премиальным радиусом 24')
+check('font-size: 23px' in lg3.split('.auth-side h1 {')[1][:300],
+      'login: заголовок крупнее (23px)')
 
 check('swap-out' in w11 and 'swap-in' in w11 and 'wTitleOut' in w11 and 'wTitleIn' in w11,
       'welcome: смена фраз — старая растворяется, новая вплывает')
