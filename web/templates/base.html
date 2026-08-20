@@ -71,10 +71,18 @@
       };
       if (!W.setLiveRefresh) {
         var jobs = [];
-        W.setLiveRefresh = function (fn, ms) { if (typeof fn === 'function') jobs.push(fn); };
+        W.setLiveRefresh = function (fn, ms) { if (typeof fn === 'function') jobs.push({ fn: fn, ms: ms || 2500 }); };
         setInterval(function () {
-          if (W.__panelKitReady) return; /* app.js взял управление */
-          jobs.forEach(function (fn) { try { fn(); } catch (e) {} });
+          if (W.__panelKitReady) {
+            /* app.js загрузился: передаём ему все зарегистрированные
+               страницами живые загрузчики, иначе они бы остановились */
+            if (jobs.length) {
+              jobs.forEach(function (j) { try { W.setLiveRefresh(j.fn, j.ms); } catch (e) {} });
+              jobs = [];
+            }
+            return;
+          }
+          jobs.forEach(function (j) { try { j.fn(); } catch (e) {} });
         }, 2500);
       }
     })();

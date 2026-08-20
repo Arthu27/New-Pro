@@ -1341,6 +1341,8 @@ check('Бут-шим панели' in base and 'simpleJSON' in base and 'if (!W.
       'base: бут-шим до контента — страничные скрипты не падают до загрузки app.js')
 check('if (!W.setLiveRefresh)' in base and '__panelKitReady' in js,
       'base+app.js: live-refresh шима уступает управление после загрузки кита')
+check('передаём ему все зарегистрированные' in base and 'jobs.forEach(function (j) { try { W.setLiveRefresh(j.fn, j.ms); } catch (e) {} })' in base,
+      'base: живые загрузчики страниц передаются настоящему setLiveRefresh после загрузки app.js (иначе автообновления останавливались бы)')
 check('__panelKitReady = true' in js,
       'app.js: флаг готовности кита в конце файла')
 _ki = open(os.path.join(ROOT, 'web', 'templates', 'mod_kiosk.html'), encoding='utf-8').read()
