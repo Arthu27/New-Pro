@@ -853,6 +853,32 @@ check('auth-feats' in lg and 'rgba(255, 255, 255, .05)' in lg,
 r = client.get('/login')
 check(r.status_code == 200 and 'MEMBER EDITION' in r.get_data(as_text=True),
       '/login открывается в чёрной теме для участников')
+# ═══ 29а. Логин — красота и надёжность ════════════════════════════════════
+print('== логин: красота 4 ==')
+check('lgGradFlow' in lg and 'background-size: 220% 100%' in lg,
+      'логин: заголовок «Твой сервер — твоя жизнь» переливается градиентом')
+check('slideSide' in lg and 'featIn' in lg and 'auth-feats li:nth-child(6)' in lg,
+      'логин: бренд-панель въезжает, фичи появляются каскадом')
+check('tabFade' in lg,
+      'логин: содержимое вкладок переключается с плавным появлением')
+check('passEye' in lg and 'aria-pressed' in lg and 'fa-eye-slash' in lg,
+      'логин: глазик показа/скрытия пароля')
+check('errShake' in lg and "classList.add('shake')" in lg,
+      'логин: ошибки трясутся при появлении')
+check('digitPop' in lg and 'classList.add(\'has\')' in lg,
+      'логин: PIN-цифры подпрыгивают при вводе')
+check('popIn' in lg and 'classList.add(\'open\')' in lg,
+      'логин: автодополнение появляется плавно')
+check('ArrowDown' in lg and 'scrollIntoView({ block: \'nearest\' })' in lg,
+      'логин: подсказки автодополнения управляются стрелками и Enter')
+check('window.qualitySetLoading = window.qualitySetLoading || function' in lg,
+      'логин: собственный спиннер кнопок (PIN не падает без app.js)')
+check('meteorNext' in lg and 'now - last < 16' in lg,
+      'логин: звёзды на 60 fps и редкие метеоры')
+check('.auth-side h1 .grad' in lg.split('prefers-reduced-motion')[1][:800]
+      and '.auth-card, .auth-side, .auth-main, .auth-feats li' in lg.split('prefers-reduced-motion')[1][:800],
+      'логин: новые анимации выключены при reduced-motion')
+
 # ═══ 30. Welcome: витрина, tilt, scrollspy, FAQ ════════════════════════════
 print('== welcome: витрина панели ==')
 w5 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()

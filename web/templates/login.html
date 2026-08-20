@@ -77,6 +77,21 @@
         overflow: hidden;
         animation: fadeUp 0.4s var(--ease) both;
       }
+      /* вход в карточку с каскадом: бренд-панель слева, форма справа */
+      .auth-side { animation: slideSide .5s var(--ease) both; }
+      .auth-main { animation: fadeUp .5s var(--ease) .1s both; }
+      @keyframes slideSide { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+      /* фичи бренд-панели появляются по очереди (backwards — после анимации hover работает) */
+      .auth-feats li {
+        animation: featIn .45s var(--ease) backwards;
+      }
+      .auth-feats li:nth-child(1) { animation-delay: .22s; }
+      .auth-feats li:nth-child(2) { animation-delay: .3s; }
+      .auth-feats li:nth-child(3) { animation-delay: .38s; }
+      .auth-feats li:nth-child(4) { animation-delay: .46s; }
+      .auth-feats li:nth-child(5) { animation-delay: .54s; }
+      .auth-feats li:nth-child(6) { animation-delay: .62s; }
+      @keyframes featIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
       .auth-card::before {
         content: '';
         position: absolute; top: 0; left: 0; right: 0;
@@ -150,9 +165,12 @@
         margin: 0 0 12px;
       }
       .auth-side h1 .grad {
-        background: linear-gradient(90deg, #818cf8, #a78bfa 50%, #22d3ee);
+        background: linear-gradient(90deg, #818cf8, #a78bfa 30%, #22d3ee 50%, #a78bfa 70%, #818cf8);
+        background-size: 220% 100%;
         -webkit-background-clip: text; background-clip: text; color: transparent;
+        animation: lgGradFlow 6s linear infinite;
       }
+      @keyframes lgGradFlow { to { background-position: 220% 0; } }
       .auth-side .lead { font-size: 13.5px; line-height: 1.65; opacity: .85; margin: 0 0 28px; }
       .auth-feats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
       .auth-feats li {
@@ -255,6 +273,50 @@
       .pin-box input:focus { outline: none; border-color: var(--ac); box-shadow: 0 0 0 3px rgba(79, 70, 229, .22); }
       .step-hint { font-size: 13px; color: var(--text3); text-align: center; margin-bottom: 14px; }
 
+      /* ── Переключение вкладок: плавное появление содержимого ── */
+      #tabPass, #tabPin { animation: tabFade .3s var(--ease); }
+      @keyframes tabFade { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+
+      /* ── Ошибки: тряска при появлении ── */
+      .auth-error.shake { animation: errShake .4s ease; }
+      @keyframes errShake {
+        10%, 90% { transform: translateX(-1px); }
+        20%, 80% { transform: translateX(2px); }
+        30%, 50%, 70% { transform: translateX(-3px); }
+        40%, 60% { transform: translateX(3px); }
+      }
+
+      /* ── Автодополнение: появление из-под поля ── */
+      .autocomplete-popup.open { display: block; animation: popIn .18s var(--ease) both; }
+      @keyframes popIn { from { opacity: 0; transform: translateY(-5px) scale(.985); } to { opacity: 1; transform: none; } }
+
+      /* ── Глазик показа пароля ── */
+      .auth-field .eye {
+        position: absolute; right: 10px; bottom: 11px;
+        width: 30px; height: 30px;
+        display: grid; place-items: center;
+        background: transparent; border: none; border-radius: 8px;
+        color: var(--text3); font-size: 13px; cursor: pointer;
+        transition: color .15s, background .15s;
+      }
+      .auth-field .eye:hover { color: #a5b4fc; background: rgba(79, 70, 229, .14); }
+      .auth-field .eye[aria-pressed="true"] { color: var(--ac3); }
+      .auth-field.has-eye input { padding-right: 44px; }
+
+      /* ── PIN: цифры подпрыгивают при вводе ── */
+      .pin-box input { transition: transform .12s ease, border-color .15s, box-shadow .2s; }
+      .pin-box input.has {
+        animation: digitPop .22s var(--ease);
+        border-color: var(--ac3);
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, .16), 0 8px 18px -8px rgba(34, 211, 238, .45);
+      }
+      @keyframes digitPop { 40% { transform: translateY(-4px) scale(1.06); } }
+
+      /* ── Кнопки: спиннер при загрузке ── */
+      .auth-btn.loading { pointer-events: none; opacity: .85; }
+      .auth-btn .spin { animation: lgSpin .8s linear infinite; display: inline-block; }
+      @keyframes lgSpin { to { transform: rotate(360deg); } }
+
       @media (max-width: 760px) {
         .auth-card { grid-template-columns: 1fr; max-width: 420px; }
         .auth-side { display: none; }
@@ -268,10 +330,12 @@
         }
         .auth-main .mobile-brand b {
           font-family: 'Unbounded', sans-serif; font-size: 14px; font-weight: 700;
-          background: linear-gradient(120deg, #e8ecf6 20%, #a5b4fc 90%);
+          background: linear-gradient(90deg, #e8ecf6 10%, #a5b4fc 40%, #22d3ee 60%, #a5b4fc 80%, #e8ecf6);
+          background-size: 200% 100%;
           -webkit-background-clip: text;
           background-clip: text;
           color: transparent;
+          animation: lgGradFlow 6s linear infinite;
         }
       }
       @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
@@ -302,8 +366,13 @@
           }
 
       @media (prefers-reduced-motion: reduce) {
-        .auth-side::before, .auth-side::after, .auth-btn::after, .dragon-live { animation: none; }
-        .auth-btn, .tab-btn, .auth-feats li, .auth-field input { transition: none; }
+        .auth-side::before, .auth-side::after, .auth-btn::after, .dragon-live,
+        .auth-card, .auth-side, .auth-main, .auth-feats li,
+        .auth-side h1 .grad, #tabPass, #tabPin, .auth-error.shake,
+        .autocomplete-popup.open, .pin-box input.has, .auth-btn .spin { animation: none; }
+        .auth-btn, .tab-btn, .auth-feats li, .auth-field input,
+        .auth-field .eye, .pin-box input { transition: none; }
+        .auth-side h1 .grad { background-size: 100% 100%; }
       }
     </style>
 </head>
@@ -357,11 +426,12 @@
             <input type="text" name="username" id="passUsername" placeholder="Логин, @username или Discord ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Логин">
             <div class="autocomplete-popup" id="passPopup"></div>
           </div>
-          <div class="auth-field">
+          <div class="auth-field has-eye">
             <label class="lbl" for="passPassword">Пароль</label>
             <input type="password" name="password" id="passPassword" placeholder="••••••••" required aria-label="Пароль">
+            <button type="button" class="eye" id="passEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
           </div>
-          <button type="submit" class="auth-btn"><i class="fas fa-arrow-right"></i> Войти</button>
+          <button type="submit" class="auth-btn" id="passSubmitBtn"><i class="fas fa-arrow-right"></i> Войти</button>
         </form>
       </div>
 
@@ -417,12 +487,44 @@
       });
     }
   }
+  var meteor = null, meteorNext = 3600;
   function step(now) {
     requestAnimationFrame(step);
     if (document.hidden) return;
-    if (now - last < 60) return;
+    if (now - last < 16) return;   /* 60 fps — мерцание шелковистое */
     last = now;
     ctx.clearRect(0, 0, W, H);
+    /* редкая падающая звезда */
+    if (!meteor && now > meteorNext) {
+      meteor = {
+        x: 120 + Math.random() * Math.max(80, W - 240),
+        y: 50 + Math.random() * H * 0.3,
+        vx: 5.5 + Math.random() * 3,
+        vy: 2.6 + Math.random() * 1.6,
+        life: 0
+      };
+    }
+    if (meteor) {
+      meteor.life++;
+      meteor.x += meteor.vx; meteor.y += meteor.vy;
+      var tail = 14;
+      var mg = ctx.createLinearGradient(
+        meteor.x, meteor.y,
+        meteor.x - meteor.vx * tail, meteor.y - meteor.vy * tail
+      );
+      mg.addColorStop(0, 'rgba(196, 181, 253, .95)');
+      mg.addColorStop(1, 'rgba(196, 181, 253, 0)');
+      ctx.strokeStyle = mg;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(meteor.x, meteor.y);
+      ctx.lineTo(meteor.x - meteor.vx * tail, meteor.y - meteor.vy * tail);
+      ctx.stroke();
+      if (meteor.life > 52 || meteor.y > H) {
+        meteor = null;
+        meteorNext = now + 4800 + Math.random() * 6000;
+      }
+    }
     for (var i = 0; i < stars.length; i++) {
       var st = stars[i];
       var a = 0.22 + 0.5 * (0.5 + 0.5 * Math.sin(st.p + now * 0.001 * st.s));
@@ -445,10 +547,48 @@
 
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  /* Кнопки: спиннер при загрузке (login не подключает app.js — свой помощник) */
+  var _btnIcons = {};
+  window.qualitySetLoading = window.qualitySetLoading || function (btn, loading) {
+    if (!btn) return;
+    if (loading) {
+      if (!_btnIcons[btn.id]) _btnIcons[btn.id] = btn.querySelector('i');
+      btn.classList.add('loading');
+      var ic = btn.querySelector('i');
+      if (ic) ic.className = 'fas fa-circle-notch spin';
+    } else {
+      btn.classList.remove('loading');
+      var saved = _btnIcons[btn.id];
+      var cur = btn.querySelector('i');
+      if (cur) cur.remove();
+      if (saved) btn.insertBefore(saved, btn.firstChild);
+    }
+  };
+
   function showError(boxId, text) {
     var el = $(boxId);
-    if (text) { el.textContent = text; el.style.display = ''; }
-    else el.style.display = 'none';
+    if (text) {
+      el.textContent = text;
+      el.style.display = '';
+      el.classList.remove('shake');
+      void el.offsetWidth; /* перезапуск анимации тряски */
+      el.classList.add('shake');
+    } else el.style.display = 'none';
+  }
+
+  /* ── Глазик показа пароля ── */
+  var passEye = $('passEye');
+  if (passEye) {
+    passEye.addEventListener('click', function () {
+      var inp = $('passPassword');
+      var show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      passEye.setAttribute('aria-pressed', show ? 'true' : 'false');
+      passEye.title = show ? 'Скрыть пароль' : 'Показать пароль';
+      passEye.querySelector('i').className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+      inp.focus();
+    });
   }
 
   /* Табы */
@@ -461,40 +601,83 @@
     });
   });
 
-  /* Автодополнение логинов */
+  /* Автодополнение логинов (с клавиатурной навигацией) */
   var suggestTimer = null;
   window.showSuggest = function (input, popupId) {
     var popup = $(popupId);
     var q = (input.value || '').trim();
-    if (q.length < 2) { popup.style.display = 'none'; return; }
+    if (q.length < 2) { popup.classList.remove('open'); return; }
     clearTimeout(suggestTimer);
     suggestTimer = setTimeout(function () {
       fetch('/api/login/suggest?q=' + encodeURIComponent(q))
         .then(function (r) { return r.json(); })
         .then(function (d) {
           var items = Array.isArray(d) ? d : (d.suggestions || []);
-          if (!items.length) { popup.style.display = 'none'; return; }
+          if (!items.length) { popup.classList.remove('open'); return; }
           popup.innerHTML = items.slice(0, 6).map(function (s) {
             return '<div class="item" data-user="' + esc(s.username || '') + '" data-id="' + esc(s.discord_id || '') + '">' +
               (s.avatar ? '<img alt="" src="' + esc(s.avatar) + '" onerror="this.style.display=\'none\'">' : '<i class="fas fa-user"></i>') +
               '<span>' + esc(s.username || '') + (s.discord_id ? ' <small class="muted">' + esc(s.discord_id) + '</small>' : '') + '</span></div>';
           }).join('');
-          popup.style.display = '';
+          popup.classList.add('open');
           Array.prototype.forEach.call(popup.querySelectorAll('.item'), function (it) {
             it.addEventListener('click', function () {
               input.value = it.dataset.user || it.dataset.id || input.value;
-              popup.style.display = 'none';
+              popup.classList.remove('open');
+              input.focus();
             });
           });
         })
-        .catch(function () { popup.style.display = 'none'; });
+        .catch(function () { popup.classList.remove('open'); });
     }, 220);
   };
+  function bindPopupKeys(input, popupId) {
+    input.addEventListener('keydown', function (e) {
+      var popup = $(popupId);
+      if (!popup.classList.contains('open')) return;
+      var items = popup.querySelectorAll('.item');
+      if (!items.length) return;
+      var active = popup.querySelector('.item.active');
+      var idx = active ? Array.prototype.indexOf.call(items, active) : -1;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        idx = (idx + 1) % items.length;
+        items.forEach(function (it) { it.classList.remove('active'); });
+        items[idx].classList.add('active');
+        items[idx].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        idx = idx <= 0 ? items.length - 1 : idx - 1;
+        items.forEach(function (it) { it.classList.remove('active'); });
+        items[idx].classList.add('active');
+        items[idx].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        if (active) {
+          e.preventDefault();
+          input.value = active.dataset.user || active.dataset.id || input.value;
+          popup.classList.remove('open');
+        }
+      } else if (e.key === 'Escape') {
+        popup.classList.remove('open');
+      }
+    });
+  }
+  bindPopupKeys($('passUsername'), 'passPopup');
+  bindPopupKeys($('discordQuery'), 'pinPopup');
   document.addEventListener('click', function (e) {
     if (!e.target.closest('.autocomplete-popup') && !e.target.closest('.auth-field input')) {
-      document.querySelectorAll('.autocomplete-popup').forEach(function (p) { p.style.display = 'none'; });
+      document.querySelectorAll('.autocomplete-popup').forEach(function (p) { p.classList.remove('open'); });
     }
   });
+
+  /* Форма пароля: спиннер на кнопке при отправке */
+  var passForm = document.querySelector('#tabPass form');
+  if (passForm) {
+    passForm.addEventListener('submit', function () {
+      var btn = $('passSubmitBtn');
+      if (btn) window.qualitySetLoading(btn, true);
+    });
+  }
 
   /* PIN: шаг 1 */
   $('pinCheckBtn').addEventListener('click', function () {
@@ -532,6 +715,13 @@
       inp.addEventListener('input', function () {
         this.value = this.value.replace(/\D/g, '');
         var idx = parseInt(this.dataset.i, 10);
+        if (this.value) {
+          this.classList.remove('has');
+          void this.offsetWidth; /* перезапуск анимации */
+          this.classList.add('has');
+        } else {
+          this.classList.remove('has');
+        }
         if (this.value && idx < 5) box.children[idx + 1].focus();
         _pin = Array.prototype.map.call(box.children, function (c) { return c.value; }).join('');
         if (_pin.length === 6) $('pinConfirmBtn').focus();
