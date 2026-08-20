@@ -1078,8 +1078,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=52' in base and 'style.css?v=112' in base,
-      'версии ассетов (112/52)')
+check('app.js?v=53' in base and 'style.css?v=113' in base,
+      'версии ассетов (113/53)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
@@ -1410,6 +1410,55 @@ check("'enabled': False" in _tj.split('api_tagjail_state')[1][:800] and "'jailed
 _ms = open(os.path.join(ROOT, 'web', 'routes', 'music_panel.py'), encoding='utf-8').read()
 check("'playing': True" in _ms.split('api_music_state')[1][:900] and 'phonk mix' in _ms,
       'api/music/state: демо-плеер с текущим треком и очередью')
+# ═══ 37с. Локдаун руками, карточка по имени, статичные кнопки, без AI-спама ══
+print('== локдаун руками, имена, кнопки, без спама ==')
+_ldt = open(os.path.join(ROOT, 'web', 'templates', 'lockdown.html'), encoding='utf-8').read()
+check('id="ldSpec"' in _ldt and 'select' in _ldt.split('id="ldSpec"')[0][-120:] and 'ldLoadChannels' in _ldt,
+      'локдаун: каналы выбираются руками из выпадающего списка (не текстом)')
+check('Все текстовые каналы' in _ldt and "c.type === 'text' && !c.hidden" in _ldt,
+      'локдаун: список каналов грузится из /channels (текстовые, не скрытые)')
+check("d.bot_online || d.demo" in _ldt,
+      'локдаун: контур запуска активен и в демо-режиме')
+_ldp = open(os.path.join(ROOT, 'web', 'routes', 'lockdown_panel.py'), encoding='utf-8').read()
+check('_demo_lock_flow' in _ldp and '_demo_unlock_flow' in _ldp and '_demo_targets' in _ldp,
+      'routes lockdown: демо-замок/откат/предпросмотр с локальным хранилищем')
+check("'demo': demo" in _ldp,
+      'routes lockdown: статус помечает демо-режим (кнопки работают в превью)')
+_mcp = open(os.path.join(ROOT, 'web', 'routes', 'member_card_panel.py'), encoding='utf-8').read()
+check('def resolve_user_ref' in _mcp and 'ИМЯ участника' in _mcp,
+      'карточка: lookup принимает имя участника (не только ID)')
+check('Найдено несколько' in _mcp and '_name_pool' in _mcp,
+      'карточка: несколько совпадений по имени — честная подсказка с вариантами')
+check("'ecobar'" in _mcp and "data/xp_{gid}.json" in _mcp,
+      'карточка: пул имён = аудит + демо-логин + XP + дни рождения')
+_mct = open(os.path.join(ROOT, 'web', 'templates', 'member_card.html'), encoding='utf-8').read()
+check('ID участника или имя' in _mct and 'Имя тоже принимается' in _mct,
+      'карточка: подсказки говорят, что имя принимается')
+check('closeTopOverlays' in js and "window.closeTopOverlays('notifDrawer')" in js,
+      'оверлеи: уведомления и лента не висят одновременно (меню не смешиваются)')
+check(js.count('window.closeTopOverlays()') >= 2 and 'closeTopOverlays' in js.split('pop.hidden = !pop.hidden')[1][:120] + js.split('pop.hidden = !pop.hidden')[0][-120:],
+      'оверлеи: меню пользователя и попап акцента закрывают друг друга')
+check('Отключено по просьбе владельца' in js.split('Магнитные кнопки')[1][:400] and 'return;' in js.split('function fxMagnetic')[1][:300],
+      'кнопки: магнитный эффект отключён — кнопки стоят на месте')
+check('кнопки статичны' in css or 'кнопки стоят на месте' in css,
+      'css: сдвиг кнопок при нажатии убран')
+check('translateY(-1px); box-shadow' not in css.split('.btn-new:hover')[1][:120]
+      and 'translateY(-2px)' not in css.split('.send-btn:hover')[1][:120],
+      'css: кнопки не подпрыгивают при наведении')
+_aim2 = open(os.path.join(ROOT, 'web', 'templates', 'ai_moderation.html'), encoding='utf-8').read()
+check('data-sev="spam"' not in _aim2 and "'spam'" not in _aim2.split('auto_actions')[0][-600:],
+      'ai-модерация: карточка спама убрана (спам не трогается ИИ)')
+_cogaim2 = open(os.path.join(ROOT, 'cogs', 'ai_moderation.py'), encoding='utf-8').read()
+check('"spam":{' not in _cogaim2.split('TOXIC_PATTERNS')[1][:600]
+      and 'spam' not in _cogaim2.split('"auto_actions"')[1][:200],
+      'cog ai_moderation: спам исключён из паттернов и авто-действий ИИ')
+_auto2 = open(os.path.join(ROOT, 'web', 'routes', 'automation.py'), encoding='utf-8').read()
+check('counters-preview demo' in _auto2,
+      'routes automation: предпросмотр счётчиков работает в превью')
+check('isNaN(p) ? null : p / 1000' in js,
+      'timeAgo: ISO-строки и битые даты не дают «NaN дн назад»')
+check("replace('Z', '+00:00')" in _app2.split('def api_activity_feed')[1][:6000],
+      'api/activity-feed: ISO-метки панель-логов приводятся к epoch (лента без NaN)')
 
 # ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')

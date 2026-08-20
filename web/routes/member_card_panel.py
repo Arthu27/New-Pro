@@ -21,6 +21,7 @@ validate_user_id, тот же текст ошибки).
 Страница и чтение — mod+; мутаций здесь нет, карточка только собирает.
 Экспорт — CSV с BOM и точкой с запятой, как остальные выгрузки панели.
 """
+import json
 from types import SimpleNamespace
 
 from web.routes._common import (
@@ -185,25 +186,78 @@ def card_view(bot, gid, uid):
 # ─────────────────────────────────────────────────────────────────────
 # #110: автодополнение и выгрузка
 # ─────────────────────────────────────────────────────────────────────
-def suggest(gid, query, limit=SUGGEST_LIMIT):
-    """Автодополнение: имена из аудита и записей ДР, подстрока без регистра."""
-    q = str(query or '').strip().lower()
-    if not q:
-        return []
+def _name_pool(gid):
+    """Все известные имена сервера: аудит, демо-участники, XP, дни рождения."""
     pool = names_from_audit(gid)
-    # демо: добавляем участников, чтобы подсказки работали без бота
+    # демо: участники, которых видно в подсказках логина — ищем по обоим никам
     from web.routes._common import DEMO_MEMBERS
     for dm in DEMO_MEMBERS:
-        pool.setdefault(str(dm.get('id')), str(dm.get('display_name') or dm.get('name')))
+        uid = str(dm.get('id'))
+        for key in ('display_name', 'name'):
+            if dm.get(key):
+                pool.setdefault(uid, str(dm[key]))
+    # демо-имена из подсказок логина (тот же набор, что в /api/login/suggest)
+    for uid, nm in (
+        ('987430047889637426', 'Owner'),
+        ('1406597367695806564', 'ecobar'),
+        ('1483484518563188767', 'dragon'),
+        ('1461513653650981054', 'hzdio'),
+        ('859341577452257330', 'oberaru'),
+        ('1465744556183126242', 'meow_meow'),
+    ):
+        pool.setdefault(uid, nm)
+    # имена из таблицы лидеров (xp)
+    try:
+        with open(f'data/xp_{gid}.json', encoding='utf-8') as fp:
+            xp = json.load(fp)
+        if isinstance(xp, dict):
+            for uid, u in xp.items():
+                if isinstance(u, dict) and u.get('name'):
+                    pool.setdefault(str(uid), str(u['name']))
+    except Exception as _ex:
+        _log.debug('_name_pool(): xp %s: %s', gid, _ex)
     for uid, info in load_birthdays(gid).items():
         if isinstance(info, dict) and info.get('name'):
             pool.setdefault(str(uid), str(info['name']))
+    return pool
+
+
+def suggest(gid, query, limit=SUGGEST_LIMIT):
+    """Автодополнение: имена из аудита, XP, ДР и демо-списка."""
+    q = str(query or '').strip().lower()
+    if not q:
+        return []
+    pool = _name_pool(gid)
     hits = []
     for uid, name in pool.items():
         if q in str(name).lower() or q in str(uid):
             hits.append({'user_id': str(uid), 'name': str(name)})
     hits.sort(key=lambda h: (h['name'].lower(), h['user_id']))
     return hits[:limit]
+
+
+def resolve_user_ref(gid, raw):
+    """ID или ИМЯ участника → user_id. Имя ищется в аудите, ДР и демо-списке.
+
+    Возвращает (uid, None) при однозначном совпадении, иначе (None, ошибка):
+    участник не найден или найдено несколько — просим уточнить.
+    """
+    raw = str(raw or '').strip()
+    if not raw:
+        return None, 'Введите ID или имя участника'
+    ok, _err, uid = validate_user_id(raw)
+    if ok:
+        return uid, None
+    pool = _name_pool(gid)
+    q = raw.lower()
+    exact = [u for u, n in pool.items() if str(n).lower() == q]
+    hits = exact or [u for u, n in pool.items() if q in str(n).lower()]
+    if len(hits) == 1:
+        return hits[0], None
+    if not hits:
+        return None, 'Участник «%s» не найден ни по ID, ни по имени' % raw
+    preview = '; '.join('%s (%s)' % (pool[u], u) for u in sorted(hits)[:3])
+    return None, 'Найдено несколько: %s. Уточните имя или введите ID.' % preview
 
 
 def card_csv_rows(card):
@@ -271,8 +325,8 @@ def register(ctx):
     def api_mc_lookup(gid):
         import web.app as appmod
         raw = (request.args.get('user') or '').strip()
-        ok, err, uid = validate_user_id(raw)
-        if not ok:
+        uid, err = resolve_user_ref(gid, raw)
+        if err:
             return jsonify({'success': False, 'error': err}), 400
         return jsonify({'success': True,
                         'card': card_view(appmod.bot_instance, gid, uid)})
@@ -290,8 +344,8 @@ def register(ctx):
     def api_mc_export(gid):
         import web.app as appmod
         raw = (request.args.get('user') or '').strip()
-        ok, err, uid = validate_user_id(raw)
-        if not ok:
+        uid, err = resolve_user_ref(gid, raw)
+        if err:
             return jsonify({'success': False, 'error': err}), 400
         card = card_view(appmod.bot_instance, gid, uid)
         body = '\ufeff' + 'Раздел;Показатель;Значение\n'

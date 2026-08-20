@@ -3379,7 +3379,13 @@ def api_activity_feed ():
             for e in raw[-40:]:
                 if e.get('broadcast'):
                     continue
-                push('🖥', e.get('action','Действие'), e.get('username'), e.get('detail',''), e.get('ts',0), 'panel', link='/logs')
+                ts = e.get('ts', 0)
+                if isinstance(ts, str) and not str(ts).isdigit():
+                    try:
+                        ts = int(datetime.fromisoformat(str(ts).replace('Z', '+00:00')).timestamp())
+                    except Exception:
+                        ts = 0
+                push('🖥', e.get('action','Действие'), e.get('username'), e.get('detail',''), ts, 'panel', link='/logs')
     except Exception as _ex:
         _log.debug("api_activity_feed(): подавлено: %s", _ex)
 

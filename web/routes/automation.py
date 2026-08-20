@@ -483,6 +483,30 @@ def register(ctx):
             except (TypeError, ValueError) as _ex:
                 _log.debug('counters-preview: битый gid %r: %s', gid, _ex)
         if guild is None:
+            import web.app as _app
+            if _app._demo_mode():
+                # демо: предпросмотр счётчиков на демо-структуре каналов
+                rows = []
+                try:
+                    with open('data/demo_channels.json', encoding='utf-8') as fp:
+                        demo = json.load(fp)
+                    text = [c for c in demo if c.get('type') == 'text'][:4]
+                    stats = {'members': 1247, 'online': 213, 'bots': 12, 'boosts': 7, 'channels': 16}
+                    tpls = ['{members} участников', 'онлайн: {online}', 'бустов: {boosts}']
+                    for i, c in enumerate(text):
+                        tpl = tpls[i % len(tpls)]
+                        rendered = (tpl
+                                    .replace('{members}', '1 247')
+                                    .replace('{online}', '213')
+                                    .replace('{boosts}', '7'))
+                        rows.append({'channel_id': str(c.get('id')),
+                                     'channel_name': str(c.get('name') or ''),
+                                     'template': tpl,
+                                     'rendered': rendered,
+                                     'missing': False})
+                except Exception as _ex:
+                    _log.debug('counters-preview demo: подавлено: %s', _ex)
+                return jsonify({'success': True, 'enabled': True, 'rows': rows})
             return jsonify({'success': False,
                             'error': 'Бот офлайн — живые числа недоступны'}), 503
         settings = server_stats.merge_settings(

@@ -38,7 +38,12 @@
       <div class="sub">Сначала безопасный предпросмотр, затем причина и запуск.</div></div></div>
     <div class="panel-body">
       <div class="form-row">
-        <label class="form-group" style="flex:1"><span class="form-label">Цель</span><input class="form-input" id="ldSpec" value="all" placeholder="all или ID канала"></label>
+        <label class="form-group" style="flex:1"><span class="form-label">Каналы — выбери руками</span>
+          <select class="form-input" id="ldSpec" aria-label="Каналы для локдауна">
+            <option value="all">Все текстовые каналы</option>
+            <option value="__loading" disabled>Загружаем каналы…</option>
+          </select>
+        </label>
         <button type="button" class="btn" id="ldPreview" style="align-self:flex-end"><i class="fas fa-eye"></i> Предпросмотр</button>
       </div>
       <div class="alert" id="ldPrev" style="display:none;flex-wrap:wrap"></div>
@@ -71,6 +76,31 @@ function msg(t, ok) {
   var m = $('ldMsg');
   m.textContent = t || '';
   m.className = 'hint ' + (t ? (ok ? '' : 'error') : '');
+}
+
+var ldChannelsLoaded = false;
+function ldLoadChannels() {
+  if (ldChannelsLoaded) return;
+  fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); }).then(function (data) {
+    var chans = Array.isArray(data) ? data : (data.channels || []);
+    var text = chans.filter(function (c) { return c.type === 'text' && !c.hidden; })
+      .sort(function (a, b) { return (a.position || 0) - (b.position || 0); });
+    var sel = $('ldSpec');
+    var prev = sel.value;
+    sel.innerHTML = '<option value="all">Все текстовые каналы</option>';
+    text.forEach(function (c) {
+      var o = document.createElement('option');
+      o.value = String(c.id);
+      o.textContent = '#' + c.name;
+      sel.appendChild(o);
+    });
+    if (prev && prev !== '__loading') sel.value = prev;
+    ldChannelsLoaded = true;
+  }).catch(function () {
+    var sel = $('ldSpec');
+    sel.innerHTML = '<option value="all">Все текстовые каналы</option>';
+    ldChannelsLoaded = true;
+  });
 }
 
 function ldLoad() {
@@ -111,7 +141,7 @@ function ldLoad() {
       }).join('');
     }
 
-    var canDrive = CAN_EDIT && d.bot_online;
+    var canDrive = CAN_EDIT && (d.bot_online || d.demo);
     $('ldControls').style.display = canDrive ? '' : 'none';
     $('ldOffline').style.display = canDrive ? 'none' : '';
   }).catch(function () {});
@@ -170,6 +200,7 @@ $('ldPreview').addEventListener('click', ldPreview);
 $('ldCsv').addEventListener('click', function (e) { e.preventDefault(); location.href = API + '/export.csv'; });
 
 ldLoad();
+ldLoadChannels();
 if (window.setLiveRefresh) window.setLiveRefresh(ldLoad, 10000);
 </script>
 {% endblock %}

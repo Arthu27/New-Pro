@@ -959,7 +959,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   box-shadow: 0 6px 16px -6px var(--ac-glow);
   transition: transform .15s var(--ease), box-shadow .2s;
 }
-.btn-new:hover { transform: translateY(-1px); box-shadow: 0 10px 22px -8px var(--ac-glow); }
+.btn-new:hover { box-shadow: 0 10px 22px -8px var(--ac-glow); }
 .btn-new:active { transform: translateY(1px); }
 
 /* ── Контейнер ролей в попапе профиля чата ── */
@@ -1009,7 +1009,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   transition: background 0.12s, border-color 0.12s, transform 0.06s;
 }
 .btn:hover { background: var(--surface-3); border-color: var(--line-3); }
-.btn:active { transform: translateY(1px); }
+/* кнопки стоят на месте: сдвигов при нажатии нет */
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn i { font-size: var(--fs-sm); }
 .btn-primary, .btn.primary {
@@ -1733,7 +1733,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   color: var(--text-2);
   transition: transform 0.14s var(--ease), border-color 0.14s, background 0.14s, color 0.14s;
 }
-.chip.selectable:hover { transform: translateY(-1px); }
+.chip.selectable:hover { border-color: var(--ac-line); }
 .chip.selectable:hover { border-color: var(--line-3); color: var(--text); }
 .chip.selectable.active {
   background: var(--ac-soft);
@@ -2564,7 +2564,7 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
   transition: transform 0.15s var(--ease), box-shadow 0.2s;
 }
 [data-theme="dark"] .send-btn { color: #14152a; }
-.send-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 22px color-mix(in srgb, var(--ac) 42%, transparent), inset 0 1px 0 rgba(255,255,255,.32); }
+.send-btn:hover { box-shadow: 0 8px 22px color-mix(in srgb, var(--ac) 42%, transparent), inset 0 1px 0 rgba(255,255,255,.32); }
 .send-btn:disabled { opacity: 0.55; pointer-events: none; }
 
 /* ── Мобильная нижняя навигация ─────────────────────────── */
@@ -3094,7 +3094,7 @@ select:disabled, select:disabled:hover { opacity: .55; cursor: not-allowed; }
 .studio-control:focus-within .lbl { color: var(--ac); }
 
 /* кнопки: тактильное нажатие */
-.btn:active { transform: translateY(1px) scale(0.98); }
+/* кнопки статичны: transform при нажатии убран */
 .cc-tile:active { transform: translateY(1px) scale(0.99); }
 
 /* ── Зебра в таблицах и липкие шапки ─────────────────────── */
@@ -3266,7 +3266,7 @@ body.dense .kpi { padding: 10px 13px; }
   position: relative;
 }
 [data-theme="dark"] .fab-main { color: #14152a; }
-.fab-main:hover { transform: scale(1.07); }
+.fab-main:hover { box-shadow: var(--shadow-3); }
 .fab.open .fab-main { transform: rotate(45deg); }
 .fab-item {
   display: flex; align-items: center; gap: 10px;
@@ -3296,7 +3296,7 @@ body.dense .kpi { padding: 10px 13px; }
 .fab-item.tone-err .ico { background: var(--err-soft); color: var(--err); }
 .fab-item.tone-ok .ico { background: var(--ok-soft); color: var(--ok); }
 .fab-item.tone-info .ico { background: var(--info-soft); color: var(--info); }
-.fab-item:hover { transform: translateX(-4px); }
+.fab-item:hover { background: var(--surface-3); }
 .fab.backdrop {
   position: fixed; inset: 0;
   background: rgba(16, 18, 24, 0.18);

@@ -168,11 +168,14 @@ page = client.get('/member-card')
 check(page.status_code == 200 and 'Карточка участника 360°' in page.get_data(as_text=True),
       'mod открывает страницу')
 r = client.get(LK)
-check(r.status_code == 400 and r.get_json()['error'] == 'Некорректный ID пользователя',
-      'без user — текст валидации мод-контроля')
+check(r.status_code == 400 and 'Введите ID или имя' in r.get_json()['error'],
+      'без user — просим ID или имя участника')
 r = client.get(LK + '?user=куку')
-check(r.status_code == 400 and r.get_json()['error'] == 'Некорректный ID пользователя',
-      'буквы не прокатили')
+check(r.status_code == 400 and 'не найден ни по ID, ни по имени' in r.get_json()['error'],
+      'незнакомое имя — честная ошибка 400')
+r = client.get(LK + '?user=Алиса')
+check(r.status_code == 200 and r.get_json()['card']['user_id'] == '111',
+      'карточка ищется ПО ИМЕНИ (не только ID)')
 r = client.get(LK + '?user=<@!111>')
 d = r.get_json()
 check(r.status_code == 200 and d['card']['user_id'] == '111', 'упоминание распарсено')

@@ -70,15 +70,8 @@ r"\b(terrorist|terrorism|bomb|isis)\b",
 r"\b(rape|pedophile|child porn)\b",
 ],
 },
-# Spam patterns
-"spam":{
-"any":[
-r"(.)\1{10,}",# 10+ repeated chars
-r"https?://(?:t\.me|discord\.gg|bit\.ly|tinyurl|shorturl)",# common spam links
-r"@everyone|@here",
-r"FREE NITRO|GIFT NITRO|CLICK HERE|CLICKHERE",
-],
-},
+# Spam исключён из AI-детекции по просьбе владельца:
+# спам/флуд обрабатывается отдельными механизмами, без ИИ.
 # Discrimination
 "discrimination":{
 "any":[
@@ -167,7 +160,7 @@ class AIModeration (commands .Cog ):
         return {
         "enabled":True ,
         "auto_actions":{
-        "mild":True ,"moderate":True ,"severe":True ,"spam":True ,"discrimination":True 
+        "mild":True ,"moderate":True ,"severe":True ,"discrimination":True 
         },
         "escalation":{
         "enabled":True ,# 3 mutes in 24h → kick, 5 → ban
@@ -194,7 +187,7 @@ class AIModeration (commands .Cog ):
         matches =[]
         # Check each severity
         for severity ,lang_dict in TOXIC_PATTERNS .items ():
-            if severity in ("spam","discrimination"):
+            if severity in ("discrimination",):
                 patterns =lang_dict .get ("any",[])
             else :
                 patterns =[]
@@ -375,15 +368,13 @@ class AIModeration (commands .Cog ):
         config .get ("languages",["ru","tr","en"]),
         config .get ("sensitivity",0.7 )
         )
-        # Detect spam
-        if self .detect_spam (guild_id ,str (message .author .id ),message .content ):
-            matches .append (("spam","rapid_fire"))
+        # Spam/флуд здесь не трогаем: он живёт в отдельных механизмах, без ИИ.
 
         if not matches :
             return 
 
             # Pick highest severity
-        severity_order =["mild","spam","moderate","discrimination","severe"]
+        severity_order =["mild","moderate","discrimination","severe"]
         severity =max (matches ,key =lambda m :severity_order .index (m [0 ]))[0 ]
         if not config .get ("auto_actions",{}).get (severity ,True ):
             return 

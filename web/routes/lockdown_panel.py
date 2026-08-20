@@ -19,6 +19,8 @@
 
 Чтение и предпросмотр — mod+, замок/откат — admin+ (у команд manage_guild).
 """
+import json
+import os
 from datetime import datetime, timezone
 
 from web.routes._common import (
@@ -220,6 +222,64 @@ def _csv_cell(text):
     return str(text).replace(';', ',').replace('\r', ' ').replace('\n', ' ')
 
 
+def _demo_channels():
+    """Текстовые каналы демо-структуры — локдаун работает в превью без бота."""
+    try:
+        with open(os.path.join('data', 'demo_channels.json'), encoding='utf-8') as fp:
+            demo = json.load(fp)
+    except Exception as _ex:
+        _log.debug('lockdown: demo_channels.json: %s', _ex)
+        demo = []
+    return [{'id': str(c.get('id')), 'name': str(c.get('name') or '')}
+            for c in demo if c.get('type') == 'text']
+
+
+def _demo_targets(state, spec):
+    rows = [{'id': ch['id'], 'name': ch['name'], 'already': LD.is_locked(state, ch['id'])}
+            for ch in _demo_channels()]
+    if spec and str(spec) != 'all':
+        rows = [r for r in rows if r['id'] == str(spec)]
+    return rows
+
+
+def _demo_lock_flow(gid, spec, reason, by):
+    """Имитация замка в превью: снимки {perm: None} и метаданные как у кога."""
+    state = _state(gid)
+    targets = _demo_targets(state, spec)
+    if not targets:
+        return False, NO_TARGET_TEXT, None
+    locked, skipped = [], []
+    for t in targets:
+        cid = t['id']
+        if cid in state['channels']:
+            skipped.append({'id': cid, 'name': t['name'], 'why': 'уже под замком'})
+            continue
+        state['channels'][cid] = {p: None for p in LD.WATCHED_PERMS}
+        locked.append({'id': cid, 'name': t['name']})
+    if locked:
+        state['since'] = datetime.now(UTC).isoformat()
+        state['by'] = by
+        state['reason'] = str(reason if reason is not None else DEFAULT_REASON)
+    _save(gid, state)
+    line = ('%d канал(ов) под замком' % len(locked)) if locked else 'Всё уже было под замком'
+    return True, '', {'locked': bool(locked), 'line': line, 'skipped': skipped, 'missing': []}
+
+
+def _demo_unlock_flow(gid, spec):
+    state = _state(gid)
+    if not state.get('channels'):
+        return False, 'Ни один канал не под замком', None
+    restored = []
+    for t in _demo_targets(state, spec):
+        cid = t['id']
+        if cid in state['channels']:
+            state['channels'].pop(cid, None)
+            restored.append({'id': cid, 'name': t['name']})
+    _save(gid, state)
+    line = ('%d канал(ов) открыто' % len(restored)) if restored else 'Нечего открывать'
+    return True, '', {'restored': bool(restored), 'line': line, 'missing': []}
+
+
 def register(ctx):
     app = ctx.app
     login_required = ctx.login_required
@@ -259,11 +319,20 @@ def register(ctx):
     def api_ld_status(gid):
         import web.app as appmod
         st = _state(gid)
-        view = status_view(_guild(appmod.bot_instance, gid), st)
+        guild = _guild(appmod.bot_instance, gid)
+        demo = appmod.bot_instance is None and appmod._demo_mode()
+        view = status_view(guild, st)
         for row in view['channels']:
             row['saved_view'] = saved_perms_view(row['saved'])
+        if demo:
+            # имена каналов в превью берём из демо-структуры
+            names = {c['id']: c['name'] for c in _demo_channels()}
+            for row in view['channels']:
+                if not row['name']:
+                    row['name'] = names.get(row['id'], '')
         return jsonify({'success': True, 'status': view,
                         'bot_online': appmod.bot_instance is not None,
+                        'demo': demo,
                         'can_edit': session.get('role') in ('admin', 'owner')})
 
     @app.route('/api/guild/<gid>/lockdown/preview', methods=['POST'])
@@ -273,6 +342,12 @@ def register(ctx):
         import web.app as appmod
         guild = _guild(appmod.bot_instance, gid)
         if guild is None:
+            if appmod._demo_mode():
+                spec = (request.get_json(silent=True) or {}).get('spec')
+                rows = _demo_targets(_state(gid), spec)
+                if not rows:
+                    return jsonify({'success': False, 'error': NO_TARGET_TEXT}), 404
+                return jsonify({'success': True, 'targets': rows})
             return jsonify({'success': False, 'error': OFFLINE_TEXT}), 409
         spec = (request.get_json(silent=True) or {}).get('spec')
         rows = preview_targets(guild, _state(gid), spec)
@@ -287,6 +362,16 @@ def register(ctx):
         import web.app as appmod
         guild = _guild(appmod.bot_instance, gid)
         if guild is None:
+            if appmod._demo_mode():
+                data = request.get_json(silent=True) or {}
+                ok, err, payload = _demo_lock_flow(
+                    gid, data.get('spec') or 'all', data.get('reason'),
+                    session.get('username', '?'))
+                if not ok:
+                    return jsonify({'success': False, 'error': err}), 404
+                if payload['locked']:
+                    _notify(f"Локдаун: {payload['line']}")
+                return jsonify({'success': True, **payload})
             return jsonify({'success': False, 'error': OFFLINE_TEXT}), 409
         data = request.get_json(silent=True) or {}
         spec = data.get('spec') or 'all'
@@ -310,6 +395,14 @@ def register(ctx):
         import web.app as appmod
         guild = _guild(appmod.bot_instance, gid)
         if guild is None:
+            if appmod._demo_mode():
+                data = request.get_json(silent=True) or {}
+                ok, err, payload = _demo_unlock_flow(gid, data.get('spec') or 'all')
+                if not ok:
+                    return jsonify({'success': False, 'error': err}), 404
+                if payload['restored']:
+                    _notify(f"Локдаун снят: {payload['line']}")
+                return jsonify({'success': True, **payload})
             return jsonify({'success': False, 'error': OFFLINE_TEXT}), 409
         data = request.get_json(silent=True) or {}
         spec = data.get('spec') or 'all'

@@ -261,11 +261,6 @@
         <div class="sev-name">Severe</div>
         <div class="sev-desc">Бан · Терроризм</div>
       </div>
-      <div class="severity-card" data-sev="spam" onclick="toggleSev('spam')">
-        <div class="sev-icon"><i class="fas fa-bullhorn"></i></div>
-        <div class="sev-name">Spam</div>
-        <div class="sev-desc">Варн · Спам</div>
-      </div>
       <div class="severity-card" data-sev="discrimination" onclick="toggleSev('discrimination')">
         <div class="sev-icon"><i class="fas fa-ban"></i></div>
         <div class="sev-name">Discrimination</div>
@@ -371,7 +366,7 @@
         if (sw) sw.classList.toggle('on', on);
         if (card) card.classList.toggle('active', on);
       });
-      ['mild', 'moderate', 'severe', 'spam', 'discrimination'].forEach(s => {
+      ['mild', 'moderate', 'severe', 'discrimination'].forEach(s => {
         const card = document.querySelector(`[data-sev="${s}"]`);
         if (card) card.classList.toggle('active', auto[s] !== false);
       });

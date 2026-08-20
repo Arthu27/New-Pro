@@ -25,7 +25,16 @@
 
   function timeAgo(ts) {
     if (!ts) return '';
-    var diff = Math.max(0, (Date.now() / 1000) - ts);
+    /* принимаем и epoch-секунды, и ISO-строки; битые значения → «только что» */
+    var v = ts;
+    if (typeof v === 'string' && !/^\d+$/.test(v.trim())) {
+      var p = Date.parse(v);
+      v = isNaN(p) ? null : p / 1000;
+    } else {
+      v = Number(v);
+    }
+    if (v == null || !isFinite(v)) return 'только что';
+    var diff = Math.max(0, (Date.now() / 1000) - v);
     if (diff < 60) return 'только что';
     if (diff < 3600) return Math.floor(diff / 60) + ' мин назад';
     if (diff < 86400) return Math.floor(diff / 3600) + ' ч назад';
@@ -649,6 +658,7 @@
     if (pill) {
       pill.addEventListener('click', function (e) {
         e.stopPropagation();
+        if (window.closeTopOverlays) window.closeTopOverlays();
         pill.classList.toggle('open');
       });
       doc.addEventListener('click', function () { pill.classList.remove('open'); });
@@ -666,6 +676,24 @@
     var searchBtn = doc.getElementById('globalSearchBtn');
     if (searchBtn) searchBtn.addEventListener('click', paletteOpen);
   }
+
+  /* ── Общий закрыватель верхних оверлеев ─────────────────────
+     Уведомления, лента активности, меню пользователя и попап
+     акцента никогда не висят одновременно — меню не смешиваются. */
+  window.closeTopOverlays = function (exceptId) {
+    ['notifDrawer', 'activityDrawer'].forEach(function (id) {
+      var el = doc.getElementById(id);
+      if (el && id !== exceptId) el.classList.remove('open');
+    });
+    ['drawerBackdrop', 'activityBackdrop'].forEach(function (id) {
+      var el = doc.getElementById(id);
+      if (el) el.classList.remove('open');
+    });
+    var pill = doc.querySelector('.user-pill.open');
+    if (pill) pill.classList.remove('open');
+    var pop = doc.querySelector('.accent-pop');
+    if (pop && !pop.hidden) pop.hidden = true;
+  };
 
   /* ── 12. Уведомления (v2) и лента активности ───────────── */
   var notifLastSeen = 0;
@@ -686,6 +714,7 @@
 
     bell.addEventListener('click', function () {
       if (drawer.classList.contains('open')) { closeDrawer(); return; }
+      if (window.closeTopOverlays) window.closeTopOverlays('notifDrawer');
       drawer.classList.add('open');
       if (backdrop) backdrop.classList.add('open');
       loadNotifs();
@@ -798,6 +827,7 @@
 
     btn.addEventListener('click', function () {
       if (drawer.classList.contains('open')) { close(); return; }
+      if (window.closeTopOverlays) window.closeTopOverlays('activityDrawer');
       drawer.classList.add('open');
       if (backdrop) backdrop.classList.add('open');
       if (!loaded) { loadActivity(); loaded = true; }
@@ -1566,6 +1596,7 @@
     }
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
+      if (window.closeTopOverlays) window.closeTopOverlays();
       pop.hidden = !pop.hidden;
       if (!pop.hidden) paint();
     });
@@ -1600,8 +1631,7 @@
       }
       // Escape закрывает открытые дроверы/меню
       if (e.key === 'Escape') {
-        var userPill = doc.querySelector('.user-pill.open');
-        if (userPill) userPill.classList.remove('open');
+        if (window.closeTopOverlays) window.closeTopOverlays();
       }
     });
   }
@@ -2964,8 +2994,11 @@
     paint();
   }
 
-  /* ── 4. Магнитные кнопки ── */
+  /* ── 4. Магнитные кнопки ──
+     Отключено по просьбе владельца: кнопки должны стоять на месте.
+     Код сохранён, но обработчик не вешается. */
   function fxMagnetic() {
+    return;
     if (reduced || narrow()) return;
     var SEL = '.btn, .send-btn, .fab-main, .hdr-btn, .analytics-refresh, .prompt-chip';
     var tick = false, lastE = null, lastTarget = null, lastRect = null;
