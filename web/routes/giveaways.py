@@ -27,6 +27,19 @@ def register(ctx):
     def api_giveaway_list (guild_id ):
         f =f'data/giveaways_{guild_id}.json'
         if not os .path .exists (f ):
+            import web .app as _app
+            if _app ._demo_mode ():
+                # демо: пара примеров, чтобы страница не висела «Розыгрышей нет»
+                import datetime as _dt
+                now =_dt .datetime .now ()
+                return jsonify ([
+                {'id':'gw-demo-1','prize':'Discord Nitro · 1 месяц','winners':1 ,'status':'live',
+                 'ends_at':(now +_dt .timedelta (hours =5 )).isoformat (),'participants':184 ,'channel_id':'1004'},
+                {'id':'gw-demo-2','prize':'Роль «Бустер» на 30 дней','winners':3 ,'status':'live',
+                 'ends_at':(now +_dt .timedelta (days =2 )).isoformat (),'participants':96 ,'channel_id':'2002'},
+                {'id':'gw-demo-3','prize':'1 000 монет экономики','winners':5 ,'status':'ended',
+                 'ends_at':(now -_dt .timedelta (days =1 )).isoformat (),'participants':310 ,'channel_id':'2002'},
+                ])
             return jsonify ([])
         with open (f ,encoding ='utf-8')as fp :
             data =json .load (fp )

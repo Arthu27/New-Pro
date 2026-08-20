@@ -84,6 +84,8 @@
     st.setProperty('--ac-3', dark(0.72));
     st.setProperty('--ac-soft', rgba(0.10));
     st.setProperty('--ac-line', rgba(0.28));
+    /* применяем и градиент кнопок/лого — перекраска полная, без индиго-хвостов */
+    st.setProperty('--ac-grad', 'linear-gradient(135deg, #' + s + ', ' + light(0.18) + ' 55%, ' + dark(0.62) + ')');
     try { localStorage.setItem('aether_accent', hex); } catch (e) {}
   };
 
@@ -1053,6 +1055,14 @@
   }
 
   bootTheme();
+  /* Восстановление сохранённого акцента: иначе цвет сбрасывался
+     при каждой перезагрузке страницы / смене канала. */
+  (function bootAccent() {
+    try {
+      var acc = localStorage.getItem('aether_accent');
+      if (acc && acc !== '#4f46e5') window.applyAccent(acc);
+    } catch (e) {}
+  })();
   ready(function () {
     paletteInitData();
     topbarInit();

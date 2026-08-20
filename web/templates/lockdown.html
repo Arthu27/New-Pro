@@ -153,7 +153,12 @@ function ldPreview() {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ spec: $('ldSpec').value || 'all' })
   }).then(function (r) { return r.json(); }).then(function (d) {
-    if (!d.success) { pv.innerHTML = esc(d.error || 'Ошибка'); pv.style.display = ''; return; }
+    if (!d.success) {
+      pv.innerHTML = '<span style="width:100%">' + esc(d.error || 'Ошибка') + '</span>' +
+        (d.hint ? '<span class="muted" style="width:100%">' + esc(d.hint) + '</span>' : '');
+      pv.style.display = '';
+      return;
+    }
     var fresh = d.targets.filter(function (t) { return !t.already; });
     var olds = d.targets.filter(function (t) { return t.already; });
     pv.innerHTML = '<span style="width:100%">Цель тронет <b>' + fresh.length + '</b> канал(ов)' +

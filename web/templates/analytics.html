@@ -860,6 +860,42 @@
     } catch (e) { /* детализация не критична */ }
   }
 
+  /* Детализация по каналу: список ВСЕХ текстовых каналов сервера,
+     а не только тех, где были сообщения (иначе селект пуст и висит
+     «Канал не выбран»). При ошибке честно показываем причину. */
+  async function loadDrillChannels(gid) {
+    var dsel = $id('anDrillSel');
+    if (!dsel) return;
+    var prev = dsel.value;
+    try {
+      var cr = await fetch('/api/guild/' + gid + '/channels');
+      var cdata = await cr.json();
+      if (cdata && !Array.isArray(cdata) && cdata.error) {
+        dsel.innerHTML = '<option value="" disabled>' + esc(cdata.error) + '</option>';
+        dsel.disabled = true;
+        $id('anDrillMeta').textContent = '';
+        return;
+      }
+      var chans = Array.isArray(cdata) ? cdata : (cdata.channels || []);
+      var text = chans.filter(function (c) { return c.type === 'text' && !c.hidden; })
+        .sort(function (a, b) { return (a.position || 0) - (b.position || 0); });
+      if (!text.length) {
+        dsel.innerHTML = '<option value="" disabled>Текстовых каналов нет</option>';
+        dsel.disabled = true;
+        return;
+      }
+      dsel.disabled = false;
+      dsel.innerHTML = text.map(function (c) {
+        return '<option value="' + esc(c.name) + '">#' + esc(c.name) + '</option>';
+      }).join('');
+      if (prev && Array.from(dsel.options).some(function (o) { return o.value === prev; })) dsel.value = prev;
+      loadDrill(gid, dsel.value);
+    } catch (e) {
+      dsel.innerHTML = '<option value="" disabled>Каналы недоступны — бот офлайн?</option>';
+      dsel.disabled = true;
+    }
+  }
+
   function onDrillChange() {
     var sel = $id('guild-select');
     var gid = (sel && sel.value) || MAIN_GID;
@@ -888,15 +924,7 @@
       loadFlow(gid);
       loadSummary(gid);
       loadRecords(gid);
-      var dsel = $id('anDrillSel');
-      if (dsel && (d.top_channels || []).length !== undefined) {
-        var prev = dsel.value;
-        dsel.innerHTML = (d.top_channels || []).map(function (c) {
-          return '<option value="' + esc(c.name) + '">#' + esc(c.name) + '</option>';
-        }).join('');
-        if (prev && Array.from(dsel.options).some(function (o) { return o.value === prev; })) dsel.value = prev;
-        loadDrill(gid, dsel.value);
-      }
+      loadDrillChannels(gid);
       var csvBtn = $id('anCsvBtn');
       if (csvBtn) csvBtn.href = '/api/guild/' + gid + '/analytics.csv';
       var csvFull = $id('anCsvFullBtn');

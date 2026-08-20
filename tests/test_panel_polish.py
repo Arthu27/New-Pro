@@ -1078,8 +1078,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=53' in base and 'style.css?v=113' in base,
-      'версии ассетов (113/53)')
+check('app.js?v=54' in base and 'style.css?v=113' in base,
+      'версии ассетов (113/54)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
@@ -1459,6 +1459,29 @@ check('isNaN(p) ? null : p / 1000' in js,
       'timeAgo: ISO-строки и битые даты не дают «NaN дн назад»')
 check("replace('Z', '+00:00')" in _app2.split('def api_activity_feed')[1][:6000],
       'api/activity-feed: ISO-метки панель-логов приводятся к epoch (лента без NaN)')
+# ═══ 37т. Точные ошибки, каналы в детализации, акцент при загрузке ═══════════
+print('== точные ошибки, детализация, акцент ==')
+check('function bootAccent' in js and "localStorage.getItem('aether_accent')" in js,
+      'акцент: сохранённый цвет применяется при загрузке (не сбрасывается при смене канала)')
+check("st.setProperty('--ac-grad'" in js.split('window.applyAccent')[1][:1500],
+      'акцент: градиент кнопок перекрашивается под выбранный цвет')
+_anl = open(os.path.join(ROOT, 'web', 'templates', 'analytics.html'), encoding='utf-8').read()
+check('function loadDrillChannels' in _anl and "c.type === 'text' && !c.hidden" in _anl,
+      'аналитика: детализация по каналу берёт ВСЕ текстовые каналы (не только топ по сообщениям)')
+check('Каналы недоступны' in _anl and 'dsel.disabled = true' in _anl.split('Каналы недоступны')[1][:300],
+      'аналитика: при недоступных каналах — честная причина в селекте, не пустота')
+check("dsel.disabled = true" in _anl,
+      'аналитика: селект блокируется при ошибке, а не висит пустым «Канал не выбран»')
+check('OFFLINE_HINT' in _ldp and "'hint': OFFLINE_HINT" in _ldp,
+      'локдаун: офлайн-ошибка с подсказкой «что делать» (точное инфо, не загадка)')
+check('d.hint' in _ldt,
+      'локдаун: подсказка ошибки показывается на странице')
+_ag = open(os.path.join(ROOT, 'web', 'static', 'api-guard.js'), encoding='utf-8').read()
+check('data.hint' in _ag and "hint ? ' · ' + hint" in _ag,
+      'api-guard: тост ошибки включает подсказку из ответа API (везде точное инфо)')
+_gw = open(os.path.join(ROOT, 'web', 'routes', 'giveaways.py'), encoding='utf-8').read()
+check("'gw-demo-1'" in _gw,
+      'routes giveaways: демо-розыгрыши (страница не пустая в превью)')
 
 # ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')

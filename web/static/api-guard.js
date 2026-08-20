@@ -69,8 +69,10 @@
         try {
           resp.clone().json().then(function (data) {
             var reason = (data && (data.error || data.message)) || '';
-            if (reason.length > MAX_ERR_LEN) reason = reason.slice(0, MAX_ERR_LEN) + '…';
-            toast(label + ' · HTTP ' + status + (reason ? ' — ' + reason : ''));
+            var hint = (data && data.hint) || '';
+            var full = label + ' · HTTP ' + status + (reason ? ' — ' + reason : '') + (hint ? ' · ' + hint : '');
+            if (full.length > MAX_ERR_LEN * 2) full = full.slice(0, MAX_ERR_LEN * 2) + '…';
+            toast(full);
           }).catch(function () {
             toast(label + ' · HTTP ' + status);
           });

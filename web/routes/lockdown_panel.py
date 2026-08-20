@@ -38,7 +38,10 @@ UTC = timezone.utc
 
 DEFAULT_REASON = 'локдаун'  # дефолт команды /lockdown
 NO_TARGET_TEXT = 'Не нашёл такой канал. `/lockdown #канал` или `/lockdown all`.'
-OFFLINE_TEXT = 'Бот офлайн — менять права каналов может только живой бот'
+OFFLINE_TEXT = ('Бот офлайн — панель не видит Discord. '
+                'Предпросмотр и смена прав требуют живое подключение бота. '
+                'Запустите бота, подождите статус «онлайн» и обновите страницу.')
+OFFLINE_HINT = 'Что делать: запустите бота и нажмите «Обновить» на странице.'
 
 PERM_LABELS = {True: 'разрешено', False: 'запрещено', None: 'наследуется'}
 
@@ -346,13 +349,15 @@ def register(ctx):
                 spec = (request.get_json(silent=True) or {}).get('spec')
                 rows = _demo_targets(_state(gid), spec)
                 if not rows:
-                    return jsonify({'success': False, 'error': NO_TARGET_TEXT}), 404
+                    return jsonify({'success': False, 'error': NO_TARGET_TEXT,
+                            'hint': 'Проверьте список каналов выше: цель должна быть в выпадающем списке или «all».'}), 404
                 return jsonify({'success': True, 'targets': rows})
-            return jsonify({'success': False, 'error': OFFLINE_TEXT}), 409
+            return jsonify({'success': False, 'error': OFFLINE_TEXT, 'hint': OFFLINE_HINT}), 409
         spec = (request.get_json(silent=True) or {}).get('spec')
         rows = preview_targets(guild, _state(gid), spec)
         if not rows:
-            return jsonify({'success': False, 'error': NO_TARGET_TEXT}), 404
+            return jsonify({'success': False, 'error': NO_TARGET_TEXT,
+                            'hint': 'Проверьте список каналов выше: цель должна быть в выпадающем списке или «all».'}), 404
         return jsonify({'success': True, 'targets': rows})
 
     @app.route('/api/guild/<gid>/lockdown/lock', methods=['POST'])
@@ -372,7 +377,7 @@ def register(ctx):
                 if payload['locked']:
                     _notify(f"Локдаун: {payload['line']}")
                 return jsonify({'success': True, **payload})
-            return jsonify({'success': False, 'error': OFFLINE_TEXT}), 409
+            return jsonify({'success': False, 'error': OFFLINE_TEXT, 'hint': OFFLINE_HINT}), 409
         data = request.get_json(silent=True) or {}
         spec = data.get('spec') or 'all'
         try:
@@ -403,7 +408,7 @@ def register(ctx):
                 if payload['restored']:
                     _notify(f"Локдаун снят: {payload['line']}")
                 return jsonify({'success': True, **payload})
-            return jsonify({'success': False, 'error': OFFLINE_TEXT}), 409
+            return jsonify({'success': False, 'error': OFFLINE_TEXT, 'hint': OFFLINE_HINT}), 409
         data = request.get_json(silent=True) or {}
         spec = data.get('spec') or 'all'
         try:
