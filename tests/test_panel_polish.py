@@ -334,8 +334,9 @@ check('translateZ(0)' not in css and 'will-change' not in css,
 print('== стабильность ==')
 check('@import' not in css and 'неблокирующе из base.html' in css,
       'блокирующий @import шрифтов убран из CSS')
-check('media="print" onload="this.media=' in base,
-      'шрифты грузятся асинхронно (не блокируют рендер)')
+_ffcss = open(os.path.join(ROOT, 'web', 'static', 'vendor', 'fonts', 'fonts.css'), encoding='utf-8').read()
+check('/static/vendor/fonts/fonts.css' in base and 'font-display: swap' in _ffcss,
+      'шрифты локальные и не блокируют рендер (font-display: swap, без внешних CDN)')
 check('aether_splash_done' in js and 'сплэш показываем один раз за сессию' in js,
       'сплэш загрузки — один раз за сессию (без вспышек на навигации)')
 check('_logsFp' in open(os.path.join(ROOT, 'web', 'templates', 'logs.html'), encoding='utf-8').read()
@@ -1229,6 +1230,30 @@ check('rgba(13, 16, 25, .88)' in lg3,
       'login: карточка — стекло на полупрозрачности без фильтров')
 check('var target = 16' in lg3 and 'ema > 30 ? 34 : 16' in lg3,
       'login: канвас звёзд сам сбрасывается на 30 fps на слабых машинах')
+# ═══ 37и. Автономность: иконки и шрифты без внешних CDN ══════════════════════
+print('== автономность: локальные ассеты ==')
+_all = []
+for _t in sorted(os.listdir(os.path.join(ROOT, 'web', 'templates'))):
+    if _t.endswith('.html'):
+        _all.append(open(os.path.join(ROOT, 'web', 'templates', _t), encoding='utf-8').read())
+_all_src = '\n'.join(_all)
+check('cdnjs.cloudflare.com/ajax/libs/font-awesome' not in _all_src,
+      'все шаблоны: иконки Font Awesome не зависят от cdnjs (0 внешних ссылок)')
+check('fonts.googleapis.com' not in _all_src,
+      'все шаблоны: шрифты не зависят от googleapis (0 внешних ссылок)')
+_vend_fa = os.path.join(ROOT, 'web', 'static', 'vendor', 'fontawesome', 'css', 'all.min.css')
+_vend_ff = os.path.join(ROOT, 'web', 'static', 'vendor', 'fonts', 'fonts.css')
+_vend_w = os.path.join(ROOT, 'web', 'static', 'vendor', 'fontawesome', 'webfonts')
+check(os.path.exists(_vend_fa) and os.path.getsize(_vend_fa) > 50000,
+      'вендор: локальный all.min.css на месте')
+check(os.path.exists(_vend_ff) and 'inter-cyrillic' in open(_vend_ff, encoding='utf-8').read(),
+      'вендор: fonts.css с кириллическими поднаборами (Inter/Unbounded/JetBrains Mono)')
+check(len([f for f in os.listdir(_vend_w) if f.endswith('.woff2')]) >= 4,
+      'вендор: webfonts Font Awesome локально (woff2)')
+check('/static/vendor/fontawesome/css/all.min.css' in base and '/static/vendor/fonts/fonts.css' in base,
+      'базовый шаблон: иконки и шрифты подключены локально')
+check('/static/vendor/fontawesome/css/all.min.css' in lg3 and '/static/vendor/fonts/fonts.css' in lg3,
+      'login: иконки и шрифты подключены локально')
 
 check('swap-out' in w11 and 'swap-in' in w11 and 'wTitleOut' in w11 and 'wTitleIn' in w11,
       'welcome: смена фраз — старая растворяется, новая вплывает')
