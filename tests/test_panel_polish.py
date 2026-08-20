@@ -463,8 +463,8 @@ sa = open(os.path.join(ROOT, 'web', 'templates', 'staff_apps.html'), encoding='u
 check('139492' not in sa and '1a1a20' not in sa and '#d4a843' not in sa,
       'рассмотрение заявок: тёмная модалка и золотые градиенты заменены палитрой')
 pa = open(os.path.join(ROOT, 'web', 'templates', 'public_apply.html'), encoding='utf-8').read()
-check('/static/style.css' in pa and 'emblem-dragon.png' in pa and 'data-theme="light"' in pa,
-      'публичная заявка: подключена дизайн-система и дракон')
+check('/static/style.css' in pa and 'emblem-dragon.png' in pa and 'data-theme="dark"' in pa,
+      'публичная заявка: гостевая зона чёрная, дизайн-система и дракон на месте')
 check('⏳' not in pa and '✅' not in pa and '❌' not in pa and '⚠' not in pa,
       'публичная заявка: статусы ID на иконках')
 login_as('owner')
@@ -1230,7 +1230,31 @@ check('rgba(13, 16, 25, .88)' in lg3,
       'login: карточка — стекло на полупрозрачности без фильтров')
 check('var target = 16' in lg3 and 'ema > 30 ? 34 : 16' in lg3,
       'login: канвас звёзд сам сбрасывается на 30 fps на слабых машинах')
-# ═══ 37и. Автономность: иконки и шрифты без внешних CDN ══════════════════════
+# ═══ 37и. Login: клик по людям в подсказках + анкета ═══════════════════════
+print('== login: клик по подсказкам ==')
+check('display_name || s.username' in lg3 and 's.discord_id || s.id' in lg3,
+      'login: поля API (name/display_name/id) мапятся в подсказки — клик реально подставляет значение')
+check('a-ava' in lg3 and '.a-copy' in lg3,
+      'login: подсказки с аватаркой-буквой и именем (не пустые строки)')
+check("input.id === 'passUsername'" in lg3 and 'pw.focus()' in lg3,
+      'login: после выбора логина фокус сразу на пароль')
+check('.autocomplete-popup .item .a-ava img' in lg3,
+      'login: аватар накрывает букву, при ошибке загрузки остаётся буква')
+print('== анкета: премиум-редизайн ==')
+check('.server-card' in pa and 'server-card-opt' not in pa,
+      'анкета: карточки серверов стилизованы (класс в CSS совпадает с JS)')
+check('particles' not in pa,
+      'анкета: частицы удалены — фон статичный, FPS не страдает')
+check('.server-panel' in pa and '.form-card' in pa and '.submit-btn::after' in pa,
+      'анкета: стеклянные панели и блеск кнопки отправки')
+check('#05060a' in pa and '.lg-back' in pa and '/welcome' in pa,
+      'анкета: чёрный премиальный фон и ссылка на главную')
+check('role-card' in pa and ':has(input:checked)' in pa and 'rc-check' in pa,
+      'анкета: карточки ролей с галочкой выбора')
+check('.success-screen .check' in pa and 'okPulse' in pa,
+      'анкета: экран успеха с пульсирующей галочкой')
+
+# ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')
 _all = []
 for _t in sorted(os.listdir(os.path.join(ROOT, 'web', 'templates'))):

@@ -500,12 +500,31 @@
       }
       .autocomplete-popup .item {
         padding: 9px 11px; cursor: pointer; font-size: 13px;
-        display: flex; gap: 9px; align-items: center;
+        display: flex; gap: 10px; align-items: center;
         border-radius: 9px;
       }
       .autocomplete-popup .item:hover, .autocomplete-popup .item.active { background: rgba(79, 70, 229, .14); color: #a5b4fc; }
-      .autocomplete-popup .item img { width: 22px; height: 22px; border-radius: 50%; }
-      .autocomplete-popup .item small { color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+      .autocomplete-popup .item .a-ava {
+        position: relative; width: 34px; height: 34px; flex: 0 0 34px;
+        border-radius: 50%;
+        background: var(--ac-grad); color: #fff;
+        display: grid; place-items: center;
+        font-size: 14px; font-weight: 800; overflow: hidden;
+        box-shadow: 0 4px 10px -4px rgba(124, 58, 237, .6);
+      }
+      .autocomplete-popup .item .a-ava img {
+        position: absolute; inset: 0; width: 100%; height: 100%;
+        object-fit: cover; border-radius: 50%;
+      }
+      .autocomplete-popup .item .a-copy { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+      .autocomplete-popup .item .a-copy b {
+        font-size: 13px; font-weight: 700; color: var(--text);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .autocomplete-popup .item:hover .a-copy b, .autocomplete-popup .item.active .a-copy b { color: #a5b4fc; }
+      .autocomplete-popup .item .a-copy small {
+        color: var(--text3); font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+      }
       .autocomplete-popup.open { display: block; animation: popIn .18s var(--ease) both; }
       @keyframes popIn { from { opacity: 0; transform: translateY(-5px) scale(.985); } to { opacity: 1; transform: none; } }
 
@@ -970,9 +989,15 @@
           var items = Array.isArray(d) ? d : (d.suggestions || []);
           if (!items.length) { popup.classList.remove('open'); return; }
           popup.innerHTML = items.slice(0, 6).map(function (s) {
-            return '<div class="item" data-user="' + esc(s.username || '') + '" data-id="' + esc(s.discord_id || '') + '">' +
-              (s.avatar ? '<img alt="" src="' + esc(s.avatar) + '" onerror="this.style.display=\'none\'">' : '<i class="fas fa-user"></i>') +
-              '<span>' + esc(s.username || '') + (s.discord_id ? ' <small class="muted">' + esc(s.discord_id) + '</small>' : '') + '</span></div>';
+            /* API отдаёт name/display_name/id — мапим надёжно */
+            var label = s.display_name || s.username || s.name || '';
+            var uid = s.discord_id || s.id || '';
+            var uname = s.username || s.name || '';
+            return '<div class="item" data-user="' + esc(label || uid) + '" data-id="' + esc(uid) + '">' +
+              '<span class="a-ava">' + esc((label || uname || uid || '?').charAt(0).toUpperCase()) +
+              (s.avatar ? '<img alt="" src="' + esc(s.avatar) + '" onerror="this.remove()">' : '') + '</span>' +
+              '<span class="a-copy"><b>' + esc(label || uname || uid || '—') + '</b>' +
+              (uid ? '<small>' + esc(uid) + '</small>' : '') + '</span></div>';
           }).join('');
           popup.classList.add('open');
           Array.prototype.forEach.call(popup.querySelectorAll('.item'), function (it) {
@@ -980,6 +1005,11 @@
               input.value = it.dataset.user || it.dataset.id || input.value;
               popup.classList.remove('open');
               input.focus();
+              /* после выбора логина сразу переводим фокус на пароль */
+              if (input.id === 'passUsername') {
+                var pw = $('passPassword');
+                if (pw) pw.focus();
+              }
             });
           });
         })
