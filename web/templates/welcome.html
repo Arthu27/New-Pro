@@ -216,6 +216,8 @@
       font-size: clamp(30px, 5vw, 54px);
       font-weight: 800; letter-spacing: -0.03em;
       line-height: 1.08; margin: 14px 0 10px;
+      /* фиксированная высота строки: при смене фраз контент не прыгает */
+      min-height: 1.1em;
     }
     .w-title.typing { min-height: 1.1em; }
     .w-title.typing::after {
@@ -225,10 +227,11 @@
       animation: wCaret .8s steps(1) infinite;
     }
     /* смена фраз: старая растворяется вверх с размытием, новая вплывает снизу */
-    .w-title.swap-out { animation: wTitleOut .36s var(--ease) forwards; }
-    .w-title.swap-in  { animation: wTitleIn .46s var(--ease) both; }
-    @keyframes wTitleOut { to { opacity: 0; transform: translateY(-7px); filter: blur(4px); } }
-    @keyframes wTitleIn  { from { opacity: 0; transform: translateY(7px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+    .w-title.swap-out { animation: wTitleOut .26s var(--ease) forwards; }
+    .w-title.swap-in  { animation: wTitleIn .34s var(--ease) both; }
+    /* без блюра: текст всегда чёткий, качество не страдает */
+    @keyframes wTitleOut { to { opacity: 0; transform: translateY(-6px); } }
+    @keyframes wTitleIn  { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
     @keyframes wCaret { 50% { opacity: 0; } }
     .w-title .grad, .w-sec-title .grad {
       background: linear-gradient(90deg, #818cf8, #a78bfa 30%, #22d3ee 50%, #a78bfa 70%, #818cf8);
@@ -1411,19 +1414,26 @@
       function run() {
         if (started) return;
         started = true;
-        var idx = 0;
+        var idx = 0, first = true;
         (function next() {
           var text = PHRASES[idx % PHRASES.length];
           idx++;
-          /* старая фраза мягко растворяется с размытием, новая вплывает */
+          /* первая фраза печатается сразу — заголовок не мигает при загрузке */
+          if (first) {
+            first = false;
+            el.textContent = '';
+            type(text, next);
+            return;
+          }
+          /* дальше: старая фраза мягко растворяется, новая вплывает (без блюра) */
           el.classList.add('swap-out');
           setTimeout(function () {
             el.classList.remove('swap-out');
             el.textContent = '';
             el.classList.add('swap-in');
-            setTimeout(function () { el.classList.remove('swap-in'); }, 460);
+            setTimeout(function () { el.classList.remove('swap-in'); }, 340);
             type(text, next);
-          }, 360);
+          }, 260);
         })();
       }
       var io = new IntersectionObserver(function (en) {
