@@ -11,6 +11,41 @@ from web.routes._common import (
     os, json, time, math, discord, datetime, timezone,
 )
 
+def _demo_leveling_file (guild_id ):
+    return f'data/leveling_demo_{guild_id}.json'
+
+def _demo_leveling_default ():
+    return {
+        'enabled':True ,
+        'text_xp':{'enabled':True ,'min':15 ,'max':25 ,'cooldown_sec':60 },
+        'voice_xp':{'enabled':True ,'per_minute':5 ,'min_online_sec':60 },
+        'streak_bonus':{'enabled':True ,'7_days':2.0 ,'14_days':3.0 ,'30_days':5.0 },
+        'level_rewards':{
+            '5':{'role_id':None ,'message':' Вы достигли 5 уровня!'},
+            '10':{'role_id':None ,'message':' 10 уровень — вы ветеран!'},
+            '25':{'role_id':None ,'message':' 25 уровень — почетный участник!'},
+        },
+        'achievements_enabled':True ,
+        'engagement_dm':{'enabled':True ,'after_inactive_hours':48 ,'message':' Скучаем по тебе на сервере!'},
+    }
+
+def _demo_leveling_config (guild_id ):
+    f =_demo_leveling_file (guild_id )
+    if os .path .exists (f ):
+        try :
+            with open (f ,'r',encoding ='utf-8')as fp :
+                return json .load (fp )
+        except Exception as _ex :
+            _log.debug("_demo_leveling_config(): подавлено: %s", _ex)
+    return _demo_leveling_default ()
+
+def _demo_leveling_save (guild_id ,cfg ):
+    try :
+        with open (_demo_leveling_file (guild_id ),'w',encoding ='utf-8')as fp :
+            json .dump (cfg ,fp ,ensure_ascii =False ,indent =2 )
+    except Exception as _ex :
+        _log.debug("_demo_leveling_save(): подавлено: %s", _ex)
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -27,13 +62,19 @@ def register(ctx):
     @role_required ('admin')
     def api_leveling_config ():
         import web .app as _app ;bot =_app .bot_instance 
-        from cogs .leveling_engagement import LevelingEngagement 
-        if not bot :
-            return jsonify ({'error':'Бот офлайн'}),503 
-        cog =bot .get_cog ('LevelingEngagement')
-        if not cog :
-            return jsonify ({'error':'Модуль не загружен'}),404 
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
+        if _app ._demo_mode ()or not bot :
+            # демо: конфиг живёт локально, тумблеры в превью работают
+            if request .method =='POST':
+                cfg =_demo_leveling_config (guild_id )
+                patch =request .get_json (silent =True )or {}
+                for k ,v in patch .items ():
+                    cfg [k ]=v 
+                _demo_leveling_save (guild_id ,cfg )
+                return jsonify ({'ok':True ,'config':cfg })
+            return jsonify (_demo_leveling_config (guild_id ))
+        from cogs .leveling_engagement import LevelingEngagement 
+        cog =bot .get_cog ('LevelingEngagement')
         if request .method =='POST':
             cfg =cog .load_config (guild_id )
             patch =request .get_json (silent =True )or {}
@@ -48,9 +89,33 @@ def register(ctx):
     @login_required 
     def api_leveling_stats ():
         import web .app as _app ;bot =_app .bot_instance 
+        guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
+        if _app ._demo_mode ()or not bot :
+            # демо: статистика из демо-XP файла
+            users ={}
+            try :
+                with open (f'data/xp_{guild_id}.json','r',encoding ='utf-8')as fp :
+                    raw =json .load (fp )
+                if isinstance (raw ,dict ):
+                    users =raw 
+            except Exception as _ex :
+                _log.debug("api_leveling_stats() demo: подавлено: %s", _ex)
+            top =sorted (users .values (),key =lambda x :x .get ('xp',0 ),reverse =True )[:10 ]
+            top_list =[{'name':u .get ('name','Участник'),'level':u .get ('level',1 ),'xp':u .get ('xp',0 )}for u in top ]
+            levels =[int (u .get ('level',0 ))for u in users .values ()]
+            return jsonify ({
+                'total_users':len (users )or 8 ,
+                'max_level':max (levels )if levels else 31 ,
+                'total_xp':sum (u .get ('xp',0 )for u in users .values ())or 184200 ,
+                'total_achievements':12 ,
+                'total_ach_available':20 ,
+                'top':top_list or [
+                    {'name':'sonya.staff','level':31 ,'xp':84200 },
+                    {'name':'ecobar','level':24 ,'xp':49800 },
+                    {'name':'dragon','level':19 ,'xp':27100 },
+                ],
+            })
         from cogs .leveling_engagement import LevelingEngagement ,level_from_xp 
-        if not bot :
-            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('LevelingEngagement')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
@@ -87,9 +152,12 @@ def register(ctx):
     @login_required 
     def api_leveling_achievements ():
         import web .app as _app ;bot =_app .bot_instance 
+        guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
+        if _app ._demo_mode ()or not bot :
+            from cogs .leveling_engagement import ACHIEVEMENTS 
+            demo_unlocked =[k for k in list (ACHIEVEMENTS .keys ())[:6 ]]
+            return jsonify ({'unlocked':demo_unlocked ,'catalog':ACHIEVEMENTS })
         from cogs .leveling_engagement import LevelingEngagement 
-        if not bot :
-            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('LevelingEngagement')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
@@ -116,9 +184,10 @@ def register(ctx):
     @login_required 
     def api_leveling_rewards ():
         import web .app as _app ;bot =_app .bot_instance 
+        guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
+        if _app ._demo_mode ()or not bot :
+            return jsonify ({'rewards':_demo_leveling_config (guild_id ).get ('level_rewards',{})})
         from cogs .leveling_engagement import LevelingEngagement 
-        if not bot :
-            return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('LevelingEngagement')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 

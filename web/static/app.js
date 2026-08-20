@@ -3248,6 +3248,18 @@
       }
       empty.style.display = any ? 'none' : '';
     });
+    /* Гарантированный скролл списка колесом: прокручиваем только список,
+       страница за дропдауном не двигается (фикс «не листается вниз») */
+    panel.addEventListener('wheel', function (e) {
+      try {
+        var sh = listEl.scrollHeight, ch = listEl.clientHeight;
+        if (sh > ch) {
+          var next = listEl.scrollTop + e.deltaY;
+          listEl.scrollTop = Math.max(0, Math.min(next, sh - ch));
+          e.preventDefault();
+        }
+      } catch (err) { /* метрики недоступны — нативное поведение */ }
+    }, { passive: false });
   }
 
   function optionHtml(o, selected) {

@@ -1078,8 +1078,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=50' in base and 'style.css?v=111' in base,
-      'версии ассетов (111/50)')
+check('app.js?v=51' in base and 'style.css?v=112' in base,
+      'версии ассетов (112/51)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
@@ -1317,6 +1317,24 @@ check('var starBtn = doc.createElement' in _js2 and 'star(path)' in _js2,
       'app.js: кнопка-звезда больше не перекрывает функцию star() (был TypeError на каждом клике)')
 check('starBtn.addEventListener' in _js2,
       'app.js: обработчик клика по звезде привязан к кнопке (starBtn)')
+# ═══ 37н. Скролл пикера и демо-данные левелинга ══════════════════════════════
+print('== скролл пикера и демо-левелинг ==')
+check("panel.addEventListener('wheel'" in _js2 and 'listEl.scrollTop + e.deltaY' in _js2,
+      'app.js: колесо прокручивает список AetherSelect, страница не дёргается')
+check('overscroll-behavior: contain' in css.split('.aes-list')[1][:400] and 'touch-action: pan-y' in css.split('.aes-list')[1][:400],
+      'css: список пикера с overscroll-contain и touch-прокруткой')
+check('max-height: min(52vh, 320px)' in css and 'max-height: calc(100vh - 16px)' in css,
+      'css: панель и список пикера вписываются в экран')
+check('overscroll-behavior: contain' in css.split('.modal-overlay .modal-card')[1][:300] or
+      'overscroll-behavior: contain' in css.split('.modal-overlay .modal-box')[1][:300],
+      'css: скролл внутри модалок не утаскивает страницу')
+check('min-height: 0' in css.split('.sidebar-nav {')[1][:200],
+      'css: меню панели гарантированно скроллится (min-height:0)')
+_lv = open(os.path.join(ROOT, 'web', 'routes', 'leveling.py'), encoding='utf-8').read()
+check('_demo_leveling_config' in _lv and 'leveling_demo_' in _lv,
+      'routes leveling: демо-конфиг левелинга с сохранением (тумблеры работают в превью)')
+check("data/xp_{guild_id}.json" in _lv and 'total_ach_available' in _lv,
+      'routes leveling: демо-статистика из XP-файла, ачивки и награды без бота')
 
 # ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')
