@@ -48,6 +48,19 @@ def register(ctx):
     def api_tagjail_state():
         bot, cog, guild = _tagjail_ctx()
         if not cog or not guild:
+            import web.app as _app
+            if _app._demo_mode():
+                # демо: карцер пуст и выключен — страница живая
+                return jsonify({
+                    'ok': True,
+                    'config': {
+                        'enabled': False, 'auto_release': True, 'on_join': True,
+                        'on_name_change': True, 'dm_notify': True, 'scan_on_boot': False,
+                        'min_account_days': 7, 'jail_role_id': 0, 'log_channel_id': 0,
+                    },
+                    'jailed': [],
+                    'guild': 'Главный сервер',
+                })
             return jsonify({'ok': False, 'error': 'Модуль офлайн (бот не запущен)'})
         c = cog.cfg(guild.id)
         jailed = []

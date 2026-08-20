@@ -20,6 +20,48 @@ def _hidden_store ():
         return {}
 
 
+def _demo_roles_file (guild_id ):
+    return f'data/demo_roles_{guild_id}.json'
+
+def _demo_roles_seed ():
+    """Типичный набор ролей сервера — страница ролей в превью живая."""
+    return [
+        {'id':'9001','name':'Владелец','color':'#e11d48','members':3},
+        {'id':'9002','name':'Администратор','color':'#f43f5e','members':9},
+        {'id':'9003','name':'Модератор','color':'#4f46e5','members':14},
+        {'id':'9004','name':'Хелпер','color':'#22d3ee','members':11},
+        {'id':'9005','name':'Чат-контроль','color':'#7c3aed','members':7},
+        {'id':'9006','name':'Ивент-мастер','color':'#a78bfa','members':6},
+        {'id':'9007','name':'Дизайнер','color':'#f59e0b','members':5},
+        {'id':'9008','name':'Бустер','color':'#ec4899','members':38},
+        {'id':'9009','name':'Ветеран','color':'#16a34a','members':64},
+        {'id':'9010','name':'Актив','color':'#0ea5e9','members':97},
+        {'id':'9011','name':'Музыкант','color':'#fb7185','members':12},
+        {'id':'9012','name':'Новичок','color':'#64748b','members':214},
+    ]
+
+def _demo_roles_load (guild_id ):
+    f =_demo_roles_file (guild_id )
+    if os .path .exists (f ):
+        try :
+            with open (f ,'r',encoding ='utf-8')as fp :
+                roles =json .load (fp )
+            if isinstance (roles ,list ):
+                return roles
+        except Exception as _ex :
+            _log.debug("_demo_roles_load(): подавлено: %s", _ex)
+    roles =_demo_roles_seed ()
+    _demo_roles_store (guild_id ,roles )
+    return roles
+
+def _demo_roles_store (guild_id ,roles ):
+    try :
+        with open (_demo_roles_file (guild_id ),'w',encoding ='utf-8')as fp :
+            json .dump (roles ,fp ,ensure_ascii =False ,indent =2 )
+    except Exception as _ex :
+        _log.debug("_demo_roles_store(): подавлено: %s", _ex)
+
+
 def _hidden_save (store ):
     path =os .path .join (_REPO_ROOT ,'data','hidden_channels.json')
     with open (path ,'w',encoding ='utf-8')as fp :
@@ -83,6 +125,20 @@ def register(ctx):
         import time 
         import web .app as _app ;bot =_app .bot_instance 
         if not bot :
+            # демо: типичные показатели процесса (страница живая в превью)
+            if _app ._demo_mode ():
+                h_ =int (time .time ())// 3600
+                return jsonify ({
+                'guilds':1 ,
+                'users':1247 ,
+                'latency':round (10 + (int (time .time ()*10 )% 30 ),1 ),
+                'uptime':f"{h_ % 48 } ч {int (time .time ()*7 )% 60 } мин",
+                'cpu':round (6 + (int (time .time ()*5 )% 24 ),1 ),
+                'ram':round (240 + (int (time .time ()*3 )% 90 ),1 ),
+                'ram_percent':round (38 + (int (time .time ()*9 )% 18 ),1 ),
+                'history':[{'time':f"{ (12 + i )% 24 }:00" if False else f"{ (12 + (i *7 )% 12 )% 24 }:{ (i *13 )% 60 :02d}",'cpu':round (8 + ((i *5 )% 20 ),1 ),'ram':round (250 + ((i *7 )% 80 ),1 )}for i in range (12 )],
+                'guild_list':[{'name':'Главный сервер','members':1247 }]
+                })
             return jsonify ({'error':'Бот офлайн'})
         try :
             try :
@@ -266,7 +322,11 @@ def register(ctx):
     def api_guild_roles (guild_id ):
         import web .app as _app 
         bot =_app .bot_instance 
-        if not bot :return jsonify ([])
+        if not bot :
+            # демо: типичный набор ролей (пустой список = страница «не листается»)
+            if _app ._demo_mode ():
+                return jsonify (sorted (_demo_roles_load (guild_id ),key =lambda x :-x ['members']))
+            return jsonify ([])
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ([])
         roles =[{'id':str (r .id ),'name':r .name ,'color':str (r .color ),'members':len (r .members )}
@@ -280,11 +340,19 @@ def register(ctx):
     def api_create_role (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         data =request .get_json (silent =True )or {}
         name =(data .get ('name')or '').strip ()
         if not name :
             return jsonify ({'error':'Требуется название роли'}),400 
+        if not bot :
+            # демо: роль создаётся в локальном хранилище превью
+            if _app ._demo_mode ():
+                roles =_demo_roles_load (guild_id )
+                new_id =str (max ([int (r .get ('id','0'))for r in roles ]+[9000 ])+1 )
+                roles .append ({'id':new_id ,'name':name ,'color':str (data .get ('color')or '#4f46e5'),'members':0 })
+                _demo_roles_store (guild_id ,roles )
+                return jsonify ({'success':True })
+            return jsonify ({'error':'Бот офлайн'}),503 
             # Проверка: один из серверов, где состоит бот
         try :
             gid =int (guild_id )
@@ -323,7 +391,16 @@ def register(ctx):
     def api_delete_role (guild_id ,role_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Бот офлайн'})
+        if not bot :
+            # демо: удаление из локального хранилища превью
+            if _app ._demo_mode ():
+                roles =_demo_roles_load (guild_id )
+                kept =[r for r in roles if str (r .get ('id'))!=str (role_id )]
+                if len (kept )==len (roles ):
+                    return jsonify ({'error':'Роль не найдена'}),404 
+                _demo_roles_store (guild_id ,kept )
+                return jsonify ({'success':True })
+            return jsonify ({'error':'Бот офлайн'})
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (role_id ))

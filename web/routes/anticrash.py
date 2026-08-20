@@ -41,6 +41,47 @@ def register(ctx):
     def api_anticrash_overview():
         eh = _anticrash_handler()
         if not eh:
+            import web.app as _app
+            if _app._demo_mode():
+                # демо: здоровый обработчик — страница живая в превью
+                now = time.time()
+                days = []
+                for i in range(6, -1, -1):
+                    days.append({'day': time.strftime('%Y-%m-%d', time.localtime(now - i * 86400)), 'count': (i * 7) % 4})
+                return jsonify({
+                    'ok': True,
+                    'master_enabled': True,
+                    'uptime_sec': 45000,
+                    'uptime_human': '12ч 30м 0с',
+                    'total_errors': 318,
+                    'errors_last_hour': 2,
+                    'critical': 5,
+                    'filtered': 96,
+                    'repeats_hidden': 41,
+                    'warnings_total': 17,
+                    'warnings': {'HTTP 429': 6, 'Timeout': 4, 'Gateway': 3},
+                    'disconnects': 11,
+                    'disconnects_hour': 1,
+                    'webhook_sent': 12,
+                    'webhook_dropped': 0,
+                    'webhook_on': False,
+                    'alerts_sent': 9,
+                    'alerts_dropped': 0,
+                    'alerts_queued': 0,
+                    'loop_lag_max': 0.84,
+                    'loop_lag_recent': 0.12,
+                    'top_types': [{'name': 'HTTPException', 'count': 74}, {'name': 'Timeout', 'count': 41}, {'name': 'AttributeError', 'count': 29}],
+                    'top_cogs': [{'name': 'Moderation', 'count': 58}, {'name': 'Tickets', 'count': 33}, {'name': 'Leveling', 'count': 21}],
+                    'breakers': [],
+                    'daily7': days,
+                    'last_errors': [
+                        {'module': 'cogs.moderation', 'text': 'HTTPException: 429 Too Many Requests', 'count': 12, 'ts': now - 60},
+                        {'module': 'cogs.tickets', 'text': 'Timeout waiting for response', 'count': 5, 'ts': now - 900},
+                    ],
+                    'guilds': 1,
+                    'latency_ms': 14,
+                    'channel_configured': False,
+                })
             return jsonify({'ok': False, 'error': 'Обработчик офлайн (бот не запущен)'})
         return jsonify(eh.get_overview())
 
@@ -52,6 +93,14 @@ def register(ctx):
         from error_handler import CONFIG_META, DEFAULT_CONFIG
         eh = _anticrash_handler()
         if not eh:
+            import web.app as _app
+            if _app._demo_mode():
+                return jsonify({
+                    'ok': True,
+                    'config': dict(DEFAULT_CONFIG),
+                    'order': list(DEFAULT_CONFIG.keys()),
+                    'meta': {k: {'label': v[0], 'desc': v[1], 'type': v[2]} for k, v in CONFIG_META.items()},
+                })
             return jsonify({'ok': False, 'error': 'Обработчик офлайн'}), 503
         if request.method == 'GET':
             return jsonify({

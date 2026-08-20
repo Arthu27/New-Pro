@@ -1381,6 +1381,35 @@ check('rarityEmoji' in _lva2 and 'rarityIcon(info.rarity)' in _lva2,
       'leveling-admin: индикатор редкости и иконка определены (карточки рендерятся)')
 check('.lvl-ach .icon i.r-legendary' in _lva2 and 'filter: drop-shadow' in _lva2,
       'leveling-admin: цвета иконок по редкости с мягкой тенью')
+# ═══ 37р. Роли и демо-API: страницы больше не пустые ═════════════════════════
+print('== роли и демо-API ==')
+_gad2 = open(os.path.join(ROOT, 'web', 'routes', 'guild_admin.py'), encoding='utf-8').read()
+check('_demo_roles_seed' in _gad2 and "'name':'Модератор'" in _gad2,
+      'routes roles: демо-набор ролей (страница ролей в превью не пустая и листается)')
+check("sorted (_demo_roles_load (guild_id ),key =lambda x :-x ['members'])" in _gad2
+      and 'Новичок' in _gad2,
+      'routes roles: список сортируется по числу участников')
+check('_demo_roles_store' in _gad2 and 'roles/create' in _gad2,
+      'routes roles: создание и удаление ролей работают в превью (локальное хранилище)')
+_app2 = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
+check('if _demo_mode ():' in _app2.split('def api_stats')[1][:400] and "'users':1247" in _app2.split('def api_stats')[1][:400],
+      'api/stats: демо-счётчики (welcome и дашборд живые)')
+check('if _demo_mode ():' in _app2.split('def api_public_guilds')[1][:400],
+      'api/public/guilds: демо-сервер (анкета /apply больше не пишет «Сервер не найден»)')
+check('if _app ._demo_mode ():' in _gad2.split('def api_bot_stats')[1][:400],
+      'api/bot-stats: демо-показатели (CPU/RAM/аптайм/история)')
+_adm2 = open(os.path.join(ROOT, 'web', 'routes', 'admin_api.py'), encoding='utf-8').read()
+check("'mutes':[],'bans':[],'kicks':[],'scheduled':[]" in _adm2.split('api_temp_mod_active')[1][:600],
+      'api/temp-mod/active: демо-пусто (страница не падает, честно «нет активных»)')
+_acr = open(os.path.join(ROOT, 'web', 'routes', 'anticrash.py'), encoding='utf-8').read()
+check('Анти-краш центр' in _acr and "'total_errors': 318" in _acr and "'last_errors'" in _acr,
+      'api/anticrash: демо-overview со статистикой, брейкерами и графиком')
+_tj = open(os.path.join(ROOT, 'web', 'routes', 'tagjail.py'), encoding='utf-8').read()
+check("'enabled': False" in _tj.split('api_tagjail_state')[1][:800] and "'jailed': []" in _tj.split('api_tagjail_state')[1][:800],
+      'api/tagjail/state: демо-конфиг и пустой карцер')
+_ms = open(os.path.join(ROOT, 'web', 'routes', 'music_panel.py'), encoding='utf-8').read()
+check("'playing': True" in _ms.split('api_music_state')[1][:900] and 'phonk mix' in _ms,
+      'api/music/state: демо-плеер с текущим треком и очередью')
 
 # ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')

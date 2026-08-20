@@ -128,6 +128,9 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         from cogs .temp_moderation import TempModeration 
         if not bot :
+            # демо: активных временных наказаний нет — страница честно пустая
+            if _app ._demo_mode ():
+                return jsonify ({'mutes':[],'bans':[],'kicks':[],'scheduled':[]})
             return jsonify ({'error':'Бот офлайн'}),503 
         cog =bot .get_cog ('TempModeration')
         if not cog :

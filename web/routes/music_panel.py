@@ -115,6 +115,21 @@ def register(ctx):
         gid = int(ctx.active_guild_id())
         bot = _bot()
         if bot is None:
+            import web.app as _app
+            if _app._demo_mode():
+                # демо: играет трек, два в очереди — плеер живой в превью
+                return jsonify({
+                    'success': True, 'offline': False,
+                    'connected': True, 'playing': True, 'paused': False,
+                    'channel': 'Голосовая · Музыка', 'volume': 80, 'volume_max': 100,
+                    'total': 3,
+                    'current': {'query': 'nightcore — legends never die', 'requester': 'ecobar'},
+                    'queue': [
+                        {'n': 1, 'query': 'phonk mix #42', 'requester': 'dragon'},
+                        {'n': 2, 'query': 'lofi hip hop radio', 'requester': 'hzdio'},
+                    ],
+                    'can_edit': has_request_context() and session.get('role') in ('admin', 'owner'),
+                })
             return jsonify({'success': False, 'offline': True,
                             'error': 'Бот офлайн — очередь недоступна.'}), 503
         return jsonify(music_payload(gid, bot))

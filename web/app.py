@@ -1318,6 +1318,15 @@ def api_login_log ():
 @login_required 
 def api_stats ():
     if not bot_instance :
+        # демо: типичные счётчики (welcome и дашборд живые в превью)
+        if _demo_mode ():
+            return jsonify ({
+            'guilds':1 ,
+            'users':1247 ,
+            'online':213 ,
+            'latency':round (12 + (_time .time ()*10 %19 ),2 ),
+            'status':'online'
+            })
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
 
     guilds =len (bot_instance .guilds )
@@ -2434,6 +2443,9 @@ def api_check_member ():
 @app .route ('/api/public/guilds')
 def api_public_guilds ():
     if not bot_instance :
+        # демо: сервер для публичной анкеты (иначе «Сервер не найден»)
+        if _demo_mode ():
+            return jsonify ([{'id':str (MAIN_GUILD_ID ),'name':'Главный сервер','icon':None ,'members':1247 }])
         return jsonify ([])
     guilds =[{'id':str (g .id ),'name':g .name ,
     'icon':str (g .icon .url )if g .icon else None ,
