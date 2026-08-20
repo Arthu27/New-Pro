@@ -3496,8 +3496,13 @@
       if (act) chooseValue(act.dataset.v);
     }
   });
-  win.addEventListener('scroll', function () {
-    if (panel && panel.classList.contains('open')) closePanel();
+  /* Скролл СТРАНИЦЫ закрывает панель. Прокрутка самого списка (.aes-list
+     или поля поиска) панель НЕ закрывает — иначе дропдаун схлопывался
+     при первом же движении колесом внутри. */
+  win.addEventListener('scroll', function (e) {
+    if (!panel || !panel.classList.contains('open')) return;
+    if (e.target && panel.contains(e.target)) return;
+    closePanel();
   }, true);
   win.addEventListener('resize', function () {
     if (panel && panel.classList.contains('open') && currentOrig) {

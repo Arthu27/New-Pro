@@ -979,6 +979,9 @@
   /* Автодополнение логинов (с клавиатурной навигацией) */
   var suggestTimer = null;
   window.showSuggest = function (input, popupId) {
+    /* после выбора участника один показ подавляется —
+       иначе focus-события вытаскивали попап обратно */
+    if (window.__lgSuggestBlock) { window.__lgSuggestBlock = false; return; }
     var popup = $(popupId);
     var q = (input.value || '').trim();
     if (q.length < 2) { popup.classList.remove('open'); return; }
@@ -1005,8 +1008,9 @@
             it.addEventListener('click', function () {
               input.value = it.dataset.user || it.dataset.id || input.value;
               popup.classList.remove('open');
-              input.focus();
-              /* после выбора логина сразу переводим фокус на пароль */
+              window.__lgSuggestBlock = true;
+              /* НЕ зовём input.focus(): у поля стоит onfocus=showSuggest,
+                 и попап тут же вылезал бы снова. Фокус сразу на пароль. */
               if (input.id === 'passUsername') {
                 var pw = $('passPassword');
                 if (pw) pw.focus();
@@ -1042,6 +1046,12 @@
           e.preventDefault();
           input.value = active.dataset.user || active.dataset.id || input.value;
           popup.classList.remove('open');
+          window.__lgSuggestBlock = true;
+          /* выбран по Enter — тоже сразу на пароль, попап не должен вернуться */
+          if (input.id === 'passUsername') {
+            var pw = $('passPassword');
+            if (pw) pw.focus();
+          }
         }
       } else if (e.key === 'Escape') {
         popup.classList.remove('open');

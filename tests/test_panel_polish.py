@@ -1078,8 +1078,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=54' in base and 'style.css?v=113' in base,
-      'версии ассетов (113/54)')
+check('app.js?v=55' in base and 'style.css?v=113' in base,
+      'версии ассетов (113/55)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
@@ -1495,6 +1495,22 @@ check('function chartFallback' in _anl2 and 'function chartFallback' in _aal,
       'графики: заглушка заменяет только canvas, соседние блоки не стираются')
 check('replaceChild(note, el)' in _anl2,
       'графики: замена узла через replaceChild (списки/легенды рядом живы)')
+# ═══ 37ф. Дропдаун не схлопывается при скролле списка; логин не дублит подсказку ══
+print('== дропдаун и подсказка логина ==')
+_aes2 = _js2.split('AETHER KIT 11')[1][:10000] if 'AETHER KIT 11' in _js2 else _js2
+_k11 = _js2.split('AETHER KIT 11')[1][:14000] if 'AETHER KIT 11' in _js2 else _js2
+check('panel.contains(e.target)' in _k11.split("win.addEventListener('scroll'")[1][:600],
+      'AetherSelect: скролл САМОГО списка не закрывает панель (только скролл страницы)')
+check('Прокрутка самого списка' in _js2,
+      'AetherSelect: комментарий-инвариант о поведении скролла')
+_lgt = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
+check('window.__lgSuggestBlock = true' in _lgt,
+      'логин: после выбора участника следующий показ подсказки подавляется')
+check('НЕ зовём input.focus()' in _lgt and 'pw.focus()' in _lgt,
+      'логин: фокус сразу на пароль, попап не вылезает повторно')
+check('__lgSuggestBlock' in _lgt.split('window.showSuggest')[1][:400],
+      'логин: showSuggest уважает флаг подавления')
+
 check('makeChart(msgCanvas' in _anl2 and 'makeChart(document.getElementById' in _aal,
       'графики: все вызовы Chart идут через защиту')
 check('График недоступен в этом браузере' in _anl2,
