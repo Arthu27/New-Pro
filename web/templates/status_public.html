@@ -141,6 +141,7 @@
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduced) return;
   var ctx = cv.getContext('2d');
+  if (!ctx) return; /* браузер без canvas 2d — просто не рисуем звёзды */
   var W, H, stars = [];
   var last = 0;
   function resize() {

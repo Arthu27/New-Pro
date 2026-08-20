@@ -1078,8 +1078,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=48' in base and 'style.css?v=111' in base,
-      'версии ассетов (111/48)')
+check('app.js?v=49' in base and 'style.css?v=111' in base,
+      'версии ассетов (111/49)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
@@ -1274,6 +1274,39 @@ check('data.error' in _ch and 'ch-empty-sub' in _ch,
 _gad = open(os.path.join(ROOT, 'web', 'routes', 'guild_admin.py'), encoding='utf-8').read()
 check('канал пропущен' in _gad or 'один проблемный канал' in _gad,
       'routes channels: один битый канал не роняет весь список (per-channel защита)')
+# ═══ 37л. Обход всех страниц: скрытые ReferenceError/TypeError ═══════════════
+print('== обход страниц: скрытые ошибки ==')
+_js2 = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
+_k2 = _js2.split('AETHER PREMIUM KIT 2')[1][:600]
+check('function reducedMotion()' in _k2,
+      'app.js: reducedMotion определён в KIT 2 (был ReferenceError при каждой отрисовке кольца)')
+_lva = open(os.path.join(ROOT, 'web', 'templates', 'leveling_admin.html'), encoding='utf-8').read()
+check("cfg = (raw && !raw.error) ? raw : {}" in _lva and 'tx.enabled !== false' in _lva,
+      'leveling-admin: конфиг с дефолтами — офлайн-бот не роняет страницу (был TypeError на cfg.text_xp)')
+check('if (!s || s.error || typeof s.total_users' in _lva,
+      'leveling-admin: статистика/ачивки/награды защищены от битого ответа')
+_bd = open(os.path.join(ROOT, 'web', 'templates', 'bot_diagnostics.html'), encoding='utf-8').read()
+check('!data || data.error || !data.current' in _bd and 'ОФЛАЙН' in _bd,
+      'bot-diagnostics: бот офлайн показывает честный статус, а не TypeError memory_mb')
+_bda = open(os.path.join(ROOT, 'web', 'routes', 'admin_api.py'), encoding='utf-8').read()
+check('типичный здоровый бот' in _bda,
+      'routes health: в демо-режиме диагностика отдаёт живой снапшот')
+_all2 = []
+for _t2 in sorted(os.listdir(os.path.join(ROOT, 'web', 'templates'))):
+    if _t2.endswith('.html'):
+        _all2.append(open(os.path.join(ROOT, 'web', 'templates', _t2), encoding='utf-8').read())
+_all2_src = '\n'.join(_all2)
+check('cdn.jsdelivr.net/npm/chart.js' not in _all2_src,
+      'все шаблоны: Chart.js не зависит от jsdelivr (графики работают без CDN)')
+check(os.path.exists(os.path.join(ROOT, 'web', 'static', 'vendor', 'chartjs', 'chart.umd.js')),
+      'вендор: chart.umd.js локально')
+_guest_canvas = 0
+for _g in ('login', 'register', 'status_public', 'welcome'):
+    _gt = open(os.path.join(ROOT, 'web', 'templates', _g + '.html'), encoding='utf-8').read()
+    if 'var ctx = cv.getContext' in _gt and 'if (!ctx) return;' in _gt:
+        _guest_canvas += 1
+check(_guest_canvas == 4,
+      f'гостевые страницы: канвас звёзд с null-защитой ({_guest_canvas}/4)')
 
 # ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')

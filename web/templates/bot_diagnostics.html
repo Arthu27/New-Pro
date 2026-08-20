@@ -182,8 +182,21 @@
 (function() {
   'use strict';
   function load() {
-    fetch('/api/bot/health').then(r => r.json()).then(data => {
-      const h = data.current;
+    fetch('/api/bot/health').then(function (r) { return r.json(); }).then(function (data) {
+      /* бот офлайн / битый ответ не должен ронять страницу */
+      if (!data || data.error || !data.current) {
+        document.getElementById('botOnlineBadge').textContent = 'ОФЛАЙН';
+        document.getElementById('botOnlineBadge').className = 'badge badge-err';
+        document.getElementById('healthDot').className = 'dot err';
+        document.getElementById('healthStatus').textContent = 'Бот недоступен — проверьте запуск';
+        ['memVal','cpuVal','latVal','errVal','uptimeVal','guildsVal','usersVal','cogsVal','cmdsVal','threadsVal'].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.textContent = '—';
+        });
+        return;
+      }
+      const h = data.current || {};
+      const hist = Array.isArray(data.history) ? data.history : [];
       // Vitals
       const memEl = document.getElementById('memVal');
       memEl.textContent = h.memory_mb || 0;
@@ -197,20 +210,20 @@
       // Bot info
       document.getElementById('uptimeVal').textContent = formatUptime(h.uptime_sec);
       document.getElementById('guildsVal').textContent = h.guilds;
-      document.getElementById('usersVal').textContent = h.users.toLocaleString();
+      document.getElementById('usersVal').textContent = (h.users || 0).toLocaleString();
       document.getElementById('cogsVal').textContent = h.cogs_loaded;
       document.getElementById('cmdsVal').textContent = h.commands;
       document.getElementById('threadsVal').textContent = h.threads;
       // Status
-      const isOk = h.latency_ms < 300 && h.memory_mb < 700 && h.errors_last_min < 5;
+      const isOk = (h.latency_ms || 999) < 300 && (h.memory_mb || 999) < 700 && (h.errors_last_min || 0) < 5;
       document.getElementById('botOnlineBadge').textContent = isOk ? 'ОНЛАЙН' : 'ПРОБЛЕМЫ';
       document.getElementById('botOnlineBadge').className = 'badge ' + (isOk ? 'badge-ok' : 'badge-warn');
       document.getElementById('healthDot').className = 'dot ' + (isOk ? 'ok' : 'warn');
       document.getElementById('healthStatus').textContent = isOk ? 'Всё в порядке' : 'Есть проблемы';
       // Charts
-      renderChart('memChart', data.history.map(h => h.memory_mb), 400, 700);
-      renderChart('latChart', data.history.map(h => h.latency_ms), 300, 800);
-      renderChart('errChart', data.history.map(h => h.errors_last_min), 5, 15);
+      renderChart('memChart', hist.map(function (x) { return x.memory_mb; }), 400, 700);
+      renderChart('latChart', hist.map(function (x) { return x.latency_ms; }), 300, 800);
+      renderChart('errChart', hist.map(function (x) { return x.errors_last_min; }), 5, 15);
     }).catch(e => console.error(e));
   }
   function setVital(id, val, warn, crit) {

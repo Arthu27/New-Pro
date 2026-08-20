@@ -203,35 +203,45 @@
 (function() {
   'use strict';
   function load() {
-    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
+    fetch('/api/leveling/config').then(r => r.json()).then(function (raw) {
+      /* конфиг с дефолтами: офлайн-бот или старый формат больше не роняют страницу */
+      var cfg = (raw && !raw.error) ? raw : {};
+      var tx = cfg.text_xp || {};
+      var vx = cfg.voice_xp || {};
+      var st = cfg.streak_bonus || {};
+      var dm = cfg.engagement_dm || {};
       // Master toggles
-      setSwitch('masterSwitch', 'masterCard', cfg.enabled);
-      setSwitch('textSwitch', 'textCard', cfg.text_xp.enabled);
-      setSwitch('voiceSwitch', 'voiceCard', cfg.voice_xp.enabled);
-      setSwitch('streakSwitch', 'streakCard', cfg.streak_bonus.enabled);
-      setSwitch('achSwitch', 'achCard', cfg.achievements_enabled);
-      setSwitch('dmSwitch', 'dmCard', cfg.engagement_dm.enabled);
+      setSwitch('masterSwitch', 'masterCard', cfg.enabled === true);
+      setSwitch('textSwitch', 'textCard', tx.enabled !== false);
+      setSwitch('voiceSwitch', 'voiceCard', vx.enabled !== false);
+      setSwitch('streakSwitch', 'streakCard', st.enabled !== false);
+      setSwitch('achSwitch', 'achCard', cfg.achievements_enabled !== false);
+      setSwitch('dmSwitch', 'dmCard', dm.enabled !== false);
       document.getElementById('heroDot').className = 'dot ' + (cfg.enabled ? 'ok' : 'err');
       document.getElementById('heroStatus').textContent = cfg.enabled ? 'Система активна' : 'Система выключена';
       // Settings
-      document.getElementById('textMin').value = cfg.text_xp.min;
-      document.getElementById('textMax').value = cfg.text_xp.max;
-      document.getElementById('textCooldown').value = cfg.text_xp.cooldown_sec;
-      document.getElementById('voicePerMin').value = cfg.voice_xp.per_minute;
-      document.getElementById('streak7').value = cfg.streak_bonus['7_days'];
-      document.getElementById('streak14').value = cfg.streak_bonus['14_days'];
-      document.getElementById('streak30').value = cfg.streak_bonus['30_days'];
-    });
+      document.getElementById('textMin').value = tx.min != null ? tx.min : 15;
+      document.getElementById('textMax').value = tx.max != null ? tx.max : 25;
+      document.getElementById('textCooldown').value = tx.cooldown_sec != null ? tx.cooldown_sec : 60;
+      document.getElementById('voicePerMin').value = vx.per_minute != null ? vx.per_minute : 1;
+      document.getElementById('streak7').value = st['7_days'] != null ? st['7_days'] : 100;
+      document.getElementById('streak14').value = st['14_days'] != null ? st['14_days'] : 250;
+      document.getElementById('streak30').value = st['30_days'] != null ? st['30_days'] : 500;
+    }).catch(function () {});
     // Stats + leaderboard
-    fetch('/api/leveling/stats').then(r => r.json()).then(s => {
+    fetch('/api/leveling/stats').then(r => r.json()).then(function (s) {
+      if (!s || s.error || typeof s.total_users === 'undefined') {
+        document.getElementById('leaderboardList').innerHTML = '<p style="text-align:center;">Модуль недоступен — бот офлайн?</p>';
+        return;
+      }
       document.getElementById('statUsers').textContent = s.total_users;
       document.getElementById('statLevel').textContent = s.max_level;
-      document.getElementById('statTotalXP').textContent = s.total_xp.toLocaleString();
+      document.getElementById('statTotalXP').textContent = (s.total_xp || 0).toLocaleString();
       document.getElementById('statAchs').textContent = s.total_achievements + ' / ' + s.total_ach_available;
       document.getElementById('achCount').textContent = s.total_ach_available + ' доступно';
       // Leaderboard
       const medals = ['<i class="fas fa-medal" style="color:#f59e0b"></i>','<i class="fas fa-medal" style="color:#94a3b8"></i>','<i class="fas fa-medal" style="color:#b45309"></i>'];
-      document.getElementById('leaderboardList').innerHTML = s.top.map((u, i) => {
+      document.getElementById('leaderboardList').innerHTML = (s.top || []).map((u, i) => {
         const medal = i < 3 ? medals[i] : '<span >' + (i+1) + '</span>';
         return `<div class="kv"   style="20px;">
           <div class="kv-key"   style="min-width: 40px;">${medal}</div>
@@ -240,23 +250,31 @@
           <div class="kv-val"   style="min-width: 80px;">${u.xp.toLocaleString()} XP</div>
         </div>`;
       }).join('') || '<p   style="text-align:center;">Нет данных</p>';
-    });
+    }).catch(function () {});
     // Achievements
-    fetch('/api/leveling/achievements').then(r => r.json()).then(d => {
+    fetch('/api/leveling/achievements').then(r => r.json()).then(function (d) {
       const grid = document.getElementById('achGrid');
+      if (!d || d.error || !d.catalog) {
+        grid.innerHTML = '<p style="text-align:center;">Нет данных</p>';
+        return;
+      }
       const rarityEmoji = {common: '<i class="fas fa-circle" style="color:#94a3b8"></i>', uncommon: '<i class="fas fa-circle" style="color:var(--ok)"></i>', rare: '<i class="fas fa-circle" style="color:#0ea5e9"></i>', epic: '<i class="fas fa-circle" style="color:#7c3aed"></i>', legendary: '<i class="fas fa-circle" style="color:#fbbf24"></i>'};
       grid.innerHTML = Object.entries(d.catalog).map(([id, info]) => {
-        const unlocked = d.unlocked.includes(id);
+        const unlocked = (d.unlocked || []).includes(id);
         return `<div class="lvl-ach ${unlocked ? 'unlocked' : ''}">
           <div class="icon">${info.icon}</div>
           <div class="name">${info.name}</div>
           <div class="rarity">${rarityEmoji[info.rarity]} ${info.rarity}</div>
         </div>`;
       }).join('');
-    });
+    }).catch(function () {});
     // Rewards
-    fetch('/api/leveling/rewards').then(r => r.json()).then(d => {
+    fetch('/api/leveling/rewards').then(r => r.json()).then(function (d) {
       const list = document.getElementById('rewardsList');
+      if (!d || d.error || !d.rewards) {
+        list.innerHTML = '<p style="text-align:center;">Нет наград</p>';
+        return;
+      }
       list.innerHTML = Object.entries(d.rewards).map(([lvl, info]) => {
         return `<div class="lvl-reward-card">
           <div class="lvl-reward-level">${lvl}</div>
@@ -266,15 +284,16 @@
           </div>
         </div>`;
       }).join('') || '<p   style="text-align:center;">Нет наград</p>';
-    });
+    }).catch(function () {});
   }
   function setSwitch(swId, cardId, on) {
     document.getElementById(swId).classList.toggle('on', on);
     document.getElementById(cardId).classList.toggle('active', on);
   }
   function toggle(key, subkey) {
-    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
-      if (subkey) cfg[key][subkey] = !cfg[key][subkey];
+    fetch('/api/leveling/config').then(r => r.json()).then(function (cfg) {
+      if (!cfg || cfg.error) { showToast('Модуль недоступен', false); return; }
+      if (subkey) { cfg[key] = cfg[key] || {}; cfg[key][subkey] = !cfg[key][subkey]; }
       else cfg[key] = !cfg[key];
       return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg)});
     }).then(r => r.json()).then(d => {
@@ -284,7 +303,11 @@
   }
   window.toggle = toggle;
   window.saveSettings = function() {
-    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
+    fetch('/api/leveling/config').then(r => r.json()).then(function (cfg) {
+      if (!cfg || cfg.error) { showToast('Модуль недоступен', false); return; }
+      cfg.text_xp = cfg.text_xp || {};
+      cfg.voice_xp = cfg.voice_xp || {};
+      cfg.streak_bonus = cfg.streak_bonus || {};
       cfg.text_xp.min = parseInt(document.getElementById('textMin').value);
       cfg.text_xp.max = parseInt(document.getElementById('textMax').value);
       cfg.text_xp.cooldown_sec = parseInt(document.getElementById('textCooldown').value);

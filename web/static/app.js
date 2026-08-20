@@ -1363,6 +1363,12 @@
   'use strict';
   var doc = document;
 
+  /* была скрытая ошибка: reducedMotion() определена в KIT 1, а здесь
+     вызывалась без определения → ReferenceError при каждой отрисовке кольца */
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
   function esc0(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')

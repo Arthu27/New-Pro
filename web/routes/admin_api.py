@@ -26,9 +26,32 @@ def register(ctx):
     @login_required 
     def api_bot_health ():
         import web .app as _app ;bot =_app .bot_instance 
-        from cogs .diagnostics import Diagnostics 
         if not bot :
+            if _app ._demo_mode ():
+                # демо: типичный здоровый бот (страница диагностики живая в превью)
+                now =time .time ()
+                hist =[]
+                for i in range (30 ,0 ,-1 ):
+                    hist .append ({
+                        'timestamp':now -i *60 ,
+                        'uptime_sec':45000 -i *60 ,
+                        'guilds':1 ,'users':1247 ,'cogs_loaded':23 ,'commands':118 ,
+                        'latency_ms':round (10 +((i *7 )% 28 ),1 ),
+                        'errors_last_min':(1 if i %17 ==0 else 0 ),
+                        'is_ws_connected':True ,
+                        'memory_mb':round (298 +((i *3 )% 90 ),1 ),
+                        'cpu_percent':round (9 +((i *5 )% 26 ),1 ),
+                        'threads':44 + (i %5 ),
+                    })
+                return jsonify ({
+                    'current':hist [-1 ],
+                    'history':hist ,
+                    'error_log':[{'ts':now -3600 ,'msg':'demo: пример ошибки из лога'}],
+                    'cog_perf':{'AIModeration':0.004 ,'Logs':0.002 },
+                    'repair_count':{'watchdog_restarts':1 },
+                })
             return jsonify ({'error':'Бот офлайн'}),503 
+        from cogs .diagnostics import Diagnostics 
         cog =bot .get_cog ('Diagnostics')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
