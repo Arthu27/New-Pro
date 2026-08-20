@@ -1170,6 +1170,29 @@ check('.lg-aurora i' in lg2.split('prefers-reduced-motion')[1][:900]
 _st = open(os.path.join(ROOT, 'web', 'routes', 'status.py'), encoding='utf-8').read()
 check('api_status_public' in _st and 'Демо-режим: бот «живой»' in _st,
       'status-api: в демо-режиме бот онлайн — логин показывает живой статус')
+# ═══ 37е. Переходы: вкладки логина и смена фраз welcome ═════════════════════
+print('== переходы: вкладки и фразы ==')
+check('tab-out-l' in lg2 and 'tab-out-r' in lg2 and 'tab-in-r' in lg2 and 'tab-in-l' in lg2,
+      'login: вкладки меняются направленным слайдом (4 класса ухода/прихода)')
+check('tabOutL' in lg2 and 'filter: blur(3px)' in lg2 and 'tabInR' in lg2,
+      'login: переход вкладок с размытием и плавным приходом')
+check('switchTab' in lg2 and '_curTab' in lg2 and "dirRight = tab === 'pin'" in lg2,
+      'login: направление слайда зависит от стороны вкладки')
+check('pinGoStep2' in lg2 and 'step-out' in lg2 and 'step-in' in lg2,
+      'login: шаг 1 → шаг 2 PIN сменяется тем же слайдом')
+check('.tab-btn.active i' in lg2 and 'tabIconPop' in lg2,
+      'login: иконка активной вкладки подпрыгивает при переключении')
+check('ease-spring' in lg2.split('.tab-slider')[1][:500] and 'moving' in lg2,
+      'login: слайдер вкладок переезжает пружинно и вспыхивает')
+check('.tab-out-l' in lg2.split('prefers-reduced-motion')[1][:1000],
+      'login: слайды вкладок отключены при reduced-motion')
+check('swap-out' in w11 and 'swap-in' in w11 and 'wTitleOut' in w11 and 'wTitleIn' in w11,
+      'welcome: смена фраз — старая растворяется с размытием, новая вплывает')
+check("el.classList.add('swap-out')" in w11 and 'classList.remove' in w11,
+      'welcome: переход фраз управляется из JS (без резкого стирания)')
+check('.w-title.swap-out' in w11.split('prefers-reduced-motion')[1][:1000],
+      'welcome: смена фраз выключена при reduced-motion')
+
 
 
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,

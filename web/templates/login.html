@@ -309,8 +309,15 @@
         background: var(--ac-grad);
         box-shadow: 0 0 10px rgba(124, 58, 237, .6);
         pointer-events: none;
-        transition: left .25s var(--ease), width .25s var(--ease);
+        transition: left .4s var(--ease-spring, cubic-bezier(.34, 1.56, .64, 1)),
+                    width .4s var(--ease-spring, cubic-bezier(.34, 1.56, .64, 1));
       }
+      .tab-slider::after {
+        content: ''; position: absolute; inset: 0; border-radius: inherit;
+        background: var(--ac-grad); filter: blur(7px);
+        opacity: .55; transition: opacity .3s;
+      }
+      .tab-slider.moving::after { opacity: .95; }
       .tab-btn {
         flex: 1; padding: 9px 12px;
         display: inline-flex; align-items: center; justify-content: center; gap: 7px;
@@ -424,6 +431,27 @@
       #tabPass, #tabPin { animation: tabFade .3s var(--ease); }
       @keyframes tabFade { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 
+      /* ── Переход вкладок: направленный слайд с размытием (уход/приход) ── */
+      #tabPass, #tabPin { transform-origin: 50% 100%; will-change: opacity, transform; }
+      .tab-out-l { animation: tabOutL .2s var(--ease) forwards; }
+      .tab-out-r { animation: tabOutR .2s var(--ease) forwards; }
+      .tab-in-r  { animation: tabInR .34s var(--ease) both; }
+      .tab-in-l  { animation: tabInL .34s var(--ease) both; }
+      @keyframes tabOutL { to { opacity: 0; transform: translateX(-28px) scale(.985); filter: blur(3px); } }
+      @keyframes tabOutR { to { opacity: 0; transform: translateX(28px) scale(.985); filter: blur(3px); } }
+      @keyframes tabInR { from { opacity: 0; transform: translateX(28px) scale(.985); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+      @keyframes tabInL { from { opacity: 0; transform: translateX(-28px) scale(.985); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+
+      /* Шаг 1 → Шаг 2 (PIN): тот же направленный слайд */
+      #step1, #step2 { transform-origin: 50% 100%; }
+      #step1.step-out, #step2.step-out { animation: tabOutL .2s var(--ease) forwards; }
+      #step1.step-in, #step2.step-in { animation: tabInR .34s var(--ease) both; }
+
+      /* Иконка активной вкладки подпрыгивает при переключении */
+      .tab-btn.active i { animation: tabIconPop .32s var(--ease); }
+      @keyframes tabIconPop { 40% { transform: scale(1.28) rotate(-8deg); } }
+      .tab-btn:active { transform: scale(.97); }
+
       /* ── Ошибки: тряска при появлении ── */
       .auth-error.shake { animation: errShake .4s ease; }
       @keyframes errShake {
@@ -519,7 +547,10 @@
         .autocomplete-popup.open, .pin-box input.has, .auth-btn .spin,
         .lg-aurora i, .lg-dragon-stage .ring, .lg-dragon-stage .ring2,
         .lg-dragon-stage .orbits, .lg-dragon-stage .tile::after,
-        .lg-dragon-stage .floor, .auth-status .dot, .dragon-smoke span { animation: none; }
+        .lg-dragon-stage .floor, .auth-status .dot, .dragon-smoke span,
+        .tab-out-l, .tab-out-r, .tab-in-r, .tab-in-l,
+        #step1.step-out, #step2.step-out, #step1.step-in, #step2.step-in,
+        .tab-btn.active i { animation: none; }
         .auth-btn, .tab-btn, .auth-feats li, .auth-field input,
         .auth-field .eye, .pin-box input, .tab-slider, .lg-back,
         .auth-field .f-ico, .auth-field .cap-hint, .auth-btn i { transition: none; }
@@ -768,17 +799,44 @@
     s.style.left = btn.offsetLeft + 'px';
     s.style.width = btn.offsetWidth + 'px';
   }
+  var _curTab = 'pass';
+  function switchTab(tab, btn) {
+    if (tab === _curTab) return;
+    var dirRight = tab === 'pin';      /* движение вправо: старый уходит влево */
+    var oldPanel = _curTab === 'pass' ? $('tabPass') : $('tabPin');
+    var newPanel = tab === 'pass' ? $('tabPass') : $('tabPin');
+    _curTab = tab;
+    document.querySelectorAll('[data-auth-tab]').forEach(function (b) { b.classList.toggle('active', b === btn); });
+    placeSlider(btn);
+    var s = $('tabSlider');
+    if (s) { s.classList.add('moving'); setTimeout(function () { s.classList.remove('moving'); }, 430); }
+    oldPanel.classList.add(dirRight ? 'tab-out-l' : 'tab-out-r');
+    setTimeout(function () {
+      oldPanel.classList.remove('tab-out-l', 'tab-out-r');
+      oldPanel.style.display = 'none';
+      newPanel.style.display = '';
+      newPanel.classList.add(dirRight ? 'tab-in-r' : 'tab-in-l');
+      setTimeout(function () { newPanel.classList.remove('tab-in-r', 'tab-in-l'); }, 360);
+    }, 190);
+  }
   document.querySelectorAll('[data-auth-tab]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var tab = btn.dataset.authTab;
-      document.querySelectorAll('[data-auth-tab]').forEach(function (b) { b.classList.toggle('active', b === btn); });
-      $('tabPass').style.display = tab === 'pass' ? '' : 'none';
-      $('tabPin').style.display = tab === 'pin' ? '' : 'none';
-      placeSlider(btn);
-    });
+    btn.addEventListener('click', function () { switchTab(btn.dataset.authTab, btn); });
   });
   placeSlider(document.querySelector('[data-auth-tab].active'));
   window.addEventListener('resize', function () { placeSlider(document.querySelector('[data-auth-tab].active')); });
+
+  /* Шаг 1 → Шаг 2 PIN: направленный слайд */
+  function pinGoStep2() {
+    var a = $('step1'), b = $('step2');
+    a.classList.add('step-out');
+    setTimeout(function () {
+      a.classList.remove('step-out');
+      a.style.display = 'none';
+      b.style.display = '';
+      b.classList.add('step-in');
+      setTimeout(function () { b.classList.remove('step-in'); }, 360);
+    }, 190);
+  }
 
   /* Живой статус бота (пульсирующая точка + пинг) */
   (function () {
@@ -934,8 +992,7 @@
       if (!d.success) { showError('step1-error', d.error || 'Аккаунт не найден'); return; }
       _discordId = d.discord_id;
       $('step2-who').textContent = (d.username ? d.username + ' — ' : '') + 'Введите 6 цифр, которые вы получили от бота в ЛС.';
-      $('step1').style.display = 'none';
-      $('step2').style.display = '';
+      pinGoStep2();
       buildPinBox();
     }).catch(function () { window.qualitySetLoading(btn, false); showError('step1-error', 'Сеть недоступна'); });
   });
