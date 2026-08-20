@@ -973,7 +973,7 @@ check('.kpi:not(.tone-ok)' in css and 'background-clip: text' in css,
 check('drop-shadow' in css and '.brand-icon .dragon-live' in css,
       'панель: дракон подсвечен в ритме дыхания')
 w9 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
-check('wHeroIn' in w9 and 'animation-delay: .7s' in w9,
+check('wHeroIn' in w9 and 'animation-delay: .48s' in w9,
       'welcome: stagger-появление hero при загрузке')
 check('.w-cta-box:hover' in w9 and 'rgba(124, 58, 237, .25)' in w9,
       'welcome: свечение CTA при hover')
@@ -1051,8 +1051,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=48' in base and 'style.css?v=110' in base,
-      'версии ассетов (110/48)')
+check('app.js?v=48' in base and 'style.css?v=111' in base,
+      'версии ассетов (111/48)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
@@ -1071,6 +1071,18 @@ check('margin: 0 auto 20px' in w11 and 'margin: 22px auto 0' in w11,
       'welcome: поиск и статистика прижаты — нет пустых провалов')
 check('setTimeout(then, 1800)' in w11,
       'welcome: пауза между фразами короче — надпись всегда живая')
+# ═══ 37б. Welcome: CSS-переменные (фикс невидимого hero) ════════════════════
+print('== welcome: переменные ==')
+_defined = set(re.findall(r'--([a-z0-9-]+)\s*:', w11))
+_used = set(re.findall(r'var\(--([a-z0-9-]+)', w11))
+check('ease' in _defined,
+      'welcome: --ease определён (иначе stagger-hero навсегда opacity:0)')
+check(len(_used - _defined - {'top-p'}) == 0,
+      'welcome: все CSS-переменные определены — ни один блок не может пропасть')
+check('--ease-out:' in css and '--ac-glow:' in css and '--ease-spring:' in css,
+      'дизайн-система: --ease-out/--ac-glow/--ease-spring доопределены в style.css')
+check('--text-1:' in css and '--r-md:' in css and '--shadow-md:' in css,
+      'дизайн-система: текстовые/радиусные/теневые токены страниц доопределены')
 check('wDragonPar' in w11 and 'requestAnimationFrame' in w11,
       'welcome: параллакс дракона за курсором (rAF, плавный)')
 check('.w-nav .brand img' in w11 and 'dragonBreath' in w11.split('.w-nav .brand img')[1][:600],

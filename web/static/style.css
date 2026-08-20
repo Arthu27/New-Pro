@@ -73,6 +73,32 @@
   --topbar-h: 56px;
 
   --ease: cubic-bezier(0.25, 0.6, 0.3, 1);
+
+  /* ── Дополнительные токены (используются шаблонами страниц) ── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --text-1: #16181d;
+  --text-4: #aab1bd;
+  --surface-1: #ffffff;
+  --bg-3: #e9ebef;
+  --r-md: 9px;
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-3);
+  --fw-bold: 700;
+  --fw-semibold: 600;
+  --fw-medium: 500;
+  --ac-glow: 0 0 28px rgba(79, 70, 229, 0.35);
+  --stat-glow: 0 0 34px rgba(79, 70, 229, 0.28);
+  --cyan: #0891b2;
+  --glass: rgba(255, 255, 255, 0.55);
+  --muted: #8b93a1;
+  --accent: #4f46e5;
+  --accent-color: #4f46e5;
+  --text-muted: #8b93a1;
+  --text-secondary: #4d5561;
+  --text-primary: #16181d;
+  --bg-primary: #f5f6f8;
 }
 
 [data-theme="dark"] {
@@ -108,6 +134,32 @@
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.45);
   --shadow-3: 0 12px 40px rgba(0, 0, 0, 0.6);
+
+  /* ── Дополнительные токены (используются шаблонами страниц) ── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --text-1: #e9ebef;
+  --text-4: #565e6d;
+  --surface-1: #181a1f;
+  --bg-3: #0c0d11;
+  --r-md: 9px;
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-3);
+  --fw-bold: 700;
+  --fw-semibold: 600;
+  --fw-medium: 500;
+  --ac-glow: 0 0 28px rgba(129, 140, 248, 0.45);
+  --stat-glow: 0 0 34px rgba(129, 140, 248, 0.38);
+  --cyan: #22d3ee;
+  --glass: rgba(24, 26, 31, 0.6);
+  --muted: #6c7483;
+  --accent: #818cf8;
+  --accent-color: #818cf8;
+  --text-muted: #6c7483;
+  --text-secondary: #a4abb8;
+  --text-primary: #e9ebef;
+  --bg-primary: #0f1013;
 }
 
 /* ── 2. Сброс и база ───────────────────────────────────────── */

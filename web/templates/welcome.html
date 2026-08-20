@@ -28,6 +28,8 @@
       --err: #f87171;
       --shadow: 0 24px 70px rgba(0, 0, 0, .6);
       --glow: 0 0 60px rgba(79, 70, 229, .35);
+      --ease: cubic-bezier(0.25, 0.6, 0.3, 1);
+      --ac-line: rgba(79, 70, 229, 0.22);
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -744,14 +746,14 @@
     }
     /* заголовок НЕ в stagger: он печатается сам и должен быть виден сразу */
     .w-title { opacity: 1; }
-    .w-dragon-wrap { animation-delay: .05s; }
-    .w-eyebrow { animation-delay: .15s; }
-    .w-lead { animation-delay: .3s; }
-    .w-chips { animation-delay: .38s; }
-    .w-at-hint { animation-delay: .46s; }
-    .w-search { animation-delay: .54s; }
-    .w-hero-actions { animation-delay: .62s; }
-    .w-stats { animation-delay: .7s; }
+    .w-dragon-wrap { animation-delay: .04s; }
+    .w-eyebrow { animation-delay: .1s; }
+    .w-lead { animation-delay: .18s; }
+    .w-chips { animation-delay: .24s; }
+    .w-at-hint { animation-delay: .3s; }
+    .w-search { animation-delay: .36s; }
+    .w-hero-actions { animation-delay: .42s; }
+    .w-stats { animation-delay: .48s; }
     @keyframes wHeroIn {
       from { opacity: 0; transform: translateY(18px); }
       to   { opacity: 1; transform: none; }
