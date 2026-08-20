@@ -1482,6 +1482,37 @@ check('data.hint' in _ag and "hint ? ' · ' + hint" in _ag,
 _gw = open(os.path.join(ROOT, 'web', 'routes', 'giveaways.py'), encoding='utf-8').read()
 check("'gw-demo-1'" in _gw,
       'routes giveaways: демо-розыгрыши (страница не пустая в превью)')
+# ═══ 37у. Финальный глянец: health, графики, битые стили ═════════════════════
+print('== финальный глянец ==')
+_app3 = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
+check("'bot':'demo'" in _app3.split('def health_check')[1][:1200],
+      'api /health: в демо-режиме мониторинг отвечает 200 healthy')
+_anl2 = open(os.path.join(ROOT, 'web', 'templates', 'analytics.html'), encoding='utf-8').read()
+_aal = open(os.path.join(ROOT, 'web', 'templates', 'advanced_analytics.html'), encoding='utf-8').read()
+check('function makeChart' in _anl2 and 'function makeChart' in _aal,
+      'графики: защитный makeChart на обеих страницах аналитики')
+check('function chartFallback' in _anl2 and 'function chartFallback' in _aal,
+      'графики: заглушка заменяет только canvas, соседние блоки не стираются')
+check('replaceChild(note, el)' in _anl2,
+      'графики: замена узла через replaceChild (списки/легенды рядом живы)')
+check('makeChart(msgCanvas' in _anl2 and 'makeChart(document.getElementById' in _aal,
+      'графики: все вызовы Chart идут через защиту')
+check('График недоступен в этом браузере' in _anl2,
+      'графики: честный текст заглушки на месте')
+_aim3 = open(os.path.join(ROOT, 'web', 'templates', 'ai_moderation.html'), encoding='utf-8').read()
+_lva3 = open(os.path.join(ROOT, 'web', 'templates', 'leveling_admin.html'), encoding='utf-8').read()
+check('style="0 0;"' not in _aim3 and 'style="16px;"' not in _aim3,
+      'ai-модерация: битые inline-стили вычищены')
+check('style="20px;"' not in _lva3 and 'lb-kv' in _lva3,
+      'leveling-admin: битые inline-стили заменены классом lb-kv')
+_all3 = []
+for _t3 in sorted(os.listdir(os.path.join(ROOT, 'web', 'templates'))):
+    if _t3.endswith('.html'):
+        _all3.append(open(os.path.join(ROOT, 'web', 'templates', _t3), encoding='utf-8').read())
+_all3_src = '\n'.join(_all3)
+_broken_inline = [m for m in re.finditer(r'style\s*=\s*"\s*\d+(?:px)?\s*;?\s*"', _all3_src)]
+check(not _broken_inline,
+      'все шаблоны: битых inline-стилей (только голое число/px) больше нет')
 
 # ═══ 37й. Автономность: иконки и шрифты без внешних CDN ══════════════════════
 print('== автономность: локальные ассеты ==')

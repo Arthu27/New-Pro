@@ -130,7 +130,32 @@ check(KP.adjust_score(st, 'куку', 5)[1] == 'Некорректный ID по
       'битый ID — ошибка 1:1 с мод-контролем')
 
 print('== 5. API: права и потоки ==')
-GuildData('karma').set(777, 'state', seed_state())
+# Панельный API считает окно от реального «сейчас» (в отличие от чистых
+# функций с фиксированным NOW): пере-сидим журнал относительно текущей
+# даты, чтобы «за неделю» не съедало записи по мере хода календаря.
+_real_now = datetime.now()
+
+
+def _seed_relative():
+    def r_ago(**kw):
+        return (_real_now - timedelta(**kw)).isoformat()
+    st = seed_state()
+    st['thanks'] = [
+        {'giver': '1', 'target': '2', 'at': r_ago(days=3), 'reason': 'помог с боссом'},
+        {'giver': '1', 'target': '2', 'at': r_ago(days=2), 'reason': 'снова выручил'},
+        {'giver': '2', 'target': '1', 'at': r_ago(days=1), 'reason': ''},
+        {'giver': '5', 'target': '6', 'at': r_ago(days=5), 'reason': 'спасибо'},
+        {'giver': '5', 'target': '6', 'at': r_ago(hours=36), 'reason': 'угостил'},
+        {'giver': '6', 'target': '5', 'at': r_ago(days=4), 'reason': ''},
+        {'giver': '6', 'target': '5', 'at': r_ago(days=2), 'reason': ''},
+        {'giver': '6', 'target': '5', 'at': r_ago(days=1), 'reason': ''},
+        {'giver': '5', 'target': '6', 'at': r_ago(hours=12), 'reason': 'держал слово'},
+        {'giver': '9', 'target': '8', 'at': r_ago(days=10), 'reason': 'старое'},
+    ]
+    return st
+
+
+GuildData('karma').set(777, 'state', _seed_relative())
 with open('data/audit_log.json', 'w', encoding='utf-8') as fh:
     json.dump({'777': [
         {'category': 'mod', 'action': 'Мут', 'user_id': '1', 'user_name': 'Аня',

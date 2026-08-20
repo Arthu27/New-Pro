@@ -255,6 +255,15 @@ BASE = 'a1e4a58579d3544a5c9b3ccea247414576293266'
 def git_show(path):
     proc = subprocess.run(['git', 'show', f'{BASE}:{path}'], cwd=ROOT,
                           capture_output=True, text=True)
+    if proc.returncode == 0:
+        return proc.stdout
+    # Неглубокий клон может не знать базовый коммит: дочитываем историю
+    # один раз и пробуем снова — тест сам себя лечит после чистого клона.
+    subprocess.run(['git', 'fetch', '-q', '--deepen=5000', 'origin',
+                    'arena/01a01525-new-pro'],
+                   cwd=ROOT, capture_output=True, text=True, timeout=300)
+    proc = subprocess.run(['git', 'show', f'{BASE}:{path}'], cwd=ROOT,
+                          capture_output=True, text=True)
     return proc.stdout if proc.returncode == 0 else None
 
 

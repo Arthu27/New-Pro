@@ -516,7 +516,40 @@
     }).join('') + '</div>';
   }
 
-  function renderCharts(d) {
+    /* График с защитой: если Chart.js не загрузился или canvas недоступен,
+     не сыплем ошибками в консоль, а показываем честную заглушку. */
+  function makeChart(el, cfg) {
+    if (typeof Chart === 'undefined') return null;
+    if (!el) return null;
+    var target = el;
+    if (typeof el.getContext === 'function') {
+      var ctx2d = null;
+      try { ctx2d = el.getContext('2d'); } catch (e) { ctx2d = null; }
+      if (!ctx2d) {
+        chartFallback(el, 'График недоступен в этом браузере');
+        return null;
+      }
+    }
+    try { return new Chart(target, cfg); }
+    catch (e) {
+      chartFallback(el, 'График не отрисовался');
+      return null;
+    }
+  }
+
+  /* Заменяем ТОЛЬКО сам canvas заглушкой — соседние элементы
+     (списки, легенды) не трогаем. */
+  function chartFallback(el, text) {
+    try {
+      if (!el || !el.parentNode) return;
+      var note = document.createElement('div');
+      note.className = 'empty-state';
+      note.innerHTML = '<i class="fas fa-chart-simple"></i><p>' + text + '</p>';
+      el.parentNode.replaceChild(note, el);
+    } catch (e) { /* метрики — не критично */ }
+  }
+
+function renderCharts(d) {
     if (typeof Chart === 'undefined') return;
     Chart.defaults.color = '#aeb6d0';
     Chart.defaults.font.family = 'Inter';
@@ -529,7 +562,7 @@
     if (msgChart) { msgChart.destroy(); msgChart = null; }
     var msgCanvas = $id('msgChart');
     if (msgCanvas) {
-      msgChart = new Chart(msgCanvas, {
+      msgChart = makeChart(msgCanvas, {
         type: 'bar',
         data: {
           labels: msgLabels,
@@ -579,7 +612,7 @@
     if (memberChart) { memberChart.destroy(); memberChart = null; }
     var memCanvas = $id('memberChart');
     if (memCanvas) {
-      memberChart = new Chart(memCanvas, {
+      memberChart = makeChart(memCanvas, {
         type: 'line',
         data: {
           labels: d.member_labels || [],
@@ -700,7 +733,7 @@
     var el = $id('flowChart');
     if (!el) return;
     if (flowChart) flowChart.destroy();
-    flowChart = new Chart(el.getContext('2d'), {
+    flowChart = makeChart(el, {
       type: 'bar',
       data: {
         labels: d.labels,

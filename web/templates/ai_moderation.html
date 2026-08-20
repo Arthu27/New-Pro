@@ -280,7 +280,7 @@
       <div class="aimod-slider-wrap">
         <label>Чувствительность детекции: <span class="aimod-slider-value" id="sensValue">70%</span></label>
         <input type="range" min="0" max="100" value="70" class="aimod-slider" id="sensSlider" oninput="updateSens(this.value)" aria-label="Чувствительность ИИ">
-        <p   style="0 0;">
+        <p style="margin:0 0 10px;color:var(--text-3);font-size:12.5px;line-height:1.6">
           <b>Низкая (0-50%):</b> только severe и discrimination<br>
           <b>Средняя (50-70%):</b> + moderate<br>
           <b>Высокая (70-100%):</b> + mild (может быть больше false positives)
@@ -328,7 +328,7 @@
       <input type="text" id="testInput" placeholder="Например: ты тупой идиот" aria-label="Например: ты тупой идиот">
       <button type="button" class="form-btn" onclick="runTest()"><i class="fas fa-play"></i> Проверить</button>
     </div>
-    <div id="testResult"   style="16px;"></div>
+    <div id="testResult" style="font-size:13.5px;margin-top:12px;line-height:1.6"></div>
   </div>
 </div>
 

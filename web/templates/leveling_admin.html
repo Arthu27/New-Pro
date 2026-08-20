@@ -36,6 +36,9 @@
 .lvl-reward-info { flex: 1; }
 .lvl-reward-info .name { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
 .lvl-reward-info .role { font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; }
+.lb-kv { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-bottom: 1px dashed var(--line); font-size: var(--fs-md); }
+.lb-kv:last-child { border-bottom: none; }
+.lb-kv .kv-val { flex: 1; }
 .lvl-achievement-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
 .lvl-ach { padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; transition: all 0.2s; }
 .lvl-ach:hover { transform: translateY(-2px); border-color: var(--ac-line); }
@@ -250,7 +253,7 @@
       const medals = ['<i class="fas fa-medal" style="color:#f59e0b"></i>','<i class="fas fa-medal" style="color:#94a3b8"></i>','<i class="fas fa-medal" style="color:#b45309"></i>'];
       document.getElementById('leaderboardList').innerHTML = (s.top || []).map((u, i) => {
         const medal = i < 3 ? medals[i] : '<span >' + (i+1) + '</span>';
-        return `<div class="kv"   style="20px;">
+        return `<div class="lb-kv">
           <div class="kv-key"   style="min-width: 40px;">${medal}</div>
           <div class="kv-val"   style="text-align: left;">${esc(u.name)}</div>
           <div class="kv-key"   style="font-weight: 700;">Ур.${u.level}</div>
