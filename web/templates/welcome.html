@@ -94,7 +94,16 @@
       z-index: 100;
     }
     .w-nav .brand { display: flex; align-items: center; gap: 10px; }
-    .w-nav .brand img { width: 34px; height: 34px; border-radius: 10px; box-shadow: var(--glow); }
+    .w-nav .brand img {
+      width: 38px; height: 38px; border-radius: 11px;
+      background: var(--ac-grad);
+      padding: 5px;
+      object-fit: cover;
+      box-shadow: var(--glow), inset 0 1px 0 rgba(255, 255, 255, .25);
+      filter: drop-shadow(0 0 6px rgba(34, 211, 238, .35));
+      animation: dragonBreath 4.6s ease-in-out infinite;
+    }
+    .w-nav .brand:hover img { transform: scale(1.06); }
     .w-nav .brand b { font-weight: 800; letter-spacing: .08em; font-size: 14px; }
     .w-nav .brand small { display: block; font-size: 9px; color: var(--text3); letter-spacing: .12em; text-transform: uppercase; }
     .w-nav-links { display: flex; gap: 4px; margin-left: 12px; }
@@ -112,31 +121,82 @@
       padding: 150px 20px 70px;
       text-align: center; max-width: 1080px; margin: 0 auto;
     }
-    .w-dragon-wrap { position: relative; width: 170px; height: 170px; margin: 0 auto 28px; }
+    .w-dragon-wrap { position: relative; width: 218px; height: 218px; margin: 0 auto 34px; }
+    .w-dragon-par { position: absolute; inset: 0; will-change: transform; }
     .w-dragon-ring {
       position: absolute; inset: 0; border-radius: 50%;
       background: conic-gradient(#4f46e5, #7c3aed, #22d3ee, #4f46e5);
       -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
               mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
-      opacity: .85;
+      opacity: .9;
       animation: wSpin 9s linear infinite;
     }
     @keyframes wSpin { to { transform: rotate(360deg); } }
+    .w-dragon-ring2 {
+      position: absolute; inset: -12px; border-radius: 50%;
+      border: 2px dashed rgba(129, 140, 248, .32);
+      animation: wSpin 28s linear infinite reverse;
+    }
+    .w-dragon-orbit { position: absolute; inset: 0; animation: wSpin 11s linear infinite; }
+    .w-dragon-orbit i {
+      position: absolute; left: 50%; top: 50%;
+      width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px;
+      border-radius: 50%;
+      background: #22d3ee;
+      box-shadow: 0 0 10px rgba(34, 211, 238, .9), 0 0 26px rgba(34, 211, 238, .45);
+    }
+    .w-dragon-orbit i:nth-child(1) { transform: translate(0, -109px); }
+    .w-dragon-orbit i:nth-child(2) {
+      transform: translate(77px, 77px);
+      background: #a78bfa;
+      box-shadow: 0 0 10px rgba(167, 139, 250, .9), 0 0 26px rgba(167, 139, 250, .45);
+    }
+    .w-dragon-orbit i:nth-child(3) {
+      transform: translate(-77px, 77px);
+      background: #818cf8;
+      box-shadow: 0 0 10px rgba(129, 140, 248, .9), 0 0 26px rgba(129, 140, 248, .45);
+    }
     .w-dragon-halo {
-      position: absolute; inset: 16px; border-radius: 50%;
-      background: radial-gradient(circle at 30% 25%, rgba(124, 58, 237, .4), transparent 70%);
+      position: absolute; inset: 14px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 25%, rgba(124, 58, 237, .42), transparent 70%);
       animation: wHalo 4.5s ease-in-out infinite;
     }
     @keyframes wHalo { 0%,100% { opacity: .5; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.05); } }
     .w-dragon {
-      position: absolute; inset: 18px; border-radius: 40px;
+      position: absolute; inset: 26px; border-radius: 48px;
       background: var(--ac-grad);
       display: grid; place-items: center;
-      box-shadow: 0 0 70px rgba(124, 58, 237, .55), var(--glow);
+      overflow: hidden;
+      box-shadow: 0 0 70px rgba(124, 58, 237, .55), var(--glow),
+                  inset 0 1px 0 rgba(255, 255, 255, .35);
       animation: wFloat 5s ease-in-out infinite;
     }
-    @keyframes wFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
-    .w-dragon img { width: 96px; height: 96px; object-fit: contain; filter: drop-shadow(0 4px 14px rgba(0,0,0,.5)); }
+    .w-dragon::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, .26), transparent 55%);
+    }
+    .w-dragon::after {
+      content: ''; position: absolute; top: -35%; bottom: -35%; left: -65%;
+      width: 36%;
+      background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .32), transparent);
+      transform: skewX(-18deg);
+      animation: wGloss 3.6s ease-in-out infinite;
+    }
+    @keyframes wGloss { 0%, 55% { left: -65%; } 85%, 100% { left: 135%; } }
+    .w-dragon img {
+      position: relative; z-index: 1;
+      width: 122px; height: 122px; object-fit: contain;
+      filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .45));
+    }
+    .w-dragon-floor {
+      position: absolute; left: 50%; bottom: -30px;
+      width: 180px; height: 34px; margin-left: -90px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(124, 58, 237, .42), transparent 70%);
+      filter: blur(7px);
+      animation: wFloor 5s ease-in-out infinite;
+    }
+    @keyframes wFloor { 0%,100% { transform: scaleX(.85); opacity: .55; } 50% { transform: scaleX(1.1); opacity: 1; } }
     .w-eyebrow {
       display: inline-flex; align-items: center; gap: 8px;
       font-size: 11px; font-weight: 700;
@@ -310,7 +370,11 @@
       font-size: 12px; padding: 34px 20px 44px;
       position: relative; z-index: 1;
     }
-    .w-foot img { width: 26px; height: 26px; border-radius: 8px; vertical-align: -7px; margin-right: 6px; }
+    .w-foot img {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: var(--ac-grad); padding: 4px; object-fit: cover;
+      vertical-align: -8px; margin-right: 6px;
+    }
 
     /* ── Звёздное небо ── */
     #w-stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
@@ -510,7 +574,11 @@
       border-bottom: 1px solid var(--line);
       font-size: 11px; font-weight: 800; letter-spacing: .08em;
     }
-    .w-showcase-side .s-brand img { width: 20px; height: 20px; border-radius: 6px; }
+    .w-showcase-side .s-brand img {
+      width: 22px; height: 22px; border-radius: 7px;
+      background: var(--ac-grad); padding: 3px; object-fit: cover;
+      box-shadow: 0 0 10px rgba(124, 58, 237, .35);
+    }
     .w-showcase-side .s-item {
       display: flex; align-items: center; gap: 8px;
       padding: 7px 9px; border-radius: 9px;
@@ -757,30 +825,33 @@
           58% { transform: scale(1.045); }
           78% { transform: scale(0.99); }
         }
-        .dragon-smoke { position: absolute; pointer-events: none; z-index: 5; }
+        .dragon-smoke { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
         .dragon-smoke span {
-          position: absolute; left: 50%; bottom: 0;
-          width: 16px; height: 16px; margin-left: -8px;
+          position: absolute; left: 50%; top: 18px;
+          width: 18px; height: 18px; margin-left: -9px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(165, 180, 252, .55), rgba(34, 211, 238, .18) 60%, transparent 72%);
+          background: radial-gradient(circle, rgba(165, 180, 252, .6), rgba(34, 211, 238, .2) 60%, transparent 72%);
           filter: blur(3px);
           opacity: 0;
           animation: dragonSmoke 4.6s ease-out infinite;
         }
-        .dragon-smoke span:nth-child(2) { animation-delay: 1.53s; margin-left: -14px; }
+        .dragon-smoke span:nth-child(2) { animation-delay: 1.53s; margin-left: -16px; }
         .dragon-smoke span:nth-child(3) { animation-delay: 3.06s; margin-left: -2px; }
         @keyframes dragonSmoke {
           0%   { opacity: 0; transform: translateY(0) translateX(0) scale(.45); }
-          18%  { opacity: .8; }
-          100% { opacity: 0; transform: translateY(-54px) translateX(-7px) scale(1.7); }
+          18%  { opacity: .85; }
+          100% { opacity: 0; transform: translateY(-74px) translateX(-8px) scale(1.75); }
         }
 
     @media (prefers-reduced-motion: reduce) {
-      .w-dragon, .w-dragon-halo, .w-dragon-ring, .w-marquee-track,
+      .w-dragon, .w-dragon-halo, .w-dragon-ring, .w-dragon-ring2,
+      .w-dragon-orbit, .w-dragon-floor, .w-dragon::after,
+      .w-marquee-track,
       .w-title.typing::after, .w-term-caret, .w-scroll-hint .mouse::after,
       .btn-primary-wrap::before, .dragon-live, .dragon-smoke span,
       .w-showcase-kpi .k-n.tick { animation: none; }
       .dragon-smoke { display: none; }
+      .w-dragon-par { transform: none !important; }
       .w-section::before, .w-sec-title::after, .w-step .num,
       .w-terminal, .w-chips .chip { transition: none; }
       .w-dragon-wrap, .w-eyebrow, .w-lead,
@@ -829,10 +900,15 @@
   <!-- Hero -->
   <header class="w-hero">
     <div class="w-dragon-wrap">
-      <div class="w-dragon-ring" aria-hidden="true"></div>
-      <div class="w-dragon-halo" aria-hidden="true"></div>
-      <div class="dragon-smoke" aria-hidden="true"><span></span><span></span><span></span></div>
-      <div class="w-dragon"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Белый дракон Aether"></div>
+      <div class="w-dragon-par" id="wDragonPar">
+        <div class="w-dragon-ring" aria-hidden="true"></div>
+        <div class="w-dragon-ring2" aria-hidden="true"></div>
+        <div class="w-dragon-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="w-dragon-halo" aria-hidden="true"></div>
+        <div class="dragon-smoke" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="w-dragon"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Белый дракон Aether"></div>
+      </div>
+      <div class="w-dragon-floor" aria-hidden="true"></div>
     </div>
     <div class="w-eyebrow"><span class="dot"></span> Панель сервера · для всех участников</div>
     <h1 class="w-title">Управляй сервером <span class="grad">красиво</span></h1>
@@ -1680,6 +1756,25 @@
     if (fine) {
       setTimeout(function () { inp.focus({ preventScroll: true }); }, 900);
     }
+  })();
+
+  /* ── Дракон: мягкий параллакс за курсором (только transform, 1 rAF на событие) ── */
+  (function () {
+    var mq = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var par = document.getElementById('wDragonPar');
+    if (mq || !par || !('requestAnimationFrame' in window)) return;
+    var tx = 0, ty = 0, dx = 0, dy = 0, raf = null;
+    document.addEventListener('mousemove', function (e) {
+      tx = (e.clientX / window.innerWidth - .5) * 16;
+      ty = (e.clientY / window.innerHeight - .5) * 12;
+      if (raf) return;
+      raf = requestAnimationFrame(function () {
+        raf = null;
+        dx += (tx - dx) * .12;
+        dy += (ty - dy) * .12;
+        par.style.transform = 'translate3d(' + dx.toFixed(2) + 'px,' + dy.toFixed(2) + 'px,0)';
+      });
+    });
   })();
   </script>
 </body>

@@ -1053,6 +1053,22 @@ check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
 check('app.js?v=48' in base and 'style.css?v=110' in base,
       'версии ассетов (110/48)')
+# ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
+print('== welcome: лого hero ==')
+check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
+      'welcome: дракон получил параллакс-слой, второе кольцо и орбитальные огоньки')
+check('.w-dragon::after' in w11 and 'wGloss' in w11,
+      'welcome: глянцевый блик пробегает по плитке дракона')
+check('.w-dragon-floor' in w11 and 'wFloor' in w11,
+      'welcome: светящийся пол под драконом дышит в такт полёту')
+check('.w-dragon img' in w11 and '122px' in w11.split('.w-dragon img')[1][:400],
+      'welcome: дракон в hero стал крупнее (122px)')
+check('wDragonPar' in w11 and 'requestAnimationFrame' in w11,
+      'welcome: параллакс дракона за курсором (rAF, плавный)')
+check('.w-nav .brand img' in w11 and 'dragonBreath' in w11.split('.w-nav .brand img')[1][:600],
+      'welcome: дракон в навигации на градиентной плитке и дышит')
+check('.w-dragon-ring, .w-dragon-ring2,' in w11.split('prefers-reduced-motion')[1][:900],
+      'welcome: новые анимации дракона отключаются при reduced-motion')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,
