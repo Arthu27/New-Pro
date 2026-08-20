@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Unbounded:wght@500;700;900&display=swap" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="/static/style.css?v=104">
+    <link rel="stylesheet" href="/static/style.css?v=110">
     <style>
       :root {
         --bg: #05060a;
@@ -129,6 +129,14 @@
         display: grid; place-items: center;
         border: none;
         box-shadow: 0 6px 18px rgba(0, 0, 0, .4), var(--glow);
+      }
+      .auth-side .brand .ico img,
+      .auth-main .mobile-brand .ico img {
+        width: 100%; height: 100%; object-fit: cover;
+        border-radius: inherit;
+        padding: 4px;
+        filter: drop-shadow(0 0 6px rgba(34, 211, 238, .35));
+        animation: dragonBreath 4.6s ease-in-out infinite;
       }
       .auth-side .brand b {
         font-family: 'Unbounded', sans-serif;

@@ -499,6 +499,26 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .sidebar-version i { color: var(--ac); }
 
 /* ── 5. Верхняя панель ─────────────────────────────────────── */
+.topbar-brand {
+  display: none;
+  width: 36px; height: 36px; flex: 0 0 auto;
+  border-radius: 10px;
+  background: var(--ac-grad);
+  place-items: center;
+  overflow: hidden;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--ac) 40%, transparent),
+              inset 0 1px 0 rgba(255,255,255,.35);
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.topbar-brand img {
+  width: 100%; height: 100%; object-fit: cover;
+  padding: 3px;
+  filter: drop-shadow(0 0 5px rgba(34, 211, 238, .45));
+  animation: dragonBreath 4.6s ease-in-out infinite;
+}
+.topbar-brand:hover { transform: translateY(-1px) scale(1.05); box-shadow: 0 8px 22px color-mix(in srgb, var(--ac) 55%, transparent), inset 0 1px 0 rgba(255,255,255,.35); }
+[data-theme="dark"] .topbar-brand { box-shadow: 0 0 18px color-mix(in srgb, var(--ac) 55%, transparent), inset 0 1px 0 rgba(255,255,255,.18); }
+@media (prefers-reduced-motion: reduce) { .topbar-brand img { animation: none; } }
 .topbar {
   height: var(--topbar-h);
   display: flex; align-items: center; gap: 14px;
@@ -1847,6 +1867,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   .mobile-menu { display: grid; place-items: center; }
   .topbar, .main-content { padding-left: 18px; padding-right: 18px; }
   .navbar-clock { display: none; }
+  .topbar-brand { display: grid; }
 }
 @media (max-width: 860px) {
   .stat-grid,.donut-grid,.quick-grid{grid-template-columns:1fr !important}
@@ -2634,9 +2655,16 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
   background: var(--ac-grad);
   display: grid; place-items: center;
   color: #fff; font-size: 30px;
+  overflow: hidden;
   box-shadow: 0 0 70px color-mix(in srgb, var(--ac) 55%, transparent),
               inset 0 1px 0 rgba(255,255,255,.4);
   animation: bootPulse 1.3s ease-in-out infinite;
+}
+.boot-logo img {
+  width: 100%; height: 100%; object-fit: cover;
+  padding: 9px;
+  animation: dragonBreath 4.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, .55));
 }
 [data-theme="dark"] .boot-logo { color: #14152a; }
 @keyframes bootPulse {
@@ -4651,7 +4679,11 @@ input:focus, select:focus, textarea:focus {
 
 /* ── Логотип дышащего дракона: лёгкое свечение синхронно дыханию ── */
 .brand-icon .dragon-live {
+  padding: 4px;
   filter: drop-shadow(0 0 6px color-mix(in srgb, var(--ac) 55%, transparent));
+}
+[data-theme="dark"] .brand-icon .dragon-live {
+  filter: drop-shadow(0 0 6px rgba(165, 180, 252, .5));
 }
 
 @media (prefers-reduced-motion: reduce) {

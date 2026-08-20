@@ -1017,6 +1017,21 @@ login_as('owner')
 r = client.get('/apply')
 check(r.status_code == 200 and '.header .logo' in r.get_data(as_text=True),
       '/apply открывается с видимым лого')
+# ═══ 36а. Лого: мобильная шапка, сплэш, плотность дракона ═══════════════════
+print('== лого: сплэш и мобильная шапка ==')
+check('boot-logo"><img class="dragon-live"' in base and 'fa-bolt' not in base.split('bootSplash')[1].split('boot-wrap')[1][:600],
+      'сплэш загрузки показывает дракона, а не молнию')
+check('topbar-brand' in base and 'emblem-dragon.png' in base.split('topbar-brand')[1][:400],
+      'мобильная шапка панели получила дракона (лого видно и без сайдбара)')
+check('.topbar-brand' in css and 'display: grid' in css.split('max-width: 1080px')[1][:700],
+      'лого шапки появляется именно на мобильных экранах (≤1080px)')
+check('.boot-logo img' in css and 'dragonBreath' in css.split('.boot-logo img')[1][:400],
+      'дракон на сплэше дышит (анимация дыхания)')
+from PIL import Image as _Img
+_dim = _Img.open(os.path.join(ROOT, 'web', 'static', 'brand', 'emblem-dragon.png'))
+_bx = _dim.getbbox()
+_cov = ((_bx[2]-_bx[0]) * (_bx[3]-_bx[1])) / (_dim.size[0] * _dim.size[1])
+check(_cov >= 0.7, f'дракон заполняет холст ({_cov:.2%}) — виден крупно даже в маленьких иконках')
 # ═══ 37. Welcome: фиксы пустых блоков ══════════════════════════════════════
 print('== welcome: фиксы ==')
 w11 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
@@ -1036,8 +1051,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=47' in base and 'style.css?v=109' in base,
-      'версии ассетов (109/47)')
+check('app.js?v=48' in base and 'style.css?v=110' in base,
+      'версии ассетов (110/48)')
 check('-moz-osx-font-smoothing: grayscale' in css and 'font-synthesis: none' in css,
       'сглаживание шрифтов полное (четкий текст на всех платформах)')
 check('image-rendering: auto' in css and 'backface-visibility: hidden' in css,
