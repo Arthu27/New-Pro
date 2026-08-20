@@ -33,6 +33,9 @@
       html, body { min-height: 100%; }
       body {
         margin: 0;
+        display: flex;
+        min-height: 100vh;
+        padding: 24px;
         background: var(--bg);
         color: var(--text);
         font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -110,8 +113,8 @@
       .lg-stage {
         position: relative; z-index: 1;
         width: 100%; max-width: 430px;
-        margin: 0 auto;
-        padding: 48px 20px 32px;
+        margin: auto;
+        padding: 24px 0 8px;
       }
       .lg-card-zone { position: relative; padding-top: 40px; }
 
@@ -546,7 +549,7 @@
 
       /* ── Мобильные ── */
       @media (max-width: 640px) {
-        .lg-stage { padding: 40px 14px 24px; }
+        .lg-stage { padding: 8px 0 4px; }
         .auth-main { padding: 54px 20px 24px; }
         .auth-feats { grid-template-columns: repeat(2, 1fr); }
         .auth-main .mobile-brand {

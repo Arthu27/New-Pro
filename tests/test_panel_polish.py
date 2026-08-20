@@ -1201,8 +1201,10 @@ check('body::after' in lg3 and 'feTurbulence' in lg3,
       'login: лёгкая плёнка-зерно для глубины фона (статичная, без нагрузки)')
 check('padding: 56px 32px 30px' in lg3,
       'login: контент карточки освобождает место под парящим медальоном')
-check('max-width: 430px' in lg3 and 'padding: 48px 20px 32px' in lg3,
-      'login: компактная колонна — всё помещается в один экран без скролла')
+check('max-width: 430px' in lg3 and 'margin: auto' in lg3.split('.lg-stage {')[1][:260],
+      'login: компактная колонна, центрированная по вертикали')
+check('display: flex' in lg3.split('      body {')[1][:300] and 'min-height: 100vh' in lg3.split('      body {')[1][:300],
+      'login: карточка по центру экрана, а не прижата к верху (flex + 100vh)')
 check('gap: 22px' in lg3.split('.tabs {')[1][:420] and 'border-bottom: 1px solid rgba(255, 255, 255, .07)' in lg3.split('.tabs {')[1][:420],
       'login: табы — чистые подчёркнутые (Linear-стиль), без коробок-пилюль')
 check('.tab-btn.active { color: #c7d2fe; }' in lg3,
