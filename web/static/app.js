@@ -761,7 +761,7 @@
         var sys = both[0].notifications || [];
         var own = Array.isArray(both[1]) ? both[1] : [];
         var sysItems = sys.map(function (n) {
-          return { title: n.title, body: n.body, icon: notifIcon(n), ts: n.ts, kind: 'system' };
+          return { title: n.title, body: n.body, icon: notifIcon(n), ts: n.ts, kind: 'system', link: n.link || '' };
         });
         var ownItems = own.map(function (n) {
           return {
@@ -769,7 +769,8 @@
             body: n.body || n.detail || '',
             icon: /^fa-/.test(n.icon || '') ? n.icon : 'fa-bell',
             ts: n.ts || n.created_at || n.timestamp || 0,
-            kind: 'personal'
+            kind: 'personal',
+            link: n.link || n.path || ''
           };
         });
         var all = sysItems.concat(ownItems).sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
@@ -779,7 +780,8 @@
         } else {
           body.innerHTML = list.slice(0, 30).map(function (n) {
             var t = n.ts ? timeAgo(n.ts) : '';
-            return '<div class="feed-item">' +
+            var isNew = n.ts && (n.ts * 1 || 0) > notifLastSeen && drawer.classList.contains('open') === false;
+            var inner =
               '<div class="feed-item-icon"><i class="fas ' + esc(n.icon) + '"></i></div>' +
               '<div style="min-width:0"><div class="feed-item-title">' + esc(n.title || '') + '</div>' +
               (n.body ? '<div class="feed-item-sub">' + esc(n.body) + '</div>' : '') +
@@ -787,8 +789,19 @@
                 (n.kind === 'personal'
                   ? '<span class="badge neutral" style="font-size:9px;padding:0 6px">личное</span> '
                   : '<span class="badge security" style="font-size:9px;padding:0 6px">система</span> ') +
-                esc(t) + '</div></div></div>';
+                esc(t) + '</div></div>';
+            if (n.link) {
+              return '<a class="feed-item' + (isNew ? ' is-new' : '') + '" href="' + esc(n.link) + '" data-notif-link>' + inner + '</a>';
+            }
+            return '<div class="feed-item' + (isNew ? ' is-new' : '') + '">' + inner + '</div>';
           }).join('');
+          Array.prototype.forEach.call(body.querySelectorAll('[data-notif-link]'), function (a) {
+            a.addEventListener('click', function (e) {
+              e.preventDefault();
+              closeDrawer();
+              window.location.href = a.getAttribute('href');
+            });
+          });
         }
         var unread = both[0].unread || 0;
         if (unread > 0 && badge && !drawer.classList.contains('open')) {
@@ -852,12 +865,24 @@
             return;
           }
           body.innerHTML = items.slice(0, 40).map(function (it) {
-            return '<div class="feed-item">' +
-              '<div class="feed-item-icon">' + esc(it.icon || '•') + '</div>' +
+            var ic = /^fa-/.test(it.icon || '') ? it.icon : 'fa-circle';
+            var inner =
+              '<div class="feed-item-icon"><i class="fas ' + esc(ic) + '"></i></div>' +
               '<div style="min-width:0"><div class="feed-item-title">' + esc(it.title || '') + '</div>' +
               '<div class="feed-item-sub">' + esc(it.user || '') + (it.detail ? ' — ' + esc(it.detail) : '') + '</div>' +
-              '<div class="feed-item-time">' + esc(timeAgo(it.ts)) + '</div></div></div>';
+              '<div class="feed-item-time">' + esc(timeAgo(it.ts)) + '</div></div>';
+            if (it.link) {
+              return '<a class="feed-item" href="' + esc(it.link) + '" data-activity-link>' + inner + '</a>';
+            }
+            return '<div class="feed-item">' + inner + '</div>';
           }).join('');
+          Array.prototype.forEach.call(body.querySelectorAll('[data-activity-link]'), function (a) {
+            a.addEventListener('click', function (e) {
+              e.preventDefault();
+              close();
+              window.location.href = a.getAttribute('href');
+            });
+          });
           var stamp = doc.getElementById('activityLastUpdate');
           if (stamp) stamp.textContent = 'Обновлено ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
         })

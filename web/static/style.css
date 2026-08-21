@@ -1665,6 +1665,15 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 }
 .feed-item:hover { background: var(--surface-2); }
 .feed-item + .feed-item { border-top: 1px solid var(--line); }
+a.feed-item { text-decoration: none; color: inherit; }
+a.feed-item:hover .feed-item-title { color: var(--ac); }
+.feed-item.is-new {
+  background: color-mix(in srgb, var(--ac) 7%, transparent);
+  box-shadow: inset 3px 0 0 var(--ac);
+}
+[data-theme="light"] .feed-item.is-new {
+  background: color-mix(in srgb, var(--ac) 8%, #ffffff);
+}
 .feed-item-icon {
   width: 30px; height: 30px; flex: 0 0 30px;
   border-radius: 8px;

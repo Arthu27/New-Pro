@@ -41,6 +41,12 @@
 .ma-empty i{font-size:24px;color:var(--ac)}
 .ma-empty b{display:block;font-size:13px;color:var(--text-2)}
 .ma-empty span{font-size:11.5px}
+/* Модерация сегодня: простая шапка — заголовок на своей строке, ничего не наезжает */
+.mt-head { padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.mt-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mt-title-row h2 { margin: 0; font-size: var(--fs-lg); font-weight: 700; display: flex; align-items: center; gap: 9px; }
+.mt-title-row h2 i { color: var(--ac); font-size: 0.85em; }
+.mt-sub { margin-top: 4px; font-size: var(--fs-sm); color: var(--text-3); }
 /* Модерация сегодня: вертикальные KPI-карточки — надписи не могут наехать */
 .mt-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; }
 .mt-kpi {
@@ -95,7 +101,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   <div class="cc-grid" aria-hidden="true"></div>
   <button type="button" class="btn btn-icon btn-ghost" id="ccSettings" style="position:absolute;top:14px;right:16px;z-index:5;cursor:pointer" title="Настроить виджеты главной" aria-label="Настроить виджеты главной"><i class="fas fa-sliders"></i></button>
   <div class="page-hero-content">
-    <div class="page-hero-greeting" id="heroGreeting"><span class="dot"></span> Панель управления · сборка 58</div>
+    <div class="page-hero-greeting" id="heroGreeting"><span class="dot"></span> Панель управления · сборка 59</div>
     <h1 id="heroTitle">Добро пожаловать</h1>
     <p id="heroWelcomeMsg">Логи, демки, тикеты и быстрые действия — в одном месте. Управляйте сервером без лишних кликов.</p>
     <div class="cc-date" id="ccDate"></div>
@@ -108,76 +114,15 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   </div>
 </div>
 
-<!-- Живой пульс панели -->
-<div class="panel" data-widget="pulse" style="margin-bottom:14px">
-  <div class="panel-head">
-    <div><h2><i class="fas fa-wave-square"></i> Пульс панели</h2><div class="sub">Последние события в реальном времени.</div></div>
-    <span class="live-chip" style="margin-left:auto"><span class="dot"></span> LIVE</span>
-  </div>
-  <div class="panel-body" id="pulseStrip">
-    <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку событий</span></div>
-  </div>
-</div>
-
-<!-- Быстрые действия -->
-<div class="cc-quick" data-widget="quick">
-  <a class="cc-tile" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Варны</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Временные меры</b><small>Мьюты и баны с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile" href="/logs"><span class="cc-ico"><i class="fas fa-clipboard-list"></i></span><span><b>Журнал</b><small>Лента действий команды</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-ok" href="/proofs"><span class="cc-ico"><i class="fas fa-folder-open"></i></span><span><b>Доказательства</b><small>Архив демок</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-info" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Автофильтр</b><small>Слова, ссылки, флуд</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-warn" href="/antiraid"><span class="cc-ico"><i class="fas fa-shield-virus"></i></span><span><b>Анти-рейд</b><small>Защита от волн входов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-err" href="/mod-center"><span class="cc-ico"><i class="fas fa-shield-halved"></i></span><span><b>Центр модерации</b><small>Сводный штаб раздела</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-info" href="/mod-report"><span class="cc-ico"><i class="fas fa-chart-simple"></i></span><span><b>Отчёты</b><small>Нагрузка команды</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-</div>
-
-<!-- KPI -->
-<div class="stat-grid">
-  <div class="stat-box">
-    <div class="stat-icon"><i class="fas fa-server"></i></div>
-    <div class="stat-body"><div class="stat-value" id="guild-count">—</div><div class="stat-label">Серверов</div></div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-icon"><i class="fas fa-users"></i></div>
-    <div class="stat-body"><div class="stat-value" id="user-count">—</div><div class="stat-label">Участников</div></div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-icon" style="background:var(--ok-soft);color:var(--ok)"><i class="fas fa-user-check"></i></div>
-    <div class="stat-body"><div class="stat-value" id="sum-online">—</div><div class="stat-label">Онлайн</div></div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-icon" style="background:var(--info-soft);color:var(--info)"><i class="fas fa-gauge-high"></i></div>
-    <div class="stat-body"><div class="stat-value" id="latency">—<small>ms</small></div><div class="stat-label">Пинг бота · <span id="status">—</span></div></div>
-  </div>
-</div>
-
-<!-- Глубокие метрики: лидеры, доли мер, часы -->
-<div class="grid-3" data-widget="metrics" style="align-items:start">
-  <div class="panel">
-    <div class="panel-head"><div><h2><i class="fas fa-medal"></i> Топ модераторов</h2>
-      <div class="sub">Действия за 7 дней.</div></div></div>
-    <div class="panel-body" id="modTop"><div class="sk-line" style="height:12px"></div></div>
-    <div class="panel-foot" id="modRec" style="border-top:1px solid var(--line)"><span class="hint">рецидивисты: —</span></div>
-  </div>
-  <div class="panel">
-    <div class="panel-head"><div><h2><i class="fas fa-chart-pie"></i> Доля мер</h2>
-      <div class="sub">Структура наказаний за 7 дней.</div></div></div>
-    <div class="panel-body" id="modRing"><div class="sk-line" style="height:12px"></div></div>
-  </div>
-  <div class="panel">
-    <div class="panel-head"><div><h2><i class="fas fa-fire"></i> Часы активности</h2>
-      <div class="sub">Когда команда чаще всего действует.</div></div></div>
-    <div class="panel-body" id="modHeat"><div class="sk-line" style="height:12px"></div></div>
-  </div>
-</div>
-
 <div class="grid-2" data-widget="today" style="align-items:start">
   <!-- Модерация сегодня -->
   <div class="panel">
-    <div class="panel-head" style="flex-wrap:wrap">
-      <div style="min-width:0"><h2><i class="fas fa-shield-halved"></i> Модерация сегодня</h2><div class="sub">Действия команды за сегодня — цифры обновляются сами.</div></div>
-      <a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a>
+    <div class="mt-head">
+      <div class="mt-title-row">
+        <h2><i class="fas fa-shield-halved"></i> Модерация сегодня</h2>
+        <a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a>
+      </div>
+      <div class="mt-sub">Действия команды за сегодня — цифры обновляются сами.</div>
     </div>
     <div class="panel-body">
       <div class="mt-kpis" id="quick-stats">
@@ -244,6 +189,71 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
 </div>
 
 <!-- Аналитика модерации: графики -->
+
+<!-- Живой пульс панели -->
+<div class="panel" data-widget="pulse" style="margin-bottom:14px">
+  <div class="panel-head">
+    <div><h2><i class="fas fa-wave-square"></i> Пульс панели</h2><div class="sub">Последние события в реальном времени.</div></div>
+    <span class="live-chip" style="margin-left:auto"><span class="dot"></span> LIVE</span>
+  </div>
+  <div class="panel-body" id="pulseStrip">
+    <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку событий</span></div>
+  </div>
+</div>
+
+<!-- Быстрые действия -->
+<div class="cc-quick" data-widget="quick">
+  <a class="cc-tile" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Варны</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Временные меры</b><small>Мьюты и баны с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile" href="/logs"><span class="cc-ico"><i class="fas fa-clipboard-list"></i></span><span><b>Журнал</b><small>Лента действий команды</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-ok" href="/proofs"><span class="cc-ico"><i class="fas fa-folder-open"></i></span><span><b>Доказательства</b><small>Архив демок</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-info" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Автофильтр</b><small>Слова, ссылки, флуд</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-warn" href="/antiraid"><span class="cc-ico"><i class="fas fa-shield-virus"></i></span><span><b>Анти-рейд</b><small>Защита от волн входов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-err" href="/mod-center"><span class="cc-ico"><i class="fas fa-shield-halved"></i></span><span><b>Центр модерации</b><small>Сводный штаб раздела</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-info" href="/mod-report"><span class="cc-ico"><i class="fas fa-chart-simple"></i></span><span><b>Отчёты</b><small>Нагрузка команды</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+</div>
+
+<!-- KPI -->
+<div class="stat-grid">
+  <div class="stat-box">
+    <div class="stat-icon"><i class="fas fa-server"></i></div>
+    <div class="stat-body"><div class="stat-value" id="guild-count">—</div><div class="stat-label">Серверов</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon"><i class="fas fa-users"></i></div>
+    <div class="stat-body"><div class="stat-value" id="user-count">—</div><div class="stat-label">Участников</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon" style="background:var(--ok-soft);color:var(--ok)"><i class="fas fa-user-check"></i></div>
+    <div class="stat-body"><div class="stat-value" id="sum-online">—</div><div class="stat-label">Онлайн</div></div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-icon" style="background:var(--info-soft);color:var(--info)"><i class="fas fa-gauge-high"></i></div>
+    <div class="stat-body"><div class="stat-value" id="latency">—<small>ms</small></div><div class="stat-label">Пинг бота · <span id="status">—</span></div></div>
+  </div>
+</div>
+
+<!-- Глубокие метрики: лидеры, доли мер, часы -->
+<div class="grid-3" data-widget="metrics" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-medal"></i> Топ модераторов</h2>
+      <div class="sub">Действия за 7 дней.</div></div></div>
+    <div class="panel-body" id="modTop"><div class="sk-line" style="height:12px"></div></div>
+    <div class="panel-foot" id="modRec" style="border-top:1px solid var(--line)"><span class="hint">рецидивисты: —</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-chart-pie"></i> Доля мер</h2>
+      <div class="sub">Структура наказаний за 7 дней.</div></div></div>
+    <div class="panel-body" id="modRing"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-fire"></i> Часы активности</h2>
+      <div class="sub">Когда команда чаще всего действует.</div></div></div>
+    <div class="panel-body" id="modHeat"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+</div>
+
 <div class="grid-2" data-widget="charts" style="align-items:start">
   <div class="panel">
     <div class="panel-head">
@@ -429,9 +439,13 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   }
 
   /* Основная статистика */
+  var _statsFp = '';
   async function loadStats() {
     try {
       var d = await window.fetchCachedJSON('/api/stats');
+      var fp = [d.guilds || 0, d.users || 0, d.online || 0, d.latency || 0, d.error ? 1 : 0].join('|');
+      if (fp === _statsFp) return;          // данные не изменились — DOM не трогаем
+      _statsFp = fp;
       setNum('guild-count', d.guilds || 0);
       setNum('user-count', d.users || 0);
       setNum('sum-online', d.online || 0);
@@ -476,9 +490,13 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     unmute: { color: '#16a34a', label: 'Размуты' }
   };
 
+  var _chartsFp = '';
   async function loadModCharts() {
     try {
       var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
+      var fp = logs.length + '|' + (logs.length ? logs[0].timestamp + '|' + logs[0].action : '');
+      if (fp === _chartsFp) return;   // логи те же — графики не перерисовываем
+      _chartsFp = fp;
       var days = [];
       var now = new Date();
       for (var i = 6; i >= 0; i--) {
@@ -546,10 +564,14 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   }
 
   /* Топ модераторов + рецидивисты (из отчёта) */
+  var _leadersFp = '';
   async function loadModLeaders() {
     try {
       var d = await fetch('/api/mod-report?days=7').then(function (r) { return r.json(); });
       if (!d.success) return;
+      var fp = JSON.stringify(d.per_mod || []) + '|' + JSON.stringify(d.recidivists || []);
+      if (fp === _leadersFp) return;  // отчёт тот же — топ не перерисовываем
+      _leadersFp = fp;
       if (window.AetherChart && d.per_mod.length) {
         window.AetherChart.vbars($('modTop'), d.per_mod.map(function (m, i) {
           return { label: m[0], value: m[1] };
@@ -782,6 +804,9 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       var level = d.threat_level || 'Низкая';
       var color = d.threat_color || '#16a34a';
       var active = d.lockdown_active || false;
+      var _tfp = score + '|' + level + '|' + active;
+      if (_tfp === (loadThreatIndex._fp || '')) return;
+      loadThreatIndex._fp = _tfp;
       $('threatScoreVal').textContent = score + '/100';
       var badge = $('threatLevelBadge');
       badge.textContent = level;
@@ -810,6 +835,9 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     var cur = health.current || health || {};
     var cpu = cur.cpu_percent != null ? cur.cpu_percent : (cur.cpu != null ? cur.cpu : null);
     var ram = cur.memory_percent != null ? cur.memory_percent : (cur.ram_percent != null ? cur.ram_percent : null);
+    var _hfp = Math.round(cpu || 0) + '|' + Math.round(ram || 0);
+    if (_hfp === (loadHealth._fp || '')) return;   // CPU/RAM не изменились
+    loadHealth._fp = _hfp;
     if (window.drawDonut) {
       if (cpu != null) {
         window.drawDonut($('cpuDonut'), Math.min(100, cpu), cpu < 60 ? '#16a34a' : cpu < 85 ? '#d97706' : '#dc2626');

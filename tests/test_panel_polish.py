@@ -134,8 +134,10 @@ dash = open(os.path.join(ROOT, 'web', 'templates', 'dashboard.html'), encoding='
 _app_py = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
 check('class="page-hero"' in dash and 'class="mt-kpis"' in dash,
       'дашборд использует компоненты дизайн-системы (вертикальные KPI модерации)')
-check('data-widget="metrics"' in dash and dash.index('data-widget="today"') < dash.index('data-widget="charts"'),
-      '«Модерация сегодня» поднята вверх: сразу после метрик, до графиков')
+check('data-widget="today"' in dash and dash.index('data-widget="today"') < dash.index('data-widget="pulse"'),
+      '«Модерация сегодня» — самый первый виджет дашборда (сразу после шапки)')
+check('mt-head' in dash and 'mt-title-row' in dash and 'mt-sub' in dash,
+      'модерация сегодня: заголовок на отдельной строке — ничего не сливается')
 check('.mt-kpi' in dash and 'flex-direction: column' in dash and '.mt-l' in dash,
       'модерация сегодня: вертикальные карточки — подписи на своей строке, наложение невозможно')
 check('today_stats.actions' in dash and 'today_stats' in dash and 'mt-ma-actions' in dash,
@@ -150,10 +152,15 @@ check('function isToday' in dash and 'isToday(l.timestamp)' in dash,
       'модерация сегодня: данные фильтруются по сегодняшней дате (timestamp, не объект)')
 check('maRenderDelta' in dash and 'logFingerprint' in dash and 'oldFp === newFp' in dash,
       'модерация сегодня: дельта-обновление — без перерисовки, только новые строки/цифры')
+check('_statsFp' in dash and '_chartsFp' in dash and '_leadersFp' in dash and 'loadThreatIndex._fp' in dash and 'loadHealth._fp' in dash,
+      'дашборд: графики/KPI/пончики обновляются только при изменении данных — без мигания каждые 5 сек')
 check('.ma-row' in dash and 'flex-wrap:wrap' in dash and 'border:1px solid var(--line-2' in dash,
       'модерация сегодня: строки — отдельные карточки на flex-переносе, не слипаются')
 check('function pulseRow' in dash and 'pulse-item' in dash and "href=\"' + esc(it.link" in dash,
       'пульс панели: кликабельные события со ссылками и дельта-обновлением')
+_app_js = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
+check('data-notif-link' in _app_js and 'data-activity-link' in _app_js and 'link: n.link' in _app_js,
+      'уведомления и лента активности: клик по событию ведёт в раздел (link сохраняется)')
 check('def _human_panel_action' in _app_py and 'Дали роль' in _app_py
       and 'Изменили видимость каналов' in _app_py,
       'лента активности: человекочитаемые названия вместо сырых /api/… путей')
@@ -256,6 +263,8 @@ check('.modal-overlay:not(.open) { display: none; }' in css,
 kiosk = open(os.path.join(ROOT, 'web', 'templates', 'mod_kiosk.html'), encoding='utf-8').read()
 check('kioskTime' in kiosk and 'kioskMain' in kiosk and 'kioskDrift' in kiosk,
       'экран дежурного: часы, стена и лента на месте')
+check('kioskDots' not in kiosk and 'kiosk-slide' not in kiosk and 'kiosk-kpis' in kiosk and 'kiosk-grid' in kiosk,
+      'экран дежурного: одна страница без слайдов — всё видно сразу')
 check('k-task' in kiosk and 'kioskActivity' in kiosk and 'ktThreat' in kiosk and 'kioskShiftInfo' in kiosk,
       'экран дежурного: задачи «что делать», лента событий, угрозы и смена')
 login_as('owner')
@@ -1104,8 +1113,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=57' in base and 'style.css?v=114' in base,
-      'версии ассетов (114/57)')
+check('app.js?v=58' in base and 'style.css?v=114' in base,
+      'версии ассетов (114/58)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
