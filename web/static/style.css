@@ -5262,3 +5262,5 @@ img[src*="emblem-dragon"] {
 
 /* Вкладки заявок персонала */
 .app-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+
+#opsPing::after { content: attr(data-unit); font-size: 11px; color: var(--text-3); margin-left: 3px; }

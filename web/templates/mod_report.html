@@ -130,6 +130,8 @@ async function mrLoad() {
     var r = await fetch('/api/mod-report?days=' + DAYS);
     var d = await r.json();
     if (!d.success) return;
+    var fp = String(JSON.stringify(d || null) || '').slice(0, 800);
+    if (window.silentGuard && window.silentGuard('mod-report-' + DAYS, fp)) return;
     STATE = d;
     var render = function () { renderKpis(d); renderMods(d); renderActions(d); renderRec(d); };
     if (window.renderSafe) window.renderSafe(render); else render();

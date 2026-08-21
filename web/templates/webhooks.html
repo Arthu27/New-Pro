@@ -83,7 +83,10 @@ function render(d) {
 async function whLoad() {
   try {
     var d = await fetch('/api/webhooks').then(function (r) { return r.json(); });
-    if (d.success) window.renderSafe ? window.renderSafe(function () { render(d); }) : render(d);
+    if (!d.success) return;
+    var fp = String(JSON.stringify(d || null) || '').slice(0, 600);
+    if (window.silentGuard && window.silentGuard('webhooks', fp)) return;
+    if (window.renderSafe) window.renderSafe(function () { render(d); }); else render(d);
   } catch (e) { /* API Guard показал причину */ }
 }
 

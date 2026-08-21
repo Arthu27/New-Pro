@@ -274,6 +274,8 @@ async function loadState() {
   var r = await fetch('/api/tickets-ops/sla?h=' + encodeURIComponent(SLA_H));
   var d = await r.json();
   if (!d.success) return;
+  var fp = String(JSON.stringify(d || null) || '').slice(0, 600);
+  if (window.silentGuard && window.silentGuard('tickets-ops-' + SLA_H, fp)) return;
   SLA_H = d.sla_hours;
   STATE = d;
   var render = function () { renderKpis(d); renderList(d); };

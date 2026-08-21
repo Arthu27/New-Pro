@@ -130,7 +130,12 @@
         ? 'всё работает · v' + esc(d.version) + ' · телеметрия обновляется'
         : 'бот не отвечает — данные файлов и панели доступны';
       var ping = Number(d.latency_ms) || 0;
-      $('opsPing').innerHTML = ping ? ping + '<small style="font-size:11px;color:var(--text-3)">мс</small>' : '—';
+      /* данные не изменились — статус не трогаем (тихие обновления) */
+      var fp = (on ? 1 : 0) + '|' + (d.version || '') + '|' + (d.uptime_human || '') + '|' + (d.guilds || 0) + '|' + (d.users_cached || 0);
+      if (window.silentGuard && window.silentGuard('ops-status', fp)) return;
+      var pingEl = $('opsPing');
+      pingEl.textContent = ping ? ping : '—';
+      pingEl.setAttribute('data-unit', ping ? 'мс' : '');
       $('opsUptime').textContent = d.uptime_human || '—';
       setNum('opsGuilds', d.guilds);
       setNum('opsUsers', d.users_cached);
@@ -140,7 +145,7 @@
     }
   }
 
-  /* ── CPU / RAM (история сессии) ── */
+/* ── CPU / RAM (история сессии) ── */
   function cpuTone(v) { return v < 60 ? '#16a34a' : v < 85 ? '#d97706' : '#dc2626'; }
   function ramTone(v) { return v < 70 ? '#0284c7' : v < 90 ? '#d97706' : '#dc2626'; }
 
@@ -151,20 +156,27 @@
     var cpu = cur.cpu_percent != null ? cur.cpu_percent : (cur.cpu != null ? cur.cpu : null);
     var ram = cur.memory_percent != null ? cur.memory_percent : (cur.ram_percent != null ? cur.ram_percent : null);
     if (cpu != null) {
-      cpuHist.push(Number(cpu));
-      if (cpuHist.length > HIST_MAX) cpuHist.shift();
-      $('cpuNow').textContent = Math.round(cpu) + '%';
-      $('cpuBar').style.width = Math.min(100, cpu) + '%';
-      $('cpuBar').style.background = cpuTone(cpu);
-      if (window.AetherChart) window.AetherChart.sparkline($('cpuSpark'), cpuHist, { height: 56, color: cpuTone(cpu), title: 'CPU, %' });
+      var cpuV = Math.round(cpu);
+      /* новую точку в историю — только при реальном изменении значения */
+      if (!cpuHist.length || cpuHist[cpuHist.length - 1] !== cpuV) {
+        cpuHist.push(cpuV);
+        if (cpuHist.length > HIST_MAX) cpuHist.shift();
+        $('cpuNow').textContent = cpuV + '%';
+        $('cpuBar').style.width = Math.min(100, cpuV) + '%';
+        $('cpuBar').style.background = cpuTone(cpuV);
+        if (window.AetherChart) window.AetherChart.sparkline($('cpuSpark'), cpuHist, { height: 56, color: cpuTone(cpuV), title: 'CPU, %' });
+      }
     }
     if (ram != null) {
-      ramHist.push(Number(ram));
-      if (ramHist.length > HIST_MAX) ramHist.shift();
-      $('ramNow').textContent = Math.round(ram) + '%';
-      $('ramBar').style.width = Math.min(100, ram) + '%';
-      $('ramBar').style.background = ramTone(ram);
-      if (window.AetherChart) window.AetherChart.sparkline($('ramSpark'), ramHist, { height: 56, color: ramTone(ram), title: 'RAM, %' });
+      var ramV = Math.round(ram);
+      if (!ramHist.length || ramHist[ramHist.length - 1] !== ramV) {
+        ramHist.push(ramV);
+        if (ramHist.length > HIST_MAX) ramHist.shift();
+        $('ramNow').textContent = ramV + '%';
+        $('ramBar').style.width = Math.min(100, ramV) + '%';
+        $('ramBar').style.background = ramTone(ramV);
+        if (window.AetherChart) window.AetherChart.sparkline($('ramSpark'), ramHist, { height: 56, color: ramTone(ramV), title: 'RAM, %' });
+      }
     }
   }
 

@@ -186,6 +186,13 @@ async function muLoad() {
   var d = null;
   try { d = await r.json(); } catch (e) { return; }
   STATE = d;
+  var fp = String(JSON.stringify({
+    t: d && (d.title || d.track || ''),
+    p: d && (d.playing ? 1 : 0),
+    q: d && Array.isArray(d.queue) ? d.queue.length : 0,
+    v: d && (d.volume != null ? d.volume : '')
+  }) || '');
+  if (window.silentGuard && window.silentGuard('music', fp)) return;
   if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
 }
 

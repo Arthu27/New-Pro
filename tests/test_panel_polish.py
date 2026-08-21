@@ -175,6 +175,12 @@ for _name, (_marker, _msg) in _silent_pages.items():
 _app_js_now = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
 check('window.silentGuard' in _app_js_now and 'W.silentGuard' in base,
       'общий помощник тихих обновлений в app.js и бут-шиме')
+# Второй круг тихих обновлений: остальные живые комнаты
+for _name in ('music', 'proofs', 'tickets_ops', 'team_board', 'mod_report',
+              'webhooks', 'users', 'reminders', 'shop', 'quiz', 'server_health', 'ops_center'):
+    _t2 = open(os.path.join(ROOT, 'web', 'templates', _name + '.html'), encoding='utf-8').read()
+    check('silentGuard' in _t2 or ('_membersFp' in _t2 and _name == 'users') or ('_panelLogsFp' in _t2 and _name == 'ops_center'),
+          f'{_name}: живое обновление тихое (без перерисовки при неизменных данных)')
 check('.ma-row' in dash and 'flex-wrap:wrap' in dash and 'border:1px solid var(--line-2' in dash,
       'модерация сегодня: строки — отдельные карточки на flex-переносе, не слипаются')
 check('function pulseRow' in dash and 'pulse-item' in dash and "href=\"' + esc(it.link" in dash,

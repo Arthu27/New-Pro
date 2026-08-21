@@ -99,7 +99,11 @@
       var health = {};
       try { health = await fetch('/api/bot/health').then(function(r){return r.json();}); } catch(e){}
       var cur = health.current || health || {};
-      setBar('cpu', cur.cpu_percent != null ? cur.cpu_percent : cur.cpu);
+      var cpuV = cur.cpu_percent != null ? cur.cpu_percent : cur.cpu;
+      var ramV = cur.memory_percent != null ? cur.memory_percent : cur.ram_percent;
+      var fp = [Math.round(cpuV || 0), Math.round(ramV || 0), Math.round(cur.latency || stats.latency || 0), stats.guilds, stats.users].join('|');
+      if (window.silentGuard && window.silentGuard('server-health', fp)) return;
+      setBar('cpu', cpuV);
       setBar('ram', cur.memory_percent != null ? cur.memory_percent : cur.ram_percent);
       setBar('disk', cur.disk_percent != null ? cur.disk_percent : cur.disk);
       if (cur.latency != null) $('ping-val').textContent = Math.round(cur.latency) + 'ms';

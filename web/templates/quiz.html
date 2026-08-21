@@ -152,7 +152,10 @@ function renderAll(d) {
 async function qzLoad() {
   try {
     var d = await fetch('/api/quiz/state').then(function (r) { return r.json(); });
-    if (d.success) renderAll(d);
+    if (!d.success) return;
+    var fp = String(JSON.stringify(d || null) || '').slice(0, 600);
+    if (window.silentGuard && window.silentGuard('quiz', fp)) return;
+    renderAll(d);
   } catch (e) { /* сеть моргнула — API Guard уже показал */ }
 }
 

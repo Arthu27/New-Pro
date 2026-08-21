@@ -290,6 +290,8 @@ async function shLoad() {
   var r = await fetch('/api/shop/state');
   var d = await r.json();
   if (!d.success) return;
+  var fp = String(JSON.stringify(d || null) || '').slice(0, 800);
+  if (window.silentGuard && window.silentGuard('shop', fp)) return;
   STATE = d;
   fillSelects(d);
   renderKpis(d);

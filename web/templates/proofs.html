@@ -141,6 +141,9 @@
   function load() {
     fetch('/api/proofs').then(function (r) { return r.json(); }).then(function (d) {
       all = Array.isArray(d) ? d : [];
+      var _p0 = all[0] || null;
+      var fp = all.length + '|' + (_p0 ? String(_p0.id || _p0.name || _p0.file || '').slice(0, 80) : '');
+      if (window.silentGuard && window.silentGuard('proofs', fp)) return;
       renderChips();
       render();
     }).catch(function () {});

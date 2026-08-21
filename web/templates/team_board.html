@@ -235,6 +235,8 @@
     try {
       var d = await fetch('/api/team-board').then(function (r) { return r.json(); });
       if (!d.ok) return;
+      var fp = String(JSON.stringify(d || null) || '').slice(0, 800);
+      if (window.silentGuard && window.silentGuard('team-board', fp)) return;
       DATA = d;
       render();
     } catch (e) { /* сеть */ }

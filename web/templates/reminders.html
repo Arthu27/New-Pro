@@ -99,7 +99,10 @@ function render(d) {
 async function rmLoad() {
   try {
     var d = await fetch('/api/reminders/state').then(function (r) { return r.json(); });
-    if (d.success) window.renderSafe ? window.renderSafe(function () { render(d); }) : render(d);
+    if (!d.success) return;
+    var fp = String(JSON.stringify(d || null) || '').slice(0, 600);
+    if (window.silentGuard && window.silentGuard('reminders', fp)) return;
+    if (window.renderSafe) window.renderSafe(function () { render(d); }); else render(d);
   } catch (e) { /* сеть моргнула — API Guard уже показал */ }
 }
 
