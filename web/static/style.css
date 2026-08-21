@@ -1694,6 +1694,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 
 /* ── 21. Списки и сетки ────────────────────────────────────── */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 1240px) { .grid-2 { grid-template-columns: 1fr; } }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .spacer { flex: 1; }

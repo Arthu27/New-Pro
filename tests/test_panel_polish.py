@@ -144,8 +144,8 @@ check('function isToday' in dash and 'isToday(l.timestamp)' in dash,
       'модерация сегодня: данные фильтруются по сегодняшней дате (timestamp, не объект)')
 check('maRenderDelta' in dash and 'logFingerprint' in dash and 'oldFp === newFp' in dash,
       'модерация сегодня: дельта-обновление — без перерисовки, только новые строки/цифры')
-check('.ma-row:last-child' in dash and 'border-bottom:1px dashed' in dash,
-      'модерация сегодня: строки разделены пунктиром — не слипаются')
+check('.ma-row' in dash and 'flex-wrap:wrap' in dash and 'border:1px solid var(--line-2' in dash,
+      'модерация сегодня: строки — отдельные карточки на flex-переносе, не слипаются')
 check('function pulseRow' in dash and 'pulse-item' in dash and "href=\"' + esc(it.link" in dash,
       'пульс панели: кликабельные события со ссылками и дельта-обновлением')
 check('def _human_panel_action' in _app_py and 'Дали роль' in _app_py
@@ -1098,8 +1098,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=55' in base and 'style.css?v=113' in base,
-      'версии ассетов (113/55)')
+check('app.js?v=55' in base and 'style.css?v=114' in base,
+      'версии ассетов (114/55)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
