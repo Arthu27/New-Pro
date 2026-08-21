@@ -75,6 +75,9 @@ function kpi(icon, num, label, tone) {
 function loadOverview() {
   fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
+    /* данные не изменились — KPI не пересобираем (тихие обновления) */
+    var fp = String(JSON.stringify(d || null) || '').slice(0, 400);
+    if (window.silentGuard && window.silentGuard('appeals', fp)) return;
     var s = d.stats;
     var last = s.last_resolved
       ? kpi('fa-gavel', '#' + esc(s.last_resolved.id), 'последняя: ' + esc(s.last_resolved.status_label) + ' · ' + esc(s.last_resolved.reviewed_by), 'tone-info')

@@ -178,7 +178,8 @@ check('window.silentGuard' in _app_js_now and 'W.silentGuard' in base,
 # Второй круг тихих обновлений: остальные живые комнаты
 for _name in ('music', 'proofs', 'tickets_ops', 'team_board', 'mod_report',
               'webhooks', 'users', 'reminders', 'shop', 'quiz', 'server_health', 'ops_center',
-              'anticrash', 'schedule', 'leveling_admin', 'staff_shifts', 'temp_moderation'):
+              'anticrash', 'schedule', 'leveling_admin', 'staff_shifts', 'temp_moderation',
+              'appeals'):
     _t2 = open(os.path.join(ROOT, 'web', 'templates', _name + '.html'), encoding='utf-8').read()
     check('silentGuard' in _t2 or ('_membersFp' in _t2 and _name == 'users') or ('_panelLogsFp' in _t2 and _name == 'ops_center'),
           f'{_name}: живое обновление тихое (без перерисовки при неизменных данных)')
