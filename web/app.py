@@ -32,6 +32,9 @@ _BASE =_os .path .dirname (_os .path .abspath (__file__ ))
 app =Flask (__name__ ,
 template_folder =_os .path .join (_BASE ,'templates'),
 static_folder =_os .path .join (_BASE ,'static'))
+# Страницы доступны и со слэшем на конце (/dashboard/ = /dashboard) —
+# иначе пользователь, дописавший «/», получает 404.
+app .url_map .strict_slashes =False
 
 # Производительность: atomic yazma, TTL cache, toplu (batch) log flusher
 from web import _store # noqa: E402
@@ -912,14 +915,6 @@ def my_applications ():
     if session .get ('role')!='uye':
         return redirect (url_for ('index'))
     return render_template ('my_applications.html',role =session .get ('role'),username =session .get ('username'))
-
-@app .route ('/notifications')
-@login_required 
-def notifications ():
-    # Админская страница настроек уведомлений — только для персонала (mod+).
-    if ROLES .get (session .get ('role'),-1 )<ROLES .get ('mod',999 ):
-        return redirect (url_for ('index'))
-    return render_template ('notifications.html',role =session .get ('role'),username =session .get ('username'))
 
 @app .route ('/announcements')
 @login_required 

@@ -58,18 +58,6 @@ def register(ctx):
         return jsonify ({'success':True ,'id':backup_id })
 
 
-    @app .route ('/api/backups')
-    @login_required 
-    @role_required ('admin')
-    def api_list_backups ():
-        f ='data/backups.json'
-        if not os .path .exists (f ):return jsonify ([])
-        try :
-            with open (f ,encoding ='utf-8')as fp :return jsonify (json .load (fp ))
-        except (json .JSONDecodeError ,ValueError ):
-            return jsonify ([])
-
-
     @app .route ('/api/backups/<backup_id>/download')
     @login_required 
     @role_required ('admin')
