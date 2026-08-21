@@ -7,7 +7,7 @@
   <link rel="icon" href="/static/favicon.ico">
   <link rel="stylesheet" href="/static/style.css?v=113">
   <style>
-    /* ЭКРАН ДЕЖУРНОГО — полноэкранная живая стена модерации */
+    /* ЭКРАН ДЕЖУРНОГО — командная стена: что случилось и что делать */
     body.kiosk {
       margin: 0; min-height: 100vh; overflow: hidden;
       background:
@@ -20,29 +20,84 @@
     }
     .kiosk-top {
       display: flex; align-items: center; gap: 14px;
-      padding: 18px 26px 6px;
+      padding: 16px 24px 8px;
     }
     .kiosk-brand { display: flex; align-items: center; gap: 10px; }
     .kiosk-brand img { width: 40px; height: 40px; border-radius: 12px; box-shadow: 0 6px 18px -6px var(--ac-glow); }
     .kiosk-brand b { font-family: var(--font-display); font-size: 17px; letter-spacing: .06em; }
     .kiosk-brand small { display: block; font-size: 10px; color: var(--text-3); letter-spacing: .1em; text-transform: uppercase; }
+    .kiosk-duty {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid var(--ac-line); background: var(--ac-soft);
+      border-radius: 20px; padding: 7px 14px; font-size: 12.5px; font-weight: 600; color: var(--text);
+      max-width: 340px; white-space: nowrap; overflow: hidden;
+    }
+    .kiosk-duty i { color: var(--ac); }
+    .kiosk-duty b { color: var(--ac); }
+    .kiosk-duty span { overflow: hidden; text-overflow: ellipsis; }
     .kiosk-clock { margin-left: auto; text-align: right; }
     .kiosk-clock .t { font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 800; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
     .kiosk-clock .d { font-size: 12px; color: var(--text-3); letter-spacing: .08em; text-transform: uppercase; }
-    .kiosk-top .btn { margin-left: 10px; }
-    .kiosk-main { flex: 1; display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; padding: 8px 26px 26px; min-height: 0; }
-    .kiosk-left, .kiosk-right { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .kiosk-top .btn { margin-left: 4px; }
+    .kiosk-dots { display: flex; gap: 7px; align-items: center; }
+    .kiosk-dots i {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--line-2);
+      cursor: pointer; display: inline-block;
+    }
+    .kiosk-dots i.on { background: var(--ac); }
+    .kiosk-main { flex: 1; display: grid; grid-template-columns: 1fr; gap: 14px; padding: 6px 24px 22px; min-height: 0; }
+    .kiosk-slide { display: none; }
+    .kiosk-slide.on {
+      display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px;
+      min-height: 0; animation: kioskIn .35s var(--ease) both;
+    }
+    @keyframes kioskIn { from { opacity: 0; } to { opacity: 1; } }
+    .kiosk-col { display: flex; flex-direction: column; gap: 14px; min-height: 0; min-width: 0; }
     .kiosk-panel {
       background: var(--glass); border: 1px solid var(--line);
       border-radius: 18px; padding: 16px 18px; overflow: hidden;
-      box-shadow: var(--shadow-1); display: flex; flex-direction: column;
+      box-shadow: var(--shadow-1); display: flex; flex-direction: column; min-height: 0;
     }
+    .kiosk-panel.grow { flex: 1; }
     .kiosk-panel h3 {
       margin: 0 0 10px; font-size: 11px; font-weight: 800;
       text-transform: uppercase; letter-spacing: .1em; color: var(--text-3);
-      display: flex; align-items: center; gap: 8px;
+      display: flex; align-items: center; gap: 8px; white-space: nowrap;
     }
     .kiosk-panel h3 i { color: var(--ac); }
+    .kiosk-panel h3 .right { margin-left: auto; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text-3); }
+    /* ── задачи дежурного ── */
+    .kiosk-tasks { display: flex; flex-direction: column; flex: 1; }
+    .k-task {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 10px; border-radius: 12px;
+      border-bottom: 1px dashed var(--line-2);
+      text-decoration: none; color: inherit; min-width: 0;
+    }
+    .k-task:last-child { border-bottom: none; }
+    .k-task:hover { background: var(--surface-2); }
+    .k-task .ico {
+      width: 36px; height: 36px; border-radius: 11px; flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; background: var(--ac-soft); color: var(--ac);
+    }
+    .k-task[data-tone="warn"] .ico { background: rgba(245,158,11,.14); color: #d97706; }
+    .k-task[data-tone="err"] .ico { background: rgba(220,38,38,.12); color: var(--err); }
+    .k-task[data-tone="ok"] .ico { background: rgba(22,163,74,.12); color: var(--ok); }
+    .k-task[data-tone="info"] .ico { background: rgba(14,165,233,.12); color: #0ea5e9; }
+    .k-task .copy { min-width: 0; flex: 1; }
+    .k-task .copy b { display: block; font-size: 13px; color: var(--text); }
+    .k-task .copy small { display: block; font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .k-task .c {
+      flex: 0 0 auto; font-family: 'JetBrains Mono', monospace;
+      font-size: 17px; font-weight: 800; color: var(--ac);
+      background: var(--ac-soft); border-radius: 10px; padding: 4px 10px; min-width: 34px; text-align: center;
+    }
+    .k-task[data-tone="warn"] .c { color: #d97706; }
+    .k-task[data-tone="err"] .c { color: var(--err); background: rgba(220,38,38,.1); }
+    .k-task[data-tone="ok"] .c { color: var(--ok); background: rgba(22,163,74,.1); }
+    .k-task .go { color: var(--text-3); font-size: 12px; }
+    /* ── KPI ── */
     .kiosk-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex: 1; }
     .kiosk-kpi {
       border: 1px solid var(--line); border-radius: 14px; padding: 14px;
@@ -60,18 +115,35 @@
     .kiosk-kpi[data-tone="err"] { --kpi-tone: var(--err); }
     .kiosk-kpi[data-tone="warn"] { --kpi-tone: var(--warn); }
     .kiosk-kpi[data-tone="info"] { --kpi-tone: var(--info); }
-    .kiosk-ring-box { flex: 1; display: flex; align-items: center; justify-content: center; gap: 26px; }
-    .kiosk-ring-box .ring-wrap { width: 190px; height: 190px; }
-    .kiosk-ring-box .ring-copy { max-width: 240px; }
-    .kiosk-ring-box .ring-copy b { font-size: 16px; }
-    .kiosk-ring-box .ring-copy p { margin: 6px 0 0; font-size: 12px; color: var(--text-2); line-height: 1.5; }
-    .kiosk-feed { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-    .kiosk-feed .data-table { width: 100%; font-size: 12px; }
-    .kiosk-feed .data-table td, .kiosk-feed .data-table th { padding: 8px 6px; }
-    .kiosk-ticker { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; background: var(--surface); overflow: hidden; }
-    .kiosk-ticker .kiosk-ticker-label { flex: 0 0 auto; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--ac); background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 20px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; }
-    .kiosk-ticker .kiosk-ticker-track { flex: 1; overflow: hidden; }
-    .kiosk-ticker .kiosk-ticker-inner { display: flex; gap: 8px; width: max-content; animation: kioskDrift 30s linear infinite; }
+    /* ── ленты ── */
+    .kiosk-feed { flex: 1; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+    .k-feed-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 8px; border-bottom: 1px dashed var(--line-2);
+      text-decoration: none; color: inherit; border-radius: 10px; min-width: 0;
+    }
+    .k-feed-row:last-child { border-bottom: none; }
+    .k-feed-row:hover { background: var(--surface-2); }
+    .k-feed-row .ico {
+      width: 30px; height: 30px; border-radius: 9px; flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: center; font-size: 12px;
+      background: var(--ac-soft); color: var(--ac);
+    }
+    .k-feed-row[data-tone="err"] .ico { background: rgba(220,38,38,.12); color: var(--err); }
+    .k-feed-row[data-tone="warn"] .ico { background: rgba(245,158,11,.14); color: #d97706; }
+    .k-feed-row[data-tone="ok"] .ico { background: rgba(22,163,74,.12); color: var(--ok); }
+    .k-feed-row[data-tone="info"] .ico { background: rgba(14,165,233,.12); color: #0ea5e9; }
+    .k-feed-row .copy { min-width: 0; flex: 1; }
+    .k-feed-row .copy b { display: block; font-size: 12.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .k-feed-row .copy small { display: block; font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .k-feed-row .tm { flex: 0 0 auto; font-size: 10.5px; color: var(--text-3); white-space: nowrap; padding-top: 2px; }
+    .kiosk-empty { color: var(--text-3); font-size: 12.5px; padding: 14px 6px; }
+    .kiosk-empty i { color: var(--ac); margin-right: 8px; }
+    /* ── тикер ── */
+    .kiosk-ticker { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; background: var(--surface); overflow: hidden; }
+    .kiosk-ticker-label { flex: 0 0 auto; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--ac); background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 20px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; }
+    .kiosk-ticker-track { flex: 1; overflow: hidden; }
+    .kiosk-ticker-inner { display: flex; gap: 8px; width: max-content; animation: kioskDrift 30s linear infinite; }
     .kiosk-ticker:hover .kiosk-ticker-inner { animation-play-state: paused; }
     @keyframes kioskDrift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
     .kiosk-ticker .chip {
@@ -83,24 +155,24 @@
     .kiosk-ticker .chip.danger { border-color: color-mix(in srgb, var(--err) 35%, transparent); color: var(--err); }
     .kiosk-ticker .chip.warn { border-color: color-mix(in srgb, var(--warn) 40%, transparent); color: #b45309; }
     .kiosk-ticker .chip.ok { border-color: color-mix(in srgb, var(--ok) 35%, transparent); color: var(--ok); }
-    .kiosk-dots { display: flex; gap: 6px; }
-    .kiosk-dots i {
-      width: 7px; height: 7px; border-radius: 50%; background: var(--line-2);
-      cursor: pointer; transition: all .2s var(--ease);
-    }
-    .kiosk-dots i.on { background: var(--ac); transform: scale(1.35); }
-    .kiosk-slide { display: none; flex-direction: column; gap: 14px; flex: 1; min-height: 0; }
-    .kiosk-slide.on { display: flex; animation: kioskIn .4s var(--ease) both; }
-    @keyframes kioskIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-    .kiosk-bars { display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
-    .kiosk-bar-row { display: flex; align-items: center; gap: 10px; }
-    .kiosk-bar-row .nm { flex: 0 0 140px; min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* ── бары ── */
+    .kiosk-bars { display: flex; flex-direction: column; gap: 10px; overflow: hidden; flex: 1; }
+    .kiosk-bar-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .kiosk-bar-row .nm { flex: 0 0 150px; min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .kiosk-bar-row .tr { flex: 1; height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; }
     .kiosk-bar-row .fl { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--ac), #7c3aed); transition: width .6s var(--ease-out); }
     .kiosk-bar-row .ct { flex: 0 0 auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--ac); min-width: 24px; text-align: right; }
+    .kiosk-type-row { display: flex; align-items: center; gap: 10px; padding: 7px 2px; border-bottom: 1px dashed var(--line-2); min-width: 0; }
+    .kiosk-type-row:last-child { border-bottom: none; }
+    .kiosk-type-row .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+    .kiosk-type-row .nm { flex: 1; font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .kiosk-type-row .ct { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; }
+    .kiosk-serenity { font-size: 12.5px; color: var(--text-2); line-height: 1.6; }
+    .kiosk-serenity b { display: block; font-size: 14px; color: var(--text); margin-bottom: 4px; }
     @media (max-width: 900px) {
-      .kiosk-main { grid-template-columns: 1fr; overflow-y: auto; }
+      .kiosk-main { overflow-y: auto; }
       body.kiosk { overflow: auto; }
+      .kiosk-slide.on { grid-template-columns: 1fr; }
     }
     @media (prefers-reduced-motion: reduce) {
       .kiosk-ticker .kiosk-ticker-inner { animation: none; }
@@ -142,9 +214,14 @@
       <img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Aether">
       <div><b>AETHER</b><small>Экран дежурного</small></div>
     </div>
+    <div class="kiosk-duty" id="kioskDuty" title="Кто на смене">
+      <i class="fas fa-user-shield"></i>
+      <span>На смене: <b id="kioskDutyName">собираем…</b><span id="kioskDutyTime"></span></span>
+    </div>
     <div class="kiosk-dots" id="kioskDots" aria-label="Слайды">
-      <i class="on" data-slide="0" title="Обзор"></i>
-      <i data-slide="1" title="Команда и нарушители"></i>
+      <i class="on" data-slide="0" title="Дежурство"></i>
+      <i data-slide="1" title="Что случилось"></i>
+      <i data-slide="2" title="Команда"></i>
     </div>
     <div class="kiosk-clock">
       <div class="t"><span id="kioskTime">--:--:--</span></div>
@@ -156,9 +233,51 @@
 
   <div class="kiosk-main" id="kioskMain">
 
-    <div class="kiosk-left">
-      <div class="kiosk-slide on" data-slide="0">
+    <!-- СЛАЙД 0 · Дежурство -->
+    <div class="kiosk-slide on" data-slide="0">
+      <div class="kiosk-col">
+        <div class="kiosk-panel grow">
+          <h3><i class="fas fa-list-check"></i> Что делать дежурному <span class="right">клик — переход в раздел</span></h3>
+          <div class="kiosk-tasks">
+            <a class="k-task" data-tone="warn" href="/appeals">
+              <span class="ico"><i class="fas fa-scale-balanced"></i></span>
+              <span class="copy"><b>Апелляции в очереди</b><small>Разбери заявки участников на пересмотр</small></span>
+              <span class="c" id="ktAppeals">—</span><i class="fas fa-chevron-right go"></i>
+            </a>
+            <a class="k-task" data-tone="info" href="/ticket-search">
+              <span class="ico"><i class="fas fa-ticket"></i></span>
+              <span class="copy"><b>Тикеты в работе</b><small>Ответь на обращения или передай коллеге</small></span>
+              <span class="c" id="ktTickets">—</span><i class="fas fa-chevron-right go"></i>
+            </a>
+            <a class="k-task" data-tone="ok" href="/proofs">
+              <span class="ico"><i class="fas fa-folder-open"></i></span>
+              <span class="copy"><b>Демки на проверку</b><small>Подтверди или отклони доказательства</small></span>
+              <span class="c" id="ktProofs">—</span><i class="fas fa-chevron-right go"></i>
+            </a>
+            <a class="k-task" data-tone="err" href="/temp-moderation">
+              <span class="ico"><i class="fas fa-clock"></i></span>
+              <span class="copy"><b>Активные временные меры</b><small>Мьюты и баны с таймером — следи за истечением</small></span>
+              <span class="c" id="ktTemp">—</span><i class="fas fa-chevron-right go"></i>
+            </a>
+            <a class="k-task" data-tone="warn" href="/warnings">
+              <span class="ico"><i class="fas fa-triangle-exclamation"></i></span>
+              <span class="copy"><b>Варны за сегодня</b><small>Свежие предупреждения и их причины</small></span>
+              <span class="c" id="ktWarnsToday">—</span><i class="fas fa-chevron-right go"></i>
+            </a>
+            <a class="k-task" data-tone="err" href="/security">
+              <span class="ico"><i class="fas fa-shield-virus"></i></span>
+              <span class="copy"><b>Уровень угрозы</b><small>Общий контур безопасности сервера</small></span>
+              <span class="c" id="ktThreat">—</span><i class="fas fa-chevron-right go"></i>
+            </a>
+          </div>
+        </div>
         <div class="kiosk-panel">
+          <h3><i class="fas fa-user-clock"></i> Смена</h3>
+          <div class="kiosk-serenity" id="kioskShiftInfo"><i class="fas fa-circle-notch fa-spin"></i> Загружаем расписание…</div>
+        </div>
+      </div>
+      <div class="kiosk-col">
+        <div class="kiosk-panel grow">
           <h3><i class="fas fa-gauge-high"></i> Ключевые показатели</h3>
           <div class="kiosk-kpis">
             <div class="kiosk-kpi" data-tone="info"><div class="v" id="kkMutes">—</div><div class="l">Активных мьютов</div></div>
@@ -169,41 +288,56 @@
             <div class="kiosk-kpi" data-tone="err"><div class="v" id="kkEdge">—</div><div class="l">На грани</div></div>
           </div>
         </div>
-        <div class="kiosk-panel">
-          <h3><i class="fas fa-chart-pie"></i> Структура мер за 7 дней</h3>
-          <div class="kiosk-ring-box">
-            <div class="ring-wrap" id="kioskRing"><div class="sk-line" style="height:12px"></div></div>
-            <div class="ring-copy">
-              <b id="kioskSerenity">Контур спокойствия</b>
-              <p id="kioskSerenityHint">Оцениваем соотношение снятий и наказаний.</p>
-            </div>
-          </div>
-        </div>
       </div>
-
-      <div class="kiosk-slide" data-slide="1">
-        <div class="kiosk-panel">
-          <h3><i class="fas fa-user-slash"></i> ТОП нарушителей · 7 дней</h3>
-          <div class="kiosk-bars" id="kioskOffenders"><div class="sk-line" style="height:12px"></div></div>
-        </div>
-        <div class="kiosk-panel">
-          <h3><i class="fas fa-people-group"></i> Нагрузка команды · 7 дней</h3>
-          <div class="kiosk-bars" id="kioskTeam"><div class="sk-line" style="height:12px"></div></div>
-        </div>
-      </div>
-
       <div class="kiosk-ticker">
         <span class="kiosk-ticker-label"><i class="fas fa-bolt"></i> События</span>
         <div class="kiosk-ticker-track"><div class="kiosk-ticker-inner" id="kioskTicker"><span class="chip">Собираем события…</span></div></div>
       </div>
     </div>
 
-    <div class="kiosk-right">
-      <div class="kiosk-panel kiosk-feed">
-        <h3><i class="fas fa-clipboard-list"></i> Последние действия</h3>
-        <div style="overflow:auto;flex:1" id="kioskFeed"><div class="sk-line" style="height:12px"></div></div>
+    <!-- СЛАЙД 1 · Что случилось -->
+    <div class="kiosk-slide" data-slide="1">
+      <div class="kiosk-col">
+        <div class="kiosk-panel grow">
+          <h3><i class="fas fa-shield-halved"></i> Мод-действия за сегодня</h3>
+          <div class="kiosk-feed" id="kioskActions"><div class="kiosk-empty"><i class="fas fa-circle-notch fa-spin"></i>Загружаем…</div></div>
+        </div>
+      </div>
+      <div class="kiosk-col">
+        <div class="kiosk-panel grow">
+          <h3><i class="fas fa-wave-square"></i> Лента событий <span class="right">клик — подробности</span></h3>
+          <div class="kiosk-feed" id="kioskActivity"><div class="kiosk-empty"><i class="fas fa-circle-notch fa-spin"></i>Загружаем…</div></div>
+        </div>
       </div>
     </div>
+
+    <!-- СЛАЙД 2 · Команда -->
+    <div class="kiosk-slide" data-slide="2">
+      <div class="kiosk-col">
+        <div class="kiosk-panel grow">
+          <h3><i class="fas fa-people-group"></i> Нагрузка команды · 7 дней</h3>
+          <div class="kiosk-bars" id="kioskTeam"><div class="kiosk-empty"><i class="fas fa-circle-notch fa-spin"></i>Загружаем…</div></div>
+        </div>
+        <div class="kiosk-panel">
+          <h3><i class="fas fa-chart-simple"></i> Структура мер · 7 дней</h3>
+          <div id="kioskTypes"><div class="kiosk-empty"><i class="fas fa-circle-notch fa-spin"></i>Загружаем…</div></div>
+        </div>
+      </div>
+      <div class="kiosk-col">
+        <div class="kiosk-panel grow">
+          <h3><i class="fas fa-user-slash"></i> ТОП нарушителей · 7 дней</h3>
+          <div class="kiosk-bars" id="kioskOffenders"><div class="kiosk-empty"><i class="fas fa-circle-notch fa-spin"></i>Загружаем…</div></div>
+        </div>
+        <div class="kiosk-panel">
+          <h3><i class="fas fa-dove"></i> Контур спокойствия</h3>
+          <div class="kiosk-serenity">
+            <b id="kioskSerenity">Считаем соотношение…</b>
+            <span id="kioskSerenityHint">Снятия против наказаний за 7 дней.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="/static/app.js?v=55"></script>
@@ -216,6 +350,18 @@
       if (!iso) return '—';
       try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
       catch (e) { return '—'; }
+    }
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
+      catch (e) { return '—'; }
+    }
+    function isToday(iso) {
+      if (!iso) return false;
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return false;
+      var n = new Date();
+      return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
     }
     var _counted = {};
     function setNum(id, val) {
@@ -266,19 +412,32 @@
     main.addEventListener('mouseleave', schedule);
     schedule();
 
-    /* Данные (те же API, что и мод-центр) */
+    /* Активный сервер */
     async function activeGid() {
       try {
         var guilds = await window.fetchCachedJSON('/api/guilds');
         if (!Array.isArray(guilds) || !guilds.length) return null;
-        var main = '{{ main_guild_id }}';
+        var mainG = '{{ main_guild_id }}';
         for (var i = 0; i < guilds.length; i++) {
-          if (String(guilds[i].id) === String(main)) return guilds[i].id;
+          if (String(guilds[i].id) === String(mainG)) return guilds[i].id;
         }
         return guilds[0].id;
       } catch (e) { return null; }
     }
 
+    var ACTION_TONES = {
+      ban: { tone: 'err', icon: 'fa-ban', label: 'Бан' },
+      kick: { tone: 'warn', icon: 'fa-door-open', label: 'Кик' },
+      warn: { tone: 'warn', icon: 'fa-triangle-exclamation', label: 'Варн' },
+      mute: { tone: 'info', icon: 'fa-comment-slash', label: 'Мут' },
+      timeout: { tone: 'info', icon: 'fa-clock', label: 'Таймаут' },
+      unban: { tone: 'ok', icon: 'fa-unlock', label: 'Разбан' },
+      unmute: { tone: 'ok', icon: 'fa-comment', label: 'Размут' }
+    };
+    var TICKER_TONE = { ban: 'danger', kick: 'danger', warn: 'warn', mute: 'warn', timeout: 'warn', unban: 'ok', unmute: 'ok' };
+    var TICKER_ICON = { ban: 'fa-ban', kick: 'fa-right-from-bracket', warn: 'fa-triangle-exclamation', mute: 'fa-comment-slash', timeout: 'fa-clock', unban: 'fa-check', unmute: 'fa-check' };
+
+    /* KPI */
     async function loadMetrics() {
       try {
         var d = await fetch('/api/temp-mod/active').then(function (r) { return r.ok ? r.json() : null; });
@@ -296,7 +455,7 @@
       if (gid) {
         try {
           var a = await fetch('/api/guild/' + gid + '/appeals/overview').then(function (r) { return r.json(); });
-          if (a && a.stats) setNum('kkAppeals', a.stats.pending);
+          if (a) setNum('kkAppeals', a.pending != null ? a.pending : (a.stats && a.stats.pending));
         } catch (e) {}
         try {
           var c = await fetch('/api/guild/' + gid + '/mod-control/overview').then(function (r) { return r.json(); });
@@ -305,20 +464,138 @@
       }
     }
 
-    var ACTION_TONES = {
-      ban: { color: '#dc2626', label: 'Баны' }, kick: { color: '#ea580c', label: 'Кики' },
-      warn: { color: '#d97706', label: 'Варны' }, mute: { color: '#7c3aed', label: 'Мьюты' },
-      timeout: { color: '#7c3aed', label: 'Таймауты' }, unban: { color: '#16a34a', label: 'Разбаны' },
-      unmute: { color: '#16a34a', label: 'Размуты' }
-    };
-    var TICKER_TONE = { ban: 'danger', kick: 'danger', warn: 'warn', mute: 'warn', timeout: 'warn', unban: 'ok', unmute: 'ok' };
-    var TICKER_ICON = { ban: 'fa-ban', kick: 'fa-right-from-bracket', warn: 'fa-triangle-exclamation', mute: 'fa-comment-slash', timeout: 'fa-clock', unban: 'fa-check', unmute: 'fa-check' };
+    /* Задачи: «что делать» */
+    async function loadTasks() {
+      var gid = await activeGid();
+      try {
+        var a = await fetch('/api/guild/' + gid + '/appeals/overview').then(function (r) { return r.json(); });
+        if (a) setNum('ktAppeals', a.pending != null ? a.pending : (a.stats && a.stats.pending));
+      } catch (e) {}
+      try {
+        var t = await fetch('/api/guild/' + gid + '/tickets').then(function (r) { return r.ok ? r.json() : null; });
+        if (Array.isArray(t)) setNum('ktTickets', t.length);
+      } catch (e) {}
+      try {
+        var p = await fetch('/api/proofs').then(function (r) { return r.json(); });
+        if (p && p.items) setNum('ktProofs', p.items.length);
+      } catch (e) {}
+      try {
+        var tm = await fetch('/api/temp-mod/active').then(function (r) { return r.ok ? r.json() : null; });
+        if (tm) setNum('ktTemp', ((tm.bans || []).length + (tm.mutes || []).length + (tm.scheduled || []).length));
+      } catch (e) {}
+      try {
+        var w = await window.fetchCachedJSON('/api/warnings');
+        if (Array.isArray(w)) setNum('ktWarnsToday', w.filter(function (x) { return isToday(x && x.timestamp); }).length);
+      } catch (e) {}
+      try {
+        var s = await fetch('/api/security/threat-index').then(function (r) { return r.ok ? r.json() : null; });
+        if (s) {
+          var el = $('ktThreat');
+          if (el) {
+            el.textContent = s.threat_score != null ? s.threat_score : '—';
+            el.title = 'Уровень: ' + (s.threat_level || '—');
+          }
+        }
+      } catch (e) {}
+    }
 
+    /* Смена */
+    var _shiftFp = '';
+    async function loadShifts() {
+      var gid = await activeGid();
+      if (!gid) return;
+      try {
+        var d = await fetch('/api/guild/' + gid + '/staff-shifts').then(function (r) { return r.json(); });
+        var fp = JSON.stringify(d || {}).slice(0, 300);
+        if (fp === _shiftFp) return;
+        _shiftFp = fp;
+        var cur = d && d.current;
+        var nameEl = $('kioskDutyName'), timeEl = $('kioskDutyTime'), info = $('kioskShiftInfo');
+        if (cur) {
+          var name = cur.name || cur.mod_name || cur.moderator || '—';
+          var hh = cur.start && cur.end ? ' · ' + fmtTime(cur.start) + '–' + fmtTime(cur.end) : '';
+          if (nameEl) nameEl.textContent = name;
+          if (timeEl) timeEl.textContent = hh;
+          if (info) info.innerHTML = '<i class="fas fa-user-check" style="color:var(--ok)"></i> Сейчас на смене: <b>' + esc(name) + '</b>' +
+            (cur.start ? ' с ' + fmtTime(cur.start) + ' до ' + fmtTime(cur.end) : '') +
+            '. Остальные задачи — в списке слева.';
+          return;
+        }
+        if (d && d.next) {
+          var nx = d.next;
+          var nxName = nx.name || nx.mod_name || nx.moderator || '—';
+          if (nameEl) nameEl.textContent = 'скоро ' + nxName;
+          if (timeEl) timeEl.textContent = ' · ' + (nx.start ? fmtTime(nx.start) : '');
+          if (info) info.innerHTML = '<i class="fas fa-user-clock"></i> Сейчас смен нет. Следующая: <b>' + esc(nxName) + '</b>' +
+            (nx.start ? ' в ' + fmtTime(nx.start) : '') + '.';
+          return;
+        }
+        if (nameEl) nameEl.textContent = 'не задана';
+        if (timeEl) timeEl.textContent = '';
+        if (info) info.innerHTML = '<i class="fas fa-calendar-xmark"></i> Смены не настроены — <a href="/staff-shifts" style="color:var(--ac)">задай расписание в штабе</a>, и дежурные будут видны здесь.';
+      } catch (e) {}
+    }
+
+    /* Слайд 1: мод-действия за сегодня */
+    var _actsFp = '';
+    async function loadActions() {
+      var logs = [];
+      try { logs = await window.fetchCachedJSON('/api/logs'); } catch (e) { return; }
+      if (!Array.isArray(logs)) return;
+      var today = logs.filter(function (l) { return isToday(l.timestamp); });
+      var fp = today.map(function (l) { return l.timestamp + '|' + l.action + '|' + (l.user_name || l.user_id || ''); }).join('\u0001');
+      if (fp === _actsFp) return;
+      _actsFp = fp;
+      var box = $('kioskActions');
+      if (!today.length) {
+        box.innerHTML = '<div class="kiosk-empty"><i class="fas fa-shield-halved"></i>За сегодня действий ещё не было — тут появятся баны, мьюты и варны.</div>';
+        return;
+      }
+      box.innerHTML = today.slice(0, 14).map(function (log) {
+        var t = ACTION_TONES[(log.action || '?').toLowerCase()] || { tone: '', icon: 'fa-gavel', label: log.action || '?' };
+        var tg = log.user_name || log.target_name || log.user_id || '—';
+        var mod = log.mod_name || log.mod_id || '—';
+        return '<div class="k-feed-row" data-tone="' + t.tone + '">' +
+          '<span class="ico"><i class="fas ' + t.icon + '"></i></span>' +
+          '<span class="copy"><b>' + esc(t.label) + ' — ' + esc(tg) + '</b>' +
+          '<small>' + esc(log.reason || 'без причины') + ' · модер: ' + esc(mod) + '</small></span>' +
+          '<span class="tm">' + esc(fmtTime(log.timestamp)) + '</span></div>';
+      }).join('');
+    }
+
+    /* Слайд 1: лента событий (человеческие названия, кликабельно) */
+    var _actyFp = '';
+    async function loadActivity() {
+      try {
+        var d = await fetch('/api/activity-feed').then(function (r) { return r.json(); });
+        var items = Array.isArray(d) ? d : (d.items || []);
+        var top = items.slice(0, 10);
+        var fp = top.map(function (it) { return it.ts + '|' + it.title + '|' + it.user; }).join('\u0001');
+        if (fp === _actyFp) return;
+        _actyFp = fp;
+        var box = $('kioskActivity');
+        if (!top.length) {
+          box.innerHTML = '<div class="kiosk-empty"><i class="fas fa-wave-square"></i>Событий пока нет.</div>';
+          return;
+        }
+        var TONE = { mod: 'warn', warn: 'warn', ticket: 'info', auth: '', panel: '', system: '' };
+        box.innerHTML = top.map(function (it) {
+          var icon = /^fa-/.test(it.icon || '') ? it.icon : 'fa-bell';
+          return '<a class="k-feed-row" data-tone="' + (TONE[it.type] || '') + '" href="' + esc(it.link || '/panel-logs') + '">' +
+            '<span class="ico"><i class="fas ' + esc(icon) + '"></i></span>' +
+            '<span class="copy"><b>' + esc(it.title || '—') + '</b>' +
+            '<small>' + (it.user ? esc(it.user) + ' · ' : '') + esc(it.detail || '') + '</small></span>' +
+            '<span class="tm">' + esc((it.ts ? new Date(it.ts * 1000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '—')) + '</span></a>';
+        }).join('');
+      } catch (e) {}
+    }
+
+    /* Слайд 2: команда, нарушители, структура мер, тикер */
     function renderBars(box, counts, emptyText) {
       var entries = Object.keys(counts).map(function (k) { return { name: k, n: counts[k] }; })
         .sort(function (a, b) { return b.n - a.n; }).slice(0, 6);
       if (!entries.length) {
-        box.innerHTML = '<div style="color:var(--text-3);font-size:12px;padding:6px 2px"><i class="fas fa-shield-halved"></i> ' + esc(emptyText) + '</div>';
+        box.innerHTML = '<div class="kiosk-empty"><i class="fas fa-shield-halved"></i>' + esc(emptyText) + '</div>';
         return;
       }
       var max = entries[0].n;
@@ -327,24 +604,6 @@
           '<span class="tr"><span class="fl" style="width:' + Math.max(4, Math.round(e.n / max * 100)) + '%"></span></span>' +
           '<span class="ct">' + e.n + '</span></div>';
       }).join('');
-    }
-
-    async function loadFeed() {
-      var logs = [];
-      try {
-        logs = await window.fetchCachedJSON('/api/logs');
-      } catch (e) { return; }
-      if (!Array.isArray(logs)) return;
-      var TONE = { ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral', timeout: 'neutral', unban: 'ok', unmute: 'ok' };
-      var rows = logs.slice(0, 10).map(function (log) {
-        var a = (log.action || '?').toLowerCase();
-        return '<tr><td><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(log.action || '?') + '</span></td>' +
-          '<td>' + esc(log.user_name || log.target_name || log.user_id || '—') + '</td>' +
-          '<td class="muted">' + esc(log.mod_name || log.mod_id || '—') + '</td>' +
-          '<td class="muted">' + esc(fmtDate(log.timestamp)) + '</td></tr>';
-      }).join('');
-      $('kioskFeed').innerHTML = '<table class="data-table"><thead><tr><th>Действие</th><th>Цель</th><th>Модератор</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
-      if (window.attachTableSort) window.attachTableSort($('kioskFeed').querySelector('table'));
     }
 
     async function loadPeople() {
@@ -363,21 +622,16 @@
         } catch (e) {}
       }
       var since = Date.now() - 7 * 86400000;
-      var offenders = {}, mods = {};
-      var ticker = [];
-      var types = {};
-      var good = 0, bad = 0;
+      var offenders = {}, mods = {}, types = {}, good = 0, bad = 0, ticker = [];
       events.forEach(function (ev) {
         var a = String(ev.action || '').toLowerCase();
         if (ev.at) {
           var t = new Date(ev.at).getTime();
-          if (!isNaN(t)) {
-            if (t >= since) {
-              offenders[String(ev.target || '—')] = (offenders[String(ev.target || '—')] || 0) + 1;
-              mods[String(ev.mod || '—')] = (mods[String(ev.mod || '—')] || 0) + 1;
-            }
-            ticker.push({ action: ev.action, target: ev.target, at: ev.at });
+          if (!isNaN(t) && t >= since) {
+            offenders[String(ev.target || '—')] = (offenders[String(ev.target || '—')] || 0) + 1;
+            mods[String(ev.mod || '—')] = (mods[String(ev.mod || '—')] || 0) + 1;
           }
+          ticker.push({ action: ev.action, target: ev.target, at: ev.at });
         }
         if (ACTION_TONES[a]) types[a] = (types[a] || 0) + 1;
         if (a === 'unban' || a === 'unmute') good++;
@@ -386,39 +640,46 @@
       ticker.sort(function (a, b) { return new Date(b.at).getTime() - new Date(a.at).getTime(); });
       var chips = ticker.slice(0, 8).map(function (ev) {
         var a = String(ev.action || '').toLowerCase();
-        var when = '';
-        try { when = new Date(ev.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) {}
-        return '<span class="chip ' + (TICKER_TONE[a] || '') + '"><i class="fas ' + (TICKER_ICON[a] || 'fa-circle') + '"></i><b>' + esc(ev.action || '?') + '</b> ' + esc(ev.target || '—') + ' · ' + esc(when) + '</span>';
+        return '<span class="chip ' + (TICKER_TONE[a] || '') + '"><i class="fas ' + (TICKER_ICON[a] || 'fa-circle') + '"></i><b>' + esc(ev.action || '?') + '</b> ' + esc(ev.target || '—') + ' · ' + esc(fmtDate(ev.at)) + '</span>';
       }).join('');
       var track = $('kioskTicker');
       track.innerHTML = chips || '<span class="chip">Событий пока нет</span>';
       if (chips && track.scrollWidth > track.parentElement.clientWidth + 4) track.innerHTML += chips;
       renderBars($('kioskOffenders'), offenders, 'За 7 дней мер нет — пока тихо.');
       renderBars($('kioskTeam'), mods, 'Команда пока не действовала.');
-      if (window.AetherRing) {
-        var items = Object.keys(types).map(function (k) {
-          return { label: ACTION_TONES[k].label, value: types[k], color: ACTION_TONES[k].color };
-        }).sort(function (a, b) { return b.value - a.value; });
-        if (items.length) {
-          window.AetherRing($('kioskRing'), items.slice(0, 6), { totalLabel: 'мер за 7 дн' });
-          if (good + bad > 0) {
-            var pct = Math.round(good / (good + bad) * 100);
-            $('kioskSerenity').textContent = pct >= 70 ? 'Контур спокойствия: ' + pct + '%' : 'Нужен фокус: ' + pct + '%';
-            $('kioskSerenityHint').textContent = 'снятий: ' + good + ' · наказаний: ' + bad + ' — выше доля снятий, спокойнее контур.';
-          }
-        }
+      var typeBox = $('kioskTypes');
+      var typeEntries = Object.keys(types).map(function (k) {
+        return { key: k, n: types[k], t: ACTION_TONES[k] };
+      }).sort(function (a, b) { return b.n - a.n; });
+      if (!typeEntries.length) {
+        typeBox.innerHTML = '<div class="kiosk-empty"><i class="fas fa-chart-simple"></i>Мер за 7 дней нет.</div>';
+      } else {
+        typeBox.innerHTML = typeEntries.map(function (e) {
+          var color = e.t ? { err: '#dc2626', warn: '#d97706', info: '#7c3aed', ok: '#16a34a' }[e.t.tone] || '#4f46e5' : '#4f46e5';
+          return '<div class="kiosk-type-row"><span class="dot" style="background:' + color + '"></span>' +
+            '<span class="nm">' + esc(e.t ? e.t.label : e.key) + '</span>' +
+            '<span class="ct" style="color:' + color + '">' + e.n + '</span></div>';
+        }).join('');
+      }
+      if (good + bad > 0) {
+        var pct = Math.round(good / (good + bad) * 100);
+        $('kioskSerenity').textContent = pct >= 70 ? 'Спокойный контур: ' + pct + '%' : 'Нужен фокус: ' + pct + '%';
+        $('kioskSerenityHint').textContent = 'снятий: ' + good + ' · наказаний: ' + bad + ' — чем выше доля снятий, тем спокойнее сервер.';
       }
     }
 
     function refresh() {
-      loadMetrics(); loadFeed(); loadPeople();
+      loadMetrics(); loadTasks(); loadShifts(); loadActions(); loadActivity(); loadPeople();
       if (window.freshStamp && !window.__modLivePaused) window.freshStamp();
     }
     refresh();
     if (window.setLiveRefresh) {
       window.setLiveRefresh(loadMetrics, 15000);
-      window.setLiveRefresh(loadFeed, 30000);
-      window.setLiveRefresh(loadPeople, 15000);
+      window.setLiveRefresh(loadTasks, 15000);
+      window.setLiveRefresh(loadShifts, 30000);
+      window.setLiveRefresh(loadActions, 20000);
+      window.setLiveRefresh(loadActivity, 15000);
+      window.setLiveRefresh(loadPeople, 30000);
     }
 
     /* Полный экран + Esc */

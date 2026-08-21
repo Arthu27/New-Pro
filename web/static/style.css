@@ -460,13 +460,12 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   font-weight: 500;
   transition: background 0.12s, color 0.12s, padding-left 0.16s var(--ease);
 }
-.nav-link:hover { padding-left: 11px; }
 .nav-link:hover { background: var(--surface-3); color: var(--text); }
 .nav-link i {
   width: 16px; text-align: center; font-size: var(--fs-sm); color: var(--text-3); flex: 0 0 16px;
   transition: transform 0.2s var(--ease), color 0.12s;
 }
-.nav-link:hover i { transform: scale(1.2); }
+.nav-link:hover i { color: var(--ac); }
 @media (prefers-reduced-motion: reduce) { .nav-link i { transition: color 0.12s; } }
 .nav-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-link.active {
@@ -568,7 +567,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   filter: drop-shadow(0 0 5px rgba(34, 211, 238, .45));
   animation: dragonBreath 4.6s ease-in-out infinite;
 }
-.topbar-brand:hover { transform: translateY(-1px) scale(1.05); box-shadow: 0 8px 22px color-mix(in srgb, var(--ac) 55%, transparent), inset 0 1px 0 rgba(255,255,255,.35); }
+.topbar-brand:hover { box-shadow: 0 8px 22px color-mix(in srgb, var(--ac) 55%, transparent), inset 0 1px 0 rgba(255,255,255,.35); }
 [data-theme="dark"] .topbar-brand { box-shadow: 0 0 18px color-mix(in srgb, var(--ac) 55%, transparent), inset 0 1px 0 rgba(255,255,255,.18); }
 @media (prefers-reduced-motion: reduce) { .topbar-brand img { animation: none; } }
 .topbar {
@@ -823,7 +822,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   box-shadow: var(--shadow-1);
   transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
 }
-.card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line-2); }
+.card:hover { box-shadow: var(--shadow-lift); border-color: var(--line-2); }
 .card-head {
   display: flex; align-items: center; gap: 12px;
   padding-bottom: 12px; margin-bottom: 14px;
@@ -916,12 +915,12 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .kpi.tone-warn::before { background: linear-gradient(180deg, var(--warn), color-mix(in srgb, var(--warn) 45%, transparent)); }
 .kpi.tone-err::before { background: linear-gradient(180deg, var(--err), color-mix(in srgb, var(--err) 45%, transparent)); }
 .kpi.tone-info::before { background: linear-gradient(180deg, var(--info), color-mix(in srgb, var(--info) 45%, transparent)); }
-.kpi:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line-2); }
+.kpi:hover { box-shadow: var(--shadow-lift); border-color: var(--line-2); }
 .kpi-icon {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 3px 10px color-mix(in srgb, var(--ac) 16%, transparent);
   transition: transform 0.2s var(--ease);
 }
-.kpi:hover .kpi-icon { transform: scale(1.1) rotate(-4deg); }
+.kpi:hover .kpi-icon { color: var(--ac); }
 .kpi-icon {
   width: 36px; height: 36px; flex: 0 0 36px;
   border-radius: 9px;
@@ -979,7 +978,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   box-shadow: var(--shadow-1);
   transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
 }
-.stat-box:hover { transform: translateY(-2px); box-shadow: var(--shadow-lift); border-color: var(--line-2); }
+.stat-box:hover { box-shadow: var(--shadow-lift); border-color: var(--line-2); }
 .stat-icon {
   width: 36px; height: 36px; flex: 0 0 36px;
   border-radius: 9px;
@@ -1028,7 +1027,6 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   background: var(--ac-grad);
   border-color: transparent;
   color: #fff;
-  transform: translateY(-1px);
   box-shadow: 0 6px 18px color-mix(in srgb, var(--ac) 38%, transparent);
   filter: brightness(1.04);
 }
@@ -1059,7 +1057,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   padding: 4px 6px; border-radius: var(--r-sm);
 }
 .btn-link i { transition: transform 0.16s var(--ease); }
-.btn-link:hover i { transform: translateX(3px); }
+.btn-link:hover i { color: var(--ac); }
 .btn-link:hover { background: var(--ac-soft); }
 
 .btn-sm { padding: 4px 10px; font-size: var(--fs-sm); border-radius: var(--r-sm); }
@@ -1945,7 +1943,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   transition: transform 0.12s var(--ease);
   cursor: default;
 }
-.heat-cell:hover { transform: scale(1.18); }
+.heat-cell:hover { outline: 2px solid var(--ac); outline-offset: -2px; }
 .heat-cell.h1 { background: color-mix(in srgb, var(--ac) 22%, var(--surface-3)); }
 .heat-cell.h2 { background: color-mix(in srgb, var(--ac) 40%, var(--surface-3)); }
 .heat-cell.h3 { background: color-mix(in srgb, var(--ac) 60%, var(--surface-3)); }
@@ -2000,7 +1998,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   box-shadow: var(--shadow-1);
   transition: transform 0.12s var(--ease), border-color 0.12s;
 }
-.accent-swatch:hover { transform: scale(1.06); }
+.accent-swatch:hover { outline: 2px solid var(--ac); }
 .accent-swatch.active { border-color: var(--text); }
 [data-theme="dark"] .accent-swatch { color: #14152a; }
 
@@ -2062,7 +2060,6 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s var(--ease);
 }
 .cc-tile:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-lift);
   border-color: var(--ac-line);
   color: var(--text);
@@ -2085,7 +2082,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   margin-left: auto; color: var(--text-3); font-size: 11px; flex: 0 0 auto;
   transition: transform 0.18s var(--ease), color 0.18s;
 }
-.cc-tile:hover .cc-arrow { transform: translateX(4px); color: var(--ac); }
+.cc-tile:hover .cc-arrow { color: var(--ac); }
 
 /* Графики (чистый SVG / гибкие бары) */
 .chart-box { position: relative; width: 100%; }
@@ -2227,7 +2224,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   box-shadow: var(--shadow-1);
   transition: transform .18s var(--ease), box-shadow .18s var(--ease), border-color .18s;
 }
-.g-card:hover { transform: translateX(4px); border-color: var(--ac-line); box-shadow: var(--shadow-2); }
+.g-card:hover { border-color: var(--ac-line); box-shadow: var(--shadow-2); }
 .g-icon {
   width: 52px; height: 52px; flex: 0 0 52px;
   border-radius: 14px;
@@ -2267,7 +2264,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   transition: transform .18s var(--ease), box-shadow .18s var(--ease), border-color .18s;
   cursor: pointer;
 }
-.member-card:hover { transform: translateY(-2px); border-color: var(--ac-line); box-shadow: var(--shadow-2); }
+.member-card:hover { border-color: var(--ac-line); box-shadow: var(--shadow-2); }
 .av-wrap { position: relative; flex-shrink: 0; }
 .av-wrap .av { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid var(--line-2); object-fit: cover; background: var(--surface-3); }
 .member-name { font-weight: 600; color: var(--text); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2346,7 +2343,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   cursor: grab;
   transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease), border-color 0.15s, opacity 0.15s;
 }
-.board-card:hover { border-color: var(--ac-line); box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.board-card:hover { border-color: var(--ac-line); box-shadow: var(--shadow-2); }
 .board-card.dragging { opacity: 0.45; transform: rotate(1.5deg) scale(0.98); cursor: grabbing; }
 .board-card-top { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .board-card-title { font-weight: 700; font-size: var(--fs-md); line-height: 1.4; margin-bottom: 6px; word-break: break-word; }
@@ -2401,7 +2398,7 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
   transition: transform 0.12s var(--ease), border-color 0.12s;
 }
 [data-theme="dark"] .studio-color-swatch { color: #14152a; }
-.studio-color-swatch:hover { transform: scale(1.07); }
+.studio-color-swatch:hover { outline: 2px solid var(--ac); }
 .studio-color-swatch.active { border-color: var(--text); }
 input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface); cursor: pointer; }
 
@@ -2474,7 +2471,7 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
               color 0.15s var(--ease), background 0.15s var(--ease);
 }
 .prompt-chip i { color: var(--ac); font-size: 11px; }
-.prompt-chip:hover { border-color: var(--ac-line); color: var(--ac); background: var(--ac-soft); transform: translateY(-1px); }
+.prompt-chip:hover { border-color: var(--ac-line); color: var(--ac); background: var(--ac-soft); }
 
 .msg {
   display: flex; gap: 11px; align-items: flex-end; max-width: 86%;
@@ -2614,7 +2611,7 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
   color: var(--text);
   transition: border-color 0.15s, transform 0.15s;
 }
-.sidebar-guild:hover { border-color: var(--ac-line); color: var(--text); transform: translateY(-1px); }
+.sidebar-guild:hover { border-color: var(--ac-line); color: var(--text); }
 .sidebar-guild .ico {
   width: 30px; height: 30px; flex: 0 0 30px;
   border-radius: 9px;
@@ -2823,7 +2820,7 @@ input[type="color"].studio-custom { width: 100%; height: 44px; padding: 2px; bor
   background: var(--surface-3);
   transition: transform 0.12s var(--ease);
 }
-.cal-cell:hover { transform: scale(1.3); }
+.cal-cell:hover { background: var(--ac-soft); }
 .cal-cell.c1 { background: color-mix(in srgb, var(--ac) 26%, var(--surface-3)); }
 .cal-cell.c2 { background: color-mix(in srgb, var(--ac) 45%, var(--surface-3)); }
 .cal-cell.c3 { background: color-mix(in srgb, var(--ac) 66%, var(--surface-3)); }
@@ -3453,7 +3450,6 @@ table.data-table tbody tr:hover td:first-child {
 .load-more-btn:hover {
   background: var(--ac-soft);
   border-color: var(--ac-line);
-  transform: translateY(-1px);
 }
 
 
@@ -3639,7 +3635,7 @@ body.reorder-mode .reorder-hint { display: block; }
 
 /* ── Лёгкий сдвиг строк лент ────────────────────────────── */
 .feed-item { transition: background 0.12s, transform 0.12s var(--ease); }
-.feed-item:hover { transform: translateX(2px); }
+.feed-item:hover { background: var(--surface-2); }
 
 /* ── Контур спокойствия ─────────────────────────────────── */
 .serenity-row {
@@ -3838,7 +3834,7 @@ body.reorder-mode .reorder-hint { display: block; }
   transition: transform 0.14s var(--ease), box-shadow 0.14s;
 }
 .empty-hint-chip:hover {
-  transform: translateY(-1px);
+  background: var(--ac-soft);
   box-shadow: 0 2px 10px color-mix(in srgb, var(--ac) 20%, transparent);
 }
 .empty-hint-chip i { font-size: 10px; }
@@ -4471,7 +4467,7 @@ input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
   text-decoration: none;
 }
 .btn-exec:hover, .btn-add:hover {
-  transform: translateY(-1px);
+  filter: brightness(1.05);
   box-shadow: 0 10px 22px -8px var(--ac-glow);
   color: #fff;
 }
@@ -4536,7 +4532,7 @@ input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
   box-shadow: var(--shadow-1);
   transition: transform .15s var(--ease), border-color .15s;
 }
-.ms-result-card:hover { transform: translateY(-2px); border-color: var(--ac-line); }
+.ms-result-card:hover { border-color: var(--ac-line); }
 
 /* ═══════════════════════════════════════════════════════════
    ЖИВОЙ ДРАКОН: дыхание + дымок выдоха
@@ -4720,7 +4716,6 @@ table.data-table th.sortable:hover {
   background: color-mix(in srgb, var(--ac) 12%, transparent);
   color: var(--ac);
   box-shadow: 0 4px 14px -6px var(--ac-glow);
-  transform: translateY(-1px);
 }
 .nav-icon-btn { transition: background .15s, color .15s, box-shadow .2s, transform .15s var(--ease); }
 
@@ -4740,7 +4735,7 @@ input:focus, select:focus, textarea:focus {
 
 /* ── Панель-head: иконка слегка покачивается при hover ── */
 .panel-head h2 i { transition: transform .2s var(--ease); display: inline-block; }
-.panel-head:hover h2 i { transform: scale(1.12) rotate(-4deg); }
+.panel-head:hover h2 i { color: var(--ac); }
 
 /* ── Логотип дышащего дракона: лёгкое свечение синхронно дыханию ── */
 .brand-icon .dragon-live {
@@ -4903,7 +4898,7 @@ img[src*="emblem-dragon"] {
 [data-theme="dark"] .btn-submit { color: #14152a; }
 .save-btn:hover, .btn-save:hover, .btn-submit:hover {
   background: var(--ac-grad);
-  transform: translateY(-1px);
+  filter: brightness(1.05);
   box-shadow: 0 10px 22px -8px var(--ac-glow);
 }
 .btn-cancel {
@@ -5078,7 +5073,7 @@ img[src*="emblem-dragon"] {
 .at-item-copy b { display: block; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .at-item-copy small { display: block; font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .at-item-arrow { color: var(--text-3); font-size: 11px; opacity: 0; transition: opacity 0.12s, transform 0.12s; }
-.at-item:hover .at-item-arrow, .at-item.active .at-item-arrow { opacity: 1; transform: translateX(2px); }
+.at-item:hover .at-item-arrow, .at-item.active .at-item-arrow { opacity: 1; }
 .at-empty { padding: 22px 12px; text-align: center; color: var(--text-3); font-size: 13px; }
 .at-loading { padding: 22px 12px; text-align: center; color: var(--text-3); font-size: 13px; }
 .at-loading i { margin-right: 7px; color: var(--ac); }

@@ -250,6 +250,8 @@ check('.modal-overlay:not(.open) { display: none; }' in css,
 kiosk = open(os.path.join(ROOT, 'web', 'templates', 'mod_kiosk.html'), encoding='utf-8').read()
 check('kioskTime' in kiosk and 'kioskMain' in kiosk and 'kioskDrift' in kiosk,
       'экран дежурного: часы, стена и лента на месте')
+check('k-task' in kiosk and 'kioskActivity' in kiosk and 'ktThreat' in kiosk and 'kioskShiftInfo' in kiosk,
+      'экран дежурного: задачи «что делать», лента событий, угрозы и смена')
 login_as('owner')
 r = client.get('/mod-kiosk')
 check(r.status_code == 200 and 'Экран дежурного' in r.get_data(as_text=True),
@@ -1007,12 +1009,14 @@ check('badgePop' in css and '.badge, .chip, .status-pill' in css,
       'панель: pop-появление бейджей и чипов')
 check('th.sortable:hover' in css,
       'панель: подсветка столбца таблицы при hover на заголовок')
-check('.nav-icon-btn:hover' in css and 'translateY(-1px)' in css,
-      'панель: свечение и подъём иконок шапки')
-check('.panel-head:hover h2 i { transform: scale(1.12) rotate(-4deg); }' in css,
-      'панель: покачивание иконок заголовков панелей')
+check('.nav-icon-btn:hover' in css and 'translateY(-1px)' not in css,
+      'панель: кнопки шапки светятся, но не двигаются')
+check('.panel-head:hover h2 i { color: var(--ac); }' in css,
+      'панель: иконки заголовков подсвечиваются цветом, не качаются')
 check('.kpi:not(.tone-ok)' in css and 'background-clip: text' in css,
       'панель: градиентные KPI-значения')
+check('translateY(-1px)' not in css and 'translateY(-2px)' not in css,
+      'панель: hover не двигает элементы — кнопка нажимается всей площадью')
 check('drop-shadow' in css and '.brand-icon .dragon-live' in css,
       'панель: дракон подсвечен в ритме дыхания')
 w9 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
@@ -1144,10 +1148,10 @@ check('wProgress' in w11 and 'id="wProgress"' in w11,
       'welcome: градиентная полоса прогресса чтения сверху')
 check('.w-stat::after' in w11 and 'skewX(-20deg)' in w11,
       'welcome: глянцевый блик пробегает по стат-карточкам при hover')
-check('.w-chips .chip:hover i' in w11 and 'scale(1.18)' in w11,
-      'welcome: иконки чипов подпрыгивают при наведении')
-check('.w-step:hover .num' in w11 and 'rotate(-4deg)' in w11,
-      'welcome: шаги приподнимаются, номер пульсирует кольцом')
+check('.w-chips .chip:hover i' in w11 and 'scale(1.18)' not in w11,
+      'welcome: иконки чипов не прыгают — только цвет')
+check('.w-step:hover .num' in w11 and 'rotate(-4deg)' not in w11,
+      'welcome: номер шага подсвечивается кольцом без вращения')
 check('faqIn' in w11 and 'details[open] .faq-body' in w11,
       'welcome: FAQ раскрывается плавной анимацией')
 check('.w-terminal-body::after' in w11 and 'repeating-linear-gradient' in w11,

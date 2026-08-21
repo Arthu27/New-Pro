@@ -39,7 +39,7 @@
 
   .sm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
   .sm-card { background:linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:14px; transition:.18s; position:relative; overflow:hidden; }
-  .sm-card:hover { border-color:var(--ac); transform:translateY(-2px); box-shadow:0 10px 30px rgba(0,0,0,0.3); }
+  .sm-card:hover {border-color:var(--ac); box-shadow:0 10px 30px rgba(0,0,0,0.3)}
   .sm-card::before { content:""; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--ac),var(--ok)); opacity:.0; transition:.18s; }
   .sm-card:hover::before { opacity:1; }
 

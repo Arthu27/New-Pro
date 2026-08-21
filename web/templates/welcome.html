@@ -49,7 +49,7 @@
       font-size: 14px; font-weight: 700; cursor: pointer;
       transition: transform .18s ease, border-color .18s, box-shadow .2s;
     }
-    .btn:hover { transform: translateY(-1px); border-color: var(--ac); }
+    .btn:hover {border-color: var(--ac)}
     .btn-primary {
       background: var(--ac-grad); color: #fff; border: none;
       box-shadow: 0 8px 26px -8px rgba(124, 58, 237, .6);
@@ -103,7 +103,7 @@
       filter: drop-shadow(0 0 6px rgba(34, 211, 238, .35));
       animation: dragonBreath 4.6s ease-in-out infinite;
     }
-    .w-nav .brand:hover img { transform: scale(1.06); }
+    .w-nav .brand:hover img { filter: brightness(1.08); }
     .w-nav .brand b { font-weight: 800; letter-spacing: .08em; font-size: 14px; }
     .w-nav .brand small { display: block; font-size: 9px; color: var(--text3); letter-spacing: .12em; text-transform: uppercase; }
     .w-nav-links { display: flex; gap: 4px; margin-left: 12px; }
@@ -249,7 +249,7 @@
       transition: border-color .15s, color .15s, transform .15s ease;
     }
     .w-chips .chip i { color: var(--ac2); }
-    .w-chips .chip:hover { border-color: var(--ac); color: var(--text); transform: translateY(-1px); }
+    .w-chips .chip:hover {border-color: var(--ac); color: var(--text)}
     .w-at-hint {
       display: inline-flex; align-items: center; gap: 9px;
       margin: 0 auto 16px; padding: 10px 18px;
@@ -325,7 +325,7 @@
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
       background: var(--ac-grad); opacity: 0; transition: opacity .18s;
     }
-    .w-card:hover { transform: translateY(-3px); border-color: var(--ac); box-shadow: 0 14px 34px -14px rgba(79, 70, 229, .5); }
+    .w-card:hover {border-color: var(--ac); box-shadow: 0 14px 34px -14px rgba(79, 70, 229, .5)}
     .w-card:hover::before { opacity: 1; }
     .w-card .ico {
       width: 44px; height: 44px; border-radius: 13px;
@@ -409,7 +409,7 @@
       padding: 16px 18px; text-align: center;
       transition: border-color .18s, transform .18s ease;
     }
-    .w-stat:hover { border-color: var(--ac); transform: translateY(-2px); }
+    .w-stat:hover {border-color: var(--ac)}
     .w-stat .n {
       font-family: 'Unbounded', sans-serif;
       font-size: 26px; font-weight: 800;
@@ -732,7 +732,7 @@
 
     /* ── Шаги: пульс-номер при hover ── */
     .w-step .num { transition: transform .2s var(--ease), box-shadow .2s; }
-    .w-step:hover .num { transform: scale(1.1); box-shadow: 0 8px 22px -6px rgba(124, 58, 237, .8); }
+    .w-step:hover .num { box-shadow: 0 8px 22px -6px rgba(124, 58, 237, .8); }
 
     /* ── Чипы hero: свечение активного hover ── */
     .w-chips .chip:hover { box-shadow: 0 4px 16px -6px rgba(124, 58, 237, .6); }
@@ -767,14 +767,10 @@
 
     /* ── CTA-блок: свечение при hover ── */
     .w-cta-box { transition: box-shadow .3s ease, border-color .3s, transform .3s var(--ease); }
-    .w-cta-box:hover {
-      border-color: var(--ac);
-      box-shadow: 0 0 60px rgba(124, 58, 237, .25);
-      transform: translateY(-2px);
-    }
+    .w-cta-box:hover {border-color: var(--ac); box-shadow: 0 0 60px rgba(124, 58, 237, .25)}
 
     /* ── Нав-кнопки: подъём при hover ── */
-    .w-nav-actions .btn:hover { transform: translateY(-2px); }
+    .w-nav-actions .btn:hover {background:var(--surface2)}
 
     /* ── Пульс-точка активного пункта навигации ── */
     .w-nav-links a.on {
@@ -822,15 +818,11 @@
 
     /* ── Чипы hero: иконка подпрыгивает при hover ── */
     .w-chips .chip i { transition: transform .18s var(--ease), color .18s; }
-    .w-chips .chip:hover i { transform: translateY(-2px) scale(1.18); color: #a5b4fc; }
+    .w-chips .chip:hover i { color: #a5b4fc; }
 
     /* ── Шаги: подъём карточки и пульс номера ── */
-    .w-step:hover {
-      transform: translateY(-3px); border-color: var(--ac);
-      box-shadow: 0 14px 30px -14px rgba(79, 70, 229, .45);
-    }
+    .w-step:hover {border-color: var(--ac); box-shadow: 0 14px 30px -14px rgba(79, 70, 229, .45)}
     .w-step:hover .num {
-      transform: scale(1.1) rotate(-4deg);
       box-shadow: 0 8px 20px -6px rgba(124, 58, 237, .8), 0 0 0 6px rgba(124, 58, 237, .12);
     }
 
@@ -856,7 +848,7 @@
 
     /* ── Лента фич: пункты оживают при наведении ── */
     .w-marquee .item { transition: border-color .18s, color .18s, transform .18s; }
-    .w-marquee .item:hover { border-color: var(--ac); color: var(--text); transform: translateY(-1px); }
+    .w-marquee .item:hover {border-color: var(--ac); color: var(--text)}
     .w-marquee .item:hover i { color: #a5b4fc; }
 
     /* ── Кнопка «наверх» ── */
@@ -937,8 +929,8 @@
       .w-card, .w-step, .w-stat { transition: none; }
       .w-card, .w-search input, .w-chips .chip, .w-reveal, .btn-primary::after,
       .w-stat::after, .w-chips .chip i, .w-marquee .item, .w-stat .n { transition: none; }
-      .w-card:hover { transform: none; }
-      .w-step:hover { transform: none; box-shadow: none; }
+      .w-card:hover {background:var(--surface2)}
+      .w-step:hover {box-shadow: none}
       .w-reveal { opacity: 1; transform: none; }
     }
   </style>

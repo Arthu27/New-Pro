@@ -27,7 +27,7 @@
   /* ── карточки модулей ── */
   .au-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 16px; }
   .au-card { position: relative; overflow: hidden; background: linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border: 1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; transition: border-color .18s, transform .18s, box-shadow .18s; }
-  .au-card:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(0,0,0,0.28); }
+  .au-card:hover {box-shadow: 0 10px 26px rgba(0,0,0,0.28)}
   .au-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--au-accent, var(--ac)); opacity: .85; }
   .au-card.is-on  { border-color: rgba(46,204,113,0.28); }
   .au-card-head { display: flex; align-items: center; gap: 12px; }

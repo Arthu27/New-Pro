@@ -54,7 +54,7 @@
   cursor: pointer; transition: all .15s var(--ease);
 }
 .yd-chip i { color: var(--ac); font-size: 11px; }
-.yd-chip:hover { border-color: var(--ac-line); color: var(--ac); transform: translateY(-1px); }
+.yd-chip:hover {border-color: var(--ac-line); color: var(--ac)}
 .yd-chip.active {
   background: var(--ac-grad); color: #fff; border-color: transparent;
   box-shadow: 0 6px 16px -6px var(--ac-glow);
@@ -82,10 +82,7 @@
   background: linear-gradient(90deg, var(--yd-tone, var(--ac)), transparent);
   opacity: 0; transition: opacity .18s;
 }
-.yd-card:hover {
-  transform: translateY(-3px); border-color: var(--ac-line);
-  box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--ac) 40%, transparent);
-}
+.yd-card:hover {border-color: var(--ac-line); box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--ac) 40%, transparent)}
 .yd-card:hover::before { opacity: 1; }
 .yd-icon {
   width: 42px; height: 42px; border-radius: 13px;
@@ -105,7 +102,7 @@
   margin-left: auto; color: var(--text-3); font-size: 11px;
   transition: transform .18s var(--ease), color .18s;
 }
-.yd-card:hover .yd-arrow { transform: translateX(3px); color: var(--ac); }
+.yd-card:hover .yd-arrow { color: var(--ac); }
 .yd-none {
   grid-column: 1/-1; text-align: center; padding: 40px 16px;
   color: var(--text-3); font-size: 14px;
@@ -191,7 +188,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .yd-card, .yd-chip, .yd-arrow, .yd-faq summary .chev { transition: none; }
-  .yd-card:hover { transform: none; }
+  .yd-card:hover {background:var(--surface-2)}
 }
 </style>
 

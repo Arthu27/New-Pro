@@ -72,7 +72,7 @@
     transition: border-color .15s, color .15s, transform .15s ease;
     text-decoration: none;
   }
-  .lg-back:hover { border-color: var(--ac); color: #c7d2fe; transform: translateX(-2px); }
+  .lg-back:hover {border-color: var(--ac); color: #c7d2fe}
 
   /* ── Колонна ── */
   .container {
@@ -180,7 +180,7 @@
     cursor: pointer;
     transition: transform .15s ease, border-color .15s, box-shadow .2s, background .15s;
   }
-  .server-card:hover { transform: translateY(-2px); border-color: var(--ac-line); background: rgba(79, 70, 229, .07); }
+  .server-card:hover {border-color: var(--ac-line); background: rgba(79, 70, 229, .07)}
   .server-card.selected {
     border-color: var(--ac);
     background: rgba(79, 70, 229, .12);
@@ -204,7 +204,7 @@
     background: rgba(255, 255, 255, .04); border: 1.5px solid rgba(255, 255, 255, .08);
     cursor: pointer; transition: all .18s var(--ease);
   }
-  .role-card:hover { border-color: var(--ac-line); transform: translateY(-1px); }
+  .role-card:hover {border-color: var(--ac-line)}
   .role-card input { position: absolute; opacity: 0; width: 0; height: 0; }
   .role-card:has(input:checked) {
     border-color: var(--ac); background: var(--ac-soft);
@@ -279,7 +279,7 @@
     transform: skewX(-20deg);
     transition: left .55s ease;
   }
-  .submit-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); box-shadow: 0 12px 28px -8px rgba(124, 58, 237, .75); }
+  .submit-btn:hover:not(:disabled) { filter: brightness(1.05); box-shadow: 0 12px 28px -8px rgba(124, 58, 237, .75); }
   .submit-btn:hover:not(:disabled)::after { left: 135%; }
   .submit-btn:disabled { opacity: .75; cursor: default; }
   .submit-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(34, 211, 238, .35), 0 12px 28px -8px rgba(124, 58, 237, .75); }
