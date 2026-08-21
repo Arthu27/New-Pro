@@ -52,5 +52,6 @@ os.environ['DB_PATH'] = os.path.join(_TMP, 'data', 'bot.db')  # до импор�
 | `test_http_semantics.py` | HEAD/405/404, MIME-типы, фазз query, битый JSON, бюджет рендера |
 | `test_menu_audit.py` | меню→роуты Flask, уникальность путей, мёртвые шаблоны, конкурентность |
 | `test_py_compile.py` | compileall всех .py, скан секретов/токенов, мёртвые route-модули |
+| `test_state_roundtrip.py` | переходы состояния: создать→увидеть→изменить→удалить (роли/расписание/leveling) |
 
 Любая новая фича = логика-ядро чистое + тест по контракту выше.
