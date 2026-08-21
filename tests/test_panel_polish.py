@@ -1199,6 +1199,11 @@ check('getModifierState' in lg2 and 'CapsLock' in lg2 and 'cap-hint' in lg2,
       'login: предупреждение о Caps Lock у пароля')
 check('has-ico' in lg2 and 'f-ico' in lg2 and 'fa-lock' in lg2 and 'fab fa-discord' in lg2,
       'login: иконки в полях ввода (логин/пароль/discord)')
+check('.auth-side .brand { display: flex; align-items: center; flex-wrap: wrap' in lg2.replace('\n', ''),
+      'login: бренд-строка переносится — чип MEMBER EDITION не залезает в меню вкладок')
+check("replace(/^@/, '')" in lg2 and "__lgSuggestBlock = true;" in lg2
+      and "dispatchEvent(new Event('input'" not in lg2,
+      'login: @ в поиске отбрасывается, клик по подсказке закрывает попап с первого раза')
 check('lg-back' in lg2 and '/welcome' in lg2,
       'login: ссылка назад на приветственную страницу')
 check('margin: auto' in lg2.split('.auth-card {')[1][:200],
@@ -1240,7 +1245,7 @@ check('.lg-dragon-stage' in lg3 and 'top: 0; left: 50%' in lg3.split('.lg-dragon
       'login: медальон дракона парит над кромкой карточки (не внутри, не сверху страницей)')
 check('body::after' in lg3 and 'feTurbulence' in lg3,
       'login: лёгкая плёнка-зерно для глубины фона (статичная, без нагрузки)')
-check('padding: 60px 38px 32px' in lg3,
+check('padding: 66px 38px 32px' in lg3,
       'login: контент карточки освобождает место под парящим медальоном')
 check('max-width: 470px' in lg3 and 'margin: auto' in lg3.split('.lg-stage {')[1][:260],
       'login: просторная колонна формы, центрированная по вертикали')

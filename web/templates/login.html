@@ -195,11 +195,12 @@
       opacity: 0; transition: opacity .35s;
     }
     .auth-card:hover::after { opacity: 1; }
-    .auth-main { display: flex; padding: 60px 38px 32px; }
+    .auth-main { display: flex; padding: 66px 38px 32px; }
 
     /* ── Левая часть: бренд ── */
     .auth-side { flex: 0 0 46%; padding-right: 38px; border-right: 1px solid rgba(255,255,255,.06); }
-    .auth-side .brand { display: flex; align-items: center; gap: 11px; }
+    .auth-side .brand { display: flex; align-items: center; flex-wrap: wrap; gap: 11px 11px; }
+    .auth-side .brand > div { min-width: 0; }
     .auth-side .brand .ico {
       width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
       background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
@@ -221,7 +222,7 @@
       border-radius: 99px; padding: 5px 10px;
     }
     .auth-side h1 {
-      margin: 26px 0 10px;
+      margin: 20px 0 10px;
       font-family: var(--font-display, 'Unbounded', sans-serif);
       font-size: 25px; font-weight: 800; line-height: 1.26;
       letter-spacing: -.01em;
@@ -911,7 +912,7 @@
        иначе focus-события вытаскивали попап обратно */
     if (window.__lgSuggestBlock) { window.__lgSuggestBlock = false; return; }
     var popup = $(popupId);
-    var q = (input.value || '').trim();
+    var q = (input.value || '').trim().replace(/^@/, '');
     if (q.length < 2) { popup.classList.remove('open'); return; }
     clearTimeout(suggestTimer);
     suggestTimer = setTimeout(function () {
@@ -933,11 +934,17 @@
           }).join('');
           popup.classList.add('open');
           Array.prototype.forEach.call(popup.querySelectorAll('.item'), function (it) {
-            it.addEventListener('click', function () {
-              input.value = it.dataset.user || it.dataset.id || input.value;
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              popup.classList.remove('open');
+            it.addEventListener('click', function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              /* Блок СРАЗУ: никакой input/focus-событие не откроет попап заново */
               window.__lgSuggestBlock = true;
+              input.value = it.dataset.user || it.dataset.id || input.value;
+              /* плавающий лейбл синхронизируем вручную — без dispatch, чтобы
+                 oninput=showSuggest не сработал повторно */
+              var fld = input.closest('[data-float]');
+              if (fld) fld.classList.toggle('filled', !!input.value);
+              popup.classList.remove('open');
               /* НЕ зовём input.focus(): у поля стоит onfocus=showSuggest,
                  и попап тут же вылезал бы снова. Фокус сразу на пароль. */
               if (input.id === 'passUsername') {
