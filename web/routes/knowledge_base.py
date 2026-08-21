@@ -44,6 +44,40 @@ def register(ctx):
         categories =kb_data .get ('categories',[])
         articles =kb_data .get ('articles',[])
 
+        # Демо-режим: база не пустая — страница живая в превью
+        import web .app as _app
+        if _app ._demo_mode ()and not categories and not articles :
+            categories =[
+                {'id':'kb-c1','name':'Общие вопросы','description':'Вход, роли и навигация по панели.','icon':'fa-circle-question'},
+                {'id':'kb-c2','name':'Модерация','description':'Варны, баны и правила для команды.','icon':'fa-shield-halved'},
+                {'id':'kb-c3','name':'Бот и команды','description':'Основные команды и реакции бота.','icon':'fa-robot'},
+            ]
+            articles =[
+                {'id':'kb-a1','category_id':'kb-c1','title':'Как войти в панель','summary':'Логин, Discord PIN и первый вход.',
+                 'content':'Открой страницу входа и выбери способ: пароль или Discord PIN. После входа попадёшь на дашборд со своим профилем, заявками и событиями.','tags':['вход','pin','логин'],
+                 'views':412,'helpful_yes':31,'helpful_no':2,'created_at':'2026-07-01T10:00:00','updated_at':'2026-08-10T12:00:00'},
+                {'id':'kb-a2','category_id':'kb-c1','title':'Что умеет @-поиск','summary':'Мгновенный поиск по всей панели.',
+                 'content':'Нажми @ в любом месте панели и начни печатать: найдутся страницы, участники, каналы и команды. Стрелки выбирают, Enter открывает.','tags':['поиск','@','горячие клавиши'],
+                 'views':298,'helpful_yes':24,'helpful_no':1,'created_at':'2026-07-05T10:00:00','updated_at':'2026-08-02T09:00:00'},
+                {'id':'kb-a3','category_id':'kb-c2','title':'Как выдать варн','summary':'Шаги предупреждения участника.',
+                 'content':'Открой «Предупреждения», найди участника по ID или имени, укажи причину и отправь. Все варны попадают в журнал модерации.','tags':['варн','модерация'],
+                 'views':356,'helpful_yes':29,'helpful_no':3,'created_at':'2026-07-08T10:00:00','updated_at':'2026-08-05T18:00:00'},
+                {'id':'kb-a4','category_id':'kb-c2','title':'Локдаун за минуту','summary':'Экстренное закрытие каналов с откатом.',
+                 'content':'Выбери каналы вручную или «все», сделай предпросмотр, укажи причину и закрой. Снимки прав вернутся при снятии режима.','tags':['локдаун','безопасность'],
+                 'views':189,'helpful_yes':17,'helpful_no':0,'created_at':'2026-07-12T10:00:00','updated_at':'2026-07-30T14:00:00'},
+                {'id':'kb-a5','category_id':'kb-c3','title':'Команды уровня','summary':'/rank, /top и награды за активность.',
+                 'content':'Пиши сообщения — опыт капает сам. /rank покажет твой уровень, /top — таблицу лидеров. Награды за уровни выдаются автоматически.','tags':['уровни','xp','rank'],
+                 'views':267,'helpful_yes':22,'helpful_no':2,'created_at':'2026-07-15T10:00:00','updated_at':'2026-08-08T11:00:00'},
+                {'id':'kb-a6','category_id':'kb-c3','title':'Дни рождения и ивенты','summary':'Календарь событий сервера.',
+                 'content':'Зарегистрируй дату рождения в панели — бот поздравит в канале. Ивенты команды видны в разделе «События».','tags':['др','ивенты'],
+                 'views':143,'helpful_yes':11,'helpful_no':1,'created_at':'2026-07-18T10:00:00','updated_at':'2026-07-28T16:00:00'},
+            ]
+            try :
+                with open (kb_file ,'w',encoding ='utf-8')as f :
+                    json .dump ({'categories':categories,'articles':articles},f ,ensure_ascii =False ,indent =2 )
+            except Exception as _ex :
+                _log.debug("api_knowledge_base_get() demo: подавлено: %s", _ex)
+
         # Подсчитать количество статей в каждой категории
         for category in categories :
             category ['article_count']=sum (1 for a in articles if a .get ('category_id')==category ['id'])
@@ -69,6 +103,7 @@ def register(ctx):
         'helpful_rate':helpful_rate 
         },
         'categories':categories ,
+        'articles':articles ,   # полный список — модалка категории показывает все её статьи
         'popular_articles':popular_articles ,
         'recent_articles':recent_articles 
         })

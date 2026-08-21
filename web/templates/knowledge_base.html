@@ -152,11 +152,80 @@
   </div>
 </div>
 
+<!-- Просмотр статьи/категории (раньше клик вёл на несуществующие страницы) -->
+<div id="kbViewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; overflow-y: auto;">
+  <div style="max-width: 640px; margin: 6vh auto; background: var(--surface, #1d1f26); border: 1px solid color-mix(in srgb, var(--text) 12%, transparent); border-radius: 14px; padding: 24px;">
+    <div style="display: flex; align-items: start; justify-content: space-between; margin-bottom: 14px;">
+      <h3 id="kbViewTitle" style="margin: 0; font-size: 18px;"></h3>
+      <button type="button" class="control-btn" onclick="closeViewModal()" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div id="kbViewMeta" style="font-size: 12px; color: var(--text-muted, #9aa3ba); margin-bottom: 14px;"></div>
+    <div id="kbViewBody" style="font-size: 14px; line-height: 1.7; color: var(--text-2, #c6cbd6);"></div>
+  </div>
+</div>
+
 <script>
+var kbAllArticles = [];
+var kbAllCategories = [];
+
+function escKb(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function openViewModal(title, meta, bodyHtml) {
+  document.getElementById('kbViewTitle').textContent = title;
+  document.getElementById('kbViewMeta').textContent = meta || '';
+  document.getElementById('kbViewBody').innerHTML = bodyHtml;
+  document.getElementById('kbViewModal').style.display = 'block';
+}
+
+function closeViewModal() {
+  document.getElementById('kbViewModal').style.display = 'none';
+}
+document.getElementById('kbViewModal').addEventListener('click', function (e) {
+  if (e.target === this) closeViewModal();
+});
+
+function viewArticle(articleId) {
+  const a = kbAllArticles.find(function (x) { return String(x.id) === String(articleId); });
+  if (!a) { showToast('Статья не найдена', false); return; }
+  const cat = kbAllCategories.find(function (c) { return String(c.id) === String(a.category_id); });
+  const meta = (cat ? escKb(cat.name) + ' · ' : '') + (a.views || 0) + ' просмотров';
+  const tags = (a.tags || []).map(function (t) {
+    return '<span style="display:inline-block;background:color-mix(in srgb, var(--text) 5%, transparent);color:var(--text-muted);padding:3px 9px;border-radius:5px;font-size:11px;margin:0 6px 6px 0;">' + escKb(t) + '</span>';
+  }).join('');
+  const body = '<p style="margin:0 0 14px;">' + escKb(a.summary) + '</p>' +
+    '<div style="white-space:pre-wrap;">' + escKb(a.content) + '</div>' +
+    (tags ? '<div style="margin-top:16px;">' + tags + '</div>' : '');
+  openViewModal(a.title, meta, body);
+}
+
+function viewCategory(categoryId) {
+  const c = kbAllCategories.find(function (x) { return String(x.id) === String(categoryId); });
+  if (!c) { showToast('Категория не найдена', false); return; }
+  const items = kbAllArticles.filter(function (a) { return String(a.category_id) === String(categoryId); });
+  const body = items.length ? items.map(function (a) {
+    return '<div style="padding:12px 14px;border:1px solid color-mix(in srgb, var(--text) 10%, transparent);border-radius:10px;margin-bottom:10px;cursor:pointer;" onclick="viewArticle(\'' + escKb(a.id) + '\')">' +
+      '<div style="font-weight:600;margin-bottom:4px;">' + escKb(a.title) + '</div>' +
+      '<div style="font-size:12.5px;color:var(--text-muted);">' + escKb(a.summary || '') + '</div>' +
+    '</div>';
+  }).join('') : '<p style="color:var(--text-muted);">В этой категории пока нет статей.</p>';
+  openViewModal(c.name, (c.description || '') + ' · статей: ' + items.length, body);
+}
+
 async function loadKnowledgeBase() {
   try {
     const response = await fetch('/api/knowledge-base');
     const data = await response.json();
+    /* все статьи: API отдаёт полный список articles (модалка категории
+       показывает каждую статью, а не только топ-6) */
+    kbAllArticles = Array.isArray(data.articles) ? data.articles : [];
+    if (kbAllArticles.length === 0 && data.popular_articles) {
+      kbAllArticles = data.popular_articles.concat(data.recent_articles || []);
+    }
+    if (data.categories) kbAllCategories = data.categories;
     
     if (data.success) {
       updateStats(data.stats);
@@ -395,16 +464,6 @@ async function createArticle() {
   } catch (e) {
     showToast('Ошибка соединения', false);
   }
-}
-
-async function viewCategory(categoryId) {
-  // Перенаправить на страницу категории
-  window.location.href = `/knowledge-base/category/${categoryId}`;
-}
-
-async function viewArticle(articleId) {
-  // Перенаправить на страницу статьи
-  window.location.href = `/knowledge-base/article/${articleId}`;
 }
 
 function pluralize(n, one, few, many) {

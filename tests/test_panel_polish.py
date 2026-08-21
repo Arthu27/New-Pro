@@ -1510,6 +1510,22 @@ check('НЕ зовём input.focus()' in _lgt and 'pw.focus()' in _lgt,
       'логин: фокус сразу на пароль, попап не вылезает повторно')
 check('__lgSuggestBlock' in _lgt.split('window.showSuggest')[1][:400],
       'логин: showSuggest уважает флаг подавления')
+# ═══ 37х. База знаний: модалка вместо 404-переходов ═════════════════════════
+print('== база знаний: связи ==')
+_kb = open(os.path.join(ROOT, 'web', 'templates', 'knowledge_base.html'), encoding='utf-8').read()
+check('kbViewModal' in _kb and 'function viewArticle' in _kb and 'function viewCategory' in _kb,
+      'база знаний: просмотр статьи/категории через модалку на странице')
+check('location.href = `/knowledge-base/article' not in _kb
+      and 'location.href = `/knowledge-base/category' not in _kb,
+      'база знаний: переходов на несуществующие страницы больше нет (были 404)')
+check('kbAllArticles' in _kb and 'kbAllCategories' in _kb,
+      'база знаний: кеш всех статей и категорий для модалок')
+_kbr = open(os.path.join(ROOT, 'web', 'routes', 'knowledge_base.py'), encoding='utf-8').read()
+check("'articles':articles" in _kbr and '# полный список' in _kbr,
+      'routes knowledge-base: API отдаёт полный список статей (для модалки категории)')
+check('kb-c1' in _kbr and 'Демо-режим: база не пустая' in _kbr,
+      'routes knowledge-base: демо-база с категориями и статьями (страница живая в превью)')
+
 
 check('makeChart(msgCanvas' in _anl2 and 'makeChart(document.getElementById' in _aal,
       'графики: все вызовы Chart идут через защиту')
