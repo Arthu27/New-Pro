@@ -175,6 +175,18 @@ for _name, (_marker, _msg) in _silent_pages.items():
 _app_js_now = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
 check('window.silentGuard' in _app_js_now and 'W.silentGuard' in base,
       'общий помощник тихих обновлений в app.js и бут-шиме')
+# HEALTH-лог бота: структурированные чипы вместо сырого текста
+check('window.fmtHealthLog' in _app_js_now and 'log-health' in _app_js_now and 'Здоровье' in _app_js_now,
+      'health-лог: парсер строки бота в чипы (uptime/ping/errors/warn/dc/webhook/lag/alerts)')
+check('log-chip' in css and 'log-health' in css and 'ac-grad' in css,
+      'health-лог: стили чипов в дизайн-системе')
+_kn = open(os.path.join(ROOT, 'web', 'templates', 'konsol.html'), encoding='utf-8').read()
+_oc = open(os.path.join(ROOT, 'web', 'templates', 'ops_center.html'), encoding='utf-8').read()
+check('fmtHealthLog' in _kn and 'kn-chips' in _kn, 'консоль рендерит HEALTH-строки чипами')
+check('fmtHealthLog' in _oc and 'log-chips' in _oc, 'оперативный центр рендерит HEALTH-строки чипами')
+_st = open(os.path.join(ROOT, 'web', 'routes', 'status.py'), encoding='utf-8').read()
+check('HEALTH | uptime' in _st and '_demo_lines' in _st,
+      'демо-консоль отдаёт реалистичные строки с HEALTH-логом')
 # Заявки в команду: чистый редизайн на дизайн-системе
 sa = open(os.path.join(ROOT, 'web', 'templates', 'staff_apps.html'), encoding='utf-8').read()
 check('sa-card' in sa and 'sa-tabs' in sa and 'modal-overlay' in sa and 'modal-box' in sa,
@@ -1155,8 +1167,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=59' in base and 'style.css?v=116' in base,
-      'версии ассетов (116/59)')
+check('app.js?v=60' in base and 'style.css?v=116' in base,
+      'версии ассетов (116/60)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,

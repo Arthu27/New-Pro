@@ -200,6 +200,48 @@
 
   /* Тихие обновления: страницы сравнивают сигнатуру данных и пропускают
      перерисовку, когда данные не изменились (никаких миганий «как F5») */
+  /* Структурированный HEALTH-лог бота:
+     «HEALTH | uptime … | guilds 1 | ping 159ms | errors 0 (hour 0, crit 0, …) |
+      warn 0 | dc 2 | webhook 0/0 | lag max 0.0s | alerts 0»
+     → строка чипов с иконками и цветами вместо сырого текста. */
+  window.fmtHealthLog = function (msg) {
+    var parts = String(msg || '').split('|').map(function (s) { return s.trim(); });
+    if (parts[0] !== 'HEALTH') return null;
+    function escH(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+    function pluralH(n, one, few, many) {
+      var m10 = n % 10, m100 = n % 100;
+      if (m100 >= 11 && m100 <= 19) return many;
+      if (m10 === 1) return one;
+      if (m10 >= 2 && m10 <= 4) return few;
+      return many;
+    }
+    function chip(icon, text, tone) {
+      return '<span class="log-chip' + (tone ? ' ' + tone : '') + '"><i class="fas ' + icon + '"></i>' + escH(text) + '</span>';
+    }
+    var out = '<span class="log-health"><i class="fas fa-heart-pulse"></i> Здоровье</span>';
+    for (var i = 1; i < parts.length; i++) {
+      var p = parts[i], m;
+      if ((m = p.match(/^uptime (.+)$/))) out += chip('fa-clock', m[1]);
+      else if ((m = p.match(/^guilds (\d+)$/))) out += chip('fa-server', m[1] + ' ' + pluralH(+m[1], 'сервер', 'сервера', 'серверов'));
+      else if ((m = p.match(/^ping (\d+(?:\.\d+)?)ms$/))) {
+        var v = +m[1];
+        out += chip('fa-signal', m[1] + ' мс', v < 120 ? 'ok' : v < 300 ? 'warn' : 'err');
+      }
+      else if ((m = p.match(/^errors (\d+) \(hour (\d+), crit (\d+), filtered (\d+), repeats (\d+)\)$/))) {
+        var n = +m[1];
+        out += chip('fa-bug', n + ' ' + pluralH(n, 'ошибка', 'ошибки', 'ошибок'), n > 0 ? 'err' : 'ok');
+        out += chip('fa-filter', 'час ' + m[2] + ' · крит ' + m[3] + ' · фильтр ' + m[4] + ' · повторы ' + m[5], n > 0 ? 'err' : '');
+      }
+      else if ((m = p.match(/^warn (\d+)$/))) out += chip('fa-triangle-exclamation', m[1] + ' ' + pluralH(+m[1], 'варн', 'варна', 'варнов'), +m[1] > 0 ? 'warn' : '');
+      else if ((m = p.match(/^dc (\d+)$/))) out += chip('fa-plug', m[1] + ' dc', +m[1] > 0 ? 'warn' : '');
+      else if ((m = p.match(/^webhook (\d+)\/(\d+)$/))) out += chip('fa-link', 'вебхуки ' + m[1] + '/' + m[2], +m[1] > 0 ? 'warn' : '');
+      else if ((m = p.match(/^lag max ([\d.]+)s$/))) out += chip('fa-gauge-high', 'лаг макс ' + m[1] + 'с', +m[1] > 1 ? 'warn' : '');
+      else if ((m = p.match(/^alerts (\d+)$/))) out += chip('fa-bell', m[1] + ' ' + pluralH(+m[1], 'алерт', 'алерта', 'алертов'), +m[1] > 0 ? 'err' : 'ok');
+      else out += chip('fa-circle-info', p);
+    }
+    return out;
+  };
+
   window.silentGuard = function (key, sig) {
     if (typeof sig === 'undefined' || sig === null) return false;
     if (!window.__silentFp) window.__silentFp = {};

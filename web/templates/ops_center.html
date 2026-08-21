@@ -229,9 +229,12 @@
         var color = LVL_TONES[lvl] || 'var(--text-2)';
         var t = '';
         try { t = new Date((it.ts || 0) * 1000).toLocaleTimeString('ru-RU'); } catch (e) { t = ''; }
+        var health = window.fmtHealthLog && window.fmtHealthLog(it.msg);
+        var msgPart = health
+          ? '<span class="log-chips">' + health + '</span>'
+          : '<span style="color:var(--text-2)">' + esc(it.msg || '') + '</span>';
         return '<div><span style="color:var(--text-3)">' + esc(t) + '</span> ' +
-          '<b style="color:' + color + '">' + esc(it.level || 'INFO') + '</b> ' +
-          '<span style="color:var(--text-2)">' + esc(it.msg || '') + '</span></div>';
+          '<b style="color:' + color + '">' + esc(it.level || 'INFO') + '</b> ' + msgPart + '</div>';
       });
       if (first) box.innerHTML = lines.join('') || '<div class="empty"><i class="fas fa-terminal"></i><span>Логов пока нет</span></div>';
       else if (lines.length) {

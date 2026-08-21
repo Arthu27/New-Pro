@@ -215,9 +215,34 @@ def register(ctx):
     def api_live_logs():
         try:
             from logger import get_live_logs
+            import web.app as _app
             after = request.args.get('after', 0, type=int) or 0
             items = get_live_logs(after_id=after, limit=250)
             last_id = items[-1]['id'] if items else after
+            # демо: живая консоль с реалистичными строками (включая HEALTH-лог бота)
+            if _app._demo_mode():
+                import time as _t
+                _now = int(_t.time())
+                _demo_lines = [
+                    (_now - 58, 'INFO', 'errors',
+                     'HEALTH | uptime 2ч 40м 4с | guilds 1 | ping 159ms | errors 0 (hour 0, crit 0, filtered 0, repeats 0) | warn 0 | dc 2 | webhook 0/0 | lag max 0.0s | alerts 0'),
+                    (_now - 50, 'INFO', 'aether',
+                     'Команды синхронизированы · слэш-команд: 84'),
+                    (_now - 41, 'WARNING', 'music',
+                     'Трек пропущен: источник вернул пустой аудиопоток'),
+                    (_now - 25, 'INFO', 'moderation',
+                     'Варн выдан участнику toxicguy (причина: спам)'),
+                    (_now - 11, 'ERROR', 'api',
+                     'Discord API 429 (rate limit): повтор через 3.2s'),
+                ]
+                demo_items = [
+                    {'id': _now - _i, 'ts': _now - _i, 'level': _lvl, 'name': _nm, 'msg': _msg}
+                    for _i, (_ts, _lvl, _nm, _msg) in enumerate(_demo_lines)
+                ]
+                items = demo_items + items
+                items.sort(key=lambda x: x.get('id', 0))
+                last_id = items[-1]['id'] if items else after
+            items = [i for i in items if i.get('id', 0) > after]
             return jsonify({'ok': True, 'items': items, 'last_id': last_id})
         except Exception as e:
             return jsonify({'ok': False, 'error': str(e)}), 500

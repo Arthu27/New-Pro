@@ -96,11 +96,15 @@ function passFilter(l){
 }
 
 function lineHtml(l){
+  const health = window.fmtHealthLog && window.fmtHealthLog(l.msg);
+  const msgHtml = health
+    ? `<span class="kn-chips">${health}</span>`
+    : `<span class="kn-msg">${esc(l.msg)}</span>`;
   return `<div class="kn-line ${esc(l.level)}">` +
     `<span class="kn-time">${fmtT(l.ts)}</span>` +
     `<span class="kn-lvl ${esc(l.level)}">${esc(l.level)}</span>` +
     `<span class="kn-name">${esc(l.name)}</span>` +
-    `<span class="kn-msg">${esc(l.msg)}</span></div>`;
+    msgHtml + `</div>`;
 }
 
 function renderAll(){
