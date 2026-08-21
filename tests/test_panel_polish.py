@@ -1102,8 +1102,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=56' in base and 'style.css?v=114' in base,
-      'версии ассетов (114/56)')
+check('app.js?v=57' in base and 'style.css?v=114' in base,
+      'версии ассетов (114/57)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,

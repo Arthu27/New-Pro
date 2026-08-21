@@ -78,13 +78,24 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
 .feed-item-time{flex:0 0 auto}
 </style>
 
+<script>
+/* Порядок виджетов: сброс устаревшего ключа (поломанная раскладка) до загрузки app.js */
+(function () {
+  'use strict';
+  try {
+    var bad = localStorage.getItem('cc_widgets_order');
+    if (bad) { localStorage.removeItem('cc_widgets_order'); }
+  } catch (e) {}
+  document.querySelectorAll('[data-widget]').forEach(function (el) { el.style.order = ''; });
+})();
+</script>
 <div class="page-hero" id="ccHero">
   <span class="aura" aria-hidden="true"></span>
   <div class="cc-mesh" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="cc-grid" aria-hidden="true"></div>
   <button type="button" class="btn btn-icon btn-ghost" id="ccSettings" style="position:absolute;top:14px;right:16px;z-index:5;cursor:pointer" title="Настроить виджеты главной" aria-label="Настроить виджеты главной"><i class="fas fa-sliders"></i></button>
   <div class="page-hero-content">
-    <div class="page-hero-greeting" id="heroGreeting"><span class="dot"></span> Панель управления</div>
+    <div class="page-hero-greeting" id="heroGreeting"><span class="dot"></span> Панель управления · сборка 57</div>
     <h1 id="heroTitle">Добро пожаловать</h1>
     <p id="heroWelcomeMsg">Логи, демки, тикеты и быстрые действия — в одном месте. Управляйте сервером без лишних кликов.</p>
     <div class="cc-date" id="ccDate"></div>

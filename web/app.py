@@ -317,7 +317,7 @@ def after_request (response ):
     elif request .path .startswith ('/api/')or response .is_json :
         response .headers ['Cache-Control']='no-store'
     else :
-        response .headers ['Cache-Control']='no-cache, must-revalidate'
+        response .headers ['Cache-Control']='no-cache, no-store, must-revalidate'
 
         # Базовые защитные заголовки на каждый ответ
     response .headers ['X-Content-Type-Options']='nosniff'
