@@ -129,5 +129,23 @@ for asset in ('/static/app.js', '/static/style.css', '/static/vendor/fontawesome
     r = client.get(asset)
     check(r.status_code == 200, f'{asset} → {r.status_code}')
 
+print('== 6. Ни одна страница не показывает undefined/None ==')
+_bad = []
+for path in sorted(menu_paths | set(guests)):
+    r = client.get(path)
+    if r.status_code != 200:
+        continue
+    body = r.get_data(as_text=True)
+    # видимый текст: выкидываем скрипты/стили/svg
+    visible = re.sub(r'<script[^>]*>.*?</script>', '', body, flags=re.S)
+    visible = re.sub(r'<style[^>]*>.*?</style>', '', visible, flags=re.S)
+    visible = re.sub(r'<svg[^>]*>.*?</svg>', '', visible, flags=re.S)
+    visible = re.sub(r'<[^>]+>', ' ', visible)
+    if re.search(r'\bundefined\b', visible, re.I):
+        _bad.append(f'{path}: undefined')
+    if re.search(r'\bNone\b', visible):
+        _bad.append(f'{path}: None')
+check(not _bad, f'все страницы чисты от undefined/None ({_bad[:5]})')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

@@ -103,7 +103,11 @@ def register(ctx):
     def api_leveling (guild_id ):
         f =f'data/leveling_{guild_id}.json'
         if request .method =='GET':
-            if not os .path .exists (f ):return jsonify ({'enabled':False ,'xp_min':15 ,'xp_max':25 })
+            if not os .path .exists (f ):
+                # дефолт = контракт страницы leveling.html: все поля, что читает фронт
+                return jsonify ({'enabled':False ,'notify':False ,'notify_channel':None ,
+                                 'xp_min':15 ,'xp_max':25 ,'cooldown':60 ,
+                                 'level_message':'{user} достиг уровня {level}!'})
             with open (f )as fp :return jsonify (json .load (fp ))
         data =request .get_json (silent =True )or {}
         with open (f ,'w')as fp :json .dump (data ,fp ,indent =2 )
