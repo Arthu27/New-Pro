@@ -48,5 +48,9 @@ os.environ['DB_PATH'] = os.path.join(_TMP, 'data', 'bot.db')  # до импор�
 | `test_a11y_audit.py` | доступность (alt/labels/имена кнопок), rel=noopener, баланс тегов рендера |
 | `test_web_hygiene.py` | CSP без CDN, защитные заголовки, локальный sw.js, бюджеты ассетов |
 | `test_ws_health.py` | живой WebSocket: handshake, ping/pong, 1008, broadcast |
+| `test_icon_audit.py` | битые иконки FA, эмодзи-сторож, префиксы стилей, иконки меню |
+| `test_http_semantics.py` | HEAD/405/404, MIME-типы, фазз query, битый JSON, бюджет рендера |
+| `test_menu_audit.py` | меню→роуты Flask, уникальность путей, мёртвые шаблоны, конкурентность |
+| `test_py_compile.py` | compileall всех .py, скан секретов/токенов, мёртвые route-модули |
 
 Любая новая фича = логика-ядро чистое + тест по контракту выше.

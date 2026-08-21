@@ -569,7 +569,7 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
     return '<article class="ann-card' + (featured ? ' is-featured' : '') + '" style="--ann-index:' + index + '" data-status="' + status + '" data-ann-index="' + index + '" data-ann-id="' + esc(a.id || '') + '">' +
       '<header class="ann-header">' +
         '<span class="ann-icon" aria-hidden="true"><i class="fas fa-bullhorn"></i></span>' +
-        '<div class="ann-head-copy">' + (featured ? '<span class="ann-featured-label"><i class="fas fa-sparkles"></i> Последнее объявление</span>' : '') + '<div class="ann-title">' + esc(a.title || 'Без заголовка') + '</div>' +
+        '<div class="ann-head-copy">' + (featured ? '<span class="ann-featured-label"><i class="fas fa-star"></i> Последнее объявление</span>' : '') + '<div class="ann-title">' + esc(a.title || 'Без заголовка') + '</div>' +
           '<div class="ann-meta"><span><i class="fas fa-user"></i> ' + esc(a.from || 'Система') + '</span><span>·</span>' +
           '<time datetime="' + esc(a.created_at || '') + '" title="' + esc(exactDate(a.created_at)) + '"><i class="fas fa-clock"></i> ' + esc(relativeDate(a.created_at)) + '</time></div></div>' +
         '<span class="ann-status-mark" aria-hidden="true"></span>' +
