@@ -316,15 +316,23 @@ def after_request (response ):
     else :
         response .headers ['Cache-Control']='no-cache, must-revalidate'
 
+        # Базовые защитные заголовки на каждый ответ
+    response .headers ['X-Content-Type-Options']='nosniff'
+    if not response .headers .get ('X-Frame-Options'):
+        response .headers ['X-Frame-Options']='SAMEORIGIN'
+    response .headers ['Referrer-Policy']='strict-origin-when-cross-origin'
+
         # CSP: Cloudflare или прокси иногда добавляют слишком строгий CSP; своим
         # заголовком разрешаем 'unsafe-eval' и 'unsafe-inline'.
         # Это админ-панель (доверенные пользователи), поэтому inline JS/eval допустим.
+        # Все скрипты/стили/шрифты вендорены локально → 'self', внешние домены
+        # остались только для Discord-аватарок (img-src https:) и API/WS (connect-src).
     if not response .headers .get ('Content-Security-Policy'):
         csp =(
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
-        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "font-src 'self' data:; "
         "img-src 'self' data: https:; "
         "connect-src 'self' https: wss: ws: http:; "
         "frame-ancestors 'self'"

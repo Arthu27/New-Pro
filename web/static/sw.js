@@ -1,10 +1,14 @@
 // Aether Panel Service Worker (Light Edition)
-const CACHE_NAME = 'Aether-light-v3';
+const CACHE_NAME = 'Aether-light-v4';
 const STATIC_ASSETS = [
   '/static/style.css',
   '/static/app.js',
   '/static/pickers.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+  '/static/api-guard.js',
+  '/static/websocket-client.js',
+  '/static/vendor/fontawesome/css/all.min.css',
+  '/static/vendor/fonts/fonts.css',
+  '/static/brand/emblem-dragon.png'
 ];
 
 self.addEventListener('install', event => {

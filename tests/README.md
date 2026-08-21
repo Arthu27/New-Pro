@@ -41,5 +41,12 @@ os.environ['DB_PATH'] = os.path.join(_TMP, 'data', 'bot.db')  # до импор�
 | `test_panel_module_mode.py` | гашение пунктов меню в MOD_ONLY, эмодзи-сторож шаблонов |
 | `test_voice_stats.py` | единый источник голосовой статистики, RU-единицы |
 | `test_routes_layout.py` | фасад роутов худой, доменные модули на месте |
+| `test_link_audit.py` | связи: fetch-URL vs роуты, inline-хендлеры vs функции, href/form/id |
+| `test_pages_http.py` | все страницы меню → 200 владельцу, GET-API не 500, чистота от undefined |
+| `test_css_audit.py` | CSS-баланс, переменные, @keyframes, палитра, чёрная гостевая зона |
+| `test_contract_audit.py` | контракты GET-API (поля фронта), POST-smoke, целостность data/ |
+| `test_a11y_audit.py` | доступность (alt/labels/имена кнопок), rel=noopener, баланс тегов рендера |
+| `test_web_hygiene.py` | CSP без CDN, защитные заголовки, локальный sw.js, бюджеты ассетов |
+| `test_ws_health.py` | живой WebSocket: handshake, ping/pong, 1008, broadcast |
 
 Любая новая фича = логика-ядро чистое + тест по контракту выше.
