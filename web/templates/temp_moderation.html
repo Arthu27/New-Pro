@@ -163,6 +163,11 @@
       return r.json();
     }).then(function (data) {
       if (!data) return;
+      /* данные не изменились — списки не пересобираем (тихие обновления) */
+      var fp = [ (data.muts || []).length, (data.bans || []).length,
+                 (data.kicks || []).length, (data.scheduled || []).length,
+                 ((data.muts || [])[0] || {}).expires_at || '' ].join('|');
+      if (window.silentGuard && window.silentGuard('temp-mod', fp)) return;
       currentData = data;
       var vis = (data.muts || []).length + (data.bans || []).length + (data.kicks || []).length + (data.scheduled || []).length;
       var flt = (filteredItems(data.muts || []).length + filteredItems(data.bans || []).length +

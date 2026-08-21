@@ -132,6 +132,9 @@ function load() {
   fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
     var s = d.stats;
+    /* данные не изменились — KPI не пересобираем */
+    var fp = [s.shifts_total, s.minutes_week, s.people, s.tz_offset].join('|');
+    if (window.silentGuard && window.silentGuard('staff-shifts', fp)) return;
     document.getElementById('ssKpis').innerHTML =
       kpi('fa-calendar-week', s.shifts_total, 'смен в расписании') +
       kpi('fa-clock', (s.minutes_week / 60).toFixed(1).replace('.0', '') + ' ч', 'дежурства в неделю') +

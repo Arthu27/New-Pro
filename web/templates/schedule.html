@@ -115,6 +115,17 @@ async function loadState(){
       sel.dataset.filled = '1';
     }
     const list = document.getElementById('items-list');
+    /* тихое обновление: каркас тот же — обновляем только «Следующая отправка» */
+    const fp = d.items.map(it => it.id + ':' + it.enabled + ':' + it.time + ':' + it.content).join('|');
+    if (window.silentGuard && window.silentGuard('schedule', fp)) {
+      const nexts = list.querySelectorAll('.sc-next b');
+      d.items.forEach(function (it, i) {
+        if (nexts[i] && nexts[i].textContent !== String(it.next || '')) {
+          nexts[i].textContent = it.next || '';
+        }
+      });
+      return;
+    }
     document.getElementById('list-count').textContent = d.items.length ? ('всего: ' + d.items.length) : '';
     if(!d.items.length){
       list.innerHTML = '<div style="opacity:.55;font-size:13px">Пока пусто — создайте первый анонс выше</div>';

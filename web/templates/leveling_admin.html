@@ -240,6 +240,8 @@
     }).catch(function () {});
     // Stats + leaderboard
     fetch('/api/leveling/stats').then(r => r.json()).then(function (s) {
+      var fp = String(JSON.stringify(s || null) || '').slice(0, 600);
+      if (window.silentGuard && window.silentGuard('leveling-admin', fp)) return;
       if (!s || s.error || typeof s.total_users === 'undefined') {
         document.getElementById('leaderboardList').innerHTML = '<p style="text-align:center;">Модуль недоступен — бот офлайн?</p>';
         return;

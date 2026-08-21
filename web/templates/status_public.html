@@ -192,7 +192,9 @@ async function tick(){
       ? `всё работает · v${d.version} · в кэше ${d.users_cached} юзеров`
       : 'бот не отвечает — уже чиним';
     const [w, cls] = pingWord(d.latency_ms);
-    $('m-ping').innerHTML = `${d.latency_ms} <small>мс${w ? ' · ' + w : ''}</small>`;
+    var pingEl = $('m-ping');
+    pingEl.textContent = (d.latency_ms != null ? d.latency_ms : '—');
+    pingEl.setAttribute('data-unit', w ? ('мс · ' + w) : 'мс');
     $('m-ping').closest('.st-m').classList.toggle('warn', cls === 'warn');
     $('m-uptime').textContent = d.uptime_human;
     $('m-guilds').textContent = d.guilds;

@@ -477,6 +477,12 @@ async function loadOverview(){
     const r = await fetch('/api/anticrash/overview');
     const d = await r.json();
     if(!d.ok){ heroOffline(d.error); return; }
+    /* данные не изменились — обзор не перерисовываем (тихие обновления) */
+    const fp = String(JSON.stringify({
+      daily7: d.daily7, last_errors: d.last_errors, latency_ms: d.latency_ms,
+      breakers: d.breakers, tops: d.tops, metrics: d.metrics
+    }) || '');
+    if (window.silentGuard && window.silentGuard('anticrash', fp)) return;
     renderHero(d); renderMetrics(d); renderChart(d);
     renderBreaker(d); renderTops(d); renderErrors(d);
     $('hero-updated').textContent = 'обновлено ' + new Date().toLocaleTimeString('ru-RU');
