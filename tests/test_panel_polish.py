@@ -1118,8 +1118,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=58' in base and 'style.css?v=115' in base,
-      'версии ассетов (115/58)')
+check('app.js?v=58' in base and 'style.css?v=116' in base,
+      'версии ассетов (116/58)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,
@@ -1240,24 +1240,24 @@ check('.lg-dragon-stage' in lg3 and 'top: 0; left: 50%' in lg3.split('.lg-dragon
       'login: медальон дракона парит над кромкой карточки (не внутри, не сверху страницей)')
 check('body::after' in lg3 and 'feTurbulence' in lg3,
       'login: лёгкая плёнка-зерно для глубины фона (статичная, без нагрузки)')
-check('padding: 56px 32px 30px' in lg3,
+check('padding: 60px 38px 32px' in lg3,
       'login: контент карточки освобождает место под парящим медальоном')
-check('max-width: 430px' in lg3 and 'margin: auto' in lg3.split('.lg-stage {')[1][:260],
-      'login: компактная колонна, центрированная по вертикали')
+check('max-width: 470px' in lg3 and 'margin: auto' in lg3.split('.lg-stage {')[1][:260],
+      'login: просторная колонна формы, центрированная по вертикали')
 check('display: flex' in lg3.split('      body {')[1][:300] and 'min-height: 100vh' in lg3.split('      body {')[1][:300],
       'login: карточка по центру экрана, а не прижата к верху (flex + 100vh)')
-check('gap: 22px' in lg3.split('.tabs {')[1][:420] and 'border-bottom: 1px solid rgba(255, 255, 255, .07)' in lg3.split('.tabs {')[1][:420],
+check('gap: 26px' in lg3.split('.tabs {')[1][:420] and 'border-bottom: 1px solid rgba(255, 255, 255, .07)' in lg3.split('.tabs {')[1][:420],
       'login: табы — чистые подчёркнутые (Linear-стиль), без коробок-пилюль')
 check('.tab-btn.active { color: #c7d2fe; }' in lg3,
       'login: активная вкладка выделена цветом, а не заливкой')
-check('height: 48px' in lg3 and 'border-radius: 12px' in lg3,
-      'login: поля выше и мягче (48px, радиус 12)')
-check('height: 50px' in lg3.split('.auth-btn {')[1][:300],
-      'login: кнопка входа крупная и ровная (50px)')
+check('height: 52px' in lg3 and 'border-radius: 13px' in lg3,
+      'login: поля выше и мягче (52px, радиус 13)')
+check('height: 54px' in lg3.split('.auth-btn {')[1][:300],
+      'login: кнопка входа крупная и ровная (54px)')
 check('border-radius: 24px' in lg3.split('.auth-card {')[1][:520],
       'login: карточка с премиальным радиусом 24')
-check('font-size: 23px' in lg3.split('.auth-side h1 {')[1][:300],
-      'login: заголовок крупнее (23px)')
+check('font-size: 25px' in lg3.split('.auth-side h1 {')[1][:300],
+      'login: заголовок крупнее (25px)')
 # ═══ 37з. Login: FPS — стекло и аврора без GPU-блюра ════════════════════════
 print('== login: FPS ==')
 check('backdrop-filter' not in lg3,
