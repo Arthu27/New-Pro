@@ -110,12 +110,18 @@
     }
   }
 
+  var _mhFp = '';
   async function load() {
     try {
       var r = await fetch('/api/mod-history');
       var d = await r.json();
-      allCases = Array.isArray(d) ? d : [];
-    } catch (e) { allCases = []; }
+      var raw = Array.isArray(d) ? d : [];
+      /* данные не изменились — не перерисовываем (без мерцания) */
+      var fp = raw.length + '|' + (raw.length ? JSON.stringify(raw[0]).slice(0, 160) : '');
+      if (fp === _mhFp) return;
+      _mhFp = fp;
+      allCases = raw;
+    } catch (e) { return; }
     window.renderSafe(render);
     if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('mh-stamp'));
   }

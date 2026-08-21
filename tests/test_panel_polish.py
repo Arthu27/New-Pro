@@ -131,6 +131,7 @@ check(rendered == 5, 'все контрольные страницы отрен�
 # ═══ 4. Дашборд и логин: новая светлая подача ════════════════════════════
 print('== дашборд и логин ==')
 dash = open(os.path.join(ROOT, 'web', 'templates', 'dashboard.html'), encoding='utf-8').read()
+_app_py = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
 check('class="page-hero"' in dash and 'class="kpi-row"' in dash,
       'дашборд использует компоненты дизайн-системы')
 check('.stat-card-big' not in dash and '--ac-glow' not in dash,
@@ -143,6 +144,13 @@ check('function isToday' in dash and 'isToday(l.timestamp)' in dash,
       'модерация сегодня: данные фильтруются по сегодняшней дате (timestamp, не объект)')
 check('maRenderDelta' in dash and 'logFingerprint' in dash and 'oldFp === newFp' in dash,
       'модерация сегодня: дельта-обновление — без перерисовки, только новые строки/цифры')
+check('.ma-row:last-child' in dash and 'border-bottom:1px dashed' in dash,
+      'модерация сегодня: строки разделены пунктиром — не слипаются')
+check('function pulseRow' in dash and 'pulse-item' in dash and "href=\"' + esc(it.link" in dash,
+      'пульс панели: кликабельные события со ссылками и дельта-обновлением')
+check('def _human_panel_action' in _app_py and 'Дали роль' in _app_py
+      and 'Изменили видимость каналов' in _app_py,
+      'лента активности: человекочитаемые названия вместо сырых /api/… путей')
 login = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
 check('auth-card' in login and 'data-theme="dark"' in login,
       'логин — тёмная карточка (чёрное издание)')

@@ -78,7 +78,7 @@ def register(ctx):
         except Exception as _ex:
             _log.debug("api_backups_create(): подавлено: %s", _ex)
         info ['size_h']=_bk .format_size (info ['size'])
-        _fire_panel_notification ('backup','💾 Бэкап создан',
+        _fire_panel_notification ('backup','Бэкап создан',
         f"{session.get('username')}: {info['name']} ({info['size_h']})")
         return jsonify ({'success':True ,'item':info ,'removed':len (removed )})
 

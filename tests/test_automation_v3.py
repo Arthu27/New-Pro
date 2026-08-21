@@ -92,8 +92,17 @@ check('digest_embed_dict(summary, days, guild.name' in cog_src, 'ког зовё
 # ═══ 2. Панель ════════════════════════════════════════════════════════════
 print('== 3. Панель: окружение ==')
 os.makedirs('data', exist_ok=True)
+# Панель агрегирует от реального «сейчас» (datetime.now()), поэтому фикстура
+# окна должна быть от реального сейчас — фиксированный NOW теста (16.08) с
+# течением времени выпадал бы из 7-дневного окна (флейк на границе суток).
+events_panel = []
+for back, cat, act, mod in ((0, 'warn', 'warn', 'Arthur'), (0, 'warn', 'warn', 'Arthur'),
+                            (1, 'mod', 'ban', 'moder'), (2, 'ticket', 'close', 'moder')):
+    ts = datetime.now(timezone.utc) - timedelta(days=back)
+    events_panel.append({'category': cat, 'action': act, 'mod_name': mod,
+                         'timestamp': ts.isoformat()})
 with open('data/audit_log.json', 'w', encoding='utf-8') as f:
-    json.dump({'777': events}, f, ensure_ascii=False)
+    json.dump({'777': events_panel}, f, ensure_ascii=False)
 
 appmod = importlib.import_module('web.app')
 app = appmod.app

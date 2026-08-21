@@ -11,9 +11,14 @@
 .ma-sort:hover{background:var(--ac-soft,color-mix(in srgb, var(--ac) 12%, transparent));color:var(--text)}
 .ma-sort.on{color:var(--ac)}
 .ma-sort i{font-size:10px;opacity:.75}
-.ma-row{padding:9px 12px;border-radius:12px;margin:2px 0}
+.ma-row{padding:9px 12px;border-radius:12px;margin:2px 0;border-bottom:1px dashed var(--line-2,color-mix(in srgb, var(--text) 8%, transparent))}
+.ma-row:last-child{border-bottom:none}
 .ma-row:hover{background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent))}
 .ma-act{display:flex;align-items:center;gap:11px;min-width:0}
+.ma-who{display:flex;align-items:center;gap:9px;min-width:0}
+.ma-mod{font-size:12px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ma-ava{width:27px;height:27px;border-radius:50%;background:var(--ac-soft,color-mix(in srgb, var(--ac) 14%, transparent));color:var(--ac);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ma-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;color:var(--text);font-weight:600}
 .ma-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
 .ma-ico.err{color:var(--err,#dc2626);background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.28)}
 .ma-ico.warn{color:#f0cd7a;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3)}
@@ -23,12 +28,6 @@
 .ma-act-copy{min-width:0}
 .ma-act-copy b{display:block;font-size:12.5px;color:var(--text);font-weight:700}
 .ma-act-copy small{display:block;font-size:11px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ma-act-copy small.dim{opacity:.65}
-.ma-who{display:flex;align-items:center;gap:9px;min-width:0}
-.ma-ava{width:27px;height:27px;border-radius:50%;background:var(--ac-soft,color-mix(in srgb, var(--ac) 14%, transparent));color:var(--ac);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.ma-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;color:var(--text);font-weight:600}
-.ma-mod{font-size:12px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ma-mod i{color:var(--ac);font-size:10.5px;margin-right:5px;opacity:.85}
 .ma-time{font-size:11.5px;color:var(--text-3);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ma-rows{max-height:430px;overflow:auto;overscroll-behavior:contain}
 .ma-empty{display:flex;gap:13px;align-items:center;padding:20px 14px;color:var(--text-3)}
@@ -39,6 +38,13 @@
 .kpi-value.pulse{animation:maPulse .5s ease}
 @media (prefers-reduced-motion: reduce){.kpi-value.pulse{animation:none}}
 @media(max-width:760px){.ma-head,.ma-row{grid-template-columns:1fr auto;gap:8px}.ma-mod,.ma-sort[data-k="mod"]{display:none}}
+/* ── Пульс панели: кликабельная лента с дельта-обновлением ── */
+.pulse-list{display:flex;flex-direction:column}
+a.pulse-item{text-decoration:none;color:inherit}
+a.pulse-item:hover .feed-item-title{color:var(--ac)}
+.feed-item-copy{min-width:0;flex:1;overflow:hidden}
+.feed-item-sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed-item-time{flex:0 0 auto}
 </style>
 
 <div class="page-hero" id="ccHero">
@@ -878,26 +884,55 @@
     if (diff < 86400) return Math.floor(diff / 3600) + ' ч назад';
     return Math.floor(diff / 86400) + ' дн назад';
   }
+  var pulseFps = '';
+
+  function pulseRow(it) {
+    var tone = PULSE_TONES[it.type] || ['fa-circle', 'neutral'];
+    var icon = /^fa-/.test(it.icon || '') ? it.icon : tone[0];
+    var fp = (it.ts || '') + '|' + (it.title || '') + '|' + (it.user || '');
+    return '<a class="feed-item pulse-item" href="' + esc(it.link || '/panel-logs') + '" data-fp="' + esc(fp) + '">' +
+      '<div class="feed-item-icon"><i class="fas ' + esc(icon) + '"></i></div>' +
+      '<div class="feed-item-copy"><div class="feed-item-title">' + esc(it.title || '') +
+      (it.user ? ' <span class="muted" style="font-weight:500">— ' + esc(it.user) + '</span>' : '') + '</div>' +
+      (it.detail ? '<div class="feed-item-sub">' + esc(it.detail) + '</div>' : '') + '</div>' +
+      '<span class="feed-item-time">' + esc(timeAgo(it.ts)) + '</span></a>';
+  }
+
   async function loadPulse() {
     var box = $('pulseStrip');
     if (!box) return;
     try {
       var d = await fetch('/api/activity-feed').then(function (r) { return r.json(); });
       var items = Array.isArray(d) ? d : (d.items || []);
-      if (!items.length) {
-        box.innerHTML = '<div class="empty"><i class="fas fa-wave-square"></i><span>Событий пока нет</span></div>';
+      var top = items.slice(0, 5);
+      if (!top.length) {
+        if (!box.querySelector('.pulse-empty')) {
+          box.innerHTML = '<div class="empty pulse-empty"><i class="fas fa-wave-square"></i><span>Событий пока нет</span></div>';
+        }
         return;
       }
-      box.innerHTML = items.slice(0, 5).map(function (it) {
-        var tone = PULSE_TONES[it.type] || ['fa-circle', 'neutral'];
-        var icon = /^fa-/.test(it.icon || '') ? it.icon : tone[0];
-        return '<div class="feed-item" style="border-bottom:1px solid var(--line);padding:7px 0">' +
-          '<div class="feed-item-icon" style="width:28px;height:28px;flex-basis:28px;font-size:11px"><i class="fas ' + esc(icon) + '"></i></div>' +
-          '<div style="min-width:0;flex:1"><div class="feed-item-title" style="font-size:var(--fs-sm)">' + esc(it.title || '') +
-          (it.user ? ' <span class="muted" style="font-weight:500">— ' + esc(it.user) + '</span>' : '') + '</div>' +
-          (it.detail ? '<div class="feed-item-sub" style="font-size:var(--fs-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(it.detail) + '</div>' : '') + '</div>' +
-          '<span class="feed-item-time" style="flex:0 0 auto">' + esc(timeAgo(it.ts)) + '</span></div>';
-      }).join('');
+      var sig = top.map(function (it) { return (it.ts || '') + '|' + (it.title || '') + '|' + (it.user || ''); }).join('\u0001');
+      if (sig === pulseFps) return;   // ничего нового — DOM не трогаем
+      pulseFps = sig;
+      var wrap = box.querySelector('.pulse-list');
+      if (!wrap) { box.innerHTML = '<div class="pulse-list">' + top.map(pulseRow).join('') + '</div>'; return; }
+      var existing = {};
+      Array.prototype.forEach.call(wrap.querySelectorAll('.pulse-item'), function (n) {
+        existing[n.getAttribute('data-fp')] = 1;
+      });
+      var fresh = top.filter(function (it) {
+        return !existing[(it.ts || '') + '|' + (it.title || '') + '|' + (it.user || '')];
+      });
+      if (!fresh.length) { wrap.innerHTML = top.map(pulseRow).join(''); return; }
+      var tmp = document.createElement('div');
+      tmp.innerHTML = fresh.map(pulseRow).join('');
+      var addedH = 0;
+      while (tmp.firstChild) {
+        wrap.insertBefore(tmp.firstChild, wrap.firstChild);
+        addedH += wrap.firstChild.offsetHeight || 0;
+      }
+      var kids = wrap.querySelectorAll('.pulse-item');
+      for (var i = 5; i < kids.length; i++) { wrap.removeChild(kids[i]); }
     } catch (e) { /* пульс опционален */ }
   }
 
@@ -1277,7 +1312,7 @@
   document.addEventListener('aether:live', function () { loadPulse(); });
   if (window.tiltCards) window.tiltCards(document, '.kpi, .stat-box, .cc-tile');
   if (window.setLiveRefresh) {
-    window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 10000);
+    window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 5000);
     window.setLiveRefresh(loadShifts, 30000);
     window.setLiveRefresh(loadPulse, 5000);
   } else {

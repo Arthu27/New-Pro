@@ -35,25 +35,27 @@ PANEL_LOGS_FILE = 'data/panel_logs.json'
 
 # event_key -> (ключ настройки-переключателя, подпись по-русски, иконка)
 EVENTS = {
-    'ticket_open': ('event_ticket_open', 'Новый тикет открыт', '🎫'),
-    'ticket_message': ('event_ticket_message', 'Новое сообщение в тикете', '💬'),
-    'ticket_close': ('event_ticket_close', 'Тикет закрыт', '🔒'),
-    'priority_change': ('event_priority_change', 'Изменение приоритета', '⚡'),
-    'assignment': ('event_assignment', 'Назначение тикета', '👤'),
-    'warn': ('event_warn', 'Выдано предупреждение', '⚠️'),
-    'mod_action': ('event_mod_action', 'Действие модерации', '🔨'),
-    'staff_apply': ('event_staff_apply', 'Новая заявка в персонал', '📝'),
-    'karma': ('event_karma', 'Карма: корректировка очков', '🎖'),
-    'birthdays': ('event_birthdays', 'Дни рождения: записи и настройки', '🎂'),
-    'social': ('event_social', 'События и поиски: уборка из панели', '🎉'),
-    'anime_daily': ('event_anime_daily', 'Аниме дня: настройки рассылки', '📺'),
-    'j2c': ('event_j2c', 'Комнаты J2C: настройки и уборка', '🔊'),
-    'gamification': ('event_gamification', 'Геймификация: корректировка очков', '🏆'),
-    'test': (None, 'Тестовое уведомление', '🧪'),
+    'ticket_open': ('event_ticket_open', 'Новый тикет открыт', 'fa-ticket'),
+    'ticket_message': ('event_ticket_message', 'Новое сообщение в тикете', 'fa-comment'),
+    'ticket_close': ('event_ticket_close', 'Тикет закрыт', 'fa-lock'),
+    'priority_change': ('event_priority_change', 'Изменение приоритета', 'fa-bolt'),
+    'assignment': ('event_assignment', 'Назначение тикета', 'fa-user'),
+    'warn': ('event_warn', 'Выдано предупреждение', 'fa-triangle-exclamation'),
+    'mod_action': ('event_mod_action', 'Действие модерации', 'fa-gavel'),
+    'staff_apply': ('event_staff_apply', 'Новая заявка в персонал', 'fa-file-signature'),
+    'karma': ('event_karma', 'Карма: корректировка очков', 'fa-medal'),
+    'birthdays': ('event_birthdays', 'Дни рождения: записи и настройки', 'fa-cake-candles'),
+    'social': ('event_social', 'События и поиски: уборка из панели', 'fa-champagne-glasses'),
+    'anime_daily': ('event_anime_daily', 'Аниме дня: настройки рассылки', 'fa-tv'),
+    'j2c': ('event_j2c', 'Комнаты J2C: настройки и уборка', 'fa-volume-high'),
+    'gamification': ('event_gamification', 'Геймификация: корректировка очков', 'fa-trophy'),
+    'backup': ('event_backup', 'Бэкап создан', 'fa-box-archive'),
+    'test': (None, 'Тестовое уведомление', 'fa-flask'),
 }
 
 # event_key -> страница панели, куда ведёт клик по уведомлению
 EVENT_LINKS = {
+    'backup': '/backups',
     'ticket_open': '/ticket-search',
     'ticket_message': '/ticket-search',
     'ticket_close': '/ticket-search',
@@ -139,7 +141,7 @@ def _append_json_list(path, item, limit=None):
 
 def _record_history(event, title, body, channels, link=''):
     """Записать событие в историю уведомлений (максимум 200 записей)."""
-    _, label, icon = EVENTS.get(event, (None, event, '🔔'))
+    _, label, icon = EVENTS.get(event, (None, event, 'fa-bell'))
     with _history_lock:
         _append_json_list(HISTORY_FILE, {
             'event': event,
@@ -236,7 +238,7 @@ def notify_event(event, title, body, link='', discord_sender=None):
     channels = {'web': None, 'discord': None, 'email': None}
     try:
         settings = load_settings()
-        flag, label, icon = EVENTS.get(event, (None, event, '🔔'))
+        flag, label, icon = EVENTS.get(event, (None, event, 'fa-bell'))
         if flag and not settings.get(flag):
             channels['skipped'] = 'Событие отключено в настройках'
             return channels

@@ -3279,6 +3279,47 @@ def api_notifications_poll ():
     return jsonify ({'notifications':notifs [:20 ],'unread':unread ,'ts':int (_t .time ()*1000 )})
 
 
+# ── Лента активности: человекочитаемые названия панель-действий ─────────────
+# Сырой «POST /api/guild/…/channels-visibility» превращается в
+# «Изменили видимость каналов» со ссылкой на нужный раздел.
+_ACTION_MAP = (
+    (r'/roles/create', 'Дали роль', 'fa-user-plus', '/roles'),
+    (r'/roles/\d+/delete', 'Удалили роль', 'fa-user-minus', '/roles'),
+    (r'channels-visibility', 'Изменили видимость каналов', 'fa-eye-slash', '/channels'),
+    (r'/lockdown', 'Локдаун каналов', 'fa-lock', '/lockdown'),
+    (r'/schedule', 'Расписание анонсов', 'fa-calendar-days', '/schedule'),
+    (r'/role-map', 'Настроили карту ролей', 'fa-map', '/role-permissions'),
+    (r'/role-permissions', 'Изменили права ролей', 'fa-key', '/role-permissions'),
+    (r'/warnings', 'Выдали предупреждение', 'fa-triangle-exclamation', '/warnings'),
+    (r'/temp-mod', 'Временные меры', 'fa-clock', '/temp-moderation'),
+    (r'/member-card', 'Открыли карточку участника', 'fa-id-card-clip', '/member-card'),
+    (r'/ai-mod', 'Настроили AI-модерацию', 'fa-brain', '/ai-moderation'),
+    (r'/autofilter', 'Настроили автофильтр', 'fa-filter', '/autofilter'),
+    (r'/automation', 'Изменили автоматизацию', 'fa-robot', '/automation'),
+    (r'/giveaway', 'Розыгрыши', 'fa-gift', '/giveaway'),
+    (r'/leveling', 'Настроили уровни', 'fa-ranking-star', '/leveling-admin'),
+    (r'/ticket', 'Тикеты', 'fa-ticket', '/ticket-search'),
+    (r'/backup', 'Бэкапы', 'fa-box-archive', '/backups'),
+    (r'/announcement', 'Объявления', 'fa-bullhorn', '/announcements'),
+    (r'/webhook', 'Вебхуки', 'fa-link', '/webhooks'),
+    (r'/ban|/kick|/mute', 'Мод-действие', 'fa-gavel', '/logs'),
+)
+
+
+def _human_panel_action(action):
+    """«POST /api/guild/123/roles/create» → ('Дали роль', 'fa-user-plus', '/roles')."""
+    a = str(action or '')
+    method = a.split(' ', 1)[0]
+    path = a.split(' ', 1)[1] if ' ' in a else a
+    for pat, title, icon, link in _ACTION_MAP:
+        if re.search(pat, path):
+            return title, icon, link
+    seg = path.rstrip('/').split('/')[-1].replace('-', ' ').replace('_', ' ').strip()
+    if seg:
+        return 'Изменили: ' + seg, 'fa-sliders', '/panel-logs'
+    return 'Действие в панели', 'fa-sliders', '/panel-logs'
+
+
 @app .route ('/api/activity-feed')
 @login_required
 def api_activity_feed ():
@@ -3312,7 +3353,7 @@ def api_activity_feed ():
                         ts = int(datetime.fromisoformat(e.get('timestamp','')).timestamp())
                     except Exception:
                         ts = 0
-                push('🔐', 'Вход в панель', e.get('username'), f"Роль: {e.get('role','?')}", ts, 'auth', link='/logs')
+                push('fa-lock', 'Вход в панель', e.get('username'), f"Роль: {e.get('role','?')}", ts, 'auth', link='/logs')
     except Exception as _ex:
         _log.debug("api_activity_feed(): подавлено: %s", _ex)
 
@@ -3330,15 +3371,15 @@ def api_activity_feed ():
                     except Exception:
                         ts = 0
                     act = (ev.get('action') or '').lower()
-                    icon = '🛡'
+                    icon = 'fa-shield-halved'
                     evtype = 'mod'
-                    if 'бан' in act or 'ban' in act: icon = '🔨'
-                    elif 'мут' in act or 'mute' in act: icon = '🔇'
-                    elif 'кик' in act or 'kick' in act: icon = '👢'
-                    elif 'роль' in act: icon = '🎭'
-                    elif 'канал' in act: icon = '📁'
-                    elif 'сообщ' in act or 'message' in act: icon = '💬'
-                    elif 'голос' in act or 'voice' in act: icon = '🎙'
+                    if 'бан' in act or 'ban' in act: icon = 'fa-gavel'
+                    elif 'мут' in act or 'mute' in act: icon = 'fa-comment-slash'
+                    elif 'кик' in act or 'kick' in act: icon = 'fa-door-open'
+                    elif 'роль' in act: icon = 'fa-masks-theater'
+                    elif 'канал' in act: icon = 'fa-folder-open'
+                    elif 'сообщ' in act or 'message' in act: icon = 'fa-comment'
+                    elif 'голос' in act or 'voice' in act: icon = 'fa-microphone'
                     push(icon, ev.get('action','Действие'), ev.get('user_name') or ev.get('mod_name'),
                          ev.get('reason',''), ts, evtype, link='/logs')
     except Exception as _ex:
@@ -3358,7 +3399,7 @@ def api_activity_feed ():
                             ts = int(datetime.fromisoformat(w.get('timestamp','')).timestamp())
                         except Exception:
                             ts = 0
-                        push('⚠️', 'Предупреждение', w.get('moderator') or w.get('mod') or uid,
+                        push('fa-triangle-exclamation', 'Предупреждение', w.get('moderator') or w.get('mod') or uid,
                              w.get('reason',''), ts, 'warn', link='/warnings')
     except Exception as _ex:
         _log.debug("api_activity_feed(): подавлено: %s", _ex)
@@ -3375,7 +3416,7 @@ def api_activity_feed ():
                         ts = int(datetime.fromisoformat(tk.get('created_at','')).timestamp())
                     except Exception:
                         ts = 0
-                    push('🎫', 'Тикет: '+ (tk.get('category') or 'общий'),
+                    push('fa-ticket', 'Тикет: '+ (tk.get('category') or 'общий'),
                          tk.get('user_name'), tk.get('description','')[:80], ts, 'ticket', link='/ticket-search')
     except Exception as _ex:
         _log.debug("api_activity_feed(): подавлено: %s", _ex)
@@ -3396,7 +3437,8 @@ def api_activity_feed ():
                         ts = int(datetime.fromisoformat(str(ts).replace('Z', '+00:00')).timestamp())
                     except Exception:
                         ts = 0
-                push('🖥', e.get('action','Действие'), e.get('username'), e.get('detail',''), ts, 'panel', link='/logs')
+                _title, _icon, _link = _human_panel_action(e.get('action', ''))
+                push(_icon, _title, e.get('username'), e.get('detail', ''), ts, 'panel', link=_link)
     except Exception as _ex:
         _log.debug("api_activity_feed(): подавлено: %s", _ex)
 
