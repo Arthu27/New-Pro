@@ -175,6 +175,19 @@ for _name, (_marker, _msg) in _silent_pages.items():
 _app_js_now = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
 check('window.silentGuard' in _app_js_now and 'W.silentGuard' in base,
       'общий помощник тихих обновлений в app.js и бут-шиме')
+# Заявки в команду: чистый редизайн на дизайн-системе
+sa = open(os.path.join(ROOT, 'web', 'templates', 'staff_apps.html'), encoding='utf-8').read()
+check('sa-card' in sa and 'sa-tabs' in sa and 'modal-overlay' in sa and 'modal-box' in sa,
+      'заявки: карточки, вкладки и модалка на дизайн-системе')
+check('&times;' not in sa and 'prompt(' not in sa and 'style="' not in sa,
+      'заявки: без сырого ×, без prompt(), без инлайн-стилей')
+check('sa-note' in sa and 'saNote' in sa and 'silentGuard' not in sa and '_appsFp' in sa,
+      'заявки: поле примечания вместо prompt и тихое обновление списка')
+check('sa-status' in sa and 'pending' in sa and 'approved' in sa,
+      'заявки: цветные статусные бейджи')
+_staff_seed = open(os.path.join(ROOT, 'scripts', 'seed_demo_panel.py'), encoding='utf-8').read()
+check('staff_apps' in _staff_seed and 'app-9001' in _staff_seed,
+      'заявки: демо-сид с анкетами для живой страницы')
 # Второй круг тихих обновлений: остальные живые комнаты
 for _name in ('music', 'proofs', 'tickets_ops', 'team_board', 'mod_report',
               'webhooks', 'users', 'reminders', 'shop', 'quiz', 'server_health', 'ops_center',

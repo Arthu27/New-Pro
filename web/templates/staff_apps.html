@@ -1,108 +1,113 @@
 {% extends "base.html" %}
-{% block title %}Заявки - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-user-shield" ></i> Заявки в администрацию{% endblock %}
+{% block title %}Заявки в команду — Панель Aether{% endblock %}
+{% block page_title %}Заявки в команду{% endblock %}
 {% block content %}
 
 <div class="page-head">
   <div class="page-head-copy">
     <div class="eyebrow">Сообщество <span class="sep">·</span> Набор команды</div>
     <h1>Заявки в команду</h1>
-    <p class="lead">Рассмотрение анкет кандидатов: проверка профиля, детальный просмотр и решение по каждому.</p>
+    <p class="lead">Анкеты кандидатов: детальный просмотр, примечание и решение по каждой заявке.</p>
   </div>
   <div class="page-head-actions">
-    <button type="button" class="btn" onclick="loadApps()" title="Обновить список"><i class="fas fa-arrows-rotate"></i> Обновить</button>
+    <button type="button" class="btn" id="saRefresh" title="Обновить список"><i class="fas fa-arrows-rotate"></i> Обновить</button>
   </div>
 </div>
 
 <style>
-
-.app-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.app-card{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;box-shadow:var(--shadow-1);transition:border-color .18s var(--ease),box-shadow .18s}
-.app-card:hover{border-color:var(--ac-line);box-shadow:var(--shadow-lift)}
-.app-icon{width:42px;height:42px;border-radius:11px;background:var(--ac-soft);color:var(--ac);border:1px solid var(--ac-line);display:flex;align-items:center;justify-content:center;font-size:16px}
-.app-info{font-size:13px;color:var(--text-2);line-height:1.5}
-.app-actions{display:flex;gap:9px;margin-top:12px;flex-wrap:wrap}
-.badge-role{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line)}
-
+/* Заявки в команду: карточки и модалка в дизайн-системе панели */
+.sa-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.sa-stat{display:flex;align-items:center;gap:12px;background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 16px;box-shadow:var(--shadow-1)}
+.sa-stat-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--ac-soft);color:var(--ac);flex-shrink:0}
+.sa-stat-ico.warn{background:rgba(245,158,11,.14);color:#d97706}
+.sa-stat-ico.ok{background:rgba(22,163,74,.14);color:var(--ok)}
+.sa-stat-ico.err{background:rgba(220,38,38,.12);color:var(--err)}
+.sa-stat-num{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:800;line-height:1.1;color:var(--text)}
+.sa-stat-lbl{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.sa-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.sa-tab{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:99px;border:1px solid var(--line-2);background:var(--surface);color:var(--text-2);font-size:12.5px;font-weight:600;cursor:pointer;transition:background .12s,color .12s,border-color .12s}
+.sa-tab:hover{background:var(--surface-3);color:var(--text)}
+.sa-tab.active{background:var(--ac-soft);border-color:var(--ac-line);color:var(--ac)}
+.sa-tab .n{font-family:'JetBrains Mono',monospace;font-size:10.5px;background:var(--surface-2);border-radius:7px;padding:1px 7px}
+.sa-tab.active .n{background:color-mix(in srgb,var(--ac) 18%,transparent)}
+.sa-list{display:flex;flex-direction:column;gap:10px}
+.sa-card{display:flex;align-items:center;gap:14px;background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px 16px;box-shadow:var(--shadow-1)}
+.sa-card:hover{border-color:var(--ac-line)}
+.sa-av{width:46px;height:46px;border-radius:50%;flex-shrink:0;background:var(--ac-soft);color:var(--ac);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;overflow:hidden}
+.sa-av img{width:100%;height:100%;object-fit:cover}
+.sa-main{min-width:0;flex:1}
+.sa-name{font-size:14.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sa-role-badge{font-size:10.5px;font-weight:700;color:#a5b4fc;background:var(--ac-soft);border:1px solid var(--ac-line);border-radius:8px;padding:2px 9px}
+.sa-meta{font-size:11.5px;color:var(--text-3);margin-top:3px}
+.sa-meta b{color:var(--text-2);font-weight:600}
+.sa-status{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:8px;padding:3px 9px;flex-shrink:0}
+.sa-status.pending{background:rgba(245,158,11,.14);color:#d97706;border:1px solid rgba(245,158,11,.3)}
+.sa-status.approved{background:rgba(22,163,74,.14);color:var(--ok);border:1px solid rgba(22,163,74,.3)}
+.sa-status.rejected{background:rgba(220,38,38,.12);color:var(--err);border:1px solid rgba(220,38,38,.28)}
+.sa-actions{display:flex;gap:8px;flex-shrink:0}
+.sa-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:34px 16px;color:var(--text-3)}
+.sa-empty i{font-size:26px;color:var(--ac)}
+.sa-empty b{font-size:13.5px;color:var(--text-2)}
+.sa-empty span{font-size:12px}
+/* Модалка анкеты */
+.sa-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.sa-field{background:var(--surface-2);border:1px solid var(--line-2);border-radius:11px;padding:11px 13px}
+.sa-field label{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:5px}
+.sa-field .v{font-size:13.5px;font-weight:700;color:var(--text)}
+.sa-field .t{font-size:12.5px;color:var(--text-2);white-space:pre-wrap;line-height:1.55;max-height:110px;overflow-y:auto}
+.sa-note{width:100%;min-height:72px;resize:vertical;padding:10px 12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:11px;color:var(--text);font-size:12.5px;font-family:inherit;outline:none}
+.sa-note:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.sa-note-label{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:6px}
+.sa-note-hint{text-transform:none;font-weight:400;color:var(--text-3)}
+.sa-modal-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+.sa-modal-box{max-width:640px}
+.sa-modal-body{padding:16px 18px}
+.sa-field.sa-gap{margin-bottom:12px}
+.sa-field.sa-gap-lg{margin-bottom:16px}
+@media(max-width:640px){.sa-modal-grid{grid-template-columns:1fr}.sa-card{flex-wrap:wrap}}
 </style>
 
-<div class="app-stats">
-  <div class="app-stat">
-    <div class="app-icon" style="background: var(--ac-grad) !important; color: #fff;"><i class="fas fa-list"></i></div>
-    <div><div class="app-stat-num" id="stat-total">-</div><div class="app-stat-lbl">Всего</div></div>
-  </div>
-  <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #fbbf24, #d97706) !important; color: #fff;"><i class="fas fa-hourglass-half"></i></div>
-    <div><div class="app-stat-num" id="stat-pending">-</div><div class="app-stat-lbl">Ожидание</div></div>
-  </div>
-  <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #4ade80, #16a34a) !important; color: #fff;"><i class="fas fa-check-circle"></i></div>
-    <div><div class="app-stat-num" id="stat-approved">-</div><div class="app-stat-lbl">Одобрено</div></div>
-  </div>
-  <div class="app-stat">
-    <div class="app-icon" style="background: linear-gradient(135deg, #f87171, #dc2626) !important; color: #fff;"><i class="fas fa-times-circle"></i></div>
-    <div><div class="app-stat-num" id="stat-rejected">-</div><div class="app-stat-lbl">Отклонено</div></div>
-  </div>
+<div class="sa-stats">
+  <div class="sa-stat"><div class="sa-stat-ico"><i class="fas fa-list"></i></div><div><div class="sa-stat-num" id="stat-total">—</div><div class="sa-stat-lbl">Всего</div></div></div>
+  <div class="sa-stat"><div class="sa-stat-ico warn"><i class="fas fa-hourglass-half"></i></div><div><div class="sa-stat-num" id="stat-pending">—</div><div class="sa-stat-lbl">Ожидание</div></div></div>
+  <div class="sa-stat"><div class="sa-stat-ico ok"><i class="fas fa-circle-check"></i></div><div><div class="sa-stat-num" id="stat-approved">—</div><div class="sa-stat-lbl">Одобрено</div></div></div>
+  <div class="sa-stat"><div class="sa-stat-ico err"><i class="fas fa-circle-xmark"></i></div><div><div class="sa-stat-num" id="stat-rejected">—</div><div class="sa-stat-lbl">Отклонено</div></div></div>
 </div>
 
-<div class="app-tabs">
-  <button type="button" class="app-tab active" data-tab="all">Все</button>
-  <button type="button" class="app-tab" data-tab="pending">Ожидание</button>
-  <button type="button" class="app-tab" data-tab="approved">Одобрено</button>
-  <button type="button" class="app-tab" data-tab="rejected">Отклонено</button>
+<div class="sa-tabs">
+  <button type="button" class="sa-tab active" data-tab="all">Все <span class="n" id="tabn-all">0</span></button>
+  <button type="button" class="sa-tab" data-tab="pending">Ожидание <span class="n" id="tabn-pending">0</span></button>
+  <button type="button" class="sa-tab" data-tab="approved">Одобрено <span class="n" id="tabn-approved">0</span></button>
+  <button type="button" class="sa-tab" data-tab="rejected">Отклонено <span class="n" id="tabn-rejected">0</span></button>
 </div>
 
-<div class="app-box">
-  <div class="app-head">
-    <div class="app-title"><i class="fas fa-user-shield"></i> Список заявок кандидатов</div>
-    <span class="app-count" id="app-count">-</span>
-  </div>
-  <div class="app-body" id="app-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
-  </div>
+<div class="sa-list" id="app-body">
+  <div class="sa-empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загружаем заявки…</span></div>
 </div>
 
-<!-- Модальное окно детального просмотра заявки -->
-<div id="app-modal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(15, 23, 42, 0.45); align-items: center; justify-content: center;">
-  <div class="modal-content" style="background-color: var(--surface); margin: auto; padding: 28px; border: 1px solid var(--line); width: 90%; max-width: 650px; border-radius: 18px; color: var(--text); position: relative; box-shadow: var(--shadow-3);">
-    <span class="close-modal" style="color: var(--text-3); float: right; font-size: 26px; font-weight: bold; cursor: pointer; position: absolute; right: 18px; top: 12px;">&times;</span>
-    <h3 id="modal-user-title" style="margin-top: 0; border-bottom: 1px solid var(--line); padding-bottom: 12px; color: var(--ac);"><i class="fas fa-address-card"></i> Детальная анкета кандидата</h3>
-    
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; margin-top: 14px;">
+<!-- Модалка детального просмотра -->
+<div class="modal-overlay" id="saModal" hidden>
+  <div class="modal-box sa-modal-box">
+    <div class="modal-head">
       <div>
-        <label style="font-size: 11px; color: var(--text-3); display: block; text-transform: uppercase;">Имя пользователя</label>
-        <span id="modal-username" style="font-weight: bold; font-size: 17px; color: var(--text);"></span>
+        <h3 id="modal-user-title">Анкета кандидата</h3>
+        <div class="sub" id="modal-user-sub"></div>
       </div>
-      <div>
-        <label style="font-size: 11px; color: var(--text-3); display: block; text-transform: uppercase;">Желаемая должность</label>
-        <span id="modal-role" class="badge-role" style="background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); padding: 4px 12px; border-radius: 6px; font-weight: bold; font-size: 13px; display: inline-block; margin-top: 4px;"></span>
+      <button type="button" class="close" id="saModalClose" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="sa-modal-body">
+      <div class="sa-modal-grid">
+        <div class="sa-field"><label>Возраст</label><div class="v" id="modal-age">—</div></div>
+        <div class="sa-field"><label>Активность</label><div class="v" id="modal-activity">—</div></div>
       </div>
-    </div>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; background: var(--surface-2); padding: 14px; border-radius: 12px; border: 1px solid var(--line);">
-      <div>
-        <label style="font-size: 11px; color: var(--text-3); display: block; text-transform: uppercase;">Возраст кандидата</label>
-        <span id="modal-age" style="font-weight: bold; font-size: 15px; color: var(--info);"></span>
+      <div class="sa-field sa-gap"><label>Опыт модерации</label><div class="t" id="modal-experience">—</div></div>
+      <div class="sa-field sa-gap-lg"><label>Почему наш сервер</label><div class="t" id="modal-reason">—</div></div>
+      <label class="sa-note-label" for="saNote">Примечание кандидату <span class="sa-note-hint">(бот отправит его в ЛС Discord)</span></label>
+      <textarea class="sa-note" id="saNote" placeholder="Например: «Добро пожаловать в команду!» или «Пока рано — возвращайся с опытом»"></textarea>
+      <div class="sa-modal-foot">
+        <button type="button" class="btn" id="btn-modal-reject"><i class="fas fa-xmark"></i> Отклонить</button>
+        <button type="button" class="btn btn-primary" id="btn-modal-approve"><i class="fas fa-check"></i> Одобрить</button>
       </div>
-      <div>
-        <label style="font-size: 11px; color: var(--text-3); display: block; text-transform: uppercase;">Активность на сервере</label>
-        <span id="modal-activity" style="font-weight: bold; font-size: 15px; color: var(--ok);"></span>
-      </div>
-    </div>
-
-    <div style="margin-bottom: 18px;">
-      <label style="font-size: 11px; color: var(--text-3); display: block; margin-bottom: 6px; text-transform: uppercase;">Опыт модерации и администрирования</label>
-      <div id="modal-experience" style="background: var(--bg); padding: 14px; border-radius: 10px; font-size: 14px; border: 1px solid var(--line); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: var(--text);"></div>
-    </div>
-
-    <div style="margin-bottom: 24px;">
-      <label style="font-size: 11px; color: var(--text-3); display: block; margin-bottom: 6px; text-transform: uppercase;">Почему выбирает именно наш сервер?</label>
-      <div id="modal-reason" style="background: var(--bg); padding: 14px; border-radius: 10px; font-size: 14px; border: 1px solid var(--line); white-space: pre-wrap; max-height: 120px; overflow-y: auto; line-height: 1.5; color: var(--text);"></div>
-    </div>
-
-    <div id="modal-decision-box" style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid var(--line); padding-top: 18px;">
-      <button type="button" class="btn btn-ok" id="btn-modal-approve" style="background: var(--ok); border: none; padding: 12px 24px; border-radius: 10px; color: #fff; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-check"></i> Одобрить</button>
-      <button type="button" class="btn btn-no" id="btn-modal-reject" style="background: var(--err); border: none; padding: 12px 24px; border-radius: 10px; color: #fff; cursor: pointer; font-weight: bold; transition: background 0.2s;"><i class="fas fa-times"></i> Отклонить</button>
     </div>
   </div>
 </div>
@@ -112,75 +117,117 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function fmtDate(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleDateString('ru-RU') + ' ' + new Date(iso).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}); } catch (e) { return '-'; } }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('ru-RU') + ' ' + new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return '—'; }
+  }
+  function toast(msg, ok) {
+    if (window.showToast) { window.showToast(msg, ok); }
+  }
 
   var apps = [];
   var currentTab = 'all';
   var selectedApp = null;
+  var _appsFp = '';
 
-  function loadApps() {
-    fetch('/api/staff-apps', { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        apps = data || [];
-        render();
-      })
-      .catch(function (err) {
-        console.error('Failed to load apps:', err);
-        $('app-body').innerHTML = '<p class="empty" style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Не удалось загрузить заявки с сервера</p>';
-      });
+  function appKey(a) { return a.app_id || a.user_id || ''; }
+
+  function statusLabel(s) {
+    return s === 'pending' ? 'Ожидание' : s === 'approved' ? 'Одобрено' : 'Отклонено';
+  }
+
+  async function loadApps(live) {
+    try {
+      var r = await fetch('/api/staff-apps', { credentials: 'same-origin' });
+      var data = await r.json();
+      if (!Array.isArray(data)) data = [];
+      /* тихое обновление: данные не изменились — список не трогаем */
+      var fp = data.length + '|' + data.map(function (a) {
+        return appKey(a) + ':' + (a.status || '');
+      }).join('|');
+      if (live && fp === _appsFp) return;
+      _appsFp = fp;
+      apps = data;
+      render();
+    } catch (err) {
+      if (!live) {
+        $('app-body').innerHTML = '<div class="sa-empty"><i class="fas fa-triangle-exclamation"></i><b>Не удалось загрузить заявки</b><span>Проверьте соединение и обновите страницу</span></div>';
+      }
+    }
   }
 
   function render() {
-    var total = apps.length;
     var pend = apps.filter(function (a) { return a.status === 'pending'; }).length;
     var appr = apps.filter(function (a) { return a.status === 'approved'; }).length;
     var rej = apps.filter(function (a) { return a.status === 'rejected'; }).length;
-
-    $('stat-total').textContent = total;
+    $('stat-total').textContent = apps.length;
     $('stat-pending').textContent = pend;
     $('stat-approved').textContent = appr;
     $('stat-rejected').textContent = rej;
+    $('tabn-all').textContent = apps.length;
+    $('tabn-pending').textContent = pend;
+    $('tabn-approved').textContent = appr;
+    $('tabn-rejected').textContent = rej;
 
     var list = currentTab === 'all' ? apps : apps.filter(function (a) { return a.status === currentTab; });
-    $('app-count').textContent = list.length;
-
-    if (!list.length) { 
-      $('app-body').innerHTML = '<p class="empty">Заявок по выбранному фильтру не найдено</p>'; 
-      return; 
+    if (!list.length) {
+      $('app-body').innerHTML = '<div class="sa-empty"><i class="fas fa-inbox"></i><b>Заявок по фильтру нет</b><span>Новые анкеты появятся здесь, когда участники подадут заявку</span></div>';
+      return;
     }
-
-    var html = '';
-    list.forEach(function (a) {
-      var statusLabel = a.status === 'pending' ? 'Ожидание' : a.status === 'approved' ? 'Одобрено' : 'Отклонено';
-      var keyId = a.app_id || a.user_id;
-      var actions = '<div class="app-actions"><button type="button" class="btn btn-secondary inspect-btn" style="background:var(--ac); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;" data-app-key="' + esc(keyId) + '"><i class="fas fa-eye"></i> Смотреть</button></div>';
-      
+    $('app-body').innerHTML = list.map(function (a) {
+      var name = a.display_name || a.username || a.user_name || 'Без имени';
       var avatar = a.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
-      var roleName = a.role || 'Moderator';
-      html += '<div class="app-row" style="display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid color-mix(in srgb, var(--text) 5%, transparent);">' +
-        '<div style="display:flex; align-items:center; gap:14px;">' +
-        '<img alt="" class="app-av" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:44px; height:44px; border-radius:50%; border:2px solid rgba(19,148,146,0.3);">' +
-        '<div class="app-info"><div class="app-name" style="font-weight:bold; font-size:16px; color:var(--text);">' + esc(a.display_name || a.username || a.user_name) + ' <span style="font-size:12px; color:var(--ac); background:var(--ac-soft); padding:2px 8px; border-radius:6px; margin-left:6px;">' + esc(roleName) + '</span></div><div class="app-meta" style="font-size:12px; color:var(--text-3); margin-top:4px;">Отправлена: ' + fmtDate(a.submitted_at || a.timestamp) + ' • Статус: <span class="app-status ' + a.status + '" style="font-weight:bold;">' + statusLabel + '</span></div></div>' +
+      var initial = esc(String(name).charAt(0).toUpperCase());
+      return '<div class="sa-card">' +
+        '<span class="sa-av">' + initial + '<img alt="" src="' + esc(avatar) + '" onerror="this.remove()"></span>' +
+        '<div class="sa-main">' +
+          '<div class="sa-name">' + esc(name) + '<span class="sa-role-badge"><i class="fas fa-user-tag"></i> ' + esc(a.role || '—') + '</span></div>' +
+          '<div class="sa-meta">Подана <b>' + fmtDate(a.submitted_at || a.timestamp) + '</b>' +
+          (a.reviewed_by ? ' · решение: <b>' + esc(a.reviewed_by) + '</b>' : '') + '</div>' +
         '</div>' +
-        actions + '</div>';
-    });
-    $('app-body').innerHTML = html;
+        '<span class="sa-status ' + esc(a.status || 'pending') + '">' + statusLabel(a.status) + '</span>' +
+        '<div class="sa-actions">' +
+          (a.status === 'pending'
+            ? '<button type="button" class="btn btn-primary sa-open" data-app-key="' + esc(appKey(a)) + '"><i class="fas fa-eye"></i> Смотреть</button>'
+            : '<button type="button" class="btn sa-open" data-app-key="' + esc(appKey(a)) + '"><i class="fas fa-eye"></i> Смотреть</button>') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function openModal(a) {
+    selectedApp = a;
+    var answers = a.answers || {};
+    var age = a.age || answers.yas || '—';
+    var act = a.activity || answers.activity || '—';
+    var exp = a.experience || answers.tecrube || '—';
+    var why = a.reason || answers.why || '—';
+    $('modal-user-title').textContent = 'Анкета: ' + (a.display_name || a.username || a.user_name || 'кандидат');
+    $('modal-user-sub').textContent = 'Желаемая должность: ' + (a.role || '—') + ' · статус: ' + statusLabel(a.status);
+    $('modal-age').textContent = age;
+    $('modal-activity').textContent = act;
+    $('modal-experience').textContent = exp;
+    $('modal-reason').textContent = why;
+    $('saNote').value = a.review_note || '';
+    $('btn-modal-approve').style.display = a.status === 'pending' ? '' : 'none';
+    $('btn-modal-reject').style.display = a.status === 'pending' ? '' : 'none';
+    $('saModal').hidden = false;
+    $('saModal').classList.add('open');
+  }
+  function closeModal() {
+    $('saModal').classList.remove('open');
+    $('saModal').hidden = true;
+    selectedApp = null;
   }
 
   function reviewApp(action) {
     if (!selectedApp) return;
-    var note = prompt("Введите примечание для пользователя (оно будет отправлено ему ботом в личные сообщения Discord):", "");
-    if (note === null) return; // Отмена
-
-    var btnApprove = $('btn-modal-approve');
-    var btnReject = $('btn-modal-reject');
-    btnApprove.disabled = true;
-    btnReject.disabled = true;
-
-    var appKey = selectedApp.app_id || selectedApp.user_id;
-
-    fetch('/api/staff-apps/' + appKey + '/review', {
+    var note = $('saNote').value.trim();
+    var key = appKey(selectedApp);
+    var btnA = $('btn-modal-approve'), btnR = $('btn-modal-reject');
+    if (window.qualitySetLoading) { window.qualitySetLoading(btnA, true); window.qualitySetLoading(btnR, true); }
+    fetch('/api/staff-apps/' + encodeURIComponent(key) + '/review', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
@@ -189,94 +236,57 @@
       .then(function (r) { return r.json(); })
       .then(function (res) {
         if (res.error) {
-          showToast('Ошибка при сохранении: ' + res.error, false);
+          toast('Ошибка при сохранении: ' + res.error, false);
         } else {
-          var okMsg = action === 'approve' ? 'Заявка кандидата одобрена!' : 'Заявка кандидата отклонена!';
-          if (res.dm_sent === true) okMsg += ' Уведомление отправлено пользователю в ЛС.';
-          else if (res.dm_sent === false) okMsg += ' ЛС не доставлено — у пользователя закрыты личные сообщения.';
+          var okMsg = action === 'approve' ? 'Заявка одобрена!' : 'Заявка отклонена!';
+          if (res.dm_sent === true) okMsg += ' Уведомление отправлено в ЛС.';
+          else if (res.dm_sent === false) okMsg += ' ЛС не доставлено — у пользователя закрыты сообщения.';
           if (res.role_assigned) okMsg += ' Роль выдана: ' + res.role_assigned;
-          else if (res.role_note === 'no_mapped_role') okMsg += ' (Роль не выдана — настройте маппинг ролей в "Доступе к панели")';
-          showToast(okMsg);
-          $('app-modal').style.display = 'none';
-          loadApps();
+          toast(okMsg, true);
+          closeModal();
+          loadApps(false);
         }
       })
       .catch(function (err) {
-        showToast('Ошибка связи с сервером: ' + err.message, false);
+        toast('Ошибка связи с сервером: ' + err.message, false);
       })
       .finally(function () {
-        btnApprove.disabled = false;
-        btnReject.disabled = false;
+        if (window.qualitySetLoading) { window.qualitySetLoading(btnA, false); window.qualitySetLoading(btnR, false); }
       });
   }
 
-  function bind() {
-    document.querySelectorAll('.app-tab').forEach(function (t) {
-      t.addEventListener('click', function () {
-        document.querySelectorAll('.app-tab').forEach(function (x) { x.classList.remove('active'); });
-        t.classList.add('active');
-        currentTab = t.getAttribute('data-tab');
-        render();
-      });
+  /* привязки */
+  $('saRefresh').addEventListener('click', function () { loadApps(false); });
+  $('saModalClose').addEventListener('click', closeModal);
+  $('saModal').addEventListener('click', function (e) { if (e.target === $('saModal')) closeModal(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !$('saModal').hidden) closeModal();
+  });
+  $('btn-modal-approve').addEventListener('click', function () { reviewApp('approve'); });
+  $('btn-modal-reject').addEventListener('click', function () { reviewApp('reject'); });
+  document.querySelectorAll('.sa-tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      document.querySelectorAll('.sa-tab').forEach(function (x) { x.classList.remove('active'); });
+      t.classList.add('active');
+      currentTab = t.getAttribute('data-tab');
+      render();
     });
+  });
+  $('app-body').addEventListener('click', function (e) {
+    var btn = e.target.closest('.sa-open');
+    if (!btn) return;
+    var key = btn.getAttribute('data-app-key');
+    var app = apps.find(function (a) { return String(appKey(a)) === String(key); });
+    if (app) openModal(app);
+  });
 
-    $('app-body').addEventListener('click', function (e) {
-      var btn = e.target.closest('.inspect-btn');
-      if (!btn) return;
-      var appKey = btn.getAttribute('data-app-key');
-      selectedApp = apps.find(function (a) { return (a.app_id || a.user_id) == appKey; });
-      if (!selectedApp) return;
-
-      var answers = selectedApp.answers || {};
-
-      // Поддержка как пошагового бота, так и веб-форм (авто-разбор полей)
-      var age = selectedApp.age || answers.yas || '—';
-      var activity = selectedApp.activity || answers.активен || '—';
-      var experience = selectedApp.experience || answers.tecrube || 'Опыт отсутствует';
-      var reason = selectedApp.reason || answers.почему || answers.ekstra || 'Не указана';
-      var role = selectedApp.role || 'Moderator (по умолчанию)';
-
-      // Заполнить модальное окно
-      $('modal-username').textContent = selectedApp.display_name || selectedApp.username || selectedApp.user_name;
-      $('modal-role').textContent = role;
-      $('modal-age').textContent = age;
-      $('modal-activity').textContent = activity;
-      $('modal-experience').textContent = experience;
-      $('modal-reason').textContent = reason;
-
-      // Скрыть кнопки если заявка уже проверена
-      if (selectedApp.status === 'pending') {
-        $('modal-decision-box').style.display = 'flex';
-      } else {
-        $('modal-decision-box').style.display = 'none';
-      }
-
-      // Открыть модальное окно с красивым флексом
-      $('app-modal').style.display = 'flex';
-    });
-
-    // События закрытия модального окна
-    document.querySelector('.close-modal').addEventListener('click', function () {
-      $('app-modal').style.display = 'none';
-    });
-
-    window.addEventListener('click', function (e) {
-      if (e.target === $('app-modal')) {
-        $('app-modal').style.display = 'none';
-      }
-    });
-
-    $('btn-modal-approve').onclick = function () {
-      reviewApp('approve');
-    };
-
-    $('btn-modal-reject').onclick = function () {
-      reviewApp('reject');
-    };
+  loadApps(false);
+  /* тихое живое обновление: список сам подхватит новые заявки */
+  if (window.setLiveRefresh) {
+    window.setLiveRefresh(function () { loadApps(true); }, 15000);
+  } else {
+    setInterval(function () { loadApps(true); }, 15000);
   }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); loadApps(); });
-  else { bind(); loadApps(); }
 })();
 </script>
 {% endblock %}
