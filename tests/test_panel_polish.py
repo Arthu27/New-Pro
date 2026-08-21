@@ -139,6 +139,10 @@ check('.ma-row' in dash and '.ma-sort' in dash and 'MA_TONES' in dash and 'funct
       'модерация сегодня: карточный сортируемый список вместо тесной таблицы')
 check('attachTableSort' not in dash and "'data-table'" not in dash,
       'модерация сегодня больше не голая таблица — свой список со сортировкой')
+check('function isToday' in dash and 'isToday(l.timestamp)' in dash,
+      'модерация сегодня: данные фильтруются по сегодняшней дате (timestamp, не объект)')
+check('maRenderDelta' in dash and 'logFingerprint' in dash and 'oldFp === newFp' in dash,
+      'модерация сегодня: дельта-обновление — без перерисовки, только новые строки/цифры')
 login = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
 check('auth-card' in login and 'data-theme="dark"' in login,
       'логин — тёмная карточка (чёрное издание)')

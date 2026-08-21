@@ -19,6 +19,12 @@ def iso(days_ago=0, hour=12, minute=0):
     return dt.isoformat()
 
 
+def iso_recent(minutes_ago=0):
+    """Свежая UTC-метка «N минут назад» — чтобы «Модерация сегодня» была живой
+    в любом часовом поясе владельца (не уезжала на завтра)."""
+    return (NOW - timedelta(minutes=minutes_ago)).isoformat()
+
+
 GID = '987654321098765432'
 
 # ── 1. Варны ─────────────────────────────────────────────────────────────
@@ -30,6 +36,7 @@ warnings = {
         ],
         '723456789012345679': [
             {'reason': 'Спам ссылками на сторонний сервер', 'moderator': 'artem.mods', 'timestamp': iso(5, 15, 5)},
+            {'reason': 'Массовые упоминания в неположенном канале', 'moderator': 'sonya.staff', 'timestamp': iso_recent(38)},
         ],
         '823456789012345680': [
             {'reason': 'Токсичность в голосовом чате', 'moderator': 'lina.mod', 'timestamp': iso(12, 11, 30)},
@@ -51,13 +58,17 @@ A = lambda **kw: dict(category='mod', **kw)  # noqa: E731
 audit = {
     GID: [
         A(action='ban', user_name='toxicguy', mod_name='lina.mod',
-          reason='Неоднократные оскорбления после бана', timestamp=iso(0, 22, 10)),
+          reason='Неоднократные оскорбления после бана', timestamp=iso_recent(7)),
         A(action='mute', user_name='spammer_228', mod_name='artem.mods',
-          reason='Флуд в общем чате', timestamp=iso(0, 20, 5)),
+          reason='Флуд в общем чате', timestamp=iso_recent(26)),
         A(action='warn', user_name='newbie_gg', mod_name='sonya.staff',
-          reason='Реклама в профиле', timestamp=iso(0, 18, 40)),
+          reason='Реклама в профиле', timestamp=iso_recent(48)),
         A(action='kick', user_name='alt_account1', mod_name='lina.mod',
-          reason='Подозрение на обход мьюта', timestamp=iso(0, 12, 25)),
+          reason='Подозрение на обход мьюта', timestamp=iso_recent(71)),
+        A(action='timeout', user_name='loud_voice', mod_name='lina.mod',
+          reason='Микрофон-спам в голосовом чате', timestamp=iso_recent(133)),
+        A(action='unmute', user_name='caps_forever', mod_name='artem.mods',
+          reason='Таймаут истёк — доступ возвращён', timestamp=iso_recent(182)),
         A(action='mute', user_name='caps_forever', mod_name='artem.mods',
           reason='Анти-капс: сплошной капс в новостях', timestamp=iso(1, 21, 15)),
         A(action='unban', user_name='toxicguy', mod_name='lina.mod',

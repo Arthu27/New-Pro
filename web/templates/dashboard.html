@@ -35,6 +35,9 @@
 .ma-empty i{font-size:24px;color:var(--ac)}
 .ma-empty b{display:block;font-size:13px;color:var(--text-2)}
 .ma-empty span{font-size:11.5px}
+@keyframes maPulse{from{opacity:.35}to{opacity:1}}
+.kpi-value.pulse{animation:maPulse .5s ease}
+@media (prefers-reduced-motion: reduce){.kpi-value.pulse{animation:none}}
 @media(max-width:760px){.ma-head,.ma-row{grid-template-columns:1fr auto;gap:8px}.ma-mod,.ma-sort[data-k="mod"]{display:none}}
 </style>
 
@@ -151,7 +154,7 @@
   <!-- Модерация сегодня -->
   <div class="panel">
     <div class="panel-head">
-      <div><h2><i class="fas fa-shield-halved"></i> Модерация сегодня</h2><div class="sub">Сводка последних действий команды.</div></div>
+      <div><h2><i class="fas fa-shield-halved"></i> Модерация сегодня</h2><div class="sub">Действия команды за сегодня — цифры обновляются сами.</div></div>
       <a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a>
     </div>
     <div class="panel-body">
@@ -159,7 +162,7 @@
         <div class="sk-card" style="height:64px"></div><div class="sk-card" style="height:64px"></div>
         <div class="sk-card" style="height:64px"></div><div class="sk-card" style="height:64px"></div>
       </div>
-      <div class="section-title" style="margin-top:12px">Последние действия <span class="hint">— клик по заголовку сортирует</span></div>
+      <div class="section-title" style="margin-top:12px">За сегодня <span class="hint">— клик по заголовку сортирует, новые действия добавляются сами</span></div>
       <div class="table-wrap" id="recent-activity"></div>
     </div>
   </div>
@@ -514,23 +517,52 @@
     } catch (e) { /* опционально */ }
   }
 
-  /* Модерация сегодня */
+  /* Модерация сегодня: KPI за сегодня, плавное обновление цифр без перерисовки */
+  function isToday(iso) {
+    if (!iso) return false;
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return false;
+    var n = new Date();
+    return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
+  }
+
+  var MA_KPI_IDS = ['kpi-ma-actions', 'kpi-ma-warns', 'kpi-ma-bans', 'kpi-ma-kicks', 'kpi-ma-mutes'];
+
   async function loadQuickStats() {
     try {
       var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
       var warns = await window.fetchCachedJSON('/api/warnings').catch(function () { return []; });
-      var bans = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'ban'; }).length;
-      var kicks = logs.filter(function (l) { return (l.action || '').toLowerCase() === 'kick'; }).length;
-      var muts = logs.filter(function (l) {
+      var today = logs.filter(function (l) { return isToday(l.timestamp); });
+      var twarns = warns.filter(function (w) { return isToday(w && w.timestamp); });
+      var bans = today.filter(function (l) { return (l.action || '').toLowerCase() === 'ban'; }).length;
+      var kicks = today.filter(function (l) { return (l.action || '').toLowerCase() === 'kick'; }).length;
+      var muts = today.filter(function (l) {
         var a = (l.action || '').toLowerCase();
         return (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1) && a.indexOf('un') !== 0;
       }).length;
-      $('quick-stats').innerHTML =
-        '<div class="kpi"><div class="kpi-icon"><i class="fas fa-gavel"></i></div><div class="kpi-copy"><div class="kpi-value">' + logs.length.toLocaleString('ru-RU') + '</div><div class="kpi-label">Мод. действий</div></div></div>' +
-        '<div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value">' + warns.length.toLocaleString('ru-RU') + '</div><div class="kpi-label">Варнов</div></div></div>' +
-        '<div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value">' + bans.toLocaleString('ru-RU') + '</div><div class="kpi-label">Банов</div></div></div>' +
-        '<div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value">' + kicks.toLocaleString('ru-RU') + '</div><div class="kpi-label">Киков</div></div></div>' +
-        '<div class="kpi"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value">' + muts.toLocaleString('ru-RU') + '</div><div class="kpi-label">Мутов</div></div></div>';
+      var vals = [today.length, twarns.length, bans, kicks, muts];
+      if (!$(MA_KPI_IDS[0])) {
+        var icons = ['fa-gavel', 'fa-triangle-exclamation', 'fa-ban', 'fa-door-open', 'fa-comment-slash'];
+        var tones = ['', ' tone-warn', ' tone-err', ' tone-info', ''];
+        var labels = ['Мод. действий', 'Варнов', 'Банов', 'Киков', 'Мутов'];
+        $('quick-stats').innerHTML = vals.map(function (v, i) {
+          return '<div class="kpi' + tones[i] + '" id="' + MA_KPI_IDS[i] + '"><div class="kpi-icon"><i class="fas ' + icons[i] + '"></i></div>' +
+            '<div class="kpi-copy"><div class="kpi-value">' + v.toLocaleString('ru-RU') + '</div><div class="kpi-label">' + labels[i] + '</div></div></div>';
+        }).join('');
+        return;
+      }
+      MA_KPI_IDS.forEach(function (id, i) {
+        var card = $(id);
+        if (!card) return;
+        var v = card.querySelector('.kpi-value');
+        var next = vals[i].toLocaleString('ru-RU');
+        if (v && v.textContent !== next) {
+          v.textContent = next;
+          v.classList.remove('pulse');
+          void v.offsetWidth;
+          v.classList.add('pulse');
+        }
+      });
     } catch (e) {
       $('quick-stats').innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить</span></div>';
     }
@@ -546,8 +578,13 @@
     unban: { tone: 'ok', icon: 'fa-unlock', label: 'Разбан' },
     unmute: { tone: 'ok', icon: 'fa-comment', label: 'Размут' }
   };
-  var maLogs = [], maSort = { key: 'time', dir: -1 };
+  var maLogs = [], maSort = { key: 'time', dir: -1 }, maInited = false;
   var MA_COLS = { action: 'Действие', target: 'Цель', mod: 'Модератор', time: 'Время' };
+
+  function logFingerprint(l) {
+    return [l.timestamp || '', l.action || '', l.user_name || l.user_id || '',
+            l.mod_name || l.mod_id || '', l.reason || ''].join('|');
+  }
 
   function maSortVal(log) {
     return {
@@ -558,6 +595,24 @@
     };
   }
 
+  function maRowHtml(log) {
+    var t = MA_TONES[(log.action || '?').toLowerCase()] ||
+            { tone: 'neutral', icon: 'fa-gavel', label: log.action || '?' };
+    var tg = log.user_name || log.target_name || log.user_id || '—';
+    var mod = log.mod_name || log.mod_id || '—';
+    var reason = log.reason || '';
+    return '<div class="ma-row" data-fp="' + esc(log._fp) + '">' +
+      '<div class="ma-act"><span class="ma-ico ' + t.tone + '"><i class="fas ' + t.icon + '"></i></span>' +
+        '<div class="ma-act-copy"><b>' + esc(t.label) + '</b>' +
+        (reason ? '<small title="' + esc(reason) + '">' + esc(reason) + '</small>' : '<small class="dim">без причины</small>') +
+      '</div></div>' +
+      '<div class="ma-who"><span class="ma-ava">' + esc(String(tg).charAt(0).toUpperCase()) + '</span>' +
+        '<span class="ma-name" title="' + esc(tg) + '">' + esc(tg) + '</span></div>' +
+      '<div class="ma-mod" title="' + esc(mod) + '"><i class="fas fa-user-shield"></i>' + esc(mod) + '</div>' +
+      '<div class="ma-time" title="' + esc(log.timestamp || '') + '">' + esc(fmtDate(log.timestamp)) + '</div>' +
+    '</div>';
+  }
+
   function maRender() {
     var box = $('recent-activity');
     var head = Object.keys(MA_COLS).map(function (k) {
@@ -566,29 +621,13 @@
       return '<button type="button" class="ma-sort' + (on ? ' on' : '') + '" data-k="' + k + '">' + MA_COLS[k] + ' <i class="fas ' + ic + '"></i></button>';
     }).join('');
     if (!maLogs.length) {
-      box.innerHTML = '<div class="ma-empty"><i class="fas fa-shield-halved"></i><div><b>Сегодня тихо</b><span>Команда ещё не действовала — мод-действия появятся здесь.</span></div></div>';
+      box.innerHTML = '<div class="ma-empty"><i class="fas fa-shield-halved"></i><div><b>Сегодня тихо</b><span>За сегодня действий ещё нет — свежие мод-действия появятся здесь сами.</span></div></div>';
       return;
     }
     var rows = maLogs.slice().sort(function (x, y) {
       var a = x._ma[maSort.key], b = y._ma[maSort.key];
       return (a < b ? -1 : a > b ? 1 : 0) * maSort.dir;
-    }).slice(0, 12).map(function (log) {
-      var t = MA_TONES[(log.action || '?').toLowerCase()] ||
-              { tone: 'neutral', icon: 'fa-gavel', label: log.action || '?' };
-      var tg = log.user_name || log.target_name || log.user_id || '—';
-      var mod = log.mod_name || log.mod_id || '—';
-      var reason = log.reason || '';
-      return '<div class="ma-row">' +
-        '<div class="ma-act"><span class="ma-ico ' + t.tone + '"><i class="fas ' + t.icon + '"></i></span>' +
-          '<div class="ma-act-copy"><b>' + esc(t.label) + '</b>' +
-          (reason ? '<small title="' + esc(reason) + '">' + esc(reason) + '</small>' : '<small class="dim">без причины</small>') +
-        '</div></div>' +
-        '<div class="ma-who"><span class="ma-ava">' + esc(String(tg).charAt(0).toUpperCase()) + '</span>' +
-          '<span class="ma-name" title="' + esc(tg) + '">' + esc(tg) + '</span></div>' +
-        '<div class="ma-mod" title="' + esc(mod) + '"><i class="fas fa-user-shield"></i>' + esc(mod) + '</div>' +
-        '<div class="ma-time" title="' + esc(log.timestamp || '') + '">' + esc(fmtDate(log.timestamp)) + '</div>' +
-      '</div>';
-    }).join('');
+    }).slice(0, 12).map(maRowHtml).join('');
     box.innerHTML = '<div class="ma-head">' + head + '</div><div class="ma-rows">' + rows + '</div>';
     Array.prototype.forEach.call(box.querySelectorAll('.ma-sort'), function (b) {
       b.onclick = function () {
@@ -599,12 +638,54 @@
     });
   }
 
-  /* Последние действия (сортируемый список вместо тесной таблицы) */
+  /* Дельта: новые действия добавляются сверху без перерисовки всего блока */
+  function maRenderDelta() {
+    var box = $('recent-activity');
+    var rowsEl = box.querySelector('.ma-rows');
+    if (!rowsEl || !maLogs.length) { maRender(); return; }
+    if (maSort.key !== 'time' || maSort.dir !== -1) { maRender(); return; }  // нестандартная сортировка — честный перерендер
+    var existing = {};
+    Array.prototype.forEach.call(rowsEl.querySelectorAll('.ma-row'), function (r) {
+      existing[r.getAttribute('data-fp')] = 1;
+    });
+    var stale = Object.keys(existing).filter(function (fp) {
+      return !maLogs.some(function (l) { return l._fp === fp; });
+    });
+    if (stale.length) { maRender(); return; }  // день сменился — полный рендер
+    var fresh = maLogs.filter(function (l) { return !existing[l._fp]; });
+    if (!fresh.length) return;
+    fresh.sort(function (x, y) { return (x.timestamp || '') < (y.timestamp || '') ? 1 : -1; });
+    var before = rowsEl.scrollTop;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = fresh.map(maRowHtml).join('');
+    var nodes = Array.prototype.slice.call(tmp.children);
+    var addedH = 0;
+    nodes.forEach(function (n) {
+      rowsEl.insertBefore(n, rowsEl.firstChild);
+      addedH += n.offsetHeight || 0;
+    });
+    var kids = rowsEl.querySelectorAll('.ma-row');
+    for (var i = 12; i < kids.length; i++) { rowsEl.removeChild(kids[i]); }
+    if (before > 0) { rowsEl.scrollTop = before + addedH; }  // прокрутку не дёргаем
+  }
+
+  /* Последние действия за сегодня (живое дельта-обновление) */
   async function loadRecentActivity() {
     try {
-      maLogs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
-      maLogs.forEach(function (l) { l._ma = maSortVal(l); });
-      maRender();
+      var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
+      var today = logs.filter(function (l) { return isToday(l.timestamp); });
+      today.forEach(function (l) { l._ma = maSortVal(l); l._fp = logFingerprint(l); });
+      if (!maInited) {
+        maInited = true;
+        maLogs = today;
+        maRender();
+        return;
+      }
+      var oldFp = maLogs.map(function (l) { return l._fp; }).join('\u0001');
+      var newFp = today.map(function (l) { return l._fp; }).join('\u0001');
+      if (oldFp === newFp) return;   // ничего не изменилось — не трогаем DOM
+      maLogs = today;
+      maRenderDelta();
     } catch (e) {
       $('recent-activity').innerHTML = '<div class="ma-empty"><i class="fas fa-triangle-exclamation"></i><div><b>Не удалось загрузить</b><span>Попробуйте обновить страницу.</span></div></div>';
     }
