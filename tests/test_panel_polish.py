@@ -200,6 +200,21 @@ check('sa-status' in sa and 'pending' in sa and 'approved' in sa,
 _staff_seed = open(os.path.join(ROOT, 'scripts', 'seed_demo_panel.py'), encoding='utf-8').read()
 check('staff_apps' in _staff_seed and 'app-9001' in _staff_seed,
       'заявки: демо-сид с анкетами для живой страницы')
+# Смены персонала: переработанная страница
+_ss = open(os.path.join(ROOT, 'web', 'templates', 'staff_shifts.html'), encoding='utf-8').read()
+check('ss-du' in _ss and 'ss-week' in _ss and 'ss-bars' in _ss and 'kpi-icon' in _ss,
+      'смены: дежурства, неделя, нагрузка-бары и KPI в дизайн-системе')
+check('ssWho' in _ss and 'ssStart' in _ss and 'ssEnd' in _ss and 'ssChan' in _ss and 'ssTz' in _ss,
+      'смены: выбор дежурного по имени, время двумя полями, канал и пояс селектами')
+check('silentGuard' in _ss and 'tickCountdown' in _ss and 'askConfirm' in _ss,
+      'смены: тихое обновление, живой обратный отсчёт и подтверждение снятия')
+check('ss-raw-wrap' in _ss,
+      'смены: таблица недели свёрнута в details')
+_ssp = open(os.path.join(ROOT, 'web', 'routes', 'shifts_panel.py'), encoding='utf-8').read()
+check("'people': people" in _ssp and 'DEMO_MEMBERS' in _ssp,
+      'смены: обзор отдаёт список людей для выбора (демо-имена)')
+check('GuildData' in _staff_seed and "'live'" in _staff_seed and "'d1'" in _staff_seed,
+      'смены: демо-сид с живой сменой и недельным расписанием')
 # Второй круг тихих обновлений: остальные живые комнаты
 for _name in ('music', 'proofs', 'tickets_ops', 'team_board', 'mod_report',
               'webhooks', 'users', 'reminders', 'shop', 'quiz', 'server_health', 'ops_center',

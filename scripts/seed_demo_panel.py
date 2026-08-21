@@ -514,4 +514,39 @@ for path, payload in files.items():
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     print('записано:', path)
+
+# ── Смены персонала: то же хранилище, что у бота (GuildData) ───────────
+# Живая смена «прямо сейчас» + вечное расписание — страница сразу живая.
+try:
+    import sys as _sys
+    import os as _os
+    _sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+    from datetime import timedelta, timezone as _tz
+    from db import GuildData
+
+    _t3 = _tz(timedelta(hours=3))          # пояс демо-сервера (UTC+3)
+    _now3 = datetime.now(_t3)
+    _start3 = (_now3 - timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    _end3 = (_now3 + timedelta(hours=2)).replace(minute=0, second=0, microsecond=0)
+    _fmt = lambda d: d.strftime('%H:%M')
+    _shifts = {
+        'live': {'user_id': '1001', 'weekday': _now3.weekday(),
+                 'start': _fmt(_start3), 'end': _fmt(_end3),
+                 'added_by': 'panel:owner', 'added_at': iso(0, 12, 0)},
+        'd1': {'user_id': '1001', 'weekday': 0, 'start': '18:00', 'end': '22:00', 'added_by': 'panel:owner'},
+        'd2': {'user_id': '1002', 'weekday': 1, 'start': '18:00', 'end': '22:00', 'added_by': 'panel:owner'},
+        'd3': {'user_id': '1003', 'weekday': 2, 'start': '16:00', 'end': '20:00', 'added_by': 'panel:owner'},
+        'd4': {'user_id': '1004', 'weekday': 3, 'start': '18:00', 'end': '22:00', 'added_by': 'panel:owner'},
+        'd5': {'user_id': '1005', 'weekday': 4, 'start': '20:00', 'end': '00:00', 'added_by': 'panel:owner'},
+        'd6': {'user_id': '1006', 'weekday': 5, 'start': '12:00', 'end': '16:00', 'added_by': 'panel:owner'},
+        'd7': {'user_id': '1002', 'weekday': 5, 'start': '16:00', 'end': '20:00', 'added_by': 'panel:owner'},
+        'd8': {'user_id': '1003', 'weekday': 6, 'start': '14:00', 'end': '18:00', 'added_by': 'panel:owner'},
+    }
+    _ss = GuildData('staff_shifts')
+    _ss.set(GID, 'settings', {'channel_id': 4002, 'tz_offset': 3})
+    _ss.set(GID, 'shifts', _shifts)
+    print('записано: смены персонала (%d смен)' % len(_shifts))
+except Exception as _ex:
+    print('смены персонала не засеяны:', _ex)
+
 print('Готово. Демо-данные в data/ (gitignored).')

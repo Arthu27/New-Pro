@@ -6,228 +6,361 @@
   <div class="page-head-copy">
     <div class="eyebrow">Сообщество <span class="sep">·</span> Смены персонала</div>
     <h1>Смены персонала</h1>
+    <p class="lead">Кто дежурит сейчас, расписание на неделю и нагрузка команды.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn" id="ssRefresh" title="Обновить"><i class="fas fa-arrows-rotate"></i> Обновить</button>
+    <a class="btn" id="ssCsv" href="#" download title="Выгрузить расписание в CSV"><i class="fas fa-file-csv"></i> CSV</a>
   </div>
 </div>
 
 <style>
-.ss-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 16px}
-.ss-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:10px 16px}
-.ss-kpi i{color:var(--ac,var(--ac));font-size:16px}
-.ss-kpi b{font-size:17px;color:var(--text-1,#fff)}
-.ss-kpi span{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
+/* Смены персонала: дежурства, неделя и нагрузка в дизайн-системе */
+.ss-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.ss-duty{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:760px){.ss-duty{grid-template-columns:1fr}}
+.ss-du{display:flex;align-items:center;gap:14px;background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px 18px;box-shadow:var(--shadow-1);min-width:0}
+.ss-du.live{border-color:color-mix(in srgb, var(--ok) 40%, transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--ok) 7%,var(--glass)),var(--glass))}
+.ss-du .av{width:46px;height:46px;border-radius:50%;flex-shrink:0;background:var(--ac-soft);color:var(--ac);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;border:2px solid var(--ac-line)}
+.ss-du.live .av{background:rgba(22,163,74,.14);color:var(--ok);border-color:rgba(22,163,74,.4);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.ss-du .copy{min-width:0;flex:1}
+.ss-du .lab{font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3);margin-bottom:4px}
+.ss-du .v{font-size:15px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-du.live .v{color:var(--ok)}
+.ss-du small{display:block;font-size:11.5px;color:var(--text-3);margin-top:3px}
+.ss-du .pr{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:9px}
+.ss-du .pr span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--ok),#4ade80)}
 .ss-week{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:16px}
-@media (max-width:1100px){.ss-week{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:640px){.ss-week{grid-template-columns:1fr}}
-.ss-day{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:11px 12px;min-height:90px}
-.ss-day h4{margin:0 0 8px;font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent))}
-.ss-day.today h4{color:var(--ac,var(--ac))}
-.ss-slot{border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-left:3px solid var(--ac,var(--ac));border-radius:9px;padding:7px 9px;margin-bottom:7px;font-size:12px}
-.ss-slot .t{font-weight:800;color:var(--text-1,#fff);font-variant-numeric:tabular-nums}
-.ss-slot .w{color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));margin-top:2px;word-break:break-word}
-.ss-slot .x{float:right;border:none;background:transparent;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));cursor:pointer;font-size:11px;padding:0 2px}
-.ss-slot .x:hover{color:#ff8a7a}
-.ss-empty{font-size:11px;color:var(--text-3,color-mix(in srgb, var(--text) 35%, transparent))}
-.ss-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-@media (max-width:960px){.ss-grid{grid-template-columns:1fr}}
-.ss-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px 18px;margin-bottom:16px}
-.ss-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
-.ss-panel h3 i{color:var(--ac,var(--ac))}
-.ss-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.5}
-.ss-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
-.ss-inp{flex:1;min-width:130px;background:var(--surface-2,color-mix(in srgb, var(--text) 5%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
-.ss-inp:focus{border-color:var(--ac,var(--ac))}
-.ss-sel{background:var(--surface-2,color-mix(in srgb, var(--text) 5%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
-.ss-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,var(--ac));color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
-.ss-btn:hover{filter:brightness(1.08)}
-.ss-btn.ghost{background:transparent;color:var(--ac,var(--ac));border:1px solid var(--ac-line,color-mix(in srgb, var(--ac) 35%, transparent))}
+@media(max-width:1100px){.ss-week{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.ss-week{grid-template-columns:1fr}}
+.ss-day{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);padding:11px 12px;min-height:96px}
+.ss-day.today{border-color:var(--ac-line);background:linear-gradient(160deg,color-mix(in srgb,var(--ac) 7%,var(--glass)),var(--glass))}
+.ss-day h4{margin:0 0 9px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);display:flex;align-items:center;justify-content:space-between}
+.ss-day.today h4{color:var(--ac)}
+.ss-day.today h4::after{content:'сегодня';font-size:8.5px;font-weight:800;color:var(--ac);background:var(--ac-soft);border:1px solid var(--ac-line);border-radius:99px;padding:1px 7px;letter-spacing:.04em}
+.ss-slot{display:flex;align-items:center;gap:8px;border:1px solid var(--line-2);border-radius:9px;padding:7px 9px;margin-bottom:7px;font-size:12px;min-width:0}
+.ss-slot .t{font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;flex-shrink:0}
+.ss-slot .w{color:var(--text-2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-slot .x{border:none;background:transparent;color:var(--text-3);cursor:pointer;font-size:11px;padding:2px 4px;flex-shrink:0;border-radius:6px}
+.ss-slot .x:hover{color:var(--err);background:rgba(220,38,38,.12)}
+.ss-empty{font-size:11px;color:var(--text-3)}
+.ss-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;margin-bottom:16px}
+@media(max-width:960px){.ss-grid{grid-template-columns:1fr}}
+.ss-panel{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 18px;box-shadow:var(--shadow-1)}
+.ss-panel h3{margin:0 0 3px;font-size:14.5px;color:var(--text);display:flex;align-items:center;gap:9px}
+.ss-panel h3 i{color:var(--ac)}
+.ss-sub{font-size:12px;color:var(--text-3);margin-bottom:14px}
+.ss-field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.ss-field label{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.ss-inp,.ss-sel{width:100%;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.ss-inp:focus,.ss-sel:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.ss-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ss-msg{font-size:12px;padding:4px 2px;display:none}
-.ss-msg.ok{color:#4ade80}
-.ss-msg.err{color:#ff8a7a}
-.ss-duty{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.ss-du{flex:1;min-width:200px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:12px;padding:11px 14px}
-.ss-du.live{border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.06)}
-.ss-du .lab{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:5px}
-.ss-du .v{font-size:14px;font-weight:800;color:var(--text-1,#fff)}
-.ss-du small{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent))}
-.ss-wl{display:flex;justify-content:space-between;gap:8px;padding:8px 4px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent);font-size:12.5px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent))}
-.ss-wl:last-child{border-bottom:none}
-.ss-wl b{color:var(--ac,var(--ac));font-variant-numeric:tabular-nums}
-.ss-raw{font-family:monospace;font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent));white-space:pre-wrap;word-break:break-word;background:color-mix(in srgb, var(--text) 3%, transparent);border-radius:10px;padding:10px 12px;line-height:1.6}
-[data-theme="light"] .ss-wl{border-bottom-color:rgba(0,0,0,.08)}
+.ss-msg.ok{color:var(--ok)}
+.ss-msg.err{color:var(--err)}
+.ss-bars{display:flex;flex-direction:column;gap:9px}
+.ss-bar-row{display:flex;align-items:center;gap:10px;min-width:0}
+.ss-bar-row .nm{flex:0 0 150px;min-width:0;font-size:12.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-bar-row .tr{flex:1;height:9px;border-radius:99px;background:var(--line);overflow:hidden}
+.ss-bar-row .fl{height:100%;border-radius:99px;background:var(--ac-grad)}
+.ss-bar-row .ct{flex:0 0 auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700;color:var(--ac)}
+.ss-raw{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-3);white-space:pre-wrap;word-break:break-word;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;padding:11px 13px;line-height:1.6}
+details.ss-raw-wrap{margin-bottom:16px}
+details.ss-raw-wrap summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text-2);padding:6px 2px}
+details.ss-raw-wrap summary i{color:var(--ac);margin-right:7px}
 </style>
 
 <div class="ss-kpis" id="ssKpis">
-  <div class="sk-card" style="width:160px;height:56px"></div>
-  <div class="sk-card" style="width:160px;height:56px"></div>
-  <div class="sk-card" style="width:160px;height:56px"></div>
-  <div class="sk-card" style="width:160px;height:56px"></div>
+  <div class="sk-card" style="height:64px"></div>
+  <div class="sk-card" style="height:64px"></div>
+  <div class="sk-card" style="height:64px"></div>
+  <div class="sk-card" style="height:64px"></div>
 </div>
 
-<div class="ss-duty" id="ssDuty"></div>
+<div class="ss-duty" id="ssDuty"><div class="sk-card" style="height:80px"></div><div class="sk-card" style="height:80px"></div></div>
 
-<div class="ss-week" id="ssWeek"></div>
+<div class="ss-week" id="ssWeek"><div class="sk-card" style="height:96px"></div></div>
 
+{% if can_edit %}
 <div class="ss-grid">
-  <div>
-    <div class="ss-panel" id="ssAddPanel" style="display:none">
-      <h3><i class="fas fa-user-plus"></i> Назначить смену</h3>
-      <div class="ss-sub">Как «/дежурства назначить»: ID участника, день, промежуток ЧЧ:ММ-ЧЧ:ММ (можно через полночь — 22:00-02:00).</div>
-      <div class="ss-row">
-        <input class="ss-inp" id="ssUid" placeholder="ID участника">
-        <select class="ss-sel" id="ssDay">
-          {% for d in days %}<option value="{{ loop.index0 }}">{{ d }}</option>{% endfor %}
-        </select>
-        <input class="ss-inp" id="ssTime" placeholder="18:00-22:00" style="max-width:150px">
-      </div>
-      <button type="button" class="ss-btn" id="ssAdd"><i class="fas fa-plus"></i> Назначить</button>
-      <div class="ss-msg" id="ssAddMsg"></div>
+  <div class="ss-panel">
+    <h3><i class="fas fa-user-clock"></i> Назначить смену</h3>
+    <div class="ss-sub">Выбери человека, день и время — бот начнёт следить и напоминать.</div>
+    <div class="ss-field">
+      <label for="ssWho">Дежурный</label>
+      <select class="ss-sel" id="ssWho" aria-label="Дежурный"></select>
     </div>
-    <div class="ss-panel" id="ssSetPanel" style="display:none">
-      <h3><i class="fas fa-gear"></i> Напоминания</h3>
-      <div class="ss-sub">Канал анонсов и пояс (правило кога: от -12 до +14, МСК = 3). Пустой канал — расписание работает молча.</div>
-      <div class="ss-row">
-        <input class="ss-inp" id="ssChan" placeholder="ID канала (пусто — молча)">
-        <input class="ss-inp" id="ssTz" placeholder="пояс, напр. 3" style="max-width:110px">
-        <button type="button" class="ss-btn ghost" id="ssSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
-      </div>
-      <div class="ss-msg" id="ssSetMsg"></div>
+    <div class="ss-field">
+      <label for="ssDay">День недели</label>
+      <select class="ss-sel" id="ssDay" aria-label="День недели">
+        <option value="0">Понедельник</option><option value="1">Вторник</option>
+        <option value="2">Среда</option><option value="3">Четверг</option>
+        <option value="4">Пятница</option><option value="5">Суббота</option>
+        <option value="6">Воскресенье</option>
+      </select>
     </div>
+    <div class="ss-row2">
+      <div class="ss-field">
+        <label for="ssStart">Начало</label>
+        <input class="ss-inp" type="time" id="ssStart" value="18:00" aria-label="Начало смены">
+      </div>
+      <div class="ss-field">
+        <label for="ssEnd">Конец</label>
+        <input class="ss-inp" type="time" id="ssEnd" value="22:00" aria-label="Конец смены">
+      </div>
+    </div>
+    <button type="button" class="btn btn-primary" id="ssAdd"><i class="fas fa-plus"></i> Назначить</button>
+    <div class="ss-msg" id="ssAddMsg"></div>
   </div>
-  <div>
-    <div class="ss-panel">
-      <h3><i class="fas fa-scale-balanced"></i> Нагрузка недели</h3>
-      <div class="ss-sub">Часов дежурства на человека — честно посчитано из смен (перенос через полночь учтён).</div>
-      <div id="ssWork"></div>
-      <div style="margin-top:10px"><button type="button" class="ss-btn ghost" id="ssCsv"><i class="fas fa-file-csv"></i> Выгрузить расписание</button></div>
+  <div class="ss-panel">
+    <h3><i class="fas fa-gear"></i> Настройки</h3>
+    <div class="ss-sub">Канал напоминаний и часовой пояс расписания.</div>
+    <div class="ss-field">
+      <label for="ssChan">Канал напоминаний</label>
+      <select class="ss-sel" id="ssChan" aria-label="Канал напоминаний"><option value="">Без канала — тихо</option></select>
     </div>
-    <div class="ss-panel">
-      <h3><i class="fas fa-terminal"></i> Как отвечает бот</h3>
-      <div class="ss-sub">Строка недели из самой команды /дежурства — с дискордовскими упоминаниями, как есть.</div>
-      <div class="ss-raw" id="ssRaw"></div>
+    <div class="ss-field">
+      <label for="ssTz">Часовой пояс (UTC)</label>
+      <select class="ss-sel" id="ssTz" aria-label="Часовой пояс"></select>
     </div>
+    <button type="button" class="btn" id="ssSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
+    <div class="ss-msg" id="ssSetMsg"></div>
   </div>
 </div>
+{% endif %}
+
+<div class="ss-panel" style="margin-bottom:16px">
+  <h3><i class="fas fa-chart-simple"></i> Нагрузка команды</h3>
+  <div class="ss-sub">Часы дежурств за неделю по каждому участнику.</div>
+  <div class="ss-bars" id="ssWork"></div>
+</div>
+
+<details class="ss-raw-wrap">
+  <summary><i class="fas fa-table-list"></i> Текстовая таблица недели (как в /дежурства)</summary>
+  <div class="ss-raw" id="ssRaw">—</div>
+</details>
 
 <script>
-function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }
 
-var GID = '{{ guild_id }}';
-var API = '/api/guild/' + GID + '/shiftboard';
-var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
-var NAMES = {};
+  var GID = '{{ guild_id }}';
+  var API = '/api/guild/' + GID + '/shiftboard';
+  var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+  var DAYS_RU = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+  var _fp = '';
+  var _dutyBase = null;   // для тика обратного отсчёта
+  var _dutyAt = 0;
 
-function kpi(icon, num, label) {
-  return '<div class="ss-kpi"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
-}
+  function kpi(icon, num, label, tone) {
+    return '<div class="kpi' + (tone ? ' ' + tone : '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
+      '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
+  }
+  function who(row) { return row.name ? esc(row.name) : 'ID ' + esc(row.user_id); }
+  function initial(row) { return esc(String(row.name || '?').charAt(0).toUpperCase()); }
+  function fmtLeft(sec) {
+    sec = Math.max(0, sec);
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+    if (h >= 24) { var d = Math.floor(h / 24); return d + ' д ' + (h % 24) + ' ч'; }
+    return h ? h + ' ч ' + m + ' мин' : m + ' мин';
+  }
+  function fmtHM(s) { return String(s || '').replace('.', ':'); }
 
-function fmtLeft(sec) {
-  var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
-  if (h >= 24) { var d = Math.floor(h / 24); return d + ' д ' + (h % 24) + ' ч'; }
-  return h ? h + ' ч ' + m + ' м' : m + ' мин';
-}
-
-function who(row) { return row.name ? esc(row.name) : 'ID ' + esc(row.user_id); }
-
-function load() {
-  fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
-    if (!d.success) { return; }
-    var s = d.stats;
-    /* данные не изменились — KPI не пересобираем */
-    var fp = [s.shifts_total, s.minutes_week, s.people, s.tz_offset].join('|');
-    if (window.silentGuard && window.silentGuard('staff-shifts', fp)) return;
-    document.getElementById('ssKpis').innerHTML =
-      kpi('fa-calendar-week', s.shifts_total, 'смен в расписании') +
-      kpi('fa-clock', (s.minutes_week / 60).toFixed(1).replace('.0', '') + ' ч', 'дежурства в неделю') +
-      kpi('fa-user-shield', s.people, 'дежурных задействовано') +
-      kpi('fa-earth-europe', 'UTC' + (s.tz_offset >= 0 ? '+' : '') + s.tz_offset, 'пояс расписания');
-
-    var duty = d.duty, dh = '';
+  function paintDuty(duty) {
+    var dh = '';
     if (duty.active) {
-      dh += '<div class="ss-du live"><div class="lab">сейчас дежурит</div><div class="v">' + who(duty.active) + '</div>' +
-        '<small>до конца смены ' + fmtLeft(duty.active.left_s) + '</small></div>';
+      var a = duty.active;
+      var total = Math.max(1, a.minutes * 60);
+      var pct = Math.min(100, Math.round((total - a.left_s) / total * 100));
+      dh += '<div class="ss-du live">' +
+        '<span class="av">' + initial(a) + '</span>' +
+        '<div class="copy"><div class="lab">Сейчас дежурит</div>' +
+        '<div class="v">' + who(a) + '</div>' +
+        '<small>' + esc(a.start) + '–' + esc(a.end) + ' · до конца <b data-cd="left">' + fmtLeft(a.left_s) + '</b></small>' +
+        '<div class="pr"><span style="width:' + pct + '%"></span></div></div></div>';
     } else {
-      dh += '<div class="ss-du"><div class="lab">сейчас</div><div class="v" style="color:var(--text-3)">никто не дежурит</div><small>экипаж отдыхает</small></div>';
+      dh += '<div class="ss-du"><span class="av"><i class="fas fa-moon"></i></span>' +
+        '<div class="copy"><div class="lab">Сейчас</div><div class="v" style="color:var(--text-3)">Никто не дежурит</div>' +
+        '<small>Команда отдыхает — следующая смена по расписанию</small></div></div>';
     }
     if (duty.next) {
-      dh += '<div class="ss-du"><div class="lab">следующая смена</div><div class="v">' + who(duty.next) + '</div>' +
-        '<small>' + esc(duty.next.wd_label) + ' ' + esc(duty.next.start) + '–' + esc(duty.next.end) + ', через ' + fmtLeft(duty.next.wait_s) + '</small></div>';
+      var n = duty.next;
+      dh += '<div class="ss-du"><span class="av">' + initial(n) + '</span>' +
+        '<div class="copy"><div class="lab">Следующая смена</div>' +
+        '<div class="v">' + who(n) + '</div>' +
+        '<small>' + esc(DAYS_RU[n.weekday] || n.wd_label) + ' ' + esc(n.start) + '–' + esc(n.end) +
+        ' · через <b data-cd="wait">' + fmtLeft(n.wait_s) + '</b></small></div></div>';
     }
-    document.getElementById('ssDuty').innerHTML = dh;
+    $('ssDuty').innerHTML = dh;
+  }
 
-    var today = (new Date().getDay() + 6) % 7;
-    document.getElementById('ssWeek').innerHTML = d.week.map(function (day) {
-      var slots = day.slots.length ? day.slots.map(function (sl) {
-        var x = CAN_EDIT ? '<button type="button" class="x" title="Снять смену" onclick="ssRemove(\'' + esc(sl.id) + '\')"><i class="fas fa-xmark"></i></button>' : '';
-        return '<div class="ss-slot">' + x + '<span class="t">' + esc(sl.start) + '–' + esc(sl.end) + '</span>' +
-          '<div class="w">' + who(sl) + '</div></div>';
-      }).join('') : '<div class="ss-empty">—</div>';
-      return '<div class="ss-day' + (day.weekday === today ? ' today' : '') + '"><h4>' + esc(day.label) + '</h4>' + slots + '</div>';
-    }).join('');
+  /* Тик обратного отсчёта: обновляем только цифры, DOM не пересоздаём */
+  function tickCountdown() {
+    if (!_dutyBase) return;
+    var el = new Date().getTime() / 1000 - _dutyAt;
+    var leftEl = document.querySelector('[data-cd="left"]');
+    if (leftEl && _dutyBase.active) leftEl.textContent = fmtLeft(_dutyBase.active.left_s - el);
+    var waitEl = document.querySelector('[data-cd="wait"]');
+    if (waitEl && _dutyBase.next) waitEl.textContent = fmtLeft(_dutyBase.next.wait_s - el);
+  }
 
-    NAMES = {};
-    d.workload.forEach(function (w) { NAMES[w.user_id] = w.name; });
-    document.getElementById('ssWork').innerHTML = d.workload.length ? d.workload.map(function (w) {
-      return '<div class="ss-wl"><span>' + (w.name ? esc(w.name) : 'ID ' + esc(w.user_id)) +
-        ' <small style="color:var(--text-3)">· ' + w.shifts + ' см.</small></span><b>' + w.hours + ' ч</b></div>';
-    }).join('') : '<div class="ss-sub" style="margin:4px 0">пока пусто</div>';
+  function load() {
+    fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) return;
+      var s = d.stats;
+      /* данные не изменились — ничего не перерисовываем */
+      var fp = JSON.stringify({ w: d.week, wl: d.workload, st: d.settings, p: d.people });
+      if (window.silentGuard && window.silentGuard('staff-shifts', fp)) {
+        _dutyBase = d.duty; _dutyAt = new Date().getTime() / 1000;
+        tickCountdown();
+        return;
+      }
+      $('ssKpis').innerHTML =
+        kpi('fa-calendar-week', s.shifts_total, 'смен в расписании') +
+        kpi('fa-clock', (s.minutes_week / 60).toFixed(1).replace('.0', '') + ' ч', 'дежурства в неделю') +
+        kpi('fa-user-shield', s.people, 'дежурных задействовано') +
+        kpi('fa-earth-europe', 'UTC' + (s.tz_offset >= 0 ? '+' : '') + s.tz_offset, 'пояс расписания', 'tone-info');
 
-    document.getElementById('ssRaw').textContent = d.week_table_text || '—';
-    if (CAN_EDIT) {
-      document.getElementById('ssAddPanel').style.display = '';
-      document.getElementById('ssSetPanel').style.display = '';
-      var st = d.settings;
-      document.getElementById('ssTz').value = st.tz_offset;
-      document.getElementById('ssChan').value = st.channel_id || '';
+      _dutyBase = d.duty; _dutyAt = new Date().getTime() / 1000;
+      paintDuty(d.duty);
+
+      var today = (new Date().getDay() + 6) % 7;
+      $('ssWeek').innerHTML = d.week.map(function (day) {
+        var slots = day.slots.length ? day.slots.map(function (sl) {
+          var x = CAN_EDIT ? '<button type="button" class="x" title="Снять смену" aria-label="Снять смену" onclick="ssRemove(\'' + esc(sl.id) + '\')"><i class="fas fa-xmark"></i></button>' : '';
+          return '<div class="ss-slot">' +
+            '<span class="t">' + esc(sl.start) + '–' + esc(sl.end) + '</span>' +
+            '<span class="w">' + who(sl) + '</span>' + x + '</div>';
+        }).join('') : '<div class="ss-empty">—</div>';
+        return '<div class="ss-day' + (day.weekday === today ? ' today' : '') + '"><h4>' + esc(DAYS_RU[day.weekday].slice(0, 2)) + '</h4>' + slots + '</div>';
+      }).join('');
+
+      $('ssWork').innerHTML = d.workload.length ? d.workload.slice(0, 6).map(function (w) {
+        var max = d.workload[0].hours || 1;
+        var pct = Math.max(4, Math.round(w.hours / max * 100));
+        return '<div class="ss-bar-row"><span class="nm" title="' + (w.name ? esc(w.name) : 'ID ' + esc(w.user_id)) + '">' +
+          (w.name ? esc(w.name) : 'ID ' + esc(w.user_id)) + ' · ' + w.shifts + ' см.</span>' +
+          '<span class="tr"><span class="fl" style="width:' + pct + '%"></span></span>' +
+          '<span class="ct">' + w.hours + ' ч</span></div>';
+      }).join('') : '<div class="ss-sub" style="margin:4px 0">Пока пусто — назначь первую смену</div>';
+
+      $('ssRaw').textContent = d.week_table_text || '—';
+
+      /* выбор дежурного — из известных людей */
+      if (CAN_EDIT && $('ssWho')) {
+        var people = d.people || [];
+        $('ssWho').innerHTML = '<option value="">— Выбери дежурного —</option>' +
+          people.map(function (p) {
+            return '<option value="' + esc(p.id) + '">' + esc(p.name) + (p.name ? '' : ' (ID ' + esc(p.id) + ')') + '</option>';
+          }).join('');
+      }
+      if (CAN_EDIT && $('ssChan')) {
+        var st = d.settings;
+        $('ssTz').value = String(st.tz_offset != null ? st.tz_offset : 3);
+        loadChannels(st.channel_id);
+      }
+    }).catch(function () {});
+  }
+
+  /* Каналы для настроек */
+  function loadChannels(selected) {
+    fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); }).then(function (data) {
+      var chs = Array.isArray(data) ? data : (data.channels || []);
+      var text = chs.filter(function (c) { return c.type === 'text' || c.type === 0 || c.type === undefined; });
+      $('ssChan').innerHTML = '<option value="">Без канала — тихо</option>' +
+        text.map(function (c) {
+          return '<option value="' + esc(c.id) + '"' + (String(c.id) === String(selected) ? ' selected' : '') + '>#' + esc(c.name) + '</option>';
+        }).join('');
+    }).catch(function () {});
+  }
+
+  /* Часовой пояс: -12..+14 */
+  (function () {
+    var sel = $('ssTz');
+    if (!sel) return;
+    var html = '';
+    for (var t = -12; t <= 14; t++) {
+      var label = 'UTC' + (t >= 0 ? '+' : '') + t + (t === 3 ? ' · МСК' : '');
+      html += '<option value="' + t + '">' + label + '</option>';
     }
-  }).catch(function () {});
-}
+    sel.innerHTML = html;
+  })();
 
-function msg(id, t, ok) {
-  var m = document.getElementById(id);
-  m.textContent = t || ''; m.className = 'ss-msg ' + (ok ? 'ok' : 'err');
-  m.style.display = t ? 'block' : 'none';
-}
+  window.ssRemove = function (sid) {
+    if (window.askConfirm) {
+      window.askConfirm('Снять смену?', 'Смена уйдёт из расписания вместе с метками напоминаний.', function () {
+        doRemove(sid);
+      }, { danger: true, okText: 'Снять', icon_fa: 'fa-xmark' });
+    } else if (window.confirm('Снять смену?')) {
+      doRemove(sid);
+    }
+  };
+  function doRemove(sid) {
+    fetch(API + '/remove', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shift_id: sid })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) { toast('Смена снята', true); load(); }
+      else { toast(d.error || 'Ошибка', false); }
+    }).catch(function () { toast('Сеть моргнула — попробуй ещё раз', false); });
+  }
 
-document.getElementById('ssAdd').onclick = function () {
-  msg('ssAddMsg', '');
-  fetch(API + '/add', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({user_id: document.getElementById('ssUid').value,
-                          weekday: document.getElementById('ssDay').value,
-                          time: document.getElementById('ssTime').value})
-  }).then(function (r) { return r.json(); }).then(function (d) {
-    if (d.success) { msg('ssAddMsg', d.message, true); load(); }
-    else { msg('ssAddMsg', d.error || 'Ошибка', false); }
-  }).catch(function () { msg('ssAddMsg', 'Сеть моргнула — попробуйте ещё раз', false); });
-};
-
-function ssRemove(sid) {
-  askConfirm('Снять смену?', 'Смена ' + sid + ' уйдёт из расписания вместе с метками напоминаний.',
-    function () {
-      fetch(API + '/remove', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({shift_id: sid})
+  if (CAN_EDIT) {
+    $('ssAdd').addEventListener('click', function () {
+      var uid = $('ssWho').value.trim();
+      var start = $('ssStart').value, end = $('ssEnd').value;
+      var msg = $('ssAddMsg');
+      if (!uid) { msg.textContent = 'Выбери дежурного'; msg.className = 'ss-msg err'; msg.style.display = 'block'; return; }
+      if (!start || !end || start === end) { msg.textContent = 'Укажи начало и конец смены'; msg.className = 'ss-msg err'; msg.style.display = 'block'; return; }
+      msg.style.display = 'none';
+      fetch(API + '/add', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: uid, weekday: $('ssDay').value, time: start + '-' + end })
       }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d.success) { load(); } else { alert(d.error || 'Ошибка'); }
-      }).catch(function () { alert('Сеть моргнула — попробуйте ещё раз'); });
-    }, {danger: true, okText: 'Снять', icon_fa: 'fa-xmark'});
-}
+        if (d.success) {
+          msg.textContent = d.message || 'Смена добавлена';
+          msg.className = 'ss-msg ok'; msg.style.display = 'block';
+          $('ssWho').value = '';
+          load();
+        } else {
+          msg.textContent = d.error || 'Ошибка'; msg.className = 'ss-msg err'; msg.style.display = 'block';
+        }
+      }).catch(function () {
+        msg.textContent = 'Сеть моргнула — попробуй ещё раз'; msg.className = 'ss-msg err'; msg.style.display = 'block';
+      });
+    });
 
-document.getElementById('ssSave').onclick = function () {
-  msg('ssSetMsg', '');
-  fetch(API + '/settings', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({channel_id: document.getElementById('ssChan').value,
-                          tz_offset: document.getElementById('ssTz').value})
-  }).then(function (r) { return r.json(); }).then(function (d) {
-    if (d.success) { msg('ssSetMsg', 'Сохранено — бот уже видит', true); load(); }
-    else { msg('ssSetMsg', d.error || 'Ошибка', false); }
-  }).catch(function () { msg('ssSetMsg', 'Сеть моргнула — попробуйте ещё раз', false); });
-};
+    $('ssSave').addEventListener('click', function () {
+      var msg = $('ssSetMsg');
+      msg.style.display = 'none';
+      fetch(API + '/settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel_id: $('ssChan').value, tz_offset: $('ssTz').value })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) { msg.textContent = 'Сохранено — бот уже видит'; msg.className = 'ss-msg ok'; msg.style.display = 'block'; load(); }
+        else { msg.textContent = d.error || 'Ошибка'; msg.className = 'ss-msg err'; msg.style.display = 'block'; }
+      }).catch(function () {
+        msg.textContent = 'Сеть моргнула — попробуй ещё раз'; msg.className = 'ss-msg err'; msg.style.display = 'block';
+      });
+    });
+  }
 
-document.getElementById('ssCsv').onclick = function () { location.href = API + '/export.csv'; };
+  $('ssRefresh').addEventListener('click', load);
+  $('ssCsv').addEventListener('click', function (e) {
+    e.preventDefault();
+    location.href = API + '/export.csv';
+  });
 
-load();
-ssTimer = setInterval(load, 60000);
+  load();
+  if (window.setLiveRefresh) {
+    window.setLiveRefresh(load, 60000);
+  } else {
+    setInterval(load, 60000);
+  }
+  setInterval(tickCountdown, 30000);
+})();
 </script>
 {% endblock %}

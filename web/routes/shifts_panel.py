@@ -280,6 +280,16 @@ def register(ctx):
         shifts = _shifts(gid)
         settings = _settings(gid)
         names = names_from_audit(gid)
+        import web.app as _app
+        if _app._demo_mode():
+            # демо: слоты и карточки показывают настоящие имена участников
+            from web.routes._common import DEMO_MEMBERS
+            for dm in DEMO_MEMBERS:
+                uid = str(dm.get('id'))
+                if uid not in names:
+                    names[uid] = str(dm.get('display_name') or dm.get('name') or uid)
+        people = [{'id': uid, 'name': nm} for uid, nm in sorted(
+            names.items(), key=lambda kv: (kv[1] or '').lower())]
         return jsonify({
             'success': True,
             'stats': overview_stats(shifts, settings['tz_offset']),
@@ -287,6 +297,7 @@ def register(ctx):
             'duty': duty_now(shifts, settings['tz_offset'], names),
             'workload': workload(shifts, names),
             'settings': settings,
+            'people': people,
             'week_table_text': SH.week_table(list(shifts.values())),
             'can_edit': session.get('role') in ('admin', 'owner'),
         })
