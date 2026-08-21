@@ -2,6 +2,30 @@
 
 Русский Discord-бот с AI-функциями, модерацией и веб-панелью управления.
 
+## Быстрый запуск веб-панели (без токена бота)
+
+Хочешь просто посмотреть панель у себя на компьютере — ничего настраивать не надо:
+
+1. Установи Python 3.10+ с https://python.org (на Windows при установке отметь «Add python.exe to PATH»).
+2. **Windows:** двойной клик по `start_panel.bat`. **Linux/macOS:** `bash start_panel.sh`.
+3. Браузер сам откроет http://localhost:5001 — логин `owner`, пароль `preview123`.
+
+Скрипт сам создаст виртуальное окружение, поставит только нужные панели зависимости
+(`requirements-panel.txt`, без тяжёлых библиотек бота), наполнит демо-данные и поднимет сервер.
+
+> Если скачивал проект ZIP-архивом с GitHub — бери архив актуальной ветки
+> (`Code → Download ZIP`), а не только `main`: свежие правки могут быть ещё не влиты.
+
+Ручной вариант:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-panel.txt   # Windows: .venv\Scripts\pip
+.venv/bin/python scripts/seed_demo_panel.py
+DEMO_MODE=1 SECRET_KEY=local PANEL_USER=owner PANEL_PASSWORD=preview123 \
+  MAIN_GUILD_ID=987654321098765432 .venv/bin/python -m flask --app web.wsgi run --port 5001
+```
+
 ## Возможности
 
 - **AI-чат** с поддержкой контекста (Mistral / OpenRouter / DeepSeek / локальная Ollama)
