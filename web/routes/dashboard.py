@@ -11,6 +11,79 @@ from web.routes._common import (
     os, json, time, math, discord, datetime, timezone,
 )
 
+
+def _today_mod_stats():
+    """Начальные цифры «Модерации сегодня» для серверного рендера.
+
+    Цифры печатаются прямо в HTML — они видны сразу, даже если весь
+    JavaScript не отработает. JS потом обновляет их вживую.
+    """
+    from datetime import datetime as _dt
+
+    def _ts(t):
+        try:
+            s = str(t or '').strip()
+            if not s:
+                return None
+            return _dt.fromisoformat(s.replace('Z', '+00:00'))
+        except Exception:
+            return None
+
+    _now = _dt.now().astimezone()
+
+    def _today(dt):
+        return dt is not None and dt.astimezone().date() == _now.date()
+
+    logs = []
+    for fname in ('data/audit_log.json', 'data/audit_log_backup.json'):
+        if not os.path.exists(fname):
+            continue
+        try:
+            data = json.load(open(fname, encoding='utf-8'))
+        except Exception as _ex:
+            _log.debug('_today_mod_stats(): %s: %s', fname, _ex)
+            continue
+        if isinstance(data, dict):
+            for _gid, events in data.items():
+                if isinstance(events, list):
+                    logs += events
+    try:
+        md = json.load(open('data/mod_data.json', encoding='utf-8'))
+        for _gid, case in md.get('case', {}).items():
+            if isinstance(case, list):
+                logs += case
+    except Exception as _ex:
+        _log.debug('_today_mod_stats(): mod_data: %s', _ex)
+    try:
+        cache = json.load(open('data/discord_audit_cache.json', encoding='utf-8'))
+        for _gid, evs in cache.items():
+            if isinstance(evs, list):
+                logs += evs
+    except Exception as _ex:
+        _log.debug('_today_mod_stats(): audit cache: %s', _ex)
+
+    today_logs = [l for l in logs if _today(_ts(l.get('timestamp')))]
+    bans = sum(1 for l in today_logs if str(l.get('action', '')).lower() == 'ban')
+    kicks = sum(1 for l in today_logs if str(l.get('action', '')).lower() == 'kick')
+    muts = 0
+    for l in today_logs:
+        a = str(l.get('action', '')).lower()
+        if ('mute' in a or 'timeout' in a) and not a.startswith('un'):
+            muts += 1
+    warns_today = 0
+    try:
+        w = json.load(open('data/warnings.json', encoding='utf-8'))
+        for _gid, users in w.items():
+            if not isinstance(users, dict):
+                continue
+            for _uid, ws in users.items():
+                if isinstance(ws, list):
+                    warns_today += sum(1 for x in ws if _today(_ts(x.get('timestamp'))))
+    except Exception as _ex:
+        _log.debug('_today_mod_stats(): warnings: %s', _ex)
+    return {'actions': len(today_logs), 'warns': warns_today,
+            'bans': bans, 'kicks': kicks, 'mutes': muts}
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -106,4 +179,5 @@ def register(ctx):
     @login_required 
     def dashboard_page ():
         """Страница дашборда с аналитикой"""
-        return render_template ('dashboard.html',role =session .get ('role'),username =session .get ('username'))
+        return render_template ('dashboard.html',role =session .get ('role'),username =session .get ('username'),
+        today_stats =_today_mod_stats ())

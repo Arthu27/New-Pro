@@ -138,6 +138,8 @@ check('data-widget="metrics"' in dash and dash.index('data-widget="today"') < da
       '«Модерация сегодня» поднята вверх: сразу после метрик, до графиков')
 check('.mt-kpi' in dash and 'flex-direction: column' in dash and '.mt-l' in dash,
       'модерация сегодня: вертикальные карточки — подписи на своей строке, наложение невозможно')
+check('today_stats.actions' in dash and 'today_stats' in dash and 'mt-ma-actions' in dash,
+      'модерация сегодня: цифры рендерятся сервером — видны даже без JavaScript')
 check('.stat-card-big' not in dash and '--ac-glow' not in dash,
       'старый тёмный дашборд с золотыми бликами удалён')
 check('.ma-row' in dash and '.ma-sort' in dash and 'MA_TONES' in dash and 'function maRender' in dash,

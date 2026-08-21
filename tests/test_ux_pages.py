@@ -116,8 +116,8 @@ check('class="sk-row"' in trx and 'fa-spinner' not in trx.split('displayTranscri
       'транскрипты: скелетоны в контейнере списка')
 check('<p>Загрузка...</p></div>' not in trx, 'транскрипты: спиннер-заглушка убрана')
 check('sk-card' in ann and '<p>Загрузка...</p>' not in ann, 'анонсы: скелетоны карт вместо спиннера')
-check('sk-line' in dash and 'sk-chip' in dash and 'class="sk-card"' in dash,
-      'дашборд: скелетоны виджета дежурств и быстрой статистики')
+check('sk-line' in dash and 'sk-chip' in dash and 'today_stats' in dash and 'mt-kpi' in dash,
+      'дашборд: скелетоны дежурств + серверные цифры быстрой статистики (лучше скелетона)')
 check('quick-grid-loading">\n        <i class="fas fa-spinner' not in dash, 'дашборд: спиннер статистики убран')
 css = open(os.path.join(ROOT, 'web', 'static', 'style.css'), encoding='utf-8').read()
 check('@keyframes shimmer' in css and '.sk-card' in css and 'skeleton-card' in css,
@@ -144,7 +144,8 @@ print('== 6b. Мобильный дашборд рендерится ==')
 r = client.get('/')
 check(r.status_code == 200, 'дашборд открывается (200)')
 html = r.get_data(as_text=True)
-check('sk-card' in html and 'SHIFT_EMPTY_HINT' in html, 'скелетоны и подсказка в живом HTML')
+check('sk-line' in html and 'SHIFT_EMPTY_HINT' in html and 'mt-kpi' in html,
+      'скелетоны дежурств, подсказка и реальные цифры модерации в живом HTML')
 check('добавьте первую смену в редакторе ниже' in html, 'owner видит редакторский вариант подсказки')
 
 print('== 7. Эмодзи-политика новых правок ==')

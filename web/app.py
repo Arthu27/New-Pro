@@ -676,11 +676,13 @@ def welcome_page ():
 
 @app .route ('/')
 def index ():
+    # Главная = дашборд. Цифры «Модерации сегодня» рендерятся сервером.
+    from web .routes .dashboard import _today_mod_stats
     if 'logged_in'not in session :
         return render_template ('welcome.html')
     if session .get ('role')=='uye':
         return render_template ('member_dashboard.html',role =session .get ('role'),username =session .get ('username'))
-    return render_template ('dashboard.html',role =session .get ('role'),username =session .get ('username'))
+    return render_template ('dashboard.html',role =session .get ('role'),username =session .get ('username'),today_stats =_today_mod_stats ())
 
 @app .route ('/member-apply')
 @login_required 
