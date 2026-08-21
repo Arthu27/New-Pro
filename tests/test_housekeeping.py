@@ -173,7 +173,8 @@ check(not silent_left, f'ни одного молчаливого except (pass/c
 
 # ═══ 5. Гигиена корня: никаких мусорных txt/md (архив в docs/devnotes) ═══
 print('== гигиена корня ==')
-_ROOT_ALLOWED_DOCS = {'README.md', 'requirements.txt', 'requirements-test.txt'}
+_ROOT_ALLOWED_DOCS = {'README.md', 'requirements.txt', 'requirements-test.txt',
+                      'requirements-panel.txt'}
 junk = sorted(f for f in os.listdir(ROOT)
               if os.path.isfile(os.path.join(ROOT, f))
               and os.path.splitext(f)[1].lower() in ('.md', '.txt')
