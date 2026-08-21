@@ -973,11 +973,11 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       });
     }
     function orderList() {
-      try { return JSON.parse(localStorage.getItem('cc_widgets_order') || '[]'); }
+      try { return JSON.parse(localStorage.getItem('cc_widgets_order_v2') || '[]'); }
       catch (e) { return []; }
     }
     function saveOrder(list) {
-      try { localStorage.setItem('cc_widgets_order', JSON.stringify(list)); } catch (e) {}
+      try { localStorage.setItem('cc_widgets_order_v2', JSON.stringify(list)); } catch (e) {}
       if (window.widgetOrderApply) window.widgetOrderApply();
     }
     function moveWidget(key, dir) {
@@ -1042,6 +1042,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
         try {
           localStorage.removeItem('cc_widgets');
           localStorage.removeItem('cc_widgets_order');
+          localStorage.removeItem('cc_widgets_order_v2');
         } catch (e) {}
         apply();
         if (window.widgetOrderApply) window.widgetOrderApply();
@@ -1076,7 +1077,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     if (!main || !els.length) return;
     function persistOrder() {
       var order = Array.prototype.map.call(main.querySelectorAll('[data-widget]'), function (x) { return x.dataset.widget; });
-      try { localStorage.setItem('cc_widgets_order', JSON.stringify(order)); } catch (e) {}
+      try { localStorage.setItem('cc_widgets_order_v2', JSON.stringify(order)); } catch (e) {}
     }
     function clearMarks() {
       els.forEach(function (x) { x.classList.remove('drop-above', 'drop-below'); });

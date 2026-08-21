@@ -2711,17 +2711,36 @@
 
   /* ── 4. Перестановка виджетов главной ──────────────────── */
   function widgetOrderApply() {
-    try {
-      var order = JSON.parse(localStorage.getItem('cc_widgets_order') || '[]');
-    } catch (e) { order = []; }
     var main = doc.querySelector('.main-content');
     var els = doc.querySelectorAll('[data-widget]');
     if (!main || !els.length) return;
+    var order = [];
+    var stored = false;
+    try {
+      order = JSON.parse(localStorage.getItem('cc_widgets_order_v2') || '[]');
+      stored = Array.isArray(order) && order.length > 0;
+    } catch (e) { order = []; stored = false; }
+    if (!Array.isArray(order)) order = [];
+    if (!stored) {
+      /* порядка нет — натуральный DOM-порядок, никаких order-сдвигов */
+      main.classList.remove('cc-orderable');
+      els.forEach(function (el) { el.style.order = ''; });
+      return;
+    }
+    /* нормализация: только существующие виджеты, недостающие — в DOM-порядке.
+       Иначе неполный список уводил блоки на 100+ и разбрасывал вёрстку. */
+    var keys = [];
+    els.forEach(function (el) { keys.push(el.dataset.widget); });
+    var seen = {};
+    var clean = [];
+    order.forEach(function (k) {
+      if (keys.indexOf(k) !== -1 && !seen[k]) { clean.push(k); seen[k] = 1; }
+    });
+    keys.forEach(function (k) { if (!seen[k]) { clean.push(k); seen[k] = 1; } });
     main.classList.add('cc-orderable');
-    els.forEach(function (el, i) {
-      var key = el.dataset.widget;
-      var idx = order.indexOf(key);
-      el.style.order = idx === -1 ? String(100 + i) : String(idx);
+    els.forEach(function (el) {
+      /* +1: hero (order 0) всегда остаётся сверху */
+      el.style.order = String(clean.indexOf(el.dataset.widget) + 1);
     });
   }
   window.widgetOrderApply = widgetOrderApply;
