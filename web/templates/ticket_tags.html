@@ -50,7 +50,7 @@
         Требуется немедленное внимание. Время реакции: до 1 часа.
       </div>
     </div>
-    
+
     <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px;">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
         <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(241,196,15,0.2); display: flex; align-items: center; justify-content: center;">
@@ -65,7 +65,7 @@
         Стандартный приоритет. Время реакции: до 24 часов.
       </div>
     </div>
-    
+
     <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px;">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
         <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(46,204,113,0.2); display: flex; align-items: center; justify-content: center;">
@@ -115,7 +115,7 @@ async function loadTags() {
   try {
     const response = await fetch('/api/ticket-tags');
     const data = await response.json();
-    
+
     if (data.success) {
       displayTags(data.tags);
       updateStats(data.tags, data.stats);
@@ -127,12 +127,12 @@ async function loadTags() {
 
 function displayTags(tags) {
   const container = document.getElementById('tagsList');
-  
+
   if (tags.length === 0) {
     container.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">Теги не созданы</p>';
     return;
   }
-  
+
   container.innerHTML = tags.map(tag => `
     <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font-size: 12px; background: ${tag.color}20; border: 1px solid ${tag.color}; color: ${tag.color};">
       <span>${tag.name}</span>
@@ -152,12 +152,12 @@ function updateStats(tags, stats) {
 async function createTag() {
   const name = document.getElementById('newTag').value.trim();
   const color = document.getElementById('tagColor').value;
-  
+
   if (!name) {
     alert('Введите название тега');
     return;
   }
-  
+
   try {
     const response = await fetch('/api/ticket-tags', {
       method: 'POST',
@@ -165,7 +165,7 @@ async function createTag() {
       body: JSON.stringify({name, color})
     });
     const data = await response.json();
-    
+
     if (data.success) {
       document.getElementById('newTag').value = '';
       loadTags();

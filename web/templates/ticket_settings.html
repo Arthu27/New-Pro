@@ -70,7 +70,7 @@
       <i class="fas fa-info-circle"></i>
       Управляйте каждой системой отдельно. Включайте только то, что нужно вашему серверу.
     </p>
-    
+
     <!-- AI МОДЕРАТОР -->
     <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 12px; padding: 20px; margin-bottom: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
@@ -85,7 +85,7 @@
             </div>
           </div>
           <p style="font-size: 13px; color: var(--text-3); margin: 8px 0; line-height: 1.5;">
-            Искусственный интеллект анализирует жалобы, определяет виновных и применяет наказания автоматически. 
+            Искусственный интеллект анализирует жалобы, определяет виновных и применяет наказания автоматически.
             Поддерживает анализ сообщений, определение контекста и принятие решений.
           </p>
         </div>
@@ -120,7 +120,7 @@
             </div>
           </div>
           <p style="font-size: 13px; color: var(--text-3); margin: 8px 0; line-height: 1.5;">
-            Ограничивает количество тикетов, которые пользователь может создать за определённый период. 
+            Ограничивает количество тикетов, которые пользователь может создать за определённый период.
             Защищает от спама и злоупотреблений системой тикетов.
           </p>
         </div>
@@ -159,7 +159,7 @@
             </div>
           </div>
           <p style="font-size: 13px; color: var(--text-3); margin: 8px 0; line-height: 1.5;">
-            Автоматически закрывает тикеты, в которых не было активности в течение заданного времени. 
+            Автоматически закрывает тикеты, в которых не было активности в течение заданного времени.
             Помогает поддерживать порядок и не накапливать старые тикеты.
           </p>
         </div>
@@ -194,7 +194,7 @@
             </div>
           </div>
           <p style="font-size: 13px; color: var(--text-3); margin: 8px 0; line-height: 1.5;">
-            После закрытия тикета пользователь может оставить отзыв о качестве поддержки. 
+            После закрытия тикета пользователь может оставить отзыв о качестве поддержки.
             Помогает отслеживать удовлетворённость пользователей и улучшать сервис.
           </p>
         </div>
@@ -229,7 +229,7 @@
             </div>
           </div>
           <p style="font-size: 13px; color: var(--text-3); margin: 8px 0; line-height: 1.5;">
-            Показывает прогресс-бар во время сканирования сообщений при анализе жалоб. 
+            Показывает прогресс-бар во время сканирования сообщений при анализе жалоб.
             Улучшает пользовательский опыт, показывая что процесс идёт.
           </p>
         </div>
@@ -260,7 +260,7 @@
             </div>
           </div>
           <p style="font-size: 13px; color: var(--text-3); margin: 8px 0; line-height: 1.5;">
-            Пошаговый процесс подачи и обработки жалоб. Включает сбор информации, 
+            Пошаговый процесс подачи и обработки жалоб. Включает сбор информации,
             сканирование сообщений, анализ и вынесение решения.
           </p>
         </div>
@@ -299,7 +299,7 @@
       <i class="fas fa-info-circle"></i>
       Настройте роли для управления тикетами. Каждая роль имеет свой уровень доступа.
     </p>
-    
+
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
       <!-- РОЛИ МОДЕРАТОРОВ -->
       <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 12px; padding: 20px;">
@@ -312,7 +312,7 @@
             <div style="font-size: 12px; color: var(--text-3); margin-top: 2px;">Базовый доступ к тикетам</div>
           </div>
         </div>
-        
+
         <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
           <div style="font-size: 13px; color: var(--text-3); line-height: 1.6; margin-bottom: 12px;">
             <strong style="color: #3498db;">Возможности:</strong><br>
@@ -323,7 +323,7 @@
             • Применять предупреждения
           </div>
         </div>
-        
+
         <label style="font-size: 12px; color: var(--text-3); display: block; margin-bottom: 8px;">
           Выберите роли модераторов:
         </label>
@@ -346,7 +346,7 @@
             <div style="font-size: 12px; color: var(--text-3); margin-top: 2px;">Полный доступ ко всем функциям</div>
           </div>
         </div>
-        
+
         <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
           <div style="font-size: 13px; color: var(--text-3); line-height: 1.6; margin-bottom: 12px;">
             <strong style="color: var(--err);">Возможности:</strong><br>
@@ -359,7 +359,7 @@
             • Принудительно эскалировать тикеты
           </div>
         </div>
-        
+
         <label style="font-size: 12px; color: var(--text-3); display: block; margin-bottom: 8px;">
           Выберите роли владельцев:
         </label>
@@ -624,19 +624,19 @@
       if (!notifyGuild.value) return;
       fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', { credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
-        .then(function (d) { 
-          notifyCid.value = d.notify_channel_id || ''; 
-          rulesCid.value = d.rules_channel_id || ''; 
-          modRid.value = d.mod_role_id || ''; 
-          adminRid.value = d.admin_role_id || ''; 
-          ownerRid.value = d.owner_role_id || ''; 
+        .then(function (d) {
+          notifyCid.value = d.notify_channel_id || '';
+          rulesCid.value = d.rules_channel_id || '';
+          modRid.value = d.mod_role_id || '';
+          adminRid.value = d.admin_role_id || '';
+          ownerRid.value = d.owner_role_id || '';
         })
-        .catch(function () { 
-          notifyCid.value = ''; 
-          rulesCid.value = ''; 
-          modRid.value = ''; 
-          adminRid.value = ''; 
-          ownerRid.value = ''; 
+        .catch(function () {
+          notifyCid.value = '';
+          rulesCid.value = '';
+          modRid.value = '';
+          adminRid.value = '';
+          ownerRid.value = '';
         });
     }
 
@@ -649,7 +649,7 @@
       var m = (modRid.value || '').trim();
       var a = (adminRid.value || '').trim();
       var o = (ownerRid.value || '').trim();
-      
+
       function check_val(x) {
         if (x && !/^\d{17,22}$/.test(x)) return false;
         return true;
@@ -659,11 +659,11 @@
       if (!check_val(m)) { setNotifyStatus('Неверный ID роли модераторов', true); return; }
       if (!check_val(a)) { setNotifyStatus('Неверный ID роли администраторов', true); return; }
       if (!check_val(o)) { setNotifyStatus('Неверный ID роли владельца', true); return; }
-      
+
       fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', {
         method: 'POST', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           notify_channel_id: v || null,
           rules_channel_id: r || null,
           mod_role_id: m || null,

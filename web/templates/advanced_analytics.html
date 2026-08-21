@@ -188,7 +188,7 @@ async function loadAnalytics() {
   const period = document.getElementById('periodFilter').value;
   const category = document.getElementById('categoryFilter').value;
   const moderator = document.getElementById('moderatorFilter').value;
-  
+
   // Показать/скрыть пользовательский период
   const customDateRange = document.getElementById('customDateRange');
   if (period === 'custom') {
@@ -196,7 +196,7 @@ async function loadAnalytics() {
   } else {
     customDateRange.style.display = 'none';
   }
-  
+
   try {
     const response = await fetch('/api/analytics/advanced', {
       method: 'POST',
@@ -204,7 +204,7 @@ async function loadAnalytics() {
       body: JSON.stringify({period, category, moderator})
     });
     const data = await response.json();
-    
+
     if (data.success) {
       updateStats(data.stats);
       updateCharts(data.charts);
@@ -223,7 +223,7 @@ function updateStats(stats) {
   document.getElementById('avgResolutionTime').textContent = (stats.avg_resolution_time || 0) + 'ч';
   document.getElementById('resolutionRate').textContent = (stats.resolution_rate || 0) + '%';
   document.getElementById('satisfactionScore').textContent = stats.satisfaction_score || 0;
-  
+
   // Обновить тренды
   updateTrend('totalTicketsTrend', stats.total_tickets_trend);
   updateTrend('avgResolutionTimeTrend', stats.avg_resolution_time_trend);
@@ -237,11 +237,11 @@ function updateTrend(elementId, trend) {
     element.innerHTML = '';
     return;
   }
-  
+
   const isPositive = trend > 0;
   const icon = isPositive ? 'fa-arrow-up' : 'fa-arrow-down';
   const color = isPositive ? 'var(--ok)' : 'var(--err)';
-  
+
   element.innerHTML = `<span style="color: ${color};"><i class="fas ${icon}"></i> ${Math.abs(trend)}%</span>`;
 }
 
@@ -272,7 +272,7 @@ function updateCharts(charts) {
       }
     }
   });
-  
+
   // Распределение по категориям
   if (categoryChart) categoryChart.destroy();
   categoryChart = makeChart(document.getElementById('categoryChart'), {
@@ -291,7 +291,7 @@ function updateCharts(charts) {
       }
     }
   });
-  
+
   // Список категорий
   const categoryList = document.getElementById('categoryList');
   const total = charts.category.data.reduce((a, b) => a + b, 0);
@@ -310,7 +310,7 @@ function updateCharts(charts) {
       </div>
     `;
   }).join('');
-  
+
   // Производительность модераторов
   if (moderatorChart) moderatorChart.destroy();
   moderatorChart = makeChart(document.getElementById('moderatorChart'), {
@@ -334,7 +334,7 @@ function updateCharts(charts) {
       }
     }
   });
-  
+
   // Время решения по категориям
   if (resolutionTimeChart) resolutionTimeChart.destroy();
   resolutionTimeChart = makeChart(document.getElementById('resolutionTimeChart'), {
@@ -362,12 +362,12 @@ function updateCharts(charts) {
 
 function updateInsights(insights) {
   const container = document.getElementById('aiInsights');
-  
+
   if (!insights || insights.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Инсайтов пока нет</p>';
     return;
   }
-  
+
   container.innerHTML = insights.map(insight => {
     const iconMap = {
       'positive': 'fa-arrow-up',
@@ -379,10 +379,10 @@ function updateInsights(insights) {
       'negative': 'var(--err)',
       'neutral': 'var(--accent-color)'
     };
-    
+
     const icon = iconMap[insight.type] || 'fa-info-circle';
     const color = colorMap[insight.type] || 'var(--accent-color)';
-    
+
     return `
       <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px;">
         <div style="display: flex; align-items: start; gap: 12px;">
@@ -408,14 +408,14 @@ async function exportReport(format) {
   const period = document.getElementById('periodFilter').value;
   const category = document.getElementById('categoryFilter').value;
   const moderator = document.getElementById('moderatorFilter').value;
-  
+
   try {
     const response = await fetch('/api/analytics/export', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({period, category, moderator, format})
     });
-    
+
     if (response.ok) {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);

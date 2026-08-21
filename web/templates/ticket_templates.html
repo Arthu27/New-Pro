@@ -29,12 +29,12 @@
       </select>
     </div>
   </div>
-  
+
   <div style="margin-top: 16px;">
     <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Описание шаблона</label>
     <textarea id="templateDescription" class="form-input" rows="3" placeholder="Краткое описание шаблона..." aria-label="Краткое описание шаблона..."></textarea>
   </div>
-  
+
   <div style="margin-top: 16px;">
     <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Сообщение шаблона</label>
     <textarea id="templateMessage" class="form-input" rows="8" placeholder="Текст сообщения, который будет автоматически вставлен при создании тикета...
@@ -49,7 +49,7 @@
 {date} - текущая дата
 {time} - текущее время"></textarea>
   </div>
-  
+
   <div style="margin-top: 16px; display: flex; gap: 12px;">
     <button type="button" class="control-btn primary" onclick="createTemplate()">
       <i class="fas fa-plus"></i> Создать шаблон
@@ -77,7 +77,7 @@ async function loadTemplates() {
   try {
     const response = await fetch('/api/ticket-templates');
     const data = await response.json();
-    
+
     if (data.success) {
       displayTemplates(data.templates);
     }
@@ -89,14 +89,14 @@ async function loadTemplates() {
 function displayTemplates(templates) {
   const container = document.getElementById('templateList');
   const countEl = document.getElementById('templateCount');
-  
+
   countEl.textContent = templates.length + ' ' + pluralize(templates.length, 'шаблон', 'шаблона', 'шаблонов');
-  
+
   if (templates.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Шаблонов пока нет</p>';
     return;
   }
-  
+
   container.innerHTML = templates.map(template => `
     <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
@@ -131,12 +131,12 @@ async function createTemplate() {
   const category = document.getElementById('templateCategory').value;
   const description = document.getElementById('templateDescription').value.trim();
   const message = document.getElementById('templateMessage').value.trim();
-  
+
   if (!name || !message) {
     alert('Заполните название и сообщение шаблона');
     return;
   }
-  
+
   try {
     const response = await fetch('/api/ticket-templates', {
       method: 'POST',
@@ -144,7 +144,7 @@ async function createTemplate() {
       body: JSON.stringify({name, category, description, message})
     });
     const data = await response.json();
-    
+
     if (data.success) {
       alert('Шаблон создан!');
       clearForm();
@@ -174,14 +174,14 @@ async function editTemplate(templateId) {
   try {
     const response = await fetch(`/api/ticket-templates/${templateId}`);
     const data = await response.json();
-    
+
     if (data.success) {
       const template = data.template;
       document.getElementById('templateName').value = template.name;
       document.getElementById('templateCategory').value = template.category;
       document.getElementById('templateDescription').value = template.description || '';
       document.getElementById('templateMessage').value = template.message;
-      
+
       // Прокрутить к форме
       window.scrollTo({top: 0, behavior: 'smooth'});
     }

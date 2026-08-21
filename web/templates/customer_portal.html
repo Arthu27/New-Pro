@@ -175,7 +175,7 @@ async function loadPortal() {
   try {
     const response = await fetch('/api/customer-portal');
     const data = await response.json();
-    
+
     if (data.success) {
       updateProfile(data.user);
       updateStats(data.stats);
@@ -191,7 +191,7 @@ function updateProfile(user) {
   document.getElementById('userName').textContent = user.name || 'Пользователь';
   document.getElementById('userEmail').textContent = user.email || 'email@example.com';
   document.getElementById('userMemberSince').textContent = 'Участник с ' + (user.member_since || 'недавно');
-  
+
   if (user.avatar_url) {
     document.getElementById('userAvatar').innerHTML = `<img alt="" src="${user.avatar_url}" style="width: 100%; height: 100%; border-radius: 50%;">`;
   }
@@ -206,19 +206,19 @@ function updateStats(stats) {
 
 function displayTickets(tickets) {
   const container = document.getElementById('ticketList');
-  
+
   if (!tickets || tickets.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Тикетов пока нет</p>';
     return;
   }
-  
+
   container.innerHTML = tickets.map(ticket => {
     const statusColor = ticket.status === 'open' ? 'var(--ok)' : 'var(--text-muted)';
     const statusText = ticket.status === 'open' ? 'Открыт' : 'Закрыт';
     const priorityColor = ticket.priority === 'high' ? 'var(--err)' : ticket.priority === 'medium' ? '#f1c40f' : 'var(--ok)';
     const priorityText = ticket.priority === 'high' ? 'Высокий' : ticket.priority === 'medium' ? 'Средний' : 'Низкий';
     const createdDate = new Date(ticket.created_at).toLocaleString('ru-RU');
-    
+
     return `
       <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px; margin-bottom: 12px; cursor: pointer;" onclick="viewTicket('${ticket.id}')">
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
@@ -253,12 +253,12 @@ function displayTickets(tickets) {
 
 function displayHelpfulArticles(articles) {
   const container = document.getElementById('helpfulArticles');
-  
+
   if (!articles || articles.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Статей пока нет</p>';
     return;
   }
-  
+
   container.innerHTML = articles.slice(0, 6).map(article => `
     <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px; cursor: pointer;" onclick="window.location.href='/knowledge-base/article/${article.id}'">
       <div style="font-weight: 600; font-size: 16px; margin-bottom: 8px;">${article.title}</div>
@@ -288,29 +288,29 @@ async function createTicket() {
   const priority = document.getElementById('ticketPriority').value;
   const description = document.getElementById('ticketDescription').value.trim();
   const files = document.getElementById('ticketFiles').files;
-  
+
   if (!subject || !description) {
     showToast('Заполните тему и описание', false);
     return;
   }
-  
+
   try {
     const formData = new FormData();
     formData.append('subject', subject);
     formData.append('category', category);
     formData.append('priority', priority);
     formData.append('description', description);
-    
+
     for (let i = 0; i < files.length; i++) {
       formData.append('files', files[i]);
     }
-    
+
     const response = await fetch('/api/customer-portal/tickets', {
       method: 'POST',
       body: formData
     });
     const data = await response.json();
-    
+
     if (data.success) {
       showToast('Тикет создан!', true);
       closeCreateTicketModal();
@@ -334,7 +334,7 @@ function closeEditProfileModal() {
 async function updateProfile() {
   const name = document.getElementById('editName').value.trim();
   const email = document.getElementById('editEmail').value.trim();
-  
+
   try {
     const response = await fetch('/api/customer-portal/profile', {
       method: 'PUT',
@@ -342,7 +342,7 @@ async function updateProfile() {
       body: JSON.stringify({name, email})
     });
     const data = await response.json();
-    
+
     if (data.success) {
       showToast('Профиль обновлен!', true);
       closeEditProfileModal();
@@ -366,11 +366,11 @@ async function viewTicket(ticketId) {
 
 async function loadTickets() {
   const filter = document.getElementById('ticketFilter').value;
-  
+
   try {
     const response = await fetch(`/api/customer-portal/tickets?filter=${filter}`);
     const data = await response.json();
-    
+
     if (data.success) {
       displayTickets(data.tickets);
     }

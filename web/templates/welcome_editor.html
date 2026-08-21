@@ -81,7 +81,7 @@ var selectedGuild = '{{ main_guild_id }}';
 async function loadSettings() {
   try {
     console.log('Loading settings for guild:', selectedGuild);
-    
+
     // Каналы загрузить
     var r = await fetch('/api/guild/' + selectedGuild + '/channels');
     if (!r.ok) {
@@ -89,10 +89,10 @@ async function loadSettings() {
       showToast('Список каналов загружается. Обновите страницу.', false);
       return;
     }
-    
+
     var chData = await r.json();
     console.log('Channels data:', chData);
-    
+
     // Проверяем формат данных, пришедших от API
     var channels = [];
     if (Array.isArray(chData)) {
@@ -104,7 +104,7 @@ async function loadSettings() {
       alert('Не удалось получить список каналов: ' + chData.error);
       return;
     }
-    
+
     console.log('Filtered text channels:', channels);
 
     ['welcome-channel','leave-channel'].forEach(function(id) {
@@ -112,7 +112,7 @@ async function loadSettings() {
       sel.innerHTML = '<option value="">Выберите канал...</option>';
       channels.forEach(function(c) {
         var o = document.createElement('option');
-        o.value = c.id; 
+        o.value = c.id;
         o.textContent = '#' + c.name;
         sel.appendChild(o);
       });
@@ -123,7 +123,7 @@ async function loadSettings() {
     if (s.ok) {
       var d = await s.json();
       console.log('Welcome settings:', d);
-      
+
       if (d.welcome) {
         document.getElementById('welcome-channel').value = d.welcome.channel_id || '';
         document.getElementById('welcome-title').value = d.welcome.title || '';
@@ -139,8 +139,8 @@ async function loadSettings() {
     } else {
       console.warn('Welcome settings API error:', s.status, s.statusText);
     }
-  } catch(e) { 
-    console.error('loadSettings ошибки:', e); 
+  } catch(e) {
+    console.error('loadSettings ошибки:', e);
     alert('Настройки загруз ошибка произошла: ' + e.message);
   }
   updatePreviews();
@@ -152,7 +152,7 @@ function updatePreviews() {
   var wc = document.getElementById('welcome-color').value;
   document.getElementById('welcome-preview').style.borderLeftColor = wc;
   document.getElementById('welcome-preview').innerHTML = '<div class="preview-title">'+wt+'</div><div class="preview-desc">'+wm+'</div>';
-  
+
   var lt = document.getElementById('leave-title').value || 'До свидания!';
   var lm = document.getElementById('leave-msg').value || 'Здесь будет предпросмотр...';
   var lc = document.getElementById('leave-color').value;
@@ -169,32 +169,32 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function saveWelcome() {
-  if (!selectedGuild) { 
-    alert('Сервер выбрать!'); 
-    return; 
+  if (!selectedGuild) {
+    alert('Сервер выбрать!');
+    return;
   }
-  
+
   try {
     var r = await fetch('/api/guild/'+selectedGuild+'/welcome-settings', {
-      method:'POST', 
+      method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        type:'welcome', 
+        type:'welcome',
         channel_id:document.getElementById('welcome-channel').value,
-        title:document.getElementById('welcome-title').value, 
+        title:document.getElementById('welcome-title').value,
         message:document.getElementById('welcome-msg').value,
         color:document.getElementById('welcome-color').value
       })
     });
-    
+
     var d = await r.json();
     var btn = document.querySelector('button[onclick="saveWelcome()"]');
-    
-    if (d.success) { 
-      btn.textContent='Сохранено!'; 
+
+    if (d.success) {
+      btn.textContent='Сохранено!';
       setTimeout(function(){
         btn.innerHTML='<i class="fas fa-save"   style="margin-right: 6px;"></i>Сохранить';
-      }, 2000); 
+      }, 2000);
     } else {
       alert(''+(d.error||'Ошибка'));
     }
@@ -205,32 +205,32 @@ async function saveWelcome() {
 }
 
 async function saveLeave() {
-  if (!selectedGuild) { 
-    alert('Сервер выбрать!'); 
-    return; 
+  if (!selectedGuild) {
+    alert('Сервер выбрать!');
+    return;
   }
-  
+
   try {
     var r = await fetch('/api/guild/'+selectedGuild+'/welcome-settings', {
-      method:'POST', 
+      method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        type:'leave', 
+        type:'leave',
         channel_id:document.getElementById('leave-channel').value,
-        title:document.getElementById('leave-title').value, 
+        title:document.getElementById('leave-title').value,
         message:document.getElementById('leave-msg').value,
         color:document.getElementById('leave-color').value
       })
     });
-    
+
     var d = await r.json();
     var btn = document.querySelector('button[onclick="saveLeave()"]');
-    
-    if (d.success) { 
-      btn.textContent='Сохранено!'; 
+
+    if (d.success) {
+      btn.textContent='Сохранено!';
       setTimeout(function(){
         btn.innerHTML='<i class="fas fa-save"   style="margin-right: 6px;"></i>Сохранить';
-      }, 2000); 
+      }, 2000);
     } else {
       alert(''+(d.error||'Ошибка'));
     }
