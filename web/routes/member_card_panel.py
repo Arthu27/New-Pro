@@ -223,11 +223,23 @@ def _name_pool(gid):
 
 
 def suggest(gid, query, limit=SUGGEST_LIMIT):
-    """Автодополнение: имена из аудита, XP, ДР и демо-списка."""
-    q = str(query or '').strip().lower()
-    if not q:
+    """Автодополнение: @-поиск по именам из аудита, XP, ДР и демо-списка.
+
+    Символ @ отбрасывается (стиль Discord-упоминаний): '@sonya' ищет 'sonya'.
+    Голый '@' (пусто после @) возвращает верх пула — можно сразу кликнуть
+    по человеку, не набирая имя.
+    """
+    raw = str(query or '').strip()
+    q = raw.lower()
+    if q.startswith('@'):
+        q = q[1:].lstrip()
+    if not raw:
         return []
     pool = _name_pool(gid)
+    if not q:
+        hits = [{'user_id': str(u), 'name': str(n)} for u, n in pool.items()]
+        hits.sort(key=lambda h: (h['name'].lower(), h['user_id']))
+        return hits[:limit]
     hits = []
     for uid, name in pool.items():
         if q in str(name).lower() or q in str(uid):
@@ -239,10 +251,13 @@ def suggest(gid, query, limit=SUGGEST_LIMIT):
 def resolve_user_ref(gid, raw):
     """ID или ИМЯ участника → user_id. Имя ищется в аудите, ДР и демо-списке.
 
+    Принимает упоминание в стиле Discord: '@sonya' ≡ 'sonya'.
     Возвращает (uid, None) при однозначном совпадении, иначе (None, ошибка):
     участник не найден или найдено несколько — просим уточнить.
     """
     raw = str(raw or '').strip()
+    if raw.startswith('@'):
+        raw = raw[1:].lstrip()
     if not raw:
         return None, 'Введите ID или имя участника'
     ok, _err, uid = validate_user_id(raw)

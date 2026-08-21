@@ -144,6 +144,17 @@ s = MC.suggest('777', 'тест')
 check(len(s) == MC.SUGGEST_LIMIT and s[0]['name'] == 'тест 01' and s[-1]['name'] == 'тест 08',
       'лимит 8, сорт по имени')
 
+print('== 4b. @-поиск (стиль Discord-упоминаний) ==')
+check(MC.suggest('777', '@али') == MC.suggest('777', 'али'),
+      '@-запрос эквивалентен обычному')
+at_pool = MC.suggest('777', '@')
+check(len(at_pool) >= 1 and all('@' not in (h['name'] or '') for h in at_pool),
+      'голый @ показывает людей из пула (получено %d)' % len(at_pool))
+uid, err = MC.resolve_user_ref('777', '@Алиса Мод')
+check(uid == '111' and err is None, '@Имя резолвится в ID')
+uid2, err2 = MC.resolve_user_ref('777', '  @222 ')
+check(uid2 == '222' and err2 is None, '@ID с пробелами резолвится')
+
 print('== 5. API и права ==')
 appmod = importlib.import_module('web.app')
 appmod.app.config['TESTING'] = True
@@ -221,6 +232,8 @@ for fid in ('mcQ', 'mcGo', 'mcSug', 'mcKpis', 'mcWarns', 'mcCsv'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
 check("'/lookup?user='" in tpl and "'/suggest?q='" in tpl and "'/export?user='" in tpl,
       'API-пути в шаблоне')
+check('Начни с @' in tpl and 'data-name=' in tpl,
+      '@-поиск: подсказка и подстановка имени на месте')
 check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
 ktpl = open(os.path.join(ROOT, 'web/templates/karma.html'), encoding='utf-8').read()
 check("URLSearchParams(location.search).get('user')" in ktpl,

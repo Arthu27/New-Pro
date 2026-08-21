@@ -20,6 +20,7 @@
 .mc-sug button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:none;border:none;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent);padding:10px 14px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));font-size:13px;cursor:pointer}
 .mc-sug button:last-child{border-bottom:none}
 .mc-sug button:hover{background:var(--ac-soft,color-mix(in srgb, var(--ac) 10%, transparent))}
+.mc-sug button.active{background:var(--ac-soft,color-mix(in srgb, var(--ac) 16%, transparent))}
 .mc-sug small{color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
 .mc-kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
 .mc-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:10px 16px}
@@ -63,7 +64,7 @@
 </style>
 
 <div class="mc-search">
-  <input class="mc-input" id="mcQ" placeholder="ID участника или имя — например 123456789012345678 или sonya" autocomplete="off">
+  <input class="mc-input" id="mcQ" placeholder="Начни с @, чтобы найти человека — @sonya — или введи ID" autocomplete="off" aria-label="Поиск участника: @имя или ID">
   <button type="button" class="mc-btn" id="mcGo"><i class="fas fa-magnifying-glass"></i> Показать</button>
   <button type="button" class="mc-btn ghost" id="mcCsv" style="display:none"><i class="fas fa-file-csv"></i> CSV</button>
   <div class="mc-sug" id="mcSug"></div>
@@ -112,7 +113,7 @@
 
 <div class="empty-state" id="mcEmpty">
   <i class="fas fa-id-card"></i>
-  <div>Введите ID или имя участника — соберём досье из всех подсистем разом.<div class="empty-tip">Подсказки появляются по именам из журнала аудита и календаря дней рождения. Имя тоже принимается.</div></div>
+  <div>Введите ID или имя участника — соберём досье из всех подсистем разом.<div class="empty-tip">Начните с @ — появятся люди, кликните по нужному. Имя или ID тоже принимаются.</div></div>
 </div>
 
 <script>
@@ -242,30 +243,69 @@ function mcLookup(q) {
   });
 }
 
-var q = document.getElementById('mcQ'), sug = document.getElementById('mcSug'), sugTimer = null;
-document.getElementById('mcGo').onclick = function () { sug.style.display = 'none'; mcLookup(q.value); };
+var q = document.getElementById('mcQ'), sug = document.getElementById('mcSug'), sugTimer = null, sugIdx = -1;
+
+function hideSug() { sug.style.display = 'none'; sugIdx = -1; }
+
+function paintSug(items) {
+  if (!items || !items.length) { hideSug(); return; }
+  sug.innerHTML = items.map(function (it) {
+    return '<button type="button" data-id="' + esc(it.user_id) + '" data-name="' + esc(it.name || '') + '">' +
+      '<span>' + esc(it.name || 'Без имени') + '</span><small>' + esc(it.user_id) + '</small></button>';
+  }).join('');
+  sugIdx = -1;
+  Array.prototype.forEach.call(sug.querySelectorAll('button'), function (b) {
+    b.onclick = function () {
+      q.value = b.getAttribute('data-name') || b.getAttribute('data-id');
+      hideSug();
+      mcLookup(b.getAttribute('data-id'));
+    };
+  });
+  sug.style.display = '';
+}
+
+function markSug() {
+  var btns = sug.querySelectorAll('button');
+  for (var i = 0; i < btns.length; i++) { btns[i].classList.toggle('active', i === sugIdx); }
+  if (sugIdx >= 0 && btns[sugIdx]) { btns[sugIdx].scrollIntoView({block: 'nearest'}); }
+}
+
+document.getElementById('mcGo').onclick = function () { hideSug(); mcLookup(q.value); };
+
 q.addEventListener('keydown', function (e) {
-  if (e.key === 'Enter') { sug.style.display = 'none'; mcLookup(q.value); }
+  var btns = sug.style.display === 'none' ? [] : sug.querySelectorAll('button');
+  if (e.key === 'ArrowDown' && btns.length) {
+    e.preventDefault();
+    sugIdx = Math.min(sugIdx + 1, btns.length - 1);
+    markSug();
+  } else if (e.key === 'ArrowUp' && btns.length) {
+    e.preventDefault();
+    sugIdx = Math.max(sugIdx - 1, 0);
+    markSug();
+  } else if (e.key === 'Enter') {
+    if (sugIdx >= 0 && btns[sugIdx]) { e.preventDefault(); btns[sugIdx].click(); }
+    else { hideSug(); mcLookup(q.value); }
+  } else if (e.key === 'Escape') {
+    hideSug();
+  }
 });
+
 q.addEventListener('input', function () {
   clearTimeout(sugTimer);
-  var v = q.value.trim();
-  if (v.length < 2) { sug.style.display = 'none'; return; }
+  var raw = q.value.trim();
+  if (!raw) { hideSug(); return; }
+  var isAt = raw.charAt(0) === '@';
+  if (!isAt && raw.length < 2) { hideSug(); return; }   // один «@» уже показывает людей
   sugTimer = setTimeout(function () {
-    fetch(API + '/suggest?q=' + encodeURIComponent(v)).then(function (r) { return r.json(); }).then(function (d) {
-      if (!d.success || !d.items.length) { sug.style.display = 'none'; return; }
-      sug.innerHTML = d.items.map(function (it) {
-        return '<button type="button" data-id="' + esc(it.user_id) + '"><span>' + esc(it.name || 'Без имени') + '</span><small>' + esc(it.user_id) + '</small></button>';
-      }).join('');
-      sug.style.display = '';
-      Array.prototype.forEach.call(sug.querySelectorAll('button'), function (b) {
-        b.onclick = function () { q.value = b.getAttribute('data-id'); sug.style.display = 'none'; mcLookup(q.value); };
-      });
-    }).catch(function () {});
+    fetch(API + '/suggest?q=' + encodeURIComponent(raw)).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) { hideSug(); return; }
+      paintSug(d.items);
+    }).catch(function () { hideSug(); });
   }, 220);
 });
+
 document.addEventListener('click', function (e) {
-  if (!sug.contains(e.target) && e.target !== q) { sug.style.display = 'none'; }
+  if (!sug.contains(e.target) && e.target !== q) { hideSug(); }
 });
 
 (function () {

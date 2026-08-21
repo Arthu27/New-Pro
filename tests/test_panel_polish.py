@@ -1432,8 +1432,8 @@ check('Найдено несколько' in _mcp and '_name_pool' in _mcp,
 check("'ecobar'" in _mcp and "data/xp_{gid}.json" in _mcp,
       'карточка: пул имён = аудит + демо-логин + XP + дни рождения')
 _mct = open(os.path.join(ROOT, 'web', 'templates', 'member_card.html'), encoding='utf-8').read()
-check('ID участника или имя' in _mct and 'Имя тоже принимается' in _mct,
-      'карточка: подсказки говорят, что имя принимается')
+check('Начни с @' in _mct and 'Имя или ID тоже принимаются' in _mct,
+      'карточка: подсказки говорят, что @ и имя принимаются')
 check('closeTopOverlays' in js and "window.closeTopOverlays('notifDrawer')" in js,
       'оверлеи: уведомления и лента не висят одновременно (меню не смешиваются)')
 check(js.count('window.closeTopOverlays()') >= 2 and 'closeTopOverlays' in js.split('pop.hidden = !pop.hidden')[1][:120] + js.split('pop.hidden = !pop.hidden')[0][-120:],
