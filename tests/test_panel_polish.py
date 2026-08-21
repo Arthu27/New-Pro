@@ -132,8 +132,12 @@ check(rendered == 5, 'все контрольные страницы отрен�
 print('== дашборд и логин ==')
 dash = open(os.path.join(ROOT, 'web', 'templates', 'dashboard.html'), encoding='utf-8').read()
 _app_py = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
-check('class="page-hero"' in dash and 'class="kpi-row"' in dash,
-      'дашборд использует компоненты дизайн-системы')
+check('class="page-hero"' in dash and 'class="mt-kpis"' in dash,
+      'дашборд использует компоненты дизайн-системы (вертикальные KPI модерации)')
+check('data-widget="metrics"' in dash and dash.index('data-widget="today"') < dash.index('data-widget="charts"'),
+      '«Модерация сегодня» поднята вверх: сразу после метрик, до графиков')
+check('.mt-kpi' in dash and 'flex-direction: column' in dash and '.mt-l' in dash,
+      'модерация сегодня: вертикальные карточки — подписи на своей строке, наложение невозможно')
 check('.stat-card-big' not in dash and '--ac-glow' not in dash,
       'старый тёмный дашборд с золотыми бликами удалён')
 check('.ma-row' in dash and '.ma-sort' in dash and 'MA_TONES' in dash and 'function maRender' in dash,

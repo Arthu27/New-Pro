@@ -41,6 +41,30 @@
 .ma-empty i{font-size:24px;color:var(--ac)}
 .ma-empty b{display:block;font-size:13px;color:var(--text-2)}
 .ma-empty span{font-size:11.5px}
+/* Модерация сегодня: вертикальные KPI-карточки — надписи не могут наехать */
+.mt-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; }
+.mt-kpi {
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 7px;
+  padding: 12px 14px 13px;
+  background: var(--glass, rgba(255,255,255,.03));
+  border: 1px solid var(--line, rgba(255,255,255,.08));
+  border-radius: 14px; min-height: 96px;
+}
+.mt-kpi::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--ac-grad, linear-gradient(180deg,#4f46e5,#7c3aed)); }
+.mt-kpi[data-tone="ok"]::before { background: linear-gradient(180deg, var(--ok,#16a34a), color-mix(in srgb, var(--ok,#16a34a) 40%, transparent)); }
+.mt-kpi[data-tone="warn"]::before { background: linear-gradient(180deg, var(--warn,#f59e0b), color-mix(in srgb, var(--warn,#f59e0b) 40%, transparent)); }
+.mt-kpi[data-tone="err"]::before { background: linear-gradient(180deg, var(--err,#dc2626), color-mix(in srgb, var(--err,#dc2626) 40%, transparent)); }
+.mt-kpi[data-tone="info"]::before { background: linear-gradient(180deg, var(--info,#0ea5e9), color-mix(in srgb, var(--info,#0ea5e9) 40%, transparent)); }
+.mt-kpi .mt-ic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 13px; background: var(--ac-soft, rgba(79,70,229,.14)); color: var(--ac,#4f46e5); }
+.mt-kpi[data-tone="ok"] .mt-ic { background: rgba(22,163,74,.14); color: var(--ok,#16a34a); }
+.mt-kpi[data-tone="warn"] .mt-ic { background: rgba(245,158,11,.14); color: #d97706; }
+.mt-kpi[data-tone="err"] .mt-ic { background: rgba(220,38,38,.13); color: var(--err,#dc2626); }
+.mt-kpi[data-tone="info"] .mt-ic { background: rgba(14,165,233,.13); color: #0ea5e9; }
+.mt-kpi .mt-v { font-family: 'JetBrains Mono', 'Inter', sans-serif; font-size: 20px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text,#fff); }
+.mt-kpi .mt-l { font-size: 11px; line-height: 1.25; color: var(--text-3, rgba(255,255,255,.55)); }
+.mt-kpi .mt-v.pulse { animation: maPulse .5s ease; }
+@media (prefers-reduced-motion: reduce) { .mt-kpi .mt-v.pulse { animation: none; } }
 @keyframes maPulse{from{opacity:.35}to{opacity:1}}
 .kpi-value.pulse{animation:maPulse .5s ease}
 @media (prefers-reduced-motion: reduce){.kpi-value.pulse{animation:none}}
@@ -137,45 +161,19 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   </div>
 </div>
 
-<!-- Аналитика модерации: графики -->
-<div class="grid-2" data-widget="charts" style="align-items:start">
-  <div class="panel">
-    <div class="panel-head">
-      <div><h2><i class="fas fa-chart-area"></i> Активность модерации</h2><div class="sub">Действия команды за последние 7 дней.</div></div>
-      <a class="btn-link" href="/mod-report" style="margin-left:auto">Отчёт <i class="fas fa-arrow-right"></i></a>
-    </div>
-    <div class="panel-body">
-      <div class="chart-box" id="modArea"></div>
-    </div>
-  </div>
-  <div class="panel">
-    <div class="panel-head"><div><h2><i class="fas fa-list-ol"></i> Типы действий</h2>
-      <div class="sub">Распределение мер за 7 дней.</div></div></div>
-    <div class="panel-body" id="modTypes"><div class="sk-line" style="height:12px"></div></div>
-  </div>
-</div>
-
-<!-- Календарь активности (90 дней) -->
-<div class="panel" data-widget="calendar" style="margin-top:14px">
-  <div class="panel-head"><div><h2><i class="fas fa-calendar-days"></i> Календарь активности</h2>
-    <div class="sub">Интенсивность мод-действий за последние 90 дней.</div></div>
-    <a class="btn-link" href="/mod-center" style="margin-left:auto">Центр модерации <i class="fas fa-arrow-right"></i></a></div>
-  <div class="panel-body" id="dashCalendar"><div class="sk-line" style="height:12px"></div></div>
-</div>
-
 <div class="grid-2" data-widget="today" style="align-items:start">
   <!-- Модерация сегодня -->
   <div class="panel">
-    <div class="panel-head">
-      <div><h2><i class="fas fa-shield-halved"></i> Модерация сегодня</h2><div class="sub">Действия команды за сегодня — цифры обновляются сами.</div></div>
+    <div class="panel-head" style="flex-wrap:wrap">
+      <div style="min-width:0"><h2><i class="fas fa-shield-halved"></i> Модерация сегодня</h2><div class="sub">Действия команды за сегодня — цифры обновляются сами.</div></div>
       <a class="btn-link" href="/logs" style="margin-left:auto">Журнал <i class="fas fa-arrow-right"></i></a>
     </div>
     <div class="panel-body">
-      <div class="kpi-row" id="quick-stats" style="margin-bottom:6px">
+      <div class="mt-kpis" id="quick-stats">
         <div class="sk-card" style="height:64px"></div><div class="sk-card" style="height:64px"></div>
         <div class="sk-card" style="height:64px"></div><div class="sk-card" style="height:64px"></div>
       </div>
-      <div class="section-title" style="margin-top:12px">За сегодня <span class="hint">— клик по заголовку сортирует, новые действия добавляются сами</span></div>
+      <div class="section-title" style="margin-top:14px">За сегодня <span class="hint">— сортировка по клику</span></div>
       <div class="table-wrap" id="recent-activity"></div>
     </div>
   </div>
@@ -229,6 +227,32 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       </div>
     </div>
   </div>
+</div>
+
+<!-- Аналитика модерации: графики -->
+<div class="grid-2" data-widget="charts" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head">
+      <div><h2><i class="fas fa-chart-area"></i> Активность модерации</h2><div class="sub">Действия команды за последние 7 дней.</div></div>
+      <a class="btn-link" href="/mod-report" style="margin-left:auto">Отчёт <i class="fas fa-arrow-right"></i></a>
+    </div>
+    <div class="panel-body">
+      <div class="chart-box" id="modArea"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-list-ol"></i> Типы действий</h2>
+      <div class="sub">Распределение мер за 7 дней.</div></div></div>
+    <div class="panel-body" id="modTypes"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+</div>
+
+<!-- Календарь активности (90 дней) -->
+<div class="panel" data-widget="calendar" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-calendar-days"></i> Календарь активности</h2>
+    <div class="sub">Интенсивность мод-действий за последние 90 дней.</div></div>
+    <a class="btn-link" href="/mod-center" style="margin-left:auto">Центр модерации <i class="fas fa-arrow-right"></i></a></div>
+  <div class="panel-body" id="dashCalendar"><div class="sk-line" style="height:12px"></div></div>
 </div>
 
 <div class="grid-2" data-widget="logins" style="align-items:start;margin-top:14px">
@@ -539,7 +563,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate();
   }
 
-  var MA_KPI_IDS = ['kpi-ma-actions', 'kpi-ma-warns', 'kpi-ma-bans', 'kpi-ma-kicks', 'kpi-ma-mutes'];
+  var MA_KPI_IDS = ['mt-ma-actions', 'mt-ma-warns', 'mt-ma-bans', 'mt-ma-kicks', 'mt-ma-mutes'];
 
   async function loadQuickStats() {
     try {
@@ -555,19 +579,26 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       }).length;
       var vals = [today.length, twarns.length, bans, kicks, muts];
       if (!$(MA_KPI_IDS[0])) {
-        var icons = ['fa-gavel', 'fa-triangle-exclamation', 'fa-ban', 'fa-door-open', 'fa-comment-slash'];
-        var tones = ['', ' tone-warn', ' tone-err', ' tone-info', ''];
-        var labels = ['Мод. действий', 'Варнов', 'Банов', 'Киков', 'Мутов'];
+        var defs = [
+          { icon: 'fa-gavel', tone: '', label: 'Мод. действий' },
+          { icon: 'fa-triangle-exclamation', tone: 'warn', label: 'Варнов' },
+          { icon: 'fa-ban', tone: 'err', label: 'Банов' },
+          { icon: 'fa-door-open', tone: 'info', label: 'Киков' },
+          { icon: 'fa-comment-slash', tone: '', label: 'Мутов' }
+        ];
         $('quick-stats').innerHTML = vals.map(function (v, i) {
-          return '<div class="kpi' + tones[i] + '" id="' + MA_KPI_IDS[i] + '"><div class="kpi-icon"><i class="fas ' + icons[i] + '"></i></div>' +
-            '<div class="kpi-copy"><div class="kpi-value">' + v.toLocaleString('ru-RU') + '</div><div class="kpi-label">' + labels[i] + '</div></div></div>';
+          var d = defs[i];
+          return '<div class="mt-kpi" id="' + MA_KPI_IDS[i] + '"' + (d.tone ? ' data-tone="' + d.tone + '"' : '') + '>' +
+            '<span class="mt-ic"><i class="fas ' + d.icon + '"></i></span>' +
+            '<span class="mt-v">' + v.toLocaleString('ru-RU') + '</span>' +
+            '<span class="mt-l">' + d.label + '</span></div>';
         }).join('');
         return;
       }
       MA_KPI_IDS.forEach(function (id, i) {
         var card = $(id);
         if (!card) return;
-        var v = card.querySelector('.kpi-value');
+        var v = card.querySelector('.mt-v');
         var next = vals[i].toLocaleString('ru-RU');
         if (v && v.textContent !== next) {
           v.textContent = next;
