@@ -71,6 +71,9 @@ async function loadSuggestions() {
   try {
     var r = await fetch('/api/guild/'+selectedGuild+'/suggestions');
     allSuggestions = await r.json();
+    var _s0 = (allSuggestions || [])[0] || null;
+    var fp = (allSuggestions || []).length + '|' + (_s0 ? String(_s0.id || _s0.title || _s0.text || '').slice(0, 80) : '');
+    if (window.silentGuard && window.silentGuard('suggestions-' + selectedGuild, fp)) return;
     renderSuggestions();
   } catch (e) { document.getElementById('sg-list').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Не удалось загрузить</p></div>'; }
 }

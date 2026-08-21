@@ -68,6 +68,11 @@
       if (!W.hlEsc) W.hlEsc = function (s) {
         return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       };
+      if (!W.silentGuard) W.silentGuard = function (key, sig) {
+        if (W.__silentFp && W.__silentFp[key] === sig) return true;
+        (W.__silentFp = W.__silentFp || {})[key] = sig;
+        return false;
+      };
       if (!W.setLiveRefresh) {
         var jobs = [];
         W.setLiveRefresh = function (fn, ms) { if (typeof fn === 'function') jobs.push({ fn: fn, ms: ms || 2500 }); };
@@ -360,6 +365,6 @@
     <!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
     <script src="/static/api-guard.js?v=3"></script>
     <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
-    <script src="/static/app.js?v=58"></script>
+    <script src="/static/app.js?v=59"></script>
 </body>
 </html>

@@ -76,6 +76,10 @@
     } catch (e) {
       allWarnings = [];
     }
+    /* данные не изменились — не перерисовываем список и график */
+    var _w0 = (allWarnings || [])[0] || null;
+    var fp = (allWarnings || []).length + '|' + (_w0 ? String(_w0.timestamp || _w0.user_id || _w0.reason || '').slice(0, 80) : '');
+    if (window.silentGuard && window.silentGuard('warnings', fp)) return;
     window.renderSafe(render);
     updateStats();
     if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('warn-stamp'));

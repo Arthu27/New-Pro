@@ -88,6 +88,8 @@ async function loadRoles() {
   try {
     var r = await fetch('/api/guild/' + selectedGuild + '/roles');
     var roles = await r.json();
+    var fp = (roles || []).map(function (x) { return x.id + ':' + x.name + ':' + (x.members || 0); }).join('|');
+    if (window.silentGuard && window.silentGuard('roles-' + selectedGuild, fp)) return;
     if (!Array.isArray(roles) || roles.length === 0) {
       box.innerHTML = '<div class="empty-msg"><i class="fas fa-user-tag"></i>На этом сервере ролей нет</div>';
       $('stat-roles').textContent = '0'; $('stat-members').textContent = '0';

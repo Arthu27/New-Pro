@@ -170,12 +170,19 @@
 
   /* ── Журнал панели ── */
   var ROLE_TONES = { owner: 'danger', admin: 'security', mod: 'ok', uye: 'neutral' };
+  var _panelLogsFp = '';
   async function loadPanelLogs() {
     var box = $('panelLogList');
     if (!box) return;
     try {
       var d = await fetch('/api/panel-logs').then(function (r) { return r.json(); });
       var items = Array.isArray(d) ? d : (d.items || []);
+      /* данные не изменились — список не перерисовываем */
+      var fp = items.slice(0, 14).map(function (it) {
+        return (it.ts || '') + '|' + (it.action || '') + '|' + (it.username || '');
+      }).join('\u0001');
+      if (fp === _panelLogsFp) return;
+      _panelLogsFp = fp;
       if (!items.length) {
         box.innerHTML = '<div class="empty"><i class="fas fa-list"></i><span>Действий панели пока нет</span></div>';
         return;

@@ -198,6 +198,16 @@
     set: function (v) { livePaused = !!v; }
   });
 
+  /* Тихие обновления: страницы сравнивают сигнатуру данных и пропускают
+     перерисовку, когда данные не изменились (никаких миганий «как F5») */
+  window.silentGuard = function (key, sig) {
+    if (typeof sig === 'undefined' || sig === null) return false;
+    if (!window.__silentFp) window.__silentFp = {};
+    if (window.__silentFp[key] === sig) return true;
+    window.__silentFp[key] = sig;
+    return false;
+  };
+
   window.setLiveRefresh = function (fn, ms) {
     if (typeof fn !== 'function') return;
     liveFns.push({ fn: fn, ms: ms || 2500, last: 0 });

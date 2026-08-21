@@ -159,6 +159,22 @@ check('maRenderDelta' in dash and 'logFingerprint' in dash and 'oldFp === newFp'
       'модерация сегодня: дельта-обновление — без перерисовки, только новые строки/цифры')
 check('_statsFp' in dash and '_chartsFp' in dash and '_leadersFp' in dash and 'loadThreatIndex._fp' in dash and 'loadHealth._fp' in dash,
       'дашборд: графики/KPI/пончики обновляются только при изменении данных — без мигания каждые 5 сек')
+# Тихие обновления в каждой комнате: никаких перерисовок при неизменных данных
+_silent_pages = {
+  'analytics': ('_anFp', '«Самые активные участники» и графики не мигают'),
+  'ops_center': ('_panelLogsFp', 'журнал панели не мигает'),
+  'warnings': ('silentGuard', 'варны не перерисовываются'),
+  'roles': ('silentGuard', 'роли не перерисовываются'),
+  'polls': ('silentGuard', 'опросы не перерисовываются'),
+  'suggestions': ('silentGuard', 'предложения не перерисовываются'),
+  'voice_stats': ('silentGuard', 'голосовая статистика не перерисовывается'),
+}
+for _name, (_marker, _msg) in _silent_pages.items():
+    _t = open(os.path.join(ROOT, 'web', 'templates', _name + '.html'), encoding='utf-8').read()
+    check(_marker in _t, f'{_name}: {_msg}')
+_app_js_now = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
+check('window.silentGuard' in _app_js_now and 'W.silentGuard' in base,
+      'общий помощник тихих обновлений в app.js и бут-шиме')
 check('.ma-row' in dash and 'flex-wrap:wrap' in dash and 'border:1px solid var(--line-2' in dash,
       'модерация сегодня: строки — отдельные карточки на flex-переносе, не слипаются')
 check('function pulseRow' in dash and 'pulse-item' in dash and "href=\"' + esc(it.link" in dash,
@@ -1118,8 +1134,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=58' in base and 'style.css?v=116' in base,
-      'версии ассетов (116/58)')
+check('app.js?v=59' in base and 'style.css?v=116' in base,
+      'версии ассетов (116/59)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,

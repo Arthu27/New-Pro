@@ -935,18 +935,31 @@ function renderCharts(d) {
     loadDrill(gid, $id('anDrillSel').value);
   }
 
+  var _anFp = '';
   async function load() {
     var sel = $id('guild-select');
     var gid = (sel && sel.value) || MAIN_GID;
     if (!gid || _loading) return;
     _loading = true;
     var refresh = $id('anRefresh');
-    if (refresh) { refresh.disabled = true; refresh.classList.add('busy'); }
-    if ($id('anUpdated')) $id('anUpdated').textContent = 'Синхронизация…';
     try {
       var res = await fetch('/api/guild/' + gid + '/analytics');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var d = await res.json();
+      /* Данные не изменились — ничего не перерисовываем:
+         «Самые активные» и графики не мигают, как при обновлении страницы */
+      var fp = String(JSON.stringify({
+        m: Array.isArray(d.top_members) ? d.top_members.slice(0, 10) : [],
+        c: Array.isArray(d.top_channels) ? d.top_channels.slice(0, 10) : [],
+        dl: Array.isArray(d.daily_labels) ? d.daily_labels : [],
+        dm: Array.isArray(d.daily_messages) ? d.daily_messages : [],
+        ml: Array.isArray(d.member_labels) ? d.member_labels : [],
+        mc: Array.isArray(d.member_counts) ? d.member_counts : []
+      }) || '');
+      if (fp === _anFp && _loaded) return;
+      _anFp = fp;
+      if (refresh) { refresh.disabled = true; refresh.classList.add('busy'); }
+      if ($id('anUpdated')) $id('anUpdated').textContent = 'Синхронизация…';
       renderMembers(d.top_members || []);
       renderChannels(d.top_channels || []);
       renderCharts(d);

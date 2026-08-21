@@ -74,6 +74,8 @@
       polls = await r.json();
       if (!Array.isArray(polls)) polls = [];
     } catch (e) { polls = []; }
+    var fp = polls.map(function (p) { return (p.id || '') + ':' + (p.active === false ? 0 : 1) + ':' + (p.votes || 0); }).join('|');
+    if (window.silentGuard && window.silentGuard('polls-' + selectedGuild, fp)) return;
     render();
   }
 
