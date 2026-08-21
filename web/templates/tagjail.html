@@ -102,7 +102,7 @@
     var tags = TJ.config.banned_tags || [];
     $('tag-chips').innerHTML = tags.length
       ? tags.map(function (t) {
-          return '<span class="chip">' + esc(t) + ' <span class="x" data-del-tag="' + esc(t) + '" title="Удалить">×</span></span>';
+          return '<span class="chip">' + esc(t) + ' <span class="x" data-del-tag="' + esc(t) + '" title="Удалить"><i class="fas fa-xmark"></i></span></span>';
         }).join('')
       : '<span class="muted">Список пуст — добавьте хотя бы один тег.</span>';
   }

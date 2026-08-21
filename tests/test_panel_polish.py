@@ -132,6 +132,7 @@ check(rendered == 5, 'все контрольные страницы отрен�
 print('== дашборд и логин ==')
 dash = open(os.path.join(ROOT, 'web', 'templates', 'dashboard.html'), encoding='utf-8').read()
 _app_py = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
+ar_tpl = open(os.path.join(ROOT, 'web', 'templates', 'autorole.html'), encoding='utf-8').read()
 check('class="page-hero"' in dash and 'class="mt-kpis"' in dash,
       'дашборд использует компоненты дизайн-системы (вертикальные KPI модерации)')
 check('data-widget="today"' in dash and dash.index('data-widget="today"') < dash.index('data-widget="pulse"'),
@@ -146,6 +147,10 @@ check('.stat-card-big' not in dash and '--ac-glow' not in dash,
       'старый тёмный дашборд с золотыми бликами удалён')
 check('.ma-row' in dash and '.ma-sort' in dash and 'MA_TONES' in dash and 'function maRender' in dash,
       'модерация сегодня: карточный сортируемый список вместо тесной таблицы')
+check('.ar-panel' in ar_tpl and 'ar-save-all' in ar_tpl and 'НАСТРОЙКИ' not in ar_tpl,
+      'авто-роли: премиальные карточки, «Сохранить всё», без капса и Poppins')
+check('ar-grid' in ar_tpl and 'fa-xmark' in ar_tpl,
+      'авто-роли: чипы ролей с FA-крестиком вместо сырого ×')
 check('attachTableSort' not in dash and "'data-table'" not in dash,
       'модерация сегодня больше не голая таблица — свой список со сортировкой')
 check('function isToday' in dash and 'isToday(l.timestamp)' in dash,
@@ -1113,8 +1118,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=58' in base and 'style.css?v=114' in base,
-      'версии ассетов (114/58)')
+check('app.js?v=58' in base and 'style.css?v=115' in base,
+      'версии ассетов (115/58)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,

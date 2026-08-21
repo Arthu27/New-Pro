@@ -165,7 +165,7 @@ function renderReasons(d) {
   } else {
     box.innerHTML = items.map(function (it) {
       return '<span class="chip">' + esc(it.text) +
-        (CAN_EDIT ? ' <span class="x" data-reason-del="' + it.id + '" title="Удалить">×</span>' : '') + '</span>';
+        (CAN_EDIT ? ' <span class="x" data-reason-del="' + it.id + '" title="Удалить"><i class="fas fa-xmark"></i></span>' : '') + '</span>';
     }).join('');
   }
   $('mcReasonForm').style.display = CAN_EDIT ? '' : 'none';

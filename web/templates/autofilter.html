@@ -124,7 +124,7 @@
     list.forEach(function (w, i) {
       var tag = document.createElement('span');
       tag.className = 'chip';
-      tag.innerHTML = esc(w) + ' <span class="x" data-chip="' + boxId + ':' + i + '">×</span>';
+      tag.innerHTML = esc(w) + ' <span class="x" data-chip="' + boxId + ':' + i + '"><i class="fas fa-xmark"></i></span>';
       box.appendChild(tag);
     });
   }

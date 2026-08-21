@@ -31,7 +31,7 @@
 <div class="page-head">
   <div class="page-head-copy">
     <div class="eyebrow">Роли <span class="sep">·</span> Роли по реакциям</div>
-    <h1>РОЛИ ПО РЕАКЦИЯМ</h1>
+    <h1>Роли по реакциям</h1>
     <p class="lead">Создание ролей по реакциям: нажал — получил роль.</p>
   </div>
 </div>
@@ -166,7 +166,7 @@ function addEntry() {
   }
   div.innerHTML = field +
     '<select class="entry-role form-input" name="entry-role" aria-label="Роль">'+roles+'</select>'+
-    '<button type="button" class="entry-del" onclick="this.parentElement.remove()">×</button>';
+    '<button type="button" class="entry-del" aria-label="Убрать роль" title="Убрать" onclick="this.parentElement.remove()"><i class="fas fa-xmark"></i></button>';
   document.getElementById('rr-entries').appendChild(div);
 }
 

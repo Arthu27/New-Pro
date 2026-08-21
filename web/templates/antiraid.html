@@ -145,7 +145,7 @@
       wl.innerHTML = '<span class="muted">Белый список пуст</span>';
     } else {
       wl.innerHTML = currentConfig.whitelist.map(function (uid, idx) {
-        return '<span class="chip">' + esc(uid) + ' <span class="x" data-wl="' + idx + '">×</span></span>';
+        return '<span class="chip">' + esc(uid) + ' <span class="x" data-wl="' + idx + '"><i class="fas fa-xmark"></i></span></span>';
       }).join('');
     }
     renderEvents();

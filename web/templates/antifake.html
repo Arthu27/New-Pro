@@ -135,7 +135,7 @@ function renderProtected(names) {
   }
   box.innerHTML = names.map(function (n) {
     return '<span class="chip">' + esc(n) +
-      (CAN_EDIT ? ' <span class="x" data-unprot="' + esc(n) + '" title="Убрать">×</span>' : '') + '</span>';
+      (CAN_EDIT ? ' <span class="x" data-unprot="' + esc(n) + '" title="Убрать"><i class="fas fa-xmark"></i></span>' : '') + '</span>';
   }).join('');
 }
 

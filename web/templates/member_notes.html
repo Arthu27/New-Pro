@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Заметки участников - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-sticky-note"   style="animation: pulse 2s infinite;"></i> ЗАМЕТКИ УЧАСТНИКОВ{% endblock %}
+{% block page_title %}<i class="fas fa-sticky-note"></i> Заметки участников{% endblock %}
 {% block content %}
 <style>
 .search-box { display: flex; gap: 8px; margin-bottom: 14px; }
@@ -31,7 +31,7 @@
 <div class="page-head">
   <div class="page-head-copy">
     <div class="eyebrow">Участники <span class="sep">·</span> Заметки</div>
-    <h1>ЗАМЕТКИ УЧАСТНИКОВ</h1>
+    <h1>Заметки участников</h1>
     <p class="lead">Заметки модераторов об участниках сервера.</p>
   </div>
 </div>
@@ -95,7 +95,7 @@ async function loadNotes(id) {
     notes.map(function(n){
       return '<div class="note-item"><div class="note-text">'+n.text+'</div>'+
         '<div class="note-meta"><i class="fas fa-user"   style="margin-right: 4px;"></i>'+n.author+' &nbsp;·&nbsp; '+new Date(n.created_at).toLocaleString('tr-TR')+'</div>'+
-        '<button type="button" class="note-del" onclick="deleteNote(\''+n.id+'\',\''+id+'\')">×</button></div>';
+        '<button type="button" class="note-del" aria-label="Удалить заметку" title="Удалить" onclick="deleteNote(\''+n.id+'\',\''+id+'\')"><i class="fas fa-xmark"></i></button></div>';
     }).join('') :
     '<p >Пока нет заметок.</p>';
 }
