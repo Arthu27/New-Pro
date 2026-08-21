@@ -135,6 +135,10 @@ check('class="page-hero"' in dash and 'class="kpi-row"' in dash,
       'дашборд использует компоненты дизайн-системы')
 check('.stat-card-big' not in dash and '--ac-glow' not in dash,
       'старый тёмный дашборд с золотыми бликами удалён')
+check('.ma-row' in dash and '.ma-sort' in dash and 'MA_TONES' in dash and 'function maRender' in dash,
+      'модерация сегодня: карточный сортируемый список вместо тесной таблицы')
+check('attachTableSort' not in dash and "'data-table'" not in dash,
+      'модерация сегодня больше не голая таблица — свой список со сортировкой')
 login = open(os.path.join(ROOT, 'web', 'templates', 'login.html'), encoding='utf-8').read()
 check('auth-card' in login and 'data-theme="dark"' in login,
       'логин — тёмная карточка (чёрное издание)')
@@ -441,8 +445,8 @@ check('w-dragon' in welcome and 'emblem-dragon.png' in welcome,
       'welcome: белый дракон в герое')
 check('Участникам' in welcome and 'wSearch' in welcome and 'w-steps' in welcome,
       'welcome: инфо для участников, поиск и «как начать»')
-check('для всех участников' in welcome and '@ уже ждёт тебя' in welcome,
-      'welcome: акцент на участников и автоматическая подсказка про @')
+check('для всех участников' in welcome and 'Поиск без @' in welcome,
+      'welcome: акцент на участников и поиск без обязательного @')
 # ═══ 15. Страницы заявок и каналов — единый премиум-вид ═══════════════════
 print('== заявки и каналы ==')
 ma = open(os.path.join(ROOT, 'web', 'templates', 'member_apply.html'), encoding='utf-8').read()
@@ -761,8 +765,8 @@ print('== welcome: @-автомат ==')
 w3 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()
 check('PHRASES' in w3 and 'Управляй сервером красиво' in w3 and 'Модерация без хаоса' in w3,
       'welcome: заголовок печатается с ротацией фраз')
-check('@ уже ждёт тебя' in w3 and 'Просто печатай' in w3,
-      'welcome: @ подан как автоматика, а не обязательный шаг')
+check('Поиск без @' in w3 and 'Просто печатай' in w3,
+      'welcome: @ не обязателен — поиск работает сам')
 check("inp.focus({ preventScroll: true })" in w3 and "matchMedia('(pointer: fine)')" in w3,
       'welcome: поле поиска само ждёт ввода (автофокус на desktop)')
 check("fetch('/api/ux/search?q=' + encodeURIComponent(q)" in w3,
@@ -770,7 +774,7 @@ check("fetch('/api/ux/search?q=' + encodeURIComponent(q)" in w3,
 check('PANEL_ICONS' in w3 and 'transcripts' in w3,
       'welcome: живые результаты с иконками групп')
 check('Начни печатать' in w3,
-      'welcome: placeholder подсказывает автоматику @')
+      'welcome: placeholder подсказывает поиск без @')
 # ═══ 27. Welcome: терминал-демо и созвездие ════════════════════════════════
 print('== welcome: терминал и созвездие ==')
 w4 = open(os.path.join(ROOT, 'web', 'templates', 'welcome.html'), encoding='utf-8').read()

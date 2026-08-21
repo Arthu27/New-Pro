@@ -3,6 +3,40 @@
 {% block page_title %}Обзор сервера{% endblock %}
 {% block content %}
 
+<style>
+/* ── Модерация сегодня: карточный список вместо тесной таблицы ── */
+.ma-head,.ma-row{display:grid;grid-template-columns:minmax(170px,1.5fr) minmax(120px,1fr) minmax(110px,.9fr) auto;gap:12px;align-items:center}
+.ma-head{padding:2px 12px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.ma-sort{display:inline-flex;align-items:center;gap:6px;background:none;border:none;padding:6px 8px;border-radius:8px;color:var(--text-2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
+.ma-sort:hover{background:var(--ac-soft,color-mix(in srgb, var(--ac) 12%, transparent));color:var(--text)}
+.ma-sort.on{color:var(--ac)}
+.ma-sort i{font-size:10px;opacity:.75}
+.ma-row{padding:9px 12px;border-radius:12px;margin:2px 0}
+.ma-row:hover{background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent))}
+.ma-act{display:flex;align-items:center;gap:11px;min-width:0}
+.ma-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.ma-ico.err{color:var(--err,#dc2626);background:rgba(220,38,38,.12);border:1px solid rgba(220,38,38,.28)}
+.ma-ico.warn{color:#f0cd7a;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3)}
+.ma-ico.info{color:#7dd3fc;background:rgba(14,165,233,.12);border:1px solid rgba(14,165,233,.26)}
+.ma-ico.ok{color:var(--ok,#16a34a);background:rgba(22,163,74,.12);border:1px solid rgba(22,163,74,.28)}
+.ma-ico.neutral{color:var(--text-2);background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2)}
+.ma-act-copy{min-width:0}
+.ma-act-copy b{display:block;font-size:12.5px;color:var(--text);font-weight:700}
+.ma-act-copy small{display:block;font-size:11px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ma-act-copy small.dim{opacity:.65}
+.ma-who{display:flex;align-items:center;gap:9px;min-width:0}
+.ma-ava{width:27px;height:27px;border-radius:50%;background:var(--ac-soft,color-mix(in srgb, var(--ac) 14%, transparent));color:var(--ac);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ma-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;color:var(--text);font-weight:600}
+.ma-mod{font-size:12px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ma-mod i{color:var(--ac);font-size:10.5px;margin-right:5px;opacity:.85}
+.ma-time{font-size:11.5px;color:var(--text-3);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ma-rows{max-height:430px;overflow:auto;overscroll-behavior:contain}
+.ma-empty{display:flex;gap:13px;align-items:center;padding:20px 14px;color:var(--text-3)}
+.ma-empty i{font-size:24px;color:var(--ac)}
+.ma-empty b{display:block;font-size:13px;color:var(--text-2)}
+.ma-empty span{font-size:11.5px}
+@media(max-width:760px){.ma-head,.ma-row{grid-template-columns:1fr auto;gap:8px}.ma-mod,.ma-sort[data-k="mod"]{display:none}}
+</style>
 
 <div class="page-hero" id="ccHero">
   <span class="aura" aria-hidden="true"></span>
@@ -503,30 +537,76 @@
   }
 
   /* Последние действия (сортируемая таблица) */
+  var MA_TONES = {
+    ban: { tone: 'err', icon: 'fa-ban', label: 'Бан' },
+    kick: { tone: 'warn', icon: 'fa-door-open', label: 'Кик' },
+    warn: { tone: 'warn', icon: 'fa-triangle-exclamation', label: 'Варн' },
+    mute: { tone: 'info', icon: 'fa-comment-slash', label: 'Мут' },
+    timeout: { tone: 'info', icon: 'fa-clock', label: 'Таймаут' },
+    unban: { tone: 'ok', icon: 'fa-unlock', label: 'Разбан' },
+    unmute: { tone: 'ok', icon: 'fa-comment', label: 'Размут' }
+  };
+  var maLogs = [], maSort = { key: 'time', dir: -1 };
+  var MA_COLS = { action: 'Действие', target: 'Цель', mod: 'Модератор', time: 'Время' };
+
+  function maSortVal(log) {
+    return {
+      action: (log.action || '?').toLowerCase(),
+      target: (log.user_name || log.target_name || log.user_id || '').toLowerCase(),
+      mod: (log.mod_name || log.mod_id || '').toLowerCase(),
+      time: log.timestamp || ''
+    };
+  }
+
+  function maRender() {
+    var box = $('recent-activity');
+    var head = Object.keys(MA_COLS).map(function (k) {
+      var on = maSort.key === k;
+      var ic = on ? (maSort.dir === 1 ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort';
+      return '<button type="button" class="ma-sort' + (on ? ' on' : '') + '" data-k="' + k + '">' + MA_COLS[k] + ' <i class="fas ' + ic + '"></i></button>';
+    }).join('');
+    if (!maLogs.length) {
+      box.innerHTML = '<div class="ma-empty"><i class="fas fa-shield-halved"></i><div><b>Сегодня тихо</b><span>Команда ещё не действовала — мод-действия появятся здесь.</span></div></div>';
+      return;
+    }
+    var rows = maLogs.slice().sort(function (x, y) {
+      var a = x._ma[maSort.key], b = y._ma[maSort.key];
+      return (a < b ? -1 : a > b ? 1 : 0) * maSort.dir;
+    }).slice(0, 12).map(function (log) {
+      var t = MA_TONES[(log.action || '?').toLowerCase()] ||
+              { tone: 'neutral', icon: 'fa-gavel', label: log.action || '?' };
+      var tg = log.user_name || log.target_name || log.user_id || '—';
+      var mod = log.mod_name || log.mod_id || '—';
+      var reason = log.reason || '';
+      return '<div class="ma-row">' +
+        '<div class="ma-act"><span class="ma-ico ' + t.tone + '"><i class="fas ' + t.icon + '"></i></span>' +
+          '<div class="ma-act-copy"><b>' + esc(t.label) + '</b>' +
+          (reason ? '<small title="' + esc(reason) + '">' + esc(reason) + '</small>' : '<small class="dim">без причины</small>') +
+        '</div></div>' +
+        '<div class="ma-who"><span class="ma-ava">' + esc(String(tg).charAt(0).toUpperCase()) + '</span>' +
+          '<span class="ma-name" title="' + esc(tg) + '">' + esc(tg) + '</span></div>' +
+        '<div class="ma-mod" title="' + esc(mod) + '"><i class="fas fa-user-shield"></i>' + esc(mod) + '</div>' +
+        '<div class="ma-time" title="' + esc(log.timestamp || '') + '">' + esc(fmtDate(log.timestamp)) + '</div>' +
+      '</div>';
+    }).join('');
+    box.innerHTML = '<div class="ma-head">' + head + '</div><div class="ma-rows">' + rows + '</div>';
+    Array.prototype.forEach.call(box.querySelectorAll('.ma-sort'), function (b) {
+      b.onclick = function () {
+        var k = b.getAttribute('data-k');
+        if (maSort.key === k) { maSort.dir = -maSort.dir; } else { maSort.key = k; maSort.dir = 1; }
+        maRender();
+      };
+    });
+  }
+
+  /* Последние действия (сортируемый список вместо тесной таблицы) */
   async function loadRecentActivity() {
     try {
-      var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
-      var box = $('recent-activity');
-      if (!logs.length) {
-        box.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><span>Пока действий нет</span></div>';
-        return;
-      }
-      var TONE = { ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral', timeout: 'neutral', unban: 'ok', unmute: 'ok' };
-      var rows = logs.slice(0, 12).map(function (log) {
-        var a = (log.action || '?').toLowerCase();
-        var tg = log.user_name || log.target_name || log.user_id || '—';
-        var m = log.mod_name || log.mod_id || '—';
-        var r = log.reason || '—';
-        return '<tr><td data-sort="' + esc(log.action || '') + '"><span class="badge ' + (TONE[a] || 'neutral') + '">' + esc(log.action || '?') + '</span></td>' +
-          '<td>' + esc(tg) + '</td>' +
-          '<td>' + esc(m) + '</td>' +
-          '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(r) + '">' + esc(r) + '</td>' +
-          '<td data-sort="' + esc(log.timestamp || '') + '" class="muted">' + esc(fmtDate(log.timestamp)) + '</td></tr>';
-      }).join('');
-      box.innerHTML = '<table class="data-table" data-sortable><thead><tr><th class="sortable">Действие</th><th class="sortable">Цель</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
-      if (window.attachTableSort) window.attachTableSort(box.querySelector('table'));
+      maLogs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
+      maLogs.forEach(function (l) { l._ma = maSortVal(l); });
+      maRender();
     } catch (e) {
-      $('recent-activity').innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить</span></div>';
+      $('recent-activity').innerHTML = '<div class="ma-empty"><i class="fas fa-triangle-exclamation"></i><div><b>Не удалось загрузить</b><span>Попробуйте обновить страницу.</span></div></div>';
     }
   }
 
