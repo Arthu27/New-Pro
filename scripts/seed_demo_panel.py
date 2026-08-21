@@ -549,4 +549,18 @@ try:
 except Exception as _ex:
     print('смены персонала не засеяны:', _ex)
 
+# ── Учётка владельца панели: консистентна с env, под который стартует демо ──
+try:
+    from werkzeug.security import generate_password_hash as _wz_gen
+    _u = (os.environ.get('PANEL_USER', 'owner') or 'owner').strip() or 'owner'
+    _p = (os.environ.get('PANEL_PASSWORD', 'preview123') or 'preview123').strip() or 'preview123'
+    with open('data/panel_credentials.json', 'w', encoding='utf-8') as _f:
+        json.dump({'user': _u, 'password_hash': _wz_gen(_p)}, _f, ensure_ascii=False)
+    _txt = 'data/panel_credentials.txt'
+    if os.path.exists(_txt):
+        os.remove(_txt)
+    print(f'записано: демо-учётка панели ({_u})')
+except Exception as _ex:
+    print('учётка панели не засеяна:', _ex)
+
 print('Готово. Демо-данные в data/ (gitignored).')

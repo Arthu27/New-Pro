@@ -131,6 +131,11 @@ def register(ctx):
             # Owner контроль (USERS dict'inden) — по солёному хэшу,
             # запись уходит в panel_credentials.json (переживает рестарт)
         username =session .get ('username')
+        from web .app import _demo_mode 
+        if _demo_mode ()and username =='demo':
+            # демо-режим: сессия называется 'demo', учётка — владелец панели
+            from web .app import _owner_user 
+            username =_owner_user 
         if username in USERS :
             from web .app import _pw_matches ,complete_owner_password_change 
             if not _pw_matches (USERS [username ].get ('password_hash'),old_pass ):

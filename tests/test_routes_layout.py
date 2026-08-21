@@ -362,7 +362,7 @@ EXPECTED = {
     'api_update_channel': '/api/guild/<guild_id>/channels/<channel_id>/update',
     'api_update_task': '/api/tasks/<task_id>',
     'api_user_change_password': '/api/user/change-password',
-    'api_user_info': '/api/user/<user_id>',
+    'api_user_info': '/api/user/<int:user_id>',
     'api_user_messages': '/api/guild/<guild_id>/user-messages',
     'api_user_profile': '/api/user-profile',
     'api_voice_command': '/api/voice-command',

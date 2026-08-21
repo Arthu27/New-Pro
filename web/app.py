@@ -432,6 +432,13 @@ _OWNER_RECORD_LEGACY_KEYS =('must_change_password','totp_secret')
 
 def _load_owner_credentials ():
     user =(os .environ .get ('PANEL_USER','owner')or 'owner').strip ()or 'owner'
+    # Демо-режим: пароль ВСЕГДА из env. Файл panel_credentials.json мог остаться
+    # от тестов или старого запуска со случайным паролем — тогда «Сменить пароль»
+    # не принимал бы верный текущий пароль (env перекрывался файлом).
+    if _demo_mode ():
+        env_pw_d =(os .environ .get ('PANEL_PASSWORD','')or '').strip ()
+        if env_pw_d :
+            return user ,_hash_pw (env_pw_d )
     try :
         saved =_store .read_json (_OWNER_CRED_PATH ,default =None )
     except Exception :
@@ -1673,7 +1680,7 @@ def api_warnings ():
         print (f"Ошибка предупреждений: {e}")
         return jsonify ([])
 
-@app .route ('/api/user/<user_id>')
+@app .route ('/api/user/<int:user_id>')
 @login_required 
 @role_required ('mod')
 def api_user_info (user_id ):
