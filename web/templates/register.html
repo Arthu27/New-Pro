@@ -223,8 +223,8 @@
     <!-- Шаг 1: данные -->
     <div class="auth-title">Регистрация</div>
     <div class="auth-sub">Нужен Discord ID, привязанный к серверу, и пароль для входа.</div>
-    <div class="auth-error" id="regError">{% if error %}{{ error }}{% endif %}</div>
-    <script>document.getElementById('regError').style.display = '{% if error %}block{% else %}none{% endif %}';</script>
+    <div class="auth-error" id="regErrorStep1">{% if error %}{{ error }}{% endif %}</div>
+    <script>document.getElementById('regErrorStep1').style.display = '{% if error %}block{% else %}none{% endif %}';</script>
     <form method="POST">
       <input type="hidden" name="step" value="1">
       <div class="auth-field">
