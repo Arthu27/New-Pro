@@ -367,6 +367,35 @@ ROLES ={
 'owner':3 
 }
 
+
+# ── Видимость уведомлений и ленты активности ──────────────────────────────
+# Минимальная роль, которой видны колокольчик и лента, настраивается
+# владельцем в панели «Доступ к панели» (/panel-access). По умолчанию —
+# только персонал (mod+): участники не видят штабных уведомлений.
+_PANEL_VIS_PATH ='data/panel_visibility.json'
+
+def _panel_visibility ():
+    try :
+        v =_store .cached_read_json (_PANEL_VIS_PATH ,ttl =10.0 ,default ={})
+        return v if isinstance (v ,dict )else {}
+    except Exception :
+        return {}
+
+def _vis_allowed (kind ):
+    v =_panel_visibility ()
+    min_role =str (v .get (kind )or 'mod').strip ()
+    if min_role not in ROLES :
+        min_role ='mod'
+    role =str (session .get ('role','uye')or 'uye')
+    return ROLES .get (role ,-1 )>=ROLES .get (min_role ,1 )
+
+@app .context_processor
+def inject_visibility ():
+    return {
+    'vis_notifications':_vis_allowed ('notifications_min_role'),
+    'vis_activity':_vis_allowed ('activity_min_role'),
+    }
+
 # Учётные данные владельца панели — приоритет:
 #  1) data/panel_credentials.json (сменённый через панель, постоянный)
 #  2) .env: PANEL_USER / PANEL_PASSWORD
@@ -1000,6 +1029,8 @@ def api_my_applications ():
 @app .route ('/api/my-notifications')
 @login_required 
 def api_my_notifications ():
+    if not _vis_allowed ('notifications_min_role'):
+        return jsonify ([])
     import time as _t 
     # Запоминаем предыдущую отметку просмотра — по ней считаем «непрочитанное»
     try :
@@ -1565,6 +1596,38 @@ def _epoch_from_ts (value ):
         dt =dt .replace (tzinfo =timezone .utc )
     return int (dt .timestamp ())
 
+def _guild_name_map (gid ):
+    """uid → имя для логов: data/member_names_{gid}.json → демо-участники →
+    живой кэш бота. Неизвестные id остаются как есть."""
+    out ={}
+    try :
+        f ='data/member_names_%s.json' % gid
+        if os .path .exists (f ):
+            with open (f ,encoding ='utf-8')as fp :
+                d =json .load (fp )
+            if isinstance (d ,dict ):
+                for k ,v in d .items ():
+                    if v :
+                        out [str (k )]=str (v )
+    except Exception as _ex :
+        _log.debug("_guild_name_map(%s): файл имён: %s", gid ,_ex )
+    if _demo_mode ():
+        try :
+            from web .routes ._common import DEMO_MEMBERS
+            for m in DEMO_MEMBERS :
+                out .setdefault (str (m .get ('id')),str (m .get ('display_name')or m .get ('name')or m .get ('id')))
+        except Exception as _ex :
+            _log.debug("_guild_name_map(%s): демо-имена: %s", gid ,_ex )
+    try :
+        if bot_instance and str (gid ).isdigit ():
+            g =bot_instance .get_guild (int (gid ))
+            if g is not None :
+                for m in g .members :
+                    out .setdefault (str (m .id ),str (m .display_name ))
+    except Exception as _ex :
+        _log.debug("_guild_name_map(%s): кэш бота: %s", gid ,_ex )
+    return out
+
 @app .route ('/api/logs')
 @login_required 
 @role_required ('mod')
@@ -1626,6 +1689,21 @@ def api_logs ():
         for _ev in all_events :
             _ev ['timestamp']=_ts_to_utc_iso (_ev .get ('timestamp'))
             _clean_md_fields (_ev )
+
+        # Имена вместо ID: цель и модератор резолвятся из карты имён гильдии.
+        _nm ={}
+        for _ev in all_events :
+            _gid =str (_ev .get ('guild_id')or '')
+            if _gid and _gid not in _nm :
+                _nm [_gid ]=_guild_name_map (_gid )
+            _map =_nm .get (_gid )or {}
+            _uid =str (_ev .get ('user_id')or '').strip ()
+            _un =str (_ev .get ('user_name')or '').strip ()
+            if _uid and (not _un or _un ==_uid or _un .isdigit ()):
+                _ev ['user_name']=_map .get (_uid )or _uid
+            _mid =str (_ev .get ('mod_id')or '').strip ()
+            if _mid and not str (_ev .get ('mod_name')or '').strip ():
+                _ev ['mod_name']=_map .get (_mid )or _mid
         all_events .sort (key =_ts_sort_key ,reverse =True )
         return jsonify (all_events [:1000 ])
     except Exception as e :
@@ -3308,6 +3386,8 @@ def api_reset_password ():
 @app .route ('/api/notifications/poll')
 @login_required 
 def api_notifications_poll ():
+    if not _vis_allowed ('notifications_min_role'):
+        return jsonify ({'notifications':[],'unread':0 ,'ts':int (_time .time ()*1000 )})
     """Опрос непрочитанных уведомлений панели для текущего пользователя.
 
     Возвращает список событий (системные broadcast-уведомления + действия
@@ -3414,6 +3494,8 @@ def _human_panel_action(action):
 @app .route ('/api/activity-feed')
 @login_required
 def api_activity_feed ():
+    if not _vis_allowed ('activity_min_role'):
+        return jsonify ([])
     """Rich recent panel activity (newest first) for the activity drawer.
 
     Собирает события из нескольких источников и нормализует их в единый

@@ -268,6 +268,7 @@ EXPECTED = {
     'api_notifications_settings_post': '/api/notifications/settings',
     'api_notifications_test': '/api/notifications/test',
     'api_panel_logs': '/api/panel-logs',
+    'api_panel_visibility': '/api/panel/visibility',
     'api_panel_menu_get': '/api/panel-menu',
     'api_panel_menu_set': '/api/panel-menu',
     'api_panic_status_panel': '/api/panic',

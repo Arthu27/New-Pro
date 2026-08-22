@@ -21,12 +21,35 @@ def register(ctx):
     _resolve_member_async = ctx._resolve_member_async
 
 
-    @app .route ('/api/guild/<guild_id>/color-roles',methods =['GET'])
+    @app .route ('/api/guild/<guild_id>/color-roles',methods =['GET','POST'])
     @login_required 
     def api_color_roles (guild_id ):
+        """Цветные роли: GET — список из файла; POST — сохранить (admin+)."""
         f =f'data/color_roles_{guild_id}.json'
-        if not os .path .exists (f ):return jsonify ([])
-        with open (f )as fp :return jsonify (json .load (fp ))
+        if request .method =='GET':
+            if not os .path .exists (f ):return jsonify ([])
+            try :
+                with open (f ,encoding ='utf-8')as fp :return jsonify (json .load (fp ))
+            except Exception :
+                return jsonify ([])
+        # POST: сохранение списка цветов (без публикации)
+        import web .app as _appm
+        if _appm .ROLES .get (session .get ('role'),-1 )<_appm .ROLES .get ('admin',2 ):
+            return jsonify ({'error':'Нет доступа'}),403 
+        data =request .get_json (silent =True )or {}
+        colors =data .get ('colors')if isinstance (data .get ('colors'),list )else []
+        clean =[]
+        for c in colors :
+            if not isinstance (c ,dict ):continue 
+            name =str (c .get ('name')or '').strip ()[:40 ]
+            hexv =str (c .get ('hex')or '').strip ()
+            import re as _re 
+            if not name or not _re .match (r'^#[0-9a-fA-F]{6}$',hexv ):
+                continue 
+            clean .append ({'name':name ,'hex':hexv .lower (),'emoji':str (c .get ('emoji')or '').strip ()[:16 ]})
+        os .makedirs ('data',exist_ok =True )
+        with open (f ,'w',encoding ='utf-8')as fp :json .dump (clean ,fp ,indent =2 ,ensure_ascii =False )
+        return jsonify ({'success':True ,'colors':clean })
 
 
     @app .route ('/api/guild/<guild_id>/color-roles/publish',methods =['POST'])
@@ -35,24 +58,62 @@ def register(ctx):
     def api_publish_color_roles (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
+        ch_id =str (data .get ('channel_id')or '').strip ()
+        colors =data .get ('colors')if isinstance (data .get ('colors'),list )else []
+        import re as _re 
+        clean =[]
+        for c in colors :
+            if not isinstance (c ,dict ):continue 
+            name =str (c .get ('name')or '').strip ()[:40 ]
+            hexv =str (c .get ('hex')or '').strip ()
+            if not name or not _re .match (r'^#[0-9a-fA-F]{6}$',hexv ):
+                continue 
+            clean .append ({'name':name ,'hex':hexv .lower (),'emoji':str (c .get ('emoji')or '').strip ()[:16 ]})
+        if not ch_id :
+            return jsonify ({'error':'Выберите канал панели'}),400 
+        if not clean :
+            return jsonify ({'error':'Сначала добавьте хотя бы один цвет'}),400 
         f =f'data/color_roles_{guild_id}.json'
-        with open (f ,'w')as fp :json .dump (data .get ('colors',[]),fp ,indent =2 )
-        def send ():
+        os .makedirs ('data',exist_ok =True )
+        with open (f ,'w',encoding ='utf-8')as fp :json .dump (clean ,fp ,indent =2 ,ensure_ascii =False )
+        if not bot :
+            if _app ._demo_mode ():
+                _fire_panel_notification ('color_roles',f"Цветные роли опубликованы: {len (clean )} цветов",f"Канал {ch_id } · демо-режим")
+                return jsonify ({'success':True ,'demo':True ,'message':f"Демо-режим: {len (clean )} цветов готовы — при живом боте роли создадутся в Discord"})
+            return jsonify ({'error':'Бот офлайн — публикация недоступна'})
+
+        async def send ():
             guild =bot .get_guild (int (guild_id ))
-            ch =bot .get_channel (int (data ['channel_id']))
-            if not guild or not ch :return 
-            for c in data .get ('colors',[]):
-                role =discord .utils .get (guild .roles ,name =f"🎨 {c['name']}")
+            ch =bot .get_channel (int (ch_id ))
+            if not guild :
+                raise RuntimeError ('Сервер не найден у бота')
+            if not ch :
+                raise RuntimeError ('Канал панели не найден — возможно, бот его не видит')
+            perms =ch .permissions_for (guild .me )
+            if not perms .send_messages :
+                raise RuntimeError ('У бота нет права писать в этот канал')
+            for c in clean :
+                role =discord .utils .get (guild .roles ,name =f"Цвет · {c['name']}")
                 if not role :
                     color_hex =c ['hex'].lstrip ('#')
-                    role =_run_async (guild .create_role (name =f"🎨 {c['name']}",color =discord .Color (int (color_hex ,16 ))))
-            desc ='\n'.join ([f"{c.get('emoji','🎨')} **{c['name']}** — `{c['hex']}`"for c in data .get ('colors',[])])
-            embed =discord .Embed (title ="🎨 Цветовые роли",description =desc +"\n\nЧтобы получить нужный цвет, используйте команду `/color`!",color =0xdc143c )
-            _run_async (ch .send (embed =embed ))
-        asyncio .run_coroutine_threadsafe (send (),bot .loop )
-        return jsonify ({'success':True })
+                    try :
+                        await guild .create_role (name =f"Цвет · {c['name']}",color =discord .Color (int (color_hex ,16 )))
+                    except Exception as _ex :
+                        _log.debug("send(): роль %s: %s", c['name'], _ex )
+            desc ='\n'.join ([f"{c.get('emoji')or '🎨'} **{c['name']}** — `{c['hex']}`"for c in clean ])
+            embed =discord .Embed (title ="Цветные роли",description =desc +"\n\nЧтобы получить нужный цвет, используйте команду `/color`!",color =0xdc143c )
+            await ch .send (embed =embed )
+
+        try :
+            asyncio .run_coroutine_threadsafe (send (),bot .loop ).result (timeout =25 )
+        except Exception as _ex :
+            msg =str (_ex )
+            if 'Forbidden' in msg or 'Missing Access' in msg :
+                msg ='Discord запретил отправку: у бота нет прав на этот канал'
+            return jsonify ({'error':f"Не удалось опубликовать: {msg }"[:200 ]}),502 
+        _fire_panel_notification ('color_roles',f"Цветные роли опубликованы: {len (clean )} цветов",f"Канал {ch_id }")
+        return jsonify ({'success':True ,'message':f"Опубликовано цветов: {len (clean )}"})
 
 
     @app .route ('/api/guild/<guild_id>/antiraid',methods =['GET','POST'])

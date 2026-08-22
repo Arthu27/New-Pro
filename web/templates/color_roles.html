@@ -1,162 +1,291 @@
 {% extends "base.html" %}
-{% block title %}Цвет Роли - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-palette" ></i> Цвет Роли{% endblock %}
+{% block title %}Цветные роли — Панель Aether{% endblock %}
+{% block page_title %}Цветные роли{% endblock %}
 {% block content %}
+
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Роли <span class="sep">·</span> Цветовые роли</div>
-    <h1>Цвет Роли</h1>
-    <p class="lead">Создание и публикация цветных ролей для участников.</p>
+    <div class="eyebrow">Роли <span class="sep">·</span> Цветные роли</div>
+    <h1>Цветные роли</h1>
+    <p class="lead">Палитра цветных ролей: добавьте цвет — участник получит его командой <span class="mono">/color</span>. Публикация создаст роли и панель в Discord.</p>
+  </div>
+  <div class="page-head-actions">
+    <span class="live-chip"><span class="dot"></span> автосохранение</span>
   </div>
 </div>
 
+<style>
+/* ═══ Цветные роли — Aether ═══ */
+.cr-grid{display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start}
+@media(max-width:900px){.cr-grid{grid-template-columns:1fr}}
+.cr-panel{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-1);overflow:hidden}
+.cr-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:linear-gradient(135deg,var(--ac-soft),transparent 60%);font-weight:800;font-size:14px}
+.cr-head i{width:32px;height:32px;border-radius:10px;background:var(--ac-grad);color:#fff;display:grid;place-items:center;font-size:13px;box-shadow:0 5px 14px -5px var(--ac-glow)}
+.cr-head .hint{margin-left:auto;font-weight:600;font-size:11px;color:var(--text-3)}
+.cr-body{padding:16px 18px}
+.cr-form{display:flex;flex-direction:column;gap:12px}
+.cr-field label{display:block;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.cr-inp{width:100%;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.cr-inp:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.cr-color-row{display:flex;gap:10px;align-items:center}
+.cr-color-row input[type="color"]{width:44px;height:38px;border:none;background:transparent;cursor:pointer;padding:0;border-radius:8px;flex-shrink:0}
+.cr-color-row input[type="text"]{flex:1;font-family:'JetBrains Mono',monospace;font-size:12.5px}
+.cr-preview{display:flex;align-items:center;gap:10px;margin-top:4px;padding:10px 12px;border:1px dashed var(--line-2);border-radius:11px}
+.cr-preview .sw{width:34px;height:34px;border-radius:10px;flex-shrink:0;border:1px solid var(--line)}
+.cr-preview .nm{font-size:13px;font-weight:700;color:var(--text)}
+.cr-preview .hx{font-size:11px;color:var(--text-3);font-family:'JetBrains Mono',monospace}
+.cr-preview .em{font-size:18px;margin-left:auto}
+.cr-actions{display:flex;gap:10px}
+.cr-actions .btn{flex:1;justify-content:center}
+.cr-list{display:flex;flex-direction:column;gap:9px}
+.cr-card{display:flex;align-items:center;gap:13px;border:1px solid var(--line);border-radius:13px;padding:11px 13px;background:var(--surface);transition:border-color .15s}
+.cr-card:hover{border-color:var(--ac-line)}
+.cr-swatch{width:42px;height:42px;border-radius:12px;flex-shrink:0;border:1px solid var(--line)}
+.cr-card .copy{flex:1;min-width:0}
+.cr-card .nm{font-size:13.5px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px}
+.cr-card .nm .em{font-size:15px}
+.cr-card .hx{font-size:11px;color:var(--text-3);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.cr-del{border:1px solid transparent;background:transparent;color:var(--text-3);border-radius:9px;width:30px;height:30px;cursor:pointer;font-size:12px;display:grid;place-items:center;transition:all .12s}
+.cr-del:hover{color:var(--err);background:color-mix(in srgb,var(--err) 10%,transparent);border-color:color-mix(in srgb,var(--err) 35%,transparent)}
+.cr-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:30px 16px;color:var(--text-3)}
+.cr-empty i{font-size:26px;color:var(--ac)}
+.cr-empty b{font-size:13.5px;color:var(--text-2)}
+.cr-msg{margin-top:10px;padding:10px 13px;border-radius:11px;font-size:12.5px;font-weight:600;display:none;line-height:1.5}
+.cr-msg.show{display:block}
+.cr-msg.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);border:1px solid color-mix(in srgb,var(--ok) 40%,transparent);color:var(--ok)}
+.cr-msg.err{background:color-mix(in srgb,var(--err) 10%,transparent);border:1px solid color-mix(in srgb,var(--err) 40%,transparent);color:var(--err)}
+@media (prefers-reduced-motion: reduce){.cr-card,.cr-del{transition:none}}
+</style>
 
-
-
-<select  id="guild-select" class="guild-select" onchange="loadColorRoles()" aria-label="Выбор сервера">
-  <option value="">Выберите сервер...</option>
-</select>
-
-<div class="cr-box" data-reveal="up">
-  <div class="cr-title"><i class="fas fa-plus"></i> Добавить цвет</div>
-  <div class="grid3" >
-    <div>
-      <label class="field-label">Цвет</label>
-      <input type="text" id="color-name" placeholder="напр.: Красный" class="field-input" aria-label="напр.: Красный">
-    </div>
-    <div>
-      <label class="field-label">Код цвета</label>
-      <div  >
-        <input type="color" id="color-picker" value="#c8922a"   style="width: 42px; height: 38px;" aria-label="Цвет">
-        <input type="text" id="color-hex" placeholder="#c8922a" class="field-input"  oninput="syncColor(this.value)" aria-label="#c8922a">
+<div class="cr-grid">
+  <div class="cr-panel">
+    <div class="cr-head"><i class="fas fa-plus"></i> Добавить цвет</div>
+    <div class="cr-body">
+      <div class="cr-form">
+        <div class="cr-field">
+          <label for="cr-name">Название цвета</label>
+          <input class="cr-inp" id="cr-name" placeholder="Например: Красный" aria-label="Название цвета" maxlength="40">
+        </div>
+        <div class="cr-field">
+          <label for="cr-picker">Код цвета</label>
+          <div class="cr-color-row">
+            <input type="color" id="cr-picker" value="#c8922a" aria-label="Выбор цвета">
+            <input class="cr-inp" id="cr-hex" type="text" placeholder="#c8922a" aria-label="HEX-код цвета" maxlength="7">
+          </div>
+        </div>
+        <div class="cr-field">
+          <label for="cr-emoji">Эмодзи роли (необязательно)</label>
+          <input class="cr-inp" id="cr-emoji" placeholder="Любой эмодзи — вставьте сюда" aria-label="Эмодзи роли" maxlength="16">
+        </div>
+        <div class="cr-preview" id="cr-preview">
+          <span class="sw" id="cr-preview-sw"></span>
+          <div><div class="nm" id="cr-preview-nm">Новый цвет</div><div class="hx" id="cr-preview-hx">#c8922a</div></div>
+          <span class="em" id="cr-preview-em"></span>
+        </div>
+        <div class="cr-actions">
+          <button type="button" class="btn btn-primary" id="cr-add"><i class="fas fa-plus"></i> Добавить</button>
+        </div>
+        <div class="cr-msg" id="cr-add-msg"></div>
       </div>
     </div>
-    <div>
-      <label class="field-label">Emoji</label>
-      <input type="text" id="color-emoji" placeholder="Эмодзи роли (необязательно)" class="field-input" aria-label="Эмодзи роли (необязательно)">
-    </div>
   </div>
-  <button type="button" onclick="addColor()" class="save-btn"><i class="fas fa-plus"   style="margin-right: 6px;"></i>Добавить</button>
-</div>
 
-<div class="cr-box" data-reveal="up">
-  <div class="cr-title"><i class="fas fa-palette"></i> Текущие цвета</div>
-  <div class="colors-grid" id="color-list" data-reveal="up">
-    <p >Выберите сервер...</p>
-  </div>
-</div>
-
-<div class="cr-box" data-reveal="up">
-  <div class="cr-title"><i class="fas fa-paper-plane"></i> Опубликовать панель</div>
-  <div  >
-    <div   style="min-width: 200px;">
-      <label class="field-label">Канал панели</label>
-      <select id="panel-channel" class="field-input" aria-label="Канал панели"></select>
+  <div class="cr-panel">
+    <div class="cr-head"><i class="fas fa-palette"></i> Палитра <span class="hint" id="cr-count">0 цветов</span></div>
+    <div class="cr-body">
+      <div class="cr-list" id="cr-list">
+        <div class="cr-empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загружаем палитру…</span></div>
+      </div>
+      <div class="cr-field" style="margin-top:16px">
+        <label for="cr-channel">Канал панели</label>
+        <select class="cr-inp" id="cr-channel" aria-label="Канал панели">
+          <option value="">Выберите канал…</option>
+        </select>
+      </div>
+      <button type="button" class="btn btn-primary" id="cr-publish" style="width:100%;justify-content:center;margin-top:10px"><i class="fas fa-paper-plane"></i> Опубликовать в Discord</button>
+      <div class="cr-msg" id="cr-pub-msg"></div>
+      <div class="hint" style="margin-top:10px">Публикация сохранит палитру, создаст недостающие роли в Discord и отправит панель выбора.</div>
     </div>
-    <button type="button" onclick="publishPanel()" class="save-btn" >
-      <i class="fas fa-paper-plane"   style="margin-right: 6px;"></i>Опубликовать
-    </button>
   </div>
 </div>
 
 <script>
-var selectedGuild = '{{ main_guild_id }}';
-var colors = [];
+(function () {
+  'use strict';
+  var GID = '{{ main_guild_id }}';
+  var CAN_EDIT = {{ 'true' if role in ('admin', 'owner') else 'false' }};
+  var colors = [];
+  var _fp = '';
+  var _saveTimer = null;
 
-async function loadGuilds() {
-  // Фиксированный ID сервера
-  var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
-  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
-  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
-  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
-  if (typeof loadData === 'function') { loadData(gid); return; }
-  if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
-  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
-  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
-  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
-  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
-  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
-  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
-  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
-  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
-  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
-  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }
+  function msg(id, ok, text) {
+    var el = $(id);
+    if (!text) { el.className = 'cr-msg'; el.textContent = ''; return; }
+    el.className = 'cr-msg show ' + (ok ? 'ok' : 'err');
+    el.textContent = text;
+  }
+  function validHex(v) { return /^#[0-9a-fA-F]{6}$/.test(v); }
 
-}
+  function syncPreview() {
+    var name = $('cr-name').value.trim();
+    var hex = $('cr-hex').value.trim();
+    var emo = $('cr-emoji').value.trim();
+    $('cr-preview-sw').style.background = validHex(hex) ? hex : '#c8922a';
+    $('cr-preview-nm').textContent = name || 'Новый цвет';
+    $('cr-preview-hx').textContent = validHex(hex) ? hex.toLowerCase() : '#c8922a';
+    $('cr-preview-em').textContent = emo || '';
+  }
 
-async function loadColorRoles() {
-  selectedGuild = document.getElementById('guild-select').value;
-  if(!selectedGuild) return;
-  var [colRes, chRes] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/color-roles').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json())
-  ]);
-  colors = Array.isArray(colRes) ? colRes : [];
-  var channels = Array.isArray(chRes) ? chRes : (chRes.channels||[]);
-  document.getElementById('panel-channel').innerHTML = '<option value="">Выберите канал...</option>' +
-    channels.filter(function(c){return c.type==='text';})
-    .map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
-  renderColors();
-}
+  function plural(n) {
+    var m = Number(n) % 100, m1 = m % 10;
+    if (m > 10 && m < 20) return 'цветов';
+    if (m1 === 1) return 'цвет';
+    if (m1 > 1 && m1 < 5) return 'цвета';
+    return 'цветов';
+  }
 
-function syncColor(hex) {
-  if(/^#[0-9a-fA-F]{6}$/.test(hex)) document.getElementById('color-picker').value = hex;
-}
+  function render() {
+    $('cr-count').textContent = colors.length + ' ' + plural(colors.length);
+    var box = $('cr-list');
+    if (!colors.length) {
+      box.innerHTML = '<div class="cr-empty"><i class="fas fa-palette"></i><b>Палитра пуста</b><span>Добавьте первый цвет слева</span></div>';
+      return;
+    }
+    box.innerHTML = colors.map(function (c, i) {
+      return '<div class="cr-card">' +
+        '<span class="cr-swatch" style="background:' + esc(c.hex) + '"></span>' +
+        '<div class="copy"><div class="nm">' + (c.emoji ? '<span class="em">' + esc(c.emoji) + '</span>' : '') + esc(c.name) + '</div>' +
+        '<div class="hx">' + esc(c.hex) + '</div></div>' +
+        '<button type="button" class="cr-del" data-del="' + i + '" title="Удалить цвет" aria-label="Удалить цвет ' + esc(c.name) + '"><i class="fas fa-xmark"></i></button>' +
+      '</div>';
+    }).join('');
+  }
 
-document.addEventListener('DOMContentLoaded', function(){
-  document.getElementById('color-picker').addEventListener('input', function(){
-    document.getElementById('color-hex').value = this.value;
+  function saveSoon() {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(savePalette, 700);
+  }
+
+  async function savePalette() {
+    try {
+      var r = await fetch('/api/guild/' + GID + '/color-roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ colors: colors })
+      });
+      var d = await r.json();
+      if (d.success) colors = d.colors || colors;
+    } catch (e) { /* тихо */ }
+  }
+
+  async function load() {
+    try {
+      var colRes = await fetch('/api/guild/' + GID + '/color-roles').then(function (r) { return r.json(); });
+      var chRes = await fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); });
+      var fp = JSON.stringify(colRes);
+      if (fp !== _fp) {
+        _fp = fp;
+        colors = (Array.isArray(colRes) ? colRes : []).map(function (c) {
+          return { name: String(c.name || ''), hex: String(c.hex || '#c8922a'), emoji: String(c.emoji || '') };
+        });
+        render();
+      }
+      var chans = Array.isArray(chRes) ? chRes : (chRes.channels || []);
+      var sel = $('cr-channel');
+      var prev = sel.value;
+      sel.innerHTML = '<option value="">Выберите канал…</option>';
+      chans.filter(function (c) { return c.type === 'text' && !c.hidden; })
+        .sort(function (a, b) { return (a.position || 0) - (b.position || 0); })
+        .forEach(function (c) {
+          var s = String(c.id) === prev ? ' selected' : '';
+          sel.innerHTML += '<option value="' + esc(c.id) + '"' + s + '>#' + esc(c.name) + '</option>';
+        });
+    } catch (e) {
+      $('cr-list').innerHTML = '<div class="cr-empty"><i class="fas fa-triangle-exclamation"></i><b>Не удалось загрузить палитру</b><span>Проверьте соединение</span></div>';
+    }
+  }
+
+  function addColor() {
+    var name = $('cr-name').value.trim();
+    var hex = ($('cr-hex').value.trim() || $('cr-picker').value).toLowerCase();
+    if (!name) { msg('cr-add-msg', false, 'Введите название цвета'); return; }
+    if (!validHex(hex)) { msg('cr-add-msg', false, 'HEX-код должен быть вида #a1b2c3'); return; }
+    var emoji = $('cr-emoji').value.trim();
+    if (colors.some(function (c) { return c.name.toLowerCase() === name.toLowerCase(); })) {
+      msg('cr-add-msg', false, 'Такой цвет уже есть в палитре');
+      return;
+    }
+    colors.push({ name: name, hex: hex, emoji: emoji });
+    render();
+    saveSoon();
+    msg('cr-add-msg', true, 'Цвет «' + name + '» добавлен и сохранён');
+    $('cr-name').value = '';
+    $('cr-emoji').value = '';
+    syncPreview();
+  }
+
+  async function publish() {
+    var ch = $('cr-channel').value;
+    if (!ch) { msg('cr-pub-msg', false, 'Выберите канал панели'); return; }
+    if (!colors.length) { msg('cr-pub-msg', false, 'Сначала добавьте хотя бы один цвет'); return; }
+    var btn = $('cr-publish');
+    var orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Публикуем…';
+    msg('cr-pub-msg', true, 'Отправляем панель в Discord…');
+    try {
+      var r = await fetch('/api/guild/' + GID + '/color-roles/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel_id: ch, colors: colors })
+      });
+      var d = await r.json();
+      if (d.success) {
+        msg('cr-pub-msg', true, String(d.message || 'Цветные роли опубликованы'));
+        toast(String(d.message || 'Цветные роли опубликованы'), true);
+      } else {
+        msg('cr-pub-msg', false, String(d.error || 'Ошибка публикации'));
+        toast(String(d.error || 'Ошибка публикации'), false);
+      }
+    } catch (e) {
+      msg('cr-pub-msg', false, 'Ошибка соединения');
+    }
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+
+  /* события */
+  $('cr-picker').addEventListener('input', function () { $('cr-hex').value = this.value; syncPreview(); });
+  $('cr-hex').addEventListener('input', function () { if (validHex(this.value)) $('cr-picker').value = this.value; syncPreview(); });
+  $('cr-name').addEventListener('input', syncPreview);
+  $('cr-emoji').addEventListener('input', syncPreview);
+  $('cr-add').addEventListener('click', addColor);
+  $('cr-publish').addEventListener('click', publish);
+  $('cr-list').addEventListener('click', function (e) {
+    var del = e.target.closest ? e.target.closest('[data-del]') : null;
+    if (!del) return;
+    var i = Number(del.getAttribute('data-del'));
+    var c = colors[i];
+    window.confirmAction('Удалить цвет «' + c.name + '»?', 'Цвет исчезнет из палитры.', function () {
+      colors.splice(i, 1);
+      render();
+      saveSoon();
+      toast('Цвет удалён', true);
+    }, { danger: true, okText: 'Удалить' });
   });
-});
 
-function renderColors() {
-  var box = document.getElementById('color-list');
-  if(!colors.length) { box.innerHTML='<p >Цветов пока нет</p>'; return; }
-  box.innerHTML = colors.map(function(c,i){
-    return '<div class="color-card">'+
-      '<button type="button" class="del-btn" aria-label="Удалить цвет" title="Удалить" onclick="removeColor('+i+')"><i class="fas fa-xmark"></i></button>'+
-      '<div class="color-swatch" style="--swatch-color:' + c.hex + '"></div>'+
-      '<div   style="margin-bottom: 4px;">'+(c.emoji||'<i class=\"fas fa-palette\"></i>')+'</div>'+
-      '<div class="color-name">'+c.name+'</div>'+
-      '<div class="color-hex">'+c.hex+'</div>'+
-    '</div>';
-  }).join('');
-}
+  if (!CAN_EDIT) {
+    $('cr-add').disabled = true;
+    $('cr-publish').disabled = true;
+    msg('cr-add-msg', false, 'Просмотр: редактирование доступно администраторам');
+  }
 
-function addColor() {
-  var name = document.getElementById('color-name').value.trim();
-  if(!name) { alert('Введите название цвета!'); return; }
-  var hex = document.getElementById('color-hex').value.trim() || document.getElementById('color-picker').value;
-  if(!/^#[0-9a-fA-F]{6}$/.test(hex)) hex = document.getElementById('color-picker').value;
-  var emoji = document.getElementById('color-emoji').value.trim() || '';
-  colors.push({name:name, hex:hex, emoji:emoji});
-  renderColors();
-  document.getElementById('color-name').value = '';
-  document.getElementById('color-emoji').value = '';
-}
-
-function removeColor(i) { colors.splice(i,1); renderColors(); }
-
-async function publishPanel() {
-  if(!selectedGuild) { alert('Сервер выбрать!'); return; }
-  var ch = document.getElementById('panel-channel').value;
-  if(!ch) { alert('Выберите канал!'); return; }
-  if(!colors.length) { alert('Сначала добавьте цвета!'); return; }
-  var r = await fetch('/api/guild/'+selectedGuild+'/color-roles/publish', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({channel_id:ch, colors:colors})
-  });
-  var d = await r.json();
-  var btn = event.target;
-  if(d.success) { btn.textContent='Опубликовано!'; setTimeout(function(){btn.innerHTML='<i class="fas fa-paper-plane"></i> Опубликовать';},2000); }
-  else alert(''+(d.error||'Ошибка'));
-}
-
-loadGuilds();
+  syncPreview();
+  load();
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { load(); }, 30000);
+})();
 </script>
 {% endblock %}

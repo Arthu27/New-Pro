@@ -556,6 +556,24 @@ try:
 except Exception as _ex:
     print('смены персонала не засеяны:', _ex)
 
+# ── Карта имён: uid → имя для логов (вместо голых ID) ──
+try:
+    _names_map = {
+        '823456789012345680': 'toxicguy',
+        '523456789012345678': 'spammer_228',
+        '723456789012345679': 'voice_troll',
+        '923456789012345681': 'night_flooder',
+        '623456789012345678': 'caps_forever',
+        '623456789012345679': 'loud_voice',
+        '823456789012345679': 'offtopic_king',
+        '423456789012345678': 'emoji_spam',
+    }
+    with open('data/member_names_%s.json' % GID, 'w', encoding='utf-8') as _f:
+        json.dump(_names_map, _f, ensure_ascii=False, indent=2)
+    print('записано: карта имён участников (%d пар)' % len(_names_map))
+except Exception as _ex:
+    print('карта имён не засеяна:', _ex)
+
 # ── Демо-тикеты для Про-аналитики (файл, который читает /api/analytics/advanced) ──
 try:
     _cats = ['Модерация', 'Техподдержка', 'Жалобы', 'Другое']

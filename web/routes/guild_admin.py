@@ -288,6 +288,23 @@ def register(ctx):
             except Exception as _e :
                 print (f'[MOD-HISTORY] Ошибка чтения предупреждений: {_e}')
 
+        # Имена вместо ID: цель и модератор резолвятся из карты имён гильдии.
+        try :
+            import web .app as _appm
+            _nm =_appm ._guild_name_map (gid )if gid else {}
+            for _ev in all_events :
+                _gid =str (_ev .get ('guild_id')or '')
+                if _gid and _gid !=gid :
+                    continue 
+                _map =_nm
+                _uid =str (_ev .get ('target_id')or _ev .get ('user_id')or '').strip ()
+                if _uid and (not str (_ev .get ('target_name')or '').strip ()or str (_ev .get ('target_name'))==_uid ):
+                    _ev ['target_name']=_map .get (_uid )or _uid
+                _mid =str (_ev .get ('mod_id')or '').strip ()
+                if _mid and not str (_ev .get ('mod_name')or '').strip ():
+                    _ev ['mod_name']=_map .get (_mid )or _mid
+        except Exception as _ex :
+            print (f'[MOD-HISTORY] Имена: {_ex }')
         all_events .sort (key =lambda x :x .get ('created_at',''),reverse =True )
         return jsonify (all_events [:500 ])
 

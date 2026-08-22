@@ -135,6 +135,29 @@
   height: 4px;
   background: linear-gradient(90deg, var(--ac), #7c3aed, #22d3ee);
 }
+/* Discord-сообщение: аватар бота + имя + эмбед с цветной кромкой */
+.pv-msg { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.pv-ava {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center; overflow: hidden;
+  border: 2px solid var(--ac-line);
+}
+.pv-ava img { width: 100%; height: 100%; object-fit: cover; }
+.pv-ava .ph { font-weight: 800; font-size: 16px; color: var(--ac); background: var(--ac-soft); width: 100%; height: 100%; display: grid; place-items: center; }
+.pv-bot-line { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+.pv-bot-name { font-size: 13.5px; font-weight: 800; color: var(--text); }
+.pv-bot-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  background: var(--ac); color: #fff; border-radius: 5px; padding: 1px 6px;
+}
+.pv-embed {
+  border-left: 4px solid var(--ac);
+  background: var(--surface-2);
+  border-radius: 4px 10px 10px 4px;
+  padding: 10px 14px; min-width: 0;
+}
+.pv-embed-title { font-weight: 800; font-size: 14px; color: var(--text); margin-bottom: 4px; }
 .preview-intro {
   font-size: 12.5px; color: var(--text-2); line-height: 1.6;
   margin: -4px 0 12px; display: none;
@@ -178,9 +201,11 @@
   width: 100%; border-radius: 10px; display: block;
   border: 1px solid var(--line);
 }
+.pv-line { display: flex; gap: 10px; align-items: flex-start; }
+.pv-line .pv-text { flex: 1; min-width: 0; }
 .pv-thumb {
-  margin-top: 8px; width: 64px; height: 64px; object-fit: cover;
-  border-radius: 10px; display: block; border: 1px solid var(--line);
+  width: 64px; height: 64px; object-fit: cover;
+  border-radius: 8px; display: block; border: 1px solid var(--line); flex-shrink: 0;
 }
 .pv-badge {
   display: inline-flex; align-items: center; gap: 5px;
@@ -278,14 +303,19 @@
       <div class="preview-card">
         <div class="preview-card-bar" id="previewColorBar"></div>
         <div class="preview-card-body">
-          <div class="preview-card-title">
-            <span class="ico"><i class="fas fa-scroll"></i></span>
-            <span id="preview-title">Правила сервера</span>
+          <div class="pv-msg">
+            <span class="pv-ava"><span class="ph">A</span><img alt="" src="/static/brand/emblem-dragon.png" onerror="this.remove()"></span>
+            <div style="flex:1;min-width:0">
+              <div class="pv-bot-line"><span class="pv-bot-name">Aether</span><span class="pv-bot-badge"><i class="fas fa-robot"></i> BOT</span></div>
+              <div class="pv-embed" id="pv-embed">
+                <div class="pv-embed-title" id="preview-title">Правила сервера</div>
+                <div class="preview-intro" id="preview-intro"></div>
+                <div id="preview-rules"></div>
+              </div>
+            </div>
           </div>
-          <div class="preview-intro" id="preview-intro"></div>
-          <div id="preview-rules"></div>
           <div class="preview-foot">
-            <i class="fas fa-circle-info"></i> Первый эмбед — заголовок и вступление, дальше по одному эмбеду на правило
+            <i class="fas fa-circle-info"></i> Первый эмбед — заголовок и вступление, дальше по одному эмбеду на правило: текст, ссылка, картинка, миниатюра
           </div>
         </div>
       </div>
@@ -345,6 +375,8 @@
     if (pt) pt.textContent = title || 'Правила сервера';
     if (pi) { pi.textContent = intro; pi.className = 'preview-intro' + (intro ? ' show' : ''); }
     if (pb) pb.style.background = color;
+    var pe = document.getElementById('pv-embed');
+    if (pe) pe.style.borderLeftColor = color;
   }
   function saveMetaSoon() {
     if (!CAN_EDIT) return;
@@ -511,17 +543,17 @@
     }
     box.innerHTML = rules.map(function (r, i) {
       var html = '<div class="preview-rule"><b>' + (i + 1) + '.</b><div class="preview-rule-body">';
+      html += '<div class="pv-line">';
       html += '<div class="pv-text">' + esc(r.t) + '</div>';
+      if (r.thumb) {
+        html += '<img class="pv-thumb" src="' + esc(r.thumb) + '" alt="Миниатюра правила ' + (i + 1) + '" loading="lazy" onerror="this.style.display=\'none\'">';
+      }
+      html += '</div>';
       if (r.u) {
         html += '<a class="pv-link" href="' + esc(r.u) + '" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> ' + esc(r.u) + '</a>';
       }
       if (r.img) {
-        html += '<div class="pv-media"><span class="pv-badge"><i class="fas fa-image"></i> Картинка</span>' +
-          '<img src="' + esc(r.img) + '" alt="Картинка правила ' + (i + 1) + '" loading="lazy" onerror="this.style.display=\'none\'"></div>';
-      }
-      if (r.thumb) {
-        html += '<span class="pv-badge"><i class="fas fa-images"></i> Миниатюра</span>' +
-          '<img class="pv-thumb" src="' + esc(r.thumb) + '" alt="Миниатюра правила ' + (i + 1) + '" loading="lazy" onerror="this.style.display=\'none\'">';
+        html += '<div class="pv-media"><img src="' + esc(r.img) + '" alt="Картинка правила ' + (i + 1) + '" loading="lazy" onerror="this.style.display=\'none\'"></div>';
       }
       html += '</div></div>';
       return html;

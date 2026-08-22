@@ -36,6 +36,35 @@ def register(ctx):
         )
 
 
+    @app .route ('/api/panel/visibility',methods =['GET','POST'])
+    @login_required
+    @role_required ('owner')
+    def api_panel_visibility ():
+        """Кому видны уведомления и лента активности (min-роль)."""
+        f ='data/panel_visibility.json'
+        defaults ={'notifications_min_role':'mod','activity_min_role':'mod'}
+        cur =dict (defaults )
+        try :
+            if os .path .exists (f ):
+                with open (f ,encoding ='utf-8')as fp :
+                    d =json .load (fp )
+                if isinstance (d ,dict ):
+                    cur .update ({k :v for k ,v in d .items ()if k in defaults })
+        except Exception as _ex :
+            _log.debug("api_panel_visibility(): подавлено: %s", _ex )
+        if request .method =='GET':
+            return jsonify ({'success':True ,'visibility':cur })
+        data =request .get_json (silent =True )or {}
+        for k in defaults :
+            v =str (data .get (k ,cur [k ])or '').strip ()
+            if v in ROLES :
+                cur [k ]=v
+        os .makedirs ('data',exist_ok =True )
+        with open (f ,'w',encoding ='utf-8')as fp :
+            json .dump (cur ,fp ,indent =2 ,ensure_ascii =False )
+        return jsonify ({'success':True ,'visibility':cur })
+
+
     @app .route ('/panel-access')
     @login_required
     @role_required ('owner')
