@@ -99,13 +99,24 @@ def validate_user_id(value):
 
 
 def names_from_audit(gid):
-    """user_id -> user_name из журнала аудита (первое встреченное имя)."""
+    """user_id -> user_name: журнал аудита + общая карта имён (файл/демо/бот).
+
+    Единый источник для рисков, радара, субъектов и амнистии — голые ID
+    в панели больше не показываются, если имя известно.
+    """
     out = {}
     for ev in _read_audit(gid):
         uid = str(ev.get('user_id') or '').strip()
         name = str(ev.get('user_name') or '').strip()
         if uid and name:
             out.setdefault(uid, name)
+    try:
+        from web.routes._common import name_map_for
+        nm = name_map_for(gid)
+        for uid, name in nm.items():
+            out.setdefault(str(uid), str(name))
+    except Exception as _ex:
+        _log.debug("names_from_audit(%s): карта имён: %s", gid, _ex)
     return out
 
 
@@ -307,10 +318,18 @@ def load_amnesty_log(gid):
     return [a for a in raw if isinstance(a, dict)]
 
 
-def public_amnesty(a):
-    return {'id': a.get('id'), 'user_id': str(a.get('user_id') or ''),
+def public_amnesty(a, gid=None):
+    row = {'id': a.get('id'), 'user_id': str(a.get('user_id') or ''),
             'count': a.get('count', 0), 'by': str(a.get('by') or ''),
             'at': str(a.get('at') or ''), 'restored_at': a.get('restored_at') or None}
+    if gid is not None:
+        try:
+            from web.routes._common import name_map_for
+            nm = name_map_for(gid)
+            row['name'] = nm.get(row['user_id']) or ''
+        except Exception as _ex:
+            _log.debug("public_amnesty(): имена: %s", _ex)
+    return row
 
 
 def amnesty_user(gid, user_id, by='', at=None):
@@ -489,7 +508,7 @@ def register(ctx):
                 'edge': sum(1 for r in items if r['gap'] == 1),
             },
             'radar': expiry_radar(radar_rows),
-            'amnesty': [public_amnesty(a) for a in reversed(amnesty_log)][:10],
+            'amnesty': [public_amnesty(a, gid) for a in reversed(amnesty_log)][:10],
             'amnesty_total': len(amnesty_log),
             'can_edit': session.get('role') in ('admin', 'owner'),
         })

@@ -85,6 +85,64 @@ def _notify_discord_sender (channel_id ,title ,body ):
         return False
 
 
+def name_map_for (gid ,bot =None ):
+    """uid → имя: data/member_names_{gid}.json → демо-участники → кэш бота.
+
+    Единый источник имён для всех списков панели (логи, варны, риски,
+    субъекты, заявки): вместо голых ID везде показывается имя, если оно
+    известно; неизвестные id остаются как есть.
+    """
+    out ={}
+    try :
+        f ='data/member_names_%s.json' % str (gid )
+        if os .path .exists (f ):
+            with open (f ,encoding ='utf-8')as fp :
+                d =json .load (fp )
+            if isinstance (d ,dict ):
+                for k ,v in d .items ():
+                    if v :
+                        out [str (k )]=str (v )
+    except Exception as _ex :
+        _log.debug("name_map_for(%s): файл имён: %s", gid ,_ex )
+    try :
+        import web .app as _appm
+        if _appm ._demo_mode ():
+            for m in DEMO_MEMBERS :
+                out .setdefault (str (m .get ('id')),str (m .get ('display_name')or m .get ('name')or m .get ('id')))
+    except Exception as _ex :
+        _log.debug("name_map_for(%s): демо-имена: %s", gid ,_ex )
+    if bot is None :
+        try :
+            import web .app as _appm2
+            bot =_appm2 .bot_instance
+        except Exception :
+            bot =None 
+    try :
+        if bot and str (gid ).isdigit ():
+            g =bot .get_guild (int (gid ))
+            if g is not None :
+                for m in getattr (g ,'members',[]):
+                    out .setdefault (str (m .id ),str (m .display_name ))
+    except Exception as _ex :
+        _log.debug("name_map_for(%s): кэш бота: %s", gid ,_ex )
+    return out 
+
+def fill_names (items ,gid ,field_map =None ,bot =None ):
+    """Дописать имена в записи: {id-поле: имя-поле}; пустые/числовые имена заменяются."""
+    field_map =field_map or {'user_id':'user_name','mod_id':'mod_name'}
+    nm =name_map_for (gid ,bot )
+    for it in items :
+        if not isinstance (it ,dict ):
+            continue 
+        for idf ,nf in field_map .items ():
+            uid =str (it .get (idf )or '').strip ()
+            if not uid :
+                continue 
+            cur =str (it .get (nf )or '').strip ()
+            if not cur or cur ==uid or cur .isdigit ():
+                it [nf ]=nm .get (uid )or uid 
+    return items 
+
 def _fire_panel_notification (event ,title ,body ):
     """Вызвать диспетчер уведомлений, не прерывая основной обработчик."""
     try :

@@ -94,8 +94,13 @@ MUSIC_COGS = frozenset({
     'voice_tracker.py',
 })
 
-# Профиль «модерация + тикеты + музыка»
-SLIM_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | MUSIC_COGS
+# AI-чат — по желанию владельца включается в профиль SLIM
+AI_CHAT_COGS = frozenset({
+    'ai_chat.py',        # AI-чат (Mistral/OpenRouter/DeepSeek/Ollama)
+})
+
+# Профиль «модерация + тикеты + музыка + AI-чат»
+SLIM_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | MUSIC_COGS | AI_CHAT_COGS
 
 # env-переменные
 ENV_MOD_ONLY = 'MOD_ONLY'

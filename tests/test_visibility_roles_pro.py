@@ -193,11 +193,11 @@ enabled, gone = select_cog_files(files, slim=True)
 sel = set(enabled)
 check({'moderation.py', 'ticket.py', 'sla_cog.py', 'staff_apply.py',
        'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
-       'help.py', 'logs.py', 'impersonation.py'} <= sel,
-      'BOT_SLIM: модерация, тикеты, музыка и ядро загружены')
-check({'economy_cog.py', 'giveaway.py', 'ai_chat.py', 'minigames.py',
+       'help.py', 'logs.py', 'impersonation.py', 'ai_chat.py'} <= sel,
+      'BOT_SLIM: модерация, тикеты, музыка, ядро и AI-чат загружены')
+check({'economy_cog.py', 'giveaway.py', 'minigames.py',
        'level_cog.py'} <= set(gone),
-      'BOT_SLIM: веселуха (экономика/игры/AI/левелинг) отключена')
+      'BOT_SLIM: веселуха (экономика/игры/левелинг) отключена')
 
 # ═══ 6. Шаблоны ═══════════════════════════════════════════════════════
 print('== шаблоны ==')

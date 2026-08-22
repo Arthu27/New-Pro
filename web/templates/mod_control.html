@@ -185,7 +185,9 @@ function renderAmnesty(d) {
     else if (CAN_EDIT) tail = '<button type="button" class="btn btn-sm" data-amnesty-undo="' + a.id + '"><i class="fas fa-rotate-left"></i> Откатить</button>';
     else tail = '<span class="badge neutral">активна</span>';
     return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-dove"></i></div>' +
-      '<div style="min-width:0;flex:1"><div class="feed-item-title">#' + esc(a.user_id) + ' · ' + a.count + ' ' + plural(a.count, 'варн', 'варна', 'варнов') + '</div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' +
+        (a.name && a.name !== a.user_id ? '<b>' + esc(a.name) + '</b> <span class="id-pill">#' + esc(a.user_id) + '</span>' : '#' + esc(a.user_id)) +
+        ' · ' + a.count + ' ' + plural(a.count, 'варн', 'варна', 'варнов') + '</div>' +
       '<div class="feed-item-sub">' + esc(a.by || '—') + ' · ' + esc(fmtDate(a.at)) + '</div></div>' + tail + '</div>';
   }).join('');
 }

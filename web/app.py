@@ -1597,36 +1597,13 @@ def _epoch_from_ts (value ):
     return int (dt .timestamp ())
 
 def _guild_name_map (gid ):
-    """uid → имя для логов: data/member_names_{gid}.json → демо-участники →
-    живой кэш бота. Неизвестные id остаются как есть."""
-    out ={}
+    """uid → имя: общий резолвер из _common (файл имён → демо → кэш бота)."""
     try :
-        f ='data/member_names_%s.json' % gid
-        if os .path .exists (f ):
-            with open (f ,encoding ='utf-8')as fp :
-                d =json .load (fp )
-            if isinstance (d ,dict ):
-                for k ,v in d .items ():
-                    if v :
-                        out [str (k )]=str (v )
+        from web .routes ._common import name_map_for
+        return name_map_for (gid ,bot_instance )
     except Exception as _ex :
-        _log.debug("_guild_name_map(%s): файл имён: %s", gid ,_ex )
-    if _demo_mode ():
-        try :
-            from web .routes ._common import DEMO_MEMBERS
-            for m in DEMO_MEMBERS :
-                out .setdefault (str (m .get ('id')),str (m .get ('display_name')or m .get ('name')or m .get ('id')))
-        except Exception as _ex :
-            _log.debug("_guild_name_map(%s): демо-имена: %s", gid ,_ex )
-    try :
-        if bot_instance and str (gid ).isdigit ():
-            g =bot_instance .get_guild (int (gid ))
-            if g is not None :
-                for m in g .members :
-                    out .setdefault (str (m .id ),str (m .display_name ))
-    except Exception as _ex :
-        _log.debug("_guild_name_map(%s): кэш бота: %s", gid ,_ex )
-    return out
+        _log.debug("_guild_name_map(%s): подавлено: %s", gid ,_ex )
+        return {}
 
 @app .route ('/api/logs')
 @login_required 
@@ -1781,6 +1758,22 @@ def api_warnings ():
                             'timestamp':_ts_to_utc_iso (warn .get ('timestamp'))
                             })
 
+        # Имена вместо ID: цель и модератор резолвятся через карту имён гильдии
+        try :
+            from web .routes ._common import name_map_for
+            _wm ={}
+            for _w in all_warnings :
+                _g =str (_w .get ('guild_id')or '')
+                if _g and _g not in _wm :
+                    _wm [_g ]=name_map_for (_g )
+                _map =_wm .get (_g )or {}
+                _uid =str (_w .get ('user_id')or '')
+                _w ['user_name']=_map .get (_uid )or _uid
+                _mod =str (_w .get ('moderator')or '').strip ()
+                if _mod and _mod .isdigit ():
+                    _w ['moderator']=_map .get (_mod )or _mod
+        except Exception as _ex :
+            print (f'[WARNINGS] Имена: {_ex }')
         all_warnings .sort (key =_ts_sort_key ,reverse =True )
         return jsonify (all_warnings [:200 ])
     except Exception as e :

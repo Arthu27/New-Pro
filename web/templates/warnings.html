@@ -134,8 +134,10 @@
           return '<div class="warn-reason"><i class="fas fa-chevron-right"></i> ' + esc(w.reason || '—') + ' <span class="muted">· ' + esc(fmtDate(w.timestamp)) + '</span></div>';
         }).join('');
         var more = list.length > 4 ? '<div class="hint" style="margin-top:4px">+ ещё ' + (list.length - 4) + '</div>' : '';
-        return '<tr><td><span class="id-pill">' + esc(uid) + '</span> <span class="badge danger">' + list.length + '</span>' +
-          (last.user_name ? ' <b>' + esc(last.user_name) + '</b>' : '') + '</td>' +
+        var uidName = (last.user_name && last.user_name !== uid && !String(last.user_name).match(/^\d+$/)) ? last.user_name : '';
+        return '<tr><td>' +
+          (uidName ? '<b>' + esc(uidName) + '</b> <span class="id-pill" title="ID участника">' + esc(uid) + '</span>' : '<span class="id-pill">' + esc(uid) + '</span>') +
+          ' <span class="badge danger">' + list.length + '</span></td>' +
           '<td colspan="2">' + reasons + more + '</td>' +
           '<td><a class="btn btn-sm" href="/mod-insights?user=' + esc(uid) + '"><i class="fas fa-id-card"></i> Досье</a></td></tr>';
       }).join('');
@@ -144,7 +146,10 @@
     var q = ($('search').value || '');
     var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
     body.innerHTML = filtered.slice(0, 200).map(function (w) {
-      return '<tr><td data-sort="' + esc(w.user_id || '') + '"><span class="id-pill copyable" data-copy="' + esc(w.user_id || '') + '" title="Клик — скопировать ID">' + H(w.user_id || '—') + '</span></td>' +
+      var wName = (w.user_name && w.user_name !== w.user_id && !String(w.user_name).match(/^\d+$/)) ? w.user_name : '';
+      return '<tr><td data-sort="' + esc(w.user_id || '') + '">' +
+        (wName ? '<b>' + H(wName) + '</b> <span class="id-pill copyable" data-copy="' + esc(w.user_id || '') + '" title="Клик — скопировать ID">' + H(w.user_id || '—') + '</span>' : '<span class="id-pill copyable" data-copy="' + esc(w.user_id || '') + '" title="Клик — скопировать ID">' + H(w.user_id || '—') + '</span>') +
+        '</td>' +
         '<td>' + H(w.moderator || '—') + '</td>' +
         '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(w.reason || '') + '">' + H(w.reason || '—') + '</td>' +
         '<td data-sort="' + esc(w.timestamp || '') + '" class="muted">' + esc(fmtDate(w.timestamp)) + '</td></tr>';
