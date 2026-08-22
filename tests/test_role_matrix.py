@@ -86,8 +86,11 @@ check(public_actual == PUBLIC,
 import web.app as wa  # noqa: E402
 
 ROLES = wa.ROLES
-check(ROLES.get('uye', 0) < ROLES['mod'] < ROLES['admin'] < ROLES['owner'],
-      f'лестница ролей uye<mod<admin<owner ({ROLES})')
+check(ROLES.get('uye', 0) < ROLES['mod'] < ROLES['curator'] < ROLES['admin'] < ROLES['owner'],
+      f'лестница ролей uye<mod<curator<admin<owner ({ROLES})')
+check('curator' in ROLES and 'curator' in wa.ROLE_LABELS
+      and wa.ROLE_LABELS['curator'] == 'Куратор',
+      'куратор есть в ROLES и в русских подписях (Куратор)')
 
 
 class FakeGuild:

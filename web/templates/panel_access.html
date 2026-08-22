@@ -28,6 +28,7 @@
   .p-owner { color:#f1c40f; background:rgba(241,196,15,0.16); border:1px solid rgba(241,196,15,0.35); }
   .p-admin { color:#ff7a6b; background:rgba(231,76,60,0.16); border:1px solid rgba(231,76,60,0.35); }
   .p-mod   { color:#7fe0a8; background:rgba(46,204,113,0.16); border:1px solid rgba(46,204,113,0.35); }
+  .p-curator { color:#67e8f9; background:rgba(34,211,238,0.16); border:1px solid rgba(34,211,238,0.35); }
   .p-uye   { color:var(--ac-2); background:color-mix(in srgb, var(--ac) 16%, transparent); border:1px solid color-mix(in srgb, var(--ac) 35%, transparent); }
 
   .pa-panel { background: linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:16px; padding:18px; }
@@ -49,6 +50,7 @@
   .pa-role select.owner { border-color:rgba(241,196,15,0.6); color:#f1c40f; }
   .pa-role select.admin { border-color:rgba(231,76,60,0.6); color:#ff8a80; }
   .pa-role select.mod   { border-color:rgba(46,204,113,0.6); color:#7fe0a8; }
+  .pa-role select.curator { border-color:rgba(34,211,238,0.6); color:#67e8f9; }
 
   .pa-empty { text-align:center; opacity:.5; padding:50px 0; }
   .pa-empty i { font-size:30px; display:block; margin-bottom:12px; }
@@ -77,6 +79,7 @@
         <select id="pv-notif" aria-label="Кому видны уведомления">
           <option value="owner">Только владелец</option>
           <option value="admin">Администраторы и выше</option>
+          <option value="curator">Кураторы и выше</option>
           <option value="mod">Модераторы и выше</option>
           <option value="uye">Все участники</option>
         </select>
@@ -87,6 +90,7 @@
         <select id="pv-activity" aria-label="Кому видна лента активности">
           <option value="owner">Только владелец</option>
           <option value="admin">Администраторы и выше</option>
+          <option value="curator">Кураторы и выше</option>
           <option value="mod">Модераторы и выше</option>
           <option value="uye">Все участники</option>
         </select>
@@ -103,6 +107,7 @@
   <div class="pa-legend">
     <span class="lg p-owner"><i class="fas fa-crown"></i> Владелец</span>
     <span class="lg p-admin"><i class="fas fa-user-tie"></i> Администратор</span>
+    <span class="lg p-curator"><i class="fas fa-graduation-cap"></i> Куратор</span>
     <span class="lg p-mod"><i class="fas fa-shield-halved"></i> Модератор</span>
     <span class="lg p-uye"><i class="fas fa-user"></i> Участник (авто)</span>
   </div>
@@ -111,6 +116,7 @@
     <div class="pa-stat"><div class="ico p-owner"><i class="fas fa-crown"></i></div><div><div class="num" id="cnt-owner">0</div><div class="lbl">Владелец</div></div></div>
     <div class="pa-stat"><div class="ico p-admin"><i class="fas fa-user-tie"></i></div><div><div class="num" id="cnt-admin">0</div><div class="lbl">Администратор</div></div></div>
     <div class="pa-stat"><div class="ico p-mod"><i class="fas fa-shield-halved"></i></div><div><div class="num" id="cnt-mod">0</div><div class="lbl">Модератор</div></div></div>
+    <div class="pa-stat"><div class="ico p-curator"><i class="fas fa-graduation-cap"></i></div><div><div class="num" id="cnt-curator">0</div><div class="lbl">Куратор</div></div></div>
     <div class="pa-stat"><div class="ico p-uye"><i class="fas fa-user"></i></div><div><div class="num" id="cnt-uye">0</div><div class="lbl">Участник (авто)</div></div></div>
   </div>
 
@@ -165,14 +171,16 @@ document.addEventListener('DOMContentLoaded', function () {
 loadVisibility();
 
 var PANEL_OPTS = [
-  {v:'uye',   label:'Участник'},
-  {v:'mod',   label:'Модератор'},
-  {v:'admin', label:'Администратор'},
-  {v:'owner', label:'Владелец'}
+  {v:'uye',     label:'Участник'},
+  {v:'mod',     label:'Модератор'},
+  {v:'curator', label:'Куратор'},
+  {v:'admin',   label:'Администратор'},
+  {v:'owner',   label:'Владелец'}
 ];
 var BADGE = {
   owner: '<span class="pa-badge p-owner"><i class="fas fa-crown"></i> Владелец</span>',
   admin: '<span class="pa-badge p-admin"><i class="fas fa-user-tie"></i> Администратор</span>',
+  curator: '<span class="pa-badge p-curator"><i class="fas fa-graduation-cap"></i> Куратор</span>',
   mod:   '<span class="pa-badge p-mod"><i class="fas fa-shield-halved"></i> Модератор</span>',
   uye:   '<span class="pa-badge p-uye"><i class="fas fa-user"></i> Участник</span>'
 };
@@ -191,10 +199,11 @@ function hexToRgba(hex, a){
 function panelOf(rid){ return PA_MAP[rid] || 'uye'; }
 
 function updateStats(){
-  var c = {uye:0, mod:0, admin:0, owner:0};
-  PA_ROLES.forEach(function(r){ c[panelOf(r.id)]++; });
+  var c = {uye:0, mod:0, curator:0, admin:0, owner:0};
+  PA_ROLES.forEach(function(r){ c[panelOf(r.id)] = (c[panelOf(r.id)] || 0) + 1; });
   document.getElementById('cnt-owner').textContent = c.owner;
   document.getElementById('cnt-admin').textContent = c.admin;
+  document.getElementById('cnt-curator').textContent = c.curator;
   document.getElementById('cnt-mod').textContent = c.mod;
   document.getElementById('cnt-uye').textContent = c.uye;
 }
@@ -205,8 +214,8 @@ function renderRoles(){
   var q = (document.getElementById('pa-search-input').value || '').toLowerCase().trim();
   var list = PA_ROLES.filter(function(r){ if(!q) return true; return (r.name||'').toLowerCase().indexOf(q) !== -1; });
   if(!list.length){ host.innerHTML = '<div class="pa-empty"><i class="fas fa-search"></i>Роли не найдены</div>'; return; }
-  // Показываем сверху важные (owner/admin/mod), затем участники — по позиции
-  var order = {owner:0, admin:1, mod:2, uye:3};
+  // Показываем сверху важные (owner/admin/curator/mod), затем участники — по позиции
+  var order = {owner:0, admin:1, curator:2, mod:3, uye:4};
   list.sort(function(a,b){ return (order[panelOf(a.id)] - order[panelOf(b.id)]) || (b.position - a.position); });
   host.innerHTML = list.map(function(r){
     var cur = panelOf(r.id);

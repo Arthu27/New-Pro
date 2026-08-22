@@ -694,6 +694,15 @@ try:
 except Exception as _ex:
     print('карта имён не засеяна:', _ex)
 
+# ── Маппинг Discord-ролей → роли панели (включая Куратора) ──
+try:
+    _role_map = {'9001': 'owner', '9002': 'admin', '9003': 'mod', '9013': 'curator'}
+    with open('data/role_map.json', 'w', encoding='utf-8') as _f:
+        json.dump(_role_map, _f, ensure_ascii=False, indent=2)
+    print('записано: маппинг ролей панели (owner/admin/mod/curator)')
+except Exception as _ex:
+    print('маппинг ролей не засеян:', _ex)
+
 # ── Демо-тикеты для Про-аналитики (файл, который читает /api/analytics/advanced) ──
 try:
     _cats = ['Модерация', 'Техподдержка', 'Жалобы', 'Другое']

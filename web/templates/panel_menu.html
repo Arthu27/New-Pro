@@ -86,6 +86,10 @@
       <span class="pico" style="background:rgba(46,204,113,0.16);color:var(--ok);"><i class="fas fa-shield-halved"></i></span>
       Модератор
     </button>
+    <button type="button" class="pm-tab" id="tab-curator" onclick="selectPanel('curator')">
+      <span class="pico" style="background:rgba(34,211,238,0.16);color:#22d3ee;"><i class="fas fa-graduation-cap"></i></span>
+      Куратор
+    </button>
     <button type="button" class="pm-tab" id="tab-admin" onclick="selectPanel('admin')">
       <span class="pico" style="background:rgba(231,76,60,0.16);color:var(--err);"><i class="fas fa-user-tie"></i></span>
       Администратор
@@ -147,13 +151,20 @@ function refreshState(){
   });
 }
 
+var PM_META = {
+  mod:     {label:'Модератора',     icon:'fa-shield-halved'},
+  curator: {label:'Куратора',       icon:'fa-graduation-cap'},
+  admin:   {label:'Администратора', icon:'fa-user-tie'}
+};
+
 function selectPanel(role){
   curRole = role;
   document.getElementById('tab-mod').classList.toggle('active', role==='mod');
+  document.getElementById('tab-curator').classList.toggle('active', role==='curator');
   document.getElementById('tab-admin').classList.toggle('active', role==='admin');
-  var isMod = role==='mod';
-  document.getElementById('pm-title').innerHTML = '<i class="fas '+(isMod?'fa-shield-halved':'fa-user-tie')+'"></i> Панель '+(isMod?'Модератора':'Администратора');
-  document.getElementById('pm-sub').textContent = 'Отметьте разделы и страницы для панели '+(isMod?'Модератора':'Администратора');
+  var meta = PM_META[role] || PM_META.mod;
+  document.getElementById('pm-title').innerHTML = '<i class="fas '+meta.icon+'"></i> Панель '+meta.label;
+  document.getElementById('pm-sub').textContent = 'Отметьте разделы и страницы для панели '+meta.label;
   openGroups = {};
   refreshState();
   render();
@@ -247,7 +258,7 @@ function savePanel(){
   }).then(function(r){ return r.json(); }).then(function(d){
     if(d.success){
       CFG[curRole] = {groups:groups, items:items};
-      toast('Панель '+(curRole==='mod'?'Модератора':'Администратора')+' сохранена: '+groups.length+' разделов, '+items.length+' страниц', true);
+      toast('Панель '+((PM_META[curRole]||PM_META.mod).label)+' сохранена: '+groups.length+' разделов, '+items.length+' страниц', true);
     } else toast(d.error || 'Ошибка', false);
   }).catch(function(){ toast('Ошибка сети', false); });
 }

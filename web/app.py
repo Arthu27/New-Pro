@@ -359,12 +359,24 @@ def _handle_unexpected_error (e ):
     # Фиксированный ID сервера — используется первый найденный ботом сервер; меняется в панели
 MAIN_GUILD_ID =os .getenv ('MAIN_GUILD_ID','')  # задаётся в .env; без него контекст берёт первый сервер бота
 
-# Роли администратор (den nizkogo e visokomu)
+# Роли панели (от низшей к высшей). Куратор — старший модератор:
+# видит всё модерское + тикеты/сообщество, настраивается владельцем
+# так же, как модератор и администратор (доступ к меню, маппинг ролей).
 ROLES ={
 'uye':0 ,
 'mod':1 ,
-'admin':2 ,
-'owner':3 
+'curator':2 ,
+'admin':3 ,
+'owner':4 
+}
+
+# Русские названия ролей — для шапки панели, логов и ИИ-помощника.
+ROLE_LABELS ={
+'uye':'Участник',
+'mod':'Модератор',
+'curator':'Куратор',
+'admin':'Администратор',
+'owner':'Владелец'
 }
 
 
@@ -394,6 +406,7 @@ def inject_visibility ():
     return {
     'vis_notifications':_vis_allowed ('notifications_min_role'),
     'vis_activity':_vis_allowed ('activity_min_role'),
+    'role_label':ROLE_LABELS .get (session .get ('role','uye'),'Участник'),
     }
 
 # Учётные данные владельца панели — приоритет:
@@ -596,7 +609,9 @@ def _get_role_from_discord (discord_id :str )->str :
                 return 'owner'
             if mapped =='admin':
                 best_mapped ='admin'
-            elif mapped =='mod'and best_mapped not in ('admin','owner'):
+            elif mapped =='curator'and best_mapped not in ('admin','owner'):
+                best_mapped ='curator'
+            elif mapped =='mod'and best_mapped not in ('curator','admin','owner'):
                 best_mapped ='mod'
         if best_mapped !='uye':
             return best_mapped 
@@ -2352,7 +2367,7 @@ def api_review_staff_app (app_id ):
                                 except Exception :member =None
                             target =None
                             for rid ,prole in DISCORD_ROLE_MAP .items ():
-                                if prole in ('mod','admin')and guild .get_role (int (rid )):
+                                if prole in ('mod','curator','admin')and guild .get_role (int (rid )):
                                     target =guild .get_role (int (rid ));break
                             if member and target :
                                 await member .add_roles (target ,reason ='Заявка одобрена (Aether Panel)')
@@ -2484,7 +2499,7 @@ def inject_panel_menu ():
     from services .panel_menu import (panel_groups_for, module_mode_active,
     module_off_paths)
     role =session .get ('role','uye')
-    menu =panel_groups_for (role )if role in ('owner','admin','mod')else []
+    menu =panel_groups_for (role )if ROLES .get (role ,-1 )>=ROLES ['mod']else []
     off_paths =module_off_paths ()
     return {'panel_menu':menu ,'panel_role':role ,
             'panel_mod_only':module_mode_active (),
@@ -2767,8 +2782,28 @@ def api_get_role_map ():
                     'position':r .position ,
                     'members':r .members .__len__ ()if hasattr (r .members ,'__len__')else 0 ,
                     })
+    elif _demo_mode ():
+        # демо-превью без бота: роли сервера из демо-набора —
+        # страница «Доступ к панели» живая и показывает маппинг,
+        # включая роль Куратора (9013 → curator).
+        try :
+            from web .routes .guild_admin import _demo_roles_seed
+            for r in _demo_roles_seed ():
+                guild_roles .append ({
+                'id':str (r ['id']),
+                'name':r ['name'],
+                'color':r ['color'],
+                'position':int (r ['id'])if str (r ['id']).isdigit ()else 0 ,
+                'members':int (r .get ('members')or 0 ),
+                })
+        except Exception as _ex:
+            _log.debug("api_get_role_map(): демо: %s", _ex )
+    role_map =dict (DISCORD_ROLE_MAP )
+    if _demo_mode ()and not role_map :
+        # дефолтный демо-маппинг, пока владелец не поменял через панель
+        role_map ={'9001':'owner','9002':'admin','9003':'mod','9013':'curator'}
     return jsonify ({
-    'role_map':DISCORD_ROLE_MAP ,
+    'role_map':role_map ,
     'guild_roles':guild_roles ,
     })
 
@@ -2777,12 +2812,12 @@ def api_get_role_map ():
 @role_required ('admin')
 def api_set_role_map ():
     """Добавить/изменить сопоставление роли.
-    panel_role: 'uye' | 'mod' | 'admin' | 'owner'  (uye = снять сопоставление, авто-определение)
+    panel_role: 'uye' | 'mod' | 'curator' | 'admin' | 'owner'  (uye = снять сопоставление, авто-определение)
     """
     data =request .get_json (silent =True )or {}
     role_id =str (data .get ('role_id','')).strip ()
     panel_role =data .get ('panel_role','').strip ()
-    if not role_id or panel_role not in ('mod','admin','owner','uye'):
+    if not role_id or panel_role not in ('mod','curator','admin','owner','uye'):
         return jsonify ({'error':'Неверные данные'}),400 
     if panel_role =='uye':
         DISCORD_ROLE_MAP .pop (role_id ,None )

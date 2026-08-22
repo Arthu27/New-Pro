@@ -29,6 +29,7 @@ def _demo_roles_seed ():
         {'id':'9001','name':'Владелец','color':'#e11d48','members':3},
         {'id':'9002','name':'Администратор','color':'#f43f5e','members':9},
         {'id':'9003','name':'Модератор','color':'#4f46e5','members':14},
+        {'id':'9013','name':'Куратор','color':'#22d3ee','members':5},
         {'id':'9004','name':'Хелпер','color':'#22d3ee','members':11},
         {'id':'9005','name':'Чат-контроль','color':'#7c3aed','members':7},
         {'id':'9006','name':'Ивент-мастер','color':'#a78bfa','members':6},

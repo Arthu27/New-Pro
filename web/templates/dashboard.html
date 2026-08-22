@@ -781,7 +781,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
         box.innerHTML = '<div class="empty"><i class="fas fa-user-clock"></i><span>Пока входов нет</span></div>';
         return;
       }
-      var roleTones = { owner: 'danger', admin: 'security', mod: 'ok', uye: 'neutral' };
+      var roleTones = { owner: 'danger', admin: 'security', curator: 'info', mod: 'ok', uye: 'neutral' };
       box.innerHTML = logs.slice(0, 15).map(function (l) {
         var t = fmtDate(l.timestamp);
         var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';

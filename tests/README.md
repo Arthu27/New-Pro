@@ -63,5 +63,6 @@ os.environ['DB_PATH'] = os.path.join(_TMP, 'data', 'bot.db')  # до импор�
 | `test_autoclose_tz.py` | авто-закрытие тикетов: cutoff aware (регрессия «can't compare offset-naive and offset-aware datetimes»), легаси-naive метки как UTC, свежие/чужие каналы не трогаются |
 | `test_pages_data_pro.py` | страницы участников/тикетов/ролей: демо-данные (участники, заметки, наблюдение, палитра цветов, приглашения, DM), авто-выбор главного сервера на /users и /invite-tracker, демо-ветка /api/guild/.../members |
 | `test_leaderboards_panel.py` | рейтинги: реальные имена вместо фейковых заглушек (AETHER_LEADER убраны), топ-20 с uid/raw/аватарами, русские единицы, пустой сервер — пустой список; шаблон без золотой PNG-карточки, с KPI и поиском |
+| `test_curator_role.py` | роль «Куратор» везде: лестница uye<mod<curator<admin<owner, маппинг Discord-ролей (owner>admin>curator>mod), /api/role-map принимает curator, настраиваемая панель куратора в /api/panel-menu, видимость уведомлений «кураторы и выше», шаблоны panel-access/panel-menu с куратором, демо-ветка /api/role-map, база знаний ИИ (панель+куратор в ai_helper/ai_knowledge/ai-chat) |
 
 Любая новая фича = логика-ядро чистое + тест по контракту выше.

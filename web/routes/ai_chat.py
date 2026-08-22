@@ -435,10 +435,20 @@ def register(ctx):
             "Если пользователь запрашивает действие, ответь: 'Это действие доступно только владельцу или администратору'.\n"
             )
 
+        # Всё о панели и боте: роли (включая Куратора), разделы и страницы —
+        # ИИ отвечает про панель точно и не выдумывает ссылок.
+        panel_kb =''
+        try :
+            from web .ai_knowledge import build_panel_knowledge
+            panel_kb =build_panel_knowledge (compact =True )
+        except Exception as _ex:
+            _log.debug("api_ai_chat(): подавлено: %s", _ex )
+
         system =(
         "Ты Aether — ИИ-ассистент Discord-сервера Aether и веб-панели.\n"
         f"Пользователь: {session.get('username')}, Роль: {user_role}\n"
         f"Время: {now.strftime('%H:%M')}, Дата: {now.strftime('%d %B %Y, %A')}\n\n"
+        +(f"=== ВСЁ О ПАНЕЛИ И БОТЕ ===\n{panel_kb}\n\n"if panel_kb else '')+
         "=== СОСТОЯНИЕ СЕРВЕРА ===\n"
         f"{chr(10).join(guild_data) if guild_data else 'Бот не в сети'}\n\n"
         f"=== СТАТИСТИКА МОДЕРАЦИИ ===\n{mod_stats}\n\n"

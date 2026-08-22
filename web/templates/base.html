@@ -119,7 +119,7 @@
                 </div>
             </a>
 
-            {% if role == 'owner' or role == 'admin' or role == 'mod' %}
+            {% if role != 'uye' %}
             <a href="/guilds" class="sidebar-guild" id="sidebarGuild" title="Серверы бота">
                 <span class="ico"><i class="fas fa-server"></i></span>
                 <span style="min-width:0"><b>Серверы</b><small id="sidebarGuildName">загрузка…</small></span>
@@ -150,7 +150,7 @@
                     </a>
                 </div>
 
-                {% elif role == 'owner' or role == 'admin' or role == 'mod' %}
+                {% elif role != 'uye' %}
                 {% for grp in panel_menu %}
                     {% if grp.pages %}
                     <div class="nav-group" data-group="{{ grp.key }}">
@@ -274,7 +274,7 @@
                         <div class="user-avatar">{{ (username or 'U')[0]|upper }}</div>
                         <div class="user-info">
                             <div class="user-name">{{ username }}</div>
-                            <div class="user-role">{{ role }}</div>
+                            <div class="user-role">{{ role_label }}</div>
                         </div>
                         <i class="fas fa-chevron-down user-caret"></i>
                         <div class="user-menu">
@@ -305,12 +305,12 @@
     </div>
 
     <!-- ── Плавающее меню быстрых действий ────────────────── -->
-    {% if role == 'owner' or role == 'admin' or role == 'mod' %}
+    {% if role != 'uye' %}
     <div id="fabHost"></div>
     {% endif %}
 
     <!-- ── Мобильная нижняя навигация ─────────────────────── -->
-    {% if role == 'owner' or role == 'admin' or role == 'mod' %}
+    {% if role != 'uye' %}
     <nav class="mobile-nav" aria-label="Мобильная навигация">
         <a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class="fas fa-house"></i> Главная</a>
         <a href="/warnings" class="{% if request.path == '/warnings' %}active{% endif %}"><i class="fas fa-shield-halved"></i> Варны</a>
@@ -362,7 +362,7 @@
     {% endif %}
 
     <!-- ── Данные для палитры Ctrl+K ───────────────────────── -->
-    {% if role == 'owner' or role == 'admin' or role == 'mod' %}
+    {% if role != 'uye' %}
     <script type="application/json" id="palette-data">
     {{ panel_menu|tojson }}
     </script>

@@ -23,7 +23,7 @@ except ImportError :
 
 def _bot_knowledge_base ()->str :
     """Полная база знаний о боте Aether (Discord)"""
-    return """ПОЛНАЯ БАЗА ЗНАНИЙ О БОТЕ AETHER (Discord)
+    base ="""ПОЛНАЯ БАЗА ЗНАНИЙ О БОТЕ AETHER (Discord)
 ═══════════════════════════════════════════════════
 
 ## ОСНОВНЫЕ КОМАНДЫ (ВСЕ НА АНГЛИЙСКОМ)
@@ -143,13 +143,22 @@ def _bot_knowledge_base ()->str :
 **Веб-панель Aether Panel**:
 - Полное управление ботом через браузер
 - Адрес даёт владелец (/health — статус)
-- Роли доступа: owner / admin / mod / uye
+- Роли доступа: owner / admin / curator / mod / uye
+- Куратор — старший модератор (всё модерское + тикеты и сообщество), настраивается владельцем в «Доступ к панели» и «Доступ к меню» (вкладка «Куратор»)
 
 **Правила сервера**: /rules — действующие правила
 
 ═══════════════════════════════════════════════════
 ОТВЕЧАЙ КРАТКО И ТОЧНО. ЕСЛИ НЕ ЗНАЕШЬ КОМАНДУ — НЕ ВЫДУМЫВАЙ.
 """
+
+    # Полная карта панели (разделы/страницы/роли) — генерируется из живого MENU
+    try :
+        from web .ai_knowledge import build_panel_knowledge
+        base +="\n\n"+build_panel_knowledge (compact =True )
+    except Exception as _ex:
+        _log.debug("_bot_knowledge_base(): подавлено: %s", _ex )
+    return base
 
 
     # ─── ОПРЕДЕЛЕНИЕ КАТЕГОРИИ (AI) ─────────────────────────────────────────────
@@ -946,6 +955,18 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         {"provider":"fallback","latency_ms":12 }
         )
 
+        # 16.5. Панель и роли доступа (включая Куратора) — из живой карты MENU
+    if any (k in q_lower for k in ["панел","panel","куратор","веб-панель","где настроить доступ","роли доступа"]):
+        try :
+            from web .ai_knowledge import build_panel_faq
+            return (
+            build_panel_faq (),
+            "moebius-offline-ai",
+            {"provider":"fallback","latency_ms":11 }
+            )
+        except Exception as _ex:
+            _log.debug("_local_moebius_fallback(): подавлено: %s", _ex )
+
         # 17. Команды и помощь
     if any (k in q_lower for k in ["команда","помощь","help","neler yapabilirsin","особенность","команды","помощь","что ты умеешь","справка","какие команды"]):
         return (
@@ -1133,6 +1154,14 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         sys_lines .append (f"Собеседник: {context.get('user_name')} (ID: {context.get('user_id', '?')})")
     if context .get ('guild_name'):
         sys_lines .append (f"Название сервера: {context.get('guild_name')}")
+
+        # Всё о панели и боте: роли (включая Куратора), разделы и страницы —
+        # чтобы ИИ отвечал про панель точно и не выдумывал ссылок.
+    try :
+        from web .ai_knowledge import build_panel_knowledge
+        sys_lines .append (build_panel_knowledge (compact =True ))
+    except Exception as _ex:
+        _log.debug("ai_assistant(): подавлено: %s", _ex )
 
         # RAG: Правил ve Benzer Решение Автоматически Добавить
     try :

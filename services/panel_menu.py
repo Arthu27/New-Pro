@@ -1,8 +1,8 @@
 """Panel menu visibility — which sidebar categories (groups) and rooms (pages)
-are shown for each panel role (mod / admin / owner).
+are shown for each panel role (mod / curator / admin / owner).
 
 - owner always sees everything.
-- mod / admin visibility is stored in data/panel_menu.json.
+- mod / curator / admin visibility is stored in data/panel_menu.json.
 - member (uye) panel is managed separately by the user later.
 
 Moderation section metadata (section / tone / access) is used by the sidebar
@@ -229,17 +229,20 @@ MODERATION_SECTIONS = (
      'icon': 'fa-chart-line', 'description': 'Нагрузка, качество и эскалация'},
 )
 
-_ROLE_LEVEL = {'uye': 0, 'mod': 1, 'admin': 2, 'owner': 3}
+_ROLE_LEVEL = {'uye': 0, 'mod': 1, 'curator': 2, 'admin': 3, 'owner': 4}
 
 
 # Defaults applied if a role has no stored config yet.
+# Куратор — старший модератор: всё модерское + тикеты и сообщество.
 DEFAULT_GROUPS = {
     'mod': ['main', 'mod', 'members', 'logs', 'ai'],
+    'curator': ['main', 'mod', 'members', 'tickets', 'community', 'logs', 'ai'],
     'admin': [g['key'] for g in MENU],
 }
 
 # Panels that can be configured (owner is always full and not stored).
-CONFIGURABLE = ('mod', 'admin')
+# Куратор настраивается так же, как модератор и администратор.
+CONFIGURABLE = ('mod', 'curator', 'admin')
 
 # ── Режим модулей: какие страницы обслуживаются какими когами ─────────────
 # Если все коги страницы выключены (MOD_ONLY / DISABLED_COGS), пункт меню
