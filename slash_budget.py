@@ -35,8 +35,8 @@ KEEP_SLASH = frozenset({
     'дежурства',
     # быт участника
     'напомни', 'report', 'my-application',
-    # модерация — ежедневное
-    'warn', 'warnings', 'moderate', 'role', 'case', 'userinfo',
+    # модерация — ежедневное (всё в одном select-меню /modpanel)
+    'modpanel', 'warnings', 'role', 'case', 'userinfo',
     'snipe', 'jail', 'unjail', 'logs', 'ticket-panel', 'логи-экспорт',
     # аварийные кнопки
     'panic', 'lockdown', 'unlockdown', 'nuke', 'raidcleanup',

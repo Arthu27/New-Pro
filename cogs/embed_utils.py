@@ -46,11 +46,11 @@ def mod_dm_embed(action, guild, moderator, reason=None, extra_fields=None, gif_k
     """DM-сообщение пользователю — минималистичный стиль"""
     configs = {
         "ban": {
-            "title": "🔨 Вы забанены",
+            "title": "🚫 Вы изолированы",
             "color": 0xE74C3C,
-            "text": f"Вы были **забанены** на сервере **{guild.name}**.",
-            "note": "Если считаете это решение ошибочным — свяжитесь с администрацией сервера.",
-            "gif": "https://media.tenor.com/x8v1oNUOmg4AAAAC/ban-hammer.gif",
+            "text": f"На сервере **{guild.name}** вам **закрыты все каналы** — остался только канал изоляции.",
+            "note": "Это временная изоляция. Свяжитесь с администрацией сервера для разъяснения.",
+            "gif": None,
         },
         "kick": {
             "title": "👢 Вы кикнуты",

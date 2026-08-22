@@ -162,169 +162,6 @@ class Moderation (commands .Cog ):
 
         return e 
 
-    async def _maybe_proof (self ,interaction ,user ,action_ru ,reason ,демка ):
-        """Мод приложил вложение — сохраняем демку в канал доказательств.
-        Сбой демки НЕ должен влиять на уже выданное наказание."""
-        if демка is None :
-            return
-        try :
-            from cogs .proof_cog import try_deliver_proof
-            note =await try_deliver_proof (self .bot ,interaction .guild ,interaction .user ,
-            user ,action_ru ,reason ,attachment =демка )
-            if note :
-                try :
-                    await interaction .followup .send (note ,ephemeral =True )
-                except Exception as _ex:
-                    _log.debug("_maybe_proof(): подавлено: %s", _ex)
-        except Exception as _pe :
-            print (f'[PROOF] после {action_ru}: {_pe}')
-
-        # /moderate 
-
-    @app_commands .command (name ="moderate",description ="Модерация: бан, кик, мут, размут, разбан")
-    @app_commands .choices (action =[
-    app_commands .Choice (name ="бан",value ="ban"),
-    app_commands .Choice (name ="кик",value ="kick"),
-    app_commands .Choice (name ="мут",value ="timeout"),
-    app_commands .Choice (name ="размут",value ="untimeout"),
-    app_commands .Choice (name ="разбан",value ="unban")
-    ])
-    @app_commands .describe (action ="Действие модерации",user ="Участник (для бана/кика/мута)",user_id ="ID пользователя (для разбана)",minutes ="Длительность мута в минутах",reason ="Причина",демка ="Скрин/видео нарушения — сразу в канал доказательств")
-    @app_commands .checks .has_permissions (ban_members =True )
-    async def moderate_user (self ,interaction ,action :str ,
-    user :discord .Member =None ,user_id :str =None ,
-    minutes :int =None ,reason :str =None ,демка :discord .Attachment =None ):
-        guild =interaction .guild
-        # Быстрый ack: цепочка DM → наказание → дело → лог может занять
-        # больше 3 секунд, без defer токен interaction сгорает посередине
-        try :
-            await interaction .response .defer (ephemeral =True )
-        except Exception as _ex:
-            _log.debug("moderate_user(): подавлено: %s", _ex)
-
-        # Наказания (бан/кик/мут) — только с доказательством. Без пруфа
-        # наказание НЕ выдаётся ни в каком случае (картинка или видео).
-        if action in ('ban','kick','timeout'):
-            from cogs .proof_cog import require_proof
-            _action_ru ={'ban':'бан','kick':'кик','timeout':'мут'}[action ]
-            if not await require_proof (interaction ,attachment =демка ,action_ru =_action_ru ):
-                return
-
-        if action =="ban":
-            if not user :
-                await _respond (interaction ,embed =error_embed ("Укажите пользователя для бана."),ephemeral =True )
-                return 
-            try :
-                dm =mod_dm_embed ("ban",guild ,interaction .user ,reason )
-                await self .send_dm (user ,dm )
-                await user .ban (reason =reason )
-                case_id =self .save_case (guild .id ,'ban',user .id ,interaction .user .id ,reason )
-                log =mod_log_embed ("ban","🔨 Бан",0xE74C3C ,user ,interaction .user ,guild ,reason ,case_id )
-                await self .send_log (guild ,log )
-                confirm =self ._confirm_embed ("ban",user ,guild ,reason ,case_id ,moderator =interaction .user )
-                await _respond (interaction ,embed =confirm ,ephemeral =True )
-                await self ._notify_owner ('ban',user ,interaction .user ,reason )
-                await self ._maybe_proof (interaction ,user ,'бан',reason ,демка )
-            except discord .Forbidden :
-                await _respond (interaction ,embed =error_embed ("Роль пользователя выше или равна роли бота."),ephemeral =True )
-            except Exception as ex :
-                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
-
-        elif action =="kick":
-            if not user :
-                await _respond (interaction ,embed =error_embed ("Укажите пользователя для кика."),ephemeral =True )
-                return 
-            try :
-                dm =mod_dm_embed ("kick",guild ,interaction .user ,reason )
-                await self .send_dm (user ,dm )
-                await user .kick (reason =reason )
-                case_id =self .save_case (guild .id ,'kick',user .id ,interaction .user .id ,reason )
-                log =mod_log_embed ("kick","👢 Кик",0xE67E22 ,user ,interaction .user ,guild ,reason ,case_id )
-                await self .send_log (guild ,log )
-                confirm =self ._confirm_embed ("kick",user ,guild ,reason ,case_id ,moderator =interaction .user )
-                await _respond (interaction ,embed =confirm ,ephemeral =True )
-                await self ._notify_owner ('kick',user ,interaction .user ,reason )
-                await self ._maybe_proof (interaction ,user ,'кик',reason ,демка )
-            except discord .Forbidden :
-                await _respond (interaction ,embed =error_embed ("Роль пользователя выше или равна роли бота."),ephemeral =True )
-            except Exception as ex :
-                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
-
-        elif action =="timeout":
-            if not user :
-                await _respond (interaction ,embed =error_embed ("Укажите пользователя для мута."),ephemeral =True )
-                return 
-            sure =minutes if minutes is not None else 5 
-            try :
-                until =datetime.now(timezone.utc)+timedelta (minutes =sure )
-                dm =mod_dm_embed ("timeout",guild ,interaction .user ,reason ,
-                extra_fields =[("Длительность",f"**{sure} мин.**",True )])
-                await self .send_dm (user ,dm )
-                await user .timeout (until ,reason =reason )
-                case_id =self .save_case (guild .id ,'timeout',user .id ,interaction .user .id ,reason )
-                log =mod_log_embed ("timeout","🔇 Мут",0xF39C12 ,user ,interaction .user ,guild ,reason ,case_id ,
-                extra_fields =[("Длительность",f"{sure} мин.",True )])
-                await self .send_log (guild ,log )
-                confirm =self ._confirm_embed ("timeout",user ,guild ,reason ,case_id ,
-                extra =f"Длительность: **{sure} мин.** · Снимется: <t:{int(until.timestamp())}:R>",
-                moderator =interaction .user )
-                await _respond (interaction ,embed =confirm ,ephemeral =True )
-                await self ._notify_owner ('timeout',user ,interaction .user ,reason )
-                await self ._maybe_proof (interaction ,user ,'мут',reason ,демка )
-            except discord .Forbidden :
-                await _respond (interaction ,embed =error_embed ("У вас нет прав для выполнения этого действия."),ephemeral =True )
-            except Exception as ex :
-                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
-
-        elif action =="untimeout":
-            if not user :
-                await _respond (interaction ,embed =error_embed ("Укажите пользователя."),ephemeral =True )
-                return 
-            try :
-                await user .timeout (None )
-                dm =mod_dm_embed ("untimeout",guild ,interaction .user )
-                await self .send_dm (user ,dm )
-                log =mod_log_embed ("untimeout","🔊 Мут снят",0x2ECC71 ,user ,interaction .user ,guild )
-                await self .send_log (guild ,log )
-                confirm =self ._confirm_embed ("untimeout",user ,guild ,reason ,0 ,moderator =interaction .user )
-                await _respond (interaction ,embed =confirm ,ephemeral =True )
-            except Exception as ex :
-                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
-
-        elif action =="unban":
-            if not user_id :
-                await _respond (interaction ,embed =error_embed ("Укажите ID пользователя в поле `user_id`."),ephemeral =True )
-                return 
-            try :
-                fetched =await self .bot .fetch_user (int (user_id ))
-                await guild .unban (fetched )
-                case_id =self .save_case (guild .id ,'unban',fetched .id ,interaction .user .id ,reason )
-                e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
-                e .description =(
-                "## 🕊️ Бан снят\n"
-                f"**{fetched.name}** · `{fetched.id}`\n\n"
-                "✅ Пользователь разбанен.\n"
-                f"🛡️ **Модератор:** {interaction.user.mention}\n\n"
-                f"{DIVIDER}"
-                )
-                e .set_footer (text =f"{guild.name}")
-                await self .send_log (guild ,e )
-                await _respond (interaction ,embed =e ,ephemeral =True )
-            except Exception as ex :
-                await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
-
-    @moderate_user .error 
-    async def moderate_user_error (self ,interaction ,error ):
-        if isinstance (error ,app_commands .MissingPermissions ):
-            await _respond (interaction ,
-            embed =error_embed ("Недостаточно прав. Требуется: **Бан участников**."),
-            ephemeral =True 
-            )
-        else :
-            await _respond (interaction ,embed =error_embed (str (error )),ephemeral =True )
-
-            # /utility 
-
     @app_commands .command (name ="utility",description ="Утилиты: очистка, слоумод, блокировка, инфо")
     @app_commands .choices (action =[
     app_commands .Choice (name ="очистка",value ="clear"),
@@ -540,6 +377,61 @@ class Moderation (commands .Cog ):
             return int (m .group (1 ))
         return None
 
+    # ── Изоляция («бан») ──────────────────────────────────────────────
+    # «Бан» больше НЕ выгоняет с сервера: у участника закрываются все каналы,
+    # открытым остаётся только один — канал изоляции.
+    _ISO_NAMES =('изоляция','изолированные','isolated','isolation','карцер')
+
+    async def _isolation_channel (self ,guild ,reason ):
+        """Найти или создать канал изоляции (виден только изолированным)."""
+        ch =None
+        for _nm in self ._ISO_NAMES :
+            ch =discord .utils .get (guild .text_channels ,name =_nm )
+            if ch is not None :
+                break
+        if ch is None :
+            try :
+                overwrites ={
+                guild .default_role :discord .PermissionOverwrite (view_channel =False ),
+                guild .me :discord .PermissionOverwrite (view_channel =True ,send_messages =True ),
+                }
+                ch =await guild .create_text_channel ('изоляция',overwrites =overwrites ,
+                reason =reason or 'Канал изоляции')
+            except Exception as _ex :
+                log .warning (f'[MODPANEL] создание канала изоляции: {_ex}')
+                ch =None
+        return ch
+
+    async def _isolate_member (self ,guild ,user ,reason ):
+        """Закрыть все каналы для участника, оставить открытым канал изоляции."""
+        iso =await self ._isolation_channel (guild ,reason )
+        deny =discord .PermissionOverwrite (view_channel =False ,send_messages =False ,
+        connect =False ,speak =False )
+        allow =discord .PermissionOverwrite (view_channel =True ,send_messages =True )
+        closed =0
+        for ch in guild .channels :
+            if ch ==iso :
+                continue
+            try :
+                await ch .set_permissions (user ,overwrite =deny )
+                closed +=1
+            except Exception as _ex :
+                log .debug (f'_isolate_member(): {ch}: {_ex}')
+        if iso is not None :
+            try :
+                await iso .set_permissions (user ,overwrite =allow )
+            except Exception as _ex :
+                log .debug (f'_isolate_member(): iso: {_ex}')
+        return iso ,closed
+
+    async def _unisolate_member (self ,guild ,user ):
+        """Снять изоляцию: вернуть участнику обычный доступ ко всем каналам."""
+        for ch in guild .channels :
+            try :
+                await ch .set_permissions (user ,overwrite =None )
+            except Exception as _ex :
+                log .debug (f'_unisolate_member(): {ch}: {_ex}')
+
     async def _execute_mod_action (self ,interaction ,action ,target ,reason ,amount ,proof_link =None ):
         """Выполнить выбранное действие модерации."""
         guild =interaction .guild
@@ -550,7 +442,7 @@ class Moderation (commands .Cog ):
         _punish_actions =("ban","kick","timeout","mute_chat","vmute")
         if action in _punish_actions :
             from cogs .proof_cog import require_proof
-            _action_ru ={'ban':'бан','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
+            _action_ru ={'ban':'изоляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
             if not await require_proof (interaction ,action_ru =_action_ru ,link =proof_link ):
                 return
 
@@ -570,8 +462,9 @@ class Moderation (commands .Cog ):
 
             try :
                 if action =="ban":
-                    await user .ban (reason =reason )
-                    msg ="🔨 пользователь забанен"
+                    # Изоляция: закрыть все каналы, оставить один (изоляция).
+                    _iso ,_closed =await self ._isolate_member (guild ,user ,reason )
+                    msg =f"🚫 изоляция: закрыто каналов {_closed}, открыт {_iso .mention if _iso else 'канал изоляции'}"
                 elif action =="kick":
                     await user .kick (reason =reason )
                     msg ="👢 пользователь кикнут"
@@ -620,7 +513,7 @@ class Moderation (commands .Cog ):
                     aux_errors .append ("DM не доставлен")
                     log .info (f'[MODPANEL] DM: {_dm_e}')
                 try :
-                    log_ch_embed =mod_log_embed (action ,{"ban":"🔨 Бан","kick":"👢 Кик","timeout":"🔇 Мут","mute_chat":"🔇 Мут чата","vmute":"🎙️ Войс-мут","vunmute":"🎙️ Войс-мут снят","untimeout":"🔊 Мут снят"}.get (action ,action ),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
+                    log_ch_embed =mod_log_embed (action ,{"ban":"🚫 Изоляция","kick":"👢 Кик","timeout":"🔇 Мут","mute_chat":"🔇 Мут чата","vmute":"🎙️ Войс-мут","vunmute":"🎙️ Войс-мут снят","untimeout":"🔊 Мут снят"}.get (action ,action ),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
                     await self .send_log (guild ,log_ch_embed )
                 except Exception as _log_e :
                     aux_errors .append ("лог-канал недоступен")
@@ -629,7 +522,7 @@ class Moderation (commands .Cog ):
                 # Уведомление панели о действии модерации (веб/Discord/email — в фоне)
                 try :
                     from cogs .ticket import _notify_panel_ticket_event as _np
-                    _label ={"ban":"Бан","kick":"Кик","timeout":"Таймаут","mute_chat":"Мут чата","vmute":"Войс-мут","vunmute":"Войс-мут снят","untimeout":"Мут снят"}.get (action ,action )
+                    _label ={"ban":"Изоляция","kick":"Кик","timeout":"Таймаут","mute_chat":"Мут чата","vmute":"Войс-мут","vunmute":"Войс-мут снят","untimeout":"Мут снят"}.get (action ,action )
                     _np (interaction ,'mod_action',
                     f"{_label }: {user .display_name }",
                     f"Модератор: {interaction .user .display_name } · Причина: {reason } · Дело #{case_id}")
@@ -641,7 +534,7 @@ class Moderation (commands .Cog ):
                 try :
                     if action in _punish_actions and (proof_link or '').strip ():
                         from cogs .proof_cog import try_deliver_proof
-                        _p_ru ={'ban':'бан','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}.get (action ,action )
+                        _p_ru ={'ban':'изоляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}.get (action ,action )
                         proof_note =await try_deliver_proof (self .bot ,guild ,interaction .user ,user ,_p_ru ,reason ,link =proof_link )
                 except Exception as _pe :
                     log .warning (f'[MODPANEL] демка: {_pe}')
@@ -670,19 +563,32 @@ class Moderation (commands .Cog ):
                 embed =error_embed ("Укажите ID пользователя для разбана."),ephemeral =True )
                 return
             try :
-                fetched =await self .bot .fetch_user (uid )
-                await guild .unban (fetched )
-                case_id =self .save_case (guild .id ,"unban",fetched .id ,interaction .user .id ,reason )
-                confirm =success_embed (
-                "Разбан",
-                f"**{fetched.name}** · `{fetched.id}`\nПользователь разбанен.\n**Дело:** #{case_id}",
-                guild =guild )
+                member =guild .get_member (uid )
+                # Снятие изоляции (участник остаётся на сервере)
+                if member is not None :
+                    await self ._unisolate_member (guild ,member )
+                # Настоящий разбан (для легаси-банов, если пользователь вне сервера)
+                unban_done =False
+                try :
+                    fetched =await self .bot .fetch_user (uid )
+                    await guild .unban (fetched )
+                    unban_done =True
+                except Exception as _ub_ex :
+                    log .debug (f'unban: {_ub_ex}')
+                case_id =self .save_case (guild .id ,"unban",uid ,interaction .user .id ,reason )
+                _who =member .display_name if member else (getattr (fetched ,'name','') if unban_done else str (uid ))
+                _desc =f"**{_who}** · `{uid}`\n"
+                _desc +="Снята изоляция и разбан." if (member is not None and unban_done) else \
+                        ("Изоляция снята." if member is not None else \
+                         ("Разбан выполнен." if unban_done else "Ничего не изменилось (не изолирован и не забанен)."))
+                _desc +=f"\n**Дело:** #{case_id}"
+                confirm =success_embed ("Снятие изоляции / разбан",_desc ,guild =guild )
                 await self .send_log (guild ,confirm )
-                # Уведомление панели о разбане (веб/Discord/email — в фоне)
+                # Уведомление панели (веб/Discord/email — в фоне)
                 try :
                     from cogs .ticket import _notify_panel_ticket_event as _np
                     _np (interaction ,'mod_action',
-                    f"Разбан: {fetched .name }",
+                    f"Разбан/снятие изоляции: {_who }",
                     f"Модератор: {interaction .user .display_name } · Дело #{case_id}")
                 except Exception as _ex:
                     _log.debug("_execute_mod_action(): подавлено: %s", _ex)
@@ -776,12 +682,12 @@ class ModActionSelect(discord.ui.Select):
 
     def __init__(self, cog):
         options = [
-            discord.SelectOption(label="Бан", value="ban", description="Забанить участника"),
+            discord.SelectOption(label="Бан (изоляция)", value="ban", description="Закрыть все каналы, оставить один — изоляция"),
             discord.SelectOption(label="Кик", value="kick", description="Выгнать участника"),
             discord.SelectOption(label="Мут (чат + войс)", value="timeout", description="Таймаут — закрыть и чат, и голос"),
             discord.SelectOption(label="Мут (только чат)", value="mute_chat", description="Закрыть только чат (таймаут)"),
             discord.SelectOption(label="Мут (только войс)", value="vmute", description="Заглушить микрофон (чат не трогает)"),
-            discord.SelectOption(label="Разбан", value="unban", description="Разбанить участника (по ID)"),
+            discord.SelectOption(label="Снять изоляцию / разбан", value="unban", description="Вернуть доступ к каналам (по ID)"),
             discord.SelectOption(label="Очистить сообщения", value="clear", description="Удалить N сообщений"),
             discord.SelectOption(label="Размут (чат + войс)", value="untimeout", description="Снять таймаут с участника"),
             discord.SelectOption(label="Размут (войс)", value="vunmute", description="Включить микрофон участника"),
@@ -807,12 +713,12 @@ class ModActionModal(discord.ui.Modal):
         self.cog = cog
         self.action = action
         titles = {
-            "ban": "Бан участника",
+            "ban": "Бан (изоляция)",
             "kick": "Кик участника",
             "timeout": "Мут (чат + войс)",
             "mute_chat": "Мут чата",
             "vmute": "Войс-мут",
-            "unban": "Разбан по ID",
+            "unban": "Снять изоляцию / разбан",
             "clear": "Очистка сообщений",
             "untimeout": "Снять мут",
             "vunmute": "Снять войс-мут",

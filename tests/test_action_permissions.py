@@ -99,7 +99,7 @@ with client.session_transaction() as s:
 r = client.get(f'/api/role-permissions/{GID}')
 body = r.get_json()
 check(r.status_code == 200 and body.get('success'), f'GET -> {r.status_code}')
-check(isinstance(body.get('actions'), dict) and body.get('actions', {}).get('ban') == 'Бан',
+check(isinstance(body.get('actions'), dict) and body.get('actions', {}).get('ban') == 'Бан (изоляция)',
       'GET отдаёт действия с русскими подписями')
 check(isinstance(body.get('action_acl'), dict), 'GET отдаёт action_acl')
 
@@ -156,23 +156,34 @@ class FakeInteraction:
         class G: id = GID
         self.guild = G()
 
+# действие ban задано через «классические» разрешения: slash-команда с опцией
+# action=ban блокируется (механизм общий, не зависит от имени команды).
 set_action_rule(GID, 'ban', ['900'])
-inter = FakeInteraction('moderate', Member(roles=[1]),
-                        {'name': 'moderate', 'options': [{'name': 'action', 'value': 'ban', 'type': 3}]})
+inter = FakeInteraction('modpanel', Member(roles=[1]),
+                        {'name': 'modpanel', 'options': [{'name': 'action', 'value': 'ban', 'type': 3}]})
 ok = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter))
 check(ok is False and inter.response.kw and 'действию' in inter.response.kw['content'],
-      'slash: /moderate action=ban заблокирован для чужого')
+      'slash: опция action=ban заблокирована для чужого')
 
-inter2 = FakeInteraction('moderate', Member(roles=[900]),
-                         {'name': 'moderate', 'options': [{'name': 'action', 'value': 'ban', 'type': 3}]})
+inter2 = FakeInteraction('modpanel', Member(roles=[900]),
+                         {'name': 'modpanel', 'options': [{'name': 'action', 'value': 'ban', 'type': 3}]})
 ok2 = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter2))
 check(ok2 is True and inter2.response.kw is None, 'slash: своя роль проходит action=ban')
 
+# utility: action=clear (purge) без правила — открыто
 inter3 = FakeInteraction('utility', Member(roles=[1]),
                          {'name': 'utility', 'options': [{'name': 'action', 'value': 'clear', 'type': 3}]})
 ok3 = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter3))
 check(ok3 is True, 'slash: action=clear без правила открыто')
 set_action_rule(GID, 'ban', [])
+
+# правило на действие purge блокирует action=clear
+set_action_rule(GID, 'purge', ['900'])
+inter4 = FakeInteraction('utility', Member(roles=[1]),
+                         {'name': 'utility', 'options': [{'name': 'action', 'value': 'clear', 'type': 3}]})
+ok4 = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter4))
+check(ok4 is False, 'slash: action=clear заблокирован правилом purge')
+set_action_rule(GID, 'purge', [])
 
 os.system('rm -rf data')
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

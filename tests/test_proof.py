@@ -361,97 +361,67 @@ check(run(try_deliver_proof(_BoomBot(), GUILD, MOD, BADGUY, 'бан', 'x',
                             link='https://x.y/z')) is None,
       'try_deliver_proof: исключения проглочены — наказание не роняет')
 
-print('== интеграция: /moderate бан + демка одной командой ==')
-from cogs.moderation import Moderation  # noqa: E402
-
-
-class FakeBanUser:
-    def __init__(self, uid, name):
-        self.id = uid
-        self.name = name
-        self.display_name = name
-        self.mention = f'<@{uid}>'
-        self.banned = False
-
-    class _Av:
-        url = 'http://x/av.png'
-
-    display_avatar = _Av()
-
-    def __str__(self):
-        return self.name
-
-    async def ban(self, reason=None):
-        self.banned = reason or True
-
-
-FakeResp.is_done = lambda self: bool(self.deferred or self.sent)
-
-
-async def _noop(*a, **k):
-    return None
-
+print('== модерация в одном меню: /modpanel + изоляция ==')
+from cogs.moderation import Moderation, ModActionSelect  # noqa: E402
 
 mod_cog = Moderation(botx)
-mod_cog.send_dm = _noop
-mod_cog.send_log = _noop
-mod_cog._notify_owner = _noop
 
-BANUSER = FakeBanUser(9090, 'Griefer#3')
-proofs_before = len(proof_list(GUILD.id))
-inter = FakeInter(GUILD, MOD)
-run(Moderation.moderate_user.callback(
-    mod_cog, inter, action='ban', user=BANUSER, reason='массовый рейд',
-    демка=FakeAttachment('raid.png')))
-check(BANUSER.banned == 'массовый рейд', 'moderate: бан реально применён')
-check(len(proof_list(GUILD.id)) == proofs_before + 1, 'moderate: демка записана автоматически')
-rec = proof_list(GUILD.id)[0]
-check(rec['action'] == 'бан' and rec['user_id'] == 9090, 'moderate: действие=бан, юзер верный')
-check(any('Демка #' in str(c or '') for c, _ in inter.followup.sent),
-      'moderate: мод получил подтверждение про демку')
-
-# без демки — бан НЕ выдаётся: наказание требует доказательство
-BANUSER2 = FakeBanUser(9091, 'Griefer#4')
-proofs_before = len(proof_list(GUILD.id))
-inter = FakeInter(GUILD, MOD)
-run(Moderation.moderate_user.callback(
-    mod_cog, inter, action='ban', user=BANUSER2, reason='без демки'))
-check(BANUSER2.banned is False, 'moderate: бан без демки НЕ выдаётся')
-check(len(proof_list(GUILD.id)) == proofs_before, 'moderate: без вложения демка не создаётся')
-check(any('Требуется доказательство' in str((e.title if e else '') or '')
-          for _, e in inter.followup.sent),
-      'moderate: без демки мод получает отказ «требуется доказательство»')
-
-print('== интеграция: /warn + демка ==')
-from cogs.warnings import warnings as WarningsCog  # noqa: E402
-
-warn_cog = WarningsCog(botx)
+# /modpanel — единственный пункт наказаний; select содержит изоляцию
+_opts = ModActionSelect(mod_cog)
+_labels = {o.label for o in _opts.options}
+check('Бан (изоляция)' in _labels, 'select: «Бан (изоляция)» есть')
+check('Снять изоляцию / разбан' in _labels, 'select: «Снять изоляцию / разбан» есть')
+check({'ban', 'unban', 'kick', 'timeout', 'clear'} <= {o.value for o in _opts.options},
+      'select: действия ban/unban/kick/timeout/clear на месте')
 
 
-async def _fake_add_warn(self, interaction, user, reason):
-    return (1, 1, None)
+class _Ch:
+    def __init__(self, cid, name):
+        self.id = cid
+        self.name = name
+        self.perm = None
+
+    async def set_permissions(self, target, overwrite=None, **kw):
+        self.perm = (getattr(target, 'id', None), overwrite)
 
 
-import types as _types
-warn_cog.add_warn = _types.MethodType(_fake_add_warn, warn_cog)
+class _G:
+    def __init__(self):
+        self.id = 888
+        self.name = 'G'
+        self.me = type('Me', (), {'id': 0})()
+        self.default_role = type('R', (), {'id': -1})()
+        self.channels = [_Ch(1, 'общий'), _Ch(2, 'войс'), _Ch(3, 'админка')]
+        self.text_channels = self.channels
 
-proofs_before = len(proof_list(GUILD.id))
-inter = FakeInter(GUILD, MOD)
-run(WarningsCog.warn.callback(warn_cog, inter, user=BANUSER, reason='спам-ссылки',
-                              демка=FakeAttachment('spam.png')))
-check(len(proof_list(GUILD.id)) == proofs_before + 1, 'warn: демка записана')
-check(proof_list(GUILD.id)[0]['action'] == 'варн', 'warn: действие=варн')
-emb = inter.response.sent[-1][1] or inter.followup.sent[-1][1]
-check('Демка #' in (emb.description or ''), 'warn: про демку сказано в самом ответе о варне')
+    async def create_text_channel(self, name, overwrites=None, reason=None):
+        ch = _Ch(9, name)
+        self.channels.append(ch)
+        return ch
 
-# warn БЕЗ демки — НЕ выдаётся (требуется доказательство)
-proofs_before = len(proof_list(GUILD.id))
-inter = FakeInter(GUILD, MOD)
-run(WarningsCog.warn.callback(warn_cog, inter, user=BANUSER, reason='просто варн'))
-check(len(proof_list(GUILD.id)) == proofs_before
-      and any('Требуется доказательство' in str((e.title if e else '') or '')
-              for _, e in inter.followup.sent),
-      'warn без демки: не выдаётся, мод получает отказ')
+
+class _M:
+    def __init__(self, uid):
+        self.id = uid
+        self.name = 'x'
+        self.display_name = 'x'
+        self.mention = '<@x>'
+
+
+_g = _G()
+_m = _M(9090)
+iso, closed = run(mod_cog._isolate_member(_g, _m, 'рейд'))
+check(closed == 3, 'изоляция: закрыты все каналы, кроме изоляции')
+check(iso is not None and iso.name == 'изоляция', 'изоляция: канал изоляции создан')
+_denied = [c for c in _g.channels if c is not iso]
+check(all(c.perm is not None and c.perm[1] is not None and c.perm[1].view_channel is False for c in _denied),
+      'изоляция: на закрытых каналах view_channel=False')
+check(iso.perm is not None and iso.perm[1].view_channel is True,
+      'изоляция: канал изоляции открыт (view_channel=True)')
+
+run(mod_cog._unisolate_member(_g, _m))
+check(all(c.perm is not None and c.perm[1] is None for c in _g.channels),
+      'снятие изоляции: overwrite очищен на всех каналах')
 
 # ═══ 6. ПАНЕЛЬ: /proofs ═══════════════════════════════════════════════════
 print('== панель: страница и API демок ==')
@@ -486,8 +456,8 @@ check(all(set(['id', 'action', 'user_name', 'reason', 'set_at']) <= set(i) for i
 check(any(i.get('jump', None) for i in d['items']),
       'mod: есть jump-ссылки на сообщения в Discord')
 
-r = client.get(f'/api/proofs?user_id={BANUSER.id}')
-check(all(i['user_id'] == str(BANUSER.id) for i in r.get_json()['items']),
+r = client.get(f'/api/proofs?user_id={BADGUY.id}')
+check(all(i['user_id'] == str(BADGUY.id) for i in r.get_json()['items']),
       'фильтр по юзеру работает')
 r = client.get('/api/proofs?action=варн')
 check(all(i['action'] == 'варн' for i in r.get_json()['items']),
