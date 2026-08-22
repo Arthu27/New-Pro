@@ -1566,7 +1566,9 @@ check('counters-preview demo' in _auto2,
       'routes automation: предпросмотр счётчиков работает в превью')
 check('isNaN(p) ? null : p / 1000' in js,
       'timeAgo: ISO-строки и битые даты не дают «NaN дн назад»')
-check("replace('Z', '+00:00')" in _app2.split('def api_activity_feed')[1][:6000],
+check(('_epoch_from_ts' in _app2.split('def api_activity_feed')[1][:6000])
+      and ('def _epoch_from_ts' in _app2)
+      and ("replace ('Z','+00:00')" in _app2.split('def _epoch_from_ts')[1][:800]),
       'api/activity-feed: ISO-метки панель-логов приводятся к epoch (лента без NaN)')
 # ═══ 37т. Точные ошибки, каналы в детализации, акцент при загрузке ═══════════
 print('== точные ошибки, детализация, акцент ==')
