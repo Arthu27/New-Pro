@@ -70,7 +70,14 @@ LEGACY_ROUTE_EMOJI = {
     'security_api.py', 'tasks_rules.py', 'tickets_admin.py',
 }
 # Публичные API без логина — осознанно (виджет статуса снаружи).
-PUBLIC_API = {('status.py', '/api/status-public')}
+# Discord Activity: авторизация — Bearer-токен OAuth2 из SDK, а не сессия панели.
+PUBLIC_API = {
+    ('status.py', '/api/status-public'),
+    ('music_activity.py', '/api/activity/music/config'),
+    ('music_activity.py', '/api/activity/music/token'),
+    ('music_activity.py', '/api/activity/music/state'),
+    ('music_activity.py', '/api/activity/music/control'),
+}
 
 MARATHON_MODULES = [
     'analytics_plus.py', 'tickets_ops.py', 'mod_report.py',

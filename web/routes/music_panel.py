@@ -96,6 +96,63 @@ def _or_offline(gid):
     return bot, cog, None
 
 
+def perform_music_action(bot, gid, action, data):
+    """Применить действие к плееру. Возвращает (body, http_status).
+
+    Используется и веб-панелью (/api/music/control), и Discord-активностью
+    (/api/activity/music/control) — одна и та же логика, что и команды бота
+    pause/resume/skip/shuffle/clear/volume/leave.
+    """
+    cog = _cog(bot)
+    guild = bot.get_guild(int(gid))
+    vc = getattr(guild, 'voice_client', None) if guild else None
+
+    if action == 'pause':
+        if not (vc and vc.is_playing()):
+            return {'success': False, 'error': 'Сейчас ничего не играет.'}, 409
+        vc.pause()
+    elif action == 'resume':
+        if not (vc and vc.is_paused()):
+            return {'success': False, 'error': 'Сейчас нет трека на паузе.'}, 409
+        vc.resume()
+    elif action == 'skip':
+        if not (vc and vc.is_playing()):
+            return {'success': False, 'error': 'Сейчас ничего не играет.'}, 409
+        vc.stop()
+    elif action == 'shuffle':
+        queue = cog.get_queue(gid)
+        if len(queue) < 2:
+            return {'success': False,
+                    'error': 'В очереди должно быть минимум 2 трека.'}, 409
+        cog.queues[gid] = shuffle_queue(queue)
+    elif action == 'clear':
+        cog.queues[gid] = []
+    elif action == 'volume':
+        try:
+            vol = int(data.get('volume'))
+        except (TypeError, ValueError):
+            return {'success': False,
+                    'error': 'Громкость должна быть целым числом.'}, 400
+        if vol < _VOLUME_MIN or vol > _VOLUME_MAX:
+            return {'success': False,
+                    'error': 'Уровень громкости должен быть от 0 до 200%.'}, 400
+        if not (vc and getattr(vc, 'source', None)):
+            return {'success': False, 'error': 'Сейчас ничего не играет.'}, 409
+        vc.source.volume = vol / 100
+    elif action == 'leave':
+        if not vc:
+            return {'success': False, 'error': 'Бот сейчас не в голосовом канале.'}, 409
+        try:
+            _run(bot, vc.disconnect())
+        except Exception as exc:
+            _log.debug('music leave: %s', exc)
+            return {'success': False, 'error': 'Не получилось отключиться от канала.'}, 500
+        cog.queues[gid] = []
+    else:
+        return {'success': False, 'error': 'Неизвестное действие.'}, 400
+    return music_payload(gid, bot), 200
+
+
 def register(ctx):
     app = ctx.app
     login_required = ctx.login_required
@@ -144,56 +201,8 @@ def register(ctx):
         bot, cog, offline = _or_offline(ctx.active_guild_id())
         if offline:
             return jsonify(offline[0]), offline[1]
-        gid = int(ctx.active_guild_id())
-        guild = bot.get_guild(gid)
-        vc = getattr(guild, 'voice_client', None) if guild else None
-
-        if action == 'pause':
-            if not (vc and vc.is_playing()):
-                return jsonify({'success': False, 'error': 'Сейчас ничего не играет.'}), 409
-            vc.pause()
-        elif action == 'resume':
-            if not (vc and vc.is_paused()):
-                return jsonify({'success': False, 'error': 'Сейчас нет трека на паузе.'}), 409
-            vc.resume()
-        elif action == 'skip':
-            if not (vc and vc.is_playing()):
-                return jsonify({'success': False, 'error': 'Сейчас ничего не играет.'}), 409
-            vc.stop()
-        elif action == 'shuffle':
-            queue = cog.get_queue(gid)
-            if len(queue) < 2:
-                return jsonify({'success': False,
-                                'error': 'В очереди должно быть минимум 2 трека.'}), 409
-            cog.queues[gid] = shuffle_queue(queue)
-        elif action == 'clear':
-            cog.queues[gid] = []
-        elif action == 'volume':
-            try:
-                vol = int(data.get('volume'))
-            except (TypeError, ValueError):
-                return jsonify({'success': False,
-                                'error': 'Громкость должна быть целым числом.'}), 400
-            if vol < _VOLUME_MIN or vol > _VOLUME_MAX:
-                return jsonify({'success': False,
-                                'error': 'Уровень громкости должен быть от 0 до 200%.'}), 400
-            if not (vc and getattr(vc, 'source', None)):
-                return jsonify({'success': False, 'error': 'Сейчас ничего не играет.'}), 409
-            vc.source.volume = vol / 100
-        elif action == 'leave':
-            if not vc:
-                return jsonify({'success': False,
-                                'error': 'Бот сейчас не в голосовом канале.'}), 409
-            try:
-                _run(bot, vc.disconnect())
-            except Exception as exc:
-                _log.debug('music leave: %s', exc)
-                return jsonify({'success': False,
-                                'error': 'Не получилось отключиться от канала.'}), 500
-            cog.queues[gid] = []
-        else:
-            return jsonify({'success': False, 'error': 'Неизвестное действие.'}), 400
-        return jsonify(music_payload(gid, bot))
+        body, status = perform_music_action(bot, int(ctx.active_guild_id()), action, data)
+        return jsonify(body), status
 
     @app.route('/api/music/remove', methods=['POST'])
     @login_required

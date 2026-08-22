@@ -71,6 +71,7 @@ from web.routes import (
     quiz_panel,
     shop_panel,
     music_panel,
+    music_activity,
     achievements_panel,
     duels_panel,
     flags_panel,

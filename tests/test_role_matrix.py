@@ -75,6 +75,9 @@ PUBLIC = {
     'api_public_apply', 'api_public_guilds', 'public_apply',
     'api_status_public', 'status_public_page', 'api_voice_command',
     'favicon', 'health_check', 'static',
+    # Discord Activity: публичный OAuth/Bearer-флоу встроенного приложения
+    'activity_music_config', 'activity_music_token',
+    'activity_music_state', 'activity_music_control',
 }
 public_actual = {k for k, v in DECOS.items() if not v['login']} | {'static'}
 check(public_actual == PUBLIC,
@@ -180,8 +183,14 @@ guest_public_viol = []  # публичные должны открываться
 denied_viol = {r: [] for r in ROLES}    # роль ниже порога, но впустило
 allowed_viol = {r: [] for r in ROLES}   # роль ≥ порога, но не впустило
 
+# Discord Activity: авторизация — Bearer-токен OAuth2 (не сессия панели),
+# поэтому их не гоняем через сессионную матрицу ролей.
+BEARER_GET = {'/api/activity/music/config', '/api/activity/music/state'}
+
 for path, ep in GET_RULES:
     info = DECOS.get(ep, {'login': False, 'role': None})
+    if path in BEARER_GET:
+        continue
     st, to_login = probe(None, path)
     if info['login']:
         if not to_login:

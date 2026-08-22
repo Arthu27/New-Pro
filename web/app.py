@@ -342,6 +342,22 @@ def after_request (response ):
         )
         response .headers ['Content-Security-Policy']=csp 
 
+    # Discord Embedded App (Activity): страница музыкальной панели открывается
+    # внутри клиента Discord (iframe), поэтому разрешаем Discord встраивать её.
+    # X-Frame-Options убираем (он не умеет списка доменов), управление — через
+    # frame-ancestors. Для всего остального правила прежние.
+    if request .path .startswith ('/static/activity/'):
+        response .headers .pop ('X-Frame-Options',None )
+        response .headers ['Content-Security-Policy']=(
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "font-src 'self' data:; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https: wss: ws: http:; "
+        "frame-ancestors https://discord.com https://*.discord.com https://discordapp.com"
+        )
+
     return response 
 @app .errorhandler (Exception )
 def _handle_unexpected_error (e ):
