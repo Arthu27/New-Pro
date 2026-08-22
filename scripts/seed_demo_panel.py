@@ -655,6 +655,27 @@ try:
 except Exception as _ex:
     print('приглашения не засеяны:', _ex)
 
+# ── Рейтинги: сообщения и балансы демо-участников (реальные имена) ──
+try:
+    _lb_members = [('1001', 'Sonya', 'sonya.staff', 1850),
+                   ('1002', 'Artem', 'artem.mods', 1640),
+                   ('1003', 'Lina', 'lina.mod', 1320),
+                   ('1004', 'Max', 'max.gg', 980),
+                   ('1005', 'Dasha', 'dasha.live', 760),
+                   ('1006', 'Kolyan', 'kolyan.tv', 540),
+                   ('1007', 'Nastya', 'nastya.chat', 430),
+                   ('1008', 'Vanya', 'vanya.dev', 310)]
+    _lb = {'messages': {uid: str(cnt) for uid, _nm, _lg, cnt in _lb_members}}
+    with open('data/leaderboard_%s.json' % GID, 'w', encoding='utf-8') as _f:
+        json.dump(_lb, _f, ensure_ascii=False, indent=2)
+    _eco = {uid: {'balance': 1500 + i * 1800, 'bank': 2500 + i * 3200}
+            for i, (uid, _nm, _lg, _cnt) in enumerate(_lb_members)}
+    with open('data/economy_%s.json' % GID, 'w', encoding='utf-8') as _f:
+        json.dump(_eco, _f, ensure_ascii=False, indent=2)
+    print('записано: рейтинги (сообщения 8 + балансы 8)')
+except Exception as _ex:
+    print('рейтинги не засеяны:', _ex)
+
 # ── Карта имён: uid → имя для логов (вместо голых ID) ──
 try:
     _names_map = {

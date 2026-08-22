@@ -73,27 +73,27 @@ check([u for u, _v in PL.raw_rows('777', 'balance')] == ['111', '222', '333'],
 check(PL.raw_rows('777', 'voice')[0] == ('111', 189600), 'войс: total_seconds')
 check(PL.raw_rows('999', 'messages') == [], 'пустой сервер — пусто')
 
-print('== 2. Топ-7 словами бота ==')
+print('== 2. Топ рейтинга (реальные данные, без заглушек) ==')
 t = PL.table_view(None, '777', 'messages')
-check(t['demo'] is False and len(t['rows']) == 7, 'семёрка из восьми без демо')
-check(t['rows'][0] == {'rank': 1, 'name': 'ID 111', 'value': '1 850 СООБЩЕНИЙ'},
-      'первая строка в наряде бота (офлайн-имя — его фолбэк)')
-check(t['rows'][6]['name'] == 'ID 7777', 'седьмая строка отрезана правильно')
+check(t['demo'] is False and len(t['rows']) == 8,
+      'сообщения: все 8 строк офлайн (топ-20)')
+check(t['rows'][0] == {'rank': 1, 'name': 'ID 111', 'value': '1 850 сообщений',
+                       'uid': '111', 'raw': 1850},
+      'первая строка: реальное значение и uid (без «AETHER_LEADER»)')
+check(t['rows'][7]['name'] == 'ID 8888', 'последняя строка на месте')
 t = PL.table_view(None, '777', 'voice')
-check(t['rows'][0] == {'rank': 1, 'name': 'Катя', 'value': '52ч 40м В ВОЙСЕ'},
-      'войс: имя из статистики, значение его формата')
-check(t['demo'] is False and len(t['rows']) == 3
-      and t['rows'][2] == {'rank': 3, 'name': 'Оля', 'value': '5ч 56м В ВОЙСЕ'},
-      '3 своих, демо нет — ког подмешивает только при полной пустоте')
+check(t['rows'][0]['rank'] == 1 and t['rows'][0]['name'] == 'Катя'
+      and t['rows'][0]['value'] == '2 д 4 ч',
+      f"войс: имя из статистики, значение fmt_duration ({t['rows'][0]['value'] if t['rows'] else '?'})")
+check(len(t['rows']) == 3 and t['rows'][2]['name'] == 'Оля',
+      '3 своих — все показаны')
 t = PL.table_view(None, '777', 'balance')
-check(t['rows'][0]['value'] == '500 000 МОНЕТ' and len(t['rows']) == 3
-      and t['demo'] is False,
-      'баланс: сумма и все свои строки')
+check(t['rows'][0]['raw'] == 500000 and t['rows'][0]['value'] == '500 000 монет'
+      and len(t['rows']) == 3,
+      'баланс: кошелёк+банк, русские единицы')
 t = PL.table_view(None, '999', 'messages')
-check(t['demo'] is True and len(t['rows']) == 5
-      and t['rows'][0]['name'] == 'AETHER_LEADER'
-      and t['rows'][0]['value'] == '1 850 СООБЩЕНИЙ',
-      'без данных — его демо-строки, помеченные')
+check(t['rows'] == [] and t['demo'] is False,
+      'без данных — пустой список (фейковых AETHER_LEADER больше нет)')
 check(t['title'] == 'ТОП ПО СООБЩЕНИЯМ', 'заголовок категории')
 
 print('== 3. Позиция участника ==')
@@ -155,10 +155,11 @@ check(d['success'] and d['table']['rows'][0]['name'] == 'Катя'
 d = client.get(TB + '?cat=мусор').get_json()
 check(d['cat'] == 'messages', 'API: кламп категории')
 d = client.get('/api/guild/999/leaderboards/table').get_json()
-check(d['table']['demo'] is True, 'API: демо-пометка пустого сервера')
+check(d['table']['rows'] == [] and d['table']['demo'] is False,
+      'API: пустой сервер — пустой список без фейковых строк')
 d = client.get(TB).get_json()
-check(len(d['table']['rows']) == 7 and d['table']['rows'][6]['name'] == 'ID 7777',
-      'API: семёрка сообщений без демо')
+check(len(d['table']['rows']) == 8 and d['table']['rows'][7]['name'] == 'ID 8888',
+      'API: все строки сообщений, реальные имена')
 r = client.get('/api/guild/777/leaderboards/card.png?cat=balance')
 check(r.status_code == 200 and r.mimetype == 'image/png'
       and r.get_data().startswith(b'\x89PNG'), 'PNG-карточка рисуется офлайн')
@@ -203,11 +204,13 @@ src = open(os.path.join(ROOT, 'web/routes/leaderboards_panel.py'), encoding='utf
 check(not EMOJI_RE.search(src), 'в модуле нет эмодзи')
 base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
 check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
-for fid in ('lbTabs', 'lbTable', 'lbCard', 'lbDl', 'lbCsv', 'lbRankInp',
-            'lbRankGo', 'lbRankRes', 'lbSendCh', 'lbSend'):
+for fid in ('lbTabs', 'lbTable', 'lbCsv', 'lbRankInp', 'lbRankGo',
+            'lbRankRes', 'lbSendCh', 'lbSend', 'lbSearch', 'lbReload',
+            'lbKpiTop', 'lbKpiCount', 'lbKpiTotal'):
     check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
-check("'/table?cat='" in tpl and "'/card.png?cat='" in tpl
-      and "'/rank?user='" in tpl and "'/send'" in tpl
+check('lbCard' not in tpl and 'lbDl' not in tpl and 'card.png' not in tpl,
+      'золотая PNG-карточка убрана со страницы (по просьбе владельца)')
+check("'/table?cat='" in tpl and "'/rank?user='" in tpl and "'/send'" in tpl
       and "'/export.csv?cat='" in tpl, 'API-пути в шаблоне')
 check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
 import services.panel_menu as PM

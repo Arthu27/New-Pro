@@ -71,11 +71,36 @@ def raw_rows(gid, cat):
     return rows
 
 
+def _demo_names():
+    """uid → {'name','avatar'} из демо-участников и карты имён."""
+    out = {}
+    try:
+        from web.routes._common import DEMO_MEMBERS, name_map_for
+        for m in DEMO_MEMBERS:
+            out[str(m.get('id'))] = {'name': str(m.get('display_name') or m.get('name') or m.get('id')),
+                                     'avatar': str(m.get('avatar') or '')}
+        nm = name_map_for(None)
+        for uid, name in nm.items():
+            out.setdefault(str(uid), {'name': str(name), 'avatar': ''})
+    except Exception as _ex:
+        _log.debug('_demo_names(): подавлено: %s', _ex)
+    return out
+
+
 def _shim_guild(gid):
-    """Гильдия-заглушка для офлайн-рендера: id настоящий, имён нет —
-    _get_lb_data сам подставит «ID xxx», карточка — «Aether Community»."""
+    """Гильдия-заглушка для офлайн-рендера: имена участников из демо-данных —
+    никаких «AETHER_LEADER», таблица показывает реальных людей."""
+    names = _demo_names()
+
+    def get_member(uid):
+        rec = names.get(str(uid))
+        if not rec:
+            return None
+        return SimpleNamespace(id=int(uid), display_name=rec['name'],
+                               name=rec['name'])
+
     return SimpleNamespace(id=int(gid), name='Aether Community',
-                           get_member=lambda _x: None)
+                           get_member=get_member)
 
 
 def _guild(bot, gid):
@@ -84,14 +109,51 @@ def _guild(bot, gid):
     return bot.get_guild(int(gid)) or _shim_guild(gid)
 
 
-def table_view(bot, gid, cat):
-    """Топ словами бота + флаг «это демо-строки» (ког подставляет заглушки,
-    только когда своих строк нет совсем — совпадает с пустотой сырых)."""
-    top = LB._get_lb_data(_guild(bot, gid), cat)
-    return {'rows': [{'rank': i + 1, 'name': n, 'value': v}
-                     for i, (n, v) in enumerate(top)],
-            'demo': not raw_rows(gid, cat),
-            'title': CAT_META[cat]['title']}
+def _pretty_value(cat, raw):
+    """Значение словами панели (русские единицы, пробелы разрядов)."""
+    if cat == 'voice':
+        return fmt_duration(raw)
+    num = f'{int(raw):,}'.replace(',', ' ')
+    unit = {'messages': 'сообщений', 'voice': 'в войсе', 'balance': 'монет'}[cat]
+    return f'{num} {unit}'
+
+
+def table_view(bot, gid, cat, limit=20):
+    """Топ рейтинга: живые данные и реальные имена (без фейковых заглушек).
+
+    С ботом — словами кога. Офлайн (демо) — из тех же файлов, что читает
+    ког, с именами из демо-участников и карты имён. Строки «AETHER_LEADER»
+    больше не появляются: если данных нет вообще, отдаём пустой список.
+    """
+    if bot is not None:
+        top = LB._get_lb_data(_guild(bot, gid), cat)
+        rows = [{'rank': i + 1, 'name': n, 'value': v}
+                for i, (n, v) in enumerate(top)]
+        rows = rows[:limit]
+    else:
+        names = _demo_names()
+        if cat == 'voice':
+            # имена из голосовой статистики (там же, где секунды)
+            for uid, d in voice_view(int(gid)).get('users', {}).items():
+                if isinstance(d, dict) and d.get('name'):
+                    names.setdefault(str(uid), {'name': str(d['name']), 'avatar': str(d.get('avatar') or '')})
+        raw = raw_rows(gid, cat)[:limit]
+        rows = [{'rank': i + 1,
+                 'name': (names.get(uid) or {}).get('name') or f'ID {uid}',
+                 'uid': uid,
+                 'raw': val,
+                 'value': _pretty_value(cat, val)}
+                for i, (uid, val) in enumerate(raw)]
+        # аватар из демо-участников — в клиентскую строку
+        for row in rows:
+            rec = names.get(row.get('uid') or '')
+            if rec and rec.get('avatar'):
+                row['avatar'] = rec['avatar']
+    return {'rows': rows,
+            'demo': False,
+            'title': CAT_META[cat]['title'],
+            'cat': cat,
+            'unit': CAT_META[cat]['unit']}
 
 
 def rank_view(gid, uid_raw):
@@ -129,11 +191,14 @@ def csv_rows(bot, gid, cat):
                        voice_view(int(gid)).get('users', {}).items()
                        if isinstance(d, dict)}
     guild = _guild(bot, gid)
+    demo_names = _demo_names()
     out = []
     for i, (uid, val) in enumerate(raw_rows(gid, cat)):
         member = guild.get_member(int(uid)) if uid.isdigit() else None
         name = (member.display_name if member
-                else voice_names.get(uid) or f'ID {uid[:6]}')
+                else voice_names.get(uid)
+                or (demo_names.get(uid) or {}).get('name')
+                or f'ID {uid[:6]}')
         out.append((i + 1, uid, name, val))
     return out
 
