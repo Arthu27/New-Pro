@@ -1183,7 +1183,7 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=61' in base and 'style.css?v=116' in base,
+check('app.js?v=61' in base and 'style.css?v=117' in base,
       'версии ассетов (116/60)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')

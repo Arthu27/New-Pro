@@ -69,7 +69,7 @@ def register(ctx):
     @login_required
     @role_required ('owner')
     def panel_access_page ():
-        """Доступ к панелям: какие Discord-роли получают панель
+        """Панели и роли: какие Discord-роли получают панель
         Владелец / Администратор / Модератор / Участник."""
         return render_template (
         'panel_access.html',
@@ -83,7 +83,7 @@ def register(ctx):
     @login_required
     @role_required ('owner')
     def panel_menu_page ():
-        """Доступ к меню: какие категории (группы) и страницы (комнаты)
+        """Меню панели: какие категории (группы) и страницы (комнаты)
         видны в панели Модератора и Администратора."""
         return render_template (
         'panel_menu.html',

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""OPS-центр тикетов (идеи #21-25).
+"""Операции с тикетами (идеи #21-25).
 
 Проверяем: чистые sla_snapshot (возраст/просрочка/среднее закрытие),
 bulk_close с пропусками, reopen (стирание полей закрытия), add_note с
@@ -175,7 +175,7 @@ check('data-theme="light"' in base_tpl, 'светлая тема учтена (�
 check(('askConfirm' in tpl or 'confirmAction' in tpl) and 'uxUndo' in tpl, 'confirm и undo на месте')
 import services.panel_menu as PM
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
-check('/tickets-ops' in paths, 'пункт меню «OPS-центр» есть')
+check('/tickets-ops' in paths, 'пункт меню «Операции» есть')
 check(PM.PAGE_COGS.get('/tickets-ops') == ('ticket',), 'PAGE_COGS привязан к ticket')
 
 print('== 5. История автора, переоткрытые, экспорт (#26-30) ==')

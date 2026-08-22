@@ -117,13 +117,13 @@ MENU = [
         {'path': '/reaction-roles', 'label': 'Роли по реакциям', 'icon': 'fa-smile'},
     ]},
     {'group': 'Доступ', 'key': 'access', 'icon': 'fa-shield-alt', 'pages': [
-        {'path': '/panel-access', 'label': 'Доступ к панелям', 'icon': 'fa-user-shield'},
-        {'path': '/panel-menu', 'label': 'Доступ к меню', 'icon': 'fa-bars'},
-        {'path': '/role-permissions', 'label': 'Доступ к командам', 'icon': 'fa-user-lock'},
+        {'path': '/panel-access', 'label': 'Панели и роли', 'icon': 'fa-user-shield'},
+        {'path': '/panel-menu', 'label': 'Меню панели', 'icon': 'fa-bars'},
+        {'path': '/role-permissions', 'label': 'Права команд', 'icon': 'fa-user-lock'},
     ]},
     {'group': 'Тикеты', 'key': 'tickets', 'icon': 'fa-ticket-alt', 'pages': [
-        {'path': '/ai-tickets', 'label': 'AI Тикеты', 'icon': 'fa-ticket-alt'},
-        {'path': '/tickets-ops', 'label': 'OPS-центр', 'icon': 'fa-gauge-high'},
+        {'path': '/ai-tickets', 'label': 'AI-тикеты', 'icon': 'fa-ticket-alt'},
+        {'path': '/tickets-ops', 'label': 'Операции', 'icon': 'fa-gauge-high'},
         {'path': '/ai_ticket_stats', 'label': 'Статистика', 'icon': 'fa-chart-pie'},
         {'path': '/ticket-search', 'label': 'Поиск тикетов', 'icon': 'fa-magnifying-glass'},
         {'path': '/transcripts', 'label': 'Транскрипты', 'icon': 'fa-file-lines'},

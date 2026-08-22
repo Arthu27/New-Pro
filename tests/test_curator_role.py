@@ -233,22 +233,22 @@ check(r.status_code == 200 and 'Куратор' in body,
       'в шапке панели куратора показана подпись «Куратор»')
 check('nav-group' in body, 'куратор видит штабное меню (сайдбар)')
 
-# 4.3 Шаблон «Доступ к панели»: куратор в легенде/опциях/статистике
+# 4.3 Шаблон «Панели и роли»: куратор в легенде/опциях/статистике
 c = make_client('owner')
 r = c.get('/panel-access')
 pa = r.get_data(as_text=True)
 check('p-curator' in pa and 'fa-graduation-cap' in pa
-      and 'Куратор' in pa, 'страница «Доступ к панели» знает куратора')
+      and 'Куратор' in pa, 'страница «Панели и роли» знает куратора')
 check(pa.count('value="curator"') >= 2,
       'оба селекта видимости предлагают «Кураторы и выше»')
 check('cnt-curator' in pa and "v:'curator'" in pa,
       'статистика и опции маппинга включают куратора')
 
-# 4.4 Шаблон «Доступ к меню»: вкладка Куратора
+# 4.4 Шаблон «Меню панели»: вкладка Куратора
 r = c.get('/panel-menu')
 pm = r.get_data(as_text=True)
 check('tab-curator' in pm and "selectPanel('curator')" in pm,
-      'страница «Доступ к меню» имеет вкладку «Куратор»')
+      'страница «Меню панели» имеет вкладку «Куратор»')
 
 
 print('== 5. База знаний ИИ ==')
@@ -261,7 +261,7 @@ check('Куратор' in kb and 'curator' in kb
 check(ROLE_ORDER == ('uye', 'mod', 'curator', 'admin', 'owner'),
       'порядок ролей в справке ИИ правильный')
 faq = build_panel_faq()
-check('Куратор' in faq and 'Доступ к панели' in faq and 'Доступ к меню' in faq,
+check('Куратор' in faq and 'Панели и роли' in faq and 'Меню панели' in faq,
       'человекочитаемая справка упоминает куратора и страницы настройки')
 kb_compact = build_panel_knowledge(compact=True, full_menu=False)
 check('Куратор' in kb_compact and 'РАЗДЕЛЫ' in kb_compact,

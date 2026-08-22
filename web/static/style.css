@@ -388,7 +388,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 
 .sidebar-nav { flex: 1; overflow-y: auto; padding: 6px 12px 14px; min-height: 0; }
 
-.nav-group { margin-top: 6px; }
+.nav-group { margin-top: 10px; }
 .nav-group-title {
   display: flex; align-items: center; gap: 8px;
   width: 100%;
@@ -443,7 +443,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .nav-group.collapsed .nav-group-items { max-height: 0; opacity: 0; }
 
 .nav-group-items {
-  margin-top: 2px;
+  margin-top: 5px;
   max-height: 2400px;
   overflow: hidden;
   transition: max-height 0.3s var(--ease), opacity 0.22s var(--ease);
