@@ -91,8 +91,15 @@ def register(ctx):
             data =json .load (fp )
         wl =data .get ('watchlist',{}).get (guild_id ,{})
         result =[]
+        try :
+            from web .routes ._common import name_map_for
+            _nm =name_map_for (guild_id )
+        except Exception as _ex :
+            _nm ={}
         for uid ,info in wl .items ():
-            result .append ({'id':uid ,'name':info .get ('added_by',uid ),'reason':info .get ('reason',''),'added_by':info .get ('added_by',''),'timestamp':info .get ('timestamp','')})
+            result .append ({'id':uid ,'name':_nm .get (uid )or info .get ('name')or uid ,
+            'reason':info .get ('reason',''),'added_by':info .get ('added_by',''),
+            'timestamp':info .get ('timestamp','')})
         return jsonify (result )
 
 

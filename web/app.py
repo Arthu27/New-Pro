@@ -1490,6 +1490,25 @@ def api_set_nick (guild_id ,member_id ):
 @login_required 
 def api_guild_members (guild_id ):
     if not bot_instance :
+        # демо-предпросмотр без бота: отдаём демо-участников —
+        # иначе /users, заметки и наблюдение пустовали без видимой причины
+        if _demo_mode ():
+            try :
+                from web .routes ._common import DEMO_MEMBERS
+                return jsonify ([{
+                'id':str (m .get ('id')),
+                'name':str (m .get ('name')or m .get ('id')),
+                'display_name':str (m .get ('display_name')or m .get ('name')or m .get ('id')),
+                'discriminator':'0',
+                'avatar':str (m .get ('avatar')or ''),
+                'joined_at':m .get ('joined_at'),
+                'created_at':None ,
+                'roles':[{'name':str (r .get ('name')or ''),'color':str (r .get ('color')or 0)}for r in (m .get ('roles')or [])],
+                'bot':False ,'status':m .get ('status','offline'),'nick':None ,
+                'top_role':str ((m .get ('roles')or [{'name':''}])[0 ].get ('name')or '')if (m .get ('roles')or [])else None ,
+                }for m in DEMO_MEMBERS ])
+            except Exception as _ex :
+                _log.debug("api_guild_members(): демо: %s", _ex )
         return jsonify ([])
 
     try :

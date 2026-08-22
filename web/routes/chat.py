@@ -200,10 +200,15 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         log =_load_dm_log ()
         result =[]
+        try :
+            from web .routes ._common import name_map_for
+            _nm =name_map_for (guild_id ,bot )
+        except Exception as _ex :
+            _nm ={}
         for uid ,msgs in log .items ():
             if not msgs :continue 
             last =msgs [-1 ]
-            name =uid 
+            name =_nm .get (uid )or uid 
             avatar =''
             if bot :
                 for g in bot .guilds :
@@ -215,6 +220,16 @@ def register(ctx):
                             break 
                     except Exception as _ex:
                         _log.debug("api_dm_recent(): подавлено: %s", _ex)
+            elif not avatar :
+                try :
+                    from web .routes ._common import DEMO_MEMBERS
+                    for dm in DEMO_MEMBERS :
+                        if str (dm .get ('id'))==uid :
+                            name =str (dm .get ('display_name')or dm .get ('name')or uid )
+                            avatar =str (dm .get ('avatar')or '')
+                            break 
+                except Exception as _ex :
+                    _log.debug("api_dm_recent(): демо-аватар: %s", _ex )
             result .append ({
             'id':uid ,
             'name':name ,

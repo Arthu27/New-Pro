@@ -556,6 +556,105 @@ try:
 except Exception as _ex:
     print('смены персонала не засеяны:', _ex)
 
+# ── Заметки участников (страница /member-notes) ──
+try:
+    _notes = {
+        '1001': {'name': 'Sonya', 'avatar': 'https://cdn.discordapp.com/embed/avatars/1.png',
+                 'notes': [
+                     {'id': 'n1', 'note': 'Ведёт ночные смены дежурств, надёжная.', 'author': 'artem.mods',
+                      'timestamp': iso(2, 20, 15)},
+                     {'id': 'n2', 'note': 'Помогла с набором модераторов — поблагодарить.', 'author': 'lina.mod',
+                      'timestamp': iso(5, 11, 0)}]},
+        '1002': {'name': 'Artem', 'avatar': 'https://cdn.discordapp.com/embed/avatars/2.png',
+                 'notes': [
+                     {'id': 'n3', 'note': 'Отвечает за варн-конфиг. Согласовывать пороги с ним.', 'author': 'owner',
+                      'timestamp': iso(1, 16, 45)}]},
+        '1003': {'name': 'Lina', 'avatar': 'https://cdn.discordapp.com/embed/avatars/3.png',
+                 'notes': [
+                     {'id': 'n4', 'note': 'Обрабатывает тикеты в утренние часы.', 'author': 'artem.mods',
+                      'timestamp': iso(3, 9, 30)},
+                     {'id': 'n5', 'note': 'На испытательном сроке до конца месяца.', 'author': 'owner',
+                      'timestamp': iso(6, 18, 0)}]},
+    }
+    with open('data/member_notes.json', 'w', encoding='utf-8') as _f:
+        json.dump(_notes, _f, ensure_ascii=False, indent=2)
+    print('записано: заметки участников (%d)' % len(_notes))
+except Exception as _ex:
+    print('заметки не засеяны:', _ex)
+
+# ── Наблюдение (watchlist) — в mod_data.json рядом с кейсами ──
+try:
+    _md = json.load(open('data/mod_data.json', encoding='utf-8'))
+    _md['watchlist'] = {GID: {
+        '823456789012345680': {'reason': 'Снял мьют вторым аккаунтом', 'added_by': 'lina.mod',
+                               'timestamp': iso(1, 20, 0)},
+        '623456789012345678': {'reason': 'Пограничный капс-спам, смотрим', 'added_by': 'sonya.staff',
+                               'timestamp': iso(3, 14, 30)},
+        '923456789012345681': {'reason': 'Ночной флудер, возможен обход бана', 'added_by': 'artem.mods',
+                               'timestamp': iso(4, 2, 10)},
+    }}
+    with open('data/mod_data.json', 'w', encoding='utf-8') as _f:
+        json.dump(_md, _f, ensure_ascii=False, indent=2)
+    print('записано: watchlist (3 участника)')
+except Exception as _ex:
+    print('watchlist не засеян:', _ex)
+
+# ── Цветные роли: демо-палитра ──
+try:
+    _palette = [
+        {'name': 'Красный', 'hex': '#ef4444', 'emoji': ''},
+        {'name': 'Синий', 'hex': '#3b82f6', 'emoji': ''},
+        {'name': 'Зелёный', 'hex': '#22c55e', 'emoji': ''},
+        {'name': 'Фиолетовый', 'hex': '#a855f7', 'emoji': ''},
+    ]
+    with open('data/color_roles_%s.json' % GID, 'w', encoding='utf-8') as _f:
+        json.dump(_palette, _f, ensure_ascii=False, indent=2)
+    print('записано: палитра цветных ролей (%d)' % len(_palette))
+except Exception as _ex:
+    print('палитра не засеяна:', _ex)
+
+# ── DM-разговоры для страницы «Чат» ──
+try:
+    _dm_log = {
+        '823456789012345680': [
+            {'content': 'Привет, почему меня замутили?', 'author': 'toxicguy', 'bot': False,
+             'timestamp': iso(1, 21, 5)},
+            {'content': 'Обход мьюта вторым аккаунтом. Подробности в тикете.', 'author': 'Aether', 'bot': True,
+             'timestamp': iso(1, 21, 7)},
+        ],
+        '723456789012345679': [
+            {'content': 'Я не спамил голосовым ботом, честно!', 'author': 'voice_troll', 'bot': False,
+             'timestamp': iso(2, 19, 40)},
+            {'content': 'Логи говорят иначе. Апелляция — через /appeal.', 'author': 'Aether', 'bot': True,
+             'timestamp': iso(2, 19, 44)},
+        ],
+    }
+    with open('data/dm_log.json', 'w', encoding='utf-8') as _f:
+        json.dump(_dm_log, _f, ensure_ascii=False, indent=2)
+    print('записано: DM-разговоры (%d)' % len(_dm_log))
+except Exception as _ex:
+    print('DM-лог не засеян:', _ex)
+
+# ── Приглашения: лидерборд и свежие входы ──
+try:
+    _lb = [
+        {'name': 'sonya.staff', 'joins': 14, 'leaves': 2},
+        {'name': 'artem.mods', 'joins': 11, 'leaves': 1},
+        {'name': 'lina.mod', 'joins': 8, 'leaves': 0},
+        {'name': 'max.gg', 'joins': 5, 'leaves': 3},
+    ]
+    with open('data/invites_%s.json' % GID, 'w', encoding='utf-8') as _f:
+        json.dump({'leaderboard': _lb, 'total_joins': 38, 'total_leaves': 6}, _f, ensure_ascii=False, indent=2)
+    _joins = []
+    for i in range(10):
+        _joins.append({'user': 'newbie_%02d' % i, 'inviter': _lb[i % len(_lb)]['name'],
+                       'timestamp': iso(i, 12, 0)})
+    with open('data/invite_joins_%s.json' % GID, 'w', encoding='utf-8') as _f:
+        json.dump(_joins, _f, ensure_ascii=False, indent=2)
+    print('записано: приглашения (лидерборд %d + %d входов)' % (len(_lb), len(_joins)))
+except Exception as _ex:
+    print('приглашения не засеяны:', _ex)
+
 # ── Карта имён: uid → имя для логов (вместо голых ID) ──
 try:
     _names_map = {

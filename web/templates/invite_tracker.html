@@ -91,9 +91,25 @@ function showTab(tab, btn) {
 }
 function emptyHTML(msg){ return '<div class="inv-empty"><i class="fas fa-inbox"></i>'+msg+'</div>'; }
 
+var MAIN_GID = '{{ main_guild_id }}';
+
+async function loadGuilds() {
+  try {
+    var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+    var sel = document.getElementById('guild-select');
+    (Array.isArray(guilds) ? guilds : []).forEach(function (g) {
+      var opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = g.name;
+      sel.appendChild(opt);
+    });
+  } catch (e) { /* тихо */ }
+}
+
 async function loadInvites() {
-  var gid = document.getElementById('guild-select').value;
+  var gid = document.getElementById('guild-select').value || MAIN_GID;
   if(!gid) return;
+  document.getElementById('guild-select').value = gid;
   var r = await fetch('/api/guild/'+gid+'/invite-tracker-full');
   var d = await r.json();
 
@@ -135,9 +151,12 @@ async function loadInvites() {
 }
 
 function start() {
-  var gid = document.getElementById('guild-select').value || '{{ main_guild_id }}';
-  document.getElementById('guild-select').value = gid;
-  loadInvites();
+  /* серверы догружаются, затем авто-выбираем главный и грузим данные */
+  loadGuilds().then(function () {
+    var sel = document.getElementById('guild-select');
+    if (!sel.value && MAIN_GID) sel.value = MAIN_GID;
+    loadInvites();
+  });
   if (window.setLiveRefresh) window.setLiveRefresh(loadInvites, 5000);
   else setInterval(loadInvites, 30000);
 }

@@ -48,6 +48,8 @@
   var statusClass = { online: 'ok', idle: 'warn', dnd: 'err' };
   var statusLabel = { online: 'В сети', idle: 'Неактивен', dnd: 'Не беспокоить', offline: 'Не в сети' };
 
+  var MAIN_GID = '{{ main_guild_id }}';
+
   async function loadGuilds() {
     try {
       var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
@@ -58,6 +60,9 @@
         opt.textContent = g.name;
         sel.appendChild(opt);
       });
+      /* авто-выбор главного сервера — список виден сразу, без ручного клика */
+      if (!sel.value && MAIN_GID) sel.value = MAIN_GID;
+      loadMembers(false);
     } catch (e) { /* тихо */ }
   }
 
