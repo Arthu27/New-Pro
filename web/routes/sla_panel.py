@@ -25,7 +25,7 @@ data/sla_breaches.json, картина одна на бота и панель.
 Чтение — mod+; политики и перепроверку меняет admin+ (создание в боте идёт
 с administrator).
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from web.routes._common import (
     _log,
@@ -195,14 +195,23 @@ def scan_flow():
 
 
 def _created_dt(ticket):
-    """created_at → naive datetime; битые и пустые — None."""
-    raw = str(ticket.get('created_at') or '')[:19]
+    """created_at → aware-UTC datetime; битые и пустые — None.
+
+    Раньше метка обрезалась до naive и сравнивалась с локальным now —
+    отчёт «уезжал» на пояс сервера. Теперь всё в aware-UTC.
+    """
+    raw = str(ticket.get('created_at') or '').strip()
     if not raw:
         return None
     try:
-        return datetime.fromisoformat(raw)
+        dt = datetime.fromisoformat(raw.replace('Z', '+00:00'))
     except ValueError:
         return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
+    return dt
 
 
 def report_flow(days_raw):
@@ -212,7 +221,7 @@ def report_flow(days_raw):
     except (TypeError, ValueError):
         days = 30
     days = max(1, min(days, 3650))
-    end = datetime.now()
+    end = datetime.now(timezone.utc)
     start = end - timedelta(days=days)
     tickets = []
     for t in ticket_manager.get_all_tickets():

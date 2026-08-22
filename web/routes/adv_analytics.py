@@ -29,8 +29,22 @@ def register(ctx):
         """Получить расширенную аналитику"""
         import json 
         import os 
-        from datetime import datetime ,timedelta 
+        from datetime import datetime ,timedelta ,timezone 
         from collections import Counter ,defaultdict 
+
+        def _aware (s ):
+            # ISO-метка -> aware-UTC. Naive считаем UTC (так пишут тикеты).
+            # Без этого сравнение с cutoff (aware) роняло эндпоинт с TypeError
+            # либо молча отбрасывало все тикеты.
+            try :
+                dt =datetime .fromisoformat (str (s or '').replace ('Z','+00:00'))
+            except Exception :
+                return None 
+            if dt .tzinfo is None :
+                dt =dt .replace (tzinfo =timezone .utc )
+            else :
+                dt =dt .astimezone (timezone .utc )
+            return dt 
 
         data =request .get_json ()
         period =int (data .get ('period',30 ))
@@ -55,15 +69,15 @@ def register(ctx):
                         _log.debug("api_analytics_advanced(): подавлено: %s", _ex)
 
                         # Фильтрация по периоду
-        cutoff_date =datetime .now ()-timedelta (days =period )
+        cutoff_date =datetime .now (timezone .utc )-timedelta (days =period )
         filtered_tickets =[]
 
         for ticket in all_tickets :
             created_at =ticket .get ('created_at','')
             if created_at :
                 try :
-                    created_date =datetime .fromisoformat (created_at .replace ('Z','+00:00'))
-                    if created_date >=cutoff_date :
+                    created_date =_aware (created_at )
+                    if created_date is not None and created_date >=cutoff_date :
                     # Фильтрация по категории
                         if category_filter and ticket .get ('category','')!=category_filter :
                             continue 
@@ -84,10 +98,11 @@ def register(ctx):
         for ticket in filtered_tickets :
             if ticket .get ('status')=='closed'and ticket .get ('created_at')and ticket .get ('closed_at'):
                 try :
-                    created =datetime .fromisoformat (ticket ['created_at'].replace ('Z','+00:00'))
-                    closed =datetime .fromisoformat (ticket ['closed_at'].replace ('Z','+00:00'))
-                    hours =(closed -created ).total_seconds ()/3600 
-                    resolution_times .append (hours )
+                    created =_aware (ticket ['created_at'])
+                    closed =_aware (ticket ['closed_at'])
+                    if created is not None and closed is not None and closed >=created :
+                        hours =(closed -created ).total_seconds ()/3600 
+                        resolution_times .append (hours )
                 except Exception as _ex:
                     _log.debug("api_analytics_advanced(): подавлено: %s", _ex)
 
@@ -98,7 +113,11 @@ def register(ctx):
 
         # Тренды (сравнение с предыдущим периодом)
         prev_cutoff_date =cutoff_date -timedelta (days =period )
-        prev_tickets =[t for t in all_tickets if prev_cutoff_date <=datetime .fromisoformat (t .get ('created_at','').replace ('Z','+00:00'))<cutoff_date ]
+        prev_tickets =[]
+        for t in all_tickets :
+            _cd =_aware (t .get ('created_at',''))
+            if _cd is not None and prev_cutoff_date <=_cd <cutoff_date :
+                prev_tickets .append (t )
         prev_total =len (prev_tickets )
 
         total_tickets_trend =round (((total_tickets -prev_total )/prev_total *100 ),1 )if prev_total >0 else 0 
@@ -109,15 +128,17 @@ def register(ctx):
             created_at =ticket .get ('created_at','')
             if created_at :
                 try :
-                    date =datetime .fromisoformat (created_at .replace ('Z','+00:00')).date ()
-                    tickets_by_day [date ]+=1 
+                    _d =_aware (created_at )
+                    if _d is not None :
+                        date =_d .date ()
+                        tickets_by_day [date ]+=1 
                 except Exception as _ex:
                     _log.debug("api_analytics_advanced(): подавлено: %s", _ex)
 
         trend_labels =[]
         trend_data =[]
         for i in range (period ,0 ,-1 ):
-            date =(datetime .now ()-timedelta (days =i )).date ()
+            date =(datetime .now (timezone .utc )-timedelta (days =i )).date ()
             trend_labels .append (date .strftime ('%d.%m'))
             trend_data .append (tickets_by_day .get (date ,0 ))
 
@@ -136,8 +157,8 @@ def register(ctx):
         for ticket in filtered_tickets :
             if ticket .get ('status')=='closed'and ticket .get ('created_at')and ticket .get ('closed_at'):
                 try :
-                    created =datetime .fromisoformat (ticket ['created_at'].replace ('Z','+00:00'))
-                    closed =datetime .fromisoformat (ticket ['closed_at'].replace ('Z','+00:00'))
+                    created =_aware (ticket ['created_at'])
+                    closed =_aware (ticket ['closed_at'])
                     hours =(closed -created ).total_seconds ()/3600 
                     category =ticket .get ('category','Другое')
                     resolution_by_category [category ].append (hours )

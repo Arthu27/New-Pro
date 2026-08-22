@@ -89,6 +89,17 @@ STOCKS ={
 # Казино-игры
 CASINO_GAMES =['coinflip','slots','blackjack','roulette','dice','crash']
 
+def _as_local_naive (dt ):
+    """Метка из хранилища -> naive-локальная (как datetime.now() в этом коге).
+
+    Легаси-данные могли быть записаны с поясом; вычитание aware/naive
+    роняло бы команды кулдаунов с TypeError.
+    """
+    if dt .tzinfo is not None :
+        dt =dt .astimezone ().replace (tzinfo =None )
+    return dt
+
+
 def _rarity_color (rarity :str )->int :
     return RARITY_COLORS .get (rarity ,0x95A5A6 )
 
@@ -163,7 +174,7 @@ class _EconomyExtra (commands .Cog ):
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))
         now =datetime .now ()
         if data .get ('interest_last'):
-            last =datetime .fromisoformat (data ['interest_last'])
+            last =_as_local_naive (datetime .fromisoformat (data ['interest_last']))
             if now -last <timedelta (hours =6 ):
                 rem =timedelta (hours =6 )-(now -last )
                 await ctx .send (f"Проценты будут через {int(rem.total_seconds()//3600)}ч.")
@@ -184,7 +195,7 @@ class _EconomyExtra (commands .Cog ):
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))
         now =datetime .now ()
         if data .get ('weekly_last'):
-            last =datetime .fromisoformat (data ['weekly_last'])
+            last =_as_local_naive (datetime .fromisoformat (data ['weekly_last']))
             if now -last <timedelta (days =7 ):
                 rem =timedelta (days =7 )-(now -last )
                 await ctx .send (f"Недельная награда будет через {int(rem.total_seconds()//86400)}д.")
@@ -252,7 +263,7 @@ class _EconomyExtra (commands .Cog ):
         data =self ._migrate (ctx .author .id ,self ._get (ctx .author .id ))
         now =datetime .now ()
         if data ['work_last']:
-            last =datetime .fromisoformat (data ['work_last'])
+            last =_as_local_naive (datetime .fromisoformat (data ['work_last']))
             if now -last <timedelta (minutes =30 ):
                 m =int ((timedelta (minutes =30 )-(now -last )).total_seconds ()/60 )
                 await ctx .send (f"Отдохните. Попробуйте через {m} мин.")
@@ -746,7 +757,7 @@ class EconomyCog (_EconomyExtra ,commands .Cog ):
         streak =data .get ('daily_streak',0 )
 
         if data ['daily_last']:
-            last =datetime .fromisoformat (data ['daily_last'])
+            last =_as_local_naive (datetime .fromisoformat (data ['daily_last']))
             diff =now -last 
             if diff <timedelta (hours =24 ):
                 remaining =timedelta (hours =24 )-diff 
@@ -791,7 +802,7 @@ class EconomyCog (_EconomyExtra ,commands .Cog ):
         data =self ._get (ctx .author .id )
 
         if data ['beg_last']:
-            last =datetime .fromisoformat (data ['beg_last'])
+            last =_as_local_naive (datetime .fromisoformat (data ['beg_last']))
             diff =datetime .now ()-last 
             if diff <timedelta (minutes =15 ):
                 m =int ((timedelta (minutes =15 )-diff ).total_seconds ()/60 )

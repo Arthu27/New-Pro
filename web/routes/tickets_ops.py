@@ -72,7 +72,9 @@ def _parse_ts(ts):
         dt = datetime.fromisoformat(str(ts).replace('Z', '+00:00'))
     except ValueError:
         return None
-    if dt.tzinfo is not None:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)  # легаси-метки без пояса считаем UTC
+    else:
         dt = dt.astimezone(timezone.utc)
     return dt
 

@@ -1492,7 +1492,7 @@ def api_guild_members (guild_id ):
                 'discriminator':m .discriminator ,
                 'avatar':str (m .display_avatar .url ),
                 'joined_at':m .joined_at .isoformat ()if m .joined_at else None ,
-                'created_at':created_at .isoformat (),
+                'created_at':created_at .replace (tzinfo =timezone .utc ).isoformat (),
                 'roles':[{'name':r .name ,'color':str (r .color )}for r in m .roles [1 :]],
                 'bot':m .bot ,
                 'status':str (m .status )if hasattr (m ,'status')else 'offline',
@@ -1548,6 +1548,22 @@ def _ts_sort_key (ev ):
     else :
         dt =dt .astimezone (timezone .utc )
     return dt 
+
+def _epoch_from_ts (value ):
+    """ISO-метка → epoch-секунды. Naive считаем UTC (так пишут все наши хранилища) —
+    иначе .timestamp() трактует её как локальное время и лента событий «уезжает»
+    на величину пояса сервера. Мусор → 0.
+    """
+    s =(str (value or '')).strip ()
+    if not s :
+        return 0 
+    try :
+        dt =datetime .fromisoformat (s .replace ('Z','+00:00'))
+    except (ValueError ,TypeError ):
+        return 0 
+    if dt .tzinfo is None :
+        dt =dt .replace (tzinfo =timezone .utc )
+    return int (dt .timestamp ())
 
 @app .route ('/api/logs')
 @login_required 
@@ -1888,7 +1904,7 @@ def api_execute_command ():
                     raise Exception ('У бота нет права на бан участников')
                 await guild .ban (user ,reason =data .get ('reason','Бан через веб-панель'))
             elif command =='kick':
-                member =guild .get_member (int (data .get ('user_id')))
+                member =_resolve_guild_member_async (guild ,int (data .get ('user_id')))
                 if not member :
                     raise Exception ('Участник не найден на сервере')
                 if not guild .me .guild_permissions .kick_members :
@@ -1897,7 +1913,7 @@ def api_execute_command ():
                     raise Exception ('Роль целевого пользователя выше роли бота')
                 await member .kick (reason =data .get ('reason','Кик через веб-панель'))
             elif command =='timeout':
-                member =guild .get_member (int (data .get ('user_id')))
+                member =_resolve_guild_member_async (guild ,int (data .get ('user_id')))
                 if not member :
                     raise Exception ('Участник не найден на сервере')
                 if not guild .me .guild_permissions .moderate_members :
@@ -1933,7 +1949,7 @@ def api_execute_command ():
                 _panel_notify ('warn',f"Предупреждение выдано (ID {uid_str })",
                 f"Модератор: {session .get ('username')} · Причина: {data .get ('reason','Предупреждение через веб-панель')}")
                 # Отправить DM о предупреждении
-                member =guild .get_member (int (data .get ('user_id')))
+                member =_resolve_guild_member_async (guild ,int (data .get ('user_id')))
                 if member :
                     dm_file =f'data/warn_dm_{guild.id}.json'
                     dm_msg =None 
@@ -1953,7 +1969,7 @@ def api_execute_command ():
                         except Exception as _ex:
                             _log.debug("execute(): подавлено: %s", _ex)
             elif command =='jail':
-                member =guild .get_member (int (data .get ('user_id')))
+                member =_resolve_guild_member_async (guild ,int (data .get ('user_id')))
                 if not member :
                     raise Exception ('Участник не найден на сервере')
                     # Поиск jail-роли
@@ -1986,7 +2002,7 @@ def api_execute_command ():
                 except Exception as _ex:
                     _log.debug("execute(): подавлено: %s", _ex)
             elif command =='unjail':
-                member =guild .get_member (int (data .get ('user_id')))
+                member =_resolve_guild_member_async (guild ,int (data .get ('user_id')))
                 if not member :
                     raise Exception ('Участник не найден на сервере')
                 jail_role =discord .utils .get (guild .roles ,name ='Jail')
@@ -2453,6 +2469,23 @@ def _resolve_guild_member (guild ,user_id ):
         member =future .result (timeout =10 )
     except Exception as _ex :
         _log.debug('_resolve_guild_member(%s): подавлено: %s', uid, _ex)
+        member =None 
+    return member 
+
+async def _resolve_guild_member_async (guild ,user_id ):
+    """Аналог _resolve_guild_member для вызова ВНУТРИ loop бота (прямой await).
+
+    execute() крутится в loop: run_coroutine_threadsafe из него привёл бы к
+    дедлоку, поэтому здесь обычный await fetch_member.
+    """
+    uid =int (user_id )
+    member =guild .get_member (uid )
+    if member is not None :
+        return member 
+    try :
+        member =await guild .fetch_member (uid )
+    except Exception as _ex :
+        _log.debug('_resolve_guild_member_async(%s): подавлено: %s', uid, _ex)
         member =None 
     return member 
 
@@ -3408,7 +3441,7 @@ def api_activity_feed ():
                 ts = e.get('ts', 0)
                 if not ts:
                     try:
-                        ts = int(datetime.fromisoformat(e.get('timestamp','')).timestamp())
+                        ts = _epoch_from_ts (e .get ('timestamp'))
                     except Exception:
                         ts = 0
                 push('fa-lock', 'Вход в панель', e.get('username'), f"Роль: {e.get('role','?')}", ts, 'auth', link='/logs')
@@ -3425,7 +3458,7 @@ def api_activity_feed ():
                 for ev in events[-15:]:
                     ts = 0
                     try:
-                        ts = int(datetime.fromisoformat(ev.get('timestamp','')).timestamp())
+                        ts = _epoch_from_ts (ev .get ('timestamp'))
                     except Exception:
                         ts = 0
                     act = (ev.get('action') or '').lower()
@@ -3454,7 +3487,7 @@ def api_activity_feed ():
                     for w in warns[-5:]:
                         ts = 0
                         try:
-                            ts = int(datetime.fromisoformat(w.get('timestamp','')).timestamp())
+                            ts = _epoch_from_ts (w .get ('timestamp'))
                         except Exception:
                             ts = 0
                         push('fa-triangle-exclamation', 'Предупреждение', w.get('moderator') or w.get('mod') or uid,
@@ -3471,7 +3504,7 @@ def api_activity_feed ():
                 for tid, tk in data.items():
                     ts = 0
                     try:
-                        ts = int(datetime.fromisoformat(tk.get('created_at','')).timestamp())
+                        ts = _epoch_from_ts (tk .get ('created_at'))
                     except Exception:
                         ts = 0
                     push('fa-ticket', 'Тикет: '+ (tk.get('category') or 'общий'),
@@ -3492,7 +3525,7 @@ def api_activity_feed ():
                 ts = e.get('ts', 0)
                 if isinstance(ts, str) and not str(ts).isdigit():
                     try:
-                        ts = int(datetime.fromisoformat(str(ts).replace('Z', '+00:00')).timestamp())
+                        ts = _epoch_from_ts (ts )
                     except Exception:
                         ts = 0
                 _title, _icon, _link = _human_panel_action(e.get('action', ''))
@@ -3512,7 +3545,7 @@ def api_activity_feed ():
             for h in hist[-30:]:
                 ts = 0
                 try:
-                    ts = int(datetime.fromisoformat(h.get('created_at','')).timestamp())
+                    ts = _epoch_from_ts (h .get ('created_at'))
                 except Exception:
                     ts = 0
                 push(h.get('icon','🔔'), h.get('title','Уведомление'), 'Система',

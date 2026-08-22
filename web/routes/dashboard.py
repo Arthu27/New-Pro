@@ -25,7 +25,10 @@ def _today_mod_stats():
             s = str(t or '').strip()
             if not s:
                 return None
-            return _dt.fromisoformat(s.replace('Z', '+00:00'))
+            d = _dt.fromisoformat(s.replace('Z', '+00:00'))
+            if d.tzinfo is None:
+                d = d.replace(tzinfo=_dt.timezone.utc)  # легаси-метки без пояса — UTC
+            return d
         except Exception:
             return None
 

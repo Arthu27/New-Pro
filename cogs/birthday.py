@@ -65,6 +65,11 @@ class Birthday (commands .Cog ):
                     continue 
                 member =guild .get_member (int (user_id ))
                 if not member :
+                    try :
+                        member =await guild .fetch_member (int (user_id ))
+                    except Exception as _ex:
+                        _log.debug('check_birthdays(): подавлено: %s', _ex)
+                if not member :
                     continue 
                 age_str =""
                 age =None 
