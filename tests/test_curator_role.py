@@ -273,7 +273,32 @@ check('curator' in base and 'Куратор' in base,
       'база знаний тикет-ИИ дополнена панелью и куратором')
 
 
-print('== 6. Демо-ветка /api/role-map ==')
+print('== 6. Меню куратора по умолчанию ==')
+# сбросить конфиг, сохранённый проверкой 3.2 (тест пишет в свой tmp-каталог)
+_pmf = 'data/panel_menu.json'
+if os.path.exists(_pmf):
+    os.remove(_pmf)
+from services.panel_menu import panel_groups_for, DEFAULT_GROUPS  # noqa: E402
+cg = DEFAULT_GROUPS.get('curator') or []
+check('tickets' in cg and 'community' in cg and 'mod' in cg,
+      f'дефолт куратора: модерация + тикеты + сообщество ({cg})')
+visible = panel_groups_for('curator')
+keys = [g['key'] for g in visible]
+check(set(['main', 'mod', 'members', 'tickets', 'community', 'logs', 'ai']) <= set(keys),
+      'куратор видит все свои дефолтные группы')
+mod_paths = [p['path'] for g in visible for p in g['pages'] if g['key'] == 'mod']
+check('/bulk-actions' not in mod_paths and '/tagjail' not in mod_paths,
+      'админские страницы в мод-группе скрыты от куратора (403 не светится в меню)')
+
+c = make_client('curator')
+for path in ('/tickets-ops', '/leaderboards', '/warnings'):
+    r = c.get(path)
+    check(r.status_code == 200, f'куратор открывает {path}')
+r = c.get('/panel-menu')
+check(r.status_code == 403, 'куратор НЕ открывает /panel-menu (настройка — только владелец)')
+
+
+print('== 7. Демо-ветка /api/role-map ==')
 _saved_demo = os.environ.get('DEMO_MODE')
 _saved_bot2 = wa.bot_instance
 try:

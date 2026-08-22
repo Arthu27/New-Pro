@@ -734,7 +734,7 @@ try:
     _af_cfg = {
         GID: {'enabled': True, 'action': 'strip', 'log_channel_id': 1002,
               'check_join': True, 'check_update': True, 'check_ads': True,
-              'threshold': 0.85, 'protected_names': ['Aether', 'Модератор', 'Владелец'],
+              'threshold': 0.85, 'protected_names': ['Aether', 'Владелец', 'Администратор', 'Куратор', 'Модератор'],
               'exempt_staff': True, 'dm_notify': True, 'strike_timeout': True}}
     with open('data/antifake.json', 'w', encoding='utf-8') as _f:
         json.dump(_af_cfg, _f, ensure_ascii=False, indent=2)
