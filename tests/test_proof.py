@@ -361,7 +361,7 @@ check(run(try_deliver_proof(_BoomBot(), GUILD, MOD, BADGUY, 'бан', 'x',
                             link='https://x.y/z')) is None,
       'try_deliver_proof: исключения проглочены — наказание не роняет')
 
-print('== модерация в одном меню: /modpanel + изоляция ==')
+print('== модерация в одном меню: /modpanel + апелляция ==')
 from cogs.moderation import Moderation, ModActionSelect  # noqa: E402
 
 mod_cog = Moderation(botx)
@@ -369,8 +369,8 @@ mod_cog = Moderation(botx)
 # /modpanel — единственный пункт наказаний; select содержит изоляцию
 _opts = ModActionSelect(mod_cog)
 _labels = {o.label for o in _opts.options}
-check('Бан (изоляция)' in _labels, 'select: «Бан (изоляция)» есть')
-check('Снять изоляцию / разбан' in _labels, 'select: «Снять изоляцию / разбан» есть')
+check('Бан (апелляция)' in _labels, 'select: «Бан (апелляция)» есть')
+check('Снять апелляцию / разбан' in _labels, 'select: «Снять апелляцию / разбан» есть')
 check({'ban', 'unban', 'kick', 'timeout', 'clear'} <= {o.value for o in _opts.options},
       'select: действия ban/unban/kick/timeout/clear на месте')
 
@@ -411,13 +411,13 @@ class _M:
 _g = _G()
 _m = _M(9090)
 iso, closed = run(mod_cog._isolate_member(_g, _m, 'рейд'))
-check(closed == 3, 'изоляция: закрыты все каналы, кроме изоляции')
-check(iso is not None and iso.name == 'изоляция', 'изоляция: канал изоляции создан')
+check(closed == 3, 'апелляция: закрыты все каналы, кроме канала апелляции')
+check(iso is not None and iso.name == 'апелляция', 'апелляция: канал апелляции создан')
 _denied = [c for c in _g.channels if c is not iso]
 check(all(c.perm is not None and c.perm[1] is not None and c.perm[1].view_channel is False for c in _denied),
-      'изоляция: на закрытых каналах view_channel=False')
+      'апелляция: на закрытых каналах view_channel=False')
 check(iso.perm is not None and iso.perm[1].view_channel is True,
-      'изоляция: канал изоляции открыт (view_channel=True)')
+      'апелляция: канал апелляции открыт (view_channel=True)')
 
 run(mod_cog._unisolate_member(_g, _m))
 check(all(c.perm is not None and c.perm[1] is None for c in _g.channels),

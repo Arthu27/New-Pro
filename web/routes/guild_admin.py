@@ -644,6 +644,12 @@ def register(ctx):
                         return jsonify (_annotate_hidden (guild_id ,demo ))
                     except Exception as e :
                         print (f'[WEB][WARN] /channels: demo_channels.json ошибка: {e}')
+                # Демо-структура не засеяна — отдаём минимальный встроенный список,
+                # чтобы селекты каналов (правила, апелляции) не пустовали в превью.
+                _fallback =[{'id':'2001','name':'общий','type':'text','position':0,'category_id':None,'hidden':False},
+                            {'id':'2002','name':'правила','type':'text','position':1,'category_id':None,'hidden':False},
+                            {'id':'2003','name':'апелляции','type':'text','position':2,'category_id':None,'hidden':False}]
+                return jsonify (_annotate_hidden (guild_id ,_fallback ))
             print ('[WEB][WARN] /channels: bot is None')
             return jsonify ({'error':'Бот офлайн','channels':[]})
 

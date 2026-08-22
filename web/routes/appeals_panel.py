@@ -76,6 +76,7 @@ def pending_view(state):
             'user_name': str(item.get('user_name') or ''),
             'text': str(item.get('text') or ''),
             'created_at': str(item.get('created_at') or '')[:16].replace('T', ' '),
+            'link': str(item.get('link') or ''),
             'card_text': AP.fmt_card_text(item),
         })
     return rows
@@ -194,6 +195,7 @@ def history_view(state, status=None, query=None, limit=HISTORY_LIMIT):
             'user_id': str(item.get('user_id') or ''),
             'user_name': str(item.get('user_name') or ''),
             'text': str(item.get('text') or ''),
+            'link': str(item.get('link') or ''),
             'status': item.get('status'),
             'status_label': STATUS_LABELS.get(item.get('status'), '?'),
             'created_at': str(item.get('created_at') or '')[:16].replace('T', ' '),

@@ -35,6 +35,17 @@ from db import GuildData  # noqa: E402
 
 NOW = datetime(2026, 8, 13, 12, 0, 0, tzinfo=UTC)
 
+print('== 0. ссылка-доказательство ==')
+st0 = ap.empty_state()
+it0, err0 = ap.create_appeal(st0, 555, 'Zhulik', 'прошу разбанить, вот пруф', NOW,
+                             link='imgur.com/abc')
+check(it0 is not None and it0.get('link') == 'https://imgur.com/abc',
+      'ссылка без протокола -> https://')
+it0b, _ = ap.create_appeal(st0, 556, 'X', 'вторая ссылка с javascript', NOW,
+                           link='javascript:alert(1)')
+check(it0b.get('link') is None, 'опасная схема отбрасывается')
+check('Доказательство' in ap.fmt_card_text(it0), 'fmt_card_text включает ссылку')
+
 print('== 1. create_appeal: валидация и лимиты ==')
 st = ap.empty_state()
 item, err = ap.create_appeal(st, 555, 'Zhulik', 'Я не спамил, это был брат.', NOW)

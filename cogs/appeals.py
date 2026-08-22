@@ -16,9 +16,11 @@
 Хранилище — SQLite (GuildData 'appeals'). Кнопки живут в persistent view
 и переживают рестарт бота. Метки — aware UTC.
 """
+import re
 from datetime import datetime, timezone
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 from db import GuildData
@@ -49,9 +51,10 @@ def user_pending(state, user_id):
     return [i for i in pending_items(state) if i['user_id'] == user_id]
 
 
-def create_appeal(state, user_id, user_name, text, now):
+def create_appeal(state, user_id, user_name, text, now, link=None):
     """Создать апелляцию. Возвращает (item, ошибка)."""
     text = str(text or '').strip()
+    link = _clean_link(link)
     if len(text) < 10:
         return None, f'слишком коротко — напишите подробнее (минимум 10 символов)'
     if len(text) > MAX_TEXT:
@@ -63,6 +66,7 @@ def create_appeal(state, user_id, user_name, text, now):
         'user_id': int(user_id),
         'user_name': str(user_name),
         'text': text,
+        'link': link,
         'status': 'pending',           # pending | accepted | rejected
         'created_at': now.isoformat(),
         'reviewed_by': None,
@@ -72,6 +76,18 @@ def create_appeal(state, user_id, user_name, text, now):
     state['next_id'] += 1
     state['items'].append(item)
     return item, None
+
+
+def _clean_link(link):
+    """Ссылка-доказательство: без протокола — https://, опасные схемы — None."""
+    v = str(link or '').strip()
+    if not v:
+        return None
+    if re.match(r'^(javascript|data|vbscript):', v, re.I):
+        return None
+    if not re.match(r'^https?://', v, re.I):
+        v = 'https://' + v
+    return v[:500]
 
 
 def resolve_appeal(state, appeal_id, accept, reviewer_name, now, reply=None):
@@ -97,10 +113,11 @@ def get_appeal(state, appeal_id):
 
 def fmt_card_text(item):
     """Текст карточки для мод-канала (экран логики, покрыт тестом)."""
-    return (
-        f"**Апелляция #{item['id']}** от {item['user_name']} (`{item['user_id']}`)\n"
-        f"{item['text'][:400]}"
-    )
+    body = f"**Апелляция #{item['id']}** от {item['user_name']} (`{item['user_id']}`)\n{item['text'][:400]}"
+    link = (item.get('link') or '').strip()
+    if link:
+        body += f"\n🔗 Доказательство: {link}"
+    return body
 
 
 # ─── view с кнопками ────────────────────────────────────────────────────────
@@ -175,6 +192,68 @@ class AppealView(discord.ui.View):
             await interaction.response.edit_message(view=self)
 
 
+class AppealModal(discord.ui.Modal):
+    """Окно подачи: текст апелляции + ссылка-доказательство (необязательно)."""
+
+    def __init__(self, cog, guild):
+        super().__init__(title=f'Апелляция · {str(guild.name)[:30]}')
+        self.cog = cog
+        self.guild = guild
+        self.text = discord.ui.TextInput(
+            label='Текст апелляции',
+            placeholder='Расскажите, что произошло (минимум 10 символов)',
+            required=True, max_length=500, style=discord.TextStyle.paragraph)
+        self.link = discord.ui.TextInput(
+            label='Ссылка-доказательство (необязательно)',
+            placeholder='https://… — скрин, видео или сообщение',
+            required=False, max_length=500)
+        self.add_item(self.text)
+        self.add_item(self.link)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        if not await self.cog._is_banned(self.guild, interaction.user):
+            await interaction.followup.send(
+                'Вы не забанены на этом сервере — апелляция не нужна.', ephemeral=True)
+            return
+        item, err = await self.cog._submit_appeal(
+            interaction.user, self.guild, self.text.value,
+            link=self.link.value)
+        if err:
+            await interaction.followup.send(f'Не получилось: {err}.', ephemeral=True)
+            return
+        await interaction.followup.send(
+            f'Апелляция **#{item["id"]}** отправлена модераторам сервера '
+            f'**{self.guild.name}**. Ответ придёт сюда, в личку.', ephemeral=True)
+
+
+class AppealServerSelect(discord.ui.Select):
+    """Выбор сервера для апелляции (в ЛС боту)."""
+
+    def __init__(self, cog, guilds):
+        self.cog = cog
+        options = [discord.SelectOption(
+            label=str(g.name)[:100] or 'Сервер', value=str(g.id),
+            description=f'{g.member_count or 0} участников') for g in guilds[:25]]
+        super().__init__(placeholder='Выберите сервер…', options=options,
+                         min_values=1, max_values=1)
+
+    async def callback(self, interaction: discord.Interaction):
+        guild = self.cog.bot.get_guild(int(self.values[0]))
+        if guild is None:
+            await interaction.response.send_message('Сервер не найден.', ephemeral=True)
+            return
+        await interaction.response.send_modal(AppealModal(self.cog, guild))
+
+
+class AppealViewParent(discord.ui.View):
+    """Обёртка select-меню выбора сервера."""
+
+    def __init__(self, cog, guilds):
+        super().__init__(timeout=300)
+        self.add_item(AppealServerSelect(cog, guilds))
+
+
 # ─── ког ────────────────────────────────────────────────────────────────────
 
 class Appeals(commands.Cog):
@@ -209,9 +288,40 @@ class Appeals(commands.Cog):
         self.db.set(guild_id, 'state', state)
 
     # ---- подача (ЛС боту) ----
-    @commands.hybrid_command(name='апелляция', aliases=['appeal'],
-                             description='Обжаловать бан: /апелляция <ID сервера> <текст>')
+    async def _submit_appeal(self, user, guild, text, link=None):
+        """Общая точка создания апелляции: проверка бана, лимит, карточка."""
+        guild_id = guild.id
+        state = self._load(guild_id)
+        item, err = create_appeal(state, user.id, str(user), text,
+                                  datetime.now(UTC), link=link)
+        if err:
+            return None, err
+        self._save(guild_id, state)
+
+        embed = discord.Embed(title=f'Апелляция #{item["id"]} — новая',
+                              description=item['text'],
+                              color=COLOR_PENDING,
+                              timestamp=datetime.now(UTC))
+        if item.get('link'):
+            embed.add_field(name='Доказательство', value=item['link'], inline=False)
+        embed.set_author(name=str(user), icon_url=user.display_avatar.url
+                         if getattr(user, 'display_avatar', None) else None)
+        embed.set_footer(text=f'user_id: {item["user_id"]} · appeal #{item["id"]}')
+        channel = self._log_channel(guild, state)
+        if channel is not None:
+            view = AppealView(self, guild_id, item['id'])
+            try:
+                msg = await channel.send(embed=embed, view=view)
+                item['message_id'] = msg.id
+                self._save(guild_id, state)
+            except (discord.Forbidden, discord.HTTPException) as _ex:
+                log.error('appeals: карточка #%s на %s не ушла: %s',
+                          item['id'], guild_id, _ex)
+        return item, None
+
+    @commands.command(name='апелляция', aliases=['appeal'])
     async def cmd_appeal(self, ctx, сервер: str, *, текст: str):
+        """Обжаловать бан: !апелляция <ID сервера> <текст> (в ЛС боту)."""
         if ctx.guild is not None:
             await ctx.reply('Апелляция подаётся в личных сообщениях боту.',
                             mention_author=False)
@@ -225,44 +335,40 @@ class Appeals(commands.Cog):
         if guild is None:
             await ctx.reply('Я не состою на таком сервере.')
             return
-        banned = True
-        try:
-            await guild.fetch_ban(discord.Object(id=ctx.author.id))
-        except discord.NotFound:
-            banned = False
-        except (discord.Forbidden, discord.HTTPException) as _ex:
-            log.warning('appeals: ban-check %s на %s: %s', ctx.author.id, guild_id, _ex)
-        if not banned:
+        if not await self._is_banned(guild, ctx.author):
             await ctx.reply('Вы не забанены на этом сервере — апелляция не нужна.')
             return
-
-        state = self._load(guild_id)
-        item, err = create_appeal(state, ctx.author.id, str(ctx.author), текст,
-                                  datetime.now(UTC))
+        item, err = await self._submit_appeal(ctx.author, guild, текст)
         if err:
             await ctx.reply(f'Не получилось: {err}.')
             return
-        self._save(guild_id, state)
         await ctx.reply(f'Апелляция **#{item["id"]}** отправлена модераторам '
                         f'сервера **{guild.name}**. Ответ придёт сюда, в личку.')
 
-        embed = discord.Embed(title=f'Апелляция #{item["id"]} — новая',
-                              description=item['text'],
-                              color=COLOR_PENDING,
-                              timestamp=datetime.now(UTC))
-        embed.set_author(name=f'{ctx.author}', icon_url=ctx.author.display_avatar.url
-                         if ctx.author.display_avatar else None)
-        embed.set_footer(text=f'user_id: {item["user_id"]} · appeal #{item["id"]}')
-        channel = self._log_channel(guild, state)
-        if channel is not None:
-            view = AppealView(self, guild_id, item['id'])
-            try:
-                msg = await channel.send(embed=embed, view=view)
-                item['message_id'] = msg.id
-                self._save(guild_id, state)
-            except (discord.Forbidden, discord.HTTPException) as _ex:
-                log.error('appeals: карточка #%s на %s не ушла: %s',
-                          item['id'], guild_id, _ex)
+    @app_commands.command(name='апелляция', description='Обжаловать бан — выберите сервер')
+    async def cmd_appeal_slash(self, interaction: discord.Interaction):
+        if interaction.guild is not None:
+            await interaction.response.send_message(
+                'Апелляция подаётся в личных сообщениях боту.', ephemeral=True)
+            return
+        guilds = [g for g in self.bot.guilds]
+        if not guilds:
+            await interaction.response.send_message(
+                'Бот пока не состоит ни на одном сервере.', ephemeral=True)
+            return
+        view = AppealViewParent(self, guilds)
+        await interaction.response.send_message(
+            'Выберите сервер, на котором вы забанены:', view=view, ephemeral=True)
+
+    async def _is_banned(self, guild, user):
+        try:
+            await guild.fetch_ban(discord.Object(id=user.id))
+            return True
+        except discord.NotFound:
+            return False
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.warning('appeals: ban-check %s на %s: %s', user.id, guild.id, _ex)
+            return True
 
     # ---- модераторские ----
     @commands.hybrid_group(name='апелляции', aliases=['appeals'],

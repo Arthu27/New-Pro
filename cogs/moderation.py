@@ -377,13 +377,13 @@ class Moderation (commands .Cog ):
             return int (m .group (1 ))
         return None
 
-    # ── Изоляция («бан») ──────────────────────────────────────────────
+    # ── Апелляция («бан») ─────────────────────────────────────────────
     # «Бан» больше НЕ выгоняет с сервера: у участника закрываются все каналы,
-    # открытым остаётся только один — канал изоляции.
-    _ISO_NAMES =('изоляция','изолированные','isolated','isolation','карцер')
+    # открытым остаётся только один — канал апелляции, где он обжалует бан.
+    _ISO_NAMES =('апелляция','апелляции','appeal','appeals')
 
     async def _isolation_channel (self ,guild ,reason ):
-        """Найти или создать канал изоляции (виден только изолированным)."""
+        """Найти или создать канал апелляции (виден только изолированным)."""
         ch =None
         for _nm in self ._ISO_NAMES :
             ch =discord .utils .get (guild .text_channels ,name =_nm )
@@ -395,15 +395,15 @@ class Moderation (commands .Cog ):
                 guild .default_role :discord .PermissionOverwrite (view_channel =False ),
                 guild .me :discord .PermissionOverwrite (view_channel =True ,send_messages =True ),
                 }
-                ch =await guild .create_text_channel ('изоляция',overwrites =overwrites ,
-                reason =reason or 'Канал изоляции')
+                ch =await guild .create_text_channel ('апелляция',overwrites =overwrites ,
+                reason =reason or 'Канал апелляции')
             except Exception as _ex :
-                log .warning (f'[MODPANEL] создание канала изоляции: {_ex}')
+                log .warning (f'[MODPANEL] создание канала апелляции: {_ex}')
                 ch =None
         return ch
 
     async def _isolate_member (self ,guild ,user ,reason ):
-        """Закрыть все каналы для участника, оставить открытым канал изоляции."""
+        """Закрыть все каналы для участника, оставить открытым канал апелляции."""
         iso =await self ._isolation_channel (guild ,reason )
         deny =discord .PermissionOverwrite (view_channel =False ,send_messages =False ,
         connect =False ,speak =False )
@@ -425,7 +425,7 @@ class Moderation (commands .Cog ):
         return iso ,closed
 
     async def _unisolate_member (self ,guild ,user ):
-        """Снять изоляцию: вернуть участнику обычный доступ ко всем каналам."""
+        """Снять апелляцию: вернуть участнику обычный доступ ко всем каналам."""
         for ch in guild .channels :
             try :
                 await ch .set_permissions (user ,overwrite =None )
@@ -442,7 +442,7 @@ class Moderation (commands .Cog ):
         _punish_actions =("ban","kick","timeout","mute_chat","vmute")
         if action in _punish_actions :
             from cogs .proof_cog import require_proof
-            _action_ru ={'ban':'изоляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
+            _action_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
             if not await require_proof (interaction ,action_ru =_action_ru ,link =proof_link ):
                 return
 
@@ -462,9 +462,9 @@ class Moderation (commands .Cog ):
 
             try :
                 if action =="ban":
-                    # Изоляция: закрыть все каналы, оставить один (изоляция).
+                    # Апелляция: закрыть все каналы, оставить канал апелляции.
                     _iso ,_closed =await self ._isolate_member (guild ,user ,reason )
-                    msg =f"🚫 изоляция: закрыто каналов {_closed}, открыт {_iso .mention if _iso else 'канал изоляции'}"
+                    msg =f"🚫 апелляция: закрыто каналов {_closed}, открыт {_iso .mention if _iso else 'канал апелляции'}"
                 elif action =="kick":
                     await user .kick (reason =reason )
                     msg ="👢 пользователь кикнут"
@@ -513,7 +513,7 @@ class Moderation (commands .Cog ):
                     aux_errors .append ("DM не доставлен")
                     log .info (f'[MODPANEL] DM: {_dm_e}')
                 try :
-                    log_ch_embed =mod_log_embed (action ,{"ban":"🚫 Изоляция","kick":"👢 Кик","timeout":"🔇 Мут","mute_chat":"🔇 Мут чата","vmute":"🎙️ Войс-мут","vunmute":"🎙️ Войс-мут снят","untimeout":"🔊 Мут снят"}.get (action ,action ),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
+                    log_ch_embed =mod_log_embed (action ,{"ban":"🚫 Апелляция","kick":"👢 Кик","timeout":"🔇 Мут","mute_chat":"🔇 Мут чата","vmute":"🎙️ Войс-мут","vunmute":"🎙️ Войс-мут снят","untimeout":"🔊 Мут снят"}.get (action ,action ),0x3498DB ,user ,interaction .user ,guild ,reason ,case_id )
                     await self .send_log (guild ,log_ch_embed )
                 except Exception as _log_e :
                     aux_errors .append ("лог-канал недоступен")
@@ -522,7 +522,7 @@ class Moderation (commands .Cog ):
                 # Уведомление панели о действии модерации (веб/Discord/email — в фоне)
                 try :
                     from cogs .ticket import _notify_panel_ticket_event as _np
-                    _label ={"ban":"Изоляция","kick":"Кик","timeout":"Таймаут","mute_chat":"Мут чата","vmute":"Войс-мут","vunmute":"Войс-мут снят","untimeout":"Мут снят"}.get (action ,action )
+                    _label ={"ban":"Апелляция","kick":"Кик","timeout":"Таймаут","mute_chat":"Мут чата","vmute":"Войс-мут","vunmute":"Войс-мут снят","untimeout":"Мут снят"}.get (action ,action )
                     _np (interaction ,'mod_action',
                     f"{_label }: {user .display_name }",
                     f"Модератор: {interaction .user .display_name } · Причина: {reason } · Дело #{case_id}")
@@ -534,7 +534,7 @@ class Moderation (commands .Cog ):
                 try :
                     if action in _punish_actions and (proof_link or '').strip ():
                         from cogs .proof_cog import try_deliver_proof
-                        _p_ru ={'ban':'изоляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}.get (action ,action )
+                        _p_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}.get (action ,action )
                         proof_note =await try_deliver_proof (self .bot ,guild ,interaction .user ,user ,_p_ru ,reason ,link =proof_link )
                 except Exception as _pe :
                     log .warning (f'[MODPANEL] демка: {_pe}')
@@ -564,7 +564,7 @@ class Moderation (commands .Cog ):
                 return
             try :
                 member =guild .get_member (uid )
-                # Снятие изоляции (участник остаётся на сервере)
+                # Снятие апелляции (участник остаётся на сервере)
                 if member is not None :
                     await self ._unisolate_member (guild ,member )
                 # Настоящий разбан (для легаси-банов, если пользователь вне сервера)
@@ -578,17 +578,17 @@ class Moderation (commands .Cog ):
                 case_id =self .save_case (guild .id ,"unban",uid ,interaction .user .id ,reason )
                 _who =member .display_name if member else (getattr (fetched ,'name','') if unban_done else str (uid ))
                 _desc =f"**{_who}** · `{uid}`\n"
-                _desc +="Снята изоляция и разбан." if (member is not None and unban_done) else \
-                        ("Изоляция снята." if member is not None else \
+                _desc +="Снята апелляция и разбан." if (member is not None and unban_done) else \
+                        ("Апелляция снята." if member is not None else \
                          ("Разбан выполнен." if unban_done else "Ничего не изменилось (не изолирован и не забанен)."))
                 _desc +=f"\n**Дело:** #{case_id}"
-                confirm =success_embed ("Снятие изоляции / разбан",_desc ,guild =guild )
+                confirm =success_embed ("Снятие апелляции / разбан",_desc ,guild =guild )
                 await self .send_log (guild ,confirm )
                 # Уведомление панели (веб/Discord/email — в фоне)
                 try :
                     from cogs .ticket import _notify_panel_ticket_event as _np
                     _np (interaction ,'mod_action',
-                    f"Разбан/снятие изоляции: {_who }",
+                    f"Разбан/снятие апелляции: {_who }",
                     f"Модератор: {interaction .user .display_name } · Дело #{case_id}")
                 except Exception as _ex:
                     _log.debug("_execute_mod_action(): подавлено: %s", _ex)
@@ -682,12 +682,12 @@ class ModActionSelect(discord.ui.Select):
 
     def __init__(self, cog):
         options = [
-            discord.SelectOption(label="Бан (изоляция)", value="ban", description="Закрыть все каналы, оставить один — изоляция"),
+            discord.SelectOption(label="Бан (апелляция)", value="ban", description="Закрыть все каналы, оставить канал апелляции"),
             discord.SelectOption(label="Кик", value="kick", description="Выгнать участника"),
             discord.SelectOption(label="Мут (чат + войс)", value="timeout", description="Таймаут — закрыть и чат, и голос"),
             discord.SelectOption(label="Мут (только чат)", value="mute_chat", description="Закрыть только чат (таймаут)"),
             discord.SelectOption(label="Мут (только войс)", value="vmute", description="Заглушить микрофон (чат не трогает)"),
-            discord.SelectOption(label="Снять изоляцию / разбан", value="unban", description="Вернуть доступ к каналам (по ID)"),
+            discord.SelectOption(label="Снять апелляцию / разбан", value="unban", description="Вернуть доступ к каналам (по ID)"),
             discord.SelectOption(label="Очистить сообщения", value="clear", description="Удалить N сообщений"),
             discord.SelectOption(label="Размут (чат + войс)", value="untimeout", description="Снять таймаут с участника"),
             discord.SelectOption(label="Размут (войс)", value="vunmute", description="Включить микрофон участника"),
@@ -713,12 +713,12 @@ class ModActionModal(discord.ui.Modal):
         self.cog = cog
         self.action = action
         titles = {
-            "ban": "Бан (изоляция)",
+            "ban": "Бан (апелляция)",
             "kick": "Кик участника",
             "timeout": "Мут (чат + войс)",
             "mute_chat": "Мут чата",
             "vmute": "Войс-мут",
-            "unban": "Снять изоляцию / разбан",
+            "unban": "Снять апелляцию / разбан",
             "clear": "Очистка сообщений",
             "untimeout": "Снять мут",
             "vunmute": "Снять войс-мут",

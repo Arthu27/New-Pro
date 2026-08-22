@@ -99,7 +99,7 @@ with client.session_transaction() as s:
 r = client.get(f'/api/role-permissions/{GID}')
 body = r.get_json()
 check(r.status_code == 200 and body.get('success'), f'GET -> {r.status_code}')
-check(isinstance(body.get('actions'), dict) and body.get('actions', {}).get('ban') == 'Бан (изоляция)',
+check(isinstance(body.get('actions'), dict) and body.get('actions', {}).get('ban') == 'Бан (апелляция)',
       'GET отдаёт действия с русскими подписями')
 check(isinstance(body.get('action_acl'), dict), 'GET отдаёт action_acl')
 

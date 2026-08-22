@@ -32,19 +32,23 @@ ACTION_META = {
 
 
 class ReasonModal(discord.ui.Modal):
-    """Модалка одной строки 'Причина' для контекстных действий."""
+    """Модалка 'Причина' (+ ссылка-доказательство) для контекстных действий."""
 
-    reason = discord.ui.TextInput(
-        label="Причина",
-        placeholder="За что наказание? (необязательно)",
-        required=False,
-        max_length=300,
-        style=discord.TextStyle.paragraph,
-    )
-
-    def __init__(self, title: str, handler):
+    def __init__(self, title: str, handler, require_proof=False):
         super().__init__(title=title[:45])
         self._handler = handler
+        self._require_proof = require_proof
+        self.reason = discord.ui.TextInput(
+            label="Причина",
+            placeholder="За что наказание? (необязательно)",
+            required=False, max_length=300, style=discord.TextStyle.paragraph)
+        self.add_item(self.reason)
+        if require_proof:
+            self.proof = discord.ui.TextInput(
+                label="Доказательство (ссылка)",
+                placeholder="https://… — скрин или видео нарушения (обязательно)",
+                required=True, max_length=500)
+            self.add_item(self.proof)
 
     async def on_submit(self, interaction: discord.Interaction):
         # Быстрый ack: DM + наказание может занять больше 3 секунд
@@ -52,7 +56,15 @@ class ReasonModal(discord.ui.Modal):
             await interaction.response.defer(ephemeral=True)
         except Exception as _ex:
             _log.debug("on_submit(): подавлено: %s", _ex)
-        await self._handler(interaction, str(self.reason.value).strip() or None)
+        proof = None
+        if self._require_proof:
+            proof = str(self.proof.value).strip() or None
+            if not proof:
+                await _respond(interaction,
+                    content="🚫 Без доказательства (ссылка на скрин/видео) наказание не выдаётся.",
+                    ephemeral=True)
+                return
+        await self._handler(interaction, str(self.reason.value).strip() or None, proof)
 
 
 async def _respond(interaction, **kwargs):
@@ -91,7 +103,7 @@ class ModTools(commands.Cog):
         self.ctx_warn_user.default_member_permissions = discord.Permissions(moderate_members=True)
 
         self.ctx_ban_user = app_commands.ContextMenu(
-            name="Забанить",
+            name="Изолировать",
             callback=self._ban_user_ctx,
         )
         self.ctx_ban_user.default_member_permissions = discord.Permissions(ban_members=True)
@@ -122,10 +134,11 @@ class ModTools(commands.Cog):
         if member.bot:
             return await _respond(interaction, content="Ботов предупреждать нельзя.", ephemeral=True)
 
-        async def _do(inter: discord.Interaction, reason):
-            await self._apply_warn(inter, member, reason, origin="ПКМ")
+        async def _do(inter: discord.Interaction, reason, proof_link):
+            await self._apply_warn(inter, member, reason, origin="ПКМ", proof_link=proof_link)
 
-        await interaction.response.send_modal(ReasonModal(f"Варн: {member.display_name}", _do))
+        await interaction.response.send_modal(
+            ReasonModal(f"Варн: {member.display_name}", _do, require_proof=True))
 
     # ────────────────────────────────────────────────────────────
     # ПКМ → Варн за сообщение (message)
@@ -137,14 +150,15 @@ class ModTools(commands.Cog):
         if not isinstance(member, discord.Member) or member.bot:
             return await _respond(interaction, content="Нельзя: автор — бот или покинул сервер.", ephemeral=True)
 
-        async def _do(inter: discord.Interaction, reason):
+        async def _do(inter: discord.Interaction, reason, _proof=None):
             preview = (message.content or "[вложение]")[:100]
             full_reason = f"{reason or 'Не указана'} | msg: {message.jump_url}"
-            await self._apply_warn(inter, member, full_reason, origin="ПКМ-сообщение", extra=f"Сообщение: {preview}")
+            await self._apply_warn(inter, member, full_reason, origin="ПКМ-сообщение",
+                                   extra=f"Сообщение: {preview}", proof_link=message.jump_url)
 
         await interaction.response.send_modal(ReasonModal("Варн за сообщение", _do))
 
-    async def _apply_warn(self, inter: discord.Interaction, member: discord.Member, reason, origin="ПКМ", extra: str = None):
+    async def _apply_warn(self, inter: discord.Interaction, member: discord.Member, reason, origin="ПКМ", extra: str = None, proof_link=None):
         """Общий путь выдачи варна через ядро warnings-cog."""
         wcog = self.bot.get_cog("warnings")
         if wcog is None:
@@ -163,6 +177,16 @@ class ModTools(commands.Cog):
             except Exception as _ex:
                 _log.debug("_apply_warn(): подавлено: %s", _ex)
 
+        # Доказательство — в канал доказательств (ссылка из ПКМ/сообщения).
+        proof_note = None
+        try:
+            if proof_link:
+                from cogs.proof_cog import try_deliver_proof
+                proof_note = await try_deliver_proof(self.bot, inter.guild, inter.user,
+                                                     member, 'варн', reason, link=proof_link)
+        except Exception as _pe:
+            log.debug(f"[MOD_TOOLS] демка: {_pe}")
+
         e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
         desc = (
             f"## Предупреждение выдано ({origin})\n"
@@ -175,33 +199,36 @@ class ModTools(commands.Cog):
             desc += f"\nАвто-наказание: **{punishment}**"
         if extra:
             desc += f"\n{extra}"
+        if proof_note:
+            desc += f"\n{proof_note}"
         desc += f"\n\n{DIVIDER}"
         e.description = desc
         e.set_footer(text=inter.guild.name)
         await _respond(inter, embed=e, ephemeral=True)
 
     # ────────────────────────────────────────────────────────────
-    # ПКМ → Забанить (user)
+    # ПКМ → Изолировать (user)
     # ────────────────────────────────────────────────────────────
     async def _ban_user_ctx(self, interaction: discord.Interaction, member: discord.Member):
         if interaction.guild is None:
             return await _respond(interaction, content="Работает только на сервере.", ephemeral=True)
         if member.bot:
-            return await _respond(interaction, content="Ботов банить через ПКМ нельзя.", ephemeral=True)
+            return await _respond(interaction, content="Ботов изолировать нельзя.", ephemeral=True)
         if member == interaction.user:
-            return await _respond(interaction, content="Себя банить не нужно.", ephemeral=True)
+            return await _respond(interaction, content="Себя изолировать не нужно.", ephemeral=True)
 
-        async def _do(inter: discord.Interaction, reason):
+        async def _do(inter: discord.Interaction, reason, proof_link):
             reason_txt = reason or "Без причины"
-            # DM до бана — иначе пользователь недоступен
             mcog = self.bot.get_cog("Moderation")
+            # DM до изоляции
             try:
                 dm = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
                 dm.description = (
-                    "## Бан\n"
+                    "## Вам закрыты каналы\n"
                     f"Сервер: **{inter.guild.name}**\n"
                     f"Модератор: **{inter.user.display_name}**\n"
-                    f"Причина: {reason_txt}"
+                    f"Причина: {reason_txt}\n\n"
+                    "Открыт только канал апелляции — там можно обжаловать."
                 )
                 if mcog:
                     await mcog.send_dm(member, dm)
@@ -211,16 +238,13 @@ class ModTools(commands.Cog):
                 _log.debug("_do(): подавлено: %s", _ex)
 
             try:
-                await inter.guild.ban(
-                    member,
-                    reason=f"[ПКМ] {reason_txt} — {inter.user}",
-                    delete_message_seconds=0,
-                )
-            except discord.Forbidden:
-                return await _respond(inter, 
-                    "❌ Не могу забанить: роль бота ниже роли пользователя или нет прав.", ephemeral=True)
-            except Exception as e:
-                return await _respond(inter, content=f"❌ Ошибка бана: {e}", ephemeral=True)
+                if mcog and hasattr(mcog, '_isolate_member'):
+                    _iso, _closed = await mcog._isolate_member(inter.guild, member, reason_txt)
+                else:
+                    _iso, _closed = None, 0
+            except Exception as _ex:
+                _log.debug("_do(): изоляция: %s", _ex)
+                _iso, _closed = None, 0
 
             case_id = 0
             if mcog:
@@ -229,14 +253,27 @@ class ModTools(commands.Cog):
                 except Exception as _ex:
                     _log.debug("_do(): подавлено: %s", _ex)
 
+            proof_note = None
+            try:
+                if proof_link:
+                    from cogs.proof_cog import try_deliver_proof
+                    proof_note = await try_deliver_proof(self.bot, inter.guild, inter.user,
+                                                        member, 'апелляция', reason_txt, link=proof_link)
+            except Exception as _pe:
+                log.debug(f"[MOD_TOOLS] демка: {_pe}")
+
             e = discord.Embed(color=0xE74C3C, timestamp=datetime.now(timezone.utc))
             e.description = (
-                "## Бан выдан (ПКМ)\n"
+                "## Изоляция (ПКМ)\n"
                 f"**{member.display_name}** · `{member.id}`\n\n"
+                f"Закрыто каналов: **{_closed}**\n"
+                f"Открыт канал апелляции: {_iso.mention if _iso else '—'}\n"
                 f"Причина: {reason_txt}\n"
                 f"Модератор: {inter.user.mention}\n"
                 f"Дело: **#{case_id}**\n\n{DIVIDER}"
             )
+            if proof_note:
+                e.description += f"\n{proof_note}"
             e.set_footer(text=inter.guild.name)
             await _respond(inter, embed=e, ephemeral=True)
             if mcog:
@@ -245,7 +282,8 @@ class ModTools(commands.Cog):
                 except Exception as _ex:
                     _log.debug("_do(): подавлено: %s", _ex)
 
-        await interaction.response.send_modal(ReasonModal(f"Бан: {member.display_name}", _do))
+        await interaction.response.send_modal(
+            ReasonModal(f"Изоляция: {member.display_name}", _do, require_proof=True))
 
     # ────────────────────────────────────────────────────────────
     # /cases — история нарушений
