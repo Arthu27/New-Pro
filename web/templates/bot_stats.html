@@ -128,8 +128,8 @@
     $('cpuNow').textContent = Math.round(cpu) + '%';
     $('ramNow').textContent = Math.round(ram) + ' МБ' + (ramPct ? ' · ' + ramPct + '%' : '');
     if (window.AetherChart) {
-      window.AetherChart.sparkline($('cpuSpark'), cpuHist, { height: 76, color: cpuTone(cpu), title: 'CPU, %' });
-      window.AetherChart.sparkline($('ramSpark'), ramHist, { height: 76, color: ramTone(ramPct || ram), title: 'RAM, МБ' });
+      window.AetherChart.sparkline($('cpuSpark'), cpuHist, { height: 104, pad: 34, color: cpuTone(cpu), title: 'CPU, %', grid: true, labels: true, unit: '%' });
+      window.AetherChart.sparkline($('ramSpark'), ramHist, { height: 104, pad: 34, color: ramTone(ramPct || ram), title: 'RAM, МБ', grid: true, labels: true, unit: ' МБ' });
     }
   }
 

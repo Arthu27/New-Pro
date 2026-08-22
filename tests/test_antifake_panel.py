@@ -261,8 +261,13 @@ AF.unprotect_flow(lambda: FB2, '777', 'AetherBank')
 
 print('== 8. Страйки рекламы ==')
 now = time.time()
-COG._strikes['777'] = {'5': [now - 100, now - 3600, now - 9 * 86400],
-                       '9': [now - 50]}
+_strike_data = {'5': [now - 100, now - 3600, now - 9 * 86400],
+                '9': [now - 50]}
+# файл-первый контракт: панель читает тот же файл, что пишет ког
+import json as _json
+with open(IM.STRIKES_PATH, 'w', encoding='utf-8') as _f:
+    _json.dump({'777': _strike_data}, _f)
+COG._strikes['777'] = {k: list(v) for k, v in _strike_data.items()}
 ok, err, code, p = AF.strikes_flow(lambda: FB2, '777')
 check(ok and p['limit'] == 3 and p['window_days'] == 7,
       'лимит и окно — из кога')
@@ -347,9 +352,11 @@ try:
     check(IM.AntiFake(None).cfg(777)['protected_names'] == ['AetherBank'],
           'строка дошла до файла кога')
     COG2._strikes['777'] = {'5': [time.time() - 42]}
+    with open(IM.STRIKES_PATH, 'w', encoding='utf-8') as _f:
+        _json.dump({'777': {'5': [time.time() - 42]}}, _f)
     d = client.get('/api/guild/777/antifake/strikes').get_json()
     check(d['success'] and d['entries'][0]['active'] == 1,
-          'страйки через API')
+          'страйки через API (файл-первый)')
     r = client.get('/api/guild/777/antifake/strikes.csv')
     body = r.get_data(as_text=True)
     check(r.headers['Content-Disposition']
@@ -361,11 +368,11 @@ try:
     check(r.status_code == 200 and r.get_json()['removed'] == 1,
           'обнуление через API')
     appmod.bot_instance = None
-    check(client.get('/api/guild/777/antifake/status').status_code == 409,
-          'статус без бота — 409')
+    check(client.get('/api/guild/777/antifake/status').status_code == 200,
+          'статус без бота — 200 (файл-первый, панель живёт отдельным процессом)')
     check(client.post('/api/guild/777/antifake/lab',
-                      json={'text': 'x'}).status_code == 409,
-          'лаборатория без бота — 409')
+                      json={'text': 'x'}).status_code == 200,
+          'лаборатория без бота — 200 (чистые функции кога)')
 finally:
     appmod.bot_instance = None
 

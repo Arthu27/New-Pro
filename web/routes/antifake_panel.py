@@ -1,24 +1,17 @@
 # -*- coding: utf-8 -*-
 """AntiFake — защита от подделок (идеи #191-195): комната /antifake.
 
-Всё через живой ког AntiFake (bot_instance.get_cog): его cfg()/set_cfg() —
-та же память, что слушают on_member_join/on_message, поэтому переключатели
-действуют сразу, без перезагрузки бота. Тексты — словами команд без
-маркдауна: «Действие при подделке: X», «Порог похожести: N%», «Защищаемые
-строки (N): a, b», «Осталось строк: N». Варианты действий — из
-ACTION_CHOICES кога, подписи — из его ACTIONS_META.
+Источники данных — ФАЙЛЫ кога (data/antifake.json, data/antifake_strikes.json):
+панель и бот могут жить в разных процессах, поэтому читаем/пишем файлы напрямую,
+а живой ког (если он в этом же процессе) синхронизируем его методами — его
+память слушают on_member_join/on_message, переключатели действуют сразу.
 
-Сухой прогон участника — 1:1 «/antifake test»: те же find_impersonation и
-find_stolen_avatar, те же строки выводов («Имя похоже на X (совпадение
-N%)», «Аватар скопирован с Y», «Чисто — подделки не найдено») — без
-наказания, как и команда. Лаборатория строки гоняет normalize/similarity
-кога по тем же защищаемым именам.
+Страйки рекламы — ровно тот же файл, что пишет ког (_add_strike):
+{guild_id: {user_id: [метки]}}. Никакого смешивания гильдий/участников —
+каждая запись лежит под своим ключом, окно STRIKE_WINDOW считает активные.
 
-Страйки рекламы — через хелперы кога strike_view/clear_strikes (память и
-файл те самые, STRIKE_WINDOW/STRIKE_LIMIT — его константы).
-
-Без бота или без кога — честные 409, без заглушек. Чтение/лаборатория/
-страйки/CSV — mod+; мутации и сухой прогон — admin+ (у команд administrator).
+Без бота (демо-предпросмотр) работают: статус, тумблеры, порог, защищаемые
+строки, лаборатория, страйки, сброс страйков, CSV — всё пишется в файлы.
 """
 import time
 from datetime import datetime, timezone
@@ -28,6 +21,9 @@ from web.routes._common import (
 )
 
 from cogs import impersonation as IM
+from logger import get_logger
+
+_log = get_logger('antifake_panel')
 
 UTC = timezone.utc
 
@@ -54,6 +50,52 @@ TOGGLES = {
 }
 
 
+# ── Файловые источники (те же, что у кога) ────────────────────────────────
+def _cfg_file(gid):
+    """Конфиг гильдии из data/antifake.json (DEFAULT_CFG + записанное)."""
+    data = IM._load_json(IM.CFG_PATH, {})
+    rec = data.get(str(gid)) if isinstance(data, dict) else None
+    cfg = dict(IM.DEFAULT_CFG)
+    if isinstance(rec, dict):
+        cfg.update(rec)
+    return cfg
+
+
+def _save_cfg_file(gid, cfg):
+    data = IM._load_json(IM.CFG_PATH, {})
+    if not isinstance(data, dict):
+        data = {}
+    data[str(gid)] = cfg
+    IM._save_json(IM.CFG_PATH, data)
+
+
+def _strikes_file():
+    data = IM._load_json(IM.STRIKES_PATH, {})
+    return data if isinstance(data, dict) else {}
+
+
+def _save_strikes_file(data):
+    IM._save_json(IM.STRIKES_PATH, data)
+
+
+def _demo_members():
+    try:
+        from web.routes._common import DEMO_MEMBERS
+        return list(DEMO_MEMBERS)
+    except Exception as _ex:
+        _log.debug('_demo_members(): подавлено: %s', _ex)
+        return []
+
+
+def _demo_mode():
+    try:
+        import web.app as appmod
+        return bool(appmod._demo_mode())
+    except Exception as _ex:
+        _log.debug('_demo_mode(): подавлено: %s', _ex)
+        return False
+
+
 def _ctx(bot_lookup, gid):
     """(ok, err, code, cog, guild) — живой ког и гильдия из кэша бота."""
     bot = bot_lookup()
@@ -68,11 +110,47 @@ def _ctx(bot_lookup, gid):
     return True, '', 200, cog, guild
 
 
-def status_payload(cog, guild, gid):
-    """Карточка настроек 1:1 _cfg_embed + все honour-флаги кога."""
-    cfg = cog.cfg(int(gid))
+def _names_lookup(bot, guild, gid):
+    """uid → имя: живой кэш бота → демо-участники. Без бота — демо."""
+    def f(uid):
+        if bot is not None and guild is not None:
+            try:
+                m = guild.get_member(int(uid))
+                if m is not None:
+                    return str(m.display_name)
+            except Exception as _ex:
+                _log.debug('_names_lookup(%s): подавлено: %s', uid, _ex)
+        if _demo_mode():
+            for dm in _demo_members():
+                if str(dm.get('id')) == str(uid):
+                    return str(dm.get('display_name') or dm.get('name') or uid)
+        return None
+    return f
+
+
+def status_payload(cfg, guild, gid):
+    """Карточка настроек из конфига (живой ког или файл — одна форма)."""
     action = str(cfg.get('action'))
-    ch = guild.get_channel(int(cfg.get('log_channel_id', 0) or 0))
+    ch_name = ''
+    try:
+        cid = int(cfg.get('log_channel_id', 0) or 0)
+    except (TypeError, ValueError):
+        cid = 0
+    if cid:
+        if guild is not None:
+            ch = guild.get_channel(cid)
+            ch_name = str(getattr(ch, 'name', '') or '') if ch is not None else ''
+        if not ch_name and _demo_mode():
+            try:
+                import json as _json
+                with open('data/demo_channels.json', encoding='utf-8') as fp:
+                    chans = _json.load(fp)
+                for c in chans:
+                    if str(c.get('id')) == str(cid):
+                        ch_name = str(c.get('name') or '')
+                        break
+            except Exception as _ex:
+                _log.debug('status_payload(): демо-каналы: %s', _ex)
     names = list(cfg.get('protected_names', []))
     return {
         'success': True,
@@ -85,8 +163,8 @@ def status_payload(cog, guild, gid):
         'toggles': [{'key': k, 'label': lbl, 'on': bool(cfg.get(k))}
                     for k, lbl in TOGGLES.items()],
         'log_channel_id': str(cfg.get('log_channel_id', 0) or 0),
-        'log_channel_name': str(getattr(ch, 'name', '') or '') if ch else None,
-        'log_auto': ch is None,
+        'log_channel_name': ch_name or None,
+        'log_auto': not bool(ch_name),
         'protected_names': names,
         'protected_count': len(names),
         'strike_limit': IM.STRIKE_LIMIT,
@@ -95,122 +173,177 @@ def status_payload(cog, guild, gid):
 
 
 def status_flow(bot_lookup, gid):
-    ok, err, code, cog, guild = _ctx(bot_lookup, gid)
-    if not ok:
-        return False, err, code, None
-    return True, '', 200, status_payload(cog, guild, gid)
+    bot = bot_lookup()
+    guild = bot.get_guild(int(gid)) if bot is not None else None
+    cog = bot.get_cog('AntiFake') if bot is not None else None
+    if cog is not None:
+        cfg = cog.cfg(int(gid))
+    else:
+        cfg = _cfg_file(gid)
+    return True, '', 200, status_payload(cfg, guild, gid)
+
+
+def _mutate_cfg(bot_lookup, gid, key, value):
+    """Запись настройки: живой ког (синхронно в файл) или файл напрямую."""
+    bot = bot_lookup()
+    cog = bot.get_cog('AntiFake') if bot is not None else None
+    if cog is not None:
+        cog.set_cfg(int(gid), key, value)
+    else:
+        cfg = _cfg_file(gid)
+        cfg[key] = value
+        _save_cfg_file(gid, cfg)
 
 
 def toggle_flow(bot_lookup, gid, key):
-    """Переключатель флага; enabled — то же, что «/antifake on|off»."""
-    ok, err, code, cog, guild = _ctx(bot_lookup, gid)
-    if not ok:
-        return False, err, code, None
     key = str(key or '')
     if key not in TOGGLES:
         return False, ERR_KEY, 400, None
-    new_val = not bool(cog.cfg(int(gid)).get(key))
-    cog.set_cfg(int(gid), key, new_val)
+    cfg = _cfg_file(gid)
+    new_val = not bool(cfg.get(key))
+    _mutate_cfg(bot_lookup, gid, key, new_val)
     return True, '', 200, {
         'message': f'{TOGGLES[key]}: {"вкл" if new_val else "выкл"}',
         'key': key, 'on': new_val,
-        'status': status_payload(cog, guild, gid),
+        'status': status_flow(bot_lookup, gid)[3],
     }
 
 
 def action_flow(bot_lookup, gid, value):
-    """Действие при подделке 1:1 «/antifake action» (те же Choice)."""
-    ok, err, code, cog, guild = _ctx(bot_lookup, gid)
-    if not ok:
-        return False, err, code, None
     choice = next((c for c in IM.ACTION_CHOICES if c.value == value), None)
     if choice is None:
         return False, ERR_ACTION, 400, None
-    cog.set_cfg(int(gid), 'action', choice.value)
+    _mutate_cfg(bot_lookup, gid, 'action', choice.value)
     return True, '', 200, {
         'message': f'Действие при подделке: {choice.name}',
         'action': choice.value,
-        'status': status_payload(cog, guild, gid),
+        'status': status_flow(bot_lookup, gid)[3],
     }
 
 
 def threshold_flow(bot_lookup, gid, percent):
-    """Порог 1:1 «/antifake threshold» (Range 60–100 → доля)."""
-    ok, err, code, cog, guild = _ctx(bot_lookup, gid)
-    if not ok:
-        return False, err, code, None
     try:
         pct = int(percent)
     except (TypeError, ValueError):
         return False, ERR_THRESHOLD, 400, None
     if not 60 <= pct <= 100:
         return False, ERR_THRESHOLD, 400, None
-    cog.set_cfg(int(gid), 'threshold', pct / 100.0)
+    _mutate_cfg(bot_lookup, gid, 'threshold', pct / 100.0)
     return True, '', 200, {
         'message': f'Порог похожести: {pct}%',
         'threshold_pct': pct,
-        'status': status_payload(cog, guild, gid),
+        'status': status_flow(bot_lookup, gid)[3],
     }
 
 
 def protect_flow(bot_lookup, gid, text):
-    """Добавить защищаемую строку 1:1 «/antifake protect»."""
-    ok, err, code, cog, guild = _ctx(bot_lookup, gid)
-    if not ok:
-        return False, err, code, None
     text = str(text or '')
-    cfg = cog.cfg(int(gid))
+    cfg = _cfg_file(gid)
     arr = list(cfg.get('protected_names', []))
     if text.strip() and text not in arr:
         arr.append(text)
-        cog.set_cfg(int(gid), 'protected_names', arr)
+        _mutate_cfg(bot_lookup, gid, 'protected_names', arr)
     return True, '', 200, {
         'message': f'Защищаемые строки ({len(arr)}): ' + ', '.join(arr),
         'protected_names': arr,
-        'status': status_payload(cog, guild, gid),
+        'status': status_flow(bot_lookup, gid)[3],
     }
 
 
 def unprotect_flow(bot_lookup, gid, text):
-    """Убрать строку 1:1 «/antifake unprotect»."""
-    ok, err, code, cog, guild = _ctx(bot_lookup, gid)
-    if not ok:
-        return False, err, code, None
     text = str(text or '')
-    cfg = cog.cfg(int(gid))
+    cfg = _cfg_file(gid)
     arr = [x for x in cfg.get('protected_names', []) if x != text]
-    cog.set_cfg(int(gid), 'protected_names', arr)
+    _mutate_cfg(bot_lookup, gid, 'protected_names', arr)
     return True, '', 200, {
         'message': f'Осталось строк: {len(arr)}',
         'protected_names': arr,
-        'status': status_payload(cog, guild, gid),
+        'status': status_flow(bot_lookup, gid)[3],
     }
 
 
+def _protected_name_items(bot, guild, gid):
+    """[(user_id|None, имя, норма)] — персонал + защищаемые строки.
+
+    Без бота (демо) персонал берём из демо-участников со статусами.
+    """
+    items = []
+    cfg = _cfg_file(gid)
+    if bot is not None and guild is not None:
+        for m in getattr(guild, 'members', []):
+            if getattr(m, 'bot', False):
+                continue
+            roles = getattr(m, 'roles', []) or []
+            if not any(str(getattr(r, 'permissions', '')).lower() != '' for r in roles):
+                pass
+            for n in {m.display_name, m.nick, m.global_name, m.name} - {None, ''}:
+                nn = IM.normalize(n)
+                if len(nn) >= 4:
+                    items.append((m.id, n, nn))
+    elif _demo_mode():
+        for dm in _demo_members():
+            n = str(dm.get('display_name') or dm.get('name') or '')
+            nn = IM.normalize(n)
+            if len(nn) >= 4:
+                items.append((dm.get('id'), n, nn))
+    for s in cfg.get('protected_names', []):
+        nn = IM.normalize(str(s))
+        if len(nn) >= 4:
+            items.append((None, str(s), nn))
+    return items
+
+
 def test_member_flow(bot_lookup, gid, user_id):
-    """Сухой прогон 1:1 «/antifake test» — те же проверки, без наказания."""
-    ok, err, code, cog, guild = _ctx(bot_lookup, gid)
-    if not ok:
-        return False, err, code, None
     try:
         uid = int(user_id)
     except (TypeError, ValueError):
         return False, ERR_NUMBER, 400, None
-    member = guild.get_member(uid)
-    if member is None:
+    bot = bot_lookup()
+    guild = bot.get_guild(int(gid)) if bot is not None else None
+    cog = bot.get_cog('AntiFake') if bot is not None else None
+    member = None
+    name = ''
+    if guild is not None:
+        member = guild.get_member(uid)
+        name = str(getattr(member, 'display_name', '') or '') if member else ''
+    # живой ког — 1:1 «/antifake test» (имя + украденный аватар)
+    if member is not None and cog is not None:
+        hit = cog.find_impersonation(member)
+        stolen = cog.find_stolen_avatar(member)
+        findings = []
+        if hit:
+            findings.append({'kind': 'name',
+                             'text': f'Имя похоже на {hit[0]} '
+                                     f'(совпадение {int(hit[2] * 100)}%)'})
+        if stolen:
+            findings.append({'kind': 'avatar',
+                             'text': f'Аватар скопирован с {stolen.display_name}'})
+        return True, '', 200, {
+            'member': {'name': name, 'id': str(uid)},
+            'clean': not findings,
+            'verdict': CLEAN_TEXT if not findings else None,
+            'findings': findings,
+        }
+    if member is None and _demo_mode():
+        for dm in _demo_members():
+            if str(dm.get('id')) == str(uid):
+                name = str(dm.get('display_name') or dm.get('name') or uid)
+                break
+    if not name:
         return False, ERR_MEMBER, 404, None
-    hit = cog.find_impersonation(member)
-    stolen = cog.find_stolen_avatar(member)
+    cfg = _cfg_file(gid)
+    thr = float(cfg.get('threshold', 0.85))
+    norm = IM.normalize(name)
     findings = []
-    if hit:
-        findings.append({'kind': 'name',
-                         'text': f'Имя похоже на {hit[0]} '
-                                 f'(совпадение {int(hit[2] * 100)}%)'})
-    if stolen:
-        findings.append({'kind': 'avatar',
-                         'text': f'Аватар скопирован с {stolen.display_name}'})
+    for tid, orig, norig in _protected_name_items(bot, guild, gid):
+        sc = IM.similarity(norm, norig) if norm else 0.0
+        if norm and sc >= thr:
+            findings.append({'kind': 'name',
+                             'text': f'Имя похоже на {orig} '
+                                     f'(совпадение {int(sc * 100)}%)'})
+            break
     return True, '', 200, {
-        'member': {'name': member.display_name, 'id': str(member.id)},
+        'member': {'name': name, 'id': str(uid)},
         'clean': not findings,
         'verdict': CLEAN_TEXT if not findings else None,
         'findings': findings,
@@ -218,22 +351,17 @@ def test_member_flow(bot_lookup, gid, user_id):
 
 
 def lab_flow(bot_lookup, gid, text):
-    """Лаборатория строки: normalize/similarity кога по защищаемым именам.
-
-    Вердикт считается по всем именам (как find_impersonation), в выдачу —
-    двадцать ближайших.
-    """
-    ok, err, code, cog, guild = _ctx(bot_lookup, gid)
-    if not ok:
-        return False, err, code, None
     text = str(text or '').strip()
     if not text:
         return False, ERR_TEXT, 400, None
+    bot = bot_lookup()
+    guild = bot.get_guild(int(gid)) if bot is not None else None
+    cfg = _cfg_file(gid)
+    thr = float(cfg.get('threshold', 0.85))
     norm = IM.normalize(text)
-    thr = float(cog.cfg(int(gid)).get('threshold', 0.85))
     rows = []
     verdict = False
-    for tid, orig, norig, _mem in cog.protected_names(guild):
+    for tid, orig, norig in _protected_name_items(bot, guild, gid):
         sc = IM.similarity(norm, norig) if norm else 0.0
         if norm and sc >= thr:
             verdict = True
@@ -252,53 +380,77 @@ def lab_flow(bot_lookup, gid, text):
     }
 
 
+# ── Страйки: ровно файл кога, ничего не смешивается ───────────────────────
 def strikes_flow(bot_lookup, gid):
-    """Страйки рекламы через strike_view кога; окно и лимит — его же."""
-    ok, err, code, cog, guild = _ctx(bot_lookup, gid)
-    if not ok:
-        return False, err, code, None
-    return True, '', 200, strikes_payload(cog, guild, gid)
-
-
-def strikes_payload(cog, guild, gid):
+    bot = bot_lookup()
+    guild = bot.get_guild(int(gid)) if bot is not None else None
+    names = _names_lookup(bot, guild, gid)
+    data = _strikes_file()
+    g = data.get(str(gid), {}) if isinstance(data, dict) else {}
     now = time.time()
     entries = []
-    for uid, arr in cog.strike_view(int(gid)).items():
-        marks = [float(t) for t in arr]
+    for uid, arr in g.items():
+        if not isinstance(arr, list):
+            arr = []
+        marks = []
+        for t in arr:
+            try:
+                marks.append(float(t))
+            except (TypeError, ValueError) as _ex:
+                _log.debug('strikes_flow(%s): битая метка %r: %s', uid, t, _ex)
+                continue
+        marks.sort(reverse=True)
         active = [t for t in marks if now - t < IM.STRIKE_WINDOW]
-        member = guild.get_member(int(uid)) if uid.isdigit() else None
         entries.append({
-            'user_id': uid,
-            'name': str(member.display_name) if member else None,
+            'user_id': str(uid),
+            'name': names(str(uid)),
             'total': len(marks),
             'active': len(active),
+            'history': [datetime.fromtimestamp(t, UTC).strftime('%Y-%m-%d %H:%M')
+                        for t in marks[:10]],
             'last_at': (datetime.fromtimestamp(max(marks), UTC)
                         .strftime('%Y-%m-%d %H:%M') if marks else ''),
         })
     entries.sort(key=lambda e: (-e['active'], -e['total'], e['user_id']))
-    return {'success': True, 'entries': entries,
-            'limit': IM.STRIKE_LIMIT,
-            'window_days': IM.STRIKE_WINDOW // 86400}
+    return True, '', 200, {
+        'success': True,
+        'entries': entries,
+        'limit': IM.STRIKE_LIMIT,
+        'window_days': IM.STRIKE_WINDOW // 86400,
+    }
 
 
 def clear_strikes_flow(bot_lookup, gid, user_id):
-    """Обнулить страйки участника (хелпер кога clear_strikes)."""
-    ok, err, code, cog, guild = _ctx(bot_lookup, gid)
-    if not ok:
-        return False, err, code, None
     try:
         uid = int(user_id)
     except (TypeError, ValueError):
         return False, ERR_NUMBER, 400, None
-    n = cog.clear_strikes(int(gid), uid)
+    data = _strikes_file()
+    g = data.setdefault(str(gid), {})
+    arr = g.pop(str(uid), None) or []
+    _save_strikes_file(data)
+    # синхронизация живой памяти кога (если он в этом процессе)
+    bot = bot_lookup()
+    if bot is not None:
+        cog = bot.get_cog('AntiFake')
+        if cog is not None:
+            try:
+                cog.clear_strikes(int(gid), uid)
+            except Exception as _ex:
+                _log.debug('clear_strikes_flow(): синк кога: %s', _ex)
+    n = len(arr)
     if not n:
         return False, NO_STRIKES, 404, None
-    member = guild.get_member(uid)
+    bot2 = bot_lookup()
+    guild = bot2.get_guild(int(gid)) if bot2 is not None else None
+    names = _names_lookup(bot2, guild, gid)
+    member = names(str(uid))
+    payload = strikes_flow(bot_lookup, gid)[3]
     return True, '', 200, {
         'message': f'Снято страйков: {n}.',
         'removed': n,
-        'member': str(member.display_name) if member else None,
-        'strikes': strikes_payload(cog, guild, gid),
+        'member': member,
+        'strikes': payload,
     }
 
 
@@ -397,10 +549,9 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_antifake_strikes_csv(gid):
-        ok, err, code, cog, guild = _ctx(_bot, gid)
+        ok, err, code, payload = strikes_flow(_bot, gid)
         if not ok:
             return jsonify({'success': False, 'error': err}), code
-        payload = strikes_payload(cog, guild, gid)
         body = '\ufeff' + 'user_id;name;active;total;last_at\n'
         body += '\n'.join(';'.join(_csv_cell(c) for c in (
             e['user_id'], e['name'] or '', e['active'], e['total'],

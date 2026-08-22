@@ -40,7 +40,7 @@
   <div class="modal-box">
     <div class="modal-title"><i class="fas fa-terminal"></i> Пользователь Создать команду</div>
     <div class="vars-box">Переменные: <span>{user}</span> <span>{сервер}</span> <span>{channel}</span> <span>{count}</span></div>
-    <label   style="margin-bottom: 6px;">Tetikleyici (prefix olmadan)</label>
+    <label   style="margin-bottom: 6px;">Триггер (без префикса)</label>
     <input type="text" id="cmd-trigger" placeholder="напр.: привет, правила" class="modal-input" aria-label="напр.: привет, правила">
     <label   style="margin-bottom: 6px;">Ответ</label>
     <textarea id="cmd-response" placeholder="Ответ команды..." class="modal-textarea" aria-label="Ответ команды..."></textarea>
@@ -92,7 +92,7 @@ async function loadCommands() {
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands');
   var cmds = await r.json();
   var box = document.getElementById('cmd-list');
-  if(!cmds.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-terminal"   style="opacity: 0.3; margin-bottom: 10px;"></i>Пока пользователь команда yok.</div>'; return; }
+  if(!cmds.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-terminal" style="opacity: 0.3; margin-bottom: 10px;"></i>Своих команд пока нет.</div>'; return; }
   box.innerHTML = cmds.map(function(cmd){
     var delBtn = role === 'owner' ? '<button type="button" class="del-btn" onclick="deleteCmd(\''+cmd.id+'\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>' : '';
     return '<div class="cmd-card">'+
@@ -115,7 +115,7 @@ function closeModal() { document.getElementById('modal').style.display='none'; }
 async function createCommand() {
   var trigger = document.getElementById('cmd-trigger').value.trim().replace(/^!/,'');
   var response = document.getElementById('cmd-response').value.trim();
-  if(!trigger || !response) { alert('Tetikleyici ve ответ gir!'); return; }
+  if(!trigger || !response) { alert('Введите триггер и ответ!'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/create', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({trigger:trigger, response:response, type:document.getElementById('cmd-type').value})

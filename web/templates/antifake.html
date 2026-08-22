@@ -67,18 +67,64 @@
   </div>
 
   <div class="panel">
-    <div class="panel-head"><div><h2><i class="fas fa-bolt"></i> Страйки</h2>
-      <div class="sub">Реклама и фейк-волны: счётчики участников.</div></div>
+    <div class="panel-head"><div><h2><i class="fas fa-bolt"></i> Страйки рекламы</h2>
+      <div class="sub">Замаскированная реклама: у каждого участника свой счётчик.</div></div>
       <div class="row" style="margin-left:auto">
         <button type="button" class="btn btn-sm" id="afStrikesReload" aria-label="Обновить страйки"><i class="fas fa-arrows-rotate"></i></button>
         <a class="btn btn-sm" id="afStrikesCsv" href="#"><i class="fas fa-file-csv"></i> CSV</a>
       </div></div>
-    <div class="table-wrap" style="padding:0 18px 16px">
-      <table class="data-table" id="afStrikesBox"><tbody><tr><td><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка…</span></div></td></tr></tbody></table>
+    <div class="panel-body">
+      <div class="af-strikes" id="afStrikesBox">
+        <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка…</span></div>
+      </div>
+      <div class="hint" id="afStMsg" style="margin-top:8px"></div>
     </div>
-    <div class="hint" id="afStMsg" style="padding:0 18px 14px"></div>
   </div>
 </div>
+
+<style>
+/* ═══ Страйки рекламы — карточки Aether ═══ */
+.af-strikes { display: flex; flex-direction: column; gap: 10px; }
+.af-strike-card {
+  display: flex; align-items: center; gap: 13px;
+  border: 1px solid var(--line); border-radius: 13px;
+  padding: 12px 14px; background: var(--surface);
+  transition: border-color .15s, background .15s;
+}
+.af-strike-card:hover { border-color: var(--line-2); background: var(--surface-2); }
+.af-strike-card .av {
+  width: 40px; height: 40px; flex: 0 0 40px; border-radius: 12px;
+  display: grid; place-items: center;
+  background: var(--ac-soft); color: var(--ac);
+  font-weight: 800; font-size: 16px; border: 1px solid var(--ac-line);
+}
+.af-strike-card.warn .av { background: rgba(217,119,6,.12); color: #d97706; border-color: rgba(217,119,6,.35); }
+.af-strike-card.danger .av { background: rgba(220,38,38,.12); color: var(--err); border-color: rgba(220,38,38,.35); }
+.af-strike-card .copy { flex: 1; min-width: 0; }
+.af-strike-card .nm {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-weight: 800; font-size: 13.5px; color: var(--text);
+}
+.af-strike-card .bar {
+  height: 7px; border-radius: 99px; background: var(--line);
+  overflow: hidden; margin-top: 8px;
+}
+.af-strike-card .bar span {
+  display: block; height: 100%; border-radius: 99px;
+  background: var(--ac-grad); transition: width .3s var(--ease);
+}
+.af-strike-card.warn .bar span { background: linear-gradient(90deg,#f59e0b,#d97706); }
+.af-strike-card.danger .bar span { background: linear-gradient(90deg,#ef4444,#dc2626); }
+.af-strike-card .meta {
+  margin-top: 6px; font-size: 11.5px; color: var(--text-3);
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.af-strike-card .meta b { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.af-strike-card .hist { font-size: 10.5px; color: var(--text-3); }
+@media (prefers-reduced-motion: reduce) {
+  .af-strike-card, .af-strike-card .bar span { transition: none; }
+}
+</style>
 
 <script>
 var GID = '{{ guild_id }}';
@@ -233,19 +279,32 @@ $('afLabGo').addEventListener('click', function () {
 
 function renderStrikes(d) {
   var box = $('afStrikesBox');
-  if (!d.entries.length) {
-    box.innerHTML = '<tbody><tr><td><div class="empty"><i class="fas fa-broom"></i><span>Страйков нет — реклама не ловилась.</span></div></td></tr></tbody>';
+  if (!box) return;
+  if (!d.entries || !d.entries.length) {
+    box.innerHTML = '<div class="empty"><i class="fas fa-broom"></i><span>Страйков нет — реклама не ловилась.</span></div>';
     return;
   }
-  box.innerHTML = '<thead><tr><th>Участник</th><th>ID</th><th>Активные</th><th>Всего</th><th>Последний (UTC)</th>' +
-    (CAN_EDIT ? '<th></th>' : '') + '</tr></thead><tbody>' +
-    d.entries.map(function (e) {
-      return '<tr><td><b>' + esc(e.name || 'покинул сервер') + '</b></td>' +
-        '<td><span class="id-pill">' + esc(e.user_id) + '</span></td>' +
-        '<td>' + e.active + ' / ' + d.limit + '</td><td>' + e.total + '</td><td class="muted">' + esc(e.last_at) + '</td>' +
-        (CAN_EDIT ? '<td><button type="button" class="btn btn-sm btn-ghost" data-clear="' + esc(e.user_id) + '"><i class="fas fa-eraser" style="color:var(--err)"></i> Обнулить</button></td>' : '') +
-        '</tr>';
-    }).join('') + '</tbody>';
+  box.innerHTML = d.entries.map(function (e) {
+    var pct = Math.min(100, Math.round((e.active / Math.max(1, d.limit)) * 100));
+    var cls = e.active >= d.limit ? 'danger' : (e.active > 0 ? 'warn' : '');
+    var letter = String(e.name || '?').charAt(0).toUpperCase();
+    var hist = (e.history && e.history.length)
+      ? '<div class="hist">История: ' + e.history.map(esc).join(' · ') + ' UTC</div>' : '';
+    return '<div class="af-strike-card ' + cls + '">' +
+      '<span class="av">' + letter + '</span>' +
+      '<div class="copy">' +
+        '<div class="nm">' + esc(e.name || 'Покинул сервер') +
+          ' <span class="id-pill">' + esc(e.user_id) + '</span></div>' +
+        '<div class="bar"><span style="width:' + pct + '%"></span></div>' +
+        '<div class="meta">' +
+          '<span><b>' + e.active + '</b> активных из ' + d.limit + ' за ' + d.window_days + ' дн</span>' +
+          '<span>всего: <b>' + e.total + '</b></span>' +
+          '<span>последний: <b>' + esc(e.last_at || '—') + '</b> UTC</span>' +
+        '</div>' + hist +
+      '</div>' +
+      (CAN_EDIT ? '<button type="button" class="btn btn-sm btn-ghost" data-clear="' + esc(e.user_id) + '" title="Обнулить страйки" aria-label="Обнулить страйки"><i class="fas fa-eraser" style="color:var(--err)"></i></button>' : '') +
+    '</div>';
+  }).join('');
 }
 
 function loadStrikes() {

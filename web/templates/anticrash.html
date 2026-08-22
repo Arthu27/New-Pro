@@ -410,7 +410,7 @@ function renderMetrics(d){
   $('v-alerts').innerHTML = `${fmtN(d.alerts_sent)} <small>/ очередь ${fmtN(d.alerts_queued)}</small>`;
   $('m-alerts').title = d.channel_configured
     ? 'Отправлено сводок в канал алертов / сейчас в очереди'
-    : 'Канал алертов не задан: !anticrash kanal или log_channel_id в настройках';
+    : 'Канал алертов не задан: !anticrash канал или log_channel_id в настройках';
   $('v-webhook').innerHTML = `${fmtN(d.webhook_sent)} <small>/ дедуп ${fmtN(d.webhook_dropped)}</small>`;
 }
 

@@ -7,6 +7,7 @@
 import json
 import os
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 
 os.makedirs('data', exist_ok=True)
@@ -554,6 +555,54 @@ try:
     print('записано: смены персонала (%d смен)' % len(_shifts))
 except Exception as _ex:
     print('смены персонала не засеяны:', _ex)
+
+# ── Демо-тикеты для Про-аналитики (файл, который читает /api/analytics/advanced) ──
+try:
+    _cats = ['Модерация', 'Техподдержка', 'Жалобы', 'Другое']
+    _mods = ['sonya.staff', 'artem.mods', 'lina.mod', None]
+    _users = ['toxicguy', 'spammer_228', 'caps_forever', 'night_flooder', 'emoji_spam']
+    _tk = {}
+    for i in range(26):
+        days_ago = (i * 5) % 30
+        opened = NOW - timedelta(days=days_ago, hours=i % 9)
+        closed = opened + timedelta(hours=1 + (i % 30))
+        status = 'closed' if i % 4 else 'open'
+        _tk['tk-demo-%02d' % i] = {
+            'created_at': opened.isoformat(),
+            'closed_at': closed.isoformat() if status == 'closed' else None,
+            'status': status,
+            'category': _cats[i % len(_cats)],
+            'closed_by': _mods[i % len(_mods)] if status == 'closed' else None,
+            'user_name': _users[i % len(_users)],
+            'description': 'Демо-обращение №%d для Про-аналитики' % (i + 1),
+        }
+    with open('data/ai_tickets_demo.json', 'w', encoding='utf-8') as _f:
+        json.dump(_tk, _f, ensure_ascii=False, indent=2)
+    print('записано: демо-тикеты для Про-аналитики (%d шт)' % len(_tk))
+except Exception as _ex:
+    print('демо-тикеты не засеяны:', _ex)
+
+# ── Антифейк: конфиг + страйки рекламы (файлы кога) ──
+try:
+    _af_cfg = {
+        GID: {'enabled': True, 'action': 'strip', 'log_channel_id': 1002,
+              'check_join': True, 'check_update': True, 'check_ads': True,
+              'threshold': 0.85, 'protected_names': ['Aether', 'Модератор', 'Владелец'],
+              'exempt_staff': True, 'dm_notify': True, 'strike_timeout': True}}
+    with open('data/antifake.json', 'w', encoding='utf-8') as _f:
+        json.dump(_af_cfg, _f, ensure_ascii=False, indent=2)
+    _t = time.time()
+    _af_strikes = {GID: {
+        '1004': [_t - 3600, _t - 86400 * 2, _t - 86400 * 5],          # 3 шт → порог
+        '1005': [_t - 7200],                                            # 1 активный
+        '1007': [_t - 86400 * 10, _t - 86400 * 20],                     # оба протухли
+        '888888888888888888': [_t - 1800],                               # покинувший сервер
+    }}
+    with open('data/antifake_strikes.json', 'w', encoding='utf-8') as _f:
+        json.dump(_af_strikes, _f, ensure_ascii=False, indent=2)
+    print('записано: антифейк (конфиг + страйки 4 участников)')
+except Exception as _ex:
+    print('антифейк не засеян:', _ex)
 
 # ── Голос и сообщения модеров (для профи-статистики /mod-history) ──
 try:

@@ -1247,7 +1247,7 @@ function openprofile(event, memberId) {
     var c = r.color && r.color !== '#000000' ? r.color : 'rgba(212,168,67,0.4)';
     return '<span class="profs-role-badge" >' + r.name + '</span>';
   }).join('');
-  document.getElementById('pp-role').innerHTML = role || '<span class="profs-no-roles">Роль yok</span>';
+  document.getElementById('pp-role').innerHTML = role || '<span class="profs-no-roles">Роль не найдена</span>';
   document.getElementById('pp-nick-input').value = m.nick || '';
   var rect = event.currentTarget.getBoundingClientRect();
   var left = rect.right + 8, top = rect.top;

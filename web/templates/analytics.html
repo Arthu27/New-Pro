@@ -518,6 +518,22 @@
 
     /* График с защитой: если Chart.js не загрузился или canvas недоступен,
      не сыплем ошибками в консоль, а показываем честную заглушку. */
+
+  /* Цвета для Chart.js из переменных темы (canvas не понимает var()/color-mix). */
+  function anTick() { return (window.cssVar ? window.cssVar('--text-3', '#7f879f') : '#7f879f'); }
+  function anLegend() { return (window.cssVar ? window.cssVar('--text-2', '#2a2d35') : '#2a2d35'); }
+  function anGrid() {
+    try {
+      var tmp = document.createElement('div');
+      tmp.style.color = (window.cssVar ? window.cssVar('--text', '#2a2d35') : '#2a2d35');
+      document.body.appendChild(tmp);
+      var rgb = getComputedStyle(tmp).color.match(/\d+/g);
+      tmp.remove();
+      if (rgb && rgb.length >= 3) return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',0.07)';
+    } catch (e) { /* ниже фолбэк */ }
+    return 'rgba(127,135,159,0.12)';
+  }
+
   function makeChart(el, cfg) {
     if (typeof Chart === 'undefined') return null;
     if (!el) return null;
@@ -744,10 +760,10 @@ function renderCharts(d) {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: 'color-mix(in srgb, var(--text) 70%, transparent)', boxWidth: 12 } } },
+        plugins: { legend: { labels: { color: anLegend(), boxWidth: 12 } } },
         scales: {
-          x: { ticks: { color: 'color-mix(in srgb, var(--text) 45%, transparent)', maxTicksLimit: 7 }, grid: { display: false } },
-          y: { beginAtZero: true, ticks: { color: 'color-mix(in srgb, var(--text) 45%, transparent)', precision: 0 }, grid: { color: 'color-mix(in srgb, var(--text) 6%, transparent)' } }
+          x: { ticks: { color: anTick(), maxTicksLimit: 7 }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { color: anTick(), precision: 0 }, grid: { color: anGrid() } }
         }
       }
     });

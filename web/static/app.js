@@ -1350,29 +1350,60 @@
       opts = opts || {};
       if (!el) return;
       var data = (values || []).map(function (x) { return Number(x) || 0; });
-      var w = 260, h = Number(opts.height) || 64, pad = 8;
+      var w = 640, h = Number(opts.height) || 64, pad = Number(opts.pad) || 12;
       var color = opts.color || cssVar('--ac', '#4f46e5');
       if (!data.length) { el.innerHTML = '<span class="muted" style="font-size:11px">нет данных</span>'; return; }
-      var pts = numPath(data, w, h, pad);
-      var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
-      var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + (h - pad) + ' L' + pts[0][0].toFixed(1) + ' ' + (h - pad) + ' Z';
+      var gutter = opts.labels ? 40 : 10;
+      var pts = numPath(data, w, h, 10);
+      // плавная кривая (катмулл-ром → безье)
+      var line = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+      for (var i = 0; i < pts.length - 1; i++) {
+        var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+        var c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+        var c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+        line += ' C' + c1x.toFixed(1) + ' ' + c1y.toFixed(1) + ' ' + c2x.toFixed(1) + ' ' + c2y.toFixed(1) + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1);
+      }
+      var baseY = h - 10;
+      var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + baseY + ' L' + pts[0][0].toFixed(1) + ' ' + baseY + ' Z';
       var svg = svgEl('svg', { viewBox: '0 0 ' + w + ' ' + h, preserveAspectRatio: 'none', style: 'width:100%;height:' + h + 'px' });
       window.__chartUid = (window.__chartUid || 0) + 1;
       var uid = 's' + window.__chartUid;
       var defs = svgEl('defs', {});
       var lg = svgEl('linearGradient', { id: uid + '-fill', x1: '0', y1: '0', x2: '0', y2: '1' });
-      lg.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '0.34' }));
+      lg.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '0.32' }));
       lg.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.02' }));
       defs.appendChild(lg);
       var flt = svgEl('filter', { id: uid + '-glow', x: '-30%', y: '-30%', width: '160%', height: '160%' });
       flt.appendChild(svgEl('feDropShadow', { dx: '0', dy: '2', stdDeviation: '2.4', 'flood-color': color, 'flood-opacity': '0.38' }));
       defs.appendChild(flt);
       svg.appendChild(defs);
+      // горизонтальная сетка (3 линии) и подписи значений
+      if (opts.grid) {
+        var gridColor = cssVar('--line', 'rgba(127,135,159,0.18)');
+        var minV = Math.min.apply(null, data.concat([0]));
+        var maxV = Math.max.apply(null, data.concat([1]));
+        if (maxV === minV) maxV = minV + 1;
+        for (var g = 0; g <= 2; g++) {
+          var gy = 10 + (baseY - 10) * (g / 2);
+          var gv = maxV - (maxV - minV) * (g / 2);
+          svg.appendChild(svgEl('line', { x1: 10, y1: gy, x2: w - 10, y2: gy, stroke: gridColor, 'stroke-width': '1', 'class': 'grid-line' }));
+          if (opts.labels) {
+            var txt = svgEl('text', { x: 4, y: gy + 3, 'font-size': '9', fill: cssVar('--text-3', '#7f879f'), 'class': 'grid-label' });
+            txt.textContent = String(Math.round(gv * 10) / 10) + (opts.unit || '');
+            svg.appendChild(txt);
+          }
+        }
+        if (opts.labels) {
+          // отступ слева под подписи — сдвигаем сам svg, а не геометрию
+          svg.style.marginLeft = gutter - 10 + 'px';
+          svg.style.width = 'calc(100% - ' + (gutter - 10) + 'px)';
+        }
+      }
       svg.appendChild(svgEl('path', { d: area, fill: 'url(#' + uid + '-fill)', 'class': 'area-fill' }));
-      svg.appendChild(svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.5', 'class': 'line-path', filter: 'url(#' + uid + '-glow)' }));
+      svg.appendChild(svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.6', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'class': 'line-path', filter: 'url(#' + uid + '-glow)' }));
       var last = pts[pts.length - 1];
       var surf = cssVar('--surface', '#ffffff');
-      svg.appendChild(svgEl('circle', { cx: last[0], cy: last[1], r: 4.2, fill: color, stroke: surf, 'stroke-width': '1.6', 'class': 'last-dot' }));
+      svg.appendChild(svgEl('circle', { cx: last[0], cy: last[1], r: 4.6, fill: color, stroke: surf, 'stroke-width': '1.8', 'class': 'last-dot' }));
       if (opts.title) svg.appendChild(svgEl('title', {}));
       if (opts.title) svg.querySelector('title').textContent = opts.title;
       el.innerHTML = '';
