@@ -8,6 +8,13 @@ import discord
 from discord .ext import commands 
 from discord import app_commands 
 from datetime import datetime ,timezone 
+
+def _as_utc (dt ):
+    """Легаси-метки без пояса считаем UTC: вычитание aware/naive роняло бота."""
+    if dt .tzinfo is None :
+        return dt .replace (tzinfo =timezone .utc )
+    return dt 
+
 import os 
 from config import Config, clean_number 
 
@@ -132,7 +139,7 @@ class AFK (commands .Cog ):
         afk_data =self ._get (gid ,uid )
         if afk_data and not afk_data .get ('owner_mode'):
             self ._remove (gid ,uid )
-            since =datetime .fromisoformat (afk_data ["since"])
+            since =_as_utc (datetime .fromisoformat (afk_data ["since"]))
             elapsed =datetime .now (timezone .utc )-since 
             mins =int (elapsed .total_seconds ()//60 )
             dur =f"{mins} мин."if mins >0 else "только что"
@@ -160,7 +167,7 @@ class AFK (commands .Cog ):
             if not data :
                 continue 
 
-            since =datetime .fromisoformat (data ["since"])
+            since =_as_utc (datetime .fromisoformat (data ["since"]))
             elapsed =datetime .now (timezone .utc )-since 
             mins =int (elapsed .total_seconds ()//60 )
             dur =f"{mins} мин."if mins >0 else "только что"

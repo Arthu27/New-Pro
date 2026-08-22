@@ -15,6 +15,23 @@ from typing import Dict ,List ,Optional ,Tuple
 from collections import defaultdict 
 import re 
 
+def _parse_ts (value ):
+    # ISO-строка в aware-UTC. Naive считаем UTC, мусор -> None.
+    # История из JSON может быть без пояса, живые записи с поясом;
+    # сравнение aware/naive роняло бота с TypeError.
+    if not isinstance (value ,str ):
+        return None 
+    try :
+        dt =datetime .fromisoformat (value .strip ())
+    except Exception :
+        return None 
+    if dt .tzinfo is None :
+        dt =dt .replace (tzinfo =timezone .utc )
+    else :
+        dt =dt .astimezone (timezone .utc )
+    return dt 
+
+
 
 class SentimentAnalyzer :
     """Анализатор настроения сервера"""
@@ -115,12 +132,15 @@ class SentimentAnalyzer :
         """Получает настроение канала за последние N минут"""
         messages =self .message_buffer .get (channel_id ,[])
 
-        # Filtreliyoruz по время
-        cutoff =datetime.now(timezone.utc).replace(tzinfo=None)-timedelta (minutes =window_minutes )
-        recent =[
-        msg for msg in messages 
-        if datetime .fromisoformat (msg ['timestamp'])>cutoff 
-        ]
+        # Filtreliyoruz по время: cutoff aware-UTC, каждую метку приводим к aware-UTC
+        # (история из JSON может хранить naive-строки, живые сообщения — с поясом;
+        #  сравнение aware/naive роняло бота с TypeError).
+        cutoff =datetime .now (timezone .utc )-timedelta (minutes =window_minutes )
+        recent =[]
+        for msg in messages :
+            _dt =_parse_ts (msg .get ('timestamp')if isinstance (msg ,dict )else None )
+            if _dt is not None and _dt >cutoff :
+                recent .append (msg )
 
         if not recent :
             return {

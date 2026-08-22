@@ -5,6 +5,13 @@ from discord import app_commands
 import json ,os 
 from datetime import datetime ,timedelta ,timezone 
 
+def _as_utc (dt ):
+    """Легаси-метки без пояса считаем UTC: вычитание aware/naive роняло ког."""
+    if dt .tzinfo is None :
+        return dt .replace (tzinfo =timezone .utc )
+    return dt 
+
+
 DUTY_FILE ="data/duty_log.json"
 POINTS_FILE ="data/duty_points.json"
 REQUIRED_ROLE_ID =Config .REQUIRED_ROLE_ID 
@@ -200,7 +207,7 @@ class DutyPanelView (discord .ui .View ):
             await interaction .response .send_message (" Активен задача нет.",ephemeral =True )
             return 
 
-        start_dt =datetime .fromisoformat (active ["start"])
+        start_dt =_as_utc (datetime .fromisoformat (active ["start"]))
         end_dt =datetime .now (timezone .utc )
         elapsed =(end_dt -start_dt ).total_seconds ()
 
@@ -297,7 +304,7 @@ class DutyPanelView (discord .ui .View ):
         data =load_duty ()
         active =data .get (gid ,{}).get (uid ,{}).get ("active")
         if active :
-            elapsed =(datetime .now (timezone .utc )-datetime .fromisoformat (active ["start"])).total_seconds ()
+            elapsed =(datetime .now (timezone .utc )-_as_utc (datetime .fromisoformat (active ["start"]))).total_seconds ()
             if "ses"in active .get ("tasks",[]):
                 active ["progress"]["ses"]=int (elapsed )
             embed .add_field (name ="​",value ="**🟢 Прогресс активных задач**",inline =False )

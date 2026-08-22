@@ -555,7 +555,7 @@ def _get_role_from_discord (discord_id :str )->str :
         guild =bot_instance .get_guild (int (gid ))
         if not guild :
             return 'uye'
-        member =guild .get_member (int (discord_id ))
+        member =_resolve_guild_member (guild ,int (discord_id ))
         if not member :
             return 'uye'
 
@@ -714,7 +714,11 @@ def login ():
                 _token_ok =True 
                 try :
                     _created =datetime .fromisoformat (t .get ('created_at')or '')
-                    if (datetime.now(timezone.utc).replace(tzinfo=None)-_created ).days >14 :
+                    if _created .tzinfo is None :
+                        _created =_created .replace (tzinfo =timezone .utc )
+                    else :
+                        _created =_created .astimezone (timezone .utc )
+                    if (datetime .now (timezone .utc )-_created ).days >14 :
                         _token_ok =False 
                 except Exception :
                     _token_ok =True 
@@ -1439,7 +1443,7 @@ def api_set_nick (guild_id ,member_id ):
         guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
         if not guild :
             return jsonify ({'error':'Сервер не найден'}),404 
-        member =guild .get_member (int (member_id ))
+        member =_resolve_guild_member (guild ,member_id )
         if not member :
             return jsonify ({'error':'Участник не найден'}),404 
         import asyncio 
@@ -1530,11 +1534,20 @@ def _ts_to_utc_iso (ts ):
     return dt .astimezone (timezone .utc ).isoformat ()
 
 def _ts_sort_key (ev ):
-    """Ключ сортировки по мгновению: непарсящиеся метки — в самый низ."""
+    """Ключ сортировки по мгновению: непарсящиеся метки — в самый низ.
+
+    Метки приводим к aware-UTC: в данных бывают и naive, и aware строки,
+    их сравнение иначе роняет сортировку (TypeError).
+    """
     try :
-        return datetime .fromisoformat (ev .get ('timestamp')or '')
+        dt =datetime .fromisoformat (ev .get ('timestamp')or '')
     except (ValueError ,TypeError ):
         return datetime .min .replace (tzinfo =timezone .utc )
+    if dt .tzinfo is None :
+        dt =dt .replace (tzinfo =timezone .utc )
+    else :
+        dt =dt .astimezone (timezone .utc )
+    return dt 
 
 @app .route ('/api/logs')
 @login_required 
@@ -1746,7 +1759,7 @@ def api_kick ():
         guild =discord .utils .get (bot_instance .guilds ,id =guild_id )
         if not guild :
             return jsonify ({'error':'Сервер не найден'})
-        member =guild .get_member (user_id )
+        member =_resolve_guild_member (guild ,user_id )
         if not member :
             return jsonify ({'error':'Участник не найден'})
 
@@ -2424,6 +2437,25 @@ def api_change_password ():
 
     # PUBLIC ROUTES (вход gerektirmez) 
 
+def _resolve_guild_member (guild ,user_id ):
+    """Участник сервера по ID: кэш, затем fetch_member (работает и без intents.members).
+
+    get_member смотрит только в кэше; если у бота не включён intents.members,
+    кэш почти пуст и реальный участник «не находится». Поэтому при промахе
+    дотягиваем участника прямым API-запросом через loop бота.
+    """
+    uid =int (user_id )
+    member =guild .get_member (uid )
+    if member is not None :
+        return member 
+    try :
+        future =asyncio .run_coroutine_threadsafe (guild .fetch_member (uid ),bot_instance .loop )
+        member =future .result (timeout =10 )
+    except Exception as _ex :
+        _log.debug('_resolve_guild_member(%s): подавлено: %s', uid, _ex)
+        member =None 
+    return member 
+
 @app .route ('/apply')
 def public_apply ():
     return render_template ('public_apply.html')
@@ -2433,6 +2465,17 @@ def api_check_member ():
     if not bot_instance :
     # Frontend'in 503 с kыrыlmamasы для 200 dёn.
     # Bot hazыr olana userya anlaшыlыr bir message показ.
+        if _demo_mode ():
+            # демо-предпросмотр без бота: принимаем любой валидный ID,
+            # чтобы форму заявки можно было проверить целиком
+            data =request .get_json (silent =True )or {}
+            uid =str (data .get ('user_id','')).strip ()
+            if not uid .isdigit ()or not (17 <=len (uid )<=20 ):
+                return jsonify ({'found':False ,'error':'Введи корректный Discord ID (17–20 цифр).'})
+            from web .routes ._common import DEMO_MEMBERS
+            dm =next ((m for m in DEMO_MEMBERS if str (m .get ('id'))==uid ),None )
+            name =str (dm .get ('display_name')or dm .get ('name')or f'Участник {uid }')if dm else f'Участник {uid }'
+            return jsonify ({'found':True ,'id':uid ,'name':name ,'display_name':name ,'avatar':'/static/brand/emblem-dragon.png','joined_at':None })
         return jsonify ({
         'found':False ,
         'error':'Бот ещё не готов, повторите попытку через несколько секунд.'
@@ -2442,11 +2485,13 @@ def api_check_member ():
     user_id =str (data .get ('user_id',''))
     if not guild_id or not user_id :
         return jsonify ({'error':'Недостаточно параметров'}),400 
+    if not user_id .isdigit ()or not (17 <=len (user_id )<=20 ):
+        return jsonify ({'found':False ,'error':'Введи корректный Discord ID (17–20 цифр).'})
     try :
         guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
         if not guild :
             return jsonify ({'error':'Сервер не найден'}),404 
-        member =guild .get_member (int (user_id ))
+        member =_resolve_guild_member (guild ,user_id )
         if not member :
             return jsonify ({'found':False ,'error':'Вы не участник этого сервера! Не можете подать заявку.'})
         return jsonify ({
@@ -2750,7 +2795,11 @@ def api_discord_check ():
         if query .isdigit ()and 17 <=len (query )<=19 :
             discord_id =query 
             for guild in bot_instance .guilds :
-                m =guild .get_member (int (discord_id ))
+                try :
+                    m =_resolve_guild_member (guild ,discord_id )
+                except Exception as _ex:
+                    _log.debug("api_discord_check(): подавлено: %s", _ex)
+                    m =None 
                 if m :
                     user =m 
                     break 
