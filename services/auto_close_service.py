@@ -57,7 +57,11 @@ class AutoCloseService:
     
     async def _check_inactive_tickets(self):
         """Проверить все тикеты на неактивность"""
-        cutoff_time = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=self.inactive_hours)
+        # cutoff — aware-UTC: message.created_at у Discord всегда aware.
+        # Прежний вариант с replace(tzinfo=None) падал при сравнении
+        # («can't compare offset-naive and offset-aware datetimes»)
+        # и тикет не проверялся вовсе.
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=self.inactive_hours)
         closed_count = 0
         
         for guild in self.bot.guilds:
@@ -83,8 +87,11 @@ class AutoCloseService:
                     if not last_message:
                         continue
                     
-                    # Проверить время последнего сообщения
-                    if last_message.created_at < cutoff_time:
+                    # Проверить время последнего сообщения (легаси-naive считаем UTC)
+                    created = last_message.created_at
+                    if getattr(created, 'tzinfo', None) is None:
+                        created = created.replace(tzinfo=timezone.utc)
+                    if created < cutoff_time:
                         # Тикет неактивен - закрыть
                         await self._close_inactive_ticket(channel, last_message)
                         closed_count += 1
