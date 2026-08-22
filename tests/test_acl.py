@@ -186,12 +186,18 @@ r = client.get(f'/api/role-permissions/{GID}')
 body = r.get_json()
 check(r.status_code == 200 and body.get('success'), f'GET категории -> {r.status_code}')
 cats = body.get('categories', {})
-check('Модерация' in cats and 'tagjail-on' in cats.get('Модерация', []),
-      'категория Модерация содержит tagjail-подкоманды')
-check('j2c-lobby' in cats.get('Сервер', []) and 'vc-lock' in cats.get('Сервер', []),
-      'Сервер содержит j2c/vc-подкоманды')
+check('Модерация' in cats and 'ban' in cats.get('Модерация', []),
+      'категория Модерация содержит ban')
+check('tagjail' not in cats.get('Модерация', []) and 'jail' not in cats.get('Модерация', []),
+      'jail/tagjail убраны из панели модерации')
+check('Логи' in cats and 'logs-center' in cats.get('Логи', []),
+      'категория Логи содержит log-команды')
+check('AI-система' in cats and 'aimod' in cats.get('AI-система', []),
+      'категория AI-система содержит aimod')
+check('Тикеты' in cats and 'sla-create' in cats.get('Тикеты', []),
+      'категория Тикеты содержит sla-подкоманды')
 total_cmds = sum(len(v) for v in cats.values())
-check(total_cmds > 250, f'всего команд в панели: {total_cmds} (>250)')
+check(total_cmds > 100, f'всего команд в панели: {total_cmds} (>100)')
 
 r = client.post(f'/api/role-permissions/{GID}/set',
                 data=json.dumps({'command': 'j2c', 'role_ids': ['900']}),

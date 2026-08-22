@@ -374,6 +374,73 @@ async def try_deliver_proof(bot, guild, moderator, user, action, reason,
         return None
 
 
+VIDEO_EXTS = ('.mp4', '.mov', '.webm', '.mkv', '.avi', '.m4v')
+
+
+def is_media_attachment(attachment) -> bool:
+    """Доказательство — только картинка или видео (не любой файл)."""
+    if attachment is None:
+        return False
+    ct = (getattr(attachment, 'content_type', '') or '').lower()
+    if ct.startswith('image/') or ct.startswith('video/'):
+        return True
+    fn = (getattr(attachment, 'filename', '') or '').lower()
+    return fn.endswith(IMAGE_EXTS) or fn.endswith(VIDEO_EXTS)
+
+
+async def require_proof(interaction, attachment=None, action_ru='наказание', link=None):
+    """Обязательное доказательство к наказанию.
+
+    Возвращает True, если доказательство есть (картинка/видео во вложении
+    или ссылка). Если нет — отправляет модератору отказ и возвращает False:
+    наказание БЕЗ доказательства не выдаётся ни в каком случае.
+    """
+    if is_media_attachment(attachment) or (link or '').strip():
+        return True
+    e = discord.Embed(
+        color=RED,
+        title='Требуется доказательство',
+        description=(
+            f'Для наказания «**{action_ru}**» нужен скрин или видео нарушения.\n'
+            'Прикрепите файл (картинку/видео) или укажите ссылку — '
+            'без доказательства наказание не выдаётся.'
+        ),
+    )
+    try:
+        await interaction.followup.send(embed=e, ephemeral=True)
+    except Exception:
+        try:
+            await interaction.response.send_message(embed=e, ephemeral=True)
+        except Exception as _send_ex:
+            log.debug(f"[PROOF] require_proof: ответ не доставлен: {_send_ex}")
+    return False
+
+
+def prefix_has_media(ctx) -> bool:
+    """Есть ли картинка/видео во вложениях сообщения префикс-команды."""
+    for a in getattr(getattr(ctx, 'message', None), 'attachments', []) or []:
+        if is_media_attachment(a):
+            return True
+    return False
+
+
+async def deliver_prefix_proof(bot, ctx, member, action_ru, reason):
+    """Префикс-команды: первое медиа-вложение — в канал доказательств."""
+    try:
+        att = None
+        for a in getattr(getattr(ctx, 'message', None), 'attachments', []) or []:
+            if is_media_attachment(a):
+                att = a
+                break
+        if att is None:
+            return None
+        return await try_deliver_proof(bot, ctx.guild, ctx.author, member,
+                                       action_ru, reason, attachment=att)
+    except Exception as _ex:
+        log.debug(f"[PROOF] deliver_prefix_proof: {_ex}")
+        return None
+
+
 async def setup(bot):
     await bot.add_cog(ProofCog(bot))
     log.info('[PROOF] Ког загружен (демки к наказаниям)')

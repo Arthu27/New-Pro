@@ -202,6 +202,14 @@ class Moderation (commands .Cog ):
         except Exception as _ex:
             _log.debug("moderate_user(): подавлено: %s", _ex)
 
+        # Наказания (бан/кик/мут) — только с доказательством. Без пруфа
+        # наказание НЕ выдаётся ни в каком случае (картинка или видео).
+        if action in ('ban','kick','timeout'):
+            from cogs .proof_cog import require_proof
+            _action_ru ={'ban':'бан','kick':'кик','timeout':'мут'}[action ]
+            if not await require_proof (interaction ,attachment =демка ,action_ru =_action_ru ):
+                return
+
         if action =="ban":
             if not user :
                 await _respond (interaction ,embed =error_embed ("Укажите пользователя для бана."),ephemeral =True )
@@ -532,9 +540,19 @@ class Moderation (commands .Cog ):
             return int (m .group (1 ))
         return None
 
-    async def _execute_mod_action (self ,interaction ,action ,target ,reason ,amount ):
+    async def _execute_mod_action (self ,interaction ,action ,target ,reason ,amount ,proof_link =None ):
         """Выполнить выбранное действие модерации."""
         guild =interaction .guild
+
+        # Наказания — только с доказательством (ссылкой на скрин/видео):
+        # модальные окна Discord не принимают вложения, поэтому через панель
+        # доказательство передаётся ссылкой.
+        _punish_actions =("ban","kick","timeout","mute_chat","vmute")
+        if action in _punish_actions :
+            from cogs .proof_cog import require_proof
+            _action_ru ={'ban':'бан','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
+            if not await require_proof (interaction ,action_ru =_action_ru ,link =proof_link ):
+                return
 
         if action in ("ban","kick","timeout","mute_chat","untimeout","vmute","vunmute"):
             uid =self ._parse_target_id (target )
@@ -618,12 +636,24 @@ class Moderation (commands .Cog ):
                 except Exception as _ex:
                     _log.debug("_execute_mod_action(): подавлено: %s", _ex)
 
+                # Доказательство (ссылка) — в канал доказательств.
+                proof_note =None
+                try :
+                    if action in _punish_actions and (proof_link or '').strip ():
+                        from cogs .proof_cog import try_deliver_proof
+                        _p_ru ={'ban':'бан','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}.get (action ,action )
+                        proof_note =await try_deliver_proof (self .bot ,guild ,interaction .user ,user ,_p_ru ,reason ,link =proof_link )
+                except Exception as _pe :
+                    log .warning (f'[MODPANEL] демка: {_pe}')
+
                 confirm =success_embed (
                 "Действие выполнено",
                 f"**{user.display_name}** · `{user.id}`\n{msg}\n**Причина:** {reason}\n**Дело:** #{case_id}",
                 guild =guild )
                 if aux_errors :
                     confirm .description +=f"\n\n⚠️ {' · '.join (aux_errors )}"
+                if proof_note :
+                    confirm .description +=f"\n{proof_note }"
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
             except discord .Forbidden :
                 await _respond (interaction ,
@@ -801,9 +831,14 @@ class ModActionModal(discord.ui.Modal):
             label="Минут (timeout) / количество (clear)", required=False,
             default="5",
         )
+        self.proof = discord.ui.TextInput(
+            label="Доказательство (ссылка на скрин/видео)", required=False,
+            placeholder="https://… — обязательно для бана/кика/мута",
+        )
         self.add_item(self.target)
         self.add_item(self.reason)
         self.add_item(self.amount)
+        self.add_item(self.proof)
 
     async def on_submit(self, interaction: discord.Interaction):
         # Быстрый ack — дальше цепочка (таймаут → дело → DM → лог) может
@@ -819,6 +854,7 @@ class ModActionModal(discord.ui.Modal):
             self.target.value or "",
             self.reason.value or "",
             self.amount.value or "5",
+            proof_link=(self.proof.value or "").strip(),
         )
 
 

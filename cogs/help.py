@@ -21,6 +21,63 @@ ICONS_DIR = os.path.join(ROOT, 'assets', 'icons')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
+# Текстовый формат справки: без картинок, с фильтром по правам.
+# Команды, к которым у участника нет доступа (в т.ч. классические
+# разрешения на действия), скрываются из справки.
+from services.permission_acl import COMMAND_CATEGORIES, has_access as _acl_has_access
+
+_HELP_TITLE = 'Команды бота'
+_HELP_COLOR = 0x4F46E5
+
+
+def _visible_categories(guild_id, member):
+    """Категории команд, которые видит участник."""
+    groups = {}
+    for cat, cmds in COMMAND_CATEGORIES.items():
+        visible = []
+        for cmd in cmds:
+            try:
+                if _acl_has_access(guild_id, cmd, member):
+                    visible.append(cmd)
+            except Exception:
+                visible.append(cmd)
+        if visible:
+            groups[cat] = visible
+    return groups
+
+
+def _help_chunks(items, cap=900):
+    """Разбить команды на фрагменты по длине поля эмбеда."""
+    out, cur, ln = [], [], 0
+    for it in items:
+        token = '`' + it + '`'
+        if cur and ln + len(token) + 2 > cap:
+            out.append(cur)
+            cur, ln = [], 0
+        cur.append(token)
+        ln += len(token) + 2
+    if cur:
+        out.append(cur)
+    return out
+
+
+def build_help_embed(category_id=None, member=None, guild_id=0):
+    """Текстовый эмбед справки (без картинок)."""
+    groups = _visible_categories(guild_id, member)
+    if category_id and category_id != 'overview':
+        groups = {category_id: groups.get(category_id, [])}
+    total = sum(len(v) for v in groups.values())
+    e = discord.Embed(title=_HELP_TITLE, color=_HELP_COLOR)
+    e.description = f'Доступно **{total}** команд. Команды, к которым у вас нет доступа, скрыты.'
+    for cat, cmds in groups.items():
+        if not cmds:
+            e.add_field(name=cat, value='*Нет доступных команд*', inline=False)
+            continue
+        for i, chunk in enumerate(_help_chunks(cmds)):
+            name = cat if i == 0 else cat + ' · продолжение'
+            e.add_field(name=name, value=', '.join(chunk), inline=False)
+    return e
+
 # Палитра — тёмный люкс
 BG_DEEP = (13, 16, 38)
 PANEL = (24, 29, 60, 215)
@@ -477,25 +534,23 @@ class HelpSelect(discord.ui.Select):
             discord.SelectOption(
                 label="Главное меню",
                 value="overview",
-                description="Общий список всех 11 категорий команд",
-                emoji="🔘",
+                description="Общий список категорий команд",
                 default=(current_cat == "overview" or current_cat is None)
             )
         ]
-        for c in CATEGORIES:
+        for cat in COMMAND_CATEGORIES:
             options.append(
                 discord.SelectOption(
-                    label=c["title"],
-                    value=c["id"],
-                    description=f"{len(c['commands'])} команд в категории",
-                    emoji=CUSTOM_EMOJIS.get(c["id"]) or CAT_EMOJIS_FALLBACK.get(c["id"]),
-                    default=(c["id"] == current_cat)
+                    label=cat,
+                    value=cat,
+                    description=f"Команды категории «{cat}»",
+                    default=(cat == current_cat)
                 )
             )
         super().__init__(
-            placeholder="📂 Выберите категорию для просмотра команд...",
+            placeholder="Выберите категорию для просмотра команд...",
             options=options,
-            custom_id="help_select_v5_lux"
+            custom_id="help_select_text_v1"
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -503,12 +558,13 @@ class HelpSelect(discord.ui.Select):
         cat_id = self.values[0]
         if cat_id == "overview":
             cat_id = None
-        img_buf = await interaction.client.loop.run_in_executor(
-            None, generate_help_card_bytes, cat_id
+        e = build_help_embed(
+            category_id=cat_id,
+            member=interaction.user,
+            guild_id=interaction.guild.id if interaction.guild else 0,
         )
-        file = discord.File(img_buf, filename="help_card.png")
         view = HelpView(current_cat=cat_id)
-        await interaction.edit_original_response(embed=None, attachments=[file], view=view)
+        await interaction.edit_original_response(embed=e, view=view)
 
 
 class HelpView(discord.ui.View):
@@ -522,11 +578,17 @@ class Help(commands.Cog):
         self.bot = bot
 
     async def cog_load(self):
-        """Фоновый прогрев: держать все 12 страниц готовыми."""
-        async def _warm():
-            await self.bot.wait_until_ready()
-            await self.bot.loop.run_in_executor(None, prewarm_help_cards)
-        self.bot.loop.create_task(_warm())
+        # Картинки в справке отключены — прогрев не нужен.
+        pass
+
+    def _resolve_help_cat(self, category):
+        if not category:
+            return None
+        cat_l = str(category).lower().strip()
+        for c in COMMAND_CATEGORIES:
+            if c.lower() == cat_l or cat_l in c.lower():
+                return c
+        return None
 
     @commands.command(name="help", aliases=["h", "команды", "menu", "yardim"])
     async def help_prefix(self, ctx, category: str = None):
@@ -535,36 +597,26 @@ class Help(commands.Cog):
         except Exception as _ex:
             _log.debug("help_prefix(): подавлено: %s", _ex)
 
-        cat_id = None
-        if category:
-            cat_l = category.lower()
-            cat = next((c for c in CATEGORIES if c["id"] == cat_l or c["title"].lower() == cat_l), None)
-            if cat:
-                cat_id = cat["id"]
-
-        img_buf = await self.bot.loop.run_in_executor(
-            None, generate_help_card_bytes, cat_id
+        cat_id = self._resolve_help_cat(category)
+        e = build_help_embed(
+            category_id=cat_id,
+            member=ctx.author,
+            guild_id=ctx.guild.id if ctx.guild else 0,
         )
-        file = discord.File(img_buf, filename="help_card.png")
         view = HelpView(current_cat=cat_id)
-        await ctx.send(file=file, view=view)
+        await ctx.send(embed=e, view=view)
 
-    @app_commands.command(name="help", description="Профессиональное руководство и справка по всем командам")
+    @app_commands.command(name="help", description="Справка по командам бота")
     async def help_slash(self, interaction: discord.Interaction, category: str = None):
         await interaction.response.defer(ephemeral=True)
-        cat_id = None
-        if category:
-            cat_l = category.lower()
-            cat = next((c for c in CATEGORIES if c["id"] == cat_l or c["title"].lower() == cat_l), None)
-            if cat:
-                cat_id = cat["id"]
-
-        img_buf = await interaction.client.loop.run_in_executor(
-            None, generate_help_card_bytes, cat_id
+        cat_id = self._resolve_help_cat(category)
+        e = build_help_embed(
+            category_id=cat_id,
+            member=interaction.user,
+            guild_id=interaction.guild.id if interaction.guild else 0,
         )
-        file = discord.File(img_buf, filename="help_card.png")
         view = HelpView(current_cat=cat_id)
-        await interaction.followup.send(file=file, view=view, ephemeral=True)
+        await interaction.followup.send(embed=e, view=view, ephemeral=True)
 
 
 class HelpEmojiUpload(commands.Cog):

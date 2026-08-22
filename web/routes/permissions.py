@@ -97,8 +97,8 @@ def register(ctx):
     @login_required
     @role_required ('owner')
     def api_role_permissions_get (guild_id ):
-        """Вернуть: все роли сервера, категории команд, текущие ACL."""
-        from services .permission_acl import COMMAND_CATEGORIES ,load_acl
+        """Вернуть: все роли сервера, категории команд, текущие ACL, действия."""
+        from services .permission_acl import COMMAND_CATEGORIES ,load_acl ,ACTIONS ,load_action_acl
         import web .app as _app
         bot =_app .bot_instance
         guild =None
@@ -114,17 +114,62 @@ def register(ctx):
             roles =[
             {'id':str (r .id ),'name':r .name ,'color':str (r .color ),
              'position':r .position ,'hoist':r .hoist ,
-             'permissions':r .permissions .value }
+             'permissions':r .permissions .value ,
+             'members':len (getattr (r ,'members',[])or [])}
             for r in guild .roles
             ]
             roles .sort (key =lambda x :x ['position'],reverse =True )
+        elif _app ._demo_mode ():
+            # демо-превью без бота: роли из демо-набора (тот же источник,
+            # что /api/role-map) — страница «Права команд» живая в превью.
+            try :
+                from web .routes .guild_admin import _demo_roles_seed
+                roles =[
+                {'id':str (r ['id']),'name':r ['name'],'color':r ['color'],
+                 'position':int (r ['id'])if str (r ['id']).isdigit ()else 0,
+                 'hoist':False ,'permissions':0 ,
+                 'members':int (r .get ('members')or 0)}
+                for r in _demo_roles_seed ()
+                ]
+                roles .sort (key =lambda x :x ['position'])
+            except Exception as _ex:
+                _log.debug("api_role_permissions_get(): демо-роли: %s", _ex )
         acl =load_acl (int (guild_id ))
+        action_acl =load_action_acl (int (guild_id ))
         return jsonify ({
         'success':True ,
         'roles':roles ,
         'categories':COMMAND_CATEGORIES ,
         'acl':acl ,
+        'actions':ACTIONS ,
+        'action_acl':action_acl ,
         })
+
+
+    @app .route ('/api/role-permissions/<guild_id>/action/set',methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_role_permissions_action_set (guild_id ):
+        """Классические разрешения: установить роли для действия (бан/мут/…).
+        Пустой role_ids — снять правило (действие снова доступно всем)."""
+        from services .permission_acl import ACTIONS ,set_action_rule
+        data =request .get_json (silent =True )or {}
+        action =data .get ('action','').strip ()
+        role_ids =data .get ('role_ids',[]) or []
+        if action not in ACTIONS :
+            return jsonify ({'success':False ,'error':'Неизвестное действие'}),400
+        set_action_rule (int (guild_id ),action ,[str (r )for r in role_ids ])
+        return jsonify ({'success':True ,'action':action ,'role_ids':role_ids })
+
+
+    @app .route ('/api/role-permissions/<guild_id>/actions/clear',methods =['POST'])
+    @login_required
+    @role_required ('owner')
+    def api_role_permissions_actions_clear (guild_id ):
+        """Снять все классические ограничения (все действия доступны всем)."""
+        from services .permission_acl import clear_action_rules
+        clear_action_rules (int (guild_id ))
+        return jsonify ({'success':True })
 
 
     @app .route ('/api/role-permissions/<guild_id>/set',methods =['POST'])
@@ -173,7 +218,7 @@ def register(ctx):
                     acl [cat ]=role_ids
         elif preset =='staff':
             for cat ,cmds in COMMAND_CATEGORIES .items ():
-                if cat in ('Модерация','Сервер','Приглашения/Участники'):
+                if cat in ('Модерация','Тикеты','Логи'):
                     acl [cat ]=role_ids
         elif preset =='all':
             for cat ,cmds in COMMAND_CATEGORIES .items ():

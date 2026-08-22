@@ -6,371 +6,777 @@
   <div class="page-head-copy">
     <div class="eyebrow">Доступ <span class="sep">·</span> Права команд</div>
     <h1>Права команд</h1>
-    <p class="lead">Выберите одну или несколько ролей и настройте, какие команды им доступны.</p>
+    <p class="lead">Выберите роли слева и решите, какие команды им открыть, а какие закрыть. Изменения сохраняются сразу.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn btn-danger" id="reset-all" onclick="resetAll()"><i class="fas fa-rotate-left"></i> Сбросить всё</button>
   </div>
 </div>
-
 
 <style>
-  .rp-wrap { display:grid; grid-template-columns: 300px 1fr; gap:20px; padding:6px 2px 34px; }
-  @media (max-width: 900px){ .rp-wrap{ grid-template-columns:1fr; } }
+  .acc-wrap { padding: 6px 2px 40px; }
 
-  .rp-roles { background: linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:16px; padding:18px; align-self:start; position:sticky; top:12px; }
-  .rp-roles h3 { margin:0 0 6px; font-size:13px; letter-spacing:1.5px; opacity:.75; display:flex; align-items:center; gap:8px; }
-  .rp-roles h3 i { color:var(--ac); }
-  .rp-roles .sel-hint { font-size:11px; opacity:.5; margin:0 0 12px; }
-  .sel-count { display:inline-flex; align-items:center; gap:6px; margin:6px 0 12px; padding:5px 12px; border-radius:20px; font-size:12px; background:color-mix(in srgb, var(--ac) 16%, transparent); color:var(--ac-2); border:1px solid color-mix(in srgb, var(--ac) 30%, transparent); }
-  #role-list { max-height:58vh; overflow:auto; padding-right:4px; }
-  #role-list::-webkit-scrollbar{ width:6px; } #role-list::-webkit-scrollbar-thumb{ background:color-mix(in srgb, var(--text) 15%, transparent); border-radius:6px; }
-  .rp-role { display:flex; align-items:center; gap:11px; padding:9px 10px; border-radius:10px; cursor:pointer; margin-bottom:5px; border:1px solid transparent; transition:.12s; }
-  .rp-role:hover { background:color-mix(in srgb, var(--text) 6%, transparent); }
-  .rp-role.sel { background:linear-gradient(90deg, color-mix(in srgb, var(--ac) 20%, transparent), color-mix(in srgb, var(--ac) 5%, transparent)); border-color:var(--ac); }
-  .rp-role .cb { width:20px; height:20px; border-radius:6px; border:2px solid color-mix(in srgb, var(--text) 25%, transparent); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; color:#fff; transition:.12s; }
-  .rp-role.sel .cb { background:var(--ac); border-color:var(--ac); }
-  .rp-role .swatch { width:16px; height:16px; border-radius:6px; flex-shrink:0; border:1px solid color-mix(in srgb, var(--text) 25%, transparent); }
-  .rp-role .rname { flex:1; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .acc-card {
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-1);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .acc-card:hover { border-color: color-mix(in srgb, var(--ac) 32%, transparent); }
 
-  .rp-panel { background: linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:16px; padding:20px; }
-  .rp-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
-  .rp-head h2 { margin:0; font-size:18px; display:flex; align-items:center; gap:9px; }
-  .rp-head h2 i { color:var(--ac); }
-  .rp-head .sub { font-size:12px; opacity:.55; margin-top:4px; }
+  .acc-info {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: color-mix(in srgb, var(--ac) 7%, transparent);
+    border: 1px solid var(--ac-line);
+    border-radius: var(--r);
+    padding: 12px 14px;
+    font-size: var(--fs-sm); color: var(--text-2); line-height: 1.55;
+    margin-bottom: 16px;
+  }
+  .acc-info i { color: var(--ac); margin-top: 2px; }
 
-  .status-pill { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:20px; font-size:11.5px; font-weight:600; }
-  .status-all { background:rgba(46,204,113,0.15); color:var(--ok); border:1px solid rgba(46,204,113,0.3); }
-  .status-roles { background:rgba(243,156,18,0.15); color:#f39c12; border:1px solid rgba(243,156,18,0.3); }
-  .status-default { background:color-mix(in srgb, var(--text) 6%, transparent); color:color-mix(in srgb, var(--text) 50%, transparent); border:1px solid color-mix(in srgb, var(--text) 12%, transparent); }
+  .acc-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 960px) { .acc-layout { grid-template-columns: 1fr; } }
 
-  .cat-box { border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:14px; margin-bottom:14px; overflow:hidden; background: var(--bg); }
-  .cat-box.open { border-color:color-mix(in srgb, var(--ac) 35%, transparent); }
-  .cat-head { display:flex; align-items:center; gap:12px; padding:14px 16px; background:color-mix(in srgb, var(--text) 3%, transparent); flex-wrap:wrap; }
-  .cat-head .cat-title { font-size:14.5px; font-weight:700; letter-spacing:.3px; }
-  .cat-head .cat-count { font-size:11px; opacity:.5; padding:3px 9px; border-radius:20px; background:color-mix(in srgb, var(--text) 7%, transparent); }
-  .cat-head .spacer { flex:1; }
-  .expand-btn { cursor:pointer; opacity:.6; font-size:13px; transition:.15s; padding:2px 6px; }
-  .expand-btn:hover { opacity:1; }
-  .cat-body { padding:14px 16px 16px; display:none; border-top:1px solid color-mix(in srgb, var(--text) 6%, transparent); }
-  .cat-box.open .cat-body { display:block; }
+  .acc-roles { padding: 16px; position: sticky; top: 70px; }
+  @media (max-width: 960px) { .acc-roles { position: static; } }
 
-  .role-actions { display:flex; gap:8px; margin:0 0 10px; flex-wrap:wrap; }
-  .rp-btn-small { padding:6px 11px; font-size:11.5px; }
-  .rp-btn { padding:8px 14px; border-radius:10px; border:1px solid color-mix(in srgb, var(--text) 16%, transparent); background:color-mix(in srgb, var(--text) 5%, transparent); cursor:pointer; font-size:12.5px; transition:.15s; display:inline-flex; align-items:center; gap:7px; }
-  .rp-btn:hover { background:var(--ac); color:#fff; border-color:transparent; }
-  .rp-btn i { font-size:12px; }
-  .rp-btn-green { border-color:rgba(46,204,113,0.35); color:var(--ok); }
-  .rp-btn-green:hover { background:var(--ok); color:#fff; }
-  .rp-btn-red { color:var(--err); border-color:rgba(231,76,60,0.35); }
-  .rp-btn-red:hover { background:var(--err); color:#fff; }
+  .acc-sec-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: var(--fs-sm); font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--text-3); margin-bottom: 12px;
+  }
+  .acc-sec-title i { color: var(--ac); }
+  .acc-count {
+    margin-left: auto; font-size: var(--fs-xs); font-weight: 700; color: var(--text-2);
+    padding: 2px 9px; border-radius: 99px; background: var(--surface-3);
+    letter-spacing: 0; text-transform: none;
+  }
 
-  .everyone-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; padding:11px 13px; border-radius:11px; background:color-mix(in srgb, var(--ac) 8%, transparent); border:1px dashed color-mix(in srgb, var(--ac) 28%, transparent); }
-  .everyone-row .er-label { font-size:12px; opacity:.75; display:flex; align-items:center; gap:8px; }
-  .everyone-row .er-label i { color:var(--ac); }
+  .acc-search {
+    display: flex; align-items: center; gap: 9px;
+    background: var(--surface-3);
+    border: 1px solid color-mix(in srgb, var(--text) 9%, transparent);
+    border-radius: var(--r);
+    padding: 8px 12px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .acc-search:focus-within { border-color: var(--ac); box-shadow: 0 0 0 3px var(--ac-soft); }
+  .acc-search i { color: var(--text-3); font-size: var(--fs-sm); }
+  .acc-search input {
+    flex: 1; min-width: 0; width: auto; border: none; background: none; outline: none;
+    color: var(--text); font-size: var(--fs-md); font-family: inherit; padding: 0;
+    box-shadow: none;
+  }
+  .acc-search input:focus { box-shadow: none; border: none; }
+  .acc-search input::placeholder { color: var(--text-3); }
 
-  .cmd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); gap:9px; }
-  .cmd-item { display:flex; align-items:center; justify-content:space-between; gap:8px; background:color-mix(in srgb, var(--text) 3%, transparent); border:1px solid color-mix(in srgb, var(--text) 7%, transparent); border-radius:9px; padding:9px 11px; font-size:12.5px; }
-  .cmd-item .cname { font-family:monospace; color:#9ad0ff; font-size:12px; }
-  .cmd-item .cbtn { font-size:11px; padding:5px 10px; border-radius:7px; cursor:pointer; border:1px solid color-mix(in srgb, var(--text) 15%, transparent); background:color-mix(in srgb, var(--text) 4%, transparent); transition:.15s; display:inline-flex; align-items:center; gap:5px; }
-  .cmd-item .cbtn:hover { background:color-mix(in srgb, var(--text) 10%, transparent); }
-  .cmd-item .cbtn.grant { background:var(--ac); color:#fff; border-color:transparent; }
+  .acc-role-actions { display: flex; gap: 6px; margin: 10px 0; }
+  .acc-role-actions .btn { flex: 1; }
 
-  .info-bar { background:linear-gradient(90deg, color-mix(in srgb, var(--ac) 14%, transparent), color-mix(in srgb, var(--ac) 5%, transparent)); border:1px solid color-mix(in srgb, var(--ac) 30%, transparent); border-radius:12px; padding:13px 16px; font-size:12.5px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; }
-  .info-bar i { color:var(--ac); margin-top:1px; }
+  .acc-selcount {
+    display: inline-flex; align-items: center; gap: 7px;
+    margin: 2px 0 10px; padding: 5px 12px; border-radius: 99px;
+    font-size: var(--fs-sm); font-weight: 600;
+    background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line);
+  }
+  .acc-selcount i { font-size: var(--fs-xs); }
 
-  .rp-toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(130%); background:rgba(18,18,22,0.95); border:1px solid color-mix(in srgb, var(--text) 16%, transparent); padding:13px 22px; border-radius:12px; font-size:13px; z-index:999; transition:.3s; box-shadow:0 10px 34px rgba(0,0,0,0.55); }
-  .rp-toast.show { transform:translateX(-50%) translateY(0); }
-  .rp-toast.ok { border-color:var(--ok); }
-  .rp-toast.err { border-color:var(--err); }
+  .acc-role-list { display: flex; flex-direction: column; gap: 4px; max-height: 58vh; overflow: auto; padding-right: 3px; }
+  .acc-role-list::-webkit-scrollbar { width: 6px; }
+  .acc-role-list::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text) 15%, transparent); border-radius: 6px; }
 
-  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6);  display:none; align-items:center; justify-content:center; z-index:1000; }
-  .modal-overlay.show { display:flex; }
-  .modal-box { background:linear-gradient(165deg,#1f1f26,#16161b); border:1px solid color-mix(in srgb, var(--text) 12%, transparent); border-radius:18px; padding:26px 28px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.6); }
-  .modal-box .m-icon { font-size:34px; text-align:center; margin-bottom:10px; }
-  .modal-box .m-title { font-size:17px; font-weight:700; text-align:center; margin-bottom:8px; }
-  .modal-box .m-desc { font-size:13px; opacity:.75; text-align:center; margin-bottom:20px; line-height:1.5; }
-  .modal-box .m-btns { display:flex; gap:10px; justify-content:center; }
-  .modal-box .m-btns .rp-btn { min-width:110px; justify-content:center; font-size:13px; padding:10px 14px; }
+  .role-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: var(--r);
+    border: 1px solid transparent; cursor: pointer;
+    transition: background .12s, border-color .12s, box-shadow .12s;
+  }
+  .role-item:hover { background: var(--surface-3); }
+  .role-item:focus-visible { outline: 2px solid var(--ac); outline-offset: 1px; }
+  .role-item.sel {
+    background: var(--ac-soft); border-color: var(--ac-line);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ac) 22%, transparent);
+  }
+  .role-check {
+    width: 18px; height: 18px; flex: 0 0 18px; border-radius: 6px;
+    border: 2px solid var(--line-3); display: grid; place-items: center;
+    font-size: 10px; color: transparent; transition: background .12s, border-color .12s, color .12s;
+  }
+  .role-item.sel .role-check { background: var(--ac); border-color: var(--ac); color: #fff; }
+  .role-dot {
+    width: 18px; height: 18px; flex: 0 0 18px; border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text) 5%, transparent);
+  }
+  .role-name { flex: 1; min-width: 0; font-size: var(--fs-md); font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .role-members { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--text-3); }
+  .role-empty { padding: 22px 8px; text-align: center; font-size: var(--fs-sm); color: var(--text-3); }
+  .role-empty i { display: block; font-size: 20px; margin-bottom: 8px; color: var(--line-3); }
+
+  .acc-main { padding: 16px; }
+  .acc-toolbar { padding-bottom: 14px; border-bottom: 1px solid var(--line-2); margin-bottom: 14px; }
+
+  .acc-target { display: flex; align-items: center; gap: 11px; min-width: 0; margin-bottom: 12px; }
+  .acc-target-ico {
+    width: 38px; height: 38px; flex: 0 0 38px; border-radius: 11px;
+    display: grid; place-items: center; font-size: 15px;
+    background: var(--ac-soft); color: var(--ac);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 3px 10px color-mix(in srgb, var(--ac) 16%, transparent);
+  }
+  .acc-target-copy { min-width: 0; }
+  .acc-target-title { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
+  .acc-target-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  .acc-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 4px 10px; border-radius: 99px; font-size: var(--fs-sm); font-weight: 600;
+    background: var(--surface-3); color: var(--text-2); border: 1px solid var(--line-2);
+  }
+  .acc-chip-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 9px; }
+
+  .acc-presets {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin: 0 0 12px; padding: 10px 12px;
+    background: var(--surface-2); border: 1px solid var(--line-2); border-radius: var(--r);
+  }
+  .acc-presets .lbl { display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); margin-right: auto; }
+  .acc-presets .lbl i { color: var(--ac); }
+  .acc-presets .btn i { color: var(--ac); }
+
+  .acc-cmdbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .acc-cmdbar .acc-search { flex: 1; min-width: 220px; }
+  .acc-cmdbar .hint { margin-left: auto; font-size: var(--fs-xs); color: var(--text-3); }
+
+  .cat-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .cat-card {
+    background: var(--surface);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .cat-card.open { border-color: color-mix(in srgb, var(--ac) 40%, transparent); box-shadow: var(--shadow-2), inset 3px 0 0 var(--ac); }
+  .cat-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 16px; cursor: pointer; user-select: none;
+    transition: background .12s;
+  }
+  .cat-head:hover { background: var(--surface-2); }
+  .cat-head:focus-visible { outline: 2px solid var(--ac); outline-offset: -2px; }
+  .cat-ico {
+    width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px;
+    display: grid; place-items: center; font-size: 14px;
+    color: var(--tone); background: color-mix(in srgb, var(--tone) 13%, transparent);
+  }
+  .cat-title { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
+  .cat-count { font-size: var(--fs-xs); color: var(--text-3); padding: 3px 9px; border-radius: 99px; background: var(--surface-3); }
+  .cat-head .spacer { flex: 1; }
+  .cat-chev { color: var(--text-3); font-size: var(--fs-sm); transition: transform .18s var(--ease); }
+  .cat-card.open .cat-chev { transform: rotate(180deg); }
+
+  .cat-body { display: none; padding: 14px 16px 16px; border-top: 1px solid var(--line-2); background: var(--surface-2); }
+  .cat-card.open .cat-body { display: block; }
+
+  .cat-actions {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 12px; margin-bottom: 12px;
+    background: color-mix(in srgb, var(--ac) 5%, transparent);
+    border: 1px dashed var(--ac-line); border-radius: var(--r);
+  }
+  .cat-actions .lbl { display: inline-flex; align-items: center; gap: 7px; font-size: var(--fs-sm); color: var(--text-2); margin-right: auto; }
+  .cat-actions .lbl i { color: var(--ac); }
+
+  .cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+
+  .cmd-card {
+    background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r);
+    padding: 9px 10px; display: flex; flex-direction: column; gap: 8px;
+    transition: border-color .12s, background .12s;
+  }
+  .cmd-card.on { border-color: color-mix(in srgb, var(--ac) 45%, transparent); background: color-mix(in srgb, var(--ac) 5%, transparent); }
+  .cmd-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .cmd-name { flex: 1; min-width: 0; font-family: var(--mono); font-size: var(--fs-sm); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cmd-card.on .cmd-name { color: var(--ac); font-weight: 600; }
+  .cmd-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px; border-radius: 99px; font-size: var(--fs-xs); font-weight: 600;
+    white-space: nowrap; flex: 0 0 auto;
+  }
+  .cmd-pill i { font-size: 9px; }
+  .cmd-pill-all { background: var(--surface-3); color: var(--text-2); border: 1px solid var(--line-2); }
+  .cmd-pill-sel { background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); }
+  .cmd-pill-mix { background: var(--warn-soft); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
+  .cmd-pill-other { background: var(--err-soft); color: var(--err); border: 1px solid color-mix(in srgb, var(--err) 30%, transparent); }
+
+  .cmd-grant {
+    width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 6px 10px; border-radius: 8px; cursor: pointer;
+    font-size: var(--fs-sm); font-weight: 700;
+    border: 1px solid transparent; transition: background .12s, border-color .12s, color .12s;
+  }
+  .cmd-grant.give { background: var(--ac-grad); color: #fff; box-shadow: 0 2px 10px color-mix(in srgb, var(--ac) 30%, transparent); }
+  .cmd-grant.give:hover { filter: brightness(1.05); }
+  .cmd-grant.revoke { background: var(--surface-3); color: var(--text-2); border-color: var(--line-2); }
+  .cmd-grant.revoke:hover { border-color: var(--ac); color: var(--ac); }
+  .cmd-grant:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
+  .cmd-grant:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── Классические разрешения (действия) ── */
+  .acc-actions { margin-bottom: 16px; }
+  .acc-actions-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
+  .acc-actions-head .t { font-size: var(--fs-sm); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
+  .acc-actions-head .t i { color: var(--ac); }
+  .acc-actions-head .hint { font-size: var(--fs-xs); color: var(--text-3); }
+  .act-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+  .act-card {
+    background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r);
+    padding: 10px; display: flex; flex-direction: column; gap: 8px;
+    transition: border-color .12s, background .12s;
+  }
+  .act-card.on { border-color: color-mix(in srgb, var(--ac) 45%, transparent); background: color-mix(in srgb, var(--ac) 5%, transparent); }
+  .act-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .act-ico {
+    width: 30px; height: 30px; flex: 0 0 30px; border-radius: 9px;
+    display: grid; place-items: center; font-size: 13px;
+    color: var(--tone); background: color-mix(in srgb, var(--tone) 13%, transparent);
+  }
+  .act-name { flex: 1; min-width: 0; font-size: var(--fs-md); font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .acc-empty { text-align: center; padding: 46px 20px; color: var(--text-3); }
+  .acc-empty-ico {
+    width: 54px; height: 54px; margin: 0 auto 14px; border-radius: 16px;
+    display: grid; place-items: center; font-size: 22px;
+    background: var(--ac-soft); color: var(--ac);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 6px 18px color-mix(in srgb, var(--ac) 14%, transparent);
+  }
+  .acc-empty h3 { font-size: var(--fs-lg); font-weight: 700; color: var(--text); margin: 0 0 6px; }
+  .acc-empty p { font-size: var(--fs-sm); color: var(--text-3); max-width: 380px; margin: 0 auto 16px; line-height: 1.55; }
+
+  .tone-0 { --tone: var(--ac); }
+  .tone-1 { --tone: var(--warn); }
+  .tone-2 { --tone: var(--violet); }
+  .tone-3 { --tone: var(--cyan); }
+  .tone-4 { --tone: var(--orange); }
+  .tone-5 { --tone: var(--info); }
+  .tone-6 { --tone: var(--ok); }
+  .tone-7 { --tone: var(--text-3); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cat-chev, .role-item, .role-check, .cmd-card, .cmd-grant, .cat-head { transition: none; }
+  }
 </style>
 
-<div class="info-bar">
-  <i class="fas fa-info-circle"></i> <b>Как это работает:</b> отметьте одну или несколько ролей слева <i class="fas fa-check-square"></i>, затем жмите «Открыть» у команд — доступ получит каждая отмеченная роль. Состояние категории: <span class="status-pill status-all"><i class="fas fa-globe"></i> Для всех</span> — доступно всем, <span class="status-pill status-roles"><i class="fas fa-lock"></i> Только роли</span> — только отмеченные роли, <span class="status-pill status-default"><i class="fas fa-minus"></i> По умолчанию</span> — без ограничений.
-</div>
-
-<div class="rp-wrap">
-  <div class="rp-roles">
-    <h3><i class="fas fa-users-cog"></i> РОЛИ</h3>
-    <p class="sel-hint">Отметьте роли — можно несколько</p>
-    <div class="role-actions">
-      <button type="button" class="rp-btn rp-btn-small" onclick="selectAllRoles()"><i class="fas fa-check-double"></i> Выбрать все</button>
-      <button type="button" class="rp-btn rp-btn-small" onclick="clearAllRoles()"><i class="fas fa-times"></i> Сбросить</button>
-    </div>
-    <div class="sel-count" id="sel-count">Выбрано: 0</div>
-    <div id="role-list"></div>
+<div class="acc-wrap">
+  <div class="kpi-row">
+    <div class="kpi tone-info"><span class="kpi-icon"><i class="fas fa-user"></i></span><div class="kpi-copy"><div class="kpi-value" id="kpi-roles">0</div><div class="kpi-label">Ролей на сервере</div></div></div>
+    <div class="kpi tone-ok"><span class="kpi-icon"><i class="fas fa-terminal"></i></span><div class="kpi-copy"><div class="kpi-value" id="kpi-cmds">0</div><div class="kpi-label">Команд бота</div></div></div>
+    <div class="kpi tone-warn"><span class="kpi-icon"><i class="fas fa-layer-group"></i></span><div class="kpi-copy"><div class="kpi-value" id="kpi-cats">0</div><div class="kpi-label">Категорий</div></div></div>
+    <div class="kpi tone-err"><span class="kpi-icon"><i class="fas fa-lock"></i></span><div class="kpi-copy"><div class="kpi-value" id="kpi-rules">0</div><div class="kpi-label">Активных ограничений</div></div></div>
   </div>
 
-  <div class="rp-panel">
-    <div class="rp-head">
-      <div>
-        <h2><i class="fas fa-user-tag"></i> <span id="sel-role-name">Выберите роли</span></h2>
-        <div class="sub" id="sel-role-sub">Отметьте роли слева, затем настройте доступ к командам</div>
+  <div class="acc-info">
+    <i class="fas fa-circle-info"></i>
+    <span><b>Как это работает.</b> Выберите роли слева. У каждой команды есть кнопка: <b>«Дать доступ»</b> — команда откроется выбранным ролям (остальные её потеряют), <b>«Снять доступ»</b> — вернёт команду всем. Статус-пилюля рядом показывает текущее состояние. Изменения применяются сразу.</span>
+  </div>
+
+  <div class="acc-layout">
+    <aside class="acc-card acc-roles">
+      <div class="acc-sec-title"><i class="fas fa-user-tag"></i> Роли сервера <span class="acc-count" id="role-count">0</span></div>
+      <div class="acc-search">
+        <i class="fas fa-magnifying-glass"></i>
+        <input type="text" id="role-search" placeholder="Найти роль..." aria-label="Найти роль" oninput="renderRoles()">
       </div>
-      <button type="button" class="rp-btn rp-btn-red" onclick="resetAll()"><i class="fas fa-undo-alt"></i> Сбросить всё</button>
-    </div>
+      <div class="acc-role-actions">
+        <button type="button" class="btn btn-sm btn-ghost" onclick="selectAllRoles()"><i class="fas fa-check-double"></i> Все</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="roles-clear" onclick="clearRoles()"><i class="fas fa-eraser"></i> Сброс</button>
+      </div>
+      <div class="acc-selcount" id="sel-count"><i class="fas fa-check-double"></i> Выбрано: 0</div>
+      <div class="acc-role-list" id="role-list"></div>
+    </aside>
 
-    <div id="category-list"></div>
+    <div class="acc-card acc-main" id="acc-main">
+      <div class="acc-toolbar" id="acc-toolbar" style="display:none">
+        <div class="acc-target">
+          <span class="acc-target-ico"><i class="fas fa-key"></i></span>
+          <div class="acc-target-copy">
+            <div class="acc-target-title">Доступ настраивается для:</div>
+            <div class="acc-target-chips" id="target-chips"></div>
+          </div>
+        </div>
+        <div class="acc-presets">
+          <span class="lbl"><i class="fas fa-bolt"></i> Быстрая настройка</span>
+          <button type="button" class="btn btn-sm" id="preset-mod" onclick="applyPreset('mod')"><i class="fas fa-shield-halved"></i> Модерация</button>
+          <button type="button" class="btn btn-sm" id="preset-staff" onclick="applyPreset('staff')"><i class="fas fa-user-tie"></i> Стафф</button>
+          <button type="button" class="btn btn-sm" id="preset-all" onclick="applyPreset('all')"><i class="fas fa-globe"></i> Все команды</button>
+        </div>
+        <div class="acc-cmdbar">
+          <div class="acc-search">
+            <i class="fas fa-magnifying-glass"></i>
+            <input type="text" id="cmd-search" placeholder="Найти команду по названию..." aria-label="Найти команду" oninput="renderCommands()">
+          </div>
+          <button type="button" class="btn btn-sm btn-ghost" id="expand-all" onclick="expandAll(true)"><i class="fas fa-angles-down"></i> Развернуть все</button>
+          <button type="button" class="btn btn-sm btn-ghost" id="collapse-all" onclick="expandAll(false)"><i class="fas fa-angles-up"></i> Свернуть все</button>
+          <span class="hint">«Дать доступ» — только выбранным ролям</span>
+        </div>
+      </div>
+      <div class="acc-actions" id="actions-block"></div>
+      <div id="acc-body"></div>
+    </div>
   </div>
 </div>
-
-<div class="modal-overlay" id="confirm-modal">
-  <div class="modal-box">
-    <div class="m-icon" id="m-icon" style="color:var(--ac,var(--ac));"><i class="fas fa-globe"></i></div>
-    <div class="m-title" id="m-title">Подтверждение</div>
-    <div class="m-desc" id="m-desc">Вы уверены?</div>
-    <div class="m-btns">
-      <button type="button" class="rp-btn" onclick="closeConfirm()">Отмена</button>
-      <button type="button" class="rp-btn rp-btn-green" id="m-confirm-btn">Подтвердить</button>
-    </div>
-  </div>
-</div>
-
-<div class="rp-toast" id="rp-toast"></div>
 
 <script>
 var ALL_ROLES = [];
 var ACL = {};
 var CATEGORIES = {};
-var selectedRoleIds = [];   // массив выбранных ролей
-var openCats = {};          // храним открытые категории (чтобы не закрывались)
-var _confirmCb = null;
+var ACTIONS = {};
+var ACTION_ACL = {};
+var selectedRoleIds = [];
+var openCats = {};
 
-function toast(msg, ok){
-  var t = document.getElementById('rp-toast');
-  t.textContent = msg;
-  t.className = 'rp-toast show ' + (ok ? 'ok' : 'err');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(function(){ t.className='rp-toast'; }, 2600);
+var ACTION_META = {
+  ban:      { icon: 'fa-ban',                tone: 0 },
+  kick:     { icon: 'fa-user-slash',         tone: 1 },
+  mute:     { icon: 'fa-microphone-slash',   tone: 2 },
+  timeout:  { icon: 'fa-hourglass-half',     tone: 3 },
+  warn:     { icon: 'fa-triangle-exclamation', tone: 4 },
+  purge:    { icon: 'fa-broom',              tone: 5 },
+  lockdown: { icon: 'fa-lock',               tone: 6 },
+  roles:    { icon: 'fa-user-gear',          tone: 0 }
+};
+
+var CAT_META = {
+  'Модерация':             { icon: 'fa-shield-halved',      tone: 0 },
+  'Экономика':             { icon: 'fa-coins',              tone: 1 },
+  'Уровни':                { icon: 'fa-ranking-star',       tone: 2 },
+  'Тикеты':                { icon: 'fa-ticket',             tone: 3 },
+  'Развлечения':           { icon: 'fa-gamepad',            tone: 4 },
+  'Сервер':                { icon: 'fa-server',             tone: 5 },
+  'Приглашения/Участники': { icon: 'fa-user-plus',          tone: 6 },
+  'Служебные':             { icon: 'fa-screwdriver-wrench', tone: 7 }
+};
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-/* Сохраняем и восстанавливаем scroll, чтобы не подпрыгивало */
-function refresh(renderFn){
-  var y = window.scrollY;
-  var el = document.querySelector('.rp-panel');
-  var elY = el ? el.scrollTop : 0;
-  renderFn();
-  requestAnimationFrame(function(){
-    window.scrollTo(0, y);
-    if(el) el.scrollTop = elY;
-  });
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
 }
 
-function showConfirm(title, desc, icon, cb){
-  document.getElementById('m-title').textContent = title;
-  document.getElementById('m-desc').textContent = desc;
-  document.getElementById('m-icon').innerHTML = '<i class="fas ' + String(icon || 'fa-circle-question').replace(/[^a-z0-9\- ]/gi, '') + '"></i>';
-  _confirmCb = cb;
-  document.getElementById('confirm-modal').classList.add('show');
-}
-function closeConfirm(){
-  document.getElementById('confirm-modal').classList.remove('show');
-  _confirmCb = null;
-}
-document.getElementById('confirm-modal').addEventListener('click', function(e){ if(e.target===this) closeConfirm(); });
-document.getElementById('m-confirm-btn').addEventListener('click', function(){ var cb=_confirmCb; closeConfirm(); if(cb) cb(); });
-
-function hexToRgba(hex, a){
-  var h = String(hex || '#4f46e5').replace('#', '');
-  if(h.length===3) h=h.split('').map(function(x){return x+x;}).join('');
-  var n = parseInt(h,16);
-  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+function swatchColor(col) {
+  var c = String(col == null ? '' : col).trim();
+  if (!c || c === '0') return 'linear-gradient(135deg, var(--text-3), var(--text-4))';
+  if (/^\d{5,9}$/.test(c)) c = parseInt(c, 10).toString(16);
+  if (c.charAt(0) !== '#') c = '#' + c;
+  return c;
 }
 
-function loadRoles(){
-  fetch('/api/role-permissions/'+('{{ guild_id }}'))
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(!d.success){ toast('Не удалось загрузить', false); return; }
-      ALL_ROLES = d.roles;
+function roleName(rid) {
+  for (var i = 0; i < ALL_ROLES.length; i++) if (ALL_ROLES[i].id === rid) return ALL_ROLES[i].name;
+  return 'Роль ' + rid;
+}
+
+function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }
+
+function askConfirm(title, desc, cb, danger) {
+  if (window.confirmAction) window.confirmAction(title, desc, cb, { danger: !!danger });
+  else if (window.confirm) { if (window.confirm(title + ' — ' + desc)) cb(); }
+  else cb();
+}
+
+function reflow(fn) {
+  var y = window.scrollY || 0;
+  var rl = document.getElementById('role-list');
+  var rly = rl ? rl.scrollTop : 0;
+  fn();
+  if (window.requestAnimationFrame) {
+    window.requestAnimationFrame(function () {
+      if (window.scrollTo) { try { window.scrollTo(0, y); } catch (e) {} }
+      var rl2 = document.getElementById('role-list');
+      if (rl2) rl2.scrollTop = rly;
+    });
+  }
+}
+
+function loadData() {
+  fetch('/api/role-permissions/' + ('{{ guild_id }}'))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success) { toast('Не удалось загрузить данные', false); return; }
+      ALL_ROLES = d.roles || [];
       ACL = d.acl || {};
       CATEGORIES = d.categories || {};
-      // по умолчанию открыть все категории
-      Object.keys(CATEGORIES).forEach(function(c){ openCats[c]=true; });
-      renderRoles();
-      renderCategories();
+      ACTIONS = d.actions || {};
+      ACTION_ACL = d.action_acl || {};
+      Object.keys(CATEGORIES).forEach(function (c) { if (openCats[c] === undefined) openCats[c] = true; });
+      renderStats();
+      reflow(function () { renderRoles(); renderSelSummary(); renderCommands(); renderActions(); });
     })
-    .catch(function(){ toast('Ошибка загрузки', false); });
+    .catch(function () { toast('Ошибка загрузки', false); });
 }
 
-function renderRoles(){
-  var el = document.getElementById('role-list');
-  el.innerHTML = ALL_ROLES.map(function(r){
-    var sel = selectedRoleIds.indexOf(r.id) !== -1;
-    return '<div class="rp-role '+(sel?'sel':'')+'" onclick="toggleRole(\''+r.id+'\')">'
-      + '<span class="cb">'+(sel?'<i class=\"fas fa-check\"></i>':'')+'</span>'
-      + '<span class="swatch" style="background:'+hexToRgba(r.color,0.9)+'"></span>'
-      + '<span class="rname">'+r.name+'</span>'
-      + '</div>';
-  }).join('');
-  document.getElementById('sel-count').innerHTML = '<i class="fas fa-check-double"></i> Выбрано: '+selectedRoleIds.length;
-  if(selectedRoleIds.length===0){
-    document.getElementById('sel-role-name').textContent = 'Выберите роли';
-    document.getElementById('sel-role-sub').textContent = 'Отметьте роли слева, затем настройте доступ к командам';
+function renderStats() {
+  var totalCmds = 0;
+  Object.keys(CATEGORIES).forEach(function (c) { totalCmds += (CATEGORIES[c] || []).length; });
+  var rules = Object.keys(ACL).filter(function (k) { return (ACL[k] || []).length > 0; }).length;
+  document.getElementById('kpi-roles').textContent = ALL_ROLES.length;
+  document.getElementById('kpi-cmds').textContent = totalCmds;
+  document.getElementById('kpi-cats').textContent = Object.keys(CATEGORIES).length;
+  document.getElementById('kpi-rules').textContent = rules;
+}
+
+function renderRoles() {
+  var host = document.getElementById('role-list');
+  var q = (document.getElementById('role-search').value || '').toLowerCase().trim();
+  document.getElementById('role-count').textContent = ALL_ROLES.length;
+  var html;
+  if (!ALL_ROLES.length) {
+    html = '<div class="role-empty"><i class="fas fa-users-cog"></i>Роли сервера не загружены</div>';
   } else {
-    var names = ALL_ROLES.filter(function(r){ return selectedRoleIds.indexOf(r.id)!==-1; }).map(function(r){ return r.name; });
-    document.getElementById('sel-role-name').textContent = names.join(', ');
-    document.getElementById('sel-role-sub').textContent = 'Доступ будет выдан ' + selectedRoleIds.length + ' отмеченным ролям';
+    var list = ALL_ROLES.filter(function (r) { return !q || (r.name || '').toLowerCase().indexOf(q) !== -1; });
+    if (!list.length) {
+      html = '<div class="role-empty"><i class="fas fa-magnifying-glass"></i>Ролей не найдено</div>';
+    } else {
+      html = list.map(function (r) {
+        var sel = selectedRoleIds.indexOf(r.id) !== -1;
+        return '<div class="role-item' + (sel ? ' sel' : '') + '" data-rid="' + r.id + '" role="checkbox" aria-checked="' + (sel ? 'true' : 'false') + '" tabindex="0">'
+          + '<span class="role-check"><i class="fas fa-check"></i></span>'
+          + '<span class="role-dot" style="background:' + swatchColor(r.color) + '"></span>'
+          + '<span class="role-name">' + esc(r.name) + '</span>'
+          + '<span class="role-members"><i class="fas fa-user"></i>' + (r.members || 0) + '</span>'
+          + '</div>';
+      }).join('');
+    }
   }
+  host.innerHTML = html;
 }
 
-function toggleRole(id){
-  var i = selectedRoleIds.indexOf(id);
-  if(i===-1) selectedRoleIds.push(id); else selectedRoleIds.splice(i,1);
-  refresh(function(){ renderRoles(); renderCategories(); });
-}
-
-function selectAllRoles(){
-  if(!ALL_ROLES.length){ toast('Роли не загружены', false); return; }
-  selectedRoleIds = ALL_ROLES.map(function(r){ return r.id; });
-  refresh(function(){ renderRoles(); renderCategories(); });
-  toast('Выбраны все роли ('+selectedRoleIds.length+')', true);
-}
-
-function clearAllRoles(){
-  selectedRoleIds = [];
-  refresh(function(){ renderRoles(); renderCategories(); });
-  toast('Выбор ролей сброшен', true);
-}
-
-function allowedRoles(key){ return ACL[key] || []; }
-
-/* есть ли выбранная роль в списке разрешённых для команды */
-function anySelectedIn(key){
-  var allowed = ACL[key] || [];
-  return allowed.some(function(r){ return selectedRoleIds.indexOf(r)!==-1; });
-}
-
-function categoryStatus(cat){
-  var a = ACL[cat];
-  if(a && a.length>0) return 'roles';
-  var cmds = CATEGORIES[cat]||[];
-  for(var i=0;i<cmds.length;i++){ var ca=ACL[cmds[i]]; if(ca && ca.length>0) return 'roles'; }
-  return 'default';
-}
-
-function renderCategories(){
-  if(!selectedRoleIds.length){
-    document.getElementById('category-list').innerHTML =
-      '<div style="text-align:center;opacity:.5;padding:50px 0;"><i class="fas fa-arrow-left" style="font-size:30px;display:block;margin-bottom:12px;"></i>Отметьте хотя бы одну роль слева</div>';
+/* Обновляет счётчик, чипы выбранных ролей и видимость панели инструментов */
+function renderSelSummary() {
+  document.getElementById('sel-count').innerHTML = '<i class="fas fa-check-double"></i> Выбрано: ' + selectedRoleIds.length;
+  var chips = document.getElementById('target-chips');
+  var toolbar = document.getElementById('acc-toolbar');
+  if (!selectedRoleIds.length) {
+    toolbar.style.display = 'none';
+    chips.innerHTML = '';
     return;
   }
-  var el = document.getElementById('category-list');
-  el.innerHTML = Object.keys(CATEGORIES).map(function(cat){
-    var cmds = CATEGORIES[cat];
-    var st = categoryStatus(cat);
-    var pill = st==='all' ? '<span class="status-pill status-all"><i class="fas fa-globe"></i> Для всех</span>'
-             : st==='roles' ? '<span class="status-pill status-roles"><i class="fas fa-lock"></i> Только роли</span>'
-             : '<span class="status-pill status-default"><i class="fas fa-minus"></i> По умолчанию</span>';
+  toolbar.style.display = 'block';
+  chips.innerHTML = selectedRoleIds.map(function (r) {
+    var role = null;
+    for (var i = 0; i < ALL_ROLES.length; i++) if (ALL_ROLES[i].id === r) role = ALL_ROLES[i];
+    var name = role ? role.name : 'Роль ' + r;
+    var color = role ? swatchColor(role.color) : '#888';
+    return '<span class="acc-chip"><span class="acc-chip-dot" style="background:' + color + '"></span>' + esc(name) + '</span>';
+  }).join('');
+  renderActions();
+}
 
-    return '<div class="cat-box '+(openCats[cat]?'open':'')+'" id="cat-'+cat+'">'
-      + '<div class="cat-head">'
-      + '<span class="cat-title">'+cat+'</span>'
-      + pill
-      + '<span class="cat-count">'+cmds.length+' команд</span>'
-      + '<span class="spacer"></span>'
-      + '<span class="expand-btn" onclick="toggleCatOpen(\''+cat+'\')"><i class="fas '+(openCats[cat]?'fa-chevron-up':'fa-chevron-down')+'"></i></span>'
-      + '</div>'
-      + '<div class="cat-body">'
-      + '<div class="everyone-row">'
-      + '<span class="er-label"><i class="fas fa-globe"></i> Снять все ограничения категории (для всех):</span>'
-      + '<button type="button" class="rp-btn rp-btn-green" onclick="categoryEveryone(\''+cat+'\')"><i class="fas fa-users"></i> Сделать «Для всех»</button>'
-      + '</div>'
-      + '<div class="everyone-row">'
-      + '<span class="er-label"><i class="fas fa-check-double"></i> Выдать эту категорию '+selectedRoleIds.length+' отмеченным ролям:</span>'
-      + '<button type="button" class="rp-btn" onclick="categoryAssign(\''+cat+'\')"><i class="fas fa-check-double"></i> Дать ролям</button>'
-      + '</div>'
-      + '<div class="cmd-grid">'
-      + cmds.map(function(cmd){
-          var granted = anySelectedIn(cmd);
-          return '<div class="cmd-item">'
-            + '<span class="cname">'+cmd+'</span>'
-            + '<button type="button" class="cbtn '+(granted?'grant':'')+'" '
-            + 'onclick="toggleCommand(\''+cat+'\',\''+cmd+'\')">'
-            + (granted?'<i class="fas fa-check"></i> Доступ':'<i class="fas fa-lock-open"></i> Открыть')
-            + '</button>'
-            + '</div>';
-        }).join('')
-      + '</div>'
-      + '</div>'
+/* ── Состояние одной команды ── */
+function cmdInfo(cmd) {
+  var allowed = ACL[cmd] || [];
+  var info = { allowed: allowed, label: 'Для всех', cls: 'all', allGranted: false };
+  if (!allowed.length) return info;
+  if (selectedRoleIds.length && allowed.length === selectedRoleIds.length && allowed.every(function (r) { return selectedRoleIds.indexOf(r) !== -1; })) {
+    info.label = 'Только выбранным'; info.cls = 'sel';
+  } else if (selectedRoleIds.length && allowed.some(function (r) { return selectedRoleIds.indexOf(r) !== -1; })) {
+    info.label = 'Выбранным и другим'; info.cls = 'mix';
+  } else {
+    info.label = 'Другим ролям'; info.cls = 'other';
+  }
+  info.allGranted = selectedRoleIds.length > 0 && selectedRoleIds.every(function (r) { return allowed.indexOf(r) !== -1; });
+  return info;
+}
+
+function renderCatCard(cat, cmds, open) {
+  var meta = CAT_META[cat] || { icon: 'fa-folder', tone: 7 };
+  var cards = cmds.map(function (cmd) {
+    var info = cmdInfo(cmd);
+    var rolesTitle = info.allowed.length
+      ? 'Доступ: ' + info.allowed.map(roleName).join(', ')
+      : 'Доступ: все роли';
+    var pill = '<span class="cmd-pill cmd-pill-' + info.cls + '" title="' + esc(rolesTitle) + '">'
+      + '<i class="fas ' + (info.cls === 'all' ? 'fa-globe' : 'fa-lock') + '"></i>' + esc(info.label) + '</span>';
+    var btn = info.allGranted
+      ? '<button type="button" class="cmd-grant revoke" data-cat="' + cat + '" data-cmd="' + cmd + '"><i class="fas fa-lock-open"></i> Снять доступ</button>'
+      : '<button type="button" class="cmd-grant give" data-cat="' + cat + '" data-cmd="' + cmd + '"><i class="fas fa-key"></i> Дать доступ</button>';
+    return '<div class="cmd-card' + (info.allGranted ? ' on' : '') + '">'
+      + '<div class="cmd-top"><span class="cmd-name" title="' + esc(cmd) + '">' + esc(cmd) + '</span>' + pill + '</div>'
+      + btn
       + '</div>';
   }).join('');
+  return '<div class="cat-card' + (open ? ' open' : '') + '" data-cat="' + cat + '">'
+    + '<div class="cat-head" role="button" tabindex="0">'
+    + '<span class="cat-ico tone-' + meta.tone + '"><i class="fas ' + meta.icon + '"></i></span>'
+    + '<span class="cat-title">' + esc(cat) + '</span>'
+    + '<span class="cat-count">' + cmds.length + ' ' + plural(cmds.length, 'команда', 'команды', 'команд') + '</span>'
+    + '<span class="spacer"></span>'
+    + '<span class="cat-chev"><i class="fas fa-chevron-down"></i></span>'
+    + '</div>'
+    + '<div class="cat-body">'
+    + '<div class="cat-actions">'
+    + '<span class="lbl"><i class="fas fa-check-double"></i> Действие на всю категорию</span>'
+    + '<button type="button" class="btn btn-sm btn-primary" data-action="assign" data-cat="' + cat + '"><i class="fas fa-check-double"></i> Дать ролям</button>'
+    + '<button type="button" class="btn btn-sm btn-ghost" data-action="everyone" data-cat="' + cat + '"><i class="fas fa-globe"></i> Для всех</button>'
+    + '</div>'
+    + '<div class="cmd-grid">' + cards + '</div>'
+    + '</div>'
+    + '</div>';
 }
 
-function toggleCatOpen(cat){
-  openCats[cat] = !openCats[cat];
-  document.getElementById('cat-'+cat).classList.toggle('open');
-  var icon = document.getElementById('cat-'+cat).querySelector('.expand-btn i');
-  if(icon) icon.className = 'fas '+(openCats[cat]?'fa-chevron-up':'fa-chevron-down');
-}
-
-/* Добавить/убрать выбранные роли для команды */
-function setCommandRoles(key, roleIds){
-  return fetch('/api/role-permissions/'+('{{ guild_id }}')+'/set',{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({command:key, role_ids:roleIds})
-  }).then(function(r){ return r.json(); });
-}
-
-function toggleCommand(cat, cmd){
-  if(!selectedRoleIds.length){ toast('Сначала отметьте роли', false); return; }
-  var roles = ACL[cmd] ? ACL[cmd].slice() : [];
-  // определяем: если выбранные роли уже все в списке — снимаем, иначе добавляем
-  var allSelected = selectedRoleIds.every(function(r){ return roles.indexOf(r)!==-1; });
-  if(allSelected){
-    // снять выбранные роли
-    roles = roles.filter(function(r){ return selectedRoleIds.indexOf(r)===-1; });
-  } else {
-    // добавить выбранные роли
-    selectedRoleIds.forEach(function(r){ if(roles.indexOf(r)===-1) roles.push(r); });
+function renderCommands() {
+  var host = document.getElementById('acc-body');
+  var q = (document.getElementById('cmd-search').value || '').toLowerCase().trim();
+  if (!selectedRoleIds.length) {
+    host.innerHTML = '<div class="acc-empty">'
+      + '<div class="acc-empty-ico"><i class="fas fa-arrow-pointer"></i></div>'
+      + '<h3>Сначала выберите роли</h3>'
+      + '<p>Отметьте роли слева — здесь появится карта команд с кнопками «Дать доступ» и «Снять доступ».</p>'
+      + '<button type="button" class="btn btn-primary" id="pick-all" onclick="selectAllRoles()"><i class="fas fa-check-double"></i> Выбрать все роли</button>'
+      + '</div>';
+    return;
   }
-  setCommandRoles(cmd, roles).then(function(){
-    ACL[cmd] = roles;
-    toast(allSelected ? 'Доступ снят' : 'Доступ открыт для «'+cmd+'»', true);
-    refresh(function(){ renderCategories(); });
-  });
+  var keys = Object.keys(CATEGORIES);
+  var parts = [];
+  for (var i = 0; i < keys.length; i++) {
+    var cat = keys[i];
+    var cmds = CATEGORIES[cat] || [];
+    var filtered = q ? cmds.filter(function (c) { return c.toLowerCase().indexOf(q) !== -1; }) : cmds;
+    if (q && !filtered.length) continue;
+    var open = q ? true : !!openCats[cat];
+    parts.push(renderCatCard(cat, filtered, open));
+  }
+  if (!parts.length) {
+    host.innerHTML = '<div class="acc-empty">'
+      + '<div class="acc-empty-ico"><i class="fas fa-magnifying-glass"></i></div>'
+      + '<h3>Ничего не найдено</h3>'
+      + '<p>По запросу «' + esc(q) + '» команд нет. Попробуйте другое слово.</p>'
+      + '</div>';
+    return;
+  }
+  host.innerHTML = '<div class="cat-list">' + parts.join('') + '</div>';
 }
 
-function categoryEveryone(cat){
-  showConfirm('Открыть категорию для всех?',
-    'Категория «'+cat+'» станет доступна ВСЕМ. Все ограничения на её команды будут сняты.',
-    'fa-globe', function(){
-      fetch('/api/role-permissions/'+('{{ guild_id }}')+'/category/everyone',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({category:cat})
-      }).then(function(r){ return r.json(); }).then(function(d){
-        if(d.success){ toast('Категория «'+cat+'» теперь доступна всем', true); refresh(function(){ loadRoles(); }); }
-        else toast(d.error||'Ошибка', false);
-      });
-    });
+/* ── Классические разрешения (действия) ───────────────────── */
+function actionInfo(key) {
+  var allowed = ACTION_ACL[key] || [];
+  var info = { allowed: allowed, label: 'Все роли', cls: 'all', allGranted: false, title: '' };
+  if (!allowed.length) return info;
+  var names = allowed.map(roleName);
+  info.title = names.join(', ');
+  if (selectedRoleIds.length && allowed.length === selectedRoleIds.length && allowed.every(function (r) { return selectedRoleIds.indexOf(r) !== -1; })) {
+    info.label = 'Только выбранным'; info.cls = 'sel';
+  } else if (selectedRoleIds.length && allowed.some(function (r) { return selectedRoleIds.indexOf(r) !== -1; })) {
+    info.label = 'Выбранным и другим'; info.cls = 'mix';
+  } else {
+    info.label = names.length + ' ' + plural(names.length, 'роль', 'роли', 'ролей');
+    info.cls = 'other';
+  }
+  info.allGranted = selectedRoleIds.length > 0 && selectedRoleIds.every(function (r) { return allowed.indexOf(r) !== -1; });
+  return info;
 }
 
-function categoryAssign(cat){
-  if(!selectedRoleIds.length){ toast('Сначала отметьте роли', false); return; }
-  fetch('/api/role-permissions/'+('{{ guild_id }}')+'/category/assign',{
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({category:cat, role_ids:selectedRoleIds})
-  }).then(function(r){ return r.json(); }).then(function(d){
-    if(d.success){ toast('Категория «'+cat+'» выдана '+selectedRoleIds.length+' ролям', true); refresh(function(){ loadRoles(); }); }
-    else toast(d.error||'Ошибка', false);
-  });
+function renderActions() {
+  var host = document.getElementById('actions-block');
+  if (!host) return;
+  var keys = Object.keys(ACTIONS);
+  if (!keys.length) { host.innerHTML = ''; return; }
+  var cards = keys.map(function (key) {
+    var meta = ACTION_META[key] || { icon: 'fa-shield', tone: 7 };
+    var info = actionInfo(key);
+    var pill = '<span class="cmd-pill cmd-pill-' + info.cls + '"' + (info.title ? ' title="' + esc(info.title) + '"' : '') + '>'
+      + '<i class="fas ' + (info.cls === 'all' ? 'fa-globe' : 'fa-lock') + '"></i>' + esc(info.label) + '</span>';
+    var btn;
+    if (!selectedRoleIds.length) {
+      btn = '<button type="button" class="cmd-grant give" disabled><i class="fas fa-key"></i> Выберите роли</button>';
+    } else if (info.allGranted) {
+      btn = '<button type="button" class="cmd-grant revoke" data-act="' + key + '"><i class="fas fa-lock-open"></i> Снять доступ</button>';
+    } else {
+      btn = '<button type="button" class="cmd-grant give" data-act="' + key + '"><i class="fas fa-key"></i> Дать доступ</button>';
+    }
+    return '<div class="act-card' + (info.allGranted ? ' on' : '') + '">'
+      + '<div class="act-top"><span class="act-ico tone-' + meta.tone + '"><i class="fas ' + meta.icon + '"></i></span>'
+      + '<span class="act-name">' + esc(ACTIONS[key]) + '</span>' + pill + '</div>'
+      + btn
+      + '</div>';
+  }).join('');
+  host.innerHTML = '<div class="acc-actions-head"><span class="t"><i class="fas fa-shield-halved"></i> Классические разрешения</span>'
+    + '<span class="hint">Только для команд бота — не меняет роли и права на сервере Discord</span></div>'
+    + '<div class="acc-info" style="margin-bottom:10px"><i class="fas fa-circle-info"></i>'
+    + '<span>Без «Бан» модератор не забанит ни одной командой (ban, tempban, /moderate…). Настройка касается только бота и не трогает разрешения ролей в Discord.</span></div>'
+    + '<div class="act-grid">' + cards + '</div>';
 }
 
-function resetAll(){
-  showConfirm('Сбросить все ограничения?',
-    'Все категории и команды станут доступны ВСЕМ. Это действие нельзя отменить.',
-    'fa-rotate-right', function(){
-      fetch('/api/role-permissions/'+('{{ guild_id }}')+'/clear',{method:'POST'})
-        .then(function(){ toast('Все ограничения сброшены', true); refresh(function(){ ACL={}; renderCategories(); }); });
-    });
+function toggleAction(key) {
+  if (!selectedRoleIds.length) { toast('Сначала отметьте роли', false); return; }
+  var roles = ACTION_ACL[key] ? ACTION_ACL[key].slice() : [];
+  var allGranted = selectedRoleIds.every(function (r) { return roles.indexOf(r) !== -1; });
+  if (allGranted) {
+    roles = roles.filter(function (r) { return selectedRoleIds.indexOf(r) === -1; });
+  } else {
+    selectedRoleIds.forEach(function (r) { if (roles.indexOf(r) === -1) roles.push(r); });
+  }
+  fetch('/api/role-permissions/' + ('{{ guild_id }}') + '/action/set', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: key, role_ids: roles })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) {
+      ACTION_ACL[key] = roles;
+      toast(allGranted ? 'Действие «' + (ACTIONS[key] || key) + '» снова доступно всем' : 'Действие «' + (ACTIONS[key] || key) + '» — только выбранным ролям', true);
+      renderActions();
+    } else toast(d.error || 'Ошибка', false);
+  }).catch(function () { toast('Ошибка сети', false); });
 }
 
-loadRoles();
+function toggleRole(id) {
+  var i = selectedRoleIds.indexOf(id);
+  if (i === -1) selectedRoleIds.push(id);
+  else selectedRoleIds.splice(i, 1);
+  reflow(function () { renderRoles(); renderSelSummary(); renderCommands(); });
+}
+
+function selectAllRoles() {
+  if (!ALL_ROLES.length) { toast('Роли не загружены', false); return; }
+  selectedRoleIds = ALL_ROLES.map(function (r) { return r.id; });
+  reflow(function () { renderRoles(); renderSelSummary(); renderCommands(); });
+}
+
+function clearRoles() {
+  selectedRoleIds = [];
+  reflow(function () { renderRoles(); renderSelSummary(); renderCommands(); });
+}
+
+function toggleCatOpen(cat) {
+  openCats[cat] = !openCats[cat];
+  reflow(function () { renderCommands(); });
+}
+
+function expandAll(open) {
+  Object.keys(CATEGORIES).forEach(function (c) { openCats[c] = open; });
+  reflow(function () { renderCommands(); });
+}
+
+function toggleCommand(cat, cmd) {
+  if (!selectedRoleIds.length) { toast('Сначала отметьте роли', false); return; }
+  var roles = ACL[cmd] ? ACL[cmd].slice() : [];
+  var allGranted = selectedRoleIds.every(function (r) { return roles.indexOf(r) !== -1; });
+  if (allGranted) {
+    roles = roles.filter(function (r) { return selectedRoleIds.indexOf(r) === -1; });
+  } else {
+    selectedRoleIds.forEach(function (r) { if (roles.indexOf(r) === -1) roles.push(r); });
+  }
+  fetch('/api/role-permissions/' + ('{{ guild_id }}') + '/set', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: cmd, role_ids: roles })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) {
+      ACL[cmd] = roles;
+      toast(allGranted ? 'Доступ снят: «' + cmd + '» теперь доступен всем' : 'Доступ открыт: «' + cmd + '» только для выбранных ролей', true);
+      renderStats();
+      reflow(function () { renderCommands(); });
+    } else toast(d.error || 'Ошибка', false);
+  }).catch(function () { toast('Ошибка сети', false); });
+}
+
+function categoryAssign(cat) {
+  if (!selectedRoleIds.length) { toast('Сначала отметьте роли', false); return; }
+  fetch('/api/role-permissions/' + ('{{ guild_id }}') + '/category/assign', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category: cat, role_ids: selectedRoleIds })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) { toast('Категория «' + cat + '» выдана ' + selectedRoleIds.length + ' ролям', true); loadData(); }
+    else toast(d.error || 'Ошибка', false);
+  }).catch(function () { toast('Ошибка сети', false); });
+}
+
+function categoryEveryone(cat) {
+  askConfirm('Открыть категорию для всех?',
+    'Категория «' + cat + '» и все её команды станут доступны всем. Ограничения будут сняты.',
+    function () {
+      fetch('/api/role-permissions/' + ('{{ guild_id }}') + '/category/everyone', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: cat })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) { toast('Категория «' + cat + '» теперь доступна всем', true); loadData(); }
+        else toast(d.error || 'Ошибка', false);
+      }).catch(function () { toast('Ошибка сети', false); });
+    }, true);
+}
+
+function applyPreset(preset) {
+  if (!selectedRoleIds.length) { toast('Сначала отметьте роли', false); return; }
+  var names = { mod: 'Модерация', staff: 'Стафф', all: 'Все команды' };
+  askConfirm('Применить пресет «' + (names[preset] || preset) + '»?',
+    'Текущие настройки доступа будут заменены пресетом для ' + selectedRoleIds.length + ' выбранных ролей.',
+    function () {
+      fetch('/api/role-permissions/' + ('{{ guild_id }}') + '/preset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preset: preset, role_ids: selectedRoleIds })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) { toast('Пресет применён', true); loadData(); }
+        else toast(d.error || 'Ошибка', false);
+      }).catch(function () { toast('Ошибка сети', false); });
+    }, false);
+}
+
+function resetAll() {
+  askConfirm('Сбросить все ограничения?',
+    'Все команды и действия станут доступны всем ролям. Это действие нельзя отменить.',
+    function () {
+      var cmdClear = fetch('/api/role-permissions/' + ('{{ guild_id }}') + '/clear', { method: 'POST' });
+      var actClear = fetch('/api/role-permissions/' + ('{{ guild_id }}') + '/actions/clear', { method: 'POST' });
+      Promise.all([cmdClear, actClear])
+        .then(function () {
+          ACL = {};
+          ACTION_ACL = {};
+          toast('Все ограничения сброшены', true);
+          renderStats();
+          reflow(function () { renderCommands(); renderActions(); });
+        })
+        .catch(function () { toast('Ошибка сети', false); });
+    }, true);
+}
+
+document.getElementById('role-list').addEventListener('click', function (e) {
+  var item = e.target.closest('.role-item');
+  if (item) toggleRole(item.getAttribute('data-rid'));
+});
+document.getElementById('role-list').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    var item = e.target.closest('.role-item');
+    if (item) { e.preventDefault(); toggleRole(item.getAttribute('data-rid')); }
+  }
+});
+document.getElementById('acc-body').addEventListener('click', function (e) {
+  var head = e.target.closest('.cat-head');
+  if (head) { toggleCatOpen(head.parentNode.getAttribute('data-cat')); return; }
+  var grant = e.target.closest('.cmd-grant');
+  if (grant) { toggleCommand(grant.getAttribute('data-cat'), grant.getAttribute('data-cmd')); return; }
+  var assign = e.target.closest('[data-action="assign"]');
+  if (assign) { categoryAssign(assign.getAttribute('data-cat')); return; }
+  var everyone = e.target.closest('[data-action="everyone"]');
+  if (everyone) { categoryEveryone(everyone.getAttribute('data-cat')); }
+});
+document.getElementById('actions-block').addEventListener('click', function (e) {
+  var btn = e.target.closest('.cmd-grant[data-act]');
+  if (btn && !btn.disabled) { toggleAction(btn.getAttribute('data-act')); }
+});
+document.getElementById('acc-body').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    var head = e.target.closest('.cat-head');
+    if (head) { e.preventDefault(); toggleCatOpen(head.parentNode.getAttribute('data-cat')); }
+  }
+});
+
+loadData();
 </script>
 {% endblock %}

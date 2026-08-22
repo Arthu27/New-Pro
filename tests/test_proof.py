@@ -410,17 +410,17 @@ check(rec['action'] == 'бан' and rec['user_id'] == 9090, 'moderate: дейс�
 check(any('Демка #' in str(c or '') for c, _ in inter.followup.sent),
       'moderate: мод получил подтверждение про демку')
 
-# без демки — бан проходит, демка не создаётся, лишних сообщений нет
+# без демки — бан НЕ выдаётся: наказание требует доказательство
 BANUSER2 = FakeBanUser(9091, 'Griefer#4')
 proofs_before = len(proof_list(GUILD.id))
-followups_before = len(inter.followup.sent)
 inter = FakeInter(GUILD, MOD)
 run(Moderation.moderate_user.callback(
     mod_cog, inter, action='ban', user=BANUSER2, reason='без демки'))
-check(BANUSER2.banned == 'без демки', 'moderate: бан без демки тоже работает')
+check(BANUSER2.banned is False, 'moderate: бан без демки НЕ выдаётся')
 check(len(proof_list(GUILD.id)) == proofs_before, 'moderate: без вложения демка не создаётся')
-check(not any('Демка #' in str(c or '') for c, _ in inter.followup.sent),
-      'moderate: без демки мод не получает лишнего шума')
+check(any('Требуется доказательство' in str((e.title if e else '') or '')
+          for _, e in inter.followup.sent),
+      'moderate: без демки мод получает отказ «требуется доказательство»')
 
 print('== интеграция: /warn + демка ==')
 from cogs.warnings import warnings as WarningsCog  # noqa: E402
@@ -444,13 +444,14 @@ check(proof_list(GUILD.id)[0]['action'] == 'варн', 'warn: действие=�
 emb = inter.response.sent[-1][1] or inter.followup.sent[-1][1]
 check('Демка #' in (emb.description or ''), 'warn: про демку сказано в самом ответе о варне')
 
-# warn БЕЗ демки — ничего лишнего
+# warn БЕЗ демки — НЕ выдаётся (требуется доказательство)
 proofs_before = len(proof_list(GUILD.id))
 inter = FakeInter(GUILD, MOD)
 run(WarningsCog.warn.callback(warn_cog, inter, user=BANUSER, reason='просто варн'))
-emb = inter.response.sent[-1][1] or inter.followup.sent[-1][1]
 check(len(proof_list(GUILD.id)) == proofs_before
-      and 'Демка #' not in (emb.description or ''), 'warn без демки: чисто')
+      and any('Требуется доказательство' in str((e.title if e else '') or '')
+              for _, e in inter.followup.sent),
+      'warn без демки: не выдаётся, мод получает отказ')
 
 # ═══ 6. ПАНЕЛЬ: /proofs ═══════════════════════════════════════════════════
 print('== панель: страница и API демок ==')

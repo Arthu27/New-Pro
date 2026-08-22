@@ -354,6 +354,10 @@ class warnings(commands.Cog):
     async def warn(self, interaction, user: discord.Member, reason: str = None,
                    демка: discord.Attachment = None):
         guild = interaction.guild
+        # Наказание (варн) — только с доказательством: скрин или видео.
+        from cogs.proof_cog import require_proof
+        if not await require_proof(interaction, attachment=демка, action_ru='варн'):
+            return
         warn_id, total, punishment_result = await self.add_warn(interaction, user, reason)
 
         # Демка к варну — если мод приложил скрин/видео.

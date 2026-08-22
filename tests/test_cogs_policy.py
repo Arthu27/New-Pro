@@ -12,6 +12,7 @@ sys.path.insert(0, _REPO)
 
 from cogs_policy import (
     CORE_COGS, HELPER_COGS, MODERATION_COGS, MOD_ONLY_COGS,
+    CORE_ONLY_COGS, TICKET_COGS, AI_CHAT_COGS, MUSIC_COGS, SLIM_COGS,
     env_flag, is_helper, select_cog_files, select_from_environment,
     _norm_name, _parse_list,
 )
@@ -93,6 +94,30 @@ check(not set(enabled_m) & set(disabled_m) and
       len(enabled_m) + len(disabled_m) == len(NON_HELPERS),
       'mod_only: разбиение без пересечений и потерь')
 
+print('\n== 5.5 BOT_CORE=1 — «модерация + тикеты + логи + AI» ==')
+check(CORE_COGS <= CORE_ONLY_COGS and MODERATION_COGS <= CORE_ONLY_COGS
+      and TICKET_COGS <= CORE_ONLY_COGS and AI_CHAT_COGS <= CORE_ONLY_COGS,
+      'core: = ядро + модерация + тикеты + AI-чат')
+check(not (MUSIC_COGS & CORE_ONLY_COGS), 'core: музыка выключена (не входит)')
+check('music_cog.py' not in CORE_ONLY_COGS and 'economy_cog.py' not in CORE_ONLY_COGS,
+      'core: экономика/музыка/веселуха выключены')
+missing_core = sorted(f for f in CORE_ONLY_COGS if f not in ALL_SET)
+check(missing_core == [], f'CORE_ONLY_COGS: все файлы на диске {missing_core}')
+enabled_c, disabled_c = select_cog_files(ALL_FILES, core=True)
+check(set(enabled_c) == CORE_ONLY_COGS, 'core: загружается ровно keep-лист')
+for fun in ('economy_cog.py', 'music_cog.py', 'fun_cog.py', 'level_cog.py',
+            'giveaway.py', 'minigames.py', 'voice_commands.py', 'starboard.py'):
+    assert fun in disabled_c, fun
+check(True, 'core: экономика/музыка/игры/левелинг — выключены')
+for keep in ('moderation.py', 'ticket.py', 'sla_cog.py', 'staff_apply.py',
+             'logs.py', 'log_menu.py', 'ai_chat.py', 'ai_moderation.py',
+             'help.py', 'cog_manager.py'):
+    assert keep in enabled_c, keep
+check(True, 'core: модерация/тикеты/логи/AI/системное — живы')
+check(not set(enabled_c) & set(disabled_c)
+      and len(enabled_c) + len(disabled_c) == len(NON_HELPERS),
+      'core: разбиение без пересечений и потерь')
+
 print('\n== 6. DISABLED_COGS / EXTRA_COGS ==')
 e2, d2 = select_cog_files(ALL_FILES, disabled='Music_Cog.py, giveaway')
 check('music_cog.py' in d2 and 'giveaway.py' in d2 and
@@ -124,7 +149,8 @@ check('from cogs_policy import select_from_environment' in main_src,
 check('SKIP_COGS' not in main_src, 'main.py: старый локальный SKIP_COGS убран (единый источник — cogs_policy)')
 with open(os.path.join(_REPO, '.env.example'), encoding='utf-8') as fp:
     env_doc = fp.read()
-check('MOD_ONLY=0' in env_doc and 'DISABLED_COGS' in env_doc and 'EXTRA_COGS' in env_doc,
+check('MOD_ONLY=0' in env_doc and 'BOT_CORE=0' in env_doc
+      and 'DISABLED_COGS' in env_doc and 'EXTRA_COGS' in env_doc,
       '.env.example: режим модулей задокументирован')
 
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')

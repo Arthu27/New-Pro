@@ -15,6 +15,11 @@
                             AI-чат, ивенты, левелинг…) выключена. Данные
                             на диске остаются — вернёшь флаг, всё вернётся.
 
+    BOT_CORE=1            — «модерация + тикеты + логи + AI» (ядро без
+                            музыки): грузятся системные, модераторские,
+                            тикетные, лог- и AI-модули. Экономика, игры,
+                            музыка, левелинг и прочая «веселуха» выключена.
+
 Имена модулей в DISABLED_COGS / EXTRA_COGS — с «.py» или без, регистр не
 важен (music_cog == Music_Cog.py). Режим подхватывается при старте бота —
 поменял .env, перезапустил, готово. Никаких правок кода и миграций данных:
@@ -102,9 +107,14 @@ AI_CHAT_COGS = frozenset({
 # Профиль «модерация + тикеты + музыка + AI-чат»
 SLIM_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | MUSIC_COGS | AI_CHAT_COGS
 
+# Профиль «ядро»: модерация + тикеты + логи + AI (без музыки).
+# Логи (logs.py, log_menu.py) уже в MODERATION_COGS, AI-модерация — тоже.
+CORE_ONLY_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | AI_CHAT_COGS
+
 # env-переменные
 ENV_MOD_ONLY = 'MOD_ONLY'
 ENV_SLIM = 'BOT_SLIM'
+ENV_CORE = 'BOT_CORE'
 ENV_DISABLED = 'DISABLED_COGS'
 ENV_EXTRA = 'EXTRA_COGS'
 
@@ -146,7 +156,7 @@ def is_helper(filename):
     return filename in HELPER_COGS
 
 
-def select_cog_files(files, mod_only=False, slim=False, disabled=None, extra=None):
+def select_cog_files(files, mod_only=False, slim=False, core=False, disabled=None, extra=None):
     """Разделить файлы ./cogs на (загрузить, отключить).
 
     files — имена файлов с расширением '.py' (как из os.listdir).
@@ -164,10 +174,13 @@ def select_cog_files(files, mod_only=False, slim=False, disabled=None, extra=Non
         if mod in disabled_names:
             gone.append(f)
             continue
-        if mod_only and f not in MOD_ONLY_COGS and mod not in extra_names:
+        if core and f not in CORE_ONLY_COGS and mod not in extra_names:
             gone.append(f)
             continue
         if slim and f not in SLIM_COGS and mod not in extra_names:
+            gone.append(f)
+            continue
+        if mod_only and f not in MOD_ONLY_COGS and mod not in extra_names:
             gone.append(f)
             continue
         enabled.append(f)
@@ -175,12 +188,13 @@ def select_cog_files(files, mod_only=False, slim=False, disabled=None, extra=Non
 
 
 def select_from_environment(files, environ=None):
-    """Обёртка: прочитать MOD_ONLY / DISABLED_COGS / EXTRA_COGS из окружения."""
+    """Обёртка: прочитать MOD_ONLY / BOT_SLIM / BOT_CORE / DISABLED / EXTRA."""
     env = os.environ if environ is None else environ
     return select_cog_files(
         files,
         mod_only=env_flag(ENV_MOD_ONLY, environ=env),
         slim=env_flag(ENV_SLIM, environ=env),
+        core=env_flag(ENV_CORE, environ=env),
         disabled=env.get(ENV_DISABLED, ''),
         extra=env.get(ENV_EXTRA, ''),
     )

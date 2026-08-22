@@ -222,6 +222,10 @@ class TempModeration(commands.Cog):
     @commands.has_permissions(moderate_members=True)
     async def mute_cmd(self, ctx, member: discord.Member, duration: str = "1h", *, reason: str = "Без причины"):
         """Временный мьют: !mute @user 1h причина"""
+        from cogs.proof_cog import prefix_has_media
+        if not prefix_has_media(ctx):
+            await ctx.send("🚫 Наказание без доказательства не выдаётся. Прикрепите скрин или видео нарушения к сообщению.")
+            return
         sec = parse_duration(duration)
         if not sec:
             presets = ", ".join(f"`{label}`" for label, _ in PRESETS[:10])
@@ -407,6 +411,10 @@ class TempModeration(commands.Cog):
     @commands.has_permissions(ban_members=True)
     async def tempban_cmd(self, ctx, member: discord.Member, duration: str = "1d", *, reason: str = "Без причины"):
         """Временный бан: !tempban @user 7d причина"""
+        from cogs.proof_cog import prefix_has_media
+        if not prefix_has_media(ctx):
+            await ctx.send("🚫 Наказание без доказательства не выдаётся. Прикрепите скрин или видео нарушения к сообщению.")
+            return
         sec = parse_duration(duration)
         if not sec:
             await ctx.send(" Неверный формат времени. Примеры: `1d`, `7д`, `12h`")

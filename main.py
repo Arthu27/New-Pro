@@ -133,10 +133,32 @@ async def _acl_check(ctx):
 bot.check(_acl_check)
 
 
+def _find_action_value(options):
+    """Рекурсивно найти значение опции action/действие в данных slash-команды.
+
+    /moderate и /utility принимают параметр action (ban/kick/timeout/clear…),
+    поэтому «классическое» разрешение на действие проверяем по его значению,
+    а не по имени команды.
+    """
+    if not options:
+        return None
+    for opt in options:
+        if not isinstance(opt, dict):
+            continue
+        if opt.get("name") in ("action", "действие") and isinstance(opt.get("value"), str):
+            return opt["value"]
+        sub = opt.get("options")
+        if isinstance(sub, list):
+            found = _find_action_value(sub)
+            if found:
+                return found
+    return None
+
+
 async def _acl_slash_check(interaction):
     """Slash-команды: проверить ролевой доступ (учитывая сабкоманды групп)."""
     try:
-        from services.permission_acl import has_access
+        from services.permission_acl import has_access, check_action, ACTION_VALUES
         cmd = None
         if getattr(interaction, "command", None) is not None:
             cmd = getattr(interaction.command, "qualified_name", None) or \
@@ -149,6 +171,16 @@ async def _acl_slash_check(interaction):
                 await interaction.response.send_message(
                     "🚫 У вас нет доступа к этой команде.", ephemeral=True)
                 return False
+        # Классические разрешения: выбранное действие (напр. /moderate action=ban)
+        if guild:
+            action_value = _find_action_value(
+                (interaction.data or {}).get("options"))
+            if action_value:
+                action_key = ACTION_VALUES.get(action_value)
+                if action_key and not check_action(guild.id, interaction.user, action_key):
+                    await interaction.response.send_message(
+                        "🚫 У вас нет доступа к этому действию.", ephemeral=True)
+                    return False
     except Exception as _ex:
         _log.debug("_acl_slash_check(): подавлено: %s", _ex)
     return True
