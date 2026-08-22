@@ -14,10 +14,18 @@
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# data/ — gitignored, демо-фикстур в чистом чекауте нет. API каналов в
+# демо-режиме читает data/demo_channels.json по абсолютному пути к корню,
+# поэтому сеем его заранее (тот же паттерн, что в test_panel_polish.py).
+if not os.path.isfile(os.path.join(ROOT, 'data', 'demo_channels.json')):
+    subprocess.run([sys.executable, os.path.join(ROOT, 'scripts', 'seed_demo_panel.py')],
+                   capture_output=True, text=True, timeout=180, cwd=ROOT)
 
 _TMP = tempfile.mkdtemp(prefix='aether_contract_test_')
 os.chdir(_TMP)
