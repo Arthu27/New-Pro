@@ -695,8 +695,9 @@ check('yok' not in rules_t and 'butonuna' not in rules_t and 'Новый пра�
 check('fa-xmark' in rules_t and 'Правил пока нет' in rules_t,
       'правила: иконка удаления и стилизованное пустое состояние')
 api_rules = open(os.path.join(ROOT, 'web', 'routes', 'tasks_rules.py'), encoding='utf-8').read()
-check('edenler' not in api_rules and '0x4f46e5' in api_rules,
-      'API публикации: русский текст и индиго-цвет эмбеда')
+check('edenler' not in api_rules and 'accent =int (color_s ,16 )' in api_rules
+      and '4f46e5' in api_rules,
+      'API публикации: русский текст и индиго-цвет эмбеда (цвет из меты)')
 login_as('owner')
 r = client.get('/rules-editor')
 check(r.status_code == 200 and 'rules-panel' in r.get_data(as_text=True),

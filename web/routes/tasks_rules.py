@@ -88,14 +88,40 @@ def register(ctx):
             }
         return {'t':'','u':'','img':'','thumb':''}
 
+    def _fix_url (v ):
+        """Ссылка к рабочему виду: без протокола — доклеиваем https://.
+
+        Пользователи часто вставляют «discord.gg/x» — жёсткий 400
+        блокировал публикацию; теперь ссылка чинится автоматически.
+        """
+        v =str (v or '').strip ()
+        if not v :
+            return ''
+        if v .lower ().startswith (('http://','https://')):
+            return v
+        if v .lower ().startswith ('javascript:')or v .lower ().startswith ('data:'):
+            return ''   # опасные схемы отбрасываем полностью
+        return 'https://' + v
+
     def _validate_rule_urls (rules ):
         """URL-ы только http(s). Возвращает (ok, ошибка)."""
         for i ,r in enumerate (rules ,1 ):
             for field ,label in (('u','ссылки'),('img','картинки'),('thumb','миниатюры')):
                 v =r .get (field )or ''
                 if v and not v .lower ().startswith (('http://','https://')):
-                    return False ,f'Правило {i}: некорректный URL {label}'
+                    return False ,f'Правило {i}: некорректный URL {label} — укажите полный адрес (https://…)'
         return True ,''
+
+    def _normalize_rules_urls (rules ):
+        """Прогнать _fix_url по всем ссылкам/картинкам правил (мутация копий)."""
+        out =[]
+        for r in rules :
+            rr =dict (r )
+            for f in ('u','img','thumb'):
+                if rr .get (f ):
+                    rr [f ]=_fix_url (rr [f ])
+            out .append (rr )
+        return out
 
     @app .route ('/api/guild/<guild_id>/rules',methods =['GET','POST'])
     @login_required 
@@ -113,7 +139,7 @@ def register(ctx):
             return jsonify ([_norm_rule (r )for r in raw ])
         raw =request .get_json (force =True ,silent =True )
         if not isinstance (raw ,list ):raw =[]
-        rules =[_norm_rule (r )for r in raw ]
+        rules =_normalize_rules_urls ([_norm_rule (r )for r in raw ])
         ok ,err =_validate_rule_urls (rules )
         if not ok :
             return jsonify ({'error':err }),400 
@@ -127,6 +153,52 @@ def register(ctx):
         return jsonify ({'success':True ,'rules':rules })
 
 
+    def _rules_meta_path (guild_id ):
+        return f'data/rules_meta_{guild_id}.json'
+
+    def _load_rules_meta (guild_id ):
+        """Настройки публикации: заголовок, вступление, цвет, канал (последний)."""
+        f =_rules_meta_path (guild_id )
+        meta ={'title':'Правила сервера','intro':'Нарушение правил ведёт к наказанию.',
+               'color':'4f46e5','channel_id':''}
+        try :
+            if os .path .exists (f ):
+                with open (f ,encoding ='utf-8')as fp :
+                    rawm =json .load (fp )
+                if isinstance (rawm ,dict ):
+                    meta .update ({k :v for k ,v in rawm .items ()if k in meta })
+        except Exception as _ex :
+            _log.debug("_load_rules_meta(): подавлено: %s", _ex)
+        return meta
+
+    def _save_rules_meta (guild_id ,meta ):
+        f =_rules_meta_path (guild_id )
+        os .makedirs ('data',exist_ok =True )
+        with open (f ,'w',encoding ='utf-8')as fp :
+            json .dump (meta ,fp ,indent =2 ,ensure_ascii =False )
+
+    @app .route ('/api/guild/<guild_id>/rules/meta',methods =['GET','POST'])
+    @login_required 
+    @role_required ('admin')
+    def api_rules_meta (guild_id ):
+        meta =_load_rules_meta (guild_id )
+        if request .method =='GET':
+            return jsonify ({'success':True ,'meta':meta })
+        data =request .get_json (silent =True )or {}
+        if 'title'in data :
+            meta ['title']=str (data ['title']or '').strip ()[:200 ]or 'Правила сервера'
+        if 'intro'in data :
+            meta ['intro']=str (data ['intro']or '').strip ()[:1800 ]
+        if 'color'in data :
+            c =str (data ['color']or '').strip ().lstrip ('#')
+            import re as _re 
+            if _re .match (r'^[0-9a-fA-F]{6}$',c ):
+                meta ['color']=c .lower ()
+        if 'channel_id'in data :
+            meta ['channel_id']=str (data ['channel_id']or '').strip ()
+        _save_rules_meta (guild_id ,meta )
+        return jsonify ({'success':True ,'meta':meta })
+
     @app .route ('/api/guild/<guild_id>/rules/publish',methods =['POST'])
     @login_required 
     @role_required ('admin')
@@ -137,7 +209,16 @@ def register(ctx):
         ch_id =str (data .get ('channel_id')or '').strip ()
         raw =data .get ('rules')or []
         rules =[_norm_rule (r )for r in raw ]if isinstance (raw ,list )else []
+        rules =_normalize_rules_urls (rules )
         rules =[r for r in rules if r ['t']]
+        meta =_load_rules_meta (guild_id )
+        if data .get ('channel_id')is not None :
+            meta ['channel_id']=ch_id 
+        for k in ('title','intro','color'):
+            if k in data :
+                meta [k]=str (data [k ]or '').strip ()
+        if not ch_id :
+            ch_id =meta .get ('channel_id')or ''
         if not ch_id :
             return jsonify ({'error':'Выберите канал публикации'}),400 
         if not rules :
@@ -145,6 +226,15 @@ def register(ctx):
         ok ,err =_validate_rule_urls (rules )
         if not ok :
             return jsonify ({'error':err }),400 
+        # финальная нормализация меты
+        title =str (meta .get ('title')or '').strip ()[:200 ]or 'Правила сервера'
+        intro =str (meta .get ('intro')or '').strip ()[:1800 ]
+        color_s =str (meta .get ('color')or '4f46e5').strip ().lstrip ('#')
+        import re as _re 
+        if not _re .match (r'^[0-9a-fA-F]{6}$',color_s ):
+            color_s ='4f46e5'
+        meta ={'title':title ,'intro':intro ,'color':color_s .lower (),'channel_id':ch_id }
+        _save_rules_meta (guild_id ,meta )
         # автосохранение — публикуем ровно то, что видим
         f =f'data/rules_{guild_id}.json'
         os .makedirs ('data',exist_ok =True )
@@ -155,18 +245,20 @@ def register(ctx):
         except Exception as _ex :
             _log.debug("api_rules(): invalidate подавлено: %s", _ex )
 
+        accent =int (color_s ,16 )
+
         def build_embeds ():
             embeds =[]
             head =discord .Embed (
-            title ="Правила сервера",
-            description =f"Обновлённые правила сообщества — {len (rules )} пунктов. Нарушение правил ведёт к наказанию.",
-            color =0x4f46e5 )
-            head .set_footer (text ="Обновлено: " + datetime.now(timezone.utc).strftime ('%d.%m.%Y %H:%M')+ " (UTC)")
+            title =title ,
+            description =(intro + (f'  ·  {len (rules )} пунктов' if intro else f'{len (rules )} пунктов')),
+            color =accent )
+            head .set_footer (text ="Обновлено: " + datetime.now(timezone.utc).strftime ('%d.%m.%Y %H:%M')+ " (UTC) · Aether")
             embeds .append (head )
             for i ,r in enumerate (rules ,1 ):
-                e =discord .Embed (color =0x4f46e5 )
-                e .title =f"{i}. {r ['t'][:200]}"
-                desc =r ['t']
+                e =discord .Embed (color =accent )
+                e .title =f"{i}. {r ['t'][:250]}"
+                desc =r ['t'][:1000 ]
                 if r ['u']:
                     desc +="\n\nСсылка: [открыть](" + r ['u']+ ")"
                 e .description =desc [:3900 ]
@@ -178,26 +270,68 @@ def register(ctx):
                 embeds .append (e )
             return embeds 
 
+        def channel_ok (ch ,guild ):
+            """Канал существует и бот имеет право писать в него."""
+            if ch is None :
+                return False ,'Канал публикации не найден — возможно, бот его не видит'
+            perms =ch .permissions_for (guild .me )
+            if not perms .send_messages :
+                return False ,'У бота нет права писать в этот канал (Send Messages)'
+            return True ,''
+
         if not bot :
             if _app ._demo_mode ():
                 # демо-предпросмотр без бота: публикация считается успешной,
-                # в лог панели уходит отметка — кнопка видимо работает
+                # отметка в лог панели — действие видно в ленте
                 _fire_panel_notification ('rules',f"Правила опубликованы: {len (rules )} пунктов",f"Канал {ch_id } · демо-режим")
-                return jsonify ({'success':True ,'demo':True ,'message':f"Демо-режим: правила готовы к публикации ({len (rules )} пунктов)"})
-            return jsonify ({'error':'Бот офлайн — публикация недоступна'})
+                try :
+                    import time as _t
+                    _pl ='data/panel_logs.json'
+                    _logs =_store_json_list (_pl )
+                    _logs .insert (0 ,{'username':'system','role':'owner','action':'Правила опубликованы',
+                        'detail':f'Канал {ch_id } · {len (rules )} пунктов · демо-режим','ts':int (_t .time ()),'broadcast':True ,'link':'/rules-editor'})
+                    json .dump (_logs ,open (_pl ,'w',encoding ='utf-8'),ensure_ascii =False ,indent =2 )
+                except Exception as _ex :
+                    _log.debug("api_publish_rules(): panel_logs: %s", _ex)
+                return jsonify ({'success':True ,'demo':True ,'title':title ,'color':color_s .lower (),
+                    'message':f"Демо-режим: {len (rules )} правил готовы — при живом боте они уйдут в Discord с заголовком «{title}»"})
+            return jsonify ({'error':'Бот офлайн — публикация недоступна. Запустите бота и повторите.'})
+        guild =bot .get_guild (int (guild_id ))
+        if guild is None :
+            return jsonify ({'error':'Сервер не найден у бота'}),404 
         embeds =build_embeds ()
 
         async def send ():
             ch =bot .get_channel (int (ch_id ))
-            if not ch :
-                raise RuntimeError ('Канал публикации не найден')
+            ok_ch ,err_ch =channel_ok (ch ,guild )
+            if not ok_ch :
+                raise RuntimeError (err_ch )
             for k in range (0 ,len (embeds ),10 ):
                 await ch .send (embeds =embeds [k :k +10 ])
 
         try :
-            asyncio .run_coroutine_threadsafe (send (),bot .loop ).result (timeout =20 )
+            asyncio .run_coroutine_threadsafe (send (),bot .loop ).result (timeout =25 )
         except Exception as _ex :
+            msg =str (_ex )
+            if 'Forbidden' in msg or 'Missing Access' in msg :
+                msg ='Discord запретил отправку: у бота нет прав на этот канал'
+            elif 'HTTPException' in msg and '400' in msg :
+                msg ='Discord отклонил сообщение (400): проверьте ссылки и картинки правил'
             _log.debug("api_publish_rules(): подавлено: %s", _ex)
-            return jsonify ({'error':f"Не удалось опубликовать: {_ex }"[:200 ]}),502 
+            return jsonify ({'error':f"Не удалось опубликовать: {msg }"[:220 ]}),502 
         _fire_panel_notification ('rules',f"Правила опубликованы: {len (rules )} пунктов",f"Канал {ch_id }")
-        return jsonify ({'success':True ,'message':f"Опубликовано правил: {len (rules )}"})
+        return jsonify ({'success':True ,'title':title ,'color':color_s .lower (),
+            'message':f"Опубликовано правил: {len (rules )}"})
+
+    def _store_json_list (path ):
+        """Список из JSON-файла (или пустой список)."""
+        try :
+            if os .path .exists (path ):
+                with open (path ,encoding ='utf-8')as fp :
+                    d =json .load (fp )
+                if isinstance (d ,list ):
+                    return d
+        except Exception as _ex :
+            _log.debug("_store_json_list(%s): %s", path ,_ex )
+        return []
+

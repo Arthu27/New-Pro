@@ -95,12 +95,32 @@ d = client.get(f'/api/guild/{GID}/rules').get_json()
 check(d[0]['u'] == 'https://discord.gg/example' and d[0]['img'].endswith('r1.png')
       and d[0]['thumb'].endswith('t1.png'), 'линк/картинка/миниатюра сохраняются и возвращаются')
 
-# валидация URL
-r = client.post(f'/api/guild/{GID}/rules', json=[{'t': 'Тест', 'img': 'ftp://bad'}])
-check(r.status_code == 400 and 'URL' in r.get_json().get('error', ''),
-      'некорректный URL картинки отклоняется с понятной ошибкой')
+# валидация URL: протоколы доклеиваются автоматически, опасные схемы отбрасываются
+r = client.post(f'/api/guild/{GID}/rules', json=[{'t': 'Тест', 'img': 'cdn.example.com/pic.png'}])
+d = r.get_json()
+check(r.status_code == 200 and d['rules'][0]['img'] == 'https://cdn.example.com/pic.png',
+      'ссылка без протокола автоматически получает https://')
 r = client.post(f'/api/guild/{GID}/rules', json=[{'t': 'Тест', 'u': 'javascript:alert(1)'}])
-check(r.status_code == 400, 'javascript:-ссылка отклоняется')
+d = r.get_json()
+check(r.status_code == 200 and d['rules'][0]['u'] == '',
+      'javascript:-схема безопасно отбрасывается (правило остаётся, ссылки нет)')
+r = client.post(f'/api/guild/{GID}/rules', json=[{'t': 'Тест', 'u': 'ftp://bad'}])
+check(r.status_code == 200 and r.get_json()['rules'][0]['u'] == 'https://ftp://bad',
+      'не-http схема мягко нормализуется в безопасный https-адрес')
+
+# мета публикации: заголовок/вступление/цвет/канал
+r = client.get(f'/api/guild/{GID}/rules/meta')
+m = r.get_json()
+check(r.status_code == 200 and m['success'] and m['meta'].get('title') == 'Правила сервера',
+      'мета по умолчанию: заголовок «Правила сервера»')
+r = client.post(f'/api/guild/{GID}/rules/meta',
+                json={'title': 'Правила нашего сервера', 'intro': 'Читай и соблюдай.',
+                      'color': '22c55e', 'channel_id': '4002'})
+m = r.get_json()['meta']
+check(m['title'] == 'Правила нашего сервера' and m['color'] == '22c55e' and m['channel_id'] == '4002',
+      'мета сохраняется (заголовок, цвет, канал)')
+r = client.post(f'/api/guild/{GID}/rules/meta', json={'color': 'кривой-цвет'})
+check(r.get_json()['meta']['color'] == '22c55e', 'битый цвет не перетирает сохранённый')
 
 # публикация без канала/правил
 r = client.post(f'/api/guild/{GID}/rules/publish', json={'channel_id': '', 'rules': payload})
@@ -114,6 +134,17 @@ r = client.post(f'/api/guild/{GID}/rules/publish', json={'channel_id': '4002', '
 d = r.get_json()
 check(r.status_code in (200, 502) and not d.get('success') and 'Бот' in str(d.get('error', '')),
       'без бота публикация честно отвечает «Бот офлайн» (не 500)')
+
+# публикация: ссылка без https:// чинится, заголовок/цвет из меты
+r = client.post(f'/api/guild/{GID}/rules', json=[{'t': 'Не спамь', 'u': 'discord.gg/our', 'img': '', 'thumb': ''}])
+saved = client.get(f'/api/guild/{GID}/rules').get_json()
+check(saved and saved[-1]['u'] == 'https://discord.gg/our',
+      'сохранение: ссылка без протокола дописывается до https://')
+r = client.post(f'/api/guild/{GID}/rules/meta', json={'title': 'Устав сообщества', 'intro': 'Свод правил.', 'color': '16a34a'})
+check(r.get_json()['meta']['title'] == 'Устав сообщества' and r.get_json()['meta']['color'] == '16a34a',
+      'мета: заголовок и цвет сохраняются отдельным запросом')
+meta_after = client.get(f'/api/guild/{GID}/rules/meta').get_json()['meta']
+check(meta_after['title'] == 'Устав сообщества', 'мета: читается обратно')
 
 # сторож от старого бага двойной обёртки run_coroutine_threadsafe
 src_rules = open(os.path.join(ROOT, 'web', 'routes', 'tasks_rules.py'), encoding='utf-8').read()
@@ -172,6 +203,12 @@ check('data-field="u"' in t_rules and 'data-field="img"' in t_rules and 'data-fi
       'редактор правил: поля ссылки, картинки и миниатюры')
 check('pv-media' in t_rules and 'pv-thumb' in t_rules and 'pv-link' in t_rules,
       'редактор правил: превью картинки, миниатюры и ссылки')
+check('rules-title' in t_rules and 'rules-color' in t_rules and 'rules-intro' in t_rules,
+      'редактор правил: поля заголовка, вступления и цвета эмбеда')
+check('publishStatus' in t_rules and 'publish-status' in t_rules,
+      'редактор правил: видимый статус результата публикации')
+check('fixUrl' in t_rules and "https://' + v" in t_rules,
+      'редактор правил: клиентская автонормализация ссылок')
 check('fa-link' in t_rules and 'fa-image' in t_rules and 'fa-images' in t_rules,
       'редактор правил: FA-иконки полей')
 t_mh = open(os.path.join(ROOT, 'web', 'templates', 'modhistory.html'), encoding='utf-8').read()

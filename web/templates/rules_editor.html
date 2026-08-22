@@ -135,6 +135,11 @@
   height: 4px;
   background: linear-gradient(90deg, var(--ac), #7c3aed, #22d3ee);
 }
+.preview-intro {
+  font-size: 12.5px; color: var(--text-2); line-height: 1.6;
+  margin: -4px 0 12px; display: none;
+}
+.preview-intro.show { display: block; }
 .preview-card-body { padding: 16px 18px; }
 .preview-card-title {
   display: flex; align-items: center; gap: 9px;
@@ -199,6 +204,41 @@
 }
 .publish-row { display: flex; gap: 10px; align-items: flex-end; }
 .publish-row .btn { white-space: nowrap; }
+.rules-pub-fields { display: flex; flex-direction: column; gap: 8px; }
+.rules-pub-fields .rule-line { display: flex; align-items: center; gap: 8px; }
+.rules-pub-fields .rule-line > i {
+  width: 18px; text-align: center; flex: 0 0 18px;
+  color: var(--text-3); font-size: 12px;
+}
+.rules-pub-fields .rule-line:focus-within > i { color: var(--ac); }
+.rules-pub-fields .rule-field {
+  flex: 1; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line-2);
+  border-radius: 10px; padding: 9px 12px;
+  color: var(--text); font-size: 13px; outline: none;
+  transition: border-color .15s, box-shadow .2s;
+}
+.rules-pub-fields .rule-field:focus {
+  border-color: var(--ac);
+  box-shadow: 0 0 0 3px var(--ac-soft);
+}
+.publish-status {
+  margin-top: 10px; padding: 10px 13px;
+  border-radius: 11px; font-size: 12.5px; font-weight: 600;
+  display: none; align-items: flex-start; gap: 8px; line-height: 1.5;
+}
+.publish-status.show { display: flex; }
+.publish-status.ok {
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
+  color: var(--ok);
+}
+.publish-status.err {
+  background: color-mix(in srgb, var(--err) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--err) 40%, transparent);
+  color: var(--err);
+}
+.publish-status i { margin-top: 1px; }
 .publish-hint {
   margin-top: 8px; font-size: 11.5px; color: var(--text-3);
   display: flex; gap: 7px; align-items: flex-start; line-height: 1.5;
@@ -236,21 +276,27 @@
     </div>
     <div class="rules-body">
       <div class="preview-card">
-        <div class="preview-card-bar"></div>
+        <div class="preview-card-bar" id="previewColorBar"></div>
         <div class="preview-card-body">
           <div class="preview-card-title">
             <span class="ico"><i class="fas fa-scroll"></i></span>
-            Правила сервера
+            <span id="preview-title">Правила сервера</span>
           </div>
+          <div class="preview-intro" id="preview-intro"></div>
           <div id="preview-rules"></div>
           <div class="preview-foot">
-            <i class="fas fa-circle-info"></i> Каждое правило — отдельный эмбед: текст, ссылка, картинка, миниатюра
+            <i class="fas fa-circle-info"></i> Первый эмбед — заголовок и вступление, дальше по одному эмбеду на правило
           </div>
         </div>
       </div>
 
-      <label class="field-label" for="rules-channel">Канал публикации</label>
-      <div class="publish-row">
+      <label class="field-label" for="rules-channel">Публикация в Discord</label>
+      <div class="rules-pub-fields">
+        <div class="rule-line"><i class="fas fa-heading"></i><input class="rule-field" id="rules-title" placeholder="Заголовок эмбеда: Правила сервера" aria-label="Заголовок эмбеда" data-meta="title"></div>
+        <div class="rule-line"><i class="fas fa-align-left"></i><input class="rule-field" id="rules-intro" placeholder="Вступление: Нарушение правил ведёт к наказанию" aria-label="Вступление эмбеда" data-meta="intro"></div>
+        <div class="rule-line"><i class="fas fa-palette"></i><input class="rule-field" id="rules-color" type="color" value="#4f46e5" aria-label="Цвет эмбеда" data-meta="color" style="max-width:70px;padding:4px 6px"></div>
+      </div>
+      <div class="publish-row" style="margin-top:10px">
         <select id="rules-channel" class="form-input" style="flex:1" aria-label="Канал публикации">
           <option value="">Выберите канал…</option>
         </select>
@@ -258,9 +304,10 @@
           <i class="fas fa-paper-plane"></i> Опубликовать
         </button>
       </div>
+      <div class="publish-status" id="publishStatus" role="status" aria-live="polite"></div>
       <div class="publish-hint">
         <i class="fas fa-link"></i>
-        <span>Ссылки и картинки указываются полными URL (https://…). Правила уйдут в Discord с нумерацией, ссылками, картинками и миниатюрами.</span>
+        <span>Ссылки без «https://» дописываются автоматически. Заголовок, вступление и цвет применяются ко всем эмбедам публикации.</span>
       </div>
     </div>
   </div>
@@ -271,6 +318,57 @@
   'use strict';
   var rules = [];
   var selectedGuild = '{{ main_guild_id }}';
+  var lastChannel = '';
+  var CAN_EDIT = {{ 'true' if role in ('admin', 'owner') else 'false' }};
+  var metaTimer = null;
+
+  /* ── Статус публикации: всегда видно, что произошло ── */
+  function publishStatus(ok, text) {
+    var el = document.getElementById('publishStatus');
+    if (!el) return;
+    if (!text) { el.className = 'publish-status'; el.textContent = ''; return; }
+    el.className = 'publish-status show ' + (ok ? 'ok' : 'err');
+    el.innerHTML = '<i class="fas ' + (ok ? 'fa-circle-check' : 'fa-circle-exclamation') + '"></i><span>' + esc(text) + '</span>';
+  }
+
+  /* ── Мета публикации: синк превью и автосохранение ── */
+  function syncPreviewMeta() {
+    var tEl = document.getElementById('rules-title');
+    var iEl = document.getElementById('rules-intro');
+    var cEl = document.getElementById('rules-color');
+    var title = tEl ? tEl.value.trim() : 'Правила сервера';
+    var intro = iEl ? iEl.value.trim() : '';
+    var color = cEl ? cEl.value : '#4f46e5';
+    var pt = document.getElementById('preview-title');
+    var pi = document.getElementById('preview-intro');
+    var pb = document.getElementById('previewColorBar');
+    if (pt) pt.textContent = title || 'Правила сервера';
+    if (pi) { pi.textContent = intro; pi.className = 'preview-intro' + (intro ? ' show' : ''); }
+    if (pb) pb.style.background = color;
+  }
+  function saveMetaSoon() {
+    if (!CAN_EDIT) return;
+    clearTimeout(metaTimer);
+    metaTimer = setTimeout(saveMeta, 700);
+  }
+  function metaPayload() {
+    return {
+      title: document.getElementById('rules-title').value.trim(),
+      intro: document.getElementById('rules-intro').value.trim(),
+      color: document.getElementById('rules-color').value.replace('#', ''),
+      channel_id: document.getElementById('rules-channel').value
+    };
+  }
+  async function saveMeta() {
+    if (!selectedGuild) return;
+    try {
+      await fetch('/api/guild/' + selectedGuild + '/rules/meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(metaPayload())
+      });
+    } catch (e) { /* автосохранение меты — тихо */ }
+  }
 
   function esc(s) {
     return String(s == null ? '' : s)
@@ -294,6 +392,13 @@
     }
     return blankRule();
   }
+  function fixUrl(v) {
+    v = String(v == null ? '' : v).trim();
+    if (!v) return '';
+    if (/^https?:\/\//i.test(v)) return v;
+    if (/^(javascript|data|vbscript):/i.test(v)) return '';
+    return 'https://' + v;
+  }
   function validUrl(v) { return !v || /^https?:\/\//i.test(v); }
 
   /* ── Серверы ── */
@@ -316,7 +421,7 @@
     loadRules();
   }
 
-  /* ── Загрузка правил и каналов ── */
+  /* ── Загрузка правил, меты и каналов ── */
   async function loadRules() {
     if (!selectedGuild) return;
     try {
@@ -327,6 +432,19 @@
       rules = [];
     }
     try {
+      var mr = await fetch('/api/guild/' + selectedGuild + '/rules/meta');
+      var md = await mr.json();
+      var meta = (md && md.meta) || {};
+      var tEl = document.getElementById('rules-title');
+      var iEl = document.getElementById('rules-intro');
+      var cEl = document.getElementById('rules-color');
+      if (tEl && meta.title) tEl.value = meta.title;
+      if (iEl && meta.intro) iEl.value = meta.intro;
+      if (cEl && meta.color) cEl.value = '#' + String(meta.color).replace('#', '');
+      if (meta.channel_id) lastChannel = String(meta.channel_id);
+      syncPreviewMeta();
+    } catch (e) { /* мета не критична */ }
+    try {
       var cr = await fetch('/api/guild/' + selectedGuild + '/channels');
       var chD = await cr.json();
       var chans = Array.isArray(chD) ? chD : (chD.channels || []);
@@ -336,9 +454,11 @@
       chans.filter(function (c) { return c.type === 'text' && !c.hidden; })
         .sort(function (a, b) { return (a.position || 0) - (b.position || 0); })
         .forEach(function (c) {
-          var s = String(c.id) === prev ? ' selected' : '';
+          var chosen = prev || lastChannel;
+          var s = String(c.id) === chosen ? ' selected' : '';
           chSel.innerHTML += '<option value="' + esc(c.id) + '"' + s + '>#' + esc(c.name) + '</option>';
         });
+      if (!chSel.value && lastChannel) chSel.value = lastChannel;
     } catch (e) { /* каналы не критичны */ }
     renderRules();
   }
@@ -426,20 +546,23 @@
     renderRules();
   }
   function checkUrls() {
+    // ссылки без протокола чиним автоматически (https://), опасные схемы — стоп
     for (var i = 0; i < rules.length; i++) {
       var r = rules[i];
-      if (!validUrl(r.u) || !validUrl(r.img) || !validUrl(r.thumb)) {
-        toast('Правило ' + (i + 1) + ': ссылки должны начинаться с https://', false);
+      if (/^(javascript|data|vbscript):/i.test(r.u) || /^(javascript|data|vbscript):/i.test(r.img) || /^(javascript|data|vbscript):/i.test(r.thumb)) {
+        toast('Правило ' + (i + 1) + ': такие ссылки запрещены', false);
         return false;
       }
+      r.u = fixUrl(r.u); r.img = fixUrl(r.img); r.thumb = fixUrl(r.thumb);
     }
+    updatePreview();
     return true;
   }
 
   async function saveRules() {
     if (!selectedGuild) { toast('Выберите сервер!', false); return; }
     var clean = rules.map(function (r) {
-      return { t: r.t.trim(), u: r.u.trim(), img: r.img.trim(), thumb: r.thumb.trim() };
+      return { t: r.t.trim(), u: fixUrl(r.u), img: fixUrl(r.img), thumb: fixUrl(r.thumb) };
     }).filter(function (r) { return r.t; });
     if (!checkUrls()) return;
     var btn = document.getElementById('btnSaveRules');
@@ -468,33 +591,41 @@
   }
 
   async function publishRules() {
-    if (!selectedGuild) { toast('Выберите сервер!', false); return; }
+    if (!CAN_EDIT) { publishStatus(false, 'Публиковать могут только администраторы'); return; }
+    if (!selectedGuild) { publishStatus(false, 'Выберите сервер!'); return; }
     var ch = document.getElementById('rules-channel').value;
-    if (!ch) { toast('Выберите канал публикации!', false); return; }
+    if (!ch) { publishStatus(false, 'Выберите канал публикации'); return; }
     var clean = rules.map(function (r) {
-      return { t: r.t.trim(), u: r.u.trim(), img: r.img.trim(), thumb: r.thumb.trim() };
+      return { t: r.t.trim(), u: fixUrl(r.u), img: fixUrl(r.img), thumb: fixUrl(r.thumb) };
     }).filter(function (r) { return r.t; });
-    if (!clean.length) { toast('Сначала добавьте правила!', false); return; }
+    if (!clean.length) { publishStatus(false, 'Сначала добавьте правила!'); return; }
     if (!checkUrls()) return;
     var btn = document.getElementById('btnPublishRules');
     var orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Публикуем…';
+    publishStatus(true, 'Отправляем правила в Discord…');
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/rules/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel_id: ch, rules: clean })
+        body: JSON.stringify({ channel_id: ch, rules: clean, title: document.getElementById('rules-title').value.trim(),
+                               intro: document.getElementById('rules-intro').value.trim(),
+                               color: document.getElementById('rules-color').value.replace('#', '') })
       });
       var d = await r.json();
       if (d.success) {
+        publishStatus(true, String(d.message || 'Правила опубликованы в Discord'));
         toast(String(d.message || 'Правила опубликованы в Discord'), true);
         rules = clean;
         renderRules();
+        saveMeta();
       } else {
+        publishStatus(false, String(d.error || 'Ошибка публикации'));
         toast(String(d.error || 'Ошибка публикации'), false);
       }
     } catch (e) {
+      publishStatus(false, 'Ошибка соединения — проверьте, что панель запущена');
       toast('Ошибка соединения', false);
     }
     btn.disabled = false;
@@ -539,6 +670,30 @@
   var refresh = document.getElementById('rulesRefresh');
   if (refresh) refresh.addEventListener('click', loadRules);
 
+  /* поля меты: живое превью + автосохранение */
+  var mTitle = document.getElementById('rules-title');
+  var mIntro = document.getElementById('rules-intro');
+  var mColor = document.getElementById('rules-color');
+  if (mTitle) mTitle.addEventListener('input', function () { syncPreviewMeta(); saveMetaSoon(); });
+  if (mIntro) mIntro.addEventListener('input', function () { syncPreviewMeta(); saveMetaSoon(); });
+  if (mColor) mColor.addEventListener('input', function () { syncPreviewMeta(); saveMetaSoon(); });
+  var chSel = document.getElementById('rules-channel');
+  if (chSel) chSel.addEventListener('change', function () { lastChannel = chSel.value; saveMetaSoon(); });
+
+  /* права: без админа кнопки отключены с подсказкой */
+  if (!CAN_EDIT) {
+    ['btnSaveRules', 'btnPublishRules', 'btnAddRule'].forEach(function (id) {
+      var b = document.getElementById(id);
+      if (b) { b.disabled = true; b.title = 'Требуются права администратора'; }
+    });
+    ['rules-title', 'rules-intro', 'rules-color', 'rules-channel'].forEach(function (id) {
+      var f = document.getElementById(id);
+      if (f) f.disabled = true;
+    });
+    publishStatus(false, 'Просмотр: публикация доступна только администраторам');
+  }
+
+  syncPreviewMeta();
   loadGuilds();
 })();
 </script>
