@@ -8,7 +8,7 @@ from web.routes._common import (
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
+    os, json, time, math, discord, datetime, timezone, timedelta,
 )
 
 def _hidden_store ():
@@ -290,6 +290,206 @@ def register(ctx):
 
         all_events .sort (key =lambda x :x .get ('created_at',''),reverse =True )
         return jsonify (all_events [:500 ])
+
+
+    @app .route ('/api/mod-stats')
+    @login_required 
+    @role_required ('mod')
+    def api_mod_stats ():
+        """Профи-статистика модераторов: действия (неделя/всего), сроки наказаний,
+        сообщения и голосовые часы за неделю. Источники те же, что у /api/mod-history,
+        плюс счётчик сообщений и голосовой трекер."""
+        gid =request .args .get ('guild_id')or str (active_guild_id ()or MAIN_GUILD_ID or '')
+        now =datetime .now (timezone .utc )
+        week_start =now -timedelta (days =6 )
+
+        def _ts (v ):
+            try :
+                dt =datetime .fromisoformat (str (v or '').replace ('Z','+00:00'))
+            except Exception :
+                return None 
+            if dt .tzinfo is None :
+                dt =dt .replace (tzinfo =timezone .utc )
+            return dt .astimezone (timezone .utc )
+
+        def _dur_min (v ):
+            """Длительность наказания → минуты: int-минуты, '2h', '1d', '1d6h', '45m', '60'."""
+            import re as _re 
+            if v is None :return 0 
+            if isinstance (v ,bool ):return 0 
+            if isinstance (v ,(int ,float )):return max (0 ,int (v ))
+            sv =str (v ).strip ()
+            if sv .isdigit ():return max (0 ,int (sv ))
+            mm =_re .match (r'^(?:(\d+)\s*d)?\s*(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?$',sv ,_re .I )
+            if not mm or not any (mm .groups ()):return 0 
+            d ,h ,mi =(int (x or 0 )for x in mm .groups ())
+            return d *1440 +h *60 +mi 
+
+        rows ={}
+        def bump (mod_ref ,action ,ts ,dur =0 ):
+            key =str (mod_ref or '').strip ()
+            if not key :return 
+            row =rows .setdefault (key ,{
+            'mod':key ,'warns':0 ,'mutes':0 ,'kicks':0 ,'bans':0 ,'other':0 ,
+            'total':0 ,'week':0 ,'duration_min':0 ,'duration_week_min':0 })
+            act =str (action or '').lower ()
+            dt =_ts (ts )
+            in_week =dt is not None and dt >=week_start 
+            row ['total']+=1 
+            if in_week :row ['week']+=1 
+            if act in ('warn','warning','предупреждение','варн'):row ['warns']+=1 
+            elif act in ('mute','timeout','мут','таймаут'):row ['mutes']+=1 ;row ['duration_min']+=dur ;row ['duration_week_min']+=dur if in_week else 0 
+            elif act in ('kick','кик'):row ['kicks']+=1 
+            elif act in ('ban','бан'):row ['bans']+=1 
+            else :row ['other']+=1 
+
+        # 1. mod_data.json (кейсы бота, могут нести длительность)
+        mod_file ='data/mod_data.json'
+        if os .path .exists (mod_file ):
+            try :
+                with open (mod_file ,'r',encoding ='utf-8')as fp :md =json .load (fp )
+                cases =md .get ('case',{})if isinstance (md ,dict )else {}
+                for cgid ,case_list in cases .items ():
+                    if gid and str (cgid )!=str (gid ):continue 
+                    if not isinstance (case_list ,list ):continue 
+                    for c in case_list :
+                        if not isinstance (c ,dict ):continue 
+                        bump (c .get ('mod_id')or c .get ('moderator'),c .get ('action','warn'),
+                        c .get ('timestamp',''),_dur_min (c .get ('duration_minutes')if 'duration_minutes'in c else c .get ('duration')))
+            except Exception as _ex :
+                print (f'[MOD-STATS] Ошибка mod_data: {_ex }')
+        # 2. audit_log.json
+        af ='data/audit_log.json'
+        if os .path .exists (af ):
+            try :
+                with open (af ,'r',encoding ='utf-8')as fp :audit =json .load (fp )
+                for agid ,events in (audit .items ()if isinstance (audit ,dict )else []):
+                    if gid and str (agid )!=str (gid ):continue 
+                    if not isinstance (events ,list ):continue 
+                    for ev in events :
+                        if not isinstance (ev ,dict ):continue 
+                        bump (ev .get ('mod_name')or ev .get ('moderator')or ev .get ('mod'),
+                        ev .get ('action','warn'),ev .get ('timestamp',''))
+            except Exception as _ex :
+                print (f'[MOD-STATS] Ошибка audit_log: {_ex }')
+        # 3. warnings.json
+        wf ='data/warnings.json'
+        if os .path .exists (wf ):
+            try :
+                with open (wf ,'r',encoding ='utf-8')as fp :warns =json .load (fp )
+                for wgid ,users in (warns .items ()if isinstance (warns ,dict )else []):
+                    if gid and str (wgid )!=str (gid ):continue 
+                    if not isinstance (users ,dict ):continue 
+                    for _uid ,wlist in users .items ():
+                        if not isinstance (wlist ,list ):continue 
+                        for w in wlist :
+                            if not isinstance (w ,dict ):continue 
+                            bump (w .get ('mod')or w .get ('moderator'),'warn',w .get ('timestamp',''))
+            except Exception as _ex :
+                print (f'[MOD-STATS] Ошибка warnings: {_ex }')
+
+        # 4. Сообщения и голос за неделю
+        msg_map ={}
+        voice_map ={}
+        try :
+            from services .mod_activity import message_counts as _mc
+            msg_map =_mc (gid ,days =7 )
+        except Exception as _ex :
+            print (f'[MOD-STATS] Ошибка счётчика сообщений: {_ex }')
+        try :
+            from cogs .voice_tracker import voice_view as _vv
+            vv =_vv (gid )
+            users =vv .get ('users',{})if isinstance (vv ,dict )else {}
+            for uid ,rec in users .items ():
+                if not isinstance (rec ,dict ):continue 
+                daily =rec .get ('daily')or {}
+                secs =0 
+                for d in range (7 ):
+                    dkey =(now -timedelta (days =d )).strftime ('%Y-%m-%d')
+                    try :secs +=max (0 ,int (daily .get (dkey ,0 )or 0 ))
+                    except Exception as _ex :_log.debug("api_mod_stats(): голосовой день %s: %s", dkey, _ex )
+                voice_map [str (uid )]={'name':rec .get ('name')or str (uid ),'seconds':secs ,'avatar':rec .get ('avatar')or ''}
+        except Exception as _ex :
+            print (f'[MOD-STATS] Ошибка голосового трекера: {_ex }')
+
+        # 5. Демо-имена и аватары: mod-имена 'sonya.staff' → Sonya + аватар
+        try :
+            import web .app as _app2 
+            if _app2 ._demo_mode ():
+                from web .routes ._common import DEMO_MEMBERS
+                demo_by_name ={str (m .get ('name','')).lower ():m for m in DEMO_MEMBERS }
+                demo_by_id ={str (m .get ('id')):m for m in DEMO_MEMBERS }
+                for row in rows .values ():
+                    key =str (row ['mod'])
+                    dm =demo_by_name .get (key .lower ())or demo_by_id .get (key )
+                    if dm :
+                        row ['name']=str (dm .get ('display_name')or dm .get ('name')or key )
+                        row ['avatar']=str (dm .get ('avatar')or '')
+                for uid ,rec in voice_map .items ():
+                    dm =demo_by_id .get (uid )
+                    if dm and not rec .get ('name'):
+                        rec ['name']=str (dm .get ('display_name')or dm .get ('name')or uid )
+                        rec ['avatar']=str (dm .get ('avatar')or '')
+                for uid ,rec in msg_map .items ():
+                    dm =demo_by_id .get (uid )
+                    if dm :
+                        rec ['name']=str (dm .get ('display_name')or dm .get ('name')or rec .get ('name')or uid )
+        except Exception as _ex :
+            print (f'[MOD-STATS] Ошибка демо-имён: {_ex }')
+
+        # 6. Собрать строки: действия по mod-ключу, сообщения/голос по uid-ключу
+        final =[]
+        seen_mods =set ()
+        for key ,row in rows .items ():
+            name =row .get ('name')or key 
+            avatar =row .get ('avatar')or ''
+            msgs =0 
+            vo_secs =0 
+            # сообщения: ищем по ключу И по имени среди записей счётчика
+            for uid ,rec in msg_map .items ():
+                if str (uid )==key or (rec .get ('name')and str (rec ['name']).lower ()==str (name ).lower ()):
+                    msgs =max (msgs ,rec .get ('messages',0 ))
+                    seen_mods .add (str (uid ).lower ())
+            for uid ,rec in voice_map .items ():
+                if str (uid )==key or (rec .get ('name')and str (rec ['name']).lower ()==str (name ).lower ()):
+                    vo_secs =max (vo_secs ,rec .get ('seconds',0 ))
+                    seen_mods .add (str (uid ).lower ())
+                    if not avatar :avatar =rec .get ('avatar')or ''
+                    if name ==key and rec .get ('name'):name =rec ['name']
+            row ['name']=name 
+            row ['avatar']=avatar 
+            row ['messages_week']=msgs 
+            row ['voice_seconds_week']=vo_secs 
+            row ['voice_hours_week']=round (vo_secs /3600.0 ,1 )
+            final .append (row )
+            seen_mods .add (key .lower ())
+        # модеры только с сообщениями/голосом (без действий в логах)
+        for uid ,rec in msg_map .items ():
+            if str (uid ).lower ()in seen_mods :continue 
+            vrec =voice_map .get (uid ,{})
+            vs =vrec .get ('seconds',0 )
+            final .append ({'mod':str (uid ),'name':rec .get ('name')or str (uid ),'avatar':vrec .get ('avatar')or '',
+            'warns':0 ,'mutes':0 ,'kicks':0 ,'bans':0 ,'other':0 ,'total':0 ,'week':0 ,
+            'duration_min':0 ,'duration_week_min':0 ,'messages_week':rec .get ('messages',0 ),
+            'voice_seconds_week':vs ,'voice_hours_week':round (vs /3600.0 ,1 )})
+            seen_mods .add (str (uid ).lower ())
+        for uid ,rec in voice_map .items ():
+            if str (uid ).lower ()in seen_mods :continue 
+            mrec =msg_map .get (uid ,{})
+            final .append ({'mod':str (uid ),'name':rec .get ('name')or str (uid ),'avatar':rec .get ('avatar')or '',
+            'warns':0 ,'mutes':0 ,'kicks':0 ,'bans':0 ,'other':0 ,'total':0 ,'week':0 ,
+            'duration_min':0 ,'duration_week_min':0 ,'messages_week':mrec .get ('messages',0 ),
+            'voice_seconds_week':rec .get ('seconds',0 ),'voice_hours_week':round (rec .get ('seconds',0 )/3600.0 ,1 )})
+            seen_mods .add (str (uid ).lower ())
+        final .sort (key =lambda r :(-(r .get ('week')or 0 ),-(r .get ('total')or 0 ),str (r .get ('name','')).lower ()))
+        kpis ={
+        'active_mods':sum (1 for r in final if (r .get ('week')or 0 )>0 or (r .get ('messages_week')or 0 )>0 or (r .get ('voice_seconds_week')or 0 )>0 ),
+        'actions_week':sum (r .get ('week')or 0 for r in final ),
+        'actions_total':sum (r .get ('total')or 0 for r in final ),
+        'messages_week':sum (r .get ('messages_week')or 0 for r in final ),
+        'voice_hours_week':round (sum (r .get ('voice_seconds_week')or 0 for r in final )/3600.0 ,1 ),
+        }
+        return jsonify ({'success':True ,'guild_id':str (gid ),'generated_at':now .isoformat (),'kpis':kpis ,'rows':final })
 
 
     @app .route ('/api/roles')

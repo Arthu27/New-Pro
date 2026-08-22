@@ -6,6 +6,7 @@
 """
 import json
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 
 os.makedirs('data', exist_ok=True)
@@ -164,11 +165,11 @@ audit = {
 # ── 3. История решений (mod_data) ───────────────────────────────────────
 mod_data = {'case': {GID: [
     {'user_id': '823456789012345680', 'mod_id': 'lina.mod', 'action': 'mute',
-     'reason': 'Обход мьюта вторым аккаунтом', 'timestamp': iso(1, 22, 45)},
+     'reason': 'Обход мьюта вторым аккаунтом', 'duration_minutes': 720, 'timestamp': iso(1, 22, 45)},
     {'user_id': '523456789012345678', 'mod_id': 'sonya.staff', 'action': 'warn',
      'reason': 'Разжигание конфликта после предупреждения', 'timestamp': iso(2, 21, 15)},
-    {'user_id': '723456789012345679', 'mod_id': 'artem.mods', 'action': 'warn',
-     'reason': 'Спам ссылками на сторонний сервер', 'timestamp': iso(5, 15, 5)},
+    {'user_id': '723456789012345679', 'mod_id': 'artem.mods', 'action': 'mute',
+     'reason': 'Спам ссылками на сторонний сервер', 'duration_minutes': 120, 'timestamp': iso(5, 15, 5)},
     {'user_id': '823456789012345680', 'mod_id': 'artem.mods', 'action': 'warn',
      'reason': 'Оскорбления в адрес модерации', 'timestamp': iso(8, 19, 50)},
 ]}}
@@ -389,12 +390,17 @@ demo_channels = [
 ]
 
 demo_rules = [
-    'Будьте вежливы и уважайте других участников — без оскорблений и травли.',
-    'Никакого спама, флуда и капса в текстовых каналах.',
-    'Запрещены NSFW-материалы, шок-контент и ссылки на вредоносные ресурсы.',
-    'Реклама других серверов — только с разрешения администрации.',
-    'Спорные ситуации решайте через тикеты, а не в общем чате.',
-    'Следуйте указаниям модераторов — их решения можно обжаловать через апелляции.',
+    {'t': 'Будьте вежливы и уважайте других участников — без оскорблений и травли.',
+     'u': 'https://discord.com/guidelines', 'img': '', 'thumb': ''},
+    {'t': 'Никакого спама, флуда и капса в текстовых каналах.', 'u': '', 'img': '', 'thumb': ''},
+    {'t': 'Запрещены NSFW-материалы, шок-контент и ссылки на вредоносные ресурсы.',
+     'u': '', 'img': '', 'thumb': ''},
+    {'t': 'Реклама других серверов — только с разрешения администрации.',
+     'u': '', 'img': 'https://cdn.discordapp.com/attachments/0000/example_rules.png', 'thumb': ''},
+    {'t': 'Спорные ситуации решайте через тикеты, а не в общем чате.',
+     'u': 'https://support.discord.com/hc/ru', 'img': '', 'thumb': ''},
+    {'t': 'Следуйте указаниям модераторов — их решения можно обжаловать через апелляции.',
+     'u': '', 'img': '', 'thumb': 'https://cdn.discordapp.com/attachments/0000/example_thumb.png'},
 ]
 
 demo_xp = {
@@ -548,6 +554,37 @@ try:
     print('записано: смены персонала (%d смен)' % len(_shifts))
 except Exception as _ex:
     print('смены персонала не засеяны:', _ex)
+
+# ── Голос и сообщения модеров (для профи-статистики /mod-history) ──
+try:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + os.sep + '..')
+    from db import GuildData as _GD
+    import random as _rnd2
+    _rnd2.seed(777)
+    _mods = [('1001', 'Sonya', 'sonya.staff', 'https://cdn.discordapp.com/embed/avatars/1.png'),
+             ('1002', 'Artem', 'artem.mods', 'https://cdn.discordapp.com/embed/avatars/2.png'),
+             ('1003', 'Lina', 'lina.mod', 'https://cdn.discordapp.com/embed/avatars/3.png')]
+    _today = datetime.now(timezone.utc).date()
+    _voice = _GD('voice_stats')
+    _msgs = _GD('mod_activity')
+    for uid, name, login, avatar in _mods:
+        daily = {}
+        total_s = 0
+        for d in range(7):
+            dkey = (_today - timedelta(days=d)).strftime('%Y-%m-%d')
+            secs = _rnd2.randint(1800, 9000) * (1 if _rnd2.random() > 0.25 else 0)
+            daily[dkey] = secs
+            total_s += secs
+        _voice.set(GID, uid, {'name': name, 'avatar': avatar,
+                              'total_seconds': total_s, 'daily': daily})
+        mdays = {}
+        for d in range(7):
+            dkey = (_today - timedelta(days=d)).strftime('%Y-%m-%d')
+            mdays[dkey] = _rnd2.randint(40, 220)
+        _msgs.set(GID, uid, {'name': name, 'days': mdays})
+    print('записано: голос и сообщения модеров (3 × 7 дней)')
+except Exception as _ex:
+    print('голос/сообщения модеров не засеяны:', _ex)
 
 # ── Учётка владельца панели: консистентна с env, под который стартует демо ──
 try:

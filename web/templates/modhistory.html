@@ -18,6 +18,94 @@
   <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value" id="mh-warns">—</div><div class="kpi-label">Варны</div></div></div>
 </div>
 
+<style>
+/* ═══════ Статистика модераторов — Aether ═══════ */
+.mst-panel {
+  background: var(--glass); border: 1px solid var(--line);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-1);
+  margin-bottom: 14px; overflow: hidden;
+}
+.mst-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 14px 18px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(135deg, var(--ac-soft), transparent 60%);
+}
+.mst-head h3 { margin: 0; font-size: 14.5px; display: flex; align-items: center; gap: 9px; }
+.mst-head h3 i {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: var(--ac-grad); color: #fff;
+  display: grid; place-items: center; font-size: 13px;
+  box-shadow: 0 5px 14px -5px var(--ac-glow);
+}
+.mst-sub { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--text-3); }
+.mst-toggle { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 10px; padding: 3px; }
+.mst-toggle button {
+  border: none; background: transparent; color: var(--text-3);
+  font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 8px;
+  cursor: pointer; transition: all .15s;
+}
+.mst-toggle button.active { background: var(--ac); color: #fff; box-shadow: 0 3px 10px -3px var(--ac-glow); }
+.mst-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px 18px 0; }
+@media (max-width: 860px) { .mst-kpis { grid-template-columns: repeat(2, 1fr); } }
+.mst-kpi {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--line); border-radius: 12px;
+  padding: 11px 13px; background: var(--surface);
+}
+.mst-kpi i { width: 30px; height: 30px; flex: 0 0 30px; border-radius: 9px; display: grid; place-items: center; background: var(--ac-soft); color: var(--ac); font-size: 12px; }
+.mst-kpi .v { font-size: 17px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.mst-kpi .l { font-size: 10.5px; color: var(--text-3); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.mst-table-wrap { padding: 14px 18px 16px; overflow-x: auto; }
+.mst-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.mst-table th {
+  text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--text-3);
+  padding: 6px 8px; border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.mst-table td { padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mst-table tr:last-child td { border-bottom: none; }
+.mst-table tr:hover td { background: var(--surface-2); }
+.mst-mod { display: flex; align-items: center; gap: 10px; }
+.mst-av { width: 32px; height: 32px; border-radius: 50%; flex: 0 0 32px; border: 2px solid var(--ac-line); }
+.mst-av-t { display: grid; place-items: center; background: var(--ac-soft); color: var(--ac); font-weight: 800; font-size: 13px; }
+.mst-name { font-weight: 800; color: var(--text); }
+.mst-login { font-size: 10.5px; color: var(--text-3); }
+.mst-acts b { font-size: 14px; color: var(--ac); }
+.mst-acts .mst-sub2 { display: block; font-size: 9.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; }
+@media (prefers-reduced-motion: reduce) {
+  .mst-toggle button { transition: none; }
+}
+</style>
+
+<div class="mst-panel">
+  <div class="mst-head">
+    <h3><i class="fas fa-chart-line"></i> Статистика модераторов</h3>
+    <div class="mst-toggle" role="group" aria-label="Период статистики">
+      <button type="button" id="mst-week" class="active">За неделю</button>
+      <button type="button" id="mst-all">За всё время</button>
+    </div>
+    <span class="mst-sub" id="mst-sub">за 7 дней</span>
+  </div>
+  <div class="mst-kpis">
+    <div class="mst-kpi"><i class="fas fa-user-shield"></i><div><div class="v" id="mst-mod-active">—</div><div class="l">Модеров активно</div></div></div>
+    <div class="mst-kpi"><i class="fas fa-gavel"></i><div><div class="v" id="mst-acts">—</div><div class="l">Действий</div></div></div>
+    <div class="mst-kpi"><i class="fas fa-comments"></i><div><div class="v" id="mst-msgs">—</div><div class="l">Сообщений</div></div></div>
+    <div class="mst-kpi"><i class="fas fa-headset"></i><div><div class="v" id="mst-voice">—</div><div class="l">В голосе</div></div></div>
+  </div>
+  <div class="mst-table-wrap">
+    <table class="mst-table">
+      <thead><tr>
+        <th>Модератор</th><th>Варны</th><th>Мьюты</th><th>Кики</th><th>Баны</th>
+        <th>Действий</th><th>Сроки наказаний</th><th>Сообщений / нед</th><th>Голос / нед</th>
+      </tr></thead>
+      <tbody id="mst-body">
+        <tr><td colspan="9"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Считаем статистику…</span></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <div class="panel">
   <div class="toolbar">
     <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
@@ -130,11 +218,92 @@
     $('search').addEventListener('input', render);
     $('filter').addEventListener('change', render);
     if (window.livePauseButton) window.livePauseButton($('mh-pause'));
+    var bw = $('mst-week'), ba = $('mst-all');
+    if (bw) bw.addEventListener('click', function () { msMode = 'week'; setMsTab(); _msFp = ''; loadMs(); });
+    if (ba) ba.addEventListener('click', function () { msMode = 'all'; setMsTab(); _msFp = ''; loadMs(); });
+  }
+
+  /* ── Профи-статистика модераторов ── */
+  var msMode = 'week';
+  var _msFp = '';
+  function setMsTab() {
+    var bw = $('mst-week'), ba = $('mst-all');
+    if (bw) bw.classList.toggle('active', msMode === 'week');
+    if (ba) ba.classList.toggle('active', msMode === 'all');
+    if ($('mst-sub')) $('mst-sub').textContent = msMode === 'week' ? 'за 7 дней' : 'всё время';
+  }
+  function fmtDur(min) {
+    min = Math.max(0, Number(min) || 0);
+    if (!min) return '—';
+    var d = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60;
+    var out = [];
+    if (d) out.push(d + ' д');
+    if (h) out.push(h + ' ч');
+    if (m || !out.length) out.push(m + ' мин');
+    return out.join(' ');
+  }
+  function fmtH(h) {
+    h = Number(h) || 0;
+    if (h >= 100) return Math.round(h) + ' ч';
+    return (Math.round(h * 10) / 10) + ' ч';
+  }
+  function msAvatar(row) {
+    var name = row.name || row.mod || '?';
+    var letter = name.charAt(0).toUpperCase();
+    if (row.avatar) {
+      return '<img class="mst-av" src="' + esc(row.avatar) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<span class=&quot;mst-av mst-av-t&quot;>' + letter + '</span>\'">';
+    }
+    return '<span class="mst-av mst-av-t">' + letter + '</span>';
+  }
+  function renderMs(d) {
+    var rows = d.rows || [];
+    var kpis = d.kpis || {};
+    var body = $('mst-body');
+    if (!body) return;
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="9"><div class="empty"><i class="fas fa-inbox"></i><span>Статистики пока нет — ждём действий модераторов</span></div></td></tr>';
+    } else {
+      body.innerHTML = rows.map(function (r) {
+        var acts = msMode === 'week' ? (r.week || 0) : (r.total || 0);
+        var dur = msMode === 'week' ? (r.duration_week_min || 0) : (r.duration_min || 0);
+        return '<tr>' +
+          '<td><div class="mst-mod">' + msAvatar(r) +
+            '<div><div class="mst-name">' + esc(r.name || r.mod || '?') + '</div>' +
+            (r.name && r.name !== r.mod ? '<div class="mst-login">' + esc(r.mod) + '</div>' : '') +
+          '</div></div></td>' +
+          '<td>' + (r.warns || 0) + '</td>' +
+          '<td>' + (r.mutes || 0) + '</td>' +
+          '<td>' + (r.kicks || 0) + '</td>' +
+          '<td>' + (r.bans || 0) + '</td>' +
+          '<td class="mst-acts"><b>' + acts + '</b><span class="mst-sub2">' + (msMode === 'week' ? 'неделя' : 'всего') + '</span></td>' +
+          '<td>' + fmtDur(dur) + '</td>' +
+          '<td>' + (r.messages_week || 0) + '</td>' +
+          '<td>' + fmtH(r.voice_hours_week || 0) + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+    if ($('mst-mod-active')) $('mst-mod-active').textContent = kpis.active_mods != null ? kpis.active_mods : rows.length;
+    if ($('mst-acts')) $('mst-acts').textContent = msMode === 'week' ? (kpis.actions_week || 0) : (kpis.actions_total || 0);
+    if ($('mst-msgs')) $('mst-msgs').textContent = kpis.messages_week || 0;
+    if ($('mst-voice')) $('mst-voice').textContent = fmtH(kpis.voice_hours_week || 0);
+    setMsTab();
+  }
+  async function loadMs() {
+    try {
+      var r = await fetch('/api/mod-stats');
+      var d = await r.json();
+      if (!d || !d.success) return;
+      var fp = msMode + '|' + JSON.stringify(d.kpis) + '|' + JSON.stringify(d.rows || []).slice(0, 500);
+      if (fp === _msFp) return;
+      _msFp = fp;
+      if (window.renderSafe) window.renderSafe(function () { renderMs(d); });
+      else renderMs(d);
+    } catch (e) { /* тихо — блок появится при следующем тике */ }
   }
 
   function start() {
-    bind(); load();
-    if (window.setLiveRefresh) window.setLiveRefresh(load, 5000);
+    bind(); load(); loadMs();
+    if (window.setLiveRefresh) window.setLiveRefresh(function () { load(); loadMs(); }, 5000);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

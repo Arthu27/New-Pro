@@ -15,7 +15,7 @@ import os ,json
 import time 
 import math 
 import discord 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 def _load_ai_tickets (guild_id :int )->dict :

@@ -7,7 +7,7 @@
   <div class="page-head-copy">
     <div class="eyebrow">Бот <span class="sep">·</span> Контент</div>
     <h1>Правила сервера</h1>
-    <p class="lead">Составь правила сообщества, посмотри, как они будут выглядеть, и опубликуй в канал одним кликом.</p>
+    <p class="lead">Текст правила, ссылка, картинка и миниатюра — каждое правило уходит в Discord отдельным эмбедом.</p>
   </div>
   <div class="page-head-actions">
     <select id="guild-select" class="form-input" style="width:auto;min-width:200px" onchange="window.__rulesLoad && window.__rulesLoad()" aria-label="Выбор сервера">
@@ -40,11 +40,12 @@
 .rules-panel-head .hint { margin-left: auto; font-weight: 600; font-size: 11px; }
 
 .rules-body { padding: 16px 18px; }
-.rules-list { display: flex; flex-direction: column; gap: 8px; }
+.rules-list { display: flex; flex-direction: column; gap: 10px; }
 .rule-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 6px; border-radius: 12px;
-  border: 1px solid transparent;
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px; border-radius: 14px;
+  border: 1px solid var(--line-2);
+  background: var(--surface);
   transition: background .15s, border-color .15s;
 }
 .rule-row:hover { background: var(--surface-2); }
@@ -53,7 +54,7 @@
   background: var(--surface-2);
 }
 .rule-num {
-  width: 30px; height: 30px; flex: 0 0 30px;
+  width: 30px; height: 30px; flex: 0 0 30px; margin-top: 7px;
   border-radius: 10px;
   background: var(--ac-soft); color: var(--ac);
   display: grid; place-items: center;
@@ -61,18 +62,28 @@
   font-family: 'JetBrains Mono', monospace;
   border: 1px solid var(--ac-line);
 }
-.rule-input {
+.rule-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.rule-line { display: flex; align-items: center; gap: 8px; position: relative; }
+.rule-line > i {
+  width: 18px; text-align: center; flex: 0 0 18px;
+  color: var(--text-3); font-size: 12px;
+}
+.rule-line:focus-within > i { color: var(--ac); }
+.rule-input, .rule-field {
   flex: 1; min-width: 0;
   background: var(--surface); border: 1px solid var(--line-2);
-  border-radius: 10px; padding: 10px 13px;
+  border-radius: 10px; padding: 9px 12px;
   color: var(--text); font-size: 13px; outline: none;
   transition: border-color .15s, box-shadow .2s;
 }
-.rule-input:focus {
+.rule-input:focus, .rule-field:focus {
   border-color: var(--ac);
   box-shadow: 0 0 0 3px var(--ac-soft);
 }
-.rule-move { display: flex; flex-direction: column; gap: 2px; }
+.rule-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 640px) { .rule-meta { grid-template-columns: 1fr; } }
+.rule-meta .rule-field { font-size: 12px; padding: 8px 11px; }
+.rule-move { display: flex; flex-direction: column; gap: 2px; margin-top: 7px; }
 .rule-move button {
   width: 24px; height: 18px; border: 1px solid var(--line);
   background: var(--surface); color: var(--text-3);
@@ -83,7 +94,7 @@
 .rule-move button:hover:not(:disabled) { color: var(--ac); border-color: var(--ac-line); }
 .rule-move button:disabled { opacity: .3; cursor: default; }
 .rule-del {
-  width: 30px; height: 30px; flex: 0 0 30px;
+  width: 30px; height: 30px; flex: 0 0 30px; margin-top: 7px;
   border: 1px solid transparent; background: transparent;
   color: var(--text-3); border-radius: 10px;
   cursor: pointer; font-size: 13px;
@@ -136,7 +147,7 @@
   box-shadow: 0 5px 14px -5px var(--ac-glow);
 }
 .preview-rule {
-  display: flex; gap: 10px; padding: 7px 0;
+  display: flex; gap: 10px; padding: 10px 0;
   font-size: 13.5px; line-height: 1.55; color: var(--text);
   border-bottom: 1px solid var(--line);
 }
@@ -144,6 +155,33 @@
 .preview-rule b {
   color: var(--ac); font-family: 'JetBrains Mono', monospace;
   flex: 0 0 24px;
+}
+.preview-rule-body { flex: 1; min-width: 0; }
+.pv-text { word-break: break-word; }
+.pv-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 6px; padding: 4px 10px;
+  font-size: 11.5px; font-weight: 700;
+  color: var(--ac); background: var(--ac-soft);
+  border: 1px solid var(--ac-line); border-radius: 99px;
+  text-decoration: none; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pv-link:hover { background: color-mix(in srgb, var(--ac) 14%, transparent); }
+.pv-media { margin-top: 8px; max-width: 420px; }
+.pv-media img {
+  width: 100%; border-radius: 10px; display: block;
+  border: 1px solid var(--line);
+}
+.pv-thumb {
+  margin-top: 8px; width: 64px; height: 64px; object-fit: cover;
+  border-radius: 10px; display: block; border: 1px solid var(--line);
+}
+.pv-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 6px; font-size: 10px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-3);
 }
 .preview-empty { color: var(--text-3); font-size: 13px; padding: 8px 0; }
 .preview-foot {
@@ -161,12 +199,17 @@
 }
 .publish-row { display: flex; gap: 10px; align-items: flex-end; }
 .publish-row .btn { white-space: nowrap; }
+.publish-hint {
+  margin-top: 8px; font-size: 11.5px; color: var(--text-3);
+  display: flex; gap: 7px; align-items: flex-start; line-height: 1.5;
+}
+.publish-hint i { color: var(--ac); margin-top: 2px; }
 
 @media (max-width: 960px) {
   .rules-wrap { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .btn-add, .rule-input, .rule-row, .rule-del, .rule-move button { transition: none; }
+  .btn-add, .rule-input, .rule-field, .rule-row, .rule-del, .rule-move button, .pv-link { transition: none; }
 }
 </style>
 
@@ -201,7 +244,7 @@
           </div>
           <div id="preview-rules"></div>
           <div class="preview-foot">
-            <i class="fas fa-circle-info"></i> Так увидят правила участники сервера
+            <i class="fas fa-circle-info"></i> Каждое правило — отдельный эмбед: текст, ссылка, картинка, миниатюра
           </div>
         </div>
       </div>
@@ -215,7 +258,10 @@
           <i class="fas fa-paper-plane"></i> Опубликовать
         </button>
       </div>
-      <p class="hint" style="margin-top:8px">Правила уйдут в Discord красивым сообщением с нумерацией.</p>
+      <div class="publish-hint">
+        <i class="fas fa-link"></i>
+        <span>Ссылки и картинки указываются полными URL (https://…). Правила уйдут в Discord с нумерацией, ссылками, картинками и миниатюрами.</span>
+      </div>
     </div>
   </div>
 </div>
@@ -235,6 +281,20 @@
     if (window.showToast) window.showToast(msg, ok);
     else alert(msg);
   }
+  function blankRule() { return { t: '', u: '', img: '', thumb: '' }; }
+  function normRule(r) {
+    if (typeof r === 'string') return { t: r, u: '', img: '', thumb: '' };
+    if (r && typeof r === 'object') {
+      return {
+        t: String(r.t || r.text || r.title || '').trim(),
+        u: String(r.u || r.url || r.link || '').trim(),
+        img: String(r.img || r.image || r.image_url || '').trim(),
+        thumb: String(r.thumb || r.thumbnail || r.thumbnail_url || '').trim()
+      };
+    }
+    return blankRule();
+  }
+  function validUrl(v) { return !v || /^https?:\/\//i.test(v); }
 
   /* ── Серверы ── */
   async function loadGuilds() {
@@ -262,7 +322,7 @@
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/rules');
       var d = await r.json();
-      rules = Array.isArray(d) ? d.map(String) : [];
+      rules = (Array.isArray(d) ? d : []).map(normRule).filter(function (x) { return x.t; });
     } catch (e) {
       rules = [];
     }
@@ -296,7 +356,14 @@
     box.innerHTML = rules.map(function (r, i) {
       return '<div class="rule-row">' +
         '<span class="rule-num">' + (i + 1) + '</span>' +
-        '<input class="rule-input" value="' + esc(r) + '" data-idx="' + i + '" aria-label="Правило ' + (i + 1) + '">' +
+        '<div class="rule-fields">' +
+          '<div class="rule-line"><i class="fas fa-align-left"></i><input class="rule-input" value="' + esc(r.t) + '" data-idx="' + i + '" data-field="t" placeholder="Текст правила" aria-label="Текст правила ' + (i + 1) + '"></div>' +
+          '<div class="rule-meta">' +
+            '<div class="rule-line"><i class="fas fa-link"></i><input class="rule-field" value="' + esc(r.u) + '" data-idx="' + i + '" data-field="u" placeholder="Ссылка https://…" aria-label="Ссылка правила ' + (i + 1) + '"></div>' +
+            '<div class="rule-line"><i class="fas fa-image"></i><input class="rule-field" value="' + esc(r.img) + '" data-idx="' + i + '" data-field="img" placeholder="Картинка URL" aria-label="Картинка правила ' + (i + 1) + '"></div>' +
+            '<div class="rule-line"><i class="fas fa-images"></i><input class="rule-field" value="' + esc(r.thumb) + '" data-idx="' + i + '" data-field="thumb" placeholder="Миниатюра URL" aria-label="Миниатюра правила ' + (i + 1) + '"></div>' +
+          '</div>' +
+        '</div>' +
         '<span class="rule-move">' +
           '<button type="button" data-mv="' + i + ':-1" title="Выше" aria-label="Поднять правило" ' + (i === 0 ? 'disabled' : '') + '><i class="fas fa-chevron-up"></i></button>' +
           '<button type="button" data-mv="' + i + ':1" title="Ниже" aria-label="Опустить правило" ' + (i === rules.length - 1 ? 'disabled' : '') + '><i class="fas fa-chevron-down"></i></button>' +
@@ -323,13 +390,27 @@
       return;
     }
     box.innerHTML = rules.map(function (r, i) {
-      return '<div class="preview-rule"><b>' + (i + 1) + '.</b><span>' + esc(r) + '</span></div>';
+      var html = '<div class="preview-rule"><b>' + (i + 1) + '.</b><div class="preview-rule-body">';
+      html += '<div class="pv-text">' + esc(r.t) + '</div>';
+      if (r.u) {
+        html += '<a class="pv-link" href="' + esc(r.u) + '" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> ' + esc(r.u) + '</a>';
+      }
+      if (r.img) {
+        html += '<div class="pv-media"><span class="pv-badge"><i class="fas fa-image"></i> Картинка</span>' +
+          '<img src="' + esc(r.img) + '" alt="Картинка правила ' + (i + 1) + '" loading="lazy" onerror="this.style.display=\'none\'"></div>';
+      }
+      if (r.thumb) {
+        html += '<span class="pv-badge"><i class="fas fa-images"></i> Миниатюра</span>' +
+          '<img class="pv-thumb" src="' + esc(r.thumb) + '" alt="Миниатюра правила ' + (i + 1) + '" loading="lazy" onerror="this.style.display=\'none\'">';
+      }
+      html += '</div></div>';
+      return html;
     }).join('');
   }
 
   /* ── Действия ── */
   function addRule() {
-    rules.push('');
+    rules.push(blankRule());
     renderRules();
     var inputs = document.querySelectorAll('#rules-list .rule-input');
     if (inputs.length) inputs[inputs.length - 1].focus({ preventScroll: true });
@@ -344,10 +425,23 @@
     var tmp = rules[i]; rules[i] = rules[j]; rules[j] = tmp;
     renderRules();
   }
+  function checkUrls() {
+    for (var i = 0; i < rules.length; i++) {
+      var r = rules[i];
+      if (!validUrl(r.u) || !validUrl(r.img) || !validUrl(r.thumb)) {
+        toast('Правило ' + (i + 1) + ': ссылки должны начинаться с https://', false);
+        return false;
+      }
+    }
+    return true;
+  }
 
   async function saveRules() {
     if (!selectedGuild) { toast('Выберите сервер!', false); return; }
-    rules = rules.map(function (r) { return r.trim(); }).filter(Boolean);
+    var clean = rules.map(function (r) {
+      return { t: r.t.trim(), u: r.u.trim(), img: r.img.trim(), thumb: r.thumb.trim() };
+    }).filter(function (r) { return r.t; });
+    if (!checkUrls()) return;
     var btn = document.getElementById('btnSaveRules');
     var orig = btn.innerHTML;
     btn.disabled = true;
@@ -356,10 +450,11 @@
       var r = await fetch('/api/guild/' + selectedGuild + '/rules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(rules)
+        body: JSON.stringify(clean)
       });
       var d = await r.json();
       if (d.success) {
+        rules = (d.rules || clean).map(normRule);
         toast('Правила сохранены', true);
         renderRules();
       } else {
@@ -376,8 +471,11 @@
     if (!selectedGuild) { toast('Выберите сервер!', false); return; }
     var ch = document.getElementById('rules-channel').value;
     if (!ch) { toast('Выберите канал публикации!', false); return; }
-    var clean = rules.map(function (r) { return r.trim(); }).filter(Boolean);
+    var clean = rules.map(function (r) {
+      return { t: r.t.trim(), u: r.u.trim(), img: r.img.trim(), thumb: r.thumb.trim() };
+    }).filter(function (r) { return r.t; });
     if (!clean.length) { toast('Сначала добавьте правила!', false); return; }
+    if (!checkUrls()) return;
     var btn = document.getElementById('btnPublishRules');
     var orig = btn.innerHTML;
     btn.disabled = true;
@@ -389,8 +487,13 @@
         body: JSON.stringify({ channel_id: ch, rules: clean })
       });
       var d = await r.json();
-      if (d.success) toast('Правила опубликованы в Discord', true);
-      else toast(String(d.error || 'Ошибка публикации'), false);
+      if (d.success) {
+        toast(String(d.message || 'Правила опубликованы в Discord'), true);
+        rules = clean;
+        renderRules();
+      } else {
+        toast(String(d.error || 'Ошибка публикации'), false);
+      }
     } catch (e) {
       toast('Ошибка соединения', false);
     }
@@ -405,10 +508,15 @@
 
   /* ── События ── */
   document.addEventListener('input', function (e) {
-    if (e.target.classList && e.target.classList.contains('rule-input')) {
-      rules[Number(e.target.dataset.idx)] = e.target.value;
-      updatePreview();
-    }
+    var t = e.target;
+    if (!t || !t.classList) return;
+    var isRule = t.classList.contains('rule-input') || t.classList.contains('rule-field');
+    if (!isRule) return;
+    var idx = Number(t.dataset.idx);
+    var field = t.dataset.field || 't';
+    if (!rules[idx]) return;
+    rules[idx][field] = t.value;
+    updatePreview();
   });
   document.addEventListener('click', function (e) {
     var mv = e.target.closest('[data-mv]');

@@ -54,6 +54,14 @@ class ProactiveModeration (commands .Cog ):
         if message .author .bot or not message .guild :
             return 
 
+        # Счётчик сообщений для профи-статистики модераторов (панель /mod-history).
+        # Ошибки счётчика глушатся внутри — on_message не должен падать из-за метрики.
+        try :
+            from services .mod_activity import record_message
+            record_message (message .guild .id ,message .author .id ,str (message .author ))
+        except Exception as _ex :
+            log.debug('on_message(): счётчик сообщений: %s',_ex )
+
         channel_id =message .channel .id 
 
         # Analiz duygu
