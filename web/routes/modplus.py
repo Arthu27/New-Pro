@@ -221,6 +221,7 @@ def register(ctx):
         if action :
             items =[e for e in items if e .get ('action')==action ]
         from web .app import _ts_to_utc_iso 
+        from cogs .proof_cog import proof_media_abspath 
         out =[]
         for e in items [:500 ]:
             ch_id =e .get ('channel_id')
@@ -231,6 +232,12 @@ def register(ctx):
             'user_name':e .get ('user_name'),'mod_name':e .get ('mod_name'),
             'action':e .get ('action'),'reason':e .get ('reason'),
             'link':e .get ('link'),'url':e .get ('url'),
+            'media':({'kind':(e .get ('media')or {}).get ('kind'),
+            'name':(e .get ('media')or {}).get ('name'),
+            'size':(e .get ('media')or {}).get ('size')}
+            if (e .get ('media')and proof_media_abspath (e ))else None ),
+            'media_url':(f"/proof-media/{e.get('id')}"
+            if (e .get ('media')and proof_media_abspath (e ))else None ),
             'set_at':_ts_to_utc_iso (e .get ('set_at'))or e .get ('set_at')or '','jump':jump })
         return jsonify ({'success':True ,'items':out ,'total':len (items )})
 
@@ -239,14 +246,25 @@ def register(ctx):
     @login_required
     @role_required ('admin')
     def api_proofs_delete (pid ):
-        # удаление демки — только admin+ (история наказаний = серьёзно)
+        # удаление демки — только admin+ (история наказаний = серьёзно).
+        # Запись и локальный файл — наши, чистим всегда; сообщение в канале
+        # доказательств трём, когда бот онлайн.
         from cogs .proof_cog import proof_remove
         guild =_active_guild ()
         if not guild :
-            return jsonify ({'success':False ,'error':'Бот офлайн'}),503
+            gid =int (active_guild_id ()or 0 )
+            entry =proof_remove (gid ,pid )
+            if not entry :
+                return jsonify ({'success':False ,'error':'Демка не найдена'}),404
+            from cogs .proof_cog import proof_delete_media as _pdm 
+            _pdm (gid ,entry )
+            return jsonify ({'success':True ,'msg_deleted':False ,
+            'offline':True })
         entry =proof_remove (guild .id ,pid )
         if not entry :
             return jsonify ({'success':False ,'error':'Демка не найдена'}),404
+        from cogs .proof_cog import proof_delete_media 
+        proof_delete_media (guild .id ,entry )
         # заодно попробуем убрать сообщение из канала доказательств
         msg_deleted =False
         try :
@@ -261,6 +279,27 @@ def register(ctx):
         _fire_panel_notification ('proof',f'Демка #{pid} удалена',
         f"{session.get('username')}: {entry.get('user_name')}")
         return jsonify ({'success':True ,'msg_deleted':msg_deleted })
+
+
+    @app .route ('/proof-media/<int:pid>')
+    @login_required
+    @role_required ('mod')
+    def proof_media_file (pid ):
+        # Локальное фото/видео демки — смотрим прямо в панели (mod+).
+        # Файл лежит на нашем диске: ссылка CDN Discord давно протухла,
+        # а тут всё живо. conditional=True — перемотка видео работает.
+        from flask import send_file 
+        from cogs .proof_cog import proof_get ,proof_media_abspath 
+        guild =_active_guild ()
+        gid =guild .id if guild else int (active_guild_id ()or 0 )
+        entry =proof_get (gid ,pid )
+        full =proof_media_abspath (entry )
+        if not full :
+            return jsonify ({'success':False ,'error':'Файл не найден'}),404
+        media =(entry or {}).get ('media')or {}
+        return send_file (full ,mimetype =media .get ('ctype')or None ,
+        conditional =True ,download_name =media .get ('name')or None ,
+        as_attachment =request .args .get ('dl')=='1')
 
 
     @app .route ('/api/panic',methods =['GET'])

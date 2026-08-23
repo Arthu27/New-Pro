@@ -384,6 +384,7 @@ EXPECTED = {
     'backups_page': '/backups',
     'birthday_register_page': '/birthday-register',
     'bot_diagnostics_page': '/bot-diagnostics',
+    'channel_settings_page': '/channel-settings',
     'bot_settings_page': '/bot-settings',
     'bot_stats_page': '/bot-stats',
     'bulk_actions_page': '/bulk-actions',

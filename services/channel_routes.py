@@ -1,0 +1,126 @@
+# -*- coding: utf-8 -*-
+"""Каналы и маршруты: единое место, куда бот что пишет.
+
+Хранилище data/channel_routes.json:
+    { "<guild_id>": {"proof_channel": 123, ...}, ... }
+
+Читают и бот (cogs/proof_cog.py), и панель (web/routes/channel_settings.py) —
+одна правда, без рассинхрона. Другие системы (апелляции, приветствия,
+tag jail) хранят каналы в своих конфигах — панель редактирует их через
+свои адаптеры, а этот модуль — для новых маршрутов Aether.
+"""
+import json
+import os
+
+from logger import get_logger
+
+log = get_logger('channel_routes')
+
+ROUTES_FILE = 'data/channel_routes.json'
+
+# Спецификация маршрутов (панель строит из неё страницу настроек).
+# kind: 'native' — канал живёт в этом файле; остальные — адаптеры к конфигам
+# других систем (их редактирует панель через их же хранилища).
+ROUTE_SPECS = [
+    {
+        'key': 'proof_channel',
+        'label': 'Канал доказательств',
+        'icon': 'fa-folder-open',
+        'kind': 'native',
+        'access': 'Админ',
+        'what': 'Сюда падают «демки» к наказаниям (/proof): кто, кого, за что — '
+                'и само фото/видео прямо в сообщении.',
+        'empty': 'Не задан — бот сам создаст #-доказательства в категории «Логи».',
+    },
+    {
+        'key': 'appeals_channel',
+        'label': 'Канал апелляций',
+        'icon': 'fa-scale-balanced',
+        'kind': 'appeals',
+        'access': 'Админ',
+        'what': 'Карточки апелляций на разбан с кнопками «Принять / Отклонить».',
+        'empty': 'Не задан — карточки идут в системный канал сервера.',
+    },
+    {
+        'key': 'welcome_channel',
+        'label': 'Канал приветствий',
+        'icon': 'fa-hand-sparkles',
+        'kind': 'welcome',
+        'access': 'Админ',
+        'what': 'Приветственные карточки новых участников (welcome PRO).',
+        'empty': 'Не задан — приветствия уходят в системный канал.',
+    },
+    {
+        'key': 'tagjail_channel',
+        'label': 'Лог Tag Jail',
+        'icon': 'fa-lock',
+        'kind': 'tagjail',
+        'access': 'Админ',
+        'what': 'Кто и за какой тег улетел в джейл, авто-освобождения, обходы.',
+        'empty': 'Не задан — логи джейла не пишутся (остальное работает).',
+    },
+]
+
+
+def _load():
+    try:
+        with open(ROUTES_FILE, 'r', encoding='utf-8') as fp:
+            data = json.load(fp)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _save(data):
+    os.makedirs(os.path.dirname(ROUTES_FILE), exist_ok=True)
+    tmp = ROUTES_FILE + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as fp:
+        json.dump(data, fp, ensure_ascii=False, indent=2)
+    os.replace(tmp, ROUTES_FILE)
+
+
+def spec_for(key):
+    for spec in ROUTE_SPECS:
+        if spec['key'] == key:
+            return spec
+    return None
+
+
+def native_keys():
+    return [s['key'] for s in ROUTE_SPECS if s.get('kind') == 'native']
+
+
+def get_route(gid, key):
+    """ID канала маршрута (0 — не задан). Только native-маршруты."""
+    if key not in native_keys():
+        return 0
+    try:
+        return int((_load().get(str(gid)) or {}).get(key) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def set_route(gid, key, channel_id):
+    """Записать маршрут (0 = очистить). Возвращает True при успехе."""
+    if key not in native_keys():
+        return False
+    data = _load()
+    row = data.setdefault(str(gid), {})
+    try:
+        row[key] = int(channel_id or 0)
+    except (TypeError, ValueError):
+        return False
+    _save(data)
+    return True
+
+
+def all_routes(gid):
+    """Все native-маршруты сервера одним словарём {key: channel_id}."""
+    row = _load().get(str(gid)) or {}
+    out = {}
+    for key in native_keys():
+        try:
+            out[key] = int(row.get(key) or 0)
+        except (TypeError, ValueError):
+            out[key] = 0
+    return out

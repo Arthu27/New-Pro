@@ -144,6 +144,7 @@ MENU = [
         {'path': '/cog-manager', 'label': 'Модули', 'icon': 'fa-cubes'},
         {'path': '/automation', 'label': 'Автоматика', 'icon': 'fa-wand-magic-sparkles'},
         {'path': '/settings', 'label': 'Сервер', 'icon': 'fa-cog'},
+        {'path': '/channel-settings', 'label': 'Каналы', 'icon': 'fa-route'},
         {'path': '/notifications', 'label': 'Уведомления', 'icon': 'fa-bell'},
         {'path': '/rules-editor', 'label': 'Правила', 'icon': 'fa-gavel'},
         {'path': '/welcome-editor', 'label': 'Приветствие', 'icon': 'fa-handshake'},

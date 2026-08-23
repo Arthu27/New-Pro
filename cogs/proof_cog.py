@@ -50,6 +50,13 @@ ACTION_COLORS = {
     'бан': RED, 'разбан': GREEN, 'тихий мут': PURPLE,
 }
 IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp')
+VIDEO_EXTS = ('.mp4', '.webm', '.mov', '.m4v', '.mkv', '.avi')
+
+# Локальное хранилище медиа для панели: ссылка CDN Discord протухает,
+# а тут файл живёт вечно — панель показывает фото/видео прямо на месте.
+MEDIA_DIR = 'data/uploads/proofs'
+LOCAL_MEDIA_MAX = 60 * 1024 * 1024  # 60 МБ — потолок для локального сохранения
+
 
 
 def _proof_path(gid):
@@ -141,6 +148,76 @@ def _is_image_name(name) -> bool:
 def _is_link(text) -> bool:
     return isinstance(text, str) and text.strip().lower().startswith(('http://', 'https://'))
 
+def _media_kind(filename, content_type=None):
+    """'image' | 'video' | None — по content-type или расширению."""
+    ct = (content_type or '').lower()
+    if ct.startswith('image/'):
+        return 'image'
+    if ct.startswith('video/'):
+        return 'video'
+    low = (filename or '').lower()
+    if low.endswith(IMAGE_EXTS):
+        return 'image'
+    if low.endswith(VIDEO_EXTS):
+        return 'video'
+    return None
+
+
+def _media_safe_name(gid, pid, filename):
+    """Строгое имя файла {gid}_{pid}{ext} — никаких путей от пользователя."""
+    ext = os.path.splitext(filename or '')[1].lower()
+    if ext not in IMAGE_EXTS + VIDEO_EXTS:
+        ext = '.bin'
+    return f'{int(gid)}_{int(pid)}{ext}'
+
+
+def proof_save_media(gid, pid, filename, data, content_type=None):
+    """Сохранить медиа демки локально. Возвращает описание для записи или None."""
+    kind = _media_kind(filename, content_type)
+    if not kind or not data:
+        return None
+    if len(data) > LOCAL_MEDIA_MAX:
+        return None
+    name = _media_safe_name(gid, pid, filename)
+    os.makedirs(MEDIA_DIR, exist_ok=True)
+    path = os.path.join(MEDIA_DIR, name)
+    with open(path, 'wb') as fp:
+        fp.write(data)
+    return {
+        'file': os.path.join(MEDIA_DIR, name),
+        'kind': kind,
+        'name': (filename or name)[:120],
+        'size': len(data),
+        'ctype': content_type or (
+            'video/mp4' if kind == 'video' else 'image/png'),
+    }
+
+
+def proof_media_abspath(entry):
+    """Абсолютный путь локального медиа, проверенный на выход за MEDIA_DIR."""
+    media = (entry or {}).get('media') or {}
+    rel = media.get('file')
+    if not rel:
+        return None
+    base = os.path.abspath(MEDIA_DIR)
+    full = os.path.abspath(rel)
+    if not full.startswith(base + os.sep):
+        return None
+    return full if os.path.isfile(full) else None
+
+
+def proof_delete_media(gid, entry):
+    """Удалить локальный файл демки (при удалении записи). True, если убрали."""
+    full = proof_media_abspath(entry)
+    if not full:
+        return False
+    try:
+        os.remove(full)
+        return True
+    except OSError as _ex:
+        _log.debug("proof_delete_media(): подавлено: %s", _ex)
+        return False
+
 
 # ════════════════════════ ког ════════════════════════════════════════════
 class ProofCog(commands.Cog):
@@ -148,7 +225,18 @@ class ProofCog(commands.Cog):
         self.bot = bot
 
     async def _proof_channel(self, guild):
-        """Канал доказательств (автосоздание через систему логов)."""
+        """Канал доказательств: явный выбор в панели («Каналы и маршруты»),
+        иначе автосоздание через систему логов."""
+        try:
+            from services.channel_routes import get_route
+            cid = get_route(guild.id, 'proof_channel')
+            if cid:
+                ch = guild.get_channel(cid)
+                if ch is not None:
+                    return ch
+                log.warning('[PROOF] маршрут proof_channel=%s не найден — фолбэк', cid)
+        except Exception as _ex:
+            _log.debug("_proof_channel(): маршруты: %s", _ex)
         try:
             from cogs import logs as _logs
             return await _logs.ensure_log_channel(guild, 'proof')
@@ -220,19 +308,38 @@ class ProofCog(commands.Cog):
         image_inline = False
         note = None
         if attachment is not None:
-            if attachment.size and attachment.size > MAX_REUPLOAD_BYTES:
-                # файл тяжёлый — не перезаливаем, оставляем исходную ссылку
-                note = (f'Файл большой ({attachment.size // 1024 // 1024} МБ) — не перезалит, '
-                        f'ссылка может протухнуть: {attachment.url}')
-                entry['link'] = entry['link'] or attachment.url
-            else:
+            size = attachment.size or 0
+            too_big = bool(attachment.size) and size > MAX_REUPLOAD_BYTES
+            kind = _media_kind(attachment.filename,
+                               getattr(attachment, 'content_type', None))
+            raw = None
+            # читаем файл один раз: и для перезалива в канал, и для панели
+            if not too_big or (kind and size <= LOCAL_MEDIA_MAX):
                 try:
                     raw = await attachment.read()
-                    file = discord.File(io.BytesIO(raw), filename=attachment.filename)
-                    image_inline = _is_image_name(attachment.filename)
-                except Exception as ex:
-                    note = f'Не смог перезалить вложение ({str(ex)[:120]}) — оставил ссылку.'
-                    entry['link'] = entry['link'] or getattr(attachment, 'url', None)
+                except Exception:
+                    raw = None
+            # локальная копия для панели — видео/фото смотрятся прямо там,
+            # даже если файл тяжёлый и в канал не перезаливается
+            if raw is not None and kind and len(raw) <= LOCAL_MEDIA_MAX:
+                media = proof_save_media(guild.id, entry['id'], attachment.filename,
+                                         raw, getattr(attachment, 'content_type', None))
+                if media:
+                    proof_update(guild.id, entry['id'], media=media)
+                    entry['media'] = media
+            if too_big:
+                # файл тяжёлый — не перезаливаем, оставляем исходную ссылку
+                note = (f'Файл большой ({(attachment.size or 0) // 1024 // 1024} МБ) — не перезалит, '
+                        f'ссылка может протухнуть: {attachment.url}')
+                if entry.get('media'):
+                    note += ' · в панели (/proofs) видео доступно'
+                entry['link'] = entry['link'] or attachment.url
+            elif raw is not None:
+                file = discord.File(io.BytesIO(raw), filename=attachment.filename)
+                image_inline = _is_image_name(attachment.filename)
+            else:
+                note = 'Не смог перезалить вложение — оставил ссылку.'
+                entry['link'] = entry['link'] or getattr(attachment, 'url', None)
         if note:
             proof_update(guild.id, entry['id'], link=entry.get('link'), note=note)
         ok = await self._post_proof(guild, entry, file=file,
@@ -274,7 +381,8 @@ class ProofCog(commands.Cog):
                           timestamp=_now())
         e.add_field(name='Кто', value=f'{user.mention} (`{user.id}`)', inline=True)
         e.add_field(name='Наказание', value=entry['action'], inline=True)
-        e.add_field(name='Куда', value='канал доказательств — админы увидят при прокрутке',
+        e.add_field(name='Куда', value='канал доказательств + панель «Доказательства» — '
+                        'фото и видео смотрятся прямо там',
                     inline=True)
         if note:
             e.add_field(name='Внимание', value=note, inline=False)
@@ -323,6 +431,7 @@ class ProofCog(commands.Cog):
             await interaction.response.send_message(
                 f'Демки #{number} нет — проверь номер в /proofs.', ephemeral=True)
             return
+        proof_delete_media(interaction.guild.id, entry)
         # попробуем заодно убрать сообщение из канала доказательств
         msg_deleted = False
         ch_id = entry.get('channel_id')

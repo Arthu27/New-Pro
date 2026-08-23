@@ -215,6 +215,8 @@ proofs = {'next': 6, 'items': {
           'mod_name': 'lina.mod', 'action': 'бан',
           'reason': 'Скриншот оскорблений в чате',
           'link': 'https://discord.com/channels/777/112233/445566',
+          'media': {'file': f'data/uploads/proofs/{GID}_1.png', 'kind': 'image',
+                    'name': 'chat-screenshot.png', 'size': 0, 'ctype': 'image/png'},
           'url': '', 'set_at': iso(0, 22, 10)},
     '2': {'id': 2, 'user_id': 523456789012345678, 'user_name': 'spammer_228',
           'mod_name': 'artem.mods', 'action': 'мут',
@@ -224,6 +226,8 @@ proofs = {'next': 6, 'items': {
     '3': {'id': 3, 'user_id': 923456789012345681, 'user_name': 'newbie_gg',
           'mod_name': 'sonya.staff', 'action': 'варн',
           'reason': 'Реклама в профиле — скриншот',
+          'media': {'file': f'data/uploads/proofs/{GID}_3.png', 'kind': 'image',
+                    'name': 'profile-screenshot.png', 'size': 0, 'ctype': 'image/png'},
           'link': '', 'url': '', 'set_at': iso(0, 18, 40)},
     '4': {'id': 4, 'user_id': 623456789012345678, 'user_name': 'alt_account1',
           'mod_name': 'lina.mod', 'action': 'кик',
@@ -382,6 +386,12 @@ demo_channels = [
      'slowmode': 0, 'bitrate': 0, 'user_limit': 0, 'news': False,
      'stage': False, 'forum': False, 'connected': 0,
      'created_at': '2025-11-02T10:22:00+00:00', 'mention': ''},
+    {'id': '4004', 'name': '-доказательства', 'type': 'text', 'position': 2,
+     'category': 'Модерация', 'category_id': '4001', 'category_pos': 3,
+     'topic': 'Демки к наказаниям: кто, кого, за что + фото/видео', 'nsfw': False,
+     'slowmode': 0, 'bitrate': 0, 'user_limit': 0, 'news': False, 'stage': False,
+     'forum': False, 'connected': 0,
+     'created_at': '2025-11-02T10:25:00+00:00', 'mention': ''},
     {'id': '5001', 'name': 'welcome', 'type': 'text', 'position': 0,
      'category': None, 'category_id': None, 'category_pos': -1,
      'topic': 'Приветствия новых участников', 'nsfw': False, 'slowmode': 0,
@@ -511,6 +521,8 @@ files = {
     'data/team_board.json': team_board,
     'data/staff_apps.json': staff_apps,
     'data/demo_channels.json': demo_channels,
+    'data/channel_routes.json': {GID: {'proof_channel': 4004}},
+    'data/tag_jail.json': {GID: {'log_channel_id': 4003}},
     'data/hidden_channels.json': {},
     f'data/rules_{GID}.json': demo_rules,
     f'data/xp_{GID}.json': demo_xp,
@@ -874,5 +886,67 @@ try:
     print(f'записано: демо-учётка панели ({_u})')
 except Exception as _ex:
     print('учётка панели не засеяна:', _ex)
+
+# ── Медиа-демки: два «скриншота-доказательства» на диск ──
+# Панель (/proofs) показывает их прямо на месте — как живые файлы из /proof.
+try:
+    from PIL import Image as _PI, ImageDraw as _PD
+    _mdir = 'data/uploads/proofs'
+    os.makedirs(_mdir, exist_ok=True)
+
+    def _proof_png(path, title, lines, accent=(216, 169, 78)):
+        img = _PI.new('RGB', (640, 360), (18, 17, 21))
+        d = _PD.Draw(img)
+        d.rectangle([0, 0, 639, 44], fill=(24, 22, 28))
+        d.rectangle([0, 0, 6, 44], fill=accent)
+        d.text((20, 14), title, fill=(232, 224, 208))
+        y = 66
+        for who, txt in lines:
+            d.ellipse([18, y + 2, 46, y + 30], fill=(45, 42, 52))
+            d.text((58, y), who, fill=(122, 200, 150))
+            d.text((58, y + 16), txt, fill=(206, 198, 182))
+            y += 46
+        d.rectangle([0, 328, 639, 359], fill=(24, 22, 28))
+        d.text((20, 338), 'Aether · доказательство из демо-посева', fill=(140, 132, 118))
+        img.save(path, 'PNG')
+        return os.path.getsize(path)
+
+    _s1 = _proof_png(
+        os.path.join(_mdir, f'{GID}_1.png'),
+        '#общий · сервер Aether',
+        [('toxicguy', 'да кто вы такие вообще, *цензура*'),
+         ('night_fox', 'спокойнее, правила читал?'),
+         ('toxicguy', 'заткнись, *цензура*'),
+         ('lina.mod', 'Достаточно. Фиксирую.')],
+        accent=(231, 76, 60))
+    _s2 = _proof_png(
+        os.path.join(_mdir, f'{GID}_3.png'),
+        'профиль newbie_gg',
+        [('статус', 'ВСТУПАЙ! discord.gg/чужой-сервер'),
+         ('о себе', 'раздаю нитро — ссылка в статусе'),
+         ('sonya.staff', 'Реклама в профиле. Варн.')])
+    # размеры файлов — в записи демок (панель покажет на бейдже)
+    for _pid, _size in ((1, _s1), (3, _s2)):
+        _pp = f'data/modproof_{GID}.json'
+        with open(_pp, 'r', encoding='utf-8') as _f:
+            _pd = json.load(_f)
+        _it = (_pd.get('items') or {}).get(str(_pid))
+        if _it and _it.get('media'):
+            _it['media']['size'] = _size
+            with open(_pp, 'w', encoding='utf-8') as _f:
+                json.dump(_pd, _f, ensure_ascii=False, indent=2)
+    print('записано: медиа-демки (2 PNG в data/uploads/proofs)')
+except Exception as _ex:
+    print('медиа-демки не засеяны:', _ex)
+
+# ── Канал приветствий: hub-страница «Каналы и маршруты» живая ──
+try:
+    from db import GuildData as _GDW
+    _wp = _GDW('welcome_pro').get(GID, 'settings', {}) or {}
+    _wp.update({'enabled': True, 'channel_id': 5001})
+    _GDW('welcome_pro').set(GID, 'settings', _wp)
+    print('записано: канал приветствий (welcome PRO → 5001)')
+except Exception as _ex:
+    print('приветствия не засеяны:', _ex)
 
 print('Готово. Демо-данные в data/ (gitignored).')

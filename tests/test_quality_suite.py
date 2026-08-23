@@ -139,8 +139,8 @@ check(asset_js.status_code == 200 and b'fetchCachedJSON' in asset_js.data,
 
 pages = [page for group in panel_groups_for('owner') for page in group['pages']]
 paths = [page['path'] for page in pages]
-check(len(paths) == 118 and len(set(paths)) == 118,
-      f'owner-меню содержит 118 уникальных страниц ({len(paths)})')
+check(len(paths) == 119 and len(set(paths)) == 119,
+      f'owner-меню содержит 119 уникальных страниц ({len(paths)})')
 
 rendered = 0
 for route in paths:

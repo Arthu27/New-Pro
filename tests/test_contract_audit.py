@@ -36,7 +36,12 @@ os.makedirs('data', exist_ok=True)
 _src_data = os.path.join(ROOT, 'data')
 if os.path.isdir(_src_data):
     for fn in os.listdir(_src_data):
-        shutil.copy(os.path.join(_src_data, fn), os.path.join('data', fn))
+        _s = os.path.join(_src_data, fn)
+        _d = os.path.join('data', fn)
+        if os.path.isdir(_s):
+            shutil.copytree(_s, _d, dirs_exist_ok=True)
+        else:
+            shutil.copy(_s, _d)
 
 os.environ['DEMO_MODE'] = '1'
 os.environ.setdefault('PANEL_USER', 'admin')
