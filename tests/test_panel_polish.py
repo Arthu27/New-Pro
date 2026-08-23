@@ -663,7 +663,7 @@ for _f in _g.glob(os.path.join(ROOT, 'web', 'templates', '*.html')):
         hero_ok += 1
     else:
         nohdr.append(os.path.basename(_f))
-check(head_ok >= 125, f'премиум page-head у {head_ok} страниц (>=125)')
+check(head_ok >= 124, f'премиум page-head у {head_ok} страниц (>=124)')
 nohdr = [n for n in nohdr if n != 'analytics.html']  # у аналитики свой кокпит-hero
 check(not nohdr, f'без шапки не осталось ни одной страницы ({nohdr[:3]})')
 allt = ''
@@ -806,7 +806,7 @@ check(r.status_code == 200 and len(r.get_json()) >= 5,
       'чат: список участников для @-пикера в демо')
 for path in ('/backups', '/duty-panel-web', '/commands', '/ai-moderation', '/ai-tickets',
              '/settings', '/panel-access', '/role-permissions', '/roles', '/users',
-             '/member-card', '/member-search', '/panel-menu'):
+             '/member-search', '/panel-menu'):
     r = client.get(path)
     check(r.status_code == 200, f'{path} → {r.status_code}')
 # ═══ 24. Welcome — премиальная ЧЁРНАЯ версия ═════════════════════════════
@@ -1541,9 +1541,11 @@ check('Найдено несколько' in _mcp and '_name_pool' in _mcp,
       'карточка: несколько совпадений по имени — честная подсказка с вариантами')
 check("'ecobar'" in _mcp and "data/xp_{gid}.json" in _mcp,
       'карточка: пул имён = аудит + демо-логин + XP + дни рождения')
-_mct = open(os.path.join(ROOT, 'web', 'templates', 'member_card.html'), encoding='utf-8').read()
-check('Начни с @' in _mct and 'Имя или ID тоже принимаются' in _mct,
-      'карточка: подсказки говорят, что @ и имя принимаются')
+check(not os.path.exists(os.path.join(ROOT, 'web', 'templates', 'member_card.html')),
+      'карточка: отдельная страница удалена — досье живёт окном в «Пользователях»')
+_mcu = open(os.path.join(ROOT, 'web', 'templates', 'users.html'), encoding='utf-8').read()
+check('mcf-win' in _mcu and 'pointerdown' in _mcu and '/member-card/lookup?user=' in _mcu,
+      'карточка 360: перетаскиваемое окно из списка участников (то же API)')
 check('closeTopOverlays' in js and "window.closeTopOverlays('notifDrawer')" in js,
       'оверлеи: уведомления и лента не висят одновременно (меню не смешиваются)')
 check(js.count('window.closeTopOverlays()') >= 2 and 'closeTopOverlays' in js.split('pop.hidden = !pop.hidden')[1][:120] + js.split('pop.hidden = !pop.hidden')[0][-120:],

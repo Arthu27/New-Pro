@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 """Карточка участника 360° (идеи #106-110): всё досье одним экраном.
 
+Отдельной страницы больше нет: досье открывается перетаскиваемым окном
+прямо из списка «Пользователи» (users.html: клик по участнику → это же API
++ общий рендер web/static/member_card.js и member_card.css). Роуты — только
+API: lookup (досье для окна), suggest (@-автодополнение), export (CSV).
+
 Агрегатор над подсистемами, которые в боте живут раздельно:
 - активность и ранги — метод ProfileCog._data (cogs/profile.py) без
   переписываний: уровень/XP из services.gamification, сообщения/войс из
@@ -26,7 +31,7 @@ from types import SimpleNamespace
 
 from web.routes._common import (
     _log,
-    render_template, session, request, jsonify, Response,
+    request, jsonify, Response,
 )
 from web.routes.mod_control import (
     validate_user_id, names_from_audit, load_warns_map,
@@ -324,15 +329,6 @@ def register(ctx):
     app = ctx.app
     login_required = ctx.login_required
     role_required = ctx.role_required
-    active_guild_id = ctx.active_guild_id
-
-    @app.route('/member-card')
-    @login_required
-    @role_required('mod')
-    def member_card_page():
-        return render_template('member_card.html', role=session.get('role'),
-                               username=session.get('username'),
-                               guild_id=active_guild_id())
 
     @app.route('/api/guild/<gid>/member-card/lookup')
     @login_required

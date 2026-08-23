@@ -49,12 +49,36 @@
 <div class="panel" style="margin-top:14px" id="apSetBox" {% if not can_edit %}hidden{% endif %}>
   <div class="panel-head"><div><h2><i class="fas fa-gear"></i> Канал карточек</h2>
     <div class="sub">Куда приходят карточки апелляций. Статус: <span id="apReady">проверяем…</span></div></div></div>
+  <div class="panel-body" style="padding-top:0;padding-bottom:0">
+    <div class="hint" style="margin-bottom:12px"><i class="fas fa-circle-info"></i> Подаются из Discord: слэш-команда <b>/апелляция</b> (для забаненных — сообщение боту в ЛС). Здесь модератор выносит вердикт: при живом боте принятая апелляция сама снимает бан и пишет человеку в ЛС.</div>
+  </div>
   <div class="panel-body">
     <div class="form-row" style="max-width:560px">
       <select class="form-input" id="apChanSel"></select>
       <button type="button" class="btn btn-primary" id="apChanSave"><i class="fas fa-save"></i> Сохранить</button>
     </div>
     <div class="hint" id="apChanMsg"></div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px" id="apLookBox" {% if not can_edit %}hidden{% endif %}>
+  <div class="panel-head"><div><h2><i class="fas fa-wand-magic-sparkles"></i> Оформление карточки</h2>
+    <div class="sub">Как выглядит карточка апелляции в Discord: авто-картинка в теме Aether, своя по URL или обычный эмбед.</div></div></div>
+  <div class="panel-body">
+    <div class="form-row" style="flex-wrap:wrap;max-width:900px">
+      <select class="form-input" id="apLookMode" aria-label="Режим картинки карточки апелляции" style="max-width:280px">
+        <option value="auto">Авто-картинка (рисует бот)</option>
+        <option value="url">Своя картинка по URL</option>
+        <option value="off">Без картинки — обычный эмбед</option>
+      </select>
+      <select class="form-input" id="apLookTheme" aria-label="Тема авто-картинки апелляции" style="max-width:220px"></select>
+      <input type="text" class="form-input" id="apLookUrl" placeholder="https://… ваша картинка" aria-label="URL собственной картинки" style="flex:1;min-width:220px">
+      <button type="button" class="btn btn-primary" id="apLookSave"><i class="fas fa-save"></i> Сохранить</button>
+    </div>
+    <div class="hint" id="apLookMsg"></div>
+    <div id="apLookPvWrap" style="margin-top:10px;border:1px solid var(--line-2);border-radius:14px;overflow:hidden;line-height:0;background:var(--bg);max-width:900px">
+      <img id="apLookPv" alt="Предпросмотр карточки апелляции" style="width:100%;height:auto" loading="lazy">
+    </div>
   </div>
 </div>
 
@@ -102,7 +126,7 @@ function loadOverview() {
     } else {
       rb.innerHTML = '<span class="badge tone-warning">свой канал не задан — при живом боте карточки уйдут в системный</span>';
     }
-    if (CAN_EDIT) { $('apSetBox').hidden = false; loadChannels(); }
+    if (CAN_EDIT) { $('apSetBox').hidden = false; loadChannels(); syncAppearance(d); }
 
     var q = $('apQueue');
     if (!d.pending.length) {
@@ -171,7 +195,9 @@ function apResolve(id, accept) {
 
 function loadChannels() {
   fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); }).then(function (d) {
-    var list = (d.channels || []).filter(function (c) { return c.type === 'text'; });
+    /* API отдаёт и массив, и {channels: [...]} — принимаем оба формата */
+    var raw = Array.isArray(d) ? d : (d.channels || []);
+    var list = raw.filter(function (c) { return c.type === 'text'; });
     $('apChanSel').innerHTML = list.length
       ? list.map(function (c) { return '<option value="' + esc(c.id) + '"># ' + esc(c.name) + '</option>'; }).join('')
       : '<option value="">бот офлайн — список недоступен</option>';
@@ -217,6 +243,76 @@ $('apQ').addEventListener('input', function () {
 $('apCsv').addEventListener('click', function (e) {
   e.preventDefault();
   location.href = API + '/export.csv';
+});
+
+/* ── Оформление карточки апелляции (admin/owner) ───────────────────── */
+var apLookDirty = false;
+function apLookEls() {
+  return {
+    mode: $('apLookMode'), theme: $('apLookTheme'), url: $('apLookUrl'),
+    msg: $('apLookMsg'), pvWrap: $('apLookPvWrap'), pv: $('apLookPv')
+  };
+}
+function syncAppearance(d) {
+  var el = apLookEls();
+  if (!el.mode || apLookDirty) return;
+  var ap = (d && d.appearance) || { mode: 'auto', theme: 'violet', url: '' };
+  if (!el.theme.options.length) {
+    el.theme.innerHTML = ((d && d.themes) || []).map(function (t) {
+      return '<option value="' + esc(t.id) + '">' + esc(t.label) + '</option>';
+    }).join('');
+  }
+  el.mode.value = ap.mode;
+  el.theme.value = ap.theme;
+  el.url.value = ap.url || '';
+  refreshAppearanceUi();
+}
+function apLookPreviewSrc() {
+  var el = apLookEls();
+  if (el.mode.value === 'url') {
+    return (el.url.value || '').trim();
+  }
+  var q = new URLSearchParams();
+  q.set('theme', el.theme.value || 'violet');
+  return API + '/card-preview.png?' + q.toString() + '&_=' + Date.now();
+}
+function refreshAppearanceUi() {
+  var el = apLookEls();
+  if (!el.mode) return;
+  var m = el.mode.value;
+  el.theme.style.display = (m === 'auto') ? '' : 'none';
+  el.url.style.display = (m === 'url') ? '' : 'none';
+  el.pvWrap.style.display = (m === 'off') ? 'none' : '';
+  if (m === 'url' && !String(el.url.value || '').trim()) return; /* пустой URL — не дёргаем картинку */
+  el.pv.src = apLookPreviewSrc();
+}
+['apLookMode', 'apLookTheme', 'apLookUrl'].forEach(function (id) {
+  var el = $(id);
+  if (el) el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function () {
+    apLookDirty = true;
+    clearTimeout(window.__apLookT);
+    window.__apLookT = setTimeout(refreshAppearanceUi, 180);
+  });
+});
+var apLookSaveBtn = $('apLookSave');
+if (apLookSaveBtn) apLookSaveBtn.addEventListener('click', function () {
+  var el = apLookEls();
+  fetch(API + '/appearance', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: el.mode.value, theme: el.theme.value, url: el.url.value })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    el.msg.className = 'hint' + (d.success ? '' : ' error');
+    el.msg.textContent = d.message || d.error || 'Ошибка';
+    if (d.success) {
+      apLookDirty = false;
+      if (d.appearance) { el.mode.value = d.appearance.mode; el.theme.value = d.appearance.theme; el.url.value = d.appearance.url || ''; }
+      if (window.showToast) window.showToast(el.msg.textContent, true);
+      refreshAppearanceUi();
+    }
+  }).catch(function () {
+    el.msg.className = 'hint error';
+    el.msg.textContent = 'Сеть моргнула — попробуйте ещё раз';
+  });
 });
 
 loadOverview();

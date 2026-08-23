@@ -47,6 +47,47 @@
     font-size: 12px;
     margin-left: 8px;
   }
+
+  /* ── Превью «Меню призыва модераторов» ─────────────────────────────── */
+  .summon-preview {
+    display: flex; flex-direction: column; gap: 8px;
+    max-width: 520px;
+  }
+  .sp-embed {
+    border-radius: 4px 12px 12px 4px; overflow: hidden;
+    border-left: 4px solid #f4a261;
+    background: var(--surface-2);
+  }
+  .sp-body { padding: 13px 16px 14px; }
+  .sp-title { font-weight: 800; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .sp-title i { color: #f4a261; }
+  .sp-desc { margin-top: 5px; font-size: 12px; color: var(--text-2); line-height: 1.55; }
+  .sp-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 12px;
+    margin-top: 10px;
+  }
+  .sp-grid span { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); }
+  .sp-grid b { font-size: 12.5px; color: var(--text); }
+  .sp-quote {
+    margin-top: 10px; padding: 8px 11px; border-radius: 9px;
+    background: color-mix(in srgb, var(--text) 5%, transparent);
+    border: 1px solid var(--line-2);
+    font-size: 12px; color: var(--text-2); font-style: italic;
+  }
+  .sp-status { margin-top: 10px; font-size: 12.5px; font-weight: 800; color: #f4a261; }
+  .sp-claim {
+    align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 16px; border: none; border-radius: 10px;
+    background: #16a34a; color: #fff; font-weight: 800; font-size: 13px;
+    cursor: not-allowed; opacity: .95;
+  }
+  .summon-steps { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+  .summon-steps div {
+    display: flex; align-items: flex-start; gap: 9px;
+    font-size: 12.5px; color: var(--text-2); line-height: 1.5;
+  }
+  .summon-steps i { color: var(--ac); margin-top: 2px; }
 </style>
 
 <div class="page-head">
@@ -538,6 +579,43 @@
       </span>
     </div>
     <div id="notify-diagnose-result" style="margin-top: 12px; display: none;"></div>
+  </div>
+
+  <!-- Меню призыва модераторов: как выглядит эскалация из AI-тикета -->
+  <div class="tk-card tk-card-wide">
+    <div class="tk-head">
+      <div class="tk-icon"><i class="fas fa-bullhorn"></i></div>
+      <div class="tk-title">Меню призыва модераторов</div>
+    </div>
+    <p class="hint-pill amber" style="margin-bottom: 12px;">
+      <i class="fas fa-info-circle"></i>
+      Когда ИИ в тикете больше не может помочь, клиент эскалируется автоматически:
+      в канал из блока выше уходит призывная карточка, роли поддержки получают пинг,
+      а кто нажмёт «Взять в работу» — отображается как обслуживающий.
+    </p>
+    <div class="summon-preview">
+      <div class="sp-embed">
+        <div class="sp-body">
+          <div class="sp-title"><i class="fas fa-bullhorn"></i> Призыв модераторов: нужна помощь в тикете</div>
+          <div class="sp-desc">ИИ больше не может помочь в этом тикете — нужен живой человек. Кто нажмёт «Взять в работу», тот и обслуживает: имя закрепится здесь и в тикете.</div>
+          <div class="sp-grid">
+            <div><span>Тикет</span><b>#ticket-artem</b></div>
+            <div><span>Причина</span><b>Лимит сообщений ИИ исчерпан</b></div>
+            <div><span>Переписка с ИИ</span><b>10 сообщений</b></div>
+            <div><span>Клиент</span><b>@artem</b></div>
+            <div><span>Тема</span><b>Жалоба</b></div>
+          </div>
+          <div class="sp-quote">«он меня оскорбил в канале, разберитесь»</div>
+          <div class="sp-status">Ожидает модератора</div>
+        </div>
+      </div>
+      <button class="sp-claim" type="button" disabled aria-label="Взять в работу (пример кнопки в Discord)"><i class="fas fa-shield-halved"></i> Взять в работу</button>
+    </div>
+    <div class="summon-steps">
+      <div><i class="fas fa-circle-check"></i><span>ИИ не смог ответить, ошибся или клиент попросил человека → тикет сам эскалируется.</span></div>
+      <div><i class="fas fa-circle-check"></i><span>Штаб видит карточку: кто, в каком тикете, причина, последняя фраза клиента.</span></div>
+      <div><i class="fas fa-circle-check"></i><span>«Взять в работу»: карточка станет зелёной со статусом «В работе у …», а клиент в тикете узнает, что модератор уже в пути.</span></div>
+    </div>
   </div>
 
   <div class="tk-card tk-card-wide">

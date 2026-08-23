@@ -3526,7 +3526,6 @@ _ACTION_MAP = (
     (r'/role-permissions', 'Изменили права ролей', 'fa-key', '/role-permissions'),
     (r'/warnings', 'Выдали предупреждение', 'fa-triangle-exclamation', '/warnings'),
     (r'/temp-mod', 'Временные меры', 'fa-clock', '/temp-moderation'),
-    (r'/member-card', 'Открыли карточку участника', 'fa-id-card-clip', '/member-card'),
     (r'/ai-mod', 'Настроили AI-модерацию', 'fa-brain', '/ai-moderation'),
     (r'/autofilter', 'Настроили автофильтр', 'fa-filter', '/autofilter'),
     (r'/automation', 'Изменили автоматизацию', 'fa-robot', '/automation'),

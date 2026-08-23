@@ -106,6 +106,25 @@
   background: color-mix(in srgb, var(--err) 10%, transparent);
   border-color: color-mix(in srgb, var(--err) 35%, transparent);
 }
+
+/* авто-картинка правила */
+.rule-gen-btn {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px; border-radius: 9px;
+  border: 1px dashed var(--ac-line); background: transparent;
+  color: var(--ac); font-size: 11px; font-weight: 800; cursor: pointer;
+  transition: all .15s;
+}
+.rule-gen-btn:hover { background: var(--ac-soft); border-style: solid; }
+.rule-gen-btn.on { background: var(--ac); color: #fff; border: 1px solid var(--ac); }
+.rule-gen-btn.on:hover { filter: brightness(1.08); }
+.rule-img-note {
+  font-size: 10px; color: var(--text-3); margin-left: 26px;
+  display: none; align-items: center; gap: 5px;
+}
+.rule-img-note.show { display: inline-flex; }
+.rule-img-note i { color: var(--ac); }
 .rules-empty {
   text-align: center; padding: 30px 16px;
   color: var(--text-3); font-size: 13px;
@@ -325,6 +344,12 @@
         <div class="rule-line"><i class="fas fa-heading"></i><input class="rule-field" id="rules-title" placeholder="Заголовок эмбеда: Правила сервера" aria-label="Заголовок эмбеда" data-meta="title"></div>
         <div class="rule-line"><i class="fas fa-align-left"></i><input class="rule-field" id="rules-intro" placeholder="Вступление: Нарушение правил ведёт к наказанию" aria-label="Вступление эмбеда" data-meta="intro"></div>
         <div class="rule-line"><i class="fas fa-palette"></i><input class="rule-field" id="rules-color" type="color" value="#4f46e5" aria-label="Цвет эмбеда" data-meta="color" style="max-width:70px;padding:4px 6px"></div>
+        <div class="rule-line"><i class="fas fa-wand-magic-sparkles"></i><select class="rule-field" id="rules-img-theme" aria-label="Тема авто-картинок" data-meta="img_theme" style="flex:1">
+          <option value="violet">Авто-картинки: тёмный фиолет</option>
+          <option value="night">Авто-картинки: ночная</option>
+          <option value="ocean">Авто-картинки: океан</option>
+          <option value="forest">Авто-картинки: лес</option>
+        </select></div>
       </div>
       <div class="publish-row" style="margin-top:10px">
         <select id="rules-channel" class="form-input" style="flex:1" aria-label="Канал публикации">
@@ -337,7 +362,7 @@
       <div class="publish-status" id="publishStatus" role="status" aria-live="polite"></div>
       <div class="publish-hint">
         <i class="fas fa-link"></i>
-        <span>Ссылки без «https://» дописываются автоматически. Заголовок, вступление и цвет применяются ко всем эмбедам публикации.</span>
+        <span>Ссылки без «https://» дописываются автоматически. У каждого правила картинка — свой URL или кнопка «Авто»: панель сама отрисует баннер в выбранной теме (URL приоритетнее). Заголовок, вступление и цвет — ко всем эмбедам публикации.</span>
       </div>
     </div>
   </div>
@@ -388,7 +413,8 @@
       title: document.getElementById('rules-title').value.trim(),
       intro: document.getElementById('rules-intro').value.trim(),
       color: document.getElementById('rules-color').value.replace('#', ''),
-      channel_id: document.getElementById('rules-channel').value
+      channel_id: document.getElementById('rules-channel').value,
+      img_theme: curTheme()
     };
   }
   async function saveMeta() {
@@ -411,15 +437,16 @@
     if (window.showToast) window.showToast(msg, ok);
     else alert(msg);
   }
-  function blankRule() { return { t: '', u: '', img: '', thumb: '' }; }
+  function blankRule() { return { t: '', u: '', img: '', thumb: '', img_gen: '' }; }
   function normRule(r) {
-    if (typeof r === 'string') return { t: r, u: '', img: '', thumb: '' };
+    if (typeof r === 'string') return { t: r, u: '', img: '', thumb: '', img_gen: '' };
     if (r && typeof r === 'object') {
       return {
         t: String(r.t || r.text || r.title || '').trim(),
         u: String(r.u || r.url || r.link || '').trim(),
         img: String(r.img || r.image || r.image_url || '').trim(),
-        thumb: String(r.thumb || r.thumbnail || r.thumbnail_url || '').trim()
+        thumb: String(r.thumb || r.thumbnail || r.thumbnail_url || '').trim(),
+        img_gen: String(r.img_gen || r.auto_img || '').trim()
       };
     }
     return blankRule();
@@ -432,6 +459,44 @@
     return 'https://' + v;
   }
   function validUrl(v) { return !v || /^https?:\/\//i.test(v); }
+
+  /* ── Авто-картинки: тема и URL предпросмотра ────────────────────────
+     Единый вид с Discord: баннер рисуется на сервере той же функцией,
+     что и при публикации (services/banner_gen.py). */
+  function curTheme() {
+    var s = document.getElementById('rules-img-theme');
+    return (s && s.value) || 'violet';
+  }
+  function curColor() {
+    var c = document.getElementById('rules-color');
+    return c ? String(c.value || '#4f46e5').replace('#', '') : '4f46e5';
+  }
+  function curTitle() {
+    var t = document.getElementById('rules-title');
+    return t ? String(t.value || 'Правила сервера') : 'Правила сервера';
+  }
+  function bannerQuery(r, i) {
+    var q = new URLSearchParams();
+    q.set('title', curTitle());
+    q.set('text', (r.t || '').slice(0, 400));
+    q.set('n', String(i + 1));
+    q.set('total', String(rules.length || 1));
+    q.set('theme', r.img_gen || curTheme());
+    q.set('color', curColor());
+    return q.toString();
+  }
+  /* после набора текста баннеры обновляем с паузой — не долбим API на каждой букве */
+  var bannerTimer = null;
+  function scheduleBannerRefresh(delay) {
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(function () {
+      var nodes = document.querySelectorAll('.pv-gen[data-bn]');
+      for (var k = 0; k < nodes.length; k++) {
+        nodes[k].innerHTML = '<img src="/api/guild/' + encodeURIComponent(selectedGuild) + '/rules/banner?' +
+          nodes[k].getAttribute('data-bn') + '&_=' + Date.now() + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
+      }
+    }, delay || 350);
+  }
 
   /* ── Серверы ── */
   async function loadGuilds() {
@@ -474,6 +539,8 @@
       if (iEl && meta.intro) iEl.value = meta.intro;
       if (cEl && meta.color) cEl.value = '#' + String(meta.color).replace('#', '');
       if (meta.channel_id) lastChannel = String(meta.channel_id);
+      var thEl = document.getElementById('rules-img-theme');
+      if (thEl && meta.img_theme) thEl.value = meta.img_theme;
       syncPreviewMeta();
     } catch (e) { /* мета не критична */ }
     try {
@@ -491,6 +558,13 @@
           chSel.innerHTML += '<option value="' + esc(c.id) + '"' + s + '>#' + esc(c.name) + '</option>';
         });
       if (!chSel.value && lastChannel) chSel.value = lastChannel;
+      /* ничего не сохранено — берём первый текстовый канал:
+         кнопка «Опубликовать» сразу рабочая, без тупика «выберите канал» */
+      if (!chSel.value && chSel.options.length > 1) {
+        chSel.selectedIndex = 1;
+        lastChannel = chSel.value;
+        saveMetaSoon();
+      }
     } catch (e) { /* каналы не критичны */ }
     renderRules();
   }
@@ -512,7 +586,10 @@
           '<div class="rule-line"><i class="fas fa-align-left"></i><input class="rule-input" value="' + esc(r.t) + '" data-idx="' + i + '" data-field="t" placeholder="Текст правила" aria-label="Текст правила ' + (i + 1) + '"></div>' +
           '<div class="rule-meta">' +
             '<div class="rule-line"><i class="fas fa-link"></i><input class="rule-field" value="' + esc(r.u) + '" data-idx="' + i + '" data-field="u" placeholder="Ссылка https://…" aria-label="Ссылка правила ' + (i + 1) + '"></div>' +
-            '<div class="rule-line"><i class="fas fa-image"></i><input class="rule-field" value="' + esc(r.img) + '" data-idx="' + i + '" data-field="img" placeholder="Картинка URL" aria-label="Картинка правила ' + (i + 1) + '"></div>' +
+            '<div class="rule-line"><i class="fas fa-image"></i><input class="rule-field" value="' + esc(r.img) + '" data-idx="' + i + '" data-field="img" placeholder="Картинка URL" aria-label="Картинка правила ' + (i + 1) + '">' +
+            '<button type="button" class="rule-gen-btn' + (r.img_gen ? ' on' : '') + '" data-gen="' + i + '" title="' +
+              (r.img_gen ? 'Авто-картинка включена · тема «' + esc(r.img_gen) + '» — отрисуем баннер при публикации' : 'Создать картинку автоматически вместо URL') +
+              '" aria-label="Авто-картинка правила ' + (i + 1) + '" aria-pressed="' + (r.img_gen ? 'true' : 'false') + '"><i class="fas fa-wand-magic-sparkles"></i> Авто</button></div>' +
             '<div class="rule-line"><i class="fas fa-images"></i><input class="rule-field" value="' + esc(r.thumb) + '" data-idx="' + i + '" data-field="thumb" placeholder="Миниатюра URL" aria-label="Миниатюра правила ' + (i + 1) + '"></div>' +
           '</div>' +
         '</div>' +
@@ -554,10 +631,13 @@
       }
       if (r.img) {
         html += '<div class="pv-media"><img src="' + esc(r.img) + '" alt="Картинка правила ' + (i + 1) + '" loading="lazy" onerror="this.style.display=\'none\'"></div>';
+      } else if (r.img_gen) {
+        html += '<div class="pv-media pv-gen" data-bn="' + bannerQuery(r, i) + '"></div>';
       }
       html += '</div></div>';
       return html;
     }).join('');
+    scheduleBannerRefresh(150);
   }
 
   /* ── Действия ── */
@@ -594,7 +674,8 @@
   async function saveRules() {
     if (!selectedGuild) { toast('Выберите сервер!', false); return; }
     var clean = rules.map(function (r) {
-      return { t: r.t.trim(), u: fixUrl(r.u), img: fixUrl(r.img), thumb: fixUrl(r.thumb) };
+      return { t: r.t.trim(), u: fixUrl(r.u), img: fixUrl(r.img), thumb: fixUrl(r.thumb),
+               img_gen: (r.img && r.img.trim()) ? '' : (r.img_gen || '') };
     }).filter(function (r) { return r.t; });
     if (!checkUrls()) return;
     var btn = document.getElementById('btnSaveRules');
@@ -628,7 +709,8 @@
     var ch = document.getElementById('rules-channel').value;
     if (!ch) { publishStatus(false, 'Выберите канал публикации'); return; }
     var clean = rules.map(function (r) {
-      return { t: r.t.trim(), u: fixUrl(r.u), img: fixUrl(r.img), thumb: fixUrl(r.thumb) };
+      return { t: r.t.trim(), u: fixUrl(r.u), img: fixUrl(r.img), thumb: fixUrl(r.thumb),
+               img_gen: (r.img && r.img.trim()) ? '' : (r.img_gen || '') };
     }).filter(function (r) { return r.t; });
     if (!clean.length) { publishStatus(false, 'Сначала добавьте правила!'); return; }
     if (!checkUrls()) return;
@@ -693,6 +775,15 @@
       removeRule(Number(del.dataset.del));
       return;
     }
+    var gen = e.target.closest('[data-gen]');
+    if (gen) {
+      var gi = Number(gen.dataset.gen);
+      if (rules[gi]) {
+        rules[gi].img_gen = rules[gi].img_gen ? '' : curTheme();
+        renderRules();   // перекрашиваем кнопку и превью
+      }
+      return;
+    }
   });
   var gs = document.getElementById('guild-select');
   if (gs) gs.addEventListener('change', function () { window.__rulesLoad(); });
@@ -711,6 +802,15 @@
   if (mColor) mColor.addEventListener('input', function () { syncPreviewMeta(); saveMetaSoon(); });
   var chSel = document.getElementById('rules-channel');
   if (chSel) chSel.addEventListener('change', function () { lastChannel = chSel.value; saveMetaSoon(); });
+  var thSel = document.getElementById('rules-img-theme');
+  if (thSel) thSel.addEventListener('change', function () {
+    /* новая тема применяется ко всем правилам с включённым «Авто» */
+    var changed = false;
+    rules.forEach(function (r) { if (r.img_gen) { r.img_gen = thSel.value; changed = true; } });
+    if (changed) renderRules();
+    updatePreview();
+    saveMetaSoon();
+  });
 
   /* права: без админа кнопки отключены с подсказкой */
   if (!CAN_EDIT) {

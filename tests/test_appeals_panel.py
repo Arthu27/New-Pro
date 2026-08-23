@@ -188,6 +188,69 @@ check(len(lines) == 5, f'шапка + 4 записи (пришло {len(lines)})
 login('uye')
 check(client.get('/api/guild/777/appeals/export.csv').status_code == 403, 'uye не выгружает')
 
+print('== 6b. Оформление карточки апелляции ==')
+login('mod')
+check(client.post('/api/guild/777/appeals/appearance',
+                  json={'mode': 'url', 'url': 'https://x/y.png'}).status_code == 403,
+      'мод не меняет оформление (admin+)')
+login('admin')
+r = client.get('/api/guild/777/appeals/overview').get_json()
+check(r['appearance'] == {'mode': 'auto', 'theme': 'violet', 'url': ''},
+      'appearance по умолчанию: авто + violet')
+check(len(r['themes']) == 5, 'пять тем авто-картинки в overview')
+
+r = client.post('/api/guild/777/appeals/appearance',
+                json={'mode': 'url', 'url': 'http://evil.example/x.png'})
+check(r.status_code == 400 and 'https' in r.get_json()['error'],
+      'http URL картинки отвергнут (Discord не показывает)')
+r = client.post('/api/guild/777/appeals/appearance',
+                json={'mode': 'url', 'url': 'http://127.0.0.1/x.png'})
+check(r.status_code == 400, 'локальный адрес картинки отвергнут')
+
+r = client.post('/api/guild/777/appeals/appearance',
+                json={'mode': 'url', 'url': 'https://cdn.example.com/card.png'})
+d = r.get_json()
+check(r.status_code == 200 and d['success'] and d['appearance']['mode'] == 'url',
+      'свой https URL принят')
+r = client.post('/api/guild/777/appeals/appearance',
+                json={'mode': 'AUTO', 'theme': 'OCEAN'})
+d = r.get_json()
+check(d['success'] and d['appearance'] == {'mode': 'auto', 'theme': 'ocean', 'url': ''},
+      'режим/тема нормализуются (регистр, мусор)')
+r = client.get('/api/guild/777/appeals/overview').get_json()
+check(r['appearance']['theme'] == 'ocean', 'тема сохранилась в state')
+r = client.post('/api/guild/777/appeals/appearance', json={'mode': 'junk', 'theme': 'nope'})
+check(r.get_json()['appearance']['mode'] == 'auto', 'мусор — к дефолтам, не падение')
+
+r = client.get('/api/guild/777/appeals/card-preview.png?theme=ocean')
+body = r.get_data()
+check(r.status_code == 200 and r.mimetype == 'image/png' and body[:8].startswith(b'\x89PNG'),
+      'предпросмотр карточки апелляции → PNG')
+check(len(body) > 40000 and r.headers.get('Cache-Control') == 'no-store',
+      f'предпросмотр живой ({len(body)} байт) и не кэшируется')
+r = client.get('/api/guild/777/appeals/card-preview.png?theme=zzz')
+check(r.status_code == 200, 'мусорная тема — дефолт, не 500')
+login('uye')
+check(client.get('/api/guild/777/appeals/card-preview.png').status_code == 403,
+      'uye не смотрит предпросмотр')
+login('admin')
+client.post('/api/guild/777/appeals/appearance',
+            json={'mode': 'auto', 'theme': 'violet', 'url': ''})
+
+# генератор сам по себе
+from services import appeal_card as ABC  # noqa: E402
+png = ABC.render_appeal_card(appeal_id=7, user_name='Кипарис',
+                             text='Меня забанили по ошибке: ссылку на гайд приняли за рекламу.',
+                             link='https://i.imgur.com/demo.png', theme='violet')
+check(png and png[:8].startswith(b'\x89PNG'), 'карточка апелляции рисуется')
+seen = {ABC.render_appeal_card(appeal_id=1, user_name='u', text='текст', theme=t)
+        for t in ABC.APPEAL_THEME_ORDER}
+check(len(seen) == len(ABC.APPEAL_THEME_ORDER), 'темы карточки визуально различны')
+long_png = ABC.render_appeal_card(appeal_id=9, user_name='u', text='очень ' * 200,
+                                  theme='night')
+check(long_png and long_png[:8].startswith(b'\x89PNG'),
+      'длинный текст влезает с авто-уменьшением/многоточием')
+
 print('== 7. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/appeals.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
@@ -204,6 +267,24 @@ check('/appeals' in mod_pages, 'пункт меню «Апелляции» в «
 check(PM.PAGE_COGS.get('/appeals') == ('appeals',), 'appeals-ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check(ext.count('appeals_panel') >= 1, 'модуль зарегистрирован в routes_extra')
+check('/апелляция' in tpl and 'fa-circle-info' in tpl,
+      'подсказка «как подать апелляцию» видна на странице')
+for fid in ('apLookBox', 'apLookMode', 'apLookTheme', 'apLookUrl', 'apLookSave',
+            'apLookMsg', 'apLookPv'):
+    check(('id="' + fid + '"') in tpl, f'панель оформления: {fid} на месте')
+check("'/appearance'" in tpl and 'card-preview.png' in tpl,
+      'панель оформления: API-пути в шаблоне')
+for opt in ('value="auto"', 'value="url"', 'value="off"'):
+    check(opt in tpl, f'режим оформления {opt} есть в выборе')
+
+# демо-посев: страница не должна быть пустой в предпросмотре
+seed_src = open(os.path.join(ROOT, 'scripts', 'seed_demo_panel.py'), encoding='utf-8').read()
+check("GuildData as _GDA" in seed_src and "_GDA('appeals').set(GID, 'state', _ap)" in seed_src,
+      'демо-посев пишет состояние апелляций')
+check(seed_src.count('_mk(') >= 3 and seed_src.count('_res(') >= 4,
+      'в посеве и очередь (3), и история (4)')
+check('_AP.create_appeal' in seed_src and '_AP.resolve_appeal' in seed_src,
+      'посев собирает записи чистыми функциями кога (формат совместим)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

@@ -59,6 +59,40 @@
   </div>
 </div>
 
+<!-- Оформление карточек логов (то, что бот шлёт в лог-каналы Discord) -->
+<div class="ml-filter-box" id="lcSetBox" {% if not can_edit %}hidden{% endif %} data-reveal="up">
+  <div class="box-title"><i class="fas fa-wand-magic-sparkles"></i> Карточки логов в Discord — оформление</div>
+  <div class="filter-row" style="margin-bottom:10px">
+    <label class="field-input" style="display:flex;align-items:center;gap:9px;flex:0 0 auto;cursor:pointer">
+      <input type="checkbox" id="lcOn" checked aria-label="Показывать карточки-картинки в лог-каналах"> Карточки-картинки включены
+    </label>
+    <select id="lcTheme" class="field-input" aria-label="Тема оформления карточек"></select>
+    <select id="lcCat" class="field-input" aria-label="Категория для предпросмотра">
+      <option value="mod">модерация</option>
+      <option value="member">участники</option>
+      <option value="message">сообщения</option>
+      <option value="voice">голос</option>
+      <option value="role">роли</option>
+      <option value="channel">каналы</option>
+      <option value="guild">сервер</option>
+      <option value="invite">приглашения</option>
+      <option value="ticket">тикеты</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2)">
+      Свой акцент
+      <input type="color" id="lcAccent" value="#f5d76e" aria-label="Свой акцентный цвет карточек" style="width:44px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)">
+    </label>
+    <button type="button" class="btn btn-sm" id="lcAccentClear"><i class="fas fa-rotate-left"></i> По теме</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn btn-primary" id="lcSave"><i class="fas fa-save"></i> Сохранить</button>
+  </div>
+  <div class="hint" id="lcMsg" style="margin-bottom:10px"></div>
+  <div style="border:1px solid var(--line-2);border-radius:14px;overflow:hidden;line-height:0;background:var(--bg)">
+    <img id="lcPreview" alt="Предпросмотр карточки лога" style="width:100%;height:auto" loading="lazy">
+  </div>
+  <div class="hint" style="margin-top:8px">Так выглядит карточка, которую бот прикладывает к каждому событию в лог-каналах. Отключение оставляет обычный текстовый эмбед.</div>
+</div>
+
 <!-- Фильтры -->
 <div class="ml-filter-box" data-reveal="up">
   <div class="filter-row">
@@ -149,5 +183,76 @@ function start() {
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
 else start();
+</script>
+
+<script>
+/* ── Оформление карточек логов (admin/owner): тема, акцент, вкл/выкл ── */
+(function () {
+  var box = document.getElementById('lcSetBox');
+  if (!box) return;
+  function lcGid() { return document.getElementById('guild-select').value; }
+  var on = document.getElementById('lcOn'),
+      themeSel = document.getElementById('lcTheme'),
+      catSel = document.getElementById('lcCat'),
+      accent = document.getElementById('lcAccent'),
+      msg = document.getElementById('lcMsg'),
+      img = document.getElementById('lcPreview');
+  var accentDirty = false; /* не трогаем цвет до первого касания владельца */
+  accent.addEventListener('input', function () { accentDirty = true; schedulePreview(); });
+
+  var pvT = null;
+  function lcPreviewUrl() {
+    var q = new URLSearchParams();
+    q.set('theme', themeSel.value || 'aether');
+    if (accentDirty) q.set('accent', accent.value.replace('#', ''));
+    q.set('cat', catSel.value || 'mod');
+    return '/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/preview.png?' + q.toString() + '&_=' + Date.now();
+  }
+  function schedulePreview() {
+    clearTimeout(pvT);
+    pvT = setTimeout(function () { img.src = lcPreviewUrl(); }, 160);
+  }
+  themeSel.addEventListener('change', schedulePreview);
+  catSel.addEventListener('change', schedulePreview);
+  document.getElementById('guild-select').addEventListener('change', loadLc);
+  document.getElementById('lcAccentClear').addEventListener('click', function () {
+    accentDirty = false; schedulePreview(); lcSave(true);
+  });
+
+  function loadLc() {
+    fetch('/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/settings')
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.success) return;
+        if (!themeSel.options.length) {
+          themeSel.innerHTML = (d.themes || []).map(function (t) {
+            return '<option value="' + esc(t.id) + '">' + esc(t.label) + '</option>';
+          }).join('');
+        }
+        on.checked = !!d.cfg.enabled;
+        themeSel.value = d.cfg.theme || 'aether';
+        if (d.cfg.accent) { accent.value = '#' + d.cfg.accent; accentDirty = true; }
+        else accentDirty = false;
+        schedulePreview();
+      }).catch(function () {});
+  }
+
+  function lcSave(silent) {
+    var body = { enabled: on.checked, theme: themeSel.value || 'aether',
+                 accent: accentDirty ? accent.value.replace('#', '') : '' };
+    fetch('/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (silent && !d.success) return;
+      msg.textContent = d.message || d.error || '';
+      msg.className = 'hint' + (d.success ? '' : ' error');
+      if (d.success && window.showToast) window.showToast(d.message, true);
+    }).catch(function () {
+      if (!silent) { msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; msg.className = 'hint error'; }
+    });
+  }
+  document.getElementById('lcSave').addEventListener('click', function () { lcSave(false); });
+
+  loadLc();
+})();
 </script>
 {% endblock %}

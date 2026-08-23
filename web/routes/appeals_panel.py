@@ -23,6 +23,7 @@ from web.routes._common import (
 )
 
 from cogs import appeals as AP
+from services import appeal_card as ABC
 
 from db import GuildData
 
@@ -285,7 +286,55 @@ def register(ctx):
             'pending': pending_view(state),
             'readiness': channel_readiness(appmod.bot_instance, gid, state),
             'can_edit': session.get('role') in ('admin', 'owner'),
+            'appearance': ABC.normalize_appearance(state.get('appearance')),
+            'themes': [{'id': t, 'label': t} for t in ABC.APPEAL_THEME_ORDER],
         })
+
+    @app.route('/api/guild/<gid>/appeals/appearance', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_appeals_appearance(gid):
+        """Оформление карточки апелляции: авто-картинка (тема), свой URL или off."""
+        data = request.get_json(silent=True) or {}
+        ap = ABC.normalize_appearance(data)
+        url = ap['url']
+        if ap['mode'] == 'url' and url:
+            low = url.lower()
+            if not low.startswith('https://'):
+                return jsonify({'success': False,
+                                'error': 'Картинка по URL — только по https:// (Discord не покажет http)'}), 400
+            if any(bad in low for bad in ('localhost', '127.0.0.1', '0.0.0.0')):
+                return jsonify({'success': False,
+                                'error': 'Адрес картинки должен быть публичным'}), 400
+        state = _state(gid)
+        state['appearance'] = ap
+        _save(gid, state)
+        _notify(f'Оформление апелляций: {ABC.APPEAL_MODE_LABELS[ap["mode"]]}'
+                + (f' ({ap["theme"]})' if ap['mode'] == 'auto' else ''))
+        return jsonify({'success': True, 'appearance': ap,
+                        'message': 'Оформление сохранено: ' +
+                                   ABC.APPEAL_MODE_LABELS[ap['mode']] +
+                                   (f' · тема «{ap["theme"]}»' if ap['mode'] == 'auto' else '')})
+
+    @app.route('/api/guild/<gid>/appeals/card-preview.png')
+    @login_required
+    @role_required('mod')
+    def api_appeals_card_preview(gid):
+        """Живой предпросмотр авто-карточки апелляции в выбранной теме."""
+        theme = request.args.get('theme')
+        text = (request.args.get('text') or
+                'Бан за ссылки — это был не спам, а ссылка на общий документ '
+                'с гайдом по ивенту. Прикладываю скрин переписки с согласованием.'
+                )[:400]
+        link = request.args.get('link') or 'https://i.imgur.com/demo-appeal-proof.png'
+        png = ABC.render_appeal_card(
+            appeal_id=7, user_name='Кипарис', text=text,
+            link=link, theme=theme or ABC.DEFAULT_APPEAL_THEME)
+        if not png:
+            return jsonify({'success': False, 'error': 'Не удалось отрисовать пример'}), 500
+        resp = Response(png, mimetype='image/png')
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
 
     @app.route('/api/guild/<gid>/appeals/history')
     @login_required

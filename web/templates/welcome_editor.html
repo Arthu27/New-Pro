@@ -75,6 +75,47 @@
   </div>
 </div>
 
+<div class="editor-box" style="margin-top:16px" id="wCardBox">
+  <div class="section-title"><i class="fas fa-image"></i> Карточка-картинка при входе и выходе</div>
+  <p class="lead" style="font-size:13px;margin-top:-8px;margin-bottom:14px">Помимо текста бот может приложить фирменную карточку «Добро пожаловать» с аватаром участника. Выберите тему, подставьте свою картинку по URL или отключите картинку вовсе — канал для карточек задаёт командой <code>/welcome channel</code>.</p>
+  <div class="editor-grid" style="margin-bottom:0">
+    <div>
+      <div class="form-group"><label>Режим картинки</label>
+        <select id="wCardMode" aria-label="Режим картинки приветствия">
+          <option value="auto">Авто-картинка (рисует бот)</option>
+          <option value="url">Своя картинка по URL</option>
+          <option value="off">Без картинки — текстовое приветствие</option>
+        </select>
+      </div>
+      <div class="form-group" id="wCardThemeBox"><label>Тема авто-картинки</label>
+        <select id="wCardTheme" aria-label="Тема карточки приветствия"></select>
+      </div>
+      <div class="form-group" id="wCardUrlBox" hidden><label>URL картинки (https://)</label>
+        <input type="text" id="wCardUrl" placeholder="https://cdn.example.com/welcome.png" aria-label="URL картинки приветствия">
+      </div>
+      <div class="form-group" id="wCardKindBox"><label>Что смотрим в примере</label>
+        <select id="wCardKind" aria-label="Вид предпросмотра карточки">
+          <option value="welcome">Приветствие (вход участника)</option>
+          <option value="goodbye">Прощание (выход участника)</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <div class="preview-box" id="wCardPvWrap">
+        <div style="margin-bottom:8px">Как будет выглядеть картинка</div>
+        <img id="wCardPv" alt="Предпросмотр карточки приветствия" style="width:100%;border-radius:10px;border:1px solid var(--line)">
+      </div>
+      <p class="lead" id="wCardOffHint" style="font-size:12.5px" hidden>Картинка отключена: участнику придёт текстовое сообщение из блока выше.</p>
+    </div>
+  </div>
+  <div class="hint" id="wCardMsg" style="margin-top:10px"></div>
+  {% if role in ('admin', 'owner') %}
+  <button type="button" class="save-btn" id="wCardSave" onclick="saveWelcomeCard()"><i class="fas fa-save" style="margin-right:6px"></i>Сохранить оформление</button>
+  {% else %}
+  <div class="hint">Оформление карточки меняют только администраторы.</div>
+  {% endif %}
+</div>
+
 <script>
 var selectedGuild = '{{ main_guild_id }}';
 
@@ -166,7 +207,106 @@ document.addEventListener('DOMContentLoaded', function() {
     if (el) el.addEventListener('input', updatePreviews);
   });
   loadSettings();
+  ['wCardMode','wCardTheme','wCardKind'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('change', function() { wCardDirty = true; wCardRefreshUi(); });
+  });
+  var wcu = document.getElementById('wCardUrl');
+  if (wcu) wcu.addEventListener('input', function() { wCardDirty = true; wCardRefreshUi(); });
+  loadWelcomeCard();
 });
+
+// ── Оформление карточки-картинки (авто/URL/выкл) ─────────────────────
+var wCardDirty = false;
+
+function wCardRefreshUi() {
+  var mode = document.getElementById('wCardMode').value;
+  document.getElementById('wCardThemeBox').hidden = mode !== 'auto';
+  document.getElementById('wCardUrlBox').hidden = mode !== 'url';
+  document.getElementById('wCardKindBox').hidden = mode === 'off';
+  document.getElementById('wCardPvWrap').hidden = mode === 'off';
+  document.getElementById('wCardOffHint').hidden = mode !== 'off';
+  wCardRefreshPreview();
+}
+
+var _wCardPvT = null;
+function wCardRefreshPreview() {
+  clearTimeout(_wCardPvT);
+  _wCardPvT = setTimeout(function() {
+    var mode = document.getElementById('wCardMode').value;
+    var img = document.getElementById('wCardPv');
+    if (!img || mode === 'off') return;
+    if (mode === 'url') {
+      var u = document.getElementById('wCardUrl').value.trim();
+      if (u && u.toLowerCase().indexOf('https://') === 0) img.src = u;
+      return;
+    }
+    var theme = document.getElementById('wCardTheme').value || 'aether';
+    var kind = document.getElementById('wCardKind').value || 'welcome';
+    img.src = '/api/guild/' + selectedGuild + '/welcome-card/preview.png?theme=' +
+              encodeURIComponent(theme) + '&kind=' + encodeURIComponent(kind) +
+              '&ts=' + Date.now();
+  }, 180);
+}
+
+async function loadWelcomeCard() {
+  try {
+    var r = await fetch('/api/guild/' + selectedGuild + '/welcome-card/appearance');
+    if (!r.ok) return;
+    var d = await r.json();
+    if (!d.success) return;
+    var ts = document.getElementById('wCardTheme');
+    if (!ts.options.length) {
+      (d.themes || []).forEach(function(t) {
+        var o = document.createElement('option');
+        o.value = t.id;
+        o.textContent = t.label;
+        ts.appendChild(o);
+      });
+    }
+    var ap = d.appearance || {};
+    if (!wCardDirty) {
+      document.getElementById('wCardMode').value = ap.mode || 'auto';
+      if (ap.theme) ts.value = ap.theme;
+      if (typeof ap.url === 'string') document.getElementById('wCardUrl').value = ap.url;
+    }
+    wCardRefreshUi();
+  } catch(e) { console.warn('welcome-card load:', e); }
+}
+
+async function saveWelcomeCard() {
+  var btn = document.getElementById('wCardSave');
+  var msg = document.getElementById('wCardMsg');
+  try {
+    var r = await fetch('/api/guild/' + selectedGuild + '/welcome-card/appearance', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        mode: document.getElementById('wCardMode').value,
+        theme: document.getElementById('wCardTheme').value,
+        url: document.getElementById('wCardUrl').value.trim()
+      })
+    });
+    var d = await r.json();
+    if (d.success) {
+      wCardDirty = false;
+      if (msg) msg.textContent = d.message || 'Сохранено';
+      if (btn) {
+        btn.textContent = 'Сохранено!';
+        setTimeout(function() {
+          btn.innerHTML = '<i class="fas fa-save" style="margin-right:6px"></i>Сохранить оформление';
+        }, 2000);
+      }
+      if (typeof showToast === 'function') showToast(d.message || 'Оформление сохранено', true);
+    } else {
+      if (msg) msg.textContent = d.error || 'Ошибка';
+      if (typeof showToast === 'function') showToast(d.error || 'Ошибка сохранения', false);
+    }
+  } catch(e) {
+    console.error('saveWelcomeCard error:', e);
+    if (msg) msg.textContent = 'Ошибка сохранения';
+  }
+}
 
 async function saveWelcome() {
   if (!selectedGuild) {

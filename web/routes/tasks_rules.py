@@ -76,17 +76,26 @@ def register(ctx):
 
 
     def _norm_rule (r ):
-        """Правило к каноничному виду {t, u, img, thumb}. Легаси-строки — только текст."""
+        """Правило к каноничному виду {t, u, img, thumb, img_gen}.
+
+        img_gen — тема авто-картинки ('' = не генерировать, берётся URL из img);
+        легаси-строки — только текст, всё остальное пустое.
+        """
+        def _theme_of (raw ):
+            from services import banner_gen as _bg
+            raw = str (raw or '').strip ().lower ()
+            return raw if raw in _bg .THEMES else ''
         if isinstance (r ,str ):
-            return {'t':r .strip (),'u':'','img':'','thumb':''}
+            return {'t':r .strip (),'u':'','img':'','thumb':'','img_gen':''}
         if isinstance (r ,dict ):
             return {
             't':str (r .get ('t')or r .get ('text')or r .get ('title')or '').strip (),
             'u':str (r .get ('u')or r .get ('url')or r .get ('link')or '').strip (),
             'img':str (r .get ('img')or r .get ('image')or r .get ('image_url')or '').strip (),
             'thumb':str (r .get ('thumb')or r .get ('thumbnail')or r .get ('thumbnail_url')or '').strip (),
+            'img_gen':_theme_of (r .get ('img_gen')or r .get ('auto_img')or ''),
             }
-        return {'t':'','u':'','img':'','thumb':''}
+        return {'t':'','u':'','img':'','thumb':'','img_gen':''}
 
     def _fix_url (v ):
         """Ссылка к рабочему виду: без протокола — доклеиваем https://.
@@ -157,10 +166,11 @@ def register(ctx):
         return f'data/rules_meta_{guild_id}.json'
 
     def _load_rules_meta (guild_id ):
-        """Настройки публикации: заголовок, вступление, цвет, канал (последний)."""
+        """Настройки публикации: заголовок, вступление, цвет, канал,
+        тема авто-картинок (последняя выбранная в редакторе)."""
         f =_rules_meta_path (guild_id )
         meta ={'title':'Правила сервера','intro':'Нарушение правил ведёт к наказанию.',
-               'color':'4f46e5','channel_id':''}
+               'color':'4f46e5','channel_id':'','img_theme':'violet'}
         try :
             if os .path .exists (f ):
                 with open (f ,encoding ='utf-8')as fp :
@@ -196,8 +206,40 @@ def register(ctx):
                 meta ['color']=c .lower ()
         if 'channel_id'in data :
             meta ['channel_id']=str (data ['channel_id']or '').strip ()
+        if 'img_theme'in data :
+            from services import banner_gen as _bg
+            th =str (data ['img_theme']or '').strip ().lower ()
+            if th in _bg .THEMES :
+                meta ['img_theme']=th
         _save_rules_meta (guild_id ,meta )
         return jsonify ({'success':True ,'meta':meta })
+
+    @app .route ('/api/guild/<guild_id>/rules/banner')
+    @login_required
+    @role_required ('admin')
+    def api_rules_banner (guild_id ):
+        """Предпросмотр авто-картинки правила — то, что увидит Discord при публикации."""
+        from services import banner_gen
+        text =(request .args .get ('text')or '').strip ()[:500 ]
+        try :
+            n =max (1 ,int (request .args .get ('n',1 )))
+        except (TypeError ,ValueError ):
+            n =1
+        try :
+            total =max (n ,int (request .args .get ('total',n )))
+        except (TypeError ,ValueError ):
+            total =n
+        theme =request .args .get ('theme')or banner_gen .DEFAULT_THEME
+        title =(request .args .get ('title')or 'Правила сервера').strip ()[:80 ]
+        color =(request .args .get ('color')or '4f46e5').strip ().lstrip ('#')
+        try :
+            png =banner_gen .render_rules_banner (title =title ,text =text ,index =n ,
+                total =total ,accent =color ,theme =theme )
+        except Exception as _ex :
+            return jsonify ({'error':f'Не удалось отрисовать баннер: {_ex}'[:180 ]}),500
+        resp =Response (png ,mimetype ='image/png')
+        resp .headers ['Cache-Control']='no-store'
+        return resp
 
     @app .route ('/api/guild/<guild_id>/rules/publish',methods =['POST'])
     @login_required 
@@ -207,7 +249,15 @@ def register(ctx):
         import asyncio ,discord 
         data =request .get_json (silent =True )or {}
         ch_id =str (data .get ('channel_id')or '').strip ()
-        raw =data .get ('rules')or []
+        raw =data .get ('rules')
+        if raw is None :
+            # тело без списка правил — публикуем то, что сохранено в редакторе
+            f_stored =f'data/rules_{guild_id}.json'
+            try :
+                with open (f_stored ,encoding ='utf-8')as fp :
+                    raw =json .load (fp )
+            except Exception :
+                raw =[]
         rules =[_norm_rule (r )for r in raw ]if isinstance (raw ,list )else []
         rules =_normalize_rules_urls (rules )
         rules =[r for r in rules if r ['t']]
@@ -225,16 +275,33 @@ def register(ctx):
             return jsonify ({'error':'Сначала добавьте правила'}),400 
         ok ,err =_validate_rule_urls (rules )
         if not ok :
-            return jsonify ({'error':err }),400 
+            return jsonify ({'error':err }),400
         # финальная нормализация меты
         title =str (meta .get ('title')or '').strip ()[:200 ]or 'Правила сервера'
         intro =str (meta .get ('intro')or '').strip ()[:1800 ]
         color_s =str (meta .get ('color')or '4f46e5').strip ().lstrip ('#')
-        import re as _re 
+        import re as _re
         if not _re .match (r'^[0-9a-fA-F]{6}$',color_s ):
             color_s ='4f46e5'
-        meta ={'title':title ,'intro':intro ,'color':color_s .lower (),'channel_id':ch_id }
+        from services import banner_gen as _bg
+        img_theme =str (meta .get ('img_theme')or '').strip ().lower ()
+        if img_theme not in _bg .THEMES :
+            img_theme =_bg .DEFAULT_THEME
+        meta ={'title':title ,'intro':intro ,'color':color_s .lower (),'channel_id':ch_id ,'img_theme':img_theme }
         _save_rules_meta (guild_id ,meta )
+
+        # авто-картинки: у правил без URL включаем отрисовку баннера.
+        # Рендерим ДО хождений в Discord — ошибка генерации видна сразу.
+        gen ={}   # номер правила (1..N) -> PNG-байты баннера
+        for i ,r in enumerate (rules ,1 ):
+            if r .get ('img')or not r .get ('img_gen'):
+                continue
+            try :
+                gen [i ]=_bg .render_rules_banner (title =title ,text =r ['t'],
+                    index =i ,total =len (rules ),accent =color_s ,theme =r ['img_gen'])
+            except Exception as _ex :
+                _log .warning ("rules publish: баннер правила %s: %s", i ,_ex )
+        gen_count =len (gen )
         # автосохранение — публикуем ровно то, что видим
         f =f'data/rules_{guild_id}.json'
         os .makedirs ('data',exist_ok =True )
@@ -293,8 +360,10 @@ def register(ctx):
                     json .dump (_logs ,open (_pl ,'w',encoding ='utf-8'),ensure_ascii =False ,indent =2 )
                 except Exception as _ex :
                     _log.debug("api_publish_rules(): panel_logs: %s", _ex)
+                _gen_note =f", из них {gen_count} с авто-картинкой" if gen_count else ''
                 return jsonify ({'success':True ,'demo':True ,'title':title ,'color':color_s .lower (),
-                    'message':f"Демо-режим: {len (rules )} правил готовы — при живом боте они уйдут в Discord с заголовком «{title}»"})
+                    'images_generated':gen_count ,
+                    'message':f"Демо-режим: {len (rules )} правил готовы{_gen_note} — при живом боте они уйдут в Discord с заголовком «{title}»"})
             return jsonify ({'error':'Бот офлайн — публикация недоступна. Запустите бота и повторите.'})
         guild =bot .get_guild (int (guild_id ))
         if guild is None :
@@ -302,12 +371,26 @@ def register(ctx):
         embeds =build_embeds ()
 
         async def send ():
+            import io as _io
             ch =bot .get_channel (int (ch_id ))
             ok_ch ,err_ch =channel_ok (ch ,guild )
             if not ok_ch :
                 raise RuntimeError (err_ch )
-            for k in range (0 ,len (embeds ),10 ):
-                await ch .send (embeds =embeds [k :k +10 ])
+            batch =[]
+            for i ,e in enumerate (embeds ):
+                png =gen .get (i )          # embeds[0] — заголовок, embeds[i] — правило i
+                if png is not None :
+                    if batch :
+                        await ch .send (embeds =batch );batch =[]
+                    fn =_bg .banner_filename (i )
+                    e .set_image (url ='attachment://' + fn )
+                    await ch .send (embed =e ,file =discord .File (_io .BytesIO (png ),filename =fn ))
+                else :
+                    batch .append (e )
+                    if len (batch )==10 :
+                        await ch .send (embeds =batch );batch =[]
+            if batch :
+                await ch .send (embeds =batch )
 
         try :
             asyncio .run_coroutine_threadsafe (send (),bot .loop ).result (timeout =25 )
@@ -320,8 +403,10 @@ def register(ctx):
             _log.debug("api_publish_rules(): подавлено: %s", _ex)
             return jsonify ({'error':f"Не удалось опубликовать: {msg }"[:220 ]}),502 
         _fire_panel_notification ('rules',f"Правила опубликованы: {len (rules )} пунктов",f"Канал {ch_id }")
+        _gen_note =f", картинок создано: {gen_count}" if gen_count else ''
         return jsonify ({'success':True ,'title':title ,'color':color_s .lower (),
-            'message':f"Опубликовано правил: {len (rules )}"})
+            'images_generated':gen_count ,
+            'message':f"Опубликовано правил: {len (rules )}{_gen_note}"})
 
     def _store_json_list (path ):
         """Список из JSON-файла (или пустой список)."""

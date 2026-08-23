@@ -29,6 +29,29 @@ from services.permission_acl import COMMAND_CATEGORIES, has_access as _acl_has_a
 _HELP_TITLE = 'Команды бота'
 _HELP_COLOR = 0x4F46E5
 
+# Фирменные маркеры разделов справки: эмодзи в select-меню и в заголовках полей.
+_HELP_EMOJI = {
+    'Модерация': '🛡️',
+    'Тикеты': '🎫',
+    'Логи': '🧾',
+    'AI-система': '🤖',
+}
+_HELP_BLURB = {
+    'Модерация': 'варны, муты, баны, доказательства и дежурства',
+    'Тикеты': 'приём обращений и сопровождение до закрытия',
+    'Логи': 'журналы событий, аудит и отчёты команды',
+    'AI-система': 'автопомощник в тикетах и авто-модерация',
+}
+
+
+def _plural_cmds(n):
+    m10, m100 = n % 10, n % 100
+    if m10 == 1 and m100 != 11:
+        return 'команда'
+    if 2 <= m10 <= 4 and not (12 <= m100 <= 14):
+        return 'команды'
+    return 'команд'
+
 
 def _visible_categories(guild_id, member):
     """Категории команд, которые видит участник."""
@@ -62,20 +85,56 @@ def _help_chunks(items, cap=900):
 
 
 def build_help_embed(category_id=None, member=None, guild_id=0):
-    """Текстовый эмбед справки (без картинок)."""
+    """Текстовый эмбед справки (без картинок).
+
+    Обзор: по разделу на категорию с фирменным маркером и счётчиком
+    (команды рубятся на «продолжения», если не влезают в поле эмбеда).
+    Раздел: отдельная страница с описанием и всеми его командами.
+    Команды, к которым у участника нет доступа, скрыты — как и раньше.
+    """
     groups = _visible_categories(guild_id, member)
     if category_id and category_id != 'overview':
         groups = {category_id: groups.get(category_id, [])}
     total = sum(len(v) for v in groups.values())
-    e = discord.Embed(title=_HELP_TITLE, color=_HELP_COLOR)
-    e.description = f'Доступно **{total}** команд. Команды, к которым у вас нет доступа, скрыты.'
-    for cat, cmds in groups.items():
+
+    if category_id and category_id != 'overview':
+        cat = category_id
+        emo = _HELP_EMOJI.get(cat, '▫️')
+        cmds = groups.get(cat, []) or []
+        e = discord.Embed(title=f'{emo} {cat}', color=_HELP_COLOR)
+        blurb = _HELP_BLURB.get(cat, '')
+        e.description = ((blurb + ' — ') if blurb else '') + \
+            f'**{len(cmds)}** {_plural_cmds(len(cmds))} в разделе.'
         if not cmds:
-            e.add_field(name=cat, value='*Нет доступных команд*', inline=False)
-            continue
+            e.add_field(name=f'{emo} {cat}',
+                        value='*Нет команд, доступных вашей роли, в этом разделе.*',
+                        inline=False)
         for i, chunk in enumerate(_help_chunks(cmds)):
-            name = cat if i == 0 else cat + ' · продолжение'
-            e.add_field(name=name, value=', '.join(chunk), inline=False)
+            e.add_field(name=(f'{emo} {cat}' if i == 0 else f'{cat} · продолжение'),
+                        value=', '.join(chunk), inline=False)
+        e.set_footer(text='Aether · назад ко всем разделам — «Главное меню» в списке ниже')
+        return e
+
+    e = discord.Embed(title='🧭 Справка Aether — команды', color=_HELP_COLOR)
+    e.description = (
+        'Пульт бота: выберите раздел в меню под сообщением — '
+        'покажем команды именно этого раздела.\n'
+        f'Сейчас вам доступно **{total}** {_plural_cmds(total)}; '
+            'то, к чему нет доступа, мы не показываем.')
+    for cat, cmds in groups.items():
+        emo = _HELP_EMOJI.get(cat, '▫️')
+        cap = f'{emo} {cat} · {len(cmds)} {_plural_cmds(len(cmds))}'
+        if not cmds:
+            e.add_field(name=cap, value='*Нет доступных команд*', inline=False)
+            continue
+        blurb = _HELP_BLURB.get(cat)
+        for i, chunk in enumerate(_help_chunks(cmds)):
+            name = cap if i == 0 else cap + ' · продолжение'
+            val = ', '.join(chunk)
+            if i == 0 and blurb:
+                val = f'*{blurb}*\n' + val
+            e.add_field(name=name, value=val, inline=False)
+    e.set_footer(text='Aether · /help <раздел> — сразу открыть нужный, напр. /help Тикеты')
     return e
 
 # Палитра — тёмный люкс
@@ -534,21 +593,26 @@ class HelpSelect(discord.ui.Select):
             discord.SelectOption(
                 label="Главное меню",
                 value="overview",
-                description="Общий список категорий команд",
+                emoji="🧭",
+                description="Все разделы справки одним экраном",
                 default=(current_cat == "overview" or current_cat is None)
             )
         ]
         for cat in COMMAND_CATEGORIES:
+            cmds = COMMAND_CATEGORIES.get(cat) or []
+            blurb = _HELP_BLURB.get(cat, f'Команды раздела «{cat}»')
+            desc = f'{len(cmds)} {_plural_cmds(len(cmds))} · {blurb}'[:100]
             options.append(
                 discord.SelectOption(
                     label=cat,
                     value=cat,
-                    description=f"Команды категории «{cat}»",
+                    emoji=_HELP_EMOJI.get(cat, '▫️'),
+                    description=desc,
                     default=(cat == current_cat)
                 )
             )
         super().__init__(
-            placeholder="Выберите категорию для просмотра команд...",
+            placeholder="Выберите раздел справки…",
             options=options,
             custom_id="help_select_text_v1"
         )

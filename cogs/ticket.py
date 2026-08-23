@@ -8,6 +8,7 @@ import json
 import os 
 import logging 
 import asyncio 
+import copy as _copy 
 from cogs .embed_utils import gif ,now_ts ,_divider 
 from services .rate_limiter import get_rate_limiter 
 from services .feedback_service import get_feedback_service 
@@ -962,12 +963,211 @@ class CloseTicketView (discord .ui .View ):
         await interaction .response .send_modal (AILearnModal ())
 
 
+
+# ════════════════════════════════════════════════════════════════════════════
+# Призыв штаба (AI не справился): карточка в штабном канале с кнопкой
+# «Взять в работу» — модераторы сразу видят, кто обслуживает клиента,
+# а повторный клик честно говорит, что тикет уже занят.
+# ════════════════════════════════════════════════════════════════════════════
+TICKET_SUMMON_REASONS ={
+'sikayet':'Жалоба ждёт живого модератора',
+'teknik':'Техническая проблема — нужны права персонала',
+'администратор':'Действие требует прав модератора',
+'agir_ihlal':'Обнаружено серьёзное нарушение — контроль персонала',
+'апелляция':'Пользователь оспаривает решение AI',
+'ban_talebi':'Бан может выдать только модератор',
+'max_messages':'Лимит сообщений ИИ исчерпан',
+'ai_error':'Ошибка ИИ — тикет передан людям',
+'appeal_accepted':'Апелляция принята — нужно решение штаба',
+'appeal_rejected':'Апелляция отклонена — финальное слово за штабом',
+'appeal_unclear':'Апелляция требует живого разбора',
+'talepte_bulundu':'Клиент сам просит модератора',
+'manual':'Призыв отправлен вручную из тикета',
+'другой':'Вопрос должен быть рассмотрен модератором',
+}
+
+SUMMON_COLOR =0xF4A261   # тёплый янтарь: «ждёт модератора»
+SUMMON_CLAIMED_COLOR =0x2ECC71
+
+
+def escalation_reason_label (reason ):
+    """Подпись причины призыва для embed-строки (фолбэк — общая фраза)."""
+    return TICKET_SUMMON_REASONS .get (str (reason or ''),'Модераторы получают управление')
+
+
+def ticket_notify_cfg (gid ):
+    """data/ticket_notify_{gid}.json: канал призыва и роли персонала."""
+    try :
+        p =f'data/ticket_notify_{gid}.json'
+        if os .path .exists (p ):
+            with open (p ,'r',encoding ='utf-8')as fp :
+                d =json .load (fp )
+                return d if isinstance (d ,dict )else {}
+    except Exception as _ex :
+        log .debug ("ticket_notify_cfg(): %s", _ex )
+    return {}
+
+
+def _clip_text (text ,lim =180 ):
+    t =' '.join (str (text or '').split ())
+    return t [:lim -1 ]+ '…' if len (t )>lim else t
+
+
+def _last_user_phrase (state ,lim =180 ):
+    """Последняя фраза клиента из истории ИИ — для карточки призыва."""
+    for h in reversed (state .get ('history')or []):
+        if isinstance (h ,dict )and h .get ('role')=='user'and h .get ('content'):
+            return _clip_text (h ['content'],lim )
+    return ''
+
+
+def build_staff_summon_embed (*,guild ,channel ,state ,reason ):
+    """Карточка призыва в штабном канале (кнопка кладётся вьюхой StaffSummonView)."""
+    owner_id =state .get ('user_id')or state .get ('owner_id')
+    owner =guild .get_member (int (owner_id ))if owner_id else None
+    e =discord .Embed (
+    title ='Призыв модераторов: нужна помощь в тикете',
+    color =SUMMON_COLOR ,
+    timestamp =datetime .datetime .now (datetime .timezone .utc ),
+    )
+    e .description =(
+    'ИИ больше не может помочь в этом тикете — нужен живой человек.\n'
+    'Кто нажмёт «Взять в работу», тот и обслуживает: имя закрепится здесь и в тикете.'
+    )
+    e .add_field (name ='Тикет',value =channel .mention ,inline =True )
+    e .add_field (name ='Причина',value =escalation_reason_label (reason ),inline =True )
+    e .add_field (name ='Переписка с ИИ',value =f"{int(state.get('ai_message_count', 0))} сообщений",inline =True )
+    if owner is not None :
+        e .add_field (name ='Клиент',value =f"{owner.mention} (`{owner}`)",inline =True )
+    category =state .get ('detected_category')or state .get ('category')
+    if category :
+        e .add_field (name ='Тема',value =_clip_text (category ,60 ),inline =True )
+    last_user =_last_user_phrase (state )
+    if last_user :
+        e .add_field (name ='Последняя фраза клиента',value =f'«{last_user}»',inline =False )
+    e .add_field (name ='Статус',value ='Ожидает модератора',inline =False )
+    if guild .icon :
+        e .set_thumbnail (url =guild .icon .url )
+    e .set_footer (text =f'призыв:{guild.id}:{channel.id} · Aether')
+    return e
+
+
+def mark_summon_claimed (embed ,claimer ):
+    """Карточка призыва после клика «Взять в работу»: статус → в работе у кого-то.
+
+    copy()/from_dict(to_dict()) у discord.Embed — поверхностные: список полей
+    делится с оригиналом, поэтому берём глубокую копию — исходный эмбед
+    в сообщении остаётся нетронутым, пока Discord не применил правку.
+    """
+    if embed is None :
+        return None
+    e =_copy .deepcopy (embed )
+    e .color =SUMMON_CLAIMED_COLOR
+    stamp =datetime .datetime .now (datetime .timezone .utc ).strftime ('%d.%m %H:%M')
+    val =f'В работе у {claimer.mention} — с {stamp}'
+    for idx ,fld in enumerate (e .fields ):
+        if fld .name =='Статус':
+            e .remove_field (idx )
+            e .insert_field_at (idx ,name ='Статус',value =val ,inline =False )
+            break
+    else :
+        e .add_field (name ='Статус',value =val ,inline =False )
+    return e
+
+
+class StaffSummonView (discord .ui .View ):
+    """Кнопка «Взять в работу» под карточкой призыва (persistent).
+
+    custom_id постоянный, а gid:cid тикета кодируются в футере карточки —
+    вьюха переживает рестарт бота и без регистрации экземпляров.
+    """
+
+    def __init__ (self ,claimed_by =None ):
+        super ().__init__ (timeout =None )
+        if claimed_by :
+            btn =self .children [0 ]
+            btn .disabled =True
+            btn .label =f'В работе: {claimed_by}'[:80 ]
+            btn .style =discord .ButtonStyle .secondary
+
+    def _is_staff (self ,member ):
+        try :
+            gp =member .guild_permissions
+            if gp .manage_guild or gp .administrator or gp .manage_messages :
+                return True
+            cfg =ticket_notify_cfg (member .guild .id )
+            rid =cfg .get ('mod_role_id')
+            if rid and any (str (r .id )==str (rid )for r in getattr (member ,'roles',[])or []):
+                return True
+            return bool (discord .utils .get (getattr (member ,'roles',[])or [],name =SUPPORT_ROLE_NAME ))
+        except Exception :
+            return False
+
+    @discord .ui .button (
+    label ='Взять в работу',
+    style =discord .ButtonStyle .success ,
+    emoji ='🛡',
+    custom_id ='ticket_staff_claim_btn',
+    )
+    async def staff_claim_btn (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
+        import re as _re
+        user =interaction .user
+        if not self ._is_staff (user ):
+            await interaction .response .send_message ('Кнопка для персонала сервера — тикет возьмёт модератор.',ephemeral =True )
+            return
+        embs =getattr (interaction .message ,'embeds',[])or []
+        foot =str (embs [0 ].footer .text )if embs and embs [0 ].footer else ''
+        m =_re .match (r'призыв:(\d+):(\d+)',foot )
+        if not m :
+            await interaction .response .send_message ('Карточка призыва без привязки к тикету.',ephemeral =True )
+            return
+        gid_s ,cid_s =m .group (1 ),m .group (2 )
+        cog =interaction .client .get_cog ('Ticket')
+        if cog is None :
+            await interaction .response .send_message ('Модуль тикетов сейчас недоступен.',ephemeral =True )
+            return
+        data =cog ._load_ai_data (int (gid_s ))
+        state =data .get (cid_s )
+        if state and state .get ('claimed_by'):
+            who =interaction .guild .get_member (int (state ['claimed_by']))
+            await interaction .response .send_message (
+            f'Тикет уже обслуживает {who.mention if who else state.get("claimed_by_name", "модератор")}.',ephemeral =True )
+            return
+        if state is None :
+            state ={}
+        state ['claimed_by']=str (user .id )
+        state ['claimed_by_name']=str (user )
+        state ['status']='staff_handling'
+        data [cid_s ]=state
+        cog ._save_ai_data (int (gid_s ),data )
+        new_embed =mark_summon_claimed (embs [0 ],user )if embs else None
+        view =StaffSummonView (claimed_by =str (user ))
+        try :
+            await interaction .response .edit_message (embed =new_embed ,view =view )
+        except Exception :
+            await interaction .response .send_message ('Закреплено за тобой!',ephemeral =True )
+        # клиенту в тикет — модератор уже в пути
+        tch =interaction .guild .get_channel (int (cid_s ))
+        if tch is not None :
+            try :
+                te =discord .Embed (color =SUMMON_CLAIMED_COLOR )
+                te .description =(
+                f'🛡 **{user.name}** взял тикет в работу — сейчас ответит.\n'
+                'Авто-ответчик отошёл, дальше живой модератор.'
+                )
+                te .set_footer (text ='Aether · служба поддержки')
+                await tch .send (embed =te )
+            except Exception :
+                log .debug ('[TICKET-CLAIM] не вышло записать в тикет %s', cid_s )
+
+
 class Ticket (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
         bot .add_view (TicketView ())
         bot .add_view (CloseTicketView ())
         bot .add_view (AdminApprovalView (0 ,"",""))
+        bot .add_view (StaffSummonView ())
 
     def _ai_enabled (self ,guild_id ):
         """Статус AI по серверам: глобально включено, можно отключить для конкретного сервера."""
@@ -2763,6 +2963,52 @@ class Ticket (commands .Cog ):
         state ['complaint']={}
         state ['analyzing']=False 
         self ._save_ticket_state (guild_id ,channel_id ,state )
+    async def _send_staff_summon (self ,channel ,state ,reason ):
+        """Карточка призыва в штабной канал (ticket_notify → log-резолвер).
+
+        Возвращает True, если призыв ушёл. Кнопка «Взять в работу» вешается
+        постоянной вьюхой — gid:cid кодированы в футере карточки.
+        """
+        guild =channel .guild
+        cfg =ticket_notify_cfg (guild .id )
+        target =None
+        ch_id =cfg .get ('notify_channel_id')
+        if ch_id :
+            try :
+                target =guild .get_channel (int (ch_id ))
+                if target is None :
+                    target =await guild .fetch_channel (int (ch_id ))
+            except Exception as _ex :
+                log .debug ('[TICKET-SUMMON] канал из конфига %s: %s', ch_id , _ex )
+                target =None
+        if target is None :
+            try :
+                from cogs .logs import ensure_log_channel
+                target =await ensure_log_channel (guild ,'модерация')
+            except Exception :
+                target =None
+        if target is None :
+            return False
+        role =None
+        mrid =cfg .get ('mod_role_id')
+        if mrid :
+            try :
+                role =guild .get_role (int (mrid ))
+            except Exception :
+                role =None
+        if role is None :
+            role =discord .utils .get (guild .roles ,name =SUPPORT_ROLE_NAME )
+        emb =build_staff_summon_embed (guild =guild ,channel =channel ,state =state ,reason =reason )
+        try :
+            msg =await target .send (content =(role .mention if role else None ),embed =emb ,view =StaffSummonView ())
+        except Exception as _sx :
+            log .warning ('[TICKET-SUMMON] отправка призыва: %s', _sx )
+            return False
+        state ['summon_channel_id']=str (msg .channel .id )
+        state ['summon_message_id']=str (msg .id )
+        log .info ('[TICKET-SUMMON] призыв в #%s → тикет #%s (%s)', target .name ,channel .name ,reason )
+        return True
+
     async def _escalate_ticket (self ,channel :discord .TextChannel ,state :dict ,reason :str ):
         """Передать тикет модераторам"""
         if state ['staff_notified']:
@@ -2775,17 +3021,7 @@ class Ticket (commands .Cog ):
         # Сообщение о передаче модераторам
         e =discord .Embed (color =0xF39C12 ,timestamp =datetime.datetime.now(datetime.timezone.utc))
 
-        reason_text ={
-        'sikayet':'Жалоба должна быть рассмотрена модератором',
-        'teknik':'Техническая проблема требует контроля модератора',
-        'администратор':'Действие требует прав модератора',
-        'agir_ihlal':'Обнаружено серьёзное нарушение, требуется контроль',
-        'апелляция':'Пользователь оспаривает решение AI',
-        'ban_talebi':'Бан может быть выдан только модератором',
-        'max_messages':'Лимит сообщений превышен, модераторы получают управление',
-        'ai_error':'Системная ошибка, модераторы получают управление',
-        'другой':'Этот вопрос должен быть рассмотрен модератором'
-        }
+        reason_text =TICKET_SUMMON_REASONS
 
         e .description =(
         "## Передано модератору\n"
@@ -2800,6 +3036,14 @@ class Ticket (commands .Cog ):
             e .set_footer (text =f"{channel.guild.name} · Модерация")
 
         await channel .send (embed =e )
+
+        # Призыв в штабной канал: там видно, кто возьмёт тикет в работу
+        try :
+            summoned =await self ._send_staff_summon (channel ,state ,reason )
+            if summoned :
+                log .info ('[TICKET-ESCALATE] штаб призван для %s (%s)', channel .name ,reason )
+        except Exception as _sx :
+            log .warning ('[TICKET-ESCALATE] призыв не ушёл: %s', _sx )
 
         # Пинг роли поддержки
         support_role =discord .utils .get (channel .guild .roles ,name =SUPPORT_ROLE_NAME )

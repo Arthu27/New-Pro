@@ -69,7 +69,7 @@ def register(ctx):
     @login_required 
     @role_required ('mod')
     def message_logs_page ():
-        return render_template ('message_logs.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
+        return render_template ('message_logs.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID ,can_edit =session .get ('role')in ('admin','owner'))
 
 
     @app .route ('/voice-stats')

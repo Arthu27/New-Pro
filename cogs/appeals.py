@@ -16,6 +16,7 @@
 Хранилище — SQLite (GuildData 'appeals'). Кнопки живут в persistent view
 и переживают рестарт бота. Метки — aware UTC.
 """
+import io
 import re
 from datetime import datetime, timezone
 
@@ -25,6 +26,8 @@ from discord.ext import commands
 
 from db import GuildData
 from logger import get_logger
+from services.appeal_card import (normalize_appearance, render_appeal_card,
+                                  appeal_card_filename)
 
 log = get_logger("appeals")
 
@@ -310,8 +313,27 @@ class Appeals(commands.Cog):
         channel = self._log_channel(guild, state)
         if channel is not None:
             view = AppealView(self, guild_id, item['id'])
+            # Оформление карточки из панели: авто-картинка в выбранной теме,
+            # своя картинка по URL или обычный эмбед без картинки.
+            appearance = normalize_appearance(state.get('appearance'))
+            send_kwargs = {'embed': embed, 'view': view}
+            if appearance['mode'] == 'url' and appearance['url']:
+                embed.set_image(url=appearance['url'])
+            elif appearance['mode'] == 'auto':
+                try:
+                    png = render_appeal_card(
+                        appeal_id=item['id'], user_name=item['user_name'],
+                        text=item['text'], link=item.get('link'),
+                        theme=appearance['theme'])
+                    if png:
+                        fn = appeal_card_filename(item['id'])
+                        send_kwargs['file'] = discord.File(io.BytesIO(png), filename=fn)
+                        embed.set_image(url=f'attachment://{fn}')
+                except Exception as _ex:
+                    log.debug('appeals: авто-картинка #%s не отрисовалась: %s',
+                              item['id'], _ex)
             try:
-                msg = await channel.send(embed=embed, view=view)
+                msg = await channel.send(**send_kwargs)
                 item['message_id'] = msg.id
                 self._save(guild_id, state)
             except (discord.Forbidden, discord.HTTPException) as _ex:

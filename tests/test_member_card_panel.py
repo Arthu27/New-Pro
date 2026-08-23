@@ -4,7 +4,9 @@
 Активность/ранги 1:1 с ProfileCog._data (уровень из gamification, сообщения/войс
 из leaderboard + voice_stats, баланс/ранги по таблицам кога), карма через чистые
 функции кога, варны из зеркала, ДР — по num-формуле schedule, автодополнение
-из аудита+ДР, CSV с BOM, права, шаблон без эмодзи, меню/регистрация.
+из аудита+ДР, CSV с BOM, права. Отдельной страницы больше нет: досье живёт
+перетаскиваемым окном в «Пользователях» (users.html + static/member_card.*),
+в меню и PAGE_COGS путь отвязан, модуль API зарегистрирован.
 
 Запуск: python3 tests/test_member_card_panel.py
 """
@@ -170,14 +172,12 @@ def login(role='owner'):
 
 
 LK = '/api/guild/777/member-card/lookup'
-check(client.get('/member-card').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get(LK + '?user=111').status_code in (302, 401, 403), 'гостю API закрыт')
 login('uye')
 check(client.get(LK + '?user=111').status_code == 403, 'uye нельзя')
 login('mod')
-page = client.get('/member-card')
-check(page.status_code == 200 and 'Карточка участника 360°' in page.get_data(as_text=True),
-      'mod открывает страницу')
+check(client.get('/member-card').status_code == 404,
+      'отдельной страницы больше нет — досье перетаскиваемым окном в «Пользователях»')
 r = client.get(LK)
 check(r.status_code == 400 and 'Введите ID или имя' in r.get_json()['error'],
       'без user — просим ID или имя участника')
@@ -223,28 +223,34 @@ login('uye')
 check(client.get('/api/guild/777/member-card/export?user=111').status_code == 403,
       'uye не выгружает')
 
-print('== 7. Шаблон, меню, регистрация ==')
-tpl = open(os.path.join(ROOT, 'web/templates/member_card.html'), encoding='utf-8').read()
-check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')
+print('== 7. Страница удалена: окно в «Пользователях», меню, регистрация ==')
+check(not os.path.exists(os.path.join(ROOT, 'web/templates/member_card.html')),
+      'member_card.html удалён — отдельной страницы больше нет')
 base_tpl = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
 check('data-theme="light"' in base_tpl, 'светлая тема учтена (общий shell)')
-for fid in ('mcQ', 'mcGo', 'mcSug', 'mcKpis', 'mcWarns', 'mcCsv'):
-    check(('id="' + fid + '"') in tpl, f'блок {fid} на месте')
-check("'/lookup?user='" in tpl and "'/suggest?q='" in tpl and "'/export?user='" in tpl,
-      'API-пути в шаблоне')
-check('Начни с @' in tpl and 'data-name=' in tpl,
-      '@-поиск: подсказка и подстановка имени на месте')
-check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
+mcjs = open(os.path.join(ROOT, 'web/static/member_card.js'), encoding='utf-8').read()
+mccss = open(os.path.join(ROOT, 'web/static/member_card.css'), encoding='utf-8').read()
+check(not EMOJI_RE.search(mcjs + mccss), 'в ассетах карточки нет эмодзи')
+check('window.MemberCard' in mcjs and 'renderCard' in mcjs, 'общий рендер досье на месте')
+check('.mcf-win' in mccss and '.mc-panel' in mccss, 'стили карточки и окна в общем css')
+check('localhost' not in mcjs and '127.0.0.1' not in mcjs, 'без локальных адресов')
+utpl = open(os.path.join(ROOT, 'web/templates/users.html'), encoding='utf-8').read()
+check('mcf-win' in utpl and 'mcWinHead' in utpl, 'в «Пользователях» перетаскиваемое окно')
+check('pointerdown' in utpl, 'окно таскает за шапку (pointer-события)')
+for fid in ('mcKpis', 'mcProfile', 'mcWarns', 'mcLinks'):
+    check(('id="' + fid + '"') in utpl, f'блок {fid} на месте в окне')
+check('/member-card/lookup?user=' in utpl and '/member-card/export?user=' in utpl,
+      'окно грузит досье и CSV через API карточки')
+check('member_card.js' in utpl and 'member_card.css' in utpl, 'общие ассеты подключены')
 ktpl = open(os.path.join(ROOT, 'web/templates/karma.html'), encoding='utf-8').read()
 check("URLSearchParams(location.search).get('user')" in ktpl,
       'карма читает ?user= из адреса — переход из карточки рабочий')
 import services.panel_menu as PM
 mem_pages = [pg['path'] for g in PM.MENU if g['key'] == 'members' for pg in g['pages']]
-check('/member-card' in mem_pages, 'пункт меню «Карточка 360°» в «Участниках»')
-check(PM.PAGE_COGS.get('/member-card') == ('profile', 'karma', 'birthday'),
-      'коги страницы привязаны')
+check('/member-card' not in mem_pages, 'пункта «Карточка 360°» в меню больше нет')
+check(PM.PAGE_COGS.get('/member-card') is None, 'коги страницы отвязаны')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
-check(ext.count('member_card_panel') >= 1, 'модуль зарегистрирован в routes_extra')
+check(ext.count('member_card_panel') >= 1, 'модуль API зарегистрирован в routes_extra')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

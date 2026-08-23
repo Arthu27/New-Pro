@@ -782,6 +782,85 @@ try:
 except Exception as _ex:
     print('голос/сообщения модеров не засеяны:', _ex)
 
+# ── Апелляции: очередь + история (та же схема хранения, что у кога) ──
+# Без этого посева страница /appeals выглядит пустой: живые апелляции шлёт
+# только бот через /appeal, а в демо бота нет — засеваем правдоподобные.
+try:
+    from db import GuildData as _GDA
+    from cogs import appeals as _AP
+
+    _ap = _AP.empty_state()
+
+    def _mk(days_ago, hour, uid, name, text, link=None):
+        _dt = (NOW - timedelta(days=days_ago)).replace(hour=hour, minute=0,
+                                                      second=0, microsecond=0)
+        _item, _err = _AP.create_appeal(_ap, uid, name, text, _dt, link=link)
+        return _item
+
+    def _res(days_ago, hour, uid, name, text, accept, who, reply):
+        _it = _mk(days_ago + 1, hour, uid, name, text)
+        _rv = (NOW - timedelta(days=days_ago)).replace(hour=hour, minute=30,
+                                                      second=0, microsecond=0)
+        _AP.resolve_appeal(_ap, _it['id'], accept, who, _rv, reply=reply)
+
+    # очередь: три свежих, одна с ссылкой-доказательством
+    _mk(0, 11, '523456789012345678', 'NightHawk_77',
+        'Меня замутили на сутки за «флуд», но я просто отвечал троим подряд '
+        'в приветственном канале — в логах видно, что сообщения были по делу. '
+        'Прошу снять мут и предупреждение.')
+    _mk(1, 19, '723456789012345679', 'Кипарис',
+        'Бан за ссылки — это был не спам, а ссылка на наш общий документ '
+        'с гайдом по ивенту, модератор мог принять за рекламу. '
+        'Прикладываю скрин переписки с согласованием.',
+        link='https://i.imgur.com/demo-appeal-proof.png')
+    _mk(2, 14, '823456789012345670', 'turbo.fox',
+        'Сняли роль ивентёра без объяснений, хотя нарушений я не допускал. '
+        'Если решение не изменится — прошу хотя бы комментарий, за что именно.')
+
+    # история: две принятых, две отклонённых — с датами и решателями
+    _res(2, 16, '923456789012345671', 'ModeRox',
+         'Варн за токсичность выписали по шутке в закрытом голосовом — '
+         'договорились с ребятами, что не в обиду, скрин подтверждения есть.',
+         True, 'sonya.staff',
+         'Контекст учтён, варн снят. О шутках договаривайтесь заранее.')
+    _res(3, 13, '103456789012345672', 'mirage_q',
+         'Ограничили по возрасту — документы прислал позже, модерация '
+         'не успела посмотреть. Прошу вернуть доступ к торговым каналам.',
+         True, 'owner', 'Данные проверены, ограничения сняты.')
+    _res(4, 18, '113456789012345673', 'aka.shock',
+         'Требую снять бан, бот точно ошибся — я не флудил капсом, '
+         'у меня просто залипла клавиша Shift.',
+         False, 'artem.mods',
+         'В логах 14 сообщений капсом подряд после предупреждения. В отказе.')
+    _res(5, 12, '123456789012345674', 'ЛетучийГолландец',
+         'Снимите мут за «провокации» — меня спровоцировали первым, '
+         'а сообщения удалили до скриншотов.',
+         False, 'sonya.staff',
+         'Подтверждений в архиве экспорта не нашлось. Решение остаётся.')
+
+    _ap['log_channel_id'] = 1003   # демо-канал из списка /api/guild/.../channels
+    _ap['appearance'] = {'mode': 'auto', 'theme': 'violet', 'url': ''}
+    _GDA('appeals').set(GID, 'state', _ap)
+    print('записано: апелляции (%d записей: 3 в очереди, 4 закрытых)' % len(_ap['items']))
+except Exception as _ex:
+    print('апелляции не засеяны:', _ex)
+
+# ── Лог-карточки: явный дефолт (фирменная тема Aether, включены) ──
+try:
+    from services import log_card as _LC
+    _LC.save_log_cards_cfg(GID, {'enabled': True, 'theme': 'aether', 'accent': ''})
+    print('записано: оформление лог-карточек (Aether Gold)')
+except Exception as _ex:
+    print('лог-карточки не засеяны:', _ex)
+
+# ── Карточка приветствия: авто-картинка в фирменной теме ──
+try:
+    from services import welcome_card_gen as _WCG
+    _WCG.save_appearance(GID, {'mode': 'auto', 'theme': 'aether', 'url': ''})
+    print('записано: оформление карточки приветствия (Aether Gold)')
+except Exception as _ex:
+    print('карточка приветствия не засеяна:', _ex)
+
 # ── Учётка владельца панели: консистентна с env, под который стартует демо ──
 try:
     from werkzeug.security import generate_password_hash as _wz_gen

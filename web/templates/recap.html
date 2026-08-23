@@ -112,9 +112,10 @@ function kpi(icon, num, label) {
 
 var chanSel = document.getElementById('rcChan');
 fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); }).then(function (d) {
-  var list = (d.channels || []).filter(function (c) { return c.type === 'text'; });
+  var rawCh = Array.isArray(d) ? d : (d.channels || []);
+  var list = rawCh.filter(function (c) { return c.type === 'text'; });
   if (!list.length) {
-    document.getElementById('rcHint').textContent = d.error
+    document.getElementById('rcHint').textContent = (d && d.error)
       ? 'Бот офлайн — список каналов недоступен, сборка тоже: ' + d.error
       : 'Текстовых каналов не найдено.';
     document.getElementById('rcHint').style.display = '';
