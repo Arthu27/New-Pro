@@ -163,6 +163,76 @@ def _anticrash_set(_gid, cid):
     return True
 
 
+# ── Дайджесты и игровые каналы: те же хранилища, что у когов бота ──────────
+def _guilddata_channel(db_name, bucket):
+    """Адаптер для GuildData-хранилищ: get(gid, bucket)[channel_id]."""
+    def _get(gid):
+        try:
+            st = GuildData(db_name).get(gid, bucket, {}) or {}
+            return int(st.get('channel_id') or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def _set(gid, cid):
+        db = GuildData(db_name)
+        st = db.get(gid, bucket, {}) or {}
+        st['channel_id'] = int(cid)
+        db.set(gid, bucket, st)
+        return True
+
+    return _get, _set
+
+
+STARBOARD_CFG = 'data/starboard_settings_{gid}.json'
+NIGHT_CFG = 'data/night_summary.json'
+TICKET_NOTIFY_CFG = 'data/ticket_notify_{gid}.json'
+
+
+def _starboard_get(gid):
+    return int(_json_load(STARBOARD_CFG.format(gid=gid)).get('channel_id') or 0)
+
+
+def _starboard_set(gid, cid):
+    path = STARBOARD_CFG.format(gid=gid)
+    data = _json_load(path)
+    data['channel_id'] = int(cid)
+    _json_save(path, data)
+    return True
+
+
+def _night_get(gid):
+    row = _json_load(NIGHT_CFG).get(str(gid)) or {}
+    try:
+        return int(row.get('channel_id') or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _night_set(gid, cid):
+    data = _json_load(NIGHT_CFG)
+    row = data.setdefault(str(gid), {})
+    row['channel_id'] = int(cid)
+    _json_save(NIGHT_CFG, data)
+    return True
+
+
+def _ticket_notify_get(gid):
+    return int(_json_load(TICKET_NOTIFY_CFG.format(gid=gid)).get('notify_channel_id') or 0)
+
+
+def _ticket_notify_set(gid, cid):
+    path = TICKET_NOTIFY_CFG.format(gid=gid)
+    data = _json_load(path)
+    data['notify_channel_id'] = int(cid) or None
+    _json_save(path, data)
+    return True
+
+
+_counting_ad = _guilddata_channel('counting', 'state')
+_mod_digest_ad = _guilddata_channel('mod_digest', 'settings')
+_shifts_ad = _guilddata_channel('staff_shifts', 'settings')
+
+
 ADAPTERS = {
     'proof_channel': (CHR.get_route, CHR.set_route),
     'appeals_channel': (_appeals_get, _appeals_set),
@@ -172,6 +242,12 @@ ADAPTERS = {
     'antiraid_channel': (_antiraid_get, _antiraid_set),
     'security_channel': (_security_get, _security_set),
     'anticrash_channel': (_anticrash_get, _anticrash_set),
+    'counting_channel': _counting_ad,
+    'starboard_channel': (_starboard_get, _starboard_set),
+    'night_report_channel': (_night_get, _night_set),
+    'mod_digest_channel': _mod_digest_ad,
+    'shifts_channel': _shifts_ad,
+    'ticket_notify_channel': (_ticket_notify_get, _ticket_notify_set),
 }
 
 

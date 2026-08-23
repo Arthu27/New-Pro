@@ -130,28 +130,33 @@ MENU = [
         {'path': '/ticket-search', 'label': 'Поиск тикетов', 'icon': 'fa-magnifying-glass'},
         {'path': '/transcripts', 'label': 'Транскрипты', 'icon': 'fa-file-lines'},
         {'path': '/sla', 'label': 'SLA-контроль', 'icon': 'fa-handshake'},
-        {'path': '/ticket-settings', 'label': 'Настройки', 'icon': 'fa-cogs'},
     ]},
     {'group': 'Бот', 'key': 'bot', 'icon': 'fa-robot', 'pages': [
         {'path': '/commands', 'label': 'Команды', 'icon': 'fa-terminal'},
         {'path': '/custom-commands', 'label': 'Свои команды', 'icon': 'fa-code'},
         {'path': '/send-command', 'label': 'Отправить', 'icon': 'fa-paper-plane'},
         {'path': '/schedule', 'label': 'Расписание', 'icon': 'fa-calendar-alt'},
-        {'path': '/bot-settings', 'label': 'Настройки', 'icon': 'fa-sliders-h'},
-        {'path': '/theme-settings', 'label': 'Тема панели', 'icon': 'fa-palette'},
-        {'path': '/theme-studio', 'label': 'Студия темы', 'icon': 'fa-wand-magic-sparkles'},
-        {'path': '/anticrash', 'label': 'Анти-краш', 'icon': 'fa-life-ring'},
         {'path': '/backups', 'label': 'Бэкапы', 'icon': 'fa-save'},
         {'path': '/templates', 'label': 'Шаблоны', 'icon': 'fa-clone'},
         {'path': '/konsol', 'label': 'Консоль', 'icon': 'fa-terminal'},
         {'path': '/cog-manager', 'label': 'Модули', 'icon': 'fa-cubes'},
-        {'path': '/automation', 'label': 'Автоматика', 'icon': 'fa-wand-magic-sparkles'},
+    ]},
+    # Отдельная категория «Настройки»: всё, что крутится и настраивается,
+    # собрано в одном месте — сервер, модерация, каналы, бот, темы, защита.
+    {'group': 'Настройки', 'key': 'settings', 'icon': 'fa-sliders', 'pages': [
         {'path': '/settings', 'label': 'Сервер', 'icon': 'fa-cog'},
-        {'path': '/channel-settings', 'label': 'Каналы', 'icon': 'fa-route'},
-        {'path': '/notifications', 'label': 'Уведомления', 'icon': 'fa-bell'},
-        {'path': '/rules-editor', 'label': 'Правила', 'icon': 'fa-gavel'},
+        {'path': '/mod-settings', 'label': 'Модерация', 'icon': 'fa-hammer'},
+        {'path': '/channel-settings', 'label': 'Каналы и маршруты', 'icon': 'fa-route'},
+        {'path': '/bot-settings', 'label': 'Бот', 'icon': 'fa-sliders-h'},
+        {'path': '/ticket-settings', 'label': 'Тикеты', 'icon': 'fa-ticket-alt'},
         {'path': '/welcome-editor', 'label': 'Приветствие', 'icon': 'fa-handshake'},
+        {'path': '/rules-editor', 'label': 'Правила', 'icon': 'fa-scroll'},
         {'path': '/warn-config', 'label': 'Варны', 'icon': 'fa-exclamation'},
+        {'path': '/automation', 'label': 'Автоматика', 'icon': 'fa-wand-magic-sparkles'},
+        {'path': '/notifications', 'label': 'Уведомления', 'icon': 'fa-bell'},
+        {'path': '/theme-settings', 'label': 'Тема панели', 'icon': 'fa-palette'},
+        {'path': '/theme-studio', 'label': 'Студия темы', 'icon': 'fa-swatchbook'},
+        {'path': '/anticrash', 'label': 'Анти-краш', 'icon': 'fa-life-ring'},
     ]},
     {'group': 'Сообщество', 'key': 'community', 'icon': 'fa-gamepad', 'pages': [
         {'path': '/economy', 'label': 'Экономика', 'icon': 'fa-coins'},
@@ -380,6 +385,70 @@ def save_config(cfg):
     _save(cfg)
 
 
+# ── Глобальный лэйаут меню: скрытые страницы + свой порядок ─────────────────
+LAYOUT_KEY = '_layout'
+
+# Эти страницы нельзя скрыть — иначе меню не вернуть обратно через панель.
+_PROTECTED = ('/panel-menu',)
+
+
+def _all_menu_paths():
+    return {pg['path'] for g in MENU for pg in g['pages']}
+
+
+def layout_view():
+    """Лэйаут из data/panel_menu.json: {hidden_pages: [...], order: {group: [...]}}."""
+    lay = _load().get(LAYOUT_KEY) or {}
+    if not isinstance(lay, dict):
+        lay = {}
+    hp = lay.get('hidden_pages') or []
+    od = lay.get('order') or {}
+    return {
+        'hidden_pages': [str(p) for p in hp if isinstance(p, (str, int))],
+        'order': {str(k): [str(p) for p in (v or [])]
+                  for k, v in od.items() if isinstance(v, list)},
+    }
+
+
+def save_layout(hidden_pages, order):
+    """Сохранить скрытие/порядок (валидация по MENU). Возвращает чистый вид."""
+    valid_paths = _all_menu_paths()
+    valid_groups = {g['key'] for g in MENU}
+    hp = []
+    for p in hidden_pages or ():
+        p = str(p)
+        if p in _PROTECTED or p not in valid_paths or p in hp:
+            continue
+        hp.append(p)
+    od = {}
+    menu_order = {g['key']: [p['path'] for p in g['pages']] for g in MENU}
+    for k, v in (order or {}).items():
+        if k not in valid_groups or not isinstance(v, list):
+            continue
+        cleaned = [str(x) for x in v if str(x) in valid_paths]
+        if cleaned == menu_order.get(str(k)):
+            continue                    # порядок совпал с исходным — хранить нечего
+        od[str(k)] = cleaned
+    cfg = _load()
+    cfg[LAYOUT_KEY] = {'hidden_pages': hp, 'order': od}
+    _save(cfg)
+    return layout_view()
+
+
+def _apply_layout(pages, group_key):
+    """Скрыть спрятанные страницы и выстроить свой порядок (стабильно)."""
+    lay = layout_view()
+    hidden = set(lay['hidden_pages']) - set(_PROTECTED)
+    pages = [p for p in pages if p['path'] not in hidden]
+    order = lay['order'].get(group_key) or []
+    if order:
+        rank = {p: i for i, p in enumerate(order)}
+        indexed = list(enumerate(pages))
+        indexed.sort(key=lambda t: (rank.get(t[1]['path'], len(order) + t[0])))
+        pages = [p for _i, p in indexed]
+    return pages
+
+
 def _role_can_open(role, page):
     """Не показывать ссылку, которая гарантированно закончится HTTP 403."""
     required = page.get('min_role', 'uye')
@@ -428,6 +497,8 @@ def panel_groups_for(role):
         pages = [page for page in group['pages'] if _role_can_open(role, page)]
         if has_items_filter:
             pages = [page for page in pages if page['path'] in allowed_items]
+        # глобальный лэйаут: скрытые страницы и свой порядок (для всех ролей)
+        pages = _apply_layout(pages, group['key'])
         if not pages:
             continue
         payload = {

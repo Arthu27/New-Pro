@@ -37,6 +37,14 @@
   .ac-hero[data-state="on"]  .ac-hero-title { color:var(--ok); }
   .ac-hero[data-state="off"] .ac-hero-title { color:var(--bad); }
   .ac-hero-sub { font-size:12.5px; color:var(--text-3); margin-top:3px; font-weight:600; }
+  .ac-links { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  .ac-link { display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:600; text-decoration:none;
+    color:var(--text-2, color-mix(in srgb, var(--text) 75%, transparent)); padding:8px 14px; border-radius:999px;
+    border:1px solid color-mix(in srgb, var(--text) 10%, transparent);
+    background:color-mix(in srgb, var(--text) 3.5%, transparent); transition:.15s; }
+  .ac-link:hover { color:var(--ac); border-color:color-mix(in srgb, var(--ac) 35%, transparent); }
+  .ac-link i { color:var(--ac); }
+
   .ac-hero-right { margin-left:auto; display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--text-3);
     font-weight:700; font-variant-numeric:tabular-nums; }
   .ac-live-dot { width:8px; height:8px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 0 rgba(46,204,113,.5);
@@ -209,6 +217,13 @@
     <div class="ac-hero-right"><span class="ac-live-dot"></span><span id="hero-updated">—</span></div>
     <div class="ac-chips" id="hero-chips"></div>
   </section>
+
+  <!-- быстрые связи: защита и маршруты -->
+  <div class="ac-links" data-reveal="up">
+    <a class="ac-link" href="/channel-settings"><i class="fas fa-route"></i> Куда летят сводки — настроить канал</a>
+    <a class="ac-link" href="/guardian"><i class="fas fa-shield-heart"></i> Щит сервера (анти-нюк)</a>
+    <a class="ac-link" href="/settings"><i class="fas fa-cog"></i> Настройки сервера</a>
+  </div>
 
   <!-- метрики: ошибки -->
   <div class="ac-group-label" data-reveal="up"><i class="fas fa-bug"></i> Ошибки</div>

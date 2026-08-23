@@ -61,8 +61,7 @@ json.dump({'777': {'111': [{'r': 1}, {'r': 2}, {'r': 3}],
 print('== 1. Ступени и подписи кога ==')
 steps = LP.steps_of(LP.load_cfg('777'))
 check([s['count'] for s in steps] == [2, 3, 5], 'сортировка по числу варнов')
-check([s['label'] for s in steps] == ['мут на 10 мин', 'кик на 0 мин',
-                                      'бан навсегда'],
+check([s['label'] for s in steps] == ['мут на 10 мин', 'кик', 'бан навсегда'],
       'подписи его _fmt_step')
 check(LD._fmt_step({'action': 'timeout', 'duration': 2, 'unit': 'hour'})
       == 'мут на 2 ч', 'timeout читается как мут, часы')
@@ -78,7 +77,7 @@ check(not ok and err == LP.ERR_COUNT, 'мусорное число — отка�
 ok, err, _ = LP.add_flow('555', 3, 'удалить нахрен', 10, 'minute')
 check(not ok and err == LP.ERR_ACTION, 'левое действие — отказ')
 ok, err, p = LP.add_flow('555', 3, 'kick', 60, 'minute')
-check(ok and p['message'] == 'Ступень сохранена: 3 варнов → кик на 0 мин. '
+check(ok and p['message'] == 'Ступень сохранена: 3 варнов → кик. '
                              'Всего ступеней: 1.', 'кик стёр длительность — как команда')
 ok, err, p = LP.add_flow('555', 0, 'mute', None, 'недель')
 check(ok and p['steps'][0]['count'] == 1 and p['steps'][0]['duration'] == 10
@@ -108,7 +107,7 @@ print('== 4. Симулятор ladder-test ==')
 ok, err, _ = LP.simulate_view('777', 'мусор')
 check(not ok and err == 'Некорректный ID пользователя', 'битый ID — текст валидатора')
 ok, err, v = LP.simulate_view('777', '111')
-check(ok and v['total'] == 3 and v['matched']['label'] == 'кик на 0 мин',
+check(ok and v['total'] == 3 and v['matched']['label'] == 'кик',
       '3 варна -> активен кик')
 check(v['next']['count'] == 5 and 'осталось 2' in v['lines'][2],
       'следующая ступень и «осталось N»')
@@ -162,7 +161,7 @@ d = client.get(VW).get_json()
 check(d['success'] and len(d['steps']) == 3 and d['impact']['warned_users'] == 3
       and d['can_edit'] is False, 'вид через API для mod')
 d = client.get('/api/guild/777/ladder/simulate?user=111').get_json()
-check(d['success'] and d['matched']['label'] == 'кик на 0 мин', 'симулятор через API')
+check(d['success'] and d['matched']['label'] == 'кик', 'симулятор через API')
 check(client.get('/api/guild/777/ladder/simulate?user=x').status_code == 400,
       'симулятор: битый ID — 400')
 r = client.get('/api/guild/777/ladder/card.png')

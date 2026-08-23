@@ -419,6 +419,7 @@ EXPECTED = {
     'member_notes_page': '/member-notes',
     'member_search_page': '/member-search',
     'message_logs_page': '/message-logs',
+    'mod_settings_page': '/mod-settings',
     'mod_tools_page': '/mod-tools',
     'modhistory_page': '/mod-history',
     'my_applications': '/my-applications',

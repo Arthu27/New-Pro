@@ -68,6 +68,10 @@
   .switch input:checked + .sl { background:linear-gradient(90deg,var(--ok),#27ae60); }
   .switch input:checked + .sl:before { transform:translateX(20px); }
 
+  .pm-ico-btn { width:30px; height:30px; border-radius:8px; border:1px solid color-mix(in srgb, var(--text) 14%, transparent); background:color-mix(in srgb, var(--text) 4%, transparent); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:11px; color:inherit; flex-shrink:0; transition:.12s; }
+  .pm-ico-btn:hover { background:var(--ac); color:#fff; border-color:transparent; }
+  .pm-ico-btn.pm-off { opacity:.45; }
+  .pm-item.pm-hidden { opacity:.5; }
   .pm-empty { text-align:center; opacity:.5; padding:50px 0; }
   .pm-empty i { font-size:30px; display:block; margin-bottom:12px; }
   .pm-toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(130%); background:rgba(18,18,22,0.95); border:1px solid color-mix(in srgb, var(--text) 16%, transparent); padding:13px 22px; border-radius:12px; font-size:13px; z-index:999; transition:.3s; box-shadow:0 10px 34px rgba(0,0,0,0.55); }
@@ -93,6 +97,10 @@
     <button type="button" class="pm-tab" id="tab-admin" onclick="selectPanel('admin')">
       <span class="pico" style="background:rgba(231,76,60,0.16);color:var(--err);"><i class="fas fa-user-tie"></i></span>
       Администратор
+    </button>
+    <button type="button" class="pm-tab" id="tab-layout" onclick="selectPanel('layout')">
+      <span class="pico" style="background:color-mix(in srgb, var(--ac) 16%, transparent);color:var(--ac);"><i class="fas fa-arrow-up-wide-short"></i></span>
+      Порядок и скрытие
     </button>
   </div>
 
@@ -154,17 +162,27 @@ function refreshState(){
 var PM_META = {
   mod:     {label:'Модератора',     icon:'fa-shield-halved'},
   curator: {label:'Куратора',       icon:'fa-graduation-cap'},
-  admin:   {label:'Администратора', icon:'fa-user-tie'}
+  admin:   {label:'Администратора', icon:'fa-user-tie'},
+  layout:  {label:'Порядок и скрытие', icon:'fa-arrow-up-wide-short'}
 };
+
+// Глобальный лэйаут: скрытые страницы + свой порядок внутри разделов
+var LAY = { hidden: {}, order: {} };
 
 function selectPanel(role){
   curRole = role;
   document.getElementById('tab-mod').classList.toggle('active', role==='mod');
   document.getElementById('tab-curator').classList.toggle('active', role==='curator');
   document.getElementById('tab-admin').classList.toggle('active', role==='admin');
+  document.getElementById('tab-layout').classList.toggle('active', role==='layout');
   var meta = PM_META[role] || PM_META.mod;
-  document.getElementById('pm-title').innerHTML = '<i class="fas '+meta.icon+'"></i> Панель '+meta.label;
-  document.getElementById('pm-sub').textContent = 'Отметьте разделы и страницы для панели '+meta.label;
+  if (role === 'layout') {
+    document.getElementById('pm-title').innerHTML = '<i class="fas '+meta.icon+'"></i> '+meta.label;
+    document.getElementById('pm-sub').textContent = 'Прячьте страницы и меняйте порядок — действует для всех панелей сразу. Страницу «Меню панели» скрыть нельзя.';
+  } else {
+    document.getElementById('pm-title').innerHTML = '<i class="fas '+meta.icon+'"></i> Панель '+meta.label;
+    document.getElementById('pm-sub').textContent = 'Отметьте разделы и страницы для панели '+meta.label;
+  }
   openGroups = {};
   refreshState();
   render();
@@ -176,7 +194,89 @@ function groupVisible(g, q){
       || g.pages.some(function(it){ return it.label.toLowerCase().indexOf(q) !== -1 || it.path.indexOf(q) !== -1; });
 }
 
+function normalizeLayout(){
+  // порядок из API добиваем фактическими страницами MENU (стабильность)
+  MENU.forEach(function(g){
+    var stored = (LAY.order[g.key] || []).filter(function(p){
+      return g.pages.some(function(it){ return it.path === p; });
+    });
+    g.pages.forEach(function(it){ if(stored.indexOf(it.path) === -1) stored.push(it.path); });
+    LAY.order[g.key] = stored;
+  });
+}
+
+function layoutOrdered(g){
+  var ord = LAY.order[g.key] || [];
+  return ord.map(function(p){ return g.pages.find(function(it){ return it.path === p; }); })
+            .filter(Boolean);
+}
+
+function renderLayout(){
+  var el = document.getElementById('pm-list');
+  var q = (document.getElementById('pm-search-input').value || '').toLowerCase().trim();
+  var html = '';
+  MENU.forEach(function(g){
+    var items = layoutOrdered(g).filter(function(it){
+      if(!q) return true;
+      return it.label.toLowerCase().indexOf(q) !== -1 || it.path.indexOf(q) !== -1;
+    });
+    if(!items.length) return;
+    var hiddenCount = layoutOrdered(g).filter(function(it){ return LAY.hidden[it.path]; }).length;
+    var open = !!openGroups[g.key];
+    var itemsHtml = items.map(function(it){
+      var hid = !!LAY.hidden[it.path];
+      return '<div class="pm-item'+(hid?' pm-hidden':'')+'">'
+        + '<button type="button" class="pm-ico-btn" title="Выше" aria-label="Поднять выше" onclick="layoutMove(\''+g.key+'\',\''+it.path+'\',-1)"><i class="fas fa-arrow-up"></i></button>'
+        + '<button type="button" class="pm-ico-btn" title="Ниже" aria-label="Опустить ниже" onclick="layoutMove(\''+g.key+'\',\''+it.path+'\',1)"><i class="fas fa-arrow-down"></i></button>'
+        + '<span class="pname"><i class="fas '+it.icon+'"></i>'+it.label+'</span>'
+        + '<span class="ppath">'+it.path+'</span>'
+        + '<button type="button" class="pm-ico-btn'+(hid?' pm-off':'')+'" title="'+(hid?'Показать':'Скрыть')+'" aria-label="'+(hid?'Показать страницу':'Скрыть страницу')+'" onclick="layoutHide(\''+it.path+'\')"><i class="fas '+(hid?'fa-eye-slash':'fa-eye')+'"></i></button>'
+        + '</div>';
+    }).join('');
+    html += '<div class="pm-group '+(open?'open':'')+'" id="pmg-'+g.key+'">'
+      + '<div class="pm-group-head" onclick="toggleGroupOpen(\''+g.key+'\')">'
+      + '<span class="gio"><i class="fas '+g.icon+'"></i></span>'
+      + '<span class="gname">'+g.group+'</span>'
+      + '<span class="gcount">'+(hiddenCount?hiddenCount+' скрыто':'порядок')+'</span>'
+      + '<span class="gcaret"><i class="fas fa-chevron-down"></i></span>'
+      + '</div>'
+      + '<div class="pm-group-body">'+itemsHtml+'</div>'
+      + '</div>';
+  });
+  el.innerHTML = html || '<div class="pm-empty"><i class="fas fa-search"></i>Ничего не найдено</div>';
+}
+
+function layoutMove(gkey, path, dir){
+  var arr = LAY.order[gkey] || [];
+  var i = arr.indexOf(path);
+  var j = i + dir;
+  if(i === -1 || j < 0 || j >= arr.length) return;
+  var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  render();
+}
+
+function layoutHide(path){
+  if(path === '/panel-menu'){ toast('Эту страницу скрыть нельзя', false); return; }
+  if(LAY.hidden[path]) delete LAY.hidden[path]; else LAY.hidden[path] = true;
+  render();
+}
+
+function saveLayout(){
+  var hp = Object.keys(LAY.hidden);
+  var od = {};
+  Object.keys(LAY.order).forEach(function(k){ od[k] = LAY.order[k].slice(); });
+  fetch('/api/panel-menu/layout',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({hidden_pages:hp, order:od})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.success){
+      toast('Лэйаут сохранён: скрыто '+d.layout.hidden_pages.length+' стр.', true);
+    } else toast(d.error || 'Ошибка', false);
+  }).catch(function(){ toast('Ошибка сети', false); });
+}
+
 function render(){
+  if (curRole === 'layout') { renderLayout(); return; }
   var el = document.getElementById('pm-list');
   if(!MENU.length){ el.innerHTML = '<div class="pm-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>'; return; }
   var q = (document.getElementById('pm-search-input').value || '').toLowerCase().trim();
@@ -238,11 +338,25 @@ function toggleItem(cb){
 }
 
 function selectAll(){
+  if (curRole === 'layout') {
+    LAY.hidden = {};
+    MENU.forEach(function(g){ openGroups[g.key] = true; });
+    render();
+    toast('Все страницы показаны', true);
+    return;
+  }
   MENU.forEach(function(g){ checkedGroups[g.key] = true; g.pages.forEach(function(it){ checkedItems[it.path] = true; }); });
   render();
   toast('Выбрано всё', true);
 }
 function clearAll(){
+  if (curRole === 'layout') {
+    LAY.hidden = {};
+    MENU.forEach(function(g){ LAY.order[g.key] = g.pages.map(function(it){ return it.path; }); });
+    render();
+    toast('Порядок сброшен к стандартному', true);
+    return;
+  }
   checkedGroups = {};
   checkedItems = {};
   render();
@@ -250,6 +364,7 @@ function clearAll(){
 }
 
 function savePanel(){
+  if (curRole === 'layout') { saveLayout(); return; }
   var groups = MENU.map(function(g){ return g.key; }).filter(function(k){ return checkedGroups[k]; });
   var items = MENU.reduce(function(a,g){ return a.concat(g.pages.map(function(it){return it.path;})); }, []).filter(function(p){ return checkedItems[p]; });
   fetch('/api/panel-menu',{
@@ -270,6 +385,11 @@ function load(){
       if(!d.success){ toast('Не удалось загрузить', false); return; }
       MENU = d.menu || [];
       CFG = d.config || {};
+      var lay = d.layout || {hidden_pages:[], order:{}};
+      LAY.hidden = {};
+      (lay.hidden_pages || []).forEach(function(p){ LAY.hidden[p] = true; });
+      LAY.order = lay.order || {};
+      normalizeLayout();
       openGroups = {};
       refreshState();
       render();

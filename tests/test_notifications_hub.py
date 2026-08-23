@@ -254,8 +254,9 @@ check("'?'" not in tpl.split('loadNotificationHistory()')[0][-200:] or True,
 check('notifFilterEvent' in tpl.split('async function loadNotificationHistory')[1].split('const data')[0],
       'loadNotificationHistory читает фильтры')
 import services.panel_menu as PM
-bot_pages = [pg['path'] for g in PM.MENU if g['key'] == 'bot' for pg in g['pages']]
-check('/notifications' in bot_pages, 'пункт «Уведомления» в группе «Бот»')
+settings_pages = [pg['path'] for g in PM.MENU if g['key'] == 'settings'
+                  for pg in g['pages']]
+check('/notifications' in settings_pages, 'пункт «Уведомления» в группе «Настройки»')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

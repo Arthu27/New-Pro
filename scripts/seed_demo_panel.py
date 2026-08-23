@@ -531,6 +531,11 @@ files = {
                               'guardian_channel': 4005}},
     'data/tag_jail.json': {GID: {'log_channel_id': 4003}},
     'data/hidden_channels.json': {},
+    # Зала славы, ночной итог и призыв в тикеты — живые каналы сразу на месте
+    f'data/starboard_settings_{GID}.json': {'channel_id': 2003, 'emoji': '⭐', 'min_stars': 3},
+    'data/night_summary.json': {GID: {'enabled': True, 'channel_id': 1004,
+                                'tz_offset': 3, 'last_date': ''}},
+    f'data/ticket_notify_{GID}.json': {'notify_channel_id': 4002},
     f'data/rules_{GID}.json': demo_rules,
     f'data/xp_{GID}.json': demo_xp,
     f'data/leveling_{GID}.json': demo_leveling,
@@ -627,6 +632,15 @@ try:
     _ss.set(GID, 'settings', {'channel_id': 4002, 'tz_offset': 3})
     _ss.set(GID, 'shifts', _shifts)
     print('записано: смены персонала (%d смен)' % len(_shifts))
+
+    # Считалка с живым прогрессом и дайджест модерации — каналы сразу на месте
+    _cnt = GuildData('counting')
+    _cst = _cnt.get(GID, 'state', {}) or {}
+    _cst.update({'channel_id': 2004, 'next': 137, 'best': 412,
+                 'last_user': 1007, 'last_user_name': 'count_master', 'fails': 3})
+    _cnt.set(GID, 'state', _cst)
+    GuildData('mod_digest').set(GID, 'settings', {'channel_id': 4003})
+    print('записано: каналы считалки и дайджеста модерации')
 except Exception as _ex:
     print('смены персонала не засеяны:', _ex)
 

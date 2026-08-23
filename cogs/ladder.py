@@ -36,6 +36,8 @@ def _fmt_step(step):
     a = names.get(act, act)
     if act == 'ban' and not d:
         return 'бан навсегда'
+    if act == 'kick' and not d:
+        return a
     if unit == 'hour':
         return f'{a} на {d} ч'
     if unit == 'day':

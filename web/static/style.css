@@ -5288,3 +5288,8 @@ img[src*="emblem-dragon"] {
 .log-chip.warn i { color: #d97706; }
 .log-chip.err { color: var(--err); border-color: color-mix(in srgb, var(--err) 36%, transparent); }
 .log-chip.err i { color: var(--err); }
+
+/* Числовые поля — без «стрелочек-спиннеров» браузера (просили по-людски) */
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }

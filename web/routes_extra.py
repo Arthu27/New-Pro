@@ -45,6 +45,7 @@ from web.routes import (
     chat,
     channels_admin,
     channel_settings,
+    mod_settings,
     guardian,
     guild_features,
     member_ops,

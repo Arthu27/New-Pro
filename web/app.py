@@ -2860,13 +2860,14 @@ def api_delete_role_map (role_id ):
 @role_required ('owner')
 def api_panel_menu_get ():
     """Return the full MENU + current visibility config for mod/admin panels."""
-    from services .panel_menu import MENU ,get_config ,CONFIGURABLE
+    from services .panel_menu import MENU ,get_config ,CONFIGURABLE ,layout_view
     cfg =get_config ()
     return jsonify ({
     'success':True ,
     'menu':MENU ,
     'config':cfg ,
     'configurable':list (CONFIGURABLE ),
+    'layout':layout_view (),
     })
 
 @app .route ('/api/panel-menu',methods =['POST'])
@@ -2888,6 +2889,25 @@ def api_panel_menu_set ():
     save_config (cfg )
     _log_panel_action ('PANEL_MENU_SET',f'{role} → {len(groups)} групп, {len(items)} страниц')
     return jsonify ({'success':True })
+
+@app .route ('/api/panel-menu/layout',methods =['POST'])
+@login_required
+@role_required ('owner')
+def api_panel_menu_layout ():
+    """Глобальный лэйаут меню: скрытые страницы + свой порядок внутри разделов.
+
+    {hidden_pages: [...], order: {group_key: [path, ...]}} — применяется
+    ко всем панелям (и к владельцу). /panel-menu скрыть нельзя.
+    """
+    from services .panel_menu import save_layout
+    data =request .get_json (silent =True )or {}
+    hp =data .get ('hidden_pages',[])
+    od =data .get ('order',{})
+    if not isinstance (hp ,list )or not isinstance (od ,dict ):
+        return jsonify ({'success':False ,'error':'Неверный формат'}),400
+    view =save_layout (hp ,od )
+    _log_panel_action ('PANEL_MENU_LAYOUT',f'скрыто {len(view["hidden_pages"])}, порядок в {len(view["order"])} разделах')
+    return jsonify ({'success':True ,'layout':view })
 
     # Discord PIN Login API 
 _login_pins ={}
