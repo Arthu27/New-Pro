@@ -33,13 +33,13 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
-print('== 1. Карта 20 инструментов ==')
+print('== 1. Карта 21 инструмент ==')
 from services import panel_menu as pm  # noqa: E402
 
 raw_group = next(group for group in pm.MENU if group['key'] == 'mod')
 raw_pages = raw_group['pages']
-check(len(raw_pages) == 20, f'в разделе модерации ровно 20 инструментов ({len(raw_pages)})')
-check(len({page['path'] for page in raw_pages}) == 20, 'URL всех инструментов уникальны')
+check(len(raw_pages) == 21, f'в разделе модерации ровно 21 инструмент ({len(raw_pages)})')
+check(len({page['path'] for page in raw_pages}) == 21, 'URL всех инструментов уникальны')
 required = {'path', 'label', 'icon', 'section', 'description', 'access', 'tone'}
 missing = [(page.get('path'), sorted(required - set(page))) for page in raw_pages
            if not required <= set(page)]
@@ -70,7 +70,7 @@ check(not hasattr(pm, 'moderation_profile_for'),
 
 admin_group = next(group for group in pm.panel_groups_for('admin') if group['key'] == 'mod')
 section_counts = [len(section['pages']) for section in admin_group['sections']]
-check(section_counts == [7, 4, 4, 5], f'workflow разбит 7/4/4/5 ({section_counts})')
+check(section_counts == [7, 4, 5, 5], f'workflow разбит 7/4/5/5 ({section_counts})')
 check([section['key'] for section in admin_group['sections']] ==
       ['response', 'investigation', 'protection', 'management'],
       'подгруппы сайдбара следуют рабочему сценарию')
@@ -78,13 +78,13 @@ check([section['key'] for section in admin_group['sections']] ==
 print('== 2. Роли: ни одной ссылки, ведущей в гарантированный 403 ==')
 mod_group = next(group for group in pm.panel_groups_for('mod') if group['key'] == 'mod')
 mod_paths = {page['path'] for page in mod_group['pages']}
-admin_only = {'/bulk-actions', '/tagjail', '/antiraid'}
+admin_only = {'/bulk-actions', '/tagjail', '/antiraid', '/guardian'}
 check(len(mod_group['pages']) == 17, f'модератор видит 17 доступных инструментов ({len(mod_group["pages"])})')
 check(not (mod_paths & admin_only), 'админские операции скрыты от роли mod')
 check(admin_only <= {page['path'] for page in admin_group['pages']},
       'администратор видит все рискованные операции')
 owner_group = next(group for group in pm.panel_groups_for('owner') if group['key'] == 'mod')
-check(len(owner_group['pages']) == 20, 'owner видит полный набор из 20 инструментов')
+check(len(owner_group['pages']) == 21, 'owner видит полный набор из 21 инструмента')
 
 print('== 3. Общий каркас: светлый shell + единый кит ==')
 base_path = os.path.join(ROOT, 'web', 'templates', 'base.html')
@@ -137,7 +137,7 @@ room_templates = {
     '/lockdown': 'lockdown', '/tagjail': 'tagjail', '/logs': 'logs',
     '/mod-history': 'modhistory', '/proofs': 'proofs', '/appeals': 'appeals',
     '/security': 'security', '/autofilter': 'autofilter',
-    '/antiraid': 'antiraid', '/antifake': 'antifake',
+    '/antiraid': 'antiraid', '/guardian': 'guardian', '/antifake': 'antifake',
     '/mod-control': 'mod_control', '/mod-report': 'mod_report',
     '/mod-insights': 'mod_insights', '/ladder': 'ladder',
     '/staff-apps': 'staff_apps',

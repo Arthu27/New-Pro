@@ -67,7 +67,7 @@ MODERATION_COGS = frozenset({
     # автомод
     'ai_moderation.py', 'auto_filter.py', 'proactive_mod.py',
     # анти-рейд / безопасность / верификация
-    'antiraid.py', 'security.py', 'verification.py', 'tag_jail.py',
+    'antiraid.py', 'guardian.py', 'security.py', 'verification.py', 'tag_jail.py',
     'impersonation.py',
     # анти-альт / локдаун / ночной режим — аварийный арсенал
     'anti_alt.py', 'lockdown.py', 'night_mode.py',
@@ -124,7 +124,7 @@ CORE_ONLY_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | AI_CHAT_COGS
 MOD_LEAN_COGS = frozenset({
     'moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
     'proof_cog.py', 'auto_filter.py', 'tag_jail.py',
-    'antiraid.py', 'security.py', 'verification.py',
+    'antiraid.py', 'guardian.py', 'security.py', 'verification.py',
     'appeals.py', 'logs.py', 'log_menu.py',
 })
 

@@ -31,6 +31,14 @@ from cogs import security as SC
 
 UTC = timezone.utc
 
+
+def _gid_int(raw):
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return 0
+
+
 FEATURES = (
     ('ai_spam', 'AI-детект спама'),
     ('fake_account', 'Детект фейковых аккаунтов'),
@@ -228,9 +236,18 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_sec_overview(gid):
+        # Сводка Щита (анти-нюк) — обзор виден всем модераторам;
+        # сама настройка — только админам на странице /guardian.
+        try:
+            from web.routes.guardian import guardian_summary
+            shield = guardian_summary(_gid_int(gid))
+        except Exception as _ex:
+            _log.debug('security: сводка Щита не собрана: %s', _ex)
+            shield = None
         return jsonify({'success': True,
                         'cfg': cfg_view(_load(gid)),
                         'rules': rules_reference(),
+                        'guardian': shield,
                         'can_edit': session.get('role') in ('admin', 'owner')})
 
     @app.route('/api/guild/<gid>/security-center/toggle', methods=['POST'])

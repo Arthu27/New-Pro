@@ -96,11 +96,82 @@ def _tagjail_set(gid, cid):
     return True
 
 
+def _json_load(path):
+    try:
+        with open(path, 'r', encoding='utf-8') as fp:
+            data = json.load(fp)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _json_save(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as fp:
+        json.dump(data, fp, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
+
+def _antiraid_path(gid):
+    return f'data/antiraid_{gid}.json'
+
+
+def _antiraid_get(gid):
+    return int(_json_load(_antiraid_path(gid)).get('alert_channel_id') or 0)
+
+
+def _antiraid_set(gid, cid):
+    path = _antiraid_path(gid)
+    data = _json_load(path)
+    data['alert_channel_id'] = int(cid) or None
+    _json_save(path, data)
+    return True
+
+
+def _security_path(gid):
+    return f'data/security_{gid}.json'
+
+
+def _security_get(gid):
+    try:
+        return int(_json_load(_security_path(gid)).get('log_channel') or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _security_set(gid, cid):
+    path = _security_path(gid)
+    data = _json_load(path)
+    data['log_channel'] = int(cid) or None
+    _json_save(path, data)
+    return True
+
+
+# Анти-краш — глобальный конфиг бота (error_handler.CONFIG_PATH).
+ANTICRASH_CFG = 'data/anticrash_config.json'
+
+
+def _anticrash_get(_gid):
+    return int(_json_load(ANTICRASH_CFG).get('log_channel_id') or 0)
+
+
+def _anticrash_set(_gid, cid):
+    data = _json_load(ANTICRASH_CFG)
+    data['log_channel_id'] = int(cid)
+    _json_save(ANTICRASH_CFG, data)
+    return True
+
+
 ADAPTERS = {
     'proof_channel': (CHR.get_route, CHR.set_route),
     'appeals_channel': (_appeals_get, _appeals_set),
     'welcome_channel': (_welcome_get, _welcome_set),
     'tagjail_channel': (_tagjail_get, _tagjail_set),
+    'guardian_channel': (CHR.get_route, CHR.set_route),
+    'antiraid_channel': (_antiraid_get, _antiraid_set),
+    'security_channel': (_security_get, _security_set),
+    'anticrash_channel': (_anticrash_get, _anticrash_set),
 }
 
 

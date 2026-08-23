@@ -392,6 +392,12 @@ demo_channels = [
      'slowmode': 0, 'bitrate': 0, 'user_limit': 0, 'news': False, 'stage': False,
      'forum': False, 'connected': 0,
      'created_at': '2025-11-02T10:25:00+00:00', 'mention': ''},
+    {'id': '4005', 'name': '-защита', 'type': 'text', 'position': 3,
+     'category': 'Модерация', 'category_id': '4001', 'category_pos': 3,
+     'topic': 'Тревоги Щита сервера: остановленные атаки, меры, подозрительные боты',
+     'nsfw': False, 'slowmode': 0, 'bitrate': 0, 'user_limit': 0, 'news': False,
+     'stage': False, 'forum': False, 'connected': 0,
+     'created_at': '2025-11-02T10:26:00+00:00', 'mention': ''},
     {'id': '5001', 'name': 'welcome', 'type': 'text', 'position': 0,
      'category': None, 'category_id': None, 'category_pos': -1,
      'topic': 'Приветствия новых участников', 'nsfw': False, 'slowmode': 0,
@@ -521,18 +527,72 @@ files = {
     'data/team_board.json': team_board,
     'data/staff_apps.json': staff_apps,
     'data/demo_channels.json': demo_channels,
-    'data/channel_routes.json': {GID: {'proof_channel': 4004}},
+    'data/channel_routes.json': {GID: {'proof_channel': 4004,
+                              'guardian_channel': 4005}},
     'data/tag_jail.json': {GID: {'log_channel_id': 4003}},
     'data/hidden_channels.json': {},
     f'data/rules_{GID}.json': demo_rules,
     f'data/xp_{GID}.json': demo_xp,
     f'data/leveling_{GID}.json': demo_leveling,
+    # Защита: анти-рейд, авто-сканер и анти-краш — живые страницы сразу
+    f'data/antiraid_{GID}.json': {
+        'join_raid': True, 'bot_protection': True, 'webhook_protection': True,
+        'delete_protection': True, 'age_filter': True,
+        'min_age': 5, 'join_threshold': 5, 'join_window': 10,
+        'raid_action': 'alert', 'alert_channel_id': '4003',
+        'whitelist': [],
+        'recent_events': [
+            {'type': 'join_raid', 'count': 7, 'window': 10, 'threshold': 5,
+             'last_user': 'raid.bot_447', 'timestamp': iso(1, 3, 12)},
+            {'type': 'young_account', 'user_tag': 'newbie_22',
+             'user_id': '723456789012345679', 'account_age_days': 2,
+             'timestamp': iso(2, 9, 40)},
+        ],
+    },
+    f'data/security_{GID}.json': {
+        'ai_spam': True, 'fake_account': True, 'link_scanner': True,
+        'new_account_days': 7, 'new_account_action': 'warn',
+        'log_channel': 4003,
+    },
+    'data/anticrash_config.json': {'log_channel_id': 4005},
 }
 
 for path, payload in files.items():
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     print('записано:', path)
+
+# ── Щит сервера (анти-нюк): живой конфиг + пара инцидентов ──────────────
+try:
+    import sys as _gs
+    import time as _gt
+    import os as _go
+    _gs.path.insert(0, _go.path.dirname(_go.path.dirname(_go.path.abspath(__file__))))
+    from cogs import guardian as _GD
+
+    _gc = _GD.guardian_default()
+    _gc['incidents'] = [
+        {'ts': int(_gt.time() - 5 * 3600), 'event': 'channel_delete',
+         'label': 'Удаление каналов', 'actor_id': '923456789012345681',
+         'actor_name': 'dima.ghost', 'action': 'strip',
+         'action_label': 'Снять все роли', 'applied': 'снято ролей: 2',
+         'detail': 'канал «offtop»'},
+        {'ts': int(_gt.time() - 26 * 3600), 'event': 'bot_add',
+         'label': 'Добавление ботов', 'actor_id': '823456789012345680',
+         'actor_name': 'kira.watch', 'action': 'kick',
+         'action_label': 'Кикнуть с сервера', 'applied': 'кикнут',
+         'detail': 'бот «raidb0t» — кикнут автоматически'},
+        {'ts': int(_gt.time() - 50 * 3600), 'event': 'webhook_create',
+         'label': 'Создание вебхуков', 'actor_id': '623456789012345678',
+         'actor_name': 'ivan.flood', 'action': 'alert',
+         'action_label': 'Только тревога в лог', 'applied': '—',
+         'detail': 'канал «general»'},
+    ]
+    with open(f'data/guardian_{GID}.json', 'w', encoding='utf-8') as _gf:
+        json.dump(_gc, _gf, ensure_ascii=False, indent=2)
+    print('записано: Щит сервера (%d инцидентов)' % len(_gc['incidents']))
+except Exception as _ex:
+    print('Щит не засеян:', _ex)
 
 # ── Смены персонала: то же хранилище, что у бота (GuildData) ───────────
 # Живая смена «прямо сейчас» + вечное расписание — страница сразу живая.

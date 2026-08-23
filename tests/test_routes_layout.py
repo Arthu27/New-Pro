@@ -403,6 +403,7 @@ EXPECTED = {
     'execute_command_page': '/execute-command',
     'favicon': '/favicon.ico',
     'giveaway_page': '/giveaway',
+    'guardian_page': '/guardian',
     'guilds_page': '/guilds',
     'health_check': '/health',
     'index': '/',
