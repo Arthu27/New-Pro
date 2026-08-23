@@ -29,7 +29,7 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
-_ENV_KEYS = ('MOD_ONLY', 'DISABLED_COGS', 'EXTRA_COGS')
+_ENV_KEYS = ('MOD_ONLY', 'BOT_SLIM', 'BOT_CORE', 'BOT_FULL', 'DISABLED_COGS', 'EXTRA_COGS')
 
 
 def _set_env(**kw):
@@ -45,8 +45,20 @@ print('== services/panel_menu: карта и статусы ==')
 from services import panel_menu as pm
 
 _set_env()
-check(pm.module_mode_active() is False, 'classic: режим модулей выключен')
-check(pm.module_off_paths() == frozenset(), 'classic: без DISABLED_COGS ничто не приглушено')
+check(pm.module_mode_active() is False, 'lean: баннер «только модерация» выключен (MOD_ONLY не задан)')
+off_lean = pm.module_off_paths()
+# /automation не гаснет: на ней живёт и welcome_pro (приветствия включены)
+for p in ('/economy', '/giveaway', '/starboard', '/custom-commands',
+          '/reaction-roles', '/fun', '/leveling', '/afk-list'):
+    assert p in off_lean, p
+check(True, 'lean (по умолчанию): игровые и соц-страницы честно гаснут чипом «выкл»')
+for p in ('/music', '/tickets-ops', '/sla', '/staff-apps', '/ai-chat',
+          '/ai-moderation', '/welcome-editor', '/voice-stats', '/appeals'):
+    assert p not in off_lean, p
+check(True, 'lean: боевые страницы открыты (модерация/тикеты/музыка/AI/приветствие)')
+
+_set_env(BOT_FULL='1')
+check(pm.module_off_paths() == frozenset(), 'BOT_FULL=1: ничто не приглушено — полный вид панели')
 
 _set_env(MOD_ONLY='1')
 check(pm.module_mode_active() is True, 'MOD_ONLY=1: режим активен')
@@ -66,8 +78,8 @@ check('/ai-chat' in pm.module_off_paths(), 'EXTRA_COGS: остальное по-
 
 _set_env(DISABLED_COGS='giveaway')
 check(pm.module_mode_active() is False, 'classic+DISABLED_COGS: баннер не включается')
-check(pm.module_off_paths() == frozenset({'/giveaway'}),
-      'classic+DISABLED_COGS: гаснет точечно только раздача')
+check('/giveaway' in pm.module_off_paths(),
+      'lean+DISABLED_COGS: точечно гаснет и раздача')
 
 _set_env()  # чистим окружение для остальных секций
 
@@ -101,11 +113,16 @@ expected_off = menu_paths & set(off)
 check(html.count('is-off') == len(expected_off) and len(expected_off) >= 8,
       f'гашение точечное 1-в-1 с картой ({len(expected_off)} спящих пунктов)')
 
-_set_env()  # режим выкл
+_set_env(BOT_FULL='1')  # полный состав — классический вид без чипов
 r2 = client.get('/')
 html2 = r2.get_data(as_text=True)
 check('mode-banner' not in html2 and 'nav-off-chip' not in html2,
-      'classic: ни баннера, ни чипов')
+      'BOT_FULL=1: ни баннера, ни чипов — классический вид меню')
+
+_set_env()  # обратно в lean
+r3 = client.get('/')
+html3 = r3.get_data(as_text=True)
+check('nav-off-chip">выкл<' in html3, 'lean: спящие пункты снабжены чипом «выкл»')
 
 # ═══ 3. Визуальный мусор вычищен ══════════════════════════════════════════
 print('== чистота шаблонов ==')

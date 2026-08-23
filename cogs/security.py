@@ -121,7 +121,7 @@ class Security (commands .Cog ):
                 #  AI Антиспам Analizi 
     def _ai_spam_score (self ,uid :int ,content :str )->tuple [float ,str ]:
         """
-        Сообщение analiz et, spam skoru вернуть (0.0 - 1.0) ve причина.
+        Проанализировать сообщение и вернуть оценку спама (0.0–1.0) и причину.
         Мультисигнал: скорость + схожесть + повторы + аномалия длины
         """
         now =time .time ()
@@ -159,7 +159,7 @@ class Security (commands .Cog ):
             # 4. Длинныйluk anomalisi: очень краткий + очень быстрый
         length_score =0.3 if len (content )<5 and speed_score >0.4 else 0.0 
 
-        # Тяжелый skor
+        # весомая оценка
         final_score =(
         speed_score *0.35 +
         sim_score *0.35 +
@@ -175,7 +175,7 @@ class Security (commands .Cog ):
 
         #  Фейковые аккаунты Tespiti 
     def _fake_account_score (self ,member :discord .Member ,cfg :dict )->tuple [float ,list ]:
-        """Fake hesap risk skoru (0-1) ve предупреждение список вернуть."""
+        """Оценка риска фейкового аккаунта (0–1) и список предупреждений."""
         warnings =[]
         score =0.0 
 

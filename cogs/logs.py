@@ -21,7 +21,7 @@ CATEGORIES ={
 'message':{'label':'Сообщения','emoji':'','color':0x3498DB ,'channel':'сообщения'},
 'role':{'label':'Роли','emoji':'','color':0x9B59B6 ,'channel':'сервер'},
 'channel':{'label':'Каналы','emoji':'','color':0xF39C12 ,'channel':'сервер'},
-'voice':{'label':'Голос','emoji':'','color':0x1ABC9C ,'channel':'ses'},
+'voice':{'label':'Голос','emoji':'','color':0x1ABC9C ,'channel':'голос'},
 'сервер':{'label':'Сервер','emoji':'','color':0xE67E22 ,'channel':'сервер'},
 'automod':{'label':'Автоматически','emoji':'','color':0xE74C3C ,'channel':'модерация'},
 'invite':{'label':'Приглашения','emoji':'','color':0x95A5A6 ,'channel':'сервер'},
@@ -137,10 +137,10 @@ LOG_CATEGORY_NAME =' Логи'
 # писали логи в разные каналы (mod-log, moderasyon, server-log …)
 LEGACY_CHANNEL_NAMES ={
 '-модерация':['mod-log','moderasyon','-moderasyon','modlog'],
-'-сообщения':['message-log','mesaj-log'],
-'-участники':['member-log','uye-log'],
+'-сообщения':['message-log','сообщения-лог'],
+'-участники':['member-log','участники-лог'],
 '-ses':['voice-log','ses-log'],
-'-сервер':['server-log','aether-logs','sunucu-log'],
+'-сервер':['server-log','aether-logs','сервер-лог'],
 '-доказательства':['proof-log','proofs','demki','демки'],
 }
 

@@ -8,7 +8,7 @@ class CogManager (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot
 
-    @commands .group (name ='module',aliases =['modul'],invoke_without_command =True )
+    @commands .group (name ='module',aliases =['модуль'],invoke_without_command =True )
     @commands .is_owner ()
     async def module_group (self ,ctx ):
         """Показать список загруженных/незагруженных модулей"""
@@ -29,7 +29,7 @@ class CogManager (commands .Cog ):
         )
         await ctx .send (embed =embed )
 
-    @module_group .command (name ='load',aliases =['yukle'])
+    @module_group .command (name ='load',aliases =['загрузить'])
     @commands .is_owner ()
     async def load_cog (self ,ctx ,cog_name :str ):
         """Загрузить модуль"""
@@ -39,7 +39,7 @@ class CogManager (commands .Cog ):
         except Exception as e :
             await ctx .send (f' Ошибка: `{e}`')
 
-    @module_group .command (name ='unload',aliases =['kaldir'])
+    @module_group .command (name ='unload',aliases =['выгрузить'])
     @commands .is_owner ()
     async def unload_cog (self ,ctx ,cog_name :str ):
         """Выгрузить модуль"""
@@ -52,7 +52,7 @@ class CogManager (commands .Cog ):
         except Exception as e :
             await ctx .send (f' Ошибка: `{e}`')
 
-    @module_group .command (name ='reload',aliases =['yenile'])
+    @module_group .command (name ='reload',aliases =['перезагрузить'])
     @commands .is_owner ()
     async def reload_cog (self ,ctx ,cog_name :str ):
         """Перезагрузить модуль"""

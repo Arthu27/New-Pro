@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Страж бюджета слеш-команд: глобальное меню Discord ≤ 100 команд.
 
-Прогоняет реальную загрузку всех когов (как main.py: выбор через
-cogs_policy, прунинг через slash_budget после каждого модуля) и проверяет:
+Прогоняет реальную загрузку всех когов в режиме BOT_FULL (худший случай:
+выбор через cogs_policy, прунинг через slash_budget после каждого модуля) и проверяет:
   * в итоговом дереве не больше 95 команд — запас до лимита;
   * всё, что осталось в меню, входит в KEEP_SLASH (и UNIQUE);
   * KEEP_SLASH не «протух»: большинство имён реально существуют в дереве
@@ -68,7 +68,7 @@ async def _load_all():
     bot = commands.Bot(command_prefix='!', intents=discord.Intents.all(), help_command=None)
     asyncio.get_running_loop().set_exception_handler(lambda _l, _c: None)
     all_files = sorted(f for f in os.listdir(os.path.join(ROOT, 'cogs')) if f.endswith('.py'))
-    files, _gone = cogs_policy.select_from_environment(all_files, environ={})
+    files, _gone = cogs_policy.select_from_environment(all_files, environ={'BOT_FULL': '1'})
     stats['total_files'] = len(files)
     for f in files:
         try:

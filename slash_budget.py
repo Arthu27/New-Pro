@@ -21,26 +21,44 @@ from discord import AppCommandType, app_commands
 LIMIT = 100          # жёсткий лимит Discord на глобальные chat-input команды
 WARN_AT = 90         # мягкий порог — пора пересмотреть меню
 
-# Что видит обычный участник и модератор в слеш-меню. Кураторский набор:
-# ежедневное (справка, профили, топы), быстрые игры, самая ходовая модерация
-# и аварийные кнопки. Настройки/рареджи (сетапы, выключатели, отчёты админам)
-# живут на префиксе и в веб-панели.
+# Что видит участник и модератор в слеш-меню. Кураторский набор ЛЁГКОГО
+# состава (cogs_policy LEAN — он по умолчанию): модерация-ядро, защита,
+# jail, апелляции, логи, тикеты + заявки, приветствие, AI и служебное.
+# Игровых/экономических имён здесь больше нет — эти модули спят, и
+# держать их в меню бессмысленно (команды просто не существуют в боте).
+# Редкие настройки живут в веб-панели и на префиксе.
 KEEP_SLASH = frozenset({
-    # справка и профиль
-    'help', 'profile', 'leaderboard', 'stats', 'badges', 'streak',
-    'afk', 'invites', 'birthday', 'changelog',
-    # социалка и быстрые игры
-    'спасибо', 'карма', 'дуэль', 'coinflip', 'rps', '8ball', 'dice',
-    'poll', 'events', 'ачивки', 'счёт', 'crown', 'recap', 'оценить', 'квиз',
-    'дежурства',
-    # быт участника
-    'напомни', 'report', 'my-application',
+    # справка и профиль участника
+    'help',
     # модерация — ежедневное (всё в одном select-меню /modpanel)
-    'modpanel', 'warnings', 'role', 'case', 'userinfo', 'войс',
-    'snipe', 'jail', 'unjail', 'logs', 'ticket-panel', 'логи-экспорт',
-    # аварийные кнопки
-    'panic', 'lockdown', 'unlockdown', 'nuke', 'raidcleanup',
-    'antiraid', 'scan-link',
+    'modpanel', 'warnings', 'unwarn', 'clearwarns', 'role', 'utility',
+    'jail', 'unjail', 'jailed', 'tagjail',
+    # доказательства
+    'proof', 'proofs', 'proofdel',
+    # автомод и защита
+    'filter', 'antiraid', 'antiraid-reload', 'scan-link',
+    'security', 'security-toggle', 'security-newaccount', 'backup', 'backup-list',
+    'verify-status', 'verify-toggle',
+    # апелляции
+    'апелляция', 'апелляции',
+    # логи
+    'logs', 'logs-center', 'logs-setup', 'setup-logs', 'modlogs', 'logmenu',
+    'логи-экспорт',
+    # тикеты и заявки
+    'ticket-panel', 'ticket-config', 'ticket-add', 'ticket-remove',
+    'ticket-auto-close', 'ticket-ai-toggle', 'ticket-ai-stats',
+    'ticket-feedback-stats', 'ticket-force-escalate',
+    'ticket-rate-limit-info', 'ticket-reset-rate-limit',
+    'sla-status', 'sla-info', 'sla-create', 'sla-breaches',
+    'my-application', 'staff-panel',
+    # приветствие
+    'welcome', 'приветствие',
+    # AI
+    'ai-info-list', 'ai-info-clear', 'ai-reset',
+    # служебное (здоровье и фиче-флаги)
+    'server-health', 'channel-stats', 'leaveguild',
+    'flag-list', 'flag-info', 'flag-create', 'flag-enable', 'flag-disable',
+    'flag-rollout',
 })
 
 

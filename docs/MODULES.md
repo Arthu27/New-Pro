@@ -10,7 +10,7 @@
 | `cog_manager` | Управление модулями (cog) — загрузка/выгрузка/перезагрузка из панели или командой |
 | `diagnostics` | Bot Diagnostic & Auto-Repair Cog |
 | `feature_flag_cog` | Feature Flags Cog |
-| `health` | Сервер состояние skoru + channel основанный на статистика |
+| `health` | Оценка состояния сервера (0–100) и статистика по каналам. |
 | `help` | Help Cog — Luxury Dark-Gold Dashboard (Pillow) |
 
 ## Модерация (MOD_ONLY) — 33
@@ -23,7 +23,7 @@
 | `antiraid` | Aether — Анти-рейд / Защита от рейдов |
 | `appeals` | Апелляции на баны (Appeals Cog) |
 | `auto_filter` | АВТОФИЛЬТР ЧАТА — настоящая автомодерация (PRO). |
-| `dm_report` | Zhaloba — линия жалоб на DM-рекламу / скаутинг. |
+| `dm_report` | Линия жалоб на рекламу и скаутинг в ЛС (DM-report). |
 | `impersonation` | AntiFake — защита от подделок (impersonation guard). |
 | `invite_tracker` | invite_tracker |
 | `lockdown` | Локдаун (Lockdown Cog) |
@@ -120,14 +120,15 @@
 | `welcome_cog` | Welcome Cog |
 | `welcome_pro` | Приветствия PRO (Welcome PRO Cog) |
 
-## Хелперы (импортируются) — 5
+## Хелперы (импортируются) — 6
 
 | Модуль | Что делает |
 | --- | --- |
 | `__init__` | __init__ |
 | `_card_style` | Shared visual style kit — professional black/white/red dashboard aesthetic. |
+| `economy_shop` | Кастомные предметы магазина экономики (задаются из панели, действуют на сервере). |
 | `embed_utils` | Aether — модуль Embed'ов и GIF |
 | `icons` | Aether — фирменные иконки (assets/icons/) — помощник embed-миниатюр |
 | `leveling_engagement` | Leveling & Engagement System |
 
-**Всего:** 107 файлов в `cogs/`.
+**Всего:** 108 файлов в `cogs/`.

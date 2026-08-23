@@ -395,12 +395,18 @@ en, dis = CP.select_from_environment(
     sorted(os.listdir(os.path.join(ROOT, 'cogs'))), environ={})
 check('economy_shop.py' not in en and 'economy_shop.py' not in dis,
       'economy_shop — хелпер: политика его больше не грузит как ког')
-check('economy_cog.py' in en, 'сам ког экономики по-прежнему грузится')
+check('economy_cog.py' not in en and 'economy_cog.py' in dis,
+      'lean по умолчанию: экономика спит (панель покажет чип «выкл»)')
+check('moderation.py' in en and 'music_cog.py' in en and 'ticket.py' in en
+      and 'tag_jail.py' in en and 'ai_chat.py' in en,
+      'lean по умолчанию: модерация/музыка/тикеты/jail/AI живы')
 
 print('== 11. Все загружаемые коги импортируются с setup ==')
 import importlib  # noqa: E402
 bad_imp = []
-for f in en:
+en_full, _dis_full = CP.select_from_environment(
+    sorted(os.listdir(os.path.join(ROOT, 'cogs'))), environ={'BOT_FULL': '1'})
+for f in en_full:
     name = 'cogs.' + f[:-3]
     try:
         m = importlib.import_module(name)
@@ -409,7 +415,7 @@ for f in en:
     except Exception as ex:
         bad_imp.append((f, f'{type(ex).__name__}: {str(ex)[:60]}'))
 check(not bad_imp,
-      f'все {len(en)} загружаемых когов живо импортируются (упали: {bad_imp[:3]})')
+      f'все {len(en_full)} когов живо импортируются (упали: {bad_imp[:3]})')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

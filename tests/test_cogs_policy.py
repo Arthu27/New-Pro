@@ -13,6 +13,7 @@ sys.path.insert(0, _REPO)
 from cogs_policy import (
     CORE_COGS, HELPER_COGS, MODERATION_COGS, MOD_ONLY_COGS,
     CORE_ONLY_COGS, TICKET_COGS, AI_CHAT_COGS, MUSIC_COGS, SLIM_COGS,
+    LEAN_COGS, MOD_LEAN_COGS, TICKET_LEAN_COGS, AI_LEAN_COGS, WELCOME_LEAN_COGS,
     env_flag, is_helper, select_cog_files, select_from_environment,
     _norm_name, _parse_list,
 )
@@ -54,11 +55,46 @@ check(all(not env_flag('X', environ={'X': v}) for v in ('0', 'false', 'no', '', 
       'env_flag: 0/false/no/пусто — ложь')
 check(env_flag('MISSING_FLAG', default=True) is True, 'env_flag: отсутствие -> default')
 
-print('\n== 3. Обычный режим (MOD_ONLY выкл) — поведение как раньше ==')
+print('\n== 3. Режим по умолчанию — LEAN (лёгкий боевой состав) ==')
 enabled, disabled = select_cog_files(ALL_FILES)
-check(enabled == NON_HELPERS and disabled == [],
-      'classic: грузятся все коги кроме хелперов, 1-в-1 со старым загрузчиком')
-check(not any(is_helper(f) for f in enabled), 'classic: хелперы не загружаются никогда')
+check(set(enabled) == LEAN_COGS, 'lean: без флагов грузится ровно боевой keep-лист')
+check(sorted(set(NON_HELPERS) - set(LEAN_COGS)) == disabled,
+      'lean: вся «веселуха» — в спящих')
+missing_lean = sorted(f for f in LEAN_COGS if f not in ALL_SET)
+check(missing_lean == [], f'LEAN_COGS: все файлы на диске {missing_lean}')
+for dead in ('economy_cog.py', 'level_cog.py', 'fun_cog.py', 'minigames.py',
+             'giveaway.py', 'starboard.py', 'birthday.py', 'karma.py',
+             'achievements.py', 'duels.py', 'quiz.py', 'profile.py',
+             'leaderboard.py', 'join_to_create.py', 'counting.py',
+             'anime_daily.py', 'reminders.py', 'scheduler.py', 'triggers.py',
+             'events.py', 'meeting.py', 'reaction_roles_cog.py', 'autorole_join.py'):
+    assert dead in disabled, dead
+check(True, 'lean: экономика/игры/уровни/ивенты/соц-системы — спят')
+for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
+             'temp_moderation.py', 'proof_cog.py', 'auto_filter.py',
+             'tag_jail.py', 'antiraid.py', 'security.py', 'verification.py',
+             'appeals.py', 'logs.py', 'log_menu.py',
+             'ticket.py', 'sla_cog.py', 'staff_apply.py', 'mod_report.py',
+             'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
+             'ai_chat.py', 'ai_moderation.py',
+             'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
+             'help.py', 'cog_manager.py', 'health.py'):
+    assert keep in enabled, keep
+check(True, 'lean: модерация/jail/тикеты/музыка/AI/приветствие/логи — живы')
+check(not any(is_helper(f) for f in enabled), 'lean: хелперы не загружаются никогда')
+check(CORE_COGS <= LEAN_COGS and MOD_LEAN_COGS <= LEAN_COGS
+      and TICKET_LEAN_COGS <= LEAN_COGS and MUSIC_COGS <= LEAN_COGS
+      and AI_LEAN_COGS <= LEAN_COGS and WELCOME_LEAN_COGS <= LEAN_COGS,
+      'lean: состав = ядро + модерация + тикеты + музыка + AI + приветствие')
+check(not set(enabled) & set(disabled)
+      and len(enabled) + len(disabled) == len(NON_HELPERS),
+      'lean: разбиение без пересечений и потерь')
+
+print('\n== 3.1. BOT_FULL=1 — полный состав (возврат всего) ==')
+enabled_f, disabled_f = select_cog_files(ALL_FILES, full=True)
+check(enabled_f == NON_HELPERS and disabled_f == [],
+      'full: грузятся все коги кроме хелперов')
+check(not any(is_helper(f) for f in enabled_f), 'full: хелперы не загружаются никогда')
 
 print('\n== 4. Классификация модер-ядра здорова ==')
 missing = sorted(f for f in MOD_ONLY_COGS if f not in ALL_SET)
@@ -119,10 +155,13 @@ check(not set(enabled_c) & set(disabled_c)
       'core: разбиение без пересечений и потерь')
 
 print('\n== 6. DISABLED_COGS / EXTRA_COGS ==')
-e2, d2 = select_cog_files(ALL_FILES, disabled='Music_Cog.py, giveaway')
+e2, d2 = select_cog_files(ALL_FILES, full=True, disabled='Music_Cog.py, giveaway')
 check('music_cog.py' in d2 and 'giveaway.py' in d2 and
       len(e2) == len(NON_HELPERS) - 2,
-      'DISABLED_COGS: работает в обычном режиме, имена нечувствительны к виду')
+      'DISABLED_COGS: работает в полном режиме, имена нечувствительны к виду')
+e2l, d2l = select_cog_files(ALL_FILES, disabled='music_cog')
+check('music_cog.py' in d2l and 'moderation.py' in e2l,
+      'DISABLED_COGS: работает и поверх LEAN (выключает даже боевой модуль)')
 e3, d3 = select_cog_files(ALL_FILES, mod_only=True, disabled='logs,ticket.py')
 check('logs.py' in d3 and 'ticket.py' in d3,
       'DISABLED_COGS: может выключить даже модер-модуль (приоритет над keep)')
@@ -139,7 +178,14 @@ ee, de = select_from_environment(ALL_FILES, environ=env)
 check('fun_cog.py' in ee and 'minigames.py' in de and 'economy_cog.py' in de,
       'select_from_environment: MOD_ONLY+EXTRA+DISABLED работают вместе')
 ee2, de2 = select_from_environment(ALL_FILES, environ={})
-check(ee2 == NON_HELPERS and de2 == [], 'select_from_environment: пустое окружение -> classic')
+check(set(ee2) == LEAN_COGS and sorted(set(NON_HELPERS) - LEAN_COGS) == de2,
+      'select_from_environment: пустое окружение -> LEAN (лёгкий состав по умолчанию)')
+ee3, de3 = select_from_environment(ALL_FILES, environ={'BOT_FULL': '1'})
+check(ee3 == NON_HELPERS and de3 == [],
+      'select_from_environment: BOT_FULL=1 -> полный состав')
+ee4, de4 = select_from_environment(ALL_FILES, environ={'EXTRA_COGS': 'economy_cog, quiz'})
+check('economy_cog.py' in ee4 and 'quiz.py' in ee4 and 'fun_cog.py' in de4,
+      'select_from_environment: EXTRA_COGS точечно будит модули поверх LEAN')
 
 print('\n== 8. Интеграция с main.py ==')
 with open(os.path.join(_REPO, 'main.py'), encoding='utf-8') as fp:
@@ -149,9 +195,9 @@ check('from cogs_policy import select_from_environment' in main_src,
 check('SKIP_COGS' not in main_src, 'main.py: старый локальный SKIP_COGS убран (единый источник — cogs_policy)')
 with open(os.path.join(_REPO, '.env.example'), encoding='utf-8') as fp:
     env_doc = fp.read()
-check('MOD_ONLY=0' in env_doc and 'BOT_CORE=0' in env_doc
+check('BOT_FULL=0' in env_doc and 'MOD_ONLY=0' in env_doc and 'BOT_CORE=0' in env_doc
       and 'DISABLED_COGS' in env_doc and 'EXTRA_COGS' in env_doc,
-      '.env.example: режим модулей задокументирован')
+      '.env.example: режим модулей задокументирован (BOT_FULL/MOD_ONLY/DISABLED/EXTRA)')
 
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

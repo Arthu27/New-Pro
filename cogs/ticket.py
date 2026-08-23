@@ -1651,8 +1651,8 @@ class Ticket (commands .Cog ):
                 for msg_text in messages_to_analyze :
                     if "[ОБВИНЯЕМЫЙ:"in msg_text :
                         msg_lower =msg_text .lower ()
-                        from cogs .ai_chat import _kufur_var_mi 
-                        is_match =_kufur_var_mi (msg_text )or any (w in msg_lower for w in [
+                        from cogs .ai_chat import _has_profanity 
+                        is_match =_has_profanity (msg_text )or any (w in msg_lower for w in [
                         'рот','ебал','сук','хуй','дурак','идиот','урод','мраз','пидор','соси',
                         'salak','aptal','gerizekalы','шerefsiz','namussuz','pezevenk','ibne','lan','aq','orospu','piч','yarrak','gёt','amcыk','oч'
                         ])
@@ -1664,8 +1664,8 @@ class Ticket (commands .Cog ):
                 for msg_text in messages_to_analyze :
                     if "[ЗАЯВИТЕЛЬ:"in msg_text :
                         msg_lower =msg_text .lower ()
-                        from cogs .ai_chat import _kufur_var_mi 
-                        is_match =_kufur_var_mi (msg_text )or any (w in msg_lower for w in [
+                        from cogs .ai_chat import _has_profanity 
+                        is_match =_has_profanity (msg_text )or any (w in msg_lower for w in [
                         'рот','ебал','сук','хуй','дурак','идиот','урод','мраз','пидор','соси',
                         'salak','aptal','gerizekalы','шerefsiz','namussuz','pezevenk','ibne','lan','aq','orospu','piч','yarrak','gёt','amcыk','oч'
                         ])

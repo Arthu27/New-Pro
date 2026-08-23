@@ -42,22 +42,39 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
-print('== 1. Реестр команд ==')
+print('== 1. Реестр команд (LEAN — боевой состав по умолчанию) ==')
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-check(data['total'] >= 300, f"собрано {data['total']} команд (≥300 всех модулей)")
-check(data['slash'] >= 120 and data['prefix'] >= 50,
-      f"slash {data['slash']} + prefix {data['prefix']} — оба вида на месте")
+check(data['total'] >= 100, f"lean: собрано {data['total']} живых команд")
+check(data['slash'] >= 30 and data['prefix'] >= 30,
+      f"lean: slash {data['slash']} + prefix {data['prefix']} — оба вида на месте")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
-check(len(data['categories']) >= 12, f"разделов ≥12 ({len(data['categories'])})")
+check(len(data['categories']) >= 8, f"lean: разделов ≥8 ({len(data['categories'])})")
 labels = [c['label'] for c in data['categories']]
-for need in ('Модерация', 'Тикеты', 'Музыка', 'Экономика', 'Уровни и карма'):
-    check(need in labels, f'раздел «{need}» в каталоге')
+for need in ('Модерация', 'Тикеты', 'Музыка', 'Голосовые', 'AI',
+             'Приветствие и вход', 'Логи и аудит', 'Система'):
+    check(need in labels, f'lean: раздел «{need}» в каталоге')
+check('Экономика' not in labels and 'Уровни и карма' not in labels,
+      'lean: спящие системы (экономика/уровни) честно не показываются')
+mods = data.get('modules') or {}
+check(mods.get('enabled') == 30 and mods.get('sleeping') == 72,
+      f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')}")
+
+print('== 1.1. Реестр в BOT_FULL (полный состав) ==')
+os.environ['BOT_FULL'] = '1'
+full = CR.catalog(force=True)
+check(full['total'] >= 300, f"full: собрано {full['total']} команд (≥300)")
+full_labels = [c['label'] for c in full['categories']]
+for need in ('Экономика', 'Уровни и карма', 'Игры и развлечения'):
+    check(need in full_labels, f'full: раздел «{need}» вернулся')
+os.environ.pop('BOT_FULL', None)
+data = CR.catalog(force=True)
 
 names = [c['name'] for c in data['commands']]
 check(len(names) == len(set(names)), 'имена команд не дублируются')
+# музыка — боевой модуль: её команды обязаны быть и в lean-каталоге
 for cmd_name in ('play', 'pause', 'queue'):
     hit = next((c for c in data['commands'] if c['name'] == cmd_name
                 and c['cat'] == 'music'), None)
@@ -117,9 +134,13 @@ login('mod')
 r = client.get('/api/commands/catalog')
 d = r.get_json()
 check(r.status_code == 200 and d['success'], 'мод читает каталог')
-check(d['total'] >= 300 and d['shown'] == d['total'] and len(d['commands']) == d['total'],
-      'без фильтров отдаётся всё')
+check(d['total'] == data['total'] and d['shown'] == d['total']
+      and len(d['commands']) == d['total'],
+      'без фильтров отдаётся весь lean-каталог (как в боте)')
 check(d['slash'] > 0 and d['prefix'] > 0, 'счётчики типов в ответе')
+check(d.get('modules', {}).get('enabled') == 30
+      and d['modules']['sleeping'] == 72,
+      'в ответе — счётчик модулей (30 включено / 72 спят)')
 
 r = client.get('/api/commands/catalog?q=play')
 d = r.get_json()
@@ -144,8 +165,11 @@ print('== 4. Шаблон страницы ==')
 tpl = open(os.path.join(ROOT, 'web', 'templates', 'commands.html'),
            encoding='utf-8').read()
 for fid in ('cmdxQ', 'cmdxKind', 'cmdxCats', 'cmdxGrid', 'cmdxCount',
-            'stTotal', 'stSlash', 'stPrefix', 'stCats', 'cmdModal'):
+            'stTotal', 'stSlash', 'stPrefix', 'stCats', 'cmdModal',
+            'cmdxModules', 'stModOn', 'stModOff'):
     check(f'id="{fid}"' in tpl, f'контрол {fid} на месте')
+check('/cog-manager' in tpl and 'BOT_FULL' in tpl and 'EXTRA_COGS' in tpl,
+      'честная подсказка: модули спят, способ разбудить указан')
 check('/api/commands/catalog' in tpl, 'каталог подключён')
 check("role=\"button\"" in tpl and 'tabindex="0"' in tpl,
       'карточки доступны с клавиатуры')
@@ -162,14 +186,23 @@ check('commands_panel' in ext, 'модуль commands_panel зарегистри
 old_fragments = ('{ cmd: \'ban\', icon' in tpl and 'fa-user-times' in tpl)
 check(not old_fragments, 'старый хардкод из 13 команд убран — каталог живой')
 
-print('== 5. /help показывает все разделы ==')
+print('== 5. /help показывает все ЖИВЫЕ разделы ==')
 import cogs.help as HP  # noqa: E402
 ov = HP.build_help_embed()
 field_names = ' | '.join(f.name for f in ov.fields)
-for need in ('Музыка', 'Экономика', 'Уровни и карма', 'Голосовые', 'Модерация', 'Тикеты'):
+for need in ('Музыка', 'Голосовые', 'Приветствие и вход', 'Система',
+             'Модерация', 'Тикеты'):
     check(need in field_names, f'/help overview содержит раздел «{need}»')
+check('Экономика' not in field_names and 'Уровни и карма' not in field_names,
+      'спящие разделы (экономика/уровни) из /help убраны')
 check('Логи и аудит' not in field_names and 'AI ' not in field_names,
       'нет дублей пересекающихся с ACL разделов (Логи и аудит / AI)')
+# в полном составе спящие разделы возвращаются
+os.environ['BOT_FULL'] = '1'
+ov_full = HP.build_help_embed()
+check('Экономика' in ' | '.join(f.name for f in ov_full.fields),
+      'BOT_FULL=1: раздел «Экономика» вернулся в /help')
+os.environ.pop('BOT_FULL', None)
 # select-меню Discord: максимум 25 опций
 n_opts = 1 + len(HP._all_category_labels())
 check(n_opts <= 25, f'select-меню умещается в лимит Discord ({n_opts} ≤ 25)')

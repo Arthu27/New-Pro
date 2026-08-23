@@ -283,12 +283,12 @@ def update_bot():
     лог("[AUTO-UPDATE] === ОБНОВЛЕНИЕ НАЧАТО ===")
     try:
         kill_bot()
-        # До git pull dene, git repo deгilse ZIP fallback
+        # Сначала пробуем git pull; если это не git-репозиторий — скачиваем ZIP
         git_dir = os.path.join(BOT_DIR, ".git")
         if os.path.isdir(git_dir):
             git_pull()
         else:
-            лог("[AUTO-UPDATE] .git не найдено, ZIP с guncelleniyor...")
+            лог("[AUTO-UPDATE] .git не найден — обновляемся из ZIP-архива...")
             download_and_extract()
         time.sleep(2)
         start_bot()

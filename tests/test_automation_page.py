@@ -137,10 +137,14 @@ print('== 5. меню и карта модулей ==')
 paths = {p['path'] for g in pm.MENU for p in g['pages']}
 check('/automation' in paths, 'пункт «Автоматика» в меню')
 check('/automation' in pm.PAGE_COGS, 'карта PAGE_COGS покрывает страницу')
-# в classic-режиме страница не гаснет (её коги загружены)
-for k in ('MOD_ONLY', 'DISABLED_COGS', 'EXTRA_COGS'):
+# в lean-режиме по умолчанию страница гаснет честным чипом, в full — активна
+for k in ('MOD_ONLY', 'BOT_FULL', 'DISABLED_COGS', 'EXTRA_COGS'):
     os.environ.pop(k, None)
-check('/automation' not in pm.module_off_paths(), 'classic: страница активна')
+check('/automation' not in pm.module_off_paths(), 'lean: страница жива (welcome_pro из её карты включён)')
+check('/economy' in pm.module_off_paths(), 'lean: экономика гаснет честным чипом')
+os.environ['BOT_FULL'] = '1'
+check('/automation' not in pm.module_off_paths(), 'BOT_FULL=1: страница активна')
+os.environ.pop('BOT_FULL', None)
 
 print('== 6. линт модуля маршрутов ==')
 src = open(os.path.join(ROOT, 'web', 'routes', 'automation.py'), encoding='utf-8').read()

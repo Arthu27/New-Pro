@@ -143,10 +143,30 @@ def _clean_desc(text, limit=140):
     return line[:limit]
 
 
+def _enabled_module_files():
+    """Файлы модулей, которые реально загрузит бот (профиль cogs_policy).
+
+    Каталог показывает ТОЛЬКО живые команды: спящие по профилю модули
+    (BOT_FULL=0 по умолчанию — лёгкий состав) честно не отображаются.
+    """
+    try:
+        import cogs_policy
+        files = sorted(f for f in os.listdir(COGS_DIR) if f.endswith('.py'))
+        enabled, _gone = cogs_policy.select_from_environment(files)
+        return set(enabled), len(_gone)
+    except Exception as _ex:
+        _log.debug('command_registry: профиль недоступен (%s) — показываю всё', _ex)
+        return {f for f in os.listdir(COGS_DIR)
+                if f.endswith('.py') and not f.startswith('_')}, 0
+
+
 def _scan():
+    enabled_files, sleeping = _enabled_module_files()
     commands = []
     for fn in sorted(os.listdir(COGS_DIR)):
         if not fn.endswith('.py') or fn.startswith('_'):
+            continue
+        if fn not in enabled_files:
             continue
         path = os.path.join(COGS_DIR, fn)
         try:
@@ -231,16 +251,21 @@ def _scan():
 
 
 def catalog(force=False):
-    """Полный каталог с кэшем по mtime каталога cogs/."""
+    """Полный каталог с кэшем по mtime каталога cogs/ + профилю модулей."""
     try:
         stamp = max(os.path.getmtime(os.path.join(COGS_DIR, f))
                     for f in os.listdir(COGS_DIR) if f.endswith('.py'))
     except OSError:
         stamp = 0
+    # профиль модулей — часть ключа кэша: BOT_FULL/профили меняют набор команд
+    stamp = (stamp, tuple(sorted((k, os.environ.get(k, '')) for k in
+                                 ('BOT_FULL', 'MOD_ONLY', 'BOT_SLIM', 'BOT_CORE',
+                                  'DISABLED_COGS', 'EXTRA_COGS'))))
     if not force and _cache['data'] is not None and _cache['stamp'] == stamp:
         return _cache['data']
 
     commands = _scan()
+    enabled_files, sleeping = _enabled_module_files()
     cats = []
     for key, meta in CATEGORIES.items():
         n = sum(1 for c in commands if c['cat'] == key)
@@ -252,6 +277,7 @@ def catalog(force=False):
         'slash': sum(1 for c in commands if c['kind'] == 'slash'),
         'subs': sum(1 for c in commands if c['kind'] == 'sub'),
         'prefix': sum(1 for c in commands if c['kind'] == 'prefix'),
+        'modules': {'enabled': len(enabled_files), 'sleeping': sleeping},
         'categories': cats,
         'commands': commands,
     }

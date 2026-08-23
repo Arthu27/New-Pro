@@ -138,7 +138,7 @@ class GuildData:
         return [row['key'] for row in rows]
     
     def count(self, guild_id: int) -> int:
-        """Kayit sayisi"""
+        """Количество записей"""
         conn = self._conn()
         try:
             row = conn.execute(
@@ -150,7 +150,8 @@ class GuildData:
         return row['cnt'] if row else 0
     
     def exists(self, guild_id: int, key: str) -> bool:
-        """Kayit var mi?"""
+        """Есть ли запись"""
+
         return self.get(guild_id, key) is not None
     
     def clear(self, guild_id: int) -> bool:
@@ -170,7 +171,7 @@ class GuildData:
             conn.close()
     
     def migrate_from_json(self, json_path: str, guild_id: int):
-        """JSON dosyasindan DB'ye tasi"""
+        """Перенести данные из JSON-файла в БД"""
         if not os.path.exists(json_path):
             return
         
@@ -193,7 +194,7 @@ class UserData:
     """
     Хранение данных по пользователям.
     
-    Kullanim:
+    Использование:
         db = UserData("economy")
         db.set(user_id, {"balance": 1000, "level": 5})
         data = db.get(user_id)

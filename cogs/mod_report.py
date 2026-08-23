@@ -33,7 +33,7 @@ def _load_cfg (guild_id :int )->dict :
     'day':0 ,
     'hour':9 ,
     'staff_roles':[],
-    'last_meeting':None # В конец toplanti date (ISO format)
+    'last_meeting':None # дата последнего собрания (ISO)
     }
 
 
@@ -64,7 +64,7 @@ def _load_lb (guild_id :int )->dict :
             with open (lb_path ,'r',encoding ='utf-8')as f :
                 lb =json .load (f )
             result ['messages']=lb .get ('messages',{})
-            # leaderboard'da voice_minutes varsa al
+            # если в таблице есть voice_minutes — берём
             for uid ,mins in lb .get ('voice_minutes',{}).items ():
                 result ['voice_minutes'][uid ]=result ['voice_minutes'].get (uid ,0 )+mins 
         except Exception as _ex:
@@ -133,20 +133,20 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
 
     if force_cutoff :
         cutoff =force_cutoff 
-        period =f'В конец {days} День'
+        period =f'последние {days} дн.'
     elif cfg .get ('last_meeting'):
         try :
             cutoff =datetime .datetime .fromisoformat (cfg ['last_meeting'])
             if cutoff .tzinfo is None :
                 cutoff =cutoff .replace (tzinfo =datetime .timezone .utc )
             days_since =(now -cutoff ).days 
-            period =f'В конец Собрание Bu Yana ({days_since} день)'
+            period =f'с последнего собрания ({days_since} дн.)'
         except Exception :
             cutoff =now -datetime .timedelta (days =days )
-            period =f'В конец {days} День'
+            period =f'последние {days} дн.'
     else :
         cutoff =now -datetime .timedelta (days =days )
-        period =f'В конец {days} День'
+        period =f'последние {days} дн.'
 
     ts_cutoff =int (cutoff .timestamp ())
     ts_now =int (now .timestamp ())
@@ -159,7 +159,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
     gid =str (guild .id )
     all_case =mod_data .get ('case',{}).get (gid ,[])
 
-    # Bu dёnemdeki mod case'leri
+    # мод-кейсы за этот период
     period_case =[]
     for c in all_case :
         try :
@@ -187,19 +187,19 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
     cover .description =(
     '```ansi\n'
     '\u001b[1;34m\u001b[0m\n'
-    '\u001b[1;34m   HAFTALIK PERFORMANS RAPORU     \u001b[0m\n'
+    '\u001b[1;34m  ЕЖЕНЕДЕЛЬНЫЙ ОТЧЁТ ПО МОДЕРАЦИИ  \u001b[0m\n'
     '\u001b[1;34m\u001b[0m\n'
     '```\n'
     f'> 📅 **Период:** **{period}**\n'
     f'>  <t:{ts_cutoff}:D> → <t:{ts_now}:D>\n'
     f'>  Всего участников: **{guild.member_count}**\n'
-    f'>  Mod Действие: **{len(period_case)}**'
+    f'>  Действий модерации: **{len(period_case)}**'
     )
     cover .set_image (url ='https://media.tenor.com/ZBDpMFBMFpkAAAAC/celebration-party.gif')
     embeds .append (cover )
 
     # 
-    # 2. ОБЩИЙ СЕРВЕР ОЧЕРЕДЬ (Top 5 — message + ses + davet)
+    # 2. общий топ сервера (Топ-5: сообщения + голос + приглашения)
     # 
     scores =defaultdict (lambda :{'msg':0 ,'voice':0 ,'inv':0 ,'score':0 })
     for uid ,cnt in lb .get ('messages',{}).items ():
@@ -254,7 +254,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
         if not role or role .is_default ():
             continue 
 
-            # Bu роли участников skorlarы
+            # очки участников с этой ролью
         role_members =[m for m in role .members if not m .bot ]
         if not role_members :
             continue 
@@ -350,7 +350,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
     close .description =(
     '```ansi\n\u001b[1;32m КОНЕЦ ОТЧЁТА \u001b[0m\n```\n'
     f'> Этот отчёт содержит данные за **{period}**.\n'
-    f'> Bir следующий rapor: <t:{ts_now + (7 - datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).weekday()) * 86400}:D>\n\n'
+    f'> Следующий отчёт: <t:{ts_now + (7 - datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).weekday()) * 86400}:D>\n\n'
     '-# Aether Bot • Автоматический еженедельный отчёт'
     )
     embeds .append (close )
@@ -461,17 +461,17 @@ class ModReportView (discord .ui .View ):
             await interaction .response .send_message ('❌ Недостаточно прав.',ephemeral =True )
             return 
         cfg =_load_cfg (interaction .guild .id )
-        gun_names =['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
+        day_names =['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
         ch =interaction .guild .get_channel (cfg .get ('channel_id',0 ))
         embed =discord .Embed (title ='⚙️ Настройки отчётов',color =0x5865F2 )
         embed .add_field (name ='Состояние',value =' Включён'if cfg .get ('enabled')else ' Выключен',inline =True )
         embed .add_field (name ='Канал',value =ch .mention if ch else 'Не задан',inline =True )
-        embed .add_field (name ='День/Время',value =f'{gun_names[cfg.get("day", 0)]} {cfg.get("hour", 9):02d}:00',inline =True )
+        embed .add_field (name ='День/Время',value =f'{day_names[cfg.get("day", 0)]} {cfg.get("hour", 9):02d}:00',inline =True )
         embed .description =(
         '**Команды:**\n'
-        '`!rapor-ayar #channel [день] [часов]`\n'
-        '`!rapor-rol-add @Роль`\n'
-        '`!rapor-rol-cikar @Роль`'
+        '`!report-setup #канал [день] [час]`\n'
+        '`!report-role-add @Роль`\n'
+        '`!report-role-remove @Роль`'
         )
         await interaction .response .send_message (embed =embed ,ephemeral =True )
 
@@ -538,54 +538,54 @@ class ModReport (commands .Cog ):
         )
         await ctx .send (embed =embed ,view =ModReportView ())
 
-    @commands .command (name ='weekly-report',aliases =['haftalik-rapor','rapor','report'])
+    @commands .command (name ='weekly-report',aliases =['еженедельный-отчёт','отчёт','report'])
     @commands .has_permissions (manage_messages =True )
-    async def weekly_report (self ,ctx ,gun :int =7 ):
-        """Показать недельный отчёт: !haftalik-rapor [дней]"""
+    async def weekly_report (self ,ctx ,n_days :int =7 ):
+        """Показать недельный отчёт: !weekly-report [дней]"""
         async with ctx .typing ():
-            embeds =await _build_weekly_report (ctx .guild ,days =gun )
+            embeds =await _build_weekly_report (ctx .guild ,days =n_days )
             for i in range (0 ,len (embeds ),10 ):
                 await ctx .send (embeds =embeds [i :i +10 ])
 
-    @commands .command (name ='report-setup',aliases =['rapor-ayar'])
+    @commands .command (name ='report-setup',aliases =['отчёт-настройка'])
     @commands .has_permissions (administrator =True )
-    async def setup_report (self ,ctx ,channel :discord .TextChannel ,gun :int =0 ,часов :int =9 ):
-        """Настроить автоматический еженедельный отчёт: !rapor-ayar #канал [день] [час]"""
+    async def setup_report (self ,ctx ,channel :discord .TextChannel ,day_of_week :int =0 ,hour :int =9 ):
+        """Настроить автоматический еженедельный отчёт: !report-setup #канал [день] [час]"""
         cfg =_load_cfg (ctx .guild .id )
-        cfg .update ({'enabled':True ,'channel_id':channel .id ,'day':gun ,'hour':часов })
+        cfg .update ({'enabled':True ,'channel_id':channel .id ,'day':day_of_week ,'hour':hour })
         _save_cfg (ctx .guild .id ,cfg )
-        gun_names =['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
+        day_names =['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
         embed =discord .Embed (
         title ='✅ Еженедельный отчёт настроен',
         color =0x57F287 ,
         description =(
-        f'Каждый **{gun_names[gun]}** в **{часов:02d}:00**\n'
+        f'Каждый **{day_names[day_of_week]}** в **{hour:02d}:00**\n'
         f'отчёт автоматически отправляется в канал {channel.mention}.'
         )
         )
         await ctx .send (embed =embed )
 
-    @commands .command (name ='report-role-add',aliases =['rapor-rol-add'])
+    @commands .command (name ='report-role-add',aliases =['отчёт-роль-добавить'])
     @commands .has_permissions (administrator =True )
     async def add_staff_role (self ,ctx ,role :discord .Role ):
-        """Добавить роль администратора в отчёт: !rapor-rol-add @Роль"""
+        """Добавить роль администратора в отчёт: !report-role-add @Роль"""
         cfg =_load_cfg (ctx .guild .id )
         if role .id not in cfg .get ('staff_roles',[]):
             cfg .setdefault ('staff_roles',[]).append (role .id )
             _save_cfg (ctx .guild .id ,cfg )
         await ctx .send (f'✅ Роль **{role.name}** добавлена в отчёт.')
 
-    @commands .command (name ='report-role-remove',aliases =['rapor-rol-cikar'])
+    @commands .command (name ='report-role-remove',aliases =['отчёт-роль-убрать'])
     @commands .has_permissions (administrator =True )
     async def remove_staff_role (self ,ctx ,role :discord .Role ):
-        """Удалить роль из отчёта: !rapor-rol-cikar @Роль"""
+        """Удалить роль из отчёта: !report-role-remove @Роль"""
         cfg =_load_cfg (ctx .guild .id )
         if role .id in cfg .get ('staff_roles',[]):
             cfg ['staff_roles'].remove (role .id )
             _save_cfg (ctx .guild .id ,cfg )
         await ctx .send (f'🗑️ Роль **{role.name}** удалена из отчёта.')
 
-    @commands .command (name ='meeting-start',aliases =['собрание-старт','toplanti-baslat','sobranie-start'])
+    @commands .command (name ='meeting-start',aliases =['собрание-старт','начать-собрание'])
     @commands .has_permissions (administrator =True )
     async def start_meeting (self ,ctx ,date :str =None ):
         """Запустить собрание: !собрание-старт [ДД.ММ.ГГГГ]"""
@@ -616,7 +616,7 @@ class ModReport (commands .Cog ):
         ts =int (meeting_time .timestamp ())
         await ctx .send (f'📅 Дата собрания установлена: <t:{ts}:F>\nСледующий отчёт будет считать с этой даты.')
 
-    @commands .command (name ='meeting-count',aliases =['собрание-счёт','toplanti-sayac','sobranie-sayac'])
+    @commands .command (name ='meeting-count',aliases =['собрание-счёт','счёт-собрания'])
     async def meeting_counter (self ,ctx ):
         """Сколько дней прошло с последнего собрания: !собрание-счёт"""
         cfg =_load_cfg (ctx .guild .id )

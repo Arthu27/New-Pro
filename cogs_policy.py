@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
 """Политика загрузки модулей (когов) бота.
 
-Один модуль — три ручки управления через .env, без правки кода:
+По умолчанию бот работает в «лёгком» боевом составе (LEAN): модерация-ядро,
+защита (антирейд/верификация/автомод), jail, апелляции, логи, тикеты,
+музыка, AI-чат и приветствия. Вся «веселуха» (экономика, игры, левелинг,
+ивенты, соц-системы…) УСЫПЛЕНА: файлы и данные на месте, модуль просто
+спит. Вернуть всё — .env: `BOT_FULL=1`, вернуть точечно — `EXTRA_COGS`.
 
+Ручки управления через .env, без правки кода:
+
+    BOT_FULL=1            — «всё включено»: грузятся все ~110 модулей.
     MOD_ONLY=1            — «только модерация»: грузятся модераторские и
                             системные модули, вся «веселуха» (экономика, игры,
                             музыка, AI-чат, ивенты, левелинг…) выключена.
     DISABLED_COGS=a,b,c   — добить конкретные модули в любом режиме.
-    EXTRA_COGS=a,b        — вернуть конкретные модули поверх MOD_ONLY.
+    EXTRA_COGS=a,b        — вернуть конкретные модули поверх любого профиля.
 
     BOT_SLIM=1            — «модерация + тикеты + музыка»: грузятся ядро,
                             модераторские, тикетные и музыкальные модули;
@@ -111,10 +118,40 @@ SLIM_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | MUSIC_COGS | AI_CHAT_COG
 # Логи (logs.py, log_menu.py) уже в MODERATION_COGS, AI-модерация — тоже.
 CORE_ONLY_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | AI_CHAT_COGS
 
+# ─── LEAN — боевой состав по умолчанию (запрос владельца: «без хлама») ────
+# Модерация-ядро: наказания (modpanel), варны, временные наказания,
+# доказательства, автомод, jail, защита и верификация, апелляции, логи.
+MOD_LEAN_COGS = frozenset({
+    'moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
+    'proof_cog.py', 'auto_filter.py', 'tag_jail.py',
+    'antiraid.py', 'security.py', 'verification.py',
+    'appeals.py', 'logs.py', 'log_menu.py',
+})
+
+# Тикеты + отчёт по модерации (веб-панель читает их данные).
+TICKET_LEAN_COGS = frozenset({
+    'ticket.py', 'sla_cog.py', 'staff_apply.py', 'mod_report.py',
+})
+
+# AI: чат-ассистент + AI-модерация токсичности.
+AI_LEAN_COGS = frozenset({
+    'ai_chat.py', 'ai_moderation.py',
+})
+
+# Приветствия: тексты, красивые карточки-Aether, PRO-шаблоны с ротацией.
+WELCOME_LEAN_COGS = frozenset({
+    'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
+})
+
+# Итоговый «лёгкий» состав: ~30 модулей вместо ~110.
+LEAN_COGS = (CORE_COGS | MOD_LEAN_COGS | TICKET_LEAN_COGS
+             | MUSIC_COGS | AI_LEAN_COGS | WELCOME_LEAN_COGS)
+
 # env-переменные
 ENV_MOD_ONLY = 'MOD_ONLY'
 ENV_SLIM = 'BOT_SLIM'
 ENV_CORE = 'BOT_CORE'
+ENV_FULL = 'BOT_FULL'
 ENV_DISABLED = 'DISABLED_COGS'
 ENV_EXTRA = 'EXTRA_COGS'
 
@@ -156,11 +193,14 @@ def is_helper(filename):
     return filename in HELPER_COGS
 
 
-def select_cog_files(files, mod_only=False, slim=False, core=False, disabled=None, extra=None):
+def select_cog_files(files, mod_only=False, slim=False, core=False, full=False,
+                     disabled=None, extra=None):
     """Разделить файлы ./cogs на (загрузить, отключить).
 
     files — имена файлов с расширением '.py' (как из os.listdir).
     disabled / extra — списки или строки через запятую; имена в любом виде.
+    Профиль по приоритету: full (всё) → core → slim → mod_only → LEAN
+    (лёгкий боевой состав по умолчанию, когда флагов нет вообще).
     Возвращает кортеж (enabled, disabled) — оба отсортированы, без хелперов.
     """
     disabled_names = _parse_list(disabled)
@@ -183,18 +223,28 @@ def select_cog_files(files, mod_only=False, slim=False, core=False, disabled=Non
         if mod_only and f not in MOD_ONLY_COGS and mod not in extra_names:
             gone.append(f)
             continue
+        if not full and not (mod_only or slim or core) \
+                and f not in LEAN_COGS and mod not in extra_names:
+            gone.append(f)
+            continue
         enabled.append(f)
     return sorted(enabled), sorted(gone)
 
 
 def select_from_environment(files, environ=None):
-    """Обёртка: прочитать MOD_ONLY / BOT_SLIM / BOT_CORE / DISABLED / EXTRA."""
+    """Обёртка: прочитать профиль из окружения.
+
+    BOT_FULL=1 — все модули; MOD_ONLY / BOT_SLIM / BOT_CORE — старые
+    профили; без флагов — LEAN (лёгкий боевой состав по умолчанию).
+    DISABLED_COGS / EXTRA_COGS работают поверх любого профиля.
+    """
     env = os.environ if environ is None else environ
     return select_cog_files(
         files,
         mod_only=env_flag(ENV_MOD_ONLY, environ=env),
         slim=env_flag(ENV_SLIM, environ=env),
         core=env_flag(ENV_CORE, environ=env),
+        full=env_flag(ENV_FULL, environ=env),
         disabled=env.get(ENV_DISABLED, ''),
         extra=env.get(ENV_EXTRA, ''),
     )

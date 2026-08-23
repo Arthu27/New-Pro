@@ -50,6 +50,7 @@ def register(ctx):
             'total': data['total'],
             'slash': data['slash'] + data['subs'],
             'prefix': data['prefix'],
+            'modules': data.get('modules'),
             'categories': data['categories'],
             'shown': len(items),
             'commands': items,
