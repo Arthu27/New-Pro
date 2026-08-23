@@ -62,7 +62,7 @@
 .gd-chip-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:999px;padding:4px 10px;background:var(--surface-2,color-mix(in srgb, var(--text) 5%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));margin:0 6px 6px 0}
 .gd-chip-tag button{background:none;border:none;color:inherit;cursor:pointer;padding:0;display:inline-flex}
 .gd-chip-tag button:hover{color:var(--err,#e05d5d)}
-.gd-feed{display:flex;flex-direction:column;gap:0}
+.gd-feed{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:0 22px}
 .gd-inc{display:flex;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line-2,color-mix(in srgb, var(--text) 10%, transparent))}
 .gd-inc:last-child{border-bottom:none}
 .gd-inc-ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:13px;flex-shrink:0;color:var(--ac);background:color-mix(in srgb, var(--ac) 10%, transparent)}
@@ -100,6 +100,10 @@
     <div class="gd-opt">
       <label for="gdPun">Общая мера наказания</label>
       <select id="gdPun" aria-label="Общая мера наказания"></select>
+    </div>
+    <div class="gd-opt">
+      <label for="gdBotAct">Мера для ботов-нарушителей</label>
+      <select id="gdBotAct" aria-label="Мера для ботов-нарушителей"></select>
     </div>
     <label class="gd-check" for="gdKickBots">
       <input type="checkbox" id="gdKickBots" checked>
@@ -143,10 +147,33 @@
     </div>
   </div>
   <div class="gd-panel">
-    <h3><i class="fas fa-tower-broadcast"></i> Последние инциденты</h3>
-    <div class="gd-sub">Кого остановил Щит и что он с этим сделал — последние 30 срабатываний.</div>
-    <div class="gd-feed" id="gdFeed"></div>
+    <h3><i class="fas fa-robot"></i> Кто может добавлять ботов</h3>
+    <div class="gd-sub">Только эти люди и роли могут звать на сервер ботов — остальных
+      приготовителей Щит накажет, а самого бота выгонит обратно. Сюда же попадают
+      все из общего белого списка (слева) и владелец сервера.</div>
+    <div class="gd-wl-col">
+      <div class="gd-wl-title"><i class="fas fa-user"></i> Пользователи</div>
+      <div class="gd-wl-add">
+        <input id="gdWlBUIn" type="text" inputmode="numeric" placeholder="ID пользователя" aria-label="ID пользователя, которому можно добавлять ботов">
+        <button type="button" class="btn btn-primary" id="gdWlBUAdd" aria-label="Разрешить пользователю добавлять ботов" title="Добавить"><i class="fas fa-plus"></i></button>
+      </div>
+      <div id="gdWlBU"></div>
+    </div>
+    <div class="gd-wl-col">
+      <div class="gd-wl-title"><i class="fas fa-user-tag"></i> Роли</div>
+      <div class="gd-wl-add">
+        <input id="gdWlBRIn" type="text" inputmode="numeric" placeholder="ID роли" aria-label="ID роли, которой можно добавлять ботов">
+        <button type="button" class="btn btn-primary" id="gdWlBRAdd" aria-label="Разрешить роли добавлять ботов" title="Добавить"><i class="fas fa-plus"></i></button>
+      </div>
+      <div id="gdWlBR"></div>
+    </div>
   </div>
+</div>
+
+<div class="gd-panel" style="margin-top:12px">
+  <h3><i class="fas fa-tower-broadcast"></i> Последние инциденты</h3>
+  <div class="gd-sub">Кого остановил Щит и что он с этим сделал — последние 30 срабатываний.</div>
+  <div class="gd-feed" id="gdFeed"></div>
 </div>
 
 <div class="gd-actions">
@@ -178,6 +205,8 @@ var EVENTS = [];
 var PUNISHMENTS = [];
 var WL_U = [];
 var WL_R = [];
+var WL_BU = [];
+var WL_BR = [];
 var NAMES = { users: {}, roles: {} };
 
 function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }
@@ -209,6 +238,7 @@ function renderHero() {
       (CFG.enabled ? 'щит активен' : 'щит выключен') + '</span>' +
     '<span class="gd-chip"><i class="fas fa-bolt"></i>событий под защитой: <b>' + on + ' / ' + EVENTS.length + '</b></span>' +
     '<span class="gd-chip"><i class="fas fa-gavel"></i>мерa: <b>' + esc(punLabel(CFG.punishment)) + '</b></span>' +
+    '<span class="gd-chip"><i class="fas fa-robot"></i>боты: <b>' + esc(punLabel(CFG.bot_action)) + '</b></span>' +
     '<span class="gd-chip"><i class="fas fa-route"></i>канал тревог: <a href="/channel-settings">настройка</a></span>';
 }
 
@@ -221,6 +251,10 @@ function renderPunSelect() {
   var sel = document.getElementById('gdPun');
   sel.innerHTML = PUNISHMENTS.map(function (p) {
     return '<option value="' + esc(p.key) + '"' + (p.key === CFG.punishment ? ' selected' : '') + '>' + esc(p.label) + '</option>';
+  }).join('');
+  var bsel = document.getElementById('gdBotAct');
+  bsel.innerHTML = PUNISHMENTS.map(function (p) {
+    return '<option value="' + esc(p.key) + '"' + (p.key === CFG.bot_action ? ' selected' : '') + '>' + esc(p.label) + '</option>';
   }).join('');
 }
 
@@ -250,12 +284,14 @@ function renderEvents() {
   }).join('');
 }
 
+function wlIsUser(kind) { return kind === 'u' || kind === 'bu'; }
+
 function wlChip(kind, id) {
-  var nm = (kind === 'u' ? NAMES.users[id] : NAMES.roles[id]);
+  var nm = (wlIsUser(kind) ? NAMES.users[id] : NAMES.roles[id]);
   return '<span class="gd-chip-tag">' +
-    '<i class="fas ' + (kind === 'u' ? 'fa-user' : 'fa-user-tag') + '"></i>' +
+    '<i class="fas ' + (wlIsUser(kind) ? 'fa-user' : 'fa-user-tag') + '"></i>' +
     esc(nm || id) +
-    '<button type="button" data-gd-wl="' + kind + ':' + esc(id) + '" aria-label="Убрать из белого списка" title="Убрать"><i class="fas fa-xmark"></i></button></span>';
+    '<button type="button" data-gd-wl="' + kind + ':' + esc(id) + '" aria-label="Убрать из списка" title="Убрать"><i class="fas fa-xmark"></i></button></span>';
 }
 
 function renderWl() {
@@ -264,6 +300,12 @@ function renderWl() {
   bu.innerHTML = WL_U.length ? WL_U.map(function (id) { return wlChip('u', id); }).join('')
     : '<div class="gd-empty"><i class="fas fa-circle-info"></i>Пользователей в списке нет</div>';
   br.innerHTML = WL_R.length ? WL_R.map(function (id) { return wlChip('r', id); }).join('')
+    : '<div class="gd-empty"><i class="fas fa-circle-info"></i>Ролей в списке нет</div>';
+  var bbu = document.getElementById('gdWlBU');
+  var bbr = document.getElementById('gdWlBR');
+  bbu.innerHTML = WL_BU.length ? WL_BU.map(function (id) { return wlChip('bu', id); }).join('')
+    : '<div class="gd-empty"><i class="fas fa-circle-info"></i>Пользователей в списке нет</div>';
+  bbr.innerHTML = WL_BR.length ? WL_BR.map(function (id) { return wlChip('br', id); }).join('')
     : '<div class="gd-empty"><i class="fas fa-circle-info"></i>Ролей в списке нет</div>';
 }
 
@@ -302,6 +344,7 @@ function renderAll() {
   document.getElementById('gdMaster').disabled = !CAN_EDIT;
   document.getElementById('gdKickBots').disabled = !CAN_EDIT;
   document.getElementById('gdPun').disabled = !CAN_EDIT;
+  document.getElementById('gdBotAct').disabled = !CAN_EDIT;
   document.getElementById('gdSave').disabled = !CAN_EDIT;
   document.getElementById('gdSave2').disabled = !CAN_EDIT;
 }
@@ -316,6 +359,8 @@ async function gdLoad() {
       PUNISHMENTS = d.cfg.punishments || [];
       WL_U = d.cfg.whitelist_users || [];
       WL_R = d.cfg.whitelist_roles || [];
+      WL_BU = d.cfg.bot_whitelist_users || [];
+      WL_BR = d.cfg.bot_whitelist_roles || [];
       NAMES = d.cfg.resolved || { users: {}, roles: {} };
     } else {
       toast(d.error || 'Не удалось загрузить Щит', false);
@@ -342,10 +387,13 @@ function collectPayload() {
   return {
     enabled: document.getElementById('gdMaster').checked,
     punishment: document.getElementById('gdPun').value,
+    bot_action: document.getElementById('gdBotAct').value,
     kick_unauthorized_bots: document.getElementById('gdKickBots').checked,
     events: events,
     whitelist_users: WL_U.slice(),
-    whitelist_roles: WL_R.slice()
+    whitelist_roles: WL_R.slice(),
+    bot_whitelist_users: WL_BU.slice(),
+    bot_whitelist_roles: WL_BR.slice()
   };
 }
 
@@ -362,6 +410,7 @@ async function gdSave() {
     if (d.cfg) {
       CFG = d.cfg; EVENTS = d.cfg.events || EVENTS;
       WL_U = d.cfg.whitelist_users || WL_U; WL_R = d.cfg.whitelist_roles || WL_R;
+      WL_BU = d.cfg.bot_whitelist_users || WL_BU; WL_BR = d.cfg.bot_whitelist_roles || WL_BR;
       NAMES = d.cfg.resolved || NAMES;
     }
     if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
@@ -370,14 +419,21 @@ async function gdSave() {
   }
 }
 
+function wlList(kind) {
+  if (kind === 'u') return { list: WL_U, input: 'gdWlUIn' };
+  if (kind === 'r') return { list: WL_R, input: 'gdWlRIn' };
+  if (kind === 'bu') return { list: WL_BU, input: 'gdWlBUIn' };
+  return { list: WL_BR, input: 'gdWlBRIn' };
+}
+
 function wlAdd(kind) {
-  var inp = document.getElementById(kind === 'u' ? 'gdWlUIn' : 'gdWlRIn');
+  var ref = wlList(kind);
+  var inp = document.getElementById(ref.input);
   var v = (inp.value || '').trim();
   if (!/^\d{17,22}$/.test(v)) { toast('ID — это 17-22 цифры', false); return; }
-  var list = kind === 'u' ? WL_U : WL_R;
-  if (list.indexOf(v) !== -1) { toast('Уже в белом списке', false); return; }
+  if (ref.list.indexOf(v) !== -1) { toast('Уже в списке', false); return; }
   if (!CAN_EDIT) return;
-  list.push(v);
+  ref.list.push(v);
   inp.value = '';
   renderWl();
   toast('Добавлено — не забудьте сохранить', true);
@@ -385,8 +441,12 @@ function wlAdd(kind) {
 
 document.getElementById('gdWlUAdd').addEventListener('click', function () { wlAdd('u'); });
 document.getElementById('gdWlRAdd').addEventListener('click', function () { wlAdd('r'); });
+document.getElementById('gdWlBUAdd').addEventListener('click', function () { wlAdd('bu'); });
+document.getElementById('gdWlBRAdd').addEventListener('click', function () { wlAdd('br'); });
 document.getElementById('gdWlUIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') wlAdd('u'); });
 document.getElementById('gdWlRIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') wlAdd('r'); });
+document.getElementById('gdWlBUIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') wlAdd('bu'); });
+document.getElementById('gdWlBRIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') wlAdd('br'); });
 document.getElementById('gdSave').addEventListener('click', gdSave);
 document.getElementById('gdSave2').addEventListener('click', gdSave);
 document.getElementById('gdMaster').addEventListener('change', function () {
@@ -396,7 +456,7 @@ document.addEventListener('click', function (e) {
   var b = e.target.closest('[data-gd-wl]');
   if (!b) return;
   var parts = b.getAttribute('data-gd-wl').split(':');
-  var list = parts[0] === 'u' ? WL_U : WL_R;
+  var list = wlList(parts[0]).list;
   var i = list.indexOf(parts[1]);
   if (i !== -1) list.splice(i, 1);
   renderWl();

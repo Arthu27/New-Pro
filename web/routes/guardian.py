@@ -57,6 +57,24 @@ def _resolve_names(gid, cfg):
             _log.debug('guardian: resolve role %s: %s', rid, _ex)
             r = None
         roles[str(rid)] = getattr(r, 'name', None) if r else None
+    for uid in cfg.get('bot_whitelist_users') or []:
+        if str(uid) in users:
+            continue
+        try:
+            m = guild.get_member(int(uid))
+        except (TypeError, ValueError) as _ex:
+            _log.debug('guardian: resolve bot-wl member %s: %s', uid, _ex)
+            m = None
+        users[str(uid)] = str(m) if m else None
+    for rid in cfg.get('bot_whitelist_roles') or []:
+        if str(rid) in roles:
+            continue
+        try:
+            r = guild.get_role(int(rid))
+        except (TypeError, ValueError) as _ex:
+            _log.debug('guardian: resolve bot-wl role %s: %s', rid, _ex)
+            r = None
+        roles[str(rid)] = getattr(r, 'name', None) if r else None
     return users, roles
 
 
@@ -80,11 +98,14 @@ def guardian_view(gid):
     return {
         'enabled': bool(cfg.get('enabled')),
         'punishment': cfg.get('punishment'),
+        'bot_action': cfg.get('bot_action'),
         'kick_unauthorized_bots': bool(cfg.get('kick_unauthorized_bots')),
         'events': events,
         'punishments': [{'key': k, 'label': v} for k, v in G.PUNISHMENTS],
         'whitelist_users': list(cfg.get('whitelist_users') or []),
         'whitelist_roles': list(cfg.get('whitelist_roles') or []),
+        'bot_whitelist_users': list(cfg.get('bot_whitelist_users') or []),
+        'bot_whitelist_roles': list(cfg.get('bot_whitelist_roles') or []),
         'incidents': incidents,
         'resolved': resolved,
         'events_on': sum(1 for e in events if e['enabled']),
@@ -143,6 +164,10 @@ def register(ctx):
         if pun not in G.PUNISH_LABELS:
             return jsonify({'success': False,
                             'error': 'Неизвестная мера наказания'}), 400
+        bact = str(data.get('bot_action') or 'strip')
+        if bact not in G.PUNISH_LABELS:
+            return jsonify({'success': False,
+                            'error': 'Неизвестная мера для ботов'}), 400
         # инциденты не доверяем клиенту — берём с диска
         current = G.load_cfg(gid)
         data['incidents'] = current.get('incidents') or []

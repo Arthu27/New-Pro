@@ -7,8 +7,13 @@
 - массово банить и кикать,
 - лепить вебхуки,
 - тащить на сервер чужих ботов,
+- а также если БОТ с правами сам начнёт бесчинствовать (взломанный токен,
+  саботаж) — для ботов-нарушителей есть отдельная мера,
 — Щит мгновенно останавливает: снимает роли (или кикает/банит) виновника,
 кикает неавторизованного бота и шлёт красивую тревогу в лог-канал.
+
+Приглашать ботов могут только люди из выделенного белого списка
+«кто может добавлять ботов» (+ общий белый список и владелец).
 
 Всё настраивается из панели: страница /guardian (пороги, меры, белый список),
 канал тревог — на странице /channel-settings (маршрут guardian_channel,
@@ -112,10 +117,13 @@ def guardian_default():
     return {
         'enabled': True,
         'punishment': 'strip',
+        'bot_action': 'strip',
         'kick_unauthorized_bots': True,
         'events': _default_events(),
         'whitelist_users': [],
         'whitelist_roles': [],
+        'bot_whitelist_users': [],
+        'bot_whitelist_roles': [],
         'incidents': [],
     }
 
@@ -151,10 +159,14 @@ def guardian_normalize(raw):
     base['enabled'] = bool(raw.get('enabled', base['enabled']))
     pun = str(raw.get('punishment') or base['punishment'])
     base['punishment'] = pun if pun in PUNISH_LABELS else 'strip'
+    bact = str(raw.get('bot_action') or base['bot_action'])
+    base['bot_action'] = bact if bact in PUNISH_LABELS else 'strip'
     base['kick_unauthorized_bots'] = bool(raw.get(
         'kick_unauthorized_bots', base['kick_unauthorized_bots']))
     base['whitelist_users'] = _clean_ids(raw.get('whitelist_users'))
     base['whitelist_roles'] = _clean_ids(raw.get('whitelist_roles'))
+    base['bot_whitelist_users'] = _clean_ids(raw.get('bot_whitelist_users'))
+    base['bot_whitelist_roles'] = _clean_ids(raw.get('bot_whitelist_roles'))
     raw_events = raw.get('events')
     if isinstance(raw_events, dict):
         for key, ev in base['events'].items():
@@ -207,6 +219,30 @@ def is_whitelisted(cfg, user_id, role_ids=()):
     if uid in set(str(x) for x in cfg.get('whitelist_users') or ()):
         return True
     wl_roles = set(str(x) for x in cfg.get('whitelist_roles') or ())
+    for rid in role_ids or ():
+        if str(rid) in wl_roles:
+            return True
+    return False
+
+
+def can_add_bots(cfg, user_id, role_ids=(), owner_id=0, bot_id=0):
+    """Может ли этот человек ЗВАТЬ ботов на сервер.
+
+    Разрешено: владельцу сервера; самому боту-Щиту; общему белому списку
+    (доверенные — им можно всё); выделенному списку «кто может добавлять
+    ботов» (пользователи и роли). Остальным — нельзя.
+    """
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return False
+    if uid and uid in (int(owner_id or 0), int(bot_id or 0)):
+        return True
+    if is_whitelisted(cfg, uid, role_ids):
+        return True
+    if str(uid) in set(str(x) for x in cfg.get('bot_whitelist_users') or ()):
+        return True
+    wl_roles = set(str(x) for x in cfg.get('bot_whitelist_roles') or ())
     for rid in role_ids or ():
         if str(rid) in wl_roles:
             return True
@@ -307,6 +343,15 @@ class Guardian(commands.Cog):
             return
         self._counter.reset(key)
         action = ev.get('action') or cfg.get('punishment', 'strip')
+        # Если нарушитель — БОТ, применяем отдельную меру для ботов:
+        # у бота «вечная жизнь» не нужна — его можно и удалить сразу.
+        try:
+            _actor_member = guild.get_member(int(actor_id)) if actor_id else None
+        except Exception as _ex:
+            _log.debug('guardian: актёр не резолвится: %s', _ex)
+            _actor_member = None
+        if _actor_member is not None and getattr(_actor_member, 'bot', False):
+            action = cfg.get('bot_action', 'strip')
         applied = await self._punish(guild, actor_id, action, spec)
         await self._alert(guild, spec, actor_id, actor_name, action, applied,
                           detail, count)
@@ -461,14 +506,20 @@ class Guardian(commands.Cog):
         cfg = load_cfg(member.guild.id)
         if not cfg.get('enabled'):
             return
+        ev = (cfg.get('events') or {}).get('bot_add') or {}
+        if not ev.get('enabled'):
+            return
         actor = await self._actor(member.guild, discord.AuditLogAction.bot_add,
                                   target_id=member.id)
         if not actor[0]:
             return
-        if actor[0] in (getattr(member.guild, 'owner_id', 0),
-                        getattr(getattr(self.bot, 'user', None), 'id', 0)):
-            return
-        if is_whitelisted(cfg, actor[0], self._member_role_ids(member.guild, actor[0])):
+        # выделенный белый список «кто может добавлять ботов» + общий + владелец
+        if can_add_bots(cfg, actor[0],
+                        self._member_role_ids(member.guild, actor[0]),
+                        owner_id=getattr(member.guild, 'owner_id', 0),
+                        bot_id=getattr(getattr(self.bot, 'user', None), 'id', 0)):
+            _log.info('guardian: бот %s добавлен разрешённым %s — ок',
+                      member.id, actor[0])
             return
         kicked = False
         if cfg.get('kick_unauthorized_bots'):
@@ -478,7 +529,12 @@ class Guardian(commands.Cog):
                 kicked = True
             except Exception as _ex:
                 _log.warning('guardian: бот %s не кикнут: %s', member.id, _ex)
-        detail = (f'бот `{member}` — ' + ('кикнут' if kicked else 'кикнуть не удалось'))
+        if kicked:
+            detail = f'бот `{member}` — кикнут'
+        elif cfg.get('kick_unauthorized_bots'):
+            detail = f'бот `{member}` — кикнуть не удалось'
+        else:
+            detail = f'бот `{member}` — кик ботов выключен в настройках'
         # bot_add по умолчанию срабатывает с первого раза (порог 1)
         await self._touch(member.guild, 'bot_add', actor[0], actor[1], detail=detail)
 

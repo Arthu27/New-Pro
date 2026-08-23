@@ -571,6 +571,8 @@ try:
     from cogs import guardian as _GD
 
     _gc = _GD.guardian_default()
+    # демо: kira.watch — единственная (кроме владельца), кто может звать ботов
+    _gc['bot_whitelist_users'] = ['823456789012345680']
     _gc['incidents'] = [
         {'ts': int(_gt.time() - 5 * 3600), 'event': 'channel_delete',
          'label': 'Удаление каналов', 'actor_id': '923456789012345681',
