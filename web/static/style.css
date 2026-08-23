@@ -1069,7 +1069,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 
 .btn-sm { padding: 4px 10px; font-size: var(--fs-sm); border-radius: var(--r-sm); }
 .btn-icon {
-  width: 30px; height: 30px; padding: 0;
+  width: 34px; height: 34px; padding: 0;
   display: inline-grid; place-items: center;
   border-radius: var(--r-sm);
 }
@@ -1916,7 +1916,7 @@ a.feed-item:hover .feed-item-title { color: var(--ac); }
 /* ── 26. Адаптив ───────────────────────────────────────────── */
 .mobile-menu {
   display: none;
-  width: 34px; height: 34px;
+  width: 38px; height: 38px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
@@ -4466,7 +4466,7 @@ input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
 }
 .cmd-modal-close {
   position: absolute; top: 14px; right: 14px;
-  width: 30px; height: 30px; border: 1px solid var(--line);
+  width: 34px; height: 34px; border: 1px solid var(--line);
   background: var(--surface); color: var(--text-3);
   border-radius: 10px; cursor: pointer; font-size: 15px;
   transition: color .12s, border-color .12s;
@@ -5293,3 +5293,30 @@ img[src*="emblem-dragon"] {
 input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* ═══ Комфорт нажатий: без задержки тапа, «серых пикселей» и мисскликов ═══
+   1) touch-action: manipulation — убирает системную паузу ~300 мс, которую
+      браузер выжидает на случай двойного тапа (кнопки «не нажимаются»).
+   2) -webkit-tap-highlight-color: transparent — убирает серый квадрат-вспышку
+      при касании на iOS/Android («пиксели» вместо нормальной реакции).
+   3) На тачах зона нажатия минимум 40–44px — палец попадает с первого раза. */
+html { touch-action: manipulation; }
+body { -webkit-tap-highlight-color: transparent; }
+a, button, .btn, [role="button"], label, select, summary {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+button, .btn, .control-btn { -webkit-user-select: none; user-select: none; }
+
+@media (hover: none) and (pointer: coarse) {
+  .btn { min-height: 42px; padding-top: 10px; padding-bottom: 10px; }
+  .btn-sm { min-height: 36px; }
+  .btn-icon { width: 44px; height: 44px; }
+  .mobile-menu { width: 44px; height: 44px; }
+  .cmd-modal-close { width: 40px; height: 40px; }
+  .pm-ico-btn { width: 42px !important; height: 42px !important; font-size: 14px !important; }
+  .ms-del { min-width: 40px !important; min-height: 40px !important; padding: 8px !important; }
+  .ms-step { grid-template-columns: 76px 1fr 88px 92px 44px !important; }
+  .rule-del { width: 40px !important; height: 40px !important; }
+  input, select, textarea { font-size: 16px !important; }
+}

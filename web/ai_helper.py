@@ -737,6 +737,21 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         {"provider":"fallback","latency_ms":11 }
         )
 
+        # 1.6. «Как настроить X?» — пошаговые гайды из базы знаний.
+        # Стоит раньше остальных блоков, чтобы «как настроить варны/тикеты/...»
+        # не перехватывалось общими ключами (экономика, тикеты и т.д.).
+    # «настро» ловит и infinitive «настроить», и «настройку» — но не «настроение»
+    if (any (k in q_lower for k in ["настро","как включить","как выключить","где включается","где выключается","куда нажать","как поставить","как подключить","как завести","как поменять","как сменить"])and "настроени" not in q_lower ):
+        try :
+            from web .ai_knowledge import build_setup_faq
+            return (
+            build_setup_faq (last_msg ),
+            "moebius-offline-ai",
+            {"provider":"fallback","latency_ms":11 }
+            )
+        except Exception as _ex:
+            _log.debug("_local_moebius_fallback(): подавлено: %s", _ex )
+
         # 2. Как дела / Как жизнь / Что нового
     if any (k in q_lower for k in ["как дела","как жизнь","что нового","как ты","как самочувствие","насылсын","набер"]):
         return (
@@ -765,7 +780,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         )
 
         # 5. Прощание (Пока / До свидания / Удачи)
-    if any (k in q_lower for k in ["пока","до свидания","удачи","спокойной ночи","до встречи","бывай"]):
+    # \b-границы: иначе «покажи правила» ошибочно ловилось подстрокой «пока»
+    if re .search (r'\bпока\b|до свидания|\bудачи\b|спокойной ночи|до встречи|\bбывай\b',q_lower ):
         return (
         "До встречи, дружище! Я остаюсь на посту и продолжаю следить за безопасностью сервера. 🛡️ Удачи!",
         "moebius-offline-ai",

@@ -193,6 +193,19 @@
   /* ── 6. Live-refresh ────────────────────────────────────── */
   var liveFns = [];
   var livePaused = false;
+
+  /* «Противоударная» защита нажатий: пока палец/курсор нажаты (и чуть-чуть
+     после отпускания), живые перерисовки списков откладываются — иначе
+     элемент мог исчезнуть из-под пальца в середине клика, и нажатие
+     «уходило в никуда» (те самые «пиксели»). */
+  var liveHoldUntil = 0;
+  function holdLiveRefresh(ms) {
+    var t = Date.now() + ms;
+    if (t > liveHoldUntil) liveHoldUntil = t;
+  }
+  window.addEventListener('pointerdown', function () { holdLiveRefresh(2600); }, { capture: true, passive: true });
+  window.addEventListener('pointerup', function () { holdLiveRefresh(900); }, { capture: true, passive: true });
+  window.addEventListener('pointercancel', function () { holdLiveRefresh(700); }, { capture: true, passive: true });
   Object.defineProperty(window, '__modLivePaused', {
     get: function () { return livePaused; },
     set: function (v) { livePaused = !!v; }
@@ -259,6 +272,7 @@
   setInterval(function () {
     if (livePaused) return;
     var now = Date.now();
+    if (now < liveHoldUntil) return;
     liveFns.forEach(function (e) {
       if (now - e.last >= e.ms) { e.last = now; try { e.fn(); } catch (err) {} }
     });
