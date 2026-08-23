@@ -156,14 +156,19 @@
         setTimeout(function () {
           btn.innerHTML = '<i class="fas fa-arrows-rotate"></i> Синхронизировать';
         }, 2000);
+      } else {
+        window.showToast(d.error || 'Не удалось синхронизировать', false);
       }
-    } catch (e) { /* сеть */ }
+    } catch (e) { window.showToast('Ошибка сети', false); }
     btn.disabled = false;
   }
 
   async function doRestart() {
     window.askConfirm('Перезапустить бота', 'Перезапустить бота? Это прервёт работу на несколько секунд.', function () {
-      fetch('/api/bot/restart', { method: 'POST' }).catch(function (e) { /* сеть */ });
+      fetch('/api/bot/restart', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d && d.success) window.showToast('Команда перезапуска отправлена', true);
+        else window.showToast((d && d.error) || 'Не удалось перезапустить', false);
+      }).catch(function () { window.showToast('Ошибка сети', false); });
     }, { icon_fa: 'fa-arrows-rotate', okText: 'Перезапустить', danger: true });
   }
 

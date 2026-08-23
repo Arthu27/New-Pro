@@ -41,6 +41,12 @@ def register(ctx):
             if name .startswith ('_')or name in NON_COG :
                 continue 
             all_cogs .append (name )
+        if bot is None :
+            from services .demo_cogs import demo_mode ,is_loaded 
+            if demo_mode ():
+                # демо-витрина: живого бота нет, модули «загружены»,
+                # выключенные из менеджера — честно показаны выключенными
+                return jsonify ([{'name':c ,'loaded':is_loaded (c )}for c in sorted (all_cogs )])
         loaded =[ext .split ('.')[-1 ]for ext in (bot .extensions if bot else [])]
         return jsonify ([{
         'name':c ,

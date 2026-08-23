@@ -401,9 +401,14 @@ def register(ctx):
     def api_cog_load ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         d =request .get_json (silent =True )or {}
         name =(d .get ('name')or d .get ('cog')or '').strip ()
+        if not bot :
+            if _app ._demo_mode ()and name :
+                from services .demo_cogs import set_loaded 
+                set_loaded (name .replace ('cogs.','',1 ),True )
+                return jsonify ({'ok':True ,'demo':True ,'name':name })
+            return jsonify ({'error':'Бот офлайн'}),503 
         if not name :
             return jsonify ({'error':'Не указано имя расширения (name/cog)'}),400 
             # Accept both "cogs.foo" and "foo" forms
@@ -432,9 +437,14 @@ def register(ctx):
     def api_cog_unload ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         d =request .get_json (silent =True )or {}
         name =(d .get ('name')or d .get ('cog')or '').strip ()
+        if not bot :
+            if _app ._demo_mode ()and name :
+                from services .demo_cogs import set_loaded 
+                set_loaded (name .replace ('cogs.','',1 ),False )
+                return jsonify ({'ok':True ,'demo':True ,'name':name })
+            return jsonify ({'error':'Бот офлайн'}),503 
         if not name :
             return jsonify ({'error':'Не указано имя расширения'}),400 
         if not name .startswith ('cogs.'):
@@ -455,9 +465,14 @@ def register(ctx):
     def api_cog_reload ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
         d =request .get_json (silent =True )or {}
         name =(d .get ('name')or d .get ('cog')or '').strip ()
+        if not bot :
+            if _app ._demo_mode ()and name :
+                from services .demo_cogs import set_loaded 
+                set_loaded (name .replace ('cogs.','',1 ),True )
+                return jsonify ({'ok':True ,'demo':True ,'name':name })
+            return jsonify ({'error':'Бот офлайн'}),503 
         if not name :
             return jsonify ({'error':'Не указано имя расширения'}),400 
         if not name .startswith ('cogs.'):
@@ -476,7 +491,12 @@ def register(ctx):
     def api_cog_reload_all ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Бот офлайн'}),503 
+        if not bot :
+            if _app ._demo_mode ():
+                from services .demo_cogs import save_states 
+                save_states ({})           # «обновить всё» = вернуть всё во включённое
+                return jsonify ({'ok':True ,'demo':True ,'results':[]})
+            return jsonify ({'error':'Бот офлайн'}),503 
         results =[]
         for ext in list (bot .extensions .keys ()):
             try :

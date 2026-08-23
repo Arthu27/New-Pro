@@ -321,12 +321,24 @@ PAGE_COGS = {
 
 
 def _off_cog_names():
-    """Множество имён когов, отключённых политикой cogs_policy из окружения."""
+    """Множество имён когов, выключенных сейчас.
+
+    Бой: политика cogs_policy из окружения (MOD_ONLY/LEAN/...).
+    Демо (DEMO_MODE=1): живого бота нет — всё включено по умолчанию,
+    а выключенные через менеджер модулей (data/demo_cog_states.json)
+    честно светятся чипом «выкл», пока их не включат обратно.
+    """
     try:
         import sys
         repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         if repo not in sys.path:
             sys.path.insert(0, repo)
+        from services.demo_cogs import demo_mode, load_states
+        if demo_mode():
+            names = {f[:-3] for f in os.listdir(os.path.join(repo, 'cogs'))
+                     if f.endswith('.py')}
+            states = load_states()
+            return frozenset(n for n in names if states.get(n, True) is False)
         import cogs_policy
         files = [f for f in os.listdir(os.path.join(repo, 'cogs')) if f.endswith('.py')]
         _on, off = cogs_policy.select_from_environment(files)

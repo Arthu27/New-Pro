@@ -3175,6 +3175,9 @@ def api_send_embed ():
 @role_required ('owner')
 def api_bot_restart ():
     if not bot_instance :
+        if _demo_mode ():
+            _log_panel_action ('BOT_RESTART',session .get ('username'))
+            return jsonify ({'success':True ,'demo':True })
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
     _log_panel_action ('BOT_RESTART',session .get ('username'))
     import threading ,time ,os ,sys 
@@ -3248,6 +3251,10 @@ def api_bot_gc ():
 @role_required ('admin')
 def api_bot_sync ():
     if not bot_instance :
+        if _demo_mode ():
+            # витрина без живого бота: команда «сработала», страница живая
+            _log_panel_action ('BOT_SYNC',session .get ('username'))
+            return jsonify ({'success':True ,'demo':True ,'synced_guilds':['Aether Demo']})
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
     async def do ():
     # Guild-specific sync (anыnda etkili) + global sync

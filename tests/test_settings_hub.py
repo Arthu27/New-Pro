@@ -351,5 +351,52 @@ check(any(m.__name__ == 'web.routes.mod_settings' for m in _re._MODULES)
       and any(m.__name__ == 'web.routes.channel_settings' for m in _re._MODULES),
       'маршруты настроек модерации и хаба каналов зарегистрированы')
 
+# ═══ 7. Демо-витрина: всё включено, кнопки живые ══════════════════════════
+print('== демо-режим: без «выкл», кнопки работают ==')
+check(os.environ.get('DEMO_MODE') == '1', 'тест бежит в демо-режиме')
+check(PM.module_off_paths() == frozenset(),
+      'в демо ни одна страница не приглушена (всё включено)')
+body = client.get('/').get_data(as_text=True)
+check('nav-off-chip' not in body, 'в меню нет чипов «выкл»')
+
+r = client.get('/api/cogs')
+cogs = r.get_json()
+check(r.status_code == 200 and len(cogs) > 50,
+      f'менеджер модулей видит все модули ({len(cogs)})')
+check(all(c['loaded'] for c in cogs), 'в демо все модули «загружены»')
+
+r = client.post('/api/cogs/unload', json={'name': 'economy_cog'})
+check(r.status_code == 200 and r.get_json().get('ok') is True,
+      'выключение модуля в демо — успех, а не «Бот офлайн»')
+loaded_now = {c['name']: c['loaded'] for c in client.get('/api/cogs').get_json()}
+check(loaded_now.get('economy_cog') is False,
+      'выключенный модуль честно показывается выключенным')
+check('/economy' in PM.module_off_paths(),
+      'выключенный модуль даёт чип «выкл» в меню')
+r = client.post('/api/cogs/load', json={'name': 'economy_cog'})
+loaded_now = {c['name']: c['loaded'] for c in client.get('/api/cogs').get_json()}
+check(r.get_json().get('ok') is True and loaded_now.get('economy_cog') is True,
+      'включение обратно тоже работает')
+check(PM.module_off_paths() == frozenset(),
+      'после включения меню снова без «выкл»')
+
+r = client.post('/api/cogs/reload', json={'name': 'level_cog'})
+check(r.status_code == 200 and r.get_json().get('ok') is True,
+      'перезагрузка модуля в демо — успех')
+r = client.post('/api/cogs/reload-all')
+check(r.status_code == 200 and r.get_json().get('ok') is True,
+      '«обновить все модули» в демо — успех')
+
+r = client.post('/api/bot/sync', json={})
+d = r.get_json()
+check(r.status_code == 200 and d.get('success') is True and d.get('demo') is True,
+      'кнопка «Синхронизировать» в демо — успех')
+r = client.post('/api/bot/restart')
+check(r.status_code == 200 and r.get_json().get('success') is True,
+      'кнопка «Перезапуск» в демо — успех')
+
+from services import demo_cogs as DC  # noqa: E402
+check(DC.load_states() == {}, 'после reload-all демо-состояния сброшены (всё вкл)')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
