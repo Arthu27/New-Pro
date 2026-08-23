@@ -389,7 +389,7 @@ class AIModeration (commands .Cog ):
             log.debug("on_message(): подавлено: %s", _ex)
 
             # COMMANDS 
-    @commands .command (name ="aimod")
+    @commands .command (name ="aimod", description ="AI-модерация: статус, включение (on), выключение (off)")
     @commands .has_permissions (administrator =True )
     async def aimod (self ,ctx ,toggle :str =None ):
         """Toggle AI moderation on/off"""
@@ -409,36 +409,43 @@ class AIModeration (commands .Cog ):
         if toggle in ("on","вкл","enable","true","1"):
             cfg ["enabled"]=True 
             self .save_config (str (ctx .guild .id ),cfg )
-            await ctx .send (" AI Модерация **ВКЛЮЧЕНА**")
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'ai','AI-модерация включена','Слежу за чатом: токсичность, спам и дискриминация — под контролем.')
+
         elif toggle in ("off","выкл","disable","false","0"):
             cfg ["enabled"]=False 
             self .save_config (str (ctx .guild .id ),cfg )
-            await ctx .send (" AI Модерация **ВЫКЛЮЧЕНА**")
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'ai','AI-модерация выключена','Автопроверки сообщений отключены.')
 
-    @commands .command (name ="aimod-sensitivity")
+    @commands .command (name ="aimod-sensitivity", description ="Настроить чувствительность AI-модерации (0.1–0.9)")
     @commands .has_permissions (administrator =True )
     async def aimod_sensitivity (self ,ctx ,value :float ):
         if not 0 <=value <=1 :
-            await ctx .send (" Значение от 0 до 1")
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'error','Неверное значение','Чувствительность — число от **0.0** до **1.0**.')
+
             return 
         cfg =self .load_config (str (ctx .guild .id ))
         cfg ["sensitivity"]=value 
         self .save_config (str (ctx .guild .id ),cfg )
         await ctx .send (f" Чувствительность: {value:.0%} ({'низкая' if value < 0.5 else 'средняя' if value < 0.8 else 'высокая'})")
 
-    @commands .command (name ="aimod-languages")
+    @commands .command (name ="aimod-languages", description ="Языки распознавания токсичности (ru en tr)")
     @commands .has_permissions (administrator =True )
     async def aimod_languages (self ,ctx ,*languages ):
         valid =[l for l in languages if l in ("ru","tr","en")]
         if not valid :
-            await ctx .send (" Доступные языки: ru, tr, en")
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'ai','Языки детекции','Доступны: **ru**, **en**, **tr**. Пример: `!aimod-languages ru en`')
+
             return 
         cfg =self .load_config (str (ctx .guild .id ))
         cfg ["languages"]=valid 
         self .save_config (str (ctx .guild .id ),cfg )
         await ctx .send (f" Языки: {', '.join(valid)}")
 
-    @commands .command (name ="aimod-escalate")
+    @commands .command (name ="aimod-escalate", description ="Авто-эскалация наказаний при рецидивах (on/off)")
     @commands .has_permissions (administrator =True )
     async def aimod_escalate (self ,ctx ,toggle :str ):
         cfg =self .load_config (str (ctx .guild .id ))
@@ -447,7 +454,7 @@ class AIModeration (commands .Cog ):
         self .save_config (str (ctx .guild .id ),cfg )
         await ctx .send (f"{'' if enabled else ''} Эскалация **{'вкл' if enabled else 'выкл'}**")
 
-    @commands .command (name ="aimod-logchannel")
+    @commands .command (name ="aimod-logchannel", description ="Канал для логов AI-модерации (не указан — отключить)")
     @commands .has_permissions (administrator =True )
     async def aimod_logchannel (self ,ctx ,channel :discord .TextChannel =None ):
         cfg =self .load_config (str (ctx .guild .id ))
@@ -458,9 +465,10 @@ class AIModeration (commands .Cog ):
         else :
             cfg ["log_channel_id"]=None 
             self .save_config (str (ctx .guild .id ),cfg )
-            await ctx .send (" Лог-канал убран")
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'ai','Лог-канал отключён','События AI-модерации больше не пишутся в канал.')
 
-    @commands .command (name ="aimod-whitelist")
+    @commands .command (name ="aimod-whitelist", description ="Убрать участника из-под AI-модерации / вернуть обратно")
     @commands .has_permissions (administrator =True )
     async def aimod_whitelist (self ,ctx ,user :discord .Member ):
         cfg =self .load_config (str (ctx .guild .id ))
@@ -469,24 +477,28 @@ class AIModeration (commands .Cog ):
             self .save_config (str (ctx .guild .id ),cfg )
         await ctx .send (f" {user.mention} добавлен в whitelist")
 
-    @commands .command (name ="aimod-test")
+    @commands .command (name ="aimod-test", description ="Проверить текст через AI-модерацию и показать вердикт")
     @commands .has_permissions (administrator =True )
     async def aimod_test (self ,ctx ,*,text :str ):
         cfg =self .load_config (str (ctx .guild .id ))
         matches =self .detect_toxic (text ,cfg .get ("languages",["ru","tr","en"]),cfg .get ("sensitivity",0.7 ))
         if not matches :
-            await ctx .send (" Текст чистый, нарушений не обнаружено.")
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'success','Текст чистый','Нарушений не обнаружено.')
+
         else :
             severity_order =["mild","spam","moderate","discrimination","severe"]
             top =max (matches ,key =lambda m :severity_order .index (m [0 ]))
             await ctx .send (f" Обнаружено: **{top[0]}** ({len(matches)} совпадений)\nПаттерны: `{top[1]}`")
 
-    @commands .command (name ="aimod-stats")
+    @commands .command (name ="aimod-stats", description ="Статистика AI-модерации по серверу")
     @commands .has_permissions (administrator =True )
     async def aimod_stats (self ,ctx ):
         history =self .load_history (str (ctx .guild .id ))
         if not history :
-            await ctx .send (" Нет данных")
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'ai','Пока нет данных','AI-модерация ещё не зафиксировала событий на этом сервере.')
+
             return 
         action_counter =Counter (h ["action"]for h in history )
         severity_counter =Counter (h ["severity"]for h in history )
@@ -501,19 +513,23 @@ class AIModeration (commands .Cog ):
         embed .add_field (name ="По типам",value =severity_text or "—",inline =True )
         await ctx .send (embed =embed )
 
-    @commands .command (name ="aimod-fp")
+    @commands .command (name ="aimod-fp", description ="Отметить ложное срабатывание AI-модерации")
     @commands .has_permissions (administrator =True )
     async def report_false_positive (self ,ctx ,message_id :int ):
-        """Report a moderation action as false positive"""
+        """Отметить ложное срабатывание AI-модерации"""
         try :
             message =await ctx .channel .fetch_message (message_id )
         except (discord .NotFound ,discord .HTTPException ):
-            await ctx .send (" Сообщение не найдено")
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'error','Не найдено','Такого сообщения в чате нет.')
+
             return 
         msg_hash =hash (message .content .lower ().strip ())
         self .false_positive_feedback [msg_hash ]=self .false_positive_feedback .get (msg_hash ,0 )+1 
         count =self .false_positive_feedback [msg_hash ]
-        await ctx .send (f" Отмечено как false positive ({count}/3). При достижении 3-х — будет игнорироваться.")
+        from cogs .embed_utils import reply as _reply 
+        await _reply (ctx ,'ai','Ложное срабатывание отмечено',
+        f'Учитываю ({count}/3). После третьей отметки такое сообщение AI пропускает.')
 
 
 async def setup (bot ):

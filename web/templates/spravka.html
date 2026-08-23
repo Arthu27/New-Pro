@@ -16,60 +16,60 @@
 
 <style>
 /* ═══════ СПРАВКА — Aether ═══════ */
-.yd-wrap { max-width: 1100px; }
+.sp-wrap { max-width: 1100px; }
 
 /* ── Поиск ── */
-.yd-search-wrap { position: relative; margin-bottom: 14px; }
-.yd-search {
+.sp-search-wrap { position: relative; margin-bottom: 14px; }
+.sp-search {
   width: 100%; padding: 15px 20px 15px 50px;
   background: var(--surface); border: 1.5px solid var(--line-2);
   border-radius: 16px; color: var(--text); font-size: 15px;
   outline: none; box-shadow: var(--shadow-1);
   transition: border-color .18s var(--ease), box-shadow .2s;
 }
-.yd-search:focus {
+.sp-search:focus {
   border-color: var(--ac);
   box-shadow: 0 0 0 4px var(--ac-soft), var(--shadow-2);
 }
-.yd-search-ico {
+.sp-search-ico {
   position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
   color: var(--ac); font-size: 16px; pointer-events: none;
 }
-.yd-search-clear {
+.sp-search-clear {
   position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
   width: 30px; height: 30px; border: none; border-radius: 10px;
   background: transparent; color: var(--text-3); cursor: pointer;
   display: none; place-items: center; font-size: 13px;
 }
-.yd-search-clear:hover { background: var(--surface-3); color: var(--err); }
-.yd-search-clear.show { display: grid; }
+.sp-search-clear:hover { background: var(--surface-3); color: var(--err); }
+.sp-search-clear.show { display: grid; }
 
 /* ── Чипы-фильтры групп ── */
-.yd-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
-.yd-chip {
+.sp-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
+.sp-chip {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 7px 14px; border-radius: 99px;
   border: 1px solid var(--line-2); background: var(--surface);
   color: var(--text-2); font-size: 12.5px; font-weight: 700;
   cursor: pointer; transition: all .15s var(--ease);
 }
-.yd-chip i { color: var(--ac); font-size: 11px; }
-.yd-chip:hover {border-color: var(--ac-line); color: var(--ac)}
-.yd-chip.active {
+.sp-chip i { color: var(--ac); font-size: 11px; }
+.sp-chip:hover {border-color: var(--ac-line); color: var(--ac)}
+.sp-chip.active {
   background: var(--ac-grad); color: #fff; border-color: transparent;
   box-shadow: 0 6px 16px -6px var(--ac-glow);
 }
-.yd-chip.active i { color: #fff; }
-.yd-chip .n {
+.sp-chip.active i { color: #fff; }
+.sp-chip .n {
   font-size: 10px; background: color-mix(in srgb, var(--ac) 12%, transparent);
   color: var(--ac); border-radius: 99px; padding: 1px 7px;
   font-family: 'JetBrains Mono', monospace;
 }
-.yd-chip.active .n { background: rgba(255,255,255,.25); color: #fff; }
+.sp-chip.active .n { background: rgba(255,255,255,.25); color: #fff; }
 
 /* ── Карточки инструментов ── */
-.yd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 11px; }
-.yd-card {
+.sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 11px; }
+.sp-card {
   display: flex; flex-direction: column; gap: 10px;
   background: var(--glass); border: 1px solid var(--line);
   border-radius: 16px; padding: 16px;
@@ -77,52 +77,52 @@
   box-shadow: var(--shadow-1); position: relative; overflow: hidden;
   transition: transform .18s var(--ease), border-color .18s, box-shadow .18s;
 }
-.yd-card::before {
+.sp-card::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, var(--yd-tone, var(--ac)), transparent);
+  background: linear-gradient(90deg, var(--sp-tone, var(--ac)), transparent);
   opacity: 0; transition: opacity .18s;
 }
-.yd-card:hover {border-color: var(--ac-line); box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--ac) 40%, transparent)}
-.yd-card:hover::before { opacity: 1; }
-.yd-icon {
+.sp-card:hover {border-color: var(--ac-line); box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--ac) 40%, transparent)}
+.sp-card:hover::before { opacity: 1; }
+.sp-icon {
   width: 42px; height: 42px; border-radius: 13px;
-  background: linear-gradient(135deg, var(--yd-tone, var(--ac)), color-mix(in srgb, var(--yd-tone, var(--ac)) 60%, #7c3aed));
+  background: linear-gradient(135deg, var(--sp-tone, var(--ac)), color-mix(in srgb, var(--sp-tone, var(--ac)) 60%, #7c3aed));
   color: #fff; display: grid; place-items: center; font-size: 16px;
-  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--yd-tone, var(--ac)) 60%, transparent);
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--sp-tone, var(--ac)) 60%, transparent);
 }
-.yd-title { font-weight: 800; font-size: 14px; }
-.yd-desc { font-size: 12.5px; color: var(--text-2); line-height: 1.55; flex: 1; }
-.yd-foot {
+.sp-title { font-weight: 800; font-size: 14px; }
+.sp-desc { font-size: 12.5px; color: var(--text-2); line-height: 1.55; flex: 1; }
+.sp-foot {
   display: flex; align-items: center; gap: 7px;
   font-size: 10.5px; color: var(--text-3); font-weight: 700;
   text-transform: uppercase; letter-spacing: .06em;
 }
-.yd-foot i { color: var(--yd-tone, var(--ac)); }
-.yd-arrow {
+.sp-foot i { color: var(--sp-tone, var(--ac)); }
+.sp-arrow {
   margin-left: auto; color: var(--text-3); font-size: 11px;
   transition: transform .18s var(--ease), color .18s;
 }
-.yd-card:hover .yd-arrow { color: var(--ac); }
-.yd-none {
+.sp-card:hover .sp-arrow { color: var(--ac); }
+.sp-none {
   grid-column: 1/-1; text-align: center; padding: 40px 16px;
   color: var(--text-3); font-size: 14px;
   border: 1.5px dashed var(--line-2); border-radius: 16px;
 }
-.yd-none i { font-size: 30px; display: block; margin-bottom: 10px; color: var(--line-3); }
+.sp-none i { font-size: 30px; display: block; margin-bottom: 10px; color: var(--line-3); }
 
 /* ── Секции ── */
-.yd-section {
+.sp-section {
   margin-top: 22px;
   background: var(--glass); border: 1px solid var(--line);
   border-radius: var(--r-lg); padding: 20px 22px;
   box-shadow: var(--shadow-1);
 }
-.yd-section > h3 {
+.sp-section > h3 {
   display: flex; align-items: center; gap: 10px;
   font-family: var(--font-display); font-size: 16px; font-weight: 800;
   margin: 0 0 14px;
 }
-.yd-section > h3 i {
+.sp-section > h3 i {
   width: 34px; height: 34px; border-radius: 11px;
   background: var(--ac-soft); color: var(--ac);
   display: grid; place-items: center; font-size: 14px;
@@ -130,69 +130,69 @@
 }
 
 /* ── Горячие клавиши ── */
-.yd-keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
-.yd-key {
+.sp-keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.sp-key {
   display: flex; align-items: center; gap: 12px;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: 13px; padding: 11px 14px;
 }
-.yd-key .kbd-group { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
-.yd-key .kbd {
+.sp-key .kbd-group { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+.sp-key .kbd {
   font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
   background: var(--bg); border: 1px solid var(--line-2);
   border-bottom-width: 3px; border-radius: 8px;
   padding: 4px 9px; color: var(--text); white-space: nowrap;
 }
-.yd-key .kbd.accent {
+.sp-key .kbd.accent {
   background: var(--ac-grad); border-color: transparent;
   border-bottom: 3px solid color-mix(in srgb, var(--ac) 60%, #000 20%);
   color: #fff;
 }
-.yd-key .what { font-size: 12.5px; color: var(--text-2); font-weight: 600; }
+.sp-key .what { font-size: 12.5px; color: var(--text-2); font-weight: 600; }
 
 /* ── FAQ-аккордеон ── */
-.yd-faq { display: flex; flex-direction: column; gap: 8px; }
-.yd-faq details {
+.sp-faq { display: flex; flex-direction: column; gap: 8px; }
+.sp-faq details {
   background: var(--surface); border: 1px solid var(--line);
   border-radius: 13px; overflow: hidden;
   transition: border-color .15s;
 }
-.yd-faq details:hover { border-color: var(--ac-line); }
-.yd-faq summary {
+.sp-faq details:hover { border-color: var(--ac-line); }
+.sp-faq summary {
   list-style: none; cursor: pointer;
   display: flex; align-items: center; gap: 11px;
   padding: 13px 16px; font-weight: 700; font-size: 13.5px;
   transition: background .15s;
 }
-.yd-faq summary::-webkit-details-marker { display: none; }
-.yd-faq summary:hover { background: var(--ac-soft); }
-.yd-faq summary .q-ico {
+.sp-faq summary::-webkit-details-marker { display: none; }
+.sp-faq summary:hover { background: var(--ac-soft); }
+.sp-faq summary .q-ico {
   width: 28px; height: 28px; flex: 0 0 28px; border-radius: 9px;
   background: var(--ac-soft); color: var(--ac);
   display: grid; place-items: center; font-size: 12px;
   border: 1px solid var(--ac-line);
 }
-.yd-faq summary .chev { margin-left: auto; color: var(--text-3); transition: transform .2s var(--ease); }
-.yd-faq details[open] summary .chev { transform: rotate(180deg); }
-.yd-faq .faq-body { padding: 2px 16px 15px 55px; font-size: 13px; color: var(--text-2); line-height: 1.65; }
-.yd-faq .faq-body code {
+.sp-faq summary .chev { margin-left: auto; color: var(--text-3); transition: transform .2s var(--ease); }
+.sp-faq details[open] summary .chev { transform: rotate(180deg); }
+.sp-faq .faq-body { padding: 2px 16px 15px 55px; font-size: 13px; color: var(--text-2); line-height: 1.65; }
+.sp-faq .faq-body code {
   background: var(--ac-soft); color: var(--ac);
   padding: 2px 7px; border-radius: 6px;
   font-family: 'JetBrains Mono', monospace; font-size: 12px;
 }
-.yd-faq .faq-body a { color: var(--ac); font-weight: 600; text-decoration: none; }
-.yd-faq .faq-body a:hover { text-decoration: underline; }
+.sp-faq .faq-body a { color: var(--ac); font-weight: 600; text-decoration: none; }
+.sp-faq .faq-body a:hover { text-decoration: underline; }
 
 @media (max-width: 720px) {
-  .yd-keys { grid-template-columns: 1fr; }
+  .sp-keys { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .yd-card, .yd-chip, .yd-arrow, .yd-faq summary .chev { transition: none; }
-  .yd-card:hover {background:var(--surface-2)}
+  .sp-card, .sp-chip, .sp-arrow, .sp-faq summary .chev { transition: none; }
+  .sp-card:hover {background:var(--surface-2)}
 }
 </style>
 
-<div class="yd-wrap">
+<div class="sp-wrap">
 
 {% set _tones = {
   'main': '#4f46e5', 'mod': '#dc2626', 'members': '#0284c7', 'roles': '#7c3aed',
@@ -203,33 +203,33 @@
 
 
   <!-- Поиск -->
-  <div class="yd-search-wrap">
-    <i class="fas fa-magnifying-glass yd-search-ico" aria-hidden="true"></i>
-    <input type="text" id="yd-search" class="yd-search" placeholder="Найди инструмент: модерация, тикеты, правила, экономика…" autocomplete="off" aria-label="Поиск по справке">
-    <button type="button" class="yd-search-clear" id="yd-search-clear" title="Очистить" aria-label="Очистить поиск"><i class="fas fa-xmark"></i></button>
+  <div class="sp-search-wrap">
+    <i class="fas fa-magnifying-glass sp-search-ico" aria-hidden="true"></i>
+    <input type="text" id="sp-search" class="sp-search" placeholder="Найди инструмент: модерация, тикеты, правила, экономика…" autocomplete="off" aria-label="Поиск по справке">
+    <button type="button" class="sp-search-clear" id="sp-search-clear" title="Очистить" aria-label="Очистить поиск"><i class="fas fa-xmark"></i></button>
   </div>
 
   <!-- Фильтры по группам меню -->
-  <div class="yd-chips" id="yd-chips">
-    <button type="button" class="yd-chip active" data-grp="*"><i class="fas fa-table-cells-large"></i> Все <span class="n" id="yd-total">{{ panel_menu|default([], true)|map(attribute='pages')|map('length')|sum }}</span></button>
+  <div class="sp-chips" id="sp-chips">
+    <button type="button" class="sp-chip active" data-grp="*"><i class="fas fa-table-cells-large"></i> Все <span class="n" id="sp-total">{{ panel_menu|default([], true)|map(attribute='pages')|map('length')|sum }}</span></button>
     {% for grp in panel_menu|default([], true) %}
       {% if grp.pages %}
-      <button type="button" class="yd-chip" data-grp="{{ grp.key }}" title="Фильтр: {{ grp.group }}"><i class="fas {{ grp.icon }}"></i> {{ grp.group }} <span class="n">{{ grp.pages|length }}</span></button>
+      <button type="button" class="sp-chip" data-grp="{{ grp.key }}" title="Фильтр: {{ grp.group }}"><i class="fas {{ grp.icon }}"></i> {{ grp.group }} <span class="n">{{ grp.pages|length }}</span></button>
       {% endif %}
     {% endfor %}
   </div>
 
   <!-- Карточки инструментов из реального меню -->
-  <div class="yd-grid" id="yd-grid">
+  <div class="sp-grid" id="sp-grid">
     {% for grp in panel_menu|default([], true) %}
       {% for p in grp.pages %}
-      <a class="yd-card" href="{{ p.path }}" data-grp="{{ grp.key }}" style="--yd-tone: {{ _tones.get(grp.key, '#4f46e5') }}" data-search="{{ p.label|lower }} {{ grp.group|lower }} {{ p.description|default('', true)|lower }}">
-        <span class="yd-icon"><i class="fas {{ p.icon }}"></i></span>
-        <span class="yd-title">{{ p.label }}</span>
-        <span class="yd-desc">{{ p.description|default(grp.group ~ ' — раздел панели «' ~ p.label ~ '»', true) }}</span>
-        <span class="yd-foot">
+      <a class="sp-card" href="{{ p.path }}" data-grp="{{ grp.key }}" style="--sp-tone: {{ _tones.get(grp.key, '#4f46e5') }}" data-search="{{ p.label|lower }} {{ grp.group|lower }} {{ p.description|default('', true)|lower }}">
+        <span class="sp-icon"><i class="fas {{ p.icon }}"></i></span>
+        <span class="sp-title">{{ p.label }}</span>
+        <span class="sp-desc">{{ p.description|default(grp.group ~ ' — раздел панели «' ~ p.label ~ '»', true) }}</span>
+        <span class="sp-foot">
           <i class="fas {{ grp.icon }}"></i> {{ grp.group }}
-          <i class="fas fa-arrow-right yd-arrow" aria-hidden="true"></i>
+          <i class="fas fa-arrow-right sp-arrow" aria-hidden="true"></i>
         </span>
       </a>
       {% endfor %}
@@ -237,30 +237,30 @@
   </div>
 
   <!-- Горячие клавиши панели -->
-  <div class="yd-section">
+  <div class="sp-section">
     <h3><i class="fas fa-keyboard"></i> Горячие клавиши панели</h3>
-    <div class="yd-keys">
-      <div class="yd-key">
+    <div class="sp-keys">
+      <div class="sp-key">
         <span class="kbd-group"><span class="kbd accent">@</span></span>
         <span class="what">Мгновенный поиск: страницы, участники, каналы, команды</span>
       </div>
-      <div class="yd-key">
+      <div class="sp-key">
         <span class="kbd-group"><span class="kbd">Ctrl</span><span>+</span><span class="kbd">K</span></span>
         <span class="what">Палитра страниц — быстрый переход в любой раздел</span>
       </div>
-      <div class="yd-key">
+      <div class="sp-key">
         <span class="kbd-group"><span class="kbd">Alt</span><span>+</span><span class="kbd">M</span></span>
         <span class="what">Палитра команд бота</span>
       </div>
-      <div class="yd-key">
+      <div class="sp-key">
         <span class="kbd-group"><span class="kbd">Alt</span><span>+</span><span class="kbd">N</span></span>
         <span class="what">Меню быстрых действий (плавающая кнопка)</span>
       </div>
-      <div class="yd-key">
+      <div class="sp-key">
         <span class="kbd-group"><span class="kbd">Shift</span><span>+</span><span class="kbd">F</span></span>
         <span class="what">Фокус-режим: только текущая панель на экране</span>
       </div>
-      <div class="yd-key">
+      <div class="sp-key">
         <span class="kbd-group"><span class="kbd">Esc</span></span>
         <span class="what">Закрыть любое окно, палитру или меню</span>
       </div>
@@ -268,9 +268,9 @@
   </div>
 
   <!-- FAQ -->
-  <div class="yd-section">
+  <div class="sp-section">
     <h3><i class="fas fa-circle-question"></i> Частые вопросы</h3>
-    <div class="yd-faq">
+    <div class="sp-faq">
       <details>
         <summary><span class="q-ico"><i class="fas fa-robot"></i></span> Бот не отвечает на команды<i class="fas fa-chevron-down chev"></i></summary>
         <div class="faq-body">Проверьте статус бота на <a href="/bot-stats">Статистике бота</a> — зелёная точка означает «онлайн». Затем убедитесь, что у бота есть права на чтение и отправку сообщений в канале, где вы пишете команды.</div>
@@ -307,10 +307,10 @@
 <script>
 (function () {
   'use strict';
-  var input = document.getElementById('yd-search');
-  var clearBtn = document.getElementById('yd-search-clear');
-  var grid = document.getElementById('yd-grid');
-  var chips = document.getElementById('yd-chips');
+  var input = document.getElementById('sp-search');
+  var clearBtn = document.getElementById('sp-search-clear');
+  var grid = document.getElementById('sp-grid');
+  var chips = document.getElementById('sp-chips');
   if (!input || !grid || !chips) return;
 
   var activeGrp = '*';
@@ -318,7 +318,7 @@
 
   function apply() {
     var shown = 0;
-    var cards = grid.querySelectorAll('.yd-card');
+    var cards = grid.querySelectorAll('.sp-card');
     cards.forEach(function (card) {
       var grpOk = activeGrp === '*' || card.dataset.grp === activeGrp;
       var qOk = !q || card.dataset.search.indexOf(q) !== -1;
@@ -326,12 +326,12 @@
       card.style.display = on ? '' : 'none';
       if (on) shown++;
     });
-    var none = document.getElementById('yd-none');
+    var none = document.getElementById('sp-none');
     if (!shown) {
       if (!none) {
         none = document.createElement('div');
-        none.id = 'yd-none';
-        none.className = 'yd-none';
+        none.id = 'sp-none';
+        none.className = 'sp-none';
         none.innerHTML = '<i class="fas fa-magnifying-glass"></i>Ничего не найдено — попробуйте другой запрос.';
         grid.appendChild(none);
       }
@@ -357,12 +357,12 @@
     var chip = e.target.closest('[data-grp]');
     if (!chip) return;
     activeGrp = chip.dataset.grp;
-    chips.querySelectorAll('.yd-chip').forEach(function (c) { c.classList.toggle('active', c === chip); });
+    chips.querySelectorAll('.sp-chip').forEach(function (c) { c.classList.toggle('active', c === chip); });
     apply();
   });
 
-  var total = document.getElementById('yd-total');
-  if (total) total.textContent = grid.querySelectorAll('.yd-card').length;
+  var total = document.getElementById('sp-total');
+  if (total) total.textContent = grid.querySelectorAll('.sp-card').length;
 })();
 </script>
 {% endblock %}

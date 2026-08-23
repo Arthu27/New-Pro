@@ -460,7 +460,7 @@ EXPECTED = {
     'warnings_page': '/warnings',
     'watchlist_panel_page': '/watchlist-panel',
     'welcome_editor_page': '/welcome-editor',
-    'yardim_page': '/yardim',
+    'spravka_page': '/spravka',
 }
 
 bad = []

@@ -251,7 +251,7 @@ class Diagnostics (commands .Cog ):
     @commands .command (name ="hotreload")
     @commands .is_owner ()
     async def hotreload (self ,ctx ,cog_name :str =None ):
-        """Hot-reload one or all cogs by checking file modification time"""
+        """Горячая перезагрузка одного или всех модулей по времени изменения файлов"""
         if cog_name :
             cogs_to_check =[cog_name ]
         else :
@@ -292,7 +292,7 @@ class Diagnostics (commands .Cog ):
         # COMMANDS 
     @commands .command (name ="health",aliases =["diag","status"])
     async def health_cmd (self ,ctx ):
-        """Show current bot health"""
+        """Показать текущее здоровье бота: нагрузку, память и статус"""
         h =self .get_health_snapshot ()
         embed =discord .Embed (title =" Bot Health",color =self ._health_color (h ))
         # Status indicator
@@ -317,7 +317,7 @@ class Diagnostics (commands .Cog ):
     @commands .command (name ="diagnose",aliases =["repair"])
     @commands .is_owner ()
     async def diagnose (self ,ctx ):
-        """Full diagnostic with auto-repair options"""
+        """Полная диагностика бота с автопочином найденных проблем"""
         h =self .get_health_snapshot ()
         issues =[]
         if h ["memory_mb"]>THRESHOLDS ["memory_mb"]["warn"]:
@@ -360,12 +360,15 @@ class Diagnostics (commands .Cog ):
     @commands .command (name ="gc")
     @commands .is_owner ()
     async def gc (self ,ctx ):
-        """Force garbage collection"""
+        """Принудительная сборка мусора — освобождает память бота"""
         import gc 
         before =sum (1 for _ in gc .get_objects ())
         collected =gc .collect ()
         after =sum (1 for _ in gc .get_objects ())
-        await ctx .send (f" GC: собрано **{collected}** объектов, {before} → {after}")
+        from cogs .embed_utils import reply 
+        await reply (ctx ,'system','Память почищена',
+        f'Garbage collect: **{collected}** объектов собрано ({before} → {after})',
+        footer_extra ='Диагностика')
 
     @commands .group (name ="cog",invoke_without_command =True )
     @commands .is_owner ()
@@ -386,7 +389,8 @@ class Diagnostics (commands .Cog ):
     async def diag_perf (self ,ctx ):
         """Cog performance stats"""
         if not self .cog_perf :
-            await ctx .send ("Нет данных")
+            from cogs .embed_utils import reply 
+            await reply (ctx ,'system','Пока пусто','Статистика по когам ещё не накопилась.',footer_extra ='Диагностика')
             return 
         sorted_perf =sorted (self .cog_perf .items (),key =lambda x :x [1 ]["calls"],reverse =True )
         text =""
@@ -402,7 +406,8 @@ class Diagnostics (commands .Cog ):
         """Last N errors"""
         errors =list (self .error_log )[-limit :]
         if not errors :
-            await ctx .send ("Нет ошибок ")
+            from cogs .embed_utils import reply 
+            await reply (ctx ,'system','Чисто','Ошибок в журнале нет. ',footer_extra ='Диагностика')
             return 
         text =""
         for e in errors :

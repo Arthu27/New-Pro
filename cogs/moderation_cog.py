@@ -40,10 +40,10 @@ class ModerationCog(commands.Cog):
             user = await self.bot.fetch_user(user_id)
             await ctx.guild.unban(user)
         except discord.NotFound:
-            await ctx.send("Пользователь не найден или не забанен!")
+            await ctx.send(embed=self._embed("Не удалось", "Пользователь не найден или не забанен!", discord.Color.red(), ""))
             return
         except Exception as e:
-            await ctx.send(f"Не удалось снять бан: {e}")
+            await ctx.send(embed=self._embed("Не удалось снять бан", str(e), discord.Color.red(), ""))
             return
 
         embed = self._embed(
@@ -58,10 +58,10 @@ class ModerationCog(commands.Cog):
     async def clear(self, ctx, amount: int = 5):
         """Очистить указанное количество сообщений (макс. 100)"""
         if amount <= 0:
-            await ctx.send("Введите корректное число!")
+            await ctx.send(embed=self._embed("Неверное число", "Количество сообщений должно быть больше нуля.", discord.Color.red(), ""))
             return
         if amount > 100:
-            await ctx.send("Максимум 100 сообщений за раз!")
+            await ctx.send(embed=self._embed("Слишком много", "Максимум 100 сообщений за раз!", discord.Color.red(), ""))
             return
 
         deleted = await ctx.channel.purge(limit=amount + 1)
@@ -80,7 +80,7 @@ class ModerationCog(commands.Cog):
     async def slowmode(self, ctx, seconds: int = 0):
         """Установить медленный режим канала (секунды, 0 = выключить)"""
         if seconds < 0:
-            await ctx.send("Секунды не могут быть отрицательными!")
+            await ctx.send(embed=self._embed("Неверное время", "Секунды не могут быть отрицательными!", discord.Color.red(), ""))
             return
 
         await ctx.channel.edit(slowmode_delay=seconds)

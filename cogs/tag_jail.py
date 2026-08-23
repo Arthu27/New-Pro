@@ -84,6 +84,11 @@ def _save_json(path, data):
 class TagJail(commands.Cog):
     """Авто-джейл за запрещённые теги в имени."""
 
+    # ── фирменный Aether-эмбед ─────────────────────────────────
+    def _ae(self, kind, title, desc=None):
+        from cogs.embed_utils import aether_embed
+        return aether_embed(kind, title, desc)
+
     def __init__(self, bot):
         self.bot = bot
         self._configs = _load_json(CFG_PATH, {})
@@ -456,21 +461,24 @@ class TagJail(commands.Cog):
         c = self.cfg(interaction.guild.id)
         if not c.get('jail_role_id'):
             return await interaction.response.send_message(
-                "⚠ Сначала задайте jail-роль: `/tagjail jail-role`", ephemeral=True)
+                embed=self._ae("warn", "Сначала задайте jail-роль",
+                               "Укажите роль заключённых: `/tagjail jail-role`"), ephemeral=True)
         if not c.get('banned_tags'):
             return await interaction.response.send_message(
-                "⚠ Сначала добавьте запрещённые теги: `/tagjail add-tag`", ephemeral=True)
+                embed=self._ae("warn", "Сначала добавьте запрещённые теги",
+                               "Без списка тегов ловить некого: `/tagjail add-tag`"), ephemeral=True)
         self.set_cfg(interaction.guild.id, 'enabled', True)
         await interaction.response.send_message(
-            "✅ **Tag Jail включён.** У кого запрещённый тег в имени — отправится в джейл автоматически.\n"
-            "Проверить всех сразу: `/tagjail scan`", ephemeral=True)
+            embed=self._ae("jail", "Tag Jail включён",
+                           "У кого запрещённый тег в имени — отправится в джейл автоматически.\n"
+                           "Проверить всех сразу: `/tagjail scan`"), ephemeral=True)
 
     @tagjail.command(name="off", description="Выключить tag jail")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_off(self, interaction: discord.Interaction):
         self.set_cfg(interaction.guild.id, 'enabled', False)
         await interaction.response.send_message(
-            "🔴 **Tag Jail выключен.** Текущие заключённые не тронуты.", ephemeral=True)
+            embed=self._ae("jail", "Tag Jail выключен", "Текущие заключённые не тронуты."), ephemeral=True)
 
     @tagjail.command(name="add-tag", description="Запретить тег/строку в имени (тег чужого сервера, '.gg/', 'discord.gg'...)")
     @app_commands.describe(текст="Тег или строка, запрещённая в имени (без учёта регистра)")
@@ -479,12 +487,14 @@ class TagJail(commands.Cog):
         c = self.cfg(interaction.guild.id)
         tags = list(c.get('banned_tags', []))
         if текст in tags:
-            return await interaction.response.send_message(f"⚠ Тег `{текст}` уже в списке.", ephemeral=True)
+            return await interaction.response.send_message(
+                embed=self._ae("warn", "Тег уже в списке", f"`{текст}` давно под запретом."), ephemeral=True)
         tags.append(текст)
         self.set_cfg(interaction.guild.id, 'banned_tags', tags)
         await interaction.response.send_message(
-            f"✅ Запрещённый тег добавлен: `{текст}` (всего {len(tags)})\n"
-            "Все, у кого он в нике/имени, отправятся в джейл.", ephemeral=True)
+            embed=self._ae("jail", "Тег запрещён",
+                           f"`{текст}` — теперь под запретом (всего {len(tags)}).\n"
+                           "Все, у кого он в нике/имени, отправятся в джейл."), ephemeral=True)
 
     @tagjail.command(name="del-tag", description="Убрать тег из запрещённых")
     @app_commands.describe(текст="Тег для удаления из списка")
@@ -492,11 +502,12 @@ class TagJail(commands.Cog):
     async def tj_tag_sil(self, interaction: discord.Interaction, текст: str):
         tags = list(self.cfg(interaction.guild.id).get('banned_tags', []))
         if текст not in tags:
-            return await interaction.response.send_message(f"⚠ Тега `{текст}` нет в списке.", ephemeral=True)
+            return await interaction.response.send_message(
+                embed=self._ae("warn", "Тег не найден", f"`{текст}` и так не запрещён."), ephemeral=True)
         tags.remove(текст)
         self.set_cfg(interaction.guild.id, 'banned_tags', tags)
         await interaction.response.send_message(
-            f"✅ Тег `{текст}` убран из запрещённых (осталось {len(tags)}).", ephemeral=True)
+            embed=self._ae("success", "Тег разрешён", f"`{текст}` убран из запрещённых (осталось {len(tags)})."), ephemeral=True)
 
     @tagjail.command(name="tags", description="Список запрещённых тегов")
     @app_commands.checks.has_permissions(administrator=True)
@@ -504,7 +515,7 @@ class TagJail(commands.Cog):
         tags = self.cfg(interaction.guild.id).get('banned_tags', [])
         if not tags:
             return await interaction.response.send_message(
-                "Список пуст. Добавьте: `/tagjail add-tag`", ephemeral=True)
+                embed=self._ae("jail", "Список пуст", "Добавьте первый тег: `/tagjail add-tag`"), ephemeral=True)
         e = discord.Embed(color=GOLD)
         e.description = "## ⛔ Запрещённые теги\n" + "\n".join(
             f"`{i}.` **{t}**" for i, t in enumerate(tags, 1))
@@ -527,7 +538,8 @@ class TagJail(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_log_kanal(self, interaction: discord.Interaction, канал: discord.TextChannel):
         self.set_cfg(interaction.guild.id, 'log_channel_id', канал.id)
-        await interaction.response.send_message(f"✅ Логи tag jail → {канал.mention}", ephemeral=True)
+        await interaction.response.send_message(
+            embed=self._ae("logs", "Логи подключены", f"Tag jail пишет в {канал.mention}"), ephemeral=True)
 
     @tagjail.command(name="auto-release", description="Авто-освобождение, когда тег убран из имени")
     @app_commands.describe(режим="вкл — выходит сам, выкл — выпускает только модератор")
@@ -608,27 +620,33 @@ class TagJail(commands.Cog):
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_tara(self, interaction: discord.Interaction):
         if not self.cfg(interaction.guild.id).get('enabled'):
-            return await interaction.response.send_message("⚠ Система выключена: `/tagjail on`", ephemeral=True)
+            return await interaction.response.send_message(
+                embed=self._ae("warn", "Система выключена", "Сначала включите: `/tagjail on`"), ephemeral=True)
         await interaction.response.defer(ephemeral=True)
         checked, jailed_now = await self._sweep_guild(interaction.guild)
+        from cogs.embed_utils import plural
         await interaction.followup.send(
-            f"✅ Обход завершён: проверено **{checked}**, в джейл отправлено: **{jailed_now}**.",
-            ephemeral=True)
+            embed=self._ae("jail", "Обход завершён",
+                           f"Проверено: **{checked}** {plural(checked, 'участник', 'участника', 'участников')} · "
+                           f"в джейл отправлено: **{jailed_now}**."), ephemeral=True)
 
     @tagjail.command(name="age-limit", description="Возрастная граница: мин. возраст аккаунта в днях (0 = выкл)")
     @app_commands.describe(дней="Минимальный возраст аккаунта. 0 — выключить проверку")
     @app_commands.checks.has_permissions(administrator=True)
     async def tj_age_limit(self, interaction: discord.Interaction, дней: int):
         if дней < 0:
-            return await interaction.response.send_message("❌ Число не может быть отрицательным.", ephemeral=True)
+            return await interaction.response.send_message(
+                embed=self._ae("error", "Число не может быть отрицательным"), ephemeral=True)
         self.set_cfg(interaction.guild.id, 'min_account_days', дней)
         if дней == 0:
-            await interaction.response.send_message("✅ Возрастная граница **выключена**.", ephemeral=True)
+            await interaction.response.send_message(
+            embed=self._ae("success", "Возрастная граница выключена"), ephemeral=True)
         else:
             action = self.cfg(interaction.guild.id).get('age_action', 'kick')
             await interaction.response.send_message(
-                f"✅ Возрастная граница: аккаунты моложе **{дней} дн.** → **{action}** при входе.\n"
-                "Изменить действие: `/tagjail age-action`", ephemeral=True)
+                embed=self._ae("success", "Возрастная граница обновлена",
+                           f"Аккаунты моложе **{дней} дн.** → **{action}** при входе.\n"
+                           "Изменить действие: `/tagjail age-action`"), ephemeral=True)
 
     @tagjail.command(name="age-action", description="Что делать со слишком новыми аккаунтами")
     @app_commands.describe(действие="kick — выгнать, jail — посадить в джейл")
@@ -641,7 +659,8 @@ class TagJail(commands.Cog):
         self.set_cfg(interaction.guild.id, 'age_action', действие)
         txt = ("выгонять с сервера (с DM-предупреждением)" if действие == 'kick'
                else "сажать в джейл (выпускает модератор)")
-        await interaction.response.send_message(f"✅ Новые аккаунты теперь: **{txt}**", ephemeral=True)
+        await interaction.response.send_message(
+            embed=self._ae("success", "Действие для новичков обновлено", f"Новые аккаунты теперь: **{txt}**"), ephemeral=True)
 
     # ────────────────────────────────────────────────────────────
     # Ручные команды модераторов
@@ -651,17 +670,22 @@ class TagJail(commands.Cog):
     @app_commands.checks.has_permissions(moderate_members=True)
     async def jail_cmd(self, interaction: discord.Interaction, пользователь: discord.Member, причина: str = None):
         if пользователь.bot:
-            return await interaction.response.send_message("Ботов не сажаем.", ephemeral=True)
+            return await interaction.response.send_message(
+                embed=self._ae("warn", "Ботов не сажаем", "Джейл — только для людей."), ephemeral=True)
         if self._jail_rec(interaction.guild.id, пользователь.id):
-            return await interaction.response.send_message("⚠ Он уже в джейле.", ephemeral=True)
+            return await interaction.response.send_message(
+                embed=self._ae("warn", "Он уже в джейле"), ephemeral=True)
         ok = await self.jail(
             пользователь,
             f"Ручной джейл — {interaction.user.display_name}: {причина or 'причина не указана'}")
         if ok:
-            await interaction.response.send_message(f"⛔ **{пользователь.display_name}** отправлен в джейл.", ephemeral=True)
+            await interaction.response.send_message(
+            embed=self._ae("jail", f"{пользователь.display_name} — в джейле",
+                           f"Заключён модератором {interaction.user.display_name}."), ephemeral=True)
         else:
             await interaction.response.send_message(
-                "❌ Не получилось — проверьте jail-роль (`/tagjail jail-role`) и права бота.", ephemeral=True)
+                embed=self._ae("error", "Не получилось",
+                               "Проверьте jail-роль (`/tagjail jail-role`) и мои права."), ephemeral=True)
 
     @app_commands.command(name="unjail", description="Освободить участника из джейла (роли вернутся)")
     @app_commands.describe(пользователь="Кого освободить", причина="Причина")
@@ -675,17 +699,21 @@ class TagJail(commands.Cog):
                 except Exception as _ex:
                     _log.debug("unjail_cmd(): подавлено: %s", _ex)
                 return await interaction.response.send_message(
-                    f"✅ Jail-роль снята с **{пользователь.display_name}** (записи в джейле не было).", ephemeral=True)
-            return await interaction.response.send_message("⚠ Он не в джейле.", ephemeral=True)
+                    embed=self._ae("success", "Jail-роль снята",
+                                   f"Снята с **{пользователь.display_name}** (записи в джейле не было)."), ephemeral=True)
+            return await interaction.response.send_message(
+                embed=self._ae("warn", "Он не в джейле"), ephemeral=True)
         await self.release(пользователь, f"Освобождён модератором: {причина or '—'}", manual_by=interaction.user)
-        await interaction.response.send_message(f"✅ **{пользователь.display_name}** освобождён, роли возвращены.", ephemeral=True)
+        await interaction.response.send_message(
+            embed=self._ae("success", f"{пользователь.display_name} — на свободе", "Роли возвращены."), ephemeral=True)
 
     @app_commands.command(name="jailed", description="Список текущих заключённых tag jail")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def jailed_cmd(self, interaction: discord.Interaction):
         recs = self._jailed.get(str(interaction.guild.id), {})
         if not recs:
-            return await interaction.response.send_message("✨ Джейл пуст — никого нет.", ephemeral=True)
+            return await interaction.response.send_message(
+                embed=self._ae("jail", "Джейл пуст", "Сейчас там никого нет."), ephemeral=True)
         lines = []
         for uid, rec in list(recs.items())[:20]:
             since = f"<t:{rec.get('since', 0)}:R>"

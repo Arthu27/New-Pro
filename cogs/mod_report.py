@@ -11,6 +11,12 @@ from logger import get_logger
 log =get_logger ("mod_report")
 
 
+def _ae(kind, title, desc=None):
+    """Фирменный Aether-эмбед для ответов."""
+    from cogs.embed_utils import aether_embed
+    return aether_embed(kind, title, desc)
+
+
 DATA_DIR ='data'
 MOD_DATA_FILE =f'{DATA_DIR}/mod_data.json'
 
@@ -367,7 +373,7 @@ class ModReportView (discord .ui .View ):
     @discord .ui .button (label ='📋 Еженедельный отчёт',style =discord .ButtonStyle .primary ,custom_id ='modreport_weekly',row =0 )
     async def weekly (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .manage_messages :
-            await interaction .response .send_message ('❌ Недостаточно прав.',ephemeral =True )
+            await interaction .response .send_message (embed =_ae ('error','Недостаточно прав','Нужно право «Управление сообщениями».'),ephemeral =True )
             return 
         await interaction .response .defer ()
         embeds =await _build_weekly_report (interaction .guild ,days =7 )
@@ -377,7 +383,7 @@ class ModReportView (discord .ui .View ):
     @discord .ui .button (label ='🗓️ Отчёт за 30 дней',style =discord .ButtonStyle .secondary ,custom_id ='modreport_30',row =0 )
     async def monthly (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .manage_messages :
-            await interaction .response .send_message ('❌ Недостаточно прав.',ephemeral =True )
+            await interaction .response .send_message (embed =_ae ('error','Недостаточно прав','Нужно право «Управление сообщениями».'),ephemeral =True )
             return 
         await interaction .response .defer ()
         cutoff =datetime .datetime .now (datetime .timezone .utc )-datetime .timedelta (days =30 )
@@ -388,9 +394,9 @@ class ModReportView (discord .ui .View ):
     @discord .ui .button (label ='🛡️ Статистика модератора',style =discord .ButtonStyle .secondary ,custom_id ='modreport_modstats',row =0 )
     async def modstats (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .manage_messages :
-            await interaction .response .send_message ('❌ Недостаточно прав.',ephemeral =True )
+            await interaction .response .send_message (embed =_ae ('error','Недостаточно прав','Нужно право «Управление сообщениями».'),ephemeral =True )
             return 
-            # Kendi статистика показать
+            # Показать собственную статистику
         data =_load_mod_data ()
         gid =str (interaction .guild .id )
         case =data .get ('case',{}).get (gid ,[])
@@ -458,7 +464,7 @@ class ModReportView (discord .ui .View ):
     @discord .ui .button (label ='⚙️ Настройки',style =discord .ButtonStyle .grey ,custom_id ='modreport_settings',row =1 )
     async def settings (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
-            await interaction .response .send_message ('❌ Недостаточно прав.',ephemeral =True )
+            await interaction .response .send_message (embed =_ae ('error','Недостаточно прав','Нужны права администратора.'),ephemeral =True )
             return 
         cfg =_load_cfg (interaction .guild .id )
         day_names =['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
@@ -573,7 +579,8 @@ class ModReport (commands .Cog ):
         if role .id not in cfg .get ('staff_roles',[]):
             cfg .setdefault ('staff_roles',[]).append (role .id )
             _save_cfg (ctx .guild .id ,cfg )
-        await ctx .send (f'✅ Роль **{role.name}** добавлена в отчёт.')
+        from cogs .embed_utils import reply as _reply 
+        await _reply (ctx ,'success','Роль добавлена в отчёт',f'**{role.name}** теперь учитывается в отчётах.')
 
     @commands .command (name ='report-role-remove',aliases =['отчёт-роль-убрать'])
     @commands .has_permissions (administrator =True )
@@ -583,7 +590,8 @@ class ModReport (commands .Cog ):
         if role .id in cfg .get ('staff_roles',[]):
             cfg ['staff_roles'].remove (role .id )
             _save_cfg (ctx .guild .id ,cfg )
-        await ctx .send (f'🗑️ Роль **{role.name}** удалена из отчёта.')
+        from cogs .embed_utils import reply as _reply 
+        await _reply (ctx ,'success','Роль убрана из отчёта',f'**{role.name}** больше не участвует в отчётах.')
 
     @commands .command (name ='meeting-start',aliases =['собрание-старт','начать-собрание'])
     @commands .has_permissions (administrator =True )
@@ -597,7 +605,8 @@ class ModReport (commands .Cog ):
                 dt =datetime .datetime .strptime (date ,'%d.%m.%Y')
                 meeting_time =dt .replace (tzinfo =datetime .timezone .utc )
             except ValueError :
-                await ctx .send ('❌ Неверный формат даты! Например: `!собрание-старт 12.04.2026`')
+                from cogs .embed_utils import reply as _reply 
+                await _reply (ctx ,'error','Неверный формат даты','Пишите так: `!собрание-старт 12.04.2026`')
                 return 
         else :
             meeting_time =datetime .datetime .now (datetime .timezone .utc )
@@ -614,14 +623,16 @@ class ModReport (commands .Cog ):
         cfg ['last_meeting']=meeting_time .isoformat ()
         _save_cfg (ctx .guild .id ,cfg )
         ts =int (meeting_time .timestamp ())
-        await ctx .send (f'📅 Дата собрания установлена: <t:{ts}:F>\nСледующий отчёт будет считать с этой даты.')
+        from cogs .embed_utils import reply as _reply 
+        await _reply (ctx ,'system','Дата собрания установлена',f'Отметка: <t:{ts}:F>\nСледующий отчёт будет считать с этой даты.')
 
     @commands .command (name ='meeting-count',aliases =['собрание-счёт','счёт-собрания'])
     async def meeting_counter (self ,ctx ):
         """Сколько дней прошло с последнего собрания: !собрание-счёт"""
         cfg =_load_cfg (ctx .guild .id )
         if not cfg .get ('last_meeting'):
-            await ctx .send ('ℹ️ Собрание ещё не запускалось. Используйте `!собрание-старт`.')
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'info','Собрание ещё не запускалось','Старт: `!собрание-старт`')
             return 
         try :
             last =datetime .datetime .fromisoformat (cfg ['last_meeting'])
@@ -645,7 +656,7 @@ class ModReport (commands .Cog ):
     @commands .command (name ='mod-stats',aliases =['мод-стата'])
     @commands .has_permissions (manage_messages =True )
     async def mod_stats (self ,ctx ,moderator :discord .Member =None ):
-        """Модератор статистика: !mod-stats [@человек]"""
+        """Статистика модератора: !mod-stats [@человек]"""
         target =moderator or ctx .author 
         data =_load_mod_data ()
         gid =str (ctx .guild .id )

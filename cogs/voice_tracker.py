@@ -303,133 +303,114 @@ class VoiceTracker(commands.Cog):
 
     @commands.command(name='voicetime', aliases=['vtime', 'голос'])
     async def voicetime(self, ctx, member: discord.Member = None):
-        """Показать время в голосовых каналах"""
+        """Сколько времени ты (или участник) провёл в голосовых каналах"""
+        from cogs.embed_utils import aether_embed, fmt_duration, plural
         member = member or ctx.author
         data = self.db.get(ctx.guild.id, str(member.id))
 
         if not data or data.get('total_seconds', 0) == 0:
-            embed = discord.Embed(
-                title="Голосовая статистика",
-                description=f"{member.display_name} ещё не был в голосовых каналах.",
-                color=discord.Color.dark_grey()
+            embed = aether_embed(
+                'voice', f'Голосовая статистика — {member.display_name}',
+                'Пока тишина: этот человек ещё не был в голосовых каналах.',
+                guild=ctx.guild, footer_extra='Голосовой трекер',
             )
+            embed.set_thumbnail(url=member.display_avatar.url)
             await ctx.send(embed=embed)
             return
 
-        total = data['total_seconds']
-        h, m = divmod(total // 60, 60)
-        d, h = divmod(h, 24)
+        total = int(data.get('total_seconds', 0))
+        today = str(date.today())
+        daily = data.get('daily', {}) or {}
+        today_sec = int(daily.get(today, 0) or 0)
+        week_sec = 0
+        from datetime import timedelta
+        for i in range(7):
+            day = str(date.today() - timedelta(days=i))
+            week_sec += int(daily.get(day, 0) or 0)
 
-        embed = discord.Embed(
-            title=f"Голосовая статистика — {member.display_name}",
-            color=discord.Color.dark_grey(),
-            timestamp=datetime.now(timezone.utc)
+        embed = aether_embed(
+            'voice', f'Голосовая статистика — {member.display_name}',
+            f'## {fmt_duration(total)}',
+            fields=[
+                ('Сегодня', fmt_duration(today_sec), True),
+                ('За неделю', fmt_duration(week_sec), True),
+            ],
+            guild=ctx.guild, footer_extra='Голосовой трекер',
         )
         embed.set_thumbnail(url=member.display_avatar.url)
-
-        time_str = ""
-        if d > 0:
-            time_str += f"{d}д "
-        if h > 0:
-            time_str += f"{h}ч "
-        time_str += f"{m}мин"
-
-        embed.add_field(name="Общее время", value=time_str, inline=True)
-
-        # Сегодня
-        today = str(date.today())
-        today_sec = data.get('daily', {}).get(today, 0)
-        th, tm = divmod(today_sec // 60, 60)
-        embed.add_field(name="Сегодня", value=f"{th}ч {tm}мин", inline=True)
-
-        # За неделю
-        week_sec = 0
-        for i in range(7):
-            day = str(date.today() - __import__('datetime').timedelta(days=i))
-            week_sec += data.get('daily', {}).get(day, 0)
-        wh, wm = divmod(week_sec // 60, 60)
-        embed.add_field(name="За неделю", value=f"{wh}ч {wm}мин", inline=True)
-
-        embed.set_footer(text=ctx.guild.name)
         await ctx.send(embed=embed)
 
     @commands.command(name='voiceleaderboard', aliases=['vtop', 'голостоп'])
-    async def voice_leaderboard(self, ctx):
+    async def voice_leaderboard_cmd(self, ctx):
         """Топ-10 по времени в голосовых каналах"""
+        from cogs.embed_utils import aether_embed, fmt_duration
         all_data = self.db.get_all(ctx.guild.id)
-
-        if not all_data:
-            embed = discord.Embed(
-                title="Голосовой рейтинг",
-                description="Нет данных.",
-                color=discord.Color.dark_grey()
-            )
-            await ctx.send(embed=embed)
-            return
-
-        # Сортировка по total_seconds
         sorted_users = sorted(
-            [(uid, data) for uid, data in all_data.items() if isinstance(data, dict) and data.get('total_seconds', 0) > 0],
+            [(uid, d) for uid, d in (all_data or {}).items()
+             if isinstance(d, dict) and d.get('total_seconds', 0) > 0],
             key=lambda x: x[1].get('total_seconds', 0),
             reverse=True
         )[:10]
 
-        embed = discord.Embed(
-            title="Голосовой рейтинг — Топ 10",
-            color=discord.Color.dark_grey(),
-            timestamp=datetime.now(timezone.utc)
-        )
-
-        for i, (uid, data) in enumerate(sorted_users, 1):
-            total = data.get('total_seconds', 0)
-            h, m = divmod(total // 60, 60)
-            d, h = divmod(h, 24)
-            time_str = f"{d}д {h}ч {m}мин" if d > 0 else f"{h}ч {m}мин"
-            name = data.get('name', f'ID: {uid}')
-            embed.add_field(name=f"{i}. {name}", value=time_str, inline=False)
-
-        embed.set_footer(text=ctx.guild.name)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='voiceonline', aliases=['голосонлайн'])
-    async def voice_online(self, ctx):
-        """Показать всех в голосовых каналах"""
-        voice_members = []
-        for channel in ctx.guild.voice_channels:
-            for member in channel.members:
-                if not member.bot:
-                    voice_members.append((member, channel))
-
-        if not voice_members:
-            embed = discord.Embed(
-                title="Голосовые каналы",
-                description="Сейчас никого нет в голосовых каналах.",
-                color=discord.Color.dark_grey()
+        if not sorted_users:
+            embed = aether_embed(
+                'voice', 'Голосовой рейтинг',
+                'Пока данных нет — зайдите в войс, и я начну считать.',
+                guild=ctx.guild, footer_extra='Голосовой трекер',
             )
             await ctx.send(embed=embed)
             return
 
-        embed = discord.Embed(
-            title=f"Голосовые каналы — {len(voice_members)} участников",
-            color=discord.Color.dark_grey(),
-            timestamp=datetime.now(timezone.utc)
+        medals = {1: '🥇', 2: '🥈', 3: '🥉'}
+        top_secs = sorted_users[0][1].get('total_seconds', 1) or 1
+        today = str(date.today())
+        rows = []
+        for i, (uid, d) in enumerate(sorted_users, 1):
+            total = int(d.get('total_seconds', 0))
+            today_sec = int((d.get('daily') or {}).get(today, 0) or 0)
+            name = d.get('name', f'ID: {uid}')
+            mark = medals.get(i, f'`{i}.`')
+            part = f' · сегодня {fmt_duration(today_sec)}' if today_sec else ''
+            rows.append(f'{mark} **{name}**\n└ `{fmt_duration(total)}`{part}')
+
+        embed = aether_embed(
+            'voice', 'Голосовой рейтинг — Топ 10', '\n'.join(rows),
+            guild=ctx.guild, footer_extra='Голосовой трекер',
         )
+        await ctx.send(embed=embed)
 
-        # Группировка по каналам
+    @commands.command(name='voiceonline', aliases=['голосонлайн'])
+    async def voice_online(self, ctx):
+        """Кто сейчас сидит в голосовых каналах"""
+        from cogs.embed_utils import aether_embed, plural
         channels = {}
-        for member, channel in voice_members:
-            if channel.name not in channels:
-                channels[channel.name] = []
-            channels[channel.name].append(member.display_name)
+        n_members = 0
+        for channel in ctx.guild.voice_channels:
+            people = [m for m in channel.members if not m.bot]
+            if people:
+                channels[channel.name] = people
+                n_members += len(people)
 
-        for ch_name, members in channels.items():
-            embed.add_field(
-                name=f"{ch_name} ({len(members)})",
-                value=", ".join(members[:10]) + ("..." if len(members) > 10 else ""),
-                inline=False
+        if not channels:
+            embed = aether_embed(
+                'voice', 'Голосовые каналы',
+                'Сейчас в войсах пусто. Заходите — будет весело.',
+                guild=ctx.guild, footer_extra='Голосовой трекер',
             )
+            await ctx.send(embed=embed)
+            return
 
-        embed.set_footer(text=ctx.guild.name)
+        fields = []
+        for ch_name, members in list(channels.items())[:10]:
+            names = ', '.join(f'**{m.display_name}**' for m in members[:10])
+            if len(members) > 10:
+                names += f' и ещё {len(members) - 10}'
+            fields.append((f'🔊 {ch_name}', names, False))
+        embed = aether_embed(
+            'voice',
+            f'В войсах сейчас: {n_members} {plural(n_members, "участник", "участника", "участников")}',
+            None, fields=fields, guild=ctx.guild, footer_extra='Голосовой трекер',
+        )
         await ctx.send(embed=embed)
 
 

@@ -18,6 +18,12 @@ from logger import get_logger
 log =get_logger ("ticket")
 
 
+def _ae(kind, title, desc=None):
+    """Фирменный Aether-эмбед для ответов."""
+    from cogs.embed_utils import aether_embed
+    return aether_embed(kind, title, desc)
+
+
 logger =logging .getLogger ('ticket')
 
 TICKET_CATEGORY_NAME ="Тикеты"
@@ -448,14 +454,14 @@ class TicketView (discord .ui .View ):
         # На этом сервере система тикетов отключена
         if guild .id in TICKET_DISABLED_GUILDS :
             await interaction .response .send_message (
-            'На этом сервере система тикетов отключена.',ephemeral =True 
+            embed =_ae ('warn','Система тикетов отключена','На этом сервере тикеты временно не принимаются.'),ephemeral =True 
             )
             return 
 
         existing =discord .utils .get (guild .text_channels ,name =f"ticket-{interaction.user.name.lower()}")
         if existing :
             await interaction .response .send_message (
-            f"У вас уже есть открытый тикет: {existing.mention}\nПожалуйста, сначала закройте его.",
+            embed =_ae ('ticket','У вас уже есть открытый тикет',f'Загляните сюда: {existing.mention}\nСначала закройте его — и сразу откроем новый.'),
             ephemeral =True 
             )
             return 
@@ -494,7 +500,7 @@ class TicketView (discord .ui .View ):
             return 
 
         await interaction .response .send_message (
-        "Канал тикета создаётся...",
+        embed =_ae ('ticket','Открываю тикет…','Пара секунд — готовлю отдельный канал.'),
         ephemeral =True 
         )
 
@@ -836,7 +842,7 @@ class CloseTicketView (discord .ui .View ):
     async def close_ticket (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         channel =interaction .channel 
         if not channel .name .startswith ("ticket-"):
-            await interaction .response .send_message ("Это не канал тикета.",ephemeral =True )
+            await interaction .response .send_message (embed =_ae ('warn','Это не канал тикета','Кнопка работает только в каналах тикетов.'),ephemeral =True )
             return 
 
         state ={}
@@ -1113,18 +1119,18 @@ class StaffSummonView (discord .ui .View ):
         import re as _re
         user =interaction .user
         if not self ._is_staff (user ):
-            await interaction .response .send_message ('Кнопка для персонала сервера — тикет возьмёт модератор.',ephemeral =True )
+            await interaction .response .send_message (embed =_ae ('ticket','Кнопка для персонала','Тикет возьмёт модератор — спасибо за понимание.'),ephemeral =True )
             return
         embs =getattr (interaction .message ,'embeds',[])or []
         foot =str (embs [0 ].footer .text )if embs and embs [0 ].footer else ''
         m =_re .match (r'призыв:(\d+):(\d+)',foot )
         if not m :
-            await interaction .response .send_message ('Карточка призыва без привязки к тикету.',ephemeral =True )
+            await interaction .response .send_message (embed =_ae ('warn','Карточка устарела','У этого призыва нет привязки к тикету.'),ephemeral =True )
             return
         gid_s ,cid_s =m .group (1 ),m .group (2 )
         cog =interaction .client .get_cog ('Ticket')
         if cog is None :
-            await interaction .response .send_message ('Модуль тикетов сейчас недоступен.',ephemeral =True )
+            await interaction .response .send_message (embed =_ae ('error','Модуль тикетов недоступен','Попробуйте чуть позже.'),ephemeral =True )
             return
         data =cog ._load_ai_data (int (gid_s ))
         state =data .get (cid_s )
@@ -1145,7 +1151,7 @@ class StaffSummonView (discord .ui .View ):
         try :
             await interaction .response .edit_message (embed =new_embed ,view =view )
         except Exception :
-            await interaction .response .send_message ('Закреплено за тобой!',ephemeral =True )
+            await interaction .response .send_message (embed =_ae ('success','Тикет закреплён за тобой!','Клиент уже знает, что ты в пути.'),ephemeral =True )
         # клиенту в тикет — модератор уже в пути
         tch =interaction .guild .get_channel (int (cid_s ))
         if tch is not None :
@@ -2058,7 +2064,7 @@ class Ticket (commands .Cog ):
                 state ['waiting_for_evidence']=False 
                 state ['complaint']={}
                 self ._save_ticket_state (guild_id ,channel_id ,state )
-                await message .channel .send ("Понятно. Могу ли я помочь чем-то ещё?")
+                await message .channel .send ("Понятно! Могу ли я помочь чем-то ещё?")
                 # else: Ждать, повторить вопрос
             return # ← Остановиться здесь, не переходить к обычному потоку AI
 
@@ -2070,9 +2076,9 @@ class Ticket (commands .Cog ):
                 complaint =state .get ('complaint',{})
                 self ._save_ticket_state (guild_id ,channel_id ,state )
                 if not complaint :
-                    await message .channel .send ("Информация о жалобе не найдена.")
+                    await message .channel .send (" Информация о жалобе не найдена.")
                     return 
-                await message .channel .send ("Дополнительные доказательства получены. Повторный анализ...")
+                await message .channel .send (" Дополнительные доказательства получены! Повторный анализ…")
                 await self ._analyze_complaint (message .channel ,state ,guild_id ,channel_id ,complaint )
             else :
                 if 'additional_evidence'not in state :
@@ -3455,7 +3461,7 @@ class Ticket (commands .Cog ):
     async def ticket_panel (self ,interaction :discord .Interaction ):
         if interaction .guild .id in TICKET_DISABLED_GUILDS :
             await interaction .response .send_message (
-            'На этом сервере система тикетов отключена.',ephemeral =True 
+            embed =_ae ('warn','Система тикетов отключена','На этом сервере тикеты временно не принимаются.'),ephemeral =True 
             )
             return 
 
@@ -3518,7 +3524,7 @@ class Ticket (commands .Cog ):
         staff_handling =sum (1 for t in data .values ()if t ['status']=='staff_handling')
         closed_tickets =total_tickets -ai_handling -escalated -staff_handling 
 
-        # Custom Menu kullan
+        # Используем кастомное меню
         e =StatsMenu .ticket_stats (
         total =total_tickets ,
         open_tickets =ai_handling +escalated +staff_handling ,
@@ -3555,7 +3561,7 @@ class Ticket (commands .Cog ):
     async def ticket_force_escalate (self ,interaction :discord .Interaction ):
         """Передать тикет модераторам вручную"""
         if not interaction .channel .name .startswith ("ticket-"):
-            await interaction .response .send_message ("Это не канал тикета.",ephemeral =True )
+            await interaction .response .send_message (embed =_ae ('warn','Это не канал тикета','Кнопка работает только в каналах тикетов.'),ephemeral =True )
             return 
 
         state =self ._get_ticket_state (interaction .guild .id ,interaction .channel .id )
@@ -3592,7 +3598,7 @@ class Ticket (commands .Cog ):
         rate_limiter =get_rate_limiter ()
         stats =await rate_limiter .get_user_stats (interaction .guild .id ,target .id )
 
-        # Custom Menu kullan
+        # Используем кастомное меню
         menu =CustomMenu (
         title =f"Rate Limit — {target.display_name}",
         color ='info',
@@ -3651,7 +3657,7 @@ class Ticket (commands .Cog ):
             )
             return 
 
-            # Custom Menu kullan
+            # Используем кастомное меню
         e =StatsMenu .feedback_stats (
         total =stats ['total'],
         positive =stats ['positive'],
@@ -3678,7 +3684,7 @@ class Ticket (commands .Cog ):
         auto_close =get_auto_close_service (self .bot )
         auto_close .set_inactive_hours (hours )
 
-        # Custom Menu kullan
+        # Используем кастомное меню
         menu =CustomMenu (
         title ="Автозакрытие тикетов",
         color ='success',
@@ -3713,7 +3719,7 @@ class Ticket (commands .Cog ):
         rate_limiter =get_rate_limiter ()
         limits =rate_limiter .default_limits 
 
-        # Custom Menu kullan
+        # Используем кастомное меню
         menu =CustomMenu (
         title ="Настройки системы тикетов",
         color ='primary',

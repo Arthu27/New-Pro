@@ -187,11 +187,11 @@ def register(ctx):
         return render_template ('starboard.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/yardim')
+    @app .route ('/spravka')
     @login_required 
     @role_required ('uye')
-    def yardim_page ():
-        return render_template ('yardim.html',role =session .get ('role'),username =session .get ('username'))
+    def spravka_page ():
+        return render_template ('spravka.html',role =session .get ('role'),username =session .get ('username'))
 
 
         # ── НОВЫЙ SAYFALAR ────────────────────────────────────────────────────────

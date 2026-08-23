@@ -155,7 +155,7 @@ class AppealView(discord.ui.View):
     async def _resolve(self, interaction, accept):
         if not interaction.user.guild_permissions.manage_guild:
             await interaction.response.send_message(
-                'Нужно право «Управление сервером».', ephemeral=True)
+                ' Нужно право «Управление сервером».', ephemeral=True)
             return
         gid = self.guild_id
         state = self.cog._load(gid)
@@ -217,17 +217,19 @@ class AppealModal(discord.ui.Modal):
         await interaction.response.defer(ephemeral=True)
         if not await self.cog._is_banned(self.guild, interaction.user):
             await interaction.followup.send(
-                'Вы не забанены на этом сервере — апелляция не нужна.', ephemeral=True)
+                ' Вы не забанены на этом сервере — апелляция не нужна.', ephemeral=True)
             return
         item, err = await self.cog._submit_appeal(
             interaction.user, self.guild, self.text.value,
             link=self.link.value)
         if err:
-            await interaction.followup.send(f'Не получилось: {err}.', ephemeral=True)
+            await interaction.followup.send(f' Не получилось: {err}.', ephemeral=True)
             return
+        from cogs.embed_utils import aether_embed as _ae
         await interaction.followup.send(
-            f'Апелляция **#{item["id"]}** отправлена модераторам сервера '
-            f'**{self.guild.name}**. Ответ придёт сюда, в личку.', ephemeral=True)
+            embed=_ae('appeal', f'Апелляция #{item["id"]} отправлена',
+                      f'Модераторы сервера **{self.guild.name}** уже получили её. '
+                      'Ответ придёт сюда, в личку.'), ephemeral=True)
 
 
 class AppealServerSelect(discord.ui.Select):
@@ -244,7 +246,7 @@ class AppealServerSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         guild = self.cog.bot.get_guild(int(self.values[0]))
         if guild is None:
-            await interaction.response.send_message('Сервер не найден.', ephemeral=True)
+            await interaction.response.send_message(' Сервер не найден — попробуйте ещё раз.', ephemeral=True)
             return
         await interaction.response.send_modal(AppealModal(self.cog, guild))
 
@@ -345,38 +347,39 @@ class Appeals(commands.Cog):
     async def cmd_appeal(self, ctx, сервер: str, *, текст: str):
         """Обжаловать бан: !апелляция <ID сервера> <текст> (в ЛС боту)."""
         if ctx.guild is not None:
-            await ctx.reply('Апелляция подаётся в личных сообщениях боту.',
+            await ctx.reply(' Апелляция подаётся в личных сообщениях боту.',
                             mention_author=False)
             return
         try:
             guild_id = int(''.join(c for c in сервер if c.isdigit()))
         except ValueError:
-            await ctx.reply('ID сервера должен быть числом.')
+            await ctx.reply(' ID сервера должен быть числом.')
             return
         guild = self.bot.get_guild(guild_id)
         if guild is None:
-            await ctx.reply('Я не состою на таком сервере.')
+            await ctx.reply(' Я не состою на таком сервере.')
             return
         if not await self._is_banned(guild, ctx.author):
-            await ctx.reply('Вы не забанены на этом сервере — апелляция не нужна.')
+            await ctx.reply(' Вы не забанены на этом сервере — апелляция не нужна.')
             return
         item, err = await self._submit_appeal(ctx.author, guild, текст)
         if err:
-            await ctx.reply(f'Не получилось: {err}.')
+            await ctx.reply(f' Не получилось: {err}.')
             return
-        await ctx.reply(f'Апелляция **#{item["id"]}** отправлена модераторам '
-                        f'сервера **{guild.name}**. Ответ придёт сюда, в личку.')
+        from cogs.embed_utils import reply as _reply
+        await _reply(ctx, 'appeal', f'Апелляция #{item["id"]} отправлена',
+                     f'Модераторы сервера **{guild.name}** уже получили её. Ответ придёт в личку.')
 
     @app_commands.command(name='апелляция', description='Обжаловать бан — выберите сервер')
     async def cmd_appeal_slash(self, interaction: discord.Interaction):
         if interaction.guild is not None:
             await interaction.response.send_message(
-                'Апелляция подаётся в личных сообщениях боту.', ephemeral=True)
+                ' Апелляция подаётся в личных сообщениях боту.', ephemeral=True)
             return
         guilds = [g for g in self.bot.guilds]
         if not guilds:
             await interaction.response.send_message(
-                'Бот пока не состоит ни на одном сервере.', ephemeral=True)
+                ' Бот пока не состоит ни на одном сервере.', ephemeral=True)
             return
         view = AppealViewParent(self, guilds)
         await interaction.response.send_message(

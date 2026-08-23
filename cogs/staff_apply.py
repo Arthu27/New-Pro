@@ -414,10 +414,10 @@ class StaffApply(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.command(name="staff-panel", description="Создать панель STAFF HAKUMO с баннером")
+    @app_commands.command(name="staff-panel", description="Создать панель заявок в персонал с баннером")
     @app_commands.checks.has_permissions(manage_guild=True)
     async def staff_panel(self, interaction: discord.Interaction):
-        """Отправляет баннер STAFF HAKUMO с меню выбора роли"""
+        """Отправляет баннер заявок в персонал с меню выбора роли"""
         # Сразу подтверждаем interaction: загрузка удалённого баннера может занять больше 3 секунд.
         await interaction.response.defer(ephemeral=True)
 
@@ -472,7 +472,7 @@ class StaffApply(commands.Cog):
         # Отправляем сам файл напрямую: без embed-контейнера и лишнего текста.
         # Так Discord показывает фотографию в полном размере, а меню остаётся снизу.
         await interaction.channel.send(file=file, view=view)
-        await interaction.followup.send("✅ Панель STAFF HAKUMO успешно создана!", ephemeral=True)
+        await interaction.followup.send("✅ Панель заявок в персонал успешно создана!", ephemeral=True)
 
     @app_commands.command(name="my-application", description="Проверить статус моей заявки в персонал")
     async def my_application(self, interaction: discord.Interaction):

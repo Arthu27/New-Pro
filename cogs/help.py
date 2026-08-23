@@ -721,8 +721,9 @@ class Help(commands.Cog):
                 return c
         return None
 
-    @commands.command(name="help", aliases=["h", "команды", "menu", "yardim"])
+    @commands.command(name="help", aliases=["h", "команды", "menu", "справка"])
     async def help_prefix(self, ctx, category: str = None):
+        """Красивая справка по всем командам бота"""
         try:
             await ctx.message.delete()
         except Exception as _ex:

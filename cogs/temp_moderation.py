@@ -599,7 +599,7 @@ class TempModeration(commands.Cog):
     @commands.command(name="modwhitelist")
     @commands.has_permissions(administrator=True)
     async def whitelist_cmd(self, ctx, action: str = "list", user: discord.Member = None):
-        """!modwhitelist list|add|remove @user"""
+        """Белый список модерации: !modwhitelist list|add|remove @user — фильтры не трогают этих людей"""
         data = {}
         try:
             with open(self._whitelist_file(), "r", encoding="utf-8") as f:

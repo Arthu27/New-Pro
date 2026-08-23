@@ -15,7 +15,7 @@ AI_CHANNELS =set ()# Пусто — dinamik как addnir
 # Динамические каналы — DM'den addnip удалить
 _dynamic_channels :set =set ()# DM'den /ai-channel команда addnir
 
-#  АКТИВЕН ЗАДАЧИ (условный задача цепь) 
+# АКТИВНЫЕ ЗАДАЧИ (цепочка «условие → действие»)
 _active_tasks :list =[]# [{'id': int, 'desc': str, 'condition': str, 'action': str, 'target_id': int}]
 _task_counter :int =0 
 
@@ -533,9 +533,11 @@ class AIChat (commands .Cog ):
         if guild_id in _knowledge_base :
             del _knowledge_base [guild_id ]
             _save_knowledge_base (_knowledge_base )
-            await ctx .send (' База знаний сервера AI очищена!',ephemeral =True )
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'ai','База знаний очищена','AI забыл всё, чему его учили на этом сервере.')
         else :
-            await ctx .send ('База знаний уже пуста. ',ephemeral =True )
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'ai','Уже пусто','База знаний сервера и так пуста.')
 
     @commands .hybrid_command (name ='ai-reset',description ="Сбросить историю AI-чата")
     async def ai_reset (self ,ctx ):
@@ -544,9 +546,11 @@ class AIChat (commands .Cog ):
         if user_id in _histories :
             del _histories [user_id ]
             _save_histories (_histories ,force =True )
-            await ctx .send (' История чата сброшена! Начинаем с чистого листа. ',ephemeral =True )
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'ai','История сброшена','Наша история чата стёрта — начинаем с чистого листа.')
         else :
-            await ctx .send ('История чата уже пуста. ',ephemeral =True )
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'ai','Уже пусто','Истории чата и так нет.')
 
     @commands .hybrid_command (name ='ai-info-add',description ="Добавить постоянную информацию в базу знаний AI (админ)")
     @commands .has_permissions (administrator =True )
@@ -566,7 +570,8 @@ class AIChat (commands .Cog ):
                 item ['confidence']='high'
                 item ['source']='manual'
                 _save_knowledge_base (_knowledge_base )
-                await ctx .send (f' Информация о **{tema}** обновлена!',ephemeral =True )
+                from cogs .embed_utils import reply as _reply 
+                await _reply (ctx ,'ai','Информация обновлена',f'Запись о **{tema}** перезаписана.',ephemeral =True )
                 return 
 
                 # Новый info add
@@ -580,7 +585,8 @@ class AIChat (commands .Cog ):
         'source':'manual'
         })
         _save_knowledge_base (_knowledge_base )
-        await ctx .send (f' Информация о **{tema}** сохранена! Теперь я буду знать правильный ответ.',ephemeral =True )
+        from cogs .embed_utils import reply as _reply 
+        await _reply (ctx ,'ai','Информация сохранена',f'Теперь я знаю всё о **{tema}** — спрашивай!',ephemeral =True )
 
     @commands .hybrid_command (name ='ai-info-list',description ="Список информации в базе знаний AI (админ)")
     @commands .has_permissions (administrator =True )
@@ -590,7 +596,8 @@ class AIChat (commands .Cog ):
         items =_knowledge_base .get (guild_key ,[])
 
         if not items :
-            await ctx .send ('В базе знаний пока нет записей.',ephemeral =True )
+            from cogs .embed_utils import reply as _reply 
+            await _reply (ctx ,'ai','Пока пусто','В базе знаний пока нет записей. Научи меня: `/ai-info-add <тема> <инфо>`.')
             return 
 
         lines =[]
@@ -939,7 +946,7 @@ class AIChat (commands .Cog ):
         if any (t in cn for t in [self ._norm (x )for x in voice_kick_triggers ]):
             target_id =self ._extract_target (text )
             if not target_id :
-                await message .channel .send (' Не удалось определить пользователя для исключения.')
+                await message .channel .send (' Не удалось определить пользователя — упомяни его или ответь на его сообщение.')
                 return True 
             results =[]
             for guild in self .bot .guilds :
@@ -985,7 +992,7 @@ class AIChat (commands .Cog ):
             _active_tasks .append (task )
             _save_tasks (_active_tasks )
             await message .channel .send (
-            f' Задача сохранена (#{task["id"]}): *{desc[:100]}*\n'
+            f'✅ **Задача сохранена** (#{task["id"]}): *{desc[:100]}*\n'
             'Все задачи — команда `задача показать`.'
             )
             return True 
@@ -994,10 +1001,10 @@ class AIChat (commands .Cog ):
         'список задач','задачи список']
         if any (t in cn for t in [self ._norm (x )for x in task_list_words ]):
             if not _active_tasks :
-                await message .channel .send (' Активен задача нет.')
+                await message .channel .send ('📭 Активных задач нет.')
             else :
                 lines =[f'**#{t["id"]}** — {t["desc"][:80]}'for t in _active_tasks ]
-                await message .channel .send (' **Активен Задачи:**\n'+'\n'.join (lines ))
+                await message .channel .send (' **Активные задачи:**\n'+'\n'.join (lines ))
             return True 
 
         task_delete_words =['задача удалить','удали задачу','задача отмена']
@@ -1010,7 +1017,7 @@ class AIChat (commands .Cog ):
                 _active_tasks [:]=[t for t in _active_tasks if t ['id']!=tid ]
                 _save_tasks (_active_tasks )
                 if len (_active_tasks )<before :
-                    await message .channel .send (f' Задача #{tid} удалено.')
+                    await message .channel .send (f' Задача #{tid} удалена.')
                 else :
                     await message .channel .send (f' Задача #{tid} не найдена.')
             else :
@@ -1054,14 +1061,14 @@ class AIChat (commands .Cog ):
             os .makedirs ('data',exist_ok =True )
             with open ('data/mod_notify.json','w',encoding ='utf-8')as f :
                 _j .dump ({'enabled':True },f )
-            await message .channel .send (' Уведомления включены. Действия модерации будут приходить в ЛС.')
+            await message .channel .send (' Уведомления включены — действия модерации будут приходить в ЛС.')
             return True 
         if any (t in cn for t in [self ._norm (x )for x in mod_notify_off ]):
             import json as _j 
             os .makedirs ('data',exist_ok =True )
             with open ('data/mod_notify.json','w',encoding ='utf-8')as f :
                 _j .dump ({'enabled':False },f )
-            await message .channel .send (' Mod уведомление закрыто.')
+            await message .channel .send (' Уведомления модерации отключены.')
             return True 
 
             # ни один обработчик не сработал — обычный разговор с AI

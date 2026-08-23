@@ -210,7 +210,7 @@ MENU = [
         {'path': '/team-board', 'label': 'Доска команды', 'icon': 'fa-table-columns'},
         {'path': '/todo', 'label': 'Задачи', 'icon': 'fa-check-square'},
         {'path': '/reminders', 'label': 'Напоминания', 'icon': 'fa-bell'},
-        {'path': '/yardim', 'label': 'Справка', 'icon': 'fa-question-circle'},
+        {'path': '/spravka', 'label': 'Справка', 'icon': 'fa-question-circle'},
         {'path': '/search', 'label': 'Поиск по серверу', 'icon': 'fa-magnifying-glass'},
     ]},
 ]

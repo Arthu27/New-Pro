@@ -209,5 +209,109 @@ def warning_embed(title, description):
     return e
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# УНИВЕРСАЛЬНЫЙ AETHER-КИТ — единый премиальный стиль для всех команд бота.
+# Тёмно-золотой фирменный стиль: аккуратные акценты по типу системы,
+# характерная кромка‑иконка, футер с именем сервера, живые метки времени.
+# ═══════════════════════════════════════════════════════════════════════
+
+GOLD = 0xD8A94E          # фирменное золото Aether
+GOLD_DARK = 0x9A7A35     # приглушённое золото
+
+KINDS = {
+    #      (цвет,     эмодзи-кромка)
+    'success': (0x2ECC71, ''),
+    'error':   (0xED4245, ''),
+    'info':    (GOLD, 'ℹ️'),
+    'warn':    (0xF39C12, '⚠️'),
+    'mod':     (0xE74C3C, '🛡️'),
+    'jail':    (0xB03A2E, '🔒'),
+    'ticket':  (0x5865F2, '🎫'),
+    'music':   (GOLD, '🎵'),
+    'voice':   (0x1ABC9C, '🎙️'),
+    'ai':      (0x9B59B6, '🤖'),
+    'logs':    (0x95A5A6, '📜'),
+    'welcome': (GOLD, '👋'),
+    'appeal':  (GOLD, '⚖️'),
+    'system':  (0x607080, '⚙️'),
+}
+
+
+def aether_embed(kind, title, description=None, fields=None, guild=None,
+                 footer_extra='', thumbnail=None):
+    """Фирменный эмбед Aether: кромка-эмодзи в заголовке, цвет по типу системы,
+    футер «Aether · <сервер>», живая метка времени.
+
+    fields — список кортежей (имя, значение, inline) или (имя, значение).
+    thumbnail override: None → не ставить; 'guild' → иконка сервера.
+    """
+    color, edge = KINDS.get(kind, KINDS['info'])
+    e = discord.Embed(
+        title=f'{edge} {title}'.strip() if edge and edge not in title else title,
+        description=description or None,
+        color=color,
+        timestamp=datetime.now(timezone.utc),
+    )
+    for f in fields or ():
+        if len(f) == 3:
+            e.add_field(name=f[0], value=f[1], inline=f[2])
+        else:
+            e.add_field(name=f[0], value=f[1])
+    foot = Aether_footer(guild, footer_extra) if guild else Aether_footer(None, footer_extra)
+    e.set_footer(text=foot['text'], icon_url=foot['icon_url'])
+    if thumbnail == 'guild' and guild and guild.icon:
+        e.set_thumbnail(url=guild.icon.url)
+    elif isinstance(thumbnail, str) and thumbnail:
+        e.set_thumbnail(url=thumbnail)
+    return e
+
+
+async def reply(ctx, kind, title, description=None, **kw):
+    """Быстрый красивый ответ: один вызов вместо сборки эмбеда руками.
+
+    Кварги для send (ephemeral, view, file, files, delete_after,
+    mention_author) пробрасываются в ctx.send, остальные — в aether_embed.
+    """
+    send_kw = {}
+    for k in ('ephemeral', 'view', 'file', 'files', 'delete_after', 'mention_author'):
+        if k in kw:
+            send_kw[k] = kw.pop(k)
+    if 'guild' not in kw and getattr(ctx, 'guild', None):
+        kw['guild'] = ctx.guild
+    return await ctx.send(embed=aether_embed(kind, title, description, **kw), **send_kw)
+
+
+def bar(frac, width=12, filled='█', empty='░'):
+    """Прогресс-бар: bar(0.4) → '████░░░░░░░░'."""
+    frac = max(0.0, min(1.0, float(frac or 0)))
+    n = round(frac * width)
+    return filled * n + empty * (width - n)
+
+
+def plural(n, one, few, many):
+    """Русская плюрализация: plural(n, 'трек', 'трека', 'треков')."""
+    n = abs(int(n))
+    if n % 10 == 1 and n % 100 != 11:
+        return one
+    if 2 <= n % 10 <= 4 and not (12 <= n % 100 <= 14):
+        return few
+    return many
+
+
+def fmt_duration(seconds):
+    """Секунды → '1 ч 23 мин', '45 мин', '2 дн 3 ч'."""
+    seconds = int(seconds or 0)
+    if seconds <= 0:
+        return '0 мин'
+    days, seconds = divmod(seconds, 86400)
+    hours, seconds = divmod(seconds, 3600)
+    minutes = seconds // 60
+    if days:
+        return f'{days} дн {hours} ч'
+    if hours:
+        return f'{hours} ч {minutes} мин'
+    return f'{minutes} мин'
+
+
 async def setup(bot):
     pass
