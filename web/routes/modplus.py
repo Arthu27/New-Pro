@@ -302,6 +302,112 @@ def register(ctx):
         as_attachment =request .args .get ('dl')=='1')
 
 
+    @app .route ('/api/proofs/upload',methods =['POST'])
+    @login_required
+    @role_required ('mod')
+    def api_proofs_upload ():
+        # Прямая загрузка демки с устройства: файл (фото/видео) — без ссылки.
+        if (request .content_length or 0 )>60 *1024 *1024 :
+            return jsonify ({'success':False ,'error':'Файл больше 60 МБ'}),413
+        from cogs .proof_cog import (proof_add ,proof_save_media ,proof_update ,
+        proof_remove ,ACTIONS )
+        f =request .files .get ('file')
+        if not f or not (f .filename or '').strip ():
+            return jsonify ({'success':False ,'error':'Выберите файл — фото или видео'}),400
+        uid =(request .form .get ('user_id','')or '').strip ()
+        if not uid .isdigit ():
+            return jsonify ({'success':False ,'error':'ID участника — только цифры'}),400
+        action =(request .form .get ('action','')or '').strip ().lower ()
+        if action not in ACTIONS :
+            return jsonify ({'success':False ,'error':'Выберите наказание из списка'}),400
+        reason =(request .form .get ('reason','')or '').strip ()[:300 ]
+        data =f .read ()
+        guild =_active_guild ()
+        gid =guild .id if guild else int (active_guild_id ()or 0 )
+        uname =(request .form .get ('user_name','')or '').strip ()[:80 ]or f'ID {uid}'
+        entry =proof_add (gid ,int (uid ),uname ,0 ,session .get ('username','панель'),action ,reason )
+        media =proof_save_media (gid ,entry ['id'],f .filename ,data ,f .mimetype )
+        if not media :
+            # файл не фото/видео (или пустой/слишком большой) — убираем пустышку
+            proof_remove (gid ,entry ['id'])
+            return jsonify ({'success':False ,'error':'Нужна картинка или видео (png/jpg/gif/webp или mp4/webm/mov), не пустая'}),400
+        proof_update (gid ,entry ['id'],media =media )
+        entry ['media']=media
+        posted =False
+        if guild :
+            try :
+                import io as _io
+                _c ,bot =_modplus_cog ()
+                cog =bot .get_cog ('ProofCog')if bot else None
+                if cog :
+                    dfile =discord .File (_io .BytesIO (data ),filename =media .get ('name')or 'proof.bin')
+                    posted =bool (_run_async (cog ._post_proof (guild ,entry ,file =dfile ,
+                    image_inline =(media .get ('kind')=='image'),note ='Загружено через панель')))
+            except Exception as _ex:
+                _log.debug("api_proofs_upload(): постинг: %s", _ex)
+        _fire_panel_notification ('proof',f"Демка #{entry['id']} загружена из панели",
+        f"{session.get('username')}: {uname} — {action}")
+        return jsonify ({'success':True ,'id':entry ['id'],'posted':posted ,
+        'media_url':f"/proof-media/{entry['id']}"})
+
+
+
+    # ── Белый список «без демки»: кому бот НЕ обязан требовать доказательство ──
+    @app .route ('/api/proof-whitelist',methods =['GET'])
+    @login_required
+    @role_required ('mod')
+    def api_proof_whitelist_get ():
+        from cogs .proof_cog import proof_whitelist
+        guild =_active_guild ()
+        gid =guild .id if guild else int (active_guild_id ()or 0 )
+        wl =proof_whitelist (gid )
+        return jsonify ({'success':True ,
+        'users':[str (u )for u in wl ['users']],
+        'roles':[str (r )for r in wl ['roles']]})
+
+
+    @app .route ('/api/proof-whitelist',methods =['POST'])
+    @login_required
+    @role_required ('admin')
+    def api_proof_whitelist_add ():
+        from cogs .proof_cog import proof_whitelist_add
+        d =request .get_json (silent =True )or {}
+        kind =str (d .get ('kind','')).strip ()
+        ident =str (d .get ('id','')).strip ()
+        if kind not in ('user','role'):
+            return jsonify ({'success':False ,'error':'kind: user или role'}),400
+        if not ident .isdigit ()or len (ident )>25 or int (ident )==0 :
+            return jsonify ({'success':False ,'error':'ID — только цифры (обычно 17–20 знаков)'}),400
+        guild =_active_guild ()
+        gid =guild .id if guild else int (active_guild_id ()or 0 )
+        wl =proof_whitelist_add (gid ,kind ,int (ident ))
+        _fire_panel_notification ('proof','Белый список демок: добавление',
+        f"{session.get('username')}: {kind} {ident}")
+        return jsonify ({'success':True ,
+        'users':[str (u )for u in wl ['users']],
+        'roles':[str (r )for r in wl ['roles']]})
+
+
+    @app .route ('/api/proof-whitelist',methods =['DELETE'])
+    @login_required
+    @role_required ('admin')
+    def api_proof_whitelist_remove ():
+        from cogs .proof_cog import proof_whitelist_remove
+        d =request .get_json (silent =True )or {}
+        kind =str (d .get ('kind','')).strip ()
+        ident =str (d .get ('id','')).strip ()
+        if kind not in ('user','role'):
+            return jsonify ({'success':False ,'error':'kind: user или role'}),400
+        if not ident .isdigit ():
+            return jsonify ({'success':False ,'error':'ID — только цифры'}),400
+        guild =_active_guild ()
+        gid =guild .id if guild else int (active_guild_id ()or 0 )
+        wl =proof_whitelist_remove (gid ,kind ,int (ident ))
+        return jsonify ({'success':True ,
+        'users':[str (u )for u in wl ['users']],
+        'roles':[str (r )for r in wl ['roles']]})
+
+
     @app .route ('/api/panic',methods =['GET'])
     @login_required 
     @role_required ('mod')

@@ -15,6 +15,69 @@
   </div>
 </div>
 
+<!-- Прямая загрузка демки с устройства — файл вместо ссылки -->
+<div class="panel" id="pf-add-panel" style="margin-bottom:14px">
+  <div class="panel-body" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <h2 style="margin:0;font-size:15px"><i class="fas fa-cloud-arrow-up" style="color:var(--ac)"></i>
+        Загрузить демку напрямую</h2>
+      <span style="font-size:12px;color:var(--text-3)">Файл с устройства — фото или видео до 60 МБ.
+        Без ссылок: хранится у нас и смотрится прямо в этой ленте.</span>
+    </div>
+    <form id="pf-add-form" class="form-row" style="margin:0" novalidate>
+      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600;flex-basis:220px">
+        Файл (фото/видео)*
+        <input type="file" id="pf-file" accept="image/*,video/*" required
+               aria-label="Файл доказательства"
+               style="padding:7px 11px;border:1px dashed var(--line-2,transparent);border-radius:10px;font-size:13px">
+      </label>
+      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
+        ID участника*
+        <input type="text" id="pf-uid" inputmode="numeric" placeholder="123456789012345678" required aria-label="ID участника">
+      </label>
+      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
+        Ник (необязательно)
+        <input type="text" id="pf-uname" placeholder="если пусто — подставим ID" aria-label="Ник участника">
+      </label>
+      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
+        Наказание
+        <select id="pf-action" aria-label="Наказание">
+          <option>варн</option><option>мут</option><option>тихий мут</option>
+          <option>таймаут</option><option>кик</option><option>бан</option><option>разбан</option>
+        </select>
+      </label>
+      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600;flex-basis:240px">
+        Причина
+        <input type="text" id="pf-reason" maxlength="300" placeholder="за что демка" aria-label="Причина">
+      </label>
+      <button type="submit" class="btn" id="pf-add-btn"><i class="fas fa-cloud-arrow-up"></i> Загрузить</button>
+    </form>
+  </div>
+</div>
+
+<!-- Белый список: кого бот НЕ просит демку -->
+<div class="panel" id="pf-wl-panel" style="margin-bottom:14px">
+  <div class="panel-body" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <h2 style="margin:0;font-size:15px"><i class="fas fa-user-check" style="color:var(--ok)"></i>
+        Белый список «без демки»</h2>
+      <span style="font-size:12px;color:var(--text-3)">Кого бот НЕ просит прикреплять доказательство
+        к наказанию (по участнику или по роли). Управление — Админ и выше.</span>
+    </div>
+    <div class="row" style="gap:8px;flex-wrap:wrap" id="pf-wl-addrow">
+      <select id="pf-wl-kind" aria-label="Тип записи белого списка" style="max-width:150px">
+        <option value="user">Участник</option><option value="role">Роль</option>
+      </select>
+      <input type="text" id="pf-wl-id" inputmode="numeric" placeholder="ID (17–20 цифр)"
+             style="flex:1;min-width:200px" aria-label="ID для белого списка">
+      <button type="button" class="btn btn-sm" id="pf-wl-add-btn"><i class="fas fa-plus"></i> Добавить</button>
+    </div>
+    <div id="pf-wl-list" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <span class="badge neutral">загрузка…</span>
+    </div>
+  </div>
+</div>
+
 <div class="panel">
   <div class="toolbar">
     <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
@@ -266,6 +329,93 @@
     });
   });
 
+  /* ── Прямая загрузка демки файлом (без ссылок) ── */
+  $('pf-add-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var file = $('pf-file').files[0];
+    if (!file) { window.showToast('Выберите файл — фото или видео', false); return; }
+    var uid = $('pf-uid').value.trim();
+    if (!/^\d{5,25}$/.test(uid)) { window.showToast('ID участника — только цифры', false); return; }
+    var fd = new FormData();
+    fd.append('file', file);
+    fd.append('user_id', uid);
+    fd.append('user_name', $('pf-uname').value.trim());
+    fd.append('action', $('pf-action').value);
+    fd.append('reason', $('pf-reason').value.trim());
+    var btn = $('pf-add-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Грузим…';
+    fetch('/api/proofs/upload', { method: 'POST', body: fd }).then(function (r) {
+      return r.json().catch(function () { return { success: false, error: 'HTTP ' + r.status }; });
+    }).then(function (d) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Загрузить';
+      if (d && d.success) {
+        window.showToast('Демка #' + d.id + ' загружена — файл хранится у нас', true);
+        $('pf-add-form').reset();
+        load();
+      } else {
+        window.showToast((d && d.error) || 'Не получилось загрузить', false);
+      }
+    }).catch(function () {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Загрузить';
+      window.showToast('Сеть не отвечает — попробуйте ещё раз', false);
+    });
+  });
+
+  /* ── Белый список «без демки» ── */
+  if (!CAN_DEL) { $('pf-wl-addrow').style.display = 'none'; }
+
+  function wlRender(d) {
+    var box = $('pf-wl-list');
+    var users = (d && d.users) || [];
+    var roles = (d && d.roles) || [];
+    var xStyle = 'background:none;border:none;color:inherit;cursor:pointer;padding:0 0 0 2px;display:inline-flex';
+    var html = '';
+    users.forEach(function (id) {
+      html += '<span class="chip" style="gap:6px"><i class="fas fa-user" style="color:var(--ac)"></i> ' + esc(id) +
+        (CAN_DEL ? ' <button type="button" data-wldel="user:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать участника ' + esc(id) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
+    });
+    roles.forEach(function (id) {
+      html += '<span class="chip" style="gap:6px"><i class="fas fa-user-tag" style="color:var(--ok)"></i> ' + esc(id) +
+        (CAN_DEL ? ' <button type="button" data-wldel="role:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать роль ' + esc(id) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
+    });
+    if (!html) html = '<span class="badge neutral">пусто — демку бот просит у всех</span>';
+    box.innerHTML = html;
+  }
+
+  function wlLoad() {
+    fetch('/api/proof-whitelist').then(function (r) { return r.json(); })
+      .then(function (d) { wlRender(d); }).catch(function () {});
+  }
+
+  $('pf-wl-add-btn').addEventListener('click', function () {
+    var id = $('pf-wl-id').value.trim();
+    if (!/^\d{5,25}$/.test(id)) { window.showToast('ID — только цифры (17–20 знаков)', false); return; }
+    fetch('/api/proof-whitelist', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: $('pf-wl-kind').value, id: id })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.success) { window.showToast('Добавлено в белый список', true); $('pf-wl-id').value = ''; wlRender(d); }
+      else window.showToast((d && d.error) || 'Ошибка', false);
+    }).catch(function () { window.showToast('Сеть не отвечает', false); });
+  });
+
+  document.addEventListener('click', function (e) {
+    var wd = e.target.closest('[data-wldel]');
+    if (!wd) return;
+    var parts = String(wd.dataset.wldel).split(':');
+    fetch('/api/proof-whitelist', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: parts[0], id: parts[1] })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.success) { window.showToast('Убрано из белого списка', true); wlRender(d); }
+      else window.showToast((d && d.error) || 'Ошибка', false);
+    }).catch(function () { window.showToast('Сеть не отвечает', false); });
+  });
+
+  wlLoad();
   load();
   if (window.setLiveRefresh) window.setLiveRefresh(load, 15000);
 })();

@@ -219,6 +219,77 @@ def proof_delete_media(gid, entry):
         return False
 
 
+# ─── Белый список «без демки» ────────────────────────────────────────────────
+# Кого бот НЕ просит прикреплять доказательство к наказанию (доверенный
+# персонал по ID участника и/или по ID роли). Управляется из панели:
+# «Модерация» → «Доказательства» (/proofs) → блок «Белый список».
+PROOF_WHITELIST_MAX = 200
+
+
+def _proof_whitelist_path(gid):
+    return f'data/proof_whitelist_{int(gid)}.json'
+
+
+def proof_whitelist(gid):
+    """{'users': [...], 'roles': [...]} — кто освобождён от обязательной демки."""
+    data = _load_json(_proof_whitelist_path(gid), {})
+    if isinstance(data, dict):
+        users = data.get('users')
+        roles = data.get('roles')
+        return {
+            'users': [int(u) for u in (users if isinstance(users, list) else [])
+                      if str(u).isdigit()],
+            'roles': [int(r) for r in (roles if isinstance(roles, list) else [])
+                      if str(r).isdigit()],
+        }
+    # старый плоский формат [ids...] — трактуем как список участников
+    if isinstance(data, list):
+        return {'users': [int(u) for u in data if str(u).isdigit()], 'roles': []}
+    return {'users': [], 'roles': []}
+
+
+def _save_proof_whitelist(gid, wl):
+    _save_json(_proof_whitelist_path(gid),
+               {'users': [int(u) for u in wl['users']],
+                'roles': [int(r) for r in wl['roles']]})
+
+
+def proof_whitelist_add(gid, kind, ident):
+    """Добавить участника/роль (kind: 'user'|'role'). Отдаёт актуальный список."""
+    wl = proof_whitelist(gid)
+    key = 'users' if kind == 'user' else 'roles'
+    ident = int(ident)
+    if ident not in wl[key] and len(wl[key]) < PROOF_WHITELIST_MAX:
+        wl[key].append(ident)
+        _save_proof_whitelist(gid, wl)
+    return wl
+
+
+def proof_whitelist_remove(gid, kind, ident):
+    """Убрать участника/роль из белого списка. Отдаёт актуальный список."""
+    wl = proof_whitelist(gid)
+    key = 'users' if kind == 'user' else 'roles'
+    ident = int(ident)
+    if ident in wl[key]:
+        wl[key] = [x for x in wl[key] if x != ident]
+        _save_proof_whitelist(gid, wl)
+    return wl
+
+
+def proof_is_whitelisted(gid, user_id=None, role_ids=None):
+    """Освобождён ли модератор от обязательной демки (сам или через роль)."""
+    try:
+        wl = proof_whitelist(gid)
+        if user_id and int(user_id) in wl['users']:
+            return True
+        for rid in role_ids or ():
+            if int(rid) in wl['roles']:
+                return True
+    except Exception as _ex:
+        log.debug(f'[PROOF] белый список: проверка пропущена: {_ex}')
+    return False
+
+
 # ════════════════════════ ког ════════════════════════════════════════════
 class ProofCog(commands.Cog):
     def __init__(self, bot):
@@ -501,10 +572,18 @@ async def require_proof(interaction, attachment=None, action_ru='наказан�
     """Обязательное доказательство к наказанию.
 
     Возвращает True, если доказательство есть (картинка/видео во вложении
-    или ссылка). Если нет — отправляет модератору отказ и возвращает False:
-    наказание БЕЗ доказательства не выдаётся ни в каком случае.
+    или ссылка) ЛИБО модератор в белом списке «без демки». Если нет —
+    отправляет модератору отказ и возвращает False: наказание БЕЗ
+    доказательства не выдаётся ни в каком случае.
     """
     if is_media_attachment(attachment) or (link or '').strip():
+        return True
+    # Белый список (панель → /proofs): доверенным демка не нужна
+    mod = getattr(interaction, 'user', None)
+    gid = getattr(getattr(interaction, 'guild', None), 'id', 0)
+    if mod and gid and proof_is_whitelisted(
+            gid, user_id=getattr(mod, 'id', 0),
+            role_ids=[getattr(r, 'id', 0) for r in getattr(mod, 'roles', []) or []]):
         return True
     e = discord.Embed(
         color=RED,
