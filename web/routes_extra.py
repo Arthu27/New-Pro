@@ -93,6 +93,7 @@ from web.routes import (
     appeals_panel,
     log_cards_panel,
     welcome_panel,
+    commands_panel,
     lockdown_panel,
     shifts_panel,
     security_panel,

@@ -35,13 +35,61 @@ _HELP_EMOJI = {
     'Тикеты': '🎫',
     'Логи': '🧾',
     'AI-система': '🤖',
+    'Музыка': '🎵',
+    'Голосовые': '🎧',
+    'Экономика': '💰',
+    'Уровни и карма': '📈',
+    'Игры и развлечения': '🎲',
+    'Профили и соц.': '👤',
+    'Инфо и поиск': 'ℹ️',
+    'Автоматизация': '⚙️',
+    'События и команда': '📅',
+    'Приветствие и вход': '👋',
+    'Система': '🖥️',
+    'Прочее': '🧩',
 }
 _HELP_BLURB = {
     'Модерация': 'варны, муты, баны, доказательства и дежурства',
     'Тикеты': 'приём обращений и сопровождение до закрытия',
     'Логи': 'журналы событий, аудит и отчёты команды',
     'AI-система': 'автопомощник в тикетах и авто-модерация',
+    'Музыка': 'плеер, очередь и голосовые вечеринки',
+    'Голосовые': 'войс-команды, личные комнаты и статистика голоса',
+    'Экономика': 'баланс, магазин и переводы между участниками',
+    'Уровни и карма': 'опыт, ранги и репутация на сервере',
+    'Игры и развлечения': 'дуэли, квизы, аниме и мини-игры',
+    'Профили и соц.': 'карточки профилей, дни рождения и карма-борды',
+    'Инфо и поиск': 'информация о сервере, участниках и поиск',
+    'Автоматизация': 'триггеры, расписания и свои команды',
+    'События и команда': 'розыгрыши, собрания и события сервера',
+    'Приветствие и вход': 'карточки входа, инвайты и автороли',
+    'Система': 'состояние бота, модули и техническая диагностика',
+    'Прочее': 'полезные мелочи',
 }
+
+
+def _registry_extra_categories():
+    """Разделы из полного каталога команд, НЕ покрытые ACL-четвёркой."""
+    try:
+        from services.command_registry import CATEGORIES, catalog_by_category
+        acl_labels = set(COMMAND_CATEGORIES)          # Модерация/Тикеты/Логи/AI-система
+        overlapped_ids = {'mod', 'tickets', 'logs', 'ai'}  # дубли ACL-разделов
+        out = {}
+        for cid, meta in CATEGORIES.items():
+            if cid in overlapped_ids or meta['label'] in acl_labels:
+                continue
+            names = catalog_by_category().get(meta['label'])
+            if names:
+                out[meta['label']] = names
+        return out
+    except Exception as _ex:
+        _log.debug('_registry_extra_categories(): %s', _ex)
+        return {}
+
+
+def _all_category_labels():
+    """Порядок разделов справки: ACL-ядро + дополнительные из каталога."""
+    return list(COMMAND_CATEGORIES) + list(_registry_extra_categories())
 
 
 def _plural_cmds(n):
@@ -54,11 +102,18 @@ def _plural_cmds(n):
 
 
 def _visible_categories(guild_id, member):
-    """Категории команд, которые видит участник."""
+    """Категории команд, которые видит участник.
+
+    Сначала ACL-ядро (Модерация/Тикеты/Логи/AI) с фильтром прав, затем
+    дополнительные разделы из полного каталога бота (музыка, экономика
+    и т.д.) — без дублей уже показанных команд.
+    """
     groups = {}
+    covered = set()
     for cat, cmds in COMMAND_CATEGORIES.items():
         visible = []
         for cmd in cmds:
+            covered.add(cmd)
             try:
                 if _acl_has_access(guild_id, cmd, member):
                     visible.append(cmd)
@@ -66,6 +121,18 @@ def _visible_categories(guild_id, member):
                 visible.append(cmd)
         if visible:
             groups[cat] = visible
+    for label, names in _registry_extra_categories().items():
+        visible = []
+        for cmd in names:
+            if cmd in covered:
+                continue
+            try:
+                if member is None or _acl_has_access(guild_id, cmd, member):
+                    visible.append(cmd)
+            except Exception:
+                visible.append(cmd)
+        if visible:
+            groups[label] = visible
     return groups
 
 
@@ -598,8 +665,8 @@ class HelpSelect(discord.ui.Select):
                 default=(current_cat == "overview" or current_cat is None)
             )
         ]
-        for cat in COMMAND_CATEGORIES:
-            cmds = COMMAND_CATEGORIES.get(cat) or []
+        for cat in _all_category_labels():
+            cmds = COMMAND_CATEGORIES.get(cat) or _registry_extra_categories().get(cat) or []
             blurb = _HELP_BLURB.get(cat, f'Команды раздела «{cat}»')
             desc = f'{len(cmds)} {_plural_cmds(len(cmds))} · {blurb}'[:100]
             options.append(
@@ -649,7 +716,7 @@ class Help(commands.Cog):
         if not category:
             return None
         cat_l = str(category).lower().strip()
-        for c in COMMAND_CATEGORIES:
+        for c in _all_category_labels():
             if c.lower() == cat_l or cat_l in c.lower():
                 return c
         return None

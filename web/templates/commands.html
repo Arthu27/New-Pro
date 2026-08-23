@@ -1,23 +1,104 @@
 {% extends "base.html" %}
 {% block title %}Команды - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-terminal" ></i> Команды{% endblock %}
+{% block page_title %}<i class="fas fa-terminal"></i> Команды{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
     <div class="eyebrow">Бот <span class="sep">·</span> Команды</div>
     <h1>Команды</h1>
-    <p class="lead">Список всех доступных команд бота с описанием.</p>
+    <p class="lead">Весь арсенал бота одним каталогом: каждая команда с описанием, разбивка по разделам, поиск и быстрые действия.</p>
   </div>
 </div>
 
+<style>
+.cmdx-stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.cmdx-stat{display:flex;align-items:center;gap:10px;padding:10px 16px;background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 5%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:12px}
+.cmdx-stat i{color:var(--ac);font-size:15px}
+.cmdx-stat b{font-size:18px;color:var(--text)}
+.cmdx-stat span{font-size:12px;color:var(--text-2)}
+.cmdx-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.cmdx-search{position:relative;flex:1;min-width:220px}
+.cmdx-search i{position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:.5;font-size:12px;color:var(--text-2)}
+.cmdx-search input{width:100%;padding:10px 13px 10px 34px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:11px;color:var(--text);font-size:13.5px;outline:none;font-family:inherit}
+.cmdx-search input:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.cmdx-kind{padding:10px 13px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:11px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.cmdx-kind:focus{border-color:var(--ac)}
+.cmdx-count{font-size:12.5px;color:var(--text-3);white-space:nowrap}
+.cmdx-cats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.cmdx-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:999px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text-2);transition:.15s;user-select:none}
+.cmdx-chip i{font-size:11px;color:var(--cc,var(--ac))}
+.cmdx-chip em{font-style:normal;font-size:11px;font-weight:700;color:var(--cc,var(--ac));background:color-mix(in srgb, var(--cc,var(--ac)) 14%, transparent);padding:1px 7px;border-radius:999px}
+.cmdx-chip:hover{border-color:color-mix(in srgb, var(--cc,var(--ac)) 55%, transparent);color:var(--text)}
+.cmdx-chip.active{border-color:var(--cc,var(--ac));color:var(--text);background:color-mix(in srgb, var(--cc,var(--ac)) 10%, transparent);box-shadow:0 2px 10px color-mix(in srgb, var(--cc,var(--ac)) 18%, transparent)}
+.cmdx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:12px}
+.cmdx-card{position:relative;background:linear-gradient(165deg,color-mix(in srgb, var(--cc,var(--ac)) 5%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:14px;padding:15px 16px;cursor:pointer;transition:transform .16s var(--ease),border-color .16s var(--ease),box-shadow .16s var(--ease);overflow:hidden}
+.cmdx-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cc,var(--ac));opacity:0;transition:.16s}
+.cmdx-card:hover{transform:translateY(-2px);border-color:color-mix(in srgb, var(--cc,var(--ac)) 55%, transparent);box-shadow:0 8px 22px rgba(0,0,0,.18)}
+.cmdx-card:hover::before{opacity:1}
+.cmdx-card:focus-visible{outline:2px solid var(--cc,var(--ac));outline-offset:2px}
+.cmdx-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cmdx-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--cc,var(--ac)) 15%, transparent);border:1px solid color-mix(in srgb, var(--cc,var(--ac)) 35%, transparent)}
+.cmdx-ico i{font-size:14px;color:var(--cc,var(--ac))}
+.cmdx-kindchip{font-size:10px;font-weight:800;letter-spacing:.07em;padding:3px 8px;border-radius:6px;border:1px solid}
+.cmdx-kindchip.slash{color:var(--ac-2,#818cf8);border-color:color-mix(in srgb, var(--ac) 45%, transparent);background:color-mix(in srgb, var(--ac) 12%, transparent)}
+.cmdx-kindchip.prefix{color:#94a3b8;border-color:color-mix(in srgb, #94a3b8 40%, transparent);background:color-mix(in srgb, #94a3b8 10%, transparent)}
+.cmdx-name{font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:6px;word-break:break-all}
+.cmdx-desc{font-size:12.5px;line-height:1.45;color:var(--text-2);min-height:34px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cmdx-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.cmdx-catlab{font-size:11px;font-weight:700;color:var(--cc,var(--ac));display:inline-flex;align-items:center;gap:6px}
+.cmdx-mod{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-3)}
+.cmdx-alias{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-3);margin-top:5px}
+.cmdx-empty{grid-column:1/-1;text-align:center;padding:44px 18px;color:var(--text-3)}
+.cmdx-empty i{font-size:26px;opacity:.4;display:block;margin-bottom:10px}
+.cmdx-skel{height:118px;border-radius:14px;background:linear-gradient(100deg,var(--surface-2) 40%,color-mix(in srgb, var(--surface-2) 60%, var(--text) 6%) 50%,var(--surface-2) 60%);background-size:200% 100%;animation:cmdx-shimmer 1.2s infinite}
+@keyframes cmdx-shimmer{0%{background-position:120% 0}100%{background-position:-80% 0}}
+.cmd-modal-overlay{display:none;position:fixed;inset:0;background:rgba(8,10,16,.55);backdrop-filter:blur(4px);z-index:900;align-items:center;justify-content:center;padding:18px}
+.cmd-modal-overlay.open{display:flex}
+.cmd-modal{width:min(560px,100%);max-height:88vh;overflow:auto;background:var(--surface);border:1px solid var(--line-2);border-radius:18px;padding:24px;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.cmd-modal-close{position:absolute;top:12px;right:14px;width:32px;height:32px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text-2);cursor:pointer;font-size:16px}
+.cmd-modal-close:hover{color:var(--text);border-color:var(--ac)}
+.cmdx-mhead{display:flex;align-items:center;gap:12px;margin-bottom:6px;padding-right:34px}
+.cmdx-mname{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--text)}
+.cmdx-mdesc{font-size:13.5px;color:var(--text-2);line-height:1.5;margin-bottom:14px}
+.cmdx-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.cmdx-meta div{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:12px;color:var(--text-2)}
+.cmdx-meta b{color:var(--text);font-weight:700}
+.cmdx-exec{border-top:1px dashed var(--line-2);margin-top:16px;padding-top:14px}
+.cmdx-exec .form-group{margin-bottom:12px}
+.cmdx-exec label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin-bottom:5px;display:block}
+.cmdx-exec input,.cmdx-exec select,.cmdx-exec textarea{width:100%;padding:9px 12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font-size:13.5px;outline:none;font-family:inherit}
+.cmdx-exec input:focus,.cmdx-exec select:focus,.cmdx-exec textarea:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.btn-exec{padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ac),color-mix(in srgb, var(--ac) 70%, #818cf8));color:#fff;font-size:13.5px;font-weight:700;cursor:pointer}
+.btn-cancel{padding:10px 18px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text-2);font-size:13.5px;font-weight:600;cursor:pointer;margin-left:8px}
+#result-msg{margin-top:12px;border-radius:10px;padding:10px 14px;font-size:13px;display:none}
+</style>
 
+<div class="cmdx-stats" id="cmdxStats">
+  <div class="cmdx-stat"><i class="fas fa-terminal"></i><div><b id="stTotal">…</b><br><span>всего команд</span></div></div>
+  <div class="cmdx-stat"><i class="fas fa-bolt"></i><div><b id="stSlash">…</b><br><span>слеш-команд</span></div></div>
+  <div class="cmdx-stat"><i class="fas fa-keyboard"></i><div><b id="stPrefix">…</b><br><span>префикс-команд</span></div></div>
+  <div class="cmdx-stat"><i class="fas fa-layer-group"></i><div><b id="stCats">…</b><br><span>разделов</span></div></div>
+</div>
 
+<div class="cmdx-toolbar">
+  <div class="cmdx-search">
+    <i class="fas fa-search"></i>
+    <input type="text" id="cmdxQ" placeholder="Поиск по команде, описанию или алиасу…" aria-label="Поиск команд">
+  </div>
+  <select class="cmdx-kind" id="cmdxKind" aria-label="Тип команд">
+    <option value="">Все типы</option>
+    <option value="slash">Слеш-команды</option>
+    <option value="prefix">Префикс-команды</option>
+  </select>
+  <span class="cmdx-count" id="cmdxCount"></span>
+</div>
 
-<div class="cmd-grid" id="cmd-grid"></div>
+<div class="cmdx-cats" id="cmdxCats"></div>
+<div class="cmdx-grid" id="cmdxGrid"></div>
 
 <div id="cmdModal" class="cmd-modal-overlay">
   <div class="cmd-modal">
-    <button class="cmd-modal-close" id="modalClose" type="button">&times;</button>
+    <button class="cmd-modal-close" id="modalClose" type="button" aria-label="Закрыть">&times;</button>
     <div id="cmd-modal-content"></div>
   </div>
 </div>
@@ -28,84 +109,134 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  var commands = [
-    { cmd: 'ban', icon: 'fa-gavel', name: 'Бан', desc: 'Забанить участника', tag: 'admin' },
-    { cmd: 'kick', icon: 'fa-user-times', name: 'Кик', desc: 'Кикнуть участника', tag: 'admin' },
-    { cmd: 'warn', icon: 'fa-exclamation-triangle', name: 'Варн', desc: 'Выдать предупреждение', tag: 'mod' },
-    { cmd: 'timeout', icon: 'fa-volume-mute', name: 'Мут', desc: 'Мут (тайм-аут)', tag: 'mod' },
-    { cmd: 'untimeout', icon: 'fa-volume-up', name: 'Снять мут', desc: 'Снять мут с участника', tag: 'mod' },
-    { cmd: 'unban', icon: 'fa-user-plus', name: 'Снять бан', desc: 'Снять бан с пользователя', tag: 'admin' },
-    { cmd: 'jail', icon: 'fa-lock', name: 'Jail', desc: 'Отправить в джейл', tag: 'admin' },
-    { cmd: 'unjail', icon: 'fa-unlock', name: 'Снять jail', desc: 'Снять наказание jail', tag: 'admin' },
-    { cmd: 'clear', icon: 'fa-broom', name: 'Clear', desc: 'Очистить сообщения', tag: 'mod' },
-    { cmd: 'lock', icon: 'fa-lock', name: 'Lock', desc: 'Заблокировать канал', tag: 'mod' },
-    { cmd: 'unlock', icon: 'fa-unlock', name: 'Unlock', desc: 'Открыть канал', tag: 'mod' },
-    { cmd: 'role', icon: 'fa-user-tag', name: 'Role', desc: 'Выдать/забрать роль', tag: 'mod' },
-    { cmd: 'ticket_panel', icon: 'fa-ticket-alt', name: 'Ticket Panel', desc: 'Отправить панель тикетов', tag: 'admin' }
-  ];
+  var CAN_EDIT = {% if role in ('admin', 'owner') %}true{% else %}false{% endif %};
+  var CAT_COLORS = {
+    mod: '#f87171', tickets: '#60a5fa', logs: '#94a3b8', music: '#a78bfa',
+    voice: '#2dd4bf', economy: '#fbbf24', levels: '#4ade80', fun: '#f472b6',
+    profile: '#c084fc', info: '#38bdf8', automation: '#fb923c', ai: '#818cf8',
+    events: '#facc15', welcome: '#34d399', system: '#94a3b8', misc: '#cbd5e1'
+  };
+  var _data = null;           // каталог с сервера
+  var _activeCat = '';        // выбранный раздел ('' = все)
+  var _current = null;        // открытая в модалке команда
 
-  var roleColors = { mod: '#16a34a', admin: '#4f46e5' };
-  var currentCmd = null;  // The currently open command (set by openModal, used by Execute)
-
-  function renderGrid() {
-    var html = '';
-    commands.forEach(function (c) {
-      html += '<div class="cmd-card" data-cmd="' + esc(c.cmd) + '" role="button" tabindex="0">' +
-        '<div class="cmd-icon"><i class="fas ' + esc(c.icon) + '"></i></div>' +
-        '<div class="cmd-name">' + esc(c.name) + '</div>' +
-        '<div class="cmd-desc">' + esc(c.desc) + '</div>' +
-        '<div class="cmd-tag" data-tag="' + esc(c.tag) + '">' + esc(c.tag.toUpperCase()) + '</div>' +
-      '</div>';
-    });
-    $('cmd-grid').innerHTML = html;
+  // ── Отрисовка ────────────────────────────────────────────────────────
+  function kindOf(c) { return c.kind === 'prefix' ? 'prefix' : 'slash'; }
+  function shownName(c) {
+    return (c.kind === 'prefix' ? '!' : '/') + c.name;
   }
 
-  function openModal(cmd) {
-    currentCmd = cmd;
-    var fields = '';
-    if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'timeout' || cmd === 'untimeout' || cmd === 'jail' || cmd === 'unjail' || cmd === 'role') {
-      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id" aria-label="ID сервера">' +
-        '<option value="">Выберите...</option></select></div>';
-      fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" placeholder="123456789012345678" aria-label="123456789012345678"></div>';
+  function renderStats() {
+    $('stTotal').textContent = _data.total;
+    $('stSlash').textContent = _data.slash;
+    $('stPrefix').textContent = _data.prefix;
+    $('stCats').textContent = _data.categories.length;
+  }
+
+  function renderCats() {
+    var html = '<button type="button" class="cmdx-chip' + (!_activeCat ? ' active' : '') +
+      '" data-cat=""><i class="fas fa-border-all"></i>Все разделы<em>' + _data.total + '</em></button>';
+    _data.categories.forEach(function (c) {
+      var col = CAT_COLORS[c.id] || '#818cf8';
+      html += '<button type="button" class="cmdx-chip' + (_activeCat === c.id ? ' active' : '') +
+        '" data-cat="' + esc(c.id) + '" style="--cc:' + col + '">' +
+        '<i class="fas ' + esc(c.icon) + '"></i>' + esc(c.label) + '<em>' + c.count + '</em></button>';
+    });
+    $('cmdxCats').innerHTML = html;
+  }
+
+  function filtered() {
+    var q = $('cmdxQ').value.trim().toLowerCase();
+    var kind = $('cmdxKind').value;
+    return _data.commands.filter(function (c) {
+      if (_activeCat && c.cat !== _activeCat) return false;
+      if (kind && kindOf(c) !== kind) return false;
+      if (q) {
+        var hay = (c.name + ' ' + c.desc + ' ' + c.aliases.join(' ')).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderGrid() {
+    var list = filtered();
+    $('cmdxCount').textContent = 'Показано ' + list.length + ' из ' + _data.total;
+    if (!list.length) {
+      $('cmdxGrid').innerHTML = '<div class="cmdx-empty"><i class="fas fa-search"></i>' +
+        'Ничего не найдено — попробуйте другой запрос или снимите фильтры.</div>';
+      return;
     }
-    if (cmd === 'timeout') {
-      fields += '<div class="form-group"><label>Длительность (минуты)</label><input type="number" id="duration" value="60" min="1" aria-label="Длительность (мин)"></div>';
-    }
-    if (cmd === 'role') {
-      fields += '<div class="form-group"><label>ID роли</label><input type="text" id="role-id" placeholder="ID роли" aria-label="ID роли"></div>';
-      fields += '<div class="form-group"><label>Действие</label><select id="role-action" aria-label="Действие с ролью"><option value="add">Выдать</option><option value="remove">Забрать</option></select></div>';
-    }
-    if (cmd === 'ban' || cmd === 'kick' || cmd === 'warn' || cmd === 'jail' || cmd === 'role' || cmd === 'clear') {
-      fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2" aria-label="Причина"></textarea></div>';
-    }
-    if (cmd === 'clear' || cmd === 'lock' || cmd === 'unlock' || cmd === 'ticket_panel') {
-      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id" aria-label="ID сервера">' +
-        '<option value="">Выберите...</option></select></div>';
-    }
-    if (cmd === 'clear' || cmd === 'lock' || cmd === 'unlock' || cmd === 'ticket_panel') {
-      fields += '<div class="form-group"><label>ID канала</label><input type="text" id="channel-id" placeholder="ID канала" aria-label="ID канала"></div>';
-    }
-    if (cmd === 'unban') {
-      fields += '<div class="form-group"><label>Сервер</label><select id="guild-id" aria-label="ID сервера">' +
-        '<option value="">Выберите...</option></select></div>';
-      fields += '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" aria-label="ID пользователя"></div>';
-      fields += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2" aria-label="Причина"></textarea></div>';
+    var html = '';
+    list.forEach(function (c, i) {
+      var col = CAT_COLORS[c.cat] || '#818cf8';
+      var catMeta = null;
+      _data.categories.forEach(function (cc) { if (cc.id === c.cat) catMeta = cc; });
+      var kind = kindOf(c);
+      html += '<div class="cmdx-card" data-idx="' + _data.commands.indexOf(c) + '" role="button" tabindex="0" style="--cc:' + col + '" aria-label="' + esc(shownName(c)) + '">' +
+        '<div class="cmdx-card-top"><div class="cmdx-ico"><i class="fas ' + esc(catMeta ? catMeta.icon : 'fa-puzzle-piece') + '"></i></div>' +
+        '<span class="cmdx-kindchip ' + kind + '">' + (kind === 'slash' ? 'SLASH' : 'PREFIX') + '</span></div>' +
+        '<div class="cmdx-name">' + esc(shownName(c)) + '</div>' +
+        '<div class="cmdx-desc">' + esc(c.desc) + '</div>' +
+        (c.aliases.length ? '<div class="cmdx-alias">также: ' + c.aliases.map(esc).join(', ') + '</div>' : '') +
+        '<div class="cmdx-foot"><span class="cmdx-catlab"><i class="fas ' + esc(catMeta ? catMeta.icon : 'fa-puzzle-piece') + '"></i>' + esc(catMeta ? catMeta.label : c.cat) + '</span>' +
+        '<span class="cmdx-mod">' + esc(c.module) + '</span></div></div>';
+    });
+    $('cmdxGrid').innerHTML = html;
+  }
+
+  function showSkeleton() {
+    var html = '';
+    for (var i = 0; i < 12; i++) html += '<div class="cmdx-skel"></div>';
+    $('cmdxGrid').innerHTML = html;
+  }
+
+  // ── Модалка: детали + выполнение ─────────────────────────────────────
+  function openModal(c) {
+    _current = c;
+    var col = CAT_COLORS[c.cat] || '#818cf8';
+    var catMeta = null;
+    _data.categories.forEach(function (cc) { if (cc.id === c.cat) catMeta = cc; });
+    var kind = kindOf(c);
+
+    var html = '<div class="cmdx-mhead">' +
+      '<div class="cmdx-ico" style="--cc:' + col + ';width:44px;height:44px"><i class="fas ' + esc(catMeta ? catMeta.icon : 'fa-terminal') + '" style="font-size:18px"></i></div>' +
+      '<div><div class="cmdx-mname">' + esc(shownName(c)) + '</div>' +
+      '<span class="cmdx-kindchip ' + kind + '">' + (kind === 'slash' ? 'SLASH-КОМАНДА' : 'PREFIX-КОМАНДА') + '</span></div></div>' +
+      '<div class="cmdx-mdesc">' + esc(c.desc) + '</div>' +
+      '<div class="cmdx-meta">' +
+      '<div><i class="fas fa-layer-group"></i> Раздел: <b>' + esc(catMeta ? catMeta.label : c.cat) + '</b></div>' +
+      '<div><i class="fas fa-cube"></i> Модуль: <b>' + esc(c.module) + '</b></div>' +
+      (c.group ? '<div><i class="fas fa-folder-tree"></i> Группа: <b>/' + esc(c.group) + '</b></div>' : '') +
+      (c.aliases.length ? '<div><i class="fas fa-tags"></i> Алиасы: <b>' + c.aliases.map(esc).join(', ') + '</b></div>' : '') +
+      '</div>';
+
+    // Выполнение — только для серверно поддерживаемых команд и админов/владельца
+    if (CAN_EDIT && c.executable) {
+      html += '<div class="cmdx-exec">' +
+        '<div class="cmdx-meta" style="margin-bottom:10px"><div><i class="fas fa-play"></i> <b>Быстрое действие</b> — выполнить команду из панели</div></div>' +
+        '<div class="form-group"><label>Сервер</label><select id="guild-id" aria-label="Сервер"><option value="">Выберите…</option></select></div>' +
+        '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" placeholder="123456789012345678" aria-label="ID пользователя"></div>';
+      if (c.bare === 'timeout') {
+        html += '<div class="form-group"><label>Длительность (минут)</label><input type="number" id="duration" value="60" min="1" aria-label="Длительность в минутах"></div>';
+      }
+      if (c.bare === 'ban' || c.bare === 'kick' || c.bare === 'warn' || c.bare === 'jail') {
+        html += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2" aria-label="Причина"></textarea></div>';
+      }
+      html += '<div style="margin-top:14px">' +
+        '<button class="btn-exec" id="btnExec" type="button"><i class="fas fa-play"></i> Выполнить</button>' +
+        '<button class="btn-cancel" id="btnCancel" type="button">Закрыть</button></div>' +
+        '<div id="result-msg"></div></div>';
+    } else {
+      html += '<div style="margin-top:14px"><button class="btn-cancel" id="btnCancel" type="button">Закрыть</button></div>';
     }
 
-    $('cmd-modal-content').innerHTML =
-      '<h3 >' + esc(commands.find(function (c) { return c.cmd === cmd; }).name) + '</h3>' +
-      fields +
-      '<div   style="margin-top: 14px;">' +
-        '<button class="btn-exec" id="btnExec" type="button">Выполнить</button>' +
-        '<button class="btn-cancel" id="btnCancel" type="button">Отмена</button>' +
-      '</div>' +
-      '<div id="result-msg"></div>';
+    $('cmd-modal-content').innerHTML = html;
 
-    // Заполнить список серверов
     var guildSelect = $('guild-id');
     if (guildSelect) {
       fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
-        guilds.forEach(function (g) {
+        (guilds || []).forEach(function (g) {
           var opt = document.createElement('option');
           opt.value = g.id;
           opt.textContent = g.name;
@@ -118,23 +249,21 @@
 
   function closeModal() {
     $('cmdModal').classList.remove('open');
-    currentCmd = null;
+    _current = null;
+  }
+
+  function flashResult(ok, text) {
+    var msg = $('result-msg');
+    if (!msg) return;
+    msg.style.display = 'block';
+    msg.style.background = ok ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)';
+    msg.style.color = ok ? '#4ade80' : '#ef4444';
+    msg.textContent = text;
   }
 
   async function execute() {
-    if (!currentCmd) {
-      var m0 = $('result-msg');
-      m0.style.display = 'block';
-      m0.style.background = 'rgba(239,68,68,0.10)';
-      m0.style.color = 'var(--err)';
-      m0.style.border = '1px solid rgba(239,68,68,0.30)';
-      m0.style.borderRadius = '10px';
-      m0.style.padding = '10px 14px';
-      m0.textContent = 'Команда не выбрана';
-      return;
-    }
-    var cmd = currentCmd;
-    var data = { command: cmd };
+    if (!_current) { flashResult(false, 'Команда не выбрана'); return; }
+    var data = { command: _current.bare };
     var guildId = $('guild-id');
     if (guildId) data.guild_id = guildId.value;
     var userId = $('user-id');
@@ -143,73 +272,78 @@
     if (reason) data.reason = reason.value;
     var duration = $('duration');
     if (duration) data.duration = parseInt(duration.value, 10);
-    var roleId = $('role-id');
-    if (roleId) data.role_id = roleId.value;
-    var roleAction = $('role-action');
-    if (roleAction) data.action = roleAction.value;
-    var channelId = $('channel-id');
-    if (channelId) data.channel_id = channelId.value;
-    if (!data.guild_id) {
-      var msg = $('result-msg');
-      msg.style.display = 'block';
-      msg.style.background = 'rgba(239,68,68,0.1)';
-      msg.style.color = '#ef4444';
-      msg.textContent = 'Выберите сервер!';
-      return;
-    }
+    if (!data.guild_id) { flashResult(false, 'Выберите сервер'); return; }
     try {
       var r = await fetch('/api/execute-command', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       });
       var d = await r.json();
-      var msg = $('result-msg');
-      msg.style.display = 'block';
-      if (d.success) {
-        msg.style.background = 'rgba(74,222,128,0.1)';
-        msg.style.color = '#4ade80';
-        msg.textContent = '' + (d.message || 'Успешно');
-      } else {
-        msg.style.background = 'rgba(239,68,68,0.1)';
-        msg.style.color = '#ef4444';
-        msg.textContent = '' + (d.error || 'Ошибка');
-      }
+      flashResult(!!d.success, d.success ? ('' + (d.message || 'Выполнено')) : ('' + (d.error || 'Ошибка')));
     } catch (e) {
-      var msg = $('result-msg');
-      msg.style.display = 'block';
-      msg.style.background = 'rgba(239,68,68,0.1)';
-      msg.style.color = '#ef4444';
-      msg.textContent = 'Ошибка: ' + e.message;
+      flashResult(false, 'Ошибка: ' + e.message);
     }
   }
 
+  // ── События ──────────────────────────────────────────────────────────
   function bind() {
-    // Card click — open modal
-    $('cmd-grid').addEventListener('click', function (e) {
-      var card = e.target.closest('.cmd-card');
-      if (card) openModal(card.getAttribute('data-cmd'));
+    $('cmdxQ').addEventListener('input', renderGrid);
+    $('cmdxKind').addEventListener('change', renderGrid);
+    $('cmdxCats').addEventListener('click', function (e) {
+      var chip = e.target.closest('.cmdx-chip');
+      if (!chip) return;
+      _activeCat = chip.getAttribute('data-cat') || '';
+      renderCats();
+      renderGrid();
     });
-    // Keyboard: Enter / Space on focused card
-    $('cmd-grid').addEventListener('keydown', function (e) {
+    $('cmdxGrid').addEventListener('click', function (e) {
+      var card = e.target.closest('.cmdx-card');
+      if (!card) return;
+      var c = _data.commands[parseInt(card.getAttribute('data-idx'), 10)];
+      if (c) openModal(c);
+    });
+    $('cmdxGrid').addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
-      var card = e.target.closest('.cmd-card');
-      if (card) { e.preventDefault(); openModal(card.getAttribute('data-cmd')); }
+      var card = e.target.closest('.cmdx-card');
+      if (!card) return;
+      e.preventDefault();
+      var c = _data.commands[parseInt(card.getAttribute('data-idx'), 10)];
+      if (c) openModal(c);
     });
-    // Modal close
     $('modalClose').addEventListener('click', closeModal);
     $('cmdModal').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
-    // Execute + Cancel — attach handlers to the actual buttons (id stable)
     document.addEventListener('click', function (e) {
       if (e.target && e.target.id === 'btnExec') execute();
-      else if (e.target && e.target.id === 'btnCancel') closeModal();
+      else if (e.target && e.target.closest && e.target.closest('#btnExec')) execute();
+      else if (e.target && (e.target.id === 'btnCancel' || e.target.closest('#btnCancel'))) closeModal();
     });
   }
 
+  // ── Загрузка ─────────────────────────────────────────────────────────
+  async function init() {
+    showSkeleton();
+    bind();
+    try {
+      var r = await fetch('/api/commands/catalog');
+      if (!r.ok) { throw new Error('HTTP ' + r.status); }
+      var d = await r.json();
+      if (!d.success) { throw new Error(d.error || 'ошибка каталога'); }
+      _data = d;
+      renderStats();
+      renderCats();
+      renderGrid();
+    } catch (e) {
+      $('cmdxCount').textContent = '';
+      $('cmdxGrid').innerHTML = '<div class="cmdx-empty"><i class="fas fa-triangle-exclamation"></i>' +
+        'Не удалось загрузить каталог команд (' + esc(e.message) + '). Обновите страницу.</div>';
+    }
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { renderGrid(); bind(); });
+    document.addEventListener('DOMContentLoaded', init);
   } else {
-    renderGrid(); bind();
+    init();
   }
 })();
 </script>
