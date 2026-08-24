@@ -106,7 +106,7 @@ MODULE_CATEGORY = {
 
 # Модули-исполнители: этим командам панель умеет показывать форму «Выполнить»
 # (белый список дублирует серверный /api/execute-command).
-EXECUTABLE = ('ban', 'kick', 'timeout', 'warn', 'jail', 'unjail')
+EXECUTABLE = ('ban', 'timeout', 'warn', 'jail', 'unjail')
 
 _KIND_LABEL = {'slash': 'SLASH', 'prefix': 'PREFIX', 'sub': 'SLASH'}
 

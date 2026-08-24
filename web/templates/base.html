@@ -380,6 +380,8 @@
     <script src="/static/websocket-client.js?v={{ static_v('websocket-client.js') }}"></script>
     <!-- API Guard: тост на HTTP-ошибки (штатный ETag 304 не считается сбоем) -->
     <script src="/static/api-guard.js?v={{ static_v('api-guard.js') }}"></script>
+    <!-- Click Guard: если невидимка перехватывает тап — пробрасываем на кнопку под ней -->
+    <script src="/static/click-guard.js?v={{ static_v('click-guard.js') }}"></script>
     <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
     <script src="/static/app.js?v={{ static_v('app.js') }}"></script>
 </body>

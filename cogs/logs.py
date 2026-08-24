@@ -1226,27 +1226,41 @@ class Logs (commands .Cog ):
                 'removed_roles':[r .name for r in removed ],
                 'mod_name':_actor_line (who ),
                 })
-                ch =await self .get_log_channel (before .guild ,'role')
-                if ch :
-                    _rf =[('Участник',f"**{before.display_name}** · `{before.id}`")]
-                    if added :
-                        _rf .append (('Добавлены',", ".join (r .mention for r in added )))
-                    if removed :
-                        _rf .append (('Сняты',", ".join (r .mention for r in removed )))
-                    _rf .append (('Модератор',_actor_line (who )))
-                    if who and who [2 ]:
-                        _rf .append (('Причина',who [2 ]))
-                    # Для картинки — читаемые имена ролей вместо сырых упоминаний
-                    _crf =[]
-                    for _n ,_v in _rf :
-                        if _n =='Добавлены':
-                            _v ='+ '+", ".join (r .name for r in added )
-                        elif _n =='Сняты':
-                            _v ='- '+", ".join (r .name for r in removed )
-                        _crf .append ((_n ,_v ))
-                    e =_styled_log_embed (before .guild ,'role','Изменение ролей участника',
-                    fields =_rf ,card_rows =_crf ,thumbnail =str (before .display_avatar .url ))
-                    await _safe_send (ch ,embed =e )
+                # Пачкуем вывод: массовая раздача ролей уходит ОДНОЙ сводной
+                # карточкой, а не десятком одинаковых (канал не «портится»).
+                _item ={
+                'user_name':str (before .display_name ),
+                'added':[r .name for r in added ],
+                'removed':[r .name for r in removed ],
+                'mod':_actor_line (who ),
+                }
+                async def _flush_roles (items ,_g =before .guild ):
+                    _ch =await self .get_log_channel (_g ,'role')
+                    if not _ch :
+                        return
+                    _rows =[]
+                    _cap =7
+                    for _it in items [:_cap ]:
+                        _bits =[]
+                        if _it .get ('added'):
+                            _bits .append ('+ '+", ".join (_it ['added']))
+                        if _it .get ('removed'):
+                            _bits .append ('− '+", ".join (_it ['removed']))
+                        _txt =" · ".join (_bits )or '—'
+                        if _it .get ('mod'):
+                            _txt +=f"  ({_it ['mod']})"
+                        _rows .append ((_it ['user_name'],_txt ))
+                    if len (items )>_cap :
+                        _rows .append (('Итого',f'{len (items )} участников · выше {_cap} последних'))
+                    _title ='Изменение ролей участника'if len (items )==1 else f'Изменение ролей · {len (items )} участников'
+                    _e =_styled_log_embed (_g ,'role',_title ,
+                    fields =_rows ,card_rows =_rows )
+                    await _safe_send (_ch ,embed =_e )
+                try :
+                    from services .log_throttle import member_updates as _mu
+                    _mu .feed ((before .guild .id ,'roles'),_item ,_flush_roles )
+                except Exception as _te :
+                    log .debug (f'[LOGS] throttle roles: {_te}')
 
                     # Mute
         before_to =getattr (before ,'timed_out_until',None )
@@ -1331,16 +1345,31 @@ class Logs (commands .Cog ):
             'old_nick':before .nick or before .name ,
             'new_nick':after .nick or after .name ,
             })
-            ch =await self .get_log_channel (before .guild ,'member')
-            if ch :
-                e =_styled_log_embed (before .guild ,'member','Псевдоним изменён',
-                fields =[
-                ('Участник',f"**{before.display_name}** · `{before.id}`"),
-                ('Было',f"`{before.nick or before.name}`"),
-                ('Стало',f"`{after.nick or after.name}`"),
-                ],
-                color =0x3498DB ,thumbnail =str (before .display_avatar .url ))
-                await _safe_send (ch ,embed =e )
+            # Ники тоже пачкуем за 12с — «переименовал всех» не завалит канал
+            _item ={
+            'user_name':str (before .display_name ),
+            'old_nick':before .nick or before .name ,
+            'new_nick':after .nick or after .name ,
+            }
+            async def _flush_nicks (items ,_g =before .guild ):
+                _ch =await self .get_log_channel (_g ,'member')
+                if not _ch :
+                    return
+                _rows =[]
+                _cap =7
+                for _it in items [:_cap ]:
+                    _rows .append ((_it ['user_name'],f"`{_it ['old_nick']}` → `{_it ['new_nick']}`"))
+                if len (items )>_cap :
+                    _rows .append (('Итого',f'{len (items )} смен ника · выше {_cap} последних'))
+                _title ='Псевдоним изменён'if len (items )==1 else f'Псевдонимы · {len (items )} смен'
+                _e =_styled_log_embed (_g ,'member',_title ,
+                fields =_rows ,card_rows =_rows ,color =0x3498DB )
+                await _safe_send (_ch ,embed =_e )
+            try :
+                from services .log_throttle import member_updates as _mu
+                _mu .feed ((before .guild .id ,'nick'),_item ,_flush_nicks )
+            except Exception as _te :
+                log .debug (f'[LOGS] throttle nick: {_te}')
 
                 # СООБЩЕНИЯ 
 

@@ -284,10 +284,31 @@ class Moderation (commands .Cog ):
         """Выполнить выбранное действие модерации."""
         guild =interaction .guild
 
+        # Лимиты стаффа — защита от «плохих» модераторов (владельца не трогаем)
+        try :
+            if action in ('ban','clear') and guild and getattr (interaction .user ,'id',0 )!=getattr (guild ,'owner_id',0 ):
+                from services .staff_limits import check_limit as _sl_check
+                if action =='clear':
+                    try :
+                        _sl_amt =max (1 ,min (int (amount )or 10 ,200 ))
+                    except Exception :
+                        _sl_amt =10
+                else :
+                    _sl_amt =1
+                _sl_ok ,_sl_used ,_sl_lim =_sl_check (guild .id ,interaction .user .id ,action ,_sl_amt )
+                if not _sl_ok :
+                    _what ='банов'if action =='ban'else 'сообщений чисткой'
+                    await _respond (interaction ,
+                    embed =error_embed (f'🛡 Дневной лимит исчерпан: {_sl_lim} {_what} в день (уже {_sl_used}). Сброс — после полуночи по UTC.'),
+                    ephemeral =True )
+                    return
+        except Exception as _le :
+            log .debug (f'[STAFF_LIMIT] {_le}')
+
         # Наказания — только с доказательством (ссылкой на скрин/видео):
         # модальные окна Discord не принимают вложения, поэтому через панель
         # доказательство передаётся ссылкой.
-        _punish_actions =("ban","kick","timeout","mute_chat","vmute")
+        _punish_actions =("ban","timeout","mute_chat","vmute")
         if action in _punish_actions :
             from cogs .proof_cog import require_proof
             _action_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
@@ -312,9 +333,19 @@ class Moderation (commands .Cog ):
                     # Апелляция: закрыть все каналы, оставить канал апелляции.
                     _iso ,_closed =await self ._isolate_member (guild ,user ,reason )
                     msg =f"🚫 апелляция: закрыто каналов {_closed}, открыт {_iso .mention if _iso else 'канал апелляции'}"
+                    try :
+                        from services .staff_limits import record_hit as _sl_rec
+                        _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
+                    except Exception as _re :
+                        log .debug (f'[STAFF_LIMIT] ban rec: {_re}')
                 elif action =="kick":
-                    await user .kick (reason =reason )
-                    msg ="👢 пользователь кикнут"
+                    # Система kick полностью отключена решением владельца (2026-08):
+                    # опция убрана из меню, ручные вызовы — вежливый отказ.
+                    if interaction .response .is_done ():
+                        await interaction .followup .send ("🛡 Кик отключён на этом сервере — используй мут или апелляцию.",ephemeral =True )
+                    else :
+                        await interaction .response .send_message ("🛡 Кик отключён на этом сервере — используй мут или апелляцию.",ephemeral =True )
+                    return 
                 elif action in ("timeout","mute_chat"):
                     try :
                         minutes =max (1 ,int (amount )if str (amount ).strip () else 5 )
@@ -449,6 +480,11 @@ class Moderation (commands .Cog ):
             except Exception :
                 count =10
             deleted =await interaction .channel .purge (limit =count )
+            try :
+                from services .staff_limits import record_hit as _sl_rec
+                _sl_rec (guild .id ,interaction .user .id ,'clear',len (deleted ))
+            except Exception as _re :
+                log .debug (f'[STAFF_LIMIT] clear rec: {_re}')
             confirm =success_embed (
             "Сообщения удалены",
             f"Удалено **{len(deleted)}** сообщений в {interaction.channel.mention}",
@@ -506,7 +542,6 @@ class ModActionSelect(discord.ui.Select):
     def __init__(self, cog):
         options = [
             discord.SelectOption(label="Бан (апелляция)", value="ban", description="Закрыть все каналы, оставить канал апелляции"),
-            discord.SelectOption(label="Кик", value="kick", description="Выгнать участника"),
             discord.SelectOption(label="Мут (чат + войс)", value="timeout", description="Таймаут — закрыть и чат, и голос"),
             discord.SelectOption(label="Мут (только чат)", value="mute_chat", description="Закрыть только чат (таймаут)"),
             discord.SelectOption(label="Мут (только войс)", value="vmute", description="Заглушить микрофон (чат не трогает)"),
@@ -531,7 +566,7 @@ class ModActionSelect(discord.ui.Select):
 
 # Действия-наказания в мод-панели: к ним обязательна демка (пока включено
 # требование в панели: «Доказательства» → тумблер).
-_PUNISH_MODPANEL = ("ban", "kick", "timeout", "mute_chat", "vmute")
+_PUNISH_MODPANEL = ("ban", "timeout", "mute_chat", "vmute")
 
 
 class ModActionModal(discord.ui.Modal):
@@ -547,7 +582,6 @@ class ModActionModal(discord.ui.Modal):
         self.action = action
         titles = {
             "ban": "Бан (апелляция)",
-            "kick": "Кик участника",
             "timeout": "Мут (чат + войс)",
             "mute_chat": "Мут чата",
             "vmute": "Войс-мут",
