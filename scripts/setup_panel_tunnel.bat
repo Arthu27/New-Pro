@@ -38,14 +38,19 @@ if /i "%PING%"=="DOWN" (
 )
 echo        Panel is alive, moving on.
 
-if exist cloudflared.exe cloudflared.exe --version >nul 2>&1
-if %errorlevel%==0 goto havebin
+if exist cloudflared.exe cloudflared.exe --version >nul 2>&1 && goto havebin
 del cloudflared.exe >nul 2>&1
 echo(
 echo [1/6] Downloading cloudflared, please wait ...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile 'cloudflared.exe'"
-if not exist cloudflared.exe (
-  echo [ERROR] Download failed. Check internet and try again.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe' -OutFile 'cloudflared.exe'"
+cloudflared.exe --version >nul 2>&1
+if errorlevel 1 (
+  del cloudflared.exe >nul 2>&1
+  echo [ERROR] Download failed or the file is broken.
+  echo         Plan B: open this link in your browser, then move
+  echo         the downloaded file into this scripts folder
+  echo         and rename it to cloudflared.exe :
+  echo         https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
   pause
   exit /b 1
 )
