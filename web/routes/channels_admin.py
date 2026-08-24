@@ -27,7 +27,9 @@ def register(ctx):
     def api_create_channel (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Бот офлайн'})
+        if not bot :
+            if _app ._demo_mode ():return jsonify ({'success':True ,'demo':True })
+            return jsonify ({'error':'Бот офлайн — запусти его через start.bat и попробуй ещё раз'})
         data =request .get_json (silent =True )or {}
         async def do ():
             guild =bot .get_guild (int (guild_id ))
@@ -81,7 +83,9 @@ def register(ctx):
     def api_update_channel (guild_id ,channel_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        if not bot :return jsonify ({'error':'Бот офлайн'})
+        if not bot :
+            if _app ._demo_mode ():return jsonify ({'success':True ,'demo':True })
+            return jsonify ({'error':'Бот офлайн — запусти его через start.bat и попробуй ещё раз'})
         data =request .get_json (silent =True )or {}
         async def do ():
             guild =bot .get_guild (int (guild_id ))
@@ -138,7 +142,9 @@ def register(ctx):
     def api_delete_channel (guild_id ,channel_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        if not bot :return jsonify ({'error':'Бот офлайн'})
+        if not bot :
+            if _app ._demo_mode ():return jsonify ({'success':True ,'demo':True })
+            return jsonify ({'error':'Бот офлайн — запусти его через start.bat и попробуй ещё раз'})
         async def do ():
             ch =bot .get_channel (int (channel_id ))
             if ch :await (ch .delete ())

@@ -306,6 +306,17 @@ _ETAG_PATHS =(
 
 @app .after_request 
 def after_request (response ):
+    # «Бот офлайн» из ~40 эндпоинтов подменяем на человеческую подсказку —
+    # сухое «Ошибка: Бот офлайн» в тосте владелец читает как «кнопки сломаны».
+    # Меняем ТОЛЬКО голый литерал (хвост-варианты вида «Бот офлайн — ...» не трогаем).
+    try :
+        if response .is_json :
+            _d =response .get_json (silent =True )
+            if isinstance (_d ,dict )and _d .get ('error')=='Бот офлайн':
+                _d ['error']='Бот офлайн — запусти его через start.bat и попробуй ещё раз'
+                response .set_data (json .dumps (_d ,ensure_ascii =False ))
+    except Exception as _ex:
+        _log .debug ("after_request(): офлайн-подсказка подавлена: %s",_ex )
 # Логировать только POST/DELETE-запросы — частые GET-опросы не трогаем
     if request .method in ('POST','DELETE')and session .get ('logged_in'):
         path =request .path 
