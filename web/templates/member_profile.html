@@ -55,7 +55,6 @@
       <div class="row"><span class="row-key">Ролей</span><span class="row-val" id="p-rolcnt">-</span></div>
       <div class="actions-row">
         <button class="btn btn-warn" type="button" data-action="warn"><i class="fas fa-exclamation-triangle"></i> Варн</button>
-        <button class="btn btn-warn" type="button" data-action="kick"><i class="fas fa-user-times"></i> Кик</button>
         <button class="btn btn-danger" type="button" data-action="ban"><i class="fas fa-gavel"></i> Бан</button>
       </div>
     </div>
@@ -125,10 +124,41 @@
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
 
+  function askReason(title) {
+    var v = window.prompt(title + ' — укажите причину:', 'Нарушение правил');
+    return v === null ? null : (v.trim() || 'Не указана');
+  }
+
+  async function punish(action) {
+    var uid = ($('p-id').textContent || '').trim();
+    if (!/^\d+$/.test(uid)) { showToast('Сначала загрузите профиль участника', false); return; }
+    if (action === 'ban') {
+      if (!window.confirm('Забанить ' + ($('p-name').textContent || uid) + '? Действие серьёзное.')) return;
+    }
+    var reason = askReason(action === 'warn' ? 'Предупреждение' : 'Бан');
+    if (reason === null) return;
+    try {
+      var r = await fetch('/api/member-profile/' + selectedGuild + '/' + uid + '/' + action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason })
+      });
+      var d = await r.json();
+      if (d.error) { showToast(d.error, false); return; }
+      showToast(action === 'warn'
+        ? 'Варн выдан — всего предупреждений: ' + (d.total || '?')
+        : 'Участник забанен', true);
+      if (action === 'warn') load();
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
+  }
+
   function bind() {
     $('guild-select').addEventListener('change', function () { selectedGuild = this.value || MAIN_GID; });
     $('btn-load').addEventListener('click', load);
     $('search').addEventListener('keypress', function (e) { if (e.key === 'Enter') load(); });
+    Array.prototype.forEach.call(document.querySelectorAll('.actions-row [data-action]'), function (b) {
+      b.addEventListener('click', function () { punish(b.getAttribute('data-action')); });
+    });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); });
   else { bind(); loadGuilds(); }

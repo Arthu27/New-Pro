@@ -176,6 +176,118 @@ def register(ctx):
         return jsonify (result )
 
 
+    @app .route ('/api/member-profile/<guild_id>/<user_id>/warn',methods =['POST'])
+    @login_required 
+    @role_required ('admin')
+    def api_member_profile_warn (guild_id ,user_id ):
+        # Варн из профиля участника: идём через живой ког warnings, чтобы сработали
+        # и хранение, и DM, и лог-канал, и авто-наказание по порогам.
+        if not str (user_id ).isdigit ():
+            return jsonify ({'error':'Некорректный ID участника.'}),400 
+        import web .app as _app ;bot =_app .bot_instance 
+        d =request .get_json (silent =True )or {}
+        reason =(d .get ('reason')or '').strip ()or 'Не указана'
+        if _app ._demo_mode ():
+            return jsonify ({'ok':True ,'demo':True ,'warn_id':1 ,'total':1 })
+        if not bot :
+            return jsonify ({'error':'Бот офлайн'}),503 
+        guild =bot .get_guild (int (guild_id )if str (guild_id ).isdigit ()else 0 )
+        if not guild :
+            return jsonify ({'error':'Сервер не найден'}),404 
+        try :
+            member =_run_async (_resolve_member_async (guild ,int (user_id )))
+        except Exception :
+            member =None 
+        if not member :
+            return jsonify ({'error':'Участник не найден на сервере'}),404 
+        # Модератор — владелец панели (Discord ID из сессии), иначе сам бот.
+        moderator =guild .me 
+        _did =str (session .get ('discord_id')or '')
+        if _did .isdigit ():
+            _md =guild .get_member (int (_did ))
+            if _md :
+                moderator =_md 
+        cog =bot .get_cog ('warnings')or bot .get_cog ('Warnings')
+        if cog :
+            import asyncio as _asyncio 
+            try :
+                _fut =_asyncio .run_coroutine_threadsafe (cog .add_warning (member ,moderator ,reason ),bot .loop )
+                warn_id ,total =_fut .result (timeout =15 )
+            except Exception as _e :
+                return jsonify ({'error':f'Не удалось выдать предупреждение: { _e }'}),500 
+        else :
+            # Ког не загружен — пишем зеркало data/warnings.json напрямую (та же схема).
+            wf ='data/warnings.json'
+            os .makedirs ('data',exist_ok =True )
+            try :
+                with open (wf ,encoding ='utf-8')as f :data =json .load (f )
+                if not isinstance (data ,dict ):data ={}
+            except Exception :
+                data ={}
+            _g =data .setdefault (str (guild_id ),{})
+            _w =_g .get (str (user_id ),[])
+            warn_id =len (_w )+1 
+            _w .append ({'id':warn_id ,'reason':reason ,'mod':str (moderator ),
+            'mod_id':str (moderator .id ),'timestamp':datetime .now (timezone .utc ).isoformat ()})
+            _g [str (user_id )]=_w [-25 :]
+            _tmp =wf +'.tmp'
+            with open (_tmp ,'w',encoding ='utf-8')as f :json .dump (data ,f ,ensure_ascii =False ,indent =2 )
+            os .replace (_tmp ,wf )
+            total =len (_w )
+        return jsonify ({'ok':True ,'warn_id':warn_id ,'total':total })
+
+
+    @app .route ('/api/member-profile/<guild_id>/<user_id>/ban',methods =['POST'])
+    @login_required 
+    @role_required ('admin')
+    def api_member_profile_ban (guild_id ,user_id ):
+        # Бан из профиля участника (кик из панели убран по решению владельца).
+        if not str (user_id ).isdigit ():
+            return jsonify ({'error':'Некорректный ID участника.'}),400 
+        import web .app as _app ;bot =_app .bot_instance 
+        d =request .get_json (silent =True )or {}
+        reason =(d .get ('reason')or '').strip ()or 'Не указана'
+        if _app ._demo_mode ():
+            return jsonify ({'ok':True ,'demo':True })
+        if not bot :
+            return jsonify ({'error':'Бот офлайн'}),503 
+        guild =bot .get_guild (int (guild_id )if str (guild_id ).isdigit ()else 0 )
+        if not guild :
+            return jsonify ({'error':'Сервер не найден'}),404 
+        try :
+            member =_run_async (_resolve_member_async (guild ,int (user_id )))
+        except Exception :
+            member =None 
+        if not member :
+            return jsonify ({'error':'Участник не найден на сервере'}),404 
+        if guild .owner_id ==member .id :
+            return jsonify ({'error':'Нельзя забанить владельца сервера.'}),400 
+        _uname =session .get ('username')or 'панель'
+        # DM до бана — best effort: после бана написать уже не выйдет.
+        try :
+            import asyncio as _asyncio 
+            async def _dm ():
+                try :
+                    await member .send (f'Вы забанены на сервере **{guild .name }**. Причина: {reason }')
+                except Exception :
+                    return 
+            _asyncio .run_coroutine_threadsafe (_dm (),bot .loop ).result (timeout =5 )
+        except Exception as _ex:
+            _log .debug ("api_member_profile_ban(): DM не доставлено: %s",_ex )
+        try :
+            _run_async (guild .ban (member ,reason =f"[Панель] { _uname }: { reason }"))
+        except Exception as _e :
+            return jsonify ({'error':str (_e )}),400 
+        _modcog =bot .get_cog ('Moderation')
+        if _modcog :
+            try :
+                _modcog .save_case (guild .id ,'ban',str (user_id ),
+                str (session .get ('discord_id')or _uname ),reason )
+            except Exception as _ex:
+                _log .debug ("api_member_profile_ban(): save_case подавлен: %s",_ex )
+        return jsonify ({'ok':True })
+
+
     @app .route ('/api/my-profile',methods =['GET'])
     @login_required 
     def api_my_profile ():
