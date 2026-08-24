@@ -106,6 +106,27 @@ check('def ensure_binary' in nt and 'def runtime_config' in nt, 'хелперы 
 gi = read('.gitignore')
 check('scripts/tunnel-creds.json' in gi, 'ключ туннеля в .gitignore (не утекёт в репо)')
 
+print('\n[8] Крошки сверху видят ВЛОЖЕННЫЕ разделы (каналы и др.):')
+os.makedirs('data', exist_ok=True)
+os.environ.setdefault('DB_PATH', os.path.join(_TMP, 'data', 'bot.db'))
+os.environ.setdefault('PANEL_USER', 'admin')
+os.environ.setdefault('PANEL_PASSWORD', 'test123')
+os.environ.setdefault('MAIN_GUILD_ID', '777')
+os.environ.setdefault('DEMO_MODE', '1')
+from web.app import app as flask_app
+flask_app.config['TESTING'] = True
+client = flask_app.test_client()
+
+r = client.get('/channels')
+body = r.get_data(as_text=True)
+check(r.status_code == 200, f'/channels рендерится (было {r.status_code})')
+m = re.search(r'crumb-here">\s*<i[^>]*></i>\s*([^<]+)', body)
+check(m is not None and 'Каналы' in m.group(1),
+      f'сверху видно текущий раздел: {m.group(1).strip() if m else None}')
+check('crumb-group' in body, 'крошки показывают и группу раздела')
+m2 = re.search(r'<a href="/channels"[^>]*class="nav-link active', body)
+check(m2 is not None, 'пункт меню «Каналы» подсвечен активным')
+
 shutil.rmtree(_TMP, ignore_errors=True)
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

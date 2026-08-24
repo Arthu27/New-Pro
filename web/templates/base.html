@@ -246,13 +246,27 @@
                     <a class="crumb-home" href="/" title="Обзор сервера"><i class="fas fa-house"></i></a>
                     {% set ns = namespace(c_group='', c_label='', c_icon='') %}
                     {% for grp in panel_menu|default([], true) %}
-                        {% for it in grp.pages %}
-                            {% if it.path == request.path %}
-                                {% set ns.c_group = grp.group %}
-                                {% set ns.c_label = it.label %}
-                                {% set ns.c_icon = it.icon %}
-                            {% endif %}
-                        {% endfor %}
+                        {% if grp.sections %}
+                            {# Вложенные разделы (модерация: каналы, участники и т.д.) — #}
+                            {# раньше крошки их НЕ видели, и сверху было пусто. #}
+                            {% for section in grp.sections %}
+                                {% for it in section.pages %}
+                                    {% if it.path == request.path %}
+                                        {% set ns.c_group = section.short or grp.group %}
+                                        {% set ns.c_label = it.label %}
+                                        {% set ns.c_icon = it.icon %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                        {% else %}
+                            {% for it in grp.pages %}
+                                {% if it.path == request.path %}
+                                    {% set ns.c_group = grp.group %}
+                                    {% set ns.c_label = it.label %}
+                                    {% set ns.c_icon = it.icon %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
                     {% endfor %}
                     {% if ns.c_label %}
                     <span class="crumb-sep"><i class="fas fa-chevron-right"></i></span>
