@@ -129,7 +129,7 @@ docker compose logs -f
 
 Адрес: http://localhost:5001
 
-Свой домен для панели (например https://panel.hakumods.xyz) — готовый
+Панель на своём домене (https://hakumods.xyz — прямо на главном) — готовый
 пошаговый план и авто-скрипт: docs/PANEL-DOMAIN.md, scripts/setup_panel_tunnel.bat.
 
 **Дизайн — «Light Edition Premium»**: светлый минимализм с премиум-слоем —
