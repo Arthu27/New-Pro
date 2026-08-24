@@ -139,32 +139,6 @@ class VoiceCommands(commands.Cog):
             log.error(f"Voice API ошибка: {e}")
             return None
 
-    @commands.command(name="voice-status")
-    @commands.has_permissions(manage_messages=True)
-    async def voice_status(self, ctx):
-        """Показать состояние системы голосовых команд"""
-        status = "Доступен" if self.whisper_available else "Не установлен"
-
-        embed = discord.Embed(
-            title="Голосовые команды",
-            color=discord.Color.dark_grey()
-        )
-        embed.description = f"**Whisper:** {status}\n\n"
-
-        if self.whisper_available:
-            embed.description += (
-                "Система голосовых команд активна.\n"
-                "Голосовые сообщения в каналах будут автоматически распознаваться."
-            )
-        else:
-            embed.description += (
-                "Для работы голосовых команд установите Whisper:\n"
-                "```bash\npip install faster-whisper   # рекомендуется\n# или\npip install openai-whisper\n```"
-            )
-
-        embed.set_footer(text=ctx.guild.name)
-        await ctx.send(embed=embed)
-
 
 async def setup(bot):
     await bot.add_cog(VoiceCommands(bot))

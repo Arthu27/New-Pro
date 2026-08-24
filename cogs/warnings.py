@@ -377,25 +377,6 @@ class warnings(commands.Cog):
         e.set_footer(text=f"{interaction.guild.name}")
         await interaction.response.send_message(embed=e, ephemeral=True)
 
-    # ── /clearwarns ──────────────────────────────────────────────────────
-    @app_commands.command(name="clearwarns", description="Очистить все предупреждения")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def clearwarns(self, interaction, user: discord.Member):
-        warns = self._get_warns(interaction.guild.id, user.id)
-        count = len(warns)
-        self._clear_warns(interaction.guild.id, user.id)
-
-        e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
-        e.description = (
-            "## Предупреждения очищены\n"
-            f"**{user.display_name}** · `{user.id}`\n\n"
-            f"Удалено: **{count}** предупреждений\n"
-            f"Модератор: {interaction.user.mention}\n\n"
-            f"{DIVIDER}"
-        )
-        e.set_footer(text=f"{interaction.guild.name}")
-        await interaction.response.send_message(embed=e, ephemeral=True)
-
     # ── /unwarn ─────────────────────────────────────────────────────────
     @app_commands.command(name="unwarn", description="Снять последнее предупреждение у пользователя")
     @app_commands.checks.has_permissions(moderate_members=True)
@@ -514,47 +495,6 @@ class warnings(commands.Cog):
         except Exception as _ex:
             _log.debug("_collect_mod_data(): подавлено: %s", _ex)
         return warns, cases, notes
-
-    @commands.command(name="pw", aliases=["player", "dossier", "dosye"])
-    @commands.has_permissions(moderate_members=True)
-    async def pw(self, ctx, user: discord.Member = None):
-        """Полное досье пользователя: предупреждения, наказания, заметки, оценка."""
-        user = user or ctx.author
-        warns, cases, notes = self._collect_mod_data(ctx.guild.id, user.id)
-        score = _compute_score(len(warns), cases)
-        score_text = _score_text(score)
-
-        # Показываем карточку (если PIL доступен) + embed с деталями
-        embed = discord.Embed(
-            title=f"📋 Досье: {user.display_name}",
-            description=(
-                f"`{user.id}`\n\n"
-                f"**⚠️ Предупреждения:** {len(warns)}\n"
-                f"**🛠 Наказания:** {len(cases)}\n"
-                f"**📝 Заметки:** {len(notes)}\n\n"
-                f"**Оценка:** {score}/100 — **{score_text}**"
-            ),
-            color=0x3498DB,
-            timestamp=datetime.now(timezone.utc)
-        )
-        embed.set_thumbnail(url=user.display_avatar.url)
-        embed.set_footer(text=f"{ctx.guild.name} • Aether Модерация")
-
-        files = []
-        view = None
-        if _PIL_OK:
-            try:
-                buf = generate_pw_card(
-                    user.display_name, user.id, user.display_avatar.url,
-                    len(warns), cases, len(notes), score, score_text, user
-                )
-                files = [discord.File(buf, filename="dossier.png")]
-                embed.set_image(url="attachment://dossier.png")
-            except Exception as e:
-                log.warning(f"pw card gen error: {e}")
-
-        view = PWView(self, user, warns, cases, notes)
-        await ctx.send(embed=embed, files=files, view=view)
 
 
 # ═══════════════════════════════════════════════════════════════════

@@ -49,13 +49,18 @@ check(pm.module_mode_active() is False, 'lean: баннер «только мо�
 off_lean = pm.module_off_paths()
 # /automation не гаснет: на ней живёт и welcome_pro (приветствия включены)
 for p in ('/economy', '/giveaway', '/starboard', '/custom-commands',
-          '/reaction-roles', '/fun', '/leveling', '/afk-list'):
+          '/reaction-roles', '/fun', '/leveling'):
     assert p in off_lean, p
 check(True, 'lean (по умолчанию): игровые и соц-страницы честно гаснут чипом «выкл»')
-for p in ('/music', '/tickets-ops', '/sla', '/staff-apps', '/ai-chat',
+for p in ('/sla', '/tagjail', '/security'):
+    assert p in off_lean, p
+check(True, 'lean: страницы уснувших модулей (SLA/TagJail/безопасность) гаснут чипом')
+check('/mod-report' not in off_lean,
+      'lean: /mod-report живёт от аудит-файла — ког mod_report не нужен, чип не вешаем')
+for p in ('/music', '/tickets-ops', '/staff-apps', '/ai-chat', '/afk-list',
           '/ai-moderation', '/welcome-editor', '/voice-stats', '/appeals'):
     assert p not in off_lean, p
-check(True, 'lean: боевые страницы открыты (модерация/тикеты/музыка/AI/приветствие)')
+check(True, 'lean: боевые страницы открыты (модерация/тикеты/музыка/AI/AFK/приветствие)')
 
 _set_env(BOT_FULL='1')
 check(pm.module_off_paths() == frozenset(), 'BOT_FULL=1: ничто не приглушено — полный вид панели')

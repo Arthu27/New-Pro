@@ -159,8 +159,6 @@ def log_category_display (category :str ='сервер'):
     return LOG_CHANNELS .get (ch_name ,LOG_CHANNELS ['сервер'])
 
 
-
-
 def find_log_channel (guild ,category :str ='сервер'):
     """Единый поиск лог-канала для категории.
 
@@ -788,8 +786,6 @@ class LogsCenterView(discord.ui.View):
             log.debug("lc_refresh(): подавлено: %s", _ex)
 
 
-
-
 class Logs (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -1000,10 +996,6 @@ class Logs (commands .Cog ):
         e .set_footer (text =f"Aether • {guild.name}",icon_url =guild .icon .url if guild .icon else None )
         await interaction .followup .send (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="setup-logs",description ="Создать/починить категорию и каналы для логов")
-    @app_commands .checks .has_permissions (administrator =True )
-    async def setup_logs (self ,interaction :discord .Interaction ):
-        await self ._setup_logs_core (interaction )
 
     @app_commands .command (name ="logs-setup",description ="Создать/починить категорию и каналы для логов")
     @app_commands .checks .has_permissions (administrator =True )
@@ -1880,58 +1872,6 @@ class Logs (commands .Cog ):
 
             # ЦЕНТР ЛОГОВ: select-меню — статус категорий, тест, починка
 
-    @commands.command(name="logs", aliases=["modlogs", "логи", "модлоги", "loghelp", "logs-help"])
-    async def logs_cmd(self, ctx):
-        """Интерактивное руководство и Центр логов для модераторов/админов"""
-        if not (ctx.author.guild_permissions.administrator or ctx.author.guild_permissions.moderate_members or ctx.author.guild_permissions.manage_messages):
-            await ctx.send("🚫 Центр логов доступен только модераторам и администраторам.", delete_after=6)
-            return
-        view = LogsCenterView(ctx.guild, ctx.author.id)
-        await ctx.send(embed=view.overview_embed(), view=view)
-
-    @app_commands.command(name="logs", description="Интерактивный центр логов: руководство, каналы, статус доставки и аудит")
-    @app_commands.checks.has_permissions(moderate_members=True)
-    async def logs_slash(self, interaction: discord.Interaction):
-        view = LogsCenterView(interaction.guild, interaction.user.id)
-        await interaction.response.send_message(
-            embed=view.overview_embed(), view=view, ephemeral=True)
-
-    @app_commands.command(name="modlogs", description="Логи модерации: проверка каналов, последние действия и статус доставки")
-    @app_commands.checks.has_permissions(moderate_members=True)
-    async def modlogs_slash(self, interaction: discord.Interaction):
-        view = LogsCenterView(interaction.guild, interaction.user.id)
-        view.selected = 'mod'
-        await interaction.response.send_message(
-            embed=view.status_embed(), view=view, ephemeral=True)
-
-    @app_commands.command(name="logs-center", description="Центр логов: выбор категории в меню — статус, тест доставки, починка каналов")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def logs_center(self, interaction: discord.Interaction):
-        view = LogsCenterView(interaction.guild, interaction.user.id)
-        await interaction.response.send_message(
-            embed=view.overview_embed(), view=view, ephemeral=True)
-
-    @commands.hybrid_command(name='логи-экспорт', aliases=['logexport', 'экспорт-логов'],
-                             description='Выгрузить журнал модерации автономным HTML-файлом')
-    @commands.has_permissions(moderate_members=True)
-    async def logs_export(self, ctx, days: int = 7, category: str = None, mod: str = None):
-        """Портативный HTML-отчёт по audit_log: /логи-экспорт [дни] [категория] [модератор]."""
-        import io as _io
-        from services import log_export as _lx
-        events = _lx.load_events(ctx.guild.id)
-        filtered = _lx.filter_events(events, days=days, category=category, mod=mod)
-        parts = [f'период: {days} дн.']
-        if category:
-            parts.append(f'категория: {category}')
-        if mod:
-            parts.append(f'модератор: {mod}')
-        html_doc = _lx.render_html(filtered, guild_name=ctx.guild.name, filters_desc=', '.join(parts))
-        filename = _lx.export_filename(ctx.guild.name)
-        payload = _io.BytesIO(html_doc.encode('utf-8'))
-        await ctx.send(
-            f'Журнал модерации: **{len(filtered)}** событий ({", ".join(parts)}). Файл автономный.',
-            file=discord.File(payload, filename=filename)
-        )
 
             # DISCORD AUDIT LOG SYNC 
 

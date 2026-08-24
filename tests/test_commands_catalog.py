@@ -46,26 +46,26 @@ print('== 1. Реестр команд (LEAN — боевой состав по 
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-check(data['total'] >= 100, f"lean: собрано {data['total']} живых команд")
-check(data['slash'] >= 30 and data['prefix'] >= 30,
+check(data['total'] == 32, f"lean: собрано {data['total']} живых команд (после чистки — 32)")
+check(data['slash'] == 13 and data['prefix'] == 19,
       f"lean: slash {data['slash']} + prefix {data['prefix']} — оба вида на месте")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
-check(len(data['categories']) >= 8, f"lean: разделов ≥8 ({len(data['categories'])})")
+check(len(data['categories']) >= 6, f"lean: разделов ≥6 ({len(data['categories'])})")
 labels = [c['label'] for c in data['categories']]
-for need in ('Модерация', 'Тикеты', 'Музыка', 'Голосовые', 'AI',
-             'Приветствие и вход', 'Логи и аудит', 'Система'):
+for need in ('Модерация', 'Тикеты', 'Музыка', 'Голосовые',
+             'Логи и аудит', 'Система'):
     check(need in labels, f'lean: раздел «{need}» в каталоге')
 check('Экономика' not in labels and 'Уровни и карма' not in labels,
       'lean: спящие системы (экономика/уровни) честно не показываются')
 mods = data.get('modules') or {}
-check(mods.get('enabled') == 31 and mods.get('sleeping') == 72,
+check(mods.get('enabled') == 26 and mods.get('sleeping') == 77,
       f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')}")
 
 print('== 1.1. Реестр в BOT_FULL (полный состав) ==')
 os.environ['BOT_FULL'] = '1'
 full = CR.catalog(force=True)
-check(full['total'] >= 300, f"full: собрано {full['total']} команд (≥300)")
+check(full['total'] >= 250, f"full: собрано {full['total']} команд (≥250)")
 full_labels = [c['label'] for c in full['categories']]
 for need in ('Экономика', 'Уровни и карма', 'Игры и развлечения'):
     check(need in full_labels, f'full: раздел «{need}» вернулся')
@@ -87,16 +87,18 @@ check('игра' in music['desc'].lower() or 'трек' in music['desc'].lower()
 check(music['module'] == 'music_cog.py', 'модуль команды указан')
 check('играй' in music['aliases'], f"алиасы подхвачены: {music['aliases']}")
 
-sub = next((c for c in data['commands'] if c['kind'] == 'sub' and c['group']), None)
+sub = next((c for c in full['commands'] if c['kind'] == 'sub' and c['group']), None)
 check(sub is not None and ' ' in sub['name'],
-      f"подкоманды групп развёрнуты ('{sub['name'] if sub else '?'}')")
+      f"подкоманды групп развёрнуты (в full: '{sub['name'] if sub else '?'}')")
+check(not any(c['kind'] == 'sub' for c in data['commands']),
+      'lean: групповые подкоманды вычищены из боевого меню')
 
 nodesc = sum(1 for c in data['commands'] if c['desc'] == 'Описание скоро появится')
 check(nodesc <= int(data['total'] * 0.15),
       f'описания почти у всех (без описания лишь {nodesc})')
 
 exe = {c['bare'] for c in data['commands'] if c['executable']}
-check(exe <= set(CR.EXECUTABLE) and exe,  # jail/unjail точно есть
+check(exe <= set(CR.EXECUTABLE),  # после чистки whitelist-команды спят — кнопка просто скрыта
       '«Выполнить» предлагается только командам из серверного белого списка')
 check(exe == {c['bare'] for c in data['commands'] if c['bare'] in CR.EXECUTABLE},
       'все подходящие команды помечены исполняемыми')
@@ -138,9 +140,9 @@ check(d['total'] == data['total'] and d['shown'] == d['total']
       and len(d['commands']) == d['total'],
       'без фильтров отдаётся весь lean-каталог (как в боте)')
 check(d['slash'] > 0 and d['prefix'] > 0, 'счётчики типов в ответе')
-check(d.get('modules', {}).get('enabled') == 31
-      and d['modules']['sleeping'] == 72,
-      'в ответе — счётчик модулей (31 включено / 72 спят)')
+check(d.get('modules', {}).get('enabled') == 26
+      and d['modules']['sleeping'] == 77,
+      'в ответе — счётчик модулей (26 включено / 77 спят)')
 
 r = client.get('/api/commands/catalog?q=play')
 d = r.get_json()
@@ -190,7 +192,7 @@ print('== 5. /help показывает все ЖИВЫЕ разделы ==')
 import cogs.help as HP  # noqa: E402
 ov = HP.build_help_embed()
 field_names = ' | '.join(f.name for f in ov.fields)
-for need in ('Музыка', 'Голосовые', 'Приветствие и вход', 'Система',
+for need in ('Музыка', 'Голосовые', 'Система',
              'Модерация', 'Тикеты'):
     check(need in field_names, f'/help overview содержит раздел «{need}»')
 check('Экономика' not in field_names and 'Уровни и карма' not in field_names,

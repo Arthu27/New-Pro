@@ -72,15 +72,19 @@ for dead in ('economy_cog.py', 'level_cog.py', 'fun_cog.py', 'minigames.py',
 check(True, 'lean: экономика/игры/уровни/ивенты/соц-системы — спят')
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'temp_moderation.py', 'proof_cog.py', 'auto_filter.py',
-             'tag_jail.py', 'antiraid.py', 'security.py', 'verification.py',
+             'antiraid.py', 'verification.py',
              'appeals.py', 'logs.py', 'log_menu.py',
-             'ticket.py', 'sla_cog.py', 'staff_apply.py', 'mod_report.py',
+             'ticket.py', 'staff_apply.py',
              'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
              'ai_chat.py', 'ai_moderation.py',
              'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
-             'help.py', 'cog_manager.py', 'health.py'):
+             'afk.py', 'help.py', 'cog_manager.py'):
     assert keep in enabled, keep
-check(True, 'lean: модерация/jail/тикеты/музыка/AI/приветствие/логи — живы')
+check(True, 'lean: модерация/тикеты/музыка/AI/приветствие/логи/afk — живы')
+for asleep in ('tag_jail.py', 'security.py', 'sla_cog.py', 'mod_report.py',
+               'health.py', 'feature_flag_cog.py'):
+    assert asleep in disabled, asleep
+check(True, 'lean: tag_jail/security/sla/mod_report/health/flags — спят (чистка команд)')
 check(not any(is_helper(f) for f in enabled), 'lean: хелперы не загружаются никогда')
 check(CORE_COGS <= LEAN_COGS and MOD_LEAN_COGS <= LEAN_COGS
       and TICKET_LEAN_COGS <= LEAN_COGS and MUSIC_COGS <= LEAN_COGS
@@ -123,7 +127,7 @@ check(True, 'mod_only: экономика/музыка/игры/AI-чат/раз
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
              'antiraid.py', 'security.py', 'verification.py', 'auto_filter.py',
              'ai_moderation.py', 'ticket.py', 'logs.py', 'proof_cog.py',
-             'help.py', 'cog_manager.py', 'health.py'):
+             'help.py', 'cog_manager.py'):
     assert keep in enabled_m, keep
 check(True, 'mod_only: наказания/автомод/анти-рейд/тикеты/журналы/демки/системное — живы')
 check(not set(enabled_m) & set(disabled_m) and

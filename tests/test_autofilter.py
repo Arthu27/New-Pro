@@ -147,10 +147,10 @@ print('== cog ==')
 cog = af.AutoFilter(bot=None)
 check(isinstance(cog.tracker, af.FloodTracker), 'ког: флуд-трекер инициализирован')
 groups = [c for c in af.AutoFilter.__cog_app_commands__ if getattr(c, 'name', '') == 'filter']
-check(bool(groups), 'ког: группа /filter зарегистрирована')
-subs = {c.name for c in groups[0].commands} if groups else set()
-check(subs == {'status', 'add', 'remove', 'words', 'toggle', 'test', 'ignore'},
-      f'ког: все 7 подкоманд /filter на месте ({sorted(subs) if subs else "—"})')
+check(not groups, 'ког: группа /filter убрана из боевого меню (чистка команд)')
+listeners = [m for m in dir(cog) if m.startswith('on_')]
+check(any('message' in m for m in listeners) or hasattr(cog, 'on_message'),
+      'ког: слушатель автофильтра на месте (сама защита жива)')
 
 
 class _Perms:

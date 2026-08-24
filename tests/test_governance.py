@@ -398,8 +398,10 @@ check('economy_shop.py' not in en and 'economy_shop.py' not in dis,
 check('economy_cog.py' not in en and 'economy_cog.py' in dis,
       'lean по умолчанию: экономика спит (панель покажет чип «выкл»)')
 check('moderation.py' in en and 'music_cog.py' in en and 'ticket.py' in en
-      and 'tag_jail.py' in en and 'ai_chat.py' in en,
-      'lean по умолчанию: модерация/музыка/тикеты/jail/AI живы')
+      and 'afk.py' in en and 'ai_chat.py' in en,
+      'lean по умолчанию: модерация/музыка/тикеты/AFK/AI живы')
+check('tag_jail.py' in dis and 'security.py' in dis and 'sla_cog.py' in dis,
+      'lean по умолчанию: jail/security/SLA спят (чистка лишних команд)')
 
 print('== 11. Все загружаемые коги импортируются с setup ==')
 import importlib  # noqa: E402

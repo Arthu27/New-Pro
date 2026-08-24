@@ -315,78 +315,23 @@ CATEGORIES = [
         "id": "moderation",
         "title": "Модерация",
         "commands": [
-            ("!ban @user [причина]", "Бан пользователя", "Админ"),
-            ("!kick @user [причина]", "Кик пользователя", "Админ"),
-            ("!mute @user [время]", "Мьют пользователя", "Мод"),
-            ("!unmute @user", "Размьют пользователя", "Мод"),
-            ("!timeout @user [время]", "Таймаут пользователя", "Мод"),
-            ("!clear [кол-во]", "Очистить сообщения", "Мод"),
-            ("!lock [#канал]", "Заблокировать канал", "Мод"),
-            ("!unlock [#канал]", "Разблокировать канал", "Мод"),
-            ("!slowmode [сек]", "Медленный режим", "Мод"),
-            ("/replay [@user] [минуты]", "Визуальная лента событий (таймлайн-карточка)", "Мод"),
-            ("/snipe [#канал]", "Последнее удалённое сообщение", "Мод"),
-            ("/editsnipe [#канал]", "Последняя правка сообщения", "Мод"),
-            ("/stick <текст>", "Липкое сообщение — всегда внизу канала", "Мод"),
-            ("/unstick [#канал]", "Отклеить липкое сообщение", "Мод"),
-            ("/ghostmute @юзер [время]", "Тихий мут: сообщения незаметно исчезают", "Мод"),
-            ("/ghostunmute @юзер", "Снять тихий мут", "Мод"),
-            ("/ghostlist", "Все «призраки» сервера", "Мод"),
-            ("панель «Доказательства»", "Загрузка демки файлом прямо из панели — фото/видео смотрятся там же", "Мод"),
-            ("/proofs [@юзер]", "Все демки сервера или конкретного юзера", "Мод"),
+            ("/modpanel", "Панель модератора: варн/мут/бан/кик/клир — модалка с демкой", "Мод"),
+            ("/warnings @user", "Список предупреждений участника", "Мод"),
+            ("/unwarn @user №", "Снять предупреждение по номеру", "Мод"),
+            ("/proofs [@user]", "Все демки сервера или конкретного юзера", "Мод"),
             ("/proofdel №", "Удалить демку по номеру", "Админ"),
-            ("/panic on|off|status", "Паника-кнопка: локдаун всех каналов и откат", "Админ"),
-            ("⚠️ реакция на сообщение", "⚡-варн автору сообщения в один клик (моды)", "Мод"),
-            ("/nuke [#канал] подтверждение", "Пересоздать канал начисто (история удаляется)", "Админ"),
-            ("/raidcleanup минуты действие", "Кик/бан всех, кто зашёл за последние N минут", "Админ"),
-            ("/dehoist [симуляция]", "Починить «выпирающие» и залго-ники", "Мод"),
-            ("/case @юзер [публично]", "Карточка нарушителя PNG: варны+демки+заметки+статусы", "Мод"),
-            ("/filter status", "Сводка автофильтра: слова/ссылки/капс/флуд", "Мод"),
-            ("/filter add|remove слово · /filter words", "Запрещённые слова: добавить, убрать, список", "Мод"),
-            ("/filter toggle · /filter test · /filter ignore", "Вкл/выкл фильтры, сухая проверка текста, канал-исключение", "Мод"),
-            ("/backup now", "Создать резервную копию данных немедленно", "Админ"),
-            ("/backup list", "Список резервных копий на диске", "Админ"),
-            ("/backup status", "Расписание и статус автобэкапа", "Админ"),
-        ]
-    },
-    {
-        "id": "warnings",
-        "title": "Предупреждения",
-        "commands": [
-            ("/warn @user [причина]", "Выдать предупреждение", "Мод"),
-            ("/warnings @user", "Список предупреждений", "Мод"),
-            ("/clearwarns @user", "Очистить предупреждения", "Админ"),
-            ("/ladder", "Лестница авто-наказаний (карточка)", "Мод"),
-            ("/ladder-add N действие [время]", "Добавить ступень лестницы", "Админ"),
-            ("/ladder-test @user", "Что грозит участнику сейчас", "Мод"),
+            ("панель «Доказательства»", "Загрузка демки файлом прямо из панели — фото/видео смотрятся там же", "Мод"),
         ]
     },
     {
         "id": "tickets",
-        "title": "Тикеты",
+        "title": "Тикеты и заявки",
         "commands": [
-            ("/ticket-panel", "Создать панель тикетов", "Админ"),
-            ("/tickets [статус]", "Список тикетов", "Все"),
-            ("/ticket-info [ID]", "Информация о тикете", "Все"),
-            ("/ticket-close [ID]", "Закрыть тикет", "Все"),
-            ("/ticket-assign [ID] @user", "Назначить тикет", "Мод"),
-        ]
-    },
-    {
-        "id": "economy",
-        "title": "Экономика",
-        "commands": [
-            ("!balance [@user]", "Баланс пользователя", "Все"),
-            ("!daily", "Ежедневная награда", "Все"),
-            ("!work", "Работать и получать монеты", "Все"),
-            ("!beg", "Попросить деньги", "Все"),
-            ("!rob @user", "Ограбить пользователя", "Все"),
-            ("!deposit [сумма]", "Положить в банк", "Все"),
-            ("!withdraw [сумма]", "Снять из банка", "Все"),
-            ("!transfer @user [сумма]", "Перевести монеты", "Все"),
-            ("!shop", "Магазин ролей и предметов", "Все"),
-            ("!buy [предмет]", "Купить предмет", "Все"),
-            ("!inventory [@user]", "Инвентарь пользователя", "Все"),
+            ("/ticket-panel", "Разместить панель обращений в канале", "Админ"),
+            ("/ticket-add @user", "Добавить участника в тикет", "Мод"),
+            ("/ticket-remove @user", "Убрать участника из тикета", "Мод"),
+            ("/staff-panel", "Панель набора в команду сервера", "Админ"),
+            ("/my-application", "Статус моей заявки в команду", "Все"),
         ]
     },
     {
@@ -398,73 +343,31 @@ CATEGORIES = [
             ("!resume", "Продолжить воспроизведение", "Все"),
             ("!skip", "Пропустить текущий трек", "Все"),
             ("!queue", "Очередь воспроизведения", "Все"),
-            ("!stop", "Остановить и очистить", "Все"),
+            ("!nowplaying", "Что сейчас играет", "Все"),
             ("!volume [0-100]", "Громкость музыки", "Все"),
             ("!loop", "Зациклить трек/очередь", "Все"),
             ("!shuffle", "Перемешать очередь", "Все"),
+            ("!clearqueue", "Очистить очередь", "Все"),
             ("!leave", "Покинуть голосовой канал", "Все"),
-        ]
-    },
-    {
-        "id": "levels",
-        "title": "Уровни",
-        "commands": [
-            ("!rank [@user]", "Ранг и уровень", "Все"),
-            ("!leaderboard", "Таблица лидеров", "Все"),
-            ("!rewards", "Награды за уровни", "Все"),
-            ("!setlevel @user [уровень]", "Установить уровень", "Админ"),
-        ]
-    },
-    {
-        "id": "utility",
-        "title": "Утилиты",
-        "commands": [
-            ("!ping", "Задержка бота", "Все"),
-            ("!botinfo", "Информация о боте", "Все"),
-            ("!serverinfo", "Информация о сервере", "Все"),
-            ("!userinfo [@user]", "О пользователе", "Все"),
-            ("!avatar [@user]", "Аватар пользователя", "Все"),
-            ("!color [hex]", "Показать цвет по hex", "Все"),
-            ("!base64 [en/de] [текст]", "Кодирование Base64", "Все"),
-            ("!hesap [выражение]", "Калькулятор", "Все"),
         ]
     },
     {
         "id": "voice",
         "title": "Голосовые",
         "commands": [
-            ("!voicetime [@user]", "Время в голосовых", "Все"),
-            ("!voiceleaderboard", "Топ по голосовым", "Все"),
-            ("!voiceonline", "Кто в голосовых каналах", "Все"),
+            ("!voicetime [@user]", "Время в голосовых каналах", "Все"),
+            ("!voiceleaderboard", "Топ по времени в голосе", "Все"),
         ]
     },
     {
-        "id": "fun",
-        "title": "Развлечения",
+        "id": "utility",
+        "title": "Утилиты",
         "commands": [
-            ("!8ball [вопрос]", "Магический шар 8ball", "Все"),
-            ("!coinflip", "Подбросить монетку", "Все"),
-            ("!dice [грани]", "Бросить кубик", "Все"),
-            ("!meme", "Случайный мем", "Все"),
-            ("!joke", "Случайная шутка", "Все"),
-            ("!cat", "Случайный кот", "Все"),
-            ("!dog", "Случайная собака", "Все"),
-        ]
-    },
-    {
-        "id": "giveaway",
-        "title": "Розыгрыши",
-        "commands": [
-            ("!giveaway [время] [побед] [приз]", "Создать розыгрыш", "Админ"),
-            ("!reroll [ID]", "Перевыбрать победителя", "Админ"),
-        ]
-    },
-    {
-        "id": "profile",
-        "title": "Профиль",
-        "commands": [
-            ("!profile [@user]", "Карточка профиля", "Все"),
-            ("/profile [@user]", "Карточка профиля (slash)", "Все"),
+            ("/afk [причина]", "Уйти в AFK — бот ответит за тебя на упоминания", "Все"),
+            ("/afk-remove", "Вернуться из AFK", "Все"),
+            ("!help", "Это меню команд", "Все"),
+            ("!апелляция", "Подать апелляцию на бан (в личке боту)", "Все"),
+            ("/logs-setup", "Создать/починить категорию и каналы логов", "Админ"),
         ]
     },
 ]
@@ -757,63 +660,6 @@ class HelpEmojiUpload(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='upload-emoji')
-    @commands.has_permissions(administrator=True)
-    async def upload_emoji(self, ctx, mode: str = None):
-        """Загружает иконки из assets/icons на сервер как эмодзи 'aether_<name>'.
-        С 'force' старые aether_* эмодзи заливаются заново (после смены набора)."""
-        import os as _os
-        icons_dir = _os.path.join(ROOT, 'assets', 'icons')
-        done, skipped, failed = [], [], []
-        # force: eski aether_* emojilerini sil
-        if mode and mode.lower() in ('force', 'yenile', 'refresh'):
-            for e in list(ctx.guild.emojis):
-                if e.name.startswith('aether_'):
-                    try:
-                        await e.delete()
-                        await ctx.send(f'🗑 Старый эмодзи удалён: `{e.name}`')
-                    except Exception as _ex:
-                        _log.debug("upload_emoji(): подавлено: %s", _ex)
-        existing = {e.name for e in ctx.guild.emojis}
-        for fn in sorted(_os.listdir(icons_dir)):
-            if not fn.endswith('_256.png'):
-                continue
-            name = 'aether_' + fn[:-len('_256.png')]
-            if name in existing:
-                skipped.append(fn)
-                continue
-            try:
-                with open(_os.path.join(icons_dir, fn), 'rb') as fp:
-                    data = fp.read()
-                await ctx.guild.create_custom_emoji(name=name, image=data)
-                done.append(fn)
-            except Exception as exc:
-                failed.append(f'{fn}: {exc}')
-        # AFK-иконка (в корневой папке assets)
-        afk_p = _os.path.join(ROOT, 'assets', 'afk_icon.png')
-        if _os.path.exists(afk_p) and 'aether_afk_icon' not in existing:
-            try:
-                with open(afk_p, 'rb') as fp:
-                    await ctx.guild.create_custom_emoji(name='aether_afk_icon', image=fp.read())
-                done.append('afk_icon.png')
-            except Exception as exc:
-                failed.append(f'afk_icon.png: {exc}')
-        # Логотип бренда (для заголовка карточки)
-        logo_p = _os.path.join(icons_dir, 'aether_logo.png')
-        if _os.path.exists(logo_p) and 'aether_aether_logo' not in existing:
-            try:
-                im = Image.open(logo_p).convert('RGBA').resize((256, 256), Image.Resampling.LANCZOS)
-                buf = io.BytesIO()
-                im.save(buf, format='PNG')
-                await ctx.guild.create_custom_emoji(name='aether_aether_logo', image=buf.getvalue())
-                done.append('aether_logo.png')
-            except Exception as exc:
-                failed.append(f'aether_logo.png: {exc}')
-        load_custom_help_emojis(self.bot)
-        msg = [f'Загружено: **{len(done)}**, пропущено (уже есть): **{len(skipped)}**']
-        if failed:
-            msg.append('Ошибки: ' + '; '.join(failed[:5]))
-        await ctx.send('\n'.join(msg))
 
     @commands.Cog.listener()
     async def on_ready(self):

@@ -309,41 +309,6 @@ class AntiRaid(commands.Cog):
             "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
-    @app_commands.command(name="antiraid", description="Показать текущий статус системы анти-рейда")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def antiraid_status(self, interaction: discord.Interaction):
-        cfg = self.get_config(interaction.guild.id)
-        d = cfg.data
-        e = discord.Embed(
-            title="🛡️ Анти-рейд — Состояние",
-            color=0x2ECC71 if (d.get("join_raid") or d.get("age_filter") or d.get("bot_protection")) else 0x95A5A6,
-        )
-        e.description = (
-            "**Режим наблюдения**: бот не делает авто-кик/бан/локдаун, "
-            "только уведомляет в канал алертов.\n"
-            "Все настройки делаются на странице `/antiraid` в панели."
-        )
-        e.add_field(name="Обнаружение рейда", value="✅ Вкл" if d.get("join_raid") else "❌ Выкл", inline=True)
-        e.add_field(name="Фильтр возраста", value="✅ Вкл" if d.get("age_filter") else "❌ Выкл", inline=True)
-        e.add_field(name="Защита от ботов", value="✅ Вкл" if d.get("bot_protection") else "❌ Выкл", inline=True)
-        e.add_field(name="Защита от массового удаления", value="✅ Вкл" if d.get("delete_protection") else "❌ Выкл", inline=True)
-        e.add_field(name="Порог", value=f"{d.get('join_threshold', 5)} чел / {d.get('join_window', 10)}с", inline=True)
-        e.add_field(name="Мин. возраст", value=f"{d.get('min_age', 5)} дней", inline=True)
-        e.add_field(name="Белый список", value=f"{len(d.get('whitelist', []))} чел", inline=True)
-        e.add_field(name="Канал алертов", value=f"<#{d['alert_channel_id']}>" if d.get("alert_channel_id") else "`mod-log` (по умолчанию)", inline=True)
-        e.add_field(name="Последние события", value=str(len(d.get("recent_events", []))), inline=True)
-        await interaction.response.send_message(embed=e, ephemeral=True)
-
-    @app_commands.command(name="antiraid-reload", description="Сейчас перезагрузить конфиг анти-рейда с диска")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def antiraid_reload(self, interaction: discord.Interaction):
-        cfg = self.get_config(interaction.guild.id)
-        changed = cfg.reload()
-        await interaction.response.send_message(
-            f"🔄 Конфиг {'изменился и перезагружен' if changed else 'уже актуален'}.",
-            ephemeral=True,
-        )
-
 
 async def setup(bot):
     # Серверы для slash-команд — из .env (MAIN_GUILD_ID + EXTRA_GUILD_IDS)

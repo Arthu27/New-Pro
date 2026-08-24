@@ -379,40 +379,6 @@ class VoiceTracker(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @commands.command(name='voiceonline', aliases=['голосонлайн'])
-    async def voice_online(self, ctx):
-        """Кто сейчас сидит в голосовых каналах"""
-        from cogs.embed_utils import aether_embed, plural
-        channels = {}
-        n_members = 0
-        for channel in ctx.guild.voice_channels:
-            people = [m for m in channel.members if not m.bot]
-            if people:
-                channels[channel.name] = people
-                n_members += len(people)
-
-        if not channels:
-            embed = aether_embed(
-                'voice', 'Голосовые каналы',
-                'Сейчас в войсах пусто. Заходите — будет весело.',
-                guild=ctx.guild, footer_extra='Голосовой трекер',
-            )
-            await ctx.send(embed=embed)
-            return
-
-        fields = []
-        for ch_name, members in list(channels.items())[:10]:
-            names = ', '.join(f'**{m.display_name}**' for m in members[:10])
-            if len(members) > 10:
-                names += f' и ещё {len(members) - 10}'
-            fields.append((f'🔊 {ch_name}', names, False))
-        embed = aether_embed(
-            'voice',
-            f'В войсах сейчас: {n_members} {plural(n_members, "участник", "участника", "участников")}',
-            None, fields=fields, guild=ctx.guild, footer_extra='Голосовой трекер',
-        )
-        await ctx.send(embed=embed)
-
 
 async def setup(bot):
     await bot.add_cog(VoiceTracker(bot))

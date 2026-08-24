@@ -11,7 +11,6 @@ from logger import get_logger
 log =get_logger ("welcome_cog")
 
 
-
 class WelcomeCog (commands .Cog ):
     """Система приветствий (legacy + панель)"""
 
@@ -19,51 +18,6 @@ class WelcomeCog (commands .Cog ):
         self .bot =bot 
         self .welcome_message ="👋 Добро пожаловать, {user}! Рады видеть тебя на сервере!"
         self .welcome_channel_id =None 
-
-    @commands .command (name ='setwelcome',aliases =['настройкаприветствия'])
-    @commands .has_permissions (administrator =True )
-    async def setwelcome (self ,ctx ,*,message :str ):
-        """Настроить текст приветствия"""
-        self .welcome_message =message 
-
-        embed =discord .Embed (
-        title ="✅ Приветственное сообщение обновлено",
-        description =f"**Новый текст:** {message}",
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
-        )
-
-        await ctx .send (embed =embed )
-
-    @commands .command (name ='setwelcomechannel',aliases =['каналприветствий'])
-    @commands .has_permissions (administrator =True )
-    async def setwelcomechannel (self ,ctx ,channel :discord .TextChannel ):
-        """Настроить канал приветствий"""
-        self .welcome_channel_id =channel .id 
-
-        embed =discord .Embed (
-        title ="✅ Канал приветствий обновлён",
-        description =f"**Новый канал:** {channel.mention}",
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
-        )
-
-        await ctx .send (embed =embed )
-
-    @commands .command (name ='testwelcome',aliases =['тестприветствия'])
-    async def testwelcome (self ,ctx ):
-        """Проверить текст приветствия"""
-        message =self .welcome_message .replace ("{user}",ctx .author .mention )
-
-        embed =discord .Embed (
-        title ="👋 Добро пожаловать!",
-        description =message ,
-        color =discord .Color .dark_grey (),
-        timestamp =datetime .now ()
-        )
-
-        from cogs .icons import send_with_icon 
-        await send_with_icon (ctx ,embed ,'welcome')
 
 
     # ── Панель (/welcome-editor): data/welcome_{gid}.json ──

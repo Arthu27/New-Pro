@@ -438,62 +438,6 @@ class LogMenu(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="logmenu", aliases=["modmenu", "логменю", "модменю"])
-    @commands.has_permissions(moderate_members=True)
-    async def logmenu_prefix(self, ctx, category: str = "all"):
-        """Открыть интерактивное графическое меню логов сервера"""
-        try:
-            await ctx.message.delete()
-        except Exception as _ex:
-            _log.debug("logmenu_prefix(): подавлено: %s", _ex)
-        cat = category.lower().strip()
-        if cat not in CAT_META:
-            cat = "all"
-        view = LogBrowserView(ctx.guild, ctx.author.id, category=cat)
-        page_events, page, total_pages, total = view.get_current_page_data()
-        view._refresh_components()
-        for item in view.children:
-            if getattr(item, 'custom_id', None) == 'log_menu:next':
-                item.disabled = (page >= total_pages)
-
-        img_buf = await self.bot.loop.run_in_executor(
-            None, generate_log_browser_bytes, ctx.guild.name, cat, page_events, page, total_pages, ""
-        )
-        file = discord.File(img_buf, filename="aether_log_menu.png")
-        await ctx.send(file=file, view=view)
-
-    @app_commands.command(name="logmenu", description="Интерактивное графическое меню логов: просмотр, фильтры, поиск по событиям")
-    @app_commands.describe(категория="Категория логов (модерация, сообщения, войс, участники...)")
-    @app_commands.choices(категория=[
-        app_commands.Choice(name="Все события", value="all"),
-        app_commands.Choice(name="Модерация", value="mod"),
-        app_commands.Choice(name="Сообщения", value="message"),
-        app_commands.Choice(name="Участники", value="member"),
-        app_commands.Choice(name="Голосовые", value="voice"),
-        app_commands.Choice(name="Роли", value="role"),
-        app_commands.Choice(name="Каналы", value="channel"),
-        app_commands.Choice(name="Приглашения", value="invite"),
-        app_commands.Choice(name="Тикеты", value="ticket"),
-    ])
-    @app_commands.checks.has_permissions(moderate_members=True)
-    async def logmenu_slash(self, interaction: discord.Interaction, категория: str = "all"):
-        await interaction.response.defer(ephemeral=True)
-        cat = категория.lower().strip()
-        if cat not in CAT_META:
-            cat = "all"
-        view = LogBrowserView(interaction.guild, interaction.user.id, category=cat)
-        page_events, page, total_pages, total = view.get_current_page_data()
-        view._refresh_components()
-        for item in view.children:
-            if getattr(item, 'custom_id', None) == 'log_menu:next':
-                item.disabled = (page >= total_pages)
-
-        img_buf = await interaction.client.loop.run_in_executor(
-            None, generate_log_browser_bytes, interaction.guild.name, cat, page_events, page, total_pages, ""
-        )
-        file = discord.File(img_buf, filename="aether_log_menu.png")
-        await interaction.followup.send(file=file, view=view, ephemeral=True)
-
 
 async def setup(bot):
     await bot.add_cog(LogMenu(bot))

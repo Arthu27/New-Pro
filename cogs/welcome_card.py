@@ -138,7 +138,6 @@ class WelcomeCard(commands.Cog):
             await self._send_card(member.guild, member, 'goodbye')
 
     # ────────────────────────────────────────────────────────────
-    wcard = app_commands.Group(name="welcome", description="Карточки приветствия (картинка)")
 
     def _status_embed(self, guild: discord.Guild) -> discord.Embed:
         cfg = self.cfg(guild.id)
@@ -159,54 +158,6 @@ class WelcomeCard(commands.Cog):
             f"Канал: {ch.mention if ch else '`системный канал сервера`'}\n{DIVIDER}")
         e.set_footer(text=f"{guild.name} · welcome card")
         return e
-
-    @wcard.command(name="status", description="Настройки приветственных карт")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def wc_status(self, interaction: discord.Interaction):
-        await interaction.response.send_message(embed=self._status_embed(interaction.guild), ephemeral=True)
-
-    @wcard.command(name="test", description="Предпросмотр карты (на тебе)")
-    @app_commands.describe(тип="Какую карту показать")
-    @app_commands.choices(тип=[
-        app_commands.Choice(name="Приветствие", value="welcome"),
-        app_commands.Choice(name="Прощание", value="goodbye"),
-    ])
-    @app_commands.checks.has_permissions(administrator=True)
-    async def wc_test(self, interaction: discord.Interaction, тип: app_commands.Choice[str] = None):
-        await interaction.response.defer(ephemeral=True)
-        kind = тип.value if тип else 'welcome'
-        appearance = self._appearance(interaction.guild.id)
-        av = await self._avatar_bytes(interaction.user)
-        png = WCG.render_welcome_card(
-            interaction.user.display_name, interaction.guild.name,
-            interaction.guild.member_count or 0, avatar_bytes=av, kind=kind,
-            theme=appearance['theme'])
-        await interaction.followup.send(
-            file=discord.File(io.BytesIO(png),
-                              filename=WCG.welcome_card_filename(kind)),
-            ephemeral=True)
-
-    @wcard.command(name="channel", description="Канал для карт приветствия")
-    @app_commands.describe(канал="Текстовый канал")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def wc_channel(self, interaction: discord.Interaction, канал: discord.TextChannel):
-        self.set_cfg(interaction.guild.id, 'channel_id', канал.id)
-        await interaction.response.send_message(f"✅ Карты будут приходить в {канал.mention}", ephemeral=True)
-
-    @wcard.command(name="toggle", description="Включить/выключить карты входа и прощания")
-    @app_commands.describe(вход="Карта при входе", выход="Карта при выходе")
-    @app_commands.choices(вход=[app_commands.Choice(name="вкл", value=1), app_commands.Choice(name="выкл", value=0)],
-                          выход=[app_commands.Choice(name="вкл", value=1), app_commands.Choice(name="выкл", value=0)])
-    @app_commands.checks.has_permissions(administrator=True)
-    async def wc_toggle(self, interaction: discord.Interaction,
-                        вход: app_commands.Choice[int] = None, выход: app_commands.Choice[int] = None):
-        if вход is not None:
-            self.set_cfg(interaction.guild.id, 'welcome', bool(вход.value))
-            self.set_cfg(interaction.guild.id, 'enabled', True)
-        if выход is not None:
-            self.set_cfg(interaction.guild.id, 'goodbye', bool(выход.value))
-            self.set_cfg(interaction.guild.id, 'enabled', True)
-        await interaction.response.send_message(embed=self._status_embed(interaction.guild), ephemeral=True)
 
 
 async def setup(bot):

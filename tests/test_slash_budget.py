@@ -102,7 +102,7 @@ check(not stray, f'ничего лишнего вне KEEP_SLASH (лишнее: 
 realized = [n for n in keep if n in tree_names]
 missing = sorted(set(keep) - set(tree_names))
 print(f'  KEEP-имена реально в меню: {len(realized)}/{len(keep)}; отсутствуют оффлайн: {missing}')
-check(len(realized) >= 30, f'белый список не протух: {len(realized)} >= 30 имён на месте')
+check(not missing, f'белый список не протух: все {len(keep)} имён на месте (нет: {missing})')
 
 print('== 5. Прунинг реально работает ==')
 check(stats['pruned'] >= 30, f'на префикс вынесено {stats["pruned"]} команд (>= 30)')

@@ -370,20 +370,6 @@ class Appeals(commands.Cog):
         await _reply(ctx, 'appeal', f'Апелляция #{item["id"]} отправлена',
                      f'Модераторы сервера **{guild.name}** уже получили её. Ответ придёт в личку.')
 
-    @app_commands.command(name='апелляция', description='Обжаловать бан — выберите сервер')
-    async def cmd_appeal_slash(self, interaction: discord.Interaction):
-        if interaction.guild is not None:
-            await interaction.response.send_message(
-                ' Апелляция подаётся в личных сообщениях боту.', ephemeral=True)
-            return
-        guilds = [g for g in self.bot.guilds]
-        if not guilds:
-            await interaction.response.send_message(
-                ' Бот пока не состоит ни на одном сервере.', ephemeral=True)
-            return
-        view = AppealViewParent(self, guilds)
-        await interaction.response.send_message(
-            'Выберите сервер, на котором вы забанены:', view=view, ephemeral=True)
 
     async def _is_banned(self, guild, user):
         try:
@@ -396,30 +382,7 @@ class Appeals(commands.Cog):
             return True
 
     # ---- модераторские ----
-    @commands.hybrid_group(name='апелляции', aliases=['appeals'],
-                           description='Настройка апелляций')
-    @commands.has_permissions(manage_guild=True)
-    async def grp(self, ctx):
-        if ctx.invoked_subcommand is None:
-            await ctx.reply('Команды: `канал`, `список`.', mention_author=False)
 
-    @grp.command(name='канал', description='Куда падать карточки апелляций')
-    async def cmd_channel(self, ctx, канал: discord.TextChannel):
-        state = self._load(ctx.guild.id)
-        state['log_channel_id'] = канал.id
-        self._save(ctx.guild.id, state)
-        await ctx.reply(f'Апелляции идут в {канал.mention}.', mention_author=False)
-
-    @grp.command(name='список', description='Ожидающие апелляции')
-    async def cmd_list(self, ctx):
-        rows = pending_items(self._load(ctx.guild.id))
-        if not rows:
-            await ctx.reply('Ожидающих апелляций нет.', mention_author=False)
-            return
-        embed = discord.Embed(title=f'Апелляции в ожидании — {len(rows)}',
-                              color=COLOR_PENDING,
-                              description='\n\n'.join(fmt_card_text(i) for i in rows[:10]))
-        await ctx.reply(embed=embed, mention_author=False)
 
     # ---- утилиты ----
     def _log_channel(self, guild, state):

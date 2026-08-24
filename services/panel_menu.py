@@ -310,6 +310,7 @@ PAGE_COGS = {
     '/staff-shifts': ('staff_shifts',),
     '/staff-stats': ('staff_stats',),
     '/security': ('security',),
+    '/tagjail': ('tag_jail',),
     '/antifake': ('impersonation',),
     '/ladder': ('ladder', 'warnings'),
     '/replay': ('replay',),

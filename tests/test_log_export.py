@@ -150,39 +150,16 @@ check('ban' in body and 'purge' in body and 'join' not in body, '30 дней: ba
 r2 = client.get('/logs/export?days=7&mod=Ночной')
 check('warn' in r2.get_data(as_text=True), 'параметр mod фильтрует')
 
-print('== 6. Команда /логи-экспорт ==')
-# Команда использует реальное текущее UTC, тогда как unit-проверки выше намеренно
-# привязаны к фиксированному NOW. Обновляем только временные метки командного
-# сценария, чтобы тест не становился красным после смены календарного дня.
-command_now = datetime.now(UTC)
-command_events = []
-for source, days_ago in zip(EVENTS, (1, 3, 9, 40)):
-    item = dict(source)
-    item['timestamp'] = (command_now - timedelta(days=days_ago)).isoformat()
-    command_events.append(item)
-json.dump({'777': command_events}, open('data/audit_log.json', 'w', encoding='utf-8'),
-          ensure_ascii=False)
-
+print('== 6. Бот-команда /логи-экспорт убрана (экспорт живёт в панели) ==')
+# Чистка команд: бот-обёртка убрана из боевого меню, HTML-отчёт выдаёт
+# панельный /logs/export (проверен выше). Проверяем, что команды нет, а
+# сервис рендера никуда не делся.
 from cogs.logs import Logs  # noqa: E402
 
-
-class FakeCtx:
-    def __init__(self):
-        self.guild = type('G', (), {'id': 777, 'name': 'TestGuild'})()
-        self.sent = []
-
-    async def send(self, text=None, file=None, **kw):
-        self.sent.append((text, file))
-
-
-cog = Logs.__new__(Logs)
-ctx = FakeCtx()
-asyncio.get_event_loop().run_until_complete(cog.logs_export.callback(cog, ctx, days=10))
-text, file_obj = ctx.sent[0]
-check(file_obj is not None and file_obj.filename.endswith('.html'), f'файл приложен: {file_obj.filename}')
-payload = file_obj.fp.getvalue().decode('utf-8')
-check(payload.startswith('<!DOCTYPE html>') and 'warn' in payload, 'содержимое — отчёт за 10 дней')
-check('3' in (text or '') and 'событ' in (text or ''), f'подпись с количеством: {text}')
+check(not hasattr(Logs, 'logs_export'), 'бот-команда /логи-экспорт снята с боевого меню')
+payload = lx.render_html(EVENTS[:2], guild_name='TestGuild', filters_desc='за 7 дней', generated_at=NOW)
+check(payload.startswith('<!DOCTYPE html>') and 'warn' in payload,
+      'сервис рендера отчёта на месте (используется панелью)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

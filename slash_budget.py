@@ -28,37 +28,22 @@ WARN_AT = 90         # мягкий порог — пора пересмотре
 # держать их в меню бессмысленно (команды просто не существуют в боте).
 # Редкие настройки живут в веб-панели и на префиксе.
 KEEP_SLASH = frozenset({
-    # справка и профиль участника
+    # Боевой минимум (решение владельца: «команд должно быть мало» — 2026-08).
+    # FULL-режим тоже режется до этого списка: всё остальное живёт на
+    # префиксе и в веб-панели. Расширять только по явной просьбе владельца.
+    # справка
     'help',
-    # модерация — ежедневное (всё в одном select-меню /modpanel)
-    'modpanel', 'warnings', 'unwarn', 'clearwarns', 'role', 'utility',
-    'jail', 'unjail', 'jailed', 'tagjail',
+    # модерация — ежедневное (всё через /modpanel + варны)
+    'modpanel', 'warnings', 'unwarn',
     # доказательства
-    'proof', 'proofs', 'proofdel',
-    # автомод и защита
-    'filter', 'antiraid', 'antiraid-reload', 'scan-link',
-    'security', 'security-toggle', 'security-newaccount', 'backup', 'backup-list',
-    'verify-status', 'verify-toggle',
-    # апелляции
-    'апелляция', 'апелляции',
+    'proofs', 'proofdel',
     # логи
-    'logs', 'logs-center', 'logs-setup', 'setup-logs', 'modlogs', 'logmenu',
-    'логи-экспорт',
+    'logs-setup',
     # тикеты и заявки
-    'ticket-panel', 'ticket-config', 'ticket-add', 'ticket-remove',
-    'ticket-auto-close', 'ticket-ai-toggle', 'ticket-ai-stats',
-    'ticket-feedback-stats', 'ticket-force-escalate',
-    'ticket-rate-limit-info', 'ticket-reset-rate-limit',
-    'sla-status', 'sla-info', 'sla-create', 'sla-breaches',
-    'my-application', 'staff-panel',
-    # приветствие
-    'welcome', 'приветствие',
-    # AI
-    'ai-info-list', 'ai-info-clear', 'ai-reset',
-    # служебное (здоровье и фиче-флаги)
-    'server-health', 'channel-stats', 'leaveguild',
-    'flag-list', 'flag-info', 'flag-create', 'flag-enable', 'flag-disable',
-    'flag-rollout',
+    'ticket-panel', 'ticket-add', 'ticket-remove',
+    'staff-panel', 'my-application',
+    # AFK
+    'afk', 'afk-remove',
 })
 
 

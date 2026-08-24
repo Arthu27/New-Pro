@@ -339,9 +339,6 @@ def save_config(gid, cfg: dict):
 class AutoFilter(commands.Cog):
     """🧹 Автофильтр чата: слова, ссылки, капс, флуд."""
 
-    filter = app_commands.Group(name='filter',
-                                description='Автофильтр чата: настройка и проверка',
-                                guild_only=True)
 
     def __init__(self, bot):
         self.bot = bot
@@ -479,119 +476,6 @@ class AutoFilter(commands.Cog):
             e.add_field(name='Каналы-исключения', value=', '.join(f'<#{i}>' for i in cfg['ignore_channels']) or '—',
                         inline=False)
         return e
-
-    @filter.command(name='status', description='Текущие настройки автофильтра чата')
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def filter_status(self, interaction: discord.Interaction):
-        await interaction.response.send_message(
-            embed=self._status_embed(load_config(interaction.guild_id)), ephemeral=True)
-
-    @filter.command(name='add', description='Добавить запрещённое слово/фразу')
-    @app_commands.checks.has_permissions(manage_messages=True)
-    @app_commands.describe(word='Слово или фраза (до 60 символов)')
-    async def filter_add(self, interaction: discord.Interaction, word: str):
-        cfg = load_config(interaction.guild_id)
-        word = word.strip()[:MAX_WORD_LEN]
-        if not has_word_chars(word):
-            return await interaction.response.send_message(
-                '❌ В слове должна быть хоть одна буква или цифра.', ephemeral=True)
-        words = cfg['words']['list']
-        if normalize_text(word) in [normalize_text(w) for w in words]:
-            return await interaction.response.send_message(
-                f'ℹ️ Слово `{word}` уже в списке.', ephemeral=True)
-        if len(words) >= MAX_WORDS:
-            return await interaction.response.send_message(
-                f'❌ Лимит: не больше {MAX_WORDS} слов.', ephemeral=True)
-        words.append(word)
-        save_config(interaction.guild_id, cfg)
-        await interaction.response.send_message(
-            embed=self._card('🚫 Слово добавлено',
-                             f'`{word}` — теперь под фильтром. Всего слов: **{len(words)}**'),
-            ephemeral=True)
-
-    @filter.command(name='remove', description='Убрать слово из запрещённых')
-    @app_commands.checks.has_permissions(manage_messages=True)
-    @app_commands.describe(word='Слово из списка')
-    async def filter_remove(self, interaction: discord.Interaction, word: str):
-        cfg = load_config(interaction.guild_id)
-        before = len(cfg['words']['list'])
-        key = normalize_text(word)
-        cfg['words']['list'] = [w for w in cfg['words']['list'] if normalize_text(w) != key]
-        if len(cfg['words']['list']) == before:
-            return await interaction.response.send_message(
-                f'ℹ️ Слово `{word}` не найдено в списке.', ephemeral=True)
-        save_config(interaction.guild_id, cfg)
-        await interaction.response.send_message(
-            embed=self._card('🗑 Слово убрано', f'`{word}` больше не фильтруется. '
-                             f'Осталось слов: **{len(cfg["words"]["list"])}**'),
-            ephemeral=True)
-
-    @filter.command(name='words', description='Показать список запрещённых слов')
-    @app_commands.checks.has_permissions(manage_messages=True)
-    async def filter_words(self, interaction: discord.Interaction):
-        words = load_config(interaction.guild_id)['words']['list']
-        body = '\n'.join(f'`{i + 1}.` {w}' for i, w in enumerate(words[:80])) or '_Список пуст._'
-        if len(words) > 80:
-            body += f'\n…и ещё {len(words) - 80}'
-        await interaction.response.send_message(
-            embed=self._card(f'🚫 Запрещённые слова ({len(words)})', body), ephemeral=True)
-
-    @filter.command(name='toggle', description='Включить/выключить фильтр или всю систему')
-    @app_commands.checks.has_permissions(manage_messages=True)
-    @app_commands.describe(target='Что переключаем')
-    @app_commands.choices(target=[
-        app_commands.Choice(name='Весь автофильтр', value='main'),
-        app_commands.Choice(name='Слова', value='words'),
-        app_commands.Choice(name='Ссылки', value='links'),
-        app_commands.Choice(name='Капс', value='caps'),
-        app_commands.Choice(name='Флуд', value='flood')])
-    async def filter_toggle(self, interaction: discord.Interaction, target: str):
-        cfg = load_config(interaction.guild_id)
-        if target == 'main':
-            cfg['enabled'] = not cfg['enabled']
-            state = '🛡 включён' if cfg['enabled'] else '⏸ на паузе'
-        else:
-            cfg[target]['enabled'] = not cfg[target]['enabled']
-            state = '🟢 включён' if cfg[target]['enabled'] else '🔴 выключен'
-        save_config(interaction.guild_id, cfg)
-        name = 'Автофильтр' if target == 'main' else f'Фильтр «{FILTER_NAMES[target]}»'
-        await interaction.response.send_message(
-            embed=self._card('⚙️ Переключено', f'{name} теперь **{state}**.'), ephemeral=True)
-
-    @filter.command(name='test', description='Сухая проверка: сработал бы фильтр на этот текст?')
-    @app_commands.checks.has_permissions(manage_messages=True)
-    @app_commands.describe(text='Текст для проверки (никого не наказывает)')
-    async def filter_test(self, interaction: discord.Interaction, text: str):
-        cfg = load_config(interaction.guild_id)
-        v = classify_message(cfg, text)
-        if not v:
-            desc = '✅ Чисто — ни один фильтр не сработал.'
-        else:
-            desc = '\n'.join(f'🚨 **{FILTER_NAMES[x["filter"]]}** — совпадение: `{x["detail"]}`' for x in v)
-        await interaction.response.send_message(
-            embed=self._card('🧪 Проверка текста', desc), ephemeral=True)
-
-    @filter.command(name='ignore', description='Добавить/убрать канал из исключений фильтра')
-    @app_commands.checks.has_permissions(manage_messages=True)
-    @app_commands.describe(channel='Канал (по умолчанию текущий)')
-    async def filter_ignore(self, interaction: discord.Interaction,
-                            channel: discord.TextChannel = None):
-        channel = channel or interaction.channel
-        cfg = load_config(interaction.guild_id)
-        ids = cfg['ignore_channels']
-        cid = str(channel.id)
-        if cid in ids:
-            ids.remove(cid)
-            msg = f'{channel.mention} снова под защитой фильтра 🛡'
-        else:
-            if len(ids) >= MAX_IDS:
-                return await interaction.response.send_message(
-                    f'❌ Лимит исключений: {MAX_IDS}.', ephemeral=True)
-            ids.append(cid)
-            msg = f'{channel.mention} добавлен в исключения — фильтр там молчит 🤫'
-        save_config(interaction.guild_id, cfg)
-        await interaction.response.send_message(
-            embed=self._card('🎯 Каналы-исключения', msg), ephemeral=True)
 
 
 async def setup(bot):

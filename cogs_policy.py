@@ -53,9 +53,9 @@ HELPER_COGS = frozenset({
 CORE_COGS = frozenset({
     'help.py',             # /help индексирует только загруженные команды — полезен всегда
     'cog_manager.py',      # !module load/unload — чтобы вернуть модуль без рестарта
-    'feature_flag_cog.py', # фиче-флаги (инфраструктура)
-    'health.py',           # health-check / мониторинг
     'diagnostics.py',      # самодиагностика бота
+    # feature_flag_cog.py и health.py убраны из боевого состава (лишние
+    # команды в меню Дискорда). Вернуть: EXTRA_COGS=feature_flag_cog,health
 })
 
 # ─── модерация — ядро, которое остаётся в MOD_ONLY ────────────────────────
@@ -123,14 +123,20 @@ CORE_ONLY_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | AI_CHAT_COGS
 # доказательства, автомод, jail, защита и верификация, апелляции, логи.
 MOD_LEAN_COGS = frozenset({
     'moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
-    'proof_cog.py', 'auto_filter.py', 'tag_jail.py',
-    'antiraid.py', 'guardian.py', 'security.py', 'verification.py',
+    'proof_cog.py', 'auto_filter.py',
+    'antiraid.py', 'guardian.py', 'verification.py',
     'appeals.py', 'logs.py', 'log_menu.py',
+    'afk.py',              # /afk + /afk-remove — пользователи просили
+    # tag_jail.py и security.py убраны из боевого состава: 24 лишних
+    # команды в меню. Слушатели антирейда/guardian продолжают защищать.
+    # Вернуть: EXTRA_COGS=tag_jail,security
 })
 
-# Тикеты + отчёт по модерации (веб-панель читает их данные).
+# Тикеты + приём заявок в команду.
 TICKET_LEAN_COGS = frozenset({
-    'ticket.py', 'sla_cog.py', 'staff_apply.py', 'mod_report.py',
+    'ticket.py', 'staff_apply.py',
+    # sla_cog.py и mod_report.py убраны из боевого состава (12 лишних
+    # команд). Вернуть: EXTRA_COGS=sla_cog,mod_report
 })
 
 # AI: чат-ассистент + AI-модерация токсичности.
