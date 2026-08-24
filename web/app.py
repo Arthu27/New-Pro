@@ -147,6 +147,19 @@ def _demo_mode ():
 def inject_demo_mode ():
     return {'demo_mode':_demo_mode ()}
 
+
+# Авто-версии статики: ?v= по времени изменения файла — браузер сам подхватит
+# свежий JS/CSS после каждого обновления, вручную номера больше не крутим.
+@app .context_processor
+def inject_static_versions ():
+    def static_v (filename ):
+        try :
+            return str (int (os .path .getmtime (os .path .join (
+            os .path .dirname (os .path .abspath (__file__)),'static',filename ))))
+        except OSError :
+            return '1'
+    return {'static_v':static_v }
+
 @app .before_request 
 def before_request ():
     # Демо-режим: автоматический вход владельцем без логина и пароля.

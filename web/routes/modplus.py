@@ -352,6 +352,27 @@ def register(ctx):
 
 
 
+    @app .route ('/api/proofs/member-search',methods =['GET'])
+    @login_required
+    @role_required ('mod')
+    def api_proofs_member_search ():
+        # Поиск участника для формы демки: по нику/имени/ID — «@тегнуть» в панели.
+        from web .routes ._common import ms_normalize_query ,ms_search_members ,ms_member_payload
+        q =ms_normalize_query (request .args .get ('q',''))
+        if len (q )<2 :
+            return jsonify ({'success':False ,'error':'Введите минимум 2 символа'}),400
+        guild =_active_guild ()
+        if guild :
+            try :
+                return jsonify ({'success':True ,'items':[
+                ms_member_payload (m )for m in ms_search_members (guild .members ,q ,limit =12 )]})
+            except Exception as _ex:
+                _log.debug("api_proofs_member_search(): живой поиск: %s", _ex)
+        from web .routes ._common import demo_members_search ,demo_member_payload
+        return jsonify ({'success':True ,'items':[
+        demo_member_payload (m )for m in demo_members_search (q ,limit =12 )]})
+
+
     # ── Белый список «без демки»: кому бот НЕ обязан требовать доказательство ──
     @app .route ('/api/proof-whitelist',methods =['GET'])
     @login_required

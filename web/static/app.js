@@ -194,6 +194,26 @@
   var liveFns = [];
   var livePaused = false;
 
+  /* Кнопка «молча не работает» — худшее, что есть в панели.
+     Показываем понятный тост при непойманной JS-ошибке (не чаще раза в 20 с),
+     чтобы сбой был виден, а не выглядел мёртвой кнопкой. */
+  (function () {
+    var lastToast = 0;
+    function failToast() {
+      var n = Date.now();
+      if (n - lastToast < 20000) return;
+      lastToast = n;
+      if (typeof window.showToast === 'function') {
+        try { window.showToast('Что-то загрузилось со сбоем — обновите страницу', false); } catch (e) {}
+      }
+    }
+    window.addEventListener('error', function (e) {
+      if (e && e.filename && String(e.filename).indexOf('/static/') === -1) return; // чужие скрипты не шумят
+      failToast();
+    });
+    window.addEventListener('unhandledrejection', function () { failToast(); });
+  })();
+
   /* «Противоударная» защита нажатий: пока палец/курсор нажаты (и чуть-чуть
      после отпускания), живые перерисовки списков откладываются — иначе
      элемент мог исчезнуть из-под пальца в середине клика, и нажатие
@@ -2011,7 +2031,7 @@
     setTimeout(function () {
       el.classList.add('out');
       setTimeout(function () { el.remove(); }, 620);
-    }, 950);
+    }, 650);
   }
 
   /* ── 4. Вспышка обновлённых значений ───────────────────── */

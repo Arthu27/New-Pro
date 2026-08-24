@@ -8,7 +8,9 @@
 не надо.
 
 Команды (mod+):
-  /proof <юзер> <наказание> <причина> [вложение] [ссылка]
+  Демки загружаются из веб-панели («Модерация» → «Доказательства»)
+  или автоматически из /warn и /moderate (вложение перезаливается).
+  Отдельная команда /proof убрана: вся работа с демками — в панели.
       Прикрепить демку. Вложение перезаливается в канал (ссылки CDN Discord
       протухают — в канале файл живёт вечно). Большие файлы (>8 МБ) не
       перезальются — тогда кидаем ссылку.
@@ -369,7 +371,7 @@ class ProofCog(commands.Cog):
                                attachment=None, link=None):
         """Ядро: запись → (перезалив вложения) → постинг в канал доказательств.
 
-        Возвращает (ok, entry, note). Общая точка для /proof и для
+        Возвращает (ok, entry, note). Общая точка для команд бота и для
         «демка прямо в /warn|/moderate» — одна логика, ноль дубляжа.
         """
         entry = proof_add(guild.id, user.id, str(user),
@@ -417,53 +419,6 @@ class ProofCog(commands.Cog):
                                     image_inline=image_inline, note=note)
         return ok, entry, note
 
-    @app_commands.command(name='proof', description='Прикрепить «демку» к наказанию (скрин/видео/ссылка)')
-    @app_commands.checks.has_permissions(manage_messages=True)
-    @app_commands.describe(user='Кто наказан',
-                           action='Что выдали: варн, мут, таймаут, кик, бан…',
-                           reason='За что (коротко)',
-                           attachment='Скрин или видео — перезальётся в канал доказательств',
-                           link='Или ссылка на демку (ютуб и т.п.)')
-    @app_commands.choices(action=[
-        app_commands.Choice(name=a, value=a) for a in ACTIONS])
-    async def proof(self, interaction: discord.Interaction, user: discord.Member,
-                    action: str, reason: str,
-                    attachment: discord.Attachment = None, link: str = None):
-        link = (link or '').strip()
-        # Фото/ссылка больше НЕ обязательны (пожелание владельца): демку можно
-        # приложить позже отдельной /proof — карточка фиксируется сразу.
-        if link and not _is_link(link):
-            await interaction.response.send_message(
-                'Ссылка должна начинаться с http:// или https://', ephemeral=True)
-            return
-        await interaction.response.defer(ephemeral=True)
-
-        ok, entry, note = await self._create_and_post(
-            interaction.guild, interaction.user, user, action, reason,
-            attachment=attachment, link=link or None)
-        if not ok:
-            await interaction.followup.send(
-                'Демку записал, но канал доказательств недоступен '
-                '(нет прав на создание каналов?). Дай боту «Управление каналами».',
-                ephemeral=True)
-            return
-
-        e = discord.Embed(title=f"Демка #{entry['id']} сохранена", color=GREEN,
-                          timestamp=_now())
-        e.add_field(name='Кто', value=f'{user.mention} (`{user.id}`)', inline=True)
-        e.add_field(name='Наказание', value=entry['action'], inline=True)
-        e.add_field(name='Куда', value='канал доказательств + панель «Доказательства» — '
-                        'фото и видео смотрятся прямо там',
-                    inline=True)
-        if note:
-            e.add_field(name='Внимание', value=note, inline=False)
-        if attachment is None and not link:
-            e.add_field(name='Без медиа',
-                        value='Записал без фото — скрин можно приложить позже: /proof',
-                        inline=False)
-        await interaction.followup.send(embed=e, ephemeral=True)
-        log.info(f"[PROOF] #{entry['id']} {interaction.user} → {user}: {action}")
-
     # ── /proofs ───────────────────────────────────────────────────────────
     @app_commands.command(name='proofs', description='Все демки сервера (или конкретного юзера)')
     @app_commands.checks.has_permissions(manage_messages=True)
@@ -477,7 +432,7 @@ class ProofCog(commands.Cog):
             title=f'Демки — {user.display_name}' if user else 'Демки сервера',
             color=PURPLE, timestamp=_now())
         if not items:
-            e.description = 'Пока пусто. Первая демка появится после /proof.'
+            e.description = 'Пока пусто. Загрузите первую демку в панели: «Модерация» → «Доказательства».'
         else:
             lines = []
             ch_id = items[0].get('channel_id')

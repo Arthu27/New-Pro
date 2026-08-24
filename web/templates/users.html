@@ -32,7 +32,7 @@
 </div>
 
 <!-- Перетаскиваемое окно «Карточка 360°» -->
-<link rel="stylesheet" href="/static/member_card.css?v=1">
+<link rel="stylesheet" href="/static/member_card.css?v={{ static_v('member_card.css') }}">
 <div class="mcf-win" id="mcWin" style="display:none" role="dialog" aria-label="Карточка участника 360°">
   <div class="mcf-head" id="mcWinHead">
     <i class="fas fa-grip-vertical mcf-grip" aria-hidden="true"></i>
@@ -92,7 +92,7 @@
   </div>
 </div>
 
-<script src="/static/member_card.js?v=1"></script>
+<script src="/static/member_card.js?v={{ static_v('member_card.js') }}"></script>
 <script>
 (function () {
   'use strict';

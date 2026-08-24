@@ -31,14 +31,15 @@
                aria-label="Файл доказательства"
                style="padding:7px 11px;border:1px dashed var(--line-2,transparent);border-radius:10px;font-size:13px">
       </label>
-      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
-        ID участника*
-        <input type="text" id="pf-uid" inputmode="numeric" placeholder="123456789012345678" required aria-label="ID участника">
+      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600;flex-basis:260px;position:relative">
+        Участник* — @поиск
+        <input type="text" id="pf-member" autocomplete="off" placeholder="@ник, имя или ID" required aria-label="Участник — поиск по нику или ID">
+        <input type="hidden" id="pf-uid">
+        <input type="hidden" id="pf-uname">
+        <div id="pf-member-list" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:600;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;max-height:250px;overflow:auto;box-shadow:var(--shadow-3)"></div>
+        <span style="font-size:11px;font-weight:400;color:var(--text-3)">Начните писать ник — выберите из списка (можно и просто ID)</span>
       </label>
-      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
-        Ник (необязательно)
-        <input type="text" id="pf-uname" placeholder="если пусто — подставим ID" aria-label="Ник участника">
-      </label>
+      <style>.pf-pick:hover { background: var(--ac-soft) !important; }</style>
       <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
         Наказание
         <select id="pf-action" aria-label="Наказание">
@@ -329,13 +330,71 @@
     });
   });
 
+  /* ── @поиск участника для демки: тегнул → выбрал → готово ── */
+  var pfTimer = null;
+  function pfHideList() { $('pf-member-list').style.display = 'none'; }
+  function pfPick(el) {
+    $('pf-uid').value = el.dataset.id;
+    $('pf-uname').value = el.dataset.name;
+    $('pf-member').value = el.dataset.name + ' · ' + el.dataset.id;
+    pfHideList();
+  }
+  function pfRenderList(items) {
+    var box = $('pf-member-list');
+    if (!items.length) {
+      box.innerHTML = '<div style="padding:10px 12px;font-size:12.5px;color:var(--text-3)">Никого не нашлось — можно вписать ID вручную</div>';
+    } else {
+      box.innerHTML = items.map(function (m) {
+        var nm = m.display_name || m.name || m.id;
+        var av = m.avatar
+          ? '<img src="' + esc(m.avatar) + '" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none">'
+          : '<span style="width:26px;height:26px;border-radius:50%;background:var(--ac-soft);display:grid;place-items:center;flex:none"><i class="fas fa-user" style="font-size:11px;color:var(--ac)"></i></span>';
+        return '<button type="button" class="pf-pick" data-id="' + esc(m.id) + '" data-name="' + esc(nm) + '" ' +
+          'style="display:flex;align-items:center;gap:9px;width:100%;padding:8px 11px;background:none;border:none;cursor:pointer;color:inherit;text-align:left;font:inherit;font-size:13px">' +
+          av + '<span style="display:flex;flex-direction:column;line-height:1.25"><b>' + esc(nm) + '</b>' +
+          '<span style="font-size:11px;color:var(--text-3)">' + esc(m.username || '') + ' · ' + esc(m.id) + '</span></span></button>';
+      }).join('');
+    }
+    box.style.display = 'block';
+  }
+  function pfSearch(q) {
+    if (!q || q.length < 2 || /^\d{4,25}$/.test(q)) { pfHideList(); return; }
+    fetch('/api/proofs/member-search?q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (d) { pfRenderList((d && d.items) || []); })
+      .catch(function () {});
+  }
+  $('pf-member').addEventListener('input', function () {
+    $('pf-uid').value = '';
+    $('pf-uname').value = '';
+    var q = this.value.trim();
+    clearTimeout(pfTimer);
+    pfTimer = setTimeout(function () { pfSearch(q); }, 260);
+  });
+  $('pf-member-list').addEventListener('click', function (e) {
+    var b = e.target.closest('.pf-pick');
+    if (b) pfPick(b);
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#pf-member') && !e.target.closest('#pf-member-list')) pfHideList();
+  });
+  $('pf-member').addEventListener('focus', function () {
+    var q = this.value.trim();
+    if (q.length >= 2 && !$('pf-uid').value) pfSearch(q);
+  });
+
   /* ── Прямая загрузка демки файлом (без ссылок) ── */
   $('pf-add-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var file = $('pf-file').files[0];
     if (!file) { window.showToast('Выберите файл — фото или видео', false); return; }
     var uid = $('pf-uid').value.trim();
-    if (!/^\d{5,25}$/.test(uid)) { window.showToast('ID участника — только цифры', false); return; }
+    if (!uid) {
+      var manual = $('pf-member').value.trim();
+      var mm = /(\d{15,22})\s*$/.exec(manual);
+      if (mm) uid = mm[1];
+    }
+    if (!/^\d{4,25}$/.test(uid)) { window.showToast('Тегните участника из подсказок или впишите его ID', false); return; }
     var fd = new FormData();
     fd.append('file', file);
     fd.append('user_id', uid);

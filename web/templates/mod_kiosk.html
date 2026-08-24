@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Экран дежурного — Aether</title>
   <link rel="icon" href="/static/favicon.ico">
-  <link rel="stylesheet" href="/static/style.css?v=116">
+  <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
   <style>
     /* ЭКРАН ДЕЖУРНОГО — одна страница: что случилось, что делать, кто на смене */
     body.kiosk {
@@ -269,7 +269,7 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=61"></script>
+  <script src="/static/app.js?v={{ static_v('app.js') }}"></script>
   <script>
   (function () {
     'use strict';

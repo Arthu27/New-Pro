@@ -1151,7 +1151,7 @@ check(r.status_code == 200 and '.header .logo' in r.get_data(as_text=True),
       '/apply открывается с видимым лого')
 # ═══ 36а. Лого: мобильная шапка, сплэш, плотность дракона ═══════════════════
 print('== лого: сплэш и мобильная шапка ==')
-check('boot-logo"><img class="dragon-live"' in base and 'fa-bolt' not in base.split('bootSplash')[1].split('boot-wrap')[1][:600],
+check('boot-logo"><img class="dragon-live"' in base and 'fa-bolt' not in base.split('id="bootSplash"')[1].split('boot-wrap')[1][:600],
       'сплэш загрузки показывает дракона, а не молнию')
 check('topbar-brand' in base and 'emblem-dragon.png' in base.split('topbar-brand')[1][:400],
       'мобильная шапка панели получила дракона (лого видно и без сайдбара)')
@@ -1183,8 +1183,8 @@ check('lastStart' in w11 and 'lastPart' in w11,
       'welcome: заголовок печатается посимвольно (не целыми словами)')
 check('barsShown' in w11 and 'barsIo' in w11,
       'welcome: рост баров перезапускается при показе (не проигрывается впустую)')
-check('app.js?v=61' in base and 'style.css?v=117' in base,
-      'версии ассетов (116/60)')
+check("static_v('app.js')" in base and "static_v('style.css')" in base,
+      'версии ассетов подставляются автоматически (mtime)')
 # ═══ 37а. Welcome: лого hero ══════════════════════════════════════════════
 print('== welcome: лого hero ==')
 check('w-dragon-par' in w11 and 'w-dragon-ring2' in w11 and 'w-dragon-orbit' in w11,

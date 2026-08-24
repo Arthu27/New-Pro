@@ -16,19 +16,19 @@ log =get_logger ("logs")
 AUDIT_FILE ="data/audit_log.json"
 
 CATEGORIES ={
-'mod':{'label':'Модерация','emoji':'','color':0xE74C3C ,'channel':'модерация'},
-'member':{'label':'Участники','emoji':'','color':0x2ECC71 ,'channel':'участники'},
-'message':{'label':'Сообщения','emoji':'','color':0x3498DB ,'channel':'сообщения'},
-'role':{'label':'Роли','emoji':'','color':0x9B59B6 ,'channel':'сервер'},
-'channel':{'label':'Каналы','emoji':'','color':0xF39C12 ,'channel':'сервер'},
-'voice':{'label':'Голос','emoji':'','color':0x1ABC9C ,'channel':'голос'},
-'сервер':{'label':'Сервер','emoji':'','color':0xE67E22 ,'channel':'сервер'},
-'automod':{'label':'Автоматически','emoji':'','color':0xE74C3C ,'channel':'модерация'},
-'invite':{'label':'Приглашения','emoji':'','color':0x95A5A6 ,'channel':'сервер'},
-'proof':{'label':'Доказательства','emoji':'','color':0x9B59B6 ,'channel':'доказательства'},
+'mod':{'label':'Модерация','emoji':'🛡','color':0xE74C3C ,'channel':'модерация'},
+'member':{'label':'Участники','emoji':'👋','color':0x2ECC71 ,'channel':'участники'},
+'message':{'label':'Сообщения','emoji':'💬','color':0x3498DB ,'channel':'сообщения'},
+'role':{'label':'Роли','emoji':'🎭','color':0x9B59B6 ,'channel':'сервер'},
+'channel':{'label':'Каналы','emoji':'🗂','color':0xF39C12 ,'channel':'сервер'},
+'voice':{'label':'Голос','emoji':'🔊','color':0x1ABC9C ,'channel':'голос'},
+'сервер':{'label':'Сервер','emoji':'🏠','color':0xE67E22 ,'channel':'сервер'},
+'automod':{'label':'Автоматически','emoji':'⚔','color':0xE74C3C ,'channel':'модерация'},
+'invite':{'label':'Приглашения','emoji':'🔗','color':0x95A5A6 ,'channel':'сервер'},
+'proof':{'label':'Доказательства','emoji':'📸','color':0x9B59B6 ,'channel':'доказательства'},
 }
 
-DIV =""
+DIV =" \u2022 "
 
 # Кэш сообщений — чтобы знать содержимое удалённых
 _msg_cache :dict ={}
@@ -121,28 +121,44 @@ def save_event (guild_id ,category ,action ,details :dict ):
     })
 
 
-    # Имена лог-каналов
+    # Имена лог-каналов — красиво и по-русски (эмодзи + ・ + слово).
+    # Ключ 'голос' должен совпадать с CATEGORIES[voice]['channel'] — раньше
+    # его не было ('ses'), и войс-логи улетали в канал «сервер» (древняя бага).
 LOG_CHANNELS ={
-'модерация':'-модерация',
-'moderasyon':'-модерация',  # legacy alias (старые серверы)
-'участники':'-участники',
-'сообщения':'-сообщения',
-'ses':'-ses',
-'сервер':'-сервер',
-'доказательства':'-доказательства',
+'модерация':'🛡・модерация',
+'moderasyon':'🛡・модерация',  # legacy alias (старые серверы)
+'участники':'👋・участники',
+'сообщения':'💬・сообщения',
+'голос':'🔊・голос',
+'ses':'🔊・голос',  # legacy alias
+'сервер':'📋・сервер',
+'доказательства':'📸・доказательства',
 }
-LOG_CATEGORY_NAME =' Логи'
+LOG_CATEGORY_NAME ='📚 Логи'
+# Старые имена категории (до переименования) — находим и мягко обновляем
+LOG_CATEGORY_LEGACY =[' Логи','Логи',' Logs','Logs','logs']
 
 # Старые (legacy) имена каналов по каждому каноническому — раньше коги
-# писали логи в разные каналы (mod-log, moderasyon, server-log …)
+# писали логи в разные каналы (mod-log, moderasyon, '-модерация', '-ses' …)
 LEGACY_CHANNEL_NAMES ={
-'-модерация':['mod-log','moderasyon','-moderasyon','modlog'],
-'-сообщения':['message-log','сообщения-лог'],
-'-участники':['member-log','участники-лог'],
-'-ses':['voice-log','ses-log'],
-'-сервер':['server-log','aether-logs','сервер-лог'],
-'-доказательства':['proof-log','proofs','demki','демки'],
+'🛡・модерация':['-модерация','mod-log','moderasyon','-moderasyon','modlog'],
+'💬・сообщения':['-сообщения','message-log','сообщения-лог'],
+'👋・участники':['-участники','member-log','участники-лог'],
+'🔊・голос':['-ses','voice-log','ses-log','-голос'],
+'📋・сервер':['-сервер','server-log','aether-logs','сервер-лог'],
+'📸・доказательства':['-доказательства','proof-log','proofs','demki','демки'],
 }
+
+
+def log_category_display (category :str ='сервер'):
+    """Красивое имя лог-канала категории (то, что видят участники)."""
+    category ={'модерация':'mod','moderasyon':'mod','участники':'member',
+    'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
+    'каналы':'channel'}.get (category ,category )
+    ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
+    return LOG_CHANNELS .get (ch_name ,LOG_CHANNELS ['сервер'])
+
+
 
 
 def find_log_channel (guild ,category :str ='сервер'):
@@ -152,11 +168,7 @@ def find_log_channel (guild ,category :str ='сервер'):
     → общие старые каналы (server-log, aether-logs). None, если ничего нет.
     Используется ВСЕМИ когами — иначе логи уходят в несуществующие каналы.
     """
-    category ={'модерация':'mod','moderasyon':'mod','участники':'member',
-    'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
-    'каналы':'channel'}.get (category ,category )
-    ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
-    target =LOG_CHANNELS .get (ch_name ,LOG_CHANNELS ['сервер'])
+    target =log_category_display (category )
 
     candidates =[target ]+LEGACY_CHANNEL_NAMES .get (target ,[])+['server-log','aether-logs']
     # Нормализованная карта каналов: эмодзи/прочерки/регистр не мешают
@@ -196,6 +208,18 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
     # 10 минут на случай отсутствия прав Manage Channels. None = не удалось.
     ch =find_log_channel (guild ,category )
     if ch :
+        # Мягкая миграция внешнего вида: канал со старым уродливым именем
+        # (-модерация, -ses …) переименовываем в красивое (🛡・модерация …)
+        _pretty =log_category_display (category )
+        if _pretty and ch .name !=_pretty :
+            try :
+                import asyncio as _asyncio
+                _cor =ch .edit (name =_pretty ,reason ='Aether: красивое русское название лог-канала')
+                if _asyncio .iscoroutine (_cor ):
+                    await _cor 
+                log .info (f'[LOGS] Канал переименован: #{ch.name} → #{_pretty}')
+            except Exception as _rn:
+                log .debug (f'[LOGS] переименование пропущено: {_rn}')
         return ch
     category ={'модерация':'mod','moderasyon':'mod','участники':'member',
     'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
@@ -213,7 +237,12 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
         return None
     _auto_create_state [key ]=now
     try :
-        cat =discord .utils .get (guild .categories ,name =LOG_CATEGORY_NAME )
+        cat =_find_log_category (guild )
+        if cat is not None and getattr (cat ,'name','')!=LOG_CATEGORY_NAME :
+            try :
+                await cat .edit (name =LOG_CATEGORY_NAME ,reason ='Aether: красивое название категории логов')
+            except Exception as _rn:
+                log .debug (f'[LOGS] переименование категории пропущено: {_rn}')
         if cat is None :
             overwrites ={
             guild .default_role :discord .PermissionOverwrite (read_messages =False ),
@@ -298,7 +327,7 @@ def ensure_log_permissions (guild ,category =None ):
     """
     try :
         if category is None :
-            category =discord .utils .get (guild .categories ,name =LOG_CATEGORY_NAME )
+            category =_find_log_category (guild )
         if category is None :
             return None ,False
         overwrites =dict (category .overwrites )
@@ -313,6 +342,25 @@ def ensure_log_permissions (guild ,category =None ):
     except Exception as _e :
         log .info (f'[LOGS] ensure_log_permissions: {_e}')
         return category ,False
+
+
+def _find_log_category (guild ):
+    """Категория логов: новое имя «📚 Логи» или старые (' Логи' и т.п.)."""
+    cat =None
+    for _c in getattr (guild ,'categories',[])or []:
+        if getattr (_c ,'name','')==LOG_CATEGORY_NAME :
+            return _c
+    for legacy in LOG_CATEGORY_LEGACY :
+        cat =discord .utils .get (getattr (guild ,'categories',[])or [],name =legacy )
+        if cat is not None :
+            return cat
+    try :
+        for _c in getattr (guild ,'categories',[])or []:
+            if _norm_ch_name (getattr (_c ,'name',''))in ('логи','logs'):
+                return _c
+    except Exception as _ex:
+        log .debug (f'[LOGS] поиск категории: {_ex}')
+    return None
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -330,7 +378,7 @@ _LOG_META = {
     'ticket':  ('🎫', 0xF39C12, 'Тикеты'),
     'ai':      ('🤖', 0xE91E63, 'AI-алерты'),
     'welcome': ('🎉', 0x2ECC71, 'Приветствие'),
-    'proof':   ('', 0x9B59B6, 'Доказательства'),
+    'proof':   ('📸', 0x9B59B6, 'Доказательства'),
 }
 
 
@@ -692,7 +740,7 @@ class LogsCenterView(discord.ui.View):
             ok = await _safe_send(ch, embed=te)
             self.notice = ('✅ Тест отправлен — посмотрите в канал.'
                            if ok else
-                           '⚠️ Не удалось отправить — проверьте права бота на категорию « Логи».')
+                           '⚠️ Не удалось отправить — проверьте права бота на категорию «📚 Логи».')
         try:
             await interaction.response.edit_message(embed=self.status_embed(), view=self)
         except Exception as _ex:
@@ -804,7 +852,7 @@ class Logs (commands .Cog ):
             _cat ,_ow =ensure_log_permissions (guild ,existing_cat )
             if _ow :
                 await existing_cat .edit (overwrites =_ow ,reason ="Aether: починка прав бота на категорию логов")
-                migrated .append ("права категории « Логи» восстановлены")
+                migrated .append ("права категории «📚 Логи» восстановлены")
         except Exception as _pe :
             log .info (f'[SETUP-LOGS] починка прав: {_pe}')
 
@@ -943,7 +991,7 @@ class Logs (commands .Cog ):
             _dv ="Тестовые сообщения отправлены в: "+" ".join (f"`{c}`"for c in delivery_ok )
             if delivery_fail :
                 _dv +="\n\n⚠️ **Не удалось отправить в:** "+" ".join (f"`{c}`"for c in delivery_fail )
-                _dv +="\nПроверьте права бота (Administrator или доступ к категории « Логи»)."
+                _dv +="\nПроверьте права бота (Administrator или доступ к категории «📚 Логи»)."
             e .add_field (
             name =f" Проверка доставки: {len(delivery_ok)}/{len(delivery_ok)+len(delivery_fail)}",
             value =_dv ,

@@ -64,7 +64,8 @@ check('.scroll-top-btn' in css and '.scroll-top-btn.show' in css
 
 print('== 2. Версионирование подключений ==')
 for name in ('j2c.html', 'anime_daily.html', 'birthdays.html', 'social.html'):
-    check('pickers.js?v=2' in tpl(name), f'{name}: хелпер v2')
+    check("static_v('pickers.js')" in tpl(name) or 'pickers.js?v=' in tpl(name),
+      f'{name}: версия pickers.js подставляется (авто)')
 
 print('== 3. «/» в поиск списка ==')
 check('bindSlashFocus(document.getElementById(\'j2RoomSearch\'))' in tpl('j2c.html'),

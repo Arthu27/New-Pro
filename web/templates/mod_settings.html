@@ -224,8 +224,16 @@ async function msSave(part) {
 }
 
 document.getElementById('msAddStep').addEventListener('click', function () {
-  var count = parseInt(document.getElementById('msNewCount').value, 10);
-  if (!count || count < 1 || count > 100) { toast('Количество варнов — число 1-100', false); return; }
+  var countInp = document.getElementById('msNewCount');
+  var count = parseInt(countInp.value, 10);
+  if (!count || count < 1 || count > 100) {
+    toast('Сначала впишите число варнов (1-100) в поле «Варнов»', false);
+    countInp.focus();
+    countInp.style.borderColor = 'var(--err)';
+    countInp.style.boxShadow = '0 0 0 3px var(--err-soft)';
+    setTimeout(function () { countInp.style.borderColor = ''; countInp.style.boxShadow = ''; }, 1800);
+    return;
+  }
   if (STEPS.some(function (s) { return s.count === count; })) { toast('Ступень на ' + count + ' варнов уже есть', false); return; }
   if (STEPS.length >= MAX_STEPS) { toast('Максимум ' + MAX_STEPS + ' ступеней', false); return; }
   syncFromDom();

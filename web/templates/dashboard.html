@@ -1401,6 +1401,11 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     setInterval(loadShifts, 30000);
     setInterval(loadPulse, 5000);
   }
+  /* inline onclick из разметки: экспортируем редактирование смен,
+     иначе кнопки «смены» на главной молча умирали (ReferenceError) */
+  window.shiftAdd = shiftAdd;
+  window.shiftRemove = shiftRemove;
+  window.shiftTzSave = shiftTzSave;
 })();
 </script>
 {% endblock %}

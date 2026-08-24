@@ -46,7 +46,7 @@ check('response.status === 304' in helper, '304 обрабатывается о�
 check('_etagCache.has(url)' in helper, 'наличие кэша проверяется без путаницы с undefined')
 check("fresh.cache = 'no-store'" in helper, 'при потере JSON выполняется свежий запрос')
 check("fresh.headers.delete('If-None-Match')" in helper, 'повторный запрос уходит без старого ETag')
-check('/static/api-guard.js?v=3' in base, 'браузер получает новую версию API Guard')
+check("static_v('api-guard.js')" in base, 'браузер получает свежую версию API Guard (авто-v по mtime)')
 check('/static/app.js' in base, 'кит с ETag-хелпером подключён в base.html')
 
 print('== 2. Функциональный прогон ETag-кэша (Node vm) ==')

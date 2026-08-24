@@ -155,11 +155,11 @@ _logs_mod.ensure_log_channel = fake_ensure
 
 # ═══ 0. РЕГИСТРАЦИЯ КАНАЛА В logs ════════════════════════════════════════
 print('== logs: канал доказательств зарегистрирован ==')
-check(_logs_mod.LOG_CHANNELS.get('доказательства') == '-доказательства',
-      'LOG_CHANNELS: доказательства → -доказательства')
+check(_logs_mod.LOG_CHANNELS.get('доказательства') == '📸・доказательства',
+      'LOG_CHANNELS: доказательства → 📸・доказательства (красивое русское имя)')
 check(_logs_mod.CATEGORIES.get('proof', {}).get('channel') == 'доказательства',
       'CATEGORIES: proof → канал доказательства')
-check(_logs_mod._LOG_META.get('proof', (None,))[0] == '', '_LOG_META: без эмоджи-иконки (владелец просил убрать)')
+check(_logs_mod._LOG_META.get('proof', (None,))[0] == '📸', '_LOG_META: иконка демок — фотоаппарат')
 ch = _logs_mod.find_log_channel(GUILD, 'proof')
 check(ch is GUILD.proof_ch, 'find_log_channel: находит #-доказательства по имени')
 
@@ -192,84 +192,74 @@ check(proof_remove(GUILD.id, 3) is None, 'proof_remove: повторно → Non
 check(_is_image_name('screen.PNG') and not _is_image_name('clip.mp4'), 'image ext')
 check(_is_link('https://x') and not _is_link('просто текст'), 'link check')
 
-# ═══ 2. КОГ — /proof ═════════════════════════════════════════════════════
-print('== /proof ==')
+# ═══ 2. ЯДРО — _create_and_post (общая точка панели, /warn и /moderate) ══
+print('== _create_and_post ==')
 cog = ProofCog(bot=object())
+check(not hasattr(ProofCog, 'proof'), 'команды /proof больше нет — загрузка демок в панели')
 
-# без вложения и ссылки — теперь РАЗРЕШЕНО (фото не обязательно, владелец просил)
+# без вложения и ссылки — разрешено (фото не обязательно, владелец просил)
 before0 = len(proof_list(GUILD.id))
-inter = FakeInter(GUILD, MOD)
-run(ProofCog.proof.callback(cog, inter, user=BADGUY, action='варн', reason='токсик'))
+ok, entry, note = run(cog._create_and_post(GUILD, MOD, BADGUY, 'варн', 'токсик'))
 items0 = proof_list(GUILD.id)
-check(len(items0) == before0 + 1, 'proof: без файла и ссылки карточка создаётся')
+check(ok and len(items0) == before0 + 1, 'ядро: без файла и ссылки карточка создаётся и постится')
 check(items0[0]['link'] is None and items0[0]['reason'] == 'токсик',
-      'proof: запись без медиа честная (нет выдуманной ссылки)')
-_ok_embed = inter.followup.sent[-1][1]
-check('сохранена' in (_ok_embed.title or ''), 'proof: мод получил подтверждение без медиа')
-check(any((f.name or '') == 'Без медиа' for f in _ok_embed.fields),
-      'proof: подсказка «добавь фото позже через /proof» есть')
+      'ядро: запись без медиа честная (нет выдуманной ссылки)')
+_c0, _e0, _f0 = GUILD.proof_ch.sent[-1]
+check(_e0 is not None and _f0 is None and 'Демка' in (_e0.title or ''),
+      'ядро: в канал ушла карточка демки без файла')
 
-# кривая ссылка — отказ
-inter = FakeInter(GUILD, MOD)
-run(ProofCog.proof.callback(cog, inter, user=BADGUY, action='варн', reason='токсик',
-                            link='просто текст'))
-check('ссылка' in (inter.response.sent[-1][0] or '').lower(), 'proof: не-ссылка → отказ')
+# кривая ссылка — отсеивается на входе (панель/form-валидация), ядро хранит как есть
+check(not _is_link('просто текст') and _is_link('https://youtu.be/x'),
+      'ядро: _is_link отсеивает невалидные ссылки до записи')
 
 # только ссылка
 before = len(proof_list(GUILD.id))
-inter = FakeInter(GUILD, MOD)
-run(ProofCog.proof.callback(cog, inter, user=BADGUY, action='бан', reason='мясорейд',
-                            link='https://youtu.be/proof1'))
+ok, entry, note = run(cog._create_and_post(GUILD, MOD, BADGUY, 'бан', 'мясорейд',
+                                           link='https://youtu.be/proof1'))
 items = proof_list(GUILD.id)
-check(len(items) == before + 1, 'proof: запись добавлена (ссылка)')
+check(ok and len(items) == before + 1, 'ядро: запись добавлена (ссылка)')
 last = items[0]
 check(last['link'] == 'https://youtu.be/proof1' and last['mod_name'] == str(MOD),
-      'proof: ссылка и мод записаны')
+      'ядро: ссылка и мод записаны')
 check(GUILD.proof_ch.sent and GUILD.proof_ch.sent[-1][1] is not None
-      and GUILD.proof_ch.sent[-1][2] is None, 'proof: в канал ушёл эмбед БЕЗ файла')
+      and GUILD.proof_ch.sent[-1][2] is None, 'ядро: в канал ушёл эмбед БЕЗ файла')
 emb_ch = GUILD.proof_ch.sent[-1][1]
-check('Демка' in (emb_ch.title or '') and 'мясорейд' in str(emb_ch.fields[-1].value if False else '')
-      or emb_ch.fields, 'proof: эмбед в канале с полями')
+check('Демка' in (emb_ch.title or '') or emb_ch.fields, 'ядро: эмбед в канале с полями')
 check(last['msg_id'] is not None and last['channel_id'] == 300,
-      'proof: msg_id/канал записаны — сообщение найдём')
-check(inter.followup.sent and 'сохранена' in (inter.followup.sent[-1][1].title or ''),
-      'proof: мод получил подтверждение')
+      'ядро: msg_id/канал записаны — сообщение найдём')
 # ссылка демки подсвечена в канале
-check(any('Ссылка' in (f.name or '') for f in emb_ch.fields), 'proof: поле-ссылка в канале есть (без эмоджи)')
+check(any('Ссылка' in (f.name or '') for f in emb_ch.fields), 'ядро: поле-ссылка в канале есть')
 
 # картинка-вложение → перезалив + инлайн в эмбед
 att = FakeAttachment('proof.png')
-inter = FakeInter(GUILD, MOD)
-run(ProofCog.proof.callback(cog, inter, user=BADGUY, action='кик', reason='рейдил войс',
-                            attachment=att))
+ok, entry, note = run(cog._create_and_post(GUILD, MOD, BADGUY, 'кик', 'рейдил войс',
+                                           attachment=att))
 content, embed, file = GUILD.proof_ch.sent[-1]
-check(file is not None and file.filename == 'proof.png', 'proof: файл перезалит в канал')
+check(file is not None and file.filename == 'proof.png', 'ядро: файл перезалит в канал')
 check(embed.image and embed.image.url == 'attachment://proof.png',
-      'proof: картинка инлайнится в эмбед — видно при прокрутке')
+      'ядро: картинка инлайнится в эмбед — видно при прокрутке')
 rec = proof_list(GUILD.id)[0]
 check(rec['url'] == 'https://cdn.aether/proof.png',
-      'proof: живой url из нового сообщения записан (не протухающий CDN)')
+      'ядро: живой url из нового сообщения записан (не протухающий CDN)')
 
 # видео — файлом, без инлайна
 att2 = FakeAttachment('clip.mp4', data=b'video bytes')
-inter = FakeInter(GUILD, MOD)
-run(ProofCog.proof.callback(cog, inter, user=BADGUY, action='бан', reason='читы',
-                            attachment=att2))
+ok, entry, note = run(cog._create_and_post(GUILD, MOD, BADGUY, 'бан', 'читы',
+                                           attachment=att2))
 _, embed2, file2 = GUILD.proof_ch.sent[-1]
-check(file2 is not None and file2.filename == 'clip.mp4', 'proof: видео прикреплено файлом')
-check(embed2.image.url is None, 'proof: видео НЕ инлайнится (Discord сам даст плеер)')
+check(file2 is not None and file2.filename == 'clip.mp4', 'ядро: видео прикреплено файлом')
+check(embed2.image.url is None, 'ядро: видео НЕ инлайнится (Discord сам даст плеер)')
 
 # слишком большой файл → fallback ссылка + предупреждение
 big = FakeAttachment('huge.mp4', size=MAX_REUPLOAD_BYTES + 5)
-inter = FakeInter(GUILD, MOD)
-run(ProofCog.proof.callback(cog, inter, user=BADGUY, action='бан', reason='читы v2',
-                            attachment=big))
+ok, entry, note = run(cog._create_and_post(GUILD, MOD, BADGUY, 'бан', 'читы v2',
+                                           attachment=big))
 _, embed3, file3 = GUILD.proof_ch.sent[-1]
-check(file3 is None, 'proof: большой файл НЕ перезаливается')
+check(file3 is None, 'ядро: большой файл НЕ перезаливается')
 check(any('не перезалит' in (f.value or '') for f in embed3.fields),
-      'proof: предупреждение о размере в карточке канала')
+      'ядро: предупреждение о размере в карточке канала')
 rec3 = proof_list(GUILD.id)[0]
-check(rec3['link'] == big.url, 'proof: вместо файла сохранена исходная ссылка')
+check(rec3['link'] == big.url, 'ядро: вместо файла сохранена исходная ссылка')
 
 # ═══ 3. /proofs ═══════════════════════════════════════════════════════════
 print('== /proofs ==')
