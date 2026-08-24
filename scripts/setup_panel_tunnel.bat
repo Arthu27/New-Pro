@@ -24,12 +24,22 @@ echo  ==========================================================
 echo.
 echo  Перед стартом убедись, что:
 echo   1) hakumods.xyz добавлен в Cloudflare, статус "Active"
-echo      (сайт-пустышка на хостинге больше не нужна — домен
-echo       целиком показывает нашу панель)
-echo   2) бот запущен (start.bat) и панель открывается на
-echo      http://localhost:%PANEL_PORT%
+echo   2) бот запущен (start.bat)
 echo.
 pause
+
+rem --- 0. панель вообще отвечает? --------------------------------------------
+echo [0/6] Проверяю панель на localhost:%PANEL_PORT% ...
+powershell -NoProfile -Command "try { (Invoke-WebRequest -UseBasicParsing -TimeoutSec 4 -Uri 'http://localhost:%PANEL_PORT%/').StatusCode } catch { 'DOWN' }" > "%TEMP%\_aether_ping.txt" 2>nul
+set /p PING=<"%TEMP%\_aether_ping.txt"
+del "%TEMP%\_aether_ping.txt" >nul 2>&1
+if /i "%PING%"=="DOWN" (
+  echo [ВНИМАНИЕ] Панель на порту %PANEL_PORT% не отвечает!
+  echo           Запусти бота через start.bat и повтори скрипт.
+  pause & exit /b 1
+) else (
+  echo       Панель отвечает — едем дальше.
+)
 
 rem --- 1. cloudflared рядом со скриптом --------------------------------------
 if not exist cloudflared.exe (
@@ -107,9 +117,24 @@ if not exist "%SYSCFG%" mkdir "%SYSCFG%" >nul 2>&1
 copy /y "%CFG%" "%SYSCFG%\config.yml" >nul 2>&1
 copy /y "%USERPROFILE%\.cloudflared\%TID%.json" "%SYSCFG%\%TID%.json" >nul 2>&1
 
-rem --- 6. автозапуск службой ---------------------------------------------------
+rem --- 5.5 WEB_BEHIND_PROXY=1 в .env бота (одной строкой, если её нет) --------
+set ENVFILE=%~dp0..\.env
+if exist "%ENVFILE%" (
+  findstr /x /c:"WEB_BEHIND_PROXY=1" "%ENVFILE%" >nul 2>&1
+  if errorlevel 1 (
+    (echo WEB_BEHIND_PROXY=1)>> "%ENVFILE%"
+    echo       Дописал WEB_BEHIND_PROXY=1 в .env — не забудь перезапустить бота!
+  ) else (
+    echo       WEB_BEHIND_PROXY=1 уже есть в .env — ок.
+  )
+) else (
+  echo       [ВНИМАНИЕ] .env не найден рядом с ботом — допиши руками:
+  echo                 WEB_BEHIND_PROXY=1
+)
+
+rem --- 6. автозапуск службой + старт службы -----------------------------------
 echo.
-echo [6/6] Ставлю автозапуск (служба Windows)...
+echo [6/6] Ставлю автозапуск (служба Windows) и запускаю её...
 cloudflared.exe service install
 if errorlevel 1 (
   echo.
@@ -117,6 +142,7 @@ if errorlevel 1 (
   echo Для автозапуска позже: запусти этот скрипт от имени администратора.
   cloudflared.exe tunnel run %TNAME%
 ) else (
+  sc start cloudflared >nul 2>&1 || net start cloudflared >nul 2>&1
   echo.
   echo  ==========================================================
   echo   ГОТОВО! Панель живёт на домене и будет сама подниматься
@@ -124,8 +150,8 @@ if errorlevel 1 (
   echo.
   echo        https://%HOST1%
   echo.
-  echo   Осталось: в .env бота допиши строку  WEB_BEHIND_PROXY=1
-  echo   и перезапусти start.bat. Подробности: docs/PANEL-DOMAIN.md
+  echo   ФИНАЛ: перезапусти бота (start.bat), чтобы подхватился
+  echo   WEB_BEHIND_PROXY=1 — и открывай https://%HOST1%
   echo  ==========================================================
 )
 echo.
