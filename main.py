@@ -264,11 +264,90 @@ def _stop_web_server():
         _web_server_proc = None
 
 
+# ── Cloudflare-туннель: запускается ВМЕСТЕ с ботом ───────────────────────────
+# Активируется сам после scripts/setup_panel_tunnel.bat: нашли бинарник
+# cloudflared в scripts/ и конфиг туннеля — поднимаем панель на домене
+# (hakumods.xyz) прямо из start.bat. Если туннель уже крутится службой
+# Windows — не дублируем. Отключить: TUNNEL_AUTOSTART=0 в .env.
+_tunnel_proc = None
+
+
+def _tunnel_service_running_windows():
+    """Туннель уже поставлен службой Windows (setup_panel_tunnel.bat)?"""
+    if os.name != 'nt':
+        return False
+    try:
+        out = subprocess.check_output(['sc', 'query', 'cloudflared'],
+                                      stderr=subprocess.DEVNULL, timeout=5)
+        return b'RUNNING' in out
+    except Exception:
+        # службы нет/не ответила — будем запускать сами
+        return False
+
+
+def _start_tunnel_sidecar():
+    global _tunnel_proc
+    raw = (os.environ.get('TUNNEL_AUTOSTART', '') or '').strip().lower()
+    if raw in ('0', 'false', 'no', 'off'):
+        return
+    root = os.path.dirname(os.path.abspath(__file__))
+    exe = next((c for c in (os.path.join(root, 'scripts', 'cloudflared.exe'),
+                            os.path.join(root, 'scripts', 'cloudflared'))
+                if os.path.exists(c)), None)
+    if not exe:
+        return  # туннель ещё не настраивали — работаем локально, не шумим
+    cfg_local = os.path.join(os.path.expanduser('~'), '.cloudflared', 'config.yml')
+    cfg_scripts = os.path.join(root, 'scripts', 'config.yml')
+    cfg = cfg_local if os.path.exists(cfg_local) else (cfg_scripts if os.path.exists(cfg_scripts) else None)
+    if not cfg:
+        return  # бинарник есть, а туннель не настроен — скрипт ещё не прошли
+    if _tunnel_service_running_windows():
+        print('[ТУННЕЛЬ] Уже крутится службой Windows — вместе со стартом ПК, везде ок.')
+        return
+    try:
+        _tunnel_proc = subprocess.Popen(
+            [exe, '--config', cfg, 'tunnel', 'run'],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            bufsize=1, text=True, encoding='utf-8', errors='replace',
+        )
+    except Exception as e:
+        print(f'[ТУННЕЛЬ] Не удалось запустить: {e}')
+        return
+
+    def _echo_tunnel_log():
+        try:
+            for line in _tunnel_proc.stdout:
+                line = (line or '').rstrip()
+                if line:
+                    print(f'[ТУННЕЛЬ] {line}')
+        except Exception as e:
+            print(f'[ТУННЕЛЬ] Чтение лога: {e}')
+        print(f'[ТУННЕЛЬ] Остановился (код {_tunnel_proc.poll()}) — следующий запуск бота поднимет снова.')
+
+    threading.Thread(target=_echo_tunnel_log, daemon=True).start()
+    print('[ТУННЕЛЬ] Запущен вместе с ботом — панель на домене активна.')
+
+
+def _stop_tunnel_sidecar():
+    global _tunnel_proc
+    if _tunnel_proc and _tunnel_proc.poll() is None:
+        try:
+            _tunnel_proc.terminate()
+            try:
+                _tunnel_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                _tunnel_proc.kill()
+        except Exception as e:
+            print(f'[ТУННЕЛЬ] Остановка: {e}')
+        _tunnel_proc = None
+
+
 def cleanup_on_exit():
     """Действия очистки при закрытии бота"""
     try:
         print("[ОЧИСТКА] Бот закрывается...")
         _stop_web_server()
+        _stop_tunnel_sidecar()
         try:
             loop = getattr(bot, 'loop', None)
             if loop and loop.is_running():
@@ -655,6 +734,7 @@ async def main():
     set_bot_instance(bot)
     _start_web_server(app)
     print("[ВЕБ] Веб панель: http://localhost:5001")
+    _start_tunnel_sidecar()
 
     try:
         from web.websocket_server import start_websocket_thread
