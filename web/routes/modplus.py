@@ -429,6 +429,34 @@ def register(ctx):
         'roles':[str (r )for r in wl ['roles']]})
 
 
+    @app .route ('/api/proof-required',methods =['GET'])
+    @login_required
+    @role_required ('mod')
+    def api_proof_required_get ():
+        # Требование демки к наказаниям: текущее положение тумблера.
+        from cogs .proof_cog import proof_is_required
+        guild =_active_guild ()
+        gid =guild .id if guild else int (active_guild_id ()or 0 )
+        return jsonify ({'success':True ,'required':proof_is_required (gid )})
+
+
+    @app .route ('/api/proof-required',methods =['POST'])
+    @login_required
+    @role_required ('admin')
+    def api_proof_required_set ():
+        # Переключить «доказательство обязательно» одним движением.
+        from cogs .proof_cog import proof_set_required
+        d =request .get_json (silent =True )or {}
+        on =bool (d .get ('required',True ))
+        guild =_active_guild ()
+        gid =guild .id if guild else int (active_guild_id ()or 0 )
+        on =proof_set_required (gid ,on )
+        _fire_panel_notification ('proof',
+        'Обязательная демка: '+('включена'if on else 'выключена'),
+        f"{session.get('username')} переключил требование")
+        return jsonify ({'success':True ,'required':on })
+
+
     @app .route ('/api/panic',methods =['GET'])
     @login_required 
     @role_required ('mod')

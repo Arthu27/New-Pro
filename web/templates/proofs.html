@@ -56,6 +56,23 @@
   </div>
 </div>
 
+<!-- Обязательная демка: требовать доказательство к наказаниям или нет -->
+<div class="panel" id="pf-req-panel" style="margin-bottom:14px">
+  <div class="panel-body" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <h2 style="margin:0;font-size:15px"><i class="fas fa-clipboard-check" style="color:var(--ac)"></i>
+        Требовать доказательство к наказаниям</h2>
+      <span id="pf-req-state" class="badge neutral">…</span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--text-3);max-width:420px">Выключено — бан/кик/мут
+        выдаются без скрина. Демки всё равно можно грузить сюда и смотреть.</span>
+      <button type="button" class="btn btn-sm" id="pf-req-btn"
+              aria-label="Переключить требование доказательства" title="Переключить">…</button>
+    </div>
+  </div>
+</div>
+
 <!-- Белый список: кого бот НЕ просит демку -->
 <div class="panel" id="pf-wl-panel" style="margin-bottom:14px">
   <div class="panel-body" style="display:flex;flex-direction:column;gap:10px">
@@ -425,6 +442,42 @@
 
   /* ── Белый список «без демки» ── */
   if (!CAN_DEL) { $('pf-wl-addrow').style.display = 'none'; }
+
+  /* ── Тумблер «требовать доказательство» ── */
+  var pfReqOn = true;
+  function pfReqRender() {
+    $('pf-req-state').textContent = pfReqOn ? 'включено' : 'выключено';
+    $('pf-req-state').className = 'badge ' + (pfReqOn ? 'ok' : 'neutral');
+    $('pf-req-btn').innerHTML = pfReqOn
+      ? '<i class="fas fa-toggle-on"></i> Выключить'
+      : '<i class="fas fa-toggle-off"></i> Включить';
+  }
+  function pfReqLoad() {
+    fetch('/api/proof-required').then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.success) { pfReqOn = !!d.required; pfReqRender(); }
+    }).catch(function (e) { console.debug('req load', e); });
+  }
+  if (!CAN_DEL) { $('pf-req-btn').style.display = 'none'; }
+  $('pf-req-btn').addEventListener('click', function () {
+    var btn = $('pf-req-btn');
+    btn.disabled = true;
+    fetch('/api/proof-required', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ required: !pfReqOn })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false;
+      if (!d || !d.success) { window.showToast((d && d.error) || 'Не вышло переключить', false); return; }
+      pfReqOn = !!d.required;
+      pfReqRender();
+      window.showToast(pfReqOn
+        ? 'Бот снова требует доказательство к наказаниям'
+        : 'Наказания выдаются без доказательства', true);
+    }).catch(function () {
+      btn.disabled = false;
+      window.showToast('Сеть моргнула — повторите', false);
+    });
+  });
+  pfReqLoad();
 
   function wlRender(d) {
     var box = $('pf-wl-list');

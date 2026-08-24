@@ -33,19 +33,33 @@ ACTION_META = {
 }
 
 
-class ReasonModal(discord.ui.Modal):
-    """Модалка 'Причина' (+ ссылка-доказательство) для контекстных действий."""
+def _proof_needed(guild):
+    """Обязательна ли демка сейчас: тумблер панели («Доказательства») важнее всего."""
+    try:
+        from cogs.proof_cog import proof_is_required
+        gid = getattr(guild, 'id', 0) or 0
+        return proof_is_required(gid) if gid else True
+    except Exception:
+        return True
 
-    def __init__(self, title: str, handler, require_proof=False):
+
+class ReasonModal(discord.ui.Modal):
+    """Модалка 'Причина' (+ ссылка-доказательство) для контекстных действий.
+
+    Поле демки появляется, только если наказание её требует И требование
+    не выключено в панели («Доказательства» → тумблер).
+    """
+
+    def __init__(self, title: str, handler, require_proof=False, guild=None):
         super().__init__(title=title[:45])
         self._handler = handler
-        self._require_proof = require_proof
+        self._require_proof = bool(require_proof) and _proof_needed(guild)
         self.reason = discord.ui.TextInput(
             label="Причина",
             placeholder="За что наказание? (необязательно)",
             required=False, max_length=300, style=discord.TextStyle.paragraph)
         self.add_item(self.reason)
-        if require_proof:
+        if self._require_proof:
             self.proof = discord.ui.TextInput(
                 label="Доказательство (ссылка)",
                 placeholder="https://… — скрин или видео нарушения (обязательно)",
@@ -163,7 +177,7 @@ class VoiceActionView(discord.ui.View):
                          'vunmute': 'Войс-размут'}.get(action, action)
                 await interaction.response.send_modal(
                     ReasonModal(f"{title}: {self.member.display_name}", _do,
-                                require_proof=require_proof))
+                                require_proof=require_proof, guild=interaction.guild))
             b.callback = _cb
             return b
 
@@ -240,7 +254,7 @@ class ModTools(commands.Cog):
             await self._apply_warn(inter, member, reason, origin="ПКМ", proof_link=proof_link)
 
         await interaction.response.send_modal(
-            ReasonModal(f"Варн: {member.display_name}", _do, require_proof=True))
+            ReasonModal(f"Варн: {member.display_name}", _do, require_proof=True, guild=interaction.guild))
 
     # ────────────────────────────────────────────────────────────
     # ПКМ → Варн за сообщение (message)
@@ -385,7 +399,7 @@ class ModTools(commands.Cog):
                     _log.debug("_do(): подавлено: %s", _ex)
 
         await interaction.response.send_modal(
-            ReasonModal(f"Изоляция: {member.display_name}", _do, require_proof=True))
+            ReasonModal(f"Изоляция: {member.display_name}", _do, require_proof=True, guild=interaction.guild))
 
     # ────────────────────────────────────────────────────────────
     # ПКМ → Войс-мут / Войс-размут / Кик из войса (user)
@@ -402,7 +416,7 @@ class ModTools(commands.Cog):
             await self._voice_action(inter, member, 'vmute', reason, proof)
 
         await interaction.response.send_modal(
-            ReasonModal(f"Войс-мут: {member.display_name}", _do, require_proof=True))
+            ReasonModal(f"Войс-мут: {member.display_name}", _do, require_proof=True, guild=interaction.guild))
 
     async def _vunmute_user_ctx(self, interaction: discord.Interaction, member: discord.Member):
         if interaction.guild is None:
@@ -428,7 +442,7 @@ class ModTools(commands.Cog):
             await self._voice_action(inter, member, 'vkick', reason, proof)
 
         await interaction.response.send_modal(
-            ReasonModal(f"Кик из войса: {member.display_name}", _do, require_proof=True))
+            ReasonModal(f"Кик из войса: {member.display_name}", _do, require_proof=True, guild=interaction.guild))
 
     async def _voice_action(self, interaction, member, action, reason, proof):
         """Общий путь голосовых действий: мут / размут / кик из войса."""

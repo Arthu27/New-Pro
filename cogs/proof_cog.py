@@ -292,6 +292,31 @@ def proof_is_whitelisted(gid, user_id=None, role_ids=None):
     return False
 
 
+# ── Настройка «доказательство обязательно» (панель → «Доказательства») ───
+def _proof_cfg_path(gid):
+    return f'data/proof_config_{int(gid)}.json'
+
+
+def proof_is_required(gid):
+    """Обязательна ли демка к наказаниям на сервере (по умолчанию — да)."""
+    try:
+        data = _load_json(_proof_cfg_path(gid), {})
+        if isinstance(data, dict):
+            return bool(data.get('required', True))
+    except Exception as _ex:
+        log.debug(f'[PROOF] конфиг: чтение пропущено: {_ex}')
+    return True
+
+
+def proof_set_required(gid, on):
+    """Переключить требование доказательства из панели. Возвращает итог."""
+    try:
+        _save_json(_proof_cfg_path(gid), {'required': bool(on)})
+    except Exception as _ex:
+        log.debug(f'[PROOF] конфиг: запись пропущена: {_ex}')
+    return proof_is_required(gid)
+
+
 # ════════════════════════ ког ════════════════════════════════════════════
 class ProofCog(commands.Cog):
     def __init__(self, bot):
@@ -531,24 +556,36 @@ async def require_proof(interaction, attachment=None, action_ru='наказан�
     отправляет модератору отказ и возвращает False: наказание БЕЗ
     доказательства не выдаётся ни в каком случае.
     """
-    if is_media_attachment(attachment) or (link or '').strip():
+    if is_media_attachment(attachment):
+        return True
+    link = (link or '').strip()
+    bad_link = bool(link) and not _is_link(link)
+    if link and _is_link(link):
+        return True
+    # Отключено на сервере в панели («Доказательства» → тумблер): демка не нужна
+    gid = getattr(getattr(interaction, 'guild', None), 'id', 0)
+    if gid and not proof_is_required(gid):
         return True
     # Белый список (панель → /proofs): доверенным демка не нужна
     mod = getattr(interaction, 'user', None)
-    gid = getattr(getattr(interaction, 'guild', None), 'id', 0)
     if mod and gid and proof_is_whitelisted(
             gid, user_id=getattr(mod, 'id', 0),
             role_ids=[getattr(r, 'id', 0) for r in getattr(mod, 'roles', []) or []]):
         return True
+    _desc = (
+        f'Для наказания «**{action_ru}**» нужен скрин или видео нарушения.\n'
+        'Прикрепите файл (картинку/видео) или укажите ссылку (https://…) — '
+        'без доказательства наказание не выдаётся.'
+    )
+    if bad_link:
+        _desc += ('\n\nВаша строка не похожа на ссылку — нужна ссылка '
+                  'вида https://… на скрин/видео.')
     e = discord.Embed(
         color=RED,
         title='Требуется доказательство',
-        description=(
-            f'Для наказания «**{action_ru}**» нужен скрин или видео нарушения.\n'
-            'Прикрепите файл (картинку/видео) или укажите ссылку — '
-            'без доказательства наказание не выдаётся.'
-        ),
+        description=_desc,
     )
+    e.set_footer(text='Отключить требование: панель → «Доказательства» (тумблер сверху)')
     try:
         await interaction.followup.send(embed=e, ephemeral=True)
     except Exception:

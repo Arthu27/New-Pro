@@ -162,165 +162,9 @@ class Moderation (commands .Cog ):
 
         return e 
 
-    @app_commands .command (name ="utility",description ="Утилиты: очистка, слоумод, блокировка, инфо")
-    @app_commands .choices (action =[
-    app_commands .Choice (name ="очистка",value ="clear"),
-    app_commands .Choice (name ="слоумод",value ="slowmode"),
-    app_commands .Choice (name ="блокировка",value ="lock"),
-    app_commands .Choice (name ="разблокировка",value ="unlock"),
-    app_commands .Choice (name ="пользователь",value ="userinfo"),
-    app_commands .Choice (name ="сервер",value ="server")
-    ])
-    @app_commands .describe (action ="Что сделать",количество ="Сколько сообщений удалить (очистка)",секунд ="Задержка слоумода в секундах (0-21600)",user ="Участник для инфо")
-    @app_commands .checks .has_permissions (manage_messages =True )
-    async def utility_commands (self ,interaction ,action :str ,
-    количество :int =10 ,секунд :int =0 ,user :discord .Member =None ):
-        guild =interaction .guild 
-
-        if action =="clear":
-            await interaction .response .defer (ephemeral =True )
-            deleted =await interaction .channel .purge (limit =количество )
-            e =discord .Embed (color =0xDC143C ,timestamp =datetime .now (timezone .utc ))
-            e .description =(
-            "## 🧹 Сообщения удалены\n"
-            f"Удалено **{len(deleted)}** сообщений\n\n"
-            f"📺 **Канал:** {interaction.channel.mention}\n"
-            f"🛡️ **Модератор:** {interaction.user.mention}\n\n"
-            f"{DIVIDER}"
-            )
-            e .set_footer (text =f"{guild.name}")
-            await interaction .followup .send (embed =e ,ephemeral =True )
-
-        elif action =="slowmode":
-            if секунд <0 or секунд >21600 :
-                await _respond (interaction ,embed =error_embed ("Значение от 0 до 21600 секунд."),ephemeral =True )
-                return 
-            await interaction .channel .edit (slowmode_delay =секунд )
-            e =discord .Embed (color =0xF39C12 ,timestamp =datetime .now (timezone .utc ))
-            e .description =(
-            "## 🐌 Медленный режим\n"
-            f"📺 **Канал:** {interaction.channel.mention}\n"
-            f"⏱️ **Задержка:** **{секунд} сек.**\n"
-            f"🛡️ **Модератор:** {interaction.user.mention}\n\n"
-            f"{DIVIDER}"
-            )
-            e .set_footer (text =f"{guild.name}")
-            await _respond (interaction ,embed =e ,ephemeral =True )
-
-        elif action =="lock":
-            await interaction .channel .set_permissions (guild .default_role ,send_messages =False )
-            e =discord .Embed (color =0xE74C3C ,timestamp =datetime .now (timezone .utc ))
-            e .description =(
-            "## 🔒 Канал заблокирован\n"
-            f"{interaction.channel.mention}\n\n"
-            "🚫 Отправка сообщений отключена.\n"
-            f"🛡️ **Заблокировал:** {interaction.user.mention}\n\n"
-            f"{DIVIDER}"
-            )
-            e .set_footer (text =f"{guild.name}")
-            # Канал УЖЕ заблокирован — если анонс не отправился (нет прав view/send),
-            # модератор всё равно получает подтверждение, а не «ошибку»
-            try :
-                await interaction .channel .send (embed =e )
-            except Exception as _an_e :
-                log .info (f'[UTILITY] Анонс блокировки не отправлен: {_an_e}')
-            await _respond (interaction ,content ="🔒 Канал заблокирован.",ephemeral =True )
-
-        elif action =="unlock":
-            await interaction .channel .set_permissions (guild .default_role ,send_messages =True )
-            e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
-            e .description =(
-            "## 🔓 Канал разблокирован\n"
-            f"{interaction.channel.mention}\n\n"
-            "✅ Отправка сообщений включена.\n"
-            f"🛡️ **Разблокировал:** {interaction.user.mention}\n\n"
-            f"{DIVIDER}"
-            )
-            e .set_footer (text =f"{guild.name}")
-            try :
-                await interaction .channel .send (embed =e )
-            except Exception as _an_e :
-                log .info (f'[UTILITY] Анонс разблокировки не отправлен: {_an_e}')
-            await _respond (interaction ,content ="🔓 Канал разблокирован.",ephemeral =True )
-
-        elif action =="userinfo":
-            u =user or interaction .user 
-            roles =[r .mention for r in u .roles [1 :]]
-            roles_text =" ".join (roles [:20 ])if roles else "Нет"
-            if len (roles )>20 :
-                roles_text +=f" · +{len(roles) - 20}"
-
-            e =discord .Embed (
-            color =u .color if u .color !=discord .Color .default ()else 0x3498DB ,
-            timestamp =datetime .now (timezone .utc )
-            )
-            e .description =(
-            f"## 👤 {u.display_name}\n"
-            f"`{u.id}`\n\n"
-            f"🏷️ **Имя:** **{u.name}**\n"
-            f"✨ **Псевдоним:** **{u.display_name}**\n"
-            f"📅 **Аккаунт:** <t:{int(u.created_at.timestamp())}:R>\n"
-            f"📥 **На сервере:** <t:{int(u.joined_at.timestamp())}:R>\n"
-            f"🎭 **Роли ({len(roles)}):** {roles_text}\n\n"
-            f"{DIVIDER}"
-            )
-            e .set_thumbnail (url =u .display_avatar .url )
-            e .set_footer (text =f"{guild.name}")
-            await _respond (interaction ,embed =e )
-
-        elif action =="server":
-            g =guild 
-            bots =sum (1 for m in g .members if m .bot )
-            humans =g .member_count -bots 
-
-            e =discord .Embed (color =0x3498DB ,timestamp =datetime .now (timezone .utc ))
-            e .description =(
-            f"## 🏰 {g.name}\n"
-            f"`{g.id}`\n\n"
-            f"👑 **Владелец:** {g.owner.mention}\n"
-            f"📅 **Создан:** <t:{int(g.created_at.timestamp())}:R>\n\n"
-            f"👥 **Участников:** **{g.member_count}**\n"
-            f"🧑 **Людей:** **{humans}** · 🤖 **Ботов:** **{bots}**\n\n"
-            f"💬 **Текстовых каналов:** **{len(g.text_channels)}**\n"
-            f"🔊 **Голосовых каналов:** **{len(g.voice_channels)}**\n"
-            f"🎭 **Ролей:** **{len(g.roles)}**\n"
-            f"🚀 **Буст:** уровень {g.premium_tier} · {g.premium_subscription_count} бустов\n\n"
-            f"{DIVIDER}"
-            )
-            if g .icon :
-                e .set_thumbnail (url =g .icon .url )
-            if g .banner :
-                e .set_image (url =g .banner .url )
-            e .set_footer (text =f"{g.name}")
-            await _respond (interaction ,embed =e )
 
             # /роли 
 
-    @app_commands .command (name ="role",description ="Выдать или забрать роль у пользователя")
-    @app_commands .describe (user ="Участник, у которого меняем роль",role ="Роль для выдачи/снятия")
-    @app_commands .checks .has_permissions (manage_roles =True )
-    async def role (self ,interaction ,user :discord .Member ,role :discord .Role ):
-        guild =interaction .guild 
-        if role in user .roles :
-            await user .remove_roles (role )
-            action_text ="снята"
-            color =0xE74C3C 
-        else :
-            await user .add_roles (role )
-            action_text ="выдана"
-            color =0x2ECC71 
-
-        e =discord .Embed (color =color ,timestamp =datetime .now (timezone .utc ))
-        e .description =(
-        f"## {'🚫' if action_text =='снята' else '✅'} Роль {action_text}\n"
-        f"**{user.display_name}** · `{user.id}`\n\n"
-        f"🎭 **Роль:** {role.mention}\n"
-        f"🛡️ **Модератор:** {interaction.user.mention}\n\n"
-        f"{DIVIDER}"
-        )
-        e .set_thumbnail (url =user .display_avatar .url )
-        e .set_footer (text =f"{guild.name} · Управление ролями")
-        await _respond (interaction ,embed =e ,ephemeral =True )
 
         # /leaveguild 
 
@@ -340,42 +184,46 @@ class Moderation (commands .Cog ):
         timestamp =datetime .now (timezone .utc )
         )
         if interaction .guild .icon :
-            embed .set_footer (text =f"{interaction.guild.name} · Модерация",icon_url =interaction .guild .icon .url )
+            embed .set_footer (text =f"{interaction.guild.name} · Модерация · видите только вы",icon_url =interaction .guild .icon .url )
         else :
-            embed .set_footer (text =f"{interaction.guild.name} · Модерация")
-        await _respond (interaction ,embed =embed ,view =ModPanelView (self ))
+            embed .set_footer (text =f"{interaction.guild.name} · Модерация · видите только вы")
+        await _respond (interaction ,embed =embed ,view =ModPanelView (self ),ephemeral =True )
 
     # ═══════════════════════════════════════════════════════════════════
     #  !moderate — та же панель, но префиксной командой (без slash-синхронизации)
     # ═══════════════════════════════════════════════════════════════════
-    @commands .command (name ="moderate",aliases =["modpanel"])
-    @commands .has_permissions (moderate_members =True )
-    async def moderate_prefix (self ,ctx ):
-        """Открыть панель модерации (select-меню) префиксной командой."""
-        embed =discord .Embed (
-        title ="🛡 Модерация",
-        description =(
-        "Выберите действие в выпадающем меню ниже.\n"
-        "После выбора откроется окно для ввода цели и причины."
-        ),
-        color =0x3498DB ,
-        timestamp =datetime .now (timezone .utc )
-        )
-        if ctx .guild .icon :
-            embed .set_footer (text =f"{ctx.guild.name} · Модерация",icon_url =ctx .guild .icon .url )
-        else :
-            embed .set_footer (text =f"{ctx.guild.name} · Модерация")
-        await ctx .send (embed =embed ,view =ModPanelView (self ))
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
         if not target :
             return None
         import re as _re
-        m =_re .search (r'(\d{15,20})',target )
+        m =_re .search (r'(\d{15,22})',target )
         if m :
             return int (m .group (1 ))
         return None
+
+    def _resolve_member (self ,guild ,target ):
+        """Найти участника по строке из модалки: @упоминание, ID или ТОЧНЫЙ ник.
+
+        Возвращает (user, uid). uid может быть найден без user (оффлайн/ушёл —
+        добираем через fetch_user выше по стеку), user без uid не бывает.
+        Точный ник: совпадение с username / отображаемым / ником на сервере
+        (без учёта регистра); неоднозначность → (None, None), мод уточнит.
+        """
+        uid =self ._parse_target_id (target )
+        if uid :
+            return discord .utils .get (guild .members ,id =uid ),uid
+        name =(target or '').strip ().lstrip ('@').strip ().casefold ()
+        if len (name )<2 :
+            return None ,None
+        cands =[u for u in guild .members
+        if name in (str (getattr (u ,'name','')).casefold (),
+        str (getattr (u ,'global_name','')or '').casefold (),
+        str (getattr (u ,'display_name','')).casefold ())]
+        if len (cands )==1 :
+            return cands [0 ],cands [0 ].id
+        return None ,None
 
     # ── Апелляция («бан») ─────────────────────────────────────────────
     # «Бан» больше НЕ выгоняет с сервера: у участника закрываются все каналы,
@@ -447,16 +295,15 @@ class Moderation (commands .Cog ):
                 return
 
         if action in ("ban","kick","timeout","mute_chat","untimeout","vmute","vunmute"):
-            uid =self ._parse_target_id (target )
-            user =discord .utils .get (guild .members ,id =uid ) if uid else None
-            if not user :
+            user ,uid =self ._resolve_member (guild ,target )
+            if not user and uid :
                 try :
-                    user =await self .bot .fetch_user (uid ) if uid else None
+                    user =await self .bot .fetch_user (uid )
                 except Exception :
                     user =None
             if not user :
                 await _respond (interaction ,
-                embed =error_embed ("Пользователь не найден. Укажите корректный ID или упоминание."),
+                embed =error_embed ("Пользователь не найден. Укажите @упоминание, точный ник или ID — ровно как на сервере."),
                 ephemeral =True )
                 return
 
@@ -560,7 +407,7 @@ class Moderation (commands .Cog ):
             uid =self ._parse_target_id (target )
             if not uid :
                 await _respond (interaction ,
-                embed =error_embed ("Укажите ID пользователя для разбана."),ephemeral =True )
+                embed =error_embed ("Укажите ID пользователя для разбана (15-22 цифры, можно с @упоминанием)."),ephemeral =True )
                 return
             try :
                 member =guild .get_member (uid )
@@ -649,30 +496,6 @@ class Moderation (commands .Cog ):
         except Exception as ex :
             log .warning (f"[watchlist auto] {ex}")
 
-    @app_commands .command (name ="leaveguild",description ="Покинуть сервер (только владелец бота)")
-    async def leave_guild (self ,interaction ,guild_id :str ):
-        app_info =await self .bot .application_info ()
-        if interaction .user .id !=app_info .owner .id :
-            await _respond (interaction ,
-            embed =error_embed ("Эта команда доступна только владельцу бота."),
-            ephemeral =True 
-            )
-            return 
-        try :
-            target =self .bot .get_guild (int (guild_id ))
-            if not target :
-                await _respond (interaction ,embed =error_embed ("Сервер не найден."),ephemeral =True )
-                return 
-            name =target .name 
-            await target .leave ()
-            e =discord .Embed (color =0x2ECC71 ,timestamp =datetime .now (timezone .utc ))
-            e .description =f"## Сервер покинут\n**{name}** · `{guild_id}`"
-            await _respond (interaction ,embed =e ,ephemeral =True )
-        except ValueError :
-            await _respond (interaction ,embed =error_embed ("Неверный ID сервера."),ephemeral =True )
-        except Exception as ex :
-            await _respond (interaction ,embed =error_embed (str (ex )),ephemeral =True )
-
 
 # ═══════════════════════════════════════════════════════════════════
 #  SELECT-МЕНЮ МОДЕРАЦИИ (без кнопок/эмодзи — только выпадающие меню)
@@ -702,14 +525,24 @@ class ModActionSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         action = self.values[0]
-        modal = ModActionModal(self.cog, action)
+        modal = ModActionModal(self.cog, action, guild=interaction.guild)
         await interaction.response.send_modal(modal)
 
 
-class ModActionModal(discord.ui.Modal):
-    """Модальное окно ввода данных для выбранного действия."""
+# Действия-наказания в мод-панели: к ним обязательна демка (пока включено
+# требование в панели: «Доказательства» → тумблер).
+_PUNISH_MODPANEL = ("ban", "kick", "timeout", "mute_chat", "vmute")
 
-    def __init__(self, cog, action):
+
+class ModActionModal(discord.ui.Modal):
+    """Модальное окно ввода — поля строго под выбранное действие.
+
+    «Очистка» спрашивает только количество и причину (никакой демки),
+    разбан/размут — цель и причину, наказания — демку, НО только если
+    требование включено в панели.
+    """
+
+    def __init__(self, cog, action, guild=None):
         self.cog = cog
         self.action = action
         titles = {
@@ -725,26 +558,40 @@ class ModActionModal(discord.ui.Modal):
         }
         super().__init__(title=titles.get(action, "Модерация"))
 
-        self.target = discord.ui.TextInput(
-            label="Цель (ID или @упоминание)", required=False,
-            placeholder="123456789012345678 или @пользователь",
-        )
+        if action != "clear":
+            self.target = discord.ui.TextInput(
+                label="Цель (@ник, точное имя или ID)", required=True,
+                placeholder="@упоминание, ник или 15-22 цифры ID",
+            )
+            self.add_item(self.target)
+        if action in ("timeout", "mute_chat", "vmute", "clear"):
+            if action == "clear":
+                _lbl, _ph, _d = "Сколько сообщений удалить?", "например: 25", "10"
+            else:
+                _lbl, _ph, _d = "На сколько минут?", "например: 60", "5"
+            self.amount = discord.ui.TextInput(
+                label=_lbl, required=False, placeholder=_ph, default=_d,
+            )
+            self.add_item(self.amount)
         self.reason = discord.ui.TextInput(
-            label="Причина", required=False, default="Не указана",
+            label="Причина", required=False, placeholder="За что? (необязательно)",
             style=discord.TextStyle.short,
         )
-        self.amount = discord.ui.TextInput(
-            label="Минут (timeout) / количество (clear)", required=False,
-            default="5",
-        )
-        self.proof = discord.ui.TextInput(
-            label="Доказательство (ссылка на скрин/видео)", required=False,
-            placeholder="https://… — обязательно для бана/кика/мута",
-        )
-        self.add_item(self.target)
         self.add_item(self.reason)
-        self.add_item(self.amount)
-        self.add_item(self.proof)
+        _need_proof = False
+        if action in _PUNISH_MODPANEL:
+            try:
+                from cogs.proof_cog import proof_is_required
+                _need_proof = proof_is_required(getattr(guild, 'id', 0) or 0)
+            except Exception:
+                _need_proof = True
+        if _need_proof:
+            self.proof = discord.ui.TextInput(
+                label="Доказательство (ссылка на скрин/видео)", required=True,
+                placeholder="https://… — без этого наказание не выдаётся",
+                max_length=500,
+            )
+            self.add_item(self.proof)
 
     async def on_submit(self, interaction: discord.Interaction):
         # Быстрый ack — дальше цепочка (таймаут → дело → DM → лог) может
@@ -754,13 +601,17 @@ class ModActionModal(discord.ui.Modal):
             await interaction.response.defer(ephemeral=True)
         except Exception as _ex:
             _log.debug("on_submit(): подавлено: %s", _ex)
+        _t = getattr(self, 'target', None)
+        _a = getattr(self, 'amount', None)
+        _p = getattr(self, 'proof', None)
+        _reason = (self.reason.value or "").strip() or "Не указана"
         await self.cog._execute_mod_action(
             interaction,
             self.action,
-            self.target.value or "",
-            self.reason.value or "",
-            self.amount.value or "5",
-            proof_link=(self.proof.value or "").strip(),
+            (_t.value or "").strip() if _t else "",
+            _reason,
+            (_a.value or "").strip() if _a else "5",
+            proof_link=(_p.value or "").strip() if _p else "",
         )
 
 
