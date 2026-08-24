@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aether — бот-хранитель сервера | hakumods.xyz</title>
+<meta name="description" content="Aether — дискорд-бот: модерация, тикеты, логи, музыка и защита сервера. Добавь и пользуйся.">
+<style>
+:root{--bg:#05060a;--card:#0d1017;--line:#1c2233;--txt:#e8eaf2;--mut:#8b93a8;--ac:#4f46e5;--cy:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--txt);font:16px/1.6 'Segoe UI',system-ui,sans-serif;overflow-x:hidden}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+header{padding:22px 0;display:flex;align-items:center;gap:12px}
+.logo{font-size:34px;filter:drop-shadow(0 0 12px rgba(34,211,238,.5))}
+.brand{font-size:22px;font-weight:800;letter-spacing:.5px}
+.brand span{background:linear-gradient(120deg,var(--ac),var(--cy));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero{text-align:center;padding:70px 0 54px;position:relative}
+.hero::before{content:'';position:absolute;inset:-40px 0;background:radial-gradient(ellipse 60% 50% at 50% 20%,rgba(79,70,229,.18),transparent 70%);pointer-events:none}
+.dragon{font-size:84px;animation:float 4s ease-in-out infinite;filter:drop-shadow(0 0 30px rgba(34,211,238,.45))}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+h1{font-size:clamp(30px,5vw,52px);font-weight:900;line-height:1.15;margin:18px 0 14px;position:relative}
+h1 b{background:linear-gradient(120deg,#6366f1,var(--cy));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--mut);max-width:560px;margin:0 auto 34px;font-size:17px;position:relative}
+.btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative}
+.btn{padding:15px 34px;border-radius:14px;font-weight:800;font-size:16px;border:0;cursor:pointer;transition:.2s;text-decoration:none;display:inline-block}
+.btn-a{background:linear-gradient(120deg,#6366f1,#4f46e5);color:#fff;box-shadow:0 8px 28px rgba(79,70,229,.4)}
+.btn-a:hover{transform:translateY(-2px);box-shadow:0 12px 34px rgba(79,70,229,.55)}
+.btn-b{background:transparent;color:var(--cy);border:2px solid rgba(34,211,238,.4)}
+.btn-b:hover{border-color:var(--cy);background:rgba(34,211,238,.08)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;padding:20px 0 54px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;transition:.25s}
+.card:hover{border-color:rgba(79,70,229,.5);transform:translateY(-3px)}
+.card .ic{font-size:30px;margin-bottom:12px}
+.card h3{font-size:18px;margin-bottom:8px}
+.card p{color:var(--mut);font-size:14.5px}
+.steps{padding:0 0 60px;text-align:center}
+.steps h2{font-size:26px;margin-bottom:26px}
+.steps ol{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;list-style:none;counter-reset:s}
+.steps li{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 26px;max-width:280px;text-align:left;counter-increment:s;position:relative;padding-left:66px}
+.steps li::before{content:counter(s);position:absolute;left:20px;top:20px;width:32px;height:32px;border-radius:50%;background:linear-gradient(120deg,#6366f1,var(--cy));color:#fff;font-weight:800;display:grid;place-items:center}
+footer{border-top:1px solid var(--line);padding:26px 0;text-align:center;color:var(--mut);font-size:14px}
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(90px);background:#131728;border:1px solid var(--ac);color:#fff;padding:13px 22px;border-radius:12px;font-size:14.5px;transition:.3s;z-index:9}
+#toast.on{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<header class="wrap">
+<div class="logo">🐉</div>
+<div class="brand">AETHER <span>· hakumods.xyz</span></div>
+</header>
+
+<section class="hero wrap">
+<div class="dragon">🐉</div>
+<h1>Бот-хранитель <b>твоего сервера</b></h1>
+<p class="sub">Модерация в один клик, демки-доказательства, логи, тикеты, музыка и защита от рейдов. Добавил — и работает.</p>
+<div class="btns">
+<a class="btn btn-a" href="#" onclick="go('bot');return false">➕ Добавить бота</a>
+<a class="btn btn-b" href="#" onclick="go('srv');return false">💬 Наш Discord</a>
+</div>
+</section>
+
+<section class="cards wrap">
+<div class="card"><div class="ic">🛡️</div><h3>Модерация</h3><p>Варны, муты, баны и кики через удобную панель — всё в пару нажатий, с причиной и сроком.</p></div>
+<div class="card"><div class="ic">📸</div><h3>Демки</h3><p>К каждому наказанию прикрепляй доказательство — фото или видео хранятся и смотрятся в панели.</p></div>
+<div class="card"><div class="ic">📚</div><h3>Логи сервера</h3><p>Удалённые сообщения, входы/выходы, действия модеров — красивые русские журналы.</p></div>
+<div class="card"><div class="ic">🎫</div><h3>Тикеты</h3><p>Обращения участников к команде: панель с кнопкой, приватные каналы, авто-закрытие.</p></div>
+<div class="card"><div class="ic">🎵</div><h3>Музыка</h3><p>Плейлисты из голосового: play, пауза, пропуск, очередь, громкость — для всей тусовки.</p></div>
+<div class="card"><div class="ic">⚔️</div><h3>Антирейд</h3><p>Автозащита от набегов и спама: фильтр слов, ссылок, флуда — работает сам, 24/7.</p></div>
+</section>
+
+<section class="steps wrap">
+<h2>Как начать — 3 шага</h2>
+<ol>
+<li><b>Добавь бота</b> на свой сервер по кнопке выше.</li>
+<li><b>Напиши /modpanel</b> — модерация готова сразу, без настройки.</li>
+<li><b>Открой веб-панель</b> — тикеты, приветствия и тонкие настройки.</li>
+</ol>
+</section>
+
+<footer class="wrap">© 2026 Aether · hakumods.xyz — сделано с драконьей аккуратностью 🐉</footer>
+
+<div id="toast"></div>
+<script>
+/* ═══ ССЫЛКИ ПРОПИСАНЫ ✅ ═══ */
+const DISCORD_INVITE = 'https://discord.gg/hakumo';
+const CLIENT_ID = '1421418700451348520';
+/* ═══ дальше не трогай ═══ */
+const BOT_INVITE = 'https://discord.com/oauth2/authorize?client_id=' + CLIENT_ID + '&permissions=8&scope=bot%20applications.commands';
+function go(t){
+  const u = (t === 'bot') ? BOT_INVITE : DISCORD_INVITE;
+  if (u.indexOf('ВСТАВЬ') !== -1) { toast('Ссылка скоро появится — идёт настройка'); return; }
+  window.open(u, '_blank');
+}
+function toast(m){
+  const t = document.getElementById('toast');
+  t.textContent = m; t.classList.add('on');
+  setTimeout(() => t.classList.remove('on'), 2600);
+}
+</script>
+</body>
+</html>
