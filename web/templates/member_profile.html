@@ -119,7 +119,7 @@
       $('p-roles').innerHTML = roles.length ? roles.map(function (r) { return '<span class="mp-role">' + esc(r) + '</span>'; }).join('') : '<p>Нет ролей</p>';
       var cases = d.case || [];
       $('p-history').innerHTML = cases.length ? cases.map(function (c) {
-        return '<div class="history-item"><strong>' + esc(c.action || 'Действие') + '</strong> — ' + esc(c.reason || '') + '<span style="margin-left:auto;font-size:11px;color:var(--text-3)">' + esc((c.timestamp||'').slice(0,10)) + '</span></div>';
+        return '<div class="history-item"><strong>' + esc(c.action || 'Действие') + '</strong> — ' + esc(c.reason || '') + (c.proof ? ' <a href="' + esc(c.proof) + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--ac,#c8922a);text-decoration:underline">доказательство</a>' : '') + '<span style="margin-left:auto;font-size:11px;color:var(--text-3)">' + esc((c.timestamp||'').slice(0,10)) + '</span></div>';
       }).join('') : '<p>История чиста</p>';
     } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
@@ -137,11 +137,13 @@
     }
     var reason = askReason(action === 'warn' ? 'Предупреждение' : 'Бан');
     if (reason === null) return;
+    var proofAsk = window.prompt('Доказательство — ссылка на скрин/видео (необязательно):', '');
+    var proof = proofAsk ? proofAsk.trim() : '';
     try {
       var r = await fetch('/api/member-profile/' + selectedGuild + '/' + uid + '/' + action, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: reason })
+        body: JSON.stringify({ reason: reason, proof: proof })
       });
       var d = await r.json();
       if (d.error) { showToast(d.error, false); return; }

@@ -48,6 +48,107 @@ ACTIONS = ('warn', 'kick', 'ban')
 DAYS_MIN, DAYS_MAX = 1, 365
 
 
+
+def protection_reset_all(gid):
+    """Выключить ВСЮ защиту сервера (заказ владельца: всё opt-in, «включать будем сами»).
+    Тушим только флаги — пороги, белые списки и история наказаний сохраняются.
+    Работает и без бота: сторы защиты файловые (json/GuildData)."""
+    import json as _json
+    import os as _os
+
+    flipped = []
+    gid_i = int(gid)
+
+    def _write_atomic(path, data):
+        tmp = path + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as fh:
+            _json.dump(data, fh, ensure_ascii=False, indent=2)
+        _os.replace(tmp, path)
+
+    # 1) Центр безопасности (cogs/security.py): три флага
+    try:
+        cfg = SC._load_cfg(gid_i)
+        for key, _t in FEATURES:
+            cfg[key] = False
+        SC._save_cfg(gid_i, cfg)
+        flipped.append('security')
+    except Exception as _ex:
+        _log.debug('protection_reset_all(): security пропущен: %s', _ex)
+
+    # 2) Анти-фейк/имперсонация (data/antifake.json {gid: cfg})
+    try:
+        path = 'data/antifake.json'
+        data = {}
+        if _os.path.exists(path):
+            with open(path, encoding='utf-8') as fh:
+                data = _json.load(fh)
+            if not isinstance(data, dict):
+                data = {}
+        cur = data.get(str(gid_i)) or {}
+        cur['enabled'] = False
+        data[str(gid_i)] = cur
+        _write_atomic(path, data)
+        flipped.append('antifake')
+    except Exception as _ex:
+        _log.debug('protection_reset_all(): antifake пропущен: %s', _ex)
+
+    # 3) Автофильтр (data/autofilter_<gid>.json): корень + все секции
+    try:
+        from cogs import auto_filter as AF
+        cfg = AF.load_config(gid_i)
+        cfg['enabled'] = False
+        for sect in ('words', 'links', 'caps', 'flood'):
+            if isinstance(cfg.get(sect), dict):
+                cfg[sect]['enabled'] = False
+        AF.save_config(gid_i, cfg)
+        flipped.append('auto_filter')
+    except Exception as _ex:
+        _log.debug('protection_reset_all(): auto_filter пропущен: %s', _ex)
+
+    # 4) Анти-альт (GuildData('anti_alt'), ключ settings)
+    try:
+        from db import GuildData as _GD
+        from cogs import anti_alt as AA
+        store = _GD('anti_alt')
+        cfg = AA.merge_settings(store.get(gid_i, 'settings', {}) or {})
+        cfg['enabled'] = False
+        store.set(gid_i, 'settings', cfg)
+        flipped.append('anti_alt')
+    except Exception as _ex:
+        _log.debug('protection_reset_all(): anti_alt пропущен: %s', _ex)
+
+    # 5) Щит от нюка — data/guardian_<gid>.json (глобальный enabled)
+    try:
+        path = f'data/guardian_{gid_i}.json'
+        if _os.path.exists(path):
+            with open(path, encoding='utf-8') as fh:
+                cfg = _json.load(fh)
+        else:
+            from cogs import guardian as GR
+            cfg = GR.guardian_default()
+        if isinstance(cfg, dict):
+            cfg['enabled'] = False
+            _write_atomic(path, cfg)
+            flipped.append('guardian')
+    except Exception as _ex:
+        _log.debug('protection_reset_all(): guardian пропущен: %s', _ex)
+
+    # 6) AI-модерация — data/ai_mod_config_<gid>.json (если уже писался)
+    try:
+        path = f'data/ai_mod_config_{gid_i}.json'
+        if _os.path.exists(path):
+            with open(path, encoding='utf-8') as fh:
+                cfg = _json.load(fh)
+            if isinstance(cfg, dict):
+                cfg['enabled'] = False
+                _write_atomic(path, cfg)
+                flipped.append('ai_moderation')
+    except Exception as _ex:
+        _log.debug('protection_reset_all(): ai_moderation пропущен: %s', _ex)
+
+    return flipped
+
+
 # ── Контур защиты: соседние системы — статус и быстрый тумблер ───────────
 def shield_statuses(gid):
     """Состояние всех систем щита одним списком (для карточек страницы)."""
@@ -55,7 +156,7 @@ def shield_statuses(gid):
     out = []
 
     # Анти-альт: свежие аккаунты при входе (настройки в GuildData)
-    on = True
+    on = False  # opt-in: без сохранённой настройки щит на паузе
     try:
         from cogs import anti_alt as _aa
         from db import GuildData as _GD
@@ -67,7 +168,7 @@ def shield_statuses(gid):
                 'href': '/automation', 'hint': 'ловит свежие аккаунты на входе'})
 
     # Антифейк: маски под администрацию (impersonation)
-    on = True
+    on = False  # opt-in
     try:
         from cogs import impersonation as _im
         cfg = dict(_im.DEFAULT_CFG)
@@ -82,14 +183,14 @@ def shield_statuses(gid):
                 'hint': 'подделки ников и аватаров стаффа'})
 
     # ИИ-модерация чата (файл конфига на гильдию)
-    on = True
+    on = False  # opt-in
     try:
         import json as _json
         import os as _os
         _p = f'data/ai_mod_config_{gid_i}.json'
         if _os.path.exists(_p):
             with open(_p, encoding='utf-8') as _f:
-                on = bool((_json.load(_f) or {}).get('enabled', True))
+                on = bool((_json.load(_f) or {}).get('enabled', False))
     except Exception as _ex:
         _log.debug('shield ai_mod: %s', _ex)
     out.append({'key': 'ai_moderation', 'label': 'ИИ-модерация чата',
@@ -97,7 +198,7 @@ def shield_statuses(gid):
                 'hint': 'токсичность и оскорбления в чате'})
 
     # Автофильтр: флуд/слова/ссылки/капс (модульные функции кога)
-    on = True
+    on = False  # opt-in
     try:
         from cogs import auto_filter as _af
         on = bool(_af.load_config(gid_i).get('enabled'))
@@ -387,6 +488,15 @@ def register(ctx):
             return jsonify({'success': False, 'error': err}), 400
         _notify(f"Безопасность: {payload['feature']} → {payload['status']}")
         return jsonify({'success': True, **payload})
+
+    @app.route('/api/guild/<gid>/security-center/protection-reset', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_sec_protection_reset(gid):
+        # «Выключи все настройки — включать будем сами» (заказ владельца).
+        flipped = protection_reset_all(_gid_int(gid))
+        _notify('Безопасность: вся защита выключена (сброс до opt-in)')
+        return jsonify({'success': True, 'flipped': flipped, 'count': len(flipped)})
 
     @app.route('/api/guild/<gid>/security-center/newaccount', methods=['POST'])
     @login_required

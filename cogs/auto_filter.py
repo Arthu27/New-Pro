@@ -57,11 +57,11 @@ MAX_WORD_LEN = 60      # и whitelist-доменов не длиннее
 MAX_IDS = 60           # каналов-исключений / иммунных ролей
 
 DEFAULT_FILTER = {
-    'enabled': True,
-    'words': {'enabled': True, 'action': 'warn', 'list': []},
+    'enabled': False,  # opt-in: весь фильтр выключен, включает владелец
+    'words': {'enabled': False, 'action': 'warn', 'list': []},
     'links': {'enabled': False, 'action': 'delete', 'whitelist': []},
     'caps': {'enabled': False, 'action': 'delete', 'percent': 70, 'min_length': 12},
-    'flood': {'enabled': True, 'action': 'timeout', 'limit': 5, 'seconds': 5,
+    'flood': {'enabled': False, 'action': 'timeout', 'limit': 5, 'seconds': 5,
               'dupe_count': 3, 'timeout_minutes': 10},
     'ignore_channels': [],
     'immune_roles': [],

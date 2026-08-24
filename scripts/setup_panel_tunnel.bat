@@ -124,6 +124,12 @@ if not exist "%SYSCFG%" mkdir "%SYSCFG%" >nul 2>&1
 copy /y "%CFG%" "%SYSCFG%\config.yml" >nul 2>&1
 copy /y "%USERPROFILE%\.cloudflared\%TID%.json" "%SYSCFG%\%TID%.json" >nul 2>&1
 
+rem Portable copies next to the bot: upload this folder to a VDS and the
+rem tunnel will start itself from start.bat (binary auto-downloads too).
+copy /y "%CFG%" "%~dp0config.yml" >nul 2>&1
+copy /y "%USERPROFILE%\.cloudflared\%TID%.json" "%~dp0tunnel-creds.json" >nul 2>&1
+echo        Portable copies saved into scripts - VDS upload ready.
+
 set ENVFILE=%~dp0..\.env
 if exist "%ENVFILE%" (
   findstr /x /c:"WEB_BEHIND_PROXY=1" "%ENVFILE%" >nul 2>&1

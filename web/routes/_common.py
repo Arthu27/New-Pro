@@ -567,6 +567,7 @@ def ms_normalize_warn(w, idx: int) -> dict:
         'reason': str(w.get('reason') or '—'),
         'mod': str(w.get('mod') or w.get('moderator') or w.get('mod_id') or ''),
         'timestamp': str(w.get('timestamp') or w.get('date') or ''),
+        'proof': str(w.get('proof') or ''),
     }
 
 
@@ -580,6 +581,7 @@ def ms_normalize_case(c, idx: int) -> dict:
         'reason': str(c.get('reason') or '—'),
         'mod': str(c.get('mod_name') or c.get('mod') or c.get('mod_id') or ''),
         'timestamp': str(c.get('timestamp') or ''),
+        'proof': str(c.get('proof') or ''),
     }
 
 # Корень репозитория (web/routes/_common.py -> ../../..)

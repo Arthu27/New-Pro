@@ -216,7 +216,8 @@ check(gw._load_giveaways(66)['1']['prize'] == 'Nitro', 'giveaway: roundtrip')
 import cogs.security as sc  # noqa: E402
 
 cfg = sc._load_cfg(88)
-check(cfg['ai_spam'] is True and cfg['new_account_days'] == 7, 'security: дефолтный конфиг полный')
+check(cfg['ai_spam'] is False and cfg['new_account_days'] == 7,
+      'security: дефолтный конфиг полный (флаги opt-in выкл)')
 cfg['ai_spam'] = False
 sc._save_cfg(88, cfg)
 check(sc._load_cfg(88)['ai_spam'] is False, 'security: сохранённое значение читается')

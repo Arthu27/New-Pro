@@ -29,7 +29,7 @@ COLOR_ALERT = 0xED4245
 COLOR_OK = 0x57F287
 
 DEFAULT_SETTINGS = {
-    'enabled': True,  # щит по умолчанию (заказ владельца: защита на максимум)
+    'enabled': False,  # opt-in: владелец включает щит сам (панель/команда)
     'min_age_days': 7,
     'action': 'alert',          # alert | kick | ban
     'log_channel_id': 0,

@@ -47,10 +47,10 @@ GID = 987654321098765432
 from cogs import guardian as G  # noqa: E402
 
 # ═══ 1. Конфиг: дефолт и нормализация ═════════════════════════════════════
-print('== конфиг: дефолт «всё включено» ==')
+print('== конфиг: дефолт «выключен» (opt-in) ==')
 d = G.guardian_default()
-check(d['enabled'] is True and d['punishment'] == 'strip',
-      'по умолчанию щит включён, мера — снятие ролей (обратимая)')
+check(d['enabled'] is False and d['punishment'] == 'strip',
+      'по умолчанию щит выключен (opt-in), мера — снятие ролей (обратимая)')
 check(d['kick_unauthorized_bots'] is True, 'чужие боты кикаются по умолчанию')
 check(d['bot_action'] == 'strip' and d['bot_whitelist_users'] == []
       and d['bot_whitelist_roles'] == [],
@@ -114,8 +114,8 @@ loaded = G.load_cfg(GID)
 check(loaded == saved and os.path.isfile(f'data/guardian_{GID}.json'),
       'конфиг пишется атомарно и читается обратно')
 loaded2 = G.load_cfg(GID + 1)
-check(loaded2['enabled'] is True and loaded2['events'],
-      'сервер без файла получает полный дефолт')
+check(loaded2['enabled'] is False and loaded2['events'],
+      'сервер без файла получает дефолт (выкл — opt-in)')
 
 # ═══ 2. Чистые функции ════════════════════════════════════════════════════
 print('== чистые функции ==')
@@ -261,6 +261,8 @@ raider = FakeMember(9501, roles=[SimpleNamespace(id=1, managed=False),
                                  SimpleNamespace(id=2, managed=False)])
 guild = FakeGuild(GID + 10, {9501: raider}, log_ch)
 cog = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
+# Дефолты opt-in: для боевых сценариев щит включаем явно.
+G.save_cfg(GID + 10, {**G.guardian_default(), 'enabled': True})
 
 run = asyncio.run
 run(cog._touch(guild, 'channel_delete', 9501, 'bad.hatter',
@@ -294,7 +296,7 @@ safe = FakeMember(823456789012345678, roles=[SimpleNamespace(id=3, managed=False
 g2 = FakeGuild(GID + 11, {823456789012345678: safe, 9501: FakeMember(9501)},
                FakeChan('-модерация'))
 c2 = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
-wl = G.guardian_normalize({'whitelist_users': ['823456789012345678']})
+wl = G.guardian_normalize({'enabled': True, 'whitelist_users': ['823456789012345678']})
 G.save_cfg(GID + 11, wl)
 for _ in range(5):
     run(c2._touch(g2, 'channel_delete', 823456789012345678, 'white.listed',
@@ -309,7 +311,7 @@ for _ in range(5):
     run(c2._touch(g2, 'channel_delete', 9501, 'bad.hatter'))
 check(not g2.text_channels[0].sent,
       'мастер-выключатель: двигатель спит полностью')
-G.save_cfg(GID + 11, G.guardian_default())
+G.save_cfg(GID + 11, {**G.guardian_default(), 'enabled': True})
 for _ in range(4):
     run(c2._touch(g2, 'channel_create', 9501, 'bad.hatter'))
 check(not g2.text_channels[0].sent,
@@ -325,7 +327,7 @@ CHR.set_route(GID + 12, 'guardian_channel', 777)
 g3.get_channel = lambda cid: routed if cid == 777 else None
 c3 = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
 G.save_cfg(GID + 12, G.guardian_normalize(
-    {'events': {'role_delete': {'enabled': True, 'threshold': 2, 'window': 10,
+    {'enabled': True, 'events': {'role_delete': {'enabled': True, 'threshold': 2, 'window': 10,
                                 'action': 'alert'}}}))
 run(c3._touch(g3, 'role_delete', 9501, 'bad.hatter', detail='роль «м»'))
 run(c3._touch(g3, 'role_delete', 9501, 'bad.hatter', detail='роль «м»'))
@@ -363,6 +365,7 @@ rogue.bot = True
 g4 = FakeGuild(GID + 13, {8801: rogue}, botlog)
 c4 = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
 G.save_cfg(GID + 13, G.guardian_normalize({
+    'enabled': True,
     'bot_action': 'ban',
     'events': {'channel_create': {'enabled': True, 'threshold': 2,
                                   'window': 10, 'action': None}}}))
@@ -381,7 +384,7 @@ print('== бой: кто позвал бота — тот за всё и отв�
 gA = FakeGuild(GID + 14, {}, FakeChan('-модерация'))
 cA = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
 G.save_cfg(GID + 14, G.guardian_normalize(
-    {'bot_whitelist_users': ['823456789012345680']}))
+    {'enabled': True, 'bot_whitelist_users': ['823456789012345680']}))
 gA._audit = [_aentry(823456789012345680, 8801)]
 run(cA.on_member_join(BotMember(8801, gA)))
 check(gA.kicked == [] and not gA.text_channels[0].sent,
@@ -395,7 +398,7 @@ naughty = FakeMember(9502, roles=[SimpleNamespace(id=9, managed=False)])
 gB = FakeGuild(GID + 15, {9502: naughty}, FakeChan('-модерация'))
 cB = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
 G.save_cfg(GID + 15, G.guardian_normalize(
-    {'bot_whitelist_users': ['823456789012345680']}))
+    {'enabled': True, 'bot_whitelist_users': ['823456789012345680']}))
 gB._audit = [_aentry(9502, 8802)]
 run(cB.on_member_join(BotMember(8802, gB)))
 check(gB.kicked == [8802], f'чужой бот выгнан автоматически {gB.kicked}')
@@ -410,7 +413,7 @@ check(incb['incidents'][0]['event'] == 'bot_add'
 naughty2 = FakeMember(9503, roles=[SimpleNamespace(id=9, managed=False)])
 gC = FakeGuild(GID + 16, {9503: naughty2}, FakeChan('-модерация'))
 cC = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
-G.save_cfg(GID + 16, G.guardian_normalize({'kick_unauthorized_bots': False}))
+G.save_cfg(GID + 16, G.guardian_normalize({'enabled': True, 'kick_unauthorized_bots': False}))
 gC._audit = [_aentry(9503, 8803)]
 run(cC.on_member_join(BotMember(8803, gC)))
 check(gC.kicked == [], 'кик выключен: бот остался (решение владельца)')
@@ -424,7 +427,7 @@ by_role = FakeMember(9504, roles=[SimpleNamespace(id=523456789012345670)])
 gD = FakeGuild(GID + 17, {9504: by_role}, FakeChan('-модерация'))
 cD = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
 G.save_cfg(GID + 17, G.guardian_normalize(
-    {'bot_whitelist_roles': ['523456789012345670']}))
+    {'enabled': True, 'bot_whitelist_roles': ['523456789012345670']}))
 gD._audit = [_aentry(9504, 8804)]
 run(cD.on_member_join(BotMember(8804, gD)))
 check(gD.kicked == [] and by_role.removed is None,

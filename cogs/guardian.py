@@ -113,9 +113,10 @@ def _default_events():
 
 
 def guardian_default():
-    """Полный конфиг по умолчанию: ВСЯ защита включена с порогами-безопасниками."""
+    """Конфиг по умолчанию: ВЫКЛЮЧЕН (opt-in). Пороги-фабрики уже стоят —
+    владельцу остаётся один тумблер в панели/командой."""
     return {
-        'enabled': True,
+        'enabled': False,
         'punishment': 'strip',
         'bot_action': 'strip',
         'kick_unauthorized_bots': True,

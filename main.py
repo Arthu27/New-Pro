@@ -302,20 +302,31 @@ def _start_tunnel_sidecar():
         # Постоянную ссылку (https://домен) бот отправит в канал панели —
         # она больше никогда не меняется между запусками.
         _nt.remember_url(root, pub)
+    # Портативные копии конфига/ключа в scripts/ — для заливки на VDS.
+    _nt.export_portable(root, cfg)
     if _tunnel_service_running_windows():
         print('[ТУННЕЛЬ] Уже крутится службой Windows — панель доступна: '
               + (pub or 'ваш домен'))
         return
-    exe = next((c for c in (os.path.join(root, 'scripts', 'cloudflared.exe'),
-                            os.path.join(root, 'scripts', 'cloudflared'))
+    scripts_dir = os.path.join(root, 'scripts')
+    exe = next((c for c in (os.path.join(scripts_dir, 'cloudflared.exe'),
+                            os.path.join(scripts_dir, 'cloudflared'))
                 if os.path.exists(c)), None)
     if not exe:
-        print('[ТУННЕЛЬ] Конфиг есть, но не хватает scripts/cloudflared.exe — '
-              'запусти scripts/setup_panel_tunnel.bat (ПКМ → от администратора).')
+        # VDS-режим «только start.bat»: докачиваем бинарник сами —
+        # настраивать руками ничего не нужно.
+        print('[ТУННЕЛЬ] cloudflared не найден — скачиваю автоматически...')
+        exe = _nt.ensure_binary(scripts_dir)
+    if not exe:
+        print('[ТУННЕЛЬ] Не удалось скачать cloudflared (интернет?) — '
+              'туннель пропущен, панель остаётся локальной.')
         return
+    # Конфиг мог переехать с другого ПК (credentials-путь там старый) —
+    # подменяем его на наш credentials-файл из scripts/.
+    run_cfg = _nt.runtime_config(root, cfg)
     try:
         _tunnel_proc = subprocess.Popen(
-            [exe, '--config', cfg, 'tunnel', 'run'],
+            [exe, '--config', run_cfg, 'tunnel', 'run'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             bufsize=1, text=True, encoding='utf-8', errors='replace',
         )

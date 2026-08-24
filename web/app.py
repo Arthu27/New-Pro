@@ -47,6 +47,24 @@ if (_os .environ .get ('WEB_BEHIND_PROXY','')or '').strip ().lower ()in ('1','tr
     except Exception as _pfe :
         print (f'[ВЕБ] ProxyFix не применён: {_pfe}')
 
+
+def _behind_proxy ():
+    return (_os .environ .get ('WEB_BEHIND_PROXY','')or '').strip ().lower ()in ('1','true','yes','on')
+
+
+@app .before_request
+def _force_https_public():
+    # Браузер писал «домен не защищён»: http://hakumods.xyz никуда не вёл.
+    # За туннелем жёстко перекидываем http → https (локалку не трогаем).
+    if not _behind_proxy ():
+        return None
+    if request .headers .get ('X-Forwarded-Proto','https')!='http':
+        return None
+    host =(request .host or '').lower ()
+    if not host or host .startswith (('localhost','127.','0.0.0.0','[::1]')):
+        return None
+    return redirect ('https://'+host +request .full_path .rstrip ('?'),code =301)
+
 # Производительность: atomic yazma, TTL cache, toplu (batch) log flusher
 from web import _store # noqa: E402
 import atexit # noqa: E402
@@ -306,6 +324,12 @@ _ETAG_PATHS =(
 
 @app .after_request 
 def after_request (response ):
+    # HSTS за туннелем: браузер запоминает, что домен — только https.
+    try :
+        if _behind_proxy ()and request .headers .get ('X-Forwarded-Proto','')=='https':
+            response .headers .setdefault ('Strict-Transport-Security','max-age=31536000; includeSubDomains')
+    except Exception as _ex :
+        _log .debug ("after_request(): HSTS подавлен: %s",_ex )
     # «Бот офлайн» из ~40 эндпоинтов подменяем на человеческую подсказку —
     # сухое «Ошибка: Бот офлайн» в тосте владелец читает как «кнопки сломаны».
     # Меняем ТОЛЬКО голый литерал (хвост-варианты вида «Бот офлайн — ...» не трогаем).

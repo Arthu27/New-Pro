@@ -87,7 +87,7 @@ for asleep in ('tag_jail.py', 'sla_cog.py', 'mod_report.py',
 check(True, 'lean: tag_jail/sla/mod_report/health/flags — спят (чистка команд)')
 for awake_shield in ('security.py', 'anti_alt.py', 'impersonation.py', 'ai_moderation.py'):
     assert awake_shield in enabled, awake_shield
-check(True, 'lean: ЩИТ проснулся — security/anti-alt/impersonation/ai-moderation защищают с завода')
+check(True, 'lean: ЩИТ проснулся — security/anti-alt/impersonation/ai-moderation в боевом профиле')
 check(not any(is_helper(f) for f in enabled), 'lean: хелперы не загружаются никогда')
 check(CORE_COGS <= LEAN_COGS and MOD_LEAN_COGS <= LEAN_COGS
       and TICKET_LEAN_COGS <= LEAN_COGS and MUSIC_COGS <= LEAN_COGS

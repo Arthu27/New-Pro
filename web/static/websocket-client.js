@@ -21,7 +21,7 @@ class WebSocketClient {
         this._disposed = false;
         
         // Автоматическое подключение
-        if (this.enabled && options.autoConnect !== false) {
+        if (this.enabled && options.autoConnect !== false && this.url) {
             this.connect();
         }
     }
@@ -31,12 +31,17 @@ class WebSocketClient {
      */
     _getDefaultUrl() {
         try {
+            const host = window.location.hostname || '';
+            const isLocal = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(host) || host === '';
+            if (!isLocal) {
+                // Панель открыта через домен/туннель: ws-порт наружу не проброшен.
+                // Молча живём на polling-API — без спама реконнектами в консоль.
+                return null;
+            }
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.hostname || 'localhost';
-            const wsPort = window.location.port === '5001' ? '8765' : (window.location.port || '8765');
-            return `${protocol}//${host}:${wsPort}`;
+            return `${protocol}//${host}:8765`;
         } catch (e) {
-            return 'ws://localhost:8765';
+            return null;
         }
     }
     
@@ -44,7 +49,7 @@ class WebSocketClient {
      * Подключение к WebSocket серверу
      */
     connect() {
-        if (this._disposed) return;
+        if (this._disposed || !this.url) return;
         
         try {
             this.ws = new WebSocket(this.url);
@@ -106,7 +111,7 @@ class WebSocketClient {
     }
     
     scheduleReconnect() {
-        if (this._disposed) return;
+        if (this._disposed || !this.url) return;
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
             // Тихо прекращаем попытки — WebSocket сервер может быть не запущен
             return;

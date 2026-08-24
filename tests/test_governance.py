@@ -403,7 +403,7 @@ check('moderation.py' in en and 'music_cog.py' in en and 'ticket.py' in en
 check('tag_jail.py' in dis and 'sla_cog.py' in dis,
       'lean по умолчанию: jail/SLA спят (чистка лишних команд)')
 check('security.py' in en and 'anti_alt.py' in en and 'impersonation.py' in en,
-      'lean по умолчанию: ЩИТ жив — security/anti-alt/impersonation защищают с завода')
+      'lean по умолчанию: ЩИТ в профиле — security/anti-alt/impersonation грузятся')
 
 print('== 11. Все загружаемые коги импортируются с setup ==')
 import importlib  # noqa: E402

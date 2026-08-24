@@ -130,9 +130,19 @@
             {% if role != 'uye' %}
             <a href="/guilds" class="sidebar-guild" id="sidebarGuild" title="Серверы бота">
                 <span class="ico"><i class="fas fa-server"></i></span>
-                <span style="min-width:0"><b>Серверы</b><small id="sidebarGuildName">загрузка…</small></span>
+                <span style="min-width:0"><b>Серверы</b><small id="sidebarGuildName">Сервер</small></span>
                 <span class="cnt" id="sidebarGuildCount">—</span>
             </a>
+            <script>
+            (function () {
+              var nn = document.getElementById('sidebarGuildName'), cc = document.getElementById('sidebarGuildCount');
+              fetch('/api/guilds', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (g) {
+                var list = Array.isArray(g) ? g : ((g && g.guilds) || []);
+                if (cc && list.length) cc.textContent = String(list.length);
+                if (nn && list.length && list[0] && list[0].name) nn.textContent = list[0].name;
+              }).catch(function () {});
+            })();
+            </script>
             {% endif %}
 
             {% if panel_mod_only %}

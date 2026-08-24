@@ -44,7 +44,7 @@ GREEN = 0x2ECC71
 DIVIDER = "✦ ───────────────────── ✦"
 
 DEFAULT_CFG = {
-    "enabled": True,           # проверка имён/аватаров
+    "enabled": False,          # opt-in: владелец включает сам — по умолчанию ВЫКЛ
     "action": "strip",         # strip | jail | kick | alert
     "log_channel_id": 0,       # 0 = tagjail-лог → канал мод-логов
     "check_join": True,        # проверять при входе

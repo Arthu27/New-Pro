@@ -155,11 +155,11 @@ check(ok and cog is COG and guild is G, 'живой ког и гильдия')
 
 print('== 3. Статус 1:1 _cfg_embed ==')
 ok, err, code, p = AF.status_flow(lambda: FB2, '777')
-check(ok and p['enabled'] is True and p['action'] == 'strip'
+check(ok and p['enabled'] is False and p['action'] == 'strip'
       and p['action_label'] == 'Снять ник' and p['threshold_pct'] == 85,
-      'дефолты: вкл, strip «Снять ник», 85%')
+      'дефолты: ВЫКЛ (opt-in), strip «Снять ник», 85%')
 check([(t['key'], t['on']) for t in p['toggles'] if t['key'] == 'enabled']
-      == [('enabled', True)] and len(p['toggles']) == 7,
+      == [('enabled', False)] and len(p['toggles']) == 7,
       'все семь флагов конфига на месте')
 check(p['log_auto'] is True and p['log_channel_name'] is None
       and p['protected_count'] == 0,
@@ -173,12 +173,12 @@ check(p['log_channel_name'] == 'мод-логи' and p['log_auto'] is False,
 
 print('== 4. Переключатели, действие, порог ==')
 ok, err, code, p = AF.toggle_flow(lambda: FB2, '777', 'enabled')
-check(ok and p['message'] == 'Система: выкл' and p['on'] is False,
-      'toggle enabled == /antifake off')
-check(IM.AntiFake(None).cfg(777)['enabled'] is False,
+check(ok and p['message'] == 'Система: вкл' and p['on'] is True,
+      'toggle enabled == /antifake on (дефолт был выкл)')
+check(IM.AntiFake(None).cfg(777)['enabled'] is True,
       'запись дошла до файла — её увидит и свежий ког')
 ok, err, code, p = AF.toggle_flow(lambda: FB2, '777', 'enabled')
-check(ok and p['on'] is True, 'включение назад')
+check(ok and p['on'] is False, 'выключение назад')
 ok, err, code, p = AF.toggle_flow(lambda: FB2, '777', 'check_ads')
 check(ok and p['message'] == 'Анти-реклама: выкл', 'флаг рекламы переключён')
 ok, err, code, p = AF.toggle_flow(lambda: FB2, '777', 'погода')

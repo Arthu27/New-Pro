@@ -55,10 +55,10 @@ for needed in ('security.py', 'anti_alt.py', 'impersonation.py', 'ai_moderation.
 check('tag_jail.py' not in cogs_policy.MOD_LEAN_COGS, 'tag_jail по-прежнему спит')
 
 from cogs import anti_alt, impersonation, security  # noqa: E402
-check(bool(anti_alt.DEFAULT_SETTINGS.get('enabled')) is True, 'анти-альт: с завода ВКЛ')
-check(bool(impersonation.DEFAULT_CFG.get('enabled')) is True, 'антифейк: с завода ВКЛ')
-check(all(security._CFG_DEFAULT.get(k) for k in ('ai_spam', 'fake_account', 'link_scanner')),
-      'security: все три контура с завода ВКЛ')
+check(bool(anti_alt.DEFAULT_SETTINGS.get('enabled')) is False, 'анти-альт: с завода ВЫКЛ (opt-in)')
+check(bool(impersonation.DEFAULT_CFG.get('enabled')) is False, 'антифейк: с завода ВЫКЛ (opt-in)')
+check(all(not security._CFG_DEFAULT.get(k) for k in ('ai_spam', 'fake_account', 'link_scanner')),
+      'security: все три контура с завода ВЫКЛ (opt-in)')
 
 # ─── 2. Кик отключён и в ИИ-модерации ──────────────────────────────────────
 print('== 2. Политика «без кика» ==')
@@ -88,7 +88,7 @@ from web.routes.security_panel import shield_statuses, toggle_shield  # noqa: E4
 initial = {s['key']: s['enabled'] for s in shield_statuses(GID)}
 check(set(initial) == {'anti_alt', 'antifake', 'ai_moderation', 'auto_filter'},
       f'щитов ровно 4: {sorted(initial)}')
-check(all(initial.values()), 'на пустом хранилище все щиты активны (дефолты ВКЛ)')
+check(not any(initial.values()), 'на пустом хранилище все щиты на паузе (дефолты ВЫКЛ — opt-in)')
 
 for key in ('anti_alt', 'antifake', 'ai_moderation', 'auto_filter'):
     ok, err = toggle_shield(GID, key, False)

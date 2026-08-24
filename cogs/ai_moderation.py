@@ -158,7 +158,7 @@ class AIModeration (commands .Cog ):
 
     def _default_config (self ):
         return {
-        "enabled":True ,
+        "enabled":False ,# opt-in: включается владельцем (панель/команда)
         "auto_actions":{
         "mild":True ,"moderate":True ,"severe":True ,"discrimination":True 
         },
@@ -358,7 +358,7 @@ class AIModeration (commands .Cog ):
             return 
         guild_id =str (message .guild .id )
         config =self .load_config (guild_id )
-        if not config .get ("enabled",True ):
+        if not config .get ("enabled",False ):
             return 
         if self .is_ignored_channel (message .channel .id ,config ):
             return 

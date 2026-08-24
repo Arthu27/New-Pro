@@ -43,9 +43,9 @@ DATA_FILE ='data/security_{guild_id}.json'
 BACKUP_DIR ='data/backups'
 
 _CFG_DEFAULT ={
-'ai_spam':True ,
-'fake_account':True ,
-'link_scanner':True ,
+'ai_spam':False ,# opt-in
+'fake_account':False ,# opt-in
+'link_scanner':False ,# opt-in
 'new_account_days':7 ,
 'new_account_action':'warn',# warn | kick | ban
 'log_channel':None ,
@@ -237,7 +237,7 @@ class Security (commands .Cog ):
         member =message .author 
 
         #  Сканер ссылок 
-        if cfg .get ('link_scanner',True ):
+        if cfg .get ('link_scanner',False ):
             has_bad ,bad_domains =self ._scan_links (message .content )
             if has_bad :
                 try :
@@ -267,7 +267,7 @@ class Security (commands .Cog ):
                 return 
 
                 #  AI Антиспам Tespiti 
-        if cfg .get ('ai_spam',True ):
+        if cfg .get ('ai_spam',False ):
             score ,reason =self ._ai_spam_score (member .id ,message .content )
 
             if score >=0.85 :

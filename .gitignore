@@ -154,3 +154,9 @@ backups/
 aether-update.zip
 cloudflared
 cloudflared_new.exe
+# Tunnel artifacts (локальные ключи/конфиг туннеля — не для репо)
+scripts/cloudflared
+scripts/cloudflared.exe
+scripts/config.yml
+scripts/tunnel-creds.json
+scripts/.aether_tunnel_runtime.yml

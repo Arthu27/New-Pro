@@ -187,6 +187,9 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         d =request .get_json (silent =True )or {}
         reason =(d .get ('reason')or '').strip ()or 'Не указана'
+        proof =(d .get ('proof')or '').strip ()[:800]
+        if proof and not proof .startswith (('http://','https://')):
+            proof =''
         if _app ._demo_mode ():
             return jsonify ({'ok':True ,'demo':True ,'warn_id':1 ,'total':1 })
         if not bot :
@@ -234,6 +237,22 @@ def register(ctx):
             with open (_tmp ,'w',encoding ='utf-8')as f :json .dump (data ,f ,ensure_ascii =False ,indent =2 )
             os .replace (_tmp ,wf )
             total =len (_w )
+        # Заказ владельца: доказательство к наказанию — прикрепляем ссылкой
+        # к свежему варну (обе ветки выше пишут в data/warnings.json).
+        if proof :
+            try :
+                wf2 ='data/warnings.json'
+                if os .path .exists (wf2 ):
+                    with open (wf2 ,encoding ='utf-8')as f2 :_wd =json .load (f2 )
+                    _lst =_wd .get (str (guild_id ),{}).get (str (user_id ),[])
+                    for _en in _lst :
+                        if _en .get ('id')==warn_id :
+                            _en ['proof']=proof ;break
+                    _tmp2 =wf2 +'.tmp'
+                    with open (_tmp2 ,'w',encoding ='utf-8')as f2 :json .dump (_wd ,f2 ,ensure_ascii =False ,indent =2 )
+                    os .replace (_tmp2 ,wf2 )
+            except Exception as _ex:
+                _log .debug ("api_member_profile_warn(): proof-attach подавлен: %s",_ex )
         return jsonify ({'ok':True ,'warn_id':warn_id ,'total':total })
 
 
@@ -247,8 +266,11 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         d =request .get_json (silent =True )or {}
         reason =(d .get ('reason')or '').strip ()or 'Не указана'
+        proof =(d .get ('proof')or '').strip ()[:800]
+        if proof and not proof .startswith (('http://','https://')):
+            proof =''
         if _app ._demo_mode ():
-            return jsonify ({'ok':True ,'demo':True })
+            return jsonify ({'ok':True ,'demo':True ,'proof':proof })
         if not bot :
             return jsonify ({'error':'Бот офлайн'}),503 
         guild =bot .get_guild (int (guild_id )if str (guild_id ).isdigit ()else 0 )
@@ -268,7 +290,7 @@ def register(ctx):
             import asyncio as _asyncio 
             async def _dm ():
                 try :
-                    await member .send (f'Вы забанены на сервере **{guild .name }**. Причина: {reason }')
+                    await member .send (f'Вы забанены на сервере **{guild .name }**. Причина: {reason }'+(f'\nДоказательство: {proof }'if proof else ''))
                 except Exception :
                     return 
             _asyncio .run_coroutine_threadsafe (_dm (),bot .loop ).result (timeout =5 )
@@ -285,6 +307,21 @@ def register(ctx):
                 str (session .get ('discord_id')or _uname ),reason )
             except Exception as _ex:
                 _log .debug ("api_member_profile_ban(): save_case подавлен: %s",_ex )
+        # Доказательство к бану — в карточку дела (data/mod_data.json).
+        if proof :
+            try :
+                mf3 ='data/mod_data.json'
+                if os .path .exists (mf3 ):
+                    with open (mf3 ,encoding ='utf-8')as f3 :_md =json .load (f3 )
+                    _cs =_md .get ('case')or _md .get ('cases')or {}
+                    for _en in reversed (_cs .get (str (guild_id ),[])):
+                        if str (_en .get ('user_id'))==str (user_id ):
+                            _en ['proof']=proof ;break
+                    _tmp3 =mf3 +'.tmp'
+                    with open (_tmp3 ,'w',encoding ='utf-8')as f3 :json .dump (_md ,f3 ,ensure_ascii =False ,indent =2 )
+                    os .replace (_tmp3 ,mf3 )
+            except Exception as _ex:
+                _log .debug ("api_member_profile_ban(): proof-attach подавлен: %s",_ex )
         return jsonify ({'ok':True })
 
 

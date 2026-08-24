@@ -188,6 +188,101 @@ finally:
         except OSError:
             pass
 
+# ── D. VDS-режим: автодокачка бинарника + портативный конфиг ────────────────
+print('\n[D] VDS-режим (ensure_binary / runtime_config):')
+from services import named_tunnel as nt2
+
+vds_scripts = os.path.join(_TMP, 'vdsroot', 'scripts')
+os.makedirs(vds_scripts, exist_ok=True)
+
+import urllib.request as _urlreq
+_orig_retrieve = _urlreq.urlretrieve
+def _fake_retrieve(url, path):
+    with open(path, 'wb') as fh:
+        fh.write(b'\0' * (6 * 1024 * 1024))  # «настоящий» бинарник
+    return path, None
+_urlreq.urlretrieve = _fake_retrieve
+try:
+    got = nt2.ensure_binary(vds_scripts)
+    check(got is not None and os.path.isfile(got) and os.path.getsize(got) > 5 * 1024 * 1024,
+          'ensure_binary: бинарник докачался сам и остался на месте')
+    got2 = nt2.ensure_binary(vds_scripts)
+    check(got2 == got, 'ensure_binary: повторно не качает (переиспользование)')
+finally:
+    _urlreq.urlretrieve = _orig_retrieve
+
+def _boom(url, path):
+    raise OSError('no internet')
+_urlreq.urlretrieve = _boom
+try:
+    dead = os.path.join(_TMP, 'deadroot', 'scripts')
+    check(nt2.ensure_binary(dead) is None, 'ensure_binary: без интернета -> None, не падает')
+    big = os.path.join(dead, 'cloudflared')
+    check(not (os.path.isfile(big) and os.path.getsize(big) > 0), 'обрыв скачивания не оставляет битый файл')
+finally:
+    _urlreq.urlretrieve = _orig_retrieve
+
+# runtime_config: creds-путь мёртв (переезд) + ключ рядом → рантайм-копия
+vds_root = os.path.dirname(vds_scripts)
+cfg_dead = os.path.join(vds_scripts, 'config.yml')
+with open(cfg_dead, 'w', encoding='utf-8') as fh:
+    fh.write('tunnel: tt-1\ncredentials-file: C:\\Users\\OldPC\\.cloudflared\\tt-1.json\n'
+             'ingress:\n  - hostname: hakumods.xyz\n    service: http://localhost:5001\n'
+             '  - service: http_status:404\n')
+with open(os.path.join(vds_scripts, 'tunnel-creds.json'), 'w', encoding='utf-8') as fh:
+    fh.write('{"AccountTag":"x"}')
+rc = nt2.runtime_config(vds_root, cfg_dead)
+check(rc != cfg_dead and os.path.isfile(rc), 'runtime_config: сделана рантайм-копия конфига')
+rt = open(rc, encoding='utf-8').read()
+check('tunnel-creds.json' in rt and 'OldPC' not in rt,
+      'credentials-путь переписан на локальный ключ')
+
+# creds-путь жив (та же машина) — конфиг не трогаем
+alive_creds = os.path.join(_TMP, 'alive.json')
+with open(alive_creds, 'w', encoding='utf-8') as fh:
+    fh.write('{}')
+cfg_alive = os.path.join(_TMP, 'alive_cfg.yml')
+with open(cfg_alive, 'w', encoding='utf-8') as fh:
+    fh.write(f'tunnel: t2\ncredentials-file: {alive_creds}\ningress:\n  - service: http_status:404\n')
+check(nt2.runtime_config(_TMP, cfg_alive) == cfg_alive, 'runtime_config: живой путь -> без изменений')
+
+# нет ключа рядом — вернёт исходник (cloudflared сам скажет, что не так)
+solo = os.path.join(_TMP, 'solocfg.yml')
+with open(solo, 'w', encoding='utf-8') as fh:
+    fh.write('tunnel: t3\ncredentials-file: /none/here.json\ningress:\n  - service: http_status:404\n')
+check(nt2.runtime_config(_TMP, solo) == solo, 'runtime_config: нет ключа -> исходник, без падения')
+
+# ── E. export_portable: профиль → scripts/ для VDS ──────────────────────────
+print('\n[E] export_portable:')
+pc_root = os.path.join(_TMP, 'pcroot')
+pc_scripts = os.path.join(pc_root, 'scripts')
+home_cfg_dir = os.path.join(_TMP, 'profile', '.cloudflared')
+os.makedirs(home_cfg_dir, exist_ok=True)
+creds_src = os.path.join(home_cfg_dir, 'tt-9.json')
+with open(creds_src, 'w', encoding='utf-8') as fh:
+    fh.write('{"k":1}')
+prof_cfg = os.path.join(home_cfg_dir, 'config.yml')
+with open(prof_cfg, 'w', encoding='utf-8') as fh:
+    fh.write(f'tunnel: tt-9\ncredentials-file: {creds_src}\n'
+             'ingress:\n  - hostname: hakumods.xyz\n    service: http://localhost:5001\n'
+             '  - service: http_status:404\n')
+
+nt2.export_portable(pc_root, prof_cfg)
+check(os.path.isfile(os.path.join(pc_scripts, 'config.yml')), 'config.yml скопирован в scripts/')
+check(os.path.isfile(os.path.join(pc_scripts, 'tunnel-creds.json')), 'ключ скопирован как tunnel-creds.json')
+# повторный вызов не затирает (исходник могли поменять под VDS)
+with open(os.path.join(pc_scripts, 'tunnel-creds.json'), 'w', encoding='utf-8') as fh:
+    fh.write('{"k":2}')
+nt2.export_portable(pc_root, prof_cfg)
+check(open(os.path.join(pc_scripts, 'tunnel-creds.json'), encoding='utf-8').read() == '{"k":2}',
+      'повторный вызов не затирает существующие копии')
+try:
+    nt2.export_portable(pc_root, os.path.join(_TMP, 'no_such.yml'))
+    _ok = True
+except Exception:
+    _ok = False
+check(_ok, 'битый путь — тихо, без падения')
+
 shutil.rmtree(_TMP, ignore_errors=True)
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

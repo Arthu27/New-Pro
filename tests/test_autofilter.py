@@ -65,6 +65,8 @@ check(af.caps_ratio('123 !!!') == 0.0, 'caps_ratio: без букв → 0')
 # ═══ 3. classify_message ═════════════════════════════════════════════════
 print('== classify_message ==')
 cfg = af.merge_config({})
+cfg['enabled'] = True  # дефолты opt-in — для теста классификатора включаем явно
+cfg['words']['enabled'] = True
 cfg['words']['list'] = ['казино']
 cfg['links']['enabled'] = True
 cfg['caps']['enabled'] = True
@@ -115,7 +117,7 @@ check(r is None, 'флуд: разные юзеры — независимые �
 # ═══ 5. Конфиг: merge / validate / файл ═════════════════════════════════
 print('== config ==')
 d = af.merge_config(None)
-check(d['enabled'] is True and d['words']['action'] == 'warn', 'merge: дефолты при пустом сохранённом')
+check(d['enabled'] is False and d['words']['action'] == 'warn', 'merge: дефолты при пустом сохранённом (выкл — opt-in)')
 check(sorted(d) == sorted(af.DEFAULT_FILTER), 'merge: все ключи дефолта на месте')
 c2 = af.merge_config({'caps': {'percent': 999, 'action': 'ban'}, 'unknown': {'x': 1}})
 check(c2['caps']['percent'] == 100, 'merge: числа зажаты в диапазон сверху')
@@ -137,7 +139,11 @@ check(back['enabled'] is False and back['words']['list'] == ['тестово'], 
 check(os.path.exists(af.cfg_path(777)), 'save: файл на диске')
 with open(af.cfg_path(777), 'w', encoding='utf-8') as fp:
     fp.write('{битый json')
-check(af.load_config(777)['enabled'] is True, 'load: битый файл → дефолты (не падать)')
+check(af.load_config(777)['enabled'] is False, 'load: битый файл → дефолты-выкл, не падаем (opt-in)')
+# Тестер ниже ходит по ЖИВОМУ конфигу — включаем явно (дефолты opt-in).
+af.save_config(777, {'enabled': True,
+                     'words': {'enabled': True, 'action': 'warn', 'list': ['бонус']},
+                     'links': {'enabled': True, 'action': 'delete', 'whitelist': ['my.gg']}})
 check(af.is_ignored_channel({'ignore_channels': ['123', '456']}, 123) is True, 'ignore: канал в исключениях')
 check(af.is_ignored_channel({'ignore_channels': ['123']}, 999, parent_id=123) is True, 'ignore: тред по parent_id')
 check(af.is_ignored_channel({'ignore_channels': ['123']}, 999) is False, 'ignore: обычный канал не исключён')
@@ -268,7 +274,8 @@ r = client.post('/api/autofilter/save', json={'enabled': True})
 check(r.status_code in (302, 403), 'save: mod не может сохранять (admin+)')
 login_as('admin')
 r = client.post('/api/autofilter/save',
-                json={'words': {'enabled': True, 'action': 'warn', 'list': ['бонус']},
+                json={'enabled': True,  # главный тумблер (дефолты opt-in)
+                      'words': {'enabled': True, 'action': 'warn', 'list': ['бонус']},
                       'caps': {'enabled': True, 'action': 'delete', 'percent': 80, 'min_length': 8},
                       'flood': {'action': 'timeout', 'limit': 6, 'seconds': 4,
                                 'dupe_count': 4, 'timeout_minutes': 15},
