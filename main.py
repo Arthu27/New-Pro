@@ -265,10 +265,12 @@ def _stop_web_server():
 
 
 # ── Cloudflare-туннель: запускается ВМЕСТЕ с ботом ───────────────────────────
-# Активируется сам после scripts/setup_panel_tunnel.bat: нашли бинарник
-# cloudflared в scripts/ и конфиг туннеля — поднимаем панель на домене
-# (hakumods.xyz) прямо из start.bat. Если туннель уже крутится службой
-# Windows — не дублируем. Отключить: TUNNEL_AUTOSTART=0 в .env.
+# Активируется сам после scripts/setup_panel_tunnel.bat: нашли конфиг
+# туннеля — поднимаем панель на домене (hakumods.xyz) прямо из start.bat.
+# Если туннель уже крутится службой Windows — не дублируем.
+# Отключить: TUNNEL_AUTOSTART=0 в .env.
+# Старый quick-туннель со случайной ссылкой выключен по умолчанию
+# (вернуть: QUICK_TUNNEL=1, см. main() внизу).
 _tunnel_proc = None
 
 
@@ -290,19 +292,26 @@ def _start_tunnel_sidecar():
     raw = (os.environ.get('TUNNEL_AUTOSTART', '') or '').strip().lower()
     if raw in ('0', 'false', 'no', 'off'):
         return
+    from services import named_tunnel as _nt
     root = os.path.dirname(os.path.abspath(__file__))
+    cfg = _nt.find_config(root)
+    if not cfg:
+        return  # туннель ещё не настраивали — работаем локально, не шумим
+    pub = _nt.public_url(cfg)
+    if pub:
+        # Постоянную ссылку (https://домен) бот отправит в канал панели —
+        # она больше никогда не меняется между запусками.
+        _nt.remember_url(root, pub)
+    if _tunnel_service_running_windows():
+        print('[ТУННЕЛЬ] Уже крутится службой Windows — панель доступна: '
+              + (pub or 'ваш домен'))
+        return
     exe = next((c for c in (os.path.join(root, 'scripts', 'cloudflared.exe'),
                             os.path.join(root, 'scripts', 'cloudflared'))
                 if os.path.exists(c)), None)
     if not exe:
-        return  # туннель ещё не настраивали — работаем локально, не шумим
-    cfg_local = os.path.join(os.path.expanduser('~'), '.cloudflared', 'config.yml')
-    cfg_scripts = os.path.join(root, 'scripts', 'config.yml')
-    cfg = cfg_local if os.path.exists(cfg_local) else (cfg_scripts if os.path.exists(cfg_scripts) else None)
-    if not cfg:
-        return  # бинарник есть, а туннель не настроен — скрипт ещё не прошли
-    if _tunnel_service_running_windows():
-        print('[ТУННЕЛЬ] Уже крутится службой Windows — вместе со стартом ПК, везде ок.')
+        print('[ТУННЕЛЬ] Конфиг есть, но не хватает scripts/cloudflared.exe — '
+              'запусти scripts/setup_panel_tunnel.bat (ПКМ → от администратора).')
         return
     try:
         _tunnel_proc = subprocess.Popen(
@@ -325,7 +334,8 @@ def _start_tunnel_sidecar():
         print(f'[ТУННЕЛЬ] Остановился (код {_tunnel_proc.poll()}) — следующий запуск бота поднимет снова.')
 
     threading.Thread(target=_echo_tunnel_log, daemon=True).start()
-    print('[ТУННЕЛЬ] Запущен вместе с ботом — панель на домене активна.')
+    print('[ТУННЕЛЬ] Запущен вместе с ботом'
+          + (f' — панель: {pub}' if pub else ' — панель на домене активна.'))
 
 
 def _stop_tunnel_sidecar():
@@ -743,11 +753,24 @@ async def main():
     except Exception as e:
         log.warning(f"WebSocket сервер не запущен: {e}")
 
-    def delayed_tunnel():
-        import time
-        time.sleep(3)
-        start_tunnel()
-    threading.Thread(target=delayed_tunnel, daemon=True).start()
+    # Старый «случайный» quick-туннель (trycloudflare-адрес менялся каждый
+    # запуск) теперь ВЫКЛЮЧЕН: у панели постоянный домен, его поднимает
+    # _start_tunnel_sidecar выше (или служба Windows). Вернуть старое
+    # поведение можно через QUICK_TUNNEL=1 в .env.
+    _quick_raw = (os.environ.get('QUICK_TUNNEL', '') or '').strip().lower()
+    if _quick_raw in ('1', 'true', 'yes', 'on'):
+        def delayed_tunnel():
+            import time
+            time.sleep(3)
+            start_tunnel()
+        threading.Thread(target=delayed_tunnel, daemon=True).start()
+    else:
+        # Постоянного домена пока нет и quick-туннель выключен — убираем
+        # старую случайную ссылку, чтобы бот не постил её в канал панели.
+        from services import named_tunnel as _nt
+        _root = os.path.dirname(os.path.abspath(__file__))
+        if not _nt.find_config(_root):
+            _nt.drop_stale_url(_root)
 
     print("[БОТ] Запускается... (загрузка когов -> вход в Discord)")
     async with bot:
