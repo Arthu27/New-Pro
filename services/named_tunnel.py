@@ -12,6 +12,8 @@ import os
 _log = logging.getLogger(__name__)
 
 URL_FILE = 'tunnel_url.txt'
+# Имя туннеля — то же, что в scripts/setup_panel_tunnel.bat.
+TUNNEL_NAME = 'aether-panel'
 
 
 def find_config(root):
@@ -149,6 +151,131 @@ def runtime_config(root, cfg_path):
     except Exception as _ex:
         _log.debug('named_tunnel.runtime_config(): запись подавлена: %s', _ex)
         return cfg_path
+
+
+def _cloudflared_home():
+    """Папка профиля cloudflared (~/.cloudflared)."""
+    return os.path.join(os.path.expanduser('~'), '.cloudflared')
+
+
+def _run_cmd(cmd, timeout=120):
+    """cloudflared <args> без всплывающего окна; None при любой ошибке запуска."""
+    import subprocess as _sp
+
+    try:
+        flags = _sp.CREATE_NO_WINDOW if os.name == 'nt' and hasattr(_sp, 'CREATE_NO_WINDOW') else 0
+        return _sp.run(cmd, capture_output=True, text=True, timeout=timeout,
+                       encoding='utf-8', errors='replace', creationflags=flags)
+    except Exception as _ex:
+        _log.debug('named_tunnel._run_cmd(): подавлено: %s', _ex)
+        return None
+
+
+def _rewrite_config(path, tid, creds_path):
+    """Подменить tunnel:/credentials-file: на свежие (in-place)."""
+    import re
+
+    try:
+        with open(path, 'r', encoding='utf-8', errors='replace') as fh:
+            text = fh.read()
+    except Exception as _ex:
+        _log.debug('named_tunnel._rewrite_config(): чтение подавлено: %s', _ex)
+        return
+    if re.search(r'(?m)^tunnel:\s*\S+\s*$', text):
+        text = re.sub(r'(?m)^tunnel:\s*\S+\s*$', 'tunnel: ' + tid, text)
+    else:
+        text = 'tunnel: ' + tid + '\n' + text
+    if re.search(r'(?m)^credentials-file:\s*\S+\s*$', text):
+        text = re.sub(r'(?m)^credentials-file:\s*\S+\s*$',
+                      'credentials-file: ' + creds_path, text)
+    else:
+        text = text.rstrip('\n') + '\ncredentials-file: ' + creds_path + '\n'
+    try:
+        with open(path, 'w', encoding='utf-8') as fh:
+            fh.write(text)
+    except Exception as _ex:
+        _log.debug('named_tunnel._rewrite_config(): запись подавлена: %s', _ex)
+
+
+def ensure_credentials(root, scripts_dir, exe):
+    """Ключ туннеля (credentials json) живой на ЭТОЙ машине — или None.
+
+    Ключ рождается один раз — на ПК, где делали login + tunnel create.
+    После переезда на VDS его на машине нет. Тогда:
+      1. поднимаем из портативных копий в scripts/ (приехали вместе с папкой);
+      2. если и их нет, но есть cert.pem (логин здесь уже делался) —
+         пересоздаём туннель: delete + create с тем же именем + перепривязка
+         DNS-хостов из конфига; конфиги патчим на новый ID.
+    Возвращает (tunnel_id, путь_к_ключу), когда пришлось чинить,
+    и None — когда чинить нечего (ключ на месте) или нечем (нет cert.pem).
+    """
+    import re
+    import shutil as _sh
+
+    home = _cloudflared_home()
+    candidates = [os.path.join(home, 'config.yml'),
+                  os.path.join(root, 'scripts', 'config.yml')]
+    paths = [p for p in candidates if os.path.isfile(p)]
+    if not paths:
+        return None
+    try:
+        with open(paths[0], 'r', encoding='utf-8', errors='replace') as fh:
+            text = fh.read()
+    except Exception as _ex:
+        _log.debug('named_tunnel.ensure_credentials(): чтение подавлено: %s', _ex)
+        return None
+    m = re.search(r'(?m)^tunnel:\s*(\S+)\s*$', text)
+    if not m:
+        return None
+    tid = m.group(1).strip('\'"')
+
+    creds = os.path.join(home, tid + '.json')
+    if os.path.isfile(creds):
+        return None  # ключ на месте — ничего не сломано
+
+    # 1) Портативные копии рядом с ботом (залиты на VDS вместе с папкой)
+    for cand in (os.path.join(scripts_dir, tid + '.json'),
+                 os.path.join(scripts_dir, 'tunnel-creds.json')):
+        if os.path.isfile(cand):
+            try:
+                os.makedirs(home, exist_ok=True)
+                _sh.copy2(cand, creds)
+                _log.info('named_tunnel: ключ туннеля поднят из scripts/ (%s)',
+                          os.path.basename(cand))
+                return (tid, creds)
+            except Exception as _ex:
+                _log.debug('named_tunnel.ensure_credentials(): копия подавлена: %s', _ex)
+
+    # 2) Полная пересборка на новой машине — достаточно cert.pem от логина
+    if not os.path.isfile(os.path.join(home, 'cert.pem')):
+        return None  # нечем чинить — ошибку покажет сам cloudflared
+
+    _log.info('named_tunnel: ключа нет — пересоздаю туннель %s на этой машине',
+              TUNNEL_NAME)
+    _run_cmd([exe, 'tunnel', 'delete', '-f', tid], timeout=180)
+    res = _run_cmd([exe, 'tunnel', 'create', TUNNEL_NAME], timeout=180)
+    out = ((res.stdout or '') + '\n' + (res.stderr or '')) if res else ''
+    m2 = re.search(r'([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})', out)
+    new_tid = m2.group(1) if m2 else None
+    new_creds = os.path.join(home, new_tid + '.json') if new_tid else None
+    if not new_tid or not os.path.isfile(new_creds):
+        _log.warning('named_tunnel: пересоздание не удалось — нет ключа после create')
+        return None
+    hosts = [h.strip('\'"') for h in
+             re.findall(r'(?m)^\s*-\s*hostname:\s*(\S+)\s*$', text)]
+    for host in hosts:
+        if host:
+            _run_cmd([exe, 'tunnel', 'route', 'dns', '--overwrite-dns', new_tid, host],
+                     timeout=180)
+    for p in paths:
+        _rewrite_config(p, new_tid, new_creds)
+    # Свежий ключ сразу в портативные копии — следующий переезд уже с ключом.
+    try:
+        _sh.copy2(new_creds, os.path.join(scripts_dir, 'tunnel-creds.json'))
+    except Exception as _ex:
+        _log.debug('named_tunnel.ensure_credentials(): экспорт ключа подавлен: %s', _ex)
+    _log.info('named_tunnel: туннель пересоздан, домены перепривязаны (%s шт.)', len(hosts))
+    return (new_tid, new_creds)
 
 
 def export_portable(root, cfg_path):

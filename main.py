@@ -321,6 +321,10 @@ def _start_tunnel_sidecar():
         print('[ТУННЕЛЬ] Не удалось скачать cloudflared (интернет?) — '
               'туннель пропущен, панель остаётся локальной.')
         return
+    # Ключ туннеля мог остаться на старом ПК — поднимем портативную копию
+    # из scripts/ или пересоздадим туннель прямо здесь (cert.pem уже есть).
+    if _nt.ensure_credentials(root, scripts_dir, exe):
+        print('[ТУННЕЛЬ] Ключ туннеля восстановлен на этой машине (переезд).')
     # Конфиг мог переехать с другого ПК (credentials-путь там старый) —
     # подменяем его на наш credentials-файл из scripts/.
     run_cfg = _nt.runtime_config(root, cfg)

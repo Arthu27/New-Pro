@@ -283,6 +283,112 @@ except Exception:
     _ok = False
 check(_ok, 'битый путь — тихо, без падения')
 
+# ── F. ensure_credentials: ключ туннеля на новой машине (переезд на VDS) ─────
+print('\n[F] ensure_credentials (переезд на VDS):')
+import importlib
+nt3 = importlib.import_module('services.named_tunnel')
+_orig_home_fn = nt3._cloudflared_home
+_orig_run_fn = nt3._run_cmd
+_orig_isfile = os.path.isfile
+
+f_root = os.path.join(_TMP, 'froot')
+f_scripts = os.path.join(f_root, 'scripts')
+f_home = os.path.join(_TMP, 'fhome', '.cloudflared')
+os.makedirs(f_scripts, exist_ok=True)
+os.makedirs(f_home, exist_ok=True)
+OLD_TID = 'b0404cba-429b-4314-b574-cdbcbe3bd077'
+NEW_TID = 'c1515dcb-1111-4222-8333-444455556666'
+CFG_OLD = ('tunnel: ' + OLD_TID + '\n'
+           'credentials-file: C:\\Users\\OldPC\\.cloudflared\\' + OLD_TID + '.json\n'
+           'ingress:\n'
+           '  - hostname: hakumods.xyz\n    service: http://localhost:5001\n'
+           '  - hostname: panel.hakumods.xyz\n    service: http://localhost:5001\n'
+           '  - service: http_status:404\n')
+
+calls = []
+
+
+class _R:
+    def __init__(self, out=''):
+        self.stdout = out
+        self.stderr = ''
+
+
+def _fake_run(cmd, timeout=120):
+    calls.append(cmd)
+    if cmd[1:3] == ['tunnel', 'create']:
+        with open(os.path.join(f_home, NEW_TID + '.json'), 'w', encoding='utf-8') as fh:
+            fh.write('{"fresh":true}')
+        return _R('Created tunnel aether-panel with id ' + NEW_TID)
+    return _R('')
+
+
+nt3._cloudflared_home = lambda: f_home
+nt3._run_cmd = _fake_run
+try:
+    prof_cfg = os.path.join(f_home, 'config.yml')
+    scr_cfg = os.path.join(f_scripts, 'config.yml')
+
+    # 1) Нет конфигов вообще — нечего чинить, cloudflared не дёргаем.
+    check(nt3.ensure_credentials(f_root, f_scripts, 'exe') is None and not calls,
+          'нет конфигов -> None, без вызовов cloudflared')
+
+    # 2) Ключ на месте в профиле — None (чинить нечего).
+    with open(prof_cfg, 'w', encoding='utf-8') as fh:
+        fh.write(CFG_OLD)
+    prof_creds = os.path.join(f_home, OLD_TID + '.json')
+    with open(prof_creds, 'w', encoding='utf-8') as fh:
+        fh.write('{"k":1}')
+    check(nt3.ensure_credentials(f_root, f_scripts, 'exe') is None and not calls,
+          'ключ в профиле на месте -> None')
+
+    # 3) Ключа в профиле нет, но есть портативная копия в scripts/ -> поднимаем.
+    os.remove(prof_creds)
+    with open(os.path.join(f_scripts, 'tunnel-creds.json'), 'w', encoding='utf-8') as fh:
+        fh.write('{"k":9}')
+    got = nt3.ensure_credentials(f_root, f_scripts, 'exe')
+    check(got == (OLD_TID, prof_creds), 'ключ поднят из scripts/tunnel-creds.json')
+    check(os.path.isfile(prof_creds)
+          and open(prof_creds, encoding='utf-8').read() == '{"k":9}',
+          'ключ скопирован в профиль с верным содержимым')
+    check(not calls, 'подъём из копии — без вызовов cloudflared')
+
+    # 4) Нет ни ключа, ни копий, ни cert.pem -> None, ничего не ломаем.
+    os.remove(prof_creds)
+    os.remove(os.path.join(f_scripts, 'tunnel-creds.json'))
+    check(nt3.ensure_credentials(f_root, f_scripts, 'exe') is None and not calls,
+          'нет ключа и нет cert.pem -> None, без побочек')
+
+    # 5) Есть cert.pem (логин делался) -> туннель пересоздаётся на этой машине.
+    with open(os.path.join(f_home, 'cert.pem'), 'w', encoding='utf-8') as fh:
+        fh.write('CERT')
+    with open(scr_cfg, 'w', encoding='utf-8') as fh:
+        fh.write(CFG_OLD)
+    got = nt3.ensure_credentials(f_root, f_scripts, 'exe')
+    check(got == (NEW_TID, os.path.join(f_home, NEW_TID + '.json')),
+          'туннель пересоздан, вернулись свежие id и ключ')
+    check(calls[0][1:] == ['tunnel', 'delete', '-f', OLD_TID],
+          'старый туннель снесён принудительно (-f)')
+    routes = [c for c in calls if c[1:3] == ['tunnel', 'route']]
+    check(len(routes) == 2
+          and all(c[3:6] == ['dns', '--overwrite-dns', NEW_TID] for c in routes)
+          and {c[6] for c in routes} == {'hakumods.xyz', 'panel.hakumods.xyz'},
+          'DNS перепривязан для всех хостов из конфига')
+    patched = open(prof_cfg, encoding='utf-8').read()
+    check('tunnel: ' + NEW_TID in patched
+          and 'credentials-file: ' + os.path.join(f_home, NEW_TID + '.json') in patched,
+          'профильный конфиг переписан на новый ключ')
+    patched2 = open(scr_cfg, encoding='utf-8').read()
+    check('tunnel: ' + NEW_TID in patched2 and 'OldPC' not in patched2,
+          'scripts/config.yml тоже переписан')
+    check(open(os.path.join(f_scripts, 'tunnel-creds.json'), encoding='utf-8').read()
+          == '{"fresh":true}', 'свежий ключ экспортирован в scripts/ для след. переезда')
+    check(_orig_isfile(os.path.join(f_home, NEW_TID + '.json')),
+          'файл ключа реально лежит в профиле')
+finally:
+    nt3._cloudflared_home = _orig_home_fn
+    nt3._run_cmd = _orig_run_fn
+
 shutil.rmtree(_TMP, ignore_errors=True)
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

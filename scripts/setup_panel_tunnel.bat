@@ -13,6 +13,7 @@ set PANEL_PORT=5001
 set HOST1=hakumods.xyz
 set HOST2=www.hakumods.xyz
 set HOST3=panel.hakumods.xyz
+set REKEY=
 
 echo(
 echo  ==========================================================
@@ -97,13 +98,30 @@ cloudflared.exe tunnel route dns --overwrite-dns %TNAME% %HOST3%
 
 echo(
 echo [5/6] Writing config ...
-set TID=
-for /f "tokens=1" %%i in ('cloudflared.exe tunnel list 2^>nul ^| findstr /C:"%TNAME%"') do set TID=%%i
+call :resolvetid
 if "%TID%"=="" (
   echo [ERROR] Tunnel ID not found. Run me again.
   pause
   exit /b 1
 )
+
+rem  The tunnel key (credentials json) lives only on the machine that
+rem  created the tunnel. On a new PC/VDS it is missing -> we either
+rem  restore it from the portable copies in this scripts folder, or
+rem  rebuild the tunnel right here (step 2 login is enough for that).
+call :ensurekey
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+
+if "%REKEY%"=="1" (
+  echo        Re-linking domains to the rebuilt tunnel ...
+  cloudflared.exe tunnel route dns --overwrite-dns %TNAME% %HOST1%
+  cloudflared.exe tunnel route dns --overwrite-dns %TNAME% %HOST2%
+  cloudflared.exe tunnel route dns --overwrite-dns %TNAME% %HOST3%
+)
+
 set CFG=%USERPROFILE%\.cloudflared\config.yml
 if not exist "%USERPROFILE%\.cloudflared" mkdir "%USERPROFILE%\.cloudflared" >nul 2>&1
 >  "%CFG%" echo tunnel: %TID%
@@ -146,15 +164,23 @@ if exist "%ENVFILE%" (
 
 echo(
 echo [6/6] Installing autostart service and starting it ...
-cloudflared.exe service install
+cloudflared.exe service install >nul 2>&1
+if errorlevel 1 (
+  echo        Service already exists, restarting it ...
+  net stop cloudflared >nul 2>&1
+  net start cloudflared >nul 2>&1
+) else (
+  echo        Service installed.
+)
+sc start cloudflared >nul 2>&1
+net start cloudflared >nul 2>&1
+sc query cloudflared | findstr /C:"RUNNING" >nul 2>&1
 if errorlevel 1 (
   echo(
-  echo [NOTE] Service install failed, starting tunnel in this window.
+  echo [NOTE] Service did not start, running tunnel in this window.
   echo        Do NOT close this window.
   cloudflared.exe tunnel run %TNAME%
 ) else (
-  sc start cloudflared >nul 2>&1
-  net start cloudflared >nul 2>&1
   echo(
   echo  ==========================================================
   echo   DONE! Panel now lives on your domain.
@@ -167,3 +193,47 @@ if errorlevel 1 (
 )
 echo(
 pause
+goto :eof
+
+
+:resolvetid
+set TID=
+for /f "tokens=1" %%i in ('cloudflared.exe tunnel list 2^>nul ^| findstr /C:"%TNAME%"') do set TID=%%i
+goto :eof
+
+
+:ensurekey
+set CREDS=%USERPROFILE%\.cloudflared\%TID%.json
+if exist "%CREDS%" goto :eof
+if exist "%~dp0%TID%.json" copy /y "%~dp0%TID%.json" "%CREDS%" >nul 2>&1
+if exist "%CREDS%" (
+  echo        Key restored from the scripts folder copy, ok.
+  goto :eof
+)
+if exist "%~dp0tunnel-creds.json" copy /y "%~dp0tunnel-creds.json" "%CREDS%" >nul 2>&1
+if exist "%CREDS%" (
+  echo        Key restored from the scripts folder copy, ok.
+  goto :eof
+)
+echo(
+echo [NOTE] Tunnel key file not found on this machine.
+echo        The tunnel was created on another PC - rebuilding it here.
+cloudflared.exe tunnel delete -f %TNAME% >nul 2>&1
+cloudflared.exe tunnel create %TNAME%
+if errorlevel 1 (
+  echo [ERROR] Could not rebuild the tunnel.
+  exit /b 1
+)
+call :resolvetid
+if "%TID%"=="" (
+  echo [ERROR] Tunnel ID not found after rebuild.
+  exit /b 1
+)
+set CREDS=%USERPROFILE%\.cloudflared\%TID%.json
+if not exist "%CREDS%" (
+  echo [ERROR] Key file still missing after rebuild.
+  exit /b 1
+)
+set REKEY=1
+echo        Tunnel rebuilt and the key is saved on this machine.
+goto :eof

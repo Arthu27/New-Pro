@@ -96,6 +96,9 @@ check(b'\r\n' in bat_raw and b'\n' not in bat_raw.replace(b'\r\n', b''),
 bat = bat_raw.decode('ascii')
 check('tunnel-creds.json' in bat, 'портативная копия ключа рядом с ботом')
 check('%~dp0config.yml' in bat, 'портативная копия конфига рядом с ботом')
+check(':ensurekey' in bat, 'ключ восстанавливается батником сам (ensurekey)')
+check('tunnel delete -f' in bat, 'нет ключа нигде — туннель пересоздаётся на месте')
+check('net start cloudflared' in bat, 'уже стоящая служба перезапускается, а не падает')
 
 print('\n[7] VDS-режим в боте:')
 main = read('main.py')
