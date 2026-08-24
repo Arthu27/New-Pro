@@ -39,6 +39,16 @@ def _install_requirements():
             __import__(import_name)
         except ImportError:
             missing.append(req)
+        except Exception as _ex:
+            # Пакет стоит, но не загружается (битая нативная DLL/.so — типичный
+            # пример: ctranslate2 без Visual C++ Redistributable на Windows).
+            # Не валим бота и не переустанавливаем по кругу — просто предупреждаем;
+            # связанная фича (распознавание речи) мягко выключится в своём коге.
+            if pkg_name in ('faster-whisper', 'edge-tts'):
+                print(f"[ИНФО] {pkg_name} не загрузился ({type(_ex).__name__}) — "
+                      f"соответствующая фича выключена, бот продолжит работу")
+            else:
+                missing.append(req)
     
     if missing:
         print(f"[УСТАНОВКА] Устанавливается {len(missing)} недостающих пакетов...")

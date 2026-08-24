@@ -32,7 +32,7 @@ class VoiceCommands(commands.Cog):
             try:
                 __import__(lib)
                 return True
-            except ImportError as _ex:
+            except Exception as _ex:
                 _log.debug("_check_whisper(): подавлено: %s", _ex)
                 continue
         return False
