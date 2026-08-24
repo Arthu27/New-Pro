@@ -48,6 +48,125 @@ ACTIONS = ('warn', 'kick', 'ban')
 DAYS_MIN, DAYS_MAX = 1, 365
 
 
+# ── Контур защиты: соседние системы — статус и быстрый тумблер ───────────
+def shield_statuses(gid):
+    """Состояние всех систем щита одним списком (для карточек страницы)."""
+    gid_i = _gid_int(gid)
+    out = []
+
+    # Анти-альт: свежие аккаунты при входе (настройки в GuildData)
+    on = True
+    try:
+        from cogs import anti_alt as _aa
+        from db import GuildData as _GD
+        st = _GD('anti_alt').get(gid_i, 'settings', {}) or {}
+        on = bool(_aa.merge_settings(st).get('enabled'))
+    except Exception as _ex:
+        _log.debug('shield anti_alt: %s', _ex)
+    out.append({'key': 'anti_alt', 'label': 'Анти-альт', 'enabled': on,
+                'href': '/automation', 'hint': 'ловит свежие аккаунты на входе'})
+
+    # Антифейк: маски под администрацию (impersonation)
+    on = True
+    try:
+        from cogs import impersonation as _im
+        cfg = dict(_im.DEFAULT_CFG)
+        raw = _im._load_json(_im.CFG_PATH, {})
+        if isinstance(raw, dict):
+            cfg.update(raw.get(str(gid_i), {}) or {})
+        on = bool(cfg.get('enabled'))
+    except Exception as _ex:
+        _log.debug('shield antifake: %s', _ex)
+    out.append({'key': 'antifake', 'label': 'Антифейк: маски под админов',
+                'enabled': on, 'href': '/antifake',
+                'hint': 'подделки ников и аватаров стаффа'})
+
+    # ИИ-модерация чата (файл конфига на гильдию)
+    on = True
+    try:
+        import json as _json
+        import os as _os
+        _p = f'data/ai_mod_config_{gid_i}.json'
+        if _os.path.exists(_p):
+            with open(_p, encoding='utf-8') as _f:
+                on = bool((_json.load(_f) or {}).get('enabled', True))
+    except Exception as _ex:
+        _log.debug('shield ai_mod: %s', _ex)
+    out.append({'key': 'ai_moderation', 'label': 'ИИ-модерация чата',
+                'enabled': on, 'href': '/ai-moderation',
+                'hint': 'токсичность и оскорбления в чате'})
+
+    # Автофильтр: флуд/слова/ссылки/капс (модульные функции кога)
+    on = True
+    try:
+        from cogs import auto_filter as _af
+        on = bool(_af.load_config(gid_i).get('enabled'))
+    except Exception as _ex:
+        _log.debug('shield auto_filter: %s', _ex)
+    out.append({'key': 'auto_filter', 'label': 'Автофильтр: спам и флуд',
+                'enabled': on, 'href': '/autofilter',
+                'hint': 'флуд, слова, ссылки, капс'})
+    return out
+
+
+def toggle_shield(gid, key, enabled):
+    """Тумблер соседней системы щита. Возвращает (ок, ошибка)."""
+    gid_i = _gid_int(gid)
+    val = bool(enabled)
+    try:
+        if key == 'anti_alt':
+            from cogs import anti_alt as _aa
+            from db import GuildData as _GD
+            db = _GD('anti_alt')
+            st = _aa.merge_settings(db.get(gid_i, 'settings', {}) or {})
+            st['enabled'] = val
+            db.set(gid_i, 'settings', st)
+            return True, ''
+        if key == 'antifake':
+            # Живой ког держит конфиг в памяти — пишем через него, если он
+            # загружен; иначе правим файл (ког подхватит при старте).
+            try:
+                import web.app as _app
+                cog = _app.bot_instance.get_cog('AntiFake') if _app.bot_instance else None
+            except Exception as _ex:
+                _log.debug('shield antifake bot: %s', _ex)
+                cog = None
+            if cog is not None:
+                cog.set_cfg(gid_i, 'enabled', val)
+            else:
+                from cogs import impersonation as _im
+                data = _im._load_json(_im.CFG_PATH, {})
+                if not isinstance(data, dict):
+                    data = {}
+                data.setdefault(str(gid_i), {})['enabled'] = val
+                _im._save_json(_im.CFG_PATH, data)
+            return True, ''
+        if key == 'ai_moderation':
+            import json as _json
+            import os as _os
+            _p = f'data/ai_mod_config_{gid_i}.json'
+            cfg = {}
+            if _os.path.exists(_p):
+                with open(_p, encoding='utf-8') as _f:
+                    cfg = _json.load(_f) or {}
+            cfg['enabled'] = val
+            _os.makedirs('data', exist_ok=True)
+            tmp = _p + '.tmp'
+            with open(tmp, 'w', encoding='utf-8') as _f:
+                _json.dump(cfg, _f, ensure_ascii=False, indent=2)
+            _os.replace(tmp, _p)
+            return True, ''
+        if key == 'auto_filter':
+            from cogs import auto_filter as _af
+            cfg = _af.load_config(gid_i)
+            cfg['enabled'] = val
+            _af.save_config(gid_i, cfg)
+            return True, ''
+    except Exception as _ex:
+        return False, str(_ex)
+    return False, 'Неизвестная система щита'
+
+
 # ─────────────────────────────────────────────────────────────────────
 # #131: настройки 1:1 с /security
 # ─────────────────────────────────────────────────────────────────────
@@ -248,6 +367,7 @@ def register(ctx):
                         'cfg': cfg_view(_load(gid)),
                         'rules': rules_reference(),
                         'guardian': shield,
+                        'shields': shield_statuses(gid),
                         'can_edit': session.get('role') in ('admin', 'owner')})
 
     @app.route('/api/guild/<gid>/security-center/toggle', methods=['POST'])
@@ -255,8 +375,14 @@ def register(ctx):
     @role_required('admin')
     def api_sec_toggle(gid):
         data = request.get_json(silent=True) or {}
-        ok, err, payload = toggle_feature(gid, data.get('feature'),
-                                          data.get('enabled'))
+        feat = data.get('feature')
+        keys = {k for k, _ in FEATURES}
+        if feat in keys:
+            ok, err, payload = toggle_feature(gid, feat, data.get('enabled'))
+        else:
+            ok, err = toggle_shield(gid, feat, data.get('enabled'))
+            payload = {'feature': feat, 'enabled': bool(data.get('enabled')),
+                       'status': ' Активен' if data.get('enabled') else ' Закрыт'} if ok else None
         if not ok:
             return jsonify({'success': False, 'error': err}), 400
         _notify(f"Безопасность: {payload['feature']} → {payload['status']}")

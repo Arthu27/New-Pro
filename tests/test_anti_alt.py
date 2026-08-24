@@ -93,8 +93,9 @@ db.set(4242, 'settings', {'enabled': True, 'action': 'ban', 'min_age_days': 14})
 back = aa.merge_settings(db.get(4242, 'settings', {}))
 check(back['enabled'] is True and back['action'] == 'ban' and back['min_age_days'] == 14,
       'настройки переживают roundtrip через SQLite')
-check(aa.merge_settings(db.get(8888, 'settings', {}))['enabled'] is False,
-      'чужой сервер -> дефолт (выключено)')
+check(aa.merge_settings(db.get(8888, 'settings', {}))['enabled'] is True
+      and aa.merge_settings(db.get(8888, 'settings', {}))['action'] == 'alert',
+      'чужой сервер -> дефолт (щит включён, безопасное действие alert)')
 
 print('== 6. линт модуля ==')
 src = open(os.path.join(ROOT, 'cogs', 'anti_alt.py'), encoding='utf-8').read()

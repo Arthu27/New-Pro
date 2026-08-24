@@ -247,6 +247,21 @@ def _scan():
             continue
         seen.add(c['name'])
         deduped.append(c)
+
+    # Честность боевого меню: slash_budget при загрузке бота жёстко режет
+    # глобальное slash-меню до KEEP_SLASH. Каталог панели обязан показывать
+    # то же, что видит пользователь, поэтому в боевом профиле (не BOT_FULL)
+    # вычищенные слеши/подкоманды из каталога тоже убираем.
+    try:
+        from slash_budget import KEEP_SLASH
+    except Exception:
+        KEEP_SLASH = frozenset()
+    full_requested = (os.environ.get('BOT_FULL', '') or '').strip() not in ('', '0', 'false', 'False')
+    if KEEP_SLASH and not full_requested:
+        keep = set(KEEP_SLASH)
+        deduped = [c for c in deduped
+                   if c['kind'] == 'prefix'
+                   or c['bare'] in keep or c['name'] in keep]
     return deduped
 
 

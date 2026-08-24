@@ -81,10 +81,13 @@ for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'afk.py', 'help.py', 'cog_manager.py'):
     assert keep in enabled, keep
 check(True, 'lean: модерация/тикеты/музыка/AI/приветствие/логи/afk — живы')
-for asleep in ('tag_jail.py', 'security.py', 'sla_cog.py', 'mod_report.py',
+for asleep in ('tag_jail.py', 'sla_cog.py', 'mod_report.py',
                'health.py', 'feature_flag_cog.py'):
     assert asleep in disabled, asleep
-check(True, 'lean: tag_jail/security/sla/mod_report/health/flags — спят (чистка команд)')
+check(True, 'lean: tag_jail/sla/mod_report/health/flags — спят (чистка команд)')
+for awake_shield in ('security.py', 'anti_alt.py', 'impersonation.py', 'ai_moderation.py'):
+    assert awake_shield in enabled, awake_shield
+check(True, 'lean: ЩИТ проснулся — security/anti-alt/impersonation/ai-moderation защищают с завода')
 check(not any(is_helper(f) for f in enabled), 'lean: хелперы не загружаются никогда')
 check(CORE_COGS <= LEAN_COGS and MOD_LEAN_COGS <= LEAN_COGS
       and TICKET_LEAN_COGS <= LEAN_COGS and MUSIC_COGS <= LEAN_COGS

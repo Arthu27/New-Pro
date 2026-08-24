@@ -2,7 +2,7 @@
 AI Moderation Cog
 =================
 - Multi-language toxic detection (RU/TR/EN)
-- Auto-escalation: warn → mute → kick → ban
+- Auto-escalation: warn → mute → ban (кик отключён по решению владельца)
 - Context-aware analysis (irony, emoji, abbreviations)
 - False positive reduction via user feedback learning
 - Real-time alerts to log channel
@@ -163,7 +163,7 @@ class AIModeration (commands .Cog ):
         "mild":True ,"moderate":True ,"severe":True ,"discrimination":True 
         },
         "escalation":{
-        "enabled":True ,# 3 mutes in 24h → kick, 5 → ban
+        "enabled":True ,# 3 мьюта за 24ч → бан (кик отключён по решению владельца)
         "warn_to_mute_after":3 ,
         "mute_to_kick_after":3 ,
         "kick_to_ban_after":2 ,
@@ -263,6 +263,11 @@ class AIModeration (commands .Cog ):
                 action ="kick"
             if kicks >=config ["escalation"]["kick_to_ban_after"]and action =="kick":
                 action ="ban"
+
+        # Жёсткая политика проекта (заказ владельца): кик отключён — любой
+        # путь эскалации или конфига, приведший к кику, сводим к бану.
+        if action =="kick":
+            action ="ban"
 
                 # Take action
         try :

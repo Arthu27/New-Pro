@@ -52,9 +52,11 @@ for p in ('/economy', '/giveaway', '/starboard', '/custom-commands',
           '/reaction-roles', '/fun', '/leveling'):
     assert p in off_lean, p
 check(True, 'lean (по умолчанию): игровые и соц-страницы честно гаснут чипом «выкл»')
-for p in ('/sla', '/tagjail', '/security'):
+for p in ('/sla', '/tagjail'):
     assert p in off_lean, p
-check(True, 'lean: страницы уснувших модулей (SLA/TagJail/безопасность) гаснут чипом')
+check(True, 'lean: страницы уснувших модулей (SLA/TagJail) гаснут чипом')
+check('/security' not in off_lean and '/antifake' not in off_lean,
+      'lean: щит жив — /security и /antifake горят зелёным')
 check('/mod-report' not in off_lean,
       'lean: /mod-report живёт от аудит-файла — ког mod_report не нужен, чип не вешаем')
 for p in ('/music', '/tickets-ops', '/staff-apps', '/ai-chat', '/afk-list',

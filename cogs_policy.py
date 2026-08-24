@@ -127,9 +127,13 @@ MOD_LEAN_COGS = frozenset({
     'antiraid.py', 'guardian.py', 'verification.py',
     'appeals.py', 'logs.py', 'log_menu.py',
     'afk.py',              # /afk + /afk-remove — пользователи просили
-    # tag_jail.py и security.py убраны из боевого состава: 24 лишних
-    # команды в меню. Слушатели антирейда/guardian продолжают защищать.
-    # Вернуть: EXTRA_COGS=tag_jail,security
+    # Щит по максимуму (заказ владельца «добавь все возможные для защиты»):
+    # security (антиспам/фейки/сканер ссылок), anti_alt (свежие аккаунты),
+    # impersonation (маски под админов), ai_moderation (токсичность чата).
+    # Их слушатели защищают с завода, а меню не пухнет: slash-лимит жёстко
+    # режет slash_budget до 14, префикс-хелп статический.
+    'security.py', 'anti_alt.py', 'impersonation.py', 'ai_moderation.py',
+    # tag_jail.py оставлен спящим (18 лишних команд). Вернуть: EXTRA_COGS=tag_jail
 })
 
 # Тикеты + приём заявок в команду.

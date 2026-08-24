@@ -24,6 +24,16 @@
   </div>
 </div>
 
+<div class="panel" style="margin-bottom:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-layer-group"></i> Контур защиты</h2>
+    <div class="sub">Все системы щита в одном месте: анти-альт, антифейк, ИИ-модерация, автофильтр.</div></div></div>
+  <div class="panel-body">
+    <div class="grid-3" id="scShields" style="gap:12px">
+      <div class="empty" style="grid-column:1/-1"><i class="fas fa-circle-notch fa-spin"></i><span>Собираем щит</span></div>
+    </div>
+  </div>
+</div>
+
 <div class="grid-2" style="align-items:start">
   <div class="panel">
     <div class="panel-head"><div><h2><i class="fas fa-vial"></i> Лаборатория</h2>
@@ -106,6 +116,19 @@ function loadOverview() {
           (f.enabled ? '<i class="fas fa-pause"></i> Приостановить' : '<i class="fas fa-play"></i> Запустить') + '</button></div>' : '') +
         '</div>';
     }).join('');
+    var sh = d.shields || [];
+    $('scShields').innerHTML = sh.map(function (sf) {
+      return '<div class="card" style="padding:14px">' +
+        '<div class="row"><i class="fas fa-shield" style="color:' + (sf.enabled ? 'var(--ok)' : 'var(--text-3)') + '"></i>' +
+        '<b style="flex:1">' + esc(sf.label) + '</b>' +
+        '<span class="badge ' + (sf.enabled ? 'ok' : 'neutral') + '">' + (sf.enabled ? 'Активно' : 'На паузе') + '</span></div>' +
+        '<div class="muted" style="font-size:12px;margin-top:6px">' + esc(sf.hint || '') + '</div>' +
+        '<div class="row" style="margin-top:10px">' +
+        (CAN_EDIT ? '<button type="button" class="btn btn-sm ' + (sf.enabled ? '' : 'btn-primary') + '" data-sc-toggle="' + esc(sf.key) + '" data-sc-val="' + (!sf.enabled) + '">' +
+          (sf.enabled ? '<i class="fas fa-pause"></i> Приостановить' : '<i class="fas fa-play"></i> Запустить') + '</button>' : '') +
+        '<a class="btn btn-sm" href="' + esc(sf.href) + '"><i class="fas fa-gear"></i> Настроить</a></div>' +
+        '</div>';
+    }).join('') || '<div class="empty" style="grid-column:1/-1"><span>Нет данных</span></div>';
     if (CAN_EDIT) {
       $('scNewPanel').hidden = false;
       $('scDays').value = c.new_account_days;

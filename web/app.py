@@ -36,6 +36,17 @@ static_folder =_os .path .join (_BASE ,'static'))
 # иначе пользователь, дописавший «/», получает 404.
 app .url_map .strict_slashes =False
 
+# Панель за внешним прокси/туннелем (Cloudflare Tunnel для личного домена):
+# WEB_BEHIND_PROXY=1 → честные https:// и хост из X-Forwarded-*, иначе
+# редиректы/куки собираются как http://localhost и фронт ломается.
+if (_os .environ .get ('WEB_BEHIND_PROXY','')or '').strip ().lower ()in ('1','true','yes','on'):
+    try :
+        from werkzeug .middleware .proxy_fix import ProxyFix 
+        app .wsgi_app =ProxyFix (app .wsgi_app ,x_proto =1 ,x_host =1 ,x_for =1 )
+        print ('[ВЕБ] WEB_BEHIND_PROXY=1 — режим внешнего домена включён (ProxyFix)')
+    except Exception as _pfe :
+        print (f'[ВЕБ] ProxyFix не применён: {_pfe}')
+
 # Производительность: atomic yazma, TTL cache, toplu (batch) log flusher
 from web import _store # noqa: E402
 import atexit # noqa: E402

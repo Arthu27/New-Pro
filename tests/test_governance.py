@@ -400,8 +400,10 @@ check('economy_cog.py' not in en and 'economy_cog.py' in dis,
 check('moderation.py' in en and 'music_cog.py' in en and 'ticket.py' in en
       and 'afk.py' in en and 'ai_chat.py' in en,
       'lean по умолчанию: модерация/музыка/тикеты/AFK/AI живы')
-check('tag_jail.py' in dis and 'security.py' in dis and 'sla_cog.py' in dis,
-      'lean по умолчанию: jail/security/SLA спят (чистка лишних команд)')
+check('tag_jail.py' in dis and 'sla_cog.py' in dis,
+      'lean по умолчанию: jail/SLA спят (чистка лишних команд)')
+check('security.py' in en and 'anti_alt.py' in en and 'impersonation.py' in en,
+      'lean по умолчанию: ЩИТ жив — security/anti-alt/impersonation защищают с завода')
 
 print('== 11. Все загружаемые коги импортируются с setup ==')
 import importlib  # noqa: E402
