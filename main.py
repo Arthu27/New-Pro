@@ -304,10 +304,6 @@ def _start_tunnel_sidecar():
         _nt.remember_url(root, pub)
     # Портативные копии конфига/ключа в scripts/ — для заливки на VDS.
     _nt.export_portable(root, cfg)
-    if _tunnel_service_running_windows():
-        print('[ТУННЕЛЬ] Уже крутится службой Windows — панель доступна: '
-              + (pub or 'ваш домен'))
-        return
     scripts_dir = os.path.join(root, 'scripts')
     exe = next((c for c in (os.path.join(scripts_dir, 'cloudflared.exe'),
                             os.path.join(scripts_dir, 'cloudflared'))
@@ -317,14 +313,21 @@ def _start_tunnel_sidecar():
         # настраивать руками ничего не нужно.
         print('[ТУННЕЛЬ] cloudflared не найден — скачиваю автоматически...')
         exe = _nt.ensure_binary(scripts_dir)
+    if exe:
+        # Ключ туннеля мог остаться на старом ПК — поднимем портативную копию
+        # из scripts/ или пересоздадим туннель прямо здесь (cert.pem уже есть).
+        # Чиним ДО проверки службы: «служба крутится, но туннель мёртв»
+        # после переезда — штатный случай VDS.
+        if _nt.ensure_credentials(root, scripts_dir, exe):
+            print('[ТУННЕЛЬ] Ключ туннеля восстановлен на этой машине (переезд).')
+    if _tunnel_service_running_windows():
+        print('[ТУННЕЛЬ] Уже крутится службой Windows — панель доступна: '
+              + (pub or 'ваш домен'))
+        return
     if not exe:
         print('[ТУННЕЛЬ] Не удалось скачать cloudflared (интернет?) — '
               'туннель пропущен, панель остаётся локальной.')
         return
-    # Ключ туннеля мог остаться на старом ПК — поднимем портативную копию
-    # из scripts/ или пересоздадим туннель прямо здесь (cert.pem уже есть).
-    if _nt.ensure_credentials(root, scripts_dir, exe):
-        print('[ТУННЕЛЬ] Ключ туннеля восстановлен на этой машине (переезд).')
     # Конфиг мог переехать с другого ПК (credentials-путь там старый) —
     # подменяем его на наш credentials-файл из scripts/.
     run_cfg = _nt.runtime_config(root, cfg)

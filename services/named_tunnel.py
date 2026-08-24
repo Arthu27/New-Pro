@@ -233,6 +233,8 @@ def ensure_credentials(root, scripts_dir, exe):
     if os.path.isfile(creds):
         return None  # ключ на месте — ничего не сломано
 
+    healed = None
+
     # 1) Портативные копии рядом с ботом (залиты на VDS вместе с папкой)
     for cand in (os.path.join(scripts_dir, tid + '.json'),
                  os.path.join(scripts_dir, 'tunnel-creds.json')):
@@ -242,40 +244,68 @@ def ensure_credentials(root, scripts_dir, exe):
                 _sh.copy2(cand, creds)
                 _log.info('named_tunnel: ключ туннеля поднят из scripts/ (%s)',
                           os.path.basename(cand))
-                return (tid, creds)
+                healed = (tid, creds)
+                break
             except Exception as _ex:
                 _log.debug('named_tunnel.ensure_credentials(): копия подавлена: %s', _ex)
 
     # 2) Полная пересборка на новой машине — достаточно cert.pem от логина
-    if not os.path.isfile(os.path.join(home, 'cert.pem')):
-        return None  # нечем чинить — ошибку покажет сам cloudflared
+    if healed is None:
+        if not os.path.isfile(os.path.join(home, 'cert.pem')):
+            return None  # нечем чинить — ошибку покажет сам cloudflared
+        _log.info('named_tunnel: ключа нет — пересоздаю туннель %s на этой машине',
+                  TUNNEL_NAME)
+        _run_cmd([exe, 'tunnel', 'delete', '-f', tid], timeout=180)
+        res = _run_cmd([exe, 'tunnel', 'create', TUNNEL_NAME], timeout=180)
+        out = ((res.stdout or '') + '\n' + (res.stderr or '')) if res else ''
+        m2 = re.search(r'([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})', out)
+        new_tid = m2.group(1) if m2 else None
+        new_creds = os.path.join(home, new_tid + '.json') if new_tid else None
+        if not new_tid or not os.path.isfile(new_creds):
+            _log.warning('named_tunnel: пересоздание не удалось — нет ключа после create')
+            return None
+        hosts = [h.strip('\'"') for h in
+                 re.findall(r'(?m)^\s*-\s*hostname:\s*(\S+)\s*$', text)]
+        for host in hosts:
+            if host:
+                _run_cmd([exe, 'tunnel', 'route', 'dns', '--overwrite-dns', new_tid, host],
+                         timeout=180)
+        for p in paths:
+            _rewrite_config(p, new_tid, new_creds)
+        # Свежий ключ сразу в портативные копии — следующий переезд уже с ключом.
+        try:
+            _sh.copy2(new_creds, os.path.join(scripts_dir, 'tunnel-creds.json'))
+        except Exception as _ex:
+            _log.debug('named_tunnel.ensure_credentials(): экспорт ключа подавлен: %s', _ex)
+        _log.info('named_tunnel: туннель пересоздан, домены перепривязаны (%s шт.)', len(hosts))
+        healed = (new_tid, new_creds)
 
-    _log.info('named_tunnel: ключа нет — пересоздаю туннель %s на этой машине',
-              TUNNEL_NAME)
-    _run_cmd([exe, 'tunnel', 'delete', '-f', tid], timeout=180)
-    res = _run_cmd([exe, 'tunnel', 'create', TUNNEL_NAME], timeout=180)
-    out = ((res.stdout or '') + '\n' + (res.stderr or '')) if res else ''
-    m2 = re.search(r'([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})', out)
-    new_tid = m2.group(1) if m2 else None
-    new_creds = os.path.join(home, new_tid + '.json') if new_tid else None
-    if not new_tid or not os.path.isfile(new_creds):
-        _log.warning('named_tunnel: пересоздание не удалось — нет ключа после create')
-        return None
-    hosts = [h.strip('\'"') for h in
-             re.findall(r'(?m)^\s*-\s*hostname:\s*(\S+)\s*$', text)]
-    for host in hosts:
-        if host:
-            _run_cmd([exe, 'tunnel', 'route', 'dns', '--overwrite-dns', new_tid, host],
-                     timeout=180)
-    for p in paths:
-        _rewrite_config(p, new_tid, new_creds)
-    # Свежий ключ сразу в портативные копии — следующий переезд уже с ключом.
+    _sync_service_profile(*healed)
+    return healed
+
+
+def _sync_service_profile(tid, creds_path):
+    """Профиль службы Windows (systemprofile): ключ + конфиг тоже живые.
+
+    Службу ставит setup-батник; при пересоздании туннеля её копии протухают —
+    после перезагрузки VDS служба бы упала. Синхронизируем молча.
+    """
+    import shutil as _sh
+
+    if os.name != 'nt':
+        return
     try:
-        _sh.copy2(new_creds, os.path.join(scripts_dir, 'tunnel-creds.json'))
+        sysdir = os.path.join(os.environ.get('SystemRoot', r'C:\Windows'),
+                              'System32', 'config', 'systemprofile', '.cloudflared')
+        if not os.path.isdir(sysdir):
+            return
+        sys_creds = os.path.join(sysdir, tid + '.json')
+        _sh.copy2(creds_path, sys_creds)
+        sys_cfg = os.path.join(sysdir, 'config.yml')
+        if os.path.isfile(sys_cfg):
+            _rewrite_config(sys_cfg, tid, sys_creds)
     except Exception as _ex:
-        _log.debug('named_tunnel.ensure_credentials(): экспорт ключа подавлен: %s', _ex)
-    _log.info('named_tunnel: туннель пересоздан, домены перепривязаны (%s шт.)', len(hosts))
-    return (new_tid, new_creds)
+        _log.debug('named_tunnel._sync_service_profile(): подавлено: %s', _ex)
 
 
 def export_portable(root, cfg_path):
