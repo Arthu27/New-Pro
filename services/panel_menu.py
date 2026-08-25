@@ -203,7 +203,8 @@ MENU = [
         {'path': '/webhooks', 'label': 'Вебхуки', 'icon': 'fa-link'},
         {'path': '/channels', 'label': 'Каналы', 'icon': 'fa-hashtag'},
         {'path': '/announcements', 'label': 'Объявления', 'icon': 'fa-bullhorn'},
-        {'path': '/execute-command', 'label': 'Команда', 'icon': 'fa-bolt'},
+        # «Команда» (/execute-command) убрана из меню (заказ владельца:
+        # дубль «Команд»). Сама страница жива — на неё ведёт профиль участника.
     ]},
     {'group': 'AI', 'key': 'ai', 'icon': 'fa-brain', 'pages': [
         {'path': '/ai-chat', 'label': 'AI Чат', 'icon': 'fa-comments'},

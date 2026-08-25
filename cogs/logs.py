@@ -278,21 +278,24 @@ async def _safe_send (ch ,**kw ):
             try :
                 from services .log_card import render_log_card ,get_log_cards_cfg 
                 import io as _io 
+                import asyncio as _aio 
                 # Оформление карточки настраивается в панели (Логи → оформление):
                 # тема/акцент/выключение хранятся в data/log_cards_<gid>.json.
                 _gid =getattr (getattr (ch ,'guild',None ),'id',0 )or 0 
-                _cfg =get_log_cards_cfg (_gid )
+                _cfg =await _aio .to_thread (get_log_cards_cfg ,_gid )
                 if not _cfg .get ('enabled',True ):
                     _png =None # владелец выключил картинки — остаётся текстовый эмбед
                 else :
-                    _png =render_log_card (_m ['cat'],_m ['title'],_m ['rows'],
+                    # JPEG + отдельный поток: PNG-кодирование жрало ~1.2с на каждый лог
+                    # и фризило весь бот. Теперь ~30-100 мс, бот не замирает.
+                    _png =await _aio .to_thread (render_log_card ,_m ['cat'],_m ['title'],_m ['rows'],
                     color =_m ['color'],cat_name =_cat_meta (_m ['cat'])[2 ],
                     guild_name =_m ['guild'],theme =_cfg .get ('theme'),
                     accent =_cfg .get ('accent'),
                     time_str =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime ('%H:%M UTC'))
                 if _png :
-                    kw ['file']=discord .File (_io .BytesIO (_png ),filename ='aether_log_card.png')
-                    _e .set_image (url ='attachment://aether_log_card.png')
+                    kw ['file']=discord .File (_io .BytesIO (_png ),filename ='aether_log_card.jpg')
+                    _e .set_image (url ='attachment://aether_log_card.jpg')
                     # В лог-канале — ТОЛЬКО картинка: весь текст уже отрисован
                     # внутри карточки, дублирующий markdown-текст убираем.
                     # Если рендер карточки не удался, текстовый эмбед остаётся

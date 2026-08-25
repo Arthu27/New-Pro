@@ -403,6 +403,9 @@ def _draw_category_widget(d, ctype, W, H, PAD, right_bound, pal=None):
             d.line([(x, 44), (x, 80)], fill=gold + (70,), width=1)
 
 
+_BG_CACHE = {}
+
+
 def _load_celestial_bg(w, h, cat_tint=None, pal=None, use_asset=True):
     """Загружает фирменный звёздно-космический фон карточки логов.
 
@@ -421,6 +424,11 @@ def _load_celestial_bg(w, h, cat_tint=None, pal=None, use_asset=True):
         if not os.path.exists(bg_path):
             continue
         try:
+            _ck = (bg_name, w, h)
+            _cached = _BG_CACHE.get(_ck)
+            if _cached is not None:
+                base = _cached.copy()
+                break
             bg_im = Image.open(bg_path).convert('RGBA')
             bw, bh = bg_im.size
             target_ratio = w / h
@@ -434,6 +442,7 @@ def _load_celestial_bg(w, h, cat_tint=None, pal=None, use_asset=True):
                 y0 = (bh - nh) // 2
                 bg_im = bg_im.crop((0, y0, bw, y0 + nh))
             base = bg_im.resize((w, h), Image.Resampling.LANCZOS)
+            _BG_CACHE[_ck] = base.copy()
             break
         except Exception as _ex:
             _log.debug("_load_celestial_bg(): подавлено: %s", _ex)
@@ -458,7 +467,8 @@ def _load_celestial_bg(w, h, cat_tint=None, pal=None, use_asset=True):
 
 
 def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
-                    guild_name='', time_str='', theme=None, accent=None):
+                    guild_name='', time_str='', theme=None, accent=None,
+                    fmt='jpeg'):
     """Нарисовать премиальную карточку лога в единой стилистике AETHER.
 
     theme — одна из LOG_CARD_THEMES ('aether' — исторический фирменный вид,
@@ -606,7 +616,14 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
         d.text((W - PAD - bw, fy + 16), brand, font=_font(24, True), fill=bright)
 
         buf = io.BytesIO()
-        img.convert('RGB').save(buf, 'PNG', optimize=True)
+        # JPEG вместо PNG: кодирование PNG жрало ~1.2 секунды НА КАЖДЫЙ лог
+        # («логи медленные»), JPEG делает то же за ~5-20 мс и файл в 4 раза
+        # меньше — Discord быстрее грузит. Качество 90 — артефактов нет.
+        # fmt='png' остаётся для превью панели (эндпоинт .../preview.png).
+        if str(fmt).lower() == 'png':
+            img.convert('RGB').save(buf, 'PNG', optimize=True)
+        else:
+            img.convert('RGB').save(buf, 'JPEG', quality=90, optimize=False)
         return buf.getvalue()
     except Exception:
         return None

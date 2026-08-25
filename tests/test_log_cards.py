@@ -54,14 +54,14 @@ rows = [('Пользователь', 'GhostBlade · 523456789012345678'),
         ('Причина', 'Повторные провокации после предупреждения в #general')]
 base = LC.render_log_card('mod', 'Выдано предупреждение', rows, color=0xE2455A,
                           cat_name='модерация', guild_name='Aether', time_str='20:41 UTC')
-check(base and base[:8].startswith(b'\x89PNG'), 'базовая карточка рисуется')
+check(base and base[:2] == b'\xff\xd8', 'базовая карточка рисуется (JPEG — мгновенные логи)')
 check(len(base) > 40000, f'карточка не заглушка ({len(base)} байт)')
 
 seen = set()
 for th in LC.LOG_CARD_THEME_ORDER:
     png = LC.render_log_card('member', 'Новый участник', [('Участник', 'Lina')],
                              cat_name='участники', theme=th)
-    check(png and png[:8].startswith(b'\x89PNG'), f'тема «{th}» рендерится')
+    check(png and png[:2] == b'\xff\xd8', f'тема «{th}» рендерится')
     seen.add(png)
 check(len(seen) == len(LC.LOG_CARD_THEME_ORDER), 'темы различаются визуально')
 
@@ -69,7 +69,7 @@ acc = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', theme='aether', a
 acc2 = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', theme='aether', accent='22ff88')
 check(acc != acc2, 'свой акцент меняет карточку')
 junk = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', theme='nope', accent='zzz')
-check(junk and junk[:8].startswith(b'\x89PNG'), 'мусорные тема/цвет → дефолт, без падения')
+check(junk and junk[:2] == b'\xff\xd8', 'мусорные тема/цвет → дефолт, без падения')
 check(LC._ui_color('#22D3EE') == (34, 211, 238) and LC._ui_color('junk') is None,
       '_ui_color: hex → RGB, мусор → None')
 pal = LC._palette('ocean', 'ff8800')

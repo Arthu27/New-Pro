@@ -154,7 +154,7 @@ check(e and 'Пользователь заблокирован' in desc_of(e) an
       and 'Флуд и реклама' in desc_of(e) and 'Причина' in desc_of(e),
       f'бан: модератор + причина в эмбеде')
 check('Aether Log' in getattr(e, '_aether_log_footer', ''), 'футер «Aether Log · …» сохранён (в канале — только картинка)')
-check(e.description is None and e.image and e.image.url == 'attachment://aether_log_card.png',
+check(e.description is None and e.image and e.image.url == 'attachment://aether_log_card.jpg',
       'в канал уходит ТОЛЬКО карточка-картинка (description очищен)')
 
 guild.audit_entries = [FakeAuditEntry(77, mod, None)]
