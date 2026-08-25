@@ -161,6 +161,46 @@ check('/log-cards/preview.png' in tpl, 'предпросмотр подключ�
 check('schedulePreview' in tpl, 'превью обновляется с паузой')
 check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
 
+print('== 6. Имена вместо сырых ID (заказ владельца 2026-08-25) ==')
+from cogs import logs as LOGS  # noqa: E402
+
+
+class _FM:
+    id = 523456789012345678
+    display_name = 'GhostBlade'
+
+    def __str__(self):
+        return 'ghost.blade'
+
+
+class _FG:
+    def get_member(self, mid):
+        return _FM() if mid == _FM.id else None
+
+
+_fg = _FG()
+check(LOGS._card_friendly('GhostBlade (523456789012345678)', _fg) == 'GhostBlade',
+      '«Имя (ID)» -> просто имя')
+check(LOGS._card_friendly('GhostBlade · 523456789012345678', _fg) == 'GhostBlade',
+      '«Имя · ID» -> просто имя')
+check(LOGS._card_friendly(
+    '**GhostBlade** · <@523456789012345678> · `523456789012345678`', _fg)
+    == 'GhostBlade · @GhostBlade',
+    'упоминание резолвится в имя, ID-хвост исчезает')
+check(LOGS._card_friendly('предупреждение 2 из 3', _fg) == 'предупреждение 2 из 3',
+    'короткие числа и обычный текст не трогаем')
+check('\u00b7' not in LOGS._strip_raw_id(
+    '**Имя** · <@523456789012345678> · `523456789012345678`').split(' ')[-1],
+    'эмбед-строка теряет голый ID-хвост')
+src_logs = open(os.path.join(ROOT, 'cogs', 'logs.py'), encoding='utf-8').read()
+check('_card_friendly(n, guild), _card_friendly(v, guild)' in src_logs,
+      'все строки карточек проходят чистильщик (в центре рендера)')
+from web.routes import log_cards_panel as LCP  # noqa: E402
+check(not any(re.search(r'\d{15,25}', v) for _n, v in LCP.PREVIEW_ROWS),
+      'демо-карточка в панели: имена без ID (заказ «сначала демо-версию»)')
+check('GhostBlade' in dict(LCP.PREVIEW_ROWS)['Пользователь'],
+      'демо-пример: пользователь показан именем')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

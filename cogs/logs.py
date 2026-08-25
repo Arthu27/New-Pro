@@ -1,13 +1,14 @@
-import discord 
-from discord .ext import commands 
-from discord import app_commands 
-import datetime 
-import json 
-import os 
-import time 
-import threading 
-import queue 
-from typing import Dict ,Any 
+import discord
+from discord.ext import commands
+from discord import app_commands
+import datetime
+import json
+import os
+import re
+import time
+import threading
+import queue
+from typing import Dict, Any 
 
 from logger import get_logger 
 log =get_logger ("logs")
@@ -496,6 +497,78 @@ class _LogEmbed(discord.Embed):
     pass
 
 
+# Заказ владельца 2026-08-25: в логах — ИМЕНА, а не сырые ID.
+_RE_MENTION = re.compile(r'<@!?(\d{15,25})>')
+_RE_ROLE_MENTION = re.compile(r'<@&(\d{15,25})>')
+_RE_CHANNEL_MENTION = re.compile(r'<#(\d{15,25})>')
+_RE_ID_PARENS = re.compile(r'\s*\((\d{15,25})\)')
+_RE_ID_TAIL = re.compile(r'\s*[·\-]?\s*`?(\d{15,25})`?\s*$')
+
+
+def _card_friendly(text, guild):
+    """Строка для карточки лога: имена вместо ID, без markdown-мусора.
+
+    Упоминания резолвятся в имена через состав сервера; голые длинные
+    ID (и «Имя (ID)», и «Имя · ID») убираются — остаётся человекочитаемое.
+    """
+    try:
+        s = str(text if text is not None else '')
+
+        def _mem(m):
+            mid = int(m.group(1))
+            name = None
+            if guild is not None:
+                mem = guild.get_member(mid)
+                if mem is not None:
+                    name = getattr(mem, 'display_name', None) or str(mem)
+            return '@' + (name or 'участник')
+
+        def _role(m):
+            rid = int(m.group(1))
+            name = None
+            if guild is not None:
+                role = guild.get_role(rid)
+                if role is not None:
+                    name = getattr(role, 'name', None)
+            return '@' + (name or 'роль')
+
+        def _chan(m):
+            cid = int(m.group(1))
+            name = None
+            if guild is not None:
+                ch = guild.get_channel(cid)
+                if ch is not None:
+                    name = getattr(ch, 'name', None)
+            return '#' + (name or 'канал')
+
+        s = _RE_MENTION.sub(_mem, s)
+        s = _RE_ROLE_MENTION.sub(_role, s)
+        s = _RE_CHANNEL_MENTION.sub(_chan, s)
+        s = s.replace('**', '').replace('`', '')
+        s = _RE_ID_PARENS.sub('', s)       # «Имя (123…)» -> «Имя»
+        s = _RE_ID_TAIL.sub('', s)         # «Имя · 123…» -> «Имя»
+        s = re.sub(r'\s·\s·\s', ' · ', s)
+        s = s.strip(' ·-')
+        return s or '—'
+    except Exception:
+        return str(text)
+
+
+def _strip_raw_id(text):
+    """Убрать голый ID из строки эмбеда (markdown и упоминания остаются).
+
+    «**Имя** · @упоминание · `123456789012345678`» -> «**Имя** · @упоминание»:
+    в Discord упоминание само рендерится именем, цифровой хвост не нужен.
+    """
+    try:
+        s = str(text)
+        s = _RE_ID_TAIL.sub('', s)
+        s = re.sub(r'\s*[·\-]?\s*`(\d{15,25})`', '', s)
+        return s.strip(' ·-') or str(text)
+    except Exception:
+        return text
+
+
 def _styled_log_embed(guild, category, title, fields=(), color=None,
                       thumbnail=None, image=None, note=None, card_rows=None):
     """Единый стиль лог-эмбеда: заголовок с иконкой категории, строки
@@ -511,6 +584,9 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     for name, value in fields:
         if value in (None, ''):
             continue
+        # В тексте эмбеда голые ID тоже не показываем — заказ владельца:
+        # имена вместо цифр (упоминание Discord само рендерится именем).
+        value = _strip_raw_id(value)
         desc += f"**{name}** — {value}\n"
     if note:
         desc += f"\n{note}"
@@ -534,6 +610,10 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     # текст эмбеда скрывается (_safe_send), поэтому информацию не теряем.
     _rows = [(n, v) for n, v in (card_rows if card_rows is not None else fields)
              if v not in (None, '')]
+    # Карточка — картинка: markdown и сырые ID на ней не рисуем,
+    # упоминания превращаем в имена (заказ: «вместо id — имя»).
+    _rows = [(_card_friendly(n, guild), _card_friendly(v, guild))
+             for n, v in _rows]
     if note and len(_rows) < 8:
         _rows.append(('Инфо', note))
     e._aether_log_meta = {
