@@ -122,9 +122,14 @@ client = appmod.app.test_client()
 r = client.post('/login', data={'username': 'owner', 'password': 'test123'})
 ok('вход владельцем', r.status_code in (200, 302))
 
-r = client.get('/staff-limits')
-ok('страница /staff-limits открывается', r.status_code == 200
-   and 'Лимиты команды' in r.get_data(as_text=True))
+r = client.get('/staff-limits', follow_redirects=False)
+ok('старый адрес /staff-limits ведёт в Щит (редирект)', r.status_code == 302
+   and '/guardian' in r.headers.get('Location', ''))
+r = client.get('/guardian')
+gpage = r.get_data(as_text=True)
+ok('Щит открывается и содержит секцию «Лимиты команды»',
+   r.status_code == 200 and 'Лимиты команды' in gpage
+   and 'gdLimRoles' in gpage and 'gdLimGlobal' in gpage)
 r = client.get('/log-settings')
 ok('страница /log-settings открывается', r.status_code == 200
    and 'Логи сервера' in r.get_data(as_text=True))
@@ -159,17 +164,67 @@ r = client.post('/api/guild/777/staff-limits/role/delete',
 ok('DELETE лимита роли', r.get_json()['success']
    and '999' not in SL.get_role_limits(777))
 
-tpl = open(os.path.join(ROOT, 'web/templates/staff_limits.html'),
+print('== 2.5 Журнал изменений лимитов (кто/когда/что + откат) ==')
+r = client.post('/api/guild/777/staff-limits/role',
+                json={'role_id': '999', 'limits': {'mute': 5},
+                      'windows': {'mute': {'n': 12, 'unit': 'h'}}})
+r = client.post('/api/guild/777/staff-limits/role',
+                json={'role_id': '999', 'limits': {'mute': 2},
+                      'windows': {'mute': {'n': 1, 'unit': 'h'}}})
+ok('правка роли: новое значение действует',
+   (SL.get_role_overrides(777).get('999') or {}).get('limits', {}).get('mute') == 2)
+r = client.post('/api/guild/777/staff-limits/role',
+                json={'role_id': '999', 'clear': ['mute']})
+ok('стёртое поле снимает переопределение роли (clear)', r.get_json()['success']
+   and 'mute' not in (SL.get_role_overrides(777).get('999') or {}).get('limits', {}))
+r = client.get('/api/guild/777/staff-limits/changes')
+d = r.get_json()
+ok('журнал отдаёт записи с автором и временем', d['success']
+   and len(d['changes']) > 0 and all(e.get('ts') and e.get('who') == 'owner'
+                                     for e in d['changes'][:3]))
+mute_chg = next((e for e in d['changes'] if e['scope'] == 'role'
+                 and e.get('role_id') == '999'
+                 and any(c['key'] == 'mute' and c['field'] == 'limit' and c['new'] == 2
+                         for c in e['changes'])), None)
+ok('в журнале видна правка роли (кто/что/было→стало)', mute_chg is not None
+   and mute_chg['changes'][0]['old'] == 5)
+r = client.post('/api/guild/777/staff-limits/changes/revert',
+                json={'id': mute_chg['id']})
+ok('кнопка «Вернуть» откатывает правку роли к старому',
+   r.get_json()['success']
+   and (SL.get_role_overrides(777).get('999') or {}).get('limits', {}).get('mute') == 5)
+r = client.post('/api/guild/777/staff-limits/changes/revert',
+                json={'id': 'c9999999'})
+ok('несуществующая запись отката → 404', r.status_code == 404)
+SL.clear_role_limits(777, '999')   # чистим роль для следующей проверки
+ban_chg = next(e for e in SL.get_changes(777) if e['scope'] == 'global'
+               and any(c['key'] == 'ban' and c['field'] == 'limit' for c in e['changes']))
+r = client.post('/api/guild/777/staff-limits/changes/revert',
+                json={'id': ban_chg['id']})
+ok('откат глобального лимита возвращает старое значение', r.get_json()['success']
+   and SL.get_limits(777)['ban'] == 8)
+win_chg = next(e for e in SL.get_changes(777) if e['scope'] == 'global'
+               and any(c['key'] == 'ban' and c['field'] == 'window'
+                       for c in e['changes']))
+r = client.post('/api/guild/777/staff-limits/changes/revert',
+                json={'id': win_chg['id']})
+ok('откат глобального периода возвращает 1 дн', r.get_json()['success']
+   and SL.get_windows(777)['ban'] == 86400)
+
+tpl = open(os.path.join(ROOT, 'web/templates/guardian.html'),
            encoding='utf-8').read()
-ok('шаблон: выбор ролей + live 1.5с + мгновенное применение',
-   'slRoleList' in tpl and 'setLiveRefresh' in tpl
+ok('Щит: секция лимитов с выбором роли + live 1.5с',
+   'gdLimRoles' in tpl and 'setLiveRefresh' in tpl
    and 'действует сразу' in tpl)
-ok('шаблон: поля строятся из групп API (не захардкожены)',
-   'slGlobalBox' in tpl and 'action_meta' in tpl
+ok('Щит: поля лимитов строятся из групп API (не захардкожены)',
+   'gdLimGlobal' in tpl and 'action_meta' in tpl
    and "'warn', 'mute', 'kick'" not in tpl)
-ok('шаблон: периоды «за N час/дн» у каждого поля',
-   'slGW' in tpl and 'slGU' in tpl and 'slRW' in tpl and 'slRU' in tpl
+ok('Щит: периоды «за N час/дн» у каждого поля лимитов',
+   'gdLimGW' in tpl and 'gdLimGU' in tpl and 'gdLimRW' in tpl and 'gdLimRU' in tpl
    and '>час</option>' in tpl and '>дн</option>' in tpl)
+ok('Щит: видно изменения роли («сейчас действует» + журнал с откатом)',
+   'Сейчас действует' in tpl and 'gdLimChanges' in tpl
+   and 'changes/revert' in tpl and 'Вернуть' in tpl)
 mod_src = open(os.path.join(ROOT, 'cogs/moderation.py'), encoding='utf-8').read()
 ok('модерация гейтит ВСЕ действия и передаёт роли',
    "'vmute':'mute'" in mod_src and 'role_ids =_sl_roles' in mod_src)
@@ -245,7 +300,7 @@ ok('бот пишет в канал, выбранный в панели (при�
    '_configured_log_channel' in logs_src and 'target_channel_id' in logs_src)
 ok('live без «перезагрузки»: снимок сравнивается, DOM зря не трогаем',
    'raw === _lastRaw' in ls_tpl
-   and 'raw === _lastRaw' in open(os.path.join(ROOT, 'web/templates/staff_limits.html'),
+   and 'raw === _lastRaw' in open(os.path.join(ROOT, 'web/templates/guardian.html'),
                                  encoding='utf-8').read())
 
 print('== 3.6 Команды: модалка без блюра + доказательство из панели ==')
@@ -304,14 +359,16 @@ ok('API Щита отдаёт роли сервера для пикера',
 print('== 4. Меню ==')
 from services import panel_menu as PM  # noqa: E402
 paths = {p['path'] for g in PM.MENU for p in g.get('pages', [])}
-ok('«Лимиты команды» в меню (Модерация·Защита)', '/staff-limits' in paths)
+ok('отдельной страницы лимитов больше нет (вошла в Щит)',
+   '/staff-limits' not in paths)
 ok('«Логи сервера» в меню (Настройки)', '/log-settings' in paths)
 mod_pages = [p for g in PM.MENU if g.get('key') == 'mod'
              for p in g.get('pages', [])]
-sl_page = next((p for p in mod_pages if p['path'] == '/staff-limits'), None)
-ok('страница лимитов — admin+ в разделе «Защита»',
-   sl_page and sl_page.get('min_role') == 'admin'
-   and sl_page.get('section') == 'protection')
+gd_menu = next((p for p in mod_pages if p['path'] == '/guardian'), None)
+ok('Щит сервера — admin+, внутри упомянуты лимиты команды',
+   gd_menu and gd_menu.get('min_role') == 'admin'
+   and gd_menu.get('section') == 'protection'
+   and 'лимиты' in gd_menu.get('description', ''))
 
 print('== 5. Защиты по-прежнему выключены (opt-in) ==')
 fresh_cfgs = {

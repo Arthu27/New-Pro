@@ -38,8 +38,8 @@ from services import panel_menu as pm  # noqa: E402
 
 raw_group = next(group for group in pm.MENU if group['key'] == 'mod')
 raw_pages = raw_group['pages']
-check(len(raw_pages) == 22, f'в разделе модерации ровно 22 инструмента ({len(raw_pages)})')
-check(len({page['path'] for page in raw_pages}) == 22, 'URL всех инструментов уникальны')
+check(len(raw_pages) == 21, f'в разделе модерации ровно 21 инструмент ({len(raw_pages)})')
+check(len({page['path'] for page in raw_pages}) == 21, 'URL всех инструментов уникальны')
 required = {'path', 'label', 'icon', 'section', 'description', 'access', 'tone'}
 missing = [(page.get('path'), sorted(required - set(page))) for page in raw_pages
            if not required <= set(page)]
@@ -70,7 +70,7 @@ check(not hasattr(pm, 'moderation_profile_for'),
 
 admin_group = next(group for group in pm.panel_groups_for('admin') if group['key'] == 'mod')
 section_counts = [len(section['pages']) for section in admin_group['sections']]
-check(section_counts == [7, 4, 6, 5], f'workflow разбит 7/4/6/5 — защита выросла ({section_counts})')
+check(section_counts == [7, 4, 5, 5], f'workflow разбит 7/4/5/5 — защита выросла ({section_counts})')
 check([section['key'] for section in admin_group['sections']] ==
       ['response', 'investigation', 'protection', 'management'],
       'подгруппы сайдбара следуют рабочему сценарию')
@@ -84,7 +84,7 @@ check(not (mod_paths & admin_only), 'админские операции скр�
 check(admin_only <= {page['path'] for page in admin_group['pages']},
       'администратор видит все рискованные операции')
 owner_group = next(group for group in pm.panel_groups_for('owner') if group['key'] == 'mod')
-check(len(owner_group['pages']) == 22, 'owner видит полный набор из 22 инструментов')
+check(len(owner_group['pages']) == 21, 'owner видит полный набор из 21 инструмента')
 
 print('== 3. Общий каркас: светлый shell + единый кит ==')
 base_path = os.path.join(ROOT, 'web', 'templates', 'base.html')
@@ -138,7 +138,6 @@ room_templates = {
     '/mod-history': 'modhistory', '/proofs': 'proofs', '/appeals': 'appeals',
     '/security': 'security', '/autofilter': 'autofilter',
     '/antiraid': 'antiraid', '/guardian': 'guardian', '/antifake': 'antifake',
-    '/staff-limits': 'staff_limits',
     '/mod-control': 'mod_control', '/mod-report': 'mod_report',
     '/mod-insights': 'mod_insights', '/ladder': 'ladder',
     '/staff-apps': 'staff_apps',

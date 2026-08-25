@@ -81,14 +81,11 @@ MENU = [
          'section': 'protection', 'description': 'Защита от массовых входов и атак',
          'access': 'Админ', 'min_role': 'admin', 'tone': 'security'},
         {'path': '/guardian', 'label': 'Щит сервера', 'icon': 'fa-shield-heart',
-         'section': 'protection', 'description': 'Анти-нюк: каналы, роли, права, боты — останавливает уничтожение',
+         'section': 'protection', 'description': 'Анти-нюк + лимиты команды: каналы, роли, права, боты, периоды',
          'access': 'Админ', 'min_role': 'admin', 'tone': 'critical'},
         {'path': '/antifake', 'label': 'Антифейк', 'icon': 'fa-user-secret',
          'section': 'protection', 'description': 'Поиск подделок профилей и impersonation',
          'access': 'Мод+', 'tone': 'security'},
-        {'path': '/staff-limits', 'label': 'Лимиты команды', 'icon': 'fa-hand',
-         'section': 'protection', 'description': 'Дневные лимиты действий модерации — глобальные и по ролям',
-         'access': 'Админ', 'min_role': 'admin', 'tone': 'security'},
 
         # Команда и аналитика: качество, нагрузка и эскалация.
         {'path': '/mod-control', 'label': 'Контроль команды', 'icon': 'fa-clipboard-check',

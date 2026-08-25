@@ -8,7 +8,7 @@
 каким разрешено СОЗДАВАТЬ канал самим (по умолчанию — никаким).
 """
 from web.routes._common import (
-    _log, render_template, session, request, jsonify,
+    _log, render_template, session, request, jsonify, redirect,
 )
 
 
@@ -73,6 +73,14 @@ def _guild_channels(bot, guild_id):
     return channels
 
 
+def _role_name(bot, guild_id, role_id):
+    """Имя роли для журнала изменений (бот офлайн — из демо-набора)."""
+    for r in _guild_roles(bot, guild_id):
+        if r['id'] == str(role_id):
+            return r['name']
+    return None
+
+
 def _win_to_api(sec, default=None):
     """Секунды → {n, unit} для панели (unit: 'h' | 'd')."""
     sec = int(sec or 0) or (default or 86400)
@@ -104,9 +112,8 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def staff_limits_page():
-        return render_template('staff_limits.html',
-                               role=session.get('role'),
-                               username=session.get('username'))
+        # Лимиты команды живут СЕКЦИЕЙ внутри Щита сервера (заказ владельца)
+        return redirect('/guardian#limits')
 
     @app.route('/log-settings')
     @login_required
@@ -156,9 +163,9 @@ def register(ctx):
         if not clean and not wins:
             return jsonify({'success': False, 'error': 'Пустые лимиты'}), 400
         if clean:
-            SL.set_limits(guild_id, **clean)
+            SL.set_limits(guild_id, who=session.get('username', '?'), **clean)
         if wins:
-            SL.set_windows(guild_id, **wins)
+            SL.set_windows(guild_id, who=session.get('username', '?'), **wins)
         return jsonify({'success': True, 'defaults': SL.get_limits(guild_id),
                         'windows': {k: _win_to_api(v)
                                     for k, v in SL.get_windows(guild_id).items()}})
@@ -171,7 +178,8 @@ def register(ctx):
         role_id = str(data.get('role_id') or '').strip()
         limits = data.get('limits')
         if not role_id or (not isinstance(limits, dict)
-                           and not isinstance(data.get('windows'), dict)):
+                           and not isinstance(data.get('windows'), dict)
+                           and not isinstance(data.get('clear'), list)):
             return jsonify({'success': False, 'error': 'Неверный формат'}), 400
         clean = {k: int(v) for k, v in (limits or {}).items()
                  if k in SL.DEFAULT_LIMITS and isinstance(v, int) and v > 0}
@@ -179,9 +187,20 @@ def register(ctx):
         for k, w in (data.get('windows') or {}).items():
             if k in SL.DEFAULT_LIMITS and isinstance(w, dict):
                 wins[k] = _win_to_sec(w)
-        saved = SL.set_role_limits(guild_id, role_id, **clean)
+        who = session.get('username', '?')
+        rname = _role_name(_app.bot_instance, guild_id, role_id)
+        # ключи, которые стёрли в панели: их переопределения снимаем точечно
+        clear = [str(k) for k in (data.get('clear') or [])
+                 if k in SL.DEFAULT_LIMITS]
+        if clear:
+            SL.unset_role_keys(guild_id, role_id,
+                               limit_keys=clear, window_keys=clear,
+                               who=who, role_name=rname)
+        saved = SL.set_role_limits(guild_id, role_id, who=who,
+                                   role_name=rname, **clean)
         if wins:
-            SL.set_role_windows(guild_id, role_id, **wins)
+            SL.set_role_windows(guild_id, role_id, who=who,
+                                role_name=rname, **wins)
         return jsonify({'success': True, 'limits': saved,
                         'windows': {k: _win_to_api(v) for k, v in wins.items()}})
 
@@ -193,8 +212,37 @@ def register(ctx):
         role_id = str(data.get('role_id') or '').strip()
         if not role_id:
             return jsonify({'success': False, 'error': 'Не указана роль'}), 400
-        SL.clear_role_limits(guild_id, role_id)
+        SL.clear_role_limits(guild_id, role_id,
+                             who=session.get('username', '?'),
+                             role_name=_role_name(_app.bot_instance,
+                                                  guild_id, role_id))
         return jsonify({'success': True})
+
+    # ── API: журнал изменений лимитов («кто/когда/что» + откат) ────────
+    @app.route('/api/guild/<guild_id>/staff-limits/changes')
+    @login_required
+    @role_required('admin')
+    def api_staff_limits_changes(guild_id):
+        return jsonify({'success': True,
+                        'changes': SL.get_changes(guild_id, 60)})
+
+    @app.route('/api/guild/<guild_id>/staff-limits/changes/revert',
+               methods=['POST'])
+    @login_required
+    @role_required('owner')
+    def api_staff_limits_revert(guild_id):
+        data = request.get_json(silent=True) or {}
+        cid = str(data.get('id') or '').strip()
+        if not cid:
+            return jsonify({'success': False,
+                            'error': 'Не указано изменение'}), 400
+        done, entry = SL.revert_change(guild_id, cid,
+                                       who=session.get('username', '?'))
+        if not done:
+            return jsonify({'success': False,
+                            'error': 'Изменение не найдено'}), 404
+        return jsonify({'success': True, 'entry': entry,
+                        'changes': SL.get_changes(guild_id, 60)})
 
     # ── API: настройки логов ───────────────────────────────────────────
     @app.route('/api/guild/<guild_id>/log-settings')

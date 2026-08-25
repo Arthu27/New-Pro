@@ -19,6 +19,7 @@ API:
     get_limits / set_limits(**kw)          — числа лимитов
     get_windows / set_windows(**kw)        — окна в секундах (3600..31 день)
     human_window(sec)                      — «2 ч» / «7 дн.» для сообщений
+    get_changes / revert_change            — журнал «кто/когда/что» и откат
 
 Ключи лимитов — ВСЕ действия стаффа, которыми можно «обнаглеть»:
 наказания + опасные операции (12 действий).
@@ -206,16 +207,49 @@ def _write_cfg(guild_id, limits_patch=None, windows_patch=None):
     return saved
 
 
-def set_limits(guild_id, **kw):
-    """Обновить лимиты гильдии (например set_limits(gid, ban=5))."""
+def set_limits(guild_id, who=None, **kw):
+    """Обновить лимиты гильдии (например set_limits(gid, ban=5)).
+
+    who — кто менял (для журнала изменений).
+    """
+    cur = get_limits(guild_id)
+    diffs = [{'key': k, 'field': 'limit', 'old': cur.get(k), 'new': int(v)}
+             for k, v in kw.items()
+             if k in DEFAULT_LIMITS and isinstance(v, int) and v > 0
+             and cur.get(k) != int(v)]
     _write_cfg(guild_id, limits_patch=kw)
+    _journal(guild_id, 'global', None, None, diffs, who)
     return get_limits(guild_id)
 
 
-def set_windows(guild_id, **kw):
+def set_windows(guild_id, who=None, **kw):
     """Обновить окна гильдии в СЕКУНДАХ (например set_windows(gid, ban=3600))."""
+    cur = get_windows(guild_id)
+    diffs = [{'key': k, 'field': 'window', 'old': cur.get(k), 'new': int(v)}
+             for k, v in kw.items()
+             if k in DEFAULT_LIMITS and isinstance(v, int) and v > 0
+             and cur.get(k) != int(v)]
     _write_cfg(guild_id, windows_patch=kw)
+    _journal(guild_id, 'global', None, None, diffs, who)
     return get_windows(guild_id)
+
+
+def _unset_cfg(guild_id, limit_keys=(), window_keys=()):
+    """Убрать глобальные переопределения выбранных ключей (вернутся дефолты)."""
+    saved = _load_json(_cfg_path(guild_id), {})
+    if not isinstance(saved.get('limits'), dict):
+        legacy = _clean_limits(saved)
+        saved = {'limits': legacy}
+    lims = saved.setdefault('limits', {})
+    for k in limit_keys or ():
+        lims.pop(k, None)
+    if window_keys:
+        wins = saved.setdefault('windows', {})
+        for k in window_keys:
+            wins.pop(k, None)
+        if not wins:
+            saved.pop('windows', None)
+    _save_json(_cfg_path(guild_id), saved)
 
 
 # ─── Счётчики (метки времени) ───────────────────────────────────────────
@@ -356,8 +390,14 @@ def get_role_limits(guild_id):
             if o['limits']}
 
 
-def set_role_limits(guild_id, role_id, **kw):
+def set_role_limits(guild_id, role_id, who=None, role_name=None, **kw):
     """Задать лимиты роли (окна роли не трогаем). Возвращает её лимиты."""
+    cur = get_role_overrides(guild_id).get(str(role_id)) or {}
+    cur_lims = cur.get('limits') or {}
+    diffs = [{'key': k, 'field': 'limit', 'old': cur_lims.get(k), 'new': int(v)}
+             for k, v in kw.items()
+             if k in DEFAULT_LIMITS and isinstance(v, int) and v > 0
+             and cur_lims.get(k) != int(v)]
     saved = _load_json(_roles_path(guild_id), {})
     cur = saved.get(str(role_id))
     if not isinstance(cur, dict) or not isinstance(cur.get('limits'), dict):
@@ -365,11 +405,18 @@ def set_role_limits(guild_id, role_id, **kw):
     cur['limits'].update(_clean_limits(kw))
     saved[str(role_id)] = cur
     _save_json(_roles_path(guild_id), saved)
+    _journal(guild_id, 'role', str(role_id), role_name, diffs, who)
     return cur.get('limits') or {}
 
 
-def set_role_windows(guild_id, role_id, **kw):
+def set_role_windows(guild_id, role_id, who=None, role_name=None, **kw):
     """Задать окна роли в СЕКУНДАХ. Возвращает её окна."""
+    cur = get_role_overrides(guild_id).get(str(role_id)) or {}
+    cur_wins = cur.get('windows') or {}
+    diffs = [{'key': k, 'field': 'window', 'old': cur_wins.get(k), 'new': int(v)}
+             for k, v in kw.items()
+             if k in DEFAULT_LIMITS and isinstance(v, int) and v > 0
+             and cur_wins.get(k) != int(v)]
     saved = _load_json(_roles_path(guild_id), {})
     cur = saved.get(str(role_id))
     if not isinstance(cur, dict) or not isinstance(cur.get('limits'), dict):
@@ -378,17 +425,141 @@ def set_role_windows(guild_id, role_id, **kw):
     cur['windows'].update(_clean_windows(kw))
     saved[str(role_id)] = cur
     _save_json(_roles_path(guild_id), saved)
+    _journal(guild_id, 'role', str(role_id), role_name, diffs, who)
     return cur.get('windows') or {}
 
 
-def clear_role_limits(guild_id, role_id):
+def unset_role_keys(guild_id, role_id, limit_keys=(), window_keys=(),
+                   who=None, role_name=None):
+    """Убрать отдельные переопределения роли (пустую роль выкидываем)."""
+    before = get_role_overrides(guild_id).get(str(role_id)) or {}
+    diffs = [{'key': k, 'field': 'limit', 'old': v, 'new': None}
+             for k, v in (before.get('limits') or {}).items()
+             if k in (limit_keys or ())]
+    diffs += [{'key': k, 'field': 'window', 'old': v, 'new': None}
+              for k, v in (before.get('windows') or {}).items()
+              if k in (window_keys or ())]
+    saved = _load_json(_roles_path(guild_id), {})
+    cur = saved.get(str(role_id))
+    if not isinstance(cur, dict):
+        _journal(guild_id, 'role', str(role_id), role_name, diffs, who)
+        return False
+    lims = cur.get('limits') if isinstance(cur.get('limits'), dict) else {}
+    wins = cur.get('windows') if isinstance(cur.get('windows'), dict) else {}
+    for k in limit_keys or ():
+        lims.pop(k, None)
+    for k in window_keys or ():
+        wins.pop(k, None)
+    if lims or wins:
+        cur['limits'], cur['windows'] = lims, wins
+        saved[str(role_id)] = cur
+    else:
+        saved.pop(str(role_id), None)
+    _save_json(_roles_path(guild_id), saved)
+    _journal(guild_id, 'role', str(role_id), role_name, diffs, who)
+    return True
+
+
+def clear_role_limits(guild_id, role_id, who=None, role_name=None):
     """Убрать переопределение роли — она живёт по глобальным лимитам."""
+    before = get_role_overrides(guild_id).get(str(role_id)) or {}
+    diffs = [{'key': k, 'field': 'limit', 'old': v, 'new': None}
+             for k, v in (before.get('limits') or {}).items()]
+    diffs += [{'key': k, 'field': 'window', 'old': v, 'new': None}
+              for k, v in (before.get('windows') or {}).items()]
     saved = _load_json(_roles_path(guild_id), {})
     if str(role_id) in saved:
         saved.pop(str(role_id), None)
         _save_json(_roles_path(guild_id), saved)
+        _journal(guild_id, 'role', str(role_id), role_name, diffs, who)
         return True
     return False
+
+
+# ─── Журнал изменений: кто/когда/что — чтобы увидеть и переделать ────────
+
+_JOURNAL_MAX = 80        # храним последние изменения
+
+
+def _chg_path(gid):
+    return f'data/staff_limit_changes_{int(gid)}.json'
+
+
+def _load_changes(guild_id):
+    data = _load_json(_chg_path(guild_id), {})
+    lst = data.get('changes')
+    return [e for e in lst if isinstance(e, dict)] if isinstance(lst, list) else []
+
+
+def _journal(guild_id, scope, role_id, role_name, diffs, who):
+    """Дописать изменение в журнал (сам журнал не роняет настройку)."""
+    if not diffs:
+        return None
+    try:
+        data = _load_json(_chg_path(guild_id), {})
+        lst = _load_changes(guild_id)
+        seq = data.get('seq')
+        seq = int(seq) + 1 if isinstance(seq, int) else len(lst) + 1
+        entry = {
+            'id': 'c' + str(seq),
+            'ts': int(_now()),
+            'who': str(who or 'панель'),
+            'scope': scope,
+            'role_id': str(role_id) if role_id else None,
+            'role_name': str(role_name) if role_name else None,
+            'changes': diffs,
+        }
+        lst.append(entry)
+        _save_json(_chg_path(guild_id), {'seq': seq, 'changes': lst[-_JOURNAL_MAX:]})
+        return entry
+    except Exception as ex:
+        _log.debug('journal: %s', ex)
+        return None
+
+
+def get_changes(guild_id, limit=60):
+    """Последние изменения лимитов, новые первыми."""
+    out = list(reversed(_load_changes(guild_id)))
+    return out[:max(1, int(limit))]
+
+
+def revert_change(guild_id, change_id, who=None):
+    """(ok, entry): вернуть значения, как было ДО изменения из журнала."""
+    for entry in reversed(_load_changes(guild_id)):
+        if entry.get('id') != str(change_id):
+            continue
+        scope, rid = entry.get('scope'), entry.get('role_id')
+        rname = entry.get('role_name')
+        limits, windows = {}, {}
+        for ch in entry.get('changes') or []:
+            if not isinstance(ch, dict) or ch.get('key') not in DEFAULT_LIMITS:
+                continue
+            if ch.get('field') == 'limit':
+                limits[ch['key']] = ch.get('old')
+            elif ch.get('field') == 'window':
+                windows[ch['key']] = ch.get('old')
+        if scope == 'role' and rid:
+            unset_role_keys(guild_id, rid,
+                            limit_keys=[k for k, v in limits.items() if v is None],
+                            window_keys=[k for k, v in windows.items() if v is None])
+            own_l = {k: v for k, v in limits.items() if v is not None}
+            own_w = {k: v for k, v in windows.items() if v is not None}
+            if own_l:
+                set_role_limits(guild_id, rid, who=who, role_name=rname, **own_l)
+            if own_w:
+                set_role_windows(guild_id, rid, who=who, role_name=rname, **own_w)
+        elif scope == 'global':
+            _unset_cfg(guild_id,
+                       limit_keys=[k for k, v in limits.items() if v is None],
+                       window_keys=[k for k, v in windows.items() if v is None])
+            own_l = {k: v for k, v in limits.items() if v is not None}
+            own_w = {k: v for k, v in windows.items() if v is not None}
+            if own_l:
+                set_limits(guild_id, who=who, **own_l)
+            if own_w:
+                set_windows(guild_id, who=who, **own_w)
+        return True, entry
+    return False, None
 
 
 def effective_limits(guild_id, role_ids=()):
