@@ -292,6 +292,14 @@ ok('API сохраняет автосоздание', r.get_json()['success']
 r = client.post('/api/guild/777/log-settings', json={'channels': {'mod': '987654321'}})
 ok('API сохраняет выбранный канал', r.get_json()['success']
    and LS.target_channel_id(777, 'mod') == '987654321')
+r = client.post('/api/guild/777/log-settings',
+                json={'channels': {'mod': '1015', 'message': '1015',
+                                   'voice': '1015', 'member': '1015'}})
+ok('одним махом: один канал сразу в несколько категорий',
+   r.get_json()['success']
+   and LS.target_channel_id(777, 'mod') == '1015'
+   and LS.target_channel_id(777, 'voice') == '1015'
+   and LS.target_channel_id(777, 'member') == '1015')
 
 logs_src = open(os.path.join(ROOT, 'cogs/logs.py'), encoding='utf-8').read()
 ok('бот спрашивает разрешение перед созданием канала',
@@ -303,6 +311,8 @@ ls_tpl = open(os.path.join(ROOT, 'web/templates/log_settings.html'),
 ok('шаблон логов: тумблеры + live 1.5с', 'lsEn' in ls_tpl and 'setLiveRefresh' in ls_tpl)
 ok('шаблон логов: выбор канала «куда писать»', 'lsCh' in ls_tpl
    and 'Авто — искать по имени' in ls_tpl and 'Куда писать' in ls_tpl)
+ok('шаблон логов: быстрый выбор «во все категории» сразу',
+   'lsApplyAll' in ls_tpl and 'Во все категории' in ls_tpl)
 ok('бот пишет в канал, выбранный в панели (приоритет над именами)',
    '_configured_log_channel' in logs_src and 'target_channel_id' in logs_src)
 ok('live без «перезагрузки»: снимок сравнивается, DOM зря не трогаем',
