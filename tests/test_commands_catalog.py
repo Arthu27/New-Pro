@@ -46,16 +46,18 @@ print('== 1. Реестр команд (LEAN — боевой состав по 
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-check(data['total'] == 32, f"lean: собрано {data['total']} живых команд (после чистки — 32)")
-check(data['slash'] == 13 and data['prefix'] == 19,
+check(data['total'] == 25, f"lean: собрано {data['total']} живых команд (после чистки — 25)")
+check(data['slash'] == 13 and data['prefix'] == 12,
       f"lean: slash {data['slash']} + prefix {data['prefix']} — оба вида на месте")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
 check(len(data['categories']) >= 6, f"lean: разделов ≥6 ({len(data['categories'])})")
 labels = [c['label'] for c in data['categories']]
-for need in ('Модерация', 'Тикеты', 'Музыка', 'Голосовые',
+for need in ('Модерация', 'Тикеты', 'Музыка',
              'Логи и аудит', 'Система'):
     check(need in labels, f'lean: раздел «{need}» в каталоге')
+check('Голосовые' not in labels,
+      'lean: голосовая статистика удалена владельцем — раздела нет')
 check('Экономика' not in labels and 'Уровни и карма' not in labels,
       'lean: спящие системы (экономика/уровни) честно не показываются')
 mods = data.get('modules') or {}
@@ -192,9 +194,11 @@ print('== 5. /help показывает все ЖИВЫЕ разделы ==')
 import cogs.help as HP  # noqa: E402
 ov = HP.build_help_embed()
 field_names = ' | '.join(f.name for f in ov.fields)
-for need in ('Музыка', 'Голосовые', 'Система',
+for need in ('Музыка', 'Система',
              'Модерация', 'Тикеты'):
     check(need in field_names, f'/help overview содержит раздел «{need}»')
+check('Голосовые' not in field_names,
+      'голосовая статистика удалена из /help (команд нет — раздела нет)')
 check('Экономика' not in field_names and 'Уровни и карма' not in field_names,
       'спящие разделы (экономика/уровни) из /help убраны')
 check('Логи и аудит' not in field_names and 'AI ' not in field_names,

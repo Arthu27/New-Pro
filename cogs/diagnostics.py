@@ -353,22 +353,8 @@ class Diagnostics (commands .Cog ):
         embed .add_field (name =" Быстрые действия",value =
         "`!hotreload` — перезагрузить изменённые cog'и\n"
         "`!cog perf` — статистика по cog'ам\n"
-        "`!cog errors` — последние ошибки\n"
-        "`!gc` — принудительный garbage collect",inline =False )
+        "`!cog errors` — последние ошибки",inline =False )
         await ctx .send (embed =embed )
-
-    @commands .command (name ="gc")
-    @commands .is_owner ()
-    async def gc (self ,ctx ):
-        """Принудительная сборка мусора — освобождает память бота"""
-        import gc 
-        before =sum (1 for _ in gc .get_objects ())
-        collected =gc .collect ()
-        after =sum (1 for _ in gc .get_objects ())
-        from cogs .embed_utils import reply 
-        await reply (ctx ,'system','Память почищена',
-        f'Garbage collect: **{collected}** объектов собрано ({before} → {after})',
-        footer_extra ='Диагностика')
 
     @commands .group (name ="cog",invoke_without_command =True )
     @commands .is_owner ()

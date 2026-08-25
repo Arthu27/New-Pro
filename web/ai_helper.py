@@ -51,11 +51,7 @@ def _bot_knowledge_base ()->str :
 
 **Музыка** (префикс !):
 - !play запрос — включить трек; !pause !resume !skip !queue !nowplaying
-  !volume !loop !shuffle !clearqueue !leave
-
-**Голосовая статистика** (префикс !):
-- !voicetime [@user] — время в голосовых
-- !voiceleaderboard — топ по голосовым
+  !leave
 
 **Автоматика бота** (работает сама, команд не нужно):
 - Автомодерация: фильтр слов/ссылок/флуда/капса (настраивается в панели)

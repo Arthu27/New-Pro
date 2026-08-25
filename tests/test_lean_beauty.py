@@ -33,7 +33,7 @@ import cogs_policy as CP  # noqa: E402
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-check(data['total'] >= 30, f'lean-каталог собран ({data["total"]} команд после чистки)')
+check(data['total'] >= 20, f'lean-каталог собран ({data["total"]} команд после чистки)')
 placeholder = [c['name'] for c in data['commands'] if c['desc'] == 'Описание скоро появится']
 check(not placeholder, f'без описания не осталось ни одной команды {placeholder[:6]}')
 non_ru = [c['name'] for c in data['commands']
@@ -91,10 +91,10 @@ check('aether_embed' in music and 'embed_utils' in music,
       'music_cog отвечает фирменными эмбедами')
 check("dark_grey" not in music, 'music_cog: унылый dark_grey убран')
 tracker = open(os.path.join(ROOT, 'cogs', 'voice_tracker.py'), encoding='utf-8').read()
-check('embed_utils' in tracker and '🥇' in tracker,
-      'голосовой трекер: медали и Aether-стиль')
-check("aliases=['vtop', 'голостоп']" in tracker,
-      'русские алиасы голосовых команд сохранены')
+check('on_voice_state_update' in tracker and 'def voice_seconds' in tracker,
+      'голосовой трекер считает время (команды удалены, трекинг жив)')
+check('voicetime' not in tracker and 'voiceleaderboard' not in tracker,
+      'команды голосовой статистики удалены владельцем')
 cogmgr = open(os.path.join(ROOT, 'cogs', 'cog_manager.py'), encoding='utf-8').read()
 check('BOT_FULL' in cogmgr and 'Спят по профилю' in cogmgr,
       'менеджер модулей честно показывает спящие по профилю')

@@ -109,11 +109,7 @@ function renderHero() {
   var track = d.current ? '<div class="mu-track">' + esc(d.current.query) + '</div>' +
     '<div class="mu-meta">' + chips + (d.current.requester ? '<span class="mu-chip"><i class="fas fa-user"></i> ' + esc(d.current.requester) + '</span>' : '') + '</div>'
     : '<div class="mu-track">Тишина</div><div class="mu-meta">' + chips + '</div>';
-  var vol = '<div class="mu-vol"><i class="fas fa-volume-low" style="color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent))"></i>' +
-    '<input type="range" min="0" max="' + d.volume_max + '" value="' + (d.volume == null ? 100 : d.volume) + '" ' +
-    (CAN_EDIT && d.connected ? '' : 'disabled') + ' onchange="muVolume(this.value)" aria-label="Громкость">' +
-    '<b>' + (d.volume == null ? '—' : d.volume + '%') + '</b></div>';
-  hero.innerHTML = '<div class="mu-disc ' + cls + '"><i class="fas ' + icon + '"></i></div>' + track + vol;
+  hero.innerHTML = '<div class="mu-disc ' + cls + '"><i class="fas ' + icon + '"></i></div>' + track;
 }
 
 function renderControls() {
@@ -125,8 +121,6 @@ function renderControls() {
     : '<button type="button" class="mu-btn main" onclick="muAction(\x27pause\x27)"><i class="fas fa-pause"></i> Пауза</button>';
   box.innerHTML = pp +
     '<button type="button" class="mu-btn" onclick="muAction(\x27skip\x27)"><i class="fas fa-forward"></i> Дальше</button>' +
-    '<button type="button" class="mu-btn" onclick="muAction(\x27shuffle\x27)"><i class="fas fa-shuffle"></i> Перемешать</button>' +
-    '<button type="button" class="mu-btn" onclick="muClear()"><i class="fas fa-broom"></i> Очистить очередь</button>' +
     '<button type="button" class="mu-btn danger" onclick="muLeave()"><i class="fas fa-door-open"></i> Отключить бота</button>';
 }
 
@@ -166,14 +160,7 @@ async function muPost(path, payload) {
 }
 
 function muAction(a) { muPost('/api/music/control', { action: a }); }
-function muVolume(v) { muPost('/api/music/control', { action: 'volume', volume: v }); }
 function muRemove(n) { muPost('/api/music/remove', { index: n }); }
-
-function muClear() {
-  window.askConfirm('Очистить очередь?', 'Все треки будут убраны, играющий остановится. Как команда !clearqueue.', function () {
-    muAction('clear');
-  }, { danger: true, okText: 'Очистить', icon_fa: 'fas fa-broom' });
-}
 
 function muLeave() {
   window.askConfirm('Отключить бота от канала?', 'Бот выйдет из голосового канала, а очередь очистится — как команда !leave.', function () {

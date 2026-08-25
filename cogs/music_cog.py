@@ -11,11 +11,11 @@ import random
 from logger import get_logger
 log = get_logger("music_cog")
 
-from cogs.embed_utils import aether_embed, reply, bar, plural
+from cogs.embed_utils import aether_embed, reply, plural
 
 
 def shuffle_queue(queue: list) -> list:
-    """Перемешать очередь, сохранив играющий трек первым (1:1 с командой !shuffle)."""
+    """Перемешать очередь, сохранив играющий трек первым (панельный API плеера)."""
     if len(queue) < 2:
         return list(queue)
     current = queue[0]
@@ -167,29 +167,6 @@ class MusicCog(commands.Cog):
         from cogs.icons import send_with_icon
         await send_with_icon(ctx, embed, 'music')
 
-    @commands.command(name='volume', aliases=['громкость'])
-    async def volume(self, ctx, volume: int = None):
-        """Настроить уровень громкости (0–200%)"""
-        if not ctx.voice_client:
-            await self._silent(ctx)
-            return
-        if volume is None:
-            current_volume = ctx.voice_client.source.volume * 100 if ctx.voice_client.source else 100
-            pct = int(current_volume)
-            await reply(ctx, 'music', 'Громкость',
-                        f'`{bar(pct / 200)}` **{pct}%**\nНастроить: `!volume <0-200>`',
-                        footer_extra='Музыка')
-            return
-        if volume < 0 or volume > 200:
-            await reply(ctx, 'error', 'Вне диапазона',
-                        'Громкость — от **0** до **200**%.', footer_extra='Музыка')
-            return
-        if ctx.voice_client.source:
-            ctx.voice_client.source.volume = volume / 100
-        await reply(ctx, 'music', 'Громкость настроена',
-                    f'`{bar(volume / 200)}` **{volume}%**',
-                    footer_extra='Музыка')
-
     @commands.command(name='leave', aliases=['выйти'])
     async def leave(self, ctx):
         """Выйти из голосового канала"""
@@ -202,45 +179,6 @@ class MusicCog(commands.Cog):
             self.queues[ctx.guild.id] = []
         await reply(ctx, 'music', 'Отключился',
                     'Вышел из голосового канала, очередь очищена.',
-                    footer_extra='Музыка')
-
-    @commands.command(name='clearqueue', aliases=['очиститьочередь'])
-    @commands.has_permissions(manage_guild=True)
-    async def clearqueue(self, ctx):
-        """Очистить очередь"""
-        had = len(self.get_queue(ctx.guild.id))
-        if ctx.guild.id in self.queues:
-            self.queues[ctx.guild.id] = []
-        await reply(ctx, 'music', 'Очередь очищена',
-                    f'Убрано {had} {plural(had, "трек", "трека", "треков")}.',
-                    footer_extra='Музыка')
-
-    @commands.command(name='shuffle', aliases=['перемешать'])
-    async def shuffle(self, ctx):
-        """Перемешать очередь"""
-        queue = self.get_queue(ctx.guild.id)
-        if len(queue) < 2:
-            await reply(ctx, 'music', 'Мало треков',
-                        'Чтобы перемешать, в очереди должны быть минимум 2 трека.',
-                        footer_extra='Музыка')
-            return
-        self.queues[ctx.guild.id] = shuffle_queue(queue)
-        await reply(ctx, 'music', 'Перемешано',
-                    f'Порядок {len(queue)} {plural(len(queue), "трека", "треков", "треков")} обновлён.',
-                    footer_extra='Музыка')
-
-    @commands.command(name='loop', aliases=['povtor', 'повтор'])
-    async def loop(self, ctx):
-        """Повторить текущий трек (добавить в конец очереди)"""
-        queue = self.get_queue(ctx.guild.id)
-        if not queue:
-            await reply(ctx, 'music', 'Очередь пуста',
-                        'Сначала включи трек: `!play <название>`', footer_extra='Музыка')
-            return
-        current = queue[0]
-        queue.append(current)
-        await reply(ctx, 'music', 'Повтор включён',
-                    f'**{_track_name(current)}** сыграет ещё раз — трек добавлен в конец очереди.',
                     footer_extra='Музыка')
 
     @commands.Cog.listener()
