@@ -325,5 +325,8 @@ var debounceTimer = null;
 
 loadTrxStats();
 searchTranscripts();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadTrxStats(); } catch (e) {} }, 30000);
 </script>
 {% endblock %}

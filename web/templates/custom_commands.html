@@ -135,5 +135,8 @@ async function deleteCmd(id) {
 
 document.getElementById('modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 loadGuilds();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadCommands(); } catch (e) {} }, 30000);
 </script>
 {% endblock %}

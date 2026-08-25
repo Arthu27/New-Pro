@@ -222,5 +222,8 @@ document.getElementById('mtCsv').onclick = function () { location.href = API + '
 
 loadStatus();
 loadPreview();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadStatus(); } catch (e) {} }, 30000);
 </script>
 {% endblock %}

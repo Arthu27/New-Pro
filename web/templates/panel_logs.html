@@ -59,13 +59,31 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  var logs = [
-    { action: 'POST /api/guild/.../ticket-settings', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '2 мин назад', method: 'POST' },
-    { action: 'POST /api/command/ban', user: 'Администратор', role: 'admin', ip: '127.0.0.1', time: '5 мин назад', method: 'POST' },
-    { action: 'GET /api/guilds', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '10 мин назад', method: 'GET' },
-    { action: 'POST /api/warn', user: 'Мод', role: 'mod', ip: '127.0.0.1', time: '15 мин назад', method: 'POST' },
-    { action: 'DELETE /api/guild/.../channels/...', user: 'Администратор', role: 'admin', ip: '127.0.0.1', time: '1 час назад', method: 'DELETE' }
-  ];
+  /* Раньше здесь лежала захардкоженная выдумка из 5 строк («Owner»,
+     «Мод»...) — теперь только РЕАЛЬНЫЕ логи из /api/panel-logs,
+     плюс живое обновление без перезагрузки страницы. */
+  var logs = [];
+
+  function fetchLogs() {
+    fetch('/api/panel-logs', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (rows) {
+        logs = (rows || []).map(function (l) {
+          var m = String(l.method || (l.action || '').split(' ')[0] || '').toUpperCase();
+          if (['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].indexOf(m) === -1) m = 'POST';
+          return {
+            action: l.action || l.event || '—',
+            user: l.username || l.user || '—',
+            role: l.role || '',
+            ip: l.ip || l.ip_address || '',
+            time: l.timestamp ? String(l.timestamp).replace('T', ' ').slice(0, 19) : (l.time || ''),
+            method: m
+          };
+        });
+        render();
+      })
+      .catch(function () {});
+  }
   var roleColor = { owner: 'var(--err)', админ: '#c8922a', мод: 'var(--ok)' };
 
   function render() {
@@ -108,8 +126,11 @@
     });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
-  else { bind(); render(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); fetchLogs(); });
+  else { bind(); fetchLogs(); }
+
+  /* live: логи панели обновляются сами каждые 15 секунд */
+  if (window.setLiveRefresh) window.setLiveRefresh(fetchLogs, 15000);
 })();
 </script>
 {% endblock %}

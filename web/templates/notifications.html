@@ -411,5 +411,8 @@ async function sendTestNotification() {
 }
 
 document.addEventListener('DOMContentLoaded', loadNotificationSettings);
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadNotificationHistory(); } catch (e) {} }, 30000);
 </script>
 {% endblock %}

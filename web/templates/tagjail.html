@@ -220,5 +220,8 @@
 
   loadState();
 })();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadState(); } catch (e) {} }, 15000);
 </script>
 {% endblock %}

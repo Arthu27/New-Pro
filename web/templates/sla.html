@@ -341,5 +341,8 @@ document.getElementById('slCsvP').onclick = function () { location.href = API + 
 document.getElementById('slCsvB').onclick = function () { location.href = API + '/breaches.csv'; };
 
 load();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { load(); } catch (e) {} }, 30000);
 </script>
 {% endblock %}
