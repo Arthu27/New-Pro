@@ -348,6 +348,8 @@ def check_action(guild, actor, key, amount=1):
             return True, None
         if getattr(actor, 'id', 0) == getattr(guild, 'owner_id', 0):
             return True, None
+        if getattr(actor, 'bot', False):
+            return True, None      # сам бот (панель/автоматика) — лимитами не грудим
         role_ids = [r.id for r in (getattr(actor, 'roles', None) or [])
                     if getattr(r, 'id', None) != getattr(guild, 'id', None)]
         lim_map, win_map = effective_limits(guild.id, role_ids)

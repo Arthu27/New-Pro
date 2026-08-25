@@ -151,7 +151,7 @@
     <div class="gd-wl-col">
       <div class="gd-wl-title"><i class="fas fa-user"></i> Пользователи</div>
       <div class="gd-wl-add">
-        <input id="gdWlUIn" type="text" inputmode="numeric" placeholder="ID пользователя, например 823456789012345678" aria-label="ID пользователя для белого списка">
+        <select id="gdWlUPick" aria-label="Участник сервера для белого списка"></select>
         <button type="button" class="btn btn-primary" id="gdWlUAdd" aria-label="Добавить пользователя в белый список" title="Добавить"><i class="fas fa-plus"></i></button>
       </div>
       <div id="gdWlU"></div>
@@ -175,7 +175,7 @@
     <div class="gd-wl-col">
       <div class="gd-wl-title"><i class="fas fa-user"></i> Пользователи</div>
       <div class="gd-wl-add">
-        <input id="gdWlBUIn" type="text" inputmode="numeric" placeholder="ID пользователя" aria-label="ID пользователя, которому можно добавлять ботов">
+        <select id="gdWlBUPick" aria-label="Участник, которому можно добавлять ботов"></select>
         <button type="button" class="btn btn-primary" id="gdWlBUAdd" aria-label="Разрешить пользователю добавлять ботов" title="Добавить"><i class="fas fa-plus"></i></button>
       </div>
       <div id="gdWlBU"></div>
@@ -325,6 +325,7 @@ var WL_BU = [];
 var WL_BR = [];
 var NAMES = { users: {}, roles: {} };
 var G_ROLES = [];   /* роли сервера для пикеров */
+var G_MEMBERS = []; /* участники сервера для пикеров */
 
 function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }
 
@@ -521,6 +522,16 @@ function renderPickers() {
     sel.innerHTML = html;
     if (keep) sel.value = keep;
   });
+  [['gdWlUPick'], ['gdWlBUPick']].forEach(function (ids) {
+    var sel = document.getElementById(ids[0]);
+    if (!sel) return;
+    var keep = sel.value;
+    var html = '<option value="">Участник сервера…</option>' + G_MEMBERS.map(function (m) {
+      return '<option value="' + esc(m.id) + '">' + esc(m.name) + '</option>';
+    }).join('');
+    sel.innerHTML = html;
+    if (keep) sel.value = keep;
+  });
 }
 
 function renderFeed() {
@@ -582,6 +593,7 @@ async function gdLoad(live) {
     var d = JSON.parse(raw);
     if (d.success && d.cfg) {
       G_ROLES = d.roles || G_ROLES;
+      G_MEMBERS = d.members || G_MEMBERS;
       CFG = d.cfg;
       EVENTS = d.cfg.events || [];
       PUNISHMENTS = d.cfg.punishments || [];
@@ -590,6 +602,9 @@ async function gdLoad(live) {
       WL_BU = d.cfg.bot_whitelist_users || [];
       WL_BR = d.cfg.bot_whitelist_roles || [];
       NAMES = d.cfg.resolved || { users: {}, roles: {} };
+      G_MEMBERS.forEach(function (m) {        /* имена для чипов, даже если с сервера не пришли */
+        if (!NAMES.users[m.id]) NAMES.users[m.id] = m.name;
+      });
     } else if (!live) {
       toast(d.error || 'Не удалось загрузить Щит', false);
     }
@@ -657,17 +672,17 @@ async function gdSave() {
 }
 
 function wlList(kind) {
-  if (kind === 'u') return { list: WL_U, input: 'gdWlUIn' };
-  if (kind === 'r') return { list: WL_R, input: 'gdWlRPick', pick: true };
-  if (kind === 'bu') return { list: WL_BU, input: 'gdWlBUIn' };
-  return { list: WL_BR, input: 'gdWlBRPick', pick: true };
+  if (kind === 'u') return { list: WL_U, input: 'gdWlUPick', pick: true, what: 'участника' };
+  if (kind === 'r') return { list: WL_R, input: 'gdWlRPick', pick: true, what: 'роль' };
+  if (kind === 'bu') return { list: WL_BU, input: 'gdWlBUPick', pick: true, what: 'участника' };
+  return { list: WL_BR, input: 'gdWlBRPick', pick: true, what: 'роль' };
 }
 
 function wlAdd(kind) {
   var ref = wlList(kind);
   var inp = document.getElementById(ref.input);
   var v = ((inp && inp.value) || '').trim();
-  if (!v) { toast(ref.pick ? 'Выбери роль из списка' : 'ID — это 17-22 цифры', false); return; }
+  if (!v) { toast(ref.pick ? ('Выбери ' + (ref.what || 'из списка')) : 'ID — это 17-22 цифры', false); return; }
   if (!ref.pick && !/^\d{17,22}$/.test(v)) { toast('ID — это 17-22 цифры', false); return; }
   if (ref.list.indexOf(v) !== -1) { toast('Уже в списке', false); return; }
   if (!CAN_EDIT) return;
@@ -681,8 +696,6 @@ document.getElementById('gdWlUAdd').addEventListener('click', function () { wlAd
 document.getElementById('gdWlRAdd').addEventListener('click', function () { wlAdd('r'); });
 document.getElementById('gdWlBUAdd').addEventListener('click', function () { wlAdd('bu'); });
 document.getElementById('gdWlBRAdd').addEventListener('click', function () { wlAdd('br'); });
-document.getElementById('gdWlUIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') wlAdd('u'); });
-document.getElementById('gdWlBUIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') wlAdd('bu'); });
 document.getElementById('gdSave').addEventListener('click', gdSave);
 document.getElementById('gdSave2').addEventListener('click', gdSave);
 

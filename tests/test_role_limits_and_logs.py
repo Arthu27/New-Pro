@@ -112,6 +112,24 @@ ok('без ролей действует глобальный лимит', allow
 
 ok('сброс роли', SL.clear_role_limits(777, 222) is True
    and '222' not in SL.get_role_limits(777))
+
+
+class _FakeObj:
+    def __init__(self, **kw):
+        for k, v in kw.items():
+            setattr(self, k, v)
+
+
+_fg = _FakeObj(id=777, owner_id=1)
+_hu = _FakeObj(id=55, bot=False, roles=[])
+_bo = _FakeObj(id=66, bot=True, roles=[])
+SL.record_hit(777, 55, 'ban', 99)
+SL.record_hit(777, 66, 'ban', 99)
+_deny = SL.check_action(_fg, _hu, 'ban')
+ok('check_action: человек с исчерпанным лимитом — отказ',
+   _deny[0] is False and bool(_deny[1]))
+ok('check_action: бот (панель/автоматика) — exempt даже с исчерпанным лимитом',
+   SL.check_action(_fg, _bo, 'ban') == (True, None))
 eff2 = SL.limits_for_roles(777, [222])
 ok('после сброса роль живёт по глобальным', eff2['ban'] == 8)
 
@@ -416,12 +434,24 @@ ok('значение зажимается в 3 сек..31 день при сох
 ok('РОЛИ выбираются пикером (не ID руками)',
    'gdWlRPick' in gd_tpl and 'gdWlBRPick' in gd_tpl
    and 'Роль сервера' in gd_tpl and 'renderPickers' in gd_tpl)
+ok('УЧАСТНИКИ тоже пикером (белые списки без ID руками)',
+   'gdWlUPick' in gd_tpl and 'gdWlBUPick' in gd_tpl
+   and 'Участник сервера' in gd_tpl and 'gdWlUIn' not in gd_tpl)
 gd_cog = open(os.path.join(ROOT, 'cogs/guardian.py'), encoding='utf-8').read()
 ok('бот принимает окна до 31 дня (не только 300 сек)',
    '31 * 86400' in gd_cog)
 gd_route = open(os.path.join(ROOT, 'web/routes/guardian.py'), encoding='utf-8').read()
 ok('API Щита отдаёт роли сервера для пикера',
    '_roles_for_pick' in gd_route and "'roles': _roles_for_pick(gid)" in gd_route)
+ok('API Щита отдаёт участников для пикера',
+   '_members_for_pick' in gd_route and "'members': _members_for_pick(gid)" in gd_route)
+
+r = client.get('/api/guild/777/guardian')
+d = r.get_json() or {}
+ok('демо-API участников непустое (пикеры живые)',
+   r.status_code == 200 and isinstance(d.get('members'), list)
+   and len(d['members']) >= 5 and d['members'][0].get('id')
+   and d['members'][0].get('name'))
 
 print('== 4. Меню ==')
 from services import panel_menu as PM  # noqa: E402

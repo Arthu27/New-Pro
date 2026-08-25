@@ -104,6 +104,42 @@ def _roles_for_pick(gid):
     return out
 
 
+def _members_for_pick(gid):
+    """Участники сервера для пикера в Щите (бот офлайн — демо-набор превью)."""
+    import web.app as _app
+    bot = _app.bot_instance
+    guild = None
+    if bot:
+        try:
+            guild = bot.get_guild(int(gid))
+            if guild is None:
+                guild = next((g for g in bot.guilds if str(g.id) == str(gid)), None)
+        except (TypeError, ValueError):
+            guild = None
+    out = []
+    if guild:
+        try:
+            for m in sorted(guild.members,
+                            key=lambda x: (getattr(x, 'display_name', '') or '').lower()):
+                label = (getattr(m, 'display_name', None)
+                         or str(m)) + (' · бот' if getattr(m, 'bot', False) else '')
+                out.append({'id': str(m.id), 'name': label})
+                if len(out) >= 1000:      # огромные серверы — пикер не душим
+                    break
+        except Exception as ex:
+            _log.debug('guardian: участники: %s', ex)
+    elif _app._demo_mode():
+        try:
+            from web.routes._common import DEMO_MEMBERS
+            for m in DEMO_MEMBERS:
+                label = (m.get('display_name') or m.get('name') or m.get('id', '')) \
+                    + (' · бот' if m.get('bot') else '')
+                out.append({'id': str(m.get('id')), 'name': label})
+        except Exception as ex:
+            _log.debug('guardian: демо-участники: %s', ex)
+    return out
+
+
 def guardian_view(gid):
     """Полный витринный вид конфига для страницы (и для тестов)."""
     cfg = G.load_cfg(gid)
@@ -177,7 +213,8 @@ def register(ctx):
         gid = _gid(ctx) or _int_gid(gid)
         if request.method == 'GET':
             return jsonify({'success': True, 'cfg': guardian_view(gid),
-                            'roles': _roles_for_pick(gid)})
+                            'roles': _roles_for_pick(gid),
+                            'members': _members_for_pick(gid)})
 
         # POST: принять витрину, нормализовать, сохранить (файл бота)
         data = request.get_json(silent=True)
