@@ -199,6 +199,10 @@ for need in ('Музыка', 'Система',
     check(need in field_names, f'/help overview содержит раздел «{need}»')
 check('Голосовые' not in field_names,
       'голосовая статистика удалена из /help (команд нет — раздела нет)')
+help_src = open(os.path.join(ROOT, 'cogs', 'help.py'), encoding='utf-8').read()
+check('HELP_ENABLED = False' in help_src
+      and help_src.count('if not HELP_ENABLED') == 2,
+      '!help и /help временно выключены владельцем (флаг HELP_ENABLED)')
 check('Экономика' not in field_names and 'Уровни и карма' not in field_names,
       'спящие разделы (экономика/уровни) из /help убраны')
 check('Логи и аудит' not in field_names and 'AI ' not in field_names,

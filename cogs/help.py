@@ -7,6 +7,16 @@ from logger import get_logger
 
 _log = get_logger("help")
 
+# Владелец 2026-08-25: справка ВРЕМЕННО выключена (!help + алиасы и /help).
+# Команды отвечают «выключена владельцем». Вернуть: HELP_ENABLED = True.
+HELP_ENABLED = False
+def _help_disabled_embed(guild=None):
+    from cogs.embed_utils import aether_embed
+    return aether_embed(
+        'system', 'Справка выключена',
+        'Команда временно выключена владельцем сервера.',
+        guild=guild)
+
 import os
 import io
 import discord
@@ -615,6 +625,9 @@ class Help(commands.Cog):
     @commands.command(name="help", aliases=["h", "команды", "menu", "справка"])
     async def help_prefix(self, ctx, category: str = None):
         """Красивая справка по всем командам бота"""
+        if not HELP_ENABLED:
+            await ctx.send(embed=_help_disabled_embed(ctx.guild))
+            return
         try:
             await ctx.message.delete()
         except Exception as _ex:
@@ -631,6 +644,10 @@ class Help(commands.Cog):
 
     @app_commands.command(name="help", description="Справка по командам бота")
     async def help_slash(self, interaction: discord.Interaction, category: str = None):
+        if not HELP_ENABLED:
+            await interaction.response.send_message(
+                embed=_help_disabled_embed(interaction.guild), ephemeral=True)
+            return
         await interaction.response.defer(ephemeral=True)
         cat_id = self._resolve_help_cat(category)
         e = build_help_embed(
