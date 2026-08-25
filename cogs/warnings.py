@@ -288,6 +288,29 @@ class warnings(commands.Cog):
         Возвращает: (warn_id, total, punishment_result)
         """
         guild = interaction.guild
+
+        # Лимиты стаффа (владельца не трогаем): пер-рольные лимиты на варны
+        try:
+            if guild and getattr(interaction.user, 'id', 0) != getattr(guild, 'owner_id', 0):
+                from services.staff_limits import check_limit as _sl_check
+                _sl_roles = []
+                try:
+                    _sl_roles = [r.id for r in (getattr(interaction.user, 'roles', None) or [])
+                                 if getattr(r, 'id', None) != getattr(guild, 'id', None)]
+                except Exception:
+                    _sl_roles = []
+                _sl_ok, _sl_used, _sl_lim = _sl_check(guild.id, interaction.user.id,
+                                                      'warn', 1, role_ids=_sl_roles)
+                if not _sl_ok:
+                    from cogs.embed_utils import error_embed as _err
+                    await interaction.followup.send(
+                        embed=_err(f'🛡 Дневной лимит исчерпан: {_sl_lim} варнов в день '
+                                   f'(уже {_sl_used}). Сброс — после полуночи по UTC.'),
+                        ephemeral=True)
+                    return (0, len(self._get_warns(guild.id, user.id)), None)
+        except Exception as _ex:
+            _log.debug("add_warn() staff_limit: %s", _ex)
+
         warns = self._get_warns(guild.id, user.id)
         warn_id = len(warns) + 1
         warns.append({
@@ -299,6 +322,13 @@ class warnings(commands.Cog):
         })
         self._save_warns(guild.id, user.id, warns)
         total = len(warns)
+
+        # Лимиты: фиксируем успешный варн в дневном счётчике
+        try:
+            from services.staff_limits import record_hit as _sl_rec
+            _sl_rec(guild.id, interaction.user.id, 'warn', 1)
+        except Exception as _ex:
+            _log.debug("add_warn() record: %s", _ex)
 
         # Уведомление панели о варне (веб/Discord/email — в фоне)
         try:

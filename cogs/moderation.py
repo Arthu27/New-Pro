@@ -284,10 +284,14 @@ class Moderation (commands .Cog ):
         """Выполнить выбранное действие модерации."""
         guild =interaction .guild
 
-        # Лимиты стаффа — защита от «плохих» модераторов (владельца не трогаем)
+        # Лимиты стаффа — защита от «плохих» модераторов (владельца не трогаем).
+        # С 2026-08 лимитируется ВСЁ: варны, муты, баны, чистка — и действует
+        # САМЫЙ СТРОГИЙ лимит среди ролей модератора (пер-рольные лимиты).
         try :
-            if action in ('ban','clear') and guild and getattr (interaction .user ,'id',0 )!=getattr (guild ,'owner_id',0 ):
-                from services .staff_limits import check_limit as _sl_check
+            _sl_key ={'warn':'warn','timeout':'mute','mute_chat':'mute','vmute':'mute',
+            'ban':'ban','clear':'clear','kick':'kick'}.get (action )
+            if _sl_key and guild and getattr (interaction .user ,'id',0 )!=getattr (guild ,'owner_id',0 ):
+                from services .staff_limits import check_limit as _sl_check ,ACTION_TITLES 
                 if action =='clear':
                     try :
                         _sl_amt =max (1 ,min (int (amount )or 10 ,200 ))
@@ -295,9 +299,15 @@ class Moderation (commands .Cog ):
                         _sl_amt =10
                 else :
                     _sl_amt =1
-                _sl_ok ,_sl_used ,_sl_lim =_sl_check (guild .id ,interaction .user .id ,action ,_sl_amt )
+                _sl_roles =[]
+                try :
+                    _sl_roles =[r .id for r in (getattr (interaction .user ,'roles',None )or [])
+                    if getattr (r ,'id',None )!=getattr (guild ,'id',None )]
+                except Exception :
+                    _sl_roles =[]
+                _sl_ok ,_sl_used ,_sl_lim =_sl_check (guild .id ,interaction .user .id ,_sl_key ,_sl_amt ,role_ids =_sl_roles )
                 if not _sl_ok :
-                    _what ='банов'if action =='ban'else 'сообщений чисткой'
+                    _what =ACTION_TITLES .get (_sl_key ,'действий' )
                     await _respond (interaction ,
                     embed =error_embed (f'🛡 Дневной лимит исчерпан: {_sl_lim} {_what} в день (уже {_sl_used}). Сброс — после полуночи по UTC.'),
                     ephemeral =True )
@@ -378,6 +388,15 @@ class Moderation (commands .Cog ):
                 # Каждый — в своём try: сбой побочного шага НЕ должен превращать
                 # выполненное наказание в «ошибку» для модератора.
                 aux_errors =[]
+                # Лимиты: фиксируем успешные муты в дневном счётчике
+                # (бан и чистка пишутся в своих ветках)
+                try :
+                    _sl_rec_key ={'timeout':'mute','mute_chat':'mute','vmute':'mute','kick':'kick'}.get (action )
+                    if _sl_rec_key and guild :
+                        from services .staff_limits import record_hit as _sl_rec 
+                        _sl_rec (guild .id ,interaction .user .id ,_sl_rec_key ,1 )
+                except Exception as _slr :
+                    log .debug (f'[STAFF_LIMIT] rec: {_slr}')
                 try :
                     case_id =self .save_case (guild .id ,action ,user .id ,interaction .user .id ,reason )
                 except Exception as _case_e :

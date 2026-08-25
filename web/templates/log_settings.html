@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Логи сервера · Настройки — Aether{% endblock %}
+{% block page_title %}Логи сервера{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Настройки <span class="sep">·</span> Логи</div>
+    <h1>Логи сервера</h1>
+    <p class="lead">Какие события логировать и каким категориям разрешено создавать лог-канал самостоятельно. По умолчанию каналы <b>никогда не создаются сами</b> — только если ты разрешишь здесь.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn" id="lsReload"><i class="fas fa-arrows-rotate"></i> Обновить</button>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi tone-ok"><div class="kpi-icon"><i class="fas fa-eye"></i></div><div class="kpi-copy"><div class="kpi-value" id="lsOnPill">—</div><div class="kpi-label">Категорий логируется</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-wand-magic-sparkles"></i></div><div class="kpi-copy"><div class="kpi-value" id="lsAutoPill">—</div><div class="kpi-label">Разрешено автосоздание</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-bolt"></i></div><div class="kpi-copy"><div class="kpi-value">мгновенно</div><div class="kpi-label">Применение</div></div></div>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><div><h2><i class="fas fa-list-check"></i> Категории</h2>
+    <div class="sub">«Логировать» — события уходят в канал, если он существует. «Создавать канал самому» — бот сам создаст недостающий лог-канал этой категории. Изменения применяются сразу, без рестарта.</div></div></div>
+  <div class="panel-body">
+    <div id="lsCats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px"></div>
+    <div class="hint" id="lsMsg" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  var state = { cats: [], settings: null };
+  var SAVING = false;
+
+  function gid() {
+    var v = window.MAIN_GID || '';
+    if (!v) { try { v = localStorage.getItem('selected_guild') || '777'; } catch (e) { v = '777'; } }
+    return v;
+  }
+
+  function post(body) {
+    if (SAVING) return;
+    SAVING = true;
+    fetch('/api/guild/' + gid() + '/log-settings', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      SAVING = false;
+      if (d.success) {
+        state.settings = d.settings;
+        render();
+        $('lsMsg').textContent = 'Сохранено — действует сразу';
+        setTimeout(function () { if ($('lsMsg')) $('lsMsg').textContent = ''; }, 2600);
+      }
+    }).catch(function () { SAVING = false; });
+  }
+
+  function toggle(key, field, val) {
+    var patch = {};
+    patch[key] = val;
+    var body = {};
+    body[field] = patch;
+    post(body);
+  }
+
+  function card(c) {
+    var en = state.settings.enabled[c.key] !== false;
+    var ac = !!state.settings.autocreate[c.key];
+    return '<div class="panel" style="margin:0">' +
+      '<div class="panel-body" style="padding:14px">' +
+      '<div class="row" style="justify-content:space-between;margin-bottom:10px">' +
+      '<span class="row" style="gap:8px"><span style="font-size:20px">' + c.emoji + '</span><b>' + esc(c.label) + '</b></span>' +
+      (en ? '<span class="chip" style="background:rgba(46,204,113,.18);color:#2ecc71">логируется</span>' : '<span class="chip" style="opacity:.5">выключена</span>') +
+      '</div>' +
+      '<label class="row" style="justify-content:space-between;cursor:pointer;padding:6px 0">' +
+      '<span>Логировать события</span>' +
+      '<input type="checkbox" class="lsEn" data-k="' + esc(c.key) + '"' + (en ? ' checked' : '') + '></label>' +
+      '<label class="row" style="justify-content:space-between;cursor:pointer;padding:6px 0;opacity:' + (ac ? 1 : .75) + '">' +
+      '<span>Создавать канал самому</span>' +
+      '<input type="checkbox" class="lsAc" data-k="' + esc(c.key) + '"' + (ac ? ' checked' : '') + '></label>' +
+      '<div class="hint" style="margin-top:6px">' + (ac ? 'Бот сам создаст канал, если его нет' : 'Канал создаст только человек') + '</div>' +
+      '</div></div>';
+  }
+
+  function render() {
+    if (!state.settings) return;
+    $('lsCats').innerHTML = state.cats.map(card).join('');
+    Array.prototype.forEach.call($('lsCats').querySelectorAll('.lsEn'), function (t) {
+      t.addEventListener('change', function () { toggle(t.getAttribute('data-k'), 'enabled', t.checked); });
+    });
+    Array.prototype.forEach.call($('lsCats').querySelectorAll('.lsAc'), function (t) {
+      t.addEventListener('change', function () { toggle(t.getAttribute('data-k'), 'autocreate', t.checked); });
+    });
+    var on = state.cats.filter(function (c) { return state.settings.enabled[c.key] !== false; }).length;
+    var auto = state.cats.filter(function (c) { return !!state.settings.autocreate[c.key]; }).length;
+    $('lsOnPill').textContent = on + ' / ' + state.cats.length;
+    $('lsAutoPill').textContent = String(auto);
+  }
+
+  function load() {
+    fetch('/api/guild/' + gid() + '/log-settings', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.success) return;
+        state.cats = d.categories || [];
+        state.settings = d.settings;
+        render();
+      }).catch(function () {});
+  }
+
+  function bind() { $('lsReload').addEventListener('click', load); }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); load(); });
+  else { bind(); load(); }
+
+  /* live: изменения подхватываются сами каждые 1.5 секунды */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { load(); } catch (e) {} }, 1500);
+})();
+</script>
+{% endblock %}

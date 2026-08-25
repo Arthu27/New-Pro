@@ -86,6 +86,9 @@ MENU = [
         {'path': '/antifake', 'label': 'Антифейк', 'icon': 'fa-user-secret',
          'section': 'protection', 'description': 'Поиск подделок профилей и impersonation',
          'access': 'Мод+', 'tone': 'security'},
+        {'path': '/staff-limits', 'label': 'Лимиты команды', 'icon': 'fa-hand',
+         'section': 'protection', 'description': 'Дневные лимиты действий модерации — глобальные и по ролям',
+         'access': 'Админ', 'min_role': 'admin', 'tone': 'security'},
 
         # Команда и аналитика: качество, нагрузка и эскалация.
         {'path': '/mod-control', 'label': 'Контроль команды', 'icon': 'fa-clipboard-check',
@@ -157,6 +160,7 @@ MENU = [
         {'path': '/theme-settings', 'label': 'Тема панели', 'icon': 'fa-palette'},
         {'path': '/theme-studio', 'label': 'Студия темы', 'icon': 'fa-swatchbook'},
         {'path': '/anticrash', 'label': 'Анти-краш', 'icon': 'fa-life-ring'},
+        {'path': '/log-settings', 'label': 'Логи сервера', 'icon': 'fa-list-check'},
     ]},
     {'group': 'Сообщество', 'key': 'community', 'icon': 'fa-gamepad', 'pages': [
         {'path': '/economy', 'label': 'Экономика', 'icon': 'fa-coins'},

@@ -592,7 +592,7 @@ check(paths.count('/guardian') == 1, 'Щит сервера — один пун�
 gd = [p for p in pages if p['path'] == '/guardian'][0]
 check(gd.get('section') == 'protection' and gd.get('min_role') == 'admin',
       'пункт в разделе «Защита» модерации, доступ Админ')
-check(len(paths) == 120, f'в меню 120 страниц ({len(paths)})')
+check(len(paths) == 122, f'в меню 122 страницы ({len(paths)})')
 
 from web import routes_extra as _re  # noqa: E402
 

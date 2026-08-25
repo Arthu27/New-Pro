@@ -229,6 +229,14 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
         target =category
     if target is None :
         return None
+    # Автосоздание каналов — ТОЛЬКО с явного разрешения из панели
+    # (заказ владельца 2026-08: «логи не создаются сами по себе»).
+    try :
+        from services .log_settings import autocreate_allowed 
+        if not autocreate_allowed (guild .id ,ch_name ):
+            return None 
+    except Exception as _ex :
+        log .debug("ensure_log_channel(): log_settings подавлено: %s", _ex)
     key =(str (guild .id ),target )
     now =time .time ()
     if now -_auto_create_state .get (key ,0 )<600 :
@@ -796,6 +804,15 @@ class Logs (commands .Cog ):
         self ._audit_forbidden_notified =set ()  # о чём уже предупредили однажды
 
     async def get_log_channel (self ,guild ,category :str ='сервер'):
+        # Настройки из панели («Логи сервера»): категорию можно выключить —
+        # тогда события в канал не уходят вовсе (файл читается каждый раз,
+        # применение мгновенное, без рестарта).
+        try :
+            from services .log_settings import category_enabled 
+            if not category_enabled (guild .id ,category ):
+                return None 
+        except Exception as _ex :
+            log .debug("get_log_channel(): log_settings подавлено: %s", _ex)
         # Найти канал категории логов; отсутствующий — создать автоматически
         return await ensure_log_channel (guild ,category )
 

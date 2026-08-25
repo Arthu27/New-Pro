@@ -95,6 +95,7 @@ from web.routes import (
     recap_panel,
     appeals_panel,
     log_cards_panel,
+    staff_limits_panel,
     welcome_panel,
     commands_panel,
     lockdown_panel,

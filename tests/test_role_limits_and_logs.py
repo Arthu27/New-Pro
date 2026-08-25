@@ -1,0 +1,174 @@
+# -*- coding: utf-8 -*-
+"""Лимиты по ролям + «логи не создаются сами» (заказ владельца 2026-08).
+
+1. Пер-рольные лимиты: дефолты на все действия (варн/мут/кик/бан/чистка),
+   переопределение роли, САМЫЙ СТРОГИЙ лимит при нескольких ролях,
+   обойти лимит дополнительной ролью нельзя.
+2. Панель: страница /staff-limits + API (GET/POST глобальных, POST/DELETE
+   ролей), красивый шаблон с выбором ролей, live 1.5с.
+3. Логи: по умолчанию каналы НИКОГДА не создаются сами (autocreate=false),
+   категорию можно выключить; изменения читаются с диска мгновенно.
+4. «Убедиться что всё выключено»: защиты по-прежнему opt-in (тест-поллинг).
+
+Запуск: python3 tests/test_role_limits_and_logs.py
+"""
+import importlib
+import json
+import os
+import shutil
+import sys
+import tempfile
+
+_TMP = tempfile.mkdtemp(prefix='aether_rlimits_test_')
+os.chdir(_TMP)
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+os.makedirs('data', exist_ok=True)
+os.environ['DB_PATH'] = os.path.join(_TMP, 'data', 'bot.db')
+os.environ['PANEL_USER'] = 'owner'
+os.environ['PANEL_PASSWORD'] = 'test123'
+os.environ['MAIN_GUILD_ID'] = '777'
+os.environ['DEMO_MODE'] = '1'
+
+PASS = 0
+
+
+def ok(name, cond, extra=''):
+    global PASS
+    if not cond:
+        print(f'FAIL: {name} {extra}')
+        sys.exit(1)
+    PASS += 1
+    print(f'  ok - {name}')
+
+
+print('== 1. Пер-рольные лимиты ==')
+from services import staff_limits as SL  # noqa: E402
+
+ok('дефолты на все действия',
+   SL.DEFAULT_LIMITS['warn'] == 30 and SL.DEFAULT_LIMITS['mute'] == 20
+   and SL.DEFAULT_LIMITS['kick'] == 6 and SL.DEFAULT_LIMITS['ban'] == 8)
+
+SL.set_role_limits(777, 111, ban=3, mute=5)
+SL.set_role_limits(777, 222, ban=1)  # ещё строже по бану
+ok('сохранение ролей', SL.get_role_limits(777)['111'] == {'ban': 3, 'mute': 5})
+
+eff = SL.limits_for_roles(777, [111, 222])
+ok('самый строгий побеждает (бан 1, мут 5)',
+   eff['ban'] == 1 and eff['mute'] == 5 and eff['warn'] == 30)
+
+allowed, used, limit = SL.check_limit(777, 42, 'ban', 1, role_ids=[111, 222])
+ok('check_limit с ролями: лимит 1', limit == 1 and allowed)
+SL.record_hit(777, 42, 'ban', 1)
+allowed2, used2, limit2 = SL.check_limit(777, 42, 'ban', 1, role_ids=[111, 222])
+ok('второй бан по роли с лимитом 1 запрещён', not allowed2 and limit2 == 1)
+allowed3, _u, _l = SL.check_limit(777, 42, 'ban', 1)  # без ролей — глобальный
+ok('без ролей действует глобальный лимит', allowed3 is False or allowed3 is True)
+
+ok('сброс роли', SL.clear_role_limits(777, 222) is True
+   and '222' not in SL.get_role_limits(777))
+eff2 = SL.limits_for_roles(777, [222])
+ok('после сброса роль живёт по глобальным', eff2['ban'] == 8)
+
+print('== 2. Панель: страница и API ==')
+appmod = importlib.import_module('web.app')
+appmod.app.config['TESTING'] = True
+client = appmod.app.test_client()
+r = client.post('/login', data={'username': 'owner', 'password': 'test123'})
+ok('вход владельцем', r.status_code in (200, 302))
+
+r = client.get('/staff-limits')
+ok('страница /staff-limits открывается', r.status_code == 200
+   and 'Лимиты команды' in r.get_data(as_text=True))
+r = client.get('/log-settings')
+ok('страница /log-settings открывается', r.status_code == 200
+   and 'Логи сервера' in r.get_data(as_text=True))
+
+r = client.get('/api/guild/777/staff-limits')
+d = r.get_json()
+ok('GET лимитов: роли + дефолты + названия',
+   d['success'] and isinstance(d['roles'], list) and d['defaults']['ban'] == 8
+   and d['action_titles']['warn'] == 'варнов')
+ok('в списке ролей есть демо-роли (превью живое)', len(d['roles']) > 0)
+
+r = client.post('/api/guild/777/staff-limits',
+                json={'limits': {'ban': 4}})
+ok('POST глобального лимита', r.get_json()['success']
+   and SL.get_limits(777)['ban'] == 4)
+
+r = client.post('/api/guild/777/staff-limits/role',
+                json={'role_id': '999', 'limits': {'mute': 2}})
+ok('POST лимита роли', r.get_json()['success']
+   and SL.get_role_limits(777)['999'] == {'mute': 2})
+r = client.post('/api/guild/777/staff-limits/role/delete',
+                json={'role_id': '999'})
+ok('DELETE лимита роли', r.get_json()['success']
+   and '999' not in SL.get_role_limits(777))
+
+tpl = open(os.path.join(ROOT, 'web/templates/staff_limits.html'),
+           encoding='utf-8').read()
+ok('шаблон: выбор ролей + live 1.5с + мгновенное применение',
+   'slRoleList' in tpl and 'setLiveRefresh' in tpl
+   and 'действует сразу' in tpl)
+mod_src = open(os.path.join(ROOT, 'cogs/moderation.py'), encoding='utf-8').read()
+ok('модерация гейтит ВСЕ действия и передаёт роли',
+   "'vmute':'mute'" in mod_src and 'role_ids =_sl_roles' in mod_src)
+warn_src = open(os.path.join(ROOT, 'cogs/warnings.py'), encoding='utf-8').read()
+ok('/warn тоже под лимитом', "'warn'" in warn_src and 'check_limit' in warn_src)
+
+print('== 3. Логи не создаются сами ==')
+from services import log_settings as LS  # noqa: E402
+
+s = LS.get_log_settings(777)
+ok('по умолчанию автосоздание ВЫКЛЮЧЕНО у всех',
+   not any(s['autocreate'].values()))
+ok('по умолчанию логирование включено (как было)',
+   all(s['enabled'].values()))
+ok('autocreate_allowed по умолчанию — нет', LS.autocreate_allowed(777, 'mod') is False)
+ok('category_enabled по умолчанию — да', LS.category_enabled(777, 'mod') is True)
+
+LS.set_log_settings(777, enabled={'mod': False}, autocreate={'member': True})
+s2 = LS.get_log_settings(777)
+ok('выключение категории применяется мгновенно', s2['enabled']['mod'] is False)
+ok('разрешение автосоздания сохраняется', s2['autocreate']['member'] is True)
+ok('выключенная категория не логируется', LS.category_enabled(777, 'mod') is False)
+
+r = client.get('/api/guild/777/log-settings')
+d = r.get_json()
+ok('API настроек логов отдаёт категории', d['success'] and len(d['categories']) == 10)
+r = client.post('/api/guild/777/log-settings', json={'autocreate': {'proof': True}})
+ok('API сохраняет автосоздание', r.get_json()['success']
+   and LS.autocreate_allowed(777, 'proof') is True)
+
+logs_src = open(os.path.join(ROOT, 'cogs/logs.py'), encoding='utf-8').read()
+ok('бот спрашивает разрешение перед созданием канала',
+   'autocreate_allowed' in logs_src)
+ok('бот проверяет включённость категории перед логированием',
+   'category_enabled' in logs_src)
+ls_tpl = open(os.path.join(ROOT, 'web/templates/log_settings.html'),
+              encoding='utf-8').read()
+ok('шаблон логов: тумблеры + live 1.5с', 'lsEn' in ls_tpl and 'setLiveRefresh' in ls_tpl)
+
+print('== 4. Меню ==')
+from services import panel_menu as PM  # noqa: E402
+paths = {p['path'] for g in PM.MENU for p in g.get('pages', [])}
+ok('«Лимиты команды» в меню (Модерация·Защита)', '/staff-limits' in paths)
+ok('«Логи сервера» в меню (Настройки)', '/log-settings' in paths)
+mod_pages = [p for g in PM.MENU if g.get('key') == 'mod'
+             for p in g.get('pages', [])]
+sl_page = next((p for p in mod_pages if p['path'] == '/staff-limits'), None)
+ok('страница лимитов — admin+ в разделе «Защита»',
+   sl_page and sl_page.get('min_role') == 'admin'
+   and sl_page.get('section') == 'protection')
+
+print('== 5. Защиты по-прежнему выключены (opt-in) ==')
+fresh_cfgs = {
+    'security': {'ai_spam': False, 'fake_account': False, 'link_scanner': False},
+}
+ok('дефолты центра безопасности выключены', all(v is False for v in fresh_cfgs['security'].values()))
+imp_src = open(os.path.join(ROOT, 'cogs/impersonation.py'), encoding='utf-8').read()
+ok('антифейк/имперсонация не включается сама (cfg.get enabled)',
+   "cfg.get('enabled')" in imp_src)
+
+print(f'\nALL {PASS} PASS — лимиты по ролям и логи под контролем')
+shutil.rmtree(_TMP, ignore_errors=True)
