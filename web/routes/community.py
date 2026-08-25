@@ -81,18 +81,7 @@ def register(ctx):
                     except Exception as _ex:
                         _log.debug("api_guild_analytics(): подавлено: %s", _ex)
 
-                        # Берём у бота свежие данные по участникам
-        if bot :
-            guild =bot .get_guild (int (guild_id ))
-            if guild :
-            # Если данных о сообщениях нет, показываем хотя бы активных участников
-                if not member_msg_counts :
-                # Участники сортируются по количеству ролей (приблизительный показатель активности)
-                    for m in list (guild .members )[:10 ]:
-                        if not m .bot :
-                            member_msg_counts [m .display_name ]=len (m .roles )
-
-                            # Метки последних 7 дней
+        # Метки последних 7 дней
         today =dt .date .today ()
         labels =[(today -dt .timedelta (days =i )).isoformat ()for i in range (6 ,-1 ,-1 )]
         result ['daily_labels']=[l [5 :]for l in labels ]# формат ММ-ДД
@@ -110,26 +99,28 @@ def register(ctx):
         for ch ,count in channel_msg_counts .most_common (10 )
         ]
 
-        # Демо-режим: если статистика пуста (бот офлайн), заполняем её
-        # из демо-структуры каналов — страница аналитики выглядит живой
-        if _app ._demo_mode ()and not result ['top_channels']:
-            try :
-                with open ('data/demo_channels.json','r',encoding ='utf-8')as _fp :
-                    _demo =json .load (_fp )
-                _names =[(c .get ('name')or '')for c in _demo if c .get ('type')=='text'][:8 ]
-                _base =[1420 ,1175 ,986 ,812 ,654 ,510 ,388 ,266 ]
-                result ['top_channels']=[{'name':n ,'messages':_base [i ]if i <len (_base )else 180 }for i ,n in enumerate (_names )]
-            except Exception as _ex :
-                _log.debug("api_guild_analytics() demo: подавлено: %s", _ex)
+        # Демо-подстановка каналов удалена (заказ владельца 2026-08):
+        # аналитика показывает ТОЛЬКО реальные данные; пусто — честные
+        # нули и пустые состояния, никаких выдуманных цифр «из воздуха».
 
-        # Рост участников (последние 7 дней — приблизительные данные, не реального времени)
+        # Рост участников: реконструкция по реальным приходам/уходам
+        # (member_flow читает audit/message-логи). Истории нет — честная
+        # прямая линия на текущем составе, без выдуманного «+2 в день».
         result ['member_labels']=result ['daily_labels']
         if bot :
             guild =bot .get_guild (int (guild_id ))
             mc =guild .member_count if guild else 0 
         else :
             mc =0 
-        result ['member_counts']=[max (0 ,mc -(6 -i )*2 )for i in range (7 )]
+        counts =[mc ]*7 
+        try :
+            from web .routes .analytics_plus import member_flow 
+            flow =member_flow (guild_id ,days =7 )
+            if any (flow .get ('joins'))or any (flow .get ('leaves')):
+                counts =[max (0 ,mc -(sum (flow ['joins'][i :])-sum (flow ['leaves'][i :])))for i in range (7 )]
+        except Exception as _ex :
+            _log .debug("api_guild_analytics(): member_flow подавлено: %s", _ex)
+        result ['member_counts']=counts 
 
         return jsonify (result )
 

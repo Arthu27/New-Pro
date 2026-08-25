@@ -80,10 +80,26 @@ w('message_logs_111.json', [])
 # что обязано уцелеть
 w('panel_credentials.json', {'user': 'owner', 'password': 'x'})
 w('flask_secret.key', {'k': 1})
-w('tunnel_url.txt', {})  # не json-лог, но проверим что не снесён
 with open('data/tunnel_url.txt', 'w', encoding='utf-8') as fh:
     fh.write('https://panel.example')
 w('notification_settings.json', {'111': {'digest': True}})  # настройки — не лог
+
+# v2: логины/входы/бэкапы/демо-семена/рантайм-логи
+w('tokens.json', {'abc': {'username': 'owner'}})
+w('audit_seen.json', {'111': 'cursor'})
+w('ai_chat_histories.json', {'111': []})
+w('invite_joins_111.json', [{'joined': 1}])
+w('demo_channels.json', [{'id': 1, 'type': 'text'}])
+os.makedirs('data/backups', exist_ok=True)
+with open('data/backups/backup_20260101_000000_ab12.zip', 'wb') as fh:
+    fh.write(b'PK\x03\x04old-logs')
+w('backups.json', {'items': []})
+os.makedirs('data/flask_sessions', exist_ok=True)
+with open('data/flask_sessions/sess1', 'w', encoding='utf-8') as fh:
+    fh.write('session')  # сессии НЕ логи — должны уцелеть
+os.makedirs('logs', exist_ok=True)
+with open('logs/bot.log', 'w', encoding='utf-8') as fh:
+    fh.write('runtime log line')
 
 conn = sqlite3.connect(os.environ['DB_PATH'])
 conn.execute('''CREATE TABLE IF NOT EXISTS guild_data (
@@ -154,6 +170,15 @@ ok('tunnel_url уцелел',
 ok('notification_settings (настройки, не лог) уцелели',
    os.path.exists('data/notification_settings.json'))
 
+print('== v2: входы/токены/бэкапы/демо/рантайм-логи ==')
+for fn in ('tokens.json', 'audit_seen.json', 'ai_chat_histories.json',
+           'invite_joins_111.json', 'demo_channels.json', 'backups.json',
+           'data/backups/backup_20260101_000000_ab12.zip', 'logs/bot.log'):
+    ok(f'v2 удалён: {fn}', not os.path.exists(os.path.join(_TMP, fn)))
+ok('v2: сессии панели уцелели (владельца не выкидывает)',
+   os.path.exists('data/flask_sessions/sess1'))
+ok('маркер v2 записан', os.path.isfile('data/.freshstart_v2.json'))
+
 print('== чистый старт: второй запуск ничего не трогает ==')
 # Хозяин включил защиту сам — миграция НЕ должна её погасить снова
 sec = json.load(open('data/security_111.json', encoding='utf-8'))
@@ -166,6 +191,10 @@ ok('второй запуск — no-op (маркер)', rep2 is None)
 sec = json.load(open('data/security_111.json', encoding='utf-8'))
 ok('включённое хозяином НЕ выключено', sec['ai_spam'] is True)
 ok('новый лог хозяина НЕ стёрт', os.path.exists('data/audit_log.json'))
+# v2 тоже одноразовая: новый токен входа после сброса не сносится
+w('tokens.json', {'fresh': {'username': 'owner'}})
+ok('v2 повторно не срабатывает (токен хозяина жив)',
+   os.path.exists('data/tokens.json'))
 
 print(f'\nALL {PASS} PASS — fresh_start (чистый старт) работает')
 shutil.rmtree(_TMP, ignore_errors=True)

@@ -180,6 +180,42 @@ check('id="anPrint"' in tpl and 'window.print()' in tpl,
 r = client.get('/analytics')
 check(r.status_code == 200 and 'contextGid' in r.get_data(as_text=True),
       'страница /analytics живая и несёт фолбэк выбора сервера')
+
+print('== 6. Только реальные данные — демо-фабрикации удалены ==')
+ap_src = open(os.path.join(ROOT, 'web/routes/analytics_plus.py'), encoding='utf-8').read()
+com_src = open(os.path.join(ROOT, 'web/routes/community.py'), encoding='utf-8').read()
+check("'sonya.staff' not in ap_src and 'seed % 1200' not in ap_src",
+      'фейковые авторы и числа детализации канала удалены')
+check('demo_channels.json' not in com_src and '1420' not in com_src,
+      'демо-каналы с выдуманными числами удалены из основной аналитики')
+check('member_flow' in com_src, 'рост участников считается по реальным событиям')
+check('len (m .roles )' not in com_src,
+      '«самые активные по числу ролей» больше не подставляются')
+
+import web.app as _wa  # noqa: E402
+_saved_bot, _wa.bot_instance = _wa.bot_instance, None
+os.environ['DEMO_MODE'] = '1'
+check(_wa._demo_mode() is True, 'демо жив только когда бота нет (предпросмотр)')
+_wa.bot_instance = object()  # бот подключён
+try:
+    check(_wa._demo_mode() is False,
+          'при живом боте DEMO_MODE из .env игнорируется (никаких выдуманных данных)')
+finally:
+    _wa.bot_instance = _saved_bot
+    os.environ['DEMO_MODE'] = ''
+
+# Пустой сервер (нет логов) — честные пустые ответы, без подстановок
+login('mod')
+r = client.get('/api/guild/424242/analytics')
+d = r.get_json() or {}
+check(r.status_code == 200 and d.get('top_channels') == [] and d.get('top_members') == [],
+      'нет данных — так и показываем: пусто, без «жизненных» фейков')
+check(len(set(d.get('member_counts') or [0])) == 1,
+      'график участников — честная линия, без выдуманного «+2 в день»')
+r = client.get('/api/guild/424242/analytics/channel-drill?name=общий')
+d = r.get_json() or {}
+check(r.status_code == 200 and d.get('total') == 0 and not d.get('top_authors'),
+      'детализация пустого канала без выдуманных авторов')
 demo_source = open(os.path.join(ROOT, 'scripts', 'demo_panel.py'), encoding='utf-8').read()
 check("message_log_path = f'data/message_logs_{GID}.json'" in demo_source and
       'for day in range(30)' in demo_source,

@@ -11,15 +11,19 @@
 безопасности это чинит, но её надо нажать. Эта миграция делает то же
 самое АВТОМАТИЧЕСКИ, один раз, при запуске бота.
 
-Что делает (маркер data/.freshstart_v1.json защищает от повтора):
-  1) Гасит флаги enabled во ВСЕХ найденных сторах защиты — файловых
-     (security/antifake/autofilter/guardian/ai_moderation/antiraid)
-     и в базе (GuildData 'anti_alt'). Пороги и белые списки НЕ трогаем:
-     хозяин включит систему — и она заработает с прежними настройками.
-  2) Удаляет логи/истории (audit/dm/login/panel-логи, кейсы модерации,
-     варны, страйки, message_logs, night_summary и т.п.).
-  3) Пишет маркер со сводкой. Всё, что хозяин включит ПОСЛЕ этого,
-     миграция уже никогда не трогает (маркер есть — выход сразу).
+Что делает (каждая фаза защищена своим маркером в data/):
+  v1 (.freshstart_v1.json):
+    1) Гасит флаги enabled во ВСЕХ найденных сторах защиты — файловых
+       (security/antifake/autofilter/guardian/ai_moderation/antiraid)
+       и в базе (GuildData 'anti_alt'). Пороги и белые списки НЕ трогаем:
+       хозяин включит систему — и она заработает с прежними настройками.
+    2) Удаляет логи/истории (audit/dm/login/panel-логи, кейсы модерации,
+       варны, страйки, message_logs, night_summary и т.п.).
+  v2 (.freshstart_v2.json) — «удали вообще все логи и данные о входах»:
+    токены авто-входа, история входов по инвайтам, архивы бэкапов
+    (внутри копии старых логов), рантайм-логи бота (logs/*.log),
+    демо-семены (demo_*, ai_tickets_demo) — источник «странных данных».
+  Всё, что хозяин включит ПОСЛЕ миграции, она уже никогда не трогает.
 """
 import json
 import logging
@@ -30,6 +34,7 @@ from datetime import datetime, timezone
 _log = logging.getLogger(__name__)
 
 MARKER = '.freshstart_v1.json'
+MARKER_V2 = '.freshstart_v2.json'
 
 # --- Логи и истории: сносим целиком, файлы пересоздадутся пустыми ------
 WIPE_FILES = (
@@ -49,11 +54,28 @@ WIPE_FILES = (
 # Файловые префиксы (за ними идёт <gid>.json): протоколы наказаний и логи сообщений
 WIPE_PREFIXES = ('modproof_', 'message_logs')
 
+# --- v2 (2026-08, «удали вообще все логи и данные о входах») -------------
+# Токены авто-входа, курсор аудита, истории AI-чатов, демо-семена,
+# индекс бэкапов (сами архивы — отдельным проходом по data/backups/).
+WIPE_V2_FILES = (
+    'tokens.json',             # токены авто-входа в панель
+    'audit_seen.json',         # курсор прочитанного аудита
+    'ai_chat_histories.json',  # истории AI-чата
+    'ai_tickets_demo.json',    # демо-семена (фейковые тикеты)
+    'backups.json',            # индекс бэкапов (пересоздаётся)
+)
+# История входов на сервер по инвайтам + все демо-файлы (demo_channels и т.п.)
+WIPE_V2_PREFIXES = ('invite_joins_', 'demo_')
+# Архивы бэкапов хранят копии старых логов — чистим тоже
+WIPE_V2_ZIP_DIRS = ('backups',)
+# Рантайм-логи самого бота (logs/bot.log и соседи)
+WIPE_V2_LOG_DIRS = ('logs',)
+
 # --- Никогда не трогаем: иначе владелец потеряет доступ к панели -------
 KEEP_FILES = (
     'panel_credentials.json', 'panel_credentials.txt',
     'flask_secret.key', 'tunnel_url.txt',
-    MARKER,
+    MARKER, MARKER_V2,
     # bot.db и настройки уведомлений — не логи, оставляем
 )
 
@@ -231,34 +253,100 @@ def _wipe_logs(data_dir):
     return wiped
 
 
-def run_once(root):
-    """Выполняется при старте бота. Возвращает сводку или None (уже сделано)."""
-    data_dir = os.path.join(root, 'data')
-    marker = os.path.join(data_dir, MARKER)
-    if os.path.isfile(marker):
-        return None
+def _wipe_v2(root, data_dir):
+    """v2: логины/токены, история входов, бэкапы-архивы, рантайм-логи, демо."""
+    wiped = []
+    for fn in WIPE_V2_FILES:
+        path = os.path.join(data_dir, fn)
+        if os.path.isfile(path):
+            try:
+                os.remove(path)
+                wiped.append(fn)
+            except Exception as _ex:
+                _log.debug('fresh_start: не удалил %s: %s', fn, _ex)
+    try:
+        names = os.listdir(data_dir)
+    except Exception:
+        names = []
+    for fn in names:
+        if fn in KEEP_FILES or not fn.endswith('.json'):
+            continue
+        stem = fn[:-5]
+        if any(stem.startswith(p) for p in WIPE_V2_PREFIXES):
+            path = os.path.join(data_dir, fn)
+            if os.path.isfile(path):
+                try:
+                    os.remove(path)
+                    wiped.append(fn)
+                except Exception as _ex:
+                    _log.debug('fresh_start: не удалил %s: %s', fn, _ex)
+    # архивы бэкапов (внутри — копии старых логов)
+    for sub in WIPE_V2_ZIP_DIRS:
+        d = os.path.join(data_dir, sub)
+        try:
+            for fn in os.listdir(d):
+                if fn.endswith('.zip'):
+                    os.remove(os.path.join(d, fn))
+                    wiped.append(f'{sub}/{fn}')
+        except Exception as _ex:
+            _log.debug('fresh_start: бэкапы %s пропущены: %s', sub, _ex)
+    # рантайм-логи бота (logs/bot.log …) — лежат в корне репозитория
+    for sub in WIPE_V2_LOG_DIRS:
+        d = os.path.join(root, sub)
+        try:
+            for fn in os.listdir(d):
+                if fn.endswith('.log'):
+                    os.remove(os.path.join(d, fn))
+                    wiped.append(f'{sub}/{fn}')
+        except Exception as _ex:
+            _log.debug('fresh_start: логи %s пропущены: %s', sub, _ex)
+    return wiped
 
+
+def run_once(root):
+    """Выполняется при старте бота. Фазы независимы, каждая — один раз.
+
+    v1: защита гарантированно выключена + базовые логи стёрты.
+    v2 (2026-08, «вообще все логи»): токены входа, история входов на
+         сервер, архивы бэкапов, рантайм-логи бота, демо-семена.
+    Возвращает сводку выполненных фаз или None (всё уже сделано).
+    """
+    data_dir = os.path.join(root, 'data')
     os.makedirs(data_dir, exist_ok=True)
 
-    flipped = []   # какие сторы защиты погашены
-    _disable_file_stores(data_dir, flipped)
-    _disable_anti_alt(flipped)
+    report = None
+    flipped = []
+    wiped = []
 
-    wiped = _wipe_logs(data_dir)
+    # --- фаза 1: защита off + базовая зачистка логов --------------------
+    if not os.path.isfile(os.path.join(data_dir, MARKER)):
+        _disable_file_stores(data_dir, flipped)
+        _disable_anti_alt(flipped)
+        wiped += _wipe_logs(data_dir)
+        try:
+            _write_atomic(os.path.join(data_dir, MARKER), {
+                'at': datetime.now(timezone.utc).isoformat(),
+                'disabled': flipped, 'wiped_files': wiped})
+        except Exception as _ex:
+            _log.warning('fresh_start: маркер v1 не записан (%s)', _ex)
+        _log.info('ЧИСТЫЙ СТАРТ v1: защита выключена (%s), логи стёрты (%d шт.)',
+                  ', '.join(flipped) or 'уже была выключена', len(wiped))
+        report = {'disabled': flipped, 'wiped_files': list(wiped)}
 
-    report = {
-        'at': datetime.now(timezone.utc).isoformat(),
-        'disabled': flipped,
-        'wiped_files': wiped,
-        'note': 'Разовый чистый старт: защита выключена, логи стёрты. '
-                'Дальше владелец включает всё сам — миграция больше не сработает.',
-    }
-    try:
-        _write_atomic(marker, report)
-    except Exception as _ex:
-        _log.warning('fresh_start: маркер не записан (%s) — миграция '
-                     'повторится при следующем запуске!', _ex)
+    # --- фаза 2: «вообще все логи и данные о входах» ---------------------
+    if not os.path.isfile(os.path.join(data_dir, MARKER_V2)):
+        wiped2 = _wipe_v2(root, data_dir)
+        try:
+            _write_atomic(os.path.join(data_dir, MARKER_V2), {
+                'at': datetime.now(timezone.utc).isoformat(),
+                'wiped_files': wiped2})
+        except Exception as _ex:
+            _log.warning('fresh_start: маркер v2 не записан (%s)', _ex)
+        _log.info('ЧИСТЫЙ СТАРТ v2: входы/токены/бэкапы/демо стёрты (%d шт.)',
+                  len(wiped2))
+        if report is None:
+            report = {'disabled': [], 'wiped_files': wiped2}
+        else:
+            report['wiped_files'] += wiped2
 
-    _log.info('ЧИСТЫЙ СТАРТ: защита выключена (%s), логи стёрты (%d шт.)',
-              ', '.join(flipped) or 'уже была выключена', len(wiped))
     return report
