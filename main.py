@@ -758,6 +758,22 @@ async def load_cogs():
         log.warning(f"Слеш-меню почти полное ({len(_kept)}/100) — пора пересмотреть KEEP_SLASH")
 
 async def main():
+    # Разовый «чистый старт» (заказ владельца 2026-08): стереть все логи
+    # и ГАРАНТИРОВАННО выключить защиту — старые конфиги на диске могли
+    # хранить enabled: true ещё с эпохи «всё включено» (отсюда сюрпризы
+    # вида «за спам отлетел»). Маркер data/.freshstart_v1.json защищает
+    # от повтора: всё, что хозяин включит потом, никто не трогает.
+    try:
+        _root = os.path.dirname(os.path.abspath(__file__))
+        from services import fresh_start as _fs
+        _rep = _fs.run_once(_root)
+        if _rep:
+            print('[СБРОС] Чистый старт: защита выключена (%s), логов стёрто: %d шт.'
+                  % (', '.join(_rep['disabled']) or 'уже была выключена',
+                     len(_rep['wiped_files'])))
+    except Exception as _e:
+        print(f'[СБРОС] Чистый старт не выполнен: {_e}')
+
     from web.app import app, set_bot_instance
     set_bot_instance(bot)
     _start_web_server(app)

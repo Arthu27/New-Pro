@@ -399,6 +399,59 @@
   var _lastFlow = null;
   var _topChannel = null;
 
+  /* Контекст сервера. Раньше селектор «Выберите сервер…» никто не filling
+     и при пустом MAIN_GUILD_ID страница навеки висела на «Загрузка…» —
+     выглядело как «система не работает». Теперь: подтягиваем список
+     серверов из /api/guilds, подставляем дефолт, а если бота вообще
+     нет ни на одном сервере — честно пишем об этом вместо спиннеров. */
+  var _guildsFetched = false;
+  var _guildsList = [];
+  async function ensureGuilds() {
+    if (_guildsFetched) return _guildsList;
+    _guildsFetched = true;
+    try {
+      var r = await fetch('/api/guilds');
+      if (r.ok) {
+        var d = await r.json();
+        _guildsList = Array.isArray(d) ? d : (d && d.guilds) || [];
+      }
+    } catch (e) { _guildsList = []; }
+    var sel = $id('guild-select');
+    if (sel && _guildsList.length && sel.options.length <= 1) {
+      var cur = sel.value;
+      _guildsList.forEach(function (g) {
+        var o = document.createElement('option');
+        o.value = String(g.id);
+        o.textContent = g.name || String(g.id);
+        sel.appendChild(o);
+      });
+      if (cur) sel.value = cur;
+    }
+    return _guildsList;
+  }
+  async function contextGid() {
+    var list = await ensureGuilds();
+    var sel = $id('guild-select');
+    if (sel && sel.value) return sel.value;
+    if (MAIN_GID) { if (sel) sel.value = MAIN_GID; return MAIN_GID; }
+    if (list.length) {
+      var first = String(list[0].id);
+      if (sel) sel.value = first;
+      return first;
+    }
+    return '';
+  }
+  function renderNoContext() {
+    var html = '<div class="empty-state"><i class="fas fa-server"></i>' +
+      '<p>Бот пока не виден ни на одном сервере</p>' +
+      '<p class="empty-tip">Добавьте бота на сервер — и сигналы появятся сами.</p></div>';
+    ['top-members', 'top-channels', 'anHeatmap', 'anModLoad', 'anVoicePulse', 'anDrill', 'anRecords'].forEach(function (id) {
+      var el = $id(id); if (el) el.innerHTML = html;
+    });
+    if ($id('anUpdated')) $id('anUpdated').textContent = 'Нет контекста сервера';
+    if ($id('anPulseLabel')) $id('anPulseLabel').textContent = 'Нет данных';
+  }
+
   function kpi(id, value, note) {
     var valueEl = $id(id), noteEl = $id(id + 'Note');
     if (valueEl) valueEl.textContent = value;
@@ -945,20 +998,20 @@ function renderCharts(d) {
     }
   }
 
-  function onDrillChange() {
-    var sel = $id('guild-select');
-    var gid = (sel && sel.value) || MAIN_GID;
+  async function onDrillChange() {
+    var gid = await contextGid();
+    if (!gid) return;
     loadDrill(gid, $id('anDrillSel').value);
   }
 
   var _anFp = '';
   async function load() {
-    var sel = $id('guild-select');
-    var gid = (sel && sel.value) || MAIN_GID;
-    if (!gid || _loading) return;
+    if (_loading) return;
     _loading = true;
     var refresh = $id('anRefresh');
     try {
+      var gid = await contextGid();
+      if (!gid) { renderNoContext(); return; }
       var res = await fetch('/api/guild/' + gid + '/analytics');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var d = await res.json();

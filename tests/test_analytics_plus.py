@@ -169,10 +169,17 @@ check('analytics-signal-grid' in tpl and 'anSignalActivity' in tpl and 'anSignal
 check('data-an-lens="content"' in tpl and 'function setLens' in tpl and
       "localStorage.setItem('analytics_lens'" in tpl,
       'рабочие линзы переключают контент, аудиторию и команду')
+check('contextGid' in tpl and 'ensureGuilds' in tpl and "'/api/guilds'" in tpl,
+      'селектор сервера заполняется из /api/guilds (без MAIN_GUILD_ID не виснет)')
+check('renderNoContext' in tpl and 'Бот пока не виден ни на одном сервере' in tpl,
+      'нет серверов — честное пустое состояние вместо вечного «Загрузка…»')
 check('analytics-chart-shell' in tpl and 'analytics-chart-panel' in tpl,
       'графики получили собственную полноэкранную визуальную систему')
 check('id="anPrint"' in tpl and 'window.print()' in tpl,
       'снимок аналитики готовится штатной печатью/PDF')
+r = client.get('/analytics')
+check(r.status_code == 200 and 'contextGid' in r.get_data(as_text=True),
+      'страница /analytics живая и несёт фолбэк выбора сервера')
 demo_source = open(os.path.join(ROOT, 'scripts', 'demo_panel.py'), encoding='utf-8').read()
 check("message_log_path = f'data/message_logs_{GID}.json'" in demo_source and
       'for day in range(30)' in demo_source,
