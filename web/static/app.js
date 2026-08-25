@@ -291,6 +291,10 @@
 
   setInterval(function () {
     if (livePaused) return;
+    /* Вкладка в фоне — опрос стоит: браузер всё равно рвёт ответы
+       (отсюда шквал «context canceled» у туннеля). Вернёшься — само
+       догонит живьём. */
+    if (document.hidden) return;
     var now = Date.now();
     if (now < liveHoldUntil) return;
     liveFns.forEach(function (e) {

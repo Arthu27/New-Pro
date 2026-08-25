@@ -278,4 +278,16 @@ def register(ctx):
                                        enabled=data.get('enabled'),
                                        autocreate=data.get('autocreate'),
                                        channels=data.get('channels'))
+        # Владелец явно выбрал каналы в панели — категория снова может
+        # автосоздаваться, если канал когда-нибудь пропадёт (маркер
+        # «удалено владельцем» снимается осознанной настройкой).
+        try:
+            chosen = {k: v for k, v in (settings.get('channels') or {}).items()
+                      if str(v or '').strip()}
+            if chosen:
+                from services import log_settings as _LS
+                for cat in chosen:
+                    _LS.autocreate_forget(guild_id, cat)
+        except Exception as _ex:
+            _log.debug('log-settings: autocreate_forget подавлено: %s', _ex)
         return jsonify({'success': True, 'settings': settings})

@@ -12,6 +12,8 @@ from web.routes._common import (
     _log, request, jsonify,
 )
 
+import importlib
+
 from services import command_registry as CR
 
 
@@ -52,6 +54,45 @@ def register(ctx):
             'prefix': data['prefix'],
             'modules': data.get('modules'),
             'categories': data['categories'],
+            'disabled': data.get('disabled', 0),
             'shown': len(items),
             'commands': items,
         })
+
+
+    @app.route('/api/commands/switches', methods=['GET'])
+    @login_required
+    @role_required('mod')
+    def api_commands_switches():
+        """Какие команды выключены владельцем (для тумблеров на карточках)."""
+        from services import command_switches as CSW
+        return jsonify({'success': True,
+                        'disabled': sorted(CSW.disabled_set())})
+
+    @app.route('/api/commands/switch', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_commands_switch():
+        """Вкл/выкл команду. Бот онлайн — команда мгновенно исчезает
+        из slash-меню Discord (пересинк в фоне) и перестаёт отвечать."""
+        from services import command_switches as CSW
+        data = request.get_json(silent=True) or {}
+        name = str(data.get('name') or '').strip()
+        off = bool(data.get('disabled'))
+        if not name:
+            return jsonify({'success': False,
+                            'error': 'Не указана команда'}), 400
+        disabled = CSW.set_disabled(name, off)
+        bot = getattr(importlib.import_module('web.app'), 'bot_instance', None)
+        scheduled = False
+        if bot is not None and getattr(bot, 'loop', None):
+            import asyncio
+            try:
+                asyncio.run_coroutine_threadsafe(CSW.resync(bot), bot.loop)
+                scheduled = True
+            except RuntimeError as _ex:
+                _log.debug('switch resync schedule: %s', _ex)
+        return jsonify({'success': True, 'name': name, 'disabled': off,
+                        'disabled_list': sorted(disabled),
+                        'bot_online': bot is not None,
+                        'resync_scheduled': scheduled})

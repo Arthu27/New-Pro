@@ -70,24 +70,9 @@ MENU = [
          'section': 'investigation', 'description': 'Очередь пересмотра наказаний и вердикты',
          'access': 'Мод+', 'tone': 'info'},
 
-        # Защита: превентивные политики безопасности.
-        {'path': '/security', 'label': 'Центр безопасности', 'icon': 'fa-shield-halved',
-         'section': 'protection', 'description': 'Сводный риск, политики и готовность защиты',
-         'access': 'Мод+', 'tone': 'security'},
-        {'path': '/autofilter', 'label': 'Автофильтр', 'icon': 'fa-filter',
-         'section': 'protection', 'description': 'Слова, ссылки, капс, флуд и исключения',
-         'access': 'Мод+', 'tone': 'security'},
-        {'path': '/antiraid', 'label': 'Анти-рейд', 'icon': 'fa-shield-virus',
-         'section': 'protection', 'description': 'Защита от массовых входов и атак',
-         'access': 'Админ', 'min_role': 'admin', 'tone': 'security'},
-        {'path': '/guardian', 'label': 'Щит сервера', 'icon': 'fa-shield-heart',
-         'section': 'protection', 'description': 'Анти-нюк + лимиты команды: каналы, роли, права, боты, периоды',
-         'access': 'Админ', 'min_role': 'admin', 'tone': 'critical'},
-        {'path': '/antifake', 'label': 'Антифейк', 'icon': 'fa-user-secret',
-         'section': 'protection', 'description': 'Поиск подделок профилей и impersonation',
-         'access': 'Мод+', 'tone': 'security'},
+        # Защита: вынесена в отдельную категорию сайдбара «Защита»
+        # (заказ владельца 2026-08-25: разделить Модерация и Защита).
 
-        # Команда и аналитика: качество, нагрузка и эскалация.
         {'path': '/mod-control', 'label': 'Контроль команды', 'icon': 'fa-clipboard-check',
          'section': 'management', 'description': 'Очереди, заметки и контроль исполнения',
          'access': 'Мод+', 'tone': 'analytics'},
@@ -103,6 +88,24 @@ MENU = [
         {'path': '/staff-apps', 'label': 'Заявки в команду', 'icon': 'fa-file-signature',
          'section': 'management', 'description': 'Анкеты кандидатов: хелперы, модераторы, чат-контроль',
          'access': 'Мод+', 'tone': 'analytics'},
+    ]},
+    # Защита — отдельная категория сайдбара (заказ владельца 2026-08-25).
+    {'group': 'Защита', 'key': 'protection', 'icon': 'fa-shield-halved', 'pages': [
+        {'path': '/security', 'label': 'Центр безопасности', 'icon': 'fa-shield-halved',
+         'section': 'protection', 'description': 'Сводный риск, политики и готовность защиты',
+         'access': 'Мод+', 'tone': 'security'},
+        {'path': '/autofilter', 'label': 'Автофильтр', 'icon': 'fa-filter',
+         'section': 'protection', 'description': 'Слова, ссылки, капс, флуд и исключения',
+         'access': 'Мод+', 'tone': 'security'},
+        {'path': '/antiraid', 'label': 'Анти-рейд', 'icon': 'fa-shield-virus',
+         'section': 'protection', 'description': 'Защита от массовых входов и атак',
+         'access': 'Админ', 'min_role': 'admin', 'tone': 'security'},
+        {'path': '/guardian', 'label': 'Щит сервера', 'icon': 'fa-shield-heart',
+         'section': 'protection', 'description': 'Анти-нюк + лимиты команды: каналы, роли, права, боты, периоды',
+         'access': 'Админ', 'min_role': 'admin', 'tone': 'critical'},
+        {'path': '/antifake', 'label': 'Антифейк', 'icon': 'fa-user-secret',
+         'section': 'protection', 'description': 'Поиск подделок профилей и impersonation',
+         'access': 'Мод+', 'tone': 'security'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},
@@ -145,6 +148,7 @@ MENU = [
     # собрано в одном месте — сервер, модерация, каналы, бот, темы, защита.
     {'group': 'Настройки', 'key': 'settings', 'icon': 'fa-sliders', 'pages': [
         {'path': '/settings', 'label': 'Сервер', 'icon': 'fa-cog'},
+        {'path': '/command-switches', 'label': 'Команды вкл/выкл', 'icon': 'fa-toggle-on'},
         {'path': '/mod-settings', 'label': 'Модерация', 'icon': 'fa-hammer'},
         {'path': '/channel-settings', 'label': 'Каналы и маршруты', 'icon': 'fa-route'},
         {'path': '/bot-settings', 'label': 'Бот', 'icon': 'fa-sliders-h'},
@@ -245,8 +249,8 @@ _ROLE_LEVEL = {'uye': 0, 'mod': 1, 'curator': 2, 'admin': 3, 'owner': 4}
 # Defaults applied if a role has no stored config yet.
 # Куратор — старший модератор: всё модерское + тикеты и сообщество.
 DEFAULT_GROUPS = {
-    'mod': ['main', 'mod', 'members', 'logs', 'ai'],
-    'curator': ['main', 'mod', 'members', 'tickets', 'community', 'logs', 'ai'],
+    'mod': ['main', 'mod', 'protection', 'members', 'logs', 'ai'],
+    'curator': ['main', 'mod', 'protection', 'members', 'tickets', 'community', 'logs', 'ai'],
     'admin': [g['key'] for g in MENU],
 }
 

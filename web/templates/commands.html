@@ -11,6 +11,14 @@
 </div>
 
 <style>
+.cmdx-card{position:relative}
+.cmdx-card.is-off{opacity:.55;filter:saturate(.35)}
+.cmdx-card.is-off::after{content:'выключена';position:absolute;top:10px;right:38px;font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#f59e0b;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);padding:2px 8px;border-radius:999px}
+.cmdx-switch{position:absolute;top:10px;right:10px;width:34px;height:19px;border-radius:999px;background:color-mix(in srgb,var(--text) 18%,transparent);border:1px solid var(--line-2);cursor:pointer;transition:.16s;z-index:3;flex:none}
+.cmdx-switch::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:.16s;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.cmdx-switch.on{background:#22c55e;border-color:#22c55e}
+.cmdx-switch.on::after{left:17px}
+.cmdx-switch:hover{transform:scale(1.06)}
 .cmdx-stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
 .cmdx-stat{display:flex;align-items:center;gap:10px;padding:10px 16px;background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 5%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:12px}
 .cmdx-stat i{color:var(--ac);font-size:15px}
@@ -57,6 +65,21 @@
 .cmdx-empty i{font-size:26px;opacity:.4;display:block;margin-bottom:10px}
 .cmdx-skel{height:118px;border-radius:14px;background:linear-gradient(100deg,var(--surface-2) 40%,color-mix(in srgb, var(--surface-2) 60%, var(--text) 6%) 50%,var(--surface-2) 60%);background-size:200% 100%;animation:cmdx-shimmer 1.2s infinite}
 @keyframes cmdx-shimmer{0%{background-position:120% 0}100%{background-position:-80% 0}}
+.cmdx-exec-toggle{display:flex;align-items:center;gap:10px;margin:16px 0 0;padding:12px 14px;border:1px dashed color-mix(in srgb,var(--ac) 45%,transparent);border-radius:12px;background:color-mix(in srgb,var(--ac) 6%,transparent);color:var(--text);font-weight:700;font-size:13px;cursor:pointer;user-select:none;transition:.15s}
+.cmdx-exec-toggle:hover{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent)}
+.cmdx-exec-toggle>i:first-child{color:var(--ac)}
+.cmdx-exec-toggle .cmdx-tgl-arrow{margin-left:auto;font-size:11px;color:var(--text-2);transition:transform .18s}
+.cmdx-exec-toggle.open .cmdx-tgl-arrow{transform:rotate(180deg)}
+.cmdx-ucombo{position:relative}
+.cmdx-ucombo input{width:100%;box-sizing:border-box;padding:9px 12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.cmdx-ucombo input:focus{border-color:var(--ac)}
+.cmdx-ulist{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:210px;overflow:auto;background:#141821;border:1px solid var(--line-2);border-radius:10px;z-index:50;box-shadow:0 14px 34px rgba(0,0,0,.45);padding:4px}
+.cmdx-ucombo.open .cmdx-ulist{display:block}
+.cmdx-uitem{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--text)}
+.cmdx-uitem i{font-size:11px;color:var(--ac)}
+.cmdx-uitem small{margin-left:auto;color:var(--text-3);font-size:10.5px;font-variant-numeric:tabular-nums}
+.cmdx-uitem:hover,.cmdx-uitem.sel{background:color-mix(in srgb,var(--ac) 15%,transparent)}
+.cmdx-unone{padding:8px 10px;font-size:12px;color:var(--text-3)}
 .cmd-modal-overlay{display:none;position:fixed;inset:0;background:rgba(5,7,12,.78);z-index:900;align-items:center;justify-content:center;padding:18px}
 .cmd-modal-overlay.open{display:flex}
 .cmd-modal{width:min(580px,100%);max-height:88vh;overflow:auto;background:var(--surface);border:1px solid var(--line-2);border-radius:18px;padding:0;position:relative;box-shadow:0 28px 80px rgba(0,0,0,.5);animation:cmdx-pop .22s var(--ease) both}
@@ -197,7 +220,9 @@
       var catMeta = null;
       _data.categories.forEach(function (cc) { if (cc.id === c.cat) catMeta = cc; });
       var kind = kindOf(c);
-      html += '<div class="cmdx-card" data-idx="' + _data.commands.indexOf(c) + '" role="button" tabindex="0" style="--cc:' + col + '" aria-label="' + esc(shownName(c)) + '">' +
+      var isOff = !!c.off;
+      html += '<div class="cmdx-card' + (isOff ? ' is-off' : '') + '" data-idx="' + _data.commands.indexOf(c) + '" role="button" tabindex="0" style="--cc:' + col + '" aria-label="' + esc(shownName(c)) + (isOff ? ' (выключена)' : '') + '">' +
+        (CAN_EDIT ? '<div class="cmdx-switch' + (isOff ? '' : ' on') + '" data-sw="' + esc(c.name) + '" role="switch" aria-checked="' + !isOff + '" title="Команда включена/выключена" tabindex="0"></div>' : '') +
         '<div class="cmdx-card-top"><div class="cmdx-ico"><i class="fas ' + esc(catMeta ? catMeta.icon : 'fa-puzzle-piece') + '"></i></div>' +
         '<span class="cmdx-kindchip ' + kind + '">' + (kind === 'slash' ? 'SLASH' : 'PREFIX') + '</span></div>' +
         '<div class="cmdx-name">' + esc(shownName(c)) + '</div>' +
@@ -207,6 +232,38 @@
         '<span class="cmdx-mod">' + esc(c.module) + '</span></div></div>';
     });
     $('cmdxGrid').innerHTML = html;
+  }
+
+
+  /* Вкл/выкл команды (только admin/owner). Бот онлайн — команда тут же
+     исчезает из slash-меню Discord; каталог обновляется живьём. */
+  function toggleSwitch(sw) {
+    if (!CAN_EDIT) return;
+    var name = sw.getAttribute('data-sw');
+    var card = sw.closest('.cmdx-card');
+    var willOff = !card.classList.contains('is-off');
+    sw.style.pointerEvents = 'none';
+    fetch('/api/commands/switch', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, disabled: willOff })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      sw.style.pointerEvents = '';
+      if (!d.success) { alert(d.error || 'Не получилось'); return; }
+      card.classList.toggle('is-off', d.disabled);
+      sw.classList.toggle('on', !d.disabled);
+      sw.setAttribute('aria-checked', String(!d.disabled));
+      var c = null;
+      _data.commands.forEach(function (x) { if (x.name === name) c = x; });
+      if (c) c.off = d.disabled;
+      var msg = d.disabled
+        ? 'Команда выключена — из Discord-меню она исчезнет через несколько секунд'
+        : 'Команда снова включена';
+      if (window.toast) window.toast(msg, true);
+      if (!d.bot_online && window.toast) {
+        window.toast('Бот офлайн: применится сразу после его запуска', false);
+      }
+    }).catch(function () { sw.style.pointerEvents = ''; });
   }
 
   function showSkeleton() {
@@ -238,12 +295,19 @@
       (c.aliases.length ? '<div><i class="fas fa-tags"></i> Алиасы: <b>' + c.aliases.map(esc).join(', ') + '</b></div>' : '') +
       '</div>';
 
-    // Выполнение — только для серверно поддерживаемых команд и админов/владельца
+    // Выполнение — только для серверно поддерживаемых команд и админов/владельца.
+    // Свернуто за явную кнопку: карточка команды остаётся чистой и понятной.
     if (CAN_EDIT && c.executable) {
-      html += '<div class="cmdx-exec">' +
-        '<div class="cmdx-meta" style="margin-bottom:10px"><div><i class="fas fa-play"></i> <b>Быстрое действие</b> — выполнить команду из панели</div></div>' +
+      html += '<div class="cmdx-exec-toggle" id="execToggle" role="button" tabindex="0" aria-expanded="false">' +
+        '<i class="fas fa-bolt"></i> Выполнить из панели' +
+        '<i class="fas fa-chevron-down cmdx-tgl-arrow"></i></div>' +
+        '<div class="cmdx-exec" id="execBox" style="display:none">' +
+        '<div class="cmdx-meta" style="margin-bottom:10px"><div><i class="fas fa-play"></i> <b>Быстрое действие</b> — выбрать сервер и участника</div></div>' +
         '<div class="form-group"><label>Сервер</label><select id="guild-id" aria-label="Сервер"><option value="">Выберите…</option></select></div>' +
-        '<div class="form-group"><label>Пользователь ID</label><input type="text" id="user-id" placeholder="123456789012345678" aria-label="ID пользователя"></div>';
+        '<div class="form-group"><label>Участник</label>' +
+        '<div class="cmdx-ucombo" id="userCombo">' +
+        '<input type="text" id="user-combo" placeholder="Поиск участника — имя или ID…" autocomplete="off" aria-label="Поиск участника">' +
+        '<div class="cmdx-ulist" role="listbox"></div></div></div>';
       if (c.bare === 'timeout') {
         html += '<div class="form-group"><label>Длительность (минут)</label><input type="number" id="duration" value="60" min="1" aria-label="Длительность в минутах"></div>';
       }
@@ -274,7 +338,95 @@
         });
       });
     }
+    bindExecToggle();
     $('cmdModal').classList.add('open');
+  }
+
+  /* «Выполнить из панели» — свёрнуто, раскрывается по клику. Участник
+     выбирается поиском по имени (или вставкой готового ID). */
+  var _execUserId = null;
+  var _membersCache = null;
+
+  function fetchMembers() {
+    if (_membersCache) return Promise.resolve(_membersCache);
+    return fetch('/api/members').then(function (r) { return r.json(); }).then(function (list) {
+      _membersCache = (Array.isArray(list) ? list : []).map(function (m) {
+        return { id: String(m.id || ''), name: m.name || m.display_name || m.username || String(m.id || '') };
+      });
+      return _membersCache;
+    }).catch(function () { _membersCache = []; return _membersCache; });
+  }
+
+  function bindExecToggle() {
+    var tgl = $('execToggle');
+    var box = $('execBox');
+    if (!tgl || !box) return;
+    _execUserId = null;
+    var combo = $('userCombo');
+    var inp = $('user-combo');
+    var list = combo ? combo.querySelector('.cmdx-ulist') : null;
+    tgl.addEventListener('click', function () {
+      var open = box.style.display === 'none';
+      box.style.display = open ? '' : 'none';
+      tgl.classList.toggle('open', open);
+      tgl.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open && inp) inp.focus();
+    });
+    if (!combo || !inp || !list) return;
+    function renderList(items, q) {
+      if (!items.length) {
+        list.innerHTML = '<div class="cmdx-unone">' + (q ? 'Никого не нашли — можно вставить ID целиком' : 'Список пуст') + '</div>';
+      } else {
+        list.innerHTML = items.map(function (m, i) {
+          return '<div class="cmdx-uitem' + (i === 0 ? ' sel' : '') + '" data-id="' + esc(m.id) + '">' +
+            '<i class="fas fa-user"></i>' + esc(m.name) + '<small>' + esc(m.id) + '</small></div>';
+        }).join('');
+        list.querySelectorAll('.cmdx-uitem').forEach(function (el) {
+          el.addEventListener('mousedown', function (ev) {
+            ev.preventDefault();
+            pickUser(el.getAttribute('data-id'));
+          });
+        });
+      }
+      combo.classList.add('open');
+    }
+    function pickUser(id) {
+      var m = null;
+      for (var i = 0; i < (_membersCache || []).length; i++) {
+        if (String(_membersCache[i].id) === String(id)) { m = _membersCache[i]; break; }
+      }
+      if (!m) return;
+      _execUserId = m.id;
+      inp.value = m.name;
+      combo.classList.remove('open');
+    }
+    function refresh() {
+      var q = inp.value.trim().toLowerCase();
+      var digits = q.replace(/\D/g, '');
+      fetchMembers().then(function (all) {
+        var items = all.filter(function (m) {
+          if (!q) return true;
+          if (digits.length >= 2) return String(m.id).indexOf(digits) === 0;
+          return m.name.toLowerCase().indexOf(q) !== -1;
+        }).slice(0, 8);
+        renderList(items, q);
+      });
+    }
+    inp.addEventListener('focus', refresh);
+    inp.addEventListener('input', function () { _execUserId = null; refresh(); });
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        var f = list.querySelector('.cmdx-uitem');
+        if (f) pickUser(f.getAttribute('data-id'));
+      } else if (e.key === 'Escape') {
+        combo.classList.remove('open');
+        inp.blur();
+      }
+    });
+    inp.addEventListener('blur', function () {
+      setTimeout(function () { combo.classList.remove('open'); }, 160);
+    });
   }
 
   function closeModal() {
@@ -296,8 +448,13 @@
     var data = { command: _current.bare };
     var guildId = $('guild-id');
     if (guildId) data.guild_id = guildId.value;
-    var userId = $('user-id');
-    if (userId) data.user_id = userId.value;
+    var comboInp = $('user-combo');
+    if (comboInp) {
+      var raw = (comboInp.value || '').trim();
+      var pickedId = _execUserId || (/^\d{15,25}$/.test(raw) ? raw : null);
+      if (!pickedId) { flashResult(false, 'Выберите участника из поиска (или вставьте его ID)'); return; }
+      data.user_id = pickedId;
+    }
     var reason = $('reason');
     if (reason) data.reason = reason.value;
     var proof = $('proof');
@@ -329,6 +486,8 @@
       renderGrid();
     });
     $('cmdxGrid').addEventListener('click', function (e) {
+      var sw = e.target.closest('.cmdx-switch');
+      if (sw) { toggleSwitch(sw); return; }
       var card = e.target.closest('.cmdx-card');
       if (!card) return;
       var c = _data.commands[parseInt(card.getAttribute('data-idx'), 10)];

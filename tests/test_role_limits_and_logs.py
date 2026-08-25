@@ -431,12 +431,16 @@ ok('человеческая подсказка «Сработает: N за X»
    'gd-fires' in gd_tpl and 'Как настроить защиту' in gd_tpl)
 ok('значение зажимается в 3 сек..31 день при сохранении',
    'Math.min(WIN_MAX, wsec)' in gd_tpl and 'WIN_MAX = 31 * 86400' in gd_tpl)
-ok('РОЛИ выбираются пикером (не ID руками)',
+ok('РОЛИ выбираются живым поиском (как в лимитах)',
    'gdWlRPick' in gd_tpl and 'gdWlBRPick' in gd_tpl
-   and 'Роль сервера' in gd_tpl and 'renderPickers' in gd_tpl)
-ok('УЧАСТНИКИ тоже пикером (белые списки без ID руками)',
+   and 'Поиск роли' in gd_tpl and 'wlComboInit' in gd_tpl
+   and 'gd-combo' in gd_tpl)
+ok('УЧАСТНИКИ тоже живым поиском (белые списки без ID руками)',
    'gdWlUPick' in gd_tpl and 'gdWlBUPick' in gd_tpl
-   and 'Участник сервера' in gd_tpl and 'gdWlUIn' not in gd_tpl)
+   and 'Поиск участника' in gd_tpl and 'gdWlUIn' not in gd_tpl)
+ok('быстрые якоря: Защита / Белые списки / Лимиты / Инциденты',
+   'gd-tabs' in gd_tpl and '#limits' in gd_tpl and '#gdWlCard' in gd_tpl
+   and 'gdFeedPanel' in gd_tpl)
 gd_cog = open(os.path.join(ROOT, 'cogs/guardian.py'), encoding='utf-8').read()
 ok('бот принимает окна до 31 дня (не только 300 сек)',
    '31 * 86400' in gd_cog)
@@ -459,9 +463,9 @@ paths = {p['path'] for g in PM.MENU for p in g.get('pages', [])}
 ok('отдельной страницы лимитов больше нет (вошла в Щит)',
    '/staff-limits' not in paths)
 ok('«Логи сервера» в меню (Настройки)', '/log-settings' in paths)
-mod_pages = [p for g in PM.MENU if g.get('key') == 'mod'
-             for p in g.get('pages', [])]
-gd_menu = next((p for p in mod_pages if p['path'] == '/guardian'), None)
+prot_pages = [p for g in PM.MENU if g.get('key') == 'protection'
+              for p in g.get('pages', [])]
+gd_menu = next((p for p in prot_pages if p['path'] == '/guardian'), None)
 ok('Щит сервера — admin+, внутри упомянуты лимиты команды',
    gd_menu and gd_menu.get('min_role') == 'admin'
    and gd_menu.get('section') == 'protection'

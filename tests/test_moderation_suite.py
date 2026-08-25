@@ -33,20 +33,30 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
-print('== 1. Карта 21 инструмент ==')
+print('== 1. Карта инструментов (Модерация 16 + Защита 5) ==')
 from services import panel_menu as pm  # noqa: E402
 
 raw_group = next(group for group in pm.MENU if group['key'] == 'mod')
 raw_pages = raw_group['pages']
-check(len(raw_pages) == 21, f'в разделе модерации ровно 21 инструмент ({len(raw_pages)})')
-check(len({page['path'] for page in raw_pages}) == 21, 'URL всех инструментов уникальны')
+prot_group = next(group for group in pm.MENU if group['key'] == 'protection')
+check(len(raw_pages) == 16, f'в разделе модерации ровно 16 инструментов ({len(raw_pages)})')
+check(len(prot_group['pages']) == 5,
+      f'«Защита» — отдельная категория из 5 страниц ({len(prot_group["pages"])})')
+check([g['key'] for g in pm.MENU][:4] == ['main', 'mod', 'protection', 'members'],
+      'порядок категорий: Модерация сразу после Основного, Защита следом')
+check(all(pg.get('section') == 'protection' for pg in prot_group['pages']),
+      'все страницы «Защиты» — защитные')
+_all = raw_pages + prot_group['pages']
+check(len({page['path'] for page in _all}) == 21, 'URL всех 21 инструмента уникальны')
+check('protection' in pm.DEFAULT_GROUPS['mod'] and 'protection' in pm.DEFAULT_GROUPS['curator'],
+      'модератор и куратор видят категорию «Защита» по умолчанию')
 required = {'path', 'label', 'icon', 'section', 'description', 'access', 'tone'}
 missing = [(page.get('path'), sorted(required - set(page))) for page in raw_pages
            if not required <= set(page)]
 check(not missing, f'у каждой страницы есть полные метаданные ({missing or "полный комплект"})')
 check(all(page['icon'].startswith('fa-') for page in raw_pages),
       'только Font Awesome, без декоративных эмодзи')
-check({page['section'] for page in raw_pages} ==
+check({page['section'] for page in raw_pages} <=
       {section['key'] for section in pm.MODERATION_SECTIONS},
       'каждый инструмент входит в известный рабочий раздел')
 
@@ -68,23 +78,33 @@ check(not hasattr(pm, 'MODERATION_PAGE_PROFILES') and not hasattr(pm, 'MODERATIO
 check(not hasattr(pm, 'moderation_profile_for'),
       'старый moderation_profile_for удалён из сервиса')
 
-admin_group = next(group for group in pm.panel_groups_for('admin') if group['key'] == 'mod')
+admin_groups = pm.panel_groups_for('admin')
+admin_group = next(group for group in admin_groups if group['key'] == 'mod')
+admin_prot = next(group for group in admin_groups if group['key'] == 'protection')
 section_counts = [len(section['pages']) for section in admin_group['sections']]
-check(section_counts == [7, 4, 5, 5], f'workflow разбит 7/4/5/5 — защита выросла ({section_counts})')
+check(section_counts == [7, 4, 5], f'workflow разбит 7/4/5 — защита отдельной категорией ({section_counts})')
 check([section['key'] for section in admin_group['sections']] ==
-      ['response', 'investigation', 'protection', 'management'],
-      'подгруппы сайдбара следуют рабочему сценарию')
+      ['response', 'investigation', 'management'],
+      'подгруппы «Модерации» следуют рабочему сценарию')
+check(len(admin_prot['pages']) == 5 and not admin_prot.get('sections'),
+      '«Защита» — плоская категория из 5 страниц')
 
 print('== 2. Роли: ни одной ссылки, ведущей в гарантированный 403 ==')
-mod_group = next(group for group in pm.panel_groups_for('mod') if group['key'] == 'mod')
-mod_paths = {page['path'] for page in mod_group['pages']}
+mod_groups = pm.panel_groups_for('mod')
+mod_group = next(group for group in mod_groups if group['key'] == 'mod')
+mod_prot = next(group for group in mod_groups if group['key'] == 'protection')
+mod_paths = {page['path'] for page in mod_group['pages']} | {p['path'] for p in mod_prot['pages']}
 admin_only = {'/bulk-actions', '/tagjail', '/antiraid', '/guardian'}
-check(len(mod_group['pages']) == 17, f'модератор видит 17 доступных инструментов ({len(mod_group["pages"])})')  # лимиты — admin+, модеру не видны
+check(len(mod_group['pages']) + len(mod_prot['pages']) == 17,
+      f'модератор видит 17 доступных инструментов ({len(mod_group["pages"]) + len(mod_prot["pages"])})')
 check(not (mod_paths & admin_only), 'админские операции скрыты от роли mod')
-check(admin_only <= {page['path'] for page in admin_group['pages']},
+check(admin_only <= ({page['path'] for page in admin_group['pages']}
+                     | {page['path'] for page in admin_prot['pages']}),
       'администратор видит все рискованные операции')
-owner_group = next(group for group in pm.panel_groups_for('owner') if group['key'] == 'mod')
-check(len(owner_group['pages']) == 21, 'owner видит полный набор из 21 инструмента')
+owner_groups = pm.panel_groups_for('owner')
+owner_all = next(g for g in owner_groups if g['key'] == 'mod')['pages'] \
+    + next(g for g in owner_groups if g['key'] == 'protection')['pages']
+check(len(owner_all) == 21, 'owner видит полный набор из 21 инструмента')
 
 print('== 3. Общий каркас: светлый shell + единый кит ==')
 base_path = os.path.join(ROOT, 'web', 'templates', 'base.html')

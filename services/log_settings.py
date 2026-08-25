@@ -114,3 +114,67 @@ def set_log_settings(gid, enabled=None, autocreate=None, channels=None):
             cur_ch[str(key)] = str(val or '').strip() if str(val or '').strip().isdigit() else ''
     _save(gid, {'enabled': cur_en, 'autocreate': cur_ac, 'channels': cur_ch})
     return get_log_settings(gid)
+
+
+# ── «Удалил канал — значит, не нужен» (заказ владельца 2026-08-25) ──────
+# Раньше: владелец удалял автосозданный лог-канал, а бот честно создавал
+# его заново при следующем событии. Теперь: однажды автосозданный канал,
+# исчезнувший с сервера, помечается удалённым и больше НЕ воссоздаётся.
+# Вернуть логи может только явная настройка канала в панели.
+
+def _ac_block(gid):
+    return dict(_load(gid).get('ac') or {})
+
+
+def _ac_save(gid, sub):
+    data = _load(gid)
+    data['ac'] = sub
+    _save(gid, data)
+
+
+def autocreate_note(gid, cat, ch_id):
+    """Запомнить: канал этой категории создал сам бот (id)."""
+    sub = _ac_block(gid)
+    created = dict(sub.get('created') or {})
+    created[str(cat)] = str(ch_id)
+    sub['created'] = created
+    _ac_save(gid, sub)
+
+
+def autocreate_is_dead(gid, cat, guild_has=None):
+    """Канал категории уже создавался ботом и был удалён владельцем?
+
+    guild_has — callable(id)->bool (существует ли канал), чтобы не тащить
+    discord в сервис. Первый же «пропавший» канал помечает категорию
+    мёртвой — навсегда (до явной настройки в панели).
+    """
+    sub = _ac_block(gid)
+    cat = str(cat)
+    cid = (sub.get('created') or {}).get(cat)
+    if not cid:
+        return False
+    if cat in (sub.get('dead') or {}):
+        return True
+    if guild_has is not None and not guild_has(cid):
+        dead = dict(sub.get('dead') or {})
+        dead[cat] = True
+        sub['dead'] = dead
+        _ac_save(gid, sub)
+        _log.info('логи: канал категории %s удалён владельцем — больше '
+                 'не создаю его сам', cat)
+        return True
+    return False
+
+
+def autocreate_forget(gid, cat):
+    """Владелец явно настроил категорию в панели — снять маркеры."""
+    sub = _ac_block(gid)
+    changed = False
+    for block in ('created', 'dead'):
+        b = dict(sub.get(block) or {})
+        if str(cat) in b:
+            del b[str(cat)]
+            sub[block] = b
+            changed = True
+    if changed:
+        _ac_save(gid, sub)

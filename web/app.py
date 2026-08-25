@@ -1448,6 +1448,13 @@ def warnings_page ():
 def commands_page ():
     return render_template ('commands.html',role =session .get ('role'),username =session .get ('username'))
 
+@app .route ('/command-switches')
+@login_required 
+@role_required ('admin')
+def command_switches_page ():
+    """Ярлык из «Настройки»: та же страница «Команды» с тумблерами."""
+    return redirect ('/commands')
+
 @app .route ('/settings')
 @login_required 
 @role_required ('owner')

@@ -132,6 +132,7 @@ bot = commands.Bot(command_prefix=Config.COMMAND_PREFIX, intents=intents, help_c
 async def _acl_check(ctx):
     """Prefix-команды: проверить ролевой доступ (учитывая сабкоманды групп)."""
     try:
+        from services import command_switches as _csw
         from services.permission_acl import has_access
         # qualified_name даёт "group sub" для сабкоманд — правила на группу
         # и на сабкоманду ("j2c", "j2c-lobby") срабатывают корректно.
@@ -139,6 +140,11 @@ async def _acl_check(ctx):
         if ctx.command:
             cmd = getattr(ctx.command, "qualified_name", None) or ctx.command.name
         if cmd:
+            # Команда выключена владельцем из панели — не отвечаем вовсе.
+            if _csw.is_disabled(cmd):
+                await ctx.send("⏸️ Эта команда выключена владельцем панели.",
+                               delete_after=8)
+                return False
             if not has_access(ctx.guild.id if ctx.guild else 0, cmd, ctx.author):
                 await ctx.send("🚫 У вас нет доступа к этой команде.", delete_after=8)
                 return False
@@ -174,6 +180,7 @@ def _find_action_value(options):
 async def _acl_slash_check(interaction):
     """Slash-команды: проверить ролевой доступ (учитывая сабкоманды групп)."""
     try:
+        from services import command_switches as _csw
         from services.permission_acl import has_access, check_action, ACTION_VALUES
         cmd = None
         if getattr(interaction, "command", None) is not None:
@@ -181,6 +188,10 @@ async def _acl_slash_check(interaction):
                   getattr(interaction.command, "name", None)
         if not cmd:
             cmd = (interaction.data.get("name") if interaction.data else None)
+        if cmd and _csw.is_disabled(cmd):
+            await interaction.response.send_message(
+                "⏸️ Эта команда выключена владельцем панели.", ephemeral=True)
+            return False
         guild = interaction.guild
         if cmd and guild:
             if not has_access(guild.id, cmd, interaction.user):
@@ -831,6 +842,15 @@ async def main():
     async with bot:
         print("[БОТ] Коги загружаются...")
         await load_cogs()
+        # Выключенные владельцем команды сразу прячем из slash-меню
+        # (парковка — включение обратно без перезагрузки бота).
+        try:
+            from services import command_switches as _csw
+            _hid, _res = _csw.apply_to_bot(bot)
+            if _hid:
+                log.info(f"Команды выключены владельцем: {', '.join(_hid)}")
+        except Exception as _ex:
+            log.warning(f"Переключатели команд не применены: {_ex}")
         _token = (os.getenv("TOKEN", "") or os.getenv("TОКEN", "")).strip()
         if not _token:
             print("[ОШИБКА] Токен не найден! Добавьте токен в .env файл (строка TOKEN=ваш_токен) "

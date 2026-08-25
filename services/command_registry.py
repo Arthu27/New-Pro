@@ -265,6 +265,37 @@ def _scan():
     return deduped
 
 
+
+def _annotate_switches(data):
+    """Пометить выключенные владельцем команды (кэш не должен мешать).
+
+    Каталог кэшируется по mtime cogs/, а переключатели живут в другом
+    файле — поэтому флаг off проставляется при каждом обращении.
+    """
+    try:
+        from services import command_switches as _csw
+        off = _csw.disabled_set()
+    except Exception:
+        off = set()
+
+    def _is_off(c):
+        name = _csw_norm(c.get('name') or '')
+        bare = _csw_norm(c.get('bare') or '')
+        return bool(off) and (name in off or bare in off)
+
+    try:
+        from services.command_switches import normalize as _csw_norm
+    except Exception:
+        return data
+    n = 0
+    for c in data.get('commands', []):
+        flag = _is_off(c)
+        c['off'] = flag
+        n += 1 if flag else 0
+    data['disabled'] = n
+    return data
+
+
 def catalog(force=False):
     """Полный каталог с кэшем по mtime каталога cogs/ + профилю модулей."""
     try:
@@ -277,7 +308,7 @@ def catalog(force=False):
                                  ('BOT_FULL', 'MOD_ONLY', 'BOT_SLIM', 'BOT_CORE',
                                   'DISABLED_COGS', 'EXTRA_COGS'))))
     if not force and _cache['data'] is not None and _cache['stamp'] == stamp:
-        return _cache['data']
+        return _annotate_switches(_cache['data'])
 
     commands = _scan()
     enabled_files, sleeping = _enabled_module_files()
@@ -298,7 +329,7 @@ def catalog(force=False):
     }
     _cache['stamp'] = stamp
     _cache['data'] = data
-    return data
+    return _annotate_switches(data)
 
 
 def catalog_by_category():

@@ -260,9 +260,14 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
     # Автосоздание каналов — ТОЛЬКО с явного разрешения из панели
     # (заказ владельца 2026-08: «логи не создаются сами по себе»).
     try :
-        from services .log_settings import autocreate_allowed 
+        from services .log_settings import autocreate_allowed ,autocreate_is_dead 
         if not autocreate_allowed (guild .id ,ch_name ):
-            return None 
+            return None
+        # «Удалил канал — значит, не нужен»: категория, чей автосозданный
+        # канал владелец снёс, больше никогда не воссоздаётся (2026-08-25).
+        if autocreate_is_dead (guild .id ,target ,
+                lambda cid :guild .get_channel (int (cid ))is not None ):
+            return None
     except Exception as _ex :
         log .debug("ensure_log_channel(): log_settings подавлено: %s", _ex)
     key =(str (guild .id ),target )
@@ -293,6 +298,11 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
         ch =await guild .create_text_channel (target ,category =cat ,
         reason ="Aether: автосоздание лог-канала",
         topic =f"Логи «{target}» — события каждый день")
+        try :
+            from services .log_settings import autocreate_note 
+            autocreate_note (guild .id ,target ,ch .id )
+        except Exception as _ex :
+            log .debug (f'[LOGS] запоминание автосоздания подавлено: {_ex}')
         log .info (f'[LOGS] Автосоздан канал #{target} ({getattr (guild ,"name","?")})')
         return ch
     except Exception as _e :

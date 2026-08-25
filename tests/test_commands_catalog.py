@@ -61,7 +61,7 @@ check('Голосовые' not in labels,
 check('Экономика' not in labels and 'Уровни и карма' not in labels,
       'lean: спящие системы (экономика/уровни) честно не показываются')
 mods = data.get('modules') or {}
-check(mods.get('enabled') == 29 and mods.get('sleeping') == 74,
+check(mods.get('enabled') == 29 and mods.get('sleeping') == 75,  # +activity_stats (без команд)
       f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')}")
 
 print('== 1.1. Реестр в BOT_FULL (полный состав) ==')
@@ -143,8 +143,8 @@ check(d['total'] == data['total'] and d['shown'] == d['total']
       'без фильтров отдаётся весь lean-каталог (как в боте)')
 check(d['slash'] > 0 and d['prefix'] > 0, 'счётчики типов в ответе')
 check(d.get('modules', {}).get('enabled') == 29
-      and d['modules']['sleeping'] == 74,
-      'в ответе — счётчик модулей (29 включено / 74 спят)')
+      and d['modules']['sleeping'] == 75,
+      'в ответе — счётчик модулей (29 включено / 75 спит)')
 
 r = client.get('/api/commands/catalog?q=play')
 d = r.get_json()

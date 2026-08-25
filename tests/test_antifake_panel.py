@@ -404,9 +404,9 @@ check(hasattr(IM.AntiFake, 'strike_view')
       'хелперы страйков в коге')
 check(AF.IM is IM, 'панель зовёт сам модуль кога, не копию')
 import services.panel_menu as PM
-mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod'
-             for pg in g['pages']]
-check('/antifake' in mod_pages, 'пункт меню «Антифейк» в «Модерации»')
+prot_pages = [pg['path'] for g in PM.MENU if g['key'] == 'protection'
+              for pg in g['pages']]
+check('/antifake' in prot_pages, 'пункт меню «Антифейк» в категории «Защита»')
 check(PM.PAGE_COGS.get('/antifake') == ('impersonation',), 'ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check(ext.count('antifake_panel') >= 1, 'модуль зарегистрирован в routes_extra')
