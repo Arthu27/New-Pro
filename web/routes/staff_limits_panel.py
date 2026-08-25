@@ -54,8 +54,17 @@ def _guild_channels(bot, guild_id):
                     break
     channels = []
     if guild:
-        channels = [{'id': str(c.id), 'name': f'#{c.name}'}
-                    for c in sorted(guild.text_channels, key=lambda x: x.position)]
+        # Логи можно писать и в ФОРУМ-канал (владелец держит логи форумом) —
+        # показываем текстовые и форумы, форум помечаем в названии.
+        import discord as _dc
+        pool = [c for c in guild.channels
+                if isinstance(c, _dc.TextChannel)
+                or c.type == _dc.ChannelType.forum]
+        channels = [{'id': str(c.id),
+                     'name': (f'{c.name} · форум'
+                              if c.type == _dc.ChannelType.forum
+                              else f'#{c.name}')}
+                    for c in sorted(pool, key=lambda x: x.position)]
     else:
         import web.app as _app
         if _app._demo_mode():
@@ -65,9 +74,14 @@ def _guild_channels(bot, guild_id):
                 path = _os.path.join('data', 'demo_channels.json')
                 with open(path, 'r', encoding='utf-8') as fh:
                     for c in _json.load(fh):
-                        if c.get('type') in ('text', ''):
-                            channels.append({'id': str(c.get('id')),
-                                             'name': '#' + str(c.get('name', ''))})
+                        _t = c.get('type')
+                        _is_forum = _t == 'forum' or bool(c.get('forum'))
+                        if _t in ('text', '') or _is_forum:
+                            channels.append({
+                                'id': str(c.get('id')),
+                                'name': (str(c.get('name', '')) + ' · форум')
+                                        if _is_forum
+                                        else '#' + str(c.get('name', ''))})
             except Exception as ex:
                 _log.debug('staff_limits_panel: демо-каналы: %s', ex)
     return channels

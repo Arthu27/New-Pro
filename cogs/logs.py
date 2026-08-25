@@ -172,7 +172,9 @@ def _configured_log_channel (guild ,category ):
         'каналы':'channel'}.get (category ,category )
         _cid =target_channel_id (guild .id ,_cat )
         if _cid :
-            _ch =guild .get_channel (int (_cid ))
+            _ch =(guild .get_channel_or_thread (int (_cid ))
+                   if hasattr (guild ,"get_channel_or_thread")
+                   else guild .get_channel (int (_cid )))
             if _ch is not None :
                 return _ch
     except Exception as _ex :
@@ -196,8 +198,9 @@ def find_log_channel (guild ,category :str ='сервер'):
     candidates =[target ]+LEGACY_CHANNEL_NAMES .get (target ,[])+['server-log','aether-logs']
     # Нормализованная карта каналов: эмодзи/прочерки/регистр не мешают
     # (-mod-log, -moderasyon, -Модерация  — всё находится)
+    _pool =list (guild .text_channels )+list (getattr (guild ,'forums',[])or [])
     norm_map ={}
-    for _c in guild .text_channels :
+    for _c in _pool :
         norm_map .setdefault (_norm_ch_name (_c .name ),_c )
     seen =set ()
     for name in candidates :
@@ -205,7 +208,7 @@ def find_log_channel (guild ,category :str ='сервер'):
         if nname in seen :
             continue
         seen .add (nname )
-        ch =norm_map .get (nname )or discord .utils .get (guild .text_channels ,name =name )
+        ch =norm_map .get (nname )or discord .utils .get (_pool ,name =name )
         if ch :
             return ch
     return None
@@ -297,6 +300,16 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
         return None
 
 
+def _is_forum_ch (ch ):
+    """Канал-форум? В форум пишут ПОСТАМИ (create_thread), не сообщениями."""
+    try :
+        if isinstance (ch ,discord .ForumChannel ):
+            return True
+        return getattr (getattr (ch ,'type',None ),'name','')=='forum'
+    except Exception :
+        return False
+
+
 async def _safe_send (ch ,**kw ):
     """Отправка в лог-канал, не роняющая слушатель. Возвращает True/False.
 
@@ -306,6 +319,12 @@ async def _safe_send (ch ,**kw ):
     """
     try :
         _e =kw .get ('embed')
+        _th_name =''
+        if _e is not None :
+            _th_name =str (getattr (_e ,'title','')or '')
+            if not _th_name :
+                _m0 =getattr (_e ,'_aether_log_meta',None )
+                _th_name =str (_m0 .get ('title',''))if _m0 else ''
         _m =getattr (_e ,'_aether_log_meta',None )if _e is not None else None 
         if _m and 'file'not in kw and 'files'not in kw :
             try :
@@ -346,6 +365,15 @@ async def _safe_send (ch ,**kw ):
                         log.debug("_safe_send(): подавлено: %s", _ex)
             except Exception as _ex:
                 log.debug("_safe_send(): подавлено: %s", _ex)
+        if _is_forum_ch (ch ):
+            # Форум-канал как лог: каждый лог = НОВЫЙ ПОСТ форума
+            # (в сам форум сообщениями писать нельзя — только постами).
+            _tk ={}
+            for _k in ('content','embed','embeds','file','files','view','allowed_mentions'):
+                if _k in kw :
+                    _tk [_k ]=kw [_k ]
+            await ch .create_thread (name =(_th_name or 'Лог')[:100],**_tk )
+            return True
         await ch .send (**kw )
         return True
     except Exception as _e :
@@ -376,6 +404,35 @@ def ensure_log_permissions (guild ,category =None ):
     except Exception as _e :
         log .info (f'[LOGS] ensure_log_permissions: {_e}')
         return category ,False
+
+
+async def ensure_forum_log_permissions (guild ):
+    """Форум-канал в роли лога: боту нужны права СОЗДАВАТЬ ПОСТЫ.
+
+    Владелец выбрал форум в «Логах сервера» — проверяем/чиним оверрайты
+    (send_messages + create_public_threads), иначе посты не создаются.
+    Вызывается из /logs-setup и on_ready (самолечение).
+    """
+    try :
+        from services .log_settings import get_log_settings
+        for cid in ((get_log_settings (guild .id ).get ('channels')or {}).values ()):
+            if not str (cid or '').strip ().isdigit ():
+                continue
+            ch =guild .get_channel (int (cid ))
+            if ch is None or not _is_forum_ch (ch ):
+                continue
+            ow =dict (ch .overwrites )
+            me_ow =ow .get (guild .me )
+            if me_ow is not None and me_ow .create_public_threads and me_ow .send_messages :
+                continue
+            ow [guild .me ]=discord .PermissionOverwrite (
+            view_channel =True ,send_messages =True ,embed_links =True ,
+            attach_files =True ,create_public_threads =True ,
+            read_message_history =True )
+            await ch .edit (overwrites =ow ,reason ="Aether: права на посты в форум-логе")
+            log .info (f'[LOGS] Права на форум-лог #{ch.name} выданы')
+    except Exception as _e :
+        log .info (f'[LOGS] ensure_forum_log_permissions: {_e}')
 
 
 def _find_log_category (guild ):
@@ -896,6 +953,10 @@ class Logs (commands .Cog ):
                 migrated .append ("права категории «📚 Логи» восстановлены")
         except Exception as _pe :
             log .info (f'[SETUP-LOGS] починка прав: {_pe}')
+        try :
+            await ensure_forum_log_permissions (guild )
+        except Exception as _fe :
+            log .info (f'[SETUP-LOGS] форум-лог: {_fe}')
 
         # 2) Канонические каналы + миграция legacy-имён (mod-log → -модерация и т.д.)
         canonical =list (dict .fromkeys (LOG_CHANNELS .values ()))
@@ -2105,6 +2166,10 @@ class Logs (commands .Cog ):
                     log .info (f'[LOGS] Права категории логов восстановлены: {_g.name}')
             except Exception as _he :
                 log .info (f'[LOGS] self-heal ({getattr (_g ,"name","?")}): {_he}')
+            try :
+                await ensure_forum_log_permissions (_g )
+            except Exception as _fe :
+                log .info (f'[LOGS] форум-лог ({getattr (_g ,"name","?")}): {_fe}')
 
     async def _audit_sync_loop (self ):
         import asyncio 

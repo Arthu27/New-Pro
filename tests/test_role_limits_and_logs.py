@@ -275,10 +275,17 @@ ok('выбранный канал сохраняется (ID цифрами)', s
 ok('мусор вместо ID не принимается', s3['channels']['voice'] == '')
 ok('target_channel_id отдаёт выбор', LS.target_channel_id(777, 'mod') == '123456789')
 
+# демо-каналы: обычный текстовый + ФОРУМ (логи форумом — как у владельца)
+with open(os.path.join('data', 'demo_channels.json'), 'w', encoding='utf-8') as fh:
+    json.dump([{'id': '1001', 'name': 'общее', 'type': 'text'},
+               {'id': '1015', 'name': 'логи-модерации', 'type': 'forum'}], fh)
 r = client.get('/api/guild/777/log-settings')
 d = r.get_json()
 ok('API настроек логов отдаёт категории', d['success'] and len(d['categories']) == 10)
 ok('API отдаёт список каналов для пикера', isinstance(d.get('channels'), list))
+_names = [c['name'] for c in d.get('channels') or []]
+ok('пикер каналов: и обычные, и ФОРУМ-каналы (владелец держит логи форумом)',
+   '#общее' in _names and 'логи-модерации · форум' in _names)
 r = client.post('/api/guild/777/log-settings', json={'autocreate': {'proof': True}})
 ok('API сохраняет автосоздание', r.get_json()['success']
    and LS.autocreate_allowed(777, 'proof') is True)
@@ -303,6 +310,56 @@ ok('live без «перезагрузки»: снимок сравнивает�
    and 'raw === _lastRaw' in open(os.path.join(ROOT, 'web/templates/guardian.html'),
                                  encoding='utf-8').read())
 
+print('== 3.3 Логи в ФОРУМ-канал: каждый лог = пост форума ==')
+import asyncio as _aio
+import discord as _dc
+from cogs import logs as LOGS
+
+
+class _FakeForum:
+    type = _dc.ChannelType.forum
+    name = 'логи-модерации'
+
+    def __init__(self):
+        self.created = None
+
+    async def create_thread(self, **kw):
+        self.created = kw
+        return None
+
+
+class _FakeText:
+    type = _dc.ChannelType.text
+
+    def __init__(self):
+        self.sent = None
+
+    async def send(self, **kw):
+        self.sent = kw
+        return None
+
+
+_ff = _FakeForum()
+_emb = _dc.Embed(title='Бан участника', description='тест')
+ok('лог в форум уходит ПОСТОМ (create_thread), не send()',
+   _aio.run(LOGS._safe_send(_ff, embed=_emb)) is True
+   and _ff.created and _ff.created.get('name') == 'Бан участника'
+   and _ff.created.get('embed') is _emb)
+ok('имя поста режется до 100 символов',
+   _aio.run(LOGS._safe_send(_ff, embed=_dc.Embed(title='Щ' * 150))) is True
+   and len(_ff.created['name']) == 100)
+_ft = _FakeText()
+ok('обычный канал: по-прежнему send()',
+   _aio.run(LOGS._safe_send(_ft, embed=_emb)) is True
+   and _ft.sent and 'embed' in _ft.sent)
+_logs_src = open(os.path.join(ROOT, 'cogs/logs.py'), encoding='utf-8').read()
+ok('настроенный канал ищется и среди веток форума (get_channel_or_thread)',
+   'get_channel_or_thread' in _logs_src)
+ok('бот сам чинит права на посты в форум-логе',
+   'create_public_threads' in _logs_src
+   and 'ensure_forum_log_permissions' in _logs_src)
+ok('форум узнаётся и по типу, и по классу (_is_forum_ch)',
+   LOGS._is_forum_ch(_ff) is True and LOGS._is_forum_ch(_ft) is False)
 print('== 3.6 Команды: модалка без блюра + доказательство из панели ==')
 cmd_tpl = open(os.path.join(ROOT, 'web/templates/commands.html'),
                encoding='utf-8').read()
