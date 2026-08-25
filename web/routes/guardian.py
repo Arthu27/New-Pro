@@ -78,6 +78,32 @@ def _resolve_names(gid, cfg):
     return users, roles
 
 
+def _roles_for_pick(gid):
+    """Роли сервера для пикера в Щите (бот офлайн — демо-набор превью)."""
+    import web.app as _app
+    bot = _app.bot_instance
+    guild = None
+    if bot:
+        try:
+            guild = bot.get_guild(int(gid))
+            if guild is None:
+                guild = next((g for g in bot.guilds if str(g.id) == str(gid)), None)
+        except (TypeError, ValueError):
+            guild = None
+    out = []
+    if guild:
+        out = [{'id': str(r.id), 'name': r.name, 'color': str(r.color)}
+               for r in guild.roles if r.name != '@everyone']
+    elif _app._demo_mode():
+        try:
+            from web.routes.guild_admin import _demo_roles_seed
+            out = [{'id': str(r['id']), 'name': r['name'], 'color': r['color']}
+                   for r in _demo_roles_seed() if r.get('name') != '@everyone']
+        except Exception as ex:
+            _log.debug('guardian: демо-роли: %s', ex)
+    return out
+
+
 def guardian_view(gid):
     """Полный витринный вид конфига для страницы (и для тестов)."""
     cfg = G.load_cfg(gid)
@@ -150,7 +176,8 @@ def register(ctx):
     def api_guardian(gid):
         gid = _gid(ctx) or _int_gid(gid)
         if request.method == 'GET':
-            return jsonify({'success': True, 'cfg': guardian_view(gid)})
+            return jsonify({'success': True, 'cfg': guardian_view(gid),
+                            'roles': _roles_for_pick(gid)})
 
         # POST: принять витрину, нормализовать, сохранить (файл бота)
         data = request.get_json(silent=True)

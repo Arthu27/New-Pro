@@ -180,7 +180,7 @@ def guardian_normalize(raw):
             except (TypeError, ValueError) as _ex:
                 _log.debug('guardian: порог %s не изменён: %s', key, _ex)
             try:
-                ev['window'] = max(3, min(300, int(src.get('window', ev['window']))))
+                ev['window'] = max(3, min(31 * 86400, int(src.get('window', ev['window']))))
             except (TypeError, ValueError) as _ex:
                 _log.debug('guardian: окно %s не изменено: %s', key, _ex)
             act = src.get('action', ev.get('action'))

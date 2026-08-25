@@ -523,7 +523,7 @@ ok = client.post(f'/api/guild/{GID}/guardian', json={
     'enabled': True, 'punishment': 'ban', 'bot_action': 'kick',
     'kick_unauthorized_bots': False,
     'events': {'channel_delete': {'enabled': True, 'threshold': 50,
-                                  'window': 999, 'action': 'kick'}},
+                                  'window': 99999999, 'action': 'kick'}},
     'whitelist_users': ['823456789012345678', 'junk'],
     'whitelist_roles': ['623456789012345678'],
     'bot_whitelist_users': ['823456789012345680', 'junk'],
@@ -535,7 +535,7 @@ saved = json.load(open(f'data/guardian_{GID}.json', encoding='utf-8'))
 check(saved['punishment'] == 'ban'
       and saved['kick_unauthorized_bots'] is False
       and saved['events']['channel_delete']['threshold'] == 25
-      and saved['events']['channel_delete']['window'] == 300
+      and saved['events']['channel_delete']['window'] == 31 * 86400
       and saved['events']['channel_delete']['action'] == 'kick',
       'POST: мера/пороги/клампы записались в файл бота (та же правда)')
 check(saved['whitelist_users'] == ['823456789012345678']

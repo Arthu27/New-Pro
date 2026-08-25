@@ -277,19 +277,29 @@ ok('панель «Права команд» обновляется без «п�
 perm_src = open(os.path.join(ROOT, 'web/routes/permissions.py'), encoding='utf-8').read()
 ok('API прав отдаёт живые категории', 'command_categories ()' in perm_src)
 
-print('== 3.5 Выбор времени в Щите (бывшее «Окно, сек») ==')
+print('== 3.5 Щит сервера: время сек/мин/час/дн + выбор ролей ==')
 gd_tpl = open(os.path.join(ROOT, 'web/templates/guardian.html'),
               encoding='utf-8').read()
 ok('непонятное поле «Окно, сек» убрано', 'Окно, сек' not in gd_tpl)
-ok('выбор времени: число + единица сек/мин',
-   'gd-ev-winu' in gd_tpl and "'m'" in gd_tpl and 'wsec = wsec * 60' in gd_tpl)
-ok('быстрые пресеты времени (10с/30с/1м/2м/5м)',
+ok('выбор времени: сек/мин/ЧАС/ДН (заказ «часы и дни»)',
+   '>час</option>' in gd_tpl and '>дн</option>' in gd_tpl
+   and 'WIN_UNITS' in gd_tpl)
+ok('быстрые пресеты: 30 сек … 1 час, 6 ч, 1 день',
    'WIN_PRESETS' in gd_tpl and 'gd-pbtn' in gd_tpl
-   and '300' in gd_tpl and 'data-s' in gd_tpl)
+   and '1 час' in gd_tpl and '1 день' in gd_tpl and '21600' in gd_tpl)
 ok('человеческая подсказка «Сработает: N за X» и объяснение',
    'gd-fires' in gd_tpl and 'Как настроить защиту' in gd_tpl)
-ok('значение зажимается в 3..300 секунд при сохранении',
-   'Math.max(3, Math.min(300, wsec))' in gd_tpl)
+ok('значение зажимается в 3 сек..31 день при сохранении',
+   'Math.min(WIN_MAX, wsec)' in gd_tpl and 'WIN_MAX = 31 * 86400' in gd_tpl)
+ok('РОЛИ выбираются пикером (не ID руками)',
+   'gdWlRPick' in gd_tpl and 'gdWlBRPick' in gd_tpl
+   and 'Роль сервера' in gd_tpl and 'renderPickers' in gd_tpl)
+gd_cog = open(os.path.join(ROOT, 'cogs/guardian.py'), encoding='utf-8').read()
+ok('бот принимает окна до 31 дня (не только 300 сек)',
+   '31 * 86400' in gd_cog)
+gd_route = open(os.path.join(ROOT, 'web/routes/guardian.py'), encoding='utf-8').read()
+ok('API Щита отдаёт роли сервера для пикера',
+   '_roles_for_pick' in gd_route and "'roles': _roles_for_pick(gid)" in gd_route)
 
 print('== 4. Меню ==')
 from services import panel_menu as PM  # noqa: E402
