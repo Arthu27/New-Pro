@@ -13,7 +13,8 @@ from web.routes._common import (
 )
 
 from db import GuildData
-from cogs.achievements import ACHIEVEMENTS, total_points, user_record
+from cogs.achievements import (ACHIEVEMENTS_ENABLED, ACHIEVEMENTS,
+                               total_points, user_record)
 
 
 def _resolve_name(bot, gid, uid):
@@ -101,7 +102,8 @@ def register(ctx):
     @role_required('mod')
     def achievements_page():
         return render_template('achievements.html', role=session.get('role'),
-                               username=session.get('username'))
+                               username=session.get('username'),
+                               ach_off=not ACHIEVEMENTS_ENABLED)
 
     @app.route('/api/achievements/state')
     @login_required

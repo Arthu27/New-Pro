@@ -145,7 +145,10 @@ check('data-theme="light"' in base_tpl, 'светлая тема учтена (�
 check('methods' not in tpl.lower() or 'POST' not in tpl, 'шаблон честно read-only: нет POST-форм')
 import services.panel_menu as PM
 paths = [pg['path'] for g in PM.MENU for pg in g['pages']]
-check('/achievements' in paths, 'пункт меню «Ачивки» есть')
+# Достижения «пока что» выключены: пункт скрыт из меню, но страница
+# жива (PAGE_COGS и роут на месте) и честно показывает баннер.
+check('/achievements' not in paths, 'пункт меню «Ачивки» скрыт (выключено владельцем)')
+check('/achievements' in getattr(PM, 'HIDDEN_PATHS', []), 'путь назван в HIDDEN_PATHS')
 check(PM.PAGE_COGS.get('/achievements') == ('achievements',), 'PAGE_COGS привязан к achievements')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

@@ -150,7 +150,11 @@ check(set(PM.DEFAULT_GROUPS['mod']) <= set(keys),
 check(set(PM.DEFAULT_GROUPS['admin']) == set(keys),
       'админу по умолчанию — все группы')
 menu_paths = set(paths)
-orphans = [p for p in PM.PAGE_COGS if p not in menu_paths]
+# Страницы, временно скрытые флагом модуля (сейчас — достижения),
+# не считаются сиротами: роут и PAGE_COGS живы, пункт меню спрятан.
+hidden = set(getattr(PM, 'HIDDEN_PATHS', []))
+check(hidden <= set(PM.PAGE_COGS), f'HIDDEN_PATHS — реальные страницы: {sorted(hidden)}')
+orphans = [p for p in PM.PAGE_COGS if p not in menu_paths and p not in hidden]
 check(not orphans, f'PAGE_COGS без страницы в меню: {orphans}')
 bad_cogs = [(p, c) for p, cogs in PM.PAGE_COGS.items() for c in cogs
             if not os.path.exists(os.path.join(ROOT, 'cogs', c + '.py'))]

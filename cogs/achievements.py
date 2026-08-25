@@ -22,6 +22,11 @@ from db import GuildData
 from logger import get_logger
 from services import text_format as tf
 
+# Заказ владельца 2026-08-25: достижения «пока что не нужны» — выключены
+# целиком (ког не грузится ни в одном профиле: ни BOT_FULL, ни EXTRA_COGS).
+# Код и накопленные данные на месте. Вернуть: ACHIEVEMENTS_ENABLED = True.
+ACHIEVEMENTS_ENABLED = False
+
 log = get_logger("achievements")
 
 UTC = timezone.utc
@@ -267,4 +272,8 @@ class Achievements(commands.Cog):
 
 
 async def setup(bot):
+    if not ACHIEVEMENTS_ENABLED:
+        log.info('Достижения выключены владельцем (ACHIEVEMENTS_ENABLED=False) '
+                 '— ког не загружается. Вернуть: флаг True в cogs/achievements.py')
+        return
     await bot.add_cog(Achievements(bot))

@@ -266,6 +266,40 @@ def _scan():
 
 
 
+def _drop_off_modules(data):
+    """Убрать команды модулей, выключенных владельцем «пока что».
+
+    Сейчас это достижения (ACHIEVEMENTS_ENABLED=False): даже если .env
+    будит модуль (BOT_FULL/EXTRA_COGS), каталог честно не показывает его
+    команды — бот их всё равно не выполняет.
+    """
+    try:
+        from cogs.achievements import ACHIEVEMENTS_ENABLED
+        off_mods = set() if ACHIEVEMENTS_ENABLED else {'achievements', 'achievements.py'}
+    except Exception:
+        off_mods = set()
+    if not off_mods:
+        return data
+    cmds = [c for c in data.get('commands', [])
+            if str(c.get('module', '')).lower() not in off_mods]
+    if len(cmds) == len(data.get('commands', [])):
+        return data
+    out = dict(data)
+    out['commands'] = cmds
+    out['total'] = len(cmds)
+    out['slash'] = sum(1 for c in cmds if c['kind'] == 'slash')
+    out['subs'] = sum(1 for c in cmds if c['kind'] == 'sub')
+    out['prefix'] = sum(1 for c in cmds if c['kind'] == 'prefix')
+    cats = []
+    for meta in data.get('categories', []):
+        n = sum(1 for c in cmds
+                if c['cat'] == meta['id'])
+        if n:
+            cats.append(dict(meta, count=n))
+    out['categories'] = cats
+    return out
+
+
 def _annotate_switches(data):
     """Пометить выключенные владельцем команды (кэш не должен мешать).
 
@@ -308,7 +342,7 @@ def catalog(force=False):
                                  ('BOT_FULL', 'MOD_ONLY', 'BOT_SLIM', 'BOT_CORE',
                                   'DISABLED_COGS', 'EXTRA_COGS'))))
     if not force and _cache['data'] is not None and _cache['stamp'] == stamp:
-        return _annotate_switches(_cache['data'])
+        return _annotate_switches(_drop_off_modules(_cache['data']))
 
     commands = _scan()
     enabled_files, sleeping = _enabled_module_files()
@@ -329,7 +363,7 @@ def catalog(force=False):
     }
     _cache['stamp'] = stamp
     _cache['data'] = data
-    return _annotate_switches(data)
+    return _annotate_switches(_drop_off_modules(data))
 
 
 def catalog_by_category():

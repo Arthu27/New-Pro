@@ -3504,7 +3504,7 @@ def api_voice_command ():
 
 
 if __name__ =='__main__':
-    app .run (host ='0.0.0.0',port =5000 ,debug =True )
+    app .run (host ='0.0.0.0',port =int (os .environ .get ('PANEL_PORT')or 5000 ),debug =True )
 
     # Parola Sыfыrlama (login страница для) 
 import random as _random 

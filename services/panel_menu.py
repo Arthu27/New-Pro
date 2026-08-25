@@ -245,6 +245,20 @@ MODERATION_SECTIONS = (
 
 _ROLE_LEVEL = {'uye': 0, 'mod': 1, 'curator': 2, 'admin': 3, 'owner': 4}
 
+# Достижения «пока что не нужны» (заказ владельца 2026-08-25): страница
+# «Ачивки» исчезает из меню, ког не грузится, команды не показываются.
+# Вернуть — ACHIEVEMENTS_ENABLED = True в cogs/achievements.py.
+HIDDEN_PATHS = []          # страницы, скрытые из меню выключенным модулем
+try:
+    from cogs.achievements import ACHIEVEMENTS_ENABLED as _ACHIEVEMENTS_ON
+except Exception:
+    _ACHIEVEMENTS_ON = True
+if not _ACHIEVEMENTS_ON:
+    HIDDEN_PATHS.append('/achievements')
+    for _grp in MENU:
+        _grp['pages'] = [p for p in _grp.get('pages', [])
+                         if p.get('path') != '/achievements']
+
 
 # Defaults applied if a role has no stored config yet.
 # Куратор — старший модератор: всё модерское + тикеты и сообщество.
