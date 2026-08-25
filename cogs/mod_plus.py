@@ -482,6 +482,15 @@ class ModPlus(commands.Cog):
         if refusal:
             await interaction.response.send_message(f'⚠️ {refusal}', ephemeral=True)
             return
+        # Лимиты команды: тихий мут — тот же дневной лимит мутов
+        try:
+            from services.staff_limits import check_action, record_hit
+            _ok, _deny = check_action(interaction.guild, interaction.user, 'mute')
+            if not _ok:
+                await interaction.response.send_message(f'🛡 {_deny}', ephemeral=True)
+                return
+        except Exception as _ex:
+            _log.debug('ghostmute(): staff limit: %s', _ex)
         sec, err = parse_ghost_duration(duration)
         if err:
             await interaction.response.send_message(f'⚠️ {err}', ephemeral=True)
@@ -489,6 +498,11 @@ class ModPlus(commands.Cog):
         until = (_now() + timedelta(seconds=sec)).isoformat() if sec else None
         ghost_add(interaction.guild.id, user.id, reason or '—',
                   by=str(interaction.user), until=until)
+        try:
+            from services.staff_limits import record_hit
+            record_hit(interaction.guild.id, interaction.user.id, 'mute', 1)
+        except Exception as _ex:
+            _log.debug('ghostmute(): record: %s', _ex)
         if until:
             from cogs.temp_moderation import format_duration
             term_txt = f'{format_duration(sec)} (до {until[:16].replace("T", " ")})'
@@ -511,6 +525,15 @@ class ModPlus(commands.Cog):
     @app_commands.checks.has_permissions(manage_messages=True)
     @app_commands.describe(user='Кого возвращаем')
     async def ghostunmute(self, interaction: discord.Interaction, user: discord.Member):
+        # Лимиты команды: снятие тихого мута — лимит «размутов»
+        try:
+            from services.staff_limits import check_action
+            _ok, _deny = check_action(interaction.guild, interaction.user, 'unmute')
+            if not _ok:
+                await interaction.response.send_message(f'🛡 {_deny}', ephemeral=True)
+                return
+        except Exception as _ex:
+            _log.debug('ghostunmute(): staff limit: %s', _ex)
         entry = ghost_remove(interaction.guild.id, user.id)
         if not entry:
             await interaction.response.send_message(
@@ -522,6 +545,11 @@ class ModPlus(commands.Cog):
                     value=str(entry.get('suppressed') or 0), inline=True)
         e.add_field(name='Причина мута была', value=(entry.get('reason') or '—')[:300],
                     inline=False)
+        try:
+            from services.staff_limits import record_hit
+            record_hit(interaction.guild.id, interaction.user.id, 'unmute', 1)
+        except Exception as _ex:
+            _log.debug('ghostunmute(): record: %s', _ex)
         await interaction.response.send_message(embed=e, ephemeral=True)
         log_e = discord.Embed(title='👻 Тихий мут снят', color=GREEN, timestamp=_now())
         log_e.add_field(name='Кто', value=f'{user.mention} (`{user.id}`)', inline=True)

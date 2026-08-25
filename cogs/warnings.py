@@ -446,6 +446,16 @@ class warnings(commands.Cog):
     async def add_warning(self, user: discord.Member, moderator: discord.Member, reason: str = None):
         """Добавить предупреждение без interaction"""
         guild = user.guild
+        # Лимиты стаффа: этот путь используют ⚡-варн реакцией и AI-модератор —
+        # без гейта они обходили бы дневной лимит варнов.
+        try:
+            from services.staff_limits import check_action
+            _ok, _deny = check_action(guild, moderator, 'warn')
+            if not _ok:
+                _log.info("add_warning(): лимит варнов — пропуск (%s)", _deny)
+                return (0, len(self._get_warns(guild.id, user.id)), None)
+        except Exception as _ex:
+            _log.debug("add_warning() staff_limit: %s", _ex)
         warns = self._get_warns(guild.id, user.id)
         warn_id = len(warns) + 1
         warns.append({
@@ -457,6 +467,13 @@ class warnings(commands.Cog):
         })
         self._save_warns(guild.id, user.id, warns)
         total = len(warns)
+
+        # Лимиты: фиксируем успешный варн в дневном счётчике
+        try:
+            from services.staff_limits import record_hit as _sl_rec
+            _sl_rec(guild.id, moderator.id, 'warn', 1)
+        except Exception as _ex:
+            _log.debug("add_warning() record: %s", _ex)
 
         # Уведомление панели о варне от AI-модератора (веб/webhook/email — в фоне)
         try:

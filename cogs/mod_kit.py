@@ -204,6 +204,14 @@ class ModKit(commands.Cog):
                                  'Права, категория и позиция сохранятся.\n\n'
                                  'Если уверены — повторите с `подтверждение: True`.', 0xE67E22),
                 ephemeral=True)
+        # Лимиты команды: nuke — самое разрушительное, лимит жёсткий
+        try:
+            from services.staff_limits import check_action
+            _ok, _deny = check_action(interaction.guild, interaction.user, 'nuke')
+            if not _ok:
+                return await interaction.response.send_message(f'🛡 {_deny}', ephemeral=True)
+        except Exception as _ex:
+            _log.debug('nuke(): staff limit: %s', _ex)
         await interaction.response.defer(ephemeral=True)
         try:
             new_ch = await ch.clone(reason=f'Nuke: {interaction.user}')
@@ -213,6 +221,11 @@ class ModKit(commands.Cog):
                 _log.debug("nuke(): подавлено: %s", _ex)
             old_name = ch.name
             await ch.delete(reason=f'Nuke: {interaction.user}')
+            try:
+                from services.staff_limits import record_hit
+                record_hit(interaction.guild.id, interaction.user.id, 'nuke', 1)
+            except Exception as _ex:
+                _log.debug('nuke(): record: %s', _ex)
             card = self._card('☢️ Канал пересоздан',
                               f'Канал **#{old_name}** начисто пересоздан модератором '
                               f'{interaction.user.mention}. Прежняя история удалена.')
@@ -259,6 +272,15 @@ class ModKit(commands.Cog):
                                  'Повторите с `подтверждение: True`.', 0xE67E22),
                 ephemeral=True)
 
+        # Лимиты команды: массовая зачистка — только несколько в день
+        try:
+            from services.staff_limits import check_action
+            _ok, _deny = check_action(interaction.guild, interaction.user, 'raid')
+            if not _ok:
+                return await interaction.response.send_message(f'🛡 {_deny}', ephemeral=True)
+        except Exception as _ex:
+            _log.debug('raidcleanup(): staff limit: %s', _ex)
+
         await interaction.response.defer(ephemeral=True)
         reason = f'Raid cleanup ({minutes} мин): {interaction.user}'
         ok, fail = 0, 0
@@ -279,6 +301,11 @@ class ModKit(commands.Cog):
                            [('Окно', f'{minutes} мин'), ('Действие', act),
                             ('Кандидатов', len(cands)), ('Успешно', ok), ('Ошибок', fail)],
                            color=0xE74C3C if act == 'ban' else 0xE67E22)
+        try:
+            from services.staff_limits import record_hit
+            record_hit(interaction.guild.id, interaction.user.id, 'raid', 1)
+        except Exception as _ex:
+            _log.debug('raidcleanup(): record: %s', _ex)
         await interaction.followup.send(embed=card, ephemeral=True)
 
     # ── 🧽 /dehoist ───────────────────────────────────────────
@@ -305,6 +332,14 @@ class ModKit(commands.Cog):
                                  f'Найдено «выпирающих»/залго ников: **{len(flagged)}**\n\n{preview}{more}\n\n'
                                  'Применить: повторите с `симуляция: False`.'),
                 ephemeral=True)
+        # Лимиты команды: массовое переименование — под дневным лимитом
+        try:
+            from services.staff_limits import check_action
+            _ok, _deny = check_action(interaction.guild, interaction.user, 'dehoist')
+            if not _ok:
+                return await interaction.response.send_message(f'🛡 {_deny}', ephemeral=True)
+        except Exception as _ex:
+            _log.debug('dehoist(): staff limit: %s', _ex)
         await interaction.response.defer(ephemeral=True)
         ok, fail = 0, 0
         for m, new in flagged:
@@ -318,6 +353,11 @@ class ModKit(commands.Cog):
                           f'Модератор: {interaction.user.mention}')
         await self._modlog(interaction.guild, 'Dehoist ников',
                            [('Найдено', len(flagged)), ('Переименовано', ok), ('Ошибок', fail)])
+        try:
+            from services.staff_limits import record_hit
+            record_hit(interaction.guild.id, interaction.user.id, 'dehoist', 1)
+        except Exception as _ex:
+            _log.debug('dehoist(): record: %s', _ex)
         await interaction.followup.send(embed=card, ephemeral=True)
 
 

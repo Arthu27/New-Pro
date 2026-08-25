@@ -7,7 +7,7 @@
   <div class="page-head-copy">
     <div class="eyebrow">Модерация <span class="sep">·</span> Защита</div>
     <h1>Лимиты команды</h1>
-    <p class="lead">Дневные лимиты действий модерации — чтобы никто «не обнаглел». Глобальные значения и свои лимиты для каждой роли. Владельца лимиты не касаются никогда.</p>
+    <p class="lead">Дневные лимиты на ВСЕ действия модерации — чтобы никто «не обнаглел». Глобальные значения и свои лимиты для каждой роли. Владельца лимиты не касаются никогда.</p>
   </div>
   <div class="page-head-actions">
     <button type="button" class="btn" id="slReload"><i class="fas fa-arrows-rotate"></i> Обновить</button>
@@ -15,16 +15,16 @@
 </div>
 
 <div class="kpi-row">
-  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-users-gear"></i></div><div class="kpi-copy"><div class="kpi-value" id="slRolesPill">—</div><div class="kpi-label">Ролей с лимитами</div></div></div>
-  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-gauge-high"></i></div><div class="kpi-copy"><div class="kpi-value" id="slDefPill">—</div><div class="kpi-label">Глобальный лимит банов/день</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-list-check"></i></div><div class="kpi-copy"><div class="kpi-value" id="slActionsPill">—</div><div class="kpi-label">Действий под лимитом</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-users-gear"></i></div><div class="kpi-copy"><div class="kpi-value" id="slRolesPill">—</div><div class="kpi-label">Ролей со своими лимитами</div></div></div>
   <div class="kpi tone-ok"><div class="kpi-icon"><i class="fas fa-bolt"></i></div><div class="kpi-copy"><div class="kpi-value" id="slApplyPill">мгновенно</div><div class="kpi-label">Применение</div></div></div>
 </div>
 
 <div class="panel" style="margin-bottom:18px">
   <div class="panel-head"><div><h2><i class="fas fa-sliders"></i> Глобальные лимиты (по умолчанию для всех)</h2>
-    <div class="sub">Действуют на весь персонал, у роли без своих лимитов. Счётчик сбрасывается каждый день в 00:00 UTC.</div></div></div>
+    <div class="sub">Действуют на весь персонал, у роли без своих лимитов. Счётчик сбрасывается каждый день в 00:00 UTC. Кнопка с галочкой применяет поле сразу.</div></div></div>
   <div class="panel-body">
-    <div class="form-row" id="slGlobalRow"></div>
+    <div id="slGlobalBox"></div>
     <div class="hint" id="slGlobalMsg" style="margin-top:8px"></div>
   </div>
 </div>
@@ -58,7 +58,7 @@
           <b id="slRoleName" style="font-size:16px"></b>
           <span class="chip" id="slRoleMembers"></span>
         </div>
-        <div class="form-row" id="slRoleInputs"></div>
+        <div id="slRoleInputs"></div>
         <div class="hint" id="slRoleMsg" style="margin:10px 0"></div>
         <div class="row">
           <button type="button" class="btn btn-primary" id="slRoleSave"><i class="fas fa-check"></i> Сохранить</button>
@@ -75,18 +75,9 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  var GID = (window.__analytics && '') || '';
-  var state = { roles: [], titles: {}, defaults: {}, sel: null };
+  var state = { roles: [], titles: {}, meta: [], defaults: {}, sel: null };
   var SAVING = false;
 
-  function api(path, body, cb) {
-    var opts = { credentials: 'same-origin', headers: { 'Content-Type': 'application/json' } };
-    if (body) { opts.method = 'POST'; opts.body = JSON.stringify(body); }
-    fetch('/api/guild/' + gid() + path, opts)
-      .then(function (r) { return r.json(); })
-      .then(function (d) { cb(d); })
-      .catch(function () { cb({ success: false, error: 'сеть' }); });
-  }
   function gid() {
     var v = window.MAIN_GID || '';
     if (!v) {
@@ -95,18 +86,33 @@
     return v;
   }
 
-  function renderGlobal() {
-    var row = $('slGlobalRow'); if (!row) return;
-    var keys = ['warn', 'mute', 'kick', 'ban', 'clear'];
-    var hints = { warn: 'варнов/день', mute: 'мутов/день', kick: 'киков/день', ban: 'банов/день', clear: 'сообщений чисткой' };
-    row.innerHTML = keys.map(function (k) {
-      return '<label class="form-group"><span class="form-label">' + esc(state.titles[k] || k) +
-        ' <small style="opacity:.6">' + hints[k] + '</small></span>' +
-        '<div class="row"><input class="form-input slG" data-k="' + k + '" type="number" min="1" max="100000" value="' +
-        (state.defaults[k] || '') + '" style="flex:1">' +
-        '<button type="button" class="btn slGGo" data-k="' + k + '" aria-label="Применить"><i class="fas fa-check"></i></button></div></label>';
+  function fieldHtml(k, title, hint, val, ph, withBtn) {
+    var btn = withBtn
+      ? '<button type="button" class="btn slGGo" data-k="' + k + '" aria-label="Применить" title="Применить сразу"><i class="fas fa-check"></i></button>'
+      : '';
+    return '<label class="form-group"><span class="form-label">' + esc(title) +
+      ' <small style="opacity:.6">' + esc(hint) + '</small></span>' +
+      '<div class="row"><input class="form-input ' + (withBtn ? 'slG' : 'slR') + '" data-k="' + k +
+      '" type="number" min="1" max="100000" value="' + (val || '') + '"' +
+      (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' style="flex:1">' + btn + '</div></label>';
+  }
+
+  function groupsHtml(builder) {
+    return (state.meta || []).map(function (g) {
+      return '<div style="margin-bottom:14px">' +
+        '<div class="form-label" style="margin:2px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;opacity:.7">' +
+        esc(g.label) + '</div>' +
+        '<div class="form-row" style="align-items:end">' + g.items.map(builder).join('') + '</div></div>';
     }).join('');
-    $('slDefPill').textContent = state.defaults.ban || '—';
+  }
+
+  function renderGlobal() {
+    var box = $('slGlobalBox'); if (!box) return;
+    box.innerHTML = groupsHtml(function (it) {
+      return fieldHtml(it.key, it.title, it.hint, state.defaults[it.key] || '', '', true);
+    });
+    var n = 0; (state.meta || []).forEach(function (g) { n += g.items.length; });
+    $('slActionsPill').textContent = n || '—';
   }
 
   function roleChip(r) {
@@ -144,15 +150,11 @@
     $('slRoleMembers').textContent = (r.members || 0) + ' участн.';
     $('slRoleDot').style.background = (r.color && r.color !== '#000000') ? r.color : '#95a5a6';
     $('slEditSub').textContent = 'Свои дневные лимиты для «' + r.name + '». Пустое поле — берётся глобальное.';
-    var keys = ['warn', 'mute', 'kick', 'ban', 'clear'];
-    var hints = { warn: 'варнов', mute: 'мутов', kick: 'киков', ban: 'банов', clear: 'сообщений чисткой' };
-    $('slRoleInputs').innerHTML = keys.map(function (k) {
-      var v = (r.limits || {})[k];
-      return '<label class="form-group"><span class="form-label">' + esc(state.titles[k] || k) +
-        ' <small style="opacity:.6">' + hints[k] + '/день</small></span>' +
-        '<input class="form-input slR" data-k="' + k + '" type="number" min="1" max="100000" placeholder="глобально: ' +
-        (state.defaults[k] || '—') + '" value="' + (v || '') + '"></label>';
-    }).join('');
+    $('slRoleInputs').innerHTML = groupsHtml(function (it) {
+      var v = (r.limits || {})[it.key];
+      return fieldHtml(it.key, it.title, it.hint + '/день', v || '',
+                       'глобально: ' + (state.defaults[it.key] || '—'), false);
+    });
     $('slRoleMsg').textContent = '';
     renderRoles();
   }
@@ -209,6 +211,7 @@
         if (!d.success) return;
         state.roles = d.roles || [];
         state.titles = d.action_titles || {};
+        state.meta = d.action_meta || [];
         state.defaults = d.defaults || {};
         renderGlobal();
         renderRoles();
@@ -227,7 +230,8 @@
       var b = ev.target.closest ? ev.target.closest('.slGGo') : null;
       if (!b) return;
       var k = b.getAttribute('data-k');
-      var inp = $('slGlobalRow').querySelector('.slG[data-k="' + k + '"]');
+      var box = $('slGlobalBox');
+      var inp = box ? box.querySelector('.slG[data-k="' + k + '"]') : null;
       var val = parseInt((inp && inp.value) || '0', 10);
       if (!val || val < 1) { $('slGlobalMsg').textContent = 'Значение — целое число от 1'; return; }
       if (SAVING) return;

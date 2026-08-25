@@ -447,6 +447,17 @@ class ModTools(commands.Cog):
     async def _voice_action(self, interaction, member, action, reason, proof):
         """Общий путь голосовых действий: мут / размут / кик из войса."""
         guild = interaction.guild
+        # Лимиты команды: войс-действия тоже под дневным лимитом
+        # (владельца гейт пропускает всегда).
+        try:
+            from services.staff_limits import check_action
+            _vk = {'vmute': 'mute', 'vunmute': 'unmute', 'vkick': 'vkick'}.get(action)
+            if _vk:
+                _ok, _deny = check_action(guild, interaction.user, _vk)
+                if not _ok:
+                    return await _respond(interaction, content=f"🛡 {_deny}", ephemeral=True)
+        except Exception as _ex:
+            _log.debug("_voice_action(): staff limit: %s", _ex)
         try:
             if action == 'vmute':
                 await member.edit(mute=True, reason=reason or "Войс-мут")
@@ -473,6 +484,15 @@ class ModTools(commands.Cog):
                 case_id = mcog.save_case(guild.id, action, member.id, interaction.user.id, reason)
             except Exception as _ex:
                 _log.debug("_voice_action(): save_case: %s", _ex)
+
+        # Лимиты: фиксируем успешное войс-действие в дневном счётчике
+        try:
+            from services.staff_limits import record_hit
+            _rk = {'vmute': 'mute', 'vunmute': 'unmute', 'vkick': 'vkick'}.get(action)
+            if _rk:
+                record_hit(guild.id, interaction.user.id, _rk, 1)
+        except Exception as _ex:
+            _log.debug("_voice_action(): record: %s", _ex)
 
         proof_note = None
         try:

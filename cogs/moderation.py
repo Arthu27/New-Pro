@@ -289,6 +289,7 @@ class Moderation (commands .Cog ):
         # САМЫЙ СТРОГИЙ лимит среди ролей модератора (пер-рольные лимиты).
         try :
             _sl_key ={'warn':'warn','timeout':'mute','mute_chat':'mute','vmute':'mute',
+            'untimeout':'unmute','vunmute':'unmute','unban':'unban',
             'ban':'ban','clear':'clear','kick':'kick'}.get (action )
             if _sl_key and guild and getattr (interaction .user ,'id',0 )!=getattr (guild ,'owner_id',0 ):
                 from services .staff_limits import check_limit as _sl_check ,ACTION_TITLES 
@@ -391,7 +392,8 @@ class Moderation (commands .Cog ):
                 # Лимиты: фиксируем успешные муты в дневном счётчике
                 # (бан и чистка пишутся в своих ветках)
                 try :
-                    _sl_rec_key ={'timeout':'mute','mute_chat':'mute','vmute':'mute','kick':'kick'}.get (action )
+                    _sl_rec_key ={'timeout':'mute','mute_chat':'mute','vmute':'mute',
+                    'untimeout':'unmute','vunmute':'unmute','kick':'kick'}.get (action )
                     if _sl_rec_key and guild :
                         from services .staff_limits import record_hit as _sl_rec 
                         _sl_rec (guild .id ,interaction .user .id ,_sl_rec_key ,1 )
@@ -473,6 +475,11 @@ class Moderation (commands .Cog ):
                 except Exception as _ub_ex :
                     log .debug (f'unban: {_ub_ex}')
                 case_id =self .save_case (guild .id ,"unban",uid ,interaction .user .id ,reason )
+                try :
+                    from services .staff_limits import record_hit as _sl_rec
+                    _sl_rec (guild .id ,interaction .user .id ,'unban',1 )
+                except Exception as _re :
+                    log .debug (f'[STAFF_LIMIT] unban rec: {_re}')
                 _who =member .display_name if member else (getattr (fetched ,'name','') if unban_done else str (uid ))
                 _desc =f"**{_who}** · `{uid}`\n"
                 _desc +="Снята апелляция и разбан." if (member is not None and unban_done) else \

@@ -81,6 +81,7 @@ def register(ctx):
             'success': True,
             'defaults': SL.get_limits(guild_id),
             'action_titles': SL.ACTION_TITLES,
+            'action_meta': SL.action_meta(),
             'roles': roles,
         })
 

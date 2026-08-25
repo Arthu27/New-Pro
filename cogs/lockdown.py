@@ -114,6 +114,18 @@ class Lockdown(commands.Cog):
                             mention_author=False)
             return
 
+        # Лимиты команды: локдаун — дневной лимит закрытых каналов
+        # (владельца не ограничиваем).
+        try:
+            from services.staff_limits import check_action
+            _ok, _deny = check_action(guild, ctx.author, 'lockdown',
+                                       amount=max(1, len(targets)))
+            if not _ok:
+                await ctx.reply(f'🛡 {_deny}', mention_author=False)
+                return
+        except Exception as _ex:
+            log.debug('lockdown: staff limit: %s', _ex)
+
         locked, skipped = [], []
         for ch in targets:
             cid = str(ch.id)
@@ -137,6 +149,12 @@ class Lockdown(commands.Cog):
             state['by'] = str(ctx.author)
             state['reason'] = причина[:200]
             self._save(guild.id, state)
+            # Лимиты: считаем закрытые каналы в дневном счётчике
+            try:
+                from services.staff_limits import record_hit
+                record_hit(guild.id, ctx.author.id, 'lockdown', len(locked))
+            except Exception as _ex:
+                log.debug('lockdown: record: %s', _ex)
 
         embed = discord.Embed(
             title='Локдаун включён' if locked else 'Локдаун: ничего не закрылось',

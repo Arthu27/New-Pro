@@ -48,6 +48,16 @@ from services import staff_limits as SL  # noqa: E402
 ok('дефолты на все действия',
    SL.DEFAULT_LIMITS['warn'] == 30 and SL.DEFAULT_LIMITS['mute'] == 20
    and SL.DEFAULT_LIMITS['kick'] == 6 and SL.DEFAULT_LIMITS['ban'] == 8)
+ok('лимиты на ВСЁ: 12 действий (заказ «лимиты на все»)',
+   len(SL.DEFAULT_LIMITS) == 12
+   and SL.DEFAULT_LIMITS['unmute'] == 30 and SL.DEFAULT_LIMITS['vkick'] == 20
+   and SL.DEFAULT_LIMITS['unban'] == 10 and SL.DEFAULT_LIMITS['nuke'] == 2
+   and SL.DEFAULT_LIMITS['raid'] == 3 and SL.DEFAULT_LIMITS['lockdown'] == 12
+   and SL.DEFAULT_LIMITS['dehoist'] == 5)
+meta = SL.action_meta()
+ok('панель получает группы: наказания + опасные операции',
+   len(meta) == 2 and sum(len(g['items']) for g in meta) == 12
+   and {i['key'] for g in meta for i in g['items']} == set(SL.DEFAULT_LIMITS))
 
 SL.set_role_limits(777, 111, ban=3, mute=5)
 SL.set_role_limits(777, 222, ban=1)  # ещё строже по бану
@@ -89,6 +99,8 @@ d = r.get_json()
 ok('GET лимитов: роли + дефолты + названия',
    d['success'] and isinstance(d['roles'], list) and d['defaults']['ban'] == 8
    and d['action_titles']['warn'] == 'варнов')
+ok('GET лимитов: метаданные групп (12 полей)',
+   sum(len(g['items']) for g in d['action_meta']) == 12)
 ok('в списке ролей есть демо-роли (превью живое)', len(d['roles']) > 0)
 
 r = client.post('/api/guild/777/staff-limits',
@@ -110,11 +122,33 @@ tpl = open(os.path.join(ROOT, 'web/templates/staff_limits.html'),
 ok('шаблон: выбор ролей + live 1.5с + мгновенное применение',
    'slRoleList' in tpl and 'setLiveRefresh' in tpl
    and 'действует сразу' in tpl)
+ok('шаблон: поля строятся из групп API (не захардкожены)',
+   'slGlobalBox' in tpl and 'action_meta' in tpl
+   and "'warn', 'mute', 'kick'" not in tpl)
 mod_src = open(os.path.join(ROOT, 'cogs/moderation.py'), encoding='utf-8').read()
 ok('модерация гейтит ВСЕ действия и передаёт роли',
    "'vmute':'mute'" in mod_src and 'role_ids =_sl_roles' in mod_src)
+ok('модерация: гейт разбана и снятия мута',
+   "'unban':'unban'" in mod_src and "'untimeout':'unmute'" in mod_src
+   and "'unban',1" in mod_src)
 warn_src = open(os.path.join(ROOT, 'cogs/warnings.py'), encoding='utf-8').read()
 ok('/warn тоже под лимитом', "'warn'" in warn_src and 'check_limit' in warn_src)
+ok('⚡-варн реакцией (add_warning) больше не обходит лимит',
+   'async def add_warning' in warn_src and warn_src.count('check_action') >= 1
+   and warn_src.count("record_hit") >= 2)
+mt_src = open(os.path.join(ROOT, 'cogs/mod_tools.py'), encoding='utf-8').read()
+ok('войс-действия под лимитом (мут/размут/кик из войса)',
+   "'vkick': 'vkick'" in mt_src and "'vmute': 'mute'" in mt_src)
+mp_src = open(os.path.join(ROOT, 'cogs/mod_plus.py'), encoding='utf-8').read()
+ok('тихий мут и его снятие под лимитом',
+   "'mute'" in mp_src and "'unmute'" in mp_src and 'check_action' in mp_src)
+mk_src = open(os.path.join(ROOT, 'cogs/mod_kit.py'), encoding='utf-8').read()
+ok('nuke / raidcleanup / dehoist под лимитом',
+   "'nuke'" in mk_src and "'raid'" in mk_src and "'dehoist'" in mk_src
+   and mk_src.count('check_action') == 6)
+ld_src = open(os.path.join(ROOT, 'cogs/lockdown.py'), encoding='utf-8').read()
+ok('локдауны считаются по каналам',
+   "'lockdown'" in ld_src and 'len(locked)' in ld_src)
 
 print('== 3. Логи не создаются сами ==')
 from services import log_settings as LS  # noqa: E402
@@ -148,6 +182,20 @@ ok('бот проверяет включённость категории пер
 ls_tpl = open(os.path.join(ROOT, 'web/templates/log_settings.html'),
               encoding='utf-8').read()
 ok('шаблон логов: тумблеры + live 1.5с', 'lsEn' in ls_tpl and 'setLiveRefresh' in ls_tpl)
+
+print('== 3.5 Выбор времени в Щите (бывшее «Окно, сек») ==')
+gd_tpl = open(os.path.join(ROOT, 'web/templates/guardian.html'),
+              encoding='utf-8').read()
+ok('непонятное поле «Окно, сек» убрано', 'Окно, сек' not in gd_tpl)
+ok('выбор времени: число + единица сек/мин',
+   'gd-ev-winu' in gd_tpl and "'m'" in gd_tpl and 'wsec = wsec * 60' in gd_tpl)
+ok('быстрые пресеты времени (10с/30с/1м/2м/5м)',
+   'WIN_PRESETS' in gd_tpl and 'gd-pbtn' in gd_tpl
+   and '300' in gd_tpl and 'data-s' in gd_tpl)
+ok('человеческая подсказка «Сработает: N за X» и объяснение',
+   'gd-fires' in gd_tpl and 'Как настроить защиту' in gd_tpl)
+ok('значение зажимается в 3..300 секунд при сохранении',
+   'Math.max(3, Math.min(300, wsec))' in gd_tpl)
 
 print('== 4. Меню ==')
 from services import panel_menu as PM  # noqa: E402

@@ -6,8 +6,10 @@
 (data/staff_limits_<gid>.json), а лимиты — в data/staff_limit_cfg_<gid>.json.
 
 API:
-    check_limit(guild_id, user_id, key, amount) -> (allowed, used, limit)
+    check_limit(guild_id, user_id, key, amount, role_ids) -> (allowed, used, limit)
         Проверить, можно ли выполнить действие (без записи).
+    check_action(guild, actor, key, amount=1) -> (allowed, deny_text)
+        Удобный гейт для когов: сам достаёт роли, владельца пропускает.
     record_hit(guild_id, user_id, key, amount) -> None
         Зафиксировать успешно выполненное действие в дневном счётчике.
     get_limits(guild_id) -> dict
@@ -15,7 +17,8 @@ API:
     set_limits(guild_id, **kw) -> dict
         Обновить лимиты (например set_limits(gid, ban=5, clear=200)).
 
-Ключи лимитов: 'ban' — банов в день; 'clear' — сообщений чисткой в день.
+Ключи лимитов — ВСЕ действия стаффа, которыми можно «обнаглеть»
+(заказ владельца 2026-08: «лимиты на всё»): наказания + опасные операции.
 """
 import json
 import os
@@ -27,24 +30,72 @@ _log = get_logger('staff_limits')
 
 # Лимиты по умолчанию (в день, UTC). Подобраны так, чтобы обычной
 # модерации хватало с запасом, а «рейдера в правах» они останавливали.
-# Расширено по заказу владельца (2026-08): лимитируется ВСЁ, чем стафф
-# может «обнаглеть», а не только бан и чистка.
 DEFAULT_LIMITS = {
-    'warn': 30,    # предупреждений в день на модератора
-    'mute': 20,    # мутов (таймаут/чат/войс) в день на модератора
-    'kick': 6,     # киков в день (кик выключен — лимит на будущее)
-    'ban': 8,      # банов в день на модератора
-    'clear': 500,  # сообщений, удалённых очисткой, в день на модератора
+    # ── наказания ──
+    'warn': 30,      # предупреждений в день (/warn и ⚡-варн реакцией)
+    'mute': 20,      # мутов в день (таймаут/чат/войс/тихий ghostmute)
+    'unmute': 30,    # снятий мута в день
+    'kick': 6,       # киков в день (команда отключена — лимит на будущее)
+    'vkick': 20,     # киков из голосового канала в день
+    'ban': 8,        # банов/апелляций в день
+    'unban': 10,     # разбанов / снятий апелляции в день
+    # ── опасные операции ──
+    'clear': 500,    # сообщений, удалённых очисткой, в день
+    'nuke': 2,       # пересозданий канала начисто (/nuke) в день
+    'raid': 3,       # массовых зачисток недавних входов (/raidcleanup)
+    'lockdown': 12,  # каналов, закрытых локдауном, в день
+    'dehoist': 5,    # массовых переименований ников (/dehoist) в день
 }
 
 # Человеческие названия для сообщений и панели.
 ACTION_TITLES = {
     'warn': 'варнов',
     'mute': 'мутов',
+    'unmute': 'снятий мута',
     'kick': 'киков',
+    'vkick': 'киков из войса',
     'ban': 'банов',
+    'unban': 'разбанов',
     'clear': 'сообщений чисткой',
+    'nuke': 'пересозданий канала',
+    'raid': 'массовых зачисток',
+    'lockdown': 'локдаунов',
+    'dehoist': 'массовых переименований',
 }
+
+# Подсказки к полям в панели (что именно считается).
+ACTION_HINTS = {
+    'warn': 'варнов в день',
+    'mute': 'мутов в день (включая тихие)',
+    'unmute': 'снятий мута в день',
+    'kick': 'киков в день (отключено — на будущее)',
+    'vkick': 'выгонок из голоса в день',
+    'ban': 'банов/апелляций в день',
+    'unban': 'разбанов в день',
+    'clear': 'сообщений чисткой в день',
+    'nuke': 'пересозданий канала в день',
+    'raid': 'массовых зачисток входов',
+    'lockdown': 'закрытых каналов в день',
+    'dehoist': 'массовых переименований',
+}
+
+# Порядок и группировка полей в панели.
+ACTION_GROUPS = [
+    ('punish', 'Наказания', ['warn', 'mute', 'unmute', 'kick', 'vkick', 'ban', 'unban']),
+    ('heavy', 'Опасные операции', ['clear', 'nuke', 'raid', 'lockdown', 'dehoist']),
+]
+
+
+def action_meta():
+    """Метаданные всех действий для панели: группы с полями."""
+    return [
+        {'key': gkey, 'label': label,
+         'items': [{'key': k, 'title': ACTION_TITLES.get(k, k),
+                    'hint': ACTION_HINTS.get(k, ''), 'default': DEFAULT_LIMITS[k]}
+                   for k in keys if k in DEFAULT_LIMITS]}
+        for gkey, label, keys in ACTION_GROUPS
+        if any(k in DEFAULT_LIMITS for k in keys)
+    ]
 
 
 def _cfg_path(gid):
@@ -129,6 +180,31 @@ def check_limit(guild_id, user_id, key, amount=1, role_ids=None):
     return (used + amount) <= limit, used, limit
 
 
+def check_action(guild, actor, key, amount=1):
+    """Гейт для когов: (allowed, deny_text). deny_text готов для показа.
+
+    Сам достаёт роли модератора, владельца гильдии пропускает всегда,
+    любая ошибка НЕ мешает модерации (защита не ломает работу).
+    """
+    try:
+        if not guild or not actor:
+            return True, None
+        if getattr(actor, 'id', 0) == getattr(guild, 'owner_id', 0):
+            return True, None
+        role_ids = [r.id for r in (getattr(actor, 'roles', None) or [])
+                    if getattr(r, 'id', None) != getattr(guild, 'id', None)]
+        allowed, used, lim = check_limit(guild.id, actor.id, key, amount,
+                                         role_ids=role_ids)
+        if allowed:
+            return True, None
+        what = ACTION_TITLES.get(key, 'действий')
+        return False, (f'Дневной лимит исчерпан: {lim} {what} в день '
+                       f'(уже {used}). Сброс — после полуночи по UTC.')
+    except Exception as ex:
+        _log.debug('check_action(%s): %s', key, ex)
+        return True, None
+
+
 def record_hit(guild_id, user_id, key, amount=1):
     """Записать успешное действие в дневной счётчик."""
     try:
@@ -150,11 +226,14 @@ def status_text(guild_id, user_id):
     lim = get_limits(guild_id)
     _data, _day, per_day = _today_counts(guild_id)
     mine = per_day.get(str(user_id)) or {}
+    short = {'warn': 'варны', 'mute': 'муты', 'unmute': 'размуты',
+             'kick': 'кики', 'vkick': 'войс-кики', 'ban': 'баны',
+             'unban': 'разбаны', 'nuke': 'nuke', 'raid': 'зачистки',
+             'lockdown': 'локдауны', 'dehoist': 'dehoist'}
     parts = []
-    for key, short in (('warn', 'варны'), ('mute', 'муты'), ('kick', 'кики'),
-                       ('ban', 'баны')):
+    for key, name in short.items():
         if lim.get(key):
-            parts.append(f"{short} {mine.get(key, 0)}/{lim[key]}")
+            parts.append(f'{name} {mine.get(key, 0)}/{lim[key]}')
     if lim.get('clear'):
         parts.append(f"чистка {mine.get('clear', 0)}/{lim['clear']} сообщ.")
     return ' · '.join(parts) if parts else 'без лимитов'
