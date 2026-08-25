@@ -186,7 +186,9 @@ def _disable_anti_alt(flipped):
             for gid, raw in rows:
                 try:
                     cfg = json.loads(raw) if isinstance(raw, str) else raw
-                except Exception:
+                except Exception as _ex:
+                    _log.debug('fresh_start: anti_alt guild=%s — мусор в базе, '
+                               'пропускаю: %s', gid, _ex)
                     continue
                 if isinstance(cfg, dict) and cfg.get('enabled'):
                     cfg['enabled'] = False

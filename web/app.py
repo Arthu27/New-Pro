@@ -199,7 +199,8 @@ def before_request ():
         session ['logged_in']=True 
         session ['username']='demo'
         session ['role']='owner'
-        session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
+        # демо-сервер 777 — тот же id, что отдаёт /api/guilds в демо
+        session ['selected_guild']=str (MAIN_GUILD_ID or '777')
         session ['main_guild_id']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else ''
         session .modified =True 
 
@@ -861,6 +862,11 @@ def login ():
             session ['logged_in']=True 
             session ['username']=username 
             session ['role']=USERS [username ]['role']
+            # Реальному входу тоже нужен выбранный сервер — раньше его
+            # ставил только демо-логин, и страницы вроде /ai_ticket_stats
+            # вечно редиректили на выбор сервера.
+            session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
+            session .modified =True 
             _save_login_token (username ,USERS [username ]['role'])
             _log_login (username ,'owner',None ,None )
             return redirect (url_for ('index'))
@@ -892,6 +898,9 @@ def login ():
                 session ['username']=members [discord_id ]['display_name']
                 session ['role']=live_role 
                 session ['discord_id']=discord_id 
+                # тот же выбранный сервер, что и у входа владельца
+                session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
+                session .modified =True 
                 _save_login_token (discord_id ,live_role )
                 _log_login (
                 members [discord_id ]['display_name'],
@@ -1502,7 +1511,9 @@ def api_guilds ():
         # они обнуляли selectedGuild и переставали грузить что-либо.
         if _demo_mode ():
             return jsonify ([{
-            'id':str (MAIN_GUILD_ID ),
+            # MAIN_GUILD_ID бывает пуст (панель до настройки .env) — тогда
+            # дефолт 777, иначе селекторы получали сервер с id='' и ломались.
+            'id':str (MAIN_GUILD_ID or '777'),
             'name':'Главный сервер',
             'members':1247 ,
             'icon':None ,
@@ -2723,7 +2734,7 @@ def api_public_guilds ():
     if not bot_instance :
         # демо: сервер для публичной анкеты (иначе «Сервер не найден»)
         if _demo_mode ():
-            return jsonify ([{'id':str (MAIN_GUILD_ID ),'name':'Главный сервер','icon':None ,'members':1247 }])
+            return jsonify ([{'id':str (MAIN_GUILD_ID or '777'),'name':'Главный сервер','icon':None ,'members':1247 }])
         return jsonify ([])
     guilds =[{'id':str (g .id ),'name':g .name ,
     'icon':str (g .icon .url )if g .icon else None ,

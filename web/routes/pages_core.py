@@ -28,7 +28,9 @@ def register(ctx):
     @role_required ('mod')
     def ai_ticket_stats ():
         """AI ticket статистика страница"""
-        guild_id =session .get ('selected_guild')
+        # MAIN_GUILD_ID как запаска — как в admin_api (раньше страница
+        # вечно уходила в редирект: selected_guild ставил только демо-логин)
+        guild_id =session .get ('selected_guild')or MAIN_GUILD_ID 
         if not guild_id :
             return redirect (url_for ('guilds_page'))
 

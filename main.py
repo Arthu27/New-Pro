@@ -21,7 +21,10 @@ def _install_requirements():
     _import_map = {
         'discord.py': 'discord',
         'python-dotenv': 'dotenv',
-        'discord-ext-voice-recv': 'voice_recv',
+        # Реальное имя импорта — discord.ext.voice_recv, а не voice_recv:
+        # из-за неверного имени чекер считал пакет пропавшим и гонял
+        # pip install при КАЖДОМ старте бота.
+        'discord-ext-voice-recv': 'discord.ext.voice_recv',
         'flask-session': 'flask_session',
         'duckduckgo-search': 'duckduckgo_search',
         'deep-translator': 'deep_translator',
@@ -29,6 +32,9 @@ def _install_requirements():
         'faster-whisper': 'faster_whisper',
         'yt-dlp': 'yt_dlp',
         'PyNaCl': 'nacl',
+        # Пакет в pip называется Pillow, импортируется как PIL
+        # (без маппинга «Pillow» всегда считался пропавшим).
+        'Pillow': 'PIL',
     }
     
     missing = []
