@@ -7,7 +7,7 @@
   <div class="page-head-copy">
     <div class="eyebrow">Модерация <span class="sep">·</span> Защита</div>
     <h1>Лимиты команды</h1>
-    <p class="lead">Дневные лимиты на ВСЕ действия модерации — чтобы никто «не обнаглел». Глобальные значения и свои лимиты для каждой роли. Владельца лимиты не касаются никогда.</p>
+    <p class="lead">Лимиты на ВСЕ действия модерации за выбранный период — часы или дни. Глобальные значения и СВОИ лимиты с СВОИМ периодом для каждой роли отдельно. Владельца лимиты не касаются никогда.</p>
   </div>
   <div class="page-head-actions">
     <button type="button" class="btn" id="slReload"><i class="fas fa-arrows-rotate"></i> Обновить</button>
@@ -75,7 +75,7 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  var state = { roles: [], titles: {}, meta: [], defaults: {}, sel: null };
+  var state = { roles: [], titles: {}, meta: [], defaults: {}, windows: {}, sel: null };
   var SAVING = false;
   var _lastRaw = null;
   var _metaSig = '';
@@ -88,15 +88,26 @@
     return v;
   }
 
-  function fieldHtml(k, title, hint, val, ph, withBtn) {
+  function fieldHtml(k, title, hint, val, win, ph, withBtn) {
+    var winN = (win && win.n) || 1;
+    var winU = (win && win.unit) === 'h' ? 'h' : 'd';
     var btn = withBtn
       ? '<button type="button" class="btn slGGo" data-k="' + k + '" aria-label="Применить" title="Применить сразу"><i class="fas fa-check"></i></button>'
       : '';
+    var wInp = withBtn ? 'slGW' : 'slRW';
+    var wSel = withBtn ? 'slGU' : 'slRU';
     return '<label class="form-group"><span class="form-label">' + esc(title) +
       ' <small style="opacity:.6">' + esc(hint) + '</small></span>' +
-      '<div class="row"><input class="form-input ' + (withBtn ? 'slG' : 'slR') + '" data-k="' + k +
+      '<div class="row" style="flex-wrap:wrap">' +
+      '<input class="form-input ' + (withBtn ? 'slG' : 'slR') + '" data-k="' + k +
       '" type="number" min="1" max="100000" value="' + (val || '') + '"' +
-      (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' style="flex:1">' + btn + '</div></label>';
+      (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' style="flex:1;min-width:64px">' +
+      '<span style="align-self:center;font-size:12px;opacity:.6">за</span>' +
+      '<input class="form-input ' + wInp + '" data-k="' + k + '" type="number" min="1" max="31" value="' + winN + '" title="За сколько" aria-label="Период: ' + esc(title) + '" style="width:56px;padding-left:8px;padding-right:8px">' +
+      '<select class="form-input ' + wSel + '" data-k="' + k + '" title="Часы или дни" aria-label="Единица периода: ' + esc(title) + '" style="width:auto;padding-left:8px;padding-right:8px">' +
+      '<option value="h"' + (winU === 'h' ? ' selected' : '') + '>час</option>' +
+      '<option value="d"' + (winU === 'd' ? ' selected' : '') + '>дн</option>' +
+      '</select>' + btn + '</div></label>';
   }
 
   function groupsHtml(builder) {
@@ -114,7 +125,8 @@
     if (rebuild || sig !== _metaSig) {
       _metaSig = sig;
       box.innerHTML = groupsHtml(function (it) {
-        return fieldHtml(it.key, it.title, it.hint, state.defaults[it.key] || '', '', true);
+        return fieldHtml(it.key, it.title, it.hint, state.defaults[it.key] || '',
+                         state.windows[it.key], '', true);
       });
     } else {
       /* данных стало новое — обновляем ЗНАЧЕНИЯ на месте: фокус и печать не трогаем */
@@ -129,7 +141,8 @@
   }
 
   function roleChip(r) {
-    var has = Object.keys(r.limits || {}).length > 0;
+    var has = Object.keys(r.limits || {}).length > 0
+           || Object.keys(r.windows || {}).length > 0;
     return '<span class="chip" style="' + (has ? 'background:rgba(46,204,113,.18);color:#2ecc71' : 'opacity:.55') + '">' +
       (has ? 'свои лимиты' : 'глобальные') + '</span>';
   }
@@ -149,7 +162,9 @@
     Array.prototype.forEach.call(list.querySelectorAll('.sl-role'), function (el) {
       el.addEventListener('click', function () { selectRole(el.getAttribute('data-id')); });
     });
-    $('slRolesPill').textContent = state.roles.filter(function (r) { return Object.keys(r.limits || {}).length; }).length;
+    $('slRolesPill').textContent = state.roles.filter(function (r) {
+      return Object.keys(r.limits || {}).length || Object.keys(r.windows || {}).length;
+    }).length;
   }
 
   function selectRole(id) {
@@ -165,7 +180,8 @@
     $('slEditSub').textContent = 'Свои дневные лимиты для «' + r.name + '». Пустое поле — берётся глобальное.';
     $('slRoleInputs').innerHTML = groupsHtml(function (it) {
       var v = (r.limits || {})[it.key];
-      return fieldHtml(it.key, it.title, it.hint + '/день', v || '',
+      var w = (r.windows || {})[it.key] || state.windows[it.key];
+      return fieldHtml(it.key, it.title, it.hint, v || '', w,
                        'глобально: ' + (state.defaults[it.key] || '—'), false);
     });
     $('slRoleMsg').textContent = '';
@@ -175,15 +191,22 @@
   function saveRole() {
     if (!state.sel || SAVING) return;
     var limits = {};
+    var windows = {};
     Array.prototype.forEach.call($('slRoleInputs').querySelectorAll('.slR'), function (inp) {
       var v = parseInt(inp.value, 10);
       if (inp.value && v > 0) limits[inp.getAttribute('data-k')] = v;
+    });
+    Array.prototype.forEach.call($('slRoleInputs').querySelectorAll('.slRW'), function (inp) {
+      var k = inp.getAttribute('data-k');
+      var sel = $('slRoleInputs').querySelector('.slRU[data-k="' + k + '"]');
+      var n = parseInt(inp.value, 10) || 1;
+      if (inp.value && n > 0) windows[k] = { n: n, unit: (sel && sel.value) || 'd' };
     });
     SAVING = true;
     fetch('/api/guild/' + gid() + '/staff-limits/role', {
       credentials: 'same-origin', method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role_id: state.sel, limits: limits })
+      body: JSON.stringify({ role_id: state.sel, limits: limits, windows: windows })
     }).then(function (r) { return r.json(); }).then(function (d) {
       SAVING = false;
       $('slRoleMsg').textContent = d.success ? 'Сохранено — действует сразу' : 'Ошибка: ' + (d.error || 'не сохранено');
@@ -203,15 +226,21 @@
     }).catch(function () {});
   }
 
-  function saveGlobalReal(key, val) {
-    /* настоящий POST глобального лимита */
+  function saveGlobalReal(key, val, win) {
+    /* настоящий POST глобального лимита + окна */
+    var body = { limits: (function () { var o = {}; o[key] = val; return o; })() };
+    if (win) { body.windows = (function () { var o = {}; o[key] = win; return o; })(); }
     fetch('/api/guild/' + gid() + '/staff-limits', {
       credentials: 'same-origin', method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ limits: (function () { var o = {}; o[key] = val; return o; })() })
+      body: JSON.stringify(body)
     }).then(function (r) { return r.json(); }).then(function (d) {
       SAVING = false;
-      if (d.success) { state.defaults = d.defaults || state.defaults; $('slGlobalMsg').textContent = 'Сохранено — действует сразу'; }
+      if (d.success) {
+        state.defaults = d.defaults || state.defaults;
+        state.windows = d.windows || state.windows;
+        $('slGlobalMsg').textContent = 'Сохранено — действует сразу';
+      }
       else { $('slGlobalMsg').textContent = 'Ошибка: ' + (d.error || 'не сохранено'); }
       setTimeout(function () { if ($('slGlobalMsg')) $('slGlobalMsg').textContent = ''; }, 2600);
     }).catch(function () { SAVING = false; });
@@ -234,6 +263,7 @@
         state.titles = d.action_titles || {};
         state.meta = d.action_meta || [];
         state.defaults = d.defaults || {};
+        state.windows = d.windows || {};
         renderGlobal(true);
         renderRoles();
         if (state.sel) {
@@ -259,9 +289,17 @@
       var inp = box ? box.querySelector('.slG[data-k="' + k + '"]') : null;
       var val = parseInt((inp && inp.value) || '0', 10);
       if (!val || val < 1) { $('slGlobalMsg').textContent = 'Значение — целое число от 1'; return; }
+      var wn = box ? box.querySelector('.slGW[data-k="' + k + '"]') : null;
+      var wu = box ? box.querySelector('.slGU[data-k="' + k + '"]') : null;
+      var win = null;
+      if (wn) {
+        var n = parseInt(wn.value, 10) || 1;
+        if (n < 1 || n > 31) { $('slGlobalMsg').textContent = 'Период — от 1 до 31'; return; }
+        win = { n: n, unit: (wu && wu.value) || 'd' };
+      }
       if (SAVING) return;
       SAVING = true;
-      saveGlobalReal(k, val);
+      saveGlobalReal(k, val, win);
     });
   }
 

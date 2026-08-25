@@ -186,18 +186,18 @@ r = client.get(f'/api/role-permissions/{GID}')
 body = r.get_json()
 check(r.status_code == 200 and body.get('success'), f'GET категории -> {r.status_code}')
 cats = body.get('categories', {})
-check('Модерация' in cats and 'ban' in cats.get('Модерация', []),
-      'категория Модерация содержит ban')
-check('tagjail' not in cats.get('Модерация', []) and 'jail' not in cats.get('Модерация', []),
-      'jail/tagjail убраны из панели модерации')
-check('Логи' in cats and 'logs-center' in cats.get('Логи', []),
-      'категория Логи содержит log-команды')
-check('AI-система' in cats and 'aimod' in cats.get('AI-система', []),
-      'категория AI-система содержит aimod')
-check('Тикеты' in cats and 'sla-create' in cats.get('Тикеты', []),
-      'категория Тикеты содержит sla-подкоманды')
+# категории = ЖИВОЙ каталог бота (не хардкод): призраков удалённых команд нет
+from services import command_registry as CR
+from services.permission_acl import command_categories as live_cats
+live = live_cats()
+check(cats == live, 'категории панели = живой каталог бота (1:1)')
+check('Модерация' in cats and 'modpanel' in cats.get('Модерация', []),
+      'категория Модерация содержит живую команду modpanel')
+check('ban' not in cats.get('Модерация', []) and 'kick' not in cats.get('Модерация', []),
+      'удалённые ban/kick НЕ показываются как призраки')
 total_cmds = sum(len(v) for v in cats.values())
-check(total_cmds > 100, f'всего команд в панели: {total_cmds} (>100)')
+cat_total = CR.catalog()['total']
+check(total_cmds == cat_total, f'всего команд в панели: {total_cmds} == каталогу {cat_total}')
 
 r = client.post(f'/api/role-permissions/{GID}/set',
                 data=json.dumps({'command': 'j2c', 'role_ids': ['900']}),

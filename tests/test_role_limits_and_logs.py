@@ -59,6 +59,41 @@ ok('панель получает группы: наказания + опасн�
    len(meta) == 2 and sum(len(g['items']) for g in meta) == 12
    and {i['key'] for g in meta for i in g['items']} == set(SL.DEFAULT_LIMITS))
 
+print('== 1.2 Периоды: часы и дни (заказ «дни надо и часы») ==')
+ok('дефолтное окно — 1 день', SL.get_windows(777)['ban'] == 86400)
+SL.set_windows(777, ban=7200, clear=7 * 86400)
+_w = SL.get_windows(777)
+ok('окна сохраняются: 2 часа и 7 дней', _w['ban'] == 7200 and _w['clear'] == 604800)
+ok('окна зажимаются в 1 час..31 день',
+   SL.set_windows(777, nuke=60)['nuke'] == 3600
+   and SL.set_windows(777, nuke=999 * 86400)['nuke'] == 31 * 86400)
+ok('human_window: «2 ч» и «7 дн.»',
+   SL.human_window(7200) == '2 ч' and SL.human_window(604800) == '7 дн.')
+
+_orig_now = SL._now
+try:
+    SL._now = lambda: 1000000.0
+    SL.set_limits(777, ban=1)
+    SL.set_role_limits(777, 333, ban=1)
+    SL.set_role_windows(777, 333, ban=3600)
+    lim_r, win_r = SL.effective_limits(777, [333])
+    ok('роль задаёт СВОЙ период (1 бан за 1 час)',
+       lim_r['ban'] == 1 and win_r['ban'] == 3600)
+    ok('без ролей — глобальное окно', SL.effective_limits(777, [])[1]['ban'] == 7200)
+    allowed_a, _u, _l = SL.check_limit(777, 88, 'ban', 1, role_ids=[333])
+    SL.record_hit(777, 88, 'ban', 1)
+    allowed_b, used_b, _l = SL.check_limit(777, 88, 'ban', 1, role_ids=[333])
+    ok('лимит за час: второй запретен', allowed_a and not allowed_b and used_b == 1)
+    SL._now = lambda: 1000000.0 + 3601        # час прошёл
+    allowed_c, _u, _l = SL.check_limit(777, 88, 'ban', 1, role_ids=[333])
+    ok('час истёк — снова можно', allowed_c)
+finally:
+    SL._now = _orig_now
+SL.clear_role_limits(777, 333)
+# возвращаем глобальные, чтобы дальнейшие проверки секции видели дефолты
+SL.set_limits(777, ban=8)
+SL.set_windows(777, ban=86400, clear=86400, nuke=86400)
+
 SL.set_role_limits(777, 111, ban=3, mute=5)
 SL.set_role_limits(777, 222, ban=1)  # ещё строже по бану
 ok('сохранение ролей', SL.get_role_limits(777)['111'] == {'ban': 3, 'mute': 5})
@@ -101,17 +136,24 @@ ok('GET лимитов: роли + дефолты + названия',
    and d['action_titles']['warn'] == 'варнов')
 ok('GET лимитов: метаданные групп (12 полей)',
    sum(len(g['items']) for g in d['action_meta']) == 12)
+ok('GET лимитов: окна периодов (N + час/день)',
+   d['windows']['ban'] == {'n': 1, 'unit': 'd'}
+   and d['windows']['warn']['unit'] == 'd' and 'n' in d['windows']['mute'])
 ok('в списке ролей есть демо-роли (превью живое)', len(d['roles']) > 0)
 
 r = client.post('/api/guild/777/staff-limits',
-                json={'limits': {'ban': 4}})
-ok('POST глобального лимита', r.get_json()['success']
-   and SL.get_limits(777)['ban'] == 4)
+                json={'limits': {'ban': 4}, 'windows': {'ban': {'n': 6, 'unit': 'h'}}})
+ok('POST глобального лимита и периода',
+   r.get_json()['success'] and SL.get_limits(777)['ban'] == 4
+   and SL.get_windows(777)['ban'] == 6 * 3600
+   and r.get_json()['windows']['ban']['n'] == 6)
 
 r = client.post('/api/guild/777/staff-limits/role',
-                json={'role_id': '999', 'limits': {'mute': 2}})
-ok('POST лимита роли', r.get_json()['success']
-   and SL.get_role_limits(777)['999'] == {'mute': 2})
+                json={'role_id': '999', 'limits': {'mute': 2},
+                      'windows': {'mute': {'n': 12, 'unit': 'h'}}})
+ok('POST лимита роли со СВОИМ периодом', r.get_json()['success']
+   and SL.get_role_limits(777)['999'] == {'mute': 2}
+   and SL.get_role_overrides(777)['999']['windows']['mute'] == 12 * 3600)
 r = client.post('/api/guild/777/staff-limits/role/delete',
                 json={'role_id': '999'})
 ok('DELETE лимита роли', r.get_json()['success']
@@ -125,6 +167,9 @@ ok('шаблон: выбор ролей + live 1.5с + мгновенное пр
 ok('шаблон: поля строятся из групп API (не захардкожены)',
    'slGlobalBox' in tpl and 'action_meta' in tpl
    and "'warn', 'mute', 'kick'" not in tpl)
+ok('шаблон: периоды «за N час/дн» у каждого поля',
+   'slGW' in tpl and 'slGU' in tpl and 'slRW' in tpl and 'slRU' in tpl
+   and '>час</option>' in tpl and '>дн</option>' in tpl)
 mod_src = open(os.path.join(ROOT, 'cogs/moderation.py'), encoding='utf-8').read()
 ok('модерация гейтит ВСЕ действия и передаёт роли',
    "'vmute':'mute'" in mod_src and 'role_ids =_sl_roles' in mod_src)
@@ -218,6 +263,19 @@ ok('панельный warn уносит ссылку в доказательс�
 mk_src2 = open(os.path.join(ROOT, 'cogs/mod_kit.py'), encoding='utf-8').read()
 ok('варн реакцией-эмодзи удалён', 'on_raw_reaction_add' not in mk_src2
    and 'REACT_EMOJIS' not in mk_src2)
+
+print('== 3.7 Права команд = живой каталог бота ==')
+from services import permission_acl as PA
+live = PA.command_categories()
+ok('права строятся из ЖИВОГО каталога (не хардкод)',
+   'modpanel' in live.get('Модерация', []) and 'kick' not in live.get('Модерация', []))
+ok('legacy-правила продолжают работать (объединение)',
+   any('kick' in v for v in PA.all_categories().get('Модерация', [])))
+ok('панель «Права команд» обновляется без «перезагрузки»',
+   'raw === _rpLastRaw' in open(os.path.join(ROOT, 'web/templates/role_permissions.html'),
+                                encoding='utf-8').read())
+perm_src = open(os.path.join(ROOT, 'web/routes/permissions.py'), encoding='utf-8').read()
+ok('API прав отдаёт живые категории', 'command_categories ()' in perm_src)
 
 print('== 3.5 Выбор времени в Щите (бывшее «Окно, сек») ==')
 gd_tpl = open(os.path.join(ROOT, 'web/templates/guardian.html'),

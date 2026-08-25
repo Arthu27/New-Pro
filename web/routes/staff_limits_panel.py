@@ -73,6 +73,23 @@ def _guild_channels(bot, guild_id):
     return channels
 
 
+def _win_to_api(sec, default=None):
+    """Секунды → {n, unit} для панели (unit: 'h' | 'd')."""
+    sec = int(sec or 0) or (default or 86400)
+    if sec % 86400 == 0:
+        return {'n': max(1, sec // 86400), 'unit': 'd'}
+    return {'n': max(1, sec // 3600), 'unit': 'h'}
+
+
+def _win_to_sec(w):
+    """{n, unit} из панели → секунды (клампим 1 час..31 день)."""
+    try:
+        n = max(1, min(31, int(w.get('n', 1))))
+    except (TypeError, ValueError):
+        n = 1
+    return n * 86400 if str(w.get('unit')) == 'd' else n * 3600
+
+
 def register(ctx):
     app = ctx.app
     login_required = ctx.login_required
@@ -104,13 +121,19 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_staff_limits_get(guild_id):
-        overrides = SL.get_role_limits(guild_id)
+        overrides = SL.get_role_overrides(guild_id)
         roles = _guild_roles(_app.bot_instance, guild_id)
         for r in roles:
-            r['limits'] = overrides.get(r['id']) or {}
+            ov = overrides.get(r['id']) or {}
+            r['limits'] = ov.get('limits') or {}
+            r['windows'] = {k: _win_to_api(v)
+                            for k, v in (ov.get('windows') or {}).items()} or {}
+        defaults = SL.get_limits(guild_id)
+        windows = {k: _win_to_api(v) for k, v in SL.get_windows(guild_id).items()}
         return jsonify({
             'success': True,
-            'defaults': SL.get_limits(guild_id),
+            'defaults': defaults,
+            'windows': windows,
             'action_titles': SL.ACTION_TITLES,
             'action_meta': SL.action_meta(),
             'roles': roles,
@@ -122,14 +145,23 @@ def register(ctx):
     def api_staff_limits_set(guild_id):
         data = request.get_json(silent=True) or {}
         limits = data.get('limits')
-        if not isinstance(limits, dict):
+        if not isinstance(limits, dict) and not isinstance(data.get('windows'), dict):
             return jsonify({'success': False, 'error': 'Неверный формат'}), 400
-        clean = {k: int(v) for k, v in limits.items()
+        clean = {k: int(v) for k, v in (limits or {}).items()
                  if k in SL.DEFAULT_LIMITS and isinstance(v, int) and v > 0}
-        if not clean:
+        wins = {}
+        for k, w in (data.get('windows') or {}).items():
+            if k in SL.DEFAULT_LIMITS and isinstance(w, dict):
+                wins[k] = _win_to_sec(w)
+        if not clean and not wins:
             return jsonify({'success': False, 'error': 'Пустые лимиты'}), 400
-        SL.set_limits(guild_id, **clean)
-        return jsonify({'success': True, 'defaults': SL.get_limits(guild_id)})
+        if clean:
+            SL.set_limits(guild_id, **clean)
+        if wins:
+            SL.set_windows(guild_id, **wins)
+        return jsonify({'success': True, 'defaults': SL.get_limits(guild_id),
+                        'windows': {k: _win_to_api(v)
+                                    for k, v in SL.get_windows(guild_id).items()}})
 
     @app.route('/api/guild/<guild_id>/staff-limits/role', methods=['POST'])
     @login_required
@@ -138,12 +170,20 @@ def register(ctx):
         data = request.get_json(silent=True) or {}
         role_id = str(data.get('role_id') or '').strip()
         limits = data.get('limits')
-        if not role_id or not isinstance(limits, dict):
+        if not role_id or (not isinstance(limits, dict)
+                           and not isinstance(data.get('windows'), dict)):
             return jsonify({'success': False, 'error': 'Неверный формат'}), 400
-        clean = {k: int(v) for k, v in limits.items()
+        clean = {k: int(v) for k, v in (limits or {}).items()
                  if k in SL.DEFAULT_LIMITS and isinstance(v, int) and v > 0}
+        wins = {}
+        for k, w in (data.get('windows') or {}).items():
+            if k in SL.DEFAULT_LIMITS and isinstance(w, dict):
+                wins[k] = _win_to_sec(w)
         saved = SL.set_role_limits(guild_id, role_id, **clean)
-        return jsonify({'success': True, 'limits': saved})
+        if wins:
+            SL.set_role_windows(guild_id, role_id, **wins)
+        return jsonify({'success': True, 'limits': saved,
+                        'windows': {k: _win_to_api(v) for k, v in wins.items()}})
 
     @app.route('/api/guild/<guild_id>/staff-limits/role/delete', methods=['POST'])
     @login_required

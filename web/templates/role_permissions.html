@@ -407,11 +407,23 @@ function reflow(fn) {
   }
 }
 
-function loadData() {
+var _rpLastRaw = null;
+
+function loadData(live) {
   fetch('/api/role-permissions/' + ('{{ guild_id }}'))
-    .then(function (r) { return r.json(); })
-    .then(function (d) {
-      if (!d.success) { toast('Не удалось загрузить данные', false); return; }
+    .then(function (r) { return r.text(); })
+    .then(function (raw) {
+      if (live) {
+        if (raw === _rpLastRaw) return;            /* не изменилось — DOM не трогаем */
+        var act = document.activeElement;
+        if (act && act.closest && (act.closest('#cmd-list') || act.closest('#role-list'))) {
+          _rpLastRaw = raw;                        /* ты выбираешь роли — не мешаем */
+          return;
+        }
+      }
+      _rpLastRaw = raw;
+      var d = JSON.parse(raw);
+      if (!d.success) { if (!live) toast('Не удалось загрузить данные', false); return; }
       ALL_ROLES = d.roles || [];
       ACL = d.acl || {};
       CATEGORIES = d.categories || {};
@@ -421,7 +433,7 @@ function loadData() {
       renderStats();
       reflow(function () { renderRoles(); renderSelSummary(); renderCommands(); renderActions(); });
     })
-    .catch(function () { toast('Ошибка загрузки', false); });
+    .catch(function () { if (!live) toast('Ошибка загрузки', false); });
 }
 
 function renderStats() {
@@ -780,6 +792,6 @@ document.getElementById('acc-body').addEventListener('keydown', function (e) {
 loadData();
 
 /* live: доступ/права обновляются сами каждые 1.5 секунды (совпадение везде) */
-if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadData(); } catch (e) {} }, 1500);
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadData(true); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

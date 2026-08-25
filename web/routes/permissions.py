@@ -98,7 +98,7 @@ def register(ctx):
     @role_required ('owner')
     def api_role_permissions_get (guild_id ):
         """Вернуть: все роли сервера, категории команд, текущие ACL, действия."""
-        from services .permission_acl import COMMAND_CATEGORIES ,load_acl ,ACTIONS ,load_action_acl
+        from services .permission_acl import command_categories ,all_categories ,load_acl ,ACTIONS ,load_action_acl
         import web .app as _app
         bot =_app .bot_instance
         guild =None
@@ -139,7 +139,7 @@ def register(ctx):
         return jsonify ({
         'success':True ,
         'roles':roles ,
-        'categories':COMMAND_CATEGORIES ,
+        'categories':command_categories (),
         'acl':acl ,
         'actions':ACTIONS ,
         'action_acl':action_acl ,
@@ -205,7 +205,7 @@ def register(ctx):
     @role_required ('owner')
     def api_role_permissions_preset (guild_id ):
         """Применить пресет: moderator / admin / member / everyone."""
-        from services .permission_acl import COMMAND_CATEGORIES ,save_acl
+        from services .permission_acl import all_categories ,save_acl
         data =request .get_json (silent =True )or {}
         preset =data .get ('preset','')
         role_ids =[str (r )for r in (data .get ('role_ids',[]) or [])]
@@ -213,15 +213,15 @@ def register(ctx):
             return jsonify ({'success':False ,'error':'Выберите хотя бы одну роль'}),400
         acl ={}
         if preset =='mod':
-            for cat ,cmds in COMMAND_CATEGORIES .items ():
+            for cat ,cmds in all_categories ().items ():
                 if cat =='Модерация':
                     acl [cat ]=role_ids
         elif preset =='staff':
-            for cat ,cmds in COMMAND_CATEGORIES .items ():
+            for cat ,cmds in all_categories ().items ():
                 if cat in ('Модерация','Тикеты','Логи'):
                     acl [cat ]=role_ids
         elif preset =='all':
-            for cat ,cmds in COMMAND_CATEGORIES .items ():
+            for cat ,cmds in all_categories ().items ():
                 acl [cat ]=role_ids
         else :
             return jsonify ({'success':False ,'error':'Неизвестный пресет'}),400

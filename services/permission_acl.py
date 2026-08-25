@@ -124,6 +124,37 @@ def _action_acl_db():
     return GuildData("action_acl")
 
 
+def command_categories():
+    """ЖИВОЙ список команд по разделам — из реального каталога бота.
+
+    Каталог (services/command_registry) сканирует только включённые модули
+    и только существующие команды: призраков удалённых команд здесь не
+    бывает (заказ владельца 2026-08: «в Правах команд показываются старые»).
+    """
+    try:
+        from services import command_registry as CR
+        cats = {}
+        for c in CR.catalog().get('commands', []):
+            label = CR.CATEGORIES.get(c.get('cat'), {}).get('label',
+                                                             c.get('cat', 'Прочее'))
+            cats.setdefault(label, set()).add(c.get('name', ''))
+        return {k: sorted(v) for k, v in cats.items() if k}
+    except Exception as _ex:
+        log.debug(f'command_categories(): каталог недоступен ({_ex}) — запасной список')
+        return {k: list(v) for k, v in COMMAND_CATEGORIES.items()}
+
+
+def all_categories():
+    """Живые категории + legacy (правила на старые продолжают работать)."""
+    merged = {k: list(v) for k, v in COMMAND_CATEGORIES.items()}
+    for k, v in command_categories().items():
+        bucket = merged.setdefault(k, [])
+        for name in v:
+            if name not in bucket:
+                bucket.append(name)
+    return merged
+
+
 def load_acl(guild_id: int) -> dict:
     """Вернуть ограничения: {command_or_category: [role_ids]}"""
     try:
@@ -262,7 +293,7 @@ def has_access(guild_id: int, command: str, member) -> bool:
             return False
 
         # 1.1 Проверка категорий (если имя входит в категорию с ограничением)
-        for cat, cmds in COMMAND_CATEGORIES.items():
+        for cat, cmds in all_categories().items():
             if name in cmds:
                 cat_allowed = acl.get(cat)
                 if cat_allowed and not user_roles.intersection(set(cat_allowed)):
@@ -284,7 +315,7 @@ def roles_for_command(guild_id: int, command: str) -> list:
         allowed = acl.get(name)
         if allowed:
             return allowed
-        for cat, cmds in COMMAND_CATEGORIES.items():
+        for cat, cmds in all_categories().items():
             if name in cmds:
                 ca = acl.get(cat)
                 if ca:
@@ -295,6 +326,6 @@ def roles_for_command(guild_id: int, command: str) -> list:
 def available_commands() -> list:
     """Список всех команд (для панели)."""
     cmds = set()
-    for cmds_list in COMMAND_CATEGORIES.values():
+    for cmds_list in all_categories().values():
         cmds.update(cmds_list)
     return sorted(cmds)

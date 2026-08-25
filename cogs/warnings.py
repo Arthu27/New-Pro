@@ -304,8 +304,8 @@ class warnings(commands.Cog):
                 if not _sl_ok:
                     from cogs.embed_utils import error_embed as _err
                     await interaction.followup.send(
-                        embed=_err(f'🛡 Дневной лимит исчерпан: {_sl_lim} варнов в день '
-                                   f'(уже {_sl_used}). Сброс — после полуночи по UTC.'),
+                        embed=_err(f'🛡 Лимит варнов исчерпан: {_sl_lim} '
+                                   f'(уже {_sl_used}). Период настраивается в «Лимитах команды».'),
                         ephemeral=True)
                     return (0, len(self._get_warns(guild.id, user.id)), None)
         except Exception as _ex:

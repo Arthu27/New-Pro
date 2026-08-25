@@ -310,7 +310,7 @@ class Moderation (commands .Cog ):
                 if not _sl_ok :
                     _what =ACTION_TITLES .get (_sl_key ,'действий' )
                     await _respond (interaction ,
-                    embed =error_embed (f'🛡 Дневной лимит исчерпан: {_sl_lim} {_what} в день (уже {_sl_used}). Сброс — после полуночи по UTC.'),
+                    embed =error_embed (f'🛡 Лимит исчерпан: {_sl_lim} {_what} (уже {_sl_used}). Период настраивается в «Лимитах команды».'),
                     ephemeral =True )
                     return
         except Exception as _le :
