@@ -224,6 +224,6 @@ loadStatus();
 loadPreview();
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadStatus(); } catch (e) {} }, 30000);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadStatus(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

@@ -347,5 +347,8 @@ function loadPA(){
 }
 
 loadPA();
+
+/* live: доступ/права обновляются сами каждые 1.5 секунды (совпадение везде) */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadVisibility(); loadPA(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

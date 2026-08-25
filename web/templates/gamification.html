@@ -229,6 +229,6 @@ function gfPlayer() {
 gfLoad();
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gfLoad(); } catch (e) {} }, 30000);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gfLoad(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

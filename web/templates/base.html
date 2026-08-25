@@ -75,7 +75,7 @@
       };
       if (!W.setLiveRefresh) {
         var jobs = [];
-        W.setLiveRefresh = function (fn, ms) { if (typeof fn === 'function') jobs.push({ fn: fn, ms: ms || 2500 }); };
+        W.setLiveRefresh = function (fn, ms) { if (typeof fn === 'function') jobs.push({ fn: fn, ms: ms || 1500 }); };
         setInterval(function () {
           if (W.__panelKitReady) {
             /* app.js загрузился: передаём ему все зарегистрированные
@@ -87,8 +87,33 @@
             return;
           }
           jobs.forEach(function (j) { try { j.fn(); } catch (e) {} });
-        }, 2500);
+        }, 1500);
       }
+    })();
+    </script>
+    <script>
+    /* Живой сайдбар: изменения «Доступа»/видимости категорий появляются на
+       ЛЮБОЙ открытой странице за 1.5с — без перезагрузки (заказ владельца).
+       HTML сравнивается целиком: не изменился — DOM не трогаем. */
+    (function () {
+      var lastNav = null;
+      function sidebarLive() {
+        var nav = document.getElementById('sidebarNav');
+        if (!nav) return;
+        fetch('/api/panel/sidebar?path=' + encodeURIComponent(location.pathname), { credentials: 'same-origin' })
+          .then(function (r) { return r.ok ? r.text() : null; })
+          .then(function (html) {
+            if (!html) return;
+            if (lastNav === null) { lastNav = html; return; }
+            if (html === lastNav) return;
+            lastNav = html;
+            nav.innerHTML = html;
+            if (window.sidebarInit) { try { window.sidebarInit(); } catch (e) {} }
+          })
+          .catch(function () {});
+      }
+      sidebarLive();
+      if (window.setLiveRefresh) window.setLiveRefresh(sidebarLive, 1500);
     })();
     </script>
     <a class="skip-link" href="#main-content">Перейти к содержимому</a>
@@ -159,54 +184,7 @@
             </div>
 
             <nav class="sidebar-nav" id="sidebarNav">
-                <div class="nav-favs" id="navFavs" hidden></div>
-                {% if role == 'uye' %}
-                <div class="nav-group">
-                    <a href="/member-apply" class="nav-link {% if request.path == '/member-apply' %}active{% endif %}">
-                        <i class="fas fa-user-shield"></i>
-                        <span>Заявка в администрацию</span>
-                    </a>
-                </div>
-
-                {% elif role != 'uye' %}
-                {% for grp in panel_menu %}
-                    {% if grp.pages %}
-                    <div class="nav-group" data-group="{{ grp.key }}">
-                        <div class="nav-group-title" data-toggle role="button" tabindex="0" aria-expanded="true">
-                            <span class="nav-group-icon"><i class="fas {{ grp.icon }}"></i></span>
-                            <span class="nav-group-label">{{ grp.group }}</span>
-                            <span class="nav-group-count" data-count></span>
-                            <i class="fas fa-chevron-down nav-caret"></i>
-                        </div>
-                        <div class="nav-group-items">
-                            <div class="nav-group-inner">
-                            {% if grp.sections %}
-                                {% for section in grp.sections %}
-                                <div class="nav-subgroup{% if section.pages|selectattr('path', 'equalto', request.path)|list %} has-active{% endif %}" data-mod-section="{{ section.key }}">
-                                    <button class="nav-subgroup-title" type="button" aria-expanded="false" title="{{ section.description }}">
-                                        <span class="nav-subgroup-icon"><i class="fas {{ section.icon }}"></i></span>
-                                        <span>{{ section.short }}</span>
-                                        <span class="nav-subgroup-count">{{ section.pages|length }}</span>
-                                        <i class="fas fa-chevron-right nav-subgroup-caret"></i>
-                                    </button>
-                                    <div class="nav-subgroup-items">
-                                    {% for it in section.pages %}
-                                        <a href="{{ it.path }}" data-mod-path="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}" title="{{ it.description }}{% if it.path in panel_off_paths %} · Модуль выключен{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
-                                    {% endfor %}
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                {% for it in grp.pages %}
-                                <a href="{{ it.path }}" class="nav-link {% if request.path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}"{% if it.path in panel_off_paths %} title="Модуль выключен (MOD_ONLY / DISABLED_COGS)"{% endif %}><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
-                                {% endfor %}
-                            {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                {% endfor %}
-                {% endif %}
+                {% include "_sidebar_nav.html" %}
             </nav>
 
             <div class="sidebar-foot">

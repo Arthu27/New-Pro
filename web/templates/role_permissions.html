@@ -778,5 +778,8 @@ document.getElementById('acc-body').addEventListener('keydown', function (e) {
 });
 
 loadData();
+
+/* live: доступ/права обновляются сами каждые 1.5 секунды (совпадение везде) */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadData(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

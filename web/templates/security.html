@@ -228,6 +228,6 @@ $('scCsv').addEventListener('click', function (e) { e.preventDefault(); location
 loadOverview();
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadOverview(); } catch (e) {} }, 15000);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadOverview(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

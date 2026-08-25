@@ -1,0 +1,52 @@
+{# Живой фрагмент сайдбара: рендерится и на странице, и в /api/panel/sidebar #}
+{% set active_path = active_path if active_path is defined else request.path %}
+
+                <div class="nav-favs" id="navFavs" hidden></div>
+                {% if role == 'uye' %}
+                <div class="nav-group">
+                    <a href="/member-apply" class="nav-link {% if active_path == '/member-apply' %}active{% endif %}">
+                        <i class="fas fa-user-shield"></i>
+                        <span>Заявка в администрацию</span>
+                    </a>
+                </div>
+
+                {% elif role != 'uye' %}
+                {% for grp in panel_menu %}
+                    {% if grp.pages %}
+                    <div class="nav-group" data-group="{{ grp.key }}">
+                        <div class="nav-group-title" data-toggle role="button" tabindex="0" aria-expanded="true">
+                            <span class="nav-group-icon"><i class="fas {{ grp.icon }}"></i></span>
+                            <span class="nav-group-label">{{ grp.group }}</span>
+                            <span class="nav-group-count" data-count></span>
+                            <i class="fas fa-chevron-down nav-caret"></i>
+                        </div>
+                        <div class="nav-group-items">
+                            <div class="nav-group-inner">
+                            {% if grp.sections %}
+                                {% for section in grp.sections %}
+                                <div class="nav-subgroup{% if section.pages|selectattr('path', 'equalto', active_path)|list %} has-active{% endif %}" data-mod-section="{{ section.key }}">
+                                    <button class="nav-subgroup-title" type="button" aria-expanded="false" title="{{ section.description }}">
+                                        <span class="nav-subgroup-icon"><i class="fas {{ section.icon }}"></i></span>
+                                        <span>{{ section.short }}</span>
+                                        <span class="nav-subgroup-count">{{ section.pages|length }}</span>
+                                        <i class="fas fa-chevron-right nav-subgroup-caret"></i>
+                                    </button>
+                                    <div class="nav-subgroup-items">
+                                    {% for it in section.pages %}
+                                        <a href="{{ it.path }}" data-mod-path="{{ it.path }}" class="nav-link {% if active_path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}" title="{{ it.description }}{% if it.path in panel_off_paths %} · Модуль выключен{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
+                                    {% endfor %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                {% for it in grp.pages %}
+                                <a href="{{ it.path }}" class="nav-link {% if active_path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}"{% if it.path in panel_off_paths %} title="Модуль выключен (MOD_ONLY / DISABLED_COGS)"{% endif %}><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
+                                {% endfor %}
+                            {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                {% endif %}
+            

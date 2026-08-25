@@ -104,6 +104,6 @@ function stat(val, lbl) {
 }
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadDuty(); } catch (e) {} }, 10000);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadDuty(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

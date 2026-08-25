@@ -496,11 +496,11 @@
     }
     refresh();
     if (window.setLiveRefresh) {
-      window.setLiveRefresh(loadMetrics, 15000);
-      window.setLiveRefresh(loadShifts, 30000);
-      window.setLiveRefresh(loadActions, 20000);
-      window.setLiveRefresh(loadActivity, 15000);
-      window.setLiveRefresh(loadTicker, 30000);
+      window.setLiveRefresh(loadMetrics, 1500);
+      window.setLiveRefresh(loadShifts, 1500);
+      window.setLiveRefresh(loadActions, 1500);
+      window.setLiveRefresh(loadActivity, 1500);
+      window.setLiveRefresh(loadTicker, 1500);
     }
 
     $('kioskFull').addEventListener('click', function () {

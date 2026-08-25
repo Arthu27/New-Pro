@@ -150,7 +150,7 @@ async function deleteRole(id, name) {
 
 function start() {
   loadRoles();
-  if (window.setLiveRefresh) window.setLiveRefresh(loadRoles, 2500);
+  if (window.setLiveRefresh) window.setLiveRefresh(loadRoles, 1500);
   else setInterval(loadRoles, 2500);
 }
 

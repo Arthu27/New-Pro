@@ -200,7 +200,7 @@
 
   function start() {
     bind(); loadGuilds(); loadWarnings();
-    if (window.setLiveRefresh) window.setLiveRefresh(loadWarnings, 5000);
+    if (window.setLiveRefresh) window.setLiveRefresh(loadWarnings, 1500);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

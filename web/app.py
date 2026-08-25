@@ -2596,6 +2596,20 @@ def inject_panel_menu ():
             'panel_mod_only':module_mode_active (),
             'panel_off_paths':off_paths}
 
+@app .route ('/api/panel/sidebar')
+@login_required 
+def api_panel_sidebar ():
+    """Живой сайдбар: HTML меню для ЛЮБОЙ открытой страницы.
+
+    Владелец поменял «Доступ»/видимость категорий — сайдбар на всех
+    открытых страницах обновляется сам за 1.5с (base.html свапает
+    фрагмент и переподвязывает поведение). path — реальная страница,
+    чтобы подсветка активного пункта не съезжала."""
+    from flask import render_template as _rt 
+    active =request .args .get ('path')or request .path 
+    return _rt ('_sidebar_nav.html',active_path =active )
+
+
 def set_bot_instance (bot ):
     global bot_instance 
     bot_instance =bot 

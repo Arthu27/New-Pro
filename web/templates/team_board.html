@@ -360,7 +360,7 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
 
   load();
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { if (!editId) load(); }, 15000);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { if (!editId) load(); }, 1500);
 })();
 </script>
 {% endblock %}

@@ -163,8 +163,12 @@ check('g.name' in dash and "gName = 'Hakumo'" not in dash,
       'герой дашборда берёт имя сервера из API, а не из хардкода')
 
 base = open(os.path.join(ROOT, 'web', 'templates', 'base.html'), encoding='utf-8').read()
-check('panel_off_paths' in base and 'is-off' in base and 'nav-off-chip' in base,
-      'base.html: механика гашения подключена')
+# сайдбар живёт в partial _sidebar_nav.html (включается в base и рендерится
+# в /api/panel/sidebar для живого обновления меню на открытых страницах)
+_snav = open(os.path.join(ROOT, 'web', 'templates', '_sidebar_nav.html'), encoding='utf-8').read()
+check('panel_off_paths' in _snav and 'is-off' in _snav and 'nav-off-chip' in _snav
+      and 'include "_sidebar_nav.html"' in base,
+      'base.html + _sidebar_nav.html: механика гашения подключена')
 check('panel_mod_only' in base, 'base.html: баннер режима подключен')
 check('/static/style.css' in base, 'базовая дизайн-система подключена')
 

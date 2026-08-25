@@ -312,6 +312,6 @@ $('tpList').addEventListener('click', function (e) {
 if (window.livePauseButton) window.livePauseButton($('tp-pause'));
 
 loadState();
-if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(function () { if (!window.__modLivePaused) loadState(); }, 20000);
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(function () { if (!window.__modLivePaused) loadState(); }, 1500);
 </script>
 {% endblock %}

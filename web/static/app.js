@@ -285,7 +285,7 @@
 
   window.setLiveRefresh = function (fn, ms) {
     if (typeof fn !== 'function') return;
-    liveFns.push({ fn: fn, ms: ms || 2500, last: 0 });
+    liveFns.push({ fn: fn, ms: ms || 1500, last: 0 });
     if (liveFns.length > 60) liveFns.shift();
   };
 
@@ -626,6 +626,7 @@
   window.uxPaletteOpen = paletteOpen;
 
   /* ── 10. Сайдбар ────────────────────────────────────────── */
+  window.sidebarInit = sidebarInit;  /* живой сайдбар: переподвязка после свапа */
   function sidebarInit() {
     var nav = doc.getElementById('sidebarNav');
     if (!nav) return;

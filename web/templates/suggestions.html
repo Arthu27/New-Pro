@@ -124,7 +124,7 @@ async function updateSuggestion(id, status) {
 
 function start() {
   loadSuggestions();
-  if (window.setLiveRefresh) window.setLiveRefresh(loadSuggestions, 5000);
+  if (window.setLiveRefresh) window.setLiveRefresh(loadSuggestions, 1500);
   else setInterval(loadSuggestions, 5000);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

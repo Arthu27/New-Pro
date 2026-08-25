@@ -230,6 +230,6 @@ function srLoad(keepCard) {
 srLoad(true);
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { srLoad(); } catch (e) {} }, 30000);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { srLoad(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

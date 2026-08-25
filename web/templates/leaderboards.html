@@ -293,7 +293,7 @@
   if (CAN_EDIT) $('lbSend').addEventListener('click', sendGo);
 
   loadTable();
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { loadTable(); }, 60000);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { loadTable(); }, 1500);
   else setInterval(function () { loadTable(); }, 60000);
 })();
 </script>

@@ -259,10 +259,10 @@
   loadPanelLogs();
   loadLiveLogs(true);
   if (window.setLiveRefresh) {
-    window.setLiveRefresh(loadStatus, 5000);
-    window.setLiveRefresh(loadHealth, 5000);
-    window.setLiveRefresh(loadPanelLogs, 10000);
-    window.setLiveRefresh(function () { loadLiveLogs(false); }, 5000);
+    window.setLiveRefresh(loadStatus, 1500);
+    window.setLiveRefresh(loadHealth, 1500);
+    window.setLiveRefresh(loadPanelLogs, 1500);
+    window.setLiveRefresh(function () { loadLiveLogs(false); }, 1500);
   } else {
     setInterval(refreshAll, 5000);
   }

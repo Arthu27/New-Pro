@@ -459,6 +459,6 @@ async function exportReport(format) {
 document.addEventListener('DOMContentLoaded', loadAnalytics);
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadAnalytics(); } catch (e) {} }, 15000);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadAnalytics(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

@@ -69,7 +69,9 @@ def route_exists(url):
 
 TPL = {}
 for _f in sorted(os.listdir(os.path.join(ROOT, 'web', 'templates'))):
-    if _f.endswith('.html'):
+    # _*.html — partials (включаются в base), у них нет своего <head>:
+    # требования charset/lang/title к ним не применяются
+    if _f.endswith('.html') and not _f.startswith('_'):
         TPL[_f] = open(os.path.join(ROOT, 'web', 'templates', _f), encoding='utf-8').read()
 
 APPJS = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()

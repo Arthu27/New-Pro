@@ -130,7 +130,7 @@
   else { bind(); fetchLogs(); }
 
   /* live: логи панели обновляются сами каждые 15 секунд */
-  if (window.setLiveRefresh) window.setLiveRefresh(fetchLogs, 15000);
+  if (window.setLiveRefresh) window.setLiveRefresh(fetchLogs, 1500);
 })();
 </script>
 {% endblock %}

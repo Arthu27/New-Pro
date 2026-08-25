@@ -113,7 +113,7 @@
 
   function start() {
     bind(); loadGuilds();
-    if (window.setLiveRefresh) window.setLiveRefresh(load, 5000);
+    if (window.setLiveRefresh) window.setLiveRefresh(load, 1500);
     else setInterval(load, 5000);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

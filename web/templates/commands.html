@@ -342,6 +342,11 @@
   async function init() {
     showSkeleton();
     bind();
+    loadCatalog();
+  }
+
+  /* Только данные: живое обновление каждые 1.5с НЕ пере-вешает обработчики */
+  async function loadCatalog() {
     try {
       var r = await fetch('/api/commands/catalog');
       if (!r.ok) { throw new Error('HTTP ' + r.status); }
@@ -357,6 +362,9 @@
         'Не удалось загрузить каталог команд (' + esc(e.message) + '). Обновите страницу.</div>';
     }
   }
+
+  /* live: каталог команд обновляется сам каждые 1.5 секунды */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadCatalog(); } catch (e) {} }, 1500);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

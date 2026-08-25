@@ -1393,9 +1393,9 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   document.addEventListener('aether:live', function () { loadPulse(); });
   if (window.tiltCards) window.tiltCards(document, '.kpi, .stat-box, .cc-tile');
   if (window.setLiveRefresh) {
-    window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 5000);
-    window.setLiveRefresh(loadShifts, 30000);
-    window.setLiveRefresh(loadPulse, 5000);
+    window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 1500);
+    window.setLiveRefresh(loadShifts, 1500);
+    window.setLiveRefresh(loadPulse, 1500);
   } else {
     setInterval(loadStats, 2500);
     setInterval(loadShifts, 30000);

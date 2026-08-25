@@ -166,6 +166,6 @@ function tpGo(cat) {
 tpGo('messages');
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { tpGo(window.CAT || 'messages'); } catch (e) {} }, 30000);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { tpGo(window.CAT || 'messages'); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

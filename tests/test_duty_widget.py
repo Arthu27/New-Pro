@@ -165,8 +165,8 @@ for token in ('id="shiftNow"', 'id="shiftToday"', 'loadShifts', '/staff-shifts',
               "role != 'uye'", 'shift-dot on', '/дежурства'):
     assert token in src, token
 check(True, 'DOM-якоря, загрузчик, гейтинг от uye, подсказка про /дежурства')
-check('setLiveRefresh(loadShifts, 30000)' in src and 'setInterval(loadShifts, 30000)' in src,
-      'автообновление 30 с в обоих механизмах рефреша')
+check('setLiveRefresh(loadShifts, 1500)' in src and 'setInterval(loadShifts, 30000)' in src,
+      'автообновление 1.5 с (заказ владельца) в обоих механизмах рефреша')
 check("esc(s.name)" in src and "esc(d.current.name)" in src, 'имена рендерятся через esc()')
 EMOJI = re.compile('[\\U0001F000-\\U0001FAFF\\u2B00-\\u2BFF\\uFE0F]|[☀-➿]')
 check(not EMOJI.search(src), 'эмодзи в дашборде нет (FA-иконки только)')
