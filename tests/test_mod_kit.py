@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Тесты cogs/mod_kit.py: ⚡-варн, /nuke, /raidcleanup, /dehoist.
+"""Тесты cogs/mod_kit.py: /nuke, /raidcleanup, /dehoist (варн реакцией удалён).
 
 Запуск: python3 tests/test_mod_kit.py
 """
@@ -82,15 +82,13 @@ cand2 = mk.raid_candidates(mems, __import__('time').time(), 35)
 check(len(cand2) == 3 and all(not m.bot and not m.guild_permissions.administrator for m in cand2),
       'кандидаты: окно 35 мин → 3, боты/админы пропущены')
 
-# ═══ 3. Хранилище реакт-варнов ═══════════════════════════════════════════
-print('== react-варн хранилище ==')
-check(not mk.react_done(1, 100), 'по новому сообщению варна не было')
-mk.react_mark(1, 100)
-check(mk.react_done(1, 100) and not mk.react_done(1, 101), 'метка сохранилась')
-mk.react_mark(1, 100)
-check(mk.react_done(1, 100), 'повторная метка не дублирует')
-mk.react_mark(2, 100)
-check(mk.react_done(1, 100) and mk.react_done(2, 100), 'гильдии независимы')
+# ═══ 3. Варн реакцией удалён (заказ владельца 2026-08) ═════════════════
+print('== варн реакцией удалён ==')
+mk_src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          'cogs', 'mod_kit.py'), encoding='utf-8').read()
+check('on_raw_reaction_add' not in mk_src, 'листенер реакций-варнов вырезан')
+check('REACT_EMOJIS' not in mk_src and 'react_mark' not in mk_src,
+      'хранилище реактивных варнов вырезано')
 
 # ═══ 4. Ког: колбэки ═════════════════════════════════════════════════════
 print('== ког: колбэки ==')
@@ -303,85 +301,6 @@ check(renamed == ['выпиратель'], f'/dehoist: первый переим
 check('Не удалось' in (inter.followup.sent[0]['embed'].description or '')
       and '**1**' in inter.followup.sent[0]['embed'].description,
       '/dehoist: сбой прав посчитан, но не уронил команду')
-
-# ── ⚡ реакция-варн ──
-victim = MockUser(50)
-chan = FakeChannel('общий')
-msg = FakeMsg(victim)
-chan.messages[555] = msg
-g4 = FakeGuild([victim, mod])
-g4.channels = [chan]
-g4.get_channel = lambda cid: chan if cid == 1 else None
-wc = FakeWC()
-cog4 = mk.ModKit(FakeBot(g4, wc))
-
-p = Payload()
-p.guild_id = 777
-p.channel_id = 1
-p.message_id = 555
-p.user_id = mod.id
-p.member = mod
-
-
-class E:
-    def __str__(self):
-        return '⚠️'
-
-
-p.emoji = E()
-
-# чистим метку прошлых тестов
-import json as _json
-if os.path.exists(mk.REACT_PATH):
-    os.remove(mk.REACT_PATH)
-
-run(cog4.on_raw_reaction_add(p))
-check(len(wc.warns) == 1 and wc.warns[0][0] is victim, '⚡: варн автору сообщения')
-check('⚡-варн' in wc.warns[0][2] and 'нарушение' in wc.warns[0][2],
-      '⚡: в причине кусочек сообщения')
-check(wc.warns[0][1] is mod, '⚡: модератор записан верно')
-check(msg.reactions_added == ['✅'], '⚡: бот пометил сообщение галочкой')
-
-run(cog4.on_raw_reaction_add(p))
-check(len(wc.warns) == 1, '⚡: повтор по тому же сообщению — дедуп')
-
-plain = MockUser(60)  # без manage_messages
-p2 = Payload()
-p2.guild_id, p2.channel_id, p2.message_id = 777, 1, 556
-p2.user_id, p2.member, p2.emoji = plain.id, plain, E()
-chan.messages[556] = FakeMsg(MockUser(70))
-run(cog4.on_raw_reaction_add(p2))
-check(len(wc.warns) == 1, '⚡: реакция от не-мода игнорируется')
-
-# реакция на сообщение мода — не варним модов
-mod_victim = MockUser(80, manage=True)
-chan.messages[557] = FakeMsg(mod_victim)
-p3 = Payload()
-p3.guild_id, p3.channel_id, p3.message_id = 777, 1, 557
-p3.user_id, p3.member, p3.emoji = mod.id, mod, E()
-run(cog4.on_raw_reaction_add(p3))
-check(len(wc.warns) == 1, '⚡: модераторов не варним')
-
-# бот-автор — тоже мимо
-chan.messages[558] = FakeMsg(FM(90, 1, bot=True))
-p4 = Payload()
-p4.guild_id, p4.channel_id, p4.message_id = 777, 1, 558
-p4.user_id, p4.member, p4.emoji = mod.id, mod, E()
-run(cog4.on_raw_reaction_add(p4))
-check(len(wc.warns) == 1, '⚡: ботов не варним')
-
-# другая реакция — не триггер
-class E2:
-    def __str__(self):
-        return '🔥'
-
-
-chan.messages[559] = FakeMsg(MockUser(95))
-p5 = Payload()
-p5.guild_id, p5.channel_id, p5.message_id = 777, 1, 559
-p5.user_id, p5.member, p5.emoji = mod.id, mod, E2()
-run(cog4.on_raw_reaction_add(p5))
-check(len(wc.warns) == 1, '⚡: чужие реакции игнорируются')
 
 # ═══ 5. Регистрация ══════════════════════════════════════════════════════
 print('== setup ==')

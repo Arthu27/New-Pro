@@ -429,10 +429,22 @@ function renderAll() {
   document.getElementById('gdSave2').disabled = !CAN_EDIT;
 }
 
-async function gdLoad() {
+var _gdLastRaw = null;
+
+async function gdLoad(live) {
   try {
-    var d = await fetch('/api/guild/' + GUILD_ID + '/guardian', { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); });
+    var r = await fetch('/api/guild/' + GUILD_ID + '/guardian', { credentials: 'same-origin' });
+    var raw = await r.text();
+    if (live) {
+      if (raw === _gdLastRaw) return;                 /* тишина — DOM не трогаем */
+      var act = document.activeElement;
+      var grid = document.getElementById('gdEvents');
+      var hero = document.querySelector('.gd-hero');
+      if (act && grid && grid.contains(act)) { _gdLastRaw = raw; return; }  /* ты настраиваешь — не мешаем */
+      if (act && hero && hero.contains(act)) { _gdLastRaw = raw; return; }
+    }
+    _gdLastRaw = raw;
+    var d = JSON.parse(raw);
     if (d.success && d.cfg) {
       CFG = d.cfg;
       EVENTS = d.cfg.events || [];
@@ -442,12 +454,16 @@ async function gdLoad() {
       WL_BU = d.cfg.bot_whitelist_users || [];
       WL_BR = d.cfg.bot_whitelist_roles || [];
       NAMES = d.cfg.resolved || { users: {}, roles: {} };
-    } else {
+    } else if (!live) {
       toast(d.error || 'Не удалось загрузить Щит', false);
     }
-  } catch (e) { toast('Ошибка сети при загрузке Щита', false); }
+  } catch (e) { if (!live) toast('Ошибка сети при загрузке Щита', false); }
   if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
 }
+
+/* live: состояние Щита синхронизируется само каждые 1.5 секунды —
+   но перерисовываем ТОЛЬКО когда данные реально изменились */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gdLoad(true); } catch (e) {} }, 1500);
 
 function collectPayload() {
   var events = {};
@@ -491,6 +507,7 @@ async function gdSave() {
   var d = await r.json().catch(function () { return {}; });
   if (r.ok && d.success) {
     toast('Настройки Щита сохранены — бот уже применил их', true);
+    _gdLastRaw = null;   /* сохранение изменило данные — live сравнит заново */
     if (d.cfg) {
       CFG = d.cfg; EVENTS = d.cfg.events || EVENTS;
       WL_U = d.cfg.whitelist_users || WL_U; WL_R = d.cfg.whitelist_roles || WL_R;

@@ -167,12 +167,24 @@ ok('выключение категории применяется мгнове�
 ok('разрешение автосоздания сохраняется', s2['autocreate']['member'] is True)
 ok('выключенная категория не логируется', LS.category_enabled(777, 'mod') is False)
 
+print('== 3.2 Куда писать: выбор канала для категории ==')
+ok('дефолт: канал не выбран (авто)', LS.get_log_settings(777)['channels']['mod'] == '')
+LS.set_log_settings(777, channels={'mod': '123456789', 'voice': 'й'})
+s3 = LS.get_log_settings(777)
+ok('выбранный канал сохраняется (ID цифрами)', s3['channels']['mod'] == '123456789')
+ok('мусор вместо ID не принимается', s3['channels']['voice'] == '')
+ok('target_channel_id отдаёт выбор', LS.target_channel_id(777, 'mod') == '123456789')
+
 r = client.get('/api/guild/777/log-settings')
 d = r.get_json()
 ok('API настроек логов отдаёт категории', d['success'] and len(d['categories']) == 10)
+ok('API отдаёт список каналов для пикера', isinstance(d.get('channels'), list))
 r = client.post('/api/guild/777/log-settings', json={'autocreate': {'proof': True}})
 ok('API сохраняет автосоздание', r.get_json()['success']
    and LS.autocreate_allowed(777, 'proof') is True)
+r = client.post('/api/guild/777/log-settings', json={'channels': {'mod': '987654321'}})
+ok('API сохраняет выбранный канал', r.get_json()['success']
+   and LS.target_channel_id(777, 'mod') == '987654321')
 
 logs_src = open(os.path.join(ROOT, 'cogs/logs.py'), encoding='utf-8').read()
 ok('бот спрашивает разрешение перед созданием канала',
@@ -182,6 +194,30 @@ ok('бот проверяет включённость категории пер
 ls_tpl = open(os.path.join(ROOT, 'web/templates/log_settings.html'),
               encoding='utf-8').read()
 ok('шаблон логов: тумблеры + live 1.5с', 'lsEn' in ls_tpl and 'setLiveRefresh' in ls_tpl)
+ok('шаблон логов: выбор канала «куда писать»', 'lsCh' in ls_tpl
+   and 'Авто — искать по имени' in ls_tpl and 'Куда писать' in ls_tpl)
+ok('бот пишет в канал, выбранный в панели (приоритет над именами)',
+   '_configured_log_channel' in logs_src and 'target_channel_id' in logs_src)
+ok('live без «перезагрузки»: снимок сравнивается, DOM зря не трогаем',
+   'raw === _lastRaw' in ls_tpl
+   and 'raw === _lastRaw' in open(os.path.join(ROOT, 'web/templates/staff_limits.html'),
+                                 encoding='utf-8').read())
+
+print('== 3.6 Команды: модалка без блюра + доказательство из панели ==')
+cmd_tpl = open(os.path.join(ROOT, 'web/templates/commands.html'),
+               encoding='utf-8').read()
+ok('блюр-затемнение модалки убрано', 'backdrop-filter' not in cmd_tpl)
+ok('модалка переработана (баннер + анимация)', 'cmdx-mbanner' in cmd_tpl and 'cmdx-pop' in cmd_tpl)
+ok('поле доказательства для наказаний из панели', 'id="proof"' in cmd_tpl
+   and 'доказательств' in cmd_tpl)
+ok('каталог команд: live сравнивает снимок, не перерисовывая зря',
+   'loadCatalog(true)' in cmd_tpl and 'raw === _lastRaw' in cmd_tpl)
+app_src = open(os.path.join(ROOT, 'web/app.py'), encoding='utf-8').read()
+ok('панельный warn уносит ссылку в доказательства (панель+бот)',
+   "data .get ('proof')" in app_src and 'try_deliver_proof' in app_src)
+mk_src2 = open(os.path.join(ROOT, 'cogs/mod_kit.py'), encoding='utf-8').read()
+ok('варн реакцией-эмодзи удалён', 'on_raw_reaction_add' not in mk_src2
+   and 'REACT_EMOJIS' not in mk_src2)
 
 print('== 3.5 Выбор времени в Щите (бывшее «Окно, сек») ==')
 gd_tpl = open(os.path.join(ROOT, 'web/templates/guardian.html'),

@@ -57,11 +57,17 @@
 .cmdx-empty i{font-size:26px;opacity:.4;display:block;margin-bottom:10px}
 .cmdx-skel{height:118px;border-radius:14px;background:linear-gradient(100deg,var(--surface-2) 40%,color-mix(in srgb, var(--surface-2) 60%, var(--text) 6%) 50%,var(--surface-2) 60%);background-size:200% 100%;animation:cmdx-shimmer 1.2s infinite}
 @keyframes cmdx-shimmer{0%{background-position:120% 0}100%{background-position:-80% 0}}
-.cmd-modal-overlay{display:none;position:fixed;inset:0;background:rgba(8,10,16,.55);backdrop-filter:blur(4px);z-index:900;align-items:center;justify-content:center;padding:18px}
+.cmd-modal-overlay{display:none;position:fixed;inset:0;background:rgba(5,7,12,.78);z-index:900;align-items:center;justify-content:center;padding:18px}
 .cmd-modal-overlay.open{display:flex}
-.cmd-modal{width:min(560px,100%);max-height:88vh;overflow:auto;background:var(--surface);border:1px solid var(--line-2);border-radius:18px;padding:24px;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.35)}
-.cmd-modal-close{position:absolute;top:12px;right:14px;width:32px;height:32px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text-2);cursor:pointer;font-size:16px}
+.cmd-modal{width:min(580px,100%);max-height:88vh;overflow:auto;background:var(--surface);border:1px solid var(--line-2);border-radius:18px;padding:0;position:relative;box-shadow:0 28px 80px rgba(0,0,0,.5);animation:cmdx-pop .22s var(--ease) both}
+@keyframes cmdx-pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.cmd-modal-close{position:absolute;top:12px;right:14px;width:32px;height:32px;border-radius:9px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text-2);cursor:pointer;font-size:16px;z-index:2}
 .cmd-modal-close:hover{color:var(--text);border-color:var(--ac)}
+.cmdx-mbanner{padding:20px 24px 0}
+.cmdx-mcard{background:linear-gradient(160deg,color-mix(in srgb, var(--cc,var(--ac)) 12%, transparent),transparent);border:1px solid color-mix(in srgb, var(--cc,var(--ac)) 30%, transparent);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px}
+.cmdx-mico{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--cc,var(--ac)) 16%, transparent);border:1px solid color-mix(in srgb, var(--cc,var(--ac)) 40%, transparent);flex-shrink:0}
+.cmdx-mico i{font-size:19px;color:var(--cc,var(--ac))}
+.cmdx-mbody{padding:0 24px 22px}
 .cmdx-mhead{display:flex;align-items:center;gap:12px;margin-bottom:6px;padding-right:34px}
 .cmdx-mname{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--text)}
 .cmdx-mdesc{font-size:13.5px;color:var(--text-2);line-height:1.5;margin-bottom:14px}
@@ -217,10 +223,13 @@
     _data.categories.forEach(function (cc) { if (cc.id === c.cat) catMeta = cc; });
     var kind = kindOf(c);
 
-    var html = '<div class="cmdx-mhead">' +
-      '<div class="cmdx-ico" style="--cc:' + col + ';width:44px;height:44px"><i class="fas ' + esc(catMeta ? catMeta.icon : 'fa-terminal') + '" style="font-size:18px"></i></div>' +
-      '<div><div class="cmdx-mname">' + esc(shownName(c)) + '</div>' +
-      '<span class="cmdx-kindchip ' + kind + '">' + (kind === 'slash' ? 'SLASH-КОМАНДА' : 'PREFIX-КОМАНДА') + '</span></div></div>' +
+    var html = '<div class="cmdx-mbanner" style="--cc:' + col + '">' +
+      '<div class="cmdx-mcard">' +
+      '<div class="cmdx-mico"><i class="fas ' + esc(catMeta ? catMeta.icon : 'fa-terminal') + '"></i></div>' +
+      '<div style="min-width:0"><div class="cmdx-mname">' + esc(shownName(c)) + '</div>' +
+      '<div style="margin-top:5px"><span class="cmdx-kindchip ' + kind + '">' + (kind === 'slash' ? 'SLASH-КОМАНДА' : 'PREFIX-КОМАНДА') + '</span></div></div>' +
+      '</div></div>' +
+      '<div class="cmdx-mbody">' +
       '<div class="cmdx-mdesc">' + esc(c.desc) + '</div>' +
       '<div class="cmdx-meta">' +
       '<div><i class="fas fa-layer-group"></i> Раздел: <b>' + esc(catMeta ? catMeta.label : c.cat) + '</b></div>' +
@@ -239,15 +248,18 @@
         html += '<div class="form-group"><label>Длительность (минут)</label><input type="number" id="duration" value="60" min="1" aria-label="Длительность в минутах"></div>';
       }
       if (c.bare === 'ban' || c.bare === 'kick' || c.bare === 'warn' || c.bare === 'jail') {
-        html += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2" aria-label="Причина"></textarea></div>';
+        html += '<div class="form-group"><label>Причина</label><textarea id="reason" rows="2" aria-label="Причина"></textarea></div>' +
+          '<div class="form-group"><label>Доказательство — ссылка на сообщение или скрин</label>' +
+          '<input type="url" id="proof" placeholder="https://discord.com/channels/… — уйдёт в доказательства" aria-label="Ссылка на доказательство"></div>';
       }
-      html += '<div style="margin-top:14px">' +
+      html += '<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">' +
         '<button class="btn-exec" id="btnExec" type="button"><i class="fas fa-play"></i> Выполнить</button>' +
         '<button class="btn-cancel" id="btnCancel" type="button">Закрыть</button></div>' +
         '<div id="result-msg"></div></div>';
     } else {
       html += '<div style="margin-top:14px"><button class="btn-cancel" id="btnCancel" type="button">Закрыть</button></div>';
     }
+    html += '</div>';
 
     $('cmd-modal-content').innerHTML = html;
 
@@ -288,6 +300,8 @@
     if (userId) data.user_id = userId.value;
     var reason = $('reason');
     if (reason) data.reason = reason.value;
+    var proof = $('proof');
+    if (proof && proof.value.trim()) data.proof = proof.value.trim();
     var duration = $('duration');
     if (duration) data.duration = parseInt(duration.value, 10);
     if (!data.guild_id) { flashResult(false, 'Выберите сервер'); return; }
@@ -345,12 +359,17 @@
     loadCatalog();
   }
 
-  /* Только данные: живое обновление каждые 1.5с НЕ пере-вешает обработчики */
-  async function loadCatalog() {
+  /* Только данные: живое обновление каждые 1.5с НЕ пере-вешает обработчики.
+     Ничего не изменилось — вообще не трогаем DOM: никаких «перезагрузок». */
+  var _lastRaw = null;
+  async function loadCatalog(live) {
     try {
       var r = await fetch('/api/commands/catalog');
       if (!r.ok) { throw new Error('HTTP ' + r.status); }
-      var d = await r.json();
+      var raw = await r.text();
+      if (live && raw === _lastRaw) return;      // данных нет — DOM не трогаем
+      _lastRaw = raw;
+      var d = JSON.parse(raw);
       if (!d.success) { throw new Error(d.error || 'ошибка каталога'); }
       _data = d;
       renderStats();
@@ -364,7 +383,7 @@
   }
 
   /* live: каталог команд обновляется сам каждые 1.5 секунды */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadCatalog(); } catch (e) {} }, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadCatalog(true); } catch (e) {} }, 1500);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

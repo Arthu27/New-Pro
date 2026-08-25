@@ -2121,6 +2121,27 @@ def api_execute_command ():
                 await member .timeout (datetime.now(timezone.utc)+_td (minutes =duration ),reason =data .get ('reason'))
             elif command =='warn':
                 warns_file ='data/warnings.json'
+                # Доказательство (ссылка на сообщение/скрин) — в канал
+                # доказательств и в панель: как у варнов из Discord-приложения.
+                _proof_link =(str (data .get ('proof')or '')).strip ()
+                if _proof_link :
+                    try :
+                        from cogs .proof_cog import try_deliver_proof as _tdp
+                        class _PanelMod :
+                            id =0
+                            def __str__ (self ):
+                                return f"{session .get ('username')} (панель)"
+                            @property
+                            def display_name (self ):
+                                return str (self )
+                        _pv =_resolve_guild_member_async (guild ,int (data .get ('user_id')))
+                        if _pv is None :
+                            _pv =await bot_instance .fetch_user (int (data .get ('user_id')))
+                        await _tdp (bot_instance ,guild ,_PanelMod (),_pv ,'варн',
+                        data .get ('reason','Предупреждение через веб-панель'),link =_proof_link )
+                    except Exception as _pex :
+                        _log .debug ("warn proof: подавлено: %s",_pex )
+
                 os .makedirs ('data',exist_ok =True )
                 warns ={}
                 if os .path .exists (warns_file ):

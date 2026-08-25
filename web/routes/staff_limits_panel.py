@@ -42,6 +42,37 @@ def _guild_roles(bot, guild_id):
     return roles
 
 
+def _guild_channels(bot, guild_id):
+    """Текстовые каналы гильдии для пикера «куда писать логи» (демо — без бота)."""
+    guild = None
+    if bot:
+        guild = bot.get_guild(int(guild_id))
+        if guild is None:
+            for g in bot.guilds:
+                if str(g.id) == str(guild_id):
+                    guild = g
+                    break
+    channels = []
+    if guild:
+        channels = [{'id': str(c.id), 'name': f'#{c.name}'}
+                    for c in sorted(guild.text_channels, key=lambda x: x.position)]
+    else:
+        import web.app as _app
+        if _app._demo_mode():
+            try:
+                import json as _json
+                import os as _os
+                path = _os.path.join('data', 'demo_channels.json')
+                with open(path, 'r', encoding='utf-8') as fh:
+                    for c in _json.load(fh):
+                        if c.get('type') in ('text', ''):
+                            channels.append({'id': str(c.get('id')),
+                                             'name': '#' + str(c.get('name', ''))})
+            except Exception as ex:
+                _log.debug('staff_limits_panel: демо-каналы: %s', ex)
+    return channels
+
+
 def register(ctx):
     app = ctx.app
     login_required = ctx.login_required
@@ -132,6 +163,7 @@ def register(ctx):
     def api_log_settings_get(guild_id):
         return jsonify({'success': True,
                         'settings': LS.get_log_settings(guild_id),
+                        'channels': _guild_channels(_app.bot_instance, guild_id),
                         'categories': [{'key': k, 'label': l, 'emoji': e}
                                        for k, l, e in LS.LOG_CATEGORIES]})
 
@@ -142,5 +174,6 @@ def register(ctx):
         data = request.get_json(silent=True) or {}
         settings = LS.set_log_settings(guild_id,
                                        enabled=data.get('enabled'),
-                                       autocreate=data.get('autocreate'))
+                                       autocreate=data.get('autocreate'),
+                                       channels=data.get('channels'))
         return jsonify({'success': True, 'settings': settings})

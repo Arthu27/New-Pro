@@ -165,12 +165,11 @@ check(not errs, f'8 потоков × 25 чтений — без ошибок ({
 print('== коги на общем сторе ==')
 import cogs.mod_kit as mk  # noqa: E402
 
-check(mk.react_done(4242, 111) is False, 'mod_kit: react_done пусто → False')
-mk.react_mark(4242, 111)
-check(mk.react_done(4242, 111) is True, 'mod_kit: react_mark → react_done True')
-mk.react_mark(4242, 111)
-data = json.load(open('data/modkit_reactwarn.json', encoding='utf-8'))
-check(data['4242'].count('111') == 1, 'mod_kit: дубликаты меток не плодятся')
+mk._save_json('data/modkit_jsprobe.json', {'4242': ['111']})
+check(mk._load_json('data/modkit_jsprobe.json', {}) == {'4242': ['111']},
+      'mod_kit: сохранение через общий json_store')
+data = json.load(open('data/modkit_jsprobe.json', encoding='utf-8'))
+check(data['4242'] == ['111'], 'mod_kit: файл записан как есть')
 
 import cogs.mod_plus as mp  # noqa: E402
 

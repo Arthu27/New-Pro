@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """MOD KIT — быстрые инструменты модератора (PRO).
 
-- ⚡ Варн реакцией: мод ставит реакцию ⚠️ на сообщение → автор получает варн
+(⚡ Варн реакцией удалён по решению владельца 2026-08: варны — только через приложение/панель.)
   (через стандартный механизм warnings, с логом в -модерация). Одна реакция =
   один варн на сообщение, повторы не считаются.
 - ☢️ /nuke — полное пересоздание канала (настройки/права/позиция сохраняются).
@@ -28,8 +28,6 @@ from logger import get_logger
 log = get_logger("mod_kit")
 from json_store import load_json as _js_load, save_json as _js_save
 
-REACT_EMOJIS = ('⚠️', '⚠')
-REACT_PATH = 'data/modkit_reactwarn.json'
 
 HOIST_ORD = ord('0')          # любой ASCII ниже '0' (пробел/знаки) — «выпиратель»
 ZALGO_MIN = 3                 # столько combining-знаков = залго
@@ -94,19 +92,6 @@ def _save_json(path, data):
     _js_save(path, data, indent=None, log=_log)
 
 
-def react_done(gid, mid) -> bool:
-    return str(mid) in _load_json(REACT_PATH, {}).get(str(gid), [])
-
-
-def react_mark(gid, mid):
-    data = _load_json(REACT_PATH, {})
-    lst = data.setdefault(str(gid), [])
-    if str(mid) not in lst:
-        lst.append(str(mid))
-    data[str(gid)] = lst[-500:]          # окно памяти, чтобы файл не разрастался
-    _save_json(REACT_PATH, data)
-
-
 # ─────────────────────────────────────────────────────────────
 # Ког
 # ─────────────────────────────────────────────────────────────
@@ -140,55 +125,7 @@ class ModKit(commands.Cog):
         except Exception as e:
             log.warning(f'ModKit: не удалось записать лог: {e}')
 
-    # ── ⚡ варн реакцией ──────────────────────────────────────
-    @commands.Cog.listener()
-    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        try:
-            if payload.guild_id is None or self.bot.user is None:
-                return
-            if payload.user_id == self.bot.user.id:
-                return
-            if str(payload.emoji) not in REACT_EMOJIS:
-                return
-            guild = self.bot.get_guild(payload.guild_id)
-            if guild is None:
-                return
-            member = payload.member or guild.get_member(payload.user_id)
-            if member is None or member.bot:
-                return
-            if not member.guild_permissions.manage_messages:
-                return                                # ⚠️ от обычных — не команда
-            if react_done(guild.id, payload.message_id):
-                return                                # по сообщению уже выдан варн
-
-            channel = guild.get_channel(payload.channel_id)
-            if channel is None:
-                channel = await self.bot.fetch_channel(payload.channel_id)
-            message = await channel.fetch_message(payload.message_id)
-            target = getattr(message, 'author', None)
-            if target is None or getattr(target, 'bot', False):
-                return
-            if getattr(target, 'guild_permissions', None) and target.guild_permissions.manage_messages:
-                return                                # модов не варним
-            if target.id == guild.owner_id:
-                return
-
-            wc = self.bot.get_cog('warnings')
-            if wc is None or not hasattr(wc, 'add_warning'):
-                log.error('ModKit: ког warnings не найден — реакт-варн пропущен')
-                return
-            snippet = (getattr(message, 'content', '') or '').strip().replace('\n', ' ')
-            reason = '⚡-варн за сообщение' + (f': «{snippet[:90]}»' if snippet else '')
-            await wc.add_warning(target, member, reason)
-            react_mark(guild.id, payload.message_id)
-            try:
-                await message.add_reaction('✅')      # метка «варн зафиксирован»
-            except Exception as _ex:
-                _log.debug("on_raw_reaction_add(): подавлено: %s", _ex)
-            log.info(f'ModKit: ⚡-варн {target} от {member} (сообщение {payload.message_id})')
-        except Exception as e:
-            log.error(f'ModKit: ошибка ⚡-варна: {e}')
-
+    # ── ☢️ /nuke
     # ── ☢️ /nuke ──────────────────────────────────────────────
     @app_commands.command(name='nuke', description='Пересоздать канал начисто (все сообщения будут удалены)')
     @app_commands.checks.has_permissions(manage_guild=True)

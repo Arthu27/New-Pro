@@ -9,10 +9,15 @@
      лог-канал (дефолт: НЕТ — ничего само по себе не появляется).
 
 Хранилище: data/log_settings_<gid>.json
-    {"enabled": {"mod": true, ...}, "autocreate": {"mod": false, ...}}
+    {"enabled": {"mod": true, ...}, "autocreate": {"mod": false, ...},
+     "channels": {"mod": "123456789", ...}}
 
 Бот читает файл на каждом событии (cogs/logs.py) — панель сохранила,
 изменение применилось мгновенно, без рестарта.
+
+  3) channels — куда писать категорию: ID выбранного канала ('' = авто,
+     прежний поиск по имени). Выбранный канал бот никогда не создаёт —
+     только использует существующий (заказ владельца 2026-08).
 """
 import json
 import os
@@ -66,11 +71,20 @@ def get_log_settings(gid):
     saved = _load(gid)
     enabled = {key: True for key, _l, _e in LOG_CATEGORIES}
     autocreate = {key: False for key, _l, _e in LOG_CATEGORIES}  # ничего само не создаётся
+    channels = {key: '' for key, _l, _e in LOG_CATEGORIES}       # '' = авто (поиск по имени)
     for key, val in (saved.get('enabled') or {}).items():
         enabled[str(key)] = bool(val)
     for key, val in (saved.get('autocreate') or {}).items():
         autocreate[str(key)] = bool(val)
-    return {'enabled': enabled, 'autocreate': autocreate}
+    for key, val in (saved.get('channels') or {}).items():
+        if str(val or '').strip().isdigit():
+            channels[str(key)] = str(val).strip()
+    return {'enabled': enabled, 'autocreate': autocreate, 'channels': channels}
+
+
+def target_channel_id(gid, category):
+    """ID канала, выбранного для категории ('' — авто)."""
+    return get_log_settings(gid)['channels'].get(str(category), '') or ''
 
 
 def category_enabled(gid, category):
@@ -83,16 +97,20 @@ def autocreate_allowed(gid, category):
     return bool(get_log_settings(gid)['autocreate'].get(str(category), False))
 
 
-def set_log_settings(gid, enabled=None, autocreate=None):
+def set_log_settings(gid, enabled=None, autocreate=None, channels=None):
     """Сохранить изменения (частично). Возвращает итоговые настройки."""
     saved = _load(gid)
     cur_en = dict(saved.get('enabled') or {})
     cur_ac = dict(saved.get('autocreate') or {})
+    cur_ch = dict(saved.get('channels') or {})
     if isinstance(enabled, dict):
         for key, val in enabled.items():
             cur_en[str(key)] = bool(val)
     if isinstance(autocreate, dict):
         for key, val in autocreate.items():
             cur_ac[str(key)] = bool(val)
-    _save(gid, {'enabled': cur_en, 'autocreate': cur_ac})
+    if isinstance(channels, dict):
+        for key, val in channels.items():
+            cur_ch[str(key)] = str(val or '').strip() if str(val or '').strip().isdigit() else ''
+    _save(gid, {'enabled': cur_en, 'autocreate': cur_ac, 'channels': cur_ch})
     return get_log_settings(gid)

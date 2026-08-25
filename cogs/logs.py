@@ -159,13 +159,38 @@ def log_category_display (category :str ='сервер'):
     return LOG_CHANNELS .get (ch_name ,LOG_CHANNELS ['сервер'])
 
 
+def _configured_log_channel (guild ,category ):
+    """Канал, выбранный для категории в панели («Логи сервера»).
+
+    Приоритет выше поиска по имени: владелец выбрал — туда и пишем.
+    Канал исчез/удалён — тихо возвращаемся к прежнему поиску.
+    """
+    try :
+        from services .log_settings import target_channel_id
+        _cat ={'модерация':'mod','moderasyon':'mod','участники':'member',
+        'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
+        'каналы':'channel'}.get (category ,category )
+        _cid =target_channel_id (guild .id ,_cat )
+        if _cid :
+            _ch =guild .get_channel (int (_cid ))
+            if _ch is not None :
+                return _ch
+    except Exception as _ex :
+        log .debug (f'[LOGS] настроенный канал пропущен: {_ex}')
+    return None
+
+
 def find_log_channel (guild ,category :str ='сервер'):
     """Единый поиск лог-канала для категории.
 
-    Порядок: каноническое имя (-модерация …) → legacy-имена (mod-log, moderasyon …)
-    → общие старые каналы (server-log, aether-logs). None, если ничего нет.
+    Порядок: канал из панели («Логи сервера») → каноническое имя
+    (-модерация …) → legacy-имена (mod-log, moderasyon …) → общие старые
+    каналы (server-log, aether-logs). None, если ничего нет.
     Используется ВСЕМИ когами — иначе логи уходят в несуществующие каналы.
     """
+    _panel_ch =_configured_log_channel (guild ,category )
+    if _panel_ch is not None :
+        return _panel_ch
     target =log_category_display (category )
 
     candidates =[target ]+LEGACY_CHANNEL_NAMES .get (target ,[])+['server-log','aether-logs']

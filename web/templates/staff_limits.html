@@ -77,6 +77,8 @@
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   var state = { roles: [], titles: {}, meta: [], defaults: {}, sel: null };
   var SAVING = false;
+  var _lastRaw = null;
+  var _metaSig = '';
 
   function gid() {
     var v = window.MAIN_GID || '';
@@ -106,11 +108,22 @@
     }).join('');
   }
 
-  function renderGlobal() {
+  function renderGlobal(rebuild) {
     var box = $('slGlobalBox'); if (!box) return;
-    box.innerHTML = groupsHtml(function (it) {
-      return fieldHtml(it.key, it.title, it.hint, state.defaults[it.key] || '', '', true);
-    });
+    var sig = JSON.stringify(state.meta || []);
+    if (rebuild || sig !== _metaSig) {
+      _metaSig = sig;
+      box.innerHTML = groupsHtml(function (it) {
+        return fieldHtml(it.key, it.title, it.hint, state.defaults[it.key] || '', '', true);
+      });
+    } else {
+      /* данных стало новое — обновляем ЗНАЧЕНИЯ на месте: фокус и печать не трогаем */
+      Array.prototype.forEach.call(box.querySelectorAll('.slG'), function (inp) {
+        if (inp === document.activeElement) return;
+        var v = state.defaults[inp.getAttribute('data-k')];
+        if (v && String(v) !== inp.value) inp.value = String(v);
+      });
+    }
     var n = 0; (state.meta || []).forEach(function (g) { n += g.items.length; });
     $('slActionsPill').textContent = n || '—';
   }
@@ -204,18 +217,30 @@
     }).catch(function () { SAVING = false; });
   }
 
-  function load() {
+  function load(live) {
     fetch('/api/guild/' + gid() + '/staff-limits', { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
+      .then(function (r) { return r.text(); })
+      .then(function (raw) {
+        if (live) {
+          if (raw === _lastRaw) return;                     /* не изменилось — DOM не трогаем */
+          var act = document.activeElement;
+          if (act && (($('slGlobalBox') && $('slGlobalBox').contains(act)) ||
+                      ($('slRoleInputs') && $('slRoleInputs').contains(act)))) return; /* ты печатаешь — не мешаем */
+        }
+        _lastRaw = raw;
+        var d = JSON.parse(raw);
         if (!d.success) return;
         state.roles = d.roles || [];
         state.titles = d.action_titles || {};
         state.meta = d.action_meta || [];
         state.defaults = d.defaults || {};
-        renderGlobal();
+        renderGlobal(true);
         renderRoles();
-        if (state.sel) selectRole(state.sel);
+        if (state.sel) {
+          var editing = document.activeElement && $('slRoleInputs') &&
+            $('slRoleInputs').contains(document.activeElement);
+          if (!editing) selectRole(state.sel);
+        }
       })
       .catch(function () {});
   }
@@ -243,8 +268,9 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); load(); });
   else { bind(); load(); }
 
-  /* live: лимиты и роли других админов синхронизируются сами */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { load(); } catch (e) {} }, 1500);
+  /* live: лимиты и роли других админов синхронизируются сами —
+     без «перезагрузки»: неизменившееся не трогаем, твою печать не сбиваем */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { load(true); } catch (e) {} }, 1500);
 })();
 </script>
 {% endblock %}
