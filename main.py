@@ -657,6 +657,21 @@ async def _monitor_voice():
                 _log.debug("_monitor_voice(): подавлено: %s", _ex)
 
 @bot.event
+async def on_disconnect():
+    # Разрыв шлюза Discord: короткие — НОРМА (Discord сам рвёт связь,
+    # discord.py тут же переподключается). Пишем, чтобы в логах было
+    # видно: «отключался и вернулся», а не «пропал неизвестно зачем».
+    print("[СЕТЬ] Соединение с Discord потеряно — переподключаюсь...")
+    _log.warning("Соединение с Discord потеряно (автопереподключение)")
+
+
+@bot.event
+async def on_resumed():
+    print("[СЕТЬ] Соединение восстановлено (RESUME) — события не потеряны")
+    _log.info("Соединение с Discord восстановлено (resume)")
+
+
+@bot.event
 async def on_ready():
     global _synced
     if not _synced:
@@ -820,7 +835,7 @@ async def main():
         if not _token:
             print("[ОШИБКА] Токен не найден! Добавьте токен в .env файл (строка TOKEN=ваш_токен) "
                   "из https://discord.com/developers/applications")
-            sys.exit(1)
+            sys.exit(7)
         # Anti-crash: автоперезапуск при сетевых сбоях, но с нарастающей паузой,
         # чтобы не долбить Discord во время сбоя (5 -> 10 -> 20 ... макс. 60 сек).
         _delay = 5
@@ -832,7 +847,7 @@ async def main():
             except discord.LoginFailure:
                 print("[ОШИБКА] Недействительный токен Discord! Исправьте TOKEN в .env — "
                       "перезапуск не поможет.")
-                sys.exit(1)
+                sys.exit(7)
             except Exception as e:
                 print(f"[ОШИБКА] Бот отключился: {e}")
                 print(f"[БОТ] Автоперезапуск через {_delay} сек...")
