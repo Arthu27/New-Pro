@@ -27,6 +27,10 @@
 {% endblock %}
 
 <style>
+.analytics-empty-hint{display:flex;gap:14px;align-items:flex-start;margin:0 0 16px;padding:16px 18px;border:1px dashed var(--ac-line);border-radius:14px;background:color-mix(in srgb,var(--surface-2) 92%,var(--ac) 4%)}
+.analytics-empty-hint i{font-size:20px;color:var(--ac);margin-top:2px}
+.analytics-empty-hint strong{display:block;margin-bottom:4px}
+.analytics-empty-hint p{margin:0;font-size:13px;opacity:.82;line-height:1.55}
 .analytics-cockpit{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:24px;margin:0 0 16px;padding:30px;border:1px solid var(--ac-line);border-radius:22px;overflow:hidden;background:radial-gradient(circle at 84% 16%,color-mix(in srgb, var(--ac) 16%, transparent),transparent 32%),radial-gradient(circle at 12% 100%,color-mix(in srgb, #22d3ee 12%, transparent),transparent 34%),linear-gradient(145deg,var(--surface) 0%,var(--surface-2) 55%,color-mix(in srgb, var(--surface) 96%, #22d3ee 4%) 100%);box-shadow:0 24px 70px color-mix(in srgb, var(--ac) 16%, transparent)}
 .analytics-cockpit:before{content:"";position:absolute;inset:0;z-index:-1;opacity:.16;background-image:linear-gradient(color-mix(in srgb, var(--text) 6%, transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb, var(--text) 6%, transparent) 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(90deg,#000,transparent 78%)}
 .analytics-eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:14px;color:var(--ac);font-size:9px;font-weight:850;letter-spacing:.16em}
@@ -264,6 +268,15 @@
     <button type="button" data-an-lens="team" aria-pressed="false"><i class="fas fa-user-shield"></i> Команда</button>
   </div>
   <button type="button" class="analytics-print" id="anPrint"><i class="fas fa-file-arrow-down"></i> Снимок</button>
+</div>
+<div id="anEmptyHint" class="analytics-empty-hint" style="display:none">
+  <i class="fas fa-satellite-dish"></i>
+  <div>
+    <strong>Пока тишина — данных ещё нет</strong>
+    <p>Бот сам считает активность участников (сообщения, каналы, время — без текста сообщений).
+       Напиши что-нибудь в Discord — первые цифры появятся здесь через пару минут.
+       Выдуманных данных не показываем: только то, что было на самом деле.</p>
+  </div>
 </div>
 <nav class="analytics-jump" aria-label="Разделы аналитики">
   <a href="#anLeaders"><i class="fas fa-ranking-star"></i> Лидеры</a>
@@ -1031,6 +1044,10 @@ function renderCharts(d) {
       if ($id('anUpdated')) $id('anUpdated').textContent = 'Синхронизация…';
       renderMembers(d.top_members || []);
       renderChannels(d.top_channels || []);
+      var _hasData = ((d.daily_messages || []).some(function (x) { return x > 0; })
+        || (d.top_members || []).length || (d.top_channels || []).length);
+      var _eh = $id('anEmptyHint');
+      if (_eh) _eh.style.display = _hasData ? 'none' : '';
       renderCharts(d);
       _topChannel = (d.top_channels || [])[0] || null;
       kpi('anKpiChannel', _topChannel ? '#' + _topChannel.name : '—', _topChannel ? num(_topChannel.messages) + ' сообщений в выборке' : 'Канальная активность не записана');
