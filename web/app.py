@@ -2515,25 +2515,19 @@ def api_review_staff_app (app_id ):
         async def send_dm ():
             try :
                 if action =='approve':
-                    # Маппинг: первая Discord-роль из role_map.json, привязанная к 'mod'/'admin'
+                    # Роль по ДОЛЖНОСТИ заявки: Хелпер или Модератор
+                    # (.env → data/staff_roles.json → имя роли на сервере)
                     try :
+                        from services .staff_roles import grant_staff_role ,role_hint
                         gid =str (app_data .get ('guild_id')or MAIN_GUILD_ID or '')
                         guild =bot_instance .get_guild (int (gid ))if gid .isdigit ()else None
                         if not guild and bot_instance .guilds :guild =bot_instance .guilds [0 ]
-                        if guild :
-                            member =guild .get_member (int (app_data ['user_id']))
-                            if not member :
-                                try :member =await guild .fetch_member (int (app_data ['user_id']))
-                                except Exception :member =None
-                            target =None
-                            for rid ,prole in DISCORD_ROLE_MAP .items ():
-                                if prole in ('mod','curator','admin')and guild .get_role (int (rid )):
-                                    target =guild .get_role (int (rid ));break
-                            if member and target :
-                                await member .add_roles (target ,reason ='Заявка одобрена (Hakumo Panel)')
-                                role_info ['assigned']=target .name
-                            elif not target :
-                                role_info ['error']='not_mapped'
+                        res =await grant_staff_role (guild ,app_data .get ('user_id'),app_data .get ('role'))
+                        role_info ['assigned']=res .get ('role_name')
+                        role_info ['kind']=res .get ('kind')
+                        if not res .get ('role_name'):
+                            role_info ['error']=res .get ('reason')
+                            role_info ['hint']=role_hint (res )
                     except Exception as _role_err :
                         role_info ['error']=str (_role_err )[:120 ]
                 user =await bot_instance .fetch_user (int (app_data ['user_id']))
@@ -2599,8 +2593,8 @@ def api_review_staff_app (app_id ):
         resp ['dm_sent']=dm_info ['sent']
     if action =='approve':
         resp ['role_assigned']=role_info ['assigned']
-        if role_info ['error']=='not_mapped':
-            resp ['role_note']='no_mapped_role'
+        if role_info ['error']:
+            resp ['role_note']=role_info .get ('hint')or role_info ['error']
     return jsonify (resp )
 
 @app .route ('/api/tunnel-url')

@@ -92,10 +92,11 @@ class AFK (commands .Cog ):
         else :
             e .set_thumbnail (url =interaction .user .display_avatar .url )
         e .set_footer (text ="💤 Выход из AFK: /afk-remove")
+        # Ответ видит только сам пользователь — чат не засоряется
         if icon :
-            await interaction .response .send_message (embed =e ,file =icon )
+            await interaction .response .send_message (embed =e ,file =icon ,ephemeral =True )
         else :
-            await interaction .response .send_message (embed =e )
+            await interaction .response .send_message (embed =e ,ephemeral =True )
 
     @app_commands .command (name ="afk-remove",description ="Выйти из режима AFK")
     async def afk_remove (self ,interaction :discord .Interaction ):
@@ -123,9 +124,9 @@ class AFK (commands .Cog ):
             description ='\n\n'.join (lines ),
             color =0x57F287 
             )
-            await interaction .response .send_message (embed =embed )
+            await interaction .response .send_message (embed =embed ,ephemeral =True )
         else :
-            await interaction .response .send_message ('✅ Режим AFK отключён! Никто тебя не упоминал.')
+            await interaction .response .send_message ('Режим AFK отключён! Никто тебя не упоминал.',ephemeral =True )
 
     @commands .Cog .listener ()
     async def on_message (self ,message :discord .Message ):

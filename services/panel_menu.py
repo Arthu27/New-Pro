@@ -86,7 +86,7 @@ MENU = [
          'section': 'management', 'description': 'Ступени эскалации и контроль сроков',
          'access': 'Мод+', 'tone': 'analytics'},
         {'path': '/staff-apps', 'label': 'Заявки в команду', 'icon': 'fa-file-signature',
-         'section': 'management', 'description': 'Анкеты кандидатов: хелперы, модераторы, чат-контроль',
+         'section': 'management', 'description': 'Анкеты кандидатов: хелперы и модераторы',
          'access': 'Мод+', 'tone': 'analytics'},
     ]},
     # Защита — отдельная категория сайдбара (заказ владельца 2026-08-25).

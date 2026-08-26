@@ -272,21 +272,17 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
 
 class RoleSelect(discord.ui.Select):
     def __init__(self):
+        # Должности: Хелпер и Модератор (чат-контроль упразднён 2026-08-27)
         options = [
             discord.SelectOption(
-                label="Moderator",
-                value="Moderator",
-                description="Модерация сервера и участников"
-            ),
-            discord.SelectOption(
-                label="Chat Control",
-                value="Chat Control",
-                description="Контроль чатов и порядка"
-            ),
-            discord.SelectOption(
-                label="Helper",
+                label="Хелпер",
                 value="Helper",
                 description="Помощь участникам сервера"
+            ),
+            discord.SelectOption(
+                label="Модератор",
+                value="Moderator",
+                description="Модерация сервера и участников"
             ),
         ]
         super().__init__(
@@ -340,6 +336,23 @@ class StaffReviewView(discord.ui.View):
         app["reviewed_by"] = str(interaction.user)
         if not app.get("timestamp"):
             app["timestamp"] = app.get("submitted_at")
+
+        # Одобрена → сразу выдать роль по должности (Хелпер или Модератор)
+        granted = None
+        grant_note = ""
+        if action == "approve":
+            from services.staff_roles import grant_staff_role, role_hint
+            try:
+                gid = int(app.get("guild_id") or 0)
+            except (TypeError, ValueError):
+                gid = 0
+            guild = (interaction.client.get_guild(gid) if gid else None) or interaction.guild
+            res = await grant_staff_role(guild, app.get("user_id"), app.get("role"))
+            granted = res.get("role_name")
+            if granted:
+                app["granted_role"] = granted
+            else:
+                grant_note = role_hint(res)
         save_apps(apps)
 
         # DM заявителю — именно этого уведомления не хватало
@@ -360,6 +373,8 @@ class StaffReviewView(discord.ui.View):
                     color=0xE74C3C)
             emb.add_field(name=" Должность", value=app.get("role", "—"), inline=True)
             emb.add_field(name=" Рассмотрел", value=interaction.user.display_name, inline=True)
+            if granted:
+                emb.add_field(name=" Выдана роль", value=granted, inline=True)
             emb.set_footer(text="Статус всегда можно проверить: /my-application")
             emb.timestamp = datetime.now(timezone.utc)
             await user.send(embed=emb)
@@ -373,17 +388,24 @@ class StaffReviewView(discord.ui.View):
             if src and src.embeds:
                 e0 = discord.Embed.from_dict(src.embeds[0].to_dict())
                 e0.color = 0x2ECC71 if action == "approve" else 0xE74C3C
+                verdict_line = f"Модератор: {interaction.user.display_name}"
+                if action == "approve" and granted:
+                    verdict_line += f" · Роль: {granted}"
                 e0.add_field(
                     name=" Решение: одобрена" if action == "approve" else " Решение: отклонена",
-                    value=f"Модератор: {interaction.user.display_name}",
+                    value=verdict_line,
                     inline=False)
                 await src.edit(embed=e0, view=None)
         except Exception as _ex:
             log.debug("_review(): подавлено: %s", _ex)
 
         verdict = "одобрена" if action == "approve" else "отклонена"
+        role_line = ""
+        if action == "approve":
+            role_line = (f" Роль выдана: **{granted}**."
+                         if granted else f" Роль НЕ выдана: {grant_note}.")
         await interaction.followup.send(
-            f"Заявка **{verdict}**. Уведомление пользователю: "
+            f"Заявка **{verdict}**.{role_line} Уведомление пользователю: "
             f"{'отправлено в ЛС' if dm_ok else 'НЕ доставлено (у пользователя закрыты ЛС)'}",
             ephemeral=True)
 
