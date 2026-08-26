@@ -232,8 +232,19 @@ async def start_websocket_server(host: str = 'localhost', port: int = 8765):
     print('[WebSocket] Не удалось запустить сервер — все порты заняты')
 
 
+_ws_thread = None
+
+
 def start_websocket_thread(host: str = 'localhost', port: int = 8765):
-    """Запуск WebSocket сервера в отдельном потоке"""
+    """Запуск WebSocket сервера в отдельном потоке.
+
+    Повторный вызов (панель + main.py) — no-op: сервер и поток живут
+    в единственном экземпляре, второй порт не занимается."""
+    global _ws_thread
+    if _ws_thread is not None and _ws_thread.is_alive():
+        print('[WebSocket] Уже запущен — повторный запуск пропущен')
+        return _ws_thread
+
     def run_server():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -244,6 +255,7 @@ def start_websocket_thread(host: str = 'localhost', port: int = 8765):
     
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
+    _ws_thread = thread
     print('[WebSocket] Сервер запущен в отдельном потоке')
     return thread
 
