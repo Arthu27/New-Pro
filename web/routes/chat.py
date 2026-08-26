@@ -37,6 +37,50 @@ def _demo_members ():
     ]
 
 
+def _chat_demo_seed (channel_id ):
+    """Демо-сид канала: живая беседа, а не «режим превью».
+
+    Показывает возможности чата: ответы, markdown, упоминания,
+    редактирование, сообщения от участников и бота.
+    """
+    _demo_users ={
+    '1001':('Sonya','https://cdn.discordapp.com/embed/avatars/1.png',False ),
+    '1002':('Artem','https://cdn.discordapp.com/embed/avatars/2.png',False ),
+    '1003':('Lina','https://cdn.discordapp.com/embed/avatars/3.png',False ),
+    '1004':('Max','https://cdn.discordapp.com/embed/avatars/4.png',False ),
+    '1006':('Aether','',True ),
+    }
+    from datetime import datetime as _dt ,timedelta as _td ,timezone as _tz 
+    _base =_dt .now (_tz .utc )
+
+    def _m (mid ,uid ,minutes_ago ,content ,**kw ):
+        name ,av ,isbot =_demo_users [uid ]
+        msg ={
+        'id':mid ,'content':content ,
+        'author':name ,'author_id':uid ,'avatar':av ,'bot':isbot ,
+        'timestamp':(_base -_td (minutes =minutes_ago )).isoformat (),
+        'edited':kw .get ('edited'),'attachments':kw .get ('attachments',[]),
+        'embeds':kw .get ('embeds',False ),
+        }
+        if kw .get ('reply_to'):
+            msg ['reply_to']=kw ['reply_to']
+        return msg 
+
+    return [
+    _m ('d1','1001',240 ,'Всем привет! Сегодня в 20:00 запускаем новый розыгрыш — не пропустите'),
+    _m ('d2','1004',236 ,'о, наконец-то) в этот раз что разыгрываем?'),
+    _m ('d3','1001',233 ,'**Discord Nitro на месяц** — детали в канале #розыгрыши',
+        reply_to ={'author':'Max','content':'о, наконец-то) в этот раз что разыгрываем?'}),
+    _m ('d4','1006',230 ,'Напомнил про розыгрыш: подключайтесь заранее, чтобы не пропустить начало'),
+    _m ('d5','1002',140 ,'Кто-нибудь проверял новые правила? Вроде теперь муты выдаёт только модератор, не автопилот'),
+    _m ('d6','1001',138 ,'Да, ИИ теперь только консультирует — наказания всегда за человеком',
+        reply_to ={'author':'Artem','content':'Кто-нибудь проверял новые правила?'}),
+    _m ('d7','1003',45 ,'Я за! Стало спокойнее, никаких случайных мутов',
+        edited =True ),
+    _m ('d8','1004',12 ,'Тогда до вечера в голосовом'),
+    ]
+
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -58,12 +102,20 @@ def register(ctx):
         if not bot :
             store =_chat_demo_store ()
             key =f'{guild_id}:{channel_id}'
-            if key not in store :
-                store [key ]=[{
-                    'id':'d1','content':'Демо-режим: бот не подключён, сообщения живут только в превью.',
-                    'author':'Aether','author_id':'1006','avatar':'','bot':True,
-                    'timestamp':datetime .now (timezone .utc ).isoformat (),
-                    'edited':None ,'attachments':[] ,'embeds':False }]
+            fresh =False 
+            if key not in store or not store [key ]:
+                store [key ]=_chat_demo_seed (channel_id )
+                fresh =True 
+            else :
+                # миграция: выкидываем старую системную заглушку «Демо-режим…»
+                old_len =len (store [key ])
+                store [key ]=[m for m in store [key ]
+                if not str (m .get ('content','')).startswith ('Демо-режим')]
+                if not store [key ]:
+                    store [key ]=_chat_demo_seed (channel_id )
+                elif len (store [key ])!=old_len :
+                    fresh =True 
+            if fresh :
                 _chat_demo_save (store )
             return jsonify (store [key ][-50 :])
         channel =bot .get_channel (int (channel_id ))
@@ -107,7 +159,7 @@ def register(ctx):
             msgs .append ({
                 'id':'d'+str (int (time .time ()*1000 )),
                 'content':content ,
-                'author':'demo',
+                'author':'Вы',
                 'author_id':'0',
                 'avatar':'https://cdn.discordapp.com/embed/avatars/0.png',
                 'bot':False ,

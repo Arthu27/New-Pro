@@ -147,7 +147,24 @@
 }
 .hdr-btn:hover {border-color: var(--ac); color: var(--ac); box-shadow: 0 4px 10px -4px var(--ac-glow)}
 
+.chat-messages-wrap { position: relative; flex: 1; display: flex; min-height: 0; }
 .chat-messages { flex: 1; overflow-y: auto; padding: 16px; scroll-behavior: smooth; }
+.scroll-down-btn { position: absolute; right: 18px; bottom: 14px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ac); display: none; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,.35); transition: all .16s var(--ease); z-index: 5; }
+.scroll-down-btn.show { display: flex; }
+.scroll-down-btn:hover { border-color: var(--ac); transform: translateY(-2px); }
+.scroll-down-badge { position: absolute; top: -6px; right: -4px; min-width: 18px; height: 18px; border-radius: 99px; background: var(--ac); color: #1a1a1a; font-size: 10.5px; font-weight: 800; display: none; align-items: center; justify-content: center; padding: 0 5px; }
+.scroll-down-badge.show { display: flex; }
+
+/* поиск в хедере */
+.chat-search { display: flex; align-items: center; gap: 7px; background: var(--surface-2, var(--surface)); border: 1px solid var(--line); border-radius: 10px; padding: 5px 10px; }
+.chat-search i { color: var(--text-3); font-size: 11.5px; }
+.chat-search input { background: none; border: none; outline: none; color: var(--text); font-size: 12.5px; width: 170px; font-family: inherit; }
+.chat-search-count { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.chat-search-clear { cursor: pointer; color: var(--text-3); display: flex; }
+.chat-search-clear:hover { color: var(--text); }
+.chat-search mark { background: color-mix(in srgb, var(--ac) 26%, transparent); color: inherit; border-radius: 3px; padding: 0 2px; }
+.chat-search-info { padding: 10px 16px; font-size: 12px; color: var(--text-3); border-bottom: 1px dashed color-mix(in srgb, var(--text) 8%, transparent); }
+.chat-search-info b { color: var(--ac); }
 .chat-messages::-webkit-scrollbar { width: 8px; }
 .chat-messages::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
 .chat-empty {
@@ -168,6 +185,8 @@
   background: var(--ac-soft); border: 1px solid var(--line);
   padding: 3px 12px; border-radius: 20px;
 }
+.ch-item.ch-muted { opacity: .5; cursor: default; }
+.ch-item.ch-muted:hover { border-color: var(--line); background: transparent; }
 
 .msg-group {
   display: flex; gap: 12px; padding: 7px 10px; position: relative;
@@ -565,12 +584,24 @@
       <div class="chat-header-sep" id="ch-sep"></div>
       <span class="chat-header-topic" id="ch-topic"></span>
       <div class="chat-header-actions">
-        <button type="button" class="hdr-btn" onclick="loadMessages()" aria-label="Обновить"><i class="fas fa-sync-alt"></i></button>
+        <div class="chat-search" id="chat-search" style="display:none">
+          <i class="fas fa-magnifying-glass"></i>
+          <input id="chat-search-input" placeholder="Поиск в сообщениях…" aria-label="Поиск в сообщениях">
+          <span class="chat-search-count" id="chat-search-count"></span>
+          <span class="chat-search-clear" onclick="clearChatSearch()" title="Сбросить"><i class="fas fa-xmark"></i></span>
+        </div>
+        <button type="button" class="hdr-btn" id="search-toggle-btn" onclick="toggleChatSearch()" title="Поиск по сообщениям" aria-label="Поиск"><i class="fas fa-magnifying-glass"></i></button>
+        <button type="button" class="hdr-btn" onclick="loadMessages(); loadDmMessages();" aria-label="Обновить" title="Обновить"><i class="fas fa-sync-alt"></i></button>
       </div>
     </div>
 
-    <div class="chat-messages" id="chat-messages">
-      <div class="chat-empty"><i class="fas fa-comments"></i><span>Выберите канал слева</span></div>
+    <div class="chat-messages-wrap">
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-empty"><i class="fas fa-comments"></i><span>Выберите канал слева</span></div>
+      </div>
+      <button type="button" class="scroll-down-btn" id="scroll-down-btn" onclick="scrollChatDown(true)" title="Вниз к новым сообщениям" aria-label="Вниз">
+        <i class="fas fa-arrow-down"></i><span class="scroll-down-badge" id="scroll-down-badge"></span>
+      </button>
     </div>
 
     <div class="reply-bar" id="reply-bar">
@@ -590,9 +621,6 @@
             oninput="handleInput(this)"
             disabled aria-label="Напишите сообщение..."></textarea>
           <div class="input-actions">
-            <button type="button" class="dm-btn" id="dm-open-btn" onclick="openDmFromInput()" title="Отправить в ЛС">
-              <i class="fas fa-user"></i> DM
-            </button>
             <button type="button" class="send-btn" id="send-btn" onclick="sendMessage()" disabled aria-label="Отправить сообщение">
               <i class="fas fa-paper-plane"></i>
             </button>
@@ -696,6 +724,12 @@ function escHtml(s) {
 }
 function escJs(s) {
   if (!s) return '';
+  return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/\n/g, ' ');
+}
+
+function escAttr(s) {
+  /* для onclick-атрибутов: экранирует кавычки обоих видов */
+  if (!s) return '';
   return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' ');
 }
 
@@ -725,6 +759,8 @@ function selectGuild(gid, scrollTo) {
   var g = _guilds.find(function(x){ return x.id === gid; });
   document.getElementById('sidebar-guild-name').textContent = g ? g.name : gid;
   _channelId = null; _dmMode = false; _lastMsgId = null; _fetchSeq++;
+  _seenIds = {}; _unreadNew = 0; _lastMsgData = null; _lastDmData = null;
+  clearChatSearchSilently();
   if (_autoRefresh) { clearInterval(_autoRefresh); _autoRefresh = null; }
   document.getElementById('ch-list').innerHTML = '';
   document.getElementById('dm-list').innerHTML = '';
@@ -770,7 +806,26 @@ async function loadChannels(gid) {
           '<i class="fas fa-hashtag ch-icon"></i><span class="ch-name">' + escHtml(c.name) + '</span></div>';
       }).join('');
     }).join('');
+    /* голосовые и форум-каналы: видны для полноты картины (Discord-вид),
+       голосовые — некликабельны, честная подсказка */
+    var extra = chs.filter(function(c){
+      return !c.hidden && (c.type === 'voice' || c.type === 'forum' || c.type === 'stage');
+    });
+    if (extra.length) {
+      var icons = { voice: 'fa-volume-high', forum: 'fa-comments', stage: 'fa-bullhorn' };
+      el.innerHTML += '<div class="sidebar-section"><span>Голос и форумы</span></div>' +
+        extra.map(function(c) {
+          var icon = icons[c.type] || 'fa-volume-high';
+          if (c.type === 'voice' || c.type === 'stage') {
+            return '<div class="ch-item ch-muted" title="Голосовой канал — слушать можно в Discord">' +
+              '<i class="fas ' + icon + ' ch-icon"></i><span class="ch-name">' + escHtml(c.name) + '</span></div>';
+          }
+          return '<div class="ch-item" id="ch-' + c.id + '" onclick="selectChannel(\'' + c.id + '\',\'' + escJs(c.name) + '\')">' +
+            '<i class="fas ' + icon + ' ch-icon"></i><span class="ch-name">' + escHtml(c.name) + '</span></div>';
+        }).join('');
+    }
     if (text.length) selectChannel(text[0].id, text[0].name);
+    else hookChatScroll();
   } catch(e) {}
 }
 
@@ -780,6 +835,8 @@ async function loadMembers(gid) {
 
 function selectChannel(id, name) {
   _channelId = id; _dmMode = false; _lastMsgId = null; _fetchSeq++;
+  _seenIds = {}; _unreadNew = 0; _lastMsgData = null; _lastDmData = null;
+  clearChatSearchSilently();
   document.querySelectorAll('.ch-item').forEach(function(el){ el.classList.remove('active'); });
   var el = document.getElementById('ch-' + id);
   if (el) el.classList.add('active');
@@ -792,12 +849,54 @@ function selectChannel(id, name) {
   document.getElementById('send-btn').disabled = false;
   document.getElementById('chat-messages').innerHTML = '<div class="chat-empty"><i class="fas fa-spinner fa-spin"></i></div>';
   cancelReply();
+  hookChatScroll();
+  updateScrollBtn();
   loadMessages();
   if (_autoRefresh) clearInterval(_autoRefresh);
   _autoRefresh = setInterval(loadMessages, 2000);
 }
 
 // ── СООБЩЕНИЯ ──────────────────────────────────────────────────────────────
+var _lastMsgData = null, _lastDmData = null, _seenIds = {}, _unreadNew = 0, _scrollHooked = false;
+
+function chatScrollEl() { return document.getElementById('chat-messages'); }
+function isChatAtBottom() {
+  var el = chatScrollEl();
+  return el.scrollHeight - el.scrollTop - el.clientHeight < 90;
+}
+function updateScrollBtn() {
+  var btn = document.getElementById('scroll-down-btn');
+  if (!btn) return;
+  var atBottom = isChatAtBottom();
+  btn.classList.toggle('show', !atBottom);
+  var badge = document.getElementById('scroll-down-badge');
+  badge.classList.toggle('show', _unreadNew > 0 && !atBottom);
+  badge.textContent = _unreadNew > 99 ? '99+' : String(_unreadNew);
+  if (atBottom) _unreadNew = 0;
+}
+function scrollChatDown(smooth) {
+  var el = chatScrollEl();
+  _unreadNew = 0;
+  el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+  updateScrollBtn();
+}
+function hookChatScroll() {
+  if (_scrollHooked) return;
+  _scrollHooked = true;
+  chatScrollEl().addEventListener('scroll', updateScrollBtn, { passive: true });
+}
+function copyMsg(text) {
+  var done = function () { toast('Текст скопирован', true); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, function () { toast('Не удалось скопировать', false); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { toast('Не удалось скопировать', false); }
+    document.body.removeChild(ta);
+  }
+}
+
 async function loadMessages() {
   if (!_channelId || _dmMode) return;
   var mySeq = _fetchSeq, myCh = _channelId;
@@ -805,30 +904,100 @@ async function loadMessages() {
     var msgs = await fetch('/api/chat/' + _activeGuildId + '/' + myCh + '/messages').then(r => r.json());
     if (mySeq !== _fetchSeq || myCh !== _channelId) return;
     if (msgs.error) return;
-    var el = document.getElementById('chat-messages');
-    var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+    var el = chatScrollEl();
+    var atBottom = isChatAtBottom();
     var lastId = msgs.length ? msgs[msgs.length-1].id : null;
-    if (lastId === _lastMsgId) return;
-    _lastMsgId = lastId;
-    el.innerHTML = msgs.length ? renderMsgList(msgs) : '<div class="chat-empty"><i class="fas fa-comment-slash"></i>Сообщений пока нет</div>';
-    if (atBottom) el.scrollTop = el.scrollHeight;
+    if (lastId !== _lastMsgId) {
+      /* посчитать реально новые сообщения, пока мы выше низа */
+      if (!atBottom) {
+        msgs.forEach(function (m) {
+          if (!_seenIds[m.id]) _unreadNew++;
+        });
+      }
+      msgs.forEach(function (m) { _seenIds[m.id] = true; });
+      _lastMsgId = lastId;
+      _lastMsgData = msgs;
+      renderMsgsIntoDom(msgs);
+      if (atBottom) el.scrollTop = el.scrollHeight;
+    } else if (_lastMsgData !== msgs) {
+      _lastMsgData = msgs;
+    }
+    updateScrollBtn();
   } catch(e) {}
 }
 
+// ── ПОИСК ПО СООБЩЕНИЯМ ───────────────────────────────────────────────────
+var _chatSearchQ = '';
+
+function toggleChatSearch() {
+  var box = document.getElementById('chat-search');
+  var showing = box.style.display === 'none';
+  box.style.display = showing ? 'flex' : 'none';
+  if (!showing) { clearChatSearch(); return; }
+  document.getElementById('chat-search-input').focus();
+}
+function clearChatSearch() {
+  _chatSearchQ = '';
+  document.getElementById('chat-search-input').value = '';
+  document.getElementById('chat-search-count').textContent = '';
+  rerenderChat();
+}
+function onChatSearchInput(v) {
+  _chatSearchQ = (v || '').trim().toLowerCase();
+  rerenderChat();
+}
+function hlContent(html) {
+  if (!_chatSearchQ) return html;
+  /* подсветка только текстовых узлов — теги не трогаем */
+  var re = new RegExp('(' + _chatSearchQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+  function paint(txt) {
+    if (txt.toLowerCase().indexOf(_chatSearchQ) === -1) return txt;
+    return txt.replace(re, '<mark>$1</mark>');
+  }
+  /* порядок: сначала текст МЕЖДУ тегами, затем хвосты до первого и после последнего тега */
+  return html
+    .replace(/>([^<]+)</g, function(m, t) { return '>' + paint(t) + '<'; })
+    .replace(/^[^<]+/, function(m) { return paint(m); })
+    .replace(/[^<]+$/, function(m) { return paint(m); });
+}
+function rerenderChat() {
+  if (_dmMode) { renderDmIntoDom(_lastDmData || []); return; }
+  if (_lastMsgData) renderMsgsIntoDom(_lastMsgData);
+}
+
 function renderMsgList(msgs) {
-  var html = '', prevAuthor = null, prevDate = null;
+  var html = '', prevAuthor = null, prevDate = null, found = 0;
   msgs.forEach(function(m) {
     var d = new Date(m.timestamp);
     var dateStr = d.toLocaleDateString('ru-RU', {day:'numeric',month:'long',year:'numeric'});
+    var match = !_chatSearchQ ||
+      String(m.content || '').toLowerCase().indexOf(_chatSearchQ) !== -1 ||
+      String(m.author || '').toLowerCase().indexOf(_chatSearchQ) !== -1;
+    if (!match) { prevAuthor = null; return; }
+    found++;
     if (dateStr !== prevDate) {
-      html += '<div class="date-divider">' + dateStr + '</div>';
+      html += '<div class="date-divider" title="' + escHtml(dateStr) + '"><span>' + escHtml(dateStr.charAt(0).toUpperCase() + dateStr.slice(1)) + '</span></div>';
       prevDate = dateStr; prevAuthor = null;
     }
     var continued = (m.author === prevAuthor && !m.reply_to);
     html += renderMsg(m, continued);
     prevAuthor = m.author;
   });
+  document.getElementById('chat-search-count').textContent =
+    _chatSearchQ ? (found ? found + ' найдено' : 'нет совпадений') : '';
+  if (_chatSearchQ) {
+    html = '<div class="chat-search-info">Поиск: <b>' + escHtml(_chatSearchQ) + '</b> — ' +
+           (found ? 'найдено ' + found : 'совпадений нет') +
+           '. <span style="text-decoration:underline;cursor:pointer" onclick="clearChatSearch()">Сбросить</span></div>' + html;
+  }
   return html;
+}
+
+function renderMsgsIntoDom(msgs) {
+  var el = document.getElementById('chat-messages');
+  el.innerHTML = msgs.length || _chatSearchQ
+    ? renderMsgList(msgs) || '<div class="chat-empty"><i class="fas fa-magnifying-glass"></i>Ничего не найдено</div>'
+    : '<div class="chat-empty"><i class="fas fa-comment-slash"></i>Сообщений пока нет</div>';
 }
 
 function renderMsg(m, continued) {
@@ -881,7 +1050,7 @@ function renderMsg(m, continued) {
     '<div class="msg-meta">' +
       '<span class="msg-author' + (m.bot?' is-bot':'') + (canDm ? ' clickable' : '') + '"' + dmAttr + '>' +
         escHtml(m.author) + (m.bot ? '<span class="bot-badge">BOT</span>' : '') + '</span>' +
-      '<span class="msg-time">' + time + '</span>' +
+      '<span class="msg-time" title="' + escHtml(d.toLocaleString('ru-RU')) + '">' + time + '</span>' +
     '</div>';
 
   var safeContent = escJs((m.content||'').substring(0,60));
@@ -889,11 +1058,12 @@ function renderMsg(m, continued) {
   return '<div class="msg-group' + (continued?' continued':'') + '" id="msg-' + m.id + '">' +
     '<div class="msg-avatar-wrap' + (canDm ? ' clickable' : '') + '"' + dmAttr + '>' + avatarHtml + '</div>' +
     '<div class="msg-body">' + replyHtml + metaHtml +
-      '<div class="msg-content">' + content + (m.edited ? '<span class="msg-edited">(изменено)</span>' : '') + '</div>' +
+      '<div class="msg-content">' + hlContent(content) + (m.edited ? '<span class="msg-edited">(изменено)</span>' : '') + '</div>' +
       attachHtml + inlineMedia +
     '</div>' +
     '<div class="msg-actions">' +
       (canDm ? '<button type="button" class="msg-act-btn dm" onclick="openDm(\'' + String(m.author_id) + '\',\'' + safeAuthor + '\')" aria-label="Написать в ЛС" title="Написать в ЛС"><i class="fas fa-paper-plane"></i></button>' : '') +
+      '<button type="button" class="msg-act-btn" onclick="copyMsg(\'' + escAttr(String(m.content || '').substring(0, 200)) + '\')" aria-label="Копировать текст" title="Копировать текст"><i class="fas fa-copy"></i></button>' +
       '<button type="button" class="msg-act-btn" onclick="startReply(\'' + m.id + '\',\'' + safeAuthor + '\',\'' + safeContent + '\')" aria-label="Ответить"><i class="fas fa-reply"></i></button>' +
       '<button type="button" class="msg-act-btn del" onclick="deleteMsg(\'' + m.id + '\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>' +
     '</div>' +
@@ -1038,6 +1208,8 @@ async function openDmFromInput() {
 
 async function openDm(userId, userName) {
   _dmMode = true; _dmUserId = userId; _channelId = null; _lastMsgId = null; _fetchSeq++;
+  _seenIds = {}; _unreadNew = 0; _lastDmData = null; _lastMsgData = null;
+  clearChatSearchSilently();
   document.getElementById('dm-search').value = '';
   document.getElementById('dm-search-results').innerHTML = '';
   document.querySelectorAll('.ch-item').forEach(function(el){ el.classList.remove('active'); });
@@ -1049,17 +1221,29 @@ async function openDm(userId, userName) {
     div.innerHTML = '<i class="fas fa-user ch-icon"></i><span class="ch-name">' + escHtml(userName) + '</span>';
     document.getElementById('dm-list').appendChild(div);
   } else { existing.classList.add('active'); }
-  document.getElementById('ch-icon').innerHTML = '<i class="fas fa-user"></i>';
+  var mem = _allMembers.find(function(x){ return x.id === userId; });
+  var icon = mem && mem.avatar
+    ? '<img src="' + mem.avatar + '" alt="" style="width:22px;height:22px;border-radius:50%">'
+    : '<i class="fas fa-user"></i>';
+  document.getElementById('ch-icon').innerHTML = icon;
   document.getElementById('ch-name').textContent = userName;
   document.getElementById('ch-sep').style.display = '';
-  document.getElementById('ch-topic').textContent = 'Личные сообщения · пишите как в Discord';
+  document.getElementById('ch-topic').textContent = 'Личные сообщения — как в Discord';
   document.getElementById('chat-input').disabled = false;
   document.getElementById('chat-input').placeholder = 'Написать @' + userName + ' — личное сообщение';
   document.getElementById('send-btn').disabled = false;
   cancelReply();
+  hookChatScroll();
   if (_autoRefresh) clearInterval(_autoRefresh);
   await loadDmMessages();
+  scrollChatDown(false);
   _autoRefresh = setInterval(loadDmMessages, 2000);
+}
+
+function clearChatSearchSilently() {
+  _chatSearchQ = '';
+  var i = document.getElementById('chat-search-input'); if (i) i.value = '';
+  var c = document.getElementById('chat-search-count'); if (c) c.textContent = '';
 }
 
 async function loadDmMessages() {
@@ -1067,25 +1251,55 @@ async function loadDmMessages() {
   try {
     var data = await fetch('/api/dm/' + _activeGuildId + '/' + _dmUserId + '/messages').then(r => r.json());
     if (!Array.isArray(data)) return;
+    _lastDmData = data;
     var el = document.getElementById('chat-messages');
-    var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
-    el.innerHTML = data.length ? data.map(function(m) {
-      var d = new Date(m.timestamp);
-      var time = d.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
-      var isBot = m.from_bot;
-      var av = isBot ? '<div class="msg-avatar-placeholder" ><i class="fas fa-robot"></i></div>'
-                     : '<div class="msg-avatar-placeholder"><i class="fas fa-user"></i></div>';
-      var urlMatch = (m.content||'').match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
-      var inlineMedia = urlMatch ? '<div class="msg-attachments"><div   style="position: relative;">' +
-        '<img alt="Вложение сообщения" class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
-        (/\.gif(\?|$)/i.test(urlMatch[0]) ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>' : '';
-      return '<div class="msg-group">' + av + '<div class="msg-body">' +
-        '<div class="msg-meta"><span class="msg-author' + (isBot?' is-bot':'') + '">' + escHtml(m.author) + (isBot?'<span class="bot-badge">BOT</span>':'') + '</span>' +
-        '<span class="msg-time">' + time + '</span></div>' +
-        '<div class="msg-content">' + parseContent(m.content) + '</div>' + inlineMedia + '</div></div>';
-    }).join('') : '<div class="chat-empty"><i class="fas fa-comment-slash"></i>Сообщений пока нет</div>';
+    var atBottom = isChatAtBottom();
+    renderDmIntoDom(data);
     if (atBottom) el.scrollTop = el.scrollHeight;
+    updateScrollBtn();
   } catch(e) {}
+}
+
+function dmUserAvatar() {
+  var m = _allMembers.find(function(x){ return x.id === _dmUserId; });
+  return m && m.avatar ? m.avatar : '';
+}
+
+function renderDmIntoDom(data) {
+  var el = document.getElementById('chat-messages');
+  var avUrl = dmUserAvatar();
+  var q = _chatSearchQ;
+  var rows = [];
+  var found = 0;
+  data.forEach(function(m) {
+    var content = m.content || '';
+    if (q && content.toLowerCase().indexOf(q) === -1 &&
+        String(m.author || '').toLowerCase().indexOf(q) === -1) return;
+    found++;
+    var d = new Date(m.timestamp);
+    var time = d.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+    var isBot = m.from_bot;
+    var av;
+    if (isBot) {
+      av = '<div class="msg-avatar-placeholder"><i class="fas fa-robot"></i></div>';
+    } else if (avUrl) {
+      av = '<img alt="" class="msg-avatar" src="' + avUrl + '" onerror="this.outerHTML=\'<div class=msg-avatar-placeholder><i class=\\\"fas fa-user\\\"></i></div>\'">';
+    } else {
+      av = '<div class="msg-avatar-placeholder"><i class="fas fa-user"></i></div>';
+    }
+    var urlMatch = content.match(/https?:\/\/\S+\.(gif|jpg|jpeg|png|webp)(\?\S*)?/i);
+    var inlineMedia = urlMatch ? '<div class="msg-attachments"><div   style="position: relative;">' +
+      '<img alt="Вложение сообщения" class="msg-img" src="' + urlMatch[0] + '" loading="lazy" onclick="openLightbox(\'' + urlMatch[0] + '\')">' +
+      (/\.gif(\?|$)/i.test(urlMatch[0]) ? '<span class="msg-gif-badge">GIF</span>' : '') + '</div></div>' : '';
+    rows.push('<div class="msg-group">' + av + '<div class="msg-body">' +
+      '<div class="msg-meta"><span class="msg-author' + (isBot?' is-bot':'') + '">' + escHtml(m.author) + (isBot?'<span class="bot-badge">BOT</span>':'') + '</span>' +
+      '<span class="msg-time" title="' + escHtml(d.toLocaleString('ru-RU')) + '">' + time + '</span></div>' +
+      '<div class="msg-content">' + hlContent(parseContent(content)) + '</div>' + inlineMedia + '</div></div>');
+  });
+  document.getElementById('chat-search-count').textContent = q ? (found ? found + ' найдено' : 'нет совпадений') : '';
+  el.innerHTML = rows.length ? rows.join('')
+    : (q ? '<div class="chat-empty"><i class="fas fa-magnifying-glass"></i>Ничего не найдено</div>'
+         : '<div class="chat-empty"><i class="fas fa-comment-slash"></i>Сообщений пока нет</div>');
 }
 
 async function sendDmMessage() {
@@ -1311,6 +1525,16 @@ function etiketFromprofile() {
 document.addEventListener('click', function(e) {
   if (!e.target.closest('.profs-popup') && !e.target.closest('.member-item')) closeprofile();
 });
+
+var _searchInput = document.getElementById('chat-search-input');
+if (_searchInput) {
+  _searchInput.addEventListener('input', function(){ onChatSearchInput(this.value); });
+  _searchInput.addEventListener('keydown', function(e){
+    if (e.key === 'Enter') { e.preventDefault(); }
+    if (e.key === 'Escape') { clearChatSearch(); this.blur(); }
+  });
+}
+hookChatScroll();
 
 loadGuilds();
 </script>

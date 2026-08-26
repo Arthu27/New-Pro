@@ -116,6 +116,31 @@ check('msg-author.clickable' in ctpl and 'msg-avatar-wrap.clickable' in ctpl,
 croute = open(os.path.join(ROOT, 'web', 'routes', 'chat.py'), encoding='utf-8').read()
 check("'author_id':str (m .author .id )" in croute, 'API канала отдаёт author_id')
 
+print('== 4b. Чат-апгрейд 2026-08-26: без кнопки DM, поиск, скролл-кнопка ==')
+check('dm-open-btn' not in ctpl, 'кнопка «DM» у поля ввода убрана')
+check('scroll-down-btn' in ctpl and 'updateScrollBtn' in ctpl,
+      'кнопка «вниз» с счётчиком новых сообщений есть')
+check('toggleChatSearch' in ctpl and 'chat-search-count' in ctpl,
+      'поиск по сообщениям в шапке канала')
+check('fa-copy' in ctpl and 'copyMsg' in ctpl, 'копирование текста сообщения')
+check('hlContent' in ctpl, 'подсветка совпадений поиска')
+check('ch-item ch-muted' in ctpl and 'fa-volume-high' in ctpl,
+      'голосовые каналы видны (некликабельны), форум — с иконкой')
+check('_chat_demo_seed' in croute, 'демо-сид: живая беседа вместо заглушки')
+check("'Демо-режим: бот не подключён'" not in croute,
+      'пугающая заглушка «Демо-режим: бот не подключён» удалена из сида')
+
+# демо-сид живёт и мигрирует старый стор
+resp = client.get('/api/chat/777/1004/messages')
+dmsgs = resp.get_json()
+check(resp.status_code == 200 and len(dmsgs) >= 6,
+      f'демо-канал отдаёт живую беседу ({len(dmsgs)} сообщений)')
+check(all(m.get('author_id') for m in dmsgs), 'у демо-сообщений есть author_id')
+check(any(not m['bot'] for m in dmsgs) and any(m['bot'] for m in dmsgs),
+      'в беседе и участники, и бот')
+check(not any(str(m.get('content', '')).startswith('Демо-режим') for m in dmsgs),
+      'старая заглушка из стора вычищена')
+
 print('== 5. Ког гивок: победители сохраняются ==')
 gsrc = open(os.path.join(ROOT, 'cogs', 'giveaway.py'), encoding='utf-8').read()
 check('winner_ids' in gsrc, 'ког сохраняет победителей в файл')

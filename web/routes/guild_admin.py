@@ -644,11 +644,29 @@ def register(ctx):
                         return jsonify (_annotate_hidden (guild_id ,demo ))
                     except Exception as e :
                         print (f'[WEB][WARN] /channels: demo_channels.json ошибка: {e}')
-                # Демо-структура не засеяна — отдаём минимальный встроенный список,
-                # чтобы селекты каналов (правила, апелляции) не пустовали в превью.
-                _fallback =[{'id':'2001','name':'общий','type':'text','position':0,'category_id':None,'hidden':False},
-                            {'id':'2002','name':'правила','type':'text','position':1,'category_id':None,'hidden':False},
-                            {'id':'2003','name':'апелляции','type':'text','position':2,'category_id':None,'hidden':False}]
+                # Демо-структура не засеяна — отдаём полный встроенный список
+                # (тот же состав, что жил в data/demo_channels.json), чтобы
+                # селекты каналов и чат не пустовали в превью.
+                _fallback =[
+                {'id':'1001','name':'правила','type':'text','position':0,'category_id':'900','hidden':False},
+                {'id':'1002','name':'новости','type':'text','position':1,'category_id':'900','hidden':False},
+                {'id':'1003','name':'FAQ','type':'text','position':2,'category_id':'900','hidden':False},
+                {'id':'1015','name':'журнал-модерации','type':'forum','position':0,'category_id':'900','hidden':False},
+                {'id':'1004','name':'флудилка','type':'text','position':0,'category_id':'901','hidden':False},
+                {'id':'1005','name':'мемы','type':'text','position':1,'category_id':'901','hidden':False},
+                {'id':'1006','name':'музыка-чат','type':'text','position':2,'category_id':'901','hidden':False},
+                {'id':'1007','name':'предложения','type':'text','position':0,'category_id':'902','hidden':False},
+                {'id':'1008','name':'розыгрыши','type':'text','position':1,'category_id':'902','hidden':False},
+                {'id':'1010','name':'варны','type':'text','position':2,'category_id':'902','hidden':False},
+                {'id':'1016','name':'анонс-бота','type':'text','position':3,'category_id':'902','hidden':False},
+                {'id':'1017','name':'рекруты','type':'text','position':4,'category_id':'902','hidden':False},
+                {'id':'1018','name':'стата-недель','type':'text','position':5,'category_id':'902','hidden':False},
+                {'id':'1009','name':'тикет-логи','type':'text','position':6,'category_id':'902','hidden':False},
+                {'id':'1011','name':'общий-голос-1','type':'voice','position':0,'category_id':'903','hidden':False},
+                {'id':'1012','name':'общий-голос-2','type':'voice','position':1,'category_id':'903','hidden':False},
+                {'id':'1013','name':'афк','type':'voice','position':2,'category_id':'903','hidden':False},
+                {'id':'1014','name':'сцена','type':'stage','position':0,'category_id':'903','hidden':False},
+                ]
                 return jsonify (_annotate_hidden (guild_id ,_fallback ))
             print ('[WEB][WARN] /channels: bot is None')
             return jsonify ({'error':'Бот офлайн','channels':[]})
