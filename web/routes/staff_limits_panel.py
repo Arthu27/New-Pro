@@ -120,18 +120,32 @@ def _guild_channels_live(bot, guild_id):
                 import json as _json
                 import os as _os
                 path = _os.path.join('data', 'demo_channels.json')
-                with open(path, 'r', encoding='utf-8') as fh:
-                    for c in _json.load(fh):
-                        _t = c.get('type')
-                        _is_forum = _t == 'forum' or bool(c.get('forum'))
-                        if _t in ('text', '') or _is_forum:
-                            channels.append({
-                                'id': str(c.get('id')),
-                                'name': (str(c.get('name', '')) + ' · форум')
-                                        if _is_forum
-                                        else '#' + str(c.get('name', ''))})
+                if _os.path.exists(path):
+                    with open(path, 'r', encoding='utf-8') as fh:
+                        for c in _json.load(fh):
+                            _t = c.get('type')
+                            _is_forum = _t == 'forum' or bool(c.get('forum'))
+                            if _t in ('text', '') or _is_forum:
+                                channels.append({
+                                    'id': str(c.get('id')),
+                                    'name': (str(c.get('name', '')) + ' · форум')
+                                            if _is_forum
+                                            else '#' + str(c.get('name', ''))})
             except Exception as ex:
                 _log.debug('staff_limits_panel: демо-каналы: %s', ex)
+            # файла нет (пересборка/чистый data) — вшитый демо-набор, чтобы
+            # селекты «куда писать логи» не пустовали в превью
+            if not channels:
+                channels = [
+                    {'id': '1001', 'name': '#правила'},
+                    {'id': '1002', 'name': '#новости'},
+                    {'id': '1004', 'name': '#флудилка'},
+                    {'id': '1005', 'name': '#мемы'},
+                    {'id': '1015', 'name': 'журнал-модерации · форум'},
+                    {'id': '1010', 'name': '#варны'},
+                    {'id': '1009', 'name': '#тикет-логи'},
+                    {'id': '1016', 'name': '#анонс-бота'},
+                ]
     return channels
 
 

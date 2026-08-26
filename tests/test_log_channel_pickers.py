@@ -8,7 +8,7 @@ import sys
 import tempfile
 import types
 
-os.environ['DEMO_MODE'] = '1'
+# демо-режим НЕ включаем: проверяем честный каскад бот→кэш→настройки
 _TMP = tempfile.mkdtemp(prefix='hakumo_pick_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
