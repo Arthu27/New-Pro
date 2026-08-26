@@ -417,7 +417,7 @@ def register(ctx):
                 if wh is None :
                     wh =await (ch .create_webhook (name ='Правила сервера',
                     reason ='Публикация правил из панели Aether'))
-                kw ={'view':layout ,'username':(title [:80 ]or 'Правила сервера')}
+                kw ={'view':layout ,'username':'Правила сервера'}
                 if icon_v2 :
                     kw ['avatar_url']=icon_v2 
                 await (wh .send (**kw ))
@@ -434,7 +434,7 @@ def register(ctx):
             _fire_panel_notification ('rules',f"Правила опубликованы (V2): {len (rules )} пунктов",
             f"Канал {ch_id } · голос: {'вебхук «Правила сервера»' if how =='webhook' else 'бот (нет права вебхуков)'}")
             return jsonify ({'success':True ,'style':'v2','via':how ,'title':title ,
-            'message':("Опубликовано через вебхук: " if how =='webhook' else
+            'message':("Опубликовано через вебхук «Правила сервера»: " if how =='webhook' else
             "Опубликовано голосом бота (у бота нет права «Управлять вебхуками» в канале — выдайте право и опубликуйте снова): ")+
             f"{len (rules )} правил в одном сообщении нового формата"})
 
