@@ -273,6 +273,12 @@ def check_action(guild_id: int, member, action: str) -> bool:
         return True
     if getattr(member, "guild_permissions", None) and member.guild_permissions.administrator:
         return True
+    try:  # владелец бота — действия не проверяем
+        from config import Config
+        if int(getattr(member, "id", 0) or 0) in Config.all_owner_ids():
+            return True
+    except Exception:
+        pass
     allowed = allowed_roles_for_action(guild_id, action)
     if not allowed:
         return True
@@ -319,6 +325,14 @@ def has_access(guild_id: int, command: str, member) -> bool:
         return True
     if getattr(member, "guild_permissions", None) and member.guild_permissions.administrator:
         return True
+    # Владелец бота (OWNER_ID/OWNER_IDS) — команды не проверяем вовсе:
+    # бот принадлежит ему, ограничения ролей его не касаются
+    try:
+        from config import Config
+        if int(getattr(member, "id", 0) or 0) in Config.all_owner_ids():
+            return True
+    except Exception:
+        pass
 
     acl = load_acl(guild_id)
     user_roles = {str(r.id) for r in getattr(member, "roles", [])}

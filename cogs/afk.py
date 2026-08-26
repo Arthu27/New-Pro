@@ -18,7 +18,24 @@ def _as_utc (dt ):
 import os 
 from config import Config, clean_number 
 
-OWNER_ID = clean_number(os.getenv('OWNER_ID')) or 0
+def _owner_ids():
+    """ID всех владельцев бота (OWNER_ID + OWNER_IDS из .env)."""
+    try:
+        from config import Config
+        return Config.all_owner_ids()
+    except Exception:
+        o = clean_number(os.getenv('OWNER_ID')) or 0
+        return {o} if o else set()
+
+
+def _is_owner(uid):
+    try:
+        return bool(uid) and int(uid) in _owner_ids()
+    except (TypeError, ValueError):
+        return False
+
+
+OWNER_ID = clean_number(os.getenv('OWNER_ID')) or 0  # легаси-ссылка
 
 AFK_ICON =os .path .join (os .path .dirname (os .path .dirname (__file__ )),'assets','afk_icon.png')
 
@@ -174,7 +191,7 @@ class AFK (commands .Cog ):
             dur =f"{mins} мин."if mins >0 else "только что"
 
             # Owner mode — бот спросит, что передать
-            if data .get ('owner_mode')and OWNER_ID and mentioned .id ==OWNER_ID :
+            if data .get ('owner_mode')and _is_owner (mentioned .id ):
                 e =discord .Embed (color =0x5865F2 ,timestamp =datetime .now (timezone .utc ))
                 e .set_author (
                 name =f"😴 {mentioned.display_name} сейчас спит",
@@ -195,9 +212,9 @@ class AFK (commands .Cog ):
                     await message .channel .send (embed =e )
 
                 # Сохранить упоминание
-                if OWNER_ID not in _pending_mentions :
-                    _pending_mentions [OWNER_ID ]=[]
-                _pending_mentions [OWNER_ID ].append ({
+                if mentioned .id not in _pending_mentions :
+                    _pending_mentions [mentioned .id ]=[]
+                _pending_mentions [mentioned .id ].append ({
                 'from':message .author .display_name ,
                 'from_id':message .author .id ,
                 'msg':message .content ,
@@ -209,12 +226,12 @@ class AFK (commands .Cog ):
 
                 # Поймать следующее сообщение — что хотят спросить
                 def check (m ):
-                    return m .channel ==message .channel and not m .author .bot and m .author .id !=OWNER_ID 
+                    return m .channel ==message .channel and not m .author .bot and not _is_owner (m .author .id )
 
                 try :
                     follow =await self .bot .wait_for ('message',check =check ,timeout =120 )
                     # Отправить сообщение owner'у в ЛС
-                    owner =await self .bot .fetch_user (OWNER_ID )
+                    owner =await self .bot .fetch_user (mentioned .id )
                     dm_embed =discord .Embed (
                     color =0xf59e0b ,
                     description =(
@@ -234,7 +251,7 @@ class AFK (commands .Cog ):
                     delete_after =10 
                     )
                     # Добавить в ожидающие
-                    _pending_mentions [OWNER_ID ][-1 ]['follow_msg']=follow .content 
+                    _pending_mentions [mentioned .id ][-1 ]['follow_msg']=follow .content 
                 except Exception as _ex:
                     _log.debug("on_message(): подавлено: %s", _ex)
 
@@ -258,9 +275,9 @@ class AFK (commands .Cog ):
                     await message .channel .send (embed =e ,delete_after =10 )
 
                 # Отправить owner'у в ЛС
-                if OWNER_ID and mentioned .id ==OWNER_ID :
+                if _is_owner (mentioned .id ):
                     try :
-                        owner =await self .bot .fetch_user (OWNER_ID )
+                        owner =await self .bot .fetch_user (mentioned .id )
                         dm_embed =discord .Embed (
                         color =0xf59e0b ,
                         description =(

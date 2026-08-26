@@ -151,7 +151,12 @@ check(A._get_role_from_discord('43') == 'owner',
 check(A._get_role_from_discord('44') != 'owner',
       'посторонний без OWNER_ID владельцем не становится',
       f"→ {A._get_role_from_discord('44')}")
+_os.environ['OWNER_IDS'] = '44,45'
+check(A._get_role_from_discord('44') == 'owner',
+      'второй владелец из OWNER_IDS — тоже владелец панели',
+      f"→ {A._get_role_from_discord('44')}")
 _os.environ.pop('OWNER_ID', None)
+_os.environ.pop('OWNER_IDS', None)
 
 A._resolve_guild_member = _orig_resolve
 

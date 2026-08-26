@@ -694,13 +694,13 @@ def _get_role_from_discord (discord_id :str )->str :
     """Opredelit роль в paneli по Discord-ролям ve администрации"""
     if not bot_instance :
         return 'uye'
-    # 00. Владелец БОТА (OWNER_ID из .env) — всегда владелец панели,
-    # даже если сервер чужой и его основатель — другой человек: бот и
-    # панель принадлежат тому, кто их запускает.
+    # 00. Владельцы БОТА (OWNER_ID + OWNER_IDS из .env) — всегда
+    # владельцы панели, даже если сервер чужой: бот и панель
+    # принадлежат тем, кто их запускает.
     try :
-        from config import clean_number as _cn
-        _bot_owner =_cn (os .getenv ('OWNER_ID'))or 0
-        if _bot_owner and int (discord_id )==int (_bot_owner ):
+        from config import Config as _Cfg
+        _owners =_Cfg .all_owner_ids ()
+        if _owners and int (discord_id )in _owners :
             return 'owner'
     except Exception :
         pass

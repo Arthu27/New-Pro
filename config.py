@@ -78,6 +78,17 @@ class Config:
     # === Discord ===
     TOKEN: str = _get_token()
     OWNER_ID: int = _env_int("OWNER_ID", 0)
+    # Дополнительные владельцы бота: OWNER_IDS=123456,789012 (через запятую)
+    OWNER_IDS: list = _env_int_list("OWNER_IDS")
+
+    @classmethod
+    def all_owner_ids(cls) -> set:
+        """Все владельцы бота: OWNER_ID + OWNER_IDS (живое чтение .env)."""
+        ids = set(_env_int_list("OWNER_IDS"))
+        main = clean_number(os.getenv("OWNER_ID"))
+        if main:
+            ids.add(main)
+        return ids
     MAIN_GUILD_ID: int = _env_int("MAIN_GUILD_ID", 0)
     COMMAND_PREFIX: str = "!"
 

@@ -177,6 +177,26 @@ okp2 = asyncio.new_event_loop().run_until_complete(main._acl_check(ctx2))
 check(okp2 is True, 'prefix: своя роль проходит !meeting role-add')
 save_acl(GID, {})
 
+# ── Владелец бота: правила команд его не проверяют ──
+os.environ['OWNER_IDS'] = '555555'
+set_rule(GID, 'j2c', ['900'])
+class _OwnerM:
+    class _P: administrator = False
+    guild_permissions = _P(); bot = False
+    id = 555555
+    roles = []
+class _StrangerM:
+    class _P: administrator = False
+    guild_permissions = _P(); bot = False
+    id = 666666
+    roles = []
+check(has_access(GID, 'j2c lobby', _OwnerM()) is True,
+      'владелец бота (OWNER_IDS) проходит закрытую команду без роли')
+check(has_access(GID, 'j2c lobby', _StrangerM()) is False,
+      'посторонний без роли — по-прежнему мимо')
+os.environ.pop('OWNER_IDS', None)
+
+
 print('== панельный API категорий ==')
 os.environ['PANEL_USER'] = 'admin'; os.environ['PANEL_PASSWORD'] = 'test123'
 appmod = importlib.import_module('web.app')

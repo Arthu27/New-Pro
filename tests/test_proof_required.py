@@ -61,6 +61,11 @@ GID = 424242
 save_acl(GID, {})
 save_action_acl(GID, {})
 
+from cogs.proof_cog import proof_is_required, proof_set_required
+check(proof_is_required(GID) is False,
+      'по умолчанию доказательства НЕ требуются (включается в панели)')
+proof_set_required(GID, True)  # строгий режим — явно включаем
+
 print('== is_media_attachment ==')
 check(is_media_attachment(None) is False, 'пустое вложение — не доказательство')
 check(is_media_attachment(Att(content_type='image/png')) is True, 'image/* — доказательство')

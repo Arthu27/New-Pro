@@ -298,14 +298,17 @@ def _proof_cfg_path(gid):
 
 
 def proof_is_required(gid):
-    """Обязательна ли демка к наказаниям на сервере (по умолчанию — да)."""
+    """Обязательна ли демка к наказаниям на сервере.
+
+    По умолчанию — НЕТ (заказ владельца 2026-08-27: ничего не требовать,
+    пока сам не включишь в панели → «Доказательства»)."""
     try:
         data = _load_json(_proof_cfg_path(gid), {})
         if isinstance(data, dict):
-            return bool(data.get('required', True))
+            return bool(data.get('required', False))
     except Exception as _ex:
         log.debug(f'[PROOF] конфиг: чтение пропущено: {_ex}')
-    return True
+    return False
 
 
 def proof_set_required(gid, on):

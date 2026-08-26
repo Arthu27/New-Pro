@@ -132,6 +132,11 @@ ok = loop.run_until_complete(require_proof(i, attachment=None, action_ru='бан
 check(ok is True and not i.followup.sent and not i.response.msgs,
       'модератор из белого списка: наказание без демки разрешено, отказа нет')
 
+# строгий режим включаем явно (по умолчанию демка не нужна)
+from cogs.proof_cog import proof_is_required as _pir, proof_set_required as _psr
+check(_pir(G1) is False, 'по умолчанию доказательства НЕ требуются')
+_psr(G1, True)
+
 # доверенная роль — тоже освобождает
 proof_whitelist_add(G1, 'role', 100000000000000002)
 i = _Inter(G1, _Member(555, roles=[100000000000000002]))
