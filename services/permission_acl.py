@@ -165,6 +165,43 @@ def load_acl(guild_id: int) -> dict:
         return {}
 
 
+def effective_acl(guild_id: int) -> dict:
+    """ACL для отображения: правила категории развёрнуты в её команды.
+
+    Категория и команда — два уровня правил, при правке из панели это
+    путало («выдал категорию, а команды показывают "для всех"»). Здесь
+    каждое правило категории материализуется на все её команды, если у
+    команды нет своего личного правила."""
+    acl = dict(load_acl(guild_id))
+    for cat, cmds in all_categories().items():
+        rule = acl.get(cat)
+        if not rule:
+            continue
+        for cmd in cmds:
+            if cmd not in acl:
+                acl[cmd] = list(rule)
+    return acl
+
+
+def materialize_category(acl: dict, cat: str) -> dict:
+    """Правило категории → явные правила на каждую её команду (in-place).
+
+    После этого категорийный ключ убирается: остаётся один уровень
+    правил, который и панель показывает, и бот проверяет — без
+    пересечений и сюрпризов."""
+    rule = acl.get(cat)
+    cmds = all_categories().get(cat, [])
+    if rule:
+        for cmd in cmds:
+            if cmd not in acl:
+                acl[cmd] = list(rule)
+    elif cmds:
+        for cmd in cmds:
+            acl.setdefault(cmd, [])  # категория была «всем» — команды тоже
+    acl.pop(cat, None)
+    return acl
+
+
 def save_acl(guild_id: int, acl: dict):
     try:
         _acl_db().set(int(guild_id), "acl", acl or {})

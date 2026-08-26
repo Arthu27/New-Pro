@@ -151,5 +151,56 @@ check('async def preflight_reason' in mod_src and 'У бота не хватит
 check('"Не хватило прав у бота"' in mod_src and 'error_embed (await _forbidden_reason' in mod_src,
       'Forbidden: причина в тексте, короткий титул (порядок аргументов верный)')
 
+print('== Права команд: выдача покрывает ВСЁ и без двух уровней правил ==')
+# фейковая гильдия выше без списка ролей — дополняем, чтобы GET отдал данные
+guild.roles = [NS(id='9001', name='Модераторы', color='0', position=1,
+                  hoist=False, permissions=NS(value=0), members=[1, 2, 3]),
+               NS(id='9002', name='Хелперы', color='0', position=1,
+                  hoist=False, permissions=NS(value=0), members=[1, 2])]
+# (регресс «даёт не все»: выдача писала только категории, а живые категории
+#  вообще не находились в статическом списке — правила не записывались)
+from services.permission_acl import load_acl, all_categories, has_access
+c0 = client_with('owner')
+r = c0.post('/api/role-permissions/777/preset',
+            json={'preset': 'all', 'role_ids': ['9001']})
+d = r.get_json() or {}
+check(d.get('success') is True, 'пресет «Все команды» применяется')
+g = (c0.get('/api/role-permissions/777').get_json() or {})
+acl = g.get('acl') or {}
+cats = g.get('categories') or {}
+live_cmds = [cmd for cmds in cats.values() for cmd in cmds]
+missed = [cmd for cmd in live_cmds if acl.get(cmd) != ['9001']]
+check(len(missed) == 0, f'пресет покрывает каждую команду ({len(live_cmds)} шт.)',
+      f'без прав: : {missed[:5]}' if missed else '')
+cat_keys = [k for k in acl if k in all_categories() and k not in live_cmds]
+check(not cat_keys, 'в ACL нет категорийных ключей — один уровень правил')
+
+live_only = [k for k in cats if k not in load_acl(777) and len(cats[k]) >= 1]
+target = live_only[0] if live_only else list(cats)[0]
+r = c0.post('/api/role-permissions/777/category/assign',
+            json={'category': target, 'role_ids': ['9002']})
+d = r.get_json() or {}
+check(d.get('success') is True and d.get('commands', 0) == len(cats.get(target, [])),
+      f'«Дать ролям» на живую категорию «{target}» пишет все {len(cats.get(target, []))} команд',
+      f'→ {d}')
+acl = (c0.get('/api/role-permissions/777').get_json() or {}).get('acl') or {}
+check(all(acl.get(cmd) == ['9002'] for cmd in cats.get(target, [])),
+      'после выдачи пилюли честные: каждая команда «Только выбранным»')
+
+class _M:
+    class _P: administrator = False
+    guild_permissions = _P(); bot = False
+    def __init__(self, rid): self.roles = [type('R', (), {'id': rid})()]
+some_cmd = live_cmds[0] if live_cmds else 'help'
+some_role = (acl.get(some_cmd) or ['9001'])[0]
+check(has_access(777, some_cmd, _M(some_role)) is True,
+      f'выданная роль реально проходит has_access ({some_cmd})')
+check(has_access(777, some_cmd, _M('4242')) is False,
+      'без выданной роли команда закрыта')
+
+c0.post('/api/role-permissions/777/clear')
+after = load_acl(777)
+check(not after, 'сброс: всё снова для всех')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

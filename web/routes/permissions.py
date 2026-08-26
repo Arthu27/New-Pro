@@ -134,7 +134,8 @@ def register(ctx):
                 roles .sort (key =lambda x :x ['position'])
             except Exception as _ex:
                 _log.debug("api_role_permissions_get(): демо-роли: %s", _ex )
-        acl =load_acl (int (guild_id ))
+        from services .permission_acl import effective_acl
+        acl =effective_acl (int (guild_id ))
         action_acl =load_action_acl (int (guild_id ))
         return jsonify ({
         'success':True ,
@@ -177,12 +178,23 @@ def register(ctx):
     @role_required ('owner')
     def api_role_permissions_set (guild_id ):
         """Установить роли для команды/категории."""
-        from services .permission_acl import set_rule ,clear_rule
+        from services .permission_acl import (set_rule ,clear_rule ,load_acl ,
+        save_acl ,materialize_category ,command_categories )
         data =request .get_json (silent =True )or {}
         command =data .get ('command','').strip ()
         role_ids =data .get ('role_ids',[]) or []
         if not command :
             return jsonify ({'success':False ,'error':'Нет команды'}),400
+        # у команды может быть правило на КАТЕГОРИЮ — разворачиваем его в
+        # явные правила на команды категории, чтобы правка одной команды не
+        # пересекалась с категорийным ограничением (иначе «выдал — а не дал»)
+        for cat ,cmds in command_categories ().items ():
+            if command in cmds :
+                acl =load_acl (int (guild_id ))
+                if cat in acl :
+                    materialize_category (acl ,cat )
+                    save_acl (int (guild_id ),acl )
+                break
         if role_ids :
             set_rule (int (guild_id ),command ,[str (r )for r in role_ids ])
         else :
@@ -211,20 +223,19 @@ def register(ctx):
         role_ids =[str (r )for r in (data .get ('role_ids',[]) or [])]
         if not role_ids :
             return jsonify ({'success':False ,'error':'Выберите хотя бы одну роль'}),400
-        acl ={}
-        if preset =='mod':
-            for cat ,cmds in all_categories ().items ():
-                if cat =='Модерация':
-                    acl [cat ]=role_ids
-        elif preset =='staff':
-            for cat ,cmds in all_categories ().items ():
-                if cat in ('Модерация','Тикеты','Логи'):
-                    acl [cat ]=role_ids
-        elif preset =='all':
-            for cat ,cmds in all_categories ().items ():
-                acl [cat ]=role_ids
-        else :
+        from services .permission_acl import materialize_category
+        cats_by_preset ={
+            'mod':{'Модерация'},
+            'staff':{'Модерация','Тикеты','Логи'},
+            'all':set (all_categories ().keys ()),
+        }.get (preset )
+        if cats_by_preset is None :
             return jsonify ({'success':False ,'error':'Неизвестный пресет'}),400
+        acl ={}
+        for cat ,cmds in all_categories ().items ():
+            if cat in cats_by_preset :
+                acl [cat ]=role_ids
+                materialize_category (acl ,cat )  # правило на КАЖДУЮ команду
         save_acl (int (guild_id ),acl )
         return jsonify ({'success':True ,'preset':preset })
 
@@ -234,12 +245,12 @@ def register(ctx):
     @role_required ('owner')
     def api_role_permissions_category_everyone (guild_id ):
         """Открыть категорию для всех: снять ограничения с категории и всех её команд."""
-        from services .permission_acl import COMMAND_CATEGORIES ,load_acl ,save_acl
+        from services .permission_acl import all_categories ,load_acl ,save_acl
         data =request .get_json (silent =True )or {}
         category =data .get ('category','').strip ()
         if not category :
             return jsonify ({'success':False ,'error':'Не указана категория'}),400
-        cmds =COMMAND_CATEGORIES .get (category ,[])
+        cmds =all_categories ().get (category ,[])
         acl =load_acl (int (guild_id ))
         acl .pop (category ,None )   # снять ограничение с категории
         for c in cmds :
@@ -253,20 +264,22 @@ def register(ctx):
     @role_required ('owner')
     def api_role_permissions_category_assign (guild_id ):
         """Топливо: назначить несколько ролей сразу на целую категорию (все её команды)."""
-        from services .permission_acl import COMMAND_CATEGORIES ,load_acl ,save_acl
+        from services .permission_acl import (load_acl ,save_acl ,
+        materialize_category ,all_categories )
         data =request .get_json (silent =True )or {}
         category =data .get ('category','').strip ()
         role_ids =[str (r )for r in (data .get ('role_ids',[]) or [])]
         if not category :
             return jsonify ({'success':False ,'error':'Не указана категория'}),400
-        cmds =COMMAND_CATEGORIES .get (category ,[])
+        # ЖИВОЙ каталог (как на странице) + legacy: раньше искали только в
+        # статическом списке, названия не совпадали — «Дать ролям» писал пусто
+        cmds =all_categories ().get (category ,[])
         acl =load_acl (int (guild_id ))
+        materialize_category (acl ,category )
         if role_ids :
-            acl [category ]=role_ids
             for c in cmds :
                 acl [c ]=role_ids
         else :
-            acl .pop (category ,None )
             for c in cmds :
                 acl .pop (c ,None )
         save_acl (int (guild_id ),acl )

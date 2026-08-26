@@ -323,13 +323,14 @@ function toggleGroupAll(key, on){
     checkedGroups[key] = true;
     g.pages.forEach(function(it){ checkedItems[it.path] = true; });
     openGroups[key] = true;
-    toast('Категория «'+g.group+'» включена целиком ('+g.pages.length+' страниц)', true);
+    toast('Категория «'+g.group+'» включена целиком ('+g.pages.length+' страниц) — не забудьте «Сохранить»', true);
   } else {
     delete checkedGroups[key];
     g.pages.forEach(function(it){ delete checkedItems[it.path]; });
-    toast('Категория «'+g.group+'» выключена', 'warn');
+    toast('Категория «'+g.group+'» выключена — не забудьте «Сохранить»', 'warn');
   }
-  refreshState();
+  // без refreshState(): он сбрасывает выбор к СОХРАНЁННОМУ состоянию,
+  // и включатель «отскакивал» обратно сразу после щелчка
   render();
 }
 
