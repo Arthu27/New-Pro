@@ -2931,11 +2931,11 @@ def api_public_apply ():
     if bot_instance :
         async def send_to_discord ():
             try :
-                from cogs .staff_apply import APPLY_CHANNEL_ID ,StaffReviewView 
+                from cogs .staff_apply import apply_target ,StaffReviewView 
                 guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
                 if not guild :
                     return 
-                channel =guild .get_channel (APPLY_CHANNEL_ID )
+                channel ,ping =apply_target (data .get ('role'),guild )
                 if not channel :
                     return 
                 embed =discord .Embed (
@@ -2953,7 +2953,7 @@ def api_public_apply ():
                     embed .add_field (name =" Дополнительно",value =f"```{data['ekstra']}```",inline =False )
                 embed .set_footer (text =f"Заявка ID: {app_id} • {guild.name}")
                 view =StaffReviewView ()
-                msg =await channel .send (embed =embed ,view =view )
+                msg =await channel .send (content =ping or None ,embed =embed ,view =view )
                 apps [app_id ]['message_id']=str (msg .id )
                 with open (apps_file ,'w',encoding ='utf-8')as f :
                     json .dump (apps ,f ,indent =2 ,ensure_ascii =False )

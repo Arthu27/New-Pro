@@ -179,6 +179,13 @@ class Config:
     # Роли, выдаваемые после одобрения заявки в команду (0 = искать по имени)
     STAFF_HELPER_ROLE_ID: int = _env_int('STAFF_HELPER_ROLE_ID', 0)
     STAFF_MODERATOR_ROLE_ID: int = _env_int('STAFF_MODERATOR_ROLE_ID', 0)
+    # Ветки заявок: куда отправлять «новую заявку» по должности
+    # (0 = общий канал APPLY_CHANNEL_ID)
+    STAFF_HELPER_CHANNEL_ID: int = _env_int('STAFF_HELPER_CHANNEL_ID', 0)
+    STAFF_MODERATOR_CHANNEL_ID: int = _env_int('STAFF_MODERATOR_CHANNEL_ID', 0)
+    # Кураторы: кого пинговать в ветке (0 = не пинговать)
+    STAFF_HELPER_CURATOR_ROLE_ID: int = _env_int('STAFF_HELPER_CURATOR_ROLE_ID', 0)
+    STAFF_MODERATOR_CURATOR_ROLE_ID: int = _env_int('STAFF_MODERATOR_CURATOR_ROLE_ID', 0)
 
     @classmethod
     def data_path(cls, *parts: str) -> str:

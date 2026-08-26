@@ -117,5 +117,9 @@ git pull
   одобрения заявки бот сам выдаёт роль (ищет по имени «Хелпер»/«Модератор»
   на сервере; можно задать ID в `.env`: `STAFF_HELPER_ROLE_ID`,
   `STAFF_MODERATOR_ROLE_ID`).
+- Ветки заявок: хелперы и модераторы — в РАЗНЫЕ каналы, каждая со своим
+  куратором. В `.env`: `STAFF_HELPER_CHANNEL_ID` / `STAFF_MODERATOR_CHANNEL_ID`
+  (каналы), `STAFF_HELPER_CURATOR_ROLE_ID` / `STAFF_MODERATOR_CURATOR_ROLE_ID`
+  (какую роль пинговать в ветке). Не заданы — общий `APPLY_CHANNEL_ID`.
 - Проверить, что авто-бэкап включён: `/backup list` покажет расписание,
   первый архив появится в течение суток.

@@ -195,6 +195,65 @@ hint = SR.role_hint(res)
 check('STAFF_HELPER_ROLE_ID' in hint and 'хелпер' in hint.lower(),
       f'подсказка человеку: {hint}')
 
+# ── 3.5 Ветки заявок: хелперы — своим кураторам, модераторы — своим ──
+print('== Ветки заявок: своя на каждую должность ==')
+from cogs.staff_apply import apply_target
+from config import Config
+
+
+class FakeChan:
+    def __init__(self, cid): self.id = cid
+
+
+class FakeGuildCh:
+    def __init__(self, chans): self._ch = {c.id: c for c in chans}
+
+    def get_channel(self, cid):
+        return self._ch.get(cid)
+
+
+_p = (Config.STAFF_HELPER_CHANNEL_ID, Config.STAFF_MODERATOR_CHANNEL_ID,
+      Config.STAFF_HELPER_CURATOR_ROLE_ID, Config.STAFF_MODERATOR_CURATOR_ROLE_ID)
+(_ph, _pm, _ch, _cm) = _p
+try:
+    Config.STAFF_HELPER_CHANNEL_ID = 501
+    Config.STAFF_MODERATOR_CHANNEL_ID = 502
+    Config.STAFF_HELPER_CURATOR_ROLE_ID = 601
+    Config.STAFF_MODERATOR_CURATOR_ROLE_ID = 602
+    gch = FakeGuildCh([FakeChan(501), FakeChan(502), FakeChan(500)])
+
+    ch, ping = apply_target('Хелпер', gch)
+    check(ch is not None and ch.id == 501 and ping == '<@&601>',
+          'заявка хелпера → ветка хелперов (501) + пинг кураторов хелперов',
+          f'→ канал {getattr(ch, "id", None)}, пинг {ping}')
+    ch, ping = apply_target('Модератор', gch)
+    check(ch is not None and ch.id == 502 and ping == '<@&602>',
+          'заявка модератора → ветка модераторов (502) + пинг своих кураторов')
+    ch, ping = apply_target('Chat Control', gch)
+    check(ch.id == 502, 'легаси чат-контроль ведётся в ветку модераторов')
+
+    Config.STAFF_HELPER_CHANNEL_ID = 0  # ветки нет → общий канал
+    from cogs import staff_apply as _sa
+    _saved_apply_ch, _sa.APPLY_CHANNEL_ID = _sa.APPLY_CHANNEL_ID, 500
+    try:
+        ch, ping = apply_target('Хелпер', gch)
+        check(ch is not None and ch.id == 500,
+              'без своей ветки — общий канал заявок')
+    finally:
+        _sa.APPLY_CHANNEL_ID = _saved_apply_ch
+    ch, ping = apply_target('Хелпер', None)
+    check(ch is None and ping == '', 'без гильдии — ничего не отправляем')
+finally:
+    (Config.STAFF_HELPER_CHANNEL_ID, Config.STAFF_MODERATOR_CHANNEL_ID,
+     Config.STAFF_HELPER_CURATOR_ROLE_ID, Config.STAFF_MODERATOR_CURATOR_ROLE_ID) = _p
+
+src_cog = open(os.path.join(repo, 'cogs', 'staff_apply.py'), encoding='utf-8').read()
+src_web = open(os.path.join(repo, 'web', 'app.py'), encoding='utf-8').read()
+check('apply_target(self.role_name, interaction.guild)' in src_cog,
+      'Discord-заявка уходит в ветку по должности')
+check('apply_target (data .get' in src_web or 'apply_target(data' in src_web,
+      'веб-заявка уходит в ту же ветку по должности')
+
 # ── 4. Кнопки в Discord: одобрение выдаёт роль ───────────────────────
 print('== Кнопки «Одобрить» в Discord ==')
 apps = {'42': {

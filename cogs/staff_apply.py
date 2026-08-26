@@ -155,6 +155,30 @@ def generate_staff_panel_bytes() -> io.BytesIO:
     return buf
 
 
+def apply_target(role_name: str, guild):
+    """Куда отправить новую заявку: своя ветка на должность + кого позвать.
+
+    Хелперам и модераторам — отдельные каналы (STAFF_HELPER_CHANNEL_ID /
+    STAFF_MODERATOR_CHANNEL_ID), каждому своему куратору; кураторов бот
+    пингует ролью (STAFF_*_CURATOR_ROLE_ID). Запасной канал — общий
+    APPLY_CHANNEL_ID. Возвращает (channel, content) или (None, '')."""
+    from services.staff_roles import normalize_position
+    if not guild:
+        return None, ''
+    kind = normalize_position(role_name) or 'moderator'
+    if kind == 'helper':
+        cid = Config.STAFF_HELPER_CHANNEL_ID
+        cur = Config.STAFF_HELPER_CURATOR_ROLE_ID
+    else:
+        cid = Config.STAFF_MODERATOR_CHANNEL_ID
+        cur = Config.STAFF_MODERATOR_CURATOR_ROLE_ID
+    ch = guild.get_channel(cid) if cid else None
+    if ch is None:
+        ch = guild.get_channel(APPLY_CHANNEL_ID) if APPLY_CHANNEL_ID else None
+    content = f'<@&{cur}>' if cur else ''
+    return ch, content
+
+
 def load_apps():
     os.makedirs("data", exist_ok=True)
     if os.path.exists(APPS_FILE):
@@ -240,9 +264,10 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        # Уведомление в канал заявок
-        if APPLY_CHANNEL_ID and interaction.guild:
-            ch = interaction.guild.get_channel(APPLY_CHANNEL_ID)
+        # Уведомление в ветку заявки: хелперы — кураторам хелперов,
+        # модераторы — кураторам модераторов (свой канал + пинг роли)
+        if interaction.guild:
+            ch, ping = apply_target(self.role_name, interaction.guild)
             if ch:
                 notify = discord.Embed(
                     title="Новая заявка",
@@ -258,7 +283,7 @@ class StaffApplyModal(discord.ui.Modal, title="Заявка в команду"):
                 notify.add_field(name="Опыт", value=str(self.experience)[:500], inline=False)
                 notify.add_field(name="Причина", value=str(self.reason)[:500], inline=False)
                 notify.set_footer(text=f"ID заявителя: {user_id}")
-                msg = await ch.send(embed=notify, view=StaffReviewView())
+                msg = await ch.send(content=ping or None, embed=notify, view=StaffReviewView())
                 apps[user_id]["message_id"] = str(msg.id)
                 save_apps(apps)
 
