@@ -7,7 +7,7 @@
   <div class="page-head-copy">
     <div class="eyebrow">Бот <span class="sep">·</span> Контент</div>
     <h1>Правила сервера</h1>
-    <p class="lead">Текст, до двух ссылок на правило, картинка и миниатюра. Публикация эмбедами или одним V2-сообщением от вебхука «Правил сервера».</p>
+    <p class="lead">Текст, до двух ссылок на правило, картинка и миниатюра. Публикация эмбедами или одним V2-сообщением от вебхука «Правила сервера».</p>
   </div>
   <div class="page-head-actions">
     <select id="guild-select" class="form-input" style="width:auto;min-width:200px" onchange="window.__rulesLoad && window.__rulesLoad()" aria-label="Выбор сервера">
@@ -381,8 +381,20 @@
       </div>
       </div>
       <div id="pvPaneV2" hidden>
-        <div class="v2p" id="pv2"></div>
-        <div class="preview-foot"><i class="fas fa-circle-info"></i> Так сообщение выглядит в новом формате: один блок от вебхука «Правила сервера» с аватаркой сервера — обе ссылки правила рядом</div>
+        <div class="preview-card">
+          <div class="preview-card-bar" id="pv2ColorBar"></div>
+          <div class="preview-card-body">
+            <div class="pv-msg">
+              <span class="pv-ava"><span class="ph">П</span><img alt="" src="/static/brand/emblem-dragon.png" onerror="this.remove()"></span>
+              <div style="flex:1;min-width:0">
+                <div class="pv-bot-line"><span class="pv-bot-name" id="pv2HookName">Правила сервера</span><span class="pv-bot-badge"><i class="fas fa-paper-plane"></i> Вебхук</span></div>
+                <div class="v2p" id="pv2"></div>
+              </div>
+            </div>
+            <div class="preview-foot"><i class="fas fa-circle-info"></i> Имя и аватар сообщения — вебхук «Правила сервера» (аватарка сервера); заголовок, вступление и цвет берутся из полей выше</div>
+          </div>
+        </div>
+      </div>
       </div>
 
       <label class="field-label" for="rules-channel">Публикация в Discord</label>
@@ -462,6 +474,8 @@
     if (pt) pt.textContent = title || 'Правила сервера';
     if (pi) { pi.textContent = intro; pi.className = 'preview-intro' + (intro ? ' show' : ''); }
     if (pb) pb.style.background = color;
+    var pb2 = document.getElementById('pv2ColorBar');
+    if (pb2) pb2.style.background = color;
     var pe = document.getElementById('pv-embed');
     if (pe) pe.style.borderLeftColor = color;
     if (!document.getElementById('pvPaneV2').hidden) renderPreviewV2();
@@ -704,7 +718,7 @@
       html += '</div>';
       if (i < rules.length - 1) html += '<div class="v2p-sep"></div>';
     });
-    html += '<div class="v2p-foot">Правила сервера · обе ссылки в одном сообщении · наказания выдаёт модератор</div>';
+    html += '<div class="v2p-foot">обе ссылки правила уходят в одном сообщении</div>';
     html += '</div>';
     box.innerHTML = html;
   }

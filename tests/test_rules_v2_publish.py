@@ -81,6 +81,10 @@ check('pvTabEmbed' in tpl and 'pvTabV2' in tpl and 'Webhook · V2' in tpl,
       'табы превью «Эмбеды / Webhook · V2»')
 check('pvPaneEmbed' in tpl and 'pvPaneV2' in tpl and 'id="pv2"' in tpl,
       'две панели превью, V2-панель с живым макетом')
+check('pv2HookName' in tpl and 'Правила сервера' in tpl,
+      'в V2-превью видно имя вебхука «Правила сервера»')
+check('Вебхук' in tpl and 'pv2ColorBar' in tpl,
+      'бейдж «Вебхук» и цветная полоса в V2-превью')
 check('renderPreviewV2' in tpl, 'живой V2-превью перерисовывается')
 check('data-field="u2"' in tpl and 'Вторая ссылка' in tpl,
       'у правила есть инпут второй ссылки')
