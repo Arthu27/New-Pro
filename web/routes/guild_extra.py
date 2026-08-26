@@ -184,9 +184,10 @@ def register(ctx):
         wh_id =data .get ('webhook_id')
         message =data .get ('message','')
         username =data .get ('username','Aether')
+        style =data .get ('style','')
         f =f'data/webhooks_{guild_id}.json'
         if not os .path .exists (f ):return jsonify ({'error':'Вебхук не найден'})
-        with open (f ,'r',encoding ='utf-8')as fp :whs =json .load (fp )
+        with open (f ,encoding='utf-8')as fp :whs =json .load (fp )
         if wh_id not in whs :return jsonify ({'error':'Вебхук не найден'})
         wh_data =whs [wh_id ]
         async def do ():
@@ -195,6 +196,19 @@ def register(ctx):
                 webhooks =await (channel .webhooks ())
                 wh =_discord .utils .get (webhooks ,id =int (wh_id ))
                 if wh :
+                    # Components V2: сообщение блоками (контейнер, заголовки,
+                    # разделители) — библиотека сама ставит флаг v2
+                    if style =='v2':
+                        from services .v2_layouts import rules_layout ,rules_embed
+                        title =data .get ('title','Сообщение')
+                        lines =data .get ('lines')or ([message ]if message else ['—'])
+                        layout =rules_layout (title ,lines ,footer =username )
+                        if layout is not None :
+                            await (wh .send (view =layout ,username =username ))
+                            return 
+                        await (wh .send (embed =rules_embed (title ,lines ),
+                        username =username ))
+                        return 
                     await (wh .send (content =message ,username =username ))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )

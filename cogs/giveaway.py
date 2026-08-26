@@ -192,7 +192,15 @@ class GiveawayCog(commands.Cog):
                     except (discord.NotFound, ValueError) as _ex:
                         log.debug("check_giveaways(): подавлено: %s", _ex)
 
-                await channel.send(embed=_ended_embed(prize, winner_mentions, guild))
+                # Финал: Components V2-раскладка, при недоступности — эмбед
+                from services.v2_layouts import (giveaway_end_layout,
+                                                 giveaway_end_embed,
+                                                 send_v2_or_embed)
+                await send_v2_or_embed(
+                    channel,
+                    view=giveaway_end_layout(prize, winner_mentions,
+                                             footer=guild.name),
+                    embed=giveaway_end_embed(prize, winner_mentions))
 
             if changed:
                 _save_giveaways(guild.id, data)
@@ -257,7 +265,23 @@ class GiveawayCog(commands.Cog):
         embed.set_footer(text=f"ID: {gw_id}")
 
         view = GiveawayView(gw_id, str(ctx.guild.id))
-        msg = await ctx.send(embed=embed, view=view)
+        # Components V2: гибкая раскладка вместо эмбеда; если библиотека
+        # или клиент старые — тот же старт уходит классическим эмбедом.
+        from services.v2_layouts import (v2_available, giveaway_start_layout,
+                                         giveaway_start_embed, send_v2_or_embed)
+        if v2_available():
+            gv_v2 = GiveawayView(gw_id, str(ctx.guild.id))
+            layout = giveaway_start_layout(
+                prize, winners, ends_at, footer=f"{ctx.guild.name} • ID {gw_id}",
+                icon_url=str(ctx.guild.icon.url) if ctx.guild.icon else None)
+            msg = await send_v2_or_embed(
+                ctx, view=layout,
+                embed=giveaway_start_embed(prize, winners, ends_at,
+                                           footer=f"ID: {gw_id}"),
+                fallback_view=view,
+                v2_items=list(gv_v2.children))
+        else:
+            msg = await ctx.send(embed=embed, view=view)
 
         data[gw_id]["message_id"] = str(msg.id)
         _save_giveaways(ctx.guild.id, data)
