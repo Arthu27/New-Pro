@@ -106,7 +106,7 @@ cog = Moderation(FakeBot())
 
 # ═══ 1. Переключатель «демка обязательна» ═════════════════════════════════
 print('== тумблер «демка обязательна» ==')
-check(proof_is_required(GID) is True, 'по умолчанию требование включено')
+check(proof_is_required(GID) is False, 'по умолчанию требование ВЫКЛЮЧЕНО (включается в панели)')
 check(proof_set_required(GID, False) is False, 'выключение сохранилось')
 check(proof_is_required(GID) is False, 'после выключения чтение даёт False')
 check(proof_set_required(GID, True) is True, 'включение обратно работает')
@@ -251,10 +251,16 @@ def login(username, role='owner'):
 
 mod = login('owner', 'mod')
 r = mod.get('/api/proof-required')
-check(r.status_code == 200 and r.get_json().get('required') is True,
-      'mod видит положение тумблера (GET)')
+check(r.status_code == 200 and r.get_json().get('required') is False,
+      'mod видит: по умолчанию демка не нужна')
 r = mod.post('/api/proof-required', json={'required': False})
 check(r.status_code == 403, 'mod НЕ может переключать (только admin+)')
+adm0 = login('owner', 'admin')
+adm0.post('/api/proof-required', json={'required': True})
+mod = login('owner', 'mod')
+r = mod.get('/api/proof-required')
+check(r.status_code == 200 and r.get_json().get('required') is True,
+      'mod видит положение тумблера (GET)')
 
 adm = login('owner', 'admin')
 r = adm.post('/api/proof-required', json={'required': False})
