@@ -358,6 +358,9 @@
         <button type="button" class="btn btn-primary" id="btnPublishRules">
           <i class="fas fa-paper-plane"></i> Опубликовать
         </button>
+        <button type="button" class="btn" id="btnPublishRulesV2" title="Одно сообщение нового формата (Components V2) от вебхука «Правила сервера» — с аватаркой сервера, не от бота">
+          <i class="fas fa-wand-magic-sparkles"></i> Красиво (V2)
+        </button>
       </div>
       <div class="publish-status" id="publishStatus" role="status" aria-live="polite"></div>
       <div class="publish-hint">
@@ -703,7 +706,7 @@
     btn.innerHTML = orig;
   }
 
-  async function publishRules() {
+  async function publishRules(style) {
     if (!CAN_EDIT) { publishStatus(false, 'Публиковать могут только администраторы'); return; }
     if (!selectedGuild) { publishStatus(false, 'Выберите сервер!'); return; }
     var ch = document.getElementById('rules-channel').value;
@@ -714,16 +717,16 @@
     }).filter(function (r) { return r.t; });
     if (!clean.length) { publishStatus(false, 'Сначала добавьте правила!'); return; }
     if (!checkUrls()) return;
-    var btn = document.getElementById('btnPublishRules');
+    var btn = document.getElementById(style === 'v2' ? 'btnPublishRulesV2' : 'btnPublishRules');
     var orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Публикуем…';
-    publishStatus(true, 'Отправляем правила в Discord…');
+    publishStatus(true, style === 'v2' ? 'Отправляем красивое V2-сообщение от «Правил сервера»…' : 'Отправляем правила в Discord…');
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/rules/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel_id: ch, rules: clean, title: document.getElementById('rules-title').value.trim(),
+        body: JSON.stringify({ channel_id: ch, rules: clean, style: style || 'classic', title: document.getElementById('rules-title').value.trim(),
                                intro: document.getElementById('rules-intro').value.trim(),
                                color: document.getElementById('rules-color').value.replace('#', '') })
       });
@@ -789,7 +792,8 @@
   if (gs) gs.addEventListener('change', function () { window.__rulesLoad(); });
   document.getElementById('btnAddRule').addEventListener('click', addRule);
   document.getElementById('btnSaveRules').addEventListener('click', saveRules);
-  document.getElementById('btnPublishRules').addEventListener('click', publishRules);
+  document.getElementById('btnPublishRules').addEventListener('click', function(){ publishRules('classic'); });
+  document.getElementById('btnPublishRulesV2').addEventListener('click', function(){ publishRules('v2'); });
   var refresh = document.getElementById('rulesRefresh');
   if (refresh) refresh.addEventListener('click', loadRules);
 
@@ -814,7 +818,7 @@
 
   /* права: без админа кнопки отключены с подсказкой */
   if (!CAN_EDIT) {
-    ['btnSaveRules', 'btnPublishRules', 'btnAddRule'].forEach(function (id) {
+    ['btnSaveRules', 'btnPublishRules', 'btnPublishRulesV2', 'btnAddRule'].forEach(function (id) {
       var b = document.getElementById(id);
       if (b) { b.disabled = true; b.title = 'Требуются права администратора'; }
     });

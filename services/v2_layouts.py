@@ -120,20 +120,23 @@ def giveaway_end_embed(prize: str, winner_mentions: list, ok: bool = True):
 # ── ПРАВИЛА ──────────────────────────────────────────────────────────
 
 def rules_layout(title: str, items: list, footer: str = '',
-                 icon_url: str = None, accent: int = 0x818CF8):
-    """Правила сервера в V2: контейнер, заголовок, иконка сбоку (Section),
-    каждый пункт — отдельным блоком с разделителем. Голосом вебхука
-    такое сообщение приходит от «Правила сервера», а не от бота."""
+                 icon_url: str = None, accent: int = 0x818CF8,
+                 intro: str = ''):
+    """Правила сервера в V2: контейнер, заголовок, вступление, иконка сбоку
+    (Section), каждый пункт — отдельным блоком с разделителем. Голосом
+    вебхука такое сообщение приходит от «Правила сервера», а не от бота."""
     if not V2_AVAILABLE:
         return None
     children = [_ui.TextDisplay(f'# {title}'),
                 _ui.Separator(spacing=SeparatorSpacing.large)]
     if icon_url:
         children.append(_ui.Section(
-            _ui.TextDisplay('Соблюдай простые правила — и всем будет '
-                            'комфортно. Наказания выдаёт только '
-                            'модератор-человек.'),
+            _ui.TextDisplay(intro or ('Соблюдай простые правила — и всем '
+                                      'будет комфортно. Наказания выдаёт '
+                                      'только модератор-человек.')),
             accessory=_ui.Thumbnail(media=icon_url)))
+    elif intro:
+        children.append(_ui.TextDisplay(intro))
     for i, item in enumerate(items, 1):
         head, text = (item if isinstance(item, (list, tuple)) else (None, item))
         line = f'**{i}. {head}**' if head else f'**{i}.**'

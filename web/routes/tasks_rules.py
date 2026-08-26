@@ -361,6 +361,10 @@ def register(ctx):
                 except Exception as _ex :
                     _log.debug("api_publish_rules(): panel_logs: %s", _ex)
                 _gen_note =f", из них {gen_count} с авто-картинкой" if gen_count else ''
+                if data .get ('style')=='v2':
+                    return jsonify ({'success':True ,'demo':True ,'style':'v2','title':title ,'color':color_s .lower (),
+                        'images_generated':gen_count ,
+                        'message':f"Демо-режим: {len (rules )} правил готовы — при живом боте они уйдут одним красивым сообщением нового формата (Components V2) от вебхука «Правила сервера» с аватаркой сервера"})
                 return jsonify ({'success':True ,'demo':True ,'title':title ,'color':color_s .lower (),
                     'images_generated':gen_count ,
                     'message':f"Демо-режим: {len (rules )} правил готовы{_gen_note} — при живом боте они уйдут в Discord с заголовком «{title}»"})
@@ -368,6 +372,60 @@ def register(ctx):
         guild =bot .get_guild (int (guild_id ))
         if guild is None :
             return jsonify ({'error':'Сервер не найден у бота'}),404 
+
+        # ── Режим «красиво»: одно V2-сообщение от вебхука «Правила сервера»
+        # с аватаркой сервера — вместо пачки эмбедов от бота. Нет права
+        # вебхуков — тем же макетом уходит сообщением бота (V2 или эмбед).
+        if data .get ('style')=='v2':
+            from services .v2_layouts import rules_layout ,rules_embed ,send_v2_or_embed
+            items_v2 =[]
+            for r in rules :
+                t =r ['t'][:1000 ]
+                if r ['u']:
+                    t +="\n[Подробнее]("+r ['u']+")"
+                items_v2 .append (t )
+            icon_v2 =str (guild .icon .url )if guild .icon else None 
+            updated ='обновлено '+datetime .now (timezone .utc ).strftime ('%d.%m.%Y')
+            layout =rules_layout (title ,items_v2 ,
+            footer =f'{guild .name } · {updated } · наказания выдаёт модератор',
+            icon_url =icon_v2 ,accent =accent ,intro =intro )
+            fallback_embed_v2 =rules_embed (title ,items_v2 ,footer =updated )
+
+            async def send_v2 ():
+                ch =bot .get_channel (int (ch_id ))
+                ok_ch ,err_ch =channel_ok (ch ,guild )
+                if not ok_ch :
+                    raise RuntimeError (err_ch )
+                perms =ch .permissions_for (guild .me )
+                if not perms .manage_webhooks :
+                    await send_v2_or_embed (ch ,view =layout ,
+                    embed =fallback_embed_v2 )
+                    return 'bot'
+                hooks =await (ch .webhooks ())
+                wh =discord .utils .get (hooks ,name ='Правила сервера')
+                if wh is None :
+                    wh =await (ch .create_webhook (name ='Правила сервера',
+                    reason ='Публикация правил из панели Aether'))
+                kw ={'view':layout ,'username':(title [:80 ]or 'Правила сервера')}
+                if icon_v2 :
+                    kw ['avatar_url']=icon_v2 
+                await (wh .send (**kw ))
+                return 'webhook'
+
+            try :
+                how =asyncio .run_coroutine_threadsafe (send_v2 (),bot .loop ).result (timeout =25 )
+            except Exception as _ex :
+                msg =str (_ex )
+                if 'Forbidden' in msg or 'Missing Access' in msg :
+                    msg ='Discord запретил отправку: проверьте права бота в канале'
+                _log .debug("api_publish_rules(): v2 подавлено: %s", _ex)
+                return jsonify ({'error':f"Не удалось опубликовать: {msg }"[:220 ]}),502 
+            _fire_panel_notification ('rules',f"Правила опубликованы (V2): {len (rules )} пунктов",
+            f"Канал {ch_id } · голос: {'вебхук «Правила сервера»' if how =='webhook' else 'бот (нет права вебхуков)'}")
+            return jsonify ({'success':True ,'style':'v2','via':how ,'title':title ,
+            'message':("Опубликовано красиво: " if how =='webhook' else "Опубликовано голосом бота: ")+
+            f"{len (rules )} правил в одном сообщении нового формата"})
+
         embeds =build_embeds ()
 
         async def send ():
