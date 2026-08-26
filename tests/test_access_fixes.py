@@ -65,5 +65,17 @@ check('preflight_reason' in mod and 'У бота не хватит прав' in 
 check('владелец сервера' in mod and 'top_role' in mod and 'Настройки сервера' in mod,
       'диагностика: иерархия ролей / владелец / право бота — с что делать')
 
+print('== «Права команд»: без выбранных ролей не молчит ==')
+rp = src('web/templates/role_permissions.html')
+check('needRolesWarn' in rp and 'needRoles' in rp and 'roles-pulse' in rp,
+      'кнопки без ролей: баннер-подсказка + пульс колонки ролей вместо тихого тоста')
+
+print('== «Меню панели»: категория включается целиком ==')
+pm = src('web/templates/panel_menu.html')
+check('toggleGroupAll' in pm and 'pm-cat-switch' in pm,
+      'у каждой категории свой включатель (вся категория разом)')
+check(pm.count("openGroups[g.key] = true") >= 1 and 'MENU.forEach(function(g){ openGroups[g.key] = true; })' in pm,
+      'категории раскрыты после загрузки — видно содержимое')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

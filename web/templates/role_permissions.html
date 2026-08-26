@@ -266,6 +266,10 @@
   @media (prefers-reduced-motion: reduce) {
     .cat-chev, .role-item, .role-check, .cmd-card, .cmd-grant, .cat-head { transition: none; }
   }
+.need-roles{display:none;margin:10px 0 0;padding:10px 14px;border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.12);color:#f59e0b;border-radius:10px;font-size:13px;font-weight:600}
+.need-roles.show{display:block}
+@keyframes rolesPulse{0%,100%{box-shadow:0 0 0 0 rgba(129,140,248,0)}50%{box-shadow:0 0 0 4px rgba(129,140,248,.35)}}
+.roles-pulse{animation:rolesPulse 1s ease-in-out 2}
 </style>
 
 <div class="acc-wrap">
@@ -323,6 +327,7 @@
       </div>
       <div class="acc-actions" id="actions-block"></div>
       <div id="acc-body"></div>
+          <div class="need-roles" id="needRoles"><i class="fas fa-hand-pointer"></i> Сначала отметьте роли слева — потом «Дать ролям» выдаст категорию им всем разом.</div>
     </div>
   </div>
 </div>
@@ -628,8 +633,16 @@ function renderActions() {
     + '<div class="act-grid">' + cards + '</div>';
 }
 
+function needRolesWarn() {
+  var b = document.getElementById('needRoles');
+  if (b) { b.classList.add('show'); setTimeout(function () { b.classList.remove('show'); }, 6000); }
+  var col = document.getElementById('role-list');
+  if (col) { col.classList.remove('roles-pulse'); void col.offsetWidth; col.classList.add('roles-pulse'); }
+  toast('Сначала отметьте роли слева', false);
+}
+
 function toggleAction(key) {
-  if (!selectedRoleIds.length) { toast('Сначала отметьте роли', false); return; }
+  if (!selectedRoleIds.length) { needRolesWarn(); return; }
   var roles = ACTION_ACL[key] ? ACTION_ACL[key].slice() : [];
   var allGranted = selectedRoleIds.every(function (r) { return roles.indexOf(r) !== -1; });
   if (allGranted) {
@@ -678,7 +691,7 @@ function expandAll(open) {
 }
 
 function toggleCommand(cat, cmd) {
-  if (!selectedRoleIds.length) { toast('Сначала отметьте роли', false); return; }
+  if (!selectedRoleIds.length) { needRolesWarn(); return; }
   var roles = ACL[cmd] ? ACL[cmd].slice() : [];
   var allGranted = selectedRoleIds.every(function (r) { return roles.indexOf(r) !== -1; });
   if (allGranted) {
@@ -700,7 +713,7 @@ function toggleCommand(cat, cmd) {
 }
 
 function categoryAssign(cat) {
-  if (!selectedRoleIds.length) { toast('Сначала отметьте роли', false); return; }
+  if (!selectedRoleIds.length) { needRolesWarn(); return; }
   fetch('/api/role-permissions/' + ('{{ guild_id }}') + '/category/assign', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ category: cat, role_ids: selectedRoleIds })
@@ -725,7 +738,7 @@ function categoryEveryone(cat) {
 }
 
 function applyPreset(preset) {
-  if (!selectedRoleIds.length) { toast('Сначала отметьте роли', false); return; }
+  if (!selectedRoleIds.length) { needRolesWarn(); return; }
   var names = { mod: 'Модерация', staff: 'Стафф', all: 'Все команды' };
   askConfirm('Применить пресет «' + (names[preset] || preset) + '»?',
     'Текущие настройки доступа будут заменены пресетом для ' + selectedRoleIds.length + ' выбранных ролей.',

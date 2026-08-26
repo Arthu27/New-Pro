@@ -78,6 +78,8 @@
   .pm-toast.show { transform:translateX(-50%) translateY(0); }
   .pm-toast.ok { border-color:var(--ok); }
   .pm-toast.err { border-color:var(--err); }
+.pm-cat-switch{margin:0 10px 0 2px;flex:none}
+.pm-group-head{display:flex;align-items:center;gap:8px}
 </style>
 
 <div class="pm-wrap">
@@ -287,7 +289,6 @@ function render(){
       if(!q) return true;
       return it.label.toLowerCase().indexOf(q) !== -1 || it.path.indexOf(q) !== -1;
     });
-    var groupOn = !!checkedGroups[g.key];
     var onCount = items.filter(function(it){ return checkedItems[it.path]; }).length;
     var open = !!openGroups[g.key];
     var itemsHtml = items.map(function(it){
@@ -298,11 +299,14 @@ function render(){
         + '<span class="ppath">'+it.path+'</span>'
         + '</div>';
     }).join('');
+    var groupOn = !!checkedGroups[g.key];
     html += '<div class="pm-group '+(open?'open':'')+'" id="pmg-'+g.key+'">'
       + '<div class="pm-group-head" onclick="toggleGroupOpen(\''+g.key+'\')">'
+      + '<label class="switch pm-cat-switch" title="'+(groupOn?'Категория включена целиком':'Категория выключена — щёлкни, чтобы включить всю')+'" onclick="event.stopPropagation()">'
+      + '<input type="checkbox" '+(groupOn?'checked':'')+' onchange="toggleGroupAll(\''+g.key+'\', this.checked)"><span class="sl"></span></label>'
       + '<span class="gio"><i class="fas '+g.icon+'"></i></span>'
       + '<span class="gname">'+g.group+'</span>'
-      + '<span class="gcount">'+onCount+'/'+items.length+'</span>'
+      + '<span class="gcount">'+(groupOn?'вкл ':'')+onCount+'/'+items.length+'</span>'
       + '<span class="gcaret"><i class="fas fa-chevron-down"></i></span>'
       + '</div>'
       + '<div class="pm-group-body">'+itemsHtml+'</div>'
@@ -310,6 +314,23 @@ function render(){
   });
   if(!html) html = '<div class="pm-empty"><i class="fas fa-search"></i>Ничего не найдено</div>';
   el.innerHTML = html;
+}
+
+function toggleGroupAll(key, on){
+  var g = MENU.find(function(x){ return x.key === key; });
+  if(!g) return;
+  if(on){
+    checkedGroups[key] = true;
+    g.pages.forEach(function(it){ checkedItems[it.path] = true; });
+    openGroups[key] = true;
+    toast('Категория «'+g.group+'» включена целиком ('+g.pages.length+' страниц)', true);
+  } else {
+    delete checkedGroups[key];
+    g.pages.forEach(function(it){ delete checkedItems[it.path]; });
+    toast('Категория «'+g.group+'» выключена', 'warn');
+  }
+  refreshState();
+  render();
 }
 
 function toggleGroupOpen(key){
@@ -391,6 +412,7 @@ function load(){
       LAY.order = lay.order || {};
       normalizeLayout();
       openGroups = {};
+      MENU.forEach(function(g){ openGroups[g.key] = true; });
       refreshState();
       render();
     })
