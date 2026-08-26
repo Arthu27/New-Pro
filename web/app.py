@@ -194,6 +194,28 @@ def inject_static_versions ():
             return '1'
     return {'static_v':static_v }
 
+
+# ── Индикатор сборки: коммит, который реально задеплоен ──────────────
+_BUILD_COMMIT =None
+try :
+    _root =os .path .dirname (os .path .dirname (os .path .abspath (__file__)))
+    with open (os .path .join (_root ,'.git','HEAD'),encoding ='utf-8') as _fh :
+        _head =_fh .read ().strip ()
+    if _head .startswith ('ref:'):
+        _ref =_head .split (' ',1)[1].strip ()
+        _path =os .path .join (_root ,'.git',*_ref .split ('/'))
+        with open (_path ,encoding ='utf-8') as _fh :
+            _BUILD_COMMIT =_fh .read ().strip ()[:7]
+    else :
+        _BUILD_COMMIT =_head [:7]
+except Exception :
+    _BUILD_COMMIT =None
+
+@app .context_processor
+def inject_build_commit ():
+    return {'build_commit':_BUILD_COMMIT or ''}
+
+
 @app .before_request 
 def before_request ():
     # Демо-режим: автоматический вход владельцем без логина и пароля.
