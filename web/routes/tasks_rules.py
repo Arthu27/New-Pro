@@ -408,7 +408,10 @@ def register(ctx):
                 if not ok_ch :
                     raise RuntimeError (err_ch )
                 perms =ch .permissions_for (guild .me )
+                print (f"[ПРАВИЛА] V2-публикация в #{getattr (ch ,'name',ch_id )}: "
+                f"право вебхуков = {perms .manage_webhooks }")
                 if not perms .manage_webhooks :
+                    print ("[ПРАВИЛА] Фолбек: шлю голосом бота (нет права вебхуков)")
                     await send_v2_or_embed (ch ,view =layout ,
                     embed =fallback_embed_v2 )
                     return 'bot'
@@ -417,10 +420,14 @@ def register(ctx):
                 if wh is None :
                     wh =await (ch .create_webhook (name ='Правила сервера',
                     reason ='Публикация правил из панели Aether'))
+                    print (f"[ПРАВИЛА] Вебхук создан: «{wh .name }» (id {wh .id }) в #{ch .name }")
+                else :
+                    print (f"[ПРАВИЛА] Найден существующий вебхук: «{wh .name }» (id {wh .id })")
                 kw ={'view':layout ,'username':'Правила сервера'}
                 if icon_v2 :
                     kw ['avatar_url']=icon_v2 
                 await (wh .send (**kw ))
+                print (f"[ПРАВИЛА] V2-сообщение отправлено от вебхука «{wh .name }»")
                 return 'webhook'
 
             try :
