@@ -155,7 +155,10 @@ class FakeCtx:
 set_rule(GID, 'j2c', ['900'])
 inter = FakeInteraction('j2c lobby', Member(roles=[1]))
 ok = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter))
-check(ok is False and inter.response.kw and 'нет доступа' in inter.response.kw['content'],
+check(ok is False and inter.response.kw
+      and 'Недостаточно прав' in inter.response.kw['content']
+      and '/j2c' in inter.response.kw['content']
+      and inter.response.kw.get('ephemeral') is True,
       'slash: /j2c lobby заблокирован для чужого (эфемерно)')
 inter2 = FakeInteraction('j2c lobby', Member(roles=[900]))
 ok2 = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter2))

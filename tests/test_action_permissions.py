@@ -162,7 +162,10 @@ set_action_rule(GID, 'ban', ['900'])
 inter = FakeInteraction('modpanel', Member(roles=[1]),
                         {'name': 'modpanel', 'options': [{'name': 'action', 'value': 'ban', 'type': 3}]})
 ok = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter))
-check(ok is False and inter.response.kw and 'действию' in inter.response.kw['content'],
+check(ok is False and inter.response.kw
+      and 'Недостаточно прав' in inter.response.kw['content']
+      and 'действие' in inter.response.kw['content']
+      and inter.response.kw.get('ephemeral') is True,
       'slash: опция action=ban заблокирована для чужого')
 
 inter2 = FakeInteraction('modpanel', Member(roles=[900]),
