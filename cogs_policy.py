@@ -125,7 +125,7 @@ MOD_LEAN_COGS = frozenset({
     'moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
     'proof_cog.py', 'auto_filter.py',
     'antiraid.py', 'guardian.py', 'verification.py',
-    'appeals.py', 'logs.py', 'log_menu.py',
+    'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
     'afk.py',              # /afk + /afk-remove — пользователи просили
     # Щит по максимуму (заказ владельца «добавь все возможные для защиты»):
     # security (антиспам/фейки/сканер ссылок), anti_alt (свежие аккаунты),
