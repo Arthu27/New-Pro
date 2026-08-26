@@ -42,7 +42,7 @@ check('@echo off' in text, 'корректный бат-заголовок')
 
 print('== 2. Источник обновления — наша ветка ==')
 check('Arthu27/New-Pro' in text, 'репозиторий прошит верно')
-check('arena/019fee4a-new-pro' in text, 'качается именно сессионная ветка')
+check('arena/01a03640-new-pro' in text, 'качается именно сессионная ветка')
 check('codeload.github.com' in text, 'скачивание через официальный codeload')
 
 print('== 3. Безопасность данных — железо ==')

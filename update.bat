@@ -20,11 +20,11 @@ title Hakumo Updater
 cd /d "%~dp0"
 
 set "REPO=Arthu27/New-Pro"
-set "BRANCH=arena/019fee4a-new-pro"
+set "BRANCH=arena/01a03640-new-pro"
 set "URL=https://codeload.github.com/%REPO%/zip/refs/heads/%BRANCH%"
 set "TMPZ=%TEMP%\hakumo_update.zip"
 set "TMPSRC=%TEMP%\hakumo_update_src"
-set "SRC=%TMPSRC%\New-Pro-arena-019fee4a-new-pro"
+set "SRC=%TMPSRC%\New-Pro-arena-01a03640-new-pro"
 
 echo ════════════════════════════════════════════════════════════
 echo   Hakumo Updater
