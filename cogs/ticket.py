@@ -2266,28 +2266,10 @@ class Ticket (commands .Cog ):
                 )
                 actions =parse_ai_actions (response )
 
-                # Обрабатываем действия
-                if actions .get ('jail'):
-                    await self ._apply_jail (message .channel ,actions ['jail']['user_id'],
-                    actions ['jail']['duration'],actions ['jail']['reason'],
-                    message .author )
-
-                if actions .get ('warn'):
-                    await self ._apply_warn (message .channel ,actions ['warn']['user_id'],
-                    actions ['warn']['reason'],message .author )
-
-                if actions .get ('role_assign'):
-                    await self ._assign_role (message .guild ,actions ['role_assign']['user_id'],
-                    actions ['role_assign']['role_id'])
-
-                if actions .get ('channel_redirect'):
-                    channel =message .guild .get_channel (actions ['channel_redirect']['channel_id'])
-                    if channel :
-                        await message .channel .send (f"Перенаправлено в {channel.mention}")
-
-                if actions .get ('delete_messages'):
-                    await self ._delete_messages (message .guild ,actions ['delete_messages']['channel_id'],
-                    actions ['delete_messages']['count'])
+                # Заказ владельца 2026-08-26: ИИ НЕ наказывает. Все
+                # punish-действия (варн/тюрьма/роли/удаление) вычищаются
+                # в parse_ai_actions и здесь намеренно не исполняются.
+                # Единственное, что может ИИ — позвать модератора (escalate).
 
                 state ['history']=updated_history 
                 state ['ai_message_count']+=1 
@@ -2298,69 +2280,16 @@ class Ticket (commands .Cog ):
                     self ._save_ticket_state (guild_id ,channel_id ,state )
                     return 
 
-                    # 12. Генерируем контекстные подсказки для модераторов
-                suggested_actions =[]
+                    # Заказ владельца 2026-08-26: никаких автокнопок
+                    # «Мут/Ban по рекомендации ИИ». Модератор наказывает сам
+                    # через обычные команды (/moderate, /варн) — когда и кого
+                    # решает человек, а не бот.
                 guild =message .guild
-
-                # Если у пользователя есть предупреждения
-                if guild_context .get ('user_id'):
-                    try :
-                        from cogs .warnings import load_warnings 
-                        warnings_data =load_warnings ()
-                        user_warnings =warnings_data .get (str (guild .id ),{}).get (str (guild_context ['user_id']),[])
-
-                        if len (user_warnings )>=2 :
-                            suggested_actions .append ({
-                            'label':f'Ban ({len(user_warnings)} предупреждение)',
-                            'action':'ban',
-                            'user_id':guild_context ['user_id'],
-                            'reason':f'{len(user_warnings)} предупреждение'
-                            })
-                        elif len (user_warnings )>=1 :
-                            suggested_actions .append ({
-                            'label':'Мут на 1 час',
-                            'action':'mute',
-                            'user_id':guild_context ['user_id'],
-                            'duration':60 ,
-                            'reason':'Повторное нарушение'
-                            })
-                    except Exception as _ex:
-                        log.debug("on_message(): подавлено: %s", _ex)
 
                         # Отправляем очищенный ответ
                 clean_response =actions .get ('cleaned_response',response )
                 if clean_response :
-                # Если есть предложенные действия — добавляем кнопки
-                    if suggested_actions and message .channel .permissions_for (message .guild .me ).send_messages :
-                        view =discord .ui .View ()
-
-                        for action_data in suggested_actions [:3 ]:# Максимум 3 кнопки
-                            async def action_callback (interaction ,data =action_data ):
-                                await interaction .response .defer (ephemeral =True )
-
-                                target_user =guild .get_member (data ['user_id'])
-                                if not target_user :
-                                    await interaction .followup .send ("Пользователь не найден",ephemeral =True )
-                                    return 
-
-                                if data ['action']=='ban':
-                                    await target_user .ban (reason =f"AI рекомендация: {data['reason']}")
-                                    await interaction .followup .send (f"{target_user.mention} забанен",ephemeral =True )
-                                elif data ['action']=='mute':
-                                    until =datetime.datetime.now(datetime.timezone.utc)+timedelta (minutes =data ['duration'])
-                                    await target_user .timeout (until ,reason =f"AI рекомендация: {data['reason']}")
-                                    await interaction .followup .send (f"{target_user.mention} заглушён на {data['duration']} мин",ephemeral =True )
-
-                            button =discord .ui .Button (
-                            label =action_data ['label'],
-                            style =discord .ButtonStyle .danger if action_data ['action']=='ban'else discord .ButtonStyle .primary 
-                            )
-                            button .callback =action_callback 
-                            view .add_item (button )
-
-                        await message .channel .send (clean_response ,view =view )
-                    else :
-                        await message .channel .send (clean_response )
+                    await message .channel .send (clean_response )
 
                 self ._save_ticket_state (guild_id ,channel_id ,state )
 

@@ -62,7 +62,7 @@ def register(ctx):
     @login_required 
     @role_required ('admin')
     def giveaway_page ():
-        return render_template ('giveaway.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id ())
+        return render_template ('giveaway.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id (),main_guild_id =MAIN_GUILD_ID )
 
 
     @app .route ('/polls')

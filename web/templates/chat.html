@@ -247,6 +247,14 @@
 }
 .msg-act-btn:hover { color: var(--ac); background: var(--ac-soft); }
 .msg-act-btn.del:hover { color: var(--err); background: color-mix(in srgb, var(--err) 12%, transparent); }
+.msg-act-btn.dm:hover { color: var(--ac-2, #f0cd7a); background: color-mix(in srgb, var(--ac-2, #f0cd7a) 12%, transparent); }
+
+/* Клик по автору/аватару — открыть ЛС, как в Discord */
+.msg-author.clickable { cursor: pointer; }
+.msg-author.clickable:hover { text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
+.msg-avatar-wrap.clickable { cursor: pointer; }
+.msg-avatar-wrap.clickable:hover .msg-avatar,
+.msg-avatar-wrap.clickable:hover .msg-avatar-placeholder { box-shadow: 0 0 0 3px var(--ac-soft); }
 .etiket {
   color: var(--ac); font-weight: var(--fw-semibold);
   background: var(--ac-soft); padding: 0 4px; border-radius: 4px;
@@ -780,7 +788,7 @@ function selectChannel(id, name) {
   document.getElementById('ch-topic').textContent = '';
   document.getElementById('ch-sep').style.display = 'none';
   document.getElementById('chat-input').disabled = false;
-  document.getElementById('chat-input').placeholder = '#' + name + ' канал сообщение напишите...';
+  document.getElementById('chat-input').placeholder = 'Написать в #' + name;
   document.getElementById('send-btn').disabled = false;
   document.getElementById('chat-messages').innerHTML = '<div class="chat-empty"><i class="fas fa-spinner fa-spin"></i></div>';
   cancelReply();
@@ -811,7 +819,7 @@ function renderMsgList(msgs) {
   var html = '', prevAuthor = null, prevDate = null;
   msgs.forEach(function(m) {
     var d = new Date(m.timestamp);
-    var dateStr = d.toLocaleDateString('tr-TR', {day:'numeric',month:'long',year:'numeric'});
+    var dateStr = d.toLocaleDateString('ru-RU', {day:'numeric',month:'long',year:'numeric'});
     if (dateStr !== prevDate) {
       html += '<div class="date-divider">' + dateStr + '</div>';
       prevDate = dateStr; prevAuthor = null;
@@ -825,7 +833,7 @@ function renderMsgList(msgs) {
 
 function renderMsg(m, continued) {
   var d = new Date(m.timestamp);
-  var time = d.toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
+  var time = d.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
   var content = parseContent(m.content);
 
   var avatarHtml = m.avatar
@@ -865,22 +873,27 @@ function renderMsg(m, continued) {
     }
   }
 
+  var safeAuthor = escJs(m.author);
+  var canDm = m.author_id && !m.bot && String(m.author_id) !== '0';
+  var dmAttr = canDm ? ' onclick="openDm(\'' + String(m.author_id) + '\',\'' + safeAuthor + '\')" title="Написать в личные сообщения — как в Discord"' : '';
+
   var metaHtml = continued ? '' :
     '<div class="msg-meta">' +
-      '<span class="msg-author' + (m.bot?' is-bot':'') + '">' + escHtml(m.author) + (m.bot ? '<span class="bot-badge">BOT</span>' : '') + '</span>' +
+      '<span class="msg-author' + (m.bot?' is-bot':'') + (canDm ? ' clickable' : '') + '"' + dmAttr + '>' +
+        escHtml(m.author) + (m.bot ? '<span class="bot-badge">BOT</span>' : '') + '</span>' +
       '<span class="msg-time">' + time + '</span>' +
     '</div>';
 
-  var safeAuthor = escJs(m.author);
   var safeContent = escJs((m.content||'').substring(0,60));
 
   return '<div class="msg-group' + (continued?' continued':'') + '" id="msg-' + m.id + '">' +
-    '<div class="msg-avatar-wrap">' + avatarHtml + '</div>' +
+    '<div class="msg-avatar-wrap' + (canDm ? ' clickable' : '') + '"' + dmAttr + '>' + avatarHtml + '</div>' +
     '<div class="msg-body">' + replyHtml + metaHtml +
-      '<div class="msg-content">' + content + (m.edited ? '<span class="msg-edited">(редактировать)</span>' : '') + '</div>' +
+      '<div class="msg-content">' + content + (m.edited ? '<span class="msg-edited">(изменено)</span>' : '') + '</div>' +
       attachHtml + inlineMedia +
     '</div>' +
     '<div class="msg-actions">' +
+      (canDm ? '<button type="button" class="msg-act-btn dm" onclick="openDm(\'' + String(m.author_id) + '\',\'' + safeAuthor + '\')" aria-label="Написать в ЛС" title="Написать в ЛС"><i class="fas fa-paper-plane"></i></button>' : '') +
       '<button type="button" class="msg-act-btn" onclick="startReply(\'' + m.id + '\',\'' + safeAuthor + '\',\'' + safeContent + '\')" aria-label="Ответить"><i class="fas fa-reply"></i></button>' +
       '<button type="button" class="msg-act-btn del" onclick="deleteMsg(\'' + m.id + '\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>' +
     '</div>' +
@@ -1039,9 +1052,9 @@ async function openDm(userId, userName) {
   document.getElementById('ch-icon').innerHTML = '<i class="fas fa-user"></i>';
   document.getElementById('ch-name').textContent = userName;
   document.getElementById('ch-sep').style.display = '';
-  document.getElementById('ch-topic').textContent = 'Direkt Сообщение';
+  document.getElementById('ch-topic').textContent = 'Личные сообщения · пишите как в Discord';
   document.getElementById('chat-input').disabled = false;
-  document.getElementById('chat-input').placeholder = userName + ' личный сообщение напишите...';
+  document.getElementById('chat-input').placeholder = 'Написать @' + userName + ' — личное сообщение';
   document.getElementById('send-btn').disabled = false;
   cancelReply();
   if (_autoRefresh) clearInterval(_autoRefresh);
@@ -1058,7 +1071,7 @@ async function loadDmMessages() {
     var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
     el.innerHTML = data.length ? data.map(function(m) {
       var d = new Date(m.timestamp);
-      var time = d.toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
+      var time = d.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
       var isBot = m.from_bot;
       var av = isBot ? '<div class="msg-avatar-placeholder" ><i class="fas fa-robot"></i></div>'
                      : '<div class="msg-avatar-placeholder"><i class="fas fa-user"></i></div>';
@@ -1211,10 +1224,10 @@ function renderMemberList(members) {
   var bots = members.filter(function(m){ return m.bot; });
   document.getElementById('members-count').textContent = members.length;
   var html = '';
-  if (online.length) { html += '<div class="member-section">В сети - ' + online.length + '</div>'; html += online.map(renderMemberItem).join(''); }
-  if (bots.length) { html += '<div class="member-section">Botlar - ' + bots.length + '</div>'; html += bots.map(renderMemberItem).join(''); }
-  if (offline.length) { html += '<div class="member-section">Не в сети - ' + offline.length + '</div>'; html += offline.map(renderMemberItem).join(''); }
-  document.getElementById('members-scroll').innerHTML = html || '<div >Нет участников</div>';
+  if (online.length) { html += '<div class="member-section">В сети — ' + online.length + '</div>'; html += online.map(renderMemberItem).join(''); }
+  if (bots.length) { html += '<div class="member-section">Боты — ' + bots.length + '</div>'; html += bots.map(renderMemberItem).join(''); }
+  if (offline.length) { html += '<div class="member-section">Не в сети — ' + offline.length + '</div>'; html += offline.map(renderMemberItem).join(''); }
+  document.getElementById('members-scroll').innerHTML = html || '<div>Нет участников</div>';
 }
 
 function renderMemberItem(m) {

@@ -25,33 +25,82 @@ def register(ctx):
     @login_required 
     @role_required ('admin')
     def api_giveaway_list (guild_id ):
+        import web .app as _app ;bot =_app .bot_instance 
+
+        def _member_name (uid ,user_info ,fallback =''):
+            """Имя участника: user_info → кэш бота → демо-состав → ID."""
+            info =user_info .get (str (uid ))or user_info .get (uid )or {}
+            name =(info .get ('name')or info .get ('username')
+                   or info .get ('display_name')or '')
+            if name :
+                return str (name )
+            if bot :
+                try :
+                    g =bot .get_guild (int (guild_id ))
+                    mem =g .get_member (int (uid ))if g else None 
+                    if mem :
+                        return mem .display_name 
+                except Exception as _ex:
+                    _log.debug("api_giveaway_list(): подавлено: %s", _ex)
+            return fallback or f'ID {uid}'
+
         f =f'data/giveaways_{guild_id}.json'
         if not os .path .exists (f ):
-            import web .app as _app
             if _app ._demo_mode ():
-                # демо: пара примеров, чтобы страница не висела «Розыгрышей нет»
-                import datetime as _dt
-                now =_dt .datetime .now ()
+                # демо: живые карточки с именами участников — как в Discord,
+                # а не одна цифра. Побеждёт красивая двойка :)
+                import datetime as _dt 
+                import random as _rnd 
+                _rnd .seed (42 )
+                _names =['GhostBlade','Sonya','Artem','Lina','Max','Dasha',
+                'Kira','Vortex','NyanCat','Ryzen','Asuna','Kirito']
+                _now =_dt .datetime .now ()
+                def _demo_participants (n ):
+                    pick =_rnd .sample (_names ,min (n ,len (_names )))
+                    return [{'id':str (9000 +i ),'name':nm }
+                    for i ,nm in enumerate (pick )]
+                def _demo_gw (gid ,prize ,winners ,status ,c_h ,e_dt ,nparts ,widx ):
+                    parts =_demo_participants (nparts )
+                    wlist =[parts [i ]for i in widx if i <len (parts )]
+                    return {'id':gid ,'prize':prize ,'winners':winners ,'status':status ,
+                    'created_at':(_now -_dt .timedelta (hours =c_h )).isoformat (),
+                    'ends_at':(_now +_dt .timedelta (**e_dt )).isoformat (),
+                    'channel_id':'1004'if gid =='gw-demo-1'else '2002' ,
+                    'participants':parts ,
+                    'winner_ids':[p ['id']for p in wlist ],
+                    'winners_list':wlist }
                 return jsonify ([
-                {'id':'gw-demo-1','prize':'Discord Nitro · 1 месяц','winners':1 ,'status':'live',
-                 'ends_at':(now +_dt .timedelta (hours =5 )).isoformat (),'participants':184 ,'channel_id':'1004'},
-                {'id':'gw-demo-2','prize':'Роль «Бустер» на 30 дней','winners':3 ,'status':'live',
-                 'ends_at':(now +_dt .timedelta (days =2 )).isoformat (),'participants':96 ,'channel_id':'2002'},
-                {'id':'gw-demo-3','prize':'1 000 монет экономики','winners':5 ,'status':'ended',
-                 'ends_at':(now -_dt .timedelta (days =1 )).isoformat (),'participants':310 ,'channel_id':'2002'},
+                _demo_gw ('gw-demo-1','Discord Nitro · 1 месяц',1 ,'active',1 ,{'hours':5 },12 ,[]),
+                _demo_gw ('gw-demo-2','Роль «Бустер» на 30 дней',3 ,'active',10 ,{'days':2 },9 ,[]),
+                _demo_gw ('gw-demo-3','1 000 монет экономики',2 ,'ended',72 ,{'days':-1 },10 ,[1 ,4 ]),
                 ])
             return jsonify ([])
         with open (f ,encoding ='utf-8')as fp :
             data =json .load (fp )
         result =[]
         for gw_id ,gw in data .items ():
+            user_info =gw .get ('user_info',{})or {}
+            parts =gw .get ('participants',[])or []
+            part_list =[
+            {'id':str (uid ),'name':_member_name (uid ,user_info )}
+            for uid in parts [:100 ]
+            ]
+            winner_ids =set (str (w )for w in gw .get ('winner_ids',[])or [])
+            winners =[
+            {'id':str (uid ),'name':_member_name (uid ,user_info )}
+            for uid in gw .get ('winner_ids',[])or []
+            ]
             result .append ({
             'id':gw_id ,
             'prize':gw .get ('prize','?'),
             'winners':gw .get ('winners',1 ),
             'status':gw .get ('status','unknown'),
+            'created_at':gw .get ('created_at',''),
             'ends_at':gw .get ('ends_at',''),
-            'participants':len (gw .get ('participants',[])),
+            'participants':part_list ,
+            'participant_count':len (parts ),
+            'winner_ids':sorted (winner_ids ),
+            'winners_list':winners ,
             'channel_id':gw .get ('channel_id',''),
             })
         result .sort (key =lambda x :x ['ends_at'],reverse =True )
@@ -115,6 +164,7 @@ def register(ctx):
                     gws =json .load (fp )
             gws [gw_id ]={
             'prize':prize ,'winners':winners ,
+            'created_at':datetime .now(timezone.utc).replace(tzinfo =None ).isoformat (),
             'ends_at':ends_at .isoformat (),
             'channel_id':str (channel .id ),
             'message_id':str (msg .id ),
@@ -133,6 +183,7 @@ def register(ctx):
     @login_required 
     @role_required ('admin')
     def api_giveaway_end (guild_id ,gw_id ):
+        import random 
         f =f'data/giveaways_{guild_id}.json'
         if not os .path .exists (f ):
             return jsonify ({'error':'Не найдено'}),404 
@@ -140,10 +191,15 @@ def register(ctx):
             gws =json .load (fp )
         if gw_id not in gws :
             return jsonify ({'error':'Розыгрыш не найден'}),404 
-        gws [gw_id ]['status']='ended'
+        gw =gws [gw_id ]
+        gw ['status']='ended'
+        # Определяем победителей прямо сейчас (как это делает ког по расписанию)
+        parts =gw .get ('participants',[])or []
+        n =min (int (gw .get ('winners',1 )or 1 ),len (parts ))
+        gw ['winner_ids']=[str (w )for w in random .sample (parts ,n )]if parts else []
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump (gws ,fp ,indent =2 ,ensure_ascii =False )
-        return jsonify ({'ok':True })
+        return jsonify ({'ok':True ,'winners':gw ['winner_ids']})
 
 
     @app .route ('/api/giveaway/<guild_id>/<gw_id>/delete',methods =['POST'])

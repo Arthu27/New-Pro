@@ -175,6 +175,8 @@ class GiveawayCog(commands.Cog):
                     continue
 
                 winner_ids = random.sample(participants, min(winners_count, len(participants)))
+                # Победители сохраняются в файл: панель показывает их имена
+                gw["winner_ids"] = [str(w) for w in winner_ids]
                 winner_mentions = []
                 icon_url = guild.icon.url if guild.icon else None
 
@@ -230,6 +232,7 @@ class GiveawayCog(commands.Cog):
         data[gw_id] = {
             "prize": prize,
             "winners": winners,
+            "created_at": datetime.now().isoformat(),
             "ends_at": ends_at.isoformat(),
             "channel_id": str(ctx.channel.id),
             "status": "active",
@@ -284,6 +287,8 @@ class GiveawayCog(commands.Cog):
             return
 
         winners = random.sample(participants, min(gw.get("winners", 1), len(participants)))
+        gw["winner_ids"] = [str(w) for w in winners]
+        _save_giveaways(ctx.guild.id, data)
         winner_mentions = []
         for uid in winners:
             try:

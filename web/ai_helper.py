@@ -138,8 +138,13 @@ def _detect_category_fallback (message :str )->str :
     # ─── PROMPTI С CHAIN-OF-THOUGHT ─────────────────────────────────────────────
 
 def _prompt_complaint ()->str :
-    """Prompt для жалоба — chain-of-thought"""
-    return """Ты — AI-модератор Discord-сервера. Отвечай на русском.
+    """Prompt для жалоб: собрать факты и передать модератору.
+
+    Заказ владельца 2026-08-26: ИИ НИКОГДА не наказывает сам — ни мут,
+    ни варн, ни что-либо ещё. Единственное «действие» — позвать
+    модератора (ACTION:ESCALATE). Решение всегда за человеком.
+    """
+    return """Ты — AI-помощник Discord-сервера. Отвечай на русском.
 
 ПОЛУЧЕНА ЖАЛОБА. Твоя задача:
 1. ПРОАНАЛИЗИРУЙ ситуацию (кто, что, когда)
@@ -147,24 +152,21 @@ def _prompt_complaint ()->str :
    - Спроси, кто нарушитель (Discord ID или @упоминание)
    - Спроси, в каком канале произошло
    - Попроси доказательства (скриншоты, ссылки на сообщения)
-3. ОЦЕНИ серьёзность:
-   - Лёгкое нарушение (спам, флуд) → предупреди устно
-   - Среднее (оскорбления) → ACTION:WARN:user_id=X:reason=Y
-   - Тяжёлое (угрозы, травля) → ACTION:JAIL:user_id=X:duration=60:reason=Y ACTION:ESCALATE
-4. УСПОКОЙ пользователя, скажи, что разберёмся
+3. УСПОКОЙ пользователя и скажи, что модераторы разберутся
 
-ПРАВИЛА:
+ЖЁСТКИЕ ПРАВИЛА:
+- Ты НЕ применяешь наказания и даже НЕ предлагаешь их (никаких мутов,
+  варнов, банов, киков, тюрем). Наказания выдаёт только модератор-человек.
+- Не выдумывай факты, имена и цифры. Чего не знаешь — того не знаешь.
 - НЕ проси скриншоты, если их уже прислали
 - НЕ предлагай «открыть тикет» — мы уже в тикете
 - Будь эмпатичным, но профессиональным
-- При тяжёлом нарушении действуй быстро
+- Нарушение серьёзное или не хватает данных → на новой строке
+  ACTION:ESCALATE — позвать модератора. Это твоё единственное действие.
 
 ФОРМАТ ОТВЕТА:
-Сначала ответ пользователю (текстом).
-В конце, если нужны действия — на новой строке:
-ACTION:WARN:user_id=123456:reason=оскорбление
-или
-ACTION:JAIL:user_id=123456:duration=60:reason=травля ACTION:ESCALATE
+Только текст ответа пользователю; при необходимости последней строкой
+ACTION:ESCALATE
 """
 
 
@@ -462,8 +464,14 @@ def ai_ticket_greeting (category :str =None )->str :
     # ─── PARSING ДЕЙСТВИЕ ───────────────────────────────────────────────────────
 
 def parse_ai_actions (response :str )->Dict :
-    """Разбор записей из ответа AI"""
-    import re 
+    """Разбор записей из ответа AI.
+
+    Заказ владельца 2026-08-26: ИИ не наказывает. Любые ACTION:WARN /
+    ACTION:JAIL / ROLE_ASSIGN / CHANNEL_REDIRECT / DELETE_MESSAGES,
+    даже если модель их выдала, НЕИЗМЕННО игнорируются и вычищаются из
+    текста. Работает только ACTION:ESCALATE — позвать модератора.
+    """
+    import re
 
     actions ={
     'escalate':'ACTION:ESCALATE'in response ,
@@ -474,56 +482,21 @@ def parse_ai_actions (response :str )->Dict :
     'delete_messages':None ,
     }
 
-    # WARN
-    warn_match =re .search (r'ACTION:WARN:user_id=(\d+):reason=([^\n]+)',response )
-    if warn_match :
-        actions ['варн']={
-        'user_id':int (warn_match .group (1 )),
-        'reason':warn_match .group (2 ).strip ()
-        }
-        response =re .sub (r'ACTION:WARN:user_id=\d+:reason=[^\n]+','',response )
+    # Модель пыталась наказать? Чистим и пишем в лог — но не исполняем.
+    _forbidden =re .search (
+    r'ACTION:(WARN|JAIL|ROLE_ASSIGN|CHANNEL_REDIRECT|DELETE_MESSAGES)[^\n]*',response )
+    if _forbidden :
+        _log .warning ("parse_ai_actions(): ИИ предложил '%s' — ОТКЛОНЕНО. "
+                       "Наказания применяет только модератор.",_forbidden .group (0 )[:80 ])
 
-        # JAIL
-    тюрьма_match =re .search (r'ACTION:JAIL:user_id=(\d+):duration=(\d+):reason=([^\n]+)',response )
-    if тюрьма_match :
-        actions ['тюрьма']={
-        'user_id':int (тюрьма_match .group (1 )),
-        'duration':int (тюрьма_match .group (2 )),
-        'reason':тюрьма_match .group (3 ).strip ()
-        }
-        response =re .sub (r'ACTION:JAIL:user_id=\d+:duration=\d+:reason=[^\n]+','',response )
+    # Вычищаем ВСЕ служебные маркеры из текста ответа
+    response =re .sub (r'ACTION:(WARN|JAIL|ROLE_ASSIGN|CHANNEL_REDIRECT|DELETE_MESSAGES|ESCALATE)[^\n]*','',response )
 
-        # ROLE_ASSIGN
-    role_match =re .search (r'ACTION:ROLE_ASSIGN:user_id=(\d+):role_id=(\d+)',response )
-    if role_match :
-        actions ['role_assign']={
-        'user_id':int (role_match .group (1 )),
-        'role_id':int (role_match .group (2 ))
-        }
-        response =re .sub (r'ACTION:ROLE_ASSIGN:user_id=\d+:role_id=\d+','',response )
-
-        # CHANNEL_REDIRECT
-    channel_match =re .search (r'ACTION:CHANNEL_REDIRECT:channel_id=(\d+)',response )
-    if channel_match :
-        actions ['channel_redirect']={
-        'channel_id':int (channel_match .group (1 ))
-        }
-        response =re .sub (r'ACTION:CHANNEL_REDIRECT:channel_id=\d+','',response )
-
-        # DELETE_MESSAGES
-    delete_match =re .search (r'ACTION:DELETE_MESSAGES:channel_id=(\d+):count=(\d+)',response )
-    if delete_match :
-        actions ['delete_messages']={
-        'channel_id':int (delete_match .group (1 )),
-        'count':int (delete_match .group (2 ))
-        }
-        response =re .sub (r'ACTION:DELETE_MESSAGES:channel_id=\d+:count=\d+','',response )
-
-        # Удален pustie satыrlar
+    # Удален pustie satыrlar
     response ='\n'.join (line for line in response .split ('\n')if line .strip ())
 
-    actions ['cleaned_response']=response 
-    return actions 
+    actions ['cleaned_response']=response
+    return actions
 
 
     # ─── OBUCENIE DEN CEVAPLARIN МОДЕРАТОР ────────────────────────────────────────
@@ -594,8 +567,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     # 1. Приветствие / Салют
     if any (k in q_lower for k in ["привет","здравствуй","хай","салют","доброе утро","добрый вечер","selam","merhaba","hey","aether","moebius"]):
         return (
-        "Привет, дружище! Я Aether, твой AI-ассистент и модератор на сервере Discord. 🤖\n"
-        "Контроль сервера, модерация и поддержка под моим присмотром. Чем я могу помочь?",
+        "Привет, дружище! Я Aether, AI-ассистент сервера Discord. 🤖\n"
+        "Отвечаю на вопросы, помогаю с панелью и настройками. Наказания выдаёт только модератор-человек — я лишь помогаю разобраться. Чем могу помочь?",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":10 }
         )
@@ -832,7 +805,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         return (
         "📜 **Свод правил сервера Aether:**\n"
         +"\n".join (rule_lines [:5 ])+
-        "\n\nПожалуйста, соблюдайте правила сервера. За нарушения автоматически применяются наказания (варн/мут/кик/бан).",
+        "\n\nПожалуйста, соблюдайте правила сервера. За нарушения модераторы применяют наказания (варн/мут/кик/бан) — решения принимает человек.",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":11 }
         )
@@ -851,16 +824,58 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         {"provider":"fallback","latency_ms":12 }
         )
 
-        # 14. Модерационный отчет
-    if any (k in q_lower for k in ["rapor","deгerlendirme raporu","еженедельный","отчет","отчёт","еженедельный","сводка"]):
+        # 14. Модерационный отчет — ТОЛЬКО реальные цифры из audit_log
+        # (тот же источник, что /mod-report). Нет данных — честно говорим
+        # «нет данных», ничего не выдумываем и не советуем наказания.
+    if any (k in q_lower for k in ["rapor","deгerlendirme raporu","еженедельный","отчет","отчёт","еженедельный","сводка","активност"]):
+        facts =[]
+        total =0 
+        try :
+            from web .routes .analytics_plus import _read_audit ,_parse_ts 
+            from datetime import datetime as _dt ,timedelta as _td 
+            _gid =int (os .getenv ('MAIN_GUILD_ID','0')or 0 )
+            cutoff =_dt .now ()-_td (days =7 )
+            per_mod ={}
+            for ev in _read_audit (_gid ):
+                if ev .get ('category')!='mod':
+                    continue 
+                _ts =_parse_ts (ev .get ('timestamp'))
+                if _ts is None or _ts <cutoff :
+                    continue 
+                total +=1 
+                _mn =str (ev .get ('mod_name')or '').strip ()
+                if _mn :
+                    per_mod [_mn ]=per_mod .get (_mn ,0 )+1 
+            if per_mod :
+                top =sorted (per_mod .items (),key =lambda kv :kv [1 ],reverse =True )
+                facts .append ("• **Активность модераторов за 7 дней:**")
+                facts +=[f"  — {name}: {cnt} д." for name ,cnt in top [:8 ]]
+            if total ==0 and not per_mod :
+                return (
+                "📊 **Отчёт модерации за 7 дней:**\n\n"
+                "За последнюю неделю в журнале модерации нет ни одного записанного "
+                "действия. Это честные данные из журнала бота (audit_log), ничего "
+                "выдуманного.\n\n"
+                "Как только модераторы начнут выдавать наказания через команды бота — "
+                "цифры появятся здесь и на странице «Отчёты» панели.",
+                "moebius-offline-ai",
+                {"provider":"fallback","latency_ms":12 }
+                )
+        except Exception as _ex:
+            _log.debug("_local_moebius_fallback(): подавлено: %s", _ex)
+            return (
+            "📊 **Отчёт модерации:** данные журнала сейчас недоступны, поэтому я "
+            "не буду называть никакие цифры — выдумывать не стану. Точные данные "
+            "всегда на странице «Отчёты» в панели.",
+            "moebius-offline-ai",
+            {"provider":"fallback","latency_ms":12 }
+            )
         return (
-        "📊 **Еженедельный отчет модерации Aether**\n\n"
-        "• **Зарегистрировано предупреждений:** 17 случаев\n"
-        "• **Применено наказаний:** 0 случаев\n\n"
-        "**Общий анализ ситуации и рекомендации:**\n"
-        "1. Контроль за порядком на сервере осуществляется стабильно.\n"
-        "2. При нарушениях рекомендуется в первую очередь применять предупреждения и временный мут (timeout).\n"
-        "3. Среднее время реагирования команды модераторов на тикеты остается на высоком уровне.",
+        f"📊 **Отчёт модерации за 7 дней** (реальные данные журнала):\n\n"
+        f"• **Всего мод-действий:** {total}\n"
+        +"\n".join (facts )+
+        "\n\nПодробные графики — панель → «Отчёты». Нужны детали по конкретному "
+        "модератору или действию — спросите, я разберу по журналу.",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":15 }
         )
@@ -1081,8 +1096,16 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     history =history or []
 
     sys_lines =[
-    "Ты — Aether/Moebius, умный AI-ассистент и модератор для сервера Discord. Отвечай на русском языке.",
-    "Давай лаконичные, дружелюбные и профессиональные ответы."
+    "Ты — Aether/Moebius, информационный AI-ассистент сервера Discord. Отвечай на русском языке.",
+    "Давай лаконичные, дружелюбные и профессиональные ответы.",
+    # Заказ владельца 2026-08-26: ИИ — только консультирует.
+    "ЖЁСТКИЕ ПРАВИЛА (нарушать нельзя):",
+    "1. Ты НЕ модератор и НЕ применяешь наказания: никаких мутов, варнов, банов, "
+    "киков, тюрем — даже в виде совета «дай мут такому-то». Наказания выдаёт "
+    "только модератор-человек через команды бота.",
+    "2. НЕ выдумывай факты, цифры, имена, даты и статистику. Отвечай только тем, "
+    "что известно из контекста и баз знаний. Нет данных — так и скажи: «данных нет».",
+    "3. Никаких служебных команд ACTION:* — максимум ACTION:ESCALATE (позвать модератора).",
     ]
     if context .get ('user_name'):
         sys_lines .append (f"Собеседник: {context.get('user_name')} (ID: {context.get('user_id', '?')})")
@@ -1114,6 +1137,44 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     if context .get ('server_status'):
         s =context ['server_status']
         sys_lines .append (f"Текущее состояние сервера: {s.get('online_count', 0)} в сети, {s.get('voice_count', 0)} в голосовых.")
+
+        # Вопрос про активность модераторов → подкладываем РЕАЛЬНЫЕ цифры
+        # из того же журнала, что и страница «Отчёты». Модель отвечает
+        # фактами, а не выдумками.
+    _q_lower =(question or '').lower ()
+    if any (k in _q_lower for k in [
+    'активност','активность','модер','модеров ',' модеров','отчёт','отчет',
+    'сводк','еженедельн','наказан','варн','предупрежден','who did the moderation',
+    ]):
+        try :
+            from web .routes .analytics_plus import _read_audit ,_parse_ts 
+            from datetime import datetime as _dt ,timedelta as _td 
+            _gid =int (context .get ('guild_id')or os .getenv ('MAIN_GUILD_ID','0')or 0 )
+            cutoff =_dt .now ()-_td (days =7 )
+            per_mod ={}
+            _total =0 
+            for ev in _read_audit (_gid ):
+                if ev .get ('category')!='mod':
+                    continue 
+                _ts =_parse_ts (ev .get ('timestamp'))
+                if _ts is None or _ts <cutoff :
+                    continue 
+                _total +=1 
+                _mn =str (ev .get ('mod_name')or '').strip ()
+                if _mn :
+                    per_mod [_mn ]=per_mod .get (_mn ,0 )+1 
+            _mod_block =[
+            f"РЕАЛЬНАЯ СТАТИСТИКА МОДЕРАЦИИ ЗА 7 ДНЕЙ (из журнала бота, используй ТОЛЬКО эти цифры):",
+            f"- Всего мод-действий: {_total}",
+            ]
+            for _mn ,_cnt in sorted (per_mod .items (),key =lambda kv :kv [1 ],reverse =True )[:10 ]:
+                _mod_block .append (f"- {_mn}: {_cnt} действий" )
+            if _total ==0 :
+                _mod_block .append ("- Журнал пуст: за неделю не записано ни одного мод-действия. Честно скажи это." )
+            _mod_block .append ("Эти цифры — единственный источник. Не добавляй своих оценок чисел и не предлагай наказания." )
+            sys_lines .append ("\n".join (_mod_block ))
+        except Exception as _ex:
+            _log.debug("ai_assistant(): подавлено: %s", _ex)
     if context .get ('jarvis_mode'):
         sys_lines .append ("Режим J.A.R.V.I.S. активен. Помогай в выполнении команд и действий.")
     if context .get ('available_commands'):
