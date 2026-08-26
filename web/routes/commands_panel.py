@@ -60,6 +60,36 @@ def register(ctx):
         })
 
 
+    @app.route('/api/commands/switch-bulk', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_commands_switch_bulk():
+        """Вкл/выкл сразу список команд (кнопки «Вкл показанные / Выкл показанные»
+        и «включить категорию целиком» — вместо кликов по одному)."""
+        from services import command_switches as CSW
+        data = request.get_json(silent=True) or {}
+        names = [str(n).strip() for n in (data.get('names') or [])
+                 if str(n).strip()][:500]
+        off = bool(data.get('disabled'))
+        if not names:
+            return jsonify({'success': False,
+                            'error': 'Список команд пуст'}), 400
+        disabled = CSW.set_disabled_bulk(names, off)
+        bot = getattr(importlib.import_module('web.app'), 'bot_instance', None)
+        scheduled = False
+        if bot is not None and getattr(bot, 'loop', None):
+            import asyncio
+            try:
+                asyncio.run_coroutine_threadsafe(CSW.resync(bot), bot.loop)
+                scheduled = True
+            except RuntimeError as _ex:
+                _log.debug('switch-bulk resync schedule: %s', _ex)
+        return jsonify({'success': True, 'count': len(names), 'disabled': off,
+                        'disabled_list': sorted(disabled),
+                        'bot_online': bot is not None,
+                        'resync_scheduled': scheduled})
+
+
     @app.route('/api/commands/switches', methods=['GET'])
     @login_required
     @role_required('mod')

@@ -273,6 +273,33 @@ class Moderation (commands .Cog ):
             except Exception as _ex :
                 log .debug (f'_unisolate_member(): {ch}: {_ex}')
 
+    # ── Почему Forbidden: иерархия ролей / владелец сервера / право бота ──
+    _NEED_PERMS = {
+        'ban': ('ban_members', 'Бан участников'),
+        'kick': ('kick_members', 'Выгонять участников'),
+        'timeout': ('moderate_members', 'Модерация участников (таймаут)'),
+        'mute_chat': ('manage_roles', 'Управление ролями (мут-роль)'),
+        'vmute': ('manage_roles', 'Управление ролями (мут-роль)'),
+    }
+
+    async def _forbidden_reason(self, guild, user, action):
+        """Человеческое объяснение discord.Forbidden — что именно проверить."""
+        try:
+            me = guild.me
+            if user and getattr(user, 'id', None) == guild.owner_id:
+                return 'Это владелец сервера — применить наказание к нему нельзя.'
+            if user and me and user.top_role >= me.top_role:
+                return (f'Роль бота ({me.top_role.name}) стоит не выше роли '
+                        f'«{user.top_role.name}». Поднимите роль бота: '
+                        'Настройки сервера → Роли → перетащите роль бота выше.')
+            perm, label = self._NEED_PERMS.get(action, (None, None))
+            if perm and me and not getattr(me.guild_permissions, perm, False):
+                return f'Боту не выдано право «{label}». Настройки сервера → Роли → роль бота.'
+        except Exception:
+            pass
+        return ('Проверьте: роль бота выше роли нарушителя и у бота есть нужное '
+                'право (Настройки сервера → Роли).')
+
     async def _execute_mod_action (self ,interaction ,action ,target ,reason ,amount ,proof_link =None ):
         """Выполнить выбранное действие модерации."""
         guild =interaction .guild
@@ -442,7 +469,7 @@ class Moderation (commands .Cog ):
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
             except discord .Forbidden :
                 await _respond (interaction ,
-                embed =error_embed ("Недостаточно прав для этого действия."),ephemeral =True )
+                embed =error_embed ("Не хватило прав.",await _forbidden_reason (guild ,user ,action )),ephemeral =True )
             except Exception as ex :
                 import traceback as _tb
                 log .warning (f"[MODPANEL] Сбой действия: {_tb.format_exc()}")

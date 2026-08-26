@@ -388,5 +388,24 @@
     <script src="/static/click-guard.js?v={{ static_v('click-guard.js') }}"></script>
     <!-- Единый клиентский кит панели: темы, тосты, Ctrl+K, live-refresh -->
     <script src="/static/app.js?v={{ static_v('app.js') }}"></script>
+    {%- if not standalone|default(False) %}
+    <script>
+    /* Отказ в доступе (redirect c ?denied=...): объясняем по-человечески,
+       а не голым «Нет доступа». Создателю сервера роль даётся автоматически. */
+    (function () {
+      var m = /(?:^|[?&])denied=([^&]+)/.exec(location.search);
+      if (!m) return;
+      var need = decodeURIComponent(m[1].replace(/\+/g, ' '));
+      var host = document.getElementById('toastHost');
+      if (host && window.toast) {
+        window.toast('Раздел доступен только с роли «' + need + '». ' +
+          'Создатель сервера получает роль «Владелец» автоматически — перезайдите в панель.', 'warn');
+      } else {
+        alert('Раздел доступен только с роли «' + need + '».');
+      }
+      history.replaceState(null, '', location.pathname);
+    })();
+    </script>
+    {%- endif %}
 </body>
 </html>

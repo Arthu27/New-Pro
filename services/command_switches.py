@@ -85,6 +85,27 @@ def set_disabled(name, off):
     return {normalize(v) for v in _read().get('disabled') or []}
 
 
+def set_disabled_bulk(names, off):
+    """Вкл/выкл сразу много команд — одна запись, один resync бота.
+    Возвращает новое множество выключенных."""
+    keys = {normalize(n) for n in names if normalize(n)}
+    if not keys:
+        return disabled_set()
+    with _lock:
+        data = _read()
+        cur = {normalize(v) for v in (data.get('disabled') or [])}
+        if off:
+            cur |= keys
+        else:
+            cur -= keys
+        data['disabled'] = sorted(cur)
+        try:
+            _write(data)
+        except OSError as ex:
+            _logger().warning('command_switches: запись не удалась: %s', ex)
+    return {normalize(v) for v in _read().get('disabled') or []}
+
+
 # ── применение к живому боту ────────────────────────────────────────────
 def apply_to_bot(bot):
     """Синхронно применить выключенные к дереву команд (без sync).

@@ -14,6 +14,7 @@ import asyncio
 import json 
 import os 
 from functools import wraps 
+from urllib.parse import quote_plus
 import threading 
 from datetime import datetime, timezone
 
@@ -704,6 +705,13 @@ def _get_role_from_discord (discord_id :str )->str :
         if not member :
             return 'uye'
 
+            # 0. Создатель сервера — всегда владелец панели. Без этого
+            # ловили «я разрешил все, а прав нет»: Discord-админка даёт
+            # панели лишь роль «администратор», а разделы «Доступ»
+            # требуют именно владельца.
+        if getattr (guild ,'owner_id',None )and int (discord_id )==int (guild .owner_id ):
+            return 'owner'
+
             # 1. Ручное сопоставление из role_map.json
         best_mapped ='uye'
         for discord_role in member .roles :
@@ -766,12 +774,19 @@ def role_required (min_role ):
         @wraps (f )
         def decorated_function (*args ,**kwargs ):
             if 'role'not in session :
-                return jsonify ({'error':'Не авторизован'}),403 
+                if request .path .startswith ('/api/'):
+                    return jsonify ({'success':False ,'error':'Не авторизован'}),403
+                return redirect (url_for ('login'))
             if ROLES .get (session ['role'],-1 )<ROLES .get (min_role ,999 ):
-                return jsonify ({'error':'Нет доступа'}),403 
-            return f (*args ,**kwargs )
-        return decorated_function 
-    return decorator 
+                need =ROLE_LABELS .get (min_role ,min_role )
+                why ='Создатель сервера получает роль «Владелец» автоматически — перезайдите в панель.'
+                if request .path .startswith ('/api/'):
+                    return jsonify ({'success':False ,
+                    'error':f'Нужна роль «{need}» панели. {why}'}),403
+                return redirect ('/?denied='+quote_plus (need ))
+            return f (*args ,**kwargs)
+        return decorated_function
+    return decorator
 
 @app .route ('/favicon.ico')
 def favicon ():
