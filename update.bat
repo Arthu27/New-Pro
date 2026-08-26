@@ -39,12 +39,29 @@ if not exist main.py (
 )
 
 echo [1/5] Скачиваю свежую сборку с GitHub...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri '%URL%' -OutFile '%TMPZ%' -UseBasicParsing; exit 0 } catch { Write-Host $_.Exception.Message; exit 1 }"
-if errorlevel 1 goto :fail_download
+rem Старый PowerShell не договаривается с GitHub по TLS 1.2 («SSL/TLS channel»):
+rem сначала пробуем curl.exe (есть в Windows 10 / Server 2019+), иначе PowerShell
+rem с принудительным TLS 1.2 (3072).
+where curl.exe >nul 2>nul
+if not errorlevel 1 (
+    curl.exe -L --fail --silent --show-error -o "%TMPZ%" "%URL%"
+    if errorlevel 1 goto :fail_download
+) else (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol=[Enum]::ToObject([Net.SecurityProtocolType],3072); $ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri '%URL%' -OutFile '%TMPZ%' -UseBasicParsing; exit 0 } catch { Write-Host $_.Exception.Message; exit 1 }"
+    if errorlevel 1 goto :fail_download
+)
 
 echo [2/5] Распаковываю...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path '%TMPSRC%') { Remove-Item -Recurse -Force '%TMPSRC%' }; Expand-Archive -Path '%TMPZ%' -DestinationPath '%TMPSRC%' -Force"
-if errorlevel 1 goto :fail_download
+if exist "%TMPSRC%" rmdir /s /q "%TMPSRC%"
+mkdir "%TMPSRC%" >nul 2>nul
+where tar.exe >nul 2>nul
+if not errorlevel 1 (
+    tar.exe -xf "%TMPZ%" -C "%TMPSRC%"
+    if errorlevel 1 goto :fail_download
+) else (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Expand-Archive -Path '%TMPZ%' -DestinationPath '%TMPSRC%' -Force; exit 0 } catch { Write-Host $_.Exception.Message; exit 1 }"
+    if errorlevel 1 goto :fail_download
+)
 if not exist "%SRC%" (
     echo [ОШИБКА] В архиве нет ожидаемой папки — отмена.
     goto :fail_download
@@ -82,6 +99,8 @@ goto :end
 echo.
 echo [ОШИБКА] Не удалось скачать/распаковать сборку.
 echo Проверь интернет и что GitHub доступен. Локальные файлы не тронуты.
+echo Если снова про SSL/TLS — скачай файл вручную в браузере и положи рядом:
+echo   https://github.com/Arthu27/New-Pro/raw/arena/01a03640-new-pro/update.bat
 goto :end
 
 :fail_copy

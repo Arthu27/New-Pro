@@ -61,6 +61,13 @@ check('main.py' in text, 'защита от запуска не из папки 
 check('main\\.py' in text.replace('main.py', 'main\\.py', 1) or 'main\\.py' in text,
       'останавливается только python с main.py в командной строке')
 
+print('== 5. Старый Windows без TLS 1.2 ==')
+check('curl.exe' in text, 'скачивание через curl.exe (Server 2019+/Win10+)')
+check('3072' in text, 'PowerShell-запасной вариант с принудительным TLS 1.2 (3072)')
+check('tar.exe' in text, 'распаковка через tar.exe — без зависимости от Expand-Archive')
+check('raw/arena/01a03640-new-pro/update.bat' in text,
+      'при сбое — прямая ссылка скачать обновлялку в браузере')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)
