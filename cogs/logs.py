@@ -652,7 +652,7 @@ def _ch_type_label(ch_type):
 _audit_used = {}
 
 
-async def _audit_actor(guild, action, target_id=None, window=20, retries=2):
+async def _audit_actor(guild, action, target_id=None, window=20, retries=1):
     """Найти в audit log, КТО выполнил действие над целью.
 
     Возвращает (имя, id, причина, is_bot) или None (нет права view_audit_log
@@ -696,7 +696,7 @@ async def _audit_actor(guild, action, target_id=None, window=20, retries=2):
                 return None
             except Exception as _ex:
                 log.debug("_audit_actor(): подавлено: %s", _ex)
-            await _ai.sleep(0.4)
+            await _ai.sleep(0.2)  # между попытками (почти не используется: retries=1)
     except Exception as _ex:
         log.debug("_audit_actor(): подавлено: %s", _ex)
     return None
@@ -1359,7 +1359,7 @@ class Logs (commands .Cog ):
     @commands .Cog .listener ()
     async def on_member_ban (self ,guild ,user ):
         # Кто забанил и почему — из журнала аудита
-        who =await _audit_actor (guild ,discord .AuditLogAction .ban ,target_id =user .id ,window =25 ,retries =2 )
+        who =await _audit_actor (guild ,discord .AuditLogAction .ban ,target_id =user .id ,window =25 ,retries =1 )
         reason =(who [2 ]if who else None )or '—'
         save_event (guild .id ,'mod','Бан',{
         'user_id':str (user .id ),
@@ -1386,7 +1386,7 @@ class Logs (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_member_unban (self ,guild ,user ):
-        who =await _audit_actor (guild ,discord .AuditLogAction .unban ,target_id =user .id ,window =25 ,retries =2 )
+        who =await _audit_actor (guild ,discord .AuditLogAction .unban ,target_id =user .id ,window =25 ,retries =1 )
         save_event (guild .id ,'mod','Бан снят',{
         'user_id':str (user .id ),
         'user_name':str (user ),
@@ -1414,7 +1414,7 @@ class Logs (commands .Cog ):
             added =[r for r in after .roles if r not in before .roles ]
             removed =[r for r in before .roles if r not in after .roles ]
             if added or removed :
-                who =await _audit_actor (before .guild ,discord .AuditLogAction .member_role_update ,target_id =before .id ,window =20 ,retries =2 )
+                who =await _audit_actor (before .guild ,discord .AuditLogAction .member_role_update ,target_id =before .id ,window =20 ,retries =1 )
                 save_event (before .guild .id ,'role','Изменение ролей',{
                 'user_id':str (before .id ),
                 'user_name':str (before ),
@@ -1837,7 +1837,7 @@ class Logs (commands .Cog ):
                     await _safe_send (ch ,embed =e )
                 return
             # Retry-цикл: audit log может прийти с задержкой
-            for attempt in range (2 ):
+            for attempt in range (1 ):
                 try :
                     async for entry in guild .audit_logs (limit =10 ,action =discord .AuditLogAction .channel_delete ):
                         tid =getattr (entry .target ,'id',None )
@@ -1854,7 +1854,7 @@ class Logs (commands .Cog ):
                     log.debug("on_guild_channel_delete(): подавлено: %s", _ex)
                 if mod_id is not None :
                     break 
-                await _ai .sleep (0.4 )  # ждём появления записи в audit log (быстро: лог важнее подписи)
+                pass  # без ожидания: лог уходит сразу
         except Exception as _ex:
             log.debug("on_guild_channel_delete(): подавлено: %s", _ex)
 
@@ -1969,7 +1969,7 @@ class Logs (commands .Cog ):
             _mcount =len (role .members )
         except Exception :
             _mcount ='?'
-        who =await _audit_actor (role .guild ,discord .AuditLogAction .role_delete ,target_id =role .id ,window =20 ,retries =2 )
+        who =await _audit_actor (role .guild ,discord .AuditLogAction .role_delete ,target_id =role .id ,window =20 ,retries =1 )
         e =_styled_log_embed (role .guild ,'role','Роль удалена',
         fields =[
         ('Роль',f"**{role.name}** · `{role.id}`"),
