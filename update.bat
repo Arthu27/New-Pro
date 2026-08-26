@@ -2,6 +2,10 @@
 rem ═══════════════════════════════════════════════════════════════════
 rem  Hakumo Updater — обновление бота в один двойной клик.
 rem
+rem  Откуда качает: ПОСТОЯННАЯ ссылка «последний релиз» на GitHub —
+rem  она не меняется от чата к чату. Если релизов нет — запасной путь:
+rem  ветка, прописанная ниже (BRANCH).
+rem
 rem  Что делает:
 rem    1. Скачивает свежую сборку ветки arena/019fee4a-new-pro с GitHub
 rem    2. Распаковывает во временную папку
@@ -24,7 +28,20 @@ set "BRANCH=arena/01a03640-new-pro"
 set "URL=https://codeload.github.com/%REPO%/zip/refs/heads/%BRANCH%"
 set "TMPZ=%TEMP%\hakumo_update.zip"
 set "TMPSRC=%TEMP%\hakumo_update_src"
-set "SRC=%TMPSRC%\New-Pro-arena-01a03640-new-pro"
+set "SRC="
+set "TMPURL=%TEMP%\hakumo_update_url.txt"
+
+rem Постоянный источник: последний релиз (ссылка не зависит от ветки)
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol=[Enum]::ToObject([Net.SecurityProtocolType],3072); try { $r=Invoke-RestMethod 'https://api.github.com/repos/%REPO%/releases/latest'; if ($r.zipball_url) { $r.zipball_url | Out-File -Encoding ascii '%TMPURL%' } else { exit 1 } } catch { exit 1 }" >nul 2>nul
+if exist "%TMPURL%" (
+    for /f "usebackq delims=" %%U in ("%TMPURL%") do if not "%%U"=="" set "URL=%%U"
+    del "%TMPURL%" >nul 2>nul
+)
+if "%URL%"=="https://codeload.github.com/%REPO%/zip/refs/heads/%BRANCH%" (
+    echo   Источник: ветка %BRANCH% ^(релизов пока нет^)
+) else (
+    echo   Источник: последний релиз ^(постоянная ссылка^)
+)
 
 echo ════════════════════════════════════════════════════════════
 echo   Hakumo Updater
@@ -62,7 +79,8 @@ if not errorlevel 1 (
     powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Expand-Archive -Path '%TMPZ%' -DestinationPath '%TMPSRC%' -Force; exit 0 } catch { Write-Host $_.Exception.Message; exit 1 }"
     if errorlevel 1 goto :fail_download
 )
-if not exist "%SRC%" (
+for /d %%D in ("%TMPSRC%\*") do if not defined SRC set "SRC=%%D"
+if not defined SRC (
     echo [ОШИБКА] В архиве нет ожидаемой папки — отмена.
     goto :fail_download
 )

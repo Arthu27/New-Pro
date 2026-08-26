@@ -68,6 +68,12 @@ check('tar.exe' in text, 'распаковка через tar.exe — без з�
 check('raw/arena/01a03640-new-pro/update.bat' in text,
       'при сбое — прямая ссылка скачать обновлялку в браузере')
 
+print('== 6. Постоянная ссылка (не зависит от ветки) ==')
+check('releases/latest' in text, 'источник: последний релиз — ссылка не меняется')
+check('zipball_url' in text, 'адрес архива берётся из ответа GitHub')
+check('for /d %%D in' in text, 'папка в архиве определяется автоматически')
+check('Источник: последний релиз' in text, 'человеку видно, откуда качалось')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)
