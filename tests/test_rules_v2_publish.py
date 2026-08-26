@@ -125,6 +125,9 @@ check("create_webhook (name ='Правила сервера'" in src.replace('  
       "create_webhook (name ='Правила сервера'" in src,
       'вебхук «Правила сервера» создаётся, если его нет')
 check('manage_webhooks' in src, 'нет права вебхуков — честный фолбек голосом бота')
+check('нет права «Управлять вебхуками»' in src,
+      'фолбек объясняет причину и как починить')
+check('Опубликовать эмбедами' in tpl, 'кнопки различаются: классика — «Опубликовать эмбедами»')
 check('avatar_url' in src and 'icon.url' in flat,
       'аватарка сообщения — иконка сервера')
 check('rules_layout' in src and 'send_v2_or_embed' in src,

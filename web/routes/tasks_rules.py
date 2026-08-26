@@ -434,7 +434,8 @@ def register(ctx):
             _fire_panel_notification ('rules',f"Правила опубликованы (V2): {len (rules )} пунктов",
             f"Канал {ch_id } · голос: {'вебхук «Правила сервера»' if how =='webhook' else 'бот (нет права вебхуков)'}")
             return jsonify ({'success':True ,'style':'v2','via':how ,'title':title ,
-            'message':("Опубликовано через вебхук: " if how =='webhook' else "Опубликовано голосом бота: ")+
+            'message':("Опубликовано через вебхук: " if how =='webhook' else
+            "Опубликовано голосом бота (у бота нет права «Управлять вебхуками» в канале — выдайте право и опубликуйте снова): ")+
             f"{len (rules )} правил в одном сообщении нового формата"})
 
         embeds =build_embeds ()
