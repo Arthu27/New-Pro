@@ -118,7 +118,7 @@ echo.
 echo [ОШИБКА] Не удалось скачать/распаковать сборку.
 echo Проверь интернет и что GitHub доступен. Локальные файлы не тронуты.
 echo Если снова про SSL/TLS — скачай файл вручную в браузере и положи рядом:
-echo   https://github.com/Arthu27/New-Pro/raw/arena/01a03640-new-pro/update.bat
+echo   https://github.com/Arthu27/New-Pro/raw/latest/update.bat
 goto :end
 
 :fail_copy

@@ -65,8 +65,8 @@ print('== 5. Старый Windows без TLS 1.2 ==')
 check('curl.exe' in text, 'скачивание через curl.exe (Server 2019+/Win10+)')
 check('3072' in text, 'PowerShell-запасной вариант с принудительным TLS 1.2 (3072)')
 check('tar.exe' in text, 'распаковка через tar.exe — без зависимости от Expand-Archive')
-check('raw/arena/01a03640-new-pro/update.bat' in text,
-      'при сбое — прямая ссылка скачать обновлялку в браузере')
+check('raw/latest/update.bat' in text,
+      'при сбое — ПОСТОЯННАЯ ссылка на свежую обновлялку (тег релиза)')
 
 print('== 6. Постоянная ссылка (не зависит от ветки) ==')
 check('releases/latest' in text, 'источник: последний релиз — ссылка не меняется')
