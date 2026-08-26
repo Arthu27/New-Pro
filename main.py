@@ -387,8 +387,15 @@ def _stop_tunnel_sidecar():
         _tunnel_proc = None
 
 
+_cleanup_done = False
+
+
 def cleanup_on_exit():
-    """Действия очистки при закрытии бота"""
+    """Действия очистки при закрытии бота (ровно один запуск)"""
+    global _cleanup_done
+    if _cleanup_done:
+        return
+    _cleanup_done = True
     try:
         print("[ОЧИСТКА] Бот закрывается...")
         _stop_web_server()
