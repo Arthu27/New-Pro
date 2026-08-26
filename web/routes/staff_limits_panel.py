@@ -42,8 +42,56 @@ def _guild_roles(bot, guild_id):
     return roles
 
 
+def _channels_cache_path(guild_id):
+    import os as _os
+    _os.makedirs('data', exist_ok=True)
+    return f'data/panel_channels_cache_{int(guild_id)}.json'
+
+
+def _channels_cache_save(guild_id, channels):
+    """Запомнить список каналов с живого бота — пикеры логов не пустеют,
+    даже если бот перезапускается (владелец всё равно может выбрать канал)."""
+    import json as _json
+    try:
+        with open(_channels_cache_path(guild_id), 'w', encoding='utf-8') as fh:
+            _json.dump({'channels': channels or []}, fh, ensure_ascii=False)
+    except Exception as ex:
+        _log.debug('channels_cache_save: подавлено: %s', ex)
+
+
+def _channels_cache_load(guild_id):
+    import json as _json
+    import os as _os
+    path = _channels_cache_path(guild_id)
+    if not _os.path.exists(path):
+        return []
+    try:
+        with open(path, 'r', encoding='utf-8') as fh:
+            data = _json.load(fh)
+        chans = data.get('channels') if isinstance(data, dict) else None
+        return [c for c in (chans or []) if c.get('id') and c.get('name')]
+    except Exception as ex:
+        _log.debug('channels_cache_load: подавлено: %s', ex)
+        return []
+
+
 def _guild_channels(bot, guild_id):
-    """Текстовые каналы гильдии для пикера «куда писать логи» (демо — без бота)."""
+    """Текстовые каналы гильдии для пикера «куда писать логи».
+
+    Живой бот → список и кэш; бот офлайн → последний известный список из
+    кэша; демо — встроенная структура. Пикеры не пустуют никогда.
+    Возвращает (каналы, источник: 'bot'|'cache'|'settings')."""
+    live = _guild_channels_live(bot, guild_id)
+    if live:
+        _channels_cache_save(guild_id, live)
+        return live, 'bot'
+    cached = _channels_cache_load(guild_id)
+    if cached:
+        return cached, 'cache'
+    return _guild_channels_fallback(guild_id), 'settings'
+
+
+def _guild_channels_live(bot, guild_id):
     guild = None
     if bot:
         guild = bot.get_guild(int(guild_id))
@@ -85,6 +133,24 @@ def _guild_channels(bot, guild_id):
             except Exception as ex:
                 _log.debug('staff_limits_panel: демо-каналы: %s', ex)
     return channels
+
+
+def _guild_channels_fallback(guild_id):
+    """Совсем без бота и без кэша: каналы, НАСТРОЕННЫЕ ранее для категорий
+    логов, — чтобы выбранные значения не пропадали из селектов."""
+    try:
+        from services import log_settings as _LS
+        settings = _LS.get_log_settings(guild_id) or {}
+        seen, out = set(), []
+        for _k, cid in (settings.get('channels') or {}).items():
+            cid = str(cid or '').strip()
+            if cid and cid not in seen:
+                seen.add(cid)
+                out.append({'id': cid, 'name': f'канал {cid}'})
+        return out
+    except Exception as ex:
+        _log.debug('channels_fallback: подавлено: %s', ex)
+        return []
 
 
 def _role_name(bot, guild_id, role_id):
@@ -263,9 +329,11 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_log_settings_get(guild_id):
+        channels, src = _guild_channels(_app.bot_instance, guild_id)
         return jsonify({'success': True,
                         'settings': LS.get_log_settings(guild_id),
-                        'channels': _guild_channels(_app.bot_instance, guild_id),
+                        'channels': channels,
+                        'channels_source': src,
                         'categories': [{'key': k, 'label': l, 'emoji': e}
                                        for k, l, e in LS.LOG_CATEGORIES]})
 
