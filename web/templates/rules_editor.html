@@ -7,7 +7,7 @@
   <div class="page-head-copy">
     <div class="eyebrow">Бот <span class="sep">·</span> Контент</div>
     <h1>Правила сервера</h1>
-    <p class="lead">Текст правила, ссылка, картинка и миниатюра — каждое правило уходит в Discord отдельным эмбедом.</p>
+    <p class="lead">Текст, до двух ссылок на правило, картинка и миниатюра. Публикуйте классическими эмбедами — или одним красивым V2-сообщением от «Правил сервера».</p>
   </div>
   <div class="page-head-actions">
     <select id="guild-select" class="form-input" style="width:auto;min-width:200px" onchange="window.__rulesLoad && window.__rulesLoad()" aria-label="Выбор сервера">
@@ -292,6 +292,42 @@
 @media (max-width: 960px) {
   .rules-wrap { grid-template-columns: 1fr; }
 }
+
+/* ── Табы превью ── */
+.pv-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+.pv-tab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 12px; border-radius: 11px; border: 1px solid var(--line); background: transparent; color: var(--text-2); font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all .15s; font-family: inherit; }
+.pv-tab:hover { border-color: var(--ac-line, var(--line)); color: var(--text); }
+.pv-tab.active { border-color: var(--ac); color: var(--text); background: color-mix(in srgb, var(--ac) 10%, transparent); box-shadow: 0 2px 10px color-mix(in srgb, var(--ac) 15%, transparent); }
+.pv-tab i { font-size: 11.5px; }
+
+/* ── V2-превью (как в Discord) ── */
+.v2p { border: 1px solid var(--line); border-left: 4px solid var(--v2c, #4f46e5); border-radius: 12px; padding: 14px 16px; background: color-mix(in srgb, var(--text) 3%, transparent); display: flex; flex-direction: column; gap: 9px; }
+.v2p-head { font-size: 15px; font-weight: 800; color: var(--text); }
+.v2p-intro { font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+.v2p-sep { height: 1px; background: color-mix(in srgb, var(--text) 8%, transparent); }
+.v2p-item { font-size: 12.5px; color: var(--text-2); line-height: 1.55; }
+.v2p-item b { color: var(--text); }
+.v2p-item .pv-link { margin: 0 8px 0 0; }
+.v2p-foot { font-size: 10.5px; color: var(--text-3); }
+
+/* ── Панель публикации ── */
+.pub-box { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.pub-channel { display: flex; align-items: center; gap: 9px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--text) 3%, transparent); }
+.pub-channel i { color: var(--ac); font-size: 12px; }
+.pub-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 720px) { .pub-options { grid-template-columns: 1fr; } }
+.pub-opt { display: flex; flex-direction: column; gap: 8px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--text) 2.5%, transparent); transition: all .16s; }
+.pub-opt:hover { border-color: color-mix(in srgb, var(--text) 14%, transparent); transform: translateY(-1px); }
+.pub-opt-accent { border-color: color-mix(in srgb, var(--ac) 35%, transparent); background: linear-gradient(165deg, color-mix(in srgb, var(--ac) 7%, transparent), transparent); }
+.pub-opt-head { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 800; color: var(--text); }
+.pub-opt-head i { color: var(--ac); font-size: 13px; }
+.pub-tag { font-size: 9.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--text-3); }
+.pub-tag.new { color: var(--ac); border-color: color-mix(in srgb, var(--ac) 45%, transparent); background: color-mix(in srgb, var(--ac) 12%, transparent); }
+.pub-opt-sub { font-size: 11.5px; color: var(--text-3); line-height: 1.5; flex: 1; }
+.pub-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; border-radius: 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--text) 6%, transparent); color: var(--text); font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all .15s; font-family: inherit; }
+.pub-btn:hover { border-color: var(--ac); filter: brightness(1.12); }
+.pub-btn.accent { background: linear-gradient(135deg, var(--ac), color-mix(in srgb, var(--ac) 70%, #818cf8)); color: #fff; border: none; }
+.pub-btn.accent:hover { filter: brightness(1.1); box-shadow: 0 6px 18px color-mix(in srgb, var(--ac) 35%, transparent); }
 @media (prefers-reduced-motion: reduce) {
   .btn-add, .rule-input, .rule-field, .rule-row, .rule-del, .rule-move button, .pv-link { transition: none; }
 }
@@ -319,6 +355,11 @@
       <i class="fas fa-eye"></i> Предпросмотр и публикация
     </div>
     <div class="rules-body">
+      <div class="pv-tabs" role="tablist" aria-label="Формат превью">
+        <button type="button" class="pv-tab active" id="pvTabEmbed" role="tab" aria-selected="true"><i class="fas fa-layer-group"></i> Эмбеды</button>
+        <button type="button" class="pv-tab" id="pvTabV2" role="tab" aria-selected="false"><i class="fas fa-wand-magic-sparkles"></i> Красиво · V2</button>
+      </div>
+      <div id="pvPaneEmbed">
       <div class="preview-card">
         <div class="preview-card-bar" id="previewColorBar"></div>
         <div class="preview-card-body">
@@ -338,6 +379,11 @@
           </div>
         </div>
       </div>
+      </div>
+      <div id="pvPaneV2" hidden>
+        <div class="v2p" id="pv2"></div>
+        <div class="preview-foot"><i class="fas fa-circle-info"></i> Так сообщение выглядит в новом формате: один блок от вебхука «Правила сервера» с аватаркой сервера — обе ссылки правила рядом</div>
+      </div>
 
       <label class="field-label" for="rules-channel">Публикация в Discord</label>
       <div class="rules-pub-fields">
@@ -351,16 +397,29 @@
           <option value="forest">Авто-картинки: лес</option>
         </select></div>
       </div>
-      <div class="publish-row" style="margin-top:10px">
-        <select id="rules-channel" class="form-input" style="flex:1" aria-label="Канал публикации">
-          <option value="">Выберите канал…</option>
-        </select>
-        <button type="button" class="btn btn-primary" id="btnPublishRules">
-          <i class="fas fa-paper-plane"></i> Опубликовать
-        </button>
-        <button type="button" class="btn" id="btnPublishRulesV2" title="Одно сообщение нового формата (Components V2) от вебхука «Правила сервера» — с аватаркой сервера, не от бота">
-          <i class="fas fa-wand-magic-sparkles"></i> Красиво (V2)
-        </button>
+      <div class="pub-box">
+        <div class="pub-channel">
+          <i class="fas fa-hashtag"></i>
+          <select id="rules-channel" class="form-input" style="flex:1" aria-label="Канал публикации">
+            <option value="">Выберите канал публикации…</option>
+          </select>
+        </div>
+        <div class="pub-options">
+          <div class="pub-opt">
+            <div class="pub-opt-head"><i class="fas fa-layer-group"></i> Эмбеды <span class="pub-tag">классика</span></div>
+            <div class="pub-opt-sub">Пачка сообщений голосом бота: заголовок + по эмбеду на каждое правило, авто-баннеры</div>
+            <button type="button" class="pub-btn" id="btnPublishRules">
+              <i class="fas fa-paper-plane"></i> Опубликовать
+            </button>
+          </div>
+          <div class="pub-opt pub-opt-accent">
+            <div class="pub-opt-head"><i class="fas fa-wand-magic-sparkles"></i> Красиво <span class="pub-tag new">V2</span></div>
+            <div class="pub-opt-sub">Одно сообщение нового формата от вебхука «Правила сервера» — аватарка сервера, обе ссылки рядом, компактно</div>
+            <button type="button" class="pub-btn accent" id="btnPublishRulesV2">
+              <i class="fas fa-wand-magic-sparkles"></i> Опубликовать красиво
+            </button>
+          </div>
+        </div>
       </div>
       <div class="publish-status" id="publishStatus" role="status" aria-live="polite"></div>
       <div class="publish-hint">
@@ -405,6 +464,7 @@
     if (pb) pb.style.background = color;
     var pe = document.getElementById('pv-embed');
     if (pe) pe.style.borderLeftColor = color;
+    if (!document.getElementById('pvPaneV2').hidden) renderPreviewV2();
   }
   function saveMetaSoon() {
     if (!CAN_EDIT) return;
@@ -440,13 +500,14 @@
     if (window.showToast) window.showToast(msg, ok);
     else alert(msg);
   }
-  function blankRule() { return { t: '', u: '', img: '', thumb: '', img_gen: '' }; }
+  function blankRule() { return { t: '', u: '', u2: '', img: '', thumb: '', img_gen: '' }; }
   function normRule(r) {
-    if (typeof r === 'string') return { t: r, u: '', img: '', thumb: '', img_gen: '' };
+    if (typeof r === 'string') return { t: r, u: '', u2: '', img: '', thumb: '', img_gen: '' };
     if (r && typeof r === 'object') {
       return {
         t: String(r.t || r.text || r.title || '').trim(),
         u: String(r.u || r.url || r.link || '').trim(),
+        u2: String(r.u2 || r.url2 || r.link2 || '').trim(),
         img: String(r.img || r.image || r.image_url || '').trim(),
         thumb: String(r.thumb || r.thumbnail || r.thumbnail_url || '').trim(),
         img_gen: String(r.img_gen || r.auto_img || '').trim()
@@ -589,6 +650,7 @@
           '<div class="rule-line"><i class="fas fa-align-left"></i><input class="rule-input" value="' + esc(r.t) + '" data-idx="' + i + '" data-field="t" placeholder="Текст правила" aria-label="Текст правила ' + (i + 1) + '"></div>' +
           '<div class="rule-meta">' +
             '<div class="rule-line"><i class="fas fa-link"></i><input class="rule-field" value="' + esc(r.u) + '" data-idx="' + i + '" data-field="u" placeholder="Ссылка https://…" aria-label="Ссылка правила ' + (i + 1) + '"></div>' +
+          '<div class="rule-line"><i class="fas fa-arrow-up-right-from-square"></i><input class="rule-field" value="' + esc(r.u2 || '') + '" data-idx="' + i + '" data-field="u2" placeholder="Вторая ссылка https://… — обе уйдут в одном сообщении" aria-label="Вторая ссылка правила ' + (i + 1) + '"></div>' +
             '<div class="rule-line"><i class="fas fa-image"></i><input class="rule-field" value="' + esc(r.img) + '" data-idx="' + i + '" data-field="img" placeholder="Картинка URL" aria-label="Картинка правила ' + (i + 1) + '">' +
             '<button type="button" class="rule-gen-btn' + (r.img_gen ? ' on' : '') + '" data-gen="' + i + '" title="' +
               (r.img_gen ? 'Авто-картинка включена · тема «' + esc(r.img_gen) + '» — отрисуем баннер при публикации' : 'Создать картинку автоматически вместо URL') +
@@ -604,6 +666,47 @@
       '</div>';
     }).join('');
     updatePreview();
+  }
+
+  /* ── Табы превью: эмбеды / V2 ── */
+  function pvSwitch(mode) {
+    var te = document.getElementById('pvTabEmbed');
+    var tv = document.getElementById('pvTabV2');
+    var pe = document.getElementById('pvPaneEmbed');
+    var pv2 = document.getElementById('pvPaneV2');
+    if (!pe || !pv2) return;
+    pe.hidden = mode !== 'embed';
+    pv2.hidden = mode !== 'v2';
+    te.classList.toggle('active', mode === 'embed');
+    tv.classList.toggle('active', mode === 'v2');
+    te.setAttribute('aria-selected', mode === 'embed' ? 'true' : 'false');
+    tv.setAttribute('aria-selected', mode === 'v2' ? 'true' : 'false');
+    if (mode === 'v2') renderPreviewV2();
+  }
+
+  function renderPreviewV2() {
+    var box = document.getElementById('pv2');
+    if (!box) return;
+    var title = (document.getElementById('rules-title').value || '').trim() || 'Правила сервера';
+    var intro = (document.getElementById('rules-intro').value || '').trim();
+    var color = (document.getElementById('rules-color').value || '#4f46e5').replace('#', '');
+    var html = '<div class="v2p" style="--v2c:#' + esc(color) + '">';
+    html += '<div class="v2p-head">' + esc(title) + '</div>';
+    if (intro) html += '<div class="v2p-intro">' + esc(intro) + '</div>';
+    html += '<div class="v2p-sep"></div>';
+    if (!rules.length) {
+      html += '<div class="v2p-intro">Правила ещё не добавлены — всё сообщение соберётся автоматически.</div>';
+    }
+    rules.forEach(function (r, i) {
+      html += '<div class="v2p-item"><b>' + (i + 1) + '.</b> ' + esc(r.t || '…');
+      if (r.u) html += ' <a class="pv-link" href="' + esc(r.u) + '" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> Подробнее</a>';
+      if (r.u2) html += ' <a class="pv-link" href="' + esc(r.u2) + '" target="_blank" rel="noopener"><i class="fas fa-link"></i> Ещё</a>';
+      html += '</div>';
+      if (i < rules.length - 1) html += '<div class="v2p-sep"></div>';
+    });
+    html += '<div class="v2p-foot">Правила сервера · обе ссылки в одном сообщении · наказания выдаёт модератор</div>';
+    html += '</div>';
+    box.innerHTML = html;
   }
 
   function plural(n) {
@@ -632,6 +735,9 @@
       if (r.u) {
         html += '<a class="pv-link" href="' + esc(r.u) + '" target="_blank" rel="noopener"><i class="fas fa-arrow-up-right-from-square"></i> ' + esc(r.u) + '</a>';
       }
+      if (r.u2) {
+        html += '<a class="pv-link" href="' + esc(r.u2) + '" target="_blank" rel="noopener"><i class="fas fa-link"></i> ' + esc(r.u2) + '</a>';
+      }
       if (r.img) {
         html += '<div class="pv-media"><img src="' + esc(r.img) + '" alt="Картинка правила ' + (i + 1) + '" loading="lazy" onerror="this.style.display=\'none\'"></div>';
       } else if (r.img_gen) {
@@ -640,6 +746,7 @@
       html += '</div></div>';
       return html;
     }).join('');
+    renderPreviewV2();
     scheduleBannerRefresh(150);
   }
 
@@ -664,11 +771,11 @@
     // ссылки без протокола чиним автоматически (https://), опасные схемы — стоп
     for (var i = 0; i < rules.length; i++) {
       var r = rules[i];
-      if (/^(javascript|data|vbscript):/i.test(r.u) || /^(javascript|data|vbscript):/i.test(r.img) || /^(javascript|data|vbscript):/i.test(r.thumb)) {
+      if (/^(javascript|data|vbscript):/i.test(r.u) || /^(javascript|data|vbscript):/i.test(r.u2) || /^(javascript|data|vbscript):/i.test(r.img) || /^(javascript|data|vbscript):/i.test(r.thumb)) {
         toast('Правило ' + (i + 1) + ': такие ссылки запрещены', false);
         return false;
       }
-      r.u = fixUrl(r.u); r.img = fixUrl(r.img); r.thumb = fixUrl(r.thumb);
+      r.u = fixUrl(r.u); r.u2 = fixUrl(r.u2); r.img = fixUrl(r.img); r.thumb = fixUrl(r.thumb);
     }
     updatePreview();
     return true;
@@ -677,7 +784,7 @@
   async function saveRules() {
     if (!selectedGuild) { toast('Выберите сервер!', false); return; }
     var clean = rules.map(function (r) {
-      return { t: r.t.trim(), u: fixUrl(r.u), img: fixUrl(r.img), thumb: fixUrl(r.thumb),
+      return { t: r.t.trim(), u: fixUrl(r.u), u2: fixUrl(r.u2), img: fixUrl(r.img), thumb: fixUrl(r.thumb),
                img_gen: (r.img && r.img.trim()) ? '' : (r.img_gen || '') };
     }).filter(function (r) { return r.t; });
     if (!checkUrls()) return;
@@ -712,7 +819,7 @@
     var ch = document.getElementById('rules-channel').value;
     if (!ch) { publishStatus(false, 'Выберите канал публикации'); return; }
     var clean = rules.map(function (r) {
-      return { t: r.t.trim(), u: fixUrl(r.u), img: fixUrl(r.img), thumb: fixUrl(r.thumb),
+      return { t: r.t.trim(), u: fixUrl(r.u), u2: fixUrl(r.u2), img: fixUrl(r.img), thumb: fixUrl(r.thumb),
                img_gen: (r.img && r.img.trim()) ? '' : (r.img_gen || '') };
     }).filter(function (r) { return r.t; });
     if (!clean.length) { publishStatus(false, 'Сначала добавьте правила!'); return; }
@@ -794,6 +901,8 @@
   document.getElementById('btnSaveRules').addEventListener('click', saveRules);
   document.getElementById('btnPublishRules').addEventListener('click', function(){ publishRules('classic'); });
   document.getElementById('btnPublishRulesV2').addEventListener('click', function(){ publishRules('v2'); });
+  document.getElementById('pvTabEmbed').addEventListener('click', function(){ pvSwitch('embed'); });
+  document.getElementById('pvTabV2').addEventListener('click', function(){ pvSwitch('v2'); });
   var refresh = document.getElementById('rulesRefresh');
   if (refresh) refresh.addEventListener('click', loadRules);
 

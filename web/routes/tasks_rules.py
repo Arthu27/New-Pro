@@ -86,16 +86,17 @@ def register(ctx):
             raw = str (raw or '').strip ().lower ()
             return raw if raw in _bg .THEMES else ''
         if isinstance (r ,str ):
-            return {'t':r .strip (),'u':'','img':'','thumb':'','img_gen':''}
+            return {'t':r .strip (),'u':'','u2':'','img':'','thumb':'','img_gen':''}
         if isinstance (r ,dict ):
             return {
             't':str (r .get ('t')or r .get ('text')or r .get ('title')or '').strip (),
             'u':str (r .get ('u')or r .get ('url')or r .get ('link')or '').strip (),
+            'u2':str (r .get ('u2')or r .get ('url2')or r .get ('link2')or '').strip (),
             'img':str (r .get ('img')or r .get ('image')or r .get ('image_url')or '').strip (),
             'thumb':str (r .get ('thumb')or r .get ('thumbnail')or r .get ('thumbnail_url')or '').strip (),
             'img_gen':_theme_of (r .get ('img_gen')or r .get ('auto_img')or ''),
             }
-        return {'t':'','u':'','img':'','thumb':'','img_gen':''}
+        return {'t':'','u':'','u2':'','img':'','thumb':'','img_gen':''}
 
     def _fix_url (v ):
         """Ссылка к рабочему виду: без протокола — доклеиваем https://.
@@ -115,7 +116,7 @@ def register(ctx):
     def _validate_rule_urls (rules ):
         """URL-ы только http(s). Возвращает (ok, ошибка)."""
         for i ,r in enumerate (rules ,1 ):
-            for field ,label in (('u','ссылки'),('img','картинки'),('thumb','миниатюры')):
+            for field ,label in (('u','ссылки'),('u2','вторая ссылка'),('img','картинки'),('thumb','миниатюры')):
                 v =r .get (field )or ''
                 if v and not v .lower ().startswith (('http://','https://')):
                     return False ,f'Правило {i}: некорректный URL {label} — укажите полный адрес (https://…)'
@@ -126,7 +127,7 @@ def register(ctx):
         out =[]
         for r in rules :
             rr =dict (r )
-            for f in ('u','img','thumb'):
+            for f in ('u','u2','img','thumb'):
                 if rr .get (f ):
                     rr [f ]=_fix_url (rr [f ])
             out .append (rr )
@@ -326,8 +327,13 @@ def register(ctx):
                 e =discord .Embed (color =accent )
                 e .title =f"{i}. {r ['t'][:250]}"
                 desc =r ['t'][:1000 ]
+                _links =[]
                 if r ['u']:
-                    desc +="\n\nСсылка: [открыть](" + r ['u']+ ")"
+                    _links .append ("[открыть](" + r ['u']+")")
+                if r ['u2']:
+                    _links .append ("[ещё ссылка](" + r ['u2']+")")
+                if _links :
+                    desc +="\n\nСсылка: " + " · ".join (_links )
                 e .description =desc [:3900 ]
                 if r ['thumb']:
                     e .set_thumbnail (url =r ['thumb'])
@@ -381,8 +387,13 @@ def register(ctx):
             items_v2 =[]
             for r in rules :
                 t =r ['t'][:1000 ]
+                _links2 =[]
                 if r ['u']:
-                    t +="\n[Подробнее]("+r ['u']+")"
+                    _links2 .append ("[Подробнее]("+r ['u']+")")
+                if r ['u2']:
+                    _links2 .append ("[Ещё]("+r ['u2']+")")
+                if _links2 :
+                    t +="\n" + " · ".join (_links2 )
                 items_v2 .append (t )
             icon_v2 =str (guild .icon .url )if guild .icon else None 
             updated ='обновлено '+datetime .now (timezone .utc ).strftime ('%d.%m.%Y')
