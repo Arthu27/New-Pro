@@ -7,7 +7,7 @@
   <div class="page-head-copy">
     <div class="eyebrow">Бот <span class="sep">·</span> Контент</div>
     <h1>Правила сервера</h1>
-    <p class="lead">Текст, до двух ссылок на правило, картинка и миниатюра. Публикуйте классическими эмбедами — или одним красивым V2-сообщением от «Правил сервера».</p>
+    <p class="lead">Текст, до двух ссылок на правило, картинка и миниатюра. Публикация эмбедами или одним V2-сообщением от вебхука «Правил сервера».</p>
   </div>
   <div class="page-head-actions">
     <select id="guild-select" class="form-input" style="width:auto;min-width:200px" onchange="window.__rulesLoad && window.__rulesLoad()" aria-label="Выбор сервера">
@@ -357,7 +357,7 @@
     <div class="rules-body">
       <div class="pv-tabs" role="tablist" aria-label="Формат превью">
         <button type="button" class="pv-tab active" id="pvTabEmbed" role="tab" aria-selected="true"><i class="fas fa-layer-group"></i> Эмбеды</button>
-        <button type="button" class="pv-tab" id="pvTabV2" role="tab" aria-selected="false"><i class="fas fa-wand-magic-sparkles"></i> Красиво · V2</button>
+        <button type="button" class="pv-tab" id="pvTabV2" role="tab" aria-selected="false"><i class="fas fa-paper-plane"></i> Webhook · V2</button>
       </div>
       <div id="pvPaneEmbed">
       <div class="preview-card">
@@ -413,10 +413,10 @@
             </button>
           </div>
           <div class="pub-opt pub-opt-accent">
-            <div class="pub-opt-head"><i class="fas fa-wand-magic-sparkles"></i> Красиво <span class="pub-tag new">V2</span></div>
-            <div class="pub-opt-sub">Одно сообщение нового формата от вебхука «Правила сервера» — аватарка сервера, обе ссылки рядом, компактно</div>
+            <div class="pub-opt-head"><i class="fas fa-paper-plane"></i> Webhook <span class="pub-tag new">V2</span></div>
+            <div class="pub-opt-sub">Одно сообщение (Components V2) от вебхука «Правила сервера» с аватаркой сервера</div>
             <button type="button" class="pub-btn accent" id="btnPublishRulesV2">
-              <i class="fas fa-wand-magic-sparkles"></i> Опубликовать красиво
+              <i class="fas fa-paper-plane"></i> Опубликовать
             </button>
           </div>
         </div>
@@ -828,7 +828,7 @@
     var orig = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Публикуем…';
-    publishStatus(true, style === 'v2' ? 'Отправляем красивое V2-сообщение от «Правил сервера»…' : 'Отправляем правила в Discord…');
+    publishStatus(true, style === 'v2' ? 'Отправляем V2-сообщение от вебхука «Правил сервера»…' : 'Отправляем правила в Discord…');
     try {
       var r = await fetch('/api/guild/' + selectedGuild + '/rules/publish', {
         method: 'POST',

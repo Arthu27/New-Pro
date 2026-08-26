@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""«Опубликовать правила красиво» — Components V2 + вебхук (2026-08-26).
+"""Публикация правил через webhook — Components V2 (2026-08-26).
 
-Панель публикации — карточки-режимы: «Эмбеды классика» и «Красиво V2»
-(кнопка «Опубликовать красиво»). Превью — табы «Эмбеды / Красиво · V2»
+Панель публикации — карточки-режимы: «Эмбеды» и «Webhook V2»
+(кнопки «Опубликовать»). Превью — табы «Эмбеды / Webhook · V2»
 с живым V2-макетом. У каждого правила до двух ссылок (u + u2), обе
 уходят в одном сообщении: классика — «[открыть] · [ещё ссылка]»,
 V2 — «[Подробнее] · [Ещё]». V2-сообщение собирает
@@ -68,13 +68,17 @@ with client.session_transaction() as s:
 resp = client.get('/rules-editor')
 check(resp.status_code == 200, 'страница открывается')
 tpl = resp.get_data(as_text=True)
-check('btnPublishRulesV2' in tpl and 'Опубликовать красиво' in tpl,
-      'карточка «Красиво V2» с кнопкой «Опубликовать красиво»')
+check('btnPublishRulesV2' in tpl and 'Webhook <span class="pub-tag new">V2</span>' in tpl,
+      'карточка «Webhook V2» на месте')
+check('Опубликовать красиво' not in tpl and 'Красиво' not in tpl,
+      'никаких «красиво» в подписях')
+check('> Опубликовать\n' in tpl or '> Опубликовать <' in tpl,
+      'кнопки называются просто «Опубликовать»')
 check("publishRules('v2')" in tpl, 'кнопка дёргает публикацию со style=v2')
 check('btnPublishRules' in tpl and 'publishRules(\'classic\')' in tpl,
       'карточка «Эмбеды классика» на месте')
-check('pvTabEmbed' in tpl and 'pvTabV2' in tpl,
-      'табы превью «Эмбеды / Красиво · V2»')
+check('pvTabEmbed' in tpl and 'pvTabV2' in tpl and 'Webhook · V2' in tpl,
+      'табы превью «Эмбеды / Webhook · V2»')
 check('pvPaneEmbed' in tpl and 'pvPaneV2' in tpl and 'id="pv2"' in tpl,
       'две панели превью, V2-панель с живым макетом')
 check('renderPreviewV2' in tpl, 'живой V2-превью перерисовывается')

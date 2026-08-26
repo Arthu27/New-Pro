@@ -364,17 +364,9 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 .mode-banner-arrow { margin-left: auto; font-size: 10px; }
 
 .sidebar-search { position: relative; margin: 10px 12px 6px; display: flex; align-items: center; }
-.sidebar-search > i {
-  position: absolute; left: 11px; top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-3); font-size: var(--fs-sm);
-  pointer-events: none;
-  transition: color 0.15s;
-}
-.sidebar-search:focus-within > i { color: var(--ac); }
 .sidebar-search input {
   width: 100%;
-  padding: 8px 32px;
+  padding: 8px 32px 8px 12px;
   background: var(--surface-3);
   border: 1px solid transparent;
   border-radius: 10px;

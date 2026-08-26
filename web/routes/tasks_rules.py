@@ -370,7 +370,7 @@ def register(ctx):
                 if data .get ('style')=='v2':
                     return jsonify ({'success':True ,'demo':True ,'style':'v2','title':title ,'color':color_s .lower (),
                         'images_generated':gen_count ,
-                        'message':f"Демо-режим: {len (rules )} правил готовы — при живом боте они уйдут одним красивым сообщением нового формата (Components V2) от вебхука «Правила сервера» с аватаркой сервера"})
+                        'message':f"Демо-режим: {len (rules )} правил готовы — при живом боте они уйдут одним сообщением Components V2 от вебхука «Правила сервера» с аватаркой сервера"})
                 return jsonify ({'success':True ,'demo':True ,'title':title ,'color':color_s .lower (),
                     'images_generated':gen_count ,
                     'message':f"Демо-режим: {len (rules )} правил готовы{_gen_note} — при живом боте они уйдут в Discord с заголовком «{title}»"})
@@ -379,7 +379,7 @@ def register(ctx):
         if guild is None :
             return jsonify ({'error':'Сервер не найден у бота'}),404 
 
-        # ── Режим «красиво»: одно V2-сообщение от вебхука «Правила сервера»
+        # ── Режим webhook: одно V2-сообщение от вебхука «Правила сервера»
         # с аватаркой сервера — вместо пачки эмбедов от бота. Нет права
         # вебхуков — тем же макетом уходит сообщением бота (V2 или эмбед).
         if data .get ('style')=='v2':
@@ -434,7 +434,7 @@ def register(ctx):
             _fire_panel_notification ('rules',f"Правила опубликованы (V2): {len (rules )} пунктов",
             f"Канал {ch_id } · голос: {'вебхук «Правила сервера»' if how =='webhook' else 'бот (нет права вебхуков)'}")
             return jsonify ({'success':True ,'style':'v2','via':how ,'title':title ,
-            'message':("Опубликовано красиво: " if how =='webhook' else "Опубликовано голосом бота: ")+
+            'message':("Опубликовано через вебхук: " if how =='webhook' else "Опубликовано голосом бота: ")+
             f"{len (rules )} правил в одном сообщении нового формата"})
 
         embeds =build_embeds ()
