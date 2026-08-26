@@ -219,5 +219,34 @@ c0.post('/api/role-permissions/777/clear')
 after = load_acl(777)
 check(not after, 'сброс: всё снова для всех')
 
+print('== MAIN_GUILD_ID: панель управляет только главным сервером ==')
+_prev_mg = A.MAIN_GUILD_ID
+A.MAIN_GUILD_ID = '777'
+try:
+    r = own.get('/api/role-permissions/777')
+    check(r.status_code == 200, 'свой сервер (777) — доступ есть')
+    r = own.get('/api/role-permissions/888')
+    d = r.get_json(silent=True) or {}
+    check(r.status_code == 404 and 'MAIN_GUILD_ID' in (d.get('error') or ''),
+          'чужой guild_id в адресе API — 404 с объяснением')
+    r = own.get('/api/guild/888/analytics/heatmap')
+    check(r.status_code == 404, 'чужой guild_id в /api/guild/<id>/... — тоже мимо')
+    r = own.get('/logs?guild_id=888', follow_redirects=False)
+    check(r.status_code == 302 and 'denied' in (r.headers.get('Location') or ''),
+          'чужой ?guild_id= на странице — редирект с отказом')
+
+    # active_guild_id: главный сервер — закон, на «первый попавшийся» не меняем
+    from web.routes._common import Ctx
+    _ctx = Ctx(None, {}, lambda f: f, lambda r: (lambda f: f), '777')
+    _saved_bot, A.bot_instance = A.bot_instance, type('B', (), {'guilds': [NS(id=111)]})()
+    try:
+        check(_ctx.active_guild_id() == '777',
+              'бот состоит в другом сервере — панель всё равно на MAIN_GUILD_ID',
+              f"→ {_ctx.active_guild_id()}")
+    finally:
+        A.bot_instance = _saved_bot
+finally:
+    A.MAIN_GUILD_ID = _prev_mg
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

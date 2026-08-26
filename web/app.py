@@ -232,6 +232,20 @@ def before_request ():
         session ['main_guild_id']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else ''
         session .modified =True 
 
+    # Панель управляет ТОЛЬКО сервером из MAIN_GUILD_ID. Если бот состоит
+    # в нескольких серверах, чужой ID в адресе (/api/guild/<id>/...) или в
+    # ?guild_id=... не даёт доступа к данным другого сервера.
+    if MAIN_GUILD_ID:
+        _req_gid = (request .view_args or {}).get('guild_id') \
+            or request .args .get ('guild_id')
+        if _req_gid and str (_req_gid )!=str (MAIN_GUILD_ID ):
+            if request .path .startswith ('/api/'):
+                return jsonify ({
+                'success':False ,
+                'error':('Панель управляет сервером из MAIN_GUILD_ID. '
+                         'Другие серверы бота недоступны.')}),404
+            return redirect ('/?denied=' +quote_plus ('чужой сервер'))
+
     # CSRF-защита без токенов во всех шаблонах: запросы на запись (POST/PUT/
     # DELETE/PATCH) с чужим Origin/Referer отклоняются. Браузер всегда шлёт
     # Origin на cross-site POST, а панель же работает same-origin, поэтому

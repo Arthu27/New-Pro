@@ -204,18 +204,25 @@ finally:
     _wa.bot_instance = _saved_bot
     os.environ['DEMO_MODE'] = ''
 
-# Пустой сервер (нет логов) — честные пустые ответы, без подстановок
+# Пустой сервер (нет логов) — честные пустые ответы, без подстановок.
+# Замок MAIN_GUILD_ID пускает только к главному серверу — объявляем 424242
+# главным на время раздела (у него как раз нет данных).
 login('mod')
-r = client.get('/api/guild/424242/analytics')
-d = r.get_json() or {}
-check(r.status_code == 200 and d.get('top_channels') == [] and d.get('top_members') == [],
-      'нет данных — так и показываем: пусто, без «жизненных» фейков')
-check(len(set(d.get('member_counts') or [0])) == 1,
-      'график участников — честная линия, без выдуманного «+2 в день»')
-r = client.get('/api/guild/424242/analytics/channel-drill?name=общий')
-d = r.get_json() or {}
-check(r.status_code == 200 and d.get('total') == 0 and not d.get('top_authors'),
-      'детализация пустого канала без выдуманных авторов')
+_mg_saved =_wa .MAIN_GUILD_ID
+_wa .MAIN_GUILD_ID ='424242'
+try:
+    r = client.get('/api/guild/424242/analytics')
+    d = r.get_json() or {}
+    check(r.status_code == 200 and d.get('top_channels') == [] and d.get('top_members') == [],
+          'нет данных — так и показываем: пусто, без «жизненных» фейков')
+    check(len(set(d.get('member_counts') or [0])) == 1,
+          'график участников — честная линия, без выдуманного «+2 в день»')
+    r = client.get('/api/guild/424242/analytics/channel-drill?name=общий')
+    d = r.get_json() or {}
+    check(r.status_code == 200 and d.get('total') == 0 and not d.get('top_authors'),
+          'детализация пустого канала без выдуманных авторов')
+finally:
+    _wa .MAIN_GUILD_ID =_mg_saved
 demo_source = open(os.path.join(ROOT, 'scripts', 'demo_panel.py'), encoding='utf-8').read()
 check("message_log_path = f'data/message_logs_{GID}.json'" in demo_source and
       'for day in range(30)' in demo_source,

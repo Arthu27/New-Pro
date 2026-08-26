@@ -599,14 +599,19 @@ class Ctx:
         self.MAIN_GUILD_ID = MAIN_GUILD_ID
 
     def active_guild_id(self):
-        """Return a live guild ID, never a stale value left in .env."""
+        """Активный сервер панели.
+
+        MAIN_GUILD_ID из .env — главный закон: если задан, панель работает
+        ТОЛЬКО с ним, даже если бот случайно состоит в других серверах
+        (раньше молча переключались на первый попавшийся — чужие данные).
+        Пустой MAIN_GUILD_ID — прежнее поведение (первый сервер бота)."""
         import web.app as _app
         bot = _app.bot_instance
         guilds = getattr(bot, 'guilds', None) if bot else None
         configured = str(self.MAIN_GUILD_ID or '')
+        if configured:
+            return configured
         if guilds:
-            if any(str(g.id) == configured for g in guilds):
-                return configured
             return str(guilds[0].id)
         return configured
 

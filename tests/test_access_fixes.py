@@ -39,7 +39,7 @@ check(owner_shortcut and owner_shortcut.start() < app.index('# 1. Ручное �
 print('== Понятные 403 ==')
 check('denied=' in app and 'quote_plus' in app,
       'страницы без прав ведут на главную с ?denied=')
-check('Создатель сервера получает роль «Владелец» автоматически' in app,
+check('Владелец панели — создатель сервера и владелец бота (OWNER_ID в .env)' in app,
       'ошибка API объясняет, как получить роль')
 base = src('web/templates/base.html')
 check('denied=' in base and 'toast' in base,
