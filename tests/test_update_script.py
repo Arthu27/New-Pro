@@ -55,7 +55,8 @@ check('/XF .env update.bat' in text, 'файлы исключены: .env и с�
 check('errorlevel 8' in text, 'коды robocopy 0-7 обработаны как успех')
 
 print('== 4. UX-экран ==')
-check('chcp 65001' in text, 'UTF-8 консоль (русские строки без кракозябр)')
+check(all(ord(ch) < 128 for ch in text),
+      'файл целиком ASCII — не ломается ни в русской, ни в английской консоли')
 check('/norestart' in text, 'режим без перезапуска предусмотрен')
 check('main.py' in text, 'защита от запуска не из папки бота')
 check('main\\.py' in text.replace('main.py', 'main\\.py', 1) or 'main\\.py' in text,
@@ -72,7 +73,7 @@ print('== 6. Постоянная ссылка (не зависит от вет�
 check('releases/latest' in text, 'источник: последний релиз — ссылка не меняется')
 check('zipball_url' in text, 'адрес архива берётся из ответа GitHub')
 check('for /d %%D in' in text, 'папка в архиве определяется автоматически')
-check('Источник: последний релиз' in text, 'человеку видно, откуда качалось')
+check('Istochnik: posledniy reliz' in text, 'человеку видно, откуда качалось')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

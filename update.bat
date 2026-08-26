@@ -1,24 +1,22 @@
 @echo off
-rem ═══════════════════════════════════════════════════════════════════
-rem  Hakumo Updater — обновление бота в один двойной клик.
+rem ==================================================================
+rem  Hakumo Updater -- obnovlenie bota v odin dvoynoy klik.
 rem
-rem  Откуда качает: ПОСТОЯННАЯ ссылка «последний релиз» на GitHub —
-rem  она не меняется от чата к чату. Если релизов нет — запасной путь:
-rem  ветка, прописанная ниже (BRANCH).
+rem  Istochnik: POSTOYANNAYA ssylka "posledniy reliz" na GitHub --
+rem  ona ne menyayetsya ot chata k chatu. Esli relizov net -- zapasnoy
+rem  put': vetka, propisannaya nizhe (BRANCH).
 rem
-rem  Что делает:
-rem    1. Скачивает свежую сборку ветки arena/019fee4a-new-pro с GitHub
-rem    2. Распаковывает во временную папку
-rem    3. Аккуратно докладывает код поверх текущей папки.
-rem       НЕ ТРОГАЕТ: .env, data\ (база, настройки, логи), .venv, .git —
-rem       твои данные в безопасности, чистится только код.
-rem    4. Ставит зависимости из requirements.txt (если изменились).
-rem    5. Перезапускает бота (старую копию main.py гасит точечно).
+rem  Chto delaet:
+rem    1. Skachivayet svejuyu sborku s GitHub
+rem    2. Raspakovyvayet vo vremennuyu papku
+rem    3. Akkuratno dokladyvayet kod poverh tekushchey papki.
+rem       NE TROGAYET: .env, data\ (baza, nastroyki, logi), .venv, .git
+rem    4. Stavit zavisimosti iz requirements.txt (esli izmenilis)
+rem    5. Perezapuskayet bota (staruyu kopiyu main.py gasit tochno)
 rem
-rem  Запуск: двойной клик по update.bat
-rem  Без перезапуска: update.bat /norestart
-rem ═══════════════════════════════════════════════════════════════════
-chcp 65001 >nul
+rem  Zapusk: dvoynoy klik po update.bat
+rem  Bez perezapuska: update.bat /norestart
+rem ==================================================================
 setlocal EnableDelayedExpansion
 title Hakumo Updater
 cd /d "%~dp0"
@@ -31,34 +29,32 @@ set "TMPSRC=%TEMP%\hakumo_update_src"
 set "SRC="
 set "TMPURL=%TEMP%\hakumo_update_url.txt"
 
-rem Постоянный источник: последний релиз (ссылка не зависит от ветки)
+rem -- Postoyannyy istochnik: posledniy reliz (ssylka ne zavisit ot vetki)
 powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol=[Enum]::ToObject([Net.SecurityProtocolType],3072); try { $r=Invoke-RestMethod 'https://api.github.com/repos/%REPO%/releases/latest'; if ($r.zipball_url) { $r.zipball_url | Out-File -Encoding ascii '%TMPURL%' } else { exit 1 } } catch { exit 1 }" >nul 2>nul
 if exist "%TMPURL%" (
     for /f "usebackq delims=" %%U in ("%TMPURL%") do if not "%%U"=="" set "URL=%%U"
     del "%TMPURL%" >nul 2>nul
 )
 if "%URL%"=="https://codeload.github.com/%REPO%/zip/refs/heads/%BRANCH%" (
-    echo   Источник: ветка %BRANCH% ^(релизов пока нет^)
+    echo   Istochnik: vetka %BRANCH% ^| relizov poka net
 ) else (
-    echo   Источник: последний релиз ^(постоянная ссылка^)
+    echo   Istochnik: posledniy reliz ^| postoyannaya ssylka
 )
 
-echo ════════════════════════════════════════════════════════════
+echo ==================================================================
 echo   Hakumo Updater
-echo   Ветка: %BRANCH%
-echo   Папка бота: %CD%
-echo ════════════════════════════════════════════════════════════
+echo   Papka bota: %CD%
+echo ==================================================================
 echo.
 
 if not exist main.py (
-    echo [ОШИБКА] main.py не найден — запусти update.bat из папки бота.
+    echo [OSHIBKA] main.py ne nayden -- zapusti update.bat iz papki bota.
     goto :end
 )
 
-echo [1/5] Скачиваю свежую сборку с GitHub...
-rem Старый PowerShell не договаривается с GitHub по TLS 1.2 («SSL/TLS channel»):
-rem сначала пробуем curl.exe (есть в Windows 10 / Server 2019+), иначе PowerShell
-rem с принудительным TLS 1.2 (3072).
+echo [1/5] Skachivayu svejuyu sborku s GitHub...
+rem Staryy PowerShell ne dogovarivayetsya s GitHub po TLS 1.2:
+rem snachala curl.exe (Windows 10 / Server 2019+), inache PowerShell s TLS 1.2.
 where curl.exe >nul 2>nul
 if not errorlevel 1 (
     curl.exe -L --fail --silent --show-error -o "%TMPZ%" "%URL%"
@@ -68,7 +64,7 @@ if not errorlevel 1 (
     if errorlevel 1 goto :fail_download
 )
 
-echo [2/5] Распаковываю...
+echo [2/5] Raspakovyvayu...
 if exist "%TMPSRC%" rmdir /s /q "%TMPSRC%"
 mkdir "%TMPSRC%" >nul 2>nul
 where tar.exe >nul 2>nul
@@ -81,50 +77,50 @@ if not errorlevel 1 (
 )
 for /d %%D in ("%TMPSRC%\*") do if not defined SRC set "SRC=%%D"
 if not defined SRC (
-    echo [ОШИБКА] В архиве нет ожидаемой папки — отмена.
+    echo [OSHIBKA] V arhive net ozhidaemoy papki -- otmena.
     goto :fail_download
 )
 
-echo [3/5] Обновляю код (данные, .env и логи не трогаю)...
+echo [3/5] Obnovlyayu kod (dannye, .env i logi ne trogayu)...
 robocopy "%SRC%" "." /E /XD data .git .venv __pycache__ logs /XF .env update.bat /NFL /NDL /NJH /R:2 /W:2 >nul
 if errorlevel 8 goto :fail_copy
 
-echo [4/5] Проверяю зависимости...
+echo [4/5] Proveryayu zavisimosti...
 if exist requirements.txt (
     python -m pip install -r requirements.txt --quiet --disable-pip-version-check
-    if errorlevel 1 echo [ПРЕДУПРЕЖДЕНИЕ] pip завершился с ошибкой — смотри вывод выше.
+    if errorlevel 1 echo [PREDUPREZHDENIE] pip zavershilsya s oshibkoy -- smotri vyvod vyshe.
 )
 
 if /i "%~1"=="/norestart" (
-    echo [5/5] Готово. Перезапуск пропущен (передан /norestart).
+    echo [5/5] Gotovo. Perezapuska propushchen ^(/norestart^).
     goto :ok
 )
 
-echo [5/5] Перезапускаю бота...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" | Where-Object { $_.CommandLine -match 'main\.py' } | ForEach-Object { Write-Host ('  Останавливаю PID ' + $_.ProcessId); Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+echo [5/5] Perezapuskayu bota...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" | Where-Object { $_.CommandLine -match 'main\.py' } | ForEach-Object { Write-Host ('  Ostanavlivayu PID ' + $_.ProcessId); Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
 timeout /t 2 /nobreak >nul
 start "Hakumo Bot" cmd /k python main.py
 
 :ok
 echo.
-echo ════════════════════════════════════════════════════════════
-echo   Обновление завершено. Маркер свежего кода при старте:
-echo   «Слеш-меню: NN команд (лимит Discord — 100...)»
-echo ════════════════════════════════════════════════════════════
+echo ==================================================================
+echo   Obnovlenie zaversheno. Dannye i .env ne potrosheny.
+echo   Marker svezhego koda pri starte: "Slesh-menyu: NN komand..."
+echo ==================================================================
 goto :end
 
 :fail_download
 echo.
-echo [ОШИБКА] Не удалось скачать/распаковать сборку.
-echo Проверь интернет и что GitHub доступен. Локальные файлы не тронуты.
-echo Если снова про SSL/TLS — скачай файл вручную в браузере и положи рядом:
+echo [OSHIBKA] Ne udalos skachat/raspakovat sborku.
+echo Proveryay internet i chto GitHub dostupen. Lokalnye faily ne tronuty.
+echo Esli snova pro SSL/TLS -- skachay update.bat v brauzere i polozhi ryadom:
 echo   https://github.com/Arthu27/New-Pro/raw/latest/update.bat
 goto :end
 
 :fail_copy
 echo.
-echo [ОШИБКА] Robocopy вернул ошибку при копировании файлов.
-echo Твои .env и data\ не пострадали. Повтори запуск от имени пользователя с правами на эту папку.
+echo [OSHIBKA] Robocopy vernul oshibku pri kopirovanii.
+echo Tvoi .env i data\ ne postradali. Povtori zapusk.
 
 :end
 echo.
