@@ -694,6 +694,16 @@ def _get_role_from_discord (discord_id :str )->str :
     """Opredelit роль в paneli по Discord-ролям ve администрации"""
     if not bot_instance :
         return 'uye'
+    # 00. Владелец БОТА (OWNER_ID из .env) — всегда владелец панели,
+    # даже если сервер чужой и его основатель — другой человек: бот и
+    # панель принадлежат тому, кто их запускает.
+    try :
+        from config import clean_number as _cn
+        _bot_owner =_cn (os .getenv ('OWNER_ID'))or 0
+        if _bot_owner and int (discord_id )==int (_bot_owner ):
+            return 'owner'
+    except Exception :
+        pass
     try :
         gid =MAIN_GUILD_ID or (str (bot_instance .guilds [0 ].id )if bot_instance .guilds else None )
         if not gid :
@@ -782,7 +792,7 @@ def role_required (min_role ):
                 return redirect (url_for ('login'))
             if ROLES .get (session ['role'],-1 )<ROLES .get (min_role ,999 ):
                 need =ROLE_LABELS .get (min_role ,min_role )
-                why ='Создатель сервера получает роль «Владелец» автоматически — перезайдите в панель.'
+                why ='Владелец панели — создатель сервера и владелец бота (OWNER_ID в .env); перезайдите в панель.'
                 if request .path .startswith ('/api/'):
                     return jsonify ({'success':False ,
                     'error':f'Нужна роль «{need}» панели. {why}'}),403

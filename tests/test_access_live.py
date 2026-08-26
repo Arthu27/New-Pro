@@ -141,6 +141,18 @@ check(A._get_role_from_discord('43') == 'admin',
       'просто админ → роль admin (не owner)',
       f"→ {A._get_role_from_discord('43')}")
 
+# Бот добавляют на ЧУЖОЙ сервер: основатель — другой человек (42),
+# а владелец бота (OWNER_ID=43) всё равно владелец панели
+import os as _os
+_os.environ['OWNER_ID'] = '43'
+check(A._get_role_from_discord('43') == 'owner',
+      'владелец бота (OWNER_ID) на чужом сервере → владелец панели',
+      f"→ {A._get_role_from_discord('43')}")
+check(A._get_role_from_discord('44') != 'owner',
+      'посторонний без OWNER_ID владельцем не становится',
+      f"→ {A._get_role_from_discord('44')}")
+_os.environ.pop('OWNER_ID', None)
+
 A._resolve_guild_member = _orig_resolve
 
 print('== Бот: предпроверка прав (preflight) ==')
