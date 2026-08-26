@@ -651,26 +651,92 @@
       if (sub.classList.contains('has-active')) sub.classList.add('open');
       btn.addEventListener('click', function () { sub.classList.toggle('open'); });
     });
-    // Поиск-фильтр
+    // Поиск-фильтр по меню: подсветка совпадений, авто-раскрытие групп,
+    // счётчик у группы, «ничего не найдено», Esc и хоткей «/»
     var search = doc.getElementById('sidebarSearch');
     if (search) {
-      search.addEventListener('input', function () {
-        var q = search.value.toLowerCase().trim();
-        var any = false;
-        Array.prototype.forEach.call(nav.querySelectorAll('.nav-group'), function (grp) {
-          var links = Array.prototype.slice.call(grp.querySelectorAll('.nav-link'));
-          var visible = 0;
-          links.forEach(function (l) {
-            var hit = !q || l.textContent.toLowerCase().indexOf(q) !== -1;
-            l.style.display = hit ? '' : 'none';
-            if (hit) visible++;
-          });
-          var subs = grp.querySelectorAll('.nav-subgroup');
-          subs.forEach(function (s) { s.style.display = (q && !visible) ? 'none' : ''; });
-          grp.style.display = (!q || visible) ? '' : 'none';
-          if (!q && visible === 0) grp.style.display = 'none';
-          if (q && visible) any = true;
+      var sBox = search.parentNode;
+      var sClear = doc.getElementById('sidebarSearchClear');
+      var sEmpty = null;
+      var sFavs = nav.querySelector('.nav-favs');
+
+      function hl(span, q) {
+        var label = span.textContent;
+        var i = label.toLowerCase().indexOf(q);
+        if (i === -1) return;
+        if (!span.getAttribute('data-orig')) span.setAttribute('data-orig', span.innerHTML);
+        span.textContent = '';
+        span.appendChild(doc.createTextNode(label.slice(0, i)));
+        var mk = doc.createElement('mark');
+        mk.textContent = label.slice(i, i + q.length);
+        span.appendChild(mk);
+        span.appendChild(doc.createTextNode(label.slice(i + q.length)));
+      }
+      function unhl(span) {
+        var o = span.getAttribute('data-orig');
+        if (o !== null) { span.innerHTML = o; span.removeAttribute('data-orig'); }
+      }
+
+      function applyFilter() {
+        var q = search.value.trim().toLowerCase();
+        sBox.classList.toggle('has-value', !!q);
+        if (sClear) sClear.hidden = !q;
+        nav.classList.toggle('filtering', !!q);
+        if (sFavs) sFavs.classList.toggle('nav-hide', !!q);
+        var total = 0;
+        Array.prototype.forEach.call(nav.querySelectorAll('.nav-link'), function (l) {
+          if (l.closest('.nav-favs')) return;
+          var span = l.querySelector('span');
+          var label = span ? span.textContent : l.textContent;
+          var hay = (label + ' ' + (l.getAttribute('title') || '')).toLowerCase();
+          var hit = !q || hay.indexOf(q) !== -1;
+          l.classList.toggle('nav-hide', !!q && !hit);
+          if (q && hit && span) hl(span, q);
+          else if (span) unhl(span);
+          if (q && hit) total++;
         });
+        Array.prototype.forEach.call(nav.querySelectorAll('.nav-subgroup'), function (sub) {
+          var vis = sub.querySelectorAll('.nav-link:not(.nav-hide)').length;
+          sub.classList.toggle('nav-hide', !!q && !vis);
+        });
+        Array.prototype.forEach.call(nav.querySelectorAll('.nav-group'), function (grp) {
+          var vis = grp.querySelectorAll('.nav-link:not(.nav-hide)').length;
+          grp.classList.toggle('nav-hide', !!q && !vis);
+          var cnt = grp.querySelector('[data-count]');
+          if (cnt) cnt.textContent = (q && vis) ? String(vis) : '';
+        });
+        if (q && !total) {
+          if (!sEmpty) {
+            sEmpty = doc.createElement('div');
+            sEmpty.className = 'nav-empty';
+            sEmpty.innerHTML = '<i class="fas fa-magnifying-glass-minus"></i>' +
+              '<div>Ничего не нашлось по «<b></b>»<br><small>попробуйте другое слово</small></div>';
+            nav.appendChild(sEmpty);
+          }
+          sEmpty.querySelector('b').textContent = search.value.trim();
+          sEmpty.classList.add('show');
+        } else if (sEmpty) {
+          sEmpty.classList.remove('show');
+        }
+      }
+
+      function resetFilter() { search.value = ''; applyFilter(); }
+      search.addEventListener('input', applyFilter);
+      search.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); resetFilter(); }
+      });
+      if (sClear) sClear.addEventListener('click', function () { resetFilter(); search.focus(); });
+      doc.addEventListener('keydown', function (e) {
+        if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+        var el = doc.activeElement;
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return;
+        if (doc.body.classList.contains('zen')) return;
+        var sb = doc.getElementById('sidebar');
+        if (sb && sb.classList.contains('collapsed')) return;
+        if (sBox.offsetParent === null) return;
+        e.preventDefault();
+        search.focus();
+        search.select();
       });
     }
   }
