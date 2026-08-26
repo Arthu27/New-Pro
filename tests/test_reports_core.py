@@ -108,6 +108,8 @@ check('add_view(ReportPanelView())' in src,
       'панель персистентная — переживает рестарт')
 check('create_thread' in src and 'private_thread' in src,
       'репорт открывает приватную ветку')
+check('discord.Attachment' in src and 'proof_file' in src and 'to_file' in src,
+      'доказательства — файлом сразу в ветку (не только ссылкой)')
 check('zlib' in open(os.path.join(ROOT, 'services', 'reports_core.py'),
                     encoding='utf-8').read(), 'ядро использует zlib')
 check("'reports.py'" in open(os.path.join(ROOT, 'cogs_policy.py'),

@@ -447,9 +447,11 @@ class Reports(commands.Cog):
     # ── команды ─────────────────────────────────────────────────────
     @app_commands.command(name='report', description='Подать жалобу на участника')
     @app_commands.describe(user='На кого жалоба', reason='Причина',
-                           proof='Ссылка на доказательства (необязательно)')
+                           proof_file='Скрин/видео-доказательство — грузится в ветку сразу',
+                           proof='Ссылка на доказательства (если файл не нужен)')
     async def report_slash(self, interaction, user: discord.Member,
-                           reason: str, proof: str = ''):
+                           reason: str, proof_file: discord.Attachment = None,
+                           proof: str = ''):
         cfg = _cfg(interaction.guild_id)
         if not cfg.get('channel_id'):
             return await interaction.response.send_message(
@@ -480,19 +482,32 @@ class Reports(commands.Cog):
                 pass
         RC.ticket_create(interaction.guild_id, thread.id,
                          interaction.user.id, user.id)
+        proof_bits = []
+        if proof:
+            proof_bits.append(f'Ссылка: {proof[:200]}')
+        if proof_file is not None:
+            proof_bits.append(f'Файл: {proof_file.filename} '
+                              f'({proof_file.size // 1024} КБ) — вложением ниже')
+        proof_line = '\n'.join(proof_bits) if proof_bits else '—'
         e = discord.Embed(
             title='Репорт',
             color=0xE74C3C,
             description=(f"Обвиняемый: **{user.display_name}** · `{user.id}`\n"
                          f"Подал: {interaction.user.mention}\n\n"
                          f"**Причина:** {reason[:1000]}\n"
-                         f"**Доказательства:** {proof[:200] or '—'}\n\n"
+                         f"**Доказательства:** {proof_line}\n\n"
                          f"**Прошлые нарушения ({cfg.get('expiry_days', 90)} дн):**\n"
                          + _violations_field(interaction.guild_id, user.id, cfg)),
             timestamp=datetime.now(timezone.utc))
         e.set_thumbnail(url=user.display_avatar.url)
         e.set_footer(text=f'{interaction.guild.name} · до выбора режима пишут модератор и обвинитель')
-        await thread.send(embed=e, view=ReportPanelView())
+        send_kw = {'embed': e, 'view': ReportPanelView()}
+        if proof_file is not None:
+            try:
+                send_kw['file'] = await proof_file.to_file()
+            except Exception as ex:
+                _log.warning('report proof_file: %s', ex)
+        await thread.send(**send_kw)
         await interaction.followup.send(
             f'Репорт создан: {thread.mention}', ephemeral=True)
 
@@ -529,8 +544,10 @@ class Reports(commands.Cog):
             embed=e, view=MyViolationsView() if has else None, ephemeral=True)
 
     @app_commands.command(name='appeal', description='Обжаловать нарушение')
-    @app_commands.describe(description='Почему решение надо пересмотреть')
-    async def appeal_slash(self, interaction, description: str):
+    @app_commands.describe(description='Почему решение надо пересмотреть',
+                           proof_file='Скрин/видео к апелляции — грузится в ветку сразу')
+    async def appeal_slash(self, interaction, description: str,
+                           proof_file: discord.Attachment = None):
         cfg = _cfg(interaction.guild_id)
         if not cfg.get('channel_id'):
             return await interaction.response.send_message(
@@ -540,9 +557,15 @@ class Reports(commands.Cog):
         if not vs:
             return await interaction.response.send_message(
                 'Нарушений для обжалования нет.', ephemeral=True)
+        file_obj = None
+        if proof_file is not None:
+            try:
+                file_obj = await proof_file.to_file()
+            except Exception as ex:
+                _log.warning('appeal proof_file: %s', ex)
         await interaction.response.send_message(
             'Какое нарушение обжалуем:',
-            view=AppealSelectView(vs, description), ephemeral=True)
+            view=AppealSelectView(vs, description, file_obj), ephemeral=True)
 
     @app_commands.command(name='report-setup',
                           description='Привязать канал репортов и роль модератора')
@@ -627,9 +650,10 @@ class Reports(commands.Cog):
 
 # ── Select: апелляция ───────────────────────────────────────────────
 class AppealSelectView(discord.ui.View):
-    def __init__(self, violations, description):
+    def __init__(self, violations, description, file_obj=None):
         super().__init__(timeout=180)
         self.description = description
+        self.file_obj = file_obj
         self.select.options = [
             discord.SelectOption(
                 label=f"{RC.KIND_LABELS.get(v['kind'], v['kind'])} · "
@@ -662,7 +686,10 @@ class AppealSelectView(discord.ui.View):
             description=(f"Подал: {interaction.user.mention}\n"
                          f"Нарушение: `#{select.values[0]}`\n\n"
                          f"**Доводы:** {self.description[:1500]}"))
-        await thread.send(embed=e, view=AppealPanelView(select.values[0], old_thread))
+        send_kw = {'embed': e, 'view': AppealPanelView(select.values[0], old_thread)}
+        if self.file_obj is not None:
+            send_kw['file'] = self.file_obj
+        await thread.send(**send_kw)
         await interaction.followup.send(f'Апелляция создана: {thread.mention}',
                                         ephemeral=True)
 
