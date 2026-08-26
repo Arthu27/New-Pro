@@ -20,7 +20,7 @@ import tempfile
 import threading
 from types import SimpleNamespace
 
-_TMP = tempfile.mkdtemp(prefix='aether_templates_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_templates_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -133,7 +133,7 @@ class FakeBot:
 
 
 # Живой полный сервер — с него снимаем слепки
-FULL = FakeGuild(888, 'Aether')
+FULL = FakeGuild(888, 'Hakumo')
 FULL.roles += [mk_role('Бот-роль', 9, managed=True),
                mk_role('Модер', 2, color=0x3498DB, perms=8, mentionable=True),
                mk_role('Мирный', 1)]
@@ -169,7 +169,7 @@ TPL = {'roles': [{'name': 'Модер', 'color': 3447003, 'permissions': 8,
        'version': 1}
 ENTRY = {'template': TPL, 'description': 'основа',
          'created_at': '2026-08-17T10:00:00+00:00', 'created_by': 'админ',
-         'source_guild': 'Aether'}
+         'source_guild': 'Hakumo'}
 db.set('777', 'templates', {'основа': ENTRY})
 
 print('== 1. Слепок и мета — чистые функции кога ==')
@@ -198,7 +198,7 @@ ok, err, payload = TP.save_flow(BOT, '888', '  Вик ', 'описание-пр�
 check(ok and payload['message'] == 'Шаблон «вик» сохранён: 2 роли · 1 категория · 3 канала.',
       'снимок живого сервера — текст команды')
 entry = db.get('888', 'templates', {})['вик']
-check(entry['created_by'] == 'тестер' and entry['source_guild'] == 'Aether'
+check(entry['created_by'] == 'тестер' and entry['source_guild'] == 'Hakumo'
       and entry['description'] == 'описание-проба' and entry['created_at'],
       'карточка снимка как у команды')
 ok, err, _ = TP.save_flow(BOT, '888', '   ', '', 'тестер')

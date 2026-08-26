@@ -19,7 +19,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta
 
-_TMP = tempfile.mkdtemp(prefix='aether_modins_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_modins_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -306,7 +306,7 @@ check(client.get('/mod-insights').status_code in (302, 401, 403), 'гостю с
 check(client.get(OV).status_code in (302, 401, 403), 'гостю снимок закрыт')
 check(client.get(DS + '?user_id=100').status_code in (302, 401, 403), 'гостю досье закрыто')
 login('uye')
-check(client.get('/mod-insights').status_code == 403, 'uye нельзя на страницу')
+check(client.get('/mod-insights').status_code == 302, 'uye нельзя на страницу')
 check(client.get(OV).status_code == 403, 'uye нельзя в снимок')
 login('mod')
 page = client.get('/mod-insights')

@@ -84,10 +84,10 @@ def _save_json(path, data):
 class TagJail(commands.Cog):
     """Авто-джейл за запрещённые теги в имени."""
 
-    # ── фирменный Aether-эмбед ─────────────────────────────────
+    # ── фирменный Hakumo-эмбед ─────────────────────────────────
     def _ae(self, kind, title, desc=None):
-        from cogs.embed_utils import aether_embed
-        return aether_embed(kind, title, desc)
+        from cogs.embed_utils import hakumo_embed
+        return hakumo_embed(kind, title, desc)
 
     def __init__(self, bot):
         self.bot = bot

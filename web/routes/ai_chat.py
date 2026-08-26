@@ -445,7 +445,7 @@ def register(ctx):
             _log.debug("api_ai_chat(): подавлено: %s", _ex )
 
         system =(
-        "Ты Aether — ИИ-ассистент Discord-сервера Aether и веб-панели.\n"
+        "Ты Hakumo — ИИ-ассистент Discord-сервера Hakumo и веб-панели.\n"
         f"Пользователь: {session.get('username')}, Роль: {user_role}\n"
         f"Время: {now.strftime('%H:%M')}, Дата: {now.strftime('%d %B %Y, %A')}\n\n"
         +(f"=== ВСЁ О ПАНЕЛИ И БОТЕ ===\n{panel_kb}\n\n"if panel_kb else '')+

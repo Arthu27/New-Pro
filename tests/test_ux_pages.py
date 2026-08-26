@@ -18,7 +18,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_polish_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_polish_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -68,13 +68,13 @@ def post(path, payload):
 
 print('== 1. Undo триггера: удалить → «Отменить» (re-add тем же API) ==')
 login('owner')
-code, body = post('/api/automation/triggers/add', {'trigger': 'ip', 'response': 'play.aether', 'exact': True})
+code, body = post('/api/automation/triggers/add', {'trigger': 'ip', 'response': 'play.hakumo', 'exact': True})
 check(code == 200 and body.get('success'), 'триггер добавлен')
 state = GuildData('triggers').get(777, 'state', {})
 tid = state['items'][0]['id']
 code, body = post('/api/automation/triggers/remove', {'id': tid})
 check(code == 200 and not GuildData('triggers').get(777, 'state', {})['items'], 'удалён')
-code, body = post('/api/automation/triggers/add', {'trigger': 'ip', 'response': 'play.aether', 'exact': True})
+code, body = post('/api/automation/triggers/add', {'trigger': 'ip', 'response': 'play.hakumo', 'exact': True})
 state = GuildData('triggers').get(777, 'state', {})
 check(code == 200 and len(state['items']) == 1 and state['items'][0]['exact'] is True,
       '«отмена» вернула триггер с флагом exact — дубль-защита не завелась')

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Журнал модерации · Модерация — Aether{% endblock %}
+{% block title %}Журнал модерации · Модерация — Hakumo{% endblock %}
 {% block page_title %}Журнал модерации{% endblock %}
 {% block content %}
 
@@ -129,7 +129,7 @@
     $('stat-kicks').textContent = kicks;
     $('stat-warns').textContent = warns;
     $('stat-muts').textContent = muts;
-    if (window.AetherChart) {
+    if (window.HakumoChart) {
       var counts = {};
       allLogs.forEach(function (l) {
         var a = (l.action || '?').toLowerCase();
@@ -141,8 +141,8 @@
         var meta = tones[k] || [k, null];
         return { label: meta[0], value: counts[k], color: meta[1] || undefined };
       }).sort(function (a, b) { return b.value - a.value; });
-      window.AetherChart.vbars($('logs-types'), items);
-      if (window.AetherHeat) {
+      window.HakumoChart.vbars($('logs-types'), items);
+      if (window.HakumoHeat) {
         var hours = new Array(24).fill(0);
         allLogs.forEach(function (l) {
           try {
@@ -150,7 +150,7 @@
             if (!isNaN(h)) hours[h]++;
           } catch (e) { /* метка без времени */ }
         });
-        window.AetherHeat($('logs-heat'), hours, { labels: ['00:00', '12:00', '23:00'] });
+        window.HakumoHeat($('logs-heat'), hours, { labels: ['00:00', '12:00', '23:00'] });
       }
     }
   }

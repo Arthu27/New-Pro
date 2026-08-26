@@ -23,7 +23,7 @@ import re
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_settings_hub_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_settings_hub_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -107,11 +107,11 @@ sg = groups['settings']
 check(sg['group'] == 'Настройки' and bool(sg.get('icon')),
       'группа с русским именем и иконкой')
 sp = [p['path'] for p in sg['pages']]
-want = ['/settings', '/mod-settings', '/channel-settings', '/bot-settings',
-        '/ticket-settings', '/welcome-editor', '/rules-editor', '/warn-config',
-        '/automation', '/notifications', '/theme-settings', '/theme-studio',
-        '/anticrash', '/log-settings']
-check(sp == want, f'13 страниц категории в верном порядке ({len(sp)})')
+want = ['/settings', '/command-switches', '/mod-settings', '/channel-settings',
+        '/bot-settings', '/ticket-settings', '/welcome-editor', '/rules-editor',
+        '/warn-config', '/automation', '/notifications', '/theme-settings',
+        '/theme-studio', '/anticrash', '/log-settings']
+check(sp == want, f'страницы категории в верном порядке ({len(sp)})')
 gkeys = [g['key'] for g in PM.MENU]
 check(gkeys.index('settings') == gkeys.index('bot') + 1,
       '«Настройки» сразу после раздела «Бот»')
@@ -215,7 +215,7 @@ check('/channel-settings' in body and '/guardian' in body,
       'панель связей настроек модерации на месте')
 login_as('mod')
 r = client.get('/mod-settings')
-check(r.status_code == 403, f'настройка модерации — Админ+ ({r.status_code})')
+check(r.status_code == 302, f'настройка модерации — Админ+ ({r.status_code})')
 r = client.get(f'/api/guild/{GID}/mod-settings')
 check(r.status_code == 403, 'модератор не читает API настроек модерации')
 login_as('owner')

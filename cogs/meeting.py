@@ -287,7 +287,7 @@ async def _build_meeting_report (guild :discord .Guild ,since :datetime .datetim
     close .description =(
     f'> Период отчёта: <t:{ts_since}:D> → <t:{ts_now}:D>\n'
     '> До следующего собрания данные продолжат накапливаться.\n\n'
-    '-# Aether  ·  Система собраний'
+    '-# Hakumo  ·  Система собраний'
     )
     close .set_footer (text =f'{guild.name}',icon_url =guild .icon .url if guild .icon else None )
     embeds .append (close )

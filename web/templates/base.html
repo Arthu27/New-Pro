@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Панель Aether{% endblock %}</title>
+    <title>{% block title %}Панель Hakumo{% endblock %}</title>
     <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
 <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
@@ -11,7 +11,7 @@
       // Тема применяется до отрисовки, чтобы не было «вспышки»
       (function () {
         try {
-          var t = localStorage.getItem('aether_theme');
+          var t = localStorage.getItem('hakumo_theme');
           if (t !== 'dark' && t !== 'light') t = 'light';
           document.documentElement.setAttribute('data-theme', t);
         } catch (e) {}
@@ -57,7 +57,7 @@
       if (!W.attachTableSort) W.attachTableSort = function () {};
       if (!W.csvDownload) W.csvDownload = function () {};
       if (!W.drawDonut) W.drawDonut = function () {};
-      if (!W.AetherRing) W.AetherRing = function () {};
+      if (!W.HakumoRing) W.HakumoRing = function () {};
       if (!W.tiltCards) W.tiltCards = function () {};
       if (!W.densityButton) W.densityButton = function () {};
       if (!W.livePauseButton) W.livePauseButton = function () {};
@@ -132,8 +132,8 @@
         <div class="boot-wrap">
             <span class="boot-ring"></span>
             <span class="boot-ring"></span>
-            <div class="boot-logo"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Aether"></div>
-            <div class="boot-name">AETHER</div>
+            <div class="boot-logo"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo"></div>
+            <div class="boot-name">HAKUMO</div>
             <div class="boot-sub">загрузка панели</div>
         </div>
     </div>
@@ -146,9 +146,9 @@
         <!-- ── Сайдбар ─────────────────────────────────────── -->
         <aside class="sidebar" id="sidebar">
             <a href="/" class="brand">
-                <div class="brand-icon"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Aether" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>
+                <div class="brand-icon"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>
                 <div class="brand-text">
-                    <div class="brand-title">Aether</div>
+                    <div class="brand-title">Hakumo</div>
                     <div class="brand-sub">Панель управления</div>
                 </div>
             </a>
@@ -211,7 +211,7 @@
                 <div class="sidebar-spark" id="sidebarSpark" aria-hidden="true"></div>
                 <div class="sidebar-version">
                     <i class="fas fa-bolt"></i>
-                    AETHER <span class="mono">v3.0</span> · Light{% if build_commit %} <span class="mono" title="Сборка панели (git-коммит)">{{ build_commit }}</span>{% endif %}
+                    HAKUMO <span class="mono">v3.0</span> · Light{% if build_commit %} <span class="mono" title="Сборка панели (git-коммит)">{{ build_commit }}</span>{% endif %}
                 </div>
             </div>
         </aside>
@@ -219,8 +219,8 @@
         <!-- ── Основная область ────────────────────────────── -->
         <div class="main-wrap">
             <header class="topbar">
-                <a class="topbar-brand" href="/" title="Aether — на главную" aria-label="Aether — на главную">
-                    <img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Aether">
+                <a class="topbar-brand" href="/" title="Hakumo — на главную" aria-label="Hakumo — на главную">
+                    <img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo">
                 </a>
                 <nav class="crumbs" aria-label="Хлебные крошки">
                     <a class="crumb-home" href="/" title="Обзор сервера"><i class="fas fa-house"></i></a>

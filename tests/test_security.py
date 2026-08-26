@@ -17,7 +17,7 @@ import tempfile
 import time
 
 # Работаем в временной директории, чтобы генерация data/* не мусорила в репо.
-_TMP = tempfile.mkdtemp(prefix='aether_sec_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_sec_test_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -67,7 +67,7 @@ for expr in _BAD:
 # ─── 2. SECRET_KEY не хардкодится ───────────────────────────────────────────
 print('== SECRET_KEY: нет известных ключей в коде ==')
 KNOWN_LEAKED = {'ultra-secret-key-change-this-in-production',
-                'aether-super-secret-key-2026',
+                'hakumo-super-secret-key-2026',
                 'your-secret-key-here'}
 
 from config import Config  # noqa: E402

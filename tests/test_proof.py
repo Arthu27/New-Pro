@@ -11,7 +11,7 @@ import sys
 import tempfile
 
 # временная рабочая директория — data/* не мусорит в репо
-_TMP = tempfile.mkdtemp(prefix='aether_proof_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_proof_test_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -53,7 +53,7 @@ class FakePosted:
         FakePosted._next += 1
         self.id = FakePosted._next
         self.deleted = False
-        self.attachments = ([FakeAttachmentRecord(f'https://cdn.aether/{file.filename}')]
+        self.attachments = ([FakeAttachmentRecord(f'https://cdn.hakumo/{file.filename}')]
                             if file else [])
 
     async def delete(self):
@@ -245,7 +245,7 @@ check(file is not None and file.filename == 'proof.png', 'ядро: файл п�
 check(embed.image and embed.image.url == 'attachment://proof.png',
       'ядро: картинка инлайнится в эмбед — видно при прокрутке')
 rec = proof_list(GUILD.id)[0]
-check(rec['url'] == 'https://cdn.aether/proof.png',
+check(rec['url'] == 'https://cdn.hakumo/proof.png',
       'ядро: живой url из нового сообщения записан (не протухающий CDN)')
 
 # видео — файлом, без инлайна

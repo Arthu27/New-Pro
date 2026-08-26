@@ -279,7 +279,7 @@ class DutyPanelView (discord .ui .View ):
             value =f"```{bar}```{detail}",
             inline =False 
             )
-        embed .set_footer (text =f"Всего очки: {new_total}   ·  Aether Задача Система")
+        embed .set_footer (text =f"Всего очки: {new_total}   ·  Hakumo Задача Система")
         await interaction .response .send_message (embed =embed ,ephemeral =True )
 
     @discord .ui .button (label ="🏆 Мои очки",style =discord .ButtonStyle .secondary ,
@@ -364,7 +364,7 @@ class Duty (commands .Cog ):
         "> ℹ️ Прогресс показывается по завершении задачи."
         )
         embed .set_footer (
-        text ="Aether · Система задач · Начать → Завершить → Получить очки",
+        text ="Hakumo · Система задач · Начать → Завершить → Получить очки",
         icon_url =interaction .guild .icon .url if interaction .guild .icon else None 
         )
         await interaction .channel .send (embed =embed ,view =DutyPanelView ())

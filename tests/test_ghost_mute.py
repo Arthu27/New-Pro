@@ -11,7 +11,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 
 # временная рабочая директория — data/* не мусорит в репо
-_TMP = tempfile.mkdtemp(prefix='aether_ghost_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_ghost_test_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

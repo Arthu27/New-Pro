@@ -146,7 +146,7 @@ LEGACY_CHANNEL_NAMES ={
 '💬・сообщения':['-сообщения','message-log','сообщения-лог'],
 '👋・участники':['-участники','member-log','участники-лог'],
 '🔊・голос':['-ses','voice-log','ses-log','-голос'],
-'📋・сервер':['-сервер','server-log','aether-logs','сервер-лог'],
+'📋・сервер':['-сервер','server-log','hakumo-logs','сервер-лог'],
 '📸・доказательства':['-доказательства','proof-log','proofs','demki','демки'],
 }
 
@@ -188,7 +188,7 @@ def find_log_channel (guild ,category :str ='сервер'):
 
     Порядок: канал из панели («Логи сервера») → каноническое имя
     (-модерация …) → legacy-имена (mod-log, moderasyon …) → общие старые
-    каналы (server-log, aether-logs). None, если ничего нет.
+    каналы (server-log, hakumo-logs). None, если ничего нет.
     Используется ВСЕМИ когами — иначе логи уходят в несуществующие каналы.
     """
     _panel_ch =_configured_log_channel (guild ,category )
@@ -196,7 +196,7 @@ def find_log_channel (guild ,category :str ='сервер'):
         return _panel_ch
     target =log_category_display (category )
 
-    candidates =[target ]+LEGACY_CHANNEL_NAMES .get (target ,[])+['server-log','aether-logs']
+    candidates =[target ]+LEGACY_CHANNEL_NAMES .get (target ,[])+['server-log','hakumo-logs']
     # Нормализованная карта каналов: эмодзи/прочерки/регистр не мешают
     # (-mod-log, -moderasyon, -Модерация  — всё находится)
     _pool =list (guild .text_channels )+list (getattr (guild ,'forums',[])or [])
@@ -241,7 +241,7 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
         if _pretty and ch .name !=_pretty :
             try :
                 import asyncio as _asyncio
-                _cor =ch .edit (name =_pretty ,reason ='Aether: красивое русское название лог-канала')
+                _cor =ch .edit (name =_pretty ,reason ='Hakumo: красивое русское название лог-канала')
                 if _asyncio .iscoroutine (_cor ):
                     await _cor 
                 log .info (f'[LOGS] Канал переименован: #{ch.name} → #{_pretty}')
@@ -280,7 +280,7 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
         cat =_find_log_category (guild )
         if cat is not None and getattr (cat ,'name','')!=LOG_CATEGORY_NAME :
             try :
-                await cat .edit (name =LOG_CATEGORY_NAME ,reason ='Aether: красивое название категории логов')
+                await cat .edit (name =LOG_CATEGORY_NAME ,reason ='Hakumo: красивое название категории логов')
             except Exception as _rn:
                 log .debug (f'[LOGS] переименование категории пропущено: {_rn}')
         if cat is None :
@@ -291,13 +291,13 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
             attach_files =True ,read_message_history =True ),
             }
             cat =await guild .create_category (LOG_CATEGORY_NAME ,overwrites =overwrites ,
-            reason ="Aether: автосоздание категории логов")
+            reason ="Hakumo: автосоздание категории логов")
         else :
             _c ,_ow =ensure_log_permissions (guild ,cat )
             if _ow :
-                await cat .edit (overwrites =_ow ,reason ="Aether: автопочинка прав на логи")
+                await cat .edit (overwrites =_ow ,reason ="Hakumo: автопочинка прав на логи")
         ch =await guild .create_text_channel (target ,category =cat ,
-        reason ="Aether: автосоздание лог-канала",
+        reason ="Hakumo: автосоздание лог-канала",
         topic =f"Логи «{target}» — события каждый день")
         try :
             from services .log_settings import autocreate_note 
@@ -334,9 +334,9 @@ async def _safe_send (ch ,**kw ):
         if _e is not None :
             _th_name =str (getattr (_e ,'title','')or '')
             if not _th_name :
-                _m0 =getattr (_e ,'_aether_log_meta',None )
+                _m0 =getattr (_e ,'_hakumo_log_meta',None )
                 _th_name =str (_m0 .get ('title',''))if _m0 else ''
-        _m =getattr (_e ,'_aether_log_meta',None )if _e is not None else None 
+        _m =getattr (_e ,'_hakumo_log_meta',None )if _e is not None else None 
         if _m and 'file'not in kw and 'files'not in kw :
             try :
                 from services .log_card import render_log_card ,get_log_cards_cfg 
@@ -357,17 +357,17 @@ async def _safe_send (ch ,**kw ):
                     accent =_cfg .get ('accent'),
                     time_str =datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).strftime ('%H:%M UTC'))
                 if _png :
-                    kw ['file']=discord .File (_io .BytesIO (_png ),filename ='aether_log_card.jpg')
-                    _e .set_image (url ='attachment://aether_log_card.jpg')
+                    kw ['file']=discord .File (_io .BytesIO (_png ),filename ='hakumo_log_card.jpg')
+                    _e .set_image (url ='attachment://hakumo_log_card.jpg')
                     # В лог-канале — ТОЛЬКО картинка: весь текст уже отрисован
                     # внутри карточки, дублирующий markdown-текст убираем.
                     # Если рендер карточки не удался, текстовый эмбед остаётся
                     # как запасной вариант (ничего не теряется).
                     # Оригинальный текст/футер сохраняем на самом объекте —
                     # для отладки и тестов (в Discord они не видны).
-                    _e ._aether_log_desc =(_e .description or '')
+                    _e ._hakumo_log_desc =(_e .description or '')
                     _ft =_e .footer .text if _e .footer else ''
-                    _e ._aether_log_footer =(_ft or '')
+                    _e ._hakumo_log_footer =(_ft or '')
                     _e .description =None
                     _e .title =None
                     try :
@@ -440,7 +440,7 @@ async def ensure_forum_log_permissions (guild ):
             view_channel =True ,send_messages =True ,embed_links =True ,
             attach_files =True ,create_public_threads =True ,
             read_message_history =True )
-            await ch .edit (overwrites =ow ,reason ="Aether: права на посты в форум-логе")
+            await ch .edit (overwrites =ow ,reason ="Hakumo: права на посты в форум-логе")
             log .info (f'[LOGS] Права на форум-лог #{ch.name} выданы')
     except Exception as _e :
         log .info (f'[LOGS] ensure_forum_log_permissions: {_e}')
@@ -572,7 +572,7 @@ def _strip_raw_id(text):
 def _styled_log_embed(guild, category, title, fields=(), color=None,
                       thumbnail=None, image=None, note=None, card_rows=None):
     """Единый стиль лог-эмбеда: заголовок с иконкой категории, строки
-    «Имя — значение», футер «Aether Log · Категория · Сервер» с иконкой сервера.
+    «Имя — значение», футер «Hakumo Log · Категория · Сервер» с иконкой сервера.
 
     fields: список кортежей (имя, значение); пустые значения пропускаются.
     note: свободный текст после полей (предупреждения и т.п.).
@@ -591,7 +591,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
     if note:
         desc += f"\n{note}"
     e.description = desc
-    footer_text = f"Aether Log · {cat_name} · {getattr(guild, 'name', '')}"
+    footer_text = f"Hakumo Log · {cat_name} · {getattr(guild, 'name', '')}"
     gicon = getattr(guild, 'icon', None)
     try:
         gicon = gicon.url if gicon else None
@@ -616,7 +616,7 @@ def _styled_log_embed(guild, category, title, fields=(), color=None,
              for n, v in _rows]
     if note and len(_rows) < 8:
         _rows.append(('Инфо', note))
-    e._aether_log_meta = {
+    e._hakumo_log_meta = {
         'cat': category,
         'title': title,
         'rows': _rows[:8],
@@ -763,7 +763,7 @@ async def _lc_ensure_channel(guild, key):
             return ch
         try:
             return await guild.create_text_channel(
-                '-приветствие', reason='Aether: канал приветствий',
+                '-приветствие', reason='Hakumo: канал приветствий',
                 topic='Приветствие и прощание участников')
         except Exception:
             return None
@@ -839,9 +839,9 @@ class LogsCenterView(discord.ui.View):
         gicon = getattr(self.guild, 'icon', None)
         gicon = gicon.url if gicon else None
         if gicon:
-            e.set_footer(text=f"Aether Log · {self.guild.name}", icon_url=gicon)
+            e.set_footer(text=f"Hakumo Log · {self.guild.name}", icon_url=gicon)
         else:
-            e.set_footer(text=f"Aether Log · {self.guild.name}")
+            e.set_footer(text=f"Hakumo Log · {self.guild.name}")
         return e
 
     def status_embed(self):
@@ -861,7 +861,7 @@ class LogsCenterView(discord.ui.View):
             e.description += "\n🎉 Этот канал **публичный** — его видят все участники."
         if self.notice:
             e.description += f"\n\n{self.notice}"
-        e.set_footer(text=f"Aether Log · Центр логов · {self.guild.name}")
+        e.set_footer(text=f"Hakumo Log · Центр логов · {self.guild.name}")
         return e
 
     def events_embed(self):
@@ -897,7 +897,7 @@ class LogsCenterView(discord.ui.View):
             e.add_field(name="Последние записи аудита", value="*Нет сохранённых записей.*", inline=False)
         if self.notice:
             e.description += f"\n\n{self.notice}"
-        e.set_footer(text=f"Aether Log · {self.guild.name}")
+        e.set_footer(text=f"Hakumo Log · {self.guild.name}")
         return e
 
     # ── кнопки ─────────────────────────────────────────────────────────
@@ -1027,7 +1027,7 @@ class Logs (commands .Cog ):
             existing_cat =await guild .create_category (
             LOG_CATEGORY_NAME ,
             overwrites =overwrites ,
-            reason ="Aether: создание категории логов"
+            reason ="Hakumo: создание категории логов"
             )
 
         created =[]
@@ -1039,7 +1039,7 @@ class Logs (commands .Cog ):
         try :
             _cat ,_ow =ensure_log_permissions (guild ,existing_cat )
             if _ow :
-                await existing_cat .edit (overwrites =_ow ,reason ="Aether: починка прав бота на категорию логов")
+                await existing_cat .edit (overwrites =_ow ,reason ="Hakumo: починка прав бота на категорию логов")
                 migrated .append ("права категории «📚 Логи» восстановлены")
         except Exception as _pe :
             log .info (f'[SETUP-LOGS] починка прав: {_pe}')
@@ -1061,13 +1061,13 @@ class Logs (commands .Cog ):
                         legacy_name =legacy
                         break
                 if legacy_ch :
-                    await legacy_ch .edit (name =ch_name ,category =existing_cat ,reason ="Aether: миграция лог-канала")
+                    await legacy_ch .edit (name =ch_name ,category =existing_cat ,reason ="Hakumo: миграция лог-канала")
                     migrated .append (f"#{legacy_name} → #{ch_name}")
                     continue
                 await guild .create_text_channel (
                 ch_name ,
                 category =existing_cat ,
-                reason ="Aether: создание канала логов",
+                reason ="Hakumo: создание канала логов",
                 topic =f"Логи «{ch_name}» — события каждый день"
                 )
                 created .append (ch_name )
@@ -1088,7 +1088,7 @@ class Logs (commands .Cog ):
                     await ch .edit (category =existing_cat )
                 already .append (extra )
             else :
-                await guild .create_text_channel (extra ,category =existing_cat ,reason ="Aether: сервисный канал логов",topic =topic )
+                await guild .create_text_channel (extra ,category =existing_cat ,reason ="Hakumo: сервисный канал логов",topic =topic )
                 created .append (extra )
 
         # 4) Публичный канал приветствий — НЕ в скрытой категории (его видят все)
@@ -1096,15 +1096,15 @@ class Logs (commands .Cog ):
         if not welcome_ch :
             welcome_ch =await guild .create_text_channel (
             "-приветствие",
-            reason ="Aether: канал приветствий",
+            reason ="Hakumo: канал приветствий",
             topic ="Приветствие и прощание участников"
             )
             created .append ("-приветствие (публичный)")
         else :
             # Старый баг: канал приветствий был спрятан в закрытой категории логов
             if welcome_ch .category ==existing_cat :
-                await welcome_ch .edit (category =None ,reason ="Aether: канал приветствий должен быть публичным")
-                await welcome_ch .set_permissions (guild .default_role ,read_messages =True ,send_messages =False ,reason ="Aether: публичный канал приветствий")
+                await welcome_ch .edit (category =None ,reason ="Hakumo: канал приветствий должен быть публичным")
+                await welcome_ch .set_permissions (guild .default_role ,read_messages =True ,send_messages =False ,reason ="Hakumo: публичный канал приветствий")
                 migrated .append ("-приветствие → вынесен из скрытой категории")
             already .append ("-приветствие")
 
@@ -1189,7 +1189,7 @@ class Logs (commands .Cog ):
             value =_dv ,
             inline =False
             )
-        e .set_footer (text =f"Aether • {guild.name}",icon_url =guild .icon .url if guild .icon else None )
+        e .set_footer (text =f"Hakumo • {guild.name}",icon_url =guild .icon .url if guild .icon else None )
         await interaction .followup .send (embed =e ,ephemeral =True )
 
 
@@ -2252,7 +2252,7 @@ class Logs (commands .Cog ):
             try :
                 _cat ,_ow =ensure_log_permissions (_g )
                 if _ow :
-                    await _cat .edit (overwrites =_ow ,reason ="Aether: автопочинка прав на логи")
+                    await _cat .edit (overwrites =_ow ,reason ="Hakumo: автопочинка прав на логи")
                     log .info (f'[LOGS] Права категории логов восстановлены: {_g.name}')
             except Exception as _he :
                 log .info (f'[LOGS] self-heal ({getattr (_g ,"name","?")}): {_he}')

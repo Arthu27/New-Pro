@@ -24,13 +24,13 @@ class CogManager(commands.Cog):
     @commands.is_owner()
     async def module_group(self, ctx):
         """Показать список загруженных/незагруженных модулей"""
-        from cogs.embed_utils import aether_embed, plural
+        from cogs.embed_utils import hakumo_embed, plural
         loaded = [ext.split('.')[-1] for ext in self.bot.extensions]
         all_cogs = [f[:-3] for f in os.listdir('./cogs') if f.endswith('.py')]
         sleeping = self._sleeping()
         just_off = [c for c in all_cogs if c not in loaded and c not in sleeping]
         rows = [f'`{c}`' for c in sorted(loaded)]
-        embed = aether_embed(
+        embed = hakumo_embed(
             'system', 'Управление модулями', None,
             fields=[
                 (f' Всегда в строю ({len(loaded)})',
@@ -95,7 +95,7 @@ class CogManager(commands.Cog):
     @commands.is_owner()
     async def reload_all(self, ctx):
         """Перезагрузить все модули"""
-        from cogs.embed_utils import aether_embed
+        from cogs.embed_utils import hakumo_embed
         ok, bad = [], []
         for ext in list(self.bot.extensions):
             try:
@@ -103,7 +103,7 @@ class CogManager(commands.Cog):
                 ok.append(ext.split('.')[-1])
             except Exception as e:
                 bad.append(f'`{ext.split(".")[-1]}` — {e}')
-        embed = aether_embed(
+        embed = hakumo_embed(
             'system', 'Перезагрузка всех модулей', None,
             fields=[
                 (f' Перезагружено ({len(ok)})', ', '.join(f'`{c}`' for c in ok)[:1000] or '—', False),

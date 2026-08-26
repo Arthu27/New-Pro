@@ -17,7 +17,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-test.txt
 
 ```python
 import os, sys, tempfile
-_TMP = tempfile.mkdtemp(prefix='aether_x_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_x_test_')
 os.chdir(_TMP)                                   # ИЗОЛЯЦИЯ: чужие data/ не трогаем
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -62,7 +62,7 @@ os.environ['DB_PATH'] = os.path.join(_TMP, 'data', 'bot.db')  # до импор�
 | `test_names_everywhere.py` | имена вместо ID ВЕЗДЕ: варны (/api/warnings), риски и амнистия мод-контроля, субъекты мод-инсайтов, журнал (не перетирать имена аудита); AI-чат в профиле BOT_SLIM |
 | `test_autoclose_tz.py` | авто-закрытие тикетов: cutoff aware (регрессия «can't compare offset-naive and offset-aware datetimes»), легаси-naive метки как UTC, свежие/чужие каналы не трогаются |
 | `test_pages_data_pro.py` | страницы участников/тикетов/ролей: демо-данные (участники, заметки, наблюдение, палитра цветов, приглашения, DM), авто-выбор главного сервера на /users и /invite-tracker, демо-ветка /api/guild/.../members |
-| `test_leaderboards_panel.py` | рейтинги: реальные имена вместо фейковых заглушек (AETHER_LEADER убраны), топ-20 с uid/raw/аватарами, русские единицы, пустой сервер — пустой список; шаблон без золотой PNG-карточки, с KPI и поиском |
+| `test_leaderboards_panel.py` | рейтинги: реальные имена вместо фейковых заглушек (HAKUMO_LEADER убраны), топ-20 с uid/raw/аватарами, русские единицы, пустой сервер — пустой список; шаблон без золотой PNG-карточки, с KPI и поиском |
 | `test_curator_role.py` | роль «Куратор» везде: лестница uye<mod<curator<admin<owner, маппинг Discord-ролей (owner>admin>curator>mod), /api/role-map принимает curator, настраиваемая панель куратора в /api/panel-menu, видимость уведомлений «кураторы и выше», шаблоны panel-access/panel-menu с куратором, демо-ветка /api/role-map, база знаний ИИ (панель+куратор в ai_helper/ai_knowledge/ai-chat) |
 
 Любая новая фича = логика-ядро чистое + тест по контракту выше.

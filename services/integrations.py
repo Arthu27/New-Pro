@@ -172,7 +172,7 @@ class IntegrationManager:
                 {'title': 'Приоритет', 'value': priority_names.get(ticket.get('priority', 'medium'), 'Средний'), 'short': True},
                 {'title': 'Пользователь', 'value': ticket.get('user_name', 'Неизвестный'), 'short': True}
             ],
-            'footer': 'Aether Support System',
+            'footer': 'Hakumo Support System',
             'ts': int(datetime.now().timestamp())
         }]
         

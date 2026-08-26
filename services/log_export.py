@@ -170,7 +170,7 @@ def render_html(events, guild_name='', filters_desc='', generated_at=None):
 {body}
     </tbody>
   </table>
-  <footer>Aether · выгрузка audit_log · файл автономный, открывается в любом браузере</footer>
+  <footer>Hakumo · выгрузка audit_log · файл автономный, открывается в любом браузере</footer>
 </div>
 </body>
 </html>"""

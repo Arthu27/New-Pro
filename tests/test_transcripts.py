@@ -22,7 +22,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 
-_TMP = tempfile.mkdtemp(prefix='aether_trx_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_trx_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -52,7 +52,7 @@ OPENED = NOW - timedelta(hours=2, minutes=15)
 
 MSGS = [
     {'timestamp': OPENED, 'author': 'Иван', 'content': 'здравствуйте, помогите', 'is_bot': False},
-    {'timestamp': OPENED + timedelta(minutes=1), 'author': 'Aether', 'content': 'Чем помочь?', 'is_bot': True},
+    {'timestamp': OPENED + timedelta(minutes=1), 'author': 'Hakumo', 'content': 'Чем помочь?', 'is_bot': True},
     {'timestamp': OPENED + timedelta(minutes=2), 'author': 'Иван', 'content': '  ', 'is_bot': False},
     {'timestamp': OPENED + timedelta(minutes=3), 'author': 'Иван', 'content': '<script>alert(1)</script>&"\'', 'is_bot': False},
 ]
@@ -197,7 +197,7 @@ r = client.get('/transcripts')
 check(r.status_code == 200, 'страница открывается персоналу (200)')
 login('uye')
 r = client.get('/transcripts')
-check(r.status_code == 403, 'участнику страница запрещена (403)')
+check(r.status_code == 302, 'участнику страница запрещена (302 → главная с подсказкой)')
 
 src = open(os.path.join(ROOT, 'web', 'templates', 'transcripts.html'), encoding='utf-8').read()
 for token in ('trx-item', 'trx-backdrop', "encodeURIComponent(t.id)", "exportTranscript('html')",

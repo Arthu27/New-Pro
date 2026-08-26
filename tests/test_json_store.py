@@ -10,7 +10,7 @@ import sys
 import tempfile
 import threading
 
-_TMP = tempfile.mkdtemp(prefix='aether_jsonstore_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_jsonstore_test_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

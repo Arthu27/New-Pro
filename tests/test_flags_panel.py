@@ -16,7 +16,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_flagspanel_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_flagspanel_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -78,7 +78,7 @@ def post(path, payload):
 check(client.get('/feature-flags').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get('/api/feature-flags/state').status_code in (302, 401, 403), 'гостю state закрыт')
 login('uye')
-check(client.get('/feature-flags').status_code == 403, 'uye нельзя')
+check(client.get('/feature-flags').status_code == 302, 'uye нельзя')
 login('mod')
 check(client.get('/feature-flags').status_code == 200, 'mod читает страницу')
 check(client.get('/api/feature-flags/state').status_code == 200, 'mod читает state')

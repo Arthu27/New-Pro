@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Aether — Система репортов (ТЗ 2026-08-26)
+Hakumo — Система репортов (ТЗ 2026-08-26)
 ------------------------------------------
 /report -> приватная ветка в канале репортов с панелью управления:
 Select-меню для режима обсуждения, слова, вынесения решения (дефолт
@@ -170,8 +170,8 @@ class ModeSelectView(discord.ui.View):
         await interaction.response.send_message(embed=e)
         try:
             await interaction.channel.edit(auto_archive_duration=10080)
-        except Exception:
-            pass
+        except Exception as _ae:
+            _log.debug('auto_archive_duration: подавлено: %s', _ae)
 
 
 # ── Select: дать слово ──────────────────────────────────────────────
@@ -375,8 +375,8 @@ class Reports(commands.Cog):
                             await guild.unban(
                                 discord.Object(id=int(t['accused_id'])),
                                 reason='Срок временного бана истёк')
-                        except Exception:
-                            pass
+                        except Exception as _sx1:
+                            _log.debug('подавлено: %s', _sx1)
                     interaction.client.loop.create_task(_unban_later())
             elif v['kind'] == 'none':
                 applied = 'Нарушений не зафиксировано.'
@@ -422,8 +422,8 @@ class Reports(commands.Cog):
         verdict_label = ''
         try:
             verdict_label = _json.loads(t.get('verdict') or '{}').get('label', '')
-        except Exception:
-            pass
+        except Exception as _ve:
+            _log.debug('verdict label: подавлено: %s', _ve)
         e = discord.Embed(
             title='Тикет закрыт',
             description=(f"Итог: **{verdict_label or 'решение не вынесено'}**\n"
@@ -434,8 +434,8 @@ class Reports(commands.Cog):
                 user = interaction.client.get_user(int(uid))
                 if user:
                     await _dm(user, e)
-            except Exception:
-                pass
+            except Exception as _sx2:
+                _log.debug('подавлено: %s', _sx2)
         try:
             await interaction.followup.send('Архив сохранён. Ветка удаляется.',
                                             ephemeral=True)
@@ -478,8 +478,8 @@ class Reports(commands.Cog):
             try:
                 m = await interaction.guild.fetch_member(uid)
                 await thread.add_user(m)
-            except Exception:
-                pass
+            except Exception as _sx3:
+                _log.debug('подавлено: %s', _sx3)
         RC.ticket_create(interaction.guild_id, thread.id,
                          interaction.user.id, user.id)
         proof_bits = []
@@ -526,8 +526,8 @@ class Reports(commands.Cog):
         RC.add_witness(interaction.channel_id, user.id)
         try:
             await interaction.channel.add_user(user)
-        except Exception:
-            pass
+        except Exception as _ae:
+            _log.debug('add_user в ветку: подавлено: %s', _ae)
         await interaction.response.send_message(
             embed=discord.Embed(title='Свидетель приглашён',
                                 description=f'{user.mention} присоединился к рассмотрению.',
@@ -689,8 +689,8 @@ class Reports(commands.Cog):
                     content=f"<@{uid}>, сейчас слово у другого участника — "
                             f"модератор передаст его кнопкой «Дать слово».",
                     delete_after=6)
-            except Exception:
-                pass
+            except Exception as _sx4:
+                _log.debug('подавлено: %s', _sx4)
 
 
 # ── Select: апелляция ───────────────────────────────────────────────
@@ -785,8 +785,8 @@ class AppealPanelView(discord.ui.View):
         msgs = []
         try:
             msgs = RC.archive_load(interaction.guild_id, self.old_thread)
-        except Exception:
-            pass
+        except Exception as _sx5:
+            _log.debug('подавлено: %s', _sx5)
         if not msgs:
             return await interaction.followup.send(
                 'Архива нет — тикет закрывался без переписки.', ephemeral=True)

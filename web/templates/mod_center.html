@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Центр модерации — Aether{% endblock %}
+{% block title %}Центр модерации — Hakumo{% endblock %}
 {% block page_title %}Центр модерации{% endblock %}
 {% block content %}
 
@@ -366,15 +366,15 @@
         ico.className = 'serenity-ico' + (pct < 70 ? ' low' : '');
         $('serenityHint').textContent = 'снятий: ' + good + ' · наказаний: ' + bad + ' — чем выше доля снятий, тем спокойнее контур.';
       }
-      if (window.AetherChart) {
-        window.AetherChart.area($('mcArea'), days.map(function (d) { return d.count; }), { labels: days.map(function (d) { return d.label; }), height: 170 });
+      if (window.HakumoChart) {
+        window.HakumoChart.area($('mcArea'), days.map(function (d) { return d.count; }), { labels: days.map(function (d) { return d.label; }), height: 170 });
         var items = Object.keys(types).map(function (k) {
           return { label: ACTION_TONES[k].label, value: types[k], color: ACTION_TONES[k].color };
         }).sort(function (a, b) { return b.value - a.value; });
-        if (window.AetherRing) window.AetherRing($('mcRing'), items.slice(0, 6), { totalLabel: 'мер за 7 дн' });
-        if (window.AetherHeat) window.AetherHeat($('mcHeat'), hours, { labels: ['00:00', '12:00', '23:00'] });
+        if (window.HakumoRing) window.HakumoRing($('mcRing'), items.slice(0, 6), { totalLabel: 'мер за 7 дн' });
+        if (window.HakumoHeat) window.HakumoHeat($('mcHeat'), hours, { labels: ['00:00', '12:00', '23:00'] });
       }
-      if (window.AetherCalendar) {
+      if (window.HakumoCalendar) {
         var counts = {};
         logs.forEach(function (l) {
           try {
@@ -383,7 +383,7 @@
             counts[key] = (counts[key] || 0) + 1;
           } catch (e) {}
         });
-        window.AetherCalendar($('mcCalendar'), counts, { days: 90 });
+        window.HakumoCalendar($('mcCalendar'), counts, { days: 90 });
         var csvBtn = $('mcCalCsv');
         if (csvBtn && !csvBtn.dataset.bound) {
           csvBtn.dataset.bound = '1';
@@ -563,7 +563,7 @@
     window.setLiveRefresh(loadCharts, 1500);
     window.setLiveRefresh(loadPeople, 1500);
   }
-  document.addEventListener('aether:live', refresh);
+  document.addEventListener('hakumo:live', refresh);
   if (window.tiltCards) window.tiltCards(document, '.cc-tile');
 })();
 </script>

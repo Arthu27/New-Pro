@@ -432,12 +432,12 @@ async def send_panel_link(url):
 
     for guild in bot.guilds:
         try:
-            panel_ch = discord.utils.get(guild.text_channels, name="aether-panel")
+            panel_ch = discord.utils.get(guild.text_channels, name="hakumo-panel")
             if not panel_ch:
-                for old_name in ["panel-link", "aether-panel", "Aether-panel"]:
+                for old_name in ["panel-link", "hakumo-panel", "Hakumo-panel"]:
                     panel_ch = discord.utils.get(guild.text_channels, name=old_name)
                     if panel_ch:
-                        await panel_ch.edit(name="aether-panel")
+                        await panel_ch.edit(name="hakumo-panel")
                         break
                 if not panel_ch:
                     overwrites = {
@@ -447,8 +447,8 @@ async def send_panel_link(url):
                     role = guild.get_role(ALERT_ROLE_ID) if ALERT_ROLE_ID else None
                     if role:
                         overwrites[role] = discord.PermissionOverwrite(read_messages=True)
-                    panel_ch = await guild.create_text_channel("aether-panel", overwrites=overwrites)
-                    print(f"[ИНФО] Канал aether-panel создан: {guild.name}")
+                    panel_ch = await guild.create_text_channel("hakumo-panel", overwrites=overwrites)
+                    print(f"[ИНФО] Канал hakumo-panel создан: {guild.name}")
             async for msg in panel_ch.history(limit=10):
                 if msg.author == bot.user:
                     await msg.delete()
@@ -457,7 +457,7 @@ async def send_panel_link(url):
                 timestamp=discord.utils.utcnow()
             )
             embed.set_author(
-                name="Aether — Управление панелью",
+                name="Hakumo — Управление панелью",
                 icon_url=guild.icon.url if guild.icon else None
             )
             embed.description = f"[**› Войти в панель**]({panel_url})"
@@ -478,7 +478,7 @@ async def send_panel_link(url):
                 inline=False
             )
             embed.set_footer(
-                text="Aether Panel • Обновляется при каждом запуске",
+                text="Hakumo Panel • Обновляется при каждом запуске",
                 icon_url=guild.icon.url if guild.icon else None
             )
             await panel_ch.send(embed=embed)
@@ -708,7 +708,7 @@ async def on_ready():
     _cfg_file = 'data/bot_config.json'
     _status = discord.Status.idle
     _activity_type = discord.ActivityType.listening
-    _activity_text = '.gg/Aether'
+    _activity_text = '.gg/Hakumo'
     if os.path.exists(_cfg_file):
         try:
             with open(_cfg_file, encoding='utf-8') as _f:
@@ -717,7 +717,7 @@ async def on_ready():
             _type_map = {'listening': discord.ActivityType.listening, 'playing': discord.ActivityType.playing, 'watching': discord.ActivityType.watching, 'competing': discord.ActivityType.competing}
             _status = _status_map.get(_cfg.get('status', 'idle'), discord.Status.idle)
             _activity_type = _type_map.get(_cfg.get('activity_type', 'listening'), discord.ActivityType.listening)
-            _activity_text = _cfg.get('activity_text', '.gg/Aether')
+            _activity_text = _cfg.get('activity_text', '.gg/Hakumo')
         except Exception as _ex:
             _log.debug("on_ready(): подавлено: %s", _ex)
 

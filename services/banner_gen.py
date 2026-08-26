@@ -85,7 +85,7 @@ def _fit(draw, text, bold, start, max_w, min_sz=14):
 
 
 def render_rules_banner(*, title, text, index=1, total=1, accent='4f46e5',
-                        theme=DEFAULT_THEME, brand='Aether', seed=None,
+                        theme=DEFAULT_THEME, brand='Hakumo', seed=None,
                         return_image=False):
     """Отрисовать баннер правила; вернуть PNG-байты (или Image при return_image)."""
     base, glow_a, glow_b, grid_c, ink, ink2 = THEMES.get(str(theme), THEMES[DEFAULT_THEME])
@@ -195,7 +195,7 @@ def render_rules_banner(*, title, text, index=1, total=1, accent='4f46e5',
 
 
 def banner_filename(index):
-    return f'aether_rule_{int(index):02d}.png'
+    return f'hakumo_rule_{int(index):02d}.png'
 
 
 __all__ = ('THEMES', 'THEME_ORDER', 'DEFAULT_THEME', 'render_rules_banner', 'banner_filename')

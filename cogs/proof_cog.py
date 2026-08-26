@@ -356,7 +356,7 @@ class ProofCog(commands.Cog):
             e.add_field(name='Ссылка на демку', value=entry['link'][:900], inline=False)
         if extra_note:
             e.add_field(name='Внимание', value=extra_note, inline=False)
-        e.set_footer(text='Aether · Доказательства · листай канал — тут все демки')
+        e.set_footer(text='Hakumo · Доказательства · листай канал — тут все демки')
         return e
 
     async def _post_proof(self, guild, entry, file=None, image_inline=False, note=None):

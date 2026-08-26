@@ -1,5 +1,5 @@
 """
-Aether Social Cog
+Hakumo Social Cog
 - Расширенная система опросов (множественный выбор, по времени, анонимно, с графиком)
 - Планировщик событий (календарь событий, список участников, напоминания)
 - Система matchmaking (поиск напарника по игре, создание команды)
@@ -417,7 +417,7 @@ class Social (commands .Cog ):
         e .add_field (name ="⏰ Когда",value =f"<t:{int(event_dt.timestamp())}:R>",inline =True )
         e .add_field (name =" Участники",value ="`0 человек`"+(f" / {макс_участников}"if макс_участников else ""),inline =True )
         e .set_author (name =interaction .user .display_name ,icon_url =interaction .user .display_avatar .url )
-        e .set_footer (text =f" Aether Event Система • ID: {event_id}")
+        e .set_footer (text =f" Hakumo Event Система • ID: {event_id}")
 
         view =EventJoinView (event_id ,guild_id )
         await interaction .response .send_message (embed =e ,view =view )
@@ -524,7 +524,7 @@ class Social (commands .Cog ):
         if not_ :
             e .add_field (name =" Not",value =f"`{not_}`",inline =True )
         e .add_field (name =" Создал",value =interaction .user .mention ,inline =True )
-        e .set_footer (text ="Aether Matchmaking • Когда состав соберётся — придёт уведомление")
+        e .set_footer (text ="Hakumo Matchmaking • Когда состав соберётся — придёт уведомление")
         e .set_thumbnail (url =interaction .user .display_avatar .url )
 
         view =MatchView (match_id ,guild_id ,max_oyuncu )

@@ -19,7 +19,7 @@ import sys
 import tempfile
 import time
 
-_TMP = tempfile.mkdtemp(prefix='aether_namedtunnel_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_namedtunnel_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -319,7 +319,7 @@ def _fake_run(cmd, timeout=120):
     if cmd[1:3] == ['tunnel', 'create']:
         with open(os.path.join(f_home, NEW_TID + '.json'), 'w', encoding='utf-8') as fh:
             fh.write('{"fresh":true}')
-        return _R('Created tunnel aether-panel with id ' + NEW_TID)
+        return _R('Created tunnel hakumo-panel with id ' + NEW_TID)
     return _R('')
 
 

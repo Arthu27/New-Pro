@@ -22,7 +22,7 @@ import re
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_logs_beauty_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_logs_beauty_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -82,7 +82,7 @@ check(len(tmpl_versions) >= 4 and '?v=61' not in base and '?v=117' not in base,
 # ═══ 2. /proof убран, демки — через панель ═══════════════════════════════
 print('== /proof убран ==')
 cog_src = open(os.path.join(ROOT, 'cogs', 'proof_cog.py'), encoding='utf-8').read()
-check("name='proof'" not in cog_src, 'команды /proof больше нет в коге')
+check("name='proof'" in cog_src, '/proof вернулся: демки грузятся прямо ботом')
 check("name='proofs'" in cog_src and "name='proofdel'" in cog_src,
       '/proofs и /proofdel на месте (просмотр и удаление)')
 check('«Модерация» → «Доказательства»' in cog_src,

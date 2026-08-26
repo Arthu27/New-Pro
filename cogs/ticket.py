@@ -19,9 +19,9 @@ log =get_logger ("ticket")
 
 
 def _ae(kind, title, desc=None):
-    """Фирменный Aether-эмбед для ответов."""
-    from cogs.embed_utils import aether_embed
-    return aether_embed(kind, title, desc)
+    """Фирменный Hakumo-эмбед для ответов."""
+    from cogs.embed_utils import hakumo_embed
+    return hakumo_embed(kind, title, desc)
 
 
 logger =logging .getLogger ('ticket')
@@ -581,7 +581,7 @@ class TicketView (discord .ui .View ):
                 )
                 ai_embed .description =greeting 
                 ai_embed .set_author (
-                name ="Поддержка Aether AI",
+                name ="Поддержка Hakumo AI",
                 icon_url =interaction .client .user .display_avatar .url 
                 )
                 ai_embed .set_footer (text ="Если я не смогу помочь — передам модератору.")
@@ -1051,7 +1051,7 @@ def build_staff_summon_embed (*,guild ,channel ,state ,reason ):
     e .add_field (name ='Статус',value ='Ожидает модератора',inline =False )
     if guild .icon :
         e .set_thumbnail (url =guild .icon .url )
-    e .set_footer (text =f'призыв:{guild.id}:{channel.id} · Aether')
+    e .set_footer (text =f'призыв:{guild.id}:{channel.id} · Hakumo')
     return e
 
 
@@ -1158,7 +1158,7 @@ class StaffSummonView (discord .ui .View ):
                 f'🛡 **{user.name}** взял тикет в работу — сейчас ответит.\n'
                 'Авто-ответчик отошёл, дальше живой модератор.'
                 )
-                te .set_footer (text ='Aether · служба поддержки')
+                te .set_footer (text ='Hakumo · служба поддержки')
                 await tch .send (embed =te )
             except Exception :
                 log .debug ('[TICKET-CLAIM] не вышло записать в тикет %s', cid_s )

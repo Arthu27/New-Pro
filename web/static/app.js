@@ -1,5 +1,5 @@
 /* ============================================================
-   Aether Panel — App Kit (Light Edition)
+   Hakumo Panel — App Kit (Light Edition)
    Единый клиентский слой панели: темы, тосты, подтверждения,
    ETag-кэш, live-refresh, палитра команд (Ctrl+K), уведомления,
    лента активности и мелкие утилиты для всех страниц.
@@ -44,7 +44,7 @@
   /* ── 2. Тема ────────────────────────────────────────────── */
   function bootTheme() {
     var t = '';
-    try { t = localStorage.getItem('aether_theme') || ''; } catch (e) {}
+    try { t = localStorage.getItem('hakumo_theme') || ''; } catch (e) {}
     if (!t) {
       // первый визит — следуем за системной темой
       try {
@@ -59,7 +59,7 @@
     var cur = doc.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     var next = cur === 'dark' ? 'light' : 'dark';
     doc.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem('aether_theme', next); } catch (e) {}
+    try { localStorage.setItem('hakumo_theme', next); } catch (e) {}
     return next;
   };
 
@@ -86,7 +86,7 @@
     st.setProperty('--ac-line', rgba(0.28));
     /* применяем и градиент кнопок/лого — перекраска полная, без индиго-хвостов */
     st.setProperty('--ac-grad', 'linear-gradient(135deg, #' + s + ', ' + light(0.18) + ' 55%, ' + dark(0.62) + ')');
-    try { localStorage.setItem('aether_accent', hex); } catch (e) {}
+    try { localStorage.setItem('hakumo_accent', hex); } catch (e) {}
   };
 
   /* ── 3. Тосты ───────────────────────────────────────────── */
@@ -426,20 +426,20 @@
   var paletteRemoteTimer = null;
 
   function paletteFavs() {
-    try { return JSON.parse(localStorage.getItem('aether_favs') || '[]'); } catch (e) { return []; }
+    try { return JSON.parse(localStorage.getItem('hakumo_favs') || '[]'); } catch (e) { return []; }
   }
 
   /* «Недавние» разделы: функция вызывалась, но не была определена —
      глобальный поиск падал с ReferenceError при каждом открытии */
   function paletteRecents() {
-    try { return JSON.parse(localStorage.getItem('aether_recents') || '[]'); } catch (e) { return []; }
+    try { return JSON.parse(localStorage.getItem('hakumo_recents') || '[]'); } catch (e) { return []; }
   }
 
   function paletteRemember(path) {
     try {
       var list = paletteRecents().filter(function (p) { return p !== path; });
       list.unshift(path);
-      localStorage.setItem('aether_recents', JSON.stringify(list.slice(0, 8)));
+      localStorage.setItem('hakumo_recents', JSON.stringify(list.slice(0, 8)));
     } catch (e) {}
   }
 
@@ -534,8 +534,8 @@
   /* ── Действия палитры (команды, а не только страницы) ── */
   var PALETTE_ACTIONS = [
     { label: 'Сменить тему', icon: 'fa-circle-half-stroke', sub: 'переключить светлая/тёмная', run: function () { window.toggleTheme(); window.showToast('Тема переключена', true); } },
-    { label: 'Светлая тема', icon: 'fa-sun', sub: 'включить светлый режим', run: function () { document.documentElement.setAttribute('data-theme', 'light'); try { localStorage.setItem('aether_theme', 'light'); } catch (e) {} } },
-    { label: 'Тёмная тема', icon: 'fa-moon', sub: 'включить тёмный режим', run: function () { document.documentElement.setAttribute('data-theme', 'dark'); try { localStorage.setItem('aether_theme', 'dark'); } catch (e) {} } },
+    { label: 'Светлая тема', icon: 'fa-sun', sub: 'включить светлый режим', run: function () { document.documentElement.setAttribute('data-theme', 'light'); try { localStorage.setItem('hakumo_theme', 'light'); } catch (e) {} } },
+    { label: 'Тёмная тема', icon: 'fa-moon', sub: 'включить тёмный режим', run: function () { document.documentElement.setAttribute('data-theme', 'dark'); try { localStorage.setItem('hakumo_theme', 'dark'); } catch (e) {} } },
     { label: 'Скопировать ссылку страницы', icon: 'fa-link', sub: 'в буфер обмена', run: function () {
       var done = function () { window.showToast('Ссылка скопирована', true); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(window.location.href).then(done, function () {});
@@ -550,8 +550,8 @@
     { label: 'Тур по панели', icon: 'fa-route', sub: 'знакомство с интерфейсом за минуту', run: function () { if (typeof window.tourStart === 'function') window.tourStart(); } },
     { label: 'Звук уведомлений', icon: 'fa-volume-high', sub: 'переключить вкл/выкл', run: function () {
       var off = false;
-      try { off = localStorage.getItem('aether_sound') === 'off'; } catch (e) {}
-      try { localStorage.setItem('aether_sound', off ? 'on' : 'off'); } catch (e) {}
+      try { off = localStorage.getItem('hakumo_sound') === 'off'; } catch (e) {}
+      try { localStorage.setItem('hakumo_sound', off ? 'on' : 'off'); } catch (e) {}
       window.showToast(off ? 'Звук уведомлений включён' : 'Звук уведомлений выключен', true);
       if (!off && typeof window.notifyDing === 'function') window.notifyDing();
     } }
@@ -751,7 +751,7 @@
     if (pingPill) {
       function paintPing() {
         try {
-          var v = localStorage.getItem('aether_last_ping');
+          var v = localStorage.getItem('hakumo_last_ping');
           if (v === null) return;
           var parts = v.split('|');
           var ms = parseInt(parts[0], 10) || 0;
@@ -779,7 +779,7 @@
         .then(function (r) { return r.json(); })
         .then(function (d) {
           if (d && typeof d.latency === 'number') {
-            try { localStorage.setItem('aether_last_ping', Math.round(d.latency) + '|' + Date.now()); } catch (e) {}
+            try { localStorage.setItem('hakumo_last_ping', Math.round(d.latency) + '|' + Date.now()); } catch (e) {}
           }
         })
         .catch(function () {});
@@ -1088,7 +1088,7 @@
       });
       ws.on('stats_update', function (d) {
         if (typeof window.handleStatsUpdate === 'function') window.handleStatsUpdate(d);
-        try { doc.dispatchEvent(new CustomEvent('aether:live', { detail: d || {} })); } catch (e) {}
+        try { doc.dispatchEvent(new CustomEvent('hakumo:live', { detail: d || {} })); } catch (e) {}
       });
       ws.on('notification', function (d) {
         if (d && d.data && d.data.title) {
@@ -1241,7 +1241,7 @@
      при каждой перезагрузке страницы / смене канала. */
   (function bootAccent() {
     try {
-      var acc = localStorage.getItem('aether_accent');
+      var acc = localStorage.getItem('hakumo_accent');
       if (acc && acc !== '#4f46e5') window.applyAccent(acc);
     } catch (e) {}
   })();
@@ -1326,7 +1326,7 @@
 // ============================================================
 
 // ============================================================
-// AETHER PREMIUM KIT — счётчики, сортировка таблиц, графики
+// HAKUMO PREMIUM KIT — счётчики, сортировка таблиц, графики
 // ============================================================
 (function () {
   'use strict';
@@ -1450,7 +1450,7 @@
   }
 
   /* Спарклайн: линия + заливка + точка на последнем значении */
-  window.AetherChart = {
+  window.HakumoChart = {
     sparkline: function (el, values, opts) {
       opts = opts || {};
       if (!el) return;
@@ -1625,7 +1625,7 @@
 })();
 
 // ============================================================
-// AETHER PREMIUM KIT 2 — кольца, теплокарта, CSV, акценты
+// HAKUMO PREMIUM KIT 2 — кольца, теплокарта, CSV, акценты
 // ============================================================
 (function () {
   'use strict';
@@ -1650,7 +1650,7 @@
   }
 
   /* ── Кольцевой график (доли мер) ─────────────────────── */
-  window.AetherRing = function (el, segments, opts) {
+  window.HakumoRing = function (el, segments, opts) {
     opts = opts || {};
     if (!el) return;
     var list = (segments || []).filter(function (x) { return x && (Number(x.value) || 0) > 0; });
@@ -1731,7 +1731,7 @@
   };
 
   /* ── Тепловая карта (24 часа) ────────────────────────── */
-  window.AetherHeat = function (el, values, opts) {
+  window.HakumoHeat = function (el, values, opts) {
     opts = opts || {};
     if (!el) return;
     var vals = (values || []).map(function (v) { return Number(v) || 0; });
@@ -1811,7 +1811,7 @@
     });
     function paint() {
       var cur = '';
-      try { cur = localStorage.getItem('aether_accent') || '#4f46e5'; } catch (e) {}
+      try { cur = localStorage.getItem('hakumo_accent') || '#4f46e5'; } catch (e) {}
       cur = String(cur).toLowerCase();
       Array.prototype.forEach.call(grid.children, function (sw, i) {
         sw.classList.toggle('active', ACCENTS[i].hex.toLowerCase() === cur);
@@ -1872,7 +1872,7 @@
 })();
 
 // ============================================================
-// AETHER PREMIUM KIT 3 — тултипы, tilt, ripple
+// HAKUMO PREMIUM KIT 3 — тултипы, tilt, ripple
 // ============================================================
 (function () {
   'use strict';
@@ -1883,7 +1883,7 @@
   }
 
   /* ── Тултип для площадных графиков ───────────────────────
-     Вызывается из AetherChart.area при opts.tooltip !== false. */
+     Вызывается из HakumoChart.area при opts.tooltip !== false. */
   window.attachChartTooltip = function (box, values, opts) {
     var svg = box.querySelector('svg');
     if (!svg || !values || !values.length || reducedMotion() && false) return;
@@ -1957,7 +1957,7 @@
 })();
 
 // ============================================================
-// AETHER PREMIUM KIT 4 — 3D-tilt и ripple
+// HAKUMO PREMIUM KIT 4 — 3D-tilt и ripple
 // ============================================================
 (function () {
   'use strict';
@@ -2002,7 +2002,7 @@
 })();
 
 // ============================================================
-// AETHER FX KIT — частицы, курсор-свечение, сплэш, вспышки,
+// HAKUMO FX KIT — частицы, курсор-свечение, сплэш, вспышки,
 // параллакс фона
 // ============================================================
 (function () {
@@ -2096,9 +2096,9 @@
     /* сплэш показываем один раз за сессию — на каждой навигации
        он давал вспышку и воспринимался как нестабильность */
     var seen = false;
-    try { seen = !!window.sessionStorage.getItem('aether_splash_done'); } catch (e) {}
+    try { seen = !!window.sessionStorage.getItem('hakumo_splash_done'); } catch (e) {}
     if (reduced || seen) { el.remove(); return; }
-    try { window.sessionStorage.setItem('aether_splash_done', '1'); } catch (e) {}
+    try { window.sessionStorage.setItem('hakumo_splash_done', '1'); } catch (e) {}
     setTimeout(function () {
       el.classList.add('out');
       setTimeout(function () { el.remove(); }, 620);
@@ -2219,7 +2219,7 @@
 })();
 
 // ============================================================
-// AETHER FX KIT 2 — календарь, свёрнутый сайдбар, фокус-режим,
+// HAKUMO FX KIT 2 — календарь, свёрнутый сайдбар, фокус-режим,
 // избранное, конфетти, тултипы, справка, тонировка разделов
 // ============================================================
 (function () {
@@ -2234,7 +2234,7 @@
   }
 
   /* ── 1. Календарь активности (GitHub-стиль, 90 дней) ────── */
-  window.AetherCalendar = function (el, counts, opts) {
+  window.HakumoCalendar = function (el, counts, opts) {
     opts = opts || {};
     if (!el) return;
     var map = counts || {};
@@ -2372,11 +2372,11 @@
     var sidebar = doc.getElementById('sidebar');
     if (!btn || !sidebar) return;
     try {
-      if (localStorage.getItem('aether_sidebar') === 'collapsed') sidebar.classList.add('collapsed');
+      if (localStorage.getItem('hakumo_sidebar') === 'collapsed') sidebar.classList.add('collapsed');
     } catch (e) {}
     btn.addEventListener('click', function () {
       var collapsed = sidebar.classList.toggle('collapsed');
-      try { localStorage.setItem('aether_sidebar', collapsed ? 'collapsed' : 'full'); } catch (e) {}
+      try { localStorage.setItem('hakumo_sidebar', collapsed ? 'collapsed' : 'full'); } catch (e) {}
     });
   }
 
@@ -2410,11 +2410,11 @@
     if (!nav) return;
     var container = doc.getElementById('navFavs');
     function loadFavs() {
-      try { return JSON.parse(localStorage.getItem('aether_favs') || '[]'); }
+      try { return JSON.parse(localStorage.getItem('hakumo_favs') || '[]'); }
       catch (e) { return []; }
     }
     function saveFavs(list) {
-      try { localStorage.setItem('aether_favs', JSON.stringify(list)); } catch (e) {}
+      try { localStorage.setItem('hakumo_favs', JSON.stringify(list)); } catch (e) {}
     }
     function star(path) {
       var list = loadFavs();
@@ -2589,7 +2589,7 @@
 })();
 
 // ============================================================
-// AETHER KIT 3 — пауза live-обновлений, плотность, штамп
+// HAKUMO KIT 3 — пауза live-обновлений, плотность, штамп
 // ============================================================
 (function () {
   'use strict';
@@ -2613,7 +2613,7 @@
         window.showToast(window.__modLivePaused ? 'Live на паузе' : 'Live продолжается', true);
       }
       if (!window.__modLivePaused) {
-        try { document.dispatchEvent(new CustomEvent('aether:live')); } catch (e) {}
+        try { document.dispatchEvent(new CustomEvent('hakumo:live')); } catch (e) {}
       }
     });
     paint();
@@ -2631,7 +2631,7 @@
     btn.addEventListener('click', function () {
       document.body.classList.toggle('dense');
       var dense = document.body.classList.contains('dense');
-      try { localStorage.setItem('aether_dense', dense ? '1' : '0'); } catch (e) {}
+      try { localStorage.setItem('hakumo_dense', dense ? '1' : '0'); } catch (e) {}
       /* плотность следует за учёткой — сохраняем на сервере */
       try {
         fetch('/api/ux/prefs', {
@@ -2643,14 +2643,14 @@
       paint();
     });
     try {
-      if (localStorage.getItem('aether_dense') === '1') document.body.classList.add('dense');
+      if (localStorage.getItem('hakumo_dense') === '1') document.body.classList.add('dense');
     } catch (e) {}
     paint();
   };
 })();
 
 // ============================================================
-// AETHER KIT 4 — иконка раздела в заголовке, тень шапки,
+// HAKUMO KIT 4 — иконка раздела в заголовке, тень шапки,
 // ripple на KPI
 // ============================================================
 (function () {
@@ -2740,7 +2740,7 @@
 })();
 
 // ============================================================
-// AETHER FX KIT 5 — FAB, тур по панели, звук уведомлений,
+// HAKUMO FX KIT 5 — FAB, тур по панели, звук уведомлений,
 // перестановка виджетов
 // ============================================================
 (function () {
@@ -2887,7 +2887,7 @@
     }
 
     function finish() {
-      try { localStorage.setItem('aether_tour', 'done'); } catch (e) {}
+      try { localStorage.setItem('hakumo_tour', 'done'); } catch (e) {}
       if (target) target.classList.remove('tour-target');
       card.remove();
       mask.remove();
@@ -2902,7 +2902,7 @@
   var audioCtx = null;
   function ding() {
     try {
-      if (localStorage.getItem('aether_sound') === 'off') return;
+      if (localStorage.getItem('hakumo_sound') === 'off') return;
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
       var t = audioCtx.currentTime;
       [0, 0.12].forEach(function (offset, i) {
@@ -2970,7 +2970,7 @@
 })();
 
 // ============================================================
-// AETHER KIT 6 — оффлайн-баннер
+// HAKUMO KIT 6 — оффлайн-баннер
 // ============================================================
 (function () {
   'use strict';
@@ -2992,7 +2992,7 @@
 })();
 
 // ============================================================
-// AETHER KIT 7 — FX слой 9: живой градиентный обод карточек,
+// HAKUMO KIT 7 — FX слой 9: живой градиентный обод карточек,
 // параллакс при прокрутке, конфетти при входе,
 // drag-сортировка избранного, плотность следует за учёткой
 // ============================================================
@@ -3047,8 +3047,8 @@
   function fxEntranceConfetti() {
     if (reduced) return;
     try {
-      if (win.sessionStorage && win.sessionStorage.getItem('aether_confetti_done')) return;
-      if (win.sessionStorage) win.sessionStorage.setItem('aether_confetti_done', '1');
+      if (win.sessionStorage && win.sessionStorage.getItem('hakumo_confetti_done')) return;
+      if (win.sessionStorage) win.sessionStorage.setItem('hakumo_confetti_done', '1');
     } catch (e) { /* приватный режим */ }
     var cv = doc.createElement('canvas');
     cv.id = 'fx-confetti';
@@ -3137,7 +3137,7 @@
         var path = a.getAttribute('href');
         if (path) order.push(path);
       });
-      try { localStorage.setItem('aether_favs', JSON.stringify(order)); } catch (err) {}
+      try { localStorage.setItem('hakumo_favs', JSON.stringify(order)); } catch (err) {}
       if (typeof win.__renderFavs === 'function') win.__renderFavs();
       if (typeof win.showToast === 'function') win.showToast('Порядок избранного сохранён', true);
     });
@@ -3146,7 +3146,7 @@
 
   /* ── 6. Плотность следует за учёткой ── */
   function densityFromAccount() {
-    if (!localStorage.getItem('aether_dense')) {
+    if (!localStorage.getItem('hakumo_dense')) {
       fetch('/api/ux/prefs', { headers: { 'Accept': 'application/json' } })
         .then(function (r) { return r.json(); })
         .then(function (d) {
@@ -3163,11 +3163,11 @@
     var mo = new win.MutationObserver(function () { fxRingSchedule(); });
     mo.observe(doc.body, { childList: true, subtree: true });
   }
-  doc.addEventListener('aether:live', function () { win.__fxRingForce = true; fxRingSchedule(); });
+  doc.addEventListener('hakumo:live', function () { win.__fxRingForce = true; fxRingSchedule(); });
 })();
 
 // ============================================================
-// AETHER KIT 8 — FX слой 10: прогресс прокрутки, кнопка
+// HAKUMO KIT 8 — FX слой 10: прогресс прокрутки, кнопка
 // «наверх» с кольцом, магнитные кнопки, блик панелей
 // ============================================================
 (function () {
@@ -3307,7 +3307,7 @@
 })();
 
 // ============================================================
-// AETHER KIT 9 — стабильность прокрутки: сайдбар и страница
+// HAKUMO KIT 9 — стабильность прокрутки: сайдбар и страница
 // помнят позицию между переходами; активный пункт меню всегда
 // виден (меню больше не «уезжает в самый вверх»)
 // ============================================================
@@ -3315,8 +3315,8 @@
   'use strict';
   var doc = document;
   var win = window;
-  var SB_KEY = 'aether_sb_scroll';
-  var PG_KEY = 'aether_pg_scroll_';
+  var SB_KEY = 'hakumo_sb_scroll';
+  var PG_KEY = 'hakumo_pg_scroll_';
 
   function sget(k) { try { return win.sessionStorage.getItem(k); } catch (e) { return null; } }
   function sset(k, v) { try { win.sessionStorage.setItem(k, v); } catch (e) {} }
@@ -3398,7 +3398,7 @@
 })();
 
 // ============================================================
-// AETHER KIT 10 — единые премиум-шапки страниц: страницы без
+// HAKUMO KIT 10 — единые премиум-шапки страниц: страницы без
 // page-head/page-hero автоматически получают иконку-плитку,
 // eyebrow и описание из меню панели (навбар-дубль скрывается)
 // ============================================================
@@ -3426,7 +3426,7 @@
     logs: 'Журналы, история и расследования.',
     music: 'Музыкальные комнаты и плейлисты.',
     settings: 'Настройки панели и сервера.',
-    other: 'Дополнительные инструменты панели Aether.'
+    other: 'Дополнительные инструменты панели Hakumo.'
   };
 
   function pageHeadAuto() {
@@ -3455,7 +3455,7 @@
     if (titleEl) titleEl.querySelectorAll('i').forEach(function (el) { el.remove(); });
     var title = (titleEl ? titleEl.textContent : found.label).trim() || found.label;
     var icon = (found.icon || (grp && grp.icon) || 'fa-file').replace(/[^a-z0-9-]/gi, '');
-    var lead = found.description || GROUP_LEADS[(grp && grp.key)] || ('Раздел «' + ((grp && grp.group) || 'панель') + '» панели Aether.');
+    var lead = found.description || GROUP_LEADS[(grp && grp.key)] || ('Раздел «' + ((grp && grp.group) || 'панель') + '» панели Hakumo.');
     var head = doc.createElement('div');
     head.className = 'page-head fx-built';
     head.setAttribute('data-fx-head', (grp && grp.key) || 'auto');
@@ -3474,7 +3474,7 @@
 })();
 
 // ============================================================
-// AETHER KIT 11 — AetherSelect: полностью кастомные дропдауны
+// HAKUMO KIT 11 — HakumoSelect: полностью кастомные дропдауны
 // вместо нативных «классических» списков браузера. Стильная
 // панель, поиск, галочка выбора, клавиатура, синхронизация с
 // исходным <select> (change-события продолжают работать).
@@ -3748,13 +3748,13 @@
   }
   onReady(function () { scan(doc); });
   if (!reduced) {
-    doc.addEventListener('aether:live', function () { scan(doc); });
+    doc.addEventListener('hakumo:live', function () { scan(doc); });
   }
-  win.aetherSelect = { rescan: function () { scan(doc); } };
+  win.hakumoSelect = { rescan: function () { scan(doc); } };
 })();
 
 // ============================================================
-// AETHER KIT 12 — @-поиск: мгновенно найти всё в панели.
+// HAKUMO KIT 12 — @-поиск: мгновенно найти всё в панели.
 // Нажми @ в любом месте — откроется быстрый поиск по страницам,
 // участникам, каналам, расшифровкам, триггерам и анонсам.
 // ============================================================

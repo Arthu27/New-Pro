@@ -35,7 +35,7 @@ def register(ctx):
         username =session .get ('username','anon')
         history_key =f'ai_history_{username}'
         history =session .get (history_key ,[])
-        context ={'user_name':username ,'guild_name':'Aether Сервер'}
+        context ={'user_name':username ,'guild_name':'Hakumo Сервер'}
         answer ,new_history ,model_name ,_ =ai_assistant (message ,context ,history )
         # Храним только последние 6 пар сообщений (user + assistant),
         # чтобы session-cookie не превысил 4KB
@@ -62,7 +62,7 @@ def register(ctx):
         username =session .get ('username','anon')
         history_key =f'ai_history_{username}'
         history =session .get (history_key ,[])
-        context ={'user_name':username ,'guild_name':'Aether Сервер'}
+        context ={'user_name':username ,'guild_name':'Hakumo Сервер'}
         answer ,new_history ,model_name ,_ =ai_assistant (message ,context ,history )
         compact =[]
         for m in new_history [-12 :]:
@@ -97,7 +97,7 @@ def register(ctx):
             f"тон: {tone}. Добавь заголовок и эмодзи. До 200 слов."
         )
         messages =[
-        {"role":"system","content":"Ты — ассистент, пишущий эффектные объявления для Discord-сервера Aether. Пиши только текст объявления, без пояснений."},
+        {"role":"system","content":"Ты — ассистент, пишущий эффектные объявления для Discord-сервера Hakumo. Пиши только текст объявления, без пояснений."},
         {"role":"user","content":prompt }
         ]
         announcement =_call_text (messages ,max_tokens =600 )

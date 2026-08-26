@@ -117,10 +117,10 @@ def apply_to_bot(bot):
     tree = getattr(bot, 'tree', None)
     if tree is None:
         return [], []
-    parked = getattr(bot, '_aether_parked_commands', None)
+    parked = getattr(bot, '_hakumo_parked_commands', None)
     if parked is None:
         parked = {}
-        bot._aether_parked_commands = parked
+        bot._hakumo_parked_commands = parked
     off = disabled_set()
     hidden, restored = [], []
 
@@ -163,11 +163,11 @@ async def resync(bot, debounce=1.2):
         return False, [], []
     loop = getattr(bot, 'loop', None) or asyncio.get_running_loop()
     until = loop.time() + debounce
-    setattr(bot, '_aether_switch_sync_until', until)
-    while loop.time() < getattr(bot, '_aether_switch_sync_until', 0):
+    setattr(bot, '_hakumo_switch_sync_until', until)
+    while loop.time() < getattr(bot, '_hakumo_switch_sync_until', 0):
         await asyncio.sleep(0.25)
-        if getattr(bot, '_aether_switch_sync_until', 0) > until:
-            until = getattr(bot, '_aether_switch_sync_until', 0)
+        if getattr(bot, '_hakumo_switch_sync_until', 0) > until:
+            until = getattr(bot, '_hakumo_switch_sync_until', 0)
     hidden, restored = apply_to_bot(bot)
     try:
         await tree.sync()

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Статистика бота — Aether{% endblock %}
+{% block title %}Статистика бота — Hakumo{% endblock %}
 {% block page_title %}Статистика бота{% endblock %}
 {% block content %}
 
@@ -127,9 +127,9 @@
     if (ramHist.length > HIST_MAX) ramHist.shift();
     $('cpuNow').textContent = Math.round(cpu) + '%';
     $('ramNow').textContent = Math.round(ram) + ' МБ' + (ramPct ? ' · ' + ramPct + '%' : '');
-    if (window.AetherChart) {
-      window.AetherChart.sparkline($('cpuSpark'), cpuHist, { height: 104, pad: 34, color: cpuTone(cpu), title: 'CPU, %', grid: true, labels: true, unit: '%' });
-      window.AetherChart.sparkline($('ramSpark'), ramHist, { height: 104, pad: 34, color: ramTone(ramPct || ram), title: 'RAM, МБ', grid: true, labels: true, unit: ' МБ' });
+    if (window.HakumoChart) {
+      window.HakumoChart.sparkline($('cpuSpark'), cpuHist, { height: 104, pad: 34, color: cpuTone(cpu), title: 'CPU, %', grid: true, labels: true, unit: '%' });
+      window.HakumoChart.sparkline($('ramSpark'), ramHist, { height: 104, pad: 34, color: ramTone(ramPct || ram), title: 'RAM, МБ', grid: true, labels: true, unit: ' МБ' });
     }
   }
 

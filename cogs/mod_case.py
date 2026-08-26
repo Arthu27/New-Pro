@@ -245,7 +245,7 @@ def render_case_card(d: dict, avatar_img=None) -> io.BytesIO:
     if not lp:
         dr.text((W // 2 + 30, ly + 34), 'Демок нет', font=f_txt, fill=TXT3)
 
-    dr.text((70, H - 62), f"Aether ModKit · досье от {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')}",
+    dr.text((70, H - 62), f"Hakumo ModKit · досье от {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')}",
             font=f_small, fill=TXT3)
 
     buf = io.BytesIO()

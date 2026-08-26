@@ -433,7 +433,7 @@ DEMO_MEMBERS = [
     {'id': '1008', 'name': 'vanya.voice', 'display_name': 'Vanya',
      'avatar': 'https://cdn.discordapp.com/embed/avatars/3.png', 'status': 'online',
      'roles': [{'name': 'Новичок', 'color': '#64748b'}], 'joined_at': '2026-02-14T16:00:00+00:00'},
-    {'id': '1009', 'name': 'aether.bot', 'display_name': 'Aether',
+    {'id': '1009', 'name': 'hakumo.bot', 'display_name': 'Hakumo',
      'avatar': '', 'status': 'online', 'bot': True,
      'roles': [], 'joined_at': '2025-10-01T00:00:00+00:00'},
 ]

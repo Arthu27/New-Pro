@@ -225,7 +225,7 @@ class AppealModal(discord.ui.Modal):
         if err:
             await interaction.followup.send(f' Не получилось: {err}.', ephemeral=True)
             return
-        from cogs.embed_utils import aether_embed as _ae
+        from cogs.embed_utils import hakumo_embed as _ae
         await interaction.followup.send(
             embed=_ae('appeal', f'Апелляция #{item["id"]} отправлена',
                       f'Модераторы сервера **{self.guild.name}** уже получили её. '

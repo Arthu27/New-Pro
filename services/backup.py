@@ -117,7 +117,7 @@ def create_backup(data_dir: str = DATA_DIR_DEFAULT,
                 'created_at': ts.isoformat(timespec='seconds'),
                 'reason': reason,
                 'by': by or '',
-                'app': 'Aether (MOEBIUS)',
+                'app': 'Hakumo (MOEBIUS)',
                 'version': 2,
             }
             zf.writestr('manifest.json',

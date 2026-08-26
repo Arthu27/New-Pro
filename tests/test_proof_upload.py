@@ -23,7 +23,7 @@ import re
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_proof_upload_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_proof_upload_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

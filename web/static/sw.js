@@ -1,5 +1,5 @@
-// Aether Panel Service Worker (Light Edition)
-const CACHE_NAME = 'Aether-light-v5';
+// Hakumo Panel Service Worker (Light Edition)
+const CACHE_NAME = 'Hakumo-light-v5';
 const STATIC_ASSETS = [
   '/static/style.css',
   '/static/app.js',

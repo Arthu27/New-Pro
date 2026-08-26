@@ -10,7 +10,7 @@
 3. В шаблонах нет внешних preconnect/<script src>/<link href> (кроме
    санкционированного CDN Discord для аватарок в <img src>).
 4. Service worker (sw.js): кэширует только локальные /static/-ассеты,
-   все они существуют, версия кэша инкрементируется (Aether-light-vN).
+   все они существуют, версия кэша инкрементируется (Hakumo-light-vN).
 5. Бюджеты ассетов: app.js/style.css не распухают сверх лимитов,
    ни один файл статики не превышает кап размера.
 
@@ -91,7 +91,7 @@ check(not _bad, f'{len(os.listdir(TPL_DIR))} шаблонов, внешних р
 print('== 4. sw.js кэширует только локальные ассеты ==')
 sw = open(os.path.join(ROOT, 'web', 'static', 'sw.js'), encoding='utf-8').read()
 m = re.search(r"CACHE_NAME\s*=\s*'([^']+)'", sw)
-check(bool(m) and re.match(r'Aether-light-v\d+$', m.group(1) if m else ''),
+check(bool(m) and re.match(r'Hakumo-light-v\d+$', m.group(1) if m else ''),
       f'имя кэша инкрементируется: {m.group(1) if m else "?"}')
 assets = re.findall(r"'([^']+)'", re.search(r'STATIC_ASSETS\s*=\s*\[([^\]]+)\]', sw, re.S).group(1))
 external = [a for a in assets if a.startswith('http')]

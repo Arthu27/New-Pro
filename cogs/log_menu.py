@@ -1,5 +1,5 @@
 """
-Aether — Интерактивное графическое меню логов и аудит-хаб (Pillow + Discord UI).
+Hakumo — Интерактивное графическое меню логов и аудит-хаб (Pillow + Discord UI).
 
 Возможности:
   • Динамическая генерация графической карточки-дашборда для выбранной категории
@@ -31,7 +31,7 @@ FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 AUDIT_FILE = 'data/audit_log.json'
 
-# Палитра AETHER
+# Палитра HAKUMO
 C_BG_TOP       = (10, 16, 30)
 C_BG_BOT       = (16, 26, 48)
 C_GOLD         = (212, 175, 55)
@@ -44,16 +44,16 @@ C_CELL_BORDER  = (212, 175, 55, 65)
 
 # Цветовые акценты категорий для плашек
 CAT_META = {
-    'all':     {'title': 'ВСЕ СОБЫТИЯ',     'color': (212, 175, 55),  'tag': '✦ AETHER · ОБЩИЙ АУДИТ'},
-    'mod':     {'title': 'МОДЕРАЦИЯ',       'color': (235, 65, 85),   'tag': '🛡️ AETHER · МОДЕРАЦИЯ'},
-    'message': {'title': 'СООБЩЕНИЯ',       'color': (0, 195, 255),   'tag': '💬 AETHER · СООБЩЕНИЯ'},
-    'member':  {'title': 'УЧАСТНИКИ',       'color': (46, 213, 115),  'tag': '👤 AETHER · УЧАСТНИКИ'},
-    'voice':   {'title': 'ГОЛОСОВЫЕ',       'color': (26, 188, 156),  'tag': '🎙️ AETHER · ГОЛОС'},
-    'role':    {'title': 'РОЛИ',            'color': (165, 94, 234),  'tag': '🎭 AETHER · РОЛИ'},
-    'channel': {'title': 'КАНАЛЫ',          'color': (243, 156, 18),  'tag': '📁 AETHER · КАНАЛЫ'},
-    'guild':   {'title': 'СЕРВЕР',          'color': (212, 175, 55),  'tag': '👑 AETHER · СЕРВЕР'},
-    'invite':  {'title': 'ПРИГЛАШЕНИЯ',     'color': (108, 92, 231),  'tag': '🔗 AETHER · ИНВАЙТЫ'},
-    'ticket':  {'title': 'ТИКЕТЫ',          'color': (84, 160, 255),  'tag': '🎫 AETHER · ТИКЕТЫ'},
+    'all':     {'title': 'ВСЕ СОБЫТИЯ',     'color': (212, 175, 55),  'tag': '✦ HAKUMO · ОБЩИЙ АУДИТ'},
+    'mod':     {'title': 'МОДЕРАЦИЯ',       'color': (235, 65, 85),   'tag': '🛡️ HAKUMO · МОДЕРАЦИЯ'},
+    'message': {'title': 'СООБЩЕНИЯ',       'color': (0, 195, 255),   'tag': '💬 HAKUMO · СООБЩЕНИЯ'},
+    'member':  {'title': 'УЧАСТНИКИ',       'color': (46, 213, 115),  'tag': '👤 HAKUMO · УЧАСТНИКИ'},
+    'voice':   {'title': 'ГОЛОСОВЫЕ',       'color': (26, 188, 156),  'tag': '🎙️ HAKUMO · ГОЛОС'},
+    'role':    {'title': 'РОЛИ',            'color': (165, 94, 234),  'tag': '🎭 HAKUMO · РОЛИ'},
+    'channel': {'title': 'КАНАЛЫ',          'color': (243, 156, 18),  'tag': '📁 HAKUMO · КАНАЛЫ'},
+    'guild':   {'title': 'СЕРВЕР',          'color': (212, 175, 55),  'tag': '👑 HAKUMO · СЕРВЕР'},
+    'invite':  {'title': 'ПРИГЛАШЕНИЯ',     'color': (108, 92, 231),  'tag': '🔗 HAKUMO · ИНВАЙТЫ'},
+    'ticket':  {'title': 'ТИКЕТЫ',          'color': (84, 160, 255),  'tag': '🎫 HAKUMO · ТИКЕТЫ'},
 }
 
 _fonts = {}
@@ -277,9 +277,9 @@ def generate_log_browser_card(guild_name: str, category: str, events: list, page
     # 7. Футер таблицы
     fy = H - footer_h + 16
     d.line([(PAD, fy), (W - PAD, fy)], fill=C_GOLD + (80,), width=1)
-    d.text((PAD, fy + 16), "AETHER LOG HUB · ИНТЕРАКТИВНЫЙ АУДИТ", font=_f(False, 20), fill=C_TEXT_DIM)
+    d.text((PAD, fy + 16), "HAKUMO LOG HUB · ИНТЕРАКТИВНЫЙ АУДИТ", font=_f(False, 20), fill=C_TEXT_DIM)
 
-    brand = "✦ AETHER"
+    brand = "✦ HAKUMO"
     bw = d.textlength(brand, font=_f(True, 22))
     d.text((W - PAD - bw, fy + 14), brand, font=_f(True, 22), fill=C_GOLD_BRIGHT)
 
@@ -400,7 +400,7 @@ class LogBrowserView(discord.ui.View):
         img_buf = await interaction.client.loop.run_in_executor(
             None, generate_log_browser_bytes, self.guild.name, self.category, page_events, page, total_pages, self.query
         )
-        file = discord.File(img_buf, filename="aether_log_menu.png")
+        file = discord.File(img_buf, filename="hakumo_log_menu.png")
         if interaction.response.is_done():
             await interaction.edit_original_response(attachments=[file], view=self)
         else:

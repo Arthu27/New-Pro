@@ -17,7 +17,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_fun_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_fun_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -297,7 +297,7 @@ check(client.get('/fun').status_code in (302, 401, 403), 'гостю стран�
 check(client.post('/api/guild/777/fun/coinflip', json={}).status_code
       in (302, 401, 403), 'гостю API закрыто')
 login('uye')
-check(client.get('/fun').status_code == 403, 'uye не играет')
+check(client.get('/fun').status_code == 302, 'uye не играет')
 check(client.post('/api/guild/777/fun/rps', json={'choice': 'камень'})
       .status_code == 403, 'uye не дерётся в КНБ')
 login('mod')

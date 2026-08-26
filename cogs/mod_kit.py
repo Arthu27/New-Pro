@@ -110,7 +110,7 @@ class ModKit(commands.Cog):
         e = discord.Embed(title=title, description=desc,
                           color=color if color is not None else self.GOLD,
                           timestamp=datetime.now(timezone.utc))
-        e.set_footer(text='Aether ModKit')
+        e.set_footer(text='Hakumo ModKit')
         return e
 
     async def _modlog(self, guild, title, fields, color=None):

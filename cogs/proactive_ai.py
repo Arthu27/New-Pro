@@ -73,7 +73,7 @@ class ProactiveAI (commands .Cog ):
 
             #     morning_msg = _call_text([
             #         {'role': 'system', 'content': (
-            #             'Sen Aether, Артуров Discord-бот. '
+            #             'Sen Hakumo, Артуров Discord-бот. '
             #             'Утром — короткое дружелюбное сообщение дня для Arthur. '
             #             'Сервер statusunu belirt, сегодня для bir что-то sormak istiyorsan sor. '
             #             'Maksimum 3 cюmle. Emoji использовать.'
@@ -98,7 +98,7 @@ class ProactiveAI (commands .Cog ):
 
             evening_msg =_call_text ([
             {'role':'system','content':(
-            'Sen Aether, Артуров Discord-бот. '
+            'Sen Hakumo, Артуров Discord-бот. '
             'Вечером напиши Артуру короткую сводку. '
             'Спроси, как прошёл день, и поинтересуйся планами на завтра. '
             'Максимум 3 предложения. Тепло и естественно.'

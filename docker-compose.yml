@@ -1,5 +1,5 @@
 # ============================================================
-#   AETHER BOT — Docker Compose
+#   HAKUMO BOT — Docker Compose
 # ============================================================
 # Запуск:  docker compose up -d
 # Логи:    docker compose logs -f
@@ -11,7 +11,7 @@
 services:
   bot:
     build: .
-    container_name: aether-bot
+    container_name: hakumo-bot
     restart: unless-stopped
     
     # Переменные окружения из .env файла

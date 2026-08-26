@@ -135,5 +135,5 @@ def stop():
 if os.path.isdir('data') or os.path.isdir('cogs'):
     try:
         start()
-    except Exception:
-        pass
+    except Exception as _sx1:
+        _log.debug('подавлено: %s', _sx1)

@@ -18,7 +18,7 @@ import subprocess
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_scroll_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_scroll_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -54,8 +54,8 @@ check(bool(m) and 'Promise.resolve(promise).then' in m.group(1)
       'app.js: восстановление прокрутки привязано к .then() промиса (после DOM)')
 
 # 2. Сайдбар: память позиции + показ активного пункта
-check('aether_sb_scroll' in APP_JS, 'app.js: память прокрутки сайдбара')
-check('aether_pg_scroll_' in APP_JS, 'app.js: память прокрутки страницы по маршруту')
+check('hakumo_sb_scroll' in APP_JS, 'app.js: память прокрутки сайдбара')
+check('hakumo_pg_scroll_' in APP_JS, 'app.js: память прокрутки страницы по маршруту')
 check("nav.querySelector('.nav-link.active')" in APP_JS
       and 'sidebarNav' in APP_JS,
       'app.js: активный пункт меню показывается в сайдбаре')

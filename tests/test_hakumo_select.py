@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Регрессия движка кастомных дропдаунов AetherSelect.
+"""Регрессия движка кастомных дропдаунов HakumoSelect.
 
 Баг: enhance() переносил <select> внутрь обёртки и только потом вызывал
 replaceChild(shell, orig) — orig.parentNode уже был shell, то есть замена
@@ -8,10 +8,10 @@ replaceChild(shell, orig) — orig.parentNode уже был shell, то есть
 перерисовке (лаги панели).
 
 Харнесс Node с честной реализацией спецификации replaceChild/appendChild
-реально исполняет блок AETHER KIT 11 из app.js и проверяет, что селект
+реально исполняет блок HAKUMO KIT 11 из app.js и проверяет, что селект
 оборачивается без исключений, change-события и структура сохраняются.
 
-Запуск: python3 tests/test_aether_select.py
+Запуск: python3 tests/test_hakumo_select.py
 """
 import os
 import re
@@ -20,7 +20,7 @@ import subprocess
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_select_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_select_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -42,7 +42,7 @@ def check(ok, msg):
 APP_JS = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
 
 print('== статические проверки ==')
-check('AETHER KIT 11' in APP_JS, 'блок AetherSelect присутствует')
+check('HAKUMO KIT 11' in APP_JS, 'блок HakumoSelect присутствует')
 m = re.search(r'parent\.replaceChild\(shell, orig\).*?shell\.appendChild\(orig\)', APP_JS, re.S)
 check(bool(m), 'порядок: замена в исходном родителе ДО переноса select внутрь shell')
 m = re.search(r'shell\.appendChild\(orig\).*?orig\.parentNode\.replaceChild\(shell, orig\)', APP_JS, re.S)
@@ -53,7 +53,7 @@ print('== Node-харнесс: реальное исполнение движк�
 node_script = r"""
 const fs = require('fs');
 const src = fs.readFileSync(process.argv[1], 'utf8');
-const start = src.indexOf('// ============================================================\n// AETHER KIT 11');
+const start = src.indexOf('// ============================================================\n// HAKUMO KIT 11');
 const block = start < 0 ? '' : src.slice(start);
 if (!block) { console.error('KIT 11 не найден'); process.exit(1); }
 
@@ -143,8 +143,8 @@ let threw = null;
 try {
   const fn = new Function('document', 'window', 'MutationObserver', 'getComputedStyle', 'setInterval', block);
   fn(doc, fakeWindow, FakeMO, getComputedStyle, () => 1);
-  if (typeof fakeWindow.aetherSelect !== 'object') throw new Error('aetherSelect не экспортирован');
-  fakeWindow.aetherSelect.rescan();
+  if (typeof fakeWindow.hakumoSelect !== 'object') throw new Error('hakumoSelect не экспортирован');
+  fakeWindow.hakumoSelect.rescan();
 } catch (e) { threw = e; }
 
 if (threw) { console.error('ИСКЛЮЧЕНИЕ:', threw.message); process.exit(1); }

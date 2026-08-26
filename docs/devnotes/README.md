@@ -24,7 +24,7 @@ RU/TR содержания).
 - `AI_MODERATOR_OZET.md` — сводка (TR)
 
 ### Прочее
-- `AETHER_FEATURES_RU.txt` — общий обзор возможностей бота
+- `HAKUMO_FEATURES_RU.txt` — общий обзор возможностей бота
 - `TODO.md` — историческая сводка завершённых модулей (списка задач там нет)
 - `GUNCELLEME_RU.txt`, `GUNCELLEME_LISTESI_RU.md` — списки обновлений
 - `HIZLI_BASLANGIC.md` — быстрый старт (TR)

@@ -9,7 +9,7 @@ import re
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_afana_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_afana_')
 os.environ['DB_PATH'] = os.path.join(_TMP, 'bot.db')
 os.environ['DEMO_MODE'] = '1'
 os.environ['SECRET_KEY'] = 'test-secret'
@@ -48,7 +48,7 @@ strikes = {
 with open('data/antifake_strikes.json', 'w', encoding='utf-8') as f:
     json.dump(strikes, f)
 with open('data/antifake.json', 'w', encoding='utf-8') as f:
-    json.dump({GID: {'threshold': 0.85, 'protected_names': ['Aether'],
+    json.dump({GID: {'threshold': 0.85, 'protected_names': ['Hakumo'],
                      'log_channel_id': 1002}}, f)
 
 from web.app import app as flask_app  # noqa: E402
@@ -96,7 +96,7 @@ r = client.get(f'/api/guild/{GID}/antifake/status')
 d = r.get_json()
 check(r.status_code == 200 and d.get('success') and d.get('threshold_pct') == 85,
       'статус читается из файла (порог 85)')
-check(d.get('protected_count') == 1 and 'Aether' in d.get('protected_names', []),
+check(d.get('protected_count') == 1 and 'Hakumo' in d.get('protected_names', []),
       'защищаемые строки из файла')
 check(len(d.get('toggles', [])) == 7, '7 тумблеров')
 r = client.post(f'/api/guild/{GID}/antifake/toggle', json={'key': 'check_ads'})
@@ -112,7 +112,7 @@ check(r.get_json().get('success') and 'Куратор' in r.get_json().get('prot
       'защита строки без бота')
 
 # лаборатория — чистые функции
-r = client.post(f'/api/guild/{GID}/antifake/lab', json={'text': 'Aether'})
+r = client.post(f'/api/guild/{GID}/antifake/lab', json={'text': 'Hakumo'})
 d = r.get_json()
 check(d.get('success') and d.get('catch') and d['matches'][0]['score_pct'] == 100,
       'лаборатория ловит точное совпадение')

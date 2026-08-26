@@ -137,7 +137,7 @@ class MiniGames(commands.Cog):
         self.active_guesses = {}
 
     def _footer(self, interaction):
-        return f"Aether • {interaction.guild.name}"
+        return f"Hakumo • {interaction.guild.name}"
 
     @app_commands.command(name='coinflip', description='Подбросить монету')
     async def coin_flip(self, interaction: discord.Interaction, выбор: str = None):

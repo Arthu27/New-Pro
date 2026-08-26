@@ -11,7 +11,7 @@ import tempfile
 import time
 
 # временная рабочая директория — data/* не мусорит в репо
-_TMP = tempfile.mkdtemp(prefix='aether_modplus_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_modplus_test_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -397,7 +397,7 @@ from cogs.proof_cog import proof_add, proof_update_delivery  # noqa: E402
 login_as('mod')
 _pe1 = proof_add(guild.id, 5050, 'Cheater#7', 5001, 'Warden#1', 'мут', 'флуд стикерами')
 proof_update_delivery(guild.id, _pe1['id'], msg_id=777001, channel_id=777002,
-                      url='https://cdn.aether/proof1.png')
+                      url='https://cdn.hakumo/proof1.png')
 _pe2 = proof_add(guild.id, 5051, 'Raider#1', 5001, 'Warden#1', 'бан', 'рейд')  # без медиа
 
 r = client.get('/api/proofs')
@@ -410,7 +410,7 @@ check(_it_mute and str(_it_mute['set_at']).endswith('+00:00'),
 check(_it_mute and _it_mute.get('jump')
       == f"https://discord.com/channels/{guild.id}/777002/777001",
       'proofs API: jump-ссылка на сообщение в канале собрана')
-check(_it_mute and _it_mute.get('url') == 'https://cdn.aether/proof1.png',
+check(_it_mute and _it_mute.get('url') == 'https://cdn.hakumo/proof1.png',
       'proofs API: живой url файла доехал (не протухающий)')
 _it_ban = next((x for x in d['items'] if x['action'] == 'бан'), None)
 check(_it_ban and _it_ban.get('url') in (None, '') and _it_ban.get('reason') == 'рейд',

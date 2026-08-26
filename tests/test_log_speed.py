@@ -21,7 +21,7 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-os.environ.setdefault('DB_PATH', '/tmp/aether_logspeed.db')
+os.environ.setdefault('DB_PATH', '/tmp/hakumo_logspeed.db')
 
 PASS = 0
 
@@ -61,9 +61,9 @@ print('== 2. Отправка: не блокирует бота ==')
 logs_src = open(os.path.join(ROOT, 'cogs/logs.py'), encoding='utf-8').read()
 ok('рендер карточки в отдельном потоке (to_thread)',
    'to_thread (render_log_card' in logs_src)
-ok('лог-карточка шлётся .jpg', "filename ='aether_log_card.jpg')" in logs_src
-   and 'attachment://aether_log_card.jpg' in logs_src)
-ok('старый тяжёлый .png отправкой не остался', 'aether_log_card.png' not in logs_src)
+ok('лог-карточка шлётся .jpg', "filename ='hakumo_log_card.jpg')" in logs_src
+   and 'attachment://hakumo_log_card.jpg' in logs_src)
+ok('старый тяжёлый .png отправкой не остался', 'hakumo_log_card.png' not in logs_src)
 
 print('== 3. Дубль «Команды» убран из меню ==')
 from services import panel_menu as PM  # noqa: E402

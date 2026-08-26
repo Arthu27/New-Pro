@@ -1,5 +1,5 @@
 """
-Aether Security Cog
+Hakumo Security Cog
 - AI поддержка spam tespiti (pattern + скорость + benzerlik analizi)
 - Обнаружение фейковых аккаунтов (новый аккаунт, нет аватара, подозрительное имя)
 - Сканер безопасности ссылок (список вредоносных доменов + URL-сокращатели)
@@ -255,7 +255,7 @@ class Security (commands .Cog ):
                 +"\n".join (f"• `{d}`"for d in bad_domains )
                 )
                 e .set_thumbnail (url =member .display_avatar .url )
-                e .set_footer (text =" Aether Сканер ссылок")
+                e .set_footer (text =" Hakumo Сканер ссылок")
                 await self ._log (guild ,e ,cfg )
                 try :
                     await message .channel .send (
@@ -292,7 +292,7 @@ class Security (commands .Cog ):
                 e .set_thumbnail (url =member .display_avatar .url )
                 e .add_field (name =" Пользователь",value =f"{member.mention} `{member.id}`",inline =True )
                 e .add_field (name =" Канал",value =message .channel .mention ,inline =True )
-                e .set_footer (text =" Aether AI Security")
+                e .set_footer (text =" Hakumo AI Security")
                 await self ._log (guild ,e ,cfg )
 
             elif score >=0.65 :
@@ -316,7 +316,7 @@ class Security (commands .Cog ):
                 e .description =f"**Сканирование:** `{score:.0%}` | **Причина:** {reason}"
                 e .set_thumbnail (url =member .display_avatar .url )
                 e .add_field (name =" Пользователь",value =f"{member.mention} `{member.id}`",inline =True )
-                e .set_footer (text =" Aether AI Security")
+                e .set_footer (text =" Hakumo AI Security")
                 await self ._log (guild ,e ,cfg )
 
     @commands .Cog .listener ()
@@ -358,7 +358,7 @@ class Security (commands .Cog ):
         else :
             e .add_field (name =" Действие",value ="```Модератор уведомление отправлено```",inline =False )
 
-        e .set_footer (text =" Aether Безопасность Система")
+        e .set_footer (text =" Hakumo Безопасность Система")
         await self ._log (guild ,e ,cfg )
 
         #  Slash Команды 
@@ -376,7 +376,7 @@ class Security (commands .Cog ):
         e .add_field (name =" Сканер ссылок",value =" Активен"if cfg .get ('link_scanner')else " Закрыт",inline =True )
         e .add_field (name =" Порог нового аккаунта",value =f"`{cfg.get('new_account_days', 7)} день`",inline =True )
         e .add_field (name ="🆕 Действие для новых аккаунтов",value =f"`{cfg.get('new_account_action', 'warn')}`",inline =True )
-        e .set_footer (text =" Aether Security")
+        e .set_footer (text =" Hakumo Security")
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
     @app_commands .command (name ="security-toggle",description ="Включить/отключить функцию безопасности")
@@ -425,7 +425,7 @@ class Security (commands .Cog ):
             e =discord .Embed (title =" Ссылка чиста",color =0x2ecc71 )
             e .description ="Эта ссылка не найдена в списках известных вредоносных доменов."
         e .add_field (name =" URL",value =f"`{url[:100]}`",inline =False )
-        e .set_footer (text =" Aether Сканер ссылок")
+        e .set_footer (text =" Hakumo Сканер ссылок")
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
         #  Автоматически Backup 
@@ -501,7 +501,7 @@ class Security (commands .Cog ):
         value ="\n".join (f"• `{b}`"for b in backups [:5 ])or "Нет",
         inline =False 
         )
-        e .set_footer (text ="💾 Aether Backup • ежедневное авто-копирование активно")
+        e .set_footer (text ="💾 Hakumo Backup • ежедневное авто-копирование активно")
         await interaction .followup .send (embed =e ,ephemeral =True )
 
     @app_commands .command (name ="backup-list",description ="Показать список резервных копий")

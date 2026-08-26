@@ -7,7 +7,7 @@ import subprocess
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_announcements_pro_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_announcements_pro_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

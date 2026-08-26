@@ -150,7 +150,7 @@ def register(ctx):
             role =guild .get_role (int (data ['role_id']))
             if not role :return 
             embed =discord .Embed (title ="📢 Объявление",description =data ['message'],color =0xdc143c )
-            embed .set_footer (text ="Aether Panel",icon_url =bot .user .display_avatar .url )
+            embed .set_footer (text ="Hakumo Panel",icon_url =bot .user .display_avatar .url )
             for member in role .members :
                 try :
                     await (member .send (embed =embed ))

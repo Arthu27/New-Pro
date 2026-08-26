@@ -5,7 +5,7 @@
 
 | Путь | Где используется |
 | --- | --- |
-| `aether_log_banner.png`, `aether_log_bg.png` | Обложки лог-карточек (`services/log_card.py`). |
+| `hakumo_log_banner.png`, `hakumo_log_bg.png` | Обложки лог-карточек (`services/log_card.py`). |
 | `profile_bg.png`, `profile_bg_pro.jpg` | Фоны карточек профиля/ранга. |
 | `help_bg.png` | Фон help-карточки. |
 | `afk_icon.png` | Иконка AFK-карточек. |

@@ -1,14 +1,14 @@
 @echo off
 rem ============================================================
-rem  Aether Panel - tunnel to hakumods.xyz
+rem  Hakumo Panel - tunnel to hakumods.xyz
 rem  Right click this file - "Run as administrator"
 rem  Guide: docs/PANEL-DOMAIN.md
 rem ============================================================
 setlocal EnableExtensions
 cd /d "%~dp0"
-title Aether Panel Tunnel
+title Hakumo Panel Tunnel
 
-set TNAME=aether-panel
+set TNAME=hakumo-panel
 set PANEL_PORT=5001
 set HOST1=hakumods.xyz
 set HOST2=www.hakumods.xyz
@@ -17,7 +17,7 @@ set REKEY=
 
 echo(
 echo  ==========================================================
-echo   Aether Panel - your own domain setup
+echo   Hakumo Panel - your own domain setup
 echo   %HOST1% and %HOST3% = http://localhost:%PANEL_PORT%
 echo  ==========================================================
 echo(
@@ -28,9 +28,9 @@ echo(
 pause
 
 echo [0/6] Checking panel on localhost:%PANEL_PORT% ...
-powershell -NoProfile -Command "try { (Invoke-WebRequest -UseBasicParsing -TimeoutSec 4 -Uri 'http://localhost:%PANEL_PORT%/').StatusCode } catch { 'DOWN' }" > "%TEMP%\_aether_ping.txt" 2>nul
-set /p PING=<"%TEMP%\_aether_ping.txt"
-del "%TEMP%\_aether_ping.txt" >nul 2>&1
+powershell -NoProfile -Command "try { (Invoke-WebRequest -UseBasicParsing -TimeoutSec 4 -Uri 'http://localhost:%PANEL_PORT%/').StatusCode } catch { 'DOWN' }" > "%TEMP%\_hakumo_ping.txt" 2>nul
+set /p PING=<"%TEMP%\_hakumo_ping.txt"
+del "%TEMP%\_hakumo_ping.txt" >nul 2>&1
 if /i "%PING%"=="DOWN" (
   echo [STOP] Panel is not answering on port %PANEL_PORT%.
   echo        Start the bot with start.bat, then run me again.

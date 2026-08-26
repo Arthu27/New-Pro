@@ -50,7 +50,7 @@ def _env_int(name: str, default: int) -> int:
     if parsed is None:
         raw = os.getenv(name)
         if raw not in (None, ""):
-            logging.getLogger("aether.config").warning(
+            logging.getLogger("hakumo.config").warning(
                 "Config: значение %s=%r не является числом — используется %s",
                 name, raw, default,
             )
@@ -66,7 +66,7 @@ def _env_int_list(name: str) -> list:
         if parsed is not None:
             out.append(parsed)
         elif part.strip():
-            logging.getLogger("aether.config").warning(
+            logging.getLogger("hakumo.config").warning(
                 "Config: элемент %r в %s не является числом — пропущен", part, name,
             )
     return out
@@ -143,7 +143,7 @@ class Config:
     # === Bot Settings ===
     BOT_STATUS: str = "idle"  # online, idle, dnd, invisible
     BOT_ACTIVITY_TYPE: str = "listening"  # listening, playing, watching, competing
-    BOT_ACTIVITY_TEXT: str = ".gg/Aether"
+    BOT_ACTIVITY_TEXT: str = ".gg/Hakumo"
     
     # === Ticket Settings ===
     TICKET_CATEGORY_ID: int = _env_int("TICKET_CATEGORY_ID", 0)

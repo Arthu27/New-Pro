@@ -13,7 +13,7 @@ import sys
 import tempfile
 import time
 
-_TMP = tempfile.mkdtemp(prefix='aether_curator_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_curator_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -223,7 +223,7 @@ r = c.get('/warnings')
 check(r.status_code == 200, 'куратор открывает модерскую страницу /warnings')
 c = make_client('curator')
 r = c.get('/panel-access')
-check(r.status_code == 403, 'куратор НЕ открывает /panel-access (только admin+)')
+check(r.status_code == 302, 'куратор НЕ открывает /panel-access (только admin+)')
 
 # 4.2 Шапка: русская подпись роли + штабное меню
 c = make_client('curator')
@@ -295,7 +295,7 @@ for path in ('/tickets-ops', '/leaderboards', '/warnings'):
     r = c.get(path)
     check(r.status_code == 200, f'куратор открывает {path}')
 r = c.get('/panel-menu')
-check(r.status_code == 403, 'куратор НЕ открывает /panel-menu (настройка — только владелец)')
+check(r.status_code == 302, 'куратор НЕ открывает /panel-menu (настройка — только владелец)')
 
 
 print('== 7. Демо-ветка /api/role-map ==')

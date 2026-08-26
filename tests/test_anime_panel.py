@@ -17,7 +17,7 @@ import sys
 import tempfile
 from datetime import datetime
 
-_TMP = tempfile.mkdtemp(prefix='aether_anime_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_anime_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

@@ -18,7 +18,7 @@ import sys
 import tempfile
 import time
 
-_TMP = tempfile.mkdtemp(prefix='aether_antifake_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_antifake_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -201,14 +201,14 @@ for bad in (59, 101, 'х'):
 AF.threshold_flow(lambda: FB2, '777', 85)
 
 print('== 5. Защищаемые строки ==')
-ok, err, code, p = AF.protect_flow(lambda: FB2, '777', 'AetherBank')
-check(ok and p['message'] == 'Защищаемые строки (1): AetherBank',
+ok, err, code, p = AF.protect_flow(lambda: FB2, '777', 'HakumoBank')
+check(ok and p['message'] == 'Защищаемые строки (1): HakumoBank',
       'protect — словами команды')
-ok, err, code, p = AF.protect_flow(lambda: FB2, '777', 'AetherBank')
-check(ok and p['protected_names'] == ['AetherBank'], 'дубль не добавляется')
+ok, err, code, p = AF.protect_flow(lambda: FB2, '777', 'HakumoBank')
+check(ok and p['protected_names'] == ['HakumoBank'], 'дубль не добавляется')
 ok, err, code, p = AF.protect_flow(lambda: FB2, '777', '   ')
-check(ok and p['protected_names'] == ['AetherBank'], 'пустая строка мимо — как в команде')
-ok, err, code, p = AF.unprotect_flow(lambda: FB2, '777', 'AetherBank')
+check(ok and p['protected_names'] == ['HakumoBank'], 'пустая строка мимо — как в команде')
+ok, err, code, p = AF.unprotect_flow(lambda: FB2, '777', 'HakumoBank')
 check(ok and p['message'] == 'Осталось строк: 0'
       and p['protected_names'] == [], 'unprotect — словами команды')
 
@@ -243,9 +243,9 @@ check(p['matches'][0]['name'] == 'moder_admin'
       and p['matches'][0]['score_pct'] == 100
       and p['matches'][0]['catch'] is True,
       'ближайшее защищаемое имя — 100%')
-AF.protect_flow(lambda: FB2, '777', 'AetherBank')
-ok, err, code, p = AF.lab_flow(lambda: FB2, '777', 'АetherBank')
-row = next((r for r in p['matches'] if r['name'] == 'AetherBank'), None)
+AF.protect_flow(lambda: FB2, '777', 'HakumoBank')
+ok, err, code, p = AF.lab_flow(lambda: FB2, '777', 'HаkumoBank')
+row = next((r for r in p['matches'] if r['name'] == 'HakumoBank'), None)
 check(row is not None and row['source'] == 'string'
       and row['score_pct'] == 100 and row['catch'] is True,
       'защищаемая строка ловит свою подделку')
@@ -257,7 +257,7 @@ check(ok and p['norm'] == '' and p['catch'] is False,
       'пустая каноническая форма не паникует')
 ok, err, code, p = AF.lab_flow(lambda: FB2, '777', '   ')
 check(not ok and code == 400 and err == AF.ERR_TEXT, 'пустой текст — 400')
-AF.unprotect_flow(lambda: FB2, '777', 'AetherBank')
+AF.unprotect_flow(lambda: FB2, '777', 'HakumoBank')
 
 print('== 8. Страйки рекламы ==')
 now = time.time()
@@ -316,7 +316,7 @@ try:
     check(client.get('/api/guild/777/antifake/status').status_code
           in (302, 401, 403), 'гостю API закрыто')
     login('uye')
-    check(client.get('/antifake').status_code == 403, 'uye не видит')
+    check(client.get('/antifake').status_code == 302, 'uye не видит')
     login('mod')
     page = client.get('/antifake')
     body = page.get_data(as_text=True)
@@ -345,11 +345,11 @@ try:
     r = client.post('/api/guild/777/antifake/threshold', json={'percent': 55})
     check(r.status_code == 400 and r.get_json()['error'] == AF.ERR_THRESHOLD,
           'низкий порог — 400 через API')
-    r = client.post('/api/guild/777/antifake/protect', json={'text': 'AetherBank'})
+    r = client.post('/api/guild/777/antifake/protect', json={'text': 'HakumoBank'})
     check(r.status_code == 200
-          and r.get_json()['protected_names'] == ['AetherBank'],
+          and r.get_json()['protected_names'] == ['HakumoBank'],
           'protect через API')
-    check(IM.AntiFake(None).cfg(777)['protected_names'] == ['AetherBank'],
+    check(IM.AntiFake(None).cfg(777)['protected_names'] == ['HakumoBank'],
           'строка дошла до файла кога')
     COG2._strikes['777'] = {'5': [time.time() - 42]}
     with open(IM.STRIKES_PATH, 'w', encoding='utf-8') as _f:

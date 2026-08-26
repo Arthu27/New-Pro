@@ -1,5 +1,5 @@
 /* ============================================================
-   Aether Panel — Picker Kit (Light Edition)
+   Hakumo Panel — Picker Kit (Light Edition)
    Живые пикеры ID и мелкий UX для страниц с ID-полями:
    - pickerLoad / attachIdPicker — datalist-подсказки «#имя — id»
    - attachListFilter — клиентский поиск по длинным спискам

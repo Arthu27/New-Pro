@@ -839,8 +839,8 @@ class AIChat (commands .Cog ):
         music_triggers =['включи музыку','поставь трек','поставь песню','музыку включи']
         if any (t in cl for t in music_triggers ):
             await message .channel .send (
-            ' Музыка переехала в полноценный плеер Aether.\n'
-            'Зайди в голосовой канал и запусти активность «Aether Music» — '
+            ' Музыка переехала в полноценный плеер Hakumo.\n'
+            'Зайди в голосовой канал и запусти активность «Hakumo Music» — '
             'очередь, перемотка и обложки уже там.')
             return True 
 
@@ -1161,7 +1161,7 @@ class AIChat (commands .Cog ):
                     _d [uid ]=[]
                 # Bot cevabыnы сохранить
                 _d [uid ].append ({
-                'author':'Aether',
+                'author':'Hakumo',
                 'content':answer ,
                 'timestamp':_dt3 .datetime.now(_dt3 .timezone.utc).isoformat (),
                 'from_bot':True ,

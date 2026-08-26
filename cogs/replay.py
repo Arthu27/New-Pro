@@ -1,5 +1,5 @@
 """
-Aether — /replay: визуальная лента событий сервера (реплеер инцидентов).
+Hakumo — /replay: визуальная лента событий сервера (реплеер инцидентов).
 
 Источник — data/audit_log.json (пишет cogs/logs.py). Рисует карточку-
 таймлайн (services/replay_card.py) и присылает её вложением.
@@ -123,13 +123,13 @@ class Replay(commands.Cog):
         e.description = f'## 🎞 Реплеер событий\n**{title}** · {subtitle}\n\n' + '\n'.join(
             f"**{ev['time']}** · {ev['label']}" + (f" — {ev['detail']}" if ev['detail'] else '')
             for ev in events[-10:])
-        e.set_footer(text=f'{interaction.guild.name} · Aether Replay',
+        e.set_footer(text=f'{interaction.guild.name} · Hakumo Replay',
                      icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
 
         if png:
-            e.set_image(url='attachment://aether_replay.png')
+            e.set_image(url='attachment://hakumo_replay.png')
             await interaction.followup.send(
-                embed=e, file=discord.File(io.BytesIO(png), filename='aether_replay.png'))
+                embed=e, file=discord.File(io.BytesIO(png), filename='hakumo_replay.png'))
         else:
             await interaction.followup.send(embed=e)
 

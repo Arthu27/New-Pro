@@ -4,7 +4,7 @@
 1. Короткие разрывы с Discord — норма, но они должны быть ВИДНЫ в логе
    (on_disconnect / on_resumed в main.py).
 2. Смерть процесса — не норма: start.sh поднимает бот сам (цикл),
-   systemd-служба deploy/aether.service — правильный способ на VDS.
+   systemd-служба deploy/hakumo.service — правильный способ на VDS.
 3. Неверный токен — код выхода 7: скрипты не крутят бесконечный
    перезапуск против битого TOKEN.
 Запуск: python3 tests/test_vds_stability.py
@@ -48,14 +48,14 @@ ok('start.sh: советует systemd-службу для VDS',
 ok('start.sh синтаксически валиден (bash -n)',
    os.system('bash -n start.sh') == 0)
 
-svc = open(os.path.join(ROOT, 'deploy', 'aether.service'), encoding='utf-8').read()
+svc = open(os.path.join(ROOT, 'deploy', 'hakumo.service'), encoding='utf-8').read()
 ok('systemd-служба: Restart=always + 5 сек',
    'Restart=always' in svc and 'RestartSec=5' in svc)
 ok('systemd-служба: стартует после сети',
    'network-online.target' in svc)
 
 guide = open(os.path.join(ROOT, 'deploy', 'VDS-SETUP.md'), encoding='utf-8').read()
-for marker in ('journalctl -u aether -f', 'OOM', 'enable --now aether',
+for marker in ('journalctl -u hakumo -f', 'OOM', 'enable --now hakumo',
                'Короткие переподключения'):
     ok(f'инструкция VDS содержит «{marker}»', marker in guide)
 

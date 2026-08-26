@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Варны · Модерация — Aether{% endblock %}
+{% block title %}Варны · Модерация — Hakumo{% endblock %}
 {% block page_title %}Варны{% endblock %}
 {% block content %}
 
@@ -93,7 +93,7 @@
     $('stat-total').textContent = allWarnings.length;
     $('stat-users').textContent = Object.keys(users).length;
     $('stat-top').textContent = top;
-    if (window.AetherChart) {
+    if (window.HakumoChart) {
       var days = [];
       var now = new Date();
       for (var i = 6; i >= 0; i--) {
@@ -106,7 +106,7 @@
           for (var j = 0; j < days.length; j++) if (days[j].key === k) days[j].count++;
         } catch (e) { /* метка без даты */ }
       });
-      window.AetherChart.sparkline($('warn-spark'), days.map(function (d) { return d.count; }), { height: 48, title: 'Предупреждения по дням' });
+      window.HakumoChart.sparkline($('warn-spark'), days.map(function (d) { return d.count; }), { height: 48, title: 'Предупреждения по дням' });
     }
   }
 

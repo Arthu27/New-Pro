@@ -1,6 +1,6 @@
 @echo off
 rem ═══════════════════════════════════════════════════════════════════
-rem  Aether Updater — обновление бота в один двойной клик.
+rem  Hakumo Updater — обновление бота в один двойной клик.
 rem
 rem  Что делает:
 rem    1. Скачивает свежую сборку ветки arena/019fee4a-new-pro с GitHub
@@ -16,18 +16,18 @@ rem  Без перезапуска: update.bat /norestart
 rem ═══════════════════════════════════════════════════════════════════
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
-title Aether Updater
+title Hakumo Updater
 cd /d "%~dp0"
 
 set "REPO=Arthu27/New-Pro"
 set "BRANCH=arena/019fee4a-new-pro"
 set "URL=https://codeload.github.com/%REPO%/zip/refs/heads/%BRANCH%"
-set "TMPZ=%TEMP%\aether_update.zip"
-set "TMPSRC=%TEMP%\aether_update_src"
+set "TMPZ=%TEMP%\hakumo_update.zip"
+set "TMPSRC=%TEMP%\hakumo_update_src"
 set "SRC=%TMPSRC%\New-Pro-arena-019fee4a-new-pro"
 
 echo ════════════════════════════════════════════════════════════
-echo   Aether Updater
+echo   Hakumo Updater
 echo   Ветка: %BRANCH%
 echo   Папка бота: %CD%
 echo ════════════════════════════════════════════════════════════
@@ -68,7 +68,7 @@ if /i "%~1"=="/norestart" (
 echo [5/5] Перезапускаю бота...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" | Where-Object { $_.CommandLine -match 'main\.py' } | ForEach-Object { Write-Host ('  Останавливаю PID ' + $_.ProcessId); Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
 timeout /t 2 /nobreak >nul
-start "Aether Bot" cmd /k python main.py
+start "Hakumo Bot" cmd /k python main.py
 
 :ok
 echo.

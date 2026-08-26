@@ -6,7 +6,7 @@
 в одной из фирменных тем, своя картинка по URL или вовсе без картинки.
 
 Темы — те же, что у баннеров правил, карточек апелляций и логов: золотая
-Aether (исторический вид приветствия, 1:1), фиалковая, янтарная, океан, лес.
+Hakumo (исторический вид приветствия, 1:1), фиалковая, янтарная, океан, лес.
 Хранилище — data/welcome_card.json (тот же файл, что читает ког).
 """
 import io
@@ -31,16 +31,16 @@ W, H = 1000, 320
 SS = 2
 
 # ═══════════════════════════════════════════════════════════════════════
-# Палитры карточек приветствия. 'aether' — историческое золото на полуночном
+# Палитры карточек приветствия. 'hakumo' — историческое золото на полуночном
 # небе (ровно тот вид, что был всегда: те же RGB-константы, что у кога).
 # ═══════════════════════════════════════════════════════════════════════
 WELCOME_THEMES = {
-    'aether': {
+    'hakumo': {
         'bg_top': (10, 16, 30), 'bg_bot': (17, 28, 52),
         'accent': (212, 175, 55), 'accent_soft': (150, 122, 44),
         'ink': (236, 238, 244), 'dim': (150, 158, 175),
         'glow2': (245, 215, 110), 'grid': (52, 48, 78),
-        'label': 'Aether Gold (фирменная)',
+        'label': 'Hakumo Gold (фирменная)',
     },
     'violet': {
         'bg_top': (16, 14, 32), 'bg_bot': (26, 20, 50),
@@ -72,7 +72,7 @@ WELCOME_THEMES = {
     },
 }
 WELCOME_THEME_ORDER = tuple(WELCOME_THEMES)
-DEFAULT_WELCOME_THEME = 'aether'
+DEFAULT_WELCOME_THEME = 'hakumo'
 
 WELCOME_MODES = ('auto', 'url', 'off')
 WELCOME_MODE_LABELS = {'auto': 'авто-картинка', 'url': 'своя по URL',
@@ -278,7 +278,7 @@ def render_welcome_card(member_name, guild_name, count, avatar_bytes=None,
 
         # 7. Футер: бренд слева-снизу в углу, дата справа
         f_foot = _font(True, S(15))
-        d.text((S(34), H * SS - S(34)), '✦ AETHER',
+        d.text((S(34), H * SS - S(34)), '✦ HAKUMO',
                font=f_foot, fill=soft, anchor='ls')
         from datetime import datetime as _dt
         dt = _dt.now().strftime('%d.%m.%Y')
@@ -304,4 +304,4 @@ def render_welcome_card(member_name, guild_name, count, avatar_bytes=None,
 
 
 def welcome_card_filename(kind):
-    return f'aether_{kind or "welcome"}.png'
+    return f'hakumo_{kind or "welcome"}.png'

@@ -8,7 +8,7 @@ import os
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_realpages_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_realpages_test_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -200,15 +200,15 @@ login_as('owner')
 d = client.get('/api/bot-settings').get_json()
 check(d['ok'] and d['prefix'] == '!' and 'discord_version' in d, 'bot-settings API: префикс/версия в ответе')
 check(d['presence'] == {'status': 'idle', 'activity_type': 'listening',
-                        'activity_text': '.gg/Aether'}, 'bot-settings API: дефолтный презенс')
+                        'activity_text': '.gg/Hakumo'}, 'bot-settings API: дефолтный презенс')
 
 r = client.post('/api/bot-settings/presence',
-                json={'status': 'online', 'activity_type': 'playing', 'activity_text': 'на сервере Aether'})
+                json={'status': 'online', 'activity_type': 'playing', 'activity_text': 'на сервере Hakumo'})
 d = r.get_json()
 check(r.status_code == 200 and d['ok'], 'presence: валидное сохранение')
 check(os.path.exists('data/bot_config.json'), 'presence: пишется тот же data/bot_config.json, что читает main.py')
 on_disk = json.load(open('data/bot_config.json', encoding='utf-8'))
-check(on_disk['status'] == 'online' and on_disk['activity_text'] == 'на сервере Aether',
+check(on_disk['status'] == 'online' and on_disk['activity_text'] == 'на сервере Hakumo',
       'presence: конфиг реально на диске')
 check(getattr(FakeBot, 'presence_applied', {}).get('status').name == 'online', 'presence: применено живое к боту')
 d2 = client.get('/api/bot-settings').get_json()

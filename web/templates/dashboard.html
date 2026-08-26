@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Обзор — Aether{% endblock %}
+{% block title %}Обзор — Hakumo{% endblock %}
 {% block page_title %}Обзор сервера{% endblock %}
 {% block content %}
 
@@ -452,8 +452,8 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       var lat = d.latency || 0;
       pingHistory.push(lat);
       if (pingHistory.length > PING_MAX) pingHistory.shift();
-      if (window.AetherChart && pingHistory.length > 1) {
-        window.AetherChart.sparkline($('pingSpark'), pingHistory, { height: 42, color: '#0284c7', title: 'Пинг, мс' });
+      if (window.HakumoChart && pingHistory.length > 1) {
+        window.HakumoChart.sparkline($('pingSpark'), pingHistory, { height: 42, color: '#0284c7', title: 'Пинг, мс' });
       }
       $('latency').innerHTML = lat.toLocaleString() + '<small style="font-size:12px;color:var(--text-3)">ms</small>';
       var sEl = $('status');
@@ -520,23 +520,23 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
           }
         } catch (e) { /* метка без даты */ }
       });
-      if (window.AetherChart) {
-        window.AetherChart.area($('modArea'), days.map(function (d) { return d.count; }), {
+      if (window.HakumoChart) {
+        window.HakumoChart.area($('modArea'), days.map(function (d) { return d.count; }), {
           labels: days.map(function (d) { return d.label; }),
           height: 170
         });
         var items = Object.keys(types).map(function (k) {
           return { label: ACTION_TONES[k].label, value: types[k], color: ACTION_TONES[k].color };
         }).sort(function (a, b) { return b.value - a.value; });
-        window.AetherChart.vbars($('modTypes'), items);
+        window.HakumoChart.vbars($('modTypes'), items);
         // Кольцо долей мер
-        if (window.AetherRing) {
-          window.AetherRing($('modRing'), items.slice(0, 6).map(function (x) {
+        if (window.HakumoRing) {
+          window.HakumoRing($('modRing'), items.slice(0, 6).map(function (x) {
             return { label: x.label, value: x.value, color: x.color };
           }), { totalLabel: 'мер за 7 дн' });
         }
         // Тепловая карта по часам
-        if (window.AetherHeat) {
+        if (window.HakumoHeat) {
           var hours = new Array(24).fill(0);
           logs.forEach(function (l) {
             try {
@@ -544,10 +544,10 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
               if (!isNaN(h)) hours[h]++;
             } catch (e) { /* метка без времени */ }
           });
-          window.AetherHeat($('modHeat'), hours, { labels: ['00:00', '12:00', '23:00'] });
+          window.HakumoHeat($('modHeat'), hours, { labels: ['00:00', '12:00', '23:00'] });
         }
       }
-      if (window.AetherCalendar) {
+      if (window.HakumoCalendar) {
         var counts = {};
         logs.forEach(function (l) {
           try {
@@ -556,7 +556,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
             counts[key] = (counts[key] || 0) + 1;
           } catch (e) {}
         });
-        window.AetherCalendar($('dashCalendar'), counts, { days: 90 });
+        window.HakumoCalendar($('dashCalendar'), counts, { days: 90 });
       }
       var chip = $('chipMod');
       if (chip) chip.innerHTML = '<i class="fas fa-gavel"></i> действий за 7 дн: ' + logs.length.toLocaleString('ru-RU');
@@ -572,8 +572,8 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       var fp = JSON.stringify(d.per_mod || []) + '|' + JSON.stringify(d.recidivists || []);
       if (fp === _leadersFp) return;  // отчёт тот же — топ не перерисовываем
       _leadersFp = fp;
-      if (window.AetherChart && d.per_mod.length) {
-        window.AetherChart.vbars($('modTop'), d.per_mod.map(function (m, i) {
+      if (window.HakumoChart && d.per_mod.length) {
+        window.HakumoChart.vbars($('modTop'), d.per_mod.map(function (m, i) {
           return { label: m[0], value: m[1] };
         }), { limit: 6 });
       }
@@ -1390,7 +1390,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     try { fn(); } catch (e) { console.error('dashboard init:', fn && fn.name, e); }
   });
   // Живые события WebSocket ускоряют пульс (не ждём поллинга)
-  document.addEventListener('aether:live', function () { loadPulse(); });
+  document.addEventListener('hakumo:live', function () { loadPulse(); });
   if (window.tiltCards) window.tiltCards(document, '.kpi, .stat-box, .cc-tile');
   if (window.setLiveRefresh) {
     window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 1500);

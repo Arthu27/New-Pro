@@ -1,5 +1,5 @@
 """
-Aether — /ladder: визуальная лестница авто-наказаний.
+Hakumo — /ladder: визуальная лестница авто-наказаний.
 
 Читает/пишет тот же конфиг, что и авто-наказание в cogs/warnings.py
 (data/warn_config_<guild_id>.json, ключ 'steps') — ступени из панели
@@ -76,9 +76,9 @@ class Ladder(commands.Cog):
                      icon_url=interaction.guild.icon.url if interaction.guild.icon else None)
         png = self._render(interaction.guild)
         if png:
-            e.set_image(url='attachment://aether_ladder.png')
+            e.set_image(url='attachment://hakumo_ladder.png')
             await interaction.followup.send(
-                embed=e, file=discord.File(io.BytesIO(png), filename='aether_ladder.png'))
+                embed=e, file=discord.File(io.BytesIO(png), filename='hakumo_ladder.png'))
         else:
             await interaction.followup.send(embed=e)
 

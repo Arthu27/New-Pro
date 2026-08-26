@@ -10,7 +10,7 @@ import sys
 import tempfile
 import time
 
-_TMP = tempfile.mkdtemp(prefix='aether_ac_page_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_ac_page_test_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

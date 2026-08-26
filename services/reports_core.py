@@ -13,6 +13,8 @@ import os
 import sqlite3
 import zlib
 from datetime import datetime, timezone
+from logger import get_logger
+_log = get_logger(__name__)
 
 DB_PATH = 'data/reports.db'
 
@@ -74,8 +76,8 @@ def load_cfg(guild_id) -> dict:
                                     'label': str(step.get('label') or KIND_LABELS[step['kind']])})
                 if lad:
                     cfg['ladder'] = sorted(lad, key=lambda x: x['n'])
-    except Exception:
-        pass
+    except Exception as _sx1:
+        _log.debug('подавлено: %s', _sx1)
     return cfg
 
 

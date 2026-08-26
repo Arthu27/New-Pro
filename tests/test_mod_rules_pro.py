@@ -10,7 +10,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 
 # Изоляция: БД и data/ уходят в темп — реальные данные репо не трогаем.
-_TMP = tempfile.mkdtemp(prefix='aether_modrules_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_modrules_')
 os.environ['DB_PATH'] = os.path.join(_TMP, 'bot.db')
 os.environ['DEMO_MODE'] = '0'
 os.environ['SECRET_KEY'] = 'test-secret'

@@ -17,7 +17,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_banner_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_banner_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -64,7 +64,7 @@ check(a != c, 'смена темы меняет картинку')
 check(set(BG.THEME_ORDER) == set(BG.THEMES), 'порядок тем согласован с реестром')
 z = BG.render_rules_banner(title='Правила', text='y', index=9, total=9, accent='zzz', theme='nope')
 check(z[:8].startswith(b'\x89PNG'), 'мусорная тема/цвет → дефолт, без падения')
-check(BG.banner_filename(3) == 'aether_rule_03.png', 'имя файла для attachment')
+check(BG.banner_filename(3) == 'hakumo_rule_03.png', 'имя файла для attachment')
 
 # wrap не роняет длинные строки и пустоту
 lng = BG.render_rules_banner(title='P', text='слово ' * 120, index=1, total=2,
@@ -124,7 +124,7 @@ check(r.status_code == 200, f'img_gen сохраняется (POST 200, приш
 g = client.get(RULES_URL).get_json()
 check(g[0]['img_gen'] == 'ocean' and g[1]['img_gen'] == 'night', 'темы в правилах на месте')
 check(g[2]['img_gen'] == '', 'неизвестная тема очищена')
-check(g[3] == {'t': 'просто строка легаси', 'u': '', 'img': '', 'thumb': '', 'img_gen': ''},
+check(g[3] == {'t': 'просто строка легаси', 'u': '', 'u2': '', 'img': '', 'thumb': '', 'img_gen': ''},
       'легаси-строка нормализуется с img_gen')
 
 # demo publish: img без URL → авто-картинка посчитана.

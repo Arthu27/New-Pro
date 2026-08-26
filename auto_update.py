@@ -241,14 +241,14 @@ def download_and_extract():
     if r.status_code != 200:
         raise Exception(f"Ошибка загрузки HTTP {r.status_code}")
 
-    zip_path = os.path.join(BOT_DIR, "aether-update.zip")
+    zip_path = os.path.join(BOT_DIR, "hakumo-update.zip")
     with open(zip_path, "wb") as f:
         f.write(r.content)
     лог(f"[AUTO-UPDATE] ZIP загружен ({len(r.content)//1024} KB)")
 
     with zipfile.ZipFile(zip_path, 'r') as zf:
         for member in zf.infolist():
-            target = member.filename.replace("moebius-bot-main/", "", 1).replace("aether-bot-main/", "", 1)
+            target = member.filename.replace("moebius-bot-main/", "", 1).replace("hakumo-bot-main/", "", 1)
             if not target:
                 continue
             # Защита от Zip Slip: путь в архиве не должен выводить за

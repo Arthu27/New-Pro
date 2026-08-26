@@ -17,7 +17,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 
-_TMP = tempfile.mkdtemp(prefix='aether_tickops_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_tickops_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -137,7 +137,7 @@ def post(path, payload):
 check(client.get('/tickets-ops').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get('/api/tickets-ops/sla').status_code in (302, 401, 403), 'гостю sla закрыт')
 login('uye')
-check(client.get('/tickets-ops').status_code == 403, 'uye нельзя')
+check(client.get('/tickets-ops').status_code == 302, 'uye нельзя')
 login('mod')
 check(client.get('/tickets-ops').status_code == 200, 'mod читает страницу')
 r = client.get('/api/tickets-ops/sla?h=24')

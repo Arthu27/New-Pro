@@ -74,7 +74,7 @@ class FakeGuild:
             c.guild = self
             self.channels[100 + i] = c
         self.categories = []
-        self.me = FakeUser(999, 'Aether', bot=True)
+        self.me = FakeUser(999, 'Hakumo', bot=True)
         self.me.guild_permissions = FakePerms()
         self.default_role = FakeRole(1, '@everyone')
         self.roles = [self.default_role]
@@ -137,12 +137,12 @@ def desc_of(e):
     """Текст лог-эмбеда для проверок.
 
     В канале Discord логи уходят как "только картинка" (_safe_send очищает
-    description), но исходный текст сохраняется в e._aether_log_desc.
+    description), но исходный текст сохраняется в e._hakumo_log_desc.
     Если карточка не отрендерилась (fallback) — возвращаем description как есть.
     """
     if not e:
         return ''
-    return getattr(e, '_aether_log_desc', None) or e.description or ''
+    return getattr(e, '_hakumo_log_desc', None) or e.description or ''
 
 print('== бан / кик / разбан с модератором и причиной ==')
 mod = FakeUser(50, 'TestMod')
@@ -153,8 +153,8 @@ e = last_embed('-модерация')
 check(e and 'Пользователь заблокирован' in desc_of(e) and 'TestMod' in desc_of(e)
       and 'Флуд и реклама' in desc_of(e) and 'Причина' in desc_of(e),
       f'бан: модератор + причина в эмбеде')
-check('Aether Log' in getattr(e, '_aether_log_footer', ''), 'футер «Aether Log · …» сохранён (в канале — только картинка)')
-check(e.description is None and e.image and e.image.url == 'attachment://aether_log_card.jpg',
+check('Hakumo Log' in getattr(e, '_hakumo_log_footer', ''), 'футер «Hakumo Log · …» сохранён (в канале — только картинка)')
+check(e.description is None and e.image and e.image.url == 'attachment://hakumo_log_card.jpg',
       'в канал уходит ТОЛЬКО карточка-картинка (description очищен)')
 
 guild.audit_entries = [FakeAuditEntry(77, mod, None)]

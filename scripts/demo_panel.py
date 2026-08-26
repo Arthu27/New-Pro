@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Демо-превью панели Aether (MOEBIUS) — запуск веб-панели БЕЗ Discord-бота.
+"""Демо-превью панели Hakumo (MOEBIUS) — запуск веб-панели БЕЗ Discord-бота.
 
 Для разработки/превью (песочница Arena, локальный UI-просмотр):
 - фейковый сервер (guild id 4242) с парой каналов;
@@ -58,7 +58,7 @@ def seed():
             ('voice',  'Зашёл в голосовой',  'Mira',     '',            'Лаунж',                         32000),
             ('voice',  'Зашёл в голосовой',  'Vortex',   '',            'Игровая',                       88000),
             ('voice',  'Зашёл в голосовой',  'Luna',     '',            'Лаунж',                        176000),
-            ('invite', 'Приглашение создано','Arthur',   '',            'aether-pro',                    41000),
+            ('invite', 'Приглашение создано','Arthur',   '',            'hakumo-pro',                    41000),
             ('invite', 'Приглашение создано','Mira',     '',            'community',                    126000),
         ]
         events = []
@@ -250,13 +250,13 @@ class FakeChannel:
 
 class FakeGuild:
     id = GID
-    name = 'Демо-сервер Aether'
+    name = 'Демо-сервер Hakumo'
     member_count = 128
     owner_id = 7
     icon = None
     banner = None
     splash = None
-    description = 'Песочница панели Aether'
+    description = 'Песочница панели Hakumo'
     premium_tier = 2
     vanity_url_code = None
     created_at = NOW - timedelta(days=400)
@@ -285,14 +285,14 @@ class FakeGuild:
 
 class FakeUser:
     id = 1
-    name = 'Aether'
-    display_name = 'Aether'
+    name = 'Hakumo'
+    display_name = 'Hakumo'
     discriminator = '0'
     avatar = None
     bot = True
 
     def __str__(self):
-        return 'Aether#0'
+        return 'Hakumo#0'
 
 
 class FakeBot:

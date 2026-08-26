@@ -26,7 +26,7 @@ FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
 # ═══════════════════════════════════════════════════════════════════════
-# Палитра AETHER: Midnight Navy + Imperial Gold
+# Палитра HAKUMO: Midnight Navy + Imperial Gold
 # ═══════════════════════════════════════════════════════════════════════
 C_BG_TOP       = (10, 16, 30)
 C_BG_BOT       = (16, 26, 48)
@@ -147,7 +147,7 @@ def _get_lb_data(guild: discord.Guild, category: str):
 
     if not top:
         top = [
-            ("AETHER_LEADER", "1 850 СООБЩЕНИЙ" if category == "messages" else ("52ч 40м В ВОЙСЕ" if category == "voice" else "500 000 МОНЕТ")),
+            ("HAKUMO_LEADER", "1 850 СООБЩЕНИЙ" if category == "messages" else ("52ч 40м В ВОЙСЕ" if category == "voice" else "500 000 МОНЕТ")),
             ("CHAMPION_USER", "1 240 СООБЩЕНИЙ" if category == "messages" else ("34ч 15м В ВОЙСЕ" if category == "voice" else "275 000 МОНЕТ")),
             ("ACTIVE_MEMBER", "890 СООБЩЕНИЙ" if category == "messages" else ("21ч 30м В ВОЙСЕ" if category == "voice" else "150 000 МОНЕТ")),
             ("WARRIOR", "610 СООБЩЕНИЙ" if category == "messages" else ("14ч 10м В ВОЙСЕ" if category == "voice" else "95 000 МОНЕТ")),
@@ -215,7 +215,7 @@ def generate_leaderboard_card(guild: discord.Guild, category: str = "messages") 
     title_text = title_map.get(category, "ТАБЛИЦА ЛИДЕРОВ")
 
     # Бейдж категории
-    badge_txt = f"✦ AETHER · {title_text}"
+    badge_txt = f"✦ HAKUMO · {title_text}"
     badge_w = d.textlength(badge_txt, font=_f(True, 18)) + 28
     d.rounded_rectangle((PAD, 32, PAD + badge_w, 32 + 34), radius=10,
                         fill=(20, 28, 48, 220), outline=C_GOLD + (120,), width=1)
@@ -223,7 +223,7 @@ def generate_leaderboard_card(guild: discord.Guild, category: str = "messages") 
 
     # Заголовок
     d.text((PAD, 78), title_text, font=_f(True, 38), fill=C_TEXT_WHITE)
-    gname = (guild.name if guild else 'Aether Community')[:30]
+    gname = (guild.name if guild else 'Hakumo Community')[:30]
     d.text((PAD, 126), f"Сервер: {gname} · официальный рейтинг", font=_f(False, 18), fill=C_TEXT_DIM)
 
     # Золотой разделитель шапки
@@ -271,9 +271,9 @@ def generate_leaderboard_card(guild: discord.Guild, category: str = "messages") 
     # 7. Футер таблицы
     fy = H - footer_h + 16
     d.line([(PAD, fy), (W - PAD, fy)], fill=C_GOLD + (80,), width=1)
-    d.text((PAD, fy + 16), "AETHER LEADERBOARD · РЕЙТИНГ АКТИВНОСТИ", font=_f(False, 20), fill=C_TEXT_DIM)
+    d.text((PAD, fy + 16), "HAKUMO LEADERBOARD · РЕЙТИНГ АКТИВНОСТИ", font=_f(False, 20), fill=C_TEXT_DIM)
 
-    brand = "✦ AETHER"
+    brand = "✦ HAKUMO"
     bw = d.textlength(brand, font=_f(True, 22))
     d.text((W - PAD - bw, fy + 14), brand, font=_f(True, 22), fill=C_GOLD_BRIGHT)
 

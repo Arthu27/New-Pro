@@ -591,7 +591,7 @@ def register(ctx):
                 color =discord .Color (int (color_hex ,16 ))
             except ValueError :
                 color =discord .Color .default ()
-            await (guild .create_role (name =name ,color =color ,reason ='Создано через панель Aether'))
+            await (guild .create_role (name =name ,color =color ,reason ='Создано через панель Hakumo'))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })

@@ -1,4 +1,4 @@
-# Тестирование Aether (MOEBIUS)
+# Тестирование Hakumo (MOEBIUS)
 
 ## Быстрый старт
 

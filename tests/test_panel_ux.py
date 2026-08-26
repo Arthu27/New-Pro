@@ -19,7 +19,7 @@ import sys
 import tempfile
 from types import SimpleNamespace
 
-_TMP = tempfile.mkdtemp(prefix='aether_ux_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_ux_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -204,7 +204,7 @@ for token in ('class="crumbs"', 'crumb-home', '/static/app.js', 'id="palette-dat
               'Фильтр меню'):
     assert token in src, token
 check(True, 'крошки, данные палитры и единый кит подключены')
-check('__aetherGPressed' not in src, 'старый g-код удалён (нет дублей хоткеев)')
+check('__hakumoGPressed' not in src, 'старый g-код удалён (нет дублей хоткеев)')
 check("e.key === 'k'" not in src, 'старый Ctrl+K-фокус сайдбара убран (палитра одна)')
 check('panel_menu|default([], true)' in src, 'крошки строятся из panel_menu (1:1 с сайдбаром)')
 login('owner')

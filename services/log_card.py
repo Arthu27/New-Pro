@@ -1,7 +1,7 @@
 """
-Aether — профессиональный генератор карточек логов (Pillow).
+Hakumo — профессиональный генератор карточек логов (Pillow).
 
-Фирменная эстетика AETHER:
+Фирменная эстетика HAKUMO:
   • Глубокий звёздно-космический фон Midnight Navy (10, 16, 30) → (16, 26, 48)
   • Премиальное имперское золото Imperial Gold (212, 175, 55) и мерцающая золотая пыль
   • Индивидуальные золотые иконки и уникальные виджеты для каждой категории:
@@ -39,7 +39,7 @@ FONT_R = os.path.join(ROOT, 'assets', 'fonts', 'Regular.ttf')
 ICONS_DIR = os.path.join(ROOT, 'assets', 'icons', 'logcards')
 
 # ═══════════════════════════════════════════════════════════════════════
-# Палитры карточек логов. 'aether' — историческое фирменное золото на
+# Палитры карточек логов. 'hakumo' — историческое фирменное золото на
 # полуночном небе (ровно тот вид, что был всегда). Остальные — цветовые
 # вариации «по нашей теме», выбираются из панели (data/log_cards_<gid>.json).
 # ═══════════════════════════════════════════════════════════════════════
@@ -55,10 +55,10 @@ C_CELL_BG     = (255, 255, 255, 9)
 C_CELL_BORDER = (212, 175, 55, 65)
 
 LOG_CARD_THEMES = {
-    'aether': {'gold': C_GOLD, 'bright': C_GOLD_BRIGHT, 'soft': C_GOLD_SOFT,
+    'hakumo': {'gold': C_GOLD, 'bright': C_GOLD_BRIGHT, 'soft': C_GOLD_SOFT,
                'dim': C_GOLD_DIM, 'bg_top': C_BG_TOP, 'bg_bot': C_BG_BOT,
                'stars': (C_GOLD, C_GOLD_BRIGHT, (255, 255, 255)),
-               'label': 'Aether Gold (фирменная)'},
+               'label': 'Hakumo Gold (фирменная)'},
     'violet': {'gold': (165, 140, 255), 'bright': (205, 190, 255),
                'soft': (120, 100, 210), 'dim': (85, 70, 150),
                'bg_top': (14, 12, 30), 'bg_bot': (26, 20, 50),
@@ -81,7 +81,7 @@ LOG_CARD_THEMES = {
                'label': 'Лес'},
 }
 LOG_CARD_THEME_ORDER = tuple(LOG_CARD_THEMES)
-DEFAULT_LOG_THEME = 'aether'
+DEFAULT_LOG_THEME = 'hakumo'
 
 
 def _clamp(v):
@@ -263,66 +263,66 @@ def _load_icon(category, size=156):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Категории AETHER: золотой стиль + индивидуальные виджеты
+# Категории HAKUMO: золотой стиль + индивидуальные виджеты
 # ═══════════════════════════════════════════════════════════════════════
 CATEGORY_STYLES = {
     'mod': {
-        'tag': '✦ AETHER · МОДЕРАЦИЯ',
+        'tag': '✦ HAKUMO · МОДЕРАЦИЯ',
         'glow_color': (235, 65, 85),
         'type': 'mod',
     },
     'automod': {
-        'tag': '✦ AETHER · АВТОМОДЕРАЦИЯ',
+        'tag': '✦ HAKUMO · АВТОМОДЕРАЦИЯ',
         'glow_color': (255, 90, 45),
         'type': 'mod',
     },
     'message': {
-        'tag': '✦ AETHER · АУДИТ СООБЩЕНИЙ',
+        'tag': '✦ HAKUMO · АУДИТ СООБЩЕНИЙ',
         'glow_color': (0, 195, 255),
         'type': 'message',
     },
     'member': {
-        'tag': '✦ AETHER · УЧАСТНИКИ СЕРВЕРА',
+        'tag': '✦ HAKUMO · УЧАСТНИКИ СЕРВЕРА',
         'glow_color': (46, 213, 115),
         'type': 'member',
     },
     'welcome': {
-        'tag': '✦ AETHER · ВРАТА СЕРВЕРА',
+        'tag': '✦ HAKUMO · ВРАТА СЕРВЕРА',
         'glow_color': (32, 227, 178),
         'type': 'member',
     },
     'voice': {
-        'tag': '✦ AETHER · ГОЛОСОВАЯ АКТИВНОСТЬ',
+        'tag': '✦ HAKUMO · ГОЛОСОВАЯ АКТИВНОСТЬ',
         'glow_color': (26, 188, 156),
         'type': 'voice',
     },
     'role': {
-        'tag': '✦ AETHER · ИЕРАРХИЯ РОЛЕЙ',
+        'tag': '✦ HAKUMO · ИЕРАРХИЯ РОЛЕЙ',
         'glow_color': (165, 94, 234),
         'type': 'role',
     },
     'channel': {
-        'tag': '✦ AETHER · СТРУКТУРА КАНАЛОВ',
+        'tag': '✦ HAKUMO · СТРУКТУРА КАНАЛОВ',
         'glow_color': (243, 156, 18),
         'type': 'channel',
     },
     'guild': {
-        'tag': '✦ AETHER · НАСТРОЙКИ СЕРВЕРА',
+        'tag': '✦ HAKUMO · НАСТРОЙКИ СЕРВЕРА',
         'glow_color': (212, 175, 55),
         'type': 'guild',
     },
     'сервер': {
-        'tag': '✦ AETHER · НАСТРОЙКИ СЕРВЕРА',
+        'tag': '✦ HAKUMO · НАСТРОЙКИ СЕРВЕРА',
         'glow_color': (212, 175, 55),
         'type': 'guild',
     },
     'invite': {
-        'tag': '✦ AETHER · ПРИГЛАШЕНИЯ',
+        'tag': '✦ HAKUMO · ПРИГЛАШЕНИЯ',
         'glow_color': (108, 92, 231),
         'type': 'invite',
     },
     'ticket': {
-        'tag': '✦ AETHER · СЛУЖБА ПОДДЕРЖКИ',
+        'tag': '✦ HAKUMO · СЛУЖБА ПОДДЕРЖКИ',
         'glow_color': (84, 160, 255),
         'type': 'ticket',
     },
@@ -415,7 +415,7 @@ _BG_CACHE = {}
 def _load_celestial_bg(w, h, cat_tint=None, pal=None, use_asset=True):
     """Загружает фирменный звёздно-космический фон карточки логов.
 
-    Приоритет: assets/aether_log_bg.png (фирменный тёмный фон с
+    Приоритет: assets/hakumo_log_bg.png (фирменный тёмный фон с
     туманностью по краям и чистым центром под текст) -> assets/help_bg.png
     (старый фон) -> процедурный градиент темы (совсем запасной вариант).
     Картинка фирменная и окрашена в золото — при другой теме или своём
@@ -424,7 +424,7 @@ def _load_celestial_bg(w, h, cat_tint=None, pal=None, use_asset=True):
     """
     pal = pal or LOG_CARD_THEMES[DEFAULT_LOG_THEME]
     base = None
-    for bg_name in ('aether_log_bg.png', 'help_bg.png') if use_asset else ():
+    for bg_name in ('hakumo_log_bg.png', 'help_bg.png') if use_asset else ():
         bg_path = os.path.join(ROOT, 'assets', bg_name)
         bg_path = os.path.join(ROOT, 'assets', bg_name)
         if not os.path.exists(bg_path):
@@ -475,9 +475,9 @@ def _load_celestial_bg(w, h, cat_tint=None, pal=None, use_asset=True):
 def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
                     guild_name='', time_str='', theme=None, accent=None,
                     fmt='jpeg'):
-    """Нарисовать премиальную карточку лога в единой стилистике AETHER.
+    """Нарисовать премиальную карточку лога в единой стилистике HAKUMO.
 
-    theme — одна из LOG_CARD_THEMES ('aether' — исторический фирменный вид,
+    theme — одна из LOG_CARD_THEMES ('hakumo' — исторический фирменный вид,
     ровно как было); accent ('#rrggbb'/int) заменяет золотую гамму своим
     цветом. Оба параметра пробрасывает бот из настроек панели
     (data/log_cards_<gid>.json, get_log_cards_cfg).
@@ -549,7 +549,7 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
             tx = PAD + 154 + 32
 
         # 8. Бейдж категории в шапке (акцент + мягкий фон)
-        cat_badge = cstyle.get('tag') or f'✦ AETHER · {str(cat_name or cat_key).upper()}'
+        cat_badge = cstyle.get('tag') or f'✦ HAKUMO · {str(cat_name or cat_key).upper()}'
         badge_font = _font(22, True)
         bw = d.textlength(cat_badge, font=badge_font) + 28
         bh = 38
@@ -614,13 +614,13 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
         fy = H - footer_h + 16
         d.line([(PAD, fy), (W - PAD, fy)], fill=gold + (80,), width=1)
 
-        f_txt = f"AETHER LOG · {str(cat_name or cat_key).upper()}"
+        f_txt = f"HAKUMO LOG · {str(cat_name or cat_key).upper()}"
         if guild_name:
             f_txt += f" · {_clean(guild_name)}"
         d.text((PAD, fy + 18), _ellipsize(d, f_txt, _font(22), W - PAD * 2 - 200),
                font=_font(22), fill=C_TEXT_DIM)
 
-        brand = "✦ AETHER"
+        brand = "✦ HAKUMO"
         bw = d.textlength(brand, font=_font(24, True))
         d.text((W - PAD - bw, fy + 16), brand, font=_font(24, True), fill=bright)
 

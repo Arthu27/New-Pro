@@ -12,9 +12,9 @@ log =get_logger ("mod_report")
 
 
 def _ae(kind, title, desc=None):
-    """Фирменный Aether-эмбед для ответов."""
-    from cogs.embed_utils import aether_embed
-    return aether_embed(kind, title, desc)
+    """Фирменный Hakumo-эмбед для ответов."""
+    from cogs.embed_utils import hakumo_embed
+    return hakumo_embed(kind, title, desc)
 
 
 DATA_DIR ='data'
@@ -343,7 +343,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
         value ='\n'.join (mod_lines )or 'Нет',
         inline =False 
         )
-        mod_embed .set_footer (text =f'Aether Mod Raporu • {period}')
+        mod_embed .set_footer (text =f'Hakumo Mod Raporu • {period}')
         embeds .append (mod_embed )
 
         # 
@@ -357,7 +357,7 @@ async def _build_weekly_report (guild :discord .Guild ,days :int =7 ,force_cutof
     '```ansi\n\u001b[1;32m КОНЕЦ ОТЧЁТА \u001b[0m\n```\n'
     f'> Этот отчёт содержит данные за **{period}**.\n'
     f'> Следующий отчёт: <t:{ts_now + (7 - datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None).weekday()) * 86400}:D>\n\n'
-    '-# Aether Bot • Автоматический еженедельный отчёт'
+    '-# Hakumo Bot • Автоматический еженедельный отчёт'
     )
     embeds .append (close )
 
@@ -696,7 +696,7 @@ class ModReport (commands .Cog ):
         ),
         inline =True 
         )
-        embed .set_footer (text =f'{ctx.guild.name} • Aether')
+        embed .set_footer (text =f'{ctx.guild.name} • Hakumo')
         await ctx .send (embed =embed )
 
 

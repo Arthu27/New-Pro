@@ -113,7 +113,7 @@ def generate_pw_card(display_name, user_id, avatar_url, warns, cases, notes,
     d.text((x2, 435), score_text, font=f_mid, fill=(255, 255, 255, 255))
 
     # Подпись
-    d.text((70, H - 70), "Aether Модерация • Досье", font=f_small, fill=(150, 150, 155, 255))
+    d.text((70, H - 70), "Hakumo Модерация • Досье", font=f_small, fill=(150, 150, 155, 255))
 
     buf = io.BytesIO()
     bg.save(buf, format="PNG", optimize=True)
@@ -572,7 +572,7 @@ class PWCategorySelect(discord.ui.Select):
             timestamp=datetime.now(timezone.utc)
         )
         e.set_thumbnail(url=self.user.display_avatar.url)
-        e.set_footer(text=f"{interaction.guild.name} • Aether Модерация")
+        e.set_footer(text=f"{interaction.guild.name} • Hakumo Модерация")
 
         if choice == "warns":
             if not self.warns:

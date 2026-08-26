@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Чат — Aether{% endblock %}
+{% block title %}Чат — Hakumo{% endblock %}
 {% block page_title %}Чат{% endblock %}
 {% block content %}
 
@@ -15,7 +15,7 @@
 </div>
 
 <style>
-/* ═══════════ CHAT PANEL — Aether Light Edition ═══════════ */
+/* ═══════════ CHAT PANEL — Hakumo Light Edition ═══════════ */
 .chat-wrap {
   display: grid;
   grid-template-columns: 68px 268px 1fr 262px;
@@ -742,7 +742,7 @@ async function loadGuilds() {
     if (!_guilds.length) return;
     if (!_activeGuildId || !_guilds.some(function(g) { return g.id === _activeGuildId; })) _activeGuildId = _guilds[0].id;
     document.getElementById('guild-bar').innerHTML = _guilds.map(function(g, i) {
-      var initials = (g.name || '?').split(/\s+/).map(function(word) { return word[0]; }).join('').substring(0, 2).toUpperCase();
+      var initials = (g.name || '?').split(/\s+/).map(function(word) { return word[0]; }).join('').slice(0, 2).toUpperCase();
       var active = g.id === _activeGuildId ? ' active' : '';
       var image = g.icon ? '<img src="' + g.icon + '" alt="">' : initials;
       return (i ? '<div class="guild-sep"></div>' : '') + '<div class="guild-icon' + active + '" id="gi-' + g.id + '" onclick="selectGuild(\'' + g.id + '\', true)" title="' + escHtml(g.name) + '">' + image + '</div>';
@@ -934,7 +934,7 @@ function toggleChatSearch() {
   var showing = box.style.display === 'none';
   box.style.display = showing ? 'flex' : 'none';
   if (!showing) { clearChatSearch(); return; }
-  document.getElementById('chat-search-input').focus();
+  document.getElementById('chat-search-input').focus({preventScroll: true});
 }
 function clearChatSearch() {
   _chatSearchQ = '';
@@ -1011,7 +1011,7 @@ function renderMsg(m, continued) {
              : '<div class="msg-avatar-placeholder"><i class="fas fa-user"></i></div>');
 
   var replyHtml = m.reply_to
-    ? '<div class="msg-reply-ref"><span class="msg-reply-author">' + escHtml(m.reply_to.author||'') + '</span> ' + escHtml((m.reply_to.content||'').substring(0,80)) + '</div>'
+    ? '<div class="msg-reply-ref"><span class="msg-reply-author">' + escHtml(m.reply_to.author||'') + '</span> ' + escHtml((m.reply_to.content||'').slice(0,80)) + '</div>'
     : '';
 
   var attachHtml = '';
@@ -1053,7 +1053,7 @@ function renderMsg(m, continued) {
       '<span class="msg-time" title="' + escHtml(d.toLocaleString('ru-RU')) + '">' + time + '</span>' +
     '</div>';
 
-  var safeContent = escJs((m.content||'').substring(0,60));
+  var safeContent = escJs((m.content||'').slice(0,60));
 
   return '<div class="msg-group' + (continued?' continued':'') + '" id="msg-' + m.id + '">' +
     '<div class="msg-avatar-wrap' + (canDm ? ' clickable' : '') + '"' + dmAttr + '>' + avatarHtml + '</div>' +
@@ -1063,7 +1063,7 @@ function renderMsg(m, continued) {
     '</div>' +
     '<div class="msg-actions">' +
       (canDm ? '<button type="button" class="msg-act-btn dm" onclick="openDm(\'' + String(m.author_id) + '\',\'' + safeAuthor + '\')" aria-label="Написать в ЛС" title="Написать в ЛС"><i class="fas fa-paper-plane"></i></button>' : '') +
-      '<button type="button" class="msg-act-btn" onclick="copyMsg(\'' + escAttr(String(m.content || '').substring(0, 200)) + '\')" aria-label="Копировать текст" title="Копировать текст"><i class="fas fa-copy"></i></button>' +
+      '<button type="button" class="msg-act-btn" onclick="copyMsg(\'' + escAttr(String(m.content || '').slice(0, 200)) + '\')" aria-label="Копировать текст" title="Копировать текст"><i class="fas fa-copy"></i></button>' +
       '<button type="button" class="msg-act-btn" onclick="startReply(\'' + m.id + '\',\'' + safeAuthor + '\',\'' + safeContent + '\')" aria-label="Ответить"><i class="fas fa-reply"></i></button>' +
       '<button type="button" class="msg-act-btn del" onclick="deleteMsg(\'' + m.id + '\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>' +
     '</div>' +
@@ -1342,7 +1342,7 @@ function handleInput(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 140) + 'px';
   if (_dmMode) return;
-  var before = el.value.substring(0, el.selectionStart);
+  var before = el.value.slice(0, el.selectionStart);
   var match = before.match(/@(\w*)$/);
   if (match) {
     var q = match[1].toLowerCase();
@@ -1356,7 +1356,7 @@ function handleInput(el) {
 function renderMentionPopup() {
   var popup = document.getElementById('etiket-popup');
   popup.style.display = 'block';
-  var before = document.getElementById('chat-input').value.substring(0, document.getElementById('chat-input').selectionStart);
+  var before = document.getElementById('chat-input').value.slice(0, document.getElementById('chat-input').selectionStart);
   var q = (before.match(/@(\w*)$/) || [,''])[1].toLowerCase();
   var rows = _mentionMatches.map(function(m, i) {
     var st = m.status === 'online' ? 'online' : m.status === 'idle' ? 'idle' : m.status === 'dnd' ? 'dnd' : 'offline';
@@ -1395,8 +1395,8 @@ function selectMention(idx) {
   var m = _mentionMatches[idx]; if (!m) return;
   var inp = document.getElementById('chat-input');
   var pos = inp.selectionStart;
-  var newBefore = inp.value.substring(0, pos).replace(/@\w*$/, '<@' + m.id + '> ');
-  inp.value = newBefore + inp.value.substring(pos);
+  var newBefore = inp.value.slice(0, pos).replace(/@\w*$/, '<@' + m.id + '> ');
+  inp.value = newBefore + inp.value.slice(pos);
   inp.selectionStart = inp.selectionEnd = newBefore.length;
   closeMentionPopup(); inp.focus({ preventScroll: true });
 }

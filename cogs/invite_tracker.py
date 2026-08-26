@@ -138,7 +138,7 @@ class InviteTracker (commands .Cog ):
             rank =" Пока нет приглашений"
         e .add_field (name =" Unvan",value =f"```{rank}```",inline =True )
         e .add_field (name ="💡 Подсказка",value ="*Приглашай больше людей и поднимайся в рейтинге!*",inline =False )
-        e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+        e .set_footer (text =f"Hakumo • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e )
 
     @app_commands .command (name ='invite-ranking',description ='Рейтинг приглашений')
@@ -165,7 +165,7 @@ class InviteTracker (commands .Cog ):
             value =f"`{bar}` **{total}** приглашений",
             inline =False 
             )
-        e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+        e .set_footer (text =f"Hakumo • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e )
 
 

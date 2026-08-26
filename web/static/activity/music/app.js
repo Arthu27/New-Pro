@@ -1,4 +1,4 @@
-/* Aether Music — встроенная активность Discord.
+/* Hakumo Music — встроенная активность Discord.
    Подключается к голосовому каналу через Embedded App SDK и управляет
    плеером бота через /api/activity/music/*. */
 (function () {
@@ -188,7 +188,7 @@
       + volBlock
       + '</div>'
       + toolbar
-      + '<div class="footer">Aether Music · управление ботом в голосовом канале</div>';
+      + '<div class="footer">Hakumo Music · управление ботом в голосовом канале</div>';
   }
 
   function refresh() {

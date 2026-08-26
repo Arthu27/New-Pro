@@ -148,7 +148,7 @@ AI_LEAN_COGS = frozenset({
     'ai_chat.py', 'ai_moderation.py',
 })
 
-# Приветствия: тексты, красивые карточки-Aether, PRO-шаблоны с ротацией.
+# Приветствия: тексты, красивые карточки-Hakumo, PRO-шаблоны с ротацией.
 WELCOME_LEAN_COGS = frozenset({
     'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
 })

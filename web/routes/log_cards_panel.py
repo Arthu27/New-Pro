@@ -63,7 +63,7 @@ def register(ctx):
             png = LC.render_log_card(
                 cat, 'Пример: выдано предупреждение', PREVIEW_ROWS,
                 color=0xE2455A, cat_name=cat,
-                guild_name='Aether Demo', time_str='20:41 UTC',
+                guild_name='Hakumo Demo', time_str='20:41 UTC',
                 theme=theme, accent=accent, fmt='png')
         except Exception as _ex:
             _log.debug('log-cards preview: %s', _ex)

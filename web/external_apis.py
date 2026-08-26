@@ -262,7 +262,7 @@ class ExternalAPIs :
 
             payload ={
             "client":{
-            "clientId":"aether-bot",
+            "clientId":"hakumo-bot",
             "clientVersion":"1.0"
             },
             "threatInfo":{

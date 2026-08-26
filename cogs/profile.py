@@ -254,8 +254,8 @@ rank_messages ,rank_voice ,rank_balance ):
     # ─── Top brand strip ─────────────────────────────────────────────
     f_brand =_f (bold =True ,sz =14 )
     f_brand_sub =_f (bold =False ,sz =11 )
-    d .text ((PAD ,18 ),"AETHER",font =f_brand ,fill =BLACK )
-    bb =d .textbbox ((PAD ,18 ),"AETHER",font =f_brand )
+    d .text ((PAD ,18 ),"HAKUMO",font =f_brand ,fill =BLACK )
+    bb =d .textbbox ((PAD ,18 ),"HAKUMO",font =f_brand )
     # подпись справа от логотипа на ОДНОЙ базовой линии — чтобы ничего не наезжало
     pbb =d .textbbox ((0 ,0 ),"PROFILE",font =f_brand_sub )
     sub_y =bb [3 ]-(pbb [3 ]-pbb [1 ])-pbb [1 ]

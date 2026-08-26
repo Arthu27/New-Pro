@@ -33,7 +33,7 @@ def _demo_members ():
         {'id':'1003','name':'lina.mod','display_name':'Lina','avatar':'https://cdn.discordapp.com/embed/avatars/3.png','status':'dnd','mention':'<@1003>'},
         {'id':'1004','name':'max.gg','display_name':'Max','avatar':'https://cdn.discordapp.com/embed/avatars/4.png','status':'online','mention':'<@1004>'},
         {'id':'1005','name':'dasha.live','display_name':'Dasha','avatar':'https://cdn.discordapp.com/embed/avatars/5.png','status':'offline','mention':'<@1005>'},
-        {'id':'1006','name':'aether.bot','display_name':'Aether','avatar':'','status':'online','bot':True,'mention':'<@1006>'},
+        {'id':'1006','name':'hakumo.bot','display_name':'Hakumo','avatar':'','status':'online','bot':True,'mention':'<@1006>'},
     ]
 
 
@@ -48,7 +48,7 @@ def _chat_demo_seed (channel_id ):
     '1002':('Artem','https://cdn.discordapp.com/embed/avatars/2.png',False ),
     '1003':('Lina','https://cdn.discordapp.com/embed/avatars/3.png',False ),
     '1004':('Max','https://cdn.discordapp.com/embed/avatars/4.png',False ),
-    '1006':('Aether','',True ),
+    '1006':('Hakumo','',True ),
     }
     from datetime import datetime as _dt ,timedelta as _td ,timezone as _tz 
     _base =_dt .now (_tz .utc )

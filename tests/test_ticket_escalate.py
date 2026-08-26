@@ -19,7 +19,7 @@ import re
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_escalate_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_escalate_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -193,7 +193,7 @@ check(fname.get('Тема') == 'техническая проблема', 'те�
 check('бот не отвечает' in fname.get('Последняя фраза клиента', ''), 'последняя фраза клиента')
 check(fname.get('Статус') == 'Ожидает модератора', 'статус ожидания на старте')
 foot = e.footer.text or ''
-m = re.match(r'призыв:(\d+):(\d+) · Aether', foot)
+m = re.match(r'призыв:(\d+):(\d+) · Hakumo', foot)
 check(bool(m) and m.group(1) == str(guild.id) and m.group(2) == str(ticketch.id),
       f'футер-привязка gid:cid ({foot})')
 check(e.thumbnail and 'icon' in str(e.thumbnail.url), 'иконка сервера в миниатюре')

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Карточка приветствия: темы, авто/URL/выкл, настройки из панели и пример.
 
-- services/welcome_card_gen: 5 тем в стиле Aether, appearance round-trip
+- services/welcome_card_gen: 5 тем в стиле Hakumo, appearance round-trip
   с валидацией мусора, аватар-заглушка и настоящий аватар;
 - API панели: GET appearance (mod+), POST (admin+, https-only URL),
   preview.png живой и без кэша + права гостя;
@@ -18,7 +18,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_wcard_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_wcard_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -47,21 +47,21 @@ from services import welcome_card_gen as WCG  # noqa: E402
 
 check(set(WCG.WELCOME_THEME_ORDER) == set(WCG.WELCOME_THEMES),
       'порядок тем = реестру')
-check(WCG.DEFAULT_WELCOME_THEME == 'aether',
+check(WCG.DEFAULT_WELCOME_THEME == 'hakumo',
       'дефолт — фирменное золото (как было всегда)')
 
-base = WCG.render_welcome_card('Кипарис', 'Aether Demo', 1024, kind='welcome')
+base = WCG.render_welcome_card('Кипарис', 'Hakumo Demo', 1024, kind='welcome')
 check(base and base[:8].startswith(b'\x89PNG'), 'базовая карточка рисуется')
 check(len(base) > 40000, f'карточка не заглушка ({len(base)} байт)')
 
 seen = set()
 for th in WCG.WELCOME_THEME_ORDER:
-    png = WCG.render_welcome_card('Lina', 'Aether', 7, kind='welcome', theme=th)
+    png = WCG.render_welcome_card('Lina', 'Hakumo', 7, kind='welcome', theme=th)
     check(png and png[:8].startswith(b'\x89PNG'), f'тема «{th}» рендерится')
     seen.add(png)
 check(len(seen) == len(WCG.WELCOME_THEME_ORDER), 'темы различаются визуально')
 
-bye = WCG.render_welcome_card('GhostBlade', 'Aether', 1003, kind='goodbye')
+bye = WCG.render_welcome_card('GhostBlade', 'Hakumo', 1003, kind='goodbye')
 check(bye and bye[:8].startswith(b'\x89PNG') and bye != base,
       'карта прощания рисуется и отличается от приветствия')
 junk = WCG.render_welcome_card('u', 'g', 'мусор', kind='junk', theme='nope')
@@ -98,7 +98,7 @@ check("appearance" in flat and "_appearance" in flat,
 
 print('== 3. Настройки appearance ==')
 ap0 = WCG.get_appearance('424242')
-check(ap0 == {'mode': 'auto', 'theme': 'aether', 'url': ''}, 'нет файла → дефолт')
+check(ap0 == {'mode': 'auto', 'theme': 'hakumo', 'url': ''}, 'нет файла → дефолт')
 saved = WCG.save_appearance('424242', {'mode': 'URL', 'theme': 'OCEAN',
                                        'url': 'https://cdn.example.com/w.png'})
 check(saved == {'mode': 'url', 'theme': 'ocean',
@@ -107,7 +107,7 @@ check(saved == {'mode': 'url', 'theme': 'ocean',
 check(WCG.get_appearance('424242') == saved, 'читается обратно один в один')
 junk = WCG.save_appearance('424242', {'mode': 'junk', 'theme': 'junk',
                                       'url': 'x' * 900})
-check(junk['mode'] == 'auto' and junk['theme'] == 'aether' and len(junk['url']) == 500,
+check(junk['mode'] == 'auto' and junk['theme'] == 'hakumo' and len(junk['url']) == 500,
       'мусор в POST не пролезает: режим/тема по реестру, url до 500')
 
 # файл того же формата, что ждёт ког (data/welcome_card.json, ключи — str(gid))
@@ -164,9 +164,9 @@ check(client.get('/api/guild/777/welcome-card/appearance').status_code == 403,
 
 login('admin')
 r = client.get('/api/guild/777/welcome-card/appearance').get_json()
-check(r['appearance'] == {'mode': 'auto', 'theme': 'aether', 'url': ''},
-      'appearance по умолчанию: авто + aether')
-check(len(r['themes']) == 5 and r['themes'][0]['label'] == 'Aether Gold (фирменная)',
+check(r['appearance'] == {'mode': 'auto', 'theme': 'hakumo', 'url': ''},
+      'appearance по умолчанию: авто + hakumo')
+check(len(r['themes']) == 5 and r['themes'][0]['label'] == 'Hakumo Gold (фирменная)',
       'пять тем с понятными подписями в GET')
 
 r = client.post('/api/guild/777/welcome-card/appearance',
@@ -190,7 +190,7 @@ check(d['success'] and d['appearance'] == {'mode': 'auto', 'theme': 'forest', 'u
 check('Лес' in d['message'], 'понятное сообщение о сохранении')
 check(WCG.get_appearance('777')['theme'] == 'forest', 'тема записалась в файл кога')
 client.post('/api/guild/777/welcome-card/appearance',
-            json={'mode': 'auto', 'theme': 'aether', 'url': ''})
+            json={'mode': 'auto', 'theme': 'hakumo', 'url': ''})
 if os.path.exists(WCG.CFG_PATH):
     os.remove(WCG.CFG_PATH)
 

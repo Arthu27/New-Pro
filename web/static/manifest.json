@@ -1,6 +1,6 @@
 {
-  "name": "Aether Panel",
-  "short_name": "Aether",
+  "name": "Hakumo Panel",
+  "short_name": "Hakumo",
   "description": "Moebius Discord Bot Панель управления",
   "start_url": "/",
   "display": "standalone",

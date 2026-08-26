@@ -6,7 +6,7 @@
   «1 850 СООБЩЕНИЙ» / «52ч 40м В ВОЙСЕ» / «500 000 МОНЕТ» и демо-строки,
   когда данных нет — панель помечает такое честно);
 - PNG-карточка — его generate_leaderboard_bytes (Pillow, офлайн тоже
-  рисует: гильдия-заглушка с его же фолбэком имени «Aether Community»);
+  рисует: гильдия-заглушка с его же фолбэком имени «Hakumo Community»);
 - сырые списки для ранга и CSV читаются из тех же файлов и сортируются
   так же (сообщения int, войс total_seconds, баланс balance+bank);
 - отправка в канал — как команда: тот же файл + LeaderboardView.
@@ -89,7 +89,7 @@ def _demo_names():
 
 def _shim_guild(gid):
     """Гильдия-заглушка для офлайн-рендера: имена участников из демо-данных —
-    никаких «AETHER_LEADER», таблица показывает реальных людей."""
+    никаких «HAKUMO_LEADER», таблица показывает реальных людей."""
     names = _demo_names()
 
     def get_member(uid):
@@ -99,7 +99,7 @@ def _shim_guild(gid):
         return SimpleNamespace(id=int(uid), display_name=rec['name'],
                                name=rec['name'])
 
-    return SimpleNamespace(id=int(gid), name='Aether Community',
+    return SimpleNamespace(id=int(gid), name='Hakumo Community',
                            get_member=get_member)
 
 
@@ -122,7 +122,7 @@ def table_view(bot, gid, cat, limit=20):
     """Топ рейтинга: живые данные и реальные имена (без фейковых заглушек).
 
     С ботом — словами кога. Офлайн (демо) — из тех же файлов, что читает
-    ког, с именами из демо-участников и карты имён. Строки «AETHER_LEADER»
+    ког, с именами из демо-участников и карты имён. Строки «HAKUMO_LEADER»
     больше не появляются: если данных нет вообще, отдаём пустой список.
     """
     if bot is not None:

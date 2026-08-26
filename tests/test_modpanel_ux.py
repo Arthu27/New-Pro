@@ -8,7 +8,7 @@ import os
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_modpanel_ux_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_modpanel_ux_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

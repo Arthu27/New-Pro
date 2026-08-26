@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Карточки логов: темы, акцент, настройки из панели и живой предпросмотр.
 
-- services/log_card: 5 тем в стиле Aether, свой акцент, мусор → дефолт;
+- services/log_card: 5 тем в стиле Hakumo, свой акцент, мусор → дефолт;
 - data/log_cards_<gid>.json: cfg round-trip с валидацией, enabled=False честно
   выключает картинку (бот оставляет текстовый эмбед);
 - API панели: GET/POST settings (admin+ пишет), preview.png + права гостя;
@@ -18,7 +18,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_logcards_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_logcards_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -47,13 +47,13 @@ from services import log_card as LC  # noqa: E402
 
 check(set(LC.LOG_CARD_THEME_ORDER) == set(LC.LOG_CARD_THEMES),
       'порядок тем = реестру')
-check(LC.DEFAULT_LOG_THEME == 'aether', 'дефолт — фирменное золото (как было)')
+check(LC.DEFAULT_LOG_THEME == 'hakumo', 'дефолт — фирменное золото (как было)')
 
 rows = [('Пользователь', 'GhostBlade · 523456789012345678'),
         ('Модератор', 'sonya.staff'),
         ('Причина', 'Повторные провокации после предупреждения в #general')]
 base = LC.render_log_card('mod', 'Выдано предупреждение', rows, color=0xE2455A,
-                          cat_name='модерация', guild_name='Aether', time_str='20:41 UTC')
+                          cat_name='модерация', guild_name='Hakumo', time_str='20:41 UTC')
 check(base and base[:2] == b'\xff\xd8', 'базовая карточка рисуется (JPEG — мгновенные логи)')
 check(len(base) > 40000, f'карточка не заглушка ({len(base)} байт)')
 
@@ -65,8 +65,8 @@ for th in LC.LOG_CARD_THEME_ORDER:
     seen.add(png)
 check(len(seen) == len(LC.LOG_CARD_THEME_ORDER), 'темы различаются визуально')
 
-acc = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', theme='aether', accent='#22d3ee')
-acc2 = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', theme='aether', accent='22ff88')
+acc = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', theme='hakumo', accent='#22d3ee')
+acc2 = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', theme='hakumo', accent='22ff88')
 check(acc != acc2, 'свой акцент меняет карточку')
 junk = LC.render_log_card('mod', 'T', rows[:1], cat_name='mod', theme='nope', accent='zzz')
 check(junk and junk[:2] == b'\xff\xd8', 'мусорные тема/цвет → дефолт, без падения')
@@ -78,13 +78,13 @@ check(pal['gold'] == (255, 136, 0) and pal['bright'] != pal['gold'],
 
 print('== 2. Настройки cfg ==')
 cfg = LC.get_log_cards_cfg('424242')
-check(cfg == {'enabled': True, 'theme': 'aether', 'accent': ''}, 'нет файла → дефолт')
+check(cfg == {'enabled': True, 'theme': 'hakumo', 'accent': ''}, 'нет файла → дефолт')
 saved = LC.save_log_cards_cfg('424242', {'enabled': False, 'theme': 'ocean', 'accent': '#22d3ee'})
 check(saved == {'enabled': False, 'theme': 'ocean', 'accent': '22d3ee'},
       'сохранение нормализует (accent без #)')
 check(LC.get_log_cards_cfg('424242') == saved, 'читается обратно один в один')
 saved2 = LC.save_log_cards_cfg('424242', {'enabled': 'yes', 'theme': 'bad', 'accent': 'bad'})
-check(saved2 == {'enabled': True, 'theme': 'aether', 'accent': ''},
+check(saved2 == {'enabled': True, 'theme': 'hakumo', 'accent': ''},
       'мусор в POST не пролезает: enabled bool, тема/акцент по реестру')
 os.remove(LC.log_cards_cfg_path('424242'))
 
@@ -144,7 +144,7 @@ check(body[:8].startswith(b'\x89PNG') and len(body) > 30000,
       f'предпросмотр голосовой категории ({len(body)} байт)')
 r = client.get('/api/guild/777/log-cards/preview.png?theme=zzz&cat=unknown')
 check(r.status_code == 200, 'мусорные theme/cat → дефолты, не 500')
-LC.save_log_cards_cfg('777', {'enabled': True, 'theme': 'aether', 'accent': ''})
+LC.save_log_cards_cfg('777', {'enabled': True, 'theme': 'hakumo', 'accent': ''})
 for f in ('data/log_cards_777.json',):
     if os.path.exists(f):
         os.remove(f)

@@ -22,7 +22,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta
 
-_TMP = tempfile.mkdtemp(prefix='aether_sla_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_sla_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

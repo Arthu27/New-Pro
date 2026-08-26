@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Логи сообщений — Aether{% endblock %}
+{% block title %}Логи сообщений — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-comment-alt"></i> Логи сообщений{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -203,7 +203,7 @@ else start();
   var pvT = null;
   function lcPreviewUrl() {
     var q = new URLSearchParams();
-    q.set('theme', themeSel.value || 'aether');
+    q.set('theme', themeSel.value || 'hakumo');
     if (accentDirty) q.set('accent', accent.value.replace('#', ''));
     q.set('cat', catSel.value || 'mod');
     return '/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/preview.png?' + q.toString() + '&_=' + Date.now();
@@ -229,7 +229,7 @@ else start();
           }).join('');
         }
         on.checked = !!d.cfg.enabled;
-        themeSel.value = d.cfg.theme || 'aether';
+        themeSel.value = d.cfg.theme || 'hakumo';
         if (d.cfg.accent) { accent.value = '#' + d.cfg.accent; accentDirty = true; }
         else accentDirty = false;
         schedulePreview();
@@ -237,7 +237,7 @@ else start();
   }
 
   function lcSave(silent) {
-    var body = { enabled: on.checked, theme: themeSel.value || 'aether',
+    var body = { enabled: on.checked, theme: themeSel.value || 'hakumo',
                  accent: accentDirty ? accent.value.replace('#', '') : '' };
     fetch('/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)

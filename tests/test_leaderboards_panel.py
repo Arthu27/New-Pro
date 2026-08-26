@@ -16,7 +16,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_leaderboards_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_leaderboards_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -79,7 +79,7 @@ check(t['demo'] is False and len(t['rows']) == 8,
       'сообщения: все 8 строк офлайн (топ-20)')
 check(t['rows'][0] == {'rank': 1, 'name': 'ID 111', 'value': '1 850 сообщений',
                        'uid': '111', 'raw': 1850},
-      'первая строка: реальное значение и uid (без «AETHER_LEADER»)')
+      'первая строка: реальное значение и uid (без «HAKUMO_LEADER»)')
 check(t['rows'][7]['name'] == 'ID 8888', 'последняя строка на месте')
 t = PL.table_view(None, '777', 'voice')
 check(t['rows'][0]['rank'] == 1 and t['rows'][0]['name'] == 'Катя'
@@ -93,7 +93,7 @@ check(t['rows'][0]['raw'] == 500000 and t['rows'][0]['value'] == '500 000 мон
       'баланс: кошелёк+банк, русские единицы')
 t = PL.table_view(None, '999', 'messages')
 check(t['rows'] == [] and t['demo'] is False,
-      'без данных — пустой список (фейковых AETHER_LEADER больше нет)')
+      'без данных — пустой список (фейковых HAKUMO_LEADER больше нет)')
 check(t['title'] == 'ТОП ПО СООБЩЕНИЯМ', 'заголовок категории')
 
 print('== 3. Позиция участника ==')

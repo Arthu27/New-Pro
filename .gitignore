@@ -151,7 +151,7 @@ assets/ai_gojo/
 last_commit.txt
 bot_output.log
 backups/
-aether-update.zip
+hakumo-update.zip
 cloudflared
 cloudflared_new.exe
 # Tunnel artifacts (локальные ключи/конфиг туннеля — не для репо)
@@ -159,4 +159,4 @@ scripts/cloudflared
 scripts/cloudflared.exe
 scripts/config.yml
 scripts/tunnel-creds.json
-scripts/.aether_tunnel_runtime.yml
+scripts/.hakumo_tunnel_runtime.yml

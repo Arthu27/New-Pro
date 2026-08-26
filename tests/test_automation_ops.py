@@ -26,7 +26,7 @@ import tempfile
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
-_TMP = tempfile.mkdtemp(prefix='aether_autoops_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_autoops_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -451,7 +451,7 @@ ex = client.get('/api/automation/export-all')
 check('automation_777.json' in ex.headers.get('Content-Disposition', ''),
       'имя файла с сервером')
 bundle = json.loads(ex.get_data(as_text=True))
-check(bundle['app'] == 'aether-automation' and bundle['version'] == 1
+check(bundle['app'] == 'hakumo-automation' and bundle['version'] == 1
       and bundle['guild_id'] == '777', 'шапка бандла')
 check(set(bundle['modules']) == set(AU.MODULE_EDITORS)
       and bundle['modules']['server_stats']['channels'] ==
@@ -465,13 +465,13 @@ check(bundle['night_summary'] == {'enabled': False, 'channel_id': 123, 'tz_offse
 r = client.post('/api/automation/import-all', json={'app': 'nope'})
 check(r.status_code == 400 and r.get_json()['error'] == 'Файл не похож на экспорт автоматики',
       'чужой файл — 400')
-r = client.post('/api/automation/import-all', json={'app': 'aether-automation'})
+r = client.post('/api/automation/import-all', json={'app': 'hakumo-automation'})
 d = r.get_json()
 check(d['success'] and d['applied']['modules'] == [] and d['applied']['triggers'] == 0,
       'пустой бандл — ничего не применилось, не упало')
 
 payload = {
-    'app': 'aether-automation', 'version': 1,
+    'app': 'hakumo-automation', 'version': 1,
     'modules': {
         'night_mode': {'enabled': True, 'start_hour': 22, 'end_hour': 6,
                        'slowmode_seconds': 30},
@@ -510,7 +510,7 @@ check(ml_stored['777']['88'] == {'mode': 'link', 'exempt_mods': False}
 ns = json.load(open('data/night_summary.json', encoding='utf-8'))
 check(ns['777']['tz_offset'] == 7 and ns['777'].get('last_date') == '2026-08-15',
       'сводка перенесена, last_date цел')
-r = client.post('/api/automation/import-all', json={'app': 'aether-automation',
+r = client.post('/api/automation/import-all', json={'app': 'hakumo-automation',
                                                     'night_summary': {'tz_offset': 99}})
 d = r.get_json()
 check(d['applied']['night_summary'] is False

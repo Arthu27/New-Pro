@@ -57,7 +57,7 @@ def register(ctx):
                         'prefix': Config.COMMAND_PREFIX,
                         'presence': {'status': cfg.get('status', 'idle'),
                                      'activity_type': cfg.get('activity_type', 'listening'),
-                                     'activity_text': cfg.get('activity_text', '.gg/Aether')}})
+                                     'activity_text': cfg.get('activity_text', '.gg/Hakumo')}})
 
 
     @app.route('/api/bot-settings/presence', methods=['POST'])

@@ -13,7 +13,7 @@ os.environ.setdefault('PANEL_PORT', '5099')
 os.environ.setdefault('PANEL_USER', 'owner')
 os.environ.setdefault('PANEL_PASSWORD', 'demo-pass')
 
-_TMP = tempfile.mkdtemp(prefix='aether_access_live_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_access_live_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

@@ -348,7 +348,7 @@ def register(ctx):
         type_map ={'listening':discord .ActivityType .listening ,'playing':discord .ActivityType .playing ,'watching':discord .ActivityType .watching ,'competing':discord .ActivityType .competing }
         status =status_map .get (d .get ('status','online'),discord .Status .online )
         atype =type_map .get (d .get ('activity_type','listening'),discord .ActivityType .listening )
-        atext =d .get ('activity_text','.gg/Aether')
+        atext =d .get ('activity_text','.gg/Hakumo')
         def _set ():
             _run_async (bot .change_presence (status =status ,activity =discord .Activity (type =atype ,name =atext )))
         asyncio .run_coroutine_threadsafe (_set (),bot .loop ).result (timeout =5 )

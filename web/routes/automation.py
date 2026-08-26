@@ -532,7 +532,7 @@ def register(ctx):
         state = _trigger_state(gid)
         from cogs.triggers import DEFAULT_COOLDOWN
         payload = {
-            'app': 'aether-triggers',
+            'app': 'hakumo-triggers',
             'version': 1,
             'guild_id': str(gid),
             'cooldown': state.get('cooldown', DEFAULT_COOLDOWN),
@@ -854,7 +854,7 @@ def register(ctx):
                                   'exempt_mods': bool(rec.get('exempt_mods', True))}
         ns_cfg = _night_cfg(gid_s)
         return {
-            'app': 'aether-automation',
+            'app': 'hakumo-automation',
             'version': 1,
             'guild_id': gid_s,
             'modules': {key: _serialize(key, spec['merge'](_db(spec['ns']).get(gid, 'settings', {})))
@@ -889,7 +889,7 @@ def register(ctx):
         _clean_payload + merge_settings, что и их карточки; триггеры —
         add_trigger кога; замки и сводка — те же проверки, что у их POST."""
         data = request.get_json(silent=True)
-        if not isinstance(data, dict) or data.get('app') != 'aether-automation':
+        if not isinstance(data, dict) or data.get('app') != 'hakumo-automation':
             return jsonify({'success': False,
                             'error': 'Файл не похож на экспорт автоматики'}), 400
         gid = active_guild_id()

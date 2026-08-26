@@ -321,7 +321,7 @@ def register(ctx):
             title =title ,
             description =(intro + (f'  ·  {len (rules )} пунктов' if intro else f'{len (rules )} пунктов')),
             color =accent )
-            head .set_footer (text ="Обновлено: " + datetime.now(timezone.utc).strftime ('%d.%m.%Y %H:%M')+ " (UTC) · Aether")
+            head .set_footer (text ="Обновлено: " + datetime.now(timezone.utc).strftime ('%d.%m.%Y %H:%M')+ " (UTC) · Hakumo")
             embeds .append (head )
             for i ,r in enumerate (rules ,1 ):
                 e =discord .Embed (color =accent )
@@ -419,7 +419,7 @@ def register(ctx):
                 wh =discord .utils .get (hooks ,name ='Правила сервера')
                 if wh is None :
                     wh =await (ch .create_webhook (name ='Правила сервера',
-                    reason ='Публикация правил из панели Aether'))
+                    reason ='Публикация правил из панели Hakumo'))
                     print (f"[ПРАВИЛА] Вебхук создан: «{wh .name }» (id {wh .id }) в #{ch .name }")
                 else :
                     print (f"[ПРАВИЛА] Найден существующий вебхук: «{wh .name }» (id {wh .id })")

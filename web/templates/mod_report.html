@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Отчёты · Модерация — Aether{% endblock %}
+{% block title %}Отчёты · Модерация — Hakumo{% endblock %}
 {% block page_title %}Отчёты{% endblock %}
 {% block content %}
 
@@ -81,9 +81,9 @@ function renderMods(d) {
   var box = $('mrMods');
   if (!d.per_mod.length) {
     box.innerHTML = '<div class="empty"><i class="fas fa-user-shield"></i><span>Записей с именем модератора нет</span></div>';
-  } else if (window.AetherChart) {
+  } else if (window.HakumoChart) {
     var total = d.total || 1;
-    window.AetherChart.vbars(box, d.per_mod.map(function (m, i) {
+    window.HakumoChart.vbars(box, d.per_mod.map(function (m, i) {
       var pct = Math.round(100 * m[1] / total);
       return { label: m[0] + ' (' + pct + '%)', value: m[1] };
     }), { limit: 8 });
@@ -95,16 +95,16 @@ function renderMods(d) {
         '<span class="mono" style="font-weight:700">' + m[1] + '</span></div>';
     }).join('');
   }
-  if (window.AetherChart) {
+  if (window.HakumoChart) {
     var labels = d.per_day.labels.map(function (l) { return String(l || '').slice(5).split('-').reverse().join('.'); });
-    window.AetherChart.area($('mrArea'), d.per_day.counts, { labels: labels, height: 150 });
+    window.HakumoChart.area($('mrArea'), d.per_day.counts, { labels: labels, height: 150 });
   }
 }
 
 function renderActions(d) {
-  if (window.AetherChart && d.by_action.length) {
+  if (window.HakumoChart && d.by_action.length) {
     var max = Math.max.apply(null, d.by_action.map(function (a) { return a[1]; }).concat([1]));
-    window.AetherChart.vbars($('mrActions'), d.by_action.map(function (a) {
+    window.HakumoChart.vbars($('mrActions'), d.by_action.map(function (a) {
       return { label: a[0], value: a[1] };
     }));
   } else {

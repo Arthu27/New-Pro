@@ -151,14 +151,14 @@ def preview_embed(guild_name, category):
 def _resolve_states(bot, gid, cfg):
     """(channel_state, role_state, guild_name, bot_online) через живого бота."""
     if not bot:
-        return None, None, 'Aether', False
+        return None, None, 'Hakumo', False
     try:
         guild = bot.get_guild(int(gid))
     except Exception as _ex:
         _log.debug('anime: get_guild(%s): %s', gid, _ex)
-        return None, None, 'Aether', False
+        return None, None, 'Hakumo', False
     if guild is None:
-        return None, None, 'Aether', True
+        return None, None, 'Hakumo', True
     channel_state = None
     if cfg['channel_id']:
         try:
@@ -171,7 +171,7 @@ def _resolve_states(bot, gid, cfg):
             role_state = guild.get_role(int(cfg['role_id'])) is not None
         except Exception as _ex:
             _log.debug('anime: get_role: %s', _ex)
-    return channel_state, role_state, str(getattr(guild, 'name', '') or 'Aether'), True
+    return channel_state, role_state, str(getattr(guild, 'name', '') or 'Hakumo'), True
 
 
 # ─────────────────────────────────────────────────────────────────────

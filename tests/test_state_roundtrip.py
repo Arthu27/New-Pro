@@ -23,7 +23,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_roundtrip_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_roundtrip_')
 os.chdir(_TMP)
 os.makedirs('data', exist_ok=True)
 

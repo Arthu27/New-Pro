@@ -707,13 +707,13 @@ try:
         '823456789012345680': [
             {'content': 'Привет, почему меня замутили?', 'author': 'toxicguy', 'bot': False,
              'timestamp': iso(1, 21, 5)},
-            {'content': 'Обход мьюта вторым аккаунтом. Подробности в тикете.', 'author': 'Aether', 'bot': True,
+            {'content': 'Обход мьюта вторым аккаунтом. Подробности в тикете.', 'author': 'Hakumo', 'bot': True,
              'timestamp': iso(1, 21, 7)},
         ],
         '723456789012345679': [
             {'content': 'Я не спамил голосовым ботом, честно!', 'author': 'voice_troll', 'bot': False,
              'timestamp': iso(2, 19, 40)},
-            {'content': 'Логи говорят иначе. Апелляция — через /appeal.', 'author': 'Aether', 'bot': True,
+            {'content': 'Логи говорят иначе. Апелляция — через /appeal.', 'author': 'Hakumo', 'bot': True,
              'timestamp': iso(2, 19, 44)},
         ],
     }
@@ -822,7 +822,7 @@ try:
     _af_cfg = {
         GID: {'enabled': True, 'action': 'strip', 'log_channel_id': 1002,
               'check_join': True, 'check_update': True, 'check_ads': True,
-              'threshold': 0.85, 'protected_names': ['Aether', 'Владелец', 'Администратор', 'Куратор', 'Модератор'],
+              'threshold': 0.85, 'protected_names': ['Hakumo', 'Владелец', 'Администратор', 'Куратор', 'Модератор'],
               'exempt_staff': True, 'dm_notify': True, 'strike_timeout': True}}
     with open('data/antifake.json', 'w', encoding='utf-8') as _f:
         json.dump(_af_cfg, _f, ensure_ascii=False, indent=2)
@@ -933,19 +933,19 @@ try:
 except Exception as _ex:
     print('апелляции не засеяны:', _ex)
 
-# ── Лог-карточки: явный дефолт (фирменная тема Aether, включены) ──
+# ── Лог-карточки: явный дефолт (фирменная тема Hakumo, включены) ──
 try:
     from services import log_card as _LC
-    _LC.save_log_cards_cfg(GID, {'enabled': True, 'theme': 'aether', 'accent': ''})
-    print('записано: оформление лог-карточек (Aether Gold)')
+    _LC.save_log_cards_cfg(GID, {'enabled': True, 'theme': 'hakumo', 'accent': ''})
+    print('записано: оформление лог-карточек (Hakumo Gold)')
 except Exception as _ex:
     print('лог-карточки не засеяны:', _ex)
 
 # ── Карточка приветствия: авто-картинка в фирменной теме ──
 try:
     from services import welcome_card_gen as _WCG
-    _WCG.save_appearance(GID, {'mode': 'auto', 'theme': 'aether', 'url': ''})
-    print('записано: оформление карточки приветствия (Aether Gold)')
+    _WCG.save_appearance(GID, {'mode': 'auto', 'theme': 'hakumo', 'url': ''})
+    print('записано: оформление карточки приветствия (Hakumo Gold)')
 except Exception as _ex:
     print('карточка приветствия не засеяна:', _ex)
 
@@ -983,13 +983,13 @@ try:
             d.text((58, y + 16), txt, fill=(206, 198, 182))
             y += 46
         d.rectangle([0, 328, 639, 359], fill=(24, 22, 28))
-        d.text((20, 338), 'Aether · доказательство из демо-посева', fill=(140, 132, 118))
+        d.text((20, 338), 'Hakumo · доказательство из демо-посева', fill=(140, 132, 118))
         img.save(path, 'PNG')
         return os.path.getsize(path)
 
     _s1 = _proof_png(
         os.path.join(_mdir, f'{GID}_1.png'),
-        '#общий · сервер Aether',
+        '#общий · сервер Hakumo',
         [('toxicguy', 'да кто вы такие вообще, *цензура*'),
          ('night_fox', 'спокойнее, правила читал?'),
          ('toxicguy', 'заткнись, *цензура*'),

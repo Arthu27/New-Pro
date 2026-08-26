@@ -1,5 +1,5 @@
 """
-AETHER ANTI-CRASH — централизованная защита от падений (PRO, полный набор)
+HAKUMO ANTI-CRASH — централизованная защита от падений (PRO, полный набор)
 
 Карта покрытия (аналоги Node.js anti-crash):
 - Unhandled Rejection  → asyncio exception handler (задачи/колбэки)
@@ -636,12 +636,12 @@ class ErrorHandler:
                 {'name': 'Место', 'value': f"`{rec.get('loc') or '—'}`", 'inline': True},
                 {'name': 'Время', 'value': f"`{ts_str}`", 'inline': True},
             ],
-            'footer': {'text': 'AETHER anti-crash • мгновенный webhook'},
+            'footer': {'text': 'HAKUMO anti-crash • мгновенный webhook'},
         }
         tb = (rec.get('traceback') or '').strip()
         if tb:
             embed['fields'].append({'name': 'Traceback', 'value': f"```py\n{tb[-900:]}\n```"})
-        payload = {'username': 'AETHER ANTI-CRASH', 'embeds': [embed]}
+        payload = {'username': 'HAKUMO ANTI-CRASH', 'embeds': [embed]}
         try:
             async with self._webhook_session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as resp:
                 if resp.status in (200, 204):
@@ -1062,7 +1062,7 @@ class AntiCrashCog(commands.Cog):
         ov = self.h.get_overview()
         status = "🟢 Активна" if ov['master_enabled'] else "🔴 Отключена (master_enabled=0)"
         embed = discord.Embed(
-            title="🛡 AETHER ANTI-CRASH — Состояние системы",
+            title="🛡 HAKUMO ANTI-CRASH — Состояние системы",
             color=self.GOLD,
             timestamp=datetime.now(),
         )

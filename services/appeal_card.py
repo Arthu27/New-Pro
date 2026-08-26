@@ -20,9 +20,9 @@ W, H = 1200, 420
 SS = 2
 
 # Те же фирменные темы, что у баннеров правил: (база, свечение 1, свечение 2,
-# сетка, текст, под-текст). 'aether' — золото в тон карточкам логов.
+# сетка, текст, под-текст). 'hakumo' — золото в тон карточкам логов.
 APPEAL_THEMES = {
-    'aether': ((10, 16, 30), (212, 175, 55), (245, 215, 110), (52, 48, 78), (242, 245, 252), (165, 172, 200)),
+    'hakumo': ((10, 16, 30), (212, 175, 55), (245, 215, 110), (52, 48, 78), (242, 245, 252), (165, 172, 200)),
     'violet': ((16, 14, 32), (99, 102, 241), (34, 211, 238), (52, 48, 96), (244, 244, 248), (170, 170, 190)),
     'night': ((12, 14, 18), (240, 180, 60), (244, 127, 60), (44, 46, 56), (245, 245, 243), (168, 168, 172)),
     'ocean': ((8, 22, 30), (14, 165, 233), (34, 211, 238), (22, 62, 80), (240, 250, 252), (150, 176, 186)),
@@ -85,7 +85,7 @@ def normalize_appearance(raw):
 
 
 def render_appeal_card(*, appeal_id, user_name, text, link=None,
-                       theme=DEFAULT_APPEAL_THEME, brand='Aether'):
+                       theme=DEFAULT_APPEAL_THEME, brand='Hakumo'):
     """Карточка поданной апелляции → PNG bytes. Никогда не бросает наружу."""
     try:
         base, glow_a, glow_b, grid_c, ink, ink2 = APPEAL_THEMES.get(
@@ -208,7 +208,7 @@ def render_appeal_card(*, appeal_id, user_name, text, link=None,
 
 
 def appeal_card_filename(appeal_id):
-    return f'aether_appeal_{int(appeal_id):02d}.png'
+    return f'hakumo_appeal_{int(appeal_id):02d}.png'
 
 
 __all__ = ('APPEAL_THEMES', 'APPEAL_THEME_ORDER', 'DEFAULT_APPEAL_THEME',

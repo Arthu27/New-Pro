@@ -13,7 +13,7 @@ import os
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_matrix_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_matrix_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -171,7 +171,8 @@ def probe(role, path):
         r = make_client(role).get(path)
         loc = r.headers.get('Location', '') or ''
         to_login = r.status_code in (301, 302, 308) and 'login' in loc
-        return r.status_code, to_login
+        denied = r.status_code in (301, 302, 308) and 'denied=' in loc
+        return r.status_code, (to_login or denied or r.status_code in (401, 403))
     except Exception:
         return 599, False
 
@@ -203,7 +204,7 @@ for path, ep in GET_RULES:
     need = ROLES.get(info['role']) if info['role'] else None
     for role in ROLES:
         st, to_login = probe(role, path)
-        blocked = to_login or st in (401, 403)
+        blocked = to_login  # login/denied/403/401 — всё «закрыто»
         if need is None:
             ok = not blocked            # просто авторизация — любой роли впускает
         elif ROLES[role] >= need:

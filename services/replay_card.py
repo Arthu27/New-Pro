@@ -1,5 +1,5 @@
 """
-Aether — «Реплеер инцидентов»: визуальная лента событий сервера (Pillow).
+Hakumo — «Реплеер инцидентов»: визуальная лента событий сервера (Pillow).
 
 Вертикальный таймлайн: время → золотая иконка категории → что произошло → детали.
 Рисуется ботом на фирменном фоне Midnight Navy с золотой звёздной пылью.
@@ -157,7 +157,7 @@ def render_replay_card(title, subtitle, events, now_str=''):
         d.rectangle((16, 16, W - 16, H - 16), outline=(212, 175, 55, 40), width=1)
 
         # Шапка
-        badge_txt = "✦ AETHER · РЕПЛЕЕР СОБЫТИЙ"
+        badge_txt = "✦ HAKUMO · РЕПЛЕЕР СОБЫТИЙ"
         bw = d.textlength(badge_txt, font=_font(20, True)) + 24
         d.rounded_rectangle((PAD, 48, PAD + bw, 48 + 34), radius=10,
                             fill=(20, 28, 48, 220), outline=(212, 175, 55, 120), width=1)
@@ -230,8 +230,8 @@ def render_replay_card(title, subtitle, events, now_str=''):
         # Футер
         fy = H - footer_h + 22
         d.line([(PAD, fy), (W - PAD, fy)], fill=GOLD_SOFT, width=1)
-        d.text((PAD, fy + 16), 'AETHER REPLAY · ТАЙМЛАЙН СОБЫТИЙ', font=_font(22), fill=DIM)
-        brand = '✦ AETHER'
+        d.text((PAD, fy + 16), 'HAKUMO REPLAY · ТАЙМЛАЙН СОБЫТИЙ', font=_font(22), fill=DIM)
+        brand = '✦ HAKUMO'
         d.text((W - PAD - d.textlength(brand, font=_font(24, True)), fy + 14),
                brand, font=_font(24, True), fill=GOLD_BRIGHT)
 

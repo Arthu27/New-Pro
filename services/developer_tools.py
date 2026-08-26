@@ -290,7 +290,7 @@ class APIDocumentation:
             'response': response
         })
     
-    def generate_openapi(self, title: str = 'Aether API', version: str = '1.0.0') -> dict:
+    def generate_openapi(self, title: str = 'Hakumo API', version: str = '1.0.0') -> dict:
         """Генерировать OpenAPI спецификацию"""
         paths = {}
         
@@ -354,15 +354,15 @@ class SDKGenerator:
     def generate_python_sdk(self, api_base_url: str) -> str:
         """Генерировать Python SDK"""
         return '''"""
-Aether API Python SDK
+Hakumo API Python SDK
 """
 
 import requests
 from typing import Dict, Any, Optional
 
 
-class AetherAPI:
- """Aether API клиент"""
+class HakumoAPI:
+ """Hakumo API клиент"""
  
  def __init__(self, api_key: str, base_url: str = '{api_base_url}'):
  self.api_key = api_key
@@ -411,10 +411,10 @@ class AetherAPI:
     def generate_javascript_sdk(self, api_base_url: str) -> str:
         """Генерировать JavaScript SDK"""
         return f'''/**
- * Aether API JavaScript SDK
+ * Hakumo API JavaScript SDK
  */
 
-class AetherAPI {{
+class HakumoAPI {{
  constructor(apiKey, baseUrl = '{api_base_url}') {{
  this.apiKey = apiKey;
  this.baseUrl = baseUrl;
@@ -469,7 +469,7 @@ class AetherAPI {{
  }}
 }}
 
-module.exports = AetherAPI;
+module.exports = HakumoAPI;
 '''
 
 # Глобальные экземпляры

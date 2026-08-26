@@ -8,7 +8,7 @@ import os
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_autofilter_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_autofilter_test_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

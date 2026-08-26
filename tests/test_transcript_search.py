@@ -21,7 +21,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 
-_TMP = tempfile.mkdtemp(prefix='aether_trxsearch_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_trxsearch_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -54,7 +54,7 @@ rec = ts.record(guild_id=777, channel_id=11, channel_name='ticket-wipe-1',
                 messages=[
                     {'timestamp': NOW - timedelta(minutes=50), 'author': 'Степа',
                      'content': 'привет, а скажите пожалуйста когда будет ВАЙП на сервере? очень жду', 'is_bot': False},
-                    {'timestamp': NOW - timedelta(minutes=40), 'author': 'Aether',
+                    {'timestamp': NOW - timedelta(minutes=40), 'author': 'Hakumo',
                      'content': 'Ваш вопрос передан администрации', 'is_bot': True},
                     {'timestamp': NOW - timedelta(minutes=30), 'author': 'moder',
                      'content': 'вайп\nзапланирован\nна субботу', 'is_bot': False},

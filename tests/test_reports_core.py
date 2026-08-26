@@ -11,7 +11,7 @@ import sys
 import tempfile
 import zlib
 
-_TMP = tempfile.mkdtemp(prefix='aether_reports_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_reports_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

@@ -19,7 +19,7 @@ import sys
 import tempfile
 import threading
 
-_TMP = tempfile.mkdtemp(prefix='aether_musicpanel_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_musicpanel_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -170,7 +170,7 @@ def post(path, payload):
 check(client.get('/music').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get('/api/music/state').status_code in (302, 401, 403), 'гостю state закрыт')
 login('uye')
-check(client.get('/music').status_code == 403, 'uye нельзя')
+check(client.get('/music').status_code == 302, 'uye нельзя')
 login('mod')
 check(client.get('/music').status_code == 200, 'mod читает страницу (200)')
 check(client.get('/api/music/state').status_code == 200, 'mod читает state (200)')

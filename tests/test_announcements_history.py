@@ -24,7 +24,7 @@ import sys
 import tempfile
 import threading
 
-_TMP = tempfile.mkdtemp(prefix='aether_annhist_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_annhist_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

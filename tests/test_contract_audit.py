@@ -27,7 +27,7 @@ if not os.path.isfile(os.path.join(ROOT, 'data', 'demo_channels.json')):
     subprocess.run([sys.executable, os.path.join(ROOT, 'scripts', 'seed_demo_panel.py')],
                    capture_output=True, text=True, timeout=180, cwd=ROOT)
 
-_TMP = tempfile.mkdtemp(prefix='aether_contract_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_contract_test_')
 os.chdir(_TMP)
 sys.path.insert(0, ROOT)
 os.makedirs('data', exist_ok=True)

@@ -90,7 +90,7 @@
 
   var DCOLORS = ['#dc2626', '#d97706', '#7c3aed', '#16a34a'];
 
-  if (window.AetherRing) {
+  if (window.HakumoRing) {
     var segs = [];
     var base = Math.max(1, {{ stats.single_violation_rate }} + {{ stats.mutual_rate }} + {{ stats.fake_rate }} + {{ stats.no_violation_rate }});
     // значения в процентах — используем их как доли
@@ -100,14 +100,14 @@
       DECISIONS.forEach(function (d, i) {
         if (vals[i] > 0) segs.push({ label: d.label, value: vals[i], color: DCOLORS[i] });
       });
-      window.AetherRing($('decisionsRing'), segs, { totalLabel: 'решений' });
+      window.HakumoRing($('decisionsRing'), segs, { totalLabel: 'решений' });
     } else {
       $('decisionsRing').innerHTML = '<div class="empty"><i class="fas fa-chart-pie"></i><span>Решений пока нет</span></div>';
     }
   }
 
-  if (window.AetherChart && REASONS.length) {
-    window.AetherChart.vbars($('reasonsBars'), REASONS.slice(0, 8), { limit: 8 });
+  if (window.HakumoChart && REASONS.length) {
+    window.HakumoChart.vbars($('reasonsBars'), REASONS.slice(0, 8), { limit: 8 });
   } else {
     $('reasonsBars').innerHTML = '<div class="empty"><i class="fas fa-list"></i><span>Причин пока нет</span></div>';
   }

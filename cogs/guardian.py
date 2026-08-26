@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Aether «Щит» — анти-нюк защита сервера (PRO).
+"""Hakumo «Щит» — анти-нюк защита сервера (PRO).
 
 Если кто-то (по злому умыслу или со взломанного аккаунта) начнёт:
 - сносить каналы/роли пачкой,
@@ -382,16 +382,16 @@ class Guardian(commands.Cog):
                 if not roles:
                     return 'ролей для снятия нет'
                 await member.remove_roles(*roles,
-                                          reason='Aether Щит: анти-нюк — снятие ролей')
+                                          reason='Hakumo Щит: анти-нюк — снятие ролей')
                 return f'снято ролей: {len(roles)}'
             if action == 'kick':
                 if member is None:
                     return 'нарушителя нет на сервере'
-                await guild.kick(member, reason='Aether Щит: анти-нюк (кик)')
+                await guild.kick(member, reason='Hakumo Щит: анти-нюк (кик)')
                 return 'кикнут'
             if action == 'ban':
                 await guild.ban(discord.Object(id=int(actor_id)),
-                                reason='Aether Щит: анти-нюк (бан)',
+                                reason='Hakumo Щит: анти-нюк (бан)',
                                 delete_message_seconds=0)
                 return 'забанен'
         except Exception as _ex:
@@ -417,7 +417,7 @@ class Guardian(commands.Cog):
         if ch is None:
             return
         try:
-            from cogs.embed_utils import aether_embed
+            from cogs.embed_utils import hakumo_embed
             fields = [
                 ('Нарушитель', self._member_mention(actor_id, actor_name), True),
                 ('Сработало', f'{count} подряд', True),
@@ -426,7 +426,7 @@ class Guardian(commands.Cog):
             ]
             if detail:
                 fields.append(('Детали', detail[:200], False))
-            e = aether_embed('mod', f'Щит: {spec["label"]}',
+            e = hakumo_embed('mod', f'Щит: {spec["label"]}',
                              'Щит остановил опасную волну действий '
                              'и применил меру автоматически.',
                              fields=fields, guild=guild, footer_extra='Щит сервера')
@@ -526,7 +526,7 @@ class Guardian(commands.Cog):
         if cfg.get('kick_unauthorized_bots'):
             try:
                 await member.guild.kick(member,
-                                        reason='Aether Щит: бот добавлен без разрешения')
+                                        reason='Hakumo Щит: бот добавлен без разрешения')
                 kicked = True
             except Exception as _ex:
                 _log.warning('guardian: бот %s не кикнут: %s', member.id, _ex)

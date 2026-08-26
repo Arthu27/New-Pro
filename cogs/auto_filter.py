@@ -349,7 +349,7 @@ class AutoFilter(commands.Cog):
         e = discord.Embed(title=title, description=desc,
                           color=color if color is not None else GOLD,
                           timestamp=datetime.now(timezone.utc))
-        e.set_footer(text='Aether AutoFilter')
+        e.set_footer(text='Hakumo AutoFilter')
         return e
 
     def _is_immune(self, message, cfg) -> bool:

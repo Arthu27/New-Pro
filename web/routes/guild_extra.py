@@ -183,7 +183,7 @@ def register(ctx):
         data =request .get_json (silent =True )or {}
         wh_id =data .get ('webhook_id')
         message =data .get ('message','')
-        username =data .get ('username','Aether')
+        username =data .get ('username','Hakumo')
         style =data .get ('style','')
         f =f'data/webhooks_{guild_id}.json'
         if not os .path .exists (f ):return jsonify ({'error':'Вебхук не найден'})

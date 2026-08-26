@@ -14,7 +14,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 
-_TMP = tempfile.mkdtemp(prefix='aether_quiz_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_quiz_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

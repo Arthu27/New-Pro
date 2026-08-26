@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Оперативный центр — Aether{% endblock %}
+{% block title %}Оперативный центр — Hakumo{% endblock %}
 {% block page_title %}Оперативный центр{% endblock %}
 {% block content %}
 
@@ -164,7 +164,7 @@
         $('cpuNow').textContent = cpuV + '%';
         $('cpuBar').style.width = Math.min(100, cpuV) + '%';
         $('cpuBar').style.background = cpuTone(cpuV);
-        if (window.AetherChart) window.AetherChart.sparkline($('cpuSpark'), cpuHist, { height: 56, color: cpuTone(cpuV), title: 'CPU, %' });
+        if (window.HakumoChart) window.HakumoChart.sparkline($('cpuSpark'), cpuHist, { height: 56, color: cpuTone(cpuV), title: 'CPU, %' });
       }
     }
     if (ram != null) {
@@ -175,7 +175,7 @@
         $('ramNow').textContent = ramV + '%';
         $('ramBar').style.width = Math.min(100, ramV) + '%';
         $('ramBar').style.background = ramTone(ramV);
-        if (window.AetherChart) window.AetherChart.sparkline($('ramSpark'), ramHist, { height: 56, color: ramTone(ramV), title: 'RAM, %' });
+        if (window.HakumoChart) window.HakumoChart.sparkline($('ramSpark'), ramHist, { height: 56, color: ramTone(ramV), title: 'RAM, %' });
       }
     }
   }

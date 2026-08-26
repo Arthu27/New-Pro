@@ -16,7 +16,7 @@ import sys
 import tempfile
 from types import SimpleNamespace
 
-_TMP = tempfile.mkdtemp(prefix='aether_guardian_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_guardian_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -486,7 +486,7 @@ r = client.get('/guardian')
 check(r.status_code == 200, f'в демо-режиме /guardian доступна ({r.status_code})')
 login_as('mod')
 r = client.get('/guardian')
-check(r.status_code == 403, f'настройка Щита — только Админ+ ({r.status_code})')
+check(r.status_code == 302, f'настройка Щита — только Админ+ ({r.status_code})')
 r = client.get(f'/api/guild/{GID}/guardian')
 check(r.status_code == 403, 'mod не читает конфиг Щита')
 r = client.get(f'/api/guild/{GID}/guardian/summary')

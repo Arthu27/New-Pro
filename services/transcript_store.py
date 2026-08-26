@@ -432,6 +432,6 @@ def render_html(t):
             f'<span class="when">{e(stamp)}</span></div>'
             f'<div class="body">{e(str(msg.get("content", "")))}</div></div>')
 
-    parts.append('<div class="foot">Aether Panel · транскрипт закрытого тикета</div>')
+    parts.append('<div class="foot">Hakumo Panel · транскрипт закрытого тикета</div>')
     parts.append('</div></body></html>')
     return ''.join(parts)

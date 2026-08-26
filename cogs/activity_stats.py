@@ -29,8 +29,8 @@ class ActivityStats(commands.Cog):
                 message.author.display_name or str(message.author),
                 getattr(message.channel, 'name', 'неизвестно'),
             )
-        except Exception:
-            pass    # статистика никогда не ломает обработку сообщений
+        except Exception as _se:
+            _log.debug('activity_stats: подавлено: %s', _se)  # статистика не ломает обработку
 
 
 async def setup(bot):

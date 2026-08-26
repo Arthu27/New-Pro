@@ -9,7 +9,7 @@ import os
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_vis_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_vis_')
 os.environ['DB_PATH'] = os.path.join(_TMP, 'bot.db')
 os.environ['DEMO_MODE'] = '1'
 os.environ['SECRET_KEY'] = 'test-secret'

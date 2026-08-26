@@ -690,7 +690,7 @@ class ComplaintAnalyzer :
         inline =False ,
         )
 
-        embed .set_footer (text ="🤖 Aether AI · Система анализа жалоб")
+        embed .set_footer (text ="🤖 Hakumo AI · Система анализа жалоб")
 
         return embed 
 

@@ -16,7 +16,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta
 
-_TMP = tempfile.mkdtemp(prefix='aether_modrep_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_modrep_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -110,7 +110,7 @@ def login(role='owner'):
 check(client.get('/mod-report').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get('/api/mod-report').status_code in (302, 401, 403), 'гостю API закрыто')
 login('uye')
-check(client.get('/mod-report').status_code == 403, 'uye нельзя')
+check(client.get('/mod-report').status_code == 302, 'uye нельзя')
 check(client.get('/api/mod-report').status_code == 403, 'uye нельзя API')
 login('mod')
 check(client.get('/mod-report').status_code == 200, 'mod читает страницу')

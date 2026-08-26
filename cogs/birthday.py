@@ -94,7 +94,7 @@ class Birthday (commands .Cog ):
                 if age :
                     embed .add_field (name ="🎈 Возраст",value =f"```{age}```",inline =True )
                 embed .add_field (name ="🎉 Поздравь!",value ="*Оставь поздравление ниже!* ",inline =False )
-                embed .set_footer (text =f"Aether • {guild.name}",icon_url =guild .icon .url if guild .icon else None )
+                embed .set_footer (text =f"Hakumo • {guild.name}",icon_url =guild .icon .url if guild .icon else None )
                 from cogs .icons import send_with_icon 
                 await send_with_icon (channel ,embed ,'birthday',content =f'🎉 {member.mention}')
 
@@ -182,7 +182,7 @@ class Birthday (commands .Cog ):
         e .add_field (name ="📅 Дата",value =f"```{день}/{месяц}{f'/{год}' if год else ''}```",inline =True )
         e .add_field (name ="👤 Пользователь",value =interaction .user .mention ,inline =True )
         e .add_field (name ="ℹ️ Информация",value ="*Когда наступит день рождения — объявим на сервере!*",inline =False )
-        e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+        e .set_footer (text =f"Hakumo • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
     @app_commands .command (name ='birthdays',description ='Показать ближайшие дни рождения')
@@ -219,7 +219,7 @@ class Birthday (commands .Cog ):
             else :
                 label =f"📅 через {diff} дн."
             e .add_field (name =f"🎂 {name}",value =f"`{d:02d}/{m:02d}` — {label}",inline =False )
-        e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+        e .set_footer (text =f"Hakumo • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e )
 
     @app_commands .command (name ='birthday-delete',description ='Удалить запись о дне рождения')
@@ -257,7 +257,7 @@ class Birthday (commands .Cog ):
         e .add_field (name ="📢 Канал",value =channel .mention ,inline =True )
         e .add_field (name =" Роль",value =role .mention if role else "`Нет`",inline =True )
         e .add_field (name =" Бонусные монеты",value =f"`{gift_coins}`"if gift_coins else "`Нет`",inline =True )
-        e .set_footer (text =f"Aether • {interaction.guild.name}")
+        e .set_footer (text =f"Hakumo • {interaction.guild.name}")
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
 

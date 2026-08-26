@@ -16,7 +16,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_security_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_security_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -202,8 +202,8 @@ check("'/overview'" in tpl and "'/toggle'" in tpl and "'/scan'" in tpl
       'API-пути в шаблоне')
 check('localhost' not in tpl and '127.0.0.1' not in tpl, 'без локальных адресов')
 import services.panel_menu as PM
-mod_pages = [pg['path'] for g in PM.MENU if g['key'] == 'mod' for pg in g['pages']]
-check('/security' in mod_pages, 'пункт меню «Безопасность» в «Модерации»')
+all_pages = [pg['path'] for g in PM.MENU for pg in g['pages']]
+check('/security' in all_pages, 'пункт меню «Безопасность» есть (группа «Защита»)')
 check(PM.PAGE_COGS.get('/security') == ('security',), 'security-ког привязан')
 ext = open(os.path.join(ROOT, 'web/routes_extra.py'), encoding='utf-8').read()
 check(ext.count('security_panel') >= 1, 'модуль зарегистрирован в routes_extra')

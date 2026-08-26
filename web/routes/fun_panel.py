@@ -57,7 +57,7 @@ def fetch_json(url, timeout=10):
     """Синхронный аналог FunCog._fetch_json для Flask-потока: dict или None."""
     try:
         req = urllib.request.Request(
-            url, headers={'User-Agent': 'Aether-Panel/1.0'})
+            url, headers={'User-Agent': 'Hakumo-Panel/1.0'})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             if resp.status != 200:
                 return None

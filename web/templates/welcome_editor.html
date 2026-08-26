@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Приветствие Редактор - Aether{% endblock %}
+{% block title %}Приветствие Редактор - Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-handshake" ></i> Приветствие / Прощание{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -241,7 +241,7 @@ function wCardRefreshPreview() {
       if (u && u.toLowerCase().indexOf('https://') === 0) img.src = u;
       return;
     }
-    var theme = document.getElementById('wCardTheme').value || 'aether';
+    var theme = document.getElementById('wCardTheme').value || 'hakumo';
     var kind = document.getElementById('wCardKind').value || 'welcome';
     img.src = '/api/guild/' + selectedGuild + '/welcome-card/preview.png?theme=' +
               encodeURIComponent(theme) + '&kind=' + encodeURIComponent(kind) +

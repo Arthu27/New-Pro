@@ -9,7 +9,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 
-_TMP = tempfile.mkdtemp(prefix='aether_names_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_names_')
 os.environ['DB_PATH'] = os.path.join(_TMP, 'bot.db')
 os.environ['DEMO_MODE'] = '1'
 os.environ['SECRET_KEY'] = 'test-secret'

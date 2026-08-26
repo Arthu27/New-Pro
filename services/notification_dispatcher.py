@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Диспетчер уведомлений панели Aether.
+"""Диспетчер уведомлений панели Hakumo.
 
 Доставляет события (тикеты и др.) по каналам из data/notification_settings.json:
 
@@ -178,12 +178,12 @@ def _send_webhook(url, title, body, icon):
     try:
         import requests
         payload = {
-            'username': 'Aether Уведомления',
+            'username': 'Hakumo Уведомления',
             'embeds': [{
                 'title': f'{icon} {title}',
                 'description': body[:4000],
                 'color': 0xC8922A,
-                'footer': {'text': 'Aether · Уведомления панели'},
+                'footer': {'text': 'Hakumo · Уведомления панели'},
                 'timestamp': datetime.now(timezone.utc).isoformat(),
             }],
         }
@@ -206,7 +206,7 @@ def _send_email_sync(settings, title, body, result_box):
             result_box.append((False, 'SMTP не настроен'))
             return
         msg = MIMEText(body, 'plain', 'utf-8')
-        msg['Subject'] = Header(f'Aether · {title}', 'utf-8')
+        msg['Subject'] = Header(f'Hakumo · {title}', 'utf-8')
         msg['From'] = login
         msg['To'] = login
         with smtplib.SMTP(server, port, timeout=10) as smtp:

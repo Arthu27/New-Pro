@@ -320,8 +320,8 @@ class Moderation (commands .Cog ):
             perm, label = self._NEED_PERMS.get(action, (None, None))
             if perm and me and not getattr(me.guild_permissions, perm, False):
                 return f'Боту не выдано право «{label}». Настройки сервера → Роли → роль бота.'
-        except Exception:
-            pass
+        except Exception as _fre:
+            log.debug('forbidden_reason: подавлено: %s', _fre)
         return ('Проверьте: роль бота выше роли нарушителя и у бота есть нужное '
                 'право (Настройки сервера → Роли).')
 

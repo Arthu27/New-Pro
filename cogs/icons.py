@@ -1,4 +1,4 @@
-"""Aether — фирменные иконки (assets/icons/) — помощник embed-миниатюр"""
+"""Hakumo — фирменные иконки (assets/icons/) — помощник embed-миниатюр"""
 import os 
 import discord 
 

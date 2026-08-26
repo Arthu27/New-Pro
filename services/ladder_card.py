@@ -1,10 +1,10 @@
 """
-Aether — визуальная лестница наказаний (Pillow).
+Hakumo — визуальная лестница наказаний (Pillow).
 
 Ступени слева направо: «N предупреждений → действие». Рисуется ботом на фоне Midnight Navy.
 
     from services.ladder_card import render_ladder_card, LADDER_CARD_OK
-    png = render_ladder_card(steps, guild_name='AETHER')
+    png = render_ladder_card(steps, guild_name='HAKUMO')
 """
 import io
 import os
@@ -148,7 +148,7 @@ def render_ladder_card(steps, guild_name=''):
         d.rectangle((16, 16, W - 16, H - 16), outline=(212, 175, 55, 40), width=1)
 
         # Шапка
-        badge_txt = "✦ AETHER · ЛЕСТНИЦА НАКАЗАНИЙ"
+        badge_txt = "✦ HAKUMO · ЛЕСТНИЦА НАКАЗАНИЙ"
         bw = d.textlength(badge_txt, font=_font(20, True)) + 24
         d.rounded_rectangle((PAD, 48, PAD + bw, 48 + 34), radius=10,
                             fill=(20, 28, 48, 220), outline=(212, 175, 55, 120), width=1)
@@ -217,8 +217,8 @@ def render_ladder_card(steps, guild_name=''):
         # Футер
         fy = H - 66
         d.line([(PAD, fy), (W - PAD, fy)], fill=GOLD_SOFT, width=1)
-        d.text((PAD, fy + 14), 'AETHER MODERATION · АВТО-НАКАЗАНИЯ', font=_font(22), fill=GOLD)
-        brand = '✦ AETHER'
+        d.text((PAD, fy + 14), 'HAKUMO MODERATION · АВТО-НАКАЗАНИЯ', font=_font(22), fill=GOLD)
+        brand = '✦ HAKUMO'
         d.text((W - PAD - d.textlength(brand, font=_font(24, True)), fy + 12),
                brand, font=_font(24, True), fill=GOLD_BRIGHT)
 

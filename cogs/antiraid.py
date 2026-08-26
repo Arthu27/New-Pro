@@ -1,5 +1,5 @@
 """
-Aether — Анти-рейд / Защита от рейдов
+Hakumo — Анти-рейд / Защита от рейдов
 ----------------------------------
 Режим: "Наблюдатель" (только чтение).
 
@@ -27,7 +27,7 @@ import os
 import time
 import logging
 
-log = logging.getLogger("aether.antiraid")
+log = logging.getLogger("hakumo.antiraid")
 
 class GuildAntiraidConfig:
     """In-memory кэш настроек анти-рейда для одной гильдии, читает с диска."""
@@ -174,7 +174,7 @@ class AntiRaid(commands.Cog):
 
         embed = discord.Embed(title=title, description=description, color=color,
                               timestamp=datetime.now(timezone.utc))
-        embed.set_footer(text="Aether AntiRaid — Режим наблюдения (без авто-действий)")
+        embed.set_footer(text="Hakumo AntiRaid — Режим наблюдения (без авто-действий)")
         for name, value in (fields or []):
             embed.add_field(name=name, value=value, inline=False)
         try:

@@ -10,7 +10,7 @@ import re
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_modmode_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_modmode_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -145,8 +145,8 @@ for fn in os.listdir(os.path.join(ROOT, 'web', 'templates')):
     if fn.endswith('.html'):
         all_tpl += open(os.path.join(ROOT, 'web', 'templates', fn), encoding='utf-8').read()
 check('style="!important' not in all_tpl, 'битые style="!important; ..." вычищены везде')
-check('Hakumo' not in all_tpl and 'HAKUMO' not in all_tpl,
-      'чужой бренд (Hakumo) вычищен из шаблонов')
+check('Aether' not in all_tpl and 'AETHER' not in all_tpl,
+      'старый бренд Aether не встречается (бренд — Hakumo)')
 
 # глобальный эмодзи-сторож: декоративные классы запрещены во всех шаблонах
 # (функциональные пикеры <option>/<input> и валидаторы — вне этих классов)

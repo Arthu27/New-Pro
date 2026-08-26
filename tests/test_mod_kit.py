@@ -9,7 +9,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone, timedelta
 
-_TMP = tempfile.mkdtemp(prefix='aether_modkit_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_modkit_test_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

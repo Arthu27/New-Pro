@@ -104,7 +104,7 @@ class AdvancedMod (commands .Cog ):
         e .add_field (name ="Причина",value =f"```{info.get('reason','Не указана')}```",inline =False )
         e .add_field (name ="Сообщение",value =f"{content[:900] or '(пусто)'}",inline =False )
         e .add_field (name ="Ссылка",value =f"[Перейти]({message.jump_url})",inline =False )
-        e .set_footer (text ="Aether Модерация • watchlist",icon_url =message .guild .icon .url if message .guild .icon else None )
+        e .set_footer (text ="Hakumo Модерация • watchlist",icon_url =message .guild .icon .url if message .guild .icon else None )
         try :
             await target .send (embed =e )
         except Exception as ex :
@@ -151,7 +151,7 @@ class AdvancedMod (commands .Cog ):
         e .add_field (name ="✍️ Добавил",value =interaction .user .mention ,inline =True )
         e .add_field (name ="📝 Заметка",value =f"```{note}```",inline =False )
         e .add_field (name =" Дата",value =f"<t:{now_ts()}:F>",inline =False )
-        e .set_footer (text =f"Aether Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+        e .set_footer (text =f"Hakumo Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
     @app_commands .command (name ="notes",description ="Показать заметки пользователя")
@@ -177,7 +177,7 @@ class AdvancedMod (commands .Cog ):
             value =f"```{n['note']}```*— {n['mod']}*",
             inline =False 
             )
-        e .set_footer (text =f"Всего {len(notes)} заметок • Aether Модерация",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+        e .set_footer (text =f"Всего {len(notes)} заметок • Hakumo Модерация",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
     @app_commands .command (name ="watchlist",description ="Добавить/удалить из списка наблюдения")
@@ -196,7 +196,7 @@ class AdvancedMod (commands .Cog ):
             e .set_thumbnail (url =user .display_avatar .url )
             e .add_field (name =" Пользователь",value =f"{user.mention}\n`{user.id}`",inline =True )
             e .add_field (name =" Дата",value =f"<t:{now_ts()}:R>",inline =True )
-            e .set_footer (text =f"Aether Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+            e .set_footer (text =f"Hakumo Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         else :
             self .data ["watchlist"][guild_id ][user_id ]={
             "reason":reason or "Не указана",
@@ -214,7 +214,7 @@ class AdvancedMod (commands .Cog ):
             e .add_field (name ="✍️ Добавил",value =interaction .user .mention ,inline =True )
             e .add_field (name =" Причина",value =f"```{reason or 'Не указана'}```",inline =False )
             e .add_field (name =" Дата",value =f"<t:{now_ts()}:F>",inline =False )
-            e .set_footer (text =f"Aether Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+            e .set_footer (text =f"Hakumo Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e ,ephemeral =True )
 
     @app_commands .command (name ="watchlist-show",description ="Показать список наблюдения")
@@ -257,7 +257,7 @@ class AdvancedMod (commands .Cog ):
             inline =False 
             )
         e .set_footer (
-        text =f"Всего: {len(watchlist)} пользователей • Aether Модерация",
+        text =f"Всего: {len(watchlist)} пользователей • Hakumo Модерация",
         icon_url =interaction .guild .icon .url if interaction .guild .icon else None 
         )
         await interaction .response .send_message (embed =e ,ephemeral =True )
@@ -286,7 +286,7 @@ class AdvancedMod (commands .Cog ):
             inline =False 
             )
         e .set_footer (
-        text =f"Всего: {len(bans)} банов • Aether Модерация",
+        text =f"Всего: {len(bans)} банов • Hakumo Модерация",
         icon_url =interaction .guild .icon .url if interaction .guild .icon else None 
         )
         await interaction .followup .send (embed =e ,ephemeral =True )
@@ -328,7 +328,7 @@ class AdvancedMod (commands .Cog ):
         else :
             await interaction .followup .send ("❌ Неверное действие! Выберите «выдать» или «снять».",ephemeral =True )
             return 
-        e .set_footer (text =f"Aether Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+        e .set_footer (text =f"Hakumo Модерация • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .followup .send (embed =e ,ephemeral =True )
 
 

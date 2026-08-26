@@ -21,7 +21,7 @@ import tempfile
 import threading
 from datetime import datetime, timedelta
 
-_TMP = tempfile.mkdtemp(prefix='aether_archive_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_archive_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

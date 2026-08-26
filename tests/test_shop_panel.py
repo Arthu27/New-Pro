@@ -17,7 +17,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_shoppanel_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_shoppanel_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -140,7 +140,7 @@ def post(path, payload):
 check(client.get('/shop').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get('/api/shop/state').status_code in (302, 401, 403), 'гостю state закрыт')
 login('uye')
-check(client.get('/shop').status_code == 403, 'uye нельзя страницу')
+check(client.get('/shop').status_code == 302, 'uye нельзя страницу')
 login('mod')
 check(client.get('/shop').status_code == 200, 'mod читает страницу (200)')
 check(client.get('/api/shop/state').status_code == 200, 'mod читает state (200)')

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Страж красоты LEAN-состава: каждая команда — с описанием, по-русски,
-без турецкого мусора и чужих брендов; Aether-кит эмбедов на месте.
+без турецкого мусора и чужих брендов; Hakumo-кит эмбедов на месте.
 
 Запуск: python3 tests/test_lean_beauty.py
 """
@@ -40,19 +40,19 @@ non_ru = [c['name'] for c in data['commands']
           if not re.search('[а-яА-ЯёЁ]', c['desc'])]
 check(not non_ru, f'описания по-русски у всех {non_ru[:6]}')
 
-print('== 2. Aether-кит эмбедов ==')
+print('== 2. Hakumo-кит эмбедов ==')
 from cogs import embed_utils as EU  # noqa: E402
 
-for name in ('aether_embed', 'reply', 'bar', 'plural', 'fmt_duration',
-             'mod_dm_embed', 'KINDS', 'GOLD', 'Aether_footer'):
+for name in ('hakumo_embed', 'reply', 'bar', 'plural', 'fmt_duration',
+             'mod_dm_embed', 'KINDS', 'GOLD', 'Hakumo_footer'):
     check(hasattr(EU, name), f'embed_utils экспортирует {name}')
 check(len(EU.KINDS) >= 12, f'типов оформления KINDS ≥ 12 ({len(EU.KINDS)})')
 import discord  # noqa: E402
-e = EU.aether_embed('music', 'Тест', 'описание',
+e = EU.hakumo_embed('music', 'Тест', 'описание',
                     fields=[('Поле', 'значение', True)])
 check(isinstance(e, discord.Embed) and e.description == 'описание'
       and e.fields and e.color.value == EU.GOLD,
-      'aether_embed собирает фирменный эмбед')
+      'hakumo_embed собирает фирменный эмбед')
 check(EU.plural(1, 'трек', 'трека', 'треков') == 'трек'
       and EU.plural(3, 'трек', 'трека', 'треков') == 'трека'
       and EU.plural(7, 'трек', 'трека', 'треков') == 'треков'
@@ -81,13 +81,13 @@ for fn in sorted(os.listdir(os.path.join(ROOT, 'cogs'))):
     if not fn.endswith('.py'):
         continue
     src = open(os.path.join(ROOT, 'cogs', fn), encoding='utf-8').read()
-    if 'Hakumo' in src or 'HAKUMO' in src:
+    if 'Aether' in src or 'AETHER' in src:
         junk.append(fn)
-check(not junk, f'бренд Hakumo вычищен из всех когов {junk}')
+check(not junk, f'старый бренд Aether не встречается (бренд — Hakumo) {junk}')
 
 print('== 5. Красивые подписи в музыке и голосе ==')
 music = open(os.path.join(ROOT, 'cogs', 'music_cog.py'), encoding='utf-8').read()
-check('aether_embed' in music and 'embed_utils' in music,
+check('hakumo_embed' in music and 'embed_utils' in music,
       'music_cog отвечает фирменными эмбедами')
 check("dark_grey" not in music, 'music_cog: унылый dark_grey убран')
 tracker = open(os.path.join(ROOT, 'cogs', 'voice_tracker.py'), encoding='utf-8').read()

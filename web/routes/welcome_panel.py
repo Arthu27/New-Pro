@@ -78,7 +78,7 @@ def register(ctx):
             kind = 'welcome'
         try:
             png = WCG.render_welcome_card(
-                'Кипарис', 'Aether Demo', 1024,
+                'Кипарис', 'Hakumo Demo', 1024,
                 kind=kind, theme=theme or WCG.DEFAULT_WELCOME_THEME)
         except Exception as _ex:
             _log.debug('welcome-card preview: %s', _ex)

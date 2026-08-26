@@ -11,7 +11,7 @@ import tempfile
 import zipfile
 
 # временная рабочая директория — data/, backups/ не мусорят в репо
-_TMP = tempfile.mkdtemp(prefix='aether_backup_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_backup_test_')
 os.chdir(_TMP)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

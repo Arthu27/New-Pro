@@ -133,7 +133,7 @@ def register(ctx):
         if not channel :
             return jsonify ({'error':'Канал не найден'}),404 
 
-        ends_at =datetime.now(timezone.utc).replace(tzinfo=None)+timedelta (minutes =minutes )
+        ends_at =datetime.now(timezone.utc)+timedelta (minutes =minutes )
         gw_id =str (int (ends_at .timestamp ()))
 
         def _send ():
@@ -164,7 +164,7 @@ def register(ctx):
                     gws =json .load (fp )
             gws [gw_id ]={
             'prize':prize ,'winners':winners ,
-            'created_at':datetime .now(timezone.utc).replace(tzinfo =None ).isoformat (),
+            'created_at':datetime .now(timezone.utc).isoformat (),
             'ends_at':ends_at .isoformat (),
             'channel_id':str (channel .id ),
             'message_id':str (msg .id ),

@@ -13,7 +13,7 @@ _log = logging.getLogger(__name__)
 
 URL_FILE = 'tunnel_url.txt'
 # Имя туннеля — то же, что в scripts/setup_panel_tunnel.bat.
-TUNNEL_NAME = 'aether-panel'
+TUNNEL_NAME = 'hakumo-panel'
 
 
 def find_config(root):
@@ -67,7 +67,23 @@ def drop_stale_url(root):
         _log.debug('named_tunnel.drop_stale_url(): подавлено: %s', _ex)
 
 
-RUNTIME_CONFIG = '.aether_tunnel_runtime.yml'
+RUNTIME_CONFIG = '.hakumo_tunnel_runtime.yml'
+# до ребрендинга файл назывался aether — переносим, чтобы туннель на VDS
+# не настраивался заново после обновления
+_LEGACY_RUNTIME_CONFIG = '.aether_tunnel_runtime.yml'
+
+
+def _migrate_legacy_runtime(scripts_dir):
+    """Старый runtime-конфиг туннеля → новое имя (один раз, молча)."""
+    try:
+        old = os.path.join(scripts_dir, _LEGACY_RUNTIME_CONFIG)
+        new = os.path.join(scripts_dir, RUNTIME_CONFIG)
+        if os.path.isfile(old) and not os.path.exists(new):
+            os.replace(old, new)
+            _log.info('named_tunnel: перенёс %s → %s',
+                      _LEGACY_RUNTIME_CONFIG, RUNTIME_CONFIG)
+    except Exception as _ex:
+        _log.debug('named_tunnel.migrate(): подавлено: %s', _ex)
 
 
 def ensure_binary(scripts_dir):
@@ -117,6 +133,7 @@ def runtime_config(root, cfg_path):
     scripts/tunnel-creds.json) и пишем рантайм-копию конфига с абсолютным путём.
     Если записанный путь жив (та же машина) — конфиг не трогаем.
     """
+    _migrate_legacy_runtime(root)
     try:
         with open(cfg_path, 'r', encoding='utf-8', errors='replace') as fh:
             text = fh.read()

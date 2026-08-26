@@ -17,7 +17,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 
-_TMP = tempfile.mkdtemp(prefix='aether_replay_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_replay_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -174,7 +174,7 @@ FEED = '/api/guild/777/replay/feed'
 check(client.get('/replay').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get(FEED).status_code in (302, 401, 403), 'гостю API закрыто')
 login('uye')
-check(client.get('/replay').status_code == 403, 'uye не видит страницу')
+check(client.get('/replay').status_code == 302, 'uye не видит страницу')
 check(client.get(FEED).status_code == 403, 'uye не видит API')
 login('mod')
 page = client.get('/replay')

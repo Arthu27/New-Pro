@@ -18,7 +18,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_cmdcat_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_cmdcat_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -46,8 +46,8 @@ print('== 1. Реестр команд (LEAN — боевой состав по 
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-check(data['total'] == 25, f"lean: собрано {data['total']} живых команд (после чистки — 25)")
-check(data['slash'] == 13 and data['prefix'] == 12,
+check(data['total'] == 26, f"lean: собрано {data['total']} живых команд (после чистки — 26, с /proof)")
+check(data['slash'] == 14 and data['prefix'] == 12,
       f"lean: slash {data['slash']} + prefix {data['prefix']} — оба вида на месте")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
@@ -61,7 +61,7 @@ check('Голосовые' not in labels,
 check('Экономика' not in labels and 'Уровни и карма' not in labels,
       'lean: спящие системы (экономика/уровни) честно не показываются')
 mods = data.get('modules') or {}
-check(mods.get('enabled') == 29 and mods.get('sleeping') == 75,  # +activity_stats (без команд)
+check(mods.get('enabled') == 30 and mods.get('sleeping') == 75,  # +proof_cog (демки)
       f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')}")
 
 print('== 1.1. Реестр в BOT_FULL (полный состав) ==')
@@ -142,9 +142,9 @@ check(d['total'] == data['total'] and d['shown'] == d['total']
       and len(d['commands']) == d['total'],
       'без фильтров отдаётся весь lean-каталог (как в боте)')
 check(d['slash'] > 0 and d['prefix'] > 0, 'счётчики типов в ответе')
-check(d.get('modules', {}).get('enabled') == 29
+check(d.get('modules', {}).get('enabled') == 30
       and d['modules']['sleeping'] == 75,
-      'в ответе — счётчик модулей (29 включено / 75 спит)')
+      'в ответе — счётчик модулей (30 включено / 75 спит)')
 
 r = client.get('/api/commands/catalog?q=play')
 d = r.get_json()

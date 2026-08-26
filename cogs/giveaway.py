@@ -151,8 +151,8 @@ class GiveawayCog(commands.Cog):
                 if gw.get("status") != "active":
                     continue
 
-                ends_at = datetime.fromisoformat(gw["ends_at"])
-                if datetime.now() < ends_at:
+                ends_at = datetime.fromisoformat(gw["ends_at"]).replace(tzinfo=None) if datetime.fromisoformat(gw["ends_at"]).tzinfo is None else datetime.fromisoformat(gw["ends_at"])
+                if datetime.now(tz=ends_at.tzinfo) < ends_at:
                     continue
 
                 # Розыгрыш завершён
@@ -240,7 +240,7 @@ class GiveawayCog(commands.Cog):
         data[gw_id] = {
             "prize": prize,
             "winners": winners,
-            "created_at": datetime.now().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "ends_at": ends_at.isoformat(),
             "channel_id": str(ctx.channel.id),
             "status": "active",

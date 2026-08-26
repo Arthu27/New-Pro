@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Настройки темы - Aether{% endblock %}
+{% block title %}Настройки темы - Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-palette"></i> Настройки темы{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -103,12 +103,12 @@ function setTheme(theme) {
   currentTheme = theme;
   var resolved = resolveTheme(theme);
   document.documentElement.setAttribute('data-theme', resolved);
-  try { localStorage.setItem('aether_theme', resolved); } catch(e){}
+  try { localStorage.setItem('hakumo_theme', resolved); } catch(e){}
 }
 function setAccentColor(color) {
   currentAccentColor = color;
   if (window.applyAccent) window.applyAccent(color);
-  try { localStorage.setItem('aether_accent', color); } catch(e){}
+  try { localStorage.setItem('hakumo_accent', color); } catch(e){}
   document.querySelectorAll('.color-option').forEach(function(el){
     el.classList.toggle('selected', (el.getAttribute('data-color')||'').toLowerCase() === String(color).toLowerCase());
   });

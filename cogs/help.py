@@ -11,8 +11,8 @@ _log = get_logger("help")
 # Команды отвечают «выключена владельцем». Вернуть: HELP_ENABLED = True.
 HELP_ENABLED = False
 def _help_disabled_embed(guild=None):
-    from cogs.embed_utils import aether_embed
-    return aether_embed(
+    from cogs.embed_utils import hakumo_embed
+    return hakumo_embed(
         'system', 'Справка выключена',
         'Команда временно выключена владельцем сервера.',
         guild=guild)
@@ -189,10 +189,10 @@ def build_help_embed(category_id=None, member=None, guild_id=0):
         for i, chunk in enumerate(_help_chunks(cmds)):
             e.add_field(name=(f'{emo} {cat}' if i == 0 else f'{cat} · продолжение'),
                         value=', '.join(chunk), inline=False)
-        e.set_footer(text='Aether · назад ко всем разделам — «Главное меню» в списке ниже')
+        e.set_footer(text='Hakumo · назад ко всем разделам — «Главное меню» в списке ниже')
         return e
 
-    e = discord.Embed(title='🧭 Справка Aether — команды', color=_HELP_COLOR)
+    e = discord.Embed(title='🧭 Справка Hakumo — команды', color=_HELP_COLOR)
     e.description = (
         'Пульт бота: выберите раздел в меню под сообщением — '
         'покажем команды именно этого раздела.\n'
@@ -211,7 +211,7 @@ def build_help_embed(category_id=None, member=None, guild_id=0):
             if i == 0 and blurb:
                 val = f'*{blurb}*\n' + val
             e.add_field(name=name, value=val, inline=False)
-    e.set_footer(text='Aether · /help <раздел> — сразу открыть нужный, напр. /help Тикеты')
+    e.set_footer(text='Hakumo · /help <раздел> — сразу открыть нужный, напр. /help Тикеты')
     return e
 
 # Палитра — тёмный люкс
@@ -387,7 +387,7 @@ CAT_ICONS = {
     "profile": "afk_icon",
     "navigation": "navigation",
 }
-# Без эмоджи-заглушек (пожелание владельца): если кастомных aether_* нет,
+# Без эмоджи-заглушек (пожелание владельца): если кастомных hakumo_* нет,
 # пункт меню выводится просто без иконки.
 CAT_EMOJIS_FALLBACK = {}
 
@@ -433,8 +433,8 @@ def generate_help_card(category_id: str = None) -> Image.Image:
         dd.text((sc(LW - 24 - 166) + (pill_w - tw) / 2, sc(52)), "✦ HELP", fill=GOLD, font=pf2)
 
     if is_overview:
-        header("AETHER  ·  СПРАВКА",
-               f"{TOTAL_CMDS} КОМАНД  ·  ПРЕФИКС: !  ·  ВЫБОР КАТЕГОРИИ В МЕНЮ", "aether_logo")
+        header("HAKUMO  ·  СПРАВКА",
+               f"{TOTAL_CMDS} КОМАНД  ·  ПРЕФИКС: !  ·  ВЫБОР КАТЕГОРИИ В МЕНЮ", "hakumo_logo")
 
         # ── Сетка категорий 2×6, крупно и без мелкого текста ──
         box_w, box_h, gap_x, gap_y = (LW - 48 - 14) // 2, 96, 14, 9
@@ -444,7 +444,7 @@ def generate_help_card(category_id: str = None) -> Image.Image:
             bx = start_x + c * (box_w + gap_x)
             by = start_y + r * (box_h + gap_y)
             bg.alpha_composite(_panel_shadowed(sc(box_w), sc(box_h), radius=sc(16)), (sc(bx) - sc(6), sc(by) - sc(6)))
-            icon = _cat_icon(CAT_ICONS.get(cat["id"], "aether_logo"), sc(64))
+            icon = _cat_icon(CAT_ICONS.get(cat["id"], "hakumo_logo"), sc(64))
             bg.alpha_composite(icon, (sc(bx + 14), sc(by + 16)))
             dd = ImageDraw.Draw(bg)
             title_f = _f(True, sc(25))
@@ -456,9 +456,9 @@ def generate_help_card(category_id: str = None) -> Image.Image:
     else:
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
         cmds = cat["commands"] if cat else []
-        icon_key = CAT_ICONS.get(category_id, "aether_logo")
+        icon_key = CAT_ICONS.get(category_id, "hakumo_logo")
         header(f"{cat['title'].upper() if cat else 'СПРАВКА'}",
-               f"{len(cmds)} КОМАНД  ·  СПРАВКА AETHER", icon_key)
+               f"{len(cmds)} КОМАНД  ·  СПРАВКА HAKUMO", icon_key)
 
         col2 = len(cmds) > 6
         box_w = (LW - 48 - 14) // 2 if col2 else LW - 48
@@ -545,13 +545,13 @@ CUSTOM_EMOJIS: dict = {}
 
 
 def load_custom_help_emojis(bot):
-    """Сканировать кастом-эмодзи сервера; aether_<icon> привязать к меню help.
+    """Сканировать кастом-эмодзи сервера; hakumo_<icon> привязать к меню help.
     Загрузка иконок: !upload-emoji (PNG из assets/icons станут эмодзи сервера)."""
     CUSTOM_EMOJIS.clear()
     for g in bot.guilds:
         for e in g.emojis:
-            if e.name.startswith('aether_') and e.available:
-                key = e.name[len('aether_'):]
+            if e.name.startswith('hakumo_') and e.available:
+                key = e.name[len('hakumo_'):]
                 CUSTOM_EMOJIS.setdefault(key, str(e))
 
 

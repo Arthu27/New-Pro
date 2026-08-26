@@ -612,7 +612,7 @@ def _load_owner_credentials ():
         _store .invalidate_path (_OWNER_CRED_PATH )
         os .makedirs ('data',exist_ok =True )
         with open ('data/panel_credentials.txt','w',encoding ='utf-8')as f :
-            f .write (f'Aether Panel — первый вход\nПользователь: {user}\nПароль: {gen}\n'
+            f .write (f'Hakumo Panel — первый вход\nПользователь: {user}\nПароль: {gen}\n'
                       'Пароль можно сменить в панели (Профиль → Сменить пароль) '
                       'или задать PANEL_PASSWORD в .env\n')
         try :
@@ -1063,7 +1063,7 @@ def register ():
             try :
                 user =await bot_instance .fetch_user (int (discord_id ))
                 e =discord .Embed (
-                title =" Aether Panel — Запись Проверка",
+                title =" Hakumo Panel — Запись Проверка",
                 color =0xc8922a ,
                 timestamp =datetime.now(timezone.utc)
                 )
@@ -1071,7 +1071,7 @@ def register ():
                 "```ansi\n\u001b[1;33m ТРЕБУЕТСЯ ПРОВЕРКА КОДА \u001b[0m\n```\n"
                 "\n\n"
                 f"Привет **{member_info['display_name']}**! \n\n"
-                "Чтобы зарегистрироваться в **Aether Panel**,\n"
+                "Чтобы зарегистрироваться в **Hakumo Panel**,\n"
                 "введите код проверки на странице регистрации:\n\n"
                 f"```fix\n{code}\n```\n\n"
                 ""
@@ -1083,7 +1083,7 @@ def register ():
                 value ="*Если вы не регистрировались — игнорируйте это сообщение и никому не передавайте код.*",
                 inline =False 
                 )
-                e .set_footer (text ="Aether Panel • Доверие Запись Система")
+                e .set_footer (text ="Hakumo Panel • Доверие Запись Система")
                 await user .send (embed =e )
             except Exception as ex :
                 print (f"DM не отправлено: {ex}")
@@ -1343,7 +1343,7 @@ def api_send_notification ():
                 description =message ,
                 color =0xdc143c 
                 )
-                embed .set_footer (text ="Aether Panel • Уведомление",icon_url =bot_instance .user .display_avatar .url )
+                embed .set_footer (text ="Hakumo Panel • Уведомление",icon_url =bot_instance .user .display_avatar .url )
                 embed .timestamp =datetime.now(timezone.utc)
                 await user .send (embed =embed )
             except Exception as e :
@@ -1492,8 +1492,9 @@ def commands_page ():
 @login_required 
 @role_required ('admin')
 def command_switches_page ():
-    """Ярлык из «Настройки»: та же страница «Команды» с тумблерами."""
-    return redirect ('/commands')
+    """Ярлык из «Настройки»: та же страница «Команды» с тумблерами
+    (рендерим на месте, не редирект — меню и аудит видят 200)."""
+    return render_template ('commands.html',role =session .get ('role'),username =session .get ('username'))
 
 @app .route ('/settings')
 @login_required 
@@ -2324,7 +2325,7 @@ def api_execute_command ():
                 from cogs .embed_utils import _divider 
                 e =discord .Embed (title =" ПОДДЕРЖКА СИСТЕМА",color =0x5865F2 )
                 e .description =(
-                "```ansi\n\u001b[1;34m Aether ПОДДЕРЖКА СИСТЕМА \u001b[0m\n```\n"
+                "```ansi\n\u001b[1;34m Hakumo ПОДДЕРЖКА СИСТЕМА \u001b[0m\n```\n"
                 f"{_divider()}\n\n"
                 "Возникла проблема? Нажми кнопку ниже!\n\n"
                 f"{_divider()}"
@@ -2529,7 +2530,7 @@ def api_review_staff_app (app_id ):
                                 if prole in ('mod','curator','admin')and guild .get_role (int (rid )):
                                     target =guild .get_role (int (rid ));break
                             if member and target :
-                                await member .add_roles (target ,reason ='Заявка одобрена (Aether Panel)')
+                                await member .add_roles (target ,reason ='Заявка одобрена (Hakumo Panel)')
                                 role_info ['assigned']=target .name
                             elif not target :
                                 role_info ['error']='not_mapped'
@@ -2549,7 +2550,7 @@ def api_review_staff_app (app_id ):
                     if note :
                         embed .add_field (name =" Заметка",value =note ,inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
-                    embed .set_footer (text ="Aether Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
+                    embed .set_footer (text ="Hakumo Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
                     embed .timestamp =datetime.now(timezone.utc)
                 else :
                     embed =discord .Embed (
@@ -2561,7 +2562,7 @@ def api_review_staff_app (app_id ):
                     embed .add_field (name =" Заявка ID",value =f"`{app_id}`",inline =True )
                     embed .add_field (name =" Причина отказа",value =note if note else "Не указана",inline =False )
                     embed .set_thumbnail (url =bot_instance .user .display_avatar .url )
-                    embed .set_footer (text ="Aether Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
+                    embed .set_footer (text ="Hakumo Panel • Система заявок",icon_url =bot_instance .user .display_avatar .url )
                     embed .timestamp =datetime.now(timezone.utc)
                 await user .send (embed =embed )
                 dm_info ['sent']=True
@@ -3217,9 +3218,9 @@ def api_discord_check ():
         _login_pins [discord_id ]={'code':code ,'expires':_t .time ()+300 ,'member_info':member_info }
         async def send_pin ():
             u =await bot_instance .fetch_user (int (discord_id ))
-            embed =discord .Embed (title ='Aether — Код авторизации',color =0xc8922a ,timestamp =datetime.now(timezone.utc))
+            embed =discord .Embed (title ='Hakumo — Код авторизации',color =0xc8922a ,timestamp =datetime.now(timezone.utc))
             embed .description =f"Здравствуйте, **{member_info['display_name']}**!\n\nВаш PIN-код для входа в панель:\n\n```fix\n{code}\n```\nДействителен в течение 5 минут."
-            embed .set_footer (text ="Aether Panel")
+            embed .set_footer (text ="Hakumo Panel")
             await u .send (embed =embed )
         asyncio .run_coroutine_threadsafe (send_pin (),bot_instance .loop ).result (timeout =10 )
         tests .append ({'name':'Отправка PIN-кода','status':'ok','detail':'Отправлено в ЛС'})
@@ -3411,7 +3412,7 @@ def api_bot_sync ():
         if _demo_mode ():
             # витрина без живого бота: команда «сработала», страница живая
             _log_panel_action ('BOT_SYNC',session .get ('username'))
-            return jsonify ({'success':True ,'demo':True ,'synced_guilds':['Aether Demo']})
+            return jsonify ({'success':True ,'demo':True ,'synced_guilds':['Hakumo Demo']})
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
     async def do ():
     # Guild-specific sync (anыnda etkili) + global sync
@@ -3498,7 +3499,7 @@ def api_global_search ():
     return jsonify (results [:15 ])
 
     # Голос Команда Endpoint (voice_listener.py для) 
-VOICE_SECRET =os .getenv ('VOICE_SECRET','Aether-voice-2024')
+VOICE_SECRET =os .getenv ('VOICE_SECRET','Hakumo-voice-2024')
 
 @app .route ('/api/voice-command',methods =['POST'])
 def api_voice_command ():

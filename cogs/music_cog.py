@@ -1,5 +1,5 @@
 """
-Music Cog — музыка Aether.
+Music Cog — музыка Hakumo.
 Включить трек, очередь, пауза/продолжить, пропуск, громкость, повтор.
 Все ответы — в фирменном тёмно-золотом стиле (cogs/embed_utils).
 """
@@ -11,7 +11,7 @@ import random
 from logger import get_logger
 log = get_logger("music_cog")
 
-from cogs.embed_utils import aether_embed, reply, plural
+from cogs.embed_utils import hakumo_embed, reply, plural
 
 
 def shuffle_queue(queue: list) -> list:
@@ -42,7 +42,7 @@ def _track_name(item: dict) -> str:
 
 
 class MusicCog(commands.Cog):
-    """Музыкальные команды Aether"""
+    """Музыкальные команды Hakumo"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -77,7 +77,7 @@ class MusicCog(commands.Cog):
         else:
             title, pos = 'Добавлено в очередь', f'{len(queue)}-я'
 
-        embed = aether_embed(
+        embed = hakumo_embed(
             'music', title, None,
             fields=[('Трек', f'**{_track_name(queue[-1])}**', False),
                     ('Позиция', pos, True),
@@ -143,8 +143,8 @@ class MusicCog(commands.Cog):
         more = len(queue) - 10
         if more > 0:
             rows.append(f'…и ещё **{more}** {plural(more, "трек", "трека", "треков")}')
-        embed = aether_embed(
-            'music', 'Очередь Aether', '\n'.join(rows),
+        embed = hakumo_embed(
+            'music', 'Очередь Hakumo', '\n'.join(rows),
             fields=[('Всего', f'{len(queue)} {plural(len(queue), "трек", "трека", "треков")}', True)],
             guild=ctx.guild, footer_extra='Музыка',
         )
@@ -158,7 +158,7 @@ class MusicCog(commands.Cog):
             await self._silent(ctx)
             return
         current = queue[0]
-        embed = aether_embed(
+        embed = hakumo_embed(
             'music', 'Сейчас играет', f'## {_track_name(current)}',
             fields=[('Заказал', getattr(current.get('requester'), 'mention', '—'), True),
                     ('В очереди', f'{len(queue)}', True)],

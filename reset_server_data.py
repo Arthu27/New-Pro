@@ -67,7 +67,7 @@ def main():
 
     targets = collect(keep_auth)
     print('═' * 60)
-    print('  СБРОС ДАННЫХ AETHER — переезд на новый сервер')
+    print('  СБРОС ДАННЫХ HAKUMO — переезд на новый сервер')
     print('═' * 60)
     if not targets:
         print('Уже чисто — удалять нечего.')

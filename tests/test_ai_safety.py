@@ -17,7 +17,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_ai_safety_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_ai_safety_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

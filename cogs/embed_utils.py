@@ -1,5 +1,5 @@
 """
-Aether — модуль Embed'ов и GIF
+Hakumo — модуль Embed'ов и GIF
 Все коги импортируют этот модуль — единый красивый стиль для всего бота.
 """
 import discord
@@ -30,8 +30,8 @@ def now_ts() -> int:
     return int(datetime.now(timezone.utc).timestamp())
 
 
-def Aether_footer(guild=None, extra=""):
-    text = f"Aether{' · ' + extra if extra else ''}"
+def Hakumo_footer(guild=None, extra=""):
+    text = f"Hakumo{' · ' + extra if extra else ''}"
     icon = guild.icon.url if guild and guild.icon else None
     return {"text": text, "icon_url": icon}
 
@@ -210,12 +210,12 @@ def warning_embed(title, description):
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# УНИВЕРСАЛЬНЫЙ AETHER-КИТ — единый премиальный стиль для всех команд бота.
+# УНИВЕРСАЛЬНЫЙ HAKUMO-КИТ — единый премиальный стиль для всех команд бота.
 # Тёмно-золотой фирменный стиль: аккуратные акценты по типу системы,
 # характерная кромка‑иконка, футер с именем сервера, живые метки времени.
 # ═══════════════════════════════════════════════════════════════════════
 
-GOLD = 0xD8A94E          # фирменное золото Aether
+GOLD = 0xD8A94E          # фирменное золото Hakumo
 GOLD_DARK = 0x9A7A35     # приглушённое золото
 
 KINDS = {
@@ -237,10 +237,10 @@ KINDS = {
 }
 
 
-def aether_embed(kind, title, description=None, fields=None, guild=None,
+def hakumo_embed(kind, title, description=None, fields=None, guild=None,
                  footer_extra='', thumbnail=None):
-    """Фирменный эмбед Aether: кромка-эмодзи в заголовке, цвет по типу системы,
-    футер «Aether · <сервер>», живая метка времени.
+    """Фирменный эмбед Hakumo: кромка-эмодзи в заголовке, цвет по типу системы,
+    футер «Hakumo · <сервер>», живая метка времени.
 
     fields — список кортежей (имя, значение, inline) или (имя, значение).
     thumbnail override: None → не ставить; 'guild' → иконка сервера.
@@ -257,7 +257,7 @@ def aether_embed(kind, title, description=None, fields=None, guild=None,
             e.add_field(name=f[0], value=f[1], inline=f[2])
         else:
             e.add_field(name=f[0], value=f[1])
-    foot = Aether_footer(guild, footer_extra) if guild else Aether_footer(None, footer_extra)
+    foot = Hakumo_footer(guild, footer_extra) if guild else Hakumo_footer(None, footer_extra)
     e.set_footer(text=foot['text'], icon_url=foot['icon_url'])
     if thumbnail == 'guild' and guild and guild.icon:
         e.set_thumbnail(url=guild.icon.url)
@@ -270,7 +270,7 @@ async def reply(ctx, kind, title, description=None, **kw):
     """Быстрый красивый ответ: один вызов вместо сборки эмбеда руками.
 
     Кварги для send (ephemeral, view, file, files, delete_after,
-    mention_author) пробрасываются в ctx.send, остальные — в aether_embed.
+    mention_author) пробрасываются в ctx.send, остальные — в hakumo_embed.
     """
     send_kw = {}
     for k in ('ephemeral', 'view', 'file', 'files', 'delete_after', 'mention_author'):
@@ -278,7 +278,7 @@ async def reply(ctx, kind, title, description=None, **kw):
             send_kw[k] = kw.pop(k)
     if 'guild' not in kw and getattr(ctx, 'guild', None):
         kw['guild'] = ctx.guild
-    return await ctx.send(embed=aether_embed(kind, title, description, **kw), **send_kw)
+    return await ctx.send(embed=hakumo_embed(kind, title, description, **kw), **send_kw)
 
 
 def bar(frac, width=12, filled='█', empty='░'):

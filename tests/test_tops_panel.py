@@ -19,7 +19,7 @@ import tempfile
 import time
 from datetime import datetime
 
-_TMP = tempfile.mkdtemp(prefix='aether_tops_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_tops_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Аналитика рисков · Модерация — Aether{% endblock %}
+{% block title %}Аналитика рисков · Модерация — Hakumo{% endblock %}
 {% block page_title %}Аналитика рисков{% endblock %}
 {% block content %}
 
@@ -263,7 +263,7 @@ $('miDossierId').addEventListener('keydown', function (e) { if (e.key === 'Enter
 
 function loadReasons() {
   fetch('/api/warnings').then(function (r) { return r.json(); }).then(function (warns) {
-    if (!window.AetherChart || !Array.isArray(warns)) return;
+    if (!window.HakumoChart || !Array.isArray(warns)) return;
     var counts = {};
     warns.forEach(function (w) {
       var key = String(w.reason || 'Без причины').toLowerCase();
@@ -272,7 +272,7 @@ function loadReasons() {
     var items = Object.keys(counts).map(function (k) {
       return { label: k.charAt(0).toUpperCase() + k.slice(1), value: counts[k] };
     }).sort(function (a, b) { return b.value - a.value; }).slice(0, 6);
-    window.AetherChart.vbars($('miReasons'), items);
+    window.HakumoChart.vbars($('miReasons'), items);
   }).catch(function () {});
 }
 

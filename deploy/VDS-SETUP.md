@@ -18,22 +18,22 @@
 
 ## Вариант 2 (правильно): systemd-служба
 
-Положи бота, например, в `/opt/aether`, один раз запусти `./start.sh`
+Положи бота, например, в `/opt/hakumo`, один раз запусти `./start.sh`
 (создаст .venv и поставит зависимости), затем:
 
 ```bash
-sudo cp deploy/aether.service /etc/systemd/system/aether.service
+sudo cp deploy/hakumo.service /etc/systemd/system/hakumo.service
 # открой файл и поправь WorkingDirectory под свой путь
 sudo systemctl daemon-reload
-sudo systemctl enable --now aether
+sudo systemctl enable --now hakumo
 ```
 
 Всё: бот стартует при загрузке VDS и поднимается через 5 секунд после
 любого падения. Логи службы:
 
 ```bash
-journalctl -u aether -f          # живой поток
-journalctl -u aether --since today | grep -i сеть
+journalctl -u hakumo -f          # живой поток
+journalctl -u hakumo --since today | grep -i сеть
 ```
 
 ## Как понять, от чего падало

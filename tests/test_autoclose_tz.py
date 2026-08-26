@@ -15,7 +15,7 @@ import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
 
-_TMP = tempfile.mkdtemp(prefix='aether_autoclose_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_autoclose_')
 os.environ['DB_PATH'] = os.path.join(_TMP, 'bot.db')
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

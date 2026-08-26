@@ -22,8 +22,8 @@ except ImportError :
     # ─── БАЗА ЗНАНИЙ О БОТЕ ───────────────────────────────────────────────────────
 
 def _bot_knowledge_base ()->str :
-    """Полная база знаний о боте Aether (Discord)"""
-    base ="""ПОЛНАЯ БАЗА ЗНАНИЙ О БОТЕ AETHER (Discord)
+    """Полная база знаний о боте Hakumo (Discord)"""
+    base ="""ПОЛНАЯ БАЗА ЗНАНИЙ О БОТЕ HAKUMO (Discord)
 ═══════════════════════════════════════════════════
 
 ## КОМАНДЫ БОТА (реальный боевой список — других команд НЕТ, не выдумывай!)
@@ -75,7 +75,7 @@ def _bot_knowledge_base ()->str :
 - Логирование событий сервера в каналы логов
 - AI-помощник: упомяни бота или напиши ? вопрос — отвечу
 
-**Веб-панель Aether Panel**:
+**Веб-панель Hakumo Panel**:
 - Полное управление ботом через браузер (адрес даёт владелец)
 - Роли доступа: owner / admin / curator / mod / uye
 - Куратор — старший модератор (всё модерское + тикеты и сообщество)
@@ -568,7 +568,7 @@ import urllib .error
 
 def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     """
-    Умный автономный AI-ассистент Aether/Moebius (работает 100% без внешних API-ключей!).
+    Умный автономный AI-ассистент Hakumo/Moebius (работает 100% без внешних API-ключей!).
     """
     last_msg =""
     sys_prompt =""
@@ -581,9 +581,9 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     q_lower =last_msg .lower ()
 
     # 1. Приветствие / Салют
-    if any (k in q_lower for k in ["привет","здравствуй","хай","салют","доброе утро","добрый вечер","selam","merhaba","hey","aether","moebius"]):
+    if any (k in q_lower for k in ["привет","здравствуй","хай","салют","доброе утро","добрый вечер","selam","merhaba","hey","hakumo","moebius"]):
         return (
-        "Привет, дружище! Я Aether, AI-ассистент сервера Discord. 🤖\n"
+        "Привет, дружище! Я Hakumo, AI-ассистент сервера Discord. 🤖\n"
         "Отвечаю на вопросы, помогаю с панелью и настройками. Наказания выдаёт только модератор-человек — я лишь помогаю разобраться. Чем могу помочь?",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":10 }
@@ -671,7 +671,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 3. Кто ты / Расскажи о себе
     if any (k in q_lower for k in ["кто ты","что ты такое","расскажи о себе","ты кто","что за бот","кто ты такой"]):
         return (
-        "Я Aether (Moebius) — многофункциональный AI-ассистент и защитник этого Discord-сервера! 🤖\n"
+        "Я Hakumo (Moebius) — многофункциональный AI-ассистент и защитник этого Discord-сервера! 🤖\n"
         "• Моя задача — охранять сервер от спама и рейдов, помогать участникам в тикетах поддержки и управлять ролями.\n"
         "• Чтобы узнать все мои возможности, просто напиши «команды» или «помощь»!",
         "moebius-offline-ai",
@@ -707,7 +707,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 7. Музыка (play / песня / музыка)
     if any (k in q_lower for k in ["музыка","песня","трек","слушать","play","мьюзик"]):
         return (
-        "🎵 **Музыкальный модуль Aether:**\n"
+        "🎵 **Музыкальный модуль Hakumo:**\n"
         "• Чтобы включить музыку, зайдите в голосовой канал и используйте команду `/play <название или ссылка>`.\n"
         "• Для управления воспроизведением используйте `/pause`, `/skip` и `/queue`.\n"
         "Приятного прослушивания! 🎧",
@@ -718,7 +718,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 8. Экономика и Магазин
     if any (k in q_lower for k in ["экономика","монеты","баланс","деньги","магазин","shop","монета","эко"]):
         return (
-        "💰 **Экономика сервера Aether:**\n"
+        "💰 **Экономика сервера Hakumo:**\n"
         "• Вы можете зарабатывать монеты за активность в чатах и голосовых каналах!\n"
         "• Проверить свой баланс можно командой `/economy`, а заглянуть в магазин ролей — командой `/shop`.",
         "moebius-offline-ai",
@@ -819,7 +819,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
             "• Правило #5: Конфиденциальность и безопасность — Запрещено распространение личных данных и вредоносных ссылок."
             ]
         return (
-        "📜 **Свод правил сервера Aether:**\n"
+        "📜 **Свод правил сервера Hakumo:**\n"
         +"\n".join (rule_lines [:5 ])+
         "\n\nПожалуйста, соблюдайте правила сервера. За нарушения модераторы применяют наказания (варн/мут/кик/бан) — решения принимает человек.",
         "moebius-offline-ai",
@@ -835,7 +835,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         f"Уважаемые участники, на нашем сервере по теме **{topic_val}** проводятся необходимые обновления и улучшения.\n"
         "• Пожалуйста, соблюдайте правила сервера и следите за объявлениями администрации.\n"
         "• Для вопросов или обратной связи используйте каналы поддержки.\n\n"
-        "✨ *Администрация Aether*",
+        "✨ *Администрация Hakumo*",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":12 }
         )
@@ -912,7 +912,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         on_val =online_m .group (1 )if online_m else "Текущий"
         vc_val =voice_m .group (1 )if voice_m else "0"
         return (
-        "🤖 **Анализ состояния сервера Aether:**\n"
+        "🤖 **Анализ состояния сервера Hakumo:**\n"
         f"• На сервере сейчас **{on_val}** участник в сети, в голосовых каналах **{vc_val}** активных пользователей.\n"
         "• Все системы модерации, безопасности и анти-рейда работают 24/7.\n"
         "Чем еще я могу помочь, дружище?",
@@ -935,7 +935,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 17. Команды и помощь
     if any (k in q_lower for k in ["команда","помощь","help","neler yapabilirsin","особенность","команды","помощь","что ты умеешь","справка","какие команды"]):
         return (
-        "🤖 **Справочник по командам Aether/Moebius:**\n"
+        "🤖 **Справочник по командам Hakumo/Moebius:**\n"
         "• **Модерация:** `/moderate бан`, `/moderate кик`, `/moderate timeout`, `/варн`, `/warnings`\n"
         "• **Управление и очистка:** `/utility clear`, `/roles`, `/utility lock`, `/utility unlock`\n"
         "• **Поддержка и тикеты:** Команда `/ticket` или кнопка поддержки для создания тикета с AI-ассистентом.\n"
@@ -959,7 +959,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 19. Тикеты / Поддержка
     if any (k in q_lower for k in ["ticket","поддержка","тикет","жалоба","sorun","администратор","админ","проблема","админ","модератор","sikayet","жалоба","kufur","kюfюr"]):
         return (
-        "🎫 **Система поддержки Aether AI:**\n"
+        "🎫 **Система поддержки Hakumo AI:**\n"
         "• Вы можете легко создать тикет с помощью кнопок в канале поддержки.\n"
         "• Сначала в тикете помогаю я; при необходимости или сложных вопросах я сразу подключаю администраторов сервера.\n"
         "• При запросе связи с администрацией нашей команде отправляется уведомление.",
@@ -969,7 +969,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
 
         # 20. Умный, дружелюбный автономный ответ по умолчанию (когда нет точного совпадения по ключам)
     return (
-    "🤖 **Aether (Moebius) — автономный ассистент:**\n"
+    "🤖 **Hakumo (Moebius) — автономный ассистент:**\n"
     f"Я внимательно прочитал твоё сообщение: *«{last_msg[:120]}»*\n\n"
     "• Я работаю 24/7 и готов помочь с управлением сервером, модерацией и командами.\n"
     "• Если тебе нужен список команд — напиши **«команды»** или **«помощь»**.\n"
@@ -985,7 +985,7 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
     1) Ollama (локальная LLM)
     2) Mistral AI API (MISTRAL_API_KEY: mistral-large/medium/small)
     3) OpenRouter / DeepSeek / OpenAI API
-    4) Умный локальный офлайн-движок Aether/Moebius (fallback)
+    4) Умный локальный офлайн-движок Hakumo/Moebius (fallback)
     """
     model_name =model or os .getenv ("AI_MODEL","mistral-large-latest")
     ollama_url =os .getenv ("OLLAMA_URL","http://127.0.0.1:11434")
@@ -1080,7 +1080,7 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
         except Exception as _oe :
             print (f"[AI API] Внешняя API ошибка: {_oe}")
 
-            # 4. Akыllы Aether/Moebius Yerel Fallback (Hiчbir LLM servisi olmasa bile никогда ошибка vermez!)
+            # 4. Akыllы Hakumo/Moebius Yerel Fallback (Hiчbir LLM servisi olmasa bile никогда ошибка vermez!)
     return _local_moebius_fallback (messages )
 
 def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,model :str =None )->str :
@@ -1112,7 +1112,7 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     history =history or []
 
     sys_lines =[
-    "Ты — Aether/Moebius, информационный AI-ассистент сервера Discord. Отвечай на русском языке.",
+    "Ты — Hakumo/Moebius, информационный AI-ассистент сервера Discord. Отвечай на русском языке.",
     "Давай лаконичные, дружелюбные и профессиональные ответы.",
     # Заказ владельца 2026-08-26: ИИ — только консультирует.
     "ЖЁСТКИЕ ПРАВИЛА (нарушать нельзя):",

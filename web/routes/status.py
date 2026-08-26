@@ -226,7 +226,7 @@ def register(ctx):
                 _demo_lines = [
                     (_now - 58, 'INFO', 'errors',
                      'HEALTH | uptime 2ч 40м 4с | guilds 1 | ping 159ms | errors 0 (hour 0, crit 0, filtered 0, repeats 0) | warn 0 | dc 2 | webhook 0/0 | lag max 0.0s | alerts 0'),
-                    (_now - 50, 'INFO', 'aether',
+                    (_now - 50, 'INFO', 'hakumo',
                      'Команды синхронизированы · слэш-команд: 84'),
                     (_now - 41, 'WARNING', 'music',
                      'Трек пропущен: источник вернул пустой аудиопоток'),

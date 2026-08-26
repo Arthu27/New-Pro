@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Студия темы — Aether{% endblock %}
+{% block title %}Студия темы — Hakumo{% endblock %}
 {% block page_title %}Студия темы{% endblock %}
 {% block content %}
 
@@ -63,7 +63,7 @@
       <div class="sub">Так панель выглядит прямо сейчас.</div></div></div>
     <div class="panel-body">
       <div class="studio-preview" id="preview">
-        <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="mono" style="font-size:11px;color:var(--text-3)">aether · панель</span></div>
+        <div class="bar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="mono" style="font-size:11px;color:var(--text-3)">hakumo · панель</span></div>
         <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
           <div class="kpi"><div class="kpi-icon"><i class="fas fa-server"></i></div><div class="kpi-copy"><div class="kpi-value">248</div><div class="kpi-label">Участников</div></div></div>
           <div class="kpi tone-ok"><div class="kpi-icon"><i class="fas fa-signal"></i></div><div class="kpi-copy"><div class="kpi-value">36</div><div class="kpi-label">Онлайн</div></div></div>
@@ -129,8 +129,8 @@
     document.documentElement.style.fontSize = Math.round(state.scale * 100) + '%';
     if (window.applyCompact) window.applyCompact(state.compact);
     try {
-      localStorage.setItem('aether_theme', state.theme);
-      localStorage.setItem('aether_accent', state.accent);
+      localStorage.setItem('hakumo_theme', state.theme);
+      localStorage.setItem('hakumo_accent', state.accent);
     } catch (e) {}
   }
 

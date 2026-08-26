@@ -20,7 +20,7 @@ import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 
-_TMP = tempfile.mkdtemp(prefix='aether_staff_stats_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_staff_stats_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -208,7 +208,7 @@ check(client.get('/staff-stats').status_code in (302, 401, 403),
 check(client.get('/api/guild/777/staff-stats/table').status_code
       in (302, 401, 403), 'гостю API закрыто')
 login('uye')
-check(client.get('/staff-stats').status_code == 403, 'uye не смотрит')
+check(client.get('/staff-stats').status_code == 302, 'uye не смотрит')
 login('mod')
 page = client.get('/staff-stats')
 check(page.status_code == 200

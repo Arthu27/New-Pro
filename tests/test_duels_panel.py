@@ -14,7 +14,7 @@ import shutil
 import sys
 import tempfile
 
-_TMP = tempfile.mkdtemp(prefix='aether_duelspanel_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_duelspanel_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -118,7 +118,7 @@ def login(role='owner'):
 check(client.get('/duels').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.get('/api/duels/state').status_code in (302, 401, 403), 'гостю state закрыт')
 login('uye')
-check(client.get('/duels').status_code == 403, 'uye нельзя')
+check(client.get('/duels').status_code == 302, 'uye нельзя')
 login('mod')
 check(client.get('/duels').status_code == 200, 'mod читает страницу (200)')
 r = client.get('/api/duels/state')

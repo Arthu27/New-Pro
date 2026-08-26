@@ -15,7 +15,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-_TMP = tempfile.mkdtemp(prefix='aether_quality_suite_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_quality_suite_test_')
 os.chdir(_TMP)
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))

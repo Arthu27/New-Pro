@@ -30,7 +30,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-_TMP = tempfile.mkdtemp(prefix='aether_autov3_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_autov3_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

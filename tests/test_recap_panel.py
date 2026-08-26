@@ -20,7 +20,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-_TMP = tempfile.mkdtemp(prefix='aether_recap_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_recap_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -147,7 +147,7 @@ BD = '/api/guild/777/recap/build'
 check(client.get('/recap').status_code in (302, 401, 403), 'гостю страница закрыта')
 check(client.post(BD, json={}).status_code in (302, 401, 403), 'гостю API закрыто')
 login('uye')
-check(client.get('/recap').status_code == 403, 'uye не видит страницу')
+check(client.get('/recap').status_code == 302, 'uye не видит страницу')
 check(client.post(BD, json={}).status_code == 403, 'uye не собирает')
 login('mod')
 page = client.get('/recap')

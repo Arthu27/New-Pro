@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Вебхуки — Панель Aether{% endblock %}
+{% block title %}Вебхуки — Панель Hakumo{% endblock %}
 {% block page_title %}Вебхуки{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -184,10 +184,10 @@ function whDelete(id, name) {
 }
 
 function whTest(id, name) {
-  window.askConfirm('Тест вебхука «' + name + '»?', 'В канал хука улетит сообщение «Тестовое сообщение от панели Aether».', async function () {
+  window.askConfirm('Тест вебхука «' + name + '»?', 'В канал хука улетит сообщение «Тестовое сообщение от панели Hakumo».', async function () {
     var r = await fetch('/api/webhooks/send', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ webhook_id: id, message: 'Тестовое сообщение от панели Aether — вебхук жив.' })
+      body: JSON.stringify({ webhook_id: id, message: 'Тестовое сообщение от панели Hakumo — вебхук жив.' })
     });
     var d = await r.json();
     if (r.ok && d.success && typeof window.showToast === 'function') window.showToast('Отправлено в «' + d.sent_to + '»', true);

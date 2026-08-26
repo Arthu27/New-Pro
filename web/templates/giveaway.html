@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Розыгрыши — Aether{% endblock %}
+{% block title %}Розыгрыши — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-gift"></i> Розыгрыши{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -257,7 +257,7 @@
         '</div>' +
         '<div class="gw-info">' +
           '<span><i class="fas fa-trophy"></i>' + (g.winners || 1) + ' победител' + ((g.winners || 1) > 1 ? 'я' : 'ь') + '</span>' +
-          (chName ? '<span><i class="fas fa-hash"></i>' + esc(chName) + '</span>' : '') +
+          (chName ? '<span><i class="fas fa-hashtag"></i>' + esc(chName) + '</span>' : '') +
           (left ? '<span><i class="fas fa-clock"></i>' + esc(left) + '</span>' : '') +
         '</div>' +
         '<div class="gw-progress"><div class="gw-progress-fill" style="width:' + pct + '%;"></div></div>' +
@@ -273,7 +273,7 @@
         winnersBlock +
         '<div class="gw-actions">' +
           (live_ ? '<button type="button" class="gw-btn end" onclick="window.__gwEnd(\'' + esc(g.id) + '\')"><i class="fas fa-flag-checkered"></i> Завершить</button>' : '') +
-          '<button type="button" class="gw-btn del" onclick="window.__gwDelete(\'' + esc(g.id) + '\')"><i class="fas fa-trash"></i></button>' +
+          '<button type="button" class="gw-btn del" onclick="window.__gwDelete(\'' + esc(g.id) + '\')" aria-label="Удалить розыгрыш" title="Удалить розыгрыш"><i class="fas fa-trash"></i></button>' +
         '</div>' +
       '</div>';
     }).join('');

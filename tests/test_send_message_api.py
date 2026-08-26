@@ -19,7 +19,7 @@ import sys
 import tempfile
 import threading
 
-_TMP = tempfile.mkdtemp(prefix='aether_sendmsg_test_')
+_TMP = tempfile.mkdtemp(prefix='hakumo_sendmsg_test_')
 os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)

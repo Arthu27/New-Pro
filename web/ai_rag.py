@@ -24,7 +24,7 @@ class KnowledgeBase :
 
     def _load_documents (self ):
         """Загруз все dokumenti в pamyat"""
-        # 1. Правила сервер (Особый правило yoksa Стандартные правила Aether загруз)
+        # 1. Правила сервер (Особый правило yoksa Стандартные правила Hakumo загруз)
         rules_loaded =False 
         for rf in [f"data/rules_{self.guild_id}.json","data/rules.json"]:
             if os .path .exists (rf ):

@@ -297,7 +297,7 @@ class NightSummary(commands.Cog):
 
         # Футер
         d.line([52 * S, H - 66 * S, W - 52 * S, H - 66 * S], fill=C_GOLD + (110,), width=1 * S)
-        ftxt = "AETHER · ночная сводка 00:00"
+        ftxt = "HAKUMO · ночная сводка 00:00"
         d.text((52 * S, H - 50 * S), ftxt, font=_font(False, 15 * S), fill=C_DIM)
         total = stats['warns'] + stats['bans'] + stats['kicks'] + stats['mutes'] + stats['tagjail']
         rtxt = f"санкций за день: {total}"

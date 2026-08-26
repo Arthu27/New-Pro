@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Регрессионный прогон всех тестов Aether (MOEBIUS).
+"""Регрессионный прогон всех тестов Hakumo (MOEBIUS).
 
     python3 scripts/run_tests.py           # прогон + сводка
     python3 scripts/run_tests.py -v        # + полный вывод упавших наборов
