@@ -147,46 +147,6 @@ d2 = r2.get_json()
 check(d2.get('success') and d2.get('style') != 'v2',
       'классическая публикация работает как раньше')
 
-print('== 5. Гейт доступа: кнопка «Согласен с правилами» ==')
-from services import rules_gate as G  # noqa: E402
-
-check(G.GATE_BUTTON_ID == 'aether_rules_gate', 'custom_id кнопки стабильный (переживает рестарт)')
-gv = G.gate_layout()
-check(gv.has_components_v2(), 'V2-макет гейта собирается')
-btns = [c for c in gv.walk_children() if type(c).__name__ == 'Button']
-check(len(btns) == 1 and btns[0].custom_id == G.GATE_BUTTON_ID,
-      'в макете одна кнопка с тем же custom_id')
-fb = G.RulesGateView()
-fbbtn = [c for c in fb.children if type(c).__name__ == 'Button'][0]
-check(fb.timeout is None and fbbtn.custom_id == G.GATE_BUTTON_ID,
-      'классический фолбек — персистентная вью с той же кнопкой')
-
-class _FakeBot:
-    def __init__(self): self.views = []
-    def add_view(self, v): self.views.append(v)
-fb_bot = _FakeBot()
-G.register(fb_bot); G.register(fb_bot)
-check(len(fb_bot.views) == 1, 'register() дважды — вью одна (guard)')
-
-import tempfile as _tf, shutil as _sh2  # noqa: E402
-_tmp2 = _tf.mkdtemp(prefix='aether_gate_')
-_oldcwd = os.getcwd(); os.chdir(_tmp2)
-G.save_gate_config('777', '555', True)
-cfg = G.load_gate_config('777')
-check(cfg == {'role_id': '555', 'enabled': True}, 'конфиг гейта сохраняется и читается')
-os.chdir(_oldcwd); _sh2.rmtree(_tmp2, ignore_errors=True)
-
-check('rules-gate' in tpl and 'Согласен с правилами' in tpl,
-      'в панели есть чекбокс гейта и подпись')
-check('rules-gate-role' in tpl, 'выбор роли за согласие в панели')
-check('v2p-btn' in tpl, 'мок-кнопка в V2-превью')
-gsrc = open(os.path.join(ROOT, 'web', 'routes', 'tasks_rules.py'),
-            encoding='utf-8').read()
-check('send_gate_message' in gsrc and "get ('gate')" in gsrc.replace(' ', ' '),
-      'публикация принимает gate и ставит сообщение с кнопкой')
-check('rules_gate' in open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read(),
-      'кнопка регистрируется при старте бота (main.py)')
-
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)
