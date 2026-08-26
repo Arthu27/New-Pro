@@ -142,11 +142,13 @@ async def _acl_check(ctx):
         if cmd:
             # Команда выключена владельцем из панели — не отвечаем вовсе.
             if _csw.is_disabled(cmd):
-                await ctx.send("⏸️ Эта команда выключена владельцем панели.",
-                               delete_after=8)
+                await ctx.send(f"Команда {cmd} выключена владельцем панели.",
+                               delete_after=10)
                 return False
             if not has_access(ctx.guild.id if ctx.guild else 0, cmd, ctx.author):
-                await ctx.send("🚫 У вас нет доступа к этой команде.", delete_after=8)
+                await ctx.send(f"У вас нет доступа к команде {cmd}. "
+                               "Доступ настраивает владелец: панель → Доступ → Права команд.",
+                               delete_after=12)
                 return False
     except Exception as _ex:
         _log.debug("_acl_check(): подавлено: %s", _ex)
@@ -190,13 +192,15 @@ async def _acl_slash_check(interaction):
             cmd = (interaction.data.get("name") if interaction.data else None)
         if cmd and _csw.is_disabled(cmd):
             await interaction.response.send_message(
-                "⏸️ Эта команда выключена владельцем панели.", ephemeral=True)
+                f"Команда /{cmd} выключена владельцем панели.", ephemeral=True)
             return False
         guild = interaction.guild
         if cmd and guild:
             if not has_access(guild.id, cmd, interaction.user):
                 await interaction.response.send_message(
-                    "🚫 У вас нет доступа к этой команде.", ephemeral=True)
+                    f"Недостаточно прав: команда /{cmd} доступна не всем ролям. "
+                    "Доступ настраивает владелец: панель → Доступ → Права команд.",
+                    ephemeral=True)
                 return False
         # Классические разрешения: выбранное действие (напр. /moderate action=ban)
         if guild:
@@ -206,7 +210,7 @@ async def _acl_slash_check(interaction):
                 action_key = ACTION_VALUES.get(action_value)
                 if action_key and not check_action(guild.id, interaction.user, action_key):
                     await interaction.response.send_message(
-                        "🚫 У вас нет доступа к этому действию.", ephemeral=True)
+                        "Недостаточно прав: это действие доступно не всем ролям. Панель → Доступ → Права команд.", ephemeral=True)
                     return False
     except Exception as _ex:
         _log.debug("_acl_slash_check(): подавлено: %s", _ex)

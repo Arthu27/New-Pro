@@ -982,14 +982,18 @@ class ErrorHandler:
         error = getattr(error, 'original', error)
 
         if isinstance(error, app_commands.MissingPermissions):
-            missing = ", ".join(error.missing_permissions)
-            embed = self._error_embed("Недостаточно прав", f"Отсутствуют права: `{missing}`")
+            missing = ", ".join(_perm_ru(m) for m in error.missing_permissions)
+            embed = self._error_embed("Недостаточно прав",
+                                      f"Не хватает прав: {missing}. "
+                                      "Выдать их может владелец: Настройки сервера → Роли.")
             await self._respond(interaction, embed=embed)
             return
 
         if isinstance(error, app_commands.BotMissingPermissions):
-            missing = ", ".join(error.missing_permissions)
-            embed = self._error_embed("У бота нет прав", f"Боту не хватает прав: `{missing}`")
+            missing = ", ".join(_perm_ru(m) for m in error.missing_permissions)
+            embed = self._error_embed("У бота нет прав",
+                                      f"Боту не хватает: {missing}. "
+                                      "Настройки сервера → Роли → роль бота.")
             await self._respond(interaction, embed=embed)
             return
 
@@ -999,7 +1003,16 @@ class ErrorHandler:
             return
 
         if isinstance(error, app_commands.CheckFailure):
-            embed = self._error_embed("Проверка не пройдена", "У вас нет доступа к этой команде")
+            # Проверка доступа уже сама ответила (ACL/персональные проверки) —
+            # не дублируем вторым сообщением
+            try:
+                if interaction.response.is_done():
+                    return
+            except Exception as _ex:
+                _log.debug("CheckFailure is_done(): подавлено: %s", _ex)
+            embed = self._error_embed("Недостаточно прав",
+                                      "Эта команда доступна не всем. "
+                                      "Доступ настраивает владелец: панель → Доступ → Права команд.")
             await self._respond(interaction, embed=embed)
             return
 
@@ -1046,6 +1059,46 @@ class ErrorHandler:
 # ────────────────────────────────────────────────────────────────
 # Команды управления (!anticrash)
 # ────────────────────────────────────────────────────────────────
+# Discord-права по-русски: бот объясняет отказы человеческим языком
+PERM_RU = {
+    'administrator': 'Администратор',
+    'manage_guild': 'Управление сервером',
+    'manage_roles': 'Управление ролями',
+    'manage_channels': 'Управление каналами',
+    'manage_messages': 'Управление сообщениями',
+    'manage_threads': 'Управление ветками',
+    'manage_webhooks': 'Управление вебхуками',
+    'manage_nicknames': 'Изменение ников',
+    'manage_expressions': 'Управление эмодзи и стикерами',
+    'moderate_members': 'Модерация участников (таймаут)',
+    'ban_members': 'Бан участников',
+    'kick_members': 'Выгонять участников',
+    'view_audit_log': 'Просмотр журнала аудита',
+    'view_channel': 'Просмотр канала',
+    'send_messages': 'Отправка сообщений',
+    'send_messages_in_threads': 'Отправка в ветках',
+    'embed_links': 'Встроенные ссылки',
+    'attach_files': 'Прикрепление файлов',
+    'add_reactions': 'Добавление реакций',
+    'mute_members': 'Мут в голосе',
+    'deafen_members': 'Мьют наушников',
+    'move_members': 'Перемещение участников',
+    'priority_speaker': 'Приоритетный режим',
+    'create_private_threads': 'Создание приватных веток',
+    'create_public_threads': 'Создание веток',
+    'read_message_history': 'История сообщений',
+    'mention_everyone': 'Упоминание @everyone',
+    'external_emojis': 'Внешние эмодзи',
+    'connect': 'Подключение к голосу',
+    'speak': 'Голос в канале',
+}
+
+
+def _perm_ru(perm):
+    """Discord-ключ права → русское название."""
+    return PERM_RU.get(str(perm).replace(' ', '_').lower(), str(perm))
+
+
 class AntiCrashCog(commands.Cog):
     """🛡 Управление anti-crash системой (только админы)."""
 
