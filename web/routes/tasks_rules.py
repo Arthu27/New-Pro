@@ -171,7 +171,8 @@ def register(ctx):
         тема авто-картинок (последняя выбранная в редакторе)."""
         f =_rules_meta_path (guild_id )
         meta ={'title':'Правила сервера','intro':'Нарушение правил ведёт к наказанию.',
-               'color':'4f46e5','channel_id':'','img_theme':'violet'}
+               'color':'4f46e5','channel_id':'','img_theme':'violet',
+               'gate_enabled':False ,'gate_role_id':''}
         try :
             if os .path .exists (f ):
                 with open (f ,encoding ='utf-8')as fp :
@@ -263,6 +264,13 @@ def register(ctx):
         rules =_normalize_rules_urls (rules )
         rules =[r for r in rules if r ['t']]
         meta =_load_rules_meta (guild_id )
+        # Гейт доступа: кнопка «Согласен с правилами» + роль за согласие
+        gate_on =bool (data .get ('gate'))
+        gate_role =str (data .get ('gate_role_id')or '').strip ()
+        if gate_on or 'gate' in data :
+            # ключи в самой мете — её сохранение и не затрёт
+            meta ['gate_enabled']=gate_on 
+            meta ['gate_role_id']=gate_role 
         if data .get ('channel_id')is not None :
             meta ['channel_id']=ch_id 
         for k in ('title','intro','color'):
@@ -289,6 +297,9 @@ def register(ctx):
         if img_theme not in _bg .THEMES :
             img_theme =_bg .DEFAULT_THEME
         meta ={'title':title ,'intro':intro ,'color':color_s .lower (),'channel_id':ch_id ,'img_theme':img_theme }
+        if gate_on or 'gate' in data :
+            meta ['gate_enabled']=gate_on 
+            meta ['gate_role_id']=gate_role 
         _save_rules_meta (guild_id ,meta )
 
         # авто-картинки: у правил без URL включаем отрисовку баннера.
@@ -370,7 +381,7 @@ def register(ctx):
                 if data .get ('style')=='v2':
                     return jsonify ({'success':True ,'demo':True ,'style':'v2','title':title ,'color':color_s .lower (),
                         'images_generated':gen_count ,
-                        'message':f"Демо-режим: {len (rules )} правил готовы — при живом боте они уйдут одним сообщением Components V2 от вебхука «Правила сервера» с аватаркой сервера"})
+                        'message':f"Демо-режим: {len (rules )} правил готовы — при живом боте они уйдут одним сообщением Components V2 от вебхука «Правила сервера» с аватаркой сервера"+(" + под ними кнопка «Согласен с правилами»" if gate_on else "")})
                 return jsonify ({'success':True ,'demo':True ,'title':title ,'color':color_s .lower (),
                     'images_generated':gen_count ,
                     'message':f"Демо-режим: {len (rules )} правил готовы{_gen_note} — при живом боте они уйдут в Discord с заголовком «{title}»"})
@@ -430,8 +441,17 @@ def register(ctx):
                 print (f"[ПРАВИЛА] V2-сообщение отправлено от вебхука «{wh .name }»")
                 return 'webhook'
 
+            async def send_gate ():
+                from services .rules_gate import send_gate_message
+                await send_gate_message (bot .get_channel (int (ch_id )))
+
             try :
                 how =asyncio .run_coroutine_threadsafe (send_v2 (),bot .loop ).result (timeout =25 )
+                if gate_on :
+                    try :
+                        asyncio .run_coroutine_threadsafe (send_gate (),bot .loop ).result (timeout =15 )
+                    except Exception as _ge :
+                        _log .warning ("api_publish_rules(): gate msg: %s", _ge )
             except Exception as _ex :
                 msg =str (_ex )
                 if 'Forbidden' in msg or 'Missing Access' in msg :
@@ -443,7 +463,8 @@ def register(ctx):
             return jsonify ({'success':True ,'style':'v2','via':how ,'title':title ,
             'message':("Опубликовано через вебхук «Правила сервера»: " if how =='webhook' else
             "Опубликовано голосом бота (у бота нет права «Управлять вебхуками» в канале — выдайте право и опубликуйте снова): ")+
-            f"{len (rules )} правил в одном сообщении нового формата"})
+            f"{len (rules )} правил в одном сообщении нового формата"+
+            (" + кнопка «Согласен с правилами»" if gate_on else "")})
 
         embeds =build_embeds ()
 
@@ -469,8 +490,17 @@ def register(ctx):
             if batch :
                 await ch .send (embeds =batch )
 
+        async def send_gate_classic ():
+            from services .rules_gate import send_gate_message
+            await send_gate_message (bot .get_channel (int (ch_id )))
+
         try :
             asyncio .run_coroutine_threadsafe (send (),bot .loop ).result (timeout =25 )
+            if gate_on :
+                try :
+                    asyncio .run_coroutine_threadsafe (send_gate_classic (),bot .loop ).result (timeout =15 )
+                except Exception as _ge :
+                    _log .warning ("api_publish_rules(): gate msg: %s", _ge )
         except Exception as _ex :
             msg =str (_ex )
             if 'Forbidden' in msg or 'Missing Access' in msg :
@@ -483,7 +513,7 @@ def register(ctx):
         _gen_note =f", картинок создано: {gen_count}" if gen_count else ''
         return jsonify ({'success':True ,'title':title ,'color':color_s .lower (),
             'images_generated':gen_count ,
-            'message':f"Опубликовано правил: {len (rules )}{_gen_note}"})
+            'message':f"Опубликовано правил: {len (rules )}{_gen_note}"+(" + кнопка «Согласен с правилами»" if gate_on else "")})
 
     def _store_json_list (path ):
         """Список из JSON-файла (или пустой список)."""

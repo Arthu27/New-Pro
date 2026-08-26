@@ -314,6 +314,11 @@
 .pub-box { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .pub-channel { display: flex; align-items: center; gap: 9px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--text) 3%, transparent); }
 .pub-channel i { color: var(--ac); font-size: 12px; }
+.gate-row { margin-top: 0; }
+.gate-check { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: var(--text); white-space: nowrap; cursor: pointer; }
+.gate-check input { width: 15px; height: 15px; accent-color: #22c55e; cursor: pointer; }
+.gate-row select { max-width: 260px; }
+.v2p-btn { display: inline-flex; align-items: center; gap: 7px; margin-top: 2px; padding: 7px 14px; border: none; border-radius: 9px; background: #22c55e; color: #fff; font-size: 12px; font-weight: 700; }
 .pub-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 720px) { .pub-options { grid-template-columns: 1fr; } }
 .pub-opt { display: flex; flex-direction: column; gap: 8px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--text) 2.5%, transparent); transition: all .16s; }
@@ -416,6 +421,13 @@
             <option value="">Выберите канал публикации…</option>
           </select>
         </div>
+        <div class="pub-channel gate-row" id="gateRow">
+          <i class="fas fa-user-check"></i>
+          <label class="gate-check" for="rules-gate"><input type="checkbox" id="rules-gate"> Кнопка «Согласен с правилами»</label>
+          <select id="rules-gate-role" class="form-input" style="flex:1" aria-label="Роль за согласие с правилами">
+            <option value="">Роль за согласие: «Участник» (создастся сама)</option>
+          </select>
+        </div>
         <div class="pub-options">
           <div class="pub-opt">
             <div class="pub-opt-head"><i class="fas fa-layer-group"></i> Эмбеды <span class="pub-tag">классика</span></div>
@@ -436,7 +448,7 @@
       <div class="publish-status" id="publishStatus" role="status" aria-live="polite"></div>
       <div class="publish-hint">
         <i class="fas fa-link"></i>
-        <span>Ссылки без «https://» дописываются автоматически. У каждого правила картинка — свой URL или кнопка «Авто»: панель сама отрисует баннер в выбранной теме (URL приоритетнее). Заголовок, вступление и цвет — ко всем эмбедам публикации. Для отправки от вебхука «Правила сервера» боту нужно право «Управлять вебхуками» в канале — без него сообщение уйдёт голосом бота.</span>
+        <span>Ссылки без «https://» дописываются автоматически. У каждого правила картинка — свой URL или кнопка «Авто»: панель сама отрисует баннер в выбранной теме (URL приоритетнее). Заголовок, вступление и цвет — ко всем эмбедам публикации. Для отправки от вебхука «Правила сервера» боту нужно право «Управлять вебхуками» в канале — без него сообщение уйдёт голосом бота. Гейт: закройте каналы для @everyone и откройте их роли согласия — тогда доступ появится только после кнопки.</span>
       </div>
     </div>
   </div>
@@ -619,6 +631,10 @@
       if (meta.channel_id) lastChannel = String(meta.channel_id);
       var thEl = document.getElementById('rules-img-theme');
       if (thEl && meta.img_theme) thEl.value = meta.img_theme;
+      var gEl = document.getElementById('rules-gate');
+      if (gEl) gEl.checked = !!meta.gate_enabled;
+      var grEl = document.getElementById('rules-gate-role');
+      if (grEl && meta.gate_role_id) grEl.dataset.want = String(meta.gate_role_id);
       syncPreviewMeta();
     } catch (e) { /* мета не критична */ }
     try {
@@ -644,6 +660,19 @@
         saveMetaSoon();
       }
     } catch (e) { /* каналы не критичны */ }
+    try {
+      var rr = await fetch('/api/guild/' + selectedGuild + '/roles');
+      var rD = await rr.json();
+      var roles = Array.isArray(rD) ? rD : [];
+      var rSel = document.getElementById('rules-gate-role');
+      if (rSel) {
+        var keep = rSel.value;
+        rSel.innerHTML = '<option value="">Роль за согласие: «Участник» (создастся сама)</option>' +
+          roles.map(function (r) { return '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>'; }).join('');
+        if (keep) rSel.value = keep;
+        else if (rSel.dataset.want) { try { rSel.value = rSel.dataset.want; } catch (e) {} }
+      }
+    } catch (e) { /* роли не критичны */ }
     renderRules();
   }
 
@@ -719,6 +748,8 @@
       if (i < rules.length - 1) html += '<div class="v2p-sep"></div>';
     });
     html += '<div class="v2p-foot">обе ссылки правила уходят в одном сообщении</div>';
+    var gateEl = document.getElementById('rules-gate');
+    if (gateEl && gateEl.checked) html += '<div class="v2p-sep"></div><div><button type="button" class="v2p-btn" tabindex="-1">✅ Согласен с правилами</button></div>';
     html += '</div>';
     box.innerHTML = html;
   }
@@ -848,6 +879,8 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channel_id: ch, rules: clean, style: style || 'classic', title: document.getElementById('rules-title').value.trim(),
+                               gate: !!(document.getElementById('rules-gate') && document.getElementById('rules-gate').checked),
+                               gate_role_id: (document.getElementById('rules-gate-role') || {}).value || '',
                                intro: document.getElementById('rules-intro').value.trim(),
                                color: document.getElementById('rules-color').value.replace('#', '') })
       });
@@ -922,6 +955,10 @@
 
   /* поля меты: живое превью + автосохранение */
   var mTitle = document.getElementById('rules-title');
+  var gateCb = document.getElementById('rules-gate');
+  if (gateCb) gateCb.addEventListener('change', function () {
+    if (!document.getElementById('pvPaneV2').hidden) renderPreviewV2();
+  });
   var mIntro = document.getElementById('rules-intro');
   var mColor = document.getElementById('rules-color');
   if (mTitle) mTitle.addEventListener('input', function () { syncPreviewMeta(); saveMetaSoon(); });

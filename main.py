@@ -692,6 +692,12 @@ async def on_resumed():
 @bot.event
 async def on_ready():
     global _synced
+    # Гейт правил: персистентная кнопка «Согласен с правилами»
+    try:
+        from services.rules_gate import register as _rules_gate_register
+        _rules_gate_register(bot)
+    except Exception as e:
+        log.warning(f'Гейт правил не зарегистрирован: {e}')
     if not _synced:
         for guild in bot.guilds:
             try:
