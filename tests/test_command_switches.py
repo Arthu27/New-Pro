@@ -165,8 +165,9 @@ st = next(g for g in PM.MENU if g['key'] == 'settings')
 check(any(p['path'] == '/command-switches' and 'вкл' in p['label'].lower() for p in st['pages']),
       'в «Настройках» есть ярлык «Команды вкл/выкл»')
 tpl = open(os.path.join(ROOT, 'web/templates/commands.html'), encoding='utf-8').read()
-check('toggleSwitch' in tpl and 'cmdx-switch' in tpl and '/api/commands/switch' in tpl,
-      'карточки команд несут тумблер, клик дёргает API')
+check('toggleSwitch' in tpl and 'cmdx-power' in tpl and '/api/commands/switch' in tpl,
+      'карточки команд несут кнопку питания с подписью, клик дёргает API')
+check('cmdx-switch' not in tpl, 'старые безымянные тумблеры-пилюли убраны')
 check('is-off' in tpl and 'выключена' in tpl,
       'выключенная карточка приглушена и помечена')
 
