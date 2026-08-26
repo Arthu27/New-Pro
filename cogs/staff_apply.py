@@ -162,19 +162,24 @@ def apply_target(role_name: str, guild):
     STAFF_MODERATOR_CHANNEL_ID), каждому своему куратору; кураторов бот
     пингует ролью (STAFF_*_CURATOR_ROLE_ID). Запасной канал — общий
     APPLY_CHANNEL_ID. Возвращает (channel, content) или (None, '')."""
-    from services.staff_roles import normalize_position
+    from services.staff_roles import normalize_position, setting
     if not guild:
         return None, ''
     kind = normalize_position(role_name) or 'moderator'
     if kind == 'helper':
-        cid = Config.STAFF_HELPER_CHANNEL_ID
-        cur = Config.STAFF_HELPER_CURATOR_ROLE_ID
+        cid = setting(guild.id, 'helper_channel', Config.STAFF_HELPER_CHANNEL_ID)
+        cur = setting(guild.id, 'helper_curator_role',
+                      Config.STAFF_HELPER_CURATOR_ROLE_ID)
     else:
-        cid = Config.STAFF_MODERATOR_CHANNEL_ID
-        cur = Config.STAFF_MODERATOR_CURATOR_ROLE_ID
+        cid = setting(guild.id, 'moderator_channel',
+                      Config.STAFF_MODERATOR_CHANNEL_ID)
+        cur = setting(guild.id, 'moderator_curator_role',
+                      Config.STAFF_MODERATOR_CURATOR_ROLE_ID)
     ch = guild.get_channel(cid) if cid else None
     if ch is None:
-        ch = guild.get_channel(APPLY_CHANNEL_ID) if APPLY_CHANNEL_ID else None
+        # общий канал: настройка панели главнее .env
+        common = setting(guild.id, 'apply_channel', APPLY_CHANNEL_ID)
+        ch = guild.get_channel(common) if common else None
     content = f'<@&{cur}>' if cur else ''
     return ch, content
 

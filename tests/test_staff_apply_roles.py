@@ -206,6 +206,8 @@ class FakeChan:
 
 
 class FakeGuildCh:
+    id = 555  # сервер без настроек панели — работают .env и общий канал
+
     def __init__(self, chans): self._ch = {c.id: c for c in chans}
 
     def get_channel(self, cid):
@@ -396,6 +398,48 @@ check(not d.get('role_assigned') and 'модератор' in str(d.get('role_not
 
 bg_loop.call_soon_threadsafe(bg_loop.stop)
 loop.close()
+
+print('== Настройки заявок в панели («Каналы и маршруты») ==')
+from services import staff_roles as SR
+
+SR.STAFF_SETTINGS_FILE = os.path.join(TMP, 'data', 'staff_apply_settings.json')
+SR.save_setting(777, 'helper_channel', 501)
+SR.save_setting(777, 'moderator_channel', 502)
+SR.save_setting(777, 'helper_curator_role', 601)
+SR.save_setting(777, 'helper_role', 10)
+st = SR.load_settings(777)
+check(st['helper_channel'] == 501 and st['helper_curator_role'] == 601,
+      'настройки панели сохраняются и читаются')
+check(SR.setting(777, 'helper_channel', 999) == 501,
+      'панель главнее .env')
+check(SR.setting(888, 'helper_channel', 999) == 999,
+      'нет настройки панели — берётся .env')
+check(SR.save_setting(777, 'нет_такого_ключа', 1) is False,
+      'чужой ключ не пишется')
+
+
+class _GCh:
+    id = 777
+
+    def get_channel(self, cid):
+        return FakeRole(cid, f'ch{cid}') if cid else None
+
+
+_ch, _ping = apply_target('Хелпер', _GCh())
+check(_ch is not None and _ch.id == 501 and _ping == '<@&601>',
+      'бот учитывает настройки панели: ветка + пинг')
+
+from cogs.staff_apply import apply_target as _at  # noqa: E401
+
+repo_cs = open(os.path.join(repo, 'web', 'routes', 'channel_settings.py'),
+               encoding='utf-8').read()
+tpl = open(os.path.join(repo, 'web', 'templates', 'channel_settings.html'),
+           encoding='utf-8').read()
+check('staff_helper_channel' in repo_cs and 'staff_moderator_channel' in repo_cs,
+      'маршруты веток заявок зарегистрированы в панели')
+check('/api/staff-role-routes/' in repo_cs, 'API настроек ролей заявок есть')
+check('Роли заявок в команду' in tpl and 'renderRoles' in tpl,
+      'на странице есть секция «Роли заявок» с селекторами')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

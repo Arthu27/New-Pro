@@ -228,6 +228,28 @@ def _ticket_notify_set(gid, cid):
     return True
 
 
+# ── Заявки в команду: ветки и общий канал (services/staff_roles) ──────────
+from services import staff_roles as _SR
+
+_STAFF_CHANNEL_KEYS = {
+    'staff_helper_channel': 'helper_channel',
+    'staff_moderator_channel': 'moderator_channel',
+    'staff_apply_channel': 'apply_channel',
+}
+
+
+def _staff_get(key):
+    def _get(gid):
+        return int(_SR.load_settings(gid).get(_STAFF_CHANNEL_KEYS[key]) or 0)
+    return _get
+
+
+def _staff_set(key):
+    def _set(gid, cid):
+        return _SR.save_setting(gid, _STAFF_CHANNEL_KEYS[key], cid)
+    return _set
+
+
 _counting_ad = _guilddata_channel('counting', 'state')
 _mod_digest_ad = _guilddata_channel('mod_digest', 'settings')
 _shifts_ad = _guilddata_channel('staff_shifts', 'settings')
@@ -248,6 +270,9 @@ ADAPTERS = {
     'mod_digest_channel': _mod_digest_ad,
     'shifts_channel': _shifts_ad,
     'ticket_notify_channel': (_ticket_notify_get, _ticket_notify_set),
+    'staff_helper_channel': (_staff_get('staff_helper_channel'), _staff_set('staff_helper_channel')),
+    'staff_moderator_channel': (_staff_get('staff_moderator_channel'), _staff_set('staff_moderator_channel')),
+    'staff_apply_channel': (_staff_get('staff_apply_channel'), _staff_set('staff_apply_channel')),
 }
 
 
@@ -287,7 +312,22 @@ def register(ctx):
                 'access': spec['access'],
                 'channel_id': cid,
             })
-        return jsonify({'success': True, 'routes': out, 'gid': str(gid)})
+        roles_out = []
+        for spec in _SR.ROLE_SPECS:
+            try:
+                rid = int(_SR.load_settings(gid).get(spec['key']) or 0)
+            except Exception:
+                rid = 0
+            roles_out.append({
+                'key': spec['key'],
+                'label': spec['label'],
+                'icon': spec['icon'],
+                'what': spec['what'],
+                'empty': spec['empty'],
+                'role_id': rid,
+            })
+        return jsonify({'success': True, 'routes': out,
+                        'staff_roles': roles_out, 'gid': str(gid)})
 
     @app.route('/api/channel-routes/<key>', methods=['POST'])
     @login_required
@@ -333,3 +373,34 @@ def register(ctx):
                 'channels', f'Маршрут очищен: {spec["label"]}',
                 f'{who}: вернули поведение по умолчанию')
         return jsonify({'success': True, 'key': key, 'channel_id': cid})
+
+    @app.route('/api/staff-role-routes/<key>', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_staff_role_routes_set(key):
+        spec = next((sp for sp in _SR.ROLE_SPECS if sp['key'] == key), None)
+        if spec is None:
+            return jsonify({'success': False, 'error': 'Такой настройки нет'}), 404
+        payload = request.get_json(silent=True) or {}
+        raw = str(payload.get('role_id') or '').strip()
+        if raw and not raw.isdigit():
+            return jsonify({'success': False,
+                            'error': 'ID роли должен быть числом (0 — авто)'}), 400
+        rid = int(raw or 0)
+        gid = _active_gid(ctx)
+        # если бот онлайн — роль должна существовать на сервере
+        import web.app as _app
+        bot = _app.bot_instance
+        if bot and gid and rid:
+            guild = bot.get_guild(int(gid))
+            if guild is not None and guild.get_role(rid) is None:
+                return jsonify({'success': False,
+                                'error': 'Такой роли на сервере нет'}), 404
+        if not _SR.save_setting(gid, key, rid):
+            return jsonify({'success': False,
+                            'error': 'Не удалось сохранить — попробуйте ещё раз'}), 500
+        who = session.get('username', '?')
+        _fire_panel_notification(
+            'channels', f'Роль заявок: {spec["label"]}',
+            f'{who}: ' + (f'роль {rid}' if rid else 'авто (по имени/из .env)'))
+        return jsonify({'success': True, 'key': key, 'role_id': rid})

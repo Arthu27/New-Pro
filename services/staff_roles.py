@@ -23,6 +23,103 @@ from logger import get_logger
 log = get_logger("staff_roles")
 
 STAFF_ROLES_FILE = "data/staff_roles.json"
+# Настройки заявок из панели: data/staff_apply_settings.json
+# { "<guild_id>": {"helper_channel": 0, "moderator_channel": 0, ...} }
+STAFF_SETTINGS_FILE = "data/staff_apply_settings.json"
+
+STAFF_SETTING_KEYS = (
+    "apply_channel",          # общий канал заявок (запасной)
+    "helper_channel",         # ветка заявок хелперов
+    "moderator_channel",      # ветка заявок модераторов
+    "helper_role",            # роль, выдаваемая хелперу
+    "moderator_role",         # роль, выдаваемая модератору
+    "helper_curator_role",    # кого пинговать в ветке хелперов
+    "moderator_curator_role", # кого пинговать в ветке модераторов
+)
+
+# Спецификации для панели («Каналы и маршруты» → роли заявок)
+ROLE_SPECS = [
+    {
+        "key": "helper_role",
+        "label": "Роль хелпера",
+        "icon": "fa-hands-helping",
+        "what": "Эту роль бот выдаёт после одобрения заявки хелпера. "
+                "Не задана — бот ищет роль по имени «Хелпер»/«Helper».",
+        "empty": "Авто: поиск по имени на сервере.",
+    },
+    {
+        "key": "moderator_role",
+        "label": "Роль модератора",
+        "icon": "fa-shield-halved",
+        "what": "Выдаётся после одобрения заявки модератора. "
+                "Не задана — бот ищет роль по имени «Модератор»/«Moderator».",
+        "empty": "Авто: поиск по имени на сервере.",
+    },
+    {
+        "key": "helper_curator_role",
+        "label": "Кураторы хелперов",
+        "icon": "fa-user-graduate",
+        "what": "Эту роль бот пингует в ветке заявок хелперов — "
+                "«за каждый поток отвечает свой куратор».",
+        "empty": "Не задана — пинга нет, заявка просто приходит в ветку.",
+    },
+    {
+        "key": "moderator_curator_role",
+        "label": "Кураторы модераторов",
+        "icon": "fa-user-shield",
+        "what": "Эту роль бот пингует в ветке заявок модераторов.",
+        "empty": "Не задана — пинга нет.",
+    },
+]
+
+
+def load_settings(guild_id) -> dict:
+    """Настройки заявок сервера (из панели)."""
+    if not os.path.exists(STAFF_SETTINGS_FILE):
+        return {k: 0 for k in STAFF_SETTING_KEYS}
+    try:
+        with open(STAFF_SETTINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        row = (data.get(str(guild_id)) or {}) if isinstance(data, dict) else {}
+        return {k: row.get(k, 0) for k in STAFF_SETTING_KEYS}
+    except Exception as e:
+        log.warning(f"[staff_roles] load_settings: {e}")
+        return {k: 0 for k in STAFF_SETTING_KEYS}
+
+
+def save_setting(guild_id, key, value) -> bool:
+    """Записать одну настройку (0 = сбросить в авто/.env)."""
+    if key not in STAFF_SETTING_KEYS:
+        return False
+    data = {}
+    try:
+        os.makedirs(os.path.dirname(STAFF_SETTINGS_FILE) or "data", exist_ok=True)
+        if os.path.exists(STAFF_SETTINGS_FILE):
+            with open(STAFF_SETTINGS_FILE, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                data = loaded
+    except Exception as e:
+        log.warning(f"[staff_roles] save_setting(read): {e}")
+        data = {}
+    try:
+        row = data.setdefault(str(guild_id), {})
+        row[key] = int(value or 0)
+        with open(STAFF_SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        log.warning(f"[staff_roles] save_setting: {e}")
+        return False
+
+
+def setting(guild_id, key, env_value=0) -> int:
+    """Значение настройки: панель главнее .env, 0 — не задано."""
+    try:
+        stored = int(load_settings(guild_id).get(key) or 0)
+    except (TypeError, ValueError):
+        stored = 0
+    return stored or int(env_value or 0)
 
 # Варианты имён ролей на сервере (регистр не важен)
 NAME_VARIANTS = {
@@ -98,13 +195,16 @@ def resolve_staff_role(guild, kind: str):
         return None, []
     variants = NAME_VARIANTS[kind]
 
-    # 1) Явный ID из .env — самый надёжный способ
+    # 1) Настройка из ПАНЕЛИ (Каналы и маршруты) — главнее всего
     try:
         from config import Config
         env_id = (Config.STAFF_HELPER_ROLE_ID if kind == "helper"
                   else Config.STAFF_MODERATOR_ROLE_ID)
-        if env_id:
-            role = guild.get_role(int(env_id))
+        panel_id = setting(getattr(guild, "id", 0),
+                           "helper_role" if kind == "helper" else "moderator_role",
+                           env_id)
+        if panel_id:
+            role = guild.get_role(int(panel_id))
             if role:
                 return role, []
     except Exception:
