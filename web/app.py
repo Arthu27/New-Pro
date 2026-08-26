@@ -1615,6 +1615,20 @@ def api_guilds ():
         'boost':g .premium_subscription_count or 0 ,
         }for g in bot_instance .guilds ]
 
+        # Панель показывает ТОЛЬКО главный сервер (MAIN_GUILD_ID): другие
+        # серверы бота в селекторах не светятся, даже если бот на них есть
+        if MAIN_GUILD_ID :
+            guilds =[g for g in guilds if g ['id']==str (MAIN_GUILD_ID )]
+            if not guilds :
+                # бота нет на главном сервере — держим один пункт-заглушку,
+                # чтобы селекторы не обнулялись (пустой список их ломал)
+                guilds =[{
+                'id':str (MAIN_GUILD_ID ),
+                'name':'Главный сервер',
+                'members':0 ,'icon':None ,'owner_id':'', 'online':0 ,
+                'channels':0 ,'roles':0 ,'boost':0 ,
+                }]
+
         return jsonify (guilds )
     except Exception as e :
         print (f"Ошибка списка серверов: {e}")
@@ -1630,6 +1644,8 @@ def api_leave_guild ():
     guild_id =data .get ('guild_id')
     if not guild_id :
         return jsonify ({'error':'Требуется guild_id'}),400 
+    if MAIN_GUILD_ID and str (guild_id )==str (MAIN_GUILD_ID ):
+        return jsonify ({'error':'Это главный сервер панели (MAIN_GUILD_ID) — покинуть его нельзя.'}),400 
     try :
         guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
         if not guild :

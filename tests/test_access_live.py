@@ -248,5 +248,39 @@ try:
 finally:
     A.MAIN_GUILD_ID = _prev_mg
 
+print('== Список серверов: только главный ==')
+_prev_mg2 = A.MAIN_GUILD_ID
+A.MAIN_GUILD_ID = '777'
+try:
+    _saved_bot2, A.bot_instance = A.bot_instance, type('B2', (), {})()
+    A.bot_instance.guilds = [
+        NS(id=777, name='Главный', member_count=100, icon=None, owner_id=1,
+           members=[], channels=[], roles=[], premium_subscription_count=0),
+        NS(id=888, name='Чужой', member_count=5, icon=None, owner_id=2,
+           members=[], channels=[], roles=[], premium_subscription_count=0),
+    ]
+    r = own.get('/api/guilds')
+    lst = r.get_json() or []
+    check(r.status_code == 200 and [g['id'] for g in lst] == ['777'],
+          'в списке серверов ТОЛЬКО главный (777), чужой не светится',
+          f"→ {[(g['id'], g['name']) for g in lst]}")
+
+    r = own.post('/api/leave-guild', json={'guild_id': '777'})
+    d = r.get_json(silent=True) or {}
+    check(r.status_code == 400 and 'нельзя' in (d.get('error') or ''),
+          'покинуть главный сервер — нельзя (400 с объяснением)')
+
+    # бота нет на главном сервере — селекторы не ломаются (одна заглушка)
+    A.bot_instance.guilds = [NS(id=888, name='Чужой', member_count=5, icon=None,
+                                owner_id=2, members=[], channels=[], roles=[],
+                                premium_subscription_count=0)]
+    r = own.get('/api/guilds')
+    lst = r.get_json() or []
+    check(r.status_code == 200 and len(lst) == 1 and lst[0]['id'] == '777',
+          'бота нет на главном — показываем одну заглушку, без чужих')
+finally:
+    A.bot_instance = _saved_bot2
+    A.MAIN_GUILD_ID = _prev_mg2
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
