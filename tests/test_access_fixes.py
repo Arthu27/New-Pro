@@ -58,8 +58,10 @@ check('Вкл показанные' in cmd and 'Выкл показанные' i
 
 print('== Бот объясняет Forbidden ==')
 mod = src('cogs/moderation.py')
-check('_forbidden_reason' in mod and 'Не хватило прав.' in mod,
+check('_forbidden_reason' in mod and 'Не хватило прав у бота' in mod,
       'вместо «Недостаточно прав» — разбор причины')
+check('preflight_reason' in mod and 'У бота не хватит прав' in mod,
+      'бот знает ЗАРАНЕЕ, хватит ли прав (preflight до действия)')
 check('владелец сервера' in mod and 'top_role' in mod and 'Настройки сервера' in mod,
       'диагностика: иерархия ролей / владелец / право бота — с что делать')
 

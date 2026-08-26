@@ -282,6 +282,31 @@ class Moderation (commands .Cog ):
         'vmute': ('manage_roles', 'Управление ролями (мут-роль)'),
     }
 
+    async def preflight_reason(self, guild, user, action):
+        """Проверить ЗАРАНЕЕ, хватит ли боту прав (до попытки и до записи
+        дела в базу). None — всё ок, иначе — причина для модератора."""
+        try:
+            me = guild.me
+            if not me:
+                return None
+            # снять наказание можно и без иерархии; выдать — нет
+            if (action not in ('unban', 'untimeout', 'vunmute', 'clear')
+                    and user and getattr(user, 'id', None) == guild.owner_id):
+                return 'Это владелец сервера — применить к нему наказание нельзя в принципе.'
+            if (action in self._NEED_PERMS and user
+                    and getattr(user, 'top_role', None) is not None
+                    and user.top_role >= me.top_role):
+                return (f'Роль бота ({me.top_role.name}) стоит не выше роли '
+                        f'«{user.top_role.name}» нарушителя — Discord не позволит '
+                        'действие. Поднимите роль бота: Настройки сервера → Роли.')
+            perm, label = self._NEED_PERMS.get(action, (None, None))
+            if perm and not getattr(me.guild_permissions, perm, False):
+                return (f'Боту не выдано право «{label}». '
+                        'Настройки сервера → Роли → роль бота.')
+        except Exception:
+            return None
+        return None
+
     async def _forbidden_reason(self, guild, user, action):
         """Человеческое объяснение discord.Forbidden — что именно проверить."""
         try:
@@ -357,6 +382,14 @@ class Moderation (commands .Cog ):
                 await _respond (interaction ,
                 embed =error_embed ("Пользователь не найден. Укажите @упоминание, точный ник или ID — ровно как на сервере."),
                 ephemeral =True )
+                return
+
+            # Предпроверка прав бота: знаем ЗАРАНЕЕ, получится ли действие,
+            # и дело в базу не пишется зря
+            _pre =await self .preflight_reason (guild ,user ,action )
+            if _pre :
+                await _respond (interaction ,
+                embed =error_embed (_pre ,"У бота не хватит прав"),ephemeral =True )
                 return
 
             try :
@@ -469,7 +502,7 @@ class Moderation (commands .Cog ):
                 await _respond (interaction ,embed =confirm ,ephemeral =True )
             except discord .Forbidden :
                 await _respond (interaction ,
-                embed =error_embed ("Не хватило прав.",await _forbidden_reason (guild ,user ,action )),ephemeral =True )
+                embed =error_embed (await _forbidden_reason (guild ,user ,action ),"Не хватило прав у бота"),ephemeral =True )
             except Exception as ex :
                 import traceback as _tb
                 log .warning (f"[MODPANEL] Сбой действия: {_tb.format_exc()}")

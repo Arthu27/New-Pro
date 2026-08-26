@@ -750,7 +750,10 @@ def login_required (f ):
         if discord_id and session .get ('role')!='owner':
             import time as _t 
             last_check =session .get ('_role_checked',0 )
-            if _t .time ()-last_check >300 :# 5 минут
+            # Бот офлайн — НЕ понижаем роль по живым данным Discord (иначе
+            # пока бот перезапускается, админы панели падают до «Участника»)
+            _bot_online =bool (bot_instance and getattr (bot_instance ,'guilds',None ))
+            if _bot_online and _t .time ()-last_check >300 :# 5 минут
                 live_role =_get_role_from_discord (discord_id )
                 session ['role']=live_role 
                 session ['_role_checked']=_t .time ()
@@ -1481,7 +1484,7 @@ def warnings_page ():
 
 @app .route ('/commands')
 @login_required 
-@role_required ('admin')
+@role_required ('mod')
 def commands_page ():
     return render_template ('commands.html',role =session .get ('role'),username =session .get ('username'))
 
