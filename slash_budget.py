@@ -36,7 +36,7 @@ KEEP_SLASH = frozenset({
     # модерация — ежедневное (всё через /modpanel + варны)
     'modpanel', 'warnings', 'unwarn',
     # доказательства
-    'proofs', 'proofdel',
+    'proof', 'proofs', 'proofdel',
     # логи
     'logs-setup',
     # тикеты и заявки

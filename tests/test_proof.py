@@ -195,7 +195,13 @@ check(_is_link('https://x') and not _is_link('просто текст'), 'link c
 # ═══ 2. ЯДРО — _create_and_post (общая точка панели, /warn и /moderate) ══
 print('== _create_and_post ==')
 cog = ProofCog(bot=object())
-check(not hasattr(ProofCog, 'proof'), 'команды /proof больше нет — загрузка демок в панели')
+check(hasattr(ProofCog, 'proof'), 'команда /proof вернулась: демки грузятся прямо ботом')
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_src = open(os.path.join(_root, 'cogs', 'proof_cog.py'), encoding='utf-8').read()
+check('demo: discord.Attachment' in _src and 'defer(ephemeral=True)' in _src,
+      '/proof принимает файл и отвечает сразу (defer)')
+check("name='proof'" in _src and 'app_commands.Choice' in _src,
+      'наказание выбирается из списка (варн/мут/кик/бан…)')
 
 # без вложения и ссылки — разрешено (фото не обязательно, владелец просил)
 before0 = len(proof_list(GUILD.id))
