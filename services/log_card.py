@@ -194,8 +194,14 @@ def _font(size, bold=False):
 
 
 def _clean(text):
-    """Очистка текста от эмодзи, markdown и сырых упоминаний."""
+    """Очистка текста от эмодзи, markdown, ссылок и сырых упоминаний."""
     t = str(text or '')
+    # Маркдаун-ссылки на картинке бесполезны: [Перейти...](url) -> «Перейти...»,
+    # а «Перейти к сообщению»/«Перейти» без ссылки — мусор, убираем целиком.
+    t = re.sub(r'\[([^\]\[]*)\]\([^)]*\)', r'\1', t)
+    t = t.replace(' · Перейти к сообщению', '').replace(' · Перейти', '')
+    t = t.replace('Перейти к сообщению · ', '').replace('Перейти · ', '')
+    t = re.sub(r'^Перейти(?: к сообщению)?\s*$', '', t)
     t = re.sub(r'<@&(\d+)>', r'@роль·\1', t)
     t = re.sub(r'<@!?(\d+)>', r'@\1', t)
     t = re.sub(r'<#(\d+)>', r'#\1', t)
@@ -488,6 +494,9 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
         cstyle = CATEGORY_STYLES.get(cat_key, CATEGORY_STYLES.get('guild'))
 
         clean_rows = [(n, v) for n, v in (rows or []) if v not in (None, '')][:7]
+        # «Ссылка»/«Перейти» на картинке не имеет смысла — ссылку не кликнуть
+        clean_rows = [(n, v) for n, v in clean_rows
+                      if _clean(n).strip().lower() not in ('ссылка', 'link')]
         header_h = 248
         row_h = 72
         footer_h = 82

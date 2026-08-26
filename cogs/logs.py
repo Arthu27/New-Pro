@@ -696,7 +696,7 @@ async def _audit_actor(guild, action, target_id=None, window=20, retries=2):
                 return None
             except Exception as _ex:
                 log.debug("_audit_actor(): подавлено: %s", _ex)
-            await _ai.sleep(0.8)
+            await _ai.sleep(0.4)
     except Exception as _ex:
         log.debug("_audit_actor(): подавлено: %s", _ex)
     return None
@@ -1359,7 +1359,7 @@ class Logs (commands .Cog ):
     @commands .Cog .listener ()
     async def on_member_ban (self ,guild ,user ):
         # Кто забанил и почему — из журнала аудита
-        who =await _audit_actor (guild ,discord .AuditLogAction .ban ,target_id =user .id ,window =25 ,retries =3 )
+        who =await _audit_actor (guild ,discord .AuditLogAction .ban ,target_id =user .id ,window =25 ,retries =2 )
         reason =(who [2 ]if who else None )or '—'
         save_event (guild .id ,'mod','Бан',{
         'user_id':str (user .id ),
@@ -1837,7 +1837,7 @@ class Logs (commands .Cog ):
                     await _safe_send (ch ,embed =e )
                 return
             # Retry-цикл: audit log может прийти с задержкой
-            for attempt in range (6 ):
+            for attempt in range (2 ):
                 try :
                     async for entry in guild .audit_logs (limit =10 ,action =discord .AuditLogAction .channel_delete ):
                         tid =getattr (entry .target ,'id',None )
@@ -1854,7 +1854,7 @@ class Logs (commands .Cog ):
                     log.debug("on_guild_channel_delete(): подавлено: %s", _ex)
                 if mod_id is not None :
                     break 
-                await _ai .sleep (1.0 )  # ждём появления записи в audit log
+                await _ai .sleep (0.4 )  # ждём появления записи в audit log (быстро: лог важнее подписи)
         except Exception as _ex:
             log.debug("on_guild_channel_delete(): подавлено: %s", _ex)
 

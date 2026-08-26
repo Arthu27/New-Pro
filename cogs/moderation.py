@@ -124,41 +124,34 @@ class Moderation (commands .Cog ):
             _log.debug("send_dm(): подавлено: %s", _ex)
 
     def _confirm_embed (self ,action ,user ,guild ,reason ,case_id ,extra ="" ,moderator =None ):
-        """Embed подтверждения для модератора — профессиональный стиль"""
+        """Embed подтверждения для модератора — чистый стиль без эмодзи:
+        заголовок-результат, карточка участника, поля, однострочный футер."""
         moderator =moderator or (guild .me if guild else None )
         configs ={
-        "ban":("🔨 Бан выполнен",0xE74C3C ,"забанен"),
-        "kick":("👢 Кик выполнен",0xE67E22 ,"кикнут с сервера"),
-        "timeout":("🔇 Мут выполнен",0xF39C12 ,"временно замьючен"),
-        "untimeout":("🔊 Мут снят",0x2ECC71 ,"мут снят"),
-        "unban":("🕊️ Бан снят",0x2ECC71 ,"разбанен"),
+        "ban":("Бан выполнен",0xE74C3C ,"забанен"),
+        "kick":("Кик выполнен",0xE67E22 ,"кикнут с сервера"),
+        "timeout":("Мут выполнен",0xF39C12 ,"временно замьючен"),
+        "untimeout":("Мут снят",0x2ECC71 ,"мут снят"),
+        "unban":("Бан снят",0x2ECC71 ,"разбанен"),
         }
-        title ,color ,action_text =configs .get (action ,("✅ Действие завершено",0x2ECC71 ,"применено"))
+        title ,color ,action_text =configs .get (action ,("Действие выполнено",0x2ECC71 ,"применено"))
 
-        e =discord .Embed (color =color ,timestamp =datetime .now (timezone .utc ))
+        e =discord .Embed (title =title ,
+        description =f"**{user.display_name}** — {action_text}\nID: `{user.id}`",
+        color =color ,timestamp =datetime .now (timezone .utc ))
 
-        desc =f"## {title}\n"
-        desc +=f"### **{user.display_name}** — {action_text}\n"
-        desc +=f"`{user.id}`\n"
-        desc +="\n\n"
-        desc +=f"**Дело:** #{case_id}\n"
-        desc +=f"📝 **Причина:** {reason or 'Не указана'}\n"
-        desc +=f"🛡️ **Модератор:** {moderator.mention if moderator else chr(8212)}\n"
-
+        e .add_field (name ="Причина",value =(reason or "Не указана")[:1000],inline =True )
+        e .add_field (name ="Модератор",value =(moderator .mention if moderator else "—"),inline =True )
         if extra :
-            desc +=f"\n{extra}\n"
+            e .add_field (name ="Детали",value =str (extra )[:1000],inline =False )
 
-        desc +=f"\n{DIVIDER}\n"
-        desc +="> 💬 Пользователь уведомлён в личные сообщения"
-
-        e .description =desc 
         e .set_thumbnail (url =user .display_avatar .url )
 
-        # Footer с simge с сервер
         if guild .icon :
-            e .set_footer (text =f"{guild.name} · Модерация",icon_url =guild .icon .url )
+            e .set_footer (text =f"{guild.name} · дело #{case_id} · ЛС отправлено",
+            icon_url =guild .icon .url )
         else :
-            e .set_footer (text =f"{guild.name} · Модерация")
+            e .set_footer (text =f"{guild.name} · дело #{case_id} · ЛС отправлено")
 
         return e 
 
