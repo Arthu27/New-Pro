@@ -568,21 +568,66 @@ class Reports(commands.Cog):
             view=AppealSelectView(vs, description, file_obj), ephemeral=True)
 
     @app_commands.command(name='report-setup',
-                          description='Привязать канал репортов и роль модератора')
-    @app_commands.describe(channel='Канал, где создаются ветки репортов',
-                           mod_role='Роль модераторов')
+                          description='Настроить систему репортов: канал + роль + права')
+    @app_commands.describe(mod_role='Роль модераторов',
+                           channel='Канал веток (не указан — создам закрытый #репорты)')
     @app_commands.checks.has_permissions(administrator=True)
     async def report_setup_slash(self, interaction,
-                                 channel: discord.TextChannel,
-                                 mod_role: discord.Role):
+                                 mod_role: discord.Role,
+                                 channel: discord.TextChannel = None):
+        guild = interaction.guild
+        if channel is None:
+            # ТЗ 1.8: канал репортов видят только модераторы и менеджеры —
+            # создаём сразу с закрытыми правами, ничего руками делать не надо
+            over = {
+                guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                mod_role: discord.PermissionOverwrite(
+                    read_messages=True, send_messages=True,
+                    manage_threads=True, read_message_history=True),
+                guild.me: discord.PermissionOverwrite(
+                    read_messages=True, send_messages=True,
+                    manage_threads=True, create_private_threads=True,
+                    manage_messages=True, embed_links=True, attach_files=True,
+                    read_message_history=True),
+            }
+            try:
+                channel = await guild.create_text_channel(
+                    'репорты', overwrites=over,
+                    reason='Настройка системы репортов')
+            except Exception as ex:
+                return await interaction.response.send_message(
+                    f'Канал создать не вышло: {ex}. Укажите готовый канал '
+                    'параметром channel.', ephemeral=True)
+            made = True
+        else:
+            # существующий канал закрываем от @everyone и открываем модам
+            # (точечно, чужие оверрайты не трогаем)
+            try:
+                await channel.set_permissions(
+                    guild.default_role, read_messages=False,
+                    reason='Система репортов: канал только для модерации')
+                await channel.set_permissions(
+                    mod_role, read_messages=True, send_messages=True,
+                    manage_threads=True, read_message_history=True,
+                    reason='Система репортов')
+                await channel.set_permissions(
+                    guild.me, read_messages=True, send_messages=True,
+                    manage_threads=True, create_private_threads=True,
+                    manage_messages=True, embed_links=True, attach_files=True,
+                    read_message_history=True,
+                    reason='Система репортов')
+            except Exception as ex:
+                _log.warning('report-setup perms: %s', ex)
+            made = False
         cfg = _cfg(interaction.guild_id)
         cfg['channel_id'] = str(channel.id)
         cfg['mod_role_id'] = str(mod_role.id)
         RC.save_cfg(interaction.guild_id, cfg)
-        perms = channel.permissions_for(interaction.guild.me)
+        perms = channel.permissions_for(guild.me)
         e = discord.Embed(
             title='Система репортов настроена',
-            description=(f"Канал: {channel.mention}\n"
+            description=(f"Канал: {channel.mention}"
+                         f"{' · создан и закрыт от участников' if made else ' · права обновлены: только модерация'}\n"
                          f"Роль модератора: {mod_role.mention}\n\n"
                          f"Создание приватных веток: "
                          f"{'ок' if perms.create_private_threads else 'НЕТ ПРАВА'} · "

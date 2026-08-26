@@ -112,6 +112,9 @@ check('discord.Attachment' in src and 'proof_file' in src and 'to_file' in src,
       'доказательства — файлом сразу в ветку (не только ссылкой)')
 check('zlib' in open(os.path.join(ROOT, 'services', 'reports_core.py'),
                     encoding='utf-8').read(), 'ядро использует zlib')
+check('create_text_channel' in src and 'set_permissions' in src
+      and 'read_messages=False' in src,
+      'setup сам создаёт/закрывает канал: видно только модерации (ТЗ 1.8)')
 check("'reports.py'" in open(os.path.join(ROOT, 'cogs_policy.py'),
                             encoding='utf-8').read(),
       'ког в лёгком профиле — загрузится на бою')
