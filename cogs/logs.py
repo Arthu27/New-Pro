@@ -1439,9 +1439,9 @@ class Logs (commands .Cog ):
                     for _it in items [:_cap ]:
                         _bits =[]
                         if _it .get ('added'):
-                            _bits .append ('+ '+", ".join (_it ['added']))
+                            _bits .append ("Добавлена роль: "+", ".join (_it ['added']))
                         if _it .get ('removed'):
-                            _bits .append ('− '+", ".join (_it ['removed']))
+                            _bits .append ("Убрана роль: "+", ".join (_it ['removed']))
                         _txt =" · ".join (_bits )or '—'
                         if _it .get ('mod'):
                             _txt +=f"  ({_it ['mod']})"
