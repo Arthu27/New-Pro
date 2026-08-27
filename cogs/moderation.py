@@ -385,7 +385,9 @@ class Moderation (commands .Cog ):
                 _sl_bot_owner =_sl_uid in _Cfg .all_owner_ids ()
             except Exception :
                 _sl_bot_owner =False
-            if _sl_key and guild and not _sl_bot_owner and _sl_uid !=getattr (guild ,'owner_id',0 ):
+            _sl_panel =getattr (interaction .user ,'is_panel',False )
+            if _sl_key and guild and not _sl_bot_owner and not _sl_panel \
+            and _sl_uid !=getattr (guild ,'owner_id',0 ):
                 from services .staff_limits import check_limit as _sl_check ,ACTION_TITLES 
                 if action =='clear':
                     try :
@@ -654,6 +656,52 @@ class Moderation (commands .Cog ):
             guild =guild )
             await _respond (interaction ,embed =confirm ,ephemeral =True )
 
+    async def apply_panel_action (self ,guild ,target ,action ,reason ='' ,
+    amount =None ,proof_link =None ,actor ='Панель'):
+        """Наказание из веб-панели («Пользователи») — единый путь с /modpanel.
+
+        target — discord.Member (на сервере) или строка-ID (ушёл с сервера).
+        Возвращает (ok, текст ответа для панели).
+        """
+        from cogs .embed_utils import error_embed as _err ,success_embed as _ok 
+        if action not in PANEL_ACTIONS :
+            return False ,'Неизвестное действие'
+        if guild is None :
+            return False ,'Сервер не найден'
+        _actor =PanelActor (actor )
+        target_str =str (getattr (target ,'id',target ))
+        # варн — своя ветка (в /modpanel варнов нет, они живут в warnings)
+        if action =='warn':
+            try :
+                from services .staff_limits import check_action 
+                _okw ,_deny =check_action (guild ,_actor ,'warn')
+                if not _okw :
+                    return False ,_deny or 'Лимит варнов исчерпан'
+            except Exception :
+                pass 
+            try :
+                w =self .bot .get_cog ('warnings')
+                if w is None :
+                    return False ,'Модуль варнов не загружен'
+                # add_warning сам пишет варн, ДМ участнику и лог в канал
+                res =await w .add_warning (target ,moderator =_actor ,
+                reason =reason or None )
+                _total =res [1 ]if isinstance (res ,tuple )else None 
+                return True ,f'Варн выдан (всего: {_total if _total is not None else "?"})'
+            except Exception as _ex :
+                return False ,f'Не получилось: {_ex }'
+        _it =PanelInteraction (guild ,_actor )
+        try :
+            await self ._execute_mod_action (_it ,action ,target_str ,
+            reason or 'не указана',amount ,proof_link =(proof_link or '').strip ()or None )
+        except Exception as _ex :
+            return False ,f'Не получилось: {_ex }'
+        if not _it .msgs :
+            return True ,'Готово'
+        text =_embed_text (_it .msgs [-1 ])
+        ok ='## ❌' not in text 
+        return ok ,text 
+
     async def _maybe_watchlist_after_mute (self ,interaction ,user ,reason ):
         """Если пользователь получил 2+ мьюта — добавить в watchlist на 1 неделю.
 
@@ -699,6 +747,67 @@ class Moderation (commands .Cog ):
 # ═══════════════════════════════════════════════════════════════════
 #  SELECT-МЕНЮ МОДЕРАЦИИ (без кнопок/эмодзи — только выпадающие меню)
 # ═══════════════════════════════════════════════════════════════════
+# ── Наказания из веб-панели («Пользователи») ─────────────────────────────
+# Тот же путь исполнения, что у /modpanel, но «модератором» выступает
+# панель: действия пишутся в дела и логи от имени «Панель: <логин>».
+PANEL_ACTIONS = ('warn', 'timeout', 'mute_chat', 'vmute', 'ban',
+                 'unban', 'untimeout', 'vunmute')
+
+
+class PanelActor:
+    """«Модератор» из веб-панели — пишется в дела и логи."""
+
+    is_panel = True
+    bot = False
+    id = 0
+    roles = ()
+
+    def __init__(self, name='Панель'):
+        self._name = str(name or 'Панель')
+
+    @property
+    def display_name(self):
+        return f'Панель: {self._name}'
+
+    @property
+    def mention(self):
+        return self.display_name
+
+    def __str__(self):
+        return self.display_name
+
+
+class PanelInteraction:
+    """Interaction-заглушка: собирает ответы бота, чтобы панель показала их."""
+
+    def __init__(self, guild, actor):
+        self.guild = guild
+        self.user = actor
+        self.channel = None
+        self.client = None
+        self.msgs = []
+
+        class _Resp:
+            def is_done(s):
+                return False
+
+            async def send_message(s, embed=None, ephemeral=False, **kw):
+                if embed is not None:
+                    self.msgs.append(embed)
+
+        class _Follow:
+            async def send(s, embed=None, ephemeral=False, **kw):
+                if embed is not None:
+                    self.msgs.append(embed)
+
+        self.response = _Resp()
+        self.followup = _Follow()
+
+
+def _embed_text(e):
+    return str(getattr(e, 'description', None) or getattr(e, 'title', '') or '').strip()
+
+
 # Действия панели: (value, label, описание, ключ лимита стаффа).
 # Ключ — как в services/staff_limits: мут чата/войса/таймаут — один ключ mute.
 MODPANEL_ACTIONS = [

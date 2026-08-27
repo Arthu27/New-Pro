@@ -92,6 +92,7 @@ from web.routes import (
     j2c_panel,
     staff_rating_panel,
     member_card_panel,
+    panel_punish,
     recap_panel,
     appeals_panel,
     log_cards_panel,

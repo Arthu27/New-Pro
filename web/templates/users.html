@@ -76,6 +76,22 @@
             <div class="mc-sub">Свежие варны из зеркала модерации (новые сверху).</div>
             <div id="mcWarns"></div>
           </div>
+          <div class="mc-panel" id="mcPunishPanel">
+            <h3><i class="fas fa-gavel"></i> Наказание</h3>
+            <div class="mc-sub">Как в /modpanel: варн, муты, бан-апелляция и снятия. Пишется в дела и логи от «Панель: ваш логин».</div>
+            <div id="mcPunish">
+              <label class="field" style="display:block;margin:6px 0"><span style="font-size:var(--fs-sm);color:var(--text-3)">Действие</span>
+                <select id="pnAct" aria-label="Действие"></select></label>
+              <label class="field" style="display:block;margin:6px 0" id="pnDurWrap" hidden><span style="font-size:var(--fs-sm);color:var(--text-3)">На сколько (мин/час/дни)</span>
+                <input id="pnDur" placeholder="60, 1ч, 3ч, 1д…" maxlength="40"></label>
+              <label class="field" style="display:block;margin:6px 0" id="pnProofWrap" hidden><span style="font-size:var(--fs-sm);color:var(--text-3)">Доказательство — ссылка (https://…)</span>
+                <input id="pnProof" placeholder="https://… скрин или видео" maxlength="500"></label>
+              <label class="field" style="display:block;margin:6px 0"><span style="font-size:var(--fs-sm);color:var(--text-3)">Причина</span>
+                <input id="pnReason" placeholder="За что? (необязательно)" maxlength="500"></label>
+              <button type="button" class="btn" id="pnGo" style="width:100%;margin-top:4px"><i class="fas fa-bolt"></i> Применить</button>
+              <div id="pnMsg" class="empty-tip" style="padding:6px 0 0"></div>
+            </div>
+          </div>
           <div class="mc-panel">
             <h3><i class="fas fa-cake-candles"></i> События</h3>
             <div class="mc-sub">День рождения по грубой формуле бота и дата входа, если бот онлайн.</div>
@@ -218,6 +234,14 @@
     $('mcWinHint').textContent = '@' + (m.name || '') + ' · ' + st + ' · ID ' + m.id;
     $('mcWinCsv').href = '/api/guild/' + $('guild-select').value + '/member-card/export?user=' + encodeURIComponent(String(m.id));
 
+    /* наказания: привязка к открытому участнику */
+    pnUid = String(m.id);
+    if ($('pnReason')) $('pnReason').value = '';
+    if ($('pnDur')) $('pnDur').value = '';
+    if ($('pnProof')) $('pnProof').value = '';
+    if ($('pnMsg')) { $('pnMsg').textContent = ''; $('pnMsg').style.color = ''; }
+    pnLoad();
+
     /* быстрые чипы из данных списка — видны сразу, пока грузится досье */
     var sc = statusClass[m.status] || 'offline';
     var cr = m.created_at ? new Date(m.created_at) : null;
@@ -252,6 +276,78 @@
       $('mcWinLoad').style.display = 'none';
       $('mcWinErr').textContent = 'Сеть моргнула — попробуйте кликнуть ещё раз';
       $('mcWinErr').style.display = '';
+    });
+  }
+
+  /* ── Наказания из карточки (тот же путь, что /modpanel) ── */
+  var pnOpts = null;
+  var pnUid = '';
+
+  function pnRefreshFields() {
+    var sel = $('pnAct');
+    if (!sel || !pnOpts) return;
+    var v = sel.value;
+    var meta = {};
+    (pnOpts.actions || []).forEach(function (a) { meta[a.value] = a; });
+    var m = meta[v] || {};
+    var proofOn = !!pnOpts.proof_required && m.proof;
+    $('pnDurWrap').hidden = !m.duration;
+    $('pnProofWrap').hidden = !proofOn;
+    /* бан честно подсвечивает неготовность настройки */
+    var msg = '';
+    if (v === 'ban' && pnOpts && !pnOpts.ban_ready) {
+      msg = '«Бан» пока не работает: не выбран канал апелляции. Панель → Каналы и маршруты → «Канал апелляции (бан)».';
+    }
+    $('pnMsg').textContent = msg;
+    $('pnMsg').style.color = msg ? 'var(--warn, #f0b26b)' : '';
+  }
+
+  function pnLoad() {
+    var gid = $('guild-select').value;
+    if (!gid) return;
+    fetch('/api/guild/' + gid + '/punish/options', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.success) { pnOpts = null; return; }
+        pnOpts = d;
+        var sel = $('pnAct');
+        sel.innerHTML = (d.actions || []).map(function (a) {
+          return '<option value="' + a.value + '">' + a.value + ' — ' + a.label + '</option>';
+        }).join('');
+        pnRefreshFields();
+        if (!d.bot_online) {
+          $('pnMsg').textContent = 'Бот офлайн — наказания недоступны.';
+        }
+      }).catch(function () {});
+  }
+
+  function pnApply() {
+    if (!pnUid || !$('pnAct').value) return;
+    var gid = $('guild-select').value;
+    var btn = $('pnGo');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    $('pnMsg').textContent = 'Применяем…';
+    $('pnMsg').style.color = '';
+    fetch('/api/guild/' + gid + '/punish', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: pnUid,
+        action: $('pnAct').value,
+        duration: $('pnDurWrap').hidden ? '' : $('pnDur').value.trim(),
+        proof: $('pnProofWrap').hidden ? '' : $('pnProof').value.trim(),
+        reason: $('pnReason').value.trim()
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false;
+      var t = d.message || d.error || 'Готово';
+      $('pnMsg').textContent = t;
+      $('pnMsg').style.color = d.success ? '' : 'var(--danger, #e74c3c)';
+    }).catch(function () {
+      btn.disabled = false;
+      $('pnMsg').textContent = 'Сеть моргнула — попробуйте ещё раз';
+      $('pnMsg').style.color = 'var(--danger, #e74c3c)';
     });
   }
 
@@ -307,6 +403,10 @@
       if (card) { e.preventDefault(); showDetail(card.getAttribute('data-id')); }
     });
     bindDrag();
+  if ($('pnAct')) {
+    $('pnAct').addEventListener('change', pnRefreshFields);
+    $('pnGo').addEventListener('click', pnApply);
+  }
   }
 
   function start() {
