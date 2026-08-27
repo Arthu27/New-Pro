@@ -276,9 +276,8 @@ def _count_within(hits, window):
 def check_limit(guild_id, user_id, key, amount=1, role_ids=None):
     """Разрешено ли действие: (allowed, used_in_window, limit).
 
-    role_ids — роли модератора: если у каких-то из них есть свои
-    переопределения, действует САМЫЙ СТРОГИЙ лимит/окно (обойти лимит,
-    добавив себе лишнюю роль, нельзя).
+    role_ids — роли модератора: если у какой-то из них задан СВОЙ лимит,
+    действует он вместо общего (заказ владельца).
     """
     if role_ids:
         lim_map, win_map = effective_limits(guild_id, role_ids)
@@ -571,26 +570,29 @@ def revert_change(guild_id, change_id, who=None):
 
 
 def effective_limits(guild_id, role_ids=()):
-    """Эффективные (лимиты, окна) пользователя: глобальные, ужатые ролями.
-
-    На каждый ключ побеждает ИСТОЧНИК С МЕНЬШИМ ЧИСЛОМ — его окно и
-    действует (8/день против 3/12 часов → 3 за 12 часов). Выдать себе
-    «мягкую» роль нельзя.
+    """Эффективные (лимиты, окна) пользователя: свои лимиты ролей ГЛАВНЕЕ
+    общих (так пожелал владелец). Задали роли лимит — действует ОН, больше
+    общего или меньше — неважно. Общего лимита нет, а у роли есть —
+    действует лимит роли. Несколько ролей со своими лимитами — побеждает
+    самая мягкая (роль дают осознанно, наказывать за вторую роль странно).
     """
-    lim = get_limits(guild_id)
-    win = get_windows(guild_id)
+    lim = dict(get_limits(guild_id))
+    win = dict(get_windows(guild_id))
     overrides = get_role_overrides(guild_id)
+    best = {}          # ключ → (лимит, окно) — лучший из СВОИХ лимитов ролей
     for rid in role_ids or ():
         ov = overrides.get(str(rid))
         if not ov:
             continue
         for k, v in (ov.get('limits') or {}).items():
-            if k not in lim:
+            if not isinstance(v, int) or v <= 0:
                 continue
             w = (ov.get('windows') or {}).get(k, win.get(k, DEFAULT_WINDOW))
-            if v < lim[k] or (v == lim[k] and w < win.get(k, DEFAULT_WINDOW)):
-                lim[k] = v
-                win[k] = w
+            if k not in best or v > best[k][0] or (v == best[k][0] and w > best[k][1]):
+                best[k] = (v, w)
+    for k, (v, w) in best.items():
+        lim[k] = v     # свой лимит роли ЗАМЕНЯЕТ общий — больше он или меньше
+        win[k] = w
     return lim, win
 
 

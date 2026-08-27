@@ -76,6 +76,65 @@ open(SL._cfg_path(G), 'w').write('не json')
 lim3 = SL.get_limits(G)
 check(lim3['ban'] == SL.DEFAULT_LIMITS['ban'], 'битый файл лимитов -> дефолты')
 
+print('== 8. Свои лимиты ролей ГЛАВНЕЕ общих ==')
+# свежая гильдия, чтобы не зависеть от предыдущих разделов
+G2 = G + 9
+SL.set_limits(G2, ban=3)                          # общий: 3 бана
+SL.set_role_limits(G2, 500, who='t', role_name='Старший мод', ban=10)
+lim_r, win_r = SL.effective_limits(G2, [500])
+check(lim_r['ban'] == 10, f'роль 10 при общем 3 → действует 10 ({lim_r["ban"]})')
+ok_r, used_r, lim_eff = SL.check_limit(G2, 333, 'ban', 9, role_ids=[500])
+check(ok_r and lim_eff == 10, 'по лимиту РОЛИ: 9-й бан разрешён (общий 3 не мешает)')
+
+SL.set_role_limits(G2, 501, who='t', role_name='Стажёр', ban=2)
+lim_j, _w = SL.effective_limits(G2, [501])
+check(lim_j['ban'] == 2, 'роль 2 при общем 3 → действует 2 (жёстче — тоже её цифра)')
+
+SL.set_role_limits(G2, 502, who='t', role_name='Спец', unban=4)
+lim_u, _wu = SL.effective_limits(G2, [502])
+check(lim_u.get('unban') == 4, 'общий дефолт 10, у роли 4 → действует 4')
+
+SL.set_role_limits(G2, 503, who='t', role_name='Мягкая', ban=9)
+lim_m, _wm = SL.effective_limits(G2, [501, 503])
+check(lim_m['ban'] == 9, 'две роли (2 и 9) → действует мягчайшая (9)')
+
+SL.set_role_windows(G2, 500, who='t', role_name='Старший мод', ban=3600)
+check(SL.effective_limits(G2, [500])[1].get('ban') == 3600,
+      'свой период роли применяется вместе с её лимитом')
+
+check(SL.effective_limits(G2, [999])[0]['ban'] == 3,
+      'роль без своих лимитов → общий (3)')
+
+
+class _R:
+    def __init__(self, i):
+        self.id = i
+
+
+class _M:
+    def __init__(self, i, roles):
+        self.id = i
+        self.roles = roles
+        self.bot = False
+
+
+class _GG:
+    def __init__(self, i):
+        self.id = i
+        self.owner_id = 1
+
+
+gA = _GG(G2)
+mA = _M(777, [_R(500), _R(G2)])                   # @everyone отбрасывается
+last_text = ''
+for _ in range(11):
+    ok_a, last_text = SL.check_action(gA, mA, 'ban', 1)
+    if not ok_a:
+        break
+    SL.record_hit(gA.id, mA.id, 'ban', 1)
+check(ok_a is False and '10' in (last_text or ''),
+      f'check_action: 11-й бан сверх лимита роли 10 запрещён ({last_text})')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)
