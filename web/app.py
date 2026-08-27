@@ -2711,9 +2711,23 @@ def inject_panel_menu ():
     role =session .get ('role','uye')
     menu =panel_groups_for (role )if ROLES .get (role ,-1 )>=ROLES ['mod']else []
     off_paths =module_off_paths ()
+    # бейджи пунктов меню: красный счётчик «Апелляции ждут решения»
+    nav_badges ={}
+    if ROLES .get (role ,-1 )>=ROLES ['mod']:
+        try :
+            from db import GuildData
+            _gid =str (session .get ('selected_guild')or MAIN_GUILD_ID or '')
+            _st =GuildData ('appeals').get (_gid ,'state',None )if _gid else None
+            _n =sum (1 for i in (_st or {}).get ('items',[])
+                    if i .get ('status')=='pending')
+            if _n :
+                nav_badges ['/appeals']=_n
+        except Exception as _ex:
+            _log.debug('inject_panel_menu badges: %s', _ex)
     return {'panel_menu':menu ,'panel_role':role ,
             'panel_mod_only':module_mode_active (),
-            'panel_off_paths':off_paths}
+            'panel_off_paths':off_paths,
+            'nav_badges':nav_badges}
 
 @app .route ('/api/panel/sidebar')
 @login_required 

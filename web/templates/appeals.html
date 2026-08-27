@@ -105,6 +105,12 @@
     </div>
     <div class="hint" style="margin-top:2px"><i class="fas fa-circle-info"></i>
       Для панельного «бана» (изоляции) ссылка не нужна — человек и так на сервере, доступ возвращается сам. Ссылка отправляется только если бан был настоящим Discord-баном.</div>
+    <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px;margin-top:10px">
+      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Пинг роли при новой апелляции (в канал карточек)</span>
+        <select class="form-input" id="apPingRole" aria-label="Роль для пинга при новой апелляции"><option value="0">Без пинга</option></select></label>
+      <label class="field" style="min-width:230px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Авто-блок подачи после N отказов (0 — выкл)</span>
+        <input type="number" class="form-input" id="apBlockAfter" min="0" max="10" aria-label="Авто-блок подачи после N отказов"></label>
+    </div>
     <div class="form-row" style="max-width:900px;margin-top:10px">
       <textarea class="form-input" id="apTemplates" rows="4" style="flex:1"
         placeholder="Шаблоны причин отказа — по одной на строку (до 10)"
@@ -138,6 +144,11 @@ function syncSettings(d) {
     $('apInviteChan').dataset.value = String(s.invite_channel_id || '');
     $('apInviteChan').value = String(s.invite_channel_id || '');
   }
+  if ($('apPingRole')) {
+    $('apPingRole').dataset.value = String(s.ping_role_id || '0');
+    $('apPingRole').value = String(s.ping_role_id || '0');
+  }
+  if ($('apBlockAfter')) $('apBlockAfter').value = s.block_after_rejects;
   if ($('apTemplates')) $('apTemplates').value = (s.reject_templates || []).join('\n');
 }
 
@@ -169,7 +180,12 @@ function loadOverview() {
       kpi('fa-inbox', s.pending, 'ожидают решения', 'tone-warn') +
       (s.stale ? kpi('fa-hourglass-half', s.stale, 'ждут > ' + staleH + 'ч — напомним в канал', 'tone-err') : '') +
       kpi('fa-circle-check', s.accepted, 'принятых', 'tone-ok') +
-      kpi('fa-circle-xmark', s.rejected, 'отклонённых', 'tone-err') + last;
+      kpi('fa-circle-xmark', s.rejected, 'отклонённых', 'tone-err') +
+      (s.ratings && s.ratings.pct !== null
+        ? kpi('fa-face-smile', s.ratings.pct + '%',
+              'оценок рассмотрения (' + (s.ratings.up + s.ratings.down) + ')',
+              s.ratings.pct >= 50 ? 'tone-ok' : 'tone-err')
+        : '') + last;
 
     var rd = d.readiness;
     var rb = $('apReady');
@@ -181,7 +197,7 @@ function loadOverview() {
     } else {
       rb.innerHTML = '<span class="badge tone-warning">свой канал не задан — при живом боте карточки уйдут в системный</span>';
     }
-    if (CAN_EDIT) { $('apSetBox').hidden = false; loadChannels(); syncAppearance(d); }
+    if (CAN_EDIT) { $('apSetBox').hidden = false; loadChannels(); loadRoles(); syncAppearance(d); }
     syncSettings(d);
 
     var q = $('apQueue');
@@ -259,6 +275,19 @@ function apResolve(id, accept) {
       }).catch(function () { window.showToast('Сеть моргнула — попробуйте ещё раз', false); });
     },
     { danger: !accept, okText: accept ? 'Принять' : 'Отклонить' });
+}
+
+function loadRoles() {
+  fetch('/api/guild/' + GID + '/roles').then(function (r) { return r.json(); }).then(function (d) {
+    var sel = $('apPingRole');
+    if (!sel) return;
+    var keep = sel.dataset.value || sel.value;
+    var raw = Array.isArray(d) ? d : (d.roles || []);
+    sel.innerHTML = '<option value="0">Без пинга</option>' + raw.map(function (r) {
+      return '<option value="' + esc(r.id) + '">@ ' + esc(r.name) + '</option>';
+    }).join('');
+    if (keep) sel.value = keep;
+  }).catch(function () {});
 }
 
 function loadChannels() {
@@ -401,7 +430,7 @@ if (CAN_EDIT && $('apRulesSave')) {
   ['apCooldown', 'apStale', 'apTemplates'].forEach(function (id) {
     $(id).addEventListener('input', function () { apRulesDirty = true; });
   });
-  ['apReqReply', 'apInviteOn', 'apInviteChan'].forEach(function (id) {
+  ['apReqReply', 'apInviteOn', 'apInviteChan', 'apPingRole', 'apBlockAfter'].forEach(function (id) {
     $(id).addEventListener('change', function () { apRulesDirty = true; });
   });
   $('apRulesSave').addEventListener('click', function () {
@@ -414,6 +443,8 @@ if (CAN_EDIT && $('apRulesSave')) {
         require_reply_on_reject: $('apReqReply').checked,
         invite_on_unban: $('apInviteOn').checked,
         invite_channel_id: $('apInviteChan').value,
+        ping_role_id: $('apPingRole').value,
+        block_after_rejects: $('apBlockAfter').value,
         reject_templates: $('apTemplates').value.split('\n')
           .map(function (s) { return s.trim(); })
           .filter(function (s) { return !!s; })

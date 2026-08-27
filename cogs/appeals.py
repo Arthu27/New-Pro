@@ -90,6 +90,11 @@ def settings_of(state):
         'invite_on_unban': bool(raw.get('invite_on_unban')),
         'invite_channel_id': _clamp_hours(raw.get('invite_channel_id'), 0, 0,
                                           10 ** 25),
+        # пинг роли модерации в канал при новой апелляции (0 = без пинга);
+        # авто-блок подачи после N отклонённых (0 = выключен)
+        'ping_role_id': _clamp_hours(raw.get('ping_role_id'), 0, 0, 10 ** 25),
+        'block_after_rejects': _clamp_hours(raw.get('block_after_rejects'),
+                                            0, 0, 10),
     }
 
 
@@ -212,6 +217,16 @@ def create_appeal(state, user_id, user_name, text, now, link=None):
     blocked = cooldown_block(state, user_id, now)
     if blocked:
         return None, blocked
+    # авто-блок злостных подателей: N отклонённых — подача закрыта
+    max_rej = settings_of(state)['block_after_rejects']
+    if max_rej > 0:
+        rejected_n = sum(
+            1 for i in (state or {}).get('items', [])
+            if int(i.get('user_id') or 0) == int(user_id)
+            and i.get('status') == 'rejected')
+        if rejected_n >= max_rej:
+            return None, ('подача апелляций для вас закрыта модерацией '
+                          f'сервера (отклонено: {rejected_n})')
     item = {
         'id': state['next_id'],
         'user_id': int(user_id),
@@ -223,6 +238,7 @@ def create_appeal(state, user_id, user_name, text, now, link=None):
         'reviewed_by': None,
         'reviewed_at': None,
         'reply': None,
+        'rating': None,               # оценка рассмотрения от автора: up/down
     }
     state['next_id'] += 1
     state['items'].append(item)
@@ -356,7 +372,8 @@ class AppealView(discord.ui.View):
             item, accept, unbanned,
             cooldown_hours=_settings['cooldown_hours'],
             guild_name=str(getattr(guild, 'name', '') or ''),
-            member_present=member_present, invite_url=invite_url)
+            member_present=member_present, invite_url=invite_url,
+            guild_id=gid)
 
         for child in self.children:
             child.disabled = True
@@ -371,6 +388,55 @@ class AppealView(discord.ui.View):
             await interaction.response.edit_message(embed=embed, view=self)
         else:
             await interaction.response.edit_message(view=self)
+
+
+class AppealRateView(discord.ui.View):
+    """Оценка рассмотрения от автора апелляции (шлётся в ЛС после решения).
+
+    custom_id несёт gid и номер апелляции → persistent после рестарта
+    (регистрируется в on_ready для решённых, но неоценённых апелляций).
+    Оценить может только сам автор — чужие клики отклоняются.
+    """
+
+    def __init__(self, cog, guild_id, appeal_id):
+        super().__init__(timeout=None)
+        self.cog = cog
+        self.guild_id = guild_id
+        self.appeal_id = appeal_id
+        for label, style, verb in (
+                ('Помогли разобраться', discord.ButtonStyle.success, 'up'),
+                ('Не помогли', discord.ButtonStyle.secondary, 'down')):
+            btn = discord.ui.Button(
+                label=label, style=style,
+                custom_id=f'app_rate:{verb}:{guild_id}:{appeal_id}')
+            btn.callback = self._make_cb(verb)
+            self.add_item(btn)
+
+    def _make_cb(self, verb):
+        async def _cb(interaction):
+            state = self.cog._load(self.guild_id)
+            item = get_appeal(state, self.appeal_id)
+            if item is None or item['status'] not in ('accepted', 'rejected'):
+                await interaction.response.send_message(
+                    'Эта апелляция ещё не решена — оценивать рано.',
+                    ephemeral=True)
+                return
+            if int(interaction.user.id) != int(item['user_id']):
+                await interaction.response.send_message(
+                    'Оценить может только автор апелляции.', ephemeral=True)
+                return
+            if item.get('rating'):
+                await interaction.response.send_message(
+                    'Оценка уже сохранена — спасибо.', ephemeral=True)
+                return
+            item['rating'] = verb
+            self.cog._save(self.guild_id, state)
+            for child in self.children:
+                child.disabled = True
+            await interaction.response.edit_message(view=self)
+            await interaction.followup.send(
+                'Спасибо — оценка учтена.', ephemeral=True)
+        return _cb
 
 
 class AppealModal(discord.ui.Modal):
@@ -581,6 +647,19 @@ class Appeals(commands.Cog):
             self.bot.add_view(AppealMenuView())
         except Exception as _ex:
             log.debug('appeals: меню-view: %s', _ex)
+        rated = 0
+        for guild in list(self.bot.guilds):
+            state = self._load(guild.id)
+            for item in state.get('items', []):
+                if (item.get('status') in ('accepted', 'rejected')
+                        and not item.get('rating')):
+                    try:
+                        self.bot.add_view(AppealRateView(self, guild.id, item['id']))
+                        rated += 1
+                    except Exception as _ex:
+                        log.debug('appeals: rate-view #%s: %s', item['id'], _ex)
+        if rated:
+            log.info('appeals: восстановлено %s rate-view после рестарта', rated)
         if restored:
             log.info('appeals: восстановлено %s view после рестарта', restored)
         # цикл напоминаний о висящих апелляциях — один раз (on_ready бывает повторно)
@@ -606,6 +685,18 @@ class Appeals(commands.Cog):
         except Exception as _ex:
             log.debug('appeals: контекст %s: %s', user_id, _ex)
             return 'история наказаний недоступна'
+
+    async def _ping_mod_role(self, target_channel, settings, item):
+        """Пинг роли модерации при новой апелляции (0 в настройках = без пинга)."""
+        rid = int(settings.get('ping_role_id') or 0)
+        if not rid or target_channel is None:
+            return
+        try:
+            await target_channel.send(
+                f'<@&{rid}> — новая апелляция **#{item["id"]}** ожидает решения.',
+                allowed_mentions=discord.AllowedMentions(roles=True))
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.debug('appeals: пинг роли #%s: %s', item.get('id'), _ex)
 
     async def _make_return_invite(self, guild, settings):
         """Разовая ссылка-возврат для принятого РЕАЛЬНОГО Discord-бана.
@@ -855,6 +946,7 @@ class Appeals(commands.Cog):
                 item['message_id'] = card.id
                 item['thread_id'] = thread.id
                 item['thread_url'] = card.jump_url
+                await self._ping_mod_role(thread, settings_of(state), item)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.error('appeals: тред #%s не создан: %s', item['id'], _ex)
         self._save(guild_id, state)
@@ -917,6 +1009,7 @@ class Appeals(commands.Cog):
                 msg = await channel.send(**send_kwargs)
                 item['message_id'] = msg.id
                 self._save(guild_id, state)
+                await self._ping_mod_role(channel, settings_of(state), item)
             except (discord.Forbidden, discord.HTTPException) as _ex:
                 log.error('appeals: карточка #%s на %s не ушла: %s',
                           item['id'], guild_id, _ex)
@@ -983,7 +1076,8 @@ class Appeals(commands.Cog):
         return ch or guild.system_channel
 
     async def _notify_user(self, item, accept, unbanned, cooldown_hours=0,
-                           guild_name='', member_present=False, invite_url=None):
+                           guild_name='', member_present=False, invite_url=None,
+                           guild_id=0):
         """ЛС о решении — единый embed.
 
         Развилка принятия по нашей механике: панельный «бан» — изоляция
@@ -1036,6 +1130,17 @@ class Appeals(commands.Cog):
             await user.send(embed=embed)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС %s закрыты: %s', item['user_id'], _ex)
+            return
+        # после решения — одна кнопочная оценка рассмотрения (рейтинг
+        # справедливости сводится в панели «Апелляции»)
+        if guild_id and not item.get('rating'):
+            try:
+                view = AppealRateView(self, guild_id, item.get('id'))
+                await user.send(
+                    'Как прошло рассмотрение? Одна оценка — и модерация '
+                    'становится лучше:', view=view)
+            except (discord.Forbidden, discord.HTTPException) as _ex:
+                log.debug('appeals: ЛС-оценка #%s: %s', item.get('id'), _ex)
 
 
 async def setup(bot):

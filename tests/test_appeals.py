@@ -133,6 +133,11 @@ check(sdef['invite_on_unban'] is False and sdef['invite_channel_id'] == 0,
 sinv = ap.settings_of({'settings': {'invite_on_unban': True, 'invite_channel_id': 555}})
 check(sinv['invite_on_unban'] is True and sinv['invite_channel_id'] == 555,
       'ссылка-возврат подхватывается из state')
+check(sdef['ping_role_id'] == 0 and sdef['block_after_rejects'] == 0,
+      'пинг роли и авто-блок по умолчанию выключены')
+spb = ap.settings_of({'settings': {'ping_role_id': 555, 'block_after_rejects': 3}})
+check(spb['ping_role_id'] == 555 and spb['block_after_rejects'] == 3,
+      'пинг роли и авто-блок подхватываются из state')
 
 print('== 5.2 кулдаун после отказа ==')
 stc = ap.empty_state()
@@ -176,6 +181,28 @@ check([i['id'] for i in stale] == [old_p['id']],
       'висящая — только старая и о которой не напоминали')
 check(ap.stale_pending(sts, NOW, stale_hours=100) == [],
       'настраиваемый порог уважается (100 ч — ни одной)')
+
+print('== 5.5 авто-блок подачи после N отказов ==')
+stb = ap.empty_state()
+stb['settings'] = {'block_after_rejects': 2, 'cooldown_hours': 0}
+r1, _ = ap.create_appeal(stb, 700, 'Spamer', 'первая апелляция от спамера подробно', NOW)
+ap.resolve_appeal(stb, r1['id'], False, 'Mod', NOW, reply='нет')
+r2, _ = ap.create_appeal(stb, 700, 'Spamer', 'вторая апелляция от спамера подробно', NOW)
+ap.resolve_appeal(stb, r2['id'], False, 'Mod', NOW, reply='нет')
+bad, err = ap.create_appeal(stb, 700, 'Spamer', 'третья апелляция от спамера подробно', NOW)
+check(bad is None and 'закрыта' in err, f'два отказа — подача закрыта ({err})')
+other, _ = ap.create_appeal(stb, 701, 'Good', 'а я хороший человек прошу разбан', NOW)
+check(other is not None, 'другому пользователю подача открыта')
+stb['settings']['block_after_rejects'] = 0
+ok0, _ = ap.create_appeal(stb, 700, 'Spamer', 'блок выключен — пробую опять подробно', NOW)
+check(ok0 is not None, '0 в настройке — авто-блок не мешает')
+
+print('== 5.6 rate-view оценки рассмотрения ==')
+rv = ap.AppealRateView(object(), 42, 7)
+rids = sorted(c.custom_id for c in rv.children)
+check(rids == ['app_rate:down:42:7', 'app_rate:up:42:7'],
+      f'custom_id оценки несут gid и номер: {rids}')
+check(rv.timeout is None, 'rate-view persistent (переживает рестарт)')
 
 print('== 6. линт ==')
 src = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()

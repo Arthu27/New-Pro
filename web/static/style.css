@@ -532,6 +532,22 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   background: var(--surface-3);
   padding: 1px 6px; border-radius: 99px;
 }
+.nav-ap-badge {
+  margin-left: auto; flex: 0 0 auto;
+  min-width: 17px; height: 17px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10.5px; font-weight: 800; line-height: 1;
+  color: #fff; background: var(--err);
+  border-radius: 99px;
+  box-shadow: 0 0 10px var(--err-soft);
+  animation: apBadgePulse 2.2s ease-in-out infinite;
+}
+@keyframes apBadgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+/* off-чип и бейдж рядом: бейдж отдаёт выравнивание чипу */
+.nav-ap-badge + .nav-off-chip { margin-left: 6px; }
 
 /* Подгруппы (раздел модерации) */
 .nav-subgroup { margin: 2px 0; }

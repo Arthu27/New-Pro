@@ -270,6 +270,23 @@ check('stale' in ov['stats'] and ov['stats']['stale'] == 0,
 check('settings' in ov and 'reject_templates' in ov['settings'],
       'настройки приезжают в overview')
 
+# бейдж ожидающих в живом сайдбаре (сейчас в очереди ровно одна)
+sb = client.get('/api/panel/sidebar?path=/appeals')
+check(sb.status_code == 200 and 'nav-ap-badge' in sb.get_data(as_text=True),
+      'бейдж ожидающих апелляций в сайдбаре меню')
+
+# апелляции конкретного участника — блок в карточке 360°
+r = client.get('/api/guild/777/appeals/user/999')
+du = r.get_json()
+check(du.get('success') and du.get('total') == 1 and
+      du['items'][0]['id'] == new_item['id'],
+      'апелляции конкретного участника отдаются')
+check(client.get('/api/guild/555/appeals/user/999').get_json().get('total') == 1,
+      'изоляция: /555/user отвечает данными главного сервера')
+r = client.get('/api/guild/777/appeals/user/424242')
+check(r.get_json().get('total') == 0 and r.get_json().get('items') == [],
+      'у человека без апелляций — честный ноль')
+
 # изоляция MAIN_GUILD_ID: чужой gid в URL → данные главного сервера
 ov555 = client.get('/api/guild/555/appeals/overview').get_json()
 check(ov555['stats']['total'] == ov['stats']['total'] and
@@ -319,6 +336,28 @@ check(ov['settings']['invite_on_unban'] is True and
       ov['settings']['invite_channel_id'] == 301,
       'настройки ссылки видны в overview')
 
+# пинг роли модерации и авто-блок после N отказов
+r = client.post('/api/guild/777/appeals/settings',
+                json={'ping_role_id': 404, 'block_after_rejects': 4})
+d = r.get_json()
+check(d.get('success') and d['settings']['ping_role_id'] == 404 and
+      d['settings']['block_after_rejects'] == 4,
+      'пинг роли и авто-блок сохраняются')
+ov = client.get(OV).get_json()
+check(ov['settings']['ping_role_id'] == 404 and
+      ov['settings']['block_after_rejects'] == 4,
+      'пинг и авто-блок видны в overview')
+
+# рейтинг рассмотрений сводится в сводку
+str_ = GuildData('appeals').get('777', 'state', AP.empty_state()) or AP.empty_state()
+str_['items'][0]['rating'] = 'up'
+str_['items'][1]['rating'] = 'down'
+GuildData('appeals').set('777', 'state', str_)
+ov = client.get(OV).get_json()
+rt = (ov['stats'].get('ratings') or {})
+check(rt.get('up') == 1 and rt.get('down') == 1 and rt.get('pct') == 50,
+      'рейтинг рассмотрений сведён (1×1 → 50%)')
+
 # обязательный комментарий при отказе
 r = client.post('/api/guild/777/appeals/resolve', json={
     'appeal_id': str(new_item['id']), 'accept': False, 'reply': ''})
@@ -347,6 +386,16 @@ check('id="apCooldown"' in apt and 'id="apStale"' in apt and
       'форма «Правила подачи» в шаблоне')
 check('id="apInviteOn"' in apt and 'id="apInviteChan"' in apt,
       'тумблер и выбор канала ссылки-возврата в форме')
+check('id="apPingRole"' in apt and 'id="apBlockAfter"' in apt,
+      'пинг роли и авто-блок в форме правил')
+check('ratings' in apt, 'KPI оценок рассмотрения в шаблоне')
+_ut = open(os.path.join(ROOT, 'web', 'templates', 'users.html'), encoding='utf-8').read()
+check('id="mcAppeals"' in _ut and '/appeals/user/' in _ut,
+      'блок апелляций участника в карточке 360° (Пользователи)')
+_sb = open(os.path.join(ROOT, 'web', 'templates', '_sidebar_nav.html'), encoding='utf-8').read()
+check('nav-ap-badge' in _sb, 'разметка бейджа ожидающих в сайдбаре')
+_cs = open(os.path.join(ROOT, 'web', 'static', 'style.css'), encoding='utf-8').read()
+check('.nav-ap-badge' in _cs, 'стиль бейджа в общем css')
 check('data-st="auto_closed"' in apt, 'чип автозакрытия в фильтрах шаблона')
 check('it.context' in apt and 'apTpl' in apt and '/settings' in apt,
       'контекст, шаблонные чипы и сохранение правил в очереди')

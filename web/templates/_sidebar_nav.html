@@ -33,14 +33,14 @@
                                     </button>
                                     <div class="nav-subgroup-items">
                                     {% for it in section.pages %}
-                                        <a href="{{ it.path }}" data-mod-path="{{ it.path }}" class="nav-link {% if active_path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}" title="{{ it.description }}{% if it.path in panel_off_paths %} · Модуль выключен{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
+                                        <a href="{{ it.path }}" data-mod-path="{{ it.path }}" class="nav-link {% if active_path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}" title="{{ it.description }}{% if it.path in panel_off_paths %} · Модуль выключен{% endif %}"><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if nav_badges and nav_badges.get(it.path) %}<span class="nav-ap-badge" title="ждут решения">{{ nav_badges.get(it.path) }}</span>{% endif %}{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
                                     {% endfor %}
                                     </div>
                                 </div>
                                 {% endfor %}
                             {% else %}
                                 {% for it in grp.pages %}
-                                <a href="{{ it.path }}" class="nav-link {% if active_path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}"{% if it.path in panel_off_paths %} title="Модуль выключен (MOD_ONLY / DISABLED_COGS)"{% endif %}><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
+                                <a href="{{ it.path }}" class="nav-link {% if active_path == it.path %}active{% endif %}{% if it.path in panel_off_paths %} is-off{% endif %}"{% if it.path in panel_off_paths %} title="Модуль выключен (MOD_ONLY / DISABLED_COGS)"{% endif %}><i class="fas {{ it.icon }}"></i> <span>{{ it.label }}</span>{% if nav_badges and nav_badges.get(it.path) %}<span class="nav-ap-badge" title="ждут решения">{{ nav_badges.get(it.path) }}</span>{% endif %}{% if it.path in panel_off_paths %}<span class="nav-off-chip">выкл</span>{% endif %}</a>
                                 {% endfor %}
                             {% endif %}
                             </div>

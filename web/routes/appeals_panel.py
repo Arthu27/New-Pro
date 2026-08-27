@@ -87,7 +87,17 @@ def overview_stats(state, now=None, stale_hours=None):
                 'status_label': STATUS_LABELS.get(it.get('status'), '?'),
                 'reviewed_by': str(it.get('reviewed_by') or ''),
                 'reviewed_at': str(it.get('reviewed_at') or '')[:16].replace('T', ' ')}
-    return {'total': len(items), **by, 'stale': stale, 'last_resolved': last}
+    up = down = 0
+    for item in items:
+        if item.get('rating') == 'up':
+            up += 1
+        elif item.get('rating') == 'down':
+            down += 1
+    total_votes = up + down
+    ratings = {'up': up, 'down': down,
+               'pct': round(100 * up / total_votes) if total_votes else None}
+    return {'total': len(items), **by, 'stale': stale,
+            'ratings': ratings, 'last_resolved': last}
 
 
 def pending_view(state, gid=None):
@@ -191,7 +201,8 @@ def _notify_user(bot, gid, item, accept, unbanned, member_present=False):
             item, accept, unbanned,
             cooldown_hours=settings['cooldown_hours'],
             guild_name=str(getattr(guild, 'name', '') or ''),
-            member_present=member_present, invite_url=invite_url), timeout=10)
+            member_present=member_present, invite_url=invite_url,
+            guild_id=int(gid)), timeout=10)
         return True
     except Exception as _ex:
         _log.debug('appeals: ЛС решением: %s', _ex)
@@ -455,6 +466,11 @@ def register(ctx):
             'reject_templates': templates,
             'invite_on_unban': invite_on_unban,
             'invite_channel_id': invite_channel_id,
+            'ping_role_id': _clamp_hours(data.get('ping_role_id'), 0, 10 ** 25,
+                                         cur['ping_role_id']),
+            'block_after_rejects': _clamp_hours(data.get('block_after_rejects'),
+                                                0, 10,
+                                                cur['block_after_rejects']),
         }
         state['settings'] = settings
         _save(gid, state)
@@ -481,6 +497,26 @@ def register(ctx):
         resp = Response(png, mimetype='image/png')
         resp.headers['Cache-Control'] = 'no-store'
         return resp
+
+    @app.route('/api/guild/<gid>/appeals/user/<uid>')
+    @login_required
+    @role_required('mod')
+    def api_appeals_user(gid, uid):
+        """Апелляции конкретного участника — мини-блок в карточке 360°."""
+        gid = active_guild_id()
+        state = _state(gid)
+        items = [i for i in (state or {}).get('items', [])
+                 if str(i.get('user_id')) == str(uid)]
+        items.sort(key=lambda i: str(i.get('created_at') or ''), reverse=True)
+        return jsonify({'success': True, 'total': len(items), 'items': [{
+            'id': i.get('id'),
+            'status': i.get('status'),
+            'status_label': STATUS_LABELS.get(i.get('status'), '?'),
+            'created_at': str(i.get('created_at') or '')[:16].replace('T', ' '),
+            'reviewed_at': str(i.get('reviewed_at') or '')[:16].replace('T', ' '),
+            'reply': str(i.get('reply') or ''),
+            'text': str(i.get('text') or '')[:120],
+        } for i in items[:5]]})
 
     @app.route('/api/guild/<gid>/appeals/history')
     @login_required

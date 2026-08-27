@@ -153,6 +153,11 @@
             <div class="mc-sub">Свежие варны из зеркала модерации (новые сверху).</div>
             <div id="mcWarns"></div>
           </div>
+          <div class="mc-panel" id="mcAppealsPanel" hidden>
+            <h3><i class="fas fa-scale-balanced"></i> Апелляции</h3>
+            <div class="mc-sub" id="mcAppealsSub">Обжалования этого участника.</div>
+            <div id="mcAppeals"></div>
+          </div>
           <div class="mc-panel" id="mcPunishPanel">
             <h3><i class="fas fa-gavel"></i> Наказание</h3>
             <div class="mc-sub">Показаны только действия, разрешённые вашей роли в «Правах команд». Пишется в дела и логи от «Панель: ваш логин».</div>
@@ -410,6 +415,7 @@
     pnUid = String(m.id);
     pnResetForm();
     pnLoad();
+    loadUserAppeals(String(m.id));
 
     /* быстрые чипы из данных списка — видны сразу, пока грузится досье */
     var sc = statusClass[m.status] || 'offline';
@@ -482,6 +488,41 @@
     if ($('pnReasonCnt')) $('pnReasonCnt').textContent = '0/500';
     if ($('pnDur')) $('pnDur').value = '';
     if ($('pnMsg')) { $('pnMsg').textContent = ''; $('pnMsg').style.color = ''; }
+  }
+
+  /* ── Апелляции участника в карточке 360° ── */
+  var apTone = { accepted: 'ok', rejected: 'err', pending: 'tone-warning', auto_closed: 'neutral' };
+  var _apReq = 0;
+
+  function loadUserAppeals(uid) {
+    var panel = $('mcAppealsPanel');
+    if (!panel) return;
+    panel.hidden = true;
+    var req = ++_apReq;
+    var gid = $('guild-select').value;
+    if (!gid) return;
+    fetch('/api/guild/' + gid + '/appeals/user/' + encodeURIComponent(uid), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (req !== _apReq) return;   /* кликнули другого участника */
+        if (!d || !d.success || !d.total) { panel.hidden = true; return; }
+        var items = d.items || [];
+        panel.hidden = false;
+        $('mcAppealsSub').textContent = 'Всего подано: ' + d.total +
+          (d.total > items.length ? ' · показаны последние ' + items.length : '');
+        $('mcAppeals').innerHTML = items.map(function (it) {
+          var tone = apTone[it.status] || 'neutral';
+          var det = it.reviewed_at
+            ? (it.reviewed_at + (it.reply ? ' · комментарий: ' + it.reply : ''))
+            : 'подана ' + it.created_at;
+          return '<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line)">' +
+            '<span class="badge ' + tone + '" style="flex:none">' + esc(it.status_label) + '</span>' +
+            '<div style="min-width:0"><div style="font-size:var(--fs-sm)"><b>#' + esc(it.id) + '</b> — ' + esc(it.text) + '</div>' +
+            '<div style="font-size:var(--fs-xs);color:var(--text-3)">' + esc(det) + '</div></div></div>';
+        }).join('');
+        var link = '<div style="margin-top:8px"><a href="/appeals" style="color:var(--ac);font-size:var(--fs-sm)"><i class="fas fa-arrow-up-right-from-square"></i> Открыть очередь апелляций</a></div>';
+        $('mcAppeals').innerHTML += link;
+      }).catch(function () {});
   }
 
   function pnLoad() {
