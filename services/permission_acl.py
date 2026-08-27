@@ -277,8 +277,8 @@ def check_action(guild_id: int, member, action: str) -> bool:
         from config import Config
         if int(getattr(member, "id", 0) or 0) in Config.all_owner_ids():
             return True
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug(f'владелец-скип ACL: {_ex}')
     allowed = allowed_roles_for_action(guild_id, action)
     if not allowed:
         return True
@@ -331,8 +331,8 @@ def has_access(guild_id: int, command: str, member) -> bool:
         from config import Config
         if int(getattr(member, "id", 0) or 0) in Config.all_owner_ids():
             return True
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug(f'владелец-скип ACL (вторая ветка): {_ex}')
 
     acl = load_acl(guild_id)
     user_roles = {str(r.id) for r in getattr(member, "roles", [])}

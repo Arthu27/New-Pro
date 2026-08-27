@@ -78,6 +78,8 @@ PUBLIC = {
     # Discord Activity: публичный OAuth/Bearer-флоу встроенного приложения
     'activity_music_config', 'activity_music_token',
     'activity_music_state', 'activity_music_control',
+    # PagerDuty → Discord: сервер-сервер вебхук с токеном в URL (без сессии)
+    'hook_pagerduty',
 }
 public_actual = {k for k, v in DECOS.items() if not v['login']} | {'static'}
 check(public_actual == PUBLIC,

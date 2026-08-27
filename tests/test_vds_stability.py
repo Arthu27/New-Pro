@@ -19,6 +19,7 @@ sys.path.insert(0, ROOT)
 PASS = 0
 
 
+FAIL = 0
 def ok(name, cond, extra=''):
     global PASS
     if not cond:
@@ -59,4 +60,5 @@ for marker in ('journalctl -u hakumo -f', 'OOM', 'enable --now hakumo',
                'Короткие переподключения'):
     ok(f'инструкция VDS содержит «{marker}»', marker in guide)
 
-print(f'\nALL {PASS} PASS — бот на VDS поднимается сам')
+print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
+print('ALL PASS — бот на VDS поднимается сам' if not FAIL else 'ЕСТЬ ПАДЕНИЯ')

@@ -71,9 +71,18 @@ def _install_requirements():
             try:
                 subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--pre'] + missing)
             except subprocess.CalledProcessError as e:
-                print(f"[ОШИБКА] Ошибка установки пакетов: {e}")
-                print("[ИНФО] Ручная установка: pip install -r requirements.txt")
-                sys.exit(1)
+                # Debian 12+/Ubuntu 23+: pip защищён PEP 668 — легитимный
+                # выход для владельческой установки (это не системный Python
+                # дистрибутива, бот ставит своё сам).
+                print("[УСТАНОВКА] Повтор с --break-system-packages (PEP 668)...")
+                try:
+                    subprocess.check_call(
+                        [sys.executable, '-m', 'pip', 'install',
+                         '--break-system-packages', '--pre'] + missing)
+                except subprocess.CalledProcessError as e:
+                    print(f"[ОШИБКА] Ошибка установки пакетов: {e}")
+                    print("[ИНФО] Ручная установка: pip install -r requirements.txt")
+                    sys.exit(1)
         print("[УСТАНОВКА] Все пакеты установлены!")
     else:
         print("[ОК] Все зависимости актуальны")

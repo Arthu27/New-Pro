@@ -126,6 +126,7 @@ def register(ctx):
                 'mod_action' if ok else 'mod_action_failed',
                 f"Наказание из панели: {action}",
                 f"{actor} → {raw_uid} · {text[:200]}")
-        except Exception:
+        except Exception as _ex:
+            _log.debug("punish/options: подавлено: {_ex}", _ex)
             pass
         return jsonify({'success': bool(ok), 'message' if ok else 'error': text})

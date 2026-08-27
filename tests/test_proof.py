@@ -408,9 +408,11 @@ class _M:
 
 _g = _G()
 _m = _M(9090)
-iso, closed = run(mod_cog._isolate_member(_g, _m, 'рейд'))
+_appeal = _Ch(9, 'апелляция')
+_g.channels.append(_appeal)
+iso, closed = run(mod_cog._isolate_member(_g, _m, _appeal))
 check(closed == 3, 'апелляция: закрыты все каналы, кроме канала апелляции')
-check(iso is not None and iso.name == 'апелляция', 'апелляция: канал апелляции создан')
+check(iso is _appeal and iso.name == 'апелляция', 'апелляция: канал апелляции передан и возвращён')
 _denied = [c for c in _g.channels if c is not iso]
 check(all(c.perm is not None and c.perm[1] is not None and c.perm[1].view_channel is False for c in _denied),
       'апелляция: на закрытых каналах view_channel=False')

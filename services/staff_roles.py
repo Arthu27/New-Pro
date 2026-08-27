@@ -220,7 +220,8 @@ def resolve_staff_role(guild, kind: str):
             role = guild.get_role(int(panel_id))
             if role:
                 return role, []
-    except Exception:
+    except Exception as _ex:
+        log.debug("staff_roles: подавлено: {_ex}", _ex)
         pass
 
     # 2) Ручная привязка из data/staff_roles.json

@@ -33,6 +33,7 @@ os.environ['DEMO_MODE'] = '1'
 PASS = 0
 
 
+FAIL = 0
 def ok(name, cond, extra=''):
     global PASS
     if not cond:
@@ -477,5 +478,6 @@ imp_src = open(os.path.join(ROOT, 'cogs/impersonation.py'), encoding='utf-8').re
 ok('антифейк/имперсонация не включается сама (cfg.get enabled)',
    "cfg.get('enabled')" in imp_src)
 
-print(f'\nALL {PASS} PASS — лимиты по ролям и логи под контролем')
+print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
+print('ALL PASS — лимиты по ролям и логи под контролем' if not FAIL else 'ЕСТЬ ПАДЕНИЯ')
 shutil.rmtree(_TMP, ignore_errors=True)

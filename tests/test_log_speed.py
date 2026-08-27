@@ -26,6 +26,7 @@ os.environ.setdefault('DB_PATH', '/tmp/hakumo_logspeed.db')
 PASS = 0
 
 
+FAIL = 0
 def ok(name, cond, extra=''):
     global PASS
     if not cond:
@@ -74,4 +75,5 @@ ok('«Команда» (/execute-command) больше НЕ в меню «Кон
 ok('маршрут /execute-command жив (нужен профилю участника)',
    '/execute-command' in open(os.path.join(ROOT, 'web/app.py'), encoding='utf-8').read())
 
-print(f'\nALL {PASS} PASS — логи летают, дубль убран')
+print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
+print('ALL PASS — логи летают, дубль убран' if not FAIL else 'ЕСТЬ ПАДЕНИЯ')

@@ -343,11 +343,11 @@
       btn.disabled = false;
       var t = d.message || d.error || 'Готово';
       $('pnMsg').textContent = t;
-      $('pnMsg').style.color = d.success ? '' : 'var(--danger, #e74c3c)';
+      $('pnMsg').style.color = d.success ? '' : 'var(--err, #e74c3c)';
     }).catch(function () {
       btn.disabled = false;
       $('pnMsg').textContent = 'Сеть моргнула — попробуйте ещё раз';
-      $('pnMsg').style.color = 'var(--danger, #e74c3c)';
+      $('pnMsg').style.color = 'var(--err, #e74c3c)';
     });
   }
 

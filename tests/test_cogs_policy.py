@@ -14,6 +14,7 @@ from cogs_policy import (
     CORE_COGS, HELPER_COGS, MODERATION_COGS, MOD_ONLY_COGS,
     CORE_ONLY_COGS, TICKET_COGS, AI_CHAT_COGS, MUSIC_COGS, SLIM_COGS,
     LEAN_COGS, MOD_LEAN_COGS, TICKET_LEAN_COGS, AI_LEAN_COGS, WELCOME_LEAN_COGS,
+    RETIRED_COGS,
     env_flag, is_helper, select_cog_files, select_from_environment,
     _norm_name, _parse_list,
 )
@@ -99,8 +100,13 @@ check(not set(enabled) & set(disabled)
 
 print('\n== 3.1. BOT_FULL=1 — полный состав (возврат всего) ==')
 enabled_f, disabled_f = select_cog_files(ALL_FILES, full=True)
-check(enabled_f == NON_HELPERS and disabled_f == [],
-      'full: грузятся все коги кроме хелперов')
+_NON_HELPERS_LIVE = sorted(set(NON_HELPERS) - RETIRED_COGS)
+check(enabled_f == _NON_HELPERS_LIVE
+      and sorted(disabled_f) == sorted(set(NON_HELPERS) & RETIRED_COGS),
+      'full: грузятся все коги кроме хелперов и покоящихся')
+check('dm_report.py' in RETIRED_COGS
+      and 'dm_report.py' not in enabled_f,
+      'покой: dm_report (/report-дубль) не грузится даже в full')
 check(not any(is_helper(f) for f in enabled_f), 'full: хелперы не загружаются никогда')
 
 print('\n== 4. Классификация модер-ядра здорова ==')
@@ -112,7 +118,7 @@ check(CORE_COGS <= MOD_ONLY_COGS and MODERATION_COGS <= MOD_ONLY_COGS and
 check(not (MOD_ONLY_COGS & HELPER_COGS), 'списки: хелперы не попали в mod_only')
 # известные внутренние зависимости ядра (get_cog) — обе стороны живы в MOD_ONLY
 for dep in ('warnings.py', 'tag_jail.py', 'impersonation.py', 'mod_kit.py',
-            'mod_tools.py', 'mod_case.py', 'auto_filter.py', 'dm_report.py',
+            'mod_tools.py', 'mod_case.py', 'auto_filter.py', 'reports.py',
             'logs.py', 'ticket.py', 'proof_cog.py'):
     assert dep in MOD_ONLY_COGS, dep
 check(True, 'ядро самодостаточно: warnings/tag_jail/impersonation/mod_*/logs/ticket/proof — в списке')
@@ -164,7 +170,7 @@ check(not set(enabled_c) & set(disabled_c)
 print('\n== 6. DISABLED_COGS / EXTRA_COGS ==')
 e2, d2 = select_cog_files(ALL_FILES, full=True, disabled='Music_Cog.py, giveaway')
 check('music_cog.py' in d2 and 'giveaway.py' in d2 and
-      len(e2) == len(NON_HELPERS) - 2,
+      len(e2) == len(NON_HELPERS) - 2 - len(RETIRED_COGS),
       'DISABLED_COGS: работает в полном режиме, имена нечувствительны к виду')
 e2l, d2l = select_cog_files(ALL_FILES, disabled='music_cog')
 check('music_cog.py' in d2l and 'moderation.py' in e2l,
@@ -188,8 +194,9 @@ ee2, de2 = select_from_environment(ALL_FILES, environ={})
 check(set(ee2) == LEAN_COGS and sorted(set(NON_HELPERS) - LEAN_COGS) == de2,
       'select_from_environment: пустое окружение -> LEAN (лёгкий состав по умолчанию)')
 ee3, de3 = select_from_environment(ALL_FILES, environ={'BOT_FULL': '1'})
-check(ee3 == NON_HELPERS and de3 == [],
-      'select_from_environment: BOT_FULL=1 -> полный состав')
+check(ee3 == sorted(set(NON_HELPERS) - RETIRED_COGS)
+      and de3 == sorted(set(NON_HELPERS) & RETIRED_COGS),
+      'select_from_environment: BOT_FULL=1 -> полный состав (покой на месте)')
 ee4, de4 = select_from_environment(ALL_FILES, environ={'EXTRA_COGS': 'economy_cog, quiz'})
 check('economy_cog.py' in ee4 and 'quiz.py' in ee4 and 'fun_cog.py' in de4,
       'select_from_environment: EXTRA_COGS точечно будит модули поверх LEAN')

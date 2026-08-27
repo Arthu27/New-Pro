@@ -79,9 +79,9 @@ own = {
             'user_info': {'111': {'name': 'GhostBlade'}, '222': {'name': 'Sonya'}},
             'winner_ids': ['111']}
 }
-with open(os.path.join(_TMP, 'data', 'giveaways_778.json'), 'w', encoding='utf-8') as fp:
+with open(os.path.join(_TMP, 'data', 'giveaways_777.json'), 'w', encoding='utf-8') as fp:
     json.dump(own, fp, ensure_ascii=False)
-resp2 = client.get('/api/giveaway/778')
+resp2 = client.get('/api/giveaway/777')
 g2 = resp2.get_json()[0]
 names = [p['name'] for p in g2['participants']]
 check(names == ['GhostBlade', 'Sonya'], f'имена из user_info: {names}')

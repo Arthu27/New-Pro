@@ -492,7 +492,8 @@ def check_action(guild, actor, key, amount=1):
             from config import Config
             if int(getattr(actor, 'id', 0) or 0) in Config.all_owner_ids():
                 return True, None
-        except Exception:
+        except Exception as _ex:
+            log.debug("staff_limits: подавлено: {_ex}", _ex)
             pass
         if getattr(actor, 'bot', False):
             return True, None      # сам бот (панель/автоматика) — лимитами не грудим

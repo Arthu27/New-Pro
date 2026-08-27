@@ -30,6 +30,7 @@ os.environ['DB_PATH'] = os.path.join(_TMP, 'data', 'bot.db')
 PASS = 0
 
 
+FAIL = 0
 def ok(name, cond, extra=''):
     global PASS
     if not cond:
@@ -196,5 +197,6 @@ w('tokens.json', {'fresh': {'username': 'owner'}})
 ok('v2 повторно не срабатывает (токен хозяина жив)',
    os.path.exists('data/tokens.json'))
 
-print(f'\nALL {PASS} PASS — fresh_start (чистый старт) работает')
+print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
+print('ALL PASS — fresh_start (чистый старт) работает' if not FAIL else 'ЕСТЬ ПАДЕНИЯ')
 shutil.rmtree(_TMP, ignore_errors=True)

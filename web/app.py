@@ -716,7 +716,8 @@ def _get_role_from_discord (discord_id :str )->str :
         _owners =_Cfg .all_owner_ids ()
         if _owners and int (discord_id )in _owners :
             return 'owner'
-    except Exception :
+    except Exception as _ex:
+        _log.debug("web: подавлено: {_ex}", _ex)
         pass
     try :
         gid =MAIN_GUILD_ID or (str (bot_instance .guilds [0 ].id )if bot_instance .guilds else None )

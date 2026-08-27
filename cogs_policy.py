@@ -76,7 +76,7 @@ MODERATION_COGS = frozenset({
     # контент-ограничения и анти-эвейд
     'media_only.py', 'rejoin_roles.py',
     # репорты от пользователей
-    'report_cog.py', 'dm_report.py',
+    'report_cog.py', 'reports.py',
     # журнал аудита (на него завязана веб-панель)
     'logs.py', 'log_menu.py',
     # обращения к модерам + отчёт по модерации
@@ -198,6 +198,15 @@ def _parse_list(text):
     return frozenset(n for n in (_norm_name(p) for p in parts) if n)
 
 
+# Модули на покое: загружены НЕ будут ни в одном профиле.
+# dm_report.py — старая линия жалоб; /report конфликтовала с новой системой
+# репортов (reports.py, ТЗ 2026-08-26) при BOT_FULL=1: discord.py падает на
+# повторной регистрации команды. Новая система — канонична.
+RETIRED_COGS = frozenset({
+    'dm_report.py',
+})
+
+
 def is_helper(filename):
     """Вспомогательный модуль (не загружается как extension)."""
     return filename in HELPER_COGS
@@ -221,6 +230,9 @@ def select_cog_files(files, mod_only=False, slim=False, core=False, full=False,
         if not f.endswith('.py') or is_helper(f):
             continue
         mod = _norm_name(f)
+        if f in RETIRED_COGS:          # покой: /report-конфликт, см. выше
+            gone.append(f)
+            continue
         if mod in disabled_names:
             gone.append(f)
             continue

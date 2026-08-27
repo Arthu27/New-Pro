@@ -455,7 +455,7 @@ class Moderation (commands .Cog ):
                         from services .staff_limits import refresh_in_text as _sl_refresh
                         _when =_sl_refresh (guild .id ,interaction .user .id ,_sl_key )
                         if _when :_txt +=f' Обновится через {_when}.'
-                    except Exception :pass
+                    except Exception as _sx :_log .debug ('[MODPANEL] staff_limits refresh: %s',_sx )
                     _txt +=' Настраивается: панель → Щит сервера → Лимиты.'
                     await _respond (interaction ,
                     embed =error_embed (_txt),
@@ -759,8 +759,8 @@ class Moderation (commands .Cog ):
                 _okw ,_deny =check_action (guild ,_actor ,'warn')
                 if not _okw :
                     return False ,_deny or 'Лимит варнов исчерпан'
-            except Exception :
-                pass 
+            except Exception as _sx :
+                _log .debug ('[MODPANEL] staff_limits warn: %s',_sx ) 
             try :
                 w =self .bot .get_cog ('warnings')
                 if w is None :
@@ -856,8 +856,8 @@ class Moderation (commands .Cog ):
                         await self .send_log (guild ,discord .Embed (
                         description =f"⏳ Срок наказания истёк: роль {getattr (role ,'mention ',rid )} "
                         f"снята с {member .mention }",color =0x2ECC71 ))
-                    except Exception :
-                        pass 
+                    except Exception as _lex :
+                        log .debug (f'[MODPANEL] лог авто-снятия: {_lex}') 
         except Exception as _ex :
             log .debug (f'[MODPANEL] punish_roles_loop: {_ex}')
 
@@ -1013,7 +1013,7 @@ def actions_for_member(guild, member):
         if uid in _Cfg.all_owner_ids():
             return list(MODPANEL_ACTIONS)
     except Exception:
-        pass
+        log.debug('actions_for_member: без лимитов — показываем всё')
     role_ids = []
     try:
         role_ids = [r.id for r in (getattr(member, "roles", None) or [])
@@ -1033,7 +1033,7 @@ def actions_for_member(guild, member):
 class ModActionSelect(discord.ui.Select):
     """Выбор действия модерации — только то, что доступно этому модератору."""
 
-    def __init__(self, cog, member, allowed=None):
+    def __init__(self, cog, member=None, allowed=None):
         acts = allowed if allowed is not None else MODPANEL_ACTIONS
         options = [discord.SelectOption(
                        label=label, value=value, description=desc,

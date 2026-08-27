@@ -32,6 +32,7 @@ os.environ['DEMO_MODE'] = '1'
 PASS = 0
 
 
+FAIL = 0
 def ok(name, cond, extra=''):
     global PASS
     if not cond:
@@ -139,5 +140,6 @@ ok('в web-роутах нет кэширующих декораторов',
    'lru_cache' not in open(os.path.join(ROOT, 'web/routes/community.py'),
                            encoding='utf-8').read())
 
-print(f'\nALL {PASS} PASS — всё обновляется само, без перезагрузки')
+print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
+print('ALL PASS — всё обновляется само, без перезагрузки' if not FAIL else 'ЕСТЬ ПАДЕНИЯ')
 shutil.rmtree(_TMP, ignore_errors=True)

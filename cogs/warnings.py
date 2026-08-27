@@ -297,8 +297,8 @@ class warnings(commands.Cog):
                         if iso is not None:
                             await iso.set_permissions(
                                 member, view_channel=True, send_messages=True)
-                    except Exception:
-                        pass
+                    except Exception as _ex:
+                        log.debug(f'бан-ролью: канал апелляции не открыт: {_ex}')
                     return f'Бан: роль «{role.name}» + апелляция'
                 await member.ban(reason=f'Авто-наказание: {warn_count} предупреждений')
                 return 'Бан'

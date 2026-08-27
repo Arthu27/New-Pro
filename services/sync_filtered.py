@@ -111,8 +111,8 @@ async def full_sync(bot):
             _log.debug('снять глобально %s: %s', cmd.name, e)
     try:
         await tree.sync()
-    except TypeError:
-        pass                         # дерево без параметров — уже очищено выше
+    except TypeError as e:          # дерево без параметров — уже очищено выше
+        _log.debug('tree.sync(): %s', e)
     except Exception as e:
         _log.warning('глобальная очистка не удалась: %s', e)
     for cmd in parked:            # локально возвращаем — источник для копий

@@ -74,7 +74,8 @@ def set_roles(gid, who=None, **kw):
         if k in kw:
             try:
                 v = int(kw[k] or 0)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as _ex:
+                log.debug('set_roles: мусорное значение %s=%r: %s', k, kw[k], _ex)
                 continue
             if v > 0:
                 cur[k] = v
@@ -141,7 +142,8 @@ def due(now=None):
                 try:
                     if float(until) <= now:
                         out.append((gid, uid, int(role_id)))
-                except (TypeError, ValueError):
+                except (TypeError, ValueError) as _ex:
+                    log.debug("due: битая запись: {_ex}", _ex)
                     continue
     return out
 
@@ -154,6 +156,7 @@ def temps_for(gid, uid):
     for role_id, until in user.items():
         try:
             out[int(role_id)] = float(until)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as _ex:
+            log.debug('temps_for: битая запись %s=%r: %s', role_id, until, _ex)
             continue
     return out

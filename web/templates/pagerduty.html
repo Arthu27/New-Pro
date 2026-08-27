@@ -7,7 +7,7 @@
     <div class="eyebrow">Настройки <span class="sep">·</span> Интеграции</div>
     <h1>Тревоги PagerDuty → Discord</h1>
     <p>PagerDuty не умеет слать в Discord напрямую — панель принимает его события
-       сама и постит красивую карточку в ваш канал: 🔥 тревога, 👀 принято, ✅ решено.</p>
+       сама и постит красивую карточку в ваш канал: тревога, принято, решено — каждая своим цветом.</p>
   </div>
   <div class="page-head-side">
     <span class="pd-badge" id="pdState" title="Состояние моста"><i class="fas fa-tower-broadcast"></i> проверка…</span>
@@ -40,6 +40,7 @@
 .pd-step{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));line-height:1.5}
 .pd-step::before{counter-increment:st;content:counter(st);flex-shrink:0;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--ac);background:color-mix(in srgb, var(--ac) 12%, transparent);border:1px solid color-mix(in srgb, var(--ac) 25%, transparent)}
 .pd-evs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:4px}
+.pd-ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:12px;flex-shrink:0}
 .pd-ev{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 9%, transparent));border-radius:9px;padding:7px 10px}
 .pd-ev b{color:var(--text-1,#fff);font-weight:600}
 .pd-note{margin-top:12px;font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));line-height:1.5}
@@ -78,12 +79,12 @@
     <h3><i class="fas fa-list-check"></i> Как это выглядит</h3>
     <div class="pd-sub">Каждое событие — карточка с цветом, сервисом, дежурным и ссылкой на инцидент.</div>
     <div class="pd-evs">
-      <div class="pd-ev"><span>🔥</span><div><b>Тревога</b><br>инцидент сработал</div></div>
-      <div class="pd-ev"><span>👀</span><div><b>Принято</b><br>дежурный в деле</div></div>
-      <div class="pd-ev"><span>✅</span><div><b>Решено</b><br>можно выдыхать</div></div>
-      <div class="pd-ev"><span>⏳</span><div><b>Ожидает</b><br>снова ждёт ответа</div></div>
-      <div class="pd-ev"><span>📣</span><div><b>Эскалация</b><br>поднята выше</div></div>
-      <div class="pd-ev"><span>🔔</span><div><b>Другое</b><br>любое событие PD</div></div>
+      <div class="pd-ev"><span class="pd-ico fas fa-fire" style="color:#e05d5d"></span><div><b>Тревога</b><br>инцидент сработал</div></div>
+      <div class="pd-ev"><span class="pd-ico fas fa-eye" style="color:#e0b35d"></span><div><b>Принято</b><br>дежурный в деле</div></div>
+      <div class="pd-ev"><span class="pd-ico fas fa-circle-check" style="color:#2ecc71"></span><div><b>Решено</b><br>можно выдыхать</div></div>
+      <div class="pd-ev"><span class="pd-ico fas fa-hourglass-half" style="color:#e67e22"></span><div><b>Ожидает</b><br>снова ждёт ответа</div></div>
+      <div class="pd-ev"><span class="pd-ico fas fa-bullhorn" style="color:#e05d5d"></span><div><b>Эскалация</b><br>поднята выше</div></div>
+      <div class="pd-ev"><span class="pd-ico fas fa-bell" style="color:#95a5a6"></span><div><b>Другое</b><br>любое событие PD</div></div>
     </div>
     <h3 style="margin-top:16px"><i class="fas fa-stairs"></i> Шаги в PagerDuty</h3>
     <div class="pd-steps" style="margin-top:10px">

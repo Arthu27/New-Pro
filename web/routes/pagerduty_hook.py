@@ -69,8 +69,8 @@ def build_embed(info, guild=None):
     if info.get('urgency'):
         embed.add_field(
             name='Срочность',
-            value='🔴 высокая' if info['urgency'] == 'high'
-                  else ('🟡 средняя' if info['urgency'] == 'low' else info['urgency']),
+            value='высокая' if info['urgency'] == 'high'
+                  else ('средняя' if info['urgency'] == 'low' else info['urgency']),
             inline=True)
     if info.get('occurred_at'):
         embed.add_field(name='Время', value=info['occurred_at'], inline=False)
