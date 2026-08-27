@@ -168,12 +168,13 @@ async def resync(bot, debounce=1.2):
         await asyncio.sleep(0.25)
         if getattr(bot, '_hakumo_switch_sync_until', 0) > until:
             until = getattr(bot, '_hakumo_switch_sync_until', 0)
-    hidden, restored = apply_to_bot(bot)
+    # Полный синк через guild-команды: выключенные мгновенно ИСЧЕЗАЮТ
+    # из списка «/» Discord (а не отвечают «выключена» после ввода).
     try:
-        await tree.sync()
-        _logger().info('command_switches: sync OK (скрыто %s, возвращено %s)',
-                       len(hidden), len(restored))
-        return True, hidden, restored
+        from services.sync_filtered import full_sync
+        await full_sync(bot)
+        _logger().info('command_switches: полный sync применён')
+        return True, [], []
     except Exception as ex:
         _logger().warning('command_switches: sync не удался: %s', ex)
-        return False, hidden, restored
+        return False, [], []

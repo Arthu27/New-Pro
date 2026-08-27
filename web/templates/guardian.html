@@ -788,6 +788,16 @@ document.getElementById('gdSave').addEventListener('click', gdSave);
 document.getElementById('gdSave2').addEventListener('click', gdSave);
 document.getElementById('gdEvAllOn').addEventListener('click', function () { gdEvAll(true); });
 document.getElementById('gdEvAllOff').addEventListener('click', function () { gdEvAll(false); });
+/* Тумблер события = одно нажатие: сразу применяется и сохраняется.
+   То же — мастер-выключатель Щита и «кикать чужих ботов». */
+document.addEventListener('change', function (e) {
+  var t = e.target;
+  if (!t || !CAN_EDIT) return;
+  if (t.classList && (t.classList.contains('gd-ev-tog') || t.id === 'gdMaster'
+      || t.id === 'gdKickBots')) {
+    gdSave();
+  }
+});
 
 /* время: живой пересчёт подсказки при вводе, кнопки-пресеты */
 (function () {

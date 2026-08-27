@@ -116,7 +116,10 @@ def register(ctx):
         if tree is None:
             return jsonify({'ok': False, 'error': 'Бот офлайн — синхронизировать некому'}), 503
         try:
-            synced = _run_async(tree.sync())
+            # выключенные команды («Команды вкл/выкл») в Discord не попадают —
+            # они исчезают из списка «/», а не отвечают «выключена» после ввода
+            from services.sync_filtered import full_sync as _full_sync
+            synced = _run_async(_full_sync(bot))
             n = len(synced) if isinstance(synced, (list, tuple)) else 0
             return jsonify({'ok': True, 'synced': n})
         except Exception as e:

@@ -495,6 +495,17 @@ class StaffApply(commands.Cog):
         # Сразу подтверждаем interaction: загрузка удалённого баннера может занять больше 3 секунд.
         await interaction.response.defer(ephemeral=True)
 
+        # «Настройки не все завершены»: панель создаём только когда заявки
+        # реально дойдут до персонала и роли находятся (заказ владельца).
+        try:
+            from services.system_readiness import readiness_block, staff_apply_missing
+            block = readiness_block('Заявки в команду', staff_apply_missing(interaction.guild))
+            if block:
+                await interaction.followup.send(block, ephemeral=True)
+                return
+        except Exception as _ex:
+            log.debug('staff-panel readiness: %s', _ex)
+
         # Пути к кастомным баннерам - приоритет у пользовательской фотки
         custom_paths = [
             # Пользовательская фотография имеет высший приоритет.

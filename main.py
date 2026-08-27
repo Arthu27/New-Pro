@@ -697,13 +697,15 @@ async def on_resumed():
 async def on_ready():
     global _synced
     if not _synced:
-        for guild in bot.guilds:
-            try:
-                await bot.tree.sync(guild=guild)
-                print(f'[СИНХРОНИЗАЦИЯ] Slash команды синхронизированы: {guild.name}')
-            except Exception as e:
-                print(f'[СИНХРОНИЗАЦИЯ] Ошибка {guild.name}: {e}')
-        await bot.tree.sync()
+        # Команды живут НА СЕРВЕРЕ (guild-команды): мгновенно появляются
+        # и мгновенно исчезают при выключении в панели. Выключенные
+        # («Команды вкл/выкл») в Discord вообще не попадают.
+        from services.sync_filtered import full_sync as _full_sync
+        try:
+            _n = len(await _full_sync(bot))
+            print(f'[СИНХРОНИЗАЦИЯ] Slash команды синхронизированы: {_n}')
+        except Exception as e:
+            print(f'[СИНХРОНИЗАЦИЯ] Ошибка: {e}')
         _synced = True
         bot.loop.create_task(_monitor_voice())
     print(f"[ОК] {bot.user} активен | {len(bot.guilds)} серверов")

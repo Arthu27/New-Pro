@@ -37,7 +37,7 @@
         <input type="hidden" id="pf-uid">
         <input type="hidden" id="pf-uname">
         <div id="pf-member-list" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:600;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;max-height:250px;overflow:auto;box-shadow:var(--shadow-3)"></div>
-        <span style="font-size:11px;font-weight:400;color:var(--text-3)">Начните писать ник — выберите из списка (можно и просто ID)</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-3)">Начните писать ник — выберите из списка, впишите ID или просто имя</span>
       </label>
       <style>.pf-pick:hover { background: var(--ac-soft) !important; }</style>
       <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
@@ -406,16 +406,24 @@
     var file = $('pf-file').files[0];
     if (!file) { window.showToast('Выберите файл — фото или видео', false); return; }
     var uid = $('pf-uid').value.trim();
+    var manual = $('pf-member').value.trim();
+    var uname = $('pf-uname').value.trim();
     if (!uid) {
-      var manual = $('pf-member').value.trim();
       var mm = /(\d{15,22})\s*$/.exec(manual);
       if (mm) uid = mm[1];
     }
-    if (!/^\d{4,25}$/.test(uid)) { window.showToast('Тегните участника из подсказок или впишите его ID', false); return; }
+    if (!/^\d{4,25}$/.test(uid)) {
+      /* ID не нашли — не блокируем: достаточно имени, оно и так полезно */
+      uid = '0';
+      if (!uname) uname = manual;
+    }
+    if (!uid || uid === '0') {
+      if (!uname) { window.showToast('Укажите участника: выберите из подсказок или впишите ник/ID', false); return; }
+    }
     var fd = new FormData();
     fd.append('file', file);
     fd.append('user_id', uid);
-    fd.append('user_name', $('pf-uname').value.trim());
+    fd.append('user_name', uname);
     fd.append('action', $('pf-action').value);
     fd.append('reason', $('pf-reason').value.trim());
     var btn = $('pf-add-btn');

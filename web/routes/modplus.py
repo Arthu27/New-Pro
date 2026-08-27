@@ -315,6 +315,10 @@ def register(ctx):
         if not f or not (f .filename or '').strip ():
             return jsonify ({'success':False ,'error':'Выберите файл — фото или видео'}),400
         uid =(request .form .get ('user_id','')or '').strip ()
+        # ID не обязателен: достаточно имени участника (поиск в панели мог
+        # ничего не найти — не блокируем загрузку демки из-за этого)
+        if not uid :
+            uid ='0'
         if not uid .isdigit ():
             return jsonify ({'success':False ,'error':'ID участника — только цифры'}),400
         action =(request .form .get ('action','')or '').strip ().lower ()
@@ -324,7 +328,11 @@ def register(ctx):
         data =f .read ()
         guild =_active_guild ()
         gid =guild .id if guild else int (active_guild_id ()or 0 )
-        uname =(request .form .get ('user_name','')or '').strip ()[:80 ]or f'ID {uid}'
+        uname =(request .form .get ('user_name','')or '').strip ()[:80 ]
+        if uid =='0'and not uname :
+            return jsonify ({'success':False ,'error':'Укажите участника: выберите из подсказок или впишите ник/ID'}),400
+        if not uname :
+            uname =f'ID {uid}'
         entry =proof_add (gid ,int (uid ),uname ,0 ,session .get ('username','панель'),action ,reason )
         media =proof_save_media (gid ,entry ['id'],f .filename ,data ,f .mimetype )
         if not media :
