@@ -52,20 +52,20 @@ def check(ok, msg):
 GID = 987654321098765432
 
 # ═══ 1. Хаб каналов: 14 маршрутов, новые адаптеры ════════════════════════
-print('== хаб каналов: 15 маршрутов ==')
+print('== хаб каналов: 19 маршрутов ==')
 from services import channel_routes as CHR  # noqa: E402
 from web.routes.channel_settings import ADAPTERS  # noqa: E402
 
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 18 and len(set(keys)) == 18,
-      f'18 уникальных маршрутов — 15 систем + 3 канала заявок ({len(keys)})')
+check(len(keys) == 19 and len(set(keys)) == 19,
+      f'19 уникальных маршрутов — 16 систем + 3 канала заявок ({len(keys)})')
 need = {'ban_appeal_channel',
         'proof_channel', 'appeals_channel', 'welcome_channel', 'tagjail_channel',
         'guardian_channel', 'antiraid_channel', 'security_channel',
         'anticrash_channel', 'counting_channel', 'starboard_channel',
         'night_report_channel', 'mod_digest_channel',
         'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel', 'shifts_channel',
-        'ticket_notify_channel'}
+        'ticket_notify_channel', 'appeal_menu_channel'}
 check(set(keys) == need, f'все системы на хабе ({len(need)})')
 check(set(ADAPTERS) == set(keys), 'у каждого маршрута есть адаптер')
 

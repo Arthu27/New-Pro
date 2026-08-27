@@ -169,6 +169,26 @@ class AppealView(discord.ui.View):
         if accept:
             guild = self.cog.bot.get_guild(gid)
             if guild is not None:
+                member = guild.get_member(item['user_id'])
+                # мягкое возвращение: снять роль-бан, изоляцию и таймаут
+                if member is not None:
+                    try:
+                        from services import punish_roles as PR
+                        rid = PR.role_for(gid, 'ban')
+                        role = guild.get_role(rid) if rid else None
+                        if role is not None and role in getattr(member, 'roles', []):
+                            await member.remove_roles(
+                                role, reason=f'Апелляция #{item["id"]} принята')
+                            PR.clear(gid, member.id, rid)
+                    except Exception as _ex:
+                        log.debug('appeals: снять роль бана: %s', _ex)
+                    try:
+                        mod = self.cog.bot.get_cog('Moderation')
+                        if mod is not None:
+                            await mod._unisolate_member(guild, member)
+                            await member.timeout(None)
+                    except Exception as _ex:
+                        log.debug('appeals: снятие изоляции/таймаута: %s', _ex)
                 try:
                     await guild.unban(discord.Object(id=item['user_id']),
                                       reason=f'Апелляция #{item["id"]} принята')
@@ -259,6 +279,73 @@ class AppealViewParent(discord.ui.View):
         self.add_item(AppealServerSelect(cog, guilds))
 
 
+# ─── меню апелляций в канале (не в ЛС) ────────────────────────────────
+
+MENU_CUSTOM_ID = 'appeal:menu:open'
+
+
+class AppealChannelModal(discord.ui.Modal):
+    """Окно подачи апелляции из меню в канале."""
+
+    def __init__(self, cog, guild):
+        super().__init__(title=f'Апелляция · {str(guild.name)[:30]}')
+        self.cog = cog
+        self.guild = guild
+        self.text = discord.ui.TextInput(
+            label='Что произошло?', style=discord.TextStyle.paragraph,
+            placeholder='Расскажите свою версию — спокойно и по делу (от 10 символов)',
+            required=True, max_length=500)
+        self.link = discord.ui.TextInput(
+            label='Ссылка-доказательство (необязательно)',
+            placeholder='https://… — скрин, видео или сообщение',
+            required=False, max_length=500)
+        self.add_item(self.text)
+        self.add_item(self.link)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        item, err = await self.cog._submit_channel_appeal(
+            interaction.user, self.guild, self.text.value,
+            link=self.link.value, channel=interaction.channel)
+        if err:
+            await interaction.followup.send(f'Не получилось: {err}.', ephemeral=True)
+            return
+        await interaction.followup.send(
+            f'Апелляция **#{item["id"]}** принята — обсуждение в треде. '
+            'Модераторы уже видят её.', ephemeral=True)
+
+
+class AppealMenuSelect(discord.ui.Select):
+    """Select «Подать апелляцию» в канале (persistent)."""
+
+    def __init__(self):
+        super().__init__(
+            custom_id=MENU_CUSTOM_ID,
+            placeholder='Несогласны с наказанием? Подайте апелляцию…',
+            min_values=1, max_values=1,
+            options=[discord.SelectOption(
+                label='Подать апелляцию', value='submit',
+                description='Откроется окно: что произошло и ссылка-доказательство',
+                emoji='⚖️')])
+
+    async def callback(self, interaction: discord.Interaction):
+        cog = interaction.client.get_cog('Appeals')
+        if cog is None:
+            await interaction.response.send_message(
+                'Модуль апелляций не загружен.', ephemeral=True)
+            return
+        await interaction.response.send_modal(
+            AppealChannelModal(cog, interaction.guild))
+
+
+class AppealMenuView(discord.ui.View):
+    """Обёртка меню (persistent — переживает рестарт)."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(AppealMenuSelect())
+
+
 # ─── ког ────────────────────────────────────────────────────────────────────
 
 class Appeals(commands.Cog):
@@ -283,6 +370,10 @@ class Appeals(commands.Cog):
                     self.bot.add_view(AppealView(self, guild.id, item['id']),
                                       message_id=item['message_id'])
                     restored += 1
+        try:
+            self.bot.add_view(AppealMenuView())
+        except Exception as _ex:
+            log.debug('appeals: меню-view: %s', _ex)
         if restored:
             log.info('appeals: восстановлено %s view после рестарта', restored)
 
@@ -291,6 +382,122 @@ class Appeals(commands.Cog):
 
     def _save(self, guild_id, state):
         self.db.set(guild_id, 'state', state)
+
+    # ---- меню апелляций в канале ----
+    async def publish_appeal_menu(self, channel):
+        """Опубликовать меню подачи апелляций в канал (из панели).
+
+        Возвращает (ok, сообщение). Повторная публикация обновляет сообщение.
+        """
+        if channel is None:
+            return False, 'Канал не найден'
+        guild = channel.guild
+        state = self._load(guild.id)
+        embed = discord.Embed(
+            title='⚖ Апелляции на наказания',
+            description=(
+                'Несогласны с наказанием — варном, мутом или баном?\n'
+                'Выберите ниже **«Подать апелляцию»**: откроется окно — '
+                'расскажите свою версию и, если есть, приложите ссылку '
+                'на скрин или видео.\n\n'
+                'Для вашей апелляции создастся отдельный тред — '
+                'модераторы ответят прямо в нём.'),
+            color=0xF1C40F,
+            timestamp=datetime.now(UTC))
+        embed.set_footer(text=f'{guild.name} · апелляции',
+                         icon_url=guild.icon.url if guild.icon else None)
+        try:
+            old = (state.get('menu') or {})
+            msg = None
+            if old.get('message_id') and int(old.get('channel_id') or 0) == channel.id:
+                try:
+                    msg = await channel.edit_message(
+                        int(old['message_id']), embed=embed, view=AppealMenuView())
+                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                    msg = None
+            if msg is None:
+                msg = await channel.send(embed=embed, view=AppealMenuView())
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            return False, f'Бот не может писать в этот канал: {_ex}'
+        state['menu'] = {'channel_id': channel.id, 'message_id': msg.id}
+        self._save(guild.id, state)
+        return True, f'Меню опубликовано в {channel.mention}'
+
+    async def _submit_channel_appeal(self, user, guild, text, link=None, channel=None):
+        """Апелляция из меню в канале: карточка в отдельном треде."""
+        guild_id = guild.id
+        state = self._load(guild_id)
+        item, err = create_appeal(state, user.id, str(user), text,
+                                  datetime.now(UTC), link=link)
+        if err:
+            return None, err
+        self._save(guild_id, state)
+
+        if channel is None:
+            try:
+                from services.channel_routes import get_route
+                cid = int(get_route(guild.id, 'appeal_menu_channel') or 0)
+                channel = guild.get_channel(cid) if cid else None
+            except Exception:
+                channel = None
+        if channel is None:
+            menu = state.get('menu') or {}
+            cid = int(menu.get('channel_id') or 0)
+            channel = guild.get_channel(cid) if cid else None
+        if channel is None:
+            channel = self._log_channel(guild, state)
+        embed = discord.Embed(
+            title=f'Апелляция #{item["id"]} — новая',
+            description=item['text'],
+            color=COLOR_PENDING, timestamp=datetime.now(UTC))
+        if item.get('link'):
+            embed.add_field(name='Доказательство', value=item['link'], inline=False)
+        embed.set_author(name=str(user),
+                         icon_url=user.display_avatar.url
+                         if getattr(user, 'display_avatar', None) else None)
+        embed.add_field(name='Участник',
+                        value=f'{user.mention} · `{user.id}`', inline=False)
+        embed.set_footer(text=f'appeal #{item["id"]} · решение — меню под карточкой')
+        png = None
+        png_name = None
+        try:
+            appearance = normalize_appearance(state.get('appearance'))
+            if appearance['mode'] == 'url' and appearance['url']:
+                embed.set_image(url=appearance['url'])
+            elif appearance['mode'] == 'auto':
+                png = render_appeal_card(
+                    appeal_id=item['id'], user_name=item['user_name'],
+                    text=item['text'], link=item.get('link'),
+                    theme=appearance['theme'])
+                if png:
+                    png_name = appeal_card_filename(item['id'])
+                    embed.set_image(url=f'attachment://{png_name}')
+        except Exception as _ex:
+            log.debug('appeals: карточка-картинка #%s: %s', item['id'], _ex)
+
+        view = AppealView(self, guild_id, item['id'])
+        try:
+            if channel is not None:
+                name = f'Апелляция #{item["id"]} · {str(user)[:40]}'
+                send_kw = {'embed': embed, 'view': view}
+                if png and png_name:
+                    send_kw['file'] = discord.File(io.BytesIO(png), filename=png_name)
+                thread = await channel.create_thread(
+                    name=name, type=discord.ChannelType.public_thread)
+                card = await thread.send(**send_kw)
+                item['message_id'] = card.id
+                item['thread_id'] = thread.id
+                item['thread_url'] = card.jump_url
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.error('appeals: тред #%s не создан: %s', item['id'], _ex)
+        self._save(guild_id, state)
+        try:
+            await user.send(
+                f'Ваша апелляция **#{item["id"]}** на сервере **{guild.name}** '
+                'принята. Модераторы ответят в треде.')
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.debug('appeals: ЛС о треде #%s не дошло: %s', item['id'], _ex)
+        return item, None
 
     # ---- подача (ЛС боту) ----
     async def _submit_appeal(self, user, guild, text, link=None):

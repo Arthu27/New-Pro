@@ -265,7 +265,18 @@ class warnings(commands.Cog):
         minutes = duration_to_minutes(duration, unit)
 
         try:
+            # Роли наказаний (панель → «Настройки модерации») главнее
+            # таймаута/бана: владелец сам выбрал, какими роли наказывать.
+            from services import punish_roles as PR
             if action in ('mute', 'timeout'):
+                rid = PR.role_for(guild.id, 'mute')
+                role = guild.get_role(rid) if rid else None
+                if role is not None:
+                    import time as _time
+                    await member.add_roles(role, reason=f'Авто: {warn_count} предупреждений')
+                    PR.add_temp(guild.id, member.id, role.id,
+                                _time.time() + max(60, minutes * 60))
+                    return f'Мут: роль «{role.name}» {minutes} мин'
                 until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
                 await member.timeout(until, reason=f'Авто-наказание: {warn_count} предупреждений')
                 return f'Мут {minutes} мин'
@@ -273,6 +284,22 @@ class warnings(commands.Cog):
                 await member.kick(reason=f'Авто-наказание: {warn_count} предупреждений')
                 return 'Кик'
             elif action == 'ban':
+                rid = PR.role_for(guild.id, 'ban')
+                role = guild.get_role(rid) if rid else None
+                if role is not None:
+                    # «бан» ролью: участник остаётся на сервере, апелляция —
+                    # в канале апелляции (если выбран)
+                    await member.add_roles(role, reason=f'Авто: {warn_count} предупреждений')
+                    try:
+                        from services.channel_routes import get_route
+                        cid = int(get_route(guild.id, 'ban_appeal_channel') or 0)
+                        iso = guild.get_channel(cid) if cid else None
+                        if iso is not None:
+                            await iso.set_permissions(
+                                member, view_channel=True, send_messages=True)
+                    except Exception:
+                        pass
+                    return f'Бан: роль «{role.name}» + апелляция'
                 await member.ban(reason=f'Авто-наказание: {warn_count} предупреждений')
                 return 'Бан'
         except Exception as e:

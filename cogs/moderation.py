@@ -4,7 +4,7 @@ from logger import get_logger
 _log = get_logger("moderation")
 
 import discord 
-from discord .ext import commands 
+from discord .ext import commands ,tasks 
 from discord import app_commands 
 from datetime import datetime ,timedelta ,timezone 
 import json 
@@ -84,6 +84,11 @@ def human_duration(minutes):
 class Moderation (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
+        try :
+            if not self .punish_roles_loop .is_running ():
+                self .punish_roles_loop .start ()
+        except Exception as _ex :
+            log .debug (f'punish_roles_loop старт: {_ex}')
 
     def save_case (self ,guild_id ,action ,user_id ,mod_id ,reason ):
         os .makedirs ('data',exist_ok =True )
@@ -485,7 +490,19 @@ class Moderation (commands .Cog ):
                         ephemeral =True )
                         return 
                     _closed =await self ._isolate_member (guild ,user ,_iso )
-                    msg =f"🚫 апелляция: закрыто каналов {_closed }, открыт {_iso .mention }"
+                    _brole =self ._punish_role (guild ,'ban')
+                    if _brole is not None :
+                        # роль бана: каналы закрывает сама роль (настрой её права),
+                        # бот лишь открывает участнику канал апелляции
+                        try :
+                            await _iso .set_permissions (user ,overwrite =discord .PermissionOverwrite (view_channel =True ,send_messages =True ))
+                        except Exception as _pe :
+                            log .debug (f'[MODPANEL] allow апелляции: {_pe}')
+                        await user .add_roles (_brole ,reason =reason or 'бан')
+                        msg =f"🚫 роль бана «{_brole .name }» + канал апелляции {_iso .mention }"
+                    else :
+                        _closed =await self ._isolate_member (guild ,user ,_iso )
+                        msg =f"🚫 апелляция: закрыто каналов {_closed }, открыт {_iso .mention }"
                     try :
                         from services .staff_limits import record_hit as _sl_rec
                         _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
@@ -501,28 +518,53 @@ class Moderation (commands .Cog ):
                     return 
                 elif action in ("timeout","mute_chat"):
                     minutes =parse_duration_minutes (amount ,5 )
-                    until =datetime.now(timezone.utc)+timedelta (minutes =minutes )
-                    await user .timeout (until ,reason =reason )
-                    if action =="mute_chat":
-                        msg =f"🔇 чат закрыт на {minutes} мин"
+                    # Роль мута из панели главнее таймаута (заказ 2026-08-27):
+                    # владелец сам выбрал роль — бот выдаёт её и снимет по сроку
+                    _mrole =self ._punish_role (guild ,'mute')
+                    if _mrole is not None :
+                        await user .add_roles (_mrole ,reason =reason or 'мут')
+                        self ._remember_temp (guild ,user ,_mrole ,minutes *60 )
+                        msg =f"🔇 роль мута «{_mrole .name }» на {minutes } мин — снимется сама"
                     else :
-                        msg =f"🔇 чат и голос закрыты на {minutes} мин"
-                    # 2 mute → 1 неделя в watchlist
+                        until =datetime.now(timezone.utc)+timedelta (minutes =minutes )
+                        await user .timeout (until ,reason =reason )
+                        if action =="mute_chat":
+                            msg =f"🔇 чат закрыт на {minutes } мин"
+                        else :
+                            msg =f"🔇 чат и голос закрыты на {minutes } мин"
                     await self._maybe_watchlist_after_mute (interaction ,user ,reason )
                 elif action =="vmute":
-                    if not user .voice or not user .voice .channel :
-                        await _respond (interaction ,
-                        embed =error_embed ("Участник не в голосовом канале. Голосовой мьют невозможен."),
-                        ephemeral =True )
-                        return
-                    await user .edit (mute =True )
-                    msg ="🎙️ микрофон заглушён (войс-мут)"
+                    _vrole =self ._punish_role (guild ,'vmute')
+                    if _vrole is not None :
+                        # роль войс-мута: работает и вне голоса, снимется по сроку
+                        minutes =parse_duration_minutes (amount ,5 )
+                        await user .add_roles (_vrole ,reason =reason or 'войс-мут')
+                        self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
+                        msg =f"🎙️ роль войс-мута «{_vrole .name }» на {minutes } мин"
+                    else :
+                        if not user .voice or not user .voice .channel :
+                            await _respond (interaction ,
+                            embed =error_embed ("Участник не в голосовом канале. Голосовой мьют невозможен."),
+                            ephemeral =True )
+                            return
+                        await user .edit (mute =True )
+                        msg ="🎙️ микрофон заглушён (войс-мут)"
                 elif action =="vunmute":
-                    await user .edit (mute =False )
-                    msg ="🎙️ микрофон включён"
+                    _vrole =self ._punish_role (guild ,'vmute')
+                    if _vrole is not None :
+                        await self ._drop_roles (guild ,user ,[_vrole ])
+                        msg =f"🎙️ роль войс-мута снята ({_vrole .name })"
+                    else :
+                        await user .edit (mute =False )
+                        msg ="🎙️ микрофон включён"
                 else :  # untimeout
-                    await user .timeout (None )
-                    msg ="🔊 мут снят (чат и голос открыты)"
+                    _mrole =self ._punish_role (guild ,'mute')
+                    if _mrole is not None :
+                        await self ._drop_roles (guild ,user ,[_mrole ])
+                        msg =f"🔊 роль мута снята ({_mrole .name })"
+                    else :
+                        await user .timeout (None )
+                        msg ="🔊 мут снят (чат и голос открыты)"
 
                 # Вспомогательные шаги: дело, DM, лог, уведомление панели.
                 # Каждый — в своём try: сбой побочного шага НЕ должен превращать
@@ -605,6 +647,7 @@ class Moderation (commands .Cog ):
                 # Снятие апелляции (участник остаётся на сервере)
                 if member is not None :
                     await self ._unisolate_member (guild ,member )
+                    await self ._unban_role (guild ,member )
                 # Настоящий разбан (для легаси-банов, если пользователь вне сервера)
                 unban_done =False
                 try :
@@ -701,6 +744,88 @@ class Moderation (commands .Cog ):
         text =_embed_text (_it .msgs [-1 ])
         ok ='## ❌' not in text 
         return ok ,text 
+
+    # ── Роли наказаний (панель → «Настройки модерации») ─────────────────
+    def _punish_role (self ,guild ,kind ):
+        """discord.Role для наказания или None (не выбрана — работаем как раньше)."""
+        try :
+            from services import punish_roles as PR 
+            rid =PR .role_for (guild .id ,kind )
+            if not rid :
+                return None 
+            role =guild .get_role (rid )
+            if role is None :
+                log .debug (f'[MODPANEL] роль {kind } ({rid }) не найдена на сервере')
+            return role 
+        except Exception as _ex :
+            log .debug (f'[MODPANEL] punish_role {kind }: {_ex}')
+            return None 
+
+    def _remember_temp (self ,guild ,user ,role ,seconds ):
+        """Запомнить срок выдачи роли — loop снимет её вовремя."""
+        try :
+            import time as _time 
+            from services import punish_roles as PR 
+            until =_time .time ()+max (60 ,min (int (seconds or 0 ),28 *86400 ))
+            PR .add_temp (guild .id ,user .id ,role .id ,until )
+        except Exception as _ex :
+            log .debug (f'[MODPANEL] remember_temp: {_ex}')
+
+    async def _drop_roles (self ,guild ,user ,roles ):
+        """Снять роли наказания и почистить журнал сроков."""
+        for role in roles :
+            if role is None :
+                continue 
+            try :
+                await user .remove_roles (role ,reason ='снятие наказания')
+            except Exception as _ex :
+                log .debug (f'[MODPANEL] remove_roles {role .name }: {_ex}')
+        try :
+            from services import punish_roles as PR 
+            PR .clear (guild .id ,user .id )
+        except Exception as _ex :
+            log .debug (f'[MODPANEL] clear temps: {_ex}')
+
+    async def _unban_role (self ,guild ,member ):
+        """Снять роль «бана» (если выбрана) — при разбане/снятии апелляции."""
+        _brole =self ._punish_role (guild ,'ban')
+        if _brole is not None :
+            await self ._drop_roles (guild ,member ,[_brole ])
+
+    @tasks .loop (seconds =60 )
+    async def punish_roles_loop (self ):
+        """Раз в минуту снимает просроченные роли наказаний."""
+        try :
+            import time as _time 
+            from services import punish_roles as PR 
+            due =PR .due (_time .time ())
+            for gid ,uid ,rid in due :
+                guild =self .bot .get_guild (int (gid ))
+                if guild is None :
+                    PR .clear (gid ,uid ,rid )
+                    continue 
+                member =guild .get_member (int (uid ))
+                role =guild .get_role (rid )
+                if member is not None and role is not None :
+                    try :
+                        await member .remove_roles (role ,reason ='срок наказания истёк')
+                    except Exception as _ex :
+                        log .debug (f'[MODPANEL] авто-снятие {role .name }: {_ex}')
+                PR .clear (gid ,uid ,rid )
+                if member is not None :
+                    try :
+                        await self .send_log (guild ,discord .Embed (
+                        description =f"⏳ Срок наказания истёк: роль {getattr (role ,'mention ',rid )} "
+                        f"снята с {member .mention }",color =0x2ECC71 ))
+                    except Exception :
+                        pass 
+        except Exception as _ex :
+            log .debug (f'[MODPANEL] punish_roles_loop: {_ex}')
+
+    @punish_roles_loop .before_loop 
+    async def _before_punish_loop (self ):
+        import asyncio as _aio 
+        await _aio .sleep (30 )      # дать боту подняться
 
     async def _maybe_watchlist_after_mute (self ,interaction ,user ,reason ):
         """Если пользователь получил 2+ мьюта — добавить в watchlist на 1 неделю.

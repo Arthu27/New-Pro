@@ -257,6 +257,7 @@ _shifts_ad = _guilddata_channel('staff_shifts', 'settings')
 
 ADAPTERS = {
     'ban_appeal_channel': (CHR.get_route, CHR.set_route),
+    'appeal_menu_channel': (CHR.get_route, CHR.set_route),
     'proof_channel': (CHR.get_route, CHR.set_route),
     'appeals_channel': (_appeals_get, _appeals_set),
     'welcome_channel': (_welcome_get, _welcome_set),
