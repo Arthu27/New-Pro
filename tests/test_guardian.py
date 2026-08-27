@@ -434,9 +434,9 @@ check(gD.kicked == [] and by_role.removed is None,
       'роль-ботовод: бот остался, человек не тронут')
 
 # ═══ 4. Хаб Каналов: новые маршруты ══════════════════════════════════════
-print('== хаб каналов: 14 маршрутов ==')
+print('== хаб каналов: 17 маршрутов ==')
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 14, f'маршрутов в спецификации: {len(keys)}')
+check(len(keys) == 17, f'маршрутов в спецификации (14 систем + 3 заявки): {len(keys)}')
 check('guardian_channel' in keys and 'antiraid_channel' in keys
       and 'security_channel' in keys and 'anticrash_channel' in keys,
       f'все маршруты защиты на хабе ({keys})')
@@ -572,7 +572,7 @@ check(r.status_code == 200 and ov.get('success') is True
 
 r = client.get('/api/channel-routes')
 routes = r.get_json().get('routes', [])
-check(len(routes) == 14, f'хаб Каналов отдаёт 14 маршрутов ({len(routes)})')
+check(len(routes) == 17, f'хаб Каналов отдаёт 17 маршрутов ({len(routes)})')
 hub_guard = [x for x in routes if x['key'] == 'guardian_channel']
 check(hub_guard and hub_guard[0]['label'] == 'Тревоги Щита сервера',
       'маршрут Щита с русской подписью на хабе')
