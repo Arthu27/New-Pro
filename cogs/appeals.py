@@ -338,6 +338,54 @@ class AppealMenuSelect(discord.ui.Select):
             AppealChannelModal(cog, interaction.guild))
 
 
+WEBHOOK_NAME = 'Апелляции Hakumo'
+HOOK_USERNAME = '⚖ Апелляции'
+
+
+async def _channel_webhook(channel):
+    """Найти/создать вебхук бота в канале.
+
+    Меню и карточки апелляций отправляются вебхуком бота (application-
+    owned): красивое имя и аватар вместо сырого аккаунта, а кнопки/селекты
+    работают как раньше — интеракции приходят боту. None — вебхук недоступен
+    (нет прав или канал не поддерживает), тогда обычная отправка.
+    """
+    fetch = getattr(channel, 'webhooks', None)
+    if fetch is None:
+        return None
+    try:
+        hooks = await fetch()
+    except Exception as _ex:
+        log.debug('appeals: webhooks(%s): %s', channel, _ex)
+        return None
+    me_id = None
+    try:
+        me_id = channel.guild.me.id
+    except Exception as _ex:
+        log.debug('appeals: guild.me недоступен: %s', _ex)
+    for h in hooks or ():
+        try:
+            if me_id is None or h.user is None or h.user.id == me_id:
+                return h
+        except Exception as _ex:
+            log.debug('appeals: вебхук пропущен: %s', _ex)
+    create = getattr(channel, 'create_webhook', None)
+    if create is None:
+        return None
+    try:
+        return await create(name=WEBHOOK_NAME)
+    except Exception as _ex:
+        log.debug('appeals: create_webhook: %s', _ex)
+        return None
+
+
+def _hook_avatar(guild):
+    try:
+        return guild.icon.url if guild.icon else None
+    except Exception:
+        return None
+
+
 class AppealMenuView(discord.ui.View):
     """Обёртка меню (persistent — переживает рестарт)."""
 
@@ -406,22 +454,44 @@ class Appeals(commands.Cog):
             timestamp=datetime.now(UTC))
         embed.set_footer(text=f'{guild.name} · апелляции',
                          icon_url=guild.icon.url if guild.icon else None)
-        try:
-            old = (state.get('menu') or {})
-            msg = None
-            if old.get('message_id') and int(old.get('channel_id') or 0) == channel.id:
-                try:
+        old = (state.get('menu') or {})
+        avatar = _hook_avatar(guild)
+        msg = None
+        used_hook = None
+        # главный путь — вебхук: имя «⚖ Апелляции», кнопки работают как раньше
+        hook = await _channel_webhook(channel)
+        if hook is not None:
+            used_hook = hook
+            try:
+                if (old.get('message_id')
+                        and int(old.get('webhook_id') or 0) == hook.id
+                        and int(old.get('channel_id') or 0) == channel.id):
+                    msg = await hook.edit_message(
+                        int(old['message_id']), embed=embed, view=AppealMenuView())
+                else:
+                    msg = await hook.send(
+                        embed=embed, view=AppealMenuView(), wait=True,
+                        username=HOOK_USERNAME, avatar_url=avatar)
+            except Exception as _ex:
+                log.debug('appeals: меню через вебхук не ушло: %s', _ex)
+                msg = None
+        # фолбэк — обычная отправка от бота (вебхука нет или не вышло)
+        if msg is None:
+            try:
+                if (old.get('message_id')
+                        and int(old.get('channel_id') or 0) == channel.id
+                        and not int(old.get('webhook_id') or 0)):
                     msg = await channel.edit_message(
                         int(old['message_id']), embed=embed, view=AppealMenuView())
-                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-                    msg = None
-            if msg is None:
-                msg = await channel.send(embed=embed, view=AppealMenuView())
-        except (discord.Forbidden, discord.HTTPException) as _ex:
-            return False, f'Бот не может писать в этот канал: {_ex}'
-        state['menu'] = {'channel_id': channel.id, 'message_id': msg.id}
+                if msg is None:
+                    msg = await channel.send(embed=embed, view=AppealMenuView())
+            except (discord.Forbidden, discord.HTTPException) as _ex:
+                return False, f'Бот не может писать в этот канал: {_ex}'
+        state['menu'] = {'channel_id': channel.id, 'message_id': msg.id,
+                         'webhook_id': getattr(used_hook, 'id', 0) or 0}
         self._save(guild.id, state)
-        return True, f'Меню опубликовано в {channel.mention}'
+        how = 'вебхуком' if used_hook is not None else 'от бота'
+        return True, f'Меню опубликовано в {channel.mention} ({how})'
 
     async def _submit_channel_appeal(self, user, guild, text, link=None, channel=None):
         """Апелляция из меню в канале: карточка в отдельном треде."""
@@ -484,7 +554,21 @@ class Appeals(commands.Cog):
                     send_kw['file'] = discord.File(io.BytesIO(png), filename=png_name)
                 thread = await channel.create_thread(
                     name=name, type=discord.ChannelType.public_thread)
-                card = await thread.send(**send_kw)
+                # карточку — вебхуком «⚖ Апелляции», фолбэк — от бота
+                card = None
+                hook = await _channel_webhook(channel)
+                if hook is not None:
+                    try:
+                        card = await hook.send(
+                            thread=thread, wait=True,
+                            username=f'{HOOK_USERNAME} · {item["id"]}',
+                            avatar_url=_hook_avatar(guild), **send_kw)
+                    except Exception as _ex:
+                        log.debug('appeals: карточка #%s вебхуком: %s',
+                                  item['id'], _ex)
+                        card = None
+                if card is None:
+                    card = await thread.send(**send_kw)
                 item['message_id'] = card.id
                 item['thread_id'] = thread.id
                 item['thread_url'] = card.jump_url

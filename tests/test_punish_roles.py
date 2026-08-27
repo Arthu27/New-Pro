@@ -71,6 +71,7 @@ class _Ch:
         s.sent = []
         s.threads = []
         s.edited = []
+        s.hooks = []
 
     async def set_permissions(s, u, overwrite=None, **kw):
         s.overwrites[getattr(u, 'id', u)] = overwrite or _Overwrite(**kw)
@@ -93,6 +94,20 @@ class _Ch:
 
         return _Msg()
 
+    async def webhooks(s):
+        if getattr(s, 'hook_forbidden', False):
+            import discord as _d
+            raise _d.Forbidden(Exception('нет прав'))
+        return list(s.hooks or ())
+
+    async def create_webhook(s, name=None):
+        if getattr(s, 'hook_forbidden', False):
+            import discord as _d
+            raise _d.Forbidden(Exception('нет прав'))
+        h = _Hook(6000 + len(s.hooks or ()), _Me.id)
+        s.hooks = list(s.hooks or ()) + [h]
+        return h
+
     async def create_thread(s, name, type=None):
         class _Thread(_Ch):
             def __init__(s2, i, name):
@@ -103,6 +118,46 @@ class _Ch:
         t = _Thread(7000 + len(s.threads), name)
         s.threads.append(t)
         return t
+
+
+class _HookUser:
+    def __init__(s, i):
+        s.id = i
+
+
+class _Hook:
+    """Вебхук бота в канале (фейк): send/edit_message пишут в журнал."""
+
+    def __init__(s, i, uid):
+        s.id = i
+        s.user = _HookUser(uid)
+        s.sent = []
+        s.edited = []
+
+    async def send(s, embed=None, view=None, thread=None, wait=False,
+                   username=None, avatar_url=None, **kw):
+        s.sent.append({'embed': embed, 'view': view, 'thread': thread,
+                       'wait': wait, 'username': username, **kw})
+
+        class _Msg:
+            id = 5000 + len(s.sent)
+            jump_url = f'https://discord.com/channels/{G}/webhook/{5000 + len(s.sent)}'
+
+        return _Msg()
+
+    async def edit_message(s, mid, **kw):
+        s.edited.append({'id': mid, **kw})
+
+        class _Msg:
+            id = mid
+            jump_url = f'https://discord.com/channels/{G}/webhook/{mid}'
+
+        return _Msg()
+
+
+class _Me:
+    id = 999
+    name = 'Hakumo'
 
 
 class _Voice:
@@ -181,6 +236,7 @@ class _Guild:
         s.channels = [_Ch(300 + k, guild=s) for k in range(4)]
         s.text_channels = s.channels
         s.members = []
+        s.me = _Me()
 
     def get_role(s, rid):
         return next((r for r in s.roles if r.id == rid), None)
@@ -359,13 +415,22 @@ check(menu_view.timeout is None, 'view без таймаута (пережива
 
 menu_ch = guild.get_channel(302)
 ok, msg = asyncio.run(acog.publish_appeal_menu(menu_ch))
-check(ok and menu_ch.sent, f'меню опубликовано ({msg})')
+check(ok, f'меню опубликовано ({msg})')
 st = acog._load(G)
-check(st.get('menu', {}).get('channel_id') == 302, 'сообщение меню запомнено')
+menu_hook = (menu_ch.hooks or [None])[0]
+check(menu_hook is not None and menu_hook.sent and menu_hook.sent[0].get('view')
+      is not None and menu_hook.sent[0].get('wait') is True,
+      'меню отправлено ВЕБХУКОМ с select и wait=True')
+check(not menu_ch.sent, 'обычная отправка не понадобилась')
+check('вебхуком' in msg, f'ответ называет способ ({msg})')
+check(st.get('menu', {}).get('channel_id') == 302
+      and st['menu'].get('webhook_id') == menu_hook.id,
+      'сообщение меню и вебхук запомнены')
 mid = st['menu']['message_id']
 ok, msg = asyncio.run(acog.publish_appeal_menu(menu_ch))
-check(ok and menu_ch.edited and menu_ch.edited[-1]['id'] == mid,
-      'повторная публикация редактирует то же сообщение')
+check(ok and menu_hook.edited and menu_hook.edited[-1]['id'] == mid
+      and len(menu_hook.sent) == 1,
+      'повторная публикация редактирует то же сообщение вебхуком')
 
 user = _Member(UID + 2)
 user.guild = guild
@@ -377,14 +442,31 @@ check(err is None and item is not None, f'апелляция принята из
 check(item.get('thread_id') in [t.id for t in menu_ch.threads],
       'для апелляции создан тред в канале меню')
 thread = next(t for t in menu_ch.threads if t.id == item.get('thread_id'))
-check(thread.sent and thread.sent[0].get('embed') is not None,
-      'карточка-embed отправлена в тред')
+card = next((x for x in menu_hook.sent if x.get('thread') is thread), None)
+check(card is not None and card.get('embed') is not None
+      and card.get('view') is not None,
+      'карточка отправлена ВЕБХУКОМ в тред с кнопками решения')
+check(not thread.sent, 'фолбэк-отправка в тред не понадобилась')
 check(item.get('thread_url'), 'ссылка на тред сохранена')
 check(user.dms, 'участник получил уведомление в ЛС')
 
 short, err2 = asyncio.run(acog._submit_channel_appeal(
     user, guild, 'коротко', channel=menu_ch))
 check(short is None and err2 and '10' in err2, f'короткий текст отклонён ({err2})')
+
+# фолбэк: в канале нет прав на вебхуки — карточка уходит от бота
+plain_ch = guild.get_channel(303)
+plain_ch.hook_forbidden = True
+fb_item, fb_err = asyncio.run(acog._submit_channel_appeal(
+    user, guild, 'Проверка фолбэка отправки карточки без вебхука',
+    channel=plain_ch))
+check(fb_err is None and fb_item is not None, 'фолбэк: апелляция принята')
+fb_thread = next((t for t in plain_ch.threads
+                  if t.id == fb_item.get('thread_id')), None)
+check(fb_thread is not None and fb_thread.sent
+      and fb_thread.sent[0].get('embed') is not None
+      and fb_thread.sent[0].get('view') is not None,
+      'фолбэк: карточка отправлена ботом в тред (кнопки на месте)')
 
 print('== 9. Принятие апелляции снимает роль «бана» ==')
 
@@ -524,8 +606,11 @@ r = client.post('/api/guild/777/mod-settings', json={'publish_menu': True})
 d = r.get_json()
 check(r.status_code == 200 and d.get('success'), f'publish_menu — ок ({str(d)[:70]})')
 published = wg.get_channel(301)
-check(published.sent and published.sent[0].get('view') is not None,
-      'бот опубликовал меню в выбранный канал')
+pub_hook = (published.hooks or [None])[0]
+check((pub_hook is not None and pub_hook.sent
+       and pub_hook.sent[0].get('view') is not None)
+      or (published.sent and published.sent[0].get('view') is not None),
+      'меню опубликовано в выбранный канал (вебхуком или ботом)')
 
 r = client.post('/api/guild/777/mod-settings',
                 json={'appeal_menu_channel': 0, 'publish_menu': True})
