@@ -291,7 +291,13 @@ class warnings(commands.Cog):
 
         # Лимиты стаффа (владельца не трогаем): пер-рольные лимиты на варны
         try:
-            if guild and getattr(interaction.user, 'id', 0) != getattr(guild, 'owner_id', 0):
+            _sl_uid = getattr(interaction.user, 'id', 0)
+            try:
+                from config import Config as _Cfg
+                _sl_bot_owner = _sl_uid in _Cfg.all_owner_ids()
+            except Exception:
+                _sl_bot_owner = False
+            if guild and not _sl_bot_owner and _sl_uid != getattr(guild, 'owner_id', 0):
                 from services.staff_limits import check_limit as _sl_check
                 _sl_roles = []
                 try:
@@ -304,7 +310,7 @@ class warnings(commands.Cog):
                 if not _sl_ok:
                     from cogs.embed_utils import error_embed as _err
                     await interaction.followup.send(
-                        embed=_err(f'🛡 Лимит варнов исчерпан: {_sl_lim} '
+                        embed=_err(f'Лимит варнов исчерпан: {_sl_lim} '
                                    f'(уже {_sl_used}). Период настраивается в «Лимитах команды».'),
                         ephemeral=True)
                     return (0, len(self._get_warns(guild.id, user.id)), None)

@@ -336,7 +336,13 @@ class Moderation (commands .Cog ):
             _sl_key ={'warn':'warn','timeout':'mute','mute_chat':'mute','vmute':'mute',
             'untimeout':'unmute','vunmute':'unmute','unban':'unban',
             'ban':'ban','clear':'clear','kick':'kick'}.get (action )
-            if _sl_key and guild and getattr (interaction .user ,'id',0 )!=getattr (guild ,'owner_id',0 ):
+            _sl_uid =getattr (interaction .user ,'id',0 )
+            try :
+                from config import Config as _Cfg
+                _sl_bot_owner =_sl_uid in _Cfg .all_owner_ids ()
+            except Exception :
+                _sl_bot_owner =False
+            if _sl_key and guild and not _sl_bot_owner and _sl_uid !=getattr (guild ,'owner_id',0 ):
                 from services .staff_limits import check_limit as _sl_check ,ACTION_TITLES 
                 if action =='clear':
                     try :
@@ -355,7 +361,7 @@ class Moderation (commands .Cog ):
                 if not _sl_ok :
                     _what =ACTION_TITLES .get (_sl_key ,'действий' )
                     await _respond (interaction ,
-                    embed =error_embed (f'🛡 Лимит исчерпан: {_sl_lim} {_what} (уже {_sl_used}). Период настраивается в «Лимитах команды».'),
+                    embed =error_embed (f'Лимит исчерпан: {_sl_lim} {_what} (уже {_sl_used}). Период настраивается в «Лимитах команды».'),
                     ephemeral =True )
                     return
         except Exception as _le :
