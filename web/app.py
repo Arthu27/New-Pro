@@ -3151,8 +3151,10 @@ def api_login_suggest ():
         except Exception as _ex:
             _log.debug("api_login_suggest(): подавлено: %s", _ex)
 
-            # 3. Always provide demo/known members if empty so dropdown is never blank
-    if not suggestions :
+            # 3. Демо-состав — ТОЛЬКО в режиме предпросмотра (DEMO_MODE=1 без
+    # бота). В бою чужих людей в подсказках быть не может: нет данных —
+    # выпадашка честно пустая (заказ владельца: «данные, которых я не добавлял»).
+    if not suggestions and _demo_mode ():
         demo_members =[
         {'id':'987430047889637426','name':'owner','display_name':'Owner','avatar':'https://cdn.discordapp.com/embed/avatars/0.png'},
         {'id':'1406597367695806564','name':'ecobar','display_name':'Ecobar','avatar':'https://cdn.discordapp.com/embed/avatars/1.png'},

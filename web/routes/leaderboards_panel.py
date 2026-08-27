@@ -72,13 +72,15 @@ def raw_rows(gid, cat):
 
 
 def _demo_names():
-    """uid → {'name','avatar'} из демо-участников и карты имён."""
+    """uid → {'name','avatar'} для офлайн-рендера.
+
+    Реальные имена — из сохранённой карты имён (то, что реально видел бот).
+    Демо-участники добавляются только в режиме предпросмотра (name_map_for
+    сам их инжектит при DEMO_MODE) — в бою выдуманных людей не показываем.
+    """
     out = {}
     try:
-        from web.routes._common import DEMO_MEMBERS, name_map_for
-        for m in DEMO_MEMBERS:
-            out[str(m.get('id'))] = {'name': str(m.get('display_name') or m.get('name') or m.get('id')),
-                                     'avatar': str(m.get('avatar') or '')}
+        from web.routes._common import name_map_for
         nm = name_map_for(None)
         for uid, name in nm.items():
             out.setdefault(str(uid), {'name': str(name), 'avatar': ''})

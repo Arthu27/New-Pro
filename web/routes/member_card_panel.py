@@ -194,23 +194,30 @@ def card_view(bot, gid, uid):
 def _name_pool(gid):
     """Все известные имена сервера: аудит, демо-участники, XP, дни рождения."""
     pool = names_from_audit(gid)
-    # демо: участники, которых видно в подсказках логина — ищем по обоим никам
-    from web.routes._common import DEMO_MEMBERS
-    for dm in DEMO_MEMBERS:
-        uid = str(dm.get('id'))
-        for key in ('display_name', 'name'):
-            if dm.get(key):
-                pool.setdefault(uid, str(dm[key]))
-    # демо-имена из подсказок логина (тот же набор, что в /api/login/suggest)
-    for uid, nm in (
-        ('987430047889637426', 'Owner'),
-        ('1406597367695806564', 'ecobar'),
-        ('1483484518563188767', 'dragon'),
-        ('1461513653650981054', 'hzdio'),
-        ('859341577452257330', 'oberaru'),
-        ('1465744556183126242', 'meow_meow'),
-    ):
-        pool.setdefault(uid, nm)
+    # Демо-состав — только в режиме предпросмотра (DEMO_MODE=1 без бота):
+    # в бою автодополнение показывает лишь реально известных участников
+    # (аудит, XP, дни рождения) — никаких людей, которых владелец не добавлял.
+    try:
+        import web.app as _app
+        _demo = _app._demo_mode()
+    except Exception:
+        _demo = False
+    if _demo:
+        from web.routes._common import DEMO_MEMBERS
+        for dm in DEMO_MEMBERS:
+            uid = str(dm.get('id'))
+            for key in ('display_name', 'name'):
+                if dm.get(key):
+                    pool.setdefault(uid, str(dm[key]))
+        for uid, nm in (
+            ('987430047889637426', 'Owner'),
+            ('1406597367695806564', 'ecobar'),
+            ('1483484518563188767', 'dragon'),
+            ('1461513653650981054', 'hzdio'),
+            ('859341577452257330', 'oberaru'),
+            ('1465744556183126242', 'meow_meow'),
+        ):
+            pool.setdefault(uid, nm)
     # имена из таблицы лидеров (xp)
     try:
         with open(f'data/xp_{gid}.json', encoding='utf-8') as fp:

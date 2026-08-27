@@ -103,17 +103,23 @@ def register(ctx):
             top =sorted (users .values (),key =lambda x :x .get ('xp',0 ),reverse =True )[:10 ]
             top_list =[{'name':u .get ('name','Участник'),'level':u .get ('level',1 ),'xp':u .get ('xp',0 )}for u in top ]
             levels =[int (u .get ('level',0 ))for u in users .values ()]
+            # Честный офлайн: без бота показываем ТО, что реально накоплено
+            # в xp_<gid>.json. Подставлять выдуманных участников и тонны XP
+            # можно только в режиме предпросмотра (DEMO_MODE=1) — в бою
+            # владелец не должен видеть данные, которых не добавлял.
+            _demo =bool (getattr (_app ,'_demo_mode ',lambda :False )())
+            _has =bool (users )
             return jsonify ({
-                'total_users':len (users )or 8 ,
-                'max_level':max (levels )if levels else 31 ,
-                'total_xp':sum (u .get ('xp',0 )for u in users .values ())or 184200 ,
-                'total_achievements':12 ,
-                'total_ach_available':20 ,
-                'top':top_list or [
+                'total_users':len (users )if _has else (8 if _demo else 0 ),
+                'max_level':max (levels )if levels else (31 if _demo else 0 ),
+                'total_xp':sum (u .get ('xp',0 )for u in users .values ())if _has else (184200 if _demo else 0 ),
+                'total_achievements':12 if (_has or _demo )else 0 ,
+                'total_ach_available':20 if (_has or _demo )else 0 ,
+                'top':(top_list or ([
                     {'name':'sonya.staff','level':31 ,'xp':84200 },
                     {'name':'ecobar','level':24 ,'xp':49800 },
                     {'name':'dragon','level':19 ,'xp':27100 },
-                ],
+                ] if _demo else [] )),
             })
         from cogs .leveling_engagement import LevelingEngagement ,level_from_xp 
         cog =bot .get_cog ('LevelingEngagement')

@@ -274,6 +274,9 @@ def register(ctx):
                         _log.debug("api_dm_recent(): подавлено: %s", _ex)
             elif not avatar :
                 try :
+                    import web .app as _appa
+                    if not _appa ._demo_mode ():
+                        raise KeyError('не демо-режим — чужих имён не подставляем')
                     from web .routes ._common import DEMO_MEMBERS
                     for dm in DEMO_MEMBERS :
                         if str (dm .get ('id'))==uid :
