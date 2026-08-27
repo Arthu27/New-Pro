@@ -46,9 +46,9 @@ print('== 1. Реестр команд (LEAN — боевой состав по 
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-check(data['total'] == 26, f"lean: собрано {data['total']} живых команд (после чистки — 26, с /proof)")
-check(data['slash'] == 14 and data['prefix'] == 12,
-      f"lean: slash {data['slash']} + prefix {data['prefix']} — оба вида на месте")
+check(data['total'] == 27, f"lean: собрано {data['total']} живых команд (все — слеш, с /proof)")
+check(data['slash'] == 27 and data['prefix'] == 0,
+      f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
 check(len(data['categories']) >= 6, f"lean: разделов ≥6 ({len(data['categories'])})")
@@ -87,7 +87,8 @@ check('игра' in music['desc'].lower() or 'трек' in music['desc'].lower()
       or 'музык' in music['desc'].lower(),
       f"у play русское описание ({music['desc']!r})")
 check(music['module'] == 'music_cog.py', 'модуль команды указан')
-check('играй' in music['aliases'], f"алиасы подхвачены: {music['aliases']}")
+check(music['kind'] == 'slash' and music['aliases'] == [],
+      'музыка переехала на слеш (алиасов у слеша нет)')
 
 sub = next((c for c in full['commands'] if c['kind'] == 'sub' and c['group']), None)
 check(sub is not None and ' ' in sub['name'],
@@ -141,7 +142,8 @@ check(r.status_code == 200 and d['success'], 'мод читает каталог
 check(d['total'] == data['total'] and d['shown'] == d['total']
       and len(d['commands']) == d['total'],
       'без фильтров отдаётся весь lean-каталог (как в боте)')
-check(d['slash'] > 0 and d['prefix'] > 0, 'счётчики типов в ответе')
+check(d['slash'] > 0 and d['prefix'] == 0,
+      'счётчики типов в ответе: слеш есть, префиксных — ноль')
 check(d.get('modules', {}).get('enabled') == 30
       and d['modules']['sleeping'] == 75,
       'в ответе — счётчик модулей (30 включено / 75 спит)')
@@ -159,11 +161,11 @@ r = client.get('/api/commands/catalog?kind=slash')
 d = r.get_json()
 check(all(c['kind'] in ('slash', 'sub') for c in d['commands']),
       'фильтр kind=slash включает подкоманды групп')
-r = client.get('/api/commands/catalog?kind=prefix&cat=music')
+r = client.get('/api/commands/catalog?kind=slash&cat=music')
 d = r.get_json()
-check(d['commands'] and all(c['kind'] == 'prefix' and c['cat'] == 'music'
+check(d['commands'] and all(c['kind'] == 'slash' and c['cat'] == 'music'
                             for c in d['commands']),
-      'двойной фильтр kind+cat')
+      'двойной фильтр kind+cat (музыка — слеш)')
 
 print('== 4. Шаблон страницы ==')
 tpl = open(os.path.join(ROOT, 'web', 'templates', 'commands.html'),
@@ -201,8 +203,9 @@ check('Голосовые' not in field_names,
       'голосовая статистика удалена из /help (команд нет — раздела нет)')
 help_src = open(os.path.join(ROOT, 'cogs', 'help.py'), encoding='utf-8').read()
 check('HELP_ENABLED = False' in help_src
-      and help_src.count('if not HELP_ENABLED') == 2,
-      '!help и /help временно выключены владельцем (флаг HELP_ENABLED)')
+      and help_src.count('if not HELP_ENABLED') == 1
+      and '@commands.command' not in help_src,
+      '/help за флагом HELP_ENABLED, префиксного !help больше нет')
 check('Экономика' not in field_names and 'Уровни и карма' not in field_names,
       'спящие разделы (экономика/уровни) из /help убраны')
 check('Логи и аудит' not in field_names and 'AI ' not in field_names,

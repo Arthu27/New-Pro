@@ -222,11 +222,17 @@ class Moderation (commands .Cog ):
             embed .set_footer (text =f"{interaction.guild.name} · Модерация · видите только вы",icon_url =interaction .guild .icon .url )
         else :
             embed .set_footer (text =f"{interaction.guild.name} · Модерация · видите только вы")
-        await _respond (interaction ,embed =embed ,view =ModPanelView (self ),ephemeral =True )
-
-    # ═══════════════════════════════════════════════════════════════════
-    #  !moderate — та же панель, но префиксной командой (без slash-синхронизации)
-    # ═══════════════════════════════════════════════════════════════════
+        # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
+        # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
+        allowed =actions_for_member (interaction .guild ,interaction .user )
+        if not allowed :
+            await _respond (interaction ,
+            embed =error_embed (
+            'Тебе пока не доступно ни одного действия. Владелец настраивает '
+            'их в панели: Щит сервера → Лимиты команды → роль.'),
+            ephemeral =True )
+            return 
+        await _respond (interaction ,embed =embed ,view =ModPanelView (self ,interaction .user ,allowed ),ephemeral =True )
 
     def _parse_target_id (self ,target :str ):
         """Из '@упоминание' или '123456789' вернуть int ID (или None)."""
@@ -263,31 +269,26 @@ class Moderation (commands .Cog ):
     # ── Апелляция («бан») ─────────────────────────────────────────────
     # «Бан» больше НЕ выгоняет с сервера: у участника закрываются все каналы,
     # открытым остаётся только один — канал апелляции, где он обжалует бан.
-    _ISO_NAMES =('апелляция','апелляции','appeal','appeals')
+    async def _isolation_channel (self ,guild ):
+        """Канал апелляции из панели (Каналы и маршруты → «Канал апелляции (бан)»).
 
-    async def _isolation_channel (self ,guild ,reason ):
-        """Найти или создать канал апелляции (виден только изолированным)."""
-        ch =None
-        for _nm in self ._ISO_NAMES :
-            ch =discord .utils .get (guild .text_channels ,name =_nm )
-            if ch is not None :
-                break
-        if ch is None :
-            try :
-                overwrites ={
-                guild .default_role :discord .PermissionOverwrite (view_channel =False ),
-                guild .me :discord .PermissionOverwrite (view_channel =True ,send_messages =True ),
-                }
-                ch =await guild .create_text_channel ('апелляция',overwrites =overwrites ,
-                reason =reason or 'Канал апелляции')
-            except Exception as _ex :
-                log .warning (f'[MODPANEL] создание канала апелляции: {_ex}')
-                ch =None
-        return ch
+        Канал выбирает владелец сам — бот ничего не создаёт. Не настроен —
+        «бан» из панели не работает (об этом прямо говорит модератору).
+        """
+        try :
+            from services .channel_routes import get_route as _gr 
+            cid =int (_gr (guild .id ,'ban_appeal_channel')or 0)
+        except Exception as _ex :
+            log .debug (f'[MODPANEL] канал апелляции: {_ex}')
+            return None 
+        if not cid :
+            return None 
+        return guild .get_channel (cid )
 
-    async def _isolate_member (self ,guild ,user ,reason ):
+    async def _isolate_member (self ,guild ,user ,iso ):
         """Закрыть все каналы для участника, оставить открытым канал апелляции."""
-        iso =await self ._isolation_channel (guild ,reason )
+        if iso is None :
+            return None ,0
         deny =discord .PermissionOverwrite (view_channel =False ,send_messages =False ,
         connect =False ,speak =False )
         allow =discord .PermissionOverwrite (view_channel =True ,send_messages =True )
@@ -469,9 +470,20 @@ class Moderation (commands .Cog ):
 
             try :
                 if action =="ban":
-                    # Апелляция: закрыть все каналы, оставить канал апелляции.
-                    _iso ,_closed =await self ._isolate_member (guild ,user ,reason )
-                    msg =f"🚫 апелляция: закрыто каналов {_closed}, открыт {_iso .mention if _iso else 'канал апелляции'}"
+                    # «Бан» не выкидывает с сервера: все каналы закрываются,
+                    # открыт только канал апелляции из панели. Без настроенного
+                    # канала действие не выполняется — говорим, чего не хватает.
+                    _iso =await self ._isolation_channel (guild )
+                    if _iso is None :
+                        await _respond (interaction ,
+                        embed =error_embed (
+                        'Настройки не завершены: не выбран канал апелляции. '
+                        'Панель → Каналы и маршруты → «Канал апелляции (бан)». '
+                        'Пока канал не выбран, «бан» из панели не работает.'),
+                        ephemeral =True )
+                        return 
+                    _closed =await self ._isolate_member (guild ,user ,_iso )
+                    msg =f"🚫 апелляция: закрыто каналов {_closed }, открыт {_iso .mention }"
                     try :
                         from services .staff_limits import record_hit as _sl_rec
                         _sl_rec (guild .id ,interaction .user .id ,'ban',1 )
@@ -687,20 +699,59 @@ class Moderation (commands .Cog ):
 # ═══════════════════════════════════════════════════════════════════
 #  SELECT-МЕНЮ МОДЕРАЦИИ (без кнопок/эмодзи — только выпадающие меню)
 # ═══════════════════════════════════════════════════════════════════
-class ModActionSelect(discord.ui.Select):
-    """Выбор действия модерации."""
+# Действия панели: (value, label, описание, ключ лимита стаффа).
+# Ключ — как в services/staff_limits: мут чата/войса/таймаут — один ключ mute.
+MODPANEL_ACTIONS = [
+    ("ban", "Бан (апелляция)", "Не выкидывать: закрыть все каналы, оставить канал апелляции", "ban"),
+    ("timeout", "Мут (чат + войс)", "Таймаут — закрыть и чат, и голос", "mute"),
+    ("mute_chat", "Мут (только чат)", "Закрыть только чат (таймаут)", "mute"),
+    ("vmute", "Мут (только войс)", "Заглушить микрофон (чат не трогает)", "mute"),
+    ("unban", "Снять апелляцию / разбан", "Вернуть доступ к каналам (по ID)", "unban"),
+    ("clear", "Очистить сообщения", "Удалить N сообщений", "clear"),
+    ("untimeout", "Размут (чат + войс)", "Снять таймаут с участника", "unmute"),
+    ("vunmute", "Размут (войс)", "Включить микрофон участника", "unmute"),
+]
 
-    def __init__(self, cog):
-        options = [
-            discord.SelectOption(label="Бан (апелляция)", value="ban", description="Закрыть все каналы, оставить канал апелляции"),
-            discord.SelectOption(label="Мут (чат + войс)", value="timeout", description="Таймаут — закрыть и чат, и голос"),
-            discord.SelectOption(label="Мут (только чат)", value="mute_chat", description="Закрыть только чат (таймаут)"),
-            discord.SelectOption(label="Мут (только войс)", value="vmute", description="Заглушить микрофон (чат не трогает)"),
-            discord.SelectOption(label="Снять апелляцию / разбан", value="unban", description="Вернуть доступ к каналам (по ID)"),
-            discord.SelectOption(label="Очистить сообщения", value="clear", description="Удалить N сообщений"),
-            discord.SelectOption(label="Размут (чат + войс)", value="untimeout", description="Снять таймаут с участника"),
-            discord.SelectOption(label="Размут (войс)", value="vunmute", description="Включить микрофон участника"),
-        ]
+
+def actions_for_member(guild, member):
+    """Какие действия панели показывать модератору.
+
+    По умолчанию — все. Если у его ролей есть свои лимиты/потолки
+    (Щит сервера → Лимиты команды) — только настроенные действия.
+    Владелец бота и владелец сервера видят всё.
+    """
+    try:
+        uid = getattr(member, "id", 0)
+        if getattr(guild, "owner_id", None) == uid:
+            return list(MODPANEL_ACTIONS)
+        from config import Config as _Cfg
+        if uid in _Cfg.all_owner_ids():
+            return list(MODPANEL_ACTIONS)
+    except Exception:
+        pass
+    role_ids = []
+    try:
+        role_ids = [r.id for r in (getattr(member, "roles", None) or [])
+                    if getattr(r, "id", None) != getattr(guild, "id", None)]
+    except Exception:
+        role_ids = []
+    try:
+        from services.staff_limits import role_scoped_actions as _rsa
+        scoped = _rsa(guild.id, role_ids)
+    except Exception:
+        scoped = None
+    if scoped is None:
+        return list(MODPANEL_ACTIONS)
+    return [a for a in MODPANEL_ACTIONS if a[3] in scoped]
+
+
+class ModActionSelect(discord.ui.Select):
+    """Выбор действия модерации — только то, что доступно этому модератору."""
+
+    def __init__(self, cog, member, allowed=None):
+        acts = allowed if allowed is not None else MODPANEL_ACTIONS
+        options = [discord.SelectOption(label=label, value=value, description=desc)
+                   for value, label, desc, _key in acts]
         super().__init__(
             placeholder="Выберите действие модерации...",
             options=options,
@@ -803,9 +854,9 @@ class ModActionModal(discord.ui.Modal):
 class ModPanelView(discord.ui.View):
     """View панели: только выпадающее меню, без кнопок."""
 
-    def __init__(self, cog):
+    def __init__(self, cog, member=None, allowed=None):
         super().__init__(timeout=300)
-        self.add_item(ModActionSelect(cog))
+        self.add_item(ModActionSelect(cog, member, allowed))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Панель модерации — только для модераторов (сообщение публичное)."""

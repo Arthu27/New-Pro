@@ -318,6 +318,25 @@ def set_role_durations(guild_id, role_id, who=None, role_name=None, **kw):
     return dict(row.get('durations') or {})
 
 
+def role_scoped_actions(guild_id, role_ids=()):
+    """Какие действия доступны модератору через /modpanel.
+
+    По умолчанию ограничений нет → None (видно всё). Если хоть у одной
+    роли модератора есть свои настройки (лимиты/окна/потолки), доступны
+    ТОЛЬКО настроенные действия — объединение по всем таким ролям.
+    """
+    overrides = get_role_overrides(guild_id)
+    scoped = None
+    for rid in role_ids or ():
+        ov = overrides.get(str(rid)) or {}
+        keys = (set(ov.get('limits') or ())
+                | set(ov.get('windows') or ())
+                | set(ov.get('durations') or ()))
+        if keys:
+            scoped = (scoped or set()) | keys
+    return scoped
+
+
 def effective_max_duration(guild_id, key, role_ids=()):
     """Потолок длительности в секундах (0 = без ограничения).
 

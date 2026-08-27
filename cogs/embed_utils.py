@@ -266,6 +266,41 @@ def hakumo_embed(kind, title, description=None, fields=None, guild=None,
     return e
 
 
+class InterCtx:
+    """Адаптер interaction → ctx-подобный объект.
+
+    Позволяет старым телам команд (написанным под ctx.send/reply) работать
+    из слеш-команд: reply()/send_with_icon() принимают его как ctx.
+    """
+
+    def __init__(self, interaction):
+        self.interaction = interaction
+        self.bot = getattr(interaction, 'client', None)
+        self.author = interaction.user
+        self.guild = interaction.guild
+        self.channel = interaction.channel
+        self.voice_client = None
+        if self.bot is not None and interaction.guild is not None:
+            try:
+                self.voice_client = discord.utils.get(
+                    self.bot.voice_clients, guild=interaction.guild)
+            except Exception:
+                self.voice_client = None
+
+    async def send(self, content=None, embed=None, **kw):
+        kw.pop('mention_author', None)
+        if content is not None:
+            kw['content'] = content
+        if embed is not None:
+            kw['embed'] = embed
+        if not self.interaction.response.is_done():
+            return await self.interaction.response.send_message(**kw)
+        return await self.interaction.followup.send(**kw)
+
+    async def reply(self, content=None, **kw):
+        return await self.send(content, **kw)
+
+
 async def reply(ctx, kind, title, description=None, **kw):
     """Быстрый красивый ответ: один вызов вместо сборки эмбеда руками.
 

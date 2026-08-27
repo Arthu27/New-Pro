@@ -14,7 +14,27 @@ from logger import get_logger
 _log = get_logger("diagnostics")
 
 import discord 
+from discord import app_commands 
 from discord .ext import commands ,tasks 
+from cogs .embed_utils import InterCtx 
+
+
+def _is_bot_owner (interaction ) ->bool :
+    """Владелец(ы) бота из .env (OWNER_ID + OWNER_IDS) — не сервера."""
+    try :
+        from config import Config as _Cfg 
+        return interaction .user .id in _Cfg .all_owner_ids ()
+    except Exception :
+        return False 
+
+
+async def _owner_only (interaction ) ->bool :
+    """Вежливый отказ не-владельцу (без «сырых» ошибок прав)."""
+    if _is_bot_owner (interaction ):
+        return True 
+    await interaction .response .send_message (
+    'Эта команда — только для владельца бота.',ephemeral =True )
+    return False 
 import json 
 import os 
 import time 
@@ -248,10 +268,15 @@ class Diagnostics (commands .Cog ):
             _log.debug("_notify_admin(): подавлено: %s", _ex)
 
             # HOT-RELOAD 
-    @commands .command (name ="hotreload")
-    @commands .is_owner ()
-    async def hotreload (self ,ctx ,cog_name :str =None ):
+    @app_commands .command (name ="hotreload",description ="Горячая перезагрузка модулей (владелец бота)")
+    @app_commands .describe (модуль ="Имя модуля без .py — не указано, все изменённые")
+    @app_commands .default_permissions (administrator =True )
+    async def hotreload (self ,interaction :discord .Interaction ,модуль :str =None ):
         """Горячая перезагрузка одного или всех модулей по времени изменения файлов"""
+        if not await _owner_only (interaction ):
+            return 
+        ctx =InterCtx (interaction )
+        cog_name =модуль 
         if cog_name :
             cogs_to_check =[cog_name ]
         else :
@@ -290,9 +315,10 @@ class Diagnostics (commands .Cog ):
         await ctx .send (embed =embed )
 
         # COMMANDS 
-    @commands .command (name ="health",aliases =["diag","status"])
-    async def health_cmd (self ,ctx ):
+    @app_commands .command (name ="health",description ="Здоровье бота: нагрузка, память, задержка")
+    async def health_cmd (self ,interaction :discord .Interaction ):
         """Показать текущее здоровье бота: нагрузку, память и статус"""
+        ctx =InterCtx (interaction )
         h =self .get_health_snapshot ()
         embed =discord .Embed (title =" Bot Health",color =self ._health_color (h ))
         # Status indicator
@@ -314,10 +340,27 @@ class Diagnostics (commands .Cog ):
         embed .timestamp =datetime.now(timezone.utc)
         await ctx .send (embed =embed )
 
-    @commands .command (name ="diagnose",aliases =["repair"])
-    @commands .is_owner ()
-    async def diagnose (self ,ctx ):
-        """Полная диагностика бота с автопочином найденных проблем"""
+    @app_commands .command (name ="diagnose",description ="Диагностика бота с автопочиной (владелец бота)")
+    @app_commands .describe (что ="Что показать",сколько ="Сколько последних ошибок (1-25)")
+    @app_commands .choices (что =[
+    app_commands .Choice (name ="Сводка и автопочинка",value ="summary"),
+    app_commands .Choice (name ="Статистика модулей",value ="perf"),
+    app_commands .Choice (name ="Последние ошибки",value ="errors"),
+    ])
+    @app_commands .default_permissions (administrator =True )
+    async def diagnose (self ,interaction :discord .Interaction ,
+    что :app_commands .Choice [str ]=None ,сколько :int =10 ):
+        """Полная диагностика бота с автопочиной найденных проблем"""
+        if not await _owner_only (interaction ):
+            return 
+        ctx =InterCtx (interaction )
+        mode =(что .value if что else "summary")
+        if mode =="perf":
+            await self ._diag_perf (ctx )
+            return 
+        if mode =="errors":
+            await self ._diag_errors (ctx ,сколько )
+            return 
         h =self .get_health_snapshot ()
         issues =[]
         if h ["memory_mb"]>THRESHOLDS ["memory_mb"]["warn"]:
@@ -351,45 +394,27 @@ class Diagnostics (commands .Cog ):
             embed .add_field (name =" Auto-Repairs",value =repair_text ,inline =False )
             # Quick actions
         embed .add_field (name =" Быстрые действия",value =
-        "`!hotreload` — перезагрузить изменённые cog'и\n"
-        "`!cog perf` — статистика по cog'ам\n"
-        "`!cog errors` — последние ошибки",inline =False )
+        "`/hotreload` — перезагрузить изменённые модули\n"
+        "`/diagnose` → «Статистика модулей» или «Последние ошибки»",inline =False )
         await ctx .send (embed =embed )
 
-    @commands .group (name ="cog",invoke_without_command =True )
-    @commands .is_owner ()
-    async def cog (self ,ctx ):
-        """Cog management"""
-        embed =discord .Embed (title =" Cog Менеджер",color =0xFFD700 )
-        loaded =sorted (self .bot .cogs .keys ())
-        embed .add_field (name =f"Загружено ({len(loaded)})",value =", ".join (loaded )or "—",inline =False )
-        # Performance
-        if self .cog_perf :
-            perf_text ="\n".join (f"**{name}:** {p['calls']} вызовов, {p['errors']} ошибок, {p['total_time']:.2f}s"for name ,p in sorted (self .cog_perf .items (),key =lambda x :x [1 ]['calls'],reverse =True )[:10 ])
-            embed .add_field (name =" Производительность",value =perf_text or "—",inline =False )
-        embed .add_field (name ="Команды",value ="`!cog perf` — производительность\n`!cog errors [n]` — последние N ошибок",inline =False )
-        await ctx .send (embed =embed )
-
-    @cog .command (name ="perf")
-    @commands .is_owner ()
-    async def diag_perf (self ,ctx ):
-        """Cog performance stats"""
+    async def _diag_perf (self ,ctx ):
+        """Статистика производительности модулей"""
         if not self .cog_perf :
             from cogs .embed_utils import reply 
-            await reply (ctx ,'system','Пока пусто','Статистика по когам ещё не накопилась.',footer_extra ='Диагностика')
+            await reply (ctx ,'system','Пока пусто','Статистика по модулям ещё не накопилась.',footer_extra ='Диагностика')
             return 
         sorted_perf =sorted (self .cog_perf .items (),key =lambda x :x [1 ]["calls"],reverse =True )
         text =""
         for name ,p in sorted_perf [:20 ]:
             avg =p ["total_time"]/p ["calls"]if p ["calls"]else 0 
-            text +=f"**{name}** — {p['calls']} calls, {p['errors']} errs, avg {avg*1000:.1f}ms\n"
-        embed =discord .Embed (title =" Cog Производительность",description =text ,color =0xFFD700 )
+            text +=f"**{name}** — {p['calls']} вызовов, {p['errors']} ошибок, среднее {avg*1000:.1f}мс\n"
+        embed =discord .Embed (title ="Производительность модулей",description =text ,color =0xFFD700 )
         await ctx .send (embed =embed )
 
-    @cog .command (name ="errors")
-    @commands .is_owner ()
-    async def diag_errors (self ,ctx ,limit :int =10 ):
-        """Last N errors"""
+    async def _diag_errors (self ,ctx ,limit :int =10 ):
+        """Последние ошибки модулей"""
+        limit =max (1 ,min (int (limit or 10 ),25 ))
         errors =list (self .error_log )[-limit :]
         if not errors :
             from cogs .embed_utils import reply 
@@ -399,9 +424,10 @@ class Diagnostics (commands .Cog ):
         for e in errors :
             ago =int ((time .time ()-e ["ts"])/60 )
             text +=f"`{ago}м` **{e['error_type']}** в `{e['command']}`: {e['error_msg'][:80]}\n"
-        embed =discord .Embed (title =f" Последние {len(errors)} ошибок",description =text [:2000 ],color =0xEF4444 )
+        embed =discord .Embed (title =f"Последние {len(errors)} ошибок",description =text [:2000 ],color =0xEF4444 )
         await ctx .send (embed =embed )
 
+        
         # HELPERS 
     def _health_color (self ,h ):
         if h ["latency_ms"]<300 and h ["memory_mb"]<700 and h ["errors_last_min"]<5 :

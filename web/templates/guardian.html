@@ -1035,7 +1035,7 @@ gdLoad();
     $('gdLimRoleName').textContent = r.name;
     $('gdLimRoleMembers').textContent = (r.members || 0) + ' участн.';
     $('gdLimRoleDot').style.background = (r.color && r.color !== '#000000') ? r.color : '#95a5a6';
-    $('gdLimEditSub').textContent = 'Свои лимиты для «' + r.name + '». Пустое поле — берётся глобальное.';
+    $('gdLimEditSub').textContent = 'Свои лимиты для «' + r.name + '». Пустое поле — берётся глобальное. Настроенные здесь действия — это всё, что модер этой роли видит в /modpanel.';
     /* «Сейчас действует»: что именно эта роль перекрывает */
     var lines = [];
     (L.meta || []).forEach(function (g) {

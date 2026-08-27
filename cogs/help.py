@@ -622,26 +622,6 @@ class Help(commands.Cog):
                 return c
         return None
 
-    @commands.command(name="help", aliases=["h", "команды", "menu", "справка"])
-    async def help_prefix(self, ctx, category: str = None):
-        """Красивая справка по всем командам бота"""
-        if not HELP_ENABLED:
-            await ctx.send(embed=_help_disabled_embed(ctx.guild))
-            return
-        try:
-            await ctx.message.delete()
-        except Exception as _ex:
-            _log.debug("help_prefix(): подавлено: %s", _ex)
-
-        cat_id = self._resolve_help_cat(category)
-        e = build_help_embed(
-            category_id=cat_id,
-            member=ctx.author,
-            guild_id=ctx.guild.id if ctx.guild else 0,
-        )
-        view = HelpView(current_cat=cat_id)
-        await ctx.send(embed=e, view=view)
-
     @app_commands.command(name="help", description="Справка по командам бота")
     async def help_slash(self, interaction: discord.Interaction, category: str = None):
         if not HELP_ENABLED:

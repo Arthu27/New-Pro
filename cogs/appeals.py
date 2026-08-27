@@ -343,32 +343,45 @@ class Appeals(commands.Cog):
                           item['id'], guild_id, _ex)
         return item, None
 
-    @commands.command(name='апелляция', aliases=['appeal'])
-    async def cmd_appeal(self, ctx, сервер: str, *, текст: str):
-        """Обжаловать бан: !апелляция <ID сервера> <текст> (в ЛС боту)."""
-        if ctx.guild is not None:
-            await ctx.reply(' Апелляция подаётся в личных сообщениях боту.',
-                            mention_author=False)
+    @app_commands.command(name='апелляция',
+                          description='Обжаловать бан: /апелляция в ЛС боту',
+                          extras={'keep_global': True})
+    @app_commands.describe(сервер='ID сервера, на котором забанили',
+                           текст='Что произошло — до 500 символов')
+    async def cmd_appeal(self, interaction: discord.Interaction,
+                         сервер: str, текст: str):
+        """Обжаловать бан: /апелляция <ID сервера> <текст> (в ЛС боту)."""
+        if interaction.guild is not None:
+            await interaction.response.send_message(
+                'Апелляция подаётся в личных сообщениях боту: открой ЛС бота '
+                'и вызови команду там.', ephemeral=True)
             return
         try:
             guild_id = int(''.join(c for c in сервер if c.isdigit()))
         except ValueError:
-            await ctx.reply(' ID сервера должен быть числом.')
+            await interaction.response.send_message(
+                'ID сервера должен быть числом.', ephemeral=True)
             return
         guild = self.bot.get_guild(guild_id)
         if guild is None:
-            await ctx.reply(' Я не состою на таком сервере.')
+            await interaction.response.send_message(
+                'Я не состою на таком сервере.', ephemeral=True)
             return
-        if not await self._is_banned(guild, ctx.author):
-            await ctx.reply(' Вы не забанены на этом сервере — апелляция не нужна.')
+        if not await self._is_banned(guild, interaction.user):
+            await interaction.response.send_message(
+                'Вы не забанены на этом сервере — апелляция не нужна.',
+                ephemeral=True)
             return
-        item, err = await self._submit_appeal(ctx.author, guild, текст)
+        item, err = await self._submit_appeal(interaction.user, guild, текст)
         if err:
-            await ctx.reply(f' Не получилось: {err}.')
+            await interaction.response.send_message(
+                f'Не получилось: {err}.', ephemeral=True)
             return
-        from cogs.embed_utils import reply as _reply
-        await _reply(ctx, 'appeal', f'Апелляция #{item["id"]} отправлена',
-                     f'Модераторы сервера **{guild.name}** уже получили её. Ответ придёт в личку.')
+        from cogs.embed_utils import hakumo_embed
+        e = hakumo_embed('appeal', f'Апелляция #{item["id"]} отправлена',
+                         f'Модераторы сервера **{guild.name}** уже получили её. '
+                         'Ответ придёт в личку.')
+        await interaction.response.send_message(embed=e)
 
 
     async def _is_banned(self, guild, user):

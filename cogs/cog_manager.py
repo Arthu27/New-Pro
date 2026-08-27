@@ -1,7 +1,33 @@
-"""Управление модулями (cog) — загрузка/выгрузка/перезагрузка из панели или командой"""
+"""Управление модулями (cog) — из панели или слеш-командой /module (владелец).
+
+Раньше было !module load/unload/reload — теперь одна слеш-команда
+/module <действие> [модуль]: меню Discord остаётся компактным, префиксных
+команд у бота больше нет.
+"""
 import discord
+from discord import app_commands
 from discord.ext import commands
 import os
+
+from cogs.embed_utils import hakumo_embed, reply, InterCtx
+
+
+def _is_bot_owner(interaction) -> bool:
+    """Владелец(ы) бота из .env (OWNER_ID + OWNER_IDS)."""
+    try:
+        from config import Config
+        return interaction.user.id in Config.all_owner_ids()
+    except Exception:
+        return False
+
+
+async def _owner_only(interaction) -> bool:
+    """Вежливый отказ не-владельцу (без «сырых» ошибок прав)."""
+    if _is_bot_owner(interaction):
+        return True
+    await interaction.response.send_message(
+        'Эта команда — только для владельца бота.', ephemeral=True)
+    return False
 
 
 class CogManager(commands.Cog):
@@ -20,11 +46,7 @@ class CogManager(commands.Cog):
         except Exception:
             return set()
 
-    @commands.group(name='module', aliases=['модуль'], invoke_without_command=True)
-    @commands.is_owner()
-    async def module_group(self, ctx):
-        """Показать список загруженных/незагруженных модулей"""
-        from cogs.embed_utils import hakumo_embed, plural
+    async def _list(self, ctx):
         loaded = [ext.split('.')[-1] for ext in self.bot.extensions]
         all_cogs = [f[:-3] for f in os.listdir('./cogs') if f.endswith('.py')]
         sleeping = self._sleeping()
@@ -33,85 +55,96 @@ class CogManager(commands.Cog):
         embed = hakumo_embed(
             'system', 'Управление модулями', None,
             fields=[
-                (f' Всегда в строю ({len(loaded)})',
+                (f'Всегда в строю ({len(loaded)})',
                  '\n'.join(rows)[:1000] or '—', True),
-                (f' Спят по профилю ({len(sleeping)})',
+                (f'Спят по профилю ({len(sleeping)})',
                  '\n'.join(f'`{c}`' for c in sorted(sleeping))[:1000] or '—', True),
             ],
             guild=ctx.guild, footer_extra='Модули',
         )
         if just_off:
             embed.add_field(
-                name=f'⏸ Выгружены вручную ({len(just_off)})',
+                name=f'Выгружены вручную ({len(just_off)})',
                 value='\n'.join(f'`{c}`' for c in sorted(just_off))[:1000] or '—',
                 inline=False)
         embed.add_field(
             name='Команды',
-            value=('`!module load <имя>` — загрузить\n'
-                   '`!module unload <имя>` — выгрузить\n'
-                   '`!module reload <имя>` — перезагрузить\n'
+            value=('`/module` → «Список» — что загружено\n'
+                   '`/module` → «Загрузить / Выгрузить / Перезагрузить» + имя модуля\n'
+                   '`/module` → «Перезагрузить все»\n'
                    f'Разбудить {len(sleeping)} спящих: `BOT_FULL=1` или `EXTRA_COGS` в .env'),
             inline=False)
         await ctx.send(embed=embed)
 
-    @module_group.command(name='load', aliases=['загрузить'])
-    @commands.is_owner()
-    async def load_cog(self, ctx, cog_name: str):
-        """Загрузить модуль"""
-        from cogs.embed_utils import reply
-        try:
-            await self.bot.load_extension(f'cogs.{cog_name}')
-            await reply(ctx, 'system', 'Модуль загружен', f'`{cog_name}` — в строю.')
-        except Exception as e:
-            await reply(ctx, 'error', 'Не загрузился', f'`{cog_name}`: {e}')
-
-    @module_group.command(name='unload', aliases=['выгрузить'])
-    @commands.is_owner()
-    async def unload_cog(self, ctx, cog_name: str):
-        """Выгрузить модуль"""
-        from cogs.embed_utils import reply
-        if cog_name == 'cog_manager':
-            await reply(ctx, 'warn', 'Нельзя',
-                        'Менеджер модулей выгружать нельзя — потеряешь управление.')
+    @app_commands.command(name='module',
+                          description='Модули бота: список, загрузка, выгрузка (владелец бота)')
+    @app_commands.describe(действие='Что сделать', модуль='Имя модуля без .py')
+    @app_commands.choices(действие=[
+        app_commands.Choice(name='Список', value='list'),
+        app_commands.Choice(name='Загрузить', value='load'),
+        app_commands.Choice(name='Выгрузить', value='unload'),
+        app_commands.Choice(name='Перезагрузить', value='reload'),
+        app_commands.Choice(name='Перезагрузить все', value='reload-all'),
+    ])
+    @app_commands.default_permissions(administrator=True)
+    async def module(self, interaction: discord.Interaction,
+                     действие: app_commands.Choice[str],
+                     модуль: str = None):
+        """Управление модулями: /module <действие> [модуль]"""
+        if not await _owner_only(interaction):
             return
-        try:
-            await self.bot.unload_extension(f'cogs.{cog_name}')
-            await reply(ctx, 'system', 'Модуль выгружен', f'`{cog_name}` — уснул до команды.')
-        except Exception as e:
-            await reply(ctx, 'error', 'Не выгрузился', f'`{cog_name}`: {e}')
+        ctx = InterCtx(interaction)
+        act = действие.value
+        cog_name = (модуль or '').strip()
 
-    @module_group.command(name='reload', aliases=['перезагрузить'])
-    @commands.is_owner()
-    async def reload_cog(self, ctx, cog_name: str):
-        """Перезагрузить модуль"""
-        from cogs.embed_utils import reply
-        try:
-            await self.bot.reload_extension(f'cogs.{cog_name}')
-            await reply(ctx, 'system', 'Модуль перезагружен', f'`{cog_name}` — свежий код.')
-        except Exception as e:
-            await reply(ctx, 'error', 'Не перезагрузился', f'`{cog_name}`: {e}')
+        if act == 'list':
+            await self._list(ctx)
+            return
 
-    @module_group.command(name='reload-all', aliases=['обновить-всё'])
-    @commands.is_owner()
-    async def reload_all(self, ctx):
-        """Перезагрузить все модули"""
-        from cogs.embed_utils import hakumo_embed
-        ok, bad = [], []
-        for ext in list(self.bot.extensions):
+        if act in ('load', 'unload', 'reload'):
+            if not cog_name:
+                await reply(ctx, 'warn', 'Не хватает данных',
+                            f'Для «{действие.name}» укажи имя модуля — например `moderation`.',
+                            footer_extra='Модули')
+                return
+            if act == 'unload' and cog_name == 'cog_manager':
+                await reply(ctx, 'warn', 'Нельзя',
+                            'Менеджер модулей выгружать нельзя — потеряешь управление.')
+                return
             try:
-                await self.bot.reload_extension(ext)
-                ok.append(ext.split('.')[-1])
+                if act == 'load':
+                    await self.bot.load_extension(f'cogs.{cog_name}')
+                    await reply(ctx, 'system', 'Модуль загружен', f'`{cog_name}` — в строю.')
+                elif act == 'unload':
+                    await self.bot.unload_extension(f'cogs.{cog_name}')
+                    await reply(ctx, 'system', 'Модуль выгружен',
+                                f'`{cog_name}` — уснул до команды.')
+                else:
+                    await self.bot.reload_extension(f'cogs.{cog_name}')
+                    await reply(ctx, 'system', 'Модуль перезагружен',
+                                f'`{cog_name}` — свежий код.')
             except Exception as e:
-                bad.append(f'`{ext.split(".")[-1]}` — {e}')
-        embed = hakumo_embed(
-            'system', 'Перезагрузка всех модулей', None,
-            fields=[
-                (f' Перезагружено ({len(ok)})', ', '.join(f'`{c}`' for c in ok)[:1000] or '—', False),
-                (f' Ошибки ({len(bad)})', '\n'.join(bad)[:1000] or 'нет', False),
-            ],
-            guild=ctx.guild, footer_extra='Модули',
-        )
-        await ctx.send(embed=embed)
+                await reply(ctx, 'error', 'Не получилось', f'`{cog_name}`: {e}')
+            return
+
+        if act == 'reload-all':
+            ok, bad = [], []
+            for ext in list(self.bot.extensions):
+                try:
+                    await self.bot.reload_extension(ext)
+                    ok.append(ext.split('.')[-1])
+                except Exception as e:
+                    bad.append(f'`{ext.split(".")[-1]}` — {e}')
+            embed = hakumo_embed(
+                'system', 'Перезагрузка всех модулей', None,
+                fields=[
+                    (f'Перезагружено ({len(ok)})',
+                     ', '.join(f'`{c}`' for c in ok)[:1000] or '—', False),
+                    (f'Ошибки ({len(bad)})', '\n'.join(bad)[:1000] or 'нет', False),
+                ],
+                guild=ctx.guild, footer_extra='Модули',
+            )
+            await ctx.send(embed=embed)
 
 
 async def setup(bot):

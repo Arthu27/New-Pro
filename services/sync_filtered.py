@@ -92,9 +92,18 @@ async def full_sync(bot):
         except Exception as e:
             _log.debug('copy_global_to(%s): %s', g.id, e)
 
-    # 2) глобальный список в Discord очищаем (чтобы не было дублей)
+    # 2) глобальный список в Discord очищаем (чтобы не было дублей).
+    #    Исключение — команды с extras['keep_global'] (напр. /апелляция):
+    #    они обязаны остаться глобальными, чтобы работали в ЛС бота.
     parked = []
     for cmd in list(tree.get_commands()):
+        keep_it = False
+        try:
+            keep_it = bool((getattr(cmd, 'extras', None) or {}).get('keep_global'))
+        except Exception:
+            keep_it = False
+        if keep_it:
+            continue
         try:
             tree.remove_command(cmd.name, type=AppCommandType.chat_input)
             parked.append(cmd)

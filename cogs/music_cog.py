@@ -1,17 +1,19 @@
 """
 Music Cog — музыка Hakumo.
-Включить трек, очередь, пауза/продолжить, пропуск, громкость, повтор.
-Все ответы — в фирменном тёмно-золотом стиле (cogs/embed_utils).
+Включить трек, очередь, пауза/продолжить, пропуск.
+Все команды — слеш (/play, /pause, /resume, /skip, /queue, /nowplaying,
+/leave), ответы — в фирменном тёмно-золотом стиле (cogs/embed_utils).
 """
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 import random
 
 from logger import get_logger
 log = get_logger("music_cog")
 
-from cogs.embed_utils import hakumo_embed, reply, plural
+from cogs.embed_utils import hakumo_embed, reply, plural, InterCtx
 
 
 def shuffle_queue(queue: list) -> list:
@@ -25,7 +27,7 @@ def shuffle_queue(queue: list) -> list:
 
 
 def remove_track(queue: list, index):
-    """Убрать трек по номеру (1-based, как в !queue). Возвращает (ok, ошибка, удалённый трек)."""
+    """Убрать трек по номеру (1-based, как в /queue). Возвращает (ok, ошибка, удалённый трек)."""
     try:
         i = int(index)
     except (TypeError, ValueError):
@@ -42,7 +44,7 @@ def _track_name(item: dict) -> str:
 
 
 class MusicCog(commands.Cog):
-    """Музыкальные команды Hakumo"""
+    """Музыкальные команды Hakumo — только слеш"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -54,12 +56,14 @@ class MusicCog(commands.Cog):
             self.queues[guild_id] = []
         return self.queues[guild_id]
 
-    async def _silent(self, ctx, title='Тишина в эфире', text='Сейчас ничего не играет. Включи трек: `!play <название>`'):
+    async def _silent(self, ctx, title='Тишина в эфире', text='Сейчас ничего не играет. Включи трек: `/play <название>`'):
         await reply(ctx, 'music', title, text)
 
-    @commands.command(name='play', aliases=['играй'])
-    async def play(self, ctx, *, query: str):
-        """Включить трек: !play <название или ссылка>"""
+    @app_commands.command(name='play', description='Включить трек или добавить в очередь')
+    @app_commands.describe(трек='Название или ссылка на трек')
+    async def play(self, interaction: discord.Interaction, трек: str):
+        """Включить трек: /play <название или ссылка>"""
+        ctx = InterCtx(interaction)
         if not ctx.author.voice:
             await reply(ctx, 'music', 'Ты не в войсе',
                         'Зайди в голосовой канал — и я подключусь к тебе.')
@@ -70,7 +74,7 @@ class MusicCog(commands.Cog):
             await voice_channel.connect()
 
         queue = self.get_queue(ctx.guild.id)
-        queue.append({'query': query, 'requester': ctx.author})
+        queue.append({'query': трек, 'requester': ctx.author})
 
         if len(queue) == 1:
             title, pos = 'Сейчас играет', 'сразу'
@@ -87,20 +91,22 @@ class MusicCog(commands.Cog):
         from cogs.icons import send_with_icon
         await send_with_icon(ctx, embed, 'music')
 
-    @commands.command(name='pause', aliases=['пауза'])
-    async def pause(self, ctx):
+    @app_commands.command(name='pause', description='Поставить трек на паузу')
+    async def pause(self, interaction: discord.Interaction):
         """Поставить трек на паузу"""
+        ctx = InterCtx(interaction)
         if not ctx.voice_client or not ctx.voice_client.is_playing():
             await self._silent(ctx)
             return
         ctx.voice_client.pause()
         await reply(ctx, 'music', 'Пауза',
-                    'Трек на паузе. Продолжить: `!resume`',
+                    'Трек на паузе. Продолжить: `/resume`',
                     footer_extra='Музыка')
 
-    @commands.command(name='resume', aliases=['продолжить'])
-    async def resume(self, ctx):
+    @app_commands.command(name='resume', description='Продолжить воспроизведение')
+    async def resume(self, interaction: discord.Interaction):
         """Продолжить воспроизведение трека"""
+        ctx = InterCtx(interaction)
         if not ctx.voice_client:
             await self._silent(ctx)
             return
@@ -112,9 +118,10 @@ class MusicCog(commands.Cog):
         await reply(ctx, 'music', 'Снова играю',
                     'Трек продолжает звучать.', footer_extra='Музыка')
 
-    @commands.command(name='skip', aliases=['дальше'])
-    async def skip(self, ctx):
+    @app_commands.command(name='skip', description='Пропустить трек')
+    async def skip(self, interaction: discord.Interaction):
         """Пропустить трек"""
+        ctx = InterCtx(interaction)
         if not ctx.voice_client or not ctx.voice_client.is_playing():
             await self._silent(ctx)
             return
@@ -125,13 +132,14 @@ class MusicCog(commands.Cog):
                     f'В очереди осталось {left} {plural(left, "трек", "трека", "треков")}.',
                     footer_extra='Музыка')
 
-    @commands.command(name='queue', aliases=['очередь'])
-    async def queue(self, ctx):
+    @app_commands.command(name='queue', description='Показать очередь треков')
+    async def queue(self, interaction: discord.Interaction):
         """Показать очередь"""
+        ctx = InterCtx(interaction)
         queue = self.get_queue(ctx.guild.id)
         if not queue:
             await reply(ctx, 'music', 'Очередь пуста',
-                        'Включи что-нибудь: `!play <название>`',
+                        'Включи что-нибудь: `/play <название>`',
                         footer_extra='Музыка')
             return
 
@@ -150,9 +158,10 @@ class MusicCog(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @commands.command(name='nowplaying', aliases=['сейчас', 'np'])
-    async def nowplaying(self, ctx):
+    @app_commands.command(name='nowplaying', description='Что играет сейчас')
+    async def nowplaying(self, interaction: discord.Interaction):
         """Показать играющий трек"""
+        ctx = InterCtx(interaction)
         queue = self.get_queue(ctx.guild.id)
         if not queue:
             await self._silent(ctx)
@@ -167,9 +176,10 @@ class MusicCog(commands.Cog):
         from cogs.icons import send_with_icon
         await send_with_icon(ctx, embed, 'music')
 
-    @commands.command(name='leave', aliases=['выйти'])
-    async def leave(self, ctx):
+    @app_commands.command(name='leave', description='Выйти из голосового канала')
+    async def leave(self, interaction: discord.Interaction):
         """Выйти из голосового канала"""
+        ctx = InterCtx(interaction)
         if not ctx.voice_client:
             await reply(ctx, 'music', 'Меня там нет',
                         'Я сейчас не в голосовом канале.', footer_extra='Музыка')
