@@ -122,12 +122,13 @@ with client.session_transaction() as s:
     s['role'] = 'mod'
 r = client.get('/api/logs')
 d = r.get_json()
+# действия отдаются по-русски (audit_labels): ban→«Бан», warn→«Предупреждение»
 by_action = {e['action']: e for e in d}
-check(by_action['ban'].get('user_name') == 'НочнойФлудер',
-      f"логи: ID резолвится в имя из карты ({by_action['ban'].get('user_name')})")
-check(by_action['warn'].get('user_name') == 'аудит-имя',
+check(by_action['Бан'].get('user_name') == 'НочнойФлудер',
+      f"логи: ID резолвится в имя из карты ({by_action['Бан'].get('user_name')})")
+check(by_action['Предупреждение'].get('user_name') == 'аудит-имя',
       'логи: явное имя не перетирается')
-check(by_action['ban'].get('mod_name') == 'artem.mods',
+check(by_action['Бан'].get('mod_name') == 'artem.mods',
       'логи: модератор с именем не трогается')
 
 # ═══ 3. Цветные роли: сохранение + валидация + демо-публикация ═════════

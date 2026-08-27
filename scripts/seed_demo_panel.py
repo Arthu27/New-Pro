@@ -1,14 +1,191 @@
 # -*- coding: utf-8 -*-
-"""Посев демо-данных для живой демонстрации панели (guild 777).
+"""Посев ДЕМО-данных для витрины панели (выдуманный сервер 987654321098765432).
 
-Пишет только в data/ (gitignored). Удалить демо-данные: rm файлы ниже
-или запустить reset_server_data.py.
+Нужен только для предпросмотра без бота (start_panel --demo / .bat demo).
+В боевом запуске НЕ используется: панель показывает реальные данные бота.
+
+Защита от случайного запуска: без DEMO_MODE=1 (или --force) скрипт отказывается
+писать, чтобы выдуманные данные не смешивались с реальными (жалоба владельца:
+«панель грузит фейк и чужой сервер»).
+
+Убрать уже записанные демо-данные:  python scripts/seed_demo_panel.py --clean
+(полный сброс всех данных — reset_server_data.py).
 """
 import json
 import os
 import sys
 import time
 from datetime import datetime, timedelta, timezone
+
+# ID серверов-заглушек демо-превью (этот скрипт + scripts/demo_panel.py + тесты)
+_DEMO_GIDS = ('987654321098765432', '777', '4242')
+
+# Демо-персонажи посева (для --clean): узнаём их след в общих файлах панели
+_DEMO_USERNAMES = {
+    'artem.mods', 'sonya.staff', 'lina.mod', 'max.admin',
+    'kira.moon', 'max.storm', 'lena.fox', 'dima.ghost',
+    'kira.watch', 'ivan.flood',
+}
+_DEMO_DISCORD_IDS = {'111111111111111111', '222222222222222222',
+                     '333333333333333333', '444444444444444444'}
+
+
+def _truth(v):
+    return str(v or '').strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def _strip_guild(obj):
+    """Вырезать из JSON-структуры ключи и записи демо-серверов (in-place)."""
+    if isinstance(obj, dict):
+        for k in list(obj.keys()):
+            v = obj[k]
+            if k in _DEMO_GIDS or (isinstance(v, dict)
+                                   and str(v.get('guild_id')) in _DEMO_GIDS):
+                del obj[k]
+            else:
+                _strip_guild(v)
+    elif isinstance(obj, list):
+        obj[:] = [x for x in obj
+                  if not (isinstance(x, dict)
+                          and str(x.get('guild_id')) in _DEMO_GIDS)]
+        for x in obj:
+            _strip_guild(x)
+
+
+def clean_demo_data():
+    """--clean: убрать демо-данные из data/, оставив данные настоящих серверов."""
+    removed = []
+
+    # 1. Файлы, целиком привязанные к демо-серверу — удаляем
+    gid_files = []
+    for gid in _DEMO_GIDS:
+        gid_files += [
+            f'data/modproof_{gid}.json', f'data/warn_config_{gid}.json',
+            f'data/starboard_settings_{gid}.json', f'data/ticket_notify_{gid}.json',
+            f'data/rules_{gid}.json', f'data/xp_{gid}.json',
+            f'data/leveling_{gid}.json', f'data/antiraid_{gid}.json',
+            f'data/security_{gid}.json', f'data/guardian_{gid}.json',
+        ]
+    gid_files += ['data/demo_channels.json', 'data/demo_cog_states.json']
+    for path in gid_files:
+        if os.path.exists(path):
+            os.remove(path)
+            removed.append(path)
+
+    # 1b. Демо-скриншоты доказательств
+    import glob as _glob
+    for gid in _DEMO_GIDS:
+        for path in _glob.glob(f'data/uploads/proofs/{gid}_*.png'):
+            os.remove(path)
+            removed.append(path)
+
+    # 2. Общие JSON-файлы: вырезаем только демо-GID, реальное не трогаем
+    shared = ['data/warnings.json', 'data/audit_log.json', 'data/mod_data.json',
+              'data/channel_routes.json', 'data/tag_jail.json',
+              'data/night_summary.json', 'data/staff_apps.json',
+              'data/discord_audit_cache.json', 'data/audit_seen.json']
+    for path in shared:
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                payload = json.load(f)
+            _strip_guild(payload)
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+            removed.append(path + ' (демо-GID вырезан)')
+        except Exception as ex:
+            print(f'  не смог почистить {path}: {ex}')
+
+    # 3. Списки панели без привязки к серверу: вырезаем демо-персонажей
+    path = 'data/login_log.json'
+    if os.path.exists(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                rows = json.load(f)
+            if isinstance(rows, list):
+                rows = [r for r in rows if not (
+                    str(r.get('discord_id')) in _DEMO_DISCORD_IDS
+                    or str(r.get('username')) in _DEMO_USERNAMES)]
+                with open(path, 'w', encoding='utf-8') as f:
+                    json.dump(rows, f, ensure_ascii=False, indent=2)
+                removed.append(path + ' (демо-входы вырезаны)')
+        except Exception as ex:
+            print(f'  не смог почистить {path}: {ex}')
+
+    # 4. Канбан: посевные задачи — id 1..5 (next_id=6), реальные идут после
+    path = 'data/team_board.json'
+    if os.path.exists(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                board = json.load(f)
+            tasks = board.get('tasks') or {}
+            for tid in [k for k in tasks if str(k).isdigit() and int(k) < 6]:
+                del tasks[tid]
+                removed.append(f'{path} задача #{tid}')
+            board['next_id'] = max([int(k) for k in tasks if str(k).isdigit()]
+                                   or [0]) + 1
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(board, f, ensure_ascii=False, indent=2)
+        except Exception as ex:
+            print(f'  не смог почистить {path}: {ex}')
+
+    # 5. Конфиги, которые посев перезаписал целиком (канал 4005 — выдуманный)
+    path = 'data/anticrash_config.json'
+    if os.path.exists(path):
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                ac = json.load(f)
+            if not (set(ac) - {'log_channel_id'}):
+                os.remove(path)
+                removed.append(path)
+        except Exception as ex:
+            print(f'  не смог почистить {path}: {ex}')
+
+    # 6. SQLite-хранилища когов (shifts, counting, welcome_pro и др.):
+    #    все записи демо-серверов одним DELETE
+    try:
+        _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if _root not in sys.path:
+            sys.path.insert(0, _root)
+        from config import Config
+        import sqlite3
+        db_path = Config.DB_PATH
+        if os.path.exists(db_path):
+            conn = sqlite3.connect(db_path)
+            try:
+                cur = conn.execute(
+                    "DELETE FROM guild_data WHERE CAST(guild_id AS TEXT) IN "
+                    + ','.join('?' * len(_DEMO_GIDS)), _DEMO_GIDS)
+                conn.commit()
+                if cur.rowcount:
+                    removed.append(f'{db_path} (записей демо-GID: {cur.rowcount})')
+            finally:
+                conn.close()
+    except Exception as ex:
+        print(f'  sqlite-очистка пропущена: {ex}')
+
+    if removed:
+        print('Убраны демо-данные:')
+        for item in removed:
+            print('  -', item)
+    else:
+        print('Демо-данных не найдено — чистить нечего.')
+    print('Готово. Реальные данные (другие серверы, доступы к панели) не тронуты.')
+
+
+if '--clean' in sys.argv:
+    clean_demo_data()
+    sys.exit(0)
+
+# Гард: посев только при явном демо-режиме. Без него скрипт молча перезаписывал
+# боевой data/ выдумками — именно так панель получала «фейк и чужой сервер».
+if not _truth(os.environ.get('DEMO_MODE')) and '--force' not in sys.argv:
+    print('ОТКАЗ: это посев ВЫДУМАННЫХ данных (демо-витрина панели).')
+    print('Боевой панели он не нужен — запусти панель обычно: ./start_panel.sh')
+    print('Если правда нужен предпросмотр: DEMO_MODE=1 python scripts/seed_demo_panel.py')
+    print('Убрать уже записанные демо-данные:  python scripts/seed_demo_panel.py --clean')
+    sys.exit(1)
 
 os.makedirs('data', exist_ok=True)
 

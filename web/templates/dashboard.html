@@ -480,6 +480,20 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   }
 
   /* Графики модерации: площадь за 7 дней + типы действий */
+  /* действие → машинный ключ: и старые латинские коды (ban/mute…),
+     и русские метки журнала («Бан», «Мут снят», «Предупреждение»…) */
+  function normAct(a) {
+    a = String(a || '').toLowerCase();
+    if (a.indexOf('unban') !== -1 || a.indexOf('бан снят') !== -1 || a.indexOf('разбан') !== -1) return 'unban';
+    if (a.indexOf('unmute') !== -1 || a.indexOf('мут снят') !== -1 || a.indexOf('размут') !== -1) return 'unmute';
+    if (a.indexOf('timeout') !== -1 || a.indexOf('таймаут') !== -1) return 'timeout';
+    if (a.indexOf('ban') !== -1 || a.indexOf('бан') !== -1) return 'ban';
+    if (a.indexOf('kick') !== -1 || a.indexOf('кик') !== -1) return 'kick';
+    if (a.indexOf('warn') !== -1 || a.indexOf('варн') !== -1 || a.indexOf('предупреж') !== -1) return 'warn';
+    if (a.indexOf('mute') !== -1 || a.indexOf('мут') !== -1 || a.indexOf('мьют') !== -1) return 'mute';
+    return a;
+  }
+
   var ACTION_TONES = {
     ban: { color: '#dc2626', label: 'Баны' },
     kick: { color: '#ea580c', label: 'Кики' },
@@ -509,8 +523,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       }
       var types = {};
       logs.forEach(function (l) {
-        var a = String(l.action || '').toLowerCase();
-        var k = a.indexOf('warning') !== -1 ? 'warn' : (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1 ? (a.indexOf('un') === 0 ? 'unmute' : 'mute') : a);
+        var k = normAct(l.action);
         var t = ACTION_TONES[k];
         if (t) types[k] = (types[k] || 0) + 1;
         try {
@@ -607,11 +620,11 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       var warns = await window.fetchCachedJSON('/api/warnings').catch(function () { return []; });
       var today = logs.filter(function (l) { return isToday(l.timestamp); });
       var twarns = warns.filter(function (w) { return isToday(w && w.timestamp); });
-      var bans = today.filter(function (l) { return (l.action || '').toLowerCase() === 'ban'; }).length;
-      var kicks = today.filter(function (l) { return (l.action || '').toLowerCase() === 'kick'; }).length;
+      var bans = today.filter(function (l) { return normAct(l.action) === 'ban'; }).length;
+      var kicks = today.filter(function (l) { return normAct(l.action) === 'kick'; }).length;
       var muts = today.filter(function (l) {
-        var a = (l.action || '').toLowerCase();
-        return (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1) && a.indexOf('un') !== 0;
+        var k = normAct(l.action);
+        return k === 'mute' || k === 'timeout';
       }).length;
       var vals = [today.length, twarns.length, bans, kicks, muts];
       if (!$(MA_KPI_IDS[0])) {
@@ -676,7 +689,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   }
 
   function maRowHtml(log) {
-    var t = MA_TONES[(log.action || '?').toLowerCase()] ||
+    var t = MA_TONES[normAct(log.action)] ||
             { tone: 'neutral', icon: 'fa-gavel', label: log.action || '?' };
     var tg = log.user_name || log.target_name || log.user_id || '—';
     var mod = log.mod_name || log.mod_id || '—';

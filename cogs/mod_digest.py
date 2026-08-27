@@ -22,6 +22,7 @@ from discord.ext import commands, tasks
 from db import GuildData
 from logger import get_logger
 from services import text_format as tf
+from services.audit_labels import human_action
 
 log = get_logger("mod_digest")
 
@@ -137,7 +138,7 @@ def aggregate_digest(events, days=7, now=None):
         total += 1
         category = str(ev.get('category') or 'прочее')
         per_category[category] += 1
-        per_action[str(ev.get('action') or '?')] += 1
+        per_action[human_action(ev.get('action') or '?')] += 1
         mod = str(ev.get('mod_name') or '').strip()
         if mod:
             per_mod[mod] += 1

@@ -1,6 +1,11 @@
 
 from logger import get_logger
 
+# Конфигурация (.env или DOTENV_PATH) — ДО чтения любых переменных окружения
+# ниже (SECRET_KEY, PANEL_USER/PANEL_PASSWORD, MAIN_GUILD_ID): иначе панель
+# стартовала с пустым окружением и генерировала случайный пароль, игнорируя .env.
+import config as _root_config  # noqa: F401
+
 _log = get_logger("app")
 
 import random 
@@ -68,6 +73,8 @@ def _force_https_public():
 
 # Производительность: atomic yazma, TTL cache, toplu (batch) log flusher
 from web import _store # noqa: E402
+from web .demo_mode import demo_mode_active # noqa: E402
+from services .audit_labels import human_action # noqa: E402
 import atexit # noqa: E402
 
 # Секретный ключ сессий. Приоритет:
@@ -169,14 +176,13 @@ def _demo_mode ():
     """Демо-режим предпросмотра: вход в панель без пароля (DEMO_MODE=1).
 
     Только для показа панели без бота (предпросмотр до настройки).
-    Если бот ПОДКЛЮЧЁН — флаг игнорируем: демо-данные больше не могут
-    вклиниваться поверх реальной статистики (заказ владельца: «в аналитике
-    какие-то странные данные» — это была демо-фабрикация при забытом
-    DEMO_MODE=1 в .env). И автовход демо не срабатывает на живом боте.
+    Стоп-правила — в web.demo_mode.demo_mode_active: демо игнорируется,
+    если бот подключён, задан TOKEN или MAIN_GUILD_ID указывает на
+    настоящий сервер (заказ владельца: «панель грузит фейк и чужой
+    сервер» — это была демо-фабрикация при забытом DEMO_MODE=1).
+    Сознательный override для витрины поверх боевого .env: DEMO_FORCE=1.
     """
-    if str (os .environ .get ('DEMO_MODE','')).strip ().lower ()not in ('1','true','yes','on'):
-        return False
-    return bot_instance is None
+    return demo_mode_active (bot_connected =bot_instance is not None )
 
 @app .context_processor
 def inject_demo_mode ():
@@ -1826,6 +1832,11 @@ def api_logs ():
     mod_file ='data/mod_data.json'
     all_events =[]
     filter_guild =request .args .get ('guild_id','')
+    # Панель управляет одним сервером: при заданном MAIN_GUILD_ID журнал
+    # всегда ограничен им — записи других серверов/демо-заглушек сюда не
+    # попадают, даже если лежат рядом в файлах.
+    if MAIN_GUILD_ID :
+        filter_guild =str (MAIN_GUILD_ID )
 
     try :
         for log_file in ['data/audit_log.json','data/audit_log_backup.json']:
@@ -1879,6 +1890,7 @@ def api_logs ():
         # naive-метку локальным временем и сдвигает на размер пояса (+4 ч).
         for _ev in all_events :
             _ev ['timestamp']=_ts_to_utc_iso (_ev .get ('timestamp'))
+            _ev ['action']=human_action (_ev .get ('action'))
             _clean_md_fields (_ev )
 
         # Имена вместо ID: цель и модератор резолвятся из карты имён гильдии.
@@ -1941,6 +1953,9 @@ def api_warnings ():
     warns_file ='data/warnings.json'
     all_warnings =[]
     filter_guild =request .args .get ('guild_id','')
+    # та же изоляция, что в /api/logs: варны — только главного сервера
+    if MAIN_GUILD_ID :
+        filter_guild =str (MAIN_GUILD_ID )
 
     try :
         data =_store .cached_read_json (warns_file ,ttl =5.0 ,default ={})
@@ -3520,14 +3535,18 @@ def api_global_search ():
         with open (audit_file ,'r',encoding ='utf-8')as f :
             logs =json .load (f )
         for guild_id ,events in logs .items ():
+            if MAIN_GUILD_ID and str (guild_id )!=str (MAIN_GUILD_ID ):
+                continue 
             for ev in reversed (events [-200 :]):
+                _act_h =human_action (ev .get ('action',''))
                 if (q in ev .get ('action','').lower ()or 
+                q in _act_h .lower ()or 
                 q in ev .get ('user_name','').lower ()or 
                 q in ev .get ('reason','').lower ()):
                     results .append ({
                     'type':'log',
                     'icon':'',
-                    'title':f'{ev.get("action", "?")} — {ev.get("user_name", "?")}',
+                    'title':f'{_act_h} — {ev.get("user_name", "?")}',
                     'subtitle':ev .get ('reason',''),
                     'url':'/logs'
                     })
@@ -3822,13 +3841,15 @@ def api_activity_feed ():
             with open(f, 'r', encoding='utf-8') as fp:
                 data = json.load(fp)
             for gid, events in data.items():
+                if MAIN_GUILD_ID and str (gid )!=str (MAIN_GUILD_ID ):
+                    continue
                 for ev in events[-15:]:
                     ts = 0
                     try:
                         ts = _epoch_from_ts (ev .get ('timestamp'))
                     except Exception:
                         ts = 0
-                    act = (ev.get('action') or '').lower()
+                    act = human_action (ev.get('action')).lower()
                     icon = 'fa-shield-halved'
                     evtype = 'mod'
                     if 'бан' in act or 'ban' in act: icon = 'fa-gavel'
@@ -3838,7 +3859,7 @@ def api_activity_feed ():
                     elif 'канал' in act: icon = 'fa-folder-open'
                     elif 'сообщ' in act or 'message' in act: icon = 'fa-comment'
                     elif 'голос' in act or 'voice' in act: icon = 'fa-microphone'
-                    push(icon, ev.get('action','Действие'), ev.get('user_name') or ev.get('mod_name'),
+                    push(icon, human_action (ev.get('action','Действие')), ev.get('user_name') or ev.get('mod_name'),
                          ev.get('reason',''), ts, evtype, link='/logs')
     except Exception as _ex:
         _log.debug("api_activity_feed(): подавлено: %s", _ex)

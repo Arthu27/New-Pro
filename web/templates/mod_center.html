@@ -276,6 +276,20 @@
     } catch (e) { return null; }
   }
 
+  /* действие → машинный ключ: и старые латинские коды (ban/mute…),
+     и русские метки журнала («Бан», «Мут снят», «Предупреждение»…) */
+  function normAct(a) {
+    a = String(a || '').toLowerCase();
+    if (a.indexOf('unban') !== -1 || a.indexOf('бан снят') !== -1 || a.indexOf('разбан') !== -1) return 'unban';
+    if (a.indexOf('unmute') !== -1 || a.indexOf('мут снят') !== -1 || a.indexOf('размут') !== -1) return 'unmute';
+    if (a.indexOf('timeout') !== -1 || a.indexOf('таймаут') !== -1) return 'timeout';
+    if (a.indexOf('ban') !== -1 || a.indexOf('бан') !== -1) return 'ban';
+    if (a.indexOf('kick') !== -1 || a.indexOf('кик') !== -1) return 'kick';
+    if (a.indexOf('warn') !== -1 || a.indexOf('варн') !== -1 || a.indexOf('предупрежд') !== -1) return 'warn';
+    if (a.indexOf('mute') !== -1 || a.indexOf('мут') !== -1 || a.indexOf('мьют') !== -1) return 'mute';
+    return a;
+  }
+
   var ACTION_TONES = {
     ban: { color: '#dc2626', label: 'Баны' },
     kick: { color: '#ea580c', label: 'Кики' },
@@ -336,8 +350,7 @@
       var types = {};
       var hours = new Array(24).fill(0);
       logs.forEach(function (l) {
-        var a = String(l.action || '').toLowerCase();
-        var k = a.indexOf('warning') !== -1 ? 'warn' : (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1 ? (a.indexOf('un') === 0 ? 'unmute' : 'mute') : a);
+        var k = normAct(l.action);
         if (ACTION_TONES[k]) types[k] = (types[k] || 0) + 1;
         try {
           var d = new Date(l.timestamp);
@@ -351,9 +364,9 @@
       var badActs = { ban: 1, kick: 1, warn: 1, mute: 1, timeout: 1 };
       var good = 0, bad = 0;
       logs.forEach(function (l) {
-        var a = String(l.action || '').toLowerCase();
-        if (goodActs[a]) good++;
-        else if (badActs[a]) bad++;
+        var k = normAct(l.action);
+        if (goodActs[k]) good++;
+        else if (badActs[k]) bad++;
       });
       if (good + bad > 0) {
         var pct = Math.round((good / (good + bad)) * 100);
@@ -406,9 +419,9 @@
         feedEl.innerHTML = '<div class="empty-tip"><i class="fas fa-inbox"></i> Действий пока нет — журнал пуст.</div>';
       } else {
         feedEl.innerHTML = '<div class="mc-feed">' + top.map(function (log) {
-          var a = (log.action || '?').toLowerCase();
-          var tone = TONE[a] || 'neutral';
-          var icon = FEED_ICON[a] || 'fa-shield-halved';
+          var k = normAct(log.action);
+          var tone = TONE[k] || 'neutral';
+          var icon = FEED_ICON[k] || 'fa-shield-halved';
           var target = log.user_name || log.target_name || log.user_id || '—';
           var mod = log.mod_name || log.mod_id || '—';
           var reason = log.reason || '';
@@ -459,9 +472,9 @@
       return;
     }
     var chips = items.map(function (ev) {
-      var a = String(ev.action || '').toLowerCase();
-      var tone = TICKER_TONE[a] || 'neutral';
-      var icon = TICKER_ICON[a] || 'fa-circle';
+      var k = normAct(ev.action);
+      var tone = TICKER_TONE[k] || 'neutral';
+      var icon = TICKER_ICON[k] || 'fa-circle';
       var when = '';
       try { when = new Date(ev.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) {}
       return '<span class="mod-ticker-chip ' + tone + '"><i class="fas ' + icon + '"></i><b>' + esc(ev.action || '?') + '</b> ' +

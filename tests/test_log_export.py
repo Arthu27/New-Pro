@@ -146,9 +146,10 @@ check('attachment' in (r.headers.get('Content-Disposition') or '')
       and 'modlog_TestGuild_' in (r.headers.get('Content-Disposition') or ''),
       f'attachment заголовок: {r.headers.get("Content-Disposition")}')
 check('Журнал модерации' in body, 'заголовок отчёта на месте')
-check('ban' in body and 'purge' in body and 'join' not in body, '30 дней: ban и purge внутри, древний join отсечён')
+# действия в отчёте — по-русски (audit_labels): ban→«Бан», warn→«Предупреждение»
+check('Бан' in body and 'purge' in body and 'join' not in body, '30 дней: ban и purge внутри, древний join отсечён')
 r2 = client.get('/logs/export?days=7&mod=Ночной')
-check('warn' in r2.get_data(as_text=True), 'параметр mod фильтрует')
+check('Предупреждение' in r2.get_data(as_text=True), 'параметр mod фильтрует')
 
 print('== 6. Бот-команда /логи-экспорт убрана (экспорт живёт в панели) ==')
 # Чистка команд: бот-обёртка убрана из боевого меню, HTML-отчёт выдаёт
@@ -158,7 +159,7 @@ from cogs.logs import Logs  # noqa: E402
 
 check(not hasattr(Logs, 'logs_export'), 'бот-команда /логи-экспорт снята с боевого меню')
 payload = lx.render_html(EVENTS[:2], guild_name='TestGuild', filters_desc='за 7 дней', generated_at=NOW)
-check(payload.startswith('<!DOCTYPE html>') and 'warn' in payload,
+check(payload.startswith('<!DOCTYPE html>') and 'Предупреждение' in payload,
       'сервис рендера отчёта на месте (используется панелью)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

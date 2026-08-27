@@ -13,6 +13,8 @@ import os
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
+from services.audit_labels import human_action
+
 UTC = timezone.utc
 DEFAULT_PATH = 'data/audit_log.json'
 
@@ -96,7 +98,8 @@ def row_fields(ev):
     target = str(ev.get('target_name') or ev.get('target_id') or ev.get('user_name')
                  or ev.get('user_id') or ev.get('member_name') or ev.get('member_id') or '—')
     extra = '; '.join(f'{k}={v}' for k, v in ev.items() if k not in _SKIP_DETAIL_KEYS and v not in (None, ''))
-    return when, str(ev.get('category') or 'прочее'), str(ev.get('action') or '?'), moderator, target, extra or '—'
+    # сырые коды старых записей (bot_add и т.п.) — по-русски и в экспорте
+    return when, str(ev.get('category') or 'прочее'), human_action(ev.get('action') or '?'), moderator, target, extra or '—'
 
 
 _PAGE_CSS = """

@@ -101,7 +101,8 @@ if subjects:
 print('== /api/logs ==')
 r = client.get('/api/logs')
 d = r.get_json()
-warn = next((e for e in d if e.get('action', '').lower() == 'warn'), None)
+# действия отдаются по-русски (audit_labels): warn → «Предупреждение»
+warn = next((e for e in d if e.get('action', '').lower() == 'предупреждение'), None)
 check(warn is not None and warn.get('user_name') == 'из-аудита',
       'журнал: имя из аудита сохраняется (не перетирается картой)')
 

@@ -13,6 +13,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from services.audit_labels import human_action
+
 AUDIT_FILE = 'data/audit_log.json'
 
 
@@ -107,7 +109,7 @@ class Replay(commands.Cog):
             events.append({
                 'time': ts.strftime('%H:%M'),
                 'cat': str(ev.get('category', 'guild')),
-                'label': str(ev.get('action', 'Событие')),
+                'label': human_action(ev.get('action', 'Событие')),
                 'detail': _detail_text(ev),
             })
 

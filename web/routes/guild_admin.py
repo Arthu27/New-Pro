@@ -205,6 +205,10 @@ def register(ctx):
     def api_mod_history ():
         import web .app as _app ;bot =_app .bot_instance 
         guild_id =request .args .get ('guild_id')
+        # Та же изоляция, что у /api/logs: при заданном MAIN_GUILD_ID
+        # хвост журнала — только главного сервера, склейки чужих не бывает.
+        _mg =str (getattr (_app ,'MAIN_GUILD_ID','')or '')
+        if _mg :guild_id =_mg 
         all_events =[]
 
         # ── 1. mod_data.json — bot'un сохран case'ler ────────────────────

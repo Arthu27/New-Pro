@@ -12,8 +12,13 @@ logging.getLogger("dotenv").setLevel(logging.ERROR)
 
 # Загружаем .env из каталога этого файла (надёжно, независимо от рабочей директории)
 # и с override=True, чтобы значение из .env всегда применялось.
+# DOTENV_PATH — другой dotenv-файл (демо-превью панели стартует с
+# config/panel_preview.env, чтобы боевой .env не смешивался с витриной).
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(_BASE_DIR, ".env"), override=True)
+_env_path = os.environ.get("DOTENV_PATH") or os.path.join(_BASE_DIR, ".env")
+if not os.path.isabs(_env_path):
+    _env_path = os.path.join(_BASE_DIR, _env_path)
+load_dotenv(_env_path, override=True)
 
 
 def _get_token():

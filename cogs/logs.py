@@ -11,6 +11,8 @@ import queue
 from typing import Dict, Any 
 
 from logger import get_logger 
+from config import Config 
+from services .audit_labels import audit_label 
 log =get_logger ("logs")
 
 
@@ -2141,8 +2143,14 @@ class Logs (commands .Cog ):
                 log.debug("_sync_discord_audit_log(): подавлено: %s", _ex)
 
         audit_errors =[]
+        # Панель живёт одним сервером (MAIN_GUILD_ID): аудит чужих гильдий
+        # не тянем — иначе в «Журнале модерации» всплывают записи серверов,
+        # которых владелец не настраивал.
+        _main_gid =str (Config .MAIN_GUILD_ID or '')
         for guild in self .bot .guilds :
             gid =str (guild .id )
+            if _main_gid and gid !=_main_gid :
+                continue 
             last_id =seen .get (gid )
             new_entries =[]
             try :
@@ -2176,7 +2184,10 @@ class Logs (commands .Cog ):
                 cache [gid ]=[]
 
             for entry in reversed (new_entries ):
-                cat ,action_name =action_map .get (entry .action ,('сервер',str (entry .action ).split ('.')[-1 ]))
+                # Полный русский словарь всех действий Discord (services/audit_labels):
+                # никаких сырых bot_add / overwrite_create в журнале.
+                cat ,action_name =(audit_label (entry .action .name )or 
+                action_map .get (entry .action ,('сервер',str (entry .action ).split ('.')[-1 ])))
                 target =entry .target 
                 user =entry .user 
 

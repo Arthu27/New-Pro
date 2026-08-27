@@ -10,6 +10,7 @@ Hakumo — Интерактивное графическое меню логов
 """
 
 from logger import get_logger
+from services.audit_labels import human_action
 
 _log = get_logger("log_menu")
 
@@ -257,8 +258,8 @@ def generate_log_browser_card(guild_name: str, category: str, events: list, page
             time_str = ts[11:16] if 'T' in ts else (ts[:5] if ts else '—')
             d.text((PAD + 20, y + 24), time_str, font=_f(True, 22), fill=C_GOLD_BRIGHT)
 
-            # Название действия
-            act_txt = _clean(ev.get('action', 'Событие'))
+            # Название действия (сырые коды старых записей — по-русски)
+            act_txt = _clean(human_action(ev.get('action', 'Событие')))
             act_max_w = 370
             d.text((PAD + 110, y + 23), _ellipsize(d, act_txt, _f(True, 24), act_max_w),
                    font=_f(True, 24), fill=C_TEXT_WHITE)

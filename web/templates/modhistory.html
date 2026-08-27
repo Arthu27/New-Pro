@@ -149,12 +149,13 @@
 
   function normalize(a) {
     a = String(a || '').toLowerCase();
-    if (a.indexOf('unban') !== -1) return 'unban';
-    if (a.indexOf('unmute') !== -1) return 'unmute';
-    if (a.indexOf('ban') !== -1) return 'ban';
-    if (a.indexOf('kick') !== -1) return 'kick';
-    if (a.indexOf('warn') !== -1) return 'warn';
-    if (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1) return 'mute';
+    /* понимает и латинские коды (ban/mute…), и русские метки («Бан снят»…) */
+    if (a.indexOf('unban') !== -1 || a.indexOf('бан снят') !== -1 || a.indexOf('разбан') !== -1) return 'unban';
+    if (a.indexOf('unmute') !== -1 || a.indexOf('мут снят') !== -1 || a.indexOf('размут') !== -1) return 'unmute';
+    if (a.indexOf('ban') !== -1 || a.indexOf('бан') !== -1) return 'ban';
+    if (a.indexOf('kick') !== -1 || a.indexOf('кик') !== -1) return 'kick';
+    if (a.indexOf('warn') !== -1 || a.indexOf('варн') !== -1 || a.indexOf('предупреж') !== -1) return 'warn';
+    if (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1 || a.indexOf('мут') !== -1 || a.indexOf('мьют') !== -1 || a.indexOf('таймаут') !== -1) return 'mute';
     return a;
   }
   var RU = { ban: 'Бан', kick: 'Кик', warn: 'Варн', mute: 'Мьют', timeout: 'Мьют', unban: 'Разбан', unmute: 'Размут' };

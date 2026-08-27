@@ -24,8 +24,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # демо-режиме читает data/demo_channels.json по абсолютному пути к корню,
 # поэтому сеем его заранее (тот же паттерн, что в test_panel_polish.py).
 if not os.path.isfile(os.path.join(ROOT, 'data', 'demo_channels.json')):
+    # Посев демо бережётся от случайного запуска: тест просит его явно (DEMO_MODE=1)
     subprocess.run([sys.executable, os.path.join(ROOT, 'scripts', 'seed_demo_panel.py')],
-                   capture_output=True, text=True, timeout=180, cwd=ROOT)
+                   capture_output=True, text=True, timeout=180, cwd=ROOT,
+                   env={**os.environ, 'DEMO_MODE': '1'})
 
 _TMP = tempfile.mkdtemp(prefix='hakumo_contract_test_')
 os.chdir(_TMP)

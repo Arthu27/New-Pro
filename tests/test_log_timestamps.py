@@ -97,16 +97,17 @@ check(r.status_code == 200, f'/api/logs → 200 (получено {r.status_code
 events = r.get_json()
 check(isinstance(events, list) and len(events) >= 4, f'события вернулись ({len(events)} шт)')
 
+# Действия отдаются по-русски (services/audit_labels): Mute→Мут, Ban→Бан, Kick→Кик
 by_action = {e['action']: e for e in events}
-mute = by_action['Mute']
+mute = by_action['Мут']
 check(mute['timestamp'].endswith('+00:00'), 'мьюту выдана метка со смещением +00:00')
 parsed = datetime.datetime.fromisoformat(mute['timestamp'])
 delta = abs((datetime.datetime.now(UTC) - parsed).total_seconds())
 check(delta < 10, f'главный регресс: свежее событие отстаёт на {delta:.1f}с, а не на 4 часа')
 
-ban = by_action['Ban']
+ban = by_action['Бан']
 check(ban['timestamp'].endswith('+00:00'), 'naive-метка бана тоже нормализована')
-kick = by_action['Kick']
+kick = by_action['Кик']
 check(kick['timestamp'].endswith('+00:00') and abs(
     (datetime.datetime.fromisoformat(kick['timestamp'])
      - (now - datetime.timedelta(hours=1))).total_seconds()) < 2,
@@ -118,7 +119,7 @@ instants = [datetime.datetime.fromisoformat(e['timestamp'])
             for e in events if e['timestamp'].endswith('+00:00')]
 check(instants == sorted(instants, reverse=True),
       'сортировка по мгновению (новые сверху), а не по сырой строке')
-check(events[0]['action'] == 'Mute', 'свежее событие — первым в списке')
+check(events[0]['action'] == 'Мут', 'свежее событие — первым в списке')
 
 # ═══ 3. /api/warnings: та же болезнь, та же прививка ═══════════════════
 print('== /api/warnings ==')
