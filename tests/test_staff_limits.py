@@ -30,9 +30,15 @@ from services import staff_limits as SL  # noqa: E402
 
 G, MOD, OTHER = 777001, 111, 222
 
-print('== 1. Дефолты и чтение ==')
+print('== 1. Дефолты: ВСЁ ВЫКЛЮЧЕНО (opt-in) ==')
 lim = SL.get_limits(G)
-check(lim['ban'] == 8 and lim['clear'] == 500, f'дефолты: 8 банов и 500 сообщений ({lim})')
+check(all(v == 0 for v in lim.values()),
+      'из коробки лимитов нет — персонал не ограничен ничем')
+ok0, used0, lim0 = SL.check_limit(G, MOD, 'ban', 999)
+check(ok0 and lim0 == 0, 'без заданных цифр — любое количество действий')
+SL.set_limits(G, ban=8, clear=500)   # дальше тестируем с заданными цифрами
+lim = SL.get_limits(G)
+check(lim['ban'] == 8 and lim['clear'] == 500, 'владелец задал: 8 банов и 500 сообщений')
 
 print('== 2. Проверка без записи ==')
 ok, used, limit = SL.check_limit(G, MOD, 'ban', 1)
@@ -64,8 +70,10 @@ ok7, used7, lim7 = SL.check_limit(G, MOD, 'ban', 1)
 check(not ok7 and lim7 == 3, 'под новый лимит 3: уже потраченные 8 банов > 3 — запрет')
 
 print('== 6. status_text для модератора ==')
-txt = SL.status_text(G, MOD)
-check('баны 8/3' in txt and 'чистка 480/100' in txt, f'status_text: {txt}')
+st = SL.status_text(G, MOD)
+check('баны 8/3' in st and 'чистка 480/100 сообщ.' in st,
+      f'status_text показывает только заданное: {st}')
+check('варны' not in st, 'незаданные лимиты не показываются')
 
 print('== 7. Битые файлы не роняют сервис ==')
 import json

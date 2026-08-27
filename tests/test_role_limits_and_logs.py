@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Лимиты по ролям + «логи не создаются сами» (заказ владельца 2026-08).
 
-1. Пер-рольные лимиты: дефолты на все действия (варн/мут/кик/бан/чистка),
-   переопределение роли, САМЫЙ СТРОГИЙ лимит при нескольких ролях,
-   обойти лимит дополнительной ролью нельзя.
+1. Пер-рольные лимиты: по умолчанию ВСЁ ВЫКЛЮЧЕНО (0 = opt-in), цифры
+   задаёт владелец; свой лимит роли ГЛАВНЕЕ общего (замена, не ужатие),
+   при нескольких ролях побеждает мягчайшая.
 2. Панель: страница /staff-limits + API (GET/POST глобальных, POST/DELETE
    ролей), красивый шаблон с выбором ролей, live 1.5с.
 3. Логи: по умолчанию каналы НИКОГДА не создаются сами (autocreate=false),
@@ -45,15 +45,11 @@ def ok(name, cond, extra=''):
 print('== 1. Пер-рольные лимиты ==')
 from services import staff_limits as SL  # noqa: E402
 
-ok('дефолты на все действия',
-   SL.DEFAULT_LIMITS['warn'] == 30 and SL.DEFAULT_LIMITS['mute'] == 20
-   and SL.DEFAULT_LIMITS['kick'] == 6 and SL.DEFAULT_LIMITS['ban'] == 8)
-ok('лимиты на ВСЁ: 12 действий (заказ «лимиты на все»)',
-   len(SL.DEFAULT_LIMITS) == 12
-   and SL.DEFAULT_LIMITS['unmute'] == 30 and SL.DEFAULT_LIMITS['vkick'] == 20
-   and SL.DEFAULT_LIMITS['unban'] == 10 and SL.DEFAULT_LIMITS['nuke'] == 2
-   and SL.DEFAULT_LIMITS['raid'] == 3 and SL.DEFAULT_LIMITS['lockdown'] == 12
-   and SL.DEFAULT_LIMITS['dehoist'] == 5)
+ok('дефолты: ВСЁ ВЫКЛЮЧЕНО (opt-in, заказ «выключи все»)',
+   all(v == 0 for v in SL.DEFAULT_LIMITS.values()))
+ok('12 действий в списке (варн/мут/кик/бан/чистка и др.)',
+   len(SL.DEFAULT_LIMITS) == 12 and 'warn' in SL.DEFAULT_LIMITS
+   and 'dehoist' in SL.DEFAULT_LIMITS)
 meta = SL.action_meta()
 ok('панель получает группы: наказания + опасные операции',
    len(meta) == 2 and sum(len(g['items']) for g in meta) == 12
@@ -99,14 +95,15 @@ SL.set_role_limits(777, 222, ban=1)  # ещё строже по бану
 ok('сохранение ролей', SL.get_role_limits(777)['111'] == {'ban': 3, 'mute': 5})
 
 eff = SL.limits_for_roles(777, [111, 222])
-ok('самый строгий побеждает (бан 1, мут 5)',
-   eff['ban'] == 1 and eff['mute'] == 5 and eff['warn'] == 30)
+ok('роль ГЛАВНЕЕ общего: из двух ролей мягчайшая (бан 3, мут 5)',
+   eff['ban'] == 3 and eff['mute'] == 5 and eff['warn'] == 0)
 
 allowed, used, limit = SL.check_limit(777, 42, 'ban', 1, role_ids=[111, 222])
-ok('check_limit с ролями: лимит 1', limit == 1 and allowed)
-SL.record_hit(777, 42, 'ban', 1)
+ok('check_limit с ролями: лимит роли 3', limit == 3 and allowed)
+for _ in range(3):
+    SL.record_hit(777, 42, 'ban', 1)
 allowed2, used2, limit2 = SL.check_limit(777, 42, 'ban', 1, role_ids=[111, 222])
-ok('второй бан по роли с лимитом 1 запрещён', not allowed2 and limit2 == 1)
+ok('4-й бан сверх лимита роли 3 запрещён', not allowed2 and limit2 == 3)
 allowed3, _u, _l = SL.check_limit(777, 42, 'ban', 1)  # без ролей — глобальный
 ok('без ролей действует глобальный лимит', allowed3 is False or allowed3 is True)
 
