@@ -122,7 +122,8 @@ function load() {
     .then(function (r) { return r.json(); })
     .then(function (d) {
       if (!d.success) { showMsg('ssMsg', d.error || 'Ошибка'); return; }
-      render(d);
+      if (window.renderIfChanged) { window.renderIfChanged('staff-stats-' + DAYS, d, function () { render(d); }); }
+      else { render(d); }
     })
     .catch(function () { showMsg('ssMsg', 'Сеть моргнула — попробуйте ещё раз'); });
 }

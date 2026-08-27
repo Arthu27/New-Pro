@@ -55,7 +55,8 @@ async function loadDuty(gid) {
   _guildId = gid;
   try {
     var d = await fetch('/api/duty/' + gid).then(r => r.json());
-
+    /* тихо: данные те же — DOM не трогаем (никаких «перезагрузок») */
+    if (window.renderIfChanged && !window.renderIfChanged('duty-' + gid, d, function () {})) return;
     var totalPts = Object.values(d.points).reduce(function(s,u){return s+(u.total||0);},0);
     var activeCount = Object.values(d.duty).filter(function(u){return u.active;}).length;
     var histCount = Object.values(d.duty).reduce(function(s,u){return s+(u.history||[]).length;},0);

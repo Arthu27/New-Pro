@@ -121,7 +121,7 @@ check(all(p.get('label') and p.get('icon') for p in sg['pages']),
 
 # ═══ 3. Лэйаут меню: сервис ══════════════════════════════════════════════
 print('== лэйаут меню: скрытие и порядок ==')
-check(PM.layout_view() == {'hidden_pages': [], 'order': {}},
+check(PM.layout_view() == {'hidden_pages': [], 'order': {}, 'group_order': []},
       'по умолчанию лэйаут пуст')
 
 view = PM.save_layout(['/recap', '/panel-menu', '/net-takoy', 42, '/recap'],
@@ -149,7 +149,8 @@ check('/panel-menu' in acc_paths, 'защищённая страница мен�
 
 # чистый сброс — дальше по тесту лэйаут должен быть пустым
 clean = PM.save_layout([], {})
-check(clean == {'hidden_pages': [], 'order': {}}, 'лэйаут сброшен до дефолта')
+check(clean == {'hidden_pages': [], 'order': {}, 'group_order': []},
+      'лэйаут сброшен до дефолта')
 # порядок, совпадающий с исходным, не захламляет файл (UI шлёт полный список)
 default_main = [p['path'] for p in groups['main']['pages']]
 same = PM.save_layout([], {'main': default_main})
@@ -265,7 +266,7 @@ check(cfg2['steps'][0]['label'] == LD._fmt_step(wc['steps'][0]),
 # ── Лэйаут через API ──
 r = client.get('/api/panel-menu')
 d = r.get_json()
-check('layout' in d and d['layout'] == {'hidden_pages': [], 'order': {}},
+check('layout' in d and d['layout'] == {'hidden_pages': [], 'order': {}, 'group_order': []},
       'GET /api/panel-menu отдаёт блок лэйаута')
 login_as('mod')
 r = client.post('/api/panel-menu/layout', json={'hidden_pages': ['/recap']})
@@ -288,7 +289,7 @@ check(r.get_json()['layout'].get('hidden_pages') == ['/recap'],
       'GET /api/panel-menu видит сохранённый лэйаут')
 ok = client.post('/api/panel-menu/layout',
                  json={'hidden_pages': [], 'order': {}})
-check(ok.get_json()['layout'] == {'hidden_pages': [], 'order': {}},
+check(ok.get_json()['layout'] == {'hidden_pages': [], 'order': {}, 'group_order': []},
       'лэйаут сброшен через API')
 
 # ── /settings: русская и связная ──

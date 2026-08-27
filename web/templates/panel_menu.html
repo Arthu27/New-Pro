@@ -79,6 +79,7 @@
   .pm-toast.ok { border-color:var(--ok); }
   .pm-toast.err { border-color:var(--err); }
 .pm-cat-switch{margin:0 10px 0 2px;flex:none}
+.pm-cathidden .pm-group-head{opacity:.55}
 .pm-group-head{display:flex;align-items:center;gap:8px}
 </style>
 
@@ -217,13 +218,20 @@ function renderLayout(){
   var el = document.getElementById('pm-list');
   var q = (document.getElementById('pm-search-input').value || '').toLowerCase().trim();
   var html = '';
-  MENU.forEach(function(g){
+  var orderedGroups = MENU.slice().sort(function(a, b){
+    var ra = LAY.groupOrder.indexOf(a.key), rb = LAY.groupOrder.indexOf(b.key);
+    if(ra === -1) ra = 9999; if(rb === -1) rb = 9999;
+    return ra - rb;
+  });
+  orderedGroups.forEach(function(g){
     var items = layoutOrdered(g).filter(function(it){
       if(!q) return true;
       return it.label.toLowerCase().indexOf(q) !== -1 || it.path.indexOf(q) !== -1;
     });
     if(!items.length) return;
-    var hiddenCount = layoutOrdered(g).filter(function(it){ return LAY.hidden[it.path]; }).length;
+    var allPages = layoutOrdered(g);
+    var hiddenCount = allPages.filter(function(it){ return LAY.hidden[it.path]; }).length;
+    var catHidden = allPages.length > 0 && hiddenCount === allPages.length;
     var open = !!openGroups[g.key];
     var itemsHtml = items.map(function(it){
       var hid = !!LAY.hidden[it.path];
@@ -235,12 +243,15 @@ function renderLayout(){
         + '<button type="button" class="pm-ico-btn'+(hid?' pm-off':'')+'" title="'+(hid?'Показать':'Скрыть')+'" aria-label="'+(hid?'Показать страницу':'Скрыть страницу')+'" onclick="layoutHide(\''+it.path+'\')"><i class="fas '+(hid?'fa-eye-slash':'fa-eye')+'"></i></button>'
         + '</div>';
     }).join('');
-    html += '<div class="pm-group '+(open?'open':'')+'" id="pmg-'+g.key+'">'
-      + '<div class="pm-group-head" onclick="toggleGroupOpen(\''+g.key+'\')">'
+    html += '<div class="pm-group '+(open?'open':'')+(catHidden?' pm-cathidden':'')+'" id="pmg-'+g.key+'">'
+      + '<div class="pm-group-head">'
       + '<span class="gio"><i class="fas '+g.icon+'"></i></span>'
-      + '<span class="gname">'+g.group+'</span>'
-      + '<span class="gcount">'+(hiddenCount?hiddenCount+' скрыто':'порядок')+'</span>'
-      + '<span class="gcaret"><i class="fas fa-chevron-down"></i></span>'
+      + '<span class="gname" onclick="toggleGroupOpen(\''+g.key+'\')">'+g.group+'</span>'
+      + '<span class="gcount" onclick="toggleGroupOpen(\''+g.key+'\')">'+(catHidden?'категория скрыта':(hiddenCount?hiddenCount+' скрыто':'порядок'))+'</span>'
+      + '<button type="button" class="pm-ico-btn" title="Категорию выше" aria-label="Сдвинуть категорию выше" onclick="groupMove(\''+g.key+'\',-1)"><i class="fas fa-arrow-up-wide-short" style="transform:rotate(180deg)"></i></button>'
+      + '<button type="button" class="pm-ico-btn" title="Категорию ниже" aria-label="Сдвинуть категорию ниже" onclick="groupMove(\''+g.key+'\',1)"><i class="fas fa-arrow-up-wide-short"></i></button>'
+      + '<button type="button" class="pm-ico-btn'+(catHidden?' pm-off':'')+'" title="'+(catHidden?'Показать всю категорию':'Скрыть всю категорию сразу')+'" aria-label="'+(catHidden?'Показать всю категорию':'Скрыть всю категорию')+'" onclick="layoutHideGroup(\''+g.key+'\')"><i class="fas '+(catHidden?'fa-eye':'fa-eye-slash')+'"></i></button>'
+      + '<span class="gcaret" onclick="toggleGroupOpen(\''+g.key+'\')"><i class="fas fa-chevron-down"></i></span>'
       + '</div>'
       + '<div class="pm-group-body">'+itemsHtml+'</div>'
       + '</div>';
@@ -263,13 +274,41 @@ function layoutHide(path){
   render();
 }
 
+/* Категория целиком: убрать/вернуть одним нажатием */
+function layoutHideGroup(gkey){
+  var g = MENU.find(function(x){ return x.key === gkey; });
+  if(!g) return;
+  var pages = layoutOrdered(g);
+  var allHidden = pages.length > 0 && pages.every(function(it){ return LAY.hidden[it.path] || it.path === '/panel-menu'; });
+  pages.forEach(function(it){
+    if(it.path === '/panel-menu') return;      // эту страницу прятать нельзя
+    if(allHidden) delete LAY.hidden[it.path];  // всё скрыто → показываем
+    else LAY.hidden[it.path] = true;           // иначе прячем всё разом
+  });
+  render();
+  toast(allHidden ? ('Категория «'+g.group+'» снова видна') : ('Категория «'+g.group+'» скрыта целиком — не забудьте «Сохранить»'), true);
+}
+
+/* Сдвиг всей категории в сайдбаре */
+function groupMove(gkey, dir){
+  var keys = MENU.map(function(g){ return g.key; });
+  if(!LAY.groupOrder.length) LAY.groupOrder = keys.slice();
+  var i = LAY.groupOrder.indexOf(gkey);
+  if(i === -1) return;
+  var j = i + dir;
+  if(j < 0 || j >= LAY.groupOrder.length) return;
+  var t = LAY.groupOrder[i]; LAY.groupOrder[i] = LAY.groupOrder[j]; LAY.groupOrder[j] = t;
+  render();
+}
+
 function saveLayout(){
   var hp = Object.keys(LAY.hidden);
   var od = {};
   Object.keys(LAY.order).forEach(function(k){ od[k] = LAY.order[k].slice(); });
+  var go = LAY.groupOrder.length ? LAY.groupOrder.slice() : [];
   fetch('/api/panel-menu/layout',{
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({hidden_pages:hp, order:od})
+    body: JSON.stringify({hidden_pages:hp, order:od, group_order:go})
   }).then(function(r){ return r.json(); }).then(function(d){
     if(d.success){
       toast('Лэйаут сохранён: скрыто '+d.layout.hidden_pages.length+' стр.', true);
@@ -407,10 +446,11 @@ function load(){
       if(!d.success){ toast('Не удалось загрузить', false); return; }
       MENU = d.menu || [];
       CFG = d.config || {};
-      var lay = d.layout || {hidden_pages:[], order:{}};
+      var lay = d.layout || {hidden_pages:[], order:{}, group_order:[]};
       LAY.hidden = {};
       (lay.hidden_pages || []).forEach(function(p){ LAY.hidden[p] = true; });
       LAY.order = lay.order || {};
+      LAY.groupOrder = (lay.group_order || []).slice();
       normalizeLayout();
       openGroups = {};
       MENU.forEach(function(g){ openGroups[g.key] = true; });

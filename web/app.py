@@ -3095,9 +3095,10 @@ def api_panel_menu_layout ():
     data =request .get_json (silent =True )or {}
     hp =data .get ('hidden_pages',[])
     od =data .get ('order',{})
-    if not isinstance (hp ,list )or not isinstance (od ,dict ):
+    go =data .get ('group_order',[])
+    if not isinstance (hp ,list )or not isinstance (od ,dict )or not isinstance (go ,list ):
         return jsonify ({'success':False ,'error':'Неверный формат'}),400
-    view =save_layout (hp ,od )
+    view =save_layout (hp ,od ,go )
     _log_panel_action ('PANEL_MENU_LAYOUT',f'скрыто {len(view["hidden_pages"])}, порядок в {len(view["order"])} разделах')
     return jsonify ({'success':True ,'layout':view })
 

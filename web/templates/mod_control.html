@@ -267,8 +267,17 @@ async function mcLoad() {
     if (!d.success) return;
     STATE = d;
     CAN_EDIT = !!d.can_edit;
-    var render = function () { renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d); };
-    if (window.renderSafe) window.renderSafe(render); else render();
+    /* тихо: перерисовываем только когда данные реально изменились —
+       никаких «перезагрузок страницы» на ровном месте */
+    if (window.renderIfChanged) {
+      window.renderIfChanged('mod-control', d, function () {
+        if (window.renderSafe) window.renderSafe(function () {
+          renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d);
+        }); else { renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d); }
+      });
+    } else if (window.renderSafe) window.renderSafe(function () {
+      renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d);
+    }); else { renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d); }
   } catch (e) {}
 }
 

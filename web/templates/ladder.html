@@ -85,6 +85,7 @@ function plural(n, one, few, many) {
 function load() {
   fetch(API + '/view').then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
+    if (window.renderIfChanged && !window.renderIfChanged('ladder', d, function () {})) return;
     $('ldKpis').innerHTML =
       '<div class="kpi"><div class="kpi-icon"><i class="fas fa-stairs"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.steps.length + '</div><div class="kpi-label">ступеней</div></div></div>' +
       '<div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-user-shield"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.impact.warned_users + '</div><div class="kpi-label">' + plural(d.impact.warned_users, 'участник', 'участника', 'участников') + ' с варнами</div></div></div>';

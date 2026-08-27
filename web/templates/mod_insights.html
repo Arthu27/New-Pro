@@ -281,7 +281,11 @@ function load() {
     if (!d.success) { return; }
     OV = d;
     var render = function () { renderKpis(d); renderSubjects(d); renderEffect(d); renderCheck(d); };
-    if (window.renderSafe) window.renderSafe(render); else render();
+    if (window.renderIfChanged) {
+      if (!window.renderIfChanged('mod-insights-' + DAYS, d, function () {
+        if (window.renderSafe) window.renderSafe(render); else render();
+      })) { return; }
+    } else if (window.renderSafe) window.renderSafe(render); else render();
   }).catch(function () {});
 }
 

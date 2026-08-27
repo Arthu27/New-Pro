@@ -49,7 +49,10 @@ async def sync_tree(bot, guild=None):
             except Exception as e:
                 _log.debug('remove_command(%s): %s', c.name, e)
     try:
-        synced = await tree.sync(guild=ctx)
+        try:
+            synced = await tree.sync(guild=ctx)
+        except TypeError:            # минималистичные деревья без параметра
+            synced = await tree.sync()
     finally:
         for c in removed:          # назад в локальное дерево — панель видит все
             try:
@@ -99,6 +102,8 @@ async def full_sync(bot):
             _log.debug('снять глобально %s: %s', cmd.name, e)
     try:
         await tree.sync()
+    except TypeError:
+        pass                         # дерево без параметров — уже очищено выше
     except Exception as e:
         _log.warning('глобальная очистка не удалась: %s', e)
     for cmd in parked:            # локально возвращаем — источник для копий

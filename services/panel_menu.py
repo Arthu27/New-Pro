@@ -436,14 +436,19 @@ def layout_view():
         lay = {}
     hp = lay.get('hidden_pages') or []
     od = lay.get('order') or {}
+    go = lay.get('group_order') or []
+    if not isinstance(go, (list, tuple)):
+        go = []
+    menu_keys = [g['key'] for g in MENU]
     return {
         'hidden_pages': [str(p) for p in hp if isinstance(p, (str, int))],
         'order': {str(k): [str(p) for p in (v or [])]
                   for k, v in od.items() if isinstance(v, list)},
+        'group_order': [str(k) for k in go if str(k) in menu_keys],
     }
 
 
-def save_layout(hidden_pages, order):
+def save_layout(hidden_pages, order, group_order=None):
     """Сохранить скрытие/порядок (валидация по MENU). Возвращает чистый вид."""
     valid_paths = _all_menu_paths()
     valid_groups = {g['key'] for g in MENU}
@@ -463,7 +468,18 @@ def save_layout(hidden_pages, order):
             continue                    # порядок совпал с исходным — хранить нечего
         od[str(k)] = cleaned
     cfg = _load()
-    cfg[LAYOUT_KEY] = {'hidden_pages': hp, 'order': od}
+    # порядок самих категорий сайдбара (ключи из MENU)
+    menu_keys = [g['key'] for g in MENU]
+    go_seen = set()
+    go = []
+    for k in (group_order or []):
+        k = str(k)
+        if k in menu_keys and k not in go_seen:
+            go.append(k)
+            go_seen.add(k)
+    if go == menu_keys:
+        go = []          # совпадает со стандартным — не храним
+    cfg[LAYOUT_KEY] = {'hidden_pages': hp, 'order': od, 'group_order': go}
     _save(cfg)
     return layout_view()
 
@@ -543,4 +559,10 @@ def panel_groups_for(role):
         if group['key'] == 'mod':
             payload['sections'] = _moderation_sections(pages)
         out.append(payload)
+
+    # порядок самих категорий (задаётся на «Меню панели» → «Порядок и скрытие»)
+    go = layout_view().get('group_order') or []
+    if go:
+        rank = {k: i for i, k in enumerate(go)}
+        out.sort(key=lambda g: rank.get(g['key'], len(go) + 999))
     return out

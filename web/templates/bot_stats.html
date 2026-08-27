@@ -96,7 +96,10 @@
     var d;
     try { d = await r.json(); } catch (e) { return; }
     if (!r.ok || d.error) return;
-
+    /* тихо: перерисовка только если серверы/юзеры/аптайм изменились
+       (мелкий джиттер пинга/CPU страницу не дёргает) */
+    if (window.renderIfChanged
+        && !window.renderIfChanged('bot-stats', [d.guilds, d.users, d.uptime, d.latency], function () {})) return;
     var lat = Number(d.latency) || 0;
     var cpu = Number(d.cpu) || 0;
     var ram = Number(d.ram) || 0;

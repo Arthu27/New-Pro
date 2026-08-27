@@ -302,6 +302,20 @@
     });
   }, 500);
 
+  /* Тихий live: перерисовка только если данные реально изменились.
+     Убивает «как будто страницу перезагружают» при автообновлении. */
+  window.__liveSig = window.__liveSig || {};
+  window.renderIfChanged = function (key, data, renderFn) {
+    if (typeof renderFn !== 'function') return;
+    var sig;
+    try { sig = JSON.stringify(data); } catch (e) { sig = String(Date.now()); }
+    if (window.__liveSig[key] === sig) return false;   // ничего не поменялось — не трогаем DOM
+    window.__liveSig[key] = sig;
+    renderFn();
+    return true;
+  };
+  window.dropLiveSig = function (key) { delete window.__liveSig[key]; };
+
   window.renderSafe = function (renderFn) {
     var y = window.scrollY, x = window.scrollX;
     if (typeof renderFn === 'function') { try { renderFn(); } catch (e) {} }

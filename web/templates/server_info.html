@@ -152,7 +152,10 @@ function siDelPair(key) {
 
 function load() {
   fetch(API + '/view').then(function (r) { return r.json(); }).then(function (d) {
-    if (d.success) { render(d.view); }
+    if (d.success) {
+      if (window.renderIfChanged) { window.renderIfChanged('server-info', d.view, function () { render(d.view); }); }
+      else { render(d.view); }
+    }
   }).catch(function () {});
 }
 
