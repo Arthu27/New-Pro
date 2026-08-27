@@ -4,12 +4,16 @@
 POST /api/guild/<gid>/punish — выдать наказание (варн, муты, бан-апелляция,
 снятия). Исполняет тот же код, что и /modpanel: длительности «60, 1ч, 3ч, 1д»,
 «бан» не выкидывает с сервера (изоляция + канал апелляции), без настроенного
-канала — «настройки не завершены», доказательство — если в панели включено
-требование.
+канала — «настройки не завершены». Доказательство панель не спрашивает:
+форма упрощена, поле убрано.
 
-GET /api/guild/<gid>/punish/options — что доступно сейчас: состояние
-тумблера доказательств, готовность «бана» (канал апелляции), бот онлайн.
-Доступ — mod+ (панель — доверенный вход, действия пишутся от «Панель: логин»).
+GET /api/guild/<gid>/punish/options — что доступно именно ЭТОМУ
+пользователю панели: список действий отфильтрован по ACL «Права команд»
+(services/permission_acl): если владелец ограничил действие конкретным
+Discord-ролям, то входящему через Discord-аккаунт модератору без этих ролей
+действие не показывается и на POST не принимается (403). Статический вход
+из .env и роль owner — доверенные: им доступен весь набор. Плюс состояние
+готовности «бана» (канал апелляции) и «бот онлайн».
 """
 from web.routes._common import (
     _log, _run_async, _fire_panel_notification,
@@ -30,9 +34,54 @@ PANEL_ACTIONS = [
 ]
 _VALUE_SET = {a[0] for a in PANEL_ACTIONS}
 
+# Привязка действий панели к ACL «Права команд» (services/permission_acl.ACTIONS):
+# владелец может ограничить действие конкретными Discord-ролями. Пустое правило
+# в ACL = действие разрешено всем (поведение бота 1:1, см. check_action).
+_ACTION_ACL = {
+    'warn': 'warn',
+    'timeout': 'timeout',
+    'mute_chat': 'mute',
+    'vmute': 'mute',
+    'ban': 'ban',
+    'unban': 'ban',
+    'untimeout': 'timeout',
+    'vunmute': 'mute',
+}
+
 
 def _punish_cog(bot):
     return bot.get_cog('Moderation') if bot else None
+
+
+def _viewer_member(bot, gid):
+    """Discord-мембер, под которым вошли в панель (session['discord_id']).
+
+    None → проверять нечего: статический логин из .env, роль owner панели
+    или мембер не найден — это доверенный вход, действия не режем.
+    """
+    if session.get('role') == 'owner':
+        return None
+    did = str(session.get('discord_id') or '').strip()
+    if not did.isdigit() or bot is None:
+        return None
+    try:
+        guild = bot.get_guild(int(gid))
+        return guild.get_member(int(did)) if guild is not None else None
+    except Exception:
+        return None
+
+
+def _acl_allows(gid, member, action):
+    """True, если действие не отрезано ACL «Права команд» для этого мембера."""
+    key = _ACTION_ACL.get(action)
+    if not key or member is None:
+        return True
+    try:
+        from services.permission_acl import check_action
+        return bool(check_action(int(gid), member, key))
+    except Exception as _ex:
+        _log.debug('punish acl: %s', _ex)
+        return True
 
 
 def register(ctx):
@@ -61,14 +110,19 @@ def register(ctx):
             ban_ready = int(get_route(gid, 'ban_appeal_channel') or 0) > 0
         except Exception as _ex:
             _log.debug('punish/options ban: %s', _ex)
+        # ACL «Права команд»: каждому — только его действия.
+        member = _viewer_member(bot, gid)
+        actions = [a for a in PANEL_ACTIONS if _acl_allows(gid, member, a[0])]
         return jsonify({
             'success': True,
             'bot_online': bot is not None,
             'proof_required': proof_required,
             'ban_ready': ban_ready,
+            # сколько действий скрыто правами ролей — для подсказки в форме
+            'hidden_by_acl': len(PANEL_ACTIONS) - len(actions),
             'actions': [
                 {'value': v, 'label': lbl, 'duration': dur, 'proof': prf}
-                for v, lbl, dur, prf in PANEL_ACTIONS
+                for v, lbl, dur, prf in actions
             ],
         })
 
@@ -92,6 +146,15 @@ def register(ctx):
         guild = bot.get_guild(int(gid))
         if guild is None:
             return jsonify({'success': False, 'error': 'Сервер не найден'}), 404
+
+        # ACL «Права команд» — то же правило, что в options: действие,
+        # отрезанное ролям этого модератора, не выполняем, даже если
+        # обошли форму и шлют запрос напрямую.
+        member_viewer = _viewer_member(bot, gid)
+        if not _acl_allows(gid, member_viewer, action):
+            return jsonify({'success': False,
+                            'error': 'Нет права: действие не разрешено вашей '
+                                     'роли (настройка — «Права команд»)'}), 403
 
         raw_uid = str(d.get('user_id') or '').strip().strip('<@!>')
         if not raw_uid.isdigit():

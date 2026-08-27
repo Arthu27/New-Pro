@@ -2,12 +2,68 @@
 {% block title %}Пользователи — Hakumo{% endblock %}
 {% block page_title %}Пользователи{% endblock %}
 {% block content %}
+<style>
+  /* ── строка статистики ── */
+  .u-stats { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 14px 0; }
+  .u-stat { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px;
+            border: 1px solid var(--line); border-radius: var(--r-md);
+            background: var(--surface-2); font-size: var(--fs-sm); color: var(--text-2); }
+  .u-stat i { color: var(--ac); }
+  .u-stat b { color: var(--text-1); font-weight: var(--fw-semibold); }
+  /* ── фильтры ── */
+  .u-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; padding: 10px 14px 4px; }
+  .u-filters .field { min-width: 160px; }
+  .u-lbl { display: block; font-weight: 600; color: var(--text-3); font-size: var(--fs-sm); margin-bottom: 4px; }
+  .u-seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+  .u-seg button { border: 0; background: var(--surface-2); color: var(--text-3);
+                  font-size: var(--fs-sm); padding: 8px 14px; cursor: pointer; transition: .15s; font-family: inherit; }
+  .u-seg button:hover { color: var(--text-1); }
+  .u-seg button.active { background: var(--ac-soft); color: var(--ac); font-weight: var(--fw-semibold); }
+  /* ── карточка участника: теги и стрелка ── */
+  .u-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  .u-tag { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-xs);
+           color: var(--text-3); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
+  .u-tag .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-4); flex: none; }
+  .u-tag i { font-size: 10px; color: var(--text-4); }
+  .u-bot { font-size: 10px; padding: 1px 6px; vertical-align: 2px; }
+  .u-go { margin-left: auto; color: var(--text-4); font-size: 12px; transition: .15s; flex: none; }
+  .member-card:hover .u-go, .member-card:focus .u-go { color: var(--ac); transform: translateX(2px); }
+  /* ── наказание ── */
+  .pn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 2px; }
+  .pn-act { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border: 1px solid var(--line);
+            border-radius: var(--r-md); background: var(--surface-2); cursor: pointer; text-align: left;
+            transition: border-color .15s, box-shadow .15s, transform .1s; color: var(--text-2); font-family: inherit; }
+  .pn-act:hover { border-color: var(--line-2); transform: translateY(-1px); }
+  .pn-act:focus-visible { outline: 2px solid var(--ac); outline-offset: 1px; }
+  .pn-act > i { font-size: 15px; width: 18px; text-align: center; flex: none; }
+  .pn-act .t { display: block; font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text-1); line-height: 1.15; }
+  .pn-act .s { display: block; font-size: var(--fs-xs); color: var(--text-3); }
+  .pn-act[data-kind=neg] > i { color: var(--warn); }
+  .pn-act[data-kind=pos] > i { color: var(--ok); }
+  .pn-act[data-kind=danger] > i { color: var(--err); }
+  .pn-act.sel { border-color: var(--ac); box-shadow: 0 0 0 2px var(--ac-soft); background: var(--surface-3); }
+  .pn-act.sel[data-kind=danger] { border-color: var(--err); box-shadow: 0 0 0 2px var(--err-soft); }
+  .pn-lbl { display: flex; justify-content: space-between; align-items: baseline;
+            font-size: var(--fs-sm); color: var(--text-3); font-weight: var(--fw-medium); margin: 12px 0 6px; }
+  .pn-cnt { font-size: var(--fs-xs); color: var(--text-4); font-weight: 400; }
+  .pn-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+  .pn-preset { border: 1px solid var(--line); background: var(--surface-2); color: var(--text-2);
+               border-radius: 999px; font-size: var(--fs-xs); padding: 4px 10px; cursor: pointer; transition: .15s; font-family: inherit; }
+  .pn-preset:hover { border-color: var(--ac-line); color: var(--ac); }
+  .pn-preset.sel { background: var(--ac-soft); border-color: var(--ac); color: var(--ac); font-weight: var(--fw-semibold); }
+  .pn-hint { font-size: var(--fs-xs); color: var(--text-3); margin-top: 8px; display: flex; gap: 6px; align-items: flex-start; }
+  .pn-hint i { color: var(--info); margin-top: 2px; flex: none; }
+  #pnGo[disabled] { opacity: .55; cursor: not-allowed; }
+  #pnGo.armed { background: var(--err); border-color: var(--err); color: #fff; }
+  .pn-empty { padding: 14px; border: 1px dashed var(--line-2); border-radius: var(--r-md);
+              color: var(--text-3); font-size: var(--fs-sm); text-align: center; margin-top: 8px; }
+</style>
 
 <div class="page-head">
   <div class="page-head-copy">
     <div class="eyebrow">Участники <span class="sep">·</span> Список</div>
     <h1>Пользователи</h1>
-    <p class="lead">Полный список участников сервера с фильтрами и поиском. Клик по участнику — карточка 360° в окне, которое можно перетаскивать.</p>
+    <p class="lead">Все участники сервера: поиск, фильтры по ролям и статусу, сортировка. Клик по участнику — карточка 360° в перетаскиваемом окне.</p>
   </div>
 </div>
 
@@ -21,6 +77,27 @@
     </label>
     <span class="spacer"></span>
     <span class="badge neutral" id="member-count">0</span>
+  </div>
+  <div class="u-stats" id="uStats" aria-live="polite"></div>
+  <div class="u-filters">
+    <label class="field"><span class="u-lbl">Роль</span>
+      <select id="uRole" aria-label="Фильтр по роли"><option value="">Все роли</option></select>
+    </label>
+    <label class="field"><span class="u-lbl">Сортировка</span>
+      <select id="uSort" aria-label="Сортировка списка">
+        <option value="">Как в Discord</option>
+        <option value="name">По имени (А–Я)</option>
+        <option value="joined_new">Сначала новые участники</option>
+        <option value="joined_old">Сначала старые участники</option>
+        <option value="created_new">Сначала новые аккаунты</option>
+        <option value="created_old">Сначала старые аккаунты</option>
+      </select>
+    </label>
+    <div class="u-seg" id="uStatus" aria-label="Фильтр по статусу">
+      <button type="button" class="active" data-st="all">Все</button>
+      <button type="button" data-st="on">В сети</button>
+      <button type="button" data-st="off">Не в сети</button>
+    </div>
   </div>
   <div class="panel-body">
     <div id="members-list"><div class="empty"><i class="fas fa-user-friends"></i><span>Выберите сервер для просмотра участников</span></div></div>
@@ -78,18 +155,22 @@
           </div>
           <div class="mc-panel" id="mcPunishPanel">
             <h3><i class="fas fa-gavel"></i> Наказание</h3>
-            <div class="mc-sub">Как в /modpanel: варн, муты, бан-апелляция и снятия. Пишется в дела и логи от «Панель: ваш логин».</div>
+            <div class="mc-sub">Показаны только действия, разрешённые вашей роли в «Правах команд». Пишется в дела и логи от «Панель: ваш логин».</div>
             <div id="mcPunish">
-              <label class="field" style="display:block;margin:6px 0"><span style="font-size:var(--fs-sm);color:var(--text-3)">Действие</span>
-                <select id="pnAct" aria-label="Действие"></select></label>
-              <label class="field" style="display:block;margin:6px 0" id="pnDurWrap" hidden><span style="font-size:var(--fs-sm);color:var(--text-3)">На сколько (мин/час/дни)</span>
-                <input id="pnDur" placeholder="60, 1ч, 3ч, 1д…" maxlength="40"></label>
-              <label class="field" style="display:block;margin:6px 0" id="pnProofWrap" hidden><span style="font-size:var(--fs-sm);color:var(--text-3)">Доказательство — ссылка (https://…)</span>
-                <input id="pnProof" placeholder="https://… скрин или видео" maxlength="500"></label>
-              <label class="field" style="display:block;margin:6px 0"><span style="font-size:var(--fs-sm);color:var(--text-3)">Причина</span>
-                <input id="pnReason" placeholder="За что? (необязательно)" maxlength="500"></label>
-              <button type="button" class="btn" id="pnGo" style="width:100%;margin-top:4px"><i class="fas fa-bolt"></i> Применить</button>
-              <div id="pnMsg" class="empty-tip" style="padding:6px 0 0"></div>
+              <div class="pn-empty" id="pnEmpty" hidden></div>
+              <div id="pnForm">
+                <div class="pn-grid" id="pnGrid" role="radiogroup" aria-label="Действие наказания"></div>
+                <div id="pnDurBlock" hidden>
+                  <div class="pn-lbl"><span>Срок</span><span class="pn-cnt">мин · часы · дни</span></div>
+                  <div class="pn-presets" id="pnPresets" aria-label="Быстрый выбор срока"></div>
+                  <input id="pnDur" placeholder="или своё: 45м, 2ч, 1д…" maxlength="40" aria-label="Срок наказания">
+                </div>
+                <div class="pn-lbl"><span>Причина</span><span class="pn-cnt" id="pnReasonCnt">0/500</span></div>
+                <input id="pnReason" placeholder="За что? (необязательно)" maxlength="500" aria-label="Причина наказания">
+                <button type="button" class="btn" id="pnGo" style="width:100%;margin-top:10px" disabled><i class="fas fa-bolt"></i> Применить</button>
+                <div class="pn-hint" id="pnHint" hidden><i class="fas fa-circle-info"></i><span id="pnHintText"></span></div>
+                <div id="pnMsg" class="empty-tip" style="padding:6px 0 0"></div>
+              </div>
             </div>
           </div>
           <div class="mc-panel">
@@ -152,11 +233,90 @@
       var fp = allMembers.length + '|' + (allMembers[0] ? String(allMembers[0].id || allMembers[0].name || '').slice(0, 60) : '');
       if (live && fp === _membersFp) return;   /* данные не изменились — список не трогаем */
       _membersFp = fp;
-      $('member-count').textContent = allMembers.length + ' чел.';
-      renderMembers(allMembers);
+      renderStats();
+      rebuildRoleFilter();
+      applyView();
     } catch (e) {
       $('members-list').innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить: ' + esc(e.message) + '</span></div>';
     }
+  }
+
+  /* ── статистика над списком ── */
+  function statChip(icon, label, val) {
+    return '<span class="u-stat"><i class="fas ' + icon + '"></i> ' + esc(label) + ' <b>' + esc(val) + '</b></span>';
+  }
+
+  function renderStats() {
+    var total = allMembers.length, on = 0, bots = 0, fresh = 0;
+    var weekAgo = Date.now() - 7 * 86400000;
+    allMembers.forEach(function (m) {
+      if (m.status === 'online' || m.status === 'idle' || m.status === 'dnd') on++;
+      if (m.bot) bots++;
+      if (m.joined_at && Date.parse(m.joined_at) >= weekAgo) fresh++;
+    });
+    $('uStats').innerHTML =
+      statChip('fa-users', 'Всего:', total) +
+      statChip('fa-signal', 'В сети:', on) +
+      statChip('fa-user-plus', 'Новые за 7 дн:', fresh) +
+      (bots ? statChip('fa-robot', 'Ботов:', bots) : '');
+  }
+
+  /* ── фильтр по ролям: опции собираем из самих данных ── */
+  function rebuildRoleFilter() {
+    var sel = $('uRole');
+    var keep = sel.value;
+    var counts = {};
+    allMembers.forEach(function (m) {
+      (m.roles || []).forEach(function (r) {
+        if (r && r.name) counts[r.name] = (counts[r.name] || 0) + 1;
+      });
+    });
+    var names = Object.keys(counts).sort(function (a, b) {
+      return counts[b] - counts[a] || a.localeCompare(b, 'ru');
+    });
+    sel.innerHTML = '<option value="">Все роли</option>' + names.map(function (n) {
+      return '<option value="' + esc(n) + '">' + esc(n) + ' (' + counts[n] + ')</option>';
+    }).join('');
+    sel.value = (keep && names.indexOf(keep) !== -1) ? keep : '';
+  }
+
+  /* ── единый проход: поиск + фильтры + сортировка ── */
+  function applyView() {
+    var q = $('search').value.trim().toLowerCase();
+    var role = $('uRole').value;
+    var sortKey = $('uSort').value;
+    var st = document.querySelector('#uStatus button.active');
+    var statusFilter = st ? st.getAttribute('data-st') : 'all';
+    var list = allMembers.filter(function (m) {
+      if (statusFilter === 'on' && !(m.status === 'online' || m.status === 'idle' || m.status === 'dnd')) return false;
+      if (statusFilter === 'off' && m.status && m.status !== 'offline') return false;
+      if (role && !(m.roles || []).some(function (r) { return r && r.name === role; })) return false;
+      if (q) {
+        return (m.name || '').toLowerCase().indexOf(q) !== -1 ||
+               (m.display_name || '').toLowerCase().indexOf(q) !== -1 ||
+               (m.id || '').toString().indexOf(q) !== -1;
+      }
+      return true;
+    });
+    if (sortKey === 'name') {
+      list.sort(function (a, b) {
+        return String(a.display_name || a.name || '').localeCompare(String(b.display_name || b.name || ''), 'ru');
+      });
+    } else if (sortKey === 'joined_new' || sortKey === 'joined_old') {
+      list.sort(function (a, b) {
+        var d = (b.joined_at ? Date.parse(b.joined_at) : 0) - (a.joined_at ? Date.parse(a.joined_at) : 0);
+        return sortKey === 'joined_new' ? d : -d;
+      });
+    } else if (sortKey === 'created_new' || sortKey === 'created_old') {
+      list.sort(function (a, b) {
+        var d = (b.created_at ? Date.parse(b.created_at) : 0) - (a.created_at ? Date.parse(a.created_at) : 0);
+        return sortKey === 'created_new' ? d : -d;
+      });
+    }
+    $('member-count').textContent = list.length === allMembers.length
+      ? allMembers.length + ' чел.'
+      : list.length + ' из ' + allMembers.length;
+    renderMembers(list);
   }
 
   function renderMembers(members) {
@@ -167,17 +327,29 @@
     var html = '';
     members.forEach(function (m) {
       var sc = statusClass[m.status] || 'offline';
+      var tags = '';
+      var top = m.top_role;
+      if (top) {
+        var color = '';
+        var rr = (m.roles || []).filter(function (r) { return r && r.name === top; })[0];
+        if (rr && rr.color && String(rr.color).charAt(0) === '#') color = String(rr.color);
+        tags += '<span class="u-tag"><span class="dot"' + (color ? ' style="background:' + esc(color) + '"' : '') + '></span>' + esc(top) + '</span>';
+      }
+      if (m.joined_at) {
+        tags += '<span class="u-tag"><i class="fas fa-right-to-bracket"></i>' + esc(new Date(m.joined_at).toLocaleDateString('ru-RU')) + '</span>';
+      }
       html += '<div class="member-card" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Карточка 360°: ' + esc(m.display_name || m.name) + '">' +
         '<div class="av-wrap">' +
           '<img alt="" class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
           '<span class="status-dot ' + sc + '"></span>' +
         '</div>' +
         '<div class="member-meta">' +
-          '<div class="member-name">' + esc(m.display_name || m.name) + '</div>' +
+          '<div class="member-name">' + esc(m.display_name || m.name) +
+            (m.bot ? ' <span class="badge neutral u-bot">BOT</span>' : '') + '</div>' +
           '<div class="member-username">@' + esc(m.name) + '</div>' +
+          (tags ? '<div class="u-tags">' + tags + '</div>' : '') +
         '</div>' +
-        '<span class="badge neutral" style="margin-left:auto"><i class="fas fa-id-card"></i> 360°</span>' +
-        (m.bot ? '<span class="badge neutral">BOT</span>' : '') +
+        '<i class="fas fa-chevron-right u-go" aria-hidden="true"></i>' +
       '</div>';
     });
     $('members-list').innerHTML = '<div class="members-grid">' + html + '</div>';
@@ -236,10 +408,7 @@
 
     /* наказания: привязка к открытому участнику */
     pnUid = String(m.id);
-    if ($('pnReason')) $('pnReason').value = '';
-    if ($('pnDur')) $('pnDur').value = '';
-    if ($('pnProof')) $('pnProof').value = '';
-    if ($('pnMsg')) { $('pnMsg').textContent = ''; $('pnMsg').style.color = ''; }
+    pnResetForm();
     pnLoad();
 
     /* быстрые чипы из данных списка — видны сразу, пока грузится досье */
@@ -247,6 +416,7 @@
     var cr = m.created_at ? new Date(m.created_at) : null;
     var extras = '<span class="mc-chip"><span class="status-dot ' + sc + '" style="display:inline-block;width:9px;height:9px"></span> ' + esc(st) + '</span>' +
       (cr ? chip('fa-calendar-plus', 'Создан:', cr.toLocaleDateString('ru-RU')) : '') +
+      (m.joined_at ? chip('fa-right-to-bracket', 'На сервере с:', new Date(m.joined_at).toLocaleDateString('ru-RU')) : '') +
       chip('fa-user-tag', 'Ролей:', String((m.roles || []).length)) +
       (m.top_role ? chip('fa-crown', 'Высшая:', m.top_role) : '');
     $('mcWinExtras').innerHTML = extras;
@@ -279,27 +449,39 @@
     });
   }
 
-  /* ── Наказания из карточки (тот же путь, что /modpanel) ── */
+  /* ── Наказания из карточки (тот же путь, что /modpanel) ──
+     Сервер (/api/guild/<gid>/punish/options) уже отфильтровал действия
+     по ACL «Права команд» — здесь только рисуем то, что пришло.
+     Доказательства панель не спрашивает — поля с ними убраны намеренно. */
   var pnOpts = null;
+  var pnActions = [];
+  var pnSel = '';
   var pnUid = '';
+  var pnArm = 0;   /* до какого момента «взведён» бан (двойной клик) */
 
-  function pnRefreshFields() {
-    var sel = $('pnAct');
-    if (!sel || !pnOpts) return;
-    var v = sel.value;
-    var meta = {};
-    (pnOpts.actions || []).forEach(function (a) { meta[a.value] = a; });
-    var m = meta[v] || {};
-    var proofOn = !!pnOpts.proof_required && m.proof;
-    $('pnDurWrap').hidden = !m.duration;
-    $('pnProofWrap').hidden = !proofOn;
-    /* бан честно подсвечивает неготовность настройки */
-    var msg = '';
-    if (v === 'ban' && pnOpts && !pnOpts.ban_ready) {
-      msg = '«Бан» пока не работает: не выбран канал апелляции. Панель → Каналы и маршруты → «Канал апелляции (бан)».';
-    }
-    $('pnMsg').textContent = msg;
-    $('pnMsg').style.color = msg ? 'var(--warn, #f0b26b)' : '';
+  var PN_META = {
+    warn:      { icon: 'fa-triangle-exclamation', kind: 'neg',    sub: 'запись в дело' },
+    timeout:   { icon: 'fa-clock',                kind: 'neg',    sub: 'Discord-таймаут' },
+    mute_chat: { icon: 'fa-comment-slash',        kind: 'neg',    sub: 'только чат' },
+    vmute:     { icon: 'fa-microphone-slash',     kind: 'neg',    sub: 'микрофон' },
+    ban:       { icon: 'fa-gavel',                kind: 'danger', sub: 'изоляция + апелляция' },
+    unban:     { icon: 'fa-rotate-left',          kind: 'pos',    sub: 'снять бан' },
+    untimeout: { icon: 'fa-clock-rotate-left',    kind: 'pos',    sub: 'снять таймаут' },
+    vunmute:   { icon: 'fa-microphone',           kind: 'pos',    sub: 'снять войс-мут' }
+  };
+  var PN_PRESETS = ['10м', '30м', '1ч', '3ч', '12ч', '1д', '3д', '7д'];
+
+  function pnActionMeta(v) {
+    return PN_META[v] || { icon: 'fa-bolt', kind: 'neg', sub: '' };
+  }
+
+  function pnResetForm() {
+    pnSel = '';
+    pnArm = 0;
+    if ($('pnReason')) $('pnReason').value = '';
+    if ($('pnReasonCnt')) $('pnReasonCnt').textContent = '0/500';
+    if ($('pnDur')) $('pnDur').value = '';
+    if ($('pnMsg')) { $('pnMsg').textContent = ''; $('pnMsg').style.color = ''; }
   }
 
   function pnLoad() {
@@ -308,24 +490,90 @@
     fetch('/api/guild/' + gid + '/punish/options', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        if (!d.success) { pnOpts = null; return; }
-        pnOpts = d;
-        var sel = $('pnAct');
-        sel.innerHTML = (d.actions || []).map(function (a) {
-          return '<option value="' + a.value + '">' + a.value + ' — ' + a.label + '</option>';
-        }).join('');
-        pnRefreshFields();
-        if (!d.bot_online) {
-          $('pnMsg').textContent = 'Бот офлайн — наказания недоступны.';
-        }
+        pnOpts = d && d.success ? d : null;
+        pnActions = pnOpts ? (pnOpts.actions || []) : [];
+        pnRenderForm();
       }).catch(function () {});
   }
 
+  function pnRenderForm() {
+    var grid = $('pnGrid');
+    if (!grid) return;
+    if (!pnOpts || !pnActions.length) {
+      $('pnForm').style.display = 'none';
+      $('pnEmpty').hidden = false;
+      $('pnEmpty').innerHTML = '<i class="fas fa-lock"></i> Нет доступных действий — ' +
+        (pnOpts && !pnOpts.bot_online ? 'бот офлайн.' : 'проверьте настройку «Права команд».');
+      return;
+    }
+    $('pnForm').style.display = '';
+    $('pnEmpty').hidden = true;
+    grid.innerHTML = pnActions.map(function (a) {
+      var meta = pnActionMeta(a.value);
+      return '<button type="button" class="pn-act" role="radio" aria-checked="false" data-v="' + esc(a.value) + '" data-kind="' + meta.kind + '">' +
+        '<i class="fas ' + meta.icon + '" aria-hidden="true"></i>' +
+        '<span><span class="t">' + esc(a.label) + '</span>' +
+        '<span class="s">' + esc(meta.sub) + '</span></span></button>';
+    }).join('');
+    /* быстрые пресеты срока */
+    $('pnPresets').innerHTML = PN_PRESETS.map(function (p) {
+      return '<button type="button" class="pn-preset" data-dur="' + esc(p) + '">' + esc(p) + '</button>';
+    }).join('');
+    /* подсказки: скрытые ACL действия */
+    var hints = [];
+    if (pnOpts.hidden_by_acl > 0) {
+      hints.push('Скрыто правами ролей: ' + pnOpts.hidden_by_acl + ' — настройка: «Права команд».');
+    }
+    if (!pnOpts.bot_online) {
+      hints.push('Бот офлайн — наказания недоступны.');
+    }
+    $('pnHint').hidden = !hints.length;
+    $('pnHintText').textContent = hints.join(' ');
+    pnSyncUi();
+  }
+
+  function pnSyncUi() {
+    var meta = {};
+    pnActions.forEach(function (a) { if (a.value === pnSel) meta = a; });
+    $('pnDurBlock').hidden = !meta.duration;
+    var btn = $('pnGo');
+    btn.disabled = !pnSel || (pnOpts && !pnOpts.bot_online);
+    btn.classList.remove('armed');
+    btn.innerHTML = '<i class="fas fa-bolt"></i> Применить';
+    var msg = '';
+    if (pnSel === 'ban' && pnOpts && !pnOpts.ban_ready) {
+      msg = '«Бан» пока не работает: не выбран канал апелляции. Панель → Каналы и маршруты → «Канал апелляции (бан)».';
+    }
+    $('pnMsg').textContent = msg;
+    $('pnMsg').style.color = msg ? 'var(--warn)' : '';
+  }
+
+  function pnSelect(v) {
+    pnSel = v;
+    pnArm = 0;
+    document.querySelectorAll('#pnGrid .pn-act').forEach(function (b) {
+      var on = b.getAttribute('data-v') === v;
+      b.classList.toggle('sel', on);
+      b.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    pnSyncUi();
+  }
+
   function pnApply() {
-    if (!pnUid || !$('pnAct').value) return;
+    if (!pnUid || !pnSel) return;
     var gid = $('guild-select').value;
     var btn = $('pnGo');
     if (btn.disabled) return;
+    /* бан — с подтверждением: первый клик «взводит», второй (5 сек) применяет */
+    if (pnSel === 'ban' && Date.now() > pnArm) {
+      pnArm = Date.now() + 5000;
+      btn.classList.add('armed');
+      btn.innerHTML = '<i class="fas fa-gavel"></i> Подтвердить бан';
+      $('pnMsg').textContent = 'Нажмите ещё раз — бан будет применён.';
+      $('pnMsg').style.color = 'var(--warn)';
+      return;
+    }
+    pnArm = 0;
     btn.disabled = true;
     $('pnMsg').textContent = 'Применяем…';
     $('pnMsg').style.color = '';
@@ -334,20 +582,20 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         user_id: pnUid,
-        action: $('pnAct').value,
-        duration: $('pnDurWrap').hidden ? '' : $('pnDur').value.trim(),
-        proof: $('pnProofWrap').hidden ? '' : $('pnProof').value.trim(),
+        action: pnSel,
+        duration: $('pnDurBlock').hidden ? '' : $('pnDur').value.trim(),
         reason: $('pnReason').value.trim()
       })
     }).then(function (r) { return r.json(); }).then(function (d) {
       btn.disabled = false;
       var t = d.message || d.error || 'Готово';
       $('pnMsg').textContent = t;
-      $('pnMsg').style.color = d.success ? '' : 'var(--err, #e74c3c)';
+      $('pnMsg').style.color = d.success ? '' : 'var(--err)';
+      if (d.success) { pnSelect(''); pnResetForm(); }
     }).catch(function () {
       btn.disabled = false;
       $('pnMsg').textContent = 'Сеть моргнула — попробуйте ещё раз';
-      $('pnMsg').style.color = 'var(--err, #e74c3c)';
+      $('pnMsg').style.color = 'var(--err)';
     });
   }
 
@@ -378,18 +626,18 @@
     head.addEventListener('pointercancel', stop);
   }
 
-  function filterMembers() {
-    var q = $('search').value.toLowerCase();
-    renderMembers(allMembers.filter(function (m) {
-      return (m.name || '').toLowerCase().indexOf(q) !== -1 ||
-             (m.display_name || '').toLowerCase().indexOf(q) !== -1 ||
-             (m.id || '').toString().indexOf(q) !== -1;
-    }));
-  }
-
   function bind() {
     $('guild-select').addEventListener('change', function () { closeWin(); loadMembers(false); });
-    $('search').addEventListener('input', filterMembers);
+    $('search').addEventListener('input', applyView);
+    $('uRole').addEventListener('change', applyView);
+    $('uSort').addEventListener('change', applyView);
+    $('uStatus').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-st]');
+      if (!b) return;
+      document.querySelectorAll('#uStatus button').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      applyView();
+    });
     $('mcWinClose').addEventListener('click', closeWin);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeWin(); });
     $('members-list').addEventListener('click', function (e) {
@@ -403,10 +651,29 @@
       if (card) { e.preventDefault(); showDetail(card.getAttribute('data-id')); }
     });
     bindDrag();
-  if ($('pnAct')) {
-    $('pnAct').addEventListener('change', pnRefreshFields);
-    $('pnGo').addEventListener('click', pnApply);
-  }
+    if ($('pnGrid')) {
+      $('pnGrid').addEventListener('click', function (e) {
+        var b = e.target.closest('.pn-act');
+        if (b) pnSelect(b.getAttribute('data-v'));
+      });
+      $('pnPresets').addEventListener('click', function (e) {
+        var b = e.target.closest('.pn-preset');
+        if (!b) return;
+        $('pnDur').value = b.getAttribute('data-dur');
+        document.querySelectorAll('#pnPresets .pn-preset').forEach(function (x) { x.classList.remove('sel'); });
+        b.classList.add('sel');
+      });
+      $('pnDur').addEventListener('input', function () {
+        var v = $('pnDur').value.trim();
+        document.querySelectorAll('#pnPresets .pn-preset').forEach(function (x) {
+          x.classList.toggle('sel', x.getAttribute('data-dur') === v);
+        });
+      });
+      $('pnReason').addEventListener('input', function () {
+        $('pnReasonCnt').textContent = $('pnReason').value.length + '/500';
+      });
+      $('pnGo').addEventListener('click', pnApply);
+    }
   }
 
   function start() {

@@ -4,6 +4,9 @@
 Юнит: apply_panel_action (мут с длительностью, бан без канала → «настройки
 не завершены», бан с каналом → изоляция, vmute не в голосе, варн пишется,
 снятие мута). API: options + punish (успех, отказ, чужое действие, бот-цель).
+ACL «Права команд»: действия отрезаются по Discord-ролям входящего через
+Discord-аккаунт модератора (options — фильтр, POST — 403); статический вход
+и owner — полный набор. Шаблон «Пользователи»: форма без доказательств.
 
 Запуск: python3 tests/test_panel_punish.py
 """
@@ -312,6 +315,81 @@ r = client.post('/api/guild/777/punish', json={
 check(r.status_code == 400 and 'Владельца' in (r.get_json().get('error') or ''),
       'владельца сервера наказать нельзя')
 wg.owner_id = 1
+
+print('== 8. ACL «Права команд»: действия по разрешённым ролям ==')
+from services import permission_acl as PACL  # noqa: E402
+
+PACL.set_action_rule(777, 'ban', ['555'])   # «бан» — только роли 555
+
+# статический вход без Discord-привязки — доверенный: весь набор
+r = client.get('/api/guild/777/punish/options')
+d = r.get_json()
+check(d.get('success') and len(d.get('actions', [])) == 8 and
+      d.get('hidden_by_acl') == 0, 'статический вход: полный набор (доверенный)')
+
+# вход через Discord-аккаунт: мембер без роли 555 — «бан» отрезан.
+# (_role_checked свежий — живой пересчёт роли из Discord пропускается,
+#  имитируем только что залогинившегося модератора)
+import time as _t  # noqa: E402
+
+with client.session_transaction() as sess:
+    sess.clear()
+    sess['logged_in'] = True
+    sess['username'] = 'LinkedMod'
+    sess['role'] = 'mod'
+    sess['discord_id'] = str(TID)
+    sess['selected_guild'] = '777'
+    sess['_role_checked'] = _t.time()
+r = client.get('/api/guild/777/punish/options')
+d = r.get_json()
+vals = [a.get('value') for a in d.get('actions', [])]
+# Правило «ban» режет оба: и сам бан, и unban — как у бота (unban → ban-ACL)
+check(d.get('success') and len(vals) == 6 and 'ban' not in vals and 'unban' not in vals,
+      f'связанный мод без роли: бан и разбан скрыты ({len(vals)} действий)')
+check(d.get('hidden_by_acl') == 2, 'hidden_by_acl честно говорит про два скрытых')
+
+r = client.post('/api/guild/777/punish', json={
+    'user_id': str(TID), 'action': 'ban', 'reason': 'обход формы'})
+check(r.status_code == 403 and not r.get_json().get('success') and
+      'Нет права' in (r.get_json().get('error') or ''),
+      'POST на отрезанное действие — 403 от ACL')
+
+# дали роль 555 — бан вернулся и выполняется
+wg.members[0].roles = [_Role(555)]
+CHR.set_route(777, 'ban_appeal_channel', 301)
+r = client.get('/api/guild/777/punish/options')
+d = r.get_json()
+check(len(d.get('actions', [])) == 8 and d.get('hidden_by_acl') == 0,
+      'с нужной ролью: полный набор')
+r = client.post('/api/guild/777/punish', json={
+    'user_id': str(TID), 'action': 'ban', 'reason': 'проверено'})
+check(r.status_code == 200 and r.get_json().get('success'),
+      'POST бана с разрешённой ролью — успех')
+wg.members[0].roles = []
+
+# owner панели — всегда весь набор, хоть и без Discord-ролей
+with client.session_transaction() as sess:
+    sess.clear()
+    sess['logged_in'] = True
+    sess['username'] = 'Boss'
+    sess['role'] = 'owner'
+    sess['discord_id'] = str(TID)
+    sess['selected_guild'] = '777'
+    sess['_role_checked'] = _t.time()
+r = client.get('/api/guild/777/punish/options')
+check(len((r.get_json() or {}).get('actions', [])) == 8,
+      'owner панели: ACL его не режет')
+
+print('== 9. Шаблон «Пользователи»: форма без доказательств, новая разметка ==')
+_utpl = open(os.path.join(ROOT, 'web', 'templates', 'users.html'), encoding='utf-8').read()
+check('pnProof' not in _utpl and 'proof' not in _utpl.lower(),
+      'в форме нет ни поля, ни логики доказательств')
+check('id="pnGrid"' in _utpl and 'id="pnPresets"' in _utpl and 'id="pnReasonCnt"' in _utpl,
+      'новая форма: сетка действий, пресеты срока, счётчик причины')
+check('id="uStats"' in _utpl and 'id="uRole"' in _utpl and 'id="uSort"' in _utpl and
+      'id="uStatus"' in _utpl,
+      'список: статистика, фильтр ролей, сортировка, статусы')
+check('hidden_by_acl' in _utpl, 'подсказка о скрытых правами действиях в шаблоне')
 
 # гость не проходит
 with client.session_transaction() as sess:
