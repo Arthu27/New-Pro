@@ -104,22 +104,26 @@ _ID_MIN, _ID_MAX = 17, 22   # длина discord ID (как в антирейд�
 # Чистые функции (тестируются отдельно от discord)
 # ────────────────────────────────────────────────────────────────────────────
 def _default_events():
+    """Все защиты по умолчанию ВЫКЛЮЧЕНЫ (opt-in): что включить — решает
+    владелец сам на странице «Щит сервера». Пороги-фабрики уже проставлены,
+    чтобы оставалось щёлкнуть тумблер."""
     out = {}
     for spec in EVENT_SPECS:
         t, w = spec['def']
-        out[spec['key']] = {'enabled': True, 'threshold': t, 'window': w,
+        out[spec['key']] = {'enabled': False, 'threshold': t, 'window': w,
                             'action': spec.get('action')}
     return out
 
 
 def guardian_default():
-    """Конфиг по умолчанию: ВЫКЛЮЧЕН (opt-in). Пороги-фабрики уже стоят —
-    владельцу остаётся один тумблер в панели/командой."""
+    """Конфиг по умолчанию: ВСЁ ВЫКЛЮЧЕНО (opt-in) — и сам Щит, и каждое
+    событие, и выкидывание чужих ботов. Владелец включает сам только то,
+    что нужно, на странице «Щит сервера» или командой."""
     return {
         'enabled': False,
         'punishment': 'strip',
         'bot_action': 'strip',
-        'kick_unauthorized_bots': True,
+        'kick_unauthorized_bots': False,
         'events': _default_events(),
         'whitelist_users': [],
         'whitelist_roles': [],

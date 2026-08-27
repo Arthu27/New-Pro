@@ -51,14 +51,17 @@ print('== конфиг: дефолт «выключен» (opt-in) ==')
 d = G.guardian_default()
 check(d['enabled'] is False and d['punishment'] == 'strip',
       'по умолчанию щит выключен (opt-in), мера — снятие ролей (обратимая)')
-check(d['kick_unauthorized_bots'] is True, 'чужие боты кикаются по умолчанию')
+check(d['kick_unauthorized_bots'] is False,
+      'чужие боты НЕ кикаются по умолчанию — владелец включает сам')
 check(d['bot_action'] == 'strip' and d['bot_whitelist_users'] == []
       and d['bot_whitelist_roles'] == [],
       'у ботов-нарушителей своя мера + пустой выделенный список')
 check(len(d['events']) == len(G.EVENT_SPECS) == 11,
       f'под защитой 11 типов событий ({len(d["events"])})')
-check(all(ev['enabled'] for ev in d['events'].values()),
-      'каждое событие включено из коробки')
+check(all(not ev['enabled'] for ev in d['events'].values()),
+      'каждое событие ВЫКЛЮЧЕНО из коробки — включается вручную')
+check(all(ev['threshold'] >= 1 and ev['window'] >= 3 for ev in d['events'].values()),
+      'пороги-фабрики при этом уже проставлены')
 check(d['events']['dangerous_perms']['threshold'] == 1
       and d['events']['dangerous_perms']['action'] == 'strip',
       'опасные права: мгновенная реакция со снятием ролей')
@@ -261,8 +264,11 @@ raider = FakeMember(9501, roles=[SimpleNamespace(id=1, managed=False),
                                  SimpleNamespace(id=2, managed=False)])
 guild = FakeGuild(GID + 10, {9501: raider}, log_ch)
 cog = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
-# Дефолты opt-in: для боевых сценариев щит включаем явно.
-G.save_cfg(GID + 10, {**G.guardian_default(), 'enabled': True})
+# Дефолты opt-in (всё выключено): для боевых сценариев включаем явно.
+_cfg_on = {**G.guardian_default(), 'enabled': True}
+for _k in _cfg_on['events']:
+    _cfg_on['events'][_k]['enabled'] = True
+G.save_cfg(GID + 10, _cfg_on)
 
 run = asyncio.run
 run(cog._touch(guild, 'channel_delete', 9501, 'bad.hatter',
@@ -311,7 +317,7 @@ for _ in range(5):
     run(c2._touch(g2, 'channel_delete', 9501, 'bad.hatter'))
 check(not g2.text_channels[0].sent,
       'мастер-выключатель: двигатель спит полностью')
-G.save_cfg(GID + 11, {**G.guardian_default(), 'enabled': True})
+G.save_cfg(GID + 11, _cfg_on)
 for _ in range(4):
     run(c2._touch(g2, 'channel_create', 9501, 'bad.hatter'))
 check(not g2.text_channels[0].sent,
@@ -398,7 +404,9 @@ naughty = FakeMember(9502, roles=[SimpleNamespace(id=9, managed=False)])
 gB = FakeGuild(GID + 15, {9502: naughty}, FakeChan('-модерация'))
 cB = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
 G.save_cfg(GID + 15, G.guardian_normalize(
-    {'enabled': True, 'bot_whitelist_users': ['823456789012345680']}))
+    {'enabled': True, 'kick_unauthorized_bots': True,
+     'events': {'bot_add': {'enabled': True}},
+     'bot_whitelist_users': ['823456789012345680']}))  # всё opt-in — включаем явно
 gB._audit = [_aentry(9502, 8802)]
 run(cB.on_member_join(BotMember(8802, gB)))
 check(gB.kicked == [8802], f'чужой бот выгнан автоматически {gB.kicked}')
@@ -413,7 +421,9 @@ check(incb['incidents'][0]['event'] == 'bot_add'
 naughty2 = FakeMember(9503, roles=[SimpleNamespace(id=9, managed=False)])
 gC = FakeGuild(GID + 16, {9503: naughty2}, FakeChan('-модерация'))
 cC = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
-G.save_cfg(GID + 16, G.guardian_normalize({'enabled': True, 'kick_unauthorized_bots': False}))
+G.save_cfg(GID + 16, G.guardian_normalize(
+    {'enabled': True, 'kick_unauthorized_bots': False,
+     'events': {'bot_add': {'enabled': True}}}))
 gC._audit = [_aentry(9503, 8803)]
 run(cC.on_member_join(BotMember(8803, gC)))
 check(gC.kicked == [], 'кик выключен: бот остался (решение владельца)')
@@ -555,9 +565,9 @@ d = r.get_json()
 check(d['cfg']['bot_action'] == 'kick'
       and d['cfg']['bot_whitelist_users'] == ['823456789012345680'],
       'API GET: бот-блок отдаётся странице')
-check(all(ev['enabled'] for k, ev in saved['events'].items()
-          if k != 'channel_delete'),
-      'POST: неприсланные события не выключились (дефолт держится)')
+check(all(not ev['enabled'] for k, ev in saved['events'].items()
+           if k != 'channel_delete'),
+      'POST: неприсланные события остались ВЫКЛ (opt-in дефолт держится)')
 
 login_as('mod')
 r = client.post(f'/api/guild/{GID}/guardian',

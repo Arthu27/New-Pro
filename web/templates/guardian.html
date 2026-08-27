@@ -49,6 +49,11 @@
 .gd-dur select{padding:6px 8px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:9px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit}
 .gd-dur select:focus{border-color:var(--ac)}
 .gd-pre{display:flex;gap:6px;flex-wrap:wrap}
+.gd-evbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0 2px;padding:10px 14px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:12px;background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent))}
+.gd-evbar-t{font-size:13px;font-weight:800;color:var(--text-1,#fff);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gd-evbar-t i{color:var(--ac)}
+.gd-evbar-t small{font-size:11px;font-weight:600;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent))}
+.gd-evbar-b{display:flex;gap:8px}
 .gd-pbtn{font-size:11.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent));cursor:pointer;font-family:inherit}
 .gd-pbtn:hover{border-color:var(--ac);color:var(--ac)}
 .gd-pbtn[aria-pressed="true"]{border-color:var(--ac);color:var(--ac);background:color-mix(in srgb, var(--ac) 12%, transparent);font-weight:700}
@@ -159,6 +164,15 @@
   Пример: порог 4 и время 30 сек — если кто-то удалит 4 канала за 30 секунд,
   Щит остановит его именно на этой мере. Время выбирается в секундах или минутах,
   быстрые варианты — кнопками под настройками.
+</div>
+
+<div class="gd-evbar" id="gdEvBar" style="display:none">
+  <div class="gd-evbar-t"><i class="fas fa-bolt"></i> События защиты
+    <small>по умолчанию все выключены — включи только то, что нужно</small></div>
+  <div class="gd-evbar-b">
+    <button type="button" class="btn" id="gdEvAllOn" aria-label="Включить все события защиты"><i class="fas fa-toggle-on"></i> Включить все</button>
+    <button type="button" class="btn" id="gdEvAllOff" aria-label="Выключить все события защиты"><i class="fas fa-toggle-off"></i> Выключить все</button>
+  </div>
 </div>
 
 <div class="gd-grid" id="gdEvents">
@@ -433,8 +447,21 @@ function bestUnit(sec) {
   return ['s', sec];
 }
 
+async function gdEvAll(on) {
+  if (!CAN_EDIT) { toast('Менять Щит может только админ', false); return; }
+  EVENTS.forEach(function (ev) { ev.enabled = !!on; });
+  if (window.renderSafe) window.renderSafe(renderEvents); else renderEvents();
+  await gdSave();   /* одно нажатие — применилось и сохранилось */
+}
+
 function renderEvents() {
   var box = document.getElementById('gdEvents');
+  var bar = document.getElementById('gdEvBar');
+  if (bar) {
+    bar.style.display = 'flex';
+    document.getElementById('gdEvAllOn').disabled = !CAN_EDIT;
+    document.getElementById('gdEvAllOff').disabled = !CAN_EDIT;
+  }
   box.innerHTML = EVENTS.map(function (ev) {
     var aopts = '<option value=""' + (!ev.action ? ' selected' : '') + '>Общая мера</option>' +
       PUNISHMENTS.map(function (p) {
@@ -754,6 +781,8 @@ async function gdSave() {
 wlComboInit();
 document.getElementById('gdSave').addEventListener('click', gdSave);
 document.getElementById('gdSave2').addEventListener('click', gdSave);
+document.getElementById('gdEvAllOn').addEventListener('click', function () { gdEvAll(true); });
+document.getElementById('gdEvAllOff').addEventListener('click', function () { gdEvAll(false); });
 
 /* время: живой пересчёт подсказки при вводе, кнопки-пресеты */
 (function () {
