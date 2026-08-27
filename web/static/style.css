@@ -101,6 +101,15 @@
   --bg-primary: #f5f6f8;
 }
 
+/* Нативные выпадающие списки/скроллы/пикеры даты подчиняются теме:
+   без color-scheme браузер рисует их белыми даже в тёмной теме. */
+html { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+select option, select optgroup {
+  background: var(--surface);
+  color: var(--text);
+}
+
 [data-theme="dark"] {
   --bg: #0f1013;
   --bg-2: #14161a;

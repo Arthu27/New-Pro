@@ -226,11 +226,11 @@ try:
 
     ch, ping = apply_target('Хелпер', gch)
     check(ch is not None and ch.id == 501 and ping == '<@&601>',
-          'заявка хелпера → ветка хелперов (501) + пинг кураторов хелперов',
+          'заявка хелпера → ветка хелперов (501) + пинг куратора',
           f'→ канал {getattr(ch, "id", None)}, пинг {ping}')
     ch, ping = apply_target('Модератор', gch)
-    check(ch is not None and ch.id == 502 and ping == '<@&602>',
-          'заявка модератора → ветка модераторов (502) + пинг своих кураторов')
+    check(ch is not None and ch.id == 502 and ping == '<@&601>',
+          'куратор ОДИН: пингуется та же роль и в ветке модераторов')
     ch, ping = apply_target('Chat Control', gch)
     check(ch.id == 502, 'легаси чат-контроль ведётся в ветку модераторов')
 
@@ -257,7 +257,7 @@ check('apply_target (data .get' in src_web or 'apply_target(data' in src_web,
       'веб-заявка уходит в ту же ветку по должности')
 
 # ── 4. Кнопки в Discord: одобрение выдаёт роль ───────────────────────
-print('== Кнопки «Одобрить» в Discord ==')
+print('== Select «Принять/Отклонить» в Discord ==')
 apps = {'42': {
     'user_id': '42', 'username': 'cand', 'display_name': 'cand', 'avatar': None,
     'role': 'Helper', 'age': '18', 'experience': '-', 'reason': '-', 'activity': '-',
@@ -405,10 +405,10 @@ from services import staff_roles as SR
 SR.STAFF_SETTINGS_FILE = os.path.join(TMP, 'data', 'staff_apply_settings.json')
 SR.save_setting(777, 'helper_channel', 501)
 SR.save_setting(777, 'moderator_channel', 502)
-SR.save_setting(777, 'helper_curator_role', 601)
+SR.save_setting(777, 'curator_role', 601)
 SR.save_setting(777, 'helper_role', 10)
 st = SR.load_settings(777)
-check(st['helper_channel'] == 501 and st['helper_curator_role'] == 601,
+check(st['helper_channel'] == 501 and st['curator_role'] == 601,
       'настройки панели сохраняются и читаются')
 check(SR.setting(777, 'helper_channel', 999) == 501,
       'панель главнее .env')
@@ -416,6 +416,30 @@ check(SR.setting(888, 'helper_channel', 999) == 999,
       'нет настройки панели — берётся .env')
 check(SR.save_setting(777, 'нет_такого_ключа', 1) is False,
       'чужой ключ не пишется')
+check(SR.save_setting(777, 'helper_curator_role', 1) is False,
+      'раздельные кураторы упразднены — ключ больше не пишется')
+
+# легаси: старая раздельная настройка кураторов не теряется
+SR.save_setting(777, 'curator_role', 0)
+with open(SR.STAFF_SETTINGS_FILE, 'r', encoding='utf-8') as f:
+    _legacy = json.load(f)
+_legacy['777']['helper_curator_role'] = 607
+with open(SR.STAFF_SETTINGS_FILE, 'w', encoding='utf-8') as f:
+    json.dump(_legacy, f)
+check(SR.curator_role_id(777) == 607,
+      'старая настройка «кураторы хелперов» работает как куратор')
+check(SR.curator_role_id(778, 999) == 999,
+      'нет куратора нигде — берётся .env')
+
+# select «Принять/Отклонить» вместо кнопок
+src_cog_full = open(os.path.join(repo, 'cogs', 'staff_apply.py'),
+                    encoding='utf-8').read()
+check('staff_review_select_v1' in src_cog_full
+      and 'Принять' in src_cog_full and 'Отклонить' in src_cog_full,
+      'решение по заявке — select «Принять/Отклонить»')
+check('staff_review_approve_v1' in src_cog_full
+      and 'StaffReviewButtonsView' in src_cog_full,
+      'старые заявки с кнопками остаются рабочими')
 
 
 class _GCh:
@@ -426,8 +450,8 @@ class _GCh:
 
 
 _ch, _ping = apply_target('Хелпер', _GCh())
-check(_ch is not None and _ch.id == 501 and _ping == '<@&601>',
-      'бот учитывает настройки панели: ветка + пинг')
+check(_ch is not None and _ch.id == 501 and _ping == '<@&607>',
+      'бот учитывает панель: ветка + пинг куратора (легаси-ключ)')
 
 from cogs.staff_apply import apply_target as _at  # noqa: E401
 
@@ -438,8 +462,19 @@ tpl = open(os.path.join(repo, 'web', 'templates', 'channel_settings.html'),
 check('staff_helper_channel' in repo_cs and 'staff_moderator_channel' in repo_cs,
       'маршруты веток заявок зарегистрированы в панели')
 check('/api/staff-role-routes/' in repo_cs, 'API настроек ролей заявок есть')
-check('Роли заявок в команду' in tpl and 'renderRoles' in tpl,
-      'на странице есть секция «Роли заявок» с селекторами')
+tpl_bot = open(os.path.join(repo, 'web', 'templates', 'bot_settings.html'),
+               encoding='utf-8').read()
+check('Заявки в команду' in tpl_bot and 'renderStaffRoles' in tpl_bot,
+      'роли заявок — на странице «Настройки → Бот»')
+check('renderRoles' not in tpl and 'chsRoles' not in tpl,
+      'на «Каналы и маршруты» ролей больше нет — только каналы')
+check('"curator_role"' in open(os.path.join(repo, 'services', 'staff_roles.py'),
+                               encoding='utf-8').read(),
+      'куратор один: ключ curator_role')
+style_css = open(os.path.join(repo, 'web', 'static', 'style.css'),
+                 encoding='utf-8').read()
+check('color-scheme: dark' in style_css and 'select option' in style_css,
+      'выпадающие списки больше не белые (color-scheme по теме)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

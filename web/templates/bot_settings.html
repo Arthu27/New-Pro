@@ -4,9 +4,9 @@
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Тикеты <span class="sep">·</span> Настройки</div>
+    <div class="eyebrow">Настройки <span class="sep">·</span> Бот</div>
     <h1>Настройки бота</h1>
-    <p class="lead">То, что реально применяется прямо сейчас: присутствие бота в Discord и синхронизация slash-команд.</p>
+    <p class="lead">То, что реально применяется прямо сейчас: присутствие бота, синхронизация slash-команд и заявки в команду.</p>
   </div>
 </div>
 
@@ -33,6 +33,9 @@
 .bs-out.show{display:block;animation:fadeUp .25s ease}
 .bs-out.ok{color:var(--ok);background:color-mix(in srgb, var(--ok) 8%, transparent);border:1px solid color-mix(in srgb, var(--ok) 25%, transparent)}
 .bs-out.err{color:var(--err);background:color-mix(in srgb, var(--err) 8%, transparent);border:1px solid color-mix(in srgb, var(--err) 25%, transparent)}
+.bs-staff-row{display:flex;align-items:center;gap:10px;margin-top:9px}
+.bs-staff-row label{font-size:11.5px;font-weight:700;color:var(--text-3);min-width:110px}
+.bs-staff-row select{flex:1;min-width:0}
 .bs-toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;transform:translateY(12px);pointer-events:none;transition:.3s;z-index:99}
 .bs-toast.show{opacity:1;transform:translateY(0)}
 .bs-toast.ok{background:rgba(46,204,113,.95);color:#08130c}
@@ -84,6 +87,20 @@
       <button class="btn btn-primary" id="bs-sync" type="button"><i class="fas fa-sync"></i> Синхронизировать</button>
     </div>
     <div class="bs-out" id="bs-sync-out"></div>
+  </div>
+
+  <!-- Заявки в команду -->
+  <div class="bs-card" data-reveal>
+    <div class="bs-head">
+      <div class="bs-icon"><i class="fas fa-id-badge"></i></div>
+      <div><div class="bs-title">Заявки в команду</div>
+        <div class="bs-sub">Роли для набора в команду: что выдаётся после одобрения и кого пинговать в ветках. «Авто» — бот сам найдёт роль по имени («Хелпер»/«Модератор») или возьмёт ID из .env. Каналы веток — на странице «Каналы и маршруты».</div></div>
+    </div>
+    <div id="bs-staff-box"><div class="bs-info-row"><span class="k">Загрузка…</span></div></div>
+    <div class="bs-actions">
+      <button class="btn btn-primary" id="bs-staff-save" type="button"><i class="fas fa-save"></i> Применить</button>
+      <span class="bs-live" id="bs-staff-live"></span>
+    </div>
   </div>
 
   <!-- Инфо -->
@@ -170,13 +187,77 @@
       });
   }
 
+  /* ── Заявки в команду: роли ─────────────────────────────── */
+  var STAFF_ROLES = [];
+  var STAFF_GUILD_ROLES = [];
+  var STAFF_CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+
+  function roleName(id) {
+    var r = STAFF_GUILD_ROLES.find(function (x) { return String(x.id) === String(id); });
+    return r ? r.name : null;
+  }
+
+  function renderStaffRoles() {
+    var box = $('bs-staff-box');
+    if (!STAFF_ROLES.length) {
+      box.innerHTML = '<div class="bs-info-row"><span class="k">Роли заявок не загрузились</span></div>';
+      return;
+    }
+    box.innerHTML = STAFF_ROLES.map(function (r) {
+      var opts = '<option value="0"' + (r.role_id ? '' : ' selected') + '>— Авто (по имени / из .env) —</option>' +
+        STAFF_GUILD_ROLES.map(function (x) {
+          var sel = String(x.id) === String(r.role_id) ? ' selected' : '';
+          return '<option value="' + String(x.id) + '"' + sel + '>' + String(x.name) + '</option>';
+        }).join('');
+      return '<div class="bs-staff-row"><label>' + r.label + '</label>' +
+        '<select id="bs-staff-' + r.key + '" aria-label="' + r.label + '"' + (STAFF_CAN_EDIT ? '' : ' disabled') + '>' + opts + '</select></div>';
+    }).join('');
+  }
+
+  function loadStaffRoles() {
+    fetch('/api/staff-role-routes').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.success) throw new Error('api');
+      STAFF_ROLES = d.roles || [];
+      STAFF_GUILD_ROLES = d.guild_roles || [];
+      renderStaffRoles();
+    }).catch(function () {
+      $('bs-staff-box').innerHTML = '<div class="bs-info-row"><span class="k">Не удалось загрузить</span></div>';
+    });
+  }
+
+  function saveStaffRoles() {
+    if (!STAFF_CAN_EDIT) { toast('Менять роли может только админ', false); return; }
+    $('bs-staff-live').textContent = '';
+    Promise.all(STAFF_ROLES.map(function (r) {
+      var sel = $('bs-staff-' + r.key);
+      if (!sel) return Promise.resolve(true);
+      return fetch('/api/staff-role-routes/' + encodeURIComponent(r.key), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_id: sel.value || '0' })
+      }).then(function (x) { return x.json(); }).then(function (d) {
+        if (d && d.success) r.role_id = Number(sel.value) || 0;
+        return !!(d && d.success);
+      });
+    })).then(function (res) {
+      if (res.every(function (x) { return x; })) {
+        renderStaffRoles();
+        toast('Роли заявок сохранены', true);
+        $('bs-staff-live').textContent = 'применяется сразу';
+      } else {
+        toast('Часть ролей не сохранилась — попробуйте ещё раз', false);
+        loadStaffRoles();
+      }
+    }).catch(function () { toast('Сеть недоступна', false); });
+  }
+
   function bind() {
     $('bs-save').addEventListener('click', savePresence);
     $('bs-sync').addEventListener('click', sync);
+    $('bs-staff-save').addEventListener('click', saveStaffRoles);
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); load(); });
-  else { bind(); load(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); load(); loadStaffRoles(); });
+  else { bind(); load(); loadStaffRoles(); }
 })();
 </script>
 {% endblock %}

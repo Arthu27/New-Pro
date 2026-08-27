@@ -312,22 +312,7 @@ def register(ctx):
                 'access': spec['access'],
                 'channel_id': cid,
             })
-        roles_out = []
-        for spec in _SR.ROLE_SPECS:
-            try:
-                rid = int(_SR.load_settings(gid).get(spec['key']) or 0)
-            except Exception:
-                rid = 0
-            roles_out.append({
-                'key': spec['key'],
-                'label': spec['label'],
-                'icon': spec['icon'],
-                'what': spec['what'],
-                'empty': spec['empty'],
-                'role_id': rid,
-            })
-        return jsonify({'success': True, 'routes': out,
-                        'staff_roles': roles_out, 'gid': str(gid)})
+        return jsonify({'success': True, 'routes': out, 'gid': str(gid)})
 
     @app.route('/api/channel-routes/<key>', methods=['POST'])
     @login_required
@@ -373,6 +358,43 @@ def register(ctx):
                 'channels', f'Маршрут очищен: {spec["label"]}',
                 f'{who}: вернули поведение по умолчанию')
         return jsonify({'success': True, 'key': key, 'channel_id': cid})
+
+    @app.route('/api/staff-role-routes', methods=['GET'])
+    @login_required
+    @role_required('mod')
+    def api_staff_role_routes_get():
+        """Роли заявок: настройки + список ролей сервера для селектов."""
+        gid = _active_gid(ctx)
+        roles_out = []
+        for spec in _SR.ROLE_SPECS:
+            try:
+                rid = int(_SR.load_settings(gid).get(spec['key']) or 0)
+            except Exception:
+                rid = 0
+            roles_out.append({
+                'key': spec['key'],
+                'label': spec['label'],
+                'icon': spec['icon'],
+                'what': spec['what'],
+                'empty': spec['empty'],
+                'role_id': rid,
+            })
+        guild_roles = []
+        import web.app as _app
+        bot = _app.bot_instance
+        guild = bot.get_guild(int(gid)) if (bot and gid) else None
+        if guild is not None:
+            guild_roles = [{'id': str(r.id), 'name': r.name}
+                           for r in getattr(guild, 'roles', [])]
+        elif _app._demo_mode():
+            try:
+                from web.routes.guild_admin import _demo_roles_seed
+                guild_roles = [{'id': str(r['id']), 'name': r['name']}
+                               for r in _demo_roles_seed()]
+            except Exception as _ex:
+                _log.debug('staff-role-routes: демо-роли: %s', _ex)
+        return jsonify({'success': True, 'roles': roles_out,
+                        'guild_roles': guild_roles, 'gid': str(gid)})
 
     @app.route('/api/staff-role-routes/<key>', methods=['POST'])
     @login_required

@@ -33,11 +33,14 @@ STAFF_SETTING_KEYS = (
     "moderator_channel",      # ветка заявок модераторов
     "helper_role",            # роль, выдаваемая хелперу
     "moderator_role",         # роль, выдаваемая модератору
-    "helper_curator_role",    # кого пинговать в ветке хелперов
-    "moderator_curator_role", # кого пинговать в ветке модераторов
+    "curator_role",           # куратор заявок — ОДИН на обе ветки
 )
 
-# Спецификации для панели («Каналы и маршруты» → роли заявок)
+# Кураторская роль раньше была раздельной (хелперы/модераторы) — читаем
+# старые ключи как запасное значение, чтобы настройки не потерялись.
+LEGACY_CURATOR_KEYS = ("helper_curator_role", "moderator_curator_role")
+
+# Спецификации для панели («Настройки» → «Бот» → «Заявки в команду»)
 ROLE_SPECS = [
     {
         "key": "helper_role",
@@ -56,19 +59,12 @@ ROLE_SPECS = [
         "empty": "Авто: поиск по имени на сервере.",
     },
     {
-        "key": "helper_curator_role",
-        "label": "Кураторы хелперов",
+        "key": "curator_role",
+        "label": "Куратор заявок",
         "icon": "fa-user-graduate",
-        "what": "Эту роль бот пингует в ветке заявок хелперов — "
-                "«за каждый поток отвечает свой куратор».",
+        "what": "Эту роль бот пингует в обеих ветках заявок (хелперы и "
+                "модераторы) — куратор один на весь набор.",
         "empty": "Не задана — пинга нет, заявка просто приходит в ветку.",
-    },
-    {
-        "key": "moderator_curator_role",
-        "label": "Кураторы модераторов",
-        "icon": "fa-user-shield",
-        "what": "Эту роль бот пингует в ветке заявок модераторов.",
-        "empty": "Не задана — пинга нет.",
     },
 ]
 
@@ -81,7 +77,11 @@ def load_settings(guild_id) -> dict:
         with open(STAFF_SETTINGS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         row = (data.get(str(guild_id)) or {}) if isinstance(data, dict) else {}
-        return {k: row.get(k, 0) for k in STAFF_SETTING_KEYS}
+        out = {k: row.get(k, 0) for k in STAFF_SETTING_KEYS}
+        for lk in LEGACY_CURATOR_KEYS:
+            if row.get(lk):
+                out["curator_role"] = out["curator_role"] or row.get(lk)
+        return out
     except Exception as e:
         log.warning(f"[staff_roles] load_settings: {e}")
         return {k: 0 for k in STAFF_SETTING_KEYS}
@@ -120,6 +120,19 @@ def setting(guild_id, key, env_value=0) -> int:
     except (TypeError, ValueError):
         stored = 0
     return stored or int(env_value or 0)
+
+
+def curator_role_id(guild_id, env_value=0) -> int:
+    """Роль куратора: панель (curator_role → старые раздельные ключи) → .env."""
+    stored = load_settings(guild_id)
+    for key in ("curator_role",) + LEGACY_CURATOR_KEYS:
+        try:
+            val = int(stored.get(key) or 0)
+        except (TypeError, ValueError):
+            val = 0
+        if val:
+            return val
+    return int(env_value or 0)
 
 # Варианты имён ролей на сервере (регистр не важен)
 NAME_VARIANTS = {

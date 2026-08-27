@@ -57,12 +57,13 @@ from services import channel_routes as CHR  # noqa: E402
 from web.routes.channel_settings import ADAPTERS  # noqa: E402
 
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 14 and len(set(keys)) == 14,
-      f'14 уникальных маршрутов ({len(keys)})')
+check(len(keys) == 17 and len(set(keys)) == 17,
+      f'17 уникальных маршрутов — 14 систем + 3 канала заявок ({len(keys)})')
 need = {'proof_channel', 'appeals_channel', 'welcome_channel', 'tagjail_channel',
         'guardian_channel', 'antiraid_channel', 'security_channel',
         'anticrash_channel', 'counting_channel', 'starboard_channel',
-        'night_report_channel', 'mod_digest_channel', 'shifts_channel',
+        'night_report_channel', 'mod_digest_channel',
+        'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel', 'shifts_channel',
         'ticket_notify_channel'}
 check(set(keys) == need, f'все системы на хабе ({len(need)})')
 check(set(ADAPTERS) == set(keys), 'у каждого маршрута есть адаптер')

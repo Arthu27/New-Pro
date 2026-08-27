@@ -158,23 +158,24 @@ def generate_staff_panel_bytes() -> io.BytesIO:
 def apply_target(role_name: str, guild):
     """Куда отправить новую заявку: своя ветка на должность + кого позвать.
 
-    Хелперам и модераторам — отдельные каналы (STAFF_HELPER_CHANNEL_ID /
-    STAFF_MODERATOR_CHANNEL_ID), каждому своему куратору; кураторов бот
-    пингует ролью (STAFF_*_CURATOR_ROLE_ID). Запасной канал — общий
-    APPLY_CHANNEL_ID. Возвращает (channel, content) или (None, '')."""
-    from services.staff_roles import normalize_position, setting
+    Хелперам и модераторам — отдельные каналы (панель: «Каналы и
+    маршруты»), куратор ОДИН на обе ветки (панель: «Бот»), бот пингует
+    его роль. Запасной канал — общий APPLY_CHANNEL_ID.
+    Возвращает (channel, content) или (None, '')."""
+    from services.staff_roles import curator_role_id, normalize_position, setting
     if not guild:
         return None, ''
     kind = normalize_position(role_name) or 'moderator'
     if kind == 'helper':
         cid = setting(guild.id, 'helper_channel', Config.STAFF_HELPER_CHANNEL_ID)
-        cur = setting(guild.id, 'helper_curator_role',
-                      Config.STAFF_HELPER_CURATOR_ROLE_ID)
     else:
         cid = setting(guild.id, 'moderator_channel',
                       Config.STAFF_MODERATOR_CHANNEL_ID)
-        cur = setting(guild.id, 'moderator_curator_role',
-                      Config.STAFF_MODERATOR_CURATOR_ROLE_ID)
+    cur = curator_role_id(
+        guild.id,
+        Config.STAFF_CURATOR_ROLE_ID
+        or Config.STAFF_HELPER_CURATOR_ROLE_ID
+        or Config.STAFF_MODERATOR_CURATOR_ROLE_ID)
     ch = guild.get_channel(cid) if cid else None
     if ch is None:
         # общий канал: настройка панели главнее .env
@@ -328,14 +329,14 @@ class RoleSelect(discord.ui.Select):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Кнопки рассмотрения заявки (persistent) — Одобрить / Отклонить
+# Рассмотрение заявки (persistent) — Select «Принять / Отклонить»
 # ═══════════════════════════════════════════════════════════════════
 
 class StaffReviewView(discord.ui.View):
-    """Кнопки под сообщением заявки: решение модератора + DM заявителю."""
+    """Select под сообщением заявки: решение модератора + DM заявителю."""
 
     def __init__(self):
-        super().__init__(timeout=None)
+        super().__init__(timeout=None)  # select добавлен декоратором ниже
 
     @staticmethod
     def _find_app_by_message(message_id):
@@ -439,15 +440,36 @@ class StaffReviewView(discord.ui.View):
             f"{'отправлено в ЛС' if dm_ok else 'НЕ доставлено (у пользователя закрыты ЛС)'}",
             ephemeral=True)
 
+    @discord.ui.select(
+        placeholder="Действие с заявкой",
+        options=[
+            discord.SelectOption(label="Принять", value="approve",
+                                 description="Одобрить заявку и выдать роль"),
+            discord.SelectOption(label="Отклонить", value="reject",
+                                 description="Отклонить заявку"),
+        ],
+        custom_id="staff_review_select_v1", min_values=1, max_values=1)
+    async def review_select(self, interaction: discord.Interaction,
+                            select: discord.ui.Select):
+        await self._review(interaction, select.values[0])
+
+
+class StaffReviewButtonsView(discord.ui.View):
+    """Старые кнопки: остаются живыми на заявках, отправленных до
+    перехода на select (persistent custom_id совпадает)."""
+
+    def __init__(self):
+        super().__init__(timeout=None)
+
     @discord.ui.button(label="Одобрить", style=discord.ButtonStyle.success,
                        custom_id="staff_review_approve_v1")
     async def approve_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._review(interaction, "approve")
+        await StaffReviewView()._review(interaction, "approve")
 
     @discord.ui.button(label="Отклонить", style=discord.ButtonStyle.danger,
                        custom_id="staff_review_reject_v1")
     async def reject_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._review(interaction, "reject")
+        await StaffReviewView()._review(interaction, "reject")
 
 
 class StaffApplyView(discord.ui.View):
@@ -565,6 +587,7 @@ class StaffApply(commands.Cog):
         # Регистрируем persistent views
         self.bot.add_view(StaffApplyView())
         self.bot.add_view(StaffReviewView())
+        self.bot.add_view(StaffReviewButtonsView())  # старые заявки с кнопками
 
 
 async def setup(bot):

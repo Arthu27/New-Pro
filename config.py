@@ -184,6 +184,9 @@ class Config:
     STAFF_HELPER_CHANNEL_ID: int = _env_int('STAFF_HELPER_CHANNEL_ID', 0)
     STAFF_MODERATOR_CHANNEL_ID: int = _env_int('STAFF_MODERATOR_CHANNEL_ID', 0)
     # Кураторы: кого пинговать в ветке (0 = не пинговать)
+    # Куратор заявок один на обе ветки; старые раздельные переменные
+    # работают как запасное значение (если новая не задана)
+    STAFF_CURATOR_ROLE_ID: int = _env_int('STAFF_CURATOR_ROLE_ID', 0)
     STAFF_HELPER_CURATOR_ROLE_ID: int = _env_int('STAFF_HELPER_CURATOR_ROLE_ID', 0)
     STAFF_MODERATOR_CURATOR_ROLE_ID: int = _env_int('STAFF_MODERATOR_CURATOR_ROLE_ID', 0)
 

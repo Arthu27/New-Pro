@@ -45,19 +45,19 @@
   <div class="sk-row" style="width:70%"></div>
 </div>
 
-<h2 style="margin:26px 0 2px;font-size:17px;display:flex;align-items:center;gap:9px"><i class="fas fa-id-badge" style="color:var(--ac)"></i> Роли заявок в команду</h2>
-<p style="margin:0 0 4px;font-size:12.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent))">Кого бот пингует в ветках и какие роли выдаёт после одобрения. «Авто» — бот сам найдёт роль по имени («Хелпер»/«Модератор») или возьмёт ID из .env.</p>
-<div class="chs-list" id="chsRoles">
-  <div class="sk-row"></div>
-  <div class="sk-row" style="width:60%"></div>
-</div>
-
 <div class="chs-info">
   <h3><i class="fas fa-circle-info"></i> Логи создаются сами</h3>
   Системные каналы логов (<code>-модерация</code>, <code>-сообщения</code>, <code>-участники</code>, <code>-сервер</code>)
   бот <b>создаёт и чинит автоматически</b> в категории «Логи» — их не нужно (и нельзя) переназначать:
   лента всегда найдёт их по имени. Здесь настраиваются только <b>особые маршруты</b> — страницы этих
   систем дублируют те же настройки (Апелляции, Приветствие, Tag Jail), расхождений не будет.
+</div>
+
+<div class="chs-info" style="margin-top:10px">
+  <h3><i class="fas fa-id-badge"></i> Роли заявок — на странице «Бот»</h3>
+  Какие роли выдаются после одобрения (хелпер/модератор) и роль куратора, которого бот
+  пингует в ветках, настраиваются в разделе <b>«Настройки» → «Бот»</b> — там же, где
+  присутствие и синхронизация команд. Куратор один на обе ветки.
 </div>
 
 <script>
@@ -67,62 +67,6 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 
 var CHS_ROUTES = [];
 var CHS_CHANNELS = [];
-var CHS_STAFF_ROLES = [];
-var CHS_GUILD_ROLES = [];
-var CHS_GID = '';
-
-function roleName(id) {
-  var r = CHS_GUILD_ROLES.find(function (x) { return String(x.id) === String(id); });
-  return r ? r.name : null;
-}
-
-function renderRoles() {
-  var box = document.getElementById('chsRoles');
-  if (!box) return;
-  if (!CHS_STAFF_ROLES.length) {
-    box.innerHTML = '<div class="empty-state"><i class="fas fa-id-badge"></i><p>Роли заявок не загрузились</p></div>';
-    return;
-  }
-  box.innerHTML = CHS_STAFF_ROLES.map(function (r) {
-    var nm = r.role_id ? roleName(r.role_id) : null;
-    var cur = r.role_id
-      ? '<span class="chs-cur ' + (nm ? 'ok' : 'off') + '"><i class="fas fa-id-badge"></i>' +
-        esc(nm || ('ID ' + r.role_id + ' — не найдена')) + '</span>'
-      : '<span class="chs-cur off"><i class="fas fa-wand-magic-sparkles"></i>авто</span>';
-    var opts = '<option value="0"' + (r.role_id ? '' : ' selected') + '>— Авто (по имени / из .env) —</option>' +
-      CHS_GUILD_ROLES.map(function (x) {
-        var sel = String(x.id) === String(r.role_id) ? ' selected' : '';
-        return '<option value="' + esc(x.id) + '"' + sel + '>' + esc(x.name) + '</option>';
-      }).join('');
-    return '<div class="chs-row">' +
-      '<div class="chs-ico"><i class="fas ' + esc(r.icon || 'fa-id-badge') + '"></i></div>' +
-      '<div><div class="chs-name">' + esc(r.label) + ' ' + cur + '</div>' +
-        '<div class="chs-what">' + esc(r.what || '') + '</div>' +
-        '<div class="chs-empty">' + esc(r.empty || '') + '</div></div>' +
-      '<div class="chs-edit">' +
-        '<select id="chr-' + esc(r.key) + '" aria-label="' + esc(r.label) + '"' + (CAN_EDIT ? '' : ' disabled') + '>' + opts + '</select>' +
-        (CAN_EDIT ? '<button type="button" class="btn btn-primary chs-save" aria-label="Сохранить роль" title="Сохранить" onclick="chrSave(\'' + esc(r.key) + '\')"><i class="fas fa-check"></i></button>' : '') +
-      '</div></div>';
-  }).join('');
-}
-
-async function chrSave(key) {
-  var sel = document.getElementById('chr-' + key);
-  if (!sel) return;
-  var rid = sel.value || '0';
-  var r = await fetch('/api/staff-role-routes/' + encodeURIComponent(key), {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ role_id: rid })
-  });
-  var d = await r.json().catch(function () { return {}; });
-  if (r.ok && d.success) {
-    var nm = rid === '0' ? 'авто' : (roleName(rid) || rid);
-    if (window.showToast) window.showToast('Роль обновлена: ' + nm, true);
-    chsLoad();
-  } else {
-    if (window.showToast) window.showToast(d.error || 'Не удалось сохранить', false);
-  }
-}
 
 function chName(id) {
   var ch = CHS_CHANNELS.find(function (c) { return String(c.id) === String(id); });
@@ -168,20 +112,9 @@ async function chsLoad() {
   } catch (e) { CHS_CHANNELS = []; }
   try {
     var d = await fetch('/api/channel-routes').then(function (r) { return r.json(); });
-    if (d.success) {
-      CHS_ROUTES = d.routes || [];
-      CHS_STAFF_ROLES = d.staff_roles || [];
-      CHS_GID = d.gid || '';
-    }
+    if (d.success) CHS_ROUTES = d.routes || [];
   } catch (e) { /* API Guard покажет */ }
-  if (CHS_GID) {
-    try {
-      var rd = await fetch('/api/role-permissions/' + encodeURIComponent(CHS_GID)).then(function (r) { return r.json(); });
-      CHS_GUILD_ROLES = (rd && rd.roles) || [];
-    } catch (e) { CHS_GUILD_ROLES = []; }
-  }
   if (window.renderSafe) window.renderSafe(render); else render();
-  renderRoles();
 }
 
 async function chsSave(key) {
@@ -194,9 +127,13 @@ async function chsSave(key) {
   });
   var d = await r.json().catch(function () { return {}; });
   if (r.ok && d.success) {
+    CHS_ROUTES = CHS_ROUTES.map(function (x) {
+      if (x.key === key) x.channel_id = Number(cid) || 0;
+      return x;
+    });
+    render();  // сразу, без перезагрузки списка — никакой вспышки
     var nm = cid === '0' ? 'авто-режим' : ('#' + (chName(cid) || cid));
     if (window.showToast) window.showToast('Маршрут обновлён: ' + nm, true);
-    chsLoad();
   } else {
     if (window.showToast) window.showToast(d.error || 'Не удалось сохранить', false);
   }
