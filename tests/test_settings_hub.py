@@ -52,20 +52,20 @@ def check(ok, msg):
 GID = 987654321098765432
 
 # ═══ 1. Хаб каналов: 14 маршрутов, новые адаптеры ════════════════════════
-print('== хаб каналов: 19 маршрутов ==')
+print('== хаб каналов: 20 маршрутов ==')
 from services import channel_routes as CHR  # noqa: E402
 from web.routes.channel_settings import ADAPTERS  # noqa: E402
 
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 19 and len(set(keys)) == 19,
-      f'19 уникальных маршрутов — 16 систем + 3 канала заявок ({len(keys)})')
+check(len(keys) == 20 and len(set(keys)) == 20,
+      f'20 уникальных маршрутов — 17 систем + 3 канала заявок ({len(keys)})')
 need = {'ban_appeal_channel',
         'proof_channel', 'appeals_channel', 'welcome_channel', 'tagjail_channel',
         'guardian_channel', 'antiraid_channel', 'security_channel',
         'anticrash_channel', 'counting_channel', 'starboard_channel',
         'night_report_channel', 'mod_digest_channel',
         'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel', 'shifts_channel',
-        'ticket_notify_channel', 'appeal_menu_channel'}
+        'ticket_notify_channel', 'appeal_menu_channel', 'pagerduty_channel'}
 check(set(keys) == need, f'все системы на хабе ({len(need)})')
 check(set(ADAPTERS) == set(keys), 'у каждого маршрута есть адаптер')
 
@@ -101,8 +101,8 @@ from services import panel_menu as PM  # noqa: E402
 
 pages = [p for g in PM.MENU for p in g['pages']]
 paths = [p['path'] for p in pages]
-check(len(paths) == 121 and len(set(paths)) == 121,
-      f'в меню 121 уникальная страница ({len(paths)})')
+check(len(paths) == 122 and len(set(paths)) == 122,
+      f'в меню 122 уникальные страницы ({len(paths)})')
 groups = {g['key']: g for g in PM.MENU}
 check('settings' in groups, 'категория «Настройки» существует')
 sg = groups['settings']
@@ -111,8 +111,8 @@ check(sg['group'] == 'Настройки' and bool(sg.get('icon')),
 sp = [p['path'] for p in sg['pages']]
 want = ['/settings', '/command-switches', '/mod-settings', '/channel-settings',
         '/bot-settings', '/ticket-settings', '/welcome-editor', '/rules-editor',
-        '/warn-config', '/automation', '/notifications', '/theme-settings',
-        '/theme-studio', '/anticrash', '/log-settings']
+        '/warn-config', '/automation', '/notifications', '/pagerduty',
+        '/theme-settings', '/theme-studio', '/anticrash', '/log-settings']
 check(sp == want, f'страницы категории в верном порядке ({len(sp)})')
 gkeys = [g['key'] for g in PM.MENU]
 check(gkeys.index('settings') == gkeys.index('bot') + 1,

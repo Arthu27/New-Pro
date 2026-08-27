@@ -46,6 +46,17 @@ ROUTE_SPECS = [
         'empty': 'Не задан — меню можно опубликовать из «Настроек модерации».',
     },
     {
+        'key': 'pagerduty_channel',
+        'label': 'Канал тревог PagerDuty',
+        'icon': 'fa-tower-broadcast',
+        'kind': 'native',
+        'access': 'Админ',
+        'what': 'Карточки инцидентов PagerDuty (тревога / принято / решено) '
+                'с цветом и ссылкой на инцидент. Сам мост включается на '
+                'странице «PagerDuty» в настройках панели.',
+        'empty': 'Не задан — тревоги PagerDuty некуда постить (мост молчит).',
+    },
+    {
         'key': 'proof_channel',
         'label': 'Канал доказательств',
         'icon': 'fa-folder-open',
