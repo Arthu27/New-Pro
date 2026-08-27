@@ -40,6 +40,47 @@ async def _respond (interaction ,**kw ):
             log .warning (f'[MODPANEL] Ответ не доставлен и через followup: {_e2}')
 
 
+# ── Длительности: понятный ввод + потолок из панели ──────────────────────
+import re as _re_mod
+
+_DUR_UNITS = [
+    (('д', 'дн', 'd', 'day', 'день', 'дня', 'дней'), 1440),
+    (('ч', 'h', 'hour', 'час', 'часа', 'часов'), 60),
+    (('м', 'm', 'min', 'мин', 'минут', 'минута', 'минуты'), 1),
+    (('н', 'w', 'нед', 'недел', 'week'), 10080),
+]
+
+
+def parse_duration_minutes(raw, default=5):
+    """'90' → 90 мин; '1ч'/'2 часа'/'1h' → 60/120; '1д' → 1440; '30м' → 30.
+
+    Понимает опечатки и русские/английские единицы. Не понял — default.
+    """
+    txt = str(raw or '').strip().lower().replace(' ', '')
+    if not txt:
+        return default
+    m = _re_mod.match(r'^(\d+(?:[.,]\d+)?)(.*)$', txt)
+    if not m:
+        return default
+    num = float(m.group(1).replace(',', '.'))
+    unit = m.group(2)
+    if not unit:
+        return max(1, int(num))                      # просто число = минуты
+    for variants, mult in _DUR_UNITS:
+        if unit.startswith(variants):
+            return max(1, int(num * mult))
+    return default
+
+
+def human_duration(minutes):
+    minutes = int(minutes)
+    if minutes % 1440 == 0 and minutes >= 1440:
+        d = minutes // 1440
+        return f'{d} дн'
+    if minutes % 60 == 0 and minutes >= 60:
+        return f'{minutes // 60} ч'
+    return f'{minutes} мин'
+
 class Moderation (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -162,8 +203,9 @@ class Moderation (commands .Cog ):
         # /leaveguild 
 
     # ═══════════════════════════════════════════════════════════════════
-    #  /modpanel — панель модерации через select-меню
-    # ═══════════════════════════════════════════════════════════════════
+
+
+    #  /modpanel — панель модерации через select-меню════════════════════════════════════════════════════════════════
     @app_commands .command (name ="modpanel",description ="Панель модерации (выпадающее меню)")
     @app_commands .checks .has_permissions (moderate_members =True )
     async def modpanel (self ,interaction ):
@@ -360,10 +402,37 @@ class Moderation (commands .Cog ):
                 _sl_ok ,_sl_used ,_sl_lim =_sl_check (guild .id ,interaction .user .id ,_sl_key ,_sl_amt ,role_ids =_sl_roles )
                 if not _sl_ok :
                     _what =ACTION_TITLES .get (_sl_key ,'действий' )
+                    _left =max (0 ,_sl_lim -_sl_used )
+                    _txt =f'Лимит исчерпан: {_sl_lim} {_what} (использовано {_sl_used}, осталось {_left}).'
+                    try :
+                        from services .staff_limits import refresh_in_text as _sl_refresh
+                        _when =_sl_refresh (guild .id ,interaction .user .id ,_sl_key )
+                        if _when :_txt +=f' Обновится через {_when}.'
+                    except Exception :pass
+                    _txt +=' Настраивается: панель → Щит сервера → Лимиты.'
                     await _respond (interaction ,
-                    embed =error_embed (f'Лимит исчерпан: {_sl_lim} {_what} (уже {_sl_used}). Период настраивается в «Лимитах команды».'),
+                    embed =error_embed (_txt),
                     ephemeral =True )
                     return
+                # Потолок длительности мута (панель → Щит → Лимиты):
+                # просит дольше разрешённого — вежливый отказ, а не молчание
+                if action in ('timeout','mute_chat'):
+                    try :
+                        from services .staff_limits import effective_max_duration as _sl_cap
+                        _cap =_sl_cap (guild .id ,'mute',_sl_roles )
+                        if _cap :
+                            _minutes_req =parse_duration_minutes (amount ,5 )
+                            if _minutes_req *60 >_cap :
+                                await _respond (interaction ,
+                                embed =error_embed (
+                                f'Мут дольше разрешённого: тебе можно давать мут '
+                                f'только до {human_duration (max (1,_cap //60 ))}, а ты просишь '
+                                f'{human_duration (_minutes_req )}. '
+                                f'Потолок настраивается: панель → Щит сервера → Лимиты.'),
+                                ephemeral =True )
+                                return
+                    except Exception as _cex :
+                        log .debug (f'[STAFF_LIMIT][dur] {_cex}')
         except Exception as _le :
             log .debug (f'[STAFF_LIMIT] {_le}')
 
@@ -417,10 +486,7 @@ class Moderation (commands .Cog ):
                         await interaction .response .send_message ("🛡 Кик отключён на этом сервере — используй мут или апелляцию.",ephemeral =True )
                     return 
                 elif action in ("timeout","mute_chat"):
-                    try :
-                        minutes =max (1 ,int (amount )if str (amount ).strip () else 5 )
-                    except (TypeError ,ValueError ):
-                        minutes =5
+                    minutes =parse_duration_minutes (amount ,5 )
                     until =datetime.now(timezone.utc)+timedelta (minutes =minutes )
                     await user .timeout (until ,reason =reason )
                     if action =="mute_chat":
@@ -687,7 +753,7 @@ class ModActionModal(discord.ui.Modal):
             if action == "clear":
                 _lbl, _ph, _d = "Сколько сообщений удалить?", "например: 25", "10"
             else:
-                _lbl, _ph, _d = "На сколько минут?", "например: 60", "5"
+                _lbl, _ph, _d = "На сколько? (мин/час/дни)", "60, 1ч, 3ч, 1д…", "60"
             self.amount = discord.ui.TextInput(
                 label=_lbl, required=False, placeholder=_ph, default=_d,
             )

@@ -301,6 +301,12 @@
       <span id="gdLimOwnerNote" hidden style="color:#f0b26b">Менять лимиты может только владелец сервера.</span></div>
     <div id="gdLimGlobal"></div>
     <div class="hint" id="gdLimGlobalMsg" style="margin-top:8px"></div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-2,color-mix(in srgb, var(--text) 12%, transparent))">
+      <span style="font-size:12.5px;font-weight:800"><i class="fas fa-stopwatch" style="color:var(--ac)"></i> Макс. длительность мута</span>
+      <select id="gdDurMute" aria-label="Максимальная длительность мута" style="min-width:180px"></select>
+      <span class="dim" style="font-size:11px">Модератор попросит дольше — бот откажет и подскажет потолок. Роль может задать свой.</span>
+      <span class="hint" id="gdDurMsg" style="flex-basis:100%"></span>
+    </div>
   </div>
 
   <div class="gd-lim-grid">
@@ -323,6 +329,11 @@
         </div>
         <div class="gd-eff" id="gdLimEff"></div>
         <div id="gdLimRoleInputs" style="margin-top:12px"></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line-2,color-mix(in srgb, var(--text) 12%, transparent))">
+          <span style="font-size:12.5px;font-weight:800"><i class="fas fa-stopwatch" style="color:var(--ac)"></i> Своё «макс. мут»</span>
+          <select id="gdDurMuteRole" aria-label="Максимальная длительность мута для роли" style="min-width:180px"></select>
+          <span class="dim" style="font-size:11px">Роль главнее общего потолка.</span>
+        </div>
         <div class="hint" id="gdLimRoleMsg" style="margin:10px 0"></div>
         <div class="row">
           <button type="button" class="btn btn-primary" id="gdLimRoleSave"><i class="fas fa-check"></i> Сохранить роль</button>
@@ -850,6 +861,12 @@ document.addEventListener('click', function (e) {
   toast('Убрано из списка — сохраните изменения', true);
 });
 
+document.addEventListener('change', function (e) {
+  if (!e.target) return;
+  if (e.target.id === 'gdDurMute') saveDurMute();
+  if (e.target.id === 'gdDurMuteRole') saveDurMuteRole();
+});
+
 gdLoad();
 </script>
 
@@ -860,7 +877,7 @@ gdLoad();
   'use strict';
   function $(id) { return document.getElementById(id); }
   var LIM_OWNER = {% if role == 'owner' %}true{% else %}false{% endif %};
-  var L = { roles: [], meta: [], titles: {}, defaults: {}, windows: {}, sel: null };
+  var L = { roles: [], meta: [], titles: {}, defaults: {}, windows: {}, durations: {}, sel: null };
   var CHG = [];
   var _lastRaw = null;
   var _lastChgRaw = null;
@@ -868,6 +885,57 @@ gdLoad();
   var SAVING = false;
 
   function gid() { return String(GUILD_ID || '777'); }
+  var DUR_OPTS = [
+    [0, '— Без потолка —'],
+    [300, '5 минут'], [900, '15 минут'], [1800, '30 минут'],
+    [3600, '1 час'], [10800, '3 часа'], [21600, '6 часов'], [43200, '12 часов'],
+    [86400, '1 день'], [259200, '3 дня'], [604800, '7 дней'], [2419200, '28 дней']
+  ];
+  function durOptions(val) {
+    return DUR_OPTS.map(function (o) {
+      return '<option value="' + o[0] + '"' + (Number(val) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('');
+  }
+  function durText(sec) {
+    for (var i = 0; i < DUR_OPTS.length; i++) if (DUR_OPTS[i][0] === Number(sec)) return DUR_OPTS[i][1];
+    return jWin(sec);
+  }
+  function durMsg(t) {
+    var el = $('gdDurMsg');
+    if (!el) return;
+    el.textContent = t || '';
+    if (t) setTimeout(function () { if ($('gdDurMsg')) $('gdDurMsg').textContent = ''; }, 2800);
+  }
+  function saveDurMute() {
+    if (SAVING || !LIM_OWNER) return;
+    var v = parseInt($('gdDurMute').value, 10) || 0;
+    SAVING = true;
+    fetch('/api/guild/' + gid() + '/staff-limits', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ durations: { mute: v } })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      SAVING = false;
+      durMsg(d.success ? (v ? 'Сохранено: максимум ' + durText(v) : 'Потолок снят') : 'Ошибка: ' + (d.error || 'не сохранено'));
+      load();
+    }).catch(function () { SAVING = false; });
+  }
+  function saveDurMuteRole() {
+    if (!L.sel || SAVING || !LIM_OWNER) return;
+    var v = parseInt($('gdDurMuteRole').value, 10) || 0;
+    SAVING = true;
+    fetch('/api/guild/' + gid() + '/staff-limits/role', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role_id: L.sel, durations: { mute: v } })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      SAVING = false;
+      $('gdLimRoleMsg').textContent = d.success
+        ? (v ? 'Свой потолок мута: ' + durText(v) : 'Свой потолок снят — действует общий')
+        : 'Ошибка: ' + (d.error || 'не сохранено');
+      load();
+    }).catch(function () { SAVING = false; });
+  }
   function winText(w) {
     if (!w) return '1 дн.';
     return (w.n || 1) + ' ' + (w.unit === 'h' ? 'ч' : 'дн.');
@@ -989,6 +1057,10 @@ gdLoad();
                        (r.windows || {})[it.key] || L.windows[it.key],
                        'глобально: ' + (L.defaults[it.key] || '—'), false);
     });
+    if ($('gdDurMuteRole')) {
+      $('gdDurMuteRole').innerHTML = durOptions((r.durations || {}).mute || 0);
+      $('gdDurMuteRole').disabled = !LIM_OWNER;
+    }
     $('gdLimRoleMsg').textContent = '';
     renderRoles();
   }
@@ -1135,6 +1207,12 @@ gdLoad();
         L.meta = d.action_meta || [];
         L.defaults = d.defaults || {};
         L.windows = d.windows || {};
+        L.durations = d.durations || {};
+        if ($('gdDurMute')) {
+          if (document.activeElement !== $('gdDurMute'))
+            $('gdDurMute').innerHTML = durOptions(L.durations.mute || 0);
+          $('gdDurMute').disabled = !LIM_OWNER;
+        }
         if (!LIM_OWNER && $('gdLimOwnerNote')) $('gdLimOwnerNote').hidden = false;
         renderGlobal(!live);
         renderRoles();

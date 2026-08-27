@@ -229,12 +229,15 @@ def register(ctx):
             r['limits'] = ov.get('limits') or {}
             r['windows'] = {k: _win_to_api(v)
                             for k, v in (ov.get('windows') or {}).items()} or {}
+            r['durations'] = ov.get('durations') or {}
         defaults = SL.get_limits(guild_id)
         windows = {k: _win_to_api(v) for k, v in SL.get_windows(guild_id).items()}
+        durations = SL.get_durations(guild_id)
         return jsonify({
             'success': True,
             'defaults': defaults,
             'windows': windows,
+            'durations': durations,
             'action_titles': SL.ACTION_TITLES,
             'action_meta': SL.action_meta(),
             'roles': roles,
@@ -246,7 +249,8 @@ def register(ctx):
     def api_staff_limits_set(guild_id):
         data = request.get_json(silent=True) or {}
         limits = data.get('limits')
-        if not isinstance(limits, dict) and not isinstance(data.get('windows'), dict):
+        if (not isinstance(limits, dict) and not isinstance(data.get('windows'), dict)
+                and not isinstance(data.get('durations'), dict)):
             return jsonify({'success': False, 'error': 'Неверный формат'}), 400
         clean = {k: int(v) for k, v in (limits or {}).items()
                  if k in SL.DEFAULT_LIMITS and isinstance(v, int) and v > 0}
@@ -254,15 +258,23 @@ def register(ctx):
         for k, w in (data.get('windows') or {}).items():
             if k in SL.DEFAULT_LIMITS and isinstance(w, dict):
                 wins[k] = _win_to_sec(w)
-        if not clean and not wins:
+        # потолки длительности: {'mute': 3600} (секунды, 0 = снять)
+        durs = {}
+        for k, v in (data.get('durations') or {}).items():
+            if k in SL.DURATION_KEYS and isinstance(v, int):
+                durs[k] = v
+        if not clean and not wins and not durs:
             return jsonify({'success': False, 'error': 'Пустые лимиты'}), 400
         if clean:
             SL.set_limits(guild_id, who=session.get('username', '?'), **clean)
         if wins:
             SL.set_windows(guild_id, who=session.get('username', '?'), **wins)
+        if durs:
+            SL.set_durations(guild_id, who=session.get('username', '?'), **durs)
         return jsonify({'success': True, 'defaults': SL.get_limits(guild_id),
                         'windows': {k: _win_to_api(v)
-                                    for k, v in SL.get_windows(guild_id).items()}})
+                                    for k, v in SL.get_windows(guild_id).items()},
+                        'durations': SL.get_durations(guild_id)})
 
     @app.route('/api/guild/<guild_id>/staff-limits/role', methods=['POST'])
     @login_required
@@ -273,7 +285,8 @@ def register(ctx):
         limits = data.get('limits')
         if not role_id or (not isinstance(limits, dict)
                            and not isinstance(data.get('windows'), dict)
-                           and not isinstance(data.get('clear'), list)):
+                           and not isinstance(data.get('clear'), list)
+                           and not isinstance(data.get('durations'), dict)):
             return jsonify({'success': False, 'error': 'Неверный формат'}), 400
         clean = {k: int(v) for k, v in (limits or {}).items()
                  if k in SL.DEFAULT_LIMITS and isinstance(v, int) and v > 0}
@@ -295,8 +308,17 @@ def register(ctx):
         if wins:
             SL.set_role_windows(guild_id, role_id, who=who,
                                 role_name=rname, **wins)
+        rdurs = {}
+        for k, v in (data.get('durations') or {}).items():
+            if k in SL.DURATION_KEYS and isinstance(v, int):
+                rdurs[k] = v
+        if rdurs:
+            SL.set_role_durations(guild_id, role_id, who=who,
+                                  role_name=rname, **rdurs)
         return jsonify({'success': True, 'limits': saved,
-                        'windows': {k: _win_to_api(v) for k, v in wins.items()}})
+                        'windows': {k: _win_to_api(v) for k, v in wins.items()},
+                        'durations': SL.get_role_overrides(guild_id)
+                                     .get(role_id, {}).get('durations', {})})
 
     @app.route('/api/guild/<guild_id>/staff-limits/role/delete', methods=['POST'])
     @login_required

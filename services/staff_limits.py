@@ -198,8 +198,11 @@ def _write_cfg(guild_id, limits_patch=None, windows_patch=None):
     saved = _load_json(_cfg_path(guild_id), {})
     if 'limits' not in saved or not isinstance(saved.get('limits'), dict):
         # миграция старого плоского формата {ban: 8} → {"limits": {...}}
+        # (прочие новые блоки — windows/durations — сохраняем)
         legacy = _clean_limits(saved)
-        saved = {'limits': legacy}
+        keep = {k: v for k, v in saved.items()
+                if k in ('windows', 'durations') and isinstance(v, dict)}
+        saved = {'limits': legacy, **keep}
     saved.setdefault('limits', {})
     if limits_patch:
         saved['limits'].update(_clean_limits(limits_patch))
@@ -237,12 +240,128 @@ def set_windows(guild_id, who=None, **kw):
     return get_windows(guild_id)
 
 
+# ── Потолки длительности (макс. мут) ─────────────────────────────────────
+# Хранение: cfg['durations'] = {'mute': секунды}; у роли — 'durations'.
+# 0/отсутствует = без ограничения. Роль ГЛАВНЕЕ общего (как у счётчиков).
+
+DURATION_KEYS = ('mute',)          # timeout/мут чата/войс-мут — один потолок
+DURATION_TITLES = {'mute': 'мут'}
+
+
+def _clean_durations(raw):
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for k, v in raw.items():
+        if k in DURATION_KEYS and isinstance(v, int) and v > 0:
+            out[k] = max(60, min(28 * 86400, v))     # от минуты до 28 дней
+    return out
+
+
+def get_durations(guild_id):
+    """Глобальные потолки длительности: {ключ: секунды}."""
+    saved = _load_json(_cfg_path(guild_id), {})
+    return _clean_durations(saved.get('durations'))
+
+
+def set_durations(guild_id, who=None, **kw):
+    """Задать глобальный потолок (set_durations(gid, mute=3600)); 0 = убрать."""
+    saved = _load_json(_cfg_path(guild_id), {})
+    if not isinstance(saved, dict):
+        saved = {}
+    cur = dict(saved.get('durations') or {})
+    for k, v in (kw or {}).items():
+        if k not in DURATION_KEYS:
+            continue
+        if isinstance(v, int) and v > 0:
+            cur[k] = max(60, min(28 * 86400, v))
+        else:
+            cur.pop(k, None)
+    if cur:
+        saved['durations'] = cur
+    else:
+        saved.pop('durations', None)
+    _save_json(_cfg_path(guild_id), saved)
+    _journal(guild_id, 'global', None, None,
+             [{'key': k, 'field': 'duration', 'old': None, 'new': v}
+              for k, v in cur.items()], who)
+    return dict(cur)
+
+
+def set_role_durations(guild_id, role_id, who=None, role_name=None, **kw):
+    """Свой потолок длительности для роли (роль главнее общего)."""
+    saved = _load_json(_roles_path(guild_id), {})
+    if not isinstance(saved, dict):
+        saved = {}
+    row = saved.setdefault(str(role_id), {})
+    if not isinstance(row, dict):
+        row = {}
+        saved[str(role_id)] = row
+    if 'durations' not in row or not isinstance(row.get('durations'), dict):
+        row['durations'] = {}
+    for k, v in (kw or {}).items():
+        if k not in DURATION_KEYS:
+            continue
+        if isinstance(v, int) and v > 0:
+            row['durations'][k] = max(60, min(28 * 86400, v))
+        else:
+            row['durations'].pop(k, None)
+    if not row.get('durations'):
+        row.pop('durations', None)
+    if not row:
+        saved.pop(str(role_id), None)
+    _save_json(_roles_path(guild_id), saved)
+    if role_name:
+        _journal(guild_id, 'role', role_id, role_name,
+                 [{'key': k, 'field': 'role_duration', 'old': None, 'new': v}
+                  for k, v in (row.get('durations') or {}).items()], who)
+    return dict(row.get('durations') or {})
+
+
+def effective_max_duration(guild_id, key, role_ids=()):
+    """Потолок длительности в секундах (0 = без ограничения).
+
+    Свой потолок роли ГЛАВНЕЕ общего; несколько ролей — мягчайший.
+    """
+    overrides = get_role_overrides(guild_id)
+    best = 0
+    for rid in role_ids or ():
+        ov = overrides.get(str(rid)) or {}
+        v = int((ov.get('durations') or {}).get(key) or 0)
+        if v > best:
+            best = v
+    if best:
+        return best
+    return int(get_durations(guild_id).get(key) or 0)
+
+
+def refresh_in_text(guild_id, user_id, key):
+    """Через сколько лимит отпустит: '3 ч 12 мин' или None."""
+    try:
+        win = get_windows(guild_id).get(key, DEFAULT_WINDOW)
+        hits, _d = _hits(guild_id, user_id, key)
+        now = _now()
+        live = [t for t in hits if now - t < win]
+        if not live:
+            return None
+        # отпустит, когда самая старая «расходка» выйдет из окна
+        left = max(0, int((min(live) + win - now)))
+        if left <= 60:
+            return 'меньше минуты'
+        h, m = left // 3600, (left % 3600) // 60
+        return (f'{h} ч {m} мин' if h else f'{m} мин')
+    except Exception:
+        return None
+
+
 def _unset_cfg(guild_id, limit_keys=(), window_keys=()):
     """Убрать глобальные переопределения выбранных ключей (вернутся дефолты)."""
     saved = _load_json(_cfg_path(guild_id), {})
     if not isinstance(saved.get('limits'), dict):
         legacy = _clean_limits(saved)
-        saved = {'limits': legacy}
+        keep = {k: v for k, v in saved.items()
+                if k in ('windows', 'durations') and isinstance(v, dict)}
+        saved = {'limits': legacy, **keep}
     lims = saved.setdefault('limits', {})
     for k in limit_keys or ():
         lims.pop(k, None)
@@ -370,8 +489,13 @@ def check_action(guild, actor, key, amount=1):
         if used + amount <= limit:
             return True, None
         what = ACTION_TITLES.get(key, 'действий')
-        return False, (f'Лимит исчерпан: {limit} {what} за {human_window(window)} '
-                       f'(уже {used}).')
+        left = max(0, limit - used)
+        txt = (f'Лимит исчерпан: {limit} {what} за {human_window(window)} '
+               f'(использовано {used}, осталось {left}).')
+        when = refresh_in_text(guild.id, actor.id, key)
+        if when:
+            txt += f' Обновится через {when}.'
+        return False, txt
     except Exception as ex:
         _log.debug('check_action(%s): %s', key, ex)
         return True, None
@@ -389,8 +513,10 @@ def get_role_overrides(guild_id):
         # старый плоский формат {ban: 3} → {'limits': {...}}
         limits = _clean_limits(ov.get('limits') if isinstance(ov.get('limits'), dict) else ov)
         windows = _clean_windows(ov.get('windows'))
-        if limits or windows:
-            out[str(rid)] = {'limits': limits, 'windows': windows}
+        durations = _clean_durations(ov.get('durations'))
+        if limits or windows or durations:
+            out[str(rid)] = {'limits': limits, 'windows': windows,
+                             'durations': durations}
     return out
 
 
