@@ -444,6 +444,25 @@ check(gD.kicked == [] and by_role.removed is None,
       'роль-ботовод: бот остался, человек не тронут')
 
 # ═══ 4. Хаб Каналов: новые маршруты ══════════════════════════════════════
+print('== включение Щита: боты, которые уже на сервере, не трогаются ==')
+gE = FakeGuild(GID + 17, {}, FakeChan('-модерация'))
+old_bot = BotMember(7001, gE)          # «старый» бот — уже в участниках
+gE._members[7001] = old_bot
+cE = G.Guardian(SimpleNamespace(user=SimpleNamespace(id=42)))
+# Щит включён ПОЛНОСТЬЮ, включая кик чужих ботов
+G.save_cfg(GID + 17, G.guardian_normalize(
+    {'enabled': True, 'kick_unauthorized_bots': True,
+     'bot_action': 'kick',
+     'events': {'bot_add': {'enabled': True}}}))
+# «перезапуск бота / прочие события сервера» — существующий бот никуда не заходит
+run(cE.on_guild_update(gE, gE))
+check(gE.kicked == [] and gE.banned == [],
+      'существующие боты не кикаются при включении Щита (никаких зачисток)')
+# кик возможен ТОЛЬКО когда бот заходит заново (событие входа)
+gE._audit = [_aentry(9509, 7002)]
+run(cE.on_member_join(BotMember(7002, gE)))
+check(gE.kicked == [7002], 'а вот ЗАШЕДШИЙ чужой бот — кикнут (событие входа)')
+
 print('== хаб каналов: 17 маршрутов ==')
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
 check(len(keys) == 17, f'маршрутов в спецификации (14 систем + 3 заявки): {len(keys)}')
