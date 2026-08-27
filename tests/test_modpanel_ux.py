@@ -72,11 +72,14 @@ class FakeResp:
         self.sent = []
         self.deferred = None
 
-    async def send_message(self, content=None, embed=None, ephemeral=False, **kw):
-        self.sent.append({'content': content, 'embed': embed, 'ephemeral': ephemeral})
+    async def send_message(self, content=None, embed=None, ephemeral=False,
+                           view=None, **kw):
+        self.sent.append({'content': content, 'embed': embed,
+                          'ephemeral': ephemeral, 'view': view})
 
-    async def send(self, content=None, embed=None, ephemeral=False, **kw):
-        await self.send_message(content=content, embed=embed, ephemeral=ephemeral)
+    async def send(self, content=None, embed=None, ephemeral=False, view=None, **kw):
+        await self.send_message(content=content, embed=embed,
+                                ephemeral=ephemeral, view=view)
 
     async def defer(self, ephemeral=False):
         self.deferred = ephemeral
@@ -147,6 +150,22 @@ sent = inter4.response.sent[-1]
 check(sent['ephemeral'] is True, 'панель модерации отправляется ephemeral (личная)')
 check('видите только вы' in (sent['embed'].footer.text or ''),
       'футер честно говорит «видите только вы»')
+view = sent.get('view')
+kids = list(view.children) if view is not None else []
+from cogs.moderation import ModHelpButton  # noqa: E402
+check(any(isinstance(k, ModHelpButton) for k in kids),
+      'рядом с меню — кнопка-шпаргалка «Как это работает»')
+check(any(isinstance(k, discord.ui.Select) for k in kids), 'меню действий на месте')
+sel = next(k for k in kids if isinstance(k, discord.ui.Select))
+check(all(getattr(o, 'emoji', None) for o in sel.options),
+      'у каждой опции меню — свой эмодзи')
+check('Что сделать' in (sel.placeholder or ''), 'placeholder меню живой')
+_e = sent['embed']
+check(_e.title == '🛡 Панель модерации', 'заголовок панели обновлён')
+check(any('Как это работает' in (f.name or '') for f in _e.fields),
+      'поле «Как это работает» есть')
+check(any('Что внутри' in (f.name or '') for f in _e.fields),
+      'поле «Что внутри» есть')
 
 # ═══ 3. Модалка: поля строго под действие ═════════════════════════════════
 print('== модалка: поля под действие ==')
@@ -178,11 +197,12 @@ proof_item = [it for it in m_ban.children if 'Доказательство' in i
 check(proof_item.required is True, 'бан: поле демки обязательное')
 
 m_kick = ModActionModal(cog, 'kick', guild=GUILD)
-check('На сколько минут?' not in fields(m_kick),
+check(not any(f.startswith('На сколько') for f in fields(m_kick)),
       'кик: минуты не спрашиваются (бессмысленны)')
 
 m_vmute = ModActionModal(cog, 'vmute', guild=GUILD)
-check('На сколько минут?' in fields(m_vmute), 'войс-мут: минуты спрашиваются')
+check(any(f.startswith('На сколько') for f in fields(m_vmute)),
+      'войс-мут: минуты спрашиваются')
 
 # при выключенном требовании поле демки исчезает из модалок
 proof_set_required(GID, False)

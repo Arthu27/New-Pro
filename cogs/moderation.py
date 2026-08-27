@@ -214,19 +214,6 @@ class Moderation (commands .Cog ):
     @app_commands .command (name ="modpanel",description ="Панель модерации (выпадающее меню)")
     @app_commands .checks .has_permissions (moderate_members =True )
     async def modpanel (self ,interaction ):
-        embed =discord .Embed (
-        title ="🛡 Модерация",
-        description =(
-        "Выберите действие в выпадающем меню ниже.\n"
-        "После выбора откроется окно для ввода цели и причины."
-        ),
-        color =0x3498DB ,
-        timestamp =datetime .now (timezone .utc )
-        )
-        if interaction .guild .icon :
-            embed .set_footer (text =f"{interaction.guild.name} · Модерация · видите только вы",icon_url =interaction .guild .icon .url )
-        else :
-            embed .set_footer (text =f"{interaction.guild.name} · Модерация · видите только вы")
         # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
         # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
         allowed =actions_for_member (interaction .guild ,interaction .user )
@@ -237,6 +224,58 @@ class Moderation (commands .Cog ):
             'их в панели: Щит сервера → Лимиты команды → роль.'),
             ephemeral =True )
             return 
+        _u =interaction .user 
+        _has =lambda k :any (a [3 ]==k for a in allowed )
+        _groups =[]
+        if _has ('mute'):
+            _groups .append ('🔇 муты — чат, войс или всё сразу')
+        if _has ('ban'):
+            _groups .append ('🚫 бан с апелляцией — участник остаётся на сервере')
+        if _has ('unban')or _has ('unmute'):
+            _groups .append ('🔓 снятия — размут, разбан, вернуть голос')
+        if _has ('clear'):
+            _groups .append ('🧹 чистка — снести N сообщений в канале')
+        embed =discord .Embed (
+        title ="🛡 Панель модерации",
+        description =(
+        "Личная панель: кроме вас её никто не видит.\n"
+        "Выберите действие в меню — бот спросит цель, срок и причину."
+        ),
+        color =0x5865F2 ,
+        timestamp =datetime .now (timezone .utc )
+        )
+        try :
+            if getattr (_u ,'display_avatar',None ):
+                embed .set_author (name =f"Модератор: {_u .display_name }",
+                icon_url =_u .display_avatar .url )
+        except Exception as _ex :
+            _log .debug (f'[MODPANEL] аватар модератора: {_ex}')
+        try :
+            if interaction .guild .icon :
+                embed .set_thumbnail (url =interaction .guild .icon .url )
+        except Exception as _ex :
+            _log .debug (f'[MODPANEL] иконка сервера: {_ex}')
+        embed .add_field (
+        name ="⚡ Как это работает",
+        value =("1️⃣ Выберите действие в меню ниже\n"
+        "2️⃣ Укажите цель — @ник, точное имя или ID\n"
+        "3️⃣ Причина — и наказание применится"),
+        inline =False )
+        embed .add_field (
+        name ="🎒 Что внутри",
+        value =("\n".join (_groups )or 'Меню действий ниже'),
+        inline =False )
+        embed .add_field (
+        name ="📜 Хорошая практика",
+        value =("Каждое действие пишется в дело и уходит участнику в ЛС. "
+        "Ссылка на доказательство спросится, если панель этого требует."),
+        inline =False )
+        if interaction .guild .icon :
+            embed .set_footer (text =f"{interaction.guild.name} · панель видите только вы · меню живёт 5 минут",icon_url =interaction .guild .icon .url )
+        else :
+            embed .set_footer (text =f"{interaction.guild.name} · панель видите только вы · меню живёт 5 минут")
+        # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
+        # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
         await _respond (interaction ,embed =embed ,view =ModPanelView (self ,interaction .user ,allowed ),ephemeral =True )
 
     def _parse_target_id (self ,target :str ):
@@ -936,15 +975,27 @@ def _embed_text(e):
 # Действия панели: (value, label, описание, ключ лимита стаффа).
 # Ключ — как в services/staff_limits: мут чата/войса/таймаут — один ключ mute.
 MODPANEL_ACTIONS = [
-    ("ban", "Бан (апелляция)", "Не выкидывать: закрыть все каналы, оставить канал апелляции", "ban"),
-    ("timeout", "Мут (чат + войс)", "Таймаут — закрыть и чат, и голос", "mute"),
-    ("mute_chat", "Мут (только чат)", "Закрыть только чат (таймаут)", "mute"),
-    ("vmute", "Мут (только войс)", "Заглушить микрофон (чат не трогает)", "mute"),
+    ("ban", "Бан (апелляция)", "Не выгоняет: закроет каналы, оставит только канал апелляции", "ban"),
+    ("timeout", "Мут (чат + войс)", "Тишина сразу везде — и текст, и голос", "mute"),
+    ("mute_chat", "Мут (только чат)", "В чат писать нельзя, голос живёт", "mute"),
+    ("vmute", "Мут (только войс)", "Микрофон в офф, чат не трогаем", "mute"),
     ("unban", "Снять апелляцию / разбан", "Вернуть доступ к каналам (по ID)", "unban"),
-    ("clear", "Очистить сообщения", "Удалить N сообщений", "clear"),
-    ("untimeout", "Размут (чат + войс)", "Снять таймаут с участника", "unmute"),
-    ("vunmute", "Размут (войс)", "Включить микрофон участника", "unmute"),
+    ("clear", "Очистка сообщений", "Снести N последних сообщений в канале", "clear"),
+    ("untimeout", "Размут (чат + войс)", "Снять таймаут — снова можно всё", "unmute"),
+    ("vunmute", "Размут (войс)", "Вернуть участнику голос", "unmute"),
 ]
+
+# Эмодзи действий: меню панели живое, а не текстовое
+MODPANEL_EMOJI = {
+    "ban": "🚫",
+    "timeout": "🔇",
+    "mute_chat": "🤐",
+    "vmute": "🎙️",
+    "unban": "✅",
+    "clear": "🧹",
+    "untimeout": "🔊",
+    "vunmute": "🎤",
+}
 
 
 def actions_for_member(guild, member):
@@ -984,10 +1035,12 @@ class ModActionSelect(discord.ui.Select):
 
     def __init__(self, cog, member, allowed=None):
         acts = allowed if allowed is not None else MODPANEL_ACTIONS
-        options = [discord.SelectOption(label=label, value=value, description=desc)
+        options = [discord.SelectOption(
+                       label=label, value=value, description=desc,
+                       emoji=MODPANEL_EMOJI.get(value, '⚡'))
                    for value, label, desc, _key in acts]
         super().__init__(
-            placeholder="Выберите действие модерации...",
+            placeholder="⚡ Что сделать? Выберите действие…",
             options=options,
             min_values=1,
             max_values=1,
@@ -1085,12 +1138,49 @@ class ModActionModal(discord.ui.Modal):
         )
 
 
+class ModHelpButton(discord.ui.Button):
+    """«Как это работает» — короткая шпаргалка, не мешает меню."""
+
+    def __init__(self):
+        super().__init__(emoji='❓', style=discord.ButtonStyle.secondary,
+                         label='Как это работает')
+
+    async def callback(self, interaction: discord.Interaction):
+        embed = discord.Embed(
+            title='❓ Шпаргалка по панели',
+            description=(
+                'Панель личная — видит только вызвавший.\n'
+                'Меню живёт 5 минут, потом просто вызовите /modpanel снова.'),
+            color=0x5865F2)
+        embed.add_field(
+            name='🎯 Цель',
+            value='@упоминание, точное имя или ID — бот поймёт любой вариант.\n'
+                  'Не нашли участника? Скорее всего, он ушёл с сервера: ID работает и так.',
+            inline=False)
+        embed.add_field(
+            name='⏱ Срок',
+            value='«60» — минуты, «1ч», «3ч», «1д» — час/день. Просто число = минуты.',
+            inline=False)
+        embed.add_field(
+            name='🚫 Бан — это апелляция',
+            value='Участник остаётся на сервере: все каналы закрыты, открыт только '
+                  'канал апелляции. Настраивается: Панель → Каналы и маршруты.',
+            inline=False)
+        embed.add_field(
+            name='🧹 Чистка',
+            value='Удаляет N последних сообщений в канале, где вы находитесь.',
+            inline=False)
+        embed.set_footer(text='Шпаргалка · панель Hakumo')
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
 class ModPanelView(discord.ui.View):
-    """View панели: только выпадающее меню, без кнопок."""
+    """View панели: меню действий + кнопка-шпаргалка."""
 
     def __init__(self, cog, member=None, allowed=None):
         super().__init__(timeout=300)
         self.add_item(ModActionSelect(cog, member, allowed))
+        self.add_item(ModHelpButton())
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Панель модерации — только для модераторов (сообщение публичное)."""
