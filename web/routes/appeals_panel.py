@@ -11,6 +11,15 @@ fmt_card_text (строчка карточки в очереди — как в /
 тоже успех) и ЛС тем самым методом Appeals._notify_user через цикл бота.
 Бот офлайн — решение честно фиксируется, побочка подписана как не сделанная.
 
+Поверх:
+- «Контекст модератора» в очереди — наказания и прошлые апелляции юзера
+  (services/appeal_context);
+- «Правила подачи» (state['settings']): кулдаун после отказа, порог
+  напоминаний о висящих, обязательный комментарий при отказе, шаблоны отказов;
+- статус auto_closed (разбанили вручную в Discord) — история и CSV;
+- все API-роуты замкнуты на active_guild_id() — панель живёт одним сервером
+  (MAIN_GUILD_ID), gid из адресной строки не имеет значения.
+
 Чтение и выгрузка — mod+, решения и канал — admin+ (у кнопки в Discord
 проверка «Управление сервером» — админский уровень).
 """
@@ -30,7 +39,8 @@ from db import GuildData
 UTC = timezone.utc
 
 HISTORY_LIMIT = 25
-STATUS_LABELS = {'pending': 'ожидает', 'accepted': 'принята', 'rejected': 'отклонена'}
+STATUS_LABELS = {'pending': 'ожидает', 'accepted': 'принята', 'rejected': 'отклонена',
+                 'auto_closed': 'закрыта (авто)'}
 
 
 def _db():
@@ -48,13 +58,26 @@ def _save(gid, state):
 # ─────────────────────────────────────────────────────────────────────
 # #116: очередь и сводка
 # ─────────────────────────────────────────────────────────────────────
-def overview_stats(state):
-    """Счётчики очереди + последнее решение (кто и когда)."""
+def overview_stats(state, now=None, stale_hours=None):
+    """Счётчики очереди + висящие (ждут дольше stale_hours) + последнее решение."""
     items = (state or {}).get('items', [])
-    by = {'pending': 0, 'accepted': 0, 'rejected': 0}
+    by = {'pending': 0, 'accepted': 0, 'rejected': 0, 'auto_closed': 0}
     for item in items:
         if item.get('status') in by:
             by[item['status']] += 1
+    try:
+        from datetime import timedelta
+        hours = stale_hours if stale_hours is not None \
+            else AP.settings_of(state)['stale_hours']
+        edge = (now or datetime.now(UTC)) - timedelta(hours=hours)
+        stale = 0
+        for item in AP.pending_items(state or {'items': []}):
+            created = AP._parse_ts(item.get('created_at'))
+            if created is not None and created <= edge:
+                stale += 1
+    except Exception as _ex:
+        _log.debug('appeals: stale-stats: %s', _ex)
+        stale = 0
     resolved = [i for i in items if i.get('reviewed_at')]
     resolved.sort(key=lambda i: str(i['reviewed_at']))
     last = None
@@ -64,13 +87,24 @@ def overview_stats(state):
                 'status_label': STATUS_LABELS.get(it.get('status'), '?'),
                 'reviewed_by': str(it.get('reviewed_by') or ''),
                 'reviewed_at': str(it.get('reviewed_at') or '')[:16].replace('T', ' ')}
-    return {'total': len(items), **by, 'last_resolved': last}
+    return {'total': len(items), **by, 'stale': stale, 'last_resolved': last}
 
 
-def pending_view(state):
-    """Ожидающие, как в /апелляции список: порядок подачи + текст карточки."""
+def pending_view(state, gid=None):
+    """Ожидающие, как в /апелляции список: порядок подачи + текст карточки.
+
+    context — строка «наказания и прошлые апелляции юзера»
+    (services/appeal_context); без gid не считаем (тесты без диска).
+    """
     rows = []
     for item in AP.pending_items(state or {'items': []}):
+        context = ''
+        if gid is not None:
+            try:
+                from services.appeal_context import build_context
+                context = build_context(state, gid, item.get('user_id'))['line']
+            except Exception as _ex:
+                _log.debug('appeals: контекст очереди: %s', _ex)
         rows.append({
             'id': item.get('id'),
             'user_id': str(item.get('user_id') or ''),
@@ -78,6 +112,7 @@ def pending_view(state):
             'text': str(item.get('text') or ''),
             'created_at': str(item.get('created_at') or '')[:16].replace('T', ' '),
             'link': str(item.get('link') or ''),
+            'context': context,
             'card_text': AP.fmt_card_text(item),
         })
     return rows
@@ -279,15 +314,18 @@ def register(ctx):
     @role_required('mod')
     def api_appeals_overview(gid):
         import web.app as appmod
+        gid = active_guild_id()   # панель живёт одним сервером (MAIN_GUILD_ID)
         state = _state(gid)
+        settings = AP.settings_of(state)
         return jsonify({
             'success': True,
             'stats': overview_stats(state),
-            'pending': pending_view(state),
+            'pending': pending_view(state, gid=gid),
             'readiness': channel_readiness(appmod.bot_instance, gid, state),
             'can_edit': session.get('role') in ('admin', 'owner'),
             'appearance': ABC.normalize_appearance(state.get('appearance')),
             'themes': [{'id': t, 'label': t} for t in ABC.APPEAL_THEME_ORDER],
+            'settings': settings,
         })
 
     @app.route('/api/guild/<gid>/appeals/appearance', methods=['POST'])
@@ -295,6 +333,7 @@ def register(ctx):
     @role_required('admin')
     def api_appeals_appearance(gid):
         """Оформление карточки апелляции: авто-картинка (тема), свой URL или off."""
+        gid = active_guild_id()
         data = request.get_json(silent=True) or {}
         ap = ABC.normalize_appearance(data)
         url = ap['url']
@@ -315,6 +354,47 @@ def register(ctx):
                         'message': 'Оформление сохранено: ' +
                                    ABC.APPEAL_MODE_LABELS[ap['mode']] +
                                    (f' · тема «{ap["theme"]}»' if ap['mode'] == 'auto' else '')})
+
+    @app.route('/api/guild/<gid>/appeals/settings', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_appeals_settings(gid):
+        """«Правила подачи»: кулдаун после отказа, порог напоминаний о висящих,
+        обязательный комментарий при отказе, шаблоны причин отказа."""
+        gid = active_guild_id()
+        data = request.get_json(silent=True) or {}
+
+        def _clamp_hours(value, lo, hi, fallback):
+            try:
+                return max(lo, min(int(value), hi))
+            except (TypeError, ValueError):
+                return fallback
+
+        state = _state(gid)
+        cur = AP.settings_of(state)
+        tpl_in = data.get('reject_templates')
+        templates = cur['reject_templates']
+        if isinstance(tpl_in, list):
+            templates = [str(t).strip()[:100] for t in tpl_in]
+            templates = [t for t in templates if t][:AP.MAX_TEMPLATES]
+            if not templates:
+                return jsonify({'success': False,
+                                'error': 'Нужен хотя бы один шаблон отказа'}), 400
+        settings = {
+            'cooldown_hours': _clamp_hours(data.get('cooldown_hours'), 0, 720,
+                                           cur['cooldown_hours']),
+            'stale_hours': _clamp_hours(data.get('stale_hours'), 1, 336,
+                                        cur['stale_hours']),
+            # флаг не передали — оставляем как было, не сбрасываем молча
+            'require_reply_on_reject': bool(data.get('require_reply_on_reject',
+                                                     cur['require_reply_on_reject'])),
+            'reject_templates': templates,
+        }
+        state['settings'] = settings
+        _save(gid, state)
+        _notify('Апелляции: правила подачи обновлены')
+        return jsonify({'success': True, 'settings': settings,
+                        'message': 'Правила подачи сохранены'})
 
     @app.route('/api/guild/<gid>/appeals/card-preview.png')
     @login_required
@@ -340,6 +420,7 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_appeals_history(gid):
+        gid = active_guild_id()
         return jsonify({'success': True,
                         'items': history_view(_state(gid),
                                               status=request.args.get('status'),
@@ -350,6 +431,7 @@ def register(ctx):
     @role_required('admin')
     def api_appeals_resolve(gid):
         import web.app as appmod
+        gid = active_guild_id()
         data = request.get_json(silent=True) or {}
         raw_id = str(data.get('appeal_id') or '').strip()
         if not raw_id.isdigit():
@@ -359,9 +441,17 @@ def register(ctx):
         if accept not in (True, False):
             return jsonify({'success': False,
                             'error': 'Решение должно быть true или false'}), 400
+        # настройка «комментарий обязателен при отказе» — из «Правил подачи»
+        reply = str(data.get('reply') or '')
+        if accept is False:
+            settings = AP.settings_of(_state(gid))
+            if settings['require_reply_on_reject'] and not reply.strip():
+                return jsonify({'success': False,
+                                'error': 'При отказе комментарий обязателен — '
+                                         'выберите шаблон или напишите свой'}), 400
         ok, err, code, payload = resolve_panel(
             appmod.bot_instance, gid, int(raw_id), accept,
-            session.get('username', '?'), reply=data.get('reply'))
+            session.get('username', '?'), reply=reply)
         if not ok:
             return jsonify({'success': False, 'error': err}), code
         payload['success'] = True
@@ -373,6 +463,7 @@ def register(ctx):
     @role_required('admin')
     def api_appeals_channel(gid):
         import web.app as appmod
+        gid = active_guild_id()
         data = request.get_json(silent=True) or {}
         state = _state(gid)
         ok, err, cid = set_log_channel(state, data.get('channel_id'))
@@ -401,6 +492,7 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_appeals_export(gid):
+        gid = active_guild_id()
         rows = appeals_csv_rows(_state(gid))
         body = '\ufeff' + CSV_HEADER + '\n'
         body += '\n'.join(';'.join(_csv_cell(c) for c in row) for row in rows) + '\n'

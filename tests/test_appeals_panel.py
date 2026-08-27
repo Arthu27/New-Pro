@@ -251,6 +251,89 @@ long_png = ABC.render_appeal_card(appeal_id=9, user_name='u', text='очень '
 check(long_png and long_png[:8].startswith(b'\x89PNG'),
       'длинный текст влезает с авто-уменьшением/многоточием')
 
+print('== 6c. Правила подачи, контекст, изоляция, автозакрытие ==')
+# свежая ожидающая апелляция — чистыми функциями кога, с реальной меткой «сейчас»
+stq = GuildData('appeals').get('777', 'state', AP.empty_state()) or AP.empty_state()
+new_item, _ = AP.create_appeal(stq, 999, 'Свежий', 'ещё одна апелляция ждёт решения',
+                               datetime.now(timezone.utc))
+GuildData('appeals').set('777', 'state', stq)
+
+login('admin')
+ov = client.get(OV).get_json()
+check(ov['stats']['pending'] == 1 and ov['pending'][0]['id'] == new_item['id'],
+      'свежая апелляция в очереди')
+row = ov['pending'][0]
+check('context' in row and 'Варны:' in row['context'],
+      'контекст модератора (наказания юзера) в очереди')
+check('stale' in ov['stats'] and ov['stats']['stale'] == 0,
+      'KPI «ждут давно»: свежая ещё не просрочена')
+check('settings' in ov and 'reject_templates' in ov['settings'],
+      'настройки приезжают в overview')
+
+# изоляция MAIN_GUILD_ID: чужой gid в URL → данные главного сервера
+ov555 = client.get('/api/guild/555/appeals/overview').get_json()
+check(ov555['stats']['total'] == ov['stats']['total'] and
+      ov555['pending'][0]['id'] == new_item['id'],
+      'изоляция: /555/overview отдаёт главный сервер, а не чужой')
+hist_main = client.get('/api/guild/777/appeals/history?status=rejected').get_json()['items']
+hist_555 = client.get('/api/guild/555/appeals/history?status=rejected').get_json()['items']
+check(len(hist_555) == len(hist_main) and len(hist_main) >= 2,
+      'изоляция: история по чужому gid = истории главного')
+
+# «Правила подачи»
+login('mod')
+check(client.post('/api/guild/777/appeals/settings',
+                  json={'cooldown_hours': 48}).status_code == 403,
+      'правила меняет только admin+')
+login('admin')
+r = client.post('/api/guild/777/appeals/settings', json={
+    'cooldown_hours': 48, 'stale_hours': 12, 'require_reply_on_reject': True,
+    'reject_templates': ['Причина А', 'Причина Б']})
+d = r.get_json()
+check(d.get('success') and d['settings']['cooldown_hours'] == 48 and
+      d['settings']['stale_hours'] == 12 and
+      d['settings']['require_reply_on_reject'] is True and
+      d['settings']['reject_templates'] == ['Причина А', 'Причина Б'],
+      'правила сохранены целиком')
+r = client.post('/api/guild/777/appeals/settings', json={'reject_templates': []})
+check(r.status_code == 400 and 'шаблон' in (r.get_json().get('error') or ''),
+      'пустой список шаблонов отклонён')
+r = client.post('/api/guild/777/appeals/settings', json={'cooldown_hours': 9999})
+check(r.get_json()['settings']['cooldown_hours'] == 720, 'часы зажаты в рамки (720)')
+ov = client.get(OV).get_json()
+check(ov['settings']['reject_templates'] == ['Причина А', 'Причина Б'],
+      'шаблоны видны в overview для чипов')
+
+# обязательный комментарий при отказе
+r = client.post('/api/guild/777/appeals/resolve', json={
+    'appeal_id': str(new_item['id']), 'accept': False, 'reply': ''})
+check(r.status_code == 400 and 'обязателен' in (r.get_json().get('error') or ''),
+      'отказ без комментария удержан настройкой')
+r = client.post('/api/guild/777/appeals/resolve', json={
+    'appeal_id': str(new_item['id']), 'accept': False, 'reply': 'Причина А'})
+check(r.status_code == 200 and r.get_json().get('success'),
+      'с шаблонным комментарием отказ принят')
+# вернуть выключатель в исходное
+client.post('/api/guild/777/appeals/settings',
+            json={'require_reply_on_reject': False, 'cooldown_hours': 72,
+                  'stale_hours': 24, 'reject_templates': ['Причина А', 'Причина Б']})
+
+# автозакрытие (ручной разбан)
+check(SP.STATUS_LABELS.get('auto_closed') == 'закрыта (авто)',
+      'лейбл автозакрытия в словаре статусов')
+r = client.get('/api/guild/777/appeals/history?status=auto_closed')
+check(r.status_code == 200 and isinstance(r.get_json().get('items'), list),
+      'фильтр истории автозакрытия отвечает')
+
+# шаблон страницы: форма правил, чип, контекст
+apt = open(os.path.join(ROOT, 'web', 'templates', 'appeals.html'), encoding='utf-8').read()
+check('id="apCooldown"' in apt and 'id="apStale"' in apt and
+      'id="apTemplates"' in apt and 'id="apRulesSave"' in apt,
+      'форма «Правила подачи» в шаблоне')
+check('data-st="auto_closed"' in apt, 'чип автозакрытия в фильтрах шаблона')
+check('it.context' in apt and 'apTpl' in apt and '/settings' in apt,
+      'контекст, шаблонные чипы и сохранение правил в очереди')
+
 print('== 7. Шаблон, меню, регистрация ==')
 tpl = open(os.path.join(ROOT, 'web/templates/appeals.html'), encoding='utf-8').read()
 check(not EMOJI_RE.search(tpl), 'в шаблоне нет эмодзи')

@@ -39,11 +39,128 @@ COLOR_NO = 0xED4245
 MAX_TEXT = 500
 MAX_PER_USER = 3  # открытых апелляций одновременно
 
+# антиспам и автоматика (меняются из панели «Апелляции → Правила подачи»)
+DEFAULT_COOLDOWN_HOURS = 72   # пауза после отказа до новой подачи (0 = без паузы)
+DEFAULT_STALE_HOURS = 24      # через сколько часов напоминать о висящей апелляции
+DEFAULT_REJECT_TEMPLATES = [
+    'Нарушение подтверждено — бан остаётся в силе',
+    'Недостаточно доказательств',
+    'Повторная подача без новых фактов',
+    'Слишком рано — подайте позже',
+]
+MAX_TEMPLATES = 10
+STALE_CHECK_EVERY = 1800  # сек — как часто проверять висящие апелляции
+
 
 # ─── чистые функции (покрыты тестом) ────────────────────────────────────────
 
 def empty_state():
     return {'next_id': 1, 'items': [], 'log_channel_id': 0}
+
+
+def _clamp_hours(raw_val, default, lo, hi):
+    """Часы из настроек: None/мусор → дефолт, число → зажать в [lo, hi]."""
+    if raw_val is None:
+        return default
+    try:
+        return max(lo, min(int(raw_val), hi))
+    except (TypeError, ValueError):
+        return default
+
+
+def settings_of(state):
+    """Настройки апелляций с дефолтами (старые state без settings не ломаются)."""
+    raw = (state or {}).get('settings') or {}
+    tpl = raw.get('reject_templates')
+    if not isinstance(tpl, list) or not tpl:
+        tpl = list(DEFAULT_REJECT_TEMPLATES)
+    return {
+        'cooldown_hours': _clamp_hours(raw.get('cooldown_hours'),
+                                       DEFAULT_COOLDOWN_HOURS, 0, 720),
+        'stale_hours': _clamp_hours(raw.get('stale_hours'),
+                                    DEFAULT_STALE_HOURS, 1, 336),
+        'reject_templates': [str(t)[:100] for t in tpl[:MAX_TEMPLATES]],
+        'require_reply_on_reject': bool(raw.get('require_reply_on_reject')),
+    }
+
+
+def _parse_ts(value):
+    s = str(value or '').strip()
+    if not s:
+        return None
+    try:
+        dt = datetime.fromisoformat(s.replace('Z', '+00:00'))
+        return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+    except (ValueError, TypeError):
+        return None
+
+
+def _last_rejected(state, user_id):
+    """Самая свежая отклонённая апелляция пользователя (или None)."""
+    mine = [i for i in (state or {}).get('items', [])
+            if int(i.get('user_id') or 0) == int(user_id)
+            and i.get('status') == 'rejected' and i.get('reviewed_at')]
+    mine.sort(key=lambda i: str(i.get('reviewed_at') or ''))
+    return mine[-1] if mine else None
+
+
+def cooldown_block(state, user_id, now):
+    """Ошибка кулдауна после отказа или None (чистая функция, пишет тест).
+
+    Реальное время дедлайна удобно человеку: «повторная подача — не раньше
+    30.08 15:20 (отказ 27.08 15:20)». cooldown_hours=0 — пауза выключена.
+    """
+    hours = settings_of(state)['cooldown_hours']
+    if hours <= 0:
+        return None
+    last = _last_rejected(state, user_id)
+    if not last:
+        return None
+    rejected_at = _parse_ts(last.get('reviewed_at'))
+    if rejected_at is None:
+        return None
+    from datetime import timedelta
+    deadline = rejected_at + timedelta(hours=hours)
+    if now >= deadline:
+        return None
+    fmt = lambda d: d.strftime('%d.%m %H:%M')  # noqa: E731
+    return (f'отказ был {fmt(rejected_at)} — повторная подача '
+            f'не раньше {fmt(deadline)}')
+
+
+def auto_close_unbanned(state, user_id, now):
+    """Ручной разбан в Discord: закрыть все ожидающие апелляции пользователя.
+
+    Возвращает список закрытых (чистая функция). Панель показывает их
+    в истории со статусом «закрыта (авто)».
+    """
+    closed = []
+    for item in (state or {}).get('items', []):
+        if int(item.get('user_id') or 0) != int(user_id):
+            continue
+        if item.get('status') != 'pending':
+            continue
+        item['status'] = 'auto_closed'
+        item['reviewed_by'] = 'Discord (разбан вручную)'
+        item['reviewed_at'] = now.isoformat()
+        item['reply'] = None
+        closed.append(item)
+    return closed
+
+
+def stale_pending(state, now, stale_hours=None):
+    """Висящие апелляции старше stale_hours, о которых ещё не напоминали."""
+    from datetime import timedelta
+    hours = stale_hours if stale_hours is not None else settings_of(state)['stale_hours']
+    edge = now - timedelta(hours=hours)
+    out = []
+    for item in pending_items(state or {'items': []}):
+        if item.get('reminded_at'):
+            continue
+        created = _parse_ts(item.get('created_at'))
+        if created is not None and created <= edge:
+            out.append(item)
+    return out
 
 
 def pending_items(state):
@@ -64,6 +181,9 @@ def create_appeal(state, user_id, user_name, text, now, link=None):
         return None, f'максимум {MAX_TEXT} символов'
     if len(user_pending(state, user_id)) >= MAX_PER_USER:
         return None, f'уже есть {MAX_PER_USER} открытых — дождитесь решения'
+    blocked = cooldown_block(state, user_id, now)
+    if blocked:
+        return None, blocked
     item = {
         'id': state['next_id'],
         'user_id': int(user_id),
@@ -198,7 +318,11 @@ class AppealView(discord.ui.View):
                 except (discord.Forbidden, discord.HTTPException) as _ex:
                     log.error('appeals: unban %s на %s не удался: %s',
                               item['user_id'], gid, _ex)
-        await self.cog._notify_user(item, accept, unbanned)
+        _guild = self.cog.bot.get_guild(gid)
+        await self.cog._notify_user(
+            item, accept, unbanned,
+            cooldown_hours=settings_of(state)['cooldown_hours'],
+            guild_name=str(getattr(_guild, 'name', '') or ''))
 
         for child in self.children:
             child.disabled = True
@@ -403,6 +527,7 @@ class Appeals(commands.Cog):
         self.bot = bot
         self.db = GuildData('appeals')
         self._views_restored = False
+        self._stale_started = False
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -424,12 +549,98 @@ class Appeals(commands.Cog):
             log.debug('appeals: меню-view: %s', _ex)
         if restored:
             log.info('appeals: восстановлено %s view после рестарта', restored)
+        # цикл напоминаний о висящих апелляциях — один раз (on_ready бывает повторно)
+        if not self._stale_started:
+            self._stale_started = True
+            try:
+                import asyncio
+                asyncio.get_event_loop().create_task(self._stale_loop())
+            except Exception as _ex:
+                log.debug('appeals: старт _stale_loop: %s', _ex)
 
     def _load(self, guild_id):
         return self.db.get(guild_id, 'state', empty_state()) or empty_state()
 
     def _save(self, guild_id, state):
         self.db.set(guild_id, 'state', state)
+
+    def _mod_context(self, state, guild_id, user_id):
+        """Строка «Контекст модератора» для карточки: наказания и апелляции юзера."""
+        try:
+            from services.appeal_context import build_context
+            return build_context(state, guild_id, user_id)['line']
+        except Exception as _ex:
+            log.debug('appeals: контекст %s: %s', user_id, _ex)
+            return 'история наказаний недоступна'
+
+    # ---- напоминания о висящих апелляциях ----
+    async def _stale_loop(self):
+        """Раз в STALE_CHECK_EVERY: напомнить в канал карточек о старых pending."""
+        import asyncio
+        await asyncio.sleep(30)   # дать боту прогреться после старта
+        while True:
+            try:
+                for guild in list(self.bot.guilds):
+                    state = self._load(guild.id)
+                    stale = stale_pending(state, datetime.now(UTC))
+                    if not stale:
+                        continue
+                    channel = self._log_channel(guild, state)
+                    now = datetime.now(UTC)
+                    for item in stale:
+                        if channel is not None:
+                            age_h = 0
+                            created = _parse_ts(item.get('created_at'))
+                            if created is not None:
+                                age_h = max(0, int((now - created).total_seconds() // 3600))
+                            try:
+                                await channel.send(
+                                    f'⚖ Апелляция **#{item["id"]}** от '
+                                    f'**{item["user_name"]}** ждёт решения уже '
+                                    f'**{age_h} ч** — загляните в очередь.')
+                            except (discord.Forbidden, discord.HTTPException) as _ex:
+                                log.debug('appeals: напоминание #%s: %s', item['id'], _ex)
+                        item['reminded_at'] = now.isoformat()
+                    self._save(guild.id, state)
+            except Exception as _ex:
+                log.debug('appeals: _stale_loop: %s', _ex)
+            await asyncio.sleep(STALE_CHECK_EVERY)
+
+    # ---- ручной разбан → апелляции закрываются сами ----
+    @commands.Cog.listener()
+    async def on_member_unban(self, guild, user):
+        """Разбанили руками (не кнопкой) — ожидающие апелляции теряют смысл."""
+        try:
+            state = self._load(guild.id)
+            closed = auto_close_unbanned(state, user.id, datetime.now(UTC))
+            if not closed:
+                return
+            self._save(guild.id, state)
+            channel = self._log_channel(guild, state)
+            for item in closed:
+                # карточка в канале: перекрасить и убрать кнопки
+                try:
+                    mid = int(item.get('message_id') or 0)
+                    if channel is not None and mid:
+                        msg = await channel.fetch_message(mid)
+                        embed = msg.embeds[0] if msg.embeds else None
+                        if embed:
+                            embed.color = 0x95A5A6
+                            embed.title = f'Апелляция #{item["id"]} — закрыта автоматически'
+                            embed.set_footer(text='Разбанен вручную в Discord')
+                        await msg.edit(embed=embed, view=None)
+                except (discord.NotFound, discord.Forbidden, discord.HTTPException) as _ex:
+                    log.debug('appeals: автозакрытие карточки #%s: %s', item['id'], _ex)
+                try:
+                    await user.send(
+                        f'Ваша апелляция **#{item["id"]}** на сервере **{guild.name}** '
+                        'закрыта: бан снят вручную — решение больше не нужно.')
+                except (discord.Forbidden, discord.HTTPException) as _ex:
+                    log.debug('appeals: ЛС автозакрытия #%s: %s', item['id'], _ex)
+            log.info('appeals: %s апелляций закрыто автоматически (ручной разбан %s на %s)',
+                     len(closed), user.id, guild.id)
+        except Exception as _ex:
+            log.debug('appeals: on_member_unban: %s', _ex)
 
     # ---- меню апелляций в канале ----
     async def publish_appeal_menu(self, channel):
@@ -527,6 +738,9 @@ class Appeals(commands.Cog):
                          if getattr(user, 'display_avatar', None) else None)
         embed.add_field(name='Участник',
                         value=f'{user.mention} · `{user.id}`', inline=False)
+        embed.add_field(name='Контекст модератора',
+                        value=self._mod_context(state, guild.id, user.id),
+                        inline=False)
         embed.set_footer(text=f'appeal #{item["id"]} · решение — меню под карточкой')
         png = None
         png_name = None
@@ -602,6 +816,9 @@ class Appeals(commands.Cog):
             embed.add_field(name='Доказательство', value=item['link'], inline=False)
         embed.set_author(name=str(user), icon_url=user.display_avatar.url
                          if getattr(user, 'display_avatar', None) else None)
+        embed.add_field(name='Контекст модератора',
+                        value=self._mod_context(state, guild.id, user.id),
+                        inline=False)
         embed.set_footer(text=f'user_id: {item["user_id"]} · appeal #{item["id"]}')
         channel = self._log_channel(guild, state)
         if channel is not None:
@@ -694,18 +911,28 @@ class Appeals(commands.Cog):
         ch = guild.get_channel(cid) if cid else None
         return ch or guild.system_channel
 
-    async def _notify_user(self, item, accept, unbanned):
+    async def _notify_user(self, item, accept, unbanned, cooldown_hours=0, guild_name=''):
         try:
             user = await self.bot.fetch_user(item['user_id'])
         except (discord.NotFound, discord.HTTPException):
             return
+        num = f'#{item.get("id")}' if item.get('id') else ''
+        server = f' на сервере **{guild_name}**' if guild_name else ''
         if accept:
-            text = ('Ваша апелляция **принята**, бан снят — добро пожаловать обратно.'
-                    if unbanned else 'Ваша апелляция **принята**.')
+            text = (f'Ваша апелляция **{num}**{server} **принята**, бан снят — '
+                    'добро пожаловать обратно.'
+                    if unbanned else f'Ваша апелляция **{num}**{server} **принята**.')
         else:
-            text = 'Ваша апелляция **отклонена**.'
+            text = f'Ваша апелляция **{num}**{server} **отклонена**.'
             if item.get('reply'):
                 text += f'\nКомментарий модератора: {item["reply"][:200]}'
+            if cooldown_hours > 0:
+                reviewed = _parse_ts(item.get('reviewed_at'))
+                if reviewed is not None:
+                    from datetime import timedelta
+                    retry = reviewed + timedelta(hours=cooldown_hours)
+                    text += (f'\nПовторная подача — не раньше '
+                             f'{retry.strftime("%d.%m %H:%M")}.')
         try:
             await user.send(text)
         except (discord.Forbidden, discord.HTTPException) as _ex:

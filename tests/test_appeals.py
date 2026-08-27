@@ -7,7 +7,7 @@ import ast
 import os
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 _TMP = tempfile.mkdtemp(prefix='hakumo_appeals_test_')
 os.chdir(_TMP)
@@ -64,10 +64,15 @@ ap.create_appeal(st, 555, 'Zhulik', 'вторая попытка, подробн
 ap.create_appeal(st, 555, 'Zhulik', 'третья попытка, очень подробно', NOW)
 bad, err = ap.create_appeal(st, 555, 'Zhulik', 'четвёртая попытка лимита', NOW)
 check(bad is None and 'дождитесь' in err, f'лимит {ap.MAX_PER_USER} открытых')
-# решённая освобождает место
+# решённая освобождает место — но сразу после отказа работает кулдаун,
+# а по его истечении слот честно свободен
 ap.resolve_appeal(st, 1, False, 'Arthur', NOW, reply='нет')
-freed, err = ap.create_appeal(st, 555, 'Zhulik', 'четвёртая после отказа', NOW)
-check(freed is not None, 'решённая (отклонённая) освобождает слот лимита')
+bad, err = ap.create_appeal(st, 555, 'Zhulik', 'четвёртая после отказа', NOW)
+check(bad is None and 'повторная подача' in err,
+      'мгновенный репост после отказа удерживает кулдаун')
+freed, err = ap.create_appeal(st, 555, 'Zhulik', 'четвёртая после кулдауна',
+                              NOW + timedelta(hours=ap.DEFAULT_COOLDOWN_HOURS + 1))
+check(freed is not None, 'после кулдауна решённая освобождает слот лимита')
 
 print('== 2. resolve_appeal ==')
 st2 = ap.empty_state()
@@ -108,6 +113,64 @@ db.set(4242, 'state', st2)
 back = db.get(4242, 'state', ap.empty_state())
 check(len(back['items']) == 2 and back['items'][0]['status'] == 'accepted',
       'решения переживают roundtrip')
+
+print('== 5.1 настройки settings_of ==')
+sdef = ap.settings_of(ap.empty_state())
+check(sdef['cooldown_hours'] == ap.DEFAULT_COOLDOWN_HOURS and
+      sdef['stale_hours'] == ap.DEFAULT_STALE_HOURS and
+      len(sdef['reject_templates']) == len(ap.DEFAULT_REJECT_TEMPLATES) and
+      sdef['require_reply_on_reject'] is False, 'дефолты на пустом state')
+spart = ap.settings_of({'settings': {'cooldown_hours': 5}})
+check(spart['cooldown_hours'] == 5 and spart['stale_hours'] == ap.DEFAULT_STALE_HOURS,
+      'частичное слияние: заданное + дефолт остального')
+sclamp = ap.settings_of({'settings': {'cooldown_hours': 9999, 'stale_hours': 0}})
+check(sclamp['cooldown_hours'] == 720 and sclamp['stale_hours'] == 1,
+      'значения зажаты в рамки')
+stpl = ap.settings_of({'settings': {'reject_templates': ['свой шаблон'] * 3}})
+check(stpl['reject_templates'] == ['свой шаблон'] * 3, 'свои шаблоны подхвачены')
+
+print('== 5.2 кулдаун после отказа ==')
+stc = ap.empty_state()
+check(ap.cooldown_block(stc, 777, NOW) is None, 'без истории отказов — не блокирует')
+rej, _ = ap.create_appeal(stc, 777, 'Nick', 'первая апелляция прошу разбан меня', NOW)
+ap.resolve_appeal(stc, rej['id'], False, 'Arthur', NOW, reply='нет')
+errc = ap.cooldown_block(stc, 777, NOW + timedelta(hours=1))
+check(errc is not None and 'повторная подача' in errc and 'не раньше' in errc,
+      f'свежий отказ блокирует: {errc}')
+stc2 = {'items': list(stc['items']), 'settings': {'cooldown_hours': 0}}
+check(ap.cooldown_block(stc2, 777, NOW + timedelta(hours=1)) is None,
+      'cooldown_hours=0 — пауза выключена')
+check(ap.cooldown_block(stc, 777, NOW + timedelta(hours=ap.DEFAULT_COOLDOWN_HOURS + 1)) is None,
+      'срок вышел — подавать можно')
+
+print('== 5.3 автозакрытие при ручном разбане ==')
+sta = ap.empty_state()
+pa1, _ = ap.create_appeal(sta, 900, 'Mira', 'прошу разбанить первый раз честно', NOW)
+pa2, _ = ap.create_appeal(sta, 900, 'Mira', 'вторая апелляция от того же человека', NOW)
+pb, _ = ap.create_appeal(sta, 901, 'Chuk', 'а я просто мимо проходил тут', NOW)
+rj, _ = ap.create_appeal(sta, 900, 'Mira', 'третья старая уже решённая', NOW)
+ap.resolve_appeal(sta, rj['id'], False, 'Arthur', NOW, reply='нет')
+closed = ap.auto_close_unbanned(sta, 900, NOW + timedelta(hours=2))
+check(len(closed) == 2 and {c['id'] for c in closed} == {pa1['id'], pa2['id']},
+      'закрыты обе открытые апелляции пользователя')
+check(all(c['status'] == 'auto_closed' and c['reviewed_by'] == 'Discord (разбан вручную)'
+          and c['reviewed_at'] for c in closed), 'поля автозакрытия корректны')
+check(ap.get_appeal(sta, pb['id'])['status'] == 'pending', 'чужая апелляция не тронута')
+check(ap.get_appeal(sta, rj['id'])['status'] == 'rejected', 'решённая не тронута')
+
+print('== 5.4 напоминания о висящих ==')
+sts = ap.empty_state()
+old_p, _ = ap.create_appeal(sts, 300, 'Old', 'жду решения уже целую вечность',
+                            NOW - timedelta(hours=30))
+fresh_p, _ = ap.create_appeal(sts, 301, 'New', 'только что подал апелляцию свою', NOW)
+rem_p, _ = ap.create_appeal(sts, 302, 'Rem', 'обо мне уже напоминали модам',
+                            NOW - timedelta(hours=30))
+rem_p['reminded_at'] = (NOW - timedelta(hours=1)).isoformat()
+stale = ap.stale_pending(sts, NOW)
+check([i['id'] for i in stale] == [old_p['id']],
+      'висящая — только старая и о которой не напоминали')
+check(ap.stale_pending(sts, NOW, stale_hours=100) == [],
+      'настраиваемый порог уважается (100 ч — ни одной)')
 
 print('== 6. линт ==')
 src = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()

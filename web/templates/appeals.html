@@ -36,6 +36,7 @@
         <button type="button" class="seg-btn" data-st="pending">Ожидают</button>
         <button type="button" class="seg-btn" data-st="accepted">Приняты</button>
         <button type="button" class="seg-btn" data-st="rejected">Отклонены</button>
+        <button type="button" class="seg-btn" data-st="auto_closed">Автозакрытие</button>
       </div>
       <span class="spacer"></span>
       <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
@@ -82,11 +83,49 @@
   </div>
 </div>
 
+<div class="panel" style="margin-top:14px" id="apRulesBox" {% if not can_edit %}hidden{% endif %}>
+  <div class="panel-head"><div><h2><i class="fas fa-list-check"></i> Правила подачи</h2>
+    <div class="sub">Антиспам и подсказки модераторам: кулдаун после отказа, напоминания о висящих, шаблоны причин отказа.</div></div></div>
+  <div class="panel-body">
+    <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px">
+      <label class="field" style="min-width:210px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Кулдаун после отказа (часы, 0 — выкл)</span>
+        <input type="number" class="form-input" id="apCooldown" min="0" max="720" aria-label="Кулдаун после отказа в часах"></label>
+      <label class="field" style="min-width:210px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Напоминать о висящих через (часы)</span>
+        <input type="number" class="form-input" id="apStale" min="1" max="336" aria-label="Напоминание о висящих в часах"></label>
+      <label class="field" style="flex-direction:row;align-items:center;gap:8px;margin-top:22px">
+        <input type="checkbox" id="apReqReply" aria-label="Комментарий обязателен при отказе">
+        <span style="font-size:var(--fs-sm)">При отказе комментарий обязателен</span></label>
+    </div>
+    <div class="form-row" style="max-width:900px;margin-top:10px">
+      <textarea class="form-input" id="apTemplates" rows="4" style="flex:1"
+        placeholder="Шаблоны причин отказа — по одной на строку (до 10)"
+        aria-label="Шаблоны причин отказа"></textarea>
+    </div>
+    <div class="form-row" style="margin-top:10px;align-items:center">
+      <button type="button" class="btn btn-primary" id="apRulesSave"><i class="fas fa-save"></i> Сохранить</button>
+      <span class="hint" id="apRulesMsg"></span>
+    </div>
+  </div>
+</div>
+
 <script>
 var GID = '{{ guild_id }}';
 var API = '/api/guild/' + GID + '/appeals';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
 var STATUS = '';
+var TEMPLATES = [];        /* шаблоны причин отказа — из настроек сервера */
+var apRulesDirty = false;  /* форму правил трогали — пришедший снапшот не затираем */
+
+function syncSettings(d) {
+  if (!CAN_EDIT || !d) return;
+  var s = d.settings || {};
+  TEMPLATES = s.reject_templates || [];
+  if (apRulesDirty) return;
+  if ($('apCooldown')) $('apCooldown').value = s.cooldown_hours;
+  if ($('apStale')) $('apStale').value = s.stale_hours;
+  if ($('apReqReply')) $('apReqReply').checked = !!s.require_reply_on_reject;
+  if ($('apTemplates')) $('apTemplates').value = (s.reject_templates || []).join('\n');
+}
 
 function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
@@ -108,11 +147,13 @@ function loadOverview() {
     var fp = String(JSON.stringify(d || null) || '').slice(0, 400);
     if (window.silentGuard && window.silentGuard('appeals', fp)) return;
     var s = d.stats;
+    var staleH = (d.settings && d.settings.stale_hours) || 24;
     var last = s.last_resolved
       ? kpi('fa-gavel', '#' + esc(s.last_resolved.id), 'последняя: ' + esc(s.last_resolved.status_label) + ' · ' + esc(s.last_resolved.reviewed_by), 'tone-info')
       : kpi('fa-gavel', '—', 'решений ещё не было', 'tone-info');
     $('apKpis').innerHTML =
       kpi('fa-inbox', s.pending, 'ожидают решения', 'tone-warn') +
+      (s.stale ? kpi('fa-hourglass-half', s.stale, 'ждут > ' + staleH + 'ч — напомним в канал', 'tone-err') : '') +
       kpi('fa-circle-check', s.accepted, 'принятых', 'tone-ok') +
       kpi('fa-circle-xmark', s.rejected, 'отклонённых', 'tone-err') + last;
 
@@ -127,6 +168,7 @@ function loadOverview() {
       rb.innerHTML = '<span class="badge tone-warning">свой канал не задан — при живом боте карточки уйдут в системный</span>';
     }
     if (CAN_EDIT) { $('apSetBox').hidden = false; loadChannels(); syncAppearance(d); }
+    syncSettings(d);
 
     var q = $('apQueue');
     if (!d.pending.length) {
@@ -134,8 +176,16 @@ function loadOverview() {
       return;
     }
     q.innerHTML = d.pending.map(function (it) {
+      var tplRow = '';
+      if (CAN_EDIT && TEMPLATES.length) {
+        tplRow = '<div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">' +
+          TEMPLATES.map(function (t) {
+            return '<button type="button" class="btn btn-ghost btn-sm apTpl" data-for="' + esc(it.id) + '" data-tpl="' + esc(t) + '" style="font-size:11px;padding:3px 10px">' + esc(t) + '</button>';
+          }).join('') + '</div>';
+      }
       var act = CAN_EDIT
-        ? '<div class="row" style="margin-top:10px">' +
+        ? tplRow +
+          '<div class="row" style="margin-top:8px">' +
           '<input class="form-input" id="apReply' + it.id + '" placeholder="Комментарий для ЛС (до 300 знаков)" maxlength="300" style="flex:1">' +
           '<button type="button" class="btn btn-primary btn-sm" data-ap="' + it.id + ':1"><i class="fas fa-check"></i> Принять</button>' +
           '<button type="button" class="btn btn-danger btn-sm" data-ap="' + it.id + ':0"><i class="fas fa-xmark"></i> Отклонить</button></div>'
@@ -143,10 +193,13 @@ function loadOverview() {
       var linkHtml = it.link
         ? '<div style="margin-top:6px"><a class="pv-link" href="' + esc(it.link) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;font-size:11.5px;font-weight:700;color:var(--ac);background:var(--ac-soft);border:1px solid var(--ac-line);border-radius:99px;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="fas fa-link"></i> ' + esc(it.link) + '</a></div>'
         : '';
+      var ctxHtml = it.context
+        ? '<div class="muted" style="font-size:11.5px;margin-top:5px"><i class="fas fa-folder-open" style="color:var(--ac)"></i> ' + esc(it.context) + '</div>'
+        : '';
       return '<div class="card" style="margin-bottom:10px">' +
         '<div class="row" style="margin-bottom:6px"><b>#' + esc(it.id) + '</b> · ' + esc(it.user_name || 'Без имени') +
           ' · <span class="id-pill">' + esc(it.user_id) + '</span><span class="spacer"></span><span class="muted">' + esc(it.created_at) + '</span></div>' +
-        '<div style="white-space:pre-wrap">' + linkify(esc(it.text)) + '</div>' + linkHtml + act + '</div>';
+        '<div style="white-space:pre-wrap">' + linkify(esc(it.text)) + '</div>' + ctxHtml + linkHtml + act + '</div>';
     }).join('');
   }).catch(function () {});
 }
@@ -163,7 +216,8 @@ function loadHistory() {
     h.innerHTML = d.items.map(function (it) {
       var det = it.reviewed_at ? (it.status_label + ' · ' + it.reviewed_by + ' · ' + it.reviewed_at) : 'подана ' + it.created_at;
       var rep = it.reply ? ' · комментарий: ' + it.reply : '';
-      var tone = it.status === 'accepted' ? 'ok' : it.status === 'rejected' ? 'danger' : 'tone-warning';
+      var tone = it.status === 'accepted' ? 'ok' : it.status === 'rejected' ? 'danger'
+        : it.status === 'auto_closed' ? 'neutral' : 'tone-warning';
       return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-scale-balanced"></i></div>' +
         '<div style="min-width:0;flex:1"><div class="feed-item-title">#' + esc(it.id) + ' · ' + esc(it.user_name || 'Без имени') + '</div>' +
         '<div class="feed-item-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(it.text) + '</div>' +
@@ -205,6 +259,12 @@ function loadChannels() {
 }
 
 document.addEventListener('click', function (e) {
+  var tplBtn = e.target.closest('.apTpl');
+  if (tplBtn) {   /* шаблон причины отказа — в поле комментария этой апелляции */
+    var inp = $('apReply' + tplBtn.getAttribute('data-for'));
+    if (inp) { inp.value = tplBtn.getAttribute('data-tpl'); inp.focus(); }
+    return;
+  }
   var b = e.target.closest('[data-ap]');
   if (b) {
     var parts = b.dataset.ap.split(':');
@@ -314,6 +374,40 @@ if (apLookSaveBtn) apLookSaveBtn.addEventListener('click', function () {
     el.msg.textContent = 'Сеть моргнула — попробуйте ещё раз';
   });
 });
+
+/* ── Правила подачи (admin/owner) ──────────────────────────────────── */
+if (CAN_EDIT && $('apRulesSave')) {
+  ['apCooldown', 'apStale', 'apTemplates'].forEach(function (id) {
+    $(id).addEventListener('input', function () { apRulesDirty = true; });
+  });
+  $('apReqReply').addEventListener('change', function () { apRulesDirty = true; });
+  $('apRulesSave').addEventListener('click', function () {
+    var msg = $('apRulesMsg');
+    fetch(API + '/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cooldown_hours: $('apCooldown').value,
+        stale_hours: $('apStale').value,
+        require_reply_on_reject: $('apReqReply').checked,
+        reject_templates: $('apTemplates').value.split('\n')
+          .map(function (s) { return s.trim(); })
+          .filter(function (s) { return !!s; })
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      msg.className = 'hint' + (d.success ? '' : ' error');
+      msg.textContent = d.message || d.error || 'Ошибка';
+      if (d.success) {
+        apRulesDirty = false;
+        TEMPLATES = (d.settings && d.settings.reject_templates) || TEMPLATES;
+        if (window.showToast) window.showToast(msg.textContent, true);
+        loadOverview();
+      }
+    }).catch(function () {
+      msg.className = 'hint error';
+      msg.textContent = 'Сеть моргнула — попробуйте ещё раз';
+    });
+  });
+}
 
 loadOverview();
 loadHistory();
