@@ -51,6 +51,9 @@ DEFAULT_REJECT_TEMPLATES = [
 MAX_TEMPLATES = 10
 STALE_CHECK_EVERY = 1800  # сек — как часто проверять висящие апелляции
 
+COLOR_CLOSED = 0x95A5A6   # автозакрытие (серый)
+DM_FOOTER = 'Hakumo · Апелляции'
+
 
 # ─── чистые функции (покрыты тестом) ────────────────────────────────────────
 
@@ -81,7 +84,32 @@ def settings_of(state):
                                     DEFAULT_STALE_HOURS, 1, 336),
         'reject_templates': [str(t)[:100] for t in tpl[:MAX_TEMPLATES]],
         'require_reply_on_reject': bool(raw.get('require_reply_on_reject')),
+        # разовая ссылка в ЛС при принятии РЕАЛЬНОГО бана (изоляции не нужно —
+        # человек и так на сервере). Выключено по умолчанию: авто-инвайт —
+        # это потенциальная дыра, включает только владелец.
+        'invite_on_unban': bool(raw.get('invite_on_unban')),
+        'invite_channel_id': _clamp_hours(raw.get('invite_channel_id'), 0, 0,
+                                          10 ** 25),
     }
+
+
+def _dm_embed(status, item, guild_name=''):
+    """Единый вид ЛС апелляций: цвет = исход, номер + сервер, футер Hakumo.
+
+    status: 'submitted' | 'accepted' | 'rejected' | 'closed' | 'pending'.
+    """
+    palette = {
+        'submitted': (COLOR_PENDING, f'Апелляция #{item.get("id")} отправлена'),
+        'accepted': (COLOR_YES, f'Апелляция #{item.get("id")} — принята'),
+        'rejected': (COLOR_NO, f'Апелляция #{item.get("id")} — отклонена'),
+        'closed': (COLOR_CLOSED, f'Апелляция #{item.get("id")} — закрыта'),
+        'pending': (COLOR_PENDING, f'Апелляция #{item.get("id")} — на рассмотрении'),
+    }
+    color, title = palette.get(status, (COLOR_PENDING, f'Апелляция #{item.get("id")}'))
+    embed = discord.Embed(title=title, color=color,
+                          timestamp=datetime.now(UTC))
+    embed.set_footer(text=f'{guild_name} · {DM_FOOTER}' if guild_name else DM_FOOTER)
+    return embed
 
 
 def _parse_ts(value):
@@ -286,10 +314,12 @@ class AppealView(discord.ui.View):
             return
         self.cog._save(gid, state)
         unbanned = False
+        member_present = False
+        guild = self.cog.bot.get_guild(gid)
         if accept:
-            guild = self.cog.bot.get_guild(gid)
             if guild is not None:
                 member = guild.get_member(item['user_id'])
+                member_present = member is not None
                 # мягкое возвращение: снять роль-бан, изоляцию и таймаут
                 if member is not None:
                     try:
@@ -318,11 +348,15 @@ class AppealView(discord.ui.View):
                 except (discord.Forbidden, discord.HTTPException) as _ex:
                     log.error('appeals: unban %s на %s не удался: %s',
                               item['user_id'], gid, _ex)
-        _guild = self.cog.bot.get_guild(gid)
+        _settings = settings_of(state)
+        invite_url = None
+        if accept and unbanned and not member_present and guild is not None:
+            invite_url = await self.cog._make_return_invite(guild, _settings)
         await self.cog._notify_user(
             item, accept, unbanned,
-            cooldown_hours=settings_of(state)['cooldown_hours'],
-            guild_name=str(getattr(_guild, 'name', '') or ''))
+            cooldown_hours=_settings['cooldown_hours'],
+            guild_name=str(getattr(guild, 'name', '') or ''),
+            member_present=member_present, invite_url=invite_url)
 
         for child in self.children:
             child.disabled = True
@@ -573,6 +607,28 @@ class Appeals(commands.Cog):
             log.debug('appeals: контекст %s: %s', user_id, _ex)
             return 'история наказаний недоступна'
 
+    async def _make_return_invite(self, guild, settings):
+        """Разовая ссылка-возврат для принятого РЕАЛЬНОГО Discord-бана.
+
+        Работает только если владелец включил «разовые ссылки» в «Правилах
+        подачи» и выбрал канал. 1 использование, 24 часа. Изоляции ссылка не
+        нужна вовсе — звонок сюда не доходит.
+        """
+        try:
+            if not settings.get('invite_on_unban'):
+                return None
+            cid = int(settings.get('invite_channel_id') or 0)
+            channel = guild.get_channel(cid) if (guild and cid) else None
+            if channel is None:
+                return None
+            inv = await channel.create_invite(
+                max_uses=1, max_age=86400, unique=True,
+                reason='Апелляция принята — возврат на сервер')
+            return str(inv.url)
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.debug('appeals: инвайт возврата: %s', _ex)
+            return None
+
     # ---- напоминания о висящих апелляциях ----
     async def _stale_loop(self):
         """Раз в STALE_CHECK_EVERY: напомнить в канал карточек о старых pending."""
@@ -588,11 +644,11 @@ class Appeals(commands.Cog):
                     channel = self._log_channel(guild, state)
                     now = datetime.now(UTC)
                     for item in stale:
+                        age_h = 0
+                        created = _parse_ts(item.get('created_at'))
+                        if created is not None:
+                            age_h = max(0, int((now - created).total_seconds() // 3600))
                         if channel is not None:
-                            age_h = 0
-                            created = _parse_ts(item.get('created_at'))
-                            if created is not None:
-                                age_h = max(0, int((now - created).total_seconds() // 3600))
                             try:
                                 await channel.send(
                                     f'⚖ Апелляция **#{item["id"]}** от '
@@ -600,6 +656,18 @@ class Appeals(commands.Cog):
                                     f'**{age_h} ч** — загляните в очередь.')
                             except (discord.Forbidden, discord.HTTPException) as _ex:
                                 log.debug('appeals: напоминание #%s: %s', item['id'], _ex)
+                        # и человеку в ЛС: его апелляция не потерялась
+                        try:
+                            user = await self.bot.fetch_user(int(item['user_id']))
+                            embed = _dm_embed('pending', item, str(guild.name))
+                            embed.description = (
+                                f'Ваша апелляция **#{item["id"]}** ждёт решения '
+                                f'уже **{age_h} ч** — она не потерялась: '
+                                'модераторам только что напомнили.')
+                            await user.send(embed=embed)
+                        except (discord.NotFound, discord.Forbidden,
+                                discord.HTTPException) as _ex:
+                            log.debug('appeals: ЛС-напоминание #%s: %s', item['id'], _ex)
                         item['reminded_at'] = now.isoformat()
                     self._save(guild.id, state)
             except Exception as _ex:
@@ -625,16 +693,17 @@ class Appeals(commands.Cog):
                         msg = await channel.fetch_message(mid)
                         embed = msg.embeds[0] if msg.embeds else None
                         if embed:
-                            embed.color = 0x95A5A6
+                            embed.color = COLOR_CLOSED
                             embed.title = f'Апелляция #{item["id"]} — закрыта автоматически'
                             embed.set_footer(text='Разбанен вручную в Discord')
                         await msg.edit(embed=embed, view=None)
                 except (discord.NotFound, discord.Forbidden, discord.HTTPException) as _ex:
                     log.debug('appeals: автозакрытие карточки #%s: %s', item['id'], _ex)
                 try:
-                    await user.send(
-                        f'Ваша апелляция **#{item["id"]}** на сервере **{guild.name}** '
-                        'закрыта: бан снят вручную — решение больше не нужно.')
+                    dm = _dm_embed('closed', item, str(guild.name))
+                    dm.description = ('Бан снят вручную в Discord — решение по '
+                                      'апелляции больше не нужно. Доступ уже с вами.')
+                    await user.send(embed=dm)
                 except (discord.Forbidden, discord.HTTPException) as _ex:
                     log.debug('appeals: ЛС автозакрытия #%s: %s', item['id'], _ex)
             log.info('appeals: %s апелляций закрыто автоматически (ручной разбан %s на %s)',
@@ -790,11 +859,13 @@ class Appeals(commands.Cog):
             log.error('appeals: тред #%s не создан: %s', item['id'], _ex)
         self._save(guild_id, state)
         try:
-            await user.send(
-                f'Ваша апелляция **#{item["id"]}** на сервере **{guild.name}** '
-                'принята. Модераторы ответят в треде.')
+            embed = _dm_embed('submitted', item, str(guild.name))
+            embed.description = (
+                f'Модераторы сервера **{guild.name}** уже получили её. '
+                'Ответ придёт в личные сообщения — обычно в течение суток.')
+            await user.send(embed=embed)
         except (discord.Forbidden, discord.HTTPException) as _ex:
-            log.debug('appeals: ЛС о треде #%s не дошло: %s', item['id'], _ex)
+            log.debug('appeals: ЛС подтверждения #%s не дошло: %s', item['id'], _ex)
         return item, None
 
     # ---- подача (ЛС боту) ----
@@ -911,30 +982,58 @@ class Appeals(commands.Cog):
         ch = guild.get_channel(cid) if cid else None
         return ch or guild.system_channel
 
-    async def _notify_user(self, item, accept, unbanned, cooldown_hours=0, guild_name=''):
+    async def _notify_user(self, item, accept, unbanned, cooldown_hours=0,
+                           guild_name='', member_present=False, invite_url=None):
+        """ЛС о решении — единый embed.
+
+        Развилка принятия по нашей механике: панельный «бан» — изоляция
+        (человек на сервере, возвращаем доступ), командный /ban — настоящий
+        Discord-бан (человек вне сервера, может вернуться по ссылке, если
+        владелец включил разовые инвайты в «Правилах подачи»).
+        Отказ — карточка-итог: текст апелляции, комментарий, дата репоста.
+        """
         try:
             user = await self.bot.fetch_user(item['user_id'])
         except (discord.NotFound, discord.HTTPException):
             return
-        num = f'#{item.get("id")}' if item.get('id') else ''
-        server = f' на сервере **{guild_name}**' if guild_name else ''
         if accept:
-            text = (f'Ваша апелляция **{num}**{server} **принята**, бан снят — '
-                    'добро пожаловать обратно.'
-                    if unbanned else f'Ваша апелляция **{num}**{server} **принята**.')
+            embed = _dm_embed('accepted', item, guild_name)
+            if member_present:
+                embed.description = (
+                    f'Наказание снято: изоляция убрана — вы снова видите '
+                    f'каналы сервера **{guild_name}**. Добро пожаловать назад!')
+            elif unbanned:
+                embed.description = (
+                    f'Бан на сервере **{guild_name}** снят. '
+                    + (f'Возвращайтесь по ссылке (работает один раз, 24 ч):\n{invite_url}'
+                       if invite_url else
+                       'Можно вернуться по вашему приглашению на сервер.'))
+                if not invite_url:
+                    embed.description += ' Или попросите свежую ссылку у знакомых модераторов.'
+            else:
+                embed.description = (f'Ваша апелляция на сервере **{guild_name}** '
+                                     'принята.')
         else:
-            text = f'Ваша апелляция **{num}**{server} **отклонена**.'
+            embed = _dm_embed('rejected', item, guild_name)
+            embed.description = 'К сожалению, в этот раз — нет.'
+            text_brief = str(item.get('text') or '').strip()
+            if text_brief:
+                embed.add_field(name='Ваша апелляция',
+                                value=text_brief[:300], inline=False)
             if item.get('reply'):
-                text += f'\nКомментарий модератора: {item["reply"][:200]}'
+                embed.add_field(name='Комментарий модератора',
+                                value=str(item['reply'])[:300], inline=False)
             if cooldown_hours > 0:
                 reviewed = _parse_ts(item.get('reviewed_at'))
                 if reviewed is not None:
                     from datetime import timedelta
                     retry = reviewed + timedelta(hours=cooldown_hours)
-                    text += (f'\nПовторная подача — не раньше '
-                             f'{retry.strftime("%d.%m %H:%M")}.')
+                    embed.add_field(
+                        name='Повторная подача',
+                        value=f'не раньше **{retry.strftime("%d.%m %H:%M")}**',
+                        inline=False)
         try:
-            await user.send(text)
+            await user.send(embed=embed)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: ЛС %s закрыты: %s', item['user_id'], _ex)
 

@@ -96,6 +96,15 @@
         <input type="checkbox" id="apReqReply" aria-label="Комментарий обязателен при отказе">
         <span style="font-size:var(--fs-sm)">При отказе комментарий обязателен</span></label>
     </div>
+    <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px;margin-top:10px">
+      <label class="field" style="flex-direction:row;align-items:center;gap:8px;margin-top:22px">
+        <input type="checkbox" id="apInviteOn" aria-label="Разовая ссылка при снятии настоящего бана">
+        <span style="font-size:var(--fs-sm)">Разовая ссылка в ЛС при снятии настоящего бана</span></label>
+      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Канал для ссылки (инвайт на 1 вход, 24 ч)</span>
+        <select class="form-input" id="apInviteChan" aria-label="Канал для разовой ссылки"><option value="">Не выбран</option></select></label>
+    </div>
+    <div class="hint" style="margin-top:2px"><i class="fas fa-circle-info"></i>
+      Для панельного «бана» (изоляции) ссылка не нужна — человек и так на сервере, доступ возвращается сам. Ссылка отправляется только если бан был настоящим Discord-баном.</div>
     <div class="form-row" style="max-width:900px;margin-top:10px">
       <textarea class="form-input" id="apTemplates" rows="4" style="flex:1"
         placeholder="Шаблоны причин отказа — по одной на строку (до 10)"
@@ -124,6 +133,11 @@ function syncSettings(d) {
   if ($('apCooldown')) $('apCooldown').value = s.cooldown_hours;
   if ($('apStale')) $('apStale').value = s.stale_hours;
   if ($('apReqReply')) $('apReqReply').checked = !!s.require_reply_on_reject;
+  if ($('apInviteOn')) $('apInviteOn').checked = !!s.invite_on_unban;
+  if ($('apInviteChan')) {   /* опций может ещё не быть — запоминаем для loadChannels */
+    $('apInviteChan').dataset.value = String(s.invite_channel_id || '');
+    $('apInviteChan').value = String(s.invite_channel_id || '');
+  }
   if ($('apTemplates')) $('apTemplates').value = (s.reject_templates || []).join('\n');
 }
 
@@ -251,6 +265,13 @@ function loadChannels() {
   fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); }).then(function (d) {
     /* API отдаёт и массив, и {channels: [...]} — принимаем оба формата */
     var raw = Array.isArray(d) ? d : (d.channels || []);
+    var inv = $('apInviteChan');
+    if (inv) {  /* канал для разовых ссылок-возвратов — тот же список */
+      var keepInv = inv.dataset.value || inv.value;
+      inv.innerHTML = '<option value="">Не выбран</option>' + raw.filter(function (c) { return c.type === 'text'; })
+        .map(function (c) { return '<option value="' + esc(c.id) + '"># ' + esc(c.name) + '</option>'; }).join('');
+      if (keepInv) inv.value = keepInv;
+    }
     var list = raw.filter(function (c) { return c.type === 'text'; });
     $('apChanSel').innerHTML = list.length
       ? list.map(function (c) { return '<option value="' + esc(c.id) + '"># ' + esc(c.name) + '</option>'; }).join('')
@@ -380,7 +401,9 @@ if (CAN_EDIT && $('apRulesSave')) {
   ['apCooldown', 'apStale', 'apTemplates'].forEach(function (id) {
     $(id).addEventListener('input', function () { apRulesDirty = true; });
   });
-  $('apReqReply').addEventListener('change', function () { apRulesDirty = true; });
+  ['apReqReply', 'apInviteOn', 'apInviteChan'].forEach(function (id) {
+    $(id).addEventListener('change', function () { apRulesDirty = true; });
+  });
   $('apRulesSave').addEventListener('click', function () {
     var msg = $('apRulesMsg');
     fetch(API + '/settings', {
@@ -389,6 +412,8 @@ if (CAN_EDIT && $('apRulesSave')) {
         cooldown_hours: $('apCooldown').value,
         stale_hours: $('apStale').value,
         require_reply_on_reject: $('apReqReply').checked,
+        invite_on_unban: $('apInviteOn').checked,
+        invite_channel_id: $('apInviteChan').value,
         reject_templates: $('apTemplates').value.split('\n')
           .map(function (s) { return s.trim(); })
           .filter(function (s) { return !!s; })

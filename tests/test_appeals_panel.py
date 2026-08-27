@@ -304,6 +304,21 @@ ov = client.get(OV).get_json()
 check(ov['settings']['reject_templates'] == ['Причина А', 'Причина Б'],
       'шаблоны видны в overview для чипов')
 
+# разовая ссылка-возврат: только с выбранным каналом
+r = client.post('/api/guild/777/appeals/settings',
+                json={'invite_on_unban': True, 'invite_channel_id': 0})
+check(r.status_code == 400 and 'канал' in (r.get_json().get('error') or '').lower(),
+      'ссылка без канала — понятная ошибка')
+r = client.post('/api/guild/777/appeals/settings',
+                json={'invite_on_unban': True, 'invite_channel_id': 301})
+check(r.get_json()['settings']['invite_channel_id'] == 301 and
+      r.get_json()['settings']['invite_on_unban'] is True,
+      'канал и тумблер ссылки сохранены')
+ov = client.get(OV).get_json()
+check(ov['settings']['invite_on_unban'] is True and
+      ov['settings']['invite_channel_id'] == 301,
+      'настройки ссылки видны в overview')
+
 # обязательный комментарий при отказе
 r = client.post('/api/guild/777/appeals/resolve', json={
     'appeal_id': str(new_item['id']), 'accept': False, 'reply': ''})
@@ -330,6 +345,8 @@ apt = open(os.path.join(ROOT, 'web', 'templates', 'appeals.html'), encoding='utf
 check('id="apCooldown"' in apt and 'id="apStale"' in apt and
       'id="apTemplates"' in apt and 'id="apRulesSave"' in apt,
       'форма «Правила подачи» в шаблоне')
+check('id="apInviteOn"' in apt and 'id="apInviteChan"' in apt,
+      'тумблер и выбор канала ссылки-возврата в форме')
 check('data-st="auto_closed"' in apt, 'чип автозакрытия в фильтрах шаблона')
 check('it.context' in apt and 'apTpl' in apt and '/settings' in apt,
       'контекст, шаблонные чипы и сохранение правил в очереди')

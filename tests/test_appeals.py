@@ -128,6 +128,11 @@ check(sclamp['cooldown_hours'] == 720 and sclamp['stale_hours'] == 1,
       'значения зажаты в рамки')
 stpl = ap.settings_of({'settings': {'reject_templates': ['свой шаблон'] * 3}})
 check(stpl['reject_templates'] == ['свой шаблон'] * 3, 'свои шаблоны подхвачены')
+check(sdef['invite_on_unban'] is False and sdef['invite_channel_id'] == 0,
+      'ссылка-возврат по умолчанию выключена (безопасность)')
+sinv = ap.settings_of({'settings': {'invite_on_unban': True, 'invite_channel_id': 555}})
+check(sinv['invite_on_unban'] is True and sinv['invite_channel_id'] == 555,
+      'ссылка-возврат подхватывается из state')
 
 print('== 5.2 кулдаун после отказа ==')
 stc = ap.empty_state()
@@ -182,6 +187,10 @@ silent = [n.lineno for n in ast.walk(tree)
           and isinstance([b for b in n.body if not (isinstance(b, ast.Expr)
                           and isinstance(b.value, ast.Constant))][0],
                          (ast.Pass, ast.Continue))]
+check('_dm_embed' in src and 'COLOR_CLOSED' in src,
+      'ЛС апелляций — единые embed-карточки')
+check('ответят в треде' not in src,
+      'старая неверная фраза «ответят в треде» убрана из ЛС пользователя')
 check(not silent, f'ни одного молчаливого except {silent or "ок"}')
 check('utcnow' not in src, 'utcnow() не используется')
 check('await asyncio' in src or 'wait_until_ready' in src or True, 'модуль собран')

@@ -159,8 +159,13 @@ def _unban(guild, user_id, appeal_id):
         return False
 
 
-def _notify_user(bot, item, accept, unbanned):
-    """ЛС решением — тот самый метод кога, через его цикл."""
+def _notify_user(bot, gid, item, accept, unbanned, member_present=False):
+    """ЛС решением — тот самый метод кога, через его цикл.
+
+    member_present — человек на сервере (изоляция): ЛС скажет «доступ
+    восстановлен», а для реального Discord-бана — текст про возврат
+    (плюс разовая ссылка, если владелец включил в «Правилах подачи»).
+    """
     try:
         cog = bot.get_cog('Appeals')
     except Exception as _ex:
@@ -169,7 +174,24 @@ def _notify_user(bot, item, accept, unbanned):
     if cog is None:
         return False
     try:
-        _run_async(cog._notify_user(item, accept, unbanned), timeout=10)
+        settings = AP.settings_of(_state(gid))
+        guild = None
+        try:
+            guild = bot.get_guild(int(gid))
+        except Exception as _ex:
+            _log.debug('appeals: guild на ЛС: %s', _ex)
+        invite_url = None
+        if accept and unbanned and not member_present and guild is not None:
+            try:
+                invite_url = _run_async(
+                    cog._make_return_invite(guild, settings), timeout=10)
+            except Exception as _ex:
+                _log.debug('appeals: инвайт возврата из панели: %s', _ex)
+        _run_async(cog._notify_user(
+            item, accept, unbanned,
+            cooldown_hours=settings['cooldown_hours'],
+            guild_name=str(getattr(guild, 'name', '') or ''),
+            member_present=member_present, invite_url=invite_url), timeout=10)
         return True
     except Exception as _ex:
         _log.debug('appeals: ЛС решением: %s', _ex)
@@ -177,10 +199,11 @@ def _notify_user(bot, item, accept, unbanned):
 
 
 def apply_side_effects(bot, gid, item, accept):
-    """Разбан (только при принятии) + ЛС — как в AppealView._resolve."""
+    """Разбан/снятие изоляции (при принятии) + ЛС — как в AppealView._resolve."""
     if not bot:
         return {'offline': True, 'unbanned': None, 'dm_attempted': False}
     unbanned = None
+    member_present = False
     if accept:
         guild = None
         try:
@@ -188,8 +211,36 @@ def apply_side_effects(bot, gid, item, accept):
         except Exception as _ex:
             _log.debug('appeals: guild на разбане: %s', _ex)
         if guild is not None:
+            member = None
+            try:
+                member = guild.get_member(int(item['user_id']))
+            except Exception as _ex:
+                _log.debug('appeals: member presence: %s', _ex)
+            member_present = member is not None
+            # панель повторяет кнопку кога: мягкое возвращение из изоляции —
+            # роль-бан, доступ к каналам, голосовой таймаут
+            if member is not None:
+                async def _soft_return():
+                    from services import punish_roles as PR
+                    rid = PR.role_for(int(gid), 'ban')
+                    role = guild.get_role(rid) if rid else None
+                    if role is not None and role in getattr(member, 'roles', []):
+                        await member.remove_roles(
+                            role, reason=f'Апелляция #{item["id"]} принята')
+                        PR.clear(int(gid), member.id, rid)
+                    mod = bot.get_cog('Moderation')
+                    if mod is not None:
+                        await mod._unisolate_member(guild, member)
+                        try:
+                            await member.timeout(None)
+                        except (discord.Forbidden, discord.HTTPException) as _e:
+                            _log.debug('appeals: таймаут при возврате: %s', _e)
+                try:
+                    _run_async(_soft_return(), timeout=15)
+                except Exception as _ex:
+                    _log.debug('appeals: снятие изоляции из панели: %s', _ex)
             unbanned = _unban(guild, item['user_id'], item['id'])
-    dm = _notify_user(bot, item, accept, bool(unbanned))
+    dm = _notify_user(bot, gid, item, accept, bool(unbanned), member_present)
     return {'offline': False, 'unbanned': unbanned, 'dm_attempted': dm}
 
 
@@ -380,6 +431,19 @@ def register(ctx):
             if not templates:
                 return jsonify({'success': False,
                                 'error': 'Нужен хотя бы один шаблон отказа'}), 400
+        # канал для разовых ссылок-возвратов (0 = выключено)
+        invite_channel_id = cur['invite_channel_id']
+        if 'invite_channel_id' in data:
+            try:
+                invite_channel_id = max(0, int(data.get('invite_channel_id') or 0))
+            except (TypeError, ValueError):
+                return jsonify({'success': False,
+                                'error': 'Канал для ссылок: число'}), 400
+        invite_on_unban = bool(data.get('invite_on_unban',
+                                        cur['invite_on_unban']))
+        if invite_on_unban and not invite_channel_id:
+            return jsonify({'success': False,
+                            'error': 'Разовые ссылки: сначала выберите канал'}), 400
         settings = {
             'cooldown_hours': _clamp_hours(data.get('cooldown_hours'), 0, 720,
                                            cur['cooldown_hours']),
@@ -389,6 +453,8 @@ def register(ctx):
             'require_reply_on_reject': bool(data.get('require_reply_on_reject',
                                                      cur['require_reply_on_reject'])),
             'reject_templates': templates,
+            'invite_on_unban': invite_on_unban,
+            'invite_channel_id': invite_channel_id,
         }
         state['settings'] = settings
         _save(gid, state)
