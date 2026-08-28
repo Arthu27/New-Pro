@@ -5,7 +5,7 @@
 - 14 маршрутов хаба каналов + запись/чтение новых шести адаптеров (считалка,
   зала славы, ночной итог, дайджест модерации, смены, призыв тикетов) —
   через те же файлы и хранилища, что читает бот;
-- категорию «Настройки» в меню и её 13 страниц в верном порядке;
+- категорию «Настройки» в меню и её 17 страниц в верном порядке;
 - сервис лэйаута меню: валидацию, защиту /panel-menu, скрытие и порядок
   (применяется и к владельцу), API лэйаута с валидацией формата;
 - страницу /mod-settings и её API: лестницу авто-наказаний (нормализация,
@@ -101,18 +101,19 @@ from services import panel_menu as PM  # noqa: E402
 
 pages = [p for g in PM.MENU for p in g['pages']]
 paths = [p['path'] for p in pages]
-check(len(paths) == 124 and len(set(paths)) == 124,
-      f'в меню 124 уникальные страницы ({len(paths)})')
+check(len(paths) == 125 and len(set(paths)) == 125,
+      f'в меню 125 уникальные страницы ({len(paths)})')
 groups = {g['key']: g for g in PM.MENU}
 check('settings' in groups, 'категория «Настройки» существует')
 sg = groups['settings']
 check(sg['group'] == 'Настройки' and bool(sg.get('icon')),
       'группа с русским именем и иконкой')
 sp = [p['path'] for p in sg['pages']]
-want = ['/settings', '/command-switches', '/mod-settings', '/channel-settings',
-        '/bot-settings', '/ticket-settings', '/welcome-editor', '/rules-editor',
-        '/warn-config', '/automation', '/notifications', '/pagerduty',
-        '/theme-settings', '/theme-studio', '/anticrash', '/log-settings']
+want = ['/settings', '/command-switches', '/mod-settings', '/role-settings',
+        '/channel-settings', '/bot-settings', '/ticket-settings', '/welcome-editor',
+        '/rules-editor', '/warn-config', '/automation', '/notifications',
+        '/pagerduty', '/theme-settings', '/theme-studio', '/anticrash',
+        '/log-settings']
 check(sp == want, f'страницы категории в верном порядке ({len(sp)})')
 gkeys = [g['key'] for g in PM.MENU]
 check(gkeys.index('settings') == gkeys.index('bot') + 1,

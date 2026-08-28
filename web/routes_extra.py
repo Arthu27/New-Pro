@@ -46,6 +46,7 @@ from web.routes import (
     channels_admin,
     channel_settings,
     mod_settings,
+    role_settings_panel,
     guardian,
     guild_features,
     member_ops,

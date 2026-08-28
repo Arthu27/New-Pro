@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
-"""Роли наказаний: мут / войс-мут / бан — руками из панели.
+"""Роли наказаний: мут / войс-мут / бан / уровни варнов — из панели.
 
 Владелец сам выбирает, какая роль сервера = какое наказание
-(панель → «Настройки модерации» → «Роли наказаний»). Если роль не выбрана,
+(панель → «Настройки» → «Роли наказаний»). Если роль не выбрана,
 бот работает как раньше: мут — таймаутом, «бан» — изоляцией каналов.
 
 Роль не снимается сама — поэтому сервис ведёт журнал временных выдач:
-(kогда чей срок вышел) и ког Moderation раз в минуту снимает просроченные.
+(когда чей срок вышел) и ког Moderation раз в минуту снимает просроченные.
+
+Уровни варнов (warn_1..warn_10): участник с warn_count варнами получает
+роль БЛИЖАЙШЕГО уровня не выше warn_count, роль предыдущего уровня
+снимается автоматически (level_transition — «что снять/что выдать»).
 
 Хранилище: data/punish_roles.json
     {"<gid>": {"roles": {"mute": id, "vmute": id, "ban": id},
@@ -14,6 +18,7 @@
 """
 import json
 import os
+import re
 import threading
 import time
 
@@ -23,9 +28,57 @@ log = get_logger('punish_roles')
 
 PATH = 'data/punish_roles.json'
 KINDS = ('mute', 'vmute', 'ban')
+WARN_LEVEL_MIN = 1
+WARN_LEVEL_MAX = 10
+_WARN_KEY_RE = re.compile(r'^warn_(10|[1-9])$')
 MAX_SECONDS = 28 * 86400            # роли дольше 28 дней не выдаём
 
 _lock = threading.Lock()
+
+
+def valid_kind(kind):
+    """mute/vmute/ban или warn_N — роль уровня (N варнов)."""
+    kind = str(kind or '')
+    return kind in KINDS or bool(_WARN_KEY_RE.match(kind))
+
+
+def warn_levels(mapping=None):
+    """{уровень: role_id} из выбранных warn-ролей (mapping = get(gid) или None)."""
+    roles = mapping or {}
+    out = {}
+    for k, v in roles.items():
+        m = _WARN_KEY_RE.match(str(k))
+        if not m:
+            continue
+        try:
+            v = int(v or 0)
+        except (TypeError, ValueError) as _ex:
+            log.debug('warn_levels: мусорное значение %r: %s', (k, v), _ex)
+            continue
+        if v > 0:
+            out[int(m.group(1))] = v
+    return out
+
+
+def level_transition(gid, warn_count):
+    """Роли-уровни: (add_id, remove_ids) при новом числе варнов.
+
+    Целевой уровень — ближайший не выше warn_count (как ступень лестницы).
+    Снимаем ВСЕ выбранные warn-роли кроме целевой: смена уровня снимает
+    предыдущую роль автоматически, дублей не бывает. 0 варнов — снять всё.
+    """
+    levels = warn_levels(get(gid))
+    try:
+        count = max(0, int(warn_count or 0))
+    except (TypeError, ValueError):
+        count = 0
+    target = max((lvl for lvl in levels if lvl <= count), default=0)
+    add_id = int(levels.get(target) or 0)
+    remove = []
+    for rid in dict.fromkeys(int(v) for _lvl, v in levels.items() if v):
+        if rid != add_id:
+            remove.append(rid)
+    return add_id, remove
 
 
 def _load():
@@ -49,9 +102,11 @@ def _clean_roles(raw):
     if not isinstance(raw, dict):
         return {}
     out = {}
-    for k in KINDS:
+    for k, v0 in raw.items():
+        if not valid_kind(k):
+            continue
         try:
-            v = int(raw.get(k) or 0)
+            v = int(v0 or 0)
         except (TypeError, ValueError):
             v = 0
         if v > 0:
@@ -60,27 +115,30 @@ def _clean_roles(raw):
 
 
 def get(gid):
-    """Текущий выбор ролей: {'mute': id, 'vmute': id, 'ban': id} (0 = не задано)."""
+    """Текущий выбор ролей: {'mute': id, ..., 'warn_3': id} (пусто = не задано)."""
     row = _load().get(str(gid)) or {}
     return _clean_roles(row.get('roles'))
 
 
 def set_roles(gid, who=None, **kw):
-    """Задать роли (set_roles(gid, mute=123, vmute=0...)); 0 = снять выбор."""
+    """Задать роли (set_roles(gid, mute=123, warn_1=456, vmute=0...));
+    0 = снять выбор. Невалидные ключи/значения игнорируются."""
     data = _load()
     row = data.setdefault(str(gid), {})
     cur = _clean_roles(row.get('roles'))
-    for k in KINDS:
-        if k in kw:
-            try:
-                v = int(kw[k] or 0)
-            except (TypeError, ValueError) as _ex:
-                log.debug('set_roles: мусорное значение %s=%r: %s', k, kw[k], _ex)
-                continue
-            if v > 0:
-                cur[k] = v
-            else:
-                cur.pop(k, None)
+    for k in kw:
+        if not valid_kind(k):
+            log.debug('set_roles: неизвестный вид %r — пропуск', k)
+            continue
+        try:
+            v = int(kw[k] or 0)
+        except (TypeError, ValueError) as _ex:
+            log.debug('set_roles: мусорное значение %s=%r: %s', k, kw[k], _ex)
+            continue
+        if v > 0:
+            cur[k] = v
+        else:
+            cur.pop(k, None)
     if cur:
         row['roles'] = cur
     else:

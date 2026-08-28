@@ -236,6 +236,41 @@ class warnings(commands.Cog):
         except Exception as e:
             log.error(f"Зеркалирование предупреждений в JSON: {e}")
 
+    async def _sync_warn_level_roles(self, guild, member, warn_count):
+        """Роль уровня варна (панель → «Роли наказаний»).
+
+        Выдаёт роль ближайшего уровня (≤ warn_count) и снимает роли
+        предыдущих уровней; при снятии варна уровень падает — роль
+        пересчитывается. Нет выбранных warn-ролей — вообще ничего не делает.
+        """
+        try:
+            from services import punish_roles as PR
+            add_id, remove_ids = PR.level_transition(guild.id, warn_count)
+            if not add_id and not remove_ids:
+                return
+            have = {getattr(r, 'id', None)
+                    for r in (getattr(member, 'roles', None) or [])}
+            for rid in remove_ids:
+                if rid not in have:
+                    continue
+                role = guild.get_role(rid)
+                if role is None:
+                    continue
+                await member.remove_roles(
+                    role, reason=f'Уровень варнов изменился ({warn_count})')
+                log.info('[WARNS] снята роль уровня %s с %s (варнов: %s)',
+                         role.name, member, warn_count)
+            if add_id and add_id not in have:
+                role = guild.get_role(add_id)
+                if role is None:
+                    return
+                await member.add_roles(
+                    role, reason=f'Уровень варнов: {warn_count}')
+                log.info('[WARNS] выдана роль уровня %s → %s (варнов: %s)',
+                         role.name, member, warn_count)
+        except Exception as _ex:
+            log.debug('[WARNS] роли уровней варна: %s', _ex)
+
     async def send_dm(self, user, embed):
         # DM — best-effort: закрытые ЛС/сетевой сбой не роняют команду
         try:
@@ -356,6 +391,10 @@ class warnings(commands.Cog):
         self._save_warns(guild.id, user.id, warns)
         total = len(warns)
 
+        # Роли уровня варна: вырос уровень — предыдущая роль слетает сама
+        guild = interaction.guild
+        await self._sync_warn_level_roles(guild, user, total)
+
         # Лимиты: фиксируем успешный варн в дневном счётчике
         try:
             from services.staff_limits import record_hit as _sl_rec
@@ -462,6 +501,9 @@ class warnings(commands.Cog):
         self._save_warns(interaction.guild.id, user.id, warns)
         total = len(warns)
 
+        # сняли варн — уровень упал: пересчитать роль уровня (снять/выдать)
+        await self._sync_warn_level_roles(interaction.guild, user, total)
+
         e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
         e.description = (
             "## Снятие предупреждения\n"
@@ -500,6 +542,9 @@ class warnings(commands.Cog):
         })
         self._save_warns(guild.id, user.id, warns)
         total = len(warns)
+
+        # Роли уровня варна (путь панели/AI-модератора — тот же переезд)
+        await self._sync_warn_level_roles(user.guild, user, total)
 
         # Лимиты: фиксируем успешный варн в дневном счётчике
         try:

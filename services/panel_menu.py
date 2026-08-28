@@ -156,6 +156,7 @@ MENU = [
         {'path': '/settings', 'label': 'Сервер', 'icon': 'fa-cog'},
         {'path': '/command-switches', 'label': 'Команды вкл/выкл', 'icon': 'fa-toggle-on'},
         {'path': '/mod-settings', 'label': 'Модерация', 'icon': 'fa-hammer'},
+        {'path': '/role-settings', 'label': 'Роли наказаний', 'icon': 'fa-user-tag'},
         {'path': '/channel-settings', 'label': 'Каналы и маршруты', 'icon': 'fa-route'},
         {'path': '/bot-settings', 'label': 'Бот', 'icon': 'fa-sliders-h'},
         {'path': '/ticket-settings', 'label': 'Тикеты', 'icon': 'fa-ticket-alt'},
