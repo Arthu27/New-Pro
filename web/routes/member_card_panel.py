@@ -245,12 +245,13 @@ def _name_pool(gid):
     return pool
 
 
-def suggest(gid, query, limit=SUGGEST_LIMIT):
+def suggest(gid, query, limit=SUGGEST_LIMIT, offset=0):
     """Автодополнение: @-поиск по именам из аудита, XP, ДР и демо-списка.
 
     Символ @ отбрасывается (стиль Discord-упоминаний): '@sonya' ищет 'sonya'.
     Голый '@' (пусто после @) возвращает верх пула — можно сразу кликнуть
     по человеку, не набирая имя.
+    offset — пагинация «показать ещё» (п.3: большие серверы без лагов).
     """
     raw = str(query or '').strip()
     q = raw.lower()
@@ -259,16 +260,20 @@ def suggest(gid, query, limit=SUGGEST_LIMIT):
     if not raw:
         return []
     pool = _name_pool(gid)
+    try:
+        offset = max(0, int(offset))
+    except (TypeError, ValueError):
+        offset = 0
     if not q:
         hits = [{'user_id': str(u), 'name': str(n)} for u, n in pool.items()]
         hits.sort(key=lambda h: (h['name'].lower(), h['user_id']))
-        return hits[:limit]
+        return hits[offset:offset + limit]
     hits = []
     for uid, name in pool.items():
         if q in str(name).lower() or q in str(uid):
             hits.append({'user_id': str(uid), 'name': str(name)})
     hits.sort(key=lambda h: (h['name'].lower(), h['user_id']))
-    return hits[:limit]
+    return hits[offset:offset + limit]
 
 
 def resolve_user_ref(gid, raw):
@@ -364,8 +369,26 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_mc_suggest(gid):
+        items = suggest(gid, request.args.get('q'),
+                        offset=request.args.get('offset', 0))
+        # п.3: красивый выбор — аватарки из кэша живого бота, а также флаг бота
+        try:
+            import web.app as _app
+            bot = _app.bot_instance
+            guild = bot.get_guild(int(gid)) if bot and hasattr(bot, 'get_guild') else None
+            if guild is not None:
+                members = getattr(guild, 'members', None) or []
+                by_id = {str(getattr(m, 'id', '')): m for m in members}
+                for it in items:
+                    m = by_id.get(str(it.get('user_id')))
+                    if m is not None:
+                        av = getattr(m, 'display_avatar', None)
+                        it['avatar'] = str(getattr(av, 'url', '') or '')
+                        it['bot'] = bool(getattr(m, 'bot', False))
+        except Exception as _ex:
+            _log.debug('suggest-аватарки подавлены: %s', _ex)
         return jsonify({'success': True,
-                        'items': suggest(gid, request.args.get('q'))})
+                        'items': items})
 
     @app.route('/api/guild/<gid>/member-card/export')
     @login_required

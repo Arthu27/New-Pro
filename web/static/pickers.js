@@ -199,18 +199,41 @@
 
   /* Подсказки по УЧАСТНИКАМ: вводим ник/имя — варианты из живого поиска
      панели (member-card suggest), выбор по клику; в value остаётся id. */
+  /* ── Богатый выбор участника (п.3): аватарки, поиск, клавиши, пагинация ──
+     API прежний: input.value = user_id, statusEl-чип, opts {gid, statusEl}.
+     Панель: строки с аватаркой/именем/ID, «Показать ещё» (offset-пагинация),
+     стрелки + Enter + Esc, сортировка: совпадения с начала имени — первыми.
+     Всё через серверный suggest → быстро и на сервере с тысячами людей. */
+
+  /* Сортировка: те, чьё имя НАЧИНАЕТСЯ с запроса — выше остальных. */
+  window.pickRankMembers = function (list, q) {
+    q = String(q || '').trim().toLowerCase();
+    if (!q) return list || [];
+    var head = [], tail = [];
+    (list || []).forEach(function (m) {
+      var nm = String(m.name || '').toLowerCase();
+      if (nm.indexOf(q) === 0) head.push(m); else tail.push(m);
+    });
+    return head.concat(tail);
+  };
+
   window.attachMemberPicker = function (input, opts) {
     if (!input) return null;
     opts = opts || {};
     var gid = opts.gid;
     var statusEl = opts.statusEl || null;
-    var dl = document.createElement('datalist');
-    dl.id = 'picker-dl-m' + Math.random().toString(36).slice(2, 8);
-    input.setAttribute('list', dl.id);
     input.setAttribute('autocomplete', 'off');
-    input.parentNode.appendChild(dl);
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-expanded', 'false');
+
     var found = [];
     var timer = null;
+    var panel = null, listBox = null, headEl = null, moreEl = null;
+    var activeIdx = -1;
+    var curQ = '';
+    var offset = 0;
+    var LIMIT = 25;
+    var hasMore = false;
 
     function paint() {
       if (!statusEl) return;
@@ -223,28 +246,148 @@
       }
     }
 
-    function suggest(q) {
-      return fetch('/api/guild/' + gid + '/member-card/suggest?q=' + encodeURIComponent(q),
-                   { credentials: 'same-origin' })
+    function suggest(q, off) {
+      return fetch('/api/guild/' + gid + '/member-card/suggest?q=' + encodeURIComponent(q) +
+                   (off ? '&offset=' + off : ''), { credentials: 'same-origin' })
         .then(function (r) { return r.ok ? r.json() : {}; })
         .then(function (d) { return (d && d.items) || []; })
         .catch(function () { return []; });
     }
 
-    input.addEventListener('input', function () {
-      clearTimeout(timer);
-      var raw = String(input.value || '').trim();
-      if (!raw) { dl.innerHTML = ''; found = []; paint(); return; }
-      timer = setTimeout(function () {
-        suggest(raw).then(function (list) {
-          found = list;
-          dl.innerHTML = list.map(function (it) {
-            return '<option value="' + esc(it.user_id) + '">' +
-              esc(it.name + ' — ' + it.user_id) + '</option>';
-          }).join('');
-          paint();
+    /* ── DOM панели (лениво, один раз) ────────────────────────────── */
+    function ensurePanel() {
+      if (panel) return;
+      panel = document.createElement('div');
+      panel.className = 'mpd';
+      panel.hidden = true;
+      headEl = document.createElement('div');
+      headEl.className = 'mpd-head';
+      listBox = document.createElement('div');
+      listBox.className = 'mpd-list';
+      moreEl = document.createElement('button');
+      moreEl.type = 'button';
+      moreEl.className = 'mpd-more';
+      moreEl.textContent = 'Показать ещё…';
+      moreEl.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      moreEl.addEventListener('click', function () {
+        suggest(curQ, offset).then(function (items) {
+          offset += items.length;
+          hasMore = items.length === LIMIT;
+          found = found.concat(items);
+          renderList();
         });
-      }, 250);
+      });
+      panel.appendChild(headEl);
+      panel.appendChild(listBox);
+      panel.appendChild(moreEl);
+      var host = input.parentNode;
+      if (host && getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      host.appendChild(panel);
+      document.addEventListener('mousedown', function (e) {
+        if (panel.hidden) return;
+        if (e.target === input || panel.contains(e.target)) return;
+        closePanel();
+      });
+    }
+
+    function avatarHtml(m) {
+      var av = String(m.avatar || '');
+      if (av) return '<img class="mpd-av" src="' + esc(av) + '" alt="" loading="lazy">';
+      var ch = (String(m.name || '?').trim()[0] || '?').toUpperCase();
+      return '<span class="mpd-av mpd-av-letter">' + esc(ch) + '</span>';
+    }
+
+    function rowHtml(m, q) {
+      var name = String(m.name || '?');
+      var bot = m.bot ? '<span class="mpd-bot">бот</span>' : '';
+      return '<div class="mpd-row" data-uid="' + esc(m.user_id) + '">' + avatarHtml(m) +
+        '<div class="mpd-txt"><div class="mpd-name">' + esc(name) + bot + '</div>' +
+        '<div class="mpd-id">' + esc(m.user_id) + '</div></div></div>';
+    }
+
+    function renderList() {
+      var ranked = window.pickRankMembers(found, curQ);
+      headEl.textContent = found.length
+        ? 'Найдено: ' + found.length + (hasMore ? '+' : '')
+        : 'Ничего не найдено — проверьте написание';
+      listBox.innerHTML = ranked.slice(0, 60).map(function (m) { return rowHtml(m, curQ); }).join('');
+      moreEl.hidden = !hasMore;
+      activeIdx = -1;
+      Array.prototype.forEach.call(listBox.querySelectorAll('.mpd-row'), function (row) {
+        row.addEventListener('mousedown', function (e) {
+          e.preventDefault();
+          commit(row.getAttribute('data-uid'));
+        });
+        row.addEventListener('mousemove', function () { setActive(row); });
+      });
+      panel.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    function setActive(row) {
+      Array.prototype.forEach.call(listBox.querySelectorAll('.mpd-row'), function (r) {
+        r.classList.toggle('active', r === row);
+      });
+    }
+
+    function commit(uid) {
+      var hit = null;
+      found.forEach(function (m) { if (String(m.user_id) === String(uid)) hit = m; });
+      if (!hit && listBox.querySelector('.mpd-row')) {
+        var r = listBox.querySelector('.mpd-row');
+        uid = r.getAttribute('data-uid');
+      }
+      input.value = String(uid);
+      closePanel();
+      paint();
+      /* выбор из списка должен сработать как обычное изменение поля */
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function closePanel() {
+      if (panel) panel.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+    }
+
+    function refresh() {
+      if (!curQ) { closePanel(); paint(); return; }
+      suggest(curQ, 0).then(function (items) {
+        offset = items.length;
+        hasMore = items.length === LIMIT;
+        found = items;
+        renderList();
+        paint();
+      });
+    }
+
+    input.addEventListener('input', function () {
+      ensurePanel();
+      clearTimeout(timer);
+      curQ = String(input.value || '').trim();
+      timer = setTimeout(refresh, 180);
+    });
+    input.addEventListener('focus', function () {
+      ensurePanel();
+      clearTimeout(timer);
+      curQ = String(input.value || '').trim() || '@';
+      timer = setTimeout(refresh, 60);
+    });
+    input.addEventListener('keydown', function (e) {
+      if (!panel || panel.hidden) return;
+      var rows = listBox.querySelectorAll('.mpd-row');
+      if (e.key === 'Escape') { closePanel(); e.stopPropagation(); return; }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!rows.length) return;
+        activeIdx = e.key === 'ArrowDown'
+          ? (activeIdx + 1) % rows.length
+          : (activeIdx - 1 + rows.length) % rows.length;
+        setActive(rows[activeIdx]);
+        rows[activeIdx].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter' && activeIdx >= 0 && rows[activeIdx]) {
+        e.preventDefault();
+        commit(rows[activeIdx].getAttribute('data-uid'));
+      }
     });
     input.addEventListener('change', function () {
       var id = window.pickerExtractId(input.value);

@@ -178,9 +178,13 @@ check('ранее выбрано (удалено с сервера)' in sel_fn,
 check('dispatchEvent' not in sel_fn,
       'select-пикер НЕ диспатчит change (легаси-автосейвы не срабатывают при заполнении)')
 check('opts.value' in sel_fn, 'select-пикер: явное начальное значение (opts.value)')
-check('datalist' in mem_fn and 'member-card/suggest' in mem_fn,
-      'member-пикер: datalist + живой suggest участников')
-check('setTimeout' in mem_fn and '250' in mem_fn, 'member-пикер: debounce 250 мс')
+check(".mpd" in js and 'member-card/suggest' in mem_fn and "class=\"mpd-av\"" in mem_fn.replace("'",'"'),
+      'member-пикер: богатый dropdown с аватарками + живой suggest (п.3)')
+check('setTimeout' in mem_fn and '180' in mem_fn, 'member-пикер: debounce 180 мс (быстрый отклик)')
+check('pickRankMembers' in js, 'member-пикер: сортировка «начало имени — первым»')
+check('offset' in mem_fn and 'mpd-more' in mem_fn, 'member-пикер: пагинация «Показать ещё» (offset)')
+check('ArrowDown' in mem_fn and 'Enter' in mem_fn and 'Escape' in mem_fn,
+      'member-пикер: клавиатурная навигация')
 check('pickerExtractId' in mem_fn, 'member-пикер: нормализация значения через pickerExtractId')
 
 
