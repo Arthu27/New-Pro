@@ -154,6 +154,8 @@ class Tree:
                 box.append(c)
 
     async def sync(self, guild=None):
+        if getattr(self, 'slow', False):      # симуляция сети — для теста гонки
+            await asyncio.sleep(0.05)
         box = self.glob if guild is None else self.guilds.get(guild.id, [])
         self.synced.append(('global' if guild is None else guild.id,
                             [(c.name, c.ctype) for c in box]))
@@ -213,6 +215,23 @@ asyncio.new_event_loop().run_until_complete(SF.full_sync(b2))
 synced2 = dict(b2.tree.synced)
 check('warn' in {n for n, _ in synced2.get(777, [])},
       'включили warn — снова в Discord')
+
+# антигонка: параллельный full_sync не должен стартовать вторым
+async def _race():
+    b_race = Bot()
+    b_race.tree.slow = True         # «сеть» тормозит — лок держится долго
+    t1 = asyncio.ensure_future(SF.full_sync(b_race))
+    await asyncio.sleep(0)          # t1 схватил лок и ушёл в slow-sync
+    r2 = await SF.full_sync(Bot())  # второй вход — мгновенный отказ
+    r1 = await t1
+    return r1, r2
+
+_rl = asyncio.new_event_loop()
+r1, r2 = _rl.run_until_complete(_race())
+check(r2 == [], 'параллельный full_sync отклонён — нет гонки пейлоадов')
+src_sf = open(os.path.join(ROOT, 'services', 'sync_filtered.py'), encoding='utf-8').read()
+check('_current_lock' in src_sf and 'async with lk' in src_sf,
+      'full_sync защищён локом per-loop')
 
 src_main = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
 check('full_sync' in src_main, 'старт бота использует полный синк')

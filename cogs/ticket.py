@@ -541,7 +541,7 @@ class TicketView (discord .ui .View ):
         await channel .send (
         content =f"{interaction.user.mention}"+(f" | {support_role.mention}"if support_role else ""),
         embed =e ,
-        view =CloseTicketView ()
+        view =TicketManageView ()
         )
 
         # Отправить приветственное сообщение от AI
@@ -826,6 +826,130 @@ class InteractiveFeedbackView (discord .ui .View ):
         "⚠️ **Нам очень жаль!** Пожалуйста, напишите в чат, с какой проблемой вы столкнулись или что именно вам не понравилось?\n"
         "Я проанализирую вашу критику, извлеку уроки и передам информацию администрации!"
         )
+
+
+def _ticket_mod_ok (interaction ):
+    """Модератор для управления тикетом: manage_channels или роль поддержки."""
+    try :
+        if getattr (interaction .user .guild_permissions ,'manage_channels',False ):
+            return True
+        sr =discord .utils .get (interaction .guild .roles ,name =SUPPORT_ROLE_NAME )
+        return sr is not None and sr in getattr (interaction .user ,'roles',[])
+    except Exception :
+        return False
+
+
+class TicketMemberModal (discord .ui .Modal ):
+    """Цель для «Добавить/Удалить участника» в меню тикета."""
+
+    target =discord .ui .TextInput (
+    label ="Участник (@упоминание, точный ник или ID)",
+    placeholder ="@ник, точный ник или 15-22 цифры ID",
+    required =True )
+
+    def __init__ (self ,mode ):
+        super ().__init__ (title =("Добавить участника в тикет"
+        if mode =="add"else "Удалить участника из тикета"))
+        self .mode =mode
+
+    async def on_submit (self ,interaction ):
+        guild =interaction .guild
+        channel =interaction .channel
+        raw =(self .target .value or '').strip ()
+        import re as _re
+        m =_re .search (r'(\d{15,22})',raw )
+        member =None
+        if m :
+            uid =int (m .group (1 ))
+            member =guild .get_member (uid )
+            if member is None :
+                try :
+                    member =await guild .fetch_member (uid )
+                except Exception :
+                    member =None
+        if member is None and len (raw )>=2 :
+            name =raw .lstrip ('@').casefold ()
+            cands =[x for x in guild .members if name in (
+            str (getattr (x ,'name','')).casefold (),
+            str (getattr (x ,'global_name','')or '').casefold (),
+            str (getattr (x ,'display_name','')).casefold ())]
+            if len (cands )==1 :
+                member =cands [0 ]
+        if member is None :
+            await interaction .response .send_message (
+            "Участника не нашёл. Нужен @упоминание, ТОЧНЫЙ ник или ID.",
+            ephemeral =True )
+            return
+        try :
+            if self .mode =="add":
+                await channel .set_permissions (
+                member ,view_channel =True ,send_messages =True ,
+                read_message_history =True )
+                await channel .send (
+                f"{member .mention } добавлен в тикет ({interaction .user .mention })")
+                await interaction .response .send_message (
+                f"✅ {member .display_name } теперь видит этот тикет.",ephemeral =True )
+            else :
+                await channel .set_permissions (member ,overwrite =None )
+                await interaction .response .send_message (
+                f"➖ {member .display_name } удалён из тикета.",ephemeral =True )
+        except Exception as _ex :
+            try :
+                await interaction .response .send_message (
+                f"Не получилось: {_ex .text if hasattr(_ex,'text') else _ex }",
+                ephemeral =True )
+            except Exception :
+                log .debug ('[TICKET] меню управления: %s',_ex )
+
+
+class TicketManageView (discord .ui .View ):
+    """Меню управления тикетом — приходит вместе с карточкой нового тикета.
+
+    ➕ Добавить участника · ➖ Удалить участника · 📣 Позвать модера ·
+    🗑 Закрыть. Кнопки вечные (timeout=None, persistent custom_id).
+    """
+
+    def __init__ (self ):
+        super ().__init__ (timeout =None )
+
+    @discord .ui .button (label ="Добавить",style =discord .ButtonStyle .success ,
+    emoji ="➕",custom_id ="ticket_manage_add")
+    async def add_member (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
+        if not _ticket_mod_ok (interaction ):
+            await interaction .response .send_message (
+            "Управлять тикетом могут только модераторы.",ephemeral =True )
+            return
+        await interaction .response .send_modal (TicketMemberModal ("add"))
+
+    @discord .ui .button (label ="Удалить",style =discord .ButtonStyle .secondary ,
+    emoji ="➖",custom_id ="ticket_manage_remove")
+    async def remove_member (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
+        if not _ticket_mod_ok (interaction ):
+            await interaction .response .send_message (
+            "Управлять тикетом могут только модераторы.",ephemeral =True )
+            return
+        await interaction .response .send_modal (TicketMemberModal ("remove"))
+
+    @discord .ui .button (label ="Позвать модера",style =discord .ButtonStyle .primary ,
+    emoji ="📣",custom_id ="ticket_manage_call")
+    async def call_mod (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
+        sr =discord .utils .get (interaction .guild .roles ,name =SUPPORT_ROLE_NAME )
+        ping =sr .mention if sr else ""
+        text =f"📣 {interaction .user .mention } просит модератора в этом тикете!"
+        if ping :
+            text +=f" {ping }"
+        await interaction .response .send_message (
+        text ,allowed_mentions =discord .AllowedMentions (roles =True ,users =True ))
+
+    @discord .ui .button (label ="Закрыть тикет",style =discord .ButtonStyle .red ,
+    emoji ="🗑",custom_id ="ticket_manage_close")
+    async def close_btn (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
+        # Транскрипт, фидбек и удаление — общий код CloseTicketView.
+        _v =CloseTicketView ()
+        try :
+            await _v .close_ticket .callback (interaction ,button )
+        except Exception as _ex :
+            log .debug ('[TICKET] закрытие из меню: %s',_ex )
 
 
 class CloseTicketView (discord .ui .View ):
@@ -1169,6 +1293,7 @@ class Ticket (commands .Cog ):
         self .bot =bot 
         bot .add_view (TicketView ())
         bot .add_view (CloseTicketView ())
+        bot .add_view (TicketManageView ())
         bot .add_view (AdminApprovalView (0 ,"",""))
         bot .add_view (StaffSummonView ())
 

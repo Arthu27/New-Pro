@@ -15,9 +15,30 @@ EXTRA_GUILD_IDS (гильдовые обновляются мгновенно, �
 устаревших локальных копий (иначе дубли живут там вечно).
 Если MAIN_GUILD_ID не задан — прежнее глобальное поведение."""
 
+import asyncio
+
 from logger import get_logger
 
 _log = get_logger('sync_filtered')
+
+# Антигонка: full_sync вызывается из загрузки, кнопки панели, тумблеров
+# команд и настроек — два параллельных прогона перемешивают парковки и
+# sync-пейлоады (дубли и падение панели на двойном клике). Локи ведём
+# per-event-loop: тесты гоняют функцию на свежих циклах.
+_loop_locks = {}
+
+
+def _current_lock():
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    key = id(loop)
+    lk = _loop_locks.get(key)
+    if lk is None:
+        lk = asyncio.Lock()
+        _loop_locks[key] = lk
+    return lk
 
 
 def _is_disabled(name):
@@ -67,7 +88,44 @@ async def sync_tree(bot, guild=None):
     return synced
 
 
+async def _clean_stray_guilds(bot, tree, exclude_ids):
+    """Стереть команды на серверах ВНЕ целевого списка (exclude_ids).
+
+    Гильдовый sync затирает только свой scope: на «чужих» серверах
+    (бот состоит, но их нет в MAIN/EXTRA_GUILD_IDS) старые локальные копии
+    никто никогда не трогал — вечные дубли. Пустой payload = очистка.
+    Запускается и когда targets пуст (глобальный режим): гильдовые копии
+    там вообще вне закона (именно так вечно жила вторая «апелляция»).
+    """
+    try:
+        import discord as _d
+        _exclude = {int(x or 0) for x in (exclude_ids or set())}
+        for g in list(getattr(bot, 'guilds', []) or []):
+            gid = int(getattr(g, 'id', 0) or 0)
+            if not gid or gid in _exclude:
+                continue
+            try:
+                await tree.sync(guild=_d.Object(id=gid))   # локально пусто
+                _log.info('sync: сервер %s очищен от устаревших копий команд '
+                          '(нужны команды там — добавьте его в EXTRA_GUILD_IDS)', gid)
+            except Exception as _e:
+                _log.debug('sync: очистка чужого сервера %s: %s', gid, _e)
+    except Exception as _e:
+        _log.debug('sync: обход чужих серверов: %s', _e)
+
+
 async def full_sync(bot):
+    """Полный синк с защитой от параллельного входа (двойной клик кнопки)."""
+    lk = _current_lock()
+    if lk.locked():
+        _log.warning('full_sync уже выполняется — повторный вход пропускаю '
+                     '(параллельный прогон дал бы дубли/перемешанные пейлоады)')
+        return []
+    async with lk:
+        return await _full_sync_inner(bot)
+
+
+async def _full_sync_inner(bot):
     """Полный синк: гильдовые команды (мгновенно) + чистка глобальных."""
     from discord import AppCommandType
     tree = getattr(bot, 'tree', None)
@@ -84,8 +142,12 @@ async def full_sync(bot):
         _log.debug('targets(): %s', e)
 
     if not targets:
-        # .env пуст — глобальное поведение (любой сервер), но с фильтром
-        return await sync_tree(bot)
+        # .env пуст — глобальное поведение (любой сервер), но с фильтром.
+        # И старые ГИЛЬДОВЫЕ копии от прежних регистраций стираем тоже —
+        # иначе вторая «апелляция» и прочие дубли живут на серверах вечно.
+        synced = await sync_tree(bot)
+        await _clean_stray_guilds(bot, tree, set())
+        return synced
 
     # 1) глобальный список в Discord очищаем (чтобы не было дублей).
     #    Исключение — команды с extras['keep_global'] (напр. /апелляция):
@@ -169,28 +231,10 @@ async def full_sync(bot):
         except Exception as e:
             _log.warning('sync(%s): %s', g.id, e)
 
-    # 4) «Чужие» серверы: бот состоит в гильдиях ВНЕ MAIN/EXTRA_GUILD_IDS,
-    #    а зарегистрированные там раньше гильдовые копии НИКТО и НИКОГДА не
-    #    синкал — они живут вечно и дают вечные дубли. Стираем их: локально
-    #    на этой гильдии дерева нет → пустой payload = очистка в Discord.
-    #    Если команды там НУЖНЫ — сервер добавляют в EXTRA_GUILD_IDS, и его
-    #    полноценный синк пройдёт в шаге 3 как у целевого.
-    try:
-        import discord as _d
-        _target_ids = {int(getattr(g, 'id', 0) or 0) for g in targets}
-        for g in list(getattr(bot, 'guilds', []) or []):
-            # защита от «отключён»-фейков и шард-плейсхолдеров без id
-            gid = int(getattr(g, 'id', 0) or 0)
-            if not gid or gid in _target_ids:
-                continue
-            try:
-                await tree.sync(guild=_d.Object(id=gid))   # пустой payload
-                _log.info('sync: сервер %s очищен от устаревших копий команд '
-                          '(нужны команды там — добавьте его в EXTRA_GUILD_IDS)', gid)
-            except Exception as _e:
-                _log.debug('sync: очистка чужого сервера %s: %s', gid, _e)
-    except Exception as _e:
-        _log.debug('sync: обход чужих серверов: %s', _e)
+    # 4) «Чужие» серверы (бот состоит, но их нет в MAIN/EXTRA_GUILD_IDS):
+    #    старые гильдовые копии там вечны, пока их не стереть пустым sync.
+    await _clean_stray_guilds(
+        bot, tree, {int(getattr(g, 'id', 0) or 0) for g in targets})
 
     # 5) Откат: все guild-синки упали — глобальное меню уже стёрто,
     #    серверные не появились = пользователь видел бы ПУСТОЕ меню

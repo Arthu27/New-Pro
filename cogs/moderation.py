@@ -227,6 +227,8 @@ class Moderation (commands .Cog ):
         _u =interaction .user 
         _has =lambda k :any (a [3 ]==k for a in allowed )
         _groups =[]
+        if _has ('warn'):
+            _groups .append ('⚠️ варн — официальное предупреждение, пишется в дело и уходит в ЛС')
         if _has ('mute'):
             _groups .append ('🔇 муты — чат, войс или всё сразу')
         if _has ('ban'):
@@ -492,6 +494,30 @@ class Moderation (commands .Cog ):
             _action_ru ={'ban':'апелляция','kick':'кик','timeout':'мут','mute_chat':'мут чата','vmute':'войс-мут'}[action ]
             if not await require_proof (interaction ,action_ru =_action_ru ,link =proof_link ):
                 return
+
+        if action =="warn":
+            user ,uid =self ._resolve_member (guild ,target )
+            if not user and uid :
+                try :
+                    user =await self .bot .fetch_user (uid )
+                except Exception :
+                    user =None
+            if not uid :
+                await _respond (interaction ,embed =error_embed (
+                'Не нашёл участника по цели. Нужен @ник, ТОЧНОЕ имя или ID.'),
+                ephemeral =True )
+                return
+            ok ,text =await self .apply_panel_action (
+            guild ,(user if user is not None else uid ),'warn',
+            reason =reason ,actor =getattr (interaction .user ,'display_name','Модератор'))
+            if ok :
+                who =getattr (user ,'display_name',None )or str (uid )
+                await _respond (interaction ,embed =success_embed (
+                'Варн выдан',f'**{who }** · `{uid }`\n{text }',guild =guild ),
+                ephemeral =True )
+            else :
+                await _respond (interaction ,embed =error_embed (text ),ephemeral =True )
+            return
 
         if action in ("ban","kick","timeout","mute_chat","untimeout","vmute","vunmute"):
             user ,uid =self ._resolve_member (guild ,target )
@@ -975,6 +1001,7 @@ def _embed_text(e):
 # Действия панели: (value, label, описание, ключ лимита стаффа).
 # Ключ — как в services/staff_limits: мут чата/войса/таймаут — один ключ mute.
 MODPANEL_ACTIONS = [
+    ("warn", "Варн (предупреждение)", "Официальный варн: в дело, участнику в ЛС", "warn"),
     ("ban", "Бан (апелляция)", "Не выгоняет: закроет каналы, оставит только канал апелляции", "ban"),
     ("timeout", "Мут (чат + войс)", "Тишина сразу везде — и текст, и голос", "mute"),
     ("mute_chat", "Мут (только чат)", "В чат писать нельзя, голос живёт", "mute"),
@@ -987,6 +1014,7 @@ MODPANEL_ACTIONS = [
 
 # Эмодзи действий: меню панели живое, а не текстовое
 MODPANEL_EMOJI = {
+    "warn": "⚠️",
     "ban": "🚫",
     "timeout": "🔇",
     "mute_chat": "🤐",
@@ -1070,6 +1098,7 @@ class ModActionModal(discord.ui.Modal):
         self.cog = cog
         self.action = action
         titles = {
+            "warn": "Варн (предупреждение)",
             "ban": "Бан (апелляция)",
             "timeout": "Мут (чат + войс)",
             "mute_chat": "Мут чата",

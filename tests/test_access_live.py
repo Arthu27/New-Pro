@@ -194,15 +194,20 @@ check(not cat_keys, 'в ACL нет категорийных ключей — о�
 
 live_only = [k for k in cats if k not in load_acl(777) and len(cats[k]) >= 1]
 target = live_only[0] if live_only else list(cats)[0]
+# «Дать ролям» пишет ВСЮ категорию: живые команды меню + legacy-префиксные
+# (правила на них продолжают работать — после урезания меню live < merged).
+merged = all_categories().get(target, [])
 r = c0.post('/api/role-permissions/777/category/assign',
             json={'category': target, 'role_ids': ['9002']})
 d = r.get_json() or {}
-check(d.get('success') is True and d.get('commands', 0) == len(cats.get(target, [])),
-      f'«Дать ролям» на живую категорию «{target}» пишет все {len(cats.get(target, []))} команд',
+check(d.get('success') is True and d.get('commands', 0) == len(merged),
+      f'«Дать ролям» на категорию «{target}» пишет все {len(merged)} команд (live+legacy)',
       f'→ {d}')
 acl = (c0.get('/api/role-permissions/777').get_json() or {}).get('acl') or {}
-check(all(acl.get(cmd) == ['9002'] for cmd in cats.get(target, [])),
+check(all(acl.get(cmd) == ['9002'] for cmd in merged),
       'после выдачи пилюли честные: каждая команда «Только выбранным»')
+check(all(acl.get(cmd) == ['9002'] for cmd in cats.get(target, [])),
+      'и живые команды меню покрыты тоже')
 
 class _M:
     class _P: administrator = False

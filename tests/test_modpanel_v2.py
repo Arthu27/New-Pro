@@ -42,17 +42,32 @@ cat = catalog(force=True)
 pref = [c['name'] for c in cat['commands'] if c['kind'] == 'prefix']
 check(cat.get('prefix', 1) == 0 and not pref,
       f'боевой состав без «!»-команд (осталось: {pref})')
-for name, kind in (('play', 'slash'),
-                   ('апелляция', 'slash'), ('module', 'slash'),
-                   ('health', 'slash'), ('diagnose', 'slash'), ('hotreload', 'slash')):
+for name, kind in (('modpanel', 'slash'), ('play', 'slash'),
+                   ('апелляция', 'slash'), ('update', 'slash')):
     hit = next((c for c in cat['commands'] if c['name'] == name), None)
     check(hit is not None and hit['kind'] == kind,
           f'{name} — слеш-команда')
 
 import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
-for name in ('play', 'апелляция', 'module', 'health', 'diagnose', 'hotreload'):
+check(set(keep) == {'modpanel', 'play', 'апелляция', 'update'},
+      f'белый список слеш-меню = ровно 4 команды (сейчас: {sorted(keep)})')
+for name in ('modpanel', 'play', 'апелляция', 'update'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
+
+# Урезанные из меню имена НЕ должны вернуться в KEEP_SLASH незаметно
+for gone in ('backup', 'backup-list', 'diagnose', 'health', 'hotreload',
+             'leave', 'logs-setup', 'ticket-add', 'ticket-panel',
+             'ticket-remove', 'help', 'warn', 'module'):
+    check(gone not in keep, f'{gone} убран из слеш-меню (заказ владельца)')
+
+# warn живёт ВНУТРИ /modpanel (а не отдельной командой)
+src_mod = open(os.path.join(ROOT, 'cogs', 'moderation.py'), encoding='utf-8').read()
+check('("warn", "Варн (предупреждение)"' in src_mod,
+      'варн — пункт выпадающего меню /modpanel')
+check('allowed_contexts' in open(os.path.join(ROOT, 'cogs', 'diagnostics.py'),
+                                 encoding='utf-8').read(),
+      '/update спрятан в ЛС — на сервере его не видит никто, кроме владельца')
 
 src_appeals = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
 check("keep_global" in src_appeals, '/апелляция помечена keep_global (работает в ЛС)')

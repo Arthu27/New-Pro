@@ -3500,16 +3500,19 @@ def api_bot_sync ():
     async def do ():
     # ЕДИНСТВЕННО правильный синк — full_sync: гильдовые копии (мгновенно)
     # + чистка глобальных (и слэшей, и контекстных меню) — без дублей.
-    # Раньше тут был сырой tree.sync() глобально: локальное дерево содержит
-    # все команды, поэтому каждая команда публиковалась И глобально, И в
-    # гильдиях — после каждого нажатия кнопки команд становилось больше.
         from services.sync_filtered import full_sync as _full_sync
-        await _full_sync (bot_instance )
-        return [g .name for g in bot_instance .guilds ]
+        try :
+            await _full_sync (bot_instance )
+        except Exception as _ex:
+            _log .warning ('bot sync (кнопка): %s',_ex )
     try :
-        guilds =asyncio .run_coroutine_threadsafe (do (),bot_instance .loop ).result (timeout =60 )
+        # НЕ ждём результат (раньше run_coroutine_threadsafe(...).result(60)
+        # вешал Flask на минуту — панель «умирала» именно от этого, а
+        # повторный клик плодил параллельные синки). Запускаем фоном:
+        # сам full_sync защищён локом от повторного входа.
+        asyncio .run_coroutine_threadsafe (do (),bot_instance .loop )
         _log_panel_action ('BOT_SYNC',session .get ('username'))
-        return jsonify ({'success':True ,'synced_guilds':guilds })
+        return jsonify ({'success':True ,'started':True })
     except Exception as e :
         return jsonify ({'error':str (e )})
 

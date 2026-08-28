@@ -46,18 +46,19 @@ print('== 1. Реестр команд (LEAN — боевой состав по 
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-# -6 музыкальных управлялок (pause/resume/skip/queue/nowplaying/leave): остался /play с пультом
-# +1 служебная /update (самообновление владельцем, заказ 2026-08-28)
-check(data['total'] == 22, f"lean: собрано {data['total']} живых команд (все — слеш, с /proof)")
-check(data['slash'] == 22 and data['prefix'] == 0,
+# Заказ владельца 2026-08-28 «как можно меньше»: боевое слеш-меню —
+# ровно 4 команды (modpanel с варном внутри, play, апелляция, update).
+check(data['total'] == 4, f"lean: собрано {data['total']} живых команд (ровно 4)")
+check(data['slash'] == 4 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
-check(len(data['categories']) >= 6, f"lean: разделов ≥6 ({len(data['categories'])})")
+check(len(data['categories']) >= 3, f"lean: разделов ≥3 ({len(data['categories'])})")
 labels = [c['label'] for c in data['categories']]
-for need in ('Модерация', 'Тикеты', 'Музыка',
-             'Логи и аудит', 'Система'):
+for need in ('Модерация', 'Музыка', 'Система'):
     check(need in labels, f'lean: раздел «{need}» в каталоге')
+check('Тикеты' not in labels and 'Логи и аудит' not in labels,
+      'тикеты/логи вынесены из меню (заказ «как можно меньше») — разделов нет')
 check('Голосовые' not in labels,
       'lean: голосовая статистика удалена владельцем — раздела нет')
 check('Экономика' not in labels and 'Уровни и карма' not in labels,
