@@ -101,7 +101,7 @@ check(not missing, f'{len(assets)} ассетов sw.js существуют ({m
 
 # ─── 5. бюджеты ассетов ──────────────────────────────────────────────────────
 print('== 5. Бюджеты статики ==')
-limits = {'app.js': 250_000, 'style.css': 320_000, 'pickers.js': 30_000,
+limits = {'app.js': 250_000, 'style.css': 320_000, 'pickers.js': 40_000,   # п.3 rich member dropdown + п.4 selectSuite
           'api-guard.js': 20_000, 'websocket-client.js': 30_000,
           'vendor/chartjs/chart.umd.js': 260_000}
 _bad = []

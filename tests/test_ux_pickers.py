@@ -291,7 +291,7 @@ print('== 7. Поиск внутри select (5.1–5.3) ==')
 check('window.attachSelectSearch' in js and 'window.pickerNorm' in js,
       'в pickers.js есть поиск по select и нормализатор')
 search_fn = js[js.index('window.attachSelectSearch'):]
-search_fn = search_fn[:search_fn.index('window.attachSelectPicker')]
+search_fn = search_fn[:search_fn.index('п.4: кастомные select-меню')]
 check('sel.value =' not in search_fn,
       'фильтр никогда не меняет значение — случайные выборы исключены (5.1)')
 check('opt.value === cur' in search_fn and 'sel.options[0]' in search_fn,
@@ -300,13 +300,16 @@ check('Escape' in search_fn and 'focus' in search_fn,
       'Escape и фокус мягко возвращают полный список')
 pick_fn = js[js.index('window.attachSelectPicker'):]
 pick_fn = pick_fn[:pick_fn.index('window.attachMemberPicker')]
-check('opts.search' in pick_fn and 'picker-search' in pick_fn,
-      'attachSelectPicker(search: true) создаёт строку поиска над списком')
+sshd_fn = js[js.index('п.4: кастомные select-меню'):]
+sshd_fn = sshd_fn[:sshd_fn.index('window.attachSelectPicker')]
+check('sshdEnhance' in pick_fn and 'opts.search' in pick_fn and 'sshd-search' in sshd_fn,
+      'select-пикер: кастомный dropdown с поиском внутри панели (п.4)')
 check('_pickerSearchApply' in pick_fn,
       'после заполнения фильтр прогоняется по свежим опциям (без событий)')
 check('toLowerCase()' in js and '\\p{L}' in js and '\\p{N}' in js,
       'нормализация: регистр + любые не-буквы/цифры (эмодзи включительно)')
-check('.picker-search' in css, 'стили строки поиска в style.css')
+check('.sshd-pop' in css and '.sshd-row' in css and '@keyframes sshdIn' in css,
+      'стили кастомного select: панель, строки, плавное появление')
 
 # search: true подключён в конвертированных панелях
 SEARCH_FILES = ('anime_daily.html', 'birthdays.html', 'j2c.html', 'leaderboards.html',

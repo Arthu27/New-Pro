@@ -136,6 +136,226 @@
     return input;
   };
 
+
+  /* ═══ п.4: кастомные select-меню (selectSuite) ══════════════════════════
+     Красивый, единый вид для всех select панели: закрытая таблетка с
+     текущим значением, всплываш с поиском (pickerNorm), строки с хитом
+     одним кликом (mousedown → commit, без случайных соседей), клавиши
+     (стрелки/Enter/Esc), плавные анимации через .sshd.open, корректное
+     сужение под родителя на узких экранах. Вызов один раз на элемент —
+     нативный select остаётся источником данных (скрыт визуально), все
+     обработчики `change` страницы продолжают работать (мы ДИСПАТЧИМ change
+     при выборе человека — ровно как нативный select). */
+
+  function sshdEnhance(sel, opts) {
+    if (!sel || sel._sshd) return sel && sel._sshd;
+    opts = opts || {};
+    var host = sel.parentNode;
+    if (!host) return null;
+
+    var root = document.createElement('div');
+    root.className = 'sshd';
+    if (sel.className) root.className += ' ' + sel.className.replace(/\s*form-select\s*/g, ' ');
+
+    host.insertBefore(root, sel);
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sshd-btn';
+    btn.setAttribute('aria-haspopup', 'listbox');
+    btn.setAttribute('aria-expanded', 'false');
+    var btnLbl = document.createElement('span');
+    btnLbl.className = 'sshd-lbl';
+    var caret = document.createElement('i');
+    caret.className = 'fas fa-chevron-down sshd-caret';
+    btn.appendChild(btnLbl);
+    btn.appendChild(caret);
+
+    var pop = document.createElement('div');
+    pop.className = 'sshd-pop';
+    pop.hidden = true;
+    var searchIp = null;
+    if (opts.search) {
+      searchIp = document.createElement('input');
+      searchIp.type = 'search';
+      searchIp.className = 'sshd-search';
+      searchIp.placeholder = opts.searchPlaceholder || 'Поиск…';
+      searchIp.setAttribute('aria-label', 'Поиск в списке');
+      searchIp.autocomplete = 'off';
+      pop.appendChild(searchIp);
+    }
+    var list = document.createElement('div');
+    list.className = 'sshd-list';
+    list.setAttribute('role', 'listbox');
+    pop.appendChild(list);
+
+    root.appendChild(btn);
+    root.appendChild(pop);
+    root.appendChild(sel);   // sel живёт внутри, невидим — источник истины
+    sel.classList.add('sshd-src');
+
+    var state = { open: false, active: -1 };
+    sel._sshd = root;
+    sel._sshdCtl = { refresh: refresh, syncLabel: syncLabel };
+
+    function options() {
+      return Array.prototype.slice.call(sel.options || []);
+    }
+    function currentOpt() {
+      var v = String(sel.value);
+      var opts2 = options();
+      for (var i = 0; i < opts2.length; i++) if (String(opts2[i].value) === v) return opts2[i];
+      return null;
+    }
+    function syncLabel() {
+      var cur = currentOpt();
+      btnLbl.textContent = cur ? cur.textContent : '—';
+      root.classList.toggle('empty', !cur || !cur.value);
+    }
+
+    var q = '';
+    function matches(o) {
+      if (!q) return true;
+      return window.pickerNorm(o.textContent).indexOf(window.pickerNorm(q)) !== -1;
+    }
+
+    function renderList() {
+      list.innerHTML = '';
+      var cur = String(sel.value);
+      var curVisible = false;
+      options().forEach(function (o) {
+        if (!matches(o) && String(o.value) !== cur) return;
+        if (String(o.value) === cur) curVisible = true;
+        var row = document.createElement('div');
+        row.className = 'sshd-row' + (String(o.value) === cur ? ' cur' : '');
+        row.setAttribute('role', 'option');
+        row.setAttribute('data-v', String(o.value));
+        row.setAttribute('aria-selected', String(o.value) === cur ? 'true' : 'false');
+        row.textContent = o.textContent;
+        /* mousedown, НЕ click: commit сразу, пока фокус у поля поиска —
+           клик с первого раза, промахи по соседям исключены (ряд 36px) */
+        row.addEventListener('mousedown', function (e) {
+          e.preventDefault();
+          commit(row.getAttribute('data-v'));
+        });
+        row.addEventListener('mousemove', function () { markActive(row); });
+        list.appendChild(row);
+      });
+      if (!list.children || !list.children.length) {
+        var emp = document.createElement('div');
+        emp.className = 'sshd-empty';
+        emp.textContent = 'Ничего не найдено';
+        list.appendChild(emp);
+      }
+      state.active = curVisible ? -1 : -1;
+    }
+
+    function markActive(row) {
+      Array.prototype.forEach.call(list.querySelectorAll('.sshd-row'), function (r) {
+        r.classList.toggle('active', r === row);
+      });
+    }
+
+    function openPop() {
+      if (state.open) return;
+      state.open = true;
+      root.classList.add('open');
+      pop.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      q = '';
+      if (searchIp) { searchIp.value = ''; setTimeout(function () { searchIp.focus(); }, 30); }
+      renderList();
+    }
+    function closePop() {
+      if (!state.open) return;
+      state.open = false;
+      root.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+      pop.hidden = true;
+    }
+    function commit(v) {
+      closePop();
+      if (String(sel.value) !== String(v)) {
+        sel.value = String(v);
+        /* человеческий выбор == нативный change: все обработчики форм живут */
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      syncLabel();
+    }
+
+    btn.addEventListener('click', function () { state.open ? closePop() : openPop(); });
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault(); openPop();
+      }
+    });
+    if (searchIp) {
+      searchIp.addEventListener('input', function () { q = searchIp.value; renderList(); });
+    }
+    pop.addEventListener('keydown', function (e) {
+      var rows = list.querySelectorAll('.sshd-row');
+      if (e.key === 'Escape') { closePop(); btn.focus(); e.stopPropagation(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!rows.length) return;
+        state.active = e.key === 'ArrowDown'
+          ? (state.active + 1) % rows.length
+          : (state.active - 1 + rows.length) % rows.length;
+        markActive(rows[state.active]);
+        rows[state.active].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter' && state.active >= 0 && rows[state.active]) {
+        e.preventDefault();
+        commit(rows[state.active].getAttribute('data-v'));
+      }
+    });
+    document.addEventListener('mousedown', function (e) {
+      if (state.open && !root.contains(e.target)) closePop();
+    });
+    /* внешний код поменял select.value и dispatch'нул change — обновляем ярлык */
+    sel.addEventListener('change', syncLabel);
+
+    function refresh() { syncLabel(); if (state.open) renderList(); }
+    syncLabel();
+    return sel._sshdCtl;
+  }
+
+  /* Полюбовное применение ко всем select на странице (кроме multiple и
+     явно выключенных data-sshd-no); большие списки — с поиском. */
+  window.sshdEnhance = sshdEnhance;
+
+  function sshdAll(rootEl) {
+    var scope = rootEl || document;
+    if (!scope.querySelectorAll) return;
+    Array.prototype.forEach.call(
+      scope.querySelectorAll('select:not([multiple]):not([data-sshd-no]):not(.sshd-src)'),
+      function (sel) {
+        if (sel._sshd) return;
+        var needsSearch = (sel.options || []).length > 8 || sel.hasAttribute('data-sshd-search');
+        sshdEnhance(sel, { search: needsSearch });
+      });
+  }
+  window.sshdAll = sshdAll;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { sshdAll(document); });
+  } else {
+    sshdAll(document);
+  }
+  /* динамически добавленные селекты (списки заполняются после загрузки) */
+  var _sshdTimer = null;
+  if (typeof MutationObserver === 'function' && document.body) {
+    new MutationObserver(function (muts) {
+      for (var i = 0; i < muts.length; i++) {
+        if (muts[i].addedNodes && muts[i].addedNodes.length) {
+          clearTimeout(_sshdTimer);
+          _sshdTimer = setTimeout(function () { sshdAll(document.body); }, 120);
+          break;
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
+  /* server-driven пикер канала/роли: заполняет <select> одноимёнными
+     сущностями с сервера и подключает кастомный контрол (п.4). */
   window.attachSelectPicker = function (sel, opts) {
     if (!sel) return null;
     opts = opts || {};
@@ -146,29 +366,19 @@
     /* opts.value: явное начальное значение (для селектов, созданных пустыми
        и заполняемых хелпером — у пустого <select> собственного value нет) */
 
+    /* кастомный контрол (с поиском, если opts.search не false) */
+    sshdEnhance(sel, { search: opts.search !== false,
+                       searchPlaceholder: opts.searchPlaceholder });
+
     function source(data) {
       if (kind === 'role') return data.roles;
       return (data.channels || []).filter(function (c) { return c.type === kind; });
     }
 
-    /* opts.search: над длинным списком — строка поиска (регистр/эмодзи/пробелы
-       не важны, значение фильтром никогда не меняется) */
-    var searchInput = null;
-    if (opts.search && !sel._pickerSearchAttached) {
-      sel._pickerSearchAttached = true;
-      searchInput = document.createElement('input');
-      searchInput.type = 'search';
-      searchInput.className = 'picker-search';
-      searchInput.placeholder = opts.searchPlaceholder || 'Поиск по названию…';
-      searchInput.setAttribute('aria-label',
-        opts.searchAria || 'Поиск по названию в списке');
-      searchInput.autocomplete = 'off';
-      sel.parentNode.insertBefore(searchInput, sel);
-      window.attachSelectSearch(sel, searchInput);
-    } else {
-      searchInput = sel.previousElementSibling && sel.previousElementSibling.classList
-        && sel.previousElementSibling.classList.contains('picker-search')
-        ? sel.previousElementSibling : null;
+    function refreshCtl() {
+      /* совместимость с п.5-контрактом: повторный прогон видимых опций */
+      if (sel._pickerSearchApply) sel._pickerSearchApply();
+      if (sel._sshdCtl) sel._sshdCtl.refresh();
     }
 
     window.pickerLoad(gid).then(function (data) {
@@ -188,9 +398,7 @@
       }
       sel.innerHTML = html;
       sel.value = has && keep ? keep : String(noneValue);
-      if (sel._pickerSearchApply) {  // повторный прогон фильтра по свежим опциям
-        sel._pickerSearchApply();
-      }
+      refreshCtl();
     }).catch(function () {
       /* бот офлайн/сеть: оставляем как есть, пикер не ломает страницу */
     });

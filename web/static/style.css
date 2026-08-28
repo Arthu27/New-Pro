@@ -1581,6 +1581,77 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 .mpd-more:hover { background: var(--surface-3); }
 /* ═══════════════════════════════════════════════════════════════════════ */
 
+/* ── п.4 заказа: кастомные select-меню (.sshd) ───────────────────────── */
+.sshd { position: relative; min-width: 120px; }
+.sshd-src {                /* нативный select — данные, не интерфейс */
+  position: absolute !important;
+  width: 1px; height: 1px; opacity: 0; pointer-events: none;
+}
+.sshd-btn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 14px; color: var(--text);
+  cursor: pointer; text-align: left;
+  transition: border-color .18s, box-shadow .18s, background .18s;
+}
+.sshd-btn:hover { border-color: var(--line-2, var(--line)); background: var(--surface-2); }
+.sshd.open .sshd-btn {
+  border-color: var(--ac);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 18%, transparent);
+}
+.sshd-lbl { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sshd.empty .sshd-lbl { color: var(--text-3); }
+.sshd-caret {
+  font-size: 11px; color: var(--text-3);
+  transition: transform .2s;
+}
+.sshd.open .sshd-caret { transform: rotate(180deg); color: var(--ac); }
+.sshd-pop {
+  position: absolute; z-index: 55;
+  top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(3, 7, 18, .18);
+  overflow: hidden;
+  animation: sshdIn .16s ease-out;
+}
+@keyframes sshdIn {
+  from { opacity: 0; transform: translateY(-6px) scale(.99); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.sshd-search {
+  width: 100%; box-sizing: border-box;
+  border: 0; border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: 9px 12px; font-size: 13.5px; color: var(--text);
+  outline: none;
+}
+.sshd-list { max-height: 260px; overflow-y: auto; padding: 4px; }
+.sshd-row {
+  min-height: 36px; display: flex; align-items: center;
+  padding: 8px 10px; border-radius: 10px;
+  font-size: 13.5px; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sshd-row:hover, .sshd-row.active { background: var(--surface-2); }
+.sshd-row.cur { color: var(--ac); font-weight: 700; }
+.sshd-row.cur::before {
+  content: '\f00c';            /* check */
+  font-family: 'Font Awesome 6 Free'; font-weight: 900; font-size: 10px;
+  margin-right: 8px; color: var(--ac);
+}
+.sshd-row.cur:not(:empty) { justify-content: flex-start; }
+.sshd-empty { padding: 14px; text-align: center; color: var(--text-3); font-size: 13px; }
+@media (max-width: 640px) {
+  .sshd-btn { padding: 10px 12px; }
+  .sshd-row { min-height: 42px; }   /* палец: хить одним тапом, мимо нельзя */
+}
+/* ═══════════════════════════════════════════════════════════════════════ */
+
 /* ── 16. Тост ──────────────────────────────────────────────── */
 #toastHost {
   position: fixed; bottom: 22px; right: 22px;
