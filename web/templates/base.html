@@ -4,19 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Панель Hakumo{% endblock %}</title>
-    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
-    <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
-<link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
     <script>
-      // Тема применяется до отрисовки, чтобы не было «вспышки»
+      /* П.5: тема — самым первым шагом, ДО любых стилей: фон никогда
+         не «вспыхивает» белым при переходах между разделами/каналами. */
       (function () {
-        try {
-          var t = localStorage.getItem('hakumo_theme');
-          if (t !== 'dark' && t !== 'light') t = 'light';
-          document.documentElement.setAttribute('data-theme', t);
-        } catch (e) {}
+        var t = '';
+        try { t = localStorage.getItem('hakumo_theme'); } catch (e) {}
+        if (t !== 'dark' && t !== 'light') {
+          try {
+            t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+              ? 'dark' : 'light';
+          } catch (e) { t = 'dark'; }
+        }
+        try { document.documentElement.setAttribute('data-theme', t); } catch (e) {}
       })();
     </script>
+    <style>
+      /* П.5 — критическая сцена: до прихода style.css фон уже фирменный,
+         межстраничный белый экран исключён физически. */
+      html { background: #0f1013; color-scheme: dark; }
+      html[data-theme="light"] { background: #f5f6f8; color-scheme: light; }
+      body { background: transparent; margin: 0; }
+    </style>
+    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
+    <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
 </head>
 <body>
     <script>

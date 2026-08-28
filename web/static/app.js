@@ -1148,6 +1148,14 @@
   /* ── 14a. Плавные переходы между страницами ─────────────── */
   function pageTransitions() {
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    /* bfcache-возврат: страница приходит из кэша с классом page-leaving
+       и остаётся невидимой — снимаем его при любом показе страницы */
+    window.addEventListener('pageshow', function () {
+      if (doc.body) doc.body.classList.remove('page-leaving');
+    });
+    /* П.5: клик по внутренней ссылке — НЕ гасит сцену мгновенно в белое.
+       Fade только на 60мс, навигация сразу; html-фон тематический (п.5)
+       под этим временем виден всегда. */
     doc.addEventListener('click', function (e) {
       if (e.defaultPrevented || e.button !== 0) return;
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -1160,8 +1168,30 @@
       if (href === window.location.pathname + window.location.search) return;
       e.preventDefault();
       doc.body.classList.add('page-leaving');
-      setTimeout(function () { window.location.href = href; }, 150);
+      setTimeout(function () { window.location.href = href; }, 60);
     });
+    /* Наведение/прикосновение на внутреннюю ссылку → браузер кэширует
+       следующую страницу заранее: белой полосы между разделами нет. */
+    var prefetched = {};
+    function warm(href) {
+      if (!href || prefetched[href] || href.charAt(0) !== '/' || href.charAt(1) === '/') return;
+      if (href.indexOf('/api/') === 0 || href.indexOf('/auth/') === 0) return;
+      prefetched[href] = 1;
+      try {
+        var l = doc.createElement('link');
+        l.rel = 'prefetch';
+        l.href = href;
+        doc.head.appendChild(l);
+      } catch (e) {}
+    }
+    doc.addEventListener('mouseover', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (a) warm(a.getAttribute('href'));
+    }, { passive: true });
+    doc.addEventListener('touchstart', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (a) warm(a.getAttribute('href'));
+    }, { passive: true });
   }
 
   /* ── 14b. Автопоиск: Enter в пустом списке фокусирует поиск ── */
