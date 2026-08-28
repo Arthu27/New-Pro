@@ -171,6 +171,16 @@ def quick_links(uid):
     ]
 
 
+def freshness_view(gid, uid):
+    """Авто-остывание статуса нарушителя (services/freshness), fail-safe."""
+    try:
+        from services import freshness as FSH
+        return FSH.freshness_of(gid, uid)
+    except Exception as _ex:
+        _log.debug('member_card: freshness: %s', _ex)
+        return None
+
+
 def card_view(bot, gid, uid):
     """Всё досье участника одной сборкой."""
     member, name, name_src = identity_view(bot, gid, uid)
@@ -183,6 +193,7 @@ def card_view(bot, gid, uid):
         'economy': economy_view(uid),
         'karma': karma_view(gid, uid),
         'warns': warns_view(gid, uid),
+        'freshness': freshness_view(gid, uid),
         'birthday': birthday_view(gid, uid),
         'links': quick_links(uid),
     }

@@ -79,7 +79,20 @@
       '<div class="mc-row"><span>Благодарностей отправлено<small>по журналу</small></span><span class="num">' + km.given + '</span></div>');
 
     var w = c.warns;
-    var wh = '<div class="mc-row"><span>Всего предупреждений</span><span class="num">' + w.count + '</span></div>';
+    var wh = '';
+    /* авто-остывание: чем дольше без нарушений, тем холоднее статус */
+    var f = c.freshness;
+    if (f) {
+      var fsub = f.level === 'clean'
+        ? 'нарушений в досье нет'
+        : 'без нарушений ' + f.days_without + ' ' + plural(f.days_without, 'день', 'дня', 'дней') + ' · ' + f.to_next;
+      wh += '<div class="mc-row"><span>Статус нарушителя<small>' + esc(fsub) + '</small></span>' +
+        '<span class="badge ' + esc(f.tone || 'neutral') + '">' + esc(f.label) + '</span></div>';
+      if (f.level !== 'clean') {
+        wh += '<div class="mc-track" title="Прогресс остывания"><div class="mc-fill" style="width:' + (f.progress || 0) + '%"></div></div>';
+      }
+    }
+    wh += '<div class="mc-row"><span>Всего предупреждений</span><span class="num">' + w.count + '</span></div>';
     if (!w.recent.length) {
       wh += '<div class="mc-row"><span style="color:var(--text-3)">Чисто — варнов нет.</span></div>';
     }

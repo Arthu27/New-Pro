@@ -171,10 +171,26 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_ladder_view(gid):
+        from services import freshness as FSH
         return jsonify({'success': True,
                         'steps': steps_of(load_cfg(gid)),
                         'impact': impact_view(gid),
+                        'cooldown': FSH.cooldown_config(gid),
                         'can_edit': session.get('role') in ('admin', 'owner')})
+
+    @app.route('/api/guild/<gid>/ladder/cooldown', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_ladder_cooldown(gid):
+        """Пороги авто-остывания статуса нарушителя (services/freshness)."""
+        from services import freshness as FSH
+        data = request.get_json(silent=True) or {}
+        cfg, err = FSH.save_cooldown_config(
+            gid, data.get('warm_days'), data.get('cold_days'))
+        if err:
+            return jsonify({'success': False, 'error': err}), 400
+        return jsonify({'success': True, 'cooldown': cfg,
+                        'message': 'Пороги остывания сохранены'})
 
     @app.route('/api/guild/<gid>/ladder/card.png')
     @login_required

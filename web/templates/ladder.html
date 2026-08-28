@@ -23,6 +23,21 @@
     <div class="panel-body" id="ldSteps"></div>
   </div>
 
+  <div class="panel" id="ldCoolPanel" {% if not can_edit %}hidden{% endif %}>
+    <div class="panel-head"><div><h2><i class="fas fa-temperature-low"></i> Авто-остывание статуса</h2>
+      <div class="sub">Статус нарушителя в карточке 360° сам теплеет и остывает, пока человек держится без нарушений. Ничего не удаляется — меняется только оценка «свежести».</div></div></div>
+    <div class="panel-body">
+      <div class="form-row" style="flex-wrap:wrap;gap:12px;align-items:flex-end">
+        <label class="form-group"><span class="form-label">«Тёплый» после N чистых дней</span>
+          <input class="form-input" id="ldWarmDays" type="number" min="1" max="364" value="14" aria-label="Тёплый после N чистых дней"></label>
+        <label class="form-group"><span class="form-label">«Холодный» после N чистых дней</span>
+          <input class="form-input" id="ldColdDays" type="number" min="2" max="365" value="45" aria-label="Холодный после N чистых дней"></label>
+        <button type="button" class="btn btn-primary" id="ldCoolSave"><i class="fas fa-save"></i> Сохранить</button>
+      </div>
+      <div class="hint" id="ldCoolMsg" style="margin-top:8px"></div>
+    </div>
+  </div>
+
   <div class="grid-2" style="align-items:start">
     <div class="panel" id="ldAddPanel" {% if not can_edit %}hidden{% endif %}>
       <div class="panel-head"><div><h2><i class="fas fa-plus"></i> Новая ступень</h2>
@@ -86,6 +101,10 @@ function load() {
   fetch(API + '/view').then(function (r) { return r.json(); }).then(function (d) {
     if (!d.success) { return; }
     if (window.renderIfChanged && !window.renderIfChanged('ladder', d, function () {})) return;
+    if (d.cooldown) {
+      if ($('ldWarmDays')) $('ldWarmDays').value = d.cooldown.warm_days;
+      if ($('ldColdDays')) $('ldColdDays').value = d.cooldown.cold_days;
+    }
     $('ldKpis').innerHTML =
       '<div class="kpi"><div class="kpi-icon"><i class="fas fa-stairs"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.steps.length + '</div><div class="kpi-label">ступеней</div></div></div>' +
       '<div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-user-shield"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.impact.warned_users + '</div><div class="kpi-label">' + plural(d.impact.warned_users, 'участник', 'участника', 'участников') + ' с варнами</div></div></div>';
@@ -172,6 +191,22 @@ function loadCard() {
   $('ldCard').src = API + '/card.png?t=' + Date.now();
 }
 $('ldCsv').addEventListener('click', function (e) { e.preventDefault(); location.href = API + '/export.csv'; });
+
+/* авто-остывание: сохранить пороги */
+if (CAN_EDIT && $('ldCoolSave')) {
+  $('ldCoolSave').addEventListener('click', function () {
+    var msg = $('ldCoolMsg');
+    fetch(API + '/cooldown', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ warm_days: $('ldWarmDays').value, cold_days: $('ldColdDays').value })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      msg.className = 'hint' + (d.success ? '' : ' error');
+      msg.textContent = d.message || d.error || 'Ошибка';
+      if (window.showToast) window.showToast(msg.textContent, !!d.success);
+      if (d.success) load();
+    }).catch(function () { msg.className = 'hint error'; msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; });
+  });
+}
 
 load();
 loadCard();
