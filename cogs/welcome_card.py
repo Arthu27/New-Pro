@@ -37,9 +37,10 @@ GOLD = 0xD4AF37
 DIVIDER = "✦ ───────────────────── ✦"
 
 DEFAULT_CFG = {
-    "enabled": True,
+    "enabled": False,         # авто-приветствия ВЫКЛЮЧЕНЫ по умолчанию
+                               # (владелец сам включит и настроит в панели)
     "channel_id": 0,          # 0 = system_channel
-    "welcome": True,          # карта при входе
+    "welcome": False,         # карта при входе
     "goodbye": False,         # карта при выходе
 }
 
