@@ -282,8 +282,8 @@ check("el.id === 'alert_channel_id'" in t and "el.tagName === 'INPUT' && el.id =
       'antiraid: заливка конфига переведена с INPUT-гварда на id (select)')
 check('ensureChannelPicker' in t, 'antiraid: защита от гонки «конфиг раньше каналов»')
 t = tpl('automation.html')
-check('nsEnsurePicker' in t and "var GID = {{ guild_id | tojson }};" in t,
-      'automation: nsEnsurePicker + GID из контекста')
+check('nsEnsurePicker' in t and "(guild_id|string)|tojson" in t,
+      'automation: nsEnsurePicker + GID строкой из контекста (снежинка)')
 t = tpl('j2c.html')
 check('>Канал-лобби<' in t, 'j2c: подпись поля без «ID»')
 
