@@ -91,7 +91,7 @@
     var f = $('filter').value;
     var list = logs.filter(function (l) {
       if (f && l.method !== f) return false;
-      if (q && ((l.action + ' ' + l.user + ' ' + l.ip).toLowerCase().indexOf(q) === -1)) return false;
+      if (q && ((l.action + ' ' + (l.label || '') + ' ' + l.user + ' ' + l.ip).toLowerCase().indexOf(q) === -1)) return false;
       return true;
     });
     $('pl-count').textContent = list.length + ' / ' + logs.length;
@@ -102,13 +102,16 @@
     if (!list.length) { $('pl-body').innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Логи не найдены</p>'; return; }
     var html = '';
     list.forEach(function (l) {
-      var icon = l.method === 'POST' ? 'fa-plus' : l.method === 'DELETE' ? 'fa-trash' : 'fa-eye';
+      var icon = l.icon || (l.method === 'POST' ? 'fa-plus' : l.method === 'DELETE' ? 'fa-trash' : 'fa-eye');
       var color = roleColor[l.role] || 'var(--text-muted)';
+      var title = l.label || l.action;
+      var raw = (l.label && l.label !== l.action) ? ' <span style="opacity:.55;font-weight:400">' + esc(l.action) + '</span>' : '';
+      var linkA = l.link ? '<a href="' + esc(l.link) + '" style="font-size:11px;color:var(--ac);text-decoration:none;margin-left:8px" title="Открыть раздел"><i class="fas fa-arrow-right"></i></a>' : '';
       html += '<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid color-mix(in srgb, var(--text) 5%, transparent); gap: 12px;">' +
         '<div style="width: 32px; height: 32px; border-radius: 8px; background: color-mix(in srgb, var(--text) 5%, transparent); display: flex; align-items: center; justify-content: center;"><i class="fas ' + icon + '" style="color: ' + color + ';"></i></div>' +
         '<div style="flex: 1;">' +
-          '<div style="font-weight: 500; margin-bottom: 4px;">' + esc(l.action) + '</div>' +
-          '<div style="font-size: 12px; color: var(--text-muted);">' + esc(l.user) + ' • ' + esc(l.ip) + '</div>' +
+          '<div style="font-weight: 500; margin-bottom: 4px;">' + esc(title) + linkA + raw + '</div>' +
+          '<div style="font-size: 12px; color: var(--text-muted);">' + esc(l.user) + ' • ' + esc(l.ip) + (l.detail ? ' • ' + esc(l.detail) : '') + '</div>' +
         '</div>' +
         '<div style="text-align: right;">' +
           '<div style="font-size: 12px; color: var(--text-muted);">' + esc(l.time) + '</div>' +

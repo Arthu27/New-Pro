@@ -251,6 +251,6 @@ if (CAN_EDIT) {
 
 SEL = dayKey(new Date());
 load();
-if (window.setLiveRefresh) window.setLiveRefresh(function () { DATA && (DATA.now = Math.floor(Date.now() / 1000)); renderSched(); load(); }, 30000);
+if (window.setLiveRefresh) window.setLiveRefresh(function () { DATA && (DATA.now = Math.floor(Date.now() / 1000)); renderSched(); load(); }, 1500);
 </script>
 {% endblock %}

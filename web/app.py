@@ -3773,6 +3773,19 @@ def api_notifications_poll ():
 # Сырой «POST /api/guild/…/channels-visibility» превращается в
 # «Изменили видимость каналов» со ссылкой на нужный раздел.
 _ACTION_MAP = (
+    # специфичные пути — ПЕРЕД общими ('/schedule' перехватил бы и /mod-schedule)
+    (r'/appeals/resolve', 'Решение по апелляции', 'fa-scale-balanced', '/appeals'),
+    (r'/appeals/claim', 'Взяли апелляцию в работу', 'fa-hand', '/appeals'),
+    (r'/appeals/settings', 'Настроили правила апелляций', 'fa-sliders', '/appeals'),
+    (r'/appeals/channel', 'Выбрали канал апелляций', 'fa-hashtag', '/appeals'),
+    (r'/appeals', 'Действие с апелляциями', 'fa-scale-balanced', '/appeals'),
+    (r'/mod-schedule/create', 'Запланировали наказание', 'fa-calendar-plus', '/mod-schedule'),
+    (r'/mod-schedule/cancel', 'Отменили отложенное действие', 'fa-calendar-xmark', '/mod-schedule'),
+    (r'/ladder/cooldown', 'Настроили авто-остывание', 'fa-temperature-low', '/ladder'),
+    (r'/ladder/add', 'Добавили ступень лестницы', 'fa-stairs', '/ladder'),
+    (r'/ladder/remove', 'Убрали ступень лестницы', 'fa-stairs', '/ladder'),
+    (r'/staff-rating/remove', 'Сняли голос за модератора', 'fa-star-half-stroke', '/staff-rating'),
+    (r'/punish', 'Наказание из панели', 'fa-gavel', '/warnings'),
     (r'/roles/create', 'Дали роль', 'fa-user-plus', '/roles'),
     (r'/roles/\d+/delete', 'Удалили роль', 'fa-user-minus', '/roles'),
     (r'channels-visibility', 'Изменили видимость каналов', 'fa-eye-slash', '/channels'),
@@ -3801,7 +3814,7 @@ def _human_panel_action(action):
     method = a.split(' ', 1)[0]
     path = a.split(' ', 1)[1] if ' ' in a else a
     for pat, title, icon, link in _ACTION_MAP:
-        if re.search(pat, path):
+        if _re.search(pat, path):
             return title, icon, link
     seg = path.rstrip('/').split('/')[-1].replace('-', ' ').replace('_', ' ').strip()
     if seg:

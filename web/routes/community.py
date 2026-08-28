@@ -289,7 +289,18 @@ def register(ctx):
             with open (f ,'r',encoding ='utf-8')as fp :
                 logs =json .load (fp )
                 # En новый до
-            return jsonify (list (reversed (logs )))
+            logs =list (reversed (logs ))
+            # человеческие ярлыки: «POST /api/.../appeals/resolve» → «Решение по апелляции»
+            try :
+                from web .app import _human_panel_action
+                for e in logs :
+                    if e .get ('broadcast')or not e .get ('action'):
+                        continue
+                    label ,icon ,link =_human_panel_action (e ['action'])
+                    e ['label']=label ;e ['icon']=icon ;e ['link']=link
+            except Exception as _ex:
+                _log .debug ("api_panel_logs(): ярлыки: %s", _ex )
+            return jsonify (logs )
         except (json .JSONDecodeError ,ValueError ):
             return jsonify ([])
 
