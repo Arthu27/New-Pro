@@ -75,7 +75,9 @@ ach_cmds = [c for c in cat['commands']
             if 'achiev' in str(c.get('module', '')).lower()
             or c.get('bare') in ('ачивки', 'ачивлидеры')]
 check(not ach_cmds, 'команды ачивок не показываются в каталоге')
-check(cat['total'] > 10, f'остальные команды на месте ({cat["total"]})')
+# После урезания слеш-меню (заказ владельца) в каталоге ровно 9 команд
+# ядра (модерация, тикеты, /play, /update, /afk) — они должны быть на месте.
+check(cat['total'] >= 9, f'остальные команды на месте ({cat["total"]})')
 
 print('== 4. Возврат одним флагом ==')
 src = open(os.path.join(ROOT, 'cogs', 'achievements.py'), encoding='utf-8').read()

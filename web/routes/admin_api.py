@@ -117,8 +117,8 @@ def register(ctx):
             try :
                 from slash_budget import apply_slash_budget
                 apply_slash_budget (bot .tree )
-            except Exception :
-                pass
+            except Exception as _ex :
+                _log .debug ('api_bot_hot_reload(): apply_slash_budget: %s',_ex )
         return jsonify ({'reloaded':reloaded })
 
 
@@ -429,8 +429,8 @@ def register(ctx):
             try :
                 from slash_budget import apply_slash_budget
                 apply_slash_budget (bot .tree )
-            except Exception :
-                pass
+            except Exception as _ex :
+                _log .debug ('api_bot_load(): apply_slash_budget: %s',_ex )
             return jsonify ({'ok':True ,'name':name })
         except ModuleNotFoundError as e :
             return jsonify ({'error':f'Файл не найден: {e}'}),404 
@@ -494,8 +494,8 @@ def register(ctx):
             try :
                 from slash_budget import apply_slash_budget
                 apply_slash_budget (bot .tree )
-            except Exception :
-                pass
+            except Exception as _ex :
+                _log .debug ('api_bot_reload(): apply_slash_budget: %s',_ex )
             return jsonify ({'ok':True ,'name':name })
         except Exception as e :
             return jsonify ({'error':f'Не удалось перезагрузить {name}: {e}'}),400 
@@ -523,6 +523,6 @@ def register(ctx):
         try :
             from slash_budget import apply_slash_budget
             apply_slash_budget (bot .tree )
-        except Exception :
-            pass
+        except Exception as _ex :
+            _log .debug ('api_bot_reload_all(): apply_slash_budget: %s',_ex )
         return jsonify ({'ok':True ,'results':results })

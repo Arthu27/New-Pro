@@ -163,7 +163,8 @@ def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=()):
                           encoding='utf-8') as f:
                     _json.dump(payload, f, ensure_ascii=False)
                 return
-            except OSError:
+            except OSError as _oe:
+                _log.debug('sync: не записал метку в %s: %s', base, _oe)
                 continue
     except Exception as _e:
         _log.debug('sync: метка последнего синка: %s', _e)

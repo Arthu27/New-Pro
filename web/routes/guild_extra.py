@@ -71,8 +71,8 @@ def register(ctx):
             try :
                 from slash_budget import apply_slash_budget
                 apply_slash_budget (bot .tree )
-            except Exception :
-                pass
+            except Exception as _ex :
+                _log .debug ('guild_extra(): apply_slash_budget: %s',_ex )
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })

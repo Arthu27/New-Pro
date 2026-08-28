@@ -415,8 +415,8 @@ class MusicCog(commands.Cog):
             # громкость из состояния сервера
             try:
                 source.volume = self.volume_of(guild_id) / 100
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug('music: громкость источника: %s', _ex)
             self._playing_guilds.add(int(guild_id))
             self._current_track[int(guild_id)] = track
             vc.play(source, after=lambda _e: self._after_track(guild_id, _e))
