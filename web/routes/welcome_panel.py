@@ -46,6 +46,10 @@ def register(ctx):
     def api_welcome_card_appearance_post(gid):
         """Оформление карточки приветствия: авто (тема), свой URL или off."""
         data = request.get_json(silent=True) or {}
+        # Режим 'file' сохраняет ранее загруженный фон: клиент шлёт только
+        # mode/theme/url, имя файла не перетираем пустой строкой
+        cur = WCG.get_appearance(gid)
+        data.setdefault('file', cur['file'])
         ap = WCG.normalize_appearance(data)
         url = ap['url']
         if ap['mode'] == 'url' and url:
@@ -67,19 +71,48 @@ def register(ctx):
                                    WCG.WELCOME_MODE_LABELS[ap['mode']] +
                                    (f' · тема «{theme_lbl}»' if ap['mode'] == 'auto' else '')})
 
+    @app.route('/api/guild/<gid>/welcome-card/upload', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_welcome_card_upload(gid):
+        """Загрузка файла фона карточки (multipart, поле 'file')."""
+        f = request.files.get('file')
+        if f is None or not f.filename:
+            return jsonify({'success': False,
+                            'error': 'Выберите файл картинки'}), 400
+        try:
+            data = f.stream.read(WCG.BG_MAX_BYTES + 1)
+        except Exception:
+            data = None
+        if not data:
+            return jsonify({'success': False,
+                            'error': 'Не удалось прочитать файл'}), 400
+        res = WCG.save_bg_file(gid, f.filename, data)
+        if not res.get('ok'):
+            return jsonify({'success': False, 'error': res['error']}), 400
+        _notify('Загружен фон карточки приветствия')
+        _log.info('welcome-card: %s загрузил фон %s на %s',
+                  session.get('username', '?'), res['appearance']['file'], gid)
+        return jsonify({'success': True, 'appearance': res['appearance'],
+                        'message': 'Фон загружен — карточки будут рисоваться на вашей картинке'})
+
     @app.route('/api/guild/<gid>/welcome-card/preview.png')
     @login_required
     @role_required('mod')
     def api_welcome_card_preview(gid):
-        """Живой предпросмотр авто-карточки приветствия в выбранной теме."""
+        """Живой предпросмотр карточки: тема авто или загруженный фон."""
         theme = request.args.get('theme')
         kind = str(request.args.get('kind') or 'welcome').strip().lower()
         if kind not in ('welcome', 'goodbye'):
             kind = 'welcome'
         try:
+            ap = WCG.get_appearance(gid)
+            bg = None
+            if ap['mode'] == 'file':
+                bg = WCG.load_bg_bytes(ap['file'])
             png = WCG.render_welcome_card(
                 'Кипарис', 'Hakumo Demo', 1024,
-                kind=kind, theme=theme or WCG.DEFAULT_WELCOME_THEME)
+                kind=kind, theme=theme or ap['theme'], bg_bytes=bg)
         except Exception as _ex:
             _log.debug('welcome-card preview: %s', _ex)
             png = None

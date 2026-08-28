@@ -74,9 +74,15 @@ WELCOME_THEMES = {
 WELCOME_THEME_ORDER = tuple(WELCOME_THEMES)
 DEFAULT_WELCOME_THEME = 'hakumo'
 
-WELCOME_MODES = ('auto', 'url', 'off')
+WELCOME_MODES = ('auto', 'url', 'file', 'off')
 WELCOME_MODE_LABELS = {'auto': 'авто-картинка', 'url': 'своя по URL',
-                       'off': 'без картинки'}
+                       'file': 'свой файл фона', 'off': 'без картинки'}
+
+# Каталог загруженных фонов карточек (панель грузит файл, ког рисует на нём)
+BG_DIR = os.path.join('data', 'uploads', 'welcome')
+BG_MAX_BYTES = 8 * 1024 * 1024          # 8 МБ достаточно для фонов 1000x320+
+BG_MIME_EXT = {'image/png': '.png', 'image/jpeg': '.jpg',
+               'image/gif': '.gif', 'image/webp': '.webp'}
 
 _font_cache = {}
 
@@ -119,10 +125,15 @@ def normalize_appearance(raw):
     mode = str(raw.get('mode') or '').strip().lower()
     theme = str(raw.get('theme') or '').strip().lower()
     url = str(raw.get('url') or '').strip()
+    # Загруженный файл фона: только безопасное имя (basename, без путей)
+    file_name = os.path.basename(str(raw.get('file') or '').strip())
+    if not file_name or file_name in ('.', '..'):
+        file_name = ''
     return {
         'mode': mode if mode in WELCOME_MODES else 'auto',
         'theme': theme if theme in WELCOME_THEMES else DEFAULT_WELCOME_THEME,
         'url': url[:500],
+        'file': file_name[:80],
     }
 
 
@@ -145,6 +156,71 @@ def save_appearance(gid, raw):
     data[str(gid)] = sec
     _save_raw(data)
     return cfg
+
+
+# ── Загруженный файл фона (режим 'file') ────────────────────────────────
+def bg_path(file_name):
+    """Безопасный путь к файлу фона внутри BG_DIR ('' → None)."""
+    name = os.path.basename(str(file_name or ''))
+    if not name or name in ('.', '..'):
+        return None
+    base = os.path.abspath(BG_DIR)
+    full = os.path.abspath(os.path.join(base, name))
+    return full if full.startswith(base + os.sep) else None
+
+
+def load_bg_bytes(file_name):
+    """bytes фона для рендера ('' / нет файла / не файл → None)."""
+    path = bg_path(file_name)
+    try:
+        if path and os.path.isfile(path):
+            with open(path, 'rb') as fp:
+                return fp.read()
+    except Exception as _ex:
+        _log.debug('load_bg_bytes(): %s', _ex)
+    return None
+
+
+def save_bg_file(gid, original_name, data):
+    """Принять загрузку фона: валидация картинки → dict результата.
+
+    Возвращает {'ok': True, 'appearance': normalized} или {'ok': False, 'error': str}.
+    """
+    if not data:
+        return {'ok': False, 'error': 'Файл не передан'}
+    if len(data) > BG_MAX_BYTES:
+        return {'ok': False,
+                'error': 'Файл больше 8 МБ — сожмите картинку'}
+    try:
+        probe = Image.open(io.BytesIO(data))
+        probe.verify()
+        fmt = (probe.format or '').upper()
+    except Exception:
+        return {'ok': False, 'error': 'Это не картинка (нужны PNG/JPEG/GIF/WebP)'}
+    if fmt not in ('PNG', 'JPEG', 'GIF', 'WEBP'):
+        return {'ok': False, 'error': 'Формат не поддержан: PNG/JPEG/GIF/WebP'}
+    ext = {'PNG': '.png', 'JPEG': '.jpg', 'GIF': '.gif',
+           'WEBP': '.webp'}[fmt]
+    os.makedirs(BG_DIR, exist_ok=True)
+    name = 'bg_%s%s' % (int(gid), ext)          # один фон на сервер
+    # Чистим старые файлы этого сервера с другим расширением
+    for old_ext in BG_MIME_EXT.values():
+        old = os.path.join(BG_DIR, 'bg_%s%s' % (int(gid), old_ext))
+        if old_ext != ext and os.path.exists(old):
+            try:
+                os.remove(old)
+            except OSError as _ex:
+                _log.debug('старый фон %s не удалён: %s', old, _ex)
+    tmp = os.path.join(BG_DIR, '.' + name + '.tmp')
+    with open(tmp, 'wb') as fp:
+        fp.write(data)
+    os.replace(tmp, os.path.join(BG_DIR, name))
+    _log.info('фон welcome-card от панели: сервер %s, файл %s (%d байт)',
+              gid, name, len(data))
+    cur = get_appearance(gid)
+    return {'ok': True, 'appearance': save_appearance(gid, {
+        'mode': 'file', 'theme': cur['theme'], 'url': cur['url'],
+        'file': name})}
 
 
 # ── Аватарки ────────────────────────────────────────────────────────────
@@ -171,9 +247,31 @@ def _letter_avatar(letter, size, pal):
 
 
 # ── Рендер карточки ─────────────────────────────────────────────────────
+def _cover_bg(bg_bytes, tw, th):
+    """Своя картинка как фон карточки: cover-обрезка под tw×th, чуть приглушена."""
+    src = Image.open(io.BytesIO(bg_bytes)).convert('RGB')
+    sw, sh = src.size
+    if sw <= 0 or sh <= 0:
+        return None
+    scale = max(tw / sw, th / sh)
+    src = src.resize((max(1, int(sw * scale + 0.5)),
+                      max(1, int(sh * scale + 0.5))), Image.LANCZOS)
+    left = (src.width - tw) // 2
+    top = (src.height - th) // 2
+    src = src.crop((left, top, left + tw, top + th))
+    # Виньетка-затемнение: текст и рамка должны читаться на любом фоне
+    veil = Image.new('RGB', (tw, th), (6, 8, 14))
+    src = Image.blend(src, veil, 0.42)
+    return src
+
+
 def render_welcome_card(member_name, guild_name, count, avatar_bytes=None,
-                        kind='welcome', theme=None):
-    """Карта приветствия/прощания → PNG bytes. Никогда не бросает наружу."""
+                        kind='welcome', theme=None, bg_bytes=None):
+    """Карта приветствия/прощания → PNG bytes. Никогда не бросает наружу.
+
+    bg_bytes — свой файл фона (режим 'file'): кладём его «cover» на холст
+    вместо градиента темы; при ошибке молча откатываемся на градиент.
+    """
     try:
         theme_key = str(theme or DEFAULT_WELCOME_THEME).strip().lower()
         pal = WELCOME_THEMES.get(theme_key, WELCOME_THEMES[DEFAULT_WELCOME_THEME])
@@ -188,12 +286,22 @@ def render_welcome_card(member_name, guild_name, count, avatar_bytes=None,
         img = Image.new('RGB', (W * SS, H * SS), pal['bg_top'])
         d = ImageDraw.Draw(img, 'RGBA')
 
-        # 1. Фон: вертикальный градиент темы
-        for y in range(H * SS):
-            t = y / max(1, H * SS - 1)
-            d.line([(0, y), (W * SS, y)],
-                   fill=tuple(int(pal['bg_top'][i] + (pal['bg_bot'][i] - pal['bg_top'][i]) * t)
-                              for i in range(3)))
+        # 1. Фон: свой файл-фон (cover) или вертикальный градиент темы
+        custom = None
+        if bg_bytes:
+            try:
+                custom = _cover_bg(bg_bytes, W * SS, H * SS)
+            except Exception:
+                custom = None
+        if custom is not None:
+            img = custom
+            d = ImageDraw.Draw(img, 'RGBA')
+        else:
+            for y in range(H * SS):
+                t = y / max(1, H * SS - 1)
+                d.line([(0, y), (W * SS, y)],
+                       fill=tuple(int(pal['bg_top'][i] + (pal['bg_bot'][i] - pal['bg_top'][i]) * t)
+                                  for i in range(3)))
 
         # 2. Мягкие свечения (справа сверху и слева снизу, цвета темы)
         rnd = random.Random(hash((theme_key, kind)) & 0x7fffffff)

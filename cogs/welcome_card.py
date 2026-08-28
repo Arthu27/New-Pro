@@ -115,11 +115,16 @@ class WelcomeCard(commands.Cog):
             if appearance['mode'] == 'off':
                 await ch.send(content=text)
                 return
-            # Авто-картинка: рисуем карточку в выбранной теме
+            # Свой файл фона: рисуем карточку на загруженной картинке
+            bg = None
+            if appearance['mode'] == 'file':
+                bg = WCG.load_bg_bytes(appearance['file'])
+            # Авто-картинка (или фолбэк при битом файле): тема-градиент
             av = await self._avatar_bytes(member)
             png = WCG.render_welcome_card(
                 member.display_name, guild.name, guild.member_count or 0,
-                avatar_bytes=av, kind=kind, theme=appearance['theme'])
+                avatar_bytes=av, kind=kind, theme=appearance['theme'],
+                bg_bytes=bg)
             file = discord.File(io.BytesIO(png),
                                 filename=WCG.welcome_card_filename(kind))
             await ch.send(content=(text if kind == 'welcome' else None), file=file)

@@ -83,9 +83,17 @@
       <div class="form-group"><label>Режим картинки</label>
         <select id="wCardMode" aria-label="Режим картинки приветствия">
           <option value="auto">Авто-картинка (рисует бот)</option>
+          <option value="file">Свой файл — загрузить фон</option>
           <option value="url">Своя картинка по URL</option>
           <option value="off">Без картинки — текстовое приветствие</option>
         </select>
+      </div>
+      <div class="form-group" id="wCardFileBox" hidden><label>Файл фона (PNG/JPEG/GIF/WebP, до 8 МБ)</label>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="file" id="wCardFile" accept="image/png,image/jpeg,image/gif,image/webp" aria-label="Файл фона карточки">
+          <button type="button" class="btn btn-secondary" id="wCardUpload" onclick="wCardUploadBg()"><i class="fas fa-upload" style="margin-right:6px"></i>Загрузить</button>
+        </div>
+        <span style="color:var(--text-muted,#8b949e); font-size:12px;" id="wCardFileMsg">Файл ещё не загружен</span>
       </div>
       <div class="form-group" id="wCardThemeBox"><label>Тема авто-картинки</label>
         <select id="wCardTheme" aria-label="Тема карточки приветствия"></select>
@@ -223,6 +231,7 @@ function wCardRefreshUi() {
   var mode = document.getElementById('wCardMode').value;
   document.getElementById('wCardThemeBox').hidden = mode !== 'auto';
   document.getElementById('wCardUrlBox').hidden = mode !== 'url';
+  document.getElementById('wCardFileBox').hidden = mode !== 'file';
   document.getElementById('wCardKindBox').hidden = mode === 'off';
   document.getElementById('wCardPvWrap').hidden = mode === 'off';
   document.getElementById('wCardOffHint').hidden = mode !== 'off';
@@ -249,6 +258,33 @@ function wCardRefreshPreview() {
   }, 180);
 }
 
+async function wCardUploadBg() {
+  var inp = document.getElementById('wCardFile');
+  var msg = document.getElementById('wCardFileMsg');
+  if (!inp || !inp.files || !inp.files.length) {
+    if (msg) msg.textContent = 'Сначала выберите файл';
+    return;
+  }
+  var fd = new FormData();
+  fd.append('file', inp.files[0]);
+  if (msg) msg.textContent = 'Загружаю…';
+  try {
+    var r = await fetch('/api/guild/' + selectedGuild + '/welcome-card/upload', {
+      method: 'POST', body: fd
+    });
+    var d = await r.json();
+    if (d && d.success) {
+      if (msg) msg.textContent = 'Загружен: ' + ((d.appearance && d.appearance.file) || 'файл');
+      wCardDirty = false;
+      if (typeof showToast === 'function') showToast(d.message || 'Фон загружен', true);
+      wCardRefreshUi();
+    } else {
+      if (msg) msg.textContent = (d && d.error) || 'Не удалось загрузить';
+      if (typeof showToast === 'function') showToast((d && d.error) || 'Не удалось загрузить', false);
+    }
+  } catch(e) { if (msg) msg.textContent = 'Ошибка загрузки'; }
+}
+
 async function loadWelcomeCard() {
   try {
     var r = await fetch('/api/guild/' + selectedGuild + '/welcome-card/appearance');
@@ -270,6 +306,8 @@ async function loadWelcomeCard() {
       if (ap.theme) ts.value = ap.theme;
       if (typeof ap.url === 'string') document.getElementById('wCardUrl').value = ap.url;
     }
+    var fm = document.getElementById('wCardFileMsg');
+    if (fm && ap.file) fm.textContent = 'Загружен: ' + ap.file;
     wCardRefreshUi();
   } catch(e) { console.warn('welcome-card load:', e); }
 }
