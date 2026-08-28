@@ -74,7 +74,11 @@ def register(ctx):
                 return jsonify ({'ok':True ,'config':cfg })
             return jsonify (_demo_leveling_config (guild_id ))
         from cogs .leveling_engagement import LevelingEngagement 
-        cog =bot .get_cog ('LevelingEngagement')
+        cog =bot .get_cog ('LevelingEngagement')if hasattr (bot ,'get_cog')else None 
+        if cog is None :
+            # нестандартные условия: модуль уровней не загружен — вежливый 503,
+            # панель отвечает, а не падает 500 (п.6: ни одной ошибки в консоли)
+            return jsonify ({'error':'Модуль уровней сейчас недоступен — проверьте загрузку когов'}),503 
         if request .method =='POST':
             cfg =cog .load_config (guild_id )
             patch =request .get_json (silent =True )or {}

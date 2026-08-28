@@ -234,6 +234,10 @@ for f in ('data/discord_audit_cache.json', 'data/audit_seen.json', 'data/audit_l
 try:
     Config.MAIN_GUILD_ID = MAIN_I
     asyncio.run(cog._sync_discord_audit_log())
+    # save_event пишет в audit_log.json через фоновый воркер (очередь) —
+    # дожидаемся слива очереди, иначе чтение файла ниже — гонка (п.6)
+    from cogs.logs import _audit_queue
+    _audit_queue.join()
 
     with open('data/discord_audit_cache.json', encoding='utf-8') as f:
         cache = json.load(f)

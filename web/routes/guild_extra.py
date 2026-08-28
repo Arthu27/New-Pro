@@ -47,7 +47,7 @@ def register(ctx):
                 # демо-витрина: живого бота нет, модули «загружены»,
                 # выключенные из менеджера — честно показаны выключенными
                 return jsonify ([{'name':c ,'loaded':is_loaded (c )}for c in sorted (all_cogs )])
-        loaded =[ext .split ('.')[-1 ]for ext in (bot .extensions if bot else [])]
+        loaded =[ext .split ('.')[-1 ]for ext in ((getattr (bot,'extensions',None )or {})if bot else [])]
         return jsonify ([{
         'name':c ,
         'loaded':c in loaded 
@@ -62,7 +62,7 @@ def register(ctx):
         import asyncio 
         if not bot :return jsonify ({'error':'Бот офлайн'})
         async def do ():
-            if f'cogs.{cog_name}'in bot .extensions :
+            if f'cogs.{cog_name}'in (getattr (bot,'extensions',None )or {}):
                 await (bot .reload_extension (f'cogs.{cog_name}'))
             else :
                 await (bot .load_extension (f'cogs.{cog_name}'))

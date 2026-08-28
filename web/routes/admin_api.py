@@ -105,7 +105,7 @@ def register(ctx):
                 if cog .cog_hash_cache .get (cog_name )!=h :
                     try :
                         ext =f'cogs.{cog_name}'
-                        if ext in bot .extensions :
+                        if ext in (getattr (bot ,'extensions',None )or {}): 
                             asyncio .run_coroutine_threadsafe (bot .reload_extension (ext ),bot .loop ).result (timeout =10 )
                         else :
                             asyncio .run_coroutine_threadsafe (bot .load_extension (ext ),bot .loop ).result (timeout =10 )
@@ -415,7 +415,7 @@ def register(ctx):
         if not name .startswith ('cogs.'):
             name ='cogs.'+name 
             # Idempotent: already loaded?
-        if name in bot .extensions :
+        if name in (getattr (bot ,'extensions',None )or {}): 
             return jsonify ({'ok':True ,'already_loaded':True ,'name':name })
         try :
             future =asyncio .run_coroutine_threadsafe (bot .load_extension (name ),bot .loop )
@@ -449,7 +449,7 @@ def register(ctx):
             return jsonify ({'error':'Не указано имя расширения'}),400 
         if not name .startswith ('cogs.'):
             name ='cogs.'+name 
-        if name not in bot .extensions :
+        if name not in (getattr (bot ,'extensions',None )or {}): 
             return jsonify ({'ok':True ,'not_loaded':True ,'name':name })
         try :
             future =asyncio .run_coroutine_threadsafe (bot .unload_extension (name ),bot .loop )
@@ -498,7 +498,7 @@ def register(ctx):
                 return jsonify ({'ok':True ,'demo':True ,'results':[]})
             return jsonify ({'error':'Бот офлайн'}),503 
         results =[]
-        for ext in list (bot .extensions .keys ()):
+        for ext in list ((getattr (bot ,'extensions',None )or {}).keys ()):
             try :
                 asyncio .run_coroutine_threadsafe (bot .reload_extension (ext ),bot .loop ).result (timeout =10 )
                 results .append ({'name':ext ,'ok':True })

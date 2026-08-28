@@ -182,7 +182,7 @@ def success_embed(title, description, guild=None, gif_key=None, fields=None):
     if gif_key:
         e.set_image(url=gif(gif_key))
     if guild:
-        e.set_footer(text=f"{guild.name}")
+        e.set_footer(text=str(getattr(guild, "name", None) or "сервер"))  # гильдия без .name не роняет embed
     return e
 
 
@@ -198,7 +198,7 @@ def info_embed(title, description, guild=None):
     e = discord.Embed(color=0x3498DB, timestamp=datetime.now(timezone.utc))
     e.description = f"## ℹ️ {title}\n{description}"
     if guild:
-        e.set_footer(text=f"{guild.name}")
+        e.set_footer(text=str(getattr(guild, "name", None) or "сервер"))  # гильдия без .name не роняет embed
     return e
 
 
