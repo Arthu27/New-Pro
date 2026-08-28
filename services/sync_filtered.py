@@ -85,14 +85,7 @@ async def full_sync(bot):
         # .env пуст — глобальное поведение (любой сервер), но с фильтром
         return await sync_tree(bot)
 
-    # 1) копируем глобальное дерево в каждый разрешённый сервер
-    for g in targets:
-        try:
-            tree.copy_global_to(guild=g)
-        except Exception as e:
-            _log.debug('copy_global_to(%s): %s', g.id, e)
-
-    # 2) глобальный список в Discord очищаем (чтобы не было дублей).
+    # 1) глобальный список в Discord очищаем (чтобы не было дублей).
     #    Исключение — команды с extras['keep_global'] (напр. /апелляция):
     #    они обязаны остаться глобальными, чтобы работали в ЛС бота.
     parked = []
@@ -114,18 +107,52 @@ async def full_sync(bot):
     except TypeError as e:          # дерево без параметров — уже очищено выше
         _log.debug('tree.sync(): %s', e)
     except Exception as e:
-        _log.warning('глобальная очистка не удалась: %s', e)
+        # Очистка глобального списка НЕ прошла — старое глобальное меню
+        # осталось в Discord. Копировать те же команды в гильдию = ДУБЛИ
+        # в клиенте (именно «много дубликатов» из жалоб). Останавливаемся:
+        # локальное дерево собираем обратно, до следующего рестарта
+        # бот работает на старом глобальном меню — безопасно.
+        _log.warning('глобальная очистка не удалась (%s) — guild-синк '
+                     'пропущен, чтобы не задублировать меню', e)
+        for cmd in parked:
+            try:
+                tree.add_command(cmd)
+            except Exception as _e:
+                _log.debug('вернуть %s в дерево: %s', cmd.name, _e)
+        return []
+
     for cmd in parked:            # локально возвращаем — источник для копий
         try:
             tree.add_command(cmd)
         except Exception as e:
             _log.debug('вернуть %s в дерево: %s', cmd.name, e)
 
+    # 2) копируем глобальное дерево в каждый разрешённый сервер
+    for g in targets:
+        try:
+            tree.copy_global_to(guild=g)
+        except Exception as e:
+            _log.debug('copy_global_to(%s): %s', g.id, e)
+
     # 3) по каждому серверу — синк без выключенных
     out = []
+    ok_guilds = 0
     for g in targets:
         try:
             out.extend(await sync_tree(bot, guild=g))
+            ok_guilds += 1
         except Exception as e:
             _log.warning('sync(%s): %s', g.id, e)
+
+    # 4) Откат: все guild-синки упали — глобальное меню уже стёрто,
+    #    серверные не появились = пользователь видел бы ПУСТОЕ меню
+    #    («команды не работают»). Возвращаем глобальное меню в Discord,
+    #    до следующего рестарта дублей не будет, команды живы.
+    if targets and ok_guilds == 0:
+        _log.error('ни один guild-синк не удался — возвращаю глобальное '
+                   'меню, чтобы команды не пропали из списка')
+        try:
+            await tree.sync()
+        except Exception as _e:
+            _log.error('откат глобального меню тоже не удался: %s', _e)
     return out

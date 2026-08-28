@@ -180,6 +180,50 @@ src_main = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
 check('full_sync' in src_main, 'старт бота использует полный синк')
 CSW.set_disabled('warn', False)
 
+# ═══ 2б. full_sync: защита от дублей и пустого меню ═══════════════════════
+print('== full_sync: откаты при провалах ==')
+
+
+class TreeGuildFail(Tree):
+    """Глобальный sync проходит, guild-sync падает (недоступный сервер)."""
+
+    async def sync(self, guild=None):
+        if guild is not None:
+            raise RuntimeError('429 rate limit')
+        return await super().sync(guild)
+
+
+b3 = Bot()
+b3.tree = TreeGuildFail()
+r3 = asyncio.new_event_loop().run_until_complete(SF.full_sync(b3))
+gl3 = [x for x in b3.tree.synced if x[0] == 'global']
+check(r3 == [], 'провал всех guild-синков: ничего не «выдано» в гильдии')
+check(len(gl3) == 2, 'глобальный sync вызван дважды: очистка + откат')
+check(gl3[1][1] and 'warn' in gl3[1][1],
+      'откат вернул глобальное меню — команды не пропали из Discord')
+check(not any(x[0] == 777 for x in b3.tree.synced),
+      'при провале guild-sync в Discord ничего не ушло (меню без дублей)')
+
+
+class TreeGlobalFail(Tree):
+    """Глобальная очистка падает — guild-синк трогать нельзя (будут дубли)."""
+
+    async def sync(self, guild=None):
+        if guild is None and not hasattr(self, '_boom'):
+            self._boom = True
+            raise RuntimeError('HTTP 400')
+        return await super().sync(guild)
+
+
+b4 = Bot()
+b4.tree = TreeGlobalFail()
+r4 = asyncio.new_event_loop().run_until_complete(SF.full_sync(b4))
+check(r4 == [], 'провал глобальной очистки: bail-out, пустой результат')
+check(not any(x[0] == 777 for x in b4.tree.synced),
+      'guild-синк не тронут — старое глобальное меню осталось, дублей нет')
+check(any(c.name == 'warn' for c in b4.tree.get_commands(guild=None)),
+      'локальное дерево собрано обратно после bail-out')
+
 # ═══ 3. Демки: имя вместо ID ══════════════════════════════════════════════
 print('== /proofs: загрузка без ID участника ==')
 from web.app import app  # noqa: E402
