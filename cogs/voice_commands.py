@@ -3,6 +3,11 @@
 Распознавание голосовых сообщений и преобразование в текст
 Использует Whisper API или локальную модель
 """
+
+from logger import get_logger
+
+_log = get_logger("voice_commands")
+
 import discord
 from discord.ext import commands
 import os
@@ -22,12 +27,15 @@ class VoiceCommands(commands.Cog):
         self.whisper_available = self._check_whisper()
 
     def _check_whisper(self) -> bool:
-        """Проверить доступность Whisper"""
-        try:
-            import whisper
-            return True
-        except ImportError:
-            return False
+        """Проверить доступность Whisper (faster-whisper или openai-whisper)"""
+        for lib in ("faster_whisper", "whisper"):
+            try:
+                __import__(lib)
+                return True
+            except Exception as _ex:
+                _log.debug("_check_whisper(): подавлено: %s", _ex)
+                continue
+        return False
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -80,19 +88,35 @@ class VoiceCommands(commands.Cog):
             finally:
                 try:
                     os.unlink(tmp_path)
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("_process_voice_message(): подавлено: %s", _ex)
 
         except Exception as e:
             log.error(f"Ошибка обработки голоса: {e}")
             if status_msg:
                 try:
                     await status_msg.edit(content="Ошибка при обработке голосового сообщения.")
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("_process_voice_message(): подавлено: %s", _ex)
 
     async def _transcribe_with_whisper(self, audio_path: str) -> Optional[str]:
-        """Распознавание речи через Whisper"""
+        """Распознавание речи через Whisper (faster-whisper или openai-whisper)"""
+        # faster-whisper
+        try:
+            from faster_whisper import WhisperModel
+            model = WhisperModel("base", device="cpu", compute_type="int8")
+            segments, _info = model.transcribe(
+                audio_path,
+                language="ru",
+                vad_filter=True,
+            )
+            text = " ".join(seg.text.strip() for seg in segments).strip()
+            if text:
+                return text
+        except Exception as e:
+            log.warning(f"faster-whisper не сработал, пробуем openai-whisper: {e}")
+
+        # openai-whisper
         try:
             import whisper
             model = whisper.load_model("base")
@@ -114,32 +138,6 @@ class VoiceCommands(commands.Cog):
         except Exception as e:
             log.error(f"Voice API ошибка: {e}")
             return None
-
-    @commands.command(name="voice-status")
-    @commands.has_permissions(manage_messages=True)
-    async def voice_status(self, ctx):
-        """Показать состояние системы голосовых команд"""
-        status = "Доступен" if self.whisper_available else "Не установлен"
-
-        embed = discord.Embed(
-            title="Голосовые команды",
-            color=discord.Color.dark_grey()
-        )
-        embed.description = f"**Whisper:** {status}\n\n"
-
-        if self.whisper_available:
-            embed.description += (
-                "Система голосовых команд активна.\n"
-                "Голосовые сообщения в каналах будут автоматически распознаваться."
-            )
-        else:
-            embed.description += (
-                "Для работы голосовых команд установите Whisper:\n"
-                "```bash\npip install openai-whisper\n```"
-            )
-
-        embed.set_footer(text=ctx.guild.name)
-        await ctx.send(embed=embed)
 
 
 async def setup(bot):

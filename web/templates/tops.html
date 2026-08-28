@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Топ сервера — Панель Hakumo{% endblock %}
+{% block page_title %}Топ сервера{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество <span class="sep">·</span> Топ сервера</div>
+    <h1>Топ сервера</h1>
+  </div>
+</div>
+
+<style>
+.tp-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;align-items:center}
+.tp-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:10px 16px}
+.tp-kpi i{color:var(--ac,var(--ac));font-size:16px}
+.tp-kpi b{font-size:16px;color:var(--text-1,#fff);font-variant-numeric:tabular-nums}
+.tp-kpi span{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
+.tp-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.tp-tab{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:10px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));background:transparent;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));font-size:12.5px;font-weight:600;cursor:pointer}
+.tp-tab:hover{border-color:var(--ac-line,color-mix(in srgb, var(--ac) 35%, transparent));color:var(--text-1,#fff)}
+.tp-tab.on{background:var(--ac-soft,color-mix(in srgb, var(--ac) 14%, transparent));border-color:var(--ac,var(--ac));color:var(--text-1,#fff)}
+.tp-tab i{color:var(--ac,var(--ac))}
+.tp-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.tp-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.5}
+.tp-row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
+.tp-row:last-child{border-bottom:none}
+.tp-rank{width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));background:color-mix(in srgb, var(--text) 6%, transparent)}
+.tp-rank.p1{background:linear-gradient(135deg,#f7d774,#e0a93e);color:#241a05}
+.tp-rank.p2{background:linear-gradient(135deg,#d9dee2,#a9b6c2);color:#18202a}
+.tp-rank.p3{background:linear-gradient(135deg,#e5ab74,#c07f45);color:#241304}
+.tp-row b{display:block;font-size:13px;color:var(--text-1,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tp-val{font-size:12px;font-weight:800;color:var(--ac-2,#f0cd7a);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tp-link{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ac,var(--ac));text-decoration:none;border:1px solid var(--ac-line,color-mix(in srgb, var(--ac) 30%, transparent));border-radius:8px;padding:6px 10px;margin-left:auto}
+.tp-link:hover{background:var(--ac-soft,color-mix(in srgb, var(--ac) 12%, transparent))}
+.tp-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent));background:color-mix(in srgb, var(--text) 5%, transparent);border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:999px;padding:3px 10px;white-space:nowrap}
+.tp-chip.ok{color:#4ade80;border-color:rgba(74,222,128,.25)}
+.tp-chip.stale{color:#f0cd7a;border-color:rgba(240,205,122,.3)}
+.tp-chip.miss{color:#ff8a7a;border-color:rgba(231,76,60,.3)}
+.tp-state{font-size:12.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));margin:2px 0 10px}
+.tp-state.error{color:#ff8a7a}
+[data-theme="light"] .tp-row{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="tp-kpis" id="tpKpis">
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+</div>
+
+<div class="tp-tabs" id="tpTabs"></div>
+
+<div class="tp-panel">
+  <div class="tp-state" id="tpState"></div>
+  <div id="tpRows"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+  <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap">
+    <a class="tp-link" id="tpCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузить топ (CSV)</a>
+    <span id="tpFresh" style="display:inline-flex;gap:6px;flex-wrap:wrap"></span>
+  </div>
+  <div class="tp-sub" style="margin:10px 0 0">Строки и порядок — ровно как на карточке /leaderboard в Discord (там топ-7, здесь топ-25). Пустой список в Discord закрывается примерными строками — панель показывает правду.</div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/tops';
+var CAT = 'messages';
+var CATS = {};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function fmtNum(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+
+function fmtHours(sec) {
+  var h = Math.floor(sec / 3600);
+  return fmtNum(h) + ' ' + plural(h, 'час', 'часа', 'часов') + ' в войсе';
+}
+
+function kpi(icon, num, label) {
+  return '<div class="tp-kpi"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+}
+
+function renderKpis(s) {
+  document.getElementById('tpKpis').innerHTML =
+    kpi('fa-message', fmtNum(s.messages_total), plural(s.people_messages, 'у одного участника', 'у ' + s.people_messages + ' участников', 'у ' + s.people_messages + ' участников')) +
+    kpi('fa-microphone', fmtHours(s.voice_seconds_total), plural(s.people_voice, 'один голосовой', s.people_voice + ' голосовых', s.people_voice + ' голосовых')) +
+    kpi('fa-coins', fmtNum(s.coins_total), plural(s.people_balance, 'в одном кошельке', 'в ' + s.people_balance + ' кошельках', 'в ' + s.people_balance + ' кошельках'));
+}
+
+function renderTabs() {
+  var icons = {messages: 'fa-message', voice: 'fa-microphone', balance: 'fa-coins'};
+  document.getElementById('tpTabs').innerHTML = Object.keys(CATS).map(function (key) {
+    return '<button type="button" class="tp-tab' + (key === CAT ? ' on' : '') + '" onclick="tpGo(\'' + key + '\')">' +
+      '<i class="fas ' + icons[key] + '"></i> ' + esc(CATS[key]) + '</button>';
+  }).join('');
+}
+
+var STATE_TEXT = {
+  ok: '',
+  empty: 'записей нет — Discord-карточка покажет примерные строки-заглушки',
+  error: 'в файле категории мусорное значение — карточка кога тут тоже молчит'
+};
+
+function renderRows(rows, state) {
+  var st = document.getElementById('tpState');
+  st.textContent = STATE_TEXT[state] || '';
+  st.className = 'tp-state' + (state === 'error' ? ' error' : '');
+  var box = document.getElementById('tpRows');
+  if (!rows.length) {
+    if (state !== 'error') {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-ranking-star"></i><p>Пока пусто</p><p class="empty-tip">Люди появятся, как только источник категории накопит цифры.</p></div>';
+    } else {
+      box.innerHTML = '';
+    }
+    return;
+  }
+  box.innerHTML = rows.map(function (r) {
+    var cls = r.rank === 1 ? 'p1' : (r.rank === 2 ? 'p2' : (r.rank === 3 ? 'p3' : ''));
+    return '<div class="tp-row"><span class="tp-rank ' + cls + '">' + r.rank + '</span>' +
+      '<b>' + esc(r.name) + '</b><span class="tp-val">' + esc(r.display) + '</span></div>';
+  }).join('');
+}
+
+function freshChip(key, fr) {
+  var names = {messages: 'Сообщения', voice: 'Войс', balance: 'Монеты'};
+  if (fr.state === 'live') {
+    return '<span class="tp-chip ok"><i class="fas fa-bolt"></i> ' + names[key] + ': живой источник</span>';
+  }
+  if (fr.state === 'fresh') {
+    return '<span class="tp-chip ok"><i class="fas fa-circle-check"></i> ' + names[key] + ': свежий файл</span>';
+  }
+  if (fr.state === 'stale') {
+    return '<span class="tp-chip stale"><i class="fas fa-clock"></i> ' + names[key] + ': файл старше ' + plural(fr.age_days, 'дня', 'дней', 'дней') + '</span>';
+  }
+  return '<span class="tp-chip miss"><i class="fas fa-circle-xmark"></i> ' + names[key] + ': файла нет</span>';
+}
+
+function renderFresh(fr) {
+  document.getElementById('tpFresh').innerHTML =
+    freshChip('messages', fr.messages) + freshChip('voice', fr.voice) + freshChip('balance', fr.balance);
+}
+
+function render(d) {
+  CATS = d.categories;
+  document.getElementById('tpCsv').href = API + '/' + d.category + '.csv';
+  renderKpis(d.summary);
+  renderTabs();
+  renderRows(d.rows, d.state);
+  renderFresh(d.freshness);
+}
+
+function tpGo(cat) {
+  CAT = cat;
+  fetch(API + '/overview?category=' + encodeURIComponent(cat))
+    .then(function (r) { return r.json(); })
+    .then(function (d) { if (d.success) { render(d); } })
+    .catch(function () {});
+}
+
+tpGo('messages');
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { tpGo(window.CAT || 'messages'); } catch (e) {} }, 1500);
+</script>
+{% endblock %}

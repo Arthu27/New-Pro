@@ -1,19 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Автомодерация — Aether{% endblock %}
+{% block title %}Автомодерация — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-shield-alt" ></i> Автомодерация{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Автомодерация</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Автоматика <span class="sep">·</span> Автофильтр</div>
     <h1>Автомодерация</h1>
-    <p>Настройки автоматической модерации: фильтры, анти-спам, анти-токсичность.</p>
+    <p class="lead">Настройки автоматической модерации: фильтры, анти-спам, анти-токсичность.</p>
   </div>
 </div>
-{% endblock %}
+
+
+<style>
+
+.automod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.am-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:20px;}
+.am-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.am-textarea{width:100%;min-height:80px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text);padding:10px 12px;font-size:13.5px;outline:none;font-family:inherit}
+
+</style>
 
 
 
@@ -26,15 +31,15 @@
     </div>
     <div class="form-row">
       <label>Действие</label>
-      <select id="action-badwords">
+      <select id="action-badwords" aria-label="Действие за запрещённые слова">
         <option value="warn">Варн</option>
-        <option value="mut">Мьют</option>
+        <option value="mut">Мут</option>
         <option value="kick">Кик</option>
         <option value="ban">Бан</option>
       </select>
     </div>
     <label class="form-label"   style="margin-top: 6px;">Список слов (по одному в строке)</label>
-    <textarea id="words-list" class="am-textarea" rows="6" placeholder="badword1&#10;badword2&#10;..."></textarea>
+    <textarea id="words-list" class="am-textarea" rows="6" placeholder="badword1&#10;badword2&#10;..." aria-label="badword1&#10;badword2&#10;..."></textarea>
     <div class="am-actions">
       <button class="btn btn-primary" id="save-words" type="button"><i class="fas fa-save"></i> Сохранить</button>
     </div>
@@ -46,12 +51,12 @@
       <div class="am-title">Анти-спам</div>
       <div class="am-toggle on" id="tog-antispam"></div>
     </div>
-    <div class="form-row"><label>Макс. сообщ.</label><input type="number" id="spam-count" value="5" min="2"></div>
-    <div class="form-row"><label>За (сек)</label><input type="number" id="spam-window" value="10" min="1"></div>
+    <div class="form-row"><label>Макс. сообщ.</label><input type="number" id="spam-count" value="5" min="2" aria-label="Сообщений для спама"></div>
+    <div class="form-row"><label>За (сек)</label><input type="number" id="spam-window" value="10" min="1" aria-label="Окно спама (сек)"></div>
     <div class="form-row"><label>Действие</label>
-      <select id="spam-action">
+      <select id="spam-action" aria-label="Действие за спам">
         <option value="warn">Варн</option>
-        <option value="mut">Мьют (10 min)</option>
+        <option value="mut">Мут (10 мин)</option>
         <option value="kick">Кик</option>
       </select>
     </div>
@@ -67,14 +72,14 @@
       <div class="am-toggle" id="tog-antilink"></div>
     </div>
     <div class="form-row"><label>Действие</label>
-      <select id="antilink-action">
+      <select id="antilink-action" aria-label="Действие за ссылки">
         <option value="delete">Удалить + Варн</option>
-        <option value="mut">Мьют</option>
+        <option value="mut">Мут</option>
         <option value="ban">Бан</option>
       </select>
     </div>
     <div class="form-row"><label>Whitelist</label>
-      <input type="text" id="antilink-whitelist" placeholder="discord.gg, github.com" value="discord.gg">
+      <input type="text" id="antilink-whitelist" placeholder="discord.gg, github.com" value="discord.gg" aria-label="discord.gg, github.com">
     </div>
     <div class="am-actions">
       <button class="btn btn-primary" id="save-antilink" type="button"><i class="fas fa-save"></i> Сохранить</button>
@@ -87,10 +92,10 @@
       <div class="am-title">Анти-КАПС</div>
       <div class="am-toggle" id="tog-anticaps"></div>
     </div>
-    <div class="form-row"><label>Макс % caps</label><input type="number" id="caps-percent" value="70" min="20" max="100"></div>
-    <div class="form-row"><label>Мин. длина</label><input type="number" id="caps-minlen" value="10" min="3"></div>
+    <div class="form-row"><label>Макс % caps</label><input type="number" id="caps-percent" value="70" min="20" max="100" aria-label="Процент заглавных букв"></div>
+    <div class="form-row"><label>Мин. длина</label><input type="number" id="caps-minlen" value="10" min="3" aria-label="Мин. длина сообщения"></div>
     <div class="form-row"><label>Действие</label>
-      <select id="caps-action"><option value="warn">Варн</option><option value="mut">Мьют</option></select>
+      <select id="caps-action" aria-label="Действие за КАПС"><option value="warn">Варн</option><option value="mut">Мут</option></select>
     </div>
     <div class="am-actions">
       <button class="btn btn-primary" id="save-anticaps" type="button"><i class="fas fa-save"></i> Сохранить</button>
@@ -104,14 +109,14 @@
       <div class="am-toggle" id="tog-antiinvite"></div>
     </div>
     <div class="form-row"><label>Действие</label>
-      <select id="antiinvite-action">
+      <select id="antiinvite-action" aria-label="Действие за приглашения">
         <option value="warn">Варн</option>
-        <option value="mut">Мьют</option>
+        <option value="mut">Мут</option>
         <option value="ban">Бан</option>
       </select>
     </div>
     <div class="form-row"><label>Whitelist</label>
-      <input type="text" id="antiinvite-whitelist" placeholder="ID серверов через запятую">
+      <input type="text" id="antiinvite-whitelist" placeholder="ID серверов через запятую" aria-label="ID серверов через запятую">
     </div>
     <div class="am-actions">
       <button class="btn btn-primary" id="save-antiinvite" type="button"><i class="fas fa-save"></i> Сохранить</button>
@@ -141,7 +146,7 @@
     ['tog-badwords','tog-antispam','tog-antilink','tog-anticaps','tog-antiinvite'].forEach(bindToggle);
     ['save-words','save-antispam','save-antilink','save-anticaps','save-antiinvite'].forEach(function (id) {
       var b = $(id);
-      if (b) b.addEventListener('click', function () { showToast('✓ Настройки сохранены', true); });
+      if (b) b.addEventListener('click', function () { showToast('Настройки сохранены', true); });
     });
   }
 

@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}Оперативный центр — Hakumo{% endblock %}
+{% block page_title %}Оперативный центр{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Основное <span class="sep">·</span> Мониторинг</div>
+    <h1>Оперативный центр</h1>
+    <p class="lead">Живое состояние бота, панели и системы: метрики копятся прямо во время сессии, логи обновляются сами.</p>
+  </div>
+  <div class="page-head-actions">
+    <span class="live-chip" id="opsLive"><span class="dot"></span> LIVE</span>
+    <button type="button" class="btn" id="opsRefresh"><i class="fas fa-arrows-rotate"></i> Обновить</button>
+  </div>
+</div>
+
+<!-- Статус бота -->
+<div class="panel" id="opsStatus" style="margin-bottom:14px">
+  <div class="panel-body" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div class="kpi-icon" id="opsStatusIco" style="width:48px;height:48px;font-size:20px"><i class="fas fa-bolt"></i></div>
+    <div style="flex:1;min-width:200px">
+      <div class="kpi-value" style="font-size:18px" id="opsState">Проверяем…</div>
+      <div class="kpi-label" id="opsSub">загрузка телеметрии</div>
+    </div>
+    <div class="kpi"><div class="kpi-icon" style="background:var(--info-soft);color:var(--info)"><i class="fas fa-signal"></i></div><div class="kpi-copy"><div class="kpi-value" id="opsPing">—</div><div class="kpi-label">Пинг</div></div></div>
+    <div class="kpi"><div class="kpi-icon"><i class="fas fa-clock"></i></div><div class="kpi-copy"><div class="kpi-value" id="opsUptime">—</div><div class="kpi-label">Аптайм</div></div></div>
+    <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-server"></i></div><div class="kpi-copy"><div class="kpi-value" id="opsGuilds">—</div><div class="kpi-label">Серверов</div></div></div>
+    <div class="kpi tone-ok"><div class="kpi-icon"><i class="fas fa-users"></i></div><div class="kpi-copy"><div class="kpi-value" id="opsUsers">—</div><div class="kpi-label">Юзеров в кэше</div></div></div>
+  </div>
+</div>
+
+<!-- Метрики системы -->
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-microchip"></i> CPU</h2>
+      <div class="sub">Загрузка процессора — история сессии.</div></div>
+      <span class="badge neutral mono" id="cpuNow">—</span></div>
+    <div class="panel-body">
+      <div class="chart-box" id="cpuSpark"></div>
+      <!-- п.2: только число -->
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-memory"></i> Память</h2>
+      <div class="sub">Использование RAM — история сессии.</div></div>
+      <span class="badge neutral mono" id="ramNow">—</span></div>
+    <div class="panel-body">
+      <div class="chart-box" id="ramSpark"></div>
+      <!-- п.2: только число -->
+    </div>
+  </div>
+</div>
+
+<!-- Журнал панели + живые логи -->
+<div class="grid-2" style="align-items:start;margin-top:14px">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-list"></i> Журнал панели</h2>
+      <div class="sub">Последние действия в панели управления.</div></div></div>
+    <div class="panel-body" id="panelLogList">
+      <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Читаем журнал</span></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head">
+      <div><h2><i class="fas fa-terminal"></i> Живые логи бота</h2>
+        <div class="sub">Хвост системного журнала в реальном времени.</div></div>
+      <a class="btn-link" href="/konsol" style="margin-left:auto">Консоль <i class="fas fa-arrow-right"></i></a>
+    </div>
+    <div class="panel-body mono" id="liveLogs" style="font-size:11.5px;line-height:1.7;max-height:360px;overflow-y:auto">
+      <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к логам</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Быстрые переходы -->
+<div class="panel" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-bolt"></i> Быстрые переходы</h2>
+    <div class="sub">Операционные разделы панели в один клик.</div></div></div>
+  <div class="panel-body">
+    <div class="cc-quick">
+      <a class="cc-tile" href="/bot-diagnostics"><span class="cc-ico"><i class="fas fa-heartbeat"></i></span><span><b>Диагностика</b><small>Проверки системы бота</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+      <a class="cc-tile tone-warn" href="/anticrash"><span class="cc-ico"><i class="fas fa-life-ring"></i></span><span><b>Анти-краш</b><small>Защита от падений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+      <a class="cc-tile tone-info" href="/backups"><span class="cc-ico"><i class="fas fa-save"></i></span><span><b>Бэкапы</b><small>Архивы данных</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+      <a class="cc-tile tone-ok" href="/server-health"><span class="cc-ico"><i class="fas fa-heart-pulse"></i></span><span><b>Состояние</b><small>Здоровье сервисов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+      <a class="cc-tile" href="/cog-manager"><span class="cc-ico"><i class="fas fa-cubes"></i></span><span><b>Модули</b><small>Включение когов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+      <a class="cc-tile tone-info" href="/status" target="_blank" rel="noopener"><span class="cc-ico"><i class="fas fa-arrow-up-right-from-square"></i></span><span><b>Публичный статус</b><small>Страница для участников</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function timeAgo(ts) {
+    if (!ts) return '';
+    var diff = Math.max(0, (Date.now() / 1000) - ts);
+    if (diff < 60) return 'только что';
+    if (diff < 3600) return Math.floor(diff / 60) + ' мин назад';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' ч назад';
+    return Math.floor(diff / 86400) + ' дн назад';
+  }
+
+  var cpuHist = [], ramHist = [];
+  var HIST_MAX = 36;
+  var _counted = {};
+
+  function setNum(id, val) {
+    var el = $(id);
+    if (!el) return;
+    var target = Number(val) || 0;
+    if (_counted[id]) { el.textContent = target.toLocaleString('ru-RU'); return; }
+    _counted[id] = true;
+    if (window.countUp) window.countUp(el, target); else el.textContent = target.toLocaleString('ru-RU');
+  }
+
+  /* ── Статус бота ── */
+  async function loadStatus() {
+    try {
+      var d = await fetch('/api/status-public').then(function (r) { return r.json(); });
+      var on = !!d.online;
+      var ico = $('opsStatusIco');
+      ico.style.background = on ? 'var(--ok-soft)' : 'var(--err-soft)';
+      ico.style.color = on ? 'var(--ok)' : 'var(--err)';
+      $('opsState').textContent = on ? 'Бот онлайн' : 'Бот офлайн';
+      $('opsState').style.color = on ? 'var(--ok)' : 'var(--err)';
+      $('opsSub').textContent = on
+        ? 'всё работает · v' + esc(d.version) + ' · телеметрия обновляется'
+        : 'бот не отвечает — данные файлов и панели доступны';
+      var ping = Number(d.latency_ms) || 0;
+      /* данные не изменились — статус не трогаем (тихие обновления) */
+      var fp = (on ? 1 : 0) + '|' + (d.version || '') + '|' + (d.uptime_human || '') + '|' + (d.guilds || 0) + '|' + (d.users_cached || 0);
+      if (window.silentGuard && window.silentGuard('ops-status', fp)) return;
+      var pingEl = $('opsPing');
+      pingEl.textContent = ping ? ping : '—';
+      pingEl.setAttribute('data-unit', ping ? 'мс' : '');
+      $('opsUptime').textContent = d.uptime_human || '—';
+      setNum('opsGuilds', d.guilds);
+      setNum('opsUsers', d.users_cached);
+    } catch (e) {
+      $('opsState').textContent = 'Нет связи';
+      $('opsState').style.color = 'var(--err)';
+    }
+  }
+
+/* ── CPU / RAM (история сессии) ── */
+  function cpuTone(v) { return v < 60 ? '#16a34a' : v < 85 ? '#d97706' : '#dc2626'; }
+  function ramTone(v) { return v < 70 ? '#0284c7' : v < 90 ? '#d97706' : '#dc2626'; }
+
+  async function loadHealth() {
+    var health = {};
+    try { health = await fetch('/api/bot/health').then(function (r) { return r.json(); }); } catch (e) {}
+    var cur = health.current || health || {};
+    var cpu = cur.cpu_percent != null ? cur.cpu_percent : (cur.cpu != null ? cur.cpu : null);
+    var ram = cur.memory_percent != null ? cur.memory_percent : (cur.ram_percent != null ? cur.ram_percent : null);
+    if (cpu != null) {
+      var cpuV = Math.round(cpu);
+      /* новую точку в историю — только при реальном изменении значения */
+      if (!cpuHist.length || cpuHist[cpuHist.length - 1] !== cpuV) {
+        cpuHist.push(cpuV);
+        if (cpuHist.length > HIST_MAX) cpuHist.shift();
+        $('cpuNow').textContent = cpuV + '%';
+        // п.2: полос нет — значения живут в текстовых полях
+        if (window.HakumoChart) window.HakumoChart.sparkline($('cpuSpark'), cpuHist, { height: 56, color: cpuTone(cpuV), title: 'CPU, %' });
+      }
+    }
+    if (ram != null) {
+      var ramV = Math.round(ram);
+      if (!ramHist.length || ramHist[ramHist.length - 1] !== ramV) {
+        ramHist.push(ramV);
+        if (ramHist.length > HIST_MAX) ramHist.shift();
+        $('ramNow').textContent = ramV + '%';
+        // п.2: полос нет — значения живут в текстовых полях
+        if (window.HakumoChart) window.HakumoChart.sparkline($('ramSpark'), ramHist, { height: 56, color: ramTone(ramV), title: 'RAM, %' });
+      }
+    }
+  }
+
+  /* ── Журнал панели ── */
+  var ROLE_TONES = { owner: 'danger', admin: 'security', curator: 'info', mod: 'ok', uye: 'neutral' };
+  var _panelLogsFp = '';
+  async function loadPanelLogs() {
+    var box = $('panelLogList');
+    if (!box) return;
+    try {
+      var d = await fetch('/api/panel-logs').then(function (r) { return r.json(); });
+      var items = Array.isArray(d) ? d : (d.items || []);
+      /* данные не изменились — список не перерисовываем */
+      var fp = items.slice(0, 14).map(function (it) {
+        return (it.ts || '') + '|' + (it.action || '') + '|' + (it.username || '');
+      }).join('\u0001');
+      if (fp === _panelLogsFp) return;
+      _panelLogsFp = fp;
+      if (!items.length) {
+        box.innerHTML = '<div class="empty"><i class="fas fa-list"></i><span>Действий панели пока нет</span></div>';
+        return;
+      }
+      box.innerHTML = items.slice(0, 14).map(function (it) {
+        return '<div class="feed-item" style="border-bottom:1px solid var(--line)">' +
+          '<div class="feed-item-icon" style="width:28px;height:28px;flex-basis:28px;font-size:11px"><i class="fas ' + (it.broadcast ? 'fa-bullhorn' : 'fa-user-gear') + '"></i></div>' +
+          '<div style="min-width:0;flex:1"><div class="feed-item-title" style="font-size:var(--fs-sm)">' + esc(it.action || '?') + '</div>' +
+          (it.detail ? '<div class="feed-item-sub" style="font-size:var(--fs-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(it.detail) + '</div>' : '') + '</div>' +
+          '<span class="badge ' + (ROLE_TONES[it.role] || 'neutral') + '">' + esc(it.username) + '</span>' +
+          '<span class="feed-item-time" style="flex:0 0 auto">' + esc(timeAgo(it.ts)) + '</span></div>';
+      }).join('');
+    } catch (e) { /* журнал опционален */ }
+  }
+
+  /* ── Живые логи бота ── */
+  var logAfter = 0;
+  var LVL_TONES = { ERROR: 'var(--err)', WARNING: 'var(--warn)', INFO: 'var(--info)', DEBUG: 'var(--text-3)' };
+  async function loadLiveLogs(first) {
+    var box = $('liveLogs');
+    if (!box) return;
+    try {
+      var d = await fetch('/api/live-logs?after=' + (first ? 0 : logAfter)).then(function (r) { return r.json(); });
+      if (!d.ok) return;
+      var items = d.items || [];
+      if (first && !items.length) {
+        box.innerHTML = '<div class="empty"><i class="fas fa-terminal"></i><span>Логов пока нет — бот офлайн</span></div>';
+        return;
+      }
+      var lines = items.map(function (it) {
+        var lvl = String(it.level || 'INFO').toUpperCase();
+        var color = LVL_TONES[lvl] || 'var(--text-2)';
+        var t = '';
+        try { t = new Date((it.ts || 0) * 1000).toLocaleTimeString('ru-RU'); } catch (e) { t = ''; }
+        var health = window.fmtHealthLog && window.fmtHealthLog(it.msg);
+        var msgPart = health
+          ? '<span class="log-chips">' + health + '</span>'
+          : '<span style="color:var(--text-2)">' + esc(it.msg || '') + '</span>';
+        return '<div><span style="color:var(--text-3)">' + esc(t) + '</span> ' +
+          '<b style="color:' + color + '">' + esc(it.level || 'INFO') + '</b> ' + msgPart + '</div>';
+      });
+      if (first) box.innerHTML = lines.join('') || '<div class="empty"><i class="fas fa-terminal"></i><span>Логов пока нет</span></div>';
+      else if (lines.length) {
+        box.innerHTML += lines.join('');
+        box.scrollTop = box.scrollHeight;
+      }
+      logAfter = d.last_id || logAfter;
+    } catch (e) { /* логи опциональны */ }
+  }
+
+  function refreshAll() {
+    loadStatus();
+    loadHealth();
+    loadPanelLogs();
+    loadLiveLogs(false);
+  }
+
+  $('opsRefresh').addEventListener('click', refreshAll);
+
+  loadStatus();
+  loadHealth();
+  loadPanelLogs();
+  loadLiveLogs(true);
+  if (window.setLiveRefresh) {
+    window.setLiveRefresh(loadStatus, 1500);
+    window.setLiveRefresh(loadHealth, 1500);
+    window.setLiveRefresh(loadPanelLogs, 1500);
+    window.setLiveRefresh(function () { loadLiveLogs(false); }, 1500);
+  } else {
+    setInterval(refreshAll, 5000);
+  }
+})();
+</script>
+{% endblock %}

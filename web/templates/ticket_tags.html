@@ -1,19 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Теги и приоритеты - Aether{% endblock %}
+{% block title %}Теги и приоритеты - Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-tags"></i> Теги и приоритеты{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Теги и приоритеты</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Тикеты <span class="sep">·</span> Теги тикетов</div>
     <h1>Теги и приоритеты</h1>
-    <p>Управление тегами и приоритетами тикетов для лучшей организации.</p>
+    <p class="lead">Управление тегами и приоритетами тикетов для лучшей организации.</p>
   </div>
 </div>
-{% endblock %}
+
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-tag"></i> Управление тегами</div>
@@ -21,9 +17,9 @@
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Создать новый тег</label>
       <div style="display: flex; gap: 8px;">
-        <input type="text" id="newTag" class="form-input" placeholder="Название тега...">
-        <input type="color" id="tagColor" value="#9b59b6" style="width: 50px; height: 38px; border: none; background: none;">
-        <button class="control-btn primary" onclick="createTag()">
+        <input type="text" id="newTag" class="form-input" placeholder="Название тега..." aria-label="Название тега...">
+        <input type="color" id="tagColor" value="#9b59b6" style="width: 50px; height: 38px; border: none; background: none;" aria-label="Цвет тега">
+        <button type="button" class="control-btn primary" onclick="createTag()" aria-label="Создать">
           <i class="fas fa-plus"></i>
         </button>
       </div>
@@ -40,10 +36,10 @@
 <div class="section">
   <div class="bs-title"><i class="fas fa-exclamation-circle"></i> Управление приоритетами</div>
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;" id="priorityList">
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+    <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px;">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
         <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(231,76,60,0.2); display: flex; align-items: center; justify-content: center;">
-          <i class="fas fa-exclamation-triangle" style="color: #e74c3c; font-size: 20px;"></i>
+          <i class="fas fa-exclamation-triangle" style="color: var(--err); font-size: 20px;"></i>
         </div>
         <div>
           <div style="font-weight: 600;">Высокий</div>
@@ -54,8 +50,8 @@
         Требуется немедленное внимание. Время реакции: до 1 часа.
       </div>
     </div>
-    
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+
+    <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px;">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
         <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(241,196,15,0.2); display: flex; align-items: center; justify-content: center;">
           <i class="fas fa-exclamation" style="color: #f1c40f; font-size: 20px;"></i>
@@ -69,11 +65,11 @@
         Стандартный приоритет. Время реакции: до 24 часов.
       </div>
     </div>
-    
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+
+    <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px;">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
         <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(46,204,113,0.2); display: flex; align-items: center; justify-content: center;">
-          <i class="fas fa-info-circle" style="color: #2ecc71; font-size: 20px;"></i>
+          <i class="fas fa-info-circle" style="color: var(--ok); font-size: 20px;"></i>
         </div>
         <div>
           <div style="font-weight: 600;">Низкий</div>
@@ -119,7 +115,7 @@ async function loadTags() {
   try {
     const response = await fetch('/api/ticket-tags');
     const data = await response.json();
-    
+
     if (data.success) {
       displayTags(data.tags);
       updateStats(data.tags, data.stats);
@@ -131,16 +127,16 @@ async function loadTags() {
 
 function displayTags(tags) {
   const container = document.getElementById('tagsList');
-  
+
   if (tags.length === 0) {
     container.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">Теги не созданы</p>';
     return;
   }
-  
+
   container.innerHTML = tags.map(tag => `
     <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font-size: 12px; background: ${tag.color}20; border: 1px solid ${tag.color}; color: ${tag.color};">
       <span>${tag.name}</span>
-      <button onclick="deleteTag('${tag.id}')" style="background: none; border: none; color: ${tag.color}; cursor: pointer; padding: 0; font-size: 10px;">
+      <button type="button" onclick="deleteTag('${tag.id}')" style="background: none; border: none; color: ${tag.color}; cursor: pointer; padding: 0; font-size: 10px;" aria-label="Удалить">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -156,12 +152,12 @@ function updateStats(tags, stats) {
 async function createTag() {
   const name = document.getElementById('newTag').value.trim();
   const color = document.getElementById('tagColor').value;
-  
+
   if (!name) {
     alert('Введите название тега');
     return;
   }
-  
+
   try {
     const response = await fetch('/api/ticket-tags', {
       method: 'POST',
@@ -169,7 +165,7 @@ async function createTag() {
       body: JSON.stringify({name, color})
     });
     const data = await response.json();
-    
+
     if (data.success) {
       document.getElementById('newTag').value = '';
       loadTags();
@@ -182,20 +178,16 @@ async function createTag() {
 }
 
 async function deleteTag(tagId) {
-  if (!confirm('Удалить этот тег?')) return;
-  
-  try {
-    const response = await fetch(`/api/ticket-tags/${tagId}`, {method: 'DELETE'});
-    const data = await response.json();
-    
-    if (data.success) {
-      loadTags();
-    } else {
-      alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+  window.askConfirm('Удалить тег', 'Удалить этот тег?', async function () {
+    try {
+      const response = await fetch(`/api/ticket-tags/${tagId}`, {method: 'DELETE'});
+      const data = await response.json();
+      if (data.success) { loadTags(); showToast('Тег удалён', true); }
+      else showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
+    } catch (e) {
+      showToast('Ошибка соединения', false);
     }
-  } catch (e) {
-    alert('Ошибка соединения');
-  }
+  }, { okText: 'Удалить', danger: true, icon_fa: 'fa-trash' });
 }
 
 document.addEventListener('DOMContentLoaded', loadTags);

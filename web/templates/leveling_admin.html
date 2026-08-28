@@ -1,7 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Leveling & Engagement — Aether{% endblock %}
+{% block title %}Leveling & Engagement — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-trophy" ></i> Leveling &amp; Engagement{% endblock %}
 {% block content %}
+
 {% block page_hero %}
 <div class="page-hero">
   <div class="page-hero-content">
@@ -20,7 +21,7 @@
 .lvl-toggle-card { display: flex; align-items: center; gap: 14px; padding: 14px 18px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; transition: all 0.2s; }
 .lvl-toggle-card:hover { border-color: var(--ac-line); }
 .lvl-toggle-card.active { border-color: var(--ac); background: var(--ac-soft); }
-.lvl-toggle-card .switch { position: relative; width: 42px; height: 22px; background: rgba(255,255,255,0.08); border-radius: 99px; cursor: pointer; flex-shrink: 0; border: 1px solid var(--line); transition: background 0.25s; }
+.lvl-toggle-card .switch { position: relative; width: 42px; height: 22px; background: color-mix(in srgb, var(--text) 8%, transparent); border-radius: 99px; cursor: pointer; flex-shrink: 0; border: 1px solid var(--line); transition: background 0.25s; }
 .lvl-toggle-card .switch.on { background: linear-gradient(135deg, var(--ac), var(--ac-3)); border-color: var(--ac); }
 .lvl-toggle-card .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--text-3); border-radius: 50%; transition: all 0.25s var(--ease-spring); }
 .lvl-toggle-card .switch.on::after { left: 22px; background: #fff; }
@@ -29,22 +30,32 @@
 .lvl-toggle-card p { font-size: var(--fs-sm) !important; color: var(--text-2) !important; margin: 0; line-height: 1.4; }
 .lvl-input-group { display: flex; gap: 8px; align-items: center; }
 .lvl-input-group label { font-size: var(--fs-xs) !important; font-weight: 700 !important; color: var(--text-2) !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; min-width: 100px; margin: 0 !important; }
-.lvl-input-group input { flex: 1; padding: 8px 12px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); font-size: var(--fs-sm); }
-.lvl-reward-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
+.lvl-input-group input { flex: 1; padding: 8px 12px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); font-size: var(--fs-sm); }
+.lvl-reward-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
 .lvl-reward-level { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, var(--ac), var(--ac-3)); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; color: var(--bg); flex-shrink: 0; }
 .lvl-reward-info { flex: 1; }
 .lvl-reward-info .name { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
 .lvl-reward-info .role { font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; }
+.lb-kv { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-bottom: 1px dashed var(--line); font-size: var(--fs-md); }
+.lb-kv:last-child { border-bottom: none; }
+.lb-kv .kv-val { flex: 1; }
 .lvl-achievement-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-.lvl-ach { padding: 12px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; transition: all 0.2s; }
-.lvl-ach:hover { transform: translateY(-2px); border-color: var(--ac-line); }
+.lvl-ach { padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; transition: all 0.2s; }
+.lvl-ach:hover {border-color: var(--ac-line)}
 .lvl-ach .icon { font-size: 28px; margin-bottom: 4px; }
+.lvl-ach .icon i { filter: drop-shadow(0 4px 8px rgba(0,0,0,.25)); }
+.lvl-ach .icon i.r-common { color: #94a3b8; }
+.lvl-ach .icon i.r-uncommon { color: var(--ok); }
+.lvl-ach .icon i.r-rare { color: #0ea5e9; }
+.lvl-ach .icon i.r-epic { color: #a78bfa; }
+.lvl-ach .icon i.r-legendary { color: #fbbf24; }
+.lvl-ach.unlocked .icon i.r-common { color: var(--ac-2); }
 .lvl-ach .name { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
 .lvl-ach .rarity { font-size: 9px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
 .lvl-ach.unlocked { background: var(--ac-soft); border-color: var(--ac-line); }
 .lvl-ach.unlocked .name { color: var(--ac); }
 .lvl-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-.lvl-stat { padding: 14px 16px; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; }
+.lvl-stat { padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); text-align: center; }
 .lvl-stat .num { font-size: 24px; font-weight: 800; color: var(--ac); font-variant-numeric: tabular-nums; }
 .lvl-stat .lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; font-weight: 700; }
 </style>
@@ -66,35 +77,35 @@
       <div class="lvl-toggle-card" id="textCard" onclick="toggle('text_xp', 'enabled')">
         <div class="switch" id="textSwitch"></div>
         <div class="info">
-          <h4>💬 Text XP</h4>
+          <h4><i class="fas fa-comment"></i> Text XP</h4>
           <p>Начисление XP за сообщения в чате</p>
         </div>
       </div>
       <div class="lvl-toggle-card" id="voiceCard" onclick="toggle('voice_xp', 'enabled')">
         <div class="switch" id="voiceSwitch"></div>
         <div class="info">
-          <h4>🎙️ Voice XP</h4>
+          <h4><i class="fas fa-microphone"></i> Voice XP</h4>
           <p>Начисление XP за время в голосовых каналах (без мьют/афк)</p>
         </div>
       </div>
       <div class="lvl-toggle-card" id="streakCard" onclick="toggle('streak_bonus', 'enabled')">
         <div class="switch" id="streakSwitch"></div>
         <div class="info">
-          <h4>🔥 Streak Bonus</h4>
+          <h4><i class="fas fa-fire"></i> Streak Bonus</h4>
           <p>Бонус-множитель за ежедневную активность (7д=x2, 14д=x3, 30д=x5)</p>
         </div>
       </div>
       <div class="lvl-toggle-card" id="achCard" onclick="toggle('achievements_enabled', null)">
         <div class="switch" id="achSwitch"></div>
         <div class="info">
-          <h4>🏆 Достижения</h4>
+          <h4><i class="fas fa-trophy"></i> Достижения</h4>
           <p>50+ достижений за активность, разблокировка + DM-уведомление</p>
         </div>
       </div>
       <div class="lvl-toggle-card" id="dmCard" onclick="toggle('engagement_dm', 'enabled')">
         <div class="switch" id="dmSwitch"></div>
         <div class="info">
-          <h4>📨 Auto-Engagement DM</h4>
+          <h4><i class="fas fa-envelope"></i> Auto-Engagement DM</h4>
           <p>Автоматическое DM неактивным пользователям (48ч по умолчанию)</p>
         </div>
       </div>
@@ -110,37 +121,37 @@
       <h5  >Text XP</h5>
       <div class="lvl-input-group"   style="margin-bottom: 8px;">
         <label>Мин XP</label>
-        <input type="number" id="textMin" value="15" min="1" max="100">
+        <input type="number" id="textMin" value="15" min="1" max="100" aria-label="Мин. XP за сообщение">
       </div>
       <div class="lvl-input-group"   style="margin-bottom: 8px;">
         <label>Макс XP</label>
-        <input type="number" id="textMax" value="25" min="1" max="100">
+        <input type="number" id="textMax" value="25" min="1" max="100" aria-label="Макс. XP за сообщение">
       </div>
       <div class="lvl-input-group" >
         <label>Cooldown (s)</label>
-        <input type="number" id="textCooldown" value="60" min="5" max="600">
+        <input type="number" id="textCooldown" value="60" min="5" max="600" aria-label="Перерыв XP (сек)">
       </div>
       <h5  >Voice XP</h5>
       <div class="lvl-input-group" >
         <label>XP / минута</label>
-        <input type="number" id="voicePerMin" value="5" min="1" max="50">
+        <input type="number" id="voicePerMin" value="5" min="1" max="50" aria-label="XP за минуту в войсе">
       </div>
       <h5  >Streak Bonus</h5>
       <div   style="grid-template-columns: 1fr 1fr 1fr;">
         <div>
           <label   style="margin-bottom: 4px;">7 дней</label>
-          <input type="number" id="streak7" value="2" step="0.5" min="1" max="10"  >
+          <input type="number" id="streak7" value="2" step="0.5" min="1" max="10" aria-label="Множитель серии">
         </div>
         <div>
           <label   style="margin-bottom: 4px;">14 дней</label>
-          <input type="number" id="streak14" value="3" step="0.5" min="1" max="10"  >
+          <input type="number" id="streak14" value="3" step="0.5" min="1" max="10" aria-label="Множитель серии 14 дней">
         </div>
         <div>
           <label   style="margin-bottom: 4px;">30 дней</label>
-          <input type="number" id="streak30" value="5" step="0.5" min="1" max="10"  >
+          <input type="number" id="streak30" value="5" step="0.5" min="1" max="10" aria-label="Множитель серии 30 дней">
         </div>
       </div>
-      <button class="form-btn" onclick="saveSettings()"  ><i class="fas fa-save"></i> Сохранить настройки</button>
+      <button type="button" class="form-btn" onclick="saveSettings()"  ><i class="fas fa-save"></i> Сохранить настройки</button>
     </div>
   </div>
 </div>
@@ -202,60 +213,82 @@
 (function() {
   'use strict';
   function load() {
-    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
+    fetch('/api/leveling/config').then(r => r.json()).then(function (raw) {
+      /* конфиг с дефолтами: офлайн-бот или старый формат больше не роняют страницу */
+      var cfg = (raw && !raw.error) ? raw : {};
+      var tx = cfg.text_xp || {};
+      var vx = cfg.voice_xp || {};
+      var st = cfg.streak_bonus || {};
+      var dm = cfg.engagement_dm || {};
       // Master toggles
-      setSwitch('masterSwitch', 'masterCard', cfg.enabled);
-      setSwitch('textSwitch', 'textCard', cfg.text_xp.enabled);
-      setSwitch('voiceSwitch', 'voiceCard', cfg.voice_xp.enabled);
-      setSwitch('streakSwitch', 'streakCard', cfg.streak_bonus.enabled);
-      setSwitch('achSwitch', 'achCard', cfg.achievements_enabled);
-      setSwitch('dmSwitch', 'dmCard', cfg.engagement_dm.enabled);
+      setSwitch('masterSwitch', 'masterCard', cfg.enabled === true);
+      setSwitch('textSwitch', 'textCard', tx.enabled !== false);
+      setSwitch('voiceSwitch', 'voiceCard', vx.enabled !== false);
+      setSwitch('streakSwitch', 'streakCard', st.enabled !== false);
+      setSwitch('achSwitch', 'achCard', cfg.achievements_enabled !== false);
+      setSwitch('dmSwitch', 'dmCard', dm.enabled !== false);
       document.getElementById('heroDot').className = 'dot ' + (cfg.enabled ? 'ok' : 'err');
       document.getElementById('heroStatus').textContent = cfg.enabled ? 'Система активна' : 'Система выключена';
       // Settings
-      document.getElementById('textMin').value = cfg.text_xp.min;
-      document.getElementById('textMax').value = cfg.text_xp.max;
-      document.getElementById('textCooldown').value = cfg.text_xp.cooldown_sec;
-      document.getElementById('voicePerMin').value = cfg.voice_xp.per_minute;
-      document.getElementById('streak7').value = cfg.streak_bonus['7_days'];
-      document.getElementById('streak14').value = cfg.streak_bonus['14_days'];
-      document.getElementById('streak30').value = cfg.streak_bonus['30_days'];
-    });
+      document.getElementById('textMin').value = tx.min != null ? tx.min : 15;
+      document.getElementById('textMax').value = tx.max != null ? tx.max : 25;
+      document.getElementById('textCooldown').value = tx.cooldown_sec != null ? tx.cooldown_sec : 60;
+      document.getElementById('voicePerMin').value = vx.per_minute != null ? vx.per_minute : 1;
+      document.getElementById('streak7').value = st['7_days'] != null ? st['7_days'] : 100;
+      document.getElementById('streak14').value = st['14_days'] != null ? st['14_days'] : 250;
+      document.getElementById('streak30').value = st['30_days'] != null ? st['30_days'] : 500;
+    }).catch(function () {});
     // Stats + leaderboard
-    fetch('/api/leveling/stats').then(r => r.json()).then(s => {
+    fetch('/api/leveling/stats').then(r => r.json()).then(function (s) {
+      var fp = String(JSON.stringify(s || null) || '').slice(0, 600);
+      if (window.silentGuard && window.silentGuard('leveling-admin', fp)) return;
+      if (!s || s.error || typeof s.total_users === 'undefined') {
+        document.getElementById('leaderboardList').innerHTML = '<p style="text-align:center;">Модуль недоступен — бот офлайн?</p>';
+        return;
+      }
       document.getElementById('statUsers').textContent = s.total_users;
       document.getElementById('statLevel').textContent = s.max_level;
-      document.getElementById('statTotalXP').textContent = s.total_xp.toLocaleString();
+      document.getElementById('statTotalXP').textContent = (s.total_xp || 0).toLocaleString();
       document.getElementById('statAchs').textContent = s.total_achievements + ' / ' + s.total_ach_available;
       document.getElementById('achCount').textContent = s.total_ach_available + ' доступно';
       // Leaderboard
-      const medals = ['🥇', '🥈', '🥉'];
-      document.getElementById('leaderboardList').innerHTML = s.top.map((u, i) => {
+      const medals = ['<i class="fas fa-medal" style="color:#f59e0b"></i>','<i class="fas fa-medal" style="color:#94a3b8"></i>','<i class="fas fa-medal" style="color:#b45309"></i>'];
+      document.getElementById('leaderboardList').innerHTML = (s.top || []).map((u, i) => {
         const medal = i < 3 ? medals[i] : '<span >' + (i+1) + '</span>';
-        return `<div class="kv"   style="20px;">
+        return `<div class="lb-kv">
           <div class="kv-key"   style="min-width: 40px;">${medal}</div>
           <div class="kv-val"   style="text-align: left;">${esc(u.name)}</div>
           <div class="kv-key"   style="font-weight: 700;">Ур.${u.level}</div>
           <div class="kv-val"   style="min-width: 80px;">${u.xp.toLocaleString()} XP</div>
         </div>`;
       }).join('') || '<p   style="text-align:center;">Нет данных</p>';
-    });
+    }).catch(function () {});
     // Achievements
-    fetch('/api/leveling/achievements').then(r => r.json()).then(d => {
+    fetch('/api/leveling/achievements').then(r => r.json()).then(function (d) {
       const grid = document.getElementById('achGrid');
-      const rarityEmoji = {common: '⚪', uncommon: '🟢', rare: '🔵', epic: '🟣', legendary: '🟡'};
+      if (!d || d.error || !d.catalog) {
+        grid.innerHTML = '<p style="text-align:center;">Нет данных</p>';
+        return;
+      }
+      const rarityEmoji = {common: '<i class="fas fa-circle" style="color:#94a3b8"></i>', uncommon: '<i class="fas fa-circle" style="color:var(--ok)"></i>', rare: '<i class="fas fa-circle" style="color:#0ea5e9"></i>', epic: '<i class="fas fa-circle" style="color:#7c3aed"></i>', legendary: '<i class="fas fa-circle" style="color:#fbbf24"></i>'};
+      const RARITY_ICONS = { common: 'fa-star', uncommon: 'fa-medal', rare: 'fa-gem', epic: 'fa-bolt', legendary: 'fa-dragon' };
+      function rarityIcon(r) { return RARITY_ICONS[r] || 'fa-star'; }
       grid.innerHTML = Object.entries(d.catalog).map(([id, info]) => {
-        const unlocked = d.unlocked.includes(id);
+        const unlocked = (d.unlocked || []).includes(id);
         return `<div class="lvl-ach ${unlocked ? 'unlocked' : ''}">
-          <div class="icon">${info.icon}</div>
+          <div class="icon"><i class="fas ${rarityIcon(info.rarity)} r-${esc(info.rarity)}"></i></div>
           <div class="name">${info.name}</div>
           <div class="rarity">${rarityEmoji[info.rarity]} ${info.rarity}</div>
         </div>`;
       }).join('');
-    });
+    }).catch(function () {});
     // Rewards
-    fetch('/api/leveling/rewards').then(r => r.json()).then(d => {
+    fetch('/api/leveling/rewards').then(r => r.json()).then(function (d) {
       const list = document.getElementById('rewardsList');
+      if (!d || d.error || !d.rewards) {
+        list.innerHTML = '<p style="text-align:center;">Нет наград</p>';
+        return;
+      }
       list.innerHTML = Object.entries(d.rewards).map(([lvl, info]) => {
         return `<div class="lvl-reward-card">
           <div class="lvl-reward-level">${lvl}</div>
@@ -265,25 +298,30 @@
           </div>
         </div>`;
       }).join('') || '<p   style="text-align:center;">Нет наград</p>';
-    });
+    }).catch(function () {});
   }
   function setSwitch(swId, cardId, on) {
     document.getElementById(swId).classList.toggle('on', on);
     document.getElementById(cardId).classList.toggle('active', on);
   }
   function toggle(key, subkey) {
-    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
-      if (subkey) cfg[key][subkey] = !cfg[key][subkey];
+    fetch('/api/leveling/config').then(r => r.json()).then(function (cfg) {
+      if (!cfg || cfg.error) { showToast('Модуль недоступен', false); return; }
+      if (subkey) { cfg[key] = cfg[key] || {}; cfg[key][subkey] = !cfg[key][subkey]; }
       else cfg[key] = !cfg[key];
       return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg)});
     }).then(r => r.json()).then(d => {
-      showToast('✅ Сохранено', true);
+      showToast('Сохранено', true);
       load();
     });
   }
   window.toggle = toggle;
   window.saveSettings = function() {
-    fetch('/api/leveling/config').then(r => r.json()).then(cfg => {
+    fetch('/api/leveling/config').then(r => r.json()).then(function (cfg) {
+      if (!cfg || cfg.error) { showToast('Модуль недоступен', false); return; }
+      cfg.text_xp = cfg.text_xp || {};
+      cfg.voice_xp = cfg.voice_xp || {};
+      cfg.streak_bonus = cfg.streak_bonus || {};
       cfg.text_xp.min = parseInt(document.getElementById('textMin').value);
       cfg.text_xp.max = parseInt(document.getElementById('textMax').value);
       cfg.text_xp.cooldown_sec = parseInt(document.getElementById('textCooldown').value);
@@ -293,7 +331,7 @@
       cfg.streak_bonus['30_days'] = parseFloat(document.getElementById('streak30').value);
       return fetch('/api/leveling/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg)});
     }).then(r => r.json()).then(d => {
-      showToast('✅ Настройки сохранены', true);
+      showToast('Настройки сохранены', true);
     });
   };
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

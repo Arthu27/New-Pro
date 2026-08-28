@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}События — Панель Hakumo{% endblock %}
+{% block page_title %}События и поиск игроков{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество <span class="sep">·</span> События</div>
+    <h1>События и поиск игроков</h1>
+  </div>
+</div>
+
+<style>
+.so-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;align-items:center}
+.so-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:10px 16px}
+.so-kpi i{color:var(--ac,var(--ac));font-size:16px}
+.so-kpi b{font-size:18px;color:var(--text-1,#fff)}
+.so-kpi span{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
+.so-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.so-grid{grid-template-columns:1fr}}
+.so-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.so-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.so-panel h3 i{color:var(--ac,var(--ac))}
+.so-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.5}
+.so-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:9px 6px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
+.so-row:last-child{border-bottom:none}
+.so-row.past{opacity:.55}
+.so-who{min-width:0}
+.so-who b{display:block;font-size:13px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.so-who small{display:block;font-size:11px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-top:2px}
+.so-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.so-count{font-size:12.5px;font-weight:800;color:var(--ac-2,#f0cd7a);font-variant-numeric:tabular-nums;white-space:nowrap}
+.so-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent));background:color-mix(in srgb, var(--text) 5%, transparent);border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:999px;padding:3px 10px;white-space:nowrap}
+.so-chip.full{color:#ff8a7a;border-color:rgba(231,76,60,.3);background:rgba(231,76,60,.08)}
+.so-chip.done{color:#4ade80;border-color:rgba(74,222,128,.25);background:rgba(74,222,128,.07)}
+.so-mini{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));background:transparent;color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent));cursor:pointer;font-size:11px;text-decoration:none}
+.so-mini:hover{color:#ff8a7a;border-color:rgba(231,76,60,.35)}
+.so-mini.csv:hover{color:var(--ac,var(--ac));border-color:var(--ac-line,color-mix(in srgb, var(--ac) 30%, transparent))}
+.so-sect{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));margin:12px 0 4px}
+[data-theme="light"] .so-row{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="so-kpis" id="soKpis">
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+</div>
+
+<div class="so-grid">
+  <div>
+    <div class="so-panel">
+      <h3><i class="fas fa-calendar-days"></i> Афиша событий</h3>
+      <span class="fresh-chip" id="soFresh"></span>
+      <div class="so-sub">Предстоящие — по дате, минувшие приглушены. Запись идёт кнопкой «Участвую» в Discord, здесь — составы и уборка. Создание события — командой /activity, там оно сразу получает кнопку записи.</div>
+      <input class="inp" id="soEventSearch" placeholder="Поиск по событиям" style="margin-bottom:10px">
+      <div id="soEvents"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="so-panel">
+      <h3><i class="fas fa-gamepad"></i> Поиск игроков</h3>
+      <div class="so-sub">Активные поиски /game-find: моложе двух часов и состав не полон. Полные и устаревшие приглушены — их можно закрыть, чтобы файлы не пухли.</div>
+      <input class="inp" id="soMatchSearch" placeholder="Поиск по играм и игрокам" style="margin-bottom:10px">
+      <div id="soMatches"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/pickers.js?v={{ static_v('pickers.js') }}"></script>
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/social';
+var CAN_EDIT = false;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function fmtDate(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var p = function (v) { return String(v).padStart(2, '0'); };
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function agoText(min) {
+  if (min < 1) return 'только что';
+  if (min < 60) return min + ' ' + plural(min, 'минуту', 'минуты', 'минут') + ' назад';
+  var h = Math.floor(min / 60);
+  if (h < 24) return h + ' ' + plural(h, 'час', 'часа', 'часов') + ' назад';
+  var d = Math.floor(h / 24);
+  return d + ' ' + plural(d, 'день', 'дня', 'дней') + ' назад';
+}
+
+function kpi(icon, num, label) {
+  return '<div class="so-kpi"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+}
+
+function renderKpis(s) {
+  document.getElementById('soKpis').innerHTML =
+    kpi('fa-calendar-days', s.events_upcoming, plural(s.events_upcoming, 'событие впереди', 'события впереди', 'событий впереди')) +
+    kpi('fa-users', s.participants, plural(s.participants, 'участник записан', 'участника записано', 'участников записано')) +
+    kpi('fa-gamepad', s.matches_active, plural(s.matches_active, 'активный поиск', 'активных поиска', 'активных поисков')) +
+    kpi('fa-user-plus', s.seekers, plural(s.seekers, 'игрок в составах', 'игрока в составах', 'игроков в составах'));
+}
+
+function eventRow(e) {
+  var when = fmtDate(e.date);
+  var seats = e.max_participants > 0
+    ? '<span class="so-count">' + e.count + '/' + e.max_participants + '</span>' +
+      (e.full ? '<span class="so-chip full"><i class="fas fa-ban"></i> мест нет</span>'
+              : '<span class="so-chip">осталось ' + e.spots_left + '</span>')
+    : '<span class="so-count">' + e.count + '</span><span class="so-chip">без лимита</span>';
+  var flags = (e.reminded ? '<span class="so-chip done" title="Напоминание за 30 минут уже ушло"><i class="fas fa-bell"></i></span>' : '') +
+    (e.past ? '<span class="so-chip">прошло</span>' : '');
+  var acts = '<a class="so-mini csv" title="Состав в CSV" aria-label="Состав в CSV" href="' + API + '/events/' + encodeURIComponent(e.id) + '/participants.csv"><i class="fas fa-file-csv"></i></a>' +
+    (CAN_EDIT ? ' <button type="button" class="so-mini" title="Удалить событие" aria-label="Удалить событие" onclick="soDelEvent(\'' + esc(e.id) + '\')"><i class="fas fa-trash"></i></button>' : '');
+  var sub = when + (e.description ? ' · ' + e.description : '');
+  return '<div class="so-row' + (e.past ? ' past' : '') + '"><div class="so-who"><b>' + esc(e.title) + '</b>' +
+    '<small>' + esc(sub) + '</small></div>' +
+    '<span class="so-right">' + seats + ' ' + flags + ' ' + acts + '</span></div>';
+}
+
+function renderEvents(events) {
+  var box = document.getElementById('soEvents');
+  if (!events.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-xmark"></i><p>Событий нет</p><p class="empty-tip">Первое событие создаётся командой /activity в Discord.</p></div>';
+    return;
+  }
+  var upcoming = events.filter(function (e) { return !e.past; });
+  var past = events.filter(function (e) { return e.past; });
+  var html = upcoming.map(eventRow).join('');
+  if (past.length) {
+    html += '<div class="so-sect">Минувшие</div>' + past.map(eventRow).join('');
+  }
+  box.innerHTML = html;
+}
+
+function matchRow(m) {
+  var full = m.full ? '<span class="so-chip full"><i class="fas fa-check-double"></i> состав полон</span>' : '';
+  var stale = (!m.active && !m.full) ? '<span class="so-chip">истёк</span>' : '';
+  var note = m.note ? ' · ' + m.note : '';
+  var sub = agoText(m.age_min) + note + (m.created_by_name ? ' · от ' + m.created_by_name : '');
+  var acts = CAN_EDIT ? ' <button type="button" class="so-mini" title="Закрыть поиск" aria-label="Закрыть поиск" onclick="soCloseMatch(\'' + esc(m.id) + '\')"><i class="fas fa-xmark"></i></button>' : '';
+  var names = (m.players_named || []).map(function (p) { return p.name || ('ID ' + p.user_id); }).join(', ');
+  return '<div class="so-row' + (m.active ? '' : ' past') + '"><div class="so-who"><b>' + esc(m.game) + '</b>' +
+    '<small>' + esc(sub) + '</small>' + (names ? '<small><i class="fas fa-users"></i> ' + esc(names) + '</small>' : '') + '</div>' +
+    '<span class="so-right"><span class="so-count">' + m.count + '/' + m.max_players + '</span> ' + full + stale + ' ' + acts + '</span></div>';
+}
+
+function renderMatches(matches) {
+  var box = document.getElementById('soMatches');
+  if (!matches.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-gamepad"></i><p>Поисков нет</p><p class="empty-tip">Команда /game-find в Discord запускает поиск напарников.</p></div>';
+    return;
+  }
+  box.innerHTML = matches.map(matchRow).join('');
+}
+
+function render(d) {
+  CAN_EDIT = !!d.can_edit;
+  renderKpis(d.stats);
+  renderEvents(d.events);
+  renderMatches(d.matches);
+  freshStamp(document.getElementById('soFresh'));
+}
+
+function soLoad() {
+  fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) { render(d); }
+  }).catch(function () {});
+}
+
+function soDelEvent(id) {
+  askConfirm('Удалить событие?', 'Запись события ' + id + ' исчезнет из базы; сообщение в Discord останется без данных.', function () {
+    fetch(API + '/events/delete', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                   body: JSON.stringify({event_id: id})})
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) { soLoad(); }
+      }).catch(function () {});
+  }, {danger: true, okText: 'Удалить', icon_fa: 'fa-trash'});
+}
+
+function soCloseMatch(id) {
+  askConfirm('Закрыть поиск?', 'Поиск ' + id + ' исчезнет из доски.', function () {
+    fetch(API + '/matches/close', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                   body: JSON.stringify({match_id: id})})
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) { soLoad(); }
+      }).catch(function () {});
+  }, {danger: true, okText: 'Закрыть', icon_fa: 'fa-xmark'});
+}
+
+attachListFilter(document.getElementById('soEventSearch'), 'soEvents', '.so-row');
+bindSlashFocus(document.getElementById('soEventSearch'));
+attachListFilter(document.getElementById('soMatchSearch'), 'soMatches', '.so-row');
+bindSlashFocus(document.getElementById('soMatchSearch'));
+bindCopyId(document);
+
+soLoad();
+</script>
+{% endblock %}

@@ -2,7 +2,8 @@ import discord
 from discord .ext import commands 
 from discord import app_commands 
 import io 
-from datetime import datetime 
+from datetime import datetime, timezone
+from config import Config 
 
 class Archive (commands .Cog ):
     def __init__ (self ,bot ):
@@ -21,7 +22,7 @@ class Archive (commands .Cog ):
 
         file =discord .File (
         fp =io .BytesIO (html .encode ('utf-8')),
-        filename =f"archive_{interaction.channel.name}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.html"
+        filename =f"archive_{interaction.channel.name}_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')}.html"
         )
 
         await interaction .followup .send (f" {len(messages)} сообщений заархивировано.",file =file ,ephemeral =True )
@@ -32,7 +33,7 @@ class Archive (commands .Cog ):
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>#{channel.name} Arшivi</title>
+    <title>Архив #{channel.name}</title>
     <style>
         body {{ font-family: Arial; background: #36393f; color: #dcddde; padding: 20px; }}
         .message {{ margin: 10px 0; padding: 10px; background: #40444b; border-radius: 5px; }}
@@ -43,8 +44,8 @@ class Archive (commands .Cog ):
     </style>
 </head>
 <body>
-    <h1>#{channel.name} Arшivi</h1>
-    <p>Всего Сообщение: {len(messages)}</p>
+    <h1>Архив #{channel.name}</h1>
+    <p>Всего сообщений: {len(messages)}</p>
     <hr>
 """
         for msg in messages :
@@ -61,7 +62,7 @@ class Archive (commands .Cog ):
 """
             for attachment in msg .attachments :
                 if attachment .content_type and attachment .content_type .startswith ('image'):
-                    html +=f'        <img src="{attachment.url}" низ="image"><br>\n'
+                    html +=f'        <img src="{attachment.url}" alt="image"><br>\n'
                 else :
                     html +=f'        <a href="{attachment.url}">{attachment.filename}</a><br>\n'
 
@@ -86,10 +87,10 @@ class Archive (commands .Cog ):
         content ="\n".join (messages )
         file =discord .File (
         fp =io .BytesIO (content .encode ('utf-8')),
-        filename =f"backup_{interaction.channel.name}_{datetime.utcnow().strftime('%Y%m%d')}.txt"
+        filename =f"backup_{interaction.channel.name}_{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d')}.txt"
         )
 
-        await interaction .followup .send (f" {len(messages)} message yedaddndi.",file =file ,ephemeral =True )
+        await interaction .followup .send (f" {len(messages)} сообщений скопировано.",file =file ,ephemeral =True )
 
 async def setup (bot ):
-    await bot .add_cog (Archive (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (Archive (bot ),guilds =Config .guild_objects ())

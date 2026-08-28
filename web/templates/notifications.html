@@ -1,19 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Уведомления - Aether{% endblock %}
+{% block title %}Уведомления - Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-bell"></i> Уведомления{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Уведомления</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Уведомления</div>
     <h1>Уведомления</h1>
-    <p>Настройка уведомлений о событиях системы тикетов.</p>
+    <p class="lead">Настройка уведомлений о событиях системы тикетов.</p>
   </div>
 </div>
-{% endblock %}
+
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-cog"></i> Настройки уведомлений</div>
@@ -67,6 +63,44 @@
           <input type="checkbox" id="event-assignment" style="width: 20px; height: 20px;">
           <span>Назначение тикета</span>
         </label>
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">Модерация и заявки</div>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-warn" checked style="width: 20px; height: 20px;">
+          <span>Выдано предупреждение (варн)</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-mod-action" checked style="width: 20px; height: 20px;">
+          <span>Действие модерации (бан/кик/мут)</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-staff-apply" checked style="width: 20px; height: 20px;">
+          <span>Новая заявка в персонал</span>
+        </label>
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">Панельные правки</div>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-karma" checked style="width: 20px; height: 20px;">
+          <span>Карма: корректировка очков</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-birthdays" checked style="width: 20px; height: 20px;">
+          <span>Дни рождения: записи и настройки</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-social" checked style="width: 20px; height: 20px;">
+          <span>События и поиски: уборка из панели</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-anime-daily" checked style="width: 20px; height: 20px;">
+          <span>Аниме дня: настройки рассылки</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-j2c" checked style="width: 20px; height: 20px;">
+          <span>Комнаты J2C: настройки и уборка</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-gamification" checked style="width: 20px; height: 20px;">
+          <span>Геймификация: корректировка очков</span>
+        </label>
       </div>
     </div>
   </div>
@@ -77,13 +111,14 @@
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Канал для уведомлений</label>
-      <select id="discord-channel" class="form-input">
-        <option value="">Выберите канал...</option>
+      <select id="discord-channel" class="form-input" aria-label="Discord-канал">
+        <option value="">Загрузка каналов...</option>
       </select>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">Если webhook не задан — бот отправит уведомление в выбранный канал</div>
     </div>
     <div>
-      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Webhook URL (опционально)</label>
-      <input type="text" id="webhook-url" class="form-input" placeholder="https://discord.com/api/webhooks/...">
+      <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Webhook URL (опционально, приоритетнее канала)</label>
+      <input type="text" id="webhook-url" class="form-input" placeholder="https://discord.com/api/webhooks/..." aria-label="https://discord.com/api/webhooks/...">
     </div>
   </div>
 </div>
@@ -93,112 +128,214 @@
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">SMTP сервер</label>
-      <input type="text" id="smtp-server" class="form-input" placeholder="smtp.gmail.com">
+      <input type="text" id="smtp-server" class="form-input" placeholder="smtp.gmail.com" aria-label="smtp.gmail.com">
     </div>
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Порт</label>
-      <input type="number" id="smtp-port" class="form-input" value="587">
+      <input type="number" id="smtp-port" class="form-input" value="587" aria-label="Порт SMTP">
     </div>
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Email</label>
-      <input type="email" id="smtp-email" class="form-input" placeholder="your@email.com">
+      <input type="email" id="smtp-email" class="form-input" placeholder="your@email.com" aria-label="your@email.com">
     </div>
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Пароль</label>
-      <input type="password" id="smtp-password" class="form-input" placeholder="••••••••">
+      <input type="password" id="smtp-password" class="form-input" placeholder="••••••••" aria-label="••••••••">
     </div>
   </div>
 </div>
 
 <div class="section">
-  <div class="bs-title"><i class="fas fa-history"></i> Последние уведомления</div>
+  <div class="bs-title"><i class="fas fa-history"></i> Последние уведомления <span id="notifTotal" style="font-weight: 400; font-size: 12px; color: var(--text-muted);"></span></div>
+  <div id="notifDelivery" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center;"></div>
+  <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+    <select id="notifFilterEvent" class="form-input" style="max-width: 260px;" onchange="loadNotificationHistory()">
+      <option value="">Все события</option>
+    </select>
+    <select id="notifFilterOutcome" class="form-input" style="max-width: 200px;" onchange="loadNotificationHistory()">
+      <option value="">Любой результат</option>
+      <option value="ok">Хоть один канал доставил</option>
+      <option value="fail">Есть упавший канал</option>
+    </select>
+  </div>
   <div id="notificationHistory" style="max-height: 400px; overflow-y: auto;">
     <p style="text-align: center; color: var(--text-muted); padding: 40px;">Загрузка...</p>
   </div>
 </div>
 
 <div class="section">
-  <button class="control-btn primary" onclick="saveNotificationSettings()" style="width: 100%; padding: 12px;">
-    <i class="fas fa-save"></i> Сохранить настройки
-  </button>
+  <div style="display: grid; grid-template-columns: {% if role in ('admin', 'owner') %}1fr 1fr{% else %}1fr{% endif %}; gap: 12px;">
+    {% if role in ('admin', 'owner') %}
+    <button type="button" class="control-btn primary" onclick="saveNotificationSettings()" style="padding: 12px;">
+      <i class="fas fa-save"></i> Сохранить настройки
+    </button>
+    {% endif %}
+    <button type="button" class="control-btn" id="testNotifBtn" onclick="sendTestNotification()" style="padding: 12px;">
+      <i class="fas fa-paper-plane"></i> Тестовое уведомление
+    </button>
+  </div>
+  <div id="testResult" style="margin-top: 12px; display: none;"></div>
 </div>
 
 <script>
+function escNotif(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function notifToast(msg, ok) {
+  if (typeof window.showToast === 'function') { window.showToast(msg, ok !== false); }
+  else { alert(msg); }
+}
+
 async function loadNotificationSettings() {
   try {
     const response = await fetch('/api/notifications/settings');
     const data = await response.json();
-    
+
     if (data.success) {
       const settings = data.settings;
-      
+
       // Каналы
       document.getElementById('notify-web').checked = settings.web_enabled || false;
       document.getElementById('notify-discord').checked = settings.discord_enabled || false;
       document.getElementById('notify-email').checked = settings.email_enabled || false;
-      
+
       // События
       document.getElementById('event-ticket-open').checked = settings.event_ticket_open || false;
       document.getElementById('event-ticket-message').checked = settings.event_ticket_message || false;
       document.getElementById('event-ticket-close').checked = settings.event_ticket_close || false;
       document.getElementById('event-priority-change').checked = settings.event_priority_change || false;
       document.getElementById('event-assignment').checked = settings.event_assignment || false;
-      
+      document.getElementById('event-warn').checked = settings.event_warn !== false;
+      document.getElementById('event-mod-action').checked = settings.event_mod_action !== false;
+      document.getElementById('event-staff-apply').checked = settings.event_staff_apply !== false;
+      document.getElementById('event-karma').checked = settings.event_karma !== false;
+      document.getElementById('event-birthdays').checked = settings.event_birthdays !== false;
+      document.getElementById('event-social').checked = settings.event_social !== false;
+      document.getElementById('event-anime-daily').checked = settings.event_anime_daily !== false;
+      document.getElementById('event-j2c').checked = settings.event_j2c !== false;
+  document.getElementById('event-gamification').checked = settings.event_gamification !== false;
+
       // Discord
-      document.getElementById('discord-channel').value = settings.discord_channel || '';
+      window._savedNotifChannel = settings.discord_channel || '';
       document.getElementById('webhook-url').value = settings.webhook_url || '';
-      
+
       // Email
       document.getElementById('smtp-server').value = settings.smtp_server || '';
       document.getElementById('smtp-port').value = settings.smtp_port || 587;
       document.getElementById('smtp-email').value = settings.smtp_email || '';
-      
-      // История
+
+      // Список каналов сервера и история
+      loadDiscordChannels();
       loadNotificationHistory();
     }
   } catch (e) {
-    console.error('Load notification settings error:', e);
+    console.error('Ошибка загрузки настроек уведомлений:', e);
   }
+}
+
+async function loadDiscordChannels() {
+  const select = document.getElementById('discord-channel');
+  try {
+    const gResp = await fetch('/api/guilds');
+    const guilds = await gResp.json();
+    if (!Array.isArray(guilds) || !guilds.length) throw new Error('нет серверов');
+    const gid = guilds[0].id;
+    const cResp = await fetch('/api/guild/' + gid + '/channels');
+    const cData = await cResp.json();
+    const channels = Array.isArray(cData) ? cData : (cData.channels || []);
+    const textChans = channels.filter(c => c.type === 'text');
+    if (!textChans.length) throw new Error('нет каналов');
+    select.innerHTML = '<option value="">— Не выбран —</option>' +
+      textChans.map(c => '<option value="' + escNotif(c.id) + '">#' + escNotif(c.name) + '</option>').join('');
+    select.value = window._savedNotifChannel || '';
+  } catch (e) {
+    select.innerHTML = '<option value="">Бот офлайн — укажите webhook ниже</option>';
+  }
+}
+
+function channelChip(label, state) {
+  let color, mark;
+  if (state === true) { color = '#16a34a'; mark = '<i class="fas fa-check"></i>'; }
+  else if (state === false) { color = '#dc2626'; mark = '<i class="fas fa-xmark"></i>'; }
+  else { color = 'var(--text-muted)'; mark = '—'; }
+  return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:' +
+    color + ';border:1px solid ' + color + '33;border-radius:6px;padding:2px 7px;margin-right:6px;">' +
+    escNotif(label) + ' ' + mark + '</span>';
 }
 
 async function loadNotificationHistory() {
   try {
-    const response = await fetch('/api/notifications/history');
+    const evSel = document.getElementById('notifFilterEvent');
+    const outSel = document.getElementById('notifFilterOutcome');
+    const params = [];
+    if (evSel && evSel.value) params.push('event=' + encodeURIComponent(evSel.value));
+    if (outSel && outSel.value) params.push('outcome=' + encodeURIComponent(outSel.value));
+    const response = await fetch('/api/notifications/history' + (params.length ? '?' + params.join('&') : ''));
     const data = await response.json();
-    
+
     if (data.success) {
+      if (evSel && evSel.options.length <= 1 && data.events) {
+        Object.keys(data.events).forEach(function (key) {
+          const opt = document.createElement('option');
+          opt.value = key;
+          opt.textContent = data.events[key];
+          evSel.appendChild(opt);
+        });
+      }
+      const dlv = document.getElementById('notifDelivery');
+      if (dlv && data.delivery) {
+        const chip = function (name, st) {
+          if (!st.ok && !st.fail) return '';
+          return '<span style="font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid color-mix(in srgb, var(--text) 12%, transparent);color:var(--text-muted);">' +
+            name + ': <b style="color:var(--ok)">' + st.ok + '</b> · <b style="color:' + (st.fail ? 'var(--err)' : 'inherit') + '">' + st.fail + '</b></span>';
+        };
+        dlv.innerHTML = chip('Веб', data.delivery.web) + chip('Discord', data.delivery.discord) + chip('Email', data.delivery.email);
+      }
+      const total = document.getElementById('notifTotal');
+      if (total) total.textContent = '(записей: ' + (data.total || 0) + ')';
       const container = document.getElementById('notificationHistory');
       const notifications = data.notifications || [];
-      
+
       if (notifications.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Уведомлений пока нет</p>';
         return;
       }
-      
+
       container.innerHTML = notifications.map(notif => {
         const date = new Date(notif.created_at).toLocaleString('ru-RU');
-        const icon = notif.type === 'ticket_open' ? 'fa-ticket-alt' : 
-                     notif.type === 'ticket_message' ? 'fa-comment' :
-                     notif.type === 'ticket_close' ? 'fa-check-circle' : 'fa-bell';
-        
-        return `
-          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+        const rawIcon = notif.icon || 'fa-bell';
+        const icon = String(rawIcon).indexOf('<') === 0 ? rawIcon : '<i class="fas ' + String(rawIcon).replace(/[^a-z0-9-]/gi, '') + '"></i>';
+        const body = notif.body != null ? notif.body : (notif.message || '');
+        let chips = '';
+        if (notif.channels && typeof notif.channels === 'object') {
+          chips = channelChip('Веб', notif.channels.web) +
+                  channelChip('Discord', notif.channels.discord) +
+                  channelChip('Email', notif.channels.email);
+        } else if (notif.channel) {
+          chips = '<span style="font-size:12px;color:var(--text-muted);">' + escNotif(notif.channel) + '</span>';
+        }
+
+        const link = notif.link || '';
+        const cardStyle = 'background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 12px; margin-bottom: 8px;' +
+          (link ? ' cursor: pointer; transition: border-color 0.15s;' : '');
+        const card = `
+          <div style="${cardStyle}" ${link ? `onclick="window.location.href='${link}'"` : ''} ${link ? 'onmouseover="this.style.borderColor=\'rgba(200,146,42,0.5)\'" onmouseout="this.style.borderColor=\'color-mix(in srgb, var(--text) 10%, transparent)\'"' : ''}>
             <div style="display: flex; align-items: start; gap: 12px;">
-              <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(155,89,182,0.2); display: flex; align-items: center; justify-content: center;">
-                <i class="fas ${icon}" style="color: #9b59b6;"></i>
-              </div>
-              <div style="flex: 1;">
-                <div style="font-weight: 600; margin-bottom: 4px;">${notif.title}</div>
-                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">${notif.message}</div>
-                <div style="font-size: 12px; color: var(--text-muted);">${date} • ${notif.channel}</div>
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--ac-soft); display: flex; align-items: center; justify-content: center; font-size: 16px;">${icon}</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 600; margin-bottom: 4px;">${escNotif(notif.title)}</div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 6px;">${escNotif(body)}</div>
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">${chips}<span style="font-size: 12px; color: var(--text-muted);">${date}</span>${link ? '<span style="font-size: 11px; color: #c8922a; margin-left: auto;"><i class="fas fa-arrow-right"></i> Перейти</span>' : ''}</div>
               </div>
             </div>
           </div>
         `;
+        return card;
       }).join('');
     }
   } catch (e) {
-    console.error('Load notification history error:', e);
+    console.error('Ошибка загрузки истории уведомлений:', e);
   }
 }
 
@@ -212,14 +349,23 @@ async function saveNotificationSettings() {
     event_ticket_close: document.getElementById('event-ticket-close').checked,
     event_priority_change: document.getElementById('event-priority-change').checked,
     event_assignment: document.getElementById('event-assignment').checked,
+    event_warn: document.getElementById('event-warn').checked,
+    event_mod_action: document.getElementById('event-mod-action').checked,
+    event_staff_apply: document.getElementById('event-staff-apply').checked,
+    event_karma: document.getElementById('event-karma').checked,
+    event_birthdays: document.getElementById('event-birthdays').checked,
+    event_social: document.getElementById('event-social').checked,
+    event_anime_daily: document.getElementById('event-anime-daily').checked,
+    event_j2c: document.getElementById('event-j2c').checked,
+    event_gamification: document.getElementById('event-gamification').checked,
     discord_channel: document.getElementById('discord-channel').value,
     webhook_url: document.getElementById('webhook-url').value,
     smtp_server: document.getElementById('smtp-server').value,
-    smtp_port: parseInt(document.getElementById('smtp-port').value),
+    smtp_port: parseInt(document.getElementById('smtp-port').value) || 587,
     smtp_email: document.getElementById('smtp-email').value,
     smtp_password: document.getElementById('smtp-password').value
   };
-  
+
   try {
     const response = await fetch('/api/notifications/settings', {
       method: 'POST',
@@ -227,17 +373,46 @@ async function saveNotificationSettings() {
       body: JSON.stringify(settings)
     });
     const data = await response.json();
-    
+
     if (data.success) {
-      alert('Настройки сохранены!');
+      notifToast('Настройки уведомлений сохранены');
     } else {
-      alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+      notifToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
     }
   } catch (e) {
-    alert('Ошибка соединения');
+    notifToast('Ошибка соединения', false);
+  }
+}
+
+async function sendTestNotification() {
+  const btn = document.getElementById('testNotifBtn');
+  const resultBox = document.getElementById('testResult');
+  btn.disabled = true;
+  resultBox.style.display = 'block';
+  resultBox.innerHTML = '<span style="color: var(--text-muted); font-size: 13px;"><i class="fas fa-spinner fa-spin"></i> Отправка тестового уведомления...</span>';
+  try {
+    const response = await fetch('/api/notifications/test', { method: 'POST' });
+    const data = await response.json();
+    if (data.success) {
+      const ch = data.channels || {};
+      resultBox.innerHTML =
+        '<div style="font-size: 13px; margin-bottom: 6px; font-weight: 600;">Результат доставки:</div>' +
+        channelChip('Веб', ch.web) + channelChip('Discord', ch.discord) + channelChip('Email', ch.email) +
+        '<div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;"><i class="fas fa-check"></i> — доставлено · <i class="fas fa-xmark"></i> — ошибка · <i class="fas fa-minus"></i> — канал не настроен. Событие записано в историю ниже.</div>';
+      loadNotificationHistory();
+    } else {
+      resultBox.innerHTML = '<span style="color: var(--err); font-size: 13px;">Ошибка: ' + escNotif(data.error || 'неизвестная') + '</span>';
+    }
+  } catch (e) {
+    resultBox.innerHTML = '<span style="color: var(--err); font-size: 13px;">Ошибка соединения</span>';
+  } finally {
+    btn.disabled = false;
   }
 }
 
 document.addEventListener('DOMContentLoaded', loadNotificationSettings);
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadNotificationHistory(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

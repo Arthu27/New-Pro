@@ -1,92 +1,158 @@
 {% extends "base.html" %}
-{% block title %}Менеджер модулей — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-cubes" ></i> Менеджер модулей{% endblock %}
+{% block title %}Менеджер модулей — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-cubes"></i> Менеджер модулей{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Менеджер модулей</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Модули</div>
     <h1>Менеджер модулей</h1>
-    <p>Управление модулями бота: загрузка, выгрузка, перезагрузка.</p>
+    <p class="lead">Загрузка, выгрузка и перезагрузка модулей бота — без перезапуска сервера.</p>
   </div>
 </div>
-{% endblock %}
 
 
+<style>
+  .cm-wrap { padding:6px 2px 34px; max-width: 1000px; }
+  .info-bar { background:linear-gradient(90deg, color-mix(in srgb, var(--ac) 14%, transparent), color-mix(in srgb, var(--ac) 5%, transparent)); border:1px solid color-mix(in srgb, var(--ac) 30%, transparent); border-radius:12px; padding:13px 16px; font-size:12.5px; margin-bottom:20px; display:flex; gap:10px; align-items:flex-start; }
+  .info-bar i { color:var(--ac); margin-top:1px; }
 
-<div class="top-bar">
-  <div class="summary" id="cog-summary">Загрузка...</div>
-  <button class="btn btn-primary" onclick="reloadAll()"><i class="fas fa-sync"></i> Обновить все</button>
-</div>
+  .cm-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:18px; }
+  .cm-stat { background:linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
+  .cm-stat .ico { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .cm-stat .num { font-size:20px; font-weight:800; }
+  .cm-stat .lbl { font-size:11px; opacity:.6; margin-top:1px; }
+  .i-green { color:var(--ok); background:rgba(46,204,113,0.16); border:1px solid rgba(46,204,113,0.35); }
+  .i-gray  { color:var(--text-3); background:color-mix(in srgb, var(--text) 8%, transparent); border:1px solid color-mix(in srgb, var(--text) 12%, transparent); }
 
-<div class="cog-grid" id="cog-grid">
-  <div >Загрузка...</div>
+  .cm-top { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .cm-top .spacer { flex:1; }
+  .cm-btn { padding:10px 16px; border-radius:10px; border:1px solid color-mix(in srgb, var(--text) 16%, transparent); background:color-mix(in srgb, var(--text) 5%, transparent); cursor:pointer; font-size:13px; font-weight:600; transition:.15s; display:inline-flex; align-items:center; gap:8px; }
+  .cm-btn:hover { background:var(--ac); color:#fff; }
+  .cm-btn-blue { color:var(--ac-2); border-color:color-mix(in srgb, var(--ac) 40%, transparent); }
+  .cm-btn-blue:hover { background:var(--ac); color:#fff; }
+  .cm-btn-green { color:var(--ok); border-color:rgba(46,204,113,0.4); }
+  .cm-btn-green:hover { background:var(--ok); color:#fff; }
+  .cm-btn-red { color:var(--err); border-color:rgba(231,76,60,0.4); }
+  .cm-btn-red:hover { background:var(--err); color:#fff; }
+  .cm-search { position:relative; }
+  .cm-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.5; font-size:12px; }
+  .cm-search input { background:var(--surface-2); color:#e6e6e6; border:1px solid color-mix(in srgb, var(--text) 16%, transparent); border-radius:10px; padding:10px 12px 10px 32px; font-size:13px; outline:none; width:200px; }
+  .cm-search input:focus { border-color:var(--ac); }
+
+  .cm-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; }
+  .cm-card { background:linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:14px; padding:16px 18px; display:flex; flex-direction:column; gap:12px; transition:.18s; position:relative; overflow:hidden; }
+  .cm-card:hover {border-color:var(--ac); box-shadow:0 10px 28px rgba(0,0,0,0.3)}
+  .cm-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; opacity:0; transition:.18s; }
+  .cm-card.loaded::before { background:linear-gradient(90deg,var(--ok),#27ae60); opacity:1; }
+  .cm-card.unloaded::before { background:color-mix(in srgb, var(--text) 15%, transparent); opacity:1; }
+  .cm-head { display:flex; align-items:center; gap:11px; }
+  .cm-ico { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; background:color-mix(in srgb, var(--ac) 15%, transparent); color:var(--ac-2); border:1px solid color-mix(in srgb, var(--ac) 30%, transparent); }
+  .cm-ico.loaded { background:rgba(46,204,113,0.15); color:var(--ok); border-color:rgba(46,204,113,0.3); }
+  .cm-name { font-size:14px; font-weight:700; word-break:break-word; flex:1; }
+  .cm-status { font-size:11px; font-weight:700; padding:4px 11px; border-radius:20px; white-space:nowrap; }
+  .cm-status.loaded { background:rgba(46,204,113,0.16); color:var(--ok); border:1px solid rgba(46,204,113,0.35); }
+  .cm-status.unloaded { background:color-mix(in srgb, var(--text) 7%, transparent); color:color-mix(in srgb, var(--text) 50%, transparent); border:1px solid color-mix(in srgb, var(--text) 12%, transparent); }
+  .cm-path { font-size:10.5px; opacity:.4; font-family:monospace; }
+  .cm-actions { display:flex; gap:8px; margin-top:auto; }
+  .cm-act { flex:1; padding:8px; border-radius:9px; border:1px solid color-mix(in srgb, var(--text) 14%, transparent); background:color-mix(in srgb, var(--text) 4%, transparent); cursor:pointer; font-size:12.5px; font-weight:600; transition:.15s; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+  .cm-act:hover { background:color-mix(in srgb, var(--text) 10%, transparent); }
+  .cm-act.reload { color:var(--ac-2); }
+  .cm-act.load { color:var(--ok); border-color:rgba(46,204,113,0.35); }
+  .cm-act.load:hover { background:var(--ok); color:#fff; }
+  .cm-act.unload { color:var(--err); border-color:rgba(231,76,60,0.35); }
+  .cm-act.unload:hover { background:var(--err); color:#fff; }
+
+  .cm-empty { text-align:center; opacity:.5; padding:50px 0; grid-column:1/-1; }
+  .cm-empty i { font-size:30px; display:block; margin-bottom:12px; }
+</style>
+
+<div class="cm-wrap">
+  <div class="info-bar">
+    <i class="fas fa-info-circle"></i> <b>Модули:</b> включите или выключите модуль — изменения применяются без перезапуска сервера. Перезагрузка обновляет модуль из кода. Список обновляется каждые 2.5 секунды.
+  </div>
+
+  <div class="cm-stats">
+    <div class="cm-stat"><div class="ico i-green"><i class="fas fa-check-circle"></i></div><div><div class="num" id="st-loaded">0</div><div class="lbl">Загружено</div></div></div>
+    <div class="cm-stat"><div class="ico i-gray"><i class="fas fa-cube"></i></div><div><div class="num" id="st-total">0</div><div class="lbl">Всего</div></div></div>
+  </div>
+
+  <div class="cm-top">
+    <div class="cm-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="cm-search-input" placeholder="Поиск модуля..." oninput="render()" aria-label="Поиск модуля...">
+    </div>
+    <span class="spacer"></span>
+    <button type="button" class="cm-btn cm-btn-blue" onclick="reloadAll()"><i class="fas fa-sync"></i> Обновить всё</button>
+  </div>
+
+  <div class="cm-grid" id="cm-grid"></div>
 </div>
 
 <script>
 var _cogs = [];
-function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
 
-async function loadCogs() {
+function render(){
+  var host = document.getElementById('cm-grid');
+  if(!_cogs.length){ host.innerHTML = '<div class="cm-empty"><i class="fas fa-cube"></i>Нет модулей</div>'; return; }
+  var q = (document.getElementById('cm-search-input').value || '').toLowerCase().trim();
+  var list = _cogs.filter(function(c){ if(!q) return true; return c.name.toLowerCase().indexOf(q) !== -1; });
+  host.innerHTML = list.map(function(c){
+    var loaded = c.loaded;
+    return '<div class="cm-card ' + (loaded?'loaded':'unloaded') + '">'
+      + '<div class="cm-head">'
+      + '<span class="cm-ico ' + (loaded?'loaded':'') + '"><i class="fas ' + (loaded?'fa-check':'fa-cube') + '"></i></span>'
+      + '<span class="cm-name">' + esc(cap(c.name)) + '</span>'
+      + '<span class="cm-status ' + (loaded?'loaded':'unloaded') + '">' + (loaded?'Загружен':'Не загружен') + '</span>'
+      + '</div>'
+      + '<div class="cm-path">cogs.' + esc(c.name) + '</div>'
+      + '<div class="cm-actions">'
+      + (loaded ? '<button type="button" class="cm-act reload" onclick="reloadCog(\''+esc(c.name)+'\')"><i class="fas fa-redo"></i> Перезагрузить</button>' : '')
+      + (loaded ? '<button type="button" class="cm-act unload" onclick="toggleCog(\''+esc(c.name)+'\',true)"><i class="fas fa-power-off"></i> Выкл.</button>'
+                 : '<button type="button" class="cm-act load" onclick="toggleCog(\''+esc(c.name)+'\',false)"><i class="fas fa-play"></i> Вкл.</button>')
+      + '</div>'
+      + '</div>';
+  }).join('');
+  document.getElementById('st-loaded').textContent = _cogs.filter(function(c){return c.loaded;}).length;
+  document.getElementById('st-total').textContent = _cogs.length;
+}
+
+async function loadCogs(){
   try {
     var d = await fetch('/api/cogs').then(r => r.json());
-    _cogs = d;
-    var loaded = d.filter(c => c.loaded).length;
-    document.getElementById('cog-summary').textContent = loaded + ' / ' + d.length + ' модулей загружено';
-    document.getElementById('cog-grid').innerHTML = d.map(function(c) {
-      return '<div class="cog-card ' + (c.loaded ? 'loaded' : 'unloaded') + '" id="cog-' + esc(c.name) + '">' +
-        '<div>' +
-          '<div class="cog-name"><i class="fas fa-cube"></i> ' + esc(c.name) + '</div>' +
-          '<div class="cog-status ' + (c.loaded ? 'ok' : 'err') + '"><i class="fas fa-circle"   style="margin-right: 4px;"></i>' + (c.loaded ? 'Загружен' : 'Не загружен') + '</div>' +
-        '</div>' +
-        '<div  >' +
-          (c.loaded ? '<button class="reload-btn" onclick="reloadCog(\'' + esc(c.name) + '\')" title="Перезагрузить"><i class="fas fa-redo"></i></button>' : '') +
-          '<button class="toggle-btn ' + (c.loaded ? 'unload' : 'load') + '" onclick="toggleCog(\'' + esc(c.name) + '\',' + c.loaded + ')">' +
-            (c.loaded ? 'Выкл.' : 'Вкл.') +
-          '</button>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-  } catch(e) {
-    document.getElementById('cog-grid').innerHTML = '<div >Ошибка: ' + esc(e.message) + '</div>';
-  }
+    _cogs = d || [];
+    render();
+  } catch(e){ document.getElementById('cm-grid').innerHTML = '<div class="cm-empty"><i class="fas fa-exclamation-triangle"></i>Ошибка загрузки</div>'; }
 }
 
-async function toggleCog(name, isLoaded) {
+async function toggleCog(name, isLoaded){
   var action = isLoaded ? 'unload' : 'load';
   try {
-    var r = await fetch('/api/cogs/' + action, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name: 'cogs.' + name})
-    }).then(r => r.json());
-    if (r.ok) loadCogs();
-    else alert('Ошибка: ' + (r.error || 'Неизвестно'));
-  } catch(e) { alert('Ошибка соединения'); }
+    var r = await fetch('/api/cogs/' + action, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:'cogs.'+name}) }).then(r=>r.json());
+    if (r.ok || r.already_loaded) { if(window.showToast) window.showToast(isLoaded?('Модуль «'+name+'» выключен'):('Модуль «'+name+'» включён'), true); loadCogs(); }
+    else { if(window.showToast) window.showToast(r.error || 'Ошибка', false); }
+  } catch(e){ if(window.showToast) window.showToast('Ошибка соединения', false); }
 }
 
-async function reloadCog(name) {
+async function reloadCog(name){
   try {
-    var r = await fetch('/api/cogs/reload', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({name: 'cogs.' + name})
-    }).then(r => r.json());
-    if (r.ok) loadCogs();
-    else alert('Ошибка: ' + (r.error || 'Неизвестно'));
-  } catch(e) { alert('Ошибка соединения'); }
+    var r = await fetch('/api/cogs/reload', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:'cogs.'+name}) }).then(r=>r.json());
+    if (r.ok) { if(window.showToast) window.showToast('Модуль «'+name+'» перезагружен', true); loadCogs(); }
+    else { if(window.showToast) window.showToast(r.error || 'Ошибка', false); }
+  } catch(e){ if(window.showToast) window.showToast('Ошибка соединения', false); }
 }
 
-async function reloadAll() {
+async function reloadAll(){
   try {
-    await fetch('/api/cogs/reload-all', {method:'POST'}).then(r => r.json());
+    await fetch('/api/cogs/reload-all', {method:'POST'}).then(r=>r.json());
+    if(window.showToast) window.showToast('Все модули обновлены', true);
     loadCogs();
-  } catch(e) {}
+  } catch(e){}
 }
 
 loadCogs();
+if (window.setLiveRefresh) window.setLiveRefresh(loadCogs, 1500);
+else setInterval(loadCogs, 2500);
 </script>
 {% endblock %}

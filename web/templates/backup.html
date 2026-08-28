@@ -1,19 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Резервное копирование - Aether{% endblock %}
+{% block title %}Резервное копирование - Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-database"></i> Резервное копирование{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Резервное копирование</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Логи <span class="sep">·</span> Бэкапы</div>
     <h1>Резервное копирование</h1>
-    <p>Резервное копирование и восстановление конфигурации сервера.</p>
+    <p class="lead">Резервное копирование и восстановление конфигурации сервера.</p>
   </div>
 </div>
-{% endblock %}
+
 
 <div class="stat-grid">
   <div class="stat-box purple">
@@ -79,7 +75,7 @@
     $('stat-last').textContent = '2ч';
     var html = '';
     backups.forEach(function (b, i) {
-      html += '<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 12px;">' +
+      html += '<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid color-mix(in srgb, var(--text) 5%, transparent); gap: 12px;">' +
         '<div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(155,89,182,0.15); display: flex; align-items: center; justify-content: center;"><i class="fas fa-file-archive" style="color: #9b59b6; font-size: 18px;"></i></div>' +
         '<div style="flex: 1;">' +
           '<div style="font-weight: 500; margin-bottom: 4px;">' + esc(b.name) + '</div>' +
@@ -100,12 +96,12 @@
   function bind() {
     $('btn-create').addEventListener('click', function () { showToast('Резервная копия создана', true); backups.unshift({name:'backup_now.zip',size:'12.5 MB',date:'сейчас'}); render(); });
     $('btn-restore').addEventListener('click', function () { showToast('Выберите копию для восстановления', true); });
-    $('btn-clean').addEventListener('click', function () { if (confirm('Удалить старые копии?')) { backups = backups.slice(0, 2); render(); } });
+    $('btn-clean').addEventListener('click', function () { window.askConfirm('Очистка', 'Удалить старые копии?', function () { backups = backups.slice(0, 2); render(); }, { okText: 'Удалить', danger: true }); });
     $('bk-body').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-act]');
       if (!b) return;
       var i = parseInt(b.getAttribute('data-i'), 10);
-      if (b.getAttribute('data-act') === 'del') { if (confirm('Удалить копию?')) { backups.splice(i, 1); render(); } }
+      if (b.getAttribute('data-act') === 'del') { window.askConfirm('Удалить копию', 'Удалить эту копию бэкапа?', function () { backups.splice(i, 1); render(); }, { okText: 'Удалить', danger: true }); }
       else { showToast('Восстановление запущено', true); }
     });
   }

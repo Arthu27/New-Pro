@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block title %}Контроль команды · Модерация — Hakumo{% endblock %}
+{% block page_title %}Контроль команды{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Команда и аналитика</div>
+    <h1>Контроль команды</h1>
+    <p class="lead">Управлять очередью, а не догонять её: риск эскалации, истечения, единые причины и амнистии.</p>
+  </div>
+</div>
+
+<div class="kpi-row" id="mcKpis">
+  <div class="skeleton-card" style="height:68px"></div><div class="skeleton-card" style="height:68px"></div>
+  <div class="skeleton-card" style="height:68px"></div><div class="skeleton-card" style="height:68px"></div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-triangle-exclamation" style="color:var(--warn)"></i> На грани авто-наказания</h2>
+      <div class="sub" id="mcRiskSub">До следующего автоматического наказания остался один-два шага.</div></div></div>
+    <div class="panel-body" id="mcRisk"></div>
+    <div class="panel-foot"><a class="btn-link" href="/warn-config"><i class="fas fa-arrow-up-right-from-square"></i> Настроить пороги</a></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-tower-broadcast"></i> Радар истечений</h2>
+      <div class="sub">Просроченные меры и таймеры, которые закончатся в ближайшие трое суток.</div></div></div>
+    <div class="panel-body" id="mcRadar"></div>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start;margin-top:14px">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-bolt"></i> Быстрые причины</h2>
+      <div class="sub">Единый язык решений для всей команды.</div></div></div>
+    <div class="panel-body">
+      <div class="tabs" id="mcTabs" style="margin-bottom:10px"></div>
+      <div class="chip-row" id="mcReasons" style="margin-bottom:12px"></div>
+      <div class="row" id="mcReasonForm" style="display:none">
+        <input class="form-input" id="mcReasonText" maxlength="120" placeholder="Новая формулировка" style="flex:1">
+        <button type="button" class="btn btn-primary" id="mcReasonAddBtn"><i class="fas fa-plus"></i> Добавить</button>
+      </div>
+      <div class="hint">До 20 причин на тип.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-dove"></i> Амнистия</h2>
+      <div class="sub">Обнуление с записью в журнал и быстрым откатом.</div></div></div>
+    <div class="panel-body">
+      <div class="row" id="mcAmnestyForm" style="display:none;margin-bottom:12px">
+        <input class="form-input" id="mcAmnestyId" maxlength="24" placeholder="Имя участника — выберите из списка" style="flex:1"><span id="mcAmnestyStatus"></span>
+        <button type="button" class="btn btn-danger" id="mcAmnestyBtn"><i class="fas fa-dove"></i> Обнулить</button>
+      </div>
+      <div id="mcAmnesty"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/pickers.js"></script>
+<script>
+var GID = '{{ guild_id }}';
+attachMemberPicker(document.getElementById('mcAmnestyId'), { gid: GID, statusEl: document.getElementById('mcAmnestyStatus') });
+var API = '/api/guild/' + GID + '/mod-control';
+var STATE = null;
+var CAN_EDIT = false;
+var KIND = 'warn';
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function fmtDate(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var p = function (v) { return String(v).padStart(2, '0'); };
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function fmtLeft(sec) {
+  var ago = sec < 0;
+  var s = Math.abs(sec);
+  var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  var t = d > 0 ? d + 'д ' + h + 'ч' : (h > 0 ? h + 'ч ' + m + 'м' : Math.max(m, s > 30 ? 1 : 0) + 'м');
+  return ago ? 'просрочено ' + t : 'осталось ' + t;
+}
+
+function kpi(icon, num, label, hot) {
+  return '<div class="kpi ' + (hot ? 'tone-warn' : '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
+    '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
+}
+
+function renderKpis(d) {
+  var c = d.radar.counts;
+  $('mcKpis').innerHTML =
+    kpi('fa-triangle-exclamation', d.risk.edge, 'в одном варне от порога', d.risk.edge > 0) +
+    kpi('fa-hourglass-end', c.overdue, plural(c.overdue, 'просроченное наказание', 'просроченных наказания', 'просроченных наказаний'), c.overdue > 0) +
+    kpi('fa-bolt', c.soon + c.week, 'истекает в ближайшие трое суток', false) +
+    kpi('fa-shield-halved', d.radar.active_total, 'активных временных наказаний', false);
+}
+
+function renderRisk(d) {
+  var sub = $('mcRiskSub');
+  var box = $('mcRisk');
+  if (!d.risk.tuned) {
+    sub.textContent = 'Пороги авто-наказаний не заданы. Настройте их на странице «Варны» — тогда здесь появятся участники у грани.';
+    box.innerHTML = '<div class="empty"><i class="fas fa-sliders"></i><span>Пороги не настроены</span></div>';
+    return;
+  }
+  sub.textContent = 'Участники с варнами, которым до следующего авто-наказания не хватает один-два предупреждения.';
+  if (!d.risk.items.length) {
+    box.innerHTML = '<div class="empty"><i class="fas fa-face-smile"></i><span>Все далеки от порогов</span></div>';
+    return;
+  }
+  box.innerHTML = d.risk.items.map(function (r) {
+    var pct = Math.min(100, Math.round(100 * r.warns / r.next_count));
+    var label = r.name || ('#' + r.user_id);
+    var gap = 'ещё ' + r.gap + ' ' + plural(r.gap, 'варн', 'варна', 'варнов') + ' → ' + r.action_name;
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon" style="' + (r.gap === 1 ? 'background:var(--warn-soft);color:var(--warn)' : '') + '"><i class="fas fa-user"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(label) + ' <span class="id-pill">' + esc(r.user_id) + '</span></div>' +
+      '<div class="feed-item-sub">' + r.warns + ' ' + plural(r.warns, 'варн', 'варна', 'варнов') + ' из порога ' + r.next_count + '</div>' +
+      '<span style="font-weight:800;font-variant-numeric:tabular-nums">' + pct + '%</span></div>' +
+      '<span class="badge ' + (r.gap === 1 ? 'tone-warning' : 'neutral') + '">' + esc(gap) + '</span></div>';
+  }).join('');
+}
+
+function renderRadar(d) {
+  var box = $('mcRadar');
+  if (!d.radar.rows.length) {
+    box.innerHTML = '<div class="empty"><i class="fas fa-satellite-dish"></i><span>' +
+      (d.radar.active_total ? 'Все активные наказания заканчиваются позже трёх суток' : 'Активных временных наказаний нет') + '</span></div>';
+    return;
+  }
+  box.innerHTML = d.radar.rows.map(function (r) {
+    var label = r.name || ('#' + r.user_id);
+    var pct = r.frac == null ? 0 : Math.round(r.frac * 100);
+    var hot = r.remaining_s <= 0;
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-hourglass"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title"><span class="badge neutral">' + esc(r.kind_name) + '</span> ' + esc(label) +
+        ' <span class="id-pill">' + esc(r.user_id) + '</span></div>' +
+      (r.reason ? '<div class="feed-item-sub">' + esc(r.reason) + '</div>' : '') +
+      '<span style="font-weight:800;font-variant-numeric:tabular-nums">' + pct + '%</span></div>' +
+      '<span class="mono" style="font-weight:600;' + (hot ? 'color:var(--err)' : '') + '">' + esc(fmtLeft(r.remaining_s)) + '</span></div>';
+  }).join('');
+}
+
+function renderReasons(d) {
+  var tabs = $('mcTabs');
+  tabs.innerHTML = d.reason_kinds.map(function (k) {
+    var n = (d.reasons[k.key] || []).length;
+    return '<button type="button" class="tab-btn' + (k.key === KIND ? ' active' : '') + '" data-kind="' + esc(k.key) + '">' +
+      esc(k.label) + ' <span class="count">' + n + '</span></button>';
+  }).join('');
+  var items = d.reasons[KIND] || [];
+  var box = $('mcReasons');
+  if (!items.length) {
+    box.innerHTML = '<span class="muted">Причин пока нет' + (CAN_EDIT ? ' — добавьте первую, она станет подсказкой для команды.' : '.') + '</span>';
+  } else {
+    box.innerHTML = items.map(function (it) {
+      return '<span class="chip">' + esc(it.text) +
+        (CAN_EDIT ? ' <span class="x" data-reason-del="' + it.id + '" title="Удалить"><i class="fas fa-xmark"></i></span>' : '') + '</span>';
+    }).join('');
+  }
+  $('mcReasonForm').style.display = CAN_EDIT ? '' : 'none';
+}
+
+function renderAmnesty(d) {
+  $('mcAmnestyForm').style.display = CAN_EDIT ? '' : 'none';
+  var box = $('mcAmnesty');
+  if (!d.amnesty.length) {
+    box.innerHTML = '<div class="empty"><i class="fas fa-dove"></i><span>Амнистий ещё не было</span>' +
+      (d.amnesty_total ? '<div class="hint">Записей в журнале: ' + d.amnesty_total + '.</div>' : '') + '</div>';
+    return;
+  }
+  box.innerHTML = d.amnesty.map(function (a) {
+    var tail;
+    if (a.restored_at) tail = '<span class="badge ok"><i class="fas fa-rotate-left"></i> откачена</span>';
+    else if (CAN_EDIT) tail = '<button type="button" class="btn btn-sm" data-amnesty-undo="' + a.id + '"><i class="fas fa-rotate-left"></i> Откатить</button>';
+    else tail = '<span class="badge neutral">активна</span>';
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-dove"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' +
+        (a.name && a.name !== a.user_id ? '<b>' + esc(a.name) + '</b> <span class="id-pill">#' + esc(a.user_id) + '</span>' : '#' + esc(a.user_id)) +
+        ' · ' + a.count + ' ' + plural(a.count, 'варн', 'варна', 'варнов') + '</div>' +
+      '<div class="feed-item-sub">' + esc(a.by || '—') + ' · ' + esc(fmtDate(a.at)) + '</div></div>' + tail + '</div>';
+  }).join('');
+}
+
+async function mcPost(url, obj) {
+  var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj || {}) });
+  var d = null;
+  try { d = await r.json(); } catch (e) { d = {}; }
+  return { code: r.status, data: d };
+}
+
+function mcReasonAdd() {
+  var inp = $('mcReasonText');
+  var v = inp.value.trim();
+  if (!v) return;
+  mcPost(API + '/reasons', { kind: KIND, text: v }).then(function (res) {
+    if (!res.data.success) { window.showToast(res.data.error || 'Не удалось добавить', false); return; }
+    inp.value = '';
+    STATE.reasons = res.data.reasons;
+    renderReasons(STATE);
+    window.showToast('Причина добавлена', true);
+  });
+}
+
+function mcReasonDel(id) {
+  mcPost(API + '/reasons/' + KIND + '/' + id + '/delete').then(function (res) {
+    if (!res.data.success) { window.showToast(res.data.error || 'Не удалось удалить', false); return; }
+    STATE.reasons = res.data.reasons;
+    renderReasons(STATE);
+    window.showToast('Причина удалена', true);
+  });
+}
+
+function mcAmnestyAsk() {
+  var uid = $('mcAmnestyId').value.trim();
+  if (!uid) { window.showToast('Выберите участника из подсказок', false); return; }
+  window.confirmAction('Амнистия', 'Обнулить все варны участника ' + uid + '? Откат возможен кнопкой «Откатить».', function () {
+    mcPost(API + '/amnesty', { user_id: uid }).then(function (res) {
+      if (!res.data.success) { window.showToast(res.data.error || 'Не удалось провести амнистию', false); return; }
+      $('mcAmnestyId').value = '';
+      var aid = res.data.amnesty.id;
+      window.uxUndo('Амнистия проведена', function () { mcAmnestyUndo(aid); });
+      mcLoad();
+    });
+  }, { danger: true, okText: 'Обнулить' });
+}
+
+function mcAmnestyUndo(id) {
+  mcPost(API + '/amnesty/' + id + '/undo').then(function (res) {
+    if (!res.data.success) { window.showToast(res.data.error || 'Не удалось откатить', false); return; }
+    window.showToast('Амнистия откачена, варны возвращены', true);
+    mcLoad();
+  });
+}
+
+document.addEventListener('click', function (e) {
+  var d = e.target.closest('[data-reason-del]');
+  if (d) { mcReasonDel(d.dataset.reasonDel); return; }
+  var u = e.target.closest('[data-amnesty-undo]');
+  if (u) { mcAmnestyUndo(u.dataset.amnestyUndo); return; }
+  var k = e.target.closest('[data-kind]');
+  if (k) {
+    KIND = k.dataset.kind;
+    renderReasons(STATE);
+  }
+});
+
+$('mcReasonAddBtn').addEventListener('click', mcReasonAdd);
+$('mcReasonText').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); mcReasonAdd(); } });
+$('mcAmnestyBtn').addEventListener('click', mcAmnestyAsk);
+$('mcAmnestyId').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); mcAmnestyAsk(); } });
+
+async function mcLoad() {
+  try {
+    var r = await fetch(API + '/overview');
+    var d = await r.json();
+    if (!d.success) return;
+    STATE = d;
+    CAN_EDIT = !!d.can_edit;
+    /* тихо: перерисовываем только когда данные реально изменились —
+       никаких «перезагрузок страницы» на ровном месте */
+    if (window.renderIfChanged) {
+      window.renderIfChanged('mod-control', d, function () {
+        if (window.renderSafe) window.renderSafe(function () {
+          renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d);
+        }); else { renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d); }
+      });
+    } else if (window.renderSafe) window.renderSafe(function () {
+      renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d);
+    }); else { renderKpis(d); renderRisk(d); renderRadar(d); renderReasons(d); renderAmnesty(d); }
+  } catch (e) {}
+}
+
+mcLoad();
+if (window.setLiveRefresh) window.setLiveRefresh(mcLoad, 1500);
+</script>
+{% endblock %}

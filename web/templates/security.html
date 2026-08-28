@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}Центр безопасности · Модерация — Hakumo{% endblock %}
+{% block page_title %}Центр безопасности{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Защита</div>
+    <h1>Центр безопасности</h1>
+    <p class="lead">Сводный контур защиты: политики, лаборатория проверок и экспорт отчёта.</p>
+  </div>
+  <div class="page-head-actions">
+    <a class="btn" id="scCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузка CSV</a>
+  </div>
+</div>
+
+<div class="panel" style="margin-bottom:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-shield-halved"></i> Политики защиты</h2>
+    <div class="sub">Каждый контур включается и выключается отдельно.</div></div></div>
+  <div class="panel-body">
+    <div class="grid-3" id="scKpis" style="gap:12px">
+      <div class="empty" style="grid-column:1/-1"><i class="fas fa-circle-notch fa-spin"></i><span>Загружаем контуры</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-bottom:14px">
+  <div class="panel-head" style="display:flex;align-items:center;gap:12px"><div style="flex:1"><h2><i class="fas fa-layer-group"></i> Контур защиты</h2>
+    <div class="sub">Все системы щита в одном месте: анти-альт, антифейк, ИИ-модерация, автофильтр.</div></div>
+    <button type="button" class="btn btn-sm btn-danger" id="scResetAll" title="Погасить все щиты разом — пороги и списки сохранятся"><i class="fas fa-power-off"></i> Выключить всё</button></div>
+  <div class="panel-body">
+    <div class="grid-3" id="scShields" style="gap:12px">
+      <div class="empty" style="grid-column:1/-1"><i class="fas fa-circle-notch fa-spin"></i><span>Собираем щит</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-vial"></i> Лаборатория</h2>
+      <div class="sub">Сухие прогоны без последствий: ссылки, фейк-профили, спам-волны.</div></div></div>
+    <div class="panel-body">
+      <label class="form-group"><span class="form-label">Скан ссылки</span>
+        <div class="row"><input class="form-input" id="scScanText" placeholder="Вставьте текст со ссылкой" style="flex:1"><button type="button" class="btn" id="scScan"><i class="fas fa-link"></i> Проверить</button></div></label>
+      <div class="alert" id="scScanRes" style="display:none"></div>
+
+      <label class="form-group"><span class="form-label">Модель фейк-профиля</span>
+        <div class="row">
+          <input class="form-input" id="scFakeAge" type="number" value="3" min="0" placeholder="возраст, дн" style="max-width:130px">
+          <input class="form-input" id="scFakeName" placeholder="имя профиля" style="flex:1">
+          <select class="form-input" id="scFakeAva" style="max-width:180px"><option value="0">свой аватар</option><option value="1">дефолтный аватар</option></select>
+          <button type="button" class="btn" id="scFake"><i class="fas fa-user-secret"></i> Оценить</button>
+        </div></label>
+      <div id="scFakeRes"></div>
+
+      <label class="form-group"><span class="form-label">Симуляция спам-волны</span>
+        <div class="row">
+          <input class="form-input" id="scSpamText" placeholder="текст повторяемого сообщения" style="flex:1">
+          <input class="form-input" id="scSpamN" type="number" value="5" min="1" style="max-width:90px">
+          <button type="button" class="btn" id="scSpam"><i class="fas fa-water"></i> Прогнать</button>
+        </div></label>
+      <div id="scSpamRes"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-shield-virus"></i> Правила и новые аккаунты</h2>
+      <div class="sub">Списки вредоносных доменов и паттернов, политика новичков.</div></div></div>
+    <div class="panel-body">
+      <div id="scRules"></div>
+      <div id="scNewPanel" {% if not can_edit %}hidden{% endif %} style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <div class="section-title"><i class="fas fa-user-clock"></i> Политика новых аккаунтов</div>
+        <div class="form-row">
+          <label class="form-group"><span class="form-label">Возраст аккаунта, дней</span><input class="form-input" id="scDays" type="number" min="0"></label>
+          <label class="form-group"><span class="form-label">Действие</span>
+            <select class="form-input" id="scAction">
+              <option value="alert">Только тревога</option>
+              <option value="kick">Кик</option>
+              <option value="ban">Бан</option>
+            </select></label>
+          <button type="button" class="btn btn-primary" id="scNewSave" style="align-self:flex-end"><i class="fas fa-save"></i> Сохранить</button>
+        </div>
+        <div class="hint" id="scNewMsg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/security-center';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function post(path, body, cb) {
+  fetch(API + path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function (r) { return r.json(); }).then(cb)
+    .catch(function () { cb({ success: false, error: 'Сеть моргнула — попробуйте ещё раз' }); });
+}
+
+function scoreTone(s) { return s >= 0.7 ? 'danger' : (s >= 0.3 ? 'tone-warning' : 'ok'); }
+
+function loadOverview() {
+  fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    var c = d.cfg;
+    $('scKpis').innerHTML = c.features.map(function (f) {
+      return '<div class="card" style="padding:14px">' +
+        '<div class="row"><i class="fas fa-shield-halved" style="color:' + (f.enabled ? 'var(--ok)' : 'var(--text-3)') + '"></i>' +
+        '<b style="flex:1">' + esc(f.label) + '</b>' +
+        '<span class="badge ' + (f.enabled ? 'ok' : 'neutral') + '">' + (f.enabled ? 'Активно' : 'На паузе') + '</span></div>' +
+        (CAN_EDIT ? '<div class="row" style="margin-top:10px"><button type="button" class="btn btn-sm ' + (f.enabled ? '' : 'btn-primary') + '" data-sc-toggle="' + esc(f.key) + '" data-sc-val="' + (!f.enabled) + '">' +
+          (f.enabled ? '<i class="fas fa-pause"></i> Приостановить' : '<i class="fas fa-play"></i> Запустить') + '</button></div>' : '') +
+        '</div>';
+    }).join('');
+    var sh = d.shields || [];
+    $('scShields').innerHTML = sh.map(function (sf) {
+      return '<div class="card" style="padding:14px">' +
+        '<div class="row"><i class="fas fa-shield" style="color:' + (sf.enabled ? 'var(--ok)' : 'var(--text-3)') + '"></i>' +
+        '<b style="flex:1">' + esc(sf.label) + '</b>' +
+        '<span class="badge ' + (sf.enabled ? 'ok' : 'neutral') + '">' + (sf.enabled ? 'Активно' : 'На паузе') + '</span></div>' +
+        '<div class="muted" style="font-size:12px;margin-top:6px">' + esc(sf.hint || '') + '</div>' +
+        '<div class="row" style="margin-top:10px">' +
+        (CAN_EDIT ? '<button type="button" class="btn btn-sm ' + (sf.enabled ? '' : 'btn-primary') + '" data-sc-toggle="' + esc(sf.key) + '" data-sc-val="' + (!sf.enabled) + '">' +
+          (sf.enabled ? '<i class="fas fa-pause"></i> Приостановить' : '<i class="fas fa-play"></i> Запустить') + '</button>' : '') +
+        '<a class="btn btn-sm" href="' + esc(sf.href) + '"><i class="fas fa-gear"></i> Настроить</a></div>' +
+        '</div>';
+    }).join('') || '<div class="empty" style="grid-column:1/-1"><span>Нет данных</span></div>';
+    if (CAN_EDIT) {
+      $('scNewPanel').hidden = false;
+      $('scDays').value = c.new_account_days;
+      $('scAction').value = c.new_account_action;
+    }
+    var r = d.rules;
+    $('scRules').innerHTML =
+      '<div class="section-title">Вредоносные домены (' + r.domains_total + ')</div>' +
+      '<div class="chip-row" style="margin-bottom:14px">' + (r.domains.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') || '<span class="muted">нет</span>') + '</div>' +
+      '<div class="section-title">Паттерны подозрительных имён (' + r.patterns_total + ')</div>' +
+      '<div class="chip-row">' + (r.name_patterns.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') || '<span class="muted">нет</span>') + '</div>';
+  }).catch(function () {});
+}
+
+document.addEventListener('click', function (e) {
+  var t = e.target.closest('[data-sc-toggle]');
+  if (t) {
+    post('/toggle', { feature: t.dataset.scToggle, enabled: t.dataset.scVal === 'true' }, function (res) {
+      if (!res.success) { window.showToast(res.error || 'Ошибка', false); return; }
+      window.showToast('Обновлено', true);
+      loadOverview();
+    });
+    return;
+  }
+  var rst = e.target.closest('#scResetAll');
+  if (rst) {
+    if (!window.confirm('Выключить ВСЮ защиту сервера? Погаснут только тумблеры — пороги, списки и история сохранятся.')) return;
+    post('/protection-reset', {}, function (res) {
+      if (!res.success) { window.showToast(res.error || 'Ошибка', false); return; }
+      window.showToast('Вся защита выключена — включай нужное сам (' + (res.count || 0) + ' систем)', true);
+      loadOverview();
+    });
+  }
+});
+
+$('scNewSave').addEventListener('click', function () {
+  var m = $('scNewMsg');
+  post('/newaccount', { days: $('scDays').value, action: $('scAction').value }, function (res) {
+    m.className = 'hint ' + (res.success ? '' : 'error');
+    m.textContent = res.success ? (res.message + ' — сохранено') : (res.error || 'Ошибка');
+  });
+});
+
+$('scScan').addEventListener('click', function () {
+  var box = $('scScanRes');
+  post('/scan', { text: $('scScanText').value }, function (res) {
+    box.style.display = '';
+    if (!res.success) { box.className = 'alert alert-err'; box.innerHTML = esc(res.error || 'Ошибка'); return; }
+    if (res.malicious) {
+      box.className = 'alert alert-err';
+      box.innerHTML = '<div><b>Вредоносная ссылка!</b><br>Найденные домены: ' +
+        res.domains.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join(' ') + '</div>';
+    } else {
+      box.className = 'alert alert-ok';
+      box.innerHTML = '<div><b>Ссылка чиста</b> — в списках вредоносных не найдена.' +
+        (res.extracted && res.extracted.length ? '<br>Домены в тексте: ' + res.extracted.map(esc).join(', ') : '') + '</div>';
+    }
+  });
+});
+
+$('scFake').addEventListener('click', function () {
+  var box = $('scFakeRes');
+  post('/fake-score', {
+    age_days: $('scFakeAge').value,
+    name: $('scFakeName').value,
+    avatar_default: $('scFakeAva').value === '1'
+  }, function (res) {
+    if (!res.success) { box.innerHTML = '<div class="alert alert-err">' + esc(res.error || 'Ошибка') + '</div>'; return; }
+    var s = res.score;
+    box.innerHTML = '<div class="alert" style="align-items:center"><span class="badge ' + scoreTone(s) + '" style="font-size:13px;padding:4px 12px">' + s + '</span>' +
+      '<b>риск фейка</b> ' + (res.suspicious_name ? '· имя в чёрных паттернах' : '') +
+      (res.warnings.length
+        ? '<div style="width:100%;margin-top:6px">' + res.warnings.map(function (w) { return '<div class="hint error">' + esc(w) + '</div>'; }).join('') + '</div>'
+        : '<div class="hint" style="width:100%">замечаний нет — профиль выглядит обычным</div>') + '</div>';
+  });
+});
+
+$('scSpam').addEventListener('click', function () {
+  var box = $('scSpamRes');
+  post('/spam-sim', { content: $('scSpamText').value, times: $('scSpamN').value }, function (res) {
+    if (!res.success) { box.innerHTML = '<div class="alert alert-err">' + esc(res.error || 'Ошибка') + '</div>'; return; }
+    var maxH = 60;
+    var bars = res.trail.map(function (t, i) {
+      var h = Math.max(3, Math.round(t.score * maxH));
+      return '<div title="#' + (i + 1) + ': ' + t.score + '" style="width:10px;height:' + h + 'px;border-radius:3px;background:var(--ac);opacity:' + (0.35 + 0.65 * t.score) + '"></div>';
+    }).join('');
+    var f = res.final;
+    box.innerHTML = '<div class="alert" style="align-items:center"><span class="badge ' + scoreTone(f.score) + '" style="font-size:13px;padding:4px 12px">' + f.score + '</span>' +
+      '<b>после ' + res.trail.length + ' сообщений</b> — сигналы: ' + esc(f.reason) +
+      '<div class="row" style="width:100%;margin-top:8px;align-items:flex-end;gap:3px">' + bars + '</div></div>';
+  });
+});
+
+$('scCsv').addEventListener('click', function (e) { e.preventDefault(); location.href = API + '/export.csv'; });
+
+loadOverview();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadOverview(); } catch (e) {} }, 1500);
+</script>
+{% endblock %}

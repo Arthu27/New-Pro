@@ -2,8 +2,12 @@
 Сервис автоматического закрытия неактивных тикетов
 """
 
+from logger import get_logger
+
+_log = get_logger("auto_close_service")
+
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import logging
 import discord
@@ -32,8 +36,8 @@ class AutoCloseService:
             self.task.cancel()
             try:
                 await self.task
-            except asyncio.CancelledError:
-                pass
+            except asyncio.CancelledError as _ex:
+                _log.debug("stop(): подавлено: %s", _ex)
             logger.info("[AutoClose] Фоновая задача остановлена")
     
     async def _auto_close_loop(self):
@@ -53,7 +57,11 @@ class AutoCloseService:
     
     async def _check_inactive_tickets(self):
         """Проверить все тикеты на неактивность"""
-        cutoff_time = datetime.utcnow() - timedelta(hours=self.inactive_hours)
+        # cutoff — aware-UTC: message.created_at у Discord всегда aware.
+        # Прежний вариант с replace(tzinfo=None) падал при сравнении
+        # («can't compare offset-naive and offset-aware datetimes»)
+        # и тикет не проверялся вовсе.
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=self.inactive_hours)
         closed_count = 0
         
         for guild in self.bot.guilds:
@@ -79,8 +87,11 @@ class AutoCloseService:
                     if not last_message:
                         continue
                     
-                    # Проверить время последнего сообщения
-                    if last_message.created_at < cutoff_time:
+                    # Проверить время последнего сообщения (легаси-naive считаем UTC)
+                    created = last_message.created_at
+                    if getattr(created, 'tzinfo', None) is None:
+                        created = created.replace(tzinfo=timezone.utc)
+                    if created < cutoff_time:
                         # Тикет неактивен - закрыть
                         await self._close_inactive_ticket(channel, last_message)
                         closed_count += 1
@@ -107,13 +118,13 @@ class AutoCloseService:
             embed = discord.Embed(
                 title="⏰ Тикет закрыт автоматически",
                 description=(
-                    f"Этот тикет был закрыт из-за неактивности.\n\n"
+                    "Этот тикет был закрыт из-за неактивности.\n\n"
                     f"**Последнее сообщение:** {last_message.created_at.strftime('%d.%m.%Y %H:%M')}\n"
                     f"**Неактивен:** более {self.inactive_hours} часов\n\n"
-                    f"Если ваша проблема не решена, создайте новый тикет."
+                    "Если ваша проблема не решена, создайте новый тикет."
                 ),
                 color=0xF39C12,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
             
             await channel.send(embed=embed)
@@ -123,8 +134,8 @@ class AutoCloseService:
             if channel.topic and "Ticket sahibi:" in channel.topic:
                 try:
                     owner_id = int(channel.topic.split("Ticket sahibi:")[-1].strip())
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    _log.debug("_close_inactive_ticket(): подавлено: %s", _ex)
             
             # Отправить DM владельцу
             if owner_id:
@@ -135,10 +146,10 @@ class AutoCloseService:
                         description=(
                             f"Ваш тикет **{channel.name}** был автоматически закрыт "
                             f"из-за неактивности (более {self.inactive_hours} часов).\n\n"
-                            f"Если проблема не решена, создайте новый тикет."
+                            "Если проблема не решена, создайте новый тикет."
                         ),
                         color=0xF39C12,
-                        timestamp=datetime.utcnow()
+                        timestamp=datetime.now(timezone.utc)
                     )
                     await owner.send(embed=dm_embed)
                 except Exception as e:
@@ -146,7 +157,9 @@ class AutoCloseService:
             
             # Сохранить транскрипт
             messages = []
+            full_msgs = []
             async for msg in channel.history(limit=200, oldest_first=True):
+                full_msgs.append(msg)
                 if not msg.author.bot:
                     messages.append(
                         f"[{msg.created_at.strftime('%d.%m.%Y %H:%M:%S')}] "
@@ -162,14 +175,30 @@ class AutoCloseService:
                     title=" Тикет закрыт автоматически (неактивность)",
                     description=f"**Канал:** {channel.name}\n**Сообщений:** {len(messages)}",
                     color=0xF39C12,
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(timezone.utc)
                 )
                 file = discord.File(
                     fp=io.StringIO(transcript),
                     filename=f"{channel.name}_auto_closed.txt"
                 )
                 await log_channel.send(embed=log_embed, file=file)
-            
+
+            # Транскрипт — в хранилище панели (поиск/просмотр/экспорт на /transcripts)
+            try:
+                from services import transcript_store as _tstore
+                tstate = cog._get_ticket_state(channel.guild.id, channel.id)
+                member = channel.guild.get_member(owner_id) if owner_id else None
+                _tstore.record(
+                    guild_id=channel.guild.id, channel_id=channel.id, channel_name=channel.name,
+                    user_id=owner_id, user_name=member.display_name if member else None,
+                    category=tstate.get('category'), status=tstate.get('status'),
+                    closed_by='Автозакрытие · неактивность',
+                    opened_at=getattr(channel, 'created_at', None),
+                    messages=[{'timestamp': m.created_at, 'author': m.author.display_name,
+                               'content': m.content, 'is_bot': m.author.bot} for m in full_msgs])
+            except Exception as _tex:
+                logger.debug(f"[AutoClose] транскрипт в файл не записался: {_tex}")
+
             # Очистить состояние
             cog._delete_ticket_state(channel.guild.id, channel.id)
             

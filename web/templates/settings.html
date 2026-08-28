@@ -1,86 +1,97 @@
 {% extends "base.html" %}
-{% block title %}Настройки - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-cog"></i> Настройки{% endblock %}
+{% block title %}Настройки сервера — Панель Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-cog"></i> Настройки сервера{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Настройки</span>
-    </div>
-    <h1>Настройки</h1>
-    <p>Глобальные настройки панели и сервера.</p>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Настройки <span class="sep">·</span> Сервер</div>
+    <h1>Настройки сервера</h1>
+    <p class="lead">Состояние бота, защита и служебные действия. Всё живое, всё настраивается.</p>
   </div>
 </div>
-{% endblock %}
 
+<style>
+.set-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.set-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:20px}
+.set-head{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.set-icon{width:42px;height:42px;border-radius:11px;background:var(--ac-soft);color:var(--ac);border:1px solid var(--ac-line);display:flex;align-items:center;justify-content:center;font-size:16px}
+.set-title{font-weight:700;color:var(--text);font-size:15px}
+.set-note{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));margin-top:10px;line-height:1.5}
+.action-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.set-link{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ac);text-decoration:none;margin-top:10px}
+.set-link:hover{text-decoration:underline}
+</style>
 
-
-<div class="settings-grid">
-  <!-- Bot Статусu -->
-  <div class="set-card" >
+<div class="set-grid">
+  <!-- Статус бота -->
+  <div class="set-card">
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-robot"></i></div>
-      <div class="set-title">Bot Статусu</div>
+      <div class="set-title">Статус бота</div>
     </div>
     <div class="status-row">
       <span class="dot status-on" id="bot-dot"></span>
       <span id="bot-status">Загрузка...</span>
     </div>
     <div class="kv"><span class="kv-key">Сервер</span><span class="kv-val" id="stat-guilds">-</span></div>
-    <div class="kv"><span class="kv-key">Пользователь</span><span class="kv-val" id="stat-users">-</span></div>
-    <div class="kv"><span class="kv-key">Ping</span><span class="kv-val" id="stat-ping">-</span></div>
+    <div class="kv"><span class="kv-key">Пользователей</span><span class="kv-val" id="stat-users">-</span></div>
+    <div class="kv"><span class="kv-key">Пинг</span><span class="kv-val" id="stat-ping">-</span></div>
     <div class="action-row">
-      <button class="btn btn-primary" id="btn-sync" type="button"><i class="fas fa-sync"></i> Sync</button>
-      <button class="btn btn-warn" id="btn-restart" type="button"><i class="fas fa-redo"></i> Restart</button>
+      <button class="btn btn-primary" id="btn-sync" type="button" aria-label="Синхронизировать команды" title="Синхронизировать слэш-команды с Discord"><i class="fas fa-arrows-rotate"></i> Синхронизировать</button>
+      <button class="btn btn-danger" id="btn-restart" type="button" aria-label="Перезапустить бота" title="Перезапустить бота (несколько секунд)"><i class="fas fa-power-off"></i> Перезапуск</button>
     </div>
+    <div class="set-note">«Синхронизировать» нужно, если новые команды не появляются в Discord. Перезапуск используйте, только если бот завис.</div>
   </div>
 
-  <!-- Gюvenlik -->
-  <div class="set-card" >
+  <!-- Защита сервера -->
+  <div class="set-card">
     <div class="set-head">
-      <div class="set-icon"><i class="fas fa-shield-alt"></i></div>
-      <div class="set-title">Gюvenlik</div>
+      <div class="set-icon"><i class="fas fa-shield-halved"></i></div>
+      <div class="set-title">Защита сервера</div>
     </div>
     <div class="status-row">
-      <span class="dot status-on" id="sec-dot"></span>
-      <span>Tehlike endeksi: <strong id="threat-val">-</strong>/100</span>
+      <span class="dot status-on" id="threat-dot"></span>
+      <span>Индекс угрозы: <strong id="threat-val">-</strong>/100</span>
     </div>
-    <div class="kv"><span class="kv-key">Kпоискntina</span><span class="kv-val" id="lockdown-state">-</span></div>
+    <div class="kv"><span class="kv-key">Локдаун</span><span class="kv-val" id="lockdown-state">-</span></div>
     <div class="action-row">
-      <button class="btn btn-warn" id="btn-lockdown" type="button"><i class="fas fa-lock"></i> Kпоискntina</button>
+      <button class="btn btn-primary" id="btn-lockdown" type="button" aria-label="Переключить локдаун" title="Экстренно закрыть/открыть сервер"><i class="fas fa-house-lock"></i> Переключить локдаун</button>
     </div>
+    <div class="set-note">Детали — на страницах «Щит сервера», «Центр безопасности» и «Локдаун».</div>
+    <a class="set-link" href="/guardian"><i class="fas fa-shield-heart"></i> Открыть Щит сервера</a>
+    <a class="set-link" href="/security"><i class="fas fa-user-secret"></i> Центр безопасности</a>
   </div>
 
-  <!-- Panel Gюvenlik -->
-  <div class="set-card" >
+  <!-- Панель -->
+  <div class="set-card">
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-user-shield"></i></div>
-      <div class="set-title">Panel</div>
+      <div class="set-title">Панель</div>
     </div>
     <div class="status-row">
       <span class="dot status-on"></span>
-      <span>Session: Cookie (gюvenli)</span>
+      <span>Сессия: Cookie (безопасно)</span>
     </div>
-    <div class="kv"><span class="kv-key">Длительность</span><span class="kv-val">30 gюn</span></div>
-    <div class="kv"><span class="kv-key">CSP</span><span class="kv-val">Активный</span></div>
+    <div class="kv"><span class="kv-key">Длительность</span><span class="kv-val">30 дней</span></div>
+    <div class="kv"><span class="kv-key">CSP</span><span class="kv-val">Активна</span></div>
     <div class="action-row">
-      <button class="btn btn-danger" id="btn-logout" type="button"><i class="fas fa-sign-out-alt"></i> Выход</button>
+      <button class="btn btn-danger" id="btn-logout" type="button" aria-label="Выйти из панели" title="Выйти из панели"><i class="fas fa-sign-out-alt"></i> Выйти</button>
     </div>
+    <div class="set-note">Кто что видит в меню — на странице «Меню панели», права команд — в «Права команд».</div>
   </div>
 
-  <!-- Cloudflare -->
-  <div class="set-card" >
+  <!-- Туннель -->
+  <div class="set-card">
     <div class="set-head">
       <div class="set-icon"><i class="fas fa-globe"></i></div>
-      <div class="set-title">Tюnel</div>
+      <div class="set-title">Туннель</div>
     </div>
     <div class="status-row">
       <span class="dot" id="tunnel-dot"></span>
       <span id="tunnel-status">Загрузка...</span>
     </div>
-    <div id="tunnel-url-wrap"   style="margin-top: 8px;" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='✓ Kopyalandи';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
+    <div id="tunnel-url-wrap" style="margin-top: 8px;" onclick="navigator.clipboard.writeText(this.textContent);this.textContent='Скопировано';setTimeout(()=>this.textContent=this.dataset.url,1500)" data-url=""></div>
+    <div class="set-note">Публичный адрес панели (Cloudflare). Нажмите на ссылку — скопируется.</div>
   </div>
 </div>
 
@@ -88,7 +99,6 @@
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
-  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   async function loadStats() {
     try {
@@ -101,8 +111,8 @@
         $('bot-dot').className = 'dot status-on';
       }
       $('stat-guilds').textContent = d.guilds != null ? d.guilds : '-';
-      $('stat-users').textContent = (d.users || 0).toLocaleString();
-      $('stat-ping').textContent = (d.latency || 0) + 'ms';
+      $('stat-users').textContent = (d.users || 0).toLocaleString('ru-RU');
+      $('stat-ping').textContent = (d.latency || 0) + ' мс';
     } catch (e) {
       $('bot-status').textContent = 'ОФЛАЙН';
       $('bot-dot').className = 'dot status-off';
@@ -114,26 +124,26 @@
       var d = await fetch('/api/security/threat-index').then(function (r) { return r.json(); });
       if (!d || !d.success) return;
       $('threat-val').textContent = d.threat_score || 15;
-      $('lockdown-state').textContent = d.lockdown_active ? 'АКТИВЕН' : 'Kapali';
-      $('lockdown-state').style.color = d.lockdown_active ? '#ef4444' : '#4ade80';
-    } catch (e) { /* sessiz */ }
+      $('lockdown-state').textContent = d.lockdown_active ? 'АКТИВЕН' : 'ВЫКЛЮЧЕН';
+      $('lockdown-state').style.color = d.lockdown_active ? 'var(--err)' : 'var(--ok)';
+    } catch (e) { /* индекс угрозы не критичен */ }
   }
 
   async function loadTunnel() {
     try {
       var d = await fetch('/api/tunnel-url').then(function (r) { return r.json(); });
       if (d && d.url) {
-        $('tunnel-status').textContent = 'Cloudflare Активный';
+        $('tunnel-status').textContent = 'Cloudflare активен';
         $('tunnel-dot').className = 'dot status-on';
         var w = $('tunnel-url-wrap');
         w.style.display = 'block';
         w.textContent = d.url;
         w.dataset.url = d.url;
       } else {
-        $('tunnel-status').textContent = 'Kapali';
+        $('tunnel-status').textContent = 'Выключен';
         $('tunnel-dot').className = 'dot status-off';
       }
-    } catch (e) { /* sessiz */ }
+    } catch (e) { /* туннель не критичен */ }
   }
 
   async function doSync() {
@@ -142,30 +152,35 @@
     try {
       var d = await fetch('/api/bot/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then(function (r) { return r.json(); });
       if (d.success) {
-        btn.textContent = '✓ Synced';
-        setTimeout(function () { btn.innerHTML = '<i class="fas fa-sync"></i> Sync'; }, 2000);
+        btn.textContent = 'Синхронизировано';
+        setTimeout(function () {
+          btn.innerHTML = '<i class="fas fa-arrows-rotate"></i> Синхронизировать';
+        }, 2000);
+      } else {
+        window.showToast(d.error || 'Не удалось синхронизировать', false);
       }
-    } catch (e) { /* sessiz */ }
+    } catch (e) { window.showToast('Ошибка сети', false); }
     btn.disabled = false;
   }
 
   async function doRestart() {
-    if (!confirm('Botu новыйden baшlatmak istediгine emin misin?')) return;
-    try {
-      await fetch('/api/bot/restart', { method: 'POST' });
-    } catch (e) { /* sessiz */ }
+    window.askConfirm('Перезапустить бота', 'Перезапустить бота? Это прервёт работу на несколько секунд.', function () {
+      fetch('/api/bot/restart', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d && d.success) window.showToast('Команда перезапуска отправлена', true);
+        else window.showToast((d && d.error) || 'Не удалось перезапустить', false);
+      }).catch(function () { window.showToast('Ошибка сети', false); });
+    }, { icon_fa: 'fa-arrows-rotate', okText: 'Перезапустить', danger: true });
   }
 
   async function doLockdown() {
     try {
       await fetch('/api/security/toggle-lockdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       loadThreat();
-    } catch (e) { /* sessiz */ }
+    } catch (e) { /* сеть */ }
   }
 
   function doLogout() {
-    if (!confirm('Чиkmak istediгine emin misin?')) return;
-    window.location.href = '/logout';
+    window.askConfirm('Выход', 'Вы уверены, что хотите выйти из панели?', function () { window.location.href = '/logout'; }, { okText: 'Выйти', icon_fa: 'fa-right-from-bracket' });
   }
 
   function bind() {

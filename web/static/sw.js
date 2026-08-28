@@ -1,8 +1,14 @@
-﻿// Aether Panel Service Worker
-const CACHE_NAME = 'Aether-v1';
+// Hakumo Panel Service Worker (Light Edition)
+const CACHE_NAME = 'Hakumo-light-v5';
 const STATIC_ASSETS = [
   '/static/style.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+  '/static/app.js',
+  '/static/pickers.js',
+  '/static/api-guard.js',
+  '/static/websocket-client.js',
+  '/static/vendor/fontawesome/css/all.min.css',
+  '/static/vendor/fonts/fonts.css',
+  '/static/brand/emblem-dragon.png'
 ];
 
 self.addEventListener('install', event => {
@@ -22,11 +28,9 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Только static asset'leri cache'le, API желание каждый время network'ten al
   if (event.request.url.includes('/api/') || event.request.method !== 'GET') {
     return;
   }
-
   if (event.request.url.includes('/static/')) {
     event.respondWith(
       caches.match(event.request).then(cached => cached || fetch(event.request))

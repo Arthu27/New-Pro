@@ -2,6 +2,11 @@
 Gamification
 Система геймификации (значки, очки, уровни)
 """
+
+from logger import get_logger
+
+_log = get_logger("gamification")
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -72,8 +77,8 @@ class BadgeSystem:
             try:
                 with open(self.user_badges_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_user_badges(): подавлено: %s", _ex)
         
         return {}
     
@@ -84,14 +89,15 @@ class BadgeSystem:
             json.dump(self.user_badges, f, ensure_ascii=False, indent=2)
     
     def award_badge(self, user_id: str, badge_id: str) -> Optional[Dict[str, Any]]:
-        """Значок ver"""
+        """Выдать значок"""
+        user_id = str(user_id)
         if badge_id not in self.BADGES:
             return None
         
         if user_id not in self.user_badges:
             self.user_badges[user_id] = []
         
-        # Zaten varsa verme
+        # Не выдавать, если уже есть
         if any(b['badge_id'] == badge_id for b in self.user_badges[user_id]):
             return None
         
@@ -111,16 +117,16 @@ class BadgeSystem:
         return awarded_badge
     
     def get_user_badges(self, user_id: str) -> List[Dict[str, Any]]:
-        """Пользователь rozetlerini al"""
-        return self.user_badges.get(user_id, [])
+        """Значки пользователя"""
+        return self.user_badges.get(str(user_id), [])
     
     def get_total_points(self, user_id: str) -> int:
-        """Всего очкиlarы al"""
+        """Получить общие очки"""
         badges = self.user_badges.get(user_id, [])
         return sum(badge.get('points', 0) for badge in badges)
     
     def check_and_award_badges(self, user_id: str, stats: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Статистикаe по rozetleri проверить et ve ver"""
+        """Проверить и выдать значки по статистике"""
         awarded = []
         
         # Иlk ticket
@@ -174,7 +180,7 @@ class BadgeSystem:
         return awarded
     
     def get_all_badges(self) -> Dict[str, Any]:
-        """Все rozetleri al"""
+        """Все значки"""
         return self.BADGES.copy()
 
 
@@ -191,8 +197,8 @@ class PointsSystem:
             try:
                 with open(self.user_points_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_user_points(): подавлено: %s", _ex)
         
         return {}
     
@@ -203,7 +209,8 @@ class PointsSystem:
             json.dump(self.user_points, f, ensure_ascii=False, indent=2)
     
     def add_points(self, user_id: str, points: int, reason: str) -> Dict[str, Any]:
-        """Очки добавить"""
+        """Добавить очки"""
+        user_id = str(user_id)
         if user_id not in self.user_points:
             self.user_points[user_id] = {
                 'total_points': 0,
@@ -227,16 +234,42 @@ class PointsSystem:
         }
     
     def get_points(self, user_id: str) -> int:
-        """Очкиlarы al"""
-        return self.user_points.get(user_id, {}).get('total_points', 0)
+        """Получить очки"""
+        return self.user_points.get(str(user_id), {}).get('total_points', 0)
     
     def get_points_history(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
-        """Очки geчmiшini al"""
-        history = self.user_points.get(user_id, {}).get('history', [])
+        """Получить историю очков"""
+        history = self.user_points.get(str(user_id), {}).get('history', [])
         return history[-limit:]
     
+    DAILY_REWARD = 100
+    DAILY_COOLDOWN_HOURS = 24
+
+    def can_claim_daily(self, user_id: str) -> tuple:
+        """Можно ли забрать ежедневную награду. Возвращает (можно, оставшееся время)."""
+        last = self.user_points.get(str(user_id), {}).get('last_daily')
+        if not last:
+            return True, timedelta(0)
+        try:
+            last_dt = datetime.fromisoformat(last)
+        except Exception:
+            return True, timedelta(0)
+        cooldown = timedelta(hours=self.DAILY_COOLDOWN_HOURS)
+        elapsed = datetime.now() - last_dt
+        if elapsed >= cooldown:
+            return True, timedelta(0)
+        return False, cooldown - elapsed
+
+    def claim_daily(self, user_id: str) -> int:
+        """Выдать ежедневную награду, вернуть количество полученных очков."""
+        user_id = str(user_id)
+        self.add_points(user_id, self.DAILY_REWARD, 'daily')
+        self.user_points[user_id]['last_daily'] = datetime.now().isoformat()
+        self._save_user_points()
+        return self.DAILY_REWARD
+
     def get_leaderboard(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Lider tablosunu al"""
+        """Таблица лидеров по очкам"""
         leaderboard = [
             {
                 'user_id': user_id,
@@ -267,7 +300,7 @@ class LevelSystem:
         self.points_system = points_system
     
     def get_level(self, user_id: str) -> Dict[str, Any]:
-        """Уровеньyi al"""
+        """Получить уровень"""
         points = self.points_system.get_points(user_id)
         
         current_level = 1
@@ -278,7 +311,7 @@ class LevelSystem:
         
         level_data = self.LEVELS[current_level]
         
-        # Sonraki уровень
+        # Следующий уровень
         next_level = current_level + 1
         next_level_data = self.LEVELS.get(next_level)
         
@@ -302,12 +335,12 @@ class LevelSystem:
         }
     
     def get_all_levels(self) -> Dict[int, Dict[str, Any]]:
-        """Все уровеньleri al"""
+        """Получить все уровни"""
         return self.LEVELS.copy()
 
 
 class Leaderboard:
-    """Lider tablosu"""
+    """Таблица лидеров"""
     
     def __init__(self, points_system: PointsSystem, badge_system: BadgeSystem):
         self.points_system = points_system
@@ -315,7 +348,7 @@ class Leaderboard:
         self.leaderboard_file = 'data/leaderboard_cache.json'
     
     def get_overall_leaderboard(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """Genel lider tablosunu al"""
+        """Общая таблица лидеров"""
         points_leaderboard = self.points_system.get_leaderboard(limit)
         
         leaderboard = []
@@ -327,48 +360,78 @@ class Leaderboard:
                 'user_id': user_id,
                 'total_points': entry['total_points'],
                 'badge_count': len(badges),
-                'badges': badges[:3]  # Иlk 3 rozet
+                'badges': badges[:3]  # первые 3 значка
             })
         
         return leaderboard
     
     def get_weekly_leaderboard(self, limit: int = 20) -> List[Dict[str, Any]]:
-        """Еженедельный lider tablosunu al"""
-        # Basit implementasyon - gerчek uygulamada еженедельный очки hesaplanacak
+        """Недельная таблица лидеров"""
+        # Упрощённо: отдаём общие очки (без разбивки по неделе)
         return self.get_overall_leaderboard(limit)
     
+    def get_top_users(self, kind: str = 'points', limit: int = 10) -> List[Dict[str, Any]]:
+        """Топ пользователей: 'points' — по очкам, 'badges' — по числу значков, 'level' — по уровню.
+        user_id приводится к int (для guild.get_member)."""
+        def _uid(raw):
+            return int(raw) if str(raw).isdigit() else raw
+
+        if kind == 'badges':
+            rows = [{'user_id': _uid(uid), 'badges': len(badges)}
+                    for uid, badges in self.badge_system.user_badges.items()
+                    if str(uid).isdigit()]
+            rows.sort(key=lambda x: x['badges'], reverse=True)
+            return rows[:limit]
+
+        if kind == 'level':
+            rows = []
+            for entry in self.points_system.get_leaderboard(limit * 3):
+                pts = entry['total_points']
+                lvl = 1
+                for level, data in sorted(LevelSystem.LEVELS.items(), reverse=True):
+                    if pts >= data['min_points']:
+                        lvl = level
+                        break
+                rows.append({'user_id': _uid(entry['user_id']), 'level': lvl, 'points': pts})
+            rows.sort(key=lambda x: (x['level'], x['points']), reverse=True)
+            return rows[:limit]
+
+        return [{'user_id': _uid(e['user_id']), 'points': e['total_points']}
+                for e in self.points_system.get_leaderboard(limit)]
+
     def get_monthly_leaderboard(self, limit: int = 20) -> List[Dict[str, Any]]:
-        """Aylыk lider tablosunu al"""
-        # Basit implementasyon - gerчek uygulamada aylыk очки hesaplanacak
+        """Получить месячную таблицу лидеров"""
+        # Упрощённо: отдаём общие очки (без разбивки по месяцу)
         return self.get_overall_leaderboard(limit)
 
 
 class StreakTracker:
-    """Seri takipчisi"""
+    """Трекер серий"""
     
     def __init__(self):
         self.streaks_file = 'data/user_streaks.json'
         self.streaks = self._load_streaks()
     
     def _load_streaks(self) -> Dict[str, Any]:
-        """Serileri загрузить"""
+        """Загрузить серии"""
         if os.path.exists(self.streaks_file):
             try:
                 with open(self.streaks_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_streaks(): подавлено: %s", _ex)
         
         return {}
     
     def _save_streaks(self):
-        """Serileri сохранить"""
+        """Сохранить серии"""
         os.makedirs('data', exist_ok=True)
         with open(self.streaks_file, 'w', encoding='utf-8') as f:
             json.dump(self.streaks, f, ensure_ascii=False, indent=2)
     
     def update_streak(self, user_id: str) -> Dict[str, Any]:
-        """Serхорошо обновить"""
+        """Обновить серию"""
+        user_id = str(user_id)
         today = datetime.now().date()
         
         if user_id not in self.streaks:
@@ -386,19 +449,19 @@ class StreakTracker:
             days_diff = (today - last_date).days
             
             if days_diff == 0:
-                # Aynы день, seri deгiшmez
+                # Тот же день — серия не меняется
                 pass
             elif days_diff == 1:
-                # Ertesi день, seri artar
+                # Следующий день — серия растёт
                 streak_data['current_streak'] += 1
             else:
-                # 1 деньden fazla, seri сброситьnыr
+                # Перерыв больше дня — серия сбрасывается
                 streak_data['current_streak'] = 1
         else:
-            # Иlk aktivite
+            # Первая активность
             streak_data['current_streak'] = 1
         
-        # En uzun serхорошо обновить
+        # Обновить рекорд серии
         if streak_data['current_streak'] > streak_data['longest_streak']:
             streak_data['longest_streak'] = streak_data['current_streak']
         
@@ -412,7 +475,8 @@ class StreakTracker:
         }
     
     def get_streak(self, user_id: str) -> Dict[str, Any]:
-        """Serхорошо al"""
+        """Получить серию"""
+        user_id = str(user_id)
         if user_id not in self.streaks:
             return {
                 'current_streak': 0,
@@ -421,7 +485,7 @@ class StreakTracker:
         
         streak_data = self.streaks[user_id]
         
-        # Serхорошо проверить et
+        # Проверить актуальность серии
         last_activity = streak_data.get('last_activity')
         if last_activity:
             last_date = datetime.fromisoformat(last_activity).date()
@@ -429,7 +493,7 @@ class StreakTracker:
             days_diff = (today - last_date).days
             
             if days_diff > 1:
-                # Seri bozulmuш
+                # Серия прервана
                 return {
                     'current_streak': 0,
                     'longest_streak': streak_data['longest_streak']
@@ -441,7 +505,7 @@ class StreakTracker:
         }
 
 
-# Global instances
+# Глобальные экземпляры
 badge_system = BadgeSystem()
 points_system = PointsSystem()
 level_system = LevelSystem(points_system)

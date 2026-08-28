@@ -1,397 +1,297 @@
 {% extends "base.html" %}
-{% block title %}Временная модерация — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-clock" ></i> Временная модерация{% endblock %}
+{% block title %}Временные меры · Модерация — Hakumo{% endblock %}
+{% block page_title %}Временные меры{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot" id="heroDot"></span>
-      <span id="heroStatus">Система активна</span>
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Реагирование</div>
+    <h1>Временные меры</h1>
+    <p class="lead">Мьюты и баны с точным сроком: каждый таймер под наблюдением, снятие — в один клик.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn" id="refreshBtn"><i class="fas fa-arrows-rotate"></i> Обновить</button>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value" id="statMuts">—</div><div class="kpi-label">Активные мьюты</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value" id="statBans">—</div><div class="kpi-label">Активные баны</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-user-minus"></i></div><div class="kpi-copy"><div class="kpi-value" id="statKicks">—</div><div class="kpi-label">Последние кики</div></div></div>
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-clock"></i></div><div class="kpi-copy"><div class="kpi-value" id="statScheduled">—</div><div class="kpi-label">Запланировано</div></div></div>
+</div>
+
+<div class="toolbar panel" style="margin-bottom:14px">
+  <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+    <input type="search" id="tm-search" placeholder="Поиск по участнику, причине или модератору" aria-label="Поиск по временным мерам">
+  </label>
+  <span class="spacer"></span>
+  <button type="button" class="btn" id="tm-pause" title="Пауза live"></button>
+  <span class="hint" id="tm-search-count"></span>
+</div>
+
+<div class="tabs" id="tabs">
+  <button type="button" class="tab-btn active" data-tab="muts"><i class="fas fa-comment-slash"></i> Мьюты <span class="count" id="cntMuts">0</span></button>
+  <button type="button" class="tab-btn" data-tab="bans"><i class="fas fa-ban"></i> Баны <span class="count" id="cntBans">0</span></button>
+  <button type="button" class="tab-btn" data-tab="kicks"><i class="fas fa-user-minus"></i> Кики <span class="count" id="cntKicks">0</span></button>
+  <button type="button" class="tab-btn" data-tab="scheduled"><i class="fas fa-clock-rotate-left"></i> План <span class="count" id="cntScheduled">0</span></button>
+  <button type="button" class="tab-btn" data-tab="new" style="margin-left:auto"><i class="fas fa-plus"></i> Новая мера</button>
+</div>
+
+<div class="panel" id="tab-muts">
+  <div class="panel-body" id="mutsList"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div></div>
+</div>
+<div class="panel hidden" id="tab-bans">
+  <div class="panel-body" id="bansList"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div></div>
+</div>
+<div class="panel hidden" id="tab-kicks">
+  <div class="panel-body" id="kicksList"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div></div>
+</div>
+<div class="panel hidden" id="tab-scheduled">
+  <div class="panel-body" id="scheduledList"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div></div>
+</div>
+
+<div class="panel hidden" id="tab-new">
+  <div class="panel-body">
+    <div class="seg" style="margin-bottom:14px" id="actionSeg">
+      <button type="button" class="seg-btn active" data-type="mut"><i class="fas fa-comment-slash"></i> Мьют</button>
+      <button type="button" class="seg-btn" data-type="ban"><i class="fas fa-ban"></i> Бан</button>
+      <button type="button" class="seg-btn" data-type="kick"><i class="fas fa-user-minus"></i> Кик</button>
     </div>
-    <h1>Временная модерация</h1>
-    <p>Мьют, бан и кик с произвольной длительностью. Предустановленные интервалы или свободный ввод (1ч, 30м, 7д, 2д 5ч и т.д.).</p>
-  </div>
-</div>
-{% endblock %}
-
-<style>
-.tm-tabs { display: flex; gap: 6px; margin-bottom: 18px; padding: 6px; background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px; width: fit-content; }
-.tm-tab { padding: 9px 18px; background: transparent; border: none; color: var(--text-2); font-size: var(--fs-sm); font-weight: 700; border-radius: 8px; cursor: pointer; transition: all 0.18s; display: flex; align-items: center; gap: 6px; }
-.tm-tab.active { background: linear-gradient(135deg, var(--ac), var(--ac-3)); color: var(--bg); }
-.tm-tab:not(.active):hover { background: var(--ac-soft); color: var(--text); }
-.tm-tab .count { background: rgba(0,0,0,0.2); padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 700; }
-.tm-section { display: none; }
-.tm-section.active { display: block; animation: fadeUp 0.3s var(--ease-out) both; }
-.tm-action-card { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 10px; position: relative; overflow: hidden; transition: all 0.2s; }
-.tm-action-card:hover { border-color: var(--ac-line); transform: translateY(-1px); }
-.tm-action-card.mut { border-left: 3px solid var(--warn); }
-.tm-action-card.ban { border-left: 3px solid var(--err); }
-.tm-action-card.kick { border-left: 3px solid #f97316; }
-.tm-action-card.scheduled { border-left: 3px solid var(--info); }
-.tm-action-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-.tm-action-card.mut .tm-action-icon { background: rgba(251,191,36,0.15); color: var(--warn); }
-.tm-action-card.ban .tm-action-icon { background: rgba(248,113,113,0.15); color: var(--err); }
-.tm-action-card.kick .tm-action-icon { background: rgba(249,115,22,0.15); color: #f97316; }
-.tm-action-card.scheduled .tm-action-icon { background: rgba(96,165,250,0.15); color: var(--info); }
-.tm-action-info { flex: 1; min-width: 0; }
-.tm-action-user { font-size: var(--fs-md) !important; font-weight: 700 !important; color: var(--text) !important; margin-bottom: 2px; }
-.tm-action-meta { font-size: 11px; color: var(--text-3); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.tm-action-meta i { color: var(--ac); font-size: 9px; }
-.tm-action-reason { font-size: var(--fs-sm) !important; color: var(--text-2) !important; margin-top: 4px; }
-.tm-action-countdown { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md) !important; font-weight: 700 !important; color: var(--ac) !important; padding: 6px 12px; background: var(--ac-soft); border: 1px solid var(--ac-line); border-radius: 8px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
-.tm-action-countdown.urgent { color: var(--err) !important; background: rgba(248,113,113,0.10) !important; border-color: rgba(248,113,113,0.30) !important; animation: pulse 2s ease-in-out infinite; }
-.tm-action-controls { display: flex; gap: 4px; flex-shrink: 0; }
-.tm-btn-sm { padding: 6px 10px; font-size: 11px !important; font-weight: 700 !important; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s; }
-.tm-btn-cancel { background: var(--ok); color: #fff; }
-.tm-btn-cancel:hover { background: #22c55e; }
-.tm-btn-remove { background: rgba(248,113,113,0.12); color: var(--err); border: 1px solid rgba(248,113,113,0.30); }
-.tm-btn-remove:hover { background: rgba(248,113,113,0.25); }
-.tm-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.tm-preset { padding: 6px 12px; background: var(--bg-3); border: 1px solid var(--line-2); color: var(--text-2); font-size: 11px; font-weight: 700; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
-.tm-preset:hover { background: var(--ac-soft); border-color: var(--ac); color: var(--ac); }
-.tm-preset.selected { background: var(--ac); color: var(--bg); border-color: var(--ac); }
-.tm-input-group { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-.tm-input-group label { font-size: var(--fs-xs) !important; font-weight: 700 !important; color: var(--text-2) !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; min-width: 100px; margin: 0 !important; }
-.tm-input-group input { flex: 1; padding: 9px 12px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); font-size: var(--fs-sm); font-family: 'JetBrains Mono', monospace; }
-.tm-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-  margin-bottom: 18px;
-}
-.tm-stat {
-  position: relative;
-  display: flex !important;
-  align-items: center !important;
-  gap: 14px !important;
-  background: linear-gradient(135deg, rgba(212, 168, 67, 0.06) 0%, rgba(224, 176, 74, 0.02) 100%);
-  border: 1px solid rgba(212, 168, 67, 0.18);
-  border-radius: 14px;
-  padding: 18px 18px !important;
-  text-align: left !important;
-  overflow: hidden;
-  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
-}
-.tm-stat:hover { transform: translateY(-2px); border-color: rgba(212, 168, 67, 0.45); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(212, 168, 67, 0.25); }
-.tm-stat .stat-icon {
-  flex: 0 0 48px;
-  width: 48px; height: 48px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  color: #1a1a1a;
-  background: linear-gradient(135deg, #d4a843 0%, #e0b04a 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(212, 168, 67, 0.35);
-}
-.tm-stat .stat-body { flex: 1; min-width: 0; }
-.tm-stat .num { font-size: 30px !important; font-weight: 800 !important; color: #f4f1e8 !important; font-variant-numeric: tabular-nums; line-height: 1.05; letter-spacing: -0.02em; }
-.tm-stat .lbl { font-size: 11px !important; color: #b8b3a3 !important; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px !important; font-weight: 600 !important; }
-.tm-stat.warn .num { color: #fcd34d !important; }
-.tm-stat.warn .stat-icon { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); color: #fff; }
-.tm-stat.err .num { color: #fca5a5 !important; }
-.tm-stat.err .stat-icon { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: #fff; }
-.tm-stat.info .num { color: #7dd3fc !important; }
-.tm-stat.info .stat-icon { background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); color: #fff; }
-.tm-empty { padding: 60px 20px; text-align: center; color: var(--text-3); }
-.tm-empty i { font-size: 36px; color: var(--ac); opacity: 0.4; display: block; margin-bottom: 12px; }
-</style>
-
-<!-- Stats -->
-<div class="tm-stats" id="statsBar">
-  <div class="tm-stat">
-    <div class="stat-icon"><i class="fas fa-microphone-slash"></i></div>
-    <div class="stat-body"><div class="num" id="statMuts">—</div><div class="lbl">Активных мьютов</div></div>
-  </div>
-  <div class="tm-stat warn">
-    <div class="stat-icon"><i class="fas fa-gavel"></i></div>
-    <div class="stat-body"><div class="num" id="statBans">—</div><div class="lbl">Врем. банов</div></div>
-  </div>
-  <div class="tm-stat err">
-    <div class="stat-icon"><i class="fas fa-sign-out-alt"></i></div>
-    <div class="stat-body"><div class="num" id="statKicks">—</div><div class="lbl">Врем. киков</div></div>
-  </div>
-  <div class="tm-stat info">
-    <div class="stat-icon"><i class="fas fa-clock"></i></div>
-    <div class="stat-body"><div class="num" id="statScheduled">—</div><div class="lbl">Запланировано</div></div>
-  </div>
-  <div class="tm-stat">
-    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
-    <div class="stat-body"><div class="num" id="statTotal">—</div><div class="lbl">Всего за 24ч</div></div>
-  </div>
-</div>
-
-<!-- Tabs -->
-<div class="tm-tabs">
-  <button class="tm-tab active" data-tab="muts" onclick="switchTab('muts')">🔇 Мьюты <span class="count" id="cntMuts">0</span></button>
-  <button class="tm-tab" data-tab="bans" onclick="switchTab('bans')">🔨 Баны <span class="count" id="cntBans">0</span></button>
-  <button class="tm-tab" data-tab="kicks" onclick="switchTab('kicks')">👢 Кики <span class="count" id="cntKicks">0</span></button>
-  <button class="tm-tab" data-tab="scheduled" onclick="switchTab('scheduled')">⏰ Запланировано <span class="count" id="cntScheduled">0</span></button>
-  <button class="tm-tab" data-tab="new" onclick="switchTab('new')">➕ Новое</button>
-</div>
-
-<!-- Muts list -->
-<div class="tm-section active" id="tab-muts">
-  <div id="mutsList"></div>
-</div>
-
-<!-- Bans list -->
-<div class="tm-section" id="tab-bans">
-  <div id="bansList"></div>
-</div>
-
-<!-- Kicks list -->
-<div class="tm-section" id="tab-kicks">
-  <div id="kicksList"></div>
-</div>
-
-<!-- Scheduled list -->
-<div class="tm-section" id="tab-scheduled">
-  <div id="scheduledList"></div>
-</div>
-
-<!-- New action form -->
-<div class="tm-section" id="tab-new">
-  <div class="dash-box">
-    <div class="dash-box-head">
-      <div class="dash-box-title"><i class="fas fa-plus"></i> Создать временное наказание</div>
+    <div class="form-row">
+      <label class="form-group"><span class="form-label">Участник</span><input class="form-input" id="newUser" placeholder="Имя участника — выберите из списка"><span id="newUserStatus"></span></label>
+      <label class="form-group"><span class="form-label">Точный срок</span><input class="form-input" id="newDuration" placeholder="2ч 30м"></label>
     </div>
-    <div class="dash-box-body" >
-      <!-- Type selector -->
-      <label   style="!important; font-weight: 700 !important; !important; !important; margin-bottom: 8px !important;">Тип действия</label>
-      <div  >
-        <button class="tm-preset" data-type="mut" onclick="setActionType('mut')"  >🔇 Мьют</button>
-        <button class="tm-preset" data-type="ban" onclick="setActionType('ban')"  >🔨 Бан</button>
-        <button class="tm-preset" data-type="kick" onclick="setActionType('kick')"  >👢 Кик</button>
-      </div>
-
-      <div class="tm-input-group">
-        <label>ID или @user</label>
-        <input type="text" id="newUser" placeholder="@user или 123456789012345678">
-      </div>
-
-      <!-- Duration presets -->
-      <label   style="!important; font-weight: 700 !important; !important; !important; 8px 0 !important;">Длительность</label>
-      <div class="tm-presets" id="durationPresets">
-        <button class="tm-preset" data-dur="30s" onclick="setDuration('30s', this)">30с</button>
-        <button class="tm-preset" data-dur="1m" onclick="setDuration('1m', this)">1м</button>
-        <button class="tm-preset" data-dur="5m" onclick="setDuration('5m', this)">5м</button>
-        <button class="tm-preset" data-dur="15m" onclick="setDuration('15m', this)">15м</button>
-        <button class="tm-preset" data-dur="30m" onclick="setDuration('30m', this)">30м</button>
-        <button class="tm-preset" data-dur="1h" onclick="setDuration('1h', this)">1ч</button>
-        <button class="tm-preset" data-dur="3h" onclick="setDuration('3h', this)">3ч</button>
-        <button class="tm-preset" data-dur="6h" onclick="setDuration('6h', this)">6ч</button>
-        <button class="tm-preset" data-dur="12h" onclick="setDuration('12h', this)">12ч</button>
-        <button class="tm-preset" data-dur="1d" onclick="setDuration('1d', this)">1д</button>
-        <button class="tm-preset" data-dur="3d" onclick="setDuration('3d', this)">3д</button>
-        <button class="tm-preset" data-dur="7d" onclick="setDuration('7d', this)">7д</button>
-        <button class="tm-preset" data-dur="14d" onclick="setDuration('14d', this)">14д</button>
-        <button class="tm-preset" data-dur="30d" onclick="setDuration('30d', this)">30д</button>
-      </div>
-      <div class="tm-input-group"   style="margin-top: 10px;">
-        <label>Своё (1ч, 2д 5ч, 30м)</label>
-        <input type="text" id="newDuration" placeholder="например: 1ч 30м" oninput="clearPresets()">
-      </div>
-
-      <div class="tm-input-group">
-        <label>Причина</label>
-        <input type="text" id="newReason" placeholder="Нарушение правил, спам...">
-      </div>
-
-      <div  >
-        <button class="form-btn" onclick="applyAction()"><i class="fas fa-check"></i> Применить</button>
-        <button class="btn-ghost" onclick="resetForm()"   style="font-weight: 700; background: transparent;"><i class="fas fa-times"></i> Сбросить</button>
-      </div>
+    <label class="form-group"><span class="form-label">Основание решения</span><input class="form-input" id="newReason" maxlength="300" placeholder="Причина, которая останется в журнале"></label>
+    <div class="chip-row" style="margin-bottom:16px" id="durationPresets">
+      {% for dur, label in [('30s','30 сек'),('1m','1 мин'),('5m','5 мин'),('15m','15 мин'),('30m','30 мин'),('1h','1 час'),('3h','3 часа'),('6h','6 часов'),('12h','12 часов'),('1d','1 день'),('3d','3 дня'),('7d','7 дней'),('14d','14 дней'),('30d','30 дней')] %}
+      <button type="button" class="chip selectable" data-dur="{{ dur }}" aria-label="Выбрать срок {{ label }}">{{ label }}</button>
+      {% endfor %}
+    </div>
+    <div class="row">
+      <button type="button" class="btn btn-primary" id="applyBtn"><i class="fas fa-bolt"></i> Запустить таймер</button>
+      <button type="button" class="btn" id="resetBtn"><i class="fas fa-rotate-left"></i> Сбросить</button>
     </div>
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
-(function() {
+(function () {
   'use strict';
-  let currentTab = 'muts';
-  let actionType = 'mut';
-  let currentData = {muts: [], bans: [], kicks: [], scheduled: []};
+  var currentTab = 'muts';
+  var actionType = 'mut';
+  var currentData = { muts: [], bans: [], kicks: [], scheduled: [] };
 
-  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var GID = {{ (guild_id|string)|tojson }};
+attachMemberPicker(document.getElementById('newUser'), { gid: GID, statusEl: document.getElementById('newUserStatus') });
+function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
   function fmtRem(until) {
-    const rem = Math.max(0, until - Date.now()/1000);
-    if (rem <= 0) return '<span >истекло</span>';
-    const days = Math.floor(rem / 86400);
-    const hours = Math.floor((rem % 86400) / 3600);
-    const minutes = Math.floor((rem % 3600) / 60);
-    const seconds = Math.floor(rem % 60);
-    let parts = [];
-    if (days > 0) parts.push(days + 'д');
-    if (hours > 0) parts.push(hours + 'ч');
-    if (minutes > 0) parts.push(minutes + 'м');
-    if (parts.length === 0) parts.push(seconds + 'с');
-    return parts.join(' ') + ' осталось';
+    var rem = Math.max(0, Math.floor(until - Date.now() / 1000));
+    if (rem <= 0) return 'завершено';
+    var days = Math.floor(rem / 86400), hours = Math.floor((rem % 86400) / 3600),
+        minutes = Math.floor((rem % 3600) / 60), seconds = rem % 60;
+    var pad = function (v) { return String(v).padStart(2, '0'); };
+    return pad(days) + 'д ' + pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
   }
   function isUrgent(until) {
-    const rem = until - Date.now()/1000;
-    return rem > 0 && rem < 300;  // <5min
-  }
-  function renderAction(item, type) {
-    const urgent = isUrgent(item.until) ? ' urgent' : '';
-    return `<div class="tm-action-card ${type}">
-      <div class="tm-action-icon"><i class="fas fa-${type === 'mut' ? 'volume-mut' : type === 'ban' ? 'gavel' : 'user-slash'}"></i></div>
-      <div class="tm-action-info">
-        <div class="tm-action-user">${item.user_id ? '<@' + item.user_id + '>' : esc(item.user_name || '?')}</div>
-        <div class="tm-action-meta">
-          <span><i class="fas fa-user-shield"></i> <@${item.mod_id || '?'}></span>
-          <span><i class="fas fa-clock"></i> ${new Date(item.created_at*1000).toLocaleString('ru-RU')}</span>
-          <span><i class="fas fa-hourglass-half"></i> ${formatDurationSimple(item.duration || 0)}</span>
-        </div>
-        <div class="tm-action-reason">${esc(item.reason || 'Без причины')}</div>
-      </div>
-      <div class="tm-action-countdown${urgent}" data-until="${item.until}">${fmtRem(item.until)}</div>
-      <div class="tm-action-controls">
-        <button class="tm-btn-sm tm-btn-cancel" onclick="cancelAction('${type}', '${item.user_id}')" title="Снять досрочно">↩</button>
-      </div>
-    </div>`;
+    var rem = until - Date.now() / 1000;
+    return rem > 0 && rem < 300;
   }
   function formatDurationSimple(sec) {
     if (sec < 60) return sec + 'с';
-    if (sec < 3600) return Math.floor(sec/60) + 'м';
-    if (sec < 86400) return Math.floor(sec/3600) + 'ч ' + Math.floor((sec%3600)/60) + 'м';
-    return Math.floor(sec/86400) + 'д ' + Math.floor((sec%86400)/3600) + 'ч';
+    if (sec < 3600) return Math.floor(sec / 60) + 'м';
+    if (sec < 86400) return Math.floor(sec / 3600) + 'ч ' + Math.floor((sec % 3600) / 60) + 'м';
+    return Math.floor(sec / 86400) + 'д ' + Math.floor((sec % 86400) / 3600) + 'ч';
   }
+
+  function renderAction(item, type) {
+    var icon = type === 'mut' ? 'fa-comment-slash' : type === 'ban' ? 'fa-gavel' : 'fa-user-slash';
+    var urgent = isUrgent(item.until);
+    return '<div class="feed-item" style="align-items:flex-start">' +
+      '<div class="feed-item-icon" style="' + (urgent ? 'background:var(--warn-soft);color:var(--warn)' : '') + '"><i class="fas ' + icon + '"></i></div>' +
+      '<div style="min-width:0;flex:1">' +
+        '<div class="feed-item-title">' + (item.user_id ? '<span class="id-pill">' + item.user_id + '</span>' : esc(item.user_name || '?')) +
+          ' <span class="badge neutral">' + (type === 'mut' ? 'мьют' : type === 'ban' ? 'бан' : 'кик') + '</span></div>' +
+        '<div class="feed-item-sub">модератор: ' + (item.mod_id || '?') + ' · ' + new Date(item.created_at * 1000).toLocaleString('ru-RU') +
+          ' · длительность ' + formatDurationSimple(item.duration || 0) + '</div>' +
+        '<div class="feed-item-sub">' + esc(item.reason || 'Без причины') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right">' +
+        '<div class="mono" style="font-weight:600;' + (urgent ? 'color:var(--warn)' : '') + '" data-until="' + item.until + '">' + fmtRem(item.until) + '</div>' +
+        '<button type="button" class="btn btn-sm btn-ghost" data-cancel="' + type + '" data-uid="' + esc(item.user_id) + '" title="Снять досрочно"><i class="fas fa-rotate-left"></i></button>' +
+      '</div></div>';
+  }
+
   function renderScheduled(item) {
-    return `<div class="tm-action-card scheduled">
-      <div class="tm-action-icon"><i class="fas fa-clock"></i></div>
-      <div class="tm-action-info">
-        <div class="tm-action-user">${item.user_name ? esc(item.user_name) : '<@' + item.user_id + '>'}</div>
-        <div class="tm-action-meta">
-          <span><i class="fas fa-bolt"></i> ${item.action.toUpperCase()}</span>
-          <span><i class="fas fa-hourglass-half"></i> ${formatDurationSimple(item.duration)}</span>
-          <span><i class="fas fa-calendar"></i> <t:${Math.floor(item.run_at)}:R></span>
-        </div>
-        <div class="tm-action-reason">${esc(item.reason)}</div>
-      </div>
-      <div class="tm-action-countdown"   style="background: rgba(96,165,250,0.10);">через ${fmtRem(item.run_at)}</div>
-      <div class="tm-action-controls">
-        <button class="tm-btn-sm tm-btn-remove" onclick="cancelScheduled('${item.id}')" title="Отменить">×</button>
-      </div>
-    </div>`;
+    return '<div class="feed-item" style="align-items:flex-start">' +
+      '<div class="feed-item-icon tone-info" style="background:var(--info-soft);color:var(--info)"><i class="fas fa-clock"></i></div>' +
+      '<div style="min-width:0;flex:1">' +
+        '<div class="feed-item-title">' + esc(item.user_name || item.user_id) + ' <span class="badge neutral">' + esc((item.action || '').toUpperCase()) + '</span></div>' +
+        '<div class="feed-item-sub">срок ' + formatDurationSimple(item.duration) + ' · запуск <t:' + Math.floor(item.run_at) + ':R></div>' +
+        '<div class="feed-item-sub">' + esc(item.reason || '') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right">' +
+        '<div class="mono" style="font-weight:600" data-until="' + item.run_at + '">' + fmtRem(item.run_at) + '</div>' +
+        '<button type="button" class="btn btn-sm btn-ghost" data-unschedule="' + esc(item.id) + '" title="Отменить"><i class="fas fa-xmark"></i></button>' +
+      '</div></div>';
   }
+
+  function filteredItems(items) {
+    var q = ($('tm-search').value || '').toLowerCase().trim();
+    if (!q || !items) return items;
+    return items.filter(function (it) {
+      var hay = ((it.user_name || '') + ' ' + (it.user_id || '') + ' ' + (it.reason || '') + ' ' + (it.mod_id || '') + ' ' + (it.action || '')).toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+  }
+
   function renderList(container, items, type) {
+    items = filteredItems(items);
+    var signature = JSON.stringify(items || []);
+    if (container.dataset.signature === signature) return;
+    container.dataset.signature = signature;
     if (!items.length) {
-      container.innerHTML = '<div class="tm-empty"><i class="fas fa-inbox"></i><p>Нет активных наказаний</p></div>';
-      return;
+      container.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><span>Нет активных наказаний</span></div>';
+    } else {
+      container.innerHTML = items.map(function (item) { return type === 'scheduled' ? renderScheduled(item) : renderAction(item, type); }).join('');
     }
-    container.innerHTML = items.map(item => type === 'scheduled' ? renderScheduled(item) : renderAction(item, type)).join('');
   }
+
   function load() {
-    fetch('/api/temp-mod/active').then(r => {
-      if (!r.ok) {
-        document.getElementById('mutsList').innerHTML = '<div class="tm-empty"><i class="fas fa-exclamation-triangle"></i><p>Модуль временной модерации не загружен</p></div>';
-        document.getElementById('bansList').innerHTML = '';
-        document.getElementById('kicksList').innerHTML = '';
-        document.getElementById('scheduledList').innerHTML = '';
-        return null;
-      }
+    fetch('/api/temp-mod/active').then(function (r) {
+      if (!r.ok) return null;
       return r.json();
-    }).then(data => {
+    }).then(function (data) {
       if (!data) return;
+      /* данные не изменились — списки не пересобираем (тихие обновления) */
+      var fp = [ (data.muts || []).length, (data.bans || []).length,
+                 (data.kicks || []).length, (data.scheduled || []).length,
+                 ((data.muts || [])[0] || {}).expires_at || '' ].join('|');
+      if (window.silentGuard && window.silentGuard('temp-mod', fp)) return;
       currentData = data;
-      renderList(document.getElementById('mutsList'), data.muts || [], 'mut');
-      renderList(document.getElementById('bansList'), data.bans || [], 'ban');
-      renderList(document.getElementById('kicksList'), data.kicks || [], 'kick');
-      renderList(document.getElementById('scheduledList'), data.scheduled || [], 'scheduled');
-      document.getElementById('cntMuts').textContent = (data.muts || []).length;
-      document.getElementById('cntBans').textContent = (data.bans || []).length;
-      document.getElementById('cntKicks').textContent = (data.kicks || []).length;
-      document.getElementById('cntScheduled').textContent = (data.scheduled || []).length;
-      document.getElementById('statMuts').textContent = (data.muts || []).length;
-      document.getElementById('statBans').textContent = (data.bans || []).length;
-      document.getElementById('statKicks').textContent = (data.kicks || []).length;
-      document.getElementById('statScheduled').textContent = (data.scheduled || []).length;
-      const total = (data.muts || []).length + (data.bans || []).length + (data.kicks || []).length;
-      document.getElementById('statTotal').textContent = total;
-    });
+      var vis = (data.muts || []).length + (data.bans || []).length + (data.kicks || []).length + (data.scheduled || []).length;
+      var flt = (filteredItems(data.muts || []).length + filteredItems(data.bans || []).length +
+                 filteredItems(data.kicks || []).length + filteredItems(data.scheduled || []).length);
+      var cnt = $('tm-search-count');
+      if (cnt) cnt.textContent = ($('tm-search').value || '').trim() ? ('показано ' + flt + ' из ' + vis) : '';
+      renderList($('mutsList'), data.muts || [], 'mut');
+      renderList($('bansList'), data.bans || [], 'ban');
+      renderList($('kicksList'), data.kicks || [], 'kick');
+      renderList($('scheduledList'), data.scheduled || [], 'scheduled');
+      $('cntMuts').textContent = (data.muts || []).length;
+      $('cntBans').textContent = (data.bans || []).length;
+      $('cntKicks').textContent = (data.kicks || []).length;
+      $('cntScheduled').textContent = (data.scheduled || []).length;
+      $('statMuts').textContent = (data.muts || []).length;
+      $('statBans').textContent = (data.bans || []).length;
+      $('statKicks').textContent = (data.kicks || []).length;
+      $('statScheduled').textContent = (data.scheduled || []).length;
+    }).catch(function () {});
   }
+
   function updateCountdowns() {
-    document.querySelectorAll('.tm-action-countdown[data-until]').forEach(el => {
-      const until = parseFloat(el.dataset.until);
-      el.innerHTML = fmtRem(until);
-      if (isUrgent(until)) el.classList.add('urgent'); else el.classList.remove('urgent');
+    document.querySelectorAll('[data-until]').forEach(function (el) {
+      var until = parseFloat(el.dataset.until);
+      el.textContent = fmtRem(until);
+      el.style.color = isUrgent(until) ? 'var(--warn)' : '';
     });
   }
-  window.switchTab = function(t) {
+
+  function switchTab(t) {
     currentTab = t;
-    document.querySelectorAll('.tm-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-    document.querySelectorAll('.tm-section').forEach(s => s.classList.remove('active'));
-    document.getElementById('tab-' + t).classList.add('active');
-  };
-  window.setActionType = function(t) {
+    document.querySelectorAll('#tabs .tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === t); });
+    ['muts', 'bans', 'kicks', 'scheduled', 'new'].forEach(function (name) {
+      var el = $('tab-' + name);
+      if (el) el.classList.toggle('hidden', name !== t);
+    });
+  }
+
+  function setActionType(t) {
     actionType = t;
-    document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('selected', b.dataset.type === t));
-  };
-  window.setDuration = function(d, el) {
-    document.getElementById('newDuration').value = d;
-    document.querySelectorAll('[data-dur]').forEach(b => b.classList.remove('selected'));
-    el.classList.add('selected');
-  };
-  window.clearPresets = function() {
-    document.querySelectorAll('[data-dur]').forEach(b => b.classList.remove('selected'));
-  };
-  window.resetForm = function() {
-    document.getElementById('newUser').value = '';
-    document.getElementById('newDuration').value = '';
-    document.getElementById('newReason').value = '';
-    document.querySelectorAll('[data-dur]').forEach(b => b.classList.remove('selected'));
-  };
-  window.applyAction = function() {
-    const user = document.getElementById('newUser').value.trim();
-    const dur = document.getElementById('newDuration').value.trim();
-    const reason = document.getElementById('newReason').value.trim() || 'Без причины';
-    if (!user) { showToast('Укажите пользователя', false); return; }
-    if (!dur) { showToast('Укажите длительность', false); return; }
+    document.querySelectorAll('#actionSeg .seg-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.type === t); });
+  }
+
+  function resetForm() {
+    $('newUser').value = ''; $('newDuration').value = ''; $('newReason').value = '';
+    document.querySelectorAll('#durationPresets .chip').forEach(function (b) { b.classList.remove('active'); });
+  }
+
+  function applyAction() {
+    var user = $('newUser').value.trim();
+    var dur = $('newDuration').value.trim();
+    var reason = $('newReason').value.trim() || 'Без причины';
+    if (!user) { window.showToast('Укажите пользователя', false); return; }
+    if (!dur) { window.showToast('Укажите длительность', false); return; }
     fetch('/api/temp-mod/' + actionType, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({user_id: user, duration: dur, reason: reason})
-    }).then(r => r.json()).then(d => {
-      if (d.error) showToast(d.error, false);
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: user, duration: dur, reason: reason })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.error) window.showToast(d.error, false);
       else {
-        showToast('✅ Применено', true);
+        window.showToast('Мера применена', true);
         resetForm();
         switchTab(actionType + 's');
         load();
       }
     });
-  };
-  window.cancelAction = function(type, userId) {
-    const endpoint = type === 'mut' ? 'unmut' : type === 'ban' ? 'unban' : 'unkick';
-    fetch('/api/temp-mod/' + endpoint, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({user_id: userId})
-    }).then(r => r.json()).then(d => {
-      if (d.error) showToast(d.error, false);
-      else { showToast('✅ Снято', true); load(); }
-    });
-  };
-  window.cancelScheduled = function(id) {
-    fetch('/api/temp-mod/unschedule', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({id: id})
-    }).then(r => r.json()).then(d => {
-      if (d.error) showToast(d.error, false);
-      else { showToast('✅ Отменено', true); load(); }
-    });
-  };
-  function showToast(msg, ok) {
-    const t = document.createElement('div');
-    t.className = 'toast ' + (ok ? 'ok' : 'err');
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3000);
   }
-  // Init
+
+  function cancelAction(type, userId) {
+    var endpoint = type === 'mut' ? 'unmut' : type === 'ban' ? 'unban' : 'unkick';
+    window.confirmAction('Снять досрочно?', 'Мера завершится сейчас, запись останется в журнале.', function () {
+      fetch('/api/temp-mod/' + endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.error) window.showToast(d.error, false);
+        else { window.showToast('Снято', true); load(); }
+      });
+    }, { okText: 'Снять' });
+  }
+
+  function cancelScheduled(id) {
+    window.confirmAction('Отменить запланированную меру?', 'Таймер будет удалён из плана.', function () {
+      fetch('/api/temp-mod/unschedule', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.error) window.showToast(d.error, false);
+        else { window.showToast('Отменено', true); load(); }
+      });
+    }, { danger: true, okText: 'Отменить' });
+  }
+
+  document.addEventListener('click', function (e) {
+    var cancel = e.target.closest('[data-cancel]');
+    if (cancel) { cancelAction(cancel.dataset.cancel, cancel.dataset.uid); return; }
+    var uns = e.target.closest('[data-unschedule]');
+    if (uns) { cancelScheduled(uns.dataset.unschedule); return; }
+    var chip = e.target.closest('#durationPresets .chip');
+    if (chip) {
+      $('newDuration').value = chip.dataset.dur;
+      document.querySelectorAll('#durationPresets .chip').forEach(function (b) { b.classList.toggle('active', b === chip); });
+    }
+  });
+
+  document.querySelectorAll('#tabs .tab-btn').forEach(function (b) {
+    b.addEventListener('click', function () { switchTab(b.dataset.tab); });
+  });
+  document.querySelectorAll('#actionSeg .seg-btn').forEach(function (b) {
+    b.addEventListener('click', function () { setActionType(b.dataset.type); });
+  });
+  $('tm-search').addEventListener('input', function () { load(); });
+  $('applyBtn').addEventListener('click', applyAction);
+  $('resetBtn').addEventListener('click', resetForm);
+  $('refreshBtn').addEventListener('click', load);
+
   setActionType('mut');
   load();
-  setInterval(load, 15000);  // refresh every 15s
-  setInterval(updateCountdowns, 1000);  // countdowns every second
+  if (window.livePauseButton) window.livePauseButton($('tm-pause'));
+  setInterval(function () { if (!window.__modLivePaused) load(); }, 15000);
+  setInterval(updateCountdowns, 1000);
 })();
 </script>
 {% endblock %}

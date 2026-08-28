@@ -1,47 +1,135 @@
 {% extends "base.html" %}
-{% block title %}История модерации — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-history" ></i> История модерации{% endblock %}
+{% block title %}История решений · Модерация — Hakumo{% endblock %}
+{% block page_title %}История решений{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>История модерации</span>
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Расследование</div>
+    <h1>История решений</h1>
+    <p class="lead">Хронология наказаний: восстановите ход кейса от причины до результата.</p>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-clock-rotate-left"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Все события</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-bans">—</div><div class="kpi-label">Баны</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value" id="mh-kicks">—</div><div class="kpi-label">Кики</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value" id="mh-warns">—</div><div class="kpi-label">Варны</div></div></div>
+</div>
+
+<style>
+/* ═══════ Статистика модераторов — Hakumo ═══════ */
+.mst-panel {
+  background: var(--glass); border: 1px solid var(--line);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-1);
+  margin-bottom: 14px; overflow: hidden;
+}
+.mst-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 14px 18px; border-bottom: 1px solid var(--line);
+  background: linear-gradient(135deg, var(--ac-soft), transparent 60%);
+}
+.mst-head h3 { margin: 0; font-size: 14.5px; display: flex; align-items: center; gap: 9px; }
+.mst-head h3 i {
+  width: 32px; height: 32px; border-radius: 10px;
+  background: var(--ac-grad); color: #fff;
+  display: grid; place-items: center; font-size: 13px;
+  box-shadow: 0 5px 14px -5px var(--ac-glow);
+}
+.mst-sub { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--text-3); }
+.mst-toggle { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 10px; padding: 3px; }
+.mst-toggle button {
+  border: none; background: transparent; color: var(--text-3);
+  font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 8px;
+  cursor: pointer; transition: all .15s;
+}
+.mst-toggle button.active { background: var(--ac); color: #fff; box-shadow: 0 3px 10px -3px var(--ac-glow); }
+.mst-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px 18px 0; }
+@media (max-width: 860px) { .mst-kpis { grid-template-columns: repeat(2, 1fr); } }
+.mst-kpi {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--line); border-radius: 12px;
+  padding: 11px 13px; background: var(--surface);
+}
+.mst-kpi i { width: 30px; height: 30px; flex: 0 0 30px; border-radius: 9px; display: grid; place-items: center; background: var(--ac-soft); color: var(--ac); font-size: 12px; }
+.mst-kpi .v { font-size: 17px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.mst-kpi .l { font-size: 10.5px; color: var(--text-3); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.mst-table-wrap { padding: 14px 18px 16px; overflow-x: auto; }
+.mst-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.mst-table th {
+  text-align: left; font-size: 10px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--text-3);
+  padding: 6px 8px; border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.mst-table td { padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mst-table tr:last-child td { border-bottom: none; }
+.mst-table tr:hover td { background: var(--surface-2); }
+.mst-mod { display: flex; align-items: center; gap: 10px; }
+.mst-av { width: 32px; height: 32px; border-radius: 50%; flex: 0 0 32px; border: 2px solid var(--ac-line); }
+.mst-av-t { display: grid; place-items: center; background: var(--ac-soft); color: var(--ac); font-weight: 800; font-size: 13px; }
+.mst-name { font-weight: 800; color: var(--text); }
+.mst-login { font-size: 10.5px; color: var(--text-3); }
+.mst-acts b { font-size: 14px; color: var(--ac); }
+.mst-acts .mst-sub2 { display: block; font-size: 9.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .05em; }
+@media (prefers-reduced-motion: reduce) {
+  .mst-toggle button { transition: none; }
+}
+</style>
+
+<div class="mst-panel">
+  <div class="mst-head">
+    <h3><i class="fas fa-chart-line"></i> Статистика модераторов</h3>
+    <div class="mst-toggle" role="group" aria-label="Период статистики">
+      <button type="button" id="mst-week" class="active">За неделю</button>
+      <button type="button" id="mst-all">За всё время</button>
     </div>
-    <h1>История модерации</h1>
-    <p>Полная история модерационных действий на сервере.</p>
+    <span class="mst-sub" id="mst-sub">за 7 дней</span>
+  </div>
+  <div class="mst-kpis">
+    <div class="mst-kpi"><i class="fas fa-user-shield"></i><div><div class="v" id="mst-mod-active">—</div><div class="l">Модеров активно</div></div></div>
+    <div class="mst-kpi"><i class="fas fa-gavel"></i><div><div class="v" id="mst-acts">—</div><div class="l">Действий</div></div></div>
+    <div class="mst-kpi"><i class="fas fa-comments"></i><div><div class="v" id="mst-msgs">—</div><div class="l">Сообщений</div></div></div>
+    <div class="mst-kpi"><i class="fas fa-headset"></i><div><div class="v" id="mst-voice">—</div><div class="l">В голосе</div></div></div>
+  </div>
+  <div class="mst-table-wrap">
+    <table class="mst-table">
+      <thead><tr>
+        <th>Модератор</th><th>Варны</th><th>Мьюты</th><th>Кики</th><th>Баны</th>
+        <th>Действий</th><th>Сроки наказаний</th><th>Сообщений / нед</th><th>Голос / нед</th>
+      </tr></thead>
+      <tbody id="mst-body">
+        <tr><td colspan="9"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Считаем статистику…</span></div></td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
-{% endblock %}
 
-
-
-<div class="mh-toolbar">
-  <input type="text" id="search" class="mh-search" placeholder="Поиск по истории (пользователь, мод, причина)...">
-  <select id="filter" class="mh-search"   style="flex: 0 0 auto; min-width: 140px;">
-    <option value="">Все действия</option>
-    <option>Бан</option>
-    <option>Кик</option>
-    <option>Варн</option>
-    <option>Мьют</option>
-  </select>
-</div>
-
-<div class="mh-stats">
-  <div class="mh-stat"><div class="mh-stat-num total" id="stat-total">-</div><div class="mh-stat-lbl">Всего</div></div>
-  <div class="mh-stat"><div class="mh-stat-num danger" id="stat-bans">-</div><div class="mh-stat-lbl">Банов</div></div>
-  <div class="mh-stat"><div class="mh-stat-num accent" id="mh-kicks">-</div><div class="mh-stat-lbl">Киков</div></div>
-  <div class="mh-stat"><div class="mh-stat-num warn" id="mh-warns">-</div><div class="mh-stat-lbl">Варнов</div></div>
-</div>
-
-<div class="mh-box">
-  <div class="mh-head">
-    <div class="mh-title"><i class="fas fa-history"></i> История модерации</div>
-    <span class="mh-count" id="mh-count">-</span>
+<div class="panel">
+  <div class="toolbar">
+    <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="search" placeholder="Участник, модератор, причина" aria-label="Поиск">
+    </label>
+    <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Тип события</span>
+      <select id="filter">
+        <option value="">Все действия</option>
+        <option value="ban">Бан</option>
+        <option value="kick">Кик</option>
+        <option value="warn">Варн</option>
+        <option value="mute">Мьют</option>
+      </select>
+    </label>
+    <span class="spacer"></span>
+    <span class="fresh-stamp" id="mh-stamp"></span>
+    <button type="button" class="btn" id="mh-pause" title="Пауза live"></button>
+    <span class="badge neutral" id="mh-count">0</span>
   </div>
-  <div class="mh-body" id="mh-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i></p>
+  <div class="table-wrap" style="min-height:120px">
+    <table class="data-table" data-sortable>
+      <thead><tr><th class="sortable">Действие</th><th class="sortable">Пользователь</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
+      <tbody id="mh-body"><tr><td colspan="5"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Восстанавливаем историю</span></div></td></tr></tbody>
+    </table>
   </div>
 </div>
 
@@ -50,48 +138,177 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return '—'; }
+  }
 
-  var cases = [
-    { id: 1, action: 'Бан', user: 'User1', мод: 'Mod1', reason: 'Реклама', date: '2 дн назад' },
-    { id: 2, action: 'Варн', user: 'User2', мод: 'Mod2', reason: 'Спам', date: '3 дн назад' },
-    { id: 3, action: 'Кик', user: 'User3', мод: 'Mod1', reason: 'Оскорбление', date: '4 дн назад' },
-    { id: 4, action: 'Мьют', user: 'User4', мод: 'Mod2', reason: 'CAPS', date: '5 дн назад' }
-  ];
-  var colorMap = { Бан: 'var(--err)', Кик: 'var(--orange)', Варн: 'var(--warn)', Мьют: 'var(--warn)' };
+  var allCases = [];
+  var TONE = { ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral', timeout: 'neutral', unban: 'ok', unmute: 'ok' };
+
+  function normalize(a) {
+    a = String(a || '').toLowerCase();
+    /* понимает и латинские коды (ban/mute…), и русские метки («Бан снят»…) */
+    if (a.indexOf('unban') !== -1 || a.indexOf('бан снят') !== -1 || a.indexOf('разбан') !== -1) return 'unban';
+    if (a.indexOf('unmute') !== -1 || a.indexOf('мут снят') !== -1 || a.indexOf('размут') !== -1) return 'unmute';
+    if (a.indexOf('ban') !== -1 || a.indexOf('бан') !== -1) return 'ban';
+    if (a.indexOf('kick') !== -1 || a.indexOf('кик') !== -1) return 'kick';
+    if (a.indexOf('warn') !== -1 || a.indexOf('варн') !== -1 || a.indexOf('предупреж') !== -1) return 'warn';
+    if (a.indexOf('mute') !== -1 || a.indexOf('timeout') !== -1 || a.indexOf('мут') !== -1 || a.indexOf('мьют') !== -1 || a.indexOf('таймаут') !== -1) return 'mute';
+    return a;
+  }
+  var RU = { ban: 'Бан', kick: 'Кик', warn: 'Варн', mute: 'Мьют', timeout: 'Мьют', unban: 'Разбан', unmute: 'Размут' };
 
   function render() {
     var q = ($('search').value || '').toLowerCase();
     var f = $('filter').value;
-    var list = cases.filter(function (c) {
-      if (f && c.action !== f) return false;
-      if (q && ((c.user + ' ' + c.mod + ' ' + c.reason).toLowerCase().indexOf(q) === -1)) return false;
+    var list = allCases.filter(function (c) {
+      var cat = normalize(c.action);
+      if (f && cat !== f) return false;
+      if (q) {
+        var hay = ((c.target_name || '') + ' ' + (c.mod_name || '') + ' ' + (c.reason || '')).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
       return true;
     });
-    $('mh-count').textContent = list.length + ' / ' + cases.length;
-    $('stat-total').textContent = cases.length;
-    $('stat-bans').textContent = cases.filter(function (c) { return c.action === 'Бан'; }).length;
-    $('mh-kicks').textContent = cases.filter(function (c) { return c.action === 'Кик'; }).length;
-    $('mh-warns').textContent = cases.filter(function (c) { return c.action === 'Варн'; }).length;
-    if (!list.length) { $('mh-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Кейсов нет</p>'; return; }
-    var rows = list.map(function (c) {
-      var c1 = colorMap[c.action] || 'var(--text-3)';
-      return '<tr><td><span class="case-badge" >#' + c.id + '</span></td>' +
-        '<td><span class="case-badge" >' + c.action + '</span></td>' +
-        '<td >' + esc(c.user) + '</td>' +
-        '<td >' + esc(c.mod) + '</td>' +
-        '<td   style="max-width: 180px; overflow: hidden;">' + esc(c.reason) + '</td>' +
-        '<td >' + esc(c.date) + '</td></tr>';
+    $('mh-count').textContent = list.length + ' из ' + allCases.length;
+    $('stat-total').textContent = allCases.length;
+    $('stat-bans').textContent = allCases.filter(function (c) { return normalize(c.action) === 'ban'; }).length;
+    $('mh-kicks').textContent = allCases.filter(function (c) { return normalize(c.action) === 'kick'; }).length;
+    $('mh-warns').textContent = allCases.filter(function (c) { return normalize(c.action) === 'warn'; }).length;
+    var body = $('mh-body');
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><span>Записей нет</span></div></td></tr>';
+      return;
+    }
+    var q = ($('search').value || '');
+    var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
+    body.innerHTML = list.slice(0, 300).map(function (c) {
+      var cat = normalize(c.action);
+      var label = RU[cat] || esc(c.action || '?');
+      return '<tr><td data-sort="' + esc(cat) + '"><span class="badge ' + (TONE[cat] || 'neutral') + '">' + label + '</span></td>' +
+        '<td>' + H(c.target_name || c.target_id || '—') + '</td>' +
+        '<td>' + H(c.mod_name || c.mod_id || '—') + '</td>' +
+        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(c.reason || '') + '">' + H(c.reason || '—') + '</td>' +
+        '<td data-sort="' + esc(c.created_at || '') + '" class="muted">' + esc(fmtDate(c.created_at)) + '</td></tr>';
     }).join('');
-    $('mh-body').innerHTML = '<table><thead><tr><th>ID</th><th>Действие</th><th>Пользователь</th><th>Модер.</th><th>Причина</th><th>Дата</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    if (window.attachTableSort && !window._mhSortReady) {
+      window._mhSortReady = true;
+      window.attachTableSort(document.querySelector('#mh-body').closest('table'));
+    }
+  }
+
+  var _mhFp = '';
+  async function load() {
+    try {
+      var r = await fetch('/api/mod-history');
+      var d = await r.json();
+      var raw = Array.isArray(d) ? d : [];
+      /* данные не изменились — не перерисовываем (без мерцания) */
+      var fp = raw.length + '|' + (raw.length ? JSON.stringify(raw[0]).slice(0, 160) : '');
+      if (fp === _mhFp) return;
+      _mhFp = fp;
+      allCases = raw;
+    } catch (e) { return; }
+    window.renderSafe(render);
+    if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('mh-stamp'));
   }
 
   function bind() {
     $('search').addEventListener('input', render);
     $('filter').addEventListener('change', render);
+    if (window.livePauseButton) window.livePauseButton($('mh-pause'));
+    var bw = $('mst-week'), ba = $('mst-all');
+    if (bw) bw.addEventListener('click', function () { msMode = 'week'; setMsTab(); _msFp = ''; loadMs(); });
+    if (ba) ba.addEventListener('click', function () { msMode = 'all'; setMsTab(); _msFp = ''; loadMs(); });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
-  else { bind(); render(); }
+  /* ── Профи-статистика модераторов ── */
+  var msMode = 'week';
+  var _msFp = '';
+  function setMsTab() {
+    var bw = $('mst-week'), ba = $('mst-all');
+    if (bw) bw.classList.toggle('active', msMode === 'week');
+    if (ba) ba.classList.toggle('active', msMode === 'all');
+    if ($('mst-sub')) $('mst-sub').textContent = msMode === 'week' ? 'за 7 дней' : 'всё время';
+  }
+  function fmtDur(min) {
+    min = Math.max(0, Number(min) || 0);
+    if (!min) return '—';
+    var d = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60;
+    var out = [];
+    if (d) out.push(d + ' д');
+    if (h) out.push(h + ' ч');
+    if (m || !out.length) out.push(m + ' мин');
+    return out.join(' ');
+  }
+  function fmtH(h) {
+    h = Number(h) || 0;
+    if (h >= 100) return Math.round(h) + ' ч';
+    return (Math.round(h * 10) / 10) + ' ч';
+  }
+  function msAvatar(row) {
+    var name = row.name || row.mod || '?';
+    var letter = name.charAt(0).toUpperCase();
+    if (row.avatar) {
+      return '<img class="mst-av" src="' + esc(row.avatar) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<span class=&quot;mst-av mst-av-t&quot;>' + letter + '</span>\'">';
+    }
+    return '<span class="mst-av mst-av-t">' + letter + '</span>';
+  }
+  function renderMs(d) {
+    var rows = d.rows || [];
+    var kpis = d.kpis || {};
+    var body = $('mst-body');
+    if (!body) return;
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="9"><div class="empty"><i class="fas fa-inbox"></i><span>Статистики пока нет — ждём действий модераторов</span></div></td></tr>';
+    } else {
+      body.innerHTML = rows.map(function (r) {
+        var acts = msMode === 'week' ? (r.week || 0) : (r.total || 0);
+        var dur = msMode === 'week' ? (r.duration_week_min || 0) : (r.duration_min || 0);
+        return '<tr>' +
+          '<td><div class="mst-mod">' + msAvatar(r) +
+            '<div><div class="mst-name">' + esc(r.name || r.mod || '?') + '</div>' +
+            (r.name && r.name !== r.mod ? '<div class="mst-login">' + esc(r.mod) + '</div>' : '') +
+          '</div></div></td>' +
+          '<td>' + (r.warns || 0) + '</td>' +
+          '<td>' + (r.mutes || 0) + '</td>' +
+          '<td>' + (r.kicks || 0) + '</td>' +
+          '<td>' + (r.bans || 0) + '</td>' +
+          '<td class="mst-acts"><b>' + acts + '</b><span class="mst-sub2">' + (msMode === 'week' ? 'неделя' : 'всего') + '</span></td>' +
+          '<td>' + fmtDur(dur) + '</td>' +
+          '<td>' + (r.messages_week || 0) + '</td>' +
+          '<td>' + fmtH(r.voice_hours_week || 0) + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+    if ($('mst-mod-active')) $('mst-mod-active').textContent = kpis.active_mods != null ? kpis.active_mods : rows.length;
+    if ($('mst-acts')) $('mst-acts').textContent = msMode === 'week' ? (kpis.actions_week || 0) : (kpis.actions_total || 0);
+    if ($('mst-msgs')) $('mst-msgs').textContent = kpis.messages_week || 0;
+    if ($('mst-voice')) $('mst-voice').textContent = fmtH(kpis.voice_hours_week || 0);
+    setMsTab();
+  }
+  async function loadMs() {
+    try {
+      var r = await fetch('/api/mod-stats');
+      var d = await r.json();
+      if (!d || !d.success) return;
+      var fp = msMode + '|' + JSON.stringify(d.kpis) + '|' + JSON.stringify(d.rows || []).slice(0, 500);
+      if (fp === _msFp) return;
+      _msFp = fp;
+      if (window.renderSafe) window.renderSafe(function () { renderMs(d); });
+      else renderMs(d);
+    } catch (e) { /* тихо — блок появится при следующем тике */ }
+  }
+
+  function start() {
+    bind(); load(); loadMs();
+    if (window.setLiveRefresh) window.setLiveRefresh(function () { load(); loadMs(); }, 1500);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 {% endblock %}

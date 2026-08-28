@@ -1,5 +1,5 @@
 """
-Aether — Анти-рейд / Защита от рейдов
+Hakumo — Анти-рейд / Защита от рейдов
 ----------------------------------
 Режим: "Наблюдатель" (только чтение).
 
@@ -12,8 +12,14 @@ Aether — Анти-рейд / Защита от рейдов
 
 Все решения принимаются в панели на странице /antiraid; этот ког — только "движок правил".
 """
+
+from logger import get_logger
+
+_log = get_logger("antiraid")
+
 import discord
 from discord.ext import commands, tasks
+from datetime import datetime, timezone
 from discord import app_commands
 from collections import defaultdict
 import json
@@ -21,7 +27,7 @@ import os
 import time
 import logging
 
-log = logging.getLogger("aether.antiraid")
+log = logging.getLogger("hakumo.antiraid")
 
 class GuildAntiraidConfig:
     """In-memory кэш настроек анти-рейда для одной гильдии, читает с диска."""
@@ -99,8 +105,8 @@ class AntiRaid(commands.Cog):
     def cog_unload(self):
         try:
             self.config_watcher.cancel()
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("cog_unload(): подавлено: %s", _ex)
 
     def get_config(self, guild_id: int) -> GuildAntiraidConfig:
         cfg = self.configs.get(guild_id)
@@ -126,12 +132,13 @@ class AntiRaid(commands.Cog):
                     continue
                 try:
                     gid = int(name[len("antiraid_"):-len(".json")])
-                except ValueError:
+                except ValueError as _ex:
+                    _log.debug("config_watcher(): подавлено: %s", _ex)
                     continue
                 if gid not in self.configs:
                     self.configs[gid] = GuildAntiraidConfig(gid)
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("config_watcher(): подавлено: %s", _ex)
 
     @config_watcher.before_loop
     async def before_config_watcher(self):
@@ -149,18 +156,25 @@ class AntiRaid(commands.Cog):
             except Exception:
                 target = None
         if target is None:
+            # Единый резолвер лог-каналов (-модерация → mod-log → …)
+            try:
+                from cogs.logs import ensure_log_channel
+                target = await ensure_log_channel(guild, 'модерация')
+            except Exception:
+                target = None
+        if target is None:
             target = discord.utils.get(guild.text_channels, name="mod-log")
         if target is None:
             try:
                 if guild.owner:
                     await guild.owner.send(f"⚠️ **Алерт анти-рейда** (канал mod-log не найден): {title}\n{description}")
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_send_alert(): подавлено: %s", _ex)
             return
 
         embed = discord.Embed(title=title, description=description, color=color,
-                              timestamp=discord.utils.utcnow())
-        embed.set_footer(text="Aether AntiRaid — Режим наблюдения (без авто-действий)")
+                              timestamp=datetime.now(timezone.utc))
+        embed.set_footer(text="Hakumo AntiRaid — Режим наблюдения (без авто-действий)")
         for name, value in (fields or []):
             embed.add_field(name=name, value=value, inline=False)
         try:
@@ -189,7 +203,7 @@ class AntiRaid(commands.Cog):
         ]
         self.join_tracker[guild_id].append((now, member.id))
 
-        account_age_days = (discord.utils.utcnow() - member.created_at).days
+        account_age_days = (datetime.now(timezone.utc) - member.created_at).days
         min_age = int(cfg.data.get("min_age", 5) or 0)
         if cfg.data.get("age_filter") and min_age > 0 and account_age_days < min_age:
             await self._send_alert(
@@ -208,7 +222,7 @@ class AntiRaid(commands.Cog):
                 "user_id": str(member.id),
                 "user_tag": str(member),
                 "account_age_days": account_age_days,
-                "timestamp": discord.utils.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             })
 
         if cfg.data.get("join_raid"):
@@ -220,7 +234,7 @@ class AntiRaid(commands.Cog):
                     description=(
                         f"За последние {window} секунд присоединилось **{count}** человек "
                         f"(порог: {threshold}). **Авто-действия отключены** — "
-                        f"вы можете вмешаться через страницу `/antiraid` в панели."
+                        "вы можете вмешаться через страницу `/antiraid` в панели."
                     ),
                     fields=[
                         ("Порог", f"{count}/{threshold} чел / {window}с"),
@@ -234,7 +248,7 @@ class AntiRaid(commands.Cog):
                     "window": window,
                     "threshold": threshold,
                     "last_user": str(member),
-                    "timestamp": discord.utils.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
 
     @commands.Cog.listener()
@@ -262,7 +276,7 @@ class AntiRaid(commands.Cog):
             "type": "bot_join",
             "user_id": str(after.id),
             "user_tag": str(after),
-            "timestamp": discord.utils.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         })
 
     @commands.Cog.listener()
@@ -292,51 +306,14 @@ class AntiRaid(commands.Cog):
             "type": "bulk_delete",
             "channel_id": str(ch.id),
             "count": len(messages),
-            "timestamp": discord.utils.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         })
-
-    @app_commands.command(name="antiraid", description="Показать текущий статус системы анти-рейда")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def antiraid_status(self, interaction: discord.Interaction):
-        cfg = self.get_config(interaction.guild.id)
-        d = cfg.data
-        e = discord.Embed(
-            title="🛡️ Анти-рейд — Состояние",
-            color=0x2ECC71 if (d.get("join_raid") or d.get("age_filter") or d.get("bot_protection")) else 0x95A5A6,
-        )
-        e.description = (
-            "**Режим наблюдения**: бот не делает авто-кик/бан/локдаун, "
-            "только уведомляет в канал алертов.\n"
-            "Все настройки делаются на странице `/antiraid` в панели."
-        )
-        e.add_field(name="Обнаружение рейда", value="✅ Вкл" if d.get("join_raid") else "❌ Выкл", inline=True)
-        e.add_field(name="Фильтр возраста", value="✅ Вкл" if d.get("age_filter") else "❌ Выкл", inline=True)
-        e.add_field(name="Защита от ботов", value="✅ Вкл" if d.get("bot_protection") else "❌ Выкл", inline=True)
-        e.add_field(name="Защита от массового удаления", value="✅ Вкл" if d.get("delete_protection") else "❌ Выкл", inline=True)
-        e.add_field(name="Порог", value=f"{d.get('join_threshold', 5)} чел / {d.get('join_window', 10)}с", inline=True)
-        e.add_field(name="Мин. возраст", value=f"{d.get('min_age', 5)} дней", inline=True)
-        e.add_field(name="Белый список", value=f"{len(d.get('whitelist', []))} чел", inline=True)
-        e.add_field(name="Канал алертов", value=f"<#{d['alert_channel_id']}>" if d.get("alert_channel_id") else "`mod-log` (по умолчанию)", inline=True)
-        e.add_field(name="Последние события", value=str(len(d.get("recent_events", []))), inline=True)
-        await interaction.response.send_message(embed=e, ephemeral=True)
-
-    @app_commands.command(name="antiraid-reload", description="Сейчас перезагрузить конфиг анти-рейда с диска")
-    @app_commands.checks.has_permissions(administrator=True)
-    async def antiraid_reload(self, interaction: discord.Interaction):
-        cfg = self.get_config(interaction.guild.id)
-        changed = cfg.reload()
-        await interaction.response.send_message(
-            f"🔄 Конфиг {'изменился и перезагружен' if changed else 'уже актуален'}.",
-            ephemeral=True,
-        )
 
 
 async def setup(bot):
+    # Серверы для slash-команд — из .env (MAIN_GUILD_ID + EXTRA_GUILD_IDS)
+    from config import Config
     await bot.add_cog(
         AntiRaid(bot),
-        guilds=[
-            discord.Object(id=1421244140359909513),
-            discord.Object(id=1498837105915330562),
-            discord.Object(id=1107038411895881788),
-        ],
+        guilds=Config.guild_objects(),
     )

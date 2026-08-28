@@ -1,7 +1,12 @@
 """
 Ticket AI — продвинутая система поддержки
-Chain-of-thought reasoning, personalizaciya, proактивныйe povedenie, function calling
+Chain-of-thought reasoning, персонализация, проактивное поведение, function calling
 """
+
+from logger import get_logger
+
+_log = get_logger("ai_helper")
+
 import os 
 import json 
 import re 
@@ -14,218 +19,104 @@ try :
 except ImportError :
     AIFunctions =None 
 
-    # ─── VERITABANI ИНФОРМАЦИЯ BOTUN ───────────────────────────────────────────────────────
+    # ─── БАЗА ЗНАНИЙ О БОТЕ ───────────────────────────────────────────────────────
 
 def _bot_knowledge_base ()->str :
-    """Polnaya veritabanы информация о botta Aether"""
-    return """
-═══════════════════════════════════════════
-AETHER BOT — POLNAYa VERITABANI ИНФОРМАЦИЯ
-═══════════════════════════════════════════
+    """Полная база знаний о боте Hakumo (Discord)"""
+    base ="""ПОЛНАЯ БАЗА ЗНАНИЙ О БОТЕ HAKUMO (Discord)
+═══════════════════════════════════════════════════
 
-## NE TAKOE AETHER?
-Aether — чokfunkcionalniy Discord bot для управление сервер.
-Web-panel (Flask) + Discord bot работа vmeste.
-Панель доступюzerinde с Cloudflare tunnel по publicnoy sудалитьke.
-Ссылка на панель nahoditsya в канал #aether-panel.
+## КОМАНДЫ БОТА (реальный боевой список — других команд НЕТ, не выдумывай!)
 
-## 🛡️ MODERASYON
-- /moderate бан @user [причина] — permanentniy бан
-- /moderate кик @user [причина] — кик с сервер
-- /moderate timeout @user [dakika] [причина] — временный мут
-- /moderate untimeout @user — удалено мут
-- /moderate unban [user_id] — razban
-- /utility clear [число] — toplu удалить сообщение
-- /utility lock/unlock — blokirovka/razblokirovka канал
-- /utility userinfo @user — информация о у пользователя
-- /роли @user @роль — выдать/удалено роль
-- /history @user — история moderasyonu
-- /case [id] — detali iшler
-- /note @user [metin] — добавить заметку
-- /notes @user — показать notlar
-- /watchlist @user [причина] — список наблюдение
-- /banlist — запретlanлиш пользователи
-- /massrole @роль [выдать/удалено] — toplu verme роль
+**Модерация** (модераторы):
+- /modpanel — главная панель модератора: варн/снять варн/мут/бан/кик/чистка — всё через удобное окно с прикреплением демки
+- /warnings @user — предупреждения участника
+- /unwarn @user № — снять предупреждение
+- /proofs [@user] — доказательства (демки) по серверу или участнику
+- /proofdel № — удалить демку (админ)
+- /proof @участник наказание причина + файл (или ссылка) — загрузить демку прямо из Discord: файл уходит в канал доказательств
+- Загрузка демок — командой /proof в боте или на веб-панели, вкладка «Доказательства»
 
-## ⚠️ ПРЕДУПРЕЖДЕНИЯ
-- /варн @user [причина] — выдать предупреждение
-- /warnings @user — список предупреждение
-- /clearwarns @user — очистить предупреждения
-Автоматически olarake наказания: iken nakoplenii предупреждение — мут/кик/бан.
+**Тикеты и команда**:
+- /ticket-panel — разместить панель обращений (админ)
+- /ticket-add @user / /ticket-remove @user — участники тикета (мод)
+- /staff-panel — панель набора в команду (админ)
+- /my-application — статус моей заявки
 
-## 🎵 MЮZIK
-- /play [имя/ссылка] — vosproizvesti
-- /pause — pauza/продолжить et
-- /skip — propustit trek
-- /queue — kuyruk
-- /volume [0-100] — gromkost
-- /clear-queue — очистить kuyruk
-- /leave — покинуть голосовой канал
-- /join — prisoedinitsya e канал
+**Репорты и разбор жалоб**:
+- /report @участник причина [скрин/видео-файл или ссылка] — жалоба: создаётся
+  приватная ветка с разбором; обвиняемый видит дело и свои прошлые нарушения
+- /witness @user — позвать свидетеля в ветку репорта (модератор)
+- /my_violations — мои нарушения, с кнопкой обжалования
+- /appeal доводы — обжаловать нарушение: ветка с кнопками одобрить/отклонить
+- /report-setup @роль [#канал] — настройка системы репортов (админ): без канала сама создаёт закрытый #репорты, видимый только модерации
+- /report-settings — лестница рецидивов (1-е предупреждение, 2-е мут на день,
+  3-е мут на неделю, 4-е бан) и срок давности (админ)
+- Разбором управляет модератор: режимы обсуждения (по очереди / свободный /
+  слово вручную), «дать слово», вынесение решения (дефолтное по рецидивам или
+  индивидуальное: варн/мут/кик/бан/без наказания + срок). Закрытый тикет
+  архивируется (переписка сжимается), ветка удаляется.
 
-## 💰 EKONOMI
-- /economy balance — bakiye
-- /economy daily — ежедневный награда (50 monet, 24c)
-- /economy transfer @user [собратьm] — perevesti moneti
-- /economy ranking — en хорошо bogacey
-- /games gamble [собратьm] — aкубикtnaya игра
-- /games slot [собратьm] — slot-makine
-- /games heist @user — soygun
-- /shop — магазин
-- /buy [predmet] — kupit юrюn
+**Утилиты**:
+- /afk [причина] — уйти в AFK (бот ответит на упоминания)
+- /afk-remove — вернуться из AFK
+- !апелляция — апелляция на бан (в личке боту)
+- /appeal — обжалование нарушения из репорта (см. раздел «Репорты»)
+- /logs-setup — создать каналы логов (админ)
 
-## 🎮 RAZVLECENIYa
-- /coinflip — monetka
-- /роль [число] — brosit kubik
-- /rps — kamen-nojnici-bumaga
-- /guess-start — ugкандидат число
-- /guess [число] — vvesti число
-- /8ball [soru] — magicesi sar
-- /random-member — slucтот жеy участник
-- /fun [dice] — razvlekatelnie
-- /poll [soru] — bistriy опрос
+**Музыка** (префикс !):
+- !play запрос — включить трек; !pause !resume !skip !queue !nowplaying
+  !leave
 
-## 👥 SOCIALNOE
-- /birthday [день] [месяц] — сохранить день рождение
-- /birthdays — blijaysie день рождение
-- /afk [причина] — мод AFK
-- /staff-apply — заявка модератора
-- /profile — sizin profil
-- /invites — статистика приглашение
-- /invite-ranking — en хорошо приглашение edenler
+**Автоматика бота** (работает сама, команд не нужно):
+- Автомодерация: фильтр слов/ссылок/флуда/капса (настраивается в панели)
+- Антирейд и верификация новичков
+- Приветствия с красивыми карточками (настраиваются в панели)
+- Логирование событий сервера в каналы логов
+- AI-помощник: упомяни бота или напиши ? вопрос — отвечу
 
-## 🏆 ОЧЕРЕДЬ
-- /rank — sizin уровень ve XP
-- /top-level — en хорошо-10 по уровеньye
-- !ranking — общий очередь
-- !ranking messages — очередь сообщение
-- !ranking voice — рейтинг голосового времени
-- !ranking invites — очередь приглашение
-- /mod-stats @user — статистика модератор
-- /activemods — aktivnie модераторы
+**Веб-панель Hakumo Panel**:
+- Полное управление ботом через браузер (адрес даёт владелец)
+- Роли доступа: owner / admin / curator / mod / uye
+- Куратор — старший модератор (всё модерское + тикеты и сообщество)
 
-## 📅 MEROPRIYaTIYa
-- /event-create [имя] — создать событие
-- /events — aktivnie meropriyatiya
-- /event-cancel [id] — otmenit событие
-- /giveaway — создать розыгрыш
-
-## ⚙️ УПРАВЛЕНИЕ СЕРВЕР
-- /setup-logs — создать лог-каналы
-- /verify-setup — настройк verifikaciyu
-- /ticket_panel — панель ticketlarыn
-- /duty-panel — панель задачи
-- /duty-add @user [очки] — добавить progress
-- /duty-stats — tablo очки
-- /automod — автоматически
-- /level-роли-add [уровень] @роль — роль для уровень
-- /level-роли — список роль для уровеньler
-
-## 🔧 INSTRUMENTI
-- /botinfo — информация о botta
-- /сервер — сервер информация
-- /uptime — время работа botun
-- /health — состояние сервер
-- /avatar @user — avatar пользователь
-- /channel-stats — статистика канал
-- /archive [число] — arhiv сообщение
-- /ai-reset — sbrosit история AI
-- /ai-learn [tema] [metin] — obucit AI
-- /color [#HEX] — информация о renkte
-- /announce #канал [metin] — создать объявление
-
-## 🤖 AI ASSISTENT
-- Напишите в канал с AI — on cevapit
-- /ai-reset — sbrosit история разговор
-- /ai-learn [tema] [metin] — naucit AI novomu faktu
-- AI pomogaet в ticketlarda автоматически как
-
-## 🎫 ТИКЕТЫ
-- Нажмите кнопку в канале для тикета
-- Откроется канал #ticket-вашеad
-- AI-ассистент поможет решить проблему
-- Если не получится — передаст модератору
-- При закрытии — транскрипт сохраняется
-
-## ✅ VERIFIKACIYa
-- Girin в канал verifikacii
-- Клик butona или ispolzuyte /verify
-- Posle verifikacii — polucite роль участник
-
-## 😴 AFK
-- /afk [причина] — вход yap в мод AFK
-- Takma имя menyaetsya на 💤 [sizin takma имя]
-- Iken upominanii — bot soobsaet ne siz AFK
-- Iken denhaklarыnke сообщения — AFK snimaetsya автоматически как
-
-## 🎂 ДЕНЬ РОЖДЕНИЕ
-- /birthday [день] [месяц] — сохранить
-- /birthdays — blijaysie день рождение
-- В день рождение — bot pozdravlyaet автоматически как
-
-## 📨 PRIGLASENIYa
-- /invites — vasa статистика
-- /invite-ranking — en хорошо приглашение edenler
-- Уровеньler: Posol / Priglasayusiy / Новый priglasayusiy
-
-## 🌐 WEB-PANEL
-Панель — web-interfeys управление сервер.
-Как вход yap: ссылка в канал #aether-panel → Discord ID + parola.
-Уровеньler доступ:
-- Участник: profil, заявка, день рождение
-- Модератор: loglar, предупреждения, ticketlar
-- Yёnetici: команды, каналы, roles, автоматически
-- Sahip: vse
-
-## ❓ CASTIE SORULAR
-В: Как вход yap в панель?
-О: Ссылка в канал #aether-panel → Discord ID + parola.
-
-В: Музыка не oynuyor?
-О: Войдите в голосовой канал, затем /play. Если ошибка — /leave и снова /play.
-
-В: Как povisit уровень?
-О: Пишите сообщения и сидите в голосовых каналах. /rank — ваш уровень.
-
-В: Как открыть ticket?
-О: Buton в канал ticketlarыn → "Создать ticket".
-
-В: Как получить роль?
-О: Канал выбор роль или /color-роли.
-
-В: Как podat zayavku модератора?
-О: /staff-apply или с панель.
-
-В: Как сохранить день рождение?
-О: /birthday [день] [месяц] или с панель.
-
-В: Zabil parola из paneli?
-О: Клик "Для parola?" на stranice вход → Discord ID → kod в DM.
+Если пользователь спрашивает команду, которой нет в этом списке — честно скажи,
+что такой функции сейчас нет, и предложи ближайшее из списка или веб-панель.
+═══════════════════════════════════════════════════
+ОТВЕЧАЙ КРАТКО И ТОЧНО. ЕСЛИ НЕ ЗНАЕШЬ КОМАНДУ — НЕ ВЫДУМЫВАЙ.
 """
 
+    # Полная карта панели (разделы/страницы/роли) — генерируется из живого MENU
+    try :
+        from web .ai_knowledge import build_panel_knowledge
+        base +="\n\n"+build_panel_knowledge (compact =True )
+    except Exception as _ex:
+        _log.debug("_bot_knowledge_base(): подавлено: %s", _ex )
+    return base
 
-    # ─── OPREDELENIE KATEGORILER (AI) ─────────────────────────────────────────────
+
+    # ─── ОПРЕДЕЛЕНИЕ КАТЕГОРИИ (AI) ─────────────────────────────────────────────
 
 def _detect_category_ai (message :str ,history :List [Dict ])->str :
-    """Opredelenie kategoriler с с AI (не keyword-based)"""
-    prompt ="""Opredeli kategori obraseniya пользователь в Discord tickette.
+    """Определение категории через AI (не по ключевым словам)"""
+    prompt ="""Определи категорию обращения пользователя в Discord-тикете.
 
-KATEGORILER:
-- complaint: жалоба на drugogo пользователь (оскорбление, spam, toksisite)
-- question: soru о botta, paneli, команда, в ролях, ekonomike
-- technical: tehniceskaya sorun (не работает, ошибка, bag)
-- other: vse ostalnoe
+КАТЕГОРИИ:
+- complaint: жалоба на другого пользователя (оскорбления, спам, токсичность)
+- question: вопрос о боте, панели, командах, ролях, экономике
+- technical: техническая проблема (что-то не работает, ошибка)
+- other: всё остальное (болтовня, приветствие, неясное)
 
 ПРАВИЛА:
-- Если пользователь jaluetsya на DRUGOGO пользователь → complaint
-- Если sprasivaet как ne-to ileiшlert → question
-- Если ne-to не работает или vidaet ошибка → technical
-- Если prosto boltaet или neponyatno → other
+- Если «мне пишут гадости в ЛС» — это complaint
+- Если «как сделать X?» — это question
+- Если «что-то не работает или выдаёт ошибку» — это technical
+- Если просто болтает или непонятно — это other
 
-Cevap ТОЛЬКО birine slovom: complaint, question, technical или other.
-Bez poyasneniy, bez tocek, bez kavicek.
+Ответь ТОЛЬКО одним словом: complaint, question, technical или other.
+Без пояснений, без точек, без кавычек.
 
-Сообщение пользователь: """
+Сообщение пользователя: """
 
     messages =[
     {'role':'user','content':prompt +message }
@@ -237,15 +128,15 @@ Bez poyasneniy, bez tocek, bez kavicek.
         result =result .strip ().lower ()
         if result in ('complaint','question','technical','other'):
             return result 
-    except :
-        pass 
+    except Exception as _ex:
+        _log.debug("_detect_category_ai(): подавлено: %s", _ex)
 
         # Fallback на keyword-based
     return _detect_category_fallback (message )
 
 
 def _detect_category_fallback (message :str )->str :
-    """Fallback: keyword-based opredelenie kategoriler"""
+    """Fallback: определение категории по ключевым словам"""
     msg =message .lower ()
     complaint_words =['жалоба','oskorblyaet','spamit','toksicniy','materitsya','ugrojaet','travit']
     technical_words =['не работает','ошибка','bag','sloazs','vidaet ошибка','не mogu']
@@ -263,109 +154,110 @@ def _detect_category_fallback (message :str )->str :
     # ─── PROMPTI С CHAIN-OF-THOUGHT ─────────────────────────────────────────────
 
 def _prompt_complaint ()->str :
-    """Prompt для жалоба — chain-of-thought"""
-    return """Sen — AI модератор Discord сервер. Cevapla на русский.
+    """Prompt для жалоб: собрать факты и передать модератору.
 
-POLUCENA ЖАЛОБА. Senin задача:
-1. PROANALIZIRUY situaciyu (кто, ne, ne время)
-2. SOBERI информация:
-   - Sprosi кто narusitel (Discord ID или @упоминание)
-   - Sprosi в kakom канал proizoslo
-   - Pопросve dokazatelstva (skrinsoti, ссылка на сообщения)
-3. OCENI ciddiyet:
-   - Legkoe нарушение (spam, flud) → predupredi
-   - Центрlama (оскорбление) → ACTION:WARN:user_id=X:reason=Y
-   - Tyajeloe (tehditler, travlya) → ACTION:JAIL:user_id=X:duration=60:reason=Y ACTION:ESCALATE
-4. USPOKOY пользователь, skaji ne razberemsya
+    Заказ владельца 2026-08-26: ИИ НИКОГДА не наказывает сам — ни мут,
+    ни варн, ни что-либо ещё. Единственное «действие» — позвать
+    модератора (ACTION:ESCALATE). Решение всегда за человеком.
+    """
+    return """Ты — AI-помощник Discord-сервера. Отвечай на русском.
 
-ПРАВИЛА:
-- НЕ prosi skrinsoti если ih zaten dali
-- НЕ ёner "открыть ticket" — biz zaten в tickette
-- Bud empaticnim, no professionalnim
-- Если нарушение tyajeloe — deystvuy bistro
+ПОЛУЧЕНА ЖАЛОБА. Твоя задача:
+1. ПРОАНАЛИЗИРУЙ ситуацию (кто, что, когда)
+2. СОБЕРИ информацию:
+   - Спроси, кто нарушитель (Discord ID или @упоминание)
+   - Спроси, в каком канале произошло
+   - Попроси доказательства (скриншоты, ссылки на сообщения)
+3. УСПОКОЙ пользователя и скажи, что модераторы разберутся
 
-FORMAT CEVABI:
-До cevap пользователю (metinle).
-В конецra, если gerekli записей — на novoy satыre:
-ACTION:WARN:user_id=123456:reason=оскорбление
-или
-ACTION:JAIL:user_id=123456:duration=60:reason=travlya ACTION:ESCALATE
+ЖЁСТКИЕ ПРАВИЛА:
+- Ты НЕ применяешь наказания и даже НЕ предлагаешь их (никаких мутов,
+  варнов, банов, киков, тюрем). Наказания выдаёт только модератор-человек.
+- Не выдумывай факты, имена и цифры. Чего не знаешь — того не знаешь.
+- НЕ проси скриншоты, если их уже прислали
+- НЕ предлагай «открыть тикет» — мы уже в тикете
+- Будь эмпатичным, но профессиональным
+- Нарушение серьёзное или не хватает данных → на новой строке
+  ACTION:ESCALATE — позвать модератора. Это твоё единственное действие.
+
+ФОРМАТ ОТВЕТА:
+Только текст ответа пользователю; при необходимости последней строкой
+ACTION:ESCALATE
 """
 
 
 def _prompt_question ()->str :
     """Prompt для soruov — chain-of-thought"""
-    return """Sen — AI pomosnik Discord сервер. Cevapla на русский.
+    return """Ты — AI-помощник Discord-сервера. Отвечай на русском.
 
-POLUCEN SORU. Senin задача:
-1. PONYaI soru (о cem imenno sprasivayut)
-2. PROVER veriбазу информация (biliyorsun ли cevap)
-3. CEVAP cetko ve kratko:
-   - Если biliyorsun → day cevap + пример ispolzovaniya
-   - Если не emin → skaji "Не emin, no..." + lucsee predpolojenie
-   - Если не biliyorsun → ACTION:ESCALATE (на e модератор)
+ПОЛУЧЕН ВОПРОС. Твоя задача:
+1. ПОЙМИ вопрос (о чём именно спрашивают)
+2. ПРОВЕРЬ базу знаний (знаешь ли ответ)
+3. ОТВЕТЬ чётко и кратко:
+   - Знаешь → дай ответ + пример использования
+   - Не уверен → скажи «Не уверен, но…» + лучшее предположение
+   - Не знаешь → ACTION:ESCALATE (передать модератору)
 
 ПРАВИЛА:
-- Cevapla на 2-3 predlojeniya maksimum
-- Hadi konkretnie команды с пример
-- НЕ ёner "открыть ticket" — biz zaten в tickette
-- Если soru о drugom у пользователя — не raskrivay licnuyu информация
+- Отвечай максимум в 2-3 предложения
+- Давай конкретные команды с примером
+- НЕ предлагай «открыть тикет» — мы уже в тикете
+- Если вопрос о другом пользователе — не раскрывай личную информацию
 
-ПРИМЕР HOROSIH CEVAPLARIN:
-В: Как zabanit spamera?
-О: Ispolzuy `/moderate бан @user причина`. На: `/moderate бан @spammer Spam в sohbette`. Bot denhaklarыtutar DM пользователю ve записьet в loglar.
+ПРИМЕР ХОРОШИХ ОТВЕТОВ:
+В: Как забанить спамера?
+О: Используй `/moderate ban @user причина`. Например: `/moderate ban @spammer Спам в чате`. Бот отправит DM пользователю и запишет в логи.
 
-В: Как povisit уровень?
-О: Пишите сообщения в чате и сидите в голосовых каналах — получаете XP. Проверьте уровень: `/rank`. Топ-10: `/top-level`.
+В: Как повысить уровень?
+О: Пиши сообщения в чате и сиди в голосовых каналах — получаешь XP. Проверь уровень: `!xp-rank`. Топ-10: `!xp-leaderboard`.
 """
 
 
 def _prompt_technical ()->str :
-    """Prompt для tehnicстарыйh problem — chain-of-thought"""
-    return """Sen — AI tehподдержка Discord сервер. Cevapla на русский.
+    """Промпт для технических проблем — chain-of-thought"""
+    return """Ты — AI техподдержки Discord-сервера. Отвечай на русском.
 
-TEHNICESKAYa SORUN. Senin задача:
-1. DIAGNOSTIRUY sorunu (ne imenno не работает)
-2. PREDLOJI reseniya (minimum 2 varianta):
-   - Samoe veroyatnoe решение
-   - Alternativnoe решение
-3. POSAGOVO obyasni как vipolnit решение
-4. Если не pomoglo → ACTION:ESCALATE
+ТЕХНИЧЕСКАЯ ПРОБЛЕМА. Твоя задача:
+1. ДИАГНОСТИРУЙ проблему (что именно не работает)
+2. ПРЕДЛОЖИ решения (минимум 2 варианта):
+   - Самое вероятное решение
+   - Альтернативное решение
+3. ПОШАГОВО объясни, как выполнить решение
+4. Если не помогло → ACTION:ESCALATE
 
 ПРАВИЛА:
-- Nacinay с samogo prostogo reseniya
-- Hadi posagovie instrukcii (1, 2, 3...)
-- Если nujna команда — ukaji tocno с пример
-- НЕ ёner "открыть ticket" — biz zaten в tickette
-- Если sorun slojnaya ve sen не emin → srazu ACTION:ESCALATE
+- Начиная с самого простого решения
+- Давай пошаговые инструкции (1, 2, 3...)
+- Если нужна команда — укажи точно с примером
+- НЕ предлагай «открыть тикет» — мы уже в тикете
+- Если проблема сложная и ты не уверен → сразу ACTION:ESCALATE
 
 ПРИМЕР:
-В: Музыка не oynuyor
-О: Hadi proverim:
-1. Вы в голосовом канале? (бот должен быть в том же канале)
-2. Poprobuy `/leave` после tekrar `/play [имя]`
-3. Проверьте, что у бота есть права администратора на управление голосовыми каналами
+В: Музыка не играет
+О: Давай проверим:
+1. Ты в голосовом канале? (бот должен быть в том же канале)
+2. Попробуй `!leave`, затем снова `!play [название]`
+3. Проверь, что у бота есть права на управление голосовыми каналами
 
-Если не pomoglo — направление e модератор.
+Если не помогло — передаю модератору.
 """
 
 
 def _prompt_other ()->str :
     """Prompt для drugih obraseniy — chain-of-thought"""
-    return """Sen — AI pomosnik Discord сервер. Cevapla на русский.
+    return """Ты — AI-помощник Discord-сервера. Отвечай на русском.
 
-OBRASENIE НЕ YaSNO. Senin задача:
-1. POYMI ne hocet пользователь
-2. UTOCNI если neponyatno (zкандидат 1 soru)
-3. POMOGI если mojes
-4. Если не mojes → ACTION:ESCALATE
+ОБРАЩЕНИЕ НЕЯСНО. Твоя задача:
+1. ПОЙМИ, чего хочет пользователь
+2. УТОЧНИ, если непонятно (задай 1 вопрос)
+3. ПОМОГИ, если можешь
+4. Если не можешь → ACTION:ESCALATE
 
 ПРАВИЛА:
-- Bud drujelyubnim
-- Zкандидат maksimum 1 utocnyayusiy soru
-- Если пользователь prosto boltaet — podderji разговор
-- Если sorun sereznaya — на e модератор
-- НЕ ёner "открыть ticket" — biz zaten в tickette
+- Будь дружелюбным
+- Задавай максимум 1 уточняющий вопрос
+- Если пользователь просто болтает — поддержи разговор
+- Если проблема серьёзная — передай модератору
 """
 
 
@@ -380,11 +272,11 @@ def _get_prompt_by_category (category :str )->str :
     return prompts .get (category ,_prompt_other ())
 
 
-    # ─── GLAVNAYa FUNKCIYa — AI TICKET RESPONSE ───────────────────────────────────
+    # ─── ГЛАВНАЯ ФУНКЦИЯ — AI TICKET RESPONSE ───────────────────────────────────
 
 async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_context :Dict )->Tuple [str ,bool ,str ,List [Dict ],str ]:
     """
-    Glavnaya funkciya AI cevabы в tickette.
+    Главная функция AI-ответа в тикете.
 
     Returns:
         (response, should_escalate, escalation_category, updated_history, detected_category)
@@ -416,7 +308,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
             user_info .append (f"На на сервере: {days} dn.")
     if guild_context .get ('previous_tickets'):
         prev =guild_context ['previous_tickets']
-        user_info .append (f"Predidusih ticketlarыn: {len(prev)}")
+        user_info .append (f"Предыдущих тикетов: {len(prev)}")
         if prev :
             last =prev [-1 ]
             user_info .append (f"В конец ticket: {last.get('category', '?')} ({last.get('status', '?')})")
@@ -439,7 +331,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
     if server_info :
         messages .append ({
         'role':'system',
-        'content':"BAГLAM СЕРВЕР:\n"+"\n".join (server_info )
+        'content':"КОНТЕКСТ СЕРВЕРА:\n"+"\n".join (server_info )
         })
 
         # 5.5. Function calling — описание eriшadlerin fonksiyonlarыn
@@ -460,10 +352,10 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         if learning_context :
             messages .append ({
             'role':'system',
-            'content':f"BAГLAM EГITIMI (ispolzuy для ulucseniya cevabы):\n{learning_context}"
+            'content':f"КОНТЕКСТ ОБУЧЕНИЯ (используй для улучшения ответа):\n{learning_context}"
             })
     except Exception as e :
-        print (f"[AI] Ошибка zagruzki контекстn eгitimi: {e}")
+        print (f"[AI] Ошибка загрузки контекста обучения: {e}")
 
         # 6. История разговор (son 20 сообщение)
     if history :
@@ -504,7 +396,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
                 'content':f"РЕЗУЛЬТАТ FONKSIYONLAR {func_call}:\n{result}"
                 })
 
-                # Удален vizovi fonksiyonlarыn из cevabы
+                # Убрать вызовы функций из ответа
     response =re .sub (r'\[FUNC:[^\]]+\]','',response ).strip ()
 
     # 9. Отдельношtыrыyoruz записейler
@@ -514,10 +406,10 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
         response =response .replace ('ACTION:ESCALATE','').strip ()
 
         # Удален chain-of-thought bloki если есть
-        # (re global import edildiгi для burada tekrar import gerekmiyor)
+        # (re уже импортирован глобально, повторный импорт не нужен)
 
     if not response :
-        response ="Iшliyorum sizin sorgu..."
+        response ="Обрабатываю ваш запрос..."
 
         # 10. Обновл история
     updated_history =history +[
@@ -541,14 +433,14 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
                     for fact in facts [:2 ]:# Maksimum 2 fakta для kez
                         await ai_functions .remember_fact (guild ,user_id ,fact )
         except Exception as e :
-            print (f"[AI] Ошибка izvleceniya gerчдобавитьr: {e}")
+            print (f"[AI] Ошибка извлечения фактов: {e}")
 
-            # 12. Сохран cevap для samoeгitimi (olacak proanalizirovan после)
+            # 12. Сохраняем ответ для самообучения (проанализируется позже)
     try :
         from web .self_learning import get_self_learning 
         self_learning =get_self_learning ()
 
-        # Контроль ediyoruz длинныйluгu cevabы — если очень korotkiy, vozmюmkюn sorun
+        # Проверяем длину ответа — если очень короткий, возможна проблема
         if len (response )<10 :
             self_learning .record_mistake (
             user_message =user_message ,
@@ -556,7 +448,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
             correct_response ='',
             mistake_type ='too_short_response'
             )
-            # Если cevap dlinniy ve podrobniy — vozmюmkюn uspeh
+            # Если ответ длинный и подробный — возможен успех
         elif len (response )>200 and category in ['question','technical']:
             self_learning .record_success (
             user_message =user_message ,
@@ -564,7 +456,7 @@ async def ai_ticket_response (user_message :str ,history :List [Dict ],guild_con
             success_type ='detailed_response'
             )
     except Exception as e :
-        print (f"[AI] Ошибка запись для eгitimi: {e}")
+        print (f"[AI] Ошибка записи для обучения: {e}")
 
     return response ,should_escalate ,category ,updated_history ,category 
 
@@ -588,8 +480,14 @@ def ai_ticket_greeting (category :str =None )->str :
     # ─── PARSING ДЕЙСТВИЕ ───────────────────────────────────────────────────────
 
 def parse_ai_actions (response :str )->Dict :
-    """Parsing записей из cevabы AI"""
-    import re 
+    """Разбор записей из ответа AI.
+
+    Заказ владельца 2026-08-26: ИИ не наказывает. Любые ACTION:WARN /
+    ACTION:JAIL / ROLE_ASSIGN / CHANNEL_REDIRECT / DELETE_MESSAGES,
+    даже если модель их выдала, НЕИЗМЕННО игнорируются и вычищаются из
+    текста. Работает только ACTION:ESCALATE — позвать модератора.
+    """
+    import re
 
     actions ={
     'escalate':'ACTION:ESCALATE'in response ,
@@ -600,62 +498,27 @@ def parse_ai_actions (response :str )->Dict :
     'delete_messages':None ,
     }
 
-    # WARN
-    warn_match =re .search (r'ACTION:WARN:user_id=(\d+):reason=([^\n]+)',response )
-    if warn_match :
-        actions ['варн']={
-        'user_id':int (warn_match .group (1 )),
-        'reason':warn_match .group (2 ).strip ()
-        }
-        response =re .sub (r'ACTION:WARN:user_id=\d+:reason=[^\n]+','',response )
+    # Модель пыталась наказать? Чистим и пишем в лог — но не исполняем.
+    _forbidden =re .search (
+    r'ACTION:(WARN|JAIL|ROLE_ASSIGN|CHANNEL_REDIRECT|DELETE_MESSAGES)[^\n]*',response )
+    if _forbidden :
+        _log .warning ("parse_ai_actions(): ИИ предложил '%s' — ОТКЛОНЕНО. "
+                       "Наказания применяет только модератор.",_forbidden .group (0 )[:80 ])
 
-        # JAIL
-    тюрьма_match =re .search (r'ACTION:JAIL:user_id=(\d+):duration=(\d+):reason=([^\n]+)',response )
-    if тюрьма_match :
-        actions ['тюрьма']={
-        'user_id':int (тюрьма_match .group (1 )),
-        'duration':int (тюрьма_match .group (2 )),
-        'reason':тюрьма_match .group (3 ).strip ()
-        }
-        response =re .sub (r'ACTION:JAIL:user_id=\d+:duration=\d+:reason=[^\n]+','',response )
+    # Вычищаем ВСЕ служебные маркеры из текста ответа
+    response =re .sub (r'ACTION:(WARN|JAIL|ROLE_ASSIGN|CHANNEL_REDIRECT|DELETE_MESSAGES|ESCALATE)[^\n]*','',response )
 
-        # ROLE_ASSIGN
-    role_match =re .search (r'ACTION:ROLE_ASSIGN:user_id=(\d+):role_id=(\d+)',response )
-    if role_match :
-        actions ['role_assign']={
-        'user_id':int (role_match .group (1 )),
-        'role_id':int (role_match .group (2 ))
-        }
-        response =re .sub (r'ACTION:ROLE_ASSIGN:user_id=\d+:role_id=\d+','',response )
-
-        # CHANNEL_REDIRECT
-    channel_match =re .search (r'ACTION:CHANNEL_REDIRECT:channel_id=(\d+)',response )
-    if channel_match :
-        actions ['channel_redirect']={
-        'channel_id':int (channel_match .group (1 ))
-        }
-        response =re .sub (r'ACTION:CHANNEL_REDIRECT:channel_id=\d+','',response )
-
-        # DELETE_MESSAGES
-    delete_match =re .search (r'ACTION:DELETE_MESSAGES:channel_id=(\d+):count=(\d+)',response )
-    if delete_match :
-        actions ['delete_messages']={
-        'channel_id':int (delete_match .group (1 )),
-        'count':int (delete_match .group (2 ))
-        }
-        response =re .sub (r'ACTION:DELETE_MESSAGES:channel_id=\d+:count=\d+','',response )
-
-        # Удален pustie satыrlar
+    # Удален pustie satыrlar
     response ='\n'.join (line for line in response .split ('\n')if line .strip ())
 
-    actions ['cleaned_response']=response 
-    return actions 
+    actions ['cleaned_response']=response
+    return actions
 
 
     # ─── OBUCENIE DEN CEVAPLARIN МОДЕРАТОР ────────────────────────────────────────
 
 def learn_from_staff (staff_message :str ,user_question :str ,guild_id :int ):
-    """Автоматически obucenie из cevaplarыn модератор"""
+    """Автоматическое обучение из ответов модератора"""
     try :
         faq_file ='data/faq_learned.json'
         faqs ={}
@@ -667,11 +530,11 @@ def learn_from_staff (staff_message :str ,user_question :str ,guild_id :int ):
         if guild_key not in faqs :
             faqs [guild_key ]=[]
 
-            # Ekliyoruz soru-cevap
+            # Добавляем вопрос-ответ
         faqs [guild_key ].append ({
         'question':user_question ,
         'answer':staff_message ,
-        'timestamp':datetime .datetime .utcnow ().isoformat ()
+        'timestamp':datetime.datetime.now(datetime.timezone.utc).isoformat ()
         })
 
         # Ограничиваем 100 записьyami
@@ -682,7 +545,7 @@ def learn_from_staff (staff_message :str ,user_question :str ,guild_id :int ):
             json .dump (faqs ,f ,ensure_ascii =False ,indent =2 )
 
     except Exception as e :
-        print (f"[AI LEARN] Ошибка eгitimi: {e}")
+        print (f"[AI LEARN] Ошибка обучения: {e}")
 
 
 def get_learned_faqs (guild_id :int )->List [Dict ]:
@@ -693,8 +556,8 @@ def get_learned_faqs (guild_id :int )->List [Dict ]:
             with open (faq_file ,'r',encoding ='utf-8')as f :
                 faqs =json .load (f )
             return faqs .get (str (guild_id ),[])
-    except :
-        pass 
+    except Exception as _ex:
+        _log.debug("get_learned_faqs(): подавлено: %s", _ex)
     return []
 
 
@@ -705,7 +568,7 @@ import urllib .error
 
 def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     """
-    Умный автономный AI-ассистент Aether/Moebius (работает 100% без внешних API-ключей!).
+    Умный автономный AI-ассистент Hakumo/Moebius (работает 100% без внешних API-ключей!).
     """
     last_msg =""
     sys_prompt =""
@@ -718,10 +581,10 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
     q_lower =last_msg .lower ()
 
     # 1. Приветствие / Салют
-    if any (k in q_lower for k in ["привет","здравствуй","хай","салют","доброе утро","добрый вечер","selam","merhaba","hey","aether","moebius"]):
+    if any (k in q_lower for k in ["привет","здравствуй","хай","салют","доброе утро","добрый вечер","selam","merhaba","hey","hakumo","moebius"]):
         return (
-        "Привет, дружище! Я Aether, твой AI-ассистент и модератор на сервере Discord. 🤖\n"
-        "Контроль сервера, модерация и поддержка под моим присмотром. Чем я могу помочь?",
+        "Привет, дружище! Я Hakumo, AI-ассистент сервера Discord. 🤖\n"
+        "Отвечаю на вопросы, помогаю с панелью и настройками. Наказания выдаёт только модератор-человек — я лишь помогаю разобраться. Чем могу помочь?",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":10 }
         )
@@ -753,7 +616,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         log_status ="не найден (бот ещё не записал ни одного сообщения)"
         try :
             import json as _jj 
-            _target_gid =os .getenv ('MAIN_GUILD_ID','1498837105915330562')
+            _target_gid =os .getenv ('MAIN_GUILD_ID','')or 'unknown'
             _log_f =f'data/message_log_{_target_gid}.json'
             if os .path .exists (_log_f ):
                 try :
@@ -762,24 +625,39 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                     log_status =f"существует, содержит {len(_ldata)} сообщений (но я не могу их отфильтровать в офлайн-режиме)"
                 except Exception :
                     log_status ="повреждён или недоступен"
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_local_moebius_fallback(): подавлено: %s", _ex)
 
         return (
         f"🔍 **Поиск сообщений {target_str}:**\n\n"
-        f"К сожалению, в текущем автономном (офлайн) режиме я не могу выполнить "
-        f"полноценный поиск сообщений через Discord API.\n\n"
-        f"**Что нужно сделать:**\n"
-        f"• Проверьте подключение к AI-сервису (Mistral/Ollama) — тогда я смогу "
-        f"вызвать функцию `search_user_messages` и дать точный ответ.\n"
-        f"• Или используйте веб-панель → раздел «Пользователи» для просмотра истории.\n"
-        f"• Или команду `/history @пользователь` в Discord.\n\n"
+        "К сожалению, в текущем автономном (офлайн) режиме я не могу выполнить "
+        "полноценный поиск сообщений через Discord API.\n\n"
+        "**Что нужно сделать:**\n"
+        "• Проверьте подключение к AI-сервису (Mistral/Ollama) — тогда я смогу "
+        "вызвать функцию `search_user_messages` и дать точный ответ.\n"
+        "• Или используйте веб-панель → раздел «Пользователи» для просмотра истории.\n"
+        "• Или команду `/history @пользователь` в Discord.\n\n"
         f"**Статус лога бота:** {log_status}\n\n"
-        f"Я не буду выдумывать содержимое сообщений — лучше честно сказать, что поиск "
-        f"сейчас недоступен, чем дать вам недостоверную информацию. 🙏",
+        "Я не буду выдумывать содержимое сообщений — лучше честно сказать, что поиск "
+        "сейчас недоступен, чем дать вам недостоверную информацию. 🙏",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":11 }
         )
+
+        # 1.6. «Как настроить X?» — пошаговые гайды из базы знаний.
+        # Стоит раньше остальных блоков, чтобы «как настроить варны/тикеты/...»
+        # не перехватывалось общими ключами (экономика, тикеты и т.д.).
+    # «настро» ловит и infinitive «настроить», и «настройку» — но не «настроение»
+    if (any (k in q_lower for k in ["настро","как включить","как выключить","где включается","где выключается","куда нажать","как поставить","как подключить","как завести","как поменять","как сменить"])and "настроени" not in q_lower ):
+        try :
+            from web .ai_knowledge import build_setup_faq
+            return (
+            build_setup_faq (last_msg ),
+            "moebius-offline-ai",
+            {"provider":"fallback","latency_ms":11 }
+            )
+        except Exception as _ex:
+            _log.debug("_local_moebius_fallback(): подавлено: %s", _ex )
 
         # 2. Как дела / Как жизнь / Что нового
     if any (k in q_lower for k in ["как дела","как жизнь","что нового","как ты","как самочувствие","насылсын","набер"]):
@@ -793,7 +671,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 3. Кто ты / Расскажи о себе
     if any (k in q_lower for k in ["кто ты","что ты такое","расскажи о себе","ты кто","что за бот","кто ты такой"]):
         return (
-        "Я Aether (Moebius) — многофункциональный AI-ассистент и защитник этого Discord-serverа! 🤖\n"
+        "Я Hakumo (Moebius) — многофункциональный AI-ассистент и защитник этого Discord-сервера! 🤖\n"
         "• Моя задача — охранять сервер от спама и рейдов, помогать участникам в тикетах поддержки и управлять ролями.\n"
         "• Чтобы узнать все мои возможности, просто напиши «команды» или «помощь»!",
         "moebius-offline-ai",
@@ -809,7 +687,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         )
 
         # 5. Прощание (Пока / До свидания / Удачи)
-    if any (k in q_lower for k in ["пока","до свидания","удачи","спокойной ночи","до встречи","бывай"]):
+    # \b-границы: иначе «покажи правила» ошибочно ловилось подстрокой «пока»
+    if re .search (r'\bпока\b|до свидания|\bудачи\b|спокойной ночи|до встречи|\bбывай\b',q_lower ):
         return (
         "До встречи, дружище! Я остаюсь на посту и продолжаю следить за безопасностью сервера. 🛡️ Удачи!",
         "moebius-offline-ai",
@@ -828,7 +707,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 7. Музыка (play / песня / музыка)
     if any (k in q_lower for k in ["музыка","песня","трек","слушать","play","мьюзик"]):
         return (
-        "🎵 **Музыкальный модуль Aether:**\n"
+        "🎵 **Музыкальный модуль Hakumo:**\n"
         "• Чтобы включить музыку, зайдите в голосовой канал и используйте команду `/play <название или ссылка>`.\n"
         "• Для управления воспроизведением используйте `/pause`, `/skip` и `/queue`.\n"
         "Приятного прослушивания! 🎧",
@@ -839,7 +718,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 8. Экономика и Магазин
     if any (k in q_lower for k in ["экономика","монеты","баланс","деньги","магазин","shop","монета","эко"]):
         return (
-        "💰 **Экономика сервера Aether:**\n"
+        "💰 **Экономика сервера Hakumo:**\n"
         "• Вы можете зарабатывать монеты за активность в чатах и голосовых каналах!\n"
         "• Проверить свой баланс можно командой `/economy`, а заглянуть в магазин ролей — командой `/shop`.",
         "moebius-offline-ai",
@@ -887,8 +766,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                         if _uid ==target or target .lower ()in str (_uid ).lower ():
                             w_count +=len (_ws )
                             w_reasons .extend ([_w .get ('reason','?')for _w in _ws ])
-            except :
-                pass 
+            except Exception as _ex:
+                _log.debug("_local_moebius_fallback(): подавлено: %s", _ex)
         m_count =0 
         if os .path .exists ('data/mod_data.json'):
             try :
@@ -898,8 +777,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                     for _c in _case :
                         if str (_c .get ('user_id',''))==target :
                             m_count +=1 
-            except :
-                pass 
+            except Exception as _ex:
+                _log.debug("_local_moebius_fallback(): подавлено: %s", _ex)
         return (
         f"👤 **Анализ безопасности пользователя ({target}):**\n"
         f"• **Количество предупреждений:** {w_count} шт."+(f" (*Последние причины: {', '.join(w_reasons[:3])}*)"if w_reasons else "")+"\n"
@@ -918,7 +797,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                 rule_lines .append (f"• {r_match.group(1)}")
         if not rule_lines :
             import os ,json as _j 
-            for rf in ["data/rules_1421244140359909513.json","data/rules.json"]:
+            for rf in [f"data/rules_{os .getenv ('MAIN_GUILD_ID','0')}.json","data/rules.json"]:
                 if os .path .exists (rf ):
                     try :
                         with open (rf ,'r',encoding ='utf-8')as _fp :
@@ -929,8 +808,8 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
                                     rule_lines .append (f"• {rtext}")
                             if rule_lines :
                                 break 
-                    except :
-                        pass 
+                    except Exception as _ex:
+                        _log.debug("_local_moebius_fallback(): подавлено: %s", _ex)
         if not rule_lines :
             rule_lines =[
             "• Правило #1: Уважение и вежливость — Запрещены оскорбления, мат, унижения и язык вражды.",
@@ -940,9 +819,9 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
             "• Правило #5: Конфиденциальность и безопасность — Запрещено распространение личных данных и вредоносных ссылок."
             ]
         return (
-        "📜 **Свод правил сервера Aether:**\n"
+        "📜 **Свод правил сервера Hakumo:**\n"
         +"\n".join (rule_lines [:5 ])+
-        "\n\nПожалуйста, соблюдайте правила сервера. За нарушения автоматически применяются наказания (варн/мут/кик/бан).",
+        "\n\nПожалуйста, соблюдайте правила сервера. За нарушения модераторы применяют наказания (варн/мут/кик/бан) — решения принимает человек.",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":11 }
         )
@@ -954,23 +833,65 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         return (
         f"📢 **{topic_val.upper()}**\n\n"
         f"Уважаемые участники, на нашем сервере по теме **{topic_val}** проводятся необходимые обновления и улучшения.\n"
-        f"• Пожалуйста, соблюдайте правила сервера и следите за объявлениями администрации.\n"
-        f"• Для вопросов или обратной связи используйте каналы поддержки.\n\n"
-        f"✨ *Администрация Aether*",
+        "• Пожалуйста, соблюдайте правила сервера и следите за объявлениями администрации.\n"
+        "• Для вопросов или обратной связи используйте каналы поддержки.\n\n"
+        "✨ *Администрация Hakumo*",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":12 }
         )
 
-        # 14. Модерационный отчет
-    if any (k in q_lower for k in ["rapor","deгerlendirme raporu","еженедельный","отчет","отчёт","еженедельный","сводка"]):
+        # 14. Модерационный отчет — ТОЛЬКО реальные цифры из audit_log
+        # (тот же источник, что /mod-report). Нет данных — честно говорим
+        # «нет данных», ничего не выдумываем и не советуем наказания.
+    if any (k in q_lower for k in ["rapor","deгerlendirme raporu","еженедельный","отчет","отчёт","еженедельный","сводка","активност"]):
+        facts =[]
+        total =0 
+        try :
+            from web .routes .analytics_plus import _read_audit ,_parse_ts 
+            from datetime import datetime as _dt ,timedelta as _td 
+            _gid =int (os .getenv ('MAIN_GUILD_ID','0')or 0 )
+            cutoff =_dt .now ()-_td (days =7 )
+            per_mod ={}
+            for ev in _read_audit (_gid ):
+                if ev .get ('category')!='mod':
+                    continue 
+                _ts =_parse_ts (ev .get ('timestamp'))
+                if _ts is None or _ts <cutoff :
+                    continue 
+                total +=1 
+                _mn =str (ev .get ('mod_name')or '').strip ()
+                if _mn :
+                    per_mod [_mn ]=per_mod .get (_mn ,0 )+1 
+            if per_mod :
+                top =sorted (per_mod .items (),key =lambda kv :kv [1 ],reverse =True )
+                facts .append ("• **Активность модераторов за 7 дней:**")
+                facts +=[f"  — {name}: {cnt} д." for name ,cnt in top [:8 ]]
+            if total ==0 and not per_mod :
+                return (
+                "📊 **Отчёт модерации за 7 дней:**\n\n"
+                "За последнюю неделю в журнале модерации нет ни одного записанного "
+                "действия. Это честные данные из журнала бота (audit_log), ничего "
+                "выдуманного.\n\n"
+                "Как только модераторы начнут выдавать наказания через команды бота — "
+                "цифры появятся здесь и на странице «Отчёты» панели.",
+                "moebius-offline-ai",
+                {"provider":"fallback","latency_ms":12 }
+                )
+        except Exception as _ex:
+            _log.debug("_local_moebius_fallback(): подавлено: %s", _ex)
+            return (
+            "📊 **Отчёт модерации:** данные журнала сейчас недоступны, поэтому я "
+            "не буду называть никакие цифры — выдумывать не стану. Точные данные "
+            "всегда на странице «Отчёты» в панели.",
+            "moebius-offline-ai",
+            {"provider":"fallback","latency_ms":12 }
+            )
         return (
-        "📊 **Еженедельный отчет модерации Aether**\n\n"
-        "• **Зарегистрировано предупреждений:** 17 случаев\n"
-        "• **Применено наказаний:** 0 случаев\n\n"
-        "**Общий анализ ситуации и рекомендации:**\n"
-        "1. Контроль за порядком на сервере осуществляется стабильно.\n"
-        "2. При нарушениях рекомендуется в первую очередь применять предупреждения и временный мут (timeout).\n"
-        "3. Среднее время реагирования команды модераторов на тикеты остается на высоком уровне.",
+        f"📊 **Отчёт модерации за 7 дней** (реальные данные журнала):\n\n"
+        f"• **Всего мод-действий:** {total}\n"
+        +"\n".join (facts )+
+        "\n\nПодробные графики — панель → «Отчёты». Нужны детали по конкретному "
+        "модератору или действию — спросите, я разберу по журналу.",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":15 }
         )
@@ -991,18 +912,30 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         on_val =online_m .group (1 )if online_m else "Текущий"
         vc_val =voice_m .group (1 )if voice_m else "0"
         return (
-        f"🤖 **Анализ состояния сервера Aether:**\n"
+        "🤖 **Анализ состояния сервера Hakumo:**\n"
         f"• На сервере сейчас **{on_val}** участник в сети, в голосовых каналах **{vc_val}** активных пользователей.\n"
-        f"• Все системы модерации, безопасности и анти-рейда работают 24/7.\n"
-        f"Чем еще я могу помочь, дружище?",
+        "• Все системы модерации, безопасности и анти-рейда работают 24/7.\n"
+        "Чем еще я могу помочь, дружище?",
         "moebius-offline-ai",
         {"provider":"fallback","latency_ms":12 }
         )
 
+        # 16.5. Панель и роли доступа (включая Куратора) — из живой карты MENU
+    if any (k in q_lower for k in ["панел","panel","куратор","веб-панель","где настроить доступ","роли доступа"]):
+        try :
+            from web .ai_knowledge import build_panel_faq
+            return (
+            build_panel_faq (),
+            "moebius-offline-ai",
+            {"provider":"fallback","latency_ms":11 }
+            )
+        except Exception as _ex:
+            _log.debug("_local_moebius_fallback(): подавлено: %s", _ex )
+
         # 17. Команды и помощь
     if any (k in q_lower for k in ["команда","помощь","help","neler yapabilirsin","особенность","команды","помощь","что ты умеешь","справка","какие команды"]):
         return (
-        "🤖 **Справочник по командам Aether/Moebius:**\n"
+        "🤖 **Справочник по командам Hakumo/Moebius:**\n"
         "• **Модерация:** `/moderate бан`, `/moderate кик`, `/moderate timeout`, `/варн`, `/warnings`\n"
         "• **Управление и очистка:** `/utility clear`, `/roles`, `/utility lock`, `/utility unlock`\n"
         "• **Поддержка и тикеты:** Команда `/ticket` или кнопка поддержки для создания тикета с AI-ассистентом.\n"
@@ -1026,7 +959,7 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
         # 19. Тикеты / Поддержка
     if any (k in q_lower for k in ["ticket","поддержка","тикет","жалоба","sorun","администратор","админ","проблема","админ","модератор","sikayet","жалоба","kufur","kюfюr"]):
         return (
-        "🎫 **Система поддержки Aether AI:**\n"
+        "🎫 **Система поддержки Hakumo AI:**\n"
         "• Вы можете легко создать тикет с помощью кнопок в канале поддержки.\n"
         "• Сначала в тикете помогаю я; при необходимости или сложных вопросах я сразу подключаю администраторов сервера.\n"
         "• При запросе связи с администрацией нашей команде отправляется уведомление.",
@@ -1036,28 +969,28 @@ def _local_moebius_fallback (messages :List [Dict ])->Tuple [str ,str ,Dict ]:
 
         # 20. Умный, дружелюбный автономный ответ по умолчанию (когда нет точного совпадения по ключам)
     return (
-    f"🤖 **Aether (Moebius) — автономный ассистент:**\n"
+    "🤖 **Hakumo (Moebius) — автономный ассистент:**\n"
     f"Я внимательно прочитал твоё сообщение: *«{last_msg[:120]}»*\n\n"
-    f"• Я работаю 24/7 и готов помочь с управлением сервером, модерацией и командами.\n"
-    f"• Если тебе нужен список команд — напиши **«команды»** или **«помощь»**.\n"
-    f"• Если нужно проверить правила сервера — напиши **«правила»**.\n"
-    f"• Если возникла проблема или нужна связь с админами — используй систему тикетов (`/ticket`).\n\n"
-    f"Чем именно я могу тебе помочь, дружище? 👊",
+    "• Я работаю 24/7 и готов помочь с управлением сервером, модерацией и командами.\n"
+    "• Если тебе нужен список команд — напиши **«команды»** или **«помощь»**.\n"
+    "• Если нужно проверить правила сервера — напиши **«правила»**.\n"
+    "• Если возникла проблема или нужна связь с админами — используй систему тикетов (`/ticket`).\n\n"
+    "Чем именно я могу тебе помочь, дружище? 👊",
     "moebius-offline-ai",
     {"provider":"fallback","latency_ms":12 }
     )
 def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,model :str =None )->Tuple [str ,str ,Dict ]:
     """
-    Чoklu Saгlayыcы LLM API Чaгrыsы:
-    1) Ollama (Yerel LLM)
-    2) Mistral AI API (MISTRAL_API_KEY varsa mistral-large/medium/small)
+    Мультпровайдерный вызов LLM API:
+    1) Ollama (локальная LLM)
+    2) Mistral AI API (MISTRAL_API_KEY: mistral-large/medium/small)
     3) OpenRouter / DeepSeek / OpenAI API
-    4) Akыllы Yerel Aether/Moebius Чevrimdышы Fallback Motoru
+    4) Умный локальный офлайн-движок Hakumo/Moebius (fallback)
     """
     model_name =model or os .getenv ("AI_MODEL","mistral-large-latest")
     ollama_url =os .getenv ("OLLAMA_URL","http://127.0.0.1:11434")
 
-    # 1. Ollama (Yerel LLM) denemesi — sadece работатьыyorsa чok hыzlы
+    # 1. Попытка Ollama (локальная LLM) — очень быстро, если работает
     try :
         payload =json .dumps ({
         "model":model_name ,
@@ -1079,8 +1012,8 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
             text =data .get ("message",{}).get ("content","").strip ()
             if text :
                 return text ,model_name ,{"provider":"ollama"}
-    except Exception :
-        pass 
+    except Exception as _ex:
+        _log.debug("_call(): подавлено: %s", _ex)
 
         # 2. Mistral AI API — Автоматическая ротация нескольких ключей (Key Rotation)
     mistral_env =os .getenv ("MISTRAL_API_KEY","")
@@ -1145,9 +1078,9 @@ def _call (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7
                 if text :
                     return text ,model_name ,{"provider":"api"}
         except Exception as _oe :
-            print (f"[AI API] Dыш API ошибка: {_oe}")
+            print (f"[AI API] Внешняя API ошибка: {_oe}")
 
-            # 4. Akыllы Aether/Moebius Yerel Fallback (Hiчbir LLM servisi olmasa bile никогда ошибка vermez!)
+            # 4. Akыllы Hakumo/Moebius Yerel Fallback (Hiчbir LLM servisi olmasa bile никогда ошибка vermez!)
     return _local_moebius_fallback (messages )
 
 def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float =0.7 ,model :str =None )->str :
@@ -1160,7 +1093,7 @@ def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float
             return resp 
     except Exception as e :
         print (f"[AI] _call_text exception, fallback: {e}")
-        # Fallback: yerel Moebius cevabы
+        # Fallback: локальный ответ Moebius
     try :
         fallback ,_ ,_ =_local_moebius_fallback (messages )
         return fallback 
@@ -1169,8 +1102,8 @@ def _call_text (messages :List [Dict ],max_tokens :int =2048 ,temperature :float
 
 def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None )->Tuple [str ,List [Dict ],str ,Dict ]:
     """
-    AI Chat Asistanы ana arayюz fonksiyonu (RAG & Правило Entegrasyonlu).
-    cogs/ai_chat.py ve Web Paneli сканироватьfыndan использовать.
+    Главная функция AI-ассистента чата (RAG + интеграция правил).
+    Используется из cogs/ai_chat.py и веб-панели.
     
     Returns:
         (answer, updated_history, model_name, extra_info)
@@ -1179,31 +1112,176 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     history =history or []
 
     sys_lines =[
-    "Ты — Aether/Moebius, умный AI-ассистент и модератор для сервера Discord. Отвечай на русском языке.",
-    "Давай лаконичные, дружелюбные и профессиональные ответы."
+    "Ты — Hakumo/Moebius, информационный AI-ассистент сервера Discord. Отвечай на русском языке.",
+    "Ты — эксперт высшего класса: умный, точный, рассудительный. Отвечай на ЛЮБОЙ "
+    "вопрос полно и уверенно: что спросили — то и получи.",
+    "МЕТОД РАБОТЫ (всегда, внутренне): сначала мысленно разбери вопрос — что именно "
+    "нужно человеку; сверься с данными сервера и разговора выше; потом выдай один "
+    "готовый ответ. Само рассуждение НЕ показывай — показывай его итог.",
+    "ФОРМА ОТВЕТА: первое предложение — прямой точный ответ (без воды и «конечно!»); "
+    "дальше — суть и детали, полезные догадки и варианты; если вопрос расплывчат — "
+    "ответь на самую вероятную трактовку и одной строкой уточни альтернативу.",
+    "ФОРМАТ Discord: короткие абзацы, **жирный** для ключевого, списки маркером; "
+    "код — только в коде. Без шаблонных извинений и без «как AI я не могу».",
+    "ТОН: подстраивайся под спрашивающего — спросили коротко, отвечай коротко; "
+    "шутят — ответь с лёгким юмором; раздражены — спокойно, по делу, без пафоса.",
+    "ЧЕСТНОСТЬ ТОЧНОСТИ: уверен — говори уверенно; предполагаешь — честно помечай "
+    "«вероятнее всего» и давай наиболее правдоподобный вариант, а не молчи.",
+    "НЕ попугайничай: не повторяй дословно свои ответы из истории диалога — спросили "
+    "снова, раскрой глубже или с другой стороны.",
+    # Заказ владельца 2026-08-26: ИИ — только консультирует.
+    "ЖЁСТКИЕ ПРАВИЛА (нарушать нельзя):",
+    "1. Ты НЕ модератор и НЕ применяешь наказания: никаких мутов, варнов, банов, "
+    "киков, тюрем — даже в виде совета «дай мут такому-то». Наказания выдаёт "
+    "только модератор-человек через команды бота.",
+    "2. НЕ выдумывай факты О СЕРВЕРЕ: цифры статистики, имена людей, даты и записи "
+    "журналов бери строго из контекста и баз знаний выше — не издумай их.",
+    "3. Никогда НЕ отказывай отговорками вроде «у меня нет доступа к данным», "
+    "«данных нет», «я не могу это узнать»: общие знания, логику и здравый смысл "
+    "используй свободно и отвечай как взрослый эксперт.",
+    "4. Никаких служебных команд ACTION:* — максимум ACTION:ESCALATE (позвать модератора).",
     ]
     if context .get ('user_name'):
         sys_lines .append (f"Собеседник: {context.get('user_name')} (ID: {context.get('user_id', '?')})")
     if context .get ('guild_name'):
         sys_lines .append (f"Название сервера: {context.get('guild_name')}")
+        # Живой слепок сервера — ИИ знает людей, каналы и роли, не «фантазирует»
+    # ИИ всегда знает «сегодня» — вопросы про даты/сроки отвечает точно
+    try :
+        sys_lines .append ("Сегодняшняя дата: "+
+        datetime .datetime .now ().strftime ('%d.%m.%Y'))
+    except Exception as _ex:
+        _log.debug("ai_assistant(): подавлено: %s", _ex)
+
+    if context .get ('member_count'):
+        sys_lines .append (f"Участников на сервере: {context['member_count']}")
+    if context .get ('guild_owner'):
+        sys_lines .append (f"Владелец сервера: {context['guild_owner']}")
+    if context .get ('staff_roles'):
+        try :
+            _sr ='; '.join (
+            f"{r0.get('name')}: {', '.join(r0.get('members') or [])}"
+            for r0 in (context ['staff_roles']or [])[:8 ])
+            if _sr :
+                sys_lines .append ("Команда сервера (роль — люди): "+_sr )
+        except Exception as _ex:
+            _log.debug("ai_assistant(): подавлено: %s", _ex)
+        # Реальные слеш-команды бота (из whitelist меню) — ИИ советует
+        # только существующее, не выдумывает /search и т.п.
+    try :
+        from slash_budget import KEEP_SLASH as _KEEP 
+        _cmds =sorted (str (c )for c in _KEEP )
+        if _cmds :
+            sys_lines .append (
+            "РЕАЛЬНЫЕ слеш-команды бота (советуй только их, ЛЮБАЯ другая команда — выдумка): "+
+            ", ".join ("/"+c for c in _cmds )+"\n"+
+            "Если нужной команды здесь НЕТ — скажи, как это делается через эти команды "
+            "или через панель, а не придумывай новую.")
+    except Exception as _ex:
+        _log.debug("ai_assistant(): подавлено: %s", _ex)
+
+    if context .get ('channels'):
+        _chs =[str (c )for c in context ['channels']if c ][:40 ]
+        if _chs :
+            sys_lines .append ("Каналы сервера: "+", ".join (_chs ))
+    if context .get ('roles'):
+        _rls =[str (r0 )for r0 in context ['roles']if r0 ][:30 ]
+        if _rls :
+            sys_lines .append ("Роли сервера: "+", ".join (_rls ))
+
+        # Всё о панели и боте: роли (включая Куратора), разделы и страницы —
+        # чтобы ИИ отвечал про панель точно и не выдумывал ссылок.
+    try :
+        from web .ai_knowledge import build_panel_knowledge
+        sys_lines .append (build_panel_knowledge (compact =True ))
+    except Exception as _ex:
+        _log.debug("ai_assistant(): подавлено: %s", _ex )
 
         # RAG: Правил ve Benzer Решение Автоматически Добавить
     try :
         from web .ai_rag import get_knowledge_base 
-        gid_val =int (context .get ('guild_id')or os .getenv ('MAIN_GUILD_ID','1421244140359909513'))
+        gid_val =int (context .get ('guild_id')or os .getenv ('MAIN_GUILD_ID','0'))
         rag_ctx =get_knowledge_base (gid_val ).get_context_for_query (question )
         if rag_ctx :
             sys_lines .append (rag_ctx )
-    except Exception as _re :
-        pass 
+    except Exception as _ex:
+        _log.debug("ai_assistant(): подавлено: %s", _ex)
 
     if context .get ('learned_knowledge'):
         sys_lines .append ("Изученная информация о сервере:\n  "+"\n  ".join (str (k )for k in context ['learned_knowledge']))
     if context .get ('guild_instructions'):
         sys_lines .append ("Особые инструкции сервера:\n  "+"\n  ".join (str (i )for i in context ['guild_instructions']))
+        # Хроника разговора — ИИ понимает, «о чём вообще речь», и не тупит
+    if context .get ('channel_context'):
+        _cc =[]
+        for m in (context ['channel_context']or [])[-12 :]:
+            if isinstance (m ,dict ):
+                _cc .append (f"[{m.get('timestamp','')}] {m.get('author','?')}: {m.get('content','')}")
+            else :
+                _cc .append (str (m ))
+        if _cc :
+            sys_lines .append ("ПОСЛЕДНИЕ СООБЩЕНИЯ В КАНАЛЕ (хроника вокруг вопроса, "
+            "[время] автор: текст):\n  "+"\n  ".join (_cc ))
+    if context .get ('recent_user_messages'):
+        _ru =[]
+        for m in (context ['recent_user_messages']or [])[-10 :]:
+            if isinstance (m ,dict ):
+                _ru .append (f"[{m.get('timestamp','')}] в #{m.get('channel','?')}: {m.get('content','')}")
+            else :
+                _ru .append (str (m ))
+        if _ru :
+            sys_lines .append ("Недавние сообщения спрашивающего в других каналах:\n  "+
+            "\n  ".join (_ru ))
+    if context .get ('asker_roles'):
+        sys_lines .append ("Роли спрашивающего: "+", ".join (
+        str (r0 )for r0 in context ['asker_roles'][:10 ]))
+    if context .get ('user_interests'):
+        sys_lines .append ("Замеченные интересы спрашивающего: "+", ".join (
+        str (i0 )for i0 in context ['user_interests'][:6 ]))
+    if context .get ('user_style'):
+        sys_lines .append ("Любимый стиль общения спрашивающего: "+str (context ['user_style']))
+
     if context .get ('server_status'):
         s =context ['server_status']
         sys_lines .append (f"Текущее состояние сервера: {s.get('online_count', 0)} в сети, {s.get('voice_count', 0)} в голосовых.")
+
+        # Вопрос про активность модераторов → подкладываем РЕАЛЬНЫЕ цифры
+        # из того же журнала, что и страница «Отчёты». Модель отвечает
+        # фактами, а не выдумками.
+    _q_lower =(question or '').lower ()
+    if any (k in _q_lower for k in [
+    'активност','активность','модер','модеров ',' модеров','отчёт','отчет',
+    'сводк','еженедельн','наказан','варн','предупрежден','who did the moderation',
+    ]):
+        try :
+            from web .routes .analytics_plus import _read_audit ,_parse_ts 
+            from datetime import datetime as _dt ,timedelta as _td 
+            _gid =int (context .get ('guild_id')or os .getenv ('MAIN_GUILD_ID','0')or 0 )
+            cutoff =_dt .now ()-_td (days =7 )
+            per_mod ={}
+            _total =0 
+            for ev in _read_audit (_gid ):
+                if ev .get ('category')!='mod':
+                    continue 
+                _ts =_parse_ts (ev .get ('timestamp'))
+                if _ts is None or _ts <cutoff :
+                    continue 
+                _total +=1 
+                _mn =str (ev .get ('mod_name')or '').strip ()
+                if _mn :
+                    per_mod [_mn ]=per_mod .get (_mn ,0 )+1 
+            _mod_block =[
+            f"РЕАЛЬНАЯ СТАТИСТИКА МОДЕРАЦИИ ЗА 7 ДНЕЙ (из журнала бота, используй ТОЛЬКО эти цифры):",
+            f"- Всего мод-действий: {_total}",
+            ]
+            for _mn ,_cnt in sorted (per_mod .items (),key =lambda kv :kv [1 ],reverse =True )[:10 ]:
+                _mod_block .append (f"- {_mn}: {_cnt} действий" )
+            if _total ==0 :
+                _mod_block .append ("- Журнал пуст: за неделю не записано ни одного мод-действия. Честно скажи это." )
+            _mod_block .append ("Эти цифры — единственный источник. Не добавляй своих оценок чисел и не предлагай наказания." )
+            sys_lines .append ("\n".join (_mod_block ))
+        except Exception as _ex:
+            _log.debug("ai_assistant(): подавлено: %s", _ex)
     if context .get ('jarvis_mode'):
         sys_lines .append ("Режим J.A.R.V.I.S. активен. Помогай в выполнении команд и действий.")
     if context .get ('available_commands'):
@@ -1212,13 +1290,13 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         # 1. RAG & Self-Learning FAQ: Автоматически подгружаем изученные ответы модераторов
     try :
         from web .faq_manager import find_relevant_faqs 
-        gid_val =int (context .get ('guild_id')or os .getenv ('MAIN_GUILD_ID','1421244140359909513'))
+        gid_val =int (context .get ('guild_id')or os .getenv ('MAIN_GUILD_ID','0'))
         relevant_faqs =find_relevant_faqs (question ,guild_id =gid_val ,top_k =2 ,threshold =0.35 )
         if relevant_faqs :
             faq_texts =[f"ВОПРОС: {fitem['question']}\nОТВЕТ АДМИНИСТРАЦИИ: {fitem['answer']}"for fitem in relevant_faqs ]
             sys_lines .append ("💡 ИЗУЧЕННЫЕ РЕШЕНИЯ ИЗ БАЗЫ ЗНАНИЙ СЕРВЕРА:\n  "+"\n  ".join (faq_texts ))
-    except Exception as _fe :
-        pass 
+    except Exception as _ex:
+        _log.debug("ai_assistant(): подавлено: %s", _ex)
 
     messages =[{"role":"system","content":"\n".join (sys_lines )}]
     for h in history [-16 :]:
@@ -1228,7 +1306,9 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         })
     messages .append ({"role":"user","content":question })
 
-    answer ,model_name ,rate_info =_call (messages ,max_tokens =1024 ,temperature =0.7 )
+    # Детерминизм заказан владельцем: тот же вопрос → тот же ответ,
+    # без «плавания» формулировок. Хвост длиннее — ответы полные.
+    answer ,model_name ,rate_info =_call (messages ,max_tokens =1408 ,temperature =0.25 )
 
     updated_history =list (history )+[
     {"role":"user","content":question },

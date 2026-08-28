@@ -1,32 +1,132 @@
 {% extends "base.html" %}
-{% block title %}Розыгрыши - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-gift" ></i> Розыгрыши{% endblock %}
+{% block title %}Розыгрыши — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-gift"></i> Розыгрыши{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Розыгрыши</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество <span class="sep">·</span> Розыгрыши</div>
     <h1>Розыгрыши</h1>
-    <p>Создание и управление розыгрышами на сервере.</p>
+    <p class="lead">Создание и управление розыгрышами — участники и победители видны как в Discord.</p>
   </div>
 </div>
-{% endblock %}
 
 
+<style>
+.gw-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.gw-counters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.gw-badge{display:inline-block;padding:4px 13px;border-radius:99px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.gw-badge.live{background:rgba(74,222,128,.14);color:var(--ok);border:1px solid rgba(74,222,128,.3)}
+.gw-badge.ended{background:rgba(138,125,95,.12);color:var(--text-3);border:1px solid var(--line-2)}
+.gw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.gw-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:18px;transition:all .2s var(--ease);display:flex;flex-direction:column;gap:12px}
+.gw-card:hover {border-color:var(--ac-line); box-shadow:0 12px 32px rgba(0,0,0,.3)}
+.gw-card.gw-ended{opacity:.88}
+.gw-head{display:flex;gap:12px;align-items:flex-start}
+.gw-prize{width:48px;height:48px;flex:0 0 48px;border-radius:13px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;font-size:20px;color:#1a1a1a;box-shadow:0 6px 18px var(--ac-glow)}
+.gw-title{font-size:15.5px;font-weight:700;color:var(--text);line-height:1.35;flex:1}
+.gw-live-dot{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:var(--ok);background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);border-radius:99px;padding:3px 10px;text-transform:uppercase;white-space:nowrap}
+.gw-live-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ok);animation:gwPulse 1.6s infinite}
+@keyframes gwPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.5)}50%{box-shadow:0 0 0 5px rgba(74,222,128,0)}}
+.gw-info{display:flex;gap:14px;flex-wrap:wrap}
+.gw-info span{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-3)}
+.gw-info span i{color:var(--ac);font-size:11px}
+.gw-timer{display:flex;justify-content:space-between;font-size:12px;color:var(--text-2)}
+.gw-timer b{font-variant-numeric:tabular-nums;color:var(--text)}
+/* участники — как в Discord */
+.gw-parts{border-top:1px dashed color-mix(in srgb, var(--text) 8%, transparent);padding-top:10px}
+.gw-parts-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.gw-parts-head b{font-size:12.5px;color:var(--text-2)}
+.gw-parts-head .chev{margin-left:auto;color:var(--text-3);transition:transform .18s var(--ease);font-size:11px}
+.gw-parts.open .chev{transform:rotate(180deg)}
+.gw-avatars{display:flex}
+.gw-av{width:28px;height:28px;border-radius:50%;border:2px solid var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#1a1a1a;margin-left:-8px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3))}
+.gw-av:first-child{margin-left:0}
+.gw-av.more{background:color-mix(in srgb, var(--text) 12%, transparent);color:var(--text-2)}
+.gw-av.win{background:linear-gradient(135deg,#f0cd7a,#c9a24a);box-shadow:0 0 0 2px rgba(240,205,122,.35)}
+.gw-list{display:none;margin-top:10px;max-height:180px;overflow-y:auto;gap:4px;flex-direction:column}
+.gw-parts.open .gw-list{display:flex}
+.gw-p-row{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--text-2);padding:4px 6px;border-radius:8px}
+.gw-p-row:hover{background:color-mix(in srgb, var(--text) 4%, transparent)}
+.gw-p-row .gw-av{margin-left:0;border:none;width:24px;height:24px;font-size:10px}
+.gw-p-row .win-crown{color:#f0cd7a;margin-left:auto;font-size:11px;white-space:nowrap}
+.gw-winners{background:color-mix(in srgb, #f0cd7a 8%, transparent);border:1px solid color-mix(in srgb, #f0cd7a 25%, transparent);border-radius:12px;padding:10px 12px;font-size:12.5px;color:var(--text-2)}
+.gw-winners b{color:#f0cd7a}
+.gw-actions{display:flex;gap:8px;margin-top:auto}
+.gw-btn{flex:1;padding:8px 10px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text-2);font-size:12px;font-weight:600;cursor:pointer;transition:all .16s var(--ease);display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.gw-btn:hover{border-color:var(--ac-line);color:var(--text)}
+.gw-btn.end:hover{border-color:rgba(74,222,128,.4);color:var(--ok)}
+.gw-btn.del:hover{border-color:color-mix(in srgb, var(--err) 40%, transparent);color:var(--err)}
+/* модалка создания */
+.gw-modal{position:fixed;inset:0;background:rgba(8,10,14,.72);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:1200;padding:16px}
+.gw-modal.show{display:flex}
+.gw-modal-box{width:min(460px,100%);background:var(--surface);border:1px solid var(--line-2);border-radius:18px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.gw-modal-box h3{margin:0 0 4px;font-size:17px;color:var(--text)}
+.gw-modal-box .sub{font-size:12px;color:var(--text-3);margin-bottom:16px}
+.gw-field{margin-bottom:12px}
+.gw-field label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.gw-field input,.gw-field select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);font-size:13.5px;font-family:inherit}
+.gw-field input:focus,.gw-field select:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.gw-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gw-modal-foot{display:flex;gap:10px;margin-top:18px}
+</style>
 
-<div  >
-  <div  >
-    <span class="gw-badge live" id="live-count">0 live</span>
+<div class="gw-toolbar" data-reveal="up">
+  <div class="gw-counters">
+    <select id="guild-select" class="guild-select" style="min-width:180px" aria-label="Выбор сервера"><option value="">Выберите сервер...</option></select>
+    <span class="gw-badge live" id="live-count">0 активных</span>
     <span class="gw-badge ended" id="ended-count">0 завершено</span>
   </div>
   <button class="btn btn-primary" id="btn-new" type="button"><i class="fas fa-plus"></i> Новый розыгрыш</button>
 </div>
 
-<div class="gw-grid" id="gw-grid">
-  <p class="empty">Розыгрышей нет</p>
+<div class="gw-grid" id="gw-grid" data-reveal="up">
+  <p class="empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</p>
+</div>
+
+<div class="gw-modal" id="gw-confirm">
+  <div class="gw-modal-box" style="width:min(380px,100%)">
+    <h3><i id="gwc-icon" class="fas fa-question"></i> <span id="gwc-title"></span></h3>
+    <div class="sub" id="gwc-text"></div>
+    <div class="gw-modal-foot">
+      <button type="button" class="gw-btn" id="gwc-no">Отмена</button>
+      <button type="button" class="gw-btn end" id="gwc-yes" style="border-color:var(--ac-line);color:var(--ac)">Да, подтверждаю</button>
+    </div>
+  </div>
+</div>
+
+<div class="gw-modal" id="gw-modal">
+  <div class="gw-modal-box">
+    <h3><i class="fas fa-gift"></i> Новый розыгрыш</h3>    <div class="sub">Бот опубликует красивый эмбед с кнопкой «Участвовать» в выбранном канале.</div>
+    <div class="gw-field">
+      <label for="gw-prize-input">Приз</label>
+      <input id="gw-prize-input" maxlength="100" placeholder="Например: Discord Nitro на месяц">
+    </div>
+    <div class="gw-row2">
+      <div class="gw-field">
+        <label for="gw-winners-input">Победителей</label>
+        <input id="gw-winners-input" type="number" min="1" max="20" value="1">
+      </div>
+      <div class="gw-field">
+        <label for="gw-minutes-select">Длительность</label>
+        <select id="gw-minutes-select">
+          <option value="15">15 минут</option>
+          <option value="60" selected>1 час</option>
+          <option value="360">6 часов</option>
+          <option value="1440">1 день</option>
+          <option value="4320">3 дня</option>
+          <option value="10080">7 дней</option>
+        </select>
+      </div>
+    </div>
+    <div class="gw-field">
+      <label for="gw-channel-select">Канал</label>
+      <select id="gw-channel-select"><option value="">Загрузка каналов…</option></select>
+    </div>
+    <div class="gw-modal-foot">
+      <button type="button" class="gw-btn" id="gw-cancel">Отмена</button>
+      <button type="button" class="gw-btn end" id="gw-create" style="border-color:var(--ac-line);color:var(--ac)"><i class="fas fa-rocket"></i> Запустить</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -34,43 +134,238 @@
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function initial(name) { return String(name || '?').trim().charAt(0).toUpperCase() || '?'; }
+  function isLive(g){ return (g.status || 'active').toLowerCase() !== 'ended'; }
 
-  var giveaways = [
-    { prize: 'fa-gift', title: 'Nitro 1 месяц', winners: 1, entries: 245, max: 500, live: true, ends: '2 gюn' },
-    { prize: 'fa-crown', title: 'VIP Роль', winners: 3, entries: 89, max: 100, live: true, ends: '5 часов' },
-    { prize: 'fa-gamepad', title: 'Игра kodu', winners: 1, entries: 50, max: 50, live: false, ends: 'Готово' }
-  ];
+  var MAIN_GID = '{{ main_guild_id }}' || '777';
+  var selectedGuild = MAIN_GID;
+  var giveaways = [];
+  var channels = {};          /* id → name для подписи «#канал» */
+  var openParts = {};         /* какие карточки раскрыты */
 
-  function render() {
-    var live = giveaways.filter(function (g) { return g.live; }).length;
-    var ended = giveaways.filter(function (g) { return !g.live; }).length;
-    $('live-count').textContent = live + ' live';
-    $('ended-count').textContent = ended + ' завершено';
-    if (!giveaways.length) {
-      $('gw-grid').innerHTML = '<p class="empty">Розыгрышей нет</p>';
+  /* ── загрузка серверов: НИКОГДА не зависаем на спиннере ── */
+  function loadGuilds() {
+    var gs = $('guild-select');
+    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+      if (Array.isArray(guilds) && guilds.length) {
+        gs.innerHTML = guilds.map(function (g) {
+          return '<option value="' + esc(g.id) + '"' + (String(g.id) === String(selectedGuild) ? ' selected' : '') + '>' + esc(g.name) + '</option>';
+        }).join('');
+        selectedGuild = gs.value || MAIN_GID;
+      } else {
+        /* список пуст — работаем с главным сервером, селект честно показывает это */
+        gs.innerHTML = '<option value="' + esc(MAIN_GID) + '">Демо-сервер</option>';
+        selectedGuild = MAIN_GID;
+      }
+      load();
+    }).catch(function () { load(); });
+  }
+
+  async function load() {
+    var grid = $('gw-grid');
+    if (!selectedGuild) { grid.innerHTML = '<p class="empty"><i class="fas fa-gift"></i>Розыгрышей нет</p>'; return; }
+    try {
+      var r = await fetch('/api/giveaway/' + selectedGuild);
+      giveaways = await r.json();
+      if (!Array.isArray(giveaways)) giveaways = [];
+      if (giveaways.error) giveaways = [];
+    } catch (e) {
+      giveaways = [];
+      grid.innerHTML = '<p class="empty"><i class="fas fa-triangle-exclamation"></i>Не удалось загрузить розыгрыши — проверьте соединение и обновите страницу</p>';
       return;
     }
-    var html = '';
-    giveaways.forEach(function (g, i) {
-      var pct = g.max ? Math.round(g.entries / g.max * 100) : 0;
-      html += '<div class="gw-card" >' +
-        '<div class="gw-prize"><i class="fas ' + esc(g.prize) + '"></i></div>' +
-        '<div class="gw-title">' + esc(g.title) + '</div>' +
-        '<div class="gw-info"><span><i class="fas fa-trophy"></i>' + g.winners + ' победител' + '</span><span><i class="fas fa-clock"></i>' + esc(g.ends) + '</span></div>' +
-        '<div class="gw-progress"><div class="gw-progress-fill"   style="width: ' + pct + '%;"></div></div>' +
-        '<div class="gw-foot"><span>' + g.entries + ' / ' + g.max + ' katиlиmcи</span><span class="gw-badge ' + (g.live ? 'live' : 'ended') + '">' + (g.live ? 'LIVE' : 'Готово') + '</span></div>' +
+    render();
+  }
+
+  /* ── прогресс: created_at → ends_at ── */
+  function progressOf(g) {
+    if (!isLive(g)) return 100;
+    var end = Date.parse(g.ends_at); if (!end || isNaN(end)) return 50;
+    var start = Date.parse(g.created_at);
+    if (!start || isNaN(start)) start = end - 24 * 3600e3;
+    var pct = Math.round((Date.now() - start) / Math.max(1, end - start) * 100);
+    return Math.max(2, Math.min(100, pct));
+  }
+
+  function leftText(g) {
+    var end = Date.parse(g.ends_at);
+    if (!end || isNaN(end)) return '';
+    if (!isLive(g)) return 'завершён ' + new Date(end).toLocaleString('ru-RU', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    var ms = end - Date.now();
+    if (ms <= 0) return 'подводим итоги…';
+    var m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
+    if (d > 0) return 'осталось ' + d + ' дн ' + (h % 24) + ' ч';
+    if (h > 0) return 'осталось ' + h + ' ч ' + (m % 60) + ' мин';
+    return 'осталось ' + m + ' мин';
+  }
+
+  function partsOf(g) {
+    if (Array.isArray(g.participants)) return g.participants;
+    /* старый формат: только число */
+    var n = typeof g.participants === 'number' ? g.participants : 0;
+    var arr = []; for (var i = 0; i < n; i++) arr.push({id: 'x' + i, name: 'Участник ' + (i + 1)});
+    return arr;
+  }
+  function winnersOf(g) {
+    if (Array.isArray(g.winners_list) && g.winners_list.length) return g.winners_list;
+    if (Array.isArray(g.winners)) return g.winners;   /* демо-совместимость */
+    return [];
+  }
+
+  function render() {
+    var live = giveaways.filter(isLive).length;
+    $('live-count').textContent = live + ' активных';
+    $('ended-count').textContent = (giveaways.length - live) + ' завершено';
+    var grid = $('gw-grid');
+    if (!giveaways.length) { grid.innerHTML = '<p class="empty"><i class="fas fa-gift"></i>Розыгрышей нет — запустите первый кнопкой «Новый розыгрыш»</p>'; return; }
+
+    grid.innerHTML = giveaways.map(function (g) {
+      var live_ = isLive(g);
+      var parts = partsOf(g);
+      var winners = winnersOf(g);
+      var winIds = {}; winners.forEach(function (w) { winIds[w.id] = true; });
+      var chName = channels[g.channel_id] ? '#' + channels[g.channel_id] : '';
+      var open = !!openParts[g.id];
+      var pct = progressOf(g);
+      var left = leftText(g);
+
+      var avatars = parts.slice(0, 6).map(function (p) {
+        return '<span class="gw-av' + (winIds[p.id] ? ' win' : '') + '" title="' + esc(p.name) + '">' + esc(initial(p.name)) + '</span>';
+      }).join('');
+      if (parts.length > 6) avatars += '<span class="gw-av more">+' + (parts.length - 6) + '</span>';
+
+      var listRows = parts.map(function (p) {
+        return '<div class="gw-p-row"><span class="gw-av' + (winIds[p.id] ? ' win' : '') + '">' + esc(initial(p.name)) + '</span>' +
+          '<span>' + esc(p.name) + '</span>' +
+          (winIds[p.id] ? '<span class="win-crown"><i class="fas fa-crown"></i> победитель</span>' : '') +
+          '</div>';
+      }).join('') || '<div class="gw-p-row">Пока никто не участвует</div>';
+
+      var winnersBlock = (!live_ && winners.length)
+        ? '<div class="gw-winners"><b><i class="fas fa-crown"></i> Победители:</b> ' +
+          winners.map(function (w) { return esc(w.name); }).join(', ') + '</div>'
+        : '';
+
+      return '<div class="gw-card' + (live_ ? '' : ' gw-ended') + '" id="gw-' + esc(g.id) + '">' +
+        '<div class="gw-head">' +
+          '<div class="gw-prize"><i class="fas fa-gift"></i></div>' +
+          '<div class="gw-title">' + esc(g.prize || 'Розыгрыш') + '</div>' +
+          (live_ ? '<span class="gw-live-dot">live</span>' : '<span class="gw-badge ended">Готово</span>') +
+        '</div>' +
+        '<div class="gw-info">' +
+          '<span><i class="fas fa-trophy"></i>' + (g.winners || 1) + ' победител' + ((g.winners || 1) > 1 ? 'я' : 'ь') + '</span>' +
+          (chName ? '<span><i class="fas fa-hashtag"></i>' + esc(chName) + '</span>' : '') +
+          (left ? '<span><i class="fas fa-clock"></i>' + esc(left) + '</span>' : '') +
+        '</div>' +
+        '<div class="gw-progress-num">заполнено: <b>' + pct + '%</b></div>' +
+        '<div class="gw-timer"><span>Участники</span><b>' + parts.length + '</b></div>' +
+        '<div class="gw-parts' + (open ? ' open' : '') + '">' +
+          '<div class="gw-parts-head" onclick="window.__gwToggle(\'' + esc(g.id) + '\')">' +
+            '<span class="gw-avatars">' + avatars + '</span>' +
+            '<b>' + (parts.length ? 'Показать всех' : 'Никого пока') + '</b>' +
+            '<i class="fas fa-chevron-down chev"></i>' +
+          '</div>' +
+          '<div class="gw-list">' + listRows + '</div>' +
+        '</div>' +
+        winnersBlock +
+        '<div class="gw-actions">' +
+          (live_ ? '<button type="button" class="gw-btn end" onclick="window.__gwEnd(\'' + esc(g.id) + '\')"><i class="fas fa-flag-checkered"></i> Завершить</button>' : '') +
+          '<button type="button" class="gw-btn del" onclick="window.__gwDelete(\'' + esc(g.id) + '\')" aria-label="Удалить розыгрыш" title="Удалить розыгрыш"><i class="fas fa-trash"></i></button>' +
+        '</div>' +
       '</div>';
+    }).join('');
+  }
+
+  window.__gwToggle = function (id) { openParts[id] = !openParts[id]; render(); };
+  window.__gwEnd = function (id) {
+    gwConfirm('fa-flag-checkered', 'Завершить розыгрыш?', 'Победители будут выбраны случайно из всех участников.', async function () {
+      try {
+        var r = await fetch('/api/giveaway/' + selectedGuild + '/' + id + '/end', {method: 'POST'});
+        var d = await r.json();
+        if (d.error) { showToast(d.error, true); return; }
+        showToast('Розыгрыш завершён, победители определены', false);
+        load();
+      } catch (e) { showToast('Ошибка сети', true); }
     });
-    $('gw-grid').innerHTML = html;
+  };
+  window.__gwDelete = function (id) {
+    gwConfirm('fa-trash', 'Удалить розыгрыш?', 'Карточка исчезнет из панели. Действие нельзя отменить.', async function () {
+      try {
+        await fetch('/api/giveaway/' + selectedGuild + '/' + id + '/delete', {method: 'POST'});
+        load();
+      } catch (e) { showToast('Ошибка сети', true); }
+    });
+  };
+
+  /* мини-подтверждение в стиле панели */
+  var _gwCb = null;
+  function gwConfirm(icon, title, text, cb) {
+    _gwCb = cb;
+    $('gwc-icon').className = 'fas ' + icon;
+    $('gwc-title').textContent = title;
+    $('gwc-text').textContent = text;
+    $('gw-confirm').classList.add('show');
+  }
+  window.__gwConfirmYes = function () { $('gw-confirm').classList.remove('show'); if (_gwCb) { var cb = _gwCb; _gwCb = null; cb(); } };
+  window.__gwConfirmNo = function () { $('gw-confirm').classList.remove('show'); _gwCb = null; };
+
+  /* ── создание: каналы + отправка ── */
+  async function openCreate() {
+    $('gw-modal').classList.add('show');
+    $('gw-prize-input').value = '';
+    $('gw-prize-input').focus();
+    var sel = $('gw-channel-select');
+    sel.innerHTML = '<option value="">Загрузка каналов…</option>';
+    try {
+      var chs = await fetch('/api/guild/' + selectedGuild + '/channels').then(function (r) { return r.json(); });
+      var list = (Array.isArray(chs) ? chs : (chs.channels || []));
+      sel.innerHTML = list.filter(function (c) { return (c.type || 'text') === 'text'; }).map(function (c) {
+        channels[c.id] = c.name;
+        return '<option value="' + esc(c.id) + '">#' + esc(c.name) + '</option>';
+      }).join('') || '<option value="">Нет текстовых каналов</option>';
+    } catch (e) {
+      sel.innerHTML = '<option value="">Каналы недоступны</option>';
+    }
+  }
+  async function submitCreate() {
+    var prize = $('gw-prize-input').value.trim();
+    var channel = $('gw-channel-select').value;
+    if (!prize) { showToast('Укажите приз', true); return; }
+    if (!channel) { showToast('Выберите канал', true); return; }
+    try {
+      var r = await fetch('/api/giveaway/' + selectedGuild + '/create', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({prize: prize, winners: parseInt($('gw-winners-input').value || '1', 10), minutes: parseInt($('gw-minutes-select').value, 10), channel_id: channel})
+      });
+      var d = await r.json();
+      if (d.error) { showToast(d.error, true); return; }
+      $('gw-modal').classList.remove('show');
+      showToast('Розыгрыш запущен', false);
+      load();
+    } catch (e) { showToast('Ошибка сети', true); }
   }
 
   function bind() {
-    var b = $('btn-new');
-    if (b) b.addEventListener('click', function () { alert('Новый розыгрыш — form burada olacak'); });
+    $('guild-select').addEventListener('change', function () { selectedGuild = this.value || MAIN_GID; openParts = {}; load(); });
+    $('btn-new').addEventListener('click', openCreate);
+    $('gw-cancel').addEventListener('click', function () { $('gw-modal').classList.remove('show'); });
+    $('gw-create').addEventListener('click', submitCreate);
+    $('gw-modal').addEventListener('click', function (e) { if (e.target === this) this.classList.remove('show'); });
+    $('gwc-yes').addEventListener('click', window.__gwConfirmYes);
+    $('gwc-no').addEventListener('click', window.__gwConfirmNo);
+    $('gw-confirm').addEventListener('click', function (e) { if (e.target === this) window.__gwConfirmNo(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('gw-modal').classList.remove('show'); window.__gwConfirmNo(); } });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
-  else { bind(); render(); }
+  function start() {
+    bind(); loadGuilds();
+    /* плавные live-обновления: данные подтягиваются сами, раскрытые
+       карточки и модалка не дёргаются */
+    if (window.setLiveRefresh) window.setLiveRefresh(function () { if (!$('gw-modal').classList.contains('show')) load(); }, 1500);
+    else setInterval(function () { if (!$('gw-modal').classList.contains('show')) load(); }, 5000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 {% endblock %}

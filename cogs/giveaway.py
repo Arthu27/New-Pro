@@ -10,27 +10,22 @@ from discord.ext import commands, tasks
 from discord.ui import View, Button
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import asyncio
 import random
 from typing import Dict
 
 from logger import get_logger
 log = get_logger("giveaway")
+from json_store import load_json as _js_load, save_json as _js_save
 
 
 def _save_giveaways(guild_id: int, data: dict):
-    os.makedirs("data", exist_ok=True)
-    with open(f'data/giveaways_{guild_id}.json', 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    _js_save(f'data/giveaways_{guild_id}.json', data, log=log)
 
 
 def _load_giveaways(guild_id: int) -> dict:
-    path = f'data/giveaways_{guild_id}.json'
-    if os.path.exists(path):
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
+    return _js_load(f'data/giveaways_{guild_id}.json', {}, log=log)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -42,7 +37,7 @@ def _giveaway_embed(title: str, description: str) -> discord.Embed:
         title=title,
         description=description,
         color=discord.Color.dark_grey(),
-        timestamp=datetime.now()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -50,13 +45,13 @@ def _win_dm_embed(prize: str, guild_name: str, guild_icon_url: str) -> discord.E
     e = discord.Embed(
         title="Поздравляем!",
         description=(
-            f"Вы выиграли в розыгрыше!\n\n"
+            "Вы выиграли в розыгрыше!\n\n"
             f"**Сервер:** {guild_name}\n"
             f"**Приз:** {prize}\n\n"
-            f"Свяжитесь с администрацией для получения приза."
+            "Свяжитесь с администрацией для получения приза."
         ),
         color=discord.Color.dark_grey(),
-        timestamp=datetime.now()
+        timestamp=datetime.now(timezone.utc)
     )
     if guild_icon_url:
         e.set_footer(text=f"{guild_name} | Розыгрыши", icon_url=guild_icon_url)
@@ -125,8 +120,8 @@ class GiveawayView(View):
             embed = interaction.message.embeds[0]
             embed.set_field_at(0, name="Участников", value=str(count), inline=True)
             await interaction.message.edit(embed=embed)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("join(): подавлено: %s", _ex)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -156,8 +151,8 @@ class GiveawayCog(commands.Cog):
                 if gw.get("status") != "active":
                     continue
 
-                ends_at = datetime.fromisoformat(gw["ends_at"])
-                if datetime.now() < ends_at:
+                ends_at = datetime.fromisoformat(gw["ends_at"]).replace(tzinfo=None) if datetime.fromisoformat(gw["ends_at"]).tzinfo is None else datetime.fromisoformat(gw["ends_at"])
+                if datetime.now(tz=ends_at.tzinfo) < ends_at:
                     continue
 
                 # Розыгрыш завершён
@@ -180,6 +175,8 @@ class GiveawayCog(commands.Cog):
                     continue
 
                 winner_ids = random.sample(participants, min(winners_count, len(participants)))
+                # Победители сохраняются в файл: панель показывает их имена
+                gw["winner_ids"] = [str(w) for w in winner_ids]
                 winner_mentions = []
                 icon_url = guild.icon.url if guild.icon else None
 
@@ -190,12 +187,20 @@ class GiveawayCog(commands.Cog):
                             winner_mentions.append(user.mention)
                             try:
                                 await user.send(embed=_win_dm_embed(prize, guild.name, icon_url))
-                            except discord.Forbidden:
-                                pass
-                    except (discord.NotFound, ValueError):
-                        pass
+                            except discord.Forbidden as _ex:
+                                log.debug("check_giveaways(): подавлено: %s", _ex)
+                    except (discord.NotFound, ValueError) as _ex:
+                        log.debug("check_giveaways(): подавлено: %s", _ex)
 
-                await channel.send(embed=_ended_embed(prize, winner_mentions, guild))
+                # Финал: Components V2-раскладка, при недоступности — эмбед
+                from services.v2_layouts import (giveaway_end_layout,
+                                                 giveaway_end_embed,
+                                                 send_v2_or_embed)
+                await send_v2_or_embed(
+                    channel,
+                    view=giveaway_end_layout(prize, winner_mentions,
+                                             footer=guild.name),
+                    embed=giveaway_end_embed(prize, winner_mentions))
 
             if changed:
                 _save_giveaways(guild.id, data)
@@ -235,6 +240,7 @@ class GiveawayCog(commands.Cog):
         data[gw_id] = {
             "prize": prize,
             "winners": winners,
+            "created_at": datetime.now(timezone.utc).isoformat(),
             "ends_at": ends_at.isoformat(),
             "channel_id": str(ctx.channel.id),
             "status": "active",
@@ -250,28 +256,44 @@ class GiveawayCog(commands.Cog):
                 f"**Приз:** {prize}\n"
                 f"**Победителей:** {winners}\n"
                 f"**Завершение:** {discord.utils.format_dt(ends_at, 'R')}\n\n"
-                f"Нажмите кнопку ниже для участия."
+                "Нажмите кнопку ниже для участия."
             ),
             color=discord.Color.dark_grey(),
-            timestamp=datetime.now()
+            timestamp=datetime.now(timezone.utc)
         )
         embed.add_field(name="Участников", value="0", inline=True)
         embed.set_footer(text=f"ID: {gw_id}")
 
         view = GiveawayView(gw_id, str(ctx.guild.id))
-        msg = await ctx.send(embed=embed, view=view)
+        # Components V2: гибкая раскладка вместо эмбеда; если библиотека
+        # или клиент старые — тот же старт уходит классическим эмбедом.
+        from services.v2_layouts import (v2_available, giveaway_start_layout,
+                                         giveaway_start_embed, send_v2_or_embed)
+        if v2_available():
+            gv_v2 = GiveawayView(gw_id, str(ctx.guild.id))
+            layout = giveaway_start_layout(
+                prize, winners, ends_at, footer=f"{ctx.guild.name} • ID {gw_id}",
+                icon_url=str(ctx.guild.icon.url) if ctx.guild.icon else None)
+            msg = await send_v2_or_embed(
+                ctx, view=layout,
+                embed=giveaway_start_embed(prize, winners, ends_at,
+                                           footer=f"ID: {gw_id}"),
+                fallback_view=view,
+                v2_items=list(gv_v2.children))
+        else:
+            msg = await ctx.send(embed=embed, view=view)
 
         data[gw_id]["message_id"] = str(msg.id)
         _save_giveaways(ctx.guild.id, data)
 
         try:
             await ctx.message.delete()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("create_giveaway(): подавлено: %s", _ex)
 
         log.info(f"Розыгрыш создан: {gw_id} — {prize}")
 
-    @commands.command(name="rerolel", aliases=["reroll"])
+    @commands.command(name="reroll", aliases=["rerolel"])
     @commands.has_permissions(administrator=True)
     async def reroll(self, ctx, gw_id: str):
         """Перевыбрать победителя"""
@@ -289,14 +311,16 @@ class GiveawayCog(commands.Cog):
             return
 
         winners = random.sample(participants, min(gw.get("winners", 1), len(participants)))
+        gw["winner_ids"] = [str(w) for w in winners]
+        _save_giveaways(ctx.guild.id, data)
         winner_mentions = []
         for uid in winners:
             try:
                 user = await ctx.guild.fetch_member(int(uid))
                 if user:
                     winner_mentions.append(user.mention)
-            except (discord.NotFound, ValueError):
-                pass
+            except (discord.NotFound, ValueError) as _ex:
+                log.debug("reroll(): подавлено: %s", _ex)
 
         await ctx.send(embed=_ended_embed(gw.get("prize", ""), winner_mentions, ctx.guild))
 

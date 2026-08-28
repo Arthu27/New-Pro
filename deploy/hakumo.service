@@ -1,0 +1,22 @@
+# Hakumo: бот + панель как служба VDS (systemd).
+# Установка — см. deploy/VDS-SETUP.md (поправь пути под свои!).
+[Unit]
+Description=Hakumo Discord bot + web panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/hakumo
+ExecStart=/opt/hakumo/.venv/bin/python main.py
+Restart=always
+RestartSec=5
+# 5 сек после падения — совпадает с внутренним циклом переподключения бота
+# Логи — в journalctl (journalctl -u hakumo -f); файловые ротируются сами.
+StandardOutput=journal
+StandardError=journal
+# На маленьком VDS можно ограничить память боту (раскомментируй и подстрой):
+# MemoryMax=1500M
+
+[Install]
+WantedBy=multi-user.target

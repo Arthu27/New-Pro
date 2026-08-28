@@ -1,89 +1,86 @@
 {% extends "base.html" %}
-{% block title %}Сервера - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-server" ></i> Сервера{% endblock %}
+{% block title %}Серверы — Hakumo{% endblock %}
+{% block page_title %}Серверы{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Сервера</span>
-    </div>
-    <h1>Сервера</h1>
-    <p>Список серверов, к которым подключён бот.</p>
-  </div>
-</div>
-{% endblock %}
 
-
-
-<div class="g-hero">
-  <span class="g-hero-icon">🌐</span>
-  <div class="g-hero-info">
-    <div class="g-hero-title">Сервера</div>
-    <div class="g-hero-sub">Discord серверы, где есть бот</div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Основное <span class="sep">·</span> Серверы</div>
+    <h1>Серверы</h1>
+    <p class="lead">Серверы, к которым подключён бот, и их живая статистика.</p>
   </div>
 </div>
 
-<div class="stat-row" id="g-stats">
-  <div class="stat-box">
-    <div class="stat-icon gold"><i class="fas fa-server"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-total">-</div><div class="stat-lbl">Всего</div></div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-icon cyan"><i class="fas fa-users"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-users">-</div><div class="stat-lbl">Участники</div></div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
-    <div class="stat-body"><div class="stat-val" id="stat-bots">-</div><div class="stat-lbl">Управляю</div></div>
-  </div>
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-server"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Всего серверов</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-users"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-users">—</div><div class="kpi-label">Участников</div></div></div>
+  <div class="kpi tone-ok"><div class="kpi-icon"><i class="fas fa-signal"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-online">—</div><div class="kpi-label">Онлайн</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-gem"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-boosts">—</div><div class="kpi-label">Бустов</div></div></div>
 </div>
 
-<div id="guilds-list"><p class="ld"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p></div>
+<div id="guilds-list">
+  <div class="sk-card"><div class="sk-row"><div class="sk-line" style="width:52px;height:52px;border-radius:14px"></div><div class="sk-line" style="width:40%"></div></div></div>
+  <div class="sk-card"><div class="sk-row"><div class="sk-line" style="width:52px;height:52px;border-radius:14px"></div><div class="sk-line" style="width:40%"></div></div></div>
+  <div class="sk-card"><div class="sk-row"><div class="sk-line" style="width:52px;height:52px;border-radius:14px"></div><div class="sk-line" style="width:40%"></div></div></div>
+</div>
 
 <script>
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  var _counted = {};
 
-  async function load() {
+  function setNum(id, val) {
+    var el = $(id);
+    if (!el) return;
+    var target = Number(val) || 0;
+    if (_counted[id]) { el.textContent = target.toLocaleString('ru-RU'); return; }
+    _counted[id] = true;
+    if (window.countUp) window.countUp(el, target); else el.textContent = target.toLocaleString('ru-RU');
+  }
+
+  async function loadGuilds() {
+    var list = $('guilds-list');
     try {
       var guilds = await window.fetchCachedJSON('/api/guilds');
-      if (!guilds.length) {
-        $('guilds-list').innerHTML = '<p class="empty">Сервер не найдено</p>';
-        $('stat-total').textContent = '0';
-        $('stat-users').textContent = '0';
-        $('stat-bots').textContent = '0';
+      if (!Array.isArray(guilds) || !guilds.length) {
+        list.innerHTML = '<div class="empty"><i class="fas fa-server"></i><span>Бот пока не подключён ни к одному серверу</span></div>';
         return;
       }
-      var totalUsers = 0;
-      var html = '<div class="g-grid">';
-      guilds.forEach(function (g, i) {
-        totalUsers += g.members || 0;
-        html += '<div class="g-card" >' +
-          '<img class="g-icon" src="' + esc(g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-          '<div class="g-name">' + esc(g.name) + '</div>' +
-          '<div class="g-members"><i class="fas fa-users" ></i> ' + (g.members || 0).toLocaleString() + '</div>' +
-          '<div class="g-id">' + esc(g.id) + '</div>' +
+      setNum('stat-total', guilds.length);
+      setNum('stat-users', guilds.reduce(function (acc, g) { return acc + (Number(g.member_count) || Number(g.members) || 0); }, 0));
+      setNum('stat-online', guilds.reduce(function (acc, g) { return acc + (Number(g.online) || 0); }, 0));
+      setNum('stat-boosts', guilds.reduce(function (acc, g) { return acc + (Number(g.premium_subscription_count) || Number(g.boosts) || 0); }, 0));
+      list.innerHTML = guilds.map(function (g) {
+        var icon = g.icon || '';
+        var members = Number(g.member_count) || Number(g.members) || 0;
+        var online = Number(g.online) || 0;
+        var boosts = Number(g.premium_subscription_count) || Number(g.boosts) || 0;
+        return '<div class="g-card">' +
+          (icon
+            ? '<img alt="" class="g-icon" src="' + esc(icon) + '" onerror="this.style.display=\'none\'">'
+            : '<div class="g-icon" style="display:grid;place-items:center;color:var(--ac);font-weight:800;font-size:20px">' + esc((g.name || '?').charAt(0).toUpperCase()) + '</div>') +
+          '<div class="g-info">' +
+            '<div class="g-name">' + esc(g.name || 'Без имени') + '</div>' +
+            '<div class="g-meta">' +
+              '<span class="gm"><i class="fas fa-users"></i> <b>' + members.toLocaleString('ru-RU') + '</b></span>' +
+              '<span class="gm on"><i class="fas fa-signal"></i> <b>' + online.toLocaleString('ru-RU') + '</b> онлайн</span>' +
+              (boosts ? '<span class="gm boost"><i class="fas fa-gem"></i> <b>' + boosts + '</b> бустов</span>' : '') +
+              '<span class="gm"><i class="fas fa-fingerprint"></i> ' + esc(g.id) + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<span class="g-id">' + esc(g.id) + '</span>' +
         '</div>';
-      });
-      html += '</div>';
-      $('guilds-list').innerHTML = html;
-      $('stat-total').textContent = guilds.length;
-      $('stat-users').textContent = totalUsers.toLocaleString();
-      $('stat-bots').textContent = guilds.length + ' ✓';
+      }).join('');
     } catch (e) {
-      $('guilds-list').innerHTML = '<p class="empty">Не удалось загрузить</p>';
+      list.innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить серверы</span></div>';
     }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', load);
-  } else {
-    load();
-  }
+  loadGuilds();
+  if (window.setLiveRefresh) window.setLiveRefresh(loadGuilds, 1500);
+  else setInterval(loadGuilds, 30000);
 })();
 </script>
 {% endblock %}

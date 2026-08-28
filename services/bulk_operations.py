@@ -3,6 +3,10 @@ Bulk Operations
 Система массовых операций
 """
 
+from logger import get_logger
+
+_log = get_logger("bulk_operations")
+
 import json
 import os
 from datetime import datetime
@@ -36,19 +40,19 @@ class BulkOperation:
         self.started_at = datetime.now().isoformat()
     
     def mark_completed(self):
-        """Tamamlandы как iшaretle"""
+        """Отметить как завершённую"""
         self.status = 'completed'
         self.completed_at = datetime.now().isoformat()
         self.progress = 100
     
     def mark_failed(self, error: str):
-        """Неудачно как iшaretle"""
+        """Отметить как неудачную"""
         self.status = 'failed'
         self.completed_at = datetime.now().isoformat()
         self.results['error'] = error
     
     def add_success(self, ticket_id: str, result: Any = None):
-        """Успешно sonuч добавить"""
+        """Добавить успешный результат"""
         self.results['success'].append({
             'ticket_id': ticket_id,
             'result': result,
@@ -57,7 +61,7 @@ class BulkOperation:
         self._update_progress()
     
     def add_failure(self, ticket_id: str, error: str):
-        """Неудачно sonuч добавить"""
+        """Добавить неудачный результат"""
         self.results['failed'].append({
             'ticket_id': ticket_id,
             'error': error,
@@ -66,13 +70,13 @@ class BulkOperation:
         self._update_progress()
     
     def _update_progress(self):
-        """Иlerlemeyi обновить"""
+        """Обновить прогресс"""
         total = len(self.ticket_ids)
         completed = len(self.results['success']) + len(self.results['failed'])
         self.progress = int((completed / total) * 100) if total > 0 else 0
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'operation_id': self.operation_id,
             'operation_type': self.operation_type,
@@ -105,14 +109,14 @@ class BulkOperation:
 
 
 class BulkOperationManager:
-    """Массовая операция yёneticisi"""
+    """Менеджер массовых операций"""
     
     def __init__(self):
         self.operations_file = 'data/bulk_operations.json'
         self.operations = self._load_operations()
     
     def _load_operations(self) -> Dict[str, BulkOperation]:
-        """Ишlemleri загрузить"""
+        """Загрузить операции"""
         if os.path.exists(self.operations_file):
             try:
                 with open(self.operations_file, 'r', encoding='utf-8') as f:
@@ -121,13 +125,13 @@ class BulkOperationManager:
                         op_id: BulkOperation.from_dict(op_data)
                         for op_id, op_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_operations(): подавлено: %s", _ex)
         
         return {}
     
     def _save_operations(self):
-        """Ишlemleri сохранить"""
+        """Сохранить операции"""
         os.makedirs('data', exist_ok=True)
         
         data = {
@@ -141,7 +145,7 @@ class BulkOperationManager:
     def create_operation(self, operation_type: str, ticket_ids: List[str],
                          parameters: Dict[str, Any],
                          initiated_by: str) -> BulkOperation:
-        """Ишlem создать"""
+        """Создать операцию"""
         operation_id = f"bulk_{len(self.operations) + 1}"
         
         operation = BulkOperation(
@@ -158,36 +162,36 @@ class BulkOperationManager:
         return operation
     
     def get_operation(self, operation_id: str) -> Optional[BulkOperation]:
-        """Ишlemi al"""
+        """Получить операцию"""
         return self.operations.get(operation_id)
     
     def get_user_operations(self, user_id: str) -> List[BulkOperation]:
-        """Пользователь iшlemlerini al"""
+        """Получить операции пользователя"""
         return [
             op for op in self.operations.values()
             if op.initiated_by == user_id
         ]
     
     def get_recent_operations(self, limit: int = 20) -> List[BulkOperation]:
-        """Son iшlemleri al"""
+        """Получить последние операции"""
         operations = list(self.operations.values())
         operations.sort(key=lambda op: op.started_at, reverse=True)
         return operations[:limit]
     
     def update_operation(self, operation_id: str):
-        """Ишlemi обновить"""
+        """Обновить операцию"""
         self._save_operations()
 
 
 class BulkUpdater:
-    """Массовая деньcelleyici"""
+    """Массовый обновлятель"""
     
     def __init__(self, operation_manager: BulkOperationManager):
         self.operation_manager = operation_manager
     
     async def bulk_update_status(self, ticket_ids: List[str], new_status: str,
                                   updated_by: str, tickets: Dict[str, Dict[str, Any]]) -> BulkOperation:
-        """Массовая состояние деньcellemesi"""
+        """Массовое обновление статуса"""
         operation = self.operation_manager.create_operation(
             operation_type='update_status',
             ticket_ids=ticket_ids,
@@ -253,7 +257,7 @@ class BulkUpdater:
     
     async def bulk_add_tags(self, ticket_ids: List[str], tags: List[str],
                             added_by: str, tickets: Dict[str, Dict[str, Any]]) -> BulkOperation:
-        """Массовая упоминание ekleme"""
+        """Массовое добавление упоминаний"""
         operation = self.operation_manager.create_operation(
             operation_type='add_tags',
             ticket_ids=ticket_ids,
@@ -288,7 +292,7 @@ class BulkUpdater:
     
     async def bulk_update_priority(self, ticket_ids: List[str], new_priority: str,
                                     updated_by: str, tickets: Dict[str, Dict[str, Any]]) -> BulkOperation:
-        """Массовая ёncelik деньcellemesi"""
+        """Массовое обновление приоритета"""
         operation = self.operation_manager.create_operation(
             operation_type='update_priority',
             ticket_ids=ticket_ids,
@@ -321,14 +325,14 @@ class BulkUpdater:
 
 
 class BulkCloser:
-    """Массовая закрытьыcы"""
+    """Массовый закрыватель"""
     
     def __init__(self, operation_manager: BulkOperationManager):
         self.operation_manager = operation_manager
     
     async def bulk_close(self, ticket_ids: List[str], closed_by: str,
                          tickets: Dict[str, Dict[str, Any]], close_reason: str = '') -> BulkOperation:
-        """Массовая закрытьma"""
+        """Массовое закрытие"""
         operation = self.operation_manager.create_operation(
             operation_type='close',
             ticket_ids=ticket_ids,
@@ -348,7 +352,7 @@ class BulkCloser:
                     continue
                 
                 if ticket.get('status') == 'closed':
-                    operation.add_failure(ticket_id, 'Ticket zaten закрытый')
+                    operation.add_failure(ticket_id, 'Тикет уже закрыт')
                     continue
                 
                 ticket['status'] = 'closed'
@@ -368,14 +372,14 @@ class BulkCloser:
 
 
 class BulkExporter:
-    """Массовая dышa aktarыcы"""
+    """Массовый экспортер"""
     
     def __init__(self, operation_manager: BulkOperationManager):
         self.operation_manager = operation_manager
     
     async def bulk_export_json(self, ticket_ids: List[str], exported_by: str,
                                 tickets: Dict[str, Dict[str, Any]]) -> BulkOperation:
-        """JSON как dышa aktar"""
+        """Экспортировать как JSON"""
         operation = self.operation_manager.create_operation(
             operation_type='export_json',
             ticket_ids=ticket_ids,
@@ -419,7 +423,7 @@ class BulkExporter:
     
     async def bulk_export_csv(self, ticket_ids: List[str], exported_by: str,
                                tickets: Dict[str, Dict[str, Any]]) -> BulkOperation:
-        """CSV как dышa aktar"""
+        """Экспортировать как CSV"""
         operation = self.operation_manager.create_operation(
             operation_type='export_csv',
             ticket_ids=ticket_ids,
@@ -485,14 +489,14 @@ class BulkExporter:
 
 
 class BulkImporter:
-    """Массовая iчe aktarыcы"""
+    """Массовый импортер"""
     
     def __init__(self, operation_manager: BulkOperationManager):
         self.operation_manager = operation_manager
     
     async def bulk_import_json(self, import_data: List[Dict[str, Any]],
                                 imported_by: str) -> BulkOperation:
-        """JSON'dan iчe aktar"""
+        """Импортировать из JSON"""
         ticket_ids = [t.get('id', f"import_{i}") for i, t in enumerate(import_data)]
         
         operation = self.operation_manager.create_operation(

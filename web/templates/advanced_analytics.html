@@ -1,26 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Расширенная аналитика - Aether{% endblock %}
+{% block title %}Расширенная аналитика - Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-chart-line"></i> Расширенная аналитика{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Расширенная аналитика</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Основное <span class="sep">·</span> Про-аналитика</div>
     <h1>Расширенная аналитика</h1>
-    <p>Глубокий анализ данных, тренды и AI-powered инсайты.</p>
+    <p class="lead">Глубокий анализ данных, тренды и AI-powered инсайты.</p>
   </div>
 </div>
-{% endblock %}
+
+
+<style>
+
+.stat-trend{font-size:12px;color:var(--ok);margin-top:4px;display:flex;align-items:center;gap:6px}
+
+</style>
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-filter"></i> Фильтры и период</div>
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Период</label>
-      <select id="periodFilter" class="form-input" onchange="loadAnalytics()">
+      <select id="periodFilter" class="form-input" onchange="loadAnalytics()" aria-label="Период">
         <option value="7">Последние 7 дней</option>
         <option value="30" selected>Последние 30 дней</option>
         <option value="90">Последние 90 дней</option>
@@ -30,7 +32,7 @@
     </div>
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Категория</label>
-      <select id="categoryFilter" class="form-input" onchange="loadAnalytics()">
+      <select id="categoryFilter" class="form-input" onchange="loadAnalytics()" aria-label="Категория">
         <option value="">Все категории</option>
         <option value="Жалоба">Жалобы</option>
         <option value="Вопрос">Вопросы</option>
@@ -40,7 +42,7 @@
     </div>
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Модератор</label>
-      <select id="moderatorFilter" class="form-input" onchange="loadAnalytics()">
+      <select id="moderatorFilter" class="form-input" onchange="loadAnalytics()" aria-label="Модератор">
         <option value="">Все модераторы</option>
       </select>
     </div>
@@ -48,11 +50,11 @@
   <div id="customDateRange" style="display: none; margin-top: 12px; grid-template-columns: 1fr 1fr; gap: 12px;">
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Дата начала</label>
-      <input type="date" id="startDate" class="form-input">
+      <input type="date" id="startDate" class="form-input" aria-label="Дата начала">
     </div>
     <div>
       <label style="display: block; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Дата окончания</label>
-      <input type="date" id="endDate" class="form-input">
+      <input type="date" id="endDate" class="form-input" aria-label="Дата окончания">
     </div>
   </div>
 </div>
@@ -95,7 +97,7 @@
 <div class="section">
   <div class="bs-title">
     <i class="fas fa-chart-area"></i> Тренд тикетов
-    <button class="control-btn" onclick="exportChart('tickets-trend')" style="margin-left: auto;">
+    <button type="button" class="control-btn" onclick="exportChart('tickets-trend')" style="margin-left: auto;">
       <i class="fas fa-download"></i> Экспорт
     </button>
   </div>
@@ -132,27 +134,81 @@
 <div class="section">
   <div class="bs-title"><i class="fas fa-file-export"></i> Экспорт отчетов</div>
   <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-    <button class="control-btn primary" onclick="exportReport('pdf')">
+    <button type="button" class="control-btn primary" onclick="exportReport('pdf')">
       <i class="fas fa-file-pdf"></i> PDF отчет
     </button>
-    <button class="control-btn" onclick="exportReport('excel')">
+    <button type="button" class="control-btn" onclick="exportReport('excel')">
       <i class="fas fa-file-excel"></i> Excel отчет
     </button>
-    <button class="control-btn" onclick="exportReport('csv')">
+    <button type="button" class="control-btn" onclick="exportReport('csv')">
       <i class="fas fa-file-csv"></i> CSV данные
     </button>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/numchart.js"></script>
 <script>
+
+  /* График с защитой: если Chart.js не загрузился или canvas недоступен,
+     не сыплем ошибками в консоль, а показываем честную заглушку. */
+  function makeChart(el, cfg) {
+    if (typeof Chart === 'undefined') return null;
+    if (!el) return null;
+    var target = el;
+    if (typeof el.getContext === 'function') {
+      var ctx2d = null;
+      try { ctx2d = el.getContext('2d'); } catch (e) { ctx2d = null; }
+      if (!ctx2d) {
+        chartFallback(el, 'График недоступен в этом браузере');
+        return null;
+      }
+    }
+    try { return new Chart(target, cfg); }
+    catch (e) {
+      chartFallback(el, 'График не отрисовался');
+      return null;
+    }
+  }
+
+  /* Заменяем ТОЛЬКО сам canvas заглушкой — соседние элементы
+     (списки, легенды) не трогаем. */
+  function chartFallback(el, text) {
+    try {
+      if (!el || !el.parentNode) return;
+      var note = document.createElement('div');
+      note.className = 'empty-state';
+      note.innerHTML = '<i class="fas fa-chart-simple"></i><p>' + text + '</p>';
+      el.parentNode.replaceChild(note, el);
+    } catch (e) { /* метрики — не критично */ }
+  }
+
+
+  /* Цвета графиков из CSS-переменных темы: на светлой теме белый текст
+     был невидим — теперь цвет всегда контрастен. */
+  function chartTick() { return (window.cssVar ? window.cssVar('--text-3', '#8a90a6') : '#8a90a6'); }
+  function chartGrid() {
+    var c = (window.cssVar ? window.cssVar('--text', '#2a2d35') : '#2a2d35');
+    var t = (window.cssVar ? window.cssVar('--surface-2', 'rgba(127,127,127,0.08)') : 'rgba(127,127,127,0.08)');
+    try {
+      // прозрачность из цвета темы — канвасу нужен rgba
+      var tmp = document.createElement('div');
+      tmp.style.color = c;
+      document.body.appendChild(tmp);
+      var rgb = getComputedStyle(tmp).color;
+      tmp.remove();
+      var m = rgb.match(/\d+/g);
+      if (m && m.length >= 3) return 'rgba(' + m[0] + ',' + m[1] + ',' + m[2] + ',0.07)';
+    } catch (e) { /* fallback ниже */ }
+    return t;
+  }
+
 let ticketsTrendChart, categoryChart, moderatorChart, resolutionTimeChart;
 
 async function loadAnalytics() {
   const period = document.getElementById('periodFilter').value;
   const category = document.getElementById('categoryFilter').value;
   const moderator = document.getElementById('moderatorFilter').value;
-  
+
   // Показать/скрыть пользовательский период
   const customDateRange = document.getElementById('customDateRange');
   if (period === 'custom') {
@@ -160,7 +216,7 @@ async function loadAnalytics() {
   } else {
     customDateRange.style.display = 'none';
   }
-  
+
   try {
     const response = await fetch('/api/analytics/advanced', {
       method: 'POST',
@@ -168,7 +224,7 @@ async function loadAnalytics() {
       body: JSON.stringify({period, category, moderator})
     });
     const data = await response.json();
-    
+
     if (data.success) {
       updateStats(data.stats);
       updateCharts(data.charts);
@@ -187,7 +243,7 @@ function updateStats(stats) {
   document.getElementById('avgResolutionTime').textContent = (stats.avg_resolution_time || 0) + 'ч';
   document.getElementById('resolutionRate').textContent = (stats.resolution_rate || 0) + '%';
   document.getElementById('satisfactionScore').textContent = stats.satisfaction_score || 0;
-  
+
   // Обновить тренды
   updateTrend('totalTicketsTrend', stats.total_tickets_trend);
   updateTrend('avgResolutionTimeTrend', stats.avg_resolution_time_trend);
@@ -201,18 +257,18 @@ function updateTrend(elementId, trend) {
     element.innerHTML = '';
     return;
   }
-  
+
   const isPositive = trend > 0;
   const icon = isPositive ? 'fa-arrow-up' : 'fa-arrow-down';
   const color = isPositive ? 'var(--ok)' : 'var(--err)';
-  
+
   element.innerHTML = `<span style="color: ${color};"><i class="fas ${icon}"></i> ${Math.abs(trend)}%</span>`;
 }
 
 function updateCharts(charts) {
   // Тренд тикетов
   if (ticketsTrendChart) ticketsTrendChart.destroy();
-  ticketsTrendChart = new Chart(document.getElementById('ticketsTrendChart'), {
+  ticketsTrendChart = makeChart(document.getElementById('ticketsTrendChart'), {
     type: 'line',
     data: {
       labels: charts.tickets_trend.labels,
@@ -228,24 +284,24 @@ function updateCharts(charts) {
     options: {
       responsive: true,
       plugins: {
-        legend: { labels: { color: '#fff' } }
+        legend: { labels: { color: chartTick() } }
       },
       scales: {
-        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } },
+        x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }
       }
     }
   });
-  
+
   // Распределение по категориям
   if (categoryChart) categoryChart.destroy();
-  categoryChart = new Chart(document.getElementById('categoryChart'), {
+  categoryChart = makeChart(document.getElementById('categoryChart'), {
     type: 'doughnut',
     data: {
       labels: charts.category.labels,
       datasets: [{
         data: charts.category.data,
-        backgroundColor: ['#9b59b6', '#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c']
+        backgroundColor: ['#4f46e5', '#7c3aed', '#22d3ee', '#a78bfa', '#818cf8', '#0ea5e9']
       }]
     },
     options: {
@@ -255,14 +311,14 @@ function updateCharts(charts) {
       }
     }
   });
-  
+
   // Список категорий
   const categoryList = document.getElementById('categoryList');
   const total = charts.category.data.reduce((a, b) => a + b, 0);
   categoryList.innerHTML = charts.category.labels.map((label, i) => {
     const count = charts.category.data[i];
     const percent = ((count / total) * 100).toFixed(1);
-    const colors = ['#9b59b6', '#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#1abc9c'];
+    const colors = ['#4f46e5', '#7c3aed', '#22d3ee', '#a78bfa', '#818cf8', '#0ea5e9'];
     const color = colors[i % colors.length];
     return `
       <div style="display: flex; align-items: center; padding: 8px; gap: 12px;">
@@ -274,10 +330,10 @@ function updateCharts(charts) {
       </div>
     `;
   }).join('');
-  
+
   // Производительность модераторов
   if (moderatorChart) moderatorChart.destroy();
-  moderatorChart = new Chart(document.getElementById('moderatorChart'), {
+  moderatorChart = makeChart(document.getElementById('moderatorChart'), {
     type: 'bar',
     data: {
       labels: charts.moderator.labels,
@@ -290,18 +346,18 @@ function updateCharts(charts) {
     options: {
       responsive: true,
       plugins: {
-        legend: { labels: { color: '#fff' } }
+        legend: { labels: { color: chartTick() } }
       },
       scales: {
-        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } },
+        x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }
       }
     }
   });
-  
+
   // Время решения по категориям
   if (resolutionTimeChart) resolutionTimeChart.destroy();
-  resolutionTimeChart = new Chart(document.getElementById('resolutionTimeChart'), {
+  resolutionTimeChart = makeChart(document.getElementById('resolutionTimeChart'), {
     type: 'bar',
     data: {
       labels: charts.resolution_time.labels,
@@ -314,11 +370,11 @@ function updateCharts(charts) {
     options: {
       responsive: true,
       plugins: {
-        legend: { labels: { color: '#fff' } }
+        legend: { labels: { color: chartTick() } }
       },
       scales: {
-        y: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        x: { ticks: { color: '#888' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        y: { ticks: { color: chartTick() }, grid: { color: chartGrid() } },
+        x: { ticks: { color: chartTick() }, grid: { color: chartGrid() } }
       }
     }
   });
@@ -326,12 +382,12 @@ function updateCharts(charts) {
 
 function updateInsights(insights) {
   const container = document.getElementById('aiInsights');
-  
+
   if (!insights || insights.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Инсайтов пока нет</p>';
     return;
   }
-  
+
   container.innerHTML = insights.map(insight => {
     const iconMap = {
       'positive': 'fa-arrow-up',
@@ -343,12 +399,12 @@ function updateInsights(insights) {
       'negative': 'var(--err)',
       'neutral': 'var(--accent-color)'
     };
-    
+
     const icon = iconMap[insight.type] || 'fa-info-circle';
     const color = colorMap[insight.type] || 'var(--accent-color)';
-    
+
     return `
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+      <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px;">
         <div style="display: flex; align-items: start; gap: 12px;">
           <div style="width: 32px; height: 32px; border-radius: 8px; background: ${color}20; display: flex; align-items: center; justify-content: center;">
             <i class="fas ${icon}" style="color: ${color};"></i>
@@ -372,14 +428,14 @@ async function exportReport(format) {
   const period = document.getElementById('periodFilter').value;
   const category = document.getElementById('categoryFilter').value;
   const moderator = document.getElementById('moderatorFilter').value;
-  
+
   try {
     const response = await fetch('/api/analytics/export', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({period, category, moderator, format})
     });
-    
+
     if (response.ok) {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -401,5 +457,8 @@ async function exportReport(format) {
 }
 
 document.addEventListener('DOMContentLoaded', loadAnalytics);
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadAnalytics(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

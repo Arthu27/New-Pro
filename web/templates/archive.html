@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Архиватор каналов — Панель Hakumo{% endblock %}
+{% block page_title %}Архиватор каналов{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Логи <span class="sep">·</span> Архиватор</div>
+    <h1>Архиватор каналов</h1>
+  </div>
+</div>
+
+<style>
+.ar-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:15px 17px;margin:14px 0 16px}
+.ar-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.ar-panel h3 i{color:var(--ac,var(--ac))}
+.ar-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.55}
+.ar-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ar-sel,.ar-inp{background:var(--surface-2,color-mix(in srgb, var(--text) 5%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.ar-sel{min-width:220px}
+.ar-inp{width:100px}
+.ar-sel:focus,.ar-inp:focus{border-color:var(--ac,var(--ac))}
+.ar-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,var(--ac));color:#1a1a1a;border:none;border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer}
+.ar-btn:hover{filter:brightness(1.08)}
+.ar-btn.ghost{background:transparent;color:var(--ac,var(--ac));border:1px solid var(--ac-line,color-mix(in srgb, var(--ac) 35%, transparent))}
+.ar-msg{font-size:12px;padding:8px 2px 0;display:none}
+.ar-msg.ok{color:#4ade80}
+.ar-msg.err{color:#ff8a7a}
+.ar-stats{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.ar-stat{flex:1;min-width:130px;background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:12px 15px}
+.ar-stat .lab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:4px;display:flex;align-items:center;gap:7px}
+.ar-stat .lab i{color:var(--ac,var(--ac))}
+.ar-stat .v{font-size:18px;font-weight:800;color:var(--text-1,#fff)}
+.ar-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.ar-table th{text-align:left;font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));padding:7px 10px;border-bottom:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent))}
+.ar-table td{padding:8px 10px;border-bottom:1px solid var(--line-2,color-mix(in srgb, var(--text) 6%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));vertical-align:top}
+.ar-table tr:last-child td{border-bottom:none}
+.ar-table .au{font-weight:800;color:var(--text-1,#fff);white-space:nowrap}
+.ar-table .ts{color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));white-space:nowrap;font-size:11.5px}
+.ar-table .att{color:var(--ac,var(--ac));font-size:11.5px;white-space:nowrap}
+[data-theme="light"] .ar-table td{border-bottom-color:rgba(0,0,0,.07)}
+</style>
+
+<div class="ar-panel">
+  <h3><i class="fas fa-box-archive"></i> Сборка архива</h3>
+  <div class="ar-sub">Тот же файл, что присылают /archive (HTML, до 100 сообщений по умолчанию) и /backup-channel (TXT, до 500). Канал и лимит — как в командах; потолок формы — 2000. TXT-бэкап — только админам, как и в боте (administrator).</div>
+  <div class="ar-row">
+    <select class="ar-sel" id="arChannel"><option value="">Загружаю каналы…</option></select>
+    <input class="ar-inp" id="arLimit" type="number" min="1" max="2000" value="100" placeholder="лимит">
+    <button type="button" class="ar-btn" id="arPreview"><i class="fas fa-eye"></i> Предпросмотр</button>
+    <button type="button" class="ar-btn ghost" id="arHtml"><i class="fas fa-file-code"></i> HTML-архив</button>
+    <button type="button" class="ar-btn ghost" id="arTxt" style="display:none"><i class="fas fa-file-lines"></i> TXT-бэкап</button>
+    <button type="button" class="ar-btn ghost" id="arCsv"><i class="fas fa-file-csv"></i> CSV</button>
+  </div>
+  <div class="ar-msg" id="arMsg"></div>
+</div>
+
+<div class="ar-stats" id="arStats" style="display:none"></div>
+
+<div class="ar-panel" id="arPanelRows" style="display:none">
+  <h3><i class="fas fa-clock-rotate-left"></i> Предпросмотр</h3>
+  <div class="ar-sub" id="arRowsSub"></div>
+  <div style="overflow-x:auto"><table class="ar-table">
+    <thead><tr><th>Время</th><th>Автор</th><th>Сообщение</th><th>Вложения</th></tr></thead>
+    <tbody id="arRows"></tbody>
+  </table></div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/archive';
+var CAN_TXT = {{ 'true' if can_txt else 'false' }};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function showMsg(ok, text) {
+  var m = document.getElementById('arMsg');
+  m.style.display = 'block'; m.className = 'ar-msg ' + (ok ? 'ok' : 'err');
+  m.textContent = text;
+}
+
+function loadChannels() {
+  fetch(API + '/channels').then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+    .then(function (res) {
+      var sel = document.getElementById('arChannel');
+      if (!res.d.success) {
+        sel.innerHTML = '<option value="">— недоступно —</option>';
+        showMsg(false, res.d.error || 'Ошибка');
+        return;
+      }
+      if (!res.d.channels.length) {
+        sel.innerHTML = '<option value="">— каналов нет —</option>';
+        return;
+      }
+      sel.innerHTML = res.d.channels.map(function (c) {
+        return '<option value="' + esc(c.id) + '"># ' + esc(c.name) + '</option>';
+      }).join('');
+    })
+    .catch(function () { showMsg(false, 'Сеть моргнула — попробуйте ещё раз'); });
+}
+
+function params() {
+  return 'channel=' + encodeURIComponent(document.getElementById('arChannel').value) +
+         '&limit=' + encodeURIComponent(document.getElementById('arLimit').value);
+}
+
+document.getElementById('arPreview').onclick = function () {
+  document.getElementById('arStats').style.display = 'none';
+  document.getElementById('arPanelRows').style.display = 'none';
+  fetch(API + '/preview?' + params())
+    .then(function (r) { return r.json().then(function (d) { return {status: r.status, d: d}; }); })
+    .then(function (res) {
+      if (!res.d.success) { showMsg(false, res.d.error || 'Ошибка'); return; }
+      var d = res.d;
+      showMsg(true, 'Канал # ' + d.channel + ': лимит ' + d.limit + ', в выгрузку пойдёт ' + d.stats.count + ' сообщений.');
+      var s = d.stats;
+      document.getElementById('arStats').style.display = '';
+      document.getElementById('arStats').innerHTML =
+        '<div class="ar-stat"><div class="lab"><i class="fas fa-comments"></i> сообщений</div><div class="v">' + s.count + '</div></div>' +
+        '<div class="ar-stat"><div class="lab"><i class="fas fa-users"></i> авторов</div><div class="v">' + s.authors + '</div></div>' +
+        '<div class="ar-stat"><div class="lab"><i class="fas fa-paperclip"></i> вложений</div><div class="v">' + s.attachments + '</div></div>' +
+        '<div class="ar-stat"><div class="lab"><i class="fas fa-image"></i> картинок</div><div class="v">' + s.images + '</div></div>';
+      var rows = document.getElementById('arRows');
+      document.getElementById('arPanelRows').style.display = '';
+      document.getElementById('arRowsSub').textContent = d.rows.length
+        ? 'Свежие сообщения канала — до 20 строк, старые сверху, как в архиве.'
+        : 'Канал пуст — архив будет пустым файликом.';
+      rows.innerHTML = d.rows.map(function (m) {
+        return '<tr><td class="ts">' + esc(m.ts) + '</td><td class="au">' + esc(m.author) + '</td>' +
+          '<td>' + esc(m.text) + '</td><td class="att">' + (m.atts ? m.atts + ' влож.' : '') + '</td></tr>';
+      }).join('');
+    })
+    .catch(function () { showMsg(false, 'Сеть моргнула — попробуйте ещё раз'); });
+};
+
+function download(path) {
+  fetch(API + path + params())
+    .then(function (r) {
+      var ct = r.headers.get('Content-Type') || '';
+      if (ct.indexOf('application/json') === 0) {
+        return r.json().then(function (d) { showMsg(false, d.error || 'Ошибка'); });
+      }
+      var cd = r.headers.get('Content-Disposition') || '';
+      var m = cd.match(/filename=([^;]+)/);
+      var name = m ? m[1] : 'archive';
+      var cnt = r.headers.get('X-Archived-Count') || '0';
+      return r.blob().then(function (blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+        showMsg(true, cnt + ' сообщений заархивировано.');
+      });
+    })
+    .catch(function () { showMsg(false, 'Сеть моргнула — попробуйте ещё раз'); });
+}
+
+document.getElementById('arHtml').onclick = function () { download('/html?'); };
+document.getElementById('arCsv').onclick = function () { download('/csv?'); };
+if (CAN_TXT) {
+  document.getElementById('arTxt').style.display = '';
+  document.getElementById('arTxt').onclick = function () { download('/txt?'); };
+}
+
+loadChannels();
+</script>
+{% endblock %}

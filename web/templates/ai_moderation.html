@@ -1,7 +1,8 @@
 {% extends "base.html" %}
-{% block title %}AI Модерация — Aether{% endblock %}
+{% block title %}AI Модерация — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-robot" ></i> AI Модерация{% endblock %}
 {% block content %}
+
 {% block page_hero %}
 <div class="page-hero">
   <div class="page-hero-content">
@@ -34,7 +35,7 @@
   position: relative;
   width: 44px;
   height: 24px;
-  background: rgba(255,255,255,0.08);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
   border-radius: 99px;
   cursor: pointer;
   flex-shrink: 0;
@@ -51,7 +52,7 @@
   border-radius: 50%;
   transition: all 0.25s var(--ease-spring);
 }
-.aimod-toggle-card .switch.on::after { left: 22px; background: #fff; }
+.aimod-toggle-card .switch.on::after { left: 22px; background: #1a1a1a; }
 .aimod-toggle-card .info { flex: 1; }
 .aimod-toggle-card .info h4 {
   font-size: var(--fs-md) !important;
@@ -75,7 +76,7 @@
   transition: all 0.2s;
   cursor: pointer;
 }
-.severity-card:hover { transform: translateY(-2px); border-color: var(--ac-line); }
+.severity-card:hover {border-color: var(--ac-line)}
 .severity-card.active { background: var(--ac-soft); border-color: var(--ac); }
 .severity-card .sev-icon { font-size: 28px; margin-bottom: 6px; }
 .severity-card .sev-name { font-size: var(--fs-md); font-weight: 700; color: var(--text); margin-bottom: 3px; }
@@ -90,7 +91,7 @@
   display: flex !important;
   align-items: center !important;
   gap: 14px !important;
-  background: linear-gradient(135deg, rgba(212, 168, 67, 0.06) 0%, rgba(224, 176, 74, 0.02) 100%);
+  background: linear-gradient(135deg, rgba(212, 168, 67, 0.06) 0%, color-mix(in srgb, var(--ac) 2%, transparent) 100%);
   border: 1px solid rgba(212, 168, 67, 0.18);
   border-radius: 14px;
   padding: 18px 18px !important;
@@ -98,11 +99,7 @@
   overflow: hidden;
   transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
-.aimod-stat:hover {
-  transform: translateY(-2px);
-  border-color: rgba(212, 168, 67, 0.45);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(212, 168, 67, 0.25);
-}
+.aimod-stat:hover {border-color: rgba(212, 168, 67, 0.45); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(212, 168, 67, 0.25)}
 .aimod-stat .stat-icon {
   flex: 0 0 48px;
   width: 48px; height: 48px;
@@ -110,34 +107,34 @@
   display: flex; align-items: center; justify-content: center;
   font-size: 20px;
   color: #1a1a1a;
-  background: linear-gradient(135deg, #d4a843 0%, #e0b04a 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(212, 168, 67, 0.35);
+  background: linear-gradient(135deg, var(--ac) 0%, var(--ac) 100%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 25%, transparent), 0 2px 8px rgba(212, 168, 67, 0.35);
 }
 .aimod-stat.stat-bans .stat-icon {
   background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
   color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(239, 68, 68, 0.35);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 25%, transparent), 0 2px 8px rgba(239, 68, 68, 0.35);
 }
 .aimod-stat.stat-muts .stat-icon {
   background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%);
   color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(245, 158, 11, 0.35);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 25%, transparent), 0 2px 8px rgba(245, 158, 11, 0.35);
 }
 .aimod-stat.stat-24h .stat-icon {
   background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
   color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(56, 189, 248, 0.35);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 25%, transparent), 0 2px 8px rgba(56, 189, 248, 0.35);
 }
 .aimod-stat .stat-body { flex: 1; min-width: 0; }
 .aimod-stat .num {
   font-size: 30px !important;
   font-weight: 800 !important;
-  color: #f4f1e8 !important;
+  color: var(--text) !important;
   font-variant-numeric: tabular-nums;
   line-height: 1.05;
   letter-spacing: -0.02em;
 }
-.aimod-stat.stat-bans .num { color: #fca5a5 !important; }
+.aimod-stat.stat-bans .num { color: var(--err) !important; }
 .aimod-stat.stat-muts .num { color: #fcd34d !important; }
 .aimod-stat.stat-24h .num { color: #7dd3fc !important; }
 .aimod-stat .lbl {
@@ -154,6 +151,8 @@
 .aimod-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--ac); border-radius: 50%; cursor: pointer; box-shadow: 0 0 8px var(--ac-glow); }
 .aimod-slider::-moz-range-thumb { width: 18px; height: 18px; background: var(--ac); border-radius: 50%; cursor: pointer; border: none; }
 .aimod-slider-value { display: inline-block; min-width: 40px; text-align: right; font-weight: 700; color: var(--ac); }
+
+.stat-total{font-size:30px;font-weight:800;color:var(--text);font-family:var(--font-display),sans-serif}
 </style>
 
 <div class="grid-2" >
@@ -213,21 +212,21 @@
       <div class="aimod-toggle-card" data-lang="ru" onclick="toggleLang('ru')">
         <div class="switch" data-switch="ru"></div>
         <div class="info">
-          <h4>🇷🇺 Русский</h4>
+          <h4>Русский</h4>
           <p>Детекция токсичности, спама и дискриминации на русском</p>
         </div>
       </div>
       <div class="aimod-toggle-card" data-lang="tr" onclick="toggleLang('tr')">
         <div class="switch" data-switch="tr"></div>
         <div class="info">
-          <h4>🇹🇷 Tюrkчe</h4>
+          <h4>Турецкий</h4>
           <p>Детекция токсичности, спама и дискриминации на турецком</p>
         </div>
       </div>
       <div class="aimod-toggle-card" data-lang="en" onclick="toggleLang('en')">
         <div class="switch" data-switch="en"></div>
         <div class="info">
-          <h4>🇬🇧 English</h4>
+          <h4>Английский</h4>
           <p>Детекция токсичности, спама и дискриминации на английском</p>
         </div>
       </div>
@@ -244,27 +243,22 @@
     <p >Выберите, какие типы нарушений обрабатывать автоматически:</p>
     <div class="aimod-severity-grid">
       <div class="severity-card" data-sev="mild" onclick="toggleSev('mild')">
-        <div class="sev-icon">⚠️</div>
+        <div class="sev-icon"><i class="fas fa-triangle-exclamation"></i></div>
         <div class="sev-name">Mild</div>
         <div class="sev-desc">Варн · Оскорбления</div>
       </div>
       <div class="severity-card" data-sev="moderate" onclick="toggleSev('moderate')">
-        <div class="sev-icon">🔇</div>
+        <div class="sev-icon"><i class="fas fa-comment-slash"></i></div>
         <div class="sev-name">Moderate</div>
         <div class="sev-desc">Мут 10м · Угрозы</div>
       </div>
       <div class="severity-card" data-sev="severe" onclick="toggleSev('severe')">
-        <div class="sev-icon">🔨</div>
+        <div class="sev-icon"><i class="fas fa-ban"></i></div>
         <div class="sev-name">Severe</div>
         <div class="sev-desc">Бан · Терроризм</div>
       </div>
-      <div class="severity-card" data-sev="spam" onclick="toggleSev('spam')">
-        <div class="sev-icon">📢</div>
-        <div class="sev-name">Spam</div>
-        <div class="sev-desc">Варн · Спам</div>
-      </div>
       <div class="severity-card" data-sev="discrimination" onclick="toggleSev('discrimination')">
-        <div class="sev-icon">🚫</div>
+        <div class="sev-icon"><i class="fas fa-ban"></i></div>
         <div class="sev-name">Discrimination</div>
         <div class="sev-desc">Мут 60м · Дискриминация</div>
       </div>
@@ -281,8 +275,8 @@
     <div class="dash-box-body" >
       <div class="aimod-slider-wrap">
         <label>Чувствительность детекции: <span class="aimod-slider-value" id="sensValue">70%</span></label>
-        <input type="range" min="0" max="100" value="70" class="aimod-slider" id="sensSlider" oninput="updateSens(this.value)">
-        <p   style="0 0;">
+        <input type="range" min="0" max="100" value="70" class="aimod-slider" id="sensSlider" oninput="updateSens(this.value)" aria-label="Чувствительность ИИ">
+        <p style="margin:0 0 10px;color:var(--text-3);font-size:12.5px;line-height:1.6">
           <b>Низкая (0-50%):</b> только severe и discrimination<br>
           <b>Средняя (50-70%):</b> + moderate<br>
           <b>Высокая (70-100%):</b> + mild (может быть больше false positives)
@@ -308,11 +302,11 @@
       <div class="grid-2" >
         <div>
           <label >Окно (часы)</label>
-          <input type="number" id="escWindow" value="24" min="1" max="168"  >
+          <input type="number" id="escWindow" value="24" min="1" max="168" aria-label="Окно эскалации (часы)">
         </div>
         <div>
           <label >Warns → Мут</label>
-          <input type="number" id="escWarns" value="3" min="1" max="20"  >
+          <input type="number" id="escWarns" value="3" min="1" max="20" aria-label="Предупреждений до эскалации">
         </div>
       </div>
     </div>
@@ -327,10 +321,10 @@
   <div class="dash-box-body" >
     <p >Введите текст, чтобы проверить, как AI его оценит (без реальных действий):</p>
     <div  >
-      <input type="text" id="testInput" placeholder="Например: ты тупой идиот"  >
-      <button class="form-btn" onclick="runTest()"><i class="fas fa-play"></i> Проверить</button>
+      <input type="text" id="testInput" placeholder="Например: ты тупой идиот" aria-label="Например: ты тупой идиот">
+      <button type="button" class="form-btn" onclick="runTest()"><i class="fas fa-play"></i> Проверить</button>
     </div>
-    <div id="testResult"   style="16px;"></div>
+    <div id="testResult" style="font-size:13.5px;margin-top:12px;line-height:1.6"></div>
   </div>
 </div>
 
@@ -339,9 +333,24 @@
   'use strict';
   // Load config
   function loadConfig() {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
-      document.getElementById('masterSwitch').classList.toggle('on', cfg.enabled);
-      document.getElementById('masterToggle').classList.toggle('active', cfg.enabled);
+    fetch('/api/ai-mod/config').then(r => r.json()).then(function (raw) {
+      /* модуль может быть офлайн или конфиг старого формата:
+         никогда не роняем страницу, а показываем честный статус */
+      if (!raw || raw.error || typeof raw.enabled === 'undefined') {
+        var badge = document.getElementById('statusBadge');
+        if (badge) { badge.textContent = 'НЕДОСТУПНО'; badge.className = 'badge badge-err'; }
+        var hs = document.getElementById('heroStatus');
+        if (hs) hs.textContent = 'Модуль недоступен';
+        var hd = document.getElementById('heroDot');
+        if (hd) hd.className = 'dot err';
+        return;
+      }
+      var cfg = raw;
+      var esc = cfg.escalation || {};
+      var langs = Array.isArray(cfg.languages) ? cfg.languages : ['ru', 'tr', 'en'];
+      var auto = cfg.auto_actions || {};
+      document.getElementById('masterSwitch').classList.toggle('on', !!cfg.enabled);
+      document.getElementById('masterToggle').classList.toggle('active', !!cfg.enabled);
       document.getElementById('statusBadge').textContent = cfg.enabled ? 'ВКЛ' : 'ВЫКЛ';
       document.getElementById('statusBadge').className = 'badge ' + (cfg.enabled ? 'badge-ok' : 'badge-err');
       document.getElementById('heroStatus').textContent = cfg.enabled ? 'AI Активен' : 'AI Выключен';
@@ -349,23 +358,24 @@
       ['ru', 'tr', 'en'].forEach(l => {
         const sw = document.querySelector(`[data-switch="${l}"]`);
         const card = document.querySelector(`[data-lang="${l}"]`);
-        const on = cfg.languages.includes(l);
-        sw.classList.toggle('on', on);
-        card.classList.toggle('active', on);
+        const on = langs.indexOf(l) !== -1;
+        if (sw) sw.classList.toggle('on', on);
+        if (card) card.classList.toggle('active', on);
       });
-      ['mild', 'moderate', 'severe', 'spam', 'discrimination'].forEach(s => {
+      ['mild', 'moderate', 'severe', 'discrimination'].forEach(s => {
         const card = document.querySelector(`[data-sev="${s}"]`);
-        card.classList.toggle('active', cfg.auto_actions[s] !== false);
+        if (card) card.classList.toggle('active', auto[s] !== false);
       });
-      const sens = Math.round((cfg.sensitivity || 0.7) * 100);
+      const sens = Math.round(((cfg.sensitivity != null ? cfg.sensitivity : 0.7)) * 100);
       document.getElementById('sensSlider').value = sens;
       document.getElementById('sensValue').textContent = sens + '%';
-      document.getElementById('escSwitch').classList.toggle('on', cfg.escalation.enabled);
-      document.getElementById('escToggle').classList.toggle('active', cfg.escalation.enabled);
-      document.getElementById('escBadge').textContent = cfg.escalation.enabled ? 'ВКЛ' : 'ВЫКЛ';
-      document.getElementById('escBadge').className = 'badge ' + (cfg.escalation.enabled ? 'badge-ok' : 'badge-err');
-      document.getElementById('escWindow').value = cfg.escalation.window_hours;
-      document.getElementById('escWarns').value = cfg.escalation.warn_to_mut_after;
+      document.getElementById('escSwitch').classList.toggle('on', !!esc.enabled);
+      document.getElementById('escToggle').classList.toggle('active', !!esc.enabled);
+      document.getElementById('escBadge').textContent = esc.enabled ? 'ВКЛ' : 'ВЫКЛ';
+      document.getElementById('escBadge').className = 'badge ' + (esc.enabled ? 'badge-ok' : 'badge-err');
+      /* значения с фолбэками: старые конфиги без этих полей больше не бросают RangeError */
+      document.getElementById('escWindow').value = esc.window_hours != null ? esc.window_hours : 24;
+      document.getElementById('escWarns').value = esc.warn_to_mut_after != null ? esc.warn_to_mut_after : 3;
     }).catch(e => console.error(e));
   }
   // Load stats
@@ -389,21 +399,26 @@
     saveConfig({enabled: newVal}).then(() => loadConfig());
   };
   window.toggleLang = function(l) {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
-      let langs = cfg.languages.slice();
+    fetch('/api/ai-mod/config').then(r => r.json()).then(function (cfg) {
+      if (!cfg || cfg.error) return;
+      let langs = Array.isArray(cfg.languages) ? cfg.languages.slice() : ['ru', 'tr', 'en'];
       const i = langs.indexOf(l);
       if (i >= 0) langs.splice(i, 1); else langs.push(l);
       saveConfig({languages: langs}).then(() => loadConfig());
     });
   };
   window.toggleSev = function(s) {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+    fetch('/api/ai-mod/config').then(r => r.json()).then(function (cfg) {
+      if (!cfg || cfg.error) return;
+      cfg.auto_actions = cfg.auto_actions || {};
       cfg.auto_actions[s] = !cfg.auto_actions[s];
       saveConfig({auto_actions: cfg.auto_actions}).then(() => loadConfig());
     });
   };
   window.toggleEsc = function() {
-    fetch('/api/ai-mod/config').then(r => r.json()).then(cfg => {
+    fetch('/api/ai-mod/config').then(r => r.json()).then(function (cfg) {
+      if (!cfg || cfg.error) return;
+      cfg.escalation = cfg.escalation || {};
       cfg.escalation.enabled = !cfg.escalation.enabled;
       saveConfig({escalation: cfg.escalation}).then(() => loadConfig());
     });
@@ -424,11 +439,11 @@
         if (data.clean) {
           res.style.background = 'rgba(74,222,128,0.10)';
           res.style.borderColor = 'rgba(74,222,128,0.30)';
-          res.innerHTML = '<b  >✅ Чистый текст</b><br><span >Нарушений не обнаружено.</span>';
+          res.innerHTML = '<b  ><i class="fas fa-check" style="color:var(--ok)"></i> Чистый текст</b><br><span >Нарушений не обнаружено.</span>';
         } else {
           res.style.background = 'rgba(248,113,113,0.10)';
           res.style.borderColor = 'rgba(248,113,113,0.30)';
-          res.innerHTML = '<b  >⚠️ Обнаружено: ' + data.severity + '</b><br>' +
+          res.innerHTML = '<b  ><i class="fas fa-triangle-exclamation"></i> Обнаружено: ' + data.severity + '</b><br>' +
             '<span >Паттернов: ' + data.matches + '</span><br>' +
             '<code   style="margin-top: 6px;">' + data.patterns.join('<br>') + '</code>';
         }

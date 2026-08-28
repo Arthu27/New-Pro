@@ -1,19 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Наблюдение — Aether{% endblock %}
+{% block title %}Наблюдение — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-eye" ></i> Список наблюдения{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Список наблюдения</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Участники <span class="sep">·</span> Наблюдение</div>
     <h1>Список наблюдения</h1>
-    <p>Список наблюдения за подозрительными участниками.</p>
+    <p class="lead">Список наблюдения за подозрительными участниками.</p>
   </div>
 </div>
-{% endblock %}
+
+
+<style>
+
+.wl-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px}
+.wl-count-pill{background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);padding:5px 14px;border-radius:99px;font-size:13px;font-weight:700}
+.wl-list{display:flex;flex-direction:column;gap:8px}
+.wl-row{display:flex;align-items:center;gap:12px;padding:12px 15px;background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:12px}
+.wl-name{font-weight:600;color:var(--text);flex:1}
+.wl-meta{font-size:12px;color:var(--text-3)}
+
+</style>
 
 
 
@@ -51,7 +58,7 @@ async function loadWatchlist(gid) {
     }
     tbody.innerHTML = d.map(function(u) {
       return '<tr>' +
-        '<td><div >👤 ' + esc(u.name) + '</div><div class="wl-meta">' + esc(u.id) + '</div></td>' +
+        '<td><div ><i class="fas fa-user" style="opacity:.55"></i> ' + esc(u.name) + '</div><div class="wl-meta">' + esc(u.id) + '</div></td>' +
         '<td >' + esc(u.reason||'—') + '</td>' +
         '<td >' + esc(u.added_by||'—') + '</td>' +
         '<td >' + esc((u.timestamp||'').slice(0,10)) + '</td>' +
@@ -63,5 +70,8 @@ async function loadWatchlist(gid) {
 }
 
 loadWatchlist(_guildId);
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadWatchlist(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

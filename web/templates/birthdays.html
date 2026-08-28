@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}Дни рождения — Панель Hakumo{% endblock %}
+{% block page_title %}Дни рождения{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество <span class="sep">·</span> Дни рождения</div>
+    <h1>Дни рождения</h1>
+  </div>
+</div>
+
+<style>
+.bd-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;align-items:center}
+.bd-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:10px 16px}
+.bd-kpi i{color:var(--ac,var(--ac));font-size:16px}
+.bd-kpi b{font-size:18px;color:var(--text-1,#fff)}
+.bd-kpi span{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
+.bd-kpi.hot{border-color:rgba(231,76,60,.4)}
+.bd-kpi.hot i,.bd-kpi.hot b{color:#ff8a7a}
+.bd-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.bd-grid{grid-template-columns:1fr}}
+.bd-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.bd-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.bd-panel h3 i{color:var(--ac,var(--ac))}
+.bd-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.5}
+.bd-row{display:grid;grid-template-columns:1fr auto auto;gap:4px 10px;align-items:center;padding:8px 6px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
+.bd-row:last-child{border-bottom:none}
+.bd-row.today{background:color-mix(in srgb, var(--ac) 7%, transparent);border-radius:10px}
+.bd-who{min-width:0}
+.bd-who b{display:block;font-size:13px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bd-who small{display:block;font-size:11px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-top:1px}
+.bd-when{font-size:12px;font-weight:700;color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent));white-space:nowrap;font-variant-numeric:tabular-nums}
+.bd-when.soon{color:var(--ac-2,#f0cd7a)}
+.bd-when.today{color:#4ade80}
+.bd-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent));background:color-mix(in srgb, var(--text) 5%, transparent);border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:999px;padding:3px 10px;white-space:nowrap}
+.bd-chip.cake{color:#f0a3c0;border-color:rgba(240,163,192,.3);background:rgba(240,163,192,.08)}
+.bd-act{display:inline-flex;gap:6px}
+.bd-mini{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));background:transparent;color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent));cursor:pointer;font-size:11px}
+.bd-mini:hover{color:#ff8a7a;border-color:rgba(231,76,60,.35)}
+.bd-link{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ac,var(--ac));text-decoration:none;border:1px solid var(--ac-line,color-mix(in srgb, var(--ac) 30%, transparent));border-radius:8px;padding:5px 10px}
+.bd-link:hover{background:var(--ac-soft,color-mix(in srgb, var(--ac) 12%, transparent))}
+.bd-form{display:flex;gap:8px;flex-wrap:wrap}
+.bd-form .inp{flex:1;min-width:70px}
+.bd-fields{display:grid;grid-template-columns:1fr;gap:8px}
+.bd-fields label{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));display:block;margin-bottom:3px}
+.bd-preview{background:color-mix(in srgb, var(--text) 3%, transparent);border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:14px 16px}
+.bd-preview .hdr{font-size:13px;font-weight:800;letter-spacing:.6px;color:#f0a3c0;margin-bottom:8px}
+.bd-preview .line{font-size:13.5px;color:var(--text-1,#fff);margin-bottom:6px}
+.bd-preview .invite{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));margin-bottom:10px}
+.bd-preview .fld{display:inline-block;font-size:11.5px;color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));background:color-mix(in srgb, var(--text) 5%, transparent);border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:8px;padding:4px 10px;margin:0 6px 6px 0}
+.bd-preview .note{font-size:11.5px;color:var(--ac-2,#f0cd7a);margin-top:4px}
+.bd-preview .tpl{margin-top:10px;padding-top:10px;border-top:1px dashed color-mix(in srgb, var(--text) 10%, transparent);font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent))}
+.bd-preview .tpl code{display:block;margin-top:4px;font-size:12px;color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));background: var(--bg);border-radius:8px;padding:6px 10px;white-space:pre-wrap;word-break:break-word}
+[data-theme="light"] .bd-row{border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .bd-preview .tpl code{background: var(--bg)}
+</style>
+
+<div class="bd-kpis" id="bdKpis">
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+</div>
+
+<div class="bd-grid">
+  <div>
+    <div class="bd-panel">
+      <h3><i class="fas fa-cake-candles"></i> Ближайшие дни рождения</h3>
+      <span class="fresh-chip" id="bdFresh"></span>
+      <div class="bd-sub">Порядок и числа дней — ровно как у команды /birthdays в Discord. Сегодняшние именинники подсвечены, значок торта — уже поздравлены в этом году.</div>
+      <input class="inp" id="bdSearch" placeholder="Поиск по календарю — имя или дата" style="margin-bottom:10px">
+      <div id="bdList"><div class="sk-row"></div><div class="sk-row" style="width:70%"></div></div>
+      <div style="margin-top:10px">
+        <a class="bd-link" id="bdCsv" href="#" aria-label="Выгрузить календарь в CSV"><i class="fas fa-file-csv"></i> Выгрузить календарь (CSV)</a>
+      </div>
+    </div>
+
+    <div class="bd-panel" id="bdAddPanel" style="display:none">
+      <h3><i class="fas fa-user-plus"></i> Записать день рождения</h3>
+      <div class="bd-sub">Та же запись, что даёт команда /birthday: повторная запись участника заменяет дату. Год необязателен — по нему бот назовёт возраст.</div>
+      <div class="bd-form">
+        <input class="inp" id="bdAddId" maxlength="24" placeholder="ID или @упоминание" style="min-width:160px">
+        <input class="inp" id="bdAddDay" type="number" min="1" max="31" placeholder="День">
+        <input class="inp" id="bdAddMonth" type="number" min="1" max="12" placeholder="Месяц">
+        <input class="inp" id="bdAddYear" type="number" min="1900" max="2100" placeholder="Год">
+        <button type="button" class="btn" onclick="bdSet()"><i class="fas fa-check"></i> Записать</button>
+      </div>
+      <div class="bd-sub" id="bdAddMsg" style="margin:8px 0 0"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="bd-panel">
+      <h3><i class="fas fa-eye"></i> Превью поздравления</h3>
+      <div class="bd-sub">Структура эмбеда, который бот пошлёт в 9:00 UTC в день рождения: шапка, строка с упоминанием, возраст, поля. Образец — @Мария, 20 лет.</div>
+      <div class="bd-preview" id="bdPreviewBox"><div class="sk-row"></div><div class="sk-row" style="width:55%"></div></div>
+      <div style="margin-top:10px">
+        <button type="button" class="btn btn-ghost" id="bdPreviewBtn" onclick="bdPreviewLoad()"><i class="fas fa-rotate"></i> Обновить превью</button>
+      </div>
+    </div>
+
+    <div class="bd-panel" id="bdSetPanel" style="display:none">
+      <h3><i class="fas fa-gear"></i> Настройки поздравлений</h3>
+      <div class="bd-sub">Канал — обязателен, без него ког поздравлять не станет. Роль именинника выдаётся на день. Монеты уходят подарком в экономику. Шаблон — заготовка: ког пока шлёт фирменный эмбед, плейсхолдер один — {user}.</div>
+      <div class="bd-fields">
+        <div><label for="bdSetChannel">Канал поздравлений</label>
+          <select class="inp" id="bdSetChannel" aria-label="Канал поздравлений"></select><div id="bdSetChannelStatus"></div></div>
+        <div><label for="bdSetRole">Роль именинника</label>
+          <select class="inp" id="bdSetRole" aria-label="Роль именинника"></select><div id="bdSetRoleStatus"></div></div>
+        <div><label for="bdSetGift">Подарок в монетах (0 — без подарка)</label>
+          <input class="inp" id="bdSetGift" type="number" min="0" max="100000" placeholder="0"></div>
+        <div><label for="bdSetMsg">Шаблон сообщения</label>
+          <textarea class="inp" id="bdSetMsg" rows="2" maxlength="200" placeholder="С днём рождения, {user}!"></textarea></div>
+        <div><button type="button" class="btn" onclick="bdSaveSettings()"><i class="fas fa-check"></i> Сохранить настройки</button></div>
+      </div>
+      <div class="bd-sub" id="bdSetMsgNote" style="margin:8px 0 0"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/pickers.js?v={{ static_v('pickers.js') }}"></script>
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/birthdays';
+var CAN_EDIT = false;
+var LAST_ENTRIES = [];
+
+document.getElementById('bdCsv').href = API + '/export.csv';
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function kpi(icon, num, label, hot) {
+  return '<div class="bd-kpi' + (hot ? ' hot' : '') + '"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+}
+
+function renderKpis(s) {
+  document.getElementById('bdKpis').innerHTML =
+    kpi('fa-list-ol', s.total, plural(s.total, 'запись в календаре', 'записи в календаре', 'записей в календаре'), false) +
+    kpi('fa-cake-candles', s.today, plural(s.today, 'именинник сегодня', 'именинника сегодня', 'именинников сегодня'), s.today > 0) +
+    kpi('fa-clock', s.week, plural(s.week, 'день рождения на неделе', 'дня рождения на неделе', 'дней рождения на неделе'), false) +
+    kpi('fa-champagne-glasses', s.celebrated_year, plural(s.celebrated_year, 'поздравлен в этом году', 'поздравлено в этом году', 'поздравлено в этом году'), false);
+}
+
+function whenLabel(e) {
+  if (e.today) return {text: 'сегодня', cls: 'today'};
+  var txt = 'через ' + e.days_until + ' ' + plural(e.days_until, 'день', 'дня', 'дней');
+  return {text: txt, cls: e.days_until <= 7 ? 'soon' : ''};
+}
+
+function renderList(entries) {
+  var box = document.getElementById('bdList');
+  if (!entries.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-cake-candles"></i><p>Записей о днях рождения нет</p><p class="empty-tip">Участник добавляет свою дату командой /birthday, а админ может записать её прямо здесь.</p></div>';
+    return;
+  }
+  box.innerHTML = entries.map(function (e) {
+    var w = whenLabel(e);
+    var dateTxt = String(e.day).padStart(2, '0') + '.' + String(e.month).padStart(2, '0') + (e.year ? '.' + e.year : '');
+    var sub = dateTxt + (e.age != null ? ' · исполнится ' + e.age : '');
+    var badges = e.celebrated_this_year
+      ? '<span class="bd-chip cake" title="Поздравлен в этом году"><i class="fas fa-cake-candles"></i> ' + esc(e.celebrated) + '</span> ' : '';
+    var del = CAN_EDIT
+      ? ' <button type="button" class="bd-mini" title="Удалить запись" aria-label="Удалить запись" onclick="bdDelete(\'' + esc(e.user_id) + '\')"><i class="fas fa-trash"></i></button>' : '';
+    return '<div class="bd-row' + (e.today ? ' today' : '') + '"><div class="bd-who"><b>' + esc(e.name) +
+      '</b><small>' + esc(sub) + '</small></div>' +
+      '<span class="bd-when ' + w.cls + '">' + esc(w.text) + '</span>' +
+      '<span class="bd-act">' + badges + del + '</span></div>';
+  }).join('');
+}
+
+function fillSettings(st) {
+  document.getElementById('bdSetChannel').value = st.channel_id || '';
+  document.getElementById('bdSetRole').value = st.role_id || '';
+  document.getElementById('bdSetGift').value = st.gift_coins || 0;
+  document.getElementById('bdSetMsg').value = st.message || '';
+}
+
+function render(d) {
+  CAN_EDIT = !!d.can_edit;
+  if (CAN_EDIT) {
+    document.getElementById('bdAddPanel').style.display = '';
+    document.getElementById('bdSetPanel').style.display = '';
+    fillSettings(d.settings);
+    if (!window._bdPickers) {
+      window._bdPickers = true;
+      attachSelectPicker(document.getElementById('bdSetChannel'),
+        { search: true,gid: GID, kind: 'text', noneLabel: '— выберите канал —'});
+      attachSelectPicker(document.getElementById('bdSetRole'),
+        { search: true,gid: GID, kind: 'role', noneLabel: '— роль не выдаётся —'});
+      bindCtrlS(bdSaveSettings);
+      window._bdDirty = dirtyTrack(['bdSetChannel', 'bdSetRole', 'bdSetGift', 'bdSetMsg'].map(function (id) { return document.getElementById(id); }));
+    }
+  }
+  LAST_ENTRIES = d.entries;
+  renderKpis(d.stats);
+  renderList(d.entries);
+  freshStamp(document.getElementById('bdFresh'));
+}
+
+function bdLoad() {
+  fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) { render(d); }
+  }).catch(function () {});
+}
+
+function bdSet() {
+  var msg = document.getElementById('bdAddMsg');
+  var body = {user_id: document.getElementById('bdAddId').value,
+              day: document.getElementById('bdAddDay').value,
+              month: document.getElementById('bdAddMonth').value};
+  var year = document.getElementById('bdAddYear').value;
+  if (year !== '') { body.year = year; }
+  fetch(API + '/set', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                       body: JSON.stringify(body)})
+    .then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) {
+        msg.innerHTML = '<i class="fas fa-circle-exclamation" style="color:#ff8a7a"></i> ' + esc(d.error || 'Ошибка');
+        return;
+      }
+      msg.innerHTML = '<i class="fas fa-check" style="color:#4ade80"></i> Записано: <b>' + esc(d.entry.date) + '</b>';
+      bdLoad();
+    }).catch(function () {
+      msg.textContent = 'Сеть моргнула — попробуйте ещё раз';
+    });
+}
+
+function bdDelete(uid) {
+  var entry = null;
+  for (var i = 0; i < LAST_ENTRIES.length; i++) {
+    if (LAST_ENTRIES[i].user_id === uid) { entry = LAST_ENTRIES[i]; break; }
+  }
+  askConfirm('Удалить запись?', 'День рождения участника ' + uid + ' будет удалён из базы.', function () {
+    fetch(API + '/delete', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({user_id: uid})})
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.success) { bdLoad(); return; }
+        bdLoad();
+        if (entry) {
+          uxUndo('Запись о дне рождения удалена', function () {
+            var body = {user_id: uid, day: entry.day, month: entry.month};
+            if (entry.year) { body.year = entry.year; }
+            fetch(API + '/set', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                 body: JSON.stringify(body)})
+              .then(function () { bdLoad(); }).catch(function () {});
+          });
+        }
+      }).catch(function () {});
+  }, {danger: true, okText: 'Удалить', icon_fa: 'fa-trash'});
+}
+
+function bdSaveSettings() {
+  var msg = document.getElementById('bdSetMsgNote');
+  fetch(API + '/settings', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                              channel_id: document.getElementById('bdSetChannel').value,
+                              role_id: document.getElementById('bdSetRole').value,
+                              gift_coins: document.getElementById('bdSetGift').value,
+                              message: document.getElementById('bdSetMsg').value})})
+    .then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) {
+        msg.innerHTML = '<i class="fas fa-circle-exclamation" style="color:#ff8a7a"></i> ' + esc(d.error || 'Ошибка');
+        return;
+      }
+      msg.innerHTML = '<i class="fas fa-check" style="color:#4ade80"></i> Настройки сохранены';
+      if (window._bdDirty) window._bdDirty.reset();
+      bdPreviewLoad();
+      bdLoad();
+    }).catch(function () {
+      msg.textContent = 'Сеть моргнула — попробуйте ещё раз';
+    });
+}
+
+function bdPreviewLoad() {
+  fetch(API + '/preview', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'})
+    .then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) { return; }
+      var p = d.preview;
+      var notes = [];
+      if (p.role_set) { notes.push('роль именинника будет выдана'); }
+      if (p.gift_coins > 0) { notes.push('+' + p.gift_coins + ' монет подарком в экономику'); }
+      if (!p.ready) { notes.push('канал не задан — ког пока молчит'); }
+      document.getElementById('bdPreviewBox').innerHTML =
+        '<div class="hdr">' + esc(p.header) + '</div>' +
+        '<div class="line">' + esc(p.line) + '</div>' +
+        '<div class="invite">' + esc(p.invite) + '</div>' +
+        p.fields.map(function (f) {
+          return '<span class="fld"><i class="fas fa-' + (f.name === 'Дата' ? 'calendar-day' : 'gift') + '"></i> ' +
+            esc(f.name) + ': <b>' + esc(f.value) + '</b></span>';
+        }).join('') +
+        (notes.length ? '<div class="note">' + esc(notes.join(' · ')) + '</div>' : '') +
+        '<div class="tpl">Сохранённый шаблон сообщения:<code>' + esc(p.template) + '</code></div>';
+    }).catch(function () {});
+}
+
+attachListFilter(document.getElementById('bdSearch'), 'bdList', '.bd-row');
+bindSlashFocus(document.getElementById('bdSearch'));
+
+bdLoad();
+bdPreviewLoad();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { bdLoad(); } catch (e) {} }, 1500);
+</script>
+{% endblock %}

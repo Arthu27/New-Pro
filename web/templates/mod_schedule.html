@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block title %}Расписание наказаний - Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-calendar-check"></i> Расписание{% endblock %}
+{% block content %}
+<style>
+.ms-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.ms-wd { text-align: center; font-size: 10.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .6px; padding: 4px 0 6px; }
+.ms-day { min-height: 62px; border: 1px solid var(--line); border-radius: 10px; padding: 5px 6px; cursor: pointer; background: var(--surface-2); transition: border-color .15s, background .15s; position: relative; }
+.ms-day:hover { border-color: var(--ac-line); }
+.ms-day.sel { border-color: var(--ac); box-shadow: 0 0 0 3px var(--ac-soft); }
+.ms-day.today .ms-num { background: var(--ac); color: #fff; }
+.ms-day.dim { opacity: .38; cursor: default; }
+.ms-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; font-size: 11.5px; font-weight: 700; }
+.ms-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.ms-dots .dot { width: 7px; height: 7px; border-radius: 99px; display: inline-block; }
+.ms-cnt { position: absolute; top: 5px; right: 6px; font-size: 10px; color: var(--text-3); font-weight: 700; }
+.ms-ev { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.ms-ev:last-child { border-bottom: 0; }
+.ms-ev .feed-item-icon { flex-shrink: 0; }
+.ms-leg { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+.ms-leg span { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-3); }
+.ms-leg .dot { width: 8px; height: 8px; border-radius: 99px; display: inline-block; }
+@media (max-width: 720px) { .ms-day { min-height: 46px; } .ms-cnt { display: none; } }
+</style>
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Расписание</div>
+    <h1>Расписание наказаний</h1>
+    <p class="lead">Когда что истекает — и что будет исполнено позже. Календарь живой: обновляется сам.</p>
+  </div>
+</div>
+
+<div class="kpi-row" id="msKpis">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-circle-notch fa-spin"></i></div><div class="kpi-copy"><div class="kpi-value">…</div><div class="kpi-label">Загрузка</div></div></div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <button type="button" class="btn btn-ghost btn-sm" id="msPrev" aria-label="Предыдущий месяц"><i class="fas fa-chevron-left"></i></button>
+      <b id="msTitle" style="font-size:14px"></b>
+      <button type="button" class="btn btn-ghost btn-sm" id="msNext" aria-label="Следующий месяц"><i class="fas fa-chevron-right"></i></button>
+      <span class="spacer"></span>
+      <button type="button" class="btn btn-ghost btn-sm" id="msToday">Сегодня</button>
+    </div>
+    <div class="ms-grid" id="msCal"></div>
+    <div class="ms-leg">
+      <span><i class="dot amber" style="background:var(--warn,#f59e0b)"></i> мьют чата</span>
+      <span><i class="dot cyan"></i> мьют войса</span>
+      <span><i class="dot red"></i> бан</span>
+      <span><i class="dot gold"></i> кик</span>
+      <span><i class="dot info"></i> отложенное действие</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="bs-title" style="margin-bottom:6px"><i class="fas fa-list-check"></i> <span id="msDayTitle">События дня</span></div>
+    <div id="msDayList"><div class="empty"><i class="fas fa-calendar-day"></i><span>Выберите день на календаре</span></div></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <div class="bs-title" style="margin-bottom:8px"><i class="fas fa-clock"></i> Отложенные действия</div>
+  <div class="muted" style="font-size:12px;margin-bottom:10px">Запланируйте наказание на будущее — бот исполнит его сам (проверка каждые 30 секунд). Здесь же можно отменить.</div>
+  <div id="msCreateWrap">
+    <div class="form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <label class="field" style="min-width:130px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Действие</span>
+        <select class="form-input" id="msAction" aria-label="Действие">
+          <option value="mute">Мьют</option><option value="ban">Бан</option><option value="kick">Кик</option>
+        </select></label>
+      <label class="field" style="min-width:190px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Участник</span>
+        <input class="form-input" id="msUserId" placeholder="Имя участника — выберите из списка" aria-label="Участник"><span id="msUserIdStatus"></span></label>
+      <label class="field" style="min-width:200px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Когда исполнить</span>
+        <input type="datetime-local" class="form-input" id="msRunAt" aria-label="Когда исполнить"></label>
+      <label class="field" style="min-width:130px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Длительность, мин</span>
+        <input type="number" class="form-input" id="msDur" min="1" max="129600" value="60" aria-label="Длительность в минутах"></label>
+      <label class="field" style="flex:1;min-width:200px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Причина</span>
+        <input class="form-input" id="msReason" maxlength="200" placeholder="за что (необязательно)" aria-label="Причина"></label>
+      <button type="button" class="btn btn-primary" id="msCreate"><i class="fas fa-plus"></i> Запланировать</button>
+    </div>
+    <div class="hint" id="msCreateMsg" style="margin-top:6px"></div>
+  </div>
+  <div id="msSchedList" style="margin-top:10px"><div class="empty"><i class="fas fa-hourglass-start"></i><span>Загрузка…</span></div></div>
+</div>
+<script src="/static/pickers.js"></script>
+<script>
+var GID = '{{ guild_id }}';
+attachMemberPicker(document.getElementById('msUserId'), { gid: GID, statusEl: document.getElementById('msUserIdStatus') });
+var API = '/api/guild/' + GID + '/mod-schedule';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+var DATA = null;
+var CUR = new Date();          // месяц календаря
+var SEL = null;                // выбранный день (yyyy-mm-dd)
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+function dayKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function keyOfTs(ts) { var d = new Date(ts * 1000); return dayKey(d); }
+function fmtTime(ts) { var d = new Date(ts * 1000); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function fmtDay(ts) { var d = new Date(ts * 1000); return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + ' ' + fmtTime(ts); }
+function durHuman(sec) {
+  sec = Math.max(0, Math.round(sec || 0));
+  if (sec < 3600) return Math.round(sec / 60) + ' мин';
+  if (sec < 86400) return (sec / 3600).toFixed(sec % 3600 ? 1 : 0).replace(/\.0$/, '') + ' ч';
+  return Math.round(sec / 86400) + ' дн';
+}
+var KIND_DOT = { mute: 'amber', vmute: 'cyan', ban: 'red', kick: 'gold' };
+var KIND_ICON = { mute: 'fa-comment-slash', vmute: 'fa-microphone-slash', ban: 'fa-ban', kick: 'fa-door-open' };
+var MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+
+function eventsByDay() {
+  var map = {};
+  function push(key, ev) { (map[key] = map[key] || []).push(ev); }
+  (DATA.expirations || []).forEach(function (e) {
+    push(keyOfTs(e.until), { t: 'exp', ts: e.until, kind: e.kind, label: e.label, name: e.user_name || e.user_id, reason: e.reason });
+  });
+  (DATA.scheduled || []).forEach(function (e) {
+    if (e.status !== 'pending') return;
+    push(keyOfTs(e.run_at), { t: 'sch', ts: e.run_at, kind: e.action, label: 'Запланировано: ' + e.action_label, name: e.user_name || e.user_id, reason: e.reason, dur: e.duration });
+  });
+  return map;
+}
+
+function renderCal() {
+  var y = CUR.getFullYear(), m = CUR.getMonth();
+  $('msTitle').textContent = MONTHS[m] + ' ' + y;
+  var first = new Date(y, m, 1);
+  var startDow = (first.getDay() + 6) % 7;    // понедельник первым
+  var daysIn = new Date(y, m + 1, 0).getDate();
+  var map = DATA ? eventsByDay() : {};
+  var todayKey = dayKey(new Date());
+  var html = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(function (w) { return '<div class="ms-wd">' + w + '</div>'; }).join('');
+  for (var i = 0; i < startDow; i++) html += '<div class="ms-day dim"></div>';
+  for (var d = 1; d <= daysIn; d++) {
+    var key = y + '-' + pad(m + 1) + '-' + pad(d);
+    var evs = map[key] || [];
+    var dots = evs.slice(0, 8).map(function (e) {
+      var cls = e.t === 'exp' ? (KIND_DOT[e.kind] || 'info') : 'info';
+      return '<i class="dot ' + cls + '"></i>';
+    }).join('');
+    html += '<div class="ms-day' + (key === todayKey ? ' today' : '') + (key === SEL ? ' sel' : '') + '" data-day="' + key + '">' +
+      '<span class="ms-num">' + d + '</span>' +
+      (evs.length ? '<span class="ms-cnt">' + evs.length + '</span>' : '') +
+      '<div class="ms-dots">' + dots + '</div></div>';
+  }
+  $('msCal').innerHTML = html;
+}
+
+function renderDayList() {
+  var box = $('msDayList');
+  if (!SEL) { box.innerHTML = '<div class="empty"><i class="fas fa-calendar-day"></i><span>Выберите день на календаре</span></div>'; return; }
+  var evs = (DATA ? eventsByDay()[SEL] : null) || [];
+  var dd = SEL.split('-');
+  $('msDayTitle').textContent = 'События: ' + parseInt(dd[2], 10) + ' ' + MONTHS[parseInt(dd[1], 10) - 1];
+  if (!evs.length) { box.innerHTML = '<div class="empty"><i class="fas fa-mug-hot"></i><span>На этот день ничего не запланировано</span></div>'; return; }
+  box.innerHTML = evs.sort(function (a, b) { return a.ts - b.ts; }).map(function (e) {
+    var ic = e.t === 'exp' ? (KIND_ICON[e.kind] || 'fa-clock') : 'fa-clock';
+    var sub = e.t === 'exp'
+      ? 'истекает в ' + fmtTime(e.ts) + (e.reason ? ' · ' + e.reason : '')
+      : 'исполнение в ' + fmtTime(e.ts) + (e.dur ? ' · на ' + durHuman(e.dur) : '') + (e.reason ? ' · ' + e.reason : '');
+    return '<div class="ms-ev"><div class="feed-item-icon"><i class="fas ' + ic + '"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(e.label) + '</div>' +
+      '<div class="feed-item-sub">' + esc(e.name) + '</div>' +
+      '<div class="feed-item-time">' + esc(sub) + '</div></div></div>';
+  }).join('');
+}
+
+function stTone(st) { return st === 'executed' ? 'ok' : st === 'cancelled' ? 'neutral' : st.indexOf('failed') === 0 ? 'danger' : 'tone-warning'; }
+function stLabel(st) { return st === 'executed' ? 'исполнено' : st === 'cancelled' ? 'отменено' : st.indexOf('failed') === 0 ? 'ошибка' : 'ожидает'; }
+
+function renderSched() {
+  var box = $('msSchedList');
+  var rows = (DATA.scheduled || []);
+  if (!rows.length) { box.innerHTML = '<div class="empty"><i class="fas fa-hourglass-start"></i><span>Отложенных действий нет — запланируйте первое выше.</span></div>'; return; }
+  box.innerHTML = rows.map(function (e) {
+    var left = e.status === 'pending' ? Math.max(0, Math.round(e.run_at - DATA.now)) : 0;
+    var cancel = (CAN_EDIT && e.status === 'pending')
+      ? '<button type="button" class="btn btn-ghost btn-sm" data-cancel="' + esc(e.id) + '" title="Отменить"><i class="fas fa-xmark"></i></button>' : '';
+    return '<div class="ms-ev"><div class="feed-item-icon"><i class="fas ' + (KIND_ICON[e.action] || 'fa-clock') + '"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(e.action_label) + ' · ' + esc(e.user_name || e.user_id) + '</div>' +
+      '<div class="feed-item-sub">' + esc(fmtDay(e.run_at)) + (e.duration ? ' · на ' + durHuman(e.duration) : '') +
+        (e.source === 'panel' ? ' · из панели' : '') + (e.reason ? ' · ' + esc(e.reason) : '') + '</div>' +
+      '<div class="feed-item-time">' + (e.status === 'pending' ? 'осталось ' + durHuman(left) : stLabel(e.status)) + '</div></div>' +
+      '<span class="badge ' + stTone(e.status) + '">' + stLabel(e.status) + '</span>' + cancel + '</div>';
+  }).join('');
+}
+
+function kpi(icon, num, label, tone) {
+  return '<div class="kpi ' + (tone || '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
+    '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
+}
+
+function load() {
+  fetch(API).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    var fp = String(JSON.stringify(d || null) || '').slice(0, 600);
+    if (window.silentGuard && window.silentGuard('mod_schedule', fp)) return;
+    DATA = d;
+    var s = d.stats;
+    $('msKpis').innerHTML =
+      kpi('fa-fire', s.active, 'активных наказаний', s.active ? 'tone-warn' : 'tone-ok') +
+      kpi('fa-clock', s.pending, 'отложенных действий', 'tone-info') +
+      kpi('fa-calendar-day', s.today, 'истекает сегодня', s.today ? 'tone-warn' : 'tone-ok') +
+      (s.nearest ? kpi('fa-hourglass-half', fmtDay(s.nearest), 'ближайшее истечение', 'tone-info')
+                 : kpi('fa-hourglass-half', '—', 'истечений не видно', 'tone-info'));
+    renderCal(); renderDayList(); renderSched();
+  }).catch(function () {});
+}
+
+document.addEventListener('click', function (e) {
+  var day = e.target.closest('.ms-day[data-day]');
+  if (day) { SEL = day.dataset.day; renderCal(); renderDayList(); return; }
+  var cb = e.target.closest('[data-cancel]');
+  if (cb) {
+    var id = cb.dataset.cancel;
+    window.confirmAction('Отменить отложенное действие?', 'Бот его просто не выполнит — запись останется отменённой.', function () {
+      fetch(API + '/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) })
+        .then(function (r) { return r.json(); }).then(function (d) {
+          window.showToast(d.message || d.error || 'Ошибка', !!d.success); load();
+        }).catch(function () { window.showToast('Сеть моргнула — попробуйте ещё раз', false); });
+    }, { danger: true, okText: 'Отменить действие' });
+  }
+});
+
+$('msPrev').addEventListener('click', function () { CUR = new Date(CUR.getFullYear(), CUR.getMonth() - 1, 1); renderCal(); });
+$('msNext').addEventListener('click', function () { CUR = new Date(CUR.getFullYear(), CUR.getMonth() + 1, 1); renderCal(); });
+$('msToday').addEventListener('click', function () { CUR = new Date(); SEL = dayKey(new Date()); renderCal(); renderDayList(); });
+
+if (CAN_EDIT) {
+  var dt = new Date(Date.now() + 24 * 3600 * 1000);
+  $('msRunAt').value = dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate()) + 'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+  $('msCreate').addEventListener('click', function () {
+    var msg = $('msCreateMsg');
+    var runAt = new Date($('msRunAt').value);
+    if (isNaN(runAt.getTime())) { msg.className = 'hint error'; msg.textContent = 'Укажите дату и время исполнения'; return; }
+    fetch(API + '/create', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: $('msAction').value, user_id: $('msUserId').value.trim(),
+        run_at: runAt.getTime() / 1000, duration: $('msDur').value, reason: $('msReason').value.trim()
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      msg.className = 'hint' + (d.success ? '' : ' error');
+      msg.textContent = d.message || d.error || 'Ошибка';
+      if (d.success) { $('msUserId').value = ''; $('msReason').value = ''; load(); }
+      if (window.showToast) window.showToast(msg.textContent, !!d.success);
+    }).catch(function () { msg.className = 'hint error'; msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; });
+  });
+} else if ($('msCreateWrap')) {
+  $('msCreateWrap').innerHTML = '<div class="hint"><i class="fas fa-lock"></i> Создание и отмена отложенных действий — для модераторов с правами админа.</div>';
+}
+
+SEL = dayKey(new Date());
+load();
+if (window.setLiveRefresh) window.setLiveRefresh(function () { DATA && (DATA.now = Math.floor(Date.now() / 1000)); renderSched(); load(); }, 1500);
+</script>
+{% endblock %}

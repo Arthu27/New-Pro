@@ -1,0 +1,530 @@
+{% extends "base.html" %}
+{% block title %}Апелляции · Модерация — Hakumo{% endblock %}
+{% block page_title %}Апелляции{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Расследование</div>
+    <h1>Апелляции</h1>
+    <p class="lead">Пересмотр наказаний без потери исходных фактов: очередь, аргументы сторон и вердикт в одном месте.</p>
+  </div>
+  <div class="page-head-actions">
+    <a class="btn" id="apCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузка CSV</a>
+  </div>
+</div>
+
+<div class="kpi-row" id="apKpis">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-circle-notch fa-spin"></i></div><div class="kpi-copy"><div class="kpi-value">…</div><div class="kpi-label">Загрузка</div></div></div>
+</div>
+<div id="apRateComments" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-inbox"></i> Ожидают решения</h2>
+      <div class="sub">Очередь пересмотра — принимайте или отклоняйте с комментарием.</div></div></div>
+    <div class="panel-body" id="apQueue">
+      <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка очереди</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-clock-rotate-left"></i> История</h2>
+      <div class="sub">Все обращения и вынесенные вердикты.</div></div></div>
+    <div class="toolbar">
+      <div class="seg" id="apChips">
+        <button type="button" class="seg-btn active" data-st="">Все</button>
+        <button type="button" class="seg-btn" data-st="pending">Ожидают</button>
+        <button type="button" class="seg-btn" data-st="accepted">Приняты</button>
+        <button type="button" class="seg-btn" data-st="rejected">Отклонены</button>
+        <button type="button" class="seg-btn" data-st="auto_closed">Автозакрытие</button>
+      </div>
+      <span class="spacer"></span>
+      <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+        <input type="search" id="apQ" placeholder="Поиск по истории">
+      </label>
+    </div>
+    <div class="panel-body" id="apHistory"></div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px" id="apSetBox" {% if not can_edit %}hidden{% endif %}>
+  <div class="panel-head"><div><h2><i class="fas fa-gear"></i> Канал карточек</h2>
+    <div class="sub">Куда приходят карточки апелляций. Статус: <span id="apReady">проверяем…</span></div></div></div>
+  <div class="panel-body" style="padding-top:0;padding-bottom:0">
+    <div class="hint" style="margin-bottom:12px"><i class="fas fa-circle-info"></i> Подаются из Discord: слэш-команда <b>/апелляция</b> (для забаненных — сообщение боту в ЛС). Здесь модератор выносит вердикт: при живом боте принятая апелляция сама снимает бан и пишет человеку в ЛС.</div>
+  </div>
+  <div class="panel-body">
+    <div class="form-row" style="max-width:560px">
+      <select class="form-input" id="apChanSel"></select>
+      <button type="button" class="btn btn-primary" id="apChanSave"><i class="fas fa-save"></i> Сохранить</button>
+    </div>
+    <div class="hint" id="apChanMsg"></div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px" id="apLookBox" {% if not can_edit %}hidden{% endif %}>
+  <div class="panel-head"><div><h2><i class="fas fa-wand-magic-sparkles"></i> Оформление карточки</h2>
+    <div class="sub">Как выглядит карточка апелляции в Discord: авто-картинка в теме Hakumo, своя по URL или обычный эмбед.</div></div></div>
+  <div class="panel-body">
+    <div class="form-row" style="flex-wrap:wrap;max-width:900px">
+      <select class="form-input" id="apLookMode" aria-label="Режим картинки карточки апелляции" style="max-width:280px">
+        <option value="auto">Авто-картинка (рисует бот)</option>
+        <option value="url">Своя картинка по URL</option>
+        <option value="off">Без картинки — обычный эмбед</option>
+      </select>
+      <select class="form-input" id="apLookTheme" aria-label="Тема авто-картинки апелляции" style="max-width:220px"></select>
+      <input type="text" class="form-input" id="apLookUrl" placeholder="https://… ваша картинка" aria-label="URL собственной картинки" style="flex:1;min-width:220px">
+      <button type="button" class="btn btn-primary" id="apLookSave"><i class="fas fa-save"></i> Сохранить</button>
+    </div>
+    <div class="hint" id="apLookMsg"></div>
+    <div id="apLookPvWrap" style="margin-top:10px;border:1px solid var(--line-2);border-radius:14px;overflow:hidden;line-height:0;background:var(--bg);max-width:900px">
+      <img id="apLookPv" alt="Предпросмотр карточки апелляции" style="width:100%;height:auto" loading="lazy">
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px" id="apRulesBox" {% if not can_edit %}hidden{% endif %}>
+  <div class="panel-head"><div><h2><i class="fas fa-list-check"></i> Правила подачи</h2>
+    <div class="sub">Антиспам и подсказки модераторам: кулдаун после отказа, напоминания о висящих, шаблоны причин отказа.</div></div></div>
+  <div class="panel-body">
+    <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px">
+      <label class="field" style="min-width:210px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Кулдаун после отказа (часы, 0 — выкл)</span>
+        <input type="number" class="form-input" id="apCooldown" min="0" max="720" aria-label="Кулдаун после отказа в часах"></label>
+      <label class="field" style="min-width:210px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Напоминать о висящих через (часы)</span>
+        <input type="number" class="form-input" id="apStale" min="1" max="336" aria-label="Напоминание о висящих в часах"></label>
+      <label class="field" style="flex-direction:row;align-items:center;gap:8px;margin-top:22px">
+        <input type="checkbox" id="apReqReply" aria-label="Комментарий обязателен при отказе">
+        <span style="font-size:var(--fs-sm)">При отказе комментарий обязателен</span></label>
+    </div>
+    <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px;margin-top:10px">
+      <label class="field" style="flex-direction:row;align-items:center;gap:8px;margin-top:22px">
+        <input type="checkbox" id="apInviteOn" aria-label="Разовая ссылка при снятии настоящего бана">
+        <span style="font-size:var(--fs-sm)">Разовая ссылка в ЛС при снятии настоящего бана</span></label>
+      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Канал для ссылки (инвайт на 1 вход, 24 ч)</span>
+        <select class="form-input" id="apInviteChan" aria-label="Канал для разовой ссылки"><option value="">Не выбран</option></select></label>
+    </div>
+    <div class="hint" style="margin-top:2px"><i class="fas fa-circle-info"></i>
+      Для панельного «бана» (изоляции) ссылка не нужна — человек и так на сервере, доступ возвращается сам. Ссылка отправляется только если бан был настоящим Discord-баном.</div>
+    <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px;margin-top:10px">
+      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Пинг роли при новой апелляции (в канал карточек)</span>
+        <select class="form-input" id="apPingRole" aria-label="Роль для пинга при новой апелляции"><option value="0">Без пинга</option></select></label>
+      <label class="field" style="min-width:230px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Авто-блок подачи после N отказов (0 — выкл)</span>
+        <input type="number" class="form-input" id="apBlockAfter" min="0" max="10" aria-label="Авто-блок подачи после N отказов"></label>
+    </div>
+    <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px;margin-top:10px">
+      <label class="field" style="min-width:230px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Эскалация: ждёт дольше N часов (0 — выкл)</span>
+        <input type="number" class="form-input" id="apEscHours" min="0" max="336" aria-label="Эскалация после N часов ожидания"></label>
+      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Старшая роль для эскалации (пинг в канал карточек)</span>
+        <select class="form-input" id="apEscRole" aria-label="Роль для эскалации"><option value="0">Без пинга</option></select></label>
+    </div>
+    <div class="hint" style="margin-top:2px"><i class="fas fa-circle-info"></i>
+      Эскалация сработает один раз на апелляцию: просроченное дело подсвечивается в очереди и пингует старшую роль в канале карточек.</div>
+    <div class="form-row" style="max-width:900px;margin-top:10px">
+      <textarea class="form-input" id="apTemplates" rows="4" style="flex:1"
+        placeholder="Шаблоны причин отказа — по одной на строку (до 10)"
+        aria-label="Шаблоны причин отказа"></textarea>
+    </div>
+    <div class="form-row" style="margin-top:10px;align-items:center">
+      <button type="button" class="btn btn-primary" id="apRulesSave"><i class="fas fa-save"></i> Сохранить</button>
+      <span class="hint" id="apRulesMsg"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/appeals';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+var STATUS = '';
+var TEMPLATES = [];        /* шаблоны причин отказа — из настроек сервера */
+var apRulesDirty = false;  /* форму правил трогали — пришедший снапшот не затираем */
+
+function syncSettings(d) {
+  if (!CAN_EDIT || !d) return;
+  var s = d.settings || {};
+  TEMPLATES = s.reject_templates || [];
+  if (apRulesDirty) return;
+  if ($('apCooldown')) $('apCooldown').value = s.cooldown_hours;
+  if ($('apStale')) $('apStale').value = s.stale_hours;
+  if ($('apReqReply')) $('apReqReply').checked = !!s.require_reply_on_reject;
+  if ($('apInviteOn')) $('apInviteOn').checked = !!s.invite_on_unban;
+  if ($('apInviteChan')) {   /* опций может ещё не быть — запоминаем для loadChannels */
+    $('apInviteChan').dataset.value = String(s.invite_channel_id || '');
+    $('apInviteChan').value = String(s.invite_channel_id || '');
+  }
+  if ($('apPingRole')) {
+    $('apPingRole').dataset.value = String(s.ping_role_id || '0');
+    $('apPingRole').value = String(s.ping_role_id || '0');
+  }
+  if ($('apBlockAfter')) $('apBlockAfter').value = s.block_after_rejects;
+  if ($('apEscHours')) $('apEscHours').value = s.escalate_hours;
+  if ($('apEscRole')) {   /* опций может ещё не быть — запоминаем для loadRoles */
+    $('apEscRole').dataset.value = String(s.escalate_role_id || '0');
+    $('apEscRole').value = String(s.escalate_role_id || '0');
+  }
+  if ($('apTemplates')) $('apTemplates').value = (s.reject_templates || []).join('\n');
+}
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function linkify(text) {
+  return String(text == null ? '' : text)
+    .replace(/(https?:\/\/[^\s<>"']+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--ac)">$1</a>');
+}
+
+function kpi(icon, num, label, tone) {
+  return '<div class="kpi ' + (tone || '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
+    '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
+}
+
+function loadOverview() {
+  fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    /* данные не изменились — KPI не пересобираем (тихие обновления) */
+    var fp = String(JSON.stringify(d || null) || '').slice(0, 400);
+    if (window.silentGuard && window.silentGuard('appeals', fp)) return;
+    var s = d.stats;
+    var staleH = (d.settings && d.settings.stale_hours) || 24;
+    var last = s.last_resolved
+      ? kpi('fa-gavel', '#' + esc(s.last_resolved.id), 'последняя: ' + esc(s.last_resolved.status_label) + ' · ' + esc(s.last_resolved.reviewed_by), 'tone-info')
+      : kpi('fa-gavel', '—', 'решений ещё не было', 'tone-info');
+    $('apKpis').innerHTML =
+      kpi('fa-inbox', s.pending, 'ожидают решения', 'tone-warn') +
+      (s.stale ? kpi('fa-hourglass-half', s.stale, 'ждут > ' + staleH + 'ч — напомним в канал', 'tone-err') : '') +
+      kpi('fa-circle-check', s.accepted, 'принятых', 'tone-ok') +
+      kpi('fa-circle-xmark', s.rejected, 'отклонённых', 'tone-err') +
+      (s.ratings && s.ratings.pct !== null
+        ? kpi('fa-face-smile', s.ratings.pct + '%',
+              'оценок рассмотрения (' + (s.ratings.up + s.ratings.down) + ')',
+              s.ratings.pct >= 50 ? 'tone-ok' : 'tone-err')
+        : '') + last;
+
+    /* свежие комментарии «почему так» — обратная связь по рассмотрению */
+    var rcm = $('apRateComments');
+    if (rcm) {
+      var cms = (s.ratings && s.ratings.comments) || [];
+      rcm.innerHTML = cms.map(function (c) {
+        var good = c.rating === 'up';
+        return '<div class="card" style="flex:1;min-width:240px;margin-bottom:0;padding:12px 14px">' +
+          '<div class="row" style="margin-bottom:4px"><span class="badge ' + (good ? 'ok' : 'danger') + '">' +
+          '<i class="fas ' + (good ? 'fa-thumbs-up' : 'fa-thumbs-down') + '"></i> #' + esc(c.id) + '</span>' +
+          '<span class="muted" style="font-size:11px;margin-left:auto">оценка рассмотрения</span></div>' +
+          '<div style="font-size:12.5px;color:var(--text-2);white-space:pre-wrap">' + esc(c.comment) + '</div></div>';
+      }).join('');
+    }
+
+    var rd = d.readiness;
+    var rb = $('apReady');
+    if (rd.channel_name) {
+      rb.innerHTML = '<span class="badge ok">#' + esc(rd.channel_name) + '</span>' +
+        (rd.falls_to === 'system' ? ' (системный — свой не задан)' : '');
+    } else if (rd.log_channel_id) {
+      rb.innerHTML = '<span class="badge neutral">задан канал ID ' + esc(rd.log_channel_id) + ' — бот офлайн, имя проверится при старте</span>';
+    } else {
+      rb.innerHTML = '<span class="badge tone-warning">свой канал не задан — при живом боте карточки уйдут в системный</span>';
+    }
+    if (CAN_EDIT) { $('apSetBox').hidden = false; loadChannels(); loadRoles(); syncAppearance(d); }
+    syncSettings(d);
+
+    var q = $('apQueue');
+    if (!d.pending.length) {
+      q.innerHTML = '<div class="empty"><i class="fas fa-mug-hot"></i><span>Ожидающих апелляций нет — очередь чиста.</span></div>';
+      return;
+    }
+    q.innerHTML = d.pending.map(function (it) {
+      var tplRow = '';
+      if (CAN_EDIT && TEMPLATES.length) {
+        tplRow = '<div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">' +
+          TEMPLATES.map(function (t) {
+            return '<button type="button" class="btn btn-ghost btn-sm apTpl" data-for="' + esc(it.id) + '" data-tpl="' + esc(t) + '" style="font-size:11px;padding:3px 10px">' + esc(t) + '</button>';
+          }).join('') + '</div>';
+      }
+      var claimBtn = CAN_EDIT
+        ? '<button type="button" class="btn ' + (it.claimed_by ? 'btn-ghost' : 'btn-secondary') + ' btn-sm" data-claim="' + it.id + '" title="Отметить, кто ведёт дело — остальные видят, что очередь занята"><i class="fas fa-hand"></i> ' +
+          (it.claimed_by ? 'Снять с работы' : 'Взять в работу') + '</button>'
+        : '';
+      var act = CAN_EDIT
+        ? tplRow +
+          '<div class="row" style="margin-top:8px">' +
+          claimBtn +
+          '<input class="form-input" id="apReply' + it.id + '" placeholder="Комментарий для ЛС (до 300 знаков)" maxlength="300" style="flex:1">' +
+          '<button type="button" class="btn btn-primary btn-sm" data-ap="' + it.id + ':1"><i class="fas fa-check"></i> Принять</button>' +
+          '<button type="button" class="btn btn-danger btn-sm" data-ap="' + it.id + ':0"><i class="fas fa-xmark"></i> Отклонить</button></div>'
+        : '';
+      var claimChip = it.claimed_by
+        ? '<span class="badge info" title="Этот модератор ведёт дело"><i class="fas fa-hand"></i> в работе: ' + esc(it.claimed_by) + '</span>'
+        : '';
+      var escChip = it.escalated
+        ? '<span class="badge danger" title="Просрочена — эскалирована старшей роли"><i class="fas fa-fire"></i> эскалация</span>'
+        : '';
+      var linkHtml = it.link
+        ? '<div style="margin-top:6px"><a class="pv-link" href="' + esc(it.link) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;font-size:11.5px;font-weight:700;color:var(--ac);background:var(--ac-soft);border:1px solid var(--ac-line);border-radius:99px;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="fas fa-link"></i> ' + esc(it.link) + '</a></div>'
+        : '';
+      var ctxHtml = it.context
+        ? '<div class="muted" style="font-size:11.5px;margin-top:5px"><i class="fas fa-folder-open" style="color:var(--ac)"></i> ' + esc(it.context) + '</div>'
+        : '';
+      return '<div class="card" style="margin-bottom:10px">' +
+        '<div class="row" style="margin-bottom:6px"><b>#' + esc(it.id) + '</b> · ' + esc(it.user_name || 'Без имени') +
+          ' · <span class="id-pill">' + esc(it.user_id) + '</span> ' + claimChip + ' ' + escChip +
+          '<span class="spacer"></span><span class="muted">' + esc(it.created_at) + '</span></div>' +
+        '<div style="white-space:pre-wrap">' + linkify(esc(it.text)) + '</div>' + ctxHtml + linkHtml + act + '</div>';
+    }).join('');
+  }).catch(function () {});
+}
+
+function loadHistory() {
+  var url = API + '/history?' + (STATUS ? 'status=' + STATUS + '&' : '') + 'q=' + encodeURIComponent($('apQ').value);
+  fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    var h = $('apHistory');
+    if (!d.items.length) {
+      h.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><span>По фильтру пусто</span></div>';
+      return;
+    }
+    h.innerHTML = d.items.map(function (it) {
+      var det = it.reviewed_at ? (it.status_label + ' · ' + it.reviewed_by + ' · ' + it.reviewed_at) : 'подана ' + it.created_at;
+      var rep = it.reply ? ' · комментарий: ' + it.reply : '';
+      var tone = it.status === 'accepted' ? 'ok' : it.status === 'rejected' ? 'danger'
+        : it.status === 'auto_closed' ? 'neutral' : 'tone-warning';
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-scale-balanced"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title">#' + esc(it.id) + ' · ' + esc(it.user_name || 'Без имени') + '</div>' +
+        '<div class="feed-item-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(it.text) + '</div>' +
+        '<div class="feed-item-time">' + esc(det + rep) + '</div></div>' +
+        '<span class="badge ' + tone + '">' + esc(it.status_label) + '</span></div>';
+    }).join('');
+  }).catch(function () {});
+}
+
+function apClaim(id) {
+  fetch(API + '/claim', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ appeal_id: String(id) })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { window.showToast(d.error || 'Ошибка', false); return; }
+    window.showToast(d.claimed ? 'Апелляция #' + id + ' у вас в работе' : 'Апелляция #' + id + ' снова в общей очереди', true);
+    loadOverview();
+  }).catch(function () { window.showToast('Сеть моргнула — попробуйте ещё раз', false); });
+}
+
+function apResolve(id, accept) {
+  var rep = $('apReply' + id);
+  var reply = rep ? rep.value : '';
+  window.confirmAction(accept ? 'Принять апелляцию #' + id + '?' : 'Отклонить апелляцию #' + id + '?',
+    accept ? 'При живом боте: бан будет снят, пользователь получит добрую весть в ЛС.' : 'Пользователь получит отказ в ЛС с вашим комментарием (если бот онлайн).',
+    function () {
+      fetch(API + '/resolve', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appeal_id: String(id), accept: accept, reply: reply })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.success) { window.showToast(d.error || 'Ошибка', false); return; }
+        var eff = d.effects || {};
+        if (eff.offline) window.showToast('Решение записано. Бот офлайн: разбан и ЛС не выполнялись', 'warn');
+        else window.showToast('Вердикт вынесен', true);
+        loadOverview(); loadHistory();
+      }).catch(function () { window.showToast('Сеть моргнула — попробуйте ещё раз', false); });
+    },
+    { danger: !accept, okText: accept ? 'Принять' : 'Отклонить' });
+}
+
+function loadRoles() {
+  fetch('/api/guild/' + GID + '/roles').then(function (r) { return r.json(); }).then(function (d) {
+    var raw = Array.isArray(d) ? d : (d.roles || []);
+    /* два селекта из одного списка: пинг при новой апелляции и старшая роль эскалации */
+    ['apPingRole', 'apEscRole'].forEach(function (sid) {
+      var sel = $(sid);
+      if (!sel) return;
+      var keep = sel.dataset.value || sel.value;
+      sel.innerHTML = '<option value="0">Без пинга</option>' + raw.map(function (r) {
+        return '<option value="' + esc(r.id) + '">@ ' + esc(r.name) + '</option>';
+      }).join('');
+      if (keep) sel.value = keep;
+    });
+  }).catch(function () {});
+}
+
+function loadChannels() {
+  fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); }).then(function (d) {
+    /* API отдаёт и массив, и {channels: [...]} — принимаем оба формата */
+    var raw = Array.isArray(d) ? d : (d.channels || []);
+    var inv = $('apInviteChan');
+    if (inv) {  /* канал для разовых ссылок-возвратов — тот же список */
+      var keepInv = inv.dataset.value || inv.value;
+      inv.innerHTML = '<option value="">Не выбран</option>' + raw.filter(function (c) { return c.type === 'text'; })
+        .map(function (c) { return '<option value="' + esc(c.id) + '"># ' + esc(c.name) + '</option>'; }).join('');
+      if (keepInv) inv.value = keepInv;
+    }
+    var list = raw.filter(function (c) { return c.type === 'text'; });
+    $('apChanSel').innerHTML = list.length
+      ? list.map(function (c) { return '<option value="' + esc(c.id) + '"># ' + esc(c.name) + '</option>'; }).join('')
+      : '<option value="">бот офлайн — список недоступен</option>';
+  }).catch(function () {});
+}
+
+document.addEventListener('click', function (e) {
+  var tplBtn = e.target.closest('.apTpl');
+  if (tplBtn) {   /* шаблон причины отказа — в поле комментария этой апелляции */
+    var inp = $('apReply' + tplBtn.getAttribute('data-for'));
+    if (inp) { inp.value = tplBtn.getAttribute('data-tpl'); inp.focus(); }
+    return;
+  }
+  var b = e.target.closest('[data-ap]');
+  if (b) {
+    var parts = b.dataset.ap.split(':');
+    apResolve(parts[0], parts[1] === '1');
+    return;
+  }
+  var cb = e.target.closest('[data-claim]');
+  if (cb) { apClaim(cb.dataset.claim); return; }
+  var chipBtn = e.target.closest('#apChips .seg-btn');
+  if (chipBtn) {
+    document.querySelectorAll('#apChips .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+    chipBtn.classList.add('active');
+    STATUS = chipBtn.dataset.st;
+    loadHistory();
+  }
+});
+
+$('apChanSave').addEventListener('click', function () {
+  var msg = $('apChanMsg');
+  fetch(API + '/channel', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel_id: $('apChanSel').value })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    msg.className = 'hint ' + (d.success ? '' : 'error');
+    msg.textContent = d.message || d.error || 'Ошибка';
+    if (d.success) loadOverview();
+  }).catch(function () {
+    msg.className = 'hint error';
+    msg.textContent = 'Сеть моргнула';
+  });
+});
+
+var apQT = null;
+$('apQ').addEventListener('input', function () {
+  clearTimeout(apQT);
+  apQT = setTimeout(loadHistory, 250);
+});
+$('apCsv').addEventListener('click', function (e) {
+  e.preventDefault();
+  location.href = API + '/export.csv';
+});
+
+/* ── Оформление карточки апелляции (admin/owner) ───────────────────── */
+var apLookDirty = false;
+function apLookEls() {
+  return {
+    mode: $('apLookMode'), theme: $('apLookTheme'), url: $('apLookUrl'),
+    msg: $('apLookMsg'), pvWrap: $('apLookPvWrap'), pv: $('apLookPv')
+  };
+}
+function syncAppearance(d) {
+  var el = apLookEls();
+  if (!el.mode || apLookDirty) return;
+  var ap = (d && d.appearance) || { mode: 'auto', theme: 'violet', url: '' };
+  if (!el.theme.options.length) {
+    el.theme.innerHTML = ((d && d.themes) || []).map(function (t) {
+      return '<option value="' + esc(t.id) + '">' + esc(t.label) + '</option>';
+    }).join('');
+  }
+  el.mode.value = ap.mode;
+  el.theme.value = ap.theme;
+  el.url.value = ap.url || '';
+  refreshAppearanceUi();
+}
+function apLookPreviewSrc() {
+  var el = apLookEls();
+  if (el.mode.value === 'url') {
+    return (el.url.value || '').trim();
+  }
+  var q = new URLSearchParams();
+  q.set('theme', el.theme.value || 'violet');
+  return API + '/card-preview.png?' + q.toString() + '&_=' + Date.now();
+}
+function refreshAppearanceUi() {
+  var el = apLookEls();
+  if (!el.mode) return;
+  var m = el.mode.value;
+  el.theme.style.display = (m === 'auto') ? '' : 'none';
+  el.url.style.display = (m === 'url') ? '' : 'none';
+  el.pvWrap.style.display = (m === 'off') ? 'none' : '';
+  if (m === 'url' && !String(el.url.value || '').trim()) return; /* пустой URL — не дёргаем картинку */
+  el.pv.src = apLookPreviewSrc();
+}
+['apLookMode', 'apLookTheme', 'apLookUrl'].forEach(function (id) {
+  var el = $(id);
+  if (el) el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', function () {
+    apLookDirty = true;
+    clearTimeout(window.__apLookT);
+    window.__apLookT = setTimeout(refreshAppearanceUi, 180);
+  });
+});
+var apLookSaveBtn = $('apLookSave');
+if (apLookSaveBtn) apLookSaveBtn.addEventListener('click', function () {
+  var el = apLookEls();
+  fetch(API + '/appearance', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: el.mode.value, theme: el.theme.value, url: el.url.value })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    el.msg.className = 'hint' + (d.success ? '' : ' error');
+    el.msg.textContent = d.message || d.error || 'Ошибка';
+    if (d.success) {
+      apLookDirty = false;
+      if (d.appearance) { el.mode.value = d.appearance.mode; el.theme.value = d.appearance.theme; el.url.value = d.appearance.url || ''; }
+      if (window.showToast) window.showToast(el.msg.textContent, true);
+      refreshAppearanceUi();
+    }
+  }).catch(function () {
+    el.msg.className = 'hint error';
+    el.msg.textContent = 'Сеть моргнула — попробуйте ещё раз';
+  });
+});
+
+/* ── Правила подачи (admin/owner) ──────────────────────────────────── */
+if (CAN_EDIT && $('apRulesSave')) {
+  ['apCooldown', 'apStale', 'apTemplates', 'apEscHours'].forEach(function (id) {
+    $(id).addEventListener('input', function () { apRulesDirty = true; });
+  });
+  ['apReqReply', 'apInviteOn', 'apInviteChan', 'apPingRole', 'apBlockAfter', 'apEscRole'].forEach(function (id) {
+    $(id).addEventListener('change', function () { apRulesDirty = true; });
+  });
+  $('apRulesSave').addEventListener('click', function () {
+    var msg = $('apRulesMsg');
+    fetch(API + '/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cooldown_hours: $('apCooldown').value,
+        stale_hours: $('apStale').value,
+        require_reply_on_reject: $('apReqReply').checked,
+        invite_on_unban: $('apInviteOn').checked,
+        invite_channel_id: $('apInviteChan').value,
+        ping_role_id: $('apPingRole').value,
+        block_after_rejects: $('apBlockAfter').value,
+        escalate_hours: $('apEscHours').value,
+        escalate_role_id: $('apEscRole').value,
+        reject_templates: $('apTemplates').value.split('\n')
+          .map(function (s) { return s.trim(); })
+          .filter(function (s) { return !!s; })
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      msg.className = 'hint' + (d.success ? '' : ' error');
+      msg.textContent = d.message || d.error || 'Ошибка';
+      if (d.success) {
+        apRulesDirty = false;
+        TEMPLATES = (d.settings && d.settings.reject_templates) || TEMPLATES;
+        if (window.showToast) window.showToast(msg.textContent, true);
+        loadOverview();
+      }
+    }).catch(function () {
+      msg.className = 'hint error';
+      msg.textContent = 'Сеть моргнула — попробуйте ещё раз';
+    });
+  });
+}
+
+loadOverview();
+loadHistory();
+if (window.setLiveRefresh) window.setLiveRefresh(function () { loadOverview(); }, 1500);
+</script>
+{% endblock %}

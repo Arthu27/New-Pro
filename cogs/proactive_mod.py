@@ -1,19 +1,31 @@
 from typing import Dict 
 """
 Проактивная модерация — AI сам замечает проблемы в чате
-Toksisite, spam, шюpheli ссылка, povtoryayusiesya sorular
+Токсичность, спам, подозрительные ссылки, повторяющиеся вопросы
 """
 import discord 
 from discord .ext import commands ,tasks 
 import re 
 import json 
 import os 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from typing import Dict ,List ,Optional 
 import asyncio 
 
 from logger import get_logger 
 log =get_logger ("proactive_mod")
+
+
+def _as_utc (dt ):
+    """К aware-UTC: naive-метки считаем UTC (единый мир сравнения в окне спама).
+
+    Буфер пишет datetime.now(timezone.utc) — aware; но легаси/сторонние
+    write'ы могли положить naive. TypeError на вычитании naive/aware
+    клал весь on_message — нормализуем на чтении.
+    """
+    if dt .tzinfo is None :
+        return dt .replace (tzinfo =timezone .utc )
+    return dt 
 
 
 
@@ -42,12 +54,20 @@ class ProactiveModeration (commands .Cog ):
         if message .author .bot or not message .guild :
             return 
 
+        # Счётчик сообщений для профи-статистики модераторов (панель /mod-history).
+        # Ошибки счётчика глушатся внутри — on_message не должен падать из-за метрики.
+        try :
+            from services .mod_activity import record_message
+            record_message (message .guild .id ,message .author .id ,str (message .author ))
+        except Exception as _ex :
+            log.debug('on_message(): счётчик сообщений: %s',_ex )
+
         channel_id =message .channel .id 
 
         # Analiz duygu
         from web .sentiment_analyzer import get_sentiment_analyzer 
         sentiment_analyzer =get_sentiment_analyzer ()
-        sentiment_result =sentiment_analyzer .analyze_message (message )
+        sentiment_analyzer .analyze_message (message )
 
         # Ekliyoruz в pano
         if channel_id not in self .message_buffer :
@@ -57,7 +77,7 @@ class ProactiveModeration (commands .Cog ):
         'author_id':message .author .id ,
         'author_name':str (message .author ),
         'content':message .content ,
-        'timestamp':datetime .utcnow (),
+        'timestamp':datetime.now(timezone.utc),
         'message_id':message .id ,
         })
 
@@ -76,10 +96,18 @@ class ProactiveModeration (commands .Cog ):
             await self ._send_sentiment_alert (message .guild ,alert )
 
     async def _send_sentiment_alert (self ,guild :discord .Guild ,alert :Dict ):
-        """Denhaklarыnlyaet предупреждение о nastroenii"""
+        """Тихо фиксирует предупреждения о настроении"""
         try :
         # Arыyoruz канал для uvedomleniy
             alert_channel =discord .utils .get (guild .text_channels ,name ="ai-alerts")
+            if alert_channel is None :
+                try :
+                    from cogs .logs import ensure_log_channel
+                    alert_channel =await ensure_log_channel (guild ,'ai-alerts')
+                    if alert_channel is None :
+                        alert_channel =await ensure_log_channel (guild ,'модерация')
+                except Exception as _ex:
+                    log.debug("_send_sentiment_alert(): подавлено: %s", _ex)
             if not alert_channel :
                 return 
 
@@ -91,31 +119,31 @@ class ProactiveModeration (commands .Cog ):
 
             e =discord .Embed (
             color =color_map .get (alert ['type'],0xFF0000 ),
-            timestamp =datetime .utcnow ()
+            timestamp =datetime.now(timezone.utc)
             )
 
             e .description =(
-            f"## AI Sentiment Alert\n"
+            "## ⚠️ AI-анализ настроений\n"
             f"{alert['message']}\n\n"
             )
 
             if alert ['type']=='negative_sentiment':
                 e .description +=(
-                f"**Duygu:** {alert['sentiment']}\n"
+                f"**Настроение:** {alert['sentiment']}\n"
                 f"**Сообщение:** {alert['message_count']}\n"
                 )
             elif alert ['type']=='potential_conflict':
                 e .description +=(
-                f"**Negativnih сообщение:** {alert['negative_messages']}\n"
-                f"**Rekomendaciya:** Контроль et канал на чakышma\n"
+                f"**Негативных сообщений:** {alert['negative_messages']}\n"
+                "**Рекомендация:** проконтролируйте канал на предмет конфликта\n"
                 )
 
-            e .set_footer (text =f"{guild.name} · Analiz duygu")
+            e .set_footer (text =f"{guild.name} · Анализ настроений")
 
             await alert_channel .send (embed =e )
 
         except Exception as e :
-            log .info (f"[SENTIMENT] Ошибка denhaklarыnki предупреждение: {e}")
+            log .info (f"[SENTIMENT] Ошибка фоновой проверки настроения: {e}")
 
     async def _check_toxicity (self ,message :discord .Message ):
         """Контроль ediyor на toksisite"""
@@ -127,7 +155,7 @@ class ProactiveModeration (commands .Cog ):
                 await self ._alert_moderators (
                 message .guild ,
                 'toxicity',
-                f"Obnarujena toksisite den {message.author.mention}",
+                f"Обнаружена токсичность от {message.author.mention}",
                 message 
                 )
                 break 
@@ -138,11 +166,11 @@ class ProactiveModeration (commands .Cog ):
         author_id =message .author .id 
 
         # Scitaem сообщения den bunun yazarыn для son N секунд
-        now =datetime .utcnow ()
+        now =datetime.now(timezone.utc)
         recent_messages =[
         msg for msg in self .message_buffer .get (channel_id ,[])
         if msg ['author_id']==author_id 
-        and (now -msg ['timestamp']).total_seconds ()<=self .spam_window 
+        and (now -_as_utc (msg ['timestamp'])).total_seconds ()<=self .spam_window 
         ]
 
         if len (recent_messages )>=self .spam_threshold :
@@ -150,12 +178,12 @@ class ProactiveModeration (commands .Cog ):
             await self ._alert_moderators (
             message .guild ,
             'spam',
-            f"Obnarujen spam den {message.author.mention} ({len(recent_messages)} сообщение для {self.spam_window}с)",
+            f"Obnarujen spam den {message.author.mention} ({len(recent_messages)} сообщений за {self.spam_window} с)",
             message 
             )
 
     async def _check_suspicious_links (self ,message :discord .Message ):
-        """Контроль ediyor шюpheli ссылка"""
+        """Проверяет подозрительные ссылки"""
         # Propuskaem модератор
         if message .author .guild_permissions .kick_members :
             return 
@@ -170,16 +198,24 @@ class ProactiveModeration (commands .Cog ):
                         await self ._alert_moderators (
                         message .guild ,
                         'suspicious_link',
-                        f"Podozritelnaya ссылка den {message.author.mention}: {link}",
+                        f"Подозрительная ссылка от {message.author.mention}: {link}",
                         message 
                         )
                         break 
 
     async def _alert_moderators (self ,guild :discord .Guild ,alert_type :str ,description :str ,message :discord .Message ):
-        """Denhaklarыnlyaet уведомление модератор"""
+        """Уведомляет модераторов о настроении"""
         try :
         # Arыyoruz канал для uvedomleniy
             alert_channel =discord .utils .get (guild .text_channels ,name ="ai-alerts")
+            if alert_channel is None :
+                try :
+                    from cogs .logs import ensure_log_channel
+                    alert_channel =await ensure_log_channel (guild ,'ai-alerts')
+                    if alert_channel is None :
+                        alert_channel =await ensure_log_channel (guild ,'модерация')
+                except Exception as _ex:
+                    log.debug("_alert_moderators(): подавлено: %s", _ex)
             if not alert_channel :
             # Создал канал если нет
                 overwrites ={
@@ -195,7 +231,7 @@ class ProactiveModeration (commands .Cog ):
                 alert_channel =await guild .create_text_channel (
                 'ai-alerts',
                 overwrites =overwrites ,
-                reason ="AI proактивныйya moderasyon"
+                reason ="AI-проактивная модерация"
                 )
 
                 # Создал embed
@@ -207,7 +243,7 @@ class ProactiveModeration (commands .Cog ):
 
             e =discord .Embed (
             color =color_map .get (alert_type ,0xFF0000 ),
-            timestamp =datetime .utcnow ()
+            timestamp =datetime.now(timezone.utc)
             )
 
             e .description =(
@@ -215,10 +251,10 @@ class ProactiveModeration (commands .Cog ):
             f"{description}\n\n"
             f"**Канал:** {message.channel.mention}\n"
             f"**Сообщение:** {message.content[:200]}\n"
-            f"**Ссылка:** [Pereyti]({message.jump_url})"
+            f"**Ссылка:** [Перейти]({message.jump_url})"
             )
 
-            e .set_footer (text =f"{guild.name} · Proактивныйya moderasyon")
+            e .set_footer (text =f"{guild.name} · Проактивная модерация")
 
             await alert_channel .send (embed =e )
 
@@ -228,18 +264,18 @@ class ProactiveModeration (commands .Cog ):
     @commands .command (name ="proactive-stats")
     @commands .has_permissions (kick_members =True )
     async def proactive_stats (self ,ctx ):
-        """Статистика proактивныйy moderasyonu"""
+        """Статистика проактивной модерации"""
         total_messages =sum (len (msgs )for msgs in self .message_buffer .values ())
         channels_monitored =len (self .message_buffer )
 
         e =discord .Embed (
-        title ="Статистика proактивныйy moderasyonu",
+        title ="Статистика проактивной модерации",
         color =0x5865F2 
         )
         e .description =(
         f"**Каналы pod nablyudeniem:** {channels_monitored}\n"
         f"**Сообщение в panoda:** {total_messages}\n"
-        f"**Eшik spama:** {self.spam_threshold} сообщение для {self.spam_window}с"
+        f"**Порог спама:** {self.spam_threshold} сообщений за {self.spam_window} с"
         )
         e .set_footer (text =f"{ctx.guild.name}")
 

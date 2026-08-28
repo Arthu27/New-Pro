@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block title %}Панели и роли — Панель Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-user-shield"></i> Панели и роли{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Доступ <span class="sep">·</span> Панели и роли</div>
+    <h1>Панели и роли</h1>
+    <p class="lead">Какая роль сервера какую панель открывает. Привяжите Discord-роль к уровню доступа — изменение применится сразу.</p>
+  </div>
+</div>
+
+
+<style>
+  .pa-wrap { padding:6px 2px 34px; max-width: 980px; }
+  .pa-grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  @media (max-width: 900px) { .pa-grid { grid-template-columns: 1fr; } }
+
+  .pa-card {
+    background: color-mix(in srgb, var(--text) 2%, transparent);
+    border:1px solid color-mix(in srgb, var(--text) 7%, transparent);
+    border-radius:14px; padding:16px 18px;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+  }
+  .pa-card:hover {
+    background: color-mix(in srgb, var(--text) 4%, transparent);
+    border-color: color-mix(in srgb, var(--ac) 45%, transparent);
+    box-shadow: 0 8px 26px rgba(0,0,0,0.18);
+  }
+  @media (prefers-reduced-motion: reduce) { .pa-card { transition: none; } }
+
+  .pa-card h3 { display:flex; align-items:center; gap:10px; font-size:14.5px; font-weight:700; margin:0 0 8px; color:var(--text); }
+  .pa-card h3 i { width:30px; height:30px; border-radius:9px; display:grid; place-items:center; font-size:13px; flex:0 0 30px; }
+  .pa-card p { margin:0; font-size:12.5px; line-height:1.6; color:var(--text-3); }
+
+  /* ── Гид по ролям доступа ── */
+  .pa-roles-guide { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px; margin-bottom:24px; }
+  .pa-role-guide {
+    display:flex; gap:12px; align-items:flex-start;
+    background: color-mix(in srgb, var(--text) 2%, transparent);
+    border:1px solid color-mix(in srgb, var(--text) 7%, transparent);
+    border-radius:13px; padding:13px 14px;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  .pa-role-guide:hover {
+    background: color-mix(in srgb, var(--text) 4%, transparent);
+    border-color: color-mix(in srgb, var(--ac) 40%, transparent);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.16);
+  }
+  @media (prefers-reduced-motion: reduce) { .pa-role-guide { transition: none; } }
+  .pa-role-guide .rg-ico { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; flex:0 0 34px; font-size:14px; }
+  .pa-role-guide .rg-name { font-size:13px; font-weight:700; color:var(--text); margin-bottom:3px; }
+  .pa-role-guide .rg-desc { font-size:11.5px; line-height:1.5; color:var(--text-3); }
+
+  .p-owner   { color:#f1c40f; background:rgba(241,196,15,0.14); border:1px solid rgba(241,196,15,0.35); }
+  .p-admin   { color:#ff7a6b; background:rgba(231,76,60,0.14); border:1px solid rgba(231,76,60,0.35); }
+  .p-curator { color:#67e8f9; background:rgba(34,211,238,0.14); border:1px solid rgba(34,211,238,0.35); }
+  .p-mod     { color:#7fe0a8; background:rgba(46,204,113,0.14); border:1px solid rgba(46,204,113,0.35); }
+  .p-uye     { color:var(--ac-2); background:color-mix(in srgb, var(--ac) 14%, transparent); border:1px solid color-mix(in srgb, var(--ac) 35%, transparent); }
+
+  /* ── Легенда и статистика ── */
+  .pa-legend { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
+  .lg { display:inline-flex; align-items:center; gap:7px; font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:99px; }
+  .pa-stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:10px; margin-bottom:24px; }
+  .pa-stat {
+    display:flex; align-items:center; gap:11px;
+    background: color-mix(in srgb, var(--text) 2%, transparent);
+    border:1px solid color-mix(in srgb, var(--text) 7%, transparent);
+    border-radius:12px; padding:12px 13px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .pa-stat:hover { border-color: color-mix(in srgb, var(--ac) 40%, transparent); box-shadow: 0 6px 18px rgba(0,0,0,0.14); }
+  @media (prefers-reduced-motion: reduce) { .pa-stat { transition: none; } }
+  .pa-stat .ico { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; flex:0 0 34px; font-size:13px; }
+  .pa-stat .num { font-size:17px; font-weight:700; color:var(--text); line-height:1.1; }
+  .pa-stat .lbl { font-size:11px; color:var(--text-3); margin-top:2px; }
+
+  .pa-h3 { display:flex; align-items:center; gap:9px; font-size:14.5px; font-weight:700; color:var(--text); margin:26px 0 12px; }
+  .pa-h3 i { color:var(--ac); font-size:13px; }
+
+  /* ── Список ролей сервера ── */
+  .pa-panel { background: color-mix(in srgb, var(--text) 2%, transparent); border:1px solid color-mix(in srgb, var(--text) 7%, transparent); border-radius:14px; padding:14px; }
+  .pa-search { display:flex; align-items:center; gap:9px; background:var(--surface-3); border:1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius:10px; padding:9px 13px; margin-bottom:12px; }
+  .pa-search i { color:var(--text-3); font-size:12px; }
+  .pa-search input { flex:1; background:none; border:none; outline:none; color:var(--text); font-size:13px; font-family:inherit; }
+  .pa-list-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap:10px; }
+  .pa-role { display:flex; flex-direction:column; gap:10px; background:color-mix(in srgb, var(--text) 3%, transparent); border:1px solid color-mix(in srgb, var(--text) 7%, transparent); border-radius:12px; padding:12px 13px; transition: border-color .15s, background .15s; }
+  .pa-role:hover { background:color-mix(in srgb, var(--text) 5%, transparent); border-color:var(--ac); }
+  @media (prefers-reduced-motion: reduce) { .pa-role { transition: none; } }
+  .pa-role-top { display:flex; align-items:center; gap:10px; min-width:0; }
+  .pa-role .swatch { width:24px; height:24px; border-radius:8px; flex-shrink:0; border:1px solid color-mix(in srgb, var(--text) 30%, transparent); box-shadow:0 0 10px rgba(0,0,0,0.3); }
+  .pa-role .rname { flex:1; font-size:13.5px; font-weight:700; line-height:1.3; word-break:break-word; min-width:0; color:var(--text) !important; display:block; }
+  .pa-role .rcount { font-size:11px; opacity:.55; padding:3px 9px; border-radius:20px; background:color-mix(in srgb, var(--text) 8%, transparent); white-space:nowrap; display:inline-flex; align-items:center; gap:5px; flex-shrink:0; }
+  .pa-role select { width:100%; background:var(--surface-3); color:var(--text); border:1px solid color-mix(in srgb, var(--text) 20%, transparent); border-radius:8px; padding:7px 10px; font-size:12.5px; cursor:pointer; outline:none; font-weight:600; font-family:inherit; transition: border-color .15s; }
+  .pa-role select:hover { border-color:var(--ac); }
+  .pa-role select.owner   { border-color:rgba(241,196,15,0.6); color:#f1c40f; }
+  .pa-role select.admin   { border-color:rgba(231,76,60,0.6); color:#ff8a80; }
+  .pa-role select.curator { border-color:rgba(34,211,238,0.6); color:#67e8f9; }
+  .pa-role select.mod     { border-color:rgba(46,204,113,0.6); color:#7fe0a8; }
+  .pa-role select.uye     { border-color:color-mix(in srgb, var(--ac) 50%, transparent); color:var(--ac-2); }
+
+  .pa-empty { text-align:center; opacity:.55; padding:34px 0; font-size:12.5px; }
+  .pa-empty i { display:block; font-size:22px; margin-bottom:8px; }
+
+  /* ── Видимость уведомлений и ленты ── */
+  .pv-panel { background: color-mix(in srgb, var(--text) 2%, transparent); border:1px solid color-mix(in srgb, var(--text) 7%, transparent); border-radius:14px; padding:16px 18px; }
+  .pv-panel h3 { display:flex; align-items:center; gap:9px; font-size:14.5px; font-weight:700; color:var(--text); margin:0 0 6px; }
+  .pv-panel h3 i { color:var(--ac); font-size:13px; }
+  .pv-panel .sub { font-size:12px; color:var(--text-3); line-height:1.55; margin:0 0 14px; }
+  .pv-row { display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+  @media (max-width: 760px) { .pv-row { grid-template-columns: 1fr; } }
+  .pv-field { background: var(--surface-3); border: 1px solid color-mix(in srgb, var(--text) 8%, transparent); border-radius: 12px; padding: 12px 14px; transition: border-color .15s; }
+  .pv-field:hover { border-color: color-mix(in srgb, var(--ac) 40%, transparent); }
+  .pv-field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .pv-field .hint { font-size: 11px; color: var(--text-3); margin-top: 8px; line-height: 1.45; }
+  .pv-field select { width: 100%; background: color-mix(in srgb, var(--text) 4%, transparent); color: var(--text); border: 1px solid color-mix(in srgb, var(--text) 14%, transparent); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; cursor: pointer; outline: none; font-weight: 600; font-family:inherit; transition: border-color .15s; }
+  .pv-field select:hover { border-color: var(--ac, #818cf8); }
+  .pv-saved { display: none; font-size: 11.5px; color: var(--ok); margin-top: 10px; align-items: center; gap: 6px; }
+  .pv-saved.show { display: flex; }
+
+  .info-bar { display:flex; gap:9px; align-items:flex-start; background: color-mix(in srgb, var(--ac) 8%, transparent); border:1px solid color-mix(in srgb, var(--ac) 22%, transparent); border-radius:12px; padding:12px 14px; font-size:12px; color:var(--text-2); line-height:1.55; margin-bottom:22px; }
+  .info-bar i { color:var(--ac); margin-top:1px; }
+</style>
+
+<div class="pa-wrap">
+  <div class="info-bar">
+    <i class="fas fa-circle-info"></i> <span><b>Как это работает.</b> Ниже — все роли сервера. У каждой справа показано, какую панель она открывает, и меню для смены. <b>Куратор</b> — старший модератор: модерация, тикеты и сообщество. Настраивается так же, как модератор и администратор. Изменение применяется сразу.</span>
+  </div>
+
+  <div class="pa-roles-guide">
+    <div class="pa-role-guide">
+      <span class="rg-ico p-owner"><i class="fas fa-crown"></i></span>
+      <div><div class="rg-name">Владелец</div><div class="rg-desc">Полный доступ: все разделы, настройки и опасные действия. Один на сервер.</div></div>
+    </div>
+    <div class="pa-role-guide">
+      <span class="rg-ico p-admin"><i class="fas fa-user-tie"></i></span>
+      <div><div class="rg-name">Администратор</div><div class="rg-desc">Почти всё: модерация, тикеты, контент, аналитика. Без настроек владельца.</div></div>
+    </div>
+    <div class="pa-role-guide">
+      <span class="rg-ico p-curator"><i class="fas fa-graduation-cap"></i></span>
+      <div><div class="rg-name">Куратор</div><div class="rg-desc">Старший модератор: вся модерация плюс тикеты и сообщество. Настраивается как мод и админ.</div></div>
+    </div>
+    <div class="pa-role-guide">
+      <span class="rg-ico p-mod"><i class="fas fa-shield-halved"></i></span>
+      <div><div class="rg-name">Модератор</div><div class="rg-desc">Модерация, участники, журнал и AI-инструменты. Ежедневная работа команды.</div></div>
+    </div>
+    <div class="pa-role-guide">
+      <span class="rg-ico p-uye"><i class="fas fa-user"></i></span>
+      <div><div class="rg-name">Участник (авто)</div><div class="rg-desc">Роли без привязки: только своя заявка в команду и AI-чат. Без штабных разделов.</div></div>
+    </div>
+  </div>
+
+  <div class="pa-h3"><i class="fas fa-link"></i> Привязка ролей сервера</div>
+
+  <div class="pa-legend">
+    <span class="lg p-owner"><i class="fas fa-crown"></i> Владелец</span>
+    <span class="lg p-admin"><i class="fas fa-user-tie"></i> Администратор</span>
+    <span class="lg p-curator"><i class="fas fa-graduation-cap"></i> Куратор</span>
+    <span class="lg p-mod"><i class="fas fa-shield-halved"></i> Модератор</span>
+    <span class="lg p-uye"><i class="fas fa-user"></i> Участник (авто)</span>
+  </div>
+
+  <div class="pa-stats">
+    <div class="pa-stat"><div class="ico p-owner"><i class="fas fa-crown"></i></div><div><div class="num" id="cnt-owner">0</div><div class="lbl">Владелец</div></div></div>
+    <div class="pa-stat"><div class="ico p-admin"><i class="fas fa-user-tie"></i></div><div><div class="num" id="cnt-admin">0</div><div class="lbl">Администратор</div></div></div>
+    <div class="pa-stat"><div class="ico p-curator"><i class="fas fa-graduation-cap"></i></div><div><div class="num" id="cnt-curator">0</div><div class="lbl">Куратор</div></div></div>
+    <div class="pa-stat"><div class="ico p-mod"><i class="fas fa-shield-halved"></i></div><div><div class="num" id="cnt-mod">0</div><div class="lbl">Модератор</div></div></div>
+    <div class="pa-stat"><div class="ico p-uye"><i class="fas fa-user"></i></div><div><div class="num" id="cnt-uye">0</div><div class="lbl">Участник (авто)</div></div></div>
+  </div>
+
+  <div class="pa-panel">
+    <div class="pa-search">
+      <i class="fas fa-search"></i>
+      <input type="text" id="pa-search-input" placeholder="Найти роль по названию..." oninput="renderRoles()" aria-label="Найти роль по названию">
+    </div>
+    <div id="pa-list" class="pa-list-grid"></div>
+  </div>
+
+  <div class="pa-h3"><i class="fas fa-eye"></i> Видимость уведомлений и ленты</div>
+
+  <div class="pv-panel">
+    <h3><i class="fas fa-bell"></i> Кому виден колокольчик и лента активности</h3>
+    <div class="sub">Колокольчик уведомлений и лента активности в шапке панели. Участникам можно скрыть штабную информацию, персоналу — оставить.</div>
+    <div class="pv-row">
+      <div class="pv-field">
+        <label for="pv-notif"><i class="fas fa-bell"></i> Уведомления видят</label>
+        <select id="pv-notif" aria-label="Кому видны уведомления">
+          <option value="owner">Только владелец</option>
+          <option value="admin">Администраторы и выше</option>
+          <option value="curator">Кураторы и выше</option>
+          <option value="mod">Модераторы и выше</option>
+          <option value="uye">Все участники</option>
+        </select>
+        <div class="hint">Системные объявления и события панели. Рекомендуется: модераторы и выше.</div>
+      </div>
+      <div class="pv-field">
+        <label for="pv-activity"><i class="fas fa-stream"></i> Ленту активности видят</label>
+        <select id="pv-activity" aria-label="Кому видна лента активности">
+          <option value="owner">Только владелец</option>
+          <option value="admin">Администраторы и выше</option>
+          <option value="curator">Кураторы и выше</option>
+          <option value="mod">Модераторы и выше</option>
+          <option value="uye">Все участники</option>
+        </select>
+        <div class="hint">Входы в панель, действия модерации, тикеты. Рекомендуется: модераторы и выше.</div>
+      </div>
+    </div>
+    <div class="pv-saved" id="pv-saved"><i class="fas fa-circle-check"></i> Настройка сохранена</div>
+  </div>
+</div>
+
+<script>
+var PA_ROLES = [];
+var PA_MAP = {};
+
+/* ── Видимость уведомлений и ленты ── */
+async function loadVisibility() {
+  try {
+    var r = await fetch('/api/panel/visibility');
+    var d = await r.json();
+    var v = (d && d.visibility) || {};
+    var n = document.getElementById('pv-notif');
+    var a = document.getElementById('pv-activity');
+    if (n) n.value = v.notifications_min_role || 'mod';
+    if (a) a.value = v.activity_min_role || 'mod';
+  } catch (e) { /* тихо */ }
+}
+async function saveVisibility() {
+  var n = document.getElementById('pv-notif');
+  var a = document.getElementById('pv-activity');
+  try {
+    await fetch('/api/panel/visibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notifications_min_role: n ? n.value : 'mod',
+        activity_min_role: a ? a.value : 'mod'
+      })
+    });
+    var s = document.getElementById('pv-saved');
+    if (s) { s.classList.add('show'); setTimeout(function () { s.classList.remove('show'); }, 2200); }
+  } catch (e) { /* тихо */ }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  var n = document.getElementById('pv-notif');
+  var a = document.getElementById('pv-activity');
+  if (n) n.addEventListener('change', saveVisibility);
+  if (a) a.addEventListener('change', saveVisibility);
+});
+loadVisibility();
+
+var PANEL_OPTS = [
+  {v:'uye',     label:'Участник'},
+  {v:'mod',     label:'Модератор'},
+  {v:'curator', label:'Куратор'},
+  {v:'admin',   label:'Администратор'},
+  {v:'owner',   label:'Владелец'}
+];
+var BADGE = {
+  owner: '<span class="pa-badge p-owner"><i class="fas fa-crown"></i> Владелец</span>',
+  admin: '<span class="pa-badge p-admin"><i class="fas fa-user-tie"></i> Администратор</span>',
+  curator: '<span class="pa-badge p-curator"><i class="fas fa-graduation-cap"></i> Куратор</span>',
+  mod:   '<span class="pa-badge p-mod"><i class="fas fa-shield-halved"></i> Модератор</span>',
+  uye:   '<span class="pa-badge p-uye"><i class="fas fa-user"></i> Участник</span>'
+};
+
+function swatchColor(col){
+  var c=String(col||'').toLowerCase().replace('#','');
+  if(!c || /^(0+|000000)$/.test(c)) return 'linear-gradient(135deg,#6b7280,#3f3f46)';
+  return hexToRgba(col,0.95);
+}
+function hexToRgba(hex, a){
+  var h = String(hex||'#4f46e5').replace('#','');
+  if(h.length===3) h=h.split('').map(function(x){return x+x;}).join('');
+  var n = parseInt(h,16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+}
+function panelOf(rid){ return PA_MAP[rid] || 'uye'; }
+
+function updateStats(){
+  var c = {uye:0, mod:0, curator:0, admin:0, owner:0};
+  PA_ROLES.forEach(function(r){ c[panelOf(r.id)] = (c[panelOf(r.id)] || 0) + 1; });
+  document.getElementById('cnt-owner').textContent = c.owner;
+  document.getElementById('cnt-admin').textContent = c.admin;
+  document.getElementById('cnt-curator').textContent = c.curator;
+  document.getElementById('cnt-mod').textContent = c.mod;
+  document.getElementById('cnt-uye').textContent = c.uye;
+}
+
+function renderRoles(){
+  var host = document.getElementById('pa-list');
+  if(!PA_ROLES.length){ host.innerHTML = '<div class="pa-empty" style="grid-column:1/-1"><i class="fas fa-spinner fa-spin"></i>Загружаем роли сервера...</div>'; return; }
+  var q = (document.getElementById('pa-search-input').value || '').toLowerCase().trim();
+  var list = PA_ROLES.filter(function(r){ if(!q) return true; return (r.name||'').toLowerCase().indexOf(q) !== -1; });
+  if(!list.length){ host.innerHTML = '<div class="pa-empty" style="grid-column:1/-1"><i class="fas fa-search"></i>Ролей с таким названием нет</div>'; return; }
+  // Показываем сверху важные (owner/admin/curator/mod), затем участники — по позиции
+  var order = {owner:0, admin:1, curator:2, mod:3, uye:4};
+  list.sort(function(a,b){ return (order[panelOf(a.id)] - order[panelOf(b.id)]) || (b.position - a.position); });
+  host.innerHTML = list.map(function(r){
+    var cur = panelOf(r.id);
+    var opts = PANEL_OPTS.map(function(o){ return '<option value="'+o.v+'"'+(o.v===cur?' selected':'')+'>'+o.label+'</option>'; }).join('');
+    return '<div class="pa-role">'
+      + '<div class="pa-role-top">'
+        + '<span class="swatch" style="background:'+swatchColor(r.color)+'"></span>'
+        + '<span class="rname">'+r.name+'</span>'
+        + '<span class="rcount"><i class="fas fa-user"></i>'+r.members+'</span>'
+      + '</div>'
+      + '<select class="'+cur+'" data-rid="'+r.id+'" data-name="'+String(r.name||'').replace(/"/g,'&quot;')+'" onchange="saveRole(this)" aria-label="Панель для роли '+String(r.name||'').replace(/"/g,'&quot;')+'">'+opts+'</select>'
+      + '</div>';
+  }).join('');
+  updateStats();
+}
+
+function saveRole(sel){
+  var rid = sel.getAttribute('data-rid');
+  var name = sel.getAttribute('data-name') || rid;
+  var val = sel.value;
+  fetch('/api/role-map',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({role_id:rid, panel_role:val})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.success){
+      PA_MAP[rid] = val;
+      sel.className = val;
+      var label = (PANEL_OPTS.find(function(o){return o.v===val;})||{}).label || val;
+      if(window.showToast) window.showToast('«'+name+'» → '+label, true);
+      renderRoles();
+    } else {
+      if(window.showToast) window.showToast(d.error || 'Ошибка сохранения', false);
+      loadPA();
+    }
+  }).catch(function(){ if(window.showToast) window.showToast('Ошибка сети', false); });
+}
+
+function loadPA(){
+  fetch('/api/role-map')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      PA_ROLES = d.guild_roles || [];
+      PA_MAP = d.role_map || {};
+      renderRoles();
+    })
+    .catch(function(){
+      document.getElementById('pa-list').innerHTML = '<div class="pa-empty" style="grid-column:1/-1"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить роли сервера</div>';
+    });
+}
+
+loadPA();
+
+/* live: доступ/права обновляются сами каждые 1.5 секунды (совпадение везде) */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadVisibility(); loadPA(); } catch (e) {} }, 1500);
+</script>
+{% endblock %}

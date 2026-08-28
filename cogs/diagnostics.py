@@ -3,22 +3,50 @@ Bot Diagnostic & Auto-Repair Cog
 =================================
 - Real-time health monitoring (CPU, RAM, latency, guild count)
 - Error aggregation & feed
-- Hot-reload (cog dosyasы deгiшtiгinde otomatik reload)
+- Hot-reload (автоматическая перезагрузка при изменении файла кога)
 - Performance profiling per cog
 - Auto-restart on critical failure
 - Memory leak detection
 """
+
+from logger import get_logger
+
+_log = get_logger("diagnostics")
+
 import discord 
+from discord import app_commands 
 from discord .ext import commands ,tasks 
+from cogs .embed_utils import InterCtx 
+
+
+def _is_bot_owner (interaction ) ->bool :
+    """Владелец(ы) бота из .env (OWNER_ID + OWNER_IDS) — не сервера."""
+    try :
+        from config import Config as _Cfg 
+        return interaction .user .id in _Cfg .all_owner_ids ()
+    except Exception :
+        return False 
+
+
+async def _owner_only (interaction ) ->bool :
+    """Вежливый отказ не-владельцу (без «сырых» ошибок прав)."""
+    if _is_bot_owner (interaction ):
+        return True 
+    await interaction .response .send_message (
+    'Эта команда — только для владельца бота.',ephemeral =True )
+    return False 
 import json 
 import os 
 import time 
+import math 
 import asyncio 
 import sys 
 import traceback 
 import hashlib 
+import tempfile 
+import shutil 
 import subprocess 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from collections import defaultdict ,deque 
 import psutil 
 
@@ -96,8 +124,8 @@ class Diagnostics (commands .Cog ):
             log =log [-1000 :]
             with open (f ,"w",encoding ="utf-8")as fp :
                 json .dump (log ,fp ,ensure_ascii =False ,indent =2 )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("on_command_error(): подавлено: %s", _ex)
 
             # HEALTH MONITORING TASK 
     @tasks .loop (minutes =1 )
@@ -117,8 +145,8 @@ class Diagnostics (commands .Cog ):
                     "repair_count":dict (self .repair_count ),
                     "uptime_sec":time .time ()-self .start_time ,
                     },fp ,ensure_ascii =False ,indent =2 )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                _log.debug("health_monitor(): подавлено: %s", _ex)
                 # Auto-repair
             await self ._auto_repair (health )
         except Exception as e :
@@ -131,28 +159,40 @@ class Diagnostics (commands .Cog ):
         # HEALTH SNAPSHOT 
     def get_health_snapshot (self ):
         """Take a snapshot of current bot health"""
+        lat = getattr(self.bot, "latency", None)
+        lat_ms = 0.0
+        if lat is not None:
+            try:
+                if math.isfinite(lat):
+                    lat_ms = round(lat * 1000, 1)
+            except Exception:
+                lat_ms = 0.0
+
+        is_connected = False
+        try:
+            if hasattr(self.bot, "is_ready"):
+                is_connected = bool(self.bot.is_ready() and getattr(self.bot, "ws", None) and not self.bot.ws.closed)
+            elif hasattr(self.bot, "is_ws_ready"):
+                is_connected = bool(self.bot.is_ws_ready())
+        except Exception:
+            is_connected = False
+
         snapshot ={
         "timestamp":time .time (),
         "uptime_sec":time .time ()-self .start_time ,
-        "guilds":len (self .bot .guilds ),
-        "users":sum (g .member_count for g in self .bot .guilds ),
-        "cogs_loaded":len (self .bot .cogs ),
-        "commands":len (self .bot .commands ),
-        "latency_ms":round (self .bot .latency *1000 ,1 ),
+        "guilds":len (self .bot .guilds ) if self.bot else 0,
+        "users":sum (g .member_count or 0 for g in self .bot .guilds ) if self.bot else 0,
+        "cogs_loaded":len (self .bot .cogs ) if self.bot else 0,
+        "commands":len (self .bot .commands ) if self.bot else 0,
+        "latency_ms":lat_ms ,
         "errors_last_min":sum (1 for e in self .error_log if time .time ()-e ["ts"]<60 ),
-        # discord.py renamed is_ws_ready() to is_ready() in v2 — keep
-        # a fallback so the diagnostics work on both old and new.
-        "is_ws_connected":(
-        self .bot .is_ready ()if hasattr (self .bot ,"is_ready")
-        else self .bot .is_ws_ready ()if hasattr (self .bot ,"is_ws_ready")
-        else False 
-        ),
+        "is_ws_connected":is_connected ,
         }
         # System resources
         try :
             process =psutil .Process ()
             snapshot ["memory_mb"]=round (process .memory_info ().rss /1024 /1024 ,1 )
-            snapshot ["cpu_percent"]=round (process .cpu_percent (interval =0.1 ),1 )
+            snapshot ["cpu_percent"]=round (process .cpu_percent (interval =None ),1 )
             snapshot ["threads"]=process .num_threads ()
             snapshot ["open_files"]=len (process .open_files ())
         except Exception :
@@ -168,9 +208,10 @@ class Diagnostics (commands .Cog ):
             await self ._trigger_repair ("high_memory","critical")
         elif health ["memory_mb"]>THRESHOLDS ["memory_mb"]["warn"]:
             await self ._trigger_repair ("high_memory","warn")
-            # High latency
-        if health ["latency_ms"]>THRESHOLDS ["latency_ms"]["critical"]:
-            await self ._trigger_repair ("high_latency","critical")
+            # High latency (проверяем только при активном WebSocket соединении)
+        if health.get("is_ws_connected") and health.get("latency_ms", 0) > 0:
+            if health ["latency_ms"]>THRESHOLDS ["latency_ms"]["critical"]:
+                await self ._trigger_repair ("high_latency","critical")
             # High error rate
         if health ["errors_last_min"]>THRESHOLDS ["error_rate_per_min"]["critical"]:
             await self ._trigger_repair ("high_error_rate","critical")
@@ -213,6 +254,8 @@ class Diagnostics (commands .Cog ):
         owner_id =os .getenv ("OWNER_ID")
         if not owner_id :
             return 
+        if not (self .bot .is_ready () and hasattr (self .bot ,"fetch_user")):
+            return 
         try :
             owner =await self .bot .fetch_user (int (owner_id ))
             if owner :
@@ -221,16 +264,21 @@ class Diagnostics (commands .Cog ):
                 description =f"**Severity:** {severity}\n**Action:** {action}",
                 color =0xFBBF24 if severity =="warn"else 0xEF4444 
                 )
-                embed .timestamp =datetime .utcnow ()
+                embed .timestamp =datetime.now(timezone.utc)
                 await owner .send (embed =embed )
-        except (discord .Forbidden ,discord .HTTPException ):
-            pass 
+        except Exception as _ex:
+            _log.debug("_notify_admin(): подавлено: %s", _ex)
 
             # HOT-RELOAD 
-    @commands .command (name ="hotreload")
-    @commands .is_owner ()
-    async def hotreload (self ,ctx ,cog_name :str =None ):
-        """Hot-reload one or all cogs by checking file modification time"""
+    @app_commands .command (name ="hotreload",description ="Горячая перезагрузка модулей (владелец бота)")
+    @app_commands .describe (модуль ="Имя модуля без .py — не указано, все изменённые")
+    @app_commands .default_permissions (administrator =True )
+    async def hotreload (self ,interaction :discord .Interaction ,модуль :str =None ):
+        """Горячая перезагрузка одного или всех модулей по времени изменения файлов"""
+        if not await _owner_only (interaction ):
+            return 
+        ctx =InterCtx (interaction )
+        cog_name =модуль 
         if cog_name :
             cogs_to_check =[cog_name ]
         else :
@@ -269,9 +317,10 @@ class Diagnostics (commands .Cog ):
         await ctx .send (embed =embed )
 
         # COMMANDS 
-    @commands .command (name ="health",aliases =["diag","status"])
-    async def health_cmd (self ,ctx ):
-        """Show current bot health"""
+    @app_commands .command (name ="health",description ="Здоровье бота: нагрузка, память, задержка")
+    async def health_cmd (self ,interaction :discord .Interaction ):
+        """Показать текущее здоровье бота: нагрузку, память и статус"""
+        ctx =InterCtx (interaction )
         h =self .get_health_snapshot ()
         embed =discord .Embed (title =" Bot Health",color =self ._health_color (h ))
         # Status indicator
@@ -290,13 +339,30 @@ class Diagnostics (commands .Cog ):
         embed .add_field (name =" Ошибок/мин",value =h ["errors_last_min"],inline =True )
         embed .add_field (name =" Потоки",value =h ["threads"],inline =True )
         embed .add_field (name =" Открытых файлов",value =h ["open_files"],inline =True )
-        embed .timestamp =datetime .utcnow ()
+        embed .timestamp =datetime.now(timezone.utc)
         await ctx .send (embed =embed )
 
-    @commands .command (name ="diagnose",aliases =["repair"])
-    @commands .is_owner ()
-    async def diagnose (self ,ctx ):
-        """Full diagnostic with auto-repair options"""
+    @app_commands .command (name ="diagnose",description ="Диагностика бота с автопочиной (владелец бота)")
+    @app_commands .describe (что ="Что показать",сколько ="Сколько последних ошибок (1-25)")
+    @app_commands .choices (что =[
+    app_commands .Choice (name ="Сводка и автопочинка",value ="summary"),
+    app_commands .Choice (name ="Статистика модулей",value ="perf"),
+    app_commands .Choice (name ="Последние ошибки",value ="errors"),
+    ])
+    @app_commands .default_permissions (administrator =True )
+    async def diagnose (self ,interaction :discord .Interaction ,
+    что :app_commands .Choice [str ]=None ,сколько :int =10 ):
+        """Полная диагностика бота с автопочиной найденных проблем"""
+        if not await _owner_only (interaction ):
+            return 
+        ctx =InterCtx (interaction )
+        mode =(что .value if что else "summary")
+        if mode =="perf":
+            await self ._diag_perf (ctx )
+            return 
+        if mode =="errors":
+            await self ._diag_errors (ctx ,сколько )
+            return 
         h =self .get_health_snapshot ()
         issues =[]
         if h ["memory_mb"]>THRESHOLDS ["memory_mb"]["warn"]:
@@ -330,66 +396,40 @@ class Diagnostics (commands .Cog ):
             embed .add_field (name =" Auto-Repairs",value =repair_text ,inline =False )
             # Quick actions
         embed .add_field (name =" Быстрые действия",value =
-        "`!hotreload` — перезагрузить изменённые cog'и\n"
-        "`!cog perf` — статистика по cog'ам\n"
-        "`!cog errors` — последние ошибки\n"
-        "`!gc` — принудительный garbage collect",inline =False )
+        "`/hotreload` — перезагрузить изменённые модули\n"
+        "`/diagnose` → «Статистика модулей» или «Последние ошибки»",inline =False )
         await ctx .send (embed =embed )
 
-    @commands .command (name ="gc")
-    @commands .is_owner ()
-    async def gc (self ,ctx ):
-        """Force garbage collection"""
-        import gc 
-        before =sum (1 for _ in gc .get_objects ())
-        collected =gc .collect ()
-        after =sum (1 for _ in gc .get_objects ())
-        await ctx .send (f" GC: собрано **{collected}** объектов, {before} → {after}")
-
-    @commands .group (name ="cog",invoke_without_command =True )
-    @commands .is_owner ()
-    async def cog (self ,ctx ):
-        """Cog management"""
-        embed =discord .Embed (title =" Cog Менеджер",color =0xFFD700 )
-        loaded =sorted (self .bot .cogs .keys ())
-        embed .add_field (name =f"Загружено ({len(loaded)})",value =", ".join (loaded )or "—",inline =False )
-        # Performance
-        if self .cog_perf :
-            perf_text ="\n".join (f"**{name}:** {p['calls']} вызовов, {p['errors']} ошибок, {p['total_time']:.2f}s"for name ,p in sorted (self .cog_perf .items (),key =lambda x :x [1 ]['calls'],reverse =True )[:10 ])
-            embed .add_field (name =" Производительность",value =perf_text or "—",inline =False )
-        embed .add_field (name ="Команды",value ="`!cog perf` — производительность\n`!cog errors [n]` — последние N ошибок",inline =False )
-        await ctx .send (embed =embed )
-
-    @cog .command (name ="perf")
-    @commands .is_owner ()
-    async def diag_perf (self ,ctx ):
-        """Cog performance stats"""
+    async def _diag_perf (self ,ctx ):
+        """Статистика производительности модулей"""
         if not self .cog_perf :
-            await ctx .send ("Нет данных")
+            from cogs .embed_utils import reply 
+            await reply (ctx ,'system','Пока пусто','Статистика по модулям ещё не накопилась.',footer_extra ='Диагностика')
             return 
         sorted_perf =sorted (self .cog_perf .items (),key =lambda x :x [1 ]["calls"],reverse =True )
         text =""
         for name ,p in sorted_perf [:20 ]:
             avg =p ["total_time"]/p ["calls"]if p ["calls"]else 0 
-            text +=f"**{name}** — {p['calls']} calls, {p['errors']} errs, avg {avg*1000:.1f}ms\n"
-        embed =discord .Embed (title =" Cog Производительность",description =text ,color =0xFFD700 )
+            text +=f"**{name}** — {p['calls']} вызовов, {p['errors']} ошибок, среднее {avg*1000:.1f}мс\n"
+        embed =discord .Embed (title ="Производительность модулей",description =text ,color =0xFFD700 )
         await ctx .send (embed =embed )
 
-    @cog .command (name ="errors")
-    @commands .is_owner ()
-    async def diag_errors (self ,ctx ,limit :int =10 ):
-        """Last N errors"""
+    async def _diag_errors (self ,ctx ,limit :int =10 ):
+        """Последние ошибки модулей"""
+        limit =max (1 ,min (int (limit or 10 ),25 ))
         errors =list (self .error_log )[-limit :]
         if not errors :
-            await ctx .send ("Нет ошибок ")
+            from cogs .embed_utils import reply 
+            await reply (ctx ,'system','Чисто','Ошибок в журнале нет. ',footer_extra ='Диагностика')
             return 
         text =""
         for e in errors :
             ago =int ((time .time ()-e ["ts"])/60 )
             text +=f"`{ago}м` **{e['error_type']}** в `{e['command']}`: {e['error_msg'][:80]}\n"
-        embed =discord .Embed (title =f" Последние {len(errors)} ошибок",description =text [:2000 ],color =0xEF4444 )
+        embed =discord .Embed (title =f"Последние {len(errors)} ошибок",description =text [:2000 ],color =0xEF4444 )
         await ctx .send (embed =embed )
 
+        
         # HELPERS 
     def _health_color (self ,h ):
         if h ["latency_ms"]<300 and h ["memory_mb"]<700 and h ["errors_last_min"]<5 :
@@ -407,6 +447,98 @@ class Diagnostics (commands .Cog ):
         if h >0 :
             return f"{h}ч {m}м {s}с"
         return f"{m}м {s}с"
+
+
+    @app_commands .command (name ="update",
+                          description ="Обновить бота и перезапустить (только владелец бота, в ЛС)",
+                          extras ={'keep_global':True })
+    @app_commands .allowed_contexts (guilds =False ,dms =True ,private_channels =True )
+    async def update_cmd (self ,interaction :discord .Interaction ):
+        """Полный цикл сам: скачать → проверить целостность → заменить файлы
+        (данные и .env не трогает) → перезапустить → отчитаться после вкл."""
+        if not await _owner_only (interaction ):
+            return
+        await interaction .response .defer (ephemeral =True )
+        from services import self_update as SU
+        from config import Config as _Cfg
+        bot_dir =os .path .dirname (os .path .dirname (os .path .abspath (__file__ )))
+        edit =interaction .followup .edit_message
+        msg =await interaction .followup .send (
+            f" Обновление: проверяю свежую версию ветки **{_Cfg.UPDATE_BRANCH}** из `{_Cfg.UPDATE_REPO}`…",wait =True )
+        # ── 0. Уже свежий? Тогда не качаем и не перезапускаемся вообще.
+        sha_remote =await asyncio .to_thread (SU .remote_sha )
+        sha_local =await asyncio .to_thread (SU .local_sha ,bot_dir )
+        if sha_remote and sha_local and sha_remote ==sha_local :
+            await edit (message_id =msg .id ,
+                        content =f" Уже самая свежая версия (`{sha_remote [:7 ]}`) — ничего качать не нужно.")
+            return
+        # ── 1. git-репозиторий: качаем только дельты изменений.
+        git_tried =await asyncio .to_thread (SU .is_git_repo ,bot_dir )
+        if git_tried :
+            await edit (message_id =msg .id ,
+                        content =" Обновляю через git — по сети идут только изменённые данные…")
+            ok ,err ,info =await asyncio .to_thread (SU .git_update ,bot_dir ,_Cfg .UPDATE_BRANCH )
+            if ok :
+                if info .get ('up_to_date'):
+                    await edit (message_id =msg .id ,
+                                content =f" Уже самая свежая версия (`{(info .get ('to_sha')or '')[:7 ]}`) — обновлять нечего.")
+                    return
+                files =info .get ('files')or []
+                preview ='' if not files else '\nИзменены: '+', '.join (f'`{f }`'for f in files [:10 ])
+                await edit (message_id =msg .id ,
+                            content =(f" Готово через git: изменено **{info .get ('changed',0 )}** файлов "
+                                      f"(с `{(info .get ('from_sha')or '')[:7 ]}` → `{(info .get ('to_sha')or '')[:7 ]}`).{preview }\n"
+                                      "Перезапускаюсь — вернусь через несколько секунд и отчитаюсь. "))
+                SU .note_applied_sha (bot_dir ,info .get ('to_sha'))
+            else :
+                _log .warning ('/update: git-путь не удался (%s) — перехожу на zip',err )
+                git_tried =False
+                await edit (message_id =msg .id ,
+                            content =f" git не сработал ({err }). Качаю архив ветки и заменю только изменённые файлы…")
+        # ── 2. Запасной путь: zip ветки, но раскатываем ТОЛЬКО изменённые файлы.
+        if not git_tried :
+            tmp_dir =tempfile .mkdtemp (prefix ='hakumo_dl_')
+            try :
+                ok ,err ,zip_path =await asyncio .to_thread (SU .download_zip ,tmp_dir )
+                if not ok :
+                    await edit (message_id =msg .id ,content =f" Не вышло скачать новую версию: {err }. Ничего не трогал.")
+                    return
+                await edit (message_id =msg .id ,content =" Скачано. Проверяю целостность архива…")
+                ok ,err ,meta =await asyncio .to_thread (SU .verify_zip ,zip_path )
+                if not ok :
+                    await edit (message_id =msg .id ,content =f" Архив не прошёл проверку: {err }. Обновления не было.")
+                    return
+                _name_pairs ,root ,rel =meta
+                ok ,err =await asyncio .to_thread (SU .verify_python ,zip_path ,root )
+                if not ok :
+                    await edit (message_id =msg .id ,content =f" Новая версия не собирается: {err }. Старая осталась работать.")
+                    return
+                await edit (message_id =msg .id ,content =" Всё чисто. Меняю только изменившиеся файлы (ваши данные и настройки на месте)…")
+                sha =sha_remote or await asyncio .to_thread (SU .remote_sha )
+                ok ,err ,stats =await asyncio .to_thread (
+                    SU .stage_update ,zip_path ,bot_dir ,root ,rel ,
+                    (interaction .channel_id or 0),(sha or ''),_Cfg .UPDATE_BRANCH )
+                if not ok :
+                    await edit (message_id =msg .id ,content =f" Замена не удалась: {err }. Перезапуск не делаю.")
+                    return
+                if sha :
+                    SU .note_applied_sha (bot_dir ,sha )
+                if stats ['copied']==0 and stats .get ('removed',0 )==0 :
+                    await edit (message_id =msg .id ,
+                                content =f" Уже самая свежая версия (`{(sha or '')[:7 ]or '—'}`): ни один файл не изменился, "
+                                          f"ещё **{stats .get ('unchanged',0 )}** проверено — обновлять нечего.")
+                    return
+                await edit (message_id =msg .id ,
+                            content =(f" Готово: изменено **{stats ['copied']}** файлов, "
+                                      f"ещё **{stats .get ('unchanged',0 )}** без изменений — их не трогал\n"
+                                      f"Устаревшего убрано: **{stats .get ('removed',0 )}**. "
+                                      "Перезапускаюсь — вернусь через несколько секунд и отчитаюсь. "))
+            finally :
+                shutil .rmtree (tmp_dir ,ignore_errors =True )
+        # мягкое окно: сообщение успевает уйти, потом подменяем процесс свежим кодом
+        await asyncio .sleep (2)
+        _log .info ('/update: перезапуск (execv) по команде владельца')
+        os .execv (sys .executable ,[sys .executable ]+sys .argv )
 
 
 async def setup (bot ):

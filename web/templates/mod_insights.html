@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}Аналитика рисков · Модерация — Hakumo{% endblock %}
+{% block page_title %}Аналитика рисков{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Команда и аналитика</div>
+    <h1>Аналитика рисков</h1>
+    <p class="lead">Из истории нарушений — в решение: участники со следами, эффект наказаний и готовность защиты.</p>
+  </div>
+  <div class="page-head-actions">
+    <div class="seg" id="miDaysTabs"></div>
+  </div>
+</div>
+
+<div class="kpi-row" id="miKpis"></div>
+
+<div class="grid-2" style="align-items:start">
+  <div>
+    <div class="panel" style="margin-bottom:14px">
+      <div class="panel-head"><div><h2><i class="fas fa-users-viewfinder"></i> Карта участников</h2>
+        <div class="sub" id="miSubjectsOff"></div></div></div>
+      <div class="panel-body" id="miSubjects"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h2><i class="fas fa-bullseye"></i> Топ причин</h2>
+        <div class="sub">Самые частые основания предупреждений.</div></div></div>
+      <div class="panel-body" id="miReasons"><div class="sk-line" style="height:12px"></div></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="align-items:start">
+    <div class="panel">
+      <div class="panel-head"><div><h2><i class="fas fa-rotate"></i> Эффект первого наказания</h2>
+        <div class="sub">Как часто после первой кары случается повтор.</div></div></div>
+      <div class="panel-body" id="miEffect"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h2><i class="fas fa-list-check"></i> Готовность защиты</h2>
+        <div class="sub" id="miCheckOff"></div></div></div>
+      <div class="panel-body" id="miCheck"></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-id-card"></i> Досье участника</h2>
+    <div class="sub">Полный след: варны, наказания, амнистии и заметки по ID.</div></div>
+    <div class="row" style="margin-left:auto">
+      <input class="form-input" id="miDossierId" placeholder="Имя участника" style="width:200px"><span id="miDossierStatus"></span>
+      <button type="button" class="btn btn-primary" id="miDossierGo"><i class="fas fa-magnifying-glass"></i> Открыть досье</button>
+    </div></div>
+  <div class="panel-body" id="miDossier">
+    <div class="empty"><i class="fas fa-id-card"></i><span>Введите ID участника, чтобы открыть досье.</span></div>
+  </div>
+</div>
+
+<script src="/static/pickers.js"></script>
+<script>
+var GID = '{{ guild_id }}';
+attachMemberPicker(document.getElementById('miDossierId'), { gid: GID, statusEl: document.getElementById('miDossierStatus') });
+var API = '/api/guild/' + GID + '/mod-insights';
+var DAYS = 90;
+var PICKED = null;
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function fmtDate(iso) {
+  var d = new Date(iso);
+  if (isNaN(d)) return '';
+  var p = function (v) { return String(v).padStart(2, '0'); };
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function fmtLeft(sec) {
+  var s = Math.abs(sec);
+  var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  var t = d > 0 ? d + 'д ' + h + 'ч' : (h > 0 ? h + 'ч ' + m + 'м' : Math.max(m, 1) + 'м');
+  return sec < 0 ? 'просрочено ' + t : 'осталось ' + t;
+}
+
+function pct(v) { return v == null ? '—' : v + '%'; }
+
+function kpi(icon, num, label, hot) {
+  return '<div class="kpi ' + (hot ? 'tone-warn' : '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
+    '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
+}
+
+function renderKpis(d) {
+  var eff = d.effectiveness.overall;
+  $('miKpis').innerHTML =
+    kpi('fa-users-viewfinder', d.subjects.total, plural(d.subjects.total, 'участник со следами', 'участника со следами', 'участников со следами'), false) +
+    kpi('fa-triangle-exclamation', d.subjects.warns_open, plural(d.subjects.warns_open, 'открытый варн', 'открытых варна', 'открытых варнов'), d.subjects.warns_open > 0) +
+    kpi('fa-gavel', eff.count, plural(eff.count, 'первое наказание за ' + d.effectiveness.days + ' дн.', 'первых наказания за ' + d.effectiveness.days + ' дн.', 'первых наказаний за ' + d.effectiveness.days + ' дн.'), false) +
+    kpi('fa-list-check', d.checklist.ok + '/' + d.checklist.total, 'проверок готовности пройдено', d.checklist.missing > 0);
+}
+
+function renderDaysTabs() {
+  $('miDaysTabs').innerHTML = [30, 90, 180].map(function (n) {
+    return '<button type="button" class="seg-btn' + (n === DAYS ? ' active' : '') + '" data-days="' + n + '">' + n + ' дней</button>';
+  }).join('');
+}
+
+function renderSubjects(d) {
+  var box = $('miSubjects');
+  $('miSubjectsOff').textContent = d.subjects.total
+    ? 'показаны ' + d.subjects.items.length + ' из ' + d.subjects.total : '';
+  if (!d.subjects.items.length) {
+    box.innerHTML = '<div class="empty"><i class="fas fa-face-smile"></i><span>Ни варнов, ни наказаний</span></div>';
+    return;
+  }
+  box.innerHTML = d.subjects.items.map(function (r) {
+    var label = r.name || ('ID ' + r.user_id);
+    var bits = [];
+    if (r.warns) bits.push(r.warns + ' ' + plural(r.warns, 'варн', 'варна', 'варнов'));
+    if (r.punishments) bits.push(r.punishments + ' ' + plural(r.punishments, 'наказание', 'наказания', 'наказаний'));
+    if (r.last_at) bits.push('последнее: ' + fmtDate(r.last_at));
+    return '<div class="feed-item' + (PICKED === r.user_id ? '" style="background:var(--ac-soft);border-radius:var(--r)"' : '" style="border-bottom:1px solid var(--line);cursor:pointer"') + '" data-pick="' + esc(r.user_id) + '">' +
+      '<div class="feed-item-icon"><i class="fas fa-user"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(label) + ' <span class="id-pill">' + esc(r.user_id) + '</span></div>' +
+      '<div class="feed-item-sub">' + esc(bits.join(' · ')) + '</div></div>' +
+      '<span class="badge ' + (r.weight >= 5 ? 'danger' : 'neutral') + '">вес ' + r.weight + '</span></div>';
+  }).join('');
+}
+
+function renderEffect(d) {
+  var eff = d.effectiveness;
+  var box = $('miEffect');
+  if (!eff.overall.count) {
+    box.innerHTML = '<div class="empty"><i class="fas fa-rotate"></i><span>За ' + eff.days + ' дн. наказаний нет</span></div>';
+    return;
+  }
+  var rows = eff.types.concat([eff.overall]);
+  var html = '<div class="feed-item" style="font-weight:700;font-size:var(--fs-sm);color:var(--text-3)">' +
+    '<span style="flex:1">Тип первого</span><span style="width:56px;text-align:right">за 7 дн.</span>' +
+    '<span style="width:56px;text-align:right">за 30 дн.</span><span style="width:64px;text-align:right">медиана</span></div>';
+  html += rows.map(function (r) {
+    var name = r.action === 'all' ? 'Любое наказание' : r.action;
+    var who = r.count + ' ' + plural(r.count, 'человек', 'человека', 'человек');
+    var dim = r.thin;
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line);' + (r.action === 'all' ? 'font-weight:700' : '') + '">' +
+      '<span style="flex:1;min-width:0"><b>' + esc(name) + '</b> <span class="hint">' + who + (dim ? ' · мало данных' : '') + '</span></span>' +
+      '<span class="mono" style="width:56px;text-align:right;' + (dim ? 'opacity:.4' : '') + '">' + pct(r.repeat7) + '</span>' +
+      '<span class="mono" style="width:56px;text-align:right;' + (dim ? 'opacity:.4' : '') + '">' + pct(r.repeat30) + '</span>' +
+      '<span class="mono" style="width:64px;text-align:right;' + (dim ? 'opacity:.4' : '') + '">' + (r.median_days == null ? '—' : r.median_days + ' дн.') + '</span></div>';
+  }).join('');
+  box.innerHTML = html;
+}
+
+function renderCheck(d) {
+  var c = d.checklist;
+  $('miCheckOff').textContent = c.ok + ' из ' + c.total + ' в порядке' +
+    (c.warn ? ', ' + c.warn + ' с заметками' : '') + (c.missing ? ', ' + c.missing + ' не настроено' : '');
+  $('miCheck').innerHTML = c.items.map(function (it) {
+    var dot = it.status === 'ok' ? 'ok' : it.status === 'warn' ? 'warn' : 'err';
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line)">' +
+      '<span class="dot ' + dot + '" style="margin-top:6px"></span>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(it.title) + '</div>' +
+      '<div class="feed-item-sub">' + esc(it.detail || '') + '</div>' +
+      '<div class="hint">' + esc(it.hint || '') + '</div></div>' +
+      (it.link ? '<a class="btn btn-sm" href="' + esc(it.link) + '">' + esc(it.link_label || 'Открыть') + '</a>' : '') + '</div>';
+  }).join('');
+}
+
+function renderDossier(ds) {
+  var box = $('miDossier');
+  if (!ds.known) {
+    box.innerHTML = '<div class="empty"><i class="fas fa-ghost"></i><span>Следов не найдено</span>' +
+      '<div class="hint">Ни варнов, ни наказаний, ни заметок по ID ' + esc(ds.user_id) + ' — чистый человек или не с этого сервера.</div></div>';
+    return;
+  }
+  var name = ds.name || ('ID ' + ds.user_id);
+  var html = '<div class="chip-row" style="margin-bottom:12px">' +
+    '<span class="chip"><i class="fas fa-user"></i> ' + esc(name) + ' <span class="id-pill">#' + esc(ds.user_id) + '</span></span>' +
+    '<span class="chip ' + (ds.warns.count ? 'danger' : '') + '">' + ds.warns.count + ' ' + plural(ds.warns.count, 'варн', 'варна', 'варнов') + '</span>';
+  if (ds.warns.gap != null) {
+    html += '<span class="chip ' + (ds.warns.gap === 1 ? 'danger' : '') + '">ещё ' + ds.warns.gap + ' до ' + esc(ds.warns.action_name.toLowerCase()) + 'а</span>';
+  }
+  html += '<span class="chip">' + ds.stats.punishments + ' ' + plural(ds.stats.punishments, 'наказание', 'наказания', 'наказаний') + '</span>';
+  if (ds.stats.days_since != null) {
+    html += '<span class="chip">последнее: ' + ds.stats.days_since + ' ' + plural(ds.stats.days_since, 'день', 'дня', 'дней') + ' назад</span>';
+  }
+  html += '</div>';
+
+  if (ds.temp_active.length) {
+    html += '<div class="section-title">Активные временные статусы</div>' + ds.temp_active.map(function (r) {
+      return '<div class="feed-item"><div class="feed-item-icon"><i class="fas fa-hourglass"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title"><span class="badge neutral">' + esc(r.kind_name) + '</span> ' + esc(fmtLeft(r.remaining_s)) + '</div>' +
+        (r.reason ? '<div class="feed-item-sub">' + esc(r.reason) + '</div>' : '') + '</div>' +
+        '<span class="muted">' + fmtDate(r.until * 1000) + '</span></div>';
+    }).join('');
+  }
+  if (ds.warns.items.length) {
+    html += '<div class="section-title">Последние варны' + (ds.warns.next_count ? ' · порог ' + ds.warns.next_count : '') + '</div>' +
+      ds.warns.items.map(function (w) {
+        return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon" style="background:var(--warn-soft);color:var(--warn)"><i class="fas fa-triangle-exclamation"></i></div>' +
+          '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(w.reason) + '</div>' +
+          '<div class="feed-item-time">' + esc(w.at) + (w.mod ? ' · ' + esc(w.mod) : '') + '</div></div></div>';
+      }).join('');
+  }
+  if (ds.amnesty.length) {
+    html += '<div class="section-title">Амнистии</div>' + ds.amnesty.map(function (a) {
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-dove"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title">Списано ' + a.count + ' ' + plural(a.count, 'варн', 'варна', 'варнов') + '</div>' +
+        '<div class="feed-item-time">' + esc(a.at) + (a.by ? ' · ' + esc(a.by) : '') + (a.restored_at ? ' · откачена' : '') + '</div></div></div>';
+    }).join('');
+  }
+  if (ds.timeline.length) {
+    html += '<div class="section-title">Таймлайн наказаний (' + ds.timeline_total + ')</div>' + ds.timeline.map(function (t) {
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-gavel"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title"><span class="badge neutral">' + esc(t.action) + '</span> ' + esc(t.reason || 'Без причины') + '</div>' +
+        (t.mod_name ? '<div class="feed-item-time">' + esc(t.mod_name) + '</div>' : '') + '</div>' +
+        '<span class="muted">' + fmtDate(t.at) + '</span></div>';
+    }).join('');
+  }
+  if (ds.notes.length) {
+    html += '<div class="section-title">Заметки команды</div>' + ds.notes.map(function (n) {
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas fa-sticky-note"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(n.note) + '</div>' +
+        '<div class="feed-item-time">' + esc(n.at) + (n.mod ? ' · ' + esc(n.mod) : '') + '</div></div></div>';
+    }).join('');
+  }
+  box.innerHTML = html;
+}
+
+function miPick(uid) {
+  PICKED = uid;
+  renderSubjects(OV);
+  fetch(API + '/dossier?user_id=' + encodeURIComponent(uid))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.success) {
+        window.showToast(d.error || 'Досье недоступно', false);
+        return;
+      }
+      renderDossier(d.dossier);
+      var box = $('miDossier');
+      if (box.scrollIntoView) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }).catch(function () {});
+}
+
+document.addEventListener('click', function (e) {
+  var p = e.target.closest('[data-pick]');
+  if (p) { miPick(p.dataset.pick); return; }
+  var d = e.target.closest('[data-days]');
+  if (d) { DAYS = parseInt(d.dataset.days, 10); renderDaysTabs(); load(); }
+});
+
+$('miDossierGo').addEventListener('click', function () {
+  var uid = $('miDossierId').value.trim();
+  if (!uid) { window.showToast('Выберите участника из подсказок', false); return; }
+  miPick(uid);
+});
+$('miDossierId').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('miDossierGo').click(); });
+
+function loadReasons() {
+  fetch('/api/warnings').then(function (r) { return r.json(); }).then(function (warns) {
+    if (!window.HakumoChart || !Array.isArray(warns)) return;
+    var counts = {};
+    warns.forEach(function (w) {
+      var key = String(w.reason || 'Без причины').toLowerCase();
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    var items = Object.keys(counts).map(function (k) {
+      return { label: k.charAt(0).toUpperCase() + k.slice(1), value: counts[k] };
+    }).sort(function (a, b) { return b.value - a.value; }).slice(0, 6);
+    window.HakumoChart.vbars($('miReasons'), items);
+  }).catch(function () {});
+}
+
+function load() {
+  fetch(API + '/overview?days=' + DAYS).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    OV = d;
+    var render = function () { renderKpis(d); renderSubjects(d); renderEffect(d); renderCheck(d); };
+    if (window.renderIfChanged) {
+      if (!window.renderIfChanged('mod-insights-' + DAYS, d, function () {
+        if (window.renderSafe) window.renderSafe(render); else render();
+      })) { return; }
+    } else if (window.renderSafe) window.renderSafe(render); else render();
+  }).catch(function () {});
+}
+
+renderDaysTabs();
+load();
+loadReasons();
+// Глубокая ссылка ?user=ID — сразу открывает досье
+try {
+  var q = new URLSearchParams(window.location.search).get('user');
+  if (q) {
+    $('miDossierId').value = q;
+    miPick(q);
+  }
+} catch (e) { /* параметр опционален */ }
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { load(); } catch (e) {} }, 1500);
+</script>
+{% endblock %}

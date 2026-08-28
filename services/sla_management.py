@@ -1,7 +1,11 @@
 """
 SLA Management
-Service Level Agreement yёnetimi
+Управление Service Level Agreement
 """
+
+from logger import get_logger
+
+_log = get_logger("sla_management")
 
 import json
 import os
@@ -10,7 +14,7 @@ from typing import Dict, List, Any, Optional
 
 
 class SLAPolicy:
-    """SLA politikasы"""
+    """Политика SLA"""
     
     def __init__(self, policy_id: str, name: str, description: str = ''):
         self.policy_id = policy_id
@@ -39,7 +43,7 @@ class SLAPolicy:
         }
     
     def add_condition(self, field: str, operator: str, value: Any):
-        """Koэтотl добавить"""
+        """Добавить условие"""
         self.conditions.append({
             'field': field,
             'operator': operator,
@@ -47,7 +51,7 @@ class SLAPolicy:
         })
     
     def matches_ticket(self, ticket: Dict[str, Any]) -> bool:
-        """Ticket'a uyup uymназваниегыnы проверить et"""
+        """Проверить, подходит ли тикету"""
         if not self.conditions:
             return True
         
@@ -70,7 +74,7 @@ class SLAPolicy:
         return True
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'policy_id': self.policy_id,
             'name': self.name,
@@ -97,14 +101,14 @@ class SLAPolicy:
 
 
 class SLAManager:
-    """SLA yёneticisi"""
+    """Менеджер SLA"""
     
     def __init__(self):
         self.policies_file = 'data/sla_policies.json'
         self.policies = self._load_policies()
     
     def _load_policies(self) -> Dict[str, SLAPolicy]:
-        """Politikalarы загрузить"""
+        """Загрузить политики"""
         if os.path.exists(self.policies_file):
             try:
                 with open(self.policies_file, 'r', encoding='utf-8') as f:
@@ -113,13 +117,13 @@ class SLAManager:
                         policy_id: SLAPolicy.from_dict(policy_data)
                         for policy_id, policy_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_policies(): подавлено: %s", _ex)
         
         return {}
     
     def _save_policies(self):
-        """Politikalarы сохранить"""
+        """Сохранить политики"""
         os.makedirs('data', exist_ok=True)
         
         data = {
@@ -132,8 +136,14 @@ class SLAManager:
     
     def create_policy(self, name: str, description: str = '') -> SLAPolicy:
         """Politika создать"""
-        policy_id = f"sla_{len(self.policies) + 1}"
-        
+        # id — за максимальным номером: удаление в середине не задвоит ключи.
+        top = 0
+        for policy_id in self.policies:
+            tail = policy_id.rsplit('_', 1)[-1]
+            if tail.isdigit():
+                top = max(top, int(tail))
+
+        policy_id = f"sla_{top + 1}"
         policy = SLAPolicy(
             policy_id=policy_id,
             name=name,
@@ -146,7 +156,7 @@ class SLAManager:
         return policy
     
     def update_policy(self, policy_id: str, **kwargs) -> Optional[SLAPolicy]:
-        """Politikayы обновить"""
+        """Обновить политику"""
         if policy_id not in self.policies:
             return None
         
@@ -161,7 +171,7 @@ class SLAManager:
         return policy
     
     def delete_policy(self, policy_id: str) -> bool:
-        """Politikayы удалить"""
+        """Удалить политику"""
         if policy_id in self.policies:
             del self.policies[policy_id]
             self._save_policies()
@@ -170,15 +180,15 @@ class SLAManager:
         return False
     
     def get_policy(self, policy_id: str) -> Optional[SLAPolicy]:
-        """Politikayы al"""
+        """Получить политику"""
         return self.policies.get(policy_id)
     
     def get_all_policies(self) -> List[SLAPolicy]:
-        """Все politikalarы al"""
+        """Получить все политики"""
         return list(self.policies.values())
     
     def get_applicable_policy(self, ticket: Dict[str, Any]) -> Optional[SLAPolicy]:
-        """Uygulanabilir politikayы al"""
+        """Получить применимую политику"""
         for policy in self.policies.values():
             if policy.matches_ticket(ticket):
                 return policy
@@ -187,14 +197,14 @@ class SLAManager:
 
 
 class SLACalculator:
-    """SLA hesaplayыcы"""
+    """Калькулятор SLA"""
     
     def __init__(self, sla_manager: SLAManager):
         self.sla_manager = sla_manager
     
     def calculate_response_deadline(self, ticket: Dict[str, Any],
                                     policy: Optional[SLAPolicy] = None) -> Optional[datetime]:
-        """Yanыt son tarihini hesapla"""
+        """Вычислить срок ответа"""
         if not policy:
             policy = self.sla_manager.get_applicable_policy(ticket)
         
@@ -223,7 +233,7 @@ class SLACalculator:
     
     def calculate_resolution_deadline(self, ticket: Dict[str, Any],
                                       policy: Optional[SLAPolicy] = None) -> Optional[datetime]:
-        """Чёzюm son tarihini hesapla"""
+        """Вычислить срок решения"""
         if not policy:
             policy = self.sla_manager.get_applicable_policy(ticket)
         
@@ -247,9 +257,88 @@ class SLACalculator:
             deadline = self._add_business_hours(created_dt, resolution_minutes, policy.business_hours)
         else:
             deadline = created_dt + timedelta(minutes=resolution_minutes)
-        
+
         return deadline
-    
+
+    @staticmethod
+    def _fmt_duration(delta: timedelta) -> str:
+        """«2 ч 15 мин» / «1 д 3 ч» — короткая человеческая запись интервала."""
+        seconds = max(0, int(delta.total_seconds()))
+        days, seconds = divmod(seconds, 86400)
+        hours, seconds = divmod(seconds, 3600)
+        minutes = seconds // 60
+        if days:
+            return f'{days} д {hours} ч'
+        if hours:
+            return f'{hours} ч {minutes} мин'
+        return f'{minutes} мин'
+
+    def calculate_sla(self, ticket: Dict[str, Any]) -> Dict[str, Any]:
+        """Полный статус SLA тикета: дедлайны, остаток, не сорвано ли.
+
+        Композиция готовых методов выше (политика → оба дедлайна →
+        is_breached/get_time_remaining); этим пользуется /sla-status в коге
+        и карточка тикета в панели. Строки — человекочитаемые, дедлайны —
+        isoformat (ког показывает их срез [:16]).
+        """
+        policy = self.sla_manager.get_applicable_policy(ticket)
+        info = {
+            'policy_name': policy.name if policy else 'Нет политики',
+            'policy_id': policy.policy_id if policy else None,
+            'priority': ticket.get('priority', 'medium'),
+            'status': 'Нет политики',
+            'response_deadline': None,
+            'resolution_deadline': None,
+            'response_breached': False,
+            'resolution_breached': False,
+            'time_remaining': None,
+        }
+        if not policy:
+            return info
+
+        response_deadline = self.calculate_response_deadline(ticket, policy)
+        resolution_deadline = self.calculate_resolution_deadline(ticket, policy)
+        if response_deadline:
+            info['response_deadline'] = response_deadline.isoformat()
+        if resolution_deadline:
+            info['resolution_deadline'] = resolution_deadline.isoformat()
+        if response_deadline is None and resolution_deadline is None:
+            info['status'] = 'Нет дедлайнов'
+            return info
+
+        # «Ответ» карается, только пока ответа не было; «решение» — пока
+        # тикет не закрыт (та же семантика, что у детектора нарушений).
+        waiting_response = not ticket.get('first_response_at')
+        opened = ticket.get('status') != 'closed'
+
+        info['response_breached'] = bool(
+            waiting_response and response_deadline
+            and self.is_breached(response_deadline))
+        info['resolution_breached'] = bool(
+            opened and resolution_deadline
+            and self.is_breached(resolution_deadline))
+
+        active = None
+        if waiting_response and response_deadline:
+            active = response_deadline
+        elif opened and resolution_deadline:
+            active = resolution_deadline
+        if active:
+            remaining = self.get_time_remaining(active)
+            if remaining.total_seconds() >= 0:
+                info['time_remaining'] = self._fmt_duration(remaining)
+            else:
+                info['time_remaining'] = ('просрочено на '
+                                          + self._fmt_duration(-remaining))
+
+        if info['response_breached'] or info['resolution_breached']:
+            info['status'] = 'Нарушён'
+        elif not opened:
+            info['status'] = 'Закрыт в срок'
+        else:
+            info['status'] = 'В рамках SLA'
+        return info
+
     def _add_business_hours(self, start: datetime, minutes: int,
                             business_hours: Dict[str, Any]) -> datetime:
         """Работа saatleri ekleyerek zaman hesapla"""
@@ -290,12 +379,12 @@ class SLACalculator:
         return current
     
     def get_time_remaining(self, deadline: datetime) -> timedelta:
-        """Kalan длительностьyi al"""
+        """Получить оставшееся время"""
         now = datetime.now()
         return deadline - now
     
     def is_breached(self, deadline: datetime) -> bool:
-        """Иhlal edilip edilmediгini проверить et"""
+        """Проверить, нарушено ли"""
         return datetime.now() > deadline
 
 
@@ -308,18 +397,18 @@ class SLABreachDetector:
         self.breaches = self._load_breaches()
     
     def _load_breaches(self) -> Dict[str, Any]:
-        """Иhlalleri загрузить"""
+        """Загрузить нарушения"""
         if os.path.exists(self.breaches_file):
             try:
                 with open(self.breaches_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_breaches(): подавлено: %s", _ex)
         
         return {}
     
     def _save_breaches(self):
-        """Иhlalleri сохранить"""
+        """Сохранить нарушения"""
         os.makedirs('data', exist_ok=True)
         with open(self.breaches_file, 'w', encoding='utf-8') as f:
             json.dump(self.breaches, f, ensure_ascii=False, indent=2)
@@ -388,7 +477,7 @@ class SLABreachDetector:
 
 
 class SLAReporter:
-    """SLA raporlayыcы"""
+    """Отчёты SLA"""
     
     def __init__(self, sla_manager: SLAManager, breach_detector: SLABreachDetector):
         self.sla_manager = sla_manager
@@ -445,7 +534,7 @@ class SLAReporter:
         }
     
     def get_breach_summary(self) -> Dict[str, Any]:
-        """Иhlal ёzeti al"""
+        """Получить сводку нарушений"""
         all_breaches = self.breach_detector.get_all_breaches()
         
         response_breaches = [b for b in all_breaches if b['type'] == 'response_time']

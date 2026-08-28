@@ -1,19 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Отправить сообщение — Aether{% endblock %}
+{% block title %}Отправить сообщение — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-paper-plane" ></i> Отправить сообщение{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Отправить сообщение</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Отправить</div>
     <h1>Отправить сообщение</h1>
-    <p>Отправка произвольной команды в Discord-канал.</p>
+    <p class="lead">Сообщение от имени бота в любой текстовый канал сервера.</p>
   </div>
 </div>
-{% endblock %}
+
 
 
 
@@ -22,21 +18,24 @@
     <h2><i class="fas fa-paper-plane"></i> Новое сообщение</h2>
     <div class="form-group">
       <label>Сервер</label>
-      <select id="guild-select" class="field-input" onchange="loadChannels()">
-        <option value="">Загрузка...</option>
+      <select id="guild-select" class="field-input" onchange="loadChannels()" aria-label="Выбор сервера">
+        <option value="">Загрузка серверов...</option>
       </select>
     </div>
     <div class="form-group">
       <label>Канал</label>
-      <select id="channel-select" class="field-input" disabled>
+      <select id="channel-select" class="field-input" disabled aria-label="Канал">
         <option value="">Сначала выберите сервер</option>
       </select>
     </div>
     <div class="form-group">
-      <label>Сообщение</label>
-      <textarea id="message-input" class="field-input" rows="5" placeholder="Напишите сообщение..." ></textarea>
+      <label>Сообщение <span id="char-counter" class="sc-counter">0 / 2000</span></label>
+      <textarea id="message-input" class="field-input" rows="6" maxlength="4000"
+                placeholder="Напишите сообщение..." aria-label="Напишите сообщение..."
+                oninput="updateCounter()"></textarea>
+      <div class="sc-hint">Discord принимает до 2000 символов — счётчик справа от заголовка.</div>
     </div>
-    <button id="send-btn" class="send-btn" onclick="sendMessage()">
+    <button type="button" id="send-btn" class="send-btn" onclick="sendMessage()" disabled>
       <i class="fas fa-paper-plane"></i> Отправить
     </button>
     <div id="result" class="result-box"></div>
@@ -44,43 +43,101 @@
 </div>
 
 <script>
-const GUILD_ID = '{{ main_guild_id }}';
+const PREFERRED_GUILD = '{{ main_guild_id }}';
+var guildsCache = [];
+
+async function loadGuilds() {
+  var gs = document.getElementById('guild-select');
+  try {
+    var r = await fetch('/api/guilds');
+    var guilds = await r.json();
+    guildsCache = Array.isArray(guilds) ? guilds : [];
+  } catch (e) { guildsCache = []; }
+  if (!guildsCache.length) {
+    gs.innerHTML = '<option value="">Бот не в сети или серверов нет</option>';
+    return;
+  }
+  gs.innerHTML = '';
+  guildsCache.forEach(function (g) {
+    var o = document.createElement('option');
+    o.value = g.id;
+    o.textContent = g.name + (g.members ? ' · ' + g.members + ' уч.' : '');
+    gs.appendChild(o);
+  });
+  if (PREFERRED_GUILD) gs.value = PREFERRED_GUILD;
+  if (!gs.value) gs.selectedIndex = 0;
+  loadChannels();
+}
 
 async function loadChannels() {
+  var gid = document.getElementById('guild-select').value;
   var cs = document.getElementById('channel-select');
-  cs.innerHTML = '<option value="">Загрузка...</option>';
+  if (!gid) { cs.innerHTML = '<option value="">Сначала выберите сервер</option>'; cs.disabled = true; refreshSendState(); return; }
+  cs.disabled = true;
+  cs.innerHTML = '<option value="">Загрузка каналов...</option>';
+  var channels = [];
   try {
-    var r = await fetch('/api/guild/' + GUILD_ID + '/channels');
+    var r = await fetch('/api/guild/' + gid + '/channels');
     var data = await r.json();
-    var channels = Array.isArray(data) ? data : (data.channels || []);
-    cs.innerHTML = '<option value="">Выберите канал...</option>';
-    channels.filter(function(c) { return c.type === 'text'; }).forEach(function(c) {
-      var o = document.createElement('option');
-      o.value = c.id; o.textContent = '#' + c.name;
-      cs.appendChild(o);
-    });
-  } catch(e) { cs.innerHTML = '<option value="">Ошибка загрузки</option>'; }
+    channels = Array.isArray(data) ? data : (data.channels || []);
+  } catch (e) { channels = []; }
+  var texts = channels.filter(function (c) { return c.type === 'text'; });
+  if (!texts.length) {
+    cs.innerHTML = '<option value="">Текстовых каналов не найдено</option>';
+    refreshSendState();
+    return;
+  }
+  cs.innerHTML = '<option value="">Выберите канал...</option>';
+  texts.forEach(function (c) {
+    var o = document.createElement('option');
+    o.value = c.id; o.textContent = '#' + c.name;
+    cs.appendChild(o);
+  });
+  cs.disabled = false;
+  refreshSendState();
 }
+
+function updateCounter() {
+  var len = document.getElementById('message-input').value.length;
+  var counter = document.getElementById('char-counter');
+  counter.textContent = len + ' / 2000';
+  counter.classList.toggle('over', len > 2000);
+  refreshSendState();
+}
+
+function refreshSendState() {
+  var cid = document.getElementById('channel-select').value;
+  var len = document.getElementById('message-input').value.trim().length;
+  document.getElementById('send-btn').disabled = !(cid && len > 0 && len <= 2000);
+}
+
+document.getElementById('channel-select').addEventListener('change', refreshSendState);
 
 async function sendMessage() {
   var cid = document.getElementById('channel-select').value;
   var msg = document.getElementById('message-input').value.trim();
-  if (!cid || !msg) { showResult('Заполните поля канала и сообщения!', false); return; }
+  if (!cid || !msg || msg.length > 2000) return;
   var btn = document.getElementById('send-btn');
   btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
   try {
     var r = await fetch('/api/send-message', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({guild_id: GUILD_ID, channel_id: cid, message: msg})
+      body: JSON.stringify({guild_id: document.getElementById('guild-select').value, channel_id: cid, message: msg})
     });
     var d = await r.json();
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить';
-    if (d.success) { showResult('✓ Сообщение отправлено!', true); document.getElementById('message-input').value = ''; }
-    else showResult('✗ ' + (d.error || 'Неизвестная ошибка'), false);
-  } catch(e) {
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить';
-    showResult('✗ Ошибка соединения', false);
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить';
+    if (d.success) {
+      showResult('Сообщение отправлено!', true);
+      document.getElementById('message-input').value = '';
+      updateCounter();
+    } else {
+      showResult('' + (d.error || 'Неизвестная ошибка'), false);
+    }
+  } catch (e) {
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить';
+    showResult('Ошибка соединения', false);
   }
+  refreshSendState();
 }
 
 function showResult(msg, ok) {
@@ -90,9 +147,16 @@ function showResult(msg, ok) {
   box.style.border = '1px solid ' + (ok ? 'rgba(52,211,153,0.30)' : 'rgba(248,113,113,0.30)');
   box.style.color = ok ? 'var(--ok)' : 'var(--err)';
   box.textContent = msg;
-  setTimeout(function() { box.style.display = 'none'; }, 5000);
+  setTimeout(function() { box.style.display = 'none'; }, 6000);
 }
 
-loadChannels();
+loadGuilds();
 </script>
+
+<style>
+.sc-counter { float: right; font-size: 12px; color: var(--muted, #8b93a7); font-weight: 600; }
+.sc-counter.over { color: var(--err, #f87171); }
+.sc-hint { margin-top: 4px; font-size: 12px; color: var(--muted, #8b93a7); }
+.send-btn:disabled { opacity: .55; cursor: not-allowed; }
+</style>
 {% endblock %}

@@ -1,6 +1,6 @@
 """
-Merkezi Database Helper
-Cog'lar icin basit JSON -> DB gecis API'si
+Центральный Database Helper
+Простой API перехода JSON -> DB для когов
 """
 import sqlite3
 import os
@@ -16,10 +16,10 @@ log = get_logger("db_helper")
 
 class GuildData:
     """
-    Her cog icin basit key-value storage.
-    JSON dosyalarinin yerine gecer.
-    
-    Kullanim:
+    Простое key-value хранилище для каждого кога.
+    Заменяет JSON-файлы.
+
+    Использование:
         db = GuildData("economy")
         db.set(guild_id, user_id, {"balance": 1000})
         data = db.get(guild_id, user_id)
@@ -38,7 +38,8 @@ class GuildData:
     
     def _ensure_table(self):
         conn = self._conn()
-        conn.execute('''
+        try:
+            conn.execute('''
             CREATE TABLE IF NOT EXISTS guild_data (
                 namespace TEXT NOT NULL,
                 guild_id INTEGER NOT NULL,
@@ -48,21 +49,24 @@ class GuildData:
                 PRIMARY KEY (namespace, guild_id, key)
             )
         ''')
-        conn.execute('''
+            conn.execute('''
             CREATE INDEX IF NOT EXISTS idx_guild_data_ns_guild 
             ON guild_data(namespace, guild_id)
         ''')
-        conn.commit()
-        conn.close()
+            conn.commit()
+        finally:
+            conn.close()
     
     def get(self, guild_id: int, key: str, default: Any = None) -> Any:
-        """Veri oku"""
+        """Чтение значения"""
         conn = self._conn()
-        row = conn.execute(
-            'SELECT value FROM guild_data WHERE namespace = ? AND guild_id = ? AND key = ?',
-            (self.namespace, guild_id, str(key))
-        ).fetchone()
-        conn.close()
+        try:
+            row = conn.execute(
+                'SELECT value FROM guild_data WHERE namespace = ? AND guild_id = ? AND key = ?',
+                (self.namespace, guild_id, str(key))
+            ).fetchone()
+        finally:
+            conn.close()
         if row:
             try:
                 return json.loads(row['value'])
@@ -71,7 +75,7 @@ class GuildData:
         return default
     
     def set(self, guild_id: int, key: str, value: Any) -> bool:
-        """Veri yaz"""
+        """Запись значения"""
         conn = self._conn()
         try:
             conn.execute(
@@ -88,7 +92,7 @@ class GuildData:
             conn.close()
     
     def delete(self, guild_id: int, key: str) -> bool:
-        """Veri sil"""
+        """Удаление значения"""
         conn = self._conn()
         try:
             conn.execute(
@@ -104,13 +108,15 @@ class GuildData:
             conn.close()
     
     def get_all(self, guild_id: int) -> Dict[str, Any]:
-        """Guild'in tum verilerini al"""
+        """Все данные гильдии"""
         conn = self._conn()
-        rows = conn.execute(
-            'SELECT key, value FROM guild_data WHERE namespace = ? AND guild_id = ?',
-            (self.namespace, guild_id)
-        ).fetchall()
-        conn.close()
+        try:
+            rows = conn.execute(
+                'SELECT key, value FROM guild_data WHERE namespace = ? AND guild_id = ?',
+                (self.namespace, guild_id)
+            ).fetchall()
+        finally:
+            conn.close()
         result = {}
         for row in rows:
             try:
@@ -120,31 +126,36 @@ class GuildData:
         return result
     
     def get_all_keys(self, guild_id: int) -> List[str]:
-        """Guild'in tum key'lerini al"""
+        """Все ключи гильдии"""
         conn = self._conn()
-        rows = conn.execute(
-            'SELECT key FROM guild_data WHERE namespace = ? AND guild_id = ?',
-            (self.namespace, guild_id)
-        ).fetchall()
-        conn.close()
+        try:
+            rows = conn.execute(
+                'SELECT key FROM guild_data WHERE namespace = ? AND guild_id = ?',
+                (self.namespace, guild_id)
+            ).fetchall()
+        finally:
+            conn.close()
         return [row['key'] for row in rows]
     
     def count(self, guild_id: int) -> int:
-        """Kayit sayisi"""
+        """Количество записей"""
         conn = self._conn()
-        row = conn.execute(
-            'SELECT COUNT(*) as cnt FROM guild_data WHERE namespace = ? AND guild_id = ?',
-            (self.namespace, guild_id)
-        ).fetchone()
-        conn.close()
+        try:
+            row = conn.execute(
+                'SELECT COUNT(*) as cnt FROM guild_data WHERE namespace = ? AND guild_id = ?',
+                (self.namespace, guild_id)
+            ).fetchone()
+        finally:
+            conn.close()
         return row['cnt'] if row else 0
     
     def exists(self, guild_id: int, key: str) -> bool:
-        """Kayit var mi?"""
+        """Есть ли запись"""
+
         return self.get(guild_id, key) is not None
     
     def clear(self, guild_id: int) -> bool:
-        """Guild'in tum verilerini sil"""
+        """Удалить все данные гильдии"""
         conn = self._conn()
         try:
             conn.execute(
@@ -160,7 +171,7 @@ class GuildData:
             conn.close()
     
     def migrate_from_json(self, json_path: str, guild_id: int):
-        """JSON dosyasindan DB'ye tasi"""
+        """Перенести данные из JSON-файла в БД"""
         if not os.path.exists(json_path):
             return
         
@@ -181,9 +192,9 @@ class GuildData:
 
 class UserData:
     """
-    Kullanici bazli veri saklama.
+    Хранение данных по пользователям.
     
-    Kullanim:
+    Использование:
         db = UserData("economy")
         db.set(user_id, {"balance": 1000, "level": 5})
         data = db.get(user_id)
@@ -202,7 +213,8 @@ class UserData:
     
     def _ensure_table(self):
         conn = self._conn()
-        conn.execute('''
+        try:
+            conn.execute('''
             CREATE TABLE IF NOT EXISTS user_data (
                 namespace TEXT NOT NULL,
                 user_id INTEGER NOT NULL,
@@ -211,16 +223,19 @@ class UserData:
                 PRIMARY KEY (namespace, user_id)
             )
         ''')
-        conn.commit()
-        conn.close()
+            conn.commit()
+        finally:
+            conn.close()
     
     def get(self, user_id: int, default: Any = None) -> Any:
         conn = self._conn()
-        row = conn.execute(
-            'SELECT value FROM user_data WHERE namespace = ? AND user_id = ?',
-            (self.namespace, user_id)
-        ).fetchone()
-        conn.close()
+        try:
+            row = conn.execute(
+                'SELECT value FROM user_data WHERE namespace = ? AND user_id = ?',
+                (self.namespace, user_id)
+            ).fetchone()
+        finally:
+            conn.close()
         if row:
             try:
                 return json.loads(row['value'])
@@ -260,13 +275,15 @@ class UserData:
             conn.close()
     
     def get_all(self) -> Dict[int, Any]:
-        """Tum kullanicilari al"""
+        """Все пользователи"""
         conn = self._conn()
-        rows = conn.execute(
-            'SELECT user_id, value FROM user_data WHERE namespace = ?',
-            (self.namespace,)
-        ).fetchall()
-        conn.close()
+        try:
+            rows = conn.execute(
+                'SELECT user_id, value FROM user_data WHERE namespace = ?',
+                (self.namespace,)
+            ).fetchall()
+        finally:
+            conn.close()
         result = {}
         for row in rows:
             try:

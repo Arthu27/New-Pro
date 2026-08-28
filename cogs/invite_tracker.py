@@ -1,10 +1,16 @@
+
+from logger import get_logger
+
+_log = get_logger("invite_tracker")
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
 import json 
 import os 
-from datetime import datetime 
+from datetime import datetime, timezone
 from cogs .embed_utils import _divider ,now_ts 
+from config import Config 
 
 class InviteTracker (commands .Cog ):
     def __init__ (self ,bot ):
@@ -15,8 +21,8 @@ class InviteTracker (commands .Cog ):
         try :
             invites =await guild .invites ()
             self .invite_cache [guild .id ]={inv .code :inv .uses for inv in invites }
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("cache_invites(): подавлено: %s", _ex)
 
     @commands .Cog .listener ()
     async def on_ready (self ):
@@ -67,8 +73,8 @@ class InviteTracker (commands .Cog ):
         joins .append ({
         'user_id':str (member .id ),'user_name':member .display_name ,
         'inviter_id':str (inviter .id )if inviter else None ,
-        'inviter':inviter .display_name if inviter else 'Bilinmiyor',
-        'code':code ,'joined_at':datetime .utcnow ().isoformat ()
+        'inviter':inviter .display_name if inviter else 'Неизвестно',
+        'code':code ,'joined_at':datetime.now(timezone.utc).isoformat ()
         })
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump (joins [-500 :],fp ,indent =2 ,ensure_ascii =False )
@@ -84,7 +90,7 @@ class InviteTracker (commands .Cog ):
                 leaves =json .load (fp )
         leaves .append ({
         'user_id':str (member .id ),'user_name':member .display_name ,
-        'left_at':datetime .utcnow ().isoformat ()
+        'left_at':datetime.now(timezone.utc).isoformat ()
         })
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump (leaves [-500 :],fp ,indent =2 ,ensure_ascii =False )
@@ -103,11 +109,11 @@ class InviteTracker (commands .Cog ):
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump (counts ,fp ,indent =2 ,ensure_ascii =False )
 
-    @app_commands .command (name ='invites',description ='Сколько человек davet ettiгini показать')
+    @app_commands .command (name ='invites',description ='Показать, сколько человек ты пригласил')
     async def my_invites (self ,interaction :discord .Interaction ):
         f =f'data/invite_counts_{interaction.guild_id}.json'
         if not os .path .exists (f ):
-            await interaction .response .send_message (' Пока davet данные нет!',ephemeral =True )
+            await interaction .response .send_message (' Пока нет данных о приглашениях!',ephemeral =True )
             return 
         with open (f ,'r',encoding ='utf-8')as fp :
             counts =json .load (fp )
@@ -115,39 +121,39 @@ class InviteTracker (commands .Cog ):
         info =counts .get (uid ,{'total':0 })
         total =info .get ('total',0 )
 
-        e =discord .Embed (title =" Davet Статистика",color =0x3498DB ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title =" Статистика приглашений",color =0x3498DB ,timestamp =datetime.now(timezone.utc))
         e .description =(
         f"```ansi\n\u001b[1;34m DAVET RAPORU\u001b[0m\n```\n{_divider()}"
         )
         e .set_thumbnail (url =interaction .user .display_avatar .url )
         e .add_field (name =" Пользователь",value =interaction .user .mention ,inline =True )
-        e .add_field (name =" Всего Davet",value =f"```{total} человек```",inline =True )
+        e .add_field (name =" Всего приглашений",value =f"```{total} человек```",inline =True )
         if total >=10 :
             rank =" Большой"
         elif total >=5 :
-            rank =" Davetчi"
+            rank ="🎖 Мастер приглашений"
         elif total >=1 :
-            rank =" Новый Davetчi"
+            rank ="🌱 Новичок приглашений"
         else :
-            rank =" Пока Davet Нет"
+            rank =" Пока нет приглашений"
         e .add_field (name =" Unvan",value =f"```{rank}```",inline =True )
-        e .add_field (name =" Подсказка",value ="*Более fazla человек davet ederek очередь yюksel!*",inline =False )
-        e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+        e .add_field (name ="💡 Подсказка",value ="*Приглашай больше людей и поднимайся в рейтинге!*",inline =False )
+        e .set_footer (text =f"Hakumo • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e )
 
-    @app_commands .command (name ='invite-ranking',description ='Davet очередь показать')
+    @app_commands .command (name ='invite-ranking',description ='Рейтинг приглашений')
     async def invite_leaderboard (self ,interaction :discord .Interaction ):
         f =f'data/invite_counts_{interaction.guild_id}.json'
         if not os .path .exists (f ):
-            await interaction .response .send_message (' Пока davet данные нет!',ephemeral =True )
+            await interaction .response .send_message (' Пока нет данных о приглашениях!',ephemeral =True )
             return 
         with open (f ,'r',encoding ='utf-8')as fp :
             counts =json .load (fp )
         sorted_counts =sorted (counts .items (),key =lambda x :x [1 ].get ('total',0 ),reverse =True )[:10 ]
 
-        e =discord .Embed (title =" Davet Очередь",color =0x3498DB ,timestamp =datetime .utcnow ())
+        e =discord .Embed (title =" Рейтинг приглашений",color =0x3498DB ,timestamp =datetime.now(timezone.utc))
         e .description =(
-        f"```ansi\n\u001b[1;34m EN ИYИ DAVETЧИLER\u001b[0m\n```\n{_divider()}"
+        f"```ansi\n\u001b[1;34m ЛУЧШИЕ ПРИГЛАШАЮЩИЕ\u001b[0m\n```\n{_divider()}"
         )
         medals =['','','']
         for i ,(uid ,info )in enumerate (sorted_counts ,1 ):
@@ -156,12 +162,12 @@ class InviteTracker (commands .Cog ):
             bar =""*min (total ,10 )+""*max (0 ,10 -total )
             e .add_field (
             name =f"{medal} {info.get('name', uid)}",
-            value =f"`{bar}` **{total}** davet",
+            value =f"`{bar}` **{total}** приглашений",
             inline =False 
             )
-        e .set_footer (text =f"Aether • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
+        e .set_footer (text =f"Hakumo • {interaction.guild.name}",icon_url =interaction .guild .icon .url if interaction .guild .icon else None )
         await interaction .response .send_message (embed =e )
 
 
 async def setup (bot ):
-    await bot .add_cog (InviteTracker (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (InviteTracker (bot ),guilds =Config .guild_objects ())

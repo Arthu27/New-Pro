@@ -1,164 +1,166 @@
 {% extends "base.html" %}
-{% block title %}Отслеживание приглашений - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-link"   style="animation: pulse 2s infinite;"></i> ОТСЛЕЖИВАНИЕ ПРИГЛАШЕНИЙ{% endblock %}
+{% block title %}Отслеживание приглашений — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-link"></i> Приглашения{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>DAVET ОТСЛЕЖИВАНИЕ</span>
-    </div>
-    <h1>DAVET ОТСЛЕЖИВАНИЕ</h1>
-    <p>Отслеживание приглашений: кто кого пригласил и активность.</p>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Участники <span class="sep">·</span> Приглашения</div>
+    <h1>Приглашения</h1>
+    <p class="lead">Отслеживание приглашений: кто кого пригласил и активность.</p>
   </div>
 </div>
-{% endblock %}
 
 
+<style>
+.inv-toolbar{margin-bottom:16px}
+.inv-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:6px;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:12px}
+.inv-tabs .tab-btn{padding:9px 16px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-2);background:transparent;border:none;transition:.15s}
+.inv-tabs .tab-btn:hover{background:var(--ac-soft);color:var(--text)}
+.inv-tabs .tab-btn.active{background:linear-gradient(135deg,var(--ac),var(--ac-3));color:#1a1a1a;box-shadow:0 4px 12px var(--ac-glow)}
+.inv-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:16px;}
+.inv-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.inv-title i{color:var(--ac)}
+.inv-card,.join-card{display:flex;align-items:center;gap:12px;padding:11px 13px;background:linear-gradient(160deg,color-mix(in srgb, var(--text) 2%, transparent),transparent);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;transition:all .16s var(--ease)}
+.inv-card:hover,.join-card:hover {border-color:var(--ac-line)}
+.inv-rank{font-size:20px;width:32px;text-align:center;flex-shrink:0}
+.inv-avatar,.join-avatar{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--ac-line);object-fit:cover;flex-shrink:0}
+.inv-name,.join-name{font-weight:600;color:var(--text);font-size:14px}
+.inv-detail{font-size:12px;color:var(--text-3);margin-top:3px}
+.inv-count{margin-left:auto;font-size:16px;font-weight:800;color:var(--ac-2);font-variant-numeric:tabular-nums}
+.join-inviter{font-size:12px;color:var(--text-3);margin-top:2px}
+.join-inviter span{color:var(--ac-2);font-weight:600}
+.join-time{margin-left:auto;font-size:12px;color:var(--text-3);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.inv-table{width:100%;border-collapse:separate;border-spacing:0}
+.inv-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);padding:9px 12px;border-bottom:1px solid var(--line);background:color-mix(in srgb, var(--ac) 5%, transparent)}
+.inv-table td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--text-2);font-size:13px}
+.inv-table td:first-child{font-family:'JetBrains Mono',monospace}
+.inv-empty{text-align:center;padding:34px;color:var(--text-3)}
+.inv-empty i{display:block;font-size:30px;color:var(--ac);opacity:.4;margin-bottom:10px}
+</style>
 
-<select  id="guild-select" class="guild-select" onchange="loadInvites()">
+<select id="guild-select" class="guild-select" onchange="loadInvites()" data-reveal="up" aria-label="Выбор сервера">
   <option value="">Выберите сервер...</option>
 </select>
 
-<div class="stat-row" id="stats">
+<div class="stat-row" id="stats" data-reveal="up">
   <div class="stat-box">
     <div class="stat-icon gold"><i class="fas fa-link"></i></div>
     <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Всего приглашений</div></div>
   </div>
   <div class="stat-box">
     <div class="stat-icon green"><i class="fas fa-user-plus"></i></div>
-    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Использовано ссылок</div></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Использовано</div></div>
   </div>
   <div class="stat-box">
     <div class="stat-icon red"><i class="fas fa-user-minus"></i></div>
-    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Выход</div></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Выходы</div></div>
   </div>
   <div class="stat-box">
     <div class="stat-icon cyan"><i class="fas fa-bolt"></i></div>
-    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Активных приглашений</div></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Активных</div></div>
   </div>
 </div>
 
-<div  >
-  <button class="tab-btn active" onclick="showTab('leaderboard',this)">🏆 Лидеры</button>
-  <button class="tab-btn" onclick="showTab('joins',this)">👋 В конец Использовано ссылокlar</button>
-  <button class="tab-btn" onclick="showTab('invites',this)">🔗 Активных приглашенийler</button>
+<div class="inv-tabs" data-reveal="up">
+  <button type="button" class="tab-btn active" onclick="showTab('leaderboard',this)"><i class="fas fa-trophy"></i> Лидеры</button>
+  <button type="button" class="tab-btn" onclick="showTab('joins',this)"><i class="fas fa-user-plus"></i> Использованные</button>
+  <button type="button" class="tab-btn" onclick="showTab('invites',this)"><i class="fas fa-link"></i> Активные</button>
 </div>
 
-<div class="inv-box" id="tab-leaderboard">
-  <div class="inv-title"><i class="fas fa-trophy"></i> Приглашение Лидеры</div>
-  <div id="leaderboard-list"><p >Выберите сервер...</p></div>
+<div class="inv-box" id="tab-leaderboard" data-reveal="up">
+  <div class="inv-title"><i class="fas fa-trophy"></i> Лидеры приглашений</div>
+  <div id="leaderboard-list"><div class="inv-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div></div>
 </div>
 
-<div class="inv-box" id="tab-joins" >
-  <div class="inv-title"><i class="fas fa-user-plus"></i> В конец Использовано ссылокlar</div>
-  <div id="joins-list"><p >Выберите сервер...</p></div>
+<div class="inv-box" id="tab-joins" style="display:none" data-reveal="up">
+  <div class="inv-title"><i class="fas fa-user-plus"></i> Использованные ссылки</div>
+  <div id="joins-list"><div class="inv-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div></div>
 </div>
 
-<div class="inv-box" id="tab-invites" >
-  <div class="inv-title"><i class="fas fa-link"></i> Активных приглашений Linkы</div>
-  <div id="invites-list"><p >Выберите сервер...</p></div>
+<div class="inv-box" id="tab-invites" style="display:none" data-reveal="up">
+  <div class="inv-title"><i class="fas fa-link"></i> Активные приглашения</div>
+  <div id="invites-list"><div class="inv-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div></div>
 </div>
 
 <script>
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function showTab(tab, btn) {
-  ['leaderboard','joins','invites'].forEach(function(t){
-    document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
-  });
-  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  ['leaderboard','joins','invites'].forEach(function(t){ document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none'; });
+  document.querySelectorAll('.inv-tabs .tab-btn').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
 }
+function emptyHTML(msg){ return '<div class="inv-empty"><i class="fas fa-inbox"></i>'+msg+'</div>'; }
+
+var MAIN_GID = '{{ main_guild_id }}';
 
 async function loadGuilds() {
-  // Sabit сервер ID
-  var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
-  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
-  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
-  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
-  if (typeof loadData === 'function') { loadData(gid); return; }
-  if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
-  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
-  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
-  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
-  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
-  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
-  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
-  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
-  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
-  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
-  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
-
+  try {
+    var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+    var sel = document.getElementById('guild-select');
+    (Array.isArray(guilds) ? guilds : []).forEach(function (g) {
+      var opt = document.createElement('option');
+      opt.value = g.id;
+      opt.textContent = g.name;
+      sel.appendChild(opt);
+    });
+  } catch (e) { /* тихо */ }
 }
 
 async function loadInvites() {
-  var gid = document.getElementById('guild-select').value;
+  var gid = document.getElementById('guild-select').value || MAIN_GID;
   if(!gid) return;
+  document.getElementById('guild-select').value = gid;
   var r = await fetch('/api/guild/'+gid+'/invite-tracker-full');
   var d = await r.json();
 
   document.getElementById('stats').innerHTML =
-    '<div class="stat-box">'+
-      '<div class="stat-icon gold"><i class="fas fa-link"></i></div>'+
-      '<div class="stat-body"><div class="stat-val">'+(d.total_invites||0)+'</div><div class="stat-lbl">Всего приглашений</div></div>'+
-    '</div>'+
-    '<div class="stat-box">'+
-      '<div class="stat-icon green"><i class="fas fa-user-plus"></i></div>'+
-      '<div class="stat-body"><div class="stat-val">'+(d.total_joins||0)+'</div><div class="stat-lbl">Использовано ссылок</div></div>'+
-    '</div>'+
-    '<div class="stat-box">'+
-      '<div class="stat-icon red"><i class="fas fa-user-minus"></i></div>'+
-      '<div class="stat-body"><div class="stat-val">'+(d.total_leaves||0)+'</div><div class="stat-lbl">Выход</div></div>'+
-    '</div>'+
-    '<div class="stat-box">'+
-      '<div class="stat-icon cyan"><i class="fas fa-bolt"></i></div>'+
-      '<div class="stat-body"><div class="stat-val">'+(d.active_invites||0)+'</div><div class="stat-lbl">Активных приглашений</div></div>'+
-    '</div>';
+    '<div class="stat-box"><div class="stat-icon gold"><i class="fas fa-link"></i></div><div class="stat-body"><div class="stat-val">'+(d.total_invites||0)+'</div><div class="stat-lbl">Всего приглашений</div></div></div>'+
+    '<div class="stat-box"><div class="stat-icon green"><i class="fas fa-user-plus"></i></div><div class="stat-body"><div class="stat-val">'+(d.total_joins||0)+'</div><div class="stat-lbl">Использовано</div></div></div>'+
+    '<div class="stat-box"><div class="stat-icon red"><i class="fas fa-user-minus"></i></div><div class="stat-body"><div class="stat-val">'+(d.total_leaves||0)+'</div><div class="stat-lbl">Выходы</div></div></div>'+
+    '<div class="stat-box"><div class="stat-icon cyan"><i class="fas fa-bolt"></i></div><div class="stat-body"><div class="stat-val">'+(d.active_invites||0)+'</div><div class="stat-lbl">Активных</div></div></div>';
 
   var lb = d.leaderboard||[];
-  var medals = ['🥇','🥈','🥉'];
-  document.getElementById('leaderboard-list').innerHTML = lb.length ?
-    lb.map(function(u,i){
-      return '<div class="inv-card">'+
-        '<div class="inv-rank">'+(medals[i]||'#'+(i+1))+'</div>'+
-        '<img class="inv-avatar" src="'+(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
-        '<div><div class="inv-name">'+u.name+'</div>'+
-        '<div class="inv-detail">'+(u.joins||0)+' ikenссылка · '+(u.leaves||0)+' выход · '+(u.fake||0)+' фейковый</div></div>'+
-        '<div class="inv-count">'+(u.total||0)+'</div>'+
-      '</div>';
-    }).join('') :
-    '<p >Нет данных.</p>';
+  var medals = ['<i class="fas fa-medal" style="color:#ffd700"></i>','<i class="fas fa-medal" style="color:#c0c7d1"></i>','<i class="fas fa-medal" style="color:#cd7f32"></i>'];
+  document.getElementById('leaderboard-list').innerHTML = lb.length ? lb.map(function(u,i){
+    return '<div class="inv-card">'+
+      '<div class="inv-rank">'+(medals[i]||'#'+(i+1))+'</div>'+
+      '<img alt="" class="inv-avatar" src="'+esc(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+      '<div style="flex:1;min-width:0"><div class="inv-name">'+esc(u.name)+'</div>'+
+      '<div class="inv-detail">'+(u.joins||0)+' входящих · '+(u.leaves||0)+' выходов · '+(u.fake||0)+' фейковых</div></div>'+
+      '<div class="inv-count">'+(u.total||0)+'</div>'+
+    '</div>';
+  }).join('') : emptyHTML('Нет данных');
 
   var joins = d.recent_joins||[];
-  document.getElementById('joins-list').innerHTML = joins.length ?
-    joins.map(function(j){
-      var t = j.joined_at ? new Date(j.joined_at).toLocaleString('tr-TR') : '';
-      return '<div class="join-card">'+
-        '<img class="join-avatar" src="'+(j.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
-        '<div><div class="join-name">'+j.name+'</div>'+
-        '<div class="join-inviter">Приглашение eden: <span >'+(j.inviter||'Bilinmiyor')+'</span>'+(j.invite_code?' ('+j.invite_code+')':'')+'</div></div>'+
-        '<div class="join-time">'+t+'</div>'+
-      '</div>';
-    }).join('') :
-    '<p >Пока ikenссылка запись yok.</p>';
+  document.getElementById('joins-list').innerHTML = joins.length ? joins.map(function(j){
+    var t = j.joined_at ? new Date(j.joined_at).toLocaleString('ru-RU') : '';
+    return '<div class="join-card">'+
+      '<img alt="" class="join-avatar" src="'+esc(j.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+      '<div style="flex:1;min-width:0"><div class="join-name">'+esc(j.name)+'</div>'+
+      '<div class="join-inviter">Пригласил: <span>'+esc(j.inviter||'Неизвестно')+'</span>'+(j.invite_code?' ('+esc(j.invite_code)+')':'')+'</div></div>'+
+      '<div class="join-time">'+esc(t)+'</div>'+
+    '</div>';
+  }).join('') : emptyHTML('Записей пока нет');
 
   var invites = d.invite_list||[];
   document.getElementById('invites-list').innerHTML = invites.length ?
-    '<table class="inv-table"><thead><tr><th>Kod</th><th>Создан</th><th>Использование</th><th>Канал</th></tr></thead><tbody>'+
+    '<table class="inv-table"><thead><tr><th>Код</th><th>Пригласил</th><th>Использований</th><th>Канал</th></tr></thead><tbody>'+
     invites.map(function(inv){
-      return '<tr><td >'+inv.code+'</td>'+
-        '<td>'+( inv.inviter||'?')+'</td>'+
-        '<td >'+(inv.uses||0)+'</td>'+
-        '<td >#'+(inv.channel||'?')+'</td></tr>';
-    }).join('')+'</tbody></table>' :
-    '<p >Активен приглашение ссылка yok.</p>';
+      return '<tr><td>'+esc(inv.code)+'</td><td>'+esc(inv.inviter||'?')+'</td><td>'+(inv.uses||0)+'</td><td>#'+esc(inv.channel||'?')+'</td></tr>';
+    }).join('')+'</tbody></table>' : emptyHTML('Активных ссылок нет');
 }
 
-loadGuilds();
+function start() {
+  /* серверы догружаются, затем авто-выбираем главный и грузим данные */
+  loadGuilds().then(function () {
+    var sel = document.getElementById('guild-select');
+    if (!sel.value && MAIN_GID) sel.value = MAIN_GID;
+    loadInvites();
+  });
+  if (window.setLiveRefresh) window.setLiveRefresh(loadInvites, 1500);
+  else setInterval(loadInvites, 30000);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+else start();
 </script>
 {% endblock %}

@@ -3,6 +3,10 @@ Feature Flags
 Система флагов функций
 """
 
+from logger import get_logger
+
+_log = get_logger("feature_flags")
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -11,7 +15,7 @@ from collections import defaultdict
 
 
 class FeatureFlag:
-    """Ёzellik bayraгы"""
+    """Флаг функции"""
     
     def __init__(self, flag_key: str, name: str, description: str = ''):
         self.flag_key = flag_key
@@ -28,11 +32,11 @@ class FeatureFlag:
         self.environment = 'production'
     
     def enable(self):
-        """Bayraгы включить"""
+        """Включить флаг"""
         self.enabled = True
     
     def disable(self):
-        """Bayraгы devre dышы bыrak"""
+        """Отключить флаг"""
         self.enabled = False
     
     def set_rollout_percentage(self, percentage: int):
@@ -59,7 +63,7 @@ class FeatureFlag:
         self.metadata[key] = value
     
     def is_enabled_for_user(self, user_id: str, user_context: Dict[str, Any] = None) -> bool:
-        """Пользователь для etkin mi проверить et"""
+        """Проверить, активен ли для пользователя"""
         if not self.enabled:
             return False
         
@@ -76,7 +80,7 @@ class FeatureFlag:
         return True
     
     def _matches_targeting_rules(self, user_id: str, user_context: Dict[str, Any] = None) -> bool:
-        """Hedefleme kurallarыna спит mu проверить et"""
+        """Проверить соответствие правилам таргетинга"""
         if not user_context:
             user_context = {}
         
@@ -109,7 +113,7 @@ class FeatureFlag:
         return True
     
     def _is_in_rollout_percentage(self, user_id: str) -> bool:
-        """Yюzde в mi проверить et"""
+        """Проверить, входит ли в процент"""
         if self.rollout_percentage >= 100:
             return True
         
@@ -145,7 +149,7 @@ class FeatureFlag:
         return enabled_variants[variant_index]
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'flag_key': self.flag_key,
             'name': self.name,
@@ -182,14 +186,14 @@ class FeatureFlag:
 
 
 class FeatureFlagManager:
-    """Ёzellik bayraгы yёneticisi"""
+    """Менеджер флагов функций"""
     
     def __init__(self):
         self.flags_file = 'data/feature_flags.json'
         self.flags = self._load_flags()
     
     def _load_flags(self) -> Dict[str, FeatureFlag]:
-        """Bayraklarы загрузить"""
+        """Загрузить флаги"""
         if os.path.exists(self.flags_file):
             try:
                 with open(self.flags_file, 'r', encoding='utf-8') as f:
@@ -198,13 +202,13 @@ class FeatureFlagManager:
                         flag_key: FeatureFlag.from_dict(flag_data)
                         for flag_key, flag_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_flags(): подавлено: %s", _ex)
         
         return {}
     
     def _save_flags(self):
-        """Bayraklarы сохранить"""
+        """Сохранить флаги"""
         os.makedirs('data', exist_ok=True)
         
         data = {
@@ -215,9 +219,17 @@ class FeatureFlagManager:
         with open(self.flags_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     
+    def save_flag(self, flag: 'FeatureFlag') -> bool:
+        """Сохранить изменения флага (после set_rollout_percentage и т.п.)."""
+        if not flag or not getattr(flag, 'flag_key', None):
+            return False
+        self.flags[flag.flag_key] = flag
+        self._save_flags()
+        return True
+
     def create_flag(self, flag_key: str, name: str, description: str = '',
                     created_by: str = None) -> FeatureFlag:
-        """Bayrak создать"""
+        """Создать флаг"""
         flag = FeatureFlag(
             flag_key=flag_key,
             name=name,
@@ -231,11 +243,11 @@ class FeatureFlagManager:
         return flag
     
     def get_flag(self, flag_key: str) -> Optional[FeatureFlag]:
-        """Bayraгы al"""
+        """Получить флаг"""
         return self.flags.get(flag_key)
     
     def get_all_flags(self, environment: str = None) -> List[FeatureFlag]:
-        """Все bayraklarы al"""
+        """Получить все флаги"""
         flags = list(self.flags.values())
         
         if environment:
@@ -246,11 +258,11 @@ class FeatureFlagManager:
         return flags
     
     def get_enabled_flags(self) -> List[FeatureFlag]:
-        """Etkin bayraklarы al"""
+        """Получить активные флаги"""
         return [f for f in self.flags.values() if f.enabled]
     
     def enable_flag(self, flag_key: str) -> bool:
-        """Bayraгы включить"""
+        """Включить флаг"""
         flag = self.flags.get(flag_key)
         
         if flag:
@@ -261,7 +273,7 @@ class FeatureFlagManager:
         return False
     
     def disable_flag(self, flag_key: str) -> bool:
-        """Bayraгы devre dышы bыrak"""
+        """Отключить флаг"""
         flag = self.flags.get(flag_key)
         
         if flag:
@@ -272,7 +284,7 @@ class FeatureFlagManager:
         return False
     
     def delete_flag(self, flag_key: str) -> bool:
-        """Bayraгы удалить"""
+        """Удалить флаг"""
         if flag_key in self.flags:
             del self.flags[flag_key]
             self._save_flags()
@@ -282,7 +294,7 @@ class FeatureFlagManager:
     
     def is_feature_enabled(self, flag_key: str, user_id: str = None,
                             user_context: Dict[str, Any] = None) -> bool:
-        """Ёzellik etkin mi проверить et"""
+        """Проверить, активна ли функция"""
         flag = self.flags.get(flag_key)
         
         if not flag:
@@ -294,7 +306,7 @@ class FeatureFlagManager:
         return flag.enabled
     
     def get_variant(self, flag_key: str, user_id: str) -> Optional[str]:
-        """Varyantы al"""
+        """Получить вариант"""
         flag = self.flags.get(flag_key)
         
         if not flag:
@@ -304,7 +316,7 @@ class FeatureFlagManager:
 
 
 class FeatureFlagRollout:
-    """Ёzellik bayraгы rollout yёnetimi"""
+    """Управление rollout флагов функций"""
     
     def __init__(self, feature_flag_manager: FeatureFlagManager):
         self.feature_flag_manager = feature_flag_manager
@@ -312,24 +324,24 @@ class FeatureFlagRollout:
         self.rollout_plans = self._load_rollout_plans()
     
     def _load_rollout_plans(self) -> Dict[str, Any]:
-        """Rollout planlarыnы загрузить"""
+        """Загрузить планы rollout"""
         if os.path.exists(self.rollout_plans_file):
             try:
                 with open(self.rollout_plans_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_rollout_plans(): подавлено: %s", _ex)
         
         return {}
     
     def _save_rollout_plans(self):
-        """Rollout planlarыnы сохранить"""
+        """Сохранить планы rollout"""
         os.makedirs('data', exist_ok=True)
         with open(self.rollout_plans_file, 'w', encoding='utf-8') as f:
             json.dump(self.rollout_plans, f, ensure_ascii=False, indent=2)
     
     def create_rollout_plan(self, flag_key: str, stages: List[Dict[str, Any]]):
-        """Rollout planы создать"""
+        """Создать план rollout"""
         self.rollout_plans[flag_key] = {
             'stages': stages,
             'current_stage': 0,
@@ -365,7 +377,7 @@ class FeatureFlagRollout:
         return True
     
     def get_rollout_status(self, flag_key: str) -> Optional[Dict[str, Any]]:
-        """Rollout durumunu al"""
+        """Получить состояние rollout'а"""
         if flag_key not in self.rollout_plans:
             return None
         
@@ -386,7 +398,7 @@ class FeatureFlagRollout:
 
 
 class FeatureFlagAnalytics:
-    """Ёzellik bayraгы analitiгi"""
+    """Аналитика флагов функций"""
     
     def __init__(self, feature_flag_manager: FeatureFlagManager):
         self.feature_flag_manager = feature_flag_manager
@@ -394,24 +406,24 @@ class FeatureFlagAnalytics:
         self.analytics = self._load_analytics()
     
     def _load_analytics(self) -> Dict[str, Any]:
-        """Analitiгi загрузить"""
+        """Загрузить аналитику"""
         if os.path.exists(self.analytics_file):
             try:
                 with open(self.analytics_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_analytics(): подавлено: %s", _ex)
         
         return {}
     
     def _save_analytics(self):
-        """Analitiгi сохранить"""
+        """Сохранить аналитику"""
         os.makedirs('data', exist_ok=True)
         with open(self.analytics_file, 'w', encoding='utf-8') as f:
             json.dump(self.analytics, f, ensure_ascii=False, indent=2)
     
     def track_flag_check(self, flag_key: str, user_id: str, result: bool):
-        """Bayrak проверкаnю takip et"""
+        """Отслеживать проверку флага"""
         if flag_key not in self.analytics:
             self.analytics[flag_key] = {
                 'checks': 0,
@@ -435,7 +447,7 @@ class FeatureFlagAnalytics:
         self._save_analytics()
     
     def get_flag_analytics(self, flag_key: str) -> Optional[Dict[str, Any]]:
-        """Bayrak analitiгini al"""
+        """Получить аналитику флага"""
         if flag_key not in self.analytics:
             return None
         
@@ -451,7 +463,7 @@ class FeatureFlagAnalytics:
         }
     
     def get_all_analytics(self) -> Dict[str, Dict[str, Any]]:
-        """Все analitiгi al"""
+        """Получить всю аналитику"""
         result = {}
         
         for flag_key in self.analytics:

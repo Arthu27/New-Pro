@@ -1,19 +1,15 @@
 {% extends "base.html" %}
-{% block title %}День рождения — Aether{% endblock %}
+{% block title %}День рождения — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-birthday-cake" ></i> День рождения{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>День рождения</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Участники <span class="sep">·</span> Регистрация дня рождения</div>
     <h1>День рождения</h1>
-    <p>Сохрани свой день рождения, чтобы бот поздравил тебя автоматически.</p>
+    <p class="lead">Сохрани свой день рождения, чтобы бот поздравил тебя автоматически.</p>
   </div>
 </div>
-{% endblock %}
+
 
 
 
@@ -22,16 +18,16 @@
     <h2><i class="fas fa-birthday-cake"></i> Сохранить дату рождения</h2>
     <div id="bd-current" class="bd-current"></div>
     <div class="bd-grid-3">
-      <div class="form-group"><label>День</label><input type="number" id="bd-day" placeholder="15" min="1" max="31"></div>
-      <div class="form-group"><label>Месяц</label><input type="number" id="bd-month" placeholder="3" min="1" max="12"></div>
-      <div class="form-group"><label>Год (опц.)</label><input type="number" id="bd-year" placeholder="2000" min="1900" max="2020"></div>
+      <div class="form-group"><label>День</label><input type="number" id="bd-day" placeholder="15" min="1" max="31" aria-label="15"></div>
+      <div class="form-group"><label>Месяц</label><input type="number" id="bd-month" placeholder="3" min="1" max="12" aria-label="3"></div>
+      <div class="form-group"><label>Год (опц.)</label><input type="number" id="bd-year" placeholder="2000" min="1900" max="2020" aria-label="2000"></div>
     </div>
-    <button class="btn btn-primary" onclick="saveBirthday()"><i class="fas fa-save"></i> Сохранить</button>
+    <button type="button" class="btn btn-primary" onclick="saveBirthday()"><i class="fas fa-save"></i> Сохранить</button>
     <span id="bd-msg"   style="margin-left: 12px;"></span>
   </div>
 
   <div class="bd-card">
-    <h2><i class="fas fa-party-horn"></i> Ближайшие дни рождения</h2>
+    <h2><i class="fas fa-cake-candles"></i> Ближайшие дни рождения</h2>
     <div id="bd-upcoming" class="bd-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div>
   </div>
 </div>
@@ -46,7 +42,7 @@ async function init() {
       var el = document.getElementById('bd-current');
       el.style.display = 'block';
       var parts = d.date.split('-');
-      el.innerHTML = '🎂 Запись: <strong>' + parts[1] + '/' + parts[0] + (d.year ? '/' + d.year : '') + '</strong>';
+      el.innerHTML = 'Запись: <strong>' + parts[1] + '/' + parts[0] + (d.year ? '/' + d.year : '') + '</strong>';
       document.getElementById('bd-month').value = parseInt(parts[0]);
       document.getElementById('bd-day').value = parseInt(parts[1]);
       if (d.year) document.getElementById('bd-year').value = d.year;
@@ -63,7 +59,7 @@ async function loadUpcoming() {
     el.innerHTML = d.slice(0,10).map(function(b) {
       var isToday = b.diff === 0;
       return '<div class="bd-item">' +
-        '<span class="bd-item-name">' + (isToday?'🎉 ':'🎂 ') + b.name + '</span>' +
+        '<span class="bd-item-name">' + b.name + '</span>' +
         '<span class="bd-item-time ' + (isToday?'today':'') + '">' + (isToday ? 'СЕГОДНЯ!' : b.diff + ' дн.') + '</span>' +
       '</div>';
     }).join('');
@@ -75,17 +71,17 @@ async function saveBirthday() {
   var day   = parseInt(document.getElementById('bd-day').value);
   var month = parseInt(document.getElementById('bd-month').value);
   var year  = parseInt(document.getElementById('bd-year').value) || null;
-  if (!day || !month) { msg.innerHTML = '<span >❌ День и месяц обязательны</span>'; return; }
-  if (day < 1 || day > 31 || month < 1 || month > 12) { msg.innerHTML = '<span >❌ Неверная дата</span>'; return; }
+  if (!day || !month) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:var(--err)"></i> День и месяц обязательны</span>'; return; }
+  if (day < 1 || day > 31 || month < 1 || month > 12) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:var(--err)"></i> Неверная дата</span>'; return; }
   try {
     var r = await fetch('/api/my-birthday/' + GUILD_ID, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({day, month, year})
     }).then(r => r.json());
-    if (r.ok) { msg.innerHTML = '<span >✅ Сохранено!</span>'; init(); }
-    else msg.innerHTML = '<span >❌ ' + (r.error || 'Ошибка') + '</span>';
-  } catch(e) { msg.innerHTML = '<span >❌ Ошибка соединения</span>'; }
+    if (r.ok) { msg.innerHTML = '<span ><i class="fas fa-check" style="color:var(--ok)"></i> Сохранено!</span>'; init(); }
+    else msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:var(--err)"></i> ' + (r.error || 'Ошибка') + '</span>';
+  } catch(e) { msg.innerHTML = '<span ><i class="fas fa-xmark" style="color:var(--err)"></i> Ошибка соединения</span>'; }
 }
 
 init();

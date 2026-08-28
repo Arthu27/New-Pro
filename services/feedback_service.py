@@ -5,7 +5,7 @@
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, List
 import logging
 
@@ -64,7 +64,7 @@ class FeedbackService:
             'rating': rating,
             'comment': comment,
             'closed_by': closed_by,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         self._data['feedbacks'].append(feedback)

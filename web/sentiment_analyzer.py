@@ -1,18 +1,40 @@
 """
-Analiz duygu сервер в realnom время
-Otslejivanie duygular, tona, чakышmaov
+Анализ настроения сервера в реальном времени
+Отслеживание эмоций, тона, конфликтов
 """
+
+from logger import get_logger
+
+_log = get_logger("sentiment_analyzer")
+
 import discord 
 import json 
 import os 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from typing import Dict ,List ,Optional ,Tuple 
 from collections import defaultdict 
 import re 
 
+def _parse_ts (value ):
+    # ISO-строка в aware-UTC. Naive считаем UTC, мусор -> None.
+    # История из JSON может быть без пояса, живые записи с поясом;
+    # сравнение aware/naive роняло бота с TypeError.
+    if not isinstance (value ,str ):
+        return None 
+    try :
+        dt =datetime .fromisoformat (value .strip ())
+    except Exception :
+        return None 
+    if dt .tzinfo is None :
+        dt =dt .replace (tzinfo =timezone .utc )
+    else :
+        dt =dt .astimezone (timezone .utc )
+    return dt 
+
+
 
 class SentimentAnalyzer :
-    """Analizёr duygu сервер"""
+    """Анализатор настроения сервера"""
 
     # Kalыplar для opredeleniya duygular
     EMOTION_PATTERNS ={
@@ -78,7 +100,7 @@ class SentimentAnalyzer :
         'emotions':emotions ,
         'dominant_emotion':dominant ,
         'sentiment_score':score ,
-        'timestamp':datetime .utcnow ().isoformat (),
+        'timestamp':datetime.now(timezone.utc).isoformat (),
         }
 
         # Ekliyoruz в pano
@@ -107,15 +129,18 @@ class SentimentAnalyzer :
         return emotions 
 
     def get_channel_sentiment (self ,channel_id :int ,window_minutes :int =60 )->Dict :
-        """Alыyor duygu канал для son N dakika"""
+        """Получает настроение канала за последние N минут"""
         messages =self .message_buffer .get (channel_id ,[])
 
-        # Filtreliyoruz по время
-        cutoff =datetime .utcnow ()-timedelta (minutes =window_minutes )
-        recent =[
-        msg for msg in messages 
-        if datetime .fromisoformat (msg ['timestamp'])>cutoff 
-        ]
+        # Filtreliyoruz по время: cutoff aware-UTC, каждую метку приводим к aware-UTC
+        # (история из JSON может хранить naive-строки, живые сообщения — с поясом;
+        #  сравнение aware/naive роняло бота с TypeError).
+        cutoff =datetime .now (timezone .utc )-timedelta (minutes =window_minutes )
+        recent =[]
+        for msg in messages :
+            _dt =_parse_ts (msg .get ('timestamp')if isinstance (msg ,dict )else None )
+            if _dt is not None and _dt >cutoff :
+                recent .append (msg )
 
         if not recent :
             return {
@@ -165,7 +190,7 @@ class SentimentAnalyzer :
         return result 
 
     def get_server_sentiment (self ,guild :discord .Guild ,window_minutes :int =60 )->Dict :
-        """Alыyor общий duygu сервер"""
+        """Получает общее настроение сервера"""
         channel_sentiments =[]
 
         for channel in guild .text_channels :
@@ -239,7 +264,7 @@ class SentimentAnalyzer :
                     })
                     self .alerts_sent .add (alert_key )
 
-                    # Sbrasivaem предупреждение с 10 dakika
+                    # Сбрасываем предупреждения старше 10 минут
                     import asyncio 
                     asyncio .create_task (self ._reset_alert (alert_key ,delay =600 ))
 
@@ -253,7 +278,7 @@ class SentimentAnalyzer :
                     'channel_id':channel .id ,
                     'channel_name':channel .name ,
                     'negative_messages':recent_10min ['emotion_breakdown']['negative'],
-                    'message':f"🔥 Vozmojniy чakышma в #{channel.name} ({recent_10min['emotion_breakdown']['negative']} negativnih сообщение)"
+                    'message':f"🔥 Возможный конфликт в #{channel.name} ({recent_10min['emotion_breakdown']['negative']} негативных сообщений)"
                     })
                     self .alerts_sent .add (alert_key )
                     asyncio .create_task (self ._reset_alert (alert_key ,delay =300 ))
@@ -261,7 +286,7 @@ class SentimentAnalyzer :
         return alerts 
 
     async def _reset_alert (self ,alert_key :str ,delay :int ):
-        """Sbrasivaet предупреждение с N saniye"""
+        """Сбрасывает предупреждения старше N секунд"""
         import asyncio 
         await asyncio .sleep (delay )
         self .alerts_sent .discard (alert_key )
@@ -275,8 +300,8 @@ class SentimentAnalyzer :
                     data =json .load (f )
                     for channel_id ,messages in data .items ():
                         self .message_buffer [int (channel_id )]=messages 
-            except :
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_history(): подавлено: %s", _ex)
 
     def _save_history (self ):
         """Сохран история в dosya"""
@@ -292,15 +317,15 @@ class SentimentAnalyzer :
 
             with open (history_file ,'w',encoding ='utf-8')as f :
                 json .dump (data ,f ,indent =2 ,ensure_ascii =False )
-        except :
-            pass 
+        except Exception as _ex:
+            _log.debug("_save_history(): подавлено: %s", _ex)
 
 
             # Kюresel пример
 _sentiment_analyzer =None 
 
 def get_sentiment_analyzer ()->SentimentAnalyzer :
-    """Alыyor kюresel пример SentimentAnalyzer"""
+    """Получает глобальный экземпляр SentimentAnalyzer"""
     global _sentiment_analyzer 
     if _sentiment_analyzer is None :
         _sentiment_analyzer =SentimentAnalyzer ()

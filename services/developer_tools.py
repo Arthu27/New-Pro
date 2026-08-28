@@ -3,6 +3,10 @@ Developer Tools
 Инструменты для разработчиков
 """
 
+from logger import get_logger
+
+_log = get_logger("developer_tools")
+
 import json
 import os
 import hashlib
@@ -25,8 +29,8 @@ class APIKeyManager:
             try:
                 with open(self.keys_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_keys(): подавлено: %s", _ex)
         
         return {}
     
@@ -129,8 +133,8 @@ class WebhookManager:
             try:
                 with open(self.webhooks_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_webhooks(): подавлено: %s", _ex)
         
         return {}
     
@@ -286,7 +290,7 @@ class APIDocumentation:
             'response': response
         })
     
-    def generate_openapi(self, title: str = 'Aether API', version: str = '1.0.0') -> dict:
+    def generate_openapi(self, title: str = 'Hakumo API', version: str = '1.0.0') -> dict:
         """Генерировать OpenAPI спецификацию"""
         paths = {}
         
@@ -331,7 +335,7 @@ class APIDocumentation:
             lines.append(f"{endpoint['description']}\n")
             
             if endpoint['parameters']:
-                lines.append('### Деньгиmeters\n')
+                lines.append('### Parameters\n')
                 for param in endpoint['parameters']:
                     lines.append(f"- **{param['name']}** ({param['type']}): {param['description']}")
                 lines.append('')
@@ -349,16 +353,16 @@ class SDKGenerator:
     
     def generate_python_sdk(self, api_base_url: str) -> str:
         """Генерировать Python SDK"""
-        return f'''"""
-Aether API Python SDK
+        return '''"""
+Hakumo API Python SDK
 """
 
 import requests
 from typing import Dict, Any, Optional
 
 
-class AetherAPI:
- """Aether API клиент"""
+class HakumoAPI:
+ """Hakumo API клиент"""
  
  def __init__(self, api_key: str, base_url: str = '{api_base_url}'):
  self.api_key = api_key
@@ -407,10 +411,10 @@ class AetherAPI:
     def generate_javascript_sdk(self, api_base_url: str) -> str:
         """Генерировать JavaScript SDK"""
         return f'''/**
- * Aether API JavaScript SDK
+ * Hakumo API JavaScript SDK
  */
 
-class AetherAPI {{
+class HakumoAPI {{
  constructor(apiKey, baseUrl = '{api_base_url}') {{
  this.apiKey = apiKey;
  this.baseUrl = baseUrl;
@@ -465,7 +469,7 @@ class AetherAPI {{
  }}
 }}
 
-module.exports = AetherAPI;
+module.exports = HakumoAPI;
 '''
 
 # Глобальные экземпляры

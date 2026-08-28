@@ -1,0 +1,796 @@
+{% extends "base.html" %}
+{% block title %}Автоматика — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-wand-magic-sparkles"></i> Автоматика{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Автоматика</div>
+    <h1>Автоматика</h1>
+    <p class="lead">Ночной режим, анти-альт, приветствия PRO и мод-дайджест. Настройки пишутся в ту же базу, что читают модули бота — применяется сразу, без перезапуска.</p>
+  </div>
+</div>
+
+
+<style>
+  .au-wrap { padding: 6px 2px 34px; max-width: 1080px; }
+
+  /* ── сводная планка ── */
+  .au-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .au-strip .cell { background: linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border: 1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .au-strip .ico { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .au-strip .num { font-size: 19px; font-weight: 800; line-height: 1.1; }
+  .au-strip .lbl { font-size: 11px; opacity: .6; margin-top: 2px; }
+  .i-blue  { color: var(--ac-2); background: color-mix(in srgb, var(--ac) 14%, transparent); border: 1px solid color-mix(in srgb, var(--ac) 30%, transparent); }
+  .i-green { color: var(--ok); background: rgba(46,204,113,0.14); border: 1px solid rgba(46,204,113,0.32); }
+  .i-red   { color: #ff8a8a; background: rgba(231,76,60,0.13); border: 1px solid rgba(231,76,60,0.3); }
+
+  /* ── карточки модулей ── */
+  .au-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 16px; }
+  .au-card { position: relative; overflow: hidden; background: linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border: 1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; transition: border-color .18s, transform .18s, box-shadow .18s; }
+  .au-card:hover {box-shadow: 0 10px 26px rgba(0,0,0,0.28)}
+  .au-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--au-accent, var(--ac)); opacity: .85; }
+  .au-card.is-on  { border-color: rgba(46,204,113,0.28); }
+  .au-card-head { display: flex; align-items: center; gap: 12px; }
+  .au-ico { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; color: var(--au-accent); background: color-mix(in srgb, var(--au-accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--au-accent) 32%, transparent); }
+  .au-title-block { flex: 1; min-width: 0; }
+  .au-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 9px; }
+  .au-badge { font-size: 10.5px; font-weight: 700; letter-spacing: .4px; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .au-badge.on  { background: rgba(46,204,113,0.14); color: var(--ok); border: 1px solid rgba(46,204,113,0.35); }
+  .au-badge.off { background: color-mix(in srgb, var(--text) 6%, transparent); color: color-mix(in srgb, var(--text) 45%, transparent); border: 1px solid color-mix(in srgb, var(--text) 12%, transparent); }
+  .au-desc { font-size: 12px; opacity: .62; line-height: 1.5; margin-top: 3px; }
+
+  .au-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .au-row label { flex: 1; opacity: .85; }
+  .au-row input[type=number], .au-row input[type=text], .au-row select {
+    width: 190px; background: var(--surface-2); color: #e6e6e6; border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+    border-radius: 9px; padding: 8px 10px; font-size: 13px; outline: none; transition: border-color .15s;
+  }
+  .au-row input:focus, .au-row select:focus, .au-row textarea:focus { border-color: var(--au-accent, var(--ac)); }
+  .au-row textarea {
+    width: 100%; min-height: 96px; background: var(--surface-2); color: #e6e6e6;
+    border: 1px solid color-mix(in srgb, var(--text) 16%, transparent); border-radius: 9px; padding: 9px 11px;
+    font-size: 12.5px; font-family: inherit; outline: none; resize: vertical;
+  }
+
+  .au-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .au-switch input { opacity: 0; width: 0; height: 0; }
+  .au-slider { position: absolute; inset: 0; border-radius: 24px; background: color-mix(in srgb, var(--text) 12%, transparent); border: 1px solid color-mix(in srgb, var(--text) 18%, transparent); cursor: pointer; transition: .2s; }
+  .au-slider::before { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: .2s; }
+  .au-switch input:checked + .au-slider { background: var(--au-accent, var(--ac)); border-color: transparent; }
+  .au-switch input:checked + .au-slider::before { transform: translateX(20px); }
+
+  .au-foot { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+  .au-save { padding: 9px 18px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--au-accent) 45%, transparent); background: color-mix(in srgb, var(--au-accent) 12%, transparent); color: var(--au-accent); filter: brightness(1.35); font-size: 13px; font-weight: 700; cursor: pointer; transition: .15s; display: inline-flex; align-items: center; gap: 8px; }
+  .au-save:hover { background: var(--au-accent); color: #fff; filter: none; }
+  .au-save:disabled { opacity: .5; cursor: default; }
+  .au-msg { font-size: 12px; opacity: 0; transform: translateX(-4px); transition: .25s; }
+  .au-msg.show { opacity: 1; transform: translateX(0); }
+  .au-msg.ok { color: var(--ok); }
+  .au-msg.err { color: var(--err); }
+
+  .au-loading, .au-error { grid-column: 1/-1; text-align: center; padding: 42px 20px; opacity: .6; }
+  .au-loading i { font-size: 22px; display: block; margin-bottom: 12px; }
+
+  @media (max-width: 1000px) { .au-grid { grid-template-columns: 1fr; } }
+
+  /* ── v3: триггеры и предпросмотр дайджеста ── */
+  .au-sec { margin-top: 26px; }
+  .au-sec-title { font-size: 16px; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; gap: 9px; }
+  .au-sec-sub { font-size: 12.5px; opacity: .62; margin-bottom: 14px; }
+  .au-panel { background: linear-gradient(160deg, color-mix(in srgb, var(--text) 5%, transparent), color-mix(in srgb, var(--text) 2%, transparent)); border: 1px solid color-mix(in srgb, var(--text) 9%, transparent); border-radius: 14px; padding: 16px; }
+  .trg-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .trg-count { font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--ac) 35%, transparent); color: var(--ac-2); background: color-mix(in srgb, var(--ac) 8%, transparent); }
+  .trg-row { display: grid; grid-template-columns: minmax(110px,1fr) 2fr auto auto; gap: 10px; align-items: center; padding: 8px 10px; border-bottom: 1px dashed color-mix(in srgb, var(--text) 8%, transparent); font-size: 13px; }
+  .trg-row:last-child { border-bottom: none; }
+  .trg-trig { font-weight: 700; color: var(--text-1); word-break: break-word; }
+  .trg-resp { color: var(--text-3); white-space: pre-wrap; word-break: break-word; }
+  .trg-uses { font-size: 11px; opacity: .55; white-space: nowrap; }
+  .trg-exact { font-size: 10px; font-weight: 700; border: 1px solid rgba(95,208,138,.4); color: #7bd88f; border-radius: 4px; padding: 1px 5px; margin-left: 6px; }
+  .trg-del { background: none; border: 1px solid rgba(255,138,138,.35); color: #ff8a8a; border-radius: 8px; width: 28px; height: 28px; cursor: pointer; }
+  .trg-del:hover { background: rgba(255,138,138,.12); }
+  .trg-form { display: grid; grid-template-columns: 1fr 2fr auto auto; gap: 8px; margin-top: 14px; }
+  .au-input { background: color-mix(in srgb, var(--text) 5%, transparent); border: 1px solid color-mix(in srgb, var(--text) 12%, transparent); border-radius: 9px; color: var(--text-1); padding: 9px 11px; font-size: 13px; font-family: inherit; }
+  .au-input:focus { outline: none; border-color: color-mix(in srgb, var(--ac) 50%, transparent); }
+  .trg-cool { display: flex; align-items: center; gap: 8px; font-size: 12.5px; opacity: .85; }
+  .trg-cool input { width: 76px; }
+  .trg-exact-lbl { display: flex; align-items: center; gap: 6px; font-size: 12.5px; white-space: nowrap; cursor: pointer; }
+  .dg-embed { border-left: 4px solid #5865F2; background: rgba(88,101,242,.07); border-radius: 0 10px 10px 0; padding: 14px 16px; }
+  .dg-title { font-weight: 800; font-size: 14.5px; margin-bottom: 10px; }
+  .dg-field { margin-bottom: 10px; }
+  .dg-field-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; opacity: .55; margin-bottom: 3px; }
+  .dg-field-val { font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
+  .dg-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .trg-test { display: flex; gap: 8px; margin-top: 14px; }
+  .trg-io { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+  .trg-res { margin-top: 10px; border-left: 3px solid var(--ac,var(--ac)); background: color-mix(in srgb, var(--ac) 6%, transparent); border-radius: 0 8px 8px 0; padding: 10px 12px; font-size: 13px; color: var(--text-1); }
+  .trg-res.warn { border-left-color: var(--err); background: rgba(231,76,60,.07); }
+  .trg-res .rr { color: var(--text-2); white-space: pre-wrap; word-break: break-word; margin-top: 4px; }
+  .trg-res small { display: block; color: var(--text-3); margin-top: 6px; font-size: 11.5px; }
+  .cnt-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 2px; border-bottom: 1px dashed color-mix(in srgb, var(--text) 8%, transparent); font-size: 13px; }
+  .cnt-row:last-child { border-bottom: none; }
+  .cnt-render { font-weight: 700; color: var(--text-1); }
+  .cnt-meta { color: var(--text-3); font-size: 11.5px; white-space: nowrap; }
+  .cnt-missing { color: #ff8a7a; }
+  .au-link-btn { text-decoration: none; display: inline-flex; align-items: center; gap: 7px; }
+  .au-night { display: flex; align-items: center; gap: 9px; margin: 10px 0 0; font-size: 12.5px; color: var(--text-3); padding: 8px 12px; border: 1px dashed color-mix(in srgb, var(--text) 12%, transparent); border-radius: 10px; }
+  .au-night i { color: #7f8ce0; }
+  .au-night b { color: var(--text-2); }
+  .wp-tpl { border-left: 3px solid #5fd08a; background: rgba(95,208,138,.06); border-radius: 0 8px 8px 0; padding: 10px 12px; margin-bottom: 8px; }
+  .wp-src { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+  @media (max-width: 760px) { .trg-form { grid-template-columns: 1fr; } .trg-row { grid-template-columns: 1fr auto; } }
+</style>
+
+<div class="au-wrap">
+  <div class="au-strip" id="au-strip">
+    <div class="cell"><div class="ico i-blue"><i class="fas fa-cubes"></i></div><div><div class="num" id="au-total">—</div><div class="lbl">Модулей</div></div></div>
+    <div class="cell"><div class="ico i-green"><i class="fas fa-check-circle"></i></div><div><div class="num" id="au-on">—</div><div class="lbl">Активно</div></div></div>
+    <div class="cell"><div class="ico i-red"><i class="fas fa-power-off"></i></div><div><div class="num" id="au-off">—</div><div class="lbl">На паузе</div></div></div>
+  </div>
+  <div class="au-night" id="au-night-phase" style="display:none"></div>
+
+  <div class="au-grid" id="au-grid">
+    <div class="au-loading">
+      <i class="fas fa-circle-notch fa-spin"></i> Загружаем настройки модулей…
+    </div>
+  </div>
+
+  <!-- v3: автоответы по триггерам -->
+  <div class="au-sec" id="triggers-sec">
+    <div class="au-sec-title"><i class="fas fa-bolt"></i> Автоответы по триггерам</div>
+    <div class="au-sec-sub">Бот сам отвечает на ключевые слова в чате («правила», «ip»). Те же правила, что и у команды /триг — одно хранилище на двоих.</div>
+    <div class="au-panel">
+      <div class="trg-head-row">
+        <span class="trg-count" id="trg-count">—</span>
+        <span class="trg-cool">Кулдаун:
+          <input type="number" class="au-input" id="trg-cooldown" min="0" max="3600" value="30" aria-label="Кулдаун в секундах"> сек
+          <button type="button" class="au-save" onclick="trgCooldown()" aria-label="Подтвердить"><i class="fas fa-check"></i></button>
+        </span>
+      </div>
+      <div id="trg-list"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Загружаем…</div></div>
+      <div class="trg-form">
+        <input type="text" class="au-input" id="trg-new-trigger" placeholder="Триггер: правила" aria-label="Триггер">
+        <input type="text" class="au-input" id="trg-new-response" placeholder="Ответ: ссылка на правила…" aria-label="Ответ">
+        <label class="trg-exact-lbl" title="Срабатывать только на слово целиком, а не на подстроку"><input type="checkbox" id="trg-new-exact"> точное слово</label>
+        <button type="button" class="au-save" onclick="trgAdd()"><i class="fas fa-plus"></i> Добавить</button>
+      </div>
+      <div class="trg-test">
+        <input type="text" class="au-input" id="trg-test-text" placeholder="Сухой прогон: напишите сообщение, напр. «скиньте правила»" aria-label="Тестовое сообщение">
+        <button type="button" class="au-save" onclick="trgTest()"><i class="fas fa-flask"></i> Прогнать</button>
+      </div>
+      <div id="trg-test-result"></div>
+      <div class="trg-io">
+        <a class="au-save au-link-btn" href="/api/automation/triggers/export" download><i class="fas fa-download"></i> Экспорт JSON</a>
+        <button type="button" class="au-save" onclick="trgImportToggle()"><i class="fas fa-upload"></i> Импорт</button>
+      </div>
+      <div class="trg-io-box" id="trg-import-box" style="display:none">
+        <textarea class="au-input" id="trg-import-text" rows="5" placeholder='Вставьте JSON экспорта: {"items": [{"trigger": ..., "response": ...}]}' aria-label="JSON импорта"></textarea>
+        <select class="au-input" id="trg-import-mode" aria-label="Режим импорта">
+          <option value="merge">Объединить с текущими</option>
+          <option value="replace">Заменить все триггеры</option>
+        </select>
+        <button type="button" class="au-save" onclick="trgImportRun()"><i class="fas fa-check"></i> Импортировать</button>
+        <div class="au-sec-sub" id="trg-import-result" style="margin:0"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #45: режимы каналов (медиа-лок) -->
+  <div class="au-sec" id="medialock-sec">
+    <div class="au-sec-title"><i class="fas fa-images"></i> Режимы каналов (медиа-лок)</div>
+    <div class="au-sec-sub">Каналы под автоконтролем: «только медиа», «только текст», «только ссылки». Нарушение бот удаляет и вежливо пишет автору в ЛС (не чаще раза в минуту). Одно хранилище с командой /medialock.</div>
+    <div class="au-panel">
+      <div id="ml-list"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Загружаем…</div></div>
+      <div class="trg-form" style="grid-template-columns:1.2fr 1.1fr auto auto">
+        <select class="au-input" id="ml-channel" aria-label="Канал медиа-замка"></select>
+        <select class="au-input" id="ml-mode" aria-label="Режим"></select>
+        <label class="trg-exact-lbl" title="Модераторы и администраторы не подпадают под замок"><input type="checkbox" id="ml-exempt" checked> моды свободны</label>
+        <button type="button" class="au-save" onclick="mlSet()"><i class="fas fa-lock"></i> Поставить</button>
+      </div>
+      <div id="ml-msg" class="au-sec-sub" style="margin:8px 0 0"></div>
+    </div>
+  </div>
+
+  <!-- #46-47: ночная сводка -->
+  <div class="au-sec" id="nightsum-sec">
+    <div class="au-sec-title"><i class="fas fa-moon"></i> Ночная сводка</div>
+    <div class="au-sec-sub">Раз в сутки (в 00:00 по выбранному смещению) бот рисует «золотую карту дня» в заданный канал. Настройки и предпросмотр статистики — здесь.</div>
+    <div class="au-panel">
+      <div class="trg-head-row" style="margin-bottom:8px">
+        <span class="trg-count" id="ns-status">—</span>
+        <span class="trg-cool" id="ns-last"></span>
+      </div>
+      <div class="trg-form" style="grid-template-columns:auto 1fr 1fr auto;align-items:center">
+        <label class="trg-exact-lbl"><input type="checkbox" id="ns-enabled"> включена</label>
+        <select class="au-input" id="ns-channel" aria-label="Канал сводки"></select>
+        <input type="number" class="au-input" id="ns-tz" placeholder="UTC+… (напр. 3)" min="-12" max="14" aria-label="Смещение часового пояса">
+        <button type="button" class="au-save" onclick="nsSave()"><i class="fas fa-check"></i> Сохранить</button>
+      </div>
+      <div id="ns-msg" class="au-sec-sub" style="margin:8px 0 0"></div>
+      <div style="margin-top:12px">
+        <button type="button" class="au-save" onclick="nsPreview()"><i class="fas fa-rotate"></i> Статистика дня</button>
+        <div id="ns-preview" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #49: предпросмотр приветствий PRO -->
+  <div class="au-sec" id="welcome-sec">
+    <div class="au-sec-title"><i class="fas fa-hand-sparkles"></i> Приветствия PRO · предпросмотр</div>
+    <div class="au-sec-sub">Каждый шаблон, подставленный тем же рендером, что шлёт бот новичку. Пример — участник «Новенький».</div>
+    <div class="au-panel">
+      <div class="dg-controls">
+        <button type="button" class="au-save" onclick="welcomePreview()"><i class="fas fa-rotate"></i> Обновить</button>
+        <span class="au-sec-sub" id="wp-note" style="margin:0"></span>
+      </div>
+      <div id="wp-list"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Рендерим…</div></div>
+    </div>
+  </div>
+
+  <!-- v3: предпросмотр мод-дайджеста -->
+  <div class="au-sec" id="digest-sec">
+    <div class="au-sec-title"><i class="fas fa-newspaper"></i> Мод-дайджест · предпросмотр</div>
+    <div class="au-sec-sub">Та же сводка, которую бот шлёт в Discord, — смотрите до включения рассылки.</div>
+    <div class="au-panel">
+      <div class="dg-controls">
+        <select class="au-input" id="dg-days" aria-label="Период">
+          <option value="7">за 7 дней</option>
+          <option value="14">за 14 дней</option>
+          <option value="30">за 30 дней</option>
+        </select>
+        <button type="button" class="au-save" onclick="loadDigestPreview()"><i class="fas fa-rotate"></i> Обновить</button>
+      </div>
+      <div class="dg-grid" id="dg-grid"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Считаем сводку…</div></div>
+    </div>
+  </div>
+  <!-- #50: перенос автоматики -->
+  <div class="au-sec" id="transfer-sec">
+    <div class="au-sec-title"><i class="fas fa-box-open"></i> Перенос автоматики</div>
+    <div class="au-sec-sub">Все модули, триггеры, замки каналов и ночная сводка одним JSON — удобно переехать на другой сервер или откатиться после экспериментов. Импорт мягкий: доливает к текущему, ничего не удаляет.</div>
+    <div class="au-panel">
+      <div class="trg-io" style="margin-top:0">
+        <a class="au-save au-link-btn" href="/api/automation/export-all" download><i class="fas fa-download"></i> Экспорт всего</a>
+        <button type="button" class="au-save" onclick="trImportToggle()"><i class="fas fa-upload"></i> Импорт</button>
+      </div>
+      <div class="trg-io-box" id="tr-import-box" style="display:none;margin-top:10px">
+        <textarea class="au-input" id="tr-import-text" rows="6" placeholder='Вставьте JSON из «Экспорт всего»' aria-label="JSON переноса автоматики"></textarea>
+        <button type="button" class="au-save" onclick="trImportDo()"><i class="fas fa-check"></i> Применить перенос</button>
+        <div class="au-sec-sub" id="tr-import-result" style="margin:0"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/pickers.js"></script>
+<script>
+var GID = {{ (guild_id|string)|tojson }};
+
+/* каналы только из живых списков — ручной ввод ID убран по заказу */
+attachSelectPicker(document.getElementById('ml-channel'),
+  { search: true, gid: GID, kind: 'text', noneLabel: '— выберите канал —' });
+function nsEnsurePicker(){
+  var el = document.getElementById('ns-channel');
+  if (el && el.options.length <= 1) {
+    attachSelectPicker(el, { search: true, gid: GID, kind: 'text',
+      noneLabel: '— канал логов —', noneValue: '0' });
+  }
+}
+nsEnsurePicker();
+
+var AU_ACCENTS = {
+  night_mode:   '#7f8ce0',
+  anti_alt:     '#ff8a80',
+  welcome_pro:  '#5fd08a',
+  mod_digest:   '#4f46e5',
+  server_stats: '#1abc9c'
+};
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function loadAutomation(){
+  var grid = document.getElementById('au-grid');
+  try {
+    var d = await fetch('/api/automation').then(function(r){ return r.json(); });
+    if(!d.success){ throw new Error(d.error || 'ошибка загрузки'); }
+    var keys = Object.keys(d.modules);
+    var onCount = keys.filter(function(k){ return d.modules[k].values.enabled; }).length;
+    document.getElementById('au-total').textContent = keys.length;
+    document.getElementById('au-on').textContent = onCount;
+    document.getElementById('au-off').textContent = keys.length - onCount;
+
+    grid.innerHTML = keys.map(function(key){
+      var m = d.modules[key];
+      var accent = AU_ACCENTS[key] || 'var(--ac)';
+      var on = !!m.values.enabled;
+      var rows = m.fields.map(function(f){ return fieldRow(key, f, m.values[f.key]); }).join('');
+      return '<div class="au-card '+(on?'is-on':'')+'" data-module="'+esc(key)+'" style="--au-accent:'+accent+'">'
+        + '<div class="au-card-head">'
+        + '<div class="au-ico"><i class="fas '+esc(m.icon)+'"></i></div>'
+        + '<div class="au-title-block"><div class="au-title">'+esc(m.title)
+        + '<span class="au-badge '+(on?'on':'off')+'">'+(on?'ВКЛЮЧЁН':'ВЫКЛЮЧЕН')+'</span></div>'
+        + '<div class="au-desc">'+esc(m.desc)+'</div></div></div>'
+        + rows
+        + '<div class="au-foot"><button type="button" class="au-save" onclick="saveModule(\''+esc(key)+'\')"><i class="fas fa-check"></i> Сохранить</button>'
+        + '<span class="au-msg" id="au-msg-'+esc(key)+'"></span></div>'
+        + '</div>';
+    }).join('');
+  } catch(e){
+    grid.innerHTML = '<div class="au-error"><i class="fas fa-triangle-exclamation"></i> Не удалось загрузить настройки: '+esc(e.message)+'</div>';
+  }
+}
+
+function fieldRow(modKey, f, val){
+  var id = 'au-'+modKey+'-'+f.key;
+  if(f.kind === 'bool'){
+    return '<div class="au-row"><label for="'+id+'">'+esc(f.label)+'</label>'
+      + '<span class="au-switch"><input type="checkbox" id="'+id+'" data-kind="bool"'+(val?' checked':'')+'><span class="au-slider" onclick="document.getElementById(\''+id+'\').click()"></span></span></div>';
+  }
+  if(f.kind === 'int'){
+    var mm = '';
+    if(f.min !== undefined){ mm += ' min="'+f.min+'"'; }
+    if(f.max !== undefined){ mm += ' max="'+f.max+'"'; }
+    return '<div class="au-row"><label for="'+id+'">'+esc(f.label)+'</label>'
+      + '<input type="number" id="'+id+'" data-kind="int" value="'+esc(val===undefined||val===null?'':val)+'"'+mm+'></div>';
+  }
+  if(f.kind === 'select'){
+    var opts = (f.options||[]).map(function(o){
+      return '<option value="'+esc(o[0])+'"'+(val===o[0]?' selected':'')+'>'+esc(o[1])+'</option>';
+    }).join('');
+    return '<div class="au-row"><label for="'+id+'">'+esc(f.label)+'</label>'
+      + '<select id="'+id+'" data-kind="select">'+opts+'</select></div>';
+  }
+  if(f.kind === 'templates'){
+    return '<div class="au-row" style="flex-direction:column;align-items:stretch;gap:7px;">'
+      + '<label for="'+id+'">'+esc(f.label)+'</label>'
+      + '<textarea id="'+id+'" data-kind="templates">'+esc(val||'')+'</textarea></div>';
+  }
+  if(f.kind === 'counters'){
+    return '<div class="au-row" style="flex-direction:column;align-items:stretch;gap:7px;">'
+      + '<label for="'+id+'">'+esc(f.label)+'</label>'
+      + '<textarea id="'+id+'" data-kind="counters" placeholder="123456789012345678 | Участники: {members}">'+esc(val||'')+'</textarea>'
+      + '<div class="au-sec-sub" style="margin:0">Каждая строка: ID голосового канала, «|», шаблон с переменной — {members} {channels} {online} {boosts} и др.</div>'
+      + '<div><button type="button" class="au-save" onclick="countersPreview(\''+esc(modKey)+'\')"><i class="fas fa-eye"></i> Живой предпросмотр</button></div>'
+      + '<div id="'+id+'-preview" style="margin-top:4px"></div></div>';
+  }
+  return '<div class="au-row"><label for="'+id+'">'+esc(f.label)+'</label>'
+    + '<input type="text" id="'+id+'" data-kind="text" value="'+esc(val||'')+'"></div>';
+}
+
+async function saveModule(key){
+  var card = document.querySelector('.au-card[data-module="'+key+'"]');
+  var btn = card.querySelector('.au-save');
+  var msg = document.getElementById('au-msg-'+key);
+  var payload = {};
+  card.querySelectorAll('input, select, textarea').forEach(function(el){
+    if(!el.id || el.id.indexOf('au-'+key+'-') !== 0){ return; }
+    var kind = el.getAttribute('data-kind');
+    var k = el.id.substring(('au-'+key+'-').length);
+    if(kind === 'bool'){ payload[k] = el.checked; }
+    else if(kind === 'int'){ payload[k] = el.value === '' ? 0 : parseInt(el.value, 10); }
+    else { payload[k] = el.value; }
+  });
+  btn.disabled = true;
+  msg.className = 'au-msg show'; msg.textContent = 'Сохраняем…';
+  try {
+    var r = await fetch('/api/automation/'+key, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    }).then(function(x){ return x.json(); });
+    if(r.success){
+      msg.className = 'au-msg show ok';
+      msg.innerHTML = '<i class="fas fa-check"></i> Сохранено — бот подхватит сам';
+      if(r.issues && r.issues.length){
+        msg.innerHTML += ' · пропущено строк: ' + r.issues.length + ' (' + esc(r.issues[0]) + (r.issues.length > 1 ? ', …' : '') + ')';
+      }
+      // обновляем сводную планку и бейдж карточки, не пересобирая форму
+      refreshStrip();
+      var badge = card.querySelector('.au-badge');
+      var nowOn = !!r.values.enabled;
+      badge.className = 'au-badge ' + (nowOn ? 'on' : 'off');
+      badge.textContent = nowOn ? 'ВКЛЮЧЁН' : 'ВЫКЛЮЧЕН';
+      card.classList.toggle('is-on', nowOn);
+    } else {
+      msg.className = 'au-msg show err';
+      msg.textContent = r.error || 'Ошибка сохранения';
+    }
+  } catch(e){
+    msg.className = 'au-msg show err';
+    msg.textContent = 'Сеть: ' + e.message;
+  }
+  btn.disabled = false;
+  setTimeout(function(){ msg.classList.remove('show'); }, 4000);
+}
+
+async function refreshStrip(){
+  try {
+    var d = await fetch('/api/automation').then(function(r){ return r.json(); });
+    if(!d.success){ return; }
+    var keys = Object.keys(d.modules);
+    var onCount = keys.filter(function(k){ return d.modules[k].values.enabled; }).length;
+    document.getElementById('au-total').textContent = keys.length;
+    document.getElementById('au-on').textContent = onCount;
+    document.getElementById('au-off').textContent = keys.length - onCount;
+  } catch(e) { /* стрип останется с прошлыми числами — не критично */ }
+}
+
+/* ── v3: триггеры ── */
+async function loadTriggers(){
+  var box = document.getElementById('trg-list');
+  if(!box) return;
+  try {
+    var d = await fetch('/api/automation/triggers/state').then(function(r){ return r.json(); });
+    if(!d.success){ throw new Error(d.error || 'ошибка'); }
+    window._trgItems = (d.state && d.state.items) || [];
+    var items = (d.state && d.state.items) || [];
+    document.getElementById('trg-count').textContent = items.length + ' / ' + d.max;
+    document.getElementById('trg-cooldown').value = (d.state && d.state.cooldown) || 30;
+    box.innerHTML = items.length ? items.map(function(t){
+      return '<div class="trg-row">'
+        + '<div class="trg-trig">№'+t.id+' · '+esc(t.trigger)+(t.exact?'<span class="trg-exact">ТОЧНО</span>':'')+'</div>'
+        + '<div class="trg-resp">'+esc(t.response)+'</div>'
+        + '<div class="trg-uses">'+esc(t.uses)+' сраб.</div>'
+        + '<button type="button" class="trg-del" onclick="trgRemove('+t.id+')" title="Удалить №'+t.id+'" aria-label="Удалить"><i class="fas fa-trash-can"></i></button>'
+        + '</div>';
+    }).join('') : '<div class="au-sec-sub" style="margin:6px 0 2px">Триггеров пока нет — добавьте первый ниже.</div>';
+  } catch(e){
+    box.innerHTML = '<div class="au-error">Не удалось загрузить триггеры: '+esc(e.message)+'</div>';
+  }
+}
+
+async function trgAdd(){
+  var trig = document.getElementById('trg-new-trigger').value;
+  var resp = document.getElementById('trg-new-response').value;
+  var exact = document.getElementById('trg-new-exact').checked;
+  var r = await fetch('/api/automation/triggers/add', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({trigger: trig, response: resp, exact: exact})
+  });
+  var d = await r.json();
+  if(r.ok && d.success){
+    document.getElementById('trg-new-trigger').value = '';
+    document.getElementById('trg-new-response').value = '';
+    document.getElementById('trg-new-exact').checked = false;
+  }
+  loadTriggers();
+}
+
+async function trgRemove(id){
+  var gone = (window._trgItems || []).find(function(t){ return t.id === id; });
+  var r = await fetch('/api/automation/triggers/remove', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id: id})
+  });
+  await r.json();
+  loadTriggers();
+  if (gone && typeof window.uxUndo === 'function') {
+    window.uxUndo('Триггер «' + gone.trigger + '» удалён', async function () {
+      await fetch('/api/automation/triggers/add', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({trigger: gone.trigger, response: gone.response, exact: !!gone.exact})
+      });
+      loadTriggers();
+    });
+  }
+}
+
+async function trgCooldown(){
+  var secs = parseInt(document.getElementById('trg-cooldown').value, 10);
+  var r = await fetch('/api/automation/triggers/cooldown', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({seconds: secs})
+  });
+  await r.json();
+  loadTriggers();
+}
+
+/* ── v3: предпросмотр дайджеста ── */
+async function loadDigestPreview(){
+  var grid = document.getElementById('dg-grid');
+  if(!grid) return;
+  var days = document.getElementById('dg-days').value;
+  try {
+    var d = await fetch('/api/automation/digest-preview?days='+encodeURIComponent(days)).then(function(r){ return r.json(); });
+    if(!d.success){ throw new Error(d.error || 'ошибка'); }
+    var e = d.embed;
+    var fields = (e.fields || []).map(function(fv){
+      return '<div class="dg-field"><div class="dg-field-name">'+esc(fv[0])+'</div>'
+        + '<div class="dg-field-val">'+esc(fv[1])+'</div></div>';
+    }).join('');
+    grid.innerHTML = '<div class="dg-embed"><div class="dg-title">'+esc(e.title)+'</div>'+fields+'</div>';
+    if(d.summary && d.summary.total === 0){
+      grid.innerHTML += '<div class="au-sec-sub" style="margin-top:10px">Событий за период нет — дайджест читает audit_log (журнал модерации).</div>';
+    }
+  } catch(e2){
+    grid.innerHTML = '<div class="au-error">Не удалось собрать предпросмотр: '+esc(e2.message)+'</div>';
+  }
+}
+
+/* ── #42: сухой прогон триггера ── */
+async function trgTest(){
+  var text = document.getElementById('trg-test-text').value.trim();
+  var box = document.getElementById('trg-test-result');
+  if(!text){
+    box.innerHTML = '<div class="trg-res warn">Введите текст сообщения для прогона.</div>';
+    return;
+  }
+  var r = await fetch('/api/automation/triggers/test', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text: text})
+  }).then(function(x){ return x.json(); });
+  if(!r.success){
+    box.innerHTML = '<div class="trg-res warn">'+esc(r.error || 'Ошибка прогона')+'</div>';
+    return;
+  }
+  var html;
+  if(r.matched){
+    html = '<div class="trg-res"><i class="fas fa-bolt"></i> Ответит триггер №'+r.winner.id+(r.winner.exact?' <span class="trg-exact">ТОЧНО</span>':'')+': «'+esc(r.winner.trigger)+'»'
+      + '<div class="rr">'+esc(r.winner.response)+'</div>';
+    if(r.hits_total > 1){
+      var rest = r.hits.filter(function(h){ return h.id !== r.winner.id; })
+        .map(function(h){ return '№'+h.id+' «'+esc(h.trigger)+'»'; }).join(', ');
+      html += '<small>Совпали бы, но ждут своей очереди (срабатывает самое длинное слово): '+rest+'</small>';
+    }
+  } else if(r.on_cooldown){
+    html = '<div class="trg-res warn"><i class="fas fa-hourglass-half"></i> Совпадение есть, но триггер на кулдауне ('+r.cooldown+' сек) — бот промолчит.';
+  } else {
+    html = '<div class="trg-res warn"><i class="fas fa-minus-circle"></i> Ни один триггер не совпал с сообщением.';
+  }
+  if(!r.cooldown_known){
+    html += '<small>Бот офлайн — живые кулдауны недоступны, прогон считался без их учёта.</small>';
+  }
+  box.innerHTML = html + '</div>';
+}
+
+/* ── #44: экспорт / импорт ── */
+function trgImportToggle(){
+  var box = document.getElementById('trg-import-box');
+  box.style.display = (box.style.display === 'none' || !box.style.display) ? 'grid' : 'none';
+}
+
+async function trgImportRun(){
+  var mode = document.getElementById('trg-import-mode').value;
+  if(mode === 'replace' && window.askConfirm){
+    window.askConfirm('Заменить все триггеры?',
+      'Текущие правила будут удалены и заменены содержимым файла.',
+      function(){ trgImportDo(mode); },
+      {danger: true, okText: 'Заменить', icon_fa: 'fa-upload'});
+    return;
+  }
+  await trgImportDo(mode);
+}
+
+async function trgImportDo(mode){
+  var res = document.getElementById('trg-import-result');
+  var raw;
+  try {
+    raw = JSON.parse(document.getElementById('trg-import-text').value || '{}');
+  } catch(e){
+    res.textContent = 'Это не JSON: ' + e.message;
+    return;
+  }
+  var r = await fetch('/api/automation/triggers/import', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({mode: mode, items: raw.items, cooldown: raw.cooldown})
+  }).then(function(x){ return x.json(); });
+  if(!r.success){
+    res.textContent = r.error || 'Ошибка импорта';
+    return;
+  }
+  var txt = 'Добавлено: ' + r.added + (r.skipped_total ? ' · пропущено: ' + r.skipped_total : '');
+  if(r.skipped && r.skipped.length){
+    txt += ' (' + r.skipped.slice(0, 3).map(function(s){ return '«' + s.trigger + '»: ' + s.reason; }).join('; ') + (r.skipped_total > 3 ? '…' : '') + ')';
+  }
+  res.textContent = txt;
+  document.getElementById('trg-import-text').value = '';
+  loadTriggers();
+}
+
+/* ── #43: живой предпросмотр счётчиков ── */
+async function countersPreview(modKey){
+  var box = document.getElementById('au-' + modKey + '-channels-preview');
+  if(!box){ return; }
+  box.innerHTML = '<div class="au-sec-sub" style="margin:0"><i class="fas fa-circle-notch fa-spin"></i> Считаем по живому серверу…</div>';
+  var x = await fetch('/api/automation/counters-preview');
+  var d = await x.json();
+  if(!x.ok || !d.success){
+    box.innerHTML = '<div class="au-sec-sub" style="margin:0">' + esc(d.error || 'Предпросмотр недоступен') + '</div>';
+    return;
+  }
+  if(!d.rows.length){
+    box.innerHTML = '<div class="au-sec-sub" style="margin:0">Счётчики не заданы — добавьте строки выше и сохраните.</div>';
+    return;
+  }
+  var html = d.rows.map(function(row){
+    var meta = row.channel_name ? '#' + esc(row.channel_name) : 'ID ' + esc(row.channel_id);
+    if(row.missing){ meta += ' — <span class="cnt-missing">канала нет на сервере</span>'; }
+    return '<div class="cnt-row"><span class="cnt-render">'+esc(row.rendered)+'</span><span class="cnt-meta">'+meta+'</span></div>';
+  }).join('');
+  if(!d.enabled){
+    html += '<div class="au-sec-sub" style="margin:6px 0 0">Модуль выключен — сейчас бот имена не обновляет.</div>';
+  }
+  box.innerHTML = html;
+}
+
+/* ── #45: медиа-лок каналов ── */
+function mlRender(items){
+  var box = document.getElementById('ml-list');
+  if(!items.length){
+    box.innerHTML = '<div class="au-sec-sub" style="margin:0">Замков нет — все каналы живут обычной жизнью.</div>';
+    return;
+  }
+  box.innerHTML = items.map(function(r){
+    return '<div class="trg-row" style="grid-template-columns:minmax(110px,1fr) 2fr auto auto">'
+      + '<div class="trg-trig">' + (r.channel_name ? '#'+esc(r.channel_name) : 'ID '+esc(r.channel_id)) + '</div>'
+      + '<div class="trg-resp">' + esc(r.mode_label) + ' — ' + esc(r.desc) + (r.exempt_mods ? ' · моды свободны' : ' · моды тоже под замком') + '</div>'
+      + '<span></span>'
+      + '<button type="button" class="trg-del" title="Снять замок" onclick="mlRemove(\'' + esc(r.channel_id) + '\')"><i class="fas fa-xmark"></i></button></div>';
+  }).join('');
+}
+
+async function mlLoad(){
+  var d = await fetch('/api/automation/medialock').then(function(r){ return r.json(); });
+  if(!d.success){ return; }
+  var sel = document.getElementById('ml-mode');
+  sel.innerHTML = d.modes.map(function(m){ return '<option value="'+esc(m.key)+'">'+esc(m.label)+'</option>'; }).join('');
+  mlRender(d.channels);
+}
+
+async function mlSet(){
+  var msg = document.getElementById('ml-msg');
+  var cid = document.getElementById('ml-channel').value.trim();
+  var d = await fetch('/api/automation/medialock/set', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({channel_id: cid,
+                          mode: document.getElementById('ml-mode').value,
+                          exempt_mods: document.getElementById('ml-exempt').checked})
+  }).then(function(x){ return x.json(); });
+  if(!d.success){ msg.textContent = d.error || 'Ошибка'; return; }
+  document.getElementById('ml-channel').value = '';
+  msg.textContent = '';
+  mlRender(d.channels);
+}
+
+async function mlRemove(cid){
+  var d = await fetch('/api/automation/medialock/remove', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({channel_id: cid})
+  }).then(function(x){ return x.json(); });
+  if(!d.success){ document.getElementById('ml-msg').textContent = d.error || 'Ошибка'; return; }
+  mlRender(d.channels);
+  if(window.uxUndo && d.removed){
+    window.uxUndo('Замок с канала снят', async function(){
+      await fetch('/api/automation/medialock/set', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel_id: d.removed.channel_id, mode: d.removed.mode,
+                              exempt_mods: d.removed.exempt_mods})
+      });
+      mlLoad();
+    });
+  }
+}
+
+/* ── #46-47: ночная сводка ── */
+var NS_LABELS = [['warns','Варны'],['bans','Баны'],['kicks','Кики'],['mutes','Муты'],
+                 ['tagjail','Tag Jail'],['ghost','Ghost-пинги'],['errors','Ошибки бота']];
+
+function nsRender(d){
+  document.getElementById('ns-enabled').checked = !!d.enabled;
+  document.getElementById('ns-channel').value = d.channel_id;
+  document.getElementById('ns-tz').value = d.tz_offset;
+  document.getElementById('ns-status').textContent = (d.enabled ? 'Включена' : 'На паузе') + ' · UTC' + (d.tz_offset >= 0 ? '+' : '') + d.tz_offset;
+  document.getElementById('ns-last').textContent = d.last_sent ? 'Последняя: ' + d.last_sent : 'Ещё ни разу не уходила';
+  nsEnsurePicker();
+}
+
+async function nsLoad(){
+  var d = await fetch('/api/automation/night-summary').then(function(r){ return r.json(); });
+  if(d.success){ nsRender(d); }
+}
+
+async function nsSave(){
+  var msg = document.getElementById('ns-msg');
+  var d = await fetch('/api/automation/night-summary', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({enabled: document.getElementById('ns-enabled').checked,
+                          channel_id: document.getElementById('ns-channel').value,
+                          tz_offset: document.getElementById('ns-tz').value})
+  }).then(function(x){ return x.json(); });
+  if(!d.success){ msg.textContent = d.error || 'Ошибка сохранения'; return; }
+  msg.textContent = 'Сохранено — бот подхватит сам';
+  nsRender(d);
+}
+
+async function nsPreview(){
+  var box = document.getElementById('ns-preview');
+  box.innerHTML = '<div class="au-sec-sub" style="margin:0">Считаем день…</div>';
+  var x = await fetch('/api/automation/night-summary/preview');
+  var d = await x.json();
+  if(!x.ok || !d.success){
+    box.innerHTML = '<div class="au-sec-sub" style="margin:0">' + esc(d.error || 'Недоступно') + '</div>';
+    return;
+  }
+  var s = d.stats || {};
+  var tz = 'UTC' + (d.tz_offset >= 0 ? '+' : '') + d.tz_offset;
+  var html = '<div class="au-sec-sub" style="margin:0 0 6px">День ' + esc(d.date) + ' (' + tz + ')' + (d.enabled ? '' : ' · модуль на паузе') + ':</div>';
+  html += '<div class="au-strip" style="margin:0">' + NS_LABELS.map(function(p){
+    return '<div class="cell"><div><div class="num">' + (s[p[0]] || 0) + '</div><div class="lbl">' + esc(p[1]) + '</div></div></div>';
+  }).join('') + '</div>';
+  if(s.top_mod_id){
+    html += '<div class="au-sec-sub" style="margin:8px 0 0">Модератор дня: ID ' + esc(s.top_mod_id) + ' (' + s.top_mod_count + ' дел)</div>';
+  }
+  box.innerHTML = html;
+}
+
+/* ── #48: фаза ночного режима ── */
+async function nightPhase(){
+  var box = document.getElementById('au-night-phase');
+  var d = await fetch('/api/automation/night-phase').then(function(r){ return r.json(); });
+  if(!d.success){ return; }
+  var when;
+  if(d.next_change_in_s == null){
+    when = 'окно не задано (начало = конец)';
+  } else {
+    var s = d.next_change_in_s, h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60);
+    when = (d.next_change === 'утро' ? 'утро через ' : 'ночь через ') + (h ? h + 'ч ' : '') + m + 'м';
+  }
+  box.style.display = 'flex';
+  box.innerHTML = '<i class="fas fa-moon"></i><span>Ночной режим: <b>' + (d.is_night ? 'сейчас ночь' : 'сейчас день') + '</b>'
+    + ' · ' + esc(d.window) + ' · ' + esc(when) + (d.enabled ? '' : ' · режим на паузе') + '</span>';
+}
+
+/* ── #49: предпросмотр приветствий ── */
+async function welcomePreview(){
+  var box = document.getElementById('wp-list');
+  var d = await fetch('/api/automation/welcome-preview').then(function(r){ return r.json(); });
+  if(!d.success){ box.innerHTML = '<div class="au-error">Не удалось отрендерить.</div>'; return; }
+  document.getElementById('wp-note').textContent = d.sample
+    ? ('Пример: @Новенький, сервер «' + d.server + '», №' + d.count)
+    : 'Бот офлайн — пример с примерными данными (128-й житель)';
+  var html = d.templates.map(function(tpl){
+    return '<div class="wp-tpl"><div>' + esc(tpl.rendered) + '</div>'
+      + '<div class="wp-src">Шаблон №' + tpl.index + ': ' + esc(tpl.source) + '</div></div>';
+  }).join('');
+  if(d.dm_enabled && d.dm_rendered){
+    html += '<div class="wp-tpl" style="border-left-color:var(--ac);background:color-mix(in srgb, var(--ac) 6%, transparent)"><div><i class="fas fa-envelope"></i> ЛС новичку: ' + esc(d.dm_rendered) + '</div></div>';
+  }
+  box.innerHTML = html || '<div class="au-sec-sub" style="margin:0">Шаблонов нет — добавьте их в карточке «Приветствия PRO».</div>';
+}
+
+/* ── #50: перенос автоматики ── */
+function trImportToggle(){
+  var box = document.getElementById('tr-import-box');
+  box.style.display = (box.style.display === 'none' || !box.style.display) ? 'grid' : 'none';
+}
+
+async function trImportDo(){
+  var res = document.getElementById('tr-import-result');
+  var raw;
+  try {
+    raw = JSON.parse(document.getElementById('tr-import-text').value || '{}');
+  } catch(e){
+    res.textContent = 'Это не JSON: ' + e.message;
+    return;
+  }
+  var d = await fetch('/api/automation/import-all', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(raw)
+  }).then(function(x){ return x.json(); });
+  if(!d.success){ res.textContent = d.error || 'Ошибка переноса'; return; }
+  var a = d.applied;
+  var txt = 'Применено: модулей ' + a.modules.length + ' · триггеров ' + a.triggers + ' · замков ' + a.medialock + (a.night_summary ? ' · сводка' : '');
+  if(d.skipped_total){ txt += ' · пропущено: ' + d.skipped_total; }
+  if(d.issues && d.issues.length){ txt += ' · замечания: ' + d.issues[0]; }
+  res.textContent = txt;
+  document.getElementById('tr-import-text').value = '';
+  loadAutomation(); loadTriggers(); mlLoad(); nsLoad(); nightPhase();
+}
+
+loadAutomation();
+loadTriggers();
+loadDigestPreview();
+mlLoad();
+nsLoad();
+nightPhase();
+welcomePreview();
+</script>
+{% endblock %}

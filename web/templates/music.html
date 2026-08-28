@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Музыка — Панель Hakumo{% endblock %}
+{% block page_title %}Пульт плеера{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество <span class="sep">·</span> Музыка</div>
+    <h1>Пульт плеера</h1>
+  </div>
+</div>
+
+<style>
+.mu-hero{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:18px 20px;margin:14px 0 16px}
+@media (max-width:860px){.mu-hero{grid-template-columns:1fr;text-align:center}}
+.mu-disc{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid var(--ac-line,color-mix(in srgb, var(--ac) 25%, transparent));background:var(--ac-soft,color-mix(in srgb, var(--ac) 8%, transparent));color:var(--ac,var(--ac))}
+.mu-disc.play{animation:muSpin 6s linear infinite;color:#7bd88f;border-color:rgba(123,216,143,.35);background:rgba(123,216,143,.08)}
+.mu-disc.pause{color:#f0cd7a;border-color:rgba(240,205,122,.35);background:rgba(240,205,122,.08)}
+.mu-disc.off{color:var(--text-3,color-mix(in srgb, var(--text) 30%, transparent));border-color:var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));background:color-mix(in srgb, var(--text) 4%, transparent)}
+@keyframes muSpin{to{transform:rotate(360deg)}}
+.mu-track{font-size:16px;font-weight:700;color:var(--text-1,#fff);line-height:1.4;word-break:break-word}
+.mu-meta{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-top:5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mu-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;border-radius:999px;padding:3px 10px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent))}
+.mu-chip.on{color:#7bd88f;border-color:rgba(123,216,143,.3);background:rgba(123,216,143,.08)}
+.mu-chip.warn{color:#f0cd7a;border-color:rgba(240,205,122,.3);background:rgba(240,205,122,.08)}
+.mu-vol{display:flex;align-items:center;gap:10px;min-width:180px}
+.mu-vol input[type=range]{flex:1;accent-color:var(--ac,var(--ac))}
+.mu-vol b{font-size:13px;color:var(--text-1,#fff);min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+.mu-controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.mu-btn{display:inline-flex;align-items:center;gap:8px;background:color-mix(in srgb, var(--text) 6%, transparent);color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 14%, transparent));border-radius:10px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:filter .15s,background .15s}
+.mu-btn:hover{filter:brightness(1.15)}
+.mu-btn.main{background:var(--ac,var(--ac));color:#1a1a1a;border:none}
+.mu-btn.danger{color:#ff8a7a;border-color:rgba(231,76,60,.35);background:rgba(231,76,60,.1)}
+.mu-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px 18px}
+.mu-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.mu-panel h3 i{color:var(--ac,var(--ac))}
+.mu-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.5}
+.mu-row{display:grid;grid-template-columns:30px 1fr auto auto;gap:10px;align-items:center;padding:9px 8px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
+.mu-row:last-child{border-bottom:none}
+.mu-row.first .mu-q{color:var(--text-1,#fff);font-weight:600}
+.mu-num{font-size:12px;font-weight:700;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));font-variant-numeric:tabular-nums}
+.mu-q{font-size:13.5px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));line-height:1.4;word-break:break-word}
+.mu-by{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));white-space:nowrap}
+.mu-del{background:none;border:none;color:var(--text-3,color-mix(in srgb, var(--text) 35%, transparent));cursor:pointer;padding:6px;border-radius:8px;transition:color .15s,background .15s}
+.mu-del:hover{color:var(--err);background:rgba(231,76,60,.12)}
+.mu-err{display:none;font-size:12.5px;color:#ff8a7a;background:rgba(231,76,60,.1);border:1px solid rgba(231,76,60,.3);border-radius:10px;padding:8px 12px;margin-bottom:12px}
+[data-theme="light"] .mu-row{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="mu-err" id="muErr"></div>
+
+<div class="mu-hero" id="muHero">
+  <div class="sk-card" style="width:64px;height:64px;border-radius:50%"></div>
+  <div><div class="sk-line" style="width:60%;height:18px"></div>
+    <div class="sk-line" style="width:40%;height:12px;margin-top:8px"></div></div>
+  <div class="sk-card" style="width:180px;height:40px"></div>
+</div>
+
+<div class="mu-controls" id="muControls"></div>
+
+<div class="mu-panel">
+  <h3><i class="fas fa-music"></i> Очередь <span id="muTotal" style="color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));font-size:12px;font-weight:500"></span></h3>
+  <div class="mu-sub">Та же очередь, что показывает <code>!queue</code>: первый трек — играющий.</div>
+  <div id="muQueue">
+    <div class="sk-row"></div>
+    <div class="sk-row" style="width:80%"></div>
+    <div class="sk-row" style="width:60%"></div>
+  </div>
+</div>
+
+<script>
+var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+var STATE = null;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function muPlural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function muErr(msg) {
+  var el = document.getElementById('muErr');
+  el.textContent = msg || '';
+  el.style.display = msg ? '' : 'none';
+}
+
+function renderHero() {
+  var d = STATE, hero = document.getElementById('muHero');
+  if (d.offline) {
+    hero.innerHTML = '<div class="mu-disc off"><i class="fas fa-plug-circle-xmark"></i></div>' +
+      '<div><div class="mu-track">Плеер недоступен</div>' +
+      '<div class="mu-meta">' + esc(d.error || 'Бот офлайн.') + ' Запустите бота — очередь живёт в его памяти.</div></div>';
+    return;
+  }
+  var cls = d.playing ? 'play' : (d.paused ? 'pause' : 'off');
+  var icon = d.playing ? 'fa-compact-disc' : (d.paused ? 'fa-pause' : 'fa-circle-stop');
+  var chips = '';
+  if (d.connected) {
+    chips += d.playing ? '<span class="mu-chip on"><i class="fas fa-play"></i> играет</span>' : '';
+    chips += d.paused ? '<span class="mu-chip warn"><i class="fas fa-pause"></i> пауза</span>' : '';
+    chips += (!d.playing && !d.paused) ? '<span class="mu-chip">простаивает</span>' : '';
+    if (d.channel) chips += '<span class="mu-chip"><i class="fas fa-volume-high"></i> ' + esc(d.channel) + '</span>';
+  } else {
+    chips = '<span class="mu-chip">не в голосовом канале</span>';
+  }
+  var track = d.current ? '<div class="mu-track">' + esc(d.current.query) + '</div>' +
+    '<div class="mu-meta">' + chips + (d.current.requester ? '<span class="mu-chip"><i class="fas fa-user"></i> ' + esc(d.current.requester) + '</span>' : '') + '</div>'
+    : '<div class="mu-track">Тишина</div><div class="mu-meta">' + chips + '</div>';
+  hero.innerHTML = '<div class="mu-disc ' + cls + '"><i class="fas ' + icon + '"></i></div>' + track;
+}
+
+function renderControls() {
+  var box = document.getElementById('muControls');
+  if (!CAN_EDIT || STATE.offline) { box.innerHTML = ''; return; }
+  var d = STATE;
+  var pp = d.paused
+    ? '<button type="button" class="mu-btn main" onclick="muAction(\x27resume\x27)"><i class="fas fa-play"></i> Продолжить</button>'
+    : '<button type="button" class="mu-btn main" onclick="muAction(\x27pause\x27)"><i class="fas fa-pause"></i> Пауза</button>';
+  box.innerHTML = pp +
+    '<button type="button" class="mu-btn" onclick="muAction(\x27skip\x27)"><i class="fas fa-forward"></i> Дальше</button>' +
+    '<button type="button" class="mu-btn danger" onclick="muLeave()"><i class="fas fa-door-open"></i> Отключить бота</button>';
+}
+
+function renderQueue() {
+  var d = STATE, box = document.getElementById('muQueue');
+  document.getElementById('muTotal').textContent = d.offline ? '' : '· ' + d.total + ' ' + muPlural(d.total, 'трек', 'трека', 'треков');
+  if (d.offline) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-plug-circle-xmark"></i><p>Очередь недоступна</p>' +
+      '<p class="empty-tip">Плеер живёт в памяти бота — дождитесь, пока он онлайн.</p></div>';
+    return;
+  }
+  if (!d.queue.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-music"></i><p>Очередь пуста</p>' +
+      '<p class="empty-tip">Закажите трек в Discord: <code>!play название или ссылка</code> — он появится здесь.</p></div>';
+    return;
+  }
+  box.innerHTML = d.queue.map(function (s) {
+    var del = CAN_EDIT ? '<button type="button" class="mu-del" onclick="muRemove(' + s.n + ')" title="Убрать №' + s.n + '" aria-label="Убрать"><i class="fas fa-xmark"></i></button>' : '';
+    return '<div class="mu-row' + (s.n === 1 ? ' first' : '') + '"><span class="mu-num">' + s.n + '</span>' +
+      '<div class="mu-q">' + esc(s.query) + '</div>' +
+      '<span class="mu-by">' + esc(s.requester) + '</span>' + del + '</div>';
+  }).join('');
+}
+
+function renderAll() { renderHero(); renderControls(); renderQueue(); }
+
+async function muPost(path, payload) {
+  var r = await fetch(path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload || {})
+  });
+  var d = await r.json();
+  if (!r.ok || !d.success) { muErr(d.error || 'Не получилось — попробуйте ещё раз.'); return null; }
+  muErr('');
+  STATE = d;
+  renderAll();
+  return d;
+}
+
+function muAction(a) { muPost('/api/music/control', { action: a }); }
+function muRemove(n) { muPost('/api/music/remove', { index: n }); }
+
+function muLeave() {
+  window.askConfirm('Отключить бота от канала?', 'Бот выйдет из голосового канала, а очередь очистится — как команда !leave.', function () {
+    muAction('leave');
+  }, { danger: true, okText: 'Отключить', icon_fa: 'fas fa-door-open' });
+}
+
+async function muLoad() {
+  var r = await fetch('/api/music/state');
+  var d = null;
+  try { d = await r.json(); } catch (e) { return; }
+  STATE = d;
+  var fp = String(JSON.stringify({
+    t: d && (d.title || d.track || ''),
+    p: d && (d.playing ? 1 : 0),
+    q: d && Array.isArray(d.queue) ? d.queue.length : 0,
+    v: d && (d.volume != null ? d.volume : '')
+  }) || '');
+  if (window.silentGuard && window.silentGuard('music', fp)) return;
+  if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
+}
+
+muLoad();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(muLoad, 1500);
+</script>
+{% endblock %}

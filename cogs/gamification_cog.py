@@ -1,6 +1,6 @@
 """
 Gamification Cog
-Gamification система cog'u
+Ког системы геймификации
 """
 import discord 
 from discord .ext import commands 
@@ -14,209 +14,96 @@ log =get_logger ("gamification_cog")
 
 
 class GamificationCog (commands .Cog ):
-    """Gamification система cog'u"""
+    """Ког системы геймификации"""
 
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @app_commands .command (name ='gprofile',description ='Профиль геймификации')
-    @app_commands .describe (user ='Пользователь (opsiyonel)')
-    async def profile (self ,interaction :discord .Interaction ,
-    user :discord .Member =None ):
-        """Profilinizi gёrюntюleyin"""
-        target_user =user or interaction .user 
-
-        # Очки al
-        points =points_system .get_points (target_user .id )
-
-        # Уровень al
-        level =level_system .get_level (target_user .id )
-
-        # Rozetler al
-        badges =badge_system .get_user_badges (target_user .id )
-
-        # Embed создать
-        embed =discord .Embed (
-        title =f" {target_user.display_name}'s Profile",
-        color =discord .Color .gold (),
-        timestamp =datetime .now ()
-        )
-
-        embed .set_thumbnail (url =target_user .display_avatar .url )
-
-        embed .add_field (name =" Очки",value =f"{points:,}",inline =True )
-        embed .add_field (name =" Уровень",value =f"{level['level']} - {level['name']}",inline =True )
-        embed .add_field (name =" Rozetler",value =str (len (badges )),inline =True )
-
-        # Значок listesi
-        if badges :
-            badge_list ="\n".join ([f"• {badge['name']}"for badge in badges [:5 ]])
-            embed .add_field (name ="Rozetler",value =badge_list ,inline =False )
-
-        embed .set_footer (text =f"User ID: {target_user.id}")
-
-        await interaction .response .send_message (embed =embed )
-
-    @app_commands .command (name ='game-leaderboard',description ='Oyun/Gamification lider tablosunu gёrюntюle')
-    @app_commands .describe (type ='Lider tablosu tipi (points/badges/level)')
-    async def leaderboard (self ,interaction :discord .Interaction ,type :str ='points'):
-        """Lider tablosunu gёrюntюle"""
-        if type =='points':
-            leaders =leaderboard_system .get_top_users ('points',limit =10 )
-            title =" Очки Lider Tablosu"
-        elif type =='badges':
-            leaders =leaderboard_system .get_top_users ('badges',limit =10 )
-            title =" Значок Lider Tablosu"
-        elif type =='level':
-            leaders =leaderboard_system .get_top_users ('level',limit =10 )
-            title =" Уровень Lider Tablosu"
-        else :
-            await interaction .response .send_message (
-            " Geчersiz lider tablosu tipi! (points/badges/level)",
-            ephemeral =True 
-            )
-            return 
-
-            # Embed создать
-        embed =discord .Embed (
-        title =title ,
-        color =discord .Color .gold (),
-        timestamp =datetime .now ()
-        )
-
-        # Lider listesi
-        for i ,leader in enumerate (leaders ,1 ):
-            medal =""if i ==1 else ""if i ==2 else ""if i ==3 else f"{i}."
-
-            user =interaction .guild .get_member (leader ['user_id'])
-            user_name =user .display_name if user else f"User {leader['user_id']}"
-
-            if type =='points':
-                value =f"{leader['points']:,} очки"
-            elif type =='badges':
-                value =f"{leader['badges']} rozet"
-            else :
-                value =f"Уровень {leader['level']}"
-
-            embed .add_field (
-            name =f"{medal} {user_name}",
-            value =value ,
-            inline =False 
-            )
-
-        await interaction .response .send_message (embed =embed )
-
-    @app_commands .command (name ='badges',description ='Rozetlerinizi gёrюntюleyin')
-    @app_commands .describe (user ='Пользователь (opsiyonel)')
+    @app_commands .command (name ='badges',description ='Показать ваши значки')
+    @app_commands .describe (user ='Пользователь (необязательно)')
     async def badges (self ,interaction :discord .Interaction ,
     user :discord .Member =None ):
-        """Rozetlerinizi gёrюntюleyin"""
+        """Показать ваши значки"""
         target_user =user or interaction .user 
 
-        # Rozetler al
-        badges =badge_system .get_user_badges (target_user .id )
+        # Получить значки
+        badges =badge_system .get_user_badges (str (target_user .id ))
 
         if not badges :
             await interaction .response .send_message (
-            f" {target_user.display_name} henюz hiч rozet kazanmadы!",
+            f"😶 У {target_user.display_name} пока нет значков!",
             ephemeral =True 
             )
             return 
 
-            # Embed создать
+            # Создать embed
         embed =discord .Embed (
-        title =f" {target_user.display_name}'s Badges",
-        description =f"Всего {len(badges)} rozet",
+        title =f"Значки — {target_user.display_name}",
+        description =f"Всего значков: {len(badges)}",
         color =discord .Color .gold (),
         timestamp =datetime .now ()
         )
 
-        # Значок listesi
+        # Список значков
         for badge in badges [:10 ]:
             embed .add_field (
             name =f"{badge['name']}",
-            value =f"{badge.get('description', 'Aчыklama yok')}\nKazanыldы: {badge['earned_at'][:10]}",
+            value =f"{badge.get('description', 'Нет описания')}\nПолучен: {badge['earned_at'][:10]}",
             inline =False 
             )
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='daily',description ='Gюnlюk ёdюlюnюzю alыn')
-    async def daily (self ,interaction :discord .Interaction ):
-        """Gюnlюk ёdюlюnюzю alыn"""
-        # Gюnlюk ёdюl проверкаю
-        can_claim ,time_left =points_system .can_claim_daily (interaction .user .id )
-
-        if not can_claim :
-            hours =int (time_left .total_seconds ()/3600 )
-            minutes =int ((time_left .total_seconds ()%3600 )/60 )
-
-            await interaction .response .send_message (
-            f"⏰ Gюnlюk ёdюlюnюzю zaten aldыnыz! {hours}s {minutes}d после tekrar deneyin.",
-            ephemeral =True 
-            )
-            return 
-
-            # Gюnlюk ёdюl ver
-        points =points_system .claim_daily (interaction .user .id )
-
-        # Embed создать
-        embed =discord .Embed (
-        title =" Gюnlюk Ёdюl",
-        description =f"**Kazanыlan Очки:** {points}\n\nYarыn tekrar gel!",
-        color =discord .Color .green (),
-        timestamp =datetime .now ()
-        )
-
-        await interaction .response .send_message (embed =embed )
-
-    @app_commands .command (name ='streak',description ='Seri bilgilerinizi gёrюntюleyin')
+    @app_commands .command (name ='streak',description ='Ваша серия дней')
     async def streak (self ,interaction :discord .Interaction ):
-        """Seri bilgilerinizi gёrюntюleyin"""
+        """Ваша серия дней"""
         from services .gamification import streak_system 
 
-        # Seri информация al
-        streak_info =streak_system .get_streak (interaction .user .id )
+        # Информация о серии
+        streak_info =streak_system .get_streak (str (interaction .user .id ))
 
-        # Embed создать
+        # Создать embed
         embed =discord .Embed (
-        title =" Seri Bilgileri",
+        title ="Информация о серии",
         color =discord .Color .orange (),
         timestamp =datetime .now ()
         )
 
-        embed .add_field (name =" Mevcut Seri",value =f"{streak_info['current_streak']} gюn",inline =True )
-        embed .add_field (name =" En Длинный Seri",value =f"{streak_info['longest_streak']} gюn",inline =True )
+        embed .add_field (name ="Текущая серия",value =f"{streak_info['current_streak']} дн.",inline =True )
+        embed .add_field (name ="Самая длинная серия",value =f"{streak_info['longest_streak']} дн.",inline =True )
 
         await interaction .response .send_message (embed =embed )
 
     @commands .Cog .listener ()
     async def on_message (self ,message :discord .Message ):
-        """Сообщение geldiгinde XP ver"""
+        """Начислить XP за сообщение"""
         if message .author .bot :
             return 
 
-            # XP ver
-        xp_gained =points_system .add_xp (message .author .id ,1 )
+            # Начислить очки за сообщение
+        uid =str (message .author .id )
+        old_level =level_system .get_level (uid )['level']
+        points_system .add_points (uid ,1 ,'message')
+        level =level_system .get_level (uid )
 
-        # Level-up проверкаю
-        if xp_gained :
-            level =level_system .get_level (message .author .id )
+        # Проверка повышения уровня
+        if level ['level']>old_level :
 
-            # Level-up bildirimi
+            # Уведомление о повышении уровня
             embed =discord .Embed (
-            title =" Level Up!",
-            description =f"**{message.author.mention}** уровень **{level['level']}**'e yюkseldi!\n\nНовый уровень: **{level['name']}**",
+            title ="🎉 Новый уровень!",
+            description =f"**{message.author.mention}** поднялся до **{level['level']}** уровня!\n\nНовый ранг: **{level['name']}**",
             color =discord .Color .gold (),
             timestamp =datetime .now ()
             )
 
-            await message .channel .send (embed =embed )
+            from cogs .icons import send_with_icon 
+            await send_with_icon (message .channel ,embed ,'levelup')
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
-        log .info (f" GamificationCog loaded")
+        """Бот готов"""
+        log .info ("Ког геймификации загружен")
 
 
 async def setup (bot ):

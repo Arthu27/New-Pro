@@ -1,4 +1,4 @@
-"""Proактивный AI — Bot kendi kendine dюшюnюr ve Arthur'a DM atar"""
+"""Проактивный AI — бот сам размышляет и пишет Артуру в ЛС"""
 import discord 
 from discord .ext import commands ,tasks 
 import datetime 
@@ -7,32 +7,26 @@ import json
 
 from logger import get_logger 
 log =get_logger ("proactive_ai")
+from json_store import load_json ,save_json 
 
 
-OWNER_ID =int (os .getenv ('OWNER_ID')or '0')
+from config import clean_number
+OWNER_ID = clean_number(os.getenv('OWNER_ID')) or 0
 DATA_FILE ='data/proactive_ai.json'
 
 # Предупреждение eшikleri
 LEAVE_ALERT_THRESHOLD =3 # 1 времяte bu kadar человек ayrыlыrsa uyar
-JOIN_ALERT_THRESHOLD =10 # 1 времяte bu kadar человек katыlыrsa uyar (raid?)
+JOIN_ALERT_THRESHOLD =10 # алерт, если за 1 минуту присоединится столько людей (рейд?)
 WARN_ALERT_THRESHOLD =3 # 1 времяte bu kadar предупреждение verilirse uyar
 
 
 def _load ()->dict :
-    if os .path .exists (DATA_FILE ):
-        try :
-            with open (DATA_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception :
-            pass 
-    return {'last_morning':None ,'last_check':None ,'asked_today':[],
-    'leave_log':[],'join_log':[],'warn_log':[]}
+    return load_json (DATA_FILE ,{'last_morning':None ,'last_check':None ,'asked_today':[],
+    'leave_log':[],'join_log':[],'warn_log':[]},log =log )
 
 
 def _save (data :dict ):
-    os .makedirs ('data',exist_ok =True )
-    with open (DATA_FILE ,'w',encoding ='utf-8')as f :
-        json .dump (data ,f ,ensure_ascii =False ,indent =2 )
+    save_json (DATA_FILE ,data ,log =log )
 
 
 class ProactiveAI (commands .Cog ):
@@ -44,17 +38,17 @@ class ProactiveAI (commands .Cog ):
         self .proactive_loop .cancel ()
 
     async def _send_to_owner (self ,message :str ):
-        """Arthur'a DM at"""
+        """Отправить DM владельцу (Arthur)."""
         if not OWNER_ID :
             return 
         try :
             owner =await self .bot .fetch_user (OWNER_ID )
             await owner .send (message )
         except Exception as e :
-            log .info (f'[ProactiveAI] DM Ошибки: {e}')
+            log .info (f'[ProactiveAI] Ошибка DM: {e}')
 
     async def _think_and_ask (self ):
-        """Bot dюшюnюr ve gerekirse Arthur'a soru sorar"""
+        """Бот размышляет и при нужде спрашивает Артура"""
         if not OWNER_ID :
             return 
 
@@ -79,8 +73,8 @@ class ProactiveAI (commands .Cog ):
 
             #     morning_msg = _call_text([
             #         {'role': 'system', 'content': (
-            #             'Sen Aether, Arthur\'ыn Discord botusun. '
-            #             'Sabah Arthur\'a краткий, samimi bir день сообщение yaz. '
+            #             'Sen Hakumo, Артуров Discord-бот. '
+            #             'Утром — короткое дружелюбное сообщение дня для Arthur. '
             #             'Сервер statusunu belirt, сегодня для bir что-то sormak istiyorsan sor. '
             #             'Maksimum 3 cюmle. Emoji использовать.'
             #         )},
@@ -104,12 +98,12 @@ class ProactiveAI (commands .Cog ):
 
             evening_msg =_call_text ([
             {'role':'system','content':(
-            'Sen Aether, Arthur\'ыn Discord botusun. '
-            'Akшam Arthur\'a краткий bir сводка сообщение yaz. '
-            'Сегодня как geчti diye sor, завтра для bir что-то есть mы diye merak et. '
-            'Maksimum 3 cюmle. Samimi ve doгal ol.'
+            'Sen Hakumo, Артуров Discord-бот. '
+            'Вечером напиши Артуру короткую сводку. '
+            'Спроси, как прошёл день, и поинтересуйся планами на завтра. '
+            'Максимум 3 предложения. Тепло и естественно.'
             )},
-            {'role':'user','content':f'Сервера: {", ".join(stats)}. Akшam сводка yaz.'}
+            {'role':'user','content':f'Сервер: {", ".join(stats)}. Напиши вечернюю сводку.'}
             ],max_tokens =150 )
 
             await self ._send_to_owner (evening_msg )
@@ -145,17 +139,17 @@ class ProactiveAI (commands .Cog ):
         # В конец 1 времяteki ayrыlmalarы контроль et
         leave_log =[t for t in data .get ('leave_log',[])if t >one_hour_ago ]
         if len (leave_log )>=LEAVE_ALERT_THRESHOLD :
-            alerts .append (f' В конец 1 времяte **{len(leave_log)} человек** с сервера покинул!')
-            data ['leave_log']=[]# Sыfыrla, tekrar uyarma
+            alerts .append (f'🚪 За последний час сервер покинули **{len(leave_log)} человек**!')
+            data ['leave_log']=[]# сброс — не предупреждать повторно
 
-            # В конец 1 времяteki katыlыmlarы контроль et
+            # Проверить присоединения за последнюю минуту
         join_log =[t for t in data .get ('join_log',[])if t >one_hour_ago ]
         if len (join_log )>=JOIN_ALERT_THRESHOLD :
-            alerts .append (f' В конец 1 времяte **{len(join_log)} новый участник** присоединился — olasы raid!')
+            alerts .append (f'🚨 За последний час присоединились **{len(join_log)} участников** — похоже на рейд!')
             data ['join_log']=[]
 
         if alerts :
-            msg ='** J.A.R.V.I.S. Предупреждениеsы**\n'+'\n'.join (alerts )
+            msg ='**🤖 J.A.R.V.I.S. — тревога**\n'+'\n'.join (alerts )
             await self ._send_to_owner (msg )
 
         data ['leave_log']=[t for t in data .get ('leave_log',[])if t >one_hour_ago ]
@@ -164,7 +158,7 @@ class ProactiveAI (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_member_join (self ,member :discord .Member ):
-        """Katыlыmlarы logla"""
+        """Логировать входы"""
         data =_load ()
         data .setdefault ('join_log',[]).append (datetime .datetime .now ().timestamp ())
         data ['join_log']=data ['join_log'][-50 :]
@@ -172,7 +166,7 @@ class ProactiveAI (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_member_remove (self ,member :discord .Member ):
-        """Ayrыlmalarы logla ve Arthur'a bildir"""
+        """Логировать выходы и сообщить Артуру"""
         data =_load ()
         data .setdefault ('leave_log',[]).append (datetime .datetime .now ().timestamp ())
         data ['leave_log']=data ['leave_log'][-50 :]
@@ -184,8 +178,8 @@ class ProactiveAI (commands .Cog ):
                 await owner .send (
                 f' **{member.display_name}** `{member.guild.name}` сервер покинул.'
                 )
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("on_member_remove(): подавлено: %s", _ex)
 
 
 async def setup (bot ):

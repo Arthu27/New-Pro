@@ -8,49 +8,48 @@ import datetime
 
 from logger import get_logger 
 log =get_logger ("ai_chat")
+from json_store import load_json ,save_json 
 
 
 AI_CHANNELS =set ()# Пусто — dinamik как addnir
 # Динамические каналы — DM'den addnip удалить
 _dynamic_channels :set =set ()# DM'den /ai-channel команда addnir
 
-#  АКТИВЕН ЗАДАЧИ (условный задача цепь) 
+# АКТИВНЫЕ ЗАДАЧИ (цепочка «условие → действие»)
 _active_tasks :list =[]# [{'id': int, 'desc': str, 'condition': str, 'action': str, 'target_id': int}]
 _task_counter :int =0 
 
 def _load_tasks ()->list :
-    f ='data/jarvis_tasks.json'
-    if os .path .exists (f ):
-        try :
-            with open (f ,'r',encoding ='utf-8')as fp :
-                return json .load (fp )
-        except Exception :
-            pass 
-    return []
+    return load_json ('data/jarvis_tasks.json',[],log =log )
 
 def _save_tasks (tasks :list ):
-    os .makedirs ('data',exist_ok =True )
-    with open ('data/jarvis_tasks.json','w',encoding ='utf-8')as f :
-        json .dump (tasks ,f ,ensure_ascii =False ,indent =2 )
+    save_json ('data/jarvis_tasks.json',tasks ,log =log )
 
 _active_tasks =_load_tasks ()
 
 # Owner ID — пересылает неизвестные вопросы сюда
-OWNER_ID =int (os .getenv ('OWNER_ID')or '0')
+from config import clean_number
+OWNER_ID = clean_number(os.getenv('OWNER_ID')) or 0
 
-# Baddyen sorular — owner ответитьince userya iletilir
+# Ожидающие вопросы — передаются пользователю, когда owner отвечает
 # {owner_dm_message_id: {'user_id': int, 'channel_id': int, 'question': str, 'is_dm': bool}}
 _pending_questions :dict ={}
 
-# Мат filtresi — совпадение полного слова
-KUFUR_LISTESI =['amk','amq','orospu','sik','gёt','got','piч','pic',
-'yarrak','yarak','siktir','bok','kahpe','ibne','amcыk','amcik']
+# Фильтр мата (русский + турецкий) — совпадение только целого слова
+PROFANITY_WORDS =[
+# русский мат
+'сука','сучка','бля','блять','блядь','хуй','хуя','хуё','пизда','пиздец',
+'ебал','ебан','ёбан','пидор','пидр','шлюха','мразь','гандон','залупа',
+'мудак','долбоёб','нахуй','охуеть','заебал','уёбок','уебок','хер','мразота',
+# турецкий мат (многоязычная защита)
+'amk','amq','orospu','sik','göt','got','piç','pic',
+'yarrak','yarak','siktir','bok','kahpe','ibne','amcık','amcik']
 
-def _kufur_var_mi (text :str )->bool :
+def _has_profanity (text :str )->bool :
     t =text .lower ()
-    # Tam kelime eшleшmesi для пусто/пунктуация с должно быть окружено
+    # только целое слово: по краям — пробел или пунктуация
     import re 
-    for k in KUFUR_LISTESI :
+    for k in PROFANITY_WORDS :
         if re .search (r'\b'+re .escape (k )+r'\b',t ):
             return True 
     return False 
@@ -65,41 +64,23 @@ _save_counter =0
 
 
 def _load_owner_prefs ()->dict :
-    if os .path .exists (OWNER_PREFS_FILE ):
-        try :
-            with open (OWNER_PREFS_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception :
-            pass 
-    return {'rules':[],'memory':{},'disabled_notifications':[]}
+    return load_json (OWNER_PREFS_FILE ,{'rules':[],'memory':{},'disabled_notifications':[]},log =log )
 
 
 def _save_owner_prefs (prefs :dict ):
-    os .makedirs ('data',exist_ok =True )
-    with open (OWNER_PREFS_FILE ,'w',encoding ='utf-8')as f :
-        json .dump (prefs ,f ,ensure_ascii =False ,indent =2 )
+    save_json (OWNER_PREFS_FILE ,prefs ,log =log )
 
 
 _owner_prefs =_load_owner_prefs ()
 
 
 def _load_profiles ()->dict :
-    if os .path .exists (PROFILES_FILE ):
-        try :
-            with open (PROFILES_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception :
-            pass 
-    return {}
+    return load_json (PROFILES_FILE ,{},log =log )
 
 
 def _save_profiles (profiles :dict ):
-    try :
-        os .makedirs ('data',exist_ok =True )
-        with open (PROFILES_FILE ,'w',encoding ='utf-8')as f :
-            json .dump (profiles ,f ,ensure_ascii =False ,indent =2 )
-    except Exception as e :
-        log .info (f'[AI] Profil сохран Ошибки: {e}')
+    if not save_json (PROFILES_FILE ,profiles ,log =log ):
+        log .info ('[AI] Profil сохран Ошибки — см. json_store warning')
 
 
 def _update_profile (user_id :int ,question :str ,answer :str ,profiles :dict ):
@@ -121,7 +102,7 @@ def _update_profile (user_id :int ,question :str ,answer :str ,profiles :dict ):
     'oyun':['oyun','game','lol','valorant','minecraft','cs2'],
     'anime':['anime','manga','naruto','attack on titan','one piece'],
     'spor':['футбол','баскетбол','матч','гол','команда'],
-    'teknoloji':['kod','python','infosнастройка','написано','ai'],
+    'teknoloji':['kod','python','программирование','написано','ai'],
     }
     q_lower =question .lower ()
     for interest ,keywords in interest_keywords .items ():
@@ -140,137 +121,111 @@ def _update_profile (user_id :int ,question :str ,answer :str ,profiles :dict ):
 _profiles =_load_profiles ()
 
 def _load_histories ()->dict :
-    """Разговор история dosyadan загрузить"""
-    if os .path .exists (HISTORY_FILE ):
-        try :
-            with open (HISTORY_FILE ,'r',encoding ='utf-8')as f :
-                data =json .load (f )
-                # String key'leri int'e преобразовать
-                return {int (k ):v for k ,v in data .items ()}
-        except Exception as e :
-            log .info (f'[AI] History загруз Ошибки: {e}')
-    return {}
+    """Загрузить историю диалогов с диска (через общий кэш json_store)."""
+    try :
+        # строковые ключи приводим к int
+        return {int (k ):v for k ,v in load_json (HISTORY_FILE ,{},log =log ).items ()}
+    except Exception as e :
+        log .info (f'[AI] Ошибка загрузки истории: {e}')
+        return {}
 
 def _load_knowledge_base ()->dict :
-    """Сервер основанный на info базу загрузить"""
-    if os .path .exists (KNOWLEDGE_FILE ):
-        try :
-            with open (KNOWLEDGE_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception as e :
-            log .info (f'[AI] Knowledge base загруз Ошибки: {e}')
-    return {}
+    """Загрузить базу знаний серверов"""
+    return load_json (KNOWLEDGE_FILE ,{},log =log )
 
 def _load_instructions ()->dict :
     """Сервер основанный на постоянный инструкции загрузить"""
-    if os .path .exists (INSTRUCTIONS_FILE ):
-        try :
-            with open (INSTRUCTIONS_FILE ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception as e :
-            log .info (f'[AI] Instructions загруз Ошибки: {e}')
-    return {}
+    return load_json (INSTRUCTIONS_FILE ,{},log =log )
 
 def _save_instructions (instructions :dict ):
     """Постоянный инструкции сохранить"""
-    try :
-        os .makedirs ('data',exist_ok =True )
-        with open (INSTRUCTIONS_FILE ,'w',encoding ='utf-8')as f :
-            json .dump (instructions ,f ,ensure_ascii =False ,indent =2 )
-    except Exception as e :
-        log .info (f'[AI] Instructions сохран Ошибки: {e}')
+    if not save_json (INSTRUCTIONS_FILE ,instructions ,log =log ):
+        log .info ('[AI] Ошибка сохранения инструкций — см. json_store warning')
 
 def _detect_instruction (message :str ,answer :str )->dict :
     """
-    Пользователь bot'a данные постоянный инструкции определить.
-    Напр.: "bu soruyu кто sorarsa X ответить"
+    Распознать постоянную инструкцию, которую пользователь даёт боту.
+    Напр.: «если кто-то спросит X — отвечай Y»
     """
     m =message .lower ().strip ()
 
-    # Talimat kalыplarы
+    # Шаблоны инструкций
     patterns =[
-    # "bu soruyu кто кто бы ни написал X ответить"
-    r'bu soruyu кто (кто бы ни написал|кто бы ни спросил|sorsa)',
-    # "всем X de / сказать"
-    r'всем .{3,50} (de|сказать|ответить)',
-    # "bundan после X dersen Y de"
-    r'bundan после .{3,50} (dersen|sorarsa)',
-    # "X на вопрос Y ответить"
-    r'.{3,30} на вопрос .{3,50} (ответить|de|сказать)',
+    # «кто бы ни спросил X — отвечай Y»
+    r'кто бы ни (написал|спросил) .{3,50}',
+    # «всем говори/скажи X»
+    r'всем .{3,50} (говори|скажи|ответь)',
+    # «впредь если спросят X — говори Y»
+    r'впредь если .{3,50} (спросит|спросят)',
+    # «на вопрос X отвечай Y»
+    r'.{3,30} на вопрос .{3,50} (ответь|отвечай|пиши)',
+    # русские формулировки
+    r'если (?:кто-нибудь |кто-то )?спросит .{3,60}',
+    r'всем (?:говори|отвечай|пиши) .{3,50}',
+    r'на вопрос .{3,50} (?:отвечай|ответь|пиши)',
     ]
 
-    import re 
     for pattern in patterns :
         if re .search (pattern ,m ):
             return {
-            'trigger':message ,# Tetikleyici message
-            'response':answer ,# Botun ответ для выдачи (предыдущий ответ)
+            'trigger':message ,# сообщение-триггер
+            'response':answer ,# ответ бота (предыдущий ответ)
             'instruction':message 
             }
     return None 
 
 def _save_histories (histories :dict ,force :bool =False ):
-    """Разговор история dosyaya сохранить (batch mode)"""
+    """Сохранить историю диалогов на диск (пакетно)"""
     global _save_counter 
     _save_counter +=1 
-    # Каждый 5 messageda bir или force=True ise сохранить
+    # сохраняем каждое 5-е сообщение или при force=True
     if not force and _save_counter %5 !=0 :
         return 
-    try :
-        os .makedirs ('data',exist_ok =True )
-        with open (HISTORY_FILE ,'w',encoding ='utf-8')as f :
-            json .dump (histories ,f ,ensure_ascii =False ,indent =2 )
-    except Exception as e :
-        log .info (f'[AI] History сохран Ошибки: {e}')
+    if not save_json (HISTORY_FILE ,histories ,log =log ):
+        log .info ('[AI] Ошибка сохранения истории — см. json_store warning')
 
 def _save_knowledge_base (knowledge :dict ):
-    """Информация базу сохранить"""
-    try :
-        os .makedirs ('data',exist_ok =True )
-        with open (KNOWLEDGE_FILE ,'w',encoding ='utf-8')as f :
-            json .dump (knowledge ,f ,ensure_ascii =False ,indent =2 )
-    except Exception as e :
-        log .info (f'[AI] Knowledge base сохран Ошибки: {e}')
+    """Сохранить базу знаний"""
+    if not save_json (KNOWLEDGE_FILE ,knowledge ,log =log ):
+        log .info ('[AI] Ошибка сохранения базы знаний — см. json_store warning')
 
 def _extract_learned_info (question :str ,answer :str )->dict :
-    """Вопрос-cevaptan обучаемый infoyi удалить"""
+    """Удалить обученную информацию из вопроса-ответа"""
     q =question .lower ().strip ()
 
-    # Web если выполнен поиск доверие низкий
+    # если ответ из веб-поиска — доверие пониженное
     is_web_search =' Web поиск выполнен'in answer 
     confidence ='low'if is_web_search else 'high'
 
-    # "X кто" вопросы
-    if 'кто takoy'in q or 'кто bu'in q or 'кто on'in q :
-    # Вопросdan ismi удалить
+    # вопросы «кто такой X»
+    if 'кто такой' in q or 'кто такая' in q or 'кто это' in q :
+    # вытаскиваем имя из вопроса
         name_patterns =[
         r'(\w+(?:\s+\w+)*)\s+кто',
-        r'кто\s+bu\s+(\w+(?:\s+\w+)*)',
-        r'кто\s+o\s+(\w+(?:\s+\w+)*)'
+        r'кто\s+такой\s+(\w+(?:\s+\w+)*)',
+        r'кто\s+такая\s+(\w+(?:\s+\w+)*)'
         ]
         for pattern in name_patterns :
-            import re 
             match =re .search (pattern ,q )
             if match :
                 name =match .group (1 ).strip ()
                 return {
                 'type':'person_info',
                 'name':name ,
-                'info':answer [:500 ],# Первый 500 karakter
+                'info':answer [:500 ],# первые 500 символов
                 'question':question ,
                 'confidence':confidence ,
                 'source':'web_search'if is_web_search else 'chat'
                 }
 
-                # "X nedir" вопросы
-    if 'ne takoe'in q or 'ne bu'in q :
-    # Вопросdan konuyu удалить
+                # вопросы «что такое X»
+    if 'что такое' in q or 'что это' in q :
+    # вытаскиваем тему из вопроса
         topic_patterns =[
-        r'(\w+(?:\s+\w+)*)\s+nedir',
-        r'ne\s+bu\s+(\w+(?:\s+\w+)*)'
+        r'что\s+такое\s+(\w+(?:\s+\w+)*)',
+        r'что\s+это\s+(\w+(?:\s+\w+)*)'
         ]
         for pattern in topic_patterns :
-            import re 
             match =re .search (pattern ,q )
             if match :
                 topic =match .group (1 ).strip ()
@@ -289,13 +244,74 @@ _histories =_load_histories ()
 _knowledge_base =_load_knowledge_base ()
 _instructions =_load_instructions ()
 
-# Сообщение cache — каждый user для 5 minutesda bir обновить
+# кэш сообщений — обновляем для каждого пользователя раз в 5 минут
 _message_cache ={}
-_cache_timeout =300 # 5 minutes
+_cache_timeout =300 # 5 минут
+
+
+_MENTION_RE =re .compile (r'<@!?(\d{5,25})>|<#(\d{5,25})>|<@&(\d{5,25})>')
+
+
+def _resolve_mentions (text ,guild ):
+    """<@123> / <#456> / <@&789> → @имя / #канал / @роль.
+
+    ИИ по голым цифрам не понимает, о ком речь — переводим в читаемые
+    имена; ничего не нашли — оставляем как было.
+    """
+    if not guild or not text or '<'not in text :
+        return text 
+    def _sub (m ):
+        uid ,chid ,rid =m .group (1 ),m .group (2 ),m .group (3 )
+        try :
+            if uid :
+                u =guild .get_member (int (uid ))
+                return '@'+(u .display_name if u else uid )
+            if chid :
+                c =guild .get_channel (int (chid ))
+                return '#'+(c .name if c else chid )
+            if rid :
+                r =guild .get_role (int (rid ))
+                return '@'+(r .name if r else rid )
+        except Exception as _ex:
+            log.debug("_resolve_mentions(): подавлено: %s", _ex)
+        return m .group (0 )
+    return _MENTION_RE .sub (_sub ,text )
+
+
+def _split_long (text ,limit :int =1900 )->list :
+    """Ответ длиннее лимита Discord → режем по абзацам/предложениям, не по слову."""
+    text =(text or '').strip ()
+    if len (text )<=limit :
+        return [text ]
+    chunks ,buf =[],''
+    def flush ():
+        nonlocal buf 
+        if buf .strip ():
+            chunks .append (buf .strip ())
+        buf =''
+    for para in text .split ('\n\n'):
+        # сверхдлинный абзац — сначала по предложениям, потом по словам
+        while len (para )>limit :
+            cut =para .rfind ('. ',0 ,limit )
+            if cut <limit //2 :
+                cut =para .rfind (' ',0 ,limit )
+            if cut <1 :
+                cut =limit 
+            flush ()
+            chunks .append (para [:min (cut +1 ,limit )].strip ())
+            para =para [min (cut +1 ,limit ):].strip ()
+        cand =(buf +'\n\n'+para ).strip ()if buf else para 
+        if len (cand )<=limit :
+            buf =cand 
+        else :
+            flush ()
+            buf =para 
+    flush ()
+    return chunks or [text [:limit ]]
 
 
 async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list :
-    """Пользователь son Discord messagelarыnы собрать (son 12 часов, max 15 message)"""
+    """Собрать последние сообщения пользователя на сервере (за 12 часов, макс. 15)"""
     if not guild :
         return []
 
@@ -314,7 +330,7 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
     cutoff_time =datetime .datetime .now (datetime .timezone .utc )-datetime .timedelta (hours =12 )
 
     try :
-    # Только активен channellarы сканировать (son 2 времяte message который является)
+    # Сканировать только активные каналы (с недавними сообщениями)
         active_channels =[]
         for channel in guild .text_channels :
             if not channel .permissions_for (guild .me ).read_message_history :
@@ -324,23 +340,25 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
                 last_msg =await channel .history (limit =1 ).flatten ()
                 if last_msg and (datetime .datetime .now (datetime .timezone .utc )-last_msg [0 ].created_at ).seconds <7200 :
                     active_channels .append (channel )
-            except Exception :
+            except Exception as _ex:
+                log.debug("_get_recent_user_messages(): подавлено: %s", _ex)
                 continue 
 
-                # Активен channellarы сканировать — 15 message найден ca dur
-        for channel in active_channels [:15 ]:# Max 15 channel
+                # Сканируем активные каналы — собираем до 15 сообщений
+        for channel in active_channels [:15 ]:# не больше 15 каналов
             try :
                 async for msg in channel .history (limit =30 ,after =cutoff_time ):
                     if msg .author .id ==user_id and not msg .content .startswith ('moe'):
                     # Bot не включать команды
                         recent .append ({
                         'channel':channel .name ,
-                        'content':msg .content [:200 ],# 150 → 200 karakter
+                        'content':_resolve_mentions (msg .content [:200 ],channel .guild ),# 150 → 200 karakter
                         'timestamp':msg .created_at .strftime ('%H:%M')
                         })
                         if len (recent )>=limit :# 15 message найден ca dur
                             break 
-            except Exception :
+            except Exception as _ex:
+                log.debug("_get_recent_user_messages(): подавлено: %s", _ex)
                 continue 
 
             if len (recent )>=limit :
@@ -354,20 +372,20 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
         _message_cache [cache_key ]=(result ,now )
         return result 
     except Exception as e :
-        log .info (f'[AI] Сообщение собратьma Ошибки: {e}')
+        log .info (f'[AI] Ошибка сбора сообщений: {e}')
         return []
 
 
 async def _get_channel_context (channel ,limit :int =12 )->list :
-    """Текущий channelыn son messagelarыnы собрать (sohbet контекст для)"""
+    """Собрать последние сообщения текущего канала (для контекста беседы)"""
     try :
         context_messages =[]
         async for msg in channel .history (limit =limit ):
             if msg .author .bot :
-                continue # Bot messagelarыnы dahil etme
+                continue # сообщения бота не включаем
             context_messages .append ({
             'author':msg .author .display_name ,
-            'content':msg .content [:200 ],# 150 → 200 karakter
+            'content':_resolve_mentions (msg .content [:200 ],channel .guild ),# 150 → 200 karakter
             'timestamp':msg .created_at .strftime ('%H:%M')
             })
             # Ters преобразовать (en старый en baшta)
@@ -384,7 +402,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
         history =_histories .get (user_id ,[])
 
         # Пользователь infosi
-        user_name ='arkadaш'
+        user_name ='друг'
         guild_id =0 
         if guild :
             member =guild .get_member (user_id )
@@ -402,7 +420,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
         'is_dm':is_dm ,
         }
 
-        # Сервер sahibi ve администратор роли infosi
+        # владелец сервера и роли администраторов (инфо)
         if guild :
             try :
                 owner =guild .owner 
@@ -420,11 +438,24 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                             staff_roles .append ({'name':role .name ,'members':members })
                 if staff_roles :
                     context ['staff_roles']=staff_roles [:8 ]# Max 8 роли
+
+                    # Слепок каналов и ролей — ИИ отвечает о сервере фактами
+                context ['channels']=[
+                ('# '+c .name )for c in guild .text_channels ][:40 ]+[
+                ('  '+c .name )for c in guild .voice_channels ][:20 ]
+                context ['roles']=[
+                r .name for r in sorted (
+                (r for r in guild .roles if not r .is_default ()and not r .managed ),
+                key =lambda r :r .position ,reverse =True )][:30 ]
+                if member :
+                    context ['asker_roles']=[
+                    r .name for r in member .roles if not r .is_default ()][:10 ]
             except Exception as e :
                 log .info (f'[AI] Guild info Ошибки: {e}')
 
-                #  СЕРВЕР СОСТОЯНИЕ (J.A.R.V.I.S. разница) 
-        if guild and str (user_id )=='987430047889637426':
+                # СОСТОЯНИЕ СЕРВЕРА видно ИИ у всех (публичные цифры гильдии) —
+        # иначе он отвечал «данных нет» про онлайн/голосовые
+        if guild :
             try :
                 online =[m for m in guild .members if not m .bot and m .status !=discord .Status .offline ]
                 in_voice =[]
@@ -432,12 +463,12 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                     for m in vc .members :
                         if not m .bot :
                             in_voice .append (m .display_name )
-                            # В конец katыlanlar (son 24 часов)
+                            # Недавно присоединившиеся (за 24 часа)
                 import datetime as _dt 
                 cutoff =_dt .datetime .now (_dt .timezone .utc )-_dt .timedelta (hours =24 )
                 recent_joins =[m .display_name for m in guild .members 
                 if not m .bot and m .joined_at and m .joined_at >cutoff ]
-                # Открыт ticket channellarы
+                # Открытые ticket-каналы
                 ticket_channels =[c for c in guild .text_channels if c .name .startswith ('ticket-')]
                 context ['server_status']={
                 'online_count':len (online ),
@@ -456,10 +487,10 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                 from cogs .ai_chat import _active_tasks 
                 if _active_tasks :
                     context ['active_tasks']=[t ['desc']for t in _active_tasks [:5 ]]
-            except Exception :
-                pass 
+            except Exception as _ex:
+                log.debug("_call_ai(): подавлено: %s", _ex)
 
-                # Пользователь son Discord messagelarыnы context'e add (только на сервере)
+                # Добавить последние Discord-сообщения пользователя в контекст (только на сервере)
         if recent_messages :
             context ['recent_user_messages']=recent_messages 
 
@@ -467,36 +498,36 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
         if channel_context :
             context ['channel_context']=channel_context 
 
-            # Сервер info tabanыndan ilgili информация add
+            # Добавить релевантную информацию из базы сервера
         if guild_id and str (guild_id )in _knowledge_base :
             guild_knowledge =_knowledge_base [str (guild_id )]
             relevant_knowledge =[]
             q_lower =question .lower ()
 
             for item in guild_knowledge :
-            # Низкий доверие информация atla (web поиск)
+            # пропускаем ненадёжные записи (веб-поиск)
                 if item .get ('confidence')=='low':
                     continue 
 
-                    # Вопрос benzerliгi контроль et
+                    # совпадение по словам вопроса
                 if any (word in item .get ('question','').lower ()for word in q_lower .split ()if len (word )>2 ):
-                    relevant_knowledge .append (f"заранее ёгrenilen: {item.get('question', '')} → {item.get('info', '')}")
-                    # Isim/konu benzerliгi контроль et
+                    relevant_knowledge .append (f"заранее выученное: {item.get('question', '')} → {item.get('info', '')}")
+                    # совпадение по имени/теме
                 elif 'name'in item and any (word in item ['name'].lower ()for word in q_lower .split ()if len (word )>2 ):
-                    relevant_knowledge .append (f"Bilinen человек: {item['name']} → {item.get('info', '')}")
+                    relevant_knowledge .append (f"Известная личность: {item['name']} → {item.get('info', '')}")
                 elif 'topic'in item and any (word in item ['topic'].lower ()for word in q_lower .split ()if len (word )>2 ):
-                    relevant_knowledge .append (f"Bilinen konu: {item['topic']} → {item.get('info', '')}")
+                    relevant_knowledge .append (f"Известная тема: {item['topic']} → {item.get('info', '')}")
 
             if relevant_knowledge :
-                context ['learned_knowledge']=relevant_knowledge [:3 ]# En fazla 3 info
+                context ['learned_knowledge']=relevant_knowledge [:3 ]# не больше 3 записей
 
-                # Сервер инструкцииnы context'e add
+                # инструкции сервера — в контекст
         if guild_id :
             guild_instructions =_instructions .get (str (guild_id ),[])
             if guild_instructions :
                 context ['guild_instructions']=guild_instructions 
 
-                # Пользователь kiшilik profilini context'e add
+                # профиль пользователя — в контекст
         uid_str =str (user_id )
         if uid_str in _profiles :
             p =_profiles [uid_str ]
@@ -528,7 +559,7 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                     _save_instructions (_instructions )
                     log .info (f'[AI] Новый talimat сохранено: {instr["trigger"][:50]}')
 
-                    # Ёгrenilebilir infoyi удалить ve сохранить
+                    # выделяем из ответа обучаемую информацию и сохраняем её
         if guild_id :
             learned =_extract_learned_info (question ,answer )
             if learned :
@@ -548,108 +579,29 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
 
                 if not existing :
                     _knowledge_base [guild_key ].append (learned )
-                    # Max 50 info tut
+                    # держим максимум 50 записей
                     if len (_knowledge_base [guild_key ])>50 :
                         _knowledge_base [guild_key ]=_knowledge_base [guild_key ][-50 :]
 
                 _save_knowledge_base (_knowledge_base )
 
-                # В конец 40 сообщение tut (20 soru-cevap чifti) — более длинный hafыza
+                # В конце держим 40 сообщений (20 пар вопрос-ответ) — более длинная память
         _histories [user_id ]=new_history [-40 :]
-        # Dosyaya сохранить
+        # сохраняем на диск
         _save_histories (_histories )
-        return answer or 'Hmm, bir sorun oldu. Tekrar dener misin? '
+        return answer or 'Хм, что-то пошло не так. Попробуете ещё раз? '
     except Exception as e :
         log .info (f'[AI] Ошибка: {e}')
-        return 'Сейчас не mogu cevapla, poprobuyte после. '
+        return 'Сейчас не могу ответить, попробуйте позже. '
 
 
 class AIChat (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @commands .hybrid_command (name ='ai-info-clear',description ="Temizle veriбазу информация AI на сервер (Менеджер)")
-    @commands .has_permissions (administrator =True )
-    async def ai_clear_knowledge (self ,ctx ):
-        """Сервер AI info базу clear (только adminler)"""
-        guild_id =str (ctx .guild .id )
-        if guild_id in _knowledge_base :
-            del _knowledge_base [guild_id ]
-            _save_knowledge_base (_knowledge_base )
-            await ctx .send (' База знаний сервера AI очищена!',ephemeral =True )
-        else :
-            await ctx .send ('База знаний уже пуста. ',ephemeral =True )
-    async def ai_reset (self ,ctx ):
-        """Kendi AI sohbet историю sыfыrla"""
-        user_id =ctx .author .id 
-        if user_id in _histories :
-            del _histories [user_id ]
-            _save_histories (_histories ,force =True )
-            await ctx .send (' История чата сброшена! Начинаем с чистого листа. ',ephemeral =True )
-        else :
-            await ctx .send ('История чата уже пуста. ',ephemeral =True )
-
-    @commands .hybrid_command (name ='ai-sifirla',description ="Sbrosit история AI cata")
-    @commands .has_permissions (administrator =True )
-    async def ai_add_knowledge (self ,ctx ,konu :str ,*,info :str ):
-        """
-        Bot'a постоянный info ёгret.
-        Использование: /ai-info-add armoon Armoon, Valorant ve CS2 oynayan Tюrk bir esporcu.
-        """
-        guild_key =str (ctx .guild .id )
-        if guild_key not in _knowledge_base :
-            _knowledge_base [guild_key ]=[]
-
-            # Одинаковый konu есть mы?
-        for item in _knowledge_base [guild_key ]:
-            if item .get ('name','').lower ()==konu .lower ()or item .get ('topic','').lower ()==konu .lower ():
-                item ['info']=info 
-                item ['confidence']='high'
-                item ['source']='manual'
-                _save_knowledge_base (_knowledge_base )
-                await ctx .send (f' Информация о **{konu}** обновлена!',ephemeral =True )
-                return 
-
-                # Новый info add
-        _knowledge_base [guild_key ].append ({
-        'type':'manual',
-        'name':konu .lower (),
-        'topic':konu .lower (),
-        'info':info ,
-        'question':f'{konu} кто',
-        'confidence':'high',
-        'source':'manual'
-        })
-        _save_knowledge_base (_knowledge_base )
-        await ctx .send (f' Информация о **{konu}** сохранена! Теперь я буду знать правильный ответ.',ephemeral =True )
-
-    @commands .hybrid_command (name ='ai-info-listele',description ="Liste zaregistrirovannih AI информация (Менеджер)")
-    @commands .has_permissions (administrator =True )
-    async def ai_list_knowledge (self ,ctx ):
-        """На сервер запись AI информация listele"""
-        guild_key =str (ctx .guild .id )
-        items =_knowledge_base .get (guild_key ,[])
-
-        if not items :
-            await ctx .send ('В базе знаний пока нет записей.',ephemeral =True )
-            return 
-
-        lines =[]
-        for i ,item in enumerate (items ,1 ):
-            name =item .get ('name')or item .get ('topic','?')
-            src =' Manuel'if item .get ('source')=='manual'else ' Web'
-            conf =''if item .get ('confidence')=='high'else ''
-            lines .append (f'{conf} **{name}** ({src})')
-
-        embed =discord .Embed (
-        title =' AI Информация Tabanы',
-        description ='\n'.join (lines [:20 ]),
-        color =0x00D9FF 
-        )
-        await ctx .send (embed =embed ,ephemeral =True )
 
     async def _handle_dm_send (self ,text :str ,message :discord .Message )->str :
-        """Belirli bir userya DM отправить — 'особый yaz', 'dm at' команды"""
+        """Отправить ЛС участнику: триггеры «напиши в личку», «отправь лс»."""
         import re 
 
         # Цель участника bul
@@ -662,77 +614,77 @@ class AIChat (commands .Cog ):
             if id_match :
                 target_id =int (id_match .group (1 ))
 
-                # "benimle одинаковый seste который является" → owner'ыn ses channelыndaki diгer участник
+                # «в том же голосовом канале, что и я» → другой участник в канале owner'а
         cl =text .lower ()
-        if not target_id and any (t in cl for t in ['одинаковый seste','одинаковый seste','ses channelыndaki','ses channelindaki',
-        'benimle который является','yanыmdaki','yanimdaki']):
+        if not target_id and any (t in cl for t in ['в том же войсе','в одном войсе со мной',
+        'кто со мной в войсе','со мной в голосовом']):
             for guild in self .bot .guilds :
                 owner =guild .get_member (OWNER_ID )
                 if not owner or not owner .voice :
                     continue 
-                    # Одинаковый ses channelыndaki bot olmayan diгer участники
+                    # Другие участники в том же голосовом канале (без ботов)
                 others =[m for m in owner .voice .channel .members 
                 if m .id !=OWNER_ID and not m .bot ]
                 if others :
-                    target_id =others [0 ].id # Первый kiшiyi al
+                    target_id =others [0 ].id # берём первого
                     break 
 
         if not target_id :
-            return ' Кто DM atacaгыmы anlayamadыm. ID, mention или "benimle одинаковый seste" de.'
+            return ' Не понял, кому отправить ЛС. Укажи ID, упоминание или «кто со мной в войсе».'
 
-            # Отправл сообщение удалить
-            # "X'e особый шunu yaz: ..." или "X'e dm at как"
+            # отделяем текст сообщения
+            # форматы: «напиши @user в личку: …», «отправь лс @user: …»
         dm_content =None 
-        # "yaz:" или "yaz " sonrasыnы al
-        yaz_match =re .search (r'(?:yaz[:\s]+|at[:\s]+|отправить[:\s]+)(.+)',text ,re .IGNORECASE )
-        if yaz_match :
-            dm_content =yaz_match .group (1 ).strip ()
-            # ID/mention'ы содержимое clear
+        # берём всё после «личка:», «лс:», «напиши:», «отправь:»
+        msg_match =re .search (r'(?:личка[:\s]+|лс[:\s]+|напиши[:\s]+|отправь[:\s]+|отправить[:\s]+)(.+)',text ,re .IGNORECASE )
+        if msg_match :
+            dm_content =msg_match .group (1 ).strip ()
+            # вырезаем ID/упоминания из содержимого
             dm_content =re .sub (r'<@!?\d+>','',dm_content ).strip ()
             dm_content =re .sub (r'\b\d{17,20}\b','',dm_content ).strip ()
 
-            # Hâlâ пусто — все trigger kelimeleri удалить, осталосьы message say
+            # всё ещё пусто — вырезаем слова-команды и берём остаток как текст
         if not dm_content :
             clean =text 
-            for t in ['особый yaz','приватныйden yaz','dm at','dm отправить','dm yaz',
-            'особый message at','приватный message at','особый message','приватныйden message',
-            'benimle одинаковый seste','benimle одинаковый seste','одинаковый seste который является arkadaшa',
-            'одинаковый seste который является arkadasa']:
+            for t in ['отправь в личку','напиши в личку','отправь лс','напиши лс',
+            'отправь в лс','напиши в лс','личка','личное сообщение',
+            'в том же войсе','в одном войсе со мной','кто со мной в войсе',
+            'со мной в голосовом']:
                 clean =clean .replace (t ,'').strip ()
             clean =re .sub (r'<@!?\d+>','',clean ).strip ()
             clean =re .sub (r'\b\d{17,20}\b','',clean ).strip ()
             dm_content =clean or None 
 
         if not dm_content :
-            return ' Ne yazacaгыmы anlayamadыm. "особый yaz: <message>" formatыnы использовать.'
+            return ' Не понял, что написать. Формат: «напиши @user в личку: текст».'
 
-            # Участника bul ve DM at
+            # ищем участника и отправляем ЛС
         for guild in self .bot .guilds :
             member =guild .get_member (target_id )
             if not member :
                 continue 
             try :
                 await member .send (dm_content )
-                return f' **{member.display_name}**\'e DM отправлено: *{dm_content[:100]}*'
+                return f' ЛС отправлено → **{member.display_name}**: *{dm_content[:100]}*'
             except discord .Forbidden :
-                return f' **{member.display_name}** DM\'lere закрыт.'
+                return f' **{member.display_name}** — личные сообщения закрыты.'
             except Exception as e :
-                return f' DM отправл: {e}'
+                return f' ЛС не отправлено: {e}'
 
-                # Участник guild'de найден direkt fetch dene
+                # на сервере не нашли — пробуем прямой fetch
         try :
             user =await self .bot .fetch_user (target_id )
             await user .send (dm_content )
-            return f' **{user.name}**\'e DM отправлено: *{dm_content[:100]}*'
+            return f' ЛС отправлено → **{user.name}**: *{dm_content[:100]}*'
         except Exception as e :
-            return f' Пользователь не найден или DM отправл: {e}'
+            return f' Пользователь не найден или ЛС не отправлено: {e}'
 
     async def _handle_voice_move (self ,text :str ,message :discord .Message )->str :
-        """Ses канал movema — tek/чift adыm, geri getir, channel имя desteгi"""
+        """Перемещение по голосовым каналам — один/два шага, вернуть назад, поддержка имени канала"""
         import re 
         import asyncio 
 
-        # Normalize: ASCII русский karakter eшleшtirmesi для hem orijinal hem normalize
+        # нормализация: грубое совпадение транслита и кириллицы
         def norm (s ):
             return (s .lower ()
             .replace ('ю','u').replace ('ш','s').replace ('г','g')
@@ -751,41 +703,40 @@ class AIChat (commands .Cog ):
             id_match =re .search (r'\b(\d{17,20})\b',text )
             if id_match :
                 target_id =int (id_match .group (1 ))
-        if not target_id and any (t in cl for t in ['beni','bana','benim']):
+        if not target_id and any (t in cl for t in ['меня','мне','мой','меня перемести']):
             target_id =OWNER_ID 
         if not target_id :
-            return ' Кто moveyacaгыmы anlayamadыm. ID или mention ver.'
+            return ' Не понял, кого переместить. Укажи ID или упоминание.'
 
-            #  "geri getir" / "geri al" talebi есть mы? 
-        geri_var =any (t in cl_norm for t in ['geri getir','geri al','geri don','geri gёtюr','geri gotur'])
+            # просьба «вернуть назад»
+        back_requested =any (t in cl_norm for t in ['верни назад','верни','назад'])
 
-        #  Yёn ve adыm количество 
-        yon =0 
-        # Hem "верх/верх" hem "Вверх/Вверх" destadd
-        yukari_words =['верх','верх','Вверх','Вверх','yukar']
-        asagi_words =['Низ','вниз','asagi','asag']
+        # направление и число шагов
+        direction =0 
+        # понимаем и «вверх», и «вниз»
+        up_words =['вверх','наверх']
+        down_words =['вниз','ниже']
 
-        sayi_match =re .search (r'(\d+)\s*('+
-        '|'.join (yukari_words +asagi_words )+r')',cl_norm )
-        if sayi_match :
-            yon =int (sayi_match .group (1 ))
-            if any (w in sayi_match .group (2 )for w in norm ('|'.join (asagi_words )).split ('|')):
-                yon =-yon 
+        count_match =re .search (r'(\d+)\s*('+
+        '|'.join (up_words +down_words )+r')',cl_norm )
+        if count_match :
+            direction =int (count_match .group (1 ))
+            if any (w in count_match .group (2 )for w in norm ('|'.join (down_words )).split ('|')):
+                direction =-direction 
         else :
-            if any (w in cl_norm for w in yukari_words ):
-                yon =1 
-            elif any (w in cl_norm for w in asagi_words ):
-                yon =-1 
+            if any (w in cl_norm for w in up_words ):
+                direction =1 
+            elif any (w in cl_norm for w in down_words ):
+                direction =-1 
 
-                #  "bu voice / bu channela geri getir" — hedef channel имя 
-                # "geri getir bu voice" → "bu ses" = особый bir channel имя не, orijinal channel demek
-                # Ama "X в канал geri getir" gibi bir channel имя geчiyorsa onu yakala
-        hedef_channel_adi =None 
-        channel_adi_match =re .search (r'(?:geri getir|geri al|move|al)\s+(.+?)(?:\s+в канал?|voice?|$)',cl )
-        if channel_adi_match :
-            aday =channel_adi_match .group (1 ).strip ()
-            if aday not in ('bu','o','шu','su','bu ses','o ses'):
-                hedef_channel_adi =aday 
+                # «верни в канал X» — вытаскиваем имя целевого канала,
+                # а служебные «этот канал / сюда» именем не считаем
+        target_channel_name =None 
+        channel_name_match =re .search (r'(?:верни|перемести|перекинь|притяни)\s+(.+?)(?:\s+канал?|$)',cl )
+        if channel_name_match :
+            candidate =channel_name_match .group (1 ).strip ()
+            if candidate not in ('это','этот','канал','текущий','сюда','в этот канал'):
+                target_channel_name =candidate 
 
         results =[]
         for guild in self .bot .guilds :
@@ -793,76 +744,76 @@ class AIChat (commands .Cog ):
             if not member :
                 continue 
             if not member .voice or not member .voice .channel :
-                results .append (f' {member.display_name} шu an bir ses в канале не.')
+                results .append (f' {member.display_name} сейчас не в голосовом канале.')
                 continue 
 
             current_vc =member .voice .channel 
             voice_channels =sorted (guild .voice_channels ,key =lambda c :c .position )
             current_idx =next ((i for i ,c in enumerate (voice_channels )if c .id ==current_vc .id ),None )
             if current_idx is None :
-                results .append (' Текущий channel listede не найдено.')
+                results .append (' Текущий канал не найден в списке.')
                 continue 
 
-                #  Isimыm 1: Taшы 
-            hedef_vc =None 
-            if yon !=0 :
-                new_idx =max (0 ,min (len (voice_channels )-1 ,current_idx -yon ))
-                hedef_vc =voice_channels [new_idx ]
-            elif hedef_channel_adi :
+                # ШАГ 1: переместить участника
+            target_vc =None 
+            if direction !=0 :
+                new_idx =max (0 ,min (len (voice_channels )-1 ,current_idx -direction ))
+                target_vc =voice_channels [new_idx ]
+            elif target_channel_name :
                 for vc in voice_channels :
-                    if norm (vc .name )in norm (hedef_channel_adi )or norm (hedef_channel_adi )in norm (vc .name ):
-                        hedef_vc =vc 
+                    if norm (vc .name )in norm (target_channel_name )or norm (target_channel_name )in norm (vc .name ):
+                        target_vc =vc 
                         break 
             else :
-            # Канал имя direkt geчiyor mu metinde?
+            # имя канала встречается прямо в тексте?
                 for vc in voice_channels :
                     if norm (vc .name )in cl_norm :
-                        hedef_vc =vc 
+                        target_vc =vc 
                         break 
 
-            if not hedef_vc or hedef_vc .id ==current_vc .id :
-                if hedef_vc and hedef_vc .id ==current_vc .id :
-                    results .append (f'ℹ Zaten o channelda: **{current_vc.name}**')
+            if not target_vc or target_vc .id ==current_vc .id :
+                if target_vc and target_vc .id ==current_vc .id :
+                    results .append (f'ℹ Уже в этом канале: **{current_vc.name}**')
                 else :
                     results .append (
-                    f' Цель channel не найдено. Текущий: **{current_vc.name}**\n'
-                    f'Ses channellarы: {", ".join(vc.name for vc in voice_channels)}'
+                    f' Целевой канал не найден. Текущий: **{current_vc.name}**\n'
+                    f'Голосовые каналы: {", ".join(vc.name for vc in voice_channels)}'
                     )
                 continue 
 
             try :
-                await member .move_to (hedef_vc )
-                msg =f' **{member.display_name}** → **{hedef_vc.name}** movendы.'
+                await member .move_to (target_vc )
+                msg =f' **{member.display_name}** → **{target_vc.name}** — переместил.'
 
-                #  Isimыm 2: До getir 
-                if geri_var :
-                # "bu voice geri getir" = orijinal channela (current_vc) geri al
-                    geri_hedef =current_vc 
+                # ШАГ 2: вернуть назад, если просили
+                if back_requested :
+                # «верни» без имени — возврат в исходный канал
+                    back_vc =current_vc 
 
-                    # Если belirli bir channel имя varsa onu использовать
-                    if hedef_channel_adi :
+                    # если указано имя канала — возвращаем в него
+                    if target_channel_name :
                         for vc in voice_channels :
-                            if norm (vc .name )in norm (hedef_channel_adi )or norm (hedef_channel_adi )in norm (vc .name ):
-                                geri_hedef =vc 
+                            if norm (vc .name )in norm (target_channel_name )or norm (target_channel_name )in norm (vc .name ):
+                                back_vc =vc 
                                 break 
 
-                    await asyncio .sleep (3 )# 3 секунд badd
-                    # Участник hâlâ ses в канале mы контроль et
+                    await asyncio .sleep (3 )# ждём 3 секунды
+                    # Участник всё ещё в голосовом канале?
                     await member .guild .chunk ()# cache обновить
                     fresh =guild .get_member (target_id )
                     if fresh and fresh .voice :
-                        await fresh .move_to (geri_hedef )
-                        msg +=f'\n 3 секунд после **{geri_hedef.name}** в канал geri getirildi.'
+                        await fresh .move_to (back_vc )
+                        msg +=f'\n Через 3 секунды возвращён в канал **{back_vc.name}**.'
                     else :
-                        msg +=f'\n До getirilemedi — участник ses из канала ayrыlmыш.'
+                        msg +='\n Не удалось вернуть — участник вышел из голосового канала.'
 
                 results .append (msg )
             except discord .Forbidden :
-                results .append (' Администратор нет (Move Members разрешение gerekli).')
+                results .append (' Нет прав (требуется разрешение «Перемещение участников»).')
             except Exception as e :
                 results .append (f' Ошибка: {e}')
 
-        return '\n'.join (results )if results else ' Участник bu сервер не найдено.'
+        return '\n'.join (results )if results else ' Пользователь не найден на этом сервере.'
 
     def _norm (self ,s :str )->str :
         return (s .lower ()
@@ -871,22 +822,22 @@ class AIChat (commands .Cog ):
         .replace ('И','i').replace ('Ю','u').replace ('Ш','s'))
 
     def _extract_target (self ,text :str ):
-        """Metinden hedef участник ID'sini удалить. (mention, raw ID, 'beni', isim)"""
+        """Извлечь ID целевого участника из текста (mention, raw ID, 'я', имя)"""
         import re 
         m =re .search (r'<@!?(\d+)>',text )
         if m :return int (m .group (1 ))
         m =re .search (r'\b(\d{17,20})\b',text )
         if m :return int (m .group (1 ))
         cl =text .lower ()
-        if any (t in cl for t in ['beni','bana','benim','ben ']):
+        if any (t in cl for t in ['мне','меня','мой','меня ']):
             return OWNER_ID 
-            # Isim с ara — все сервер участник ara
-            # Команда kelimelerini clear, осталось kыsыm isim может быть
-        stop_words =['sesten at','voice al','voice тянуть','ban at','kick at',
-        'timeout ver','uyar','роли ver','роли al','bu arkadasi',
-        'bu arkadasin','bu kisiyi','bu участника','bu uyeyi',
-        'arkadasi','arkadasini','kisiyi','участника','uyeyi',
-        'bunu','bunu','onu','шunu','sunu']
+            # поиск по имени среди участников сервера
+            # Убрать слова команды — оставшаяся часть может быть именем
+        stop_words =['выгнать из войса','выкинь из войса','кикни','забань',
+        'таймаут','варн','выдай роль','сними роль','роли дай','роли забери',
+        'этого участника','этому человеку','этому участнику',
+        'участника','пользователя','человека',
+        'его','её','этого','ему']
         clean =cl 
         for sw in stop_words :
             clean =clean .replace (sw ,' ')
@@ -917,17 +868,17 @@ class AIChat (commands .Cog ):
         return 10 # varчислоlan
 
     async def _detect_owner_intent (self ,text :str ,message :discord .Message )->bool :
-        """Owner DM команды — anahtar kelime основанный на, неверно yazsan da чalышыr"""
+        """Owner DM команды — на ключевых словах, работает даже при опечатках"""
         import re 
         cl =text .lower ()
         cn =self ._norm (text )
 
-        #  MЮZИK 
-        # Ses в канал gir (музыкаsiz)
+        #  МУЗЫКА 
+        # Зайти в голосовой канал (без музыки)
         ses_gir_triggers =['voice gir','voice katыl','voice gel','channela gir','benim voice gir',
         'voice gir','ses в канал gir','ses в канал gir','yanima gel']
         if any (t in cn for t in [self ._norm (x )for x in ses_gir_triggers ]):
-            result_msg =' Ses в канале deгilsin.'
+            result_msg =' Ты не в голосовом канале.'
             for guild in self .bot .guilds :
                 member =guild .get_member (OWNER_ID )
                 if not member or not member .voice :
@@ -938,132 +889,50 @@ class AIChat (commands .Cog ):
                         vc =await member .voice .channel .connect ()
                     else :
                         await vc .move_to (member .voice .channel )
-                    result_msg =f' **{member.voice.channel.name}** в канал girdim.'
+                    result_msg =f' Зашёл в канал **{member.voice.channel.name}**.'
                     break 
                 except Exception as e :
                     result_msg =f' Ошибка: {e}'
             await message .channel .send (result_msg )
             return True 
 
-            # Ses из канала чыk
-        ses_cik_triggers =['sesten чыk','sesten cik','channeldan чыk','channeldan cik',
-        'чыk sesten','cik sesten','botu удалить','botu cikar']
+            # выйти из голосового канала
+        ses_cik_triggers =['выйди из войса','выйди из голосового','покинь войс',
+        'отключись от войса','выйди из канала']
         if any (t in cn for t in [self ._norm (x )for x in ses_cik_triggers ]):
-            result_msg =' Zaten ses в канале deгilim.'
+            result_msg =' Я уже не в голосовом канале.'
             for guild in self .bot .guilds :
                 vc =guild .voice_client 
                 if vc :
                     await vc .disconnect ()
-                    result_msg =' Ses из канала вышел.'
+                    result_msg =' Вышел из голосового канала.'
                     break 
             await message .channel .send (result_msg )
             return True 
 
-        muzik_triggers =['чal','cal','музыка','muzik','песня','sarki','oynat']
-        if any (t in cl for t in muzik_triggers ):
-            query =text 
-            for t in ['чal','cal','музыка чal','muzik cal','песня чal','sarki cal','oynat','bana']:
-                query =query .replace (t ,'').strip ()
-            query =query .strip ()or 'lofi'
-            result_msg =' Ses в канале deгilsin.'
-            for guild in self .bot .guilds :
-                member =guild .get_member (OWNER_ID )
-                if not member or not member .voice :
-                    continue 
-                voice_channel =member .voice .channel 
-                text_channel =guild .text_channels [0 ]if guild .text_channels else None 
-                try :
-                    from cogs .music import fetch_source ,get_queue ,play_next 
-                    vc =guild .voice_client 
-                    if vc and not vc .is_connected ():
-                        vc =None # Kapanmakta который является ссылка clear
-                    if not vc :
-                        vc =await voice_channel .connect ()
-                    elif vc .channel !=voice_channel :
-                        await vc .move_to (voice_channel )
-                    stream_url ,title ,webpage_url =await fetch_source (query )
-                    item ={'stream_url':stream_url ,'title':title ,
-                    'webpage_url':webpage_url ,'requester':'Arthur (DM)'}
-                    q =get_queue (guild .id )
-                    if vc .is_playing ()or vc .is_paused ():
-                        q .append (item )
-                        result_msg =f' Kuyruгa addndi: **{title}**'
-                    else :
-                        q .insert (0 ,item )
-                        await play_next (guild ,text_channel )
-                        result_msg =f' Чalыnыyor: **{title}**'
-                    break 
-                except Exception as e :
-                    result_msg =f' Mюzik Ошибки: {e}'
-            await message .channel .send (result_msg )
+        music_triggers =['включи музыку','поставь трек','поставь песню','музыку включи']
+        if any (t in cl for t in music_triggers ):
+            await message .channel .send (
+            ' Музыка переехала в полноценный плеер Hakumo.\n'
+            'Зайди в голосовой канал и запусти активность «Hakumo Music» — '
+            'очередь, перемотка и обложки уже там.')
             return True 
 
-            # AFK удалить — до контроль et (закрыть/удалить varsa AFK aчma)
-        afk_kapat_triggers =['dёndюm','geldim','uyandыm','afk удалить','afk закрыть',
-        'afk удалить','afk закрыть','afk modunu закрыть','afk modu закрыть',
-        'afk bitir','afk удалить','afk отмена']
-        if any (t in cl for t in afk_kapat_triggers ):
-            afk_cog =self .bot .get_cog ('AFK')
-            for guild in self .bot .guilds :
-                member =guild .get_member (OWNER_ID )
-                if not member :
-                    continue 
-                if afk_cog :
-                    afk_cog ._remove (guild .id ,OWNER_ID )
-                try :
-                    nick =member .display_name 
-                    if nick .startswith (' '):
-                        await member .edit (nick =nick [2 :].strip ()or None )
-                except Exception :
-                    pass 
-            from cogs .afk import _pending_mentions 
-            pending =_pending_mentions .pop (OWNER_ID ,[])
-            if pending :
-                lines =[f"• **{p['from']}**: {p['msg'][:60]}"for p in pending [-5 :]]
-                await message .channel .send (f' Добро пожаловать geldin! {len(pending)} человек etiketledi:\n'+'\n'.join (lines ))
-            else :
-                await message .channel .send (' AFK modu закрыто.')
-            return True 
+            # (AFK-интенты убраны: модуль afk.py спит в лёгком профиле)
 
-            # AFK aч — "закрыть" или "удалить" geчiyorsa tetikleme
-        afk_ac_triggers =['afk','uykum есть','uyuyacaгыm','gidiyorum','yokum']
-        afk_engel =['закрыть','удалить','удалить','bitir','удалить','отмена','modunu','modu']
-        if any (t in cl for t in afk_ac_triggers )and not any (e in cl for e in afk_engel ):
-            reason =text 
-            for t in ['afk at','afk ol','afk yap','afk','beni']:
-                reason =reason .replace (t ,'').strip ()
-            reason =reason or 'AFK'
-            afk_cog =self .bot .get_cog ('AFK')
-            for guild in self .bot .guilds :
-                member =guild .get_member (OWNER_ID )
-                if not member :
-                    continue 
-                if afk_cog :
-                    afk_cog ._set (guild .id ,OWNER_ID ,reason ,owner_mode =True )
-                try :
-                    nick =member .display_name 
-                    if not nick .startswith (''):
-                        await member .edit (nick =f' {nick[:28]}')
-                except Exception :
-                    pass 
-            await message .channel .send (f' AFK modu активен! Причина: **{reason}**')
-            return True 
-
-            # Ses канал movema
+            # перемещение по голосовым каналам
         ses_tasi_triggers =[
-        'ses в канал','voice move','voice тянуть','voice al',
-        'верх channela','верх channela','Низ channela',
-        'channela move','channela тянуть','channela al','voice',
-        'верх channel','верх channel','Вверх channel','Вверх channel',
-        'в канал al','в канал al','move voice','тянуть voice','al voice',
+        'перемести в канал','перекинь в канал','притяни в канал',
+        'канал выше','канал ниже','на канал выше','на канал ниже',
+        'верни в канал','перемести в войс','верни в войс',
         ]
-        # Sesten at — ayrы handler
-        sesten_at_triggers =['sesten at','sesten удалить','sesten cikar','ses из канала at',
-        'ses из канала удалить','ses из канала at','sesten kick']
-        if any (t in cn for t in [self ._norm (x )for x in sesten_at_triggers ]):
+        # выгнать из голосового канала
+        voice_kick_triggers =['выгнать из войса','выкинь из войса','кикни из войса',
+        'выгнать из голосового','выкинуть из голосового','выгони из войса']
+        if any (t in cn for t in [self ._norm (x )for x in voice_kick_triggers ]):
             target_id =self ._extract_target (text )
             if not target_id :
-                await message .channel .send (' Не удалось определить пользователя для исключения.')
+                await message .channel .send (' Не удалось определить пользователя — упомяни его или ответь на его сообщение.')
                 return True 
             results =[]
             for guild in self .bot .guilds :
@@ -1071,16 +940,16 @@ class AIChat (commands .Cog ):
                 if not member :
                     continue 
                 if not member .voice :
-                    results .append (f' **{member.display_name}** zaten seste не.')
+                    results .append (f' **{member.display_name}** уже не в голосовом канале.')
                     continue 
                 try :
                     await member .move_to (None )
-                    results .append (f' **{member.display_name}** sesten atыldы.')
+                    results .append (f' **{member.display_name}** выкинут из голосового канала.')
                 except discord .Forbidden :
-                    results .append (' Администратор нет.')
+                    results .append (' Нет прав администратора.')
                 except Exception as e :
                     results .append (f' Ошибка: {e}')
-            await message .channel .send ('\n'.join (results )if results else ' Участник не найдено.')
+            await message .channel .send ('\n'.join (results )if results else ' Участник не найден.')
             return True 
 
         if any (t in cl for t in ses_tasi_triggers ):
@@ -1088,19 +957,20 @@ class AIChat (commands .Cog ):
             await message .channel .send (result_msg )
             return True 
 
-            # DM / особый message
-        dm_triggers =['особый yaz','приватныйden yaz','dm at','dm отправить','dm yaz',
-        'особый message at','приватный message at','особый message','приватныйden message']
+            # ЛС: «напиши в личку …», «отправь лс …»
+        dm_triggers =['напиши в личку','отправь в личку','отправь лс','напиши лс',
+        'отправь в лс','напиши в лс','личка','личное сообщение']
         if any (t in cl for t in dm_triggers ):
             result_msg =await self ._handle_dm_send (text ,message )
             await message .channel .send (result_msg )
             return True 
 
-            #  ЗАДАЧА ZИNCИRИ 
-            # "X kiшiyi izle, мат ederse ban at" gibi условный задачи
-        gorev_add =['задача add','gorevi add','izle ve','takip et','задача kur','gorev kur',
-        'ederse ban','ederse kick','ederse timeout','yaparsa ban','yaparsa kick']
-        if any (t in cn for t in [self ._norm (x )for x in gorev_add ]):
+            # ЦЕПОЧКИ ЗАДАЧ
+            # условные задачи: «следи за X, если нарушит — забань»
+        task_add_words =['задача добавить','создай задачу','новая задача','следи за',
+        'если нарушит забань','если нарушит кикни','если нарушит таймаут',
+        'если матернётся забань','если матернётся таймаут']
+        if any (t in cn for t in [self ._norm (x )for x in task_add_words ]):
             target_id =self ._extract_target (text )
             desc =text .strip ()
             task ={'id':len (_active_tasks )+1 ,'desc':desc ,
@@ -1108,23 +978,23 @@ class AIChat (commands .Cog ):
             _active_tasks .append (task )
             _save_tasks (_active_tasks )
             await message .channel .send (
-            f' Задача сохранено (#{task["id"]}): *{desc[:100]}*\n'
-            f'`задача показать` с listeleyebilirsin.'
+            f'✅ **Задача сохранена** (#{task["id"]}): *{desc[:100]}*\n'
+            'Все задачи — команда `задача показать`.'
             )
             return True 
 
-        gorev_listele =['задача показать','gorevi показать','активен задачи','активен gorevler',
-        'задача список','gorev список']
-        if any (t in cn for t in [self ._norm (x )for x in gorev_listele ]):
+        task_list_words =['задача показать','покажи задачи','активные задачи',
+        'список задач','задачи список']
+        if any (t in cn for t in [self ._norm (x )for x in task_list_words ]):
             if not _active_tasks :
-                await message .channel .send (' Активен задача нет.')
+                await message .channel .send ('📭 Активных задач нет.')
             else :
                 lines =[f'**#{t["id"]}** — {t["desc"][:80]}'for t in _active_tasks ]
-                await message .channel .send (' **Активен Задачи:**\n'+'\n'.join (lines ))
+                await message .channel .send (' **Активные задачи:**\n'+'\n'.join (lines ))
             return True 
 
-        gorev_sil =['задача удалить','gorevi удалить','задача удалить','gorevi удалить','задача отмена']
-        if any (t in cn for t in [self ._norm (x )for x in gorev_sil ]):
+        task_delete_words =['задача удалить','удали задачу','задача отмена']
+        if any (t in cn for t in [self ._norm (x )for x in task_delete_words ]):
             import re as _re 
             num =_re .search (r'\d+',text )
             if num :
@@ -1133,17 +1003,17 @@ class AIChat (commands .Cog ):
                 _active_tasks [:]=[t for t in _active_tasks if t ['id']!=tid ]
                 _save_tasks (_active_tasks )
                 if len (_active_tasks )<before :
-                    await message .channel .send (f' Задача #{tid} удалено.')
+                    await message .channel .send (f' Задача #{tid} удалена.')
                 else :
                     await message .channel .send (f' Задача #{tid} не найдена.')
             else :
-                await message .channel .send (' Какой задача удалить желание belirt: `задача удалить 1`')
+                await message .channel .send (' Какую задачу удалить? Укажи номер: `задача удалить 1`')
             return True 
 
-            #  СЕРВЕР СОСТОЯНИЕ SORGULAMA 
-        status_triggers =['на сервере кто есть','кто online','кто seste','сколько человек online',
-        'сервер statusu','neler oluyor','ne есть ne нет на сервере',
-        'кто активен','seste кто есть','online кто есть']
+            # СОСТОЯНИЕ СЕРВЕРА
+        status_triggers =['кто на сервере','кто онлайн','кто в войсе','сколько человек онлайн',
+        'что на сервере','что происходит на сервере','как дела на сервере',
+        'кто активен','кто в голосовом','кто тут есть']
         if any (t in cn for t in [self ._norm (x )for x in status_triggers ]):
             lines =[]
             for guild in self .bot .guilds :
@@ -1156,37 +1026,38 @@ class AIChat (commands .Cog ):
                     if members :
                         in_voice .append (f'**{vc.name}**: {", ".join(members)}')
                 lines .append (f'**{guild.name}**')
-                lines .append (f'• Online: {len(online)} человек')
+                lines .append (f'• Онлайн: {len(online)} человек')
                 if in_voice :
-                    lines .append ('• Ses channellarы:\n  '+'\n  '.join (in_voice ))
+                    lines .append ('• Голосовые каналы:\n  '+'\n  '.join (in_voice ))
                 else :
-                    lines .append ('• Ses channellarыnda кто нет')
+                    lines .append ('• В голосовых каналах никого нет')
                 ticket_chs =[c for c in guild .text_channels if c .name .startswith ('ticket-')]
                 if ticket_chs :
-                    lines .append (f'• Открыт ticket: {len(ticket_chs)}')
+                    lines .append (f'• Открытых тикетов: {len(ticket_chs)}')
             await message .channel .send ('\n'.join (lines )or ' Не удалось получить информацию о сервере.')
             return True 
 
-            # Mod уведомление aч/закрыть
-        mod_notify_ac =['mod уведомление aч','mod уведомление открыть','наказание уведомление aч','наказание уведомление открыть',
-        'mod notify aч','mod notify открыть','уведомление aч','уведомление открыть']
-        mod_notify_kapat =['mod уведомление закрыть','наказание уведомление закрыть','mod notify закрыть','уведомление закрыть']
+            # Вкл/выкл уведомлений модерации
+        mod_notify_ac =['включи уведомления модерации','уведомления модерации вкл',
+        'присылай наказания в лс','включи оповещения о наказаниях']
+        mod_notify_off =['выключи уведомления модерации','уведомления модерации выкл',
+        'не присылай наказания','выключи оповещения о наказаниях']
         if any (t in cn for t in [self ._norm (x )for x in mod_notify_ac ]):
             import json as _j 
             os .makedirs ('data',exist_ok =True )
             with open ('data/mod_notify.json','w',encoding ='utf-8')as f :
                 _j .dump ({'enabled':True },f )
-            await message .channel .send (' Уведомления модератора включены. Вы будете получать ЛС о действиях.n.')
+            await message .channel .send (' Уведомления включены — действия модерации будут приходить в ЛС.')
             return True 
-        if any (t in cn for t in [self ._norm (x )for x in mod_notify_kapat ]):
+        if any (t in cn for t in [self ._norm (x )for x in mod_notify_off ]):
             import json as _j 
             os .makedirs ('data',exist_ok =True )
             with open ('data/mod_notify.json','w',encoding ='utf-8')as f :
                 _j .dump ({'enabled':False },f )
-            await message .channel .send (' Mod уведомление закрыто.')
+            await message .channel .send (' Уведомления модерации отключены.')
             return True 
 
-            # Hiчbir handler eшleшmedi — normal sohbete dюш
+            # ни один обработчик не сработал — обычный разговор с AI
         return False 
 
     @commands .Cog .listener ()
@@ -1196,9 +1067,9 @@ class AIChat (commands .Cog ):
 
         is_dm =isinstance (message .channel ,discord .DMChannel )
 
-        #  Owner'ыn DM cevabыnы yakala 
+            # перехват ответа владельца в ЛС
         if is_dm and OWNER_ID and message .author .id ==OWNER_ID :
-        # Owner bir messagea reply attыysa, o message baddyen soru mu?
+        # Если owner ответил реплаем на сообщение — это ответ на ожидающий вопрос?
             if message .reference and message .reference .message_id in _pending_questions :
                 ref_id =message .reference .message_id 
                 pending =_pending_questions .pop (ref_id )
@@ -1237,26 +1108,26 @@ class AIChat (commands .Cog ):
                     await message .channel .send (f' Не удалось доставить: {e}')
                 return 
 
-                #  Owner'ыn akыllы eylem система (AI intent detection) 
+                # умные действия владельца (распознавание намерений AI)
             content_lower =message .content .lower ().strip ()
             content_raw =message .content .strip ()
 
-            # Tercih/правило сохран — "bunu bana yazma", "bunu каждый vakit yap" vb.
-            pref_triggers =['bunu bana yazma','bunu сказатьme','bunu yapma',
-            'каждый vakit yap','каждый vakit сказать','hatыrla',
-            'unutma','bunu bil','теперь biliyorsun']
+            # сохранение правил/предпочтений: «запомни», «всегда говори»…
+            pref_triggers =['это мне не пиши','так не говори','так не делай',
+            'делай всегда','говори всегда','запомни',
+            'не забывай','имей в виду','теперь ты знаешь']
             if any (t in content_lower for t in pref_triggers ):
                 _owner_prefs ['rules'].append (content_raw )
                 if len (_owner_prefs ['rules'])>50 :
                     _owner_prefs ['rules']=_owner_prefs ['rules'][-50 :]
                 _save_owner_prefs (_owner_prefs )
-                await message .channel .send (f' Сохранитьtim: **{content_raw[:100]}**')
+                await message .channel .send (f' Сохранил: **{content_raw[:100]}**')
                 return 
 
                 # AI с intent определить
             intent =await self ._detect_owner_intent (content_raw ,message )
             if intent :
-                return # Intent iшlendi, normal AI akышыna geчme
+                return # намерение обработано — обычный AI-ответ не нужен
 
         is_ticket_channel =False 
         is_ai_channel =(
@@ -1264,6 +1135,18 @@ class AIChat (commands .Cog ):
         message .channel .id in _dynamic_channels or 
         is_ticket_channel 
         )
+
+            # Заказ владельца: в личке ИИ НЕ работает — чат только на сервере.
+            # Перехват reply владельца на ожидающие вопросы и его команды
+            # (выше по коду) продолжают работать — они не ИИ-чат.
+        if is_dm :
+            try :
+                await message .channel .send (
+                'ИИ-чат теперь работает только на сервере — '
+                'напиши в канал с ИИ, отвечу там сразу.')
+            except Exception as _dm_ex:
+                log .info (f'[AI] DM notice Ошибки: {_dm_ex}')
+            return 
 
         if not (is_dm or is_ai_channel ):
             return 
@@ -1287,11 +1170,16 @@ class AIChat (commands .Cog ):
         else :
             content =message .content .strip ()or 'Здравствуйте!'
 
-            # Arthur'un команда talebi — J.A.R.V.I.S. modu
+            # <@123> / <#456> в вопросе → читаемые имена — ИИ видит, о ком речь
+        if message .guild :
+            content =_resolve_mentions (content ,message .guild )
+
+            # командный запрос владельца — режим J.A.R.V.I.S.
         if OWNER_ID and message .author .id ==OWNER_ID :
-            cmd_triggers =['channel aч','channel создать','message at','announce yap',
-            'ban at','kick at','timeout ver','роли ver','роли al']
+            cmd_triggers =['создай канал','новый канал','сделай объявление','объяви',
+            'забань','кикни','выдай таймаут','дай роль','сними роль']
             if any (t in content .lower ()for t in cmd_triggers ):
+                context ={}
                 context ['jarvis_mode']=True 
                 context ['available_commands']=(
                 'Использовать команды:\n'
@@ -1299,10 +1187,10 @@ class AIChat (commands .Cog ):
                 '/moderate kick @user причина\n'
                 '/moderate timeout @user minutes причина\n'
                 '/роли @user @роли\n'
-                '/utility clear adet\n'
+                '/utility clear количество\n'
                 '/utility lock\n'
                 '/utility unlock\n'
-                'Канал создан для: Discord\'da Сервер Настройкиы → Каналы'
+                'Каналы создаются в Discord: Настройки сервера → Каналы'
                 )
 
         async with message .channel .typing ():
@@ -1322,9 +1210,9 @@ class AIChat (commands .Cog ):
             )
 
         if _kufur_var_mi (answer ):
-            answer ="Bunu сказатьyemem. "
+            answer ="Я не могу это сказать. "
 
-            # Ответ "bilmiyorum" содержимое owner'a sor
+            # Ответы "не знаю" — спросить у владельца
         bilmiyorum_triggers =['bilmiyorum','emin deгilim','info bulamadыm','о infom нет']
         if OWNER_ID and any (t in answer .lower ()for t in bilmiyorum_triggers ):
             try :
@@ -1336,7 +1224,7 @@ class AIChat (commands .Cog ):
                 color =0xf59e0b ,
                 description =f'**Спросил:** {user_name} (`{message.author.id}`)\n'
                 f'**Вопрос:** {content}\n\n'
-                f'**Ответlamak для bu messagea reply at.**'
+                '**Чтобы ответить, сделай reply на это сообщение.**'
                 )
                 embed .set_footer (text =f'Сервер: {message.guild.name if message.guild else "DM"}')
                 dm_msg =await owner .send (embed =embed )
@@ -1351,29 +1239,24 @@ class AIChat (commands .Cog ):
                 log .info (f'[AI] Owner DM Ошибки: {e}')
 
         if is_dm :
-        # DM log'a сохранить
+        # DM log'a сохранить (входящее сообщение логгер DMLogger'a записывает,
+        # здесь только bot cevabы сохранить, чтобы не дублировать)
             try :
                 import json as _j ,os as _os ,datetime as _dt3 
                 _os .makedirs ('data',exist_ok =True )
                 _f ='data/dm_log.json'
                 _d =_j .load (open (_f ,encoding ='utf-8'))if _os .path .exists (_f )else {}
                 uid =str (message .author .id )
-                if uid not in _d :_d [uid ]=[]
-                # Gelen сообщение сохранить
-                _d [uid ].append ({
-                'author':message .author .display_name ,
-                'content':message .content ,
-                'timestamp':_dt3 .datetime .utcnow ().isoformat (),
-                'from_bot':False ,
-                })
+                if uid not in _d or not isinstance (_d [uid ],list ):
+                    _d [uid ]=[]
                 # Bot cevabыnы сохранить
                 _d [uid ].append ({
-                'author':'Aether',
+                'author':'Hakumo',
                 'content':answer ,
-                'timestamp':_dt3 .datetime .utcnow ().isoformat (),
+                'timestamp':_dt3 .datetime.now(_dt3 .timezone.utc).isoformat (),
                 'from_bot':True ,
                 })
-                # Max 200 message tut
+                # держим максимум 200 сообщений
                 _d [uid ]=_d [uid ][-200 :]
                 with open (_f ,'w',encoding ='utf-8')as fp :
                     _j .dump (_d ,fp ,ensure_ascii =False ,indent =2 )
@@ -1381,7 +1264,11 @@ class AIChat (commands .Cog ):
                 log .info (f'[DM LOG] Ошибка: {_le}')
             await message .channel .send (answer )
         else :
-            await message .reply (answer ,mention_author =False )
+            chunks =_split_long (answer )
+            if chunks :
+                await message .reply (chunks [0 ],mention_author =False )
+                for extra in chunks [1 :]:
+                    await message .channel .send (extra )
 
 
 async def setup (bot ):

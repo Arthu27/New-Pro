@@ -26,6 +26,9 @@ ffmpeg-*-essentials_build/
 # Flask sessions
 data/flask_sessions/
 
+# Runtime data — tüm bot verileri (loglar, kayıtlar, leaderboard'lar) repo'ya girmez
+data/
+
 # Log files
 *.log
 
@@ -140,3 +143,20 @@ help_overview_animated.gif
 *_bg_style.png
 anime_boy.png
 assets/ai_gojo/
+
+# Локальные симуляционные тесты Arena (не для продакшена)
+.arena_tests/
+
+# Runtime-артефакты автообновления и туннеля (не для репозитория)
+last_commit.txt
+bot_output.log
+backups/
+hakumo-update.zip
+cloudflared
+cloudflared_new.exe
+# Tunnel artifacts (локальные ключи/конфиг туннеля — не для репо)
+scripts/cloudflared
+scripts/cloudflared.exe
+scripts/config.yml
+scripts/tunnel-creds.json
+scripts/.hakumo_tunnel_runtime.yml

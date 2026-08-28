@@ -1,119 +1,263 @@
 {% extends "base.html" %}
-{% block title %}Настройки бота — Aether{% endblock %}
+{% block title %}Настройки бота — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-sliders-h" ></i> Настройки бота{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Настройки бота</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Настройки <span class="sep">·</span> Бот</div>
     <h1>Настройки бота</h1>
-    <p>Глобальные настройки бота: префикс, статус, активность, язык.</p>
+    <p class="lead">То, что реально применяется прямо сейчас: присутствие бота, синхронизация slash-команд и заявки в команду.</p>
   </div>
 </div>
-{% endblock %}
 
 
+<style>
+.bs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.bs-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:20px;}
+.bs-head{display:flex;align-items:center;gap:11px;margin-bottom:14px}
+.bs-icon{width:42px;height:42px;border-radius:11px;background:var(--ac-soft);color:var(--ac);border:1px solid var(--ac-line);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.bs-title{font-weight:800;color:var(--text);font-size:15px}
+.bs-sub{font-size:11.5px;color:var(--text-3);font-weight:600;margin-top:2px;line-height:1.45}
+.bs-card .row{display:flex;align-items:center;gap:10px;margin-top:9px}
+.bs-card .row label{font-size:11.5px;font-weight:700;color:var(--text-3);min-width:88px}
+.bs-card select,.bs-card input{flex:1;min-width:0}
+.bs-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bs-live{font-size:11px;font-weight:700;color:var(--ok)}
+.bs-info{display:flex;flex-direction:column;gap:9px;margin-top:6px}
+.bs-info-row{display:flex;align-items:center;gap:9px;font-size:12.5px}
+.bs-info-row i{color:var(--ac);width:16px;text-align:center}
+.bs-info-row .k{color:var(--text-3);font-weight:700;min-width:110px}
+.bs-info-row .v{color:var(--text);font-weight:700}
+.bs-chip{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--ac-soft);color:var(--ac-2);border:1px solid var(--ac-line);font-weight:800;font-size:12px}
+.bs-out{margin-top:10px;font-size:12px;font-weight:700;display:none;padding:10px 12px;border-radius:10px}
+.bs-out.show{display:block;animation:fadeUp .25s ease}
+.bs-out.ok{color:var(--ok);background:color-mix(in srgb, var(--ok) 8%, transparent);border:1px solid color-mix(in srgb, var(--ok) 25%, transparent)}
+.bs-out.err{color:var(--err);background:color-mix(in srgb, var(--err) 8%, transparent);border:1px solid color-mix(in srgb, var(--err) 25%, transparent)}
+.bs-staff-row{display:flex;align-items:center;gap:10px;margin-top:9px}
+.bs-staff-row label{font-size:11.5px;font-weight:700;color:var(--text-3);min-width:110px}
+.bs-staff-row select{flex:1;min-width:0}
+.bs-toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;transform:translateY(12px);pointer-events:none;transition:.3s;z-index:99}
+.bs-toast.show{opacity:1;transform:translateY(0)}
+.bs-toast.ok{background:rgba(46,204,113,.95);color:#08130c}
+.bs-toast.bad{background:rgba(231,76,60,.95);color:#fff}
+</style>
 
 <div class="bs-grid">
-  <div class="bs-card">
+
+  <!-- Присутствие -->
+  <div class="bs-card" data-reveal>
     <div class="bs-head">
       <div class="bs-icon"><i class="fas fa-robot"></i></div>
-      <div class="bs-title">Статус и активность</div>
+      <div><div class="bs-title">Присутствие бота</div>
+        <div class="bs-sub">Статус и «Слушает/Играет…» в профиле бота. Применяется мгновенно и переживает перезапуск (main.py читает этот же конфиг).</div></div>
     </div>
     <div class="row"><label>Статус</label>
-      <select id="bot-status"><option value="online">🟢 Online</option><option value="idle" selected>🟡 Idle</option><option value="dnd">🔴 DND</option><option value="invisible">⚫ Invisible</option></select>
+      <select id="bs-status" aria-label="Статус бота">
+        <option value="online">Online</option>
+        <option value="idle">Idle</option>
+        <option value="dnd">DND</option>
+        <option value="invisible">Invisible</option>
+      </select>
     </div>
     <div class="row"><label>Активность</label>
-      <select id="bot-activity"><option value="listening" selected>Слушает</option><option value="playing">Играет</option><option value="watching">Смотрит</option><option value="competing">Соревнуется</option></select>
+      <select id="bs-activity" aria-label="Тип активности">
+        <option value="listening">Слушает</option>
+        <option value="playing">Играет</option>
+        <option value="watching">Смотрит</option>
+        <option value="competing">Соревнуется</option>
+      </select>
     </div>
-    <div class="row"><label>Текст</label><input type="text" id="bot-text" value=".gg/Aether"></div>
-  </div>
-
-  <div class="bs-card">
-    <div class="bs-head">
-      <div class="bs-icon"><i class="fas fa-terminal"></i></div>
-      <div class="bs-title">Префикс команд</div>
+    <div class="row"><label>Текст</label>
+      <input type="text" id="bs-text" maxlength="80" placeholder=".gg/Hakumo" aria-label="Текст активности">
     </div>
-    <div class="row"><label>Префикс</label><input type="text" id="bot-prefix" value="!"></div>
-    <div class="row"><label>Slash</label>
-      <select id="slash-enabled"><option value="1">Включены</option><option value="0">Выключены</option></select>
-    </div>
-    <button class="btn btn-primary" id="sync-slash" type="button"   style="margin-top: 6px;"><i class="fas fa-sync"></i> Sync команд</button>
-  </div>
-
-  <div class="bs-card">
-    <div class="bs-head">
-      <div class="bs-icon"><i class="fas fa-brain"></i></div>
-      <div class="bs-title">AI и ответы</div>
-    </div>
-    <div class="row with-toggle">
-      <label>AI ответы</label>
-      <div class="toggle on" id="tog-ai"></div>
-    </div>
-    <div class="row with-toggle">
-      <label>DM ответы</label>
-      <div class="toggle on" id="tog-dm"></div>
-    </div>
-    <div class="row"><label>Модель</label>
-      <select id="ai-model"><option>Mistral</option><option>GPT-4</option><option>Claude</option></select>
+    <div class="bs-actions">
+      <button class="btn btn-primary" id="bs-save" type="button"><i class="fas fa-save"></i> Применить</button>
+      <span class="bs-live" id="bs-live"></span>
     </div>
   </div>
 
-  <div class="bs-card">
+  <!-- Синк -->
+  <div class="bs-card" data-reveal>
     <div class="bs-head">
-      <div class="bs-icon"><i class="fas fa-clipboard-list"></i></div>
-      <div class="bs-title">Логирование</div>
+      <div class="bs-icon"><i class="fas fa-rotate"></i></div>
+      <div><div class="bs-title">Slash-команды</div>
+        <div class="bs-sub">Принудительная синхронизация команд с Discord — нужна после обновления бота, если команды «потерялись».</div></div>
     </div>
-    <div class="row with-toggle"><label>Мод-логи</label><div class="toggle on" id="tog-modlog"></div></div>
-    <div class="row with-toggle"><label>Сообщения</label><div class="toggle on" id="tog-msglog"></div></div>
-    <div class="row with-toggle"><label>Голос</label><div class="toggle" id="tog-voicelog"></div></div>
-    <div class="row"><label>Канал</label><input type="text" id="log-channel" placeholder="ID канала"></div>
+    <div class="bs-actions">
+      <button class="btn btn-primary" id="bs-sync" type="button"><i class="fas fa-sync"></i> Синхронизировать</button>
+    </div>
+    <div class="bs-out" id="bs-sync-out"></div>
   </div>
 
-  <div class="bs-card">
+  <!-- Заявки в команду -->
+  <div class="bs-card" data-reveal>
     <div class="bs-head">
-      <div class="bs-icon"><i class="fas fa-database"></i></div>
-      <div class="bs-title">Резервные копии</div>
+      <div class="bs-icon"><i class="fas fa-id-badge"></i></div>
+      <div><div class="bs-title">Заявки в команду</div>
+        <div class="bs-sub">Роли для набора в команду: что выдаётся после одобрения и кого пинговать в ветках. «Авто» — бот сам найдёт роль по имени («Хелпер»/«Модератор») или возьмёт ID из .env. Каналы веток — на странице «Каналы и маршруты».</div></div>
     </div>
-    <div class="row with-toggle"><label>Авто-бэкап</label><div class="toggle on" id="tog-backup"></div></div>
-    <div class="row"><label>Интервал</label>
-      <select id="backup-interval"><option>Каждый час</option><option>Каждые 6ч</option><option selected>Каждый день</option><option>Каждую неделю</option></select>
+    <div id="bs-staff-box"><div class="bs-info-row"><span class="k">Загрузка…</span></div></div>
+    <div class="bs-actions">
+      <button class="btn btn-primary" id="bs-staff-save" type="button"><i class="fas fa-save"></i> Применить</button>
+      <span class="bs-live" id="bs-staff-live"></span>
     </div>
-    <div class="row"><label>Копий</label><input type="number" id="backup-keep" value="10" min="1"></div>
+  </div>
+
+  <!-- Инфо -->
+  <div class="bs-card" data-reveal>
+    <div class="bs-head">
+      <div class="bs-icon"><i class="fas fa-circle-info"></i></div>
+      <div><div class="bs-title">Информация</div>
+        <div class="bs-sub">Живое состояние (только чтение)</div></div>
+    </div>
+    <div class="bs-info">
+      <div class="bs-info-row"><i class="fas fa-terminal"></i><span class="k">Префикс</span><span class="v"><span class="bs-chip" id="bs-prefix">?</span> <span class="bs-sub">меняется в .env (COMMAND_PREFIX)</span></span></div>
+      <div class="bs-info-row"><i class="fas fa-signal"></i><span class="k">Бот онлайн</span><span class="v" id="bs-online">—</span></div>
+      <div class="bs-info-row"><i class="fas fa-server"></i><span class="k">Серверов</span><span class="v" id="bs-guilds">—</span></div>
+      <div class="bs-info-row"><i class="fas fa-code-branch"></i><span class="k">discord.py</span><span class="v" id="bs-version">—</span></div>
+      <div class="bs-info-row"><i class="fas fa-save"></i><span class="k">Бэкапы</span><span class="v"><a href="/backups" style="color:var(--ac);font-weight:800">Открыть страницу бэкапов →</a></span></div>
+    </div>
   </div>
 </div>
 
-<div class="save-bar">
-  <button class="btn btn-primary" id="btn-save" type="button"><i class="fas fa-save"></i> Сохранить всё</button>
-</div>
+<div class="bs-toast" id="bs-toast"></div>
 
 <script>
 (function () {
   'use strict';
-  function $(id) { return document.getElementById(id); }
-  function showToast(msg, ok) {
-    var t = document.createElement('div');
-    t.className = 'toast ' + (ok ? 'ok' : 'err');
+  var $ = function (id) { return document.getElementById(id); };
+
+  function toast(msg, ok) {
+    var t = $('bs-toast');
     t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 2200);
+    t.className = 'bs-toast show ' + (ok === false ? 'bad' : 'ok');
+    setTimeout(function () { t.className = 'bs-toast'; }, 2600);
   }
-  function bindToggle(id) {
-    var el = $(id);
-    if (el) el.addEventListener('click', function () { el.classList.toggle('on'); });
+
+  function load() {
+    fetch('/api/bot-settings').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok) throw new Error('api');
+      $('bs-status').value = d.presence.status;
+      $('bs-activity').value = d.presence.activity_type;
+      $('bs-text').value = d.presence.activity_text;
+      $('bs-prefix').textContent = d.prefix;
+      $('bs-online').innerHTML = d.bot_online ? '<i class="fas fa-circle" style="color:var(--ok);font-size:9px"></i> да' : '<i class="fas fa-circle" style="color:var(--err);font-size:9px"></i> офлайн';
+      $('bs-guilds').textContent = d.guilds;
+      $('bs-version').textContent = d.discord_version;
+    }).catch(function () { toast('Не удалось загрузить настройки', false); });
   }
+
+  function savePresence() {
+    var body = {
+      status: $('bs-status').value,
+      activity_type: $('bs-activity').value,
+      activity_text: $('bs-text').value
+    };
+    fetch('/api/bot-settings/presence', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+      .then(function (res) {
+        if (res.s === 200 && res.d.ok) {
+          $('bs-live').textContent = res.d.applied_live ? 'применено мгновенно' : 'сохранено, применится после рестарта';
+          toast('Присутствие обновлено', true);
+        } else {
+          toast('' + ((res.d.errors || [res.d.error] || ['ошибка']).join(' · ')), false);
+        }
+      }).catch(function () { toast('Сеть недоступна', false); });
+  }
+
+  function sync() {
+    var out = $('bs-sync-out');
+    out.className = 'bs-out show';
+    out.textContent = 'Синхронизируем…';
+    fetch('/api/bot-settings/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+      .then(function (res) {
+        if (res.s === 200 && res.d.ok) {
+          out.className = 'bs-out show ok';
+          out.textContent = 'Готово: синхронизировано команд — ' + res.d.synced;
+        } else {
+          out.className = 'bs-out show err';
+          out.textContent = '' + (res.d.error || 'ошибка');
+        }
+      }).catch(function () {
+        out.className = 'bs-out show err';
+        out.textContent = 'Сеть недоступна';
+      });
+  }
+
+  /* ── Заявки в команду: роли ─────────────────────────────── */
+  var STAFF_ROLES = [];
+  var STAFF_GUILD_ROLES = [];
+  var STAFF_CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+
+  function roleName(id) {
+    var r = STAFF_GUILD_ROLES.find(function (x) { return String(x.id) === String(id); });
+    return r ? r.name : null;
+  }
+
+  function renderStaffRoles() {
+    var box = $('bs-staff-box');
+    if (!STAFF_ROLES.length) {
+      box.innerHTML = '<div class="bs-info-row"><span class="k">Роли заявок не загрузились</span></div>';
+      return;
+    }
+    box.innerHTML = STAFF_ROLES.map(function (r) {
+      var opts = '<option value="0"' + (r.role_id ? '' : ' selected') + '>— Авто (по имени / из .env) —</option>' +
+        STAFF_GUILD_ROLES.map(function (x) {
+          var sel = String(x.id) === String(r.role_id) ? ' selected' : '';
+          return '<option value="' + String(x.id) + '"' + sel + '>' + String(x.name) + '</option>';
+        }).join('');
+      return '<div class="bs-staff-row"><label>' + r.label + '</label>' +
+        '<select id="bs-staff-' + r.key + '" aria-label="' + r.label + '"' + (STAFF_CAN_EDIT ? '' : ' disabled') + '>' + opts + '</select></div>';
+    }).join('');
+  }
+
+  function loadStaffRoles() {
+    fetch('/api/staff-role-routes').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.success) throw new Error('api');
+      STAFF_ROLES = d.roles || [];
+      STAFF_GUILD_ROLES = d.guild_roles || [];
+      renderStaffRoles();
+    }).catch(function () {
+      $('bs-staff-box').innerHTML = '<div class="bs-info-row"><span class="k">Не удалось загрузить</span></div>';
+    });
+  }
+
+  function saveStaffRoles() {
+    if (!STAFF_CAN_EDIT) { toast('Менять роли может только админ', false); return; }
+    $('bs-staff-live').textContent = '';
+    Promise.all(STAFF_ROLES.map(function (r) {
+      var sel = $('bs-staff-' + r.key);
+      if (!sel) return Promise.resolve(true);
+      return fetch('/api/staff-role-routes/' + encodeURIComponent(r.key), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role_id: sel.value || '0' })
+      }).then(function (x) { return x.json(); }).then(function (d) {
+        if (d && d.success) r.role_id = Number(sel.value) || 0;
+        return !!(d && d.success);
+      });
+    })).then(function (res) {
+      if (res.every(function (x) { return x; })) {
+        renderStaffRoles();
+        toast('Роли заявок сохранены', true);
+        $('bs-staff-live').textContent = 'применяется сразу';
+      } else {
+        toast('Часть ролей не сохранилась — попробуйте ещё раз', false);
+        loadStaffRoles();
+      }
+    }).catch(function () { toast('Сеть недоступна', false); });
+  }
+
   function bind() {
-    ['tog-ai','tog-dm','tog-modlog','tog-msglog','tog-voicelog','tog-backup'].forEach(bindToggle);
-    var s = $('btn-save');
-    if (s) s.addEventListener('click', function () { showToast('✓ Настройки сохранены', true); });
-    var sy = $('sync-slash');
-    if (sy) sy.addEventListener('click', function () { showToast('✓ Slash команды синхронизированы', true); });
+    $('bs-save').addEventListener('click', savePresence);
+    $('bs-sync').addEventListener('click', sync);
+    $('bs-staff-save').addEventListener('click', saveStaffRoles);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
-  else bind();
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); load(); loadStaffRoles(); });
+  else { bind(); load(); loadStaffRoles(); }
 })();
 </script>
 {% endblock %}

@@ -1,15 +1,14 @@
 """Утилиты безопасности и производительности"""
 from functools import wraps
-from flask import session, jsonify, request
+from flask import session, request
+from web.routes._common import jsonify
 import re
 import time
 from collections import defaultdict
 import hashlib
 import json
 import os
-from datetime import datetime
-
-
+from datetime import datetime, timezone
 # ── PERMISSION VALIDATION ───────────────────────────────────────────────────
 def require_permission(permission):
     """Декоратор для проверки прав доступа"""
@@ -123,7 +122,7 @@ class AuditLogger:
     def лог(self, user_id, username, action, details=None, ip_address=None):
         """Записать действие в аудит лог"""
         log_entry = {
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'user_id': user_id,
             'username': username,
             'action': action,
@@ -166,10 +165,10 @@ class AuditLogger:
         
         # Фильтрация
         if user_id:
-            logs = [лог for лог in logs if log.get('user_id') == user_id]
+            logs = [log for log in logs if log.get('user_id') == user_id]
         
         if action:
-            logs = [лог for лог in logs if log.get('action') == action]
+            logs = [log for log in logs if log.get('action') == action]
         
         # Сортировка по времени (новые первые)
         logs.sort(key=lambda x: x.get('timestamp', ''), reverse=True)

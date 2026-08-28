@@ -1,0 +1,1265 @@
+{% extends "base.html" %}
+{% block title %}Щит сервера — Панель Hakumo{% endblock %}
+{% block page_title %}Щит сервера{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Защита</div>
+    <h1>Щит сервера</h1>
+    <p>Анти-нюк защита высшего уровня: ловит снос каналов и ролей, раздачу админ-прав,
+       массовые баны и кики, вебхуки и чужих ботов — и мгновенно останавливает виновника.
+       Всё настраивается здесь и работает сразу.</p>
+  </div>
+  <div class="page-head-side">
+    <span class="gd-access" title="Смотреть и настраивать Щит могут администраторы. Обзор безопасности видят все модераторы в Центре безопасности">
+      <i class="fas fa-user-shield"></i> Настройка: Админ
+    </span>
+  </div>
+</div>
+
+<style>
+.gd-access{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:999px;padding:5px 12px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent))}
+.gd-hero{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:14px;margin-top:14px;background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:16px;padding:16px}
+.gd-master{display:flex;align-items:center;gap:12px}
+.gd-master .gd-onoff{font-size:15px;font-weight:700;color:var(--text-1,#fff)}
+.gd-master small{display:block;font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));margin-top:2px}
+.gd-opts{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.gd-opt{display:flex;flex-direction:column;gap:4px}
+.gd-opt label{font-size:11px;font-weight:600;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));text-transform:uppercase;letter-spacing:.04em}
+.gd-opt select{padding:8px 10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:10px;color:var(--text);font-size:13px;outline:none;font-family:inherit;min-width:180px}
+.gd-opt select:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft, color-mix(in srgb, var(--ac) 18%, transparent))}
+.gd-check{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));padding-bottom:8px}
+.gd-stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.gd-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:999px;padding:5px 12px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent))}
+.gd-chip b{color:var(--text-1,#fff)}
+.gd-chip.ok{color:#7bd88f;border-color:rgba(123,216,143,.3);background:rgba(123,216,143,.07)}
+.gd-chip.off{color:#f0b26b;border-color:rgba(240,178,107,.3);background:rgba(240,178,107,.07)}
+.gd-chip a{color:var(--ac);text-decoration:none;font-weight:600}
+.gd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:14px}
+.gd-card{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.gd-card.off{opacity:.55}
+.gd-card-top{display:flex;align-items:center;gap:10px}
+.gd-ico{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:15px;color:var(--ac);background:color-mix(in srgb, var(--ac) 12%, transparent);border:1px solid color-mix(in srgb, var(--ac) 25%, transparent);flex-shrink:0}
+.gd-name{font-size:14px;font-weight:700;color:var(--text-1,#fff)}
+.gd-desc{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));line-height:1.4}
+.gd-card-top .switch{margin-left:auto}
+.gd-tune{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;border-top:1px dashed var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));padding-top:10px}
+.gd-tune .gd-opt select{min-width:0}
+.gd-dur{display:flex;gap:6px;align-items:center}
+.gd-dur select{padding:6px 8px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:9px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit}
+.gd-dur select:focus{border-color:var(--ac)}
+.gd-pre{display:flex;gap:6px;flex-wrap:wrap}
+.gd-evbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0 2px;padding:10px 14px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:12px;background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent))}
+.gd-evbar-t{font-size:13px;font-weight:800;color:var(--text-1,#fff);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gd-evbar-t i{color:var(--ac)}
+.gd-evbar-t small{font-size:11px;font-weight:600;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent))}
+.gd-evbar-b{display:flex;gap:8px}
+.gd-pbtn{font-size:11.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent));cursor:pointer;font-family:inherit}
+.gd-pbtn:hover{border-color:var(--ac);color:var(--ac)}
+.gd-pbtn[aria-pressed="true"]{border-color:var(--ac);color:var(--ac);background:color-mix(in srgb, var(--ac) 12%, transparent);font-weight:700}
+.gd-fires{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent));line-height:1.4}
+.gd-fires b{color:var(--text-1,#fff)}
+.gd-num{width:64px;padding:6px 8px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:9px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.gd-num:focus{border-color:var(--ac)}
+.gd-num:disabled,.gd-card.off .gd-num,.gd-card.off select{opacity:.6}
+.gd-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.gd-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:14px 16px}
+.gd-panel h3{margin:0 0 4px;font-size:13.5px;display:flex;align-items:center;gap:8px;color:var(--text-1,#fff)}
+.gd-panel h3 i{color:var(--ac)}
+.gd-panel .gd-sub{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));margin-bottom:10px;line-height:1.45}
+.gd-wl-col{margin-bottom:12px}
+.gd-wl-col:last-child{margin-bottom:0}
+.gd-wl-title{font-size:12px;font-weight:700;color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent));margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.gd-wl-add{display:flex;gap:8px;margin-bottom:8px}
+.gd-wl-add input{flex:1;min-width:0;padding:8px 10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:10px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit}
+.gd-wl-add input:focus,.gd-wl-add select:focus{border-color:var(--ac)}
+.gd-wl-add select{flex:1;min-width:0;padding:8px 10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:10px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit;cursor:pointer}
+.gd-chip-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:999px;padding:4px 10px;background:var(--surface-2,color-mix(in srgb, var(--text) 5%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));margin:0 6px 6px 0}
+.gd-chip-tag button{background:none;border:none;color:inherit;cursor:pointer;padding:0;display:inline-flex}
+.gd-chip-tag button:hover{color:var(--err,#e05d5d)}
+.gd-feed{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:0 22px}
+.gd-inc{display:flex;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line-2,color-mix(in srgb, var(--text) 10%, transparent))}
+.gd-inc:last-child{border-bottom:none}
+.gd-inc-ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:13px;flex-shrink:0;color:var(--ac);background:color-mix(in srgb, var(--ac) 10%, transparent)}
+.gd-inc-ico.danger{color:#f0b26b;background:rgba(240,178,107,.1)}
+.gd-inc-main{min-width:0;flex:1}
+.gd-inc-title{font-size:12.5px;font-weight:700;color:var(--text-1,#fff);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.gd-badge{font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent))}
+.gd-badge.warn{color:#f0b26b;border-color:rgba(240,178,107,.3);background:rgba(240,178,107,.07)}
+.gd-badge.info{color:var(--ac);border-color:color-mix(in srgb, var(--ac) 30%, transparent);background:color-mix(in srgb, var(--ac) 8%, transparent)}
+.gd-badge.ok{color:#7bd88f;border-color:rgba(123,216,143,.3);background:rgba(123,216,143,.07)}
+.gd-inc-sub{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent));margin-top:2px;line-height:1.45;word-break:break-word}
+.gd-inc-time{font-size:10.5px;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));margin-top:3px}
+.gd-actions{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.gd-save-note{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent))}
+.gd-info{margin-top:16px;background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:14px 16px;font-size:12.5px;line-height:1.6;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent))}
+.gd-info b{color:var(--text-1,#fff)}
+.gd-info h3{margin:0 0 8px;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.gd-info h3 i{color:var(--ac)}
+.gd-info a{color:var(--ac);text-decoration:none;font-weight:600}
+.gd-combo{position:relative;margin-bottom:8px}
+.gd-combo-in{width:100%;box-sizing:border-box;padding:8px 30px 8px 10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:10px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit}
+.gd-combo-in:focus{border-color:var(--ac)}
+.gd-combo-in:disabled{opacity:.55;cursor:not-allowed}
+.gd-combo-mag{position:absolute;right:10px;top:9px;font-size:11px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));pointer-events:none}
+.gd-combo-list{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;max-height:226px;overflow:auto;background:#141821;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:10px;z-index:60;box-shadow:0 16px 38px rgba(0,0,0,.45);padding:4px}
+.gd-combo.open .gd-combo-list{display:block}
+.gd-combo-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:12.5px;color:var(--text)}
+.gd-combo-item i{font-size:11px;color:var(--ac)}
+.gd-combo-item small{margin-left:auto;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));font-size:10.5px;font-variant-numeric:tabular-nums}
+.gd-combo-item:hover,.gd-combo-item.sel{background:color-mix(in srgb, var(--ac) 15%, transparent)}
+.gd-combo-none{padding:8px 10px;font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
+.gd-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.gd-tabs a{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:999px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));text-decoration:none;font-size:12.5px;font-weight:600;transition:.15s}
+.gd-tabs a:hover{border-color:var(--ac);color:var(--text);transform:translateY(-1px)}
+.gd-tabs a i{font-size:11px;color:var(--ac)}
+#gdEvents,#gdWlCard,#limits,#gdFeedPanel{scroll-margin-top:14px}
+.gd-empty{display:flex;align-items:center;gap:8px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));font-size:12.5px;padding:10px 0}
+.gd-empty i{color:#7bd88f}
+@media (max-width:980px){.gd-hero{grid-template-columns:1fr}.gd-cols{grid-template-columns:1fr}}
+</style>
+
+<div class="gd-hero">
+  <div>
+    <div class="gd-master">
+      <label class="switch"><input type="checkbox" id="gdMaster" checked aria-label="Мастер-переключатель Щита"><span class="track"></span></label>
+      <div class="gd-onoff"><span id="gdState">Защита включена</span>
+        <small id="gdStateSub">Щит смотрит за сервером и усмиряет атаки</small></div>
+    </div>
+    <div class="gd-stats" id="gdStats"></div>
+  </div>
+  <div class="gd-opts">
+    <div class="gd-opt">
+      <label for="gdPun">Общая мера наказания</label>
+      <select id="gdPun" aria-label="Общая мера наказания"></select>
+    </div>
+    <div class="gd-opt">
+      <label for="gdBotAct">Мера для ботов-нарушителей</label>
+      <select id="gdBotAct" aria-label="Мера для ботов-нарушителей"></select>
+    </div>
+    <label class="gd-check" for="gdKickBots">
+      <input type="checkbox" id="gdKickBots" checked>
+      Чужих ботов кикать сразу
+    </label>
+    <div class="gd-sub" style="flex:1 1 100%;margin-top:-2px">
+      Касается только ботов, которые <b>зайдут</b> после включения —
+      боты, которые уже на сервере, не трогаются.
+    </div>
+    <div class="gd-opt">
+      <label>&nbsp;</label>
+      <button type="button" class="btn btn-primary" id="gdSave" aria-label="Сохранить настройки Щита">
+        <i class="fas fa-floppy-disk"></i> Сохранить
+      </button>
+    </div>
+  </div>
+</div>
+
+<nav class="gd-tabs" aria-label="Быстрые разделы Щита">
+  <a href="#gdEvents"><i class="fas fa-bolt"></i> Защита и пороги</a>
+  <a href="#gdWlCard"><i class="fas fa-user-check"></i> Белые списки</a>
+  <a href="#limits"><i class="fas fa-hand"></i> Лимиты команд</a>
+  <a href="#gdFeedPanel"><i class="fas fa-tower-broadcast"></i> Инциденты</a>
+</nav>
+
+<div class="gd-info">
+  <h3><i class="fas fa-circle-info"></i> Как настроить защиту</h3>
+  <b>Порог</b> — сколько опасных действий должно случиться, <b>Время</b> — за какой срок
+  они должны уложиться, <b>Мера</b> — что сделать с виновником.
+  Пример: порог 4 и время 30 сек — если кто-то удалит 4 канала за 30 секунд,
+  Щит остановит его именно на этой мере. Время выбирается в секундах или минутах,
+  быстрые варианты — кнопками под настройками.
+</div>
+
+<div class="gd-evbar" id="gdEvBar" style="display:none">
+  <div class="gd-evbar-t"><i class="fas fa-bolt"></i> События защиты
+    <small>по умолчанию все выключены — включи только то, что нужно</small></div>
+  <div class="gd-evbar-b">
+    <button type="button" class="btn" id="gdEvAllOn" aria-label="Включить все события защиты"><i class="fas fa-toggle-on"></i> Включить все</button>
+    <button type="button" class="btn" id="gdEvAllOff" aria-label="Выключить все события защиты"><i class="fas fa-toggle-off"></i> Выключить все</button>
+  </div>
+</div>
+
+<div class="gd-grid" id="gdEvents">
+  <div class="sk-row"></div>
+  <div class="sk-row" style="width:86%"></div>
+  <div class="sk-row" style="width:64%"></div>
+</div>
+
+<div class="gd-cols" id="gdWlCard">
+  <div class="gd-panel">
+    <h3><i class="fas fa-user-check"></i> Белый список</h3>
+    <div class="gd-sub">Этих людей (и эти роли) Щит никогда не трогает. Владелец сервера
+      неприкосновенен всегда. Начни вводить имя — список подскажет.</div>
+    <div class="gd-wl-col">
+      <div class="gd-wl-title"><i class="fas fa-user"></i> Пользователи</div>
+      <div class="gd-combo" data-kind="u">
+        <input id="gdWlUPick" class="gd-combo-in" type="text" placeholder="Поиск участника — имя или ID…" autocomplete="off" aria-label="Поиск участника для белого списка">
+        <i class="fas fa-magnifying-glass gd-combo-mag"></i>
+        <div class="gd-combo-list" role="listbox"></div>
+      </div>
+      <div id="gdWlU"></div>
+    </div>
+    <div class="gd-wl-col">
+      <div class="gd-wl-title"><i class="fas fa-user-tag"></i> Роли</div>
+      <div class="gd-combo" data-kind="r">
+        <input id="gdWlRPick" class="gd-combo-in" type="text" placeholder="Поиск роли…" autocomplete="off" aria-label="Поиск роли для белого списка">
+        <i class="fas fa-magnifying-glass gd-combo-mag"></i>
+        <div class="gd-combo-list" role="listbox"></div>
+      </div>
+      <div id="gdWlR"></div>
+    </div>
+  </div>
+  <div class="gd-panel">
+    <h3><i class="fas fa-robot"></i> Кто может добавлять ботов</h3>
+    <div class="gd-sub">Только эти люди и роли могут звать на сервер ботов — остальных
+      приглашающих Щит накажет, а самого бота выгонит обратно. Сюда же попадают
+      все из общего белого списка (слева) и владелец сервера.</div>
+    <div class="gd-wl-col">
+      <div class="gd-wl-title"><i class="fas fa-user"></i> Пользователи</div>
+      <div class="gd-combo" data-kind="bu">
+        <input id="gdWlBUPick" class="gd-combo-in" type="text" placeholder="Поиск участника — имя или ID…" autocomplete="off" aria-label="Поиск участника, которому можно добавлять ботов">
+        <i class="fas fa-magnifying-glass gd-combo-mag"></i>
+        <div class="gd-combo-list" role="listbox"></div>
+      </div>
+      <div id="gdWlBU"></div>
+    </div>
+    <div class="gd-wl-col">
+      <div class="gd-wl-title"><i class="fas fa-user-tag"></i> Роли</div>
+      <div class="gd-combo" data-kind="br">
+        <input id="gdWlBRPick" class="gd-combo-in" type="text" placeholder="Поиск роли…" autocomplete="off" aria-label="Поиск роли, которой можно добавлять ботов">
+        <i class="fas fa-magnifying-glass gd-combo-mag"></i>
+        <div class="gd-combo-list" role="listbox"></div>
+      </div>
+      <div id="gdWlBR"></div>
+    </div>
+  </div>
+</div>
+
+<div class="gd-panel" style="margin-top:12px" id="gdFeedPanel">
+  <h3><i class="fas fa-tower-broadcast"></i> Последние инциденты</h3>
+  <div class="gd-sub">Кого остановил Щит и что он с этим сделал — последние 30 срабатываний.</div>
+  <div class="gd-feed" id="gdFeed"></div>
+</div>
+
+<div class="gd-actions">
+  <button type="button" class="btn btn-primary" id="gdSave2" aria-label="Сохранить настройки Щита">
+    <i class="fas fa-floppy-disk"></i> Сохранить настройки
+  </button>
+  <span class="gd-save-note">Бот подхватывает изменения мгновенно — перезапуск не нужен.</span>
+</div>
+
+<style>
+.gd-lim{margin-top:18px}
+.gd-lim-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.gd-lim-head h2{margin:0;font-size:18px;display:flex;align-items:center;gap:10px;color:var(--text-1,#fff)}
+.gd-lim-head h2 i{color:var(--ac)}
+.gd-lim-head .lead{margin:6px 0 0;font-size:12.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));max-width:780px;line-height:1.5}
+.gd-lim-grid{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:12px;margin-top:12px;align-items:start}
+.gd-lim-role{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;cursor:pointer}
+.gd-lim-role:hover{border-color:var(--ac)}
+.gd-lim-role.sel{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
+.gd-lim-field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:170px}
+.gd-lim-field .gd-lim-lab{font-size:11px;font-weight:600;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));text-transform:uppercase;letter-spacing:.04em}
+.gd-lim-in{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.gd-lim-in .gd-num{width:70px}
+.gd-lim-in .gd-wsel{width:auto;padding:6px 8px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:9px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit;cursor:pointer}
+.gd-lim-in .gd-wsel:focus{border-color:var(--ac)}
+.gd-own{color:#7bd88f;font-weight:700}
+.gd-eff{font-size:12.5px;line-height:1.65;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));background:color-mix(in srgb, var(--ac) 5%, transparent);border:1px dashed color-mix(in srgb, var(--ac) 25%, transparent);border-radius:10px;padding:10px 12px}
+.gd-eff b{color:var(--text-1,#fff)}
+.gd-eff .dim{opacity:.6}
+.gd-jrow{display:flex;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));align-items:flex-start}
+.gd-jrow:last-child{border-bottom:none}
+.gd-jico{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:12.5px;flex-shrink:0;color:var(--ac);background:color-mix(in srgb, var(--ac) 10%, transparent)}
+.gd-jmain{min-width:0;flex:1}
+.gd-jtitle{font-size:12.5px;font-weight:700;color:var(--text-1,#fff);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.gd-jsub{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent));margin-top:3px;line-height:1.55;word-break:break-word}
+.gd-jsub b{color:var(--text-1,#fff)}
+.gd-jtime{font-size:10.5px;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));margin-top:3px}
+.gd-jback{font-size:11px;padding:4px 10px;border-radius:999px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent));cursor:pointer;font-family:inherit;flex-shrink:0}
+.gd-jback:hover{border-color:var(--ac);color:var(--ac)}
+@media (max-width:980px){.gd-lim-grid{grid-template-columns:1fr}}
+</style>
+
+<div class="gd-lim" id="limits">
+  <div class="gd-lim-head">
+    <div>
+      <h2><i class="fas fa-hand"></i> Лимиты команды</h2>
+      <p class="lead">Сколько действий модерации можно сделать за период — часы или дни.
+        Глобальные лимиты действуют на весь персонал, а каждой роли можно задать
+        СВОИ лимиты и СВОЙ период. Владельца сервера лимиты не касаются никогда.
+        Ниже — журнал: видно, кто и что менял, любое изменение можно вернуть.</p>
+    </div>
+    <span class="gd-chip" id="gdLimPill"><i class="fas fa-users-gear"></i>ролей со своими лимитами: <b>—</b></span>
+  </div>
+
+  <div class="gd-panel">
+    <h3><i class="fas fa-sliders"></i> Глобальные лимиты (для всех по умолчанию)</h3>
+    <div class="gd-sub">По умолчанию всё выключено (поля пустые) — цифры задаёшь сам.
+      Действуют на весь персонал без своих лимитов. Кнопка с галочкой
+      применяет поле сразу — общий «Сохранить» сверху для этого не нужен.
+      <span id="gdLimOwnerNote" hidden style="color:#f0b26b">Менять лимиты может только владелец сервера.</span></div>
+    <div id="gdLimGlobal"></div>
+    <div class="hint" id="gdLimGlobalMsg" style="margin-top:8px"></div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-2,color-mix(in srgb, var(--text) 12%, transparent))">
+      <span style="font-size:12.5px;font-weight:800"><i class="fas fa-stopwatch" style="color:var(--ac)"></i> Макс. длительность мута</span>
+      <select id="gdDurMute" aria-label="Максимальная длительность мута" style="min-width:180px"></select>
+      <span class="dim" style="font-size:11px">Модератор попросит дольше — бот откажет и подскажет потолок. Роль может задать свой.</span>
+      <span class="hint" id="gdDurMsg" style="flex-basis:100%"></span>
+    </div>
+  </div>
+
+  <div class="gd-lim-grid">
+    <div class="gd-panel">
+      <h3><i class="fas fa-list"></i> Роли сервера</h3>
+      <div class="gd-sub">Клик — выбрать роль: посмотреть её лимиты и переделать.</div>
+      <input class="form-input" id="gdLimRoleSearch" placeholder="Поиск роли…" style="width:100%;margin:8px 0 10px" aria-label="Поиск роли">
+      <div id="gdLimRoles" style="display:flex;flex-direction:column;gap:6px;max-height:430px;overflow:auto"></div>
+    </div>
+    <div class="gd-panel">
+      <h3 id="gdLimEditTitle"><i class="fas fa-user-tag"></i> Лимиты роли</h3>
+      <div class="gd-sub" id="gdLimEditSub">Сначала выберите роль слева.</div>
+      <div id="gdLimEditEmpty" class="empty-state"><i class="fas fa-hand-pointer"></i><p>Выберите роль из списка</p>
+        <p class="empty-tip">Задайте свои лимиты — они перекроют глобальные для этой роли.</p></div>
+      <div id="gdLimEditBody" hidden>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+          <span id="gdLimRoleDot" style="width:14px;height:14px;border-radius:50%;display:inline-block"></span>
+          <b id="gdLimRoleName" style="font-size:15px"></b>
+          <span class="chip" id="gdLimRoleMembers"></span>
+        </div>
+        <div class="gd-eff" id="gdLimEff"></div>
+        <div id="gdLimRoleInputs" style="margin-top:12px"></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line-2,color-mix(in srgb, var(--text) 12%, transparent))">
+          <span style="font-size:12.5px;font-weight:800"><i class="fas fa-stopwatch" style="color:var(--ac)"></i> Своё «макс. мут»</span>
+          <select id="gdDurMuteRole" aria-label="Максимальная длительность мута для роли" style="min-width:180px"></select>
+          <span class="dim" style="font-size:11px">Роль главнее общего потолка.</span>
+        </div>
+        <div class="hint" id="gdLimRoleMsg" style="margin:10px 0"></div>
+        <div class="row">
+          <button type="button" class="btn btn-primary" id="gdLimRoleSave"><i class="fas fa-check"></i> Сохранить роль</button>
+          <button type="button" class="btn" id="gdLimRoleReset"><i class="fas fa-eraser"></i> Убрать свои лимиты</button>
+        </div>
+        <div class="hint">Пустое поле = берётся глобальный лимит. Период — от 1 часа до 31 дня.
+          Поля «за N час/дн» относятся к своему лимиту роли.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="gd-panel" style="margin-top:12px">
+    <h3><i class="fas fa-clock-rotate-left"></i> Журнал изменений лимитов</h3>
+    <div class="gd-sub">Кто, когда и что поменял — в глобальных лимитах или у роли.
+      Кнопка «Вернуть» откатывает изменение (сам откат тоже запишется сюда).</div>
+    <div id="gdLimChanges"></div>
+  </div>
+</div>
+
+<div class="gd-info">
+  <h3><i class="fas fa-circle-info"></i> Как всё связано</h3>
+  <b>Куда летят тревоги:</b> настраивается в <a href="/channel-settings">Каналах и маршрутах</a>
+  (маршрут «Канал оповещений Щита», по умолчанию — авто, лог-модерации).
+  <b>Массовые заходы и рейды</b> — это <a href="/antiraid">Анти-рейд</a>;
+  <b>спам, фейки и ссылки</b> — <a href="/security">Центр безопасности</a>;
+  <b>экстренно закрыть сервер</b> — <a href="/lockdown">Локдаун</a>;
+  <b>здоровье самого бота</b> — <a href="/anticrash">Анти-краш</a>.
+  Вместе они держат сервер в броне. Обзор состояния Щита виден всем модераторам в Центре безопасности.
+</div>
+
+<script>
+var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+var GUILD_ID = {{ (guild_id|string)|tojson }};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+var CFG = null;
+var EVENTS = [];
+var PUNISHMENTS = [];
+var WL_U = [];
+var WL_R = [];
+var WL_BU = [];
+var WL_BR = [];
+var NAMES = { users: {}, roles: {} };
+var G_ROLES = [];   /* роли сервера для пикеров */
+var G_MEMBERS = []; /* участники сервера для пикеров */
+
+function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }
+
+function timeAgo(ts) {
+  var d = new Date(ts * 1000);
+  var s = Math.max(1, Math.floor((Date.now() - d.getTime()) / 1000));
+  if (s < 60) return s + ' сек назад';
+  if (s < 3600) return Math.floor(s / 60) + ' мин назад';
+  if (s < 86400) return Math.floor(s / 3600) + ' ч назад';
+  return d.toLocaleString('ru-RU');
+}
+
+function actionBadge(inc) {
+  var cls = inc.action === 'alert' ? 'info' : (inc.action === 'ban' ? 'warn' : 'warn');
+  if (inc.applied === 'кикнут' || inc.applied === 'забанен') cls = 'ok';
+  return '<span class="gd-badge ' + cls + '">' + esc(inc.action_label || inc.action) + '</span>';
+}
+
+function renderHero() {
+  document.getElementById('gdState').textContent = CFG.enabled ? 'Защита включена' : 'Защита выключена';
+  document.getElementById('gdStateSub').textContent = CFG.enabled
+    ? 'Щит смотрит за сервером и усмиряет атаки'
+    : 'Внимание: сервер сейчас без анти-нюк защиты';
+  var on = EVENTS.filter(function (e) { return e.enabled; }).length;
+  var stats = document.getElementById('gdStats');
+  stats.innerHTML =
+    '<span class="gd-chip ' + (CFG.enabled ? 'ok' : 'off') + '"><i class="fas fa-shield-heart"></i>' +
+      (CFG.enabled ? 'щит активен' : 'щит выключен') + '</span>' +
+    '<span class="gd-chip"><i class="fas fa-bolt"></i>событий под защитой: <b>' + on + ' / ' + EVENTS.length + '</b></span>' +
+    '<span class="gd-chip"><i class="fas fa-gavel"></i>мерa: <b>' + esc(punLabel(CFG.punishment)) + '</b></span>' +
+    '<span class="gd-chip"><i class="fas fa-robot"></i>боты: <b>' + esc(punLabel(CFG.bot_action)) + '</b></span>' +
+    '<span class="gd-chip"><i class="fas fa-route"></i>канал тревог: <a href="/channel-settings">настройка</a></span>';
+}
+
+function punLabel(key) {
+  var p = PUNISHMENTS.find(function (x) { return x.key === key; });
+  return p ? p.label : key;
+}
+
+function renderPunSelect() {
+  var sel = document.getElementById('gdPun');
+  sel.innerHTML = PUNISHMENTS.map(function (p) {
+    return '<option value="' + esc(p.key) + '"' + (p.key === CFG.punishment ? ' selected' : '') + '>' + esc(p.label) + '</option>';
+  }).join('');
+  var bsel = document.getElementById('gdBotAct');
+  bsel.innerHTML = PUNISHMENTS.map(function (p) {
+    return '<option value="' + esc(p.key) + '"' + (p.key === CFG.bot_action ? ' selected' : '') + '>' + esc(p.label) + '</option>';
+  }).join('');
+}
+
+function humanWin(sec) {
+  sec = Math.max(3, Math.min(WIN_MAX, Math.round(Number(sec) || 0)));
+  if (sec < 60) return sec + ' сек';
+  if (sec < 3600) {
+    var m = Math.floor(sec / 60), rm = sec % 60;
+    return rm ? m + ' мин ' + rm + ' сек' : m + ' мин';
+  }
+  if (sec < 86400) {
+    var h = Math.floor(sec / 3600), rmm = Math.round((sec % 3600) / 60);
+    return rmm ? h + ' ч ' + rmm + ' мин' : h + ' ч';
+  }
+  var d = Math.floor(sec / 86400), rh = Math.round((sec % 86400) / 3600);
+  return rh ? d + ' дн. ' + rh + ' ч' : d + ' дн.';
+}
+
+var WIN_PRESETS = [
+  { s: 30, label: '30 сек' },
+  { s: 60, label: '1 мин' },
+  { s: 300, label: '5 мин' },
+  { s: 3600, label: '1 час' },
+  { s: 21600, label: '6 ч' },
+  { s: 86400, label: '1 день' }
+];
+var WIN_UNITS = { s: 1, m: 60, h: 3600, d: 86400 };
+var WIN_MAX = 31 * 86400;
+
+function bestUnit(sec) {
+  if (sec >= 86400 && sec % 86400 === 0) return ['d', sec / 86400];
+  if (sec >= 3600 && sec % 3600 === 0) return ['h', sec / 3600];
+  if (sec >= 60 && sec % 60 === 0) return ['m', sec / 60];
+  return ['s', sec];
+}
+
+async function gdEvAll(on) {
+  if (!CAN_EDIT) { toast('Менять Щит может только админ', false); return; }
+  EVENTS.forEach(function (ev) { ev.enabled = !!on; });
+  if (window.renderSafe) window.renderSafe(renderEvents); else renderEvents();
+  await gdSave();   /* одно нажатие — применилось и сохранилось */
+}
+
+function renderEvents() {
+  var box = document.getElementById('gdEvents');
+  var bar = document.getElementById('gdEvBar');
+  if (bar) {
+    bar.style.display = 'flex';
+    document.getElementById('gdEvAllOn').disabled = !CAN_EDIT;
+    document.getElementById('gdEvAllOff').disabled = !CAN_EDIT;
+  }
+  box.innerHTML = EVENTS.map(function (ev) {
+    var aopts = '<option value=""' + (!ev.action ? ' selected' : '') + '>Общая мера</option>' +
+      PUNISHMENTS.map(function (p) {
+        return '<option value="' + esc(p.key) + '"' + (ev.action === p.key ? ' selected' : '') + '>' + esc(p.label) + '</option>';
+      }).join('');
+    /* время: сама крупная единица, в которую делится нацело */
+    var bu = bestUnit(ev.window);
+    var wunit = bu[0];
+    var wval = bu[1];
+    var wmax = Math.floor(WIN_MAX / WIN_UNITS[wunit]);
+    var presets = WIN_PRESETS.map(function (p) {
+      return '<button type="button" class="gd-pbtn" data-s="' + p.s + '" data-key="' + esc(ev.key) + '"' +
+        (p.s === ev.window ? ' aria-pressed="true"' : '') +
+        (CAN_EDIT ? '' : ' disabled') + ' aria-label="Срок ' + p.label + ': ' + esc(ev.label) + '">' + p.label + '</button>';
+    }).join('');
+    return '<div class="gd-card' + (ev.enabled ? '' : ' off') + '" id="gdc-' + esc(ev.key) + '">' +
+      '<div class="gd-card-top">' +
+        '<div class="gd-ico"><i class="fas ' + esc(ev.icon || 'fa-shield') + '"></i></div>' +
+        '<div><div class="gd-name">' + esc(ev.label) + '</div>' +
+        '<div class="gd-desc">' + esc(ev.desc || '') + '</div></div>' +
+        '<label class="switch"><input type="checkbox" class="gd-ev-tog" data-key="' + esc(ev.key) + '"' +
+          (ev.enabled ? ' checked' : '') + ' aria-label="Включить: ' + esc(ev.label) + '"' + (CAN_EDIT ? '' : ' disabled') + '><span class="track"></span></label>' +
+      '</div>' +
+      '<div class="gd-tune">' +
+        '<div class="gd-opt"><label title="Сколько опасных действий должно случиться">Порог</label>' +
+          '<input class="gd-num gd-ev-th" data-key="' + esc(ev.key) + '" type="number" min="1" max="25" value="' + ev.threshold + '" aria-label="Порог: ' + esc(ev.label) + '"' + (CAN_EDIT ? '' : ' disabled') + '></div>' +
+        '<div class="gd-opt"><label title="За какое время должны произойти действия, чтобы защита сработала">Время</label>' +
+          '<div class="gd-dur">' +
+            '<input class="gd-num gd-ev-win" data-key="' + esc(ev.key) + '" type="number" min="1" max="' + wmax + '" step="1" value="' + wval + '" aria-label="Срок: ' + esc(ev.label) + '"' + (CAN_EDIT ? '' : ' disabled') + '>' +
+            '<select class="gd-ev-winu" data-key="' + esc(ev.key) + '" aria-label="Единица времени: ' + esc(ev.label) + '"' + (CAN_EDIT ? '' : ' disabled') + '>' +
+              '<option value="s"' + (wunit === 's' ? ' selected' : '') + '>сек</option>' +
+              '<option value="m"' + (wunit === 'm' ? ' selected' : '') + '>мин</option>' +
+              '<option value="h"' + (wunit === 'h' ? ' selected' : '') + '>час</option>' +
+              '<option value="d"' + (wunit === 'd' ? ' selected' : '') + '>дн</option>' +
+            '</select>' +
+          '</div></div>' +
+        '<div class="gd-opt"><label>Мера</label>' +
+          '<select class="gd-ev-act" data-key="' + esc(ev.key) + '" aria-label="Мера: ' + esc(ev.label) + '"' + (CAN_EDIT ? '' : ' disabled') + '>' + aopts + '</select></div>' +
+      '</div>' +
+      '<div class="gd-pre">' + presets + '</div>' +
+      '<div class="gd-fires" data-key="' + esc(ev.key) + '">Сработает: <b class="gd-fires-th">' + ev.threshold + '</b> действий за <b class="gd-fires-win">' + humanWin(ev.window) + '</b></div>' +
+      '</div>';
+  }).join('');
+  syncFires();
+}
+
+/* сколько сейчас выбрано секунд в карточке события */
+function cardSeconds(key) {
+  var q = '[data-key="' + key + '"]';
+  var inp = document.querySelector('.gd-ev-win' + q);
+  var sel = document.querySelector('.gd-ev-winu' + q);
+  if (!inp) return null;
+  var v = parseInt(inp.value, 10) || 0;
+  v = v * (WIN_UNITS[sel && sel.value] || 1);
+  return Math.max(3, Math.min(WIN_MAX, v));
+}
+
+/* живая подсказка «сработает: N действий за X» без перерисовки */
+function syncFires() {
+  EVENTS.forEach(function (ev) {
+    var card = document.getElementById('gdc-' + ev.key);
+    if (!card) return;
+    var sec = cardSeconds(ev.key);
+    var thEl = card.querySelector('.gd-ev-th');
+    var wEl = card.querySelector('.gd-fires-win');
+    var tEl = card.querySelector('.gd-fires-th');
+    var th = thEl ? (parseInt(thEl.value, 10) || ev.threshold) : ev.threshold;
+    if (tEl) tEl.textContent = th;
+    if (wEl && sec != null) wEl.textContent = humanWin(sec);
+    Array.prototype.forEach.call(card.querySelectorAll('.gd-pbtn'), function (b) {
+      b.setAttribute('aria-pressed', (parseInt(b.getAttribute('data-s'), 10) === sec) ? 'true' : 'false');
+    });
+  });
+}
+
+function wlIsUser(kind) { return kind === 'u' || kind === 'bu'; }
+
+function wlChip(kind, id) {
+  var nm = (wlIsUser(kind) ? NAMES.users[id] : NAMES.roles[id]);
+  return '<span class="gd-chip-tag">' +
+    '<i class="fas ' + (wlIsUser(kind) ? 'fa-user' : 'fa-user-tag') + '"></i>' +
+    esc(nm || id) +
+    '<button type="button" data-gd-wl="' + kind + ':' + esc(id) + '" aria-label="Убрать из списка" title="Убрать"><i class="fas fa-xmark"></i></button></span>';
+}
+
+function renderWl() {
+  var bu = document.getElementById('gdWlU');
+  var br = document.getElementById('gdWlR');
+  bu.innerHTML = WL_U.length ? WL_U.map(function (id) { return wlChip('u', id); }).join('')
+    : '<div class="gd-empty"><i class="fas fa-circle-info"></i>Пользователей в списке нет</div>';
+  br.innerHTML = WL_R.length ? WL_R.map(function (id) { return wlChip('r', id); }).join('')
+    : '<div class="gd-empty"><i class="fas fa-circle-info"></i>Ролей в списке нет</div>';
+  var bbu = document.getElementById('gdWlBU');
+  var bbr = document.getElementById('gdWlBR');
+  bbu.innerHTML = WL_BU.length ? WL_BU.map(function (id) { return wlChip('bu', id); }).join('')
+    : '<div class="gd-empty"><i class="fas fa-circle-info"></i>Пользователей в списке нет</div>';
+  bbr.innerHTML = WL_BR.length ? WL_BR.map(function (id) { return wlChip('br', id); }).join('')
+    : '<div class="gd-empty"><i class="fas fa-circle-info"></i>Ролей в списке нет</div>';
+}
+
+function wlSource(kind) {
+  return (kind === 'r' || kind === 'br') ? G_ROLES : G_MEMBERS;
+}
+
+/* Живой поиск по участникам/ролям — как выбор роли в «Лимитах команд»:
+   печатай имя, кликай подсказку. Enter — первый в списке, Esc — закрыть. */
+var _wlCombosInited = false;
+function wlComboInit() {
+  if (_wlCombosInited) return;
+  _wlCombosInited = true;
+  document.querySelectorAll('.gd-combo').forEach(function (box) {
+    var kind = box.getAttribute('data-kind');
+    var inp = box.querySelector('.gd-combo-in');
+    var list = box.querySelector('.gd-combo-list');
+    if (!inp || !list) return;
+    if (!CAN_EDIT) { inp.disabled = true; inp.placeholder = 'Только просмотр'; }
+
+    function pick(id) {
+      var pool = wlSource(kind);
+      var it = null;
+      for (var i = 0; i < pool.length; i++) {
+        if (String(pool[i].id) === String(id)) { it = pool[i]; break; }
+      }
+      if (!it || !CAN_EDIT) return;
+      var arr = (kind === 'u') ? WL_U : (kind === 'r') ? WL_R : (kind === 'bu') ? WL_BU : WL_BR;
+      if (arr.indexOf(String(it.id)) !== -1) { toast('Уже в списке', false); return; }
+      arr.push(String(it.id));
+      (wlIsUser(kind) ? NAMES.users : NAMES.roles)[String(it.id)] = it.name;
+      inp.value = '';
+      box.classList.remove('open');
+      renderWl();
+      toast('Добавлено — не забудьте сохранить', true);
+    }
+
+    function refresh() {
+      var q = inp.value.trim().toLowerCase();
+      var arr = (kind === 'u') ? WL_U : (kind === 'r') ? WL_R : (kind === 'bu') ? WL_BU : WL_BR;
+      var pool = wlSource(kind).filter(function (x) { return arr.indexOf(String(x.id)) === -1; });
+      var items = pool.filter(function (x) {
+        if (!q) return true;
+        return ((x.name || '').toLowerCase().indexOf(q) !== -1)
+          || (q.replace(/\D/g, '').length >= 2 && String(x.id).indexOf(q.replace(/\D/g, '')) === 0);
+      }).slice(0, 8);
+      if (!items.length) {
+        list.innerHTML = '<div class="gd-combo-none">' + (q ? 'Никого не нашли' : 'Список пуст') + '</div>';
+      } else {
+        list.innerHTML = items.map(function (it, i) {
+          return '<div class="gd-combo-item' + (i === 0 ? ' sel' : '') + '" data-id="' + esc(it.id) + '">'
+            + '<i class="fas ' + (wlIsUser(kind) ? 'fa-user' : 'fa-user-tag') + '"></i>'
+            + esc(it.name) + '<small>' + esc(it.id) + '</small></div>';
+        }).join('');
+        list.querySelectorAll('.gd-combo-item').forEach(function (el) {
+          el.addEventListener('mousedown', function (ev) {
+            ev.preventDefault();                      /* не отбираем фокус у input */
+            pick(el.getAttribute('data-id'));
+          });
+        });
+      }
+      box.classList.add('open');
+    }
+
+    inp.addEventListener('focus', refresh);
+    inp.addEventListener('input', refresh);
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        var f = list.querySelector('.gd-combo-item');
+        if (f) pick(f.getAttribute('data-id'));
+      } else if (e.key === 'Escape') {
+        box.classList.remove('open');
+        inp.blur();
+      }
+    });
+    inp.addEventListener('blur', function () {
+      setTimeout(function () { box.classList.remove('open'); }, 160);
+    });
+  });
+}
+
+function renderFeed() {
+  var box = document.getElementById('gdFeed');
+  var inc = (CFG && CFG.incidents) || [];
+  if (!inc.length) {
+    box.innerHTML = '<div class="gd-empty"><i class="fas fa-circle-check"></i>Тишина — сервер под защитой, инцидентов не было</div>';
+    return;
+  }
+  box.innerHTML = inc.map(function (x) {
+    return '<div class="gd-inc">' +
+      '<div class="gd-inc-ico' + (x.action === 'alert' ? '' : ' danger') + '"><i class="fas fa-shield-halved"></i></div>' +
+      '<div class="gd-inc-main">' +
+        '<div class="gd-inc-title">' + esc(x.label || x.event) + ' ' + actionBadge(x) + '</div>' +
+        '<div class="gd-inc-sub">' + esc(x.actor_name || '—') + (x.actor_id ? ' (ID ' + esc(x.actor_id) + ')' : '') +
+          (x.detail ? ' — ' + esc(x.detail) : '') +
+          (x.applied && x.applied !== '—' ? ' · итог: ' + esc(x.applied) : '') + '</div>' +
+        '<div class="gd-inc-time">' + esc(timeAgo(x.ts || 0)) + '</div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function applyStateToDom() {
+  document.getElementById('gdMaster').checked = !!CFG.enabled;
+  document.getElementById('gdKickBots').checked = !!CFG.kick_unauthorized_bots;
+}
+
+function renderAll() {
+  renderHero();
+  renderPunSelect();
+  renderEvents();
+  wlComboInit();
+  renderWl();
+  renderFeed();
+  applyStateToDom();
+  document.getElementById('gdMaster').disabled = !CAN_EDIT;
+  document.getElementById('gdKickBots').disabled = !CAN_EDIT;
+  document.getElementById('gdPun').disabled = !CAN_EDIT;
+  document.getElementById('gdBotAct').disabled = !CAN_EDIT;
+  document.getElementById('gdSave').disabled = !CAN_EDIT;
+  document.getElementById('gdSave2').disabled = !CAN_EDIT;
+}
+
+var _gdLastRaw = null;
+
+async function gdLoad(live) {
+  try {
+    var r = await fetch('/api/guild/' + GUILD_ID + '/guardian', { credentials: 'same-origin' });
+    var raw = await r.text();
+    if (live) {
+      if (raw === _gdLastRaw) return;                 /* тишина — DOM не трогаем */
+      var act = document.activeElement;
+      var grid = document.getElementById('gdEvents');
+      var hero = document.querySelector('.gd-hero');
+      if (act && grid && grid.contains(act)) { _gdLastRaw = raw; return; }  /* ты настраиваешь — не мешаем */
+      if (act && hero && hero.contains(act)) { _gdLastRaw = raw; return; }
+    }
+    _gdLastRaw = raw;
+    var d = JSON.parse(raw);
+    if (d.success && d.cfg) {
+      G_ROLES = d.roles || G_ROLES;
+      G_MEMBERS = d.members || G_MEMBERS;
+      CFG = d.cfg;
+      EVENTS = d.cfg.events || [];
+      PUNISHMENTS = d.cfg.punishments || [];
+      WL_U = d.cfg.whitelist_users || [];
+      WL_R = d.cfg.whitelist_roles || [];
+      WL_BU = d.cfg.bot_whitelist_users || [];
+      WL_BR = d.cfg.bot_whitelist_roles || [];
+      NAMES = d.cfg.resolved || { users: {}, roles: {} };
+      G_MEMBERS.forEach(function (m) {        /* имена для чипов, даже если с сервера не пришли */
+        if (!NAMES.users[m.id]) NAMES.users[m.id] = m.name;
+      });
+    } else if (!live) {
+      toast(d.error || 'Не удалось загрузить Щит', false);
+    }
+  } catch (e) { if (!live) toast('Ошибка сети при загрузке Щита', false); }
+  if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
+}
+
+/* live: состояние Щита синхронизируется само каждые 1.5 секунды —
+   но перерисовываем ТОЛЬКО когда данные реально изменились */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gdLoad(true); } catch (e) {} }, 1500);
+
+function collectPayload() {
+  var events = {};
+  EVENTS.forEach(function (ev) {
+    var q = '[data-key="' + ev.key + '"]';
+    var tog = document.querySelector('.gd-ev-tog' + q);
+    var th = document.querySelector('.gd-ev-th' + q);
+    var win = document.querySelector('.gd-ev-win' + q);
+    var winu = document.querySelector('.gd-ev-winu' + q);
+    var act = document.querySelector('.gd-ev-act' + q);
+    var wsec = win ? (parseInt(win.value, 10) || 0) : ev.window;
+    wsec = wsec * (WIN_UNITS[winu && winu.value] || 1);
+    wsec = Math.max(3, Math.min(WIN_MAX, wsec));
+    events[ev.key] = {
+      enabled: tog ? tog.checked : ev.enabled,
+      threshold: th ? parseInt(th.value, 10) : ev.threshold,
+      window: wsec,
+      action: act && act.value ? act.value : null
+    };
+  });
+  return {
+    enabled: document.getElementById('gdMaster').checked,
+    punishment: document.getElementById('gdPun').value,
+    bot_action: document.getElementById('gdBotAct').value,
+    kick_unauthorized_bots: document.getElementById('gdKickBots').checked,
+    events: events,
+    whitelist_users: WL_U.slice(),
+    whitelist_roles: WL_R.slice(),
+    bot_whitelist_users: WL_BU.slice(),
+    bot_whitelist_roles: WL_BR.slice()
+  };
+}
+
+async function gdSave() {
+  var payload = collectPayload();
+  var r = await fetch('/api/guild/' + GUILD_ID + '/guardian', {
+    method: 'POST', credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  var d = await r.json().catch(function () { return {}; });
+  if (r.ok && d.success) {
+    toast('Настройки Щита сохранены — бот уже применил их', true);
+    _gdLastRaw = null;   /* сохранение изменило данные — live сравнит заново */
+    if (d.cfg) {
+      CFG = d.cfg; EVENTS = d.cfg.events || EVENTS;
+      WL_U = d.cfg.whitelist_users || WL_U; WL_R = d.cfg.whitelist_roles || WL_R;
+      WL_BU = d.cfg.bot_whitelist_users || WL_BU; WL_BR = d.cfg.bot_whitelist_roles || WL_BR;
+      NAMES = d.cfg.resolved || NAMES;
+    }
+    if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
+  } else {
+    toast(d.error || 'Не удалось сохранить', false);
+  }
+}
+
+wlComboInit();
+document.getElementById('gdSave').addEventListener('click', gdSave);
+document.getElementById('gdSave2').addEventListener('click', gdSave);
+document.getElementById('gdEvAllOn').addEventListener('click', function () { gdEvAll(true); });
+document.getElementById('gdEvAllOff').addEventListener('click', function () { gdEvAll(false); });
+/* Тумблер события = одно нажатие: сразу применяется и сохраняется.
+   То же — мастер-выключатель Щита и «кикать чужих ботов». */
+document.addEventListener('change', function (e) {
+  var t = e.target;
+  if (!t || !CAN_EDIT) return;
+  if (t.classList && (t.classList.contains('gd-ev-tog') || t.id === 'gdMaster'
+      || t.id === 'gdKickBots')) {
+    gdSave();
+  }
+});
+
+/* время: живой пересчёт подсказки при вводе, кнопки-пресеты */
+(function () {
+  var grid = document.getElementById('gdEvents');
+  if (!grid) return;
+  grid.addEventListener('input', function (e) {
+    if (e.target.classList.contains('gd-ev-win') || e.target.classList.contains('gd-ev-th')) syncFires();
+  });
+  grid.addEventListener('change', function (e) {
+    if (e.target.classList.contains('gd-ev-winu')) {
+      var key = e.target.getAttribute('data-key');
+      var inp = document.querySelector('.gd-ev-win[data-key="' + key + '"]');
+      if (inp) {
+        /* переводим значение между единицами без глупых чисел */
+        var v = parseInt(inp.value, 10) || 0;
+        var cur = cardSeconds(key) || v * 60;
+        var f = WIN_UNITS[e.target.value] || 1;
+        inp.value = Math.max(1, Math.min(Math.floor(WIN_MAX / f), Math.round(cur / f) || 1));
+        inp.max = Math.floor(WIN_MAX / f);
+      }
+      syncFires();
+    }
+  });
+  grid.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.gd-pbtn') : null;
+    if (!b || b.disabled) return;
+    var key = b.getAttribute('data-key');
+    var s = parseInt(b.getAttribute('data-s'), 10) || 30;
+    var inp = document.querySelector('.gd-ev-win[data-key="' + key + '"]');
+    var sel = document.querySelector('.gd-ev-winu[data-key="' + key + '"]');
+    if (!inp || !sel) return;
+    var u = bestUnit(s);
+    sel.value = u[0];
+    inp.value = u[1];
+    inp.max = Math.floor(WIN_MAX / WIN_UNITS[u[0]]);
+    syncFires();
+  });
+})();
+document.getElementById('gdMaster').addEventListener('change', function () {
+  document.getElementById('gdState').textContent = this.checked ? 'Защита включена' : 'Защита выключена';
+});
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-gd-wl]');
+  if (!b) return;
+  var parts = b.getAttribute('data-gd-wl').split(':');
+  var list = wlList(parts[0]).list;
+  var i = list.indexOf(parts[1]);
+  if (i !== -1) list.splice(i, 1);
+  renderWl();
+  toast('Убрано из списка — сохраните изменения', true);
+});
+
+document.addEventListener('change', function (e) {
+  if (!e.target) return;
+  if (e.target.id === 'gdDurMute') saveDurMute();
+  if (e.target.id === 'gdDurMuteRole') saveDurMuteRole();
+});
+
+gdLoad();
+</script>
+
+<script>
+/* ── Лимиты команды внутри Щита: глобальные + по ролям + журнал изменений.
+   Пишет в те же файлы бота (services/staff_limits.py) — применяется сразу. */
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  var LIM_OWNER = {% if role == 'owner' %}true{% else %}false{% endif %};
+  var L = { roles: [], meta: [], titles: {}, defaults: {}, windows: {}, durations: {}, sel: null };
+  var CHG = [];
+  var _lastRaw = null;
+  var _lastChgRaw = null;
+  var _metaSig = '';
+  var SAVING = false;
+
+  function gid() { return String(GUILD_ID || '777'); }
+  var DUR_OPTS = [
+    [0, '— Без потолка —'],
+    [300, '5 минут'], [900, '15 минут'], [1800, '30 минут'],
+    [3600, '1 час'], [10800, '3 часа'], [21600, '6 часов'], [43200, '12 часов'],
+    [86400, '1 день'], [259200, '3 дня'], [604800, '7 дней'], [2419200, '28 дней']
+  ];
+  function durOptions(val) {
+    return DUR_OPTS.map(function (o) {
+      return '<option value="' + o[0] + '"' + (Number(val) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('');
+  }
+  function durText(sec) {
+    for (var i = 0; i < DUR_OPTS.length; i++) if (DUR_OPTS[i][0] === Number(sec)) return DUR_OPTS[i][1];
+    return jWin(sec);
+  }
+  function durMsg(t) {
+    var el = $('gdDurMsg');
+    if (!el) return;
+    el.textContent = t || '';
+    if (t) setTimeout(function () { if ($('gdDurMsg')) $('gdDurMsg').textContent = ''; }, 2800);
+  }
+  function saveDurMute() {
+    if (SAVING || !LIM_OWNER) return;
+    var v = parseInt($('gdDurMute').value, 10) || 0;
+    SAVING = true;
+    fetch('/api/guild/' + gid() + '/staff-limits', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ durations: { mute: v } })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      SAVING = false;
+      durMsg(d.success ? (v ? 'Сохранено: максимум ' + durText(v) : 'Потолок снят') : 'Ошибка: ' + (d.error || 'не сохранено'));
+      load();
+    }).catch(function () { SAVING = false; });
+  }
+  function saveDurMuteRole() {
+    if (!L.sel || SAVING || !LIM_OWNER) return;
+    var v = parseInt($('gdDurMuteRole').value, 10) || 0;
+    SAVING = true;
+    fetch('/api/guild/' + gid() + '/staff-limits/role', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role_id: L.sel, durations: { mute: v } })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      SAVING = false;
+      $('gdLimRoleMsg').textContent = d.success
+        ? (v ? 'Свой потолок мута: ' + durText(v) : 'Свой потолок снят — действует общий')
+        : 'Ошибка: ' + (d.error || 'не сохранено');
+      load();
+    }).catch(function () { SAVING = false; });
+  }
+  function winText(w) {
+    if (!w) return '1 дн.';
+    return (w.n || 1) + ' ' + (w.unit === 'h' ? 'ч' : 'дн.');
+  }
+  function jWin(sec) { return sec ? humanWin(sec) : '—'; }
+
+  function fieldHtml(it, val, win, ph, global) {
+    var dis = LIM_OWNER ? '' : ' disabled';
+    var winD = win || L.windows[it.key] || { n: 1, unit: 'd' };
+    var winN = (winD && winD.n) || 1;
+    var winU = (winD && winD.unit) === 'h' ? 'h' : 'd';
+    var pre = global ? 'gdLimG' : 'gdLimR';
+    var btn = global
+      ? '<button type="button" class="btn gdLimGo" data-k="' + it.key + '" aria-label="Применить: ' + esc(it.title) + '" title="Применить сразу"' + dis + '><i class="fas fa-check"></i></button>'
+      : '';
+    return '<div class="gd-lim-field">' +
+      '<span class="gd-lim-lab" title="' + esc(it.hint || it.title) + '">' + esc(it.title) + '</span>' +
+      '<div class="gd-lim-in">' +
+      '<input class="form-input gd-num ' + pre + '" data-k="' + it.key + '" type="number" min="1" max="100000" value="' + (val || '') + '"' +
+      (ph ? ' placeholder="' + esc(ph) + '"' : '') + dis + ' style="width:74px">' +
+      '<span style="font-size:11px;opacity:.6">за</span>' +
+      '<input class="form-input gd-num ' + pre + 'W" data-k="' + it.key + '" type="number" min="1" max="31" value="' + winN + '"' + dis + ' style="width:52px;padding-left:8px;padding-right:8px" aria-label="Период: ' + esc(it.title) + '">' +
+      '<select class="gd-wsel ' + pre + 'U" data-k="' + it.key + '"' + dis + ' aria-label="Единица периода: ' + esc(it.title) + '">' +
+      '<option value="h"' + (winU === 'h' ? ' selected' : '') + '>час</option>' +
+      '<option value="d"' + (winU === 'd' ? ' selected' : '') + '>дн</option>' +
+      '</select>' + btn + '</div></div>';
+  }
+
+  function groupsHtml(builder) {
+    return (L.meta || []).map(function (g) {
+      return '<div style="margin-bottom:12px">' +
+        '<div class="gd-lim-lab" style="margin:2px 0 8px">' + esc(g.label) + '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">' +
+        g.items.map(builder).join('') + '</div></div>';
+    }).join('');
+  }
+
+  function renderGlobal(rebuild) {
+    var box = $('gdLimGlobal');
+    if (!box) return;
+    var sig = JSON.stringify(L.meta || []);
+    if (rebuild || sig !== _metaSig) {
+      _metaSig = sig;
+      box.innerHTML = groupsHtml(function (it) {
+        return fieldHtml(it, L.defaults[it.key] || '', L.windows[it.key], '', true);
+      });
+    } else {
+      /* данные обновились — правим только ЗНАЧЕНИЯ, печать не трогаем */
+      Array.prototype.forEach.call(box.querySelectorAll('.gdLimG'), function (inp) {
+        if (inp === document.activeElement) return;
+        var v = L.defaults[inp.getAttribute('data-k')];
+        if (v && String(v) !== inp.value) inp.value = String(v);
+      });
+    }
+  }
+
+  function ownCount(r) {
+    return Object.keys(r.limits || {}).length + Object.keys(r.windows || {}).length;
+  }
+
+  function roleById(id) {
+    var out = null;
+    (L.roles || []).forEach(function (x) { if (x.id === id) out = x; });
+    return out;
+  }
+
+  function renderRoles() {
+    var q = ($('gdLimRoleSearch').value || '').toLowerCase();
+    var list = $('gdLimRoles');
+    var html = (L.roles || []).filter(function (r) {
+      return !q || (r.name || '').toLowerCase().indexOf(q) !== -1;
+    }).map(function (r) {
+      var n = ownCount(r);
+      var chip = n
+        ? '<span class="chip" style="background:rgba(123,216,143,.16);color:#7bd88f">свои: ' + n + '</span>'
+        : '<span class="chip" style="opacity:.55">глобальные</span>';
+      return '<div class="gd-lim-role' + (L.sel === r.id ? ' sel' : '') + '" data-id="' + esc(r.id) + '">' +
+        '<span style="display:flex;align-items:center;gap:8px;min-width:0">' +
+        '<span style="width:12px;height:12px;border-radius:50%;flex-shrink:0;background:' + (r.color && r.color !== '#000000' ? r.color : '#95a5a6') + '"></span>' +
+        '<b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(r.name) + '</b></span>' + chip + '</div>';
+    }).join('');
+    list.innerHTML = html || '<div class="gd-empty"><i class="fas fa-users-slash"></i>Роли не найдены</div>';
+    Array.prototype.forEach.call(list.querySelectorAll('.gd-lim-role'), function (el) {
+      el.addEventListener('click', function () { selectRole(el.getAttribute('data-id')); });
+    });
+    var pill = $('gdLimPill');
+    if (pill) pill.innerHTML = '<i class="fas fa-users-gear"></i>ролей со своими лимитами: <b>' +
+      (L.roles || []).filter(function (r) { return ownCount(r) > 0; }).length + '</b>';
+  }
+
+  function selectRole(id) {
+    var r = roleById(id);
+    if (!r) return;
+    L.sel = id;
+    $('gdLimEditEmpty').hidden = true;
+    $('gdLimEditBody').hidden = false;
+    $('gdLimRoleName').textContent = r.name;
+    $('gdLimRoleMembers').textContent = (r.members || 0) + ' участн.';
+    $('gdLimRoleDot').style.background = (r.color && r.color !== '#000000') ? r.color : '#95a5a6';
+    $('gdLimEditSub').textContent = 'Свои лимиты для «' + r.name + '». Пустое поле — берётся глобальное. Настроенные здесь действия — это всё, что модер этой роли видит в /modpanel.';
+    /* «Сейчас действует»: что именно эта роль перекрывает */
+    var lines = [];
+    (L.meta || []).forEach(function (g) {
+      g.items.forEach(function (it) {
+        var k = it.key;
+        var ownL = (r.limits || {})[k];
+        var ownW = (r.windows || {})[k];
+        if (ownL == null && ownW == null) return;
+        var effL = ownL != null ? ownL : (L.defaults[k] || 0);
+        var effW = ownW || L.windows[k] || { n: 1, unit: 'd' };
+        lines.push('<div>' + esc(it.title) + ': <b class="gd-own">' + effL + ' за ' + winText(effW) + '</b>' +
+          ' <span class="dim">(глобально: ' + (L.defaults[k] || '—') + ' за ' + winText(L.windows[k]) + ')</span></div>');
+      });
+    });
+    $('gdLimEff').innerHTML = '<b>Сейчас действует у роли:</b>' +
+      (lines.length ? lines.join('') : ' глобальные лимиты — своих настроек у роли нет.');
+    $('gdLimRoleInputs').innerHTML = groupsHtml(function (it) {
+      return fieldHtml(it, (r.limits || {})[it.key] || '',
+                       (r.windows || {})[it.key] || L.windows[it.key],
+                       'глобально: ' + (L.defaults[it.key] || '—'), false);
+    });
+    if ($('gdDurMuteRole')) {
+      $('gdDurMuteRole').innerHTML = durOptions((r.durations || {}).mute || 0);
+      $('gdDurMuteRole').disabled = !LIM_OWNER;
+    }
+    $('gdLimRoleMsg').textContent = '';
+    renderRoles();
+  }
+
+  function saveRole() {
+    if (!L.sel || SAVING || !LIM_OWNER) return;
+    var box = $('gdLimRoleInputs');
+    var role = roleById(L.sel);
+    var limits = {}, windows = {}, clear = [];
+    Array.prototype.forEach.call(box.querySelectorAll('.gdLimR'), function (inp) {
+      var k = inp.getAttribute('data-k');
+      var v = parseInt(inp.value, 10);
+      if (inp.value && v > 0) {
+        limits[k] = v;
+        var wn = box.querySelector('.gdLimRW[data-k="' + k + '"]');
+        var wu = box.querySelector('.gdLimRU[data-k="' + k + '"]');
+        var n = parseInt(wn && wn.value, 10) || 1;
+        if (n >= 1 && n <= 31) windows[k] = { n: n, unit: (wu && wu.value) || 'd' };
+      } else if (role && (role.limits || {})[k] != null) {
+        clear.push(k);   /* стёрли поле — снимаем и лимит, и его период */
+      }
+    });
+    if (!Object.keys(limits).length && !clear.length) {
+      $('gdLimRoleMsg').textContent = 'Заполните хотя бы одно поле';
+      return;
+    }
+    SAVING = true;
+    fetch('/api/guild/' + gid() + '/staff-limits/role', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role_id: L.sel, limits: limits, windows: windows, clear: clear })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      SAVING = false;
+      $('gdLimRoleMsg').textContent = d.success ? 'Сохранено — действует сразу' : 'Ошибка: ' + (d.error || 'не сохранено');
+      load();
+    }).catch(function () { SAVING = false; });
+  }
+
+  function resetRole() {
+    if (!L.sel || SAVING || !LIM_OWNER) return;
+    fetch('/api/guild/' + gid() + '/staff-limits/role/delete', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role_id: L.sel })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      $('gdLimRoleMsg').textContent = d.success ? 'Роль снова живёт по глобальным лимитам' : 'Ошибка';
+      load();
+    }).catch(function () {});
+  }
+
+  function gMsg(t) {
+    var el = $('gdLimGlobalMsg');
+    if (!el) return;
+    el.textContent = t;
+    setTimeout(function () { if ($('gdLimGlobalMsg')) $('gdLimGlobalMsg').textContent = ''; }, 2600);
+  }
+
+  function applyGlobal(k) {
+    if (SAVING || !LIM_OWNER) return;
+    var box = $('gdLimGlobal');
+    var inp = box.querySelector('.gdLimG[data-k="' + k + '"]');
+    var val = parseInt((inp && inp.value) || '0', 10);
+    if (!val || val < 1) { gMsg('Значение — целое число от 1'); return; }
+    var wn = box.querySelector('.gdLimGW[data-k="' + k + '"]');
+    var wu = box.querySelector('.gdLimGU[data-k="' + k + '"]');
+    var n = parseInt(wn && wn.value, 10) || 1;
+    if (n < 1 || n > 31) { gMsg('Период — от 1 до 31'); return; }
+    var body = { limits: {}, windows: {} };
+    body.limits[k] = val;
+    body.windows[k] = { n: n, unit: (wu && wu.value) || 'd' };
+    SAVING = true;
+    fetch('/api/guild/' + gid() + '/staff-limits', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      SAVING = false;
+      gMsg(d.success ? 'Сохранено — действует сразу' : 'Ошибка: ' + (d.error || 'не сохранено'));
+      load();
+    }).catch(function () { SAVING = false; });
+  }
+
+  function renderChanges() {
+    var box = $('gdLimChanges');
+    if (!box) return;
+    if (!CHG.length) {
+      box.innerHTML = '<div class="gd-empty"><i class="fas fa-circle-check"></i>Изменений ещё не было — журнал начнёт заполняться с первой правки</div>';
+      return;
+    }
+    box.innerHTML = CHG.map(function (e) {
+      var scopeTxt = e.scope === 'role'
+        ? 'Роль «' + esc(e.role_name || e.role_id || '?') + '»'
+        : 'Глобальные лимиты';
+      var parts = (e.changes || []).map(function (c) {
+        var t = L.titles[c.key] || c.key;
+        var oldV = c.field === 'window' ? jWin(c.old) : (c.old == null ? '—' : c.old);
+        var newV = c.field === 'window' ? jWin(c.new) : (c.new == null ? '—' : c.new);
+        var w = c.field === 'window' ? 'период ' : '';
+        return esc(t) + ': ' + w + '<b>' + oldV + ' → ' + newV + '</b>';
+      }).join('<br>');
+      var d = new Date((e.ts || 0) * 1000);
+      var back = LIM_OWNER
+        ? '<button type="button" class="gd-jback" data-gdlim-revert="' + esc(e.id) + '" title="Вернуть, как было до этого изменения"><i class="fas fa-rotate-left"></i> Вернуть</button>'
+        : '';
+      return '<div class="gd-jrow">' +
+        '<div class="gd-jico"><i class="fas ' + (e.scope === 'role' ? 'fa-user-tag' : 'fa-sliders') + '"></i></div>' +
+        '<div class="gd-jmain"><div class="gd-jtitle">' + scopeTxt +
+        '<span class="gd-badge info">' + esc(e.who || '—') + '</span></div>' +
+        '<div class="gd-jsub">' + parts + '</div>' +
+        '<div class="gd-jtime">' + d.toLocaleString('ru-RU') + '</div></div>' + back + '</div>';
+    }).join('');
+  }
+
+  function revert(id) {
+    if (!LIM_OWNER || SAVING) return;
+    SAVING = true;
+    fetch('/api/guild/' + gid() + '/staff-limits/changes/revert', {
+      credentials: 'same-origin', method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      SAVING = false;
+      if (d.success) { toast('Возвращено, как было — уже действует', true); load(); }
+      else toast(d.error || 'Не удалось вернуть', false);
+    }).catch(function () { SAVING = false; });
+  }
+
+  function load(live) {
+    fetch('/api/guild/' + gid() + '/staff-limits', { credentials: 'same-origin' })
+      .then(function (r) { return r.text(); })
+      .then(function (raw) {
+        if (live) {
+          if (raw === _lastRaw) return;                     /* не изменилось — DOM не трогаем */
+          var act = document.activeElement;
+          if (act && (($('gdLimGlobal') && $('gdLimGlobal').contains(act)) ||
+                      ($('gdLimRoleInputs') && $('gdLimRoleInputs').contains(act)) ||
+                      ($('gdLimRoleSearch') && $('gdLimRoleSearch').contains(act)))) return;
+        }
+        _lastRaw = raw;
+        var d = JSON.parse(raw);
+        if (!d.success) return;
+        L.roles = d.roles || [];
+        L.titles = d.action_titles || {};
+        L.meta = d.action_meta || [];
+        L.defaults = d.defaults || {};
+        L.windows = d.windows || {};
+        L.durations = d.durations || {};
+        if ($('gdDurMute')) {
+          if (document.activeElement !== $('gdDurMute'))
+            $('gdDurMute').innerHTML = durOptions(L.durations.mute || 0);
+          $('gdDurMute').disabled = !LIM_OWNER;
+        }
+        if (!LIM_OWNER && $('gdLimOwnerNote')) $('gdLimOwnerNote').hidden = false;
+        renderGlobal(!live);
+        renderRoles();
+        if (L.sel) {
+          var editing = document.activeElement && $('gdLimRoleInputs') &&
+            $('gdLimRoleInputs').contains(document.activeElement);
+          if (!editing) selectRole(L.sel);
+        }
+      })
+      .catch(function () {});
+    fetch('/api/guild/' + gid() + '/staff-limits/changes', { credentials: 'same-origin' })
+      .then(function (r) { return r.text(); })
+      .then(function (raw) {
+        if (raw === _lastChgRaw) return;
+        _lastChgRaw = raw;
+        var d = JSON.parse(raw);
+        if (d.success) { CHG = d.changes || []; renderChanges(); }
+      })
+      .catch(function () {});
+  }
+
+  function bind() {
+    $('gdLimRoleSearch').addEventListener('input', renderRoles);
+    $('gdLimRoleSave').addEventListener('click', saveRole);
+    $('gdLimRoleReset').addEventListener('click', resetRole);
+    $('gdLimGlobal').addEventListener('click', function (ev) {
+      var b = ev.target.closest ? ev.target.closest('.gdLimGo') : null;
+      if (b) applyGlobal(b.getAttribute('data-k'));
+    });
+    $('gdLimChanges').addEventListener('click', function (ev) {
+      var b = ev.target.closest ? ev.target.closest('[data-gdlim-revert]') : null;
+      if (b) revert(b.getAttribute('data-gdlim-revert'));
+    });
+    if (!LIM_OWNER) {
+      $('gdLimRoleSave').disabled = true;
+      $('gdLimRoleReset').disabled = true;
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () { bind(); load(); });
+  } else { bind(); load(); }
+
+  /* live: лимиты и журнал синхронизируются сами — без «перезагрузки» */
+  if (window.setLiveRefresh) {
+    window.setLiveRefresh(function () { try { load(true); } catch (e) {} }, 1500);
+  }
+})();
+</script>
+{% endblock %}

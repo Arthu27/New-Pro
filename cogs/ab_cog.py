@@ -21,7 +21,7 @@ class ABCog (commands .Cog ):
         self .bot =bot 
 
     @app_commands .command (name ='ab-create',description ='Создать A/B тест')
-    @app_commands .describe (name ='Test adы',description ='Test aчыklamasы')
+    @app_commands .describe (name ='Название теста',description ='Описание теста')
     @app_commands .checks .has_permissions (administrator =True )
     async def ab_create (self ,interaction :discord .Interaction ,
     name :str ,description :str ):
@@ -31,24 +31,24 @@ class ABCog (commands .Cog ):
 
         # Embed создать
         embed =discord .Embed (
-        title =" A/B Test Создано",
-        description =f"**Ad:** {name}\n**Aчыklama:** {description}\n**ID:** {test.test_id}",
+        title ="🧪 A/B-тест создан",
+        description =f"**Название:** {name}\n**Описание:** {description}\n**ID:** {test.test_id}",
         color =discord .Color .purple (),
         timestamp =datetime .now ()
         )
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='ab-variants',description ='Test varyantlarыnы gёrюntюle')
+    @app_commands .command (name ='ab-variants',description ='Показать варианты теста')
     @app_commands .describe (test_id ='Test ID')
     async def ab_variants (self ,interaction :discord .Interaction ,test_id :str ):
-        """Test varyantlarыnы gёrюntюle"""
+        """Показать варианты теста"""
         # Test al
         test =ab_test_manager .get_test (test_id )
 
         if not test :
             await interaction .response .send_message (
-            " Тест не найден!",
+            "❌ Тест не найден!",
             ephemeral =True 
             )
             return 
@@ -71,7 +71,7 @@ class ABCog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        # Varyant listesi
+        # Список вариантов
         for variant in variants :
             enabled_text =" Enabled"if variant .enabled else " Disabled"
             embed .add_field (
@@ -83,8 +83,8 @@ class ABCog (commands .Cog ):
         await interaction .response .send_message (embed =embed )
 
     @app_commands .command (name ='ab-add-variant',description ='Добавить вариант теста')
-    @app_commands .describe (test_id ='Test ID',name ='Varyant adы',
-    description ='Varyant aчыklamasы',weight ='Aгыrlыk (varsayыlan: 50)')
+    @app_commands .describe (test_id ='Test ID',name ='Название варианта',
+    description ='Описание варианта',weight ='Вес (по умолчанию: 50)')
     @app_commands .checks .has_permissions (administrator =True )
     async def ab_add_variant (self ,interaction :discord .Interaction ,
     test_id :str ,name :str ,description :str ,
@@ -95,7 +95,7 @@ class ABCog (commands .Cog ):
 
         if not test :
             await interaction .response .send_message (
-            " Тест не найден!",
+            "❌ Тест не найден!",
             ephemeral =True 
             )
             return 
@@ -107,24 +107,24 @@ class ABCog (commands .Cog ):
 
         # Embed создать
         embed =discord .Embed (
-        title =" Varyant Добавлен",
-        description =f"**Test:** {test.name}\n**Varyant:** {name}\n**Aгыrlыk:** {weight}",
+        title ="✅ Вариант добавлен",
+        description =f"**Тест:** {test.name}\n**Вариант:** {name}\n**Вес:** {weight}",
         color =discord .Color .green (),
         timestamp =datetime .now ()
         )
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='ab-stats',description ='Test статистикаlerini gёrюntюle')
+    @app_commands .command (name ='ab-stats',description ='Показать статистику теста')
     @app_commands .describe (test_id ='Test ID')
     async def ab_stats (self ,interaction :discord .Interaction ,test_id :str ):
-        """Test статистикаlerini gёrюntюle"""
+        """Показать статистику теста"""
         # Test al
         test =ab_test_manager .get_test (test_id )
 
         if not test :
             await interaction .response .send_message (
-            " Тест не найден!",
+            "❌ Тест не найден!",
             ephemeral =True 
             )
             return 
@@ -165,14 +165,14 @@ class ABCog (commands .Cog ):
 
         if not success :
             await interaction .response .send_message (
-            " Test baшlatыlamadы!",
+            "❌ Не удалось запустить тест!",
             ephemeral =True 
             )
             return 
 
             # Embed создать
         embed =discord .Embed (
-        title =" Test Baшlatыldы",
+        title ="▶️ Тест запущен",
         description =f"Test ID: {test_id}",
         color =discord .Color .green (),
         timestamp =datetime .now ()
@@ -190,14 +190,14 @@ class ABCog (commands .Cog ):
 
         if not success :
             await interaction .response .send_message (
-            " Test остановитьulamadы!",
+            "❌ Не удалось остановить тест!",
             ephemeral =True 
             )
             return 
 
             # Embed создать
         embed =discord .Embed (
-        title ="⏹ Test Остановитьuldu",
+        title ="⏹ Тест остановлен",
         description =f"Test ID: {test_id}",
         color =discord .Color .red (),
         timestamp =datetime .now ()
@@ -207,8 +207,8 @@ class ABCog (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
-        log .info (f" ABCog loaded")
+        """Бот готов"""
+        log .info (" ABCog loaded")
 
 
 async def setup (bot ):

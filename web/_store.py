@@ -1,11 +1,16 @@
 """
-Центрk performans yardimcisi.
-- atomic_write_json: gecici dosya + os.replace ile atomik написатьma (yaris статусu нет, indent нет).
-- read_json: dosya yoksa None; JSON bozuksa None (uyarхорошо bir key написатьdirir).
-- ttl_cache: basit TTL onbellegi; sыk okunan JSON dosyalari icin.
-- PeriodicFlush: лог написатьimini toplu (batch) ve periyodik yapar; onyuzde bloklama нет.
-- make_etag: JSON dump etmeden быстрый (weak) ETag uretir.
+Центральный помощник производительности.
+- atomic_write_json: временный файл + os.replace — атомарная запись (без гонок, без обрывов).
+- read_json: None, если файла нет; None, если JSON повреждён (предупреждение пишется в лог).
+- ttl_cache: простой TTL-кэш; для часто читаемых JSON-файлов.
+- PeriodicFlush: делает запись логов пакетной (batch) и периодической; не блокирует основной поток.
+- make_etag: быстрый (weak) ETag без JSON-сериализации.
 """
+
+from logger import get_logger
+
+_log = get_logger("_store")
+
 import json 
 import os 
 import time 
@@ -16,7 +21,7 @@ from collections import OrderedDict
 
 # ── Atomic file I/O ───────────────────────────────────────────────────────────
 def atomic_write_json (path ,data ,ensure_ascii =False ):
-    """Написатьarken once gecici dosyaya написать, после os.replace ile atomik tasi."""
+    """Сначала записать во временный файл, затем атомарно перенести через os.replace."""
     tmp =f"{path}.tmp.{os.getpid()}.{threading.get_ident()}"
     try :
         os .makedirs (os .path .dirname (path )or '.',exist_ok =True )
@@ -25,20 +30,20 @@ def atomic_write_json (path ,data ,ensure_ascii =False ):
             fp .flush ()
             try :
                 os .fsync (fp .fileno ())
-            except OSError :
-                pass 
+            except OSError as _ex:
+                _log.debug("atomic_write_json(): подавлено: %s", _ex)
         os .replace (tmp ,path )
     except Exception :
         try :
             if os .path .exists (tmp ):
                 os .remove (tmp )
-        except OSError :
-            pass 
+        except OSError as _ex:
+            _log.debug("atomic_write_json(): подавлено: %s", _ex)
         raise 
 
 
 def read_json (path ,default =None ):
-    """Guvenli okuma. Ошибка статусunda default dondurur."""
+    """Безопасное чтение. В случае ошибки возвращает default."""
     if not os .path .exists (path ):
         return default 
     try :
@@ -64,7 +69,7 @@ class _TTLCache :
             if expires <time .time ():
                 self ._d .pop (key ,None )
                 return None 
-                # LRU: eriудалитьeni basa получить
+                # LRU: переместить использованный элемент в начало
             self ._d .move_to_end (key )
             return value 
 
@@ -88,7 +93,7 @@ _cache =_TTLCache (maxsize =512 )
 
 
 def cached_read_json (path ,ttl =5.0 ,default =None ):
-    """Dosyayi TTL onbellдобавить. Длительность doldugunda новыйden okur."""
+    """Кэшировать файл по TTL. При истечении срока читает заново."""
     if ttl <=0 :
         return read_json (path ,default )
     key =('json',os .path .abspath (path ),os .path .getmtime (path )if os .path .exists (path )else 0 )
@@ -139,7 +144,7 @@ def _etag_hash_item (h ,item ):
 
         # ── Periodic flush (panel_logs icin) ──────────────────────────────────────────
 class PeriodicFlush :
-    """append() быстрый, настоящий dosya написатьimini arka planda toplu yapar."""
+    """append() быстрый, реальную запись в файл выполняет в фоне пакетно."""
     def __init__ (self ,path ,flush_interval =5.0 ,max_entries =1000 ,batch_threshold =50 ):
         self ._path =path 
         self ._interval =flush_interval 
@@ -189,9 +194,9 @@ class PeriodicFlush :
             existing =existing [-self ._max :]
             atomic_write_json (self ._path ,existing )
             invalidate_path (self ._path )
-        except Exception :
-        # Sessizce yut; loglayici hatayi paneli kiramaz
-            pass 
+        except Exception as _ex:
+        # Молча проглотить; логгер не должен ломать панель
+            _log.debug("_flush(): подавлено: %s", _ex)
 
     def shutdown (self ):
         with self ._lock :
@@ -199,6 +204,6 @@ class PeriodicFlush :
             self ._cv .notify_all ()
         try :
             self ._thread .join (timeout =2 )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("shutdown(): подавлено: %s", _ex)
         self .flush_now ()

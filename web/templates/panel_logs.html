@@ -1,19 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Логи панели - Aether{% endblock %}
+{% block title %}Логи панели - Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-list"></i> Логи панели{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Логи панели</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Логи <span class="sep">·</span> Панель</div>
     <h1>Логи панели</h1>
-    <p>История входов и действий в панели управления.</p>
+    <p class="lead">История входов и действий в панели управления.</p>
   </div>
 </div>
-{% endblock %}
+
 
 <div class="stat-grid" id="pl-stats">
   <div class="stat-box gold">
@@ -37,8 +33,8 @@
 <div class="section">
   <div class="bs-title"><i class="fas fa-filter"></i> Фильтры</div>
   <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-    <input type="text" id="search" class="form-input" placeholder="Поиск... (действие, пользователь, IP)" style="flex: 1; min-width: 200px;">
-    <select id="filter" class="form-input" style="width: 150px;">
+    <input type="text" id="search" class="form-input" placeholder="Поиск... (действие, пользователь, IP)" style="flex: 1; min-width: 200px;" aria-label="Поиск... (действие, пользователь, IP)">
+    <select id="filter" class="form-input" style="width: 150px;" aria-label="Фильтр">
       <option value="">Все действия</option>
       <option>POST</option>
       <option>DELETE</option>
@@ -63,13 +59,31 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  var logs = [
-    { action: 'POST /api/guild/.../ticket-settings', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '2 мин назад', method: 'POST' },
-    { action: 'POST /api/command/ban', user: 'Администратор', role: 'админ', ip: '127.0.0.1', time: '5 мин назад', method: 'POST' },
-    { action: 'GET /api/guilds', user: 'Owner', role: 'owner', ip: '127.0.0.1', time: '10 мин назад', method: 'GET' },
-    { action: 'POST /api/warn', user: 'Мод', role: 'мод', ip: '127.0.0.1', time: '15 мин назад', method: 'POST' },
-    { action: 'DELETE /api/guild/.../channels/...', user: 'Администратор', role: 'админ', ip: '127.0.0.1', time: '1 час назад', method: 'DELETE' }
-  ];
+  /* Раньше здесь лежала захардкоженная выдумка из 5 строк («Owner»,
+     «Мод»...) — теперь только РЕАЛЬНЫЕ логи из /api/panel-logs,
+     плюс живое обновление без перезагрузки страницы. */
+  var logs = [];
+
+  function fetchLogs() {
+    fetch('/api/panel-logs', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (rows) {
+        logs = (rows || []).map(function (l) {
+          var m = String(l.method || (l.action || '').split(' ')[0] || '').toUpperCase();
+          if (['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].indexOf(m) === -1) m = 'POST';
+          return {
+            action: l.action || l.event || '—',
+            user: l.username || l.user || '—',
+            role: l.role || '',
+            ip: l.ip || l.ip_address || '',
+            time: l.timestamp ? String(l.timestamp).replace('T', ' ').slice(0, 19) : (l.time || ''),
+            method: m
+          };
+        });
+        render();
+      })
+      .catch(function () {});
+  }
   var roleColor = { owner: 'var(--err)', админ: '#c8922a', мод: 'var(--ok)' };
 
   function render() {
@@ -77,7 +91,7 @@
     var f = $('filter').value;
     var list = logs.filter(function (l) {
       if (f && l.method !== f) return false;
-      if (q && ((l.action + ' ' + l.user + ' ' + l.ip).toLowerCase().indexOf(q) === -1)) return false;
+      if (q && ((l.action + ' ' + (l.label || '') + ' ' + l.user + ' ' + l.ip).toLowerCase().indexOf(q) === -1)) return false;
       return true;
     });
     $('pl-count').textContent = list.length + ' / ' + logs.length;
@@ -88,13 +102,16 @@
     if (!list.length) { $('pl-body').innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">Логи не найдены</p>'; return; }
     var html = '';
     list.forEach(function (l) {
-      var icon = l.method === 'POST' ? 'fa-plus' : l.method === 'DELETE' ? 'fa-trash' : 'fa-eye';
+      var icon = l.icon || (l.method === 'POST' ? 'fa-plus' : l.method === 'DELETE' ? 'fa-trash' : 'fa-eye');
       var color = roleColor[l.role] || 'var(--text-muted)';
-      html += '<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 12px;">' +
-        '<div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;"><i class="fas ' + icon + '" style="color: ' + color + ';"></i></div>' +
+      var title = l.label || l.action;
+      var raw = (l.label && l.label !== l.action) ? ' <span style="opacity:.55;font-weight:400">' + esc(l.action) + '</span>' : '';
+      var linkA = l.link ? '<a href="' + esc(l.link) + '" style="font-size:11px;color:var(--ac);text-decoration:none;margin-left:8px" title="Открыть раздел"><i class="fas fa-arrow-right"></i></a>' : '';
+      html += '<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid color-mix(in srgb, var(--text) 5%, transparent); gap: 12px;">' +
+        '<div style="width: 32px; height: 32px; border-radius: 8px; background: color-mix(in srgb, var(--text) 5%, transparent); display: flex; align-items: center; justify-content: center;"><i class="fas ' + icon + '" style="color: ' + color + ';"></i></div>' +
         '<div style="flex: 1;">' +
-          '<div style="font-weight: 500; margin-bottom: 4px;">' + esc(l.action) + '</div>' +
-          '<div style="font-size: 12px; color: var(--text-muted);">' + esc(l.user) + ' • ' + esc(l.ip) + '</div>' +
+          '<div style="font-weight: 500; margin-bottom: 4px;">' + esc(title) + linkA + raw + '</div>' +
+          '<div style="font-size: 12px; color: var(--text-muted);">' + esc(l.user) + ' • ' + esc(l.ip) + (l.detail ? ' • ' + esc(l.detail) : '') + '</div>' +
         '</div>' +
         '<div style="text-align: right;">' +
           '<div style="font-size: 12px; color: var(--text-muted);">' + esc(l.time) + '</div>' +
@@ -108,12 +125,15 @@
     $('search').addEventListener('input', render);
     $('filter').addEventListener('change', render);
     $('btn-clear').addEventListener('click', function () {
-      if (confirm('Очистить все логи панели?')) { logs = []; render(); }
+      window.askConfirm('Очистить логи', 'Очистить все логи панели? Действие необратимо.', function () { logs = []; render(); }, { okText: 'Очистить', danger: true, icon_fa: 'fa-broom' });
     });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
-  else { bind(); render(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); fetchLogs(); });
+  else { bind(); fetchLogs(); }
+
+  /* live: логи панели обновляются сами каждые 15 секунд */
+  if (window.setLiveRefresh) window.setLiveRefresh(fetchLogs, 1500);
 })();
 </script>
 {% endblock %}

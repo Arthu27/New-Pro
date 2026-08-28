@@ -1,81 +1,130 @@
 {% extends "base.html" %}
-{% block title %}Сообщение Логы - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-comment-alt" ></i> 💬 ЛОГИ СООБЩЕНИЙ{% endblock %}
+{% block title %}Логи сообщений — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-comment-alt"></i> Логи сообщений{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>💬 ЛОГИ СООБЩЕНИЙ</span>
-    </div>
-    <h1>💬 ЛОГИ СООБЩЕНИЙ</h1>
-    <p>Логи отправленных, отредактированных и удалённых сообщений.</p>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Логи <span class="sep">·</span> Сообщения</div>
+    <h1>Логи сообщений</h1>
+    <p class="lead">Журнал удалённых и изменённых сообщений на сервере.</p>
   </div>
 </div>
-{% endblock %}
 
 
+<style>
+/* Логи сообщений — premium gold */
+.ml-hero{display:flex;align-items:center;gap:16px;padding:22px 26px;background:linear-gradient(135deg,color-mix(in srgb, var(--ac) 10%, transparent),color-mix(in srgb, var(--ac) 3%, transparent));border:1px solid var(--ac-line);border-radius:16px;margin-bottom:18px}
+.hero-icon{font-size:34px;width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--ac-2),var(--ac-3));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 6px 18px var(--ac-glow)}
+.hero-title{font-family:var(--font-display),sans-serif;font-size:20px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.02em}
+.hero-sub{font-size:13px;color:var(--text-2);margin-top:3px}
+.ml-filter-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:14px;padding:14px 16px;margin-bottom:16px;}
+.filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.filter-row .field-input{flex:1;min-width:150px}
+.ml-log-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:16px;}
+.box-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.box-title i{color:var(--ac)}
+/* логи */
+.log-row{background:linear-gradient(160deg,color-mix(in srgb, var(--text) 2%, transparent),transparent);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:9px;transition:all .16s var(--ease)}
+.log-row:hover {border-color:var(--ac-line)}
+.log-row.log-deleted{border-left:3px solid var(--err)}
+.log-row.log-edited{border-left:3px solid var(--warn)}
+.log-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.log-user-wrap{display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+.log-user{font-weight:700;color:var(--text);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log-channel{font-size:12px;color:var(--text-3);background:var(--ac-soft);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-family:'JetBrains Mono',monospace}
+.log-time{font-size:11.5px;color:var(--text-3);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.type-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.type-badge.badge-del{background:rgba(248,113,113,.14);color:var(--err);border:1px solid rgba(248,113,113,.3)}
+.type-badge.badge-edit{background:rgba(251,191,36,.14);color:#fcd34d;border:1px solid rgba(251,191,36,.3)}
+.log-content{font-size:13.5px;color:var(--text-2);line-height:1.55;background: var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 12px;word-break:break-word}
+.log-before{font-size:13px;color:var(--text-2);padding:8px 12px;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.15);border-radius:8px;margin-bottom:6px;word-break:break-word}
+.log-after{font-size:13px;color:var(--text-2);padding:8px 12px;background:rgba(74,222,128,.05);border:1px solid rgba(74,222,128,.15);border-radius:8px;word-break:break-word}
+.log-empty{text-align:center;padding:40px 20px;color:var(--text-3)}
+.log-empty i{display:block;font-size:32px;color:var(--ac);opacity:.4;margin-bottom:12px}
+</style>
 
-<!-- КАЖДЫЙ -->
-<div class="ml-hero">
-  <span class="hero-icon">💬</span>
-  <div class="hero-title">ЛОГИ СООБЩЕНИЙ</div>
-  <div class="hero-sub">Записи удалённых и отредактированных сообщений</div>
-</div>
-
-<!-- STATS -->
-<div class="stat-row">
+<!-- Статистика -->
+<div class="stat-row" data-reveal="up">
   <div class="stat-box">
     <div class="stat-icon gold"><i class="fas fa-comments"></i></div>
-    <div class="stat-body"><div class="stat-val" id="total-count">0</div><div class="stat-lbl">Всего</div></div>
+    <div class="stat-body"><div class="stat-val" id="total-count" data-countup>-</div><div class="stat-lbl">Всего</div></div>
   </div>
   <div class="stat-box">
     <div class="stat-icon red"><i class="fas fa-trash"></i></div>
-    <div class="stat-body"><div class="stat-val" id="deleted-count">0</div><div class="stat-lbl">Удалённые</div></div>
+    <div class="stat-body"><div class="stat-val" id="deleted-count" data-countup>-</div><div class="stat-lbl">Удалённые</div></div>
   </div>
   <div class="stat-box">
     <div class="stat-icon amber"><i class="fas fa-edit"></i></div>
-    <div class="stat-body"><div class="stat-val" id="edited-count">0</div><div class="stat-lbl">Изменённые</div></div>
+    <div class="stat-body"><div class="stat-val" id="edited-count" data-countup>-</div><div class="stat-lbl">Изменённые</div></div>
   </div>
 </div>
 
-<!-- FILTERS -->
-<div class="ml-filter-box">
+<!-- Оформление карточек логов (то, что бот шлёт в лог-каналы Discord) -->
+<div class="ml-filter-box" id="lcSetBox" {% if not can_edit %}hidden{% endif %} data-reveal="up">
+  <div class="box-title"><i class="fas fa-wand-magic-sparkles"></i> Карточки логов в Discord — оформление</div>
+  <div class="filter-row" style="margin-bottom:10px">
+    <label class="field-input" style="display:flex;align-items:center;gap:9px;flex:0 0 auto;cursor:pointer">
+      <input type="checkbox" id="lcOn" checked aria-label="Показывать карточки-картинки в лог-каналах"> Карточки-картинки включены
+    </label>
+    <select id="lcTheme" class="field-input" aria-label="Тема оформления карточек"></select>
+    <select id="lcCat" class="field-input" aria-label="Категория для предпросмотра">
+      <option value="mod">модерация</option>
+      <option value="member">участники</option>
+      <option value="message">сообщения</option>
+      <option value="voice">голос</option>
+      <option value="role">роли</option>
+      <option value="channel">каналы</option>
+      <option value="guild">сервер</option>
+      <option value="invite">приглашения</option>
+      <option value="ticket">тикеты</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2)">
+      Свой акцент
+      <input type="color" id="lcAccent" value="#f5d76e" aria-label="Свой акцентный цвет карточек" style="width:44px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)">
+    </label>
+    <button type="button" class="btn btn-sm" id="lcAccentClear"><i class="fas fa-rotate-left"></i> По теме</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn btn-primary" id="lcSave"><i class="fas fa-save"></i> Сохранить</button>
+  </div>
+  <div class="hint" id="lcMsg" style="margin-bottom:10px"></div>
+  <div style="border:1px solid var(--line-2);border-radius:14px;overflow:hidden;line-height:0;background:var(--bg)">
+    <img id="lcPreview" alt="Предпросмотр карточки лога" style="width:100%;height:auto" loading="lazy">
+  </div>
+  <div class="hint" style="margin-top:8px">Так выглядит карточка, которую бот прикладывает к каждому событию в лог-каналах. Отключение оставляет обычный текстовый эмбед.</div>
+</div>
+
+<!-- Фильтры -->
+<div class="ml-filter-box" data-reveal="up">
   <div class="filter-row">
     <select id="guild-select" onchange="loadLogs()" class="field-input" aria-label="Сервер">
       <option value="{{ main_guild_id }}">Текущий сервер</option>
     </select>
-    <select id="log-type" onchange="loadLogs()" class="field-input">
-      <option value="all">📋 Все</option>
-      <option value="deleted">🗑 Удалённые</option>
-      <option value="edited">✏️ Изменённые</option>
+    <select id="log-type" onchange="loadLogs()" class="field-input" aria-label="Тип журнала">
+      <option value="all">Все</option>
+      <option value="deleted">Удалённые</option>
+      <option value="edited">Изменённые</option>
     </select>
-    <input type="text" id="user-filter" placeholder="🔍 Поиск пользователя..." class="field-input"   style="min-width: 160px;" oninput="filterLogs()">
+    <input type="text" id="user-filter" placeholder="Поиск пользователя..." class="field-input" style="min-width:160px" oninput="filterLogs()" aria-label="Поиск пользователя...">
   </div>
 </div>
 
-<!-- LOG LIST -->
-<div class="ml-log-box">
+<!-- Журнал -->
+<div class="ml-log-box" data-reveal="up">
   <div class="box-title"><i class="fas fa-comment-slash"></i> Журнал сообщений</div>
-  <div id="log-list"><p >ВЫБЕРИТЕ СЕРВЕР...</p></div>
+  <div id="log-list"><div class="log-empty"><i class="fas fa-spinner fa-spin"></i>Загрузка...</div></div>
 </div>
 
 <script>
 var allLogs = [];
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-async function loadGuilds() {
-  loadLogs();
-}
+function isDeleted(l){ return /удал|delet/i.test((l.action||'')+' '+(l.type||'')); }
+function isEdited(l){ return /измен|редакт|düzenl|dюzenl|edit/i.test((l.action||'')+' '+(l.type||'')); }
 
 async function loadLogs() {
   var type = document.getElementById('log-type').value;
   var guildId = document.getElementById('guild-select').value;
-  if (!guildId) {
-    renderLogs([]);
-    return;
-  }
-  document.getElementById('log-list').innerHTML = '<p ><i class="fas fa-spinner fa-spin" ></i></p>';
+  if (!guildId) { renderLogs([]); return; }
   try {
     var r = await fetch('/api/guild/' + encodeURIComponent(guildId) + '/message-logs?type=' + encodeURIComponent(type));
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -83,56 +132,127 @@ async function loadLogs() {
     if (!Array.isArray(allLogs)) allLogs = [];
     updateStats();
     renderLogs(allLogs);
-  } catch (error) {
-    console.error('Не удалось загрузить логи сообщений:', error);
+  } catch (e) {
     allLogs = [];
     updateStats();
-    document.getElementById('log-list').innerHTML = '<p >Не удалось загрузить логи сообщений.</p>';
+    document.getElementById('log-list').innerHTML = '<div class="log-empty"><i class="fas fa-exclamation-triangle"></i>Не удалось загрузить логи сообщений.</div>';
   }
 }
 
 function updateStats() {
   document.getElementById('total-count').textContent = allLogs.length;
-  document.getElementById('deleted-count').textContent = allLogs.filter(function(l){return l.action==='Сообщение Удалитьindi'||l.type==='deleted';}).length;
-  document.getElementById('edited-count').textContent = allLogs.filter(function(l){return l.action==='Сообщение Редактироватьndi'||l.type==='edited';}).length;
+  document.getElementById('deleted-count').textContent = allLogs.filter(isDeleted).length;
+  document.getElementById('edited-count').textContent = allLogs.filter(isEdited).length;
 }
 
 function filterLogs() {
   var q = document.getElementById('user-filter').value.toLowerCase();
   renderLogs(allLogs.filter(function(l) {
-    return (l.user_name||'').toLowerCase().includes(q) || (l.user_id||'').includes(q);
+    return ((l.user_name||'')+' '+(l.user_id||'')).toLowerCase().includes(q);
   }));
 }
 
 function renderLogs(logs) {
   var box = document.getElementById('log-list');
-  if (!logs.length) {
-    box.innerHTML = '<p >LOG НЕ НАЙДЕНО</p>';
-    return;
-  }
-  box.innerHTML = logs.slice(0, 100).map(function(l, i) {
-    var isDel = l.action==='Сообщение Удалитьindi'||l.type==='deleted';
-    var cls = isDel ? 'log-deleted' : 'log-edited';
-    var badge = isDel
-      ? '<span class="type-badge badge-del">🗑 УДАЛЕНО</span>'
-      : '<span class="type-badge badge-edit">✏️ РЕДАКТИРОВАТЬ</span>';
-    var content = isDel
-      ? '<div class="log-content" >' + (l.content || '<em >(soderjimoe yok)</em>') + '</div>'
-      : '<div class="log-before">До: ' + (l.before || '') + '</div><div class="log-after">В конецra: ' + (l.after || '') + '</div>';
-    return '<div class="log-row ' + cls + '" >' +
+  if (!logs.length) { box.innerHTML = '<div class="log-empty"><i class="fas fa-inbox"></i>Логи не найдены</div>'; return; }
+  box.innerHTML = logs.slice(0, 150).map(function(l) {
+    var del = isDeleted(l);
+    var cls = del ? 'log-deleted' : 'log-edited';
+    var badge = del
+      ? '<span class="type-badge badge-del"><i class="fas fa-trash"></i> Удалено</span>'
+      : '<span class="type-badge badge-edit"><i class="fas fa-pen"></i> Изменено</span>';
+    var content = del
+      ? '<div class="log-content">' + esc(l.content || '') + '</div>'
+      : '<div class="log-before">До: ' + esc(l.before || '') + '</div><div class="log-after">После: ' + esc(l.after || '') + '</div>';
+    return '<div class="log-row ' + cls + '">' +
       '<div class="log-header">' +
-        '<div class="log-user-wrap">' +
-          badge +
-          '<span class="log-user">' + (l.user_name || l.user_id || '?') + '</span>' +
-          '<span class="log-channel">#' + (l.channel_name || l.channel_id || '?') + '</span>' +
+        '<div class="log-user-wrap">' + badge +
+          '<span class="log-user">' + esc(l.user_name || l.user_id || '?') + '</span>' +
+          '<span class="log-channel">#' + esc(l.channel_name || l.channel_id || '?') + '</span>' +
         '</div>' +
-        '<span class="log-time">' + (l.timestamp || '') + '</span>' +
-      '</div>' +
-      content +
+        '<span class="log-time">' + esc(l.timestamp || '') + '</span>' +
+      '</div>' + content +
     '</div>';
   }).join('');
 }
 
-loadGuilds();
+function start() {
+  loadLogs();
+  if (window.setLiveRefresh) window.setLiveRefresh(loadLogs, 1500);
+  else setInterval(loadLogs, 5000);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+else start();
+</script>
+
+<script>
+/* ── Оформление карточек логов (admin/owner): тема, акцент, вкл/выкл ── */
+(function () {
+  var box = document.getElementById('lcSetBox');
+  if (!box) return;
+  function lcGid() { return document.getElementById('guild-select').value; }
+  var on = document.getElementById('lcOn'),
+      themeSel = document.getElementById('lcTheme'),
+      catSel = document.getElementById('lcCat'),
+      accent = document.getElementById('lcAccent'),
+      msg = document.getElementById('lcMsg'),
+      img = document.getElementById('lcPreview');
+  var accentDirty = false; /* не трогаем цвет до первого касания владельца */
+  accent.addEventListener('input', function () { accentDirty = true; schedulePreview(); });
+
+  var pvT = null;
+  function lcPreviewUrl() {
+    var q = new URLSearchParams();
+    q.set('theme', themeSel.value || 'hakumo');
+    if (accentDirty) q.set('accent', accent.value.replace('#', ''));
+    q.set('cat', catSel.value || 'mod');
+    return '/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/preview.png?' + q.toString() + '&_=' + Date.now();
+  }
+  function schedulePreview() {
+    clearTimeout(pvT);
+    pvT = setTimeout(function () { img.src = lcPreviewUrl(); }, 160);
+  }
+  themeSel.addEventListener('change', schedulePreview);
+  catSel.addEventListener('change', schedulePreview);
+  document.getElementById('guild-select').addEventListener('change', loadLc);
+  document.getElementById('lcAccentClear').addEventListener('click', function () {
+    accentDirty = false; schedulePreview(); lcSave(true);
+  });
+
+  function loadLc() {
+    fetch('/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/settings')
+      .then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.success) return;
+        if (!themeSel.options.length) {
+          themeSel.innerHTML = (d.themes || []).map(function (t) {
+            return '<option value="' + esc(t.id) + '">' + esc(t.label) + '</option>';
+          }).join('');
+        }
+        on.checked = !!d.cfg.enabled;
+        themeSel.value = d.cfg.theme || 'hakumo';
+        if (d.cfg.accent) { accent.value = '#' + d.cfg.accent; accentDirty = true; }
+        else accentDirty = false;
+        schedulePreview();
+      }).catch(function () {});
+  }
+
+  function lcSave(silent) {
+    var body = { enabled: on.checked, theme: themeSel.value || 'hakumo',
+                 accent: accentDirty ? accent.value.replace('#', '') : '' };
+    fetch('/api/guild/' + encodeURIComponent(lcGid()) + '/log-cards/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (silent && !d.success) return;
+      msg.textContent = d.message || d.error || '';
+      msg.className = 'hint' + (d.success ? '' : ' error');
+      if (d.success && window.showToast) window.showToast(d.message, true);
+    }).catch(function () {
+      if (!silent) { msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; msg.className = 'hint error'; }
+    });
+  }
+  document.getElementById('lcSave').addEventListener('click', function () { lcSave(false); });
+
+  loadLc();
+})();
 </script>
 {% endblock %}

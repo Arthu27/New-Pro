@@ -1,4 +1,11 @@
-"""Server Информация Система — Bot'a сервер о каждый что-тоi ёгret"""
+"""Server Info — обученные ответы о сервере (FAQ-система)"""
+
+from logger import get_logger
+
+_log = get_logger("server_info")
+
+from json_store import load_json as _js_load, save_json as _js_save
+
 import discord 
 from discord .ext import commands 
 from discord import app_commands 
@@ -13,24 +20,15 @@ def _info_file (guild_id :int )->str :
 
 
 def _load_info (guild_id :int )->dict :
-    path =_info_file (guild_id )
-    if os .path .exists (path ):
-        try :
-            with open (path ,'r',encoding ='utf-8')as f :
-                return json .load (f )
-        except Exception :
-            pass 
-    return {}
+    return _js_load (_info_file (guild_id ),{},log =_log )
 
 
 def _save_info (guild_id :int ,data :dict ):
-    os .makedirs (DATA_DIR ,exist_ok =True )
-    with open (_info_file (guild_id ),'w',encoding ='utf-8')as f :
-        json .dump (data ,f ,ensure_ascii =False ,indent =2 )
+    _js_save (_info_file (guild_id ),data ,log =_log )
 
 
 def get_sunucu_context (guild_id :int )->str :
-    """AI для сервер info metnini создать"""
+    """Создать текст информации о сервере для AI"""
     info =_load_info (guild_id )
     if not info :
         return ''
@@ -38,13 +36,13 @@ def get_sunucu_context (guild_id :int )->str :
     lines =['=== СЕРВЕР ИНФОРМАЦИЯ ===']
 
     if info .get ('о'):
-        lines .append (f'Server О: {info["о"]}')
+        lines .append (f'О сервере: {info["о"]}')
     if info .get ('правила'):
         lines .append (f'Правила: {info["правила"]}')
     if info .get ('yetkili_olmak'):
         lines .append (f'Как стать модератором: {info["yetkili_olmak"]}')
-    if info .get ('приватный_infoler'):
-        for k ,v in info ['приватный_infoler'].items ():
+    if info .get ('приватные_данные'):
+        for k ,v in info ['приватные_данные'].items ():
             lines .append (f'{k}: {v}')
 
     return '\n'.join (lines )
@@ -55,21 +53,21 @@ class ServerModal (discord .ui .Modal ):
         super ().__init__ (title =title )
         self .field =field 
         self .guild_id =guild_id 
-        self .metin =discord .ui .TextInput (
+        self .input_text =discord .ui .TextInput (
         label ='Информация',
         style =discord .TextStyle .paragraph ,
-        placeholder ='Buraya yaz...',
+        placeholder ='Пишите здесь...',
         max_length =1000 ,
         required =True 
         )
-        self .add_item (self .metin )
+        self .add_item (self .input_text )
 
     async def on_submit (self ,interaction :discord .Interaction ):
         info =_load_info (self .guild_id )
-        info [self .field ]=self .metin .value .strip ()
+        info [self .field ]=self .input_text .value .strip ()
         _save_info (self .guild_id ,info )
         await interaction .response .send_message (
-        f' **{self.title}** сохранено!',ephemeral =True 
+        f'✅ **{self.title}** сохранено!',ephemeral =True 
         )
 
 
@@ -78,10 +76,10 @@ class ServerInfoView (discord .ui .View ):
         super ().__init__ (timeout =None )
         self .guild_id =guild_id 
 
-    @discord .ui .button (label =' Server О',style =discord .ButtonStyle .primary ,row =0 )
+    @discord .ui .button (label ='О сервере',style =discord .ButtonStyle .primary ,row =0 )
     async def о (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
-            await interaction .response .send_message (' Администратор нет.',ephemeral =True )
+            await interaction .response .send_message ('❌ Нужны права администратора.',ephemeral =True )
             return 
         await interaction .response .send_modal (
         ServerModal ('о','Информация о сервере',self .guild_id )
@@ -90,25 +88,25 @@ class ServerInfoView (discord .ui .View ):
     @discord .ui .button (label =' Правила',style =discord .ButtonStyle .primary ,row =0 )
     async def правила (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
-            await interaction .response .send_message (' Администратор нет.',ephemeral =True )
+            await interaction .response .send_message ('❌ Нужны права администратора.',ephemeral =True )
             return 
         await interaction .response .send_modal (
         ServerModal ('правила','Правила сервера',self .guild_id )
         )
 
-    @discord .ui .button (label =' Как стать модератором',style =discord .ButtonStyle .primary ,row =0 )
+    @discord .ui .button (label ='Как стать модератором',style =discord .ButtonStyle .primary ,row =0 )
     async def администратор (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
-            await interaction .response .send_message (' Администратор нет.',ephemeral =True )
+            await interaction .response .send_message ('❌ Нужны права администратора.',ephemeral =True )
             return 
         await interaction .response .send_modal (
         ServerModal ('yetkili_olmak','Как стать модератором',self .guild_id )
         )
 
-    @discord .ui .button (label =' Добавлено информацию',style =discord .ButtonStyle .secondary ,row =1 )
+    @discord .ui .button (label ='Добавить информацию',style =discord .ButtonStyle .secondary ,row =1 )
     async def ozel_add (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
-            await interaction .response .send_message (' Администратор нет.',ephemeral =True )
+            await interaction .response .send_message ('❌ Нужны права администратора.',ephemeral =True )
             return 
         await interaction .response .send_modal (OzelBilgiModal (self .guild_id ))
 
@@ -119,7 +117,7 @@ class ServerInfoView (discord .ui .View ):
             await interaction .response .send_message ('Информация еще не введена.',ephemeral =True )
             return 
 
-        embed =discord .Embed (title =' Server Информация',color =0x5865F2 )
+        embed =discord .Embed (title =' Информация о сервере',color =0x5865F2 )
         if interaction .guild .icon :
             embed .set_thumbnail (url =interaction .guild .icon .url )
 
@@ -128,48 +126,48 @@ class ServerInfoView (discord .ui .View ):
         if info .get ('правила'):
             embed .add_field (name =' Правила',value =info ['правила'][:500 ],inline =False )
         if info .get ('yetkili_olmak'):
-            embed .add_field (name =' Как стать модератором',value =info ['yetkili_olmak'][:500 ],inline =False )
-        if info .get ('приватный_infoler'):
-            for k ,v in list (info ['приватный_infoler'].items ())[:5 ]:
+            embed .add_field (name ='🛡 Как стать модератором',value =info ['yetkili_olmak'][:500 ],inline =False )
+        if info .get ('приватные_данные'):
+            for k ,v in list (info ['приватные_данные'].items ())[:5 ]:
                 embed .add_field (name =k ,value =str (v )[:200 ],inline =True )
 
         await interaction .response .send_message (embed =embed ,ephemeral =True )
 
-    @discord .ui .button (label =' Temizle',style =discord .ButtonStyle .danger ,row =1 )
+    @discord .ui .button (label ='Очистить',style =discord .ButtonStyle .danger ,row =1 )
     async def clear (self ,interaction :discord .Interaction ,button :discord .ui .Button ):
         if not interaction .user .guild_permissions .administrator :
-            await interaction .response .send_message (' Администратор нет.',ephemeral =True )
+            await interaction .response .send_message ('❌ Нужны права администратора.',ephemeral =True )
             return 
         _save_info (interaction .guild .id ,{})
-        await interaction .response .send_message (' Все сервер информация clearndi.',ephemeral =True )
+        await interaction .response .send_message ('🗑 Вся информация о сервере очищена.',ephemeral =True )
 
 
 class OzelBilgiModal (discord .ui .Modal ,title ='Добавлено информацию'):
     def __init__ (self ,guild_id :int ):
         super ().__init__ ()
         self .guild_id =guild_id 
-        self .baslik =discord .ui .TextInput (
+        self .heading =discord .ui .TextInput (
         label ='Заголовок',
-        placeholder ='напр.: Discord Linki, Событие День...',
+        placeholder ='напр.: Ссылка Discord, День событий...',
         max_length =50 
         )
-        self .icerik =discord .ui .TextInput (
+        self .body =discord .ui .TextInput (
         label ='Содержимое',
         style =discord .TextStyle .paragraph ,
-        placeholder ='Информация содержимое...',
+        placeholder ='Содержимое информации...',
         max_length =500 
         )
-        self .add_item (self .baslik )
-        self .add_item (self .icerik )
+        self .add_item (self .heading )
+        self .add_item (self .body )
 
     async def on_submit (self ,interaction :discord .Interaction ):
         info =_load_info (self .guild_id )
-        if 'приватный_infoler'not in info :
-            info ['приватный_infoler']={}
-        info ['приватный_infoler'][self .baslik .value .strip ()]=self .icerik .value .strip ()
+        if 'приватные_данные'not in info :
+            info ['приватные_данные']={}
+        info ['приватные_данные'][self .heading .value .strip ()]=self .body .value .strip ()
         _save_info (self .guild_id ,info )
         await interaction .response .send_message (
-        f' **{self.baslik.value}** сохранено!',ephemeral =True 
+        f' **{self.heading.value}** сохранено!',ephemeral =True 
         )
 
 
@@ -182,16 +180,16 @@ class ServerInfo (commands .Cog ):
     async def sunucu_info_panel (self ,ctx ):
         """Server info control paneli: !server-info"""
         embed =discord .Embed (
-        title =' Server Информация Управление',
+        title =' Управление информацией о сервере',
         color =0x5865F2 ,
         description =(
-        '> Bot\'a сервер о info ёгret.\n'
-        '> Bu infoler AI sohbetinde использовать.\n\n'
-        '** Server О** — Сервера amacы, temasы\n'
+        '> Научи бота информации о сервере.\n'
+        '> Эта информация используется в AI-чате.\n\n'
+        '** О сервере** — цель и тематика сервера\n'
         '** Правила** — Правила сервера\n'
-        '** Как стать модератором** — Как администратор olunur\n'
-        '** Особый Информация** — Baшka каждый bir info\n'
-        '** Текущая информация** — Запись информация видеть'
+        '** Как стать модератором** — как получить роль модератора\n'
+        '** Дополнительная информация** — любая другая информация\n'
+        '** Текущая информация** — просмотр сохранённой информации'
         )
         )
         if ctx .guild .icon :
@@ -199,7 +197,7 @@ class ServerInfo (commands .Cog ):
         if ctx .guild .banner :
             embed .set_image (url =ctx .guild .banner .url )
         embed .set_footer (
-        text =f'{ctx.guild.name} · Server Информация Система',
+        text =f'{ctx.guild.name} · Система информации о сервере',
         icon_url =ctx .guild .icon .url if ctx .guild .icon else None 
         )
         await ctx .send (embed =embed ,view =ServerInfoView (ctx .guild .id ))

@@ -4,7 +4,9 @@ from discord.ext import commands
 from discord import app_commands
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
+from config import Config 
+from json_store import load_json as _js_load, save_json as _js_save
 
 class CustomEmbeds(commands.Cog):
     def __init__(self, bot):
@@ -14,18 +16,10 @@ class CustomEmbeds(commands.Cog):
         return f'data/custom_embeds_{guild_id}.json'
 
     def _load(self, guild_id):
-        f = self._file(guild_id)
-        if not os.path.exists(f): return {}
-        try:
-            with open(f, 'r', encoding='utf-8') as fp:
-                return json.load(fp)
-        except Exception:
-            return {}
+        return _js_load(self._file(guild_id), {})
 
     def _save(self, guild_id, data):
-        os.makedirs('data', exist_ok=True)
-        with open(self._file(guild_id), 'w', encoding='utf-8') as fp:
-            json.dump(data, fp, indent=2, ensure_ascii=False)
+        _js_save(self._file(guild_id), data)
 
     @app_commands.command(name="embed_builder", description="Create a custom embed message")
     @app_commands.describe(
@@ -86,7 +80,7 @@ class CustomEmbeds(commands.Cog):
                 'thumbnail_url': thumbnail_url or '',
                 'channel_id': str(target_channel.id),
                 'author_id': str(interaction.user.id),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }
             
             embeds_data = self._load(interaction.guild_id)
@@ -124,7 +118,7 @@ class CustomEmbeds(commands.Cog):
         embed = discord.Embed(
             title=" Recent Embeds",
             color=0x7289DA,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
         
         for idx, item in enumerate(recent, 1):
@@ -143,4 +137,4 @@ class CustomEmbeds(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(CustomEmbeds(bot), guilds=[discord.Object(id=1421244140359909513), discord.Object(id=1107038411895881788), discord.Object(id=1498837105915330562)])
+    await bot.add_cog(CustomEmbeds(bot), guilds=Config.guild_objects())

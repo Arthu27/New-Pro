@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Бэкапы — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-save"></i> Резервные копии{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Бэкапы</div>
+    <h1>Резервные копии</h1>
+    <p class="lead">Автобэкап &lt;code&gt;data/&lt;/code&gt; каждый день по расписанию, ротация старых архивов и скачивание одной кнопкой.</p>
+  </div>
+</div>
+
+
+<div class="pw-wrap">
+  <div class="pw-card">
+    <h2><i class="fas fa-save"></i> Архивы данных</h2>
+    <div class="pw-hint" style="margin-bottom:12px"><i class="fas fa-info-circle"></i>
+      В архив попадает вся папка <code>data/</code>. Секреты панели (логины, хэши паролей,
+      ключ сессий) в бэкап <b>не включаются</b> — носить архив можно спокойно.
+    </div>
+    <div id="bk-stats" style="margin-bottom:12px;font-weight:600"></div>
+    <button type="button" class="btn-save" id="bk-create-btn" onclick="bkCreate()">
+      <i class="fas fa-plus"></i> Создать бэкап сейчас</button>
+    <span class="msg" id="bk-msg"></span>
+
+    <hr style="opacity:.15;margin:18px 0">
+    <div id="bk-list"><i>Загружаю…</i></div>
+  </div>
+</div>
+
+<script>
+function msg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.className = 'msg ' + type; el.style.display = 'inline-block';
+}
+const esc = s => String(s).replace(/[<>&"]/g, c =>
+  ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+
+async function bkLoad() {
+  const list = document.getElementById('bk-list');
+  const stats = document.getElementById('bk-stats');
+  const r = await fetch('/api/backups');
+  const d = await r.json();
+  if (!d.success) { list.innerHTML = '<i>Ошибка загрузки.</i>'; return; }
+  const s = d.settings || {};
+  const mode = s.enabled
+    ? `<i class="fas fa-circle" style="color:var(--ok)"></i> Автобэкап включён: ежедневно в <b>${String(s.hour).padStart(2,'0')}:00</b>, храним последние <b>${s.keep}</b>`
+    : '<i class="fas fa-circle" style="color:var(--err)"></i> Автобэкап выключен (BACKUP_ENABLED=0)';
+  stats.innerHTML = mode + ` &nbsp;·&nbsp; Всего: <b>${d.stats.total}</b> шт, <b>${d.stats.total_size_h}</b>`;
+  if (!d.items.length) {
+    list.innerHTML = '<i>Архивов пока нет — создайте первый кнопкой выше.</i>';
+    return;
+  }
+  list.innerHTML = '';
+  for (const it of d.items) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:10px;align-items:center;justify-content:space-between;' +
+      'padding:10px;border:1px solid color-mix(in srgb, var(--text) 8%, transparent);border-radius:10px;margin-bottom:8px;flex-wrap:wrap';
+    row.innerHTML =
+      '<div style="min-width:0;overflow:hidden">' +
+        '<b>' + esc(it.name) + '</b>' +
+        '<div style="opacity:.85">' + esc(it.size_h) + ' · ' + esc(it.created_at) + '</div>' +
+      '</div>' +
+      '<div style="flex:none;display:flex;gap:8px">' +
+        '<a class="btn-save" style="padding:8px 14px;text-decoration:none" ' +
+          'href="/api/backups/download/' + encodeURIComponent(it.name) + '">' +
+          '<i class="fas fa-download"></i></a>' +
+        '<button type="button" class="btn-save" style="background:#c0392b;padding:8px 14px" ' +
+          'onclick="bkDel(\'' + esc(it.name) + '\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>' +
+      '</div>';
+    list.appendChild(row);
+  }
+}
+
+async function bkCreate() {
+  const btn = document.getElementById('bk-create-btn');
+  btn.disabled = true;
+  msg('bk-msg', 'Упаковываю data/…', 'ok');
+  try {
+    const r = await fetch('/api/backups', {method: 'POST'});
+    const d = await r.json();
+    if (d.success) {
+      msg('bk-msg', `Готово: ${d.item.name} (${d.item.size_h}, файлов ${d.item.files})` +
+        (d.removed ? ` · удалено старых: ${d.removed}` : ''), 'ok');
+      bkLoad();
+    } else msg('bk-msg', '' + (d.error || 'Ошибка.'), 'err');
+  } catch(e) { msg('bk-msg', 'Ошибка сети.', 'err'); }
+  btn.disabled = false;
+}
+
+async function bkDel(name) {
+  if (!confirm('Удалить архив ' + name + '?')) return;
+  const r = await fetch('/api/backups/' + encodeURIComponent(name), {method: 'DELETE'});
+  const d = await r.json();
+  if (d.success) { msg('bk-msg', 'Архив удалён.', 'ok'); bkLoad(); }
+  else msg('bk-msg', '' + (d.error || 'Ошибка.'), 'err');
+}
+
+bkLoad();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { bkLoad(); } catch (e) {} }, 1500);
+</script>
+{% endblock %}

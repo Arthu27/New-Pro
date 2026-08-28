@@ -1,43 +1,71 @@
 {% extends "base.html" %}
-{% block title %}Логи - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-clipboard-list" ></i> Логи модерации{% endblock %}
+{% block title %}Журнал модерации · Модерация — Hakumo{% endblock %}
+{% block page_title %}Журнал модерации{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Логи модерации</span>
-    </div>
-    <h1>Логи модерации</h1>
-    <p>Журнал всех действий модерации и бота.</p>
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Расследование</div>
+    <h1>Журнал модерации</h1>
+    <p class="lead">Единая лента действий команды: каждый шаг оставляет проверяемый след.</p>
+  </div>
+  <div class="page-head-actions">
+    <a class="btn" href="/logs/export?days=7"><i class="fas fa-file-arrow-down"></i> 7 дней</a>
+    <a class="btn" href="/logs/export?days=30"><i class="fas fa-file-arrow-down"></i> 30 дней</a>
   </div>
 </div>
-{% endblock %}
 
-
-
-<div class="logs-toolbar">
-  <select id="guild-filter" class="filter-select"><option value="">Все серверы</option></select>
-  <input type="text" id="search" class="search-input" placeholder="Поиск по логам (пользователь, причина, действие)...">
-  <span id="logs-count" class="logs-count">0</span>
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-infinity"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Всего событий</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-ban"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-bans">—</div><div class="kpi-label">Баны</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-door-open"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-kicks">—</div><div class="kpi-label">Кики</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-warns">—</div><div class="kpi-label">Варны</div></div></div>
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-comment-slash"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-muts">—</div><div class="kpi-label">Мьюты</div></div></div>
 </div>
 
-<div class="logs-stats" id="logs-stats">
-  <div class="log-stat"><div class="log-stat-num" id="stat-total">-</div><div class="log-stat-lbl">Всего</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-bans" >-</div><div class="log-stat-lbl">Банов</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-kicks" >-</div><div class="log-stat-lbl">Киков</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-warns" >-</div><div class="log-stat-lbl">Варн</div></div>
-  <div class="log-stat"><div class="log-stat-num" id="stat-muts" >-</div><div class="log-stat-lbl">Мутов</div></div>
+<div class="grid-2" style="align-items:start">
+<div>
+  <div class="panel" style="margin-bottom:14px">
+    <div class="panel-head"><div><h2><i class="fas fa-chart-simple"></i> Типы действий</h2>
+      <div class="sub">Распределение событий в журнале.</div></div></div>
+    <div class="panel-body" id="logs-types"><div class="sk-line" style="height:12px"></div></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-fire"></i> Часы активности</h2>
+      <div class="sub">Распределение событий по часам.</div></div></div>
+    <div class="panel-body" id="logs-heat"><div class="sk-line" style="height:12px"></div></div>
+  </div>
 </div>
 
-<div class="logs-box">
-  <div class="logs-head">
-    <div class="logs-title"><i class="fas fa-list"></i> Список действий</div>
+<div class="panel">
+  <div class="toolbar">
+    <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Сервер</span>
+      <select id="guild-filter"><option value="">Все серверы</option></select>
+    </label>
+    <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="search" placeholder="Участник / причина / действие" aria-label="Поиск по журналу">
+    </label>
+    <span class="spacer"></span>
+    <span class="fresh-stamp" id="logs-stamp"></span>
+    <button type="button" class="btn" id="logs-pause" title="Пауза live"></button>
+    <button type="button" class="btn" id="logs-density" title="Плотность таблицы"></button>
+    <button type="button" class="btn" id="logs-csv" title="Выгрузить текущую выборку в CSV"><i class="fas fa-file-csv"></i> CSV</button>
+    <span class="badge neutral" id="logs-count">0 событий</span>
   </div>
-  <div class="logs-body" id="logs-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
+  <div class="toolbar" style="border-top:1px solid var(--line)">
+    <div class="chip-row" id="action-chips"></div>
+    <span class="spacer"></span>
+    <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Модератор</span>
+      <select id="mod-filter"><option value="">Все модераторы</option></select>
+    </label>
   </div>
+  <div class="table-wrap" style="min-height:120px">
+    <table class="data-table" data-sortable>
+      <thead><tr><th class="col-sel"><input type="checkbox" id="sel-all" aria-label="Выбрать все строки"></th><th class="sortable">Действие</th><th class="sortable">Цель</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
+      <tbody id="logs-body"><tr><td colspan="6"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Подключаемся к потоку</span></div></td></tr></tbody>
+    </table>
+  </div>
+</div>
 </div>
 
 <script>
@@ -46,38 +74,46 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function fmtDate(iso) {
-    if (!iso) return '-';
-    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); } catch (e) { return '-'; }
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return '—'; }
   }
 
   var allLogs = [];
-  var guilds = [];
-
-  var colors = { ban: 'var(--err)', kick: '#f97316', warn: 'var(--warn)', mute: '#a78bfa', timeout: '#a78bfa', unban: 'var(--ok)', unmute: 'var(--ok)', lock: 'var(--info)', unlock: 'var(--ok)' };
+  var TONE = {
+    ban: 'danger', kick: 'tone-warning', warn: 'tone-warning', mute: 'neutral',
+    timeout: 'neutral', unban: 'ok', unmute: 'ok', lock: 'security', unlock: 'ok'
+  };
 
   async function loadGuilds() {
     try {
-      guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+      var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
       var sel = $('guild-filter');
-      guilds.forEach(function (g) {
+      (Array.isArray(guilds) ? guilds : []).forEach(function (g) {
         var opt = document.createElement('option');
-        opt.value = g.id;
-        opt.textContent = g.name;
+        opt.value = g.id; opt.textContent = g.name;
         sel.appendChild(opt);
       });
-    } catch (e) { /* sessiz */ }
+    } catch (e) { /* тихо */ }
   }
 
+  var _logsFp = '';
   async function loadLogs() {
-    $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
+    var raw = [];
     try {
-      allLogs = await window.fetchCachedJSON('/api/logs');
-      render();
-      updateStats();
-    } catch (e) {
-      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-exclamation-triangle" ></i>Не удалось загрузить</p>';
-    }
+      raw = await window.fetchCachedJSON('/api/logs');
+    } catch (e) { raw = []; }
+    if (!Array.isArray(raw)) raw = [];
+    /* данные не изменились — не перерисовываем (стабильность, без мерцания) */
+    var fp = raw.length + ':' + (raw.length ? ((raw[0].timestamp || '') + '|' + (raw[0].action || '')) : '');
+    if (fp === _logsFp) return;
+    _logsFp = fp;
+    allLogs = raw;
+    window.renderSafe(function () { render(); updateStats(); updateFilters(); });
+    if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('logs-stamp'));
   }
+
+  function updateFilters() { buildFilters(); }
 
   function updateStats() {
     var bans = 0, kicks = 0, warns = 0, muts = 0;
@@ -93,46 +129,206 @@
     $('stat-kicks').textContent = kicks;
     $('stat-warns').textContent = warns;
     $('stat-muts').textContent = muts;
+    if (window.HakumoChart) {
+      var counts = {};
+      allLogs.forEach(function (l) {
+        var a = (l.action || '?').toLowerCase();
+        var k = a.indexOf('warning') !== -1 ? 'warn' : a;
+        counts[k] = (counts[k] || 0) + 1;
+      });
+      var tones = { ban: ['Баны', '#dc2626'], kick: ['Кики', '#ea580c'], warn: ['Варны', '#d97706'], mute: ['Мьюты', '#7c3aed'], timeout: ['Таймауты', '#7c3aed'], unban: ['Разбаны', '#16a34a'], unmute: ['Размуты', '#16a34a'] };
+      var items = Object.keys(counts).map(function (k) {
+        var meta = tones[k] || [k, null];
+        return { label: meta[0], value: counts[k], color: meta[1] || undefined };
+      }).sort(function (a, b) { return b.value - a.value; });
+      window.HakumoChart.vbars($('logs-types'), items);
+      if (window.HakumoHeat) {
+        var hours = new Array(24).fill(0);
+        allLogs.forEach(function (l) {
+          try {
+            var h = new Date(l.timestamp).getHours();
+            if (!isNaN(h)) hours[h]++;
+          } catch (e) { /* метка без времени */ }
+        });
+        window.HakumoHeat($('logs-heat'), hours, { labels: ['00:00', '12:00', '23:00'] });
+      }
+    }
   }
 
   function render() {
+    var filtered = currentFiltered();
+    $('logs-count').textContent = filtered.length + ' из ' + allLogs.length;
+    var body = $('logs-body');
+    if (!filtered.length) {
+      body.innerHTML = '<tr><td colspan="6"><div class="empty"><i class="fas fa-inbox"></i><span>Логи не найдены</span>' +
+        '<span class="empty-hint-chip" data-focus="#search"><i class="fas fa-keyboard"></i> Enter — поиск</span></div></td></tr>';
+      return;
+    }
+    var q = ($('search').value || '');
+    var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
+    var shown = logsShown();
+    body.innerHTML = filtered.slice(0, shown).map(function (l) {
+      var a = (l.action || '?').toLowerCase();
+      var key = rowKey(l);
+      var on = !!selected[key];
+      return '<tr class="' + (on ? 'sel' : '') + '" data-row-key="' + esc(key) + '">' +
+        '<td class="col-sel"><input type="checkbox" aria-label="Выбрать строку"' + (on ? ' checked' : '') + '></td>' +
+        '<td data-sort="' + esc(l.action || '') + '"><span class="badge ' + (TONE[a] || 'neutral') + '">' + H(l.action || '?') + '</span></td>' +
+        '<td>' + H(l.user_name || l.channel_name || l.role_name || l.user_id || '—') + '</td>' +
+        '<td>' + H(l.mod_name || l.mod_id || '—') + '</td>' +
+        '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(l.reason || '') + '">' + H(l.reason || '—') + '</td>' +
+        '<td data-sort="' + esc(l.timestamp || '') + '" class="muted">' + esc(fmtDate(l.timestamp)) + '</td></tr>';
+    }).join('');
+    if (filtered.length > shown) {
+      body.innerHTML += '<tr><td colspan="6"><button type="button" class="load-more-btn" id="logsMore">' +
+        '<i class="fas fa-chevron-down"></i> Показать ещё ' + Math.min(100, filtered.length - shown) +
+        ' из ' + (filtered.length - shown) + '</button></td></tr>';
+    }
+    paintSelectAll();
+    if (window.attachTableSort && !window._logsSortReady) {
+      window._logsSortReady = true;
+      window.attachTableSort(document.querySelector('#logs-body').closest('table'));
+    }
+  }
+
+  var LOGS_PAGE = 100;
+  function logsShown() { return LOGS_PAGE; }
+
+  function selectedCount() {
+    return Object.keys(selected).filter(function (k) { return selected[k]; }).length;
+  }
+
+  function paintSelectAll() {
+    var all = $('sel-all');
+    if (!all) return;
+    var rows = document.querySelectorAll('#logs-body tr[data-row-key]');
+    var checked = 0;
+    rows.forEach(function (r) { if (selected[r.dataset.rowKey]) checked++; });
+    all.checked = rows.length > 0 && checked === rows.length;
+    all.indeterminate = checked > 0 && checked < rows.length;
+    var btn = $('logs-csv');
+    var n = selectedCount();
+    if (btn) btn.innerHTML = n > 0
+      ? '<i class="fas fa-file-csv"></i> CSV: выбранные (' + n + ')'
+      : '<i class="fas fa-file-csv"></i> CSV';
+  }
+
+  var filterAction = '';
+  var filterMod = '';
+  var selected = {};
+
+  function rowKey(l) {
+    return (l.timestamp || '') + '|' + (l.user_id || l.user_name || '') + '|' + (l.action || '') + '|' + (l.mod_name || l.mod_id || '');
+  }
+
+  function buildFilters() {
+    // чипы типов действий
+    var counts = {};
+    allLogs.forEach(function (l) {
+      var a = String(l.action || '?').toLowerCase();
+      counts[a] = (counts[a] || 0) + 1;
+    });
+    var acts = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
+    var html = '<button type="button" class="chip selectable' + (filterAction === '' ? ' active' : '') + '" data-act="">Все</button>';
+    html += acts.map(function (a) {
+      return '<button type="button" class="chip selectable' + (filterAction === a ? ' active' : '') + '" data-act="' + esc(a) + '">' + esc(a) + ' <b style="opacity:.6">' + counts[a] + '</b></button>';
+    }).join('');
+    $('action-chips').innerHTML = html;
+    // селект модераторов
+    var mods = {};
+    allLogs.forEach(function (l) {
+      var m = l.mod_name || l.mod_id;
+      if (m) mods[m] = true;
+    });
+    var sel = $('mod-filter');
+    var keep = sel.value;
+    sel.innerHTML = '<option value="">Все модераторы</option>' + Object.keys(mods).sort().map(function (m) {
+      return '<option value="' + esc(m) + '">' + esc(m) + '</option>';
+    }).join('');
+    if (keep) sel.value = keep;
+  }
+
+  function currentFiltered() {
     var guildFilter = $('guild-filter').value;
     var q = ($('search').value || '').toLowerCase();
-    var filtered = allLogs.filter(function (l) {
+    return allLogs.filter(function (l) {
       if (guildFilter && String(l.guild_id || '') !== guildFilter) return false;
+      if (filterAction && String(l.action || '').toLowerCase() !== filterAction) return false;
+      if (filterMod && String(l.mod_name || l.mod_id || '') !== filterMod) return false;
       if (q) {
         var hay = ((l.action || '') + ' ' + (l.user_name || '') + ' ' + (l.mod_name || '') + ' ' + (l.reason || '')).toLowerCase();
         if (hay.indexOf(q) === -1) return false;
       }
       return true;
     });
-    $('logs-count').textContent = filtered.length + ' / ' + allLogs.length;
-    if (!filtered.length) {
-      $('logs-body').innerHTML = '<p class="empty"><i class="fas fa-inbox"></i>Логи не найдены</p>';
-      return;
-    }
-    var rows = filtered.slice(0, 200).map(function (l) {
-      var a = (l.action || '?').toLowerCase();
-      var c = colors[a] || 'var(--text-3)';
-      return '<tr><td><span class="action-badge" >' + esc(l.action || '?') + '</span></td>' +
-        '<td >' + esc(l.user_name || l.user_id || '-') + '</td>' +
-        '<td >' + esc(l.mod_name || l.mod_id || '-') + '</td>' +
-        '<td   style="max-width: 160px; overflow: hidden;">' + esc(l.reason || '-') + '</td>' +
-        '<td >' + esc(fmtDate(l.timestamp)) + '</td></tr>';
-    }).join('');
-    $('logs-body').innerHTML = '<table><thead><tr><th>Действие</th><th>Цель</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function exportCsv() {
+    var n = selectedCount();
+    var list = n > 0 ? allLogs.filter(function (l) { return selected[rowKey(l)]; }) : currentFiltered();
+    var rows = [['Действие', 'Цель', 'Модератор', 'Причина', 'Время', 'Сервер']];
+    list.forEach(function (l) {
+      rows.push([l.action || '', l.user_name || l.channel_name || l.role_name || l.user_id || '', l.mod_name || l.mod_id || '', l.reason || '', l.timestamp || '', l.guild_id || '']);
+    });
+    var ok = window.csvDownload ? window.csvDownload('moderation_log.csv', rows) : false;
+    window.showToast(ok ? (n > 0 ? 'Выгружено строк: ' + list.length : 'Выборка выгружена') : 'Не удалось выгрузить', ok);
   }
 
   function bind() {
     $('guild-filter').addEventListener('change', render);
     $('search').addEventListener('input', render);
+    $('logs-csv').addEventListener('click', exportCsv);
+    $('action-chips').addEventListener('click', function (e) {
+      var chip = e.target.closest('[data-act]');
+      if (!chip) return;
+      filterAction = chip.dataset.act;
+      document.querySelectorAll('#action-chips .chip').forEach(function (c) { c.classList.toggle('active', c === chip); });
+      render();
+    });
+    $('mod-filter').addEventListener('change', function () {
+      filterMod = this.value;
+      render();
+    });
+    // «Загрузить ещё» — клиентская пагинация
+    $('logs-body').addEventListener('click', function (e) {
+      if (e.target.closest('#logsMore')) {
+        LOGS_PAGE += 100;
+        render();
+      }
+    });
+    // выбор строк
+    $('sel-all').addEventListener('change', function () {
+      var on = this.checked;
+      document.querySelectorAll('#logs-body tr[data-row-key]').forEach(function (r) {
+        if (on) selected[r.dataset.rowKey] = true; else delete selected[r.dataset.rowKey];
+      });
+      render();
+    });
+    $('logs-body').addEventListener('change', function (e) {
+      if (e.target && e.target.type === 'checkbox') {
+        var row = e.target.closest('tr[data-row-key]');
+        if (!row) return;
+        if (e.target.checked) selected[row.dataset.rowKey] = true;
+        else delete selected[row.dataset.rowKey];
+        paintSelectAll();
+        var btn = $('logs-csv');
+        var n = selectedCount();
+        if (btn) btn.innerHTML = n > 0
+          ? '<i class="fas fa-file-csv"></i> CSV: выбранные (' + n + ')'
+          : '<i class="fas fa-file-csv"></i> CSV';
+      }
+    });
+    if (window.livePauseButton) window.livePauseButton($('logs-pause'));
+    if (window.densityButton) window.densityButton($('logs-density'));
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadLogs(); });
-  } else {
+  function start() {
     bind(); loadGuilds(); loadLogs();
+    if (window.setLiveRefresh) window.setLiveRefresh(loadLogs, 1500);
   }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 {% endblock %}

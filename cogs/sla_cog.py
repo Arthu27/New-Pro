@@ -1,6 +1,6 @@
 """
 SLA Cog
-SLA yёnetimi cog'u
+Менеджер SLA-политик
 """
 
 import discord 
@@ -15,15 +15,15 @@ log =get_logger ("sla_cog")
 
 
 class SLACog (commands .Cog ):
-    """SLA yёnetimi cog'u"""
+    """Менеджер SLA-политик"""
 
     def __init__ (self ,bot ):
         self .bot =bot 
 
-    @app_commands .command (name ='sla-info',description ='SLA bilgilerini gёrюntюle')
+    @app_commands .command (name ='sla-info',description ='Показать информацию об SLA')
     @app_commands .describe (policy_id ='SLA policy ID (opsiyonel)')
     async def sla_info (self ,interaction :discord .Interaction ,policy_id :str =None ):
-        """SLA bilgilerini gёrюntюle"""
+        """Показать информацию об SLA"""
         if policy_id :
         # Belirli policy
             policy =sla_manager .get_policy (policy_id )
@@ -46,7 +46,7 @@ class SLACog (commands .Cog ):
             # Response time'lar
             if policy .response_times :
                 response_text ="\n".join ([
-                f"• {priority}: {time} dakika"
+                f"• {priority}: {time} мин"
                 for priority ,time in policy .response_times .items ()
                 ])
                 embed .add_field (name ="Response Time",value =response_text ,inline =False )
@@ -54,14 +54,14 @@ class SLACog (commands .Cog ):
                 # Resolution time'lar
             if policy .resolution_times :
                 resolution_text ="\n".join ([
-                f"• {priority}: {time} dakika"
+                f"• {priority}: {time} мин"
                 for priority ,time in policy .resolution_times .items ()
                 ])
-                embed .add_field (name ="Resolution Time",value =resolution_text ,inline =False )
+                embed .add_field (name ="⏱ Время решения",value =resolution_text ,inline =False )
 
             await interaction .response .send_message (embed =embed )
         else :
-        # Tюm policy'ler
+        # Все политики
             policies =sla_manager .get_all_policies ()
 
             if not policies :
@@ -79,7 +79,7 @@ class SLACog (commands .Cog ):
             timestamp =datetime .now ()
             )
 
-            # Policy listesi
+            # Список политик
             for policy in policies [:10 ]:
                 embed .add_field (
                 name =f"{policy.name}",
@@ -89,10 +89,10 @@ class SLACog (commands .Cog ):
 
             await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='sla-status',description ='Ticket SLA статусunu gёrюntюle')
+    @app_commands .command (name ='sla-status',description ='Просмотр статуса SLA тикетов')
     @app_commands .describe (ticket_id ='Ticket ID')
     async def sla_status (self ,interaction :discord .Interaction ,ticket_id :str ):
-        """Ticket SLA статусunu gёrюntюle"""
+        """Просмотр статуса SLA тикетов"""
         from services .ticket_system import ticket_manager 
 
         # Ticket al
@@ -123,16 +123,16 @@ class SLACog (commands .Cog ):
             embed .add_field (name ="Response Deadline",value =sla_info ['response_deadline'][:16 ],inline =True )
 
         if sla_info .get ('resolution_deadline'):
-            embed .add_field (name ="Resolution Deadline",value =sla_info ['resolution_deadline'][:16 ],inline =True )
+            embed .add_field (name ="⏰ Срок решения",value =sla_info ['resolution_deadline'][:16 ],inline =True )
 
         if sla_info .get ('time_remaining'):
             embed .add_field (name ="Time Remaining",value =sla_info ['time_remaining'],inline =True )
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='sla-breaches',description ='SLA ihlallerini gёrюntюle')
+    @app_commands .command (name ='sla-breaches',description ='Просмотр нарушений SLA')
     async def sla_breaches (self ,interaction :discord .Interaction ):
-        """SLA ihlallerini gёrюntюle"""
+        """Просмотр нарушений SLA"""
         # Иhlaller al
         breaches =sla_breach_detector .get_all_breaches ()
 
@@ -151,7 +151,7 @@ class SLACog (commands .Cog ):
         timestamp =datetime .now ()
         )
 
-        # Иhlal listesi
+        # Список нарушений
         for breach in breaches [:10 ]:
             embed .add_field (
             name =f"{breach['ticket_id']} - {breach['type']}",
@@ -162,7 +162,7 @@ class SLACog (commands .Cog ):
         await interaction .response .send_message (embed =embed )
 
     @app_commands .command (name ='sla-create',description ='Создать SLA политику')
-    @app_commands .describe (name ='Policy adы',description ='Policy aчыklamasы')
+    @app_commands .describe (name ='Название политики',description ='Описание политики')
     @app_commands .checks .has_permissions (administrator =True )
     async def sla_create (self ,interaction :discord .Interaction ,
     name :str ,description :str ):
@@ -173,7 +173,7 @@ class SLACog (commands .Cog ):
         # Embed создать
         embed =discord .Embed (
         title =" SLA Policy Создано",
-        description =f"**Ad:** {name}\n**Aчыklama:** {description}\n**ID:** {policy.policy_id}",
+        description =f"**Название:** {name}\n**Описание:** {description}\n**ID:** {policy.policy_id}",
         color =discord .Color .green (),
         timestamp =datetime .now ()
         )
@@ -182,8 +182,8 @@ class SLACog (commands .Cog ):
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
-        log .info (f" SLACog loaded")
+        """Бот готов"""
+        log .info (" SLACog loaded")
 
 
 async def setup (bot ):

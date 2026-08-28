@@ -1,6 +1,6 @@
 """
 Report Cog
-Reporting cog'u
+Ког отчётности
 """
 
 import discord 
@@ -15,7 +15,7 @@ log =get_logger ("report_cog")
 
 
 class ReportCog (commands .Cog ):
-    """Reporting cog'u"""
+    """Ког отчётности"""
 
     def __init__ (self ,bot ):
         self .bot =bot 
@@ -24,25 +24,25 @@ class ReportCog (commands .Cog ):
     @app_commands .checks .has_permissions (manage_guild =True )
     async def report_daily (self ,interaction :discord .Interaction ):
         """Создать ежедневный отчёт"""
-        # Rapor создать
+        # Создать отчёт
         report =report_builder .generate_daily_report ()
 
         # Embed создать
         embed =discord .Embed (
-        title =" Daily Report",
+        title ="📅 Ежедневный отчёт",
         description =f"Дата: {report['date']}",
         color =discord .Color .blue (),
         timestamp =datetime .now ()
         )
 
-        # Иstatistikler
-        embed .add_field (name ="Total Tickets",value =str (report ['total_tickets']),inline =True )
-        embed .add_field (name ="Open Tickets",value =str (report ['open_tickets']),inline =True )
-        embed .add_field (name ="Closed Tickets",value =str (report ['closed_tickets']),inline =True )
+        # Статистика
+        embed .add_field (name ="Всего тикетов",value =str (report ['total_tickets']),inline =True )
+        embed .add_field (name ="Открыто тикетов",value =str (report ['open_tickets']),inline =True )
+        embed .add_field (name ="Закрыто тикетов",value =str (report ['closed_tickets']),inline =True )
 
-        embed .add_field (name ="Avg Resolution Time",value =f"{report['avg_resolution_time']:.2f}h",inline =True )
-        embed .add_field (name ="SLA Compliance",value =f"{report['sla_compliance']:.2f}%",inline =True )
-        embed .add_field (name ="Customer Satisfaction",value =f"{report['customer_satisfaction']:.2f}/5",inline =True )
+        embed .add_field (name ="⏱ Среднее время решения",value =f"{report['avg_resolution_time']:.2f} ч",inline =True )
+        embed .add_field (name ="Соблюдение SLA",value =f"{report['sla_compliance']:.2f}%",inline =True )
+        embed .add_field (name ="⭐ Удовлетворённость",value =f"{report['customer_satisfaction']:.2f}/5",inline =True )
 
         await interaction .response .send_message (embed =embed )
 
@@ -50,44 +50,44 @@ class ReportCog (commands .Cog ):
     @app_commands .checks .has_permissions (manage_guild =True )
     async def report_weekly (self ,interaction :discord .Interaction ):
         """Создать еженедельный отчёт"""
-        # Rapor создать
+        # Создать отчёт
         report =report_builder .generate_weekly_report ()
 
         # Embed создать
         embed =discord .Embed (
-        title =" Weekly Report",
+        title ="📅 Еженедельный отчёт",
         description =f"Неделя: {report['week_start']} - {report['week_end']}",
         color =discord .Color .blue (),
         timestamp =datetime .now ()
         )
 
-        # Иstatistikler
-        embed .add_field (name ="Total Tickets",value =str (report ['total_tickets']),inline =True )
-        embed .add_field (name ="Open Tickets",value =str (report ['open_tickets']),inline =True )
-        embed .add_field (name ="Closed Tickets",value =str (report ['closed_tickets']),inline =True )
+        # Статистика
+        embed .add_field (name ="Всего тикетов",value =str (report ['total_tickets']),inline =True )
+        embed .add_field (name ="Открыто тикетов",value =str (report ['open_tickets']),inline =True )
+        embed .add_field (name ="Закрыто тикетов",value =str (report ['closed_tickets']),inline =True )
 
-        embed .add_field (name ="Avg Resolution Time",value =f"{report['avg_resolution_time']:.2f}h",inline =True )
-        embed .add_field (name ="SLA Compliance",value =f"{report['sla_compliance']:.2f}%",inline =True )
-        embed .add_field (name ="Customer Satisfaction",value =f"{report['customer_satisfaction']:.2f}/5",inline =True )
+        embed .add_field (name ="⏱ Среднее время решения",value =f"{report['avg_resolution_time']:.2f} ч",inline =True )
+        embed .add_field (name ="Соблюдение SLA",value =f"{report['sla_compliance']:.2f}%",inline =True )
+        embed .add_field (name ="⭐ Удовлетворённость",value =f"{report['customer_satisfaction']:.2f}/5",inline =True )
 
-        # Gюnlюk breakdown
+        # Разбивка по дням
         if report .get ('daily_breakdown'):
             daily_text ="\n".join ([
-            f"• {day}: {tickets} tickets"
+            f"• {day}: {tickets} тикетов"
             for day ,tickets in report ['daily_breakdown'].items ()
             ])
-            embed .add_field (name ="Daily Breakdown",value =daily_text ,inline =False )
+            embed .add_field (name ="По дням",value =daily_text ,inline =False )
 
         await interaction .response .send_message (embed =embed )
 
     @app_commands .command (name ='report-custom',description ='Создать специальный отчёт')
-    @app_commands .describe (days ='Gюn sayыsы (varsayыlan: 30)',
-    report_type ='Rapor tipi (tickets/sla/performance)')
+    @app_commands .describe (days ='Количество дней (по умолчанию: 30)',
+    report_type ='Тип отчёта (tickets/sla/performance)')
     @app_commands .checks .has_permissions (manage_guild =True )
     async def report_custom (self ,interaction :discord .Interaction ,
     days :int =30 ,report_type :str ='tickets'):
         """Создать специальный отчёт"""
-        # Rapor создать
+        # Создать отчёт
         if report_type =='tickets':
             report =report_builder .generate_custom_report (days =days ,report_type ='tickets')
         elif report_type =='sla':
@@ -96,70 +96,70 @@ class ReportCog (commands .Cog ):
             report =report_builder .generate_custom_report (days =days ,report_type ='performance')
         else :
             await interaction .response .send_message (
-            " Geчersiz rapor tipi! (tickets/sla/performance)",
+            " Неверный тип отчёта! (tickets/sla/performance)",
             ephemeral =True 
             )
             return 
 
             # Embed создать
         embed =discord .Embed (
-        title =f" Custom Report ({report_type})",
-        description =f"Period: {report['period_start']} - {report['period_end']}",
+        title =f"📋 Специальный отчёт ({report_type})",
+        description =f"Период: {report['period_start']} — {report['period_end']}",
         color =discord .Color .blue (),
         timestamp =datetime .now ()
         )
 
-        # Иstatistikler
+        # Статистика
         for key ,value in report .get ('stats',{}).items ():
             if isinstance (value ,(int ,float )):
                 embed .add_field (name =key ,value =str (value ),inline =True )
 
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='report-analytics',description ='Analytics raporunu gёrюntюle')
+    @app_commands .command (name ='report-analytics',description ='Просмотр аналитического отчёта')
     async def report_analytics (self ,interaction :discord .Interaction ):
-        """Analytics raporunu gёrюntюle"""
-        # Analytics al
+        """Просмотр аналитического отчёта"""
+        # Получить аналитику
         analytics =analytics_engine .get_dashboard_analytics ()
 
         # Embed создать
         embed =discord .Embed (
-        title =" Analytics Dashboard",
+        title ="📊 Панель аналитики",
         color =discord .Color .blue (),
         timestamp =datetime .now ()
         )
 
-        # Иstatistikler
-        embed .add_field (name ="Total Tickets",value =str (analytics ['total_tickets']),inline =True )
-        embed .add_field (name ="Open Tickets",value =str (analytics ['open_tickets']),inline =True )
-        embed .add_field (name ="Closed Tickets",value =str (analytics ['closed_tickets']),inline =True )
+        # Статистика
+        embed .add_field (name ="Всего тикетов",value =str (analytics ['total_tickets']),inline =True )
+        embed .add_field (name ="Открыто тикетов",value =str (analytics ['open_tickets']),inline =True )
+        embed .add_field (name ="Закрыто тикетов",value =str (analytics ['closed_tickets']),inline =True )
 
-        embed .add_field (name ="Avg Resolution Time",value =f"{analytics['avg_resolution_time']:.2f}h",inline =True )
-        embed .add_field (name ="SLA Compliance",value =f"{analytics['sla_compliance']:.2f}%",inline =True )
-        embed .add_field (name ="Customer Satisfaction",value =f"{analytics['customer_satisfaction']:.2f}/5",inline =True )
+        embed .add_field (name ="⏱ Среднее время решения",value =f"{analytics['avg_resolution_time']:.2f} ч",inline =True )
+        embed .add_field (name ="Соблюдение SLA",value =f"{analytics['sla_compliance']:.2f}%",inline =True )
+        embed .add_field (name ="⭐ Удовлетворённость",value =f"{analytics['customer_satisfaction']:.2f}/5",inline =True )
 
-        # Top categories
+        # Топ категорий
         if analytics .get ('top_categories'):
             categories_text ="\n".join ([
-            f"• {cat['category']}: {cat['count']} tickets"
+            f"• {cat['category']}: {cat['count']} тикетов"
             for cat in analytics ['top_categories'][:5 ]
             ])
-            embed .add_field (name ="Top Categories",value =categories_text ,inline =False )
+            embed .add_field (name ="Топ категорий",value =categories_text ,inline =False )
 
-            # Top performers
+            # Лучшие сотрудники
         if analytics .get ('top_performers'):
             performers_text ="\n".join ([
-            f"• {performer['user_name']}: {performer['closed_tickets']} tickets"
+            f"• {performer['user_name']}: {performer['closed_tickets']} закрыто"
             for performer in analytics ['top_performers'][:5 ]
             ])
-            embed .add_field (name ="Top Performers",value =performers_text ,inline =False )
+            embed .add_field (name ="Лучшие сотрудники",value =performers_text ,inline =False )
 
         await interaction .response .send_message (embed =embed )
 
     @commands .Cog .listener ()
     async def on_ready (self ):
-        """Bot hazыr olduгunda"""
-        log .info (f" ReportCog loaded")
+        """Бот готов"""
+        log .info (" ReportCog loaded")
 
 
 async def setup (bot ):

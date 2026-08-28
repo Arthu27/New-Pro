@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Вебхуки — Панель Hakumo{% endblock %}
+{% block page_title %}Вебхуки{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Контент <span class="sep">·</span> Вебхуки</div>
+    <h1>Вебхуки</h1>
+  </div>
+</div>
+
+<style>
+.wh-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.wh-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.wh-panel h3 i{color:var(--ac,var(--ac))}
+.wh-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.5}
+.wh-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:10px 8px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
+.wh-row:last-child{border-bottom:none}
+.wh-name{font-size:13.5px;font-weight:700;color:var(--text-1,#fff)}
+.wh-meta{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-top:3px}
+.wh-url{font-size:11px;color:var(--text-3,color-mix(in srgb, var(--text) 35%, transparent));font-family:monospace}
+.wh-actions{display:flex;gap:6px}
+.wh-icon-btn{background:none;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent));border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;transition:all .15s}
+.wh-icon-btn:hover{border-color:var(--ac,var(--ac));color:var(--ac-2,#f0cd7a)}
+.wh-icon-btn.danger:hover{border-color:rgba(231,76,60,.5);color:#ff8a7a}
+.wh-form{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}
+.wh-input,.wh-select{background: var(--bg);border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:10px;padding:10px 14px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.wh-input:focus,.wh-select:focus{border-color:var(--ac,var(--ac))}
+.wh-btn{display:inline-flex;align-items:center;gap:8px;background:var(--ac,var(--ac));color:#1a1a1a;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.wh-btn:hover{filter:brightness(1.1)}
+@media (max-width:860px){.wh-form{grid-template-columns:1fr}.wh-row{grid-template-columns:1fr auto}}
+[data-theme="light"] .wh-input,[data-theme="light"] .wh-select{background: var(--bg)}
+[data-theme="light"] .wh-row{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+{% if role == 'admin' or role == 'owner' %}
+<div class="wh-panel">
+  <h3><i class="fas fa-plus"></i> Новый вебхук</h3>
+  <div class="wh-sub">Создаётся в Discord и записывается в тот же реестр, что видит команда <code>/webhook список</code>.</div>
+  <div class="wh-form">
+    <select class="wh-select" id="whChannel" aria-label="Канал"><option value="">— загрузка каналов… —</option></select>
+    <input type="text" class="wh-input" id="whName" placeholder="Имя вебхука: GitHub, Релизы..." maxlength="80" aria-label="Имя вебхука">
+    <button type="button" class="wh-btn" onclick="whCreate()"><i class="fas fa-bolt"></i> Создать</button>
+  </div>
+</div>
+
+<div class="wh-panel">
+  <h3><i class="fas fa-table-columns"></i> Components V2 — новое поколение сообщений</h3>
+  <div class="wh-sub">Discord заменил эмбеды гибкими блоками: контейнер с цветной полосой, крупные заголовки,
+  текст, картинка сбоку, разделители и кнопки — всё в одном сообщении (до 40 блоков). Бот уже отправляет
+  так розыгрыши; вебхук может отправлять так же — например, <b>правила от имени «Правила сервера»</b>,
+  а не от бота. Ниже — как это выглядит.</div>
+  <div class="v2-demo">
+    <div class="v2-msg v2-green">
+      <div class="v2-head"><i class="fas fa-gift"></i> РОЗЫГРЫШ НАЧАЛСЯ</div>
+      <div class="v2-sep"></div>
+      <div class="v2-prize"><i class="fas fa-trophy"></i> Discord Nitro · 1 месяц</div>
+      <div class="v2-text">Нажми <b>Участвовать</b>, чтобы выиграть!</div>
+      <div class="v2-sep"></div>
+      <div class="v2-meta"><span><b>Победителей:</b> 1</span><span><b>Участников:</b> 12</span><span><b>Завершение:</b> через 5 часов</span></div>
+      <button type="button" class="v2-btn" tabindex="-1"><i class="fas fa-gift"></i> Участвовать</button>
+      <div class="v2-foot">Демо-сервер • ID gw-demo-1</div>
+    </div>
+    <div class="v2-msg v2-violet">
+      <div class="v2-head">Правила сервера</div>
+      <div class="v2-sep"></div>
+      <div class="v2-text"><b>1. Уважение</b><br>Без оскорблений, травли и языка вражды.</div>
+      <div class="v2-sep"></div>
+      <div class="v2-text"><b>2. Без спама</b><br>Флуд, капс и реклама — мут от модератора.</div>
+      <div class="v2-sep"></div>
+      <div class="v2-text"><b>3. Голосовые</b><br>Не шуметь и не мешать музыке.</div>
+      <div class="v2-foot">Наказания выдаёт только модератор-человек</div>
+    </div>
+  </div>
+  <div class="wh-sub" style="margin-top:10px">От кого придёт: вебхук сам задаёт имя и аватар сообщения —
+  например «Правила сервера» с вашей картинкой. Ссылка вебхука = ключ к каналу: не показывайте её никому.</div>
+</div>
+
+<style>
+.v2-demo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:860px){.v2-demo{grid-template-columns:1fr}}
+.v2-msg{border-radius:12px;padding:14px 16px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-left-width:4px;display:flex;flex-direction:column;gap:8px;background:color-mix(in srgb, var(--text) 3%, transparent)}
+.v2-green{border-left-color:#2ecc71}
+.v2-violet{border-left-color:#818cf8}
+.v2-head{font-size:15px;font-weight:800;color:var(--text-1,#fff)}
+.v2-prize{font-size:14px;font-weight:700;color:var(--text-1,#fff)}
+.v2-text{font-size:12.5px;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));line-height:1.5}
+.v2-meta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent))}
+.v2-sep{height:1px;background:color-mix(in srgb, var(--text) 8%, transparent)}
+.v2-btn{align-self:flex-start;border:1px solid color-mix(in srgb, var(--text) 15%, transparent);background:color-mix(in srgb, var(--text) 6%, transparent);color:var(--text-1,#fff);border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:default;font-family:inherit}
+.v2-foot{font-size:10.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
+</style>
+{% endif %}
+
+<div class="wh-panel">
+  <h3><i class="fas fa-link"></i> Реестр</h3>
+  <div class="wh-sub">URL с токеном показан маской — секрет наружу не утекает. «Тест» шлёт сообщение в канал хука.</div>
+  <div id="whList">
+    <div class="sk-row"></div>
+    <div class="sk-row"></div>
+    <div class="sk-row" style="width:60%"></div>
+  </div>
+</div>
+
+<script>
+var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function render(d) {
+  var box = document.getElementById('whList');
+  if (!d.hooks.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-link"></i><p>Вебхуков пока нет</p>' +
+      '<p class="empty-tip">' + (CAN_EDIT ? 'Создайте первый формой выше или командой /webhook создать в Discord.'
+                                        : 'Создать может admin (форма сверху) или командой /webhook в Discord.') + '</p></div>';
+    return;
+  }
+  box.innerHTML = d.hooks.map(function (h) {
+    var acts = CAN_EDIT
+      ? '<div class="wh-actions">' +
+        '<button type="button" class="wh-icon-btn" onclick="whTest(\'' + esc(h.id) + '\', \'' + esc(h.name) + '\')" title="Тестовое сообщение"><i class="fas fa-paper-plane"></i></button>' +
+        '<button type="button" class="wh-icon-btn danger" onclick="whDelete(\'' + esc(h.id) + '\', \'' + esc(h.name) + '\')" title="Удалить"><i class="fas fa-trash-can"></i></button></div>'
+      : '';
+    return '<div class="wh-row"><div><div class="wh-name">' + esc(h.name) + '</div>' +
+      '<div class="wh-meta"><i class="fas fa-hashtag"></i> ' + esc(h.channel_name || h.channel_id) + ' · ID ' + esc(h.id) + '</div>' +
+      '<div class="wh-url">' + esc(h.url_masked) + '</div></div>' + acts + '</div>';
+  }).join('');
+}
+
+async function whLoad() {
+  try {
+    var d = await fetch('/api/webhooks').then(function (r) { return r.json(); });
+    if (!d.success) return;
+    var fp = String(JSON.stringify(d || null) || '').slice(0, 600);
+    if (window.silentGuard && window.silentGuard('webhooks', fp)) return;
+    if (window.renderSafe) window.renderSafe(function () { render(d); }); else render(d);
+  } catch (e) { /* API Guard показал причину */ }
+}
+
+async function whChannels() {
+  if (!CAN_EDIT) return;
+  try {
+    var guilds = await window.fetchCachedJSON('/api/guilds');
+    if (!Array.isArray(guilds) || !guilds.length) return;
+    var main = '{{ main_guild_id }}';
+    var g = guilds.filter(function (x) { return String(x.id) === String(main); })[0] || guilds[0];
+    var chans = await fetch('/api/guild/' + g.id + '/channels').then(function (r) { return r.json(); });
+    var list = (Array.isArray(chans) ? chans : []).filter(function (c) { return c.type === 'text' || c.type === 0 || c.type === undefined; });
+    var sel = document.getElementById('whChannel');
+    sel.innerHTML = list.length
+      ? '<option value="">— выберите канал —</option>' + list.map(function (c) { return '<option value="' + esc(c.id) + '">#' + esc(c.name) + '</option>'; }).join('')
+      : '<option value="">— нет доступных каналов —</option>';
+  } catch (e) { /* список опционален */ }
+}
+
+async function whCreate() {
+  var ch = document.getElementById('whChannel').value;
+  var name = document.getElementById('whName').value.trim();
+  if (!ch || !name) { if (typeof window.showToast === 'function') window.showToast('Выберите канал и введите имя', false); return; }
+  var r = await fetch('/api/webhooks/create', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel_id: ch, name: name })
+  });
+  var d = await r.json();
+  if (r.ok && d.success) {
+    document.getElementById('whName').value = '';
+    render(d);
+    if (typeof window.showToast === 'function') window.showToast('Вебхук создан', true);
+  }
+}
+
+function whDelete(id, name) {
+  window.askConfirm('Удалить вебхук «' + name + '»?', 'Хук исчезнет из Discord и реестра. Вернуть нельзя — у нового будет другой URL.', async function () {
+    var r = await fetch('/api/webhooks/delete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ webhook_id: id })
+    });
+    var d = await r.json();
+    if (r.ok && d.success) {
+      render(d);
+      if (typeof window.showToast === 'function') window.showToast('Вебхук удалён', true);
+    }
+  }, { danger: true, okText: 'Удалить' });
+}
+
+function whTest(id, name) {
+  window.askConfirm('Тест вебхука «' + name + '»?', 'В канал хука улетит сообщение «Тестовое сообщение от панели Hakumo».', async function () {
+    var r = await fetch('/api/webhooks/send', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ webhook_id: id, message: 'Тестовое сообщение от панели Hakumo — вебхук жив.' })
+    });
+    var d = await r.json();
+    if (r.ok && d.success && typeof window.showToast === 'function') window.showToast('Отправлено в «' + d.sent_to + '»', true);
+  }, { okText: 'Отправить', icon_fa: 'fa-paper-plane' });
+}
+
+whLoad();
+whChannels();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(whLoad, 1500);
+</script>
+{% endblock %}

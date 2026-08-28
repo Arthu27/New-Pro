@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Инструменты · Модерация — Hakumo{% endblock %}
+{% block page_title %}Инструменты{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Реагирование</div>
+    <h1>Инструменты</h1>
+    <p class="lead">Быстрые действия без потери контекста: panic-контур, sticky-сообщения и тихий мут.</p>
+  </div>
+</div>
+
+<div class="grid-3" style="align-items:start">
+  {% if role in ['admin', 'owner'] %}
+  <!-- Panic -->
+  <div class="panel" id="panic-card">
+    <div class="panel-head">
+      <div><h2><i class="fas fa-triangle-exclamation" style="color:var(--err)"></i> Panic-контур</h2>
+      <div class="sub">Аварийно закрывает запись для @everyone и хранит снимок прав для отката.</div></div>
+    </div>
+    <div class="panel-body">
+      <div class="alert" id="panic-status" style="border:none;padding:0;margin-bottom:12px"><i class="fas fa-circle-notch fa-spin"></i> Проверяем периметр</div>
+      <label class="form-group"><span class="form-label">Причина запуска</span><input class="form-input" type="text" id="panic-reason" maxlength="300" placeholder="Что произошло"></label>
+      <label class="switch" style="margin-bottom:12px"><input type="checkbox" id="panic-boost"><span class="track"></span> Поднять проверку сервера до High</label>
+      <div class="row">
+        <button type="button" class="btn btn-danger" id="panic-on-btn"><i class="fas fa-lock"></i> Закрыть периметр</button>
+        <button type="button" class="btn" id="panic-off-btn" style="display:none"><i class="fas fa-lock-open"></i> Восстановить</button>
+      </div>
+      <div class="hint" id="panic-msg" style="margin-top:8px"></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Sticky -->
+  <div class="panel">
+    <div class="panel-head">
+      <div><h2><i class="fas fa-thumbtack"></i> Sticky-сообщения</h2>
+      <div class="sub">Маяк возвращается в конец канала и не теряется в потоке.</div></div>
+    </div>
+    <div class="panel-body">
+      <label class="form-group"><span class="form-label">Канал</span><select class="form-input" id="sticky-channel"></select></label>
+      <label class="form-group"><span class="form-label">Текст маяка</span><textarea class="form-input" id="sticky-text" maxlength="1900" rows="3" placeholder="Важная инструкция для участников"></textarea></label>
+      <button type="button" class="btn btn-primary" id="sticky-save"><i class="fas fa-satellite-dish"></i> Установить маяк</button>
+      <div class="hint" id="sticky-msg" style="margin-top:8px"></div>
+      <div id="sticky-list" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- Ghost -->
+  <div class="panel">
+    <div class="panel-head">
+      <div><h2><i class="fas fa-ghost"></i> Тихий мут</h2>
+      <div class="sub">Сообщения исчезают незаметно для автора, попытки пишутся в журнал.</div></div>
+    </div>
+    <div class="panel-body">
+      <label class="form-group"><span class="form-label">Участник</span><input class="form-input" id="ghost-user" placeholder="Имя участника — выберите из списка"><span id="ghost-user-status"></span></label>
+      <div class="form-row-2">
+        <label class="form-group"><span class="form-label">Срок</span><input class="form-input" id="ghost-duration" placeholder="30м, 2ч или пусто"></label>
+        <label class="form-group"><span class="form-label">Причина</span><input class="form-input" id="ghost-reason" maxlength="300" placeholder="Только для команды"></label>
+      </div>
+      <button type="button" class="btn" id="ghost-add" style="color:var(--ac);border-color:var(--ac-line)"><i class="fas fa-eye-slash"></i> Перевести в тень</button>
+      <div class="hint" id="ghost-msg" style="margin-top:8px"></div>
+      <div id="ghost-list" style="margin-top:12px"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/pickers.js"></script>
+<script>
+(function () {
+  'use strict';
+  var GHOST_GUILD_ID = '{{ guild_id }}';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function msg(id, text, ok) {
+    var el = $(id);
+    el.textContent = text || '';
+    el.className = 'hint ' + (text ? (ok === false ? 'error' : '') : '');
+    el.style.display = text ? '' : 'none';
+  }
+
+  /* ── Каналы ── */
+  function loadChannels() {
+    var sel = $('sticky-channel');
+    fetch('/api/channels').then(function (r) { return r.json(); }).then(function (d) {
+      var channels = d.channels || d || [];
+      sel.innerHTML = '';
+      (Array.isArray(channels) ? channels : []).forEach(function (c) {
+        if (c.type !== undefined && c.type !== 0 && c.type !== 'text') return;
+        var o = document.createElement('option');
+        o.value = c.id; o.textContent = '#' + (c.name || c.id);
+        sel.appendChild(o);
+      });
+      if (!sel.options.length) sel.innerHTML = '<option value="">— каналы недоступны —</option>';
+    }).catch(function () { sel.innerHTML = '<option value="">— ошибка загрузки —</option>'; });
+  }
+
+  /* ── Sticky ── */
+  function stickyRender(list) {
+    var box = $('sticky-list');
+    if (!list.length) {
+      box.innerHTML = '<div class="empty" style="padding:14px"><i class="fas fa-inbox"></i><span>Липких нет</span></div>';
+      return;
+    }
+    box.innerHTML = list.map(function (it) {
+      return '<div class="feed-item"><div class="feed-item-icon"><i class="fas fa-thumbtack"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title">#' + esc(it.channel_name || it.channel_id) + '</div>' +
+        '<div class="feed-item-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(it.text || '') + '</div></div>' +
+        '<button type="button" class="btn btn-sm btn-ghost" data-sticky-del="' + esc(it.channel_id) + '" title="Удалить"><i class="fas fa-trash" style="color:var(--err)"></i></button></div>';
+    }).join('');
+  }
+
+  function stickyLoad() {
+    fetch('/api/sticky').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) { $('sticky-list').innerHTML = ''; return; }
+      stickyRender(d.items || []);
+    }).catch(function () {});
+  }
+
+  function stickySave() {
+    var channel_id = $('sticky-channel').value;
+    var text = $('sticky-text').value.trim();
+    if (!channel_id) { msg('sticky-msg', 'Выберите канал', false); return; }
+    if (!text) { msg('sticky-msg', 'Напишите текст маяка', false); return; }
+    fetch('/api/sticky', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel_id: channel_id, text: text })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) {
+        msg('sticky-msg', d.reposted ? 'Установлено и отправлено в канал' : 'Установлено (появится при следующем сообщении)', true);
+        $('sticky-text').value = '';
+        stickyLoad();
+      } else msg('sticky-msg', d.error || 'Ошибка', false);
+    });
+  }
+
+  function stickyDel(channel_id) {
+    window.confirmAction('Отклеить сообщение?', 'Маяк перестанет возвращаться в конец канала.', function () {
+      fetch('/api/sticky', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel_id: channel_id })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) { msg('sticky-msg', 'Отклеено', true); stickyLoad(); }
+        else msg('sticky-msg', d.error || 'Ошибка', false);
+      });
+    }, { danger: true, okText: 'Отклеить' });
+  }
+
+  /* ── Panic ── */
+  function panicLoad() {
+    var el = $('panic-status');
+    if (!el) return;
+    fetch('/api/panic').then(function (r) { return r.json(); }).then(function (d) {
+      if (d.active) {
+        var st = d.state || {};
+        el.innerHTML = '<i class="fas fa-circle" style="color:var(--err)"></i><span><b style="color:var(--err)">Локдаун активен</b> — включён: ' +
+          esc(st.started_at || '?') + ' · причина: ' + esc(st.reason || '—') + ' · каналов: ' + Object.keys(st.channels || {}).length + '</span>';
+        el.className = 'alert alert-err';
+        $('panic-on-btn').style.display = 'none';
+        $('panic-off-btn').style.display = '';
+      } else {
+        el.innerHTML = '<i class="fas fa-circle" style="color:var(--ok)"></i><span><b style="color:var(--ok)">Локдаун не активен</b></span>';
+        el.className = 'alert alert-ok';
+        $('panic-on-btn').style.display = '';
+        $('panic-off-btn').style.display = 'none';
+      }
+    }).catch(function () {});
+  }
+
+  function panicToggle(action) {
+    var confirmText = action === 'on'
+      ? 'Запретить @everyone писать во всех каналах? Исходные права сохранятся для отката.'
+      : 'Снять локдаун и вернуть всем прежние права?';
+    window.confirmAction(action === 'on' ? 'Закрыть периметр?' : 'Снять локдаун?', confirmText, function () {
+      var body = action === 'on'
+        ? { action: action, reason: $('panic-reason').value || 'Через панель', boost_verification: $('panic-boost').checked }
+        : { action: action };
+      fetch('/api/panic', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success && action === 'on') msg('panic-msg', 'Локдаун включён: закрыто каналов ' + d.done + ', ошибок ' + d.failed + '.', true);
+        else if (d.success) msg('panic-msg', 'Локдаун снят: восстановлено каналов ' + d.done + ', ошибок ' + d.failed + '.', true);
+        else msg('panic-msg', d.error || 'Ошибка', false);
+        panicLoad();
+      });
+    }, action === 'on' ? { danger: true, okText: 'Закрыть' } : { okText: 'Восстановить' });
+  }
+
+  /* ── Ghost ── */
+  function ghostRender(list) {
+    var box = $('ghost-list');
+    if (!list.length) {
+      box.innerHTML = '<div class="empty" style="padding:14px"><i class="fas fa-inbox"></i><span>Призраков нет</span></div>';
+      return;
+    }
+    box.innerHTML = list.map(function (it) {
+      var term = it.until ? ('до ' + esc(String(it.until).slice(0, 16).replace('T', ' '))) : 'бессрочно';
+      return '<div class="feed-item"><div class="feed-item-icon"><i class="fas fa-ghost"></i></div>' +
+        '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(it.name || it.user_id) + '</div>' +
+        '<div class="feed-item-sub">' + esc(term) + ' · скрыто сообщений: ' + (it.suppressed || 0) +
+          (it.reason ? ' · ' + esc(it.reason) : '') + (it.by ? ' · от ' + esc(it.by) : '') + '</div></div>' +
+        '<button type="button" class="btn btn-sm" data-ghost-del="' + esc(it.user_id) + '"><i class="fas fa-eye" style="color:var(--ok)"></i> Снять</button></div>';
+    }).join('');
+  }
+
+  function ghostLoad() {
+    fetch('/api/ghost').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) { $('ghost-list').innerHTML = ''; return; }
+      ghostRender(d.items || []);
+    }).catch(function () {});
+  }
+
+  function ghostAdd() {
+    var user_id = $('ghost-user').value.trim();
+    var duration = $('ghost-duration').value.trim();
+    var reason = $('ghost-reason').value.trim();
+    if (!user_id) { msg('ghost-msg', 'Укажите участника', false); return; }
+    if (!/^\d{5,25}$/.test(user_id)) { msg('ghost-msg', 'Выберите участника из подсказок', false); return; }
+    fetch('/api/ghost', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: user_id, duration: duration, reason: reason })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) {
+        msg('ghost-msg', 'Участник в тени — сообщения исчезают незаметно.', true);
+        $('ghost-user').value = ''; $('ghost-reason').value = '';
+        ghostLoad();
+      } else msg('ghost-msg', d.error || 'Ошибка', false);
+    });
+  }
+
+  function ghostDel(uid) {
+    window.confirmAction('Снять тихий мут?', 'Участник снова будет виден.', function () {
+      fetch('/api/ghost', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: uid })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) { msg('ghost-msg', 'Снято (было скрыто сообщений: ' + d.suppressed + ').', true); ghostLoad(); }
+        else msg('ghost-msg', d.error || 'Ошибка', false);
+      });
+    });
+  }
+
+  /* ── участник — только живой выбор из подсказок (без ручного ID) ── */
+  attachMemberPicker($('ghost-user'), { gid: GHOST_GUILD_ID, statusEl: $('ghost-user-status') });
+
+  document.addEventListener('click', function (e) {
+    var d = e.target.closest('[data-sticky-del]');
+    if (d) { stickyDel(d.dataset.stickyDel); return; }
+    var g = e.target.closest('[data-ghost-del]');
+    if (g) { ghostDel(g.dataset.ghostDel); return; }
+  });
+  $('sticky-save').addEventListener('click', stickySave);
+  $('ghost-add').addEventListener('click', ghostAdd);
+  $('panic-on-btn').addEventListener('click', function () { panicToggle('on'); });
+  $('panic-off-btn').addEventListener('click', function () { panicToggle('off'); });
+
+  loadChannels(); stickyLoad(); panicLoad(); ghostLoad();
+})();
+</script>
+{% endblock %}

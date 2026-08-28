@@ -1,31 +1,45 @@
 {% extends "base.html" %}
-{% block title %}Опросы — Aether{% endblock %}
+{% block title %}Опросы — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-poll-h" ></i> Опросы{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Опросы</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество <span class="sep">·</span> Опросы</div>
     <h1>Опросы</h1>
-    <p>Создание опросов и голосований для участников.</p>
+    <p class="lead">Создание опросов и голосований для участников.</p>
   </div>
 </div>
-{% endblock %}
 
 
+<style>
+/* Опросы — premium gold */
+.poll-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.poll-counters{display:flex;gap:10px;flex-wrap:wrap}
+.poll-counter{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:99px;font-size:13px;font-weight:700}
+.poll-counter.active{background:rgba(74,222,128,.12);color:var(--ok);border:1px solid rgba(74,222,128,.3)}
+.poll-counter.ended{background:rgba(138,125,95,.12);color:var(--text-3);border:1px solid var(--line-2)}
+.poll-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.poll-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:18px;transition:all .2s var(--ease)}
+.poll-card:hover {border-color:var(--ac-line); box-shadow:0 12px 32px rgba(0,0,0,.3)}
+.poll-q{font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;line-height:1.4}
+.poll-opt{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.poll-opt .name{flex:0 0 auto;min-width:80px;font-size:13px;color:var(--text-2);font-weight:600}
+.poll-votes{flex:0 0 40px;text-align:right;font-size:12.5px;font-weight:700;color:var(--ac-2);font-variant-numeric:tabular-nums}
+.poll-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.poll-foot .voters{font-size:12.5px;color:var(--text-3);display:inline-flex;align-items:center;gap:6px}
+.poll-foot .voters i{color:var(--ac)}
+</style>
 
-<div class="poll-toolbar">
+<div class="poll-toolbar" data-reveal="up">
   <div class="poll-counters">
-    <span class="poll-counter active"><i class="fas fa-circle" ></i> <span id="active-count">0 активных</span></span>
+    <select id="guild-select" class="guild-select" style="min-width:180px" aria-label="Выбор сервера"><option value="">Выберите сервер...</option></select>
+    <span class="poll-counter active"><i class="fas fa-circle"></i> <span id="active-count">0 активных</span></span>
     <span class="poll-counter ended"><i class="fas fa-check"></i> <span id="ended-count">0 завершённых</span></span>
   </div>
   <button class="btn btn-primary" id="btn-new" type="button"><i class="fas fa-plus"></i> Новый опрос</button>
 </div>
 
-<div class="poll-grid" id="poll-grid">
+<div class="poll-grid" id="poll-grid" data-reveal="up">
   <p class="empty-state"><i class="fas fa-inbox"></i>Опросов пока нет</p>
 </div>
 
@@ -35,15 +49,37 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  var polls = [
-    { q: 'Какая игра вам нравится больше всего?', opts: [{t:'Minecraft',v:120},{t:'LOL',v:85},{t:'Valorant',v:64}], active: true, voters: 269 },
-    { q: 'Какую новую функцию добавить?', opts: [{t:'Музыка',v:45},{t:'Мини-игры',v:32}], active: true, voters: 77 },
-    { q: 'Старый опрос', opts: [{t:'A',v:10}], active: false, voters: 10 }
-  ];
+  var MAIN_GID = '{{ main_guild_id }}';
+  var selectedGuild = MAIN_GID;
+  var polls = [];
+
+  function loadGuilds() {
+    var gs = $('guild-select');
+    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+      if (!Array.isArray(guilds) || !guilds.length) return;
+      gs.innerHTML = guilds.map(function (g) {
+        return '<option value="' + esc(g.id) + '"' + (String(g.id) === selectedGuild ? ' selected' : '') + '>' + esc(g.name) + '</option>';
+      }).join('');
+      selectedGuild = gs.value || MAIN_GID;
+      load();
+    }).catch(function () { load(); });
+  }
+
+  async function load() {
+    if (!selectedGuild) return;
+    try {
+      var r = await fetch('/api/guild/' + selectedGuild + '/polls');
+      polls = await r.json();
+      if (!Array.isArray(polls)) polls = [];
+    } catch (e) { polls = []; }
+    var fp = polls.map(function (p) { return (p.id || '') + ':' + (p.active === false ? 0 : 1) + ':' + (p.votes || 0); }).join('|');
+    if (window.silentGuard && window.silentGuard('polls-' + selectedGuild, fp)) return;
+    render();
+  }
 
   function render() {
-    var act = polls.filter(function (p) { return p.active; }).length;
-    var end = polls.filter(function (p) { return !p.active; }).length;
+    var act = polls.filter(function (p) { return p.active !== false; }).length;
+    var end = polls.length - act;
     $('active-count').textContent = act + ' активных';
     $('ended-count').textContent = end + ' завершённых';
     if (!polls.length) {
@@ -51,26 +87,35 @@
       return;
     }
     var html = '';
-    polls.forEach(function (p, i) {
-      var total = p.opts.reduce(function (a, b) { return a + b.v; }, 0);
-      html += '<div class="poll-card" >' +
-        '<div class="poll-q">' + esc(p.q) + '</div>';
-      p.opts.forEach(function (o) {
-        var pct = total ? Math.round(o.v / total * 100) : 0;
-        html += '<div class="poll-opt"><span class="name">' + esc(o.t) + '</span><div class="poll-bar"><div class="poll-bar-fill"   style="width: ' + pct + '%;"></div></div><span class="poll-votes">' + pct + '%</span></div>';
+    polls.forEach(function (p) {
+      var opts = p.options || p.opts || [];
+      var total = opts.reduce(function (a, b) { return a + (b.votes || b.v || 0); }, 0);
+      var votersCount = Array.isArray(p.voters) ? p.voters.length : (p.voters || 0);
+      html += '<div class="poll-card">' +
+        '<div class="poll-q">' + esc(p.question || p.q || 'Опрос') + '</div>';
+      opts.forEach(function (o) {
+        var v = o.votes || o.v || 0;
+        var pct = total ? Math.round(v / total * 100) : 0;
+        html += '<div class="poll-opt"><span class="name">' + esc(o.text || o.t || '') + '</span><span class="poll-votes">' + pct + '%</span></div>';
       });
-      html += '<div class="poll-foot"><span class="voters"><i class="fas fa-users"></i> ' + p.voters + ' голосов</span><span class="poll-counter ' + (p.active ? 'active' : 'ended') + '">' + (p.active ? 'Активен' : 'Завершён') + '</span></div></div>';
+      html += '<div class="poll-foot"><span class="voters"><i class="fas fa-users"></i> ' + votersCount + ' голосов</span><span class="poll-counter ' + (p.active !== false ? 'active' : 'ended') + '">' + (p.active !== false ? 'Активен' : 'Завершён') + '</span></div></div>';
     });
     $('poll-grid').innerHTML = html;
   }
 
   function bind() {
+    $('guild-select').addEventListener('change', function () { selectedGuild = this.value || MAIN_GID; load(); });
     var b = $('btn-new');
-    if (b) b.addEventListener('click', function () { alert('Форма нового опроса будет здесь'); });
+    if (b) b.addEventListener('click', function () { showToast('Форма нового опроса появится здесь', true); });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
-  else { bind(); render(); }
+  function start() {
+    bind(); loadGuilds();
+    if (window.setLiveRefresh) window.setLiveRefresh(load, 1500);
+    else setInterval(load, 5000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 {% endblock %}

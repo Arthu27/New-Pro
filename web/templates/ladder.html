@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Лестница наказаний · Модерация — Hakumo{% endblock %}
+{% block page_title %}Лестница наказаний{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Команда и аналитика</div>
+    <h1>Лестница наказаний</h1>
+    <p class="lead">Единая мера для одинаковых нарушений: ступени эскалации с понятными сроками.</p>
+  </div>
+  <div class="page-head-actions">
+    <a class="btn" id="ldCsv" href="#"><i class="fas fa-file-csv"></i> Выгрузка CSV</a>
+  </div>
+</div>
+
+<div class="kpi-row" id="ldKpis"></div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-stairs"></i> Ступени</h2>
+      <div class="sub">Что происходит при каждом количестве варнов.</div></div></div>
+    <div class="panel-body" id="ldSteps"></div>
+  </div>
+
+  <div class="panel" id="ldCoolPanel" {% if not can_edit %}hidden{% endif %}>
+    <div class="panel-head"><div><h2><i class="fas fa-temperature-low"></i> Авто-остывание статуса</h2>
+      <div class="sub">Статус нарушителя в карточке 360° сам теплеет и остывает, пока человек держится без нарушений. Ничего не удаляется — меняется только оценка «свежести».</div></div></div>
+    <div class="panel-body">
+      <div class="form-row" style="flex-wrap:wrap;gap:12px;align-items:flex-end">
+        <label class="form-group"><span class="form-label">«Тёплый» после N чистых дней</span>
+          <input class="form-input" id="ldWarmDays" type="number" min="1" max="364" value="14" aria-label="Тёплый после N чистых дней"></label>
+        <label class="form-group"><span class="form-label">«Холодный» после N чистых дней</span>
+          <input class="form-input" id="ldColdDays" type="number" min="2" max="365" value="45" aria-label="Холодный после N чистых дней"></label>
+        <button type="button" class="btn btn-primary" id="ldCoolSave"><i class="fas fa-save"></i> Сохранить</button>
+      </div>
+      <div class="hint" id="ldCoolMsg" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="align-items:start">
+    <div class="panel" id="ldAddPanel" {% if not can_edit %}hidden{% endif %}>
+      <div class="panel-head"><div><h2><i class="fas fa-plus"></i> Новая ступень</h2>
+        <div class="sub">Добавляется сразу и для бота, и для панели.</div></div></div>
+      <div class="panel-body">
+        <div class="form-row">
+          <label class="form-group"><span class="form-label">Варнов</span><input class="form-input" id="ldCount" type="number" min="1" value="3"></label>
+          <label class="form-group"><span class="form-label">Действие</span>
+            <select class="form-input" id="ldAction"><option value="mute">Мьют</option><option value="kick">Кик</option><option value="ban">Бан</option></select></label>
+        </div>
+        <div class="form-row">
+          <label class="form-group"><span class="form-label">Длительность</span><input class="form-input" id="ldDuration" type="number" min="0" value="0"></label>
+          <label class="form-group"><span class="form-label">Единица</span>
+            <select class="form-input" id="ldUnit"><option value="m">минут</option><option value="h">часов</option><option value="d">дней</option></select></label>
+        </div>
+        <button type="button" class="btn btn-primary" id="ldAdd"><i class="fas fa-plus"></i> Добавить ступень</button>
+        <div class="hint" id="ldAddMsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><div><h2><i class="fas fa-flask"></i> Симулятор</h2>
+        <div class="sub">Что грозит участнику прямо сейчас.</div></div></div>
+      <div class="panel-body">
+        <div class="row">
+          <input class="form-input" id="ldUser" placeholder="Имя участника — выберите из списка" style="flex:1"><span id="ldUserStatus"></span>
+          <button type="button" class="btn" id="ldSimGo"><i class="fas fa-play"></i> Проверить</button>
+        </div>
+        <div class="alert alert-info" id="ldSim" style="display:none;margin-top:10px"></div>
+        <div class="hint" id="ldSimMsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-id-card"></i> Карточка лестницы</h2>
+    <div class="sub">Визуальная схема для команды (PNG).</div></div></div>
+  <div class="panel-body">
+    <img id="ldCard" src="" alt="Карточка лестницы наказаний" style="max-width:100%;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)">
+  </div>
+</div>
+
+<script src="/static/pickers.js"></script>
+<script>
+var GID = '{{ guild_id }}';
+attachMemberPicker(document.getElementById('ldUser'), { gid: GID, statusEl: document.getElementById('ldUserStatus') });
+var API = '/api/guild/' + GID + '/ladder';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function load() {
+  fetch(API + '/view').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { return; }
+    if (window.renderIfChanged && !window.renderIfChanged('ladder', d, function () {})) return;
+    if (d.cooldown) {
+      if ($('ldWarmDays')) $('ldWarmDays').value = d.cooldown.warm_days;
+      if ($('ldColdDays')) $('ldColdDays').value = d.cooldown.cold_days;
+    }
+    $('ldKpis').innerHTML =
+      '<div class="kpi"><div class="kpi-icon"><i class="fas fa-stairs"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.steps.length + '</div><div class="kpi-label">ступеней</div></div></div>' +
+      '<div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-user-shield"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.impact.warned_users + '</div><div class="kpi-label">' + plural(d.impact.warned_users, 'участник', 'участника', 'участников') + ' с варнами</div></div></div>';
+    var usersByCount = {};
+    d.impact.steps.forEach(function (s) { usersByCount[s.count] = s.users; });
+    var box = $('ldSteps');
+    if (!d.steps.length) {
+      box.innerHTML = '<div class="empty"><i class="fas fa-stairs"></i><span>Пока не настроена. Добавьте ступени формой выше или командой /ladder-add.</span></div>';
+    } else {
+      box.innerHTML = d.steps.map(function (s) {
+        var hot = usersByCount[s.count] || 0;
+        return '<div class="feed-item" style="border-bottom:1px solid var(--line)">' +
+          '<div class="feed-item-icon" style="' + (hot ? 'background:var(--warn-soft);color:var(--warn)' : '') + '">' + s.count + '</div>' +
+          '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(s.label) + '</div>' +
+          '<div class="feed-item-sub">на ступени: <b>' + hot + '</b></div></div>' +
+          (CAN_EDIT ? '<button type="button" class="btn btn-sm btn-ghost" data-ld-remove="' + s.count + '" title="Убрать ступень"><i class="fas fa-trash" style="color:var(--err)"></i></button>' : '') +
+          '</div>';
+      }).join('');
+    }
+  }).catch(function () {});
+}
+
+function ldRemove(count) {
+  window.confirmAction('Убрать ступень на ' + count + ' варнов?', 'Правила авто-наказания обновятся сразу и для бота, и для панели — файл общий.', function () {
+    fetch(API + '/remove', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count: count })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      var m = $('ldAddMsg');
+      m.className = 'hint ' + (d.success ? '' : 'error');
+      m.textContent = d.success ? d.message : (d.error || 'Ошибка');
+      if (d.success) { load(); loadCard(); }
+    }).catch(function () {});
+  }, { danger: true, okText: 'Убрать' });
+}
+
+document.addEventListener('click', function (e) {
+  var r = e.target.closest('[data-ld-remove]');
+  if (r) { ldRemove(r.dataset.ldRemove); }
+});
+
+$('ldAdd').addEventListener('click', function () {
+  var m = $('ldAddMsg');
+  fetch(API + '/add', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      count: $('ldCount').value,
+      action: $('ldAction').value,
+      duration: $('ldDuration').value,
+      unit: $('ldUnit').value
+    })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    m.className = 'hint ' + (d.success ? '' : 'error');
+    m.textContent = d.success ? d.message : (d.error || 'Ошибка');
+    if (d.success) { load(); loadCard(); }
+  }).catch(function () { m.className = 'hint error'; m.textContent = 'Сеть моргнула — попробуйте ещё раз'; });
+});
+
+$('ldSimGo').addEventListener('click', function () {
+  var box = $('ldSim');
+  var msg = $('ldSimMsg');
+  msg.className = 'hint';
+  msg.textContent = '';
+  var uid = $('ldUser').value.trim();
+  if (!uid) { msg.textContent = 'Выберите участника из подсказок'; msg.className = 'hint error'; return; }
+  fetch(API + '/simulate?user=' + encodeURIComponent(uid))
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) {
+        box.style.display = 'none';
+        msg.textContent = res.error || 'Ошибка';
+        msg.className = 'hint error';
+        return;
+      }
+      box.style.display = '';
+      box.innerHTML = res.lines.map(function (ln, i) {
+        return i === 0 ? '<b>' + esc(ln) + '</b>' : esc(ln);
+      }).join('<br>');
+    })
+    .catch(function () { msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; msg.className = 'hint error'; });
+});
+
+function loadCard() {
+  $('ldCard').src = API + '/card.png?t=' + Date.now();
+}
+$('ldCsv').addEventListener('click', function (e) { e.preventDefault(); location.href = API + '/export.csv'; });
+
+/* авто-остывание: сохранить пороги */
+if (CAN_EDIT && $('ldCoolSave')) {
+  $('ldCoolSave').addEventListener('click', function () {
+    var msg = $('ldCoolMsg');
+    fetch(API + '/cooldown', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ warm_days: $('ldWarmDays').value, cold_days: $('ldColdDays').value })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      msg.className = 'hint' + (d.success ? '' : ' error');
+      msg.textContent = d.message || d.error || 'Ошибка';
+      if (window.showToast) window.showToast(msg.textContent, !!d.success);
+      if (d.success) load();
+    }).catch(function () { msg.className = 'hint error'; msg.textContent = 'Сеть моргнула — попробуйте ещё раз'; });
+  });
+}
+
+load();
+loadCard();
+if (window.setLiveRefresh) window.setLiveRefresh(load, 1500);
+</script>
+{% endblock %}

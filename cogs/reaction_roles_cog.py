@@ -20,6 +20,8 @@ from logger import get_logger
 
 log = get_logger("reaction_roles_cog")
 
+from json_store import load_json as _js_load, save_json as _js_save
+
 DATA_DIR = "data"
 PREFIX = "rr_"
 
@@ -30,13 +32,10 @@ def _load_panels():
     for path in glob.glob(os.path.join(DATA_DIR, PREFIX + "*.json")):
         try:
             guild_id = os.path.basename(path)[len(PREFIX):-len(".json")]
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-            if isinstance(data, dict):
-                for panel in data.values():
-                    if isinstance(panel, dict):
-                        panel.setdefault("guild_id", guild_id)
-                        panels.append(panel)
+            for panel in _js_load(path, {}, log=log).values():
+                if isinstance(panel, dict):
+                    panel.setdefault("guild_id", guild_id)
+                    panels.append(panel)
         except Exception as e:
             log.warning("rr load error %s: %s", path, e)
     return panels
@@ -85,10 +84,10 @@ class RoleSelect(Select):
             await interaction.response.send_message("Роль не найдена.", ephemeral=True)
             return
         if role in member.roles:
-            await member.remove_roles(role, reason="Select role")
+            await member.remove_roles(role, reason="Выбор роли в меню")
             verb = "снята"
         else:
-            await member.add_roles(role, reason="Select role")
+            await member.add_roles(role, reason="Выбор роли в меню")
             verb = "выдана"
         await interaction.response.send_message(
             f"Роль **{role.name}** {verb}.", ephemeral=True
@@ -120,7 +119,7 @@ class ReactionRolesCog(commands.Cog):
     @commands.command(name="reactionrole", aliases=["reactionrol"])
     @commands.has_permissions(administrator=True)
     async def reactionrole(self, ctx, message_id: int, emoji: str, role: discord.Role):
-        """Reaction role add"""
+        """Привязать выдачу роли к реакции на сообщении"""
         if message_id not in self.reaction_roles:
             self.reaction_roles[message_id] = {}
         self.reaction_roles[message_id][emoji] = role.id
@@ -129,8 +128,8 @@ class ReactionRolesCog(commands.Cog):
             message = await ctx.channel.fetch_message(message_id)
             await message.add_reaction(emoji)
             embed = discord.Embed(
-                title="Reaction Role Добавлен",
-                description=f"**Сообщение ID:** {message_id}\n**Emoji:** {emoji}\n**Роль:** {role.mention}",
+                title="✅ Роль-реакция добавлена",
+                description=f"**ID сообщения:** {message_id}\n**Эмодзи:** {emoji}\n**Роль:** {role.mention}",
                 color=discord.Color.dark_grey(),
                 timestamp=datetime.now(),
             )
@@ -138,21 +137,21 @@ class ReactionRolesCog(commands.Cog):
         except Exception as e:
             await ctx.send(f"Ошибка: {e}")
 
-    @commands.command(name="removereactionrole", aliases=["reactionrolkaldir"])
+    @commands.command(name="removereactionrole", aliases=["удалитьреакцию"])
     @commands.has_permissions(administrator=True)
     async def removereactionrole(self, ctx, message_id: int):
-        """Reaction role remove"""
+        """Удалить привязку ролей-реакций с сообщения"""
         if message_id in self.reaction_roles:
             del self.reaction_roles[message_id]
             embed = discord.Embed(
-                title="Reaction Role Kaldirildi",
-                description=f"**Сообщение ID:** {message_id}",
+                title="✅ Привязка ролей-реакций удалена",
+                description=f"**ID сообщения:** {message_id}",
                 color=discord.Color.dark_grey(),
                 timestamp=datetime.now(),
             )
             await ctx.send(embed=embed)
         else:
-            await ctx.send("Reaction role не найдено!")
+            await ctx.send("❌ Привязка ролей-реакций не найдена!")
 
     # ── emoji reaction listeners ──────────────────────────────────────────
     @commands.Cog.listener()
@@ -170,7 +169,7 @@ class ReactionRolesCog(commands.Cog):
         member = guild.get_member(payload.user_id)
         role = guild.get_role(self.reaction_roles[payload.message_id][emoji])
         if member and role:
-            await member.add_roles(role, reason="Reaction role")
+            await member.add_roles(role, reason="Роль по реакции")
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
@@ -187,7 +186,7 @@ class ReactionRolesCog(commands.Cog):
         member = guild.get_member(payload.user_id)
         role = guild.get_role(self.reaction_roles[payload.message_id][emoji])
         if member and role:
-            await member.remove_roles(role, reason="Reaction role removed")
+            await member.remove_roles(role, reason="Снятие роли по реакции")
 
     # ── select-menu panels (created from web panel) ───────────────────────
     async def register_select_panel(self, message_id: int, panel: dict):

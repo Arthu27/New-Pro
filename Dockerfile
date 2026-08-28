@@ -1,5 +1,5 @@
 # ============================================================
-#   AETHER BOT — Production Dockerfile
+#   HAKUMO BOT — Production Dockerfile
 # ============================================================
 FROM python:3.11-slim
 

@@ -3,6 +3,10 @@
 Jira, Slack, Telegram, Payment (Stripe/PayPal)
 """
 
+from logger import get_logger
+
+_log = get_logger("integrations")
+
 import json
 import os
 import requests
@@ -23,8 +27,8 @@ class IntegrationManager:
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_config(): подавлено: %s", _ex)
         
         return {
             'jira': {'enabled': False, 'url': '', 'username': '', 'api_token': ''},
@@ -168,7 +172,7 @@ class IntegrationManager:
                 {'title': 'Приоритет', 'value': priority_names.get(ticket.get('priority', 'medium'), 'Средний'), 'short': True},
                 {'title': 'Пользователь', 'value': ticket.get('user_name', 'Неизвестный'), 'short': True}
             ],
-            'footer': 'Aether Support System',
+            'footer': 'Hakumo Support System',
             'ts': int(datetime.now().timestamp())
         }]
         
@@ -207,7 +211,7 @@ class IntegrationManager:
     
     def telegram_create_ticket_notification(self, ticket: dict) -> Dict[str, Any]:
         """Создать уведомление о новом тикете в Telegram"""
-        priority_эmodзиs = {
+        priority_emojis = {
             'low': '🟢',
             'medium': '🟡',
             'high': ''
@@ -224,7 +228,7 @@ class IntegrationManager:
 
 <b>Тема:</b> {ticket.get('subject', 'Без темы')}
 <b>Категория:</b> {ticket.get('category', 'Другое')}
-<b>Приоритет:</b> {priority_эmodзиs.get(ticket.get('priority', 'medium'), '🟡')} {priority_names.get(ticket.get('priority', 'medium'), 'Средний')}
+<b>Приоритет:</b> {priority_emojis.get(ticket.get('priority', 'medium'), '🟡')} {priority_names.get(ticket.get('priority', 'medium'), 'Средний')}
 <b>Пользователь:</b> {ticket.get('user_name', 'Неизвестный')}
 
 <b>Описание:</b>

@@ -1,24 +1,29 @@
 """
-Samoobucenie — AI ucitsya на svoih ошибка ve uspehah
-Analiz geri ссылки, korrektirovka povedeniya
+Самообучение — AI учится на своих ошибках и успехах
+Анализ обратной связи, корректировка поведения
 """
+
+from logger import get_logger
+
+_log = get_logger("self_learning")
+
 import json 
 import os 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 from typing import Dict ,List ,Optional 
 from collections import defaultdict 
 
 
 class SelfLearning :
-    """Система samoeгitimi AI"""
+    """Система самообучения AI"""
 
     def __init__ (self ):
-        self .feedback_log =[]# Loglar geri ссылки
+        self .feedback_log =[]# журнал обратной связи
         self .learned_patterns ={}# Viucennie kalыplar
         self .mistakes =[]# Ошибки AI
         self .successes =[]# Uspesnie cevaplar
 
-        # Загруз veriler
+        # Загрузить данные
         self ._load_data ()
 
     def record_feedback (
@@ -30,7 +35,7 @@ class SelfLearning :
     ):
         """Сохран obratnuyu ссылка"""
         entry ={
-        'timestamp':datetime .utcnow ().isoformat (),
+        'timestamp':datetime.now(timezone.utc).isoformat (),
         'user_message':user_message ,
         'ai_response':ai_response ,
         'feedback_type':feedback_type ,# 'positive', 'negative', 'correction'
@@ -58,7 +63,7 @@ class SelfLearning :
     ):
         """Сохран ошибка AI"""
         mistake ={
-        'timestamp':datetime .utcnow ().isoformat (),
+        'timestamp':datetime.now(timezone.utc).isoformat (),
         'user_message':user_message ,
         'wrong_response':ai_response ,
         'correct_response':correct_response ,
@@ -85,7 +90,7 @@ class SelfLearning :
     ):
         """Сохран uspesniy ответ"""
         success ={
-        'timestamp':datetime .utcnow ().isoformat (),
+        'timestamp':datetime.now(timezone.utc).isoformat (),
         'user_message':user_message ,
         'ai_response':ai_response ,
         'success_type':success_type # 'helpful', 'accurate', 'empathetic'
@@ -186,7 +191,7 @@ class SelfLearning :
             self .learned_patterns [pattern_key ]=self .learned_patterns [pattern_key ][-100 :]
 
     def _extract_keywords (self ,text :str )->List [str ]:
-        """Izvlekaet anahtar словоler из metina"""
+        """Извлекает ключевые слова из текста"""
         import re 
 
         # Удален stop-словоler
@@ -205,7 +210,7 @@ class SelfLearning :
         return list (set (keywords ))
 
     def get_learning_context (self ,user_message :str )->str :
-        """Alыyor baгlam eгitimi для prompta"""
+        """Получает контекст обучения для промпта"""
         user_msg_lower =user_message .lower ()
         keywords =self ._extract_keywords (user_msg_lower )
 
@@ -231,7 +236,7 @@ class SelfLearning :
                 if pattern_type .startswith ('avoid_'):
                 # Kalыplar kotorih необходимо izbegat
                     context_parts .append (
-                    f"\n⚠️ IZBEGAY podobnih cevaplarыn (idi ошибки):\n"
+                    "\n⚠️ ИЗБЕГАЙ похожих ответов (прежние ошибки):\n"
                     )
                     for p in matching_patterns [:3 ]:# Maksimum 3
                         if p .get ('wrong_response'):
@@ -242,7 +247,7 @@ class SelfLearning :
                 elif pattern_type .startswith ('repeat_'):
                 # Kalыplar kotorie необходимо povtoryat
                     context_parts .append (
-                    f"\n✅ ISPOLZUY podobnie cevaplar (idi uspesni):\n"
+                    "\n✅ ISPOLZUY podobnie cevaplar (idi uspesni):\n"
                     )
                     for p in matching_patterns [:3 ]:# Maksimum 3
                         if p .get ('response'):
@@ -251,7 +256,7 @@ class SelfLearning :
         return ''.join (context_parts )
 
     def get_learning_stats (self )->Dict :
-        """Alыyor istatistiгi eгitimi"""
+        """Получает статистику обучения"""
         return {
         'total_feedback':len (self .feedback_log ),
         'total_mistakes':len (self .mistakes ),
@@ -263,7 +268,7 @@ class SelfLearning :
         }
 
     def _load_data (self ):
-        """Загруз veriler из dosyaya"""
+        """Загрузить данные из файла"""
         data_file ='data/ai_learning.json'
         if os .path .exists (data_file ):
             try :
@@ -273,11 +278,11 @@ class SelfLearning :
                     self .learned_patterns =data .get ('learned_patterns',{})
                     self .mistakes =data .get ('mistakes',[])
                     self .successes =data .get ('successes',[])
-            except :
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_data(): подавлено: %s", _ex)
 
     def _save_data (self ):
-        """Сохран veriler в dosya"""
+        """Сохранить данные в файл"""
         try :
             os .makedirs ('data',exist_ok =True )
             data_file ='data/ai_learning.json'
@@ -296,7 +301,7 @@ class SelfLearning :
 _self_learning =None 
 
 def get_self_learning ()->SelfLearning :
-    """Alыyor kюresel пример SelfLearning"""
+    """Получает глобальный экземпляр SelfLearning"""
     global _self_learning 
     if _self_learning is None :
         _self_learning =SelfLearning ()

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Отчёты · Модерация — Hakumo{% endblock %}
+{% block page_title %}Отчёты{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Команда и аналитика</div>
+    <h1>Отчёты</h1>
+    <p class="lead">Нагрузка команды, ритм по дням и рецидивисты — понятный отчёт для управленческого разбора.</p>
+  </div>
+  <div class="page-head-actions">
+    <div class="seg" id="mrSeg">
+      <button type="button" class="seg-btn" data-days="7">7 дн</button>
+      <button type="button" class="seg-btn active" data-days="14">14 дн</button>
+      <button type="button" class="seg-btn" data-days="30">30 дн</button>
+    </div>
+    <a class="btn" id="mrCsv" href="/api/mod-report.csv?days=14" download><i class="fas fa-file-csv"></i> CSV</a>
+    <button type="button" class="btn" id="mrPrint" aria-label="Печать отчёта"><i class="fas fa-print"></i> Печать</button>
+  </div>
+</div>
+
+<div class="kpi-row" id="mrKpis"></div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-user-shield"></i> Вклад команды</h2>
+      <div class="sub">Действия по модераторам за период.</div></div></div>
+    <div class="panel-body" id="mrMods"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-chart-column"></i> Ритм по дням</h2>
+      <div class="sub">Количество действий в день.</div></div></div>
+    <div class="panel-body">
+      <div class="chart-box" id="mrArea"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-list-ol"></i> Типы действий</h2>
+      <div class="sub">Что чаще всего применяет команда.</div></div></div>
+    <div class="panel-body" id="mrActions"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-repeat" style="color:var(--err)"></i> Повторные нарушения</h2>
+      <div class="sub">Участники с тремя и более действиями за период.</div></div></div>
+    <div class="panel-body"><div class="chip-row" id="mrRec"></div></div>
+  </div>
+</div>
+
+<script>
+var DAYS = 14;
+var STATE = null;
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function mrPlural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function renderKpis(d) {
+  var hot = d.recidivists_total > 0;
+  $('mrKpis').innerHTML =
+    '<div class="kpi"><div class="kpi-icon"><i class="fas fa-gavel"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.total + '</div><div class="kpi-label">' + mrPlural(d.total, 'действие', 'действия', 'действий') + '</div></div></div>' +
+    '<div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-user-shield"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.mods_total + '</div><div class="kpi-label">' + mrPlural(d.mods_total, 'модератор', 'модератора', 'модераторов') + '</div></div></div>' +
+    '<div class="kpi ' + (hot ? 'tone-err' : '') + '"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value">' + d.recidivists_total + '</div><div class="kpi-label">рецидивистов (3+)</div></div></div>';
+  document.querySelectorAll('#mrSeg .seg-btn').forEach(function (b) {
+    b.classList.toggle('active', parseInt(b.dataset.days, 10) === DAYS);
+  });
+  $('mrCsv').href = '/api/mod-report.csv?days=' + DAYS;
+}
+
+function renderMods(d) {
+  var box = $('mrMods');
+  if (!d.per_mod.length) {
+    box.innerHTML = '<div class="empty"><i class="fas fa-user-shield"></i><span>Записей с именем модератора нет</span></div>';
+  } else if (window.HakumoChart) {
+    var total = d.total || 1;
+    window.HakumoChart.vbars(box, d.per_mod.map(function (m, i) {
+      var pct = Math.round(100 * m[1] / total);
+      return { label: m[0] + ' (' + pct + '%)', value: m[1] };
+    }), { limit: 8 });
+  } else {
+    box.innerHTML = d.per_mod.map(function (m, i) {
+      return '<div class="feed-item" style="border-bottom:1px solid var(--line)">' +
+        '<div class="feed-item-icon">' + (i + 1) + '</div>' +
+        '<div class="feed-item-title" style="flex:1">' + esc(m[0]) + '</div>' +
+        '<span class="mono" style="font-weight:700">' + m[1] + '</span></div>';
+    }).join('');
+  }
+  if (window.HakumoChart) {
+    var labels = d.per_day.labels.map(function (l) { return String(l || '').slice(5).split('-').reverse().join('.'); });
+    window.HakumoChart.area($('mrArea'), d.per_day.counts, { labels: labels, height: 150 });
+  }
+}
+
+function renderActions(d) {
+  if (window.HakumoChart && d.by_action.length) {
+    var max = Math.max.apply(null, d.by_action.map(function (a) { return a[1]; }).concat([1]));
+    window.HakumoChart.vbars($('mrActions'), d.by_action.map(function (a) {
+      return { label: a[0], value: a[1] };
+    }));
+  } else {
+    $('mrActions').innerHTML = '<span class="muted">Типов нет</span>';
+  }
+}
+
+function renderRec(d) {
+  $('mrRec').innerHTML = d.recidivists.length
+    ? d.recidivists.map(function (r) {
+        return '<span class="chip danger"><i class="fas fa-repeat"></i> ' + esc(r.name) + ' · ' + r.count + '</span>';
+      }).join('')
+    : '<span class="muted">Рецидивистов нет — за период ни у кого не набралось трёх действий.</span>';
+}
+
+function mrSetDays(n) {
+  DAYS = n;
+  mrLoad();
+}
+
+async function mrLoad() {
+  try {
+    var r = await fetch('/api/mod-report?days=' + DAYS);
+    var d = await r.json();
+    if (!d.success) return;
+    var fp = String(JSON.stringify(d || null) || '').slice(0, 800);
+    if (window.silentGuard && window.silentGuard('mod-report-' + DAYS, fp)) return;
+    STATE = d;
+    var render = function () { renderKpis(d); renderMods(d); renderActions(d); renderRec(d); };
+    if (window.renderSafe) window.renderSafe(render); else render();
+  } catch (e) {}
+}
+
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('#mrSeg .seg-btn');
+  if (b) { mrSetDays(parseInt(b.dataset.days, 10)); }
+});
+$('mrPrint').addEventListener('click', function () { window.print(); });
+
+mrLoad();
+if (window.setLiveRefresh) window.setLiveRefresh(mrLoad, 1500);
+</script>
+{% endblock %}

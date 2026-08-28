@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Инфо-база сервера — Панель Hakumo{% endblock %}
+{% block page_title %}Инфо-база сервера{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">AI <span class="sep">·</span> Инфо-база</div>
+    <h1>Инфо-база сервера</h1>
+  </div>
+</div>
+
+<style>
+.si-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start;margin-top:14px}
+@media (max-width:1000px){.si-grid{grid-template-columns:1fr}}
+.si-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:15px 17px;margin-bottom:16px}
+.si-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.si-panel h3 i{color:var(--ac,var(--ac))}
+.si-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.55}
+.si-field{border:1px solid var(--line-2,color-mix(in srgb, var(--text) 9%, transparent));border-radius:12px;padding:11px 13px;margin-bottom:10px}
+.si-field .t{font-size:13px;font-weight:800;color:var(--text-1,#fff);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.si-field .t i{color:var(--ac,var(--ac));font-size:12px}
+.si-field .txt{font-size:12.5px;line-height:1.6;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));white-space:pre-wrap;word-break:break-word}
+.si-field .none{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));font-style:italic}
+.si-ta{width:100%;min-height:74px;background:var(--surface-2,color-mix(in srgb, var(--text) 5%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none;resize:vertical;font-family:inherit;margin-top:8px}
+.si-ta:focus{border-color:var(--ac,var(--ac))}
+.si-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.si-inp{min-width:120px;background:var(--surface-2,color-mix(in srgb, var(--text) 5%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:10px;padding:9px 12px;color:var(--text-1,#fff);font-size:13px;outline:none}
+.si-inp.wide{flex:1;min-width:160px}
+.si-inp:focus{border-color:var(--ac,var(--ac))}
+.si-btn{display:inline-flex;align-items:center;gap:7px;background:var(--ac,var(--ac));color:#1a1a1a;border:none;border-radius:10px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer}
+.si-btn:hover{filter:brightness(1.08)}
+.si-btn.ghost{background:transparent;color:var(--ac,var(--ac));border:1px solid var(--ac-line,color-mix(in srgb, var(--ac) 35%, transparent))}
+.si-btn.danger{background:transparent;color:#ff8a7a;border:1px solid rgba(255,138,122,.4)}
+.si-msg{font-size:12px;padding:6px 2px 0;display:none}
+.si-msg.ok{color:#4ade80}
+.si-msg.err{color:#ff8a7a}
+.si-pair{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 9%, transparent));border-radius:12px;margin-bottom:8px}
+.si-pair .k{flex:0 0 160px;font-weight:800;font-size:12.5px;color:var(--text-1,#fff);word-break:break-word}
+.si-pair .v{flex:1;font-size:12.5px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));white-space:pre-wrap;word-break:break-word}
+.si-del{border:none;background:transparent;color:#ff8a7a;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:7px}
+.si-del:hover{background:rgba(255,138,122,.12)}
+.si-ctx{background: var(--bg);border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:12px;padding:12px 14px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.7;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));white-space:pre-wrap;word-break:break-word;margin:0}
+[data-theme="light"] .si-ctx{background: var(--bg)}
+[data-theme="light"] .si-field,[data-theme="light"] .si-pair{border-color:rgba(0,0,0,.12)}
+</style>
+
+<div class="si-grid">
+  <div>
+    <div class="si-panel">
+      <h3><i class="fas fa-circle-info"></i> Поля базы</h3>
+      <div class="si-sub">Те самые три кнопки-модалки из !server-info: «О сервере», «Правила», «Как стать модератором». Текст до 1000 символов, как в форме бота; пустое поле стирает запись. Файл общий — AI-чат и команда видят то же самое.</div>
+      <div id="siFields">
+        <div class="sk-card" style="height:86px;margin-bottom:9px"></div>
+        <div class="sk-card" style="height:86px"></div>
+      </div>
+      <div class="si-msg" id="siMsg"></div>
+    </div>
+    <div class="si-panel">
+      <h3><i class="fas fa-list-check"></i> Свои пары</h3>
+      <div class="si-sub">Как «Добавить информацию» в боте: заголовок до 50 знаков, содержимое до 500. В карточке бота видны первые пять пар и начало текста (200 знаков) — здесь редактор видит всё.</div>
+      <div id="siPairs"></div>
+      <div class="si-row" id="siPairForm" style="display:none">
+        <input class="si-inp" id="siPairKey" maxlength="50" placeholder="Заголовок">
+        <input class="si-inp wide" id="siPairVal" maxlength="500" placeholder="Содержимое">
+        <button type="button" class="si-btn" id="siPairAdd"><i class="fas fa-plus"></i> Добавить</button>
+      </div>
+      <div class="si-msg" id="siPairMsg"></div>
+      <div class="si-row" id="siClearRow" style="display:none;margin-top:14px">
+        <button type="button" class="si-btn danger" id="siClear"><i class="fas fa-broom"></i> Очистить всю базу</button>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="si-panel">
+      <h3><i class="fas fa-brain"></i> Контекст для AI</h3>
+      <div class="si-sub">В точности тот текст, что собирает get_sunucu_context для AI-чата — блок «СЕРВЕР ИНФОРМАЦИЯ» и строки данных.</div>
+      <div id="siEmpty" style="display:none"></div>
+      <pre class="si-ctx" id="siContext">Читаю…</pre>
+    </div>
+  </div>
+</div>
+
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/server-info';
+var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function showMsg(id, ok, text) {
+  var m = document.getElementById(id);
+  m.style.display = 'block'; m.className = 'si-msg ' + (ok ? 'ok' : 'err');
+  m.textContent = text;
+}
+
+var FIELD_ICONS = {about: 'fa-circle-info', rules: 'fa-scroll', mod: 'fa-user-shield'};
+
+function render(v) {
+  var fb = document.getElementById('siFields');
+  fb.innerHTML = v.fields.map(function (f) {
+    var body = CAN_EDIT
+      ? '<textarea class="si-ta" id="siF-' + esc(f.key) + '" maxlength="1000">' + esc(f.value) + '</textarea>' +
+        '<div class="si-row"><button type="button" class="si-btn" onclick="siSaveField(\'' + esc(f.key) + '\')"><i class="fas fa-floppy-disk"></i> Сохранить</button>' +
+        '<button type="button" class="si-btn ghost" onclick="siClearField(\'' + esc(f.key) + '\')"><i class="fas fa-eraser"></i> Стереть</button></div>'
+      : (f.card ? '<div class="txt">' + esc(f.card) + '</div>' : '<div class="none">пока пусто</div>');
+    return '<div class="si-field"><div class="t"><i class="fas ' + (FIELD_ICONS[f.key] || 'fa-circle-info') + '"></i> ' + esc(f.title) + '</div>' + body + '</div>';
+  }).join('');
+
+  var pb = document.getElementById('siPairs');
+  if (!v.pairs.length) {
+    pb.innerHTML = '<div class="empty-state" style="margin:4px 0"><i class="fas fa-list-check"></i><div>Пар пока нет.<div class="empty-tip">Например: «Ссылка Discord», «День событий» — бот подставит их в ответы AI.</div></div></div>';
+  } else {
+    pb.innerHTML = v.pairs.map(function (p) {
+      return '<div class="si-pair"><div class="k">' + esc(p.key) + '</div><div class="v">' + esc(p.value) + '</div>' +
+        (CAN_EDIT ? '<button type="button" class="si-del" title="Убрать пару" onclick="siDelPair(\'' + esc(p.key) + '\')"><i class="fas fa-trash"></i></button>' : '') + '</div>';
+    }).join('');
+  }
+
+  document.getElementById('siEmpty').style.display = v.empty ? '' : 'none';
+  document.getElementById('siEmpty').innerHTML = v.empty
+    ? '<div class="empty-state" style="margin:4px 0 10px"><i class="fas fa-inbox"></i><div>' + esc(v.note) + '<div class="empty-tip">Заполните поля слева — контекст появится сразу.</div></div></div>' : '';
+  document.getElementById('siContext').textContent = v.context || '—';
+}
+
+function post(path, body, msgId) {
+  fetch(API + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)})
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      showMsg(msgId, d.success, d.success ? d.message : (d.error || 'Ошибка'));
+      if (d.success) { render(d.view); }
+    })
+    .catch(function () { showMsg(msgId, false, 'Сеть моргнула — попробуйте ещё раз'); });
+}
+
+function siSaveField(f) {
+  post('/field', {field: f, text: document.getElementById('siF-' + f).value}, 'siMsg');
+}
+
+function siClearField(f) {
+  askConfirm('Стереть это поле?',
+    'Запись исчезнет из общего файла — AI-чат и команда больше её не увидят.',
+    function () { post('/field', {field: f, text: ''}, 'siMsg'); },
+    {danger: true, okText: 'Стереть', icon_fa: 'fa-eraser'});
+}
+
+function siDelPair(key) {
+  askConfirm('Убрать пару «' + key + '»?',
+    'Файл общий — пара пропадёт и для бота.',
+    function () { post('/pair-delete', {key: key}, 'siPairMsg'); },
+    {danger: true, okText: 'Убрать', icon_fa: 'fa-trash'});
+}
+
+function load() {
+  fetch(API + '/view').then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) {
+      if (window.renderIfChanged) { window.renderIfChanged('server-info', d.view, function () { render(d.view); }); }
+      else { render(d.view); }
+    }
+  }).catch(function () {});
+}
+
+if (CAN_EDIT) {
+  document.getElementById('siPairForm').style.display = '';
+  document.getElementById('siClearRow').style.display = '';
+  document.getElementById('siPairAdd').onclick = function () {
+    post('/pair', {key: document.getElementById('siPairKey').value,
+                   value: document.getElementById('siPairVal').value}, 'siPairMsg');
+    document.getElementById('siPairKey').value = '';
+    document.getElementById('siPairVal').value = '';
+  };
+  document.getElementById('siClear').onclick = function () {
+    askConfirm('Очистить всю инфо-базу?',
+      'Как кнопка «Очистить» в боте: поля и все пары исчезнут из общего файла разом.',
+      function () { post('/clear', {}, 'siPairMsg'); },
+      {danger: true, okText: 'Очистить', icon_fa: 'fa-broom'});
+  };
+}
+
+load();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { load(); } catch (e) {} }, 1500);
+</script>
+{% endblock %}

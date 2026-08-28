@@ -1,128 +1,221 @@
 {% extends "base.html" %}
-{% block title %}Поиск участников — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-search" ></i> Поиск участников{% endblock %}
+{% block title %}Поиск участников — Hakumo{% endblock %}
+{% block page_title %}Поиск участников{% endblock %}
 {% block content %}
-<style>
-.ms-bar { display: flex; gap: 8px; margin-bottom: 16px; max-width: 560px; }
-.ms-bar input[type="text"] { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; }
-.ms-bar input[type="text"]:focus { border-color: var(--ac); box-shadow: 0 0 0 3px var(--ac-soft); }
-.ms-bar .btn { background: linear-gradient(135deg, var(--ac), #c8972f); color: #1a1405; border: none; border-radius: var(--r-sm); padding: 0 18px; font-weight: var(--fw-bold); cursor: pointer; }
-.ms-results { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-.ms-result-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); cursor: pointer; transition: all .15s var(--ease); }
-.ms-result-card:hover { border-color: var(--ac); background: rgba(224,176,74,0.05); }
-.ms-result-card img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--ac-soft); }
-.ms-result-card .name { font-weight: var(--fw-semibold); font-size: 14px; }
-.ms-result-card .id { font-size: 11px; color: #8a8374; margin-top: 2px; }
-.ms-profile { display: none; grid-template-columns: 1fr 1fr; gap: 12px; }
-.ms-profile > div { display: flex; flex-direction: column; gap: 12px; }
-.ms-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; }
-.ms-card h2 { font-size: 13px; font-weight: var(--fw-bold); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-.ms-card h2 i { color: var(--ac); }
-.ms-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
-.ms-row:last-child { border-bottom: none; }
-.ms-key { color: #8a8374; }
-.ms-val.ok { color: var(--ok); font-weight: var(--fw-semibold); }
-.ms-val.danger { color: var(--err); font-weight: var(--fw-bold); }
-.warn-item, .case-item { font-size: 12.5px; padding: 7px 0; border-bottom: 1px solid var(--line); }
-.warn-item:last-child, .case-item:last-child { border-bottom: none; }
-@media (max-width: 720px) { .ms-profile { grid-template-columns: 1fr; } }
-</style>
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Поиск участников</span>
-    </div>
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Участники <span class="sep">·</span> Поиск</div>
     <h1>Поиск участников</h1>
-    <p>Быстрый поиск участников по имени или ID.</p>
+    <p class="lead">Ищется по имени, никнейму, @упоминанию и даже части ID. Результаты появляются сами, пока вы печатаете.</p>
   </div>
 </div>
-{% endblock %}
 
-
-
-<div class="ms-bar">
-  <input type="text" id="ms-query" placeholder="Имя пользователя или ID..." onkeydown="if(event.key==='Enter')search()">
-  <button class="btn btn-primary" onclick="search()"><i class="fas fa-search"></i> Поиск</button>
+<div class="panel" style="max-width:960px">
+  <div class="toolbar">
+    <label class="field has-icon" style="flex:1"><i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="ms-query" placeholder="Имя, никнейм, @упоминание или ID..." oninput="onQueryInput()" onkeydown="if(event.key==='Enter')searchNow()" aria-label="Имя, никнейм или ID участника" autocomplete="off" spellcheck="false">
+    </label>
+    <button type="button" class="btn btn-primary" onclick="searchNow()"><i class="fas fa-search"></i> Поиск</button>
+  </div>
+  <div class="toolbar" style="border-top:1px solid var(--line)">
+    <div class="chip-row" id="ms-chips">
+      <button type="button" class="chip selectable" data-q="a">a</button>
+      <button type="button" class="chip selectable" data-q="m">m</button>
+      <button type="button" class="chip selectable" data-q="k">k</button>
+      <button type="button" class="chip selectable" data-q="d">d</button>
+      <button type="button" class="chip selectable" data-q="s">s</button>
+    </div>
+    <span class="spacer"></span>
+    <span class="hint" id="ms-count"></span>
+  </div>
 </div>
 
 <div id="ms-results" class="ms-results"></div>
-<div id="ms-profile" class="ms-profile"  ></div>
+<div id="ms-profile" class="ms-profile"></div>
 
 <script>
 var GUILD_ID = '{{ guild_id }}';
+var SEARCH_SEQ = 0;
+var SEARCH_TIMER = null;
+
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-async function search() {
+function statusRu(s) {
+  return { online: 'В сети', idle: 'Не активен', dnd: 'Не беспокоить', invisible: 'Невидимый', offline: 'Не в сети' }[s] || 'Не в сети';
+}
+
+function noteHtml(text, isErr) {
+  return '<div class="ms-note' + (isErr ? ' error' : '') + '">' + esc(text) + '</div>';
+}
+
+function roleChips(roles) {
+  if (!roles || !roles.length) return '<span class="muted">нет</span>';
+  return roles.map(function (r) {
+    var c = String(r.color || '');
+    if (c && c.charAt(0) !== '#') c = '#' + c;
+    if (!/^#[0-9a-fA-F]{6}$/.test(c) || c.toLowerCase() === '#000000') c = '';
+    return '<span class="badge neutral"' + (c ? ' style="border-color:' + c + ';color:' + c + '"' : '') + '>' + esc(r.name) + '</span>';
+  }).join(' ');
+}
+
+function onQueryInput() {
+  clearTimeout(SEARCH_TIMER);
+  SEARCH_TIMER = setTimeout(searchNow, 280);
+}
+
+async function searchNow() {
   var q = document.getElementById('ms-query').value.trim();
-  if (!q) return;
-  document.getElementById('ms-results').innerHTML = '<div >Поиск...</div>';
+  if (!GUILD_ID) {
+    document.getElementById('ms-results').innerHTML = noteHtml('Сервер не выбран на панели — поиск недоступен.', true);
+    return;
+  }
+  var seq = ++SEARCH_SEQ;
+  document.getElementById('ms-results').innerHTML = noteHtml('Поиск...');
   document.getElementById('ms-profile').style.display = 'none';
   try {
-    var d = await fetch('/api/member-search/' + GUILD_ID + '?q=' + encodeURIComponent(q)).then(r => r.json());
-    if (!d.length) {
-      document.getElementById('ms-results').innerHTML = '<div >Ничего не найдено</div>';
+    var resp = await fetch('/api/member-search/' + GUILD_ID + '?q=' + encodeURIComponent(q));
+    var d = await resp.json();
+    if (seq !== SEARCH_SEQ) return;
+    if (!Array.isArray(d)) {
+      document.getElementById('ms-results').innerHTML = noteHtml(d && d.error ? d.error : 'Ошибка поиска.', true);
       return;
     }
-    document.getElementById('ms-results').innerHTML = d.map(function(m) {
-      return '<div class="ms-result-card" onclick="loadProfile(' + m.id + ')">' +
-        (m.avatar ? '<img src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div   style="width: 32px; height: 32px;">👤</div>') +
-        '<div><div class="name">' + esc(m.display_name) + '</div>' +
-        '<div class="id">' + esc(m.id) + '</div></div>' +
+    document.getElementById('ms-count').textContent = d.length ? 'найдено: ' + d.length : '';
+    if (!d.length) {
+      document.getElementById('ms-results').innerHTML = noteHtml('Ничего не найдено по запросу "' + q + '".');
+      return;
+    }
+    var statusCls = { online: 'ok', idle: 'warn', dnd: 'err', offline: 'offline', invisible: 'offline' };
+    document.getElementById('ms-results').innerHTML = d.map(function (m) {
+      var av = m.avatar
+        ? '<img src="' + esc(m.avatar) + '" alt="" onerror="this.style.display=\'none\'">'
+        : '<div class="ms-av-fb" style="width:46px;height:46px;font-size:19px;"><i class="fas fa-user"></i></div>';
+      var sc = statusCls[m.status] || 'offline';
+      var sub = m.nickname ? ('@' + m.name + ' · ник: ' + m.nickname) : ('@' + m.name);
+      return '<div class="feed-item ms-result-card" id="msrc-' + esc(m.id) + '" onclick="selectMember(\'' + esc(m.id) + '\')" style="cursor:pointer">' +
+        '<div class="av-wrap"><span class="av" style="display:inline-flex;width:46px;height:46px;border-radius:50%;overflow:hidden;background:var(--surface-3)">' + av + '</span><span class="status-dot ' + sc + '"></span></div>' +
+        '<div style="min-width:0;flex:1">' +
+          '<div class="feed-item-title">' + esc(m.display_name) + (m.is_bot ? ' <span class="badge neutral">БОТ</span>' : '') + '</div>' +
+          '<div class="feed-item-sub">' + esc(sub) + '</div>' +
+          '<div class="feed-item-time mono">' + esc(m.id) + '</div>' +
+        '</div>' +
+        '<i class="fas fa-chevron-right" style="color:var(--text-3);font-size:11px"></i>' +
       '</div>';
     }).join('');
-  } catch(e) {
-    document.getElementById('ms-results').innerHTML = '<div >Ошибка: ' + esc(e.message) + '</div>';
+  } catch (e) {
+    if (seq !== SEARCH_SEQ) return;
+    document.getElementById('ms-results').innerHTML = noteHtml('Ошибка: ' + (e && e.message ? e.message : e), true);
   }
 }
 
-async function loadProfile(userId) {
-  document.getElementById('ms-profile').style.display = 'none';
+async function selectMember(userId) {
+  var cards = document.querySelectorAll('.ms-result-card');
+  for (var i = 0; i < cards.length; i++) cards[i].classList.toggle('active', cards[i].id === 'msrc-' + userId);
+  var el = document.getElementById('ms-profile');
+  el.style.display = 'none';
   try {
-    var d = await fetch('/api/member-profile/' + GUILD_ID + '/' + userId).then(r => r.json());
-    var el = document.getElementById('ms-profile');
+    var resp = await fetch('/api/member-profile/' + GUILD_ID + '/' + encodeURIComponent(userId));
+    var d = await resp.json();
+    if (d && d.error && !d.warnings) {
+      el.innerHTML = noteHtml(d.error, true);
+      el.style.display = 'block';
+      return;
+    }
     el.style.display = 'grid';
 
     var warns = d.warnings || [];
-    var cases = d.cases || [];
+    var cases = d.cases || d.case || [];
+    var statusKey = (d.status || 'offline');
+    var statusCls = { online: 'ok', idle: 'warn', dnd: 'err', offline: 'offline', invisible: 'offline' };
+    var sc = statusCls[statusKey] || 'offline';
 
-    var leftHtml = '<div>' +
-      '<div class="ms-card">' +
-        '<div  >' +
-          (d.avatar ? '<img src="' + esc(d.avatar) + '"   style="width: 64px; height: 64px;" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' : '<div   style="width: 64px; height: 64px;">👤</div>') +
-          '<div><div >' + esc(d.display_name||d.name||userId) + '</div>' +
-          '<div >@' + esc(d.name||userId) + '</div></div>' +
+    var avBlock = d.avatar
+      ? '<img src="' + esc(d.avatar) + '" alt="" onerror="this.style.display=\'none\'">'
+      : '<div class="ms-av-fb" style="width:76px;height:76px;font-size:30px;"><i class="fas fa-user"></i></div>';
+
+    var notFoundRow = (d.member_found === false)
+      ? '<div class="ms-row"><span class="ms-key">На сервере</span><span class="ms-val danger">Не найден — показаны только локальные записи</span></div>'
+      : '';
+
+    var leftHtml = '<div class="panel"><div class="panel-head"><div><h2><i class="fas fa-id-card"></i> ' +
+      esc(d.display_name || d.name || userId) + (d.is_bot ? ' <span class="badge neutral">БОТ</span>' : '') + '</h2>' +
+      '<div class="sub">@' + esc(d.name || userId) + '</div></div></div>' +
+      '<div class="panel-body">' +
+        '<div class="member-detail-info">' +
+          '<div class="av-wrap"><span class="av" style="display:inline-flex;width:76px;height:76px;border-radius:50%;overflow:hidden;background:var(--surface-3)">' + avBlock + '</span><span class="status-dot big ' + sc + '"></span></div>' +
+          '<div class="member-detail-name">' + esc(d.display_name || d.name || userId) + '</div>' +
+          '<div class="member-detail-sub">' + statusRu(statusKey) + '</div>' +
         '</div>' +
-        '<div class="ms-row"><span class="ms-key">ID</span><span class="ms-val id">' + esc(d.id) + '</span></div>' +
-        (d.joined_at ? '<div class="ms-row"><span class="ms-key">Дата входа</span><span class="ms-val">' + new Date(d.joined_at).toLocaleDateString('ru-RU') + '</span></div>' : '') +
-        (d.created_at ? '<div class="ms-row"><span class="ms-key">Аккаунт создан</span><span class="ms-val">' + new Date(d.created_at).toLocaleDateString('ru-RU') + '</span></div>' : '') +
-        '<div class="ms-row"><span class="ms-key">Роли</span><span class="ms-val">' + esc((d.roles||[]).slice(0,4).join(', ') || '—') + '</span></div>' +
-        '<div class="ms-row"><span class="ms-key">Предупреждения</span><span class="ms-val ' + (warns.length>0?'danger':'ok') + '">' + warns.length + '</span></div>' +
+        '<div class="ms-row"><span class="ms-key">ID</span><span class="ms-val id copyable" title="Клик — скопировать ID" onclick="copyId(this, \'' + esc(d.id || userId) + '\')">' + esc(d.id || userId) + '</span></div>' +
+        (d.nickname ? '<div class="ms-row"><span class="ms-key">Никнейм</span><span class="ms-val">' + esc(d.nickname) + '</span></div>' : '') +
+        (d.joined_at ? '<div class="ms-row"><span class="ms-key">Дата входа</span><span class="ms-val">' + new Date(d.joined_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) + '</span></div>' : '') +
+        (d.created_at ? '<div class="ms-row"><span class="ms-key">Аккаунт создан</span><span class="ms-val">' + new Date(d.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) + '</span></div>' : '') +
+        '<div class="ms-row"><span class="ms-key">Роли</span><span class="ms-val chip-row" style="justify-content:flex-end">' + roleChips(d.roles) + '</span></div>' +
+        notFoundRow +
+        '<div class="ms-row"><span class="ms-key">Предупреждения</span><span class="ms-val ' + (warns.length > 0 ? 'danger' : 'ok') + '">' + warns.length + '</span></div>' +
         '<div class="ms-row"><span class="ms-key">Записей модерации</span><span class="ms-val">' + cases.length + '</span></div>' +
-      '</div>' +
-    '</div>';
+      '</div></div>';
 
-    var rightHtml = '<div>' +
-      '<div class="ms-card">' +
-        '<h2><i class="fas fa-exclamation-triangle"></i> Предупреждения (' + warns.length + ')</h2>' +
-        (warns.length ? warns.slice(-5).map(function(w){
-          return '<div class="warn-item"><div >#' + esc(w.id) + ' — ' + esc((w.timestamp||'').slice(0,10)) + '</div><div   style="margin-top: 3px;">' + esc(w.reason||'?') + '</div></div>';
-        }).join('') : '<div >✓ Предупреждений нет</div>') +
-      '</div>' +
-      '<div class="ms-card">' +
-        '<h2><i class="fas fa-clipboard-list"></i> История модерации (' + cases.length + ')</h2>' +
-        (cases.length ? cases.slice(-5).map(function(c){
-          return '<div class="case-item"><div >#' + esc(c.id) + ' ' + esc((c.action||'').toUpperCase()) + ' — ' + esc((c.timestamp||'').slice(0,10)) + '</div><div   style="margin-top: 3px;">' + esc(c.reason||'?') + '</div></div>';
-        }).join('') : '<div >✓ Записей нет</div>') +
-      '</div>' +
-    '</div>';
+    var warnsHtml = warns.length
+      ? warns.slice(-5).map(function (w, wi) {
+          return '<div class="warn-item"><div class="ms-meta">#' + esc(w.id == null ? warns.length - 4 + wi : w.id) +
+            (w.timestamp ? ' — ' + esc(String(w.timestamp).slice(0, 10)) : '') +
+            (w.mod ? ' <span class="warn-mod">· ' + esc(w.mod) + '</span>' : '') + '</div>' +
+            '<div style="margin-top:3px;">' + esc(w.reason || '—') + '</div></div>';
+        }).join('') + (warns.length > 5 ? '<div class="ms-meta" style="margin-top:6px;">…и ещё ' + (warns.length - 5) + '</div>' : '')
+      : '<div class="empty-ok">Предупреждений нет</div>';
+
+    var casesHtml = cases.length
+      ? cases.slice(-5).map(function (c, ci) {
+          return '<div class="case-item"><div class="ms-meta">#' + esc(c.id == null ? cases.length - 4 + ci : c.id) +
+            ' <span class="badge neutral">' + esc(String(c.action || '?').toUpperCase()) + '</span>' +
+            (c.timestamp ? ' — ' + esc(String(c.timestamp).slice(0, 10)) : '') +
+            (c.mod ? ' <span class="warn-mod">· ' + esc(c.mod) + '</span>' : '') + '</div>' +
+            '<div style="margin-top:3px;">' + esc(c.reason || '—') + '</div></div>';
+        }).join('') + (cases.length > 5 ? '<div class="ms-meta" style="margin-top:6px;">…и ещё ' + (cases.length - 5) + '</div>' : '')
+      : '<div class="empty-ok">Записей нет</div>';
+
+    var rightHtml = '<div class="panel"><div class="panel-head"><div><h2><i class="fas fa-triangle-exclamation"></i> Предупреждения (' + warns.length + ')</h2></div></div><div class="panel-body">' + warnsHtml + '</div></div>' +
+      '<div class="panel"><div class="panel-head"><div><h2><i class="fas fa-clipboard-list"></i> История модерации (' + cases.length + ')</h2></div></div><div class="panel-body">' + casesHtml + '</div></div>';
 
     el.innerHTML = leftHtml + rightHtml;
-  } catch(e) {
-    document.getElementById('ms-profile').innerHTML = '<div >Ошибка загрузки: ' + esc(e.message) + '</div>';
-    document.getElementById('ms-profile').style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) {
+    el.innerHTML = noteHtml('Ошибка загрузки профиля: ' + (e && e.message ? e.message : e), true);
+    el.style.display = 'block';
   }
 }
+
+function copyId(node, id) {
+  var done = function () {
+    node.textContent = 'Скопировано!';
+    if (typeof window.showToast === 'function') window.showToast('ID скопирован', true);
+    setTimeout(function () { node.textContent = id; }, 900);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(id).then(done, function () {});
+  }
+}
+
+/* быстрые чипы */
+document.querySelectorAll('#ms-chips [data-q]').forEach(function (chip) {
+  chip.addEventListener('click', function () {
+    document.getElementById('ms-query').value = chip.dataset.q;
+    searchNow();
+    document.getElementById('ms-query').focus();
+  });
+});
+
+document.getElementById('ms-query').focus();
+
+// Глубокая ссылка ?q=... — сразу запускаем поиск
+try {
+  var qp = new URLSearchParams(window.location.search).get('q');
+  if (qp) {
+    document.getElementById('ms-query').value = qp;
+    searchNow();
+  }
+} catch (e) { /* параметр опционален */ }
 </script>
 {% endblock %}

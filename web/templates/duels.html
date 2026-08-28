@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Дуэли — Панель Hakumo{% endblock %}
+{% block page_title %}Дуэльная арена{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество <span class="sep">·</span> Дуэли</div>
+    <h1>Дуэльная арена</h1>
+  </div>
+</div>
+
+<style>
+.dl-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px}
+.dl-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:10px 16px}
+.dl-kpi i{color:var(--ac,var(--ac));font-size:16px}
+.dl-kpi b{font-size:18px;color:var(--text-1,#fff)}
+.dl-kpi span{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
+.dl-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.dl-grid{grid-template-columns:1fr}}
+.dl-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.dl-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.dl-panel h3 i{color:var(--ac,var(--ac))}
+.dl-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.5}
+.dl-tb{width:100%;border-collapse:collapse}
+.dl-tb td{padding:9px 6px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent);font-size:13px;color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));vertical-align:middle}
+.dl-tb tr:last-child td{border-bottom:none}
+.dl-pos{font-weight:700;color:var(--ac,var(--ac));width:30px;font-variant-numeric:tabular-nums}
+.dl-score{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+.dl-wr{width:130px}
+.dl-wr .bar{height:5px;border-radius:3px;background:color-mix(in srgb, var(--text) 7%, transparent);overflow:hidden;margin-top:4px}
+.dl-wr .bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#e67e22,#f0a35e)}
+.dl-wr small{font-size:11px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));font-variant-numeric:tabular-nums}
+.dl-streak{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#f0a35e;background:rgba(230,126,34,.1);border:1px solid rgba(230,126,34,.3);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.dl-hot{display:flex;flex-wrap:wrap;gap:8px}
+.dl-hotchip{display:flex;flex-direction:column;gap:2px;border:1px solid rgba(230,126,34,.25);background:rgba(230,126,34,.06);border-radius:12px;padding:8px 14px;min-width:110px}
+.dl-hotchip b{font-size:13px;color:var(--text-1,#fff)}
+.dl-hotchip span{font-size:11px;color:#f0a35e;font-weight:700}
+.dl-feed{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
+.dl-feed:last-child{border-bottom:none}
+.dl-feed i{color:#e67e22;font-size:13px}
+.dl-feed .who{font-size:13px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent))}
+.dl-feed .score{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));font-variant-numeric:tabular-nums}
+.dl-feed .when{font-size:11px;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));white-space:nowrap;font-variant-numeric:tabular-nums}
+[data-theme="light"] .dl-tb td,[data-theme="light"] .dl-feed{border-bottom-color:rgba(0,0,0,.08)}
+[data-theme="light"] .dl-wr .bar{background: var(--bg)}
+</style>
+
+<div class="dl-kpis" id="dlKpis">
+  <div class="sk-card" style="width:180px;height:56px"></div>
+  <div class="sk-card" style="width:180px;height:56px"></div>
+  <div class="sk-card" style="width:180px;height:56px"></div>
+</div>
+
+<div id="dlHotWrap" class="dl-panel" style="display:none">
+  <h3><i class="fas fa-fire"></i> Горячие серии</h3>
+  <div class="dl-sub">Идущие прямо сейчас победные серии (2+ подряд).</div>
+  <div class="dl-hot" id="dlHot"></div>
+</div>
+
+<div class="dl-grid">
+  <div class="dl-panel">
+    <h3><i class="fas fa-ranking-star"></i> Топ дуэлянтов</h3>
+    <div class="dl-sub">Тот же порядок, что даёт <code>/дуэлтоп</code>: по победам, потом по винрейту.</div>
+    <div id="dlTop">
+      <div class="sk-row" style="height:40px"></div>
+      <div class="sk-row" style="height:40px;width:80%"></div>
+      <div class="sk-row" style="height:40px;width:65%"></div>
+    </div>
+  </div>
+
+  <div class="dl-panel">
+    <h3><i class="fas fa-clock-rotate-left"></i> Свежие бои</h3>
+    <div class="dl-sub">Кто когда сражался в последний раз.</div>
+    <div id="dlRecent">
+      <div class="sk-row" style="height:36px"></div>
+      <div class="sk-row" style="height:36px;width:75%"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function dlPlural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function renderKpis(d) {
+  document.getElementById('dlKpis').innerHTML =
+    '<div class="dl-kpi"><i class="fas fa-shield-halved"></i><div><b>' + d.total_duels + '</b> <span>' + dlPlural(d.total_duels, 'дуэль', 'дуэли', 'дуэлей') + ' сыграно</span></div></div>' +
+    '<div class="dl-kpi"><i class="fas fa-users"></i><div><b>' + d.players + '</b> <span>' + dlPlural(d.players, 'дуэлянт', 'дуэлянта', 'дуэлянтов') + '</span></div></div>' +
+    '<div class="dl-kpi"><i class="fas fa-fire-flame-curved"></i><div><b>' + d.best_streak_ever + '</b> <span>лучшая серия за всё время</span></div></div>';
+}
+
+function renderHot(d) {
+  var wrap = document.getElementById('dlHotWrap');
+  if (!d.hot.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  document.getElementById('dlHot').innerHTML = d.hot.map(function (h) {
+    return '<div class="dl-hotchip"><b>' + esc(h.name) + '</b>' +
+      '<span><i class="fas fa-fire"></i> серия ' + h.streak + '</span></div>';
+  }).join('');
+}
+
+function renderTop(d) {
+  var box = document.getElementById('dlTop');
+  if (!d.top.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-shield-halved"></i><p>Дуэлей пока не было</p>' +
+      '<p class="empty-tip">Вызовите соперника в Discord: <code>/дуэль @участник</code> — бот кинет честную монетку 50/50.</p></div>';
+    return;
+  }
+  box.innerHTML = '<table class="dl-tb">' + d.top.map(function (r, i) {
+    var streak = r.streak >= 2 ? ' <span class="dl-streak"><i class="fas fa-fire"></i> ' + r.streak + '</span>' : '';
+    return '<tr><td class="dl-pos">' + (i + 1) + '</td>' +
+      '<td>' + esc(r.name) + streak + '</td>' +
+      '<td class="dl-score">' + r.wins + ' : ' + r.losses + '</td>' +
+      '<td class="dl-wr"><small>' + r.winrate + '% побед · серия макс ' + r.best_streak + '</small>' +
+      '<b>' + r.winrate + '%</b></td></tr>';
+  }).join('') + '</table>';
+}
+
+function renderRecent(d) {
+  var box = document.getElementById('dlRecent');
+  if (!d.recent.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p>Активности нет</p>' +
+      '<p class="empty-tip">Как только сыграют первую дуэль, здесь появятся записи.</p></div>';
+    return;
+  }
+  box.innerHTML = d.recent.map(function (r) {
+    var when = String(r.ts || '').slice(0, 16).replace('T', ' ');
+    return '<div class="dl-feed"><i class="fas fa-bolt"></i>' +
+      '<div><div class="who">' + esc(r.name) + '</div><div class="score">счёт ' + esc(r.summary) + '</div></div>' +
+      '<span class="when">' + esc(when) + '</span></div>';
+  }).join('');
+}
+
+async function dlLoad() {
+  var r = await fetch('/api/duels/state');
+  var d = await r.json();
+  if (!d.success) return;
+  var render = function () { renderKpis(d); renderHot(d); renderTop(d); renderRecent(d); };
+  if (window.renderSafe) window.renderSafe(render); else render();
+}
+
+dlLoad();
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(dlLoad, 1500);
+</script>
+{% endblock %}

@@ -5,7 +5,7 @@
 
 import discord
 from typing import List, Dict, Optional, Union
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class CustomMenu:
@@ -31,7 +31,7 @@ class CustomMenu:
         'dark': 0x2C2F33,         # Koyu gri
     }
     
-    # Dekorasyonlar (эмодзи yok, sadece чizgiler)
+    # Декорации (без эмодзи, только линии)
     BORDERS = {
         'single': '' * 40,
         'double': '' * 40,
@@ -65,9 +65,12 @@ class CustomMenu:
         self,
         title: str,
         content: str,
-        inline: bool = False
+        inline: bool = False,
+        emoji: str = None
     ):
-        """Bёlюm ekle (эмодзи yok)"""
+        """Добавить раздел (emoji необязателен)"""
+        if emoji:
+            title = f"{emoji} {title}"
         self.sections.append({
             'title': title,
             'content': content,
@@ -81,14 +84,14 @@ class CustomMenu:
         layout: str = 'grid'
     ):
         """
-        Статистика ekle (эмодзи yok)
+        Добавить статистику (без эмодзи)
         
         Args:
             stats: [{'label': 'Всего', 'value': 150}, ...]
-            layout: 'grid' (3'lю) veya 'list' (tek sюtun)
+            layout: 'grid' (по 3) или 'list' (одна колонка)
         """
         if layout == 'grid':
-            # 3'lю grid
+            # grid по 3
             for i in range(0, len(stats), 3):
                 row = stats[i:i+3]
                 for stat in row:
@@ -104,7 +107,7 @@ class CustomMenu:
                 lines.append(f"**{stat['label']}:** `{stat['value']}`")
             
             self.add_section(
-                title="Иstatistikler",
+                title="Статистика",
                 content="\n".join(lines)
             )
         
@@ -116,7 +119,7 @@ class CustomMenu:
         current: int,
         maximum: int
     ):
-        """Иlerleme чubuгu ekle (эмодзи yok)"""
+        """Добавить полосу прогресса (без эмодзи)"""
         percentage = (current / maximum) * 100 if maximum > 0 else 0
         filled = int(percentage / 5)
         bar = "" * filled + "" * (20 - filled)
@@ -130,9 +133,12 @@ class CustomMenu:
         self,
         title: str,
         items: List[str],
-        numbered: bool = True
+        numbered: bool = True,
+        emoji: str = None
     ):
-        """Liste ekle (эмодзи yok)"""
+        """Добавить список (emoji необязателен)"""
+        if emoji:
+            title = f"{emoji} {title}"
         if numbered:
             lines = [f"**{i+1}.** {item}" for i, item in enumerate(items)]
         else:
@@ -151,13 +157,13 @@ class CustomMenu:
         code: str,
         language: str = ''
     ):
-        """Kod bloгu ekle (эмодзи yok)"""
+        """Добавить блок кода (без эмодзи)"""
         content = f"```{language}\n{code}\n```"
         self.add_section(title=title, content=content)
         return self
     
     def add_separator(self, style: str = 'single'):
-        """Ayыrыcы ekle"""
+        """Добавить разделитель"""
         separator = self.BORDERS.get(style, self.border)
         self.sections.append({
             'title': None,
@@ -170,7 +176,7 @@ class CustomMenu:
         """Embed создать"""
         embed = discord.Embed(
             color=self.color,
-            timestamp=datetime.utcnow() if self.show_timestamp else None
+            timestamp=datetime.now(timezone.utc) if self.show_timestamp else None
         )
         
         # Заголовок ve описание
@@ -214,11 +220,11 @@ class CustomMenu:
 
 
 class TicketMenu:
-    """Ticket sistemi для ёzel menю (эмодзи yok)"""
+    """Кастомное меню для системы тикетов (без эмодзи)"""
     
     @classmethod
     def welcome(cls, user, guild, channel):
-        """Ticket добро пожаловать menюsю"""
+        """Приветственное меню тикета"""
         menu = CustomMenu(
             title="Тикет открыт",
             description=f"Добро пожаловать, {user.mention}!\n\nОпишите вашу проблему, и мы поможем вам как можно скорее.",
@@ -227,7 +233,7 @@ class TicketMenu:
         
         menu.add_section("Пользователь", user.mention, inline=True)
         menu.add_section("Канал", channel.mention, inline=True)
-        menu.add_section("Создан", discord.utils.format_dt(discord.utils.utcnow(), style='R'), inline=True)
+        menu.add_section("Создан", discord.utils.format_dt(datetime.now(timezone.utc), style='R'), inline=True)
         
         menu.add_separator()
         
@@ -242,7 +248,7 @@ class TicketMenu:
     
     @classmethod
     def closed(cls, user, closed_by):
-        """Ticket закрытьma menюsю"""
+        """Меню закрытия тикета"""
         menu = CustomMenu(
             title="Тикет закрыт",
             description="Ваш тикет был успешно закрыт.",
@@ -251,7 +257,7 @@ class TicketMenu:
         
         menu.add_section("Пользователь", user.mention, inline=True)
         menu.add_section("Закрыл", closed_by.mention, inline=True)
-        menu.add_section("Время", discord.utils.format_dt(discord.utils.utcnow(), style='R'), inline=True)
+        menu.add_section("Время", discord.utils.format_dt(datetime.now(timezone.utc), style='R'), inline=True)
         
         menu.add_separator()
         
@@ -264,11 +270,11 @@ class TicketMenu:
 
 
 class StatsMenu:
-    """Статистика menюsю (эмодзи yok)"""
+    """Меню статистики (без эмодзи)"""
     
     @classmethod
     def ticket_stats(cls, total, ai_handled, escalated):
-        """Ticket статистикаi"""
+        """Статистика тикетов"""
         menu = CustomMenu(
             title="Статистика тикетов",
             description="Общая статистика системы тикетов",
@@ -293,7 +299,7 @@ class StatsMenu:
     
     @classmethod
     def feedback_stats(cls, total, positive, negative, avg_rating, recent_comments):
-        """Feedback статистикаi"""
+        """Статистика отзывов"""
         menu = CustomMenu(
             title="Статистика отзывов",
             description="Отзывы пользователей о качестве поддержки",
@@ -325,11 +331,11 @@ class StatsMenu:
 
 
 class HelpMenu:
-    """Помощь menюsю (эмодзи yok)"""
+    """Меню помощи (без эмодзи)"""
     
     @classmethod
     def ticket_help(cls):
-        """Ticket помощь menюsю"""
+        """Меню помощи тикетов"""
         menu = CustomMenu(
             title="Справка по тикетам",
             description="Как использовать систему тикетов",
@@ -359,24 +365,24 @@ class HelpMenu:
 
 
 # Пример использования
-async def example_usage():
-    """Ёrnek kullanыm (эмодзи yok)"""
+async def example_usage(interaction, channel):
+    """Пример использования (без эмодзи)"""
     
-    # Ticket добро пожаловать menюsю
+    # Приветственное меню тикета
     welcome_embed = TicketMenu.welcome(
         user=interaction.user,
         guild=interaction.guild,
         channel=channel
     )
     
-    # Статистика menюsю
+    # Меню статистики
     stats_embed = StatsMenu.ticket_stats(
         total=150,
         ai_handled=120,
         escalated=18
     )
     
-    # Feedback menюsю
+    # Меню отзывов
     feedback_embed = StatsMenu.feedback_stats(
         total=89,
         positive=76,
@@ -385,10 +391,10 @@ async def example_usage():
         recent_comments=["Отлично!", "Быстро помогли", "Спасибо!"]
     )
     
-    # Помощь menюsю
+    # Меню помощи
     help_embed = HelpMenu.ticket_help()
     
-    # Ёzel menю создатьma
+    # Создать своё меню
     custom_menu = CustomMenu(
         title="Моё меню",
         description="Это моё кастомное меню без эмодзи",

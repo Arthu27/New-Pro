@@ -1,12 +1,13 @@
 """
 Web Dashboard
-Flask web arayюzю
+Веб-интерфейс на Flask
 """
 
 from flask import Flask, render_template, jsonify, request, redirect, url_for
 from functools import wraps
 import os
 import json
+import secrets
 from datetime import datetime, timedelta
 
 
@@ -16,7 +17,9 @@ class WebDashboard:
     def __init__(self, bot):
         self.bot = bot
         self.app = Flask(__name__)
-        self.app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-here')
+        # Без дефолта: хардкод-ключ из репозитория позволяет подделывать сессии.
+        # Если переменная не задана — случайный ключ на время запуска.
+        self.app.secret_key = os.getenv('FLASK_SECRET_KEY') or secrets.token_hex(32)
         
         self.setup_routes()
     

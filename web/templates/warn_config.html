@@ -1,49 +1,68 @@
 {% extends "base.html" %}
-{% block title %}Настройка порогов — Aether{% endblock %}
+{% block title %}Настройка порогов — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-exclamation-triangle" ></i> Пороги предупреждений{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Пороги предупреждений</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Варны</div>
     <h1>Пороги предупреждений</h1>
-    <p>Настройка автоматических наказаний за предупреждения.</p>
+    <p class="lead">Настройка автоматических наказаний за предупреждения.</p>
   </div>
 </div>
-{% endblock %}
 
 
+<style>
+/* Пороги предупреждений — premium gold */
+.wc-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:20px;margin-bottom:16px;}
+.wc-card h2{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.wc-card h2 i{color:var(--ac)}
+.rule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:14px}
+.rule-grid .form-group label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin-bottom:6px;display:block}
+.rule-grid input,.rule-grid select{width:100%;padding:9px 12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text);font-size:13.5px;outline:none;font-family:inherit}
+.rule-grid input:focus,.rule-grid select:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.add-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:10px;background:linear-gradient(135deg,var(--ac),var(--ac-3));color:#1a1a1a;font-weight:700;font-size:13px;border:none;cursor:pointer;box-shadow:0 4px 14px var(--ac-glow);transition:.15s}
+.add-btn:hover {background:var(--surface-2)}
+.empty-hint{text-align:center;padding:26px;color:var(--text-3);font-size:13px;line-height:1.6}
+.empty-hint i{display:block;font-size:26px;color:var(--ac);opacity:.5;margin-bottom:10px}
+.rule-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;background:linear-gradient(160deg,color-mix(in srgb, var(--text) 2%, transparent),transparent);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;transition:all .16s var(--ease)}
+.rule-item:hover{border-color:var(--ac-line)}
+.rule-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rule-count{font-size:20px;font-weight:800;color:var(--ac-2);font-variant-numeric:tabular-nums}
+.rule-label{font-size:12.5px;color:var(--text-3)}
+.rule-duration{font-size:12px;color:var(--text-2);background:var(--ac-soft);border:1px solid var(--ac-line);padding:3px 10px;border-radius:99px}
+.action-badge{display:inline-block;padding:3px 11px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.action-badge.ab-timeout{background:rgba(167,139,250,.14);color:#c4b5fd;border:1px solid rgba(167,139,250,.3)}
+.action-badge.ab-ban{background:rgba(248,113,113,.14);color:var(--err);border:1px solid rgba(248,113,113,.3)}
+.action-badge.ab-kick{background:rgba(251,146,60,.14);color:#fdba74;border:1px solid rgba(251,146,60,.3)}
+</style>
 
-<div class="wc-card">
+<div class="wc-card" data-reveal="up">
   <h2><i class="fas fa-list"></i> Текущие правила</h2>
-  <div id="rules-list" >Загрузка...</div>
+  <div id="rules-list">Загрузка...</div>
 </div>
 
-<div class="wc-card">
+<div class="wc-card" data-reveal="up">
   <h2><i class="fas fa-plus-circle"></i> Добавить новое правило</h2>
   <div class="rule-grid">
     <div class="form-group">
       <label>Кол-во варнов</label>
-      <input type="number" id="new-count" value="3" min="1" max="20">
+      <input type="number" id="new-count" value="3" min="1" max="20" aria-label="Количество предупреждений">
     </div>
     <div class="form-group">
       <label>Действие</label>
-      <select id="new-action">
-        <option value="timeout">⏳ Мьют</option>
-        <option value="kick">👢 Кик</option>
-        <option value="ban">🔨 Бан</option>
+      <select id="new-action" aria-label="Наказание">
+        <option value="timeout">Мут</option>
+        <option value="kick">Кик</option>
+        <option value="ban">Бан</option>
       </select>
     </div>
     <div class="form-group">
       <label>Длительность (мин)</label>
-      <input type="number" id="new-duration" value="10" min="1" max="10080">
+      <input type="number" id="new-duration" value="10" min="1" max="10080" aria-label="Длительность (мин)">
     </div>
     <div></div>
   </div>
-  <button class="add-btn" onclick="addRule()"><i class="fas fa-plus"></i> Добавить правило</button>
+  <button type="button" class="add-btn" onclick="addRule()"><i class="fas fa-plus"></i> Добавить правило</button>
   <span id="rule-msg"   style="margin-left: 12px;"></span>
 </div>
 
@@ -51,7 +70,7 @@
 var GUILD_ID = '{{ guild_id }}';
 var _rules = [];
 
-var ACTION_LABEL = {timeout: '⏳ Мьют', ban: '🔨 Бан', kick: '👢 Кик'};
+var ACTION_LABEL = {timeout: 'Мут', ban: 'Бан', kick: 'Кик'};
 var ACTION_CLASS = {timeout: 'ab-timeout', ban: 'ab-ban', kick: 'ab-kick'};
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
@@ -81,7 +100,7 @@ function renderRules() {
         '<span class="action-badge ' + cls + '">' + lbl + '</span>' +
         (r.action === 'timeout' ? '<span class="rule-duration">' + r.duration + ' мин</span>' : '') +
       '</div>' +
-      '<button class="del-btn" onclick="deleteRule(' + i + ')" title="Удалить"><i class="fas fa-trash"></i></button>' +
+      '<button type="button" class="del-btn" onclick="deleteRule(' + i + ')" title="Удалить"><i class="fas fa-trash"></i></button>' +
     '</div>';
   }).join('');
 }
@@ -91,13 +110,13 @@ async function addRule() {
   var count    = parseInt(document.getElementById('new-count').value);
   var action   = document.getElementById('new-action').value;
   var duration = parseInt(document.getElementById('new-duration').value) || 10;
-  if (!count || count < 1) { msg.innerHTML = '<span >✗ Неверное число</span>'; return; }
+  if (!count || count < 1) { msg.innerHTML = '<span >Неверное число</span>'; return; }
   var existing = _rules.findIndex(function(r){ return r.count === count; });
   if (existing >= 0) _rules.splice(existing, 1);
   _rules.push({count, action, duration});
   _rules.sort(function(a,b){ return a.count - b.count; });
   await saveConfig();
-  msg.innerHTML = '<span >✓ Сохранено</span>';
+  msg.innerHTML = '<span >Сохранено</span>';
   setTimeout(function(){ msg.textContent = ''; }, 2000);
   renderRules();
 }

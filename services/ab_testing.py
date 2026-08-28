@@ -3,6 +3,10 @@ A/B Testing
 Система A/B тестирования
 """
 
+from logger import get_logger
+
+_log = get_logger("ab_testing")
+
 import json
 import os
 import random
@@ -32,7 +36,7 @@ class ABTestVariant:
         self.weight = max(0.0, weight)
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'variant_id': self.variant_id,
             'name': self.name,
@@ -85,15 +89,15 @@ class ABTest:
         return False
     
     def get_variant(self, variant_id: str) -> Optional[ABTestVariant]:
-        """Varyantы al"""
+        """Получить вариант"""
         return self.variants.get(variant_id)
     
     def get_all_variants(self) -> List[ABTestVariant]:
-        """Все вариантовlarы al"""
+        """Получить все варианты"""
         return list(self.variants.values())
     
     def get_enabled_variants(self) -> List[ABTestVariant]:
-        """Etkin вариантовlarы al"""
+        """Получить активные варианты"""
         return [v for v in self.variants.values() if v.enabled]
     
     def start(self):
@@ -122,7 +126,7 @@ class ABTest:
         self.tags[key] = value
     
     def select_variant_for_user(self, user_id: str) -> Optional[ABTestVariant]:
-        """Пользователь для вариантов seч"""
+        """Выбрать вариант для пользователя"""
         if self.status != 'running':
             return None
         
@@ -153,7 +157,7 @@ class ABTest:
         return enabled_variants[0]
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'test_id': self.test_id,
             'name': self.name,
@@ -196,7 +200,7 @@ class ABTest:
 
 
 class ABTestManager:
-    """A/B test yёneticisi"""
+    """Менеджер A/B-тестов"""
     
     def __init__(self):
         self.tests_file = 'data/ab_tests.json'
@@ -212,8 +216,8 @@ class ABTestManager:
                         test_id: ABTest.from_dict(test_data)
                         for test_id, test_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_tests(): подавлено: %s", _ex)
         
         return {}
     
@@ -262,7 +266,7 @@ class ABTestManager:
         return tests
     
     def get_running_tests(self) -> List[ABTest]:
-        """Работатьan testleri al"""
+        """Получить активные тесты"""
         return self.get_all_tests(status='running')
     
     def start_test(self, test_id: str) -> bool:
@@ -287,6 +291,10 @@ class ABTestManager:
         
         return False
     
+    def stop_test(self, test_id: str) -> bool:
+        """Остановить тест (синоним complete_test)."""
+        return self.complete_test(test_id)
+
     def complete_test(self, test_id: str) -> bool:
         """Testi tamamla"""
         test = self.tests.get(test_id)
@@ -308,7 +316,7 @@ class ABTestManager:
         return False
     
     def get_user_variant(self, test_id: str, user_id: str) -> Optional[ABTestVariant]:
-        """Пользователь вариантовыnы al"""
+        """Получить вариант пользователя"""
         test = self.tests.get(test_id)
         
         if not test:
@@ -326,24 +334,24 @@ class ABTestTracking:
         self.events = self._load_events()
     
     def _load_events(self) -> Dict[str, Any]:
-        """Olaylarы загрузить"""
+        """Загрузить события"""
         if os.path.exists(self.events_file):
             try:
                 with open(self.events_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_events(): подавлено: %s", _ex)
         
         return {}
     
     def _save_events(self):
-        """Olaylarы сохранить"""
+        """Сохранить события"""
         os.makedirs('data', exist_ok=True)
         with open(self.events_file, 'w', encoding='utf-8') as f:
             json.dump(self.events, f, ensure_ascii=False, indent=2)
     
     def track_impression(self, test_id: str, variant_id: str, user_id: str):
-        """Показатьim takip et"""
+        """Отследить показ"""
         if test_id not in self.events:
             self.events[test_id] = {'impressions': [], 'conversions': []}
         
@@ -357,7 +365,7 @@ class ABTestTracking:
     
     def track_conversion(self, test_id: str, variant_id: str, user_id: str,
                          metric_name: str, value: float = 1.0):
-        """Dёnюшюm takip et"""
+        """Отследить конверсию"""
         if test_id not in self.events:
             self.events[test_id] = {'impressions': [], 'conversions': []}
         
@@ -372,11 +380,11 @@ class ABTestTracking:
         self._save_events()
     
     def get_test_events(self, test_id: str) -> Dict[str, Any]:
-        """Test olaylarыnы al"""
+        """Получить события теста"""
         return self.events.get(test_id, {'impressions': [], 'conversions': []})
     
     def get_variant_impressions(self, test_id: str, variant_id: str) -> int:
-        """Varyant показатьim количествоnы al"""
+        """Получить количество показов варианта"""
         events = self.events.get(test_id, {})
         impressions = events.get('impressions', [])
         
@@ -384,7 +392,7 @@ class ABTestTracking:
     
     def get_variant_conversions(self, test_id: str, variant_id: str,
                                  metric_name: str = None) -> int:
-        """Varyant dёnюшюm количествоnы al"""
+        """Получить количество конверсий варианта"""
         events = self.events.get(test_id, {})
         conversions = events.get('conversions', [])
         
@@ -396,7 +404,7 @@ class ABTestTracking:
 
 
 class ABTestAnalytics:
-    """A/B test analitiгi"""
+    """Аналитика A/B-тестирования"""
     
     def __init__(self, ab_test_manager: ABTestManager, tracking: ABTestTracking):
         self.ab_test_manager = ab_test_manager
@@ -404,7 +412,7 @@ class ABTestAnalytics:
     
     def calculate_conversion_rate(self, test_id: str, variant_id: str,
                                    metric_name: str = None) -> float:
-        """Dёnюшюm соотношениеnы hesapla"""
+        """Вычислить коэффициент конверсии"""
         impressions = self.tracking.get_variant_impressions(test_id, variant_id)
         conversions = self.tracking.get_variant_conversions(test_id, variant_id, metric_name)
         
@@ -414,7 +422,7 @@ class ABTestAnalytics:
         return (conversions / impressions) * 100
     
     def get_variant_stats(self, test_id: str) -> Dict[str, Dict[str, Any]]:
-        """Varyant статистикаini al"""
+        """Получить статистику варианта"""
         test = self.ab_test_manager.get_test(test_id)
         
         if not test:
@@ -448,7 +456,7 @@ class ABTestAnalytics:
         return stats
     
     def get_winner(self, test_id: str, metric_name: str) -> Optional[str]:
-        """Kazananы al"""
+        """Получить победителя"""
         test = self.ab_test_manager.get_test(test_id)
         
         if not test:
@@ -468,7 +476,7 @@ class ABTestAnalytics:
     
     def calculate_statistical_significance(self, test_id: str, variant_a_id: str,
                                             variant_b_id: str, metric_name: str) -> Dict[str, Any]:
-        """Статистикаsel anlamlыlыгы hesapla (basit z-test)"""
+        """Вычислить статистическую значимость (простой z-тест)"""
         impressions_a = self.tracking.get_variant_impressions(test_id, variant_a_id)
         conversions_a = self.tracking.get_variant_conversions(test_id, variant_a_id, metric_name)
         

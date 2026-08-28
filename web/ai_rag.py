@@ -1,7 +1,12 @@
 """
-RAG (Retrieval Augmented Generation) — arama по tabanda информация сервер
-AI olabilir iskat в правил, FAQ, logah ticketlarыn, dokumentacii
+RAG (Retrieval Augmented Generation) — поиск по базе информации сервера
+AI может искать в правилах, FAQ, логах тикетов, документации
 """
+
+from logger import get_logger
+
+_log = get_logger("ai_rag")
+
 import os 
 import json 
 import re 
@@ -10,7 +15,7 @@ from datetime import datetime
 
 
 class KnowledgeBase :
-    """Данныеtabanы информация сервер с aramaom"""
+    """База данных информации о сервере с поиском"""
 
     def __init__ (self ,guild_id :int ):
         self .guild_id =guild_id 
@@ -19,7 +24,7 @@ class KnowledgeBase :
 
     def _load_documents (self ):
         """Загруз все dokumenti в pamyat"""
-        # 1. Правила сервер (Особый правило yoksa Стандартные правила Aether загруз)
+        # 1. Правила сервер (Особый правило yoksa Стандартные правила Hakumo загруз)
         rules_loaded =False 
         for rf in [f"data/rules_{self.guild_id}.json","data/rules.json"]:
             if os .path .exists (rf ):
@@ -35,8 +40,8 @@ class KnowledgeBase :
                             rules_loaded =True 
                     if rules_loaded :
                         break 
-                except :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("_load_documents(): подавлено: %s", _ex)
         if not rules_loaded :
             default_rules =[
             "Правило #1: Уважение и вежливость — Запрещены оскорбления, мат, унижения и язык вражды.",
@@ -66,8 +71,8 @@ class KnowledgeBase :
                             'content':f"ВОПРОС: {faq.get('question', '')}\nОТВЕТ АДМИНИСТРАЦИИ: {faq.get('answer', '')}",
                             'metadata':{'id':faq .get ('id',''),'score':1.0 }
                             })
-                except :
-                    pass 
+                except Exception as _ex:
+                    _log.debug("_load_documents(): подавлено: %s", _ex)
 
                     # 3. Loglar ticketlarыn (son 50)
         tickets_file =f"data/tickets_{self.guild_id}.json"
@@ -89,8 +94,8 @@ class KnowledgeBase :
                         'created_at':ticket .get ('created_at','')
                         }
                         })
-            except :
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_documents(): подавлено: %s", _ex)
 
                 # 4. Пользователь notlar (из data/notes.json если есть)
         notes_file ='data/notes.json'
@@ -110,8 +115,8 @@ class KnowledgeBase :
                             'timestamp':note .get ('timestamp','')
                             }
                             })
-            except :
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_documents(): подавлено: %s", _ex)
 
     def search (self ,query :str ,max_results :int =5 )->List [Dict ]:
         """Arama по tabanda информация (prostoy keyword-based)"""
@@ -137,7 +142,7 @@ class KnowledgeBase :
         return [doc for score ,doc in scored_docs [:max_results ]]
 
     def get_context_for_query (self ,query :str )->str :
-        """Alыyor baгlam из некоторые информация для cevabы на soru"""
+        """Получает контекст из релевантной информации для ответа на вопрос"""
         results =self .search (query ,max_results =3 )
 
         if not results :
@@ -162,7 +167,7 @@ class KnowledgeBase :
 
 
 class ConversationAnalyzer :
-    """Analizёr разговор — izvlekaet vajnie fakti"""
+    """Анализатор разговора — извлекает важные факты"""
 
     @staticmethod 
     def extract_facts (messages :List [Dict ])->List [str ]:
@@ -171,13 +176,13 @@ class ConversationAnalyzer :
 
         # Kalыplar для izvleceniya gerчдобавитьr
         patterns =[
-        (r'menya zovut (\w+)','Isim пользователь: {}'),
-        (r'mne (\d+) (?:let|god)','Yaш: {} let'),
-        (r'ya из ([\w\s]+?)(?:\.|,|$)','Gorod: {}'),
+        (r'menya zovut (\w+)','Имя пользователя: {}'),
+        (r'mne (\d+) (?:let|god)','Возраст: {} лет'),
+        (r'ya из ([\w\s]+?)(?:\.|,|$)','Город: {}'),
         (r'moy (?:discord|ds|takma имя):? ([\w#]+)','Discord: {}'),
-        (r'(?:lyublyu|nravitsya|interesuyus) ([\w\s]+?)(?:\.|,|$)','Interesi: {}'),
+        (r'(?:lyublyu|nravitsya|interesuyus) ([\w\s]+?)(?:\.|,|$)','Интересы: {}'),
         (r'работа ([\w\s]+?)(?:\.|,|$)','Работа: {}'),
-        (r'ucus ([\w\s]+?)(?:\.|,|$)','Uceba: {}'),
+        (r'ucus ([\w\s]+?)(?:\.|,|$)','Учёба: {}'),
         ]
 
         for msg in messages :
@@ -196,7 +201,7 @@ class ConversationAnalyzer :
 
     @staticmethod 
     def detect_sentiment (messages :List [Dict ])->str :
-        """Opredelyaet duygu разговор"""
+        """Определяет настроение разговора"""
         positive_words =['teшekkюrler','отлично','kruto','супер','klass','pomog','reудалить']
         negative_words =['besit','zlyus','nenaviju','aptal','aptal','не работает','ошибка']
 
@@ -218,13 +223,13 @@ _kb_cache :Dict [int ,KnowledgeBase ]={}
 
 
 def get_knowledge_base (guild_id :int )->KnowledgeBase :
-    """Alыyor veriбазу информация для сервер (с kesirovaniem)"""
+    """Получает базу данных информации о сервере (с кэшированием)"""
     if guild_id not in _kb_cache :
         _kb_cache [guild_id ]=KnowledgeBase (guild_id )
     return _kb_cache [guild_id ]
 
 
 def refresh_knowledge_base (guild_id :int ):
-    """Obnovlyaet ёnbellek некоторые информация"""
+    """Обновляет кэш определённой информации"""
     if guild_id in _kb_cache :
         del _kb_cache [guild_id ]

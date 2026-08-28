@@ -1,287 +1,323 @@
 """
-Help Cog — Professional Dashboard/ID-Card Style via Pillow (THEMED MULTI-ACCENT & ZERO BLUR)
-Белый фон, тонкие чёрные линии, авторские line-art иконки.
-Каждая категория имеет свой уникальный профессиональный цветовой акцент (Emerald, Violet,
-Teal, Amber, Tech Blue, Crimson и др.), свой авторский векторный значок и крупный читаемый шрифт.
+Help Cog — Luxury Dark-Gold Dashboard (Pillow)
+Тёмно-синий фон с золотыми звёздами, золотые панели, фирменные иконки категорий.
 """
+
+from logger import get_logger
+
+_log = get_logger("help")
+
+# Владелец 2026-08-25: справка ВРЕМЕННО выключена (!help + алиасы и /help).
+# Команды отвечают «выключена владельцем». Вернуть: HELP_ENABLED = True.
+HELP_ENABLED = False
+def _help_disabled_embed(guild=None):
+    from cogs.embed_utils import hakumo_embed
+    return hakumo_embed(
+        'system', 'Справка выключена',
+        'Команда временно выключена владельцем сервера.',
+        guild=guild)
 
 import os
 import io
-import math
 import discord
 from discord import app_commands
 from discord.ext import commands
-from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 FONTS = os.path.join(ROOT, 'assets', 'fonts')
-BG_PATH = os.path.join(ROOT, 'assets', 'profile_bg_pro.jpg')
+BG_PATH = os.path.join(ROOT, 'assets', 'help_bg.png')
+ICONS_DIR = os.path.join(ROOT, 'assets', 'icons')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
-WHITE = (255, 255, 255)
-BLACK = (20, 20, 25)
-RED = (220, 38, 38)
-MUTED = (110, 115, 125)
-SS = 4
+# Текстовый формат справки: без картинок, с фильтром по правам.
+# Команды, к которым у участника нет доступа (в т.ч. классические
+# разрешения на действия), скрываются из справки.
+from services.permission_acl import COMMAND_CATEGORIES, has_access as _acl_has_access
 
-# Цветовые темы для каждой категории команд
-ACCENTS = {
-    'overview': (220, 38, 38),     # Aether Crimson Red
-    'moderation': (225, 29, 72),   # Rose Shield
-    'warnings': (245, 158, 11),    # Warning Amber
-    'tickets': (13, 148, 136),     # Support Teal
-    'economy': (16, 185, 129),     # Emerald Wealth
-    'music': (139, 92, 246),       # Synth Violet
-    'levels': (217, 119, 6),       # Gold Rank
-    'utility': (2, 132, 199),      # Tech Blue
-    'voice': (236, 72, 153),       # Broadcast Pink
-    'fun': (249, 115, 22),         # Arcade Orange
-    'giveaway': (190, 18, 60),     # Ruby Gift
-    'profile': (79, 70, 229),      # Indigo Executive
+_HELP_TITLE = 'Команды бота'
+_HELP_COLOR = 0x4F46E5
+
+# Фирменные маркеры разделов справки: эмодзи в select-меню и в заголовках полей.
+_HELP_EMOJI = {
+    'Модерация': '🛡️',
+    'Тикеты': '🎫',
+    'Логи': '🧾',
+    'AI-система': '🤖',
+    'Музыка': '🎵',
+    'Голосовые': '🎧',
+    'Экономика': '💰',
+    'Уровни и карма': '📈',
+    'Игры и развлечения': '🎲',
+    'Профили и соц.': '👤',
+    'Инфо и поиск': 'ℹ️',
+    'Автоматизация': '⚙️',
+    'События и команда': '📅',
+    'Приветствие и вход': '👋',
+    'Система': '🖥️',
+    'Прочее': '🧩',
 }
+_HELP_BLURB = {
+    'Модерация': 'варны, муты, баны, доказательства и дежурства',
+    'Тикеты': 'приём обращений и сопровождение до закрытия',
+    'Логи': 'журналы событий, аудит и отчёты команды',
+    'AI-система': 'автопомощник в тикетах и авто-модерация',
+    'Музыка': 'плеер, очередь и голосовые вечеринки',
+    'Голосовые': 'войс-команды, личные комнаты и статистика голоса',
+    'Экономика': 'баланс, магазин и переводы между участниками',
+    'Уровни и карма': 'опыт, ранги и репутация на сервере',
+    'Игры и развлечения': 'дуэли, квизы, аниме и мини-игры',
+    'Профили и соц.': 'карточки профилей, дни рождения и карма-борды',
+    'Инфо и поиск': 'информация о сервере, участниках и поиск',
+    'Автоматизация': 'триггеры, расписания и свои команды',
+    'События и команда': 'розыгрыши, собрания и события сервера',
+    'Приветствие и вход': 'карточки входа, инвайты и автороли',
+    'Система': 'состояние бота, модули и техническая диагностика',
+    'Прочее': 'полезные мелочи',
+}
+
+
+def _registry_extra_categories():
+    """Разделы из полного каталога команд, НЕ покрытые ACL-четвёркой."""
+    try:
+        from services.command_registry import CATEGORIES, catalog_by_category
+        acl_labels = set(COMMAND_CATEGORIES)          # Модерация/Тикеты/Логи/AI-система
+        overlapped_ids = {'mod', 'tickets', 'logs', 'ai'}  # дубли ACL-разделов
+        out = {}
+        for cid, meta in CATEGORIES.items():
+            if cid in overlapped_ids or meta['label'] in acl_labels:
+                continue
+            names = catalog_by_category().get(meta['label'])
+            if names:
+                out[meta['label']] = names
+        return out
+    except Exception as _ex:
+        _log.debug('_registry_extra_categories(): %s', _ex)
+        return {}
+
+
+def _all_category_labels():
+    """Порядок разделов справки: ACL-ядро + дополнительные из каталога."""
+    return list(COMMAND_CATEGORIES) + list(_registry_extra_categories())
+
+
+def _plural_cmds(n):
+    m10, m100 = n % 10, n % 100
+    if m10 == 1 and m100 != 11:
+        return 'команда'
+    if 2 <= m10 <= 4 and not (12 <= m100 <= 14):
+        return 'команды'
+    return 'команд'
+
+
+def _visible_categories(guild_id, member):
+    """Категории команд, которые видит участник.
+
+    Сначала ACL-ядро (Модерация/Тикеты/Логи/AI) с фильтром прав, затем
+    дополнительные разделы из полного каталога бота (музыка, экономика
+    и т.д.) — без дублей уже показанных команд.
+    """
+    groups = {}
+    covered = set()
+    for cat, cmds in COMMAND_CATEGORIES.items():
+        visible = []
+        for cmd in cmds:
+            covered.add(cmd)
+            try:
+                if _acl_has_access(guild_id, cmd, member):
+                    visible.append(cmd)
+            except Exception:
+                visible.append(cmd)
+        if visible:
+            groups[cat] = visible
+    for label, names in _registry_extra_categories().items():
+        visible = []
+        for cmd in names:
+            if cmd in covered:
+                continue
+            try:
+                if member is None or _acl_has_access(guild_id, cmd, member):
+                    visible.append(cmd)
+            except Exception:
+                visible.append(cmd)
+        if visible:
+            groups[label] = visible
+    return groups
+
+
+def _help_chunks(items, cap=900):
+    """Разбить команды на фрагменты по длине поля эмбеда."""
+    out, cur, ln = [], [], 0
+    for it in items:
+        token = '`' + it + '`'
+        if cur and ln + len(token) + 2 > cap:
+            out.append(cur)
+            cur, ln = [], 0
+        cur.append(token)
+        ln += len(token) + 2
+    if cur:
+        out.append(cur)
+    return out
+
+
+def build_help_embed(category_id=None, member=None, guild_id=0):
+    """Текстовый эмбед справки (без картинок).
+
+    Обзор: по разделу на категорию с фирменным маркером и счётчиком
+    (команды рубятся на «продолжения», если не влезают в поле эмбеда).
+    Раздел: отдельная страница с описанием и всеми его командами.
+    Команды, к которым у участника нет доступа, скрыты — как и раньше.
+    """
+    groups = _visible_categories(guild_id, member)
+    if category_id and category_id != 'overview':
+        groups = {category_id: groups.get(category_id, [])}
+    total = sum(len(v) for v in groups.values())
+
+    if category_id and category_id != 'overview':
+        cat = category_id
+        emo = _HELP_EMOJI.get(cat, '▫️')
+        cmds = groups.get(cat, []) or []
+        e = discord.Embed(title=f'{emo} {cat}', color=_HELP_COLOR)
+        blurb = _HELP_BLURB.get(cat, '')
+        e.description = ((blurb + ' — ') if blurb else '') + \
+            f'**{len(cmds)}** {_plural_cmds(len(cmds))} в разделе.'
+        if not cmds:
+            e.add_field(name=f'{emo} {cat}',
+                        value='*Нет команд, доступных вашей роли, в этом разделе.*',
+                        inline=False)
+        for i, chunk in enumerate(_help_chunks(cmds)):
+            e.add_field(name=(f'{emo} {cat}' if i == 0 else f'{cat} · продолжение'),
+                        value=', '.join(chunk), inline=False)
+        e.set_footer(text='Hakumo · назад ко всем разделам — «Главное меню» в списке ниже')
+        return e
+
+    e = discord.Embed(title='🧭 Справка Hakumo — команды', color=_HELP_COLOR)
+    e.description = (
+        'Пульт бота: выберите раздел в меню под сообщением — '
+        'покажем команды именно этого раздела.\n'
+        f'Сейчас вам доступно **{total}** {_plural_cmds(total)}; '
+            'то, к чему нет доступа, мы не показываем.')
+    for cat, cmds in groups.items():
+        emo = _HELP_EMOJI.get(cat, '▫️')
+        cap = f'{emo} {cat} · {len(cmds)} {_plural_cmds(len(cmds))}'
+        if not cmds:
+            e.add_field(name=cap, value='*Нет доступных команд*', inline=False)
+            continue
+        blurb = _HELP_BLURB.get(cat)
+        for i, chunk in enumerate(_help_chunks(cmds)):
+            name = cap if i == 0 else cap + ' · продолжение'
+            val = ', '.join(chunk)
+            if i == 0 and blurb:
+                val = f'*{blurb}*\n' + val
+            e.add_field(name=name, value=val, inline=False)
+    e.set_footer(text='Hakumo · /help <раздел> — сразу открыть нужный, напр. /help Тикеты')
+    return e
+
+# Палитра — тёмный люкс
+BG_DEEP = (13, 16, 38)
+PANEL = (24, 29, 60, 215)
+PANEL_BR = (212, 175, 55, 150)
+GOLD = (212, 175, 55)
+GOLD_SOFT = (240, 215, 130)
+TXT = (235, 238, 250)
+MUTED = (148, 156, 190)
+SS = 2
+
+# Кэш шрифтов — не открывает файл заново для каждого текста (рендер заметно быстрее)
+_FONT_CACHE = {}
 
 
 def _f(bold=False, sz=20):
-    try:
-        return ImageFont.truetype(FONT_B if bold else FONT_R, sz)
-    except Exception:
-        return ImageFont.load_default()
-
-
-def _ss_render(w, h, draw_fn, scale=SS):
-    big = Image.new('RGBA', (w * scale, h * scale), (0, 0, 0, 0))
-    d = ImageDraw.Draw(big)
-    draw_fn(d, scale)
-    return big.resize((w, h), Image.Resampling.LANCZOS)
+    key = (bold, sz)
+    f = _FONT_CACHE.get(key)
+    if f is None:
+        try:
+            f = ImageFont.truetype(FONT_B if bold else FONT_R, sz)
+        except Exception:
+            f = ImageFont.load_default()
+        _FONT_CACHE[key] = f
+    return f
 
 
 def _load_bg(w, h):
-    """Корректная обрезка фона по пропорциям без растягивания и размытия"""
+    """Фон-картинка по пропорциям; если нет — градиент со звёздами"""
     try:
-        bg = Image.open(BG_PATH).convert('RGBA')
+        bg = Image.open(BG_PATH).convert('RGB')
         bw, bh = bg.size
-        target_ratio = w / h
-        src_ratio = bw / bh
-        if src_ratio > target_ratio:
-            new_w = int(bh * target_ratio)
-            x0 = (bw - new_w) // 2
-            bg = bg.crop((x0, 0, x0 + new_w, bh))
+        target = w / h
+        src = bw / bh
+        if src > target:
+            nw = int(bh * target)
+            x0 = (bw - nw) // 2
+            bg = bg.crop((x0, 0, x0 + nw, bh))
         else:
-            new_h = int(bw / target_ratio)
-            y0 = (bh - new_h) // 2
-            bg = bg.crop((0, y0, bw, y0 + new_h))
+            nh = int(bw / target)
+            y0 = (bh - nh) // 2
+            bg = bg.crop((0, y0, bw, y0 + nh))
         return bg.resize((w, h), Image.Resampling.LANCZOS)
     except Exception:
-        return Image.new('RGBA', (w, h), (255, 255, 255, 255))
+        import random
+        bg = Image.new('RGB', (w, h), BG_DEEP)
+        d = ImageDraw.Draw(bg)
+        rnd = random.Random(42)
+        for _ in range(140):
+            x, y = rnd.randrange(w), rnd.randrange(h)
+            r = rnd.choice((1, 1, 2))
+            d.ellipse((x - r, y - r, x + r, y + r), fill=(212, 175, 55))
+        return bg
 
 
-# ═══════════════════════════════════════════════════════════════════════
-# Custom line-art vector icons — drawn in thematic accent color
-# ═══════════════════════════════════════════════════════════════════════
-
-def _icon_overview(d, cx, cy, s, w, color):
-    gap = s * 0.1
-    sz = s * 0.38
-    for i in (-1, 1):
-        for j in (-1, 1):
-            x = cx + i * (sz/2 + gap/2)
-            y = cy + j * (sz/2 + gap/2)
-            d.rectangle((x - sz/2, y - sz/2, x + sz/2, y + sz/2), outline=color, width=w)
+def _panel(w, h, radius=16, fill=PANEL, border=PANEL_BR, bw=2):
+    """Скруглённая полупрозрачная панель (2x supersample)"""
+    img = Image.new('RGBA', (w * SS, h * SS), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle(
+        (bw * SS / 2, bw * SS / 2, w * SS - bw * SS / 2 - 1, h * SS - bw * SS / 2 - 1),
+        radius=radius * SS, fill=fill, outline=border, width=bw * SS)
+    return img.resize((w, h), Image.Resampling.LANCZOS)
 
 
-def _icon_moderation(d, cx, cy, s, w, color):
-    pts = [
-        (cx - s*0.4, cy - s*0.4),
-        (cx + s*0.4, cy - s*0.4),
-        (cx + s*0.4, cy + s*0.05),
-        (cx, cy + s*0.45),
-        (cx - s*0.4, cy + s*0.05)
-    ]
-    d.line(pts + [pts[0]], fill=color, width=w, joint='curve')
-    chk = [(cx - s*0.18, cy + s*0.02), (cx - s*0.04, cy + s*0.16), (cx + s*0.2, cy - s*0.12)]
-    d.line(chk, fill=color, width=w, joint='curve')
+def _panel_shadowed(w, h, radius=16, border=PANEL_BR):
+    """Shadow-panel — придаёт глубину"""
+    img = Image.new('RGBA', (w + 12, h + 12), (0, 0, 0, 0))
+    sh = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(sh).rounded_rectangle((0, 0, w - 1, h - 1), radius=radius, fill=(0, 0, 0, 130))
+    img.alpha_composite(sh.filter(__import__('PIL.ImageFilter', fromlist=['GaussianBlur']).GaussianBlur(5)), (5, 7))
+    img.alpha_composite(_panel(w, h, radius=radius, border=border), (0, 0))
+    return img
 
 
-def _icon_warnings(d, cx, cy, s, w, color):
-    pts = [
-        (cx, cy - s*0.42),
-        (cx + s*0.42, cy + s*0.35),
-        (cx - s*0.42, cy + s*0.35),
-        (cx, cy - s*0.42)
-    ]
-    d.line(pts, fill=color, width=w, joint='curve')
-    d.line([(cx, cy - s*0.15), (cx, cy + s*0.1)], fill=color, width=w)
-    r = w * 0.8
-    d.ellipse((cx - r, cy + s*0.2 - r, cx + r, cy + s*0.2 + r), fill=color)
+_icon_cache = {}
 
 
-def _icon_tickets(d, cx, cy, s, w, color):
-    w_t, h_t = s*0.44, s*0.30
-    x0, y0 = cx - w_t, cy - h_t
-    x1, y1 = cx + w_t, cy + h_t
-    d.rounded_rectangle((x0, y0, x1, y1), radius=h_t*0.25, outline=color, width=w)
-    r = s*0.1
-    d.arc((x0 - r, cy - r, x0 + r, cy + r), -90, 90, fill=WHITE, width=w*2)
-    d.arc((x0 - r, cy - r, x0 + r, cy + r), -90, 90, fill=color, width=w)
-    d.arc((x1 - r, cy - r, x1 + r, cy + r), 90, 270, fill=WHITE, width=w*2)
-    d.arc((x1 - r, cy - r, x1 + r, cy + r), 90, 270, fill=color, width=w)
-
-
-def _icon_economy(d, cx, cy, s, w, color):
-    bw, bh = s * 0.64, s * 0.46
-    x0, y0 = cx - bw / 2, cy - bh / 2
-    x1, y1 = cx + bw / 2, cy + bh / 2
-    d.rounded_rectangle((x0, y0, x1, y1), radius=bh * 0.22, outline=color, width=w)
-    d.line([(x0, y0 + bh * 0.32), (x1, y0 + bh * 0.32)], fill=color, width=max(1, int(w * 0.7)))
-    r = s * 0.085
-    ccx = x1 - r * 1.5
-    ccy = y0 + bh * 0.66
-    d.ellipse((ccx - r, ccy - r, ccx + r, ccy + r), outline=color, width=max(1, int(w * 0.8)))
-
-
-def _icon_music(d, cx, cy, s, w, color):
-    r = s * 0.1
-    x1, y1 = cx - s * 0.22, cy + s * 0.22
-    x2, y2 = cx + s * 0.18, cy + s * 0.14
-    d.ellipse((x1 - r*1.2, y1 - r, x1 + r*1.2, y1 + r), outline=color, width=w)
-    d.ellipse((x2 - r*1.2, y2 - r, x2 + r*1.2, y2 + r), outline=color, width=w)
-    d.line([(x1 + r*1.2, y1), (x1 + r*1.2, y1 - s*0.45)], fill=color, width=w)
-    d.line([(x2 + r*1.2, y2), (x2 + r*1.2, y2 - s*0.45)], fill=color, width=w)
-    d.line([(x1 + r*1.2, y1 - s*0.45), (x2 + r*1.2, y2 - s*0.45)], fill=color, width=int(w*1.5))
-
-
-def _icon_levels(d, cx, cy, s, w, color):
-    bar_w = s * 0.14
-    bars = [
-        (cx - s*0.28, cy + s*0.35, cy + s*0.1),
-        (cx - s*0.05, cy + s*0.35, cy - s*0.1),
-        (cx + s*0.18, cy + s*0.35, cy - s*0.3)
-    ]
-    for bx, ybot, ytop in bars:
-        d.rounded_rectangle((bx - bar_w/2, ytop, bx + bar_w/2, ybot), radius=bar_w*0.3, outline=color, width=w)
-    pts = [(cx + s*0.05, cy - s*0.32), (cx + s*0.32, cy - s*0.32), (cx + s*0.32, cy - s*0.05)]
-    d.line(pts, fill=color, width=w, joint='curve')
-    d.line([(cx - s*0.1, cy - s*0.12), (cx + s*0.32, cy - s*0.32)], fill=color, width=w)
-
-
-def _icon_utility(d, cx, cy, s, w, color):
-    r_out = s * 0.4
-    r_in = s * 0.28
-    for idx in range(8):
-        a1 = math.radians(idx * 45 - 12)
-        a2 = math.radians(idx * 45 + 12)
-        p1 = (cx + r_in * math.cos(a1), cy + r_in * math.sin(a1))
-        p2 = (cx + r_out * math.cos(a1), cy + r_out * math.sin(a1))
-        p3 = (cx + r_out * math.cos(a2), cy + r_out * math.sin(a2))
-        p4 = (cx + r_in * math.cos(a2), cy + r_in * math.sin(a2))
-        d.line([p1, p2, p3, p4], fill=color, width=w, joint='curve')
-    r_mid = s * 0.28
-    d.ellipse((cx - r_mid, cy - r_mid, cx + r_mid, cy + r_mid), outline=color, width=w)
-    r_center = s * 0.12
-    d.ellipse((cx - r_center, cy - r_center, cx + r_center, cy + r_center), outline=color, width=w)
-
-
-def _icon_voice(d, cx, cy, s, w, color):
-    bx = cx - s * 0.20
-    hw, hh = s * 0.14, s * 0.20
-    d.rounded_rectangle((bx - hw, cy - hh, bx + hw * 0.3, cy + hh), radius=hw * 0.5, outline=color, width=w)
-    tri = [(bx + hw * 0.15, cy - hh * 0.9), (bx + s * 0.20, cy - s * 0.28), (bx + s * 0.20, cy + s * 0.28), (bx + hw * 0.15, cy + hh * 0.9)]
-    d.line(tri, fill=color, width=w, joint='curve')
-    for r in (s * 0.11, s * 0.20, s * 0.29):
-        bbox = (cx + s * 0.05 - r, cy - r, cx + s * 0.05 + r, cy + r)
-        d.arc(bbox, -42, 42, fill=color, width=w)
-
-
-def _icon_fun(d, cx, cy, s, w, color):
-    cw, ch = s * 0.44, s * 0.28
-    d.rounded_rectangle((cx - cw, cy - ch, cx + cw, cy + ch), radius=ch*0.4, outline=color, width=w)
-    dx, dy = cx - cw*0.45, cy
-    l_d = s * 0.09
-    d.line([(dx - l_d, dy), (dx + l_d, dy)], fill=color, width=w)
-    d.line([(dx, dy - l_d), (dx, dy + l_d)], fill=color, width=w)
-    bx, by = cx + cw*0.45, cy
-    r_b = s * 0.05
-    d.ellipse((bx - l_d - r_b, by - r_b, bx - l_d + r_b, by + r_b), fill=color)
-    d.ellipse((bx + l_d - r_b, by - r_b, bx + l_d + r_b, by + r_b), fill=color)
-
-
-def _icon_giveaway(d, cx, cy, s, w, color):
-    bw, bh = s * 0.36, s * 0.36
-    d.rounded_rectangle((cx - bw, cy - bh*0.7, cx + bw, cy + bh), radius=s*0.06, outline=color, width=w)
-    d.rounded_rectangle((cx - bw*1.1, cy - bh*0.7, cx + bw*1.1, cy - bh*0.35), radius=s*0.05, outline=color, width=w)
-    d.line([(cx, cy - bh*0.7), (cx, cy + bh)], fill=color, width=int(w*1.2))
-    r_bow = s * 0.12
-    d.ellipse((cx - r_bow*1.4, cy - bh*0.9 - r_bow*0.5, cx, cy - bh*0.6), outline=color, width=w)
-    d.ellipse((cx, cy - bh*0.9 - r_bow*0.5, cx + r_bow*1.4, cy - bh*0.6), outline=color, width=w)
-
-
-def _icon_profile(d, cx, cy, s, w, color):
-    cw, ch = s * 0.40, s * 0.28
-    d.rounded_rectangle((cx - cw, cy - ch, cx + cw, cy + ch), radius=ch*0.3, outline=color, width=w)
-    r_h = s * 0.08
-    d.ellipse((cx - r_h, cy - s*0.12 - r_h, cx + r_h, cy - s*0.12 + r_h), outline=color, width=w)
-    d.arc((cx - s*0.16, cy - s*0.04, cx + s*0.16, cy + s*0.18), 180, 0, fill=color, width=w)
-
-
-def _icon_cmd_bullet(d, cx, cy, s, w, color):
-    r = s * 0.40
-    pts = [(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy), (cx, cy - r)]
-    d.line(pts, fill=color, width=w)
-    c_r = s * 0.14
-    chev = [(cx - c_r*0.6, cy - c_r), (cx + c_r*0.6, cy), (cx - c_r*0.6, cy + c_r)]
-    d.line(chev, fill=color, width=w, joint='curve')
-
-
-ICON_FUNCS = {
-    'overview': _icon_overview,
-    'moderation': _icon_moderation,
-    'warnings': _icon_warnings,
-    'tickets': _icon_tickets,
-    'economy': _icon_economy,
-    'music': _icon_music,
-    'levels': _icon_levels,
-    'utility': _icon_utility,
-    'voice': _icon_voice,
-    'fun': _icon_fun,
-    'giveaway': _icon_giveaway,
-    'profile': _icon_profile,
-    'cmd_bullet': _icon_cmd_bullet
-}
-
-
-def _icon_badge(diameter, glyph_key, ring_color=BLACK, ring_w=None, icon_color=RED):
-    ring_w = ring_w if ring_w is not None else max(2, diameter // 22)
-
-    def draw(d, scale):
-        size = diameter * scale
-        rw = ring_w * scale
-        r = size * 0.22
-        d.rounded_rectangle((rw / 2, rw / 2, size - rw / 2 - 1, size - rw / 2 - 1),
-                             radius=r, fill=WHITE, outline=ring_color, width=rw)
-        fn = ICON_FUNCS.get(glyph_key, _icon_overview)
-        fn(d, size / 2, size / 2, size * 0.60, max(2, int(size * 0.032)), icon_color)
-
-    return _ss_render(diameter, diameter, draw)
-
-
-def _corner_bracket(size, thickness, length_ratio=0.35, color=RED):
-    def draw(d, scale):
-        t = thickness * scale
-        L = size * scale * length_ratio
-        d.line([(0, t / 2), (L, t / 2)], fill=color, width=t)
-        d.line([(t / 2, 0), (t / 2, L)], fill=color, width=t)
-    return _ss_render(size, size, draw)
-
-
-def _rounded_panel(w, h, radius, fill=WHITE, outline=BLACK, ow=3):
-    def draw(d, scale):
-        r = radius * scale
-        o = ow * scale
-        d.rounded_rectangle((o / 2, o / 2, w * scale - o / 2 - 1, h * scale - o / 2 - 1),
-                             radius=r, fill=fill, outline=outline, width=o)
-    return _ss_render(w, h, draw)
+def _cat_icon(key, size):
+    """Фирменная иконка категории из assets/icons"""
+    ckey = (key, size)
+    if ckey in _icon_cache:
+        return _icon_cache[ckey]
+    img = None
+    for cand in (f'{key}_256.png', f'{key}.png'):
+        p = os.path.join(ICONS_DIR, cand)
+        if os.path.exists(p):
+            img = Image.open(p).convert('RGBA')
+            break
+    if img is None and key == 'afk_icon':
+        p = os.path.join(ROOT, 'assets', 'afk_icon.png')
+        if os.path.exists(p):
+            img = Image.open(p).convert('RGBA')
+    if img is None:
+        img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    else:
+        img = img.resize((size, size), Image.Resampling.LANCZOS)
+        # Мягко обрезать белые полосы/остатки по краям: inset 5% + маска со скруглёнными углами
+        inset = max(2, size // 20)
+        img = img.crop((inset, inset, size - inset, size - inset)).resize((size, size), Image.Resampling.LANCZOS)
+        mask = Image.new('L', (size, size), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, size - 1, size - 1), radius=max(6, size // 5), fill=255)
+        img.putalpha(mask)
+    _icon_cache[ckey] = img
+    return img
 
 
 CATEGORIES = [
@@ -289,52 +325,23 @@ CATEGORIES = [
         "id": "moderation",
         "title": "Модерация",
         "commands": [
-            ("!ban @user [причина]", "Бан пользователя", "Админ"),
-            ("!kick @user [причина]", "Кик пользователя", "Админ"),
-            ("!mute @user [время]", "Мьют пользователя", "Мод"),
-            ("!unmute @user", "Размьют пользователя", "Мод"),
-            ("!timeout @user [время]", "Таймаут пользователя", "Мод"),
-            ("!clear [кол-во]", "Очистить сообщения", "Мод"),
-            ("!lock [#канал]", "Заблокировать канал", "Мод"),
-            ("!unlock [#канал]", "Разблокировать канал", "Мод"),
-            ("!slowmode [сек]", "Медленный режим", "Мод"),
-        ]
-    },
-    {
-        "id": "warnings",
-        "title": "Предупреждения",
-        "commands": [
-            ("/warn @user [причина]", "Выдать предупреждение", "Мод"),
-            ("/warnings @user", "Список предупреждений", "Мод"),
-            ("/clearwarns @user", "Очистить предупреждения", "Админ"),
+            ("/modpanel", "Панель модератора: варн/мут/бан/кик/клир — модалка с демкой", "Мод"),
+            ("/warnings @user", "Список предупреждений участника", "Мод"),
+            ("/unwarn @user №", "Снять предупреждение по номеру", "Мод"),
+            ("/proofs [@user]", "Все демки сервера или конкретного юзера", "Мод"),
+            ("/proofdel №", "Удалить демку по номеру", "Админ"),
+            ("панель «Доказательства»", "Загрузка демки файлом прямо из панели — фото/видео смотрятся там же", "Мод"),
         ]
     },
     {
         "id": "tickets",
-        "title": "Тикеты",
+        "title": "Тикеты и заявки",
         "commands": [
-            ("/ticket-panel", "Создать панель тикетов", "Админ"),
-            ("/tickets [статус]", "Список тикетов", "Все"),
-            ("/ticket-info [ID]", "Информация о тикете", "Все"),
-            ("/ticket-close [ID]", "Закрыть тикет", "Все"),
-            ("/ticket-assign [ID] @user", "Назначить тикет", "Мод"),
-        ]
-    },
-    {
-        "id": "economy",
-        "title": "Экономика",
-        "commands": [
-            ("!balance [@user]", "Баланс пользователя", "Все"),
-            ("!daily", "Ежедневная награда", "Все"),
-            ("!work", "Работать и получать монеты", "Все"),
-            ("!beg", "Попросить деньги", "Все"),
-            ("!rob @user", "Ограбить пользователя", "Все"),
-            ("!deposit [сумма]", "Положить в банк", "Все"),
-            ("!withdraw [сумма]", "Снять из банка", "Все"),
-            ("!transfer @user [сумма]", "Перевести монеты", "Все"),
-            ("!shop", "Магазин ролей и предметов", "Все"),
-            ("!buy [предмет]", "Купить предмет", "Все"),
-            ("!inventory [@user]", "Инвентарь пользователя", "Все"),
+            ("/ticket-panel", "Разместить панель обращений в канале", "Админ"),
+            ("/ticket-add @user", "Добавить участника в тикет", "Мод"),
+            ("/ticket-remove @user", "Убрать участника из тикета", "Мод"),
+            ("/staff-panel", "Панель набора в команду сервера", "Админ"),
+            ("/my-application", "Статус моей заявки в команду", "Все"),
         ]
     },
     {
@@ -346,213 +353,206 @@ CATEGORIES = [
             ("!resume", "Продолжить воспроизведение", "Все"),
             ("!skip", "Пропустить текущий трек", "Все"),
             ("!queue", "Очередь воспроизведения", "Все"),
-            ("!stop", "Остановить и очистить", "Все"),
-            ("!volume [0-100]", "Громкость музыки", "Все"),
-            ("!loop", "Зациклить трек/очередь", "Все"),
-            ("!shuffle", "Перемешать очередь", "Все"),
+            ("!nowplaying", "Что сейчас играет", "Все"),
             ("!leave", "Покинуть голосовой канал", "Все"),
-        ]
-    },
-    {
-        "id": "levels",
-        "title": "Уровни",
-        "commands": [
-            ("!rank [@user]", "Ранг и уровень", "Все"),
-            ("!leaderboard", "Таблица лидеров", "Все"),
-            ("!rewards", "Награды за уровни", "Все"),
-            ("!setlevel @user [уровень]", "Установить уровень", "Админ"),
         ]
     },
     {
         "id": "utility",
         "title": "Утилиты",
         "commands": [
-            ("!ping", "Задержка бота", "Все"),
-            ("!botinfo", "Информация о боте", "Все"),
-            ("!serverinfo", "Информация о сервере", "Все"),
-            ("!userinfo [@user]", "О пользователе", "Все"),
-            ("!avatar [@user]", "Аватар пользователя", "Все"),
-            ("!color [hex]", "Показать цвет по hex", "Все"),
-            ("!base64 [en/de] [текст]", "Кодирование Base64", "Все"),
-            ("!hesap [выражение]", "Калькулятор", "Все"),
-        ]
-    },
-    {
-        "id": "voice",
-        "title": "Голосовые",
-        "commands": [
-            ("!voicetime [@user]", "Время в голосовых", "Все"),
-            ("!voiceleaderboard", "Топ по голосовым", "Все"),
-            ("!voiceonline", "Кто в голосовых каналах", "Все"),
-        ]
-    },
-    {
-        "id": "fun",
-        "title": "Развлечения",
-        "commands": [
-            ("!8ball [вопрос]", "Магический шар 8ball", "Все"),
-            ("!coinflip", "Подбросить монетку", "Все"),
-            ("!dice [грани]", "Бросить кубик", "Все"),
-            ("!meme", "Случайный мем", "Все"),
-            ("!joke", "Случайная шутка", "Все"),
-            ("!cat", "Случайный кот", "Все"),
-            ("!dog", "Случайная собака", "Все"),
-        ]
-    },
-    {
-        "id": "giveaway",
-        "title": "Розыгрыши",
-        "commands": [
-            ("!giveaway [время] [побед] [приз]", "Создать розыгрыш", "Админ"),
-            ("!reroll [ID]", "Перевыбрать победителя", "Админ"),
-        ]
-    },
-    {
-        "id": "profile",
-        "title": "Профиль",
-        "commands": [
-            ("!profile [@user]", "Карточка профиля", "Все"),
-            ("/profile [@user]", "Карточка профиля (slash)", "Все"),
+            ("/afk [причина]", "Уйти в AFK — бот ответит за тебя на упоминания", "Все"),
+            ("/afk-remove", "Вернуться из AFK", "Все"),
+            ("!help", "Это меню команд", "Все"),
+            ("!апелляция", "Подать апелляцию на бан (в личке боту)", "Все"),
+            ("/logs-setup", "Создать/починить категорию и каналы логов", "Админ"),
         ]
     },
 ]
 
 TOTAL_CMDS = sum(len(c["commands"]) for c in CATEGORIES)
 
-CAT_EMOJIS = {
-    "moderation": "🛡️",
-    "warnings": "⚠️",
-    "tickets": "🎫",
-    "economy": "💳",
-    "music": "🎵",
-    "levels": "⭐",
-    "utility": "⚙️",
-    "voice": "🎙️",
-    "fun": "🎲",
-    "giveaway": "🎁",
-    "profile": "👤",
+# Категория -> фирменная иконка (assets/icons/<name>_256.png)
+CAT_ICONS = {
+    "moderation": "shield",
+    "warnings": "warn",
+    "tickets": "ticket",
+    "economy": "coin",
+    "music": "music",
+    "levels": "levelup",
+    "utility": "utility",
+    "voice": "voice",
+    "fun": "fun",
+    "giveaway": "gift",
+    "profile": "afk_icon",
+    "navigation": "navigation",
 }
+# Без эмоджи-заглушек (пожелание владельца): если кастомных hakumo_* нет,
+# пункт меню выводится просто без иконки.
+CAT_EMOJIS_FALLBACK = {}
+
+
+R = 2  # рендер-масштаб: Discord-превью ~400px, рендерим вдвое больше — текст родной и чёткий
 
 
 def generate_help_card(category_id: str = None) -> Image.Image:
-    """Генерация карточки 920px с уникальными тематическими акцентами для каждой категории"""
-    W = 920
-    if category_id is None or category_id == "overview":
-        H = 760
-        accent = ACCENTS['overview']
+    """Логический холст ~800px; физически рисуется в R раз больше (нет апскейла — нет мыла)."""
+    def sc(v):
+        return int(round(v * R))
+
+    LW = 800
+    is_overview = category_id in (None, "overview")
+
+    if is_overview:
+        LH = 830
     else:
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
         cmds = cat["commands"] if cat else []
-        H = max(540, 110 + len(cmds) * 104 + 30)
-        accent = ACCENTS.get(category_id, RED)
+        n = len(cmds)
+        col2 = n > 6
+        rows = n if not col2 else (n + 1) // 2
+        LH = 112 + rows * 99 + 88
 
-    bg = _load_bg(W, H)
-    d = ImageDraw.Draw(bg)
+    W, H = sc(LW), sc(LH)
+    bg = _load_bg(W, H).convert('RGBA')
 
-    # Top Header Panel (872x72 px)
-    header_box = _rounded_panel(872, 72, radius=14, fill=WHITE, outline=BLACK, ow=2)
-    bg.alpha_composite(header_box, (24, 20))
+    # ── Шапка ──
+    def header(title_text, sub_text, icon_key):
+        hp = _panel(sc(LW - 48), sc(88), radius=sc(16))
+        bg.alpha_composite(hp, (sc(24), sc(18)))
+        badge = _cat_icon(icon_key, sc(58))
+        bg.alpha_composite(badge, (sc(38), sc(33)))
+        pill_w, pill_h = sc(150), sc(42)
+        bg.alpha_composite(_panel(pill_w, pill_h, radius=sc(12), border=(212, 175, 55, 210)),
+                           (sc(LW - 24 - 166), sc(41)))
+        dd = ImageDraw.Draw(bg)
+        dd.text((sc(112), sc(28)), title_text, fill=GOLD_SOFT, font=_f(True, sc(31)))
+        dd.text((sc(112), sc(66)), sub_text, fill=(178, 186, 212), font=_f(False, sc(17)))
+        pf2 = _f(True, sc(17))
+        tw = dd.textlength("✦ HELP", font=pf2)
+        dd.text((sc(LW - 24 - 166) + (pill_w - tw) / 2, sc(52)), "✦ HELP", fill=GOLD, font=pf2)
 
-    if category_id is None or category_id == "overview":
-        title_text = "AETHER BOT • СПРАВКА И КОМАНДЫ"
-        badge_icon = "overview"
-    else:
-        cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
-        title_text = f"КАТЕГОРИЯ: {cat['title'].upper()}" if cat else "СПРАВКА"
-        badge_icon = category_id
+    if is_overview:
+        header("HAKUMO  ·  СПРАВКА",
+               f"{TOTAL_CMDS} КОМАНД  ·  ПРЕФИКС: !  ·  ВЫБОР КАТЕГОРИИ В МЕНЮ", "hakumo_logo")
 
-    badge = _icon_badge(52, badge_icon, ring_color=BLACK, ring_w=2, icon_color=accent)
-    bg.alpha_composite(badge, (36, 30))
-
-    d.text((100, 26), title_text, fill=BLACK, font=_f(True, 24))
-    d.text((100, 56), f"ПРОФЕССИОНАЛЬНАЯ СИСТЕМА • ВСЕГО КОМАНД: {TOTAL_CMDS} • ПРЕФИКС: !", fill=MUTED, font=_f(False, 15))
-
-    pill = _rounded_panel(146, 36, radius=10, fill=WHITE, outline=accent, ow=2)
-    bg.alpha_composite(pill, (734, 38))
-    d.text((752, 46), "HELP v4.0 PRO", fill=accent, font=_f(True, 14))
-
-    if category_id is None or category_id == "overview":
-        # 2 columns x 6 rows = 12 slots (HUGE FONTS 24pt/18pt/16pt) - Each box has its themed accent!
-        cols = 2
-        box_w, box_h = 426, 96
-        gap_x, gap_y = 20, 12
-        start_x, start_y = 24, 106
-
+        # ── Сетка категорий 2×6, крупно и без мелкого текста ──
+        box_w, box_h, gap_x, gap_y = (LW - 48 - 14) // 2, 96, 14, 9
+        start_x, start_y = 24, 122
         for idx, cat in enumerate(CATEGORIES):
-            c = idx % cols
-            r = idx // cols
+            c, r = idx % 2, idx // 2
             bx = start_x + c * (box_w + gap_x)
             by = start_y + r * (box_h + gap_y)
-
-            cat_acc = ACCENTS.get(cat["id"], RED)
-            box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
-            bg.alpha_composite(box, (bx, by))
-
-            cat_badge = _icon_badge(64, cat["id"], ring_color=BLACK, ring_w=2, icon_color=cat_acc)
-            bg.alpha_composite(cat_badge, (bx + 16, by + 16))
-
-            d.text((bx + 94, by + 14), cat["title"].upper(), fill=BLACK, font=_f(True, 24))
-            d.text((bx + 94, by + 44), f"{len(cat['commands'])} КОМАНД", fill=cat_acc, font=_f(True, 18))
-
-            cmds_sample = " • ".join([cmd[0].split()[0] for cmd in cat["commands"][:3]])
-            if len(cmds_sample) > 30:
-                cmds_sample = cmds_sample[:29] + "…"
-            d.text((bx + 94, by + 68), cmds_sample, fill=MUTED, font=_f(False, 16))
-
-        # 12th Box - Interactive Menu nav info
-        bx = start_x + 1 * (box_w + gap_x)
-        by = start_y + 5 * (box_h + gap_y)
-        box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=accent, ow=2)
-        bg.alpha_composite(box, (bx, by))
-
-        nav_badge = _icon_badge(64, "overview", ring_color=accent, ring_w=2, icon_color=accent)
-        bg.alpha_composite(nav_badge, (bx + 16, by + 16))
-
-        d.text((bx + 94, by + 14), "НАВИГАЦИЯ", fill=BLACK, font=_f(True, 24))
-        d.text((bx + 94, by + 44), "ВЫБЕРИТЕ РАЗДЕЛ", fill=accent, font=_f(True, 18))
-        d.text((bx + 94, by + 68), "через меню ниже для команд", fill=MUTED, font=_f(False, 16))
+            bg.alpha_composite(_panel_shadowed(sc(box_w), sc(box_h), radius=sc(16)), (sc(bx) - sc(6), sc(by) - sc(6)))
+            icon = _cat_icon(CAT_ICONS.get(cat["id"], "hakumo_logo"), sc(64))
+            bg.alpha_composite(icon, (sc(bx + 14), sc(by + 16)))
+            dd = ImageDraw.Draw(bg)
+            title_f = _f(True, sc(25))
+            while dd.textlength(cat["title"].upper(), font=title_f) > sc(box_w - 104) and title_f.size > sc(14):
+                title_f = _f(True, title_f.size - sc(1))
+            dd.text((sc(bx + 90), sc(by + 20)), cat["title"].upper(), fill=TXT, font=title_f)
+            dd.text((sc(bx + 90), sc(by + 55)), f"{len(cat['commands'])} команд", fill=GOLD, font=_f(True, sc(20)))
 
     else:
-        # Category commands view - 1 COLUMN FULL WIDTH, MASSIVE FONTS (30pt / 22pt / 22pt)
         cat = next((c for c in CATEGORIES if c["id"] == category_id), None)
         cmds = cat["commands"] if cat else []
-        box_w = 872
-        box_h = 92
-        gap_y = 12
-        start_x, start_y = 24, 108
+        icon_key = CAT_ICONS.get(category_id, "hakumo_logo")
+        header(f"{cat['title'].upper() if cat else 'СПРАВКА'}",
+               f"{len(cmds)} КОМАНД  ·  СПРАВКА HAKUMO", icon_key)
 
+        col2 = len(cmds) > 6
+        box_w = (LW - 48 - 14) // 2 if col2 else LW - 48
+        box_h, gap_y, gap_x = 88, 11, 14
+        start_x, start_y = 24, 122
         for idx, (cmd_str, desc, perm) in enumerate(cmds):
-            bx = start_x
-            by = start_y + idx * (box_h + gap_y)
+            col_i, row_i = (idx % 2, idx // 2) if col2 else (0, idx)
+            bx = start_x + col_i * (box_w + gap_x)
+            by = start_y + row_i * (box_h + gap_y)
+            bg.alpha_composite(_panel_shadowed(sc(box_w), sc(box_h), radius=sc(14)), (sc(bx) - sc(6), sc(by) - sc(6)))
+            dd = ImageDraw.Draw(bg)
+            cx, cy = sc(bx + 26), sc(by + box_h // 2)
+            s8 = sc(8)
+            dd.polygon([(cx, cy - s8), (cx + s8, cy), (cx, cy + s8), (cx - s8, cy)], fill=GOLD)
+            cf = _f(True, sc(26))
+            max_cw = box_w - 64 - 110 if not col2 else box_w - 64 - 96
+            while dd.textlength(cmd_str, font=cf) > sc(max_cw) and cf.size > sc(13):
+                cf = _f(True, cf.size - sc(1))
+            dd.text((sc(bx + 46), sc(by + 12)), cmd_str, fill=TXT, font=cf)
+            dd.text((sc(bx + 46), sc(by + 50)), desc, fill=(178, 186, 212), font=_f(False, sc(19)))
+            pf = _f(True, sc(15))
+            perm_txt = f" {perm} "
+            pw = dd.textlength(perm_txt, font=pf) + sc(16)
+            ph = sc(30)
+            bg.alpha_composite(_panel(int(pw), int(ph), radius=sc(10), border=(212, 175, 55, 190)),
+                               (sc(bx + box_w) - int(pw) - sc(12), sc(by) + (sc(box_h) - ph) // 2))
+            dd = ImageDraw.Draw(bg)
+            dd.text((sc(bx + box_w) - int(pw) - sc(12) + sc(8), sc(by) + (sc(box_h) - ph) // 2 + sc(5)),
+                    perm_txt, fill=GOLD, font=pf)
 
-            box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
-            bg.alpha_composite(box, (bx, by))
+    # ── Нижняя полоса навигации ──
+    nav_h = 62
+    bg.alpha_composite(_panel_shadowed(sc(LW - 48), sc(nav_h), radius=sc(16), border=(212, 175, 55, 230)),
+                       (sc(24) - sc(6), H - sc(nav_h + 24) - sc(6)))
+    icon = _cat_icon("navigation", sc(44))
+    bg.alpha_composite(icon, (sc(36), H - sc(nav_h + 24) + sc(9)))
+    dd = ImageDraw.Draw(bg)
+    dd.text((sc(94), H - sc(nav_h + 24) + sc(10)), "НАВИГАЦИЯ · МЕНЮ НИЖЕ",
+            fill=TXT, font=_f(True, sc(21)))
+    dd.text((sc(94), H - sc(nav_h + 24) + sc(38)), "выберите раздел — карточка обновится",
+            fill=(178, 186, 212), font=_f(False, sc(16)))
+    vf = _f(True, sc(16))
+    vt = "HELP v5.3"
+    dd.text((W - sc(24) - dd.textlength(vt, font=vf) - sc(14), H - sc(nav_h + 24) + sc(24)), vt, fill=GOLD, font=vf)
 
-            cmd_badge = _icon_badge(64, category_id, ring_color=BLACK, ring_w=2, icon_color=accent)
-            bg.alpha_composite(cmd_badge, (bx + 16, by + 14))
-
-            d.text((bx + 94, by + 15), cmd_str, fill=BLACK, font=_f(True, 30))
-            d.text((bx + 94, by + 53), desc, fill=MUTED, font=_f(False, 22))
-
-            perm_w = len(f"[{perm}]") * 13
-            d.text((bx + box_w - 24 - perm_w, by + 32), f"[{perm}]", fill=accent, font=_f(True, 22))
-
-    # 4 Corner brackets (thematic accent color)
-    br = _corner_bracket(40, 4, color=accent)
-    bg.alpha_composite(br, (6, 6))
-    bg.alpha_composite(br.rotate(270), (W - 46, 6))
-    bg.alpha_composite(br.rotate(90), (6, H - 46))
-    bg.alpha_composite(br.rotate(180), (W - 46, H - 46))
-
+    # ── Золотые уголки ──
+    L, T = sc(30), sc(3)
+    for (x, y, dx, dy) in ((8 * R, 8 * R, 1, 1), (W - 8 * R, 8 * R, -1, 1),
+                           (8 * R, H - 8 * R, 1, -1), (W - 8 * R, H - 8 * R, -1, -1)):
+        dd.line([(x, y), (x + dx * L, y)], fill=GOLD, width=T)
+        dd.line([(x, y), (x, y + dy * L)], fill=GOLD, width=T)
     return bg
 
 
+# Содержимое карточек полностью статично — PNG-байты кэшируются один раз,
+# переключение страниц в select-меню становится мгновенным.
+_CARD_BYTES_CACHE = {}
+
+
 def generate_help_card_bytes(category_id: str = None) -> io.BytesIO:
-    card = generate_help_card(category_id).convert('RGB')
-    buf = io.BytesIO()
-    card.save(buf, format='PNG', optimize=True)
-    buf.seek(0)
-    return buf
+    """Карта уже рисуется в 2x (R=2) — без размытия.
+    Если PNG-байты есть в кэше — повторный рендер не выполняется (мгновенное переключение страниц)."""
+    key = category_id or "overview"
+    data = _CARD_BYTES_CACHE.get(key)
+    if data is None:
+        card = generate_help_card(category_id).convert('RGB')
+        buf = io.BytesIO()
+        card.save(buf, format='PNG', optimize=True)
+        data = buf.getvalue()
+        _CARD_BYTES_CACHE[key] = data
+    return io.BytesIO(data)
+
+
+def prewarm_help_cards():
+    """Прогрев при старте: отрисовать все страницы в фоне — выбор мгновенный."""
+    for cid in [None] + [c["id"] for c in CATEGORIES]:
+        try:
+            generate_help_card_bytes(cid)
+        except Exception as _ex:
+            _log.debug("prewarm_help_cards(): подавлено: %s", _ex)
+
+
+CUSTOM_EMOJIS: dict = {}
+
+
+def load_custom_help_emojis(bot):
+    """Сканировать кастом-эмодзи сервера; hakumo_<icon> привязать к меню help.
+    Загрузка иконок: !upload-emoji (PNG из assets/icons станут эмодзи сервера)."""
+    CUSTOM_EMOJIS.clear()
+    for g in bot.guilds:
+        for e in g.emojis:
+            if e.name.startswith('hakumo_') and e.available:
+                key = e.name[len('hakumo_'):]
+                CUSTOM_EMOJIS.setdefault(key, str(e))
 
 
 class HelpSelect(discord.ui.Select):
@@ -561,25 +561,28 @@ class HelpSelect(discord.ui.Select):
             discord.SelectOption(
                 label="Главное меню",
                 value="overview",
-                description="Общий список всех 11 категорий команд",
-                emoji="🔘",
+                emoji="🧭",
+                description="Все разделы справки одним экраном",
                 default=(current_cat == "overview" or current_cat is None)
             )
         ]
-        for c in CATEGORIES:
+        for cat in _all_category_labels():
+            cmds = COMMAND_CATEGORIES.get(cat) or _registry_extra_categories().get(cat) or []
+            blurb = _HELP_BLURB.get(cat, f'Команды раздела «{cat}»')
+            desc = f'{len(cmds)} {_plural_cmds(len(cmds))} · {blurb}'[:100]
             options.append(
                 discord.SelectOption(
-                    label=c["title"],
-                    value=c["id"],
-                    description=f"{len(c['commands'])} команд в категории",
-                    emoji=CAT_EMOJIS.get(c["id"], "▪️"),
-                    default=(c["id"] == current_cat)
+                    label=cat,
+                    value=cat,
+                    emoji=_HELP_EMOJI.get(cat, '▫️'),
+                    description=desc,
+                    default=(cat == current_cat)
                 )
             )
         super().__init__(
-            placeholder="📂 Выберите категорию для просмотра команд...",
+            placeholder="Выберите раздел справки…",
             options=options,
-            custom_id="help_select_v4_pro"
+            custom_id="help_select_text_v1"
         )
 
     async def callback(self, interaction: discord.Interaction):
@@ -587,12 +590,13 @@ class HelpSelect(discord.ui.Select):
         cat_id = self.values[0]
         if cat_id == "overview":
             cat_id = None
-        img_buf = await interaction.client.loop.run_in_executor(
-            None, generate_help_card_bytes, cat_id
+        e = build_help_embed(
+            category_id=cat_id,
+            member=interaction.user,
+            guild_id=interaction.guild.id if interaction.guild else 0,
         )
-        file = discord.File(img_buf, filename="help_card.png")
         view = HelpView(current_cat=cat_id)
-        await interaction.edit_original_response(embed=None, attachments=[file], view=view)
+        await interaction.edit_original_response(embed=e, view=view)
 
 
 class HelpView(discord.ui.View):
@@ -605,44 +609,48 @@ class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="help", aliases=["h", "команды", "menu", "yardim"])
-    async def help_prefix(self, ctx, category: str = None):
-        try:
-            await ctx.message.delete()
-        except Exception:
-            pass
+    async def cog_load(self):
+        # Картинки в справке отключены — прогрев не нужен.
+        pass
 
-        cat_id = None
-        if category:
-            cat_l = category.lower()
-            cat = next((c for c in CATEGORIES if c["id"] == cat_l or c["title"].lower() == cat_l), None)
-            if cat:
-                cat_id = cat["id"]
+    def _resolve_help_cat(self, category):
+        if not category:
+            return None
+        cat_l = str(category).lower().strip()
+        for c in _all_category_labels():
+            if c.lower() == cat_l or cat_l in c.lower():
+                return c
+        return None
 
-        img_buf = await self.bot.loop.run_in_executor(
-            None, generate_help_card_bytes, cat_id
-        )
-        file = discord.File(img_buf, filename="help_card.png")
-        view = HelpView(current_cat=cat_id)
-        await ctx.send(file=file, view=view)
-
-    @app_commands.command(name="help", description="Профессиональное руководство и справка по всем командам")
+    @app_commands.command(name="help", description="Справка по командам бота")
     async def help_slash(self, interaction: discord.Interaction, category: str = None):
+        if not HELP_ENABLED:
+            await interaction.response.send_message(
+                embed=_help_disabled_embed(interaction.guild), ephemeral=True)
+            return
         await interaction.response.defer(ephemeral=True)
-        cat_id = None
-        if category:
-            cat_l = category.lower()
-            cat = next((c for c in CATEGORIES if c["id"] == cat_l or c["title"].lower() == cat_l), None)
-            if cat:
-                cat_id = cat["id"]
-
-        img_buf = await interaction.client.loop.run_in_executor(
-            None, generate_help_card_bytes, cat_id
+        cat_id = self._resolve_help_cat(category)
+        e = build_help_embed(
+            category_id=cat_id,
+            member=interaction.user,
+            guild_id=interaction.guild.id if interaction.guild else 0,
         )
-        file = discord.File(img_buf, filename="help_card.png")
         view = HelpView(current_cat=cat_id)
-        await interaction.followup.send(file=file, view=view, ephemeral=True)
+        await interaction.followup.send(embed=e, view=view, ephemeral=True)
+
+
+class HelpEmojiUpload(commands.Cog):
+    """Загрузить help-иконки на сервер как кастом-эмодзи (разово)."""
+
+    def __init__(self, bot):
+        self.bot = bot
+
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        load_custom_help_emojis(self.bot)
 
 
 async def setup(bot):
     await bot.add_cog(Help(bot))
+    await bot.add_cog(HelpEmojiUpload(bot))

@@ -1,213 +1,327 @@
 {% extends "base.html" %}
-{% block title %}Роли по реакциям - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-smile"></i> 🎭 РОЛИ ПО РЕАКЦИЯМ{% endblock %}
+{% block title %}Роли по реакциям — Панель Hakumo{% endblock %}
+{% block page_title %}Роли по реакциям{% endblock %}
 {% block content %}
-<style>
-.rr-type-hint { background: rgba(224,176,74,0.07); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 10px 14px; font-size: 12.5px; color: #d8d0bb; margin: 10px 0 16px; }
-.rr-type-badge { display: inline-block; font-size: 10.5px; padding: 2px 9px; border-radius: 20px; margin-bottom: 8px; font-weight: var(--fw-semibold); }
-.rr-type-badge.emoji { background: rgba(96,165,250,0.15); color: var(--info); }
-.rr-type-badge.select { background: rgba(224,176,74,0.15); color: var(--ac); }
-.rr-badge { color: var(--ac); }
-.entry-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-.entry-emoji { width: 90px; background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 8px 10px; color: var(--text); font-size: 13px; text-align: center; }
-.entry-role { flex: 1; }
-.entry-del { background: transparent; border: none; color: var(--err); cursor: pointer; font-size: 18px; }
-.btn-add-entry { background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 8px 14px; cursor: pointer; font-size: 12.5px; }
-.btn-add-entry:hover { background: var(--ac-glow); }
-</style>
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>🎭 РЕАКЦИЯ ROLES</span>
-    </div>
-    <h1>🎭 РЕАКЦИЯ ROLES</h1>
-    <p>Создание ролей по реакциям: нажал — получил роль.</p>
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Роли <span class="sep">·</span> Роли по реакциям</div>
+    <h1>Роли по реакциям</h1>
+    <p class="lead">Нажал на реакцию — получил роль. Emoji-панель или выпадающий список: создайте сообщение, участники выберут роль сами.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn btn-primary" id="rr-new"><i class="fas fa-plus"></i> Новая панель</button>
+    <button type="button" class="btn" id="rr-reload" title="Обновить"><i class="fas fa-arrows-rotate"></i> Обновить</button>
   </div>
 </div>
-{% endblock %}
 
+<style>
+/* ═══ Роли по реакциям — Hakumo ═══ */
+.rr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.rr-card{background:var(--glass);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px 17px;box-shadow:var(--shadow-1);display:flex;flex-direction:column;gap:10px;transition:border-color .15s}
+.rr-card:hover{border-color:var(--ac-line)}
+.rr-card-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rr-title{font-weight:800;font-size:14px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rr-type-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;flex-shrink:0}
+.rr-type-badge.emoji{background:var(--ac-soft);color:var(--ac);border:1px solid var(--ac-line)}
+.rr-type-badge.select{background:rgba(22,163,74,.12);color:var(--ok);border:1px solid rgba(22,163,74,.3)}
+.rr-entries{display:flex;flex-direction:column;gap:6px}
+.rr-entry{display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line-2);border-radius:9px;background:var(--surface);font-size:12.5px}
+.rr-entry .em{font-size:17px;width:24px;text-align:center;flex-shrink:0}
+.rr-entry .ro{color:var(--ac);font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rr-entry .ar{color:var(--text-3);font-size:11px}
+.rr-foot{display:flex;align-items:center;gap:8px;margin-top:auto;font-size:11px;color:var(--text-3)}
+.rr-foot .ch{margin-left:auto;font-weight:600;color:var(--text-2)}
+.rr-del{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:var(--surface);color:var(--text-3);border-radius:9px;padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer;transition:all .12s}
+.rr-del:hover{color:var(--err);border-color:color-mix(in srgb,var(--err) 40%,transparent);background:color-mix(in srgb,var(--err) 8%,transparent)}
+.rr-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:36px 16px;color:var(--text-3);border:1.5px dashed var(--line-2);border-radius:14px}
+.rr-empty i{font-size:28px;color:var(--ac)}
+.rr-empty b{font-size:14px;color:var(--text-2)}
+.rr-empty span{font-size:12px}
+/* модалка */
+.rr-modal-box{max-width:560px}
+.rr-m-body{padding:16px 18px;display:flex;flex-direction:column;gap:13px}
+.rr-field label{display:block;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+.rr-inp{width:100%;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.rr-inp:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.rr-type-row{display:flex;gap:8px}
+.rr-type-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px;border:1px solid var(--line-2);border-radius:11px;background:var(--surface);color:var(--text-2);font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s}
+.rr-type-btn.active{background:var(--ac-soft);border-color:var(--ac);color:var(--ac)}
+.rr-entry-row{display:flex;gap:8px;align-items:center}
+.rr-entry-row .em-inp{width:96px;flex-shrink:0;text-align:center}
+.rr-entry-row .role-sel{flex:1}
+.rr-entry-del{border:none;background:transparent;color:var(--text-3);cursor:pointer;font-size:13px;padding:6px;border-radius:8px;transition:all .12s}
+.rr-entry-del:hover{color:var(--err);background:color-mix(in srgb,var(--err) 10%,transparent)}
+.rr-add-entry{align-self:flex-start;display:inline-flex;align-items:center;gap:7px;border:1.5px dashed var(--ac-line);background:var(--ac-soft);color:var(--ac);border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.rr-add-entry:hover{border-style:solid}
+.rr-m-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:4px}
+.rr-msg{margin-top:10px;padding:10px 13px;border-radius:11px;font-size:12.5px;font-weight:600;display:none;line-height:1.5}
+.rr-msg.show{display:block}
+.rr-msg.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);border:1px solid color-mix(in srgb,var(--ok) 40%,transparent);color:var(--ok)}
+.rr-msg.err{background:color-mix(in srgb,var(--err) 10%,transparent);border:1px solid color-mix(in srgb,var(--err) 40%,transparent);color:var(--err)}
+@media (prefers-reduced-motion: reduce){.rr-card,.rr-type-btn,.rr-del,.rr-entry-del,.rr-add-entry{transition:none}}
+</style>
 
-
-<div class="rr-hero">
-  <div   style="margin-bottom: 10px;">🎭</div>
-  <div class="hero-title">🎭 Роли по реакциям</div>
-  <div class="hero-sub">Автоматически выдавать роль по клику на эмодзи</div>
+<div class="rr-grid" id="rr-list">
+  <div class="rr-empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загружаем панели…</span></div>
 </div>
 
-<div class="controls-bar">
-  <select  id="guild-select" class="guild-sel" onchange="loadRR()">
-    <option value="">🏠 Выберите сервер...</option>
-  </select>
-  <button class="btn-new" onclick="openModal()"><span>➕</span> Новая панель</button>
-</div>
-
-<div class="rr-type-hint">
-  💡 Панель можно создать как <b>emoji-реакции</b> (нажал на реакцию — получил роль) или как
-  <b>select-menu</b> (выпадающий список, в котором выбирают роль).
-</div>
-
-<div id="rr-list" class="rr-grid"></div>
-
-<div id="modal" class="modal-overlay">
-  <div class="modal-box">
-    <div class="modal-title">🎭 Роль по реакции Создать</div>
-    <div class="form-group">
-      <label class="form-label">📺 Канал</label>
-      <select id="rr-channel" class="form-input"></select>
+<!-- Модалка создания -->
+<div class="modal-overlay" id="rr-modal" hidden>
+  <div class="modal-box rr-modal-box" role="dialog" aria-modal="true" aria-labelledby="rr-modal-title">
+    <div class="modal-head">
+      <div><h3 id="rr-modal-title">Новая панель ролей</h3><div class="sub">Сообщение в Discord с выбором ролей</div></div>
+      <button type="button" class="close" id="rr-modal-close" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
     </div>
-    <div class="form-group">
-      <label class="form-label">📝 Заголовок</label>
-      <input type="text" id="rr-title" class="form-input" placeholder="Заголовок сообщения...">
-    </div>
-    <div class="form-group">
-      <label class="form-label">🔘 Тип панели</label>
-      <select id="rr-type" class="form-input" onchange="setType(this.value)">
-        <option value="emoji">😀 Emoji-реакции</option>
-        <option value="select">📋 Select-menu (выпадающий список)</option>
-      </select>
-    </div>
-    <div id="rr-emoji-label" class="form-label" style="margin-bottom: 10px;">🎭 Emoji → Роль</div>
-    <div id="rr-select-label" class="form-label" style="margin-bottom: 10px; display:none;">📋 Роль (для select-menu)</div>
-    <div id="rr-entries"></div>
-    <button class="btn-add-entry" onclick="addEntry()">➕ Добавить роль</button>
-    <div class="modal-actions">
-      <button class="btn-submit" onclick="createRR()">🎭 Создать и Отправить</button>
-      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+    <div class="rr-m-body">
+      <div class="rr-field">
+        <label for="rr-title-inp">Заголовок сообщения</label>
+        <input class="rr-inp" id="rr-title-inp" placeholder="Например: Выбери свои увлечения" aria-label="Заголовок сообщения" maxlength="200">
+      </div>
+      <div class="rr-field">
+        <label for="rr-channel-sel">Канал панели</label>
+        <select class="rr-inp" id="rr-channel-sel" aria-label="Канал панели"><option value="">Выберите канал…</option></select>
+      </div>
+      <div class="rr-field">
+        <label>Тип панели</label>
+        <div class="rr-type-row">
+          <button type="button" class="rr-type-btn active" id="rr-type-emoji" data-rr-type="emoji"><i class="fas fa-face-smile"></i> Emoji-реакции</button>
+          <button type="button" class="rr-type-btn" id="rr-type-select" data-rr-type="select"><i class="fas fa-list"></i> Выпадающий список</button>
+        </div>
+      </div>
+      <div class="rr-field">
+        <label id="rr-entries-label">Emoji → роль</label>
+        <div id="rr-entries"></div>
+        <button type="button" class="rr-add-entry" id="rr-add-entry"><i class="fas fa-plus"></i> Добавить роль</button>
+      </div>
+      <div class="rr-m-foot">
+        <button type="button" class="btn" id="rr-cancel"><i class="fas fa-xmark"></i> Отмена</button>
+        <button type="button" class="btn btn-primary" id="rr-create"><i class="fas fa-paper-plane"></i> Создать и отправить</button>
+      </div>
+      <div class="rr-msg" id="rr-msg"></div>
     </div>
   </div>
 </div>
 
 <script>
-var selectedGuild = '{{ main_guild_id }}';
-var allRoles = [];
-var rrType = 'emoji';
+(function () {
+  'use strict';
+  var GID = '{{ main_guild_id }}';
+  var CAN_EDIT = {{ 'true' if role in ('admin', 'owner') else 'false' }};
+  var panels = [];
+  var allRoles = [];
+  var rrType = 'emoji';
+  var _fp = '';
 
-function setType(v) {
-  rrType = v;
-  document.getElementById('rr-emoji-label').style.display = v === 'emoji' ? '' : 'none';
-  document.getElementById('rr-select-label').style.display = v === 'select' ? '' : 'none';
-  document.getElementById('rr-entries').innerHTML = '';
-  addEntry();
-}
-
-async function loadGuilds() {
-  // Sabit сервер ID
-  var gid = '{{ main_guild_id }}';
-  if (typeof selectedGuild !== 'undefined') selectedGuild = gid;
-  if (document.getElementById('guild-select')) document.getElementById('guild-select').value = gid;
-  if (document.getElementById('guild-sel')) document.getElementById('guild-sel').value = gid;
-  if (document.getElementById('guildSelect')) document.getElementById('guildSelect').value = gid;
-  if (typeof loadData === 'function') { loadData(gid); return; }
-  if (typeof loadAll === 'function') { loadAll(gid); return; }
-  if (typeof loadRoles === 'function') { loadRoles(gid); return; }
-  if (typeof loadChannels === 'function') { loadChannels(gid); return; }
-  if (typeof loadMembers === 'function') { loadMembers(gid); return; }
-  if (typeof loadHistory === 'function') { loadHistory(gid); return; }
-  if (typeof loadLogs === 'function') { loadLogs(gid); return; }
-  if (typeof loadVoiceStats === 'function') { loadVoiceStats(gid); return; }
-  if (typeof loadSettings === 'function') { loadSettings(gid); return; }
-  if (typeof loadGiveaways === 'function') { loadGiveaways(gid); return; }
-  if (typeof loadPolls === 'function') { loadPolls(gid); return; }
-  if (typeof loadEconomy === 'function') { loadEconomy(gid); return; }
-  if (typeof loadSuggestions === 'function') { loadSuggestions(gid); return; }
-  if (typeof loadInvites === 'function') { loadInvites(gid); return; }
-  if (typeof loadHealth === 'function') { loadHealth(gid); return; }
-  if (typeof loadAnalytics === 'function') { loadAnalytics(gid); return; }
-
-}
-
-async function loadRR() {
-  selectedGuild = document.getElementById('guild-select').value;
-  if (!selectedGuild) return;
-  var [rrs, chRes, roles] = await Promise.all([
-    fetch('/api/guild/'+selectedGuild+'/reaction-roles').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/channels').then(r=>r.json()),
-    fetch('/api/guild/'+selectedGuild+'/roles').then(r=>r.json())
-  ]);
-  var channels = Array.isArray(chRes) ? chRes : (chRes.channels || []);
-  allRoles = roles;
-  document.getElementById('rr-channel').innerHTML = channels.filter(c=>c.type==='text').map(c=>'<option value="'+c.id+'">#'+c.name+'</option>').join('');
-
-  var box = document.getElementById('rr-list');
-  if (!rrs.length) { box.innerHTML='<div class="empty-state"><div >🎭</div><p>Панелей пока нет.</p></div>'; return; }
-  box.innerHTML = rrs.map(function(rr, i) {
-    var isSelect = rr.type === 'select';
-    var entries = (rr.entries||[]).map(function(e) {
-      var left = isSelect ? '<span class="rr-badge">📋</span>' : '<span class="rr-emoji">'+(e.emoji||'🎭')+'</span><span class="rr-arrow">→</span>';
-      return '<div class="rr-entry">'+left+'<span class="rr-role">@'+e.role_name+'</span></div>';
-    }).join('');
-    return '<div class="rr-card" >'+
-      '<div class="rr-title">🎭 '+rr.title+'</div>'+ (isSelect ? '<span class="rr-type-badge select">📋 Select-menu</span>' : '<span class="rr-type-badge emoji">😀 Реакции</span>') + entries +
-      '<div class="rr-footer"><span >'+rr.entries.length+' роль</span>'+
-      '<button class="btn-del" onclick="deleteRR(\''+rr.id+'\')">🗑 Удалить</button></div></div>';
-  }).join('');
-}
-
-function addEntry() {
-  var div = document.createElement('div');
-  div.className = 'entry-row';
-  var roles = allRoles.map(r=>'<option value="'+r.id+'">@'+r.name+'</option>').join('');
-  var field;
-  if (rrType === 'select') {
-    field = '<input type="text" class="entry-emoji" placeholder="🎭 (необязательно)" maxlength="2">';
-  } else {
-    field = '<input type="text" class="entry-emoji" value="🎭" maxlength="2">';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }
+  function msg(ok, text) {
+    var el = $('rr-msg');
+    if (!text) { el.className = 'rr-msg'; el.textContent = ''; return; }
+    el.className = 'rr-msg show ' + (ok ? 'ok' : 'err');
+    el.textContent = text;
   }
-  div.innerHTML = field +
-    '<select class="entry-role form-input" >'+roles+'</select>'+
-    '<button class="entry-del" onclick="this.parentElement.remove()">×</button>';
-  document.getElementById('rr-entries').appendChild(div);
-}
+  function fmtDate(ts) {
+    if (!ts) return '';
+    try { return new Date(Number(ts) * 1000).toLocaleDateString('ru-RU'); } catch (e) { return ''; }
+  }
 
-function openModal() {
-  if (!selectedGuild) { alert('Выберите сервер!'); return; }
-  rrType = document.getElementById('rr-type').value;
-  document.getElementById('rr-entries').innerHTML = '';
-  document.getElementById('rr-title').value = '';
-  setType(rrType);
-  addEntry();
-  document.getElementById('modal').style.display = 'flex';
-}
-function closeModal() { document.getElementById('modal').style.display = 'none'; }
-
-async function createRR() {
-  var title = document.getElementById('rr-title').value.trim();
-  var channel_id = document.getElementById('rr-channel').value;
-  var type = document.getElementById('rr-type').value;
-  var entries = [];
-  document.querySelectorAll('.entry-row').forEach(function(row) {
-    var emoji = row.querySelector('.entry-emoji').value.trim();
-    var sel = row.querySelector('.entry-role');
-    if (!sel.value) return;
-    if (type === 'select') {
-      entries.push({ emoji: emoji || '', role_id: sel.value });
-    } else {
-      if (emoji) entries.push({ emoji: emoji, role_id: sel.value });
+  function render() {
+    var box = $('rr-list');
+    if (!panels.length) {
+      box.innerHTML = '<div class="rr-empty"><i class="fas fa-face-smile"></i><b>Панелей пока нет</b><span>Создайте первую кнопкой «Новая панель»</span></div>';
+      return;
     }
-  });
-  if (!title || entries.length < 1) {
-    alert(type === 'select' ? 'Введите заголовок и добавьте минимум 1 роль!' : 'Введите заголовок и добавьте минимум 1 совпадение!');
-    return;
+    box.innerHTML = panels.map(function (p) {
+      var typeBadge = p.type === 'select'
+        ? '<span class="rr-type-badge select"><i class="fas fa-list"></i> Список</span>'
+        : '<span class="rr-type-badge emoji"><i class="fas fa-face-smile"></i> Emoji</span>';
+      var entries = (p.entries || []).map(function (e) {
+        var em = e.emoji ? '<span class="em">' + esc(e.emoji) + '</span>' : '<span class="em"><i class="fas fa-chevron-right"></i></span>';
+        return '<div class="rr-entry">' + em + '<span class="ro">' + esc(e.role_name || e.role_id || '—') + '</span>' +
+          '<span class="ar">' + (e.emoji ? 'реакция' : 'выбор') + '</span></div>';
+      }).join('');
+      return '<div class="rr-card" data-rr-id="' + esc(p.id) + '">' +
+        '<div class="rr-card-top">' + typeBadge + '<span class="rr-title">' + esc(p.title || 'Без названия') + '</span></div>' +
+        '<div class="rr-entries">' + entries + '</div>' +
+        '<div class="rr-foot"><i class="fas fa-hashtag"></i><span class="ch">#' + esc(p.channel_name || p.channel_id || '—') + '</span>' +
+          (CAN_EDIT ? '<button type="button" class="rr-del" data-del="' + esc(p.id) + '"><i class="fas fa-trash"></i> Удалить</button>' : '') +
+        '</div></div>';
+    }).join('');
   }
-  var btn = document.querySelector('.btn-submit');
-  btn.textContent = '⏳ Создание...'; btn.disabled = true;
-  var r = await fetch('/api/guild/'+selectedGuild+'/reaction-roles/create', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ title: title, channel_id: channel_id, type: type, entries: entries })
+
+  async function load() {
+    try {
+      var rr = await fetch('/api/guild/' + GID + '/reaction-roles').then(function (r) { return r.json(); });
+      var chs = await fetch('/api/guild/' + GID + '/channels').then(function (r) { return r.json(); });
+      var fp = JSON.stringify(rr);
+      if (fp !== _fp) {
+        _fp = fp;
+        panels = (Array.isArray(rr) ? rr : []).map(function (p) {
+          var ch = (Array.isArray(chs) ? chs : (chs.channels || [])).find(function (c) { return String(c.id) === String(p.channel_id); });
+          p.channel_name = ch ? ch.name : p.channel_name;
+          return p;
+        });
+        render();
+      }
+    } catch (e) {
+      $('rr-list').innerHTML = '<div class="rr-empty"><i class="fas fa-triangle-exclamation"></i><b>Не удалось загрузить панели</b><span>Проверьте соединение</span></div>';
+    }
+  }
+
+  async function loadRolesForModal() {
+    try {
+      var r = await fetch('/api/guild/' + GID + '/roles').then(function (x) { return x.json(); });
+      allRoles = Array.isArray(r) ? r : [];
+    } catch (e) {
+      allRoles = [];
+    }
+  }
+
+  function entryRowHtml(roleId, emoji) {
+    var opts = allRoles.map(function (r) {
+      var sel = String(r.id) === String(roleId) ? ' selected' : '';
+      return '<option value="' + esc(r.id) + '"' + sel + '>' + esc(r.name || r.id) + '</option>';
+    }).join('');
+    return '<div class="rr-entry-row">' +
+      (rrType === 'emoji'
+        ? '<input class="rr-inp em-inp" data-em placeholder="Эмодзи" aria-label="Эмодзи" value="' + esc(emoji || '') + '">'
+        : '') +
+      '<select class="rr-inp role-sel" data-role aria-label="Роль">' + opts + '</select>' +
+      '<button type="button" class="rr-entry-del" data-del-entry aria-label="Убрать роль"><i class="fas fa-xmark"></i></button>' +
+    '</div>';
+  }
+
+  function resetEntries() {
+    var box = $('rr-entries');
+    box.innerHTML = entryRowHtml(allRoles.length ? allRoles[0].id : '', '');
+  }
+
+  function setType(t) {
+    rrType = t;
+    $('rr-type-emoji').classList.toggle('active', t === 'emoji');
+    $('rr-type-select').classList.toggle('active', t === 'select');
+    $('rr-entries-label').textContent = t === 'emoji' ? 'Emoji → роль' : 'Роли в списке';
+    resetEntries();
+  }
+
+  function openModal() {
+    if (!CAN_EDIT) { toast('Создание панелей доступно администраторам', false); return; }
+    loadRolesForModal().then(function () {
+      $('rr-title-inp').value = '';
+      setType('emoji');
+      msg('', '');
+      $('rr-modal').hidden = false;
+      $('rr-modal').classList.add('open');
+      loadChannelsForModal();
+    });
+  }
+  function closeModal() {
+    $('rr-modal').classList.remove('open');
+    $('rr-modal').hidden = true;
+  }
+
+  async function loadChannelsForModal() {
+    try {
+      var r = await fetch('/api/guild/' + GID + '/channels').then(function (x) { return x.json(); });
+      var chans = Array.isArray(r) ? r : (r.channels || []);
+      var sel = $('rr-channel-sel');
+      sel.innerHTML = '<option value="">Выберите канал…</option>';
+      chans.filter(function (c) { return c.type === 'text' && !c.hidden; })
+        .sort(function (a, b) { return (a.position || 0) - (b.position || 0); })
+        .forEach(function (c) {
+          sel.innerHTML += '<option value="' + esc(c.id) + '">#' + esc(c.name) + '</option>';
+        });
+    } catch (e) { /* каналы не критичны */ }
+  }
+
+  async function create() {
+    var title = $('rr-title-inp').value.trim();
+    var ch = $('rr-channel-sel').value;
+    var rows = $('rr-entries').querySelectorAll('.rr-entry-row');
+    var entries = [];
+    rows.forEach(function (row) {
+      var roleSel = row.querySelector('[data-role]');
+      var emInp = row.querySelector('[data-em]');
+      var role_id = roleSel ? roleSel.value : '';
+      var emoji = emInp ? emInp.value.trim() : '';
+      if (role_id) entries.push({ role_id: role_id, emoji: emoji });
+    });
+    if (!title) { msg(false, 'Укажите заголовок панели'); return; }
+    if (!ch) { msg(false, 'Выберите канал панели'); return; }
+    if (!entries.length) { msg(false, 'Добавьте хотя бы одну роль'); return; }
+    if (rrType === 'emoji' && entries.some(function (e) { return !e.emoji; })) {
+      msg(false, 'Для emoji-панели у каждой роли нужен эмодзи');
+      return;
+    }
+    var btn = $('rr-create');
+    var orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Создаём…';
+    msg(true, 'Отправляем панель в Discord…');
+    try {
+      var r = await fetch('/api/guild/' + GID + '/reaction-roles/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title, channel_id: ch, type: rrType, entries: entries })
+      });
+      var d = await r.json();
+      if (d.success) {
+        toast(String(d.message || 'Панель создана'), true);
+        closeModal();
+        load();
+      } else {
+        msg(false, String(d.error || 'Ошибка создания'));
+        toast(String(d.error || 'Ошибка создания'), false);
+      }
+    } catch (e) {
+      msg(false, 'Ошибка соединения');
+    }
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+
+  function del(id) {
+    var p = panels.find(function (x) { return String(x.id) === String(id); });
+    window.askConfirm('Удалить панель «' + (p ? p.title : id) + '»?', 'Сообщение останется в Discord, но реакции перестанут выдавать роли.', function () {
+      fetch('/api/guild/' + GID + '/reaction-roles/' + encodeURIComponent(id) + '/delete', { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.success) { toast('Панель удалена', true); load(); }
+          else toast(String(d.error || 'Ошибка'), false);
+        })
+        .catch(function () { toast('Ошибка соединения', false); });
+    }, { danger: true, okText: 'Удалить' });
+  }
+
+  /* события */
+  $('rr-new').addEventListener('click', openModal);
+  $('rr-reload').addEventListener('click', load);
+  $('rr-modal-close').addEventListener('click', closeModal);
+  $('rr-cancel').addEventListener('click', closeModal);
+  $('rr-modal').addEventListener('click', function (e) { if (e.target === $('rr-modal')) closeModal(); });
+  $('rr-type-emoji').addEventListener('click', function () { setType('emoji'); });
+  $('rr-type-select').addEventListener('click', function () { setType('select'); });
+  $('rr-add-entry').addEventListener('click', function () {
+    $('rr-entries').insertAdjacentHTML('beforeend', entryRowHtml(allRoles.length ? allRoles[0].id : '', ''));
   });
-  var d = await r.json();
-  btn.textContent = '🎭 Создать и Отправить'; btn.disabled = false;
-  if (d.success) { closeModal(); loadRR(); } else alert(d.error||'Ошибка!');
-}
+  $('rr-entries').addEventListener('click', function (e) {
+    var del = e.target.closest ? e.target.closest('[data-del-entry]') : null;
+    if (!del) return;
+    del.closest('.rr-entry-row').remove();
+  });
+  $('rr-create').addEventListener('click', create);
+  $('rr-list').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-del]') : null;
+    if (b) del(b.getAttribute('data-del'));
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && $('rr-modal') && !$('rr-modal').hidden) closeModal();
+  });
 
-async function deleteRR(id) {
-  if (!confirm('Удалить эту панель?')) return;
-  await fetch('/api/guild/'+selectedGuild+'/reaction-roles/'+id+'/delete', {method:'POST'});
-  loadRR();
-}
-
-loadGuilds();
+  load();
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { load(); }, 1500);
+})();
 </script>
 {% endblock %}

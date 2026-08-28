@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Консоль — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-terminal"></i> Живая консоль{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Консоль</div>
+    <h1>Живая консоль</h1>
+    <p class="lead">Последние 300 строк логов бота — автоматическое обновление каждые 2.5 секунды. Никаких перезагрузок страницы.</p>
+  </div>
+</div>
+
+
+<style>
+  .kn-wrap { padding:6px 2px 34px; max-width: 1080px; }
+  .kn-toolbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .kn-btn { display:inline-flex; align-items:center; gap:7px; padding:9px 16px; border-radius:10px;
+    background:var(--ac-soft); border:1px solid var(--ac-line);
+    color:var(--ac); font-weight:700; font-size:12.5px; cursor:pointer; transition:.15s; }
+  .kn-btn:hover {background:color-mix(in srgb, var(--ac) 16%, transparent)}
+  .kn-btn.ghost { background:var(--surface); border-color:var(--line-2); color:var(--text-2); }
+  .kn-btn.paused { background:rgba(231,76,60,.14); border-color:rgba(231,76,60,.4); color:var(--err); }
+  .kn-select { background:var(--surface); border:1px solid var(--line-2); color:var(--text);
+    border-radius:10px; padding:9px 12px; font-size:12.5px; font-weight:600; outline:none; cursor:pointer; }
+  .kn-status { margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12px; opacity:.75; font-weight:600; }
+  .kn-dot { width:9px; height:9px; border-radius:50%; background:var(--ok); box-shadow:0 0 8px rgba(46,204,113,.7); animation:knpulse 1.6s infinite; }
+  .kn-dot.off { background:var(--err); box-shadow:0 0 8px rgba(231,76,60,.7); animation:none; }
+  @keyframes knpulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .kn-term { background:linear-gradient(180deg, #070b14, #0b1020); border:1px solid var(--line-2);
+    border-radius:14px; overflow:hidden; box-shadow:0 14px 44px rgba(0,0,0,.45), inset 0 1px 0 color-mix(in srgb, var(--text) 4%, transparent); }
+  .kn-term-head { display:flex; align-items:center; gap:8px; padding:10px 14px;
+    background:color-mix(in srgb, var(--text) 3%, transparent); border-bottom:1px solid color-mix(in srgb, var(--text) 6%, transparent); font-size:12px; font-weight:700; color:#9aa2b5; }
+  .kn-term-head .tl { width:10px; height:10px; border-radius:50%; }
+  .kn-term-head .r1 { background:var(--err); } .kn-term-head .r2 { background:#f39c12; } .kn-term-head .r3 { background:var(--ok); }
+  .kn-term-head span.title { margin-left:6px; letter-spacing:.4px; }
+  .kn-term-head span.right { margin-left:auto; font-weight:600; }
+  .kn-body { height:560px; overflow-y:auto; padding:10px 6px 14px; font-family:'JetBrains Mono','Fira Code',Consolas,monospace;
+    font-size:12.5px; line-height:1.75; }
+  .kn-body::-webkit-scrollbar { width:8px; }
+  .kn-body::-webkit-scrollbar-thumb { background:var(--line); border-radius:6px; }
+  .kn-body::-webkit-scrollbar-track { background:color-mix(in srgb, var(--text) 2%, transparent); }
+  .kn-line { display:flex; gap:10px; padding:1px 10px; border-radius:6px; white-space:pre-wrap; word-break:break-word; }
+  .kn-line:hover { background:color-mix(in srgb, var(--text) 3%, transparent); }
+  .kn-time { color:#5b6376; flex-shrink:0; font-variant-numeric:tabular-nums; }
+  .kn-lvl { flex-shrink:0; width:74px; font-weight:800; font-size:11px; padding-top:1px; }
+  .kn-lvl.DEBUG { color:#8b93a7; } .kn-lvl.INFO { color:#4aa3ff; }
+  .kn-lvl.WARNING { color:#f39c12; } .kn-lvl.ERROR { color:var(--err); } .kn-lvl.CRITICAL { color:#ff5252; text-shadow:0 0 10px rgba(255,82,82,.6); }
+  .kn-name { color:#8b93a7; flex-shrink:0; max-width:150px; overflow:hidden; text-overflow:ellipsis; }
+  .kn-msg { color:#cfd6e4; flex:1; }
+  .kn-line.ERROR .kn-msg, .kn-line.CRITICAL .kn-msg { color:#f2b8b0; }
+  .kn-empty { opacity:.5; padding:30px; text-align:center; font-family:inherit; }
+  @media (max-width:700px){ .kn-name{display:none} .kn-body{height:440px} }
+</style>
+
+<div class="kn-wrap">
+  <div class="kn-toolbar" data-reveal="up">
+    <button type="button" class="kn-btn" id="btn-pause" onclick="togglePause()"><i class="fas fa-pause"></i> Пауза</button>
+    <button type="button" class="kn-btn ghost" onclick="clearView()"><i class="fas fa-broom"></i> Очистить вид</button>
+    <select class="kn-select" id="lvl-filter" onchange="renderAll()" aria-label="Фильтр уровня">
+      <option value="">Все уровни</option>
+      <option value="INFO">INFO и выше</option>
+      <option value="WARNING">WARNING и выше</option>
+      <option value="ERROR">Только ошибки</option>
+    </select>
+    <label class="kn-btn ghost" style="padding:9px 12px">
+      <input type="checkbox" id="autoscroll" checked style="accent-color:var(--ac)"> Автоскролл
+    </label>
+    <div class="kn-status"><span class="kn-dot" id="kn-dot"></span><span id="kn-status-txt">подключение…</span></div>
+  </div>
+
+  <div class="kn-term" data-reveal="up">
+    <div class="kn-term-head">
+      <span class="tl r1"></span><span class="tl r2"></span><span class="tl r3"></span>
+      <span class="title">hakumo@bot: ~/logs — live</span>
+      <span class="right" id="kn-count">0 строк</span>
+    </div>
+    <div class="kn-body" id="kn-body">
+      <div class="kn-empty">Загрузка логов…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let lastId = 0, paused = false, LINES = [];
+const LVL_ORDER = {DEBUG:0, INFO:1, WARNING:2, ERROR:3, CRITICAL:4};
+
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtT(ts){ return new Date(ts*1000).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+function passFilter(l){
+  const f = document.getElementById('lvl-filter').value;
+  if(!f) return true;
+  const min = LVL_ORDER[f] ?? 0;
+  return (LVL_ORDER[l.level] ?? 1) >= min;
+}
+
+function lineHtml(l){
+  const health = window.fmtHealthLog && window.fmtHealthLog(l.msg);
+  const msgHtml = health
+    ? `<span class="kn-chips">${health}</span>`
+    : `<span class="kn-msg">${esc(l.msg)}</span>`;
+  return `<div class="kn-line ${esc(l.level)}">` +
+    `<span class="kn-time">${fmtT(l.ts)}</span>` +
+    `<span class="kn-lvl ${esc(l.level)}">${esc(l.level)}</span>` +
+    `<span class="kn-name">${esc(l.name)}</span>` +
+    msgHtml + `</div>`;
+}
+
+function renderAll(){
+  const body = document.getElementById('kn-body');
+  const visible = LINES.filter(passFilter);
+  body.innerHTML = visible.length ? visible.map(lineHtml).join('')
+    : '<div class="kn-empty">По этому фильтру строк нет</div>';
+  document.getElementById('kn-count').textContent = visible.length + ' строк';
+  if(document.getElementById('autoscroll').checked){ body.scrollTop = body.scrollHeight; }
+}
+
+async function poll(){
+  if(paused) return;
+  try{
+    const r = await fetch('/api/live-logs?after=' + lastId);
+    const d = await r.json();
+    const dot = document.getElementById('kn-dot');
+    const txt = document.getElementById('kn-status-txt');
+    if(d.ok){
+      dot.className = 'kn-dot'; txt.textContent = 'в эфире';
+      if(d.items && d.items.length){
+        LINES = LINES.concat(d.items);
+        if(LINES.length > 300) LINES = LINES.slice(-300);
+        lastId = d.last_id;
+        renderAll();
+      }
+    } else {
+      dot.className = 'kn-dot off'; txt.textContent = d.error || 'ошибка';
+    }
+  }catch(e){
+    document.getElementById('kn-dot').className = 'kn-dot off';
+    document.getElementById('kn-status-txt').textContent = 'нет связи';
+  }
+}
+
+function togglePause(){
+  paused = !paused;
+  const b = document.getElementById('btn-pause');
+  b.className = 'kn-btn' + (paused ? ' paused' : '');
+  b.innerHTML = paused ? '<i class="fas fa-play"></i> Продолжить' : '<i class="fas fa-pause"></i> Пауза';
+}
+function clearView(){ LINES = []; renderAll(); }
+
+poll();
+setInterval(poll, 2500);
+</script>
+{% endblock %}

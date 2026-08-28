@@ -6,16 +6,21 @@ Gereksinim: pip install playwright && python -m playwright install chromium
   DEEPSEEK_EMAIL=email@gmail.com
   DEEPSEEK_PASSWORD=sifren
 """
+
+from logger import get_logger
+
+_log = get_logger("deepseek_scraper")
+
 import os 
 import json 
 import asyncio 
 import threading 
-from datetime import datetime 
+from datetime import datetime, timezone
 
 DEEPSEEK_EMAIL =os .getenv ('DEEPSEEK_EMAIL','')
 DEEPSEEK_PASSWORD =os .getenv ('DEEPSEEK_PASSWORD','')
 
-# Oturum statusu (tek seferlik login, после новыйden ispolzuetsya)
+# Статус сессии (логин один раз, потом переиспользуется)
 _browser =None 
 _page =None 
 _lock =threading .Lock ()
@@ -23,7 +28,7 @@ _logged_in =False
 
 
 async def _ensure_login ():
-    """Tarayыcыyы запустить ve вход yap (bir kez)."""
+    """Запустить браузер и войти (один раз)."""
     global _browser ,_page ,_logged_in 
 
     from playwright .async_api import async_playwright 
@@ -55,8 +60,8 @@ async def _ensure_login ():
             login_btn =_page .locator ('text=Лог in').first 
             await login_btn .click (timeout =5000 )
             await _page .wait_for_timeout (1000 )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_ensure_login(): подавлено: %s", _ex)
 
             # Email
         email_input =_page .locator ('input[type="email"], input[name="email"], input[placeholder*="email" i]').first 
@@ -85,8 +90,8 @@ async def _ensure_login ():
 
 
 async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
-    """DeepSeek'e soru sor, cevabы вернуть."""
-    global _page ,_logged_in 
+    """Задать вопрос DeepSeek, вернуть ответ."""
+    global _logged_in 
 
     if not DEEPSEEK_EMAIL or not DEEPSEEK_PASSWORD :
         return ''
@@ -102,26 +107,26 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
             new_chat =_page .locator ('text=New Chat, text=Новый Sohbet, [aria-label*="new" i]').first 
             await new_chat .click (timeout =3000 )
             await _page .wait_for_timeout (500 )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_ask_deepseek_async(): подавлено: %s", _ex)
 
             # Сообщение kutusunu bul ve написать
         textarea =_page .locator ('textarea, [contenteditable="true"]').first 
         await textarea .click (timeout =5000 )
         await textarea .fill (prompt ,timeout =5000 )
 
-        # Отправить (Enter или buton)
+        # Отправить (Enter или кнопка)
         await textarea .press ('Enter')
 
         # Cevabыn gelmesini badd — "dюшюnюyor" animasyonu bitene kadar
         await _page .wait_for_timeout (2000 )
 
-        # Cevap elementini badd
-        start =datetime .utcnow ()
+        # Ждём появления элемента ответа
+        start =datetime.now(timezone.utc).replace(tzinfo=None)
         last_text =''
         stable_count =0 
 
-        while (datetime .utcnow ()-start ).seconds <timeout :
+        while (datetime.now(timezone.utc).replace(tzinfo=None)-start ).seconds <timeout :
             await _page .wait_for_timeout (1000 )
 
             # В конец message bloгunu получить
@@ -130,7 +135,7 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
                 current_text =await msgs [-1 ].inner_text ()
                 if current_text ==last_text and current_text .strip ():
                     stable_count +=1 
-                    if stable_count >=3 :# 3 saniye deгiшmezse готовоdыr
+                    if stable_count >=3 :# 3 секунды не меняется — готово
                         return current_text .strip ()
                 else :
                     stable_count =0 
@@ -146,15 +151,15 @@ async def _ask_deepseek_async (prompt :str ,timeout :int =60 )->str :
 
 def ask_deepseek (prompt :str ,timeout :int =60 )->str :
     """
-    Sync wrapper — ai_helper.py'из чaгrыlыr.
-    DeepSeek'e soru sorar, cevabы string как вернуть.
+    Sync-обёртка — вызывается из ai_helper.py.
+    Задаёт вопрос DeepSeek, возвращает ответ строкой.
     Неудачно olursa пусто string возвращает.
     """
     if not DEEPSEEK_EMAIL or not DEEPSEEK_PASSWORD :
         return ''
 
     try :
-    # Текущий event loop varsa использовать, yoksa новый создать
+    # Используем текущий event loop, если его нет — создаём новый
         try :
             loop =asyncio .get_event_loop ()
             if loop .is_running ():

@@ -1,90 +1,126 @@
 {% extends "base.html" %}
-{% block title %}Задачи - Aether{% endblock %}
+{% block title %}Задачи - Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-check-square" ></i> Список задач{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Список задач</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Утилиты <span class="sep">·</span> Задачи</div>
     <h1>Список задач</h1>
-    <p>Список задач и заметок для команды модераторов.</p>
+    <p class="lead">Общий список задач команды — сохраняется на сервере и виден всем, у кого есть доступ к панели.</p>
   </div>
 </div>
-{% endblock %}
 
 
+<style>
+.todo-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.todo-list{display:flex;flex-direction:column;gap:8px}
+.todo-item{display:flex;align-items:center;gap:12px;padding:12px 15px;background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:12px;transition:.15s}
+.todo-item:hover{border-color:color-mix(in srgb, var(--ac) 30%, transparent)}
+.todo-item.done{opacity:.66}
+.todo-text{flex:1;font-size:14px;color:var(--text);font-weight:600}
+.todo-text.done{text-decoration:line-through;color:var(--text-3)}
+.todo-meta{font-size:10.5px;color:var(--text-4);font-weight:600;margin-top:2px}
+.todo-check{width:22px;height:22px;border-radius:7px;border:1px solid color-mix(in srgb, var(--text) 20%, transparent);display:grid;place-items:center;color:var(--ok);cursor:pointer;flex:none;background:transparent;transition:.15s}
+.todo-check.done{background:color-mix(in srgb, var(--ok) 14%, transparent);border-color:color-mix(in srgb, var(--ok) 40%, transparent)}
+.todo-check:hover {background:var(--surface-2)}
+.todo-del{width:32px;height:32px;border-radius:8px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.1);color:var(--err);cursor:pointer;transition:.15s}
+.todo-del:hover {background:var(--surface-2)}
+.todo-input{flex:1;min-width:180px}
+.todo-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.todo-stat{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 5%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:12px;padding:12px 20px;text-align:center;min-width:90px}
+.todo-stat-num{font-size:22px;font-weight:800;color:var(--ac)}
+.todo-stat-lbl{font-size:11px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.todo-body .empty{padding:26px;text-align:center;color:var(--text-3);font-weight:600}
+.todo-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:14px;padding:16px}
+.todo-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.todo-title{font-weight:800;color:var(--text);font-size:14px}
+.todo-count{font-size:11.5px;color:var(--text-3);font-weight:700}
+.todo-toast{position:fixed;bottom:24px;right:24px;padding:12px 18px;border-radius:12px;font-size:13px;font-weight:700;opacity:0;transform:translateY(12px);pointer-events:none;transition:.3s;z-index:99}
+.todo-toast.show{opacity:1;transform:translateY(0)}
+.todo-toast.ok{background:rgba(46,204,113,.95);color:#08130c}
+.todo-toast.bad{background:rgba(231,76,60,.95);color:#fff}
+</style>
 
-<div class="todo-stats">
+<div class="todo-stats" data-reveal>
   <div class="todo-stat"><div class="todo-stat-num" id="stat-total">-</div><div class="todo-stat-lbl">Всего</div></div>
-  <div class="todo-stat"><div class="todo-stat-num" id="stat-done" >-</div><div class="todo-stat-lbl">Готово</div></div>
-  <div class="todo-stat"><div class="todo-stat-num" id="stat-active" >-</div><div class="todo-stat-lbl">Активный</div></div>
+  <div class="todo-stat"><div class="todo-stat-num" id="stat-done">-</div><div class="todo-stat-lbl">Готово</div></div>
+  <div class="todo-stat"><div class="todo-stat-num" id="stat-active">-</div><div class="todo-stat-lbl">Активные</div></div>
 </div>
 
-<div class="todo-add">
-  <input type="text" id="new-todo" class="todo-input" placeholder="Новый gёrev... (Enter)">
-  <button class="btn btn-primary" id="btn-add" type="button"><i class="fas fa-plus"></i> Добавить</button>
-</div>
-
-<div class="todo-box">
+<div class="todo-card" data-reveal>
+  <div class="todo-toolbar">
+    <input type="text" id="new-todo" class="todo-input" maxlength="140" placeholder="Новая задача… (Enter)" aria-label="Новая задача">
+    <button class="btn btn-primary" id="btn-add" type="button"><i class="fas fa-plus"></i> Добавить</button>
+  </div>
   <div class="todo-head">
-    <div class="todo-title"><i class="fas fa-check-square"></i> Gёrevler</div>
+    <span class="todo-title"><i class="fas fa-list-check" style="color:var(--ac)"></i> Задачи команды</span>
     <span class="todo-count" id="todo-count">-</span>
   </div>
-  <div class="todo-body" id="todo-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i></p>
-  </div>
+  <div class="todo-list todo-body" id="todo-body"></div>
 </div>
+
+<div class="todo-toast" id="todo-toast"></div>
 
 <script>
 (function () {
   'use strict';
-  function $(id) { return document.getElementById(id); }
-  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function showToast(msg, ok) {
-    var t = document.createElement('div');
+  var $ = function (id) { return document.getElementById(id); };
+  var tasks = [];
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function toast(msg, ok) {
+    var t = $('todo-toast');
     t.textContent = msg;
-    t.style.cssText = 'position:fixed;top:14px;right:14px;padding:9px 16px;border-radius:8px;z-index:99999;font-size:12px;background:' + (ok ? 'linear-gradient(135deg,var(--ok),var(--ok))' : 'linear-gradient(135deg,var(--err),var(--err))') + ';color:#fff;';
-    document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 1500);
+    t.className = 'todo-toast show ' + (ok === false ? 'bad' : 'ok');
+    setTimeout(function () { t.className = 'todo-toast'; }, 2400);
   }
 
-  var todos = [
-    { text: 'Документацию обновить', done: true },
-    { text: 'Новые фичи добавить', done: false },
-    { text: 'Баги пофиксить', done: false },
-    { text: 'Деплой настроить', done: true }
-  ];
-
   function render() {
-    var done = todos.filter(function (t) { return t.done; }).length;
-    var active = todos.length - done;
-    $('stat-total').textContent = todos.length;
+    var done = tasks.filter(function (t) { return t.done; }).length;
+    $('stat-total').textContent = tasks.length;
     $('stat-done').textContent = done;
-    $('stat-active').textContent = active;
-    $('todo-count').textContent = todos.length;
-    if (!todos.length) { $('todo-body').innerHTML = '<p class="empty">Задача yok</p>'; return; }
+    $('stat-active').textContent = tasks.length - done;
+    $('todo-count').textContent = 'задач: ' + tasks.length;
+    if (!tasks.length) {
+      $('todo-body').innerHTML = '<div class="empty">Задач пока нет — добавь первую</div>';
+      return;
+    }
     var html = '';
-    todos.forEach(function (t, i) {
-      html += '<div class="todo-item">' +
-        '<div class="todo-check ' + (t.done ? 'done' : '') + '" data-i="' + i + '" data-act="toggle">' + (t.done ? '<i class="fas fa-check" ></i>' : '') + '</div>' +
-        '<div class="todo-text ' + (t.done ? 'done' : '') + '">' + esc(t.text) + '</div>' +
-        '<button class="todo-del" data-i="' + i + '" data-act="del" type="button"><i class="fas fa-trash"></i></button>' +
+    tasks.forEach(function (t) {
+      html += '<div class="todo-item' + (t.done ? ' done' : '') + '">' +
+        '<button class="todo-check ' + (t.done ? 'done' : '') + '" data-id="' + t.id + '" data-act="toggle" type="button" aria-label="Переключить">' +
+          (t.done ? '<i class="fas fa-check"></i>' : '') + '</button>' +
+        '<div><div class="todo-text ' + (t.done ? 'done' : '') + '">' + esc(t.text) + '</div>' +
+        ((t.author || t.created) ? '<div class="todo-meta">' + esc(t.author || '') + (t.author && t.created ? ' · ' : '') + esc(t.created || '') + '</div>' : '') +
+        '</div>' +
+        '<button class="todo-del" data-id="' + t.id + '" data-act="del" type="button" aria-label="Удалить"><i class="fas fa-trash"></i></button>' +
       '</div>';
     });
     $('todo-body').innerHTML = html;
   }
 
+  function load() {
+    fetch('/api/todo').then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.ok) { tasks = d.tasks || []; render(); }
+      else toast('Не удалось загрузить задачи', false);
+    }).catch(function () { toast('API недоступен', false); });
+  }
+
+  function post(url, body, okMsg) {
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+      .then(function (res) {
+        if (res.s === 200 && res.d.ok) { if (okMsg) toast(okMsg, true); load(); }
+        else toast(res.d.error || 'Ошибка', false);
+      }).catch(function () { toast('Сеть недоступна', false); });
+  }
+
   function add() {
     var input = $('new-todo');
-    var t = input.value.trim();
-    if (!t) return;
-    todos.unshift({ text: t, done: false });
+    var text = (input.value || '').trim();
+    if (!text) return;
     input.value = '';
-    render();
-    showToast('Задача добавитьndi', true);
+    post('/api/todo/add', { text: text }, 'Задача добавлена');
   }
 
   function bind() {
@@ -93,14 +129,17 @@
     $('todo-body').addEventListener('click', function (e) {
       var b = e.target.closest('[data-act]');
       if (!b) return;
-      var i = parseInt(b.getAttribute('data-i'), 10);
-      if (b.getAttribute('data-act') === 'del') { todos.splice(i, 1); render(); }
-      else { todos[i].done = !todos[i].done; render(); }
+      var id = parseInt(b.getAttribute('data-id'), 10);
+      if (b.getAttribute('data-act') === 'del') post('/api/todo/delete', { id: id }, 'Удалено');
+      else post('/api/todo/toggle', { id: id });
     });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); render(); });
-  else { bind(); render(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); load(); });
+  else { bind(); load(); }
 })();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { load(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

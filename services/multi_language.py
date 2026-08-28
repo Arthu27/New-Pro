@@ -3,6 +3,10 @@ Multi-language Support
 Поддержка нескольких языков для системы тикетов
 """
 
+from logger import get_logger
+
+_log = get_logger("multi_language")
+
 import json
 import os
 from typing import Dict, Any, Optional
@@ -14,28 +18,28 @@ class LanguageManager:
     
     SUPPORTED_LANGUAGES = {
         'ru': 'Русский',
-        'en': 'English',
-        'uk': 'Українська',
-        'de': 'Deutsch',
-        'fr': 'Franчais',
-        'es': 'Español',
-        'it': 'Italiano',
-        'pt': 'Português',
-        'pl': 'Polski',
-        'nl': 'Nederlands',
-        'sv': 'Svenska',
-        'no': 'Norsk',
-        'da': 'Dansk',
-        'fi': 'Suomi',
-        'tr': 'Типkчe',
-        'ar': 'العربية',
-        'he': 'עברית',
-        'zh': '',
-        'ja': '',
-        'ko': ''
+        'en': 'Английский',
+        'uk': 'Украинский',
+        'de': 'Немецкий',
+        'fr': 'Французский',
+        'es': 'Испанский',
+        'it': 'Итальянский',
+        'pt': 'Португальский',
+        'pl': 'Польский',
+        'nl': 'Нидерландский',
+        'sv': 'Шведский',
+        'no': 'Норвежский',
+        'da': 'Датский',
+        'fi': 'Финский',
+        'tr': 'Турецкий',
+        'ar': 'Арабский',
+        'he': 'Иврит',
+        'zh': 'Китайский',
+        'ja': 'Японский',
+        'ko': 'Корейский'
     }
     
-    RTL_LANGUAGES = ['ar', 'he']  # Right-to-left languages
+    RTL_LANGUAGES = ['ar', 'he']  # языки с письмом справа налево
     
     def __init__(self):
         self.translations_dir = 'data/translations'
@@ -103,8 +107,8 @@ class LanguageManager:
         if kwargs:
             try:
                 translation = translation.format(**kwargs)
-            except (KeyError, IndexError):
-                pass
+            except (KeyError, IndexError) as _ex:
+                _log.debug("translate(): подавлено: %s", _ex)
         
         return translation
     

@@ -1,0 +1,45 @@
+# ВНИМАНИЕ: этот файл нужно вручную положить в .github/workflows/tests.yml
+# (у приложения Arena нет права "workflows" на запись в .github/workflows).
+# Просто скопируйте содержимое без первых трёх строк-комментариев про перенос.
+
+# Hakumo Bot — CI: компиляция всех модулей + все тестовые сьюты.
+# Тесты запускаются как скрипты (каждый сам выходит с кодом 0/1).
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-test.txt
+
+      - name: Install test dependencies
+        run: pip install -r requirements-test.txt
+
+      - name: Compile check (все .py должны собираться)
+        run: |
+          python -m compileall -q -x '(\.git|\.venv|__pycache__)' .
+
+      - name: Run test suites
+        env:
+          PYTHONUTF8: '1'
+        run: |
+          set -e
+          failed=0
+          for t in tests/test_*.py; do
+            echo "=============== $t ==============="
+            python "$t" || failed=1
+            rm -rf data tests/data
+          done
+          exit $failed

@@ -1,7 +1,12 @@
 """
-Супер-umniy analiz жалоба на оскорбление
-Glubokiy analiz istorii, reputacii, контекстn, dokazatelstv
+Супер-умный анализ жалоб на оскорбления
+Глубокий анализ истории, репутации, контекста, доказательств
 """
+
+from logger import get_logger
+
+_log = get_logger("complaint_analyzer")
+
 import discord 
 import json 
 import os 
@@ -11,7 +16,7 @@ from typing import Dict ,List ,Optional ,Tuple
 
 
 class ComplaintAnalyzer :
-    """Prodvinutiy analizёr жалоба"""
+    """Продвинутый анализатор жалоб"""
 
     def __init__ (self ,bot :discord .Client ):
         self .bot =bot 
@@ -132,7 +137,7 @@ class ComplaintAnalyzer :
         return messages [-limit :]
 
     async def _get_reputation (self ,guild :discord .Guild ,user_id :int )->Dict :
-        """Получить itibarы пользователь"""
+        """Получить репутацию пользователя"""
         from cogs .warnings import load_warnings 
 
         warnings_data =load_warnings ()
@@ -148,7 +153,8 @@ class ComplaintAnalyzer :
             warn_date_raw =варн .get ('timestamp',now .isoformat ())
             try :
                 warn_date =datetime .fromisoformat (warn_date_raw )
-            except (ValueError ,TypeError ):
+            except (ValueError ,TypeError ) as _ex:
+                _log.debug("_get_reputation(): подавлено: %s", _ex)
                 continue 
                 # Если naive — делаем aware (UTC)
             if warn_date .tzinfo is None :
@@ -172,18 +178,18 @@ class ComplaintAnalyzer :
                     case for case in guild_mods 
                     if case .get ('user_id')==str (user_id )
                     ]
-            except :
-                pass 
+            except Exception as _ex:
+                _log.debug("_get_reputation(): подавлено: %s", _ex)
 
         bans =sum (1 for case in mod_history if case .get ('action')=='бан')
-        мутs =sum (1 for case in mod_history if case .get ('action')in ['timeout','мут'])
+        mutes =sum (1 for case in mod_history if case .get ('action')in ['timeout','мут'])
 
         return {
         'warnings_total':warnings_total ,
         'warnings_7d':warnings_7d ,
         'warnings_30d':warnings_30d ,
         'bans':bans ,
-        'мутs':мутs ,
+        'mutes':mutes ,
         'recent_warnings':guild_warnings [-5 :]if guild_warnings else [],
         }
 
@@ -495,18 +501,18 @@ class ComplaintAnalyzer :
         }.get (severity ,severity )
 
         analysis_parts =[
-        f"## 📋 Анализ жалобы\n",
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
+        "## 📋 Анализ жалобы\n",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
         f"**Вердикт:** {verdict_ru}\n",
         f"**Уверенность:** {confidence}%\n",
         f"**Серьёзность:** {severity_ru}\n\n",
 
-        f"### 📊 Доказательства:\n",
+        "### 📊 Доказательства:\n",
         f"• Токсичных сообщений: **{provided_analysis['toxic_messages']}**\n",
         f"• Угроз: **{provided_analysis['threats']}**\n",
         f"• Взаимная токсичность: **{'⚠️ Да' if provided_analysis['mutual_toxicity'] else '✅ Нет'}**\n\n",
 
-        f"### 🔍 Контекст:\n",
+        "### 🔍 Контекст:\n",
         f"• Была провокация: **{'⚠️ Да' if context_analysis['had_provocation'] else '✅ Нет'}**\n",
         f"• Первый агрессор: **{context_analysis.get('first_aggressor') or 'Не определён'}**\n",
         f"• Сообщений в контексте: **{context_analysis['context_messages_count']}**\n\n",
@@ -588,7 +594,7 @@ class ComplaintAnalyzer :
         f"**🎯 Вердикт:** {verdict_text}\n"
         f"**📈 Уверенность AI:** {confidence}%\n"
         f"**⚠️ Серьёзность:** {severity_text}\n"
-        f"━━━━━━━━━━━━━━━━━━━━"
+        "━━━━━━━━━━━━━━━━━━━━"
         ),
         inline =False ,
         )
@@ -684,7 +690,7 @@ class ComplaintAnalyzer :
         inline =False ,
         )
 
-        embed .set_footer (text ="🤖 Aether AI · Система анализа жалоб")
+        embed .set_footer (text ="🤖 Hakumo AI · Система анализа жалоб")
 
         return embed 
 

@@ -1,34 +1,40 @@
 {% extends "base.html" %}
-{% block title %}Ses Канал Статистика - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-microphone"   style="animation: pulse 2s infinite;"></i> SES КАНАЛ СТАТИСТИКА{% endblock %}
+{% block title %}Голосовая статистика — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-microphone"></i> Голосовая статистика{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>SES КАНАЛ СТАТИСТИКА</span>
-    </div>
-    <h1>SES КАНАЛ СТАТИСТИКА</h1>
-    <p>Статистика голосовой активности: время в каналах, лидеры.</p>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество <span class="sep">·</span> Голосовая</div>
+    <h1>Голосовая статистика</h1>
+    <p class="lead">Статистика голосовой активности: время в каналах, лидеры.</p>
   </div>
 </div>
-{% endblock %}
 
 
+<style>
+.vs-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:18px;}
+.vs-title{font-size:15px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.vs-title i{color:var(--ac)}
+.vc-row{display:flex;align-items:center;gap:13px;padding:11px 13px;background:linear-gradient(160deg,color-mix(in srgb, var(--text) 2%, transparent),transparent);border:1px solid var(--line);border-radius:11px;margin-bottom:8px;transition:all .16s var(--ease)}
+.vc-row:hover {border-color:var(--ac-line)}
+.vc-rank{font-size:20px;width:32px;text-align:center;flex-shrink:0}
+.vc-avatar{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--ac-line);object-fit:cover;flex-shrink:0}
+.vc-name{font-weight:600;color:var(--text);font-size:14px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vc-time{margin-left:auto;font-size:12.5px;font-weight:700;color:var(--ac-2);font-family:'JetBrains Mono',monospace;white-space:nowrap;flex-shrink:0}
+</style>
 
-<select  id="guild-select" class="guild-select" onchange="loadVoiceStats()">
+<select id="guild-select" class="guild-select" onchange="loadVoiceStats()" data-reveal="up" aria-label="Выбор сервера">
   <option value="">Выберите сервер...</option>
 </select>
 
-<div class="stat-row" id="stat-cards">
+<div class="stat-row" id="stat-cards" data-reveal="up">
   <div class="stat-box">
     <div class="stat-icon cyan"><i class="fas fa-clock"></i></div>
-    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Всего голос Длительность</div></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Всего в голосовых</div></div>
   </div>
   <div class="stat-box">
     <div class="stat-icon green"><i class="fas fa-users"></i></div>
-    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Голосовая активность сегодня</div></div>
+    <div class="stat-body"><div class="stat-val">-</div><div class="stat-lbl">Активность сегодня</div></div>
   </div>
   <div class="stat-box">
     <div class="stat-icon purple"><i class="fas fa-stopwatch"></i></div>
@@ -36,58 +42,58 @@
   </div>
 </div>
 
-<div class="vs-box">
+<div class="vs-box" data-reveal="up">
   <div class="vs-title"><i class="fas fa-trophy"></i> Самые активные в голосе</div>
   <div id="vc-leaderboard"><div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Выберите сервер...</p></div></div>
 </div>
 
 <script>
 var MAIN_GID = '{{ main_guild_id }}';
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-async function loadVoiceStats(gid_деньгиm) {
+async function loadVoiceStats(gid) {
   var selector = document.getElementById('guild-select');
-  var gid = gid_деньгиm || (selector && selector.value) || MAIN_GID;
-  if(!gid) return;
+  var gid2 = gid || (selector && selector.value) || MAIN_GID;
+  if(!gid2) return;
   try {
-    var r = await fetch('/api/guild/'+encodeURIComponent(gid)+'/voice-stats');
+    var r = await fetch('/api/guild/'+encodeURIComponent(gid2)+'/voice-stats');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     var data = await r.json();
-
-  document.getElementById('stat-cards').innerHTML =
-    '<div class="stat-box">'+
-      '<div class="stat-icon cyan"><i class="fas fa-clock"></i></div>'+
-      '<div class="stat-body"><div class="stat-val">'+(data.total_time||'0s')+'</div><div class="stat-lbl">Всего голос Длительность</div></div>'+
-    '</div>'+
-    '<div class="stat-box">'+
-      '<div class="stat-icon green"><i class="fas fa-users"></i></div>'+
-      '<div class="stat-body"><div class="stat-val">'+(data.today_users||0)+'</div><div class="stat-lbl">Голосовая активность сегодня</div></div>'+
-    '</div>'+
-    '<div class="stat-box">'+
-      '<div class="stat-icon purple"><i class="fas fa-stopwatch"></i></div>'+
-      '<div class="stat-body"><div class="stat-val">'+(data.avg_time||'0s')+'</div><div class="stat-lbl">Средняя длительность</div></div>'+
-    '</div>';
-
-  var lb = document.getElementById('vc-leaderboard');
-  var users = data.leaderboard||[];
-  if(!users.length) {
-    lb.innerHTML = '<div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Нет данных. Bot ses канал takibi делает mu?</p></div>';
-    return;
-  }
-  var medals = ['🥇','🥈','🥉'];
-  var maxSecs = users[0] ? (users[0].seconds||1) : 1;
-  lb.innerHTML = users.map(function(u,i){
-    var pct = Math.round(((u.seconds||0)/maxSecs)*100);
-    return '<div class="vc-row">'+
-      '<div class="vc-rank">'+(medals[i]||'#'+(i+1))+'</div>'+
-      '<img class="vc-avatar" src="'+(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
-      '<div ><div class="vc-name">'+u.name+'</div>'+
-      '<div class="vc-bar"><div class="vc-bar-fill"   style="width: '+pct+'%;"></div></div></div>'+
-      '<div class="vc-time">'+u.time+'</div>'+
-    '</div>';
-  }).join('');
+    var fp = String(JSON.stringify(data || null) || '').slice(0, 500);
+    if (window.silentGuard && window.silentGuard('voice-' + gid2, fp)) return;
+    document.getElementById('stat-cards').innerHTML =
+      '<div class="stat-box">'+
+        '<div class="stat-icon cyan"><i class="fas fa-clock"></i></div>'+
+        '<div class="stat-body"><div class="stat-val">'+(data.total_time||'0')+'</div><div class="stat-lbl">Всего в голосовых</div></div>'+
+      '</div>'+
+      '<div class="stat-box">'+
+        '<div class="stat-icon green"><i class="fas fa-users"></i></div>'+
+        '<div class="stat-body"><div class="stat-val">'+(data.today_users||0)+'</div><div class="stat-lbl">Активность сегодня</div></div>'+
+      '</div>'+
+      '<div class="stat-box">'+
+        '<div class="stat-icon purple"><i class="fas fa-stopwatch"></i></div>'+
+        '<div class="stat-body"><div class="stat-val">'+(data.avg_time||'0')+'</div><div class="stat-lbl">Средняя длительность</div></div>'+
+      '</div>';
+    var lb = document.getElementById('vc-leaderboard');
+    var users = data.leaderboard||[];
+    if(!users.length) {
+      lb.innerHTML = '<div class="empty-state"><i class="fas fa-microphone-slash"></i><p>Нет данных. Бот отслеживает голосовые каналы?</p></div>';
+      return;
+    }
+    var medals = ['<i class="fas fa-medal" style="color:#ffd700"></i>','<i class="fas fa-medal" style="color:#c0c7d1"></i>','<i class="fas fa-medal" style="color:#cd7f32"></i>'];
+    var maxSecs = users[0] ? (users[0].seconds||1) : 1;
+    lb.innerHTML = users.map(function(u,i){
+      var pct = Math.round(((u.seconds||0)/maxSecs)*100);
+      return '<div class="vc-row">'+
+        '<div class="vc-rank">'+(medals[i]||'#'+(i+1))+'</div>'+
+        '<img alt="" class="vc-avatar" src="'+esc(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+        '<div style="flex:1;min-width:0"><div class="vc-name">'+esc(u.name)+'</div>'+
+        '<b>' + pct + '%</b></div>'+
+        '<div class="vc-time">'+esc(u.time)+'</div>'+
+      '</div>';
+    }).join('');
   } catch (error) {
-    console.error('Не удалось загрузить голосовую статистику:', error);
-    document.getElementById('vc-leaderboard').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Не удалось загрузить статистику. Повторите попытку позже.</p></div>';
+    document.getElementById('vc-leaderboard').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Не удалось загрузить статистику.</p></div>';
   }
 }
 
@@ -102,11 +108,16 @@ async function initialiseGuildSelector() {
       return '<option value="' + g.id + '">' + g.name + '</option>';
     }).join('');
     selector.value = MAIN_GID || (guilds[0] && guilds[0].id) || '';
-  } catch (error) { console.error('Не удалось загрузить список серверов:', error); }
+  } catch (error) { /* */ }
   loadVoiceStats();
 }
 
-initialiseGuildSelector();
-setInterval(loadVoiceStats, 30000);
+function start() {
+  initialiseGuildSelector();
+  if (window.setLiveRefresh) window.setLiveRefresh(loadVoiceStats, 1500);
+  else setInterval(loadVoiceStats, 30000);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+else start();
 </script>
 {% endblock %}

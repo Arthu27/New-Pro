@@ -1,11 +1,16 @@
 """
 Multi-modelnaya система — автоматически выбор lucsey modelleri для каждый задачи
 """
+
+from logger import get_logger
+
+_log = get_logger("model_selector")
+
 import os 
 import json 
 import time 
 from typing import Dict ,List ,Optional ,Tuple 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
 
 
 class ModelSelector :
@@ -67,17 +72,17 @@ class ModelSelector :
     def select_model (self ,task_type :str ,context :Dict =None )->str :
         """Vibiraet lucsuyu model для задачи"""
 
-        # Alыyoruz rekomenduemiy тип modelleri
+        # Берём рекомендуемый тип модели
         recommended_type =self .TASK_MODEL_MAP .get (task_type ,'balanced')
         recommended_model =self .MODELS [recommended_type ]
 
-        # Контроль ediyoruz istatistiгi — если model sыk sыk padaet, ispolzuem yedek
+        # Проверяем статистику — если модель часто падает, используем запасную
         model_name =recommended_model ['name']
         stats =self .model_stats .get (model_name ,{})
 
         failure_rate =stats .get ('failures',0 )/max (stats .get ('total',1 ),1 )
 
-        # Если failure rate > 20%, pereanahсканироватьemsya на yedek model
+        # Если доля сбоев > 20% — переключаемся на запасную модель
         if failure_rate >0.2 :
             if recommended_type =='powerful':
                 model_name =self .MODELS ['balanced']['name']
@@ -89,7 +94,7 @@ class ModelSelector :
         'task_type':task_type ,
         'recommended_type':recommended_type ,
         'selected_model':model_name ,
-        'timestamp':datetime .utcnow ().isoformat ()
+        'timestamp':datetime.now(timezone.utc).isoformat ()
         })
 
         # Ограничиваем история
@@ -127,7 +132,7 @@ class ModelSelector :
         self ._save_stats ()
 
     def get_model_info (self ,model_name :str )->Dict :
-        """Alыyor информация о modelleri"""
+        """Получает информацию о моделях"""
         for model_type ,model_data in self .MODELS .items ():
             if model_data ['name']==model_name :
                 stats =self .model_stats .get (model_name ,{})
@@ -143,7 +148,7 @@ class ModelSelector :
         return {}
 
     def _load_stats (self ):
-        """Загруз istatistiгi из dosyaya"""
+        """Загружает статистику из файла"""
         stats_file ='data/model_stats.json'
         if os .path .exists (stats_file ):
             try :
@@ -151,11 +156,11 @@ class ModelSelector :
                     data =json .load (f )
                     self .model_stats =data .get ('model_stats',{})
                     self .task_history =data .get ('task_history',[])
-            except :
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_stats(): подавлено: %s", _ex)
 
     def _save_stats (self ):
-        """Сохран istatistiгi в dosya"""
+        """Сохраняет статистику в файл"""
         try :
             os .makedirs ('data',exist_ok =True )
             stats_file ='data/model_stats.json'
@@ -164,15 +169,15 @@ class ModelSelector :
                 'model_stats':self .model_stats ,
                 'task_history':self .task_history [-100 :]# Сохран только son 100
                 },f ,indent =2 )
-        except :
-            pass 
+        except Exception as _ex:
+            _log.debug("_save_stats(): подавлено: %s", _ex)
 
 
             # Kюresel пример
 _model_selector =None 
 
 def get_model_selector ()->ModelSelector :
-    """Alыyor kюresel пример ModelSelector"""
+    """Получает глобальный экземпляр ModelSelector"""
     global _model_selector 
     if _model_selector is None :
         _model_selector =ModelSelector ()
@@ -181,14 +186,14 @@ def get_model_selector ()->ModelSelector :
 
 def smart_call (messages :List [Dict ],task_type :str ,max_tokens :int =2048 ,temperature :float =0.7 )->Tuple [str ,str ,Dict ]:
     """
-    Umniy vizov AI с автоматически olarakm выбор modelleri
-    
+    Умный вызов AI с автоматическим выбором модели
+
     Args:
-        messages: Список сообщение
+        messages: Список сообщений
         task_type: Тип задачи (greeting, complaint_analysis, etc.)
-        max_tokens: Maksimum tokenov
-        temperature: Temperaорёл
-    
+        max_tokens: Максимум токенов
+        temperature: Температура
+
     Returns:
         (response, model_name, info)
     """
@@ -222,11 +227,11 @@ def smart_call (messages :List [Dict ],task_type :str ,max_tokens :int =2048 ,te
 
         return response ,model_name ,info 
 
-    except Exception as e :
-    # Сохран neudacu
+    except Exception :
+    # Сохраняем неудачу
         selector .record_failure (model_name )
 
-        # Probuem yedek model
+        # Пробуем запасную модель
         if task_type in ['complaint_analysis','moderation_decision','complex_reasoning']:
             fallback_model =ModelSelector .MODELS ['balanced']['name']
         else :
@@ -254,4 +259,4 @@ def smart_call (messages :List [Dict ],task_type :str ,max_tokens :int =2048 ,te
             return response ,fallback_model ,info 
 
         except Exception as e2 :
-            raise Exception (f"Obe modelleri upali: {model_name}, {fallback_model}")
+            raise Exception (f"Оба модели упали: {model_name}, {fallback_model}") from e2 

@@ -2,6 +2,11 @@
 Vnesnie API — integraciya с servisami контроль
 Reputaciya, NSFW, vredonosnie ссылка, avatari
 """
+
+from logger import get_logger
+
+_log = get_logger("external_apis")
+
 import aiohttp 
 import json 
 import os 
@@ -24,12 +29,12 @@ class ExternalAPIs :
             try :
                 with open (config_file ,'r',encoding ='utf-8')as f :
                     return json .load (f )
-            except :
-                pass 
+            except Exception as _ex:
+                _log.debug("_load_api_keys(): подавлено: %s", _ex)
         return {}
 
     async def _get_session (self )->aiohttp .ClientSession :
-        """Alыyor aiohttp sessiyu"""
+        """Получает aiohttp-сессию"""
         if self .session is None or self .session .closed :
             self .session =aiohttp .ClientSession ()
         return self .session 
@@ -42,7 +47,7 @@ class ExternalAPIs :
             # ─── КОНТРОЛЬ REPUTACII ─────────────────────────────────────────────
 
     async def check_user_reputation (self ,user_id :int ,username :str )->Dict :
-        """Контроль ediyor itibarы пользователь с vnesnie servisi"""
+        """Проверяет репутацию пользователя по внешним сервисам"""
         results ={
         'user_id':user_id ,
         'username':username ,
@@ -70,7 +75,7 @@ class ExternalAPIs :
         return results 
 
     async def _check_discordrep (self ,user_id :int )->Optional [Dict ]:
-        """Контроль ediyor itibarы с DiscordRep API"""
+        """Проверяет репутацию через DiscordRep API"""
         try :
             session =await self ._get_session ()
             url =f"https://discordrep.com/api/v4/user/{user_id}"
@@ -257,7 +262,7 @@ class ExternalAPIs :
 
             payload ={
             "client":{
-            "clientId":"aether-bot",
+            "clientId":"hakumo-bot",
             "clientVersion":"1.0"
             },
             "threatInfo":{
@@ -329,7 +334,7 @@ class ExternalAPIs :
 _external_apis =None 
 
 async def get_external_apis ()->ExternalAPIs :
-    """Alыyor kюresel пример ExternalAPIs"""
+    """Получает глобальный экземпляр ExternalAPIs"""
     global _external_apis 
     if _external_apis is None :
         _external_apis =ExternalAPIs ()

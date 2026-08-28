@@ -1,816 +1,1083 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aether — Вход в панель управления</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            min-height: 100%;
-            background: #0a0907;
-            color: #f5ecd2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        /* Animated aurora background */
-        .aurora {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            overflow: hidden;
-            pointer-events: none;
-        }
-        .aurora::before, .aurora::after {
-            content: '';
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(120px);
-            opacity: 0.4;
-            animation: auroraFloat 18s var(--ease, cubic-bezier(0.4, 0, 0.2, 1)) infinite;
-        }
-        .aurora::before {
-            width: 600px; height: 600px;
-            background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
-            top: -150px; left: 10%;
-            animation-delay: 0s;
-        }
-        .aurora::after {
-            width: 700px; height: 700px;
-            background: radial-gradient(circle, #ec4899 0%, transparent 70%);
-            bottom: -200px; right: 5%;
-            animation-delay: -6s;
-        }
-        .aurora-extra {
-            position: fixed;
-            width: 500px; height: 500px;
-            background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
-            border-radius: 50%;
-            filter: blur(100px);
-            opacity: 0.25;
-            top: 40%; left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 0;
-            pointer-events: none;
-            animation: auroraFloat 22s ease infinite;
-        }
-        @keyframes auroraFloat {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(80px, -60px) scale(1.15); }
-            66% { transform: translate(-60px, 60px) scale(0.9); }
-        }
-
-        /* Grid overlay */
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(212, 168, 67, 0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(212, 168, 67, 0.04) 1px, transparent 1px);
-            background-size: 60px 60px;
-            pointer-events: none;
-            z-index: 1;
-            mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
-            -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
-        }
-
-        /* Floating particles */
-        .particles {
-            position: fixed;
-            inset: 0;
-            z-index: 1;
-            pointer-events: none;
-            overflow: hidden;
-        }
-        .particle {
-            position: absolute;
-            width: 3px; height: 3px;
-            background: rgba(212, 168, 67, 0.6);
-            border-radius: 50%;
-            box-shadow: 0 0 6px rgba(212, 168, 67, 0.5);
-            animation: particleRise linear infinite;
-        }
-        @keyframes particleRise {
-            0% { transform: translateY(100vh) scale(0); opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { transform: translateY(-100px) scale(1); opacity: 0; }
-        }
-
-        .login-wrapper {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            max-width: 460px;
-        }
-
-        /* Hero / brand */
-        .hero {
-            margin-bottom: 24px;
-            animation: fadeDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-        @keyframes fadeDown {
-            from { opacity: 0; transform: translateY(-16px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(16px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes scaleIn {
-            from { opacity: 0; transform: scale(0.94); }
-            to   { opacity: 1; transform: scale(1); }
-        }
-        .hero-logo {
-            width: 68px; height: 68px;
-            margin: 0 auto 16px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, #d4a843, #b88728);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            color: #0a0907;
-            box-shadow: 0 12px 40px rgba(212, 168, 67, 0.35), inset 0 1px 0 rgba(255,255,255,0.2);
-            position: relative;
-            animation: float 4s ease-in-out infinite;
-        }
-        .hero-logo::before {
-            content: '';
-            position: absolute;
-            inset: -3px;
-            border-radius: 23px;
-            background: linear-gradient(135deg, #d4a843, #ec4899, #06b6d4, #d4a843);
-            background-size: 300% 300%;
-            z-index: -1;
-            animation: gradientShift 6s ease infinite;
-            opacity: 0.6;
-            filter: blur(10px);
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
-        }
-        @keyframes gradientShift {
-            0%   { background-position: 0% 50%; }
-            50%  { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        .hero h1 {
-            font-size: 28px;
-            color: #f5ecd2;
-            letter-spacing: -0.025em;
-            margin: 0 0 6px 0;
-            background: linear-gradient(135deg, #f0c75e 0%, #d4a843 50%, #b88728 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .hero p {
-            font-size: 13.5px;
-            color: #b6a47b;
-            }
-
-        /* Auth card */
-        .auth-card {
-            background: rgba(26, 22, 16, 0.85);
-            border: 1px solid rgba(212, 168, 67, 0.22);
-            border-radius: 24px;
-            padding: 32px;
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            position: relative;
-            animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-        .auth-card::before {
-            content: '';
-            position: absolute;
-            top: -1px; left: 25%; right: 25%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #d4a843, transparent);
-            border-radius: 2px;
-        }
-        .auth-card::after {
-            content: '';
-            position: absolute;
-            top: 0; right: 0;
-            width: 180px; height: 180px;
-            background: radial-gradient(circle at top right, rgba(212, 168, 67, 0.08), transparent 70%);
-            pointer-events: none;
-            border-radius: 24px;
-        }
-
-        /* Tab switcher */
-        .tab-switcher {
-            display: flex;
-            background: rgba(10, 9, 7, 0.7);
-            border: 1px solid rgba(212, 168, 67, 0.18);
-            border-radius: 14px;
-            padding: 5px;
-            margin-bottom: 26px;
-            position: relative;
-        }
-        .tab-btn {
-            flex: 1;
-            padding: 11px 14px;
-            background: transparent;
-            border: none;
-            border-radius: 10px;
-            color: #b6a47b;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            position: relative;
-            z-index: 1;
-        }
-        .tab-btn.active {
-            background: linear-gradient(135deg, rgba(212, 168, 67, 0.22), rgba(212, 168, 67, 0.10));
-            color: #f5ecd2;
-            box-shadow: 0 4px 14px rgba(212, 168, 67, 0.18);
-        }
-        .tab-btn i { font-size: 14px; }
-
-        /* Form */
-        #formPass { display: block; }
-        #formPin { display: none; }
-        .form-group { margin-bottom: 18px; position: relative; }
-        .form-label {
-            display: block;
-            font-size: 11.5px;
-            color: #b6a47b;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-        .form-input-wrap { position: relative; }
-        .form-input-wrap > i {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #7a6a48;
-            font-size: 15px;
-            pointer-events: none;
-            transition: color 0.2s;
-        }
-        .form-input {
-            width: 100%;
-            padding: 13px 14px 13px 44px;
-            background: rgba(10, 9, 7, 0.85);
-            border: 1px solid rgba(212, 168, 67, 0.25);
-            border-radius: 12px;
-            color: #f5ecd2;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        .form-input:hover { border-color: rgba(212, 168, 67, 0.40); }
-        .form-input:focus {
-            outline: none;
-            border-color: #d4a843;
-            background: rgba(22, 18, 11, 1);
-            box-shadow: 0 0 0 4px rgba(212, 168, 67, 0.12);
-        }
-        .form-input:focus + i,
-        .form-input-wrap:focus-within > i { color: #d4a843; }
-
-        /* Autocomplete dropdown */
-        .autocomplete-popup {
-            position: absolute;
-            top: 100%;
-            left: 0; right: 0;
-            background: rgba(20, 17, 12, 0.98);
-            border: 1px solid rgba(212, 168, 67, 0.35);
-            border-radius: 12px;
-            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
-            margin-top: 6px;
-            max-height: 220px;
-            overflow-y: auto;
-            z-index: 1000;
-            backdrop-filter: blur(20px);
-        }
-        .suggest-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 11px 14px;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            transition: background 0.15s;
-        }
-        .suggest-item:last-child { border-bottom: none; }
-        .suggest-item:hover { background: rgba(212, 168, 67, 0.18); }
-        .suggest-avatar {
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            border: 2px solid #c8922a;
-            object-fit: cover;
-        }
-        .suggest-name { font-size: 13.5px; color: #f5ecd2; }
-        .suggest-id   { font-size: 11px;   color: #8c7b58; margin-top: 1px; }
-
-        /* Submit button */
-        .btn-submit {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #d4a843, #b88728);
-            color: #0a0907;
-            border: none;
-            border-radius: 12px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 6px;
-            box-shadow: 0 6px 20px rgba(212, 168, 67, 0.30);
-            position: relative;
-            overflow: hidden;
-        }
-        .btn-submit::before {
-            content: '';
-            position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-            transition: left 0.5s;
-        }
-        .btn-submit:hover::before { left: 100%; }
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 28px rgba(212, 168, 67, 0.45);
-            filter: brightness(1.05);
-        }
-        .btn-submit:active { transform: translateY(0); }
-        .btn-submit:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
-
-        .btn-ghost {
-            width: 100%;
-            padding: 12px;
-            background: transparent;
-            color: #b6a47b;
-            border: 1px solid rgba(212, 168, 67, 0.20);
-            border-radius: 12px;
-            font-size: 13.5px;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 10px;
-        }
-        .btn-ghost:hover {
-            color: #f5ecd2;
-            background: rgba(212, 168, 67, 0.08);
-            border-color: rgba(212, 168, 67, 0.35);
-        }
-
-        /* Alert */
-        .alert {
-            padding: 12px 14px;
-            border-radius: 10px;
-            margin-bottom: 18px;
-            font-size: 13px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            animation: fadeUp 0.3s ease-out both;
-        }
-        .alert-err {
-            background: rgba(248, 113, 113, 0.10);
-            border: 1px solid rgba(248, 113, 113, 0.30);
-            color: #fca5a5;
-        }
-        .alert-ok {
-            background: rgba(52, 211, 153, 0.10);
-            border: 1px solid rgba(52, 211, 153, 0.30);
-            color: #6ee7b7;
-        }
-
-        /* Helper note */
-        .helper-note {
-            margin-top: 22px;
-            padding: 12px 14px;
-            background: rgba(212, 168, 67, 0.06);
-            border: 1px dashed rgba(212, 168, 67, 0.25);
-            border-radius: 12px;
-            font-size: 12px;
-            color: #a09068;
-            }
-        .helper-note code {
-            color: #f5ecd2;
-            background: rgba(0,0,0,0.4);
-            padding: 2px 7px;
-            border-radius: 5px;
-            border: 1px solid rgba(212, 168, 67, 0.15);
-        }
-
-        /* Progress */
-        .progress-bar {
-            height: 4px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 99px;
-            overflow: hidden;
-            margin-bottom: 18px;
-            display: none;
-        }
-        .progress-bar.active { display: block; }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #d4a843, #f0c75e);
-            width: 0%;
-            transition: width 0.3s ease;
-            box-shadow: 0 0 8px rgba(212, 168, 67, 0.5);
-        }
-
-        /* Test list */
-        .test-list {
-            margin-bottom: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .test-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 12px;
-            background: rgba(0,0,0,0.35);
-            border: 1px solid rgba(255,255,255,0.04);
-            border-radius: 10px;
-            font-size: 13px;
-            animation: fadeUp 0.3s ease-out both;
-        }
-        .test-name { color: #d0c0a0; }
-        .test-detail { color: #8c7b58; font-size: 12px; }
-
-        /* User card */
-        .user-card {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 14px;
-            background: rgba(212, 168, 67, 0.06);
-            border: 1px solid rgba(212, 168, 67, 0.20);
-            border-radius: 12px;
-            margin-bottom: 18px;
-        }
-        .user-avatar {
-            width: 48px; height: 48px;
-            border-radius: 50%;
-            border: 2px solid #d4a843;
-            box-shadow: 0 0 0 3px rgba(0,0,0,0.4);
-        }
-        .user-name { font-size: 14px; color: #f5ecd2; }
-        .user-id   { font-size: 11.5px; color: #8c7b58; margin-top: 2px; }
-
-        /* Mobile */
-        @media (max-width: 480px) {
-            .login-wrapper { max-width: 100%; }
-            .auth-card { padding: 24px 20px; }
-            .hero h1 { font-size: 24px; }
-        }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход — Hakumo</title>
+  <link rel="icon" href="/static/favicon.ico">
+      <style>
+      /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
+         первый кадр никогда не белый. */
+      html { background: #0f1013; color-scheme: dark; }
+      body { background: transparent; margin: 0; }
     </style>
+<link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
+  <style>
+    /* ═══ ЛОГИН — чёрное премиум-издание для участников ═══
+       Плавающие лейблы: подпись живёт ВНУТРИ поля и всплывает наверх
+       при фокусе или вводе — никаких «говняных» надписей над полями. */
+    :root {
+      --bg: #05060a;
+      --surface: #0d1019;
+      --surface2: #121624;
+      --surface3: #181d2b;
+      --line: rgba(255,255,255,.07);
+      --line2: rgba(255,255,255,.12);
+      --text: #e8ecf6;
+      --text2: #9aa3ba;
+      --text3: #5f6880;
+      --ac: #4f46e5;
+      --ac2: #7c3aed;
+      --ac3: #22d3ee;
+      --ac-grad: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #22d3ee);
+      --ac-soft: rgba(79, 70, 229, .16);
+      --ok: #16a34a;
+      --err: #dc2626;
+      --warn: #f59e0b;
+      --ease: cubic-bezier(.34, 1.3, .64, 1);
+      --shadow: 0 30px 70px -30px rgba(0, 0, 0, .9);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+      body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      overflow-x: hidden;
+      display: flex; flex-direction: column;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    body::after {
+      content: ''; position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      opacity: .045;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23g)'/></svg>");
+    }
+
+    /* ── Фоновые слои ── */
+    .bg-fx { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .bg-fx .orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5; }
+    .orb1 { width: 520px; height: 520px; left: -140px; top: -160px; background: radial-gradient(circle, rgba(79, 70, 229, .4), transparent 65%); animation: orbDrift 14s ease-in-out infinite alternate; }
+    @keyframes orbDrift { from { transform: translate(0, 0) scale(1); } to { transform: translate(40px, 30px) scale(1.08); } }
+    .bg-grid {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(ellipse 80% 65% at 50% 40%, #000 30%, transparent 75%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 65% at 50% 40%, #000 30%, transparent 75%);
+    }
+    #lg-stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    .lg-glow {
+      position: fixed; left: 50%; top: -260px; transform: translateX(-50%);
+      width: 900px; height: 460px; pointer-events: none; z-index: 0;
+      background: radial-gradient(closest-side, rgba(124, 58, 237, .28), transparent);
+    }
+    .lg-aurora {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+    }
+    .lg-aurora i { position: absolute; border-radius: 50%; }
+    .lg-aurora i:nth-child(1) {
+      width: 560px; height: 560px; left: -150px; top: -170px;
+      background: radial-gradient(circle, rgba(99, 102, 241, .11), transparent 65%);
+      animation: lgAurora 12s ease-in-out infinite alternate;
+    }
+    .lg-aurora i:nth-child(2) {
+      width: 500px; height: 500px; right: -130px; bottom: -160px;
+      background: radial-gradient(circle, rgba(34, 211, 238, .09), transparent 65%);
+      animation: lgAurora 14s ease-in-out infinite alternate-reverse;
+    }
+    @keyframes lgAurora { from { opacity: .4; } to { opacity: .9; } }
+
+    /* ── Назад ── */
+    .lg-back {
+      position: fixed; top: 22px; left: 26px; z-index: 30;
+      display: inline-flex; align-items: center; gap: 8px;
+      color: var(--text2); text-decoration: none;
+      font-size: 12.5px; font-weight: 600;
+      padding: 9px 14px; border-radius: 11px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      transition: color .15s, border-color .15s, background .15s;
+    }
+    .lg-back:hover { color: var(--text); border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.07); }
+
+    /* ── Сцена ── */
+    .lg-stage {
+      position: relative; z-index: 10;
+      width: 100%; max-width: 680px;
+      margin: auto;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 84px 20px 30px;
+    }
+    .lg-card-zone { position: relative; width: min(880px, 100%); }
+
+    /* ── Медальон дракона ── */
+    .lg-dragon-stage {
+      position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%);
+      width: 128px; height: 128px; z-index: 5; pointer-events: none;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lg-dragon-stage .ring {
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 1px solid rgba(124, 58, 237, .35);
+      animation: lgSpin 18s linear infinite;
+    }
+    .lg-dragon-stage .ring2 {
+      position: absolute; inset: 14px; border-radius: 50%;
+      border: 1px dashed rgba(34, 211, 238, .3);
+      animation: lgSpin 26s linear infinite reverse;
+    }
+    @keyframes lgSpin { to { transform: rotate(360deg); } }
+    .lg-dragon-stage .orbits { position: absolute; inset: 0; }
+    .lg-dragon-stage .orbits i {
+      position: absolute; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--ac3); box-shadow: 0 0 10px var(--ac3);
+    }
+    .lg-dragon-stage .orbits i:nth-child(1) { left: 50%; top: -3px; }
+    .lg-dragon-stage .orbits i:nth-child(2) { right: 6px; bottom: 26px; background: #a5b4fc; box-shadow: 0 0 10px #a5b4fc; }
+    .lg-dragon-stage .orbits i:nth-child(3) { left: 6px; bottom: 26px; }
+    .lg-dragon-stage .tile {
+      width: 84px; height: 84px; border-radius: 24px;
+      background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
+      border: 1px solid rgba(255,255,255,.1);
+      box-shadow: 0 16px 40px -12px rgba(79, 70, 229, .55), inset 0 1px 0 rgba(255,255,255,.08);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; z-index: 2;
+    }
+    .lg-dragon-stage .tile img { width: 74%; height: 74%; object-fit: contain; }
+    .lg-dragon-stage .tile::after {
+      content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.16) 45%, transparent 60%);
+      animation: lgGloss 5.5s ease-in-out infinite;
+    }
+    @keyframes lgGloss { 0%, 55% { transform: translateX(-110%); } 85%, 100% { transform: translateX(110%); } }
+    .dragon-live { animation: dragonBreath 4.6s ease-in-out infinite; }
+    @keyframes dragonBreath {
+      0%, 100% { transform: scale(1); }
+      42% { transform: scale(1.045); }
+      58% { transform: scale(1.045); }
+    }
+    .lg-dragon-stage .floor {
+      animation: lgFloor 4.6s ease-in-out infinite;
+    }
+    @keyframes lgFloor { 0%,100% { transform: translateX(-50%) scaleX(.85); opacity: .55; } 50% { transform: translateX(-50%) scaleX(1.1); opacity: 1; } }
+    .lg-dragon-stage .dragon-smoke span {
+      position: absolute; bottom: -8px; left: 50%; width: 6px; height: 6px;
+      border-radius: 50%; background: rgba(165, 180, 252, .5);
+      animation: dragonSmoke 3s ease-out infinite;
+    }
+    .lg-dragon-stage .dragon-smoke span:nth-child(2) { animation-delay: 1s; left: calc(50% - 12px); }
+    .lg-dragon-stage .dragon-smoke span:nth-child(3) { animation-delay: 2s; left: calc(50% + 12px); }
+    @keyframes dragonSmoke { from { opacity: .6; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-26px) scale(.4); } }
+    .lg-dragon-stage .floor {
+      position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
+      width: 110px; height: 14px; border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(79, 70, 229, .4), transparent);
+    }
+
+    /* ── Карточка ── */
+    .auth-card {
+      position: relative;
+      width: min(960px, 100%);
+      margin: auto;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 30%), rgba(13, 16, 25, .88);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .auth-card::after {
+      content: ''; position: absolute; inset: 0; border-radius: inherit;
+      padding: 1px; pointer-events: none;
+      background: conic-gradient(from 180deg, transparent 0deg, rgba(124, 58, 237, .7) 60deg, rgba(34, 211, 238, .6) 120deg, transparent 200deg);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      opacity: 0; transition: opacity .35s;
+    }
+    .auth-card:hover::after { opacity: 1; }
+    .auth-main { display: flex; padding: 66px 38px 32px; }
+
+    /* ── Левая часть: бренд ── */
+    .auth-side { flex: 0 0 46%; padding-right: 38px; border-right: 1px solid rgba(255,255,255,.06); }
+    .auth-side .brand { display: flex; align-items: center; flex-wrap: wrap; gap: 11px 11px; }
+    .auth-side .brand > div { min-width: 0; }
+    .auth-side .brand .ico {
+      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+      background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
+      border: 1px solid rgba(255,255,255,.1);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .auth-side .brand .ico img { width: 72%; height: 72%; object-fit: contain; }
+    .auth-side .brand b {
+      font-family: var(--font-display, 'Unbounded', sans-serif);
+      font-size: 16px; letter-spacing: .12em;
+    }
+    .auth-side .brand > div > span { display: block; font-size: 10px; color: var(--text3); letter-spacing: .14em; text-transform: uppercase; margin-top: 2px; }
+    .member-chip {
+      margin-left: auto; flex-shrink: 0;
+      font-size: 9.5px; font-weight: 800; letter-spacing: .12em;
+      color: #a5b4fc;
+      border: 1px solid rgba(124, 58, 237, .45);
+      background: rgba(124, 58, 237, .14);
+      border-radius: 99px; padding: 5px 10px;
+    }
+    .auth-side h1 {
+      margin: 20px 0 10px;
+      font-family: var(--font-display, 'Unbounded', sans-serif);
+      font-size: 25px; font-weight: 800; line-height: 1.26;
+      letter-spacing: -.01em;
+    }
+    .auth-side h1 .grad {
+      background: linear-gradient(120deg, #818cf8, #a78bfa 40%, #22d3ee 75%, #818cf8);
+      background-size: 220% 100%;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: lgGradFlow 7s linear infinite;
+    }
+    @keyframes lgGradFlow { to { background-position: 220% 0; } }
+    .auth-side .lead { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text2); }
+
+    /* ── Правая часть: форма ── */
+    .mobile-brand { display: none; }
+    .auth-form-side { flex: 1; max-width: 470px; padding-left: 42px; min-width: 0; }
+
+    /* Табы — сегментированный переключатель */
+    .tabs {
+      position: relative; display: flex;
+      gap: 26px;
+      border-bottom: 1px solid rgba(255, 255, 255, .07);
+      margin-bottom: 24px;
+    }
+    .tab-slider {
+      position: absolute; bottom: -1px; left: 0;
+      height: 2px; width: 0; border-radius: 99px;
+      background: var(--ac-grad);
+      box-shadow: 0 0 10px rgba(124, 58, 237, .6);
+      pointer-events: none;
+      transition: left .35s cubic-bezier(.34, 1.3, .64, 1),
+                  width .35s cubic-bezier(.34, 1.3, .64, 1);
+    }
+    .tab-slider::after {
+      content: ''; position: absolute; inset: 0; border-radius: inherit;
+      background: var(--ac-grad); filter: blur(7px);
+      opacity: .55; transition: opacity .3s;
+    }
+    .tab-slider.moving::after { opacity: .95; }
+    .tab-btn {
+      position: relative; z-index: 1;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: transparent; border: none;
+      color: var(--text3);
+      font-size: 13.5px; font-weight: 600; font-family: inherit; cursor: pointer;
+      padding: 0 2px 13px;
+      transition: color .15s;
+    }
+    .tab-btn:hover { color: var(--text2); }
+    .tab-btn.active { color: #c7d2fe; }
+    .tab-btn.active i { animation: tabIconPop .35s var(--ease) both; }
+    @keyframes tabIconPop { 0% { transform: scale(.7); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
+    .tab-btn:focus-visible { outline: 2px solid var(--ac3); outline-offset: 3px; border-radius: 4px; }
+    @keyframes tabFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    #tabPass, #tabPin { animation: tabFade .28s var(--ease) both; }
+    #tabPass.tab-out-l, #tabPin.tab-out-l { animation: tabOutL .16s var(--ease) forwards; }
+    #tabPass.tab-out-r, #tabPin.tab-out-r { animation: tabOutR .16s var(--ease) forwards; }
+    #tabPass.tab-in-r,  #tabPin.tab-in-r  { animation: tabInR .3s var(--ease) both; }
+    #tabPass.tab-in-l,  #tabPin.tab-in-l  { animation: tabInL .3s var(--ease) both; }
+    @keyframes tabOutL { to { opacity: 0; transform: translateX(-18px); } }
+    @keyframes tabOutR { to { opacity: 0; transform: translateX(18px); } }
+    @keyframes tabInR { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+    @keyframes tabInL { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+    #step1.step-out, #step2.step-out { animation: tabOutL .16s var(--ease) forwards; }
+    #step1.step-in, #step2.step-in { animation: tabInR .3s var(--ease) both; }
+
+    /* ── Поля с плавающими лейблами ── */
+    .auth-field { position: relative; margin-bottom: 16px; }
+    .auth-field .lbl {
+      position: absolute; left: 12px; top: 14px; z-index: 2;
+      font-size: 13.5px; color: var(--text3);
+      padding: 2px 8px; border-radius: 7px;
+      pointer-events: none; white-space: nowrap;
+      transform-origin: left center;
+      transition: transform .18s var(--ease), font-size .18s, color .18s, top .18s, left .18s, background .18s;
+    }
+    .auth-field.filled .lbl, .auth-field.focused .lbl {
+      transform: translateY(-22px);
+      font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: #a5b4fc;
+      background: linear-gradient(90deg, rgba(79, 70, 229, .9), rgba(124, 58, 237, .9));
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .auth-field input {
+      width: 100%; height: 52px;
+      padding: 14px 15px;
+      background: rgba(255, 255, 255, .035);
+      border: 1px solid rgba(255, 255, 255, .09);
+      border-radius: 13px;
+      font-size: 14.5px; font-family: inherit; color: var(--text);
+      caret-color: var(--ac3);
+      transition: border-color .15s, box-shadow .18s, background .15s;
+    }
+    .auth-field input::placeholder { color: transparent; }
+    .auth-field input:hover { border-color: rgba(255, 255, 255, .16); }
+    .auth-field input:focus {
+      outline: none; border-color: var(--ac);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .2), 0 10px 24px -12px rgba(79, 70, 229, .4);
+      background: rgba(79, 70, 229, .06);
+    }
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0 60px #121624 inset;
+      -webkit-text-fill-color: #e8ecf6;
+      caret-color: #22d3ee;
+    }
+    .auth-field .f-ico {
+      position: absolute; right: 14px; bottom: 15px;
+      width: 18px; height: 18px; display: grid; place-items: center;
+      color: var(--text3); font-size: 13px; pointer-events: none;
+      transition: color .15s;
+    }
+    .auth-field.focused .f-ico { color: #a5b4fc; }
+    .auth-field.has-ico input { padding-right: 42px; }
+    .auth-field .cap-hint {
+      position: absolute; top: 100%; right: 4px; margin-top: 5px;
+      font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
+      color: #fbbf24; opacity: 0; transition: opacity .15s; pointer-events: none;
+    }
+    .auth-field .eye {
+      position: absolute; right: 8px; bottom: 7px;
+      width: 34px; height: 34px; display: grid; place-items: center;
+      background: transparent; border: none; border-radius: 9px;
+      color: var(--text3); font-size: 13px; cursor: pointer;
+      transition: color .15s, background .15s;
+    }
+    .auth-field .eye:hover { color: #a5b4fc; background: rgba(79, 70, 229, .14); }
+    .auth-field .eye[aria-pressed="true"] { color: var(--ac3); }
+    .auth-field.has-eye input { padding-right: 50px; }
+    .auth-field.has-eye .f-ico { right: 46px; }
+
+    /* ── Ошибки ── */
+    .auth-error {
+      background: rgba(248, 113, 113, .1); border: 1px solid rgba(248, 113, 113, .3);
+      color: var(--err); border-radius: 11px; padding: 9px 13px;
+      font-size: 12px; margin-bottom: 14px; display: none;
+    }
+    .auth-error.shake { animation: errShake .4s ease; }
+    @keyframes errShake {
+      10%, 90% { transform: translateX(-1px); }
+      20%, 80% { transform: translateX(2px); }
+      30%, 50%, 70% { transform: translateX(-3px); }
+      40%, 60% { transform: translateX(3px); }
+    }
+    .step-hint { font-size: 12px; padding: 2px 2px 0; min-height: 18px; }
+
+    /* ── Шаги PIN ── */
+    .auth-title { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 5px; }
+    .auth-title .n {
+      width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+      background: var(--ac-grad); color: #fff;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11.5px; font-weight: 800;
+      box-shadow: 0 4px 12px -3px rgba(124, 58, 237, .6);
+    }
+    .auth-sub { font-size: 12px; color: var(--text3); margin-bottom: 14px; }
+    .pin-box { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; }
+    .pin-box input {
+      width: 44px; height: 54px; text-align: center;
+      font-size: 19px; font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      border: 1px solid rgba(255, 255, 255, .09); border-radius: 12px;
+      background: rgba(255, 255, 255, .035); color: var(--text);
+      transition: border-color .15s, box-shadow .2s;
+    }
+    .pin-box input:focus { outline: none; border-color: var(--ac); box-shadow: 0 0 0 3px rgba(79, 70, 229, .18); }
+    .pin-box input.has {
+      animation: digitPop .22s var(--ease);
+      border-color: var(--ac3);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, .16), 0 8px 18px -8px rgba(34, 211, 238, .45);
+    }
+    @keyframes digitPop { 0% { transform: scale(1); } 40% { transform: scale(1.09); } 100% { transform: scale(1); } }
+
+    /* ── Кнопка ── */
+    .auth-btn {
+      width: 100%; height: 54px; margin-top: 6px;
+      background: var(--ac-grad); color: #fff;
+      border: none; border-radius: 14px;
+      font-size: 14.5px; font-weight: 800; letter-spacing: .01em;
+      font-family: inherit; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      box-shadow: 0 8px 22px -8px rgba(124, 58, 237, .6), inset 0 1px 0 rgba(255,255,255,.25);
+      position: relative; overflow: hidden;
+      transition: box-shadow .2s, filter .2s;
+    }
+    .auth-btn::after {
+      content: ''; position: absolute; top: 0; left: -80%; width: 45%; height: 100%;
+      background: linear-gradient(100deg, transparent, rgba(255,255,255,.28), transparent);
+      transform: skewX(-20deg);
+      transition: left .55s ease;
+    }
+    .auth-btn:hover::after { left: 130%; }
+    .auth-btn:hover { filter: brightness(1.06); box-shadow: 0 12px 28px -8px rgba(124, 58, 237, .75); }
+    .auth-btn.loading { pointer-events: none; opacity: .85; }
+    .auth-btn .spin { animation: lgSpin 0.8s linear infinite; }
+
+    /* ── Статус бота ── */
+    .auth-status {
+      display: flex; align-items: center; gap: 9px; justify-content: center;
+      margin-top: 16px; font-size: 11.5px; color: var(--text3);
+    }
+    .auth-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+    .auth-status .dot.off { background: var(--err); box-shadow: 0 0 8px var(--err); }
+
+    /* ── Футер карточки ── */
+    .auth-foot {
+      text-align: center; margin-top: 18px; padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,.06);
+      font-size: 12px; color: var(--text3);
+    }
+    .auth-foot a { color: #a5b4fc; text-decoration: none; font-weight: 600; }
+    .auth-foot a:hover { color: #c7d2fe; }
+
+    /* ── Автодополнение ── */
+    .autocomplete-popup {
+      position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40;
+      background: var(--surface2);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 13px; overflow: hidden;
+      box-shadow: 0 20px 44px -14px rgba(0,0,0,.8);
+      display: none;
+    }
+    .autocomplete-popup.open { display: block; animation: popIn .2s var(--ease) both; }
+    @keyframes popIn { from { opacity: 0; transform: translateY(-5px) scale(.99); } to { opacity: 1; transform: none; } }
+    .autocomplete-popup .item {
+      display: flex; align-items: center; gap: 11px;
+      padding: 10px 13px; cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      transition: background .12s;
+    }
+    .autocomplete-popup .item:last-child { border-bottom: none; }
+    .autocomplete-popup .item:hover, .autocomplete-popup .item.hl { background: rgba(79, 70, 229, .14); }
+    .autocomplete-popup .a-ava {
+      position: relative; width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      background: var(--ac-soft); color: #a5b4fc;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; overflow: hidden;
+    }
+    .autocomplete-popup .item .a-ava img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .autocomplete-popup .a-copy { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .autocomplete-popup .a-copy b { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .autocomplete-popup .a-copy small { font-size: 10.5px; color: var(--text3); }
+
+    /* ── Фичи участников ── */
+    .auth-feats {
+      list-style: none; margin: 22px 0 0; padding: 0;
+      display: flex; flex-wrap: wrap; gap: 9px; justify-content: center;
+      max-width: 880px;
+    }
+    .auth-feats li {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12.5px; color: var(--text2);
+      background: rgba(255, 255, 255, .05);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 99px; padding: 10px 16px;
+      animation: featIn .5s var(--ease) both;
+    }
+    .auth-feats li i { color: var(--ac3); font-size: 12.5px; transition: color .15s; }
+    .auth-feats li:hover i {
+      background: var(--ac-grad);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .auth-feats li:nth-child(1) { animation-delay: .05s; }
+    .auth-feats li:nth-child(2) { animation-delay: .12s; }
+    .auth-feats li:nth-child(3) { animation-delay: .19s; }
+    .auth-feats li:nth-child(4) { animation-delay: .26s; }
+    .auth-feats li:nth-child(5) { animation-delay: .33s; }
+    .auth-feats li:nth-child(6) { animation-delay: .4s; }
+    @keyframes featIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .lg-foot-note {
+      margin-top: 20px; font-size: 10px; letter-spacing: .22em;
+      color: var(--text3); text-transform: uppercase; font-weight: 700;
+    }
+
+    /* ── Въезд карточки ── */
+    .auth-card, .auth-side, .auth-main, .auth-feats li { animation: slideSide .6s var(--ease) both; }
+    @keyframes slideSide { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+
+    /* ── Адаптив ── */
+    @media (max-width: 760px) {
+      .lg-stage { padding: 76px 14px 24px; }
+      .auth-card { padding-top: 40px; }
+      .auth-main { flex-direction: column; padding: 0 22px 24px; }
+      .auth-side { flex: none; padding: 0 0 18px; border-right: none; border-bottom: 1px solid rgba(255,255,255,.06); }
+      .auth-side h1 { font-size: 21px; margin-top: 18px; }
+      .auth-side .lead { font-size: 12.5px; }
+      .auth-form-side { padding: 18px 0 0; }
+      .member-chip { margin-left: 8px; }
+    }
+
+    /* ── Reduced motion: все новые анимации выключены ── */
+    @media (prefers-reduced-motion: reduce) {
+      .orb1, .lg-aurora i { animation: none; }
+      .lg-dragon-stage .ring, .lg-dragon-stage .ring2 { animation: none; }
+      .dragon-smoke span { animation: none; opacity: 0; }
+      .auth-side h1 .grad { animation: none; }
+      .dragon-live, .lg-dragon-stage .floor, .lg-dragon-stage .tile::after { animation: none; }
+      .auth-card, .auth-side, .auth-main, .auth-feats li { animation: none; }
+      #tabPass, #tabPin { animation: none; }
+      .tab-out-l, .tab-out-r, .tab-in-r, .tab-in-l,
+      #step1.step-out, #step2.step-out, #step1.step-in, #step2.step-in { animation: none; }
+      .tab-slider { transition: none; }
+      .autocomplete-popup.open { animation: none; }
+      .auth-error.shake { animation: none; }
+      .pin-box input.has { animation: none; }
+      .auth-field .lbl { transition: none; }
+      .auth-btn::after { transition: none; }
+      .auth-card, .auth-side, .auth-main, .auth-feats li { transform: none !important; }
+    }
+  </style>
 </head>
 <body>
+  <a class="lg-back" href="/welcome"><i class="fas fa-arrow-left"></i> На главную</a>
+  <div class="lg-glow" aria-hidden="true"></div>
+  <div class="lg-aurora" aria-hidden="true"><i></i><i></i></div>
+  <div class="bg-fx" aria-hidden="true">
+    <span class="orb orb1"></span>
+  </div>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <canvas id="lg-stars" aria-hidden="true"></canvas>
 
-<div class="aurora"></div>
-<div class="aurora-extra"></div>
-<div class="particles" id="particles"></div>
+  <main class="lg-stage">
+    <div class="lg-card-zone">
+      <!-- Медальон дракона: парит над кромкой карточки -->
+      <div class="lg-dragon-stage" aria-hidden="true">
+        <div class="ring"></div>
+        <div class="ring2"></div>
+        <div class="orbits"><i></i><i></i><i></i></div>
+        <div class="dragon-smoke"><span></span><span></span><span></span></div>
+        <div class="tile"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt=""></div>
+        <div class="floor"></div>
+      </div>
 
-<div class="login-wrapper">
-    <div class="hero">
-        <div class="hero-logo"><i class="fas fa-robot"></i></div>
-        <h1>Aether Panel</h1>
-        <p>Центр управления Discord-сервером</p>
+      <div class="auth-card">
+        <div class="auth-main">
+          <section class="auth-side">
+            <div class="brand">
+              <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo"></span>
+              <div><b>HAKUMO</b><span>панель управления</span></div>
+              <span class="member-chip">MEMBER EDITION</span>
+            </div>
+            <h1>Твой сервер — <span class="grad">твоя жизнь</span></h1>
+            <p class="lead">Профиль, заявки, обращения, уровни и события — всё твоё открывается одним входом.</p>
+          </section>
+
+          <div class="auth-form-side">
+            <div class="mobile-brand">
+              <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo"></span>
+              <b>HAKUMO</b>
+            </div>
+
+            <div class="tabs">
+              <span class="tab-slider" id="tabSlider" aria-hidden="true"></span>
+              <button type="button" class="tab-btn active" id="tabBtnPass" data-auth-tab="pass"><i class="fas fa-key"></i> Пароль</button>
+              <button type="button" class="tab-btn" id="tabBtnPin" data-auth-tab="pin"><i class="fas fa-shield-halved"></i> Discord PIN</button>
+            </div>
+
+            <!-- Вход по паролю -->
+            <div id="tabPass">
+              <div class="auth-error" id="passError" {% if error %}style="display:block"{% endif %}>{{ error|e }}</div>
+              <form method="POST" action="/login" autocomplete="off">
+                <div class="auth-field has-ico" data-float>
+                  <label class="lbl" for="passUsername">Логин</label>
+                  <i class="fas fa-user f-ico" aria-hidden="true"></i>
+                  <input type="text" name="username" id="passUsername" placeholder="Логин" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Логин">
+                  <div class="autocomplete-popup" id="passPopup"></div>
+                </div>
+                <div class="auth-field has-ico has-eye" data-float>
+                  <label class="lbl" for="passPassword">Пароль</label>
+                  <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+                  <input type="password" name="password" id="passPassword" placeholder="Пароль" required aria-label="Пароль">
+                  <button type="button" class="eye" id="passEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+                  <span class="cap-hint" id="capHint">Caps Lock включён</span>
+                </div>
+                <button type="submit" class="auth-btn" id="passSubmitBtn"><i class="fas fa-arrow-right"></i> Войти</button>
+              </form>
+            </div>
+
+            <!-- Вход по Discord PIN -->
+            <div id="tabPin" style="display:none">
+              <div class="auth-error" id="pinError"></div>
+              <div id="step1">
+                <div class="auth-title"><span class="n">1</span> Найди аккаунт</div>
+                <div class="auth-sub">Введи ID или @username, привязанный к панели.</div>
+                <div class="auth-field has-ico" data-float>
+                  <label class="lbl" for="discordQuery">Discord</label>
+                  <i class="fab fa-discord f-ico" aria-hidden="true"></i>
+                  <input type="text" id="discordQuery" placeholder="Discord" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')" aria-label="Discord">
+                  <div class="autocomplete-popup" id="pinPopup"></div>
+                </div>
+                <button type="button" class="auth-btn" id="pinCheckBtn"><i class="fas fa-magnifying-glass"></i> Проверить</button>
+                <div class="step-hint" id="step1-error" style="color:var(--err)"></div>
+              </div>
+              <div id="step2" style="display:none">
+                <div class="auth-title"><span class="n">2</span> Введи PIN</div>
+                <div class="auth-sub" id="step2-who">Введи 6 цифр, которые ты получил от бота.</div>
+                <div class="pin-box" id="pinBox"></div>
+                <button type="button" class="auth-btn" id="pinConfirmBtn"><i class="fas fa-arrow-right"></i> Подтвердить</button>
+                <div class="step-hint" id="step2-error" style="color:var(--err)"></div>
+              </div>
+            </div>
+
+            <div class="auth-status" id="authStatus" hidden>
+              <span class="dot" id="statusDot"></span><span id="statusText"></span>
+            </div>
+
+            <div class="auth-foot">Первый раз здесь? <a href="/register">Создай доступ</a> · Хочешь в команду — <a href="/member-apply">подай заявку</a></div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="auth-card">
-        <div class="tab-switcher">
-            <button class="tab-btn active" id="tabBtnPass" onclick="switchTab('pass')">
-                <i class="fas fa-key"></i> Вход по паролю
-            </button>
-            <button class="tab-btn" id="tabBtnPin" onclick="switchTab('pin')">
-                <i class="fab fa-discord"></i> Discord ID (PIN)
-            </button>
-        </div>
+    <!-- Фичи для участников -->
+    <ul class="auth-feats">
+      <li><i class="fas fa-user"></i> Твой профиль и роли</li>
+      <li><i class="fas fa-id-card-clip"></i> Карточка 360°</li>
+      <li><i class="fas fa-file-signature"></i> Заявки в команду</li>
+      <li><i class="fas fa-ticket"></i> Обращения без потерь</li>
+      <li><i class="fas fa-ranking-star"></i> Уровни и награды</li>
+      <li><i class="fas fa-calendar-days"></i> События сервера</li>
+    </ul>
 
-        {% if error %}
-        <div class="alert alert-err">
-            <i class="fas fa-exclamation-circle"></i>
-            <span>{{ error }}</span>
-        </div>
-        {% endif %}
-
-        <!-- TAB 1: USERNAME / PASSWORD FORM -->
-        <form id="formPass" method="POST" action="/login">
-            <div class="form-group">
-                <label class="form-label">Логин или Discord ID</label>
-                <div class="form-input-wrap">
-                    <i class="fas fa-user"></i>
-                    <input type="text" name="username" id="passUsername" class="form-input" placeholder="owner, @username или ID" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')">
-                </div>
-                <div class="autocomplete-popup" id="passPopup"></div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Пароль</label>
-                <div class="form-input-wrap">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" name="password" class="form-input" placeholder="••••••••" required>
-                </div>
-            </div>
-
-            <button type="submit" class="btn-submit">
-                <i class="fas fa-sign-in-alt"></i> Войти
-            </button>
-
-            <div class="helper-note">
-                💡 <strong>Подсказка:</strong> По умолчанию для входа владельца используйте логин <code>owner</code> и пароль <code>123</code>.
-            </div>
-        </form>
-
-        <!-- TAB 2: DISCORD ID PIN LOGIN -->
-        <div id="formPin">
-            <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
-
-            <div id="step1">
-                <div class="form-group">
-                    <label class="form-label">Discord ID или @имя</label>
-                    <div class="form-input-wrap">
-                        <i class="fab fa-discord"></i>
-                        <input type="text" id="discordQuery" class="form-input" placeholder="123456789012345678 или @username" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')">
-                    </div>
-                    <div class="autocomplete-popup" id="pinPopup"></div>
-                </div>
-                <div id="step1-error"></div>
-                <button type="button" class="btn-submit" id="btnCheck" onclick="doCheck()">
-                    <i class="fas fa-paper-plane"></i> Отправить PIN-код
-                </button>
-            </div>
-
-            <div id="step2">
-                <div class="test-list" id="testList"></div>
-            </div>
-
-            <div id="step3">
-                <div class="user-card" id="userCard"></div>
-                <div class="form-group">
-                    <label class="form-label">6-значный PIN-код из ЛС</label>
-                    <div class="form-input-wrap">
-                        <i class="fas fa-shield-alt"></i>
-                        <input type="text" id="pinInput" class="form-input" placeholder="000000" maxlength="6" autocomplete="one-time-code">
-                    </div>
-                </div>
-                <div id="step3-error"></div>
-                <button type="button" class="btn-submit" id="btnPin" onclick="doPin()">
-                    <i class="fas fa-check"></i> Подтвердить и войти
-                </button>
-                <button type="button" class="btn-ghost" onclick="resetAll()">
-                    <i class="fas fa-arrow-left"></i> Назад
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+    <div class="lg-foot-note">HAKUMO · MEMBER EDITION · v3.0</div>
+  </main>
 
 <script>
-// Floating particles
+/* ── Звёздный фон логина (лёгкий canvas, 60 fps, редкие метеоры) ── */
 (function () {
-    var container = document.getElementById('particles');
-    for (var i = 0; i < 24; i++) {
-        var p = document.createElement('div');
-        p.className = 'particle';
-        p.style.left = Math.random() * 100 + '%';
-        p.style.animationDuration = (8 + Math.random() * 12) + 's';
-        p.style.animationDelay = (-Math.random() * 20) + 's';
-        p.style.opacity = (0.3 + Math.random() * 0.5);
-        container.appendChild(p);
+  'use strict';
+  var cv = document.getElementById('lg-stars');
+  if (!cv) return;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) return;
+  var ctx = cv.getContext('2d');
+  if (!ctx) return; /* браузер без canvas 2d — просто не рисуем звёзды */
+  var W, H, stars = [];
+  var last = 0;
+  function resize() {
+    W = cv.width = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    stars = [];
+    var n = Math.min(60, Math.floor(W * H / 22000));
+    for (var i = 0; i < n; i++) {
+      stars.push({
+        x: Math.random() * W, y: Math.random() * H,
+        r: Math.random() * 1.1 + 0.3,
+        p: Math.random() * Math.PI * 2,
+        s: 0.4 + Math.random() * 0.9
+      });
     }
+  }
+  var meteor = null, meteorNext = 3600;
+  var target = 16, ema = 16;   /* адаптивно: 60 fps, на слабых машинах — 30 fps */
+  function step(now) {
+    requestAnimationFrame(step);
+    if (document.hidden) return;
+    var dt = now - last;
+    if (dt < target) return;
+    last = now;
+    ema = ema * .94 + Math.min(dt, 48) * .06;
+    target = ema > 30 ? 34 : 16;
+    ctx.clearRect(0, 0, W, H);
+    /* редкая падающая звезда */
+    if (!meteor && now > meteorNext) {
+      meteor = {
+        x: 120 + Math.random() * Math.max(80, W - 240),
+        y: 50 + Math.random() * H * 0.3,
+        vx: 5.5 + Math.random() * 3,
+        vy: 2.6 + Math.random() * 1.6,
+        life: 0
+      };
+    }
+    if (meteor) {
+      meteor.life++;
+      meteor.x += meteor.vx; meteor.y += meteor.vy;
+      var tail = 14;
+      var mg = ctx.createLinearGradient(
+        meteor.x, meteor.y,
+        meteor.x - meteor.vx * tail, meteor.y - meteor.vy * tail
+      );
+      mg.addColorStop(0, 'rgba(196, 181, 253, .95)');
+      mg.addColorStop(1, 'rgba(196, 181, 253, 0)');
+      ctx.strokeStyle = mg;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(meteor.x, meteor.y);
+      ctx.lineTo(meteor.x - meteor.vx * tail, meteor.y - meteor.vy * tail);
+      ctx.stroke();
+      if (meteor.life > 52 || meteor.y > H) {
+        meteor = null;
+        meteorNext = now + 4800 + Math.random() * 6000;
+      }
+    }
+    for (var i = 0; i < stars.length; i++) {
+      var st = stars[i];
+      var a = 0.22 + 0.5 * (0.5 + 0.5 * Math.sin(st.p + now * 0.001 * st.s));
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(200, 210, 255, ' + a.toFixed(2) + ')';
+      ctx.fill();
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+  requestAnimationFrame(step);
 })();
-
-// Sayfa yюklendiгinde: URL hash'te pin varsa PIN tab'ыnы открыть, yoksa pass (default)
+</script>
+<script>
 (function () {
-    var initialTab = 'pass';
-    try {
-        var h = (window.location.hash || '').toLowerCase();
-        if (h === '#pin' || h === '#discord') initialTab = 'pin';
-    } catch (e) {}
-    if (typeof switchTab === 'function') switchTab(initialTab);
-})();
+  'use strict';
+  var _discordId = null;
+  var _pin = '';
 
-let _discordId = '';
-let _suggestTimer = null;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-function switchTab(mode) {
-    if (mode === 'pass') {
-        document.getElementById('formPass').style.display = 'block';
-        document.getElementById('formPin').style.display = 'none';
-        document.getElementById('tabBtnPass').classList.add('active');
-        document.getElementById('tabBtnPin').classList.remove('active');
+  /* Кнопки: спиннер при загрузке (login не подключает app.js — свой помощник) */
+  var _btnIcons = {};
+  window.qualitySetLoading = window.qualitySetLoading || function (btn, loading) {
+    if (!btn) return;
+    if (loading) {
+      if (!_btnIcons[btn.id]) _btnIcons[btn.id] = btn.querySelector('i');
+      btn.classList.add('loading');
+      var ic = btn.querySelector('i');
+      if (ic) ic.className = 'fas fa-circle-notch spin';
     } else {
-        document.getElementById('formPass').style.display = 'none';
-        document.getElementById('formPin').style.display = 'block';
-        document.getElementById('tabBtnPass').classList.remove('active');
-        document.getElementById('tabBtnPin').classList.add('active');
-        resetAll();
+      btn.classList.remove('loading');
+      var saved = _btnIcons[btn.id];
+      var cur = btn.querySelector('i');
+      if (cur) cur.remove();
+      if (saved) btn.insertBefore(saved, btn.firstChild);
     }
-    hideAllSuggest();
-}
+  };
 
-function resetAll() {
-    document.getElementById('step1').style.display = 'block';
-    document.getElementById('step2').style.display = 'none';
-    document.getElementById('step3').style.display = 'none';
-    document.getElementById('progressBar').classList.remove('active');
-    document.getElementById('progressFill').style.width = '0%';
-    document.getElementById('testList').innerHTML = '';
-    document.getElementById('step1-error').innerHTML = '';
-    document.getElementById('step3-error').innerHTML = '';
-    const checkBtn = document.getElementById('btnCheck');
-    if (checkBtn) checkBtn.disabled = false;
-}
+  function showError(boxId, text) {
+    var el = $(boxId);
+    if (text) {
+      el.textContent = text;
+      el.style.display = '';
+      el.classList.remove('shake');
+      void el.offsetWidth; /* перезапуск анимации тряски */
+      el.classList.add('shake');
+    } else el.style.display = 'none';
+  }
 
-function showStep(n) {
-    ['step1', 'step2', 'step3'].forEach((s, i) => {
-        document.getElementById(s).style.display = (i + 1 === n) ? 'block' : 'none';
+  /* ── Плавающие лейблы: .filled/.focused ── */
+  document.querySelectorAll('[data-float]').forEach(function (field) {
+    var inp = field.querySelector('input');
+    if (!inp) return;
+    function sync() {
+      field.classList.toggle('filled', !!inp.value);
+    }
+    inp.addEventListener('input', sync);
+    inp.addEventListener('blur', function () { field.classList.remove('focused'); sync(); });
+    inp.addEventListener('focus', function () { field.classList.add('focused'); });
+    sync();
+  });
+
+  /* ── Глазик показа пароля ── */
+  var passEye = $('passEye');
+  if (passEye) {
+    passEye.addEventListener('click', function () {
+      var inp = $('passPassword');
+      var show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      passEye.setAttribute('aria-pressed', show ? 'true' : 'false');
+      passEye.title = show ? 'Скрыть пароль' : 'Показать пароль';
+      passEye.querySelector('i').className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+      inp.focus();
     });
-}
+  }
 
-function setProgress(pct) {
-    document.getElementById('progressBar').classList.add('active');
-    document.getElementById('progressFill').style.width = pct + '%';
-}
+  /* Табы: пружинный слайдер-индикатор + направленный слайд содержимого */
+  function placeSlider(btn) {
+    var s = $('tabSlider');
+    if (!s || !btn) return;
+    s.style.left = btn.offsetLeft + 'px';
+    s.style.width = btn.offsetWidth + 'px';
+  }
+  var _curTab = 'pass';
+  function switchTab(tab, btn) {
+    if (tab === _curTab) return;
+    var dirRight = tab === 'pin';      /* движение вправо: старый уходит влево */
+    var oldPanel = _curTab === 'pass' ? $('tabPass') : $('tabPin');
+    var newPanel = tab === 'pass' ? $('tabPass') : $('tabPin');
+    _curTab = tab;
+    document.querySelectorAll('[data-auth-tab]').forEach(function (b) { b.classList.toggle('active', b === btn); });
+    placeSlider(btn);
+    var s = $('tabSlider');
+    if (s) { s.classList.add('moving'); setTimeout(function () { s.classList.remove('moving'); }, 400); }
+    oldPanel.classList.add(dirRight ? 'tab-out-l' : 'tab-out-r');
+    setTimeout(function () {
+      oldPanel.classList.remove('tab-out-l', 'tab-out-r');
+      oldPanel.style.display = 'none';
+      newPanel.style.display = '';
+      newPanel.classList.add(dirRight ? 'tab-in-r' : 'tab-in-l');
+      setTimeout(function () { newPanel.classList.remove('tab-in-r', 'tab-in-l'); }, 320);
+    }, 180);
+  }
+  document.querySelectorAll('[data-auth-tab]').forEach(function (btn) {
+    btn.addEventListener('click', function () { switchTab(btn.dataset.authTab, btn); });
+  });
+  placeSlider(document.querySelector('[data-auth-tab].active'));
+  window.addEventListener('resize', function () { placeSlider(document.querySelector('[data-auth-tab].active')); });
 
-function addTestItem(name, status, detail) {
-    const list = document.getElementById('testList');
-    const item = document.createElement('div');
-    item.className = 'test-item';
-    let iconHtml = '<i class="fas fa-spinner fa-spin" ></i>';
-    if (status === 'ok') iconHtml = '<i class="fas fa-check-circle" ></i>';
-    else if (status === 'fail') iconHtml = '<i class="fas fa-times-circle" ></i>';
-    else if (status === 'warn') iconHtml = '<i class="fas fa-exclamation-circle" ></i>';
-    item.innerHTML = '<div>' + iconHtml + ' <span class="test-name"   style="margin-left: 6px;">' + name + '</span></div><span class="test-detail">' + (detail || '') + '</span>';
-    list.appendChild(item);
-    return item;
-}
+  /* Шаг 1 → Шаг 2 PIN: направленный слайд */
+  function pinGoStep2() {
+    var a = $('step1'), b = $('step2');
+    a.classList.add('step-out');
+    setTimeout(function () {
+      a.classList.remove('step-out');
+      a.style.display = 'none';
+      b.style.display = '';
+      b.classList.add('step-in');
+      setTimeout(function () { b.classList.remove('step-in'); }, 320);
+    }, 180);
+  }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-function hideAllSuggest() {
-    document.getElementById('passPopup').style.display = 'none';
-    document.getElementById('pinPopup').style.display = 'none';
-}
-
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.form-group')) {
-        hideAllSuggest();
-    }
-});
-
-function showSuggest(inputEl, popupId) {
-    if (_suggestTimer) clearTimeout(_suggestTimer);
-    _suggestTimer = setTimeout(async () => {
-        const q = inputEl.value.trim();
-        const popup = document.getElementById(popupId);
-        try {
-            const res = await fetch('/api/login/suggest?q=' + encodeURIComponent(q));
-            const d = await res.json();
-            if (d.success && d.suggestions && d.suggestions.length) {
-                popup.innerHTML = d.suggestions.map(item => {
-                    const disp = item.display_name || item.name;
-                    const mentionVal = (item.name === 'Owner' || item.name === 'owner') ? 'owner' : '@' + item.name;
-                    const idVal = item.id;
-                    return `<div class="suggest-item" onclick="selectSuggestItem('${inputEl.id}', '${popupId}', '${mentionVal}', '${idVal}')">
-                        <img src="${item.avatar}" class="suggest-avatar" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'"/>
-                        <div>
-                            <div class="suggest-name">${disp}</div>
-                            <div class="suggest-id">ID: ${idVal}</div>
-                        </div>
-                    </div>`;
-                }).join('');
-                popup.style.display = 'block';
-            } else {
-                popup.style.display = 'none';
-            }
-        } catch (err) {
-            popup.style.display = 'none';
-        }
-    }, 150);
-}
-
-function selectSuggestItem(inputId, popupId, mentionVal, idVal) {
-    const inputEl = document.getElementById(inputId);
-    document.getElementById(popupId).style.display = 'none';
-    inputEl.value = idVal || mentionVal;
-    if (inputId === 'passUsername') {
-        document.querySelector('#formPass input[name="password"]').focus();
-    } else {
-        inputEl.focus();
-    }
-}
-
-async function doCheck() {
-    const query = document.getElementById('discordQuery').value.trim();
-    if (!query) {
-        document.getElementById('step1-error').innerHTML = '<div class="alert alert-err"><i class="fas fa-exclamation-circle"></i> Пожалуйста, введите Discord ID или @имя пользователя.</div>';
-        return;
-    }
-    document.getElementById('btnCheck').disabled = true;
-    showStep(2);
-    setProgress(20);
-
-    const list = document.getElementById('testList');
-    list.innerHTML = '';
-    addTestItem('Поиск пользователя...', 'loading', '');
-    await sleep(300);
-
-    try {
-        const r = await fetch('/api/discord-check', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({query: query})
-        });
-        const d = await r.json();
-
-        list.innerHTML = '';
-        setProgress(60);
-
-        if (d.tests && d.tests.length) {
-            for (let i = 0; i < d.tests.length; i++) {
-                const t = d.tests[i];
-                addTestItem(t.name, t.status, t.detail);
-            }
-        }
-
-        if (!d.success) {
-            await sleep(600);
-            document.getElementById('step1-error').innerHTML = '<div class="alert alert-err"><i class="fas fa-times-circle"></i> ' + (d.error || 'Пользователь не найден или ошибка операции.') + '</div>';
-            showStep(1);
-            document.getElementById('progressBar').classList.remove('active');
-            document.getElementById('btnCheck').disabled = false;
-            return;
-        }
-
-        setProgress(100);
-        _discordId = d.discord_id;
-        await sleep(500);
-
-        const card = document.getElementById('userCard');
-        card.innerHTML = '<img class="user-avatar" src="' + (d.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png') + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'"><div><div class="user-name">' + d.display_name + '</div><div class="user-id">Discord ID: ' + d.discord_id + '</div></div>';
-        showStep(3);
-        document.getElementById('progressBar').classList.remove('active');
-        document.getElementById('pinInput').focus();
-        document.getElementById('btnCheck').disabled = false;
-
-    } catch (e) {
-        list.innerHTML = '';
-        addTestItem('Ошибка соединения', 'fail', e.message);
-        await sleep(1200);
-        showStep(1);
-        document.getElementById('progressBar').classList.remove('active');
-        document.getElementById('btnCheck').disabled = false;
-    }
-}
-
-async function doPin() {
-    const pin = document.getElementById('pinInput').value.trim();
-    if (!pin || pin.length !== 6) {
-        document.getElementById('step3-error').innerHTML = '<div class="alert alert-err"><i class="fas fa-exclamation-circle"></i> Пожалуйста, введите 6-значный PIN-код.</div>';
-        return;
-    }
-    const pinBtn = document.getElementById('btnPin');
-    pinBtn.disabled = true;
-    try {
-        const r = await fetch('/api/discord-login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({discord_id: _discordId, pin: pin})
-        });
-        const d = await r.json();
-        if (d.success) {
-            document.getElementById('step3-error').innerHTML = '<div class="alert alert-ok"><i class="fas fa-check-circle"></i> Успешный вход, перенаправление...</div>';
-            setTimeout(() => { window.location.href = d.redirect || '/'; }, 600);
+  /* Живой статус бота (пульсирующая точка + пинг) */
+  (function () {
+    var row = $('authStatus');
+    if (!row) return;
+    fetch('/api/status-public', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || d.ok === false) return;
+        row.hidden = false;
+        var dot = $('statusDot'), txt = $('statusText');
+        if (d.online) {
+          dot.classList.remove('off');
+          var g = d.guilds || 0;
+          txt.textContent = 'Бот онлайн · пинг ' + (d.latency_ms || 0) + ' мс · ' + g + ' ' +
+            (g === 1 ? 'сервер' : (g >= 2 && g <= 4 ? 'сервера' : 'серверов'));
         } else {
-            document.getElementById('step3-error').innerHTML = '<div class="alert alert-err"><i class="fas fa-times-circle"></i> ' + (d.error || 'Неверный PIN-код или истек срок его действия.') + '</div>';
-            pinBtn.disabled = false;
+          dot.classList.add('off');
+          txt.textContent = 'Бот офлайн · вход доступен, статус обновится';
         }
-    } catch (e) {
-        document.getElementById('step3-error').innerHTML = '<div class="alert alert-err"><i class="fas fa-times-circle"></i> Ошибка соединения с сервером: ' + e.message + '</div>';
-        pinBtn.disabled = false;
+      })
+      .catch(function () {});
+  })();
+
+  /* Caps Lock: подсказка у пароля */
+  (function () {
+    var pw = $('passPassword'), hint = $('capHint');
+    if (!pw || !hint) return;
+    function capState(e) {
+      var on = !!(e.getModifierState && e.getModifierState('CapsLock'));
+      hint.style.opacity = on ? '1' : '0';
     }
-}
+    pw.addEventListener('keydown', capState);
+    pw.addEventListener('keyup', capState);
+    pw.addEventListener('blur', function () { hint.style.opacity = '0'; });
+  })();
+
+  /* 3D-наклон карточки (мягкий, rAF, только точный указатель, еле заметный) */
+  (function () {
+    if (!window.matchMedia || !window.matchMedia('(pointer: fine)').matches) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var card = document.querySelector('.auth-card');
+    if (!card || !('requestAnimationFrame' in window)) return;
+    var rx = 0, ry = 0, tx = 0, ty = 0, raf = null;
+    function tick() {
+      raf = null;
+      rx += (tx - rx) * .12;
+      ry += (ty - ry) * .12;
+      card.style.transform = 'perspective(1100px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg)';
+    }
+    card.addEventListener('mousemove', function (e) {
+      var r = card.getBoundingClientRect();
+      tx = ((e.clientY - r.top) / r.height - .5) * -2.4;
+      ty = ((e.clientX - r.left) / r.width - .5) * 2.4;
+      if (!raf) raf = requestAnimationFrame(tick);
+    });
+    card.addEventListener('mouseleave', function () {
+      tx = 0; ty = 0;
+      if (!raf) raf = requestAnimationFrame(tick);
+    });
+  })();
+
+  /* Автодополнение логинов (с клавиатурной навигацией) */
+  var suggestTimer = null;
+  window.showSuggest = function (input, popupId) {
+    /* после выбора участника один показ подавляется —
+       иначе focus-события вытаскивали попап обратно */
+    if (window.__lgSuggestBlock) { window.__lgSuggestBlock = false; return; }
+    var popup = $(popupId);
+    var q = (input.value || '').trim().replace(/^@/, '');
+    if (q.length < 2) { popup.classList.remove('open'); return; }
+    clearTimeout(suggestTimer);
+    suggestTimer = setTimeout(function () {
+      fetch('/api/login/suggest?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var items = Array.isArray(d) ? d : (d.suggestions || []);
+          if (!items.length) { popup.classList.remove('open'); return; }
+          popup.innerHTML = items.slice(0, 6).map(function (s) {
+            /* API отдаёт name/display_name/id — мапим надёжно */
+            var label = s.display_name || s.username || s.name || '';
+            var uid = s.discord_id || s.id || '';
+            var uname = s.username || s.name || '';
+            return '<div class="item" data-user="' + esc(label || uid) + '" data-id="' + esc(uid) + '">' +
+              '<span class="a-ava">' + esc((label || uname || uid || '?').charAt(0).toUpperCase()) +
+              (s.avatar ? '<img alt="" src="' + esc(s.avatar) + '" onerror="this.remove()">' : '') + '</span>' +
+              '<span class="a-copy"><b>' + esc(label || uname || uid || '—') + '</b>' +
+              (uid ? '<small>' + esc(uid) + '</small>' : '') + '</span></div>';
+          }).join('');
+          popup.classList.add('open');
+          Array.prototype.forEach.call(popup.querySelectorAll('.item'), function (it) {
+            it.addEventListener('click', function (ev) {
+              ev.preventDefault();
+              ev.stopPropagation();
+              /* Блок СРАЗУ: никакой input/focus-событие не откроет попап заново */
+              window.__lgSuggestBlock = true;
+              input.value = it.dataset.user || it.dataset.id || input.value;
+              /* плавающий лейбл синхронизируем вручную — без dispatch, чтобы
+                 oninput=showSuggest не сработал повторно */
+              var fld = input.closest('[data-float]');
+              if (fld) fld.classList.toggle('filled', !!input.value);
+              popup.classList.remove('open');
+              /* НЕ зовём input.focus(): у поля стоит onfocus=showSuggest,
+                 и попап тут же вылезал бы снова. Фокус сразу на пароль. */
+              if (input.id === 'passUsername') {
+                var pw = $('passPassword');
+                if (pw) pw.focus();
+              }
+            });
+          });
+        })
+        .catch(function () { popup.classList.remove('open'); });
+    }, 220);
+  };
+  function bindPopupKeys(input, popupId) {
+    input.addEventListener('keydown', function (e) {
+      var popup = $(popupId);
+      if (!popup.classList.contains('open')) return;
+      var items = Array.prototype.slice.call(popup.querySelectorAll('.item'));
+      var hl = popup.querySelector('.item.hl');
+      var idx = hl ? items.indexOf(hl) : -1;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (hl) hl.classList.remove('hl');
+        idx = Math.min(idx + 1, items.length - 1);
+        items[idx].classList.add('hl');
+        items[idx].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (hl) hl.classList.remove('hl');
+        idx = Math.max(idx - 1, 0);
+        items[idx].classList.add('hl');
+        items[idx].scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter') {
+        var sel = hl || items[0];
+        if (sel) { e.preventDefault(); sel.click(); }
+      } else if (e.key === 'Escape') {
+        popup.classList.remove('open');
+      }
+    });
+  }
+  bindPopupKeys($('passUsername'), 'passPopup');
+  bindPopupKeys($('discordQuery'), 'pinPopup');
+  document.addEventListener('click', function (e) {
+    ['passPopup', 'pinPopup'].forEach(function (id) {
+      var popup = $(id);
+      if (popup && popup.classList.contains('open') && !popup.contains(e.target) &&
+          e.target !== $('passUsername') && e.target !== $('discordQuery')) {
+        popup.classList.remove('open');
+      }
+    });
+  });
+
+  /* PIN: шаг 1 — найти аккаунт */
+  $('pinCheckBtn').addEventListener('click', function () {
+    var btn = $('pinCheckBtn');
+    var q = ($('discordQuery').value || '').trim();
+    showError('step1-error', '');
+    if (!q) { showError('step1-error', 'Введи ID или @username'); return; }
+    window.qualitySetLoading(btn, true);
+    fetch('/api/discord-check', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      window.qualitySetLoading(btn, false);
+      if (d.success) {
+        _discordId = d.discord_id;
+        $('step2-who').textContent = 'Введи 6 цифр, которые ты получил от бота' + (d.display_name ? ' (' + d.display_name + ')' : '') + '.';
+        pinGoStep2();
+        buildPinBox();
+      } else {
+        showError('step1-error', d.error || 'Аккаунт не найден');
+      }
+    }).catch(function () { window.qualitySetLoading(btn, false); showError('step1-error', 'Сеть недоступна'); });
+  });
+
+  function buildPinBox() {
+    var box = $('pinBox');
+    box.innerHTML = '';
+    _pin = '';
+    for (var i = 0; i < 6; i++) {
+      var inp = document.createElement('input');
+      inp.type = 'text';
+      inp.maxLength = 1;
+      inp.inputMode = 'numeric';
+      inp.autocomplete = 'off';
+      inp.dataset.i = i;
+      box.appendChild(inp);
+      inp.addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '');
+        var idx = parseInt(this.dataset.i, 10);
+        if (this.value) {
+          this.classList.remove('has');
+          void this.offsetWidth; /* перезапуск анимации */
+          this.classList.add('has');
+        } else {
+          this.classList.remove('has');
+        }
+        if (this.value && idx < 5) box.children[idx + 1].focus();
+        _pin = Array.prototype.map.call(box.children, function (c) { return c.value; }).join('');
+        if (_pin.length === 6) $('pinConfirmBtn').focus();
+      });
+      inp.addEventListener('keydown', function (e) {
+        var idx = parseInt(this.dataset.i, 10);
+        if (e.key === 'Backspace' && !this.value && idx > 0) box.children[idx - 1].focus();
+      });
+    }
+    box.children[0].focus();
+  }
+
+  /* PIN: шаг 2 */
+  $('pinConfirmBtn').addEventListener('click', function () {
+    showError('step2-error', '');
+    if (_pin.length !== 6) { showError('step2-error', 'Введи 6 цифр'); return; }
+    var btn = $('pinConfirmBtn');
+    window.qualitySetLoading(btn, true);
+    fetch('/api/discord-login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ discord_id: _discordId, pin: _pin })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      window.qualitySetLoading(btn, false);
+      if (d.success) {
+        window.location.href = d.redirect || '/';
+      } else {
+        showError('step2-error', d.error || 'Неверный PIN');
+      }
+    }).catch(function () { window.qualitySetLoading(btn, false); showError('step2-error', 'Сеть недоступна'); });
+  });
+})();
 </script>
 </body>
 </html>

@@ -1,19 +1,24 @@
 """
-FAQ / Ёгrenme Система — Dosya taзапретlanлиш
+FAQ / Система обучения — основана на файлах
 
-Dosyalar:
-  data/learned_faq.json      — Ёгrenilen soru-cevaplar (bot использовать)
-  data/unknown_questions.json — Cevaplanamayan sorular (sen inceliyorsun)
+Файлы:
+  data/learned_faq.json      — изученные вопросы-ответы (использует бот)
+  data/unknown_questions.json — вопросы без ответа (проверяешь ты)
 
 Управление:
-  - learned_faq.json'u верно redaktirovatyebilirsin
-  - unknown_questions.json'daki вопросы inceleyip learned_faq.json'a addyebilirsin
-  - Bir FAQ'ы devre dышы bыrakmak для "active": false yap
+  - learned_faq.json можно редактировать вручную
+  - вопросы из unknown_questions.json можно просмотреть и добавить в learned_faq.json
+  - чтобы отключить FAQ, установите "active": false
 """
+
+from logger import get_logger
+
+_log = get_logger("faq_manager")
+
 import os 
 import json 
 import re 
-from datetime import datetime 
+from datetime import datetime, timezone
 
 FAQ_FILE ='data/learned_faq.json'
 UNKNOWN_FILE ='data/unknown_questions.json'
@@ -27,8 +32,8 @@ def _load (path :str )->list :
         try :
             with open (path ,'r',encoding ='utf-8')as f :
                 return json .load (f )
-        except Exception :
-            pass 
+        except Exception as _ex:
+            _log.debug("_load(): подавлено: %s", _ex)
     return []
 
 
@@ -58,15 +63,15 @@ def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,histor
     """Escalate olan soruyu unknown_questions.json'a add."""
     items =_load (UNKNOWN_FILE )
 
-    # Zaten benzer bir soru есть ли? Sayacы artыr
+    # Уже есть похожий вопрос? Увеличить счётчик
     for item in items :
         if _similarity (question ,item .get ('question',''))>0.7 :
             item ['count']=item .get ('count',1 )+1 
-            item ['last_seen']=datetime .utcnow ().isoformat ()
+            item ['last_seen']=datetime.now(timezone.utc).isoformat ()
             _save (UNKNOWN_FILE ,items )
             return item ['id']
 
-    new_id =f"uq_{int(datetime.utcnow().timestamp())}_{guild_id}"
+    new_id =f"uq_{int(datetime.now(timezone.utc).timestamp())}_{guild_id}"
     items .append ({
     'id':new_id ,
     'question':question ,
@@ -74,8 +79,8 @@ def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,histor
     'channel_id':channel_id ,
     'history_snapshot':history [-6 :],# В конец 6 message baгlam для
     'count':1 ,
-    'created_at':datetime .utcnow ().isoformat (),
-    'last_seen':datetime .utcnow ().isoformat (),
+    'created_at':datetime.now(timezone.utc).isoformat (),
+    'last_seen':datetime.now(timezone.utc).isoformat (),
     # status: pending | learned | ignored
     'status':'pending'
     })
@@ -83,12 +88,12 @@ def save_unknown_question (question :str ,guild_id :int ,channel_id :int ,histor
     return new_id 
 
 
-    # ─── Staff Cevabыndan Ёгren ───────────────────────────────────────────────────
+    # ─── Обучение из ответов модераторов ───────────────────────────────────────────────────
 
 def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str ='Администратор'):
     """
-    Staff'ыn ticket'ta данные cevabы learned_faq.json'a add.
-    Benzer soru zaten varsa обновл.
+    Добавить ответ модератора из тикета в learned_faq.json.
+    Если похожий вопрос уже есть — обновить.
     """
     faq =_load (FAQ_FILE )
 
@@ -96,7 +101,7 @@ def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str
     for item in faq :
         if _similarity (question ,item .get ('question',''))>0.75 :
             item ['answer']=answer 
-            item ['updated_at']=datetime .utcnow ().isoformat ()
+            item ['updated_at']=datetime.now(timezone.utc).isoformat ()
             item ['updated_by']=staff_name 
             _save (FAQ_FILE ,faq )
             # unknown_questions'da iшaretle
@@ -104,26 +109,26 @@ def learn_from_staff (question :str ,answer :str ,guild_id :int ,staff_name :str
             print (f"[FAQ] Обновлено: {question[:60]}")
             return item ['id']
 
-    new_id =f"faq_{int(datetime.utcnow().timestamp())}_{guild_id}"
+    new_id =f"faq_{int(datetime.now(timezone.utc).timestamp())}_{guild_id}"
     faq .append ({
     'id':new_id ,
     'question':question ,
     'answer':answer ,
     'guild_id':guild_id ,
     'created_by':staff_name ,
-    'created_at':datetime .utcnow ().isoformat (),
-    'updated_at':datetime .utcnow ().isoformat (),
+    'created_at':datetime.now(timezone.utc).isoformat (),
+    'updated_at':datetime.now(timezone.utc).isoformat (),
     'use_count':0 ,
     'active':True 
     })
     _save (FAQ_FILE ,faq )
     _mark_unknown_learned (question )
-    print (f"[FAQ] Новый ёгrenildi: {question[:60]}")
+    print (f"[FAQ] Изучен новый вопрос: {question[:60]}")
     return new_id 
 
 
 def _mark_unknown_learned (question :str ):
-    """unknown_questions'da benzer soruyu 'learned' как iшaretle."""
+    """В unknown_questions пометить похожий вопрос как 'learned'."""
     items =_load (UNKNOWN_FILE )
     changed =False 
     for item in items :
@@ -138,7 +143,7 @@ def _mark_unknown_learned (question :str ):
 
 def find_relevant_faqs (question :str ,guild_id :int =None ,top_k :int =3 ,threshold :float =0.25 )->list :
     """
-    Soruya en benzer FAQ'larы вернуть.
+    Вернуть наиболее похожие FAQ на вопрос.
     Returns: [{'question': str, 'answer': str, 'score': float}, ...]
     """
     faq =_load (FAQ_FILE )

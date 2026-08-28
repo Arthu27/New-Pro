@@ -1,40 +1,47 @@
 {% extends "base.html" %}
-{% block title %}Предупреждения - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-exclamation-triangle" ></i> Предупреждения{% endblock %}
+{% block title %}Варны · Модерация — Hakumo{% endblock %}
+{% block page_title %}Варны{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Предупреждения</span>
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Реагирование</div>
+    <h1>Варны</h1>
+    <p class="lead">Предупреждения, причины и история участника в одной очереди. Поиск работает по участнику, причине и модератору.</p>
+  </div>
+</div>
+
+<div class="kpi-row" id="kpis">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-total">—</div><div class="kpi-label">Всего решений</div></div></div>
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-users-viewfinder"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-users">—</div><div class="kpi-label">Участников в поле</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-arrow-trend-up"></i></div><div class="kpi-copy"><div class="kpi-value" id="stat-top">—</div><div class="kpi-label">Максимум повторов</div></div></div>
+  <div class="kpi" style="grid-column:1/-1"><div class="kpi-icon"><i class="fas fa-wave-square"></i></div><div class="kpi-copy" style="flex:1;min-width:0"><div class="kpi-label" style="margin-bottom:6px">Варны за 7 дней</div><div class="chart-box" id="warn-spark"></div></div></div>
+</div>
+
+<div class="panel">
+  <div class="toolbar">
+    <div class="seg" id="viewMode">
+      <button type="button" class="seg-btn active" data-view="table"><i class="fas fa-table"></i> Таблица</button>
+      <button type="button" class="seg-btn" data-view="grouped"><i class="fas fa-user-group"></i> По участникам</button>
     </div>
-    <h1>Предупреждения</h1>
-    <p>Все предупреждения участников: история, причины, модераторы.</p>
+    <label class="field"><span style="font-weight:600;color:var(--text-3);font-size:var(--fs-sm)">Сервер</span>
+      <select id="guild-filter" aria-label="Фильтр сервера"><option value="">Все серверы</option></select>
+    </label>
+    <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="search" placeholder="Участник, причина или модератор" aria-label="Поиск предупреждений">
+    </label>
+    <span class="spacer"></span>
+    <span class="fresh-stamp" id="warn-stamp"></span>
+    <button type="button" class="btn" id="warn-pause" title="Пауза live"></button>
+    <button type="button" class="btn" id="warn-density" title="Плотность таблицы"></button>
+    <button type="button" class="btn" id="warn-csv" title="Выгрузить текущую выборку в CSV"><i class="fas fa-file-csv"></i> CSV</button>
+    <span class="badge neutral" id="warn-count">0 кейсов</span>
   </div>
-</div>
-{% endblock %}
-
-
-
-<div class="warn-toolbar">
-  <select id="guild-filter" class="warn-select"><option value="">Все серверы</option></select>
-  <input type="text" id="search" class="warn-search" placeholder="Предупреждение поиск... (kullanиcи, sebep)">
-  <span id="warn-count" class="warn-count"   style="margin-left: auto;">0</span>
-</div>
-
-<div class="warn-stats">
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-total">-</div><div class="warn-stat-lbl">Всего</div></div>
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-users" >-</div><div class="warn-stat-lbl">Участников</div></div>
-  <div class="warn-stat"><div class="warn-stat-num" id="stat-top" >-</div><div class="warn-stat-lbl">Топ</div></div>
-</div>
-
-<div class="warn-box">
-  <div class="warn-head">
-    <div class="warn-title"><i class="fas fa-exclamation-triangle"></i> Предупреждения</div>
-  </div>
-  <div class="warn-body" id="warn-body">
-    <p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>
+  <div class="table-wrap" style="min-height:120px">
+    <table class="data-table" id="warn-table" data-sortable>
+      <thead><tr><th class="sortable">Участник</th><th class="sortable">Модератор</th><th>Причина</th><th class="sortable">Время</th></tr></thead>
+      <tbody id="warn-body"><tr><td colspan="4"><div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Собираем очередь решений</span></div></td></tr></tbody>
+    </table>
   </div>
 </div>
 
@@ -44,35 +51,38 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function fmtDate(iso) {
-    if (!iso) return '-';
-    try { var d = new Date(iso); return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}); } catch (e) { return '-'; }
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return '—'; }
   }
 
   var allWarnings = [];
-  var guilds = [];
 
   async function loadGuilds() {
     try {
-      guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
+      var guilds = await fetch('/api/guilds').then(function (r) { return r.json(); });
       var sel = $('guild-filter');
-      guilds.forEach(function (g) {
+      (Array.isArray(guilds) ? guilds : []).forEach(function (g) {
         var opt = document.createElement('option');
-        opt.value = g.id;
-        opt.textContent = g.name;
+        opt.value = g.id; opt.textContent = g.name;
         sel.appendChild(opt);
       });
-    } catch (e) { /* sessiz */ }
+    } catch (e) { /* тихо */ }
   }
 
   async function loadWarnings() {
-    $('warn-body').innerHTML = '<p class="empty"><i class="fas fa-spinner fa-spin"></i> Загрузка...</p>';
     try {
       allWarnings = await window.fetchCachedJSON('/api/warnings');
-      render();
-      updateStats();
     } catch (e) {
-      $('warn-body').innerHTML = '<p class="empty">Не удалось загрузить</p>';
+      allWarnings = [];
     }
+    /* данные не изменились — не перерисовываем список и график */
+    var _w0 = (allWarnings || [])[0] || null;
+    var fp = (allWarnings || []).length + '|' + (_w0 ? String(_w0.timestamp || _w0.user_id || _w0.reason || '').slice(0, 80) : '');
+    if (window.silentGuard && window.silentGuard('warnings', fp)) return;
+    window.renderSafe(render);
+    updateStats();
+    if (window.freshStamp && !window.__modLivePaused) window.freshStamp($('warn-stamp'));
   }
 
   function updateStats() {
@@ -83,12 +93,77 @@
     $('stat-total').textContent = allWarnings.length;
     $('stat-users').textContent = Object.keys(users).length;
     $('stat-top').textContent = top;
+    if (window.HakumoChart) {
+      var days = [];
+      var now = new Date();
+      for (var i = 6; i >= 0; i--) {
+        var dt = new Date(now.getTime() - i * 86400000);
+        days.push({ key: dt.toDateString(), label: String(dt.getDate()).padStart(2, '0') + '.' + String(dt.getMonth() + 1).padStart(2, '0'), count: 0 });
+      }
+      allWarnings.forEach(function (w) {
+        try {
+          var k = new Date(w.timestamp).toDateString();
+          for (var j = 0; j < days.length; j++) if (days[j].key === k) days[j].count++;
+        } catch (e) { /* метка без даты */ }
+      });
+      window.HakumoChart.sparkline($('warn-spark'), days.map(function (d) { return d.count; }), { height: 48, title: 'Предупреждения по дням' });
+    }
   }
 
+  var viewMode = 'table';
+
   function render() {
+    var filtered = currentFiltered();
+    $('warn-count').textContent = filtered.length + ' из ' + allWarnings.length;
+    var body = $('warn-body');
+    if (!filtered.length) {
+      body.innerHTML = '<tr><td colspan="4"><div class="empty"><i class="fas fa-inbox"></i><span>Предупреждения не найдены</span>' +
+        '<span class="empty-hint-chip" data-focus="#search"><i class="fas fa-keyboard"></i> Enter — поиск</span></div></td></tr>';
+      return;
+    }
+    if (viewMode === 'grouped') {
+      var byUser = {};
+      filtered.forEach(function (w) {
+        (byUser[w.user_id] = byUser[w.user_id] || []).push(w);
+      });
+      var users = Object.keys(byUser).sort(function (a, b) { return byUser[b].length - byUser[a].length; });
+      body.innerHTML = users.slice(0, 60).map(function (uid) {
+        var list = byUser[uid];
+        var last = list[0];
+        var reasons = list.slice(0, 4).map(function (w) {
+          return '<div class="warn-reason"><i class="fas fa-chevron-right"></i> ' + esc(w.reason || '—') + ' <span class="muted">· ' + esc(fmtDate(w.timestamp)) + '</span></div>';
+        }).join('');
+        var more = list.length > 4 ? '<div class="hint" style="margin-top:4px">+ ещё ' + (list.length - 4) + '</div>' : '';
+        var uidName = (last.user_name && last.user_name !== uid && !String(last.user_name).match(/^\d+$/)) ? last.user_name : '';
+        return '<tr><td>' +
+          (uidName ? '<b>' + esc(uidName) + '</b> <span class="id-pill" title="ID участника">' + esc(uid) + '</span>' : '<span class="id-pill">' + esc(uid) + '</span>') +
+          ' <span class="badge danger">' + list.length + '</span></td>' +
+          '<td colspan="2">' + reasons + more + '</td>' +
+          '<td><a class="btn btn-sm" href="/mod-insights?user=' + esc(uid) + '"><i class="fas fa-id-card"></i> Досье</a></td></tr>';
+      }).join('');
+      return;
+    }
+    var q = ($('search').value || '');
+    var H = function (raw) { return window.hlEsc ? window.hlEsc(raw, q) : esc(raw); };
+    body.innerHTML = filtered.slice(0, 200).map(function (w) {
+      var wName = (w.user_name && w.user_name !== w.user_id && !String(w.user_name).match(/^\d+$/)) ? w.user_name : '';
+      return '<tr><td data-sort="' + esc(w.user_id || '') + '">' +
+        (wName ? '<b>' + H(wName) + '</b> <span class="id-pill copyable" data-copy="' + esc(w.user_id || '') + '" title="Клик — скопировать ID">' + H(w.user_id || '—') + '</span>' : '<span class="id-pill copyable" data-copy="' + esc(w.user_id || '') + '" title="Клик — скопировать ID">' + H(w.user_id || '—') + '</span>') +
+        '</td>' +
+        '<td>' + H(w.moderator || '—') + '</td>' +
+        '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(w.reason || '') + '">' + H(w.reason || '—') + '</td>' +
+        '<td data-sort="' + esc(w.timestamp || '') + '" class="muted">' + esc(fmtDate(w.timestamp)) + '</td></tr>';
+    }).join('');
+    if (window.attachTableSort && !window._warnSortReady) {
+      window._warnSortReady = true;
+      window.attachTableSort($('warn-table'));
+    }
+  }
+
+  function currentFiltered() {
     var guildFilter = $('guild-filter').value;
     var q = ($('search').value || '').toLowerCase();
-    var filtered = allWarnings.filter(function (w) {
+    return allWarnings.filter(function (w) {
       if (guildFilter && String(w.guild_id || '') !== guildFilter) return false;
       if (q) {
         var hay = ((w.user_id || '') + ' ' + (w.reason || '') + ' ' + (w.moderator || '')).toLowerCase();
@@ -96,30 +171,40 @@
       }
       return true;
     });
-    $('warn-count').textContent = filtered.length + ' / ' + allWarnings.length;
-    if (!filtered.length) {
-      $('warn-body').innerHTML = '<p class="empty">Предупреждения не найдено</p>';
-      return;
-    }
-    var rows = filtered.slice(0, 200).map(function (w) {
-      return '<tr><td><span class="warn-badge">' + esc(w.user_id || '-') + '</span></td>' +
-        '<td >' + esc(w.moderator || '-') + '</td>' +
-        '<td   style="max-width: 160px; overflow: hidden;">' + esc(w.reason || '-') + '</td>' +
-        '<td >' + esc(fmtDate(w.timestamp)) + '</td></tr>';
-    }).join('');
-    $('warn-body').innerHTML = '<table><thead><tr><th>User</th><th>Модер.</th><th>Причина</th><th>Время</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function exportCsv() {
+    var rows = [['Участник', 'Модератор', 'Причина', 'Время', 'Сервер']];
+    currentFiltered().forEach(function (w) {
+      rows.push([w.user_id || '', w.moderator || '', w.reason || '', w.timestamp || '', w.guild_id || '']);
+    });
+    var ok = window.csvDownload ? window.csvDownload('warnings.csv', rows) : false;
+    window.showToast(ok ? 'Выборка выгружена' : 'Не удалось выгрузить', ok);
   }
 
   function bind() {
     $('guild-filter').addEventListener('change', render);
     $('search').addEventListener('input', render);
+    $('warn-csv').addEventListener('click', exportCsv);
+    if (window.livePauseButton) window.livePauseButton($('warn-pause'));
+    if (window.densityButton) window.densityButton($('warn-density'));
+    document.querySelectorAll('#viewMode .seg-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        document.querySelectorAll('#viewMode .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        viewMode = b.dataset.view;
+        render();
+      });
+    });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); loadWarnings(); });
-  } else {
+  function start() {
     bind(); loadGuilds(); loadWarnings();
+    if (window.setLiveRefresh) window.setLiveRefresh(loadWarnings, 1500);
   }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 </script>
 {% endblock %}

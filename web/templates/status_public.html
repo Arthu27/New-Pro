@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Статус — Hakumo</title>
+      <style>
+      /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
+         первый кадр никогда не белый. */
+      html { background: #0f1013; color-scheme: dark; }
+      body { background: transparent; margin: 0; }
+    </style>
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
+    <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
+  <style>
+    :root {
+      --bg: #05060a; --surface: #0d1019; --surface2: #121624;
+      --line: #1d2333; --line2: #2a3247;
+      --text: #e8ecf6; --text2: #9aa3ba; --text3: #5f6880;
+      --ac: #4f46e5; --ac2: #7c3aed; --ac3: #22d3ee;
+      --ok: #4ade80; --err: #f87171; --warn: #fbbf24;
+      --shadow-2: 0 24px 70px rgba(0,0,0,.6);
+    }
+    body {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 28px 16px;
+      margin: 0;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(79, 70, 229, .22), transparent 45%),
+        radial-gradient(circle at 90% 100%, rgba(34, 211, 238, .12), transparent 40%),
+        var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .st-brand b {
+      font-family: 'Unbounded', sans-serif;
+      background: linear-gradient(120deg, #e8ecf6 20%, #a5b4fc 90%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .st-hero {
+      background: linear-gradient(160deg, rgba(79, 70, 229, .14), transparent 55%), var(--surface);
+      box-shadow: var(--shadow-2), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .st-m { background: var(--surface2); }
+    .st-m:hover { box-shadow: 0 12px 30px -10px rgba(124, 58, 237, .5); }
+    .st-foot a { color: #a5b4fc; }
+    .st { width: 100%; max-width: 560px; position: relative; z-index: 1; }
+    .st-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+    .st-brand .brand-icon { width: 42px; height: 42px; font-size: 16px; border-radius: 12px; }
+    .st-brand b { display: block; font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: .1em; }
+    .st-brand span { font-size: 11px; color: var(--text-3); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+
+    .st-hero {
+      position: relative; overflow: hidden;
+      border-radius: 20px; padding: 30px 28px 24px; text-align: center;
+      background: linear-gradient(160deg, var(--ac-soft), transparent 55%), var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-2);
+    }
+    .st-hero::after {
+      content: ''; position: absolute; top: -70px; left: 50%; transform: translateX(-50%);
+      width: 300px; height: 190px; border-radius: 50%; pointer-events: none;
+      background: radial-gradient(circle, var(--ok-soft), transparent 65%);
+    }
+    .st-hero[data-state="off"]::after { background: radial-gradient(circle, var(--err-soft), transparent 65%); }
+
+    .st-ring { width: 108px; height: 108px; margin: 0 auto 18px; position: relative; }
+    .st-pulse, .st-pulse::after {
+      content: ''; position: absolute; inset: 0; border-radius: 50%;
+      border: 2px solid var(--ok);
+      animation: stPulse 2.4s ease-out infinite;
+    }
+    .st-pulse::after { animation-delay: 1.2s; }
+    .st-hero[data-state="off"] .st-pulse, .st-hero[data-state="off"] .st-pulse::after { border-color: var(--err); animation: none; opacity: .5; }
+    @keyframes stPulse { 0% { transform: scale(.72); opacity: 0; } 30% { opacity: .8; } 100% { transform: scale(1.25); opacity: 0; } }
+    .st-core {
+      position: absolute; inset: 22px; border-radius: 50%; display: grid; place-items: center;
+      font-size: 28px; color: var(--ok);
+      background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent);
+    }
+    .st-hero[data-state="off"] .st-core { color: var(--err); background: var(--err-soft); border-color: color-mix(in srgb, var(--err) 35%, transparent); }
+
+    .st-state { font-size: 26px; font-weight: 800; letter-spacing: -.01em; position: relative; z-index: 1; }
+    .st-hero[data-state="on"] .st-state { color: var(--ok); }
+    .st-hero[data-state="off"] .st-state { color: var(--err); }
+    .st-sub { font-size: 12.5px; color: var(--text-3); font-weight: 600; margin-top: 6px; position: relative; z-index: 1; }
+
+    .st-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 26px; position: relative; z-index: 1; }
+    .st-m {
+      border-radius: 14px; padding: 14px 10px 12px;
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      transition: transform .15s var(--ease), box-shadow .15s var(--ease);
+    }
+    .st-m:hover {box-shadow: var(--shadow-2)}
+    .st-m i { color: var(--ac); font-size: 13px; }
+    .st-m-val { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 7px; letter-spacing: -.02em; }
+    .st-m-val small { font-size: 11px; color: var(--text-3); font-weight: 700; }
+    .st-m-lbl { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
+    .st-m.warn .st-m-val { color: var(--warn); }
+
+    .st-foot { text-align: center; margin-top: 18px; font-size: 11.5px; color: var(--text-3); font-weight: 600; }
+    .st-foot .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 7px; animation: pulse 2s infinite; }
+    .st-foot a { color: var(--ac); text-decoration: none; font-weight: 700; }
+    @media (prefers-reduced-motion: reduce) { .st-pulse, .st-pulse::after, .st-foot .dot { animation: none !important; } }
+  </style>
+</head>
+<body>
+  <canvas id="st-stars" aria-hidden="true" style="position:fixed;inset:0;pointer-events:none;z-index:0"></canvas>
+
+  <div class="st">
+    <div class="st-brand">
+      <div class="brand-icon" style="overflow:hidden"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo" style="width:100%;height:100%;object-fit:cover"></div>
+      <div>
+        <b>HAKUMO</b>
+        <span>Статус бота · Live</span>
+      </div>
+    </div>
+
+    <div class="st-hero" id="hero" data-state="on">
+      <div class="st-ring">
+        <span class="st-pulse"></span>
+        <div class="st-core"><i class="fas fa-bolt"></i></div>
+      </div>
+      <div class="st-state" id="st-state">Проверяем…</div>
+      <div class="st-sub" id="st-sub">загрузка телеметрии</div>
+
+      <div class="st-metrics">
+        <div class="st-m"><i class="fas fa-signal"></i><div class="st-m-val" id="m-ping">—</div><div class="st-m-lbl">Пинг</div></div>
+        <div class="st-m"><i class="fas fa-clock"></i><div class="st-m-val" id="m-uptime">—</div><div class="st-m-lbl">Аптайм</div></div>
+        <div class="st-m"><i class="fas fa-server"></i><div class="st-m-val" id="m-guilds">—</div><div class="st-m-lbl">Серверов</div></div>
+      </div>
+    </div>
+
+    <div class="st-foot"><span class="dot"></span>обновлено <span id="st-upd">—</span> · обновление каждые 5 сек · <a href="/login">вход в панель</a></div>
+  </div>
+
+<script>
+/* Звёздный фон статуса */
+(function () {
+  var cv = document.getElementById('st-stars');
+  if (!cv) return;
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) return;
+  var ctx = cv.getContext('2d');
+  if (!ctx) return; /* браузер без canvas 2d — просто не рисуем звёзды */
+  var W, H, stars = [];
+  var last = 0;
+  function resize() {
+    W = cv.width = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    stars = [];
+    var n = Math.min(50, Math.floor(W * H / 24000));
+    for (var i = 0; i < n; i++) {
+      stars.push({ x: Math.random() * W, y: Math.random() * H,
+        r: Math.random() * 1.1 + 0.3, p: Math.random() * Math.PI * 2, s: 0.4 + Math.random() * 0.9 });
+    }
+  }
+  function step(now) {
+    requestAnimationFrame(step);
+    if (document.hidden) return;
+    if (now - last < 60) return;
+    last = now;
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < stars.length; i++) {
+      var st = stars[i];
+      var a = 0.22 + 0.5 * (0.5 + 0.5 * Math.sin(st.p + now * 0.001 * st.s));
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(200, 210, 255, ' + a.toFixed(2) + ')';
+      ctx.fill();
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize, { passive: true });
+  requestAnimationFrame(step);
+})();
+</script>
+<script>
+const $ = id => document.getElementById(id);
+function pingWord(ms){
+  if (ms <= 0) return ['', ''];
+  if (ms < 120) return ['отличный', ''];
+  if (ms < 250) return ['нормальный', ''];
+  return ['высокий', 'warn'];
+}
+async function tick(){
+  try{
+    const r = await fetch('/api/status-public');
+    const d = await r.json();
+    const on = !!d.online;
+    $('hero').dataset.state = on ? 'on' : 'off';
+    $('st-state').textContent = on ? 'Бот онлайн' : 'Бот офлайн';
+    $('st-sub').textContent = on
+      ? `всё работает · v${d.version} · в кэше ${d.users_cached} юзеров`
+      : 'бот не отвечает — уже чиним';
+    const [w, cls] = pingWord(d.latency_ms);
+    var pingEl = $('m-ping');
+    pingEl.textContent = (d.latency_ms != null ? d.latency_ms : '—');
+    pingEl.setAttribute('data-unit', w ? ('мс · ' + w) : 'мс');
+    $('m-ping').closest('.st-m').classList.toggle('warn', cls === 'warn');
+    $('m-uptime').textContent = d.uptime_human;
+    $('m-guilds').textContent = d.guilds;
+    $('st-upd').textContent = new Date().toLocaleTimeString('ru-RU');
+  }catch(e){
+    $('hero').dataset.state = 'off';
+    $('st-state').textContent = 'Нет связи';
+    $('st-sub').textContent = 'панель не отвечает';
+  }
+}
+tick();
+setInterval(() => { if (!document.hidden) tick(); }, 5000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+</script>
+</body>
+</html>

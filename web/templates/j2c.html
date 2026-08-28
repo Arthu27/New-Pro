@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Комнаты J2C — Панель Hakumo{% endblock %}
+{% block page_title %}Комнаты join-to-create{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Сообщество <span class="sep">·</span> Комнаты J2C</div>
+    <h1>Комнаты join-to-create</h1>
+  </div>
+</div>
+
+<style>
+.j2-kpis{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 18px;align-items:center}
+.j2-kpi{display:flex;align-items:center;gap:10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:10px 16px}
+.j2-kpi i{color:var(--ac,var(--ac));font-size:16px}
+.j2-kpi b{font-size:15px;color:var(--text-1,#fff)}
+.j2-kpi span{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent))}
+.j2-kpi.hot i,.j2-kpi.hot b{color:#ff8a7a}
+.j2-kpi.ok i,.j2-kpi.ok b{color:#4ade80}
+.j2-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}
+@media (max-width:960px){.j2-grid{grid-template-columns:1fr}}
+.j2-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.j2-panel h3{margin:0 0 4px;font-size:15px;color:var(--text-1,#fff);display:flex;align-items:center;gap:9px}
+.j2-panel h3 i{color:var(--ac,var(--ac))}
+.j2-sub{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-bottom:12px;line-height:1.5}
+.j2-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:9px 6px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
+.j2-row:last-child{border-bottom:none}
+.j2-row.dead{opacity:.55}
+.j2-who b{display:block;font-size:13px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent))}
+.j2-who small{display:block;font-size:11px;color:var(--text-3,color-mix(in srgb, var(--text) 45%, transparent));margin-top:2px}
+.j2-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent));background:color-mix(in srgb, var(--text) 5%, transparent);border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:999px;padding:3px 10px;white-space:nowrap}
+.j2-chip.ok{color:#4ade80;border-color:rgba(74,222,128,.25)}
+.j2-chip.dead{color:#ff8a7a;border-color:rgba(231,76,60,.3)}
+.j2-issue{display:flex;gap:8px;align-items:baseline;font-size:12.5px;color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));padding:6px 6px;border-bottom:1px dashed color-mix(in srgb, var(--text) 7%, transparent)}
+.j2-issue:last-child{border-bottom:none}
+.j2-issue i{color:#ff8a7a;font-size:11px}
+.j2-issue.fine i{color:#4ade80}
+.j2-fields{display:grid;grid-template-columns:1fr;gap:8px}
+.j2-fields label{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));display:block;margin-bottom:3px}
+.j2-preview{background:color-mix(in srgb, var(--text) 3%, transparent);border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:12px;padding:14px 16px;font-size:14px;color:var(--text-1,#fff);word-break:break-word}
+.j2-check{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-2,color-mix(in srgb, var(--text) 85%, transparent));cursor:pointer}
+.j2-check input{width:18px;height:18px}
+[data-theme="light"] .j2-row,[data-theme="light"] .j2-issue{border-bottom-color:rgba(0,0,0,.08)}
+</style>
+
+<div class="j2-kpis" id="j2Kpis">
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+  <div class="sk-card" style="width:170px;height:56px"></div>
+</div>
+
+<div class="j2-grid">
+  <div>
+    <div class="j2-panel">
+      <h3><i class="fas fa-stethoscope"></i> Состояние системы</h3>
+      <div class="j2-sub">Зашёл в лобби — получил личную комнату; опустела — бот её убрал. Здесь видно, что мешает работе, и жив ли лобби-канал (если бот онлайн).</div>
+      <div id="j2Status"><div class="sk-row"></div><div class="sk-row" style="width:65%"></div></div>
+    </div>
+
+    <div class="j2-panel">
+      <h3><i class="fas fa-door-open"></i> Реестр комнат</h3>
+      <span class="fresh-chip" id="j2Fresh"></span>
+      <div class="j2-sub">Комнаты, которые бот создал и помнит (реестр переживает рестарт). Сироты — записи, чьих каналов на сервере уже нет.</div>
+      <input class="inp" id="j2RoomSearch" placeholder="Поиск по комнатам — канал или владелец" style="margin-bottom:10px">
+      <div id="j2Rooms"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>
+      <div style="margin-top:10px;display:none" id="j2PruneWrap">
+        <button type="button" class="btn btn-ghost" id="j2Prune" aria-label="Вычистить сирот из реестра" onclick="j2PruneNow()"><i class="fas fa-broom"></i> Вычистить сирот</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="j2-panel">
+      <h3><i class="fas fa-eye"></i> Имя будущей комнаты</h3>
+      <div class="j2-sub">Строчка кога 1:1: срез 96 символов — у шаблона, потом подстановка {user}. Образец владельца — Мария.</div>
+      <div class="j2-preview" id="j2PreviewBox"><div class="sk-row" style="width:55%"></div></div>
+    </div>
+
+    <div class="j2-panel" id="j2Form" style="display:none">
+      <h3><i class="fas fa-gear"></i> Настройки</h3>
+      <div class="j2-sub">Те же рамки, что у команд /j2c: лимит 0–99 (0 — безлимит), шаблон до 96 символов, пустой шаблон — дефолт кога. Пустой ID лобби выключает смысл системы.</div>
+      <div class="j2-fields">
+        <label class="j2-check"><input type="checkbox" id="j2Enabled"> Система включена</label>
+        <div><label for="j2Lobby">Канал-лобби</label>
+          <select class="inp" id="j2Lobby" aria-label="Голосовой канал-лобби"></select><div id="j2LobbyStatus"></div></div>
+        <div><label for="j2Category">Категория для комнат</label>
+          <select class="inp" id="j2Category" aria-label="Категория для временных комнат"></select><div id="j2CategoryStatus"></div></div>
+        <div><label for="j2Limit">Лимит мест по умолчанию</label>
+          <input class="inp" id="j2Limit" type="number" min="0" max="99" placeholder="0"></div>
+        <div><label for="j2Template">Шаблон имени ({user} — владелец)</label>
+          <input class="inp" id="j2Template" maxlength="120" placeholder="Комната {user}"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn" onclick="j2Save()"><i class="fas fa-check"></i> Сохранить</button>
+        </div>
+      </div>
+      <div class="j2-sub" id="j2Msg" style="margin:8px 0 0"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/pickers.js?v={{ static_v('pickers.js') }}"></script>
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/j2c';
+var CAN_EDIT = false;
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function plural(n, one, few, many) {
+  var m10 = n % 10, m100 = n % 100;
+  if (m100 >= 11 && m100 <= 19) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+function kpi(icon, num, label, cls) {
+  return '<div class="j2-kpi' + (cls ? ' ' + cls : '') + '"><i class="fas ' + icon + '"></i><div><b>' + num + '</b> <span>' + esc(label) + '</span></div></div>';
+}
+
+function renderKpis(d) {
+  var r = d.readiness;
+  document.getElementById('j2Kpis').innerHTML =
+    kpi(r.ready ? 'fa-circle-check' : 'fa-circle-pause', r.ready ? 'жива' : 'не работает', 'система', r.ready ? 'ok' : 'hot') +
+    kpi('fa-door-open', d.rooms_total, plural(d.rooms_total, 'комната в реестре', 'комнаты в реестре', 'комнат в реестре'), '') +
+    kpi('fa-satellite-dish', d.bot_online ? d.rooms_live : '—', d.bot_online ? plural(d.rooms_live, 'живая сейчас', 'живые сейчас', 'живых сейчас') : 'бот офлайн', '') +
+    kpi('fa-users', d.config.user_limit || 'безлимит', 'мест по умолчанию', '');
+}
+
+function renderStatus(d) {
+  var box = document.getElementById('j2Status');
+  var r = d.readiness;
+  var html = '';
+  if (r.ready) {
+    html += '<div class="j2-issue fine"><i class="fas fa-circle-check"></i><span>Лобби на месте — заходите, комнаты создаются.</span></div>';
+  }
+  html += r.issues.map(function (t) {
+    return '<div class="j2-issue"><i class="fas fa-circle-exclamation"></i><span>' + esc(t) + '</span></div>';
+  }).join('');
+  if (!d.bot_online) {
+    html += '<div class="j2-issue"><i class="fas fa-satellite-dish"></i><span>бот офлайн — каналы не проверить, показан конфиг с диска</span></div>';
+  } else if (!d.live) {
+    html += '<div class="j2-issue"><i class="fas fa-puzzle-piece"></i><span>бот онлайн, но ког не загружен — показан конфиг с диска</span></div>';
+  }
+  box.innerHTML = html;
+}
+
+function renderRooms(d) {
+  var box = document.getElementById('j2Rooms');
+  if (!d.rooms.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-door-closed"></i><p>Комнат в реестре нет</p><p class="empty-tip">Появятся, когда кто-то зайдёт в лобби.</p></div>';
+    document.getElementById('j2PruneWrap').style.display = 'none';
+    return;
+  }
+  box.innerHTML = d.rooms.map(function (r) {
+    var state = r.live === true
+      ? '<span class="j2-chip ok"><i class="fas fa-tower-broadcast"></i> живая' + (r.members != null ? ' · ' + r.members : '') + '</span>'
+      : (r.live === false ? '<span class="j2-chip dead"><i class="fas fa-ghost"></i> сирота</span>'
+                          : '<span class="j2-chip">не проверить</span>');
+    return '<div class="j2-row' + (r.live === false ? ' dead' : '') + '"><div class="j2-who"><b data-copy-id="' + esc(r.channel_id) + '" title="Нажмите — скопировать ID канала">#' + esc(r.channel_id) + '</b>' +
+      '<small>владелец: ' + (r.owner_name ? esc(r.owner_name) : 'ID ' + esc(r.owner_id)) + ' <span class="j2-chip" data-copy-id="' + esc(r.owner_id) + '" title="Нажмите — скопировать ID владельца"><i class="fas fa-copy"></i></span></small></div>' +
+      '<span>' + state + '</span></div>';
+  }).join('');
+  var hasDead = d.rooms.some(function (r) { return r.live === false; });
+  document.getElementById('j2PruneWrap').style.display = (CAN_EDIT && hasDead) ? '' : 'none';
+}
+
+function fillForm(d) {
+  document.getElementById('j2Enabled').checked = !!d.config.enabled;
+  document.getElementById('j2Lobby').value = d.config.lobby_id || '';
+  document.getElementById('j2Category').value = d.config.category_id || '';
+  document.getElementById('j2Limit').value = d.config.user_limit || 0;
+  document.getElementById('j2Template').value = d.config.name_template || '';
+}
+
+function render(d) {
+  CAN_EDIT = !!d.can_edit;
+  if (CAN_EDIT) {
+    document.getElementById('j2Form').style.display = '';
+    fillForm(d);
+    if (!window._j2Pickers) {
+      window._j2Pickers = true;
+      attachSelectPicker(document.getElementById('j2Lobby'),
+        { search: true,gid: GID, kind: 'voice', noneLabel: '— без лобби —', value: String(d.config.lobby_id || '')});
+      attachSelectPicker(document.getElementById('j2Category'),
+        { search: true,gid: GID, kind: 'category', noneLabel: '— как у лобби —', value: String(d.config.category_id || '')});
+      bindCtrlS(j2Save);
+      window._j2Dirty = dirtyTrack(['j2Enabled', 'j2Lobby', 'j2Category', 'j2Limit', 'j2Template'].map(function (id) { return document.getElementById(id); }));
+    }
+  }
+  renderKpis(d);
+  renderStatus(d);
+  renderRooms(d);
+  document.getElementById('j2PreviewBox').textContent = d.preview;
+  freshStamp(document.getElementById('j2Fresh'));
+}
+
+function j2Load() {
+  fetch(API + '/overview').then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) { render(d); }
+  }).catch(function () {});
+}
+
+function j2Save() {
+  var msg = document.getElementById('j2Msg');
+  fetch(API + '/settings', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                              enabled: document.getElementById('j2Enabled').checked,
+                              lobby_id: document.getElementById('j2Lobby').value,
+                              category_id: document.getElementById('j2Category').value,
+                              user_limit: document.getElementById('j2Limit').value,
+                              name_template: document.getElementById('j2Template').value})})
+    .then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) {
+        msg.innerHTML = '<i class="fas fa-circle-exclamation" style="color:#ff8a7a"></i> ' + esc(d.error || 'Ошибка');
+        return;
+      }
+      msg.innerHTML = '<i class="fas fa-check" style="color:#4ade80"></i> Сохранено' + (d.live ? '' : ' (бот офлайн — на диск, ког подхватит при старте)');
+      if (window._j2Dirty) window._j2Dirty.reset();
+      j2Load();
+    }).catch(function () {
+      msg.textContent = 'Сеть моргнула — попробуйте ещё раз';
+    });
+}
+
+function j2PruneNow() {
+  askConfirm('Вычистить сирот?', 'Из реестра уберутся записи, чьих каналов на сервере уже нет.', function () {
+    fetch(API + '/rooms/prune', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'})
+      .then(function (r) { return r.json(); }).then(function (d) {
+        j2Load();
+      }).catch(function () {});
+  }, {danger: true, okText: 'Вычистить', icon_fa: 'fa-broom'});
+}
+
+attachListFilter(document.getElementById('j2RoomSearch'), 'j2Rooms', '.j2-row');
+bindSlashFocus(document.getElementById('j2RoomSearch'));
+bindCopyId(document);
+
+j2Load();
+</script>
+{% endblock %}

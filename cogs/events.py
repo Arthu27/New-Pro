@@ -1,9 +1,17 @@
-"""Событие/Event система - date belirle, hatыrlatma отправить"""
+"""Система событий — назначить дату, отправить напоминание"""
+
+from logger import get_logger
+
+_log = get_logger("events")
+
+from json_store import load_json as _js_load, save_json as _js_save
+
 import discord 
 from discord .ext import commands ,tasks 
 from discord import app_commands 
 import json ,os 
-from datetime import datetime ,timedelta 
+from datetime import datetime ,timedelta, timezone
+from config import Config 
 
 class Events (commands .Cog ):
     def __init__ (self ,bot ):
@@ -17,18 +25,14 @@ class Events (commands .Cog ):
         return f'data/events_{guild_id}.json'
 
     def _load (self ,guild_id ):
-        f =self ._file (guild_id )
-        if not os .path .exists (f ):return {}
-        with open (f ,'r',encoding ='utf-8')as fp :return json .load (fp )
+        return _js_load (self ._file (guild_id ),{},log =_log )
 
     def _save (self ,guild_id ,data ):
-        os .makedirs ('data',exist_ok =True )
-        with open (self ._file (guild_id ),'w',encoding ='utf-8')as fp :
-            json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
+        _js_save (self ._file (guild_id ),data ,log =_log )
 
     @tasks .loop (minutes =5 )
     async def check_events (self ):
-        now =datetime .utcnow ()
+        now =datetime.now(timezone.utc).replace(tzinfo=None)
         for guild in self .bot .guilds :
             events =self ._load (guild .id )
             changed =False 
@@ -36,7 +40,8 @@ class Events (commands .Cog ):
                 if ev .get ('notified'):continue 
                 try :
                     event_time =datetime .fromisoformat (ev ['time'])
-                except Exception :continue 
+                except Exception as _ex:
+                    _log.debug("check_events(): подавлено: %s", _ex)
 
                 diff_min =(event_time -now ).total_seconds ()/60 
 
@@ -88,17 +93,17 @@ class Events (commands .Cog ):
         mention =f'<@&{ev["role_id"]}>'if ev .get ('role_id')else '@everyone'
         await ch .send (content =mention ,embed =embed )
 
-    @app_commands .command (name ='etkinlik-создать',description ='Создать новое событие')
+    @app_commands .command (name ='event-create',description ='Создать новое событие')
     @app_commands .describe (
-    baslik ='Событие baшlыгы',
-    aciklama ='Событие описание',
+    title ='Название события',
+    description ='Событие описание',
     date ='Дата (GG/AA/YYYY)',
     часов ='Время (SS:DD)',
-    channel ='Duyuru канал'
+    channel ='Канал объявлений'
     )
     @app_commands .checks .has_permissions (manage_events =True )
     async def create_event (self ,interaction :discord .Interaction ,
-    baslik :str ,aciklama :str ,
+    title :str ,description :str ,
     date :str ,часов :str ,
     channel :discord .TextChannel ):
         try :
@@ -107,21 +112,21 @@ class Events (commands .Cog ):
             await interaction .response .send_message ('Неверный формат даты/времени. Пример: 25/12/2025 20:00',ephemeral =True )
             return 
 
-        if dt <datetime .utcnow ():
+        if dt <datetime.now(timezone.utc).replace(tzinfo=None):
             await interaction .response .send_message ('Нельзя создать событие в прошлом',ephemeral =True )
             return 
 
         events =self ._load (interaction .guild_id )
         eid =str (int (dt .timestamp ()))
         events [eid ]={
-        'id':eid ,'title':baslik ,'description':aciklama ,
+        'id':eid ,'title':title ,'description':description ,
         'time':dt .isoformat (),'channel_id':str (channel .id ),
         'created_by':str (interaction .user .id ),
         'notified':False ,'reminded_1h':False ,'reminded_10m':False 
         }
         self ._save (interaction .guild_id ,events )
 
-        embed =discord .Embed (title =f'{baslik}',description =aciklama ,color =discord .Color .dark_grey ())
+        embed =discord .Embed (title =f'{title}',description =description ,color =discord .Color .dark_grey ())
         embed .add_field (name ='Дата и время',value =f'<t:{int(dt.timestamp())}:F>')
         embed .add_field (name ='Канал анонсов',value =channel .mention )
         embed .set_footer (text =f'Событие ID: {eid}')
@@ -132,7 +137,7 @@ class Events (commands .Cog ):
         events =self ._load (interaction .guild_id )
         upcoming =[(eid ,ev )for eid ,ev in events .items ()
         if not ev .get ('notified')and 
-        datetime .fromisoformat (ev ['time'])>datetime .utcnow ()]
+        datetime .fromisoformat (ev ['time'])>datetime.now(timezone.utc).replace(tzinfo=None)]
         upcoming .sort (key =lambda x :x [1 ]['time'])
 
         if not upcoming :
@@ -149,7 +154,7 @@ class Events (commands .Cog ):
             )
         await interaction .response .send_message (embed =embed )
 
-    @app_commands .command (name ='etkinlik-отмена',description ='Etkinliгi отмена et')
+    @app_commands .command (name ='event-cancel',description ='Отменить событие')
     @app_commands .checks .has_permissions (manage_events =True )
     async def cancel_event (self ,interaction :discord .Interaction ,etkinlik_id :str ):
         events =self ._load (interaction .guild_id )
@@ -162,4 +167,4 @@ class Events (commands .Cog ):
         await interaction .response .send_message (f'Событие {title} отменено')
 
 async def setup (bot ):
-    await bot .add_cog (Events (bot ),guilds =[discord .Object (id =1421244140359909513 ),discord .Object (id =1107038411895881788 ),discord .Object (id =1498837105915330562 )])
+    await bot .add_cog (Events (bot ),guilds =Config .guild_objects ())

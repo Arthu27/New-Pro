@@ -1,63 +1,59 @@
 {% extends "base.html" %}
-{% block title %}Заметки участников - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-sticky-note"   style="animation: pulse 2s infinite;"></i> ЗАМЕТКИ УЧАСТНИКОВ{% endblock %}
+{% block title %}Заметки участников - Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-sticky-note"></i> Заметки участников{% endblock %}
 {% block content %}
 <style>
 .search-box { display: flex; gap: 8px; margin-bottom: 14px; }
-.search-input { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; }
+.search-input { flex: 1; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 10px 14px; color: var(--text); font-size: 13px; outline: none; }
 .search-input:focus { border-color: var(--ac); box-shadow: 0 0 0 3px var(--ac-soft); }
-.search-btn { background: linear-gradient(135deg, var(--ac), #c8972f); color: #1a1405; border: none; border-radius: var(--r-sm); padding: 0 18px; font-weight: var(--fw-bold); cursor: pointer; }
+.search-btn { background: var(--ac-grad); color: #fff; border: none; border-radius: var(--r-sm); padding: 0 18px; font-weight: var(--fw-bold); cursor: pointer; }
 .member-result-box { display: none; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; margin-bottom: 14px; }
 .note-user { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .note-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--ac-soft); }
 .note-name { font-weight: var(--fw-bold); font-size: 15px; }
-.note-id { font-size: 12px; color: #8a8374; }
+.note-id { font-size: 12px; color: var(--text-3); }
 .section-title { font-weight: var(--fw-bold); font-size: 14px; margin: 14px 0 10px; display: flex; align-items: center; gap: 8px; }
 .section-title i { color: var(--ac); }
-.note-item { background: rgba(255,255,255,0.02); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 8px; position: relative; }
+.note-item { background: color-mix(in srgb, var(--text) 2%, transparent); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; margin-bottom: 8px; position: relative; }
 .note-text { font-size: 13px; line-height: 1.5; }
-.note-meta { font-size: 11px; color: #8a8374; margin-top: 6px; }
+.note-meta { font-size: 11px; color: var(--text-3); margin-top: 6px; }
 .note-del { position: absolute; top: 8px; right: 8px; background: transparent; border: none; color: var(--err); cursor: pointer; font-size: 16px; opacity: 0; transition: opacity .15s; }
 .note-item:hover .note-del { opacity: 1; }
-.note-textarea { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 12px; color: var(--text); font-size: 13px; resize: vertical; min-height: 60px; outline: none; }
+.note-textarea { width: 100%; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 10px 12px; color: var(--text); font-size: 13px; resize: vertical; min-height: 60px; outline: none; }
 .note-textarea:focus { border-color: var(--ac); }
 .add-note-row { margin-top: 10px; }
 .add-note-btn { background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); border-radius: var(--r-sm); padding: 9px 16px; font-weight: var(--fw-medium); cursor: pointer; margin-top: 8px; }
 .add-note-btn:hover { background: var(--ac-glow); }
 .note-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px; margin-bottom: 12px; }
 .note-card .note-user { margin-bottom: 8px; }
-.empty-state { text-align: center; color: #8a8374; padding: 30px; }
+.empty-state { text-align: center; color: var(--text-3); padding: 30px; }
 </style>
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>ЗАМЕТКИ УЧАСТНИКОВ</span>
-    </div>
-    <h1>ЗАМЕТКИ УЧАСТНИКОВ</h1>
-    <p>Заметки модераторов об участниках сервера.</p>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Участники <span class="sep">·</span> Заметки</div>
+    <h1>Заметки участников</h1>
+    <p class="lead">Заметки модераторов об участниках сервера.</p>
   </div>
 </div>
-{% endblock %}
+
 
 
 
 <div class="search-box">
-  <input type="text" id="search-id" class="search-input" placeholder="🔍 Discord ID или имя поиск...">
-  <button onclick="searchMember()" class="search-btn"><i class="fas fa-search"></i> Поиск</button>
+  <input type="text" id="search-id" class="search-input" placeholder="Discord ID или имя..." aria-label="Discord ID или имя...">
+  <button type="button" onclick="searchMember()" class="search-btn"><i class="fas fa-search"></i> Поиск</button>
 </div>
 
 <div id="member-result"  class="member-result-box">
   <div class="note-user">
-    <img class="note-avatar" id="res-avatar" src="">
+    <img alt="" class="note-avatar" id="res-avatar" src="">
     <div><div class="note-name" id="res-name"></div><div class="note-id" id="res-id"></div></div>
   </div>
   <div class="section-title"><i class="fas fa-sticky-note"></i> Заметки</div>
   <div id="notes-list"></div>
   <div class="add-note-row">
-    <textarea id="new-note" class="note-textarea" placeholder="Добавить заметку..."></textarea>
-    <button onclick="addNote()" class="add-note-btn"><i class="fas fa-plus"></i> Добавить</button>
+    <textarea id="new-note" class="note-textarea" placeholder="Добавить заметку..." aria-label="Добавить заметку..."></textarea>
+    <button type="button" onclick="addNote()" class="add-note-btn"><i class="fas fa-plus"></i> Добавить</button>
   </div>
 </div>
 
@@ -83,7 +79,7 @@ async function searchMember() {
   var found = members.find(function(m){
     return m.id===q || m.name.toLowerCase().includes(q.toLowerCase()) || m.display_name.toLowerCase().includes(q.toLowerCase());
   });
-  if(!found) { alert('Участник не найден.'); return; }
+  if(!found) { showToast('Участник не найден.', false); return; }
   currentMemberId = found.id;
   document.getElementById('res-avatar').src = found.avatar;
   document.getElementById('res-name').textContent = found.display_name;
@@ -99,7 +95,7 @@ async function loadNotes(id) {
     notes.map(function(n){
       return '<div class="note-item"><div class="note-text">'+n.text+'</div>'+
         '<div class="note-meta"><i class="fas fa-user"   style="margin-right: 4px;"></i>'+n.author+' &nbsp;·&nbsp; '+new Date(n.created_at).toLocaleString('tr-TR')+'</div>'+
-        '<button class="note-del" onclick="deleteNote(\''+n.id+'\',\''+id+'\')">×</button></div>';
+        '<button type="button" class="note-del" aria-label="Удалить заметку" title="Удалить" onclick="deleteNote(\''+n.id+'\',\''+id+'\')"><i class="fas fa-xmark"></i></button></div>';
     }).join('') :
     '<p >Пока нет заметок.</p>';
 }
@@ -113,7 +109,7 @@ async function addNote() {
   });
   var d = await r.json();
   if(d.success) { document.getElementById('new-note').value=''; loadNotes(currentMemberId); loadAllNotes(); }
-  else alert('❌ '+(d.error||'Ошибка'));
+  else showToast(''+(d.error||'Ошибка'), false);
 }
 
 async function deleteNote(noteId, memberId) {
@@ -129,7 +125,7 @@ async function loadAllNotes() {
   if(!all.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-sticky-note"   style="opacity: 0.3; margin-bottom: 10px;"></i>Пока нет заметок.</div>'; return; }
   box.innerHTML = all.map(function(entry){
     return '<div class="note-card"><div class="note-user">'+
-      '<img class="note-avatar" src="'+entry.avatar+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+      '<img alt="" class="note-avatar" src="'+entry.avatar+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
       '<div><div class="note-name">'+entry.name+'</div><div class="note-id">'+entry.id+'</div></div></div>'+
       entry.notes.map(function(n){
         return '<div class="note-item"><div class="note-text">'+n.text+'</div>'+

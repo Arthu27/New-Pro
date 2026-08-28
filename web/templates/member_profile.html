@@ -1,113 +1,176 @@
 {% extends "base.html" %}
-{% block title %}Профиль участника — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-id-card" ></i> Профиль участника{% endblock %}
+{% block title %}Профиль участника — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-id-card"></i> Профиль участника{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Профиль участника</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Участники <span class="sep">·</span> Мой профиль</div>
     <h1>Профиль участника</h1>
-    <p>Профиль участника: роли, активность, история нарушений.</p>
+    <p class="lead">Профиль участника: роли, активность, история нарушений.</p>
   </div>
 </div>
-{% endblock %}
 
 
+<style>
+/* Профиль участника — premium gold */
+.mp-searchbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.mp-searchbar .guild-select{flex:1;min-width:180px}
+.mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.mp-grid{grid-template-columns:1fr}}
+.mp-card{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 4%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:16px;padding:20px;}
+.mp-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.mp-av{width:64px;height:64px;border-radius:50%;border:2px solid var(--ac);object-fit:cover;box-shadow:0 6px 20px var(--ac-glow)}
+.mp-name{font-family:var(--font-display),sans-serif;font-size:19px;font-weight:800;color:var(--text)}
+.mp-sub{font-size:13px;color:var(--text-3);margin-top:2px}
+.mp-card .row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.mp-card .row-key{color:var(--text-3);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.mp-card .row-val{font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace}
+.mp-card .row-val.accent{color:var(--ac-2)}
+.mp-role{display:inline-block;background:var(--ac-soft);border:1px solid var(--ac-line);color:var(--ac-2);padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;margin:3px}
+.history-item{display:flex;align-items:center;gap:8px;padding:9px 12px;background: var(--bg);border:1px solid var(--line);border-radius:9px;margin-bottom:7px;font-size:13px;color:var(--text-2)}
+.history-item strong{color:var(--text)}
+.mp-info{flex:1;min-width:0}
+</style>
 
-<div class="search-bar">
-  <input type="text" id="search" placeholder="ID или имя участника...">
+<div class="mp-searchbar" data-reveal="up">
+  <select id="guild-select" class="guild-select" style="flex:1;min-width:180px" aria-label="Выбор сервера"><option value="">Выберите сервер...</option></select>
+  <input type="text" id="search" class="search-input" placeholder="Имя участника — выберите из списка..." style="flex:2;min-width:200px" aria-label="Поиск участника"><span id="searchStatus"></span>
   <button class="btn btn-primary" id="btn-load" type="button"><i class="fas fa-search"></i> Загрузить</button>
 </div>
 
-<div id="profile"  >
+<div id="profile" style="display:none">
   <div class="mp-grid">
     <div class="mp-card">
       <div class="mp-head">
-        <img class="mp-av" id="p-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+        <img alt="" class="mp-av" id="p-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
         <div class="mp-info">
           <div class="mp-name" id="p-name">-</div>
           <div class="mp-sub" id="p-sub">-</div>
         </div>
       </div>
       <div class="row"><span class="row-key">ID</span><span class="row-val" id="p-id">-</span></div>
-      <div class="row"><span class="row-key">Возраст аккаунта</span><span class="row-val" id="p-age">-</span></div>
+      <div class="row"><span class="row-key">Аккаунт создан</span><span class="row-val" id="p-age">-</span></div>
       <div class="row"><span class="row-key">На сервере с</span><span class="row-val" id="p-joined">-</span></div>
       <div class="row"><span class="row-key">Предупреждений</span><span class="row-val accent" id="p-warns">-</span></div>
-      <div class="row"><span class="row-key">Мьют</span><span class="row-val" id="p-mut">-</span></div>
-      <div class="row"><span class="row-key">Jail</span><span class="row-val" id="p-jail">-</span></div>
-      <div class="row"><span class="row-key">Заметки</span><span class="row-val" id="p-notes">-</span></div>
-
+      <div class="row"><span class="row-key">Ролей</span><span class="row-val" id="p-rolcnt">-</span></div>
       <div class="actions-row">
         <button class="btn btn-warn" type="button" data-action="warn"><i class="fas fa-exclamation-triangle"></i> Варн</button>
-        <button class="btn btn-warn" type="button" data-action="mut"><i class="fas fa-volume-mut"></i> Мьют</button>
-        <button class="btn btn-warn" type="button" data-action="kick"><i class="fas fa-user-times"></i> Кик</button>
         <button class="btn btn-danger" type="button" data-action="ban"><i class="fas fa-gavel"></i> Бан</button>
-        <button class="btn btn-danger" type="button" data-action="jail"><i class="fas fa-lock"></i> Jail</button>
       </div>
     </div>
 
     <div class="mp-card">
-      <div class="section-sub"   style="margin-bottom: 10px;"><i class="fas fa-user-tag"></i> Роли участника</div>
-      <div id="p-roles" ><p >Нет ролей</p></div>
-
-      <div class="section-sub"   style="margin-bottom: 8px;">
-        <span><i class="fas fa-sticky-note"></i> Заметка</span>
-        <button class="btn btn-primary" id="btn-save-note" type="button" >Сохранить</button>
-      </div>
-      <textarea id="p-note-text" rows="6" placeholder="Заметка о участнике..." ></textarea>
-
-      <div class="section-sub"   style="margin-bottom: 8px;"><i class="fas fa-history"></i> История</div>
-      <div id="p-history"   style="max-height: 180px;"></div>
+      <div class="section-sub" style="margin-bottom:10px"><i class="fas fa-user-tag"></i> Роли участника</div>
+      <div id="p-roles"><p>Нет ролей</p></div>
+      <div class="section-sub" style="margin:14px 0 8px"><i class="fas fa-history"></i> История нарушений</div>
+      <div id="p-history" style="max-height:200px;overflow-y:auto"></div>
     </div>
   </div>
 </div>
 
 <div id="empty" class="empty-state">
   <i class="fas fa-search"></i>
-  <p>Введите ID или имя и нажмите <strong >Загрузить</strong></p>
+  <p>Введите ID участника и нажмите «Загрузить»</p>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
-  function showToast(msg, ok) {
-    var t = document.createElement('div');
-    t.className = 'toast ' + (ok ? 'ok' : 'err');
-    t.textContent = msg;
-    document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 2200);
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  var MAIN_GID = '{{ main_guild_id }}';
+  var selectedGuild = MAIN_GID;
+  var searchPicker = document.getElementById('search');
+  function attachSearchPicker() {
+    attachMemberPicker(searchPicker, { gid: selectedGuild, statusEl: document.getElementById('searchStatus') });
+  }
+  attachSearchPicker();
+
+  function loadGuilds() {
+    var gs = $('guild-select');
+    fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
+      if (!Array.isArray(guilds) || !guilds.length) return;
+      gs.innerHTML = guilds.map(function (g) {
+        return '<option value="' + esc(g.id) + '"' + (String(g.id) === selectedGuild ? ' selected' : '') + '>' + esc(g.name) + '</option>';
+      }).join('');
+      selectedGuild = gs.value || MAIN_GID;
+      attachSearchPicker();
+    }).catch(function () {});
   }
 
-  function load() {
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    try { return new Date(iso).toLocaleDateString('ru-RU'); } catch (e) { return '—'; }
+  }
+
+  async function load() {
     var q = $('search').value.trim();
-    if (!q) { showToast('Введите ID или имя', false); return; }
-    $('profile').style.display = 'block';
-    $('empty').style.display = 'none';
-    $('p-name').textContent = 'User_' + q;
-    $('p-sub').textContent = '@user_' + q;
-    $('p-id').textContent = q;
-    $('p-age').textContent = '142 дней';
-    $('p-joined').textContent = '45 дней';
-    $('p-warns').textContent = '2';
-    $('p-mut').textContent = 'Нет';
-    $('p-jail').textContent = 'Нет';
-    $('p-notes').textContent = 'Нет';
-    $('p-roles').innerHTML = '<span class="mp-role">@Member</span> <span class="mp-role">@Level 5</span> <span class="mp-role">@VIP</span>';
-    $('p-history').innerHTML = '<div class="history-item">⚠️ <strong>Варн</strong> — Spam (3 дн. назад)</div><div class="history-item">🔇 <strong>Мьют 1h</strong> — CAPS (1 нед. назад)</div>';
+    if (!q) { showToast('Выберите участника из подсказок', false); return; }
+    if (!/^\d+$/.test(q)) { showToast('Выберите участника из подсказок', false); return; }
+    try {
+      var r = await fetch('/api/member-profile/' + selectedGuild + '/' + q);
+      var d = await r.json();
+      if (d.error) { showToast(d.error, false); return; }
+      $('profile').style.display = 'block';
+      $('empty').style.display = 'none';
+      $('p-avatar').src = d.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+      $('p-name').textContent = d.display_name || d.name || q;
+      $('p-sub').textContent = '@' + (d.name || q);
+      $('p-id').textContent = d.id || q;
+      $('p-age').textContent = fmtDate(d.created_at);
+      $('p-joined').textContent = fmtDate(d.joined_at);
+      $('p-warns').textContent = d.warn_count || 0;
+      $('p-rolcnt').textContent = (d.role || []).length;
+      var roles = d.role || [];
+      $('p-roles').innerHTML = roles.length ? roles.map(function (r) { return '<span class="mp-role">' + esc(r) + '</span>'; }).join('') : '<p>Нет ролей</p>';
+      var cases = d.case || [];
+      $('p-history').innerHTML = cases.length ? cases.map(function (c) {
+        return '<div class="history-item"><strong>' + esc(c.action || 'Действие') + '</strong> — ' + esc(c.reason || '') + (c.proof ? ' <a href="' + esc(c.proof) + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--ac,#c8922a);text-decoration:underline">доказательство</a>' : '') + '<span style="margin-left:auto;font-size:11px;color:var(--text-3)">' + esc((c.timestamp||'').slice(0,10)) + '</span></div>';
+      }).join('') : '<p>История чиста</p>';
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
+  }
+
+  function askReason(title) {
+    var v = window.prompt(title + ' — укажите причину:', 'Нарушение правил');
+    return v === null ? null : (v.trim() || 'Не указана');
+  }
+
+  async function punish(action) {
+    var uid = ($('p-id').textContent || '').trim();
+    if (!/^\d+$/.test(uid)) { showToast('Сначала загрузите профиль участника', false); return; }
+    if (action === 'ban') {
+      if (!window.confirm('Забанить ' + ($('p-name').textContent || uid) + '? Действие серьёзное.')) return;
+    }
+    var reason = askReason(action === 'warn' ? 'Предупреждение' : 'Бан');
+    if (reason === null) return;
+    var proofAsk = window.prompt('Доказательство — ссылка на скрин/видео (необязательно):', '');
+    var proof = proofAsk ? proofAsk.trim() : '';
+    try {
+      var r = await fetch('/api/member-profile/' + selectedGuild + '/' + uid + '/' + action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason, proof: proof })
+      });
+      var d = await r.json();
+      if (d.error) { showToast(d.error, false); return; }
+      showToast(action === 'warn'
+        ? 'Варн выдан — всего предупреждений: ' + (d.total || '?')
+        : 'Участник забанен', true);
+      if (action === 'warn') load();
+    } catch (e) { showToast('Ошибка: ' + e.message, false); }
   }
 
   function bind() {
+    $('guild-select').addEventListener('change', function () { selectedGuild = this.value || MAIN_GID; });
     $('btn-load').addEventListener('click', load);
     $('search').addEventListener('keypress', function (e) { if (e.key === 'Enter') load(); });
-    var sn = $('btn-save-note');
-    if (sn) sn.addEventListener('click', function () { showToast('✓ Заметка сохранена', true); });
+    Array.prototype.forEach.call(document.querySelectorAll('.actions-row [data-action]'), function (b) {
+      b.addEventListener('click', function () { punish(b.getAttribute('data-action')); });
+    });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
-  else bind();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { bind(); loadGuilds(); });
+  else { bind(); loadGuilds(); }
 })();
 </script>
 {% endblock %}

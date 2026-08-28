@@ -1,30 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Шаблоны тикетов - Aether{% endblock %}
+{% block title %}Шаблоны тикетов - Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-file-alt"></i> Шаблоны тикетов{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Шаблоны тикетов</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Шаблоны</div>
     <h1>Шаблоны тикетов</h1>
-    <p>Создание и управление шаблонами для быстрого создания тикетов.</p>
+    <p class="lead">Создание и управление шаблонами для быстрого создания тикетов.</p>
   </div>
 </div>
-{% endblock %}
+
 
 <div class="section">
   <div class="bs-title"><i class="fas fa-plus"></i> Создать новый шаблон</div>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Название шаблона</label>
-      <input type="text" id="templateName" class="form-input" placeholder="Например: Сообщение о баге">
+      <input type="text" id="templateName" class="form-input" placeholder="Например: Сообщение о баге" aria-label="Например: Сообщение о баге">
     </div>
     <div>
       <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Категория</label>
-      <select id="templateCategory" class="form-input">
+      <select id="templateCategory" class="form-input" aria-label="Категория шаблона">
         <option value="Жалоба">Жалоба</option>
         <option value="Вопрос">Вопрос</option>
         <option value="Техническая проблема">Техническая проблема</option>
@@ -33,12 +29,12 @@
       </select>
     </div>
   </div>
-  
+
   <div style="margin-top: 16px;">
     <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Описание шаблона</label>
-    <textarea id="templateDescription" class="form-input" rows="3" placeholder="Краткое описание шаблона..."></textarea>
+    <textarea id="templateDescription" class="form-input" rows="3" placeholder="Краткое описание шаблона..." aria-label="Краткое описание шаблона..."></textarea>
   </div>
-  
+
   <div style="margin-top: 16px;">
     <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Сообщение шаблона</label>
     <textarea id="templateMessage" class="form-input" rows="8" placeholder="Текст сообщения, который будет автоматически вставлен при создании тикета...
@@ -46,14 +42,19 @@
 Вы можете использовать переменные:
 {user} - имя пользователя
 {date} - текущая дата
+{time} - текущее время" aria-label="Текст сообщения, который будет автоматически вставлен при создании тикета...
+
+Вы можете использовать переменные:
+{user} - имя пользователя
+{date} - текущая дата
 {time} - текущее время"></textarea>
   </div>
-  
+
   <div style="margin-top: 16px; display: flex; gap: 12px;">
-    <button class="control-btn primary" onclick="createTemplate()">
+    <button type="button" class="control-btn primary" onclick="createTemplate()">
       <i class="fas fa-plus"></i> Создать шаблон
     </button>
-    <button class="control-btn" onclick="clearForm()">
+    <button type="button" class="control-btn" onclick="clearForm()">
       <i class="fas fa-times"></i> Очистить
     </button>
   </div>
@@ -76,7 +77,7 @@ async function loadTemplates() {
   try {
     const response = await fetch('/api/ticket-templates');
     const data = await response.json();
-    
+
     if (data.success) {
       displayTemplates(data.templates);
     }
@@ -88,26 +89,26 @@ async function loadTemplates() {
 function displayTemplates(templates) {
   const container = document.getElementById('templateList');
   const countEl = document.getElementById('templateCount');
-  
+
   countEl.textContent = templates.length + ' ' + pluralize(templates.length, 'шаблон', 'шаблона', 'шаблонов');
-  
+
   if (templates.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; grid-column: 1/-1;">Шаблонов пока нет</p>';
     return;
   }
-  
+
   container.innerHTML = templates.map(template => `
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+    <div style="background: color-mix(in srgb, var(--text) 3%, transparent); border: 1px solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: 8px; padding: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
         <div>
           <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">${template.name}</div>
           <div style="font-size: 12px; color: var(--text-muted);">${template.category}</div>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button class="control-btn" onclick="editTemplate('${template.id}')" style="padding: 6px 10px;">
+          <button type="button" class="control-btn" onclick="editTemplate('${template.id}')" style="padding: 6px 10px;" aria-label="Редактировать">
             <i class="fas fa-edit"></i>
           </button>
-          <button class="control-btn" onclick="deleteTemplate('${template.id}')" style="padding: 6px 10px;">
+          <button type="button" class="control-btn" onclick="deleteTemplate('${template.id}')" style="padding: 6px 10px;" aria-label="Удалить">
             <i class="fas fa-trash"></i>
           </button>
         </div>
@@ -130,12 +131,12 @@ async function createTemplate() {
   const category = document.getElementById('templateCategory').value;
   const description = document.getElementById('templateDescription').value.trim();
   const message = document.getElementById('templateMessage').value.trim();
-  
+
   if (!name || !message) {
     alert('Заполните название и сообщение шаблона');
     return;
   }
-  
+
   try {
     const response = await fetch('/api/ticket-templates', {
       method: 'POST',
@@ -143,7 +144,7 @@ async function createTemplate() {
       body: JSON.stringify({name, category, description, message})
     });
     const data = await response.json();
-    
+
     if (data.success) {
       alert('Шаблон создан!');
       clearForm();
@@ -157,34 +158,30 @@ async function createTemplate() {
 }
 
 async function deleteTemplate(templateId) {
-  if (!confirm('Удалить этот шаблон?')) return;
-  
-  try {
-    const response = await fetch(`/api/ticket-templates/${templateId}`, {method: 'DELETE'});
-    const data = await response.json();
-    
-    if (data.success) {
-      loadTemplates();
-    } else {
-      alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+  window.askConfirm('Удалить шаблон', 'Удалить этот шаблон?', async function () {
+    try {
+      const response = await fetch(`/api/ticket-templates/${templateId}`, {method: 'DELETE'});
+      const data = await response.json();
+      if (data.success) { loadTemplates(); showToast('Шаблон удалён', true); }
+      else showToast('Ошибка: ' + (data.error || 'Неизвестная ошибка'), false);
+    } catch (e) {
+      showToast('Ошибка соединения', false);
     }
-  } catch (e) {
-    alert('Ошибка соединения');
-  }
+  }, { okText: 'Удалить', danger: true, icon_fa: 'fa-trash' });
 }
 
 async function editTemplate(templateId) {
   try {
     const response = await fetch(`/api/ticket-templates/${templateId}`);
     const data = await response.json();
-    
+
     if (data.success) {
       const template = data.template;
       document.getElementById('templateName').value = template.name;
       document.getElementById('templateCategory').value = template.category;
       document.getElementById('templateDescription').value = template.description || '';
       document.getElementById('templateMessage').value = template.message;
-      
+
       // Прокрутить к форме
       window.scrollTo({top: 0, behavior: 'smooth'});
     }

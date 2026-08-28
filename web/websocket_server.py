@@ -2,7 +2,7 @@
 import asyncio
 import json
 import websockets
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Set
 import threading
 
@@ -82,7 +82,7 @@ class WebSocketServer:
             'ticket_id': ticket_id,
             'update_type': update_type,
             'data': data,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         # Отправить в комнату тикета
@@ -97,7 +97,7 @@ class WebSocketServer:
         message = {
             'type': 'new_ticket',
             'data': ticket_data,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         # Отправить всем администраторам
@@ -109,7 +109,7 @@ class WebSocketServer:
         message = {
             'type': 'stats_update',
             'data': stats,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         await self.broadcast_to_room('dashboard', message)
@@ -119,7 +119,7 @@ class WebSocketServer:
         message = {
             'type': 'notification',
             'data': notification,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         await self.send_to_user(user_id, message)
@@ -152,7 +152,7 @@ class WebSocketServer:
                 'type': 'connected',
                 'room_id': room_id,
                 'user_id': user_id,
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }))
             
             # Ожидание сообщений от клиента
@@ -161,12 +161,12 @@ class WebSocketServer:
                     data = json.loads(message)
                     await self.handle_message(websocket, room_id, data)
                 except json.JSONDecodeError:
-                    print(f'[WebSocket] Некорректное JSON сообщение')
+                    print('[WebSocket] Некорректное JSON сообщение')
                 except Exception as e:
                     print(f'[WebSocket] Ошибка обработки сообщения: {e}')
         
         except websockets.exceptions.ConnectionClosed:
-            print(f'[WebSocket] Соединение закрыто')
+            print('[WebSocket] Соединение закрыто')
         except Exception as e:
             print(f'[WebSocket] Ошибка: {e}')
         finally:
@@ -183,7 +183,7 @@ class WebSocketServer:
         if message_type == 'ping':
             await websocket.send(json.dumps({
                 'type': 'pong',
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }))
         
         elif message_type == 'typing':
@@ -192,7 +192,7 @@ class WebSocketServer:
                 'type': 'typing',
                 'user_id': data.get('user_id'),
                 'is_typing': data.get('is_typing', True),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             })
         
         elif message_type == 'presence':
@@ -201,7 +201,7 @@ class WebSocketServer:
                 'type': 'presence',
                 'user_id': data.get('user_id'),
                 'status': data.get('status', 'online'),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             })
 
 
@@ -229,11 +229,22 @@ async def start_websocket_server(host: str = 'localhost', port: int = 8765):
             print(f'[WebSocket] Ошибка запуска: {e}')
             return
     
-    print(f'[WebSocket] Не удалось запустить сервер — все порты заняты')
+    print('[WebSocket] Не удалось запустить сервер — все порты заняты')
+
+
+_ws_thread = None
 
 
 def start_websocket_thread(host: str = 'localhost', port: int = 8765):
-    """Запуск WebSocket сервера в отдельном потоке"""
+    """Запуск WebSocket сервера в отдельном потоке.
+
+    Повторный вызов (панель + main.py) — no-op: сервер и поток живут
+    в единственном экземпляре, второй порт не занимается."""
+    global _ws_thread
+    if _ws_thread is not None and _ws_thread.is_alive():
+        print('[WebSocket] Уже запущен — повторный запуск пропущен')
+        return _ws_thread
+
     def run_server():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -244,7 +255,8 @@ def start_websocket_thread(host: str = 'localhost', port: int = 8765):
     
     thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
-    print(f'[WebSocket] Сервер запущен в отдельном потоке')
+    _ws_thread = thread
+    print('[WebSocket] Сервер запущен в отдельном потоке')
     return thread
 
 

@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+{% block title %}Доказательства · Модерация — Hakumo{% endblock %}
+{% block page_title %}Доказательства{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Расследование</div>
+    <h1>Доказательства</h1>
+    <p class="lead">Демки, привязанные к наказаниям: фото и видео смотрятся прямо здесь —
+      файлы хранятся у нас и не протухают, как ссылки Discord.</p>
+  </div>
+  <div class="page-head-actions">
+    <span class="badge neutral" id="pf-count">0</span>
+  </div>
+</div>
+
+<!-- Прямая загрузка демки с устройства — файл вместо ссылки -->
+<div class="panel" id="pf-add-panel" style="margin-bottom:14px">
+  <div class="panel-body" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <h2 style="margin:0;font-size:15px"><i class="fas fa-cloud-arrow-up" style="color:var(--ac)"></i>
+        Загрузить демку напрямую</h2>
+      <span style="font-size:12px;color:var(--text-3)">Файл с устройства — фото или видео до 60 МБ.
+        Без ссылок: хранится у нас и смотрится прямо в этой ленте.</span>
+    </div>
+    <form id="pf-add-form" class="form-row" style="margin:0" novalidate>
+      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600;flex-basis:220px">
+        Файл (фото/видео)*
+        <input type="file" id="pf-file" accept="image/*,video/*" required
+               aria-label="Файл доказательства"
+               style="padding:7px 11px;border:1px dashed var(--line-2,transparent);border-radius:10px;font-size:13px">
+      </label>
+      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600;flex-basis:260px;position:relative">
+        Участник* — @поиск
+        <input type="text" id="pf-member" autocomplete="off" placeholder="@ник, имя или ID" required aria-label="Участник — поиск по нику или ID">
+        <input type="hidden" id="pf-uid">
+        <input type="hidden" id="pf-uname">
+        <span id="pf-member-st"></span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-3)">Аватарки и живой поиск — как везде в панели; можно вписать ID или просто ник вручную</span>
+      </label>
+      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
+        Наказание
+        <select id="pf-action" aria-label="Наказание">
+          <option>варн</option><option>мут</option><option>тихий мут</option>
+          <option>таймаут</option><option>кик</option><option>бан</option><option>разбан</option>
+        </select>
+      </label>
+      <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600;flex-basis:240px">
+        Причина
+        <input type="text" id="pf-reason" maxlength="300" placeholder="за что демка" aria-label="Причина">
+      </label>
+      <button type="submit" class="btn" id="pf-add-btn"><i class="fas fa-cloud-arrow-up"></i> Загрузить</button>
+    </form>
+  </div>
+</div>
+
+<!-- Обязательная демка: требовать доказательство к наказаниям или нет -->
+<div class="panel" id="pf-req-panel" style="margin-bottom:14px">
+  <div class="panel-body" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <h2 style="margin:0;font-size:15px"><i class="fas fa-clipboard-check" style="color:var(--ac)"></i>
+        Требовать доказательство к наказаниям</h2>
+      <span id="pf-req-state" class="badge neutral">…</span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--text-3);max-width:420px">Выключено — бан/кик/мут
+        выдаются без скрина. Демки всё равно можно грузить сюда и смотреть.</span>
+      <button type="button" class="btn btn-sm" id="pf-req-btn"
+              aria-label="Переключить требование доказательства" title="Переключить">…</button>
+    </div>
+  </div>
+</div>
+
+<!-- Белый список: кого бот НЕ просит демку -->
+<div class="panel" id="pf-wl-panel" style="margin-bottom:14px">
+  <div class="panel-body" style="display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <h2 style="margin:0;font-size:15px"><i class="fas fa-user-check" style="color:var(--ok)"></i>
+        Белый список «без демки»</h2>
+      <span style="font-size:12px;color:var(--text-3)">Кого бот НЕ просит прикреплять доказательство
+        к наказанию (по участнику или по роли). Управление — Админ и выше.</span>
+    </div>
+    <div class="row" style="gap:8px;flex-wrap:wrap" id="pf-wl-addrow">
+      <select id="pf-wl-kind" aria-label="Тип записи белого списка" style="max-width:150px">
+        <option value="user">Участник</option><option value="role">Роль</option>
+      </select>
+      <input type="text" id="pf-wl-id" placeholder="Имя участника — выберите из списка"
+             style="flex:1;min-width:200px" aria-label="Участник для белого списка">
+      <select id="pf-wl-role" style="flex:1;min-width:200px;display:none" aria-label="Роль для белого списка"></select>
+      <span id="pf-wl-status"></span>
+      <button type="button" class="btn btn-sm" id="pf-wl-add-btn"><i class="fas fa-plus"></i> Добавить</button>
+    </div>
+    <div id="pf-wl-list" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <span class="badge neutral">загрузка…</span>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="toolbar">
+    <label class="field has-icon"><i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="pf-q" placeholder="Участник, причина, модератор, ID" aria-label="Поиск доказательств">
+    </label>
+    <span class="spacer"></span>
+    <div class="seg" id="pf-mtype" title="Тип медиа">
+      <button type="button" class="seg-btn active" data-mtype="all">Все</button>
+      <button type="button" class="seg-btn" data-mtype="image"><i class="fas fa-image"></i> Фото</button>
+      <button type="button" class="seg-btn" data-mtype="video"><i class="fas fa-film"></i> Видео</button>
+    </div>
+    <div class="seg" id="pf-period">
+      <button type="button" class="seg-btn active" data-period="all">Всё время</button>
+      <button type="button" class="seg-btn" data-period="1">24 часа</button>
+      <button type="button" class="seg-btn" data-period="7">7 дней</button>
+      <button type="button" class="seg-btn" data-period="30">30 дней</button>
+    </div>
+    <div class="chip-row" id="pf-chips"></div>
+  </div>
+  <div class="panel-body">
+    <div class="grid-3" id="pf-grid" style="gap:12px">
+      <div class="empty" style="grid-column:1/-1"><i class="fas fa-circle-notch fa-spin"></i><span>Загружаем архив</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Лайтбокс: фото и видео — центр экрана, всегда целиком видно,
+     Esc и клик по фону закрывают -->
+<div class="pf-lb" id="pf-modal" role="dialog" aria-modal="true" aria-label="Просмотр доказательства">
+  <div class="pf-lb-frame">
+    <img id="pf-modal-img" class="pf-lb-media" src="" alt="Демка">
+    <video id="pf-modal-video" class="pf-lb-media" controls autoplay playsinline style="display:none"></video>
+    <div class="pf-lb-bar">
+      <div class="pf-lb-cap" id="pf-modal-cap"></div>
+      <button type="button" class="pf-lb-close" id="pf-modal-close" aria-label="Закрыть просмотр">
+        <i class="fas fa-xmark"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/pickers.js"></script>
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  var CAN_DEL = {{ 'true' if role in ['admin', 'owner'] else 'false' }};
+  var all = [];
+  var chip = '';
+  var period = 'all';
+  var mtype = 'all';
+
+  function inPeriod(ts) {
+    if (period === 'all') return true;
+    var days = parseInt(period, 10);
+    var t = new Date(ts).getTime();
+    if (isNaN(t)) return true;
+    return (Date.now() - t) <= days * 86400000;
+  }
+
+  var TONE = { 'варн': 'tone-warning', 'мут': 'tone-warning', 'тихий мут': 'neutral', 'таймаут': 'tone-warning', 'кик': 'tone-warning', 'бан': 'danger', 'разбан': 'ok' };
+
+  function fmt(ts) {
+    if (!ts) return '—';
+    var d = new Date(ts);
+    if (isNaN(d)) return String(ts).slice(0, 16).replace('T', ' ');
+    var diff = Date.now() - d.getTime();
+    if (diff >= 0 && diff < 3600e3) return Math.max(1, Math.round(diff / 60e3)) + ' мин назад';
+    if (diff >= 0 && diff < 86400e3) return Math.round(diff / 3600e3) + ' ч назад';
+    return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function fmtSize(b) {
+    b = Number(b) || 0;
+    if (b >= 1048576) return (b / 1048576).toFixed(1).replace('.0', '') + ' МБ';
+    if (b >= 1024) return Math.round(b / 1024) + ' КБ';
+    return b ? (b + ' Б') : '';
+  }
+
+  function matches(it, q) {
+    if (!q) return true;
+    var h = [it.user_name, it.mod_name, it.reason, it.action, String(it.user_id || ''), '#' + it.id].join(' ').toLowerCase();
+    return q.toLowerCase().split(/\s+/).every(function (w) { return h.indexOf(w) !== -1; });
+  }
+
+  function renderChips() {
+    var acts = [];
+    all.forEach(function (it) {
+      var a = (it.action || '').toLowerCase();
+      if (a && acts.indexOf(a) === -1) acts.push(a);
+    });
+    var box = $('pf-chips');
+    box.innerHTML = '';
+    var mk = function (label, val) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip selectable' + (chip === val ? ' active' : '');
+      b.textContent = label;
+      b.addEventListener('click', function () { chip = (chip === val ? '' : val); renderChips(); render(); });
+      box.appendChild(b);
+    };
+    mk('Все', '');
+    acts.forEach(function (a) { mk(a, a); });
+  }
+
+  function mediaBlock(it) {
+    // локальный файл (живёт у нас) — приоритет; протухающий CDN — фолбэк
+    if (it.media_url && it.media && it.media.kind === 'video') {
+      return '<div style="aspect-ratio:16/10;background:#000;position:relative;border-radius:0">' +
+        '<video src="' + esc(it.media_url) + '" preload="metadata" controls playsinline ' +
+        'style="width:100%;height:100%;object-fit:contain" title="' + esc(it.media.name || '') + '"></video>' +
+        '<button type="button" class="btn btn-sm" data-vfull="' + esc(it.media_url) + '" data-cap="демка #' + esc(it.id) + ' · ' + esc(it.user_name || '') + '" ' +
+        'style="position:absolute;top:8px;right:8px;opacity:.9" title="Развернуть" aria-label="Развернуть видео"><i class="fas fa-expand"></i></button></div>';
+    }
+    if (it.media_url && it.media && it.media.kind === 'image') {
+      return '<div style="aspect-ratio:16/10;background:var(--surface-3);cursor:zoom-in" data-full="' + esc(it.media_url) + '" data-cap="демка #' + esc(it.id) + ' · ' + esc(it.user_name || '') + '">' +
+        '<img src="' + esc(it.media_url) + '" loading="lazy" alt="демка #' + esc(it.id) + '" style="width:100%;height:100%;object-fit:cover"></div>';
+    }
+    var hasImg = it.url && /\.(png|jpe?g|gif|webp|bmp)(\?|&|$)/i.test(it.url);
+    if (hasImg) {
+      return '<div style="aspect-ratio:16/10;background:var(--surface-3);cursor:zoom-in" data-full="' + esc(it.url) + '" data-cap="демка #' + esc(it.id) + ' · ' + esc(it.user_name || '') + '">' +
+        '<img src="' + esc(it.url) + '" loading="lazy" alt="демка #' + esc(it.id) + '" style="width:100%;height:100%;object-fit:cover"></div>';
+    }
+    return '<div style="aspect-ratio:16/10;background:var(--surface-3);display:grid;place-items:center;color:var(--text-3)">' +
+      '<span style="text-align:center"><i class="fas fa-file-lines" style="font-size:22px"></i><br>' +
+      '<span style="font-size:11px">без медиа</span></span></div>';
+  }
+
+  function mediaBadge(it) {
+    if (!it.media || !it.media_url) return '';
+    var ic = it.media.kind === 'video' ? 'fa-film' : 'fa-image';
+    var lbl = it.media.kind === 'video' ? 'видео' : 'фото';
+    return ' <span class="badge neutral" title="' + esc(it.media.name || '') + (it.media.size ? ' · ' + fmtSize(it.media.size) : '') + '">' +
+      '<i class="fas ' + ic + '"></i> ' + lbl + (it.media.size ? ' · ' + fmtSize(it.media.size) : '') + '</span>';
+  }
+
+  function render() {
+    var q = $('pf-q').value.trim();
+    var items = all.filter(function (it) {
+      var okType = (mtype === 'all') || (it.media && it.media.kind === mtype);
+      return matches(it, q) && okType && (!chip || (it.action || '').toLowerCase() === chip) && inPeriod(it.set_at);
+    });
+    $('pf-count').textContent = items.length === all.length ? String(all.length) : (items.length + ' из ' + all.length);
+    var grid = $('pf-grid');
+    if (!items.length) {
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="fas fa-folder-open"></i><span>' +
+        (all.length ? 'Ничего не подходит под фильтр.' : 'Демок пока нет. Добавьте демку через /proof или параметр «демка» в /warn и /moderate.') + '</span></div>';
+      return;
+    }
+    grid.innerHTML = items.map(function (it) {
+      var tone = TONE[(it.action || '').toLowerCase()] || 'neutral';
+      return '<div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">' +
+        mediaBlock(it) +
+        '<div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1">' +
+          '<div class="row"><span class="badge ' + tone + '">' + esc(it.action || '—') + '</span>' + mediaBadge(it) +
+            '<span class="mono muted" style="font-size:11px">#' + esc(it.id) + '</span></div>' +
+          '<div class="feed-item-title" style="cursor:pointer" data-q="' + esc(it.user_name || '') + '" title="Показать все демки этого участника">' + esc(it.user_name || '—') + ' <span class="id-pill">' + esc(it.user_id || '') + '</span></div>' +
+          '<div class="feed-item-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(it.reason || '') + '">' + esc(it.reason || '—') + '</div>' +
+          '<div class="feed-item-time"><i class="fas fa-user-shield"></i> ' + esc(it.mod_name || '—') + ' · ' + esc(fmt(it.set_at)) + '</div>' +
+          '<div class="row" style="margin-top:auto;padding-top:6px">' +
+            (it.url ? '<a class="btn btn-sm" href="' + esc(it.url) + '" target="_blank"><i class="fas fa-image"></i> Файл</a>' : '') +
+            (it.link ? '<a class="btn btn-sm" href="' + esc(it.link) + '" target="_blank"><i class="fas fa-link"></i> Ссылка</a>' : '') +
+            '<span class="spacer"></span>' +
+            (CAN_DEL ? '<button type="button" class="btn btn-sm btn-ghost" data-del="' + esc(it.id) + '" title="Удалить"><i class="fas fa-trash" style="color:var(--err)"></i></button>' : '') +
+          '</div></div></div>';
+    }).join('');
+  }
+
+  function closeModal() {
+    var v = $('pf-modal-video');
+    try { v.pause(); } catch (e) {}
+    v.removeAttribute('src');
+    v.load();
+    v.style.display = 'none';
+    $('pf-modal-img').style.display = '';
+    $('pf-modal-img').src = '';
+    $('pf-modal').classList.remove('open');
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && $('pf-modal').classList.contains('open')) closeModal();
+  });
+
+  var lbFrameClick = function (e) { e.stopPropagation(); };
+  function openLb() {
+    var lb = $('pf-modal');
+    lb.classList.add('open');
+    lb.removeEventListener('click', closeModal);
+    lb.addEventListener('click', closeModal);         /* клик по фону закрывает */
+    var frame = lb.querySelector('.pf-lb-frame');
+    frame.removeEventListener('click', lbFrameClick);
+    frame.addEventListener('click', lbFrameClick);    /* внутри — нет */
+  }
+
+  function openImage(src, cap) {
+    $('pf-modal-video').style.display = 'none';
+    $('pf-modal-img').style.display = '';
+    $('pf-modal-img').src = src;
+    $('pf-modal-cap').textContent = cap || '';
+    openLb();
+  }
+
+  function openVideo(src, cap) {
+    $('pf-modal-img').style.display = 'none';
+    var v = $('pf-modal-video');
+    v.style.display = '';
+    v.src = src;
+    $('pf-modal-cap').textContent = cap || '';
+    openLb();
+  }
+
+  function load() {
+    fetch('/api/proofs').then(function (r) { return r.json(); }).then(function (d) {
+      all = Array.isArray(d) ? d : (d.items || []);
+      var _p0 = all[0] || null;
+      var fp = all.length + '|' + (_p0 ? String(_p0.id || _p0.name || _p0.file || '').slice(0, 80) : '');
+      if (window.silentGuard && window.silentGuard('proofs', fp)) return;
+      renderChips();
+      render();
+    }).catch(function () {});
+  }
+
+  document.addEventListener('click', function (e) {
+    var vfull = e.target.closest('[data-vfull]');
+    if (vfull) { openVideo(vfull.dataset.vfull, vfull.dataset.cap); return; }
+    var full = e.target.closest('[data-full]');
+    if (full) { openImage(full.dataset.full, full.dataset.cap); return; }
+    var q = e.target.closest('[data-q]');
+    if (q) {
+      $('pf-q').value = q.dataset.q;
+      render();
+      return;
+    }
+    var del = e.target.closest('[data-del]');
+    if (del) {
+      window.confirmAction('Удалить доказательство #' + del.dataset.del + '?', 'Материал и файл исчезнут из архива. Наказания останутся.', function () {
+        fetch('/api/proofs/' + del.dataset.del, { method: 'DELETE' }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d && (d.success || d.ok)) { window.showToast('Удалено', true); load(); }
+          else window.showToast((d && (d.error || d.message)) || 'Ошибка', false);
+        });
+      }, { danger: true, okText: 'Удалить' });
+    }
+  });
+
+  $('pf-modal-close').addEventListener('click', closeModal);
+  $('pf-modal').addEventListener('click', function (e) { if (e.target === $('pf-modal')) closeModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+  $('pf-q').addEventListener('input', render);
+  document.querySelectorAll('#pf-period .seg-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#pf-period .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      period = b.dataset.period;
+      render();
+    });
+  });
+  document.querySelectorAll('#pf-mtype .seg-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#pf-mtype .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      mtype = b.dataset.mtype;
+      render();
+    });
+  });
+
+  /* ── @поиск участника для демки: тегнул → выбрал → готово ── */
+  var pfTimer = null;
+  /* Стандартный member-пикер панели (п.3): аватарки, живой поиск,
+     пагинация, клавиши. opts.onPick — подхватываем имя из выбора. */
+  window.attachMemberPicker($('pf-member'), {
+    gid: {{ (main_guild_id|string)|tojson }},
+    statusEl: $('pf-member-st'),
+    onPick: function (uid, item) {
+      $('pf-uid').value = uid;
+      $('pf-uname').value = (item && (item.display_name || item.name)) || '';
+    }
+  });
+  $('pf-member').addEventListener('input', function () {
+    /* ручная правка — ранее выбранный id устарел */
+    $('pf-uid').value = '';
+    $('pf-uname').value = '';
+  });
+
+  $('pf-add-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var file = $('pf-file').files[0];
+    if (!file) { window.showToast('Выберите файл — фото или видео', false); return; }
+    var uid = $('pf-uid').value.trim();
+    var manual = $('pf-member').value.trim();
+    var uname = $('pf-uname').value.trim();
+    if (!uid) {
+      var mm = /(\d{15,22})\s*$/.exec(manual);
+      if (mm) uid = mm[1];
+    }
+    if (!/^\d{4,25}$/.test(uid)) {
+      /* ID не нашли — не блокируем: достаточно имени, оно и так полезно */
+      uid = '0';
+      if (!uname) uname = manual;
+    }
+    if (!uid || uid === '0') {
+      if (!uname) { window.showToast('Укажите участника: выберите из подсказок или впишите ник/ID', false); return; }
+    }
+    var fd = new FormData();
+    fd.append('file', file);
+    fd.append('user_id', uid);
+    fd.append('user_name', uname);
+    fd.append('action', $('pf-action').value);
+    fd.append('reason', $('pf-reason').value.trim());
+    var btn = $('pf-add-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Грузим…';
+    fetch('/api/proofs/upload', { method: 'POST', body: fd }).then(function (r) {
+      return r.json().catch(function () { return { success: false, error: 'HTTP ' + r.status }; });
+    }).then(function (d) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Загрузить';
+      if (d && d.success) {
+        window.showToast('Демка #' + d.id + ' загружена — файл хранится у нас', true);
+        $('pf-add-form').reset();
+        load();
+      } else {
+        window.showToast((d && d.error) || 'Не получилось загрузить', false);
+      }
+    }).catch(function () {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Загрузить';
+      window.showToast('Сеть не отвечает — попробуйте ещё раз', false);
+    });
+  });
+
+  /* ── Белый список «без демки» ── */
+  if (!CAN_DEL) { $('pf-wl-addrow').style.display = 'none'; }
+
+  /* ── Тумблер «требовать доказательство» ── */
+  var pfReqOn = true;
+  function pfReqRender() {
+    $('pf-req-state').textContent = pfReqOn ? 'включено' : 'выключено';
+    $('pf-req-state').className = 'badge ' + (pfReqOn ? 'ok' : 'neutral');
+    $('pf-req-btn').innerHTML = pfReqOn
+      ? '<i class="fas fa-toggle-on"></i> Выключить'
+      : '<i class="fas fa-toggle-off"></i> Включить';
+  }
+  function pfReqLoad() {
+    fetch('/api/proof-required').then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.success) { pfReqOn = !!d.required; pfReqRender(); }
+    }).catch(function (e) { console.debug('req load', e); });
+  }
+  if (!CAN_DEL) { $('pf-req-btn').style.display = 'none'; }
+  $('pf-req-btn').addEventListener('click', function () {
+    var btn = $('pf-req-btn');
+    btn.disabled = true;
+    fetch('/api/proof-required', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ required: !pfReqOn })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false;
+      if (!d || !d.success) { window.showToast((d && d.error) || 'Не вышло переключить', false); return; }
+      pfReqOn = !!d.required;
+      pfReqRender();
+      window.showToast(pfReqOn
+        ? 'Бот снова требует доказательство к наказаниям'
+        : 'Наказания выдаются без доказательства', true);
+    }).catch(function () {
+      btn.disabled = false;
+      window.showToast('Сеть моргнула — повторите', false);
+    });
+  });
+  pfReqLoad();
+
+  function wlRender(d) {
+    var box = $('pf-wl-list');
+    var users = (d && d.users) || [];
+    var roles = (d && d.roles) || [];
+    var xStyle = 'background:none;border:none;color:inherit;cursor:pointer;padding:0 0 0 2px;display:inline-flex';
+    var html = '';
+    users.forEach(function (id) {
+      html += '<span class="chip" style="gap:6px"><i class="fas fa-user" style="color:var(--ac)"></i> ' + esc(id) +
+        (CAN_DEL ? ' <button type="button" data-wldel="user:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать участника ' + esc(id) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
+    });
+    roles.forEach(function (id) {
+      html += '<span class="chip" style="gap:6px"><i class="fas fa-user-tag" style="color:var(--ok)"></i> ' + esc(id) +
+        (CAN_DEL ? ' <button type="button" data-wldel="role:' + esc(id) + '" style="' + xStyle + '" title="Убрать из белого списка" aria-label="Убрать роль ' + esc(id) + '"><i class="fas fa-xmark"></i></button>' : '') + '</span>';
+    });
+    if (!html) html = '<span class="badge neutral">пусто — демку бот просит у всех</span>';
+    box.innerHTML = html;
+  }
+
+  var WL_GID = '{{ main_guild_id }}';
+  attachMemberPicker($('pf-wl-id'), { gid: WL_GID, statusEl: $('pf-wl-status') });
+  attachSelectPicker($('pf-wl-role'), { gid: WL_GID, kind: 'role', noneLabel: 'не выбрана' });
+  $('pf-wl-kind').addEventListener('change', function () {
+    var isRole = $('pf-wl-kind').value === 'role';
+    $('pf-wl-id').style.display = isRole ? 'none' : '';
+    $('pf-wl-role').style.display = isRole ? '' : 'none';
+  });
+
+  function wlLoad() {
+    fetch('/api/proof-whitelist').then(function (r) { return r.json(); })
+      .then(function (d) { wlRender(d); }).catch(function () {});
+  }
+
+  $('pf-wl-add-btn').addEventListener('click', function () {
+    var isRole = $('pf-wl-kind').value === 'role';
+    var id = (isRole ? $('pf-wl-role').value : $('pf-wl-id').value.trim());
+    if (!/^\d{5,25}$/.test(id)) { window.showToast(isRole ? 'Выберите роль из списка' : 'Выберите участника из подсказок', false); return; }
+    fetch('/api/proof-whitelist', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: $('pf-wl-kind').value, id: id })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.success) { window.showToast('Добавлено в белый список', true); $('pf-wl-id').value = ''; $('pf-wl-role').value = ''; wlRender(d); }
+      else window.showToast((d && d.error) || 'Ошибка', false);
+    }).catch(function () { window.showToast('Сеть не отвечает', false); });
+  });
+
+  document.addEventListener('click', function (e) {
+    var wd = e.target.closest('[data-wldel]');
+    if (!wd) return;
+    var parts = String(wd.dataset.wldel).split(':');
+    fetch('/api/proof-whitelist', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: parts[0], id: parts[1] })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d && d.success) { window.showToast('Убрано из белого списка', true); wlRender(d); }
+      else window.showToast((d && d.error) || 'Ошибка', false);
+    }).catch(function () { window.showToast('Сеть не отвечает', false); });
+  });
+
+  wlLoad();
+  load();
+  if (window.setLiveRefresh) window.setLiveRefresh(load, 1500);
+})();
+</script>
+{% endblock %}

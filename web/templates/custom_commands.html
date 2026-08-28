@@ -1,25 +1,33 @@
-﻿{% extends "base.html" %}
-{% block title %}Пользовательские команды - Aether{% endblock %}
-{% block page_title %}<i class="fas fa-terminal"   style="animation: pulse 2s infinite;"></i> ОСОБЫЙ КОМАНДЫ{% endblock %}
+{% extends "base.html" %}
+{% block title %}Пользовательские команды - Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-terminal"></i> Особые команды{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>ОСОБЫЙ КОМАНДЫ</span>
-    </div>
-    <h1>ОСОБЫЙ КОМАНДЫ</h1>
-    <p>Создание собственных команд с пользовательскими ответами.</p>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Свои команды</div>
+    <h1>Особые команды</h1>
+    <p class="lead">Создание собственных команд с пользовательскими ответами.</p>
   </div>
 </div>
-{% endblock %}
+
+
+<style>
+
+.section-box{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 3%, transparent),var(--surface-2));border:1px solid var(--line-2);border-radius:14px;padding:16px;margin-bottom:14px;}
+.section-title{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:9px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.section-title i{color:var(--ac)}
+.cmd-trigger,.cmd-response{width:100%;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text);padding:10px 12px;font-size:13.5px;outline:none;font-family:inherit}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:9px}
+.vars-box{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;background:var(--ac-soft);border:1px dashed var(--ac-line);border-radius:12px;font-size:13px;color:var(--text-2);margin-bottom:16px}
+.vars-box span{background:var(--ac-soft);border:1px solid var(--ac-line);color:var(--ac-2);padding:2px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:12px}
+
+</style>
 
 
 
-{% if role == 'owner' %}<button class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
+{% if role == 'owner' %}<button type="button" class="btn-add" onclick="openModal()"><i class="fas fa-plus"></i> Создать новую команду</button>{% endif %}
 
-<select  id="guild-select" class="guild-select" onchange="loadCommands()">
+<select  id="guild-select" class="guild-select" onchange="loadCommands()" aria-label="Выбор сервера">
   <option value="">Выберите сервер...</option>
 </select>
 
@@ -32,18 +40,18 @@
   <div class="modal-box">
     <div class="modal-title"><i class="fas fa-terminal"></i> Пользователь Создать команду</div>
     <div class="vars-box">Переменные: <span>{user}</span> <span>{сервер}</span> <span>{channel}</span> <span>{count}</span></div>
-    <label   style="margin-bottom: 6px;">Tetikleyici (prefix olmadan)</label>
-    <input type="text" id="cmd-trigger" placeholder="напр.: merhaba, правила" class="modal-input" >
+    <label   style="margin-bottom: 6px;">Триггер (без префикса)</label>
+    <input type="text" id="cmd-trigger" placeholder="напр.: привет, правила" class="modal-input" aria-label="напр.: привет, правила">
     <label   style="margin-bottom: 6px;">Ответ</label>
-    <textarea id="cmd-response" placeholder="Ответ команды..." class="modal-textarea"></textarea>
+    <textarea id="cmd-response" placeholder="Ответ команды..." class="modal-textarea" aria-label="Ответ команды..."></textarea>
     <label   style="margin-bottom: 6px;">Ответ Tipi</label>
-    <select id="cmd-type" class="modal-input">
-      <option value="text">Прямой Metin</option>
+    <select id="cmd-type" class="modal-input" aria-label="Тип команды">
+      <option value="text">Прямой текст</option>
       <option value="embed">Эмбед</option>
     </select>
     <div   style="margin-top: 5px;">
-      <button class="modal-btn" onclick="createCommand()" >Создать</button>
-      <button class="modal-btn" onclick="closeModal()" >Отмена</button>
+      <button type="button" class="modal-btn" onclick="createCommand()" >Создать</button>
+      <button type="button" class="modal-btn" onclick="closeModal()" >Отмена</button>
     </div>
   </div>
 </div>
@@ -84,9 +92,9 @@ async function loadCommands() {
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands');
   var cmds = await r.json();
   var box = document.getElementById('cmd-list');
-  if(!cmds.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-terminal"   style="opacity: 0.3; margin-bottom: 10px;"></i>Пока пользователь команда yok.</div>'; return; }
+  if(!cmds.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-terminal" style="opacity: 0.3; margin-bottom: 10px;"></i>Своих команд пока нет.</div>'; return; }
   box.innerHTML = cmds.map(function(cmd){
-    var delBtn = role === 'owner' ? '<button class="del-btn" onclick="deleteCmd(\''+cmd.id+'\')"><i class="fas fa-trash"></i></button>' : '';
+    var delBtn = role === 'owner' ? '<button type="button" class="del-btn" onclick="deleteCmd(\''+cmd.id+'\')" aria-label="Удалить"><i class="fas fa-trash"></i></button>' : '';
     return '<div class="cmd-card">'+
       '<div  >'+
         '<div class="cmd-trigger">!'+cmd.trigger+'</div>'+
@@ -107,7 +115,7 @@ function closeModal() { document.getElementById('modal').style.display='none'; }
 async function createCommand() {
   var trigger = document.getElementById('cmd-trigger').value.trim().replace(/^!/,'');
   var response = document.getElementById('cmd-response').value.trim();
-  if(!trigger || !response) { alert('Tetikleyici ve ответ gir!'); return; }
+  if(!trigger || !response) { alert('Введите триггер и ответ!'); return; }
   var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/create', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({trigger:trigger, response:response, type:document.getElementById('cmd-type').value})
@@ -118,13 +126,17 @@ async function createCommand() {
 }
 
 async function deleteCmd(id) {
-  if(!confirm('Это команда удалить если хотите emin misiniz ? siz?')) return;
-  var r = await fetch('/api/guild/'+selectedGuild+'/custom-commands/'+id+'/delete', {method:'POST'});
-  var d = await r.json();
-  if(d.success) loadCommands();
+  window.askConfirm('Удалить команду', 'Вы уверены, что хотите удалить эту команду? Действие необратимо.', function () {
+    fetch('/api/guild/'+selectedGuild+'/custom-commands/'+id+'/delete', {method:'POST'})
+      .then(r => r.json()).then(d => { if(d.success) { loadCommands(); showToast('Команда удалена', true); } })
+      .catch(e => showToast('Ошибка: '+e.message, false));
+  }, { okText: 'Удалить', danger: true, icon_fa: 'fa-trash' });
 }
 
 document.getElementById('modal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 loadGuilds();
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadCommands(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

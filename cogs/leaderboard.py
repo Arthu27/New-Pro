@@ -1,128 +1,99 @@
 """
-Leaderboard Cog — Professional Dashboard/ID-Card Style via Pillow
-Белый фон, тонкие чёрные линии, золотые/янтарные line-art акценты.
-Рейтинги по сообщениям, голосовой активности и балансу,
-переключаемые через Discord Select Menu (без кнопок и классических эмодзи).
+Leaderboard Cog — Luxury Dark-Gold Dashboard & Leaderboard Table via Pillow
+Глубокий фон Midnight Navy, золотые акценты, мерцающая звёздная пыль,
+премиальные плашки участников #1, #2, #3 с медалями и интерактивное Select-меню.
 """
+
+from logger import get_logger
+
+_log = get_logger("leaderboard")
 
 import os
 import io
 import json
 import math
+import random
 import datetime
 import discord
 from discord import app_commands
 from discord.ext import commands
-from PIL import Image, ImageDraw, ImageFont
-from cogs._menu_bg import load_menu_bg
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 ROOT = os.path.join(os.path.dirname(__file__), '..')
 FONTS = os.path.join(ROOT, 'assets', 'fonts')
-BG_PATH = os.path.join(ROOT, 'assets', 'profile_bg_pro.jpg')
+ICONS_DIR = os.path.join(ROOT, 'assets', 'icons', 'logcards')
 FONT_B = os.path.join(FONTS, 'Bold.ttf')
 FONT_R = os.path.join(FONTS, 'Regular.ttf')
 
-WHITE = (255, 255, 255)
-BLACK = (20, 20, 25)
-GOLD = (217, 119, 6)
-RED = (220, 38, 38)
-MUTED = (110, 115, 125)
-SS = 4
+# ═══════════════════════════════════════════════════════════════════════
+# Палитра HAKUMO: Midnight Navy + Imperial Gold
+# ═══════════════════════════════════════════════════════════════════════
+C_BG_TOP       = (10, 16, 30)
+C_BG_BOT       = (16, 26, 48)
+C_GOLD         = (212, 175, 55)
+C_GOLD_BRIGHT  = (245, 215, 110)
+C_GOLD_SOFT    = (160, 130, 50)
+C_TEXT_WHITE   = (242, 245, 252)
+C_TEXT_DIM     = (140, 155, 185)
+C_CELL_BG      = (18, 26, 46, 210)
+C_CELL_BORDER  = (212, 175, 55, 65)
+
+# Медали для топ-3
+MEDAL_COLORS = {
+    0: {'ring': (245, 215, 110), 'bg': (46, 36, 18, 240), 'text': (255, 235, 165), 'lbl': '★ #1'},
+    1: {'ring': (200, 210, 225), 'bg': (32, 40, 56, 240), 'text': (235, 240, 250), 'lbl': '◆ #2'},
+    2: {'ring': (210, 140, 80),  'bg': (42, 28, 20, 240), 'text': (250, 200, 160), 'lbl': '✦ #3'},
+}
 
 DATA_DIR = os.path.join(ROOT, 'data')
 
+_FONT_CACHE = {}
+
 
 def _f(bold=False, sz=20):
-    try:
-        return ImageFont.truetype(FONT_B if bold else FONT_R, sz)
-    except Exception:
-        return ImageFont.load_default()
+    key = (bold, sz)
+    f = _FONT_CACHE.get(key)
+    if f is None:
+        try:
+            f = ImageFont.truetype(FONT_B if bold else FONT_R, sz)
+        except Exception:
+            f = ImageFont.load_default()
+        _FONT_CACHE[key] = f
+    return f
 
 
-def _ss_render(w, h, draw_fn, scale=SS):
-    big = Image.new('RGBA', (w * scale, h * scale), (0, 0, 0, 0))
-    d = ImageDraw.Draw(big)
-    draw_fn(d, scale)
-    return big.resize((w, h), Image.Resampling.LANCZOS)
+def _clean(text):
+    t = str(text or '')
+    return t.replace('**', '').replace('`', '').strip()
 
 
-def _load_bg(w, h):
-    try:
-        bg = Image.open(BG_PATH).convert('RGBA')
-        bw, bh = bg.size
-        target_ratio = w / h
-        src_ratio = bw / bh
-        if src_ratio > target_ratio:
-            new_w = int(bh * target_ratio)
-            x0 = (bw - new_w) // 2
-            bg = bg.crop((x0, 0, x0 + new_w, bh))
-        else:
-            new_h = int(bw / target_ratio)
-            y0 = (bh - new_h) // 2
-            bg = bg.crop((0, y0, bw, y0 + new_h))
-        return bg.resize((w, h), Image.Resampling.LANCZOS)
-    except Exception:
-        return Image.new('RGBA', (w, h), (255, 255, 255, 255))
+def _ellipsize(draw, text, font_obj, max_w):
+    text = str(text or '')
+    if draw.textlength(text, font=font_obj) <= max_w:
+        return text
+    while text and draw.textlength(text + '…', font=font_obj) > max_w:
+        text = text[:-1]
+    return text + '…'
 
 
-def _icon_trophy(d, cx, cy, s, w, color):
-    cup_w, cup_h = s * 0.44, s * 0.36
-    d.rounded_rectangle((cx - cup_w, cy - cup_h*0.8, cx + cup_w, cy + cup_h*0.2), radius=s*0.08, outline=color, width=w)
-    d.line([(cx - s*0.2, cy + cup_h*0.2), (cx, cy + cup_h*0.8), (cx + s*0.2, cy + cup_h*0.2)], fill=color, width=w)
-    d.line([(cx - s*0.3, cy + cup_h*0.8), (cx + s*0.3, cy + cup_h*0.8)], fill=color, width=int(w*1.3))
-    r = s * 0.12
-    d.ellipse((cx - r, cy - s*0.25 - r, cx + r, cy - s*0.25 + r), fill=color)
-
-
-def _icon_badge(diameter, glyph_fn, ring_color=BLACK, ring_w=None, icon_color=GOLD):
-    ring_w = ring_w if ring_w is not None else max(2, diameter // 22)
-
-    def draw(d, scale):
-        size = diameter * scale
-        rw = ring_w * scale
-        r = size * 0.22
-        d.rounded_rectangle((rw / 2, rw / 2, size - rw / 2 - 1, size - rw / 2 - 1),
-                             radius=r, fill=WHITE, outline=ring_color, width=rw)
-        glyph_fn(d, size / 2, size / 2, size * 0.60, max(2, int(size * 0.032)), icon_color)
-
-    return _ss_render(diameter, diameter, draw)
-
-
-def _rank_badge(diameter, num, ring_color=BLACK, ring_w=None, text_color=GOLD):
-    ring_w = ring_w if ring_w is not None else max(2, diameter // 22)
-
-    def draw(d, scale):
-        size = diameter * scale
-        rw = ring_w * scale
-        r = size * 0.22
-        d.rounded_rectangle((rw / 2, rw / 2, size - rw / 2 - 1, size - rw / 2 - 1),
-                             radius=r, fill=WHITE, outline=ring_color, width=rw)
-        txt = f"#{num}"
-        f = _f(True, int(size * 0.40))
-        bb = d.textbbox((0, 0), txt, font=f)
-        tw = bb[2] - bb[0]
-        th = bb[3] - bb[1]
-        d.text(((size - tw) / 2 - bb[0], (size - th) / 2 - bb[1]), txt, fill=text_color, font=f)
-
-    return _ss_render(diameter, diameter, draw)
-
-
-def _corner_bracket(size, thickness, length_ratio=0.35, color=GOLD):
-    def draw(d, scale):
-        t = thickness * scale
-        L = size * scale * length_ratio
-        d.line([(0, t / 2), (L, t / 2)], fill=color, width=t)
-        d.line([(t / 2, 0), (t / 2, L)], fill=color, width=t)
-    return _ss_render(size, size, draw)
-
-
-def _rounded_panel(w, h, radius, fill=WHITE, outline=BLACK, ow=3):
-    def draw(d, scale):
-        r = radius * scale
-        o = ow * scale
-        d.rounded_rectangle((o / 2, o / 2, w * scale - o / 2 - 1, h * scale - o / 2 - 1),
-                             radius=r, fill=fill, outline=outline, width=o)
-    return _ss_render(w, h, draw)
+def _draw_stardust(img, W, H):
+    """Мерцающие золотые звёзды на фоне таблицы."""
+    overlay = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    rnd = random.Random(77)
+    for _ in range(50):
+        sx = rnd.randint(18, W - 18)
+        sy = rnd.randint(18, H - 18)
+        size = rnd.choice([1, 1, 2, 2, 3])
+        alpha = rnd.randint(40, 160)
+        od.ellipse((sx, sy, sx + size, sy + size), fill=C_GOLD + (alpha,))
+    for _ in range(6):
+        cx = rnd.randint(40, W - 40)
+        cy = rnd.randint(20, min(180, H - 20))
+        r = rnd.randint(3, 4)
+        od.line([(cx - r, cy), (cx + r, cy)], fill=C_GOLD_BRIGHT + (170,), width=1)
+        od.line([(cx, cy - r), (cx, cy + r)], fill=C_GOLD_BRIGHT + (170,), width=1)
+    return Image.alpha_composite(img, overlay)
 
 
 def _get_lb_data(guild: discord.Guild, category: str):
@@ -139,15 +110,13 @@ def _get_lb_data(guild: discord.Guild, category: str):
                     m = guild.get_member(int(uid)) if guild else None
                     name = m.display_name if m else f"ID {uid[:6]}"
                     top.append((name, f"{int(count):,} СООБЩЕНИЙ".replace(",", " ")))
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_get_lb_data(): подавлено: %s", _ex)
     elif category == "voice":
-        path = os.path.join(DATA_DIR, f'voice_stats_{gid}.json')
-        if os.path.exists(path):
+        from cogs.voice_tracker import voice_view
+        users = voice_view(gid).get('users', {})
+        if True:
             try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    vs = json.load(f)
-                users = vs.get('users', {})
                 for uid, d in sorted(
                     users.items(),
                     key=lambda x: x[1].get('total_seconds', 0) if isinstance(x[1], dict) else int(x[1]),
@@ -157,8 +126,8 @@ def _get_lb_data(guild: discord.Guild, category: str):
                     name = d.get('name', f"ID {uid[:6]}") if isinstance(d, dict) else f"ID {uid[:6]}"
                     h, m = divmod(secs // 60, 60)
                     top.append((name, f"{h}ч {m}м В ВОЙСЕ" if h else f"{m}м В ВОЙСЕ"))
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_get_lb_data(): подавлено: %s", _ex)
     elif category == "balance":
         path = os.path.join(DATA_DIR, f'economy_{gid}.json')
         if os.path.exists(path):
@@ -173,78 +142,142 @@ def _get_lb_data(guild: discord.Guild, category: str):
                     m = guild.get_member(int(uid)) if guild else None
                     name = m.display_name if m else f"ID {uid[:6]}"
                     top.append((name, f"{d:,} МОНЕТ".replace(",", " ")))
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_get_lb_data(): подавлено: %s", _ex)
 
     if not top:
         top = [
-            ("SABOTASH", "1 450 СООБЩЕНИЙ" if category == "messages" else ("42ч 15м В ВОЙСЕ" if category == "voice" else "250 000 МОНЕТ")),
-            ("TOP_PLAYER", "980 СООБЩЕНИЙ" if category == "messages" else ("28ч 40м В ВОЙСЕ" if category == "voice" else "145 000 МОНЕТ")),
-            ("AETHER_MOD", "640 СООБЩЕНИЙ" if category == "messages" else ("19ч 10м В ВОЙСЕ" if category == "voice" else "98 500 МОНЕТ")),
+            ("HAKUMO_LEADER", "1 850 СООБЩЕНИЙ" if category == "messages" else ("52ч 40м В ВОЙСЕ" if category == "voice" else "500 000 МОНЕТ")),
+            ("CHAMPION_USER", "1 240 СООБЩЕНИЙ" if category == "messages" else ("34ч 15м В ВОЙСЕ" if category == "voice" else "275 000 МОНЕТ")),
+            ("ACTIVE_MEMBER", "890 СООБЩЕНИЙ" if category == "messages" else ("21ч 30м В ВОЙСЕ" if category == "voice" else "150 000 МОНЕТ")),
+            ("WARRIOR", "610 СООБЩЕНИЙ" if category == "messages" else ("14ч 10м В ВОЙСЕ" if category == "voice" else "95 000 МОНЕТ")),
+            ("EXPLORER", "420 СООБЩЕНИЙ" if category == "messages" else ("9ч 50м В ВОЙСЕ" if category == "voice" else "50 000 МОНЕТ")),
         ]
     return top
 
 
+def _load_celestial_bg(w, h):
+    """Загружает реальный звёздно-космический фон assets/help_bg.png с золотой аурой."""
+    bg_path = os.path.join(ROOT, 'assets', 'help_bg.png')
+    try:
+        bg_im = Image.open(bg_path).convert('RGBA')
+        bw, bh = bg_im.size
+        target_ratio = w / h
+        src_ratio = bw / bh
+        if src_ratio > target_ratio:
+            nw = int(bh * target_ratio)
+            x0 = (bw - nw) // 2
+            bg_im = bg_im.crop((x0, 0, x0 + nw, bh))
+        else:
+            nh = int(bw / target_ratio)
+            y0 = (bh - nh) // 2
+            bg_im = bg_im.crop((0, y0, bw, y0 + nh))
+        base = bg_im.resize((w, h), Image.Resampling.LANCZOS)
+    except Exception:
+        grad = Image.new('RGB', (1, h))
+        for y in range(h):
+            t = y / max(1, h - 1)
+            grad.putpixel((0, y), tuple(int(C_BG_TOP[i] + (C_BG_BOT[i] - C_BG_TOP[i]) * t) for i in range(3)))
+        base = grad.resize((w, h)).convert('RGBA')
+
+    glow = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gd.ellipse((-100, -120, 500, 280), fill=C_GOLD + (35,))
+    gd.ellipse((w - 400, -140, w + 100, 260), fill=C_GOLD_BRIGHT + (20,))
+    glow = glow.filter(ImageFilter.GaussianBlur(70))
+    return Image.alpha_composite(base, glow)
+
+
 def generate_leaderboard_card(guild: discord.Guild, category: str = "messages") -> Image.Image:
-    W = 920
+    W = 1040
+    PAD = 40
     top = _get_lb_data(guild, category)
-    H = max(460, 110 + len(top) * 88 + 30)
+    row_h = 76
+    gap_y = 12
+    header_h = 176
+    footer_h = 70
+    H = header_h + len(top) * (row_h + gap_y) + footer_h
 
-    bg = load_menu_bg(W, H, "gold")
-    d = ImageDraw.Draw(bg)
+    # 1. Полноценная звёздная иллюстрация с неоновым свечением
+    img = _load_celestial_bg(W, H)
+    d = ImageDraw.Draw(img)
 
-    # Top Header Panel (872x72 px)
-    header_box = _rounded_panel(872, 72, radius=14, fill=WHITE, outline=BLACK, ow=2)
-    bg.alpha_composite(header_box, (24, 20))
+    # 4. Двойная золотая рамка
+    d.rectangle((10, 10, W - 10, H - 10), outline=C_GOLD + (80,), width=2)
+    d.rectangle((16, 16, W - 16, H - 16), outline=C_GOLD_SOFT + (40,), width=1)
 
+    # 5. Шапка таблицы
     title_map = {
         "messages": "ТОП ПО СООБЩЕНИЯМ",
-        "voice": "ТОП ПО ГОЛОСОВОЙ АКТИВНОСТИ",
+        "voice": "ТОП ПО ГОЛОСУ",
         "balance": "ТОП ПО БАЛАНСУ МОНЕТ"
     }
     title_text = title_map.get(category, "ТАБЛИЦА ЛИДЕРОВ")
 
-    badge = _icon_badge(52, _icon_trophy, ring_color=BLACK, ring_w=2, icon_color=GOLD)
-    bg.alpha_composite(badge, (36, 30))
+    # Бейдж категории
+    badge_txt = f"✦ HAKUMO · {title_text}"
+    badge_w = d.textlength(badge_txt, font=_f(True, 18)) + 28
+    d.rounded_rectangle((PAD, 32, PAD + badge_w, 32 + 34), radius=10,
+                        fill=(20, 28, 48, 220), outline=C_GOLD + (120,), width=1)
+    d.text((PAD + 14, 38), badge_txt, font=_f(True, 18), fill=C_GOLD_BRIGHT)
 
-    d.text((100, 26), title_text, fill=BLACK, font=_f(True, 24))
-    d.text((100, 56), "ПРОФЕССИОНАЛЬНЫЙ РЕЙТИНГ АКТИВНОСТИ СЕРВЕРА", fill=MUTED, font=_f(False, 15))
+    # Заголовок
+    d.text((PAD, 78), title_text, font=_f(True, 38), fill=C_TEXT_WHITE)
+    gname = (guild.name if guild else 'Hakumo Community')[:30]
+    d.text((PAD, 126), f"Сервер: {gname} · официальный рейтинг", font=_f(False, 18), fill=C_TEXT_DIM)
 
-    pill = _rounded_panel(160, 36, radius=10, fill=WHITE, outline=GOLD, ow=2)
-    bg.alpha_composite(pill, (720, 38))
-    d.text((738, 46), "TOP RANKING", fill=GOLD, font=_f(True, 14))
+    # Золотой разделитель шапки
+    d.line([(PAD, header_h - 18), (W - PAD, header_h - 18)], fill=C_GOLD + (80,), width=1)
+    d.line([(PAD, header_h - 18), (PAD + 200, header_h - 18)], fill=C_GOLD_BRIGHT + (240,), width=2)
 
-    # Leaderboard rows
-    box_w = 872
-    box_h = 76
-    gap_y = 12
-    start_x, start_y = 24, 108
+    # 6. Строки таблицы лидеров
+    card_w = W - PAD * 2
+    y = header_h
 
     for idx, (name, val) in enumerate(top):
-        bx = start_x
-        by = start_y + idx * (box_h + gap_y)
+        by = y
+        is_top3 = idx < 3
+        m_cfg = MEDAL_COLORS.get(idx, {'ring': C_GOLD_SOFT, 'bg': (20, 28, 46, 210), 'text': C_GOLD_BRIGHT, 'lbl': f'#{idx + 1}'})
 
-        box = _rounded_panel(box_w, box_h, radius=14, fill=WHITE, outline=BLACK, ow=2)
-        bg.alpha_composite(box, (bx, by))
+        # Плашка строки таблицы
+        box_bg = m_cfg['bg'] if is_top3 else C_CELL_BG
+        box_border = m_cfg['ring'] + (180,) if is_top3 else C_CELL_BORDER
 
-        r_color = GOLD if idx == 0 else BLACK
-        t_color = GOLD if idx == 0 else (RED if idx < 3 else MUTED)
-        rank_badge = _rank_badge(52, idx + 1, ring_color=r_color, ring_w=2, text_color=t_color)
-        bg.alpha_composite(rank_badge, (bx + 16, by + 12))
+        d.rounded_rectangle((PAD, by, PAD + card_w, by + row_h), radius=14,
+                            fill=box_bg, outline=box_border, width=2 if is_top3 else 1)
 
-        d.text((bx + 86, by + 22), name[:22], fill=BLACK, font=_f(True, 26))
+        # Бейдж места (#1, #2, #3, ...)
+        rank_badge_w = 70
+        d.rounded_rectangle((PAD + 12, by + 12, PAD + 12 + rank_badge_w, by + row_h - 12), radius=10,
+                            fill=(14, 20, 36, 230), outline=m_cfg['ring'] + (200,), width=1)
+        rank_txt = m_cfg['lbl']
+        rw = d.textlength(rank_txt, font=_f(True, 20))
+        d.text((PAD + 12 + (rank_badge_w - rw) / 2, by + 26), rank_txt, font=_f(True, 20), fill=m_cfg['text'])
 
-        vw = len(str(val)) * 14
-        d.text((bx + box_w - 24 - vw, by + 24), str(val), fill=GOLD if idx == 0 else MUTED, font=_f(True, 22))
+        # Имя участника
+        name_x = PAD + 12 + rank_badge_w + 20
+        name_max_w = card_w - (name_x - PAD) - 280
+        clean_name = _ellipsize(d, _clean(name), _f(True, 26), name_max_w)
+        d.text((name_x, by + 23), clean_name, font=_f(True, 26), fill=C_TEXT_WHITE)
 
-    # 4 Corner brackets (Gold accent)
-    br = _corner_bracket(40, 4, color=GOLD)
-    bg.alpha_composite(br, (6, 6))
-    bg.alpha_composite(br.rotate(270), (W - 46, 6))
-    bg.alpha_composite(br.rotate(90), (6, H - 46))
-    bg.alpha_composite(br.rotate(180), (W - 46, H - 46))
+        # Значение (очки/сообщения/войс/баланс)
+        val_txt = _clean(str(val))
+        vw = d.textlength(val_txt, font=_f(True, 22))
+        val_color = C_GOLD_BRIGHT if is_top3 else C_TEXT_DIM
+        d.text((PAD + card_w - 24 - vw, by + 25), val_txt, font=_f(True, 22), fill=val_color)
 
-    return bg
+        y += row_h + gap_y
+
+    # 7. Футер таблицы
+    fy = H - footer_h + 16
+    d.line([(PAD, fy), (W - PAD, fy)], fill=C_GOLD + (80,), width=1)
+    d.text((PAD, fy + 16), "HAKUMO LEADERBOARD · РЕЙТИНГ АКТИВНОСТИ", font=_f(False, 20), fill=C_TEXT_DIM)
+
+    brand = "✦ HAKUMO"
+    bw = d.textlength(brand, font=_f(True, 22))
+    d.text((W - PAD - bw, fy + 14), brand, font=_f(True, 22), fill=C_GOLD_BRIGHT)
+
+    return img
 
 
 def generate_leaderboard_bytes(guild: discord.Guild, category: str = "messages") -> io.BytesIO:
@@ -318,8 +351,8 @@ class Leaderboard(commands.Cog):
             try:
                 with open(path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("on_message(): подавлено: %s", _ex)
         uid = str(message.author.id)
         data['messages'][uid] = data['messages'].get(uid, 0) + 1
         os.makedirs(DATA_DIR, exist_ok=True)
@@ -331,35 +364,21 @@ class Leaderboard(commands.Cog):
         if member.bot:
             return
         uid = member.id
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         if not before.channel and after.channel:
             self._voice_join[uid] = now
         elif before.channel and not after.channel:
-            if uid in self._voice_join:
-                minutes = int((now - self._voice_join.pop(uid)).total_seconds() / 60)
-                if minutes > 0:
-                    path = os.path.join(DATA_DIR, f'voice_stats_{member.guild.id}.json')
-                    vs = {'users': {}}
-                    if os.path.exists(path):
-                        try:
-                            with open(path, 'r', encoding='utf-8') as f:
-                                vs = json.load(f)
-                        except Exception:
-                            pass
-                    suid = str(uid)
-                    d = vs['users'].get(suid, {'total_seconds': 0, 'name': member.display_name})
-                    d['total_seconds'] = d.get('total_seconds', 0) + minutes * 60
-                    vs['users'][suid] = d
-                    os.makedirs(DATA_DIR, exist_ok=True)
-                    with open(path, 'w', encoding='utf-8') as f:
-                        json.dump(vs, f, ensure_ascii=False, indent=2)
+            # Время в голосовых пишет VoiceTracker (SQLite, точность до секунды).
+            # Здесь только освобождаем слот сессии — легаси-JSON больше не пишем,
+            # иначе был двойной учёт с потерей точности (минутная усечка).
+            self._voice_join.pop(uid, None)
 
-    @commands.command(name="leaderboard", aliases=["rank", "top", "лб", "рейтинг"])
+    @commands.command(name="leaderboard", aliases=["rank", "лб", "рейтинг"])
     async def leaderboard_cmd(self, ctx, category: str = "messages"):
         try:
             await ctx.message.delete()
-        except Exception:
-            pass
+        except Exception as _ex:
+            _log.debug("leaderboard_cmd(): подавлено: %s", _ex)
         cat = category.lower()
         if cat not in ("messages", "voice", "balance"):
             cat = "messages"

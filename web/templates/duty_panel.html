@@ -1,19 +1,27 @@
 {% extends "base.html" %}
-{% block title %}Система задач — Aether{% endblock %}
-{% block page_title %}<i class="fas fa-swords" ></i> Система задач{% endblock %}
+{% block title %}Система задач — Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-list-check" ></i> Система задач{% endblock %}
 {% block content %}
-{% block page_hero %}
-<div class="page-hero compact">
-  <div class="page-hero-content">
-    <div class="page-hero-greeting">
-      <span class="dot"></span>
-      <span>Система задач</span>
-    </div>
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Дежурства</div>
     <h1>Система задач</h1>
-    <p>Система задач и дежурств для модераторов.</p>
+    <p class="lead">Система задач и дежурств для модераторов.</p>
   </div>
 </div>
-{% endblock %}
+
+
+<style>
+
+.dp-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.dp-stat{background:linear-gradient(165deg,color-mix(in srgb, var(--ac) 5%, transparent),color-mix(in srgb, var(--ac) 1%, transparent));border:1px solid var(--line-2);border-radius:14px;padding:14px;text-align:center}
+.dp-stat-val{font-size:26px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;font-family:var(--font-display),sans-serif}
+.dp-stat-lbl{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.dp-row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:linear-gradient(160deg,color-mix(in srgb, var(--text) 2%, transparent),transparent);border:1px solid var(--line);border-radius:11px;margin-bottom:8px}
+.dp-rank-medal{font-size:20px;width:30px;text-align:center}
+.dp-rank-num{font-weight:800;color:var(--ac-2)}
+
+</style>
 
 
 
@@ -47,29 +55,30 @@ async function loadDuty(gid) {
   _guildId = gid;
   try {
     var d = await fetch('/api/duty/' + gid).then(r => r.json());
-
+    /* тихо: данные те же — DOM не трогаем (никаких «перезагрузок») */
+    if (window.renderIfChanged && !window.renderIfChanged('duty-' + gid, d, function () {})) return;
     var totalPts = Object.values(d.points).reduce(function(s,u){return s+(u.total||0);},0);
     var activeCount = Object.values(d.duty).filter(function(u){return u.active;}).length;
     var histCount = Object.values(d.duty).reduce(function(s,u){return s+(u.history||[]).length;},0);
     var participants = Object.keys(d.points).length;
 
     document.getElementById('dp-stats').innerHTML =
-      stat(totalPts + ' ⭐', 'Всего очков') +
+      stat(totalPts, 'Всего очков') +
       stat(activeCount, 'Активных задач') +
       stat(histCount, 'Завершено') +
       stat(participants, 'Участников');
 
     var sorted = Object.entries(d.points).sort(function(a,b){return (b[1].total||0)-(a[1].total||0);}).slice(0,15);
     var maxPts = sorted.length ? (sorted[0][1].total || 1) : 1;
-    var medals = ['🥇','🥈','🥉'];
+    var medals = ['<i class="fas fa-medal" style="color:#ffd700"></i>','<i class="fas fa-medal" style="color:#c0c7d1"></i>','<i class="fas fa-medal" style="color:#cd7f32"></i>'];
     document.getElementById('leaderboard').innerHTML = sorted.length ?
       '<table class="dp-table"><thead><tr><th>#</th><th>Пользователь</th><th>Очки</th><th>Прогресс</th></tr></thead><tbody>' +
       sorted.map(function(e,i){
         var pct = Math.round((e[1].total||0)/maxPts*100);
         return '<tr><td><span class="dp-rank-medal">' + (medals[i]||'') + '</span><span class="dp-rank-num">#' + (i+1) + '</span></td>' +
           '<td >' + esc(e[1].name||e[0]) + '</td>' +
-          '<td >' + (e[1].total||0) + ' ⭐</td>' +
-          '<td   style="min-width: 140px;"><div class="dp-bar"><div class="dp-bar-fill"   style="width: '+pct+'%;"></div></div></td></tr>';
+          '<td >' + (e[1].total||0) + '</td>' +
+          '<td><b>' + pct + '%</b></td></tr>';
       }).join('') + '</tbody></table>'
       : '<div class="empty-state">Пока очков нет</div>';
 
@@ -94,5 +103,8 @@ async function loadDuty(gid) {
 function stat(val, lbl) {
   return '<div class="dp-stat"><div class="dp-stat-val">' + val + '</div><div class="dp-stat-lbl">' + lbl + '</div></div>';
 }
+
+  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadDuty(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}

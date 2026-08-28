@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Каналы и маршруты — Панель Hakumo{% endblock %}
+{% block page_title %}Каналы и маршруты{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Бот <span class="sep">·</span> Настройки</div>
+    <h1>Каналы и маршруты</h1>
+    <p>Единое место, куда бот что пишет: доказательства, апелляции, приветствия, джейл-логи.
+       Больше не будет вопросов «почему улетело туда» — всё настраивается здесь.</p>
+  </div>
+  <div class="page-head-side">
+    <span class="chs-access" title="Смотреть эту страницу могут все модераторы, менять маршруты — только администраторы">
+      <i class="fas fa-user-shield"></i> Просмотр: Мод+ · Изменение: Админ
+    </span>
+  </div>
+</div>
+
+<style>
+.chs-access{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:999px;padding:5px 12px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent))}
+.chs-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.chs-row{display:grid;grid-template-columns:44px 1fr minmax(240px,320px);gap:14px;align-items:center;background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:14px 16px}
+.chs-ico{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:17px;color:var(--ac);background:color-mix(in srgb, var(--ac) 12%, transparent);border:1px solid color-mix(in srgb, var(--ac) 25%, transparent)}
+.chs-name{font-size:14px;font-weight:700;color:var(--text-1,#fff);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chs-what{font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));margin-top:3px;line-height:1.45}
+.chs-empty{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));margin-top:4px;font-style:italic}
+.chs-cur{display:inline-flex;align-items:center;gap:5px;font-size:11px;border-radius:999px;padding:2px 9px;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));color:var(--text-3,color-mix(in srgb, var(--text) 55%, transparent))}
+.chs-cur.ok{color:#7bd88f;border-color:rgba(123,216,143,.3);background:rgba(123,216,143,.07)}
+.chs-cur.off{color:#f0b26b;border-color:rgba(240,178,107,.3);background:rgba(240,178,107,.07)}
+.chs-edit{display:flex;gap:8px;align-items:center}
+.chs-edit select{flex:1;min-width:0;padding:9px 11px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:10px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.chs-edit select:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft, color-mix(in srgb, var(--ac) 18%, transparent))}
+.chs-edit select:disabled{opacity:.55;cursor:not-allowed}
+.chs-save{white-space:nowrap}
+.chs-info{margin-top:18px;background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:14px 16px;font-size:12.5px;line-height:1.55;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent))}
+.chs-info b{color:var(--text-1,#fff)}
+.chs-info code{background:color-mix(in srgb, var(--text) 8%, transparent);border-radius:6px;padding:1px 6px;font-size:11.5px}
+.chs-info h3{margin:0 0 8px;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.chs-info h3 i{color:var(--ac)}
+@media (max-width:860px){.chs-row{grid-template-columns:44px 1fr}.chs-edit{grid-column:1/-1}}
+</style>
+
+<div class="chs-list" id="chsList">
+  <div class="sk-row"></div>
+  <div class="sk-row" style="width:70%"></div>
+</div>
+
+<div class="chs-info">
+  <h3><i class="fas fa-circle-info"></i> Логи создаются сами</h3>
+  Системные каналы логов (<code>-модерация</code>, <code>-сообщения</code>, <code>-участники</code>, <code>-сервер</code>)
+  бот <b>создаёт и чинит автоматически</b> в категории «Логи» — их не нужно (и нельзя) переназначать:
+  лента всегда найдёт их по имени. Здесь настраиваются только <b>особые маршруты</b> — страницы этих
+  систем дублируют те же настройки (Апелляции, Приветствие, Tag Jail), расхождений не будет.
+</div>
+
+<div class="chs-info" style="margin-top:10px">
+  <h3><i class="fas fa-id-badge"></i> Роли заявок — на странице «Бот»</h3>
+  Какие роли выдаются после одобрения (хелпер/модератор) и роль куратора, которого бот
+  пингует в ветках, настраиваются в разделе <b>«Настройки» → «Бот»</b> — там же, где
+  присутствие и синхронизация команд. Куратор один на обе ветки.
+</div>
+
+<script>
+var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+var CHS_ROUTES = [];
+var CHS_CHANNELS = [];
+
+function chName(id) {
+  var ch = CHS_CHANNELS.find(function (c) { return String(c.id) === String(id); });
+  return ch ? ch.name : null;
+}
+
+function render() {
+  var box = document.getElementById('chsList');
+  if (!CHS_ROUTES.length) {
+    box.innerHTML = '<div class="empty-state"><i class="fas fa-route"></i><p>Не удалось загрузить маршруты</p></div>';
+    return;
+  }
+  box.innerHTML = CHS_ROUTES.map(function (r) {
+    var nm = r.channel_id ? chName(r.channel_id) : null;
+    var cur = r.channel_id
+      ? '<span class="chs-cur ' + (nm ? 'ok' : 'off') + '"><i class="fas fa-hashtag"></i>' +
+        esc(nm || ('ID ' + r.channel_id + ' — не найден')) + '</span>'
+      : '<span class="chs-cur off"><i class="fas fa-wand-magic-sparkles"></i>авто</span>';
+    var opts = '<option value="0"' + (r.channel_id ? '' : ' selected') + '>— Авто (по умолчанию) —</option>' +
+      CHS_CHANNELS.map(function (c) {
+        var sel = String(c.id) === String(r.channel_id) ? ' selected' : '';
+        return '<option value="' + esc(c.id) + '"' + sel + '># ' + esc(c.name) + '</option>';
+      }).join('');
+    return '<div class="chs-row">' +
+      '<div class="chs-ico"><i class="fas ' + esc(r.icon || 'fa-route') + '"></i></div>' +
+      '<div><div class="chs-name">' + esc(r.label) + ' ' + cur +
+        '<span class="chs-cur" title="Кто меняет этот маршрут"><i class="fas fa-user-lock"></i>' + esc(r.access || 'Админ') + '</span></div>' +
+        '<div class="chs-what">' + esc(r.what || '') + '</div>' +
+        '<div class="chs-empty">' + esc(r.empty || '') + '</div></div>' +
+      '<div class="chs-edit">' +
+        '<select id="chs-' + esc(r.key) + '" aria-label="' + esc(r.label) + '"' + (CAN_EDIT ? '' : ' disabled') + '>' + opts + '</select>' +
+        (CAN_EDIT ? '<button type="button" class="btn btn-primary chs-save" aria-label="Сохранить маршрут" title="Сохранить" onclick="chsSave(\'' + esc(r.key) + '\')"><i class="fas fa-check"></i></button>' : '') +
+      '</div></div>';
+  }).join('');
+}
+
+async function chsLoad() {
+  try {
+    var chans = await fetch('/api/channels').then(function (r) { return r.json(); });
+    CHS_CHANNELS = (Array.isArray(chans) ? chans : (chans.channels || [])).filter(function (c) {
+      return c && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5);
+    });
+  } catch (e) { CHS_CHANNELS = []; }
+  try {
+    var d = await fetch('/api/channel-routes').then(function (r) { return r.json(); });
+    if (d.success) CHS_ROUTES = d.routes || [];
+  } catch (e) { /* API Guard покажет */ }
+  if (window.renderSafe) window.renderSafe(render); else render();
+}
+
+async function chsSave(key) {
+  var sel = document.getElementById('chs-' + key);
+  if (!sel) return;
+  var cid = sel.value || '0';
+  var r = await fetch('/api/channel-routes/' + encodeURIComponent(key), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel_id: cid })
+  });
+  var d = await r.json().catch(function () { return {}; });
+  if (r.ok && d.success) {
+    CHS_ROUTES = CHS_ROUTES.map(function (x) {
+      /* id канала — снежинка Discord (19 цифр): Number() ломает цифры,
+         держим строкой («0» — авто-режим = null) */
+      if (x.key === key) x.channel_id = cid === '0' ? null : String(cid);
+      return x;
+    });
+    render();  // сразу, без перезагрузки списка — никакой вспышки
+    var nm = cid === '0' ? 'авто-режим' : ('#' + (chName(cid) || cid));
+    if (window.showToast) window.showToast('Маршрут обновлён: ' + nm, true);
+  } else {
+    if (window.showToast) window.showToast(d.error || 'Не удалось сохранить', false);
+  }
+}
+
+chsLoad();
+</script>
+{% endblock %}

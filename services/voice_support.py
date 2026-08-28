@@ -3,6 +3,10 @@
 Система преобразования голоса в текст
 """
 
+from logger import get_logger
+
+_log = get_logger("voice_support")
+
 import json
 import os
 import hashlib
@@ -23,8 +27,8 @@ class VoiceToText:
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_config(): подавлено: %s", _ex)
 
         return {
             'provider': 'whisper',
@@ -80,8 +84,8 @@ class VoiceToText:
         try:
             import whisper
             whisper_ok = True
-        except ImportError:
-            pass
+        except ImportError as _ex:
+            _log.debug("get_status(): подавлено: %s", _ex)
 
         return {
             'provider': self.config.get('provider', 'whisper'),

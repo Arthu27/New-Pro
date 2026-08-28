@@ -3,6 +3,10 @@ Time Tracking
 Система отслеживания времени
 """
 
+from logger import get_logger
+
+_log = get_logger("time_tracking")
+
 import json
 import os
 from datetime import datetime, timedelta
@@ -10,7 +14,7 @@ from typing import Dict, List, Any, Optional
 
 
 class TimeEntry:
-    """Zaman записейi"""
+    """Запись времени"""
     
     def __init__(self, entry_id: str, ticket_id: str, user_id: str,
                  start_time: datetime, end_time: Optional[datetime] = None,
@@ -25,17 +29,17 @@ class TimeEntry:
         self.tags = []
     
     def get_duration(self) -> timedelta:
-        """Длительностьyi al"""
+        """Получить длительность"""
         if self.end_time:
             return self.end_time - self.start_time
         return datetime.now() - self.start_time
     
     def get_duration_hours(self) -> float:
-        """Saat cinsinden длительностьyi al"""
+        """Получить длительность в часах"""
         return self.get_duration().total_seconds() / 3600
     
     def to_dict(self) -> Dict[str, Any]:
-        """Dict'e чevir"""
+        """Преобразовать в dict"""
         return {
             'entry_id': self.entry_id,
             'ticket_id': self.ticket_id,
@@ -64,7 +68,7 @@ class TimeEntry:
 
 
 class TimeTracker:
-    """Zaman takipчisi"""
+    """Трекер времени"""
     
     def __init__(self):
         self.entries_file = 'data/time_entries.json'
@@ -81,8 +85,8 @@ class TimeTracker:
                         entry_id: TimeEntry.from_dict(entry_data)
                         for entry_id, entry_data in data.items()
                     }
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_entries(): подавлено: %s", _ex)
         
         return {}
     
@@ -100,8 +104,8 @@ class TimeTracker:
     
     def start_timer(self, ticket_id: str, user_id: str,
                     description: str = '') -> TimeEntry:
-        """Zamanlayыcыyы запустить"""
-        # Ёnceki zamanlayыcыyы остановить
+        """Запустить таймер"""
+        # Остановить предыдущий таймер
         if user_id in self.active_timers:
             self.stop_timer(user_id)
         
@@ -122,7 +126,7 @@ class TimeTracker:
         return entry
     
     def stop_timer(self, user_id: str) -> Optional[TimeEntry]:
-        """Zamanlayыcыyы остановить"""
+        """Остановить таймер"""
         if user_id not in self.active_timers:
             return None
         
@@ -139,7 +143,7 @@ class TimeTracker:
     def add_manual_entry(self, ticket_id: str, user_id: str,
                          start_time: datetime, end_time: datetime,
                          description: str = '', billable: bool = True) -> TimeEntry:
-        """Manuel записей добавить"""
+        """Добавить запись вручную"""
         entry_id = f"time_{len(self.entries) + 1}"
         
         entry = TimeEntry(
@@ -157,17 +161,42 @@ class TimeTracker:
         
         return entry
     
+    def get_active_entry(self, user_id: str) -> Optional[TimeEntry]:
+        """Активный таймер пользователя (синоним get_active_timer; id приводится к str)."""
+        return self.get_active_timer(str(user_id))
+
     def get_active_timer(self, user_id: str) -> Optional[TimeEntry]:
-        """Aktif zamanlayыcыyы al"""
+        """Получить активный таймер"""
         if user_id not in self.active_timers:
             return None
         
         entry_id = self.active_timers[user_id]
         return self.entries.get(entry_id)
     
+    def get_user_report(self, user_id: str, days: int = 7) -> Dict[str, Any]:
+        """Сводный отчёт по времени за N дней."""
+        user_id = str(user_id)
+        start = datetime.now() - timedelta(days=days)
+        entries = self.get_user_entries(user_id, start_date=start)
+        total_seconds = 0.0
+        per_day = {}
+        for e in entries:
+            end = e.end_time or datetime.now()
+            dur = max(0.0, (end - e.start_time).total_seconds())
+            total_seconds += dur
+            day = e.start_time.date().isoformat()
+            per_day[day] = per_day.get(day, 0.0) + dur
+        total_hours = total_seconds / 3600
+        return {
+            'total_hours': total_hours,
+            'total_entries': len(entries),
+            'avg_hours_per_day': total_hours / max(1, days),
+            'daily_breakdown': {d: h / 3600 for d, h in sorted(per_day.items(), reverse=True)},
+        }
+
     def get_user_entries(self, user_id: str, start_date: Optional[datetime] = None,
                          end_date: Optional[datetime] = None) -> List[TimeEntry]:
-        """Пользователь записейlerini al"""
+        """Получить записи пользователя"""
         entries = [e for e in self.entries.values() if e.user_id == user_id]
         
         if start_date:
@@ -181,7 +210,7 @@ class TimeTracker:
         return entries
     
     def get_ticket_entries(self, ticket_id: str) -> List[TimeEntry]:
-        """Ticket записейlerini al"""
+        """Получить записи тикета"""
         entries = [e for e in self.entries.values() if e.ticket_id == ticket_id]
         entries.sort(key=lambda e: e.start_time)
         return entries
@@ -191,7 +220,7 @@ class TimeTracker:
                        start_date: Optional[datetime] = None,
                        end_date: Optional[datetime] = None,
                        billable_only: bool = False) -> float:
-        """Всего длительностьyi al (saat)"""
+        """Получить общую длительность (часы)"""
         entries = list(self.entries.values())
         
         if user_id:
@@ -214,7 +243,7 @@ class TimeTracker:
         return round(total_hours, 2)
     
     def delete_entry(self, entry_id: str) -> bool:
-        """Входi удалить"""
+        """Удалить запись"""
         if entry_id in self.entries:
             del self.entries[entry_id]
             self._save_entries()
@@ -224,7 +253,7 @@ class TimeTracker:
 
 
 class PomodoroTimer:
-    """Pomodoro zamanlayыcы"""
+    """Таймер Pomodoro"""
     
     def __init__(self):
         self.sessions_file = 'data/pomodoro_sessions.json'
@@ -232,18 +261,18 @@ class PomodoroTimer:
         self.active_sessions = {}  # user_id -> session
     
     def _load_sessions(self) -> Dict[str, Any]:
-        """Oturumlarы загрузить"""
+        """Загрузить сессии"""
         if os.path.exists(self.sessions_file):
             try:
                 with open(self.sessions_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_sessions(): подавлено: %s", _ex)
         
         return {}
     
     def _save_sessions(self):
-        """Oturumlarы сохранить"""
+        """Сохранить сессии"""
         os.makedirs('data', exist_ok=True)
         with open(self.sessions_file, 'w', encoding='utf-8') as f:
             json.dump(self.sessions, f, ensure_ascii=False, indent=2)
@@ -272,7 +301,7 @@ class PomodoroTimer:
         session['completed_pomodoros'] += 1
         session['status'] = 'break'
         
-        # Kaydet
+        # Сохранить
         if user_id not in self.sessions:
             self.sessions[user_id] = []
         
@@ -286,7 +315,7 @@ class PomodoroTimer:
         return session
     
     def end_session(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Oturumu sonlandыr"""
+        """Завершить сессию"""
         if user_id not in self.active_sessions:
             return None
         
@@ -296,11 +325,11 @@ class PomodoroTimer:
         return session
     
     def get_active_session(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Aktif oturumu al"""
+        """Получить активную сессию"""
         return self.active_sessions.get(user_id)
     
     def get_user_stats(self, user_id: str, days: int = 7) -> Dict[str, Any]:
-        """Пользователь статистикаini al"""
+        """Получить статистику пользователя"""
         if user_id not in self.sessions:
             return {
                 'total_pomodoros': 0,
@@ -340,8 +369,8 @@ class TimeEstimator:
             try:
                 with open(self.estimates_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as _ex:
+                _log.debug("_load_estimates(): подавлено: %s", _ex)
         
         return {}
     
@@ -371,7 +400,7 @@ class TimeEstimator:
         return self.estimates.get(ticket_id)
     
     def get_actual_vs_estimate(self, ticket_id: str) -> Dict[str, Any]:
-        """Gerчek vs tahmin karшыlaшtыrmasы"""
+        """Сравнение фактического и прогнозируемого"""
         estimate = self.estimates.get(ticket_id)
         
         if not estimate:
@@ -396,7 +425,7 @@ class TimeEstimator:
     
     def get_average_by_category(self) -> Dict[str, float]:
         """Kategoriye по ortalama длительность"""
-        # Basit implementasyon - gerчek uygulamada ticket kategorileri ile объединитьilecek
+        # Простая реализация — в будущем будет объединена с категориями тикетов
         category_times = {}
         
         for entry in self.time_tracker.entries.values():

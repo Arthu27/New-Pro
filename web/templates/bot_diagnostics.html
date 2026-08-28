@@ -1,7 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Bot Диагностика — Aether{% endblock %}
+{% block title %}Bot Диагностика — Hakumo{% endblock %}
 {% block page_title %}<i class="fas fa-heartbeat" ></i> Bot Диагностика{% endblock %}
 {% block content %}
+
 {% block page_hero %}
 <div class="page-hero">
   <div class="page-hero-content">
@@ -17,7 +18,7 @@
 
 <style>
 .diag-vital { display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-md); position: relative; overflow: hidden; transition: all 0.2s; }
-.diag-vital:hover { transform: translateY(-2px); border-color: var(--ac-line); }
+.diag-vital:hover {border-color: var(--ac-line)}
 .diag-vital-header { display: flex; align-items: center; justify-content: space-between; }
 .diag-vital-icon { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 13px; background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); }
 .diag-vital-status { width: 10px; height: 10px; border-radius: 50%; }
@@ -138,28 +139,28 @@
       <div class="text">Hot Reload Cogs
         <small>Перезагрузить все cog'ы, чьи файлы изменились с последней загрузки</small>
       </div>
-      <button onclick="hotReload()">Reload</button>
+      <button type="button" onclick="hotReload()">Reload</button>
     </div>
     <div class="diag-action warn">
       <div class="icon"><i class="fas fa-broom"></i></div>
       <div class="text">Garbage Collect
         <small>Принудительная очистка памяти Python (освобождает ~50-200MB)</small>
       </div>
-      <button onclick="gc()">GC</button>
+      <button type="button" onclick="gc()">GC</button>
     </div>
     <div class="diag-action">
       <div class="icon"><i class="fas fa-search"></i></div>
       <div class="text">Полная диагностика
         <small>Проверить все системы и автоматически починить что можно</small>
       </div>
-      <button onclick="diagnose()">Запустить</button>
+      <button type="button" onclick="diagnose()">Запустить</button>
     </div>
     <div class="diag-action danger">
       <div class="icon"><i class="fas fa-power-off"></i></div>
       <div class="text">Перезагрузить весь бот
-        <small>⚠️ Прервёт работу бота на ~5-15 секунд. Только для критических случаев.</small>
+        <small><i class="fas fa-triangle-exclamation"></i> Прервёт работу бота на ~5-15 секунд. Только для критических случаев.</small>
       </div>
-      <button onclick="confirmRestart()">Restart</button>
+      <button type="button" onclick="confirmRestart()">Restart</button>
     </div>
   </div>
 </div>
@@ -168,7 +169,7 @@
 <div class="dash-box aimod-section">
   <div class="dash-box-head">
     <div class="dash-box-title"><i class="fas fa-list"></i> Последние ошибки</div>
-    <button onclick="loadErrors()"   style="background: none; border-radius: 6px;"><i class="fas fa-sync"></i> Обновить</button>
+    <button type="button" onclick="loadErrors()"   style="background: none; border-radius: 6px;"><i class="fas fa-sync"></i> Обновить</button>
   </div>
   <div class="dash-box-body" id="errorsBox"   style="max-height: 300px; overflow-y: auto;">
     <div   style="text-align: center;">
@@ -181,8 +182,21 @@
 (function() {
   'use strict';
   function load() {
-    fetch('/api/bot/health').then(r => r.json()).then(data => {
-      const h = data.current;
+    fetch('/api/bot/health').then(function (r) { return r.json(); }).then(function (data) {
+      /* бот офлайн / битый ответ не должен ронять страницу */
+      if (!data || data.error || !data.current) {
+        document.getElementById('botOnlineBadge').textContent = 'ОФЛАЙН';
+        document.getElementById('botOnlineBadge').className = 'badge badge-err';
+        document.getElementById('healthDot').className = 'dot err';
+        document.getElementById('healthStatus').textContent = 'Бот недоступен — проверьте запуск';
+        ['memVal','cpuVal','latVal','errVal','uptimeVal','guildsVal','usersVal','cogsVal','cmdsVal','threadsVal'].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.textContent = '—';
+        });
+        return;
+      }
+      const h = data.current || {};
+      const hist = Array.isArray(data.history) ? data.history : [];
       // Vitals
       const memEl = document.getElementById('memVal');
       memEl.textContent = h.memory_mb || 0;
@@ -196,20 +210,20 @@
       // Bot info
       document.getElementById('uptimeVal').textContent = formatUptime(h.uptime_sec);
       document.getElementById('guildsVal').textContent = h.guilds;
-      document.getElementById('usersVal').textContent = h.users.toLocaleString();
+      document.getElementById('usersVal').textContent = (h.users || 0).toLocaleString();
       document.getElementById('cogsVal').textContent = h.cogs_loaded;
       document.getElementById('cmdsVal').textContent = h.commands;
       document.getElementById('threadsVal').textContent = h.threads;
       // Status
-      const isOk = h.latency_ms < 300 && h.memory_mb < 700 && h.errors_last_min < 5;
+      const isOk = (h.latency_ms || 999) < 300 && (h.memory_mb || 999) < 700 && (h.errors_last_min || 0) < 5;
       document.getElementById('botOnlineBadge').textContent = isOk ? 'ОНЛАЙН' : 'ПРОБЛЕМЫ';
       document.getElementById('botOnlineBadge').className = 'badge ' + (isOk ? 'badge-ok' : 'badge-warn');
       document.getElementById('healthDot').className = 'dot ' + (isOk ? 'ok' : 'warn');
       document.getElementById('healthStatus').textContent = isOk ? 'Всё в порядке' : 'Есть проблемы';
       // Charts
-      renderChart('memChart', data.history.map(h => h.memory_mb), 400, 700);
-      renderChart('latChart', data.history.map(h => h.latency_ms), 300, 800);
-      renderChart('errChart', data.history.map(h => h.errors_last_min), 5, 15);
+      renderChart('memChart', hist.map(function (x) { return x.memory_mb; }), 400, 700);
+      renderChart('latChart', hist.map(function (x) { return x.latency_ms; }), 300, 800);
+      renderChart('errChart', hist.map(function (x) { return x.errors_last_min; }), 5, 15);
     }).catch(e => console.error(e));
   }
   function setVital(id, val, warn, crit) {
@@ -241,39 +255,39 @@
   window.hotReload = function() {
     showToast('Hot reload...', true);
     fetch('/api/bot/hot-reload', {method:'POST'}).then(r => r.json()).then(d => {
-      if (d.reloaded && d.reloaded.length) showToast('✅ Перезагружено: ' + d.reloaded.join(', '), true);
+      if (d.reloaded && d.reloaded.length) showToast('Перезагружено: ' + d.reloaded.join(', '), true);
       else showToast('Нет изменений', true);
       load();
     });
   };
   window.gc = function() {
     fetch('/api/bot/gc', {method:'POST'}).then(r => r.json()).then(d => {
-      showToast('🧹 GC: собрано ' + d.collected + ' объектов', true);
+      showToast('GC: собрано ' + d.collected + ' объектов', true);
       load();
     });
   };
   window.diagnose = function() {
     fetch('/api/bot/diagnose', {method:'POST'}).then(r => r.json()).then(d => {
       if (d.issues && d.issues.length) {
-        showToast('⚠️ ' + d.issues.length + ' проблем обнаружено', false);
+        showToast('' + d.issues.length + ' проблем обнаружено', false);
       } else {
-        showToast('✅ Всё в порядке', true);
+        showToast('Всё в порядке', true);
       }
       load();
     });
   };
   window.confirmRestart = function() {
-    if (confirm('Точно перезагрузить весь бот? Это прервёт работу на 5-15 секунд.')) {
+    window.askConfirm('Перезагрузка бота', 'Точно перезагрузить весь бот? Это прервёт работу на 5–15 секунд.', function () {
       fetch('/api/bot/restart', {method:'POST'}).then(r => r.json()).then(d => {
-        showToast('🔄 Бот перезагружается...', true);
+        showToast('Бот перезагружается...', true);
       });
-    }
+    }, { icon_fa: 'fa-arrows-rotate', okText: 'Перезапустить', danger: true });
   };
   function loadErrors() {
     fetch('/api/bot/errors').then(r => r.json()).then(errs => {
       const box = document.getElementById('errorsBox');
       if (!errs.length) {
-        box.innerHTML = '<div   style="text-align: center;"><i class="fas fa-check-circle"></i> Нет ошибок ✨</div>';
+        box.innerHTML = '<div   style="text-align: center;"><i class="fas fa-check-circle"></i> Нет ошибок</div>';
         return;
       }
       box.innerHTML = errs.slice(0, 15).map(e => {
@@ -297,8 +311,10 @@
   }
   load();
   loadErrors();
-  setInterval(load, 15000);  // refresh every 15s
-  setInterval(loadErrors, 30000);
+  /* п.1: телеметрия здоровья — мгновенно (2с), ошибки — 10с,
+     перезагрузки страницы нет, цифры меняются на месте */
+  if (window.setLiveRefresh) { window.setLiveRefresh(load, 1500); window.setLiveRefresh(loadErrors, 1500); }
+  else { setInterval(load, 1500); setInterval(loadErrors, 1500); }
 })();
 </script>
 {% endblock %}
