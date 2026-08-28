@@ -26,6 +26,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 os.makedirs('data', exist_ok=True)
 os.environ['DB_PATH'] = os.path.join(_TMP, 'data', 'bot.db')
+# Сервер из .env: часть когов регистрирует команды ЛОКАЛЬНО (guild-scoped)
+# через add_cog(..., guilds=Config.guild_objects()) — бюджет обязан
+# почистить и их (иначе /security, /backup, /ticket-* возвращаются в меню).
+os.environ['MAIN_GUILD_ID'] = '777'
 for _v in ('MOD_ONLY', 'DISABLED_COGS', 'EXTRA_COGS'):
     os.environ.pop(_v, None)
 
@@ -81,6 +85,8 @@ async def _load_all():
     tree_names = sorted(
         {c.name for c in bot.tree.get_commands()
          if not isinstance(c, discord.app_commands.ContextMenu)}
+        | {c.name for c in bot.tree.get_commands(guild=discord.Object(id=777))
+           if not isinstance(c, discord.app_commands.ContextMenu)}
     )
     await bot.close()
     return tree_names
@@ -96,9 +102,14 @@ print('== 3. Бюджет держится ==')
 check(len(tree_names) <= 95, f'меню умещается с запасом: {len(tree_names)} <= 95 (лимит 100)')
 check(len(tree_names) == len(set(tree_names)), 'имена в меню уникальны')
 
-print('== 4. Меню — ровно белый список ==')
+print('== 4. Меню — ровно белый список (глобально И на сервере) ==')
 stray = [n for n in tree_names if n not in keep]
 check(not stray, f'ничего лишнего вне KEEP_SLASH (лишнее: {stray[:5]})')
+for gone in ('security', 'security-toggle', 'security-newaccount', 'scan-link',
+             'backup', 'backup-list', 'ticket-panel', 'ticket-add',
+             'ticket-remove'):
+    check(gone not in tree_names,
+          f'guild-scoped {gone} не вернулся в меню (бюджет чистит и локальные команды)')
 realized = [n for n in keep if n in tree_names]
 missing = sorted(set(keep) - set(tree_names))
 print(f'  KEEP-имена реально в меню: {len(realized)}/{len(keep)}; отсутствуют оффлайн: {missing}')

@@ -113,6 +113,12 @@ def register(ctx):
                     except Exception as _ex:
                         _log.debug("api_bot_hot_reload(): подавлено: %s", _ex)
                 cog .cog_hash_cache [cog_name ]=h 
+        if reloaded :
+            try :
+                from slash_budget import apply_slash_budget
+                apply_slash_budget (bot .tree )
+            except Exception :
+                pass
         return jsonify ({'reloaded':reloaded })
 
 
@@ -420,6 +426,11 @@ def register(ctx):
         try :
             future =asyncio .run_coroutine_threadsafe (bot .load_extension (name ),bot .loop )
             future .result (timeout =10 )
+            try :
+                from slash_budget import apply_slash_budget
+                apply_slash_budget (bot .tree )
+            except Exception :
+                pass
             return jsonify ({'ok':True ,'name':name })
         except ModuleNotFoundError as e :
             return jsonify ({'error':f'Файл не найден: {e}'}),404 
@@ -480,6 +491,11 @@ def register(ctx):
         try :
             future =asyncio .run_coroutine_threadsafe (bot .reload_extension (name ),bot .loop )
             future .result (timeout =10 )
+            try :
+                from slash_budget import apply_slash_budget
+                apply_slash_budget (bot .tree )
+            except Exception :
+                pass
             return jsonify ({'ok':True ,'name':name })
         except Exception as e :
             return jsonify ({'error':f'Не удалось перезагрузить {name}: {e}'}),400 
@@ -504,4 +520,9 @@ def register(ctx):
                 results .append ({'name':ext ,'ok':True })
             except Exception as e :
                 results .append ({'name':ext ,'ok':False ,'error':str (e )})
+        try :
+            from slash_budget import apply_slash_budget
+            apply_slash_budget (bot .tree )
+        except Exception :
+            pass
         return jsonify ({'ok':True ,'results':results })

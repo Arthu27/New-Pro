@@ -66,6 +66,13 @@ def register(ctx):
                 await (bot .reload_extension (f'cogs.{cog_name}'))
             else :
                 await (bot .load_extension (f'cogs.{cog_name}'))
+            # Лишние (не из KEEP_SLASH) команды — сразу под бюджет:
+            # и глобальные, и локальные (guild-scoped).
+            try :
+                from slash_budget import apply_slash_budget
+                apply_slash_budget (bot .tree )
+            except Exception :
+                pass
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
             return jsonify ({'success':True })
