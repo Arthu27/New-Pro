@@ -5,9 +5,39 @@ import os
 import zipfile
 import sys
 
+
+def _load_dotenv():
+    """Поднять .env рядом со скриптом (как это делает сам бот).
+
+    Без этого UPDATE_BRANCH/UPDATE_REPO из .env сюда не доходят — демон
+    жил жёстко на main и откатывал рабочую ветку (все правки пропадали).
+    """
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    try:
+        with open(env_path, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+    except OSError:
+        pass
+
+
+_load_dotenv()
+
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
-REPO_API = "https://api.github.com/repos/Arthu27/moebius-bot/commits/main"
-ZIP_URL = "https://github.com/Arthu27/moebius-bot/archive/refs/heads/main.zip"
+
+# ВЕТКА ОБНОВЛЕНИЯ — из .env (UPDATE_BRANCH), по умолчанию main.
+# Раньше всё было зашито на main: машина с .env UPDATE_BRANCH=arena/... и
+# рабочей веткой arena НЕСООТВЕТСТВОВАЛА origin/main — этот демон сбрасывал
+# checkout на main с СТАРЫМ кодом и перезапускал бота (все свежие правки
+# откатывались, команды-дубли возвращались). Теперь сравниваемся со СВОЕЙ веткой.
+UPDATE_BRANCH = os.getenv("UPDATE_BRANCH", "main").strip() or "main"
+REPO_SLUG = os.getenv("UPDATE_REPO", "Arthu27/New-Pro").strip() or "Arthu27/New-Pro"
+REPO_API = f"https://api.github.com/repos/{REPO_SLUG}/commits/{UPDATE_BRANCH}"
+ZIP_URL = f"https://github.com/{REPO_SLUG}/archive/refs/heads/{UPDATE_BRANCH}.zip"
 
 # Автоматически определить директорию скрипта (VSCode workspace)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -194,7 +224,7 @@ def git_pull():
     лог("[AUTO-UPDATE] Выполняется git pull...")
     try:
         result = subprocess.run(
-            ["git", "pull", "origin", "main"],
+            ["git", "pull", "origin", UPDATE_BRANCH],
             cwd=BOT_DIR,
             capture_output=True,
             text=True,
@@ -206,8 +236,8 @@ def git_pull():
             # Conflict varsa force reset yap
             лог("[AUTO-UPDATE] Обнаружен конфликт, выполняется force reset...")
             subprocess.run(["git", "fetch", "origin"], cwd=BOT_DIR, capture_output=True, timeout=30)
-            subprocess.run(["git", "reset", "--hard", "origin/main"], cwd=BOT_DIR, capture_output=True, timeout=30)
-            лог("[AUTO-UPDATE] Force reset завершено")
+            subprocess.run(["git", "reset", "--hard", f"origin/{UPDATE_BRANCH}"], cwd=BOT_DIR, capture_output=True, timeout=30)
+            лог(f"[AUTO-UPDATE] Force reset на origin/{UPDATE_BRANCH} завершено")
         else:
             лог("[AUTO-UPDATE] Файлы обновлены")
 
@@ -347,7 +377,7 @@ def main():
             
             # Remote HEAD hash'ini al
             result = subprocess.run(
-                ["git", "rev-parse", "origin/main"],
+                ["git", "rev-parse", f"origin/{UPDATE_BRANCH}"],
                 cwd=BOT_DIR, capture_output=True, text=True, timeout=10
             )
             remote_hash = result.stdout.strip() if result.returncode == 0 else None
