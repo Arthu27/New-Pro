@@ -56,6 +56,16 @@ def _plural(n):
     return 'предупреждений'
 
 
+PUNISH_INFO = (
+    ('timeout', 'Таймаут', 'fa-clock',
+     'Нативный механизм Discord: бот замораживает участника через API — отдельная роль не нужна и не поддерживается.'),
+    ('kick', 'Кик', 'fa-door-open',
+     'Участник просто удаляется с сервера (может вернуться по ссылке) — роль не требуется.'),
+    ('unban', 'Разбан', 'fa-user-plus',
+     'Отмена бана/изоляции: бот сам снимает роль изоляции и восстанавливает доступ.'),
+)
+
+
 def settings_view(gid):
     """Что видит экран: готовые селекты + текущий выбор бота."""
     roles = PR.get(gid)
@@ -69,10 +79,19 @@ def settings_view(gid):
         mapping[k] = sid
         if available and sid not in avail_ids:
             unknown += 1
+    try:
+        from web.routes import ladder_panel as LP
+        warn_steps = LP.steps_of(LP.load_cfg(str(gid)))
+    except Exception as _ex:
+        _log.debug('role-settings warn-steps: %s', _ex)
+        warn_steps = []
     return {
         'success': True,
         'kinds': kinds_view(),
         'levels': levels_view(),
+        'punish_info': [{'key': k, 'label': lbl, 'icon': ico, 'hint': hint}
+                        for k, lbl, ico, hint in PUNISH_INFO],
+        'warn_steps': warn_steps,
         'mapping': mapping,
         'roles': available,
         'roles_count': len(available),
@@ -160,3 +179,36 @@ def register(ctx):
         view = settings_view(gid)
         view['message'] = 'Роли наказаний сохранены'
         return jsonify(view)
+
+    @app.route('/api/guild/<gid>/role-settings/warn-step', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_role_settings_warn_step_add(gid):
+        """Лестница авто-наказаний по предупреждениям — здесь же, рядом с ролями."""
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'success': False, 'error': 'Пустой или битый JSON'}), 400
+        from web.routes import ladder_panel as LP
+        ok, err, res = LP.add_flow(
+            ctx.active_guild_id() or gid,
+            data.get('count'), data.get('action'),
+            data.get('duration'), data.get('unit'))
+        if not ok:
+            return jsonify({'success': False, 'error': err}), 400
+        who = session.get('username', '?')
+        _fire_panel_notification(
+            'mod_settings', 'Ступень авто-наказаний сохранена',
+            f'{who}: {res.get("message", "")}')
+        return jsonify({'success': True, 'warn_steps': res['steps'],
+                        'message': res['message']})
+
+    @app.route('/api/guild/<gid>/role-settings/warn-step/<int:count>', methods=['DELETE'])
+    @login_required
+    @role_required('admin')
+    def api_role_settings_warn_step_del(gid, count):
+        from web.routes import ladder_panel as LP
+        ok, err, res = LP.remove_flow(ctx.active_guild_id() or gid, count)
+        if not ok:
+            return jsonify({'success': False, 'error': err}), 400
+        return jsonify({'success': True, 'warn_steps': res['steps'],
+                        'message': res['message']})

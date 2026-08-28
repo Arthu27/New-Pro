@@ -1581,6 +1581,64 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 .mpd-more:hover { background: var(--surface-3); }
 /* ═══════════════════════════════════════════════════════════════════════ */
 
+/* ── Лайтбокс доказательств (proofs): центр экрана, всегда целиком видно ── */
+.pf-lb {
+  position: fixed; inset: 0; z-index: 3000;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 24px;
+  background: rgba(9, 11, 15, .72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.pf-lb.open { display: flex; animation: pfLbFade .18s ease-out; }
+@keyframes pfLbFade { from { opacity: 0; } to { opacity: 1; } }
+.pf-lb-frame {
+  position: relative;
+  max-width: min(92vw, 960px);
+  max-height: 88vh;
+  animation: pfLbIn .2s cubic-bezier(.34, 1.35, .55, 1) both;
+}
+@keyframes pfLbIn {
+  from { opacity: 0; transform: translateY(10px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+.pf-lb-media {
+  display: block;
+  max-width: min(92vw, 960px);
+  max-height: 80vh;
+  width: auto; height: auto;
+  border-radius: 14px;
+  background: var(--surface-3);
+  box-shadow: 0 28px 70px rgba(2, 4, 10, .55);
+}
+video.pf-lb-media { background: #000; }
+.pf-lb-bar {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 10px; padding: 8px 12px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.pf-lb-cap {
+  flex: 1; min-width: 0;
+  font-size: 13px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pf-lb-close {
+  flex: none; width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface-2); color: var(--text);
+  cursor: pointer; font-size: 13px;
+}
+.pf-lb-close:hover { background: var(--surface-3); color: var(--ac); }
+@media (max-width: 640px) {
+  .pf-lb { padding: 10px; }
+  .pf-lb-media { max-height: 72vh; }
+}
+/* ═══════════════════════════════════════════════════════════════════════ */
+
 /* ── п.4 заказа: кастомные select-меню (.sshd) ───────────────────────── */
 .sshd { position: relative; min-width: 120px; }
 .sshd-src {                /* нативный select — данные, не интерфейс */

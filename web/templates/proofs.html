@@ -36,10 +36,9 @@
         <input type="text" id="pf-member" autocomplete="off" placeholder="@ник, имя или ID" required aria-label="Участник — поиск по нику или ID">
         <input type="hidden" id="pf-uid">
         <input type="hidden" id="pf-uname">
-        <div id="pf-member-list" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:600;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;max-height:250px;overflow:auto;box-shadow:var(--shadow-3)"></div>
-        <span style="font-size:11px;font-weight:400;color:var(--text-3)">Начните писать ник — выберите из списка, впишите ID или просто имя</span>
+        <span id="pf-member-st"></span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-3)">Аватарки и живой поиск — как везде в панели; можно вписать ID или просто ник вручную</span>
       </label>
-      <style>.pf-pick:hover { background: var(--ac-soft) !important; }</style>
       <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600">
         Наказание
         <select id="pf-action" aria-label="Наказание">
@@ -124,17 +123,17 @@
   </div>
 </div>
 
-<!-- Лайтбокс: фото и видео -->
-<div class="modal-overlay" id="pf-modal" style="display:none">
-  <div class="modal-box" style="max-width:820px">
-    <div class="modal-head">
-      <div><h3>Доказательство</h3><div class="sub" id="pf-modal-cap"></div></div>
-      <button type="button" class="close" id="pf-modal-close" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <img id="pf-modal-img" src="" alt="Демка" style="width:100%;border-radius:var(--r);background:var(--surface-3)">
-      <video id="pf-modal-video" controls autoplay playsinline
-             style="display:none;width:100%;border-radius:var(--r);background:var(--surface-3)"></video>
+<!-- Лайтбокс: фото и видео — центр экрана, всегда целиком видно,
+     Esc и клик по фону закрывают -->
+<div class="pf-lb" id="pf-modal" role="dialog" aria-modal="true" aria-label="Просмотр доказательства">
+  <div class="pf-lb-frame">
+    <img id="pf-modal-img" class="pf-lb-media" src="" alt="Демка">
+    <video id="pf-modal-video" class="pf-lb-media" controls autoplay playsinline style="display:none"></video>
+    <div class="pf-lb-bar">
+      <div class="pf-lb-cap" id="pf-modal-cap"></div>
+      <button type="button" class="pf-lb-close" id="pf-modal-close" aria-label="Закрыть просмотр">
+        <i class="fas fa-xmark"></i>
+      </button>
     </div>
   </div>
 </div>
@@ -276,7 +275,22 @@
     v.style.display = 'none';
     $('pf-modal-img').style.display = '';
     $('pf-modal-img').src = '';
-    $('pf-modal').style.display = 'none';
+    $('pf-modal').classList.remove('open');
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && $('pf-modal').classList.contains('open')) closeModal();
+  });
+
+  var lbFrameClick = function (e) { e.stopPropagation(); };
+  function openLb() {
+    var lb = $('pf-modal');
+    lb.classList.add('open');
+    lb.removeEventListener('click', closeModal);
+    lb.addEventListener('click', closeModal);         /* клик по фону закрывает */
+    var frame = lb.querySelector('.pf-lb-frame');
+    frame.removeEventListener('click', lbFrameClick);
+    frame.addEventListener('click', lbFrameClick);    /* внутри — нет */
   }
 
   function openImage(src, cap) {
@@ -284,7 +298,7 @@
     $('pf-modal-img').style.display = '';
     $('pf-modal-img').src = src;
     $('pf-modal-cap').textContent = cap || '';
-    $('pf-modal').style.display = 'flex';
+    openLb();
   }
 
   function openVideo(src, cap) {
@@ -293,7 +307,7 @@
     v.style.display = '';
     v.src = src;
     $('pf-modal-cap').textContent = cap || '';
-    $('pf-modal').style.display = 'flex';
+    openLb();
   }
 
   function load() {
@@ -352,58 +366,22 @@
 
   /* ── @поиск участника для демки: тегнул → выбрал → готово ── */
   var pfTimer = null;
-  function pfHideList() { $('pf-member-list').style.display = 'none'; }
-  function pfPick(el) {
-    $('pf-uid').value = el.dataset.id;
-    $('pf-uname').value = el.dataset.name;
-    $('pf-member').value = el.dataset.name + ' · ' + el.dataset.id;
-    pfHideList();
-  }
-  function pfRenderList(items) {
-    var box = $('pf-member-list');
-    if (!items.length) {
-      box.innerHTML = '<div style="padding:10px 12px;font-size:12.5px;color:var(--text-3)">Никого не нашлось — можно вписать ID вручную</div>';
-    } else {
-      box.innerHTML = items.map(function (m) {
-        var nm = m.display_name || m.name || m.id;
-        var av = m.avatar
-          ? '<img src="' + esc(m.avatar) + '" alt="" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex:none">'
-          : '<span style="width:26px;height:26px;border-radius:50%;background:var(--ac-soft);display:grid;place-items:center;flex:none"><i class="fas fa-user" style="font-size:11px;color:var(--ac)"></i></span>';
-        return '<button type="button" class="pf-pick" data-id="' + esc(m.id) + '" data-name="' + esc(nm) + '" ' +
-          'style="display:flex;align-items:center;gap:9px;width:100%;padding:8px 11px;background:none;border:none;cursor:pointer;color:inherit;text-align:left;font:inherit;font-size:13px">' +
-          av + '<span style="display:flex;flex-direction:column;line-height:1.25"><b>' + esc(nm) + '</b>' +
-          '<span style="font-size:11px;color:var(--text-3)">' + esc(m.username || '') + ' · ' + esc(m.id) + '</span></span></button>';
-      }).join('');
+  /* Стандартный member-пикер панели (п.3): аватарки, живой поиск,
+     пагинация, клавиши. opts.onPick — подхватываем имя из выбора. */
+  window.attachMemberPicker($('pf-member'), {
+    gid: {{ main_guild_id | tojson }},
+    statusEl: $('pf-member-st'),
+    onPick: function (uid, item) {
+      $('pf-uid').value = uid;
+      $('pf-uname').value = (item && (item.display_name || item.name)) || '';
     }
-    box.style.display = 'block';
-  }
-  function pfSearch(q) {
-    if (!q || q.length < 2 || /^\d{4,25}$/.test(q)) { pfHideList(); return; }
-    fetch('/api/proofs/member-search?q=' + encodeURIComponent(q))
-      .then(function (r) { return r.json(); })
-      .then(function (d) { pfRenderList((d && d.items) || []); })
-      .catch(function () {});
-  }
+  });
   $('pf-member').addEventListener('input', function () {
+    /* ручная правка — ранее выбранный id устарел */
     $('pf-uid').value = '';
     $('pf-uname').value = '';
-    var q = this.value.trim();
-    clearTimeout(pfTimer);
-    pfTimer = setTimeout(function () { pfSearch(q); }, 260);
-  });
-  $('pf-member-list').addEventListener('click', function (e) {
-    var b = e.target.closest('.pf-pick');
-    if (b) pfPick(b);
-  });
-  document.addEventListener('click', function (e) {
-    if (!e.target.closest('#pf-member') && !e.target.closest('#pf-member-list')) pfHideList();
-  });
-  $('pf-member').addEventListener('focus', function () {
-    var q = this.value.trim();
-    if (q.length >= 2 && !$('pf-uid').value) pfSearch(q);
   });
 
-  /* ── Прямая загрузка демки файлом (без ссылок) ── */
   $('pf-add-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var file = $('pf-file').files[0];

@@ -156,8 +156,15 @@ check(r.get_json().get('success') and PR.get('777') == {},
 print('== 5. шаблон: никаких ручных ID ==')
 tpl = open(os.path.join(ROOT, 'web', 'templates', 'role_settings.html'),
            encoding='utf-8').read()
-check('type="number"' not in tpl and 'type="text"' not in tpl,
-      'в шаблоне нет полей ручного ввода — только селекты')
+check('type="text"' not in tpl,
+      'в шаблоне нет полей ручного текстового ввода — роли только селектами')
+import re as _re
+_no_steps = _re.sub(r'<input[^>]*rsStep(?:Count|Dur)[^>]*>', '', tpl, flags=_re.S)
+check('type="number"' not in _no_steps,
+      'числовые поля — только у ступеней лестницы warn (не ID ролей)')
+check('rsStepAction' in tpl and 'warn-step' in tpl,
+      'настройки warn (авто-наказания по предупреждениям) на этой же странице')
+check('rsInfo' in tpl, 'секция «каждое наказание — своя карточка» на месте')
 check('/api/guild/' in tpl and '/role-settings' in tpl, 'шаблон ходит в свой API')
 check('data-k=' in tpl and 'rs-role-grid' in tpl, 'карточки селектов на месте')
 check('breadcrumbs' not in tpl and 'fa-save' in tpl, 'кнопка «Сохранить всё»')

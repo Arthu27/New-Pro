@@ -544,10 +544,16 @@
       if (!hit && listBox.querySelector('.mpd-row')) {
         var r = listBox.querySelector('.mpd-row');
         uid = r.getAttribute('data-uid');
+        found.forEach(function (m) { if (String(m.user_id) === String(uid)) hit = m; });
       }
       input.value = String(uid);
       closePanel();
       paint();
+      /* опциональный колбэк: кто именно выбран (имя/аватарка) — например,
+         страница доказательств берёт отсюда user_name, не подсматривая в DOM */
+      if (typeof opts.onPick === 'function') {
+        try { opts.onPick(String(uid), hit); } catch (e) {}
+      }
       /* выбор из списка должен сработать как обычное изменение поля */
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }

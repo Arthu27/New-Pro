@@ -102,9 +102,9 @@ check("/api/proofs/member-search" in modplus_src
       'эндпоинт /api/proofs/member-search (mod+, живой и демо режимы)')
 html = open(os.path.join(ROOT, 'web', 'templates', 'proofs.html'),
             encoding='utf-8').read()
-check('id="pf-member"' in html and 'pf-member-list' in html
-      and 'pf-pick' in html,
-      'форма загрузки: поле @поиска с выпадающим списком')
+check('id="pf-member"' in html and 'attachMemberPicker' in html
+      and 'onPick' in html,
+      'форма загрузки: стандартный member-пикер с аватарками и onPick')
 check('type="hidden" id="pf-uid"' in html and 'type="hidden" id="pf-uname"' in html,
       'форма: выбранный участник пишется в скрытые поля')
 

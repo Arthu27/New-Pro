@@ -35,6 +35,36 @@
 </div>
 
 <div class="rs-panel">
+  <h3><i class="fas fa-hammer"></i> Наказания без роли — тоже наглядно</h3>
+  <div class="rs-sub">Для каждого наказания — всё на своей карточке. Где роль не нужна технически
+    (таймаут Discord, кик, разбан) — карточка это объясняет, без «тупых» сюрпризов.</div>
+  <div class="rs-role-grid" id="rsInfo"></div>
+</div>
+
+<div class="rs-panel">
+  <h3><i class="fas fa-triangle-exclamation"></i> Настройки предупреждений (авто-наказания)</h3>
+  <div class="rs-sub">Накопил N предупреждений — бот сам выдаёт «мут / кик / бан» на выбранный срок.
+    Ступеней может быть несколько, действует последняя пройденная. Данные общие со страницей
+    «Лестница наказаний» — там эта же лестница рисуется картинкой.</div>
+  <div id="rsStepsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+  <div class="rs-step-add">
+    <input type="number" id="rsStepCount" min="1" max="100" placeholder="варнов" aria-label="Количество предупреждений"
+           style="width:92px">
+    <select id="rsStepAction" aria-label="Наказание за порог">
+      <option value="mute">Мут</option><option value="kick">Кик</option><option value="ban">Бан</option>
+    </select>
+    <input type="number" id="rsStepDur" min="0" max="10000" placeholder="срок" aria-label="Срок"
+           style="width:90px">
+    <select id="rsStepUnit" aria-label="Единицы срока">
+      <option value="minute">мин</option><option value="hour">час</option><option value="day">дн</option>
+    </select>
+    <button type="button" class="btn btn-sm" id="rsStepAdd"><i class="fas fa-plus"></i> Ступень</button>
+  </div>
+  <div class="rs-sub" style="margin:8px 0 0">Мут и бан ролью («Роли за наказания» выше) выигрывают у
+    нативного таймаута — они и будут применены, если назначены. Кик — без срока.</div>
+</div>
+
+<div class="rs-panel">
   <h3><i class="fas fa-layer-group"></i> Роли уровней предупреждений</h3>
   <div class="rs-sub">Участник с N предупреждениями получает роль ближайшего уровня не выше N —
     роль предыдущего уровня снимается автоматически, дублей не бывает.
@@ -67,6 +97,16 @@
 .rs-pill{display:none;align-items:center;gap:6px;font-size:11px;color:var(--text-2);border:1px solid var(--line-2);border-radius:999px;padding:3px 9px;width:fit-content}
 .rs-pill.rs-on{display:inline-flex}
 .rs-dot{display:inline-block;width:8px;height:8px;border-radius:50%;border:1px solid var(--line-2);flex-shrink:0}
+.rs-info{border-style:dashed;background:transparent}
+.rs-info .rs-role-name i{color:var(--text-3)}
+.rs-step-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rs-step-add input,.rs-step-add select{padding:8px 10px;background:var(--surface-2);border:1px solid color-mix(in srgb, var(--text) 10%, transparent);border-radius:8px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit}
+.rs-step-add input:focus,.rs-step-add select:focus{border-color:var(--ac)}
+.rs-step{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:color-mix(in srgb, var(--text) 3%, transparent);border:1px solid color-mix(in srgb, var(--text) 9%, transparent);border-radius:10px;padding:9px 12px}
+.rs-step b{font-size:12.5px;color:var(--text-1)}
+.rs-step span{font-size:11.5px;color:var(--text-3)}
+.rs-step .rs-lvl{font-weight:800;color:var(--ac);font-size:12px}
+.rs-step button{margin-left:auto}
 .rs-savebar{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
 .rs-save-note{font-size:11.5px;color:var(--text-3)}
 </style>
@@ -149,6 +189,11 @@ async function rsLoad() {
     $('rsLevels').innerHTML = (d.levels || []).map(function (k) {
       return rsCard(k, map[k.key] || '0');
     }).join('');
+    $('rsInfo').innerHTML = (d.punish_info || []).map(function (k) {
+      return '<div class="rs-role rs-info"><div class="rs-role-name"><i class="fas ' + k.icon + '"></i> ' +
+        esc(k.label) + '</div><div class="rs-role-hint">' + esc(k.hint) + '</div></div>';
+    }).join('');
+    rsRenderSteps(d.warn_steps || []);
     document.querySelectorAll('#rsKinds select, #rsLevels select').forEach(function (sel) {
       sel.addEventListener('change', refreshPills);
     });
@@ -184,6 +229,54 @@ async function rsSave() {
     btn.disabled = false;
   }
 }
+
+var rsSteps = [];
+var STEP_ACTION = { 'mute': 'Мут', 'kick': 'Кик', 'ban': 'Бан' };
+var STEP_UNIT = { 'minute': 'мин', 'hour': 'ч', 'day': 'д' };
+
+function rsRenderSteps(steps) {
+  rsSteps = steps.slice().sort(function (a, b) { return (a.count || 0) - (b.count || 0); });
+  if (!rsSteps.length) {
+    $('rsStepsList').innerHTML = '<div class="rs-sub" style="margin:0">Ступеней нет — бот только '
+      + 'записывает варны, авто-мер не выдаёт. Добавьте хотя бы «3 → мут 30 мин».</div>';
+    return;
+  }
+  $('rsStepsList').innerHTML = rsSteps.map(function (s) {
+    var lbl = STEP_ACTION[s.action] || s.action;
+    if (s.action !== 'kick' && s.duration) lbl += ' ' + s.duration + ' ' + (STEP_UNIT[s.unit] || s.unit);
+    return '<div class="rs-step"><span class="rs-lvl">' + esc(s.count) + '</span>' +
+      '<b>' + esc(lbl) + '</b><span>с {n} варна'.replace('{n}', esc(s.count)) + '</span>' +
+      '<button type="button" class="btn btn-sm btn-ghost" data-step-del="' + esc(s.count) + '" aria-label="Убрать ступень"><i class="fas fa-trash"></i></button></div>';
+  }).join('');
+}
+
+$('rsStepAdd').addEventListener('click', async function () {
+  var count = parseInt($('rsStepCount').value, 10) || 0;
+  var action = $('rsStepAction').value;
+  var dur = parseInt($('rsStepDur').value, 10);
+  if (isNaN(dur)) dur = action === 'kick' ? 0 : 10;
+  if (!count) { toast('Укажите, с какого количества варнов — например 3', false); return; }
+  try {
+    var d = await fetch('/api/guild/' + GUILD_ID + '/role-settings/warn-step', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count: count, action: action, duration: dur, unit: $('rsStepUnit').value })
+    }).then(function (r) { return r.json(); });
+    if (d.success) { toast(d.message || 'Ступень сохранена', true); rsRenderSteps(d.warn_steps || []); }
+    else toast(d.error || 'Ошибка', false);
+  } catch (e) { toast('Сеть моргнула', false); }
+});
+
+document.addEventListener('click', async function (e) {
+  var del = e.target.closest('[data-step-del]');
+  if (!del) return;
+  try {
+    var d = await fetch('/api/guild/' + GUILD_ID + '/role-settings/warn-step/' + del.dataset.stepDel,
+      { method: 'DELETE', credentials: 'same-origin' }).then(function (r) { return r.json(); });
+    if (d.success) { toast(d.message || 'Ступень убрана', true); rsRenderSteps(d.warn_steps || []); }
+    else toast(d.error || 'Ошибка', false);
+  } catch (e2) { toast('Сеть моргнула', false); }
+});
 
 $('rsSave').addEventListener('click', rsSave);
 rsLoad();
