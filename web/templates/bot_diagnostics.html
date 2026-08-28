@@ -311,8 +311,10 @@
   }
   load();
   loadErrors();
-  setInterval(load, 15000);  // refresh every 15s
-  setInterval(loadErrors, 30000);
+  /* п.1: телеметрия здоровья — мгновенно (2с), ошибки — 10с,
+     перезагрузки страницы нет, цифры меняются на месте */
+  if (window.setLiveRefresh) { window.setLiveRefresh(load, 2000); window.setLiveRefresh(loadErrors, 10000); }
+  else { setInterval(load, 2000); setInterval(loadErrors, 10000); }
 })();
 </script>
 {% endblock %}

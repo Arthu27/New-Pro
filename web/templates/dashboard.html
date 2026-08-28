@@ -304,7 +304,9 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     } catch (e) { /* индекс опционален */ }
   }
   loadServerHealth();
-  setInterval(loadServerHealth, 60000);
+  /* п.1: индекс здоровья — живой (5с), а не раз в минуту */
+  if (window.setLiveRefresh) window.setLiveRefresh(loadServerHealth, 5000);
+  else setInterval(loadServerHealth, 5000);
 })();
 </script>
 
