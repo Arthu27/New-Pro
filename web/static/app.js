@@ -1075,7 +1075,10 @@
     var userId = window.__panelUserId || '';
     var roomId = userId ? 'user_' + userId : 'global';
     var proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var wsUrl = proto + '//' + (window.location.hostname || 'localhost') + ':8765';
+    // PANEL_WS_URL из .env: для панели за доменом/туннелем (иначе
+    // браузер не достанет ws-порт и live-канал молча живёт на polling).
+    var wsUrl = window.PANEL_WS_URL ||
+      (proto + '//' + (window.location.hostname || 'localhost') + ':8765');
     try {
       var ws = new window.WebSocketClient({ url: wsUrl, roomId: roomId, userId: userId, autoConnect: true });
       window.wsClient = ws;

@@ -195,6 +195,18 @@ def inject_demo_mode ():
 # Авто-версии статики: ?v= по времени изменения файла — браузер сам подхватит
 # свежий JS/CSS после каждого обновления, вручную номера больше не крутим.
 @app .context_processor
+def inject_panel_ws ():
+    """Внешний WebSocket-адрес для live-обновлений панели.
+
+    Пусто (default) — браузер сам строит ws://хост:8765 и работает только
+    локально; при панели за доменом/туннелем укажи в .env:
+    PANEL_WS_URL=wss://panel.example.com/ws (если проброшен порт 8765)
+    — и live-канал (тикеты, статистика) оживёт и через домен.
+    """
+    return {'panel_ws_url': (os .environ .get ('PANEL_WS_URL','')or '').strip ()}
+
+
+@app .context_processor
 def inject_static_versions ():
     def static_v (filename ):
         try :
@@ -3683,7 +3695,16 @@ def api_voice_command ():
 
 
 if __name__ =='__main__':
-    app .run (host ='0.0.0.0',port =int (os .environ .get ('PANEL_PORT')or 5000 ),debug =True )
+    # Панель отдельным процессом (python web/app.py) — без бота; для
+    # «панель видит бота» запускай main.py (встроенный сервер).
+    _p_port =int (os .environ .get ('PANEL_PORT','')or 0 )
+    if not _p_port:
+        try :
+            from config import Config
+            _p_port =int (getattr (Config ,'PORT',0 )or 0 )
+        except Exception :
+            _p_port =0
+    app .run (host ='0.0.0.0',port =(_p_port or 5000 ),debug =False ,threaded =True )
 
     # Parola Sыfыrlama (login страница для) 
 import random as _random 
@@ -4044,8 +4065,11 @@ def api_activity_feed ():
     # WebSocket Server Initialization 
 if WEBSOCKET_ENABLED :
     try :
-    # Запуск WebSocket сервера в отдельном потоке
-        ws_thread =start_websocket_thread (host ='localhost',port =8765 )
+    # Запуск WebSocket сервера в отдельном потоке (адрес/порт из .env;
+    # при запуске ботом через main.py повторный вызов — no-op)
+        _ws_host =(os .environ .get ('WS_HOST','')or '').strip ()or 'localhost'
+        _ws_port =int (os .environ .get ('WS_PORT','')or 0 )or 8765
+        ws_thread =start_websocket_thread (host =_ws_host ,port =_ws_port )
         print ('[WebSocket] Сервер инициализирован')
     except Exception as e :
         print (f'[WebSocket] Ошибка инициализации: {e}')

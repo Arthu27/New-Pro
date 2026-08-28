@@ -263,9 +263,30 @@ def _have_gunicorn():
 
 
 def _start_web_server(app):
-    """Запуск подпроцесса Gunicorn. Если не получится — fallback на Werkzeug."""
+    """Запуск веб-панели.
+
+    ПО УМОЛЧАНИЮ — В ТОМ ЖЕ ПРОЦЕССЕ, ЧТО БОТ (Werkzeug, threaded).
+    Только так панель видит бота: web/app.py хранит bot_instance в памяти
+    процесса, и при отдельном процессе (gunicorn) он всегда None → панель
+    отвечает «Бот офлайн», изменения из панели не применяются к боту
+    (каналы, коги, синк команд, наказания...). Вот это и был разрыв
+    «я меняю тут — а там не работает».
+
+    Вернуть старые «внешний процесс без моста» (осознанно): PANEL_PROCESS=gunicorn
+    на своём риске — панель НЕ будет видеть бота.
+    """
     global _web_server_proc
-    if _have_gunicorn():
+    _port = int(os.environ.get('PANEL_PORT', '') or 0)
+    if not _port:
+        try:
+            from config import Config
+            _port = int(getattr(Config, 'PORT', 0) or 0)
+        except Exception:
+            _port = 0
+    _port = _port or 5001
+
+    _mode = (os.environ.get('PANEL_PROCESS', '') or '').strip().lower()
+    if _mode == 'gunicorn' and _have_gunicorn():
         try:
             cmd = [
                 sys.executable, '-m', 'gunicorn',
@@ -277,7 +298,9 @@ def _start_web_server(app):
                 stdout=sys.stdout, stderr=subprocess.STDOUT,
                 preexec_fn=os.setsid if hasattr(os, 'setsid') else None,
             )
-            print(f"[ВЕБ] Gunicorn запущен (pid={_web_server_proc.pid})")
+            print(f"[ВЕБ] Gunicorn запущен (pid={_web_server_proc.pid}) — "
+                  f"панель в ОТДЕЛЬНОМ процессе: бота она НЕ видит "
+                  f"(настройки из панели не применятся!)")
             return
         except Exception as e:
             print(f"[ВЕБ] Не удалось запустить Gunicorn, fallback на Werkzeug: {e}")
@@ -285,10 +308,12 @@ def _start_web_server(app):
     import logging
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     threading.Thread(
-        target=lambda: app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False),
+        target=lambda: app.run(host='0.0.0.0', port=_port, debug=False,
+                               use_reloader=False, threaded=True),
         daemon=True
     ).start()
-    print("[ВЕБ] Werkzeug (fallback) запущен")
+    print(f"[ВЕБ] Панель запущена ВМЕСТЕ С БОТОМ (единый процесс): "
+          f"http://localhost:{_port} — изменения из панели применяются сразу")
 
 
 def _stop_web_server():
@@ -854,8 +879,10 @@ async def main():
 
     try:
         from web.websocket_server import start_websocket_thread
-        start_websocket_thread()
-        log.info("WebSocket сервер запущен на порту 8765")
+        _ws_host = (os.environ.get('WS_HOST', '') or '').strip() or '0.0.0.0'
+        _ws_port = int(os.environ.get('WS_PORT', '') or 0) or 8765
+        start_websocket_thread(host=_ws_host, port=_ws_port)
+        log.info("WebSocket сервер запущен на %s:%s", _ws_host, _ws_port)
     except Exception as e:
         log.warning(f"WebSocket сервер не запущен: {e}")
 
