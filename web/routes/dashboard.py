@@ -164,6 +164,14 @@ def register(ctx):
         for mod_name ,mod_count in moderators .most_common (5 ):
             top_mods .append ({'name':mod_name ,'tickets_closed':mod_count })
 
+        # Индекс здоровья сервера — единый сервис (тестируемый без запроса)
+        try :
+            from services .health_index import compute_health
+            health =compute_health (active_guild_id ())
+        except Exception as _ex:
+            _log .debug ("api_dashboard_stats(): health: %s", _ex )
+            health =None
+
         return jsonify ({
         'total_tickets':total_tickets ,
         'closed_tickets':closed_tickets ,
@@ -174,9 +182,22 @@ def register(ctx):
         'category_labels':[c ['name']for c in top_categories ],
         'category_data':[c ['count']for c in top_categories ],
         'categories':top_categories ,
-        'top_moderators':top_mods 
+        'top_moderators':top_mods ,
+        'health':health 
         })
 
+
+    @app .route ('/api/dashboard/health')
+    @login_required
+    def api_dashboard_health ():
+        """Индекс здоровья сервера (0–100) с разложением по факторам."""
+        try :
+            from services .health_index import compute_health
+            return jsonify ({'success':True ,
+            'health':compute_health (active_guild_id ())})
+        except Exception as _ex:
+            _log .debug ("api_dashboard_health(): %s", _ex )
+            return jsonify ({'success':False ,'error':'Не удалось посчитать индекс'}),500
 
     @app .route ('/dashboard')
     @login_required 
