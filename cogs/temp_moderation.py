@@ -320,8 +320,8 @@ class TempModeration(commands.Cog):
                 # совсем свежие записи бота, ещё не сброшенные на диск
                 merged.extend(mem.values())
                 self._scheduled = merged
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug("temp_moderation: слияние отложенных с диском: %s", _ex)
         now = time.time()
         dirty = False
         for entry in list(self._scheduled):

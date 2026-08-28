@@ -275,7 +275,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
 <script>
 (function () {
   var ARC = 157;
-  var TONE_COLOR = { ok: 'var(--ok)', info: 'var(--info)', warn: 'var(--tone-warning, #f59e0b)', err: 'var(--err)' };
+  var TONE_COLOR = { ok: 'var(--ok)', info: 'var(--info)', warn: 'var(--warn, #f59e0b)', err: 'var(--err)' };
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   async function loadServerHealth() {
@@ -297,7 +297,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       $('srvHealthFactors').innerHTML = (h.factors || []).map(function (f) {
         return '<div class="hl-factor" title="' + esc(f.detail) + '">' +
           '<div class="nm"><i class="fas ' + esc(f.icon) + '"></i><span>' + esc(f.label) + '</span><small>' + esc(f.detail) + '</small></div>' +
-          '<div class="hl-bar"><i style="width:' + f.pct + '%;background:' + (f.pct >= 70 ? 'var(--ok)' : f.pct >= 40 ? 'var(--tone-warning,#f59e0b)' : 'var(--err)') + '"></i></div>' +
+          '<div class="hl-bar"><i style="width:' + f.pct + '%;background:' + (f.pct >= 70 ? 'var(--ok)' : f.pct >= 40 ? 'var(--warn,#f59e0b)' : 'var(--err)') + '"></i></div>' +
           '<div class="hl-pts">' + f.points + '<small style="color:var(--text-3);font-weight:600">/' + f.max + '</small></div></div>';
       }).join('');
       $('srvHealthHint').innerHTML = '<i class="fas fa-lightbulb"></i> ' + esc(h.hint || '');

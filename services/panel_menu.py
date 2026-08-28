@@ -70,7 +70,7 @@ MENU = [
          'section': 'investigation', 'description': 'Очередь пересмотра наказаний и вердикты',
          'access': 'Мод+', 'tone': 'info'},
         {'path': '/mod-schedule', 'label': 'Расписание', 'icon': 'fa-calendar-check',
-         'section': 'investigation', 'description': 'Истечения наказаний и отложенные действия',
+         'section': 'management', 'description': 'Истечения наказаний и отложенные действия',
          'access': 'Мод+', 'tone': 'info'},
         {'path': '/reports-queue', 'label': 'Репорты', 'icon': 'fa-flag',
          'section': 'investigation', 'description': 'Очередь жалоб участников из /report',

@@ -100,7 +100,8 @@ def _punishments_factor(gid, now_ts):
                 try:
                     if isinstance(rec, dict) and float(rec.get('until') or 0) > now_f:
                         active += 1
-                except (TypeError, ValueError):
+                except (TypeError, ValueError) as _ex:
+                    _log.debug('health_index: битая запись наказания %s: %s', path, _ex)
                     continue
         pts = max(0.0, W['punishments'] - 2 * active)
         detail = 'нет активных наказаний' if not active \
