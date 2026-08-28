@@ -51,15 +51,16 @@ for name, kind in (('modpanel', 'slash'), ('play', 'slash'),
 import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
 check(set(keep) == {'modpanel', 'play', 'апелляция', 'update',
-                    'afk', 'afk-remove'},
-      f'белый список слеш-меню = 6 команд (сейчас: {sorted(keep)})')
-for name in ('modpanel', 'play', 'апелляция', 'update', 'afk', 'afk-remove'):
+                    'afk', 'afk-remove',
+                    'ticket-panel', 'ticket-add', 'ticket-remove'},
+      f'белый список слеш-меню = 9 команд (сейчас: {sorted(keep)})')
+for name in ('modpanel', 'play', 'апелляция', 'update', 'afk', 'afk-remove',
+             'ticket-panel', 'ticket-add', 'ticket-remove'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
 
 # Урезанные из меню имена НЕ должны вернуться в KEEP_SLASH незаметно
 for gone in ('backup', 'backup-list', 'diagnose', 'health', 'hotreload',
-             'leave', 'logs-setup', 'ticket-add', 'ticket-panel',
-             'ticket-remove', 'help', 'warn', 'module'):
+             'leave', 'logs-setup', 'help', 'warn', 'module'):
     check(gone not in keep, f'{gone} убран из слеш-меню (заказ владельца)')
 
 # warn живёт ВНУТРИ /modpanel (а не отдельной командой)

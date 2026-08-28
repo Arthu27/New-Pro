@@ -106,10 +106,13 @@ print('== 4. Меню — ровно белый список (глобально
 stray = [n for n in tree_names if n not in keep]
 check(not stray, f'ничего лишнего вне KEEP_SLASH (лишнее: {stray[:5]})')
 for gone in ('security', 'security-toggle', 'security-newaccount', 'scan-link',
-             'backup', 'backup-list', 'ticket-panel', 'ticket-add',
-             'ticket-remove'):
+             'backup', 'backup-list', 'staff-panel', 'my-application'):
     check(gone not in tree_names,
           f'guild-scoped {gone} не вернулся в меню (бюджет чистит и локальные команды)')
+# тикеты вернул владелец — они обязаны быть в меню (guild-scoped)
+for need in ('ticket-panel', 'ticket-add', 'ticket-remove'):
+    check(need in tree_names,
+          f'тикетная {need} в меню (заказ «вернуть тикеты» — бюджета ей нет)')
 realized = [n for n in keep if n in tree_names]
 missing = sorted(set(keep) - set(tree_names))
 print(f'  KEEP-имена реально в меню: {len(realized)}/{len(keep)}; отсутствуют оффлайн: {missing}')

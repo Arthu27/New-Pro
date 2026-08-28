@@ -46,6 +46,14 @@ KEEP_SLASH = frozenset({
     # вход/выход обеими командами.
     'afk',
     'afk-remove',
+    # Тикеты (2026-08-29 «куда пропали тикеты»): вернул в меню.
+    # ticket-panel — панель выбора категории в канал (админ);
+    # ticket-add / ticket-remove — добавить/убрать участника в тикете
+    # (мод, manage_channels). Внутри тикета меню кнопок (➕/➖/📣/🗑)
+    # приходит автоматически — TicketManageView.
+    'ticket-panel',
+    'ticket-add',
+    'ticket-remove',
 })
 
 
