@@ -128,7 +128,9 @@ async function chsSave(key) {
   var d = await r.json().catch(function () { return {}; });
   if (r.ok && d.success) {
     CHS_ROUTES = CHS_ROUTES.map(function (x) {
-      if (x.key === key) x.channel_id = Number(cid) || 0;
+      /* id канала — снежинка Discord (19 цифр): Number() ломает цифры,
+         держим строкой («0» — авто-режим = null) */
+      if (x.key === key) x.channel_id = cid === '0' ? null : String(cid);
       return x;
     });
     render();  // сразу, без перезагрузки списка — никакой вспышки

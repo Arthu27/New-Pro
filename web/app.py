@@ -12,7 +12,10 @@ import random
 import string 
 import hashlib 
 import math 
-from flask import Flask ,render_template ,request ,jsonify ,session ,redirect ,url_for ,send_from_directory 
+from flask import Flask ,render_template ,request ,session ,redirect ,url_for ,send_from_directory 
+# jsonify ВСЕХ ответов панели — из web.routes._common: снежинки Discord
+# (>2^53) уходят клиенту строкой, иначе JS ломает цифры id.
+from web.routes._common import jsonify
 import discord 
 from discord .ext import commands 
 import asyncio 
@@ -481,7 +484,20 @@ def _handle_unexpected_error (e ):
     return ("Internal Сервер Error",500 )
 
     # Фиксированный ID сервера — используется первый найденный ботом сервер; меняется в панели
-MAIN_GUILD_ID =os .getenv ('MAIN_GUILD_ID','')  # задаётся в .env; без него контекст берёт первый сервер бота
+def _norm_guild_id(raw):
+    """ID сервера из .env → чистые цифры.
+
+    Хозяева вставляют значение с пробелами/кавычками/комментарием
+    ('123 ', '\"123\"', '123 # мой сервер'): сравнение гейта
+    /api/guild/<id> шло против грязной строки, и панель отвечала
+    404 «Другие серверы бота недоступны» на все живые API. config.py
+    бота чистит ID числом давно (clean_number) — панель делает то же.
+    """
+    return ''.join(
+        ch for ch in str(raw or '') if '0' <= ch <= '9')
+
+
+MAIN_GUILD_ID = _norm_guild_id(os.getenv('MAIN_GUILD_ID', ''))  # задаётся в .env; без него контекст берёт первый сервер бота
 
 # Роли панели (от низшей к высшей). Куратор — старший модератор:
 # видит всё модерское + тикеты/сообщество, настраивается владельцем

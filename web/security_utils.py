@@ -1,6 +1,7 @@
 """Утилиты безопасности и производительности"""
 from functools import wraps
-from flask import session, jsonify, request
+from flask import session, request
+from web.routes._common import jsonify
 import re
 import time
 from collections import defaultdict

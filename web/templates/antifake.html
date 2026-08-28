@@ -212,7 +212,7 @@ document.addEventListener('click', function (e) {
   if (c && CAN_EDIT) {
     var uid = c.dataset.clear;
     window.confirmAction('Обнулить страйки участника?', 'Счётчик рекламы начнётся с нуля.', function () {
-      post('/strikes/clear', { user_id: Number(uid) }, function (r) {
+      post('/strikes/clear', { user_id: String(uid) }, function (r) {
         showMsg('afStMsg', true, r.message);
         renderStrikes(r.strikes);
       }, 'afStMsg');

@@ -295,11 +295,12 @@ async function msSave(part) {
   if (part === 'wl') body.temp_whitelist = WL;
   if (part === 'roles') {
     body.punish_roles = {
-      mute: parseInt(document.getElementById('msRoleMute').value, 10) || 0,
-      vmute: parseInt(document.getElementById('msRoleVmute').value, 10) || 0,
-      ban: parseInt(document.getElementById('msRoleBan').value, 10) || 0
+      /* id ролей/каналов — снежинки Discord: строки, не parseInt (>2^53 ломает) */
+      mute: document.getElementById('msRoleMute').value || '0',
+      vmute: document.getElementById('msRoleVmute').value || '0',
+      ban: document.getElementById('msRoleBan').value || '0'
     };
-    body.appeal_menu_channel = parseInt(document.getElementById('msMenuChannel').value, 10) || 0;
+    body.appeal_menu_channel = document.getElementById('msMenuChannel').value || '0';
   }
   var r = await fetch('/api/guild/' + GUILD_ID + '/mod-settings', {
     method: 'POST', credentials: 'same-origin',

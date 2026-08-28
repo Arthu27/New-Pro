@@ -10,7 +10,34 @@ from logger import get_logger
 
 _log = get_logger("routes_extra")
 
-from flask import render_template ,session ,redirect ,url_for ,request ,jsonify ,Response 
+from flask import render_template ,session ,redirect ,url_for ,request ,Response 
+from flask import jsonify as _flask_jsonify
+
+# ── Снежинки Discord в JSON ─────────────────────────────────────────────
+# JavaScript хранит числа как double: int > 2^53 (а id каналов/ролей —
+# 18..19 цифр, т.е. в ~300 раз больше) при разборе JSON необратимо теряет
+# цифры. Симптом: «выбрал канал посреди списка — а показался другой /
+# выбор слетел». По контракту Discord такие id и идут строками, поэтому
+# ВСЕ int > 2^53 из API панели уходят клиенту строкой.
+_JS_SAFE_INT_MAX = (1 << 53) - 1
+
+
+def _json_snow(obj):
+    if isinstance(obj, dict):
+        return {k: _json_snow(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_snow(v) for v in obj]
+    if isinstance(obj, int) and not isinstance(obj, bool):
+        if obj > _JS_SAFE_INT_MAX or obj < -_JS_SAFE_INT_MAX:
+            return str(obj)
+    return obj
+
+
+def jsonify(*args, **kwargs):
+    """jsonify с сохранением снежинок (>2^53 int → str)."""
+    return _flask_jsonify(
+        *[_json_snow(a) for a in args],
+        **{k: _json_snow(v) for k, v in kwargs.items()})
 import os ,json 
 import time 
 import math 

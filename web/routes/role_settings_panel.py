@@ -13,7 +13,8 @@
 """
 import re
 
-from flask import render_template, session, jsonify, request
+from flask import render_template, session, request
+from web.routes._common import jsonify
 
 from services import punish_roles as PR
 from web.routes._common import _fire_panel_notification, _log

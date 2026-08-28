@@ -148,7 +148,7 @@ async function pdPost(body, btn) {
 
 document.getElementById('pdSave').addEventListener('click', function () {
   pdPost({
-    channel_id: parseInt(document.getElementById('pdChannel').value, 10) || 0,
+    channel_id: document.getElementById('pdChannel').value || '0',
     enabled: document.getElementById('pdEnabled').checked
   }, this).then(function (d) { if (d) toast('Сохранено — мост уже работает', true); });
 });
