@@ -85,7 +85,7 @@
     var sel = $('alert_channel_id');
     if (sel && sel.options.length <= 1) {
       attachSelectPicker(sel,
-        { gid: currentGuildId, kind: 'text', noneLabel: '— мод-лог —' });
+        { search: true, gid: currentGuildId, kind: 'text', noneLabel: '— мод-лог —' });
     }
   }
   function attachPickers() {

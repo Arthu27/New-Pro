@@ -192,9 +192,9 @@ function render(d) {
     if (!window._bdPickers) {
       window._bdPickers = true;
       attachSelectPicker(document.getElementById('bdSetChannel'),
-        {gid: GID, kind: 'text', noneLabel: '— выберите канал —'});
+        { search: true,gid: GID, kind: 'text', noneLabel: '— выберите канал —'});
       attachSelectPicker(document.getElementById('bdSetRole'),
-        {gid: GID, kind: 'role', noneLabel: '— роль не выдаётся —'});
+        { search: true,gid: GID, kind: 'role', noneLabel: '— роль не выдаётся —'});
       bindCtrlS(bdSaveSettings);
       window._bdDirty = dirtyTrack(['bdSetChannel', 'bdSetRole', 'bdSetGift', 'bdSetMsg'].map(function (id) { return document.getElementById(id); }));
     }

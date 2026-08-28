@@ -1187,6 +1187,14 @@ code, .mono, .num, kbd { font-family: var(--mono); }
   display: flex; align-items: center; gap: 6px;
 }
 
+/* строка поиска над длинным select-пикером (pickers.js attachSelectPicker(search)) */
+.picker-search{display:block;width:100%;margin:0 0 6px;padding:8px 11px;
+  background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;
+  color:var(--text);font:inherit;font-size:13px;outline:none}
+.picker-search:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--ac-soft)}
+.picker-search.active{border-color:var(--ac-line)}
+.picker-search::placeholder{color:var(--text-3)}
+
 .form-input, .field-input, .inp, input[type="text"], input[type="password"],
 input[type="number"], input[type="search"], input[type="email"], input[type="url"],
 input[type="datetime-local"], input[type="date"], input[type="time"], select, textarea {

@@ -267,11 +267,11 @@ var GID = {{ guild_id | tojson }};
 
 /* каналы только из живых списков — ручной ввод ID убран по заказу */
 attachSelectPicker(document.getElementById('ml-channel'),
-  { gid: GID, kind: 'text', noneLabel: '— выберите канал —' });
+  { search: true, gid: GID, kind: 'text', noneLabel: '— выберите канал —' });
 function nsEnsurePicker(){
   var el = document.getElementById('ns-channel');
   if (el && el.options.length <= 1) {
-    attachSelectPicker(el, { gid: GID, kind: 'text',
+    attachSelectPicker(el, { search: true, gid: GID, kind: 'text',
       noneLabel: '— канал логов —', noneValue: '0' });
   }
 }

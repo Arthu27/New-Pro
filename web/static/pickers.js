@@ -100,6 +100,42 @@
      каналами/ролями сервера; value — строка id, «ничего» = noneValue ('').
      Если выбранный ранее id удалён с сервера — добавляет его меткой
      «(удалён)» и не теряет значение. */
+  /* Нормализация для поиска: регистр, эмодзи и лишние пробелы не мешают
+     («Мой #Чат*» ищется как «мой чат», «MyChat», «мой  чат»). */
+  function pickerNorm(s) {
+    return String(s || '').toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .replace(/\s+/g, ' ').trim();
+  }
+  window.pickerNorm = pickerNorm;  // для тестов и нестандартных поисков
+
+  /* Поиск внутри длинного <select>: строка поиска над списком. Выбранный
+     вариант и «none» видны всегда; ФИЛЬТР НИКОГДА не меняет значение —
+     никаких случайных выборов (пункт 5.1) и сбросов других полей (5.2). */
+  window.attachSelectSearch = function (sel, input) {
+    if (!sel || !input) return null;
+    function apply() {
+      var q = pickerNorm(input.value);
+      var cur = String(sel.value || '');
+      Array.prototype.forEach.call(sel.options, function (opt) {
+        var isNone = opt === sel.options[0];
+        var keep = opt.value === cur;
+        if (isNone || keep || !q) { opt.hidden = false; return; }
+        opt.hidden = pickerNorm(opt.textContent).indexOf(q) === -1;
+      });
+      input.classList.toggle('active', !!q);
+    }
+    input.addEventListener('input', apply);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { input.value = ''; apply(); }
+    });
+    sel.addEventListener('focus', function () {
+      if (input.value) { input.value = ''; apply(); }
+    });
+    sel._pickerSearchApply = apply;  // attachSelectPicker вызывает после fill
+    return input;
+  };
+
   window.attachSelectPicker = function (sel, opts) {
     if (!sel) return null;
     opts = opts || {};
@@ -113,6 +149,26 @@
     function source(data) {
       if (kind === 'role') return data.roles;
       return (data.channels || []).filter(function (c) { return c.type === kind; });
+    }
+
+    /* opts.search: над длинным списком — строка поиска (регистр/эмодзи/пробелы
+       не важны, значение фильтром никогда не меняется) */
+    var searchInput = null;
+    if (opts.search && !sel._pickerSearchAttached) {
+      sel._pickerSearchAttached = true;
+      searchInput = document.createElement('input');
+      searchInput.type = 'search';
+      searchInput.className = 'picker-search';
+      searchInput.placeholder = opts.searchPlaceholder || 'Поиск по названию…';
+      searchInput.setAttribute('aria-label',
+        opts.searchAria || 'Поиск по названию в списке');
+      searchInput.autocomplete = 'off';
+      sel.parentNode.insertBefore(searchInput, sel);
+      window.attachSelectSearch(sel, searchInput);
+    } else {
+      searchInput = sel.previousElementSibling && sel.previousElementSibling.classList
+        && sel.previousElementSibling.classList.contains('picker-search')
+        ? sel.previousElementSibling : null;
     }
 
     window.pickerLoad(gid).then(function (data) {
@@ -132,6 +188,9 @@
       }
       sel.innerHTML = html;
       sel.value = has && keep ? keep : String(noneValue);
+      if (sel._pickerSearchApply) {  // повторный прогон фильтра по свежим опциям
+        sel._pickerSearchApply();
+      }
     }).catch(function () {
       /* бот офлайн/сеть: оставляем как есть, пикер не ломает страницу */
     });

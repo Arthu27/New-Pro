@@ -271,9 +271,9 @@ class Moderation (commands .Cog ):
         "Ссылка на доказательство спросится, если панель этого требует."),
         inline =False )
         if interaction .guild .icon :
-            embed .set_footer (text =f"{interaction.guild.name} · панель видите только вы · меню живёт 5 минут",icon_url =interaction .guild .icon .url )
+            embed .set_footer (text =f"{interaction.guild.name} · меню живёт 5 минут",icon_url =interaction .guild .icon .url )
         else :
-            embed .set_footer (text =f"{interaction.guild.name} · панель видите только вы · меню живёт 5 минут")
+            embed .set_footer (text =f"{interaction.guild.name} · меню живёт 5 минут")
         # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
         # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
         await _respond (interaction ,embed =embed ,view =ModPanelView (self ,interaction .user ,allowed ),ephemeral =True )
@@ -1149,7 +1149,7 @@ class ModHelpButton(discord.ui.Button):
         embed = discord.Embed(
             title='❓ Шпаргалка по панели',
             description=(
-                'Панель личная — видит только вызвавший.\n'
+                'Панель личная — только вызвавший модератор нажимает её меню.\n'
                 'Меню живёт 5 минут, потом просто вызовите /modpanel снова.'),
             color=0x5865F2)
         embed.add_field(

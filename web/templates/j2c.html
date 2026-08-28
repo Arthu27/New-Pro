@@ -182,9 +182,9 @@ function render(d) {
     if (!window._j2Pickers) {
       window._j2Pickers = true;
       attachSelectPicker(document.getElementById('j2Lobby'),
-        {gid: GID, kind: 'voice', noneLabel: '— без лобби —', value: String(d.config.lobby_id || '')});
+        { search: true,gid: GID, kind: 'voice', noneLabel: '— без лобби —', value: String(d.config.lobby_id || '')});
       attachSelectPicker(document.getElementById('j2Category'),
-        {gid: GID, kind: 'category', noneLabel: '— как у лобби —', value: String(d.config.category_id || '')});
+        { search: true,gid: GID, kind: 'category', noneLabel: '— как у лобби —', value: String(d.config.category_id || '')});
       bindCtrlS(j2Save);
       window._j2Dirty = dirtyTrack(['j2Enabled', 'j2Lobby', 'j2Category', 'j2Limit', 'j2Template'].map(function (id) { return document.getElementById(id); }));
     }

@@ -703,11 +703,11 @@
     function fillNotifyPickers(cfg) {
       var gid = notifyGuild.value;
       cfg = cfg || {};
-      attachSelectPicker(notifyCid, { gid: gid, kind: 'text', noneLabel: 'не настроено — канал уведомлений', value: String(cfg.notify_channel_id || '') });
-      attachSelectPicker(rulesCid, { gid: gid, kind: 'text', noneLabel: 'не выбран', value: String(cfg.rules_channel_id || '') });
-      attachSelectPicker(modRid, { gid: gid, kind: 'role', noneLabel: 'не выбрана', value: String(cfg.mod_role_id || '') });
-      attachSelectPicker(adminRid, { gid: gid, kind: 'role', noneLabel: 'не выбрана', value: String(cfg.admin_role_id || '') });
-      attachSelectPicker(ownerRid, { gid: gid, kind: 'role', noneLabel: 'не выбрана', value: String(cfg.owner_role_id || '') });
+      attachSelectPicker(notifyCid, { search: true, gid: gid, kind: 'text', noneLabel: 'не настроено — канал уведомлений', value: String(cfg.notify_channel_id || '') });
+      attachSelectPicker(rulesCid, { search: true, gid: gid, kind: 'text', noneLabel: 'не выбран', value: String(cfg.rules_channel_id || '') });
+      attachSelectPicker(modRid, { search: true, gid: gid, kind: 'role', noneLabel: 'не выбрана', value: String(cfg.mod_role_id || '') });
+      attachSelectPicker(adminRid, { search: true, gid: gid, kind: 'role', noneLabel: 'не выбрана', value: String(cfg.admin_role_id || '') });
+      attachSelectPicker(ownerRid, { search: true, gid: gid, kind: 'role', noneLabel: 'не выбрана', value: String(cfg.owner_role_id || '') });
     }
 
     function loadNotifyConfig() {

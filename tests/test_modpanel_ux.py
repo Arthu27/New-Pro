@@ -148,8 +148,8 @@ inter4 = FakeInter(GUILD, MOD)
 run(Moderation.modpanel.callback(cog, inter4))
 sent = inter4.response.sent[-1]
 check(sent['ephemeral'] is True, 'панель модерации отправляется ephemeral (личная)')
-check('видите только вы' in (sent['embed'].footer.text or ''),
-      'футер честно говорит «видите только вы»')
+check('меню живёт 5 минут' in (sent['embed'].footer.text or ''),
+      'футер честно говорит «меню живёт 5 минут»')
 view = sent.get('view')
 kids = list(view.children) if view is not None else []
 from cogs.moderation import ModHelpButton  # noqa: E402

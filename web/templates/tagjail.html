@@ -157,8 +157,8 @@
     /* заполняем живые select'ы из picker-кэша; начальное значение — из конфига */
     var roleSel = document.querySelector('[data-live="jail_role_id"]');
     var chanSel = document.querySelector('[data-live="log_channel_id"]');
-    if (roleSel) attachSelectPicker(roleSel, { gid: TJG, kind: 'role', noneValue: '', noneLabel: 'не выбрано', value: String(TJ.config.jail_role_id || '') });
-    if (chanSel) attachSelectPicker(chanSel, { gid: TJG, kind: 'text', noneValue: '', noneLabel: 'мод-лог по умолчанию', value: String(TJ.config.log_channel_id || '') });
+    if (roleSel) attachSelectPicker(roleSel, { search: true, gid: TJG, kind: 'role', noneValue: '', noneLabel: 'не выбрано', value: String(TJ.config.jail_role_id || '') });
+    if (chanSel) attachSelectPicker(chanSel, { search: true, gid: TJG, kind: 'text', noneValue: '', noneLabel: 'мод-лог по умолчанию', value: String(TJ.config.log_channel_id || '') });
   }
 
   function saveConfig() {

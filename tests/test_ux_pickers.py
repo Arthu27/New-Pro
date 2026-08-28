@@ -283,6 +283,50 @@ check('nsEnsurePicker' in t and "var GID = {{ guild_id | tojson }};" in t,
 t = tpl('j2c.html')
 check('>Канал-лобби<' in t, 'j2c: подпись поля без «ID»')
 
+print('== 7. Поиск внутри select (5.1–5.3) ==')
+check('window.attachSelectSearch' in js and 'window.pickerNorm' in js,
+      'в pickers.js есть поиск по select и нормализатор')
+search_fn = js[js.index('window.attachSelectSearch'):]
+search_fn = search_fn[:search_fn.index('window.attachSelectPicker')]
+check('sel.value =' not in search_fn,
+      'фильтр никогда не меняет значение — случайные выборы исключены (5.1)')
+check('opt.value === cur' in search_fn and 'sel.options[0]' in search_fn,
+      'выбранный вариант и none видны при любом фильтре — ничего не сбрасывается (5.2)')
+check('Escape' in search_fn and 'focus' in search_fn,
+      'Escape и фокус мягко возвращают полный список')
+pick_fn = js[js.index('window.attachSelectPicker'):]
+pick_fn = pick_fn[:pick_fn.index('window.attachMemberPicker')]
+check('opts.search' in pick_fn and 'picker-search' in pick_fn,
+      'attachSelectPicker(search: true) создаёт строку поиска над списком')
+check('_pickerSearchApply' in pick_fn,
+      'после заполнения фильтр прогоняется по свежим опциям (без событий)')
+check('toLowerCase()' in js and '\\p{L}' in js and '\\p{N}' in js,
+      'нормализация: регистр + любые не-буквы/цифры (эмодзи включительно)')
+check('.picker-search' in css, 'стили строки поиска в style.css')
+
+# search: true подключён в конвертированных панелях
+SEARCH_FILES = ('anime_daily.html', 'birthdays.html', 'j2c.html', 'leaderboards.html',
+                'meetings.html', 'antiraid.html', 'automation.html', 'tagjail.html',
+                'ticket_settings.html')
+miss = [f for f in SEARCH_FILES if 'search: true' not in tpl(f)]
+check(not miss, f'все селект-пикеры с поиском ({miss or "9/9"})')
+
+# живой прогон фильтра в node (если доступен)
+import shutil as _sh  # noqa: E402
+import subprocess as _sp  # noqa: E402
+if _sh.which('node'):
+    hn = os.path.join(ROOT, 'tests', '_picker_search_harness.js')
+    try:
+        run = _sp.run(['node', hn], capture_output=True, text=True, timeout=30)
+        import json as _json
+        data = _json.loads(run.stdout.strip().splitlines()[-1]) if run.stdout.strip() else {}
+        check(bool(data.get('ok')), 'node-harness: поведение фильтра по факту (%s)'
+              % ('ok' if data.get('ok') else '; '.join(data.get('errors', [])[:3])))
+    except Exception as _ex:
+        check(False, f'node-harness не отработал: {_ex}')
+else:
+    check(True, 'node нет — harness пропущен (статика выше покрывает контракт)')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

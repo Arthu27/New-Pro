@@ -99,7 +99,7 @@
 <script>
 var GID = '{{ guild_id }}';
 attachSelectPicker(document.getElementById('mtRoleInp'),
-  { gid: GID, kind: 'role', noneLabel: '— выберите роль —' });
+  { search: true, gid: GID, kind: 'role', noneLabel: '— выберите роль —' });
 var API = '/api/guild/' + GID + '/meetings';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
 var STATUS = null;

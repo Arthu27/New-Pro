@@ -163,7 +163,7 @@
 
   /* выбор участника/канала — только из живых списков (без ручного ID) */
   attachMemberPicker($('lbRankInp'), { gid: GID, statusEl: $('lbRankStatus') });
-  attachSelectPicker($('lbSendCh'), { gid: GID, kind: 'text', noneLabel: '— выберите канал —' });
+  attachSelectPicker($('lbSendCh'), { search: true, gid: GID, kind: 'text', noneLabel: '— выберите канал —' });
 
   function fmtN(n) { return Number(n || 0).toLocaleString('ru-RU'); }
   function fmtTotal(total) {

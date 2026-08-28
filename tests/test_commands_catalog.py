@@ -47,8 +47,9 @@ from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
 # -6 музыкальных управлялок (pause/resume/skip/queue/nowplaying/leave): остался /play с пультом
-check(data['total'] == 21, f"lean: собрано {data['total']} живых команд (все — слеш, с /proof)")
-check(data['slash'] == 21 and data['prefix'] == 0,
+# +1 служебная /update (самообновление владельцем, заказ 2026-08-28)
+check(data['total'] == 22, f"lean: собрано {data['total']} живых команд (все — слеш, с /proof)")
+check(data['slash'] == 22 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')

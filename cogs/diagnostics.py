@@ -43,6 +43,8 @@ import asyncio
 import sys 
 import traceback 
 import hashlib 
+import tempfile 
+import shutil 
 import subprocess 
 from datetime import datetime ,timedelta, timezone
 from collections import defaultdict ,deque 
@@ -445,6 +447,54 @@ class Diagnostics (commands .Cog ):
         if h >0 :
             return f"{h}ч {m}м {s}с"
         return f"{m}м {s}с"
+
+
+    @app_commands .command (name ="update",description ="Обновить бота до свежей версии и перезапустить (владелец бота)")
+    async def update_cmd (self ,interaction :discord .Interaction ):
+        """Полный цикл сам: скачать → проверить целостность → заменить файлы
+        (данные и .env не трогает) → перезапустить → отчитаться после вкл."""
+        if not await _owner_only (interaction ):
+            return
+        await interaction .response .defer (ephemeral =True )
+        from services import self_update as SU
+        from config import Config as _Cfg
+        bot_dir =os .path .dirname (os .path .dirname (os .path .abspath (__file__ )))
+        edit =interaction .followup .edit_message
+        msg =await interaction .followup .send (
+            f" Обновление: качаю ветку **{_Cfg.UPDATE_BRANCH}** из `{_Cfg.UPDATE_REPO}`…",wait =True )
+        tmp_dir =tempfile .mkdtemp (prefix ='hakumo_dl_')
+        try :
+            ok ,err ,zip_path =await asyncio .to_thread (SU .download_zip ,tmp_dir )
+            if not ok :
+                await edit (message_id =msg .id ,content =f" Не вышло скачать новую версию: {err }. Ничего не трогал.")
+                return
+            await edit (message_id =msg .id ,content =" Скачано. Проверяю целостность архива…")
+            ok ,err ,meta =await asyncio .to_thread (SU .verify_zip ,zip_path )
+            if not ok :
+                await edit (message_id =msg .id ,content =f" Архив не прошёл проверку: {err }. Обновления не было.")
+                return
+            _name_pairs ,root ,rel =meta
+            ok ,err =await asyncio .to_thread (SU .verify_python ,zip_path ,root )
+            if not ok :
+                await edit (message_id =msg .id ,content =f" Новая версия не собирается: {err }. Старая осталась работать.")
+                return
+            await edit (message_id =msg .id ,content =" Всё чисто. Заменяю файлы (ваши данные и настройки на месте)…")
+            sha =await asyncio .to_thread (SU .remote_sha )
+            ok ,err ,stats =await asyncio .to_thread (
+                SU .stage_update ,zip_path ,bot_dir ,root ,rel ,
+                (interaction .channel_id or 0),(sha or ''),_Cfg .UPDATE_BRANCH )
+            if not ok :
+                await edit (message_id =msg .id ,content =f" Замена не удалась: {err }. Перезапуск не делаю.")
+                return
+            await edit (message_id =msg .id ,
+                        content =(f" Готово: **{stats ['copied']}** файлов обновлено ({stats ['skipped']} служебных пропущено).\n"
+                                  "Перезапускаюсь — вернусь через несколько секунд и отчитаюсь. "))
+        finally :
+            shutil .rmtree (tmp_dir ,ignore_errors =True )
+        # мягкое окно: сообщение успевает уйти, потом подменяем процесс свежим кодом
+        await asyncio .sleep (2)
+        _log .info ('/update: перезапуск (execv) по команде владельца')
+        os .execv (sys .executable ,[sys .executable ]+sys .argv )
 
 
 async def setup (bot ):

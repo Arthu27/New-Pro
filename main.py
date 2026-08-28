@@ -717,6 +717,12 @@ async def on_ready():
             print(f'[СИНХРОНИЗАЦИЯ] Ошибка: {e}')
         _synced = True
         bot.loop.create_task(_monitor_voice())
+        # Если только что кончило самообновление (/update) — отчитаться в канал
+        try:
+            from services import self_update as _SU
+            bot.loop.create_task(_SU.announce_pending(bot, os.path.abspath('.')))
+        except Exception as _ex:
+            _log.debug("on_ready(): announce_pending: %s", _ex)
     print(f"[ОК] {bot.user} активен | {len(bot.guilds)} серверов")
 
     import json as _j

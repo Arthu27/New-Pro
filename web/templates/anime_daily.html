@@ -164,9 +164,9 @@ function render(d) {
     if (!window._anPickers) {
       window._anPickers = true;
       attachSelectPicker(document.getElementById('anChannel'),
-        {gid: GID, kind: 'text', noneLabel: '— рассылка на паузе —'});
+        { search: true,gid: GID, kind: 'text', noneLabel: '— рассылка на паузе —'});
       attachSelectPicker(document.getElementById('anRole'),
-        {gid: GID, kind: 'role', noneLabel: '— без упоминания —'});
+        { search: true,gid: GID, kind: 'role', noneLabel: '— без упоминания —'});
       bindCtrlS(function () { anSave(false); });
       window._anDirty = dirtyTrack(['anChannel', 'anCategory', 'anRole'].map(function (id) { return document.getElementById(id); }));
     }

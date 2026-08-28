@@ -50,7 +50,7 @@ KEEP_SLASH = frozenset({
     # Апелляция на бан — подаётся в ЛС боту, глобальная команда
     'апелляция',
     # Служебные (владелец бота; видны только администраторам)
-    'module', 'health', 'diagnose', 'hotreload',
+    'module', 'health', 'diagnose', 'hotreload', 'update',
 })
 
 

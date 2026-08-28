@@ -97,6 +97,10 @@ class Config:
     MAIN_GUILD_ID: int = _env_int("MAIN_GUILD_ID", 0)
     COMMAND_PREFIX: str = "!"
 
+    # Источник самообновления (/update): репозиторий и ветка на GitHub.
+    UPDATE_REPO: str = os.getenv("UPDATE_REPO", "Arthu27/New-Pro")
+    UPDATE_BRANCH: str = os.getenv("UPDATE_BRANCH", "main")
+
     # Дополнительные серверы для slash-команд (через запятую в .env: EXTRA_GUILD_IDS=111,222)
     EXTRA_GUILD_IDS: list = _env_int_list("EXTRA_GUILD_IDS")
 
