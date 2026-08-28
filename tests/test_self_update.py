@@ -206,7 +206,11 @@ async def _run():
     check(sent and 'только для владельца' in sent[0][0] and sent[0][1],
           'не-владелец — вежливый эфемерный отказ')
 
-    # ── владелец: весь конвейер автоматом
+    # ── владелец: весь конвейер автоматом.
+    # Состояние «уже всё свежее» разрушаем: правим файл под прошлую версию —
+    # иначе команда честно ответит «обновлять нечего» (и не перезапустится).
+    with open(os.path.join(bot_dir, 'cogs', 'alpha.py'), 'w') as f:
+        f.write('OLD = True\n')
     resp = _Resp()
     fol = _Follow()
     inter = NS(user=NS(id=4242), response=resp, followup=fol, channel_id=98765)
@@ -228,7 +232,11 @@ async def _run():
         sleeps.append(x)
     real_dl = SU.download_zip
     try:
-        with patch.object(SU, 'download_zip', lambda d: (True, None, zip_path)), \
+        # КРИТИЧНО: git-путь в тестах ВЫКЛЮЧЕН — иначе команда натравит
+        # fetch/reset --hard на ЭТОТ репозиторий (bot_dir берётся из __file__).
+        with patch.object(SU, 'is_git_repo', lambda bd: False), \
+             patch.object(SU, 'local_sha', lambda bd: None), \
+             patch.object(SU, 'download_zip', lambda d: (True, None, zip_path)), \
              patch.object(SU, 'stage_update', _safe_stage), \
              patch.object(SU, 'remote_sha', lambda: 'abc1234'), \
              patch.object(os, 'execv', lambda *a: exec_called.append(a)), \
@@ -255,7 +263,9 @@ async def _run():
     fol = _Follow()
     resp2 = _Resp()
     inter = NS(user=NS(id=4242), response=resp2, followup=fol, channel_id=98765)
-    with patch.object(SU, 'download_zip', lambda d: (False, 'сеть умерла', None)):
+    with patch.object(SU, 'is_git_repo', lambda bd: False), \
+         patch.object(SU, 'local_sha', lambda bd: None), \
+         patch.object(SU, 'download_zip', lambda d: (False, 'сеть умерла', None)):
         await DIAG.Diagnostics.update_cmd.callback(cog, inter)
     check(fol.edited and 'Не вышло скачать' in fol.edited[0][1]
           and 'Ничего не трогал' in fol.edited[0][1],
@@ -264,6 +274,82 @@ async def _run():
         check('NEW = True' in f.read(), 'при отказе рабочие файлы нетронуты')
 
 asyncio.run(_run())
+
+print('== 4б. Инкрементальность: неизменные файлы не трогаем ==')
+# вторая раскатка того же архива в тот же каталог: copied=0, всё unchanged
+ok, err, stats = SU.stage_update(zip_path, bot_dir, 'bot-main/', rel,
+                                 channel_id=98765, sha='abc1234', branch='arena/x')
+check(ok and stats['copied'] == 0, 'повтор: ни один файл не перезаписан')
+check(stats and stats.get('unchanged', 0) >= 3,
+      f"неизменных помечено: {stats and stats.get('unchanged')}")
+mtime_before = os.path.getmtime(os.path.join(bot_dir, 'cogs', 'alpha.py'))
+SU.stage_update(zip_path, bot_dir, 'bot-main/', rel)
+mtime_after = os.path.getmtime(os.path.join(bot_dir, 'cogs', 'alpha.py'))
+check(mtime_before == mtime_after, 'mtime неизменного файла не дёргается')
+
+# один файл изменился в «новой версии» — перезаписан только он
+zip_delta = os.path.join(_TMP, 'delta.zip')
+make_zip(GOOD_FILES | {'bot-main/cogs/alpha.py': "NEW = 2\n"}, zip_delta)
+ok, err, meta2 = SU.verify_zip(zip_delta)
+_, root2, rel2 = meta2
+ok, err, stats = SU.stage_update(zip_delta, bot_dir, root2, rel2,
+                                 channel_id=98765, sha='abc1234', branch='arena/x')
+check(ok and stats['copied'] == 1 and stats.get('unchanged', 0) >= 2,
+      f"дельта раскатана: copied={stats and stats['copied']}, "
+      f"unchanged={stats and stats.get('unchanged')}")
+with open(os.path.join(bot_dir, 'cogs', 'alpha.py')) as f:
+    check('NEW = 2' in f.read(), 'изменённый файл обновлён')
+
+# note_applied_sha + local_sha: повторное обновление узнаётся по sha
+SU.note_applied_sha(bot_dir, 'abc1234')
+check(SU.local_sha(bot_dir) == 'abc1234',
+      'архивный sha запоминается (data/.update_sha) — повтор не качаем')
+
+print('== 4в. git-путь: только дельты, откат при «уже свежо» ==')
+if shutil.which('git'):
+    import subprocess as _sp
+    remote_dir = tempfile.mkdtemp(prefix='hakumo_remote_')
+    work = tempfile.mkdtemp(prefix='hakumo_clone_')
+    env_g = {k: v for k, v in os.environ.items()
+             if k not in ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE')}
+    def _g(cwd, *args):
+        return _sp.run(['git'] + list(args), cwd=cwd, env=env_g,
+                       capture_output=True, text=True)
+    _g(remote_dir, 'init', '-b', 'main')
+    _g(remote_dir, 'config', 'user.email', 't@t.t')
+    _g(remote_dir, 'config', 'user.name', 't')
+    with open(os.path.join(remote_dir, 'a.py'), 'w') as f:
+        f.write('A = 1\n')
+    with open(os.path.join(remote_dir, 'b.py'), 'w') as f:
+        f.write('B = 1\n')
+    _g(remote_dir, 'add', '.')
+    _g(remote_dir, 'commit', '-m', 'v1')
+    _g(work, 'clone', remote_dir, '.')
+    _g(work, 'checkout', '-b', 'main', 'origin/main')
+    ok, err, info = SU.git_update(work, 'main')
+    check(ok and info.get('up_to_date') and info['changed'] == 0,
+          'свежий клон: «обновлять нечего», ничего не меняется')
+    # новый коммит в remote: подтягивается ровно он
+    with open(os.path.join(remote_dir, 'a.py'), 'w') as f:
+        f.write('A = 2\n')
+    _g(remote_dir, 'commit', '-am', 'v2')
+    ok, err, info = SU.git_update(work, 'main')
+    check(ok and not info.get('up_to_date') and info['changed'] == 1,
+          'дельта: изменён ровно 1 файл (не все)')
+    with open(os.path.join(work, 'a.py')) as f:
+        check('A = 2' in f.read(), 'новое содержимое применилось')
+    # локальная правка кода не мешает: ff падает → reset --hard выручает
+    with open(os.path.join(work, 'b.py'), 'w') as f:
+        f.write('B = LOCAL_EDIT\n')
+    with open(os.path.join(remote_dir, 'b.py'), 'w') as f:
+        f.write('B = 2\n')
+    _g(remote_dir, 'commit', '-am', 'v3')
+    ok, err, info = SU.git_update(work, 'main')
+    check(ok and info['changed'] == 1, 'reset-путь: локальный мусор не стопорит обновление')
+    check(SU.local_sha(work) == (info or {}).get('to_sha'),
+          'local_sha = git HEAD после обновления')
+else:
+    check(True, 'git недоступен в окружении — секция пропущена (prod-гейт)')
 
 print('== 5. Отчёт после рестарта ==')
 async def _announce():

@@ -461,37 +461,77 @@ class Diagnostics (commands .Cog ):
         bot_dir =os .path .dirname (os .path .dirname (os .path .abspath (__file__ )))
         edit =interaction .followup .edit_message
         msg =await interaction .followup .send (
-            f" Обновление: качаю ветку **{_Cfg.UPDATE_BRANCH}** из `{_Cfg.UPDATE_REPO}`…",wait =True )
-        tmp_dir =tempfile .mkdtemp (prefix ='hakumo_dl_')
-        try :
-            ok ,err ,zip_path =await asyncio .to_thread (SU .download_zip ,tmp_dir )
-            if not ok :
-                await edit (message_id =msg .id ,content =f" Не вышло скачать новую версию: {err }. Ничего не трогал.")
-                return
-            await edit (message_id =msg .id ,content =" Скачано. Проверяю целостность архива…")
-            ok ,err ,meta =await asyncio .to_thread (SU .verify_zip ,zip_path )
-            if not ok :
-                await edit (message_id =msg .id ,content =f" Архив не прошёл проверку: {err }. Обновления не было.")
-                return
-            _name_pairs ,root ,rel =meta
-            ok ,err =await asyncio .to_thread (SU .verify_python ,zip_path ,root )
-            if not ok :
-                await edit (message_id =msg .id ,content =f" Новая версия не собирается: {err }. Старая осталась работать.")
-                return
-            await edit (message_id =msg .id ,content =" Всё чисто. Заменяю файлы (ваши данные и настройки на месте)…")
-            sha =await asyncio .to_thread (SU .remote_sha )
-            ok ,err ,stats =await asyncio .to_thread (
-                SU .stage_update ,zip_path ,bot_dir ,root ,rel ,
-                (interaction .channel_id or 0),(sha or ''),_Cfg .UPDATE_BRANCH )
-            if not ok :
-                await edit (message_id =msg .id ,content =f" Замена не удалась: {err }. Перезапуск не делаю.")
-                return
+            f" Обновление: проверяю свежую версию ветки **{_Cfg.UPDATE_BRANCH}** из `{_Cfg.UPDATE_REPO}`…",wait =True )
+        # ── 0. Уже свежий? Тогда не качаем и не перезапускаемся вообще.
+        sha_remote =await asyncio .to_thread (SU .remote_sha )
+        sha_local =await asyncio .to_thread (SU .local_sha ,bot_dir )
+        if sha_remote and sha_local and sha_remote ==sha_local :
             await edit (message_id =msg .id ,
-                        content =(f" Готово: **{stats ['copied']}** файлов обновлено ({stats ['skipped']} служебных пропущено).\n"
-                                  f"Устаревшего убрано: **{stats.get('removed', 0)}** — в папке теперь только самая свежая версия."
-                                  "Перезапускаюсь — вернусь через несколько секунд и отчитаюсь. "))
-        finally :
-            shutil .rmtree (tmp_dir ,ignore_errors =True )
+                        content =f" Уже самая свежая версия (`{sha_remote [:7 ]}`) — ничего качать не нужно.")
+            return
+        # ── 1. git-репозиторий: качаем только дельты изменений.
+        git_tried =await asyncio .to_thread (SU .is_git_repo ,bot_dir )
+        if git_tried :
+            await edit (message_id =msg .id ,
+                        content =" Обновляю через git — по сети идут только изменённые данные…")
+            ok ,err ,info =await asyncio .to_thread (SU .git_update ,bot_dir ,_Cfg .UPDATE_BRANCH )
+            if ok :
+                if info .get ('up_to_date'):
+                    await edit (message_id =msg .id ,
+                                content =f" Уже самая свежая версия (`{(info .get ('to_sha')or '')[:7 ]}`) — обновлять нечего.")
+                    return
+                files =info .get ('files')or []
+                preview ='' if not files else '\nИзменены: '+', '.join (f'`{f }`'for f in files [:10 ])
+                await edit (message_id =msg .id ,
+                            content =(f" Готово через git: изменено **{info .get ('changed',0 )}** файлов "
+                                      f"(с `{(info .get ('from_sha')or '')[:7 ]}` → `{(info .get ('to_sha')or '')[:7 ]}`).{preview }\n"
+                                      "Перезапускаюсь — вернусь через несколько секунд и отчитаюсь. "))
+                SU .note_applied_sha (bot_dir ,info .get ('to_sha'))
+            else :
+                _log .warning ('/update: git-путь не удался (%s) — перехожу на zip',err )
+                git_tried =False
+                await edit (message_id =msg .id ,
+                            content =f" git не сработал ({err }). Качаю архив ветки и заменю только изменённые файлы…")
+        # ── 2. Запасной путь: zip ветки, но раскатываем ТОЛЬКО изменённые файлы.
+        if not git_tried :
+            tmp_dir =tempfile .mkdtemp (prefix ='hakumo_dl_')
+            try :
+                ok ,err ,zip_path =await asyncio .to_thread (SU .download_zip ,tmp_dir )
+                if not ok :
+                    await edit (message_id =msg .id ,content =f" Не вышло скачать новую версию: {err }. Ничего не трогал.")
+                    return
+                await edit (message_id =msg .id ,content =" Скачано. Проверяю целостность архива…")
+                ok ,err ,meta =await asyncio .to_thread (SU .verify_zip ,zip_path )
+                if not ok :
+                    await edit (message_id =msg .id ,content =f" Архив не прошёл проверку: {err }. Обновления не было.")
+                    return
+                _name_pairs ,root ,rel =meta
+                ok ,err =await asyncio .to_thread (SU .verify_python ,zip_path ,root )
+                if not ok :
+                    await edit (message_id =msg .id ,content =f" Новая версия не собирается: {err }. Старая осталась работать.")
+                    return
+                await edit (message_id =msg .id ,content =" Всё чисто. Меняю только изменившиеся файлы (ваши данные и настройки на месте)…")
+                sha =sha_remote or await asyncio .to_thread (SU .remote_sha )
+                ok ,err ,stats =await asyncio .to_thread (
+                    SU .stage_update ,zip_path ,bot_dir ,root ,rel ,
+                    (interaction .channel_id or 0),(sha or ''),_Cfg .UPDATE_BRANCH )
+                if not ok :
+                    await edit (message_id =msg .id ,content =f" Замена не удалась: {err }. Перезапуск не делаю.")
+                    return
+                if sha :
+                    SU .note_applied_sha (bot_dir ,sha )
+                if stats ['copied']==0 and stats .get ('removed',0 )==0 :
+                    await edit (message_id =msg .id ,
+                                content =f" Уже самая свежая версия (`{(sha or '')[:7 ]or '—'}`): ни один файл не изменился, "
+                                          f"ещё **{stats .get ('unchanged',0 )}** проверено — обновлять нечего.")
+                    return
+                await edit (message_id =msg .id ,
+                            content =(f" Готово: изменено **{stats ['copied']}** файлов, "
+                                      f"ещё **{stats .get ('unchanged',0 )}** без изменений — их не трогал\n"
+                                      f"Устаревшего убрано: **{stats .get ('removed',0 )}**. "
+                                      "Перезапускаюсь — вернусь через несколько секунд и отчитаюсь. "))
+            finally :
+                shutil .rmtree (tmp_dir ,ignore_errors =True )
         # мягкое окно: сообщение успевает уйти, потом подменяем процесс свежим кодом
         await asyncio .sleep (2)
         _log .info ('/update: перезапуск (execv) по команде владельца')

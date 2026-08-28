@@ -1,14 +1,23 @@
 # -*- coding: utf-8 -*-
 """Самообновление бота по команде /update (заказ, пункт 5.6).
 
-Один вызов — и всё делает бот сам, без ручного скачивания:
+Один вызов — и всё делает бот сам, без ручного скачивания.
 
-1. download_zip()  — качает zip ветки репозитория с GitHub (codeload).
+Главное: обновление ИНКРЕМЕНТАЛЬНОЕ — целиком бот не перекачивается.
+Если каталог — git-репозиторий, идём через git fetch/pull: по сети уходят
+только изменения коммитов. Если git нет — качаем zip ветки (другого
+способа у codeload нет), но раскатываем только файлы, у которых изменился
+байтовый хэш: неизменённые не трогаем вообще. Если удалённый sha совпадает
+с уже применённым — отвечаем «бот уже свежий» и ничего не делаем.
+
+1. git_update()    — git-путь: fetch + diff + ff/reset; только дельты по сети.
+   download_zip()  — запасной путь: zip ветки репозитория с GitHub (codeload).
 2. verify_zip()    — целостность: это валидный zip, есть опорные файлы
                      (main.py, config.py, web/app.py), архив не битый,
                      каждый .py компилируется (py_compile).
 3. stage_update()  — раскатывает СВЕЖЕЕ состояние ветки как ЕДИНСТВЕННОЕ:
-                     файлы из архива копируются поверх, а любой файл, которого
+                     из архива копируются ТОЛЬКО новые/изменённые файлы
+                     (по хэшу содержимого), а любой файл, которого
                      НЕТ в архиве (старый, уже удалённый в репо), убирается —
                      «обновил и всё», старого и нового вперемешку не остаётся.
                      Бережно сохраняет данные и секреты (data/, logs/, .env,
@@ -20,10 +29,12 @@
 Функции синхронные — из кога зовутся через asyncio.to_thread.
 """
 
+import hashlib
 import json
 import os
 import py_compile
 import shutil
+import subprocess
 import tempfile
 import zipfile
 from pathlib import Path as _Path
@@ -50,6 +61,104 @@ def _utcnow_iso():
 
 def marker_path(bot_dir):
     return os.path.join(bot_dir, 'data', 'update_pending.json')
+
+
+def _git_env():
+    """Чистое окружение для git: без GIT_DIR/GIT_WORK_TREE снаружи."""
+    return {k: v for k, v in os.environ.items()
+            if k not in ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE')}
+
+
+def is_git_repo(bot_dir):
+    """Каталог — git-репозиторий (значит, можем качать только дельты)."""
+    return os.path.isdir(os.path.join(bot_dir, '.git'))
+
+
+def _run_git(bot_dir, args, timeout=90):
+    try:
+        return subprocess.run(
+            ['git'] + list(args), cwd=bot_dir, capture_output=True,
+            text=True, timeout=timeout, env=_git_env())
+    except Exception as _ex:
+        log.debug('self_update: git %s: %s', args, _ex)
+        return None
+
+
+def local_sha(bot_dir):
+    """Применённая локально версия: git HEAD, иначе маркер data/.update_sha.
+
+    None — неизвестно: тогда обновляться надо по полной схеме проверки.
+    """
+    if is_git_repo(bot_dir):
+        r = _run_git(bot_dir, ['rev-parse', 'HEAD'], timeout=15)
+        if r is not None and r.returncode == 0:
+            return (r.stdout or '').strip() or None
+    try:
+        with open(os.path.join(bot_dir, 'data', '.update_sha'),
+                  encoding='utf-8') as f:
+            val = f.read().strip()
+            return val or None
+    except OSError:
+        return None
+
+
+def note_applied_sha(bot_dir, sha):
+    """Запомнить применённый архивный sha (для не-репозиторного каталога)."""
+    if not sha:
+        return
+    try:
+        os.makedirs(os.path.join(bot_dir, 'data'), exist_ok=True)
+        with open(os.path.join(bot_dir, 'data', '.update_sha'), 'w',
+                  encoding='utf-8') as f:
+            f.write(str(sha).strip())
+    except OSError as _ex:
+        log.debug('self_update: note_applied_sha: %s', _ex)
+
+
+def git_update(bot_dir, branch):
+    """Обновить через git: по сети идут только дельты объектов, а не весь бот.
+
+    Возвращает (ok, err, info). info: {
+        'up_to_date': bool, 'changed': N, 'from_sha': str, 'to_sha': str,
+        'files': [относительные пути изменённых файлов] (до 50 шт.)}
+    ok=False — git-путь недоступен/не вышел: вызывающий код пробует zip.
+    """
+    if not is_git_repo(bot_dir):
+        return False, 'каталог бота не git-репозиторий', None
+    branch = (branch or 'main').strip() or 'main'
+    r = _run_git(bot_dir, ['fetch', 'origin', branch], timeout=120)
+    if r is None or r.returncode != 0:
+        return False, 'git fetch не удался (сеть или доступ к репо)', None
+    remote_ref = 'origin/' + branch
+    r = _run_git(bot_dir, ['rev-parse', remote_ref], timeout=15)
+    if r is None or r.returncode != 0:
+        return False, f'ветка {remote_ref} не найдена в репозитории', None
+    to_sha = (r.stdout or '').strip()
+    r = _run_git(bot_dir, ['rev-parse', 'HEAD'], timeout=15)
+    from_sha = (r.stdout or '').strip() if r and r.returncode == 0 else ''
+    if from_sha and from_sha == to_sha:
+        return True, None, {'up_to_date': True, 'changed': 0,
+                            'from_sha': from_sha, 'to_sha': to_sha, 'files': []}
+    # какие именно файлы изменятся — для честного отчёта
+    files = []
+    if from_sha:
+        r = _run_git(bot_dir, ['diff', '--name-only', from_sha, to_sha], timeout=30)
+        if r is not None and r.returncode == 0:
+            files = [ln.strip() for ln in (r.stdout or '').splitlines() if ln.strip()]
+    # сначала аккуратный fast-forward; не вышло (локальные правки в коде) —
+    # жёсткий сброс на свежую ветку: данные/логи/venv не отслеживаются гитом,
+    # reset --hard их не трогает, как и незакоммиченные untracked-файлы.
+    r = _run_git(bot_dir, ['merge', '--ff-only', remote_ref], timeout=60)
+    if r is None or r.returncode != 0:
+        log.info('self_update: ff-only не вышел, reset --hard на %s', remote_ref)
+        r = _run_git(bot_dir, ['reset', '--hard', remote_ref], timeout=60)
+        if r is None or r.returncode != 0:
+            return False, 'git-обновление не применилось (конфликт с локальными файлами)', None
+    log.info('self_update: git %s..%s, изменено файлов %s',
+             (from_sha or '')[:7], to_sha[:7], len(files))
+    return True, None, {'up_to_date': False, 'changed': len(files),
+                        'from_sha': from_sha, 'to_sha': to_sha,
+                        'files': files[:50]}
 
 
 def remote_sha():
@@ -218,16 +327,42 @@ def _remove_stale_files(bot_dir, fresh_set, stats):
     return removed
 
 
-def stage_update(zip_path, bot_dir, root, rel_names, channel_id=0, sha='', branch=''):
-    """Раскатать СВЕЖЕЕ состояние ветки поверх bot_dir (и только его).
+def _file_sha256(path):
+    """sha256 содержимого файла или None (файла нет/не читается)."""
+    try:
+        h = hashlib.sha256()
+        with open(path, 'rb') as f:
+            for chunk in iter(lambda: f.read(1024 * 256), b''):
+                h.update(chunk)
+        return h.hexdigest()
+    except OSError:
+        return None
 
-    Копируем файлами (не хирургия каталогов): на Windows занятые ботом
-    каталоги переименовать нельзя, а замена файлов внутри — можно.
+
+def _files_equal(src, dst):
+    """Содержимое совпадает? Быстрый отсев по размеру, потом хэш."""
+    try:
+        if os.path.getsize(src) != os.path.getsize(dst):
+            return False
+    except OSError:
+        return False
+    a = _file_sha256(src)
+    b = _file_sha256(dst)
+    return a is not None and a == b
+
+
+def stage_update(zip_path, bot_dir, root, rel_names, channel_id=0, sha='', branch=''):
+    """Раскатать СВЕЖЕЕ состояние ветки поверх bot_dir — ИНКРЕМЕНТАЛЬНО.
+
+    Перезаписываются только файлы, чьё содержимое реально изменилось
+    (сравнение по sha256): неизменённые вообще не трогаются — развёртывание
+    на долю секунды вместо перезаписи всего бота, диск и mtime не дёргаем.
     После копирования убираем файлы, отсутствующие в архиве — в итоге каталог
     содержит ровно свежайшую версию (плюс data/logs/.env/venv).
     """
     tmp = tempfile.mkdtemp(prefix='hakumo_upd_')
     copied = 0
+    unchanged = 0
     skipped = 0
     removed = 0
     try:
@@ -246,9 +381,12 @@ def stage_update(zip_path, bot_dir, root, rel_names, channel_id=0, sha='', branc
                     continue
                 src = os.path.join(dirpath, fn)
                 dst = os.path.join(bot_dir, *parts)
+                fresh_set.add(os.path.normpath(os.path.join(*parts)))
+                if _files_equal(src, dst):
+                    unchanged += 1
+                    continue
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(src, dst)
-                fresh_set.add(os.path.normpath(os.path.join(*parts)))
                 copied += 1
         removed = _remove_stale_files(bot_dir, fresh_set, None)
         # маркер для приветствия после рестарта
@@ -259,13 +397,16 @@ def stage_update(zip_path, bot_dir, root, rel_names, channel_id=0, sha='', branc
             'channel_id': int(channel_id or 0),
             'at': _utcnow_iso(),
             'files_copied': copied,
+            'files_unchanged': unchanged,
             'files_removed': removed,
         }
         with open(marker_path(bot_dir), 'w', encoding='utf-8') as f:
             json.dump(marker, f, ensure_ascii=False)
-        log.info('self_update: раскатано %s файлов, устаревших убрано %s (пропущено %s)',
-                 copied, removed, skipped)
-        return True, None, {'copied': copied, 'skipped': skipped, 'removed': removed}
+        log.info('self_update: изменено %s файлов (без изменений %s), '
+                 'устаревших убрано %s (пропущено служебных %s)',
+                 copied, unchanged, removed, skipped)
+        return True, None, {'copied': copied, 'skipped': skipped,
+                            'removed': removed, 'unchanged': unchanged}
     except Exception as _ex:
         log.warning('self_update: stage: %s', _ex)
         return False, 'не удалось раскатать файлы (права на каталог бота?)', None
@@ -305,9 +446,12 @@ async def announce_pending(bot, bot_dir):
     except Exception as _ex:
         log.debug('self_update: announce channel: %s', _ex)
         channel = None
-    text = ('Обновление завершено: версия **{}** ({}) — {} файлов. '
+    text = ('Обновление завершено: версия **{}** ({}) — изменено **{}** файлов '
+            '(ещё {} были уже актуальны, их не трогали). '
             'Все системы запущены заново и живы.').format(
-                sha or 'из архива', branch or 'ветка', int(data.get('files_copied') or 0))
+                sha or 'из архива', branch or 'ветка',
+                int(data.get('files_copied') or 0),
+                int(data.get('files_unchanged') or 0))
     if channel is not None:
         try:
             await channel.send(text)
