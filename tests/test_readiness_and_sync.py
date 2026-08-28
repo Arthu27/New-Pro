@@ -235,6 +235,9 @@ check('_current_lock' in src_sf and 'async with lk' in src_sf,
 
 src_main = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
 check('full_sync' in src_main, 'старт бота использует полный синк')
+check('_no_prefix_commands' in src_main
+      and 'bot.process_commands = _no_prefix_commands' in src_main,
+      'текстовые !-команды выключены полностью (заказ владельца)')
 src_app = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
 blog = src_app[src_app.index('def api_bot_sync'):src_app.index('api_global_search')]
 check('full_sync' in blog, 'кнопка «Синхронизировать команды» идёт через full_sync')

@@ -137,6 +137,18 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=Config.COMMAND_PREFIX, intents=intents, help_command=None)
 
 
+# ─── Текстовые «!»-команды отключены полностью (заказ владельца 2026-08-28) ─
+# «через ! тоже убери, не нужны они нам»: ни одно сообщение-префикс не
+# исполняется. Всё живое — слеш-меню (4 команды), кнопки и веб-панель.
+# Слушатели on_message когов (антиспам, левелы, тикеты) НЕ затронуты:
+# они вешаются через @commands.Cog.listener, а не через этот конвейер.
+async def _no_prefix_commands(message):
+    return
+
+
+bot.process_commands = _no_prefix_commands
+
+
 # ─── Ролевой контроль доступа к командам (Command ACL) ────────────────
 async def _acl_check(ctx):
     """Prefix-команды: проверить ролевой доступ (учитывая сабкоманды групп)."""
