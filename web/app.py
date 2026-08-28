@@ -3531,6 +3531,19 @@ def api_bot_commands_audit ():
     async def do ():
         out ={'global':[],'guilds':{},'duplicates':[]}
         import discord as _d
+        # Цели синка из конфигурации + метка последнего полного синка —
+        # по ним сразу видно, пробежал ли вообще новый full_sync.
+        try :
+            from config import Config as _Cfg
+            out ['targets_conf']=[o .id for o in _Cfg .guild_objects ()]
+        except Exception as _ex:
+            out ['targets_conf_error']=str (_ex )
+        try :
+            import json as _json ,os as _os
+            with open (_os .path .join ('data','sync_last.json'),encoding ='utf-8')as f :
+                out ['last_sync']=_json .load (f )
+        except Exception :
+            out ['last_sync']=None
         try :
             out ['global']=sorted (c .name for c in await bot_instance .tree .fetch_commands ())
         except Exception as _ex:

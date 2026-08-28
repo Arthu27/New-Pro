@@ -207,6 +207,20 @@
         html += '<div class="hint"><b>' + esc(k) + ':</b> ' +
                 (Array.isArray(v) ? v.map(esc).join(', ') : esc(v)) + '</div>';
       });
+      var ls = d.last_sync;
+      if (ls && ls.at) {
+        html += '<div class="hint" style="margin-top:6px"><b>Последний полный синк:</b> ' +
+                esc(ls.at) + ' · режим: ' + esc(ls.mode || '?') +
+                ' · целевые серверы: ' + esc((ls.targets || []).join(', ') || 'нет') +
+                ' · чужих очищено: ' + (ls.stray_cleaned || []).length + '</div>';
+      } else {
+        html += '<div class="hint error" style="margin-top:6px"><b>Нового full_sync ещё НЕ БЫЛО</b> ' +
+                '(после последнего /update синк не проходил) — нажмите «Синхронизировать команды».</div>';
+      }
+      if (d.targets_conf) {
+        html += '<div class="hint"><b>Настроено в .env (MAIN+EXTRA):</b> ' +
+                esc((d.targets_conf || []).join(', ') || 'пусто — глобальный режим') + '</div>';
+      }
       box.innerHTML = html;
     } catch (e) {
       box.innerHTML = '<span class="hint error">Не удалось запросить: ' + esc(e) + '</span>';

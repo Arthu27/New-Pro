@@ -97,6 +97,7 @@ async def _clean_stray_guilds(bot, tree, exclude_ids):
     Запускается и когда targets пуст (глобальный режим): гильдовые копии
     там вообще вне закона (именно так вечно жила вторая «апелляция»).
     """
+    cleaned = []
     try:
         import discord as _d
         _exclude = {int(x or 0) for x in (exclude_ids or set())}
@@ -106,12 +107,41 @@ async def _clean_stray_guilds(bot, tree, exclude_ids):
                 continue
             try:
                 await tree.sync(guild=_d.Object(id=gid))   # локально пусто
+                cleaned.append(gid)
                 _log.info('sync: сервер %s очищен от устаревших копий команд '
                           '(нужны команды там — добавьте его в EXTRA_GUILD_IDS)', gid)
             except Exception as _e:
                 _log.debug('sync: очистка чужого сервера %s: %s', gid, _e)
     except Exception as _e:
         _log.debug('sync: обход чужих серверов: %s', _e)
+    return cleaned
+
+
+def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=()):
+    """Метка последнего полного синка (диагностика в панели: data/sync_last.json)."""
+    try:
+        import json as _json
+        import os as _os
+        from datetime import datetime as _dt, timezone as _tz
+        for base in (getattr(bot, 'base_dir', None), _os.getcwd()):
+            if not base:
+                continue
+            try:
+                _os.makedirs(_os.path.join(base, 'data'), exist_ok=True)
+                payload = {
+                    'at': _dt.now(_tz.utc).isoformat(timespec='seconds'),
+                    'mode': mode,
+                    'targets': [int(x or 0) for x in targets_ids],
+                    'stray_cleaned': [int(x or 0) for x in stray_cleaned],
+                }
+                with open(_os.path.join(base, 'data', 'sync_last.json'), 'w',
+                          encoding='utf-8') as f:
+                    _json.dump(payload, f, ensure_ascii=False)
+                return
+            except OSError:
+                continue
+    except Exception as _e:
+        _log.debug('sync: метка последнего синка: %s', _e)
 
 
 async def full_sync(bot):
@@ -146,7 +176,8 @@ async def _full_sync_inner(bot):
         # И старые ГИЛЬДОВЫЕ копии от прежних регистраций стираем тоже —
         # иначе вторая «апелляция» и прочие дубли живут на серверах вечно.
         synced = await sync_tree(bot)
-        await _clean_stray_guilds(bot, tree, set())
+        cleaned = await _clean_stray_guilds(bot, tree, set())
+        _note_sync_done(bot, 'global', (), cleaned)
         return synced
 
     # 1) глобальный список в Discord очищаем (чтобы не было дублей).
@@ -197,6 +228,8 @@ async def _full_sync_inner(bot):
                 tree.add_command(cmd)
             except Exception as _e:
                 _log.debug('вернуть %s в дерево: %s', cmd.name, _e)
+        _note_sync_done(bot, 'failed-global-clear',
+                        [int(getattr(g, 'id', 0) or 0) for g in targets], ())
         return []
 
     for cmd, _t in parked:        # локально возвращаем — источник для копий
@@ -233,7 +266,7 @@ async def _full_sync_inner(bot):
 
     # 4) «Чужие» серверы (бот состоит, но их нет в MAIN/EXTRA_GUILD_IDS):
     #    старые гильдовые копии там вечны, пока их не стереть пустым sync.
-    await _clean_stray_guilds(
+    cleaned = await _clean_stray_guilds(
         bot, tree, {int(getattr(g, 'id', 0) or 0) for g in targets})
 
     # 5) Откат: все guild-синки упали — глобальное меню уже стёрто,
@@ -247,4 +280,7 @@ async def _full_sync_inner(bot):
             await tree.sync()
         except Exception as _e:
             _log.error('откат глобального меню тоже не удался: %s', _e)
+    _note_sync_done(bot, 'guilds',
+                    [int(getattr(g, 'id', 0) or 0) for g in targets],
+                    cleaned)
     return out

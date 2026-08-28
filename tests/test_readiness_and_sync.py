@@ -198,6 +198,13 @@ check('апелляция' not in g777_names,
       'keep_global НЕ копируется в гильдию — иначе «апелляция» видна дважды')
 check(synced.get(999) == [],
       'сервер вне MAIN/EXTRA очищен от старых копий команд (вечные дубли)')
+
+import json as _json  # noqa: E402 — метка синка для панельной диагностики
+with open(os.path.join(os.getcwd(), 'data', 'sync_last.json'), encoding='utf-8') as _f:
+    _ls = _json.load(_f)
+check(_ls.get('mode') == 'guilds' and _ls.get('targets') == [777]
+      and _ls.get('stray_cleaned') == [999],
+      f'метка последнего синка записана (mode/targets/stray) — {_ls}')
 check(any(c.name == 'warn' for c in b.tree.get_commands(guild=GObj(777))),
       'warn вернулась в локальное дерево — панель видит и может включить')
 
