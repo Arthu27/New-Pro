@@ -46,8 +46,9 @@ print('== 1. Реестр команд (LEAN — боевой состав по 
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-check(data['total'] == 27, f"lean: собрано {data['total']} живых команд (все — слеш, с /proof)")
-check(data['slash'] == 27 and data['prefix'] == 0,
+# -6 музыкальных управлялок (pause/resume/skip/queue/nowplaying/leave): остался /play с пультом
+check(data['total'] == 21, f"lean: собрано {data['total']} живых команд (все — слеш, с /proof)")
+check(data['slash'] == 21 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
@@ -76,11 +77,15 @@ data = CR.catalog(force=True)
 
 names = [c['name'] for c in data['commands']]
 check(len(names) == len(set(names)), 'имена команд не дублируются')
-# музыка — боевой модуль: её команды обязаны быть и в lean-каталоге
-for cmd_name in ('play', 'pause', 'queue'):
-    hit = next((c for c in data['commands'] if c['name'] == cmd_name
-                and c['cat'] == 'music'), None)
-    check(hit is not None, f'музыкальная команда {cmd_name} найдена в разделе Музыка')
+# музыка — боевой модуль: единственная команда /play в разделе Музыка
+hit = next((c for c in data['commands'] if c['name'] == 'play'
+            and c['cat'] == 'music'), None)
+check(hit is not None, 'музыкальная команда play найдена в разделе Музыка')
+for gone in ('pause', 'resume', 'skip', 'queue', 'nowplaying', 'leave',
+             'musicpanel'):
+    check(next((c for c in data['commands'] if c['name'] == gone
+                and c['cat'] == 'music'), None) is None,
+          f'старая музыкальная команда {gone} удалена (управление — пульт /play)')
 
 music = next(c for c in data['commands'] if c['name'] == 'play' and c['cat'] == 'music')
 check('игра' in music['desc'].lower() or 'трек' in music['desc'].lower()

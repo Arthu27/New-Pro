@@ -42,7 +42,7 @@ cat = catalog(force=True)
 pref = [c['name'] for c in cat['commands'] if c['kind'] == 'prefix']
 check(cat.get('prefix', 1) == 0 and not pref,
       f'боевой состав без «!»-команд (осталось: {pref})')
-for name, kind in (('play', 'slash'), ('pause', 'slash'), ('queue', 'slash'),
+for name, kind in (('play', 'slash'),
                    ('апелляция', 'slash'), ('module', 'slash'),
                    ('health', 'slash'), ('diagnose', 'slash'), ('hotreload', 'slash')):
     hit = next((c for c in cat['commands'] if c['name'] == name), None)
@@ -51,8 +51,7 @@ for name, kind in (('play', 'slash'), ('pause', 'slash'), ('queue', 'slash'),
 
 import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
-for name in ('play', 'pause', 'resume', 'skip', 'queue', 'nowplaying', 'leave',
-             'апелляция', 'module', 'health', 'diagnose', 'hotreload'):
+for name in ('play', 'апелляция', 'module', 'health', 'diagnose', 'hotreload'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
 
 src_appeals = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()
