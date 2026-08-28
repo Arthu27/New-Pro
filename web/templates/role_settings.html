@@ -112,7 +112,7 @@
 </style>
 
 <script>
-var GUILD_ID = {{ guild_id | tojson }};
+var GUILD_ID = {{ (guild_id|string)|tojson }};
 var VIEW = null;
 var ROLES = [];
 

@@ -263,7 +263,7 @@
 
 <script src="/static/pickers.js"></script>
 <script>
-var GID = {{ guild_id | tojson }};
+var GID = {{ (guild_id|string)|tojson }};
 
 /* каналы только из живых списков — ручной ввод ID убран по заказу */
 attachSelectPicker(document.getElementById('ml-channel'),

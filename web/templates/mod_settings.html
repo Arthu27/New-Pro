@@ -158,7 +158,7 @@
 <script src="/static/pickers.js"></script>
 <script>
 var CAN_EDIT = true;
-var GUILD_ID = {{ guild_id | tojson }};
+var GUILD_ID = {{ (guild_id|string)|tojson }};
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }

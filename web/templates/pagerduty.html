@@ -97,7 +97,7 @@
 </div>
 
 <script>
-var GUILD_ID = {{ guild_id | tojson }};
+var GUILD_ID = {{ (guild_id|string)|tojson }};
 var STATE = { hook_path: '', channels: [] };
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }

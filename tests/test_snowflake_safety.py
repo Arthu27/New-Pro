@@ -162,6 +162,51 @@ check('GATE_OK' in out.stdout,
 if out.returncode != 0:
     print(out.stdout[-400:], out.stderr[-400:])
 
+print('== 6. Страницы отдают guild-id в JS СТРОКОЙ (не числом!) ==')
+# Регрессия 2026-08-28: guardian отдавал {{ guild_id | tojson }} числом —
+# JS double округлял 19-значный id (…345 стал …000), гейт отвечал
+# 404 «Другие серверы бота недоступны» на КАЖДЫЙ API страницы.
+code = r'''
+import os, sys, tempfile
+_TMP = tempfile.mkdtemp(prefix="hakumo_pages_")
+os.chdir(_TMP)
+sys.path.insert(0, %r)
+os.makedirs("data", exist_ok=True)
+os.environ["DB_PATH"] = os.path.join(_TMP, "data", "bot.db")
+os.environ["PANEL_USER"] = "a"
+os.environ["PANEL_PASSWORD"] = "x"
+os.environ["MAIN_GUILD_ID"] = "1484574976580391345"
+import web.app as m
+c = m.app.test_client()
+with c.session_transaction() as s:
+    s["logged_in"] = True
+    s["username"] = "a"
+    s["role"] = "owner"
+ok = True
+for url in ("/guardian", "/mod-settings", "/pagerduty", "/role-settings",
+            "/temp-moderation", "/proofs", "/automation"):
+    r = c.get(url)
+    body = r.get_data(as_text=True)
+    quoted = ('var GUILD_ID = "1484574976580391345";' in body
+              or 'var GID = "1484574976580391345";' in body
+              or 'gid: "1484574976580391345"' in body)
+    bare_number = ('= 1484574976580391345;' in body
+                   or 'gid: 1484574976580391345' in body)
+    if r.status_code != 200 or bare_number or not quoted:
+        ok = False
+        print("BAD", url, r.status_code, "quoted=", quoted, "bare=", bare_number)
+    else:
+        print("OK", url)
+assert ok
+print("PAGES_OK")
+''' % ROOT
+out = subprocess.run([sys.executable, '-c', code], capture_output=True,
+                     text=True, timeout=300)
+check('PAGES_OK' in out.stdout,
+      'guardian/mod-settings/pagerduty/role-settings/temp-mod/proofs/automation: id строкой')
+if out.returncode != 0 or 'PAGES_OK' not in out.stdout:
+    print(out.stdout[-600:], out.stderr[-600:])
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

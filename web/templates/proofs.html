@@ -369,7 +369,7 @@
   /* Стандартный member-пикер панели (п.3): аватарки, живой поиск,
      пагинация, клавиши. opts.onPick — подхватываем имя из выбора. */
   window.attachMemberPicker($('pf-member'), {
-    gid: {{ main_guild_id | tojson }},
+    gid: {{ (main_guild_id|string)|tojson }},
     statusEl: $('pf-member-st'),
     onPick: function (uid, item) {
       $('pf-uid').value = uid;

@@ -83,7 +83,7 @@
   var actionType = 'mut';
   var currentData = { muts: [], bans: [], kicks: [], scheduled: [] };
 
-  var GID = {{ guild_id | tojson }};
+  var GID = {{ (guild_id|string)|tojson }};
 attachMemberPicker(document.getElementById('newUser'), { gid: GID, statusEl: document.getElementById('newUserStatus') });
 function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }

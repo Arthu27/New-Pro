@@ -366,7 +366,7 @@
 
 <script>
 var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %};
-var GUILD_ID = {{ guild_id | tojson }};
+var GUILD_ID = {{ (guild_id|string)|tojson }};
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
