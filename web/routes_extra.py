@@ -120,6 +120,7 @@ from web.routes import (
     antifake_panel,
     staff_stats_panel,
     pagerduty_hook,
+    mod_schedule,
 )
 
 _MODULES = tuple(

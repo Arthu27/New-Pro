@@ -303,12 +303,33 @@ class TempModeration(commands.Cog):
     @tasks.loop(seconds=30)
     async def run_scheduler(self):
         """Run scheduled actions when their time comes"""
+        # Панель пишет в тот же data/temp_scheduled.json: перечитываем каждый
+        # тик — иначе запланированное из панели увидело бы выполнение только
+        # после рестарта бота, а отмена из панели не сработала бы вовсе.
+        try:
+            with open(self._scheduled_file(), "r", encoding="utf-8") as f:
+                disk = json.load(f)
+            if isinstance(disk, list):
+                mem = {str(e.get("id")): e for e in self._scheduled
+                       if isinstance(e, dict)}
+                merged = []
+                for e in disk:
+                    if isinstance(e, dict):
+                        mem.pop(str(e.get("id")), None)
+                        merged.append(e)
+                # совсем свежие записи бота, ещё не сброшенные на диск
+                merged.extend(mem.values())
+                self._scheduled = merged
+        except Exception:
+            pass
         now = time.time()
+        dirty = False
         for entry in list(self._scheduled):
             if entry["run_at"] <= now and entry["status"] == "pending":
                 guild = self.bot.get_guild(int(entry["guild_id"]))
                 if not guild:
                     entry["status"] = "failed"
+                    dirty = True
                     continue
                 # Find member if still on server
                 member = guild.get_member(int(entry["user_id"]))
@@ -341,10 +362,15 @@ class TempModeration(commands.Cog):
                             "user_name": entry.get("user_name", ""),
                         }
                     entry["status"] = "executed"
+                    dirty = True
                     self.add_history(f"scheduled_{action}", guild.id, entry["user_id"], entry["mod_id"], duration, reason)
                 except Exception as e:
                     entry["status"] = f"failed: {e}"
-        self._save("_scheduled", self._scheduled_file())
+                    dirty = True
+        # пишем на диск только когда что-то выполнили — иначе каждые 30 сек
+        # гоняли бы запись и могли бы перебить свежее создание из панели
+        if dirty:
+            self._save("_scheduled", self._scheduled_file())
 
     @run_scheduler.before_loop
     async def before_scheduler(self):

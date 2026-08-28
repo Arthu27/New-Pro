@@ -69,6 +69,9 @@ MENU = [
         {'path': '/appeals', 'label': 'Апелляции', 'icon': 'fa-scale-balanced',
          'section': 'investigation', 'description': 'Очередь пересмотра наказаний и вердикты',
          'access': 'Мод+', 'tone': 'info'},
+        {'path': '/mod-schedule', 'label': 'Расписание', 'icon': 'fa-calendar-check',
+         'section': 'investigation', 'description': 'Истечения наказаний и отложенные действия',
+         'access': 'Мод+', 'tone': 'info'},
 
         # Защита: вынесена в отдельную категорию сайдбара «Защита»
         # (заказ владельца 2026-08-25: разделить Модерация и Защита).
@@ -329,6 +332,7 @@ PAGE_COGS = {
     '/staff-rating': ('staff_rating',),
     '/recap': ('recap',),
     '/appeals': ('appeals',),
+    '/mod-schedule': ('temp_moderation',),
     '/lockdown': ('lockdown',),
     '/staff-shifts': ('staff_shifts',),
     '/staff-stats': ('staff_stats',),
