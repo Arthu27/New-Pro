@@ -11,9 +11,21 @@ Music Cog — музыка Hakumo.
 Отдельных /pause, /skip, /queue и прочих музыкальных команд больше нет —
 их место занял пульт. Пульт persistent: кнопки работают и после рестарта
 бота. Ответы — в фирменном тёмно-золотом стиле (cogs/embed_utils).
+
+Воспроизведение: /play принимает и ссылку (youtube/vk…), и название —
+принимает всё, что понимает yt-dlp; название ищется первым результатом
+ytsearch1. Прямой поток отдаётся в discord.FFmpegPCMAudio (нужен ffmpeg
+на сервере, путь можно задать FFMPEG_BINARY в .env). Очередь играет
+автоматически: после трека включается следующий; «Скип» и «Стоп» работают
+как раньше. Недоступная ссылка/нет ffmpeg — вежливое сообщение в канал,
+а не тишина.
 """
 
+import asyncio
+import os
 import random
+import re
+import shutil
 
 import discord
 from discord import app_commands
@@ -27,6 +39,10 @@ from cogs.embed_utils import hakumo_embed, reply, plural, InterCtx
 _VOLUME_STEP = 10
 _VOLUME_MIN = 0
 _VOLUME_MAX = 200
+
+# Прямые ссылки и поисковые запросы: yt-dlp сам понимает YouTube/VK и т.д.,
+# для названий ищем первый результат ytsearch1:<запрос>.
+_URL_RE = re.compile(r'^https?://', re.IGNORECASE)
 
 
 def shuffle_queue(queue: list) -> list:
@@ -268,6 +284,170 @@ class MusicCog(commands.Cog):
         self.queues = {}
         self._repeats = set()   # gid → повтор очереди включён
         self._volumes = {}      # gid → 0..200 %
+        self._playing_guilds = set()   # gid, где сейчас что-то звучит
+        self._current_track = {}       # gid → track, который сейчас играет
+
+    # ── движок воспроизведения ───────────────────────────────────────────
+    @staticmethod
+    def _ffmpeg_binary():
+        """ffmpeg для декодирования: FFMPEG_BINARY в .env или PATH."""
+        return os.environ.get('FFMPEG_BINARY') or shutil.which('ffmpeg') or None
+
+    async def _resolve_stream(self, query: str):
+        """yt-dlp: ссылка или поиск → (прямой аудио-url, название трека).
+
+        Ссылки из /play принимаются как есть; обычное название ищется
+        первым результатом ytsearch1. Бросает исключение, если трек
+        не найден или библиотека недоступна.
+        """
+        try:
+            import yt_dlp
+        except ImportError as _e:
+            raise ImportError(
+                'на сервере не установлена библиотека yt-dlp '
+                '(выполни `pip install -r requirements.txt` и перезапусти бота)')
+        target = query if _URL_RE.match(query) else f'ytsearch1:{query}'
+        opts = {
+            'format': 'bestaudio/best',
+            'noplaylist': True,
+            'quiet': True,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+        }
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = await asyncio.to_thread(ydl.extract_info, target, download=False)
+        if info is None:
+            raise ValueError('трек не найден')
+        if isinstance(info, dict) and info.get('_type') == 'playlist' and info.get('entries'):
+            info = info['entries'][0]
+        if not isinstance(info, dict):
+            raise ValueError('трек не найден')
+        url = info.get('url') or info.get('webpage_url') or ''
+        title = (info.get('title') or query).strip()
+        if not url:
+            raise ValueError('не удалось получить поток аудио')
+        return url, title
+
+    def _new_source(self, url: str):
+        return discord.FFmpegPCMAudio(
+            url,
+            before_options='-reconnect 1 -reconnect_streamed 1 '
+                           '-reconnect_delay_max 5 -nostdin',
+            options='-vn',
+            executable=self._ffmpeg_binary() or 'ffmpeg',
+        )
+
+    async def _announce(self, guild, track, kind, title, text):
+        """Играющий/ошибочный трек — короткое сообщение в канал команды."""
+        channel = None
+        cid = track.get('channel_id')
+        if cid and guild is not None:
+            channel = discord.utils.get(guild.text_channels, id=int(cid))
+        if channel is None:
+            return
+        try:
+            await channel.send(embed=hakumo_embed(
+                kind, title, text, guild=guild, footer_extra='Музыка'))
+        except Exception as _ex:
+            log.debug('music: announce: %s', _ex)
+
+    async def _play_next(self, guild_id, ctx=None):
+        """Запустить первый трек очереди, если ничего не играет.
+
+        Возвращает True, если воспроизведение запущено (или уже идёт).
+        Ошибки (не найден трек, no ffmpeg) — вежливое сообщение в канал
+        и переход к следующему треку очереди.
+        """
+        try:
+            if getattr(self, '_playing_guilds', None) is None:
+                self._playing_guilds = set()
+            if getattr(self, '_current_track', None) is None:
+                self._current_track = {}
+            if int(guild_id) in self._playing_guilds:
+                return False
+            vc = getattr(ctx, 'voice_client', None)
+            if vc is None and getattr(self, 'bot', None) is not None:
+                try:
+                    g = self.bot.get_guild(int(guild_id))
+                    vc = getattr(g, 'voice_client', None)
+                except Exception:
+                    vc = None
+            queue = self.get_queue(guild_id)
+            if vc is None or not queue:
+                return False
+            if vc.is_playing() or vc.is_paused():
+                return False
+            track = queue[0]
+            guild = getattr(vc, 'guild', None)
+            if guild is None and getattr(self, 'bot', None) is not None:
+                guild = self.bot.get_guild(int(guild_id))
+            try:
+                url, title = await self._resolve_stream(track.get('query', ''))
+            except ImportError as _ie:
+                # библиотеки нет вообще — очередь не трогаем, объясняем
+                await self._announce(guild, track, 'error', 'Нет yt-dlp',
+                                     'На сервере не установлена библиотека '
+                                     '**yt-dlp**. Обнови зависимость и '
+                                     'перезапусти бота.')
+                return False
+            except Exception as _ex:
+                log.warning('music: %s: %s', track.get('query'), _ex)
+                queue.pop(0)
+                await self._announce(
+                    guild, track, 'error', 'Не удалось найти трек',
+                    f'**{_track_name(track)}** — {str(_ex)[:160]}. '
+                    'Проверь ссылку или напиши название трека.')
+                await self._play_next(guild_id)
+                return True
+            if self._ffmpeg_binary() is None:
+                # Без ffmpeg ничего не заиграет: очередь не трогаем,
+                # объясняем один раз и останавливаемся.
+                await self._announce(
+                    guild, track, 'error', 'Нет ffmpeg',
+                    'На сервере не установлен **ffmpeg** — музыка не '
+                    'сможет играть. Поставь его или укажи путь в '
+                    '`.env`: `FFMPEG_BINARY=путь/к/ffmpeg`.')
+                return False
+
+            track['url'] = url
+            track['title'] = title
+            source = self._new_source(url)
+            # громкость из состояния сервера
+            try:
+                source.volume = self.volume_of(guild_id) / 100
+            except Exception:
+                pass
+            self._playing_guilds.add(int(guild_id))
+            self._current_track[int(guild_id)] = track
+            vc.play(source, after=lambda _e: self._after_track(guild_id, _e))
+            return True
+        except Exception as _ex:
+            log.warning('music: play_next: %s', _ex)
+            return False
+
+    def _after_track(self, guild_id, error=None):
+        """Колбэк после трека (вызывается discord.py в цикле бота)."""
+        if error is not None:
+            log.warning('music: трек завершился с ошибкой: %s', error)
+        try:
+            bot = getattr(self, 'bot', None)
+            loop = getattr(bot, 'loop', None) or asyncio.get_event_loop()
+            loop.create_task(self._on_track_end(guild_id))
+        except Exception as _ex:
+            log.debug('music: after: %s', _ex)
+
+    async def _on_track_end(self, guild_id: int):
+        """Трек закончился: убрать его из очереди и включить следующий."""
+        gid = int(guild_id)
+        if getattr(self, '_playing_guilds', None) is not None:
+            self._playing_guilds.discard(gid)
+        queue = self.get_queue(gid)
+        current = (getattr(self, '_current_track', None) or {}).get(gid)
+        if getattr(self, '_current_track', None) is not None:
+            self._current_track.pop(gid, None)
+        if queue and current is not None and queue[0] is current:
+            queue.pop(0)
+        await self._play_next(gid)
 
     # ── состояние ─────────────────────────────────────────────────────────
     def get_queue(self, guild_id: int) -> list:
@@ -343,7 +523,19 @@ class MusicCog(commands.Cog):
                 return
 
         queue = self.get_queue(ctx.guild.id)
-        queue.append({'query': трек, 'requester': ctx.author})
+        queue.append({'query': трек, 'requester': ctx.author,
+                      'channel_id': getattr(getattr(ctx, 'channel', None), 'id', None),
+                      'title': None})
+
+        # Если это первый трек — сразу поднимаем движок (yt-dlp + ffmpeg).
+        # Фоном, чтобы ответ с пультом не ждал поиска по сети.
+        try:
+            if len(queue) == 1:
+                asyncio.create_task(self._play_next(ctx.guild.id, ctx=ctx))
+            elif not self._playing_guilds:
+                asyncio.create_task(self._play_next(ctx.guild.id, ctx=ctx))
+        except Exception as _ex:
+            log.debug('music: запуск движка: %s', _ex)
 
         if len(queue) == 1:
             title, pos = 'Сейчас играет', 'сразу'
