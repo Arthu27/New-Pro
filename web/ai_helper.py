@@ -1113,20 +1113,46 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
 
     sys_lines =[
     "Ты — Hakumo/Moebius, информационный AI-ассистент сервера Discord. Отвечай на русском языке.",
-    "Давай лаконичные, дружелюбные и профессиональные ответы.",
+    "Ты — настоящий эксперт: думай, рассуждай и отвечай на ЛЮБОЙ вопрос полно и уверенно. "
+    "Что спросили — то и получи: сначала прямой точный ответ, детали — ниже если нужны.",
     # Заказ владельца 2026-08-26: ИИ — только консультирует.
     "ЖЁСТКИЕ ПРАВИЛА (нарушать нельзя):",
     "1. Ты НЕ модератор и НЕ применяешь наказания: никаких мутов, варнов, банов, "
     "киков, тюрем — даже в виде совета «дай мут такому-то». Наказания выдаёт "
     "только модератор-человек через команды бота.",
-    "2. НЕ выдумывай факты, цифры, имена, даты и статистику. Отвечай только тем, "
-    "что известно из контекста и баз знаний. Нет данных — так и скажи: «данных нет».",
-    "3. Никаких служебных команд ACTION:* — максимум ACTION:ESCALATE (позвать модератора).",
+    "2. НЕ выдумывай факты О СЕРВЕРЕ: цифры статистики, имена людей, даты и записи "
+    "журналов бери строго из контекста и баз знаний выше — не издумай их.",
+    "3. Никогда НЕ отказывай отговорками вроде «у меня нет доступа к данным», "
+    "«данных нет», «я не могу это узнать»: общие знания, логику и здравый смысл "
+    "используй свободно и отвечай как взрослый эксперт.",
+    "4. Никаких служебных команд ACTION:* — максимум ACTION:ESCALATE (позвать модератора).",
     ]
     if context .get ('user_name'):
         sys_lines .append (f"Собеседник: {context.get('user_name')} (ID: {context.get('user_id', '?')})")
     if context .get ('guild_name'):
         sys_lines .append (f"Название сервера: {context.get('guild_name')}")
+        # Живой слепок сервера — ИИ знает людей, каналы и роли, не «фантазирует»
+    if context .get ('member_count'):
+        sys_lines .append (f"Участников на сервере: {context['member_count']}")
+    if context .get ('guild_owner'):
+        sys_lines .append (f"Владелец сервера: {context['guild_owner']}")
+    if context .get ('staff_roles'):
+        try :
+            _sr ='; '.join (
+            f"{r0.get('name')}: {', '.join(r0.get('members') or [])}"
+            for r0 in (context ['staff_roles']or [])[:8 ])
+            if _sr :
+                sys_lines .append ("Команда сервера (роль — люди): "+_sr )
+        except Exception as _ex:
+            _log.debug("ai_assistant(): подавлено: %s", _ex)
+    if context .get ('channels'):
+        _chs =[str (c )for c in context ['channels']if c ][:40 ]
+        if _chs :
+            sys_lines .append ("Каналы сервера: "+", ".join (_chs ))
+    if context .get ('roles'):
+        _rls =[str (r0 )for r0 in context ['roles']if r0 ][:30 ]
+        if _rls :
+            sys_lines .append ("Роли сервера: "+", ".join (_rls ))
 
         # Всё о панели и боте: роли (включая Куратора), разделы и страницы —
         # чтобы ИИ отвечал про панель точно и не выдумывал ссылок.
@@ -1215,7 +1241,9 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         })
     messages .append ({"role":"user","content":question })
 
-    answer ,model_name ,rate_info =_call (messages ,max_tokens =1024 ,temperature =0.7 )
+    # Детерминизм заказан владельцем: тот же вопрос → тот же ответ,
+    # без «плавания» формулировок. Хвост длиннее — ответы полные.
+    answer ,model_name ,rate_info =_call (messages ,max_tokens =1408 ,temperature =0.25 )
 
     updated_history =list (history )+[
     {"role":"user","content":question },

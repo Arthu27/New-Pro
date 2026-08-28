@@ -11,6 +11,12 @@ from web.routes._common import (
     os, json, time, math, discord, datetime, timezone,
 )
 
+# Модель панельного AI — заказ владельца: в панели заведомо СЛАБАЯ (дешёвая)
+# модель; боевой сильный ответчик живёт в Discord-чате (cogs/ai_chat).
+# Переопределяется через AI_PANEL_MODEL в .env.
+_AI_PANEL_MODEL = (os.getenv('AI_PANEL_MODEL', 'mistral-small-latest')
+                   or 'mistral-small-latest')
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -469,7 +475,7 @@ def register(ctx):
         messages .append ({'role':'user','content':question })
 
         try :
-            answer ,model_name ,_ =_call (messages ,max_tokens =1024 )
+            answer ,model_name ,_ =_call (messages ,max_tokens =1024 ,model =_AI_PANEL_MODEL )
         except Exception as e :
         # Fallback: локальный ответ
             print (f"[AI-CHAT] _call exception: {e}")
@@ -727,7 +733,7 @@ def register(ctx):
                 'content':"Сформулируй финальный ответ на основе данных выше."
                 })
                 try :
-                    final_answer ,model_name2 ,_ =_call (messages ,max_tokens =1024 )
+                    final_answer ,model_name2 ,_ =_call (messages ,max_tokens =1024 ,model =_AI_PANEL_MODEL )
                     if final_answer :
                         answer =final_answer 
                 except Exception as _fe2 :

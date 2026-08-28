@@ -377,11 +377,21 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                             staff_roles .append ({'name':role .name ,'members':members })
                 if staff_roles :
                     context ['staff_roles']=staff_roles [:8 ]# Max 8 роли
+
+                    # Слепок каналов и ролей — ИИ отвечает о сервере фактами
+                context ['channels']=[
+                ('# '+c .name )for c in guild .text_channels ][:40 ]+[
+                ('  '+c .name )for c in guild .voice_channels ][:20 ]
+                context ['roles']=[
+                r .name for r in sorted (
+                (r for r in guild .roles if not r .is_default ()and not r .managed ),
+                key =lambda r :r .position ,reverse =True )][:30 ]
             except Exception as e :
                 log .info (f'[AI] Guild info Ошибки: {e}')
 
-                #  СЕРВЕР СОСТОЯНИЕ (J.A.R.V.I.S. разница) 
-        if guild and str (user_id )=='987430047889637426':
+                # СОСТОЯНИЕ СЕРВЕРА видно ИИ у всех (публичные цифры гильдии) —
+        # иначе он отвечал «данных нет» про онлайн/голосовые
+        if guild :
             try :
                 online =[m for m in guild .members if not m .bot and m .status !=discord .Status .offline ]
                 in_voice =[]
@@ -1061,6 +1071,18 @@ class AIChat (commands .Cog ):
         message .channel .id in _dynamic_channels or 
         is_ticket_channel 
         )
+
+            # Заказ владельца: в личке ИИ НЕ работает — чат только на сервере.
+            # Перехват reply владельца на ожидающие вопросы и его команды
+            # (выше по коду) продолжают работать — они не ИИ-чат.
+        if is_dm :
+            try :
+                await message .channel .send (
+                'ИИ-чат теперь работает только на сервере — '
+                'напиши в канал с ИИ, отвечу там сразу.')
+            except Exception as _dm_ex:
+                log .info (f'[AI] DM notice Ошибки: {_dm_ex}')
+            return 
 
         if not (is_dm or is_ai_channel ):
             return 
