@@ -196,6 +196,18 @@ check(('Войс-мут', 'user') in g777 and ('Варн за сообщение
       'контекстные меню доехали до сервера (и только туда)')
 check('апелляция' not in g777_names,
       'keep_global НЕ копируется в гильдию — иначе «апелляция» видна дважды')
+
+# старая гильдовая копия keep_global (залитая кодом прошлых версий) лежит
+# прямо в локальном дереве — sync обязан её снять и не вернуть в Discord
+_b5 = Bot()
+_b5.tree.add_command(Cmd('апелляция', extras={'keep_global': True}),
+                     guild=GObj(777))
+asyncio.new_event_loop().run_until_complete(SF.full_sync(_b5))
+_g5_names = {n for n, _ in dict(_b5.tree.synced).get(777, [])}
+check('апелляция' not in _g5_names,
+      'гильдовая копия keep_global снята при синке (одна команда — глобальная)')
+check(any(c.name == 'апелляция' for c in _b5.tree.get_commands(guild=None)),
+      'глобальная апелляция осталась в дереве (ЛС работает)')
 check(synced.get(999) == [],
       'сервер вне MAIN/EXTRA очищен от старых копий команд (вечные дубли)')
 

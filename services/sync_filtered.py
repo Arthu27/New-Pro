@@ -53,6 +53,7 @@ def _is_disabled(name):
 async def sync_tree(bot, guild=None):
     """tree.sync() без выключенных команд (контекст guild или глобально)."""
     import discord
+    from discord import AppCommandType
     tree = bot.tree
     ctx = None
     if guild is not None:
@@ -71,6 +72,30 @@ async def sync_tree(bot, guild=None):
                 removed.append(c)
             except Exception as e:
                 _log.debug('remove_command(%s): %s', c.name, e)
+    # Дубли апелляции: команды с extras['keep_global'] (/апелляция) живут
+    # ТОЛЬКО глобально (работают в ЛС). Гильдовая копия = вторая строка с
+    # тем же именем в меню сервера. Снимаем такие копии и НЕ возвращаем их
+    # в локальное дерево: при следующем guild-sync старые копии, оставшиеся
+    # в Discord с прошлых версий, стираются (самолечение).
+    if ctx is not None:
+        try:
+            _kept_global = [
+                c for c in tree.get_commands(guild=ctx)
+                if bool((getattr(c, 'extras', None) or {}).get('keep_global'))
+            ]
+        except Exception as _e:
+            _log.debug('get_commands(keep_global): %s', _e)
+            _kept_global = []
+        for c in _kept_global:
+            try:
+                tree.remove_command(
+                    c.name, guild=ctx,
+                    type=getattr(c, 'type', None) or AppCommandType.chat_input)
+                _log.info('sync: гильдовая копия keep_global «%s» снята '
+                          '(команда живёт глобально — дубля в меню не будет)',
+                          c.name)
+            except Exception as e:
+                _log.debug('remove_command(keep_global %s): %s', c.name, e)
     try:
         try:
             synced = await tree.sync(guild=ctx)
