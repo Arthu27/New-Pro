@@ -48,8 +48,8 @@ from services import command_registry as CR  # noqa: E402
 data = CR.catalog(force=True)
 # Заказ владельца 2026-08-28 «как можно меньше»: боевое слеш-меню —
 # ровно 4 команды (modpanel с варном внутри, play, апелляция, update).
-check(data['total'] == 4, f"lean: собрано {data['total']} живых команд (ровно 4)")
-check(data['slash'] == 4 and data['prefix'] == 0,
+check(data['total'] == 6, f"lean: собрано {data['total']} живых команд (ровно 6)")
+check(data['slash'] == 6 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
