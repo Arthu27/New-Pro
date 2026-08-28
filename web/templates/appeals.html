@@ -17,6 +17,7 @@
 <div class="kpi-row" id="apKpis">
   <div class="kpi"><div class="kpi-icon"><i class="fas fa-circle-notch fa-spin"></i></div><div class="kpi-copy"><div class="kpi-value">…</div><div class="kpi-label">Загрузка</div></div></div>
 </div>
+<div id="apRateComments" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
 
 <div class="grid-2" style="align-items:start">
   <div class="panel">
@@ -111,6 +112,14 @@
       <label class="field" style="min-width:230px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Авто-блок подачи после N отказов (0 — выкл)</span>
         <input type="number" class="form-input" id="apBlockAfter" min="0" max="10" aria-label="Авто-блок подачи после N отказов"></label>
     </div>
+    <div class="form-row" style="flex-wrap:wrap;gap:14px;max-width:900px;margin-top:10px">
+      <label class="field" style="min-width:230px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Эскалация: ждёт дольше N часов (0 — выкл)</span>
+        <input type="number" class="form-input" id="apEscHours" min="0" max="336" aria-label="Эскалация после N часов ожидания"></label>
+      <label class="field" style="min-width:260px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Старшая роль для эскалации (пинг в канал карточек)</span>
+        <select class="form-input" id="apEscRole" aria-label="Роль для эскалации"><option value="0">Без пинга</option></select></label>
+    </div>
+    <div class="hint" style="margin-top:2px"><i class="fas fa-circle-info"></i>
+      Эскалация сработает один раз на апелляцию: просроченное дело подсвечивается в очереди и пингует старшую роль в канале карточек.</div>
     <div class="form-row" style="max-width:900px;margin-top:10px">
       <textarea class="form-input" id="apTemplates" rows="4" style="flex:1"
         placeholder="Шаблоны причин отказа — по одной на строку (до 10)"
@@ -149,6 +158,11 @@ function syncSettings(d) {
     $('apPingRole').value = String(s.ping_role_id || '0');
   }
   if ($('apBlockAfter')) $('apBlockAfter').value = s.block_after_rejects;
+  if ($('apEscHours')) $('apEscHours').value = s.escalate_hours;
+  if ($('apEscRole')) {   /* опций может ещё не быть — запоминаем для loadRoles */
+    $('apEscRole').dataset.value = String(s.escalate_role_id || '0');
+    $('apEscRole').value = String(s.escalate_role_id || '0');
+  }
   if ($('apTemplates')) $('apTemplates').value = (s.reject_templates || []).join('\n');
 }
 
@@ -187,6 +201,20 @@ function loadOverview() {
               s.ratings.pct >= 50 ? 'tone-ok' : 'tone-err')
         : '') + last;
 
+    /* свежие комментарии «почему так» — обратная связь по рассмотрению */
+    var rcm = $('apRateComments');
+    if (rcm) {
+      var cms = (s.ratings && s.ratings.comments) || [];
+      rcm.innerHTML = cms.map(function (c) {
+        var good = c.rating === 'up';
+        return '<div class="card" style="flex:1;min-width:240px;margin-bottom:0;padding:12px 14px">' +
+          '<div class="row" style="margin-bottom:4px"><span class="badge ' + (good ? 'ok' : 'danger') + '">' +
+          '<i class="fas ' + (good ? 'fa-thumbs-up' : 'fa-thumbs-down') + '"></i> #' + esc(c.id) + '</span>' +
+          '<span class="muted" style="font-size:11px;margin-left:auto">оценка рассмотрения</span></div>' +
+          '<div style="font-size:12.5px;color:var(--text-2);white-space:pre-wrap">' + esc(c.comment) + '</div></div>';
+      }).join('');
+    }
+
     var rd = d.readiness;
     var rb = $('apReady');
     if (rd.channel_name) {
@@ -213,12 +241,23 @@ function loadOverview() {
             return '<button type="button" class="btn btn-ghost btn-sm apTpl" data-for="' + esc(it.id) + '" data-tpl="' + esc(t) + '" style="font-size:11px;padding:3px 10px">' + esc(t) + '</button>';
           }).join('') + '</div>';
       }
+      var claimBtn = CAN_EDIT
+        ? '<button type="button" class="btn ' + (it.claimed_by ? 'btn-ghost' : 'btn-secondary') + ' btn-sm" data-claim="' + it.id + '" title="Отметить, кто ведёт дело — остальные видят, что очередь занята"><i class="fas fa-hand"></i> ' +
+          (it.claimed_by ? 'Снять с работы' : 'Взять в работу') + '</button>'
+        : '';
       var act = CAN_EDIT
         ? tplRow +
           '<div class="row" style="margin-top:8px">' +
+          claimBtn +
           '<input class="form-input" id="apReply' + it.id + '" placeholder="Комментарий для ЛС (до 300 знаков)" maxlength="300" style="flex:1">' +
           '<button type="button" class="btn btn-primary btn-sm" data-ap="' + it.id + ':1"><i class="fas fa-check"></i> Принять</button>' +
           '<button type="button" class="btn btn-danger btn-sm" data-ap="' + it.id + ':0"><i class="fas fa-xmark"></i> Отклонить</button></div>'
+        : '';
+      var claimChip = it.claimed_by
+        ? '<span class="badge info" title="Этот модератор ведёт дело"><i class="fas fa-hand"></i> в работе: ' + esc(it.claimed_by) + '</span>'
+        : '';
+      var escChip = it.escalated
+        ? '<span class="badge danger" title="Просрочена — эскалирована старшей роли"><i class="fas fa-fire"></i> эскалация</span>'
         : '';
       var linkHtml = it.link
         ? '<div style="margin-top:6px"><a class="pv-link" href="' + esc(it.link) + '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;font-size:11.5px;font-weight:700;color:var(--ac);background:var(--ac-soft);border:1px solid var(--ac-line);border-radius:99px;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><i class="fas fa-link"></i> ' + esc(it.link) + '</a></div>'
@@ -228,7 +267,8 @@ function loadOverview() {
         : '';
       return '<div class="card" style="margin-bottom:10px">' +
         '<div class="row" style="margin-bottom:6px"><b>#' + esc(it.id) + '</b> · ' + esc(it.user_name || 'Без имени') +
-          ' · <span class="id-pill">' + esc(it.user_id) + '</span><span class="spacer"></span><span class="muted">' + esc(it.created_at) + '</span></div>' +
+          ' · <span class="id-pill">' + esc(it.user_id) + '</span> ' + claimChip + ' ' + escChip +
+          '<span class="spacer"></span><span class="muted">' + esc(it.created_at) + '</span></div>' +
         '<div style="white-space:pre-wrap">' + linkify(esc(it.text)) + '</div>' + ctxHtml + linkHtml + act + '</div>';
     }).join('');
   }).catch(function () {});
@@ -257,6 +297,17 @@ function loadHistory() {
   }).catch(function () {});
 }
 
+function apClaim(id) {
+  fetch(API + '/claim', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ appeal_id: String(id) })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { window.showToast(d.error || 'Ошибка', false); return; }
+    window.showToast(d.claimed ? 'Апелляция #' + id + ' у вас в работе' : 'Апелляция #' + id + ' снова в общей очереди', true);
+    loadOverview();
+  }).catch(function () { window.showToast('Сеть моргнула — попробуйте ещё раз', false); });
+}
+
 function apResolve(id, accept) {
   var rep = $('apReply' + id);
   var reply = rep ? rep.value : '';
@@ -279,14 +330,17 @@ function apResolve(id, accept) {
 
 function loadRoles() {
   fetch('/api/guild/' + GID + '/roles').then(function (r) { return r.json(); }).then(function (d) {
-    var sel = $('apPingRole');
-    if (!sel) return;
-    var keep = sel.dataset.value || sel.value;
     var raw = Array.isArray(d) ? d : (d.roles || []);
-    sel.innerHTML = '<option value="0">Без пинга</option>' + raw.map(function (r) {
-      return '<option value="' + esc(r.id) + '">@ ' + esc(r.name) + '</option>';
-    }).join('');
-    if (keep) sel.value = keep;
+    /* два селекта из одного списка: пинг при новой апелляции и старшая роль эскалации */
+    ['apPingRole', 'apEscRole'].forEach(function (sid) {
+      var sel = $(sid);
+      if (!sel) return;
+      var keep = sel.dataset.value || sel.value;
+      sel.innerHTML = '<option value="0">Без пинга</option>' + raw.map(function (r) {
+        return '<option value="' + esc(r.id) + '">@ ' + esc(r.name) + '</option>';
+      }).join('');
+      if (keep) sel.value = keep;
+    });
   }).catch(function () {});
 }
 
@@ -321,6 +375,8 @@ document.addEventListener('click', function (e) {
     apResolve(parts[0], parts[1] === '1');
     return;
   }
+  var cb = e.target.closest('[data-claim]');
+  if (cb) { apClaim(cb.dataset.claim); return; }
   var chipBtn = e.target.closest('#apChips .seg-btn');
   if (chipBtn) {
     document.querySelectorAll('#apChips .seg-btn').forEach(function (x) { x.classList.remove('active'); });
@@ -427,10 +483,10 @@ if (apLookSaveBtn) apLookSaveBtn.addEventListener('click', function () {
 
 /* ── Правила подачи (admin/owner) ──────────────────────────────────── */
 if (CAN_EDIT && $('apRulesSave')) {
-  ['apCooldown', 'apStale', 'apTemplates'].forEach(function (id) {
+  ['apCooldown', 'apStale', 'apTemplates', 'apEscHours'].forEach(function (id) {
     $(id).addEventListener('input', function () { apRulesDirty = true; });
   });
-  ['apReqReply', 'apInviteOn', 'apInviteChan', 'apPingRole', 'apBlockAfter'].forEach(function (id) {
+  ['apReqReply', 'apInviteOn', 'apInviteChan', 'apPingRole', 'apBlockAfter', 'apEscRole'].forEach(function (id) {
     $(id).addEventListener('change', function () { apRulesDirty = true; });
   });
   $('apRulesSave').addEventListener('click', function () {
@@ -445,6 +501,8 @@ if (CAN_EDIT && $('apRulesSave')) {
         invite_channel_id: $('apInviteChan').value,
         ping_role_id: $('apPingRole').value,
         block_after_rejects: $('apBlockAfter').value,
+        escalate_hours: $('apEscHours').value,
+        escalate_role_id: $('apEscRole').value,
         reject_templates: $('apTemplates').value.split('\n')
           .map(function (s) { return s.trim(); })
           .filter(function (s) { return !!s; })

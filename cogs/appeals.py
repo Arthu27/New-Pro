@@ -95,6 +95,11 @@ def settings_of(state):
         'ping_role_id': _clamp_hours(raw.get('ping_role_id'), 0, 0, 10 ** 25),
         'block_after_rejects': _clamp_hours(raw.get('block_after_rejects'),
                                             0, 0, 10),
+        # эскалация: pending старше N часов → пинг старшей роли в канал
+        # (0 часов = выключено; роль 0 = отметить эскалацию без упоминания)
+        'escalate_hours': _clamp_hours(raw.get('escalate_hours'), 0, 0, 336),
+        'escalate_role_id': _clamp_hours(raw.get('escalate_role_id'), 0, 0,
+                                         10 ** 25),
     }
 
 
@@ -239,6 +244,9 @@ def create_appeal(state, user_id, user_name, text, now, link=None):
         'reviewed_at': None,
         'reply': None,
         'rating': None,               # оценка рассмотрения от автора: up/down
+        'rating_comment': None,       # необязательный комментарий к оценке
+        'claimed_by': None,           # {'id','name','at'} — кто взял в работу
+        'escalated_at': None,         # когда эскалировали старшей роли
     }
     state['next_id'] += 1
     state['items'].append(item)
@@ -310,6 +318,64 @@ class AppealView(discord.ui.View):
                 custom_id=f'appeal:{verb}:{appeal_id}')
             btn.callback = self._make_cb(verb == 'accept')
             self.add_item(btn)
+        claim = discord.ui.Button(
+            label='Взять в работу', style=discord.ButtonStyle.primary,
+            emoji='✋', custom_id=f'appeal:claim:{appeal_id}')
+        claim.callback = self._claim
+        self.add_item(claim)
+
+    def _claim_btn(self):
+        for child in self.children:
+            if str(getattr(child, 'custom_id', '')).startswith('appeal:claim:'):
+                return child
+        return None
+
+    async def _claim(self, interaction):
+        """Взять апелляцию в работу / снять с себя (повторный клик)."""
+        if not interaction.user.guild_permissions.manage_guild:
+            await interaction.response.send_message(
+                'Нужно право «Управление сервером».', ephemeral=True)
+            return
+        gid = self.guild_id
+        state = self.cog._load(gid)
+        item = get_appeal(state, self.appeal_id)
+        if item is None or item.get('status') != 'pending':
+            await interaction.response.send_message(
+                'Апелляция уже решена — в работу не взять.', ephemeral=True)
+            return
+        uid = str(interaction.user.id)
+        claim = item.get('claimed_by') or None
+        btn = self._claim_btn()
+        if claim and str(claim.get('id')) != uid:
+            await interaction.response.send_message(
+                f'Уже в работе у **{claim.get("name")}** — '
+                'дождитесь его решения.', ephemeral=True)
+            return
+        now = datetime.now(UTC).isoformat()
+        if claim:
+            item['claimed_by'] = None
+            note = 'Вы сняли апелляцию с работы — очередь снова общая.'
+            if btn is not None:
+                btn.label = 'Взять в работу'
+                btn.style = discord.ButtonStyle.primary
+        else:
+            item['claimed_by'] = {'id': uid, 'name': str(interaction.user),
+                                  'at': now}
+            note = 'Апелляция у вас в работе — решение ждут от вас.'
+            if btn is not None:
+                btn.label = f'В работе: {interaction.user.display_name}'
+                btn.style = discord.ButtonStyle.secondary
+        self.cog._save(gid, state)
+        embed = (interaction.message.embeds[0]
+                 if interaction.message and interaction.message.embeds else None)
+        if embed is not None:
+            tail = (f'В работе: {item["claimed_by"]["name"]}'
+                    if item.get('claimed_by') else 'Очередь общая')
+            embed.set_footer(text=tail)
+            await interaction.response.edit_message(embed=embed, view=self)
+        else:
+            await interaction.response.edit_message(view=self)
+        await interaction.followup.send(note, ephemeral=True)
 
     def _make_cb(self, accept):
         async def _cb(interaction):
@@ -429,14 +495,63 @@ class AppealRateView(discord.ui.View):
                 await interaction.response.send_message(
                     'Оценка уже сохранена — спасибо.', ephemeral=True)
                 return
-            item['rating'] = verb
-            self.cog._save(self.guild_id, state)
-            for child in self.children:
-                child.disabled = True
-            await interaction.response.edit_message(view=self)
-            await interaction.followup.send(
-                'Спасибо — оценка учтена.', ephemeral=True)
+            # модалка с необязательным комментарием — это и есть ответ на
+            # клик, поэтому гонки «успели нажать дважды» не бывает
+            await interaction.response.send_modal(
+                AppealRateModal(self.cog, self.guild_id, self.appeal_id,
+                                verb, self))
         return _cb
+
+
+class AppealRateModal(discord.ui.Modal):
+    """Оценка + необязательный комментарий «почему так».
+
+    Открывается из кнопки AppealRateView (custom_id переживает рестарт,
+    сама модалка привязана к живому клику — persistent ей не нужен).
+    """
+
+    def __init__(self, cog, guild_id, appeal_id, verb, src_view):
+        super().__init__(title='Как прошло рассмотрение?')
+        self.cog = cog
+        self.guild_id = guild_id
+        self.appeal_id = appeal_id
+        self.verb = verb
+        self.src_view = src_view
+        self.comment = discord.ui.TextInput(
+            label='Пара слов (необязательно)',
+            placeholder='Что было хорошо — или что можно улучшить…',
+            required=False, max_length=300,
+            style=discord.TextStyle.paragraph)
+        self.add_item(self.comment)
+
+    async def on_submit(self, interaction):
+        state = self.cog._load(self.guild_id)
+        item = get_appeal(state, self.appeal_id)
+        ok = (item is not None
+              and item.get('status') in ('accepted', 'rejected')
+              and not item.get('rating')
+              and int(interaction.user.id) == int(item.get('user_id') or 0))
+        if not ok:
+            await interaction.response.send_message(
+                'Оценка уже сохранена или апелляция недоступна.',
+                ephemeral=True)
+            return
+        cm = str(self.comment.value or '').strip()[:300]
+        item['rating'] = self.verb
+        item['rating_comment'] = cm or None
+        self.cog._save(self.guild_id, state)
+        try:
+            for child in self.src_view.children:
+                child.disabled = True
+            if interaction.message is not None:
+                await interaction.message.edit(view=self.src_view)
+        except (discord.Forbidden, discord.HTTPException) as _ex:
+            log.debug('appeals: скрыть кнопки оценки #%s: %s',
+                      self.appeal_id, _ex)
+        await interaction.response.send_message(
+            'Спасибо! Оценка' + (' и комментарий' if cm else '')
+            + ' сохранены — это правда помогает модерации.',
+            ephemeral=True)
 
 
 class AppealModal(discord.ui.Modal):
@@ -698,6 +813,49 @@ class Appeals(commands.Cog):
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.debug('appeals: пинг роли #%s: %s', item.get('id'), _ex)
 
+    async def _escalate_overdue(self, guild, state, now):
+        """Просроченные прямо в канал старшей роли (0 ч в настройках = выкл).
+
+        Отмечаем item['escalated_at'], чтобы пинг был один раз; сохраняем
+        state только если что-то эскалировали.
+        """
+        from datetime import timedelta
+        settings = settings_of(state)
+        hours = int(settings.get('escalate_hours') or 0)
+        if hours <= 0:
+            return 0
+        edge = now - timedelta(hours=hours)
+        due = []
+        for item in pending_items(state):
+            if item.get('escalated_at'):
+                continue
+            created = _parse_ts(item.get('created_at'))
+            if created is not None and created <= edge:
+                due.append(item)
+        if not due:
+            return 0
+        channel = self._log_channel(guild, state)
+        rid = int(settings.get('escalate_role_id') or 0)
+        mention = f'<@&{rid}> ' if rid else ''
+        n = 0
+        for item in due:
+            created = _parse_ts(item.get('created_at'))
+            age_h = (max(0, int((now - created).total_seconds() // 3600))
+                     if created is not None else 0)
+            if channel is not None:
+                try:
+                    await channel.send(
+                        f'{mention}эскалация: апелляция **#{item["id"]}** от '
+                        f'**{item["user_name"]}** ждёт решения уже '
+                        f'**{age_h} ч** — нужен взгляд старшего модератора.',
+                        allowed_mentions=discord.AllowedMentions(roles=True))
+                except (discord.Forbidden, discord.HTTPException) as _ex:
+                    log.debug('appeals: эскалация #%s: %s', item['id'], _ex)
+            item['escalated_at'] = now.isoformat()
+            n += 1
+        self._save(guild.id, state)
+        return n
+
     async def _make_return_invite(self, guild, settings):
         """Разовая ссылка-возврат для принятого РЕАЛЬНОГО Discord-бана.
 
@@ -728,12 +886,15 @@ class Appeals(commands.Cog):
         while True:
             try:
                 for guild in list(self.bot.guilds):
+                    now = datetime.now(UTC)
+                    # эскалация: pending старше escalate_hours → старшей роли
                     state = self._load(guild.id)
-                    stale = stale_pending(state, datetime.now(UTC))
+                    await self._escalate_overdue(guild, state, now)
+                    state = self._load(guild.id)
+                    stale = stale_pending(state, now)
                     if not stale:
                         continue
                     channel = self._log_channel(guild, state)
-                    now = datetime.now(UTC)
                     for item in stale:
                         age_h = 0
                         created = _parse_ts(item.get('created_at'))

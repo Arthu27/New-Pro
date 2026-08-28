@@ -94,8 +94,18 @@ def overview_stats(state, now=None, stale_hours=None):
         elif item.get('rating') == 'down':
             down += 1
     total_votes = up + down
+    # последние комментарии «почему так» — самая ценная обратная связь
+    comments = []
+    for item in items:
+        cm = str(item.get('rating_comment') or '').strip()
+        if cm:
+            comments.append({'id': item.get('id'),
+                             'rating': item.get('rating'),
+                             'comment': cm[:300]})
+    comments = comments[-3:][::-1]
     ratings = {'up': up, 'down': down,
-               'pct': round(100 * up / total_votes) if total_votes else None}
+               'pct': round(100 * up / total_votes) if total_votes else None,
+               'comments': comments}
     return {'total': len(items), **by, 'stale': stale,
             'ratings': ratings, 'last_resolved': last}
 
@@ -115,6 +125,7 @@ def pending_view(state, gid=None):
                 context = build_context(state, gid, item.get('user_id'))['line']
             except Exception as _ex:
                 _log.debug('appeals: контекст очереди: %s', _ex)
+        claim = item.get('claimed_by') or None
         rows.append({
             'id': item.get('id'),
             'user_id': str(item.get('user_id') or ''),
@@ -124,6 +135,8 @@ def pending_view(state, gid=None):
             'link': str(item.get('link') or ''),
             'context': context,
             'card_text': AP.fmt_card_text(item),
+            'claimed_by': (str(claim.get('name') or '') if claim else ''),
+            'escalated': bool(item.get('escalated_at')),
         })
     return rows
 
@@ -471,6 +484,12 @@ def register(ctx):
             'block_after_rejects': _clamp_hours(data.get('block_after_rejects'),
                                                 0, 10,
                                                 cur['block_after_rejects']),
+            # эскалация старшей роли: 0 часов — выключена
+            'escalate_hours': _clamp_hours(data.get('escalate_hours'), 0, 336,
+                                           cur['escalate_hours']),
+            'escalate_role_id': _clamp_hours(data.get('escalate_role_id'), 0,
+                                             10 ** 25,
+                                             cur['escalate_role_id']),
         }
         state['settings'] = settings
         _save(gid, state)
@@ -559,6 +578,41 @@ def register(ctx):
         payload['success'] = True
         _notify(f'Апелляция #{raw_id}: {payload["status_text"]}')
         return jsonify(payload)
+
+    @app.route('/api/guild/<gid>/appeals/claim', methods=['POST'])
+    @login_required
+    @role_required('mod')
+    def api_appeals_claim(gid):
+        """Взять апелляцию в работу из панели / снять с себя (повтор)."""
+        gid = active_guild_id()
+        data = request.get_json(silent=True) or {}
+        raw_id = str(data.get('appeal_id') or '').strip()
+        if not raw_id.isdigit():
+            return jsonify({'success': False,
+                            'error': 'Некорректный номер апелляции'}), 400
+        state = _state(gid)
+        item = AP.get_appeal(state, int(raw_id))
+        if item is None or item.get('status') != 'pending':
+            return jsonify({'success': False,
+                            'error': 'Апелляция уже решена или не найдена'}), 404
+        uid = str(session.get('discord_id') or session.get('username') or '?')
+        uname = str(session.get('username') or uid)
+        claim = item.get('claimed_by') or None
+        if claim and str(claim.get('id')) != uid:
+            return jsonify({'success': False,
+                            'error': f'Уже в работе у {claim.get("name")}'}), 409
+        if claim:
+            item['claimed_by'] = None
+            claimed_by = ''
+        else:
+            item['claimed_by'] = {'id': uid, 'name': uname,
+                                  'at': datetime.now(UTC).isoformat()}
+            claimed_by = uname
+        _save(gid, state)
+        _notify(f'Апелляция #{raw_id}: ' +
+                ('в работе у ' + uname if claimed_by else 'снята с работы'))
+        return jsonify({'success': True, 'claimed': bool(claimed_by),
+                        'claimed_by': claimed_by})
 
     @app.route('/api/guild/<gid>/appeals/channel', methods=['POST'])
     @login_required

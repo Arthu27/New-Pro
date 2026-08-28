@@ -103,7 +103,8 @@ v1 = ap.AppealView(object(), 4242, 7)
 v2 = ap.AppealView(object(), 4242, 8)
 ids1 = sorted(c.custom_id for c in v1.children)
 ids2 = sorted(c.custom_id for c in v2.children)
-check(ids1 == ['appeal:accept:7', 'appeal:reject:7'], f'custom_id несут id апелляции: {ids1}')
+check(ids1 == ['appeal:accept:7', 'appeal:claim:7', 'appeal:reject:7'],
+      f'custom_id несут id апелляции: {ids1}')
 check(not set(ids1) & set(ids2), 'custom_id не пересекаются между апелляциями')
 check(v1.timeout is None, 'persistent (timeout=None) — переживает рестарт')
 
@@ -203,6 +204,24 @@ rids = sorted(c.custom_id for c in rv.children)
 check(rids == ['app_rate:down:42:7', 'app_rate:up:42:7'],
       f'custom_id оценки несут gid и номер: {rids}')
 check(rv.timeout is None, 'rate-view persistent (переживает рестарт)')
+
+print('== 5.7 эскалация, «в работе», комментарий к оценке ==')
+s_esc = ap.empty_state()
+check(ap.settings_of(s_esc)['escalate_hours'] == 0,
+      'эскалация по умолчанию выключена')
+s_esc['settings'] = {'escalate_hours': 12, 'escalate_role_id': 555}
+check(ap.settings_of(s_esc)['escalate_hours'] == 12 and
+      ap.settings_of(s_esc)['escalate_role_id'] == 555,
+      'настройки эскалации из state')
+item5, _ = ap.create_appeal(s_esc, 900, 'Esc', 'дело для проверки эскалации', NOW)
+check(item5['claimed_by'] is None and item5['escalated_at'] is None and
+      item5['rating_comment'] is None,
+      'поля «в работе»/эскалации/комментария есть с рождения')
+m = ap.AppealRateModal(object(), 42, 7, 'up', ap.AppealRateView(object(), 42, 7))
+check(bool(m.title) and hasattr(m, 'comment'),
+      'модалка оценки с необязательным комментарием')
+check(m.comment.required is False and m.comment.max_length == 300,
+      'комментарий к оценке— необязательный, до 300 знаков')
 
 print('== 6. линт ==')
 src = open(os.path.join(ROOT, 'cogs', 'appeals.py'), encoding='utf-8').read()

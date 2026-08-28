@@ -358,6 +358,42 @@ rt = (ov['stats'].get('ratings') or {})
 check(rt.get('up') == 1 and rt.get('down') == 1 and rt.get('pct') == 50,
       'рейтинг рассмотрений сведён (1×1 → 50%)')
 
+# комментарий «почему так» поднимается в сводку
+str_['items'][0]['rating_comment'] = 'Ответили быстро, объяснили причину.'
+str_['items'][1]['rating_comment'] = 'Ждал три дня, хотелось быстрее.'
+GuildData('appeals').set('777', 'state', str_)
+ov = client.get(OV).get_json()
+cms = (ov['stats']['ratings'].get('comments') or [])
+check(len(cms) == 2 and cms[0]['comment'].startswith('Ждал'),
+      'комментарии к оценкам приезжают в сводку свежими первыми')
+
+# эскалация: настройки сохраняются и видны
+r = client.post('/api/guild/777/appeals/settings',
+                json={'escalate_hours': 12, 'escalate_role_id': 888})
+check(r.get_json().get('success') and
+      r.get_json()['settings']['escalate_hours'] == 12,
+      'настройки эскалации сохраняются')
+ov = client.get(OV).get_json()
+check(ov['settings']['escalate_role_id'] == 888,
+      'старшая роль эскалации видна в overview')
+
+# «в работе» из панели: взяли, чужой не перехватит, сняли
+pend0 = client.get(OV).get_json().get('pending')
+check(all(not p.get('claimed_by') for p in pend0), 'изначально очередь общая')
+target = pend0[0]['id']
+r = client.post('/api/guild/777/appeals/claim', json={'appeal_id': str(target)})
+d = r.get_json()
+check(d.get('success') and d.get('claimed') and d.get('claimed_by'),
+      'взяли апелляцию в работу из панели')
+p2 = client.get(OV).get_json()['pending']
+check(any(p.get('claimed_by') for p in p2 if p['id'] == target),
+      'очередь показывает, кто ведёт дело')
+r = client.post('/api/guild/777/appeals/claim', json={'appeal_id': str(target)})
+check(r.get_json().get('success') and not r.get_json().get('claimed'),
+      'повторный клик снимает с работы')
+r = client.post('/api/guild/777/appeals/claim', json={'appeal_id': '9999'})
+check(r.status_code == 404, 'claim на несуществующую — 404')
+
 # обязательный комментарий при отказе
 r = client.post('/api/guild/777/appeals/resolve', json={
     'appeal_id': str(new_item['id']), 'accept': False, 'reply': ''})
@@ -388,6 +424,11 @@ check('id="apInviteOn"' in apt and 'id="apInviteChan"' in apt,
       'тумблер и выбор канала ссылки-возврата в форме')
 check('id="apPingRole"' in apt and 'id="apBlockAfter"' in apt,
       'пинг роли и авто-блок в форме правил')
+check('id="apEscHours"' in apt and 'id="apEscRole"' in apt,
+      'эскалация в форме правил')
+check('data-claim' in apt and "'/claim'" in apt,
+      'кнопка «в работе» и её маршрут в шаблоне')
+check('id="apRateComments"' in apt, 'блок комментариев к оценкам в шаблоне')
 check('ratings' in apt, 'KPI оценок рассмотрения в шаблоне')
 _ut = open(os.path.join(ROOT, 'web', 'templates', 'users.html'), encoding='utf-8').read()
 check('id="mcAppeals"' in _ut and '/appeals/user/' in _ut,
