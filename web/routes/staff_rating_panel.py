@@ -150,6 +150,22 @@ def register(ctx):
                                username=session.get('username'),
                                guild_id=active_guild_id())
 
+    @app.route('/api/guild/<gid>/staff-leaderboard')
+    @login_required
+    @role_required('mod')
+    def api_staff_leaderboard(gid):
+        """Композитная эффективность команды (активность+скорость+звёзды+справедливость)."""
+        gid = active_guild_id()
+        try:
+            from services.mod_leaderboard import compute_leaderboard
+            payload = compute_leaderboard(gid)
+            payload['success'] = True
+            return jsonify(payload)
+        except Exception as _ex:
+            _log.debug('staff-leaderboard: %s', _ex)
+            return jsonify({'success': False,
+                            'error': 'Не удалось собрать рейтинг'}), 500
+
     @app.route('/api/guild/<gid>/staff-rating/overview')
     @login_required
     @role_required('mod')

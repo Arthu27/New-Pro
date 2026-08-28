@@ -55,6 +55,14 @@
 .sr-sect{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3,color-mix(in srgb, var(--text) 40%, transparent));margin:14px 0 4px}
 [data-theme="light"] .sr-row,[data-theme="light"] .sr-vote,[data-theme="light"] .sr-cmt{border-bottom-color:rgba(0,0,0,.08)}
 [data-theme="light"] .sr-bars .track{background: var(--bg)}
+.sr-lb-sub{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px;font-size:11.5px;color:var(--text-2,color-mix(in srgb, var(--text) 70%, transparent))}
+.sr-lb-m{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.sr-lb-m i{font-size:10.5px;color:var(--ac,var(--ac));opacity:.85}
+.sr-lb-m.dim{opacity:.45}
+.sr-rank{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:8px;font-weight:800;font-size:12px;background:var(--surface-3);color:var(--text-3)}
+.sr-rank.r1{background:linear-gradient(135deg,#b8860b,#f0cd7a);color:#1a1305}
+.sr-rank.r2{background:linear-gradient(135deg,#8a94a6,#d6dbe4);color:#14181f}
+.sr-rank.r3{background:linear-gradient(135deg,#8c5a2b,#c98d55);color:#170f06}
 </style>
 
 <div class="sr-kpis" id="srKpis">
@@ -81,6 +89,12 @@
       <div class="empty-state"><i class="fas fa-hand-pointer"></i><p>Зачётка не открыта</p><p class="empty-tip">Выберите модератора в таблице слева.</p></div>
     </div>
   </div>
+</div>
+
+<div class="sr-panel" id="srLbPanel">
+  <h3><i class="fas fa-trophy"></i> Эффективность команды <span id="srLbCrown"></span></h3>
+  <div class="sr-sub">Композитный рейтинг за 30 дней: активность (30) + скорость ответов на апелляции (30) + звёзды (25) + справедливость решений (15). Метрики «нет данных» дают честную нейтральную половину, а не ноль.</div>
+  <div id="srLbTable"><div class="sk-row"></div><div class="sk-row" style="width:60%"></div></div>
 </div>
 
 <script>
@@ -229,7 +243,56 @@ function srLoad(keepCard) {
 
 srLoad(true);
 
+/* ── Эффективность команды (композит за 30 дней) ────────────────── */
+
+function lbMetric(icon, val, label, ok) {
+  return '<span class="sr-lb-m' + (ok === false ? ' dim' : '') + '" title="' + esc(label) + '">' +
+    '<i class="fas ' + icon + '"></i> ' + esc(val) + '</span>';
+}
+
+function srLbLoad() {
+  fetch('/api/guild/' + GID + '/staff-leaderboard').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    var fp = String(JSON.stringify(d.rows || [])).slice(0, 600);
+    if (fp === (srLbLoad._fp || '')) return;
+    srLbLoad._fp = fp;
+    var rows = d.rows || [];
+    var crown = $('srLbCrown');
+    crown.innerHTML = d.mod_of_month
+      ? '<span class="badge ok" style="margin-left:8px"><i class="fas fa-crown"></i> Модератор месяца: ' + esc(d.mod_of_month) + '</span>'
+      : '';
+    var box = $('srLbTable');
+    if (!rows.length) {
+      box.innerHTML = '<div class="empty-state"><i class="fas fa-people-group"></i><p>Пока пусто</p><p class="empty-tip">Рейтинг соберётся из действий команды: наказаний, решений апелляций и оценок.</p></div>';
+      return;
+    }
+    box.innerHTML = rows.map(function (r) {
+      var medal = '<span class="sr-rank' + (r.rank <= 3 ? ' r' + r.rank : '') + '">' + r.rank + '</span>';
+      var best = d.mod_of_month === r.mod;
+      var speedTxt = r.avg_hours === null ? '—' : (r.avg_hours < 1 ? '<1 ч' : r.avg_hours + ' ч');
+      var starsTxt = r.stars === null ? '—' : r.stars.toFixed(1) + ' ' + STAR_FULL;
+      var fairTxt = r.fair_pct === null ? '—' : r.fair_pct + '%';
+      return '<div class="sr-row" style="cursor:default;grid-template-columns:30px 1fr auto;align-items:center">' +
+        '<div style="text-align:center;font-size:' + (r.rank <= 3 ? '17px' : '12px') + '">' + medal + '</div>' +
+        '<div style="min-width:0">' +
+          '<div style="display:flex;align-items:center;gap:8px"><b>' + esc(r.mod) + '</b>' +
+            (best ? '<i class="fas fa-crown" style="color:var(--ac-2,#f0cd7a);font-size:12px" title="Модератор месяца"></i>' : '') + '</div>' +
+          '<div class="sr-lb-sub">' +
+            lbMetric('fa-bolt', r.actions, 'действий за 30 дней', true) +
+            lbMetric('fa-gavel', r.decisions, 'решений апелляций', true) +
+            lbMetric('fa-stopwatch', speedTxt, 'среднее время до решения', r.avg_hours !== null) +
+            lbMetric('fa-star', starsTxt, 'звёзды от участников', r.stars !== null) +
+            lbMetric('fa-scale-balanced', fairTxt, 'справедливость решений', r.fair_pct !== null) +
+          '</div></div>' +
+        '<div style="text-align:right"><div style="font-size:17px;font-weight:800;color:var(--ac)">' + r.score + '</div>' +
+          '<div class="sr-bars" style="width:110px"><div class="track"><div class="fill" style="width:' + r.score + '%"></div></div></div></div></div>';
+    }).join('');
+  }).catch(function () {});
+}
+
+srLbLoad();
+
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { srLoad(); } catch (e) {} }, 1500);
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { srLoad(); srLbLoad(); } catch (e) {} }, 1500);
 </script>
 {% endblock %}
