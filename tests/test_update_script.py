@@ -75,6 +75,18 @@ check('zipball_url' in text, 'адрес архива берётся из отв
 check('for /d %%D in' in text, 'папка в архиве определяется автоматически')
 check('Istochnik: posledniy reliz' in text, 'человеку видно, откуда качалось')
 
+
+import re as _re
+print('== Только самое свежее: git clean после pull ==')
+import os as _os
+_src = open(_os.path.join(ROOT, 'auto_update.py'), encoding='utf-8').read()
+check(_re.search(r'"git",\s*"clean",\s*"-fd"', _src) is not None,
+      'после обновления каталог приводится к свежей ветке (git clean -fd)')
+check('-e", "data/"' in _src and '-e", ".env"' in _src,
+      'данные и секреты в exclude-списке уборки')
+check('только самое свежее' in _src or 'СВЕЖЕЕ' in _src,
+      'логирование результатов чистки понятным языком')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

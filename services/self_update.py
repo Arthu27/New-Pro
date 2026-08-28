@@ -7,10 +7,13 @@
 2. verify_zip()    — целостность: это валидный zip, есть опорные файлы
                      (main.py, config.py, web/app.py), архив не битый,
                      каждый .py компилируется (py_compile).
-3. stage_update()  — раскатывает файлы ПОВЕРХ рабочей копии, бережно сохраняя
-                     данные и секреты (data/, logs/, .env, .git, .venv —
-                     в исключениях), и пишет маркер data/update_pending.json
-                     (sha/ветка/канал подтверждения после рестарта).
+3. stage_update()  — раскатывает СВЕЖЕЕ состояние ветки как ЕДИНСТВЕННОЕ:
+                     файлы из архива копируются поверх, а любой файл, которого
+                     НЕТ в архиве (старый, уже удалённый в репо), убирается —
+                     «обновил и всё», старого и нового вперемешку не остаётся.
+                     Бережно сохраняет данные и секреты (data/, logs/, .env,
+                     .git, .venv — в исключениях) и пишет маркер
+                     data/update_pending.json (sha/ветка/канал).
 4. ког делает os.execv — процесс заменяется свежим кодом; на on_ready
                      main.py отчитывается в канал из маркера.
 
@@ -163,19 +166,75 @@ def _preserved(rel_parts, root_parts):
     return False
 
 
+def _archive_rel_set(rel_names):
+    """Множество относительных путей файлов из архива (нормализованные sep)."""
+    out = set()
+    for n in (rel_names or ()):  # str pathlib-ish унификация
+        out.add(os.path.normpath(str(n)))
+    return out
+
+
+def _remove_stale_files(bot_dir, fresh_set, stats):
+    """Удалить из bot_dir всё, чего НЕТ в свежем архиве.
+
+    Только это и делает обновление «только свежим»: старые удалённые из репо
+    файлы не остаются рядом с новыми. Пропуски — PRESERVE-список и всё,
+    что вне репозиторного кода (логи, данные, виртуальные окружения).
+    Любая ошибка удаления — не фатал: файл просто останется.
+    """
+    removed = 0
+    if not fresh_set:
+        return removed
+    for dirpath, dirs, files in os.walk(bot_dir):
+        dirs[:] = [d for d in dirs if d not in PRESERVE_DIRS]
+        rel_dir = os.path.relpath(dirpath, bot_dir)
+        rel_parts0 = [] if rel_dir == '.' else rel_dir.split(os.sep)
+        for fn in files:
+            parts = rel_parts0 + [fn]
+            if _preserved(parts, None):
+                continue
+            rel = os.path.normpath(os.path.join(*parts)) if parts else fn
+            if rel in fresh_set:
+                continue
+            fpath = os.path.join(dirpath, fn)
+            try:
+                os.unlink(fpath)
+                removed += 1
+            except OSError:
+                log.debug('self_update: не удалось убрать устаревший %s', rel)
+    # почти пустые каталоги после зачистки — тоже свежести не мешают
+    for dirpath, dirs, files in os.walk(bot_dir, topdown=False):
+        dirs[:] = [d for d in dirs if d not in PRESERVE_DIRS]
+        rel_dir = os.path.relpath(dirpath, bot_dir)
+        if rel_dir == '.':
+            continue
+        if any(p.startswith(os.path.normpath(rel_dir) + os.sep) for p in fresh_set):
+            continue
+        try:
+            if not os.listdir(dirpath):
+                os.rmdir(dirpath)
+        except OSError as _ex:
+            log.debug('self_update: не удалось убрать пустой каталог %s: %s', dirpath, _ex)
+    return removed
+
+
 def stage_update(zip_path, bot_dir, root, rel_names, channel_id=0, sha='', branch=''):
-    """Раскатать архив поверх bot_dir. Возвращает (ok, err, статистика).
+    """Раскатать СВЕЖЕЕ состояние ветки поверх bot_dir (и только его).
 
     Копируем файлами (не хирургия каталогов): на Windows занятые ботом
     каталоги переименовать нельзя, а замена файлов внутри — можно.
+    После копирования убираем файлы, отсутствующие в архиве — в итоге каталог
+    содержит ровно свежайшую версию (плюс data/logs/.env/venv).
     """
     tmp = tempfile.mkdtemp(prefix='hakumo_upd_')
     copied = 0
     skipped = 0
+    removed = 0
     try:
         with zipfile.ZipFile(zip_path) as zf:
             zf.extractall(tmp)
         src_root = os.path.join(tmp, root.rstrip('/'))
+        fresh_set = set()
         for dirpath, dirs, files in os.walk(src_root):
             dirs[:] = [d for d in dirs if d not in PRESERVE_DIRS]
             rel_dir = os.path.relpath(dirpath, src_root)
@@ -189,7 +248,9 @@ def stage_update(zip_path, bot_dir, root, rel_names, channel_id=0, sha='', branc
                 dst = os.path.join(bot_dir, *parts)
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(src, dst)
+                fresh_set.add(os.path.normpath(os.path.join(*parts)))
                 copied += 1
+        removed = _remove_stale_files(bot_dir, fresh_set, None)
         # маркер для приветствия после рестарта
         os.makedirs(os.path.join(bot_dir, 'data'), exist_ok=True)
         marker = {
@@ -198,11 +259,13 @@ def stage_update(zip_path, bot_dir, root, rel_names, channel_id=0, sha='', branc
             'channel_id': int(channel_id or 0),
             'at': _utcnow_iso(),
             'files_copied': copied,
+            'files_removed': removed,
         }
         with open(marker_path(bot_dir), 'w', encoding='utf-8') as f:
             json.dump(marker, f, ensure_ascii=False)
-        log.info('self_update: раскатано %s файлов (пропущено %s)', copied, skipped)
-        return True, None, {'copied': copied, 'skipped': skipped}
+        log.info('self_update: раскатано %s файлов, устаревших убрано %s (пропущено %s)',
+                 copied, removed, skipped)
+        return True, None, {'copied': copied, 'skipped': skipped, 'removed': removed}
     except Exception as _ex:
         log.warning('self_update: stage: %s', _ex)
         return False, 'не удалось раскатать файлы (права на каталог бота?)', None

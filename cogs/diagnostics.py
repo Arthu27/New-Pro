@@ -488,6 +488,7 @@ class Diagnostics (commands .Cog ):
                 return
             await edit (message_id =msg .id ,
                         content =(f" Готово: **{stats ['copied']}** файлов обновлено ({stats ['skipped']} служебных пропущено).\n"
+                                  f"Устаревшего убрано: **{stats.get('removed', 0)}** — в папке теперь только самая свежая версия."
                                   "Перезапускаюсь — вернусь через несколько секунд и отчитаюсь. "))
         finally :
             shutil .rmtree (tmp_dir ,ignore_errors =True )

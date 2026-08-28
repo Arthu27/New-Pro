@@ -120,6 +120,30 @@ with open(os.path.join(bot_dir, 'data', 'state.json')) as f:
     check('{"important": true}' in f.read(), 'data/ НЕ тронута (данные на месте)')
 check(not os.path.exists(os.path.join(bot_dir, 'logs')), 'logs/ из архива не появилась')
 
+print('== 2.1. Только самое свежее: устаревшие файлы и каталоги убираются ==')
+stale = os.path.join(bot_dir, 'cogs', 'stale_legacy.py')
+with open(stale, 'w') as f:
+    f.write('VERY_OLD = True\n')
+stale_dir_file = os.path.join(bot_dir, 'services', 'dead_module.py')
+os.makedirs(os.path.dirname(stale_dir_file), exist_ok=True)
+with open(stale_dir_file, 'w') as f:
+    f.write('DEAD = True\n')
+with open(os.path.join(bot_dir, 'cogs', 'beta.py'), 'w') as f:
+    pass  # пустой не из архива — тоже усечётся
+
+ok, err, stats = SU.stage_update(zip_path, bot_dir, 'bot-main/', rel,
+                                 channel_id=98765, sha='abc1234', branch='arena/x')
+check(ok, 'повторная раскатка отработала')
+check(not os.path.exists(stale), 'устаревший файл (не из архива) удалён')
+check(stats and stats.get('removed', 0) >= 2, f"статистика уборки: removed={stats and stats.get('removed')}")
+check(not os.path.exists(stale_dir_file), 'устаревший модуль в подкаталоге удалён')
+check(not os.path.isdir(os.path.join(bot_dir, 'services')),
+      'опустевший после уборки каталог убран полностью')
+with open(os.path.join(bot_dir, 'data', 'state.json')) as f:
+    check('{"important": true}' in f.read(), 'данные выжили даже после зачистки старья')
+with open(os.path.join(bot_dir, '.env')) as f:
+    check('TOKEN=secret' in f.read(), '.env выжил даже после зачистки старья')
+
 pen = SU.peek_pending(bot_dir)
 check(pen and pen['sha'] == 'abc1234' and pen['channel_id'] == 98765,
       'маркер ожидающего подтверждения записан (sha + канал)')

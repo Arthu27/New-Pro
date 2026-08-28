@@ -211,6 +211,23 @@ def git_pull():
         else:
             лог("[AUTO-UPDATE] Файлы обновлены")
 
+        # ТОЛЬКО СВЕЖЕЕ: ничего лишнего помимо дерева origin/main —
+        # убираем неотслеживаемые хвосты (бывшие модули, временные файлы).
+        # Сохраняем: данные, логи, секреты, окружение, ручной контент.
+        clean_res = subprocess.run(
+            ["git", "clean", "-fd",
+             "-e", "data/", "-e", "logs/", "-e", ".env", "-e", ".env.local",
+             "-e", ".venv", "-e", "venv", "-e", "env", "-e", "node_modules",
+             "-e", "bot_output.log", "-e", "last_commit.txt",
+             "-e", "UPDATE.bat", "-e", "config-local.py"],
+            cwd=BOT_DIR, capture_output=True, text=True, timeout=60)
+        cleaned = [x.strip() for x in clean_res.stdout.splitlines()
+                   if x.strip().startswith(('Removing', 'Удаляется', 'Удалён'))]
+        if cleaned:
+            лог(f"[AUTO-UPDATE] убрано устаревшего: {len(cleaned)} шт — только самое свежее")
+        else:
+            лог("[AUTO-UPDATE] каталог уже соответствует свежей ветке")
+
         # создать .env, если отсутствует
         env_path = os.path.join(BOT_DIR, ".env")
         if not os.path.exists(env_path):
