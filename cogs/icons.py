@@ -41,3 +41,10 @@ async def respond_with_icon (interaction ,embed ,name :str ,**kwargs ):
             embed .set_thumbnail (url =f'attachment://{fname}')
             return await interaction .response .send_message (embed =embed ,file =f ,**kwargs )
     return await interaction .response .send_message (embed =embed ,**kwargs )
+
+
+async def setup(bot):
+    """Модуль-помощник (не ког): команды не регистрируются, загружается
+    как пустое расширение — чтобы авто-загрузчик не писал ошибки,
+    а импортирующие функции (`icon_attach` / `effective_items`) работали."""
+    return None

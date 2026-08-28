@@ -190,3 +190,10 @@ def remove_item(guild_id, name) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
     removed = existing.pop(key)
     _save_custom(guild_id, existing)
     return True, "", removed
+
+
+async def setup(bot):
+    """Модуль-помощник (не ког): команды не регистрируются, загружается
+    как пустое расширение — чтобы авто-загрузчик не писал ошибки,
+    а импортирующие функции (`icon_attach` / `effective_items`) работали."""
+    return None
