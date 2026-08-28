@@ -267,9 +267,11 @@ def check_action(guild_id: int, member, action: str) -> bool:
 
     Действие не привязано к команде: правило «ban» блокирует ЛЮБУЮ команду,
     которая банит (ban, tempban, unban, /moderate action=ban…). По умолчанию
-    (правила нет) — можно. Админ/бот — всегда можно.
+    (правила нет) — можно. Админ/бот — всегда можно, панель (is_panel) —
+    отдельная авторизация, ролевые правила её не касаются.
     """
-    if member is None or getattr(member, "bot", False):
+    if member is None or getattr(member, "bot", False) \
+            or getattr(member, "is_panel", False):
         return True
     if getattr(member, "guild_permissions", None) and member.guild_permissions.administrator:
         return True

@@ -20,6 +20,10 @@ os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 os.makedirs('data', exist_ok=True)
+# actions_for_member теперь читает и Action ACL (permission_acl → SQLite) —
+# изолируем БД, чтобы тест не трогал боевую data/bot.db
+import config  # noqa: E402
+config.Config.DB_PATH = os.path.abspath('data/bot.db')
 
 PASS = 0
 FAIL = 0
