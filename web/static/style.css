@@ -1646,6 +1646,11 @@ table.data-table .num, table.table .num { text-align: right; font-variant-numeri
 }
 .sshd-row.cur:not(:empty) { justify-content: flex-start; }
 .sshd-empty { padding: 14px; text-align: center; color: var(--text-3); font-size: 13px; }
+/* ── п.7: мобильная гавань таблиц — скроллится ТОЛЬКО таблица, не страница ─ */
+@media (max-width: 760px) {
+  table:not(.keep-grid) { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .mpd-row { min-height: 40px; }
+}
 @media (max-width: 640px) {
   .sshd-btn { padding: 10px 12px; }
   .sshd-row { min-height: 42px; }   /* палец: хить одним тапом, мимо нельзя */

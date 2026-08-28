@@ -115,8 +115,13 @@ const src = [
   { user_id: '3', name: 'промари' },
   { user_id: '4', name: 'Марина' }];
 const r = window.pickRankMembers(src, 'мар').map(x => x.user_id).join(',');
+const emojiSrc = [
+  { user_id: 'a', name: '🔥Boba' },
+  { user_id: 'b', name: 'Пётр🔥' },
+  { user_id: 'c', name: '🔥Ася' }];
+const r2 = window.pickRankMembers(emojiSrc, '🔥').map(x => x.user_id).join(',');
 const ok = r === '2,4,1,3';
-console.log(JSON.stringify({ ok: ok, rank: r }));
+console.log(JSON.stringify({ ok: ok, rank: r, emojiRank: r2 }));
 """.replace('ROOTX', ROOT)
 _tmp_h = tempfile.mkdtemp(prefix='p3_rank_')
 hn = os.path.join(_tmp_h, 'h.js')
@@ -125,6 +130,8 @@ with open(hn, 'w', encoding='utf-8') as f:
 run = subprocess.run(['node', hn], capture_output=True, text=True, timeout=30)
 data = json.loads(run.stdout.strip().splitlines()[-1])
 check(bool(data.get('ok')), f"ранжирование «мар»: {data.get('rank')} — нужно 2,4,1,3")
+check(data.get('emojiRank') == 'a,c,b',
+      f"эмодзи-запрос «🔥»: начинающиеся с эмодзи первые ({data.get('emojiRank')})")
 
 
 print('== 4. Быстрый suggest на огромном пуле ==')

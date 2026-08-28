@@ -76,7 +76,7 @@ print('== 2. Бомбы: мусорные входы в API ==')
 BOMBS = [
     '/api/guild/777/member-card/suggest?q=' + 'x' * 5000,
     '/api/guild/777/member-card/suggest?q=%EF%BF%BD%EF%BF%BD&offset=-50',
-    '/api/guild/777/member-card/suggest?q=\x00\x01',
+    '/api/guild/777/member-card/suggest?q=%00%01',
     '/api/guild/777/member-card/suggest?q=' + '🔥' * 200,
     '/api/guild/н-not-an-int/member-card/suggest?q=a',
     '/api/guild/9999999999/member-card/suggest?q=a&offset=9999999',
