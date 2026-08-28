@@ -63,8 +63,10 @@
       <div class="row">
         <button type="button" id="restartBtn" class="btn btn-danger"><i class="fas fa-redo"></i> Перезапустить бот</button>
         <button type="button" id="syncBtn" class="btn"><i class="fas fa-sync"></i> Синхронизировать команды</button>
+        <button type="button" id="cmdsAuditBtn" class="btn"><i class="fas fa-list-check"></i> Диагностика команд</button>
       </div>
       <div class="hint" id="restart-status" style="margin-top:10px"></div>
+      <div id="cmds-audit" style="margin-top:10px; display:none; font-size:13px"></div>
     </div>
   </div>
   {% endif %}
@@ -178,6 +180,37 @@
     var d = await r.json();
     window.qualitySetLoading(btn, false);
     showStatus(d.success ? 'Команды синхронизированы!' : (d.error || 'Ошибка'), d.success);
+  });
+
+  $('cmdsAuditBtn').addEventListener('click', async function () {
+    var box = $('cmds-audit');
+    box.style.display = 'block';
+    box.innerHTML = '<span class="hint">Читаю списки команд прямо из Discord…</span>';
+    try {
+      var r = await fetch('/api/bot/commands-audit');
+      var d = await r.json();
+      if (d.error) { box.innerHTML = '<span class="hint error">' + esc(d.error) + '</span>'; return; }
+      var html = '';
+      if (d.duplicates && d.duplicates.length) {
+        html += '<div class="hint error"><b>ДУБЛИ (имя есть и глобально, и на сервере):</b> ';
+        d.duplicates.forEach(function (x) {
+          html += '<div>• ' + esc(x.guild) + ': ' + x.names.map(esc).join(', ') + '</div>';
+        });
+        html += 'Нажмите «Синхронизировать команды» — уберётся само.</div>';
+      } else {
+        html += '<div class="hint" style="color:#16a34a"><b>Дублей нет</b> — каждая команда живёт ровно в одном месте.</div>';
+      }
+      html += '<div class="hint" style="margin-top:6px"><b>Глобально (' + (d.global || []).length + '):</b> ' +
+              ((d.global || []).map(esc).join(', ') || 'пусто') + '</div>';
+      Object.keys(d.guilds || {}).forEach(function (k) {
+        var v = d.guilds[k];
+        html += '<div class="hint"><b>' + esc(k) + ':</b> ' +
+                (Array.isArray(v) ? v.map(esc).join(', ') : esc(v)) + '</div>';
+      });
+      box.innerHTML = html;
+    } catch (e) {
+      box.innerHTML = '<span class="hint error">Не удалось запросить: ' + esc(e) + '</span>';
+    }
   });
 
   loadStats();

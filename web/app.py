@@ -3513,6 +3513,43 @@ def api_bot_sync ():
     except Exception as e :
         return jsonify ({'error':str (e )})
 
+        # Рентген команд: что сейчас РЕАЛЬНО зарегистрировано в Discord
+        # (глобально и по каждому серверу) — по этому видно дубли.
+@app .route ('/api/bot/commands-audit')
+@login_required
+@role_required ('admin')
+def api_bot_commands_audit ():
+    if not bot_instance :
+        if _demo_mode ():
+            return jsonify ({'demo':True ,'global':['апелляция'],
+                             'guilds':{'Hakumo Demo (777)':['help','modpanel','warn']},
+                             'duplicates':[]})
+        return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
+    async def do ():
+        out ={'global':[],'guilds':{},'duplicates':[]}
+        import discord as _d
+        try :
+            out ['global']=sorted (c .name for c in await bot_instance .tree .fetch_commands ())
+        except Exception as _ex:
+            out ['global_error']=str (_ex )
+        glob =set (out ['global'])
+        for g in list (bot_instance .guilds ):
+            try :
+                names =sorted (c .name for c in await bot_instance .tree .fetch_commands (guild =_d .Object (id =g .id )))
+                key =f'{g .name } ({g .id })'
+                out ['guilds'][key ]=names
+                dup =sorted (glob &set (names ))
+                if dup :
+                    out ['duplicates'].append ({'guild':key ,'names':dup })
+            except Exception as _ex:
+                out ['guilds'][f'{g .name } ({g .id })']=f'ошибка: {_ex }'
+        return out
+    try :
+        result =asyncio .run_coroutine_threadsafe (do (),bot_instance .loop ).result (timeout =60 )
+        return jsonify (result )
+    except Exception as e :
+        return jsonify ({'error':str (e )})
+
         # Global Aramama 
 @app .route ('/api/search')
 @login_required 

@@ -168,7 +168,9 @@ class GObj:
 class Bot:
     def __init__(self):
         self.tree = Tree()
-        self.guilds = [GObj(777)]
+        # 999 — сервер ВНЕ MAIN/EXTRA (бот туда приглашён, но
+        # гильдовый синк его не покрывает) — полигон для чужих копий.
+        self.guilds = [GObj(777), GObj(999)]
 
     def get_guild(self, i):
         return GObj(777) if i == 777 else None
@@ -192,6 +194,8 @@ check(('Войс-мут', 'user') in g777 and ('Варн за сообщение
       'контекстные меню доехали до сервера (и только туда)')
 check('апелляция' not in g777_names,
       'keep_global НЕ копируется в гильдию — иначе «апелляция» видна дважды')
+check(synced.get(999) == [],
+      'сервер вне MAIN/EXTRA очищен от старых копий команд (вечные дубли)')
 check(any(c.name == 'warn' for c in b.tree.get_commands(guild=GObj(777))),
       'warn вернулась в локальное дерево — панель видит и может включить')
 
@@ -215,6 +219,8 @@ check('full_sync' in src_main, 'старт бота использует пол�
 src_app = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
 blog = src_app[src_app.index('def api_bot_sync'):src_app.index('api_global_search')]
 check('full_sync' in blog, 'кнопка «Синхронизировать команды» идёт через full_sync')
+check('commands-audit' in src_app and 'fetch_commands' in src_app,
+      'есть рентген команд: /api/bot/commands-audit читает РЕАЛЬНЫЕ списки из Discord')
 import re as _re
 check(not _re.search(r'\btree \.sync \(\)', blog),
       'в обработчике кнопки нет сырого глобального tree.sync() (источник дублей)')
