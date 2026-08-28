@@ -62,6 +62,17 @@ print('== 3. Все внутренние страницы наследуют bas
 STANDALONE = {'base.html', 'login.html', 'register.html', 'welcome.html',
               'status_public.html', 'public_apply.html', 'mod_kiosk.html',
               '_sidebar_nav.html'}
+
+
+
+print('== 3.1. Самостоятельные страницы: тоже критически тёмные/светлые ==')
+import os as _os
+for f, crit_bg in [('login.html', '#0f1013'), ('register.html', '#0f1013'),
+                   ('welcome.html', '#0f1013'), ('status_public.html', '#0f1013'),
+                   ('public_apply.html', '#0f1013'), ('mod_kiosk.html', '#f5f6f8')]:
+    src = open(_os.path.join(ROOT, 'web/templates', f), encoding='utf-8').read()
+    check('П.5 — критическая сцена' in src and crit_bg in src and src.index('<style>') < src.index('stylesheet'),
+          f'{f}: критический фон {crit_bg} до stylesheet')
 orphans = []
 for f in glob.glob(os.path.join(ROOT, 'web/templates/*.html')):
     name = os.path.basename(f)
@@ -88,7 +99,13 @@ with client.session_transaction() as s:
     s['role'] = 'mod'
     s['selected_guild'] = '777'
 
-for path in ['/dashboard', '/analytics', '/leaderboards', '/karma', '/mod-control']:
+print('== 4.1. Многократные переключения разделов подряд (x3 круга) ==')
+pages = ['/dashboard', '/analytics', '/leaderboards', '/karma', '/mod-control']
+for _round in range(3):
+    for path in pages:
+        r = client.get(path)
+        assert r.status_code == 200, (path, r.status_code)
+for path in pages:
     r = client.get(path)
     html = r.get_data(as_text=True)
     if r.status_code != 200:

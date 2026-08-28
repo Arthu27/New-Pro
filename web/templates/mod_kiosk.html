@@ -5,7 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Экран дежурного — Hakumo</title>
   <link rel="icon" href="/static/favicon.ico">
-  <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
+      <style>
+      /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
+         первый кадр никогда не белый. */
+      html { background: #f5f6f8; color-scheme: light; }
+      body { background: transparent; margin: 0; }
+    </style>
+<link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
   <style>
     /* ЭКРАН ДЕЖУРНОГО — одна страница: что случилось, что делать, кто на смене */
     body.kiosk {

@@ -5,7 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
   <title>Статус — Hakumo</title>
-  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+      <style>
+      /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
+         первый кадр никогда не белый. */
+      html { background: #0f1013; color-scheme: dark; }
+      body { background: transparent; margin: 0; }
+    </style>
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
     <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
   <style>

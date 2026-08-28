@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hakumo — Регистрация в панели</title>
     <link rel="icon" href="/static/favicon.ico">
-    <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+        <style>
+      /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
+         первый кадр никогда не белый. */
+      html { background: #0f1013; color-scheme: dark; }
+      body { background: transparent; margin: 0; }
+    </style>
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
     <style>
       :root {
