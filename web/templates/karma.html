@@ -89,7 +89,7 @@
       <h3><i class="fas fa-comments"></i> Лента благодарностей</h3>
       <div class="km-sub">Кто кому и за что говорил спасибо за последние 7 дней (по журналу кога). Можно отфильтровать по участнику.</div>
       <div class="km-filter">
-        <input class="inp" id="kmFilter" maxlength="24" placeholder="Фильтр: ID участника">
+        <input class="inp" id="kmFilter" maxlength="24" placeholder="Имя участника (фильтр)"><span id="kmFilterStatus"></span>
         <button type="button" class="btn" onclick="kmLoad(document.getElementById('kmFilter').value)" aria-label="Обновить"><i class="fas fa-filter"></i></button>
         <button type="button" class="btn" onclick="document.getElementById('kmFilter').value='';kmLoad('')" aria-label="Обновить"><i class="fas fa-xmark"></i></button>
       </div>
@@ -105,8 +105,10 @@
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 var GID = '{{ guild_id }}';
+attachMemberPicker(document.getElementById('kmFilter'), { gid: GID, statusEl: document.getElementById('kmFilterStatus') });
 var API = '/api/guild/' + GID + '/karma';
 var CAN_EDIT = false;
 

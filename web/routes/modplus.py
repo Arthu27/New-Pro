@@ -205,7 +205,7 @@ def register(ctx):
     @login_required
     @role_required ('mod')
     def proofs_page ():
-        return render_template ('proofs.html',role =session .get ('role'),username =session .get ('username'))
+        return render_template ('proofs.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =str (MAIN_GUILD_ID ))
 
 
     @app .route ('/api/proofs',methods =['GET'])

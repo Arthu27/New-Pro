@@ -34,7 +34,7 @@
 
 <div class="mp-searchbar" data-reveal="up">
   <select id="guild-select" class="guild-select" style="flex:1;min-width:180px" aria-label="Выбор сервера"><option value="">Выберите сервер...</option></select>
-  <input type="text" id="search" class="search-input" placeholder="ID участника..." style="flex:2;min-width:200px" aria-label="ID участника...">
+  <input type="text" id="search" class="search-input" placeholder="Имя участника — выберите из списка..." style="flex:2;min-width:200px" aria-label="Поиск участника"><span id="searchStatus"></span>
   <button class="btn btn-primary" id="btn-load" type="button"><i class="fas fa-search"></i> Загрузить</button>
 </div>
 
@@ -73,6 +73,7 @@
   <p>Введите ID участника и нажмите «Загрузить»</p>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 (function () {
   'use strict';
@@ -80,6 +81,11 @@
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   var MAIN_GID = '{{ main_guild_id }}';
   var selectedGuild = MAIN_GID;
+  var searchPicker = document.getElementById('search');
+  function attachSearchPicker() {
+    attachMemberPicker(searchPicker, { gid: selectedGuild, statusEl: document.getElementById('searchStatus') });
+  }
+  attachSearchPicker();
 
   function loadGuilds() {
     var gs = $('guild-select');
@@ -89,6 +95,7 @@
         return '<option value="' + esc(g.id) + '"' + (String(g.id) === selectedGuild ? ' selected' : '') + '>' + esc(g.name) + '</option>';
       }).join('');
       selectedGuild = gs.value || MAIN_GID;
+      attachSearchPicker();
     }).catch(function () {});
   }
 
@@ -99,8 +106,8 @@
 
   async function load() {
     var q = $('search').value.trim();
-    if (!q) { showToast('Введите ID участника', false); return; }
-    if (!/^\d+$/.test(q)) { showToast('Введите числовой ID участника', false); return; }
+    if (!q) { showToast('Выберите участника из подсказок', false); return; }
+    if (!/^\d+$/.test(q)) { showToast('Выберите участника из подсказок', false); return; }
     try {
       var r = await fetch('/api/member-profile/' + selectedGuild + '/' + q);
       var d = await r.json();

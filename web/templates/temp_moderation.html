@@ -59,7 +59,7 @@
       <button type="button" class="seg-btn" data-type="kick"><i class="fas fa-user-minus"></i> Кик</button>
     </div>
     <div class="form-row">
-      <label class="form-group"><span class="form-label">Участник</span><input class="form-input" id="newUser" placeholder="ID участника"></label>
+      <label class="form-group"><span class="form-label">Участник</span><input class="form-input" id="newUser" placeholder="Имя участника — выберите из списка"><span id="newUserStatus"></span></label>
       <label class="form-group"><span class="form-label">Точный срок</span><input class="form-input" id="newDuration" placeholder="2ч 30м"></label>
     </div>
     <label class="form-group"><span class="form-label">Основание решения</span><input class="form-input" id="newReason" maxlength="300" placeholder="Причина, которая останется в журнале"></label>
@@ -75,6 +75,7 @@
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 (function () {
   'use strict';
@@ -82,7 +83,9 @@
   var actionType = 'mut';
   var currentData = { muts: [], bans: [], kicks: [], scheduled: [] };
 
-  function $(id) { return document.getElementById(id); }
+  var GID = {{ guild_id | tojson }};
+attachMemberPicker(document.getElementById('newUser'), { gid: GID, statusEl: document.getElementById('newUserStatus') });
+function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   function fmtRem(until) {

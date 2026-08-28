@@ -163,6 +163,126 @@ check('bindCtrlS(bdSaveSettings)' in bd, 'birthdays: Ctrl+S сохраняет')
 check('ctrlKey' in js and 'preventDefault()' in js,
       'Ctrl+S не отправляет страницу')
 
+print('== 6. Выбор без ручного ID (интерактивные пикеры везде) ==')
+
+# 6.1 — хелперы в pickers.js
+check('window.attachSelectPicker' in js and 'window.attachMemberPicker' in js,
+      'в pickers.js есть attachSelectPicker и attachMemberPicker')
+sel_fn = js[js.index('window.attachSelectPicker'):]
+sel_fn = sel_fn[:sel_fn.index('window.attachMemberPicker')]
+mem_fn = js[js.index('window.attachMemberPicker'):]
+check('pickerLoad' in sel_fn and 'noneLabel' in sel_fn,
+      'select-пикер: источник pickerLoad + none-вариант')
+check('ранее выбрано (удалено с сервера)' in sel_fn,
+      'select-пикер: устаревшее значение показывается явно, не теряется молча')
+check('dispatchEvent' not in sel_fn,
+      'select-пикер НЕ диспатчит change (легаси-автосейвы не срабатывают при заполнении)')
+check('opts.value' in sel_fn, 'select-пикер: явное начальное значение (opts.value)')
+check('datalist' in mem_fn and 'member-card/suggest' in mem_fn,
+      'member-пикер: datalist + живой suggest участников')
+check('setTimeout' in mem_fn and '250' in mem_fn, 'member-пикер: debounce 250 мс')
+check('pickerExtractId' in mem_fn, 'member-пикер: нормализация значения через pickerExtractId')
+
+
+def tpl(name):
+    return open(os.path.join(ROOT, 'web/templates', name), encoding='utf-8').read()
+
+
+# 6.2 — каналы/роли стали <select>
+SELECT_FIELDS = (
+    ('anime_daily.html', ('anChannel', 'anRole')),
+    ('birthdays.html', ('bdSetChannel', 'bdSetRole')),
+    ('j2c.html', ('j2Lobby', 'j2Category')),
+    ('leaderboards.html', ('lbSendCh',)),
+    ('meetings.html', ('mtRoleInp',)),
+    ('antiraid.html', ('alert_channel_id',)),
+    ('automation.html', ('ml-channel', 'ns-channel')),
+    ('ticket_settings.html', ('notify-channel-id', 'rules-channel-id',
+                              'owner-role-id', 'admin-role-id', 'mod-role-id')),
+)
+for fname, ids in SELECT_FIELDS:
+    t = tpl(fname)
+    for fid in ids:
+        check(re.search(r'<select[^>]*id="%s"' % re.escape(fid), t) is not None,
+              f'{fname}: #{fid} — <select>')
+    check('/static/pickers.js' in t and 'attachSelectPicker' in t,
+          f'{fname}: pickers.js подключён и attachSelectPicker вызван')
+
+# 6.3 — выбор участников
+MEMBER_FIELDS = (
+    ('leaderboards.html', 'lbRankInp'),
+    ('antiraid.html', 'wl-input'),
+    ('mod_settings.html', 'msWlIn'),
+    ('antifake.html', 'afTestUid'),
+    ('karma.html', 'kmFilter'),
+    ('ladder.html', 'ldUser'),
+    ('mod_control.html', 'mcAmnestyId'),
+    ('mod_insights.html', 'miDossierId'),
+    ('mod_schedule.html', 'msUserId'),
+    ('temp_moderation.html', 'newUser'),
+    ('replay.html', 'rpUser'),
+    ('dashboard.html', 'notif-discord-id'),
+    ('member_profile.html', 'search'),
+    ('proofs.html', 'pf-wl-id'),
+    ('mod_tools.html', 'ghost-user'),
+)
+for fname, fid in MEMBER_FIELDS:
+    t = tpl(fname)
+    check(attach_ok := ('attachMemberPicker' in t and fid in t and '/static/pickers.js' in t),
+          f'{fname}: #{fid} — member-пикер подключён')
+
+t = tpl('member_profile.html')
+check('attachSearchPicker()' in t and 'function attachSearchPicker' in t,
+      'member_profile: пикер перепривязывается при смене сервера')
+t = tpl('proofs.html')
+check('<select id="pf-wl-role"' in t and 'attachSelectPicker' in t
+      and "$('pf-wl-id').style.display" in t,
+      'proofs: белый список — участник из подсказок / роль из списка (переключатель)')
+
+# 6.4 — роль/лог-канал Tag Jail через живые списки
+t = tpl('tagjail.html')
+check("t: 'role_sel'" in t and "t: 'channel_sel'" in t
+      and 'data-live="jail_role_id"' in t and 'data-live="log_channel_id"' in t,
+      'tagjail: jail-роль и лог-канал — живые select')
+check('/static/pickers.js' in t and 'attachSelectPicker' in t,
+      'tagjail: pickers.js подключён')
+rt = open(os.path.join(ROOT, 'web/routes/tagjail.py'), encoding='utf-8').read()
+check("'gid': str(guild.id)" in rt, 'tagjail API: gid отдаётся пикеру')
+check('int(v or 0)' in rt, 'tagjail API: пустой select = 0 (выкл), без ошибок парсинга')
+
+# 6.5 — роуты прокидывают guild_id для пикеров
+au = open(os.path.join(ROOT, 'web/routes/automation.py'), encoding='utf-8').read()
+check('guild_id=ctx.active_guild_id()' in au, 'automation route: guild_id в контексте')
+pg = open(os.path.join(ROOT, 'web/routes/pages.py'), encoding='utf-8').read()
+check("render_template ('temp_moderation.html'" in pg and re.search(r"temp_moderation\.html'.*guild_id", pg) is not None,
+      'pages route: temp_moderation получает guild_id')
+mp = open(os.path.join(ROOT, 'web/routes/modplus.py'), encoding='utf-8').read()
+check("render_template ('proofs.html'" in mp and 'main_guild_id' in mp,
+      'modplus route: proofs получает main_guild_id')
+
+# 6.6 — ручного ввода ID в конвертированных шаблонах не осталось
+BAD = re.compile(r'placeholder="[^"]*(?:ID участника|ID канала|ID роли|ID сервера|ID для|ID \(|начните.*ID)[^"]*"')
+LEFTOVER = []
+for fname in ('anime_daily.html', 'birthdays.html', 'j2c.html', 'leaderboards.html',
+              'meetings.html', 'antiraid.html', 'automation.html', 'mod_settings.html',
+              'tagjail.html', 'ticket_settings.html', 'temp_moderation.html', 'proofs.html',
+              'antifake.html', 'karma.html', 'ladder.html', 'mod_control.html',
+              'mod_insights.html', 'mod_schedule.html', 'replay.html', 'dashboard.html',
+              'member_profile.html'):
+    if BAD.search(tpl(fname)):
+        LEFTOVER.append(fname)
+check(not LEFTOVER, f"ни одного placeholder'а с ручным ID ({LEFTOVER or 'чисто'})")
+
+t = tpl('antiraid.html')
+check("el.id === 'alert_channel_id'" in t and "el.tagName === 'INPUT' && el.id === 'alert_channel_id'" not in t,
+      'antiraid: заливка конфига переведена с INPUT-гварда на id (select)')
+check('ensureChannelPicker' in t, 'antiraid: защита от гонки «конфиг раньше каналов»')
+t = tpl('automation.html')
+check('nsEnsurePicker' in t and "var GID = {{ guild_id | tojson }};" in t,
+      'automation: nsEnsurePicker + GID из контекста')
+t = tpl('j2c.html')
+check('>Канал-лобби<' in t, 'j2c: подпись поля без «ID»')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

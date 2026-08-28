@@ -235,7 +235,7 @@ def register(ctx):
     @login_required 
     @role_required ('mod')
     def temp_moderation_page ():
-        return render_template ('temp_moderation.html',role =session .get ('role'),username =session .get ('username'))
+        return render_template ('temp_moderation.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id ())
 
 
     @app .route ('/cog-manager')

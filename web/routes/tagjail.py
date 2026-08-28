@@ -78,7 +78,8 @@ def register(ctx):
                 'reason': str(rec.get('reason', ''))[:90],
                 'roles_saved': len(rec.get('roles', [])),
             })
-        return jsonify({'ok': True, 'config': c, 'jailed': jailed, 'guild': guild.name})
+        return jsonify({'ok': True, 'config': c, 'jailed': jailed,
+                        'guild': guild.name, 'gid': str(guild.id)})
 
 
     @app.route('/api/tagjail/config', methods=['POST'])
@@ -98,7 +99,7 @@ def register(ctx):
                     cog.set_cfg(guild.id, k, bool(v))
                     updated[k] = bool(v)
                 elif k in INT_KEYS:
-                    iv = int(v)
+                    iv = int(v or 0)  # пустая строка (нет выбора) = 0 = выкл
                     if iv < 0:
                         raise ValueError('>= 0')
                     cog.set_cfg(guild.id, k, iv)

@@ -51,7 +51,7 @@
       <div class="sub">Обнуление с записью в журнал и быстрым откатом.</div></div></div>
     <div class="panel-body">
       <div class="row" id="mcAmnestyForm" style="display:none;margin-bottom:12px">
-        <input class="form-input" id="mcAmnestyId" maxlength="24" placeholder="ID участника" style="flex:1">
+        <input class="form-input" id="mcAmnestyId" maxlength="24" placeholder="Имя участника — выберите из списка" style="flex:1"><span id="mcAmnestyStatus"></span>
         <button type="button" class="btn btn-danger" id="mcAmnestyBtn"><i class="fas fa-dove"></i> Обнулить</button>
       </div>
       <div id="mcAmnesty"></div>
@@ -59,8 +59,10 @@
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 var GID = '{{ guild_id }}';
+attachMemberPicker(document.getElementById('mcAmnestyId'), { gid: GID, statusEl: document.getElementById('mcAmnestyStatus') });
 var API = '/api/guild/' + GID + '/mod-control';
 var STATE = null;
 var CAN_EDIT = false;
@@ -223,7 +225,7 @@ function mcReasonDel(id) {
 
 function mcAmnestyAsk() {
   var uid = $('mcAmnestyId').value.trim();
-  if (!uid) { window.showToast('Укажите ID участника', false); return; }
+  if (!uid) { window.showToast('Выберите участника из подсказок', false); return; }
   window.confirmAction('Амнистия', 'Обнулить все варны участника ' + uid + '? Откат возможен кнопкой «Откатить».', function () {
     mcPost(API + '/amnesty', { user_id: uid }).then(function (res) {
       if (!res.data.success) { window.showToast(res.data.error || 'Не удалось провести амнистию', false); return; }

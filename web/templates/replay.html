@@ -66,7 +66,7 @@
       <option value="1440">за сутки</option>
     </select>
     <input class="rp-inp" id="rpMin" type="number" min="5" max="1440" placeholder="своё окно, мин">
-    <input class="rp-inp uid" id="rpUser" placeholder="ID участника — только его след (необязательно)">
+    <input class="rp-inp uid" id="rpUser" placeholder="Имя участника — только его след (необязательно)"><span id="rpUserStatus"></span>
     <button type="button" class="rp-btn" id="rpGo"><i class="fas fa-play"></i> Показать</button>
     <button type="button" class="rp-btn ghost" id="rpCsv"><i class="fas fa-file-csv"></i> CSV</button>
   </div>
@@ -98,8 +98,10 @@
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 var GID = '{{ guild_id }}';
+attachMemberPicker(document.getElementById('rpUser'), { gid: GID, statusEl: document.getElementById('rpUserStatus') });
 var API = '/api/guild/' + GID + '/replay';
 var CAT_COLORS = {mod:'#dc2626', member:'#16a34a', message:'#0ea5e9', role:'#7c3aed',
                   channel:'#f59e0b', voice:'#22d3ee', 'сервер':'#ea580c', automod:'#dc2626',

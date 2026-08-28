@@ -3,13 +3,15 @@
 =================================
 Забаненный не может написать на сервере — но может написать боту в личку:
 
-    /апелляция <ID сервера> <текст>     (в ЛС боту)
+    /апелляция [текст]                  (в ЛС боту; сервер — из конфигурации,
+                                         без текста откроется форма)
 
 Модераторы получают карточку с кнопками «Принять» / «Отклонить».
 Принят — пользователь разбанен и получает добрую весть в ЛС.
 Отклонён — получает отказ (с опциональным комментарием модератора).
 
-- /апелляция <guild_id> <текст>  — подать (в ЛС боту, для забаненных)
+- /апелляция [текст]             — подать (в ЛС боту; сервер сам берётся из
+                                   конфигурации, без текста откроется форма)
 - /апелляции настройка #канал    — куда падать карточкам
 - /апелляции список              — ожидающие решения
 
@@ -591,32 +593,8 @@ class AppealModal(discord.ui.Modal):
                       'Ответ придёт сюда, в личку.'), ephemeral=True)
 
 
-class AppealServerSelect(discord.ui.Select):
-    """Выбор сервера для апелляции (в ЛС боту)."""
-
-    def __init__(self, cog, guilds):
-        self.cog = cog
-        options = [discord.SelectOption(
-            label=str(g.name)[:100] or 'Сервер', value=str(g.id),
-            description=f'{g.member_count or 0} участников') for g in guilds[:25]]
-        super().__init__(placeholder='Выберите сервер…', options=options,
-                         min_values=1, max_values=1)
-
-    async def callback(self, interaction: discord.Interaction):
-        guild = self.cog.bot.get_guild(int(self.values[0]))
-        if guild is None:
-            await interaction.response.send_message(' Сервер не найден — попробуйте ещё раз.', ephemeral=True)
-            return
-        await interaction.response.send_modal(AppealModal(self.cog, guild))
-
-
-class AppealViewParent(discord.ui.View):
-    """Обёртка select-меню выбора сервера."""
-
-    def __init__(self, cog, guilds):
-        super().__init__(timeout=300)
-        self.add_item(AppealServerSelect(cog, guilds))
-
+# (выбора сервера больше нет: апелляция всегда идёт на главный сервер
+#  из конфигурации — см. cmd_appeal / _main_guild)
 
 # ─── меню апелляций в канале (не в ЛС) ────────────────────────────────
 
@@ -1189,34 +1167,55 @@ class Appeals(commands.Cog):
                           item['id'], guild_id, _ex)
         return item, None
 
+    def _main_guild(self):
+        """Главный сервер — всегда из конфигурации (без вопросов пользователю).
+
+        Источник истины — Config.MAIN_GUILD_ID. Если конфиг не задан, но бот
+        стоит ровно на одном сервере — берём его (единственный возможный).
+        Иначе None: честно отвечаем, что бот не настроен.
+        """
+        try:
+            from config import Config
+            gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+        except Exception as _ex:
+            log.debug('appeals: MAIN_GUILD_ID: %s', _ex)
+            gid = 0
+        g = self.bot.get_guild(gid) if gid else None
+        if g is None and not gid and len(getattr(self.bot, 'guilds', [])) == 1:
+            g = self.bot.guilds[0]
+        return g
+
     @app_commands.command(name='апелляция',
-                          description='Обжаловать бан: /апелляция в ЛС боту',
+                          description='Обжаловать наказание — подаётся в ЛС боту',
                           extras={'keep_global': True})
-    @app_commands.describe(сервер='ID сервера, на котором забанили',
-                           текст='Что произошло — до 500 символов')
+    @app_commands.describe(текст='Что произошло — до 500 символов; без текста откроется форма')
     async def cmd_appeal(self, interaction: discord.Interaction,
-                         сервер: str, текст: str):
-        """Обжаловать бан: /апелляция <ID сервера> <текст> (в ЛС боту)."""
+                         текст: str = ''):
+        """Обжаловать наказание: /апелляция [текст] в ЛС боту.
+
+        Сервер никогда не спрашиваем — он из конфигурации. Без текста
+        открываем форму с полем-доказательством.
+        """
         if interaction.guild is not None:
             await interaction.response.send_message(
                 'Апелляция подаётся в личных сообщениях боту: открой ЛС бота '
                 'и вызови команду там.', ephemeral=True)
             return
-        try:
-            guild_id = int(''.join(c for c in сервер if c.isdigit()))
-        except ValueError:
-            await interaction.response.send_message(
-                'ID сервера должен быть числом.', ephemeral=True)
-            return
-        guild = self.bot.get_guild(guild_id)
+        guild = self._main_guild()
         if guild is None:
             await interaction.response.send_message(
-                'Я не состою на таком сервере.', ephemeral=True)
+                'Бот ещё не настроен: владелец не указал главный сервер. '
+                'Напишите администрации сервера другим способом.', ephemeral=True)
             return
         if not await self._is_banned(guild, interaction.user):
             await interaction.response.send_message(
-                'Вы не забанены на этом сервере — апелляция не нужна.',
+                f'Вы не забанены на сервере **{guild.name}** — апелляция не нужна.',
                 ephemeral=True)
+            return
+        текст = (текст or '').strip()
+        if not текст:
+            # удобная форма: текст + ссылка-доказательство (необязательно)
+            await interaction.response.send_modal(AppealModal(self, guild))
             return
         item, err = await self._submit_appeal(interaction.user, guild, текст)
         if err:
@@ -1231,14 +1230,34 @@ class Appeals(commands.Cog):
 
 
     async def _is_banned(self, guild, user):
+        """Забанен ли человек ПО ЛЮБОЙ нашей механике.
+
+        1. Настоящий Discord-бан — fetch_ban.
+        2. Панельный «бан» — изоляция: участник на сервере, но носит
+           назначенную роль-«бан» (выдаёт модерация). Без этого пункта
+           изолированные получали ложное «вы не в бане».
+        """
+        real_ban = None
         try:
             await guild.fetch_ban(discord.Object(id=user.id))
-            return True
+            real_ban = True
         except discord.NotFound:
-            return False
+            real_ban = False  # реального бана нет — ниже смотрим изоляцию
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.warning('appeals: ban-check %s на %s: %s', user.id, guild.id, _ex)
             return True
+        if real_ban:
+            return True
+        member = guild.get_member(user.id)
+        if member is not None:
+            try:
+                from services import punish_roles as PR
+                rid = PR.role_for(guild.id, 'ban')
+                if rid and any(r.id == rid for r in getattr(member, 'roles', [])):
+                    return True
+            except Exception as _ex:
+                log.debug('appeals: isolation ban-check: %s', _ex)
+        return False
 
     # ---- модераторские ----
 

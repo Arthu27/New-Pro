@@ -63,7 +63,7 @@
         <div class="sub">Что грозит участнику прямо сейчас.</div></div></div>
       <div class="panel-body">
         <div class="row">
-          <input class="form-input" id="ldUser" placeholder="ID участника" style="flex:1">
+          <input class="form-input" id="ldUser" placeholder="Имя участника — выберите из списка" style="flex:1"><span id="ldUserStatus"></span>
           <button type="button" class="btn" id="ldSimGo"><i class="fas fa-play"></i> Проверить</button>
         </div>
         <div class="alert alert-info" id="ldSim" style="display:none;margin-top:10px"></div>
@@ -81,8 +81,10 @@
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 var GID = '{{ guild_id }}';
+attachMemberPicker(document.getElementById('ldUser'), { gid: GID, statusEl: document.getElementById('ldUserStatus') });
 var API = '/api/guild/' + GID + '/ladder';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
 
@@ -169,7 +171,7 @@ $('ldSimGo').addEventListener('click', function () {
   msg.className = 'hint';
   msg.textContent = '';
   var uid = $('ldUser').value.trim();
-  if (!uid) { msg.textContent = 'Введите ID участника'; msg.className = 'hint error'; return; }
+  if (!uid) { msg.textContent = 'Выберите участника из подсказок'; msg.className = 'hint error'; return; }
   fetch(API + '/simulate?user=' + encodeURIComponent(uid))
     .then(function (r) { return r.json(); })
     .then(function (res) {

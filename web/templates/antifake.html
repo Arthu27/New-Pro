@@ -55,7 +55,7 @@
       <div class="sub">Сухой прогон без наказания.</div></div></div>
     <div class="panel-body">
       <label class="form-group"><span class="form-label">Скан участника</span>
-        <div class="row"><input class="form-input" id="afTestUid" placeholder="ID участника" style="flex:1"><button type="button" class="btn" id="afTestGo"><i class="fas fa-magnifying-glass"></i> Проверить</button></div></label>
+        <div class="row"><input class="form-input" id="afTestUid" placeholder="Имя участника — выберите из списка" style="flex:1"><span id="afTestUidStatus"></span><button type="button" class="btn" id="afTestGo"><i class="fas fa-magnifying-glass"></i> Проверить</button></div></label>
       <div class="alert" id="afTestRes" style="display:none"></div>
       <div class="hint" id="afTestMsg"></div>
 
@@ -126,8 +126,10 @@
 }
 </style>
 
+<script src="/static/pickers.js"></script>
 <script>
 var GID = '{{ guild_id }}';
+attachMemberPicker(document.getElementById('afTestUid'), { gid: GID, statusEl: document.getElementById('afTestUidStatus') });
 var API = '/api/guild/' + GID + '/antifake';
 var CAN_EDIT = {{ 'true' if role in ('admin', 'owner') else 'false' }};
 

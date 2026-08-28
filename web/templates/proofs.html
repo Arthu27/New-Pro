@@ -86,8 +86,10 @@
       <select id="pf-wl-kind" aria-label="Тип записи белого списка" style="max-width:150px">
         <option value="user">Участник</option><option value="role">Роль</option>
       </select>
-      <input type="text" id="pf-wl-id" inputmode="numeric" placeholder="ID (17–20 цифр)"
-             style="flex:1;min-width:200px" aria-label="ID для белого списка">
+      <input type="text" id="pf-wl-id" placeholder="Имя участника — выберите из списка"
+             style="flex:1;min-width:200px" aria-label="Участник для белого списка">
+      <select id="pf-wl-role" style="flex:1;min-width:200px;display:none" aria-label="Роль для белого списка"></select>
+      <span id="pf-wl-status"></span>
       <button type="button" class="btn btn-sm" id="pf-wl-add-btn"><i class="fas fa-plus"></i> Добавить</button>
     </div>
     <div id="pf-wl-list" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
@@ -137,6 +139,7 @@
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 (function () {
   'use strict';
@@ -505,19 +508,29 @@
     box.innerHTML = html;
   }
 
+  var WL_GID = '{{ main_guild_id }}';
+  attachMemberPicker($('pf-wl-id'), { gid: WL_GID, statusEl: $('pf-wl-status') });
+  attachSelectPicker($('pf-wl-role'), { gid: WL_GID, kind: 'role', noneLabel: 'не выбрана' });
+  $('pf-wl-kind').addEventListener('change', function () {
+    var isRole = $('pf-wl-kind').value === 'role';
+    $('pf-wl-id').style.display = isRole ? 'none' : '';
+    $('pf-wl-role').style.display = isRole ? '' : 'none';
+  });
+
   function wlLoad() {
     fetch('/api/proof-whitelist').then(function (r) { return r.json(); })
       .then(function (d) { wlRender(d); }).catch(function () {});
   }
 
   $('pf-wl-add-btn').addEventListener('click', function () {
-    var id = $('pf-wl-id').value.trim();
-    if (!/^\d{5,25}$/.test(id)) { window.showToast('ID — только цифры (17–20 знаков)', false); return; }
+    var isRole = $('pf-wl-kind').value === 'role';
+    var id = (isRole ? $('pf-wl-role').value : $('pf-wl-id').value.trim());
+    if (!/^\d{5,25}$/.test(id)) { window.showToast(isRole ? 'Выберите роль из списка' : 'Выберите участника из подсказок', false); return; }
     fetch('/api/proof-whitelist', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ kind: $('pf-wl-kind').value, id: id })
     }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d && d.success) { window.showToast('Добавлено в белый список', true); $('pf-wl-id').value = ''; wlRender(d); }
+      if (d && d.success) { window.showToast('Добавлено в белый список', true); $('pf-wl-id').value = ''; $('pf-wl-role').value = ''; wlRender(d); }
       else window.showToast((d && d.error) || 'Ошибка', false);
     }).catch(function () { window.showToast('Сеть не отвечает', false); });
   });

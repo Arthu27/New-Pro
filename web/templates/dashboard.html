@@ -387,7 +387,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     <div class="sub">Личное сообщение участнику через бота.</div></div></div>
   <div class="panel-body">
     <div class="form-row">
-      <label class="form-group"><span class="form-label">Discord ID</span><input type="text" id="notif-discord-id" placeholder="123456789012345678" class="form-input" aria-label="Discord ID получателя"></label>
+      <label class="form-group"><span class="form-label">Участник</span><input type="text" id="notif-discord-id" placeholder="Имя участника — выберите из списка" class="form-input" aria-label="Участник-получатель"></label><span id="notifDiscordStatus"></span>
       <label class="form-group"><span class="form-label">Заголовок</span><input type="text" id="notif-title" placeholder="Заголовок" class="form-input" aria-label="Заголовок"></label>
       <label class="form-group" style="flex:2"><span class="form-label">Сообщение</span><input type="text" id="notif-message" class="form-input" aria-label="Текст уведомления"></label>
       <button type="button" class="btn btn-primary" id="btnSendNotif" style="align-self:flex-end"><i class="fas fa-paper-plane"></i> Отправить</button>
@@ -439,6 +439,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
 </div>
 {% endif %}
 
+<script src="/static/pickers.js"></script>
 <script>
 (function () {
   'use strict';
@@ -969,12 +970,16 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     if (msgText) setTimeout(function () { el.textContent = ''; }, 4000);
   }
 
+  /* получатель уведомления — живой выбор участника (без ручного ID) */
+  attachMemberPicker(document.getElementById('notif-discord-id'),
+    { gid: '{{ main_guild_id }}', statusEl: document.getElementById('notifDiscordStatus') });
+
   async function sendNotification() {
-    var id = $('notif-discord-id').value.trim();
+      var id = $('notif-discord-id').value.trim();
     var title = $('notif-title').value.trim();
     var msgText = $('notif-message').value.trim();
     var el = $('notif-result');
-    if (!id || !msgText) { window.showToast('Discord ID и сообщение обязательны!', false); return; }
+    if (!id || !msgText) { window.showToast('Выберите участника и напишите сообщение', false); return; }
     try {
       var d = await fetch('/api/send-notification', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

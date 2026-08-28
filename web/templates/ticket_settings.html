@@ -541,27 +541,27 @@
       </div>
       <div class="form-group">
         <label>Канал уведомлений (логов)</label>
-        <input type="text" id="notify-channel-id" placeholder="ID канала (например: 123456789012345678)" aria-label="ID канала (например: 123456789012345678)">
+        <select id="notify-channel-id" aria-label="Канал уведомлений"></select>
       </div>
     </div>
     <div class="form-row-2" style="margin-top: 12px;">
       <div class="form-group">
         <label>Канал правил (Rules Channel)</label>
-        <input type="text" id="rules-channel-id" placeholder="ID канала с правилами сервера" aria-label="ID канала с правилами сервера">
+        <select id="rules-channel-id" aria-label="Канал с правилами сервера"></select>
       </div>
       <div class="form-group">
         <label>Роль владельца (Owner Role)</label>
-        <input type="text" id="owner-role-id" placeholder="ID роли владельца" aria-label="ID роли владельца">
+        <select id="owner-role-id" aria-label="Роль владельца"></select>
       </div>
     </div>
     <div class="form-row-2" style="margin-top: 12px; margin-bottom: 12px;">
       <div class="form-group">
         <label>Роль администраторов</label>
-        <input type="text" id="admin-role-id" placeholder="ID роли администраторов" aria-label="ID роли администраторов">
+        <select id="admin-role-id" aria-label="Роль администраторов"></select>
       </div>
       <div class="form-group">
         <label>Роль модераторов</label>
-        <input type="text" id="mod-role-id" placeholder="ID роли модераторов" aria-label="ID роли модераторов">
+        <select id="mod-role-id" aria-label="Роль модераторов"></select>
       </div>
     </div>
     <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
@@ -636,6 +636,7 @@
 </div>
 
 
+<script src="/static/pickers.js"></script>
 <script>
 
 (function () {
@@ -698,23 +699,26 @@
         .catch(function () { notifyGuild.innerHTML = '<option value="">Не удалось загрузить</option>'; });
     }
 
+    /* каналы и роли — только живой выбор из списков сервера (без ручного ID) */
+    function fillNotifyPickers(cfg) {
+      var gid = notifyGuild.value;
+      cfg = cfg || {};
+      attachSelectPicker(notifyCid, { gid: gid, kind: 'text', noneLabel: 'не настроено — канал уведомлений', value: String(cfg.notify_channel_id || '') });
+      attachSelectPicker(rulesCid, { gid: gid, kind: 'text', noneLabel: 'не выбран', value: String(cfg.rules_channel_id || '') });
+      attachSelectPicker(modRid, { gid: gid, kind: 'role', noneLabel: 'не выбрана', value: String(cfg.mod_role_id || '') });
+      attachSelectPicker(adminRid, { gid: gid, kind: 'role', noneLabel: 'не выбрана', value: String(cfg.admin_role_id || '') });
+      attachSelectPicker(ownerRid, { gid: gid, kind: 'role', noneLabel: 'не выбрана', value: String(cfg.owner_role_id || '') });
+    }
+
     function loadNotifyConfig() {
       if (!notifyGuild.value) return;
       fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', { credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
         .then(function (d) {
-          notifyCid.value = d.notify_channel_id || '';
-          rulesCid.value = d.rules_channel_id || '';
-          modRid.value = d.mod_role_id || '';
-          adminRid.value = d.admin_role_id || '';
-          ownerRid.value = d.owner_role_id || '';
+          fillNotifyPickers(d);
         })
         .catch(function () {
-          notifyCid.value = '';
-          rulesCid.value = '';
-          modRid.value = '';
-          adminRid.value = '';
-          ownerRid.value = '';
+          fillNotifyPickers({});
         });
     }
 
@@ -732,11 +736,11 @@
         if (x && !/^\d{17,22}$/.test(x)) return false;
         return true;
       }
-      if (!check_val(v)) { setNotifyStatus('Неверный ID канала уведомлений', true); return; }
-      if (!check_val(r)) { setNotifyStatus('Неверный ID канала правил', true); return; }
-      if (!check_val(m)) { setNotifyStatus('Неверный ID роли модераторов', true); return; }
-      if (!check_val(a)) { setNotifyStatus('Неверный ID роли администраторов', true); return; }
-      if (!check_val(o)) { setNotifyStatus('Неверный ID роли владельца', true); return; }
+      if (!check_val(v)) { setNotifyStatus('Выберите канал уведомлений из списка', true); return; }
+      if (!check_val(r)) { setNotifyStatus('Выберите канал правил из списка', true); return; }
+      if (!check_val(m)) { setNotifyStatus('Выберите роль модераторов из списка', true); return; }
+      if (!check_val(a)) { setNotifyStatus('Выберите роль администраторов из списка', true); return; }
+      if (!check_val(o)) { setNotifyStatus('Выберите роль владельца из списка', true); return; }
 
       fetch('/api/guild/' + notifyGuild.value + '/ticket-notify-channel', {
         method: 'POST', credentials: 'same-origin',

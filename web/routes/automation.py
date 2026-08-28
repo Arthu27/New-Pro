@@ -242,7 +242,8 @@ def register(ctx):
     def automation_page():
         return render_template('automation.html',
                                role=session.get('role'),
-                               username=session.get('username'))
+                               username=session.get('username'),
+                               guild_id=ctx.active_guild_id())
 
     @app.route('/api/automation')
     @login_required

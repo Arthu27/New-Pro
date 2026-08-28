@@ -68,8 +68,8 @@
         <select class="form-input" id="msAction" aria-label="Действие">
           <option value="mute">Мьют</option><option value="ban">Бан</option><option value="kick">Кик</option>
         </select></label>
-      <label class="field" style="min-width:190px"><span style="font-size:var(--fs-sm);color:var(--text-3)">ID участника</span>
-        <input class="form-input" id="msUserId" inputmode="numeric" placeholder="например 1234567890" aria-label="ID участника"></label>
+      <label class="field" style="min-width:190px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Участник</span>
+        <input class="form-input" id="msUserId" placeholder="Имя участника — выберите из списка" aria-label="Участник"><span id="msUserIdStatus"></span></label>
       <label class="field" style="min-width:200px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Когда исполнить</span>
         <input type="datetime-local" class="form-input" id="msRunAt" aria-label="Когда исполнить"></label>
       <label class="field" style="min-width:130px"><span style="font-size:var(--fs-sm);color:var(--text-3)">Длительность, мин</span>
@@ -82,8 +82,10 @@
   </div>
   <div id="msSchedList" style="margin-top:10px"><div class="empty"><i class="fas fa-hourglass-start"></i><span>Загрузка…</span></div></div>
 </div>
+<script src="/static/pickers.js"></script>
 <script>
 var GID = '{{ guild_id }}';
+attachMemberPicker(document.getElementById('msUserId'), { gid: GID, statusEl: document.getElementById('msUserIdStatus') });
 var API = '/api/guild/' + GID + '/mod-schedule';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
 var DATA = null;

@@ -88,10 +88,11 @@
   <div class="ms-panel">
     <h3><i class="fas fa-shield-halved"></i> Исключения временных мер</h3>
     <div class="ms-sub">Этих людей временные кики, муты и баны не трогают вообще.
-      Администраторы сервера защищены всегда (без списка). Вставьте ID.</div>
+      Администраторы сервера защищены всегда (без списка). Выбирайте из поиска.</div>
     <div class="ms-wl-add">
-      <input id="msWlIn" type="text" inputmode="numeric" placeholder="ID пользователя, например 823456789012345678" aria-label="ID пользователя для исключений временных мер">
+      <input id="msWlIn" type="text" placeholder="Начните вводить имя участника" aria-label="Участник для исключений временных мер">
       <button type="button" class="btn btn-primary" id="msWlAdd" aria-label="Добавить в исключения" title="Добавить"><i class="fas fa-plus"></i></button>
+      <span id="msWlStatus"></span>
     </div>
     <div id="msWl"></div>
     <div class="ms-savebar">
@@ -154,6 +155,7 @@
   <a class="ms-link" href="/security"><i class="fas fa-user-secret"></i>Центр безопасности</a>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 var CAN_EDIT = true;
 var GUILD_ID = {{ guild_id | tojson }};
@@ -389,7 +391,7 @@ document.getElementById('msPublishMenu').addEventListener('click', async functio
 document.getElementById('msWlAdd').addEventListener('click', function () {
   var inp = document.getElementById('msWlIn');
   var v = (inp.value || '').trim();
-  if (!/^\d{17,22}$/.test(v)) { toast('ID — это 17-22 цифры', false); return; }
+  if (!/^\d{17,22}$/.test(v)) { toast('Выберите участника из подсказок', false); return; }
   if (WL.indexOf(v) !== -1) { toast('Уже в списке', false); return; }
   WL.push(v);
   inp.value = '';
@@ -407,6 +409,10 @@ document.getElementById('msWl').addEventListener('click', function (e) {
 document.getElementById('msWlIn').addEventListener('keydown', function (e) {
   if (e.key === 'Enter') document.getElementById('msWlAdd').click();
 });
+
+/* участники — только из живого поиска (без ручного ID) */
+attachMemberPicker(document.getElementById('msWlIn'),
+  { gid: GUILD_ID, statusEl: document.getElementById('msWlStatus') });
 
 msLoad();
 </script>

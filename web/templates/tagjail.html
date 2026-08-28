@@ -50,6 +50,7 @@
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 (function () {
   'use strict';
@@ -63,7 +64,7 @@
     return Math.floor(d / 86400) + ' дн назад';
   }
 
-  var TJ = null;
+  var TJ = null, TJG = '';
 
   var FIELDS = [
     { k: 'enabled', l: 'Основной контур', t: 'bool', d: 'Авто-джейл и возрастная граница активны' },
@@ -74,14 +75,15 @@
     { k: 'jail_style', l: 'Режим джейла', t: 'select', opts: [['remove', 'снимать роли'], ['keep', 'только jail-роль']], d: 'remove — роли сохраняются и вернутся' },
     { k: 'age_action', l: 'Действие к новичкам', t: 'select', opts: [['kick', 'kick — выгнать'], ['jail', 'jail — посадить']], d: 'Если аккаунт младше лимита' },
     { k: 'min_account_days', l: 'Возраст аккаунта (дн)', t: 'num', d: '0 — проверка выключена' },
-    { k: 'jail_role_id', l: 'ID jail-роли', t: 'num', d: 'ID роли заключённых' },
-    { k: 'log_channel_id', l: 'ID лог-канала', t: 'num', d: 'Куда слать логи джейла' }
+    { k: 'jail_role_id', l: 'Jail-роль', t: 'role_sel', d: 'Роль заключённых (права настраиваются на сервере)' },
+    { k: 'log_channel_id', l: 'Лог-канал', t: 'channel_sel', d: 'Куда слать логи джейла; «не выбрано» — канал логов модерации' }
   ];
 
   function loadState() {
     fetch('/api/tagjail/state').then(function (r) { return r.json(); }).then(function (d) {
       if (!d.ok) { toast(d.error || 'Модуль офлайн', false); return; }
       TJ = d;
+      TJG = d.gid || TJG;
       var kpi = $('kpi-status');
       var on = d.config.enabled;
       kpi.querySelector('.kpi-icon').style.background = on ? 'var(--ok-soft)' : 'var(--surface-3)';
@@ -142,6 +144,9 @@
         input = '<select class="form-input" data-cfg="' + f.k + '" style="max-width:220px">' + f.opts.map(function (o) {
           return '<option value="' + o[0] + '" ' + (String(v) === o[0] ? 'selected' : '') + '>' + esc(o[1]) + '</option>';
         }).join('') + '</select>';
+      } else if (f.t === 'role_sel' || f.t === 'channel_sel') {
+        /* живой выпадающий список ролей/каналов (никакого ручного ID) */
+        input = '<select class="form-input" data-cfg="' + f.k + '" data-live="' + f.k + '" style="max-width:220px"></select>';
       } else {
         input = '<input class="form-input" type="number" min="0" data-cfg="' + f.k + '" value="' + esc(v ?? 0) + '" style="max-width:160px">';
       }
@@ -149,6 +154,11 @@
         '<div><div style="font-weight:600;font-size:var(--fs-md)">' + esc(f.l) + '</div>' +
         '<div class="hint">' + esc(f.d) + '</div></div>' + input + '</div>';
     }).join('');
+    /* заполняем живые select'ы из picker-кэша; начальное значение — из конфига */
+    var roleSel = document.querySelector('[data-live="jail_role_id"]');
+    var chanSel = document.querySelector('[data-live="log_channel_id"]');
+    if (roleSel) attachSelectPicker(roleSel, { gid: TJG, kind: 'role', noneValue: '', noneLabel: 'не выбрано', value: String(TJ.config.jail_role_id || '') });
+    if (chanSel) attachSelectPicker(chanSel, { gid: TJG, kind: 'text', noneValue: '', noneLabel: 'мод-лог по умолчанию', value: String(TJ.config.log_channel_id || '') });
   }
 
   function saveConfig() {

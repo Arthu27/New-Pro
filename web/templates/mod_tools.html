@@ -54,7 +54,7 @@
       <div class="sub">Сообщения исчезают незаметно для автора, попытки пишутся в журнал.</div></div>
     </div>
     <div class="panel-body">
-      <label class="form-group"><span class="form-label">Участник</span><input class="form-input" id="ghost-user" list="ghost-users" placeholder="ID или начните вводить ник"><datalist id="ghost-users"></datalist></label>
+      <label class="form-group"><span class="form-label">Участник</span><input class="form-input" id="ghost-user" placeholder="Имя участника — выберите из списка"><span id="ghost-user-status"></span></label>
       <div class="form-row-2">
         <label class="form-group"><span class="form-label">Срок</span><input class="form-input" id="ghost-duration" placeholder="30м, 2ч или пусто"></label>
         <label class="form-group"><span class="form-label">Причина</span><input class="form-input" id="ghost-reason" maxlength="300" placeholder="Только для команды"></label>
@@ -66,6 +66,7 @@
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 (function () {
   'use strict';
@@ -216,6 +217,7 @@
     var duration = $('ghost-duration').value.trim();
     var reason = $('ghost-reason').value.trim();
     if (!user_id) { msg('ghost-msg', 'Укажите участника', false); return; }
+    if (!/^\d{5,25}$/.test(user_id)) { msg('ghost-msg', 'Выберите участника из подсказок', false); return; }
     fetch('/api/ghost', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: user_id, duration: duration, reason: reason })
@@ -240,28 +242,8 @@
     });
   }
 
-  /* ── Автодополнение имён ── */
-  var ghostSearchTimer = null;
-  $('ghost-user').addEventListener('input', function () {
-    clearTimeout(ghostSearchTimer);
-    var q = $('ghost-user').value.trim();
-    if (q.length < 2 || /^\d+$/.test(q)) return;
-    ghostSearchTimer = setTimeout(function () {
-      fetch('/api/member-search/' + GHOST_GUILD_ID + '?q=' + encodeURIComponent(q))
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          var dl = $('ghost-users');
-          dl.innerHTML = '';
-          (Array.isArray(d) ? d : []).slice(0, 10).forEach(function (m) {
-            if (m.is_bot) return;
-            var o = document.createElement('option');
-            o.value = m.id;
-            o.label = m.display_name + ' (@' + m.name + ')';
-            dl.appendChild(o);
-          });
-        }).catch(function () {});
-    }, 300);
-  });
+  /* ── участник — только живой выбор из подсказок (без ручного ID) ── */
+  attachMemberPicker($('ghost-user'), { gid: GHOST_GUILD_ID, statusEl: $('ghost-user-status') });
 
   document.addEventListener('click', function (e) {
     var d = e.target.closest('[data-sticky-del]');

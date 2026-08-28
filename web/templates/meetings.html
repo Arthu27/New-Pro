@@ -71,7 +71,7 @@
       <h3><i class="fas fa-user-tag"></i> Роли в отчёте</h3>
       <div class="mt-sub">По этим ролям отчёт строит Top-4 блоки. Пусто — подтянутся роли из конфига мод-отчётов, как делает и бот.</div>
       <div class="mt-row" id="mtRoleCtl" style="display:none">
-        <input class="mt-inp" id="mtRoleInp" placeholder="ID роли">
+        <select class="mt-inp" id="mtRoleInp" aria-label="Роль"></select>
         <button type="button" class="mt-btn" id="mtRoleAdd"><i class="fas fa-plus"></i> Добавить</button>
       </div>
       <div id="mtRoles"></div>
@@ -95,8 +95,11 @@
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
 var GID = '{{ guild_id }}';
+attachSelectPicker(document.getElementById('mtRoleInp'),
+  { gid: GID, kind: 'role', noneLabel: '— выберите роль —' });
 var API = '/api/guild/' + GID + '/meetings';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
 var STATUS = null;

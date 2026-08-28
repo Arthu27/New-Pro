@@ -182,7 +182,7 @@
     <div class="au-panel">
       <div id="ml-list"><div class="au-loading"><i class="fas fa-circle-notch fa-spin"></i> Загружаем…</div></div>
       <div class="trg-form" style="grid-template-columns:1.2fr 1.1fr auto auto">
-        <input type="text" class="au-input" id="ml-channel" placeholder="ID канала" aria-label="ID канала" maxlength="20">
+        <select class="au-input" id="ml-channel" aria-label="Канал медиа-замка"></select>
         <select class="au-input" id="ml-mode" aria-label="Режим"></select>
         <label class="trg-exact-lbl" title="Модераторы и администраторы не подпадают под замок"><input type="checkbox" id="ml-exempt" checked> моды свободны</label>
         <button type="button" class="au-save" onclick="mlSet()"><i class="fas fa-lock"></i> Поставить</button>
@@ -202,7 +202,7 @@
       </div>
       <div class="trg-form" style="grid-template-columns:auto 1fr 1fr auto;align-items:center">
         <label class="trg-exact-lbl"><input type="checkbox" id="ns-enabled"> включена</label>
-        <input type="number" class="au-input" id="ns-channel" placeholder="ID канала (0 — канал логов)" min="0" aria-label="ID канала сводки">
+        <select class="au-input" id="ns-channel" aria-label="Канал сводки"></select>
         <input type="number" class="au-input" id="ns-tz" placeholder="UTC+… (напр. 3)" min="-12" max="14" aria-label="Смещение часового пояса">
         <button type="button" class="au-save" onclick="nsSave()"><i class="fas fa-check"></i> Сохранить</button>
       </div>
@@ -261,7 +261,22 @@
   </div>
 </div>
 
+<script src="/static/pickers.js"></script>
 <script>
+var GID = {{ guild_id | tojson }};
+
+/* каналы только из живых списков — ручной ввод ID убран по заказу */
+attachSelectPicker(document.getElementById('ml-channel'),
+  { gid: GID, kind: 'text', noneLabel: '— выберите канал —' });
+function nsEnsurePicker(){
+  var el = document.getElementById('ns-channel');
+  if (el && el.options.length <= 1) {
+    attachSelectPicker(el, { gid: GID, kind: 'text',
+      noneLabel: '— канал логов —', noneValue: '0' });
+  }
+}
+nsEnsurePicker();
+
 var AU_ACCENTS = {
   night_mode:   '#7f8ce0',
   anti_alt:     '#ff8a80',
@@ -664,6 +679,7 @@ function nsRender(d){
   document.getElementById('ns-tz').value = d.tz_offset;
   document.getElementById('ns-status').textContent = (d.enabled ? 'Включена' : 'На паузе') + ' · UTC' + (d.tz_offset >= 0 ? '+' : '') + d.tz_offset;
   document.getElementById('ns-last').textContent = d.last_sent ? 'Последняя: ' + d.last_sent : 'Ещё ни разу не уходила';
+  nsEnsurePicker();
 }
 
 async function nsLoad(){

@@ -61,12 +61,12 @@
       <h3><i class="fas fa-gear"></i> Настройки рассылки</h3>
       <div class="an-sub">Та же запись, что пишет /anime-setup: канал, категория из списка, роль упоминания. Пустой канал ставит рассылку на паузу.</div>
       <div class="an-fields">
-        <div><label for="anChannel">ID канала</label>
-          <input class="inp" id="anChannel" maxlength="24" placeholder="например 1234567890"><div id="anChannelStatus"></div></div>
+        <div><label for="anChannel">Канал рассылки</label>
+          <select class="inp" id="anChannel" aria-label="Канал рассылки"></select><div id="anChannelStatus"></div></div>
         <div><label for="anCategory">Категория</label>
           <select class="inp" id="anCategory"></select></div>
-        <div><label for="anRole">ID роли упоминания</label>
-          <input class="inp" id="anRole" maxlength="24" placeholder="пусто — без упоминания"><div id="anRoleStatus"></div></div>
+        <div><label for="anRole">Роль упоминания</label>
+          <select class="inp" id="anRole" aria-label="Роль упоминания"></select><div id="anRoleStatus"></div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button type="button" class="btn" onclick="anSave(false)"><i class="fas fa-check"></i> Сохранить</button>
           <button type="button" class="btn btn-ghost" id="anToggle" onclick="anSave(true)"><i class="fas fa-power-off"></i> Переключить</button>
@@ -163,8 +163,10 @@ function render(d) {
     fillForm(d);
     if (!window._anPickers) {
       window._anPickers = true;
-      attachIdPicker(document.getElementById('anChannel'), {gid: GID, kind: 'text', statusEl: document.getElementById('anChannelStatus')});
-      attachIdPicker(document.getElementById('anRole'), {gid: GID, kind: 'role', statusEl: document.getElementById('anRoleStatus')});
+      attachSelectPicker(document.getElementById('anChannel'),
+        {gid: GID, kind: 'text', noneLabel: '— рассылка на паузе —'});
+      attachSelectPicker(document.getElementById('anRole'),
+        {gid: GID, kind: 'role', noneLabel: '— без упоминания —'});
       bindCtrlS(function () { anSave(false); });
       window._anDirty = dirtyTrack(['anChannel', 'anCategory', 'anRole'].map(function (id) { return document.getElementById(id); }));
     }

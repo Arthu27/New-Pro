@@ -95,6 +95,106 @@
     });
   };
 
+  /* Полноценный выпадающий выбор — политика владельца «никакого ручного
+     ввода ID»: только интерактивный выбор из списка. Заполняет <select>
+     каналами/ролями сервера; value — строка id, «ничего» = noneValue ('').
+     Если выбранный ранее id удалён с сервера — добавляет его меткой
+     «(удалён)» и не теряет значение. */
+  window.attachSelectPicker = function (sel, opts) {
+    if (!sel) return null;
+    opts = opts || {};
+    var kind = opts.kind || 'text';
+    var gid = opts.gid;
+    var noneValue = opts.noneValue == null ? '' : String(opts.noneValue);
+    var noneLabel = opts.noneLabel || '— не выбрано —';
+    /* opts.value: явное начальное значение (для селектов, созданных пустыми
+       и заполняемых хелпером — у пустого <select> собственного value нет) */
+
+    function source(data) {
+      if (kind === 'role') return data.roles;
+      return (data.channels || []).filter(function (c) { return c.type === kind; });
+    }
+
+    window.pickerLoad(gid).then(function (data) {
+      var keep = String(opts.value != null ? opts.value : (sel.value || ''));
+      var list = source(data);
+      var has = false;
+      var html = '<option value="' + esc(noneValue) + '">' + esc(noneLabel) + '</option>';
+      html += list.map(function (it) {
+        if (String(it.id) === keep && keep) has = true;
+        var prefix = kind === 'role' ? '@ ' : '# ';
+        return '<option value="' + esc(it.id) + '">' + esc(prefix + it.name) + '</option>';
+      }).join('');
+      if (keep && keep !== noneValue && keep !== '0' && !has) {
+        html += '<option value="' + esc(keep) + '" selected>' +
+          esc(opts.deletedLabel || 'ранее выбрано (удалено с сервера)') + '</option>';
+        has = true;
+      }
+      sel.innerHTML = html;
+      sel.value = has && keep ? keep : String(noneValue);
+    }).catch(function () {
+      /* бот офлайн/сеть: оставляем как есть, пикер не ломает страницу */
+    });
+    return sel;
+  };
+
+  /* Подсказки по УЧАСТНИКАМ: вводим ник/имя — варианты из живого поиска
+     панели (member-card suggest), выбор по клику; в value остаётся id. */
+  window.attachMemberPicker = function (input, opts) {
+    if (!input) return null;
+    opts = opts || {};
+    var gid = opts.gid;
+    var statusEl = opts.statusEl || null;
+    var dl = document.createElement('datalist');
+    dl.id = 'picker-dl-m' + Math.random().toString(36).slice(2, 8);
+    input.setAttribute('list', dl.id);
+    input.setAttribute('autocomplete', 'off');
+    input.parentNode.appendChild(dl);
+    var found = [];
+    var timer = null;
+
+    function paint() {
+      if (!statusEl) return;
+      var id = window.pickerExtractId(input.value);
+      if (!id || !/\d{5,24}/.test(id)) { statusEl.innerHTML = ''; return; }
+      var hit = null;
+      found.forEach(function (it) { if (String(it.user_id) === id) hit = it; });
+      if (hit) {
+        statusEl.innerHTML = '<span class="picker-chip ok"><i class="fas fa-circle-check"></i> ' + esc(hit.name) + '</span>';
+      }
+    }
+
+    function suggest(q) {
+      return fetch('/api/guild/' + gid + '/member-card/suggest?q=' + encodeURIComponent(q),
+                   { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : {}; })
+        .then(function (d) { return (d && d.items) || []; })
+        .catch(function () { return []; });
+    }
+
+    input.addEventListener('input', function () {
+      clearTimeout(timer);
+      var raw = String(input.value || '').trim();
+      if (!raw) { dl.innerHTML = ''; found = []; paint(); return; }
+      timer = setTimeout(function () {
+        suggest(raw).then(function (list) {
+          found = list;
+          dl.innerHTML = list.map(function (it) {
+            return '<option value="' + esc(it.user_id) + '">' +
+              esc(it.name + ' — ' + it.user_id) + '</option>';
+          }).join('');
+          paint();
+        });
+      }, 250);
+    });
+    input.addEventListener('change', function () {
+      var id = window.pickerExtractId(input.value);
+      if (id) input.value = id;
+      paint();
+    });
+    return input;
+  };
+
   /* Клиентский поиск по списку. */
   window.attachListFilter = function (input, containerId, rowSelector) {
     var box = document.getElementById(containerId);

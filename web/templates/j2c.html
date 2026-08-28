@@ -82,10 +82,10 @@
       <div class="j2-sub">Те же рамки, что у команд /j2c: лимит 0–99 (0 — безлимит), шаблон до 96 символов, пустой шаблон — дефолт кога. Пустой ID лобби выключает смысл системы.</div>
       <div class="j2-fields">
         <label class="j2-check"><input type="checkbox" id="j2Enabled"> Система включена</label>
-        <div><label for="j2Lobby">ID канала-лобби</label>
-          <input class="inp" id="j2Lobby" maxlength="24" placeholder="0 — без лобби"><div id="j2LobbyStatus"></div></div>
-        <div><label for="j2Category">ID категории для комнат</label>
-          <input class="inp" id="j2Category" maxlength="24" placeholder="0 — как у лобби"><div id="j2CategoryStatus"></div></div>
+        <div><label for="j2Lobby">Канал-лобби</label>
+          <select class="inp" id="j2Lobby" aria-label="Голосовой канал-лобби"></select><div id="j2LobbyStatus"></div></div>
+        <div><label for="j2Category">Категория для комнат</label>
+          <select class="inp" id="j2Category" aria-label="Категория для временных комнат"></select><div id="j2CategoryStatus"></div></div>
         <div><label for="j2Limit">Лимит мест по умолчанию</label>
           <input class="inp" id="j2Limit" type="number" min="0" max="99" placeholder="0"></div>
         <div><label for="j2Template">Шаблон имени ({user} — владелец)</label>
@@ -181,8 +181,10 @@ function render(d) {
     fillForm(d);
     if (!window._j2Pickers) {
       window._j2Pickers = true;
-      attachIdPicker(document.getElementById('j2Lobby'), {gid: GID, kind: 'voice', statusEl: document.getElementById('j2LobbyStatus')});
-      attachIdPicker(document.getElementById('j2Category'), {gid: GID, kind: 'category', statusEl: document.getElementById('j2CategoryStatus')});
+      attachSelectPicker(document.getElementById('j2Lobby'),
+        {gid: GID, kind: 'voice', noneLabel: '— без лобби —', value: String(d.config.lobby_id || '')});
+      attachSelectPicker(document.getElementById('j2Category'),
+        {gid: GID, kind: 'category', noneLabel: '— как у лобби —', value: String(d.config.category_id || '')});
       bindCtrlS(j2Save);
       window._j2Dirty = dirtyTrack(['j2Enabled', 'j2Lobby', 'j2Category', 'j2Limit', 'j2Template'].map(function (id) { return document.getElementById(id); }));
     }
