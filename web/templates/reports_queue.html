@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Репорты - Hakumo{% endblock %}
+{% block page_title %}<i class="fas fa-flag"></i> Репорты{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Модерация <span class="sep">·</span> Репорты</div>
+    <h1>Репорты участников</h1>
+    <p class="lead">Очередь жалоб из <b>/report</b>: кто пожаловался, на кого, и что решили. Решение принимается в приватной ветке Discord — здесь живой мониторинг.</p>
+  </div>
+</div>
+
+<div class="kpi-row" id="rqKpis">
+  <div class="kpi"><div class="kpi-icon"><i class="fas fa-circle-notch fa-spin"></i></div><div class="kpi-copy"><div class="kpi-value">…</div><div class="kpi-label">Загрузка</div></div></div>
+</div>
+
+<div class="card">
+  <div class="bs-title" style="margin-bottom:8px"><i class="fas fa-inbox"></i> Очередь</div>
+  <div class="seg" id="rqChips">
+    <button type="button" class="seg-btn active" data-st="open"><i class="fas fa-fire"></i> Открытые</button>
+    <button type="button" class="seg-btn" data-st="closed"><i class="fas fa-check"></i> Решённые</button>
+    <button type="button" class="seg-btn" data-st=""><i class="fas fa-list"></i> Все</button>
+  </div>
+  <div id="rqList" style="margin-top:10px"><div class="empty"><i class="fas fa-mug-hot"></i><span>Загрузка…</span></div></div>
+</div>
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/reports-queue';
+var STATUS = 'open';
+var ITEMS = [];
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function kpi(icon, num, label, tone) {
+  return '<div class="kpi ' + (tone || '') + '"><div class="kpi-icon"><i class="fas ' + icon + '"></i></div>' +
+    '<div class="kpi-copy"><div class="kpi-value">' + num + '</div><div class="kpi-label">' + esc(label) + '</div></div></div>';
+}
+function ageHuman(min) {
+  if (min < 60) return min + ' мин';
+  if (min < 1440) return Math.round(min / 60) + ' ч';
+  return Math.round(min / 1440) + ' дн';
+}
+
+function render() {
+  var box = $('rqList');
+  var rows = ITEMS.filter(function (t) {
+    if (STATUS === 'open') return !t.closed;
+    if (STATUS === 'closed') return t.closed;
+    return true;
+  });
+  if (!rows.length) {
+    box.innerHTML = '<div class="empty"><i class="fas fa-mug-hot"></i><span>' +
+      (STATUS === 'open' ? 'Открытых репортов нет — очередь чиста.' : 'Здесь пусто') + '</span></div>';
+    return;
+  }
+  box.innerHTML = rows.map(function (t) {
+    var side = t.same
+      ? esc(t.reporter) + ' · апелляция на нарушение'
+      : esc(t.reporter) + ' → ' + esc(t.accused);
+    var verdict = (t.closed && t.verdict)
+      ? '<div class="feed-item-sub" style="white-space:normal">Вердикт: ' + esc(t.verdict) + '</div>' : '';
+    var when = t.closed ? ('закрыт ' + t.closed_readable) : ('ждёт ' + ageHuman(t.age_min));
+    return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon"><i class="fas ' + t.icon + '"></i></div>' +
+      '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(t.kind_label) + ' · ' + side + '</div>' + verdict +
+      '<div class="feed-item-time">' + esc(when) + '</div></div>' +
+      '<span class="badge ' + (t.closed ? 'ok' : 'tone-warning') + '">' + (t.closed ? 'решён' : 'открыт') + '</span></div>';
+  }).join('');
+}
+
+function load() {
+  fetch(API).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    var fp = String(JSON.stringify(d || null) || '').slice(0, 400);
+    if (window.silentGuard && window.silentGuard('reports_queue', fp)) return;
+    ITEMS = d.items || [];
+    var s = d.stats || {};
+    $('rqKpis').innerHTML =
+      kpi('fa-fire', s.open, 'открытых репортов', s.open ? 'tone-warn' : 'tone-ok') +
+      kpi('fa-circle-check', s.closed_week, 'решено за 7 дней', 'tone-ok') +
+      kpi('fa-flag', s.total, 'всего тикетов', 'tone-info');
+    render();
+  }).catch(function () {});
+}
+
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('#rqChips .seg-btn');
+  if (!b) return;
+  document.querySelectorAll('#rqChips .seg-btn').forEach(function (x) { x.classList.remove('active'); });
+  b.classList.add('active');
+  STATUS = b.dataset.st;
+  render();
+});
+
+load();
+if (window.setLiveRefresh) window.setLiveRefresh(function () { load(); }, 1500);
+</script>
+{% endblock %}

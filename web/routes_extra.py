@@ -121,6 +121,7 @@ from web.routes import (
     staff_stats_panel,
     pagerduty_hook,
     mod_schedule,
+    reports_queue,
 )
 
 _MODULES = tuple(

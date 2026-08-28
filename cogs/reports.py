@@ -28,6 +28,15 @@ WORD_HINT_EVERY = 10.0  # сек между подсказками «слово 
 _word_hint_ts = {}
 
 
+def _fire_new_event(event, body):
+    """Событие в колокольчик панели (веб). fail-safe: уведомления — не ядро."""
+    try:
+        from services.notification_dispatcher import notify_event
+        notify_event(event, None, body)
+    except Exception as _ex:
+        _log.debug('reports: событие %s: %s', event, _ex)
+
+
 def _is_mod(member, cfg) -> bool:
     if member is None:
         return False
@@ -482,6 +491,9 @@ class Reports(commands.Cog):
                 _log.debug('подавлено: %s', _sx3)
         RC.ticket_create(interaction.guild_id, thread.id,
                          interaction.user.id, user.id)
+        _fire_new_event('report_new',
+                        f'На **{user.display_name}** пожаловался '
+                        f'{interaction.user.display_name}: {reason[:120]}')
         proof_bits = []
         if proof:
             proof_bits.append(f'Ссылка: {proof[:200]}')

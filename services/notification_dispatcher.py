@@ -50,6 +50,8 @@ EVENTS = {
     'j2c': ('event_j2c', 'Комнаты J2C: настройки и уборка', 'fa-volume-high'),
     'gamification': ('event_gamification', 'Геймификация: корректировка очков', 'fa-trophy'),
     'backup': ('event_backup', 'Бэкап создан', 'fa-box-archive'),
+    'appeal_new': ('event_appeal_new', 'Новая апелляция', 'fa-scale-balanced'),
+    'report_new': ('event_report_new', 'Новый репорт от участника', 'fa-flag'),
     'test': (None, 'Тестовое уведомление', 'fa-flask'),
 }
 
@@ -70,6 +72,8 @@ EVENT_LINKS = {
     'anime_daily': '/anime-daily',
     'j2c': '/join-to-create',
     'gamification': '/gamification',
+    'appeal_new': '/appeals',
+    'report_new': '/reports-queue',
     'test': '/notifications',
 }
 
@@ -91,6 +95,8 @@ DEFAULT_SETTINGS = {
     'event_anime_daily': True,
     'event_j2c': True,
     'event_gamification': True,
+    'event_appeal_new': True,
+    'event_report_new': True,
     'discord_channel': '',
     'webhook_url': '',
     'smtp_server': '',

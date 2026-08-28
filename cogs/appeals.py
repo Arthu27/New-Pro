@@ -801,6 +801,17 @@ class Appeals(commands.Cog):
             log.debug('appeals: контекст %s: %s', user_id, _ex)
             return 'история наказаний недоступна'
 
+    async def _fire_panel_event(self, item):
+        """Событие «новая апелляция» в колокольчик панели (веб)."""
+        try:
+            from services.notification_dispatcher import notify_event
+            notify_event(
+                'appeal_new', None,
+                f'#{item["id"]} от **{item["user_name"]}**: '
+                f'{item["text"][:120]}')
+        except Exception as _ex:
+            log.debug('appeals: событие колокольчика: %s', _ex)
+
     async def _ping_mod_role(self, target_channel, settings, item):
         """Пинг роли модерации при новой апелляции (0 в настройках = без пинга)."""
         rid = int(settings.get('ping_role_id') or 0)
@@ -1108,6 +1119,7 @@ class Appeals(commands.Cog):
                 item['thread_id'] = thread.id
                 item['thread_url'] = card.jump_url
                 await self._ping_mod_role(thread, settings_of(state), item)
+                await self._fire_panel_event(item)
         except (discord.Forbidden, discord.HTTPException) as _ex:
             log.error('appeals: тред #%s не создан: %s', item['id'], _ex)
         self._save(guild_id, state)
@@ -1171,6 +1183,7 @@ class Appeals(commands.Cog):
                 item['message_id'] = msg.id
                 self._save(guild_id, state)
                 await self._ping_mod_role(channel, settings_of(state), item)
+                await self._fire_panel_event(item)
             except (discord.Forbidden, discord.HTTPException) as _ex:
                 log.error('appeals: карточка #%s на %s не ушла: %s',
                           item['id'], guild_id, _ex)

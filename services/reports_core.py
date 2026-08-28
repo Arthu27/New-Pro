@@ -139,6 +139,36 @@ def ticket_get(thread_id) -> dict | None:
     return t
 
 
+def ticket_list(guild_id, limit: int = 200) -> list:
+    """Тикеты сервера, свежие сверху — для панели (очередь репортов)."""
+    with db() as c:
+        rows = c.execute("""SELECT thread_id, kind, reporter_id, accused_id,
+            verdict, created, closed FROM tickets
+            WHERE guild=? ORDER BY created DESC LIMIT ?""",
+                         (str(guild_id), int(limit))).fetchall()
+    out = []
+    for r in rows:
+        out.append({'thread_id': r[0], 'kind': r[1], 'reporter_id': r[2],
+                    'accused_id': r[3], 'verdict': r[4] or '',
+                    'created': float(r[5] or 0),
+                    'closed': float(r[6] or 0) if r[6] else None})
+    return out
+
+
+def ticket_stats(guild_id) -> dict:
+    """Сводка очереди: открыто / закрыто за 7 дней / всего."""
+    now = _now()
+    with db() as c:
+        row = c.execute("""SELECT
+            SUM(CASE WHEN closed IS NULL OR closed=0 THEN 1 ELSE 0 END),
+            SUM(CASE WHEN closed IS NOT NULL AND closed>0 AND closed>=?
+                 THEN 1 ELSE 0 END),
+            COUNT(*) FROM tickets WHERE guild=?""",
+                        (now - 7 * 86400, str(guild_id))).fetchone()
+    return {'open': int(row[0] or 0), 'closed_week': int(row[1] or 0),
+            'total': int(row[2] or 0)}
+
+
 def ticket_set(thread_id, **kv) -> None:
     if not kv:
         return
