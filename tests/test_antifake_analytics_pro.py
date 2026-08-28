@@ -148,18 +148,18 @@ for f in _g.glob(os.path.join(ROOT, 'web', 'templates', '*.html')):
     for n in tr_needles:
         check(n not in text, f'{os.path.basename(f)}: нет «{n}»')
 
-# ═══ 6. Спарклайны CPU/RAM: сетка, подписи, плавная линия ══════════════
-print('== линейные показатели ==')
+# ═══ 6. Числовые ряды CPU/RAM (п.2: только числа, графики удалены) ══════
+print('== числовые показатели (без линий) ==')
 appjs = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').read()
-check('grid-line' in appjs and 'grid-label' in appjs,
-      'спарклайн умеет сетку и подписи значений')
-check("' C' +" in appjs or "line += ' C'" in appjs.replace(' ', ''),
-      'линия сглажена (кривые Безье)')
-check('stroke-linecap' in appjs, 'скруглённые концы линии')
+hc_cut = appjs[appjs.index('window.HakumoChart'):]
+check('сейчас' in hc_cut and 'сред' in hc_cut and 'макс' in hc_cut and 'мин' in hc_cut,
+      'бывший спарклайн показывает числовую сводку сейчас/сред/мин/макс')
+check('_statsRow' in hc_cut and "'<svg'" not in hc_cut,
+      'числовая сводка без SVG-линий')
 t_bs = open(os.path.join(ROOT, 'web', 'templates', 'bot_stats.html'), encoding='utf-8').read()
-check('labels: true' in t_bs and 'unit: \'%\'' in t_bs,
-      'bot-stats: подписи и единицы на CPU/RAM-графиках')
-check('height: 104' in t_bs, 'графики выше (104px, а не 76)')
+check("$('cpuNow').textContent" in t_bs and "$('ramNow').textContent" in t_bs,
+      'bot-stats: текущие CPU/RAM — просто числом')
+check('HakumoChart' in t_bs, 'bot-stats: сводки истории сессии живые')
 
 # ═══ 7. Страница антифейка: карточки страйков ═════════════════════════
 print('== шаблон страйков ==')

@@ -128,7 +128,7 @@ function renderRisk(d) {
     return '<div class="feed-item" style="border-bottom:1px solid var(--line)"><div class="feed-item-icon" style="' + (r.gap === 1 ? 'background:var(--warn-soft);color:var(--warn)' : '') + '"><i class="fas fa-user"></i></div>' +
       '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(label) + ' <span class="id-pill">' + esc(r.user_id) + '</span></div>' +
       '<div class="feed-item-sub">' + r.warns + ' ' + plural(r.warns, 'варн', 'варна', 'варнов') + ' из порога ' + r.next_count + '</div>' +
-      '<div class="modern-progress" style="margin-top:6px;max-width:260px"><span style="width:' + pct + '%;' + (r.gap === 1 ? 'background:var(--warn)' : '') + '"></span></div></div>' +
+      '<span style="font-weight:800;font-variant-numeric:tabular-nums">' + pct + '%</span></div>' +
       '<span class="badge ' + (r.gap === 1 ? 'tone-warning' : 'neutral') + '">' + esc(gap) + '</span></div>';
   }).join('');
 }
@@ -148,7 +148,7 @@ function renderRadar(d) {
       '<div style="min-width:0;flex:1"><div class="feed-item-title"><span class="badge neutral">' + esc(r.kind_name) + '</span> ' + esc(label) +
         ' <span class="id-pill">' + esc(r.user_id) + '</span></div>' +
       (r.reason ? '<div class="feed-item-sub">' + esc(r.reason) + '</div>' : '') +
-      '<div class="modern-progress" style="margin-top:6px;max-width:260px"><span style="width:' + pct + '%;' + (hot ? 'background:var(--err)' : '') + '"></span></div></div>' +
+      '<span style="font-weight:800;font-variant-numeric:tabular-nums">' + pct + '%</span></div>' +
       '<span class="mono" style="font-weight:600;' + (hot ? 'color:var(--err)' : '') + '">' + esc(fmtLeft(r.remaining_s)) + '</span></div>';
   }).join('');
 }

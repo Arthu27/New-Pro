@@ -130,9 +130,12 @@ check(r.get('success') and isinstance(r.get('health'), dict)
       'API отдаёт индекс с факторами')
 r = client.get('/dashboard')
 html = r.get_data(as_text=True)
-check(r.status_code == 200 and 'id="srvHealthArc"' in html
+# п.2: SVG-дуги и полосы-факторы заменены числами (заказчика «без линий»)
+check(r.status_code == 200 and 'srvHealthArc' not in html
+      and 'hl-bar' not in html
+      and 'id="srvHealthScore"' in html
       and 'id="srvHealthFactors"' in html and "'/api/dashboard/health'" in html,
-      'SVG-гауж и фактор-полосы в шаблоне дашборда')
+      'индекс здоровья только числами — ни дуги, ни полос факторов')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

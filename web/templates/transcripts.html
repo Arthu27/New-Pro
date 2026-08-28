@@ -288,7 +288,7 @@ function loadTrxStats() {
       document.getElementById('trxCats').innerHTML = st.categories.map(function (c) {
         var pct = Math.max(4, Math.round(100 * c.count / maxCat));
         return '<div class="trx-bar-row"><span class="trx-bar-name" title="' + esc(c.name) + '">' + esc(c.name) + '</span>' +
-          '<span class="trx-bar-track"><span class="trx-bar-fill" style="display:block;width:' + pct + '%"></span></span>' +
+          '<b>' + pct + '%</b>' +
           '<span class="trx-bar-num">' + c.count + ' · ' + c.share + '%</span></div>';
       }).join('') || '<div class="ann-meta">Категорий пока нет</div>';
       var maxDay = Math.max.apply(null, st.days.map(function (x) { return x.count; }).concat([1]));
@@ -298,7 +298,7 @@ function loadTrxStats() {
         var h = Math.max(5, Math.round(100 * x.count / maxDay));
         var today = i === st.days.length - 1;
         return '<div class="trx-col' + (today ? ' today' : '') + '" title="' + esc(x.label) + ': ' + x.count + '">' +
-          '<div class="trx-col-bar" style="height:' + h + '%"></div></div>';
+          '<div class="trx-col-num">' + (x.count || 0) + '</div></div>';
       }).join('');
       document.getElementById('trxClosers').innerHTML = st.closers.map(function (c) {
         return '<div class="trx-closer"><span>' + esc(c.name) + '</span><span class="trx-bar-num">' + c.count + '</span></div>';

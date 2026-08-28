@@ -391,7 +391,7 @@
 [data-theme="light"] .an-select{background: var(--bg)}
 [data-theme="light"] .an-select option{background:#fff;color:#2a2d35}
 </style>
-<script src="/static/vendor/chartjs/chart.umd.js"></script>
+<script src="/static/numchart.js"></script>
 <script>
 (function () {
   'use strict';
@@ -575,7 +575,7 @@
         '<div class="leader-avatar-fallback"   style="background: linear-gradient(135deg, var(--cyan), var(--violet));">#</div>' +
         '<div class="leader-info">' +
           '<div class="leader-name">#' + esc(name) + '</div>' +
-          '<div class="bar-track"><div class="bar-fill"   style="width: ' + pct + '%;"></div></div>' +
+          '<b>' + pct + '%</b>' +
         '</div>' +
         '<div class="leader-count">' + fmtNum(c.messages || 0) + '</div>' +
       '</div>';

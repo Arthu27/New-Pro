@@ -24,8 +24,6 @@
 .poll-q{font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px;line-height:1.4}
 .poll-opt{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .poll-opt .name{flex:0 0 auto;min-width:80px;font-size:13px;color:var(--text-2);font-weight:600}
-.poll-bar{flex:1;height:8px;background:color-mix(in srgb, var(--text) 5%, transparent);border-radius:99px;overflow:hidden}
-.poll-bar-fill{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac-2));border-radius:99px;transition:width .6s var(--ease-out)}
 .poll-votes{flex:0 0 40px;text-align:right;font-size:12.5px;font-weight:700;color:var(--ac-2);font-variant-numeric:tabular-nums}
 .poll-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 .poll-foot .voters{font-size:12.5px;color:var(--text-3);display:inline-flex;align-items:center;gap:6px}
@@ -98,7 +96,7 @@
       opts.forEach(function (o) {
         var v = o.votes || o.v || 0;
         var pct = total ? Math.round(v / total * 100) : 0;
-        html += '<div class="poll-opt"><span class="name">' + esc(o.text || o.t || '') + '</span><div class="poll-bar"><div class="poll-bar-fill" style="width:' + pct + '%;"></div></div><span class="poll-votes">' + pct + '%</span></div>';
+        html += '<div class="poll-opt"><span class="name">' + esc(o.text || o.t || '') + '</span><span class="poll-votes">' + pct + '%</span></div>';
       });
       html += '<div class="poll-foot"><span class="voters"><i class="fas fa-users"></i> ' + votersCount + ' голосов</span><span class="poll-counter ' + (p.active !== false ? 'active' : 'ended') + '">' + (p.active !== false ? 'Активен' : 'Завершён') + '</span></div></div>';
     });

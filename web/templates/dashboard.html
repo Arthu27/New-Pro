@@ -151,7 +151,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
           </div>
           <span class="badge" id="threatLevelBadge">—</span>
         </div>
-        <div class="modern-progress"><span id="threatFill" style="width:0%"></span></div>
+        <!-- п.2: индикатор угрозы — только числом, без полосы -->
         <div class="row" style="margin-top:14px">
           <button type="button" class="btn" id="btnLockdown"><i class="fas fa-house-lock"></i> <span id="btnLockdownText">Lockdown</span></button>
           <a class="btn-link" href="/security">Центр безопасности <i class="fas fa-arrow-right"></i></a>
@@ -244,7 +244,6 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     <style>
       .hl-body { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
       .hl-gauge { position: relative; width: 190px; flex-shrink: 0; margin: 0 auto; }
-      .hl-svg { width: 100%; display: block; }
       .hl-score { position: absolute; inset: auto 0 2px; text-align: center; font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
       .hl-score small { font-size: 12px; color: var(--text-3); font-weight: 600; }
       .hl-right { flex: 1; min-width: 240px; }
@@ -252,8 +251,6 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       .hl-factor .nm { font-size: 12px; color: var(--text-2); display: flex; gap: 7px; align-items: center; min-width: 0; }
       .hl-factor .nm i { width: 14px; color: var(--ac); opacity: .9; }
       .hl-factor .nm small { color: var(--text-3); font-size: 10.5px; margin-left: auto; }
-      .hl-bar { height: 7px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
-      .hl-bar i { display: block; height: 100%; border-radius: 99px; background: var(--ac); transition: width .5s ease; }
       .hl-pts { font-size: 11.5px; font-weight: 700; text-align: right; color: var(--text-2); }
       @media (max-width: 720px) { .hl-factor { grid-template-columns: 1fr; gap: 4px; } .hl-factor .nm small { display: none; } }
     </style>
@@ -261,7 +258,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       <div class="hl-gauge">
         <svg viewBox="0 0 120 68" class="hl-svg" aria-label="Индекс здоровья сервера">
           <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="var(--surface-3)" stroke-width="11" stroke-linecap="round"/>
-          <path id="srvHealthArc" d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="var(--ok)" stroke-width="11" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157"/>
+          <!-- п.2: дуги убраны — индекс здоровья показывается только числом -->
         </svg>
         <div class="hl-score"><span id="srvHealthScore">—</span><small> / 100</small></div>
       </div>
@@ -274,7 +271,6 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
 </div>
 <script>
 (function () {
-  var ARC = 157;
   var TONE_COLOR = { ok: 'var(--ok)', info: 'var(--info)', warn: 'var(--warn, #f59e0b)', err: 'var(--err)' };
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -288,16 +284,14 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       var h = d.health;
       var color = TONE_COLOR[h.tone] || 'var(--ac)';
       $('srvHealthScore').textContent = h.score;
-      var arc = $('srvHealthArc');
-      arc.setAttribute('stroke', color);
-      arc.setAttribute('stroke-dashoffset', String(ARC * (1 - h.score / 100)));
+
       var lbl = $('srvHealthLabel');
       lbl.textContent = h.label;
       lbl.className = 'badge ' + (h.tone === 'ok' ? 'ok' : h.tone === 'err' ? 'danger' : h.tone === 'warn' ? 'warn' : 'info');
       $('srvHealthFactors').innerHTML = (h.factors || []).map(function (f) {
         return '<div class="hl-factor" title="' + esc(f.detail) + '">' +
           '<div class="nm"><i class="fas ' + esc(f.icon) + '"></i><span>' + esc(f.label) + '</span><small>' + esc(f.detail) + '</small></div>' +
-          '<div class="hl-bar"><i style="width:' + f.pct + '%;background:' + (f.pct >= 70 ? 'var(--ok)' : f.pct >= 40 ? 'var(--warn,#f59e0b)' : 'var(--err)') + '"></i></div>' +
+          '<span class="hl-num ' + (f.pct >= 70 ? 'ok' : f.pct >= 40 ? 'warn' : 'err') + '">' + f.pct + '%</span>' +
           '<div class="hl-pts">' + f.points + '<small style="color:var(--text-3);font-weight:600">/' + f.max + '</small></div></div>';
       }).join('');
       $('srvHealthHint').innerHTML = '<i class="fas fa-lightbulb"></i> ' + esc(h.hint || '');
@@ -305,8 +299,8 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   }
   loadServerHealth();
   /* п.1: индекс здоровья — живой (5с), а не раз в минуту */
-  if (window.setLiveRefresh) window.setLiveRefresh(loadServerHealth, 5000);
-  else setInterval(loadServerHealth, 5000);
+  if (window.setLiveRefresh) window.setLiveRefresh(loadServerHealth, 1500);
+  else setInterval(loadServerHealth, 1500);
 })();
 </script>
 
@@ -905,8 +899,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       badge.style.background = color + '22';
       $('threatIconWrap').style.background = color + '22';
       $('threatIconWrap').style.color = color;
-      $('threatFill').style.width = Math.min(100, score) + '%';
-      $('threatFill').style.background = color;
+      // п.2: полосы угрозы нет — число живёт в threatScoreVal
       var chip = $('chipThreat');
       if (chip) { chip.innerHTML = '<i class="fas fa-shield-halved"></i> угрозы: ' + level.toLowerCase() + ' · ' + score + '/100'; }
       var btn = $('btnLockdown');

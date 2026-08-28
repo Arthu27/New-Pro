@@ -118,7 +118,7 @@ function renderTop(d) {
       '<td>' + esc(r.name) + streak + '</td>' +
       '<td class="dl-score">' + r.wins + ' : ' + r.losses + '</td>' +
       '<td class="dl-wr"><small>' + r.winrate + '% побед · серия макс ' + r.best_streak + '</small>' +
-      '<div class="bar"><i style="width:' + r.winrate + '%"></i></div></td></tr>';
+      '<b>' + r.winrate + '%</b></td></tr>';
   }).join('') + '</table>';
 }
 

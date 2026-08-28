@@ -360,31 +360,18 @@
   };
 
   /* ── 8. Donut-шкала ─────────────────────────────────────── */
+  /* ── 8. Donut-индикатор: ТОЛЬКО число (политика «без линий/дуг», п.2 заказа) ──
+     Бывшая SVG-дуга заменена на крупный процент в том же квадрате —
+     верстка карточек не едет (контейнер и кэпшены рядом сохраняются). */
   window.drawDonut = function (el, percent, color) {
     if (!el) return;
-    var r = 15.9155, c = 2 * Math.PI * r;
     var size = el.getAttribute('data-size') || '96';
     var p = Math.max(0, Math.min(100, Number(percent) || 0));
-    var track = getComputedStyle(doc.documentElement).getPropertyValue('--surface-3').trim() || '#eef0f3';
-    var stroke = color || getComputedStyle(doc.documentElement).getPropertyValue('--ac').trim() || '#4f46e5';
-    el.classList.add('donut');
+    el.classList.add('donut', 'donut-num');
     el.innerHTML =
-      '<svg viewBox="0 0 36 36" style="width:' + size + 'px;height:' + size + 'px">' +
-      '<circle cx="18" cy="18" r="' + r + '" fill="none" stroke="' + track + '" stroke-width="3.4"/>' +
-      '<circle class="donut-fill" cx="18" cy="18" r="' + r + '" fill="none" stroke="' + stroke + '" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + c + '" style="filter:drop-shadow(0 2px 3px ' + stroke + '55)"/>' +
-      '</svg>';
-    var fill = el.querySelector('.donut-fill');
-    if (!fill) return;
-    var cur = parseFloat(el.getAttribute('data-val')) || 0;
-    var t0 = null, dur = 700;
-    function step(ts) {
-      if (t0 == null) t0 = ts;
-      var pr = Math.min((ts - t0) / dur, 1);
-      var e = 1 - Math.pow(1 - pr, 3);
-      fill.style.strokeDashoffset = c * (1 - (cur + (p - cur) * e) / 100);
-      if (pr < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
+      '<span class="donut-num-v">' + p + '</span><span class="donut-num-u">%</span>';
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
     el.setAttribute('data-val', p);
   };
 
@@ -1464,161 +1451,64 @@
   }
 
   /* Спарклайн: линия + заливка + точка на последнем значении */
+  /* HakumoChart: ТОЛЬКО ЧИСЛА (заказ п.2): спарклайны, области и столбцы
+     заменены на краткие сводки «сейчас / сред / макс» и числовые чипы.
+     Сигнатура API сохранена — все страницы работают без переделки. */
   window.HakumoChart = {
+    _statsRow: function (el, values, opts) {
+      opts = opts || {};
+      if (!el) return;
+      var data = (values || []).map(function (x) { return Number(x) || 0; });
+      var unit = opts.unit || '';
+      if (!data.length) {
+        el.innerHTML = '<span class="hc-empty muted" style="font-size:12px">нет данных</span>';
+        return;
+      }
+      var last = data[data.length - 1];
+      var sum = 0, mx = data[0], mn = data[0];
+      data.forEach(function (v) { sum += v; if (v > mx) mx = v; if (v < mn) mn = v; });
+      var avg = sum / data.length;
+      function f(v) {
+        var num = (Math.abs(v - Math.round(v)) < 0.05) ? Math.round(v) : Math.round(v * 10) / 10;
+        return ('' + num).replace('.', ',');
+      }
+      var title = opts.title ? '<div class="hc-title muted">' + opts.title + '</div>' : '';
+      el.innerHTML = title +
+        '<div class="hc-stats">' +
+        '<div class="hc-stat"><span class="hc-k">сейчас</span><b class="hc-v">' + f(last) + unit + '</b></div>' +
+        '<div class="hc-stat"><span class="hc-k">сред</span><b class="hc-v">' + f(avg) + unit + '</b></div>' +
+        '<div class="hc-stat"><span class="hc-k">мин</span><b class="hc-v">' + f(mn) + unit + '</b></div>' +
+        '<div class="hc-stat"><span class="hc-k">макс</span><b class="hc-v">' + f(mx) + unit + '</b></div>' +
+        '</div>';
+    },
     sparkline: function (el, values, opts) {
-      opts = opts || {};
-      if (!el) return;
-      var data = (values || []).map(function (x) { return Number(x) || 0; });
-      var w = 640, h = Number(opts.height) || 64, pad = Number(opts.pad) || 12;
-      var color = opts.color || cssVar('--ac', '#4f46e5');
-      if (!data.length) { el.innerHTML = '<span class="muted" style="font-size:11px">нет данных</span>'; return; }
-      var gutter = opts.labels ? 40 : 10;
-      var pts = numPath(data, w, h, 10);
-      // плавная кривая (катмулл-ром → безье)
-      var line = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
-      for (var i = 0; i < pts.length - 1; i++) {
-        var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
-        var c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
-        var c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
-        line += ' C' + c1x.toFixed(1) + ' ' + c1y.toFixed(1) + ' ' + c2x.toFixed(1) + ' ' + c2y.toFixed(1) + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1);
-      }
-      var baseY = h - 10;
-      var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + baseY + ' L' + pts[0][0].toFixed(1) + ' ' + baseY + ' Z';
-      var svg = svgEl('svg', { viewBox: '0 0 ' + w + ' ' + h, preserveAspectRatio: 'none', style: 'width:100%;height:' + h + 'px' });
-      window.__chartUid = (window.__chartUid || 0) + 1;
-      var uid = 's' + window.__chartUid;
-      var defs = svgEl('defs', {});
-      var lg = svgEl('linearGradient', { id: uid + '-fill', x1: '0', y1: '0', x2: '0', y2: '1' });
-      lg.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '0.32' }));
-      lg.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.02' }));
-      defs.appendChild(lg);
-      var flt = svgEl('filter', { id: uid + '-glow', x: '-30%', y: '-30%', width: '160%', height: '160%' });
-      flt.appendChild(svgEl('feDropShadow', { dx: '0', dy: '2', stdDeviation: '2.4', 'flood-color': color, 'flood-opacity': '0.38' }));
-      defs.appendChild(flt);
-      svg.appendChild(defs);
-      // горизонтальная сетка (3 линии) и подписи значений
-      if (opts.grid) {
-        var gridColor = cssVar('--line', 'rgba(127,135,159,0.18)');
-        var minV = Math.min.apply(null, data.concat([0]));
-        var maxV = Math.max.apply(null, data.concat([1]));
-        if (maxV === minV) maxV = minV + 1;
-        for (var g = 0; g <= 2; g++) {
-          var gy = 10 + (baseY - 10) * (g / 2);
-          var gv = maxV - (maxV - minV) * (g / 2);
-          svg.appendChild(svgEl('line', { x1: 10, y1: gy, x2: w - 10, y2: gy, stroke: gridColor, 'stroke-width': '1', 'class': 'grid-line' }));
-          if (opts.labels) {
-            var txt = svgEl('text', { x: 4, y: gy + 3, 'font-size': '9', fill: cssVar('--text-3', '#7f879f'), 'class': 'grid-label' });
-            txt.textContent = String(Math.round(gv * 10) / 10) + (opts.unit || '');
-            svg.appendChild(txt);
-          }
-        }
-        if (opts.labels) {
-          // отступ слева под подписи — сдвигаем сам svg, а не геометрию
-          svg.style.marginLeft = gutter - 10 + 'px';
-          svg.style.width = 'calc(100% - ' + (gutter - 10) + 'px)';
-        }
-      }
-      svg.appendChild(svgEl('path', { d: area, fill: 'url(#' + uid + '-fill)', 'class': 'area-fill' }));
-      svg.appendChild(svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.6', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'class': 'line-path', filter: 'url(#' + uid + '-glow)' }));
-      var last = pts[pts.length - 1];
-      var surf = cssVar('--surface', '#ffffff');
-      svg.appendChild(svgEl('circle', { cx: last[0], cy: last[1], r: 4.6, fill: color, stroke: surf, 'stroke-width': '1.8', 'class': 'last-dot' }));
-      if (opts.title) svg.appendChild(svgEl('title', {}));
-      if (opts.title) svg.querySelector('title').textContent = opts.title;
-      el.innerHTML = '';
-      el.appendChild(svg);
-      if (opts.axis) {
-        var ax = doc.createElement('div');
-        ax.className = 'chart-axis';
-        var lab = axisLabels(data);
-        ax.innerHTML = '<span>' + (opts.axisMin || '0') + '</span><span>' + lab.mid + '</span><span>' + lab.max + '</span>';
-        el.appendChild(ax);
-      }
+      this._statsRow(el, values, opts);
     },
-
-    /* Площадной график с сеткой (для крупных блоков) */
     area: function (el, values, opts) {
-      opts = opts || {};
-      if (!el) return;
-      var data = (values || []).map(function (x) { return Number(x) || 0; });
-      var w = 640, h = Number(opts.height) || 180, pad = 14;
-      var color = opts.color || cssVar('--ac', '#4f46e5');
-      if (!data.length) { el.innerHTML = '<div class="empty" style="padding:20px"><i class="fas fa-chart-area"></i><span>нет данных</span></div>'; return; }
-      var pts = numPath(data, w, h, pad + 8);
-      var line = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
-      var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + (h - pad - 8) + ' L' + pts[0][0].toFixed(1) + ' ' + (h - pad - 8) + ' Z';
-      var svg = svgEl('svg', { viewBox: '0 0 ' + w + ' ' + h, preserveAspectRatio: 'none', style: 'width:100%;height:' + h + 'px' });
-      window.__chartUid = (window.__chartUid || 0) + 1;
-      var uid = 'g' + window.__chartUid;
-      var defs = svgEl('defs', {});
-      var lg = svgEl('linearGradient', { id: uid + '-fill', x1: '0', y1: '0', x2: '0', y2: '1' });
-      lg.appendChild(svgEl('stop', { offset: '0%', 'stop-color': color, 'stop-opacity': '0.36' }));
-      lg.appendChild(svgEl('stop', { offset: '100%', 'stop-color': color, 'stop-opacity': '0.02' }));
-      defs.appendChild(lg);
-      var flt = svgEl('filter', { id: uid + '-glow', x: '-30%', y: '-30%', width: '160%', height: '160%' });
-      flt.appendChild(svgEl('feDropShadow', { dx: '0', dy: '3', stdDeviation: '3', 'flood-color': color, 'flood-opacity': '0.4' }));
-      defs.appendChild(flt);
-      svg.appendChild(defs);
-      [0.25, 0.5, 0.75].forEach(function (f) {
-        var y = pad + (h - pad * 2) * f;
-        svg.appendChild(svgEl('line', { x1: pad, y1: y.toFixed(1), x2: w - pad, y2: y.toFixed(1), 'class': 'grid-line' }));
-      });
-      svg.appendChild(svgEl('path', { d: area, fill: 'url(#' + uid + '-fill)', 'class': 'area-fill' }));
-      var linePath = svgEl('path', { d: line, fill: 'none', stroke: color, 'stroke-width': '2.5', 'class': 'line-path', filter: 'url(#' + uid + '-glow)' });
-      svg.appendChild(linePath);
-      var surf = cssVar('--surface', '#ffffff');
-      pts.forEach(function (p, i) {
-        var dot = svgEl('circle', { cx: p[0], cy: p[1], r: i === pts.length - 1 ? 4.5 : 3.2, fill: color, stroke: surf, 'stroke-width': '1.6', opacity: i === pts.length - 1 ? 1 : 0.8 });
-        if (opts.labels && opts.labels[i] != null) {
-          var t = svgEl('title', {});
-          t.textContent = opts.labels[i] + ': ' + data[i];
-          dot.appendChild(t);
-        }
-        svg.appendChild(dot);
-      });
-      el.innerHTML = '';
-      el.appendChild(svg);
-      if (opts.tooltip !== false && typeof window.attachChartTooltip === 'function') {
-        window.attachChartTooltip(el, data, { labels: opts.labels, color: color, height: h });
-      }
-      // Рисование линии слева направо
-      if (!reducedMotion()) {
-        try {
-          var len = linePath.getTotalLength();
-          linePath.style.strokeDasharray = len;
-          linePath.style.strokeDashoffset = len;
-          linePath.style.transition = 'stroke-dashoffset 0.9s cubic-bezier(0.25, 0.6, 0.3, 1)';
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () { linePath.style.strokeDashoffset = 0; });
-          });
-        } catch (e) { /* SVG-анимация опциональна */ }
-      }
-      if (opts.labels && opts.labels.length) {
-        var ax = doc.createElement('div');
-        ax.className = 'chart-axis';
-        var lab = axisLabels(data);
-        ax.innerHTML = '<span>' + esc0(opts.labels[0]) + '</span><span>' + lab.mid + '</span><span>' + esc0(opts.labels[opts.labels.length - 1]) + '</span>';
-        el.appendChild(ax);
-      }
+      this._statsRow(el, values, opts);
     },
-
-    /* Горизонтальные бары-распределения */
+    /* vbars(el, [{label, value}]) -> числовые чипы «метка: значение», без столбцов */
     vbars: function (el, items, opts) {
       opts = opts || {};
       if (!el) return;
-      var list = (items || []).filter(function (x) { return x && x.label != null; });
-      if (!list.length) { el.innerHTML = '<span class="muted">нет данных</span>'; return; }
-      var max = Math.max.apply(null, list.map(function (x) { return Number(x.value) || 0; }).concat([1]));
-      var color = opts.color || cssVar('--ac', '#4f46e5');
-      el.innerHTML = list.slice(0, opts.limit || 8).map(function (x) {
-        var v = Number(x.value) || 0;
-        var pct = Math.round((v / max) * 100);
-        return '<div class="vbar-row" title="' + esc0(x.label) + ': ' + v + '">' +
-          '<span class="vbar-label">' + esc0(x.label) + '</span>' +
-          '<span class="vbar-track"><span class="vbar-fill" style="width:' + pct + '%;' + (x.color ? 'background:' + x.color : '') + '"></span></span>' +
-          '<span class="vbar-val">' + v.toLocaleString('ru-RU') + '</span></div>';
+      items = (items || []).slice(0, opts.limit || 12);
+      if (!items.length) {
+        el.innerHTML = '<span class="hc-empty muted" style="font-size:12px">нет данных</span>';
+        return;
+      }
+      var unit = opts.unit || '';
+      var total = 0;
+      var chips = items.map(function (it) {
+        var v = Number(it.value != null ? it.value : it[1]) || 0;
+        total += v;
+        var name = String(it.label != null ? it.label : it[0]);
+        return '<span class="hc-chip muted">' + name + ': ' + v + unit + '</span>';
       }).join('');
-    }
+      var title = opts.title ? '<div class="hc-title muted">' + opts.title + '</div>' : '';
+      el.innerHTML = title +
+        '<div class="hc-chips">' + chips +
+        '<span class="hc-chip hc-chip-sum muted">итого: ' + total + unit + '</span></div>';
+    },
   };
 
   function esc0(s) {
@@ -1663,85 +1553,23 @@
     return el;
   }
 
-  /* ── Кольцевой график (доли мер) ─────────────────────── */
+  /* ── Доли мер: ТОЛЬКО числа (п.2: без колец и дуг) ──
+     Бывшее кольцо-секторник заменено чипами «метка: значение» + итог. */
   window.HakumoRing = function (el, segments, opts) {
     opts = opts || {};
     if (!el) return;
     var list = (segments || []).filter(function (x) { return x && (Number(x.value) || 0) > 0; });
-    if (!list.length) { el.innerHTML = '<span class="muted">нет данных</span>'; return; }
+    if (!list.length) { el.innerHTML = '<span class="hc-empty muted">нет данных</span>'; return; }
     var total = list.reduce(function (acc, x) { return acc + (Number(x.value) || 0); }, 0);
-    var size = Number(opts.size) || 118;
-    var stroke = Number(opts.stroke) || 13;
-    var r = (size - stroke) / 2;
-    var c = 2 * Math.PI * r;
-    var svg = svgEl('svg', { viewBox: '0 0 ' + size + ' ' + size, style: 'width:' + size + 'px;height:' + size + 'px' });
-    var track = svgEl('circle', {
-      cx: size / 2, cy: size / 2, r: r, fill: 'none',
-      stroke: getComputedStyle(doc.documentElement).getPropertyValue('--surface-3').trim() || '#eef0f3',
-      'stroke-width': stroke
-    });
-    svg.appendChild(track);
-    var off = 0;
-    list.forEach(function (seg) {
+    var chips = list.map(function (seg) {
       var v = Number(seg.value) || 0;
-      var frac = v / total;
-      var dash = frac * c - 3; // зазор между сегментами
-      if (dash < 0) dash = 0;
-      var circle = svgEl('circle', {
-        cx: size / 2, cy: size / 2, r: r, fill: 'none',
-        stroke: seg.color || '#4f46e5',
-        'stroke-width': stroke,
-        'stroke-dasharray': dash + ' ' + (c - dash),
-        'stroke-dashoffset': -(off * c),
-        'stroke-linecap': 'round',
-        'data-anim': '1',
-        'data-final': dash + ' ' + (c - dash)
-      });
-      var t = svgEl('title', {});
-      t.textContent = seg.label + ': ' + v;
-      circle.appendChild(t);
-      svg.appendChild(circle);
-      off += frac;
-    });
-    var wrap = doc.createElement('div');
-    wrap.className = 'ring-wrap';
-    var box = doc.createElement('div');
-    box.className = 'ring-box';
-    var center = doc.createElement('div');
-    center.className = 'ring-center';
-    center.innerHTML = '<div><b>' + total.toLocaleString('ru-RU') + '</b><small>' + esc0(opts.totalLabel || 'всего') + '</small></div>';
-    box.appendChild(svg);
-    box.appendChild(center);
-    wrap.appendChild(box);
-    if (opts.legend !== false) {
-      var leg = doc.createElement('div');
-      leg.className = 'ring-legend';
-      list.slice(0, 7).forEach(function (seg) {
-        var v = Number(seg.value) || 0;
-        var pct = total ? Math.round((v / total) * 100) : 0;
-        var li = doc.createElement('div');
-        li.className = 'ring-li';
-        li.innerHTML = '<span class="sw" style="background:' + esc0(seg.color || '#4f46e5') + '"></span>' +
-          '<span class="nm">' + esc0(seg.label) + '</span>' +
-          '<span class="vl">' + v.toLocaleString('ru-RU') + '</span>' +
-          '<span class="pc">' + pct + '%</span>';
-        leg.appendChild(li);
-      });
-      wrap.appendChild(leg);
-    }
-    el.innerHTML = '';
-    el.appendChild(wrap);
-    // сегменты кольца проявляются волной
-    if (!reducedMotion()) {
-      var segs = svg.querySelectorAll('circle[data-anim]');
-      segs.forEach(function (c2, i) {
-        var finalDash = c2.getAttribute('data-final');
-        c2.setAttribute('stroke-dasharray', '0 ' + c);
-        setTimeout(function () {
-          c2.setAttribute('stroke-dasharray', finalDash);
-        }, 80 + i * 90);
-      });
-    }
+      var pct = total ? Math.round(v / total * 100) : 0;
+      return '<span class="hc-chip muted">' + esc0(String(seg.label)) + ': ' + v +
+             ' (' + pct + '%)</span>';
+    }).join('');
+    el.innerHTML =
+      '<div class="hc-title muted">' + esc0(opts.totalLabel || 'всего') + ': ' + total.toLocaleString('ru-RU') + '</div>' +
+      '<div class="hc-chips">' + chips + '</div>';
   };
 
   /* ── Тепловая карта (24 часа) ────────────────────────── */

@@ -121,10 +121,10 @@ function renderList(d) {
     if (f.created_at) meta.push(String(f.created_at).slice(0, 10));
     if (f.created_by) meta.push(esc(String(f.created_by).replace(/^panel:/, '')));
     var roll = CAN_EDIT
-      ? '<div class="ff-roll"><div class="bar"><i style="width:' + f.rollout + '%"></i></div><b>' + f.rollout + '%</b>' +
+      ? '<div class="ff-roll"><b>' + f.rollout + '%</b>' +
         '<input type="number" class="ff-input" min="0" max="100" value="' + f.rollout + '" id="ffr-' + esc(f.key) + '" aria-label="Процент выкатки">' +
         '<button type="button" class="ff-mini" onclick="ffRollout(\x27' + esc(f.key) + '\x27)">OK</button></div>'
-      : '<div class="ff-roll"><div class="bar"><i style="width:' + f.rollout + '%"></i></div><b>' + f.rollout + '%</b></div>';
+      : '<div class="ff-roll"><b>' + f.rollout + '%</b></div>';
     var del = CAN_EDIT
       ? '<button type="button" class="ff-del" onclick="ffDelete(\x27' + esc(f.key) + '\x27,\x27' + esc(f.name) + '\x27)" title="Удалить" aria-label="Удалить"><i class="fas fa-trash-can"></i></button>'
       : '';

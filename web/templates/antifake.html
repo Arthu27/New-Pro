@@ -297,7 +297,7 @@ function renderStrikes(d) {
       '<div class="copy">' +
         '<div class="nm">' + esc(e.name || 'Покинул сервер') +
           ' <span class="id-pill">' + esc(e.user_id) + '</span></div>' +
-        '<div class="bar"><span style="width:' + pct + '%"></span></div>' +
+        '<b>' + pct + '%</b>' +
         '<div class="meta">' +
           '<span><b>' + e.active + '</b> активных из ' + d.limit + ' за ' + d.window_days + ' дн</span>' +
           '<span>всего: <b>' + e.total + '</b></span>' +

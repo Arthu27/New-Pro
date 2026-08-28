@@ -30,9 +30,6 @@
 .gw-info{display:flex;gap:14px;flex-wrap:wrap}
 .gw-info span{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-3)}
 .gw-info span i{color:var(--ac);font-size:11px}
-.gw-progress{height:7px;background:color-mix(in srgb, var(--text) 5%, transparent);border-radius:99px;overflow:hidden}
-.gw-progress-fill{height:100%;background:linear-gradient(90deg,var(--ac),var(--ac-2));border-radius:99px;transition:width .6s var(--ease-out)}
-.gw-card.gw-ended .gw-progress-fill{background:var(--line-2)}
 .gw-timer{display:flex;justify-content:space-between;font-size:12px;color:var(--text-2)}
 .gw-timer b{font-variant-numeric:tabular-nums;color:var(--text)}
 /* участники — как в Discord */
@@ -260,7 +257,7 @@
           (chName ? '<span><i class="fas fa-hashtag"></i>' + esc(chName) + '</span>' : '') +
           (left ? '<span><i class="fas fa-clock"></i>' + esc(left) + '</span>' : '') +
         '</div>' +
-        '<div class="gw-progress"><div class="gw-progress-fill" style="width:' + pct + '%;"></div></div>' +
+        '<div class="gw-progress-num">заполнено: <b>' + pct + '%</b></div>' +
         '<div class="gw-timer"><span>Участники</span><b>' + parts.length + '</b></div>' +
         '<div class="gw-parts' + (open ? ' open' : '') + '">' +
           '<div class="gw-parts-head" onclick="window.__gwToggle(\'' + esc(g.id) + '\')">' +

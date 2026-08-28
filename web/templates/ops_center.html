@@ -38,7 +38,7 @@
       <span class="badge neutral mono" id="cpuNow">—</span></div>
     <div class="panel-body">
       <div class="chart-box" id="cpuSpark"></div>
-      <div class="modern-progress" style="margin-top:10px"><span id="cpuBar" style="width:0%"></span></div>
+      <!-- п.2: только число -->
     </div>
   </div>
   <div class="panel">
@@ -47,7 +47,7 @@
       <span class="badge neutral mono" id="ramNow">—</span></div>
     <div class="panel-body">
       <div class="chart-box" id="ramSpark"></div>
-      <div class="modern-progress" style="margin-top:10px"><span id="ramBar" style="width:0%;background:var(--info)"></span></div>
+      <!-- п.2: только число -->
     </div>
   </div>
 </div>
@@ -162,8 +162,7 @@
         cpuHist.push(cpuV);
         if (cpuHist.length > HIST_MAX) cpuHist.shift();
         $('cpuNow').textContent = cpuV + '%';
-        $('cpuBar').style.width = Math.min(100, cpuV) + '%';
-        $('cpuBar').style.background = cpuTone(cpuV);
+        // п.2: полос нет — значения живут в текстовых полях
         if (window.HakumoChart) window.HakumoChart.sparkline($('cpuSpark'), cpuHist, { height: 56, color: cpuTone(cpuV), title: 'CPU, %' });
       }
     }
@@ -173,8 +172,7 @@
         ramHist.push(ramV);
         if (ramHist.length > HIST_MAX) ramHist.shift();
         $('ramNow').textContent = ramV + '%';
-        $('ramBar').style.width = Math.min(100, ramV) + '%';
-        $('ramBar').style.background = ramTone(ramV);
+        // п.2: полос нет — значения живут в текстовых полях
         if (window.HakumoChart) window.HakumoChart.sparkline($('ramSpark'), ramHist, { height: 56, color: ramTone(ramV), title: 'RAM, %' });
       }
     }

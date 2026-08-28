@@ -170,7 +170,7 @@
         <span class="serenity-ico" id="serenityIco"><i class="fas fa-heart"></i></span>
         <div class="serenity-track">
           <div class="row"><b style="font-size:var(--fs-md)">Контур спокойствия</b><span class="spacer"></span><span class="mono" id="serenityPct" style="font-weight:700">—</span></div>
-          <div class="modern-progress" style="margin-top:6px"><span id="serenityBar" style="width:0%;background:var(--ok)"></span></div>
+          <!-- п.2: полоса спокойствия убрана — только процент числом -->
           <div class="hint" id="serenityHint" style="margin-top:4px"></div>
         </div>
       </div>
@@ -372,9 +372,7 @@
         var pct = Math.round((good / (good + bad)) * 100);
         $('serenityRow').style.display = '';
         $('serenityPct').textContent = pct + '%';
-        var bar = $('serenityBar');
-        bar.style.width = pct + '%';
-        bar.style.background = pct >= 70 ? 'var(--ok)' : pct >= 45 ? 'var(--warn)' : 'var(--err)';
+        // п.2: полосы нет — процент спокойствия живёт в $('serenityPct')
         var ico = $('serenityIco');
         ico.className = 'serenity-ico' + (pct < 70 ? ' low' : '');
         $('serenityHint').textContent = 'снятий: ' + good + ' · наказаний: ' + bad + ' — чем выше доля снятий, тем спокойнее контур.';
