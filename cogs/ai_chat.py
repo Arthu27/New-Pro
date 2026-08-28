@@ -386,6 +386,9 @@ def _call_ai (question :str ,user_id :int ,guild =None ,recent_messages :list =N
                 r .name for r in sorted (
                 (r for r in guild .roles if not r .is_default ()and not r .managed ),
                 key =lambda r :r .position ,reverse =True )][:30 ]
+                if member :
+                    context ['asker_roles']=[
+                    r .name for r in member .roles if not r .is_default ()][:10 ]
             except Exception as e :
                 log .info (f'[AI] Guild info Ошибки: {e}')
 

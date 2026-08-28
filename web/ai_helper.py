@@ -1113,8 +1113,16 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
 
     sys_lines =[
     "Ты — Hakumo/Moebius, информационный AI-ассистент сервера Discord. Отвечай на русском языке.",
-    "Ты — настоящий эксперт: думай, рассуждай и отвечай на ЛЮБОЙ вопрос полно и уверенно. "
-    "Что спросили — то и получи: сначала прямой точный ответ, детали — ниже если нужны.",
+    "Ты — эксперт высшего класса: умный, точный, рассудительный. Отвечай на ЛЮБОЙ "
+    "вопрос полно и уверенно: что спросили — то и получи.",
+    "МЕТОД РАБОТЫ (всегда, внутренне): сначала мысленно разбери вопрос — что именно "
+    "нужно человеку; сверься с данными сервера и разговора выше; потом выдай один "
+    "готовый ответ. Само рассуждение НЕ показывай — показывай его итог.",
+    "ФОРМА ОТВЕТА: первое предложение — прямой точный ответ (без воды и «конечно!»); "
+    "дальше — суть и детали, полезные догадки и варианты; если вопрос расплывчат — "
+    "ответь на самую вероятную трактовку и одной строкой уточни альтернативу.",
+    "ФОРМАТ Discord: короткие абзацы, **жирный** для ключевого, списки маркером; "
+    "код — только в коде. Без шаблонных извинений и без «как AI я не могу».",
     # Заказ владельца 2026-08-26: ИИ — только консультирует.
     "ЖЁСТКИЕ ПРАВИЛА (нарушать нельзя):",
     "1. Ты НЕ модератор и НЕ применяешь наказания: никаких мутов, варнов, банов, "
@@ -1132,6 +1140,13 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     if context .get ('guild_name'):
         sys_lines .append (f"Название сервера: {context.get('guild_name')}")
         # Живой слепок сервера — ИИ знает людей, каналы и роли, не «фантазирует»
+    # ИИ всегда знает «сегодня» — вопросы про даты/сроки отвечает точно
+    try :
+        sys_lines .append ("Сегодняшняя дата: "+
+        datetime .datetime .now ().strftime ('%d.%m.%Y'))
+    except Exception as _ex:
+        _log.debug("ai_assistant(): подавлено: %s", _ex)
+
     if context .get ('member_count'):
         sys_lines .append (f"Участников на сервере: {context['member_count']}")
     if context .get ('guild_owner'):
@@ -1145,6 +1160,20 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
                 sys_lines .append ("Команда сервера (роль — люди): "+_sr )
         except Exception as _ex:
             _log.debug("ai_assistant(): подавлено: %s", _ex)
+        # Реальные слеш-команды бота (из whitelist меню) — ИИ советует
+        # только существующее, не выдумывает /search и т.п.
+    try :
+        from slash_budget import KEEP_SLASH as _KEEP 
+        _cmds =sorted (str (c )for c in _KEEP )
+        if _cmds :
+            sys_lines .append (
+            "РЕАЛЬНЫЕ слеш-команды бота (советуй только их, ЛЮБАЯ другая команда — выдумка): "+
+            ", ".join ("/"+c for c in _cmds )+"\n"+
+            "Если нужной команды здесь НЕТ — скажи, как это делается через эти команды "
+            "или через панель, а не придумывай новую.")
+    except Exception as _ex:
+        _log.debug("ai_assistant(): подавлено: %s", _ex)
+
     if context .get ('channels'):
         _chs =[str (c )for c in context ['channels']if c ][:40 ]
         if _chs :
@@ -1176,6 +1205,25 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         sys_lines .append ("Изученная информация о сервере:\n  "+"\n  ".join (str (k )for k in context ['learned_knowledge']))
     if context .get ('guild_instructions'):
         sys_lines .append ("Особые инструкции сервера:\n  "+"\n  ".join (str (i )for i in context ['guild_instructions']))
+        # Хроника разговора — ИИ понимает, «о чём вообще речь», и не тупит
+    if context .get ('channel_context'):
+        _cc =[str (m )for m in context ['channel_context']if m ][-12 :]
+        if _cc :
+            sys_lines .append ("ПОСЛЕДНИЕ СООБЩЕНИЯ В КАНАЛЕ (хроника вокруг вопроса):\n  "+
+            "\n  ".join (_cc ))
+    if context .get ('recent_user_messages'):
+        _ru =[str (m )for m in context ['recent_user_messages']if m ][-10 :]
+        if _ru :
+            sys_lines .append ("Недавние сообщения спрашивающего:\n  "+"\n  ".join (_ru ))
+    if context .get ('asker_roles'):
+        sys_lines .append ("Роли спрашивающего: "+", ".join (
+        str (r0 )for r0 in context ['asker_roles'][:10 ]))
+    if context .get ('user_interests'):
+        sys_lines .append ("Замеченные интересы спрашивающего: "+", ".join (
+        str (i0 )for i0 in context ['user_interests'][:6 ]))
+    if context .get ('user_style'):
+        sys_lines .append ("Любимый стиль общения спрашивающего: "+str (context ['user_style']))
+
     if context .get ('server_status'):
         s =context ['server_status']
         sys_lines .append (f"Текущее состояние сервера: {s.get('online_count', 0)} в сети, {s.get('voice_count', 0)} в голосовых.")
