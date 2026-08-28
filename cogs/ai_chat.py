@@ -249,6 +249,67 @@ _message_cache ={}
 _cache_timeout =300 # 5 минут
 
 
+_MENTION_RE =re .compile (r'<@!?(\d{5,25})>|<#(\d{5,25})>|<@&(\d{5,25})>')
+
+
+def _resolve_mentions (text ,guild ):
+    """<@123> / <#456> / <@&789> → @имя / #канал / @роль.
+
+    ИИ по голым цифрам не понимает, о ком речь — переводим в читаемые
+    имена; ничего не нашли — оставляем как было.
+    """
+    if not guild or not text or '<'not in text :
+        return text 
+    def _sub (m ):
+        uid ,chid ,rid =m .group (1 ),m .group (2 ),m .group (3 )
+        try :
+            if uid :
+                u =guild .get_member (int (uid ))
+                return '@'+(u .display_name if u else uid )
+            if chid :
+                c =guild .get_channel (int (chid ))
+                return '#'+(c .name if c else chid )
+            if rid :
+                r =guild .get_role (int (rid ))
+                return '@'+(r .name if r else rid )
+        except Exception as _ex:
+            log.debug("_resolve_mentions(): подавлено: %s", _ex)
+        return m .group (0 )
+    return _MENTION_RE .sub (_sub ,text )
+
+
+def _split_long (text ,limit :int =1900 )->list :
+    """Ответ длиннее лимита Discord → режем по абзацам/предложениям, не по слову."""
+    text =(text or '').strip ()
+    if len (text )<=limit :
+        return [text ]
+    chunks ,buf =[],''
+    def flush ():
+        nonlocal buf 
+        if buf .strip ():
+            chunks .append (buf .strip ())
+        buf =''
+    for para in text .split ('\n\n'):
+        # сверхдлинный абзац — сначала по предложениям, потом по словам
+        while len (para )>limit :
+            cut =para .rfind ('. ',0 ,limit )
+            if cut <limit //2 :
+                cut =para .rfind (' ',0 ,limit )
+            if cut <1 :
+                cut =limit 
+            flush ()
+            chunks .append (para [:min (cut +1 ,limit )].strip ())
+            para =para [min (cut +1 ,limit ):].strip ()
+        cand =(buf +'\n\n'+para ).strip ()if buf else para 
+        if len (cand )<=limit :
+            buf =cand 
+        else :
+            flush ()
+            buf =para 
+    flush ()
+    return chunks or [text [:limit ]]
+
+
 async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list :
     """Собрать последние сообщения пользователя на сервере (за 12 часов, макс. 15)"""
     if not guild :
@@ -291,7 +352,7 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
                     # Bot не включать команды
                         recent .append ({
                         'channel':channel .name ,
-                        'content':msg .content [:200 ],# 150 → 200 karakter
+                        'content':_resolve_mentions (msg .content [:200 ],channel .guild ),# 150 → 200 karakter
                         'timestamp':msg .created_at .strftime ('%H:%M')
                         })
                         if len (recent )>=limit :# 15 message найден ca dur
@@ -324,7 +385,7 @@ async def _get_channel_context (channel ,limit :int =12 )->list :
                 continue # сообщения бота не включаем
             context_messages .append ({
             'author':msg .author .display_name ,
-            'content':msg .content [:200 ],# 150 → 200 karakter
+            'content':_resolve_mentions (msg .content [:200 ],channel .guild ),# 150 → 200 karakter
             'timestamp':msg .created_at .strftime ('%H:%M')
             })
             # Ters преобразовать (en старый en baшta)
@@ -1109,6 +1170,10 @@ class AIChat (commands .Cog ):
         else :
             content =message .content .strip ()or 'Здравствуйте!'
 
+            # <@123> / <#456> в вопросе → читаемые имена — ИИ видит, о ком речь
+        if message .guild :
+            content =_resolve_mentions (content ,message .guild )
+
             # командный запрос владельца — режим J.A.R.V.I.S.
         if OWNER_ID and message .author .id ==OWNER_ID :
             cmd_triggers =['создай канал','новый канал','сделай объявление','объяви',
@@ -1199,7 +1264,11 @@ class AIChat (commands .Cog ):
                 log .info (f'[DM LOG] Ошибка: {_le}')
             await message .channel .send (answer )
         else :
-            await message .reply (answer ,mention_author =False )
+            chunks =_split_long (answer )
+            if chunks :
+                await message .reply (chunks [0 ],mention_author =False )
+                for extra in chunks [1 :]:
+                    await message .channel .send (extra )
 
 
 async def setup (bot ):

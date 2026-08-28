@@ -94,8 +94,13 @@ try:
             'staff_roles': [{'name': 'Модератор', 'members': ['Лина', 'Гост']}],
             'channels': ['#общее', '#оффтоп', '  Голос'],
             'roles': ['Админ', 'Хелпер', 'Участник'],
-            'channel_context': ['Люк: привет', 'Лина: кто шарит по тикетам?'],
-            'recent_user_messages': ['всем хай', 'мне бы роль'],
+            'channel_context': [
+                {'author': 'Люк', 'content': 'привет', 'timestamp': '12:00'},
+                {'author': 'Лина', 'content': 'кто шарит по тикетам?',
+                 'timestamp': '12:01'}],
+            'recent_user_messages': [
+                {'channel': 'общее', 'content': 'всем хай', 'timestamp': '11:50'},
+                {'channel': 'оффтоп', 'content': 'мне бы роль', 'timestamp': '11:55'}],
             'asker_roles': ['Хелпер', 'Участник'],
             'user_interests': ['музыка', 'игры'],
         },
@@ -126,11 +131,16 @@ print('== 3.1. Экспертиза и живой контекст ==')
 for probe in ('МЕТОД РАБОТЫ', 'мысленно разбери вопрос',
               'ФОРМА ОТВЕТА', 'ФОРМАТ Discord', 'Сегодняшняя дата:',
               'РЕАЛЬНЫЕ слеш-команды', '/modpanel',
-              'Люк: привет', 'Лина: кто шарит по тикетам?',
-              'всем хай', 'Хелпер', 'музыка'):
+              '[12:00] Люк: привет', '[12:01] Лина: кто шарит по тикетам?',
+              '[11:50] в #общее: всем хай', '[11:55] в #оффтоп: мне бы роль',
+              'Хелпер', 'музыка'):
     check(probe in sys_prompt, f'умный движок: {probe}')
 check('Роли спрашивающего: Хелпер, Участник' in sys_prompt,
       'роли спрашивающего в контексте')
+for probe in ('ТОН: подстраивайся', 'шутят — ответь с лёгким юмором',
+              'ЧЕСТНОСТЬ ТОЧНОСТИ', '«вероятнее всего»',
+              'НЕ попугайничай'):
+    check(probe in sys_prompt, f'ум: {probe}')
 
 try:
     ans2, *_ = H. ai_assistant('кто в онлайне?', context={'guild_id': '777'})
@@ -145,6 +155,44 @@ check("if guild and str (user_id )=='987430047889637426':" not in cog,
 check("context ['channels']=" in cog and "context ['roles']=" in cog,
       'ког кладёт каналы/роли в контекст')
 check("context ['asker_roles']" in cog, 'ког кладёт роли спрашивающего')
+
+print('== 5. Ког: упоминания читаемые, длинные ответы не падают ==')
+import cogs.ai_chat as AC  # noqa: E402
+
+class _M:
+    def __init__(self, n): self.display_name = n
+class _C:
+    def __init__(self, n): self.name = n
+class _R:
+    def __init__(self, n): self.name = n
+class _G:
+    def get_member(self, i):
+        return _M('Лина') if i == 111111111111111111 else None
+    def get_channel(self, i):
+        return _C('мод-лог') if i == 222222222222222222 else None
+    def get_role(self, i):
+        return _R('Админ') if i == 333333333333333333 else None
+
+rr = AC._resolve_mentions(
+    'глянь <#222222222222222222> и скажи <@111111111111111111> про <@&333333333333333333>',
+    _G())
+check(rr == 'глянь #мод-лог и скажи @Лина про @Админ',
+      'упоминания → читаемые имена')
+check(AC._resolve_mentions('просто текст без упоминаний', None) ==
+      'просто текст без упоминаний', 'без guild/без < — как было')
+
+long_text = 'один абзац.\n\n' + 'x' * 1980 + '\n\nфинал'
+parts = AC._split_long(long_text)
+check(all(len(x) <= 1900 for x in parts) and len(parts) >= 3,
+      'сплиттер: все куски ≤1900, абзац внутри не крабится')
+check(AC._split_long('коротко') == ['коротко'], 'короткое не трогаем')
+check(AC._split_long(' '.join(['слово'] * 600)) and
+      all(len(x) <= 1900 for x in AC._split_long(' '.join(['слово'] * 600))),
+      'сплошной текст разрежется по словам')
+check('_resolve_mentions (content ,message .guild )' in cog,
+      'вопрос перед ИИ резолвит упоминания')
+check('_split_long (answer )' in cog and "_resolve_mentions (msg .content" in cog,
+      'отправка через сплиттер, хроника резолвится')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

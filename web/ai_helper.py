@@ -1123,6 +1123,12 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
     "ответь на самую вероятную трактовку и одной строкой уточни альтернативу.",
     "ФОРМАТ Discord: короткие абзацы, **жирный** для ключевого, списки маркером; "
     "код — только в коде. Без шаблонных извинений и без «как AI я не могу».",
+    "ТОН: подстраивайся под спрашивающего — спросили коротко, отвечай коротко; "
+    "шутят — ответь с лёгким юмором; раздражены — спокойно, по делу, без пафоса.",
+    "ЧЕСТНОСТЬ ТОЧНОСТИ: уверен — говори уверенно; предполагаешь — честно помечай "
+    "«вероятнее всего» и давай наиболее правдоподобный вариант, а не молчи.",
+    "НЕ попугайничай: не повторяй дословно свои ответы из истории диалога — спросили "
+    "снова, раскрой глубже или с другой стороны.",
     # Заказ владельца 2026-08-26: ИИ — только консультирует.
     "ЖЁСТКИЕ ПРАВИЛА (нарушать нельзя):",
     "1. Ты НЕ модератор и НЕ применяешь наказания: никаких мутов, варнов, банов, "
@@ -1207,14 +1213,25 @@ def ai_assistant (question :str ,context :Dict =None ,history :List [Dict ]=None
         sys_lines .append ("Особые инструкции сервера:\n  "+"\n  ".join (str (i )for i in context ['guild_instructions']))
         # Хроника разговора — ИИ понимает, «о чём вообще речь», и не тупит
     if context .get ('channel_context'):
-        _cc =[str (m )for m in context ['channel_context']if m ][-12 :]
+        _cc =[]
+        for m in (context ['channel_context']or [])[-12 :]:
+            if isinstance (m ,dict ):
+                _cc .append (f"[{m.get('timestamp','')}] {m.get('author','?')}: {m.get('content','')}")
+            else :
+                _cc .append (str (m ))
         if _cc :
-            sys_lines .append ("ПОСЛЕДНИЕ СООБЩЕНИЯ В КАНАЛЕ (хроника вокруг вопроса):\n  "+
-            "\n  ".join (_cc ))
+            sys_lines .append ("ПОСЛЕДНИЕ СООБЩЕНИЯ В КАНАЛЕ (хроника вокруг вопроса, "
+            "[время] автор: текст):\n  "+"\n  ".join (_cc ))
     if context .get ('recent_user_messages'):
-        _ru =[str (m )for m in context ['recent_user_messages']if m ][-10 :]
+        _ru =[]
+        for m in (context ['recent_user_messages']or [])[-10 :]:
+            if isinstance (m ,dict ):
+                _ru .append (f"[{m.get('timestamp','')}] в #{m.get('channel','?')}: {m.get('content','')}")
+            else :
+                _ru .append (str (m ))
         if _ru :
-            sys_lines .append ("Недавние сообщения спрашивающего:\n  "+"\n  ".join (_ru ))
+            sys_lines .append ("Недавние сообщения спрашивающего в других каналах:\n  "+
+            "\n  ".join (_ru ))
     if context .get ('asker_roles'):
         sys_lines .append ("Роли спрашивающего: "+", ".join (
         str (r0 )for r0 in context ['asker_roles'][:10 ]))
