@@ -207,6 +207,17 @@ def register(ctx):
         entry, err = _validate_new(request.get_json(silent=True) or {})
         if err:
             return jsonify({'success': False, 'error': err}), 400
+        # Классические разрешения (Доступ → Права команд): не дал роли
+        # «Бан»/«Мут»/«Кик» — отложенный бан/мут/кик не создать, даже если
+        # выполняется ботом позже (настройки действуют везде одинаково).
+        import web.app as _app
+        _bot = _app.bot_instance
+        from web.routes._common import viewer_member, acl_action_allowed
+        _member = viewer_member(_bot, gid) if _bot is not None else None
+        if not acl_action_allowed(gid, _member, entry['action']):
+            return jsonify({'success': False,
+                            'error': 'Нет права: действие не разрешено вашей '
+                                     'роли (настройка — «Права команд»)'}), 403
         entries = load_schedule()
         entry.update({
             'id': f'p{int(time.time() * 1000)}',

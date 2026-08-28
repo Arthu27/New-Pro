@@ -89,12 +89,19 @@ COMMAND_ACTIONS = {
     "mute": ("mute",), "unmute": ("mute",),
     "temp-mute": ("mute",), "temp-unmute": ("mute",),
     "vmute": ("mute",), "vunmute": ("mute",),
+    # тихие муты (mod_plus) — то же действие «Мут», что и обычные муты
+    "ghostmute": ("mute",), "ghostunmute": ("mute",),
     # таймаут
     "timeout": ("timeout",), "untimeout": ("timeout",),
     # варн
     "warn": ("warn",), "unwarn": ("warn",), "clearwarns": ("warn",), "pw": ("warn",),
     # очистка сообщений
     "clear": ("purge",), "purge": ("purge",),
+    # пересоздание канала начисто = зачистка всех сообщений
+    "nuke": ("purge",),
+    # массовая зачистка рейда (кик или бан) — нужны оба разрешения,
+    # чтобы один тумблер нельзя было обойти второй половиной действия
+    "raidcleanup": ("kick", "ban"),
     # локдаун
     "lock": ("lockdown",), "unlock": ("lockdown",), "lockdown": ("lockdown",),
     # роли

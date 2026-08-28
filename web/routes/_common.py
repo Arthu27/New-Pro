@@ -179,6 +179,42 @@ def _fire_panel_notification (event ,title ,body ):
         return {}
 
 
+# ── Классические разрешения: одна точка для всех веб-роутов ──────────────
+def viewer_member(bot, gid):
+    """Discord-мембер, под которым вошли в панель (session['discord_id']).
+
+    None → проверять нечего: статический логин из .env, role=owner панели
+    или мембер не найден — доверенный вход (владелец настраивал доступы).
+    """
+    if session.get('role') == 'owner':
+        return None
+    did = str(session.get('discord_id') or '').strip()
+    if not did.isdigit() or bot is None:
+        return None
+    try:
+        guild = bot.get_guild(int(gid))
+        return guild.get_member(int(did)) if guild is not None else None
+    except Exception:
+        return None
+
+
+def acl_action_allowed(gid, member, action_key):
+    """«Классическое» разрешение действия (панель → Доступ → Права команд).
+
+    Правила нет — можно (как везде в permission_acl.check_action). member
+    None (доверенный вход) — можно. Сбой чтения БД — не режем (fail-open,
+    тот же принцип, что у самого permission_acl).
+    """
+    if member is None:
+        return True
+    try:
+        from services.permission_acl import check_action
+        return bool(check_action(int(gid), member, action_key))
+    except Exception as _ex:
+        _log.debug('acl_action_allowed: %s', _ex)
+        return True
+
+
 def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
     """Обрабатывает блок <action> из ответа AI и возвращает текст результата."""
     import re as _re ,asyncio as _asyncio ,os as _os 
