@@ -105,43 +105,58 @@ from services import command_switches as CSW  # noqa: E402
 
 
 class Cmd:
-    def __init__(self, n):
+    def __init__(self, n, ctype='chat', extras=None):
         self.name = n
+        self.ctype = ctype          # 'chat' | 'user' | 'message'
+        self.extras = extras or {}
 
 
 class Tree:
+    """Кукла discord.py CommandTree: команды — (имя, тип), глобальные
+    контекстные меню копируются в гильдии (как настоящий copy_global_to).
+    sync() записывает пейлоад: [(имя, тип)]."""
+
     def __init__(self):
-        self.glob = [Cmd('ban'), Cmd('warn'), Cmd('staff-panel')]
+        self.glob = [Cmd('ban'), Cmd('warn'), Cmd('staff-panel'),
+                     Cmd('апелляция', extras={'keep_global': True}),
+                     Cmd('Войс-мут', 'user'), Cmd('Варн за сообщение', 'message')]
         self.guilds = {}
         self.synced = []
 
-    def get_commands(self, guild=None):
-        if guild is None:
-            return list(self.glob)
-        return list(self.guilds.get(guild.id, []))
+    @staticmethod
+    def _want(t):
+        n = getattr(t, 'name', None) or t or 'chat_input'
+        return 'chat' if n == 'chat_input' else n
+
+    def get_commands(self, guild=None, type=None):
+        box = self.glob if guild is None else self.guilds.get(guild.id, [])
+        want = self._want(type)
+        return [c for c in box if c.ctype == want]
 
     def remove_command(self, name, guild=None, type=None):
+        box = self.glob if guild is None else self.guilds.get(guild.id, [])
+        want = self._want(type)
+        box2 = [c for c in box if not (c.name == name and c.ctype == want)]
         if guild is None:
-            self.glob = [c for c in self.glob if c.name != name]
+            self.glob = box2
         else:
-            self.guilds[guild.id] = [c for c in self.guilds.get(guild.id, []) if c.name != name]
+            self.guilds[guild.id] = box2
 
     def add_command(self, c, guild=None):
-        if guild is None:
-            if c.name not in [x.name for x in self.glob]:
-                self.glob.append(c)
-        else:
-            box = self.guilds.setdefault(guild.id, [])
-            if c.name not in [x.name for x in box]:
-                box.append(c)
+        box = self.glob if guild is None else self.guilds.setdefault(guild.id, [])
+        if not any(x.name == c.name and x.ctype == c.ctype for x in box):
+            box.append(c)
 
     def copy_global_to(self, guild=None):
-        self.guilds[guild.id] = list(self.glob)
+        box = self.guilds.setdefault(guild.id, [])
+        for c in self.glob:          # discord.py копирует ВСЁ: и слэши, и меню
+            if not any(x.name == c.name and x.ctype == c.ctype for x in box):
+                box.append(c)
 
     async def sync(self, guild=None):
         box = self.glob if guild is None else self.guilds.get(guild.id, [])
         self.synced.append(('global' if guild is None else guild.id,
-                            [c.name for c in box]))
+                            [(c.name, c.ctype) for c in box]))
         return box
 
 
@@ -163,21 +178,46 @@ CSW.set_disabled('warn', True)
 b = Bot()
 asyncio.new_event_loop().run_until_complete(SF.full_sync(b))
 synced = dict(b.tree.synced)
-check(synced.get('global') == [], 'глобальный список Discord очищен (без дублей)')
-check('warn' not in synced.get(777, []) and 'ban' in synced.get(777, []),
+glob_names = {n for n, _ in synced.get('global', [])}
+check(glob_names == {'апелляция'},
+      f'глобально остаётся только keep_global /апелляция — дублей нет (glob={sorted(glob_names)})')
+check(not any(t != 'chat' for _, t in synced.get('global', [])),
+      'контекстные меню НЕ остаются глобальными (иначе были бы дубли)')
+g777 = synced.get(777, [])
+g777_names = {n for n, _ in g777}
+check('warn' not in g777_names and 'ban' in g777_names,
       'на сервер синка без выключенной warn, но с ban')
-check('staff-panel' in synced.get(777, []), 'остальные команды на месте')
+check('staff-panel' in g777_names, 'остальные команды на месте')
+check(('Войс-мут', 'user') in g777 and ('Варн за сообщение', 'message') in g777,
+      'контекстные меню доехали до сервера (и только туда)')
+check('апелляция' not in g777_names,
+      'keep_global НЕ копируется в гильдию — иначе «апелляция» видна дважды')
 check(any(c.name == 'warn' for c in b.tree.get_commands(guild=GObj(777))),
       'warn вернулась в локальное дерево — панель видит и может включить')
+
+# повторный прогон (как рестарт / кнопка «Синхронизировать команды»):
+synced_len1 = len(b.tree.synced)
+asyncio.new_event_loop().run_until_complete(SF.full_sync(b))
+synced_again = dict(b.tree.synced)
+check(dict(b.tree.synced).get('global') == synced.get('global')
+      and dict(b.tree.synced).get(777) == g777,
+      'повторный синк идемпотентен — пейлоады не растут и не меняются')
 
 CSW.set_disabled('warn', False)        # включили обратно
 b2 = Bot()
 asyncio.new_event_loop().run_until_complete(SF.full_sync(b2))
 synced2 = dict(b2.tree.synced)
-check('warn' in synced2.get(777, []), 'включили warn — снова в Discord')
+check('warn' in {n for n, _ in synced2.get(777, [])},
+      'включили warn — снова в Discord')
 
 src_main = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
 check('full_sync' in src_main, 'старт бота использует полный синк')
+src_app = open(os.path.join(ROOT, 'web', 'app.py'), encoding='utf-8').read()
+blog = src_app[src_app.index('def api_bot_sync'):src_app.index('api_global_search')]
+check('full_sync' in blog, 'кнопка «Синхронизировать команды» идёт через full_sync')
+import re as _re
+check(not _re.search(r'\btree \.sync \(\)', blog),
+      'в обработчике кнопки нет сырого глобального tree.sync() (источник дублей)')
 CSW.set_disabled('warn', False)
 
 # ═══ 2б. full_sync: защита от дублей и пустого меню ═══════════════════════
@@ -199,7 +239,7 @@ r3 = asyncio.new_event_loop().run_until_complete(SF.full_sync(b3))
 gl3 = [x for x in b3.tree.synced if x[0] == 'global']
 check(r3 == [], 'провал всех guild-синков: ничего не «выдано» в гильдии')
 check(len(gl3) == 2, 'глобальный sync вызван дважды: очистка + откат')
-check(gl3[1][1] and 'warn' in gl3[1][1],
+check(gl3[1][1] and ('warn', 'chat') in gl3[1][1],
       'откат вернул глобальное меню — команды не пропали из Discord')
 check(not any(x[0] == 777 for x in b3.tree.synced),
       'при провале guild-sync в Discord ничего не ушло (меню без дублей)')

@@ -3498,18 +3498,16 @@ def api_bot_sync ():
             return jsonify ({'success':True ,'demo':True ,'synced_guilds':['Hakumo Demo']})
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
     async def do ():
-    # Guild-specific sync (anыnda etkili) + global sync
-        synced_guilds =[]
-        for guild in bot_instance .guilds :
-            try :
-                await bot_instance .tree .sync (guild =guild )
-                synced_guilds .append (guild .name )
-            except Exception as _ex:
-                _log.debug("do(): подавлено: %s", _ex)
-        await bot_instance .tree .sync ()
-        return synced_guilds 
+    # ЕДИНСТВЕННО правильный синк — full_sync: гильдовые копии (мгновенно)
+    # + чистка глобальных (и слэшей, и контекстных меню) — без дублей.
+    # Раньше тут был сырой tree.sync() глобально: локальное дерево содержит
+    # все команды, поэтому каждая команда публиковалась И глобально, И в
+    # гильдиях — после каждого нажатия кнопки команд становилось больше.
+        from services.sync_filtered import full_sync as _full_sync
+        await _full_sync (bot_instance )
+        return [g .name for g in bot_instance .guilds ]
     try :
-        guilds =asyncio .run_coroutine_threadsafe (do (),bot_instance .loop ).result (timeout =30 )
+        guilds =asyncio .run_coroutine_threadsafe (do (),bot_instance .loop ).result (timeout =60 )
         _log_panel_action ('BOT_SYNC',session .get ('username'))
         return jsonify ({'success':True ,'synced_guilds':guilds })
     except Exception as e :

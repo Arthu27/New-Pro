@@ -88,20 +88,34 @@ async def full_sync(bot):
     # 1) глобальный список в Discord очищаем (чтобы не было дублей).
     #    Исключение — команды с extras['keep_global'] (напр. /апелляция):
     #    они обязаны остаться глобальными, чтобы работали в ЛС бота.
-    parked = []
-    for cmd in list(tree.get_commands()):
-        keep_it = False
+    #    ВАЖНО: паркуем не только слэш-команды, но и контекстные меню
+    #    (user/message). copy_global_to тащит глобальные контекстные меню
+    #    в каждую гильдию — если оставить их ещё и глобальными, Discord
+    #    показывает их ДВАЖДЫ (дубли «Варн за сообщение», «Войс-мут» …).
+    parked = []   # (cmd, type)
+    kept = []     # keep_global: (имя, type) — их из гильдовых копий выкинуть
+    for _t in (AppCommandType.chat_input, AppCommandType.user,
+               AppCommandType.message):
         try:
-            keep_it = bool((getattr(cmd, 'extras', None) or {}).get('keep_global'))
-        except Exception:
+            _cmds = list(tree.get_commands(type=_t))
+        except TypeError:          # минималистичные деревья без type=
+            if _t is not AppCommandType.chat_input:
+                continue
+            _cmds = list(tree.get_commands())
+        for cmd in _cmds:
             keep_it = False
-        if keep_it:
-            continue
-        try:
-            tree.remove_command(cmd.name, type=AppCommandType.chat_input)
-            parked.append(cmd)
-        except Exception as e:
-            _log.debug('снять глобально %s: %s', cmd.name, e)
+            try:
+                keep_it = bool((getattr(cmd, 'extras', None) or {}).get('keep_global'))
+            except Exception:
+                keep_it = False
+            if keep_it:
+                kept.append((cmd.name, _t))
+                continue
+            try:
+                tree.remove_command(cmd.name, type=_t)
+                parked.append((cmd, _t))
+            except Exception as e:
+                _log.debug('снять глобально %s: %s', cmd.name, e)
     try:
         await tree.sync()
     except TypeError as e:          # дерево без параметров — уже очищено выше
@@ -114,23 +128,32 @@ async def full_sync(bot):
         # бот работает на старом глобальном меню — безопасно.
         _log.warning('глобальная очистка не удалась (%s) — guild-синк '
                      'пропущен, чтобы не задублировать меню', e)
-        for cmd in parked:
+        for cmd, _t in parked:
             try:
                 tree.add_command(cmd)
             except Exception as _e:
                 _log.debug('вернуть %s в дерево: %s', cmd.name, _e)
         return []
 
-    for cmd in parked:            # локально возвращаем — источник для копий
+    for cmd, _t in parked:        # локально возвращаем — источник для копий
         try:
             tree.add_command(cmd)
         except Exception as e:
             _log.debug('вернуть %s в дерево: %s', cmd.name, e)
 
-    # 2) копируем глобальное дерево в каждый разрешённый сервер
+    # 2) копируем глобальное дерево в каждый разрешённый сервер.
+    #    ИСКЛЮЧАЯ keep_global (/апелляция): она уже опубликована ГЛОБАЛЬНО
+    #    (Discord показывает глобальные команды во всех гильдиях и в ЛС) —
+    #    гильдовая копия = вторая строчка с тем же именем в меню. Плюс это
+    #    самолечит сервер: ранее скопированные keep_global-остатки стираются.
     for g in targets:
         try:
             tree.copy_global_to(guild=g)
+            for _kname, _kt in kept:
+                try:
+                    tree.remove_command(_kname, guild=g, type=_kt)
+                except Exception as _e:
+                    _log.debug('выкинуть keep_global %s из %s: %s', _kname, g.id, _e)
         except Exception as e:
             _log.debug('copy_global_to(%s): %s', g.id, e)
 
