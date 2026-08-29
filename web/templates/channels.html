@@ -454,6 +454,10 @@ textarea.field-input{resize:vertical;min-height:52px}
   var hiddenChs = {}, hiddenCats = {}, showHidden = false, _catIds = {};
   var selectedGuild = MAIN_GID;
   var allChannels = [];
+  /* канал, который нажали (и момент нажатия): между mousedown и click
+     список не трогаем — иначе нажатие «уезжает» на соседнюю строку */
+  var chPressedRowId = null;
+  var chLastPointerDown = 0;
   var activeType = 'text';
   var detailId = null;
   var editingId = null;
@@ -1043,6 +1047,14 @@ textarea.field-input{resize:vertical;min-height:52px}
     });
 
     var list = $('channel-list');
+    /* Защита от live-перерисовки: между нажатием и отпусканием кнопки
+       список может обновиться и строка «уехать» — открыли бы другой
+       канал. Запоминаем канал на mousedown и открываем именно его. */
+    list.addEventListener('pointerdown', function (e) {
+      chLastPointerDown = performance.now();
+      var row = e.target.closest('.ch-row');
+      chPressedRowId = row ? row.getAttribute('data-id') : null;
+    });
     list.addEventListener('click', function (e) {
       var hideBtn = e.target.closest('[data-hide-id]');
       if (hideBtn) {
@@ -1084,8 +1096,11 @@ textarea.field-input{resize:vertical;min-height:52px}
         return;
       }
       var row = e.target.closest('.ch-row');
-      if (row) {
-        for (var i = 0; i < allChannels.length; i++) if (String(allChannels[i].id) === row.getAttribute('data-id')) { openDetail(allChannels[i]); break; }
+      var wantedId = row ? row.getAttribute('data-id') : chPressedRowId;
+      if (wantedId) {
+        /* открываем тот канал, который нажали, а не тот, что оказался
+           под курсором после перерисовки */
+        for (var i = 0; i < allChannels.length; i++) if (String(allChannels[i].id) === String(wantedId)) { openDetail(allChannels[i]); break; }
       }
     });
 
@@ -1158,6 +1173,9 @@ textarea.field-input{resize:vertical;min-height:52px}
     if (window.setLiveRefresh) {
       window.setLiveRefresh(function () {
         if (document.hidden) return;
+        /* во время клика список не перерисовываем: иначе строки
+           «уезжают» и нажатие попадает в другой канал */
+        if (performance.now() - chLastPointerDown < 350) return;
         /* асинхронно: вернуть прокрутку ПОСЛЕ перерисовки списка,
            чтобы клики по каналам и прокрутка не сбрасывались вверх */
         if (window.keepScrollAsync) window.keepScrollAsync(loadChannels(true));

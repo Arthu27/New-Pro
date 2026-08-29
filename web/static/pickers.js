@@ -197,6 +197,54 @@
     sel._sshd = root;
     sel._sshdCtl = { refresh: refresh, syncLabel: syncLabel };
 
+    /* ── позиционирование в пределах экрана ─────────────────────────
+       Список каналов/ролей бывает длинным, а поле — внизу страницы или
+       модалки: если открыть строго вниз, всплывашка уходит за край и
+       «выбирать невозможно» (клики попадают мимо). Считаем свободное
+       место (и в прокручиваемом контейнере — его границы) и открываем
+       ВВЕРХ или ограничиваем высоту списка. */
+    function scrollBounds(el) {
+      var n = el.parentNode;
+      while (n && n !== document.body && n.nodeType === 1) {
+        var o = getComputedStyle(n);
+        if (/(auto|scroll|overlay)/.test(o.overflowY || '')) {
+          return n.getBoundingClientRect();
+        }
+        n = n.parentNode;
+      }
+      return null;
+    }
+    function placePop() {
+      var r = btn.getBoundingClientRect();
+      var ph = pop.offsetHeight || 0;
+      var lim = scrollBounds(pop);
+      var vpBottom = window.innerHeight;
+      var vpTop = 0;
+      var below = (lim ? Math.min(vpBottom, lim.bottom) : vpBottom) - r.bottom - 12;
+      var above = r.top - (lim ? Math.max(vpTop, lim.top) : vpTop) - 12;
+      var up = below < Math.min(ph, 280) && above > below;
+      root.classList.toggle('up', up);
+      var space = up ? above : below;
+      if (space < 120) space = 120;
+      var maxH = Math.max(120, Math.min(280, space));
+      list.style.maxHeight = maxH + 'px';
+      /* выбранный вариант — в видимость, чтобы не искать его скроллом */
+      var cur = list.querySelector('.sshd-row.cur');
+      if (cur) setTimeout(function () { cur.scrollIntoView({ block: 'nearest' }); }, 0);
+    }
+
+    /* прокрутка страницы/модалки при открытом списке не должна
+       оставлять «плавающий» список — клики по нему промахиваются.
+       Прокрутка ВНУТРИ самого списка не закрывает его. */
+    function closeOnScroll(e) {
+      if (!state.open) return;
+      var t = e && e.target;
+      if (t && t.nodeType === 1 && (pop === t || pop.contains(t))) return;
+      closePop();
+    }
+    window.addEventListener('scroll', closeOnScroll, true);
+    window.addEventListener('resize', closeOnScroll, true);
+
     function options() {
       return Array.prototype.slice.call(sel.options || []);
     }
@@ -235,6 +283,7 @@
            клик с первого раза, промахи по соседям исключены (ряд 36px) */
         row.addEventListener('mousedown', function (e) {
           e.preventDefault();
+          e.stopPropagation();
           commit(row.getAttribute('data-v'));
         });
         row.addEventListener('mousemove', function () { markActive(row); });
@@ -264,6 +313,7 @@
       q = '';
       if (searchIp) { searchIp.value = ''; setTimeout(function () { searchIp.focus(); }, 30); }
       renderList();
+      setTimeout(placePop, 0);
     }
     function closePop() {
       if (!state.open) return;
@@ -491,12 +541,45 @@
       var host = input.parentNode;
       if (host && getComputedStyle(host).position === 'static') host.style.position = 'relative';
       host.appendChild(panel);
+      /* список людей не должен уходить за край экрана: открываем вверх
+         или ограничиваем высоту свободным местом (иначе «нашли — а
+         выбрать не получается» и клики уходят мимо) */
+      function place() {
+        var r = input.getBoundingClientRect();
+        var ph = panel.offsetHeight || 0;
+        var lim = (function () {
+          var n = panel.parentNode;
+          while (n && n !== document.body && n.nodeType === 1) {
+            var o = getComputedStyle(n);
+            if (/(auto|scroll|overlay)/.test(o.overflowY || '')) return n.getBoundingClientRect();
+            n = n.parentNode;
+          }
+          return null;
+        })();
+        var below = (lim ? Math.min(window.innerHeight, lim.bottom) : window.innerHeight) - r.bottom - 12;
+        var above = r.top - (lim ? Math.max(0, lim.top) : 0) - 12;
+        var up = below < Math.min(ph, 300) && above > below;
+        panel.classList.toggle('up', up);
+        var space = up ? above : below;
+        if (space < 120) space = 120;
+        listBox.style.maxHeight = Math.max(120, Math.min(300, space)) + 'px';
+      }
+      panel._place = place;
+      window.addEventListener('resize', function () { if (!panel.hidden) place(); }, true);
       document.addEventListener('mousedown', function (e) {
         if (panel.hidden) return;
         if (e.target === input || panel.contains(e.target)) return;
         closePanel();
       });
     }
+    /* прокрутка страницы/контейнера закрывает список людей, но
+       прокрутка ВНУТРИ списка (listBox) — нет */
+    window.addEventListener('scroll', function (e) {
+      if (!panel || panel.hidden) return;
+      var t = e && e.target;
+      if (t && t.nodeType === 1 && (panel === t || panel.contains(t))) return;
+      closePanel();
+    }, true);
 
     function avatarHtml(m) {
       var av = String(m.avatar || '');
@@ -524,12 +607,14 @@
       Array.prototype.forEach.call(listBox.querySelectorAll('.mpd-row'), function (row) {
         row.addEventListener('mousedown', function (e) {
           e.preventDefault();
+          e.stopPropagation();
           commit(row.getAttribute('data-uid'));
         });
         row.addEventListener('mousemove', function () { setActive(row); });
       });
       panel.hidden = false;
       input.setAttribute('aria-expanded', 'true');
+      if (panel._place) setTimeout(panel._place, 0);
     }
 
     function setActive(row) {
