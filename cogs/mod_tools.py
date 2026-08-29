@@ -101,6 +101,23 @@ async def _respond(interaction, **kwargs):
             _log.debug("_respond(): подавлено: %s", _ex)
 
 
+def _acl_allowed(guild, member, action_key):
+    """«Классическое» разрешение (панель → Доступ → Права команд).
+
+    True при отсутствии правила, у владельца/админа и при сбое БД —
+    тот же fail-open, что в permission_acl.check_action. Меню ПКМ и
+    /войс должны уважать эти настройки так же, как /modpanel.
+    """
+    if guild is None or member is None:
+        return True
+    try:
+        from services.permission_acl import check_action
+        return bool(check_action(guild.id, member, action_key))
+    except Exception as _ex:
+        _log.debug("_acl_allowed: %s", _ex)
+        return True
+
+
 def _fmt_ts(ts: int, style: str = 'R') -> str:
     return f"<t:{ts}:{style}>"
 
@@ -150,9 +167,18 @@ class VoiceMemberSelect(discord.ui.Select):
         member = self.channel.guild.get_member(int(self.values[0]))
         if member is None:
             return await interaction.response.send_message("Участник не найден.", ephemeral=True)
+        if not any(_acl_allowed(interaction.guild, interaction.user, k)
+                   for k in ('mute', 'kick')):
+            return await _respond(
+                interaction,
+                content="🚫 Вам не дано ни одного действия голосового контроля — "
+                        "владелец настраивает: панель → Доступ → Права команд → "
+                        "Классические разрешения.",
+                ephemeral=True)
         await interaction.response.send_message(
             f"Участник **{member.display_name}** — выберите действие:",
-            view=VoiceActionView(self.cog, member), ephemeral=True)
+            view=VoiceActionView(self.cog, member, user=interaction.user,
+                                 guild=interaction.guild), ephemeral=True)
 
 
 class VoiceMemberView(discord.ui.View):
@@ -162,10 +188,20 @@ class VoiceMemberView(discord.ui.View):
 
 
 class VoiceActionView(discord.ui.View):
-    def __init__(self, cog, member):
+    """Кнопки сам выбирает по правам: у модератора без «Мута»/«Кика»
+    в «Правах команд» кнопки просто не добавляются (настройки — везде)."""
+
+    def __init__(self, cog, member, user=None, guild=None):
         super().__init__(timeout=300)
         self.cog = cog
         self.member = member
+        _g = guild or getattr(member, 'guild', None)
+
+        def _allowed(action):
+            key = {'vmute': 'mute', 'vunmute': 'mute', 'vkick': 'kick'}.get(action)
+            if user is None or not key:
+                return True
+            return _acl_allowed(_g, user, key)
 
         def _btn(label, style, action, require_proof):
             b = discord.ui.Button(label=label, style=style)
@@ -181,9 +217,12 @@ class VoiceActionView(discord.ui.View):
             b.callback = _cb
             return b
 
-        self.add_item(_btn("Войс-мут", discord.ButtonStyle.danger, 'vmute', True))
-        self.add_item(_btn("Кик из войса", discord.ButtonStyle.danger, 'vkick', True))
-        self.add_item(_btn("Войс-размут", discord.ButtonStyle.secondary, 'vunmute', False))
+        if _allowed('vmute'):
+            self.add_item(_btn("Войс-мут", discord.ButtonStyle.danger, 'vmute', True))
+        if _allowed('vkick'):
+            self.add_item(_btn("Кик из войса", discord.ButtonStyle.danger, 'vkick', True))
+        if _allowed('vunmute'):
+            self.add_item(_btn("Войс-размут", discord.ButtonStyle.secondary, 'vunmute', False))
 
 
 class ModTools(commands.Cog):
@@ -276,6 +315,14 @@ class ModTools(commands.Cog):
 
     async def _apply_warn(self, inter: discord.Interaction, member: discord.Member, reason, origin="ПКМ", extra: str = None, proof_link=None):
         """Общий путь выдачи варна через ядро warnings-cog."""
+        # Классическое разрешение: ПКМ «Предупредить» / «Варн за сообщение»
+        # уважает тумблер «Варн» (раньше — только права сервера).
+        if not _acl_allowed(inter.guild, inter.user, 'warn'):
+            return await _respond(
+                inter,
+                content="🚫 «Варн» тебе не дал владелец (панель → Доступ → "
+                        "Права команд → Классические разрешения).",
+                ephemeral=True)
         wcog = self.bot.get_cog("warnings")
         if wcog is None:
             return await _respond(inter, content="Модуль предупреждений не загружен.", ephemeral=True)
@@ -332,6 +379,13 @@ class ModTools(commands.Cog):
             return await _respond(interaction, content="Ботов изолировать нельзя.", ephemeral=True)
         if member == interaction.user:
             return await _respond(interaction, content="Себя изолировать не нужно.", ephemeral=True)
+        # Классическое разрешение: ПКМ «Изолировать» = «Бан» (апелляция).
+        if not _acl_allowed(interaction.guild, interaction.user, 'ban'):
+            return await _respond(
+                interaction,
+                content="🚫 «Изолировать» тебе не дал владелец (панель → Доступ → "
+                        "Права команд → Классические разрешения).",
+                ephemeral=True)
 
         async def _do(inter: discord.Interaction, reason, proof_link):
             reason_txt = reason or "Без причины"
@@ -411,6 +465,12 @@ class ModTools(commands.Cog):
             return await _respond(interaction, content="Ботов мутить нельзя.", ephemeral=True)
         if member.voice is None or member.voice.channel is None:
             return await _respond(interaction, content="Участник не в голосовом канале.", ephemeral=True)
+        if not _acl_allowed(interaction.guild, interaction.user, 'mute'):
+            return await _respond(
+                interaction,
+                content="🚫 «Войс-мут» тебе не дал владелец (панель → Доступ → "
+                        "Права команд → Классические разрешения).",
+                ephemeral=True)
 
         async def _do(inter, reason, proof):
             await self._voice_action(inter, member, 'vmute', reason, proof)
@@ -423,6 +483,12 @@ class ModTools(commands.Cog):
             return await _respond(interaction, content="Работает только на сервере.", ephemeral=True)
         if member.bot:
             return await _respond(interaction, content="Ботов размучивать нельзя.", ephemeral=True)
+        if not _acl_allowed(interaction.guild, interaction.user, 'mute'):
+            return await _respond(
+                interaction,
+                content="🚫 «Войс-размут» тебе не дал владелец (панель → Доступ → "
+                        "Права команд → Классические разрешения).",
+                ephemeral=True)
 
         async def _do(inter, reason, _proof):
             await self._voice_action(inter, member, 'vunmute', reason, None)
@@ -437,6 +503,12 @@ class ModTools(commands.Cog):
             return await _respond(interaction, content="Ботов выгонять из войса нельзя.", ephemeral=True)
         if member.voice is None or member.voice.channel is None:
             return await _respond(interaction, content="Участник не в голосовом канале.", ephemeral=True)
+        if not _acl_allowed(interaction.guild, interaction.user, 'kick'):
+            return await _respond(
+                interaction,
+                content="🚫 «Кик из войса» тебе не дал владелец (панель → Доступ → "
+                        "Права команд → Классические разрешения).",
+                ephemeral=True)
 
         async def _do(inter, reason, proof):
             await self._voice_action(inter, member, 'vkick', reason, proof)
@@ -447,6 +519,18 @@ class ModTools(commands.Cog):
     async def _voice_action(self, interaction, member, action, reason, proof):
         """Общий путь голосовых действий: мут / размут / кик из войса."""
         guild = interaction.guild
+        # Классические разрешения (Доступ → Права команд): войс-мут/размут —
+        # «Мут», кик из войса — «Кик». Раньше здесь был только дневной лимит —
+        # это и была дыра: без «Мута» модератор мутил через /войс и ПКМ.
+        _ak = {'vmute': 'mute', 'vunmute': 'mute', 'vkick': 'kick'}.get(action)
+        if _ak and not _acl_allowed(guild, interaction.user, _ak):
+            _lbl = {'vmute': 'Войс-мут', 'vunmute': 'Войс-размут',
+                    'vkick': 'Кик из войса'}.get(action, action)
+            return await _respond(
+                interaction,
+                content=f"🚫 «{_lbl}» тебе не дал владелец (панель → Доступ → "
+                        "Права команд → Классические разрешения).",
+                ephemeral=True)
         # Лимиты команды: войс-действия тоже под дневным лимитом
         # (владельца гейт пропускает всегда).
         try:

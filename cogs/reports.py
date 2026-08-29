@@ -46,6 +46,29 @@ def _is_mod(member, cfg) -> bool:
     return bool(rid) and any(str(r.id) == rid for r in member.roles)
 
 
+# Вердикт репорта → ключ «классического» разрешения: mute в репорте —
+# это timeout (как «Мут (чат + войс)» в /modpanel), ban — «Бан», kick — «Кик».
+_VERDICT_ACL = {'mute': 'timeout', 'ban': 'ban', 'kick': 'kick'}
+
+
+def _verdict_allowed(guild, user, kind) -> bool:
+    """Разрешено ли модератору применить вердикт kind классическими правами."""
+    key = _VERDICT_ACL.get(kind)
+    if not key or guild is None or user is None:
+        return True
+    try:
+        from services.permission_acl import check_action
+        return bool(check_action(guild.id, user, key))
+    except Exception as _ex:
+        _log.debug('reports: verdict acl: %s', _ex)
+        return True
+
+
+def _any_verdict_allowed(guild, user) -> bool:
+    """Есть ли у модератора хоть одно действие для решения репорта."""
+    return any(_verdict_allowed(guild, user, k) for k in _VERDICT_ACL)
+
+
 def _cfg(guild_id) -> dict:
     return RC.load_cfg(guild_id)
 
@@ -133,6 +156,14 @@ class ReportPanelView(discord.ui.View):
         if not t or t.get('closed'):
             await interaction.response.send_message(
                 'Ветка не активна.', ephemeral=True)
+            return
+        # Классические разрешения: без «Бана»/«Кика»/«Таймаута» решение
+        # не выносят — кнопка живёт, но честно объясняет, чего не хватает.
+        if not _any_verdict_allowed(interaction.guild, interaction.user):
+            await interaction.response.send_message(
+                'Тебе не дано ни одного действия для решения (панель → '
+                'Доступ → Права команд → Классические разрешения).',
+                ephemeral=True)
             return
         await interaction.response.send_message(
             'Тип решения:', view=VerdictTypeSelect(), ephemeral=True)
@@ -361,6 +392,14 @@ class Reports(commands.Cog):
         cfg = _cfg(guild.id)
         reason = f'Решение по репорту (ветка {interaction.channel_id})'
         member = guild.get_member(int(t['accused_id']))
+        # Классические разрешения: применяем только то, что дано роли
+        # модератора (не дал «Бан» — бан не применится, даже если вердикт
+        # выбран раньше).
+        if not _verdict_allowed(guild, interaction.user, v['kind']):
+            return await interaction.response.send_message(
+                f'Действие «{RC.KIND_LABELS.get(v["kind"], v["kind"])}» тебе '
+                'не дал владелец (панель → Доступ → Права команд → '
+                'Классические разрешения).', ephemeral=True)
         applied = 'Применено.'
         try:
             if v['kind'] == 'mute' and member:

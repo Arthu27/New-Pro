@@ -390,6 +390,20 @@ class AppealView(discord.ui.View):
                 ' Нужно право «Управление сервером».', ephemeral=True)
             return
         gid = self.guild_id
+        # Принятие апелляции = разбан/снятие изоляции — то же действие
+        # «Бан», что у /unban в /modpanel: не дал владельцу — не принять.
+        if accept:
+            try:
+                from services.permission_acl import check_action
+                guild = interaction.guild
+                if not check_action(guild.id, interaction.user, 'ban'):
+                    await interaction.response.send_message(
+                        '🚫 «Принять апелляцию» тебе не дал владелец (панель → '
+                        'Доступ → Права команд → Классические разрешения).',
+                        ephemeral=True)
+                    return
+            except Exception as _ex:
+                log.debug('appeals: acl accept: %s', _ex)
         state = self.cog._load(gid)
         item, err = resolve_appeal(state, self.appeal_id, accept,
                                    str(interaction.user), datetime.now(UTC))

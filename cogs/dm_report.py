@@ -237,6 +237,18 @@ class DMReport(commands.Cog):
                 f"⚠️ Жалоба #{номер} уже закрыта ({STATUS_LABEL.get(rec['status'])}).", ephemeral=True)
             return
 
+        # Классическое разрешение: подтверждение жалобы = выдача варна —
+        # уважает тумблер «Варн» (панель → Доступ → Права команд).
+        try:
+            from services.permission_acl import check_action
+            if not check_action(guild.id, interaction.user, 'warn'):
+                await interaction.response.send_message(
+                    '🚫 «Варн» тебе не дал владелец (панель → Доступ → '
+                    'Права команд → Классические разрешения).', ephemeral=True)
+                return
+        except Exception as _ex:
+            _log.debug('report_ok(): acl: %s', _ex)
+
         self._set_status(guild.id, номер, 'ok', interaction.user.id)
 
         warn_txt = ""

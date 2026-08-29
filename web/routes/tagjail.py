@@ -155,6 +155,15 @@ def register(ctx):
         bot, cog, guild = _tagjail_ctx()
         if not cog or not guild:
             return jsonify({'ok': False, 'error': 'Модуль офлайн'}), 503
+        # Классические разрешения: освобождение — то же действие «Джейл»
+        # (настройки те же, что у команд и /modpanel).
+        import web.app as _app
+        from web.routes._common import viewer_member, acl_action_allowed
+        _member = viewer_member(_app.bot_instance, guild.id)
+        if not acl_action_allowed(guild.id, _member, 'jail'):
+            return jsonify({'ok': False,
+                            'error': 'Нет права: «Джейл» не разрешено вашей '
+                                     'роли (настройка — «Права команд»)'}), 403
         data = request.get_json(silent=True) or {}
         uid = str(data.get('user_id', '')).strip()
         if not uid.isdigit():

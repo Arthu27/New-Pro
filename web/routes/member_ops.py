@@ -4,7 +4,7 @@
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _process_action, _log, viewer_member, acl_action_allowed,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
@@ -102,6 +102,10 @@ def register(ctx):
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
+        _acl_m = viewer_member(bot, int(guild_id))
+        if not acl_action_allowed(int(guild_id), _acl_m, 'purge'):
+            return jsonify({'error': 'Нет права: «Очистка сообщений» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+
         async def do ():
             ch =bot .get_channel (int (data ['channel_id']))
             if ch :
@@ -120,6 +124,10 @@ def register(ctx):
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
+        _acl_m = viewer_member(bot, int(guild_id))
+        if not acl_action_allowed(int(guild_id), _acl_m, 'roles'):
+            return jsonify({'error': 'Нет права: «Роли» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             target_role =guild .get_role (int (data ['target_role']))
@@ -171,6 +179,10 @@ def register(ctx):
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
+        _acl_m = viewer_member(bot, int(guild_id))
+        if not acl_action_allowed(int(guild_id), _acl_m, 'mute'):
+            return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
@@ -195,6 +207,10 @@ def register(ctx):
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
+        _acl_m = viewer_member(bot, int(guild_id))
+        if not acl_action_allowed(int(guild_id), _acl_m, 'kick'):
+            return jsonify({'error': 'Нет права: «Кик» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
@@ -218,6 +234,10 @@ def register(ctx):
         if not bot :return jsonify ({'error':'Бот офлайн'})
         data =request .get_json (silent =True )or {}
         result ={'count':0 }
+        _acl_m = viewer_member(bot, int(guild_id))
+        if not acl_action_allowed(int(guild_id), _acl_m, 'ban'):
+            return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))

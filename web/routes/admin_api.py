@@ -4,7 +4,7 @@
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _process_action, _log, viewer_member, acl_action_allowed,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
@@ -175,6 +175,9 @@ def register(ctx):
         if not sec :
             return jsonify ({'error':'Неверный формат времени'}),400 
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
+        _acl_m = viewer_member(bot, guild.id if guild else None)
+        if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'mute'):
+            return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         if not guild :
             return jsonify ({'error':'Сервер не найден'}),404 
             # Resolve user
@@ -215,6 +218,9 @@ def register(ctx):
         if not sec :
             return jsonify ({'error':'Неверный формат'}),400 
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
+        _acl_m = viewer_member(bot, guild.id if guild else None)
+        if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'ban'):
+            return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
             member =_run_async (_resolve_member_async (guild ,int (user_id )))
@@ -251,6 +257,9 @@ def register(ctx):
         if not sec :
             return jsonify ({'error':'Неверный формат'}),400 
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
+        _acl_m = viewer_member(bot, guild.id if guild else None)
+        if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'kick'):
+            return jsonify({'error': 'Нет права: «Кик» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
             member =_run_async (_resolve_member_async (guild ,int (user_id )))
@@ -285,6 +294,9 @@ def register(ctx):
         d =request .get_json (silent =True )or {}
         user_id =d .get ('user_id','').strip ('<@!>')
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
+        _acl_m = viewer_member(bot, guild.id if guild else None)
+        if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'mute'):
+            return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         member =guild .get_member (int (user_id ))
         if member and member .is_timed_out ():
             try :
@@ -310,6 +322,9 @@ def register(ctx):
         d =request .get_json (silent =True )or {}
         user_id =d .get ('user_id','').strip ('<@!>')
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
+        _acl_m = viewer_member(bot, guild.id if guild else None)
+        if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'ban'):
+            return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         try :
             user =_run_async (bot .fetch_user (int (user_id )))
             _run_async (guild .unban (user ))
