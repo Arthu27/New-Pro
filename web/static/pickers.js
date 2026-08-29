@@ -283,7 +283,7 @@
            клик с первого раза, промахи по соседям исключены (ряд 36px) */
         row.addEventListener('mousedown', function (e) {
           e.preventDefault();
-          e.stopPropagation();
+          if (e.stopPropagation) e.stopPropagation();
           commit(row.getAttribute('data-v'));
         });
         row.addEventListener('mousemove', function () { markActive(row); });
@@ -480,6 +480,17 @@
     opts = opts || {};
     var gid = opts.gid;
     var statusEl = opts.statusEl || null;
+    /* идемпотентность: страницы после загрузки списка серверов вызывают
+       attachMemberPicker повторно (member_profile) — нельзя плодить
+       второй .mpd и дубли обработчиков: обновляем контекст и выходим */
+    input._mpdSetCtx = function (o) {
+      if (o && o.gid) gid = o.gid;
+      if (o && o.statusEl) statusEl = o.statusEl;
+      if (o && o.onPick) opts.onPick = o.onPick;
+      curQ = '';
+    };
+    if (input._mpdAttached) { input._mpdSetCtx(opts); return input; }
+    input._mpdAttached = true;
     input.setAttribute('autocomplete', 'off');
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-expanded', 'false');
@@ -607,7 +618,7 @@
       Array.prototype.forEach.call(listBox.querySelectorAll('.mpd-row'), function (row) {
         row.addEventListener('mousedown', function (e) {
           e.preventDefault();
-          e.stopPropagation();
+          if (e.stopPropagation) e.stopPropagation();
           commit(row.getAttribute('data-uid'));
         });
         row.addEventListener('mousemove', function () { setActive(row); });
