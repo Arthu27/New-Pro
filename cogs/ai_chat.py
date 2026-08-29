@@ -8,7 +8,8 @@ import datetime
 
 from logger import get_logger 
 log =get_logger ("ai_chat")
-from json_store import load_json ,save_json 
+from json_store import load_json ,save_json
+from services.ttl_cache import TTLMap 
 
 
 AI_CHANNELS =set ()# Пусто — dinamik как addnir
@@ -244,9 +245,11 @@ _histories =_load_histories ()
 _knowledge_base =_load_knowledge_base ()
 _instructions =_load_instructions ()
 
-# кэш сообщений — обновляем для каждого пользователя раз в 5 минут
-_message_cache ={}
-_cache_timeout =300 # 5 минут
+# кэш сообщений — обновляем для каждого пользователя раз в 5 минут.
+# Раньше был обычный dict без лимита: запись на КАЖДОГО пользователя
+# сервера и никакой чистки — RSS рос, OOM-киллер перезапускал бота.
+# Теперь TTL 5 минут + максимум 500 записей (вытеснение старых).
+_message_cache =TTLMap (maxsize =500 ,ttl =300 )# 5 минут
 
 
 _MENTION_RE =re .compile (r'<@!?(\d{5,25})>|<#(\d{5,25})>|<@&(\d{5,25})>')
@@ -320,11 +323,9 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
 
     # Cache контроль
     cache_key =f"{guild.id}_{user_id}"
-    now =time .time ()
-    if cache_key in _message_cache :
-        cached_data ,cached_time =_message_cache [cache_key ]
-        if now -cached_time <_cache_timeout :
-            return cached_data 
+    cached_data =_message_cache .get (cache_key )
+    if cached_data is not None :
+        return cached_data
 
     recent =[]
     cutoff_time =datetime .datetime .now (datetime .timezone .utc )-datetime .timedelta (hours =12 )
@@ -369,7 +370,7 @@ async def _get_recent_user_messages (user_id :int ,guild ,limit :int =15 )->list
         result =recent [-limit :]# В конец 15 message
 
         # Cache'e сохранить
-        _message_cache [cache_key ]=(result ,now )
+        _message_cache .put (cache_key ,result )
         return result 
     except Exception as e :
         log .info (f'[AI] Ошибка сбора сообщений: {e}')

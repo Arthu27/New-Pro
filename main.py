@@ -103,6 +103,7 @@ import urllib.error
 import time
 import signal
 import atexit
+import json
 
 # python-dotenv может печатать предупреждения о строках-комментариях (русские, с длинным тире и т.п.).
 # Они безвредны — скрываем предупреждения, но продолжаем читать значения.
@@ -126,6 +127,75 @@ from logger import setup_logger, get_logger
 
 Config.ensure_dirs()
 log = setup_logger("bot", Config.LOG_FILE, Config.LOG_LEVEL)
+
+# ─── Журнал запусков: «почему бот перезапустился» ─────────────────────
+# Каждый старт/останов/обрыв записывается в data/run_log.json (последние
+# 50 событий). После перезапуска видно: код выхода, сигнал, причина —
+# а не «сидел 14 часов и сам перезапустился».
+_RUN_LOG = os.path.join(_BASE_DIR, 'data', 'run_log.json')
+_RUN_START_TS = time.time()
+
+
+def _record_run(event: str, **extra):
+    """Записать событие жизненного цикла процесса (start/stop/disconnect)."""
+    try:
+        rows = []
+        if os.path.exists(_RUN_LOG):
+            try:
+                with open(_RUN_LOG, 'r', encoding='utf-8') as f:
+                    rows = json.load(f)
+            except Exception:
+                rows = []
+        import datetime as _dt
+        row = {'ts': _dt.datetime.now(_dt.timezone.utc).isoformat(timespec='seconds'),
+               'event': event, 'pid': os.getpid(), **extra}
+        rows.append(row)
+        rows = rows[-50:]
+        tmp = _RUN_LOG + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(rows, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, _RUN_LOG)
+    except Exception as _ex:
+        log.debug('_record_run(): подавлено: %s', _ex)
+
+
+async def _memory_watchdog():
+    """Раз в минуту смотрим память: рост → GC + предупреждение в лог.
+
+    Задача: 14 часов аптайма кончились молча — типичный OOM-киллер
+    (растущий кэш или утечка). Если RSS близко к критическому, пишем
+    в run_log и лог CRITICAL, чтобы причина была видна ДО перезапуска.
+    """
+    import gc
+    try:
+        import psutil as _ps
+    except Exception:
+        return
+    minute = 0
+    while True:
+        await asyncio.sleep(60)
+        minute += 1
+        try:
+            p = _ps.Process()
+            rss = p.memory_info().rss / 1024 / 1024
+            threads = p.num_threads()
+            mem_warn = 700
+            mem_crit = 900
+            if rss > mem_warn:
+                level = 'warn' if rss < mem_crit else 'critical'
+                log.warning('[ПАМЯТЬ] RSS %.0f МБ, потоков %d — %s (GC)',
+                            rss, threads, level)
+                gc.collect()
+            if rss > mem_crit:
+                _record_run('memory_high',
+                            rss_mb=round(rss, 1), threads=threads)
+                log.critical('[ПАМЯТЬ] RSS %.0f МБ — близко к лимиту '
+                             '(если процесс умрёт — причина в этом)', rss)
+            if minute % 5 == 0 and rss > mem_warn:
+                log.warning('[ПАМЯТЬ] стабильно высокое RSS %.0f МБ — '
+                            'проверьте кэши/утечки', rss)
+        except Exception as _ex:
+            log.debug('memory_watchdog(): подавлено: %s', _ex)
 
 # Стартовый фикс: очистка дублирующих эндпоинтов
 import subprocess as _sp, sys as _sys
@@ -468,7 +538,9 @@ def cleanup_on_exit():
 
 def signal_handler(signum, frame):
     """Обработчик сигналов для корректного выключения"""
-    print(f"[СИГНАЛ] Получен сигнал {signum}, выполняется очистка...")
+    name = signal.Signals(signum).name if signum in signal.Signals._value2member_map_ else str(signum)
+    print(f"[СИГНАЛ] Получен сигнал {signum} ({name}), выполняется очистка...")
+    _record_run('stop', reason=f'signal_{name}', signal=signum)
     cleanup_on_exit()
     sys.exit(0)
 
@@ -855,6 +927,23 @@ async def load_cogs():
         log.warning(f"Слеш-меню почти полное ({len(_kept)}/100) — пора пересмотреть KEEP_SLASH")
 
 async def main():
+    # Журнал жизненного цикла: старт (и предыдущая сессия видна в файле)
+    try:
+        first = True
+        if os.path.exists(_RUN_LOG):
+            first = False
+        _record_run('start', first_run=first)
+        print("[ЖИЗНЕННЫЙ ЦИКЛ] Старт записан в data/run_log.json"
+              " (перезапуски теперь не «внезапные» — видно причину)")
+    except Exception as _ex:
+        log.debug('main(): run-log start: %s', _ex)
+
+    # Сторож памяти: раз в минуту, до OOM-киллера
+    try:
+        asyncio.create_task(_memory_watchdog())
+    except Exception as _ex:
+        log.debug('main(): memory watchdog: %s', _ex)
+
     # Разовый «чистый старт» (заказ владельца 2026-08): стереть все логи
     # и ГАРАНТИРОВАННО выключить защиту — старые конфиги на диске могли
     # хранить enabled: true ещё с эпохи «всё включено» (отсюда сюрпризы
@@ -938,6 +1027,12 @@ async def main():
             except Exception as e:
                 print(f"[ОШИБКА] Бот отключился: {e}")
                 print(f"[БОТ] Автоперезапуск через {_delay} сек...")
+                _uptime = int(time.time() - _RUN_START_TS)
+                _record_run('reconnect', error=str(e)[:300],
+                            uptime_sec=_uptime, retry_in=_delay)
+                log.warning('Бот отключился после %dс аптайма: %s — '
+                            'автопереподключение через %dс',
+                            _uptime, e, _delay)
                 await asyncio.sleep(_delay)
                 _delay = min(60, _delay * 2)
 

@@ -4,6 +4,8 @@ import subprocess
 import os
 import zipfile
 import sys
+import json
+import datetime
 
 
 def _load_dotenv():
@@ -29,21 +31,48 @@ _load_dotenv()
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 
-# ВЕТКА ОБНОВЛЕНИЯ — из .env (UPDATE_BRANCH), по умолчанию main.
-# Раньше всё было зашито на main: машина с .env UPDATE_BRANCH=arena/... и
-# рабочей веткой arena НЕСООТВЕТСТВОВАЛА origin/main — этот демон сбрасывал
-# checkout на main с СТАРЫМ кодом и перезапускал бота (все свежие правки
-# откатывались, команды-дубли возвращались). Теперь сравниваемся со СВОЕЙ веткой.
-UPDATE_BRANCH = os.getenv("UPDATE_BRANCH", "main").strip() or "main"
-REPO_SLUG = os.getenv("UPDATE_REPO", "Arthu27/New-Pro").strip() or "Arthu27/New-Pro"
-REPO_API = f"https://api.github.com/repos/{REPO_SLUG}/commits/{UPDATE_BRANCH}"
-ZIP_URL = f"https://github.com/{REPO_SLUG}/archive/refs/heads/{UPDATE_BRANCH}.zip"
-
 # Автоматически определить директорию скрипта (VSCode workspace)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BOT_DIR = SCRIPT_DIR  # использовать workspace VSCode
 LAST_COMMIT_FILE = os.path.join(BOT_DIR, "last_commit.txt")
 BOT_LOG = os.path.join(BOT_DIR, "bot_output.log")
+EVENTS_LOG = os.path.join(BOT_DIR, "data", "auto_update_events.json")
+
+
+def _detect_branch():
+    """Рабочая ветка git-репозитория (или '' — не git/не получилось)."""
+    try:
+        r = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=BOT_DIR, capture_output=True, text=True, timeout=10)
+        if r.returncode == 0:
+            return (r.stdout or "").strip()
+    except Exception:
+        pass
+    return ""
+
+
+# ВЕТКА ОБНОВЛЕНИЯ — из .env (UPDATE_BRANCH); если не задана — ТЕКУЩАЯ ветка.
+# Раньше по умолчанию был main: машина с рабочей веткой arena и без
+# UPDATE_BRANCH НЕСООТВЕТСТВОВАЛА origin/main — демон сбрасывал checkout
+# на main со СТАРЫМ кодом и перезапускал бота (свежие правки откатывались).
+# Теперь: ветка = своя (из git), а не захардкоженная main.
+UPDATE_BRANCH = (os.getenv("UPDATE_BRANCH", "").strip() or _detect_branch() or "main")
+REPO_SLUG = os.getenv("UPDATE_REPO", "Arthu27/New-Pro").strip() or "Arthu27/New-Pro"
+REPO_API = f"https://api.github.com/repos/{REPO_SLUG}/commits/{UPDATE_BRANCH}"
+ZIP_URL = f"https://github.com/{REPO_SLUG}/archive/refs/heads/{UPDATE_BRANCH}.zip"
+
+# АВТООБНОВЛЕНИЕ — только по явному флагу AUTO_UPDATE=1/true/yes.
+# По умолчанию ВЫКЛЮЧЕНО: демон лишь присматривает за живым процессом
+# (поднимет, если бот умер). Никаких kill/reset без разрешения владельца.
+AUTO_UPDATE_ENABLED = (os.getenv("AUTO_UPDATE", "0") or "0").strip().lower() \
+    in ("1", "true", "yes", "on")
+AUTO_UPDATE_COOLDOWN = 600  # между перезапусками (сек), переопределяется в .env
+try:
+    AUTO_UPDATE_COOLDOWN = max(60, int(os.getenv("AUTO_UPDATE_COOLDOWN", "600")))
+except ValueError:
+    pass
+_LAST_UPDATE_TS = 0.0
 
 # содержимое .env теперь читается из файла .env, здесь не задано жёстко
 ENV_CONTENT = """TOKEN=YOUR_BOT_TOKEN_HERE
@@ -56,6 +85,31 @@ MY_PID = os.getpid()
 
 def лог(msg):
     print(msg, flush=True)
+
+
+def log_event(event, **extra):
+    """Журнал событий демона: любое решение «обновлять/не обновлять» видно."""
+    try:
+        os.makedirs(os.path.dirname(EVENTS_LOG), exist_ok=True)
+        rows = []
+        if os.path.exists(EVENTS_LOG):
+            try:
+                with open(EVENTS_LOG, "r", encoding="utf-8") as f:
+                    rows = json.load(f)
+            except Exception:
+                rows = []
+        rows.append({
+            "ts": datetime.datetime.now(datetime.timezone.utc)
+                   .isoformat(timespec="seconds"),
+            "event": event, "branch": UPDATE_BRANCH, **extra,
+        })
+        rows = rows[-200:]
+        tmp = EVENTS_LOG + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(rows, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, EVENTS_LOG)
+    except Exception:
+        return
 
 
 def get_remote_commit():
@@ -326,7 +380,20 @@ def download_and_extract():
         лог("[AUTO-UPDATE] .env создано")
 
 
-def update_bot():
+def update_bot(reason="new_commit", remote_sha=None, local_sha=None):
+    """Обновление с полным журналом. ВОЗВРАЩАЕТ True, если обновление сделано
+    (иначе False — причина уже в event-логе)."""
+    global _LAST_UPDATE_TS
+    now = time.time()
+    if now - _LAST_UPDATE_TS < AUTO_UPDATE_COOLDOWN:
+        log_event("skipped_update", reason="cooldown",
+                  wait=int(AUTO_UPDATE_COOLDOWN - (now - _LAST_UPDATE_TS)))
+        лог("[AUTO-UPDATE] Кулдаун: обновление реже раза в "
+            f"{AUTO_UPDATE_COOLDOWN // 60} мин — пропускаю")
+        return False
+    _LAST_UPDATE_TS = now
+    log_event("update_start", reason=reason,
+              remote=remote_sha or "", local=local_sha or "")
     лог("[AUTO-UPDATE] === ОБНОВЛЕНИЕ НАЧАТО ===")
     try:
         kill_bot()
@@ -339,11 +406,26 @@ def update_bot():
             download_and_extract()
         time.sleep(2)
         start_bot()
+        log_event("update_done", remote=remote_sha or "", local=local_sha or "")
         лог("[AUTO-UPDATE] === ОБНОВЛЕНИЕ ЗАВЕРШЕНО ===")
+        return True
     except Exception as e:
+        log_event("update_error", error=str(e)[:300])
         лог(f"[AUTO-UPDATE] Ошибка обновления: {e}")
         лог("[AUTO-UPDATE] Произошла ошибка, бот перезапускается...")
         start_bot()
+        return False
+
+
+def _tree_is_clean():
+    """git status --porcelain пуст — только тогда обновлять (reset безопасен)."""
+    try:
+        r = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=BOT_DIR, capture_output=True, text=True, timeout=20)
+        return r.returncode == 0 and not (r.stdout or "").strip()
+    except Exception:
+        return False
 
 
 def main():
@@ -351,6 +433,9 @@ def main():
     лог(f"[AUTO-UPDATE] Директория скрипта: {SCRIPT_DIR}")
     лог(f"[AUTO-UPDATE] Директория бота: {BOT_DIR}")
     лог(f"[AUTO-UPDATE] Python: {sys.executable}")
+    лог(f"[AUTO-UPDATE] Ветка: {UPDATE_BRANCH} | "
+        f"автообновление: {'ВКЛ' if AUTO_UPDATE_ENABLED else 'ВЫКЛ'}")
+    log_event("daemon_start", auto_update=AUTO_UPDATE_ENABLED, branch=UPDATE_BRANCH)
     
     # Проверка необходимых файлов
     main_py = os.path.join(BOT_DIR, "main.py")
@@ -385,12 +470,31 @@ def main():
             if remote_hash:
                 local_hash = get_local_commit() or ""
                 if remote_hash != local_hash:
-                    лог(f"[AUTO-UPDATE] Обнаружен новый коммит: {remote_hash[:8]} (local: {local_hash[:8]})")
-                    update_bot()
+                    лог(f"[AUTO-UPDATE] Удалённый коммит отличается: {remote_hash[:8]} (local: {local_hash[:8]})")
+                    # БЕЗОПАСНОСТЬ: обновление только по явному флагу владельца.
+                    if not AUTO_UPDATE_ENABLED:
+                        log_event("skipped_update", reason="auto_update_disabled",
+                                  remote=remote_hash, local=local_hash)
+                        лог("[AUTO-UPDATE] AUTO_UPDATE=0 — НЕ перезапускаю бота "
+                            "(обновляйтесь командой /update или включите "
+                            "AUTO_UPDATE=1 в .env)")
+                    elif _detect_branch() != UPDATE_BRANCH:
+                        log_event("skipped_update", reason="branch_mismatch",
+                                  remote=remote_hash, local=local_hash)
+                        лог("[AUTO-UPDATE] Рабочая ветка ≠ UPDATE_BRANCH — "
+                            "обновление пропущено (reset на чужую ветку запрещён)")
+                    elif not _tree_is_clean():
+                        log_event("skipped_update", reason="dirty_tree",
+                                  remote=remote_hash, local=local_hash)
+                        лог("[AUTO-UPDATE] В рабочем дереве есть изменения — "
+                            "reset --hard не делаю, бот работает дальше")
+                    else:
+                        update_bot("new_commit", remote_hash, local_hash)
 
             # Проверить, не остановился ли бот
             if not is_bot_running():
                 лог("[AUTO-UPDATE] Бот остановлен! Перезапуск...")
+                log_event("bot_restart", reason="bot_stopped")
                 if not start_bot():
                     лог("[AUTO-UPDATE] Не удалось перезапустить бота!")
                 time.sleep(10)
