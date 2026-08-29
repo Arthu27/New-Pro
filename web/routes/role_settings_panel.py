@@ -4,8 +4,9 @@
 Один экран — ВСЕ роли, которые система наказаний умеет выдавать:
 - базовые виды: мут чата, войс-мут, «бан»(изоляция) — 1:1 со старой
   страницей «Настройки модерации» (там блок остаётся, значения общие);
-- уровни варнов warn_1..warn_10 — роль ближайшего уровня выдаётся
-  сама при варне, роль предыдущего уровня снимается (cogs/warnings).
+- уровни варнов warn_N (1..100, НЕ фиксированные 10) — владелец сам
+  добавляет уровни; роль ближайшего уровня выдаётся сама при варне,
+  роль предыдущего уровня снимается (cogs/warnings).
 
 Выбор только через селекты (роли подтягиваются с сервера бота),
 ручного ввода ID нет — требование владельца 2026-08-28.
@@ -41,12 +42,14 @@ def kinds_view():
             for k, lbl, ico, hint in BASE_KINDS]
 
 
-def levels_view():
-    """Селекты уровней варнов: warn_1…warn_N (одноразовая фича — ровно N варнов)."""
+def levels_view(gid=None):
+    """Карточки уровней варнов: только те, что владелец добавил сам
+    (warn_levels), плюс уровни, у которых уже выбрана роль."""
+    lvls = PR.levels(gid) if gid else []
     return [{'key': f'warn_{lvl}', 'level': lvl,
              'label': f'{lvl} {_plural(lvl)}',
              'icon': 'fa-triangle-exclamation'}
-            for lvl in range(PR.WARN_LEVEL_MIN, PR.WARN_LEVEL_MAX + 1)]
+            for lvl in lvls]
 
 
 def _plural(n):
@@ -89,7 +92,9 @@ def settings_view(gid):
     return {
         'success': True,
         'kinds': kinds_view(),
-        'levels': levels_view(),
+        'levels': levels_view(gid),
+        'warn_level_min': PR.WARN_LEVEL_MIN,
+        'warn_level_max': PR.WARN_LEVEL_MAX,
         'punish_info': [{'key': k, 'label': lbl, 'icon': ico, 'hint': hint}
                         for k, lbl, ico, hint in PUNISH_INFO],
         'warn_steps': warn_steps,
@@ -213,3 +218,30 @@ def register(ctx):
             return jsonify({'success': False, 'error': err}), 400
         return jsonify({'success': True, 'warn_steps': res['steps'],
                         'message': res['message']})
+
+    @app.route('/api/guild/<gid>/role-settings/warn-level', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_role_settings_warn_level_add(gid):
+        """Добавить уровень варнов (карточку «N предупреждений → роль»)."""
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({'success': False, 'error': 'Пустой или битый JSON'}), 400
+        ok, err = PR.add_level(ctx.active_guild_id() or gid, data.get('level'))
+        if not ok:
+            return jsonify({'success': False, 'error': err}), 400
+        view = settings_view(gid)
+        return jsonify({'success': True, 'levels': view['levels'],
+                        'message': err})
+
+    @app.route('/api/guild/<gid>/role-settings/warn-level/<int:level>', methods=['DELETE'])
+    @login_required
+    @role_required('admin')
+    def api_role_settings_warn_level_del(gid, level):
+        """Удалить уровень: карточку и её роль (если была выбрана)."""
+        ok, err = PR.remove_level(ctx.active_guild_id() or gid, level)
+        if not ok:
+            return jsonify({'success': False, 'error': err}), 400
+        view = settings_view(gid)
+        return jsonify({'success': True, 'levels': view['levels'],
+                        'message': err})

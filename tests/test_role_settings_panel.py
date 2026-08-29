@@ -2,9 +2,10 @@
 """Страница «Роли наказаний» (Настройки → Роли наказаний).
 
 Только интерактивные селекты (ручной ввод ID исключён — требование
-владельца): все виды наказаний (мут/войс-мут/«бан») и уровни варнов
-warn_1..warn_10 собираются одним POST; чужие/удалённые роли отклоняются;
-бот офлайн → бережный отказ сохранения.
+владельца): все виды наказаний (мут/войс-мут/«бан») и уровни варнов —
+НЕ фиксированные 10, а добавленные владельцем (1..100): отдельные
+endpoint'ы добавить/удалить уровень, карточки уровней только свои;
+чужие/удалённые роли отклоняются; бот офлайн → бережный отказ.
 
 Запуск: python3 tests/test_role_settings_panel.py
 """
@@ -109,8 +110,9 @@ check([k['key'] for k in d['kinds']] == ['mute', 'vmute', 'ban'],
 check(all(k.get('icon', '').startswith('fa-') and k.get('hint')
           for k in d['kinds']), 'у видов иконки и подсказки')
 levels = [l['key'] for l in d['levels']]
-check(levels == [f'warn_{i}' for i in range(1, 11)],
-      'уровни warn_1..warn_10 в порядке роста')
+check(levels == [], 'по умолчанию уровней нет — панель не навязывает 10 карточек')
+check(d['warn_level_min'] == 1 and d['warn_level_max'] == 100,
+      'диапазон уровней 1..100 отдан панели')
 check(all(l['icon'] == 'fa-triangle-exclamation' for l in d['levels']),
       'у уровней своя иконка')
 rid = {r['id'] for r in d['roles']}
@@ -128,6 +130,8 @@ got = PR.get('777')
 check(got.get('mute') == 555010 and got.get('warn_1') == 555001
       and got.get('warn_3') == 555003 and 'ban' not in got,
       'выбор лёг в хранилище (общий с «Настройками модерации»)')
+check([l['level'] for l in d.get('levels', [])] == [1, 3],
+      'сохранённые уровни 1 и 3 стали карточками (не 1..10)')
 
 print('== 4. отсев мусора ==')
 r = client.post('/api/guild/777/role-settings', json={'mapping': {
@@ -136,8 +140,8 @@ check(r.status_code == 400 and not r.get_json().get('success'),
       'роль не с этого сервера — 400 и ничего не сохранили')
 check(PR.get('777').get('mute') == 555010, 'прошлый выбор не пострадал')
 r = client.post('/api/guild/777/role-settings', json={'mapping': {
-    'hack': '555001', 'warn_99': '555003'}})
-check(r.status_code == 400, 'неизвестные ключи — 400')
+    'hack': '555001', 'warn_101': '555003'}})
+check(r.status_code == 400, 'неизвестные ключи (hack, warn_101 вне 1..100) — 400')
 r = client.post('/api/guild/777/role-settings', data='не json',
                 content_type='application/json')
 check(r.status_code == 400, 'битый JSON — 400')
@@ -153,23 +157,56 @@ r = client.post('/api/guild/777/role-settings', json={'mapping': {
 check(r.get_json().get('success') and PR.get('777') == {},
       '«не выдавать» по всем — чистое хранилище')
 
-print('== 5. шаблон: никаких ручных ID ==')
+print('== 5. уровни варнов — добавляем и удаляем сами ==')
+login('owner')
+r = client.post('/api/guild/777/role-settings/warn-level', json={'level': 7})
+d = r.get_json()
+check(r.status_code == 200 and d.get('success'), f'уровень 7 добавлен: {d.get("error", "")}')
+check([l['level'] for l in d['levels']] == [7],
+      'в карточках только добавленный 7 (никаких 10 по умолчанию)')
+check('warn_7' not in PR.get('777'), 'уровень без роли — карточка есть, роли нет')
+r = client.post('/api/guild/777/role-settings/warn-level', json={'level': 7})
+check(r.status_code == 400, 'дубликат уровня — 400')
+r = client.post('/api/guild/777/role-settings/warn-level', json={'level': 0})
+check(r.status_code == 400, 'уровень 0 — 400')
+r = client.post('/api/guild/777/role-settings/warn-level', json={'level': 101})
+check(r.status_code == 400, 'уровень 101 (вне 1..100) — 400')
+r = client.post('/api/guild/777/role-settings/warn-level', json={'level': 'abc'})
+check(r.status_code == 400, 'не-число — 400')
+# роль для добавленного уровня — обычным сохранением
+r = client.post('/api/guild/777/role-settings', json={'mapping': {'warn_7': '555010'}})
+check(r.get_json().get('success') and PR.get('777').get('warn_7') == 555010,
+      'роль уровня 7 выбирается селектом и сохраняется')
+# удаление уровня снимает и карточку, и роль
+r = client.delete('/api/guild/777/role-settings/warn-level/7')
+d = r.get_json()
+check(r.status_code == 200 and d.get('success'), f'уровень 7 удалён: {d.get("error", "")}')
+check(d['levels'] == [] and 'warn_7' not in PR.get('777'),
+      'карточка и роль уровня удалены вместе')
+login('mod')
+r = client.post('/api/guild/777/role-settings/warn-level', json={'level': 5})
+check(r.status_code in (302, 401, 403), 'уровни добавляет только admin+')
+login('owner')
+
+print('== 6. шаблон: никаких ручных ID ==')
 tpl = open(os.path.join(ROOT, 'web', 'templates', 'role_settings.html'),
            encoding='utf-8').read()
 check('type="text"' not in tpl,
       'в шаблоне нет полей ручного текстового ввода — роли только селектами')
 import re as _re
-_no_steps = _re.sub(r'<input[^>]*rsStep(?:Count|Dur)[^>]*>', '', tpl, flags=_re.S)
+_no_steps = _re.sub(r'<input[^>]*rs(?:Step(?:Count|Dur)|LvlCount)[^>]*>', '', tpl, flags=_re.S)
 check('type="number"' not in _no_steps,
-      'числовые поля — только у ступеней лестницы warn (не ID ролей)')
+      'числовые поля — только ступени/уровень warn (не ID ролей)')
 check('rsStepAction' in tpl and 'warn-step' in tpl,
       'настройки warn (авто-наказания по предупреждениям) на этой же странице')
+check('rsLvlAdd' in tpl and 'warn-level' in tpl and 'data-lvl-del' in tpl,
+      'уровни варнов добавляются и удаляются со страницы')
 check('rsInfo' in tpl, 'секция «каждое наказание — своя карточка» на месте')
 check('/api/guild/' in tpl and '/role-settings' in tpl, 'шаблон ходит в свой API')
 check('data-k=' in tpl and 'rs-role-grid' in tpl, 'карточки селектов на месте')
 check('breadcrumbs' not in tpl and 'fa-save' in tpl, 'кнопка «Сохранить всё»')
 
-print('== 6. в меню «Настройки» ==')
+print('== 7. в меню «Настройки» ==')
 from services import panel_menu  # noqa: E402
 grp = next(g for g in panel_menu.MENU if g['key'] == 'settings')
 paths = [p['path'] for p in grp['pages']]
@@ -179,7 +216,7 @@ check(it['label'] == 'Роли наказаний' and it['icon'].startswith('fa
       'метка и FA-иконка')
 check(len(paths) == len(set(paths)), 'URL-ов дублей нет')
 
-print('== 7. бот офлайн — бережный отказ ==')
+print('== 8. бот офлайн — бережный отказ ==')
 appmod.set_bot_instance(None)
 ok, err, saved = __import__('web.routes.role_settings_panel',
                             fromlist=['save_settings']).save_settings(

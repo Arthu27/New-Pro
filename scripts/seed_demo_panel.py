@@ -61,6 +61,7 @@ def clean_demo_data():
     for gid in _DEMO_GIDS:
         gid_files += [
             f'data/modproof_{gid}.json', f'data/warn_config_{gid}.json',
+            'data/punish_roles.json',
             f'data/starboard_settings_{gid}.json', f'data/ticket_notify_{gid}.json',
             f'data/rules_{gid}.json', f'data/xp_{gid}.json',
             f'data/leveling_{gid}.json', f'data/antiraid_{gid}.json',
@@ -693,10 +694,22 @@ staff_apps = {
     },
 }
 
+# Роли наказаний: уровни варнов НЕ фиксированные — владелец добавляет сам.
+# Для демо-витрины кладём три «своих» уровня (ролей в демо нет — селекты
+# пустые, это и показывает свободу настройки).
+punish_roles = {
+    GID: {
+        'roles': {},
+        'warn_levels': [2, 5, 8],
+        'temps': {},
+    },
+}
+
 files = {
     'data/warnings.json': warnings,
     'data/audit_log.json': audit,
     'data/mod_data.json': mod_data,
+    'data/punish_roles.json': punish_roles,
     f'data/modproof_{GID}.json': proofs,
     f'data/warn_config_{GID}.json': warn_config,
     'data/login_log.json': login_log,

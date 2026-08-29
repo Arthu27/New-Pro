@@ -4,7 +4,8 @@
 Роль ближайшего уровня ≤ warn_count, предыдущая роль уровня снимается:
 level_transition возвращает (add, remove) так, что старые warn-роли
 гарантированно слетают, дублей не бывает; 0 варнов — снять всё.
-Валидация ключей: warn_1..warn_10 + классика mute/vmute/ban.
+Валидация ключей: warn_1..warn_100 (уровни добавляет сам владелец,
+НЕ фиксированные 10) + классика mute/vmute/ban.
 
 Запуск: python3 tests/test_punish_roles_levels.py
 """
@@ -36,10 +37,12 @@ def check(ok, msg):
 
 from services import punish_roles as PR  # noqa: E402
 
-print('== 1. валидность видов ==')
+print('== 1. валидность видов (уровни 1..100, свои) ==')
 for k, ok in [('mute', True), ('vmute', True), ('ban', True),
               ('warn_1', True), ('warn_9', True), ('warn_10', True),
-              ('warn_0', False), ('warn_11', False), ('warn_99', False),
+              ('warn_11', True), ('warn_99', True), ('warn_100', True),
+              ('warn_0', False), ('warn_101', False), ('warn_9999', False),
+              ('warn_007', True),
               ('warn_a', False), ('', False), ('kick', False), ('warn1', False)]:
     check(PR.valid_kind(k) is ok, f'valid_kind({k!r}) == {ok}')
 
@@ -107,13 +110,36 @@ check(('888', '42', 222) not in due, 'непросроченная не видн
 PR.clear('888', '42', 111)
 check(PR.due(200.0) == [], 'clear точечно снимает')
 
-print('== 6. чтение битого файла не падает ==')
+print('== 6. свои уровни: добавить/удалить, хранится и без роли ==')
+ok, msg = PR.add_level('999', 3)
+check(ok and PR.levels('999') == [3], f'уровень 3 добавлен: {PR.levels("999")}')
+ok, msg = PR.add_level('999', 3)
+check(not ok, 'дубликат уровня отклоняется')
+ok, msg = PR.add_level('999', 0)
+check(not ok, 'уровень 0 отклоняется')
+ok, msg = PR.add_level('999', 101)
+check(not ok, 'уровень 101 отклоняется')
+ok, msg = PR.add_level('999', 7)
+ok2, _ = PR.add_level('999', 1)
+check(ok and ok2 and PR.levels('999') == [1, 3, 7],
+      'уровни хранятся отсортированными (и без выбранной роли)')
+PR.set_roles('999', warn_3='666', warn_7='777000')
+check(PR.levels('999') == [1, 3, 7], 'роль не дублирует уровень в списке')
+ok, msg = PR.remove_level('999', 3)
+check(ok and 'warn_3' not in PR.get('999') and PR.levels('999') == [1, 7],
+      f'удаление уровня снимает и его роль: {PR.get("999")}/{PR.levels("999")}')
+PR.remove_level('999', 1)
+PR.remove_level('999', 7)
+check(PR.levels('999') == [], 'после удаления всех — пусто')
+
+print('== 7. чтение битого файла не падает ==')
 open('data/punish_roles.json', 'w', encoding='utf-8').write('{бито')
-check(PR.get('777') == {}, 'битый JSON → пустой выбор')
-json.dump({'777': {'roles': {'warn_1': 'не число', 'warn_2': 5, 'mute': -1}}},
+check(PR.get('999') == {}, 'битый JSON → пустой выбор')
+json.dump({'999': {'roles': {'warn_1': 'не число', 'warn_2': 5, 'mute': -1}}},
           open('data/punish_roles.json', 'w', encoding='utf-8'))
-got = PR.get('777')
+got = PR.get('999')
 check(got == {'warn_2': 5}, f'нечисловые/отрицательные отсекаются: {got}')
+check(PR.levels('999') == [2], 'старые warn-роли видны как уровни (совместимость)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

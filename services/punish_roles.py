@@ -8,12 +8,17 @@
 Роль не снимается сама — поэтому сервис ведёт журнал временных выдач:
 (когда чей срок вышел) и ког Moderation раз в минуту снимает просроченные.
 
-Уровни варнов (warn_1..warn_10): участник с warn_count варнами получает
-роль БЛИЖАЙШЕГО уровня не выше warn_count, роль предыдущего уровня
-снимается автоматически (level_transition — «что снять/что выдать»).
+Уровни варнов (warn_N — N любое от 1 до 100, НЕ фиксированные 10):
+владелец сам добавляет уровни в панели («Роли наказаний»), у каждого —
+своя роль; участник с warn_count варнами получает роль БЛИЖАЙШЕГО уровня
+не выше warn_count, роль предыдущего уровня снимается автоматически
+(level_transition — «что снять/что выдать»). Список добавленных уровней
+хранится отдельно (warn_levels), чтобы карточка «уровень без роли»
+не пропадала при перезагрузке панели.
 
 Хранилище: data/punish_roles.json
-    {"<gid>": {"roles": {"mute": id, "vmute": id, "ban": id},
+    {"<gid>": {"roles": {"mute": id, "vmute": id, "ban": id, "warn_3": id},
+               "warn_levels": [1, 3, 7],
                "temps": {"<uid>": {"<role_id>": until_ts}}}}
 """
 import json
@@ -29,17 +34,26 @@ log = get_logger('punish_roles')
 PATH = 'data/punish_roles.json'
 KINDS = ('mute', 'vmute', 'ban')
 WARN_LEVEL_MIN = 1
-WARN_LEVEL_MAX = 10
-_WARN_KEY_RE = re.compile(r'^warn_(10|[1-9])$')
+WARN_LEVEL_MAX = 100
+_WARN_KEY_RE = re.compile(r'^warn_(\d+)$')
 MAX_SECONDS = 28 * 86400            # роли дольше 28 дней не выдаём
 
 _lock = threading.Lock()
 
 
 def valid_kind(kind):
-    """mute/vmute/ban или warn_N — роль уровня (N варнов)."""
+    """mute/vmute/ban или warn_N — роль уровня (N варнов, 1..100)."""
     kind = str(kind or '')
-    return kind in KINDS or bool(_WARN_KEY_RE.match(kind))
+    if kind in KINDS:
+        return True
+    m = _WARN_KEY_RE.match(kind)
+    if not m:
+        return False
+    try:
+        n = int(m.group(1))
+    except (TypeError, ValueError):
+        return False
+    return WARN_LEVEL_MIN <= n <= WARN_LEVEL_MAX
 
 
 def warn_levels(mapping=None):
@@ -58,6 +72,76 @@ def warn_levels(mapping=None):
         if v > 0:
             out[int(m.group(1))] = v
     return out
+
+
+def levels(gid):
+    """Добавленные уровни варнов (сортировка): список из warn_levels + тех,
+    у кого уже выбрана роль (обратная совместимость с warn_1..warn_10)."""
+    row = _load().get(str(gid)) or {}
+    out = set()
+    for v in row.get('warn_levels') or []:
+        try:
+            n = int(v)
+        except (TypeError, ValueError) as _ex:
+            log.debug('levels: битый уровень %r: %s', v, _ex)
+            continue
+        if WARN_LEVEL_MIN <= n <= WARN_LEVEL_MAX:
+            out.add(n)
+    for k, v in (row.get('roles') or {}).items():
+        m = _WARN_KEY_RE.match(str(k))
+        if not m:
+            continue
+        try:
+            n = int(m.group(1))
+            rid = int(v or 0)
+        except (TypeError, ValueError) as _ex:
+            log.debug('levels: битый warn-ключ %r: %s', k, _ex)
+            continue
+        if WARN_LEVEL_MIN <= n <= WARN_LEVEL_MAX and rid > 0:
+            out.add(n)
+    return sorted(out)
+
+
+def add_level(gid, level):
+    """Добавить уровень (карточку) N варнов. Роль подбирается потом."""
+    try:
+        level = int(level or 0)
+    except (TypeError, ValueError):
+        return False, 'Уровень должен быть числом'
+    if not (WARN_LEVEL_MIN <= level <= WARN_LEVEL_MAX):
+        return False, f'Уровень — от {WARN_LEVEL_MIN} до {WARN_LEVEL_MAX} варнов'
+    if level in levels(gid):
+        return False, f'Уровень {level} уже есть'
+    data = _load()
+    row = data.setdefault(str(gid), {})
+    row.setdefault('warn_levels', [])
+    row['warn_levels'].append(level)
+    row['warn_levels'].sort()
+    _save(data)
+    return True, f'Уровень {level} добавлен'
+
+
+def remove_level(gid, level):
+    """Удалить уровень целиком: карточку и её роль (если выбрана)."""
+    try:
+        level = int(level or 0)
+    except (TypeError, ValueError):
+        return False, 'Уровень должен быть числом'
+    if not (WARN_LEVEL_MIN <= level <= WARN_LEVEL_MAX):
+        return False, f'Уровень — от {WARN_LEVEL_MIN} до {WARN_LEVEL_MAX} варнов'
+    data = _load()
+    row = data.setdefault(str(gid), {})
+    if 'warn_levels' in row:
+        row['warn_levels'] = [int(x) for x in row['warn_levels']
+                              if int(x) != level]
+        if not row['warn_levels']:
+            row.pop('warn_levels', None)
+    roles = row.get('roles') or {}
+    if f'warn_{level}' in roles:
+        roles.pop(f'warn_{level}', None)
+        row['roles'] = roles
+    _save(data)
+    return True, f'Уровень {level} удалён'
 
 
 def level_transition(gid, warn_count):
