@@ -60,7 +60,12 @@ def register(ctx):
                     },
                     'jailed': [],
                     'guild': 'Главный сервер',
+                    'gid': str(active_guild_id() or ''),
                 })
+            # бот работает, но ког спит (профиль LEAN по умолчанию) —
+            # говорим правду и подсказываем, как вернуть модуль
+            if bot is not None and cog is None:
+                return jsonify({'ok': False, 'error': 'Модуль «Карцер» спит (вернуть: EXTRA_COGS=tag_jail в .env)'})
             return jsonify({'ok': False, 'error': 'Модуль офлайн (бот не запущен)'})
         c = cog.cfg(guild.id)
         jailed = []
