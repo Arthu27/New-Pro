@@ -98,6 +98,15 @@ KEEP_SLASH = frozenset({
     'ticket-panel',
 })
 
+# Контекстные меню (ПКМ по сообщению/участнику: «Предупредить», «Изолировать»,
+# «Варн за сообщение», войс-мут/размут/кик). Это ОТДЕЛЬНЫЙ лимит Discord (5
+# user + 5 message на скоуп), но жалоба владельца «грузятся 13 лишних команд»
+# была именно про них: бюджет раньше чистил только chat-input и 6 ПКМ-меню из
+# mod_tools уезжали на сервер даже в кураторском наборе. В LEAN их в меню не
+# держим (всё это есть в /modpanel выпадающим списком) — пустой белый список.
+# В BOT_FULL они остаются (full_menu_mode → все меню разрешены).
+KEEP_CTX = frozenset()
+
 
 def _chat_input_commands(tree, guild=None):
     """Chat-input команды дерева (контекстные меню — отдельный лимит).
@@ -111,6 +120,15 @@ def _chat_input_commands(tree, guild=None):
     except TypeError:
         cmds = tree.get_commands()
     return [c for c in cmds if not isinstance(c, app_commands.ContextMenu)]
+
+
+def _context_menus(tree, guild=None):
+    """Контекстные меню (ПКМ) дерева в скоупе (глобально или guild-scoped)."""
+    try:
+        cmds = tree.get_commands(guild=guild)
+    except TypeError:
+        cmds = tree.get_commands()
+    return [c for c in cmds if isinstance(c, app_commands.ContextMenu)]
 
 
 def _guild_scopes():
@@ -139,8 +157,11 @@ def apply_slash_budget(tree, keep=None, guilds=None):
     Возвращает (kept, pruned) — отсортированные списки имён оставленных и
     удалённых из дерева команд (удалённые остаются доступны через префикс).
     """
+    # Режим меню: полный (BOT_FULL) держит всё, что влезает; кураторский
+    # (LEAN по умолчанию) — только KEEP_SLASH слэш-команды и KEEP_CTX меню.
+    _full = full_menu_mode()
     if keep is None:
-        if full_menu_mode():
+        if _full:
             # Полный состав: единый keep-сет на ВСЕ скоупы (глобальный и
             # гильдовые) — иначе копия глобального в гильдию переполнит её
             # поверх локальных команд и guild-синк упадёт целиком.
@@ -157,6 +178,11 @@ def apply_slash_budget(tree, keep=None, guilds=None):
                 keep = set(KEEP_SLASH) | set(_rest)
         else:
             keep = KEEP_SLASH
+    # Контекстные ПКМ-меню: в полном составе оставляем все (отдельный лимит
+    # Discord, в бюджет 100 не входят), в кураторском — только KEEP_CTX.
+    # Баг «13 лишних команд на старте»: 6 ПКМ-меню mod_tools регистрируются
+    # глобально и раньше НЕ вырезались бюджетом, уезжая на сервер.
+    keep_ctx = None if _full else set(KEEP_CTX)
     kept, pruned = [], []
     scopes = _guild_scopes() if guilds is None else list(guilds)
     for scope in [None] + scopes:
@@ -166,6 +192,19 @@ def apply_slash_budget(tree, keep=None, guilds=None):
                 continue
             try:
                 tree.remove_command(cmd.name, type=AppCommandType.chat_input,
+                                    guild=scope)
+                pruned.append(cmd.name)
+            except Exception as _ex:
+                if scope is None:
+                    raise
+        # Контекстные меню того же скоупа
+        for cmd in _context_menus(tree, guild=scope):
+            if keep_ctx is None or cmd.name in keep_ctx:
+                kept.append(cmd.name)
+                continue
+            try:
+                tree.remove_command(cmd.name,
+                                    type=getattr(cmd, 'type', None) or AppCommandType.user,
                                     guild=scope)
                 pruned.append(cmd.name)
             except Exception as _ex:
