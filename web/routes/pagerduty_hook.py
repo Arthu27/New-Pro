@@ -40,6 +40,35 @@ def _bot():
         return None
 
 
+def _bot_truth(bot):
+    """Правда о боте: (online, status, presence).
+
+    Раньше «онлайн» означало «объект бота существует» — панель уверяла,
+    что всё работает, когда шлюз Discord давно отвалился (жалоба
+    30.08.2026: «данные отправляет, но он офлайн»). Теперь:
+    online  — шлюз жив и бот готов (is_ready и не is_closed);
+    starting — подключается (объект есть, готовности ещё нет);
+    offline — объекта нет или шлюз закрыт.
+    """
+    if bot is None:
+        return False, 'offline', 'offline'
+    try:
+        if bot.is_closed():
+            return False, 'offline', str(getattr(bot, 'status', 'offline') or 'offline')
+    except AttributeError:
+        _log.debug('pagerduty: стаб без is_closed — считаем живым')
+    except Exception:
+        return False, 'offline', 'offline'
+    try:
+        if not bot.is_ready():
+            return False, 'starting', 'offline'
+    except AttributeError:
+        _log.debug('pagerduty: стаб без is_ready — считаем готовым')
+    except Exception:
+        return False, 'starting', 'offline'
+    return True, 'online', str(getattr(bot, 'status', 'online') or 'online')
+
+
 def _target_channel(bot, gid):
     """Куда постить тревоги: маршрут pagerduty_channel."""
     cid = int(get_route(gid, 'pagerduty_channel') or 0)
@@ -89,14 +118,18 @@ def deliver(info, bot, gid):
     channel = _target_channel(bot, gid)
     if channel is None:
         if bot is None or bot.get_guild(int(gid)) is None:
+            PD.log_delivery(gid, info, 'offline', 'бот офлайн — PagerDuty повторит')
             return 'offline', 'Бот офлайн — повторите позже'
+        PD.log_delivery(gid, info, 'no_channel', 'канал тревог не выбран')
         return 'no_channel', 'Канал тревог не выбран (Панель → PagerDuty)'
     embed = build_embed(info, guild=channel.guild)
     try:
         _run_async(channel.send(embed=embed))
     except Exception as _ex:
         _log.warning('pagerduty: доставка в %s: %s', gid, _ex)
+        PD.log_delivery(gid, info, 'error', str(_ex)[:120])
         return 'error', f'Не удалось отправить: {_ex}'
+    PD.log_delivery(gid, info, 'sent', getattr(channel, 'name', ''))
     return 'sent', 'Карточка отправлена'
 
 
@@ -166,6 +199,7 @@ def register(ctx):
             st = PD.get_settings(gid)
             channels = []
             bot = _bot()
+            online, bot_status, presence = _bot_truth(bot)
             if bot is not None:
                 g = bot.get_guild(int(gid))
                 if g is not None:
@@ -179,8 +213,12 @@ def register(ctx):
                 'token': st['token'],
                 'hook_path': f'/hooks/pagerduty/{gid}/{st["token"]}',
                 'channel_id': int(get_route(gid, 'pagerduty_channel') or 0),
-                'bot_online': bot is not None,
+                'bot_online': online,          # правда о шлюзе, не «объект есть»
+                'bot_status': bot_status,      # online | starting | offline
+                'bot_presence': presence,      # чем бот выглядит в Discord
                 'channels': channels,
+                'history': PD.recent(gid, 15),
+                'history_stats': PD.history_stats(gid),
             })
 
         data = request.get_json(silent=True) or {}

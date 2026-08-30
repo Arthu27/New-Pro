@@ -852,6 +852,12 @@ async def on_ready():
             print(f'[СИНХРОНИЗАЦИЯ] Slash команды синхронизированы: {_n}')
         except Exception as e:
             print(f'[СИНХРОНИЗАЦИЯ] Ошибка: {e}')
+            # причину видно и в панели (sync_last.json), не только в консоли
+            try:
+                from services.sync_filtered import note_sync_error as _nse
+                _nse(bot, e, mode='on-ready-failed')
+            except Exception as _nse_ex:
+                _log.warning("on_ready(): не записали ошибку синка в sync_last.json: %s", _nse_ex)
         _synced = True
         bot.loop.create_task(_monitor_voice())
         # Если только что кончило самообновление (/update) — отчитаться в канал
@@ -864,7 +870,7 @@ async def on_ready():
 
     import json as _j
     _cfg_file = 'data/bot_config.json'
-    _status = discord.Status.idle
+    _status = discord.Status.online   # дефолт — зелёный: idle выглядел как «бот отключился»
     _activity_type = discord.ActivityType.listening
     _activity_text = '.gg/Hakumo'
     if os.path.exists(_cfg_file):
@@ -873,7 +879,7 @@ async def on_ready():
                 _cfg = _j.load(_f)
             _status_map = {'online': discord.Status.online, 'idle': discord.Status.idle, 'dnd': discord.Status.dnd, 'invisible': discord.Status.invisible}
             _type_map = {'listening': discord.ActivityType.listening, 'playing': discord.ActivityType.playing, 'watching': discord.ActivityType.watching, 'competing': discord.ActivityType.competing}
-            _status = _status_map.get(_cfg.get('status', 'idle'), discord.Status.idle)
+            _status = _status_map.get(_cfg.get('status', 'online'), discord.Status.online)
             _activity_type = _type_map.get(_cfg.get('activity_type', 'listening'), discord.ActivityType.listening)
             _activity_text = _cfg.get('activity_text', '.gg/Hakumo')
         except Exception as _ex:

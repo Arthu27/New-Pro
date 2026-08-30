@@ -199,8 +199,9 @@ check(client.get('/api/bot-settings').status_code in (302, 403), 'bot-settings A
 login_as('owner')
 d = client.get('/api/bot-settings').get_json()
 check(d['ok'] and d['prefix'] == '!' and 'discord_version' in d, 'bot-settings API: префикс/версия в ответе')
-check(d['presence'] == {'status': 'idle', 'activity_type': 'listening',
-                        'activity_text': '.gg/Hakumo'}, 'bot-settings API: дефолтный презенс')
+check(d['presence'] == {'status': 'online', 'activity_type': 'listening',
+                        'activity_text': '.gg/Hakumo'},
+      'bot-settings API: дефолтный презенс (online — бот не выглядит «не в сети» после старта)')
 
 r = client.post('/api/bot-settings/presence',
                 json={'status': 'online', 'activity_type': 'playing', 'activity_text': 'на сервере Hakumo'})

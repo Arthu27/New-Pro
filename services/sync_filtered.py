@@ -142,7 +142,7 @@ async def _clean_stray_guilds(bot, tree, exclude_ids):
     return cleaned
 
 
-def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=()):
+def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=(), commands=None):
     """Метка последнего полного синка (диагностика в панели: data/sync_last.json)."""
     try:
         import json as _json
@@ -159,6 +159,8 @@ def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=()):
                     'targets': [int(x or 0) for x in targets_ids],
                     'stray_cleaned': [int(x or 0) for x in stray_cleaned],
                 }
+                if commands is not None:
+                    payload['commands'] = int(commands)
                 with open(_os.path.join(base, 'data', 'sync_last.json'), 'w',
                           encoding='utf-8') as f:
                     _json.dump(payload, f, ensure_ascii=False)
@@ -168,6 +170,28 @@ def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=()):
                 continue
     except Exception as _e:
         _log.debug('sync: метка последнего синка: %s', _e)
+
+
+def note_sync_error(bot, error, mode='error'):
+    """Синк упал (on_ready или кнопка) — причину видно в панели
+    (data/sync_last.json), а не только в консоли."""
+    import json as _json
+    import os as _os
+    from datetime import datetime as _dt, timezone as _tz
+    try:
+        for base in (getattr(bot, 'base_dir', None), _os.getcwd()):
+            if not base:
+                continue
+            _os.makedirs(_os.path.join(base, 'data'), exist_ok=True)
+            payload = {'at': _dt.now(_tz.utc).isoformat(timespec='seconds'),
+                       'mode': mode,
+                       'error': str(error)[:300]}
+            with open(_os.path.join(base, 'data', 'sync_last.json'), 'w',
+                      encoding='utf-8') as f:
+                _json.dump(payload, f, ensure_ascii=False)
+            return
+    except Exception as e:
+        _log.debug('note_sync_error(): %s', e)
 
 
 async def full_sync(bot):
@@ -205,7 +229,7 @@ async def _full_sync_inner(bot):
         # иначе вторая «апелляция» и прочие дубли живут на серверах вечно.
         synced = await sync_tree(bot)
         cleaned = await _clean_stray_guilds(bot, tree, set())
-        _note_sync_done(bot, 'global', (), cleaned)
+        _note_sync_done(bot, 'global', (), cleaned, commands=len(synced))
         return synced
 
     # 1) глобальный список в Discord очищаем (чтобы не было дублей).
@@ -326,5 +350,5 @@ async def _full_sync_inner(bot):
                     _log.debug('вернуть после отката %s: %s', cmd.name, _e)
     _note_sync_done(bot, 'guilds',
                     [int(getattr(g, 'id', 0) or 0) for g in targets],
-                    cleaned)
+                    cleaned, commands=len(out))
     return out

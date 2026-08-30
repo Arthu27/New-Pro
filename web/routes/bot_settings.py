@@ -55,7 +55,7 @@ def register(ctx):
                         'guilds': len(getattr(bot, 'guilds', []) or []),
                         'discord_version': _discord.__version__,
                         'prefix': Config.COMMAND_PREFIX,
-                        'presence': {'status': cfg.get('status', 'idle'),
+                        'presence': {'status': cfg.get('status', 'online'),
                                      'activity_type': cfg.get('activity_type', 'listening'),
                                      'activity_text': cfg.get('activity_text', '.gg/Hakumo')}})
 

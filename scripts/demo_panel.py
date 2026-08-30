@@ -214,6 +214,29 @@ def seed():
                 ]
             store.set(GID, 'settings', demo_settings)
 
+    # мост PagerDuty: канал тревог + живая история доставок, чтобы страница
+    # «Настройки · PagerDuty» показывала полный цикл (KPI, чипы, мост)
+    from services import pagerduty_hook as _pd
+    from services.channel_routes import set_route as _set_route
+    _set_route(GID, 'pagerduty_channel', 777002)
+    _pd.get_settings(GID)   # гарантирует токен моста
+    if not _pd.recent(GID, 50):
+        now = datetime.now(timezone.utc)
+        demo_events = [
+            (1, 'incident.triggered', '🔥 Тревога #12', 'Payment API не отвечает', 'sent', 'общий'),
+            (2, 'incident.acknowledged', '✅ Принято #12', 'Payment API не отвечает', 'sent', 'общий'),
+            (3, 'incident.resolved', '🎉 Решено #12', 'Payment API не отвечает', 'sent', 'общий'),
+            (5, 'incident.triggered', '🔥 Тревога #13', 'БД перегружена', 'offline', 'бот переподключался — PD повторил'),
+            (6, 'incident.triggered', '🔥 Тревога #13', 'БД перегружена', 'sent', 'общий'),
+            (26, 'incident.triggered', '🔥 Тревога #14', 'Диск места', 'sent', 'общий'),
+        ]
+        for mins, ev, title, inc, status, note in demo_events:
+            _pd.log_delivery(
+                GID,
+                {'event': ev, 'title': title, 'incident_title': inc,
+                 'at': (now - timedelta(minutes=mins)).isoformat(timespec='seconds')},
+                status, note)
+
 
 seed()
 
@@ -258,6 +281,7 @@ class FakeGuild:
     splash = None
     description = 'Песочница панели Hakumo'
     premium_tier = 2
+    premium_subscription_count = 12
     vanity_url_code = None
     created_at = NOW - timedelta(days=400)
 
@@ -308,6 +332,12 @@ class FakeBot:
 
     def is_ready(self):
         return True
+
+    def is_closed(self):
+        return False
+
+    def change_presence(self, **kw):
+        pass
 
     def get_guild(self, gid):
         return next((g for g in self.guilds if g.id == gid), None)

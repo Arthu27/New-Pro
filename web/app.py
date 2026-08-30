@@ -1580,6 +1580,37 @@ def api_login_log ():
     except Exception :
         return jsonify ([])
 
+def _bot_connection_truth (bot ):
+    """Правда о шлюзе бота: (status, presence).
+
+    Жалоба 30.08.2026: «панель пишет, что данные отправляет, а бот офлайн».
+    Причина: /api/stats всегда отвечал status='online', пока объект бота
+    существует — даже с отвалившимся шлюзом. Теперь честно:
+      online   — шлюз жив, бот готов;
+      starting — объект есть, но готовности ещё нет (подключается);
+      offline  — бота нет или шлюз закрыт.
+    presence — чем бот ВЫГЛЯДИТ в Discord (online/idle/dnd/invisible):
+    бот с presence=idle подключён, но кажется «не в сети».
+    """
+    if bot is None :
+        return 'offline','offline'
+    try :
+        if bot .is_closed ():
+            return 'offline',str (getattr (bot ,'status','offline')or 'offline')
+    except AttributeError :
+        _log .debug ("_bot_connection_truth(): стаб без is_closed — считаем живым")
+    except Exception :
+        return 'offline','offline'
+    try :
+        if not bot .is_ready ():
+            return 'starting','offline'
+    except AttributeError :
+        _log .debug ("_bot_connection_truth(): стаб без is_ready — считаем готовым")
+    except Exception :
+        return 'starting','offline'
+    return 'online',str (getattr (bot ,'status','online')or 'online')
+
+
 @app .route ('/api/stats')
 @login_required 
 def api_stats ():
@@ -1593,11 +1624,21 @@ def api_stats ():
             'latency':round (12 + (_time .time ()*10 %19 ),2 ),
             'status':'online'
             })
-        return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
+        return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.',
+        'status':'offline','presence':'offline'})
 
     guilds =len (bot_instance .guilds )
-    users =sum (g .member_count or 0 for g in bot_instance .guilds )
-    online =sum (1 for g in bot_instance .guilds for m in g .members if not m .bot and m .status !=discord .Status .offline )
+    # кэш гильдий может быть частичным (холодный старт, переподключение):
+    # member_count/members не обязаны существовать в каждый момент
+    users =sum (getattr (g ,'member_count',0 )or 0 for g in bot_instance .guilds )
+    online =0
+    for g in bot_instance .guilds :
+        for m in (getattr (g ,'members',None )or []):
+            try :
+                if not m .bot and m .status !=discord .Status .offline :
+                    online +=1
+            except AttributeError :
+                _log .debug ("api_stats(): член без статуса в кэше — пропущен")
     lat_val = 0.0
     if bot_instance.latency is not None:
         try:
@@ -1606,12 +1647,14 @@ def api_stats ():
         except Exception:
             lat_val = 0.0
 
+    _status ,_presence =_bot_connection_truth (bot_instance )
     return jsonify ({
     'guilds':guilds ,
     'users':users ,
     'online':online ,
     'latency':lat_val ,
-    'status':'online'
+    'status':_status ,        # online | starting | offline — правда о шлюзе
+    'presence':_presence      # чем бот выглядит в Discord (idle выглядит «не в сети»)
     })
 
 @app .route ('/api/guilds')
