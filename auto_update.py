@@ -59,8 +59,31 @@ def _detect_branch():
 # Теперь: ветка = своя (из git), а не захардкоженная main.
 UPDATE_BRANCH = (os.getenv("UPDATE_BRANCH", "").strip() or _detect_branch() or "main")
 REPO_SLUG = os.getenv("UPDATE_REPO", "Arthu27/New-Pro").strip() or "Arthu27/New-Pro"
-REPO_API = f"https://api.github.com/repos/{REPO_SLUG}/commits/{UPDATE_BRANCH}"
-ZIP_URL = f"https://github.com/{REPO_SLUG}/archive/refs/heads/{UPDATE_BRANCH}.zip"
+
+
+def _source():
+    """Источник обновлений: панель (data/update_source.json) → .env.
+
+    Заказ 30.08 «дай, я поставлю, откуда качать»: владелец меняет
+    репозиторий/ветку кнопкой в панели — и /update, и этот демон
+    качают оттуда же (раньше демон был прибит гвоздями к .env на старте).
+    """
+    try:
+        sys.path.insert(0, BOT_DIR)
+        from services.update_source import get_repo, get_branch
+        return get_repo(), get_branch()
+    except Exception:
+        return REPO_SLUG, UPDATE_BRANCH
+
+
+def _repo_api():
+    repo, branch = _source()
+    return f"https://api.github.com/repos/{repo}/commits/{branch}"
+
+
+def _zip_url():
+    repo, branch = _source()
+    return f"https://github.com/{repo}/archive/refs/heads/{branch}.zip"
 
 # АВТООБНОВЛЕНИЕ — только по явному флагу AUTO_UPDATE=1/true/yes.
 # По умолчанию ВЫКЛЮЧЕНО: демон лишь присматривает за живым процессом
@@ -116,7 +139,7 @@ def get_remote_commit():
     """GitHub API'den son commit hash'ini al"""
     try:
         headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-        r = requests.get(REPO_API, headers=headers, timeout=10)
+        r = requests.get(_repo_api(), headers=headers, timeout=10)
         if r.status_code == 200:
             return r.json()["sha"]
     except Exception as e:
@@ -323,10 +346,11 @@ def start_bot():
 
 def git_pull():
     """Обновить репозиторий через git pull"""
-    лог("[AUTO-UPDATE] Выполняется git pull...")
+    _branch = _source()[1]
+    лог(f"[AUTO-UPDATE] Выполняется git pull ({_branch})...")
     try:
         result = subprocess.run(
-            ["git", "pull", "origin", UPDATE_BRANCH],
+            ["git", "pull", "origin", _branch],
             cwd=BOT_DIR,
             capture_output=True,
             text=True,
@@ -338,8 +362,8 @@ def git_pull():
             # Conflict varsa force reset yap
             лог("[AUTO-UPDATE] Обнаружен конфликт, выполняется force reset...")
             subprocess.run(["git", "fetch", "origin"], cwd=BOT_DIR, capture_output=True, timeout=30)
-            subprocess.run(["git", "reset", "--hard", f"origin/{UPDATE_BRANCH}"], cwd=BOT_DIR, capture_output=True, timeout=30)
-            лог(f"[AUTO-UPDATE] Force reset на origin/{UPDATE_BRANCH} завершено")
+            subprocess.run(["git", "reset", "--hard", f"origin/{_branch}"], cwd=BOT_DIR, capture_output=True, timeout=30)
+            лог(f"[AUTO-UPDATE] Force reset на origin/{_branch} завершено")
         else:
             лог("[AUTO-UPDATE] Файлы обновлены")
 
@@ -386,7 +410,7 @@ def download_and_extract():
     """Скачать ZIP с GitHub и распаковать в BOT_DIR (fallback)"""
     лог("[AUTO-UPDATE] Файлы загружаются...")
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-    r = requests.get(ZIP_URL, headers=headers, timeout=60)
+    r = requests.get(_zip_url(), headers=headers, timeout=60)
     if r.status_code != 200:
         raise Exception(f"Ошибка загрузки HTTP {r.status_code}")
 
@@ -516,12 +540,13 @@ def main():
 
     while True:
         try:
+            _dyn_branch = _source()[1]
             remote_hash = None
             if _is_git:
                 subprocess.run(["git", "fetch", "origin"], cwd=BOT_DIR,
                                capture_output=True, timeout=30)
                 result = subprocess.run(
-                    ["git", "rev-parse", f"origin/{UPDATE_BRANCH}"],
+                    ["git", "rev-parse", f"origin/{_dyn_branch}"],
                     cwd=BOT_DIR, capture_output=True, text=True, timeout=10
                 )
                 remote_hash = result.stdout.strip() if result.returncode == 0 else None
@@ -548,7 +573,7 @@ def main():
                         лог("[AUTO-UPDATE] AUTO_UPDATE=0 — НЕ перезапускаю бота "
                             "(обновляйтесь командой /update или включите "
                             "AUTO_UPDATE=1 в .env)")
-                    elif _is_git and _detect_branch() != UPDATE_BRANCH:
+                    elif _is_git and _detect_branch() != _dyn_branch:
                         log_event("skipped_update", reason="branch_mismatch",
                                   remote=remote_hash, local=local_hash)
                         лог("[AUTO-UPDATE] Рабочая ветка ≠ UPDATE_BRANCH — "

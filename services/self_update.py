@@ -161,13 +161,25 @@ def git_update(bot_dir, branch):
                         'files': files[:50]}
 
 
+def _source():
+    """Источник обновлений: панель (data/update_source.json) → .env.
+    Заказ 30.08: владелец сам ставит, откуда качать — без правки .env."""
+    try:
+        from services import update_source
+        return update_source.get_repo(), update_source.get_branch()
+    except Exception as _ex:
+        log.debug('self_update: update_source недоступен (%s) — .env', _ex)
+        from config import Config
+        return Config.UPDATE_REPO, Config.UPDATE_BRANCH
+
+
 def remote_sha():
     """HEAD ветки на GitHub (для отчёта). None — если API не ответил."""
     try:
         import requests
-        from config import Config
+        _repo, _branch = _source()
         url = 'https://api.github.com/repos/{}/commits/{}'.format(
-            Config.UPDATE_REPO, Config.UPDATE_BRANCH)
+            _repo, _branch)
         r = requests.get(url, timeout=10, headers={'Accept': 'application/vnd.github+json'})
         if r.status_code == 200:
             return str(r.json().get('sha') or '') or None
@@ -178,9 +190,9 @@ def remote_sha():
 
 
 def zip_url():
-    from config import Config
+    _repo, _branch = _source()
     return 'https://codeload.github.com/{}/zip/refs/heads/{}'.format(
-        Config.UPDATE_REPO, Config.UPDATE_BRANCH)
+        _repo, _branch)
 
 
 def download_zip(dest_dir):
