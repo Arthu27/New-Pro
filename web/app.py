@@ -542,6 +542,34 @@ def _is_bot_owner (discord_id )->bool :
     except Exception :
         return False
 
+
+def _main_guild_id_str ():
+    """ID основного сервера строкой (MAIN_GUILD_ID, иначе первый сервер бота)."""
+    if MAIN_GUILD_ID :
+        return str (MAIN_GUILD_ID )
+    try :
+        if bot_instance and bot_instance .guilds :
+            return str (bot_instance .guilds [0 ].id )
+    except Exception as _ex :
+        _log .debug ("_main_guild_id_str(): %s", _ex )
+    return ''
+
+
+def _record_on_main_guild (record ):
+    """Запись {..., 'guild_id': ...} относится к основному серверу?
+
+    Если сервер в записи неизвестен (None/'' — старые данные до привязки),
+    считаем её своей, чтобы не прятать легитимные записи на единственном
+    сервере. Чужие guild_id отсекаются.
+    """
+    gid =str ((record or {}).get ('guild_id')or '').strip ()
+    main =_main_guild_id_str ()
+    if not gid :
+        return True
+    if not main :
+        return True
+    return gid ==main
+
 # Роли панели (от низшей к высшей). Куратор — старший модератор:
 # видит всё модерское + тикеты/сообщество, настраивается владельцем
 # так же, как модератор и администратор (доступ к меню, маппинг ролей).
@@ -1248,7 +1276,8 @@ def api_my_applications ():
         return jsonify ([])
     with open (apps_file ,'r',encoding ='utf-8')as f :
         apps =json .load (f )
-    my_apps =[a for a in apps .values ()if a .get ('user_id')==discord_id ]
+    my_apps =[a for a in apps .values ()
+              if a .get ('user_id')==discord_id and _record_on_main_guild (a )]
     my_apps .sort (key =lambda x :x .get ('created_at',''),reverse =True )
     return jsonify (my_apps )
 
@@ -2633,7 +2662,9 @@ def api_staff_apps ():
         return jsonify ([])
     with open (apps_file ,'r',encoding ='utf-8')as f :
         data =json .load (f )
-    apps =list (data .values ())
+    # Заявки показываем ТОЛЬКО с основного сервера (бот может состоять в
+    # нескольких) — иначе в панель нового сервера попадают чужие заявки.
+    apps =[a for a in data .values ()if _record_on_main_guild (a )]
     apps .sort (key =lambda x :x .get ('timestamp',''),reverse =True )
     return jsonify (apps )
 
@@ -2648,6 +2679,8 @@ def api_review_staff_app (app_id ):
         data =json .load (f )
     if app_id not in data :
         return jsonify ({'error':'Заявка не найдена'})
+    if not _record_on_main_guild (data [app_id ]):
+        return jsonify ({'error':'Эта заявка с другого сервера — здесь её рассматривать нельзя.'}),404
     req =request .get_json (silent =True )or {}
     action =req .get ('action')# 'approve' or 'reject'
     note =req .get ('note','')

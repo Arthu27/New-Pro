@@ -25,9 +25,13 @@ os.environ.setdefault('PANEL_USER', 'owner')
 os.environ.setdefault('PANEL_PASSWORD', 'demo-pass')
 os.environ['MAIN_GUILD_ID'] = '777'
 
+# Работаем из корня репозитория (как и прод-панель): относительные пути
+# data/... резолвятся одинаково в коде и в тесте. Тестовые data-файлы
+# удаляем в конце, чтобы не сорить в реальной data/.
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(_ROOT)
+sys.path.insert(0, _ROOT)
 _TMP = tempfile.mkdtemp(prefix='hakumo_login_guild_')
-os.chdir(_TMP)
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 PASS = 0
 FAIL = 0
@@ -136,6 +140,22 @@ A._resolve_guild_member_async = _fake_resolve_async
 
 client = A.app.test_client()
 
+# Заявки в команду с двух серверов: своя (777), чужая (888) и legacy без guild_id
+import json as _json
+os.makedirs('data', exist_ok=True)
+with open('data/staff_apps.json', 'w', encoding='utf-8') as _f:
+    _json.dump({
+        'app-main': {'app_id': 'app-main', 'user_id': str(UID_BOB),
+                     'display_name': 'bob_local', 'status': 'pending',
+                     'guild_id': str(MAIN_ID), 'timestamp': '2026-08-30T10:00:00+00:00'},
+        'app-foreign': {'app_id': 'app-foreign', 'user_id': str(UID_MALLORY),
+                        'display_name': 'mallory_foreign', 'status': 'pending',
+                        'guild_id': str(FOREIGN_ID), 'timestamp': '2026-08-30T11:00:00+00:00'},
+        'app-old-noguild': {'app_id': 'app-old-noguild', 'user_id': '999',
+                            'display_name': 'legacy', 'status': 'pending',
+                            'guild_id': None, 'timestamp': '2026-08-30T09:00:00+00:00'},
+    }, _f, ensure_ascii=False)
+
 print('== /api/login/suggest: только основной сервер ==')
 r = client.get('/api/login/suggest?q=')
 d = r.get_json(silent=True) or {}
@@ -227,6 +247,33 @@ d = r.get_json(silent=True) or []
 titles = [x.get('title') for x in d if x.get('type') == 'member']
 check(any('alice' in str(t).lower() for t in titles),
       'глобальный поиск находит своего участника', f'→ {titles}')
+
+print('== /api/staff-apps: заявки только основного сервера ==')
+# owner-сессия, чтобы role_required не понижал роль (фильтр данных не зависит
+# от роли — проверяем именно изоляцию серверов).
+with client.session_transaction() as sess:
+    sess['logged_in'] = True
+    sess['username'] = 'test-owner'
+    sess['role'] = 'owner'
+    sess['discord_id'] = str(UID_ALICE)
+r = client.get('/api/staff-apps')
+d = r.get_json(silent=True) or []
+app_ids = {a.get('app_id') for a in d}
+app_guilds = {str(a.get('guild_id')) for a in d}
+check('app-main' in app_ids, 'своя заявка (777) видна', f'→ статус {r.status_code} {app_ids}')
+check('app-foreign' not in app_ids, 'ЧУЖАЯ заявка (888) скрыта', f'→ {app_ids}')
+check(str(FOREIGN_ID) not in app_guilds, 'в ответе нет записей чужого сервера', f'→ {app_guilds}')
+check('app-old-noguild' in app_ids, 'старая заявка без guild_id не прячется', f'→ {app_ids}')
+
+r = client.post('/api/staff-apps/app-foreign/review', json={'action': 'approve'})
+d = r.get_json(silent=True) or {}
+check(r.status_code == 404 and 'другого сервера' in (d.get('error') or ''),
+      'рассмотрение заявки чужого сервера запрещено (404)', f'→ {r.status_code} {d.get("error")}')
+
+try:
+    os.remove('data/staff_apps.json')
+except OSError:
+    pass
 
 print()
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')
