@@ -52,20 +52,25 @@ for p in ('/economy', '/giveaway', '/starboard', '/custom-commands',
           '/reaction-roles', '/fun', '/leveling'):
     assert p in off_lean, p
 check(True, 'lean (по умолчанию): игровые и соц-страницы честно гаснут чипом «выкл»')
-for p in ('/sla', '/tagjail'):
+for p in ('/sla', '/tagjail', '/tickets-ops'):
     assert p in off_lean, p
 check(True, 'lean: страницы уснувших модулей (SLA/TagJail) гаснут чипом')
 check('/security' not in off_lean and '/antifake' not in off_lean,
       'lean: щит жив — /security и /antifake горят зелёным')
 check('/mod-report' not in off_lean,
       'lean: /mod-report живёт от аудит-файла — ког mod_report не нужен, чип не вешаем')
-for p in ('/music', '/tickets-ops', '/staff-apps', '/ai-chat', '/afk-list',
+for p in ('/music', '/staff-apps', '/ai-chat', '/afk-list',
           '/ai-moderation', '/welcome-editor', '/voice-stats', '/appeals'):
     assert p not in off_lean, p
-check(True, 'lean: боевые страницы открыты (модерация/тикеты/музыка/AI/AFK/приветствие)')
+check(True, 'lean: боевые страницы открыты (модерация/жалобы/музыка/AI/AFK/приветствие)')
+check('/tickets-ops' in off_lean, 'lean: /tickets-ops погашена — тикет-система снята (жалобы через /report)')
 
 _set_env(BOT_FULL='1')
-check(pm.module_off_paths() == frozenset(), 'BOT_FULL=1: ничто не приглушено — полный вид панели')
+# BOT_FULL включает все спящие коги, но RETIRED (ticket.py) снят навсегда —
+# его страница /tickets-ops гаснет даже в полном режиме.
+_full_off = pm.module_off_paths()
+check(_full_off == frozenset({'/tickets-ops'}),
+      f'BOT_FULL=1: открыто всё, кроме снятого тикет-модуля ({sorted(_full_off)})')
 
 _set_env(MOD_ONLY='1')
 check(pm.module_mode_active() is True, 'MOD_ONLY=1: режим активен')
@@ -123,8 +128,11 @@ check(html.count('is-off') == len(expected_off) and len(expected_off) >= 8,
 _set_env(BOT_FULL='1')  # полный состав — классический вид без чипов
 r2 = client.get('/')
 html2 = r2.get_data(as_text=True)
-check('mode-banner' not in html2 and 'nav-off-chip' not in html2,
-      'BOT_FULL=1: ни баннера, ни чипов — классический вид меню')
+check('mode-banner' not in html2,
+      'BOT_FULL=1: баннера режима нет — классический вид')
+# снятый навсегда тикет-модуль остаётся погашен даже в полном составе
+check(html2.count('nav-off-chip') <= 1,
+      'BOT_FULL=1: чип «выкл» максимум у одного снятого пункта (tickets-ops)')
 
 _set_env()  # обратно в lean
 r3 = client.get('/')

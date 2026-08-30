@@ -74,14 +74,14 @@ check(True, 'lean: экономика/игры/уровни/ивенты/соц-
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'temp_moderation.py', 'proof_cog.py', 'auto_filter.py',
              'antiraid.py', 'verification.py',
-             'appeals.py', 'logs.py', 'log_menu.py',
-             'ticket.py', 'staff_apply.py',
+             'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
+             'staff_apply.py',
              'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
              'ai_chat.py', 'ai_moderation.py',
              'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
              'afk.py', 'help.py', 'cog_manager.py'):
     assert keep in enabled, keep
-check(True, 'lean: модерация/тикеты/музыка/AI/приветствие/логи/afk — живы')
+check(True, 'lean: модерация/репорты/музыка/AI/приветствие/логи/afk — живы')
 for asleep in ('tag_jail.py', 'sla_cog.py', 'mod_report.py',
                'health.py', 'feature_flag_cog.py'):
     assert asleep in disabled, asleep
@@ -93,7 +93,7 @@ check(not any(is_helper(f) for f in enabled), 'lean: хелперы не заг�
 check(CORE_COGS <= LEAN_COGS and MOD_LEAN_COGS <= LEAN_COGS
       and TICKET_LEAN_COGS <= LEAN_COGS and MUSIC_COGS <= LEAN_COGS
       and AI_LEAN_COGS <= LEAN_COGS and WELCOME_LEAN_COGS <= LEAN_COGS,
-      'lean: состав = ядро + модерация + тикеты + музыка + AI + приветствие')
+      'lean: состав = ядро + модерация + репорты + музыка + AI + приветствие')
 check(not set(enabled) & set(disabled)
       and len(enabled) + len(disabled) == len(NON_HELPERS),
       'lean: разбиение без пересечений и потерь')
@@ -119,9 +119,9 @@ check(not (MOD_ONLY_COGS & HELPER_COGS), 'списки: хелперы не по
 # известные внутренние зависимости ядра (get_cog) — обе стороны живы в MOD_ONLY
 for dep in ('warnings.py', 'tag_jail.py', 'impersonation.py', 'mod_kit.py',
             'mod_tools.py', 'mod_case.py', 'auto_filter.py', 'reports.py',
-            'logs.py', 'ticket.py', 'proof_cog.py'):
+            'logs.py', 'proof_cog.py'):
     assert dep in MOD_ONLY_COGS, dep
-check(True, 'ядро самодостаточно: warnings/tag_jail/impersonation/mod_*/logs/ticket/proof — в списке')
+check(True, 'ядро самодостаточно: warnings/tag_jail/impersonation/mod_*/reports/logs/proof — в списке')
 
 print('\n== 5. MOD_ONLY=1 — «только модерация» ==')
 enabled_m, disabled_m = select_cog_files(ALL_FILES, mod_only=True)
@@ -135,18 +135,18 @@ for fun in ('economy_cog.py', 'music_cog.py', 'fun_cog.py', 'minigames.py',
 check(True, 'mod_only: экономика/музыка/игры/AI-чат/раздачи/левелинг — выключены')
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
              'antiraid.py', 'security.py', 'verification.py', 'auto_filter.py',
-             'ai_moderation.py', 'ticket.py', 'logs.py', 'proof_cog.py',
+             'ai_moderation.py', 'reports.py', 'logs.py', 'proof_cog.py',
              'help.py', 'cog_manager.py'):
     assert keep in enabled_m, keep
-check(True, 'mod_only: наказания/автомод/анти-рейд/тикеты/журналы/демки/системное — живы')
+check(True, 'mod_only: наказания/автомод/анти-рейд/репорты/журналы/демки/системное — живы')
 check(not set(enabled_m) & set(disabled_m) and
       len(enabled_m) + len(disabled_m) == len(NON_HELPERS),
       'mod_only: разбиение без пересечений и потерь')
 
-print('\n== 5.5 BOT_CORE=1 — «модерация + тикеты + логи + AI» ==')
+print('\n== 5.5 BOT_CORE=1 — «модерация + репорты + логи + AI» ==')
 check(CORE_COGS <= CORE_ONLY_COGS and MODERATION_COGS <= CORE_ONLY_COGS
       and TICKET_COGS <= CORE_ONLY_COGS and AI_CHAT_COGS <= CORE_ONLY_COGS,
-      'core: = ядро + модерация + тикеты + AI-чат')
+      'core: = ядро + модерация + репорты + AI-чат')
 check(not (MUSIC_COGS & CORE_ONLY_COGS), 'core: музыка выключена (не входит)')
 check('music_cog.py' not in CORE_ONLY_COGS and 'economy_cog.py' not in CORE_ONLY_COGS,
       'core: экономика/музыка/веселуха выключены')
@@ -158,11 +158,11 @@ for fun in ('economy_cog.py', 'music_cog.py', 'fun_cog.py', 'level_cog.py',
             'giveaway.py', 'minigames.py', 'voice_commands.py', 'starboard.py'):
     assert fun in disabled_c, fun
 check(True, 'core: экономика/музыка/игры/левелинг — выключены')
-for keep in ('moderation.py', 'ticket.py', 'sla_cog.py', 'staff_apply.py',
+for keep in ('moderation.py', 'reports.py', 'sla_cog.py', 'staff_apply.py',
              'logs.py', 'log_menu.py', 'ai_chat.py', 'ai_moderation.py',
              'help.py', 'cog_manager.py'):
     assert keep in enabled_c, keep
-check(True, 'core: модерация/тикеты/логи/AI/системное — живы')
+check(True, 'core: модерация/репорты/логи/AI/системное — живы')
 check(not set(enabled_c) & set(disabled_c)
       and len(enabled_c) + len(disabled_c) == len(NON_HELPERS),
       'core: разбиение без пересечений и потерь')

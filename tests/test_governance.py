@@ -409,9 +409,9 @@ check('economy_shop.py' not in en and 'economy_shop.py' not in dis,
       'economy_shop — хелпер: политика его больше не грузит как ког')
 check('economy_cog.py' not in en and 'economy_cog.py' in dis,
       'lean по умолчанию: экономика спит (панель покажет чип «выкл»)')
-check('moderation.py' in en and 'music_cog.py' in en and 'ticket.py' in en
+check('moderation.py' in en and 'music_cog.py' in en and 'reports.py' in en
       and 'afk.py' in en and 'ai_chat.py' in en,
-      'lean по умолчанию: модерация/музыка/тикеты/AFK/AI живы')
+      'lean по умолчанию: модерация/музыка/репорты/AFK/AI живы')
 check('tag_jail.py' in dis and 'sla_cog.py' in dis,
       'lean по умолчанию: jail/SLA спят (чистка лишних команд)')
 check('security.py' in en and 'anti_alt.py' in en and 'impersonation.py' in en,

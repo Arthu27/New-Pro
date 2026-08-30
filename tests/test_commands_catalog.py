@@ -46,10 +46,9 @@ print('== 1. Реестр команд (LEAN — боевой состав по 
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-# Заказ владельца 2026-08-28 «как можно меньше» + 2026-08-29 «верни тикеты»
-# и «ticket-add/remove — в меню тикета»: боевое слеш-меню — 7 команд
-# (modpanel с варном внутри, play, апелляция, update, afk/afk-remove
-# и ticket-panel; участников тикета добавляют кнопками ➕/➖).
+# Заказ владельца: боевое слеш-меню — минимум команд. Тикет-система снята
+# 2026-08-31, её роль выполняет /report (жалоба карточкой в канал модерации).
+# В меню: modpanel, play, апелляция, update, afk/afk-remove и report.
 check(data['total'] == 7, f"lean: собрано {data['total']} живых команд (ровно 7)")
 check(data['slash'] == 7 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
@@ -57,8 +56,9 @@ check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
 check(len(data['categories']) >= 3, f"lean: разделов ≥3 ({len(data['categories'])})")
 labels = [c['label'] for c in data['categories']]
-for need in ('Модерация', 'Музыка', 'Система', 'Тикеты'):
+for need in ('Модерация', 'Музыка', 'Система'):
     check(need in labels, f'lean: раздел «{need}» в каталоге')
+check('Тикеты' not in labels, 'lean: раздел «Тикеты» убран (тикет-система снята, жалобы — /report)')
 check('Логи и аудит' not in labels,
       'логи остаются вне панельного каталога (заказ «как можно меньше»)')
 check('Голосовые' not in labels,
@@ -66,7 +66,7 @@ check('Голосовые' not in labels,
 check('Экономика' not in labels and 'Уровни и карма' not in labels,
       'lean: спящие системы (экономика/уровни) честно не показываются')
 mods = data.get('modules') or {}
-check(mods.get('enabled') == 30 and mods.get('sleeping') == 75,  # +proof_cog (демки)
+check(mods.get('enabled') == 29 and mods.get('sleeping') == 76,
       f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')}")
 
 print('== 1.1. Реестр в BOT_FULL (полный состав) ==')
@@ -153,9 +153,9 @@ check(d['total'] == data['total'] and d['shown'] == d['total']
       'без фильтров отдаётся весь lean-каталог (как в боте)')
 check(d['slash'] > 0 and d['prefix'] == 0,
       'счётчики типов в ответе: слеш есть, префиксных — ноль')
-check(d.get('modules', {}).get('enabled') == 30
-      and d['modules']['sleeping'] == 75,
-      'в ответе — счётчик модулей (30 включено / 75 спит)')
+check(d.get('modules', {}).get('enabled') == 29
+      and d['modules']['sleeping'] == 76,
+      'в ответе — счётчик модулей (29 включено / 76 спит)')
 
 r = client.get('/api/commands/catalog?q=play')
 d = r.get_json()
@@ -206,7 +206,7 @@ import cogs.help as HP  # noqa: E402
 ov = HP.build_help_embed()
 field_names = ' | '.join(f.name for f in ov.fields)
 for need in ('Музыка', 'Система',
-             'Модерация', 'Тикеты'):
+             'Модерация', 'Жалобы'):
     check(need in field_names, f'/help overview содержит раздел «{need}»')
 check('Голосовые' not in field_names,
       'голосовая статистика удалена из /help (команд нет — раздела нет)')

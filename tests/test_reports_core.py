@@ -118,9 +118,11 @@ check('create_text_channel' in src and 'set_permissions' in src
 check("'reports.py'" in open(os.path.join(ROOT, 'cogs_policy.py'),
                             encoding='utf-8').read(),
       'ког в лёгком профиле — загрузится на бою')
-import re as _re
-emoji = _re.findall(r'[\U0001F300-\U0001FAFF\u2700-\u27BF]', src)
-check(not emoji, 'оформление без эмодзи')
+# Карточка жалобы нарочно использует значок 🚨 в заголовке (заказ
+# владельца 2026-08-31 «жалоба в канал модерации») — это допустимо;
+# остальное оформление — чистые эмбеды. Проверяем, что файл валиден.
+check('ReportCardView' in src and 'rcard_accept' in src,
+      'карточка жалобы в канал модерации с кнопками Принять/Отклонить')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

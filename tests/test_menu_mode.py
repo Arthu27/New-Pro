@@ -180,7 +180,9 @@ def build_bot():
     tree.add_command(mk('update', keep_global=True))
     tree.add_command(mk('апелляция', keep_global=True))
     tree.add_command(mk('warnings'))                       # мусор: глобальный
-    for n in ('afk', 'afk-remove', 'ticket-panel', 'backup'):
+    tree.add_command(mk('report'))                        # жалобы — в белом списке
+    tree.add_command(mk('my_violations'))                 # мои нарушения — в белом
+    for n in ('afk', 'afk-remove', 'backup'):
         tree.add_command(mk(n), guild=Object(777))         # backup — мусор
     return bot
 
@@ -191,8 +193,9 @@ MM.set_full(False)
 bot1 = build_bot()
 kept, pruned = slash_budget.apply_slash_budget(bot1.tree)
 check(set(kept) == {'modpanel', 'play', 'update', 'апелляция',
-                    'afk', 'afk-remove', 'ticket-panel'},
-      f'в дереве остались ровно кураторские 7 ({len(kept)})')
+                    'report', 'my_violations',
+                    'afk', 'afk-remove'},
+      f'в дереве остались ровно кураторские 8 ({len(kept)})')
 check(set(pruned) == {'warnings', 'backup'},
       f'мусор убран из меню, но жив на префиксе ({sorted(pruned)})')
 
@@ -203,8 +206,8 @@ async def _run_b():
     glob, guild = bot1.http.last('GLOBAL'), bot1.http.last('GUILD', 777)
     check(set(glob) == {'modpanel', 'play', 'update', 'апелляция'},
           f'глобальный список = 4 keep_global ({sorted(glob)})')
-    check(set(guild) == {'afk', 'afk-remove', 'ticket-panel'},
-          f'сервер 777 = 3 гильдовых ({sorted(guild)})')
+    check(set(guild) == {'afk', 'afk-remove', 'report', 'my_violations'},
+          f'сервер 777 = гильдовые + глобальные НЕ-keep ({sorted(guild)})')
     check(set(glob) & set(guild) == set(), 'глобаль∩гильдия пусто — дублей нет')
     check(bot1.http.last('GUILD', 888) == [], 'чужой сервер 888 очищен')
     check('warnings' not in glob + guild and 'backup' not in glob + guild,
@@ -221,12 +224,13 @@ async def _run_c():
     ok, kept2, pruned2 = await MM.apply_to_bot(bot2)
     check(ok is True, 'apply_to_bot отработал')
     check(set(kept2) == {'modpanel', 'play', 'update', 'апелляция',
-                         'afk', 'afk-remove', 'ticket-panel'},
-          'бюджет внутри apply_to_bot сжал дерево до 7')
+                          'report', 'my_violations',
+                          'afk', 'afk-remove'},
+          'бюджет внутри apply_to_bot сжал дерево до 8')
     check(set(pruned2) == {'warnings', 'backup'}, 'мусор вынесен из меню')
     glob2, guild2 = bot2.http.last('GLOBAL'), bot2.http.last('GUILD', 777)
     check(set(glob2) == {'modpanel', 'play', 'update', 'апелляция'}
-          and set(guild2) == {'afk', 'afk-remove', 'ticket-panel'},
+          and set(guild2) == {'afk', 'afk-remove', 'report', 'my_violations'},
           'синк внутри apply_to_bot доставил те же списки в Discord')
     with open('data/sync_last.json', encoding='utf-8') as fh:
         verdict = json.load(fh).get('verify', '')
@@ -240,7 +244,7 @@ print('== C2. Сверка ловит застаревшее меню (жало�
 bot3 = build_bot()
 
 async def _run_c2():
-    bot3.http.fetch_override[777] = ['afk', 'afk-remove', 'ticket-panel',
+    bot3.http.fetch_override[777] = ['afk', 'afk-remove',
                                      'backup', 'warnings', 'апелляция']
     await MM.apply_to_bot(bot3)
     with open('data/sync_last.json', encoding='utf-8') as fh:

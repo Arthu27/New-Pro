@@ -186,16 +186,16 @@ check(len(client.get('/api/guild/%s/reaction-roles' % GID).get_json()) == 1,
 # ═══ 5. Профиль BOT_SLIM ══════════════════════════════════════════════
 print('== BOT_SLIM ==')
 from cogs_policy import select_cog_files, SLIM_COGS  # noqa: E402
-files = ['moderation.py', 'ticket.py', 'sla_cog.py', 'staff_apply.py',
+files = ['moderation.py', 'reports.py', 'sla_cog.py', 'staff_apply.py',
          'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
          'economy_cog.py', 'giveaway.py', 'ai_chat.py', 'help.py',
          'logs.py', 'impersonation.py', 'minigames.py', 'level_cog.py']
 enabled, gone = select_cog_files(files, slim=True)
 sel = set(enabled)
-check({'moderation.py', 'ticket.py', 'sla_cog.py', 'staff_apply.py',
+check({'moderation.py', 'reports.py', 'sla_cog.py', 'staff_apply.py',
        'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
        'help.py', 'logs.py', 'impersonation.py', 'ai_chat.py'} <= sel,
-      'BOT_SLIM: модерация, тикеты, музыка, ядро и AI-чат загружены')
+      'BOT_SLIM: модерация, репорты, музыка, ядро и AI-чат загружены')
 check({'economy_cog.py', 'giveaway.py', 'minigames.py',
        'level_cog.py'} <= set(gone),
       'BOT_SLIM: веселуха (экономика/игры/левелинг) отключена')
