@@ -40,6 +40,17 @@ MAX_COG_BURST = 12   # измеренный максимум от одного �
 
 _TRUE = ('1', 'true', 'yes', 'on')
 
+_budget_log = None
+
+
+def _logger():
+    global _budget_log
+    if _budget_log is None:
+        import logging
+        _budget_log = logging.getLogger('slash_budget')
+        _budget_log.addHandler(logging.NullHandler())
+    return _budget_log
+
 
 def full_menu_mode(environ=None):
     """BOT_FULL=1 — слеш-меню держит ВСЕ команды (до жёсткого лимита).
@@ -47,9 +58,19 @@ def full_menu_mode(environ=None):
     Жалоба владельца 30.08 «команды не грузятся»: в полном составе модулей
     пользователь ожидает видеть в Discord ВСЕ команды, а не кураторские 7.
     Лёгкий состав (LEAN, по умолчанию) — по-прежнему кураторский KEEP_SLASH.
+
+    Приоритет: тумблер на странице «Команды» (data/menu_mode.json — заказ
+    30.08 «оставим только 7») → BOT_FULL из .env. Так режим переключается
+    из панели без правки .env на сервере.
     """
-    env = os.environ if environ is None else environ
-    return str(env.get('BOT_FULL', '') or '').strip().lower() in _TRUE
+    try:
+        from services.menu_mode import is_full
+        return bool(is_full(environ))
+    except Exception as ex:      # сервис недоступен — .env, как раньше
+        _logger().warning('full_menu_mode: menu_mode недоступен (%s) — '
+                          'читаю BOT_FULL из .env', ex)
+        env = os.environ if environ is None else environ
+        return str(env.get('BOT_FULL', '') or '').strip().lower() in _TRUE
 
 # Что видит участник и модератор в слеш-меню. Кураторский набор ЛЁГКОГО
 # состава (cogs_policy LEAN — он по умолчанию): модерация-ядро, защита,

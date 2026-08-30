@@ -968,7 +968,8 @@ async def load_cogs():
         log.info(
             f"Слеш-меню: {len(_kept)} команд — лёгкий состав (кураторский список); "
             f"ещё {_prefix_total} команд доступны через префикс «!» "
-            f"(все модули — BOT_FULL=1 в .env)"
+            f"(полное меню — BOT_FULL=1 в .env или кнопка «Вернуть все» "
+            f"на странице «Команды» панели)"
         )
     if len(_kept) >= slash_budget.WARN_AT:
         log.warning(f"Слеш-меню почти полное ({len(_kept)}/100) — пора пересмотреть KEEP_SLASH")
