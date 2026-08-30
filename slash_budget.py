@@ -22,10 +22,34 @@ add_cog(..., guilds=Config.guild_objects()) — и раньше бюджет ч�
 tests/test_slash_budget.py: следит, чтобы меню не переполнилось и чтобы
 имена из KEEP_SLASH реально существовали (ловит переименования).
 """
+import os
+
 from discord import AppCommandType, app_commands
 
-LIMIT = 100          # жёсткий лимит Discord на глобальные chat-input команды
+LIMIT = 100          # жёсткий лимит Discord на chat-input команды В СКОУПЕ
 WARN_AT = 90         # мягкий порог — пора пересмотреть меню
+
+# Полный состав (BOT_FULL=1): сколько команд держать в меню. Меньше LIMIT:
+# 1) самый тяжёлый ког добавляет до 9 команд за раз — нужен запас, иначе
+#    discord.py валит модуль CommandLimitReached прямо при загрузке;
+# 2) full_sync копирует глобальное дерево в гильдию ПОВЕРХ локальных —
+#    сумма в гильдии обязана остаться <= LIMIT, иначе guild-синк падает
+#    и «команды не грузятся» целиком.
+SAFE_FULL = 80
+MAX_COG_BURST = 12   # измеренный максимум от одного кога (9) + запас
+
+_TRUE = ('1', 'true', 'yes', 'on')
+
+
+def full_menu_mode(environ=None):
+    """BOT_FULL=1 — слеш-меню держит ВСЕ команды (до жёсткого лимита).
+
+    Жалоба владельца 30.08 «команды не грузятся»: в полном составе модулей
+    пользователь ожидает видеть в Discord ВСЕ команды, а не кураторские 7.
+    Лёгкий состав (LEAN, по умолчанию) — по-прежнему кураторский KEEP_SLASH.
+    """
+    env = os.environ if environ is None else environ
+    return str(env.get('BOT_FULL', '') or '').strip().lower() in _TRUE
 
 # Что видит участник и модератор в слеш-меню. Кураторский набор ЛЁГКОГО
 # состава (cogs_policy LEAN — он по умолчанию): модерация-ядро, защита,
@@ -94,7 +118,24 @@ def apply_slash_budget(tree, keep=None, guilds=None):
     Возвращает (kept, pruned) — отсортированные списки имён оставленных и
     удалённых из дерева команд (удалённые остаются доступны через префикс).
     """
-    keep = KEEP_SLASH if keep is None else keep
+    if keep is None:
+        if full_menu_mode():
+            # Полный состав: единый keep-сет на ВСЕ скоупы (глобальный и
+            # гильдовые) — иначе копия глобального в гильдию переполнит её
+            # поверх локальных команд и guild-синк упадёт целиком.
+            _names = set()
+            scopes_pre = _guild_scopes() if guilds is None else list(guilds)
+            for scope in [None] + scopes_pre:
+                for cmd in _chat_input_commands(tree, guild=scope):
+                    _names.add(cmd.name)
+            if len(_names) <= LIMIT - MAX_COG_BURST:
+                keep = _names            # всё влезает с запасом — не режем
+            else:
+                # перебор: кураторские всегда в меню + первые по алфавиту
+                _rest = sorted(_names - KEEP_SLASH)[:max(0, SAFE_FULL - len(KEEP_SLASH))]
+                keep = set(KEEP_SLASH) | set(_rest)
+        else:
+            keep = KEEP_SLASH
     kept, pruned = [], []
     scopes = _guild_scopes() if guilds is None else list(guilds)
     for scope in [None] + scopes:

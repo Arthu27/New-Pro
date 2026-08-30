@@ -954,10 +954,22 @@ async def load_cogs():
             traceback.print_exc()
 
     _kept, _pruned = apply_slash_budget(bot.tree)
-    log.info(
-        f"Слеш-меню: {len(_kept)} команд (лимит Discord — 100; "
-        f"ещё {len(_pruned)} команд доступны через префикс)"
-    )
+    # честный счётчик: сколько команд реально отвечает на префикс «!»
+    # (гибридные команды живут и в меню, и на префиксе). Раньше здесь
+    # писался итог ПОСЛЕДНЕГО прохода чистки (0) — вводило в заблуждение.
+    _prefix_total = len({c.name for c in bot.commands})
+    if slash_budget.full_menu_mode():
+        log.info(
+            f"Слеш-меню: {len(_kept)} команд — полный состав, лимит Discord 100"
+            + (f" (лишние {len(_pruned)} команд — на префикс «!»)"
+               if _pruned else "")
+        )
+    else:
+        log.info(
+            f"Слеш-меню: {len(_kept)} команд — лёгкий состав (кураторский список); "
+            f"ещё {_prefix_total} команд доступны через префикс «!» "
+            f"(все модули — BOT_FULL=1 в .env)"
+        )
     if len(_kept) >= slash_budget.WARN_AT:
         log.warning(f"Слеш-меню почти полное ({len(_kept)}/100) — пора пересмотреть KEEP_SLASH")
 
