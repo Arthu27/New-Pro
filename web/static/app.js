@@ -1075,7 +1075,10 @@
     var userId = window.__panelUserId || '';
     var roomId = userId ? 'user_' + userId : 'global';
     var proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var wsUrl = proto + '//' + (window.location.hostname || 'localhost') + ':8765';
+    // PANEL_WS_URL из .env: для панели за доменом/туннелем (иначе
+    // браузер не достанет ws-порт и live-канал молча живёт на polling).
+    var wsUrl = window.PANEL_WS_URL ||
+      (proto + '//' + (window.location.hostname || 'localhost') + ':8765');
     try {
       var ws = new window.WebSocketClient({ url: wsUrl, roomId: roomId, userId: userId, autoConnect: true });
       window.wsClient = ws;
@@ -3395,16 +3398,19 @@
       }
       empty.style.display = any ? 'none' : '';
     });
-    /* Гарантированный скролл списка колесом: прокручиваем только список,
-       страница за дропдауном не двигается (фикс «не листается вниз») */
+    /* Гарантированный скролл списка колесом: пока дропдаун открыт, колесо
+       над панелью крутит ТОЛЬКО список — страница за панелью не двигается
+       и панель не закрывается посреди выбора (фикс «скролл уезжает,
+       открывается другая настройка»). На краях списка — как у нативного
+       дропдауна: стоим на месте, наружу не отдаём. */
     panel.addEventListener('wheel', function (e) {
       try {
         var sh = listEl.scrollHeight, ch = listEl.clientHeight;
         if (sh > ch) {
           var next = listEl.scrollTop + e.deltaY;
           listEl.scrollTop = Math.max(0, Math.min(next, sh - ch));
-          e.preventDefault();
         }
+        e.preventDefault();
       } catch (err) { /* метрики недоступны — нативное поведение */ }
     }, { passive: false });
   }
@@ -3434,15 +3440,46 @@
 
   function positionPanel(btn) {
     var rect = btn.getBoundingClientRect();
+    var vh = win.innerHeight;
     panel.style.minWidth = Math.max(rect.width, 230) + 'px';
     panel.style.maxWidth = Math.max(rect.width, 340) + 'px';
+    /* Сброс прошлых ужиманий — меряем честную высоту панели (поиск + список) */
+    listEl.style.maxHeight = '';
+    var h = panel.offsetHeight || 320;
+    var listH = listEl.offsetHeight || (h - 100);
+    var chrome = Math.max(0, h - listH);   /* поиск + отступы панели */
+    var MIN_LIST = 132;                    /* минимум списка: ~3–4 опции */
     var below = rect.bottom + 6;
-    var est = Math.min(300, panel.offsetHeight || 300);
-    if (below + est > win.innerHeight - 8 && rect.top - est - 6 > 8) {
-      panel.style.top = Math.max(8, rect.top - est - 6) + 'px';
-    } else {
-      panel.style.top = below + 'px';
+    var roomBelow = vh - 8 - below;
+    var top = below;
+    if (h > roomBelow) {
+      /* Целиком вниз не влезает. Дропдаун обязан открываться «сверху вниз» —
+         ужимаем СПИСОК под свободное место, а не переворачиваем панель.
+         Вверх уходит только когда внизу не помещается даже минимум. */
+      var fitList = roomBelow - chrome;
+      if (fitList >= MIN_LIST) {
+        listEl.style.maxHeight = fitList + 'px';
+        h = panel.offsetHeight || h;
+      } else {
+        var above = rect.top - 6;
+        var roomAbove = above - 8;
+        if (h <= roomAbove) {
+          top = above - h;                            // вверх — целиком
+        } else if (roomAbove - chrome >= MIN_LIST) {
+          listEl.style.maxHeight = (roomAbove - chrome) + 'px';
+          h = panel.offsetHeight || h;
+          top = above - h;                            // вверх — с ужиманием
+        } else {
+          /* Совсем тесно (крошечный экран/крупный зум) — прижимаем в экран */
+          if (h > vh - 16) {
+            listEl.style.maxHeight = Math.max(120, vh - 16 - chrome) + 'px';
+            h = panel.offsetHeight || h;
+          }
+          top = Math.max(8, vh - 8 - h);
+        }
+      }
     }
+    panel.style.top = top + 'px';
     var left = Math.min(rect.left, win.innerWidth - (panel.offsetWidth || 260) - 10);
     panel.style.left = Math.max(8, left) + 'px';
   }
@@ -3559,6 +3596,10 @@
 
   /* перерисовка опций из шаблонов (innerHTML) */
   var mo = new MutationObserver(function (muts) {
+    /* Страница перерисовалась (напр. сохранение маршрута канала) и select,
+       владеющий открытой панелью, удалён из DOM — панель больше ни к чему
+       не относится: закрываем, чтобы клики не уходили в «мёртвый» список. */
+    if (currentOrig && !doc.contains(currentOrig)) closePanel();
     muts.forEach(function (m) {
       m.addedNodes.forEach(function (n) {
         if (n.nodeType !== 1) return;

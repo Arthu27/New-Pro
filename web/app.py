@@ -195,6 +195,18 @@ def inject_demo_mode ():
 # Авто-версии статики: ?v= по времени изменения файла — браузер сам подхватит
 # свежий JS/CSS после каждого обновления, вручную номера больше не крутим.
 @app .context_processor
+def inject_panel_ws ():
+    """Внешний WebSocket-адрес для live-обновлений панели.
+
+    Пусто (default) — браузер сам строит ws://хост:8765 и работает только
+    локально; при панели за доменом/туннелем укажи в .env:
+    PANEL_WS_URL=wss://panel.example.com/ws (если проброшен порт 8765)
+    — и live-канал (тикеты, статистика) оживёт и через домен.
+    """
+    return {'panel_ws_url': (os .environ .get ('PANEL_WS_URL','')or '').strip ()}
+
+
+@app .context_processor
 def inject_static_versions ():
     def static_v (filename ):
         try :
@@ -1568,6 +1580,37 @@ def api_login_log ():
     except Exception :
         return jsonify ([])
 
+def _bot_connection_truth (bot ):
+    """Правда о шлюзе бота: (status, presence).
+
+    Жалоба 30.08.2026: «панель пишет, что данные отправляет, а бот офлайн».
+    Причина: /api/stats всегда отвечал status='online', пока объект бота
+    существует — даже с отвалившимся шлюзом. Теперь честно:
+      online   — шлюз жив, бот готов;
+      starting — объект есть, но готовности ещё нет (подключается);
+      offline  — бота нет или шлюз закрыт.
+    presence — чем бот ВЫГЛЯДИТ в Discord (online/idle/dnd/invisible):
+    бот с presence=idle подключён, но кажется «не в сети».
+    """
+    if bot is None :
+        return 'offline','offline'
+    try :
+        if bot .is_closed ():
+            return 'offline',str (getattr (bot ,'status','offline')or 'offline')
+    except AttributeError :
+        _log .debug ("_bot_connection_truth(): стаб без is_closed — считаем живым")
+    except Exception :
+        return 'offline','offline'
+    try :
+        if not bot .is_ready ():
+            return 'starting','offline'
+    except AttributeError :
+        _log .debug ("_bot_connection_truth(): стаб без is_ready — считаем готовым")
+    except Exception :
+        return 'starting','offline'
+    return 'online',str (getattr (bot ,'status','online')or 'online')
+
+
 @app .route ('/api/stats')
 @login_required 
 def api_stats ():
@@ -1581,11 +1624,21 @@ def api_stats ():
             'latency':round (12 + (_time .time ()*10 %19 ),2 ),
             'status':'online'
             })
-        return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
+        return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.',
+        'status':'offline','presence':'offline'})
 
     guilds =len (bot_instance .guilds )
-    users =sum (g .member_count or 0 for g in bot_instance .guilds )
-    online =sum (1 for g in bot_instance .guilds for m in g .members if not m .bot and m .status !=discord .Status .offline )
+    # кэш гильдий может быть частичным (холодный старт, переподключение):
+    # member_count/members не обязаны существовать в каждый момент
+    users =sum (getattr (g ,'member_count',0 )or 0 for g in bot_instance .guilds )
+    online =0
+    for g in bot_instance .guilds :
+        for m in (getattr (g ,'members',None )or []):
+            try :
+                if not m .bot and m .status !=discord .Status .offline :
+                    online +=1
+            except AttributeError :
+                _log .debug ("api_stats(): член без статуса в кэше — пропущен")
     lat_val = 0.0
     if bot_instance.latency is not None:
         try:
@@ -1594,12 +1647,14 @@ def api_stats ():
         except Exception:
             lat_val = 0.0
 
+    _status ,_presence =_bot_connection_truth (bot_instance )
     return jsonify ({
     'guilds':guilds ,
     'users':users ,
     'online':online ,
     'latency':lat_val ,
-    'status':'online'
+    'status':_status ,        # online | starting | offline — правда о шлюзе
+    'presence':_presence      # чем бот выглядит в Discord (idle выглядит «не в сети»)
     })
 
 @app .route ('/api/guilds')
@@ -3487,6 +3542,97 @@ def api_bot_gc ():
     'after':after ,
     })
 
+@app .route ('/api/bot/memory-profile',methods =['POST'])
+@login_required
+@role_required ('owner')
+def api_bot_memory_profile ():
+    """Профиль памяти: КУДА уходит RAM — кэш Discord или Python-объекты.
+
+    Жалоба 30.08.2026: RSS 1649,8 МБ на «Статистике бота» при пороге
+    критичности 900 МБ. Чтобы не гадать, считаем по полочкам: сколько
+    участников/каналов/ролей держит шлюз, сколько живых объектов Python
+    и какие типы их больше всего. GC до замера отделяет мусор от живого.
+    """
+    import gc
+    from collections import Counter
+    if not bot_instance and _demo_mode ():
+        return jsonify ({
+        'success':True ,'demo':True ,
+        'rss_mb':412.6 ,'rss_after_gc_mb':401.8 ,'threads':18 ,
+        'guilds':1 ,'members_cached':1247 ,'channels_cached':14 ,
+        'roles_cached':9 ,'voice_clients':0 ,'cogs':24 ,'extensions':24 ,
+        'objects_total':486311 ,
+        'top_types':[['builtins.dict',94210],['builtins.instance_method',61884],
+                     ['builtins.str',58472],['builtins.function',24106],
+                     ['discord.user.User',8312],['builtins.set',6128],
+                     ['builtins.list',5904],['builtins.tuple',5231],
+                     ['builtins.type',2140],['builtins.weakref',1987]],
+        'per_guild':[{'name':'Демо-сервер Hakumo','members':1247}],
+        'gc_generations':[{'collections':214,'collected':1894,'uncollectable':0},
+                          {'collections':37,'collected':5421,'uncollectable':0},
+                          {'collections':9,'collected':12837,'uncollectable':0}]
+        })
+    rss_before =0.0
+    threads =0
+    try :
+        import psutil as _ps ,os as _os
+        _proc =_ps .Process (_os .getpid ())
+        rss_before =_proc .memory_info ().rss /1024 /1024
+        threads =_proc .num_threads ()
+    except Exception as _ex:
+        _log .debug ("api_bot_memory_profile(): psutil: %s",_ex)
+    gc .collect ()
+    rss_after =rss_before
+    try :
+        import psutil as _ps ,os as _os
+        rss_after =_ps .Process (_os .getpid ()).memory_info ().rss /1024 /1024
+    except Exception as _ex:
+        _log .debug ("api_bot_memory_profile(): повторный замер: %s",_ex)
+    guilds =0 ;members =0 ;channels =0 ;roles =0 ;voice =0
+    per_guild =[]
+    cogs =0 ;extensions =0
+    if bot_instance :
+        try :
+            guilds =len (bot_instance .guilds )
+            for g in bot_instance .guilds :
+                _m =len (getattr (g ,'members',None )or [])
+                members +=_m
+                channels +=len (getattr (g ,'channels',None )or [])
+                roles +=len (getattr (g ,'roles',None )or [])
+                per_guild .append ({'name':str (getattr (g ,'name','?'))[:40],'members':_m })
+            per_guild =sorted (per_guild ,key =lambda x :-x ['members'])[:5]
+            voice =len (getattr (bot_instance ,'voice_clients',None )or [])
+            cogs =len (getattr (bot_instance ,'cogs',{})or {})
+            extensions =len (getattr (bot_instance ,'extensions',{})or {})
+        except Exception as _ex:
+            _log .debug ("api_bot_memory_profile(): кэш Discord: %s",_ex)
+    objects_total =0
+    top_types =[]
+    try :
+        _objs =gc .get_objects ()
+        objects_total =len (_objs )
+        _cnt =Counter ()
+        for _o in _objs :
+            _t =type (_o )
+            _cnt [f'{_t .__module__ }.{_t .__name__ }']+=1
+        top_types =[[k ,v ]for k ,v in _cnt .most_common (15 )]
+        del _objs ,_cnt
+    except Exception as _ex:
+        _log .debug ("api_bot_memory_profile(): подсчёт объектов: %s",_ex)
+    return jsonify ({
+    'success':True ,
+    'rss_mb':round (rss_before ,1 ),
+    'rss_after_gc_mb':round (rss_after ,1 ),
+    'threads':threads ,
+    'guilds':guilds ,'members_cached':members ,
+    'channels_cached':channels ,'roles_cached':roles ,
+    'voice_clients':voice ,'cogs':cogs ,'extensions':extensions ,
+    'objects_total':objects_total ,'top_types':top_types ,
+    'per_guild':per_guild ,
+    'gc_generations':[dict (g )for g in gc .get_stats ()]
+    })
+
+
 @app .route ('/api/bot/sync',methods =['POST'])
 @login_required 
 @role_required ('admin')
@@ -3683,7 +3829,16 @@ def api_voice_command ():
 
 
 if __name__ =='__main__':
-    app .run (host ='0.0.0.0',port =int (os .environ .get ('PANEL_PORT')or 5000 ),debug =True )
+    # Панель отдельным процессом (python web/app.py) — без бота; для
+    # «панель видит бота» запускай main.py (встроенный сервер).
+    _p_port =int (os .environ .get ('PANEL_PORT','')or 0 )
+    if not _p_port:
+        try :
+            from config import Config
+            _p_port =int (getattr (Config ,'PORT',0 )or 0 )
+        except Exception :
+            _p_port =0
+    app .run (host ='0.0.0.0',port =(_p_port or 5000 ),debug =False ,threaded =True )
 
     # Parola Sыfыrlama (login страница для) 
 import random as _random 
@@ -4044,8 +4199,11 @@ def api_activity_feed ():
     # WebSocket Server Initialization 
 if WEBSOCKET_ENABLED :
     try :
-    # Запуск WebSocket сервера в отдельном потоке
-        ws_thread =start_websocket_thread (host ='localhost',port =8765 )
+    # Запуск WebSocket сервера в отдельном потоке (адрес/порт из .env;
+    # при запуске ботом через main.py повторный вызов — no-op)
+        _ws_host =(os .environ .get ('WS_HOST','')or '').strip ()or 'localhost'
+        _ws_port =int (os .environ .get ('WS_PORT','')or 0 )or 8765
+        ws_thread =start_websocket_thread (host =_ws_host ,port =_ws_port )
         print ('[WebSocket] Сервер инициализирован')
     except Exception as e :
         print (f'[WebSocket] Ошибка инициализации: {e}')

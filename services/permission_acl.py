@@ -53,7 +53,7 @@ COMMAND_CATEGORIES = {
                    "filter-words", "filter-toggle", "filter-test", "filter-ignore",
                    "reactionrole", "removereactionrole",
                    "replay", "ladder", "ladder-add", "ladder-remove", "ladder-test"],
-    "Тикеты": ["ticket-panel", "ticket-config", "ticket-add", "ticket-remove",
+    "Тикеты": ["ticket-panel", "ticket-config",
                 "ticket-auto-close", "ticket-ai-toggle", "ticket-ai-stats",
                 "ticket-force-escalate", "ticket-rate-limit-info", "ticket-reset-rate-limit",
                 "ticket-feedback-stats", "sla-status", "sla-info", "sla-create", "sla-breaches"],
@@ -74,6 +74,8 @@ ACTIONS = {
     "purge": "Очистка сообщений",
     "lockdown": "Локдаун",
     "roles": "Роли",
+    "jail": "Джейл (изоляция ролями)",
+    "dehoist": "Дихоист (чистка ников)",
 }
 
 # команда -> действия, которые она выполняет (проверяется в рантайме).
@@ -89,17 +91,34 @@ COMMAND_ACTIONS = {
     "mute": ("mute",), "unmute": ("mute",),
     "temp-mute": ("mute",), "temp-unmute": ("mute",),
     "vmute": ("mute",), "vunmute": ("mute",),
+    # тихие муты (mod_plus) — то же действие «Мут», что и обычные муты
+    "ghostmute": ("mute",), "ghostunmute": ("mute",),
     # таймаут
     "timeout": ("timeout",), "untimeout": ("timeout",),
     # варн
     "warn": ("warn",), "unwarn": ("warn",), "clearwarns": ("warn",), "pw": ("warn",),
     # очистка сообщений
     "clear": ("purge",), "purge": ("purge",),
+    # пересоздание канала начисто = зачистка всех сообщений
+    "nuke": ("purge",),
+    # массовая зачистка рейда (кик или бан) — нужны оба разрешения,
+    # чтобы один тумблер нельзя было обойти второй половиной действия
+    "raidcleanup": ("kick", "ban"),
+    # джейл (tag_jail): посадка и освобождение — одно действие «Джейл»
+    "jail": ("jail",), "unjail": ("jail",),
+    # дихоист (mod_kit) — массовая чистка ников
+    "dehoist": ("dehoist",),
     # локдаун
     "lock": ("lockdown",), "unlock": ("lockdown",), "lockdown": ("lockdown",),
     # роли
     "role": ("roles",), "massrole": ("roles",),
     "reactionrole": ("roles",), "removereactionrole": ("roles",),
+    # ── ПКМ-меню (mod_tools) — имена ровно как их видит has_access:
+    # кандидаты режутся по пробелам и склеиваются дефисом; регистр важен.
+    "Изолировать": ("ban",),
+    "Войс-мут": ("mute",), "Войс-размут": ("mute",),
+    "Кик-из-войса": ("kick",),
+    "Предупредить": ("warn",), "Варн-за-сообщение": ("warn",),
 }
 
 # значение опции action в slash-командах (/moderate, /utility) -> ключ действия.
@@ -267,9 +286,11 @@ def check_action(guild_id: int, member, action: str) -> bool:
 
     Действие не привязано к команде: правило «ban» блокирует ЛЮБУЮ команду,
     которая банит (ban, tempban, unban, /moderate action=ban…). По умолчанию
-    (правила нет) — можно. Админ/бот — всегда можно.
+    (правила нет) — можно. Админ/бот — всегда можно, панель (is_panel) —
+    отдельная авторизация, ролевые правила её не касаются.
     """
-    if member is None or getattr(member, "bot", False):
+    if member is None or getattr(member, "bot", False) \
+            or getattr(member, "is_panel", False):
         return True
     if getattr(member, "guild_permissions", None) and member.guild_permissions.administrator:
         return True

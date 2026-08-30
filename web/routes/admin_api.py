@@ -4,7 +4,7 @@
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _process_action, _log, viewer_member, acl_action_allowed,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
@@ -113,6 +113,12 @@ def register(ctx):
                     except Exception as _ex:
                         _log.debug("api_bot_hot_reload(): подавлено: %s", _ex)
                 cog .cog_hash_cache [cog_name ]=h 
+        if reloaded :
+            try :
+                from slash_budget import apply_slash_budget
+                apply_slash_budget (bot .tree )
+            except Exception as _ex :
+                _log .debug ('api_bot_hot_reload(): apply_slash_budget: %s',_ex )
         return jsonify ({'reloaded':reloaded })
 
 
@@ -169,6 +175,9 @@ def register(ctx):
         if not sec :
             return jsonify ({'error':'Неверный формат времени'}),400 
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
+        _acl_m = viewer_member(bot, guild.id if guild else None)
+        if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'mute'):
+            return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         if not guild :
             return jsonify ({'error':'Сервер не найден'}),404 
             # Resolve user
@@ -209,6 +218,9 @@ def register(ctx):
         if not sec :
             return jsonify ({'error':'Неверный формат'}),400 
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
+        _acl_m = viewer_member(bot, guild.id if guild else None)
+        if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'ban'):
+            return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
             member =_run_async (_resolve_member_async (guild ,int (user_id )))
@@ -245,6 +257,9 @@ def register(ctx):
         if not sec :
             return jsonify ({'error':'Неверный формат'}),400 
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
+        _acl_m = viewer_member(bot, guild.id if guild else None)
+        if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'kick'):
+            return jsonify({'error': 'Нет права: «Кик» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
             member =_run_async (_resolve_member_async (guild ,int (user_id )))
@@ -279,6 +294,9 @@ def register(ctx):
         d =request .get_json (silent =True )or {}
         user_id =d .get ('user_id','').strip ('<@!>')
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
+        _acl_m = viewer_member(bot, guild.id if guild else None)
+        if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'mute'):
+            return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         member =guild .get_member (int (user_id ))
         if member and member .is_timed_out ():
             try :
@@ -304,6 +322,9 @@ def register(ctx):
         d =request .get_json (silent =True )or {}
         user_id =d .get ('user_id','').strip ('<@!>')
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
+        _acl_m = viewer_member(bot, guild.id if guild else None)
+        if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'ban'):
+            return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         try :
             user =_run_async (bot .fetch_user (int (user_id )))
             _run_async (guild .unban (user ))
@@ -347,8 +368,8 @@ def register(ctx):
         status_map ={'online':discord .Status .online ,'idle':discord .Status .idle ,'dnd':discord .Status .dnd ,'invisible':discord .Status .invisible }
         type_map ={'listening':discord .ActivityType .listening ,'playing':discord .ActivityType .playing ,'watching':discord .ActivityType .watching ,'competing':discord .ActivityType .competing }
         status =status_map .get (d .get ('status','online'),discord .Status .online )
-        atype =type_map .get (d .get ('activity_type','listening'),discord .ActivityType .listening )
-        atext =d .get ('activity_text','.gg/Hakumo')
+        atype =type_map .get (d .get ('activity_type','watching'),discord .ActivityType .watching )
+        atext =str (d .get ('activity_text','Hakumo')or '').strip ()[:80]or 'Hakumo'
         def _set ():
             _run_async (bot .change_presence (status =status ,activity =discord .Activity (type =atype ,name =atext )))
         asyncio .run_coroutine_threadsafe (_set (),bot .loop ).result (timeout =5 )
@@ -420,6 +441,11 @@ def register(ctx):
         try :
             future =asyncio .run_coroutine_threadsafe (bot .load_extension (name ),bot .loop )
             future .result (timeout =10 )
+            try :
+                from slash_budget import apply_slash_budget
+                apply_slash_budget (bot .tree )
+            except Exception as _ex :
+                _log .debug ('api_bot_load(): apply_slash_budget: %s',_ex )
             return jsonify ({'ok':True ,'name':name })
         except ModuleNotFoundError as e :
             return jsonify ({'error':f'Файл не найден: {e}'}),404 
@@ -480,6 +506,11 @@ def register(ctx):
         try :
             future =asyncio .run_coroutine_threadsafe (bot .reload_extension (name ),bot .loop )
             future .result (timeout =10 )
+            try :
+                from slash_budget import apply_slash_budget
+                apply_slash_budget (bot .tree )
+            except Exception as _ex :
+                _log .debug ('api_bot_reload(): apply_slash_budget: %s',_ex )
             return jsonify ({'ok':True ,'name':name })
         except Exception as e :
             return jsonify ({'error':f'Не удалось перезагрузить {name}: {e}'}),400 
@@ -504,4 +535,9 @@ def register(ctx):
                 results .append ({'name':ext ,'ok':True })
             except Exception as e :
                 results .append ({'name':ext ,'ok':False ,'error':str (e )})
+        try :
+            from slash_budget import apply_slash_budget
+            apply_slash_budget (bot .tree )
+        except Exception as _ex :
+            _log .debug ('api_bot_reload_all(): apply_slash_budget: %s',_ex )
         return jsonify ({'ok':True ,'results':results })

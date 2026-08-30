@@ -228,6 +228,18 @@ def register(ctx):
     @role_required('admin')
     def api_ladder_add(gid):
         data = request.get_json(silent=True) or {}
+        # Классические разрешения: ступень «бан» требует права «Бан» и т.д. —
+        # настройки те же, что в /modpanel, «Пользователях» и планировщике.
+        _act = str(data.get('action') or '').strip().lower()
+        if _act in ACTIONS:
+            import web.app as _app
+            from web.routes._common import viewer_member, acl_action_allowed
+            _bot = _app.bot_instance
+            _member = viewer_member(_bot, gid) if _bot is not None else None
+            if not acl_action_allowed(gid, _member, _act):
+                return jsonify({'success': False,
+                                'error': 'Нет права: действие не разрешено вашей '
+                                         'роли (настройка — «Права команд»)'}), 403
         ok, err, payload = add_flow(gid, data.get('count'), data.get('action'),
                                     data.get('duration'), data.get('unit'))
         if not ok:

@@ -764,6 +764,30 @@ class Moderation (commands .Cog ):
             guild =guild )
             await _respond (interaction ,embed =confirm ,ephemeral =True )
 
+    async def _ensure_action_acl(self, interaction, action):
+        """Пункт /modpanel: у модератора должно быть «классическое» разрешение.
+
+        Меню живёт 5 минут — владелец мог успеть снять «Бан»/«Мут»/… у роли.
+        Отказ здесь (до модалки и до исполнения): без права действие не
+        выполнится, даже если пункт ещё виден на экране. Веб-панель сюда не
+        ходит — у неё свои проверки авторизации (apply_panel_action).
+        """
+        try:
+            from services.permission_acl import check_action as _acl_check
+            key = MODPANEL_ACL_KEYS.get(action)
+            guild = getattr(interaction, 'guild', None)
+            if key and guild and not _acl_check(guild.id, interaction.user, key):
+                label = next((lbl for val, lbl, _d, _k in MODPANEL_ACTIONS
+                              if val == action), action)
+                await _respond(interaction, embed=error_embed(
+                    f'Действие «{label}» тебе не дал владелец. '
+                    'Разрешения ролей: панель → Доступ → Права команд → '
+                    'Классические разрешения.'), ephemeral=True)
+                return False
+        except Exception as _ex:
+            log.debug(f'[MODPANEL] ACL-проверка действия {action}: {_ex}')
+        return True
+
     async def apply_panel_action (self ,guild ,target ,action ,reason ='' ,
     amount =None ,proof_link =None ,actor ='Панель'):
         """Наказание из веб-панели («Пользователи») — единый путь с /modpanel.
@@ -1025,12 +1049,52 @@ MODPANEL_EMOJI = {
     "vunmute": "🎤",
 }
 
+# Пункт /modpanel → «классическое» разрешение (панель → Доступ → Права
+# команд → Классические разрешения). Ключи — как в permission_acl.ACTIONS:
+# не дал модератору «Бан» → у него в /modpanel нет ни «Бан», ни «Разбан»;
+# не дал «Мут» → нет мута чата/войса и снятий; «Таймаут» → нет таймаута
+# и снятия; «Очистка» → нет чистки. Правило не задано — действие доступно.
+MODPANEL_ACL_KEYS = {
+    "warn": "warn",
+    "ban": "ban",
+    "unban": "ban",
+    "timeout": "timeout",
+    "untimeout": "timeout",
+    "mute_chat": "mute",
+    "vmute": "mute",
+    "vunmute": "mute",
+    "clear": "purge",
+}
+
+
+def _action_acl_allows(guild_id, member, action_name):
+    """Разрешено ли модератору действие action_name «классическим» ACL.
+
+    Панель → Доступ → Права команд → «Классические разрешения»: если для
+    действия заданы роли, у модератора должна быть одна из них. Правила
+    нет — можно (как и везде в permission_acl). Сбой чтения БД не ломает
+    панель модератора: пункт скрывается только при явном отказе.
+    """
+    key = MODPANEL_ACL_KEYS.get(action_name)
+    if not key:
+        return True
+    try:
+        from services.permission_acl import check_action as _acl_check
+        return _acl_check(guild_id, member, key)
+    except Exception:
+        log.debug('actions_for_member: ACL-проверка %s пропущена (сбой БД)', action_name)
+        return True
+
 
 def actions_for_member(guild, member):
     """Какие действия панели показывать модератору.
 
-    По умолчанию — все. Если у его ролей есть свои лимиты/потолки
-    (Щит сервера → Лимиты команды) — только настроенные действия.
+    По умолчанию — все. Фильтры (оба работают вместе):
+    1) «Лимиты команды» (Щит сервера → Лимиты → роль): если у ролей
+       модератора есть свои лимиты/потолки — только настроенные действия;
+    2) «Классические разрешения» (Доступ → Права команд → действия):
+       не дал роли «Бан»/«Мут»/«Таймаут»/«Варн»/«Очистку» — пункт не
+       показывается, даже если пункт позволяет команда.
     Владелец бота и владелец сервера видят всё.
     """
     try:
@@ -1054,8 +1118,10 @@ def actions_for_member(guild, member):
     except Exception:
         scoped = None
     if scoped is None:
-        return list(MODPANEL_ACTIONS)
-    return [a for a in MODPANEL_ACTIONS if a[3] in scoped]
+        base = list(MODPANEL_ACTIONS)
+    else:
+        base = [a for a in MODPANEL_ACTIONS if a[3] in scoped]
+    return [a for a in base if _action_acl_allows(guild.id, member, a[0])]
 
 
 class ModActionSelect(discord.ui.Select):
@@ -1077,6 +1143,9 @@ class ModActionSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         action = self.values[0]
+        # Защита на границе: доступ могли снять, пока меню было на экране
+        if not await self.cog._ensure_action_acl(interaction, action):
+            return
         modal = ModActionModal(self.cog, action, guild=interaction.guild)
         await interaction.response.send_modal(modal)
 
@@ -1146,6 +1215,10 @@ class ModActionModal(discord.ui.Modal):
             self.add_item(self.proof)
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Финальная защита действия: модалку могли открыть до смены прав,
+        # роль могли снять — без «классического» разрешения не исполняем.
+        if not await self.cog._ensure_action_acl(interaction, self.action):
+            return
         # Быстрый ack — дальше цепочка (таймаут → дело → DM → лог) может
         # занять больше 3 секунд, без defer токен умирал и Discord рисовал
         # «Приложение не отвечает», хотя наказание уже применено.

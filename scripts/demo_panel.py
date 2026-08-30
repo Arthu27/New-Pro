@@ -214,6 +214,29 @@ def seed():
                 ]
             store.set(GID, 'settings', demo_settings)
 
+    # мост PagerDuty: канал тревог + живая история доставок, чтобы страница
+    # «Настройки · PagerDuty» показывала полный цикл (KPI, чипы, мост)
+    from services import pagerduty_hook as _pd
+    from services.channel_routes import set_route as _set_route
+    _set_route(GID, 'pagerduty_channel', 777002)
+    _pd.get_settings(GID)   # гарантирует токен моста
+    if not _pd.recent(GID, 50):
+        now = datetime.now(timezone.utc)
+        demo_events = [
+            (1, 'incident.triggered', '🔥 Тревога #12', 'Payment API не отвечает', 'sent', 'общий'),
+            (2, 'incident.acknowledged', '✅ Принято #12', 'Payment API не отвечает', 'sent', 'общий'),
+            (3, 'incident.resolved', '🎉 Решено #12', 'Payment API не отвечает', 'sent', 'общий'),
+            (5, 'incident.triggered', '🔥 Тревога #13', 'БД перегружена', 'offline', 'бот переподключался — PD повторил'),
+            (6, 'incident.triggered', '🔥 Тревога #13', 'БД перегружена', 'sent', 'общий'),
+            (26, 'incident.triggered', '🔥 Тревога #14', 'Диск места', 'sent', 'общий'),
+        ]
+        for mins, ev, title, inc, status, note in demo_events:
+            _pd.log_delivery(
+                GID,
+                {'event': ev, 'title': title, 'incident_title': inc,
+                 'at': (now - timedelta(minutes=mins)).isoformat(timespec='seconds')},
+                status, note)
+
 
 seed()
 
@@ -248,6 +271,25 @@ class FakeChannel:
         return self.name
 
 
+class _FakeMember:
+    """Лёгкий участник для кэша демо-гильдии (профиль памяти)."""
+
+    class _Avatar:
+        url = 'https://i.imgur.com/demo.png'
+
+    def __init__(self, uid):
+        self.id = uid
+        self.name = f'Участник {uid}'
+        self.display_name = self.name
+        self.bot = False
+        self.status = 'online' if uid % 5 else 'idle'
+        self.roles = []
+        self.avatar = None
+        self.display_avatar = self._Avatar()
+        self.mention = f'<@{uid}>'
+        self.joined_at = NOW - timedelta(days=uid % 90)
+
+
 class FakeGuild:
     id = GID
     name = 'Демо-сервер Hakumo'
@@ -258,12 +300,15 @@ class FakeGuild:
     splash = None
     description = 'Песочница панели Hakumo'
     premium_tier = 2
+    premium_subscription_count = 12
     vanity_url_code = None
     created_at = NOW - timedelta(days=400)
 
     def __init__(self):
         self.channels = [FakeChannel(777001, 'доказательства'), FakeChannel(777002, 'общий')]
         self.text_channels = self.channels
+        # лёгкий кэш участников: профиль памяти показывает живые числа
+        self.members = [_FakeMember(2000 + i) for i in range(128)]
         self.voice_channels = []
         self.stage_channels = []
         self.forums = []
@@ -271,7 +316,6 @@ class FakeGuild:
         self.roles = []
         self.emojis = []
         self.stickers = []
-        self.members = []
 
     def get_member(self, uid):
         return None
@@ -295,8 +339,31 @@ class FakeUser:
         return 'Hakumo#0'
 
 
+class _FakeDiagnosticsCog:
+    """Стаб кога Diagnostics: живой снимок здоровья для демо-витрины."""
+
+    def get_health_snapshot(self):
+        now = time.time()
+        return {
+            'healthy': True, 'uptime_sec': int(now % 86400),
+            'latency_ms': 12.4, 'guilds': 1, 'cogs_loaded': 24,
+            'threads': 5, 'last_error': None,
+        }
+
+
+class _FakeTempModCog:
+    """Стаб кога TempModeration: активных наказаний в демо нет."""
+
+    _mutes = {}
+    _bans = {}
+    _kicks = {}
+    _scheduled = []
+
+
 class FakeBot:
     """Минимальный суррогат discord.Client для панели."""
+
+    _COGS = {'Diagnostics': _FakeDiagnosticsCog, 'TempModeration': _FakeTempModCog}
 
     def __init__(self):
         self.guilds = [FakeGuild()]
@@ -305,15 +372,22 @@ class FakeBot:
         self.ws = None
         self.loop = None
         self.owner_id = 7
+        self._cog_instances = {name: cls() for name, cls in self._COGS.items()}
 
     def is_ready(self):
         return True
+
+    def is_closed(self):
+        return False
+
+    def change_presence(self, **kw):
+        pass
 
     def get_guild(self, gid):
         return next((g for g in self.guilds if g.id == gid), None)
 
     def get_cog(self, name):
-        return None
+        return self._cog_instances.get(name)
 
     def get_channel(self, cid):
         return None

@@ -538,6 +538,16 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_mod_control_amnesty(gid):
+        # Классическое разрешение: амнистия снимает ВСЕ варны — тот же
+        # тумблер «Варн» (как у /unwarn и /clearwarns).
+        import web.app as _app
+        from web.routes._common import viewer_member, acl_action_allowed
+        _bot = _app.bot_instance
+        _member = viewer_member(_bot, gid) if _bot is not None else None
+        if not acl_action_allowed(gid, _member, 'warn'):
+            return jsonify({'success': False,
+                            'error': 'Нет права: «Варн» не разрешено вашей '
+                                     'роли (настройка — «Права команд»)'}), 403
         data = _json()
         ok, err, entry = amnesty_user(gid, data.get('user_id'), by=session.get('username'))
         if not ok:

@@ -55,9 +55,9 @@ def register(ctx):
                         'guilds': len(getattr(bot, 'guilds', []) or []),
                         'discord_version': _discord.__version__,
                         'prefix': Config.COMMAND_PREFIX,
-                        'presence': {'status': cfg.get('status', 'idle'),
-                                     'activity_type': cfg.get('activity_type', 'listening'),
-                                     'activity_text': cfg.get('activity_text', '.gg/Hakumo')}})
+                        'presence': {'status': cfg.get('status', 'online'),
+                                     'activity_type': cfg.get('activity_type', 'watching'),
+                                     'activity_text': cfg.get('activity_text', 'Hakumo') or 'Hakumo'}})
 
 
     @app.route('/api/bot-settings/presence', methods=['POST'])
@@ -111,16 +111,60 @@ def register(ctx):
     @role_required('owner')
     def api_bot_settings_sync():
         import web.app as _app
+        import asyncio
         bot = _app.bot_instance
         tree = getattr(bot, 'tree', None) if bot is not None else None
         if tree is None:
             return jsonify({'ok': False, 'error': 'Бот офлайн — синхронизировать некому'}), 503
         try:
-            # выключенные команды («Команды вкл/выкл») в Discord не попадают —
-            # они исчезают из списка «/», а не отвечают «выключена» после ввода
+            # Синк уходит ФОНОМ и без ожидания ответа: full_sync ходит в
+            # Discord (глобальная очистка + синк каждой гильдии) и легко
+            # идёт дольше 10 секунд. Прежний «wait с таймаутом» показывал
+            # «Синк упал», хотя синк продолжался, — и повторные клики
+            # плодили вызовы до rate limit (дубли в меню). Лок внутри
+            # full_sync не пускает второй прогон параллельно.
             from services.sync_filtered import full_sync as _full_sync
-            synced = _run_async(_full_sync(bot))
-            n = len(synced) if isinstance(synced, (list, tuple)) else 0
-            return jsonify({'ok': True, 'synced': n})
+            asyncio.run_coroutine_threadsafe(_full_sync(bot), bot.loop)
+            return jsonify({'ok': True, 'started': True})
         except Exception as e:
-            return jsonify({'ok': False, 'error': f'Синк упал: {e}'}), 500
+            return jsonify({'ok': False, 'error': f'Синк не запустился: {e}'}), 500
+
+
+    @app.route('/api/bot-settings/update-source', methods=['GET', 'POST'])
+    @login_required
+    @role_required('owner')
+    def api_bot_settings_update_source():
+        """Источник обновлений: ОТКУДА бот качает версии (заказ 30.08
+        «дай, я поставлю, откуда он будет скачивать»).
+
+        Репозиторий и ветку владелец задаёт прямо в панели — без правки
+        .env. Значения читают и /update, и демон автообновления. GET ещё
+        показывает локальную и свежую версии — сразу видно, отстаёт ли
+        бот и откуда он качает.
+        """
+        import web.app as _app
+        from services import update_source as US
+        if request.method == 'GET':
+            payload = {'ok': True, 'repo': US.get_repo(), 'branch': US.get_branch(),
+                       'kind': US.source_kind(), 'local_sha': None, 'remote_sha': None}
+            if getattr(_app, '_demo_mode', lambda: False)():
+                payload['demo'] = True
+                return jsonify(payload)
+            try:
+                from services import self_update as SU
+                payload['local_sha'] = SU.local_sha(str(_REPO_ROOT))
+                payload['remote_sha'] = SU.remote_sha()
+            except Exception as _ex:
+                _log.debug('update-source GET: %s', _ex)
+            return jsonify(payload)
+
+        data = request.get_json(silent=True) or {}
+        repo = str(data.get('repo') or '').strip()
+        branch = str(data.get('branch') or '').strip()
+        ok, error, (new_repo, new_branch) = US.set_source(repo, branch)
+        if not ok:
+            return jsonify({'ok': False, 'error': error}), 400
+        return jsonify({'ok': True, 'repo': new_repo, 'branch': new_branch,
+                        'kind': US.source_kind(),
+                        'hint': 'Источник сохранён — /update и автообновление '
+                                'качают уже оттуда. Перезапуск не нужен.'})

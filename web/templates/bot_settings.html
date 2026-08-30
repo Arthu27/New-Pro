@@ -68,7 +68,7 @@
       </select>
     </div>
     <div class="row"><label>Текст</label>
-      <input type="text" id="bs-text" maxlength="80" placeholder=".gg/Hakumo" aria-label="Текст активности">
+      <input type="text" id="bs-text" maxlength="80" placeholder="Hakumo" aria-label="Текст активности">
     </div>
     <div class="bs-actions">
       <button class="btn btn-primary" id="bs-save" type="button"><i class="fas fa-save"></i> Применить</button>
@@ -103,6 +103,31 @@
     </div>
   </div>
 
+  <!-- Источник обновлений -->
+  <div class="bs-card" data-reveal>
+    <div class="bs-head">
+      <div class="bs-icon"><i class="fas fa-cloud-arrow-down"></i></div>
+      <div><div class="bs-title">Источник обновлений</div>
+        <div class="bs-sub">Откуда бот качает свежие версии: репозиторий и ветка на GitHub. Действует сразу и для команды /update, и для автообновления. Здесь же видно, на какой версии бот и что есть на GitHub.</div></div>
+    </div>
+    <div class="row"><label>Репозиторий</label>
+      <input type="text" id="bs-upd-repo" maxlength="100" placeholder="Arthu27/New-Pro" aria-label="Репозиторий обновлений">
+    </div>
+    <div class="row"><label>Ветка</label>
+      <input type="text" id="bs-upd-branch" maxlength="120" placeholder="arena/01a04e42-new-pro" aria-label="Ветка обновлений">
+    </div>
+    <div class="bs-info">
+      <div class="bs-info-row"><i class="fas fa-code-commit"></i><span class="k">Версия бота</span><span class="v" id="bs-upd-local">…</span></div>
+      <div class="bs-info-row"><i class="fab fa-github"></i><span class="k">Свежая на GitHub</span><span class="v" id="bs-upd-remote">…</span></div>
+      <div class="bs-info-row"><i class="fas fa-sliders"></i><span class="k">Источник</span><span class="v" id="bs-upd-kind">…</span></div>
+    </div>
+    <div class="bs-actions">
+      <button class="btn btn-primary" id="bs-upd-save" type="button"><i class="fas fa-save"></i> Сохранить источник</button>
+      <span class="bs-live" id="bs-upd-live"></span>
+    </div>
+    <div class="bs-out" id="bs-upd-out"></div>
+  </div>
+
   <!-- Инфо -->
   <div class="bs-card" data-reveal>
     <div class="bs-head">
@@ -135,6 +160,7 @@
   }
 
   function load() {
+    loadUpdateSource();
     fetch('/api/bot-settings').then(function (r) { return r.json(); }).then(function (d) {
       if (!d || !d.ok) throw new Error('api');
       $('bs-status').value = d.presence.status;
@@ -167,6 +193,53 @@
       }).catch(function () { toast('Сеть недоступна', false); });
   }
 
+  /* ── Источник обновлений ─────────────────────────────────── */
+  function shortSha(sha) { return sha ? String(sha).slice(0, 7) : '—'; }
+
+  function loadUpdateSource() {
+    fetch('/api/bot-settings/update-source').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.ok) throw new Error('api');
+      if ($('bs-upd-repo')) $('bs-upd-repo').value = d.repo || '';
+      if ($('bs-upd-branch')) $('bs-upd-branch').value = d.branch || '';
+      if ($('bs-upd-kind')) $('bs-upd-kind').textContent = d.kind || '';
+      if ($('bs-upd-local')) $('bs-upd-local').textContent = d.demo ? 'демо' : shortSha(d.local_sha);
+      if ($('bs-upd-remote')) {
+        $('bs-upd-remote').textContent = d.demo ? 'демо'
+          : (d.remote_sha ? shortSha(d.remote_sha) : 'GitHub не ответил');
+        if (d.local_sha && d.remote_sha) {
+          $('bs-upd-remote').textContent += (d.local_sha === d.remote_sha)
+            ? ' · бот свежий' : ' · ЕСТЬ ОБНОВЛЕНИЕ — /update в ЛС бота';
+        }
+      }
+    }).catch(function () {
+      if ($('bs-upd-local')) $('bs-upd-local').textContent = 'не удалось узнать';
+    });
+  }
+
+  function saveUpdateSource() {
+    var out = $('bs-upd-out');
+    out.className = 'bs-out show';
+    out.textContent = 'Сохраняю…';
+    fetch('/api/bot-settings/update-source', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repo: $('bs-upd-repo').value, branch: $('bs-upd-branch').value })
+    }).then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+      .then(function (res) {
+        if (res.s === 200 && res.d.ok) {
+          out.className = 'bs-out show ok';
+          out.textContent = res.d.hint || 'Сохранено.';
+          loadUpdateSource();
+        } else {
+          out.className = 'bs-out show err';
+          out.textContent = '' + (res.d.error || 'ошибка');
+        }
+      }).catch(function () {
+        out.className = 'bs-out show err';
+        out.textContent = 'Сеть недоступна';
+      });
+  }
+  if ($('bs-upd-save')) $('bs-upd-save').addEventListener('click', saveUpdateSource);
+
   function sync() {
     var out = $('bs-sync-out');
     out.className = 'bs-out show';
@@ -176,7 +249,7 @@
       .then(function (res) {
         if (res.s === 200 && res.d.ok) {
           out.className = 'bs-out show ok';
-          out.textContent = 'Готово: синхронизировано команд — ' + res.d.synced;
+          out.textContent = 'Синк запущен в фоне: секунда-другая — и команды на месте. Жать повторно не нужно.';
         } else {
           out.className = 'bs-out show err';
           out.textContent = '' + (res.d.error || 'ошибка');

@@ -179,11 +179,39 @@ def render_html(events, guild_name='', filters_desc='', generated_at=None):
 </html>"""
 
 
-def export_filename(guild_name='server', now=None):
-    """Имя файла вида modlog_гильдия_2026-08-17.html (только безопасные символы)."""
-    now = now or datetime.now(UTC)
-    safe = ''.join(ch if (ch.isalnum() or ch in '-') else '_' for ch in str(guild_name or 'server'))
+# Транслитерация RU -> EN: имена файлов идут в HTTP-заголовок Content-Disposition,
+# который обязан быть ASCII/latin-1. Кириллица в имени роняла ответ сервера
+# с UnicodeEncodeError, и браузер висел на бесконечной загрузке (баг 29.08.2026).
+_TRANSLIT = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+}
+
+
+def _ascii_name(name):
+    """Любое имя -> безопасная ASCII-строка (транслит + фильтр)."""
+    out = []
+    for ch in str(name or ''):
+        low = ch.lower()
+        if low in _TRANSLIT:
+            tr = _TRANSLIT[low]
+            out.append(tr.upper() if (ch.isupper() and tr) else tr)
+        elif ch.isascii() and (ch.isalnum() or ch == '-'):
+            out.append(ch)
+        elif ch in ' ._':
+            out.append('_')
+    safe = ''.join(out)
     while '__' in safe:
         safe = safe.replace('__', '_')
-    safe = safe.strip('_')[:40] or 'server'
+    return safe.strip('_')[:40]
+
+
+def export_filename(guild_name='server', now=None):
+    """Имя файла вида modlog_Gildia_2026-08-17.html — строго ASCII:
+    имя попадает в Content-Disposition, кириллица там запрещена."""
+    now = now or datetime.now(UTC)
+    safe = _ascii_name(guild_name) or 'server'
     return f'modlog_{safe}_{now.strftime("%Y-%m-%d")}.html'

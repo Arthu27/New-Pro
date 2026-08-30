@@ -20,6 +20,10 @@ os.chdir(_TMP)
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 os.makedirs('data', exist_ok=True)
+# actions_for_member теперь читает и Action ACL (permission_acl → SQLite) —
+# изолируем БД, чтобы тест не трогал боевую data/bot.db
+import config  # noqa: E402
+config.Config.DB_PATH = os.path.abspath('data/bot.db')
 
 PASS = 0
 FAIL = 0
@@ -51,15 +55,16 @@ for name, kind in (('modpanel', 'slash'), ('play', 'slash'),
 import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
 check(set(keep) == {'modpanel', 'play', 'апелляция', 'update',
-                    'afk', 'afk-remove'},
-      f'белый список слеш-меню = 6 команд (сейчас: {sorted(keep)})')
-for name in ('modpanel', 'play', 'апелляция', 'update', 'afk', 'afk-remove'):
+                    'afk', 'afk-remove',
+                    'ticket-panel'},
+      f'белый список слеш-меню = 7 команд (сейчас: {sorted(keep)})')
+for name in ('modpanel', 'play', 'апелляция', 'update', 'afk', 'afk-remove',
+             'ticket-panel'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
 
 # Урезанные из меню имена НЕ должны вернуться в KEEP_SLASH незаметно
 for gone in ('backup', 'backup-list', 'diagnose', 'health', 'hotreload',
-             'leave', 'logs-setup', 'ticket-add', 'ticket-panel',
-             'ticket-remove', 'help', 'warn', 'module'):
+             'leave', 'logs-setup', 'help', 'warn', 'module'):
     check(gone not in keep, f'{gone} убран из слеш-меню (заказ владельца)')
 
 # warn живёт ВНУТРИ /modpanel (а не отдельной командой)

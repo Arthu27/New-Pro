@@ -113,6 +113,59 @@ def check_token(gid, token):
                                                           str(token or ''))
 
 
+# ── история доставок (кольцевой журнал на 50 событий) ────────────────────
+# Ответ на вопрос «данные отправляются или нет?» — видно из панели:
+# каждое событие PagerDuty (и тестовая тревога) пишется сюда с результатом
+# доставки: sent / offline / no_channel / error. Живёт в том же файле.
+
+HISTORY_LIMIT = 50
+
+
+def log_delivery(gid, info, status, note=''):
+    """Записать доставку: (gid, карточка-данные, статус, пояснение)."""
+    try:
+        from datetime import datetime, timezone
+        data = _load()
+        row = data.get(str(gid)) or {}
+        hist = row.get('history') if isinstance(row.get('history'), list) else []
+        hist.append({
+            'at': datetime.now(timezone.utc).isoformat(timespec='seconds'),
+            'event': str(info.get('event') or ''),
+            'title': str(info.get('title') or '')[:80],
+            'incident': str(info.get('incident_title') or '')[:120],
+            'status': str(status or ''),
+            'note': str(note or '')[:120],
+        })
+        row['history'] = hist[-HISTORY_LIMIT:]
+        data[str(gid)] = row
+        _save(data)
+    except Exception as ex:            # история — не критичный путь
+        log.debug('pagerduty: история не записана: %s', ex)
+
+
+def recent(gid, limit=15):
+    """Последние события (новые первыми)."""
+    row = _load().get(str(gid)) or {}
+    hist = row.get('history') if isinstance(row.get('history'), list) else []
+    out = list(reversed(hist))[:max(1, int(limit or 15))]
+    return out
+
+
+def history_stats(gid):
+    """Сводка по истории: сколько всего, доставлено, ждало бота, падений."""
+    row = _load().get(str(gid)) or {}
+    hist = row.get('history') if isinstance(row.get('history'), list) else []
+    st = {'total': len(hist), 'sent': 0, 'offline': 0, 'no_channel': 0,
+          'error': 0, 'last_at': ''}
+    for e in hist:
+        k = str(e.get('status') or '')
+        if k in st:
+            st[k] += 1
+    if hist:
+        st['last_at'] = str(hist[-1].get('at') or '')
+    return st
+
+
 # ── разбор payload PagerDuty (v2 и v3) ───────────────────────────────────
 
 def normalize_payload(payload):

@@ -18,7 +18,7 @@ set REKEY=
 echo(
 echo  ==========================================================
 echo   Hakumo Panel - your own domain setup
-echo   %HOST1% and %HOST3% = http://localhost:%PANEL_PORT%
+echo   %HOST1% and %HOST3% = http://127.0.0.1:%PANEL_PORT%
 echo  ==========================================================
 echo(
 echo  Make sure first:
@@ -129,11 +129,11 @@ if not exist "%USERPROFILE%\.cloudflared" mkdir "%USERPROFILE%\.cloudflared" >nu
 >> "%CFG%" echo(
 >> "%CFG%" echo ingress:
 >> "%CFG%" echo   - hostname: %HOST1%
->> "%CFG%" echo     service: http://localhost:%PANEL_PORT%
+>> "%CFG%" echo     service: http://127.0.0.1:%PANEL_PORT%
 >> "%CFG%" echo   - hostname: %HOST2%
->> "%CFG%" echo     service: http://localhost:%PANEL_PORT%
+>> "%CFG%" echo     service: http://127.0.0.1:%PANEL_PORT%
 >> "%CFG%" echo   - hostname: %HOST3%
->> "%CFG%" echo     service: http://localhost:%PANEL_PORT%
+>> "%CFG%" echo     service: http://127.0.0.1:%PANEL_PORT%
 >> "%CFG%" echo   - service: http_status:404
 echo        Config written: %CFG%
 

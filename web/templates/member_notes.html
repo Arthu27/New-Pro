@@ -46,7 +46,7 @@
 
 <div id="member-result"  class="member-result-box">
   <div class="note-user">
-    <img alt="" class="note-avatar" id="res-avatar" src="">
+    <img alt="" class="note-avatar" id="res-avatar">
     <div><div class="note-name" id="res-name"></div><div class="note-id" id="res-id"></div></div>
   </div>
   <div class="section-title"><i class="fas fa-sticky-note"></i> Заметки</div>
@@ -61,6 +61,11 @@
 <div id="all-notes"></div>
 
 <script>
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 var currentMemberId = null;
 var selectedGuild = '{{ main_guild_id }}';
 
@@ -81,7 +86,9 @@ async function searchMember() {
   });
   if(!found) { showToast('Участник не найден.', false); return; }
   currentMemberId = found.id;
-  document.getElementById('res-avatar').src = found.avatar;
+  var _av = document.getElementById('res-avatar');
+  if (found.avatar) { _av.removeAttribute('src'); _av.src = found.avatar; }
+  else { _av.removeAttribute('src'); }
   document.getElementById('res-name').textContent = found.display_name;
   document.getElementById('res-id').textContent = found.id;
   document.getElementById('member-result').style.display = 'block';
@@ -93,8 +100,8 @@ async function loadNotes(id) {
   var notes = await r.json();
   document.getElementById('notes-list').innerHTML = notes.length ?
     notes.map(function(n){
-      return '<div class="note-item"><div class="note-text">'+n.text+'</div>'+
-        '<div class="note-meta"><i class="fas fa-user"   style="margin-right: 4px;"></i>'+n.author+' &nbsp;·&nbsp; '+new Date(n.created_at).toLocaleString('tr-TR')+'</div>'+
+      return '<div class="note-item"><div class="note-text">'+esc(n.text || n.note || '')+'</div>'+
+        '<div class="note-meta"><i class="fas fa-user"   style="margin-right: 4px;"></i>'+esc(n.author || '—')+' &nbsp;·&nbsp; '+(n.created_at || n.timestamp ? new Date(n.created_at || n.timestamp).toLocaleString('ru-RU') : '—')+'</div>'+
         '<button type="button" class="note-del" aria-label="Удалить заметку" title="Удалить" onclick="deleteNote(\''+n.id+'\',\''+id+'\')"><i class="fas fa-xmark"></i></button></div>';
     }).join('') :
     '<p >Пока нет заметок.</p>';
@@ -125,7 +132,7 @@ async function loadAllNotes() {
   if(!all.length) { box.innerHTML='<div class="empty-state"><i class="fas fa-sticky-note"   style="opacity: 0.3; margin-bottom: 10px;"></i>Пока нет заметок.</div>'; return; }
   box.innerHTML = all.map(function(entry){
     return '<div class="note-card"><div class="note-user">'+
-      '<img alt="" class="note-avatar" src="'+entry.avatar+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">'+
+      '<img alt="" class="note-avatar"'+(entry.avatar ? ' src="'+esc(entry.avatar)+'" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'"' : '')+'>'+
       '<div><div class="note-name">'+entry.name+'</div><div class="note-id">'+entry.id+'</div></div></div>'+
       entry.notes.map(function(n){
         return '<div class="note-item"><div class="note-text">'+n.text+'</div>'+

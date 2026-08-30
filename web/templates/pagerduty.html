@@ -4,57 +4,168 @@
 {% block content %}
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Интеграции</div>
-    <h1>Тревоги PagerDuty → Discord</h1>
-    <p>PagerDuty не умеет слать в Discord напрямую — панель принимает его события
-       сама и постит красивую карточку в ваш канал: тревога, принято, решено — каждая своим цветом.</p>
+    <div class="eyebrow">Настройки <span class="sep">·</span> PagerDuty</div>
+    <h1>Мост тревог PagerDuty → Discord</h1>
+    <p>PagerDuty не умеет слать в Discord сам — панель принимает его тревоги и превращает
+       в понятные карточки в вашем канале: что случилось, кто дежурный, ссылка на инцидент.
+       Ниже — адрес моста, его живое состояние и история каждого сигнала.</p>
   </div>
   <div class="page-head-side">
-    <span class="pd-badge" id="pdState" title="Состояние моста"><i class="fas fa-tower-broadcast"></i> проверка…</span>
+    <span class="pd-pill" id="pdState"><i class="fas fa-tower-broadcast"></i> проверка…</span>
   </div>
 </div>
 
 <style>
-.pd-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:999px;padding:5px 12px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent))}
-.pd-badge.on{color:#2ecc71;border-color:color-mix(in srgb,#2ecc71 35%,transparent)}
-.pd-badge.off{color:var(--err,#e05d5d);border-color:color-mix(in srgb,var(--err,#e05d5d) 35%,transparent)}
-.pd-cols{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-top:14px}
+/* ═══ Мост PagerDuty — состояние, а не догадки ═══ */
+.pd-pill{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--text-3);border:1px solid var(--line-2);border-radius:999px;padding:7px 14px;background:var(--surface-2)}
+.pd-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--text-3);flex-shrink:0}
+.pd-pill.ok{color:#15803d;border-color:color-mix(in srgb,var(--ok) 35%,transparent)}
+.pd-pill.ok .dot{background:var(--ok);animation:pdPulse 2.4s ease-out infinite}
+.pd-pill.warn{color:#92400e;border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+.pd-pill.warn .dot{background:var(--warn)}
+.pd-pill.err{color:#b91c1c;border-color:color-mix(in srgb,var(--err) 35%,transparent)}
+.pd-pill.err .dot{background:var(--err)}
+@keyframes pdPulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 45%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion: reduce){.pd-pill.ok .dot{animation:none}}
+
+/* ── диаграмма моста: PagerDuty → Панель → Discord ── */
+.pd-bridge{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:10px;align-items:stretch;margin-top:14px}
+@media (max-width:880px){.pd-bridge{grid-template-columns:1fr;gap:8px}.pd-link{transform:rotate(90deg);margin:0 auto}}
+.pd-node{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 14px;display:flex;gap:11px;align-items:flex-start;min-width:0}
+.pd-node .ico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-size:15px;flex-shrink:0;border:1px solid var(--line-2)}
+.pd-node h4{margin:0;font-size:12.5px;letter-spacing:.02em}
+.pd-node .st{font-size:11.5px;color:#5f6b7a;line-height:1.45;margin-top:3px}
+.pd-node .st b{font-weight:700}
+.pd-node.ok .ico{color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.pd-node.warn .ico{color:var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.pd-node.err .ico{color:var(--err);background:color-mix(in srgb,var(--err) 10%,transparent);border-color:color-mix(in srgb,var(--err) 30%,transparent)}
+.pd-node.dim .ico{color:var(--text-3);background:var(--surface-2)}
+.pd-link{display:grid;place-items:center;color:var(--text-3);font-size:15px;padding:0 2px}
+.pd-link i{opacity:.5}
+
+/* ── KPI ── */
+.pd-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.pd-kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+.pd-kpi .v{font-size:22px;font-weight:800;font-family:var(--mono);font-variant-numeric:tabular-nums;line-height:1.1}
+.pd-kpi .l{font-size:10.5px;color:var(--text-3);letter-spacing:.05em;text-transform:uppercase;margin-top:4px}
+.pd-kpi.tone-ok .v{color:var(--ok)}
+.pd-kpi.tone-warn .v{color:var(--warn)}
+.pd-kpi.tone-err .v{color:var(--err)}
+
+/* ── сетка панелей ── */
+.pd-cols{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-top:14px}
 @media (max-width:980px){.pd-cols{grid-template-columns:1fr}}
-.pd-panel{background:var(--surface-2,color-mix(in srgb, var(--text) 3%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 8%, transparent));border-radius:14px;padding:16px}
-.pd-panel h3{margin:0 0 4px;font-size:13.5px;display:flex;align-items:center;gap:8px;color:var(--text-1,#fff)}
+.pd-panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.pd-panel h3{margin:0 0 4px;font-size:13.5px;display:flex;align-items:center;gap:8px}
 .pd-panel h3 i{color:var(--ac)}
-.pd-sub{font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));margin-bottom:12px;line-height:1.5}
+.pd-sub{font-size:11.5px;color:#5f6b7a;margin-bottom:12px;line-height:1.55}
 .pd-url{display:flex;gap:8px;align-items:stretch}
-.pd-url code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:10px 12px;background:var(--surface-2,color-mix(in srgb, var(--text) 5%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));border-radius:10px;color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));font-size:12px}
-.pd-field{margin-top:12px}
-.pd-field label{display:block;font-size:11.5px;font-weight:700;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));margin-bottom:6px}
-.pd-field select{width:100%;padding:9px 10px;background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 10%, transparent));border-radius:9px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit}
+.pd-url code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:10px 12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text-2);font-size:12px}
+.pd-btn-ghost{background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text-2);cursor:pointer;padding:0 13px;font-size:12px;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+.pd-btn-ghost:hover{border-color:var(--ac);color:var(--ac)}
+.pd-btn-ghost:disabled{opacity:.5;cursor:default}
+.pd-field{margin-top:13px}
+.pd-field label{display:block;font-size:11.5px;font-weight:700;color:var(--text-2);margin-bottom:6px}
+.pd-field select{width:100%;padding:9px 10px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:9px;color:var(--text);font-size:12.5px;outline:none;font-family:inherit}
 .pd-field select:focus{border-color:var(--ac)}
 .pd-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}
-.pd-switch{display:inline-flex;align-items:center;gap:9px;cursor:pointer;user-select:none;font-size:12.5px;color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent))}
-.pd-switch input{appearance:none;width:38px;height:22px;border-radius:999px;background:color-mix(in srgb, var(--text) 12%, transparent);position:relative;cursor:pointer;transition:.2s;border:1px solid var(--line-2,color-mix(in srgb, var(--text) 12%, transparent));margin:0}
-.pd-switch input:checked{background:color-mix(in srgb, var(--ac) 55%, transparent)}
+.pd-switch{display:inline-flex;align-items:center;gap:9px;cursor:pointer;user-select:none;font-size:12.5px;color:var(--text-2)}
+.pd-switch input{appearance:none;width:38px;height:22px;border-radius:999px;background:color-mix(in srgb,var(--text) 12%,transparent);position:relative;cursor:pointer;transition:.2s;border:1px solid var(--line-2);margin:0}
+.pd-switch input:checked{background:color-mix(in srgb,var(--ac) 55%,transparent)}
 .pd-switch input::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s}
 .pd-switch input:checked::after{left:18px}
-.pd-steps{counter-reset:st;display:flex;flex-direction:column;gap:10px}
-.pd-step{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--text-2,color-mix(in srgb, var(--text) 80%, transparent));line-height:1.5}
-.pd-step::before{counter-increment:st;content:counter(st);flex-shrink:0;width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--ac);background:color-mix(in srgb, var(--ac) 12%, transparent);border:1px solid color-mix(in srgb, var(--ac) 25%, transparent)}
-.pd-evs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:4px}
-.pd-ico{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:12px;flex-shrink:0}
-.pd-ev{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent));background:var(--surface-2,color-mix(in srgb, var(--text) 4%, transparent));border:1px solid var(--line-2,color-mix(in srgb, var(--text) 9%, transparent));border-radius:9px;padding:7px 10px}
-.pd-ev b{color:var(--text-1,#fff);font-weight:600}
-.pd-note{margin-top:12px;font-size:11.5px;color:var(--text-3,color-mix(in srgb, var(--text) 50%, transparent));line-height:1.5}
-.pd-note i{color:var(--warn,#e0b35d)}
+.pd-btn{background:var(--surface-2);border:1px solid var(--line-2);border-radius:10px;color:var(--text-1);cursor:pointer;padding:9px 14px;font-size:12.5px;display:inline-flex;align-items:center;gap:8px;transition:.15s;font-family:inherit;font-weight:600}
+.pd-btn:hover{border-color:var(--ac)}
+.pd-btn.primary{background:color-mix(in srgb,var(--ac) 16%,transparent);border-color:color-mix(in srgb,var(--ac) 40%,transparent);color:var(--ac)}
+.pd-btn.primary:hover{background:color-mix(in srgb,var(--ac) 26%,transparent)}
+.pd-btn:disabled{opacity:.5;cursor:default}
+.pd-steps{counter-reset:st;display:flex;flex-direction:column;gap:9px;margin-top:10px}
+.pd-step{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text-2);line-height:1.5}
+.pd-step::before{counter-increment:st;content:counter(st);flex-shrink:0;width:21px;height:21px;border-radius:7px;display:grid;place-items:center;font-size:10.5px;font-weight:700;color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent);border:1px solid color-mix(in srgb,var(--ac) 25%,transparent)}
+
+/* ── превью карточки Discord ── */
+.pd-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.pd-tab{border:1px solid var(--line-2);background:var(--surface-2);color:var(--text-3);border-radius:999px;padding:5px 12px;font-size:11.5px;cursor:pointer;transition:.15s;font-family:inherit}
+.pd-tab.on{color:var(--text-1);border-color:var(--ac);background:color-mix(in srgb,var(--ac) 10%,transparent)}
+.pd-card{background:var(--surface-2);border:1px solid var(--line-2);border-radius:12px;padding:11px 13px;border-left-width:4px;min-width:0}
+.pd-card .ttl{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+.pd-card .desc{font-size:12px;color:var(--text-2);margin-top:6px;line-height:1.55}
+.pd-card .desc a{color:var(--ac);text-decoration:none}
+.pd-card .flds{display:flex;gap:16px;flex-wrap:wrap;margin-top:9px}
+.pd-card .fld{min-width:80px}
+.pd-card .fld .k{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}
+.pd-card .fld .v{font-size:12px;font-weight:600;margin-top:1px}
+.pd-card .foot{font-size:10.5px;color:var(--text-3);margin-top:10px;display:flex;align-items:center;gap:6px}
+.pd-card .foot .clock{width:14px;height:14px;border-radius:50%;background:var(--text-3);opacity:.5;flex-shrink:0}
+
+/* ── история ── */
+.pd-hist{margin-top:14px}
+.pd-hist table{width:100%;border-collapse:collapse;font-size:12px}
+.pd-hist th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+.pd-hist td{padding:8px 10px;border-bottom:1px solid color-mix(in srgb,var(--line-2) 50%,transparent);color:var(--text-2);vertical-align:top}
+.pd-hist tr:last-child td{border-bottom:none}
+.pd-hist .t{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--text-3);white-space:nowrap}
+.pd-hist .inc{min-width:0}
+.pd-hist .inc b{color:var(--text-1);font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:380px}
+.pd-hist .inc span{font-size:11px;color:var(--text-3)}
+.pd-chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;border-radius:999px;padding:3px 10px;white-space:nowrap;border:1px solid transparent}
+.pd-chip.sent{color:#166534;background:color-mix(in srgb,var(--ok) 10%,transparent);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.pd-chip.offline{color:#92400e;background:color-mix(in srgb,var(--warn) 10%,transparent);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.pd-chip.no_channel{color:#92400e;background:color-mix(in srgb,var(--warn) 10%,transparent);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.pd-chip.error{color:#991b1b;background:color-mix(in srgb,var(--err) 10%,transparent);border-color:color-mix(in srgb,var(--err) 30%,transparent)}
+.pd-empty{padding:26px 10px;text-align:center;color:var(--text-3);font-size:12.5px}
+.pd-empty i{font-size:20px;opacity:.5;display:block;margin-bottom:8px}
+.pd-note{margin-top:12px;font-size:11.5px;color:var(--text-3);line-height:1.6;border-top:1px dashed var(--line-2);padding-top:11px}
+.pd-note b{color:var(--text-2)}
+.pd-note i{color:var(--warn);margin-right:5px}
 </style>
 
+<!-- ═══ Живой мост: где сигнал идёт, а где обрыв ═══ -->
+<div class="pd-bridge">
+  <div class="pd-node dim" id="pdNodePD">
+    <div class="ico"><i class="fas fa-bell-concierge"></i></div>
+    <div style="min-width:0">
+      <h4>PagerDuty</h4>
+      <div class="st" id="pdNodePDSt">адрес моста выдан</div>
+    </div>
+  </div>
+  <div class="pd-link"><i class="fas fa-arrow-right-long"></i></div>
+  <div class="pd-node ok" id="pdNodePanel">
+    <div class="ico"><i class="fas fa-server"></i></div>
+    <div style="min-width:0">
+      <h4>Панель</h4>
+      <div class="st"><b>принимает события 24/7</b> — даже когда бот офлайн, ни одна тревога не теряется</div>
+    </div>
+  </div>
+  <div class="pd-link"><i class="fas fa-arrow-right-long"></i></div>
+  <div class="pd-node" id="pdNodeBot">
+    <div class="ico"><i class="fab fa-discord"></i></div>
+    <div style="min-width:0">
+      <h4>Discord</h4>
+      <div class="st" id="pdNodeBotSt">проверяем бота…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Счётчики сигналов ═══ -->
+<div class="pd-kpis">
+  <div class="pd-kpi"><div class="v" id="pdKpiTotal">—</div><div class="l">событий в истории</div></div>
+  <div class="pd-kpi tone-ok"><div class="v" id="pdKpiSent">—</div><div class="l">доставлено в канал</div></div>
+  <div class="pd-kpi tone-warn"><div class="v" id="pdKpiWait">—</div><div class="l">ждали бота</div></div>
+  <div class="pd-kpi tone-err"><div class="v" id="pdKpiErr">—</div><div class="l">ошибок доставки</div></div>
+  <div class="pd-kpi"><div class="v" id="pdKpiLast" style="font-size:15px;padding-top:5px">—</div><div class="l">последний сигнал</div></div>
+</div>
+
 <div class="pd-cols">
+  <!-- ═══ Подключение ═══ -->
   <div class="pd-panel">
-    <h3><i class="fas fa-tower-broadcast"></i> Подключение</h3>
-    <div class="pd-sub">Вставьте этот URL в PagerDuty: <b>Integrations → Generic Webhooks → New Webhook</b>,
-      события <code>incident.triggered / acknowledged / resolved</code>. Токен в адресе — секрет: кто знает URL, тот может слать тревоги.</div>
+    <h3><i class="fas fa-plug-circle-bolt"></i> Подключение</h3>
+    <div class="pd-sub">Вставьте адрес моста в PagerDuty: <b>Integrations → Generic Webhooks → New Webhook</b>.
+      Токен в адресе — секрет: кто знает URL, тот может слать тревоги. Обновили токен — не забудьте поменять URL в PagerDuty.</div>
     <div class="pd-url">
-      <code id="pdHook" title="URL вебхука PagerDuty">…</code>
-      <button type="button" class="btn" id="pdCopy" title="Скопировать URL"><i class="fas fa-copy"></i> Копировать</button>
+      <code id="pdHook" title="Адрес моста PagerDuty">…</code>
+      <button type="button" class="pd-btn-ghost" id="pdCopy" title="Скопировать адрес"><i class="fas fa-copy"></i> Копировать</button>
+      <button type="button" class="pd-btn-ghost" id="pdEye" title="Показать/скрыть токен"><i class="fas fa-eye"></i></button>
     </div>
     <div class="pd-field">
       <label for="pdChannel">Канал тревог в Discord</label>
@@ -63,71 +174,260 @@
     <div class="pd-row">
       <label class="pd-switch"><input type="checkbox" id="pdEnabled" checked> Мост включён</label>
       <span style="flex:1"></span>
-      <button type="button" class="btn" id="pdRegen" title="Старый URL перестанет работать сразу">
+      <button type="button" class="pd-btn-ghost" id="pdRegen" title="Старый адрес перестанет работать сразу">
         <i class="fas fa-rotate"></i> Новый токен
       </button>
     </div>
     <div class="pd-row">
-      <button type="button" class="btn btn-primary" id="pdSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
-      <button type="button" class="btn" id="pdTest"><i class="fas fa-bolt"></i> Тестовая тревога</button>
+      <button type="button" class="pd-btn primary" id="pdSave"><i class="fas fa-floppy-disk"></i> Сохранить</button>
+      <button type="button" class="pd-btn" id="pdTest"><i class="fas fa-bolt"></i> Тестовая тревога</button>
     </div>
-    <div class="pd-note"><i class="fas fa-circle-info"></i> Бот офлайн → панель отвечает PagerDuty «повторить позже»,
-      тревога не потеряется. Канал не выбран → событие логируется и игнорируется (ретраев нет).</div>
+    <div class="pd-steps">
+      <div class="pd-step">Скопируйте адрес моста кнопкой «Копировать».</div>
+      <div class="pd-step">PagerDuty → <b>Integrations → Generic Webhooks → New Webhook</b>, вставьте адрес.</div>
+      <div class="pd-step">Отметьте события: triggered, acknowledged, resolved (можно все — панель понимает любые).</div>
+      <div class="pd-step">Нажмите «Тестовая тревога» — карточка придёт в канал, а событие появится в истории ниже.</div>
+    </div>
   </div>
 
+  <!-- ═══ Превью карточки ═══ -->
   <div class="pd-panel">
-    <h3><i class="fas fa-list-check"></i> Как это выглядит</h3>
-    <div class="pd-sub">Каждое событие — карточка с цветом, сервисом, дежурным и ссылкой на инцидент.</div>
-    <div class="pd-evs">
-      <div class="pd-ev"><span class="pd-ico fas fa-fire" style="color:#e05d5d"></span><div><b>Тревога</b><br>инцидент сработал</div></div>
-      <div class="pd-ev"><span class="pd-ico fas fa-eye" style="color:#e0b35d"></span><div><b>Принято</b><br>дежурный в деле</div></div>
-      <div class="pd-ev"><span class="pd-ico fas fa-circle-check" style="color:#2ecc71"></span><div><b>Решено</b><br>можно выдыхать</div></div>
-      <div class="pd-ev"><span class="pd-ico fas fa-hourglass-half" style="color:#e67e22"></span><div><b>Ожидает</b><br>снова ждёт ответа</div></div>
-      <div class="pd-ev"><span class="pd-ico fas fa-bullhorn" style="color:#e05d5d"></span><div><b>Эскалация</b><br>поднята выше</div></div>
-      <div class="pd-ev"><span class="pd-ico fas fa-bell" style="color:#95a5a6"></span><div><b>Другое</b><br>любое событие PD</div></div>
+    <h3><i class="fas fa-image"></i> Как это выглядит в Discord</h3>
+    <div class="pd-sub">Такую карточку увидит канал тревог. Переключите тип события — цвет и подпись меняются:</div>
+    <div class="pd-tabs" id="pdTabs">
+      <button type="button" class="pd-tab on" data-kind="triggered"><i class="fas fa-fire"></i> Тревога</button>
+      <button type="button" class="pd-tab" data-kind="ack"><i class="fas fa-eye"></i> Принято</button>
+      <button type="button" class="pd-tab" data-kind="resolved"><i class="fas fa-circle-check"></i> Решено</button>
     </div>
-    <h3 style="margin-top:16px"><i class="fas fa-stairs"></i> Шаги в PagerDuty</h3>
-    <div class="pd-steps" style="margin-top:10px">
-      <div class="pd-step">Скопируйте URL вебхука слева (кнопка «Копировать»).</div>
-      <div class="pd-step">PagerDuty → <b>Integrations → Generic Webhooks → New Webhook</b>, вставьте URL.</div>
-      <div class="pd-step">Отметьте события: triggered, acknowledged, resolved (можно и больше — панель понимает все).</div>
-      <div class="pd-step">Нажмите «Тестовая тревога» здесь и проверьте карточку в Discord.</div>
+    <div class="pd-card" id="pdCard">
+      <div class="ttl" id="pdCardTtl"></div>
+      <div class="desc" id="pdCardDesc"></div>
+      <div class="flds">
+        <div class="fld"><div class="k">Сервис</div><div class="v" id="pdCardSvc">Payment API</div></div>
+        <div class="fld"><div class="k">Дежурный</div><div class="v" id="pdCardAsg">Владелец панели</div></div>
+        <div class="fld"><div class="k">Срочность</div><div class="v" id="pdCardUrg">высокая</div></div>
+      </div>
+      <div class="foot"><span class="clock"></span><span id="pdCardFoot"></span></div>
     </div>
+    <div class="pd-note" style="border-top:none;padding-top:6px">
+      <i class="fas fa-circle-info"></i>Каждое событие PagerDuty — своя карточка: цвет, эмодзи и подпись зависят от типа.
+      Ссылка «Открыть в PagerDuty» ведёт прямо к инциденту.
+    </div>
+  </div>
+</div>
+
+<!-- ═══ История доставок ═══ -->
+<div class="pd-panel pd-hist">
+  <h3><i class="fas fa-clock-rotate-left"></i> История сигналов</h3>
+  <div class="pd-sub">Каждое событие PagerDuty и каждая тестовая тревога — с результатом доставки. Обновляется вживую.</div>
+  <div style="overflow-x:auto">
+    <table>
+      <thead><tr><th>Время</th><th>Событие</th><th>Инцидент</th><th>Результат</th></tr></thead>
+      <tbody id="pdHistBody">
+        <tr><td colspan="4" class="pd-empty"><i class="fas fa-satellite-dish"></i>Загрузка…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pd-note">
+    <i class="fas fa-shield-halved"></i><b>Что значит каждый статус:</b>
+    <b style="color:var(--ok)">доставлено</b> — карточка в канале;
+    <b style="color:var(--warn)">бот офлайн</b> — PagerDuty повторит сам, тревога не теряется;
+    <b style="color:var(--warn)">канал не выбран</b> — выберите канал выше;
+    <b style="color:var(--err)">ошибка</b> — Discord не принял отправку (нет прав у бота?).
   </div>
 </div>
 
 <script>
 var GUILD_ID = {{ (guild_id|string)|tojson }};
-var STATE = { hook_path: '', channels: [] };
+var STATE = { hook_path: '', channels: [], token: '', bot_status: 'offline', bot_presence: 'offline' };
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }
+function $(id) { return document.getElementById(id); }
 
-function renderState(d) {
-  STATE = d;
-  var full = location.origin + d.hook_path;
-  document.getElementById('pdHook').textContent = full;
-  document.getElementById('pdEnabled').checked = !!d.enabled;
-  var sel = document.getElementById('pdChannel');
-  sel.innerHTML = '<option value="0">— не выбран —</option>' + (d.channels || []).map(function (c) {
-    return '<option value="' + esc(c.id) + '"' + (String(d.channel_id) === c.id ? ' selected' : '') + '>#' + esc(c.name) + '</option>';
-  }).join('');
-  if (!d.channels || !d.channels.length) {
-    sel.innerHTML = '<option value="0">Бот офлайн — список каналов недоступен</option>';
-  }
-  var badge = document.getElementById('pdState');
-  var ready = d.enabled && d.channel_id && d.bot_online;
-  badge.className = 'pd-badge ' + (ready ? 'on' : 'off');
-  badge.innerHTML = '<i class="fas fa-tower-broadcast"></i> ' + (ready ? 'готов к тревогам' :
-    (!d.enabled ? 'выключен' : (!d.channel_id ? 'не выбран канал' : 'бот офлайн')));
+/* ── маска токена: адрес виден, секрет не светится ── */
+var tokenVisible = false;
+function renderHook() {
+  var full = location.origin + STATE.hook_path;
+  var el = $('pdHook');
+  if (!STATE.hook_path) { el.textContent = '…'; return; }
+  if (tokenVisible) { el.textContent = full; return; }
+  /* короткий токен прячем ЦЕЛИКОМ: регэксп с хвостами на нём молча проваливался */
+  var cut = full.lastIndexOf('/');
+  var base = full.slice(0, cut + 1), t = full.slice(cut + 1);
+  el.textContent = t.length >= 12 ? base + t.slice(0, 4) + '••••••••' + t.slice(-4)
+                                  : base + '••••••••';
 }
 
+/* ── время по-человечески ── */
+function relTime(iso) {
+  if (!iso) return '—';
+  var t = Date.parse(iso);
+  if (isNaN(t)) return '—';
+  var s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (s < 60) return 'только что';
+  if (s < 3600) return Math.floor(s / 60) + ' мин назад';
+  if (s < 86400) return Math.floor(s / 3600) + ' ч назад';
+  return Math.floor(s / 86400) + ' дн назад';
+}
+function fmtTime(iso) {
+  var t = Date.parse(iso);
+  if (isNaN(t)) return esc(iso);
+  var d = new Date(t);
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }) +
+    ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+/* ── мост: правдивые статусы узлов ── */
+function renderBridge(d) {
+  STATE.bot_status = d.bot_status || (d.bot_online ? 'online' : 'offline');
+  STATE.bot_presence = d.bot_presence || '';
+  /* узел PagerDuty */
+  var pd = $('pdNodePD');
+  pd.className = 'pd-node ' + (d.enabled ? 'ok' : 'dim');
+  $('pdNodePDSt').innerHTML = d.enabled
+    ? '<b>адрес выдан</b> — события будут приходить сюда'
+    : 'мост выключен — PagerDuty получит отказ';
+  /* узел Discord: правда о шлюзе + чем бот выглядит */
+  var bot = $('pdNodeBot');
+  var st = $('pdNodeBotSt');
+  if (STATE.bot_status === 'online') {
+    bot.className = 'pd-node ok';
+    var look = (STATE.bot_presence === 'idle' || STATE.bot_presence === 'invisible')
+      ? ' Бот при этом выглядит «' + (STATE.bot_presence === 'idle' ? 'нет на месте' : 'невидимкой') +
+        '» — смените статус в «Настройках бота», если мешает.'
+      : '';
+    st.innerHTML = '<b>бот онлайн</b> — карточки уходят в канал мгновенно.' + look;
+  } else if (STATE.bot_status === 'starting') {
+    bot.className = 'pd-node warn';
+    st.innerHTML = '<b>бот подключается…</b> Панель уже принимает тревоги и придержит их до готовности.';
+  } else {
+    bot.className = 'pd-node err';
+    st.innerHTML = '<b>бот офлайн</b> — панель отвечает PagerDuty «повторить позже», тревога не теряется.';
+  }
+  /* общий статус-пилюля */
+  var pill = $('pdState');
+  var ready = d.enabled && d.channel_id && STATE.bot_status === 'online';
+  var cls, txt;
+  if (ready) { cls = 'ok'; txt = 'мост готов к тревогам'; }
+  else if (!d.enabled) { cls = ''; txt = 'мост выключен'; }
+  else if (STATE.bot_status === 'starting') { cls = 'warn'; txt = 'бот подключается…'; }
+  else if (!d.channel_id) { cls = 'warn'; txt = 'не выбран канал тревог'; }
+  else if (STATE.bot_status === 'offline') { cls = 'err'; txt = 'бот офлайн — тревоги копятся'; }
+  else { cls = 'warn'; txt = 'мост не готов'; }
+  pill.className = 'pd-pill ' + cls;
+  pill.innerHTML = '<span class="dot"></span><i class="fas fa-tower-broadcast"></i> ' + esc(txt);
+}
+
+/* ── KPI истории ── */
+function renderKpis(hs) {
+  hs = hs || {};
+  $('pdKpiTotal').textContent = hs.total != null ? hs.total : '—';
+  $('pdKpiSent').textContent = hs.sent != null ? hs.sent : '—';
+  $('pdKpiWait').textContent = (hs.offline || 0) + (hs.no_channel || 0);
+  $('pdKpiErr').textContent = hs.error != null ? hs.error : '—';
+  $('pdKpiLast').textContent = relTime(hs.last_at);
+}
+
+/* ── история ── */
+var HIST_LABEL = {
+  sent: ['sent', 'доставлено', 'fa-circle-check'],
+  offline: ['offline', 'бот офлайн — повторит PD', 'fa-hourglass-half'],
+  no_channel: ['no_channel', 'канал не выбран', 'fa-triangle-exclamation'],
+  error: ['error', 'ошибка доставки', 'fa-circle-xmark'],
+};
+function renderHistory(list) {
+  var body = $('pdHistBody');
+  if (!list || !list.length) {
+    body.innerHTML = '<tr><td colspan="4" class="pd-empty"><i class="fas fa-satellite-dish"></i>' +
+      'Событий пока не было. Нажмите «Тестовая тревога» — результат появится здесь.</td></tr>';
+    return;
+  }
+  body.innerHTML = list.map(function (e) {
+    var lab = HIST_LABEL[e.status] || ['error', e.status, 'fa-circle-question'];
+    return '<tr>' +
+      '<td class="t">' + fmtTime(e.at) + '</td>' +
+      '<td style="white-space:nowrap">' + esc(e.title || e.event || 'событие') + '</td>' +
+      '<td class="inc"><b>' + esc(e.incident || '—') + '</b>' +
+        (e.note ? '<span>' + esc(e.note) + '</span>' : '') + '</td>' +
+      '<td><span class="pd-chip ' + lab[0] + '"><i class="fas ' + lab[2] + '"></i>' + esc(lab[1]) + '</span></td>' +
+      '</tr>';
+  }).join('');
+}
+
+/* ── селект канала: рендерим только при изменении списка (не дёргаем открытый) ── */
+var _chansKey = '';
+function renderChannels(d) {
+  var key = (d.channels || []).map(function (c) { return c.id + ':' + c.name; }).join('|') + '#' + (d.channel_id || 0);
+  if (key === _chansKey) return;
+  _chansKey = key;
+  var sel = $('pdChannel');
+  if (!d.channels || !d.channels.length) {
+    sel.innerHTML = '<option value="0">' +
+      (STATE.bot_status === 'offline'
+        ? 'бот офлайн — список каналов недоступен, сохраните после запуска'
+        : 'нет текстовых каналов') + '</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="0">— не выбран —</option>' + d.channels.map(function (c) {
+    return '<option value="' + esc(c.id) + '"' + (String(d.channel_id) === c.id ? ' selected' : '') +
+      '>#' + esc(c.name) + '</option>';
+  }).join('');
+}
+
+/* ── превью карточки ── */
+var PREVIEW = {
+  triggered: { ico: 'fa-fire', ttl: 'Тревога #42', color: 'var(--err)', line: 'сработала — нужен взгляд', foot: 'PagerDuty · incident.triggered' },
+  ack: { ico: 'fa-eye', ttl: 'Принято #42', color: 'var(--warn)', line: 'взята дежурным', foot: 'PagerDuty · incident.acknowledged' },
+  resolved: { ico: 'fa-circle-check', ttl: 'Решено #42', color: 'var(--ok)', line: 'успешно закрыта', foot: 'PagerDuty · incident.resolved' },
+};
+function renderPreview(kind) {
+  var p = PREVIEW[kind] || PREVIEW.triggered;
+  var card = $('pdCard');
+  card.style.borderLeftColor = p.color;
+  $('pdCardTtl').innerHTML = '<span><i class="fas ' + p.ico + '"></i> ' + esc(p.ttl) + '</span>';
+  $('pdCardDesc').innerHTML = '<b>Плата не отвечает на запросы</b><br>Инцидент ' + esc(p.line) + '.' +
+    '<br><a href="#" onclick="return false">Открыть в PagerDuty</a>';
+  $('pdCardFoot').textContent = p.foot + ' · ваш сервер';
+}
+document.querySelectorAll('#pdTabs .pd-tab').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('#pdTabs .pd-tab').forEach(function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    renderPreview(b.getAttribute('data-kind'));
+  });
+});
+
+/* ── загрузка ── */
+function applyState(d) {
+  STATE.hook_path = d.hook_path || '';
+  STATE.token = d.token || '';
+  renderHook();
+  $('pdEnabled').checked = !!d.enabled;
+  renderBridge(d);
+  renderChannels(d);
+  renderKpis(d.history_stats);
+  renderHistory(d.history);
+}
 async function pdLoad() {
   try {
     var r = await fetch('/api/guild/' + GUILD_ID + '/pagerduty', { credentials: 'same-origin' });
     var d = await r.json();
-    if (d.success) renderState(d); else toast(d.error || 'Не удалось загрузить', false);
-  } catch (e) { toast('Ошибка сети', false); }
+    if (d.success) applyState(d); else toast(d.error || 'Не удалось загрузить', false);
+  } catch (e) { /* тише: тик обновления не должен будоражить */ }
+}
+/* лёгкий тик: статус моста и история — селекты не трогаем */
+async function pdTick() {
+  try {
+    var r = await fetch('/api/guild/' + GUILD_ID + '/pagerduty', { credentials: 'same-origin' });
+    var d = await r.json();
+    if (!d.success) return;
+    STATE.bot_status = d.bot_status || (d.bot_online ? 'online' : 'offline');
+    STATE.bot_presence = d.bot_presence || '';
+    renderBridge(d);
+    renderKpis(d.history_stats);
+    renderHistory(d.history);
+  } catch (e) { /* сеть моргнула — на следующем тике доедет */ }
 }
 
 async function pdPost(body, btn) {
@@ -139,25 +439,26 @@ async function pdPost(body, btn) {
       body: JSON.stringify(body)
     });
     var d = await r.json().catch(function () { return {}; });
-    if (r.ok && d.success) { pdLoad(); return d; }
+    if (r.ok && d.success) { await pdLoad(); return d; }
     toast(d.error || 'Не получилось', false);
   } catch (e) { toast('Ошибка сети', false); }
   if (btn) btn.disabled = false;
   return null;
 }
 
-document.getElementById('pdSave').addEventListener('click', function () {
+$('pdSave').addEventListener('click', function () {
   pdPost({
-    channel_id: document.getElementById('pdChannel').value || '0',
-    enabled: document.getElementById('pdEnabled').checked
+    channel_id: $('pdChannel').value || '0',
+    enabled: $('pdEnabled').checked
   }, this).then(function (d) { if (d) toast('Сохранено — мост уже работает', true); });
 });
 
-document.getElementById('pdRegen').addEventListener('click', function () {
-  pdPost({ regen: true }, this).then(function (d) { if (d) toast('Новый токен выдан — обновите URL в PagerDuty', true); });
+$('pdRegen').addEventListener('click', function () {
+  if (!window.confirm('Выдать новый токен? Старый адрес перестанет работать СРАЗУ — обновите URL в PagerDuty.')) return;
+  pdPost({ regen: true }, this).then(function (d) { if (d) toast('Новый токен выдан — обновите адрес в PagerDuty', true); });
 });
 
-document.getElementById('pdTest').addEventListener('click', async function () {
+$('pdTest').addEventListener('click', async function () {
   var btn = this;
   btn.disabled = true;
   try {
@@ -168,22 +469,31 @@ document.getElementById('pdTest').addEventListener('click', async function () {
     var d = await r.json().catch(function () { return {}; });
     if (r.ok && d.success) toast('Тестовая тревога отправлена — проверьте канал', true);
     else toast(d.error || 'Не получилось', false);
+    await pdTick();   /* результат сразу попадает в историю */
   } catch (e) { toast('Ошибка сети', false); }
   btn.disabled = false;
 });
 
-document.getElementById('pdCopy').addEventListener('click', function () {
+$('pdCopy').addEventListener('click', function () {
   var url = location.origin + STATE.hook_path;
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(function () { toast('URL скопирован', true); });
+    navigator.clipboard.writeText(url).then(function () { toast('Адрес моста скопирован', true); });
   } else {
     var ta = document.createElement('textarea');
     ta.value = url; document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); toast('URL скопирован', true); } catch (e) { toast(url, true); }
+    try { document.execCommand('copy'); toast('Адрес моста скопирован', true); } catch (e) { toast(url, true); }
     document.body.removeChild(ta);
   }
 });
 
+$('pdEye').addEventListener('click', function () {
+  tokenVisible = !tokenVisible;
+  this.innerHTML = '<i class="fas ' + (tokenVisible ? 'fa-eye-slash' : 'fa-eye') + '"></i>';
+  renderHook();
+});
+
+renderPreview('triggered');
 pdLoad();
+if (window.setLiveRefresh) window.setLiveRefresh(pdTick, 1500);
 </script>
 {% endblock %}

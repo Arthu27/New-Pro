@@ -161,9 +161,9 @@ class Config:
     PLUGINS_DIR: str = os.path.join(_BASE_DIR, "plugins")
     
     # === Bot Settings ===
-    BOT_STATUS: str = "idle"  # online, idle, dnd, invisible
-    BOT_ACTIVITY_TYPE: str = "listening"  # listening, playing, watching, competing
-    BOT_ACTIVITY_TEXT: str = ".gg/Hakumo"
+    BOT_STATUS: str = "online"  # online, idle, dnd, invisible
+    BOT_ACTIVITY_TYPE: str = "watching"  # listening, playing, watching, competing
+    BOT_ACTIVITY_TEXT: str = "Hakumo"
     
     # === Ticket Settings ===
     TICKET_CATEGORY_ID: int = _env_int("TICKET_CATEGORY_ID", 0)

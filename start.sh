@@ -63,7 +63,15 @@ while true; do
         echo "  [СТОП] Токен Discord неверный. Исправь TOKEN в .env и запусти снова."
         exit 7
     fi
+    # ВАЖНО: каждый выход процесса — в журнал (код + время). Раньше бот
+    # «сидел 14 часов и сам перезапустился» без следов: причина (краш/OOM/
+    # сигнал) теперь видна в logs/bot_restarts.log и data/run_log.json.
+    mkdir -p logs
+    {
+        echo "[$(date '+%F %T')] Бот завершился: код $CODE (аптайм см. data/run_log.json)"
+    } >> logs/bot_restarts.log
     echo "  [ПЕРЕЗАПУСК] Бот завершился (код $CODE). Поднимаю через 5 сек..."
+    echo "  (причина: logs/bot_restarts.log, история: data/run_log.json)"
     echo "  (остановить полностью: Ctrl+C во время паузы или закрыть окно)"
     sleep 5
 done

@@ -365,6 +365,14 @@ def register(ctx):
     @role_required('admin')
     def api_ld_lock(gid):
         import web.app as appmod
+        # Классическое разрешение: локдаун — действие «Локдаун» (тот же
+        # тумблер, что у /lock и /unlock).
+        from web.routes._common import viewer_member, acl_action_allowed
+        _member = viewer_member(appmod.bot_instance, gid)
+        if not acl_action_allowed(gid, _member, 'lockdown'):
+            return jsonify({'success': False,
+                            'error': 'Нет права: «Локдаун» не разрешено вашей '
+                                     'роли (настройка — «Права команд»)'}), 403
         guild = _guild(appmod.bot_instance, gid)
         if guild is None:
             if appmod._demo_mode():
@@ -398,6 +406,13 @@ def register(ctx):
     @role_required('admin')
     def api_ld_unlock(gid):
         import web.app as appmod
+        # Снятие локдауна — то же действие «Локдаун».
+        from web.routes._common import viewer_member, acl_action_allowed
+        _member = viewer_member(appmod.bot_instance, gid)
+        if not acl_action_allowed(gid, _member, 'lockdown'):
+            return jsonify({'success': False,
+                            'error': 'Нет права: «Локдаун» не разрешено вашей '
+                                     'роли (настройка — «Права команд»)'}), 403
         guild = _guild(appmod.bot_instance, gid)
         if guild is None:
             if appmod._demo_mode():

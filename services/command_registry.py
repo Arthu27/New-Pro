@@ -256,7 +256,15 @@ def _scan():
         from slash_budget import KEEP_SLASH
     except Exception:
         KEEP_SLASH = frozenset()
-    full_requested = (os.environ.get('BOT_FULL', '') or '').strip() not in ('', '0', 'false', 'False')
+    # Режим меню — из одного источника с самим ботом: тумблер панели
+    # «Команды» (data/menu_mode.json) важнее BOT_FULL из .env (заказ
+    # 30.08 «оставим только 7» — каталог обязан показать то же меню).
+    try:
+        from slash_budget import full_menu_mode
+        full_requested = bool(full_menu_mode())
+    except Exception as _ex:
+        _log.debug('command_registry: режим меню не узнать (%s) — .env', _ex)
+        full_requested = (os.environ.get('BOT_FULL', '') or '').strip() not in ('', '0', 'false', 'False')
     if KEEP_SLASH and not full_requested:
         keep = set(KEEP_SLASH)
         deduped = [c for c in deduped
@@ -337,10 +345,18 @@ def catalog(force=False):
                     for f in os.listdir(COGS_DIR) if f.endswith('.py'))
     except OSError:
         stamp = 0
-    # профиль модулей — часть ключа кэша: BOT_FULL/профили меняют набор команд
-    stamp = (stamp, tuple(sorted((k, os.environ.get(k, '')) for k in
-                                 ('BOT_FULL', 'MOD_ONLY', 'BOT_SLIM', 'BOT_CORE',
-                                  'DISABLED_COGS', 'EXTRA_COGS'))))
+    # профиль модулей — часть ключа кэша: режим меню/профили меняют набор
+    # команд. Режим берём целиком (тумблер панели важнее .env) — иначе
+    # каталог кэшировал бы «полный» состав, когда владелец сжал меню до 7.
+    try:
+        from slash_budget import full_menu_mode as _fmm
+        _menu_key = 'menu:' + ('full' if _fmm() else 'lean')
+    except Exception as _ex:
+        _log.debug('command_registry: режим меню для ключа кэша (%s) — .env', _ex)
+        _menu_key = 'menu:env:' + os.environ.get('BOT_FULL', '')
+    stamp = (stamp, _menu_key, tuple(sorted((k, os.environ.get(k, '')) for k in
+                                             ('MOD_ONLY', 'BOT_SLIM', 'BOT_CORE',
+                                              'DISABLED_COGS', 'EXTRA_COGS'))))
     if not force and _cache['data'] is not None and _cache['stamp'] == stamp:
         return _annotate_switches(_drop_off_modules(_cache['data']))
 

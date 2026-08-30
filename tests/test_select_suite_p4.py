@@ -82,9 +82,16 @@ El.prototype.dispatchEvent = function (e) {
   return true; };
 El.prototype.focus = function () {};
 El.prototype.scrollIntoView = function () {};
+El.prototype.getBoundingClientRect = function () {
+  return { top: 10, bottom: 52, left: 0, right: 200, width: 200, height: 42 };
+};
+El.prototype.style = {};
 El.prototype._find = function (pred, out) {
   if (pred(this)) out.push(this);
   this.children.forEach(function (c) { c._find(pred, out); }); };
+El.prototype.querySelector = function (sel) {
+  return this.querySelectorAll(sel)[0] || null;
+};
 El.prototype.querySelectorAll = function (sel) {
   var out = [];
   if (sel.indexOf('select:') === 0) {
@@ -112,8 +119,14 @@ global.document = {
   body: wrap(new El('body')),
   querySelectorAll: function (sel) { return this.body.querySelectorAll(sel); }
 };
-global.window = {};
+global.window = {
+  /* пикер слушает прокрутку страницы (закрытие списка) */
+  addEventListener: function () {},
+  removeEventListener: function () {},
+  innerHeight: 800
+};
 global.MutationObserver = undefined;
+global.getComputedStyle = function () { return { overflowY: '' }; };
 global.Event = function (t, o) { this.type = t; this.bubbles = !!(o && o.bubbles); };
 global.CustomEvent = function (t, o) { this.type = t; this.detail = o && o.detail; };
 

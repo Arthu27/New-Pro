@@ -5,8 +5,8 @@ Hakumo — Система репортов (ТЗ 2026-08-26)
 /report -> приватная ветка в канале репортов с панелью управления:
 Select-меню для режима обсуждения, слова, вынесения решения (дефолт
 по рецидивам / индивидуальное + срок). Переписка при закрытии сжимается
-zlib и уходит в архив (services/reports_core). /my_violations + /appeal
-с восстановлением переписки из архива.
+zlib и уходит в архив (services/reports_core). /my_violations — мои
+нарушения (обжалование наказаний — глобальная /апелляция в ЛС боту).
 
 Хранение: SQLite data/reports.db + data/reports_<gid>.json (без Postgres —
 его на VDS нет, данных мизер). Оформление: чистые эмбеды без эмодзи.
@@ -44,6 +44,29 @@ def _is_mod(member, cfg) -> bool:
         return True
     rid = str(cfg.get('mod_role_id') or '')
     return bool(rid) and any(str(r.id) == rid for r in member.roles)
+
+
+# Вердикт репорта → ключ «классического» разрешения: mute в репорте —
+# это timeout (как «Мут (чат + войс)» в /modpanel), ban — «Бан», kick — «Кик».
+_VERDICT_ACL = {'mute': 'timeout', 'ban': 'ban', 'kick': 'kick'}
+
+
+def _verdict_allowed(guild, user, kind) -> bool:
+    """Разрешено ли модератору применить вердикт kind классическими правами."""
+    key = _VERDICT_ACL.get(kind)
+    if not key or guild is None or user is None:
+        return True
+    try:
+        from services.permission_acl import check_action
+        return bool(check_action(guild.id, user, key))
+    except Exception as _ex:
+        _log.debug('reports: verdict acl: %s', _ex)
+        return True
+
+
+def _any_verdict_allowed(guild, user) -> bool:
+    """Есть ли у модератора хоть одно действие для решения репорта."""
+    return any(_verdict_allowed(guild, user, k) for k in _VERDICT_ACL)
 
 
 def _cfg(guild_id) -> dict:
@@ -133,6 +156,14 @@ class ReportPanelView(discord.ui.View):
         if not t or t.get('closed'):
             await interaction.response.send_message(
                 'Ветка не активна.', ephemeral=True)
+            return
+        # Классические разрешения: без «Бана»/«Кика»/«Таймаута» решение
+        # не выносят — кнопка живёт, но честно объясняет, чего не хватает.
+        if not _any_verdict_allowed(interaction.guild, interaction.user):
+            await interaction.response.send_message(
+                'Тебе не дано ни одного действия для решения (панель → '
+                'Доступ → Права команд → Классические разрешения).',
+                ephemeral=True)
             return
         await interaction.response.send_message(
             'Тип решения:', view=VerdictTypeSelect(), ephemeral=True)
@@ -361,6 +392,14 @@ class Reports(commands.Cog):
         cfg = _cfg(guild.id)
         reason = f'Решение по репорту (ветка {interaction.channel_id})'
         member = guild.get_member(int(t['accused_id']))
+        # Классические разрешения: применяем только то, что дано роли
+        # модератора (не дал «Бан» — бан не применится, даже если вердикт
+        # выбран раньше).
+        if not _verdict_allowed(guild, interaction.user, v['kind']):
+            return await interaction.response.send_message(
+                f'Действие «{RC.KIND_LABELS.get(v["kind"], v["kind"])}» тебе '
+                'не дал владелец (панель → Доступ → Права команд → '
+                'Классические разрешения).', ephemeral=True)
         applied = 'Применено.'
         try:
             if v['kind'] == 'mute' and member:
@@ -555,30 +594,6 @@ class Reports(commands.Cog):
         await interaction.response.send_message(
             embed=e, view=MyViolationsView() if has else None, ephemeral=True)
 
-    @app_commands.command(name='appeal', description='Обжаловать нарушение')
-    @app_commands.describe(description='Почему решение надо пересмотреть',
-                           proof_file='Скрин/видео к апелляции — грузится в ветку сразу')
-    async def appeal_slash(self, interaction, description: str,
-                           proof_file: discord.Attachment = None):
-        cfg = _cfg(interaction.guild_id)
-        if not cfg.get('channel_id'):
-            return await interaction.response.send_message(
-                'Канал репортов не привязан.', ephemeral=True)
-        vs = RC.violations_of(interaction.guild_id, interaction.user.id,
-                              cfg.get('expiry_days', 90))
-        if not vs:
-            return await interaction.response.send_message(
-                'Нарушений для обжалования нет.', ephemeral=True)
-        file_obj = None
-        if proof_file is not None:
-            try:
-                file_obj = await proof_file.to_file()
-            except Exception as ex:
-                _log.warning('appeal proof_file: %s', ex)
-        await interaction.response.send_message(
-            'Какое нарушение обжалуем:',
-            view=AppealSelectView(vs, description, file_obj), ephemeral=True)
-
     @app_commands.command(name='report-setup',
                           description='Настроить систему репортов: канал + роль + права')
     @app_commands.describe(mod_role='Роль модераторов',
@@ -705,122 +720,6 @@ class Reports(commands.Cog):
                 _log.debug('подавлено: %s', _sx4)
 
 
-# ── Select: апелляция ───────────────────────────────────────────────
-class AppealSelectView(discord.ui.View):
-    def __init__(self, violations, description, file_obj=None):
-        super().__init__(timeout=180)
-        self.description = description
-        self.file_obj = file_obj
-        self.select.options = [
-            discord.SelectOption(
-                label=f"{RC.KIND_LABELS.get(v['kind'], v['kind'])} · "
-                      f"{datetime.fromtimestamp(v['created'], timezone.utc).strftime('%d.%m.%Y')}",
-                value=str(v['id'])) for v in violations[-25:]]
-
-    @discord.ui.select(cls=discord.ui.Select, placeholder='Нарушение')
-    async def choose(self, interaction, select):
-        await interaction.response.defer(ephemeral=True)
-        cfg = _cfg(interaction.guild_id)
-        ch = interaction.guild.get_channel(int(cfg['channel_id']))
-        if ch is None:
-            return await interaction.followup.send('Канал репортов не найден.',
-                                                   ephemeral=True)
-        thread = await ch.create_thread(
-            name=f'апелляция · {interaction.user.display_name[:36]}',
-            type=discord.ChannelType.private_thread,
-            auto_archive_duration=10080,
-            reason=f'Апелляция {interaction.user}')
-        await thread.add_user(interaction.user)
-        RC.ticket_create(interaction.guild_id, thread.id,
-                         interaction.user.id, interaction.user.id, kind='appeal')
-        with RC.db() as c:
-            row = c.execute('SELECT thread_id FROM violations WHERE id=?',
-                            (int(select.values[0]),)).fetchone()
-        old_thread = row[0] if row else ''
-        e = discord.Embed(
-            title='Апелляция',
-            color=0x5865F2,
-            description=(f"Подал: {interaction.user.mention}\n"
-                         f"Нарушение: `#{select.values[0]}`\n\n"
-                         f"**Доводы:** {self.description[:1500]}"))
-        send_kw = {'embed': e, 'view': AppealPanelView(select.values[0], old_thread)}
-        if self.file_obj is not None:
-            send_kw['file'] = self.file_obj
-        await thread.send(**send_kw)
-        await interaction.followup.send(f'Апелляция создана: {thread.mention}',
-                                        ephemeral=True)
-
-
-class AppealPanelView(discord.ui.View):
-    def __init__(self, violation_id, old_thread):
-        super().__init__(timeout=None)
-        self.violation_id = violation_id
-        self.old_thread = old_thread
-
-    async def _mod(self, interaction):
-        cfg = _cfg(interaction.guild_id)
-        if not _is_mod(interaction.user, cfg):
-            await interaction.response.send_message('Только модератор.',
-                                                    ephemeral=True)
-            return False
-        return True
-
-    @discord.ui.button(label='Одобрить (снять)', style=discord.ButtonStyle.success,
-                       custom_id='rpt_appr_ok')
-    async def approve(self, interaction, button):
-        if not await self._mod(interaction):
-            return
-        RC.remove_violation(self.violation_id)
-        e = discord.Embed(title='Апелляция одобрена',
-                          description='Нарушение снято с учёта.',
-                          color=0x2ECC71)
-        await interaction.response.send_message(embed=e)
-        await _dm(interaction.user, e)
-
-    @discord.ui.button(label='Отклонить', style=discord.ButtonStyle.danger,
-                       custom_id='rpt_appr_no')
-    async def reject(self, interaction, button):
-        if not await self._mod(interaction):
-            return
-        e = discord.Embed(title='Апелляция отклонена',
-                          description='Решение остаётся в силе.',
-                          color=0xE74C3C)
-        await interaction.response.send_message(embed=e)
-        await _dm(interaction.user, e)
-
-    @discord.ui.button(label='Показать переписку', style=discord.ButtonStyle.secondary,
-                       custom_id='rpt_appr_show')
-    async def show(self, interaction, button):
-        if not await self._mod(interaction):
-            return
-        await interaction.response.defer()
-        msgs = []
-        try:
-            msgs = RC.archive_load(interaction.guild_id, self.old_thread)
-        except Exception as _sx5:
-            _log.debug('подавлено: %s', _sx5)
-        if not msgs:
-            return await interaction.followup.send(
-                'Архива нет — тикет закрывался без переписки.', ephemeral=True)
-        await interaction.channel.send(
-            embed=discord.Embed(title='Восстановление переписки',
-                                description=f'{len(msgs)} сообщений из архива тикета.',
-                                color=0x99AAB5))
-        import asyncio as _aio
-        chunk, n = [], 0
-        for author, _uid, _ts, content in msgs[:60]:
-            if not content:
-                continue
-            chunk.append(f'**{author}:** {content[:200]}')
-            n += 1
-            if len(chunk) == 5:
-                await interaction.channel.send('\n'.join(chunk))
-                await _aio.sleep(0.8)
-                chunk = []
-        if chunk:
-            await interaction.channel.send('\n'.join(chunk))
-
-
 class MyViolationsView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=180)
@@ -829,7 +728,7 @@ class MyViolationsView(discord.ui.View):
                        custom_id='rpt_my_appeal')
     async def appeal(self, interaction, button):
         await interaction.response.send_message(
-            'Опишите доводы и выполните команду /appeal — выберите нарушение из списка.',
+            'Апелляция подаётся через /апелляция в ЛС боту.',
             ephemeral=True)
 
 

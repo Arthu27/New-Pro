@@ -570,6 +570,15 @@ def register(ctx):
                 return jsonify({'success': False,
                                 'error': 'При отказе комментарий обязателен — '
                                          'выберите шаблон или напишите свой'}), 400
+        # Принятие = разбан/снятие изоляции — то же действие «Бан», что у
+        # /unban: настройки «Права команд» действуют и в панели.
+        if accept:
+            from web.routes._common import viewer_member, acl_action_allowed
+            _member = viewer_member(appmod.bot_instance, gid)
+            if not acl_action_allowed(gid, _member, 'ban'):
+                return jsonify({'success': False,
+                                'error': 'Нет права: «Бан» не разрешено вашей '
+                                         'роли (настройка — «Права команд»)'}), 403
         ok, err, code, payload = resolve_panel(
             appmod.bot_instance, gid, int(raw_id), accept,
             session.get('username', '?'), reply=reply)

@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Настройки <span class="sep">·</span> Логи</div>
+    <div class="eyebrow">Настройки <span class="sep">·</span> Логи сервера</div>
     <h1>Логи сервера</h1>
     <p class="lead">Какие события логировать, в какой канал их писать и каким категориям разрешено создавать лог-канал самостоятельно. По умолчанию каналы <b>никогда не создаются сами</b> — только если ты разрешишь здесь.</p>
   </div>
@@ -45,9 +45,10 @@
   var SAVING = false;
   var _lastRaw = null;
 
+  var MAIN_GID = '{{ main_guild_id }}';   /* ID гильдии из сессии — не хардкод 777 */
   function gid() {
-    var v = window.MAIN_GID || '';
-    if (!v) { try { v = localStorage.getItem('selected_guild') || '777'; } catch (e) { v = '777'; } }
+    var v = window.MAIN_GID || MAIN_GID || '';
+    if (!v) { try { v = localStorage.getItem('selected_guild') || ''; } catch (e) { v = ''; } }
     return v;
   }
 

@@ -63,6 +63,8 @@ class _Guild:
         s.id = i
         s.name = 'Тест'
         s.icon = None
+        s.member_count = 10
+        s.members = []
         s.channels = [_Ch(300 + k, guild=s) for k in range(4)]
         s.text_channels = s.channels
         s.roles = []
@@ -255,6 +257,210 @@ r = client.get('/api/channel-routes')
 d = r.get_json()
 keys = [x['key'] for x in (d or {}).get('routes', [])]
 check('pagerduty_channel' in keys, 'маршрут виден на хабе каналов')
+
+print('== 6. История доставок: видно из панели, отправляются данные или нет ==')
+r = client.get(f'/api/guild/{G}/pagerduty')
+d = r.get_json()
+hist = d.get('history') or []
+check(len(hist) >= 4, f'история пишется ({len(hist)} событий)')
+st = d.get('history_stats') or {}
+check(st.get('total', 0) >= 4 and st.get('sent', 0) >= 3, 'сводка истории считает доставки')
+check(any(e.get('status') == 'no_channel' for e in hist), 'событие «канал не выбран» попало в историю')
+check(any(e.get('status') == 'offline' for e in hist), 'событие «бот офлайн» попало в историю (не потерялось)')
+check(d.get('bot_status') == 'online' and d.get('bot_online') is True,
+      'бот готов — статус online')
+check(hist[0].get('at', '') >= hist[-1].get('at', ''), 'история: новые сверху')
+
+print('== 7. Правда о статусе бота (жалоба «данные отправляет, но офлайн») ==')
+# шлюз закрыт: объект есть, но бот мёртв — раньше писалось «online»
+class _DeadBot(_Bot):
+    def __init__(s, guild):
+        super().__init__(guild)
+        s.status = 'offline'
+    def is_closed(s):
+        return True
+    def is_ready(s):
+        return False
+set_bot_instance(_DeadBot(guild))
+r = client.get(f'/api/guild/{G}/pagerduty')
+d = r.get_json()
+check(d.get('bot_online') is False and d.get('bot_status') == 'offline',
+      'мёртвый шлюз = честный offline (не «объект есть = онлайн»)')
+r = client.get('/api/stats')
+d = r.get_json()
+check(d.get('status') == 'offline', '/api/stats не врёт про мёртвый шлюз (был хардкод online)')
+# подключается: объект есть, готовности нет
+class _StartingBot(_Bot):
+    def __init__(s, guild):
+        super().__init__(guild)
+        s.status = 'offline'
+    def is_closed(s):
+        return False
+    def is_ready(s):
+        return False
+set_bot_instance(_StartingBot(guild))
+r = client.get('/api/stats')
+d = r.get_json()
+check(d.get('status') == 'starting', '/api/stats: подключение = starting')
+# живой бот с presence idle: шлюз онлайн, но ВЫГЛЯДИТ «не в сети»
+class _IdleBot(_Bot):
+    def __init__(s, guild):
+        super().__init__(guild)
+        s.status = 'idle'
+    def is_closed(s):
+        return False
+    def is_ready(s):
+        return True
+set_bot_instance(_IdleBot(guild))
+r = client.get('/api/stats')
+d = r.get_json()
+check(d.get('status') == 'online' and d.get('presence') == 'idle',
+      'шлюз жив + presence=idle — оба факта видны отдельно')
+set_bot_instance(bot)   # вернуть как было
+
+print('== 8. Новая страница: мост, история, превью ==')
+r = client.get('/pagerduty')
+page = r.get_data(as_text=True)
+for marker, what in [('pd-bridge', 'диаграмма моста PagerDuty→Панель→Discord'),
+                     ('pdHistBody', 'таблица истории сигналов'),
+                     ('pdCard', 'превью карточки Discord'),
+                     ('bot_status', 'правдивый статус бота в JS'),
+                     ('setLiveRefresh', 'живое обновление моста')]:
+    check(marker in page, f'страница содержит {what}')
+
+print('== 9. Node-харнесс: живой JS моста (статусы, история, маска) ==')
+import json as _json
+import re as _re
+import subprocess as _sp
+page_src = open(os.path.join(ROOT, 'web', 'templates', 'pagerduty.html'),
+                encoding='utf-8').read()
+_scripts = _re.findall(r'<script>(.*?)</script>', page_src, _re.S)
+check(len(_scripts) >= 1, 'inline-скрипт страницы извлечён')
+page_js = _scripts[-1].replace('{{ (guild_id|string)|tojson }}', '777')
+
+harness = r"""
+const fs = require('fs');
+const src = fs.readFileSync(process.argv[2], 'utf8');
+const byId = {};
+function makeEl(id) {
+  const e = { id, textContent: '', title: '',
+              style: {}, disabled: false, value: '0', checked: false,
+              _classes: new Set(), _handlers: {}, _html: '' };
+  Object.defineProperty(e, 'innerHTML', {
+    get() { return this._html; }, set(v) { this._html = String(v); }
+  });
+  Object.defineProperty(e, 'className', {
+    get() { return Array.from(e._classes).join(' '); },
+    set(v) { e._classes = new Set(String(v).split(/\s+/).filter(Boolean)); }
+  });
+  e.classList = {
+    add(c) { e._classes.add(c); }, remove(c) { e._classes.delete(c); },
+    contains(c) { return e._classes.has(c); }
+  };
+  e.addEventListener = (t, fn) => { (e._handlers[t] = e._handlers[t] || []).push(fn); };
+  e.getAttribute = (k) => e['attr_' + k] !== undefined ? e['attr_' + k] : null;
+  e.setAttribute = (k, v) => { e['attr_' + k] = String(v); };
+  return e;
+}
+const doc = {
+  getElementById: (id) => byId[id] || (byId[id] = makeEl(id)),
+  querySelectorAll: (sel) => sel.includes('pd-tab') ? TABS : [],
+  createElement: () => makeEl('tmp'),
+  body: { appendChild() {}, removeChild() {} }
+};
+const TABS = ['triggered', 'ack', 'resolved'].map(k => {
+  const t = makeEl('tab-' + k); t.setAttribute('data-kind', k); return t; });
+const tabs = TABS;
+
+let DATA = {
+  success: true, enabled: true, token: 'tok123secret456', bot_online: true,
+  bot_status: 'online', bot_presence: 'online',
+  hook_path: '/hooks/pagerduty/777/tok123secret456', channel_id: 301,
+  channels: [{ id: '301', name: 'тревоги' }, { id: '302', name: 'общее' }],
+  history: [
+    { at: '2026-08-30T10:00:00+00:00', event: 'incident.triggered', title: '🔥 Тревога #12',
+      incident: 'API не отвечает', status: 'sent', note: 'тревоги' },
+    { at: '2026-08-30T09:00:00+00:00', event: 'incident.triggered', title: '🔥 Тревога #11',
+      incident: 'БД молчит', status: 'offline', note: 'бот офлайн — PagerDuty повторит' }
+  ],
+  history_stats: { total: 2, sent: 1, offline: 1, no_channel: 0, error: 0,
+                   last_at: '2026-08-30T10:00:00+00:00' }
+};
+const win = {
+  setLiveRefresh: (fn) => { win._tick = fn; },
+  showToast: () => {}, confirm: () => true
+};
+const fetchMock = () => Promise.resolve({
+  ok: true, json: () => Promise.resolve(DATA)
+});
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+function fail(m) { console.error('FAIL: ' + m); process.exit(1); }
+
+(async () => {
+  new Function('document', 'window', 'location', 'navigator', 'fetch', src)(
+    doc, win, { origin: 'https://panel.example' },
+    { clipboard: { writeText: () => Promise.resolve() } }, fetchMock);
+  await sleep(60);
+
+  // 1) всё готово → мост зелёный, пилюля ок
+  if (!byId['pdState']._classes.has('ok')) fail('пилюля моста не ок при готовом мосте');
+  if (!byId['pdNodeBot'].className.includes('ok')) fail('узел Discord не зелёный при живом боте');
+  if (byId['pdNodeBotSt'].innerHTML.indexOf('бот онлайн') === -1) fail('нет подписи «бот онлайн»');
+  if (byId['pdHook'].textContent.indexOf('•••') === -1) fail('токен не замаскирован по умолчанию');
+
+  // 2) история: 2 строки, чипы со статусами
+  const rows = (byId['pdHistBody'].innerHTML.match(/<tr>/g) || []).length;
+  if (rows !== 2) fail('строк истории ' + rows + ', а нужно 2');
+  if (byId['pdHistBody'].innerHTML.indexOf('бот офлайн — повторит PD') === -1)
+    fail('нет чипа «бот офлайн» в истории');
+  if (String(byId['pdKpiSent'].textContent) !== '1') fail('KPI доставлено != 1');
+
+  // 3) тик: бот отвалился → узел красный, пилюля err, история не дёргается заново
+  DATA.bot_status = 'offline'; DATA.bot_online = false;
+  await win._tick(); await sleep(30);
+  if (!byId['pdNodeBot'].className.includes('err')) fail('узел Discord не покраснел');
+  if (!byId['pdState']._classes.has('err')) fail('пилюля не err при мёртвом боте');
+  if (byId['pdNodeBotSt'].innerHTML.indexOf('тревога не теряется') === -1)
+    fail('нет подписи «тревога не теряется»');
+
+  // 4) бот подключается → warn
+  DATA.bot_status = 'starting'; DATA.bot_online = false;
+  await win._tick(); await sleep(30);
+  if (!byId['pdNodeBot'].className.includes('warn')) fail('узел Discord не warn при подключении');
+
+  // 5) живой бот с presence=idle: подключён, но выглядит «не в сети» — и это сказано
+  DATA.bot_status = 'online'; DATA.bot_online = true; DATA.bot_presence = 'idle';
+  await win._tick(); await sleep(30);
+  if (!byId['pdNodeBot'].className.includes('ok')) fail('idle-бот должен быть зелёным (шлюз жив)');
+  if (byId['pdNodeBotSt'].innerHTML.indexOf('нет на месте') === -1)
+    fail('нет подсказки про idle-видимость');
+
+  // 6) вкладки превью меняют цвет карточки
+  tabs[1]._handlers['click'][0]();
+  if (byId['pdCard'].style.borderLeftColor !== 'var(--warn)')
+    fail('вкладка «Принято» не перекрасила превью');
+
+  // 7) глаз: токен раскрывается и прячется обратно
+  byId['pdEye']._handlers['click'][0]();
+  if (byId['pdHook'].textContent.indexOf('tok123secret456') === -1) fail('глаз не раскрыл токен');
+  byId['pdEye']._handlers['click'][0]();
+  if (byId['pdHook'].textContent.indexOf('•••') === -1) fail('глаз не спрятал токен');
+
+  console.log('OK: мост, статусы, история, маска, превью');
+})().catch(e => { console.error('ИСКЛЮЧЕНИЕ: ' + (e && e.message)); process.exit(1); });
+"""
+_js = os.path.join(_TMP, 'pd_page.js')
+open(_js, 'w', encoding='utf-8').write(page_js)
+_h = os.path.join(_TMP, 'pd_harness.js')
+open(_h, 'w', encoding='utf-8').write(harness)
+try:
+    _proc = _sp.run(['node', _h, _js], capture_output=True, text=True, timeout=60)
+    check(_proc.returncode == 0,
+          'JS моста работает: статусы online/offline/starting, idle-подсказка, '
+          'история, KPI, маска токена, превью'
+          + (f' [{_proc.stderr.strip()[:160]}]' if _proc.returncode else ''))
+except FileNotFoundError:
+    check(False, 'node недоступен для харнесса')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

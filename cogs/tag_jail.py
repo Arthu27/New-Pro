@@ -110,6 +110,22 @@ class TagJail(commands.Cog):
         self._configs[gid][key] = value
         _save_json(CFG_PATH, self._configs)
 
+    def _acl_ok(self, guild, member, action_key) -> bool:
+        """«Классическое» разрешение (панель → Доступ → Права команд).
+
+        Ручной джейл/освобождение уважает тумблер «Джейл» так же, как
+        /modpanel уважает «Бан»/«Мут». Правила нет — можно; владелец,
+        админ и сбой БД — fail-open (как в permission_acl.check_action).
+        """
+        if guild is None or member is None:
+            return True
+        try:
+            from services.permission_acl import check_action
+            return bool(check_action(guild.id, member, action_key))
+        except Exception as _ex:
+            _log.debug('tag_jail._acl_ok: %s', _ex)
+            return True
+
     def _jail_rec(self, guild_id: int, user_id: int):
         return self._jailed.get(str(guild_id), {}).get(str(user_id))
 
@@ -672,6 +688,14 @@ class TagJail(commands.Cog):
         if пользователь.bot:
             return await interaction.response.send_message(
                 embed=self._ae("warn", "Ботов не сажаем", "Джейл — только для людей."), ephemeral=True)
+        # Классическое разрешение: джейл — действие владельца (панель →
+        # Доступ → Права команд). Без тумблера «Джейл» команда не сработает.
+        if not self._acl_ok(interaction.guild, interaction.user, 'jail'):
+            return await interaction.response.send_message(
+                embed=self._ae("warn", "Нет права",
+                               "«Джейл» тебе не дал владелец (панель → Доступ → "
+                               "Права команд → Классические разрешения)."),
+                ephemeral=True)
         if self._jail_rec(interaction.guild.id, пользователь.id):
             return await interaction.response.send_message(
                 embed=self._ae("warn", "Он уже в джейле"), ephemeral=True)
@@ -691,6 +715,13 @@ class TagJail(commands.Cog):
     @app_commands.describe(пользователь="Кого освободить", причина="Причина")
     @app_commands.checks.has_permissions(moderate_members=True)
     async def unjail_cmd(self, interaction: discord.Interaction, пользователь: discord.Member, причина: str = None):
+        # Классическое разрешение: освобождение — то же действие «Джейл».
+        if not self._acl_ok(interaction.guild, interaction.user, 'jail'):
+            return await interaction.response.send_message(
+                embed=self._ae("warn", "Нет права",
+                               "«Джейл» тебе не дал владелец (панель → Доступ → "
+                               "Права команд → Классические разрешения)."),
+                ephemeral=True)
         if not self._jail_rec(interaction.guild.id, пользователь.id):
             role = self._jail_role(interaction.guild)
             if role and role in пользователь.roles:

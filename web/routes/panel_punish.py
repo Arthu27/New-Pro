@@ -56,32 +56,21 @@ def _punish_cog(bot):
 def _viewer_member(bot, gid):
     """Discord-мембер, под которым вошли в панель (session['discord_id']).
 
-    None → проверять нечего: статический логин из .env, роль owner панели
-    или мембер не найден — это доверенный вход, действия не режем.
+    Единая реализация — web/routes/_common.viewer_member: та же логика
+    используется планировщиком, лестницей и «Пользователями», чтобы нигде
+    не было двух разных проверок.
     """
-    if session.get('role') == 'owner':
-        return None
-    did = str(session.get('discord_id') or '').strip()
-    if not did.isdigit() or bot is None:
-        return None
-    try:
-        guild = bot.get_guild(int(gid))
-        return guild.get_member(int(did)) if guild is not None else None
-    except Exception:
-        return None
+    from web.routes._common import viewer_member
+    return viewer_member(bot, gid)
 
 
 def _acl_allows(gid, member, action):
     """True, если действие не отрезано ACL «Права команд» для этого мембера."""
     key = _ACTION_ACL.get(action)
-    if not key or member is None:
+    if not key:
         return True
-    try:
-        from services.permission_acl import check_action
-        return bool(check_action(int(gid), member, key))
-    except Exception as _ex:
-        _log.debug('punish acl: %s', _ex)
-        return True
+    from web.routes._common import acl_action_allowed
+    return acl_action_allowed(gid, member, key)
 
 
 def register(ctx):

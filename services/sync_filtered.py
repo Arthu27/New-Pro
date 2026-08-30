@@ -53,6 +53,7 @@ def _is_disabled(name):
 async def sync_tree(bot, guild=None):
     """tree.sync() без выключенных команд (контекст guild или глобально)."""
     import discord
+    from discord import AppCommandType
     tree = bot.tree
     ctx = None
     if guild is not None:
@@ -71,6 +72,30 @@ async def sync_tree(bot, guild=None):
                 removed.append(c)
             except Exception as e:
                 _log.debug('remove_command(%s): %s', c.name, e)
+    # Дубли апелляции: команды с extras['keep_global'] (/апелляция) живут
+    # ТОЛЬКО глобально (работают в ЛС). Гильдовая копия = вторая строка с
+    # тем же именем в меню сервера. Снимаем такие копии и НЕ возвращаем их
+    # в локальное дерево: при следующем guild-sync старые копии, оставшиеся
+    # в Discord с прошлых версий, стираются (самолечение).
+    if ctx is not None:
+        try:
+            _kept_global = [
+                c for c in tree.get_commands(guild=ctx)
+                if bool((getattr(c, 'extras', None) or {}).get('keep_global'))
+            ]
+        except Exception as _e:
+            _log.debug('get_commands(keep_global): %s', _e)
+            _kept_global = []
+        for c in _kept_global:
+            try:
+                tree.remove_command(
+                    c.name, guild=ctx,
+                    type=getattr(c, 'type', None) or AppCommandType.chat_input)
+                _log.info('sync: гильдовая копия keep_global «%s» снята '
+                          '(команда живёт глобально — дубля в меню не будет)',
+                          c.name)
+            except Exception as e:
+                _log.debug('remove_command(keep_global %s): %s', c.name, e)
     try:
         try:
             synced = await tree.sync(guild=ctx)
@@ -117,7 +142,8 @@ async def _clean_stray_guilds(bot, tree, exclude_ids):
     return cleaned
 
 
-def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=()):
+def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=(), commands=None,
+                    failed_guilds=(), error=''):
     """Метка последнего полного синка (диагностика в панели: data/sync_last.json)."""
     try:
         import json as _json
@@ -134,14 +160,45 @@ def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=()):
                     'targets': [int(x or 0) for x in targets_ids],
                     'stray_cleaned': [int(x or 0) for x in stray_cleaned],
                 }
+                if failed_guilds:
+                    # каким серверам команды НЕ дошли (видно в панели,
+                    # жалоба 30.08: «на сервере 33 команды и две апелляции»)
+                    payload['failed_guilds'] = [int(x or 0) for x in failed_guilds]
+                if error:
+                    payload['error'] = str(error)[:300]
+                if commands is not None:
+                    payload['commands'] = int(commands)
                 with open(_os.path.join(base, 'data', 'sync_last.json'), 'w',
                           encoding='utf-8') as f:
                     _json.dump(payload, f, ensure_ascii=False)
                 return
-            except OSError:
+            except OSError as _oe:
+                _log.debug('sync: не записал метку в %s: %s', base, _oe)
                 continue
     except Exception as _e:
         _log.debug('sync: метка последнего синка: %s', _e)
+
+
+def note_sync_error(bot, error, mode='error'):
+    """Синк упал (on_ready или кнопка) — причину видно в панели
+    (data/sync_last.json), а не только в консоли."""
+    import json as _json
+    import os as _os
+    from datetime import datetime as _dt, timezone as _tz
+    try:
+        for base in (getattr(bot, 'base_dir', None), _os.getcwd()):
+            if not base:
+                continue
+            _os.makedirs(_os.path.join(base, 'data'), exist_ok=True)
+            payload = {'at': _dt.now(_tz.utc).isoformat(timespec='seconds'),
+                       'mode': mode,
+                       'error': str(error)[:300]}
+            with open(_os.path.join(base, 'data', 'sync_last.json'), 'w',
+                      encoding='utf-8') as f:
+                _json.dump(payload, f, ensure_ascii=False)
+            return
+    except Exception as e:
+        _log.debug('note_sync_error(): %s', e)
 
 
 async def full_sync(bot):
@@ -166,8 +223,10 @@ async def _full_sync_inner(bot):
         from config import Config
         for obj in Config.guild_objects():
             g = bot.get_guild(obj.id)
-            if g is not None:
-                targets.append(g)
+            # Гильдия может ещё не быть в кэше (холодный старт/переподключение) —
+            # Object(id) для guild-синка достаточно. Раньше пустой targets
+            # включал «глобальный режим» и стирал гильдовые меню на ровном месте.
+            targets.append(g if g is not None else obj)
     except Exception as e:
         _log.debug('targets(): %s', e)
 
@@ -177,7 +236,7 @@ async def _full_sync_inner(bot):
         # иначе вторая «апелляция» и прочие дубли живут на серверах вечно.
         synced = await sync_tree(bot)
         cleaned = await _clean_stray_guilds(bot, tree, set())
-        _note_sync_done(bot, 'global', (), cleaned)
+        _note_sync_done(bot, 'global', (), cleaned, commands=len(synced))
         return synced
 
     # 1) глобальный список в Discord очищаем (чтобы не было дублей).
@@ -211,25 +270,43 @@ async def _full_sync_inner(bot):
                 parked.append((cmd, _t))
             except Exception as e:
                 _log.debug('снять глобально %s: %s', cmd.name, e)
-    try:
-        await tree.sync()
-    except TypeError as e:          # дерево без параметров — уже очищено выше
-        _log.debug('tree.sync(): %s', e)
-    except Exception as e:
+    # С РЕТРАЯМИ (как guild-синки, жалоба 30.08 «опять так же — команды
+    # не удалились»): разовый обрыв сети/замерзание loop убивал очистку
+    # ОДНОЙ попыткой — старое глобальное меню жило в Discord вечно.
+    _global_cleared = False
+    _global_err = None
+    for _attempt in (1, 2, 3):
+        try:
+            await tree.sync()
+            _global_cleared = True
+            break
+        except TypeError as e:      # дерево без параметров — уже очищено выше
+            _log.debug('tree.sync(): %s', e)
+            _global_cleared = True
+            break
+        except Exception as e:
+            _global_err = e
+            if _attempt < 3:
+                _log.warning('глобальная очистка: попытка %d/3 не удалась (%s) '
+                             '— повтор через 2с', _attempt, e)
+                await asyncio.sleep(2)
+    if not _global_cleared:
         # Очистка глобального списка НЕ прошла — старое глобальное меню
         # осталось в Discord. Копировать те же команды в гильдию = ДУБЛИ
         # в клиенте (именно «много дубликатов» из жалоб). Останавливаемся:
         # локальное дерево собираем обратно, до следующего рестарта
         # бот работает на старом глобальном меню — безопасно.
-        _log.warning('глобальная очистка не удалась (%s) — guild-синк '
-                     'пропущен, чтобы не задублировать меню', e)
+        _log.warning('глобальная очистка не удалась за 3 попытки (%s) — '
+                     'guild-синк пропущен, чтобы не задублировать меню',
+                     _global_err)
         for cmd, _t in parked:
             try:
                 tree.add_command(cmd)
             except Exception as _e:
                 _log.debug('вернуть %s в дерево: %s', cmd.name, _e)
         _note_sync_done(bot, 'failed-global-clear',
-                        [int(getattr(g, 'id', 0) or 0) for g in targets], ())
+                        [int(getattr(g, 'id', 0) or 0) for g in targets], (),
+                        error=str(_global_err))
         return []
 
     for cmd, _t in parked:        # локально возвращаем — источник для копий
@@ -254,33 +331,67 @@ async def _full_sync_inner(bot):
         except Exception as e:
             _log.debug('copy_global_to(%s): %s', g.id, e)
 
-    # 3) по каждому серверу — синк без выключенных
+    # 3) по каждому серверу — синк без выключенных. С РЕТРАЯМИ: разовый
+    #    сбой сети/замерзание event-loop не должен оставлять сервер со
+    #    СТАРЫМ меню (жалоба 30.08: на сервере висели 33 команды и две
+    #    «апелляции» — последний успешный guild-синк был давно).
     out = []
     ok_guilds = 0
+    failed_guilds = []
     for g in targets:
-        try:
-            out.extend(await sync_tree(bot, guild=g))
+        _synced_guild = None
+        for _attempt in (1, 2, 3):
+            try:
+                _synced_guild = await sync_tree(bot, guild=g)
+                break
+            except Exception as e:
+                if _attempt < 3:
+                    _log.warning('sync(%s): попытка %d/3 не удалась (%s) — '
+                                 'повтор через 2с', getattr(g, 'id', g), _attempt, e)
+                    await asyncio.sleep(2)
+                else:
+                    _log.warning('sync(%s): все 3 попытки не удались (%s) — меню '
+                                 'сервера останется прежним до следующего синка',
+                                 getattr(g, 'id', g), e)
+        if _synced_guild is not None:
+            out.extend(_synced_guild)
             ok_guilds += 1
-        except Exception as e:
-            _log.warning('sync(%s): %s', g.id, e)
+        else:
+            failed_guilds.append(int(getattr(g, 'id', 0) or 0))
 
     # 4) «Чужие» серверы (бот состоит, но их нет в MAIN/EXTRA_GUILD_IDS):
     #    старые гильдовые копии там вечны, пока их не стереть пустым sync.
     cleaned = await _clean_stray_guilds(
         bot, tree, {int(getattr(g, 'id', 0) or 0) for g in targets})
 
-    # 5) Откат: все guild-синки упали — глобальное меню уже стёрто,
-    #    серверные не появились = пользователь видел бы ПУСТОЕ меню
-    #    («команды не работают»). Возвращаем глобальное меню в Discord,
-    #    до следующего рестарта дублей не будет, команды живы.
+    # 5) Откат: все guild-синки упали. Глобальный список в Discord УЖЕ
+    #    правильный (шаг 1 опубликовал только keep_global), а упавший
+    #    guild-синк НЕ трогает старый список сервера — меню живо.
+    #    Раньше здесь делали tree.sync() всем деревом: parked-команды
+    #    (контекстные меню и пр.) публикавались ГЛОБАЛЬНО поверх
+    #    гильдовых копий — и каждая команда появлялась ПО ДВАЖДЫ.
+    #    Теперь честно перепубликуем только keep_global (идемпотентно
+    #    с шагом 1 — дублей не бывает физически).
     if targets and ok_guilds == 0:
-        _log.error('ни один guild-синк не удался — возвращаю глобальное '
-                   'меню, чтобы команды не пропали из списка')
+        _log.error('ни один guild-синк не удался — глобальное меню '
+                   'оставляю как после шага 1 (только keep_global): '
+                   'гильдовые списки не тронуты, дублей не будет')
         try:
+            for cmd, _t in parked:
+                try:
+                    tree.remove_command(cmd.name, type=_t)
+                except Exception as _e:
+                    _log.debug('снять перед откатом %s: %s', cmd.name, _e)
             await tree.sync()
         except Exception as _e:
-            _log.error('откат глобального меню тоже не удался: %s', _e)
+            _log.error('перепубликация keep_global после сбоя: %s', _e)
+        finally:
+            for cmd, _t in parked:
+                try:
+                    tree.add_command(cmd)
+                except Exception as _e:
+                    _log.debug('вернуть после отката %s: %s', cmd.name, _e)
     _note_sync_done(bot, 'guilds',
                     [int(getattr(g, 'id', 0) or 0) for g in targets],
-                    cleaned)
+                    cleaned, commands=len(out), failed_guilds=failed_guilds)
     return out

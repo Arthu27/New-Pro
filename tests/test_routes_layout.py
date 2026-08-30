@@ -135,6 +135,7 @@ EXPECTED = {
     'api_bot_diagnose': '/api/bot/diagnose',
     'api_bot_errors': '/api/bot/errors',
     'api_bot_gc': '/api/bot/gc',
+    'api_bot_memory_profile': '/api/bot/memory-profile',
     'api_bot_health': '/api/bot/health',
     'api_bot_hot_reload': '/api/bot/hot-reload',
     'api_bot_prefix': '/api/bot/prefix',

@@ -9,6 +9,10 @@ from discord import app_commands
 from discord.ext import commands
 import os
 
+from logger import get_logger
+
+log = get_logger("cog_manager")
+
 from cogs.embed_utils import hakumo_embed, reply, InterCtx
 
 
@@ -123,6 +127,14 @@ class CogManager(commands.Cog):
                     await self.bot.reload_extension(f'cogs.{cog_name}')
                     await reply(ctx, 'system', 'Модуль перезагружен',
                                 f'`{cog_name}` — свежий код.')
+                # Свежезагруженные команды — сразу под бюджет меню
+                # (глобальные И guild-scoped): /module load не должен
+                # вернуть в слеш-меню лишние команды до рестарта.
+                try:
+                    from slash_budget import apply_slash_budget
+                    apply_slash_budget(self.bot.tree)
+                except Exception as _ex:
+                    log.debug('cog_manager: apply_slash_budget: %s', _ex)
             except Exception as e:
                 await reply(ctx, 'error', 'Не получилось', f'`{cog_name}`: {e}')
             return
@@ -135,6 +147,11 @@ class CogManager(commands.Cog):
                     ok.append(ext.split('.')[-1])
                 except Exception as e:
                     bad.append(f'`{ext.split(".")[-1]}` — {e}')
+            try:
+                from slash_budget import apply_slash_budget
+                apply_slash_budget(self.bot.tree)
+            except Exception as _ex:
+                log.debug('cog_manager: apply_slash_budget (reload-all): %s', _ex)
             embed = hakumo_embed(
                 'system', 'Перезагрузка всех модулей', None,
                 fields=[

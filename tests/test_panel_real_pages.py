@@ -199,8 +199,9 @@ check(client.get('/api/bot-settings').status_code in (302, 403), 'bot-settings A
 login_as('owner')
 d = client.get('/api/bot-settings').get_json()
 check(d['ok'] and d['prefix'] == '!' and 'discord_version' in d, 'bot-settings API: префикс/версия в ответе')
-check(d['presence'] == {'status': 'idle', 'activity_type': 'listening',
-                        'activity_text': '.gg/Hakumo'}, 'bot-settings API: дефолтный презенс')
+check(d['presence'] == {'status': 'online', 'activity_type': 'watching',
+                        'activity_text': 'Hakumo'},
+      'bot-settings API: дефолтный презенс «Смотрит Hakumo» + online (не выглядит «не в сети»)')
 
 r = client.post('/api/bot-settings/presence',
                 json={'status': 'online', 'activity_type': 'playing', 'activity_text': 'на сервере Hakumo'})
@@ -235,14 +236,23 @@ class FakeTree:
         return [1, 2, 3]
 
 
+import asyncio as _aio  # noqa: E402
+
+_not_running_loop = _aio.new_event_loop()
+
+
 class FakeBot2(FakeBot):
     tree = FakeTree()
+    loop = _not_running_loop
 
 
 set_bot_instance(FakeBot2())
 r = client.post('/api/bot-settings/sync', json={})
 d = r.get_json()
-check(r.status_code == 200 and d['ok'] and d['synced'] == 3, 'sync: живой бот → synced=3')
+# 2026-08-29: синк уходит ФОНОМ (раньше ждали 10 сек с таймаутом → ложное
+# «Синк упал» → повторные клики → rate limit → дубли команд в меню).
+check(r.status_code == 200 and d['ok'] and d.get('started'),
+      'sync: живой бот → синк запущен фоном (без ожидания и дублей)')
 set_bot_instance(FakeBot())
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

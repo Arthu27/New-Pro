@@ -4,7 +4,7 @@
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _process_action, _log, viewer_member, acl_action_allowed,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
@@ -197,6 +197,10 @@ def register(ctx):
         guild =bot .get_guild (int (guild_id )if str (guild_id ).isdigit ()else 0 )
         if not guild :
             return jsonify ({'error':'Сервер не найден'}),404 
+        _acl_m = viewer_member(bot, guild.id)
+        if not acl_action_allowed(guild.id, _acl_m, 'warn'):
+            return jsonify({'error': 'Нет права: «Варн» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+
         try :
             member =_run_async (_resolve_member_async (guild ,int (user_id )))
         except Exception :
@@ -276,6 +280,10 @@ def register(ctx):
         guild =bot .get_guild (int (guild_id )if str (guild_id ).isdigit ()else 0 )
         if not guild :
             return jsonify ({'error':'Сервер не найден'}),404 
+        _acl_m = viewer_member(bot, guild.id)
+        if not acl_action_allowed(guild.id, _acl_m, 'ban'):
+            return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+
         try :
             member =_run_async (_resolve_member_async (guild ,int (user_id )))
         except Exception :

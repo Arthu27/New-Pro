@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Модерация <span class="sep">·</span> Реагирование</div>
+    <div class="eyebrow">Модерация <span class="sep">·</span> Массовые операции</div>
     <h1>Массовые операции</h1>
     <p class="lead">Пакетные действия под полным контролем: сервер, аудитория и масштаб всегда видны до запуска.</p>
   </div>
@@ -80,6 +80,8 @@
     el.className = 'hint ' + (ok ? '' : 'error');
   }
 
+  var MAIN_GID = '{{ main_guild_id }}';
+
   function loadGuilds() {
     fetch('/api/guilds').then(function (r) { return r.json(); }).then(function (guilds) {
       if (!Array.isArray(guilds)) return;
@@ -89,10 +91,16 @@
           var opt = document.createElement('option');
           opt.value = g.id;
           opt.textContent = g.name;
+          if (MAIN_GID && String(g.id) === String(MAIN_GID)) opt.selected = true;
           sel.appendChild(opt);
         });
+        if (sel.value) loadRoles(sel);   /* главный сервер предвыбран — роли сразу на месте */
       });
     }).catch(function () {});
+    /* до выбора сервера — внятный плейсхолдер, а не пустой дропдаун */
+    document.querySelectorAll('.ba-roles').forEach(function (sel) {
+      if (!sel.options.length) sel.innerHTML = '<option value="">Сначала выберите сервер</option>';
+    });
   }
 
   function loadRoles(guildSelect) {

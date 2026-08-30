@@ -61,6 +61,7 @@ def clean_demo_data():
     for gid in _DEMO_GIDS:
         gid_files += [
             f'data/modproof_{gid}.json', f'data/warn_config_{gid}.json',
+            'data/punish_roles.json',
             f'data/starboard_settings_{gid}.json', f'data/ticket_notify_{gid}.json',
             f'data/rules_{gid}.json', f'data/xp_{gid}.json',
             f'data/leveling_{gid}.json', f'data/antiraid_{gid}.json',
@@ -590,11 +591,11 @@ demo_rules = [
     {'t': 'Запрещены NSFW-материалы, шок-контент и ссылки на вредоносные ресурсы.',
      'u': '', 'img': '', 'thumb': ''},
     {'t': 'Реклама других серверов — только с разрешения администрации.',
-     'u': '', 'img': 'https://cdn.discordapp.com/attachments/0000/example_rules.png', 'thumb': ''},
+     'u': '', 'img': '/static/brand/emblem-dragon.png', 'thumb': ''},
     {'t': 'Спорные ситуации решайте через тикеты, а не в общем чате.',
      'u': 'https://support.discord.com/hc/ru', 'img': '', 'thumb': ''},
     {'t': 'Следуйте указаниям модераторов — их решения можно обжаловать через апелляции.',
-     'u': '', 'img': '', 'thumb': 'https://cdn.discordapp.com/attachments/0000/example_thumb.png'},
+     'u': '', 'img': '', 'thumb': '/static/brand/emblem-dragon.png'},
 ]
 
 demo_xp = {
@@ -693,10 +694,22 @@ staff_apps = {
     },
 }
 
+# Роли наказаний: уровни варнов НЕ фиксированные — владелец добавляет сам.
+# Для демо-витрины кладём три «своих» уровня (ролей в демо нет — селекты
+# пустые, это и показывает свободу настройки).
+punish_roles = {
+    GID: {
+        'roles': {},
+        'warn_levels': [2, 5, 8],
+        'temps': {},
+    },
+}
+
 files = {
     'data/warnings.json': warnings,
     'data/audit_log.json': audit,
     'data/mod_data.json': mod_data,
+    'data/punish_roles.json': punish_roles,
     f'data/modproof_{GID}.json': proofs,
     f'data/warn_config_{GID}.json': warn_config,
     'data/login_log.json': login_log,
@@ -826,20 +839,20 @@ try:
     _notes = {
         '1001': {'name': 'Sonya', 'avatar': 'https://cdn.discordapp.com/embed/avatars/1.png',
                  'notes': [
-                     {'id': 'n1', 'note': 'Ведёт ночные смены дежурств, надёжная.', 'author': 'artem.mods',
-                      'timestamp': iso(2, 20, 15)},
-                     {'id': 'n2', 'note': 'Помогла с набором модераторов — поблагодарить.', 'author': 'lina.mod',
-                      'timestamp': iso(5, 11, 0)}]},
+                     {'id': 'n1', 'text': 'Ведёт ночные смены дежурств, надёжная.', 'author': 'artem.mods',
+                      'created_at': iso(2, 20, 15)},
+                     {'id': 'n2', 'text': 'Помогла с набором модераторов — поблагодарить.', 'author': 'lina.mod',
+                      'created_at': iso(5, 11, 0)}]},
         '1002': {'name': 'Artem', 'avatar': 'https://cdn.discordapp.com/embed/avatars/2.png',
                  'notes': [
-                     {'id': 'n3', 'note': 'Отвечает за варн-конфиг. Согласовывать пороги с ним.', 'author': 'owner',
-                      'timestamp': iso(1, 16, 45)}]},
+                     {'id': 'n3', 'text': 'Отвечает за варн-конфиг. Согласовывать пороги с ним.', 'author': 'owner',
+                      'created_at': iso(1, 16, 45)}]},
         '1003': {'name': 'Lina', 'avatar': 'https://cdn.discordapp.com/embed/avatars/3.png',
                  'notes': [
-                     {'id': 'n4', 'note': 'Обрабатывает тикеты в утренние часы.', 'author': 'artem.mods',
-                      'timestamp': iso(3, 9, 30)},
-                     {'id': 'n5', 'note': 'На испытательном сроке до конца месяца.', 'author': 'owner',
-                      'timestamp': iso(6, 18, 0)}]},
+                     {'id': 'n4', 'text': 'Обрабатывает тикеты в утренние часы.', 'author': 'artem.mods',
+                      'created_at': iso(3, 9, 30)},
+                     {'id': 'n5', 'text': 'На испытательном сроке до конца месяца.', 'author': 'owner',
+                      'created_at': iso(6, 18, 0)}]},
     }
     with open('data/member_notes.json', 'w', encoding='utf-8') as _f:
         json.dump(_notes, _f, ensure_ascii=False, indent=2)

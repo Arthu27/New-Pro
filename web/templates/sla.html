@@ -198,9 +198,9 @@ function renderPolicies(list) {
   }
   var sel = document.getElementById('slCfgPolicy');
   if (sel) {
-    sel.innerHTML = list.map(function (pol) {
+    sel.innerHTML = list.length ? list.map(function (pol) {
       return '<option value="' + esc(pol.policy_id) + '">' + esc(pol.name) + '</option>';
-    }).join('');
+    }).join('') : '<option value="">— нет настроенных политик —</option>';
   }
 }
 

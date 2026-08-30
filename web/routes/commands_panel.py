@@ -99,6 +99,46 @@ def register(ctx):
         return jsonify({'success': True,
                         'disabled': sorted(CSW.disabled_set())})
 
+
+    @app.route('/api/commands/menu-mode', methods=['GET', 'POST'])
+    @login_required
+    @role_required('admin')
+    def api_commands_menu_mode():
+        """Режим слеш-меню Discord: кураторский (7 команд) или полный.
+
+        Заказ 30.08 «давай удалим все команды, оставим только это»:
+        владелец жмёт кнопку на странице «Команды» — без правки .env на
+        сервере (там до сих пор BOT_FULL=1). Сжатие меню применяется к
+        ЖИВОМУ боту: бюджет чистит дерево, синк затирает списки Discord —
+        через минуту в меню «/» ровно 7 команд. Обратное включение —
+        только с перезапуском: команды сверх кураторских выгружаются из
+        дерева при загрузке когов, вернуть их в живой бот нельзя.
+        """
+        from services import menu_mode as MM
+        if request.method == 'GET':
+            return jsonify({'success': True, 'full': MM.is_full()})
+        data = request.get_json(silent=True) or {}
+        if 'full' not in data:
+            return jsonify({'success': False,
+                            'error': 'Не указан режим (full)'}), 400
+        full = bool(data.get('full'))
+        MM.set_full(full)
+        bot = getattr(importlib.import_module('web.app'), 'bot_instance', None)
+        scheduled = False
+        if (not full and bot is not None and getattr(bot, 'loop', None)
+                and getattr(bot, 'tree', None) is not None):
+            import asyncio
+            try:
+                # фоном, без ожидания: бюджет + полный синк ходят в Discord
+                # и легко идут дольше 10 секунд (как кнопка синка рядом)
+                asyncio.run_coroutine_threadsafe(MM.apply_to_bot(bot), bot.loop)
+                scheduled = True
+            except RuntimeError as _ex:
+                _log.debug('menu-mode apply schedule: %s', _ex)
+        return jsonify({'success': True, 'full': MM.is_full(),
+                        'applied_live': scheduled,
+                        'restart_needed': bool(full)})
+
     @app.route('/api/commands/switch', methods=['POST'])
     @login_required
     @role_required('admin')

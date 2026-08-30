@@ -26,6 +26,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 os.makedirs('data', exist_ok=True)
 os.environ['DB_PATH'] = os.path.join(_TMP, 'data', 'bot.db')
+# Сервер из .env: часть когов регистрирует команды ЛОКАЛЬНО (guild-scoped)
+# через add_cog(..., guilds=Config.guild_objects()) — бюджет обязан
+# почистить и их (иначе /security, /backup, /ticket-* возвращаются в меню).
+os.environ['MAIN_GUILD_ID'] = '777'
 for _v in ('MOD_ONLY', 'DISABLED_COGS', 'EXTRA_COGS'):
     os.environ.pop(_v, None)
 
@@ -81,6 +85,8 @@ async def _load_all():
     tree_names = sorted(
         {c.name for c in bot.tree.get_commands()
          if not isinstance(c, discord.app_commands.ContextMenu)}
+        | {c.name for c in bot.tree.get_commands(guild=discord.Object(id=777))
+           if not isinstance(c, discord.app_commands.ContextMenu)}
     )
     await bot.close()
     return tree_names
@@ -96,9 +102,22 @@ print('== 3. Бюджет держится ==')
 check(len(tree_names) <= 95, f'меню умещается с запасом: {len(tree_names)} <= 95 (лимит 100)')
 check(len(tree_names) == len(set(tree_names)), 'имена в меню уникальны')
 
-print('== 4. Меню — ровно белый список ==')
+print('== 4. Меню — ровно белый список (глобально И на сервере) ==')
 stray = [n for n in tree_names if n not in keep]
 check(not stray, f'ничего лишнего вне KEEP_SLASH (лишнее: {stray[:5]})')
+for gone in ('security', 'security-toggle', 'security-newaccount', 'scan-link',
+             'backup', 'backup-list', 'staff-panel', 'my-application'):
+    check(gone not in tree_names,
+          f'guild-scoped {gone} не вернулся в меню (бюджет чистит и локальные команды)')
+# тикетная панель вернулась по заказу владельца — обязана быть в меню
+# (guild-scoped). ticket-add/ticket-remove убраны (заказ 2026-08-29
+# «должны быть в меню тикета»): их работа — кнопки ➕/➖ в TicketManageView.
+for need in ('ticket-panel',):
+    check(need in tree_names,
+          f'тикетная {need} в меню (заказ «вернуть тикеты» — бюджета ей нет)')
+for moved in ('ticket-add', 'ticket-remove'):
+    check(moved not in tree_names,
+          f'{moved} убрана из слеш-меню — теперь это кнопки в меню тикета')
 realized = [n for n in keep if n in tree_names]
 missing = sorted(set(keep) - set(tree_names))
 print(f'  KEEP-имена реально в меню: {len(realized)}/{len(keep)}; отсутствуют оффлайн: {missing}')
@@ -109,6 +128,61 @@ check(stats['pruned'] >= 30, f'на префикс вынесено {stats["prun
 check(stats['loaded'] >= 60, f'загрузилось большинство модулей: {stats["loaded"]} >= 60')
 check('CommandLimitReached' not in ''.join(stats['failed'].values()),
       'ни один модуль не упал о лимит команд')
+
+print('== 6. BOT_FULL=1: меню держит ВСЕ команды (жалоба «команды не грузятся») ==')
+os.environ['BOT_FULL'] = '1'   # как у владельца в .env
+check(slash_budget.full_menu_mode({'BOT_FULL': '1'}) is True,
+      'full_menu_mode распознаёт BOT_FULL=1')
+check(slash_budget.full_menu_mode({}) is False,
+      'без флага — лёгкий кураторский режим')
+
+
+class _Cmd:
+    def __init__(self, name):
+        self.name = name
+
+
+class _Tree:
+    """Дерево-заглушка: команды живут в множестве, remove по имени."""
+
+    def __init__(self, names):
+        self._cmds = {n: _Cmd(n) for n in names}
+
+    def get_commands(self, guild=None):
+        return list(self._cmds.values())
+
+    def remove_command(self, name, type=None, guild=None):
+        return self._cmds.pop(name, None)
+
+
+_names80 = [f'cmd{i:02d}' for i in range(80)]
+_tree = _Tree(_names80)
+_kept80, _pruned80 = slash_budget.apply_slash_budget(_tree, guilds=[])
+check(len(_kept80) == 80 and not _pruned80,
+      f'BOT_FULL держит всё меню целиком ({len(_kept80)} из 80)')
+# а теперь перебор: 130 команд — хвост уходит на префикс, лимит не пробит
+_names130 = [f'cmd{i:03d}' for i in range(130)]
+_tree130 = _Tree(_names130)
+_kept130, _pruned130 = slash_budget.apply_slash_budget(_tree130, guilds=[])
+# 7 мест из SAFE_FULL зарезервированы под KEEP_SLASH — их имён в дереве нет,
+# реально остаётся SAFE_FULL - |KEEP_SLASH| команд
+_full_cap = slash_budget.SAFE_FULL - len(slash_budget.KEEP_SLASH)
+check(len(_kept130) == _full_cap and len(_pruned130) == 130 - _full_cap,
+      f'перебор урезается до безопасных {slash_budget.SAFE_FULL} '
+      f'(мест под KEEP_SLASH включены): {len(_kept130)} в меню, {len(_pruned130)} на префикс')
+# 88 команд (LIMIT - MAX_COG_BURST) — ещё влезают целиком, запас для следующего кога
+_names88 = [f'cmd{i:02d}' for i in range(88)]
+_tree88 = _Tree(_names88)
+_kept88, _pruned88 = slash_budget.apply_slash_budget(_tree88, guilds=[])
+check(len(_kept88) == 88 and not _pruned88,
+      'до порога — меню не режется вовсе (88 команд целиком)')
+# 89 — уже режем до SAFE_FULL
+_names89 = [f'cmd{i:02d}' for i in range(89)]
+_tree89 = _Tree(_names89)
+_kept89, _pruned89 = slash_budget.apply_slash_budget(_tree89, guilds=[])
+check(len(_kept89) == _full_cap,
+      'за порогом — урезается до SAFE_FULL (гильдия не переполнится после копии)')
+os.environ.pop('BOT_FULL', None)   # не течёт в остальные проверки
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

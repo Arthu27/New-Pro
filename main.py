@@ -103,6 +103,7 @@ import urllib.error
 import time
 import signal
 import atexit
+import json
 
 # python-dotenv может печатать предупреждения о строках-комментариях (русские, с длинным тире и т.п.).
 # Они безвредны — скрываем предупреждения, но продолжаем читать значения.
@@ -126,6 +127,75 @@ from logger import setup_logger, get_logger
 
 Config.ensure_dirs()
 log = setup_logger("bot", Config.LOG_FILE, Config.LOG_LEVEL)
+
+# ─── Журнал запусков: «почему бот перезапустился» ─────────────────────
+# Каждый старт/останов/обрыв записывается в data/run_log.json (последние
+# 50 событий). После перезапуска видно: код выхода, сигнал, причина —
+# а не «сидел 14 часов и сам перезапустился».
+_RUN_LOG = os.path.join(_BASE_DIR, 'data', 'run_log.json')
+_RUN_START_TS = time.time()
+
+
+def _record_run(event: str, **extra):
+    """Записать событие жизненного цикла процесса (start/stop/disconnect)."""
+    try:
+        rows = []
+        if os.path.exists(_RUN_LOG):
+            try:
+                with open(_RUN_LOG, 'r', encoding='utf-8') as f:
+                    rows = json.load(f)
+            except Exception:
+                rows = []
+        import datetime as _dt
+        row = {'ts': _dt.datetime.now(_dt.timezone.utc).isoformat(timespec='seconds'),
+               'event': event, 'pid': os.getpid(), **extra}
+        rows.append(row)
+        rows = rows[-50:]
+        tmp = _RUN_LOG + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(rows, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, _RUN_LOG)
+    except Exception as _ex:
+        log.debug('_record_run(): подавлено: %s', _ex)
+
+
+async def _memory_watchdog():
+    """Раз в минуту смотрим память: рост → GC + предупреждение в лог.
+
+    Задача: 14 часов аптайма кончились молча — типичный OOM-киллер
+    (растущий кэш или утечка). Если RSS близко к критическому, пишем
+    в run_log и лог CRITICAL, чтобы причина была видна ДО перезапуска.
+    """
+    import gc
+    try:
+        import psutil as _ps
+    except Exception:
+        return
+    minute = 0
+    while True:
+        await asyncio.sleep(60)
+        minute += 1
+        try:
+            p = _ps.Process()
+            rss = p.memory_info().rss / 1024 / 1024
+            threads = p.num_threads()
+            mem_warn = 700
+            mem_crit = 900
+            if rss > mem_warn:
+                level = 'warn' if rss < mem_crit else 'critical'
+                log.warning('[ПАМЯТЬ] RSS %.0f МБ, потоков %d — %s (GC)',
+                            rss, threads, level)
+                gc.collect()
+            if rss > mem_crit:
+                _record_run('memory_high',
+                            rss_mb=round(rss, 1), threads=threads)
+                log.critical('[ПАМЯТЬ] RSS %.0f МБ — близко к лимиту '
+                             '(если процесс умрёт — причина в этом)', rss)
+            if minute % 5 == 0 and rss > mem_warn:
+                log.warning('[ПАМЯТЬ] стабильно высокое RSS %.0f МБ — '
+                            'проверьте кэши/утечки', rss)
+        except Exception as _ex:
+            log.debug('memory_watchdog(): подавлено: %s', _ex)
 
 # Стартовый фикс: очистка дублирующих эндпоинтов
 import subprocess as _sp, sys as _sys
@@ -263,9 +333,30 @@ def _have_gunicorn():
 
 
 def _start_web_server(app):
-    """Запуск подпроцесса Gunicorn. Если не получится — fallback на Werkzeug."""
+    """Запуск веб-панели.
+
+    ПО УМОЛЧАНИЮ — В ТОМ ЖЕ ПРОЦЕССЕ, ЧТО БОТ (Werkzeug, threaded).
+    Только так панель видит бота: web/app.py хранит bot_instance в памяти
+    процесса, и при отдельном процессе (gunicorn) он всегда None → панель
+    отвечает «Бот офлайн», изменения из панели не применяются к боту
+    (каналы, коги, синк команд, наказания...). Вот это и был разрыв
+    «я меняю тут — а там не работает».
+
+    Вернуть старые «внешний процесс без моста» (осознанно): PANEL_PROCESS=gunicorn
+    на своём риске — панель НЕ будет видеть бота.
+    """
     global _web_server_proc
-    if _have_gunicorn():
+    _port = int(os.environ.get('PANEL_PORT', '') or 0)
+    if not _port:
+        try:
+            from config import Config
+            _port = int(getattr(Config, 'PORT', 0) or 0)
+        except Exception:
+            _port = 0
+    _port = _port or 5001
+
+    _mode = (os.environ.get('PANEL_PROCESS', '') or '').strip().lower()
+    if _mode == 'gunicorn' and _have_gunicorn():
         try:
             cmd = [
                 sys.executable, '-m', 'gunicorn',
@@ -277,7 +368,9 @@ def _start_web_server(app):
                 stdout=sys.stdout, stderr=subprocess.STDOUT,
                 preexec_fn=os.setsid if hasattr(os, 'setsid') else None,
             )
-            print(f"[ВЕБ] Gunicorn запущен (pid={_web_server_proc.pid})")
+            print(f"[ВЕБ] Gunicorn запущен (pid={_web_server_proc.pid}) — "
+                  f"панель в ОТДЕЛЬНОМ процессе: бота она НЕ видит "
+                  f"(настройки из панели не применятся!)")
             return
         except Exception as e:
             print(f"[ВЕБ] Не удалось запустить Gunicorn, fallback на Werkzeug: {e}")
@@ -285,10 +378,12 @@ def _start_web_server(app):
     import logging
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     threading.Thread(
-        target=lambda: app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False),
+        target=lambda: app.run(host='0.0.0.0', port=_port, debug=False,
+                               use_reloader=False, threaded=True),
         daemon=True
     ).start()
-    print("[ВЕБ] Werkzeug (fallback) запущен")
+    print(f"[ВЕБ] Панель запущена ВМЕСТЕ С БОТОМ (единый процесс): "
+          f"http://localhost:{_port} — изменения из панели применяются сразу")
 
 
 def _stop_web_server():
@@ -339,6 +434,34 @@ def _start_tunnel_sidecar():
     cfg = _nt.find_config(root)
     if not cfg:
         return  # туннель ещё не настраивали — работаем локально, не шумим
+    # Windows-грабли: «localhost» в origin резолвится в ::1 (IPv6), а панель
+    # слушает 0.0.0.0 (IPv4) → «dial tcp [::1]:5001: connectex: connection
+    # refused». Чиним все копии конфига ДО запуска туннеля/службы.
+    try:
+        _healed = _nt.heal_all_origins(root, cfg)
+    except Exception:
+        _healed = []
+    if _healed:
+        print('[ТУННЕЛЬ] Починил origin в конфиге: localhost -> 127.0.0.1 '
+              f'({len(_healed)} файл.) — панель слушает IPv4, '
+              'а localhost на Windows резолвится в IPv6 ::1')
+    # Протокол до края Cloudflare: QUIC (UDP, по умолчанию cloudflared) на
+    # капризных сетях VDS рвётся каждые ~20 секунд («timeout: no recent
+    # network activity», «failed to accept QUIC stream») и домен флапает.
+    # http2 (TCP) стабилен — потому он и дефолт. Вернуть QUIC: TUNNEL_PROTOCOL=quic.
+    proto = (os.environ.get('TUNNEL_PROTOCOL', '') or 'http2').strip().lower()
+    if proto not in ('http2', 'quic', 'auto'):
+        print(f'[ТУННЕЛЬ] TUNNEL_PROTOCOL={proto} не понял — использую http2.')
+        proto = 'http2'
+    try:
+        _prototuned = _nt.ensure_protocol_line(root, cfg, proto)
+    except Exception:
+        _prototuned = []
+    if _prototuned:
+        print(f'[ТУННЕЛЬ] Прописал protocol: {proto} в конфиг '
+              f'({len(_prototuned)} файл.) — QUIC/UDP нестабилен, '
+              'http2/TCP держит соединение; службе Windows флаг не передать, '
+              'потому пишем в конфиг.')
     pub = _nt.public_url(cfg)
     if pub:
         # Постоянную ссылку (https://домен) бот отправит в канал панели —
@@ -375,7 +498,7 @@ def _start_tunnel_sidecar():
     run_cfg = _nt.runtime_config(root, cfg)
     try:
         _tunnel_proc = subprocess.Popen(
-            [exe, '--config', run_cfg, 'tunnel', 'run'],
+            [exe, '--protocol', proto, '--config', run_cfg, 'tunnel', 'run'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             bufsize=1, text=True, encoding='utf-8', errors='replace',
         )
@@ -384,10 +507,14 @@ def _start_tunnel_sidecar():
         return
 
     def _echo_tunnel_log():
+        # Инцидент 30.08: ~60 строк cloudflared за рестарт прятали
+        # сообщения бота. Показываем только значимое: ошибки, регистрации
+        # соединений, итог пре-чеков (см. services/startup_info.py).
+        from services.startup_info import tunnel_line_worth
         try:
             for line in _tunnel_proc.stdout:
                 line = (line or '').rstrip()
-                if line:
+                if line and tunnel_line_worth(line):
                     print(f'[ТУННЕЛЬ] {line}')
         except Exception as e:
             print(f'[ТУННЕЛЬ] Чтение лога: {e}')
@@ -443,7 +570,9 @@ def cleanup_on_exit():
 
 def signal_handler(signum, frame):
     """Обработчик сигналов для корректного выключения"""
-    print(f"[СИГНАЛ] Получен сигнал {signum}, выполняется очистка...")
+    name = signal.Signals(signum).name if signum in signal.Signals._value2member_map_ else str(signum)
+    print(f"[СИГНАЛ] Получен сигнал {signum} ({name}), выполняется очистка...")
+    _record_run('stop', reason=f'signal_{name}', signal=signum)
     cleanup_on_exit()
     sys.exit(0)
 
@@ -617,7 +746,7 @@ def start_tunnel():
             cmd = [cf_path, "tunnel", "--no-autoupdate"]
             if proto != "auto":
                 cmd.extend(["--protocol", proto])
-            cmd.extend(["--url", "http://localhost:5001"])
+            cmd.extend(["--url", "http://127.0.0.1:5001"])
             proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -727,7 +856,22 @@ async def on_ready():
             print(f'[СИНХРОНИЗАЦИЯ] Slash команды синхронизированы: {_n}')
         except Exception as e:
             print(f'[СИНХРОНИЗАЦИЯ] Ошибка: {e}')
+            # причину видно и в панели (sync_last.json), не только в консоли
+            try:
+                from services.sync_filtered import note_sync_error as _nse
+                _nse(bot, e, mode='on-ready-failed')
+            except Exception as _nse_ex:
+                _log.warning("on_ready(): не записали ошибку синка в sync_last.json: %s", _nse_ex)
         _synced = True
+        # Куча к этому моменту построена: замораживаем стартовый граф и
+        # делаем сборки редкими — мультисекундные паузы GC рвали цикл
+        # (инцидент 30.08: зависания 6–10 сек каждые ~3 мин, стек-монитор
+        # видел только «виновник уже завершился»).
+        try:
+            from error_handler import gc_stabilize
+            gc_stabilize()
+        except Exception as _ex:
+            _log.warning("on_ready(): GC-стабилизация не удалась: %s", _ex)
         bot.loop.create_task(_monitor_voice())
         # Если только что кончило самообновление (/update) — отчитаться в канал
         try:
@@ -739,18 +883,19 @@ async def on_ready():
 
     import json as _j
     _cfg_file = 'data/bot_config.json'
-    _status = discord.Status.idle
-    _activity_type = discord.ActivityType.listening
-    _activity_text = '.gg/Hakumo'
+    _status = discord.Status.online   # дефолт — зелёный: idle выглядел как «бот отключился»
+    _activity_type = discord.ActivityType.watching   # «Смотрит Hakumo» — заказ владельца 30.08
+    _activity_text = 'Hakumo'
     if os.path.exists(_cfg_file):
         try:
             with open(_cfg_file, encoding='utf-8') as _f:
                 _cfg = _j.load(_f)
             _status_map = {'online': discord.Status.online, 'idle': discord.Status.idle, 'dnd': discord.Status.dnd, 'invisible': discord.Status.invisible}
             _type_map = {'listening': discord.ActivityType.listening, 'playing': discord.ActivityType.playing, 'watching': discord.ActivityType.watching, 'competing': discord.ActivityType.competing}
-            _status = _status_map.get(_cfg.get('status', 'idle'), discord.Status.idle)
-            _activity_type = _type_map.get(_cfg.get('activity_type', 'listening'), discord.ActivityType.listening)
-            _activity_text = _cfg.get('activity_text', '.gg/Hakumo')
+            _status = _status_map.get(_cfg.get('status', 'online'), discord.Status.online)
+            _activity_type = _type_map.get(_cfg.get('activity_type', 'watching'), discord.ActivityType.watching)
+            # пустая строка в конфиге не должна оставлять бота без подписи
+            _activity_text = str(_cfg.get('activity_text', 'Hakumo') or '').strip()[:80] or 'Hakumo'
         except Exception as _ex:
             _log.debug("on_ready(): подавлено: %s", _ex)
 
@@ -822,14 +967,65 @@ async def load_cogs():
             traceback.print_exc()
 
     _kept, _pruned = apply_slash_budget(bot.tree)
-    log.info(
-        f"Слеш-меню: {len(_kept)} команд (лимит Discord — 100; "
-        f"ещё {len(_pruned)} команд доступны через префикс)"
-    )
+    # честный счётчик: сколько команд реально отвечает на префикс «!»
+    # (гибридные команды живут и в меню, и на префиксе). Раньше здесь
+    # писался итог ПОСЛЕДНЕГО прохода чистки (0) — вводило в заблуждение.
+    _prefix_total = len({c.name for c in bot.commands})
+    if slash_budget.full_menu_mode():
+        log.info(
+            f"Слеш-меню: {len(_kept)} команд — полный состав, лимит Discord 100"
+            + (f" (лишние {len(_pruned)} команд — на префикс «!»)"
+               if _pruned else "")
+        )
+    else:
+        log.info(
+            f"Слеш-меню: {len(_kept)} команд — лёгкий состав (кураторский список); "
+            f"ещё {_prefix_total} команд доступны через префикс «!» "
+            f"(полное меню — BOT_FULL=1 в .env или кнопка «Вернуть все» "
+            f"на странице «Команды» панели)"
+        )
     if len(_kept) >= slash_budget.WARN_AT:
         log.warning(f"Слеш-меню почти полное ({len(_kept)}/100) — пора пересмотреть KEEP_SLASH")
 
 async def main():
+    # ПЕРВАЯ строка запуска — какой код вообще работает. Инцидент 30.08:
+    # /update со стандартным источником (main, без фиксов) молча откатил
+    # бота на старую версию — и в логе не было ни одного признака этого.
+    try:
+        from services.startup_info import version_stamp
+        _vs = version_stamp(os.path.abspath('.'))
+        print(f"[ВЕРСИЯ] Код: {_vs}")
+        _log.info("ВЕРСИЯ КОДА: %s", _vs)
+    except Exception as _ex:
+        _log.debug("version_stamp(): %s", _ex)
+
+    # Предупреждения о среде: три главные причины «странных» зависаний
+    # (инцидент 30.08: Downloads + вложенная папка + Python 3.14)
+    try:
+        from error_handler import environment_warnings
+        for msg in environment_warnings(os.path.abspath('.')):
+            print(f"[СРЕДА] ⚠ {msg}")
+            _log.warning("СРЕДА: %s", msg)
+    except Exception as _ex:
+        _log.debug("environment_warnings(): %s", _ex)
+
+    # Журнал жизненного цикла: старт (и предыдущая сессия видна в файле)
+    try:
+        first = True
+        if os.path.exists(_RUN_LOG):
+            first = False
+        _record_run('start', first_run=first)
+        print("[ЖИЗНЕННЫЙ ЦИКЛ] Старт записан в data/run_log.json"
+              " (перезапуски теперь не «внезапные» — видно причину)")
+    except Exception as _ex:
+        log.debug('main(): run-log start: %s', _ex)
+
+    # Сторож памяти: раз в минуту, до OOM-киллера
+    try:
+        asyncio.create_task(_memory_watchdog())
+    except Exception as _ex:
+        log.debug('main(): memory watchdog: %s', _ex)
+
     # Разовый «чистый старт» (заказ владельца 2026-08): стереть все логи
     # и ГАРАНТИРОВАННО выключить защиту — старые конфиги на диске могли
     # хранить enabled: true ещё с эпохи «всё включено» (отсюда сюрпризы
@@ -854,8 +1050,10 @@ async def main():
 
     try:
         from web.websocket_server import start_websocket_thread
-        start_websocket_thread()
-        log.info("WebSocket сервер запущен на порту 8765")
+        _ws_host = (os.environ.get('WS_HOST', '') or '').strip() or '0.0.0.0'
+        _ws_port = int(os.environ.get('WS_PORT', '') or 0) or 8765
+        start_websocket_thread(host=_ws_host, port=_ws_port)
+        log.info("WebSocket сервер запущен на %s:%s", _ws_host, _ws_port)
     except Exception as e:
         log.warning(f"WebSocket сервер не запущен: {e}")
 
@@ -911,6 +1109,12 @@ async def main():
             except Exception as e:
                 print(f"[ОШИБКА] Бот отключился: {e}")
                 print(f"[БОТ] Автоперезапуск через {_delay} сек...")
+                _uptime = int(time.time() - _RUN_START_TS)
+                _record_run('reconnect', error=str(e)[:300],
+                            uptime_sec=_uptime, retry_in=_delay)
+                log.warning('Бот отключился после %dс аптайма: %s — '
+                            'автопереподключение через %dс',
+                            _uptime, e, _delay)
                 await asyncio.sleep(_delay)
                 _delay = min(60, _delay * 2)
 

@@ -279,6 +279,20 @@ def register(ctx):
                             'error': 'Пустой или битый JSON'}), 400
         who = session.get('username', '?')
         if 'steps' in data:
+            # Классические разрешения: в сохранённой лестнице не должно быть
+            # ступеней с действиями, закрытыми роли этого пользователя
+            # (те же правила, что в /modpanel, «Пользователях» и планировщике).
+            import web.app as _app
+            from web.routes._common import viewer_member, acl_action_allowed
+            _bot = _app.bot_instance
+            _member = viewer_member(_bot, gid) if _bot is not None else None
+            for _st in (data.get('steps') or []):
+                _act = str(_st.get('action', 'mute') if isinstance(_st, dict) else 'mute').strip().lower()
+                if _act in ACTIONS and not acl_action_allowed(gid, _member, _act):
+                    return jsonify({'success': False,
+                                    'error': f'Нет права: ступень «{ACTION_LABELS.get(_act, _act)}» '
+                                             'не разрешена вашей роли (настройка — '
+                                             '«Права команд»)'}), 403
             save_steps(gid, data.get('steps'))
             _fire_panel_notification(
                 'mod_settings', 'Настройки модерации: лестница обновлена',

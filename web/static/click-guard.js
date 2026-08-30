@@ -6,12 +6,16 @@
    Гард НЕ срабатывает, когда открыто осмысленное модальное окно/дровер —
    там бэкдроп перекрывает страницу намеренно. */
 (function () {
-  var INTER = 'button, a, [role="button"], input, select, textarea, label,' +
-              ' summary, .switch, .nav-link, [data-bs-toggle], [onclick]';
+  var INTER = 'button, a, [role="button"], [role="option"], input, select, textarea, label,' +
+              ' summary, .switch, .nav-link, [data-bs-toggle], [onclick], .aes-opt';
 
   function overlayIntentional(x, y) {
-    /* Открытые оверлеи: модалка, дровер, палитра, сплэш — не лечим */
-    var open = document.querySelector('.modal-overlay.open, .drawer.open, .kbd-palette:not([hidden])');
+    /* Открытые оверлеи: модалка, дровер, палитра, сплэш — не лечим.
+       .aes-panel.open — открытый кастомный дропдаун (HakumoSelect): клики
+       по его опциям — законные клики в интерактив, а не «промах».
+       Без этого гарда пробрасывала тап по опции на кнопку ПОД панелью —
+       открывался чужой селект («настройки переключаются сами»). */
+    var open = document.querySelector('.modal-overlay.open, .drawer.open, .kbd-palette:not([hidden]), .aes-panel.open');
     if (open) return true;
     var boot = document.getElementById('bootSplash');
     return !!(boot && !boot.classList.contains('out'));

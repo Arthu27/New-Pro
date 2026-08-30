@@ -191,10 +191,14 @@ check('active_guild_id()' in panel, 'API панели замкнут на гла
 tpl = open(os.path.join(ROOT, 'web/templates/appeals.html'), encoding='utf-8').read()
 check('ID сервера' not in tpl and 'guild-select' not in tpl,
       'в панели апелляций нет поля выбора/ввода сервера')
+# Заказ 2026-08-29 «две апелляции»: серверная /appeal удалена — осталась
+# одна глобальная /апелляция (работает в ЛС, сервер берётся из конфигурации).
 rsrc = open(os.path.join(ROOT, 'cogs/reports.py'), encoding='utf-8').read()
-check("name='appeal'" in rsrc and 'сервер' not in
-      rsrc[rsrc.index("name='appeal'"):rsrc.index("name='appeal'") + 400],
-      'вторая команда (/appeal) тоже без параметра сервера')
+check("name='appeal'" not in rsrc,
+      'второй команды /appeal больше нет — апелляция одна')
+check("name='апелляция'" in open(os.path.join(ROOT, 'cogs/appeals.py'),
+                                  encoding='utf-8').read(),
+      'глобальная /апелляция на месте (ЛС, сервер — из конфигурации)')
 check('AppealModal' in dir(A), 'форма модального окна на месте')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

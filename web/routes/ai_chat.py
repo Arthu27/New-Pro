@@ -378,10 +378,18 @@ def register(ctx):
         else :
         # Fallback: API'den hesapla
             try :
+                # Порт панели берём из того же источника, что и сам сервер
+                # (PANEL_PORT -> PORT из config.py), а не «магическую»
+                # константу: self-call дружит с любой настройкой портов.
+                try :
+                    from config import Config as _Cfg
+                    _panel_port =int (os .environ .get ('PANEL_PORT','')or 0)or int (getattr (_Cfg ,'PORT',5001))
+                except Exception :
+                    _panel_port =5001 
                 import requests as _req2 
                 for g in (bot .guilds if bot else []):
                     r =_req2 .get (
-                    f'http://localhost:5001/api/guild/{g.id}/health',
+                    f'http://127.0.0.1:{_panel_port}/api/guild/{g.id}/health',
                     cookies =request .cookies ,timeout =3 
                     )
                     if r .status_code ==200 :

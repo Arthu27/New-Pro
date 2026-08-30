@@ -356,3 +356,107 @@ def export_portable(root, cfg_path):
             _sh.copy2(creds_src, dst_creds)
     except Exception as _ex:
         _log.debug('named_tunnel.export_portable(): подавлено: %s', _ex)
+
+
+def heal_localhost_origins(cfg_path):
+    """localhost → 127.0.0.1 в service:-строках конфига туннеля.
+
+    На Windows VDS «localhost» часто резолвится в ::1 (IPv6), а панель
+    слушает 0.0.0.0 — только IPv4. cloudflared тогда ловит
+    «dial tcp [::1]:5001: connectex: connection refused» и домен лежит,
+    хотя панель жива. Явный 127.0.0.1 в origin убирает этот класс
+    ошибок полностью. Возвращает True, если файл переписали.
+    """
+    import re
+
+    try:
+        with open(cfg_path, 'r', encoding='utf-8', errors='replace') as fh:
+            text = fh.read()
+    except Exception as _ex:
+        _log.debug('named_tunnel.heal_localhost_origins(): чтение подавлено: %s', _ex)
+        return False
+    # Только http://localhost:ПОРТ в ingress-строках; https и другие
+    # хосты не трогаем (http_status:404 и прочее остаются как есть).
+    healed_text = re.sub(
+        r'(?m)^(\s*-?\s*service:\s*http://)localhost(:\d+\s*)$',
+        lambda m: m.group(1) + '127.0.0.1' + m.group(2),
+        text)
+    if healed_text == text:
+        return False
+    try:
+        with open(cfg_path, 'w', encoding='utf-8') as fh:
+            fh.write(healed_text)
+        _log.info('named_tunnel: origin localhost -> 127.0.0.1 в %s', cfg_path)
+        return True
+    except Exception as _ex:
+        _log.debug('named_tunnel.heal_localhost_origins(): запись подавлена: %s', _ex)
+        return False
+
+
+def _all_config_copies(root, cfg_path=None):
+    """Все места, где может лежать конфиг туннеля на этой машине.
+
+    Конфиг живёт в трёх местах: профиль пользователя (~/.cloudflared),
+    портативная копия в scripts/ и профиль службы Windows (systemprofile).
+    """
+    candidates = [
+        cfg_path,
+        os.path.join(_cloudflared_home(), 'config.yml'),
+        os.path.join(root, 'scripts', 'config.yml'),
+        os.path.join(root, 'scripts', RUNTIME_CONFIG),
+    ]
+    if os.name == 'nt':
+        sysdir = os.path.join(os.environ.get('SystemRoot', r'C:\Windows'),
+                              'System32', 'config', 'systemprofile', '.cloudflared')
+        candidates.append(os.path.join(sysdir, 'config.yml'))
+    return [p for p in candidates if p]
+
+
+def heal_all_origins(root, cfg_path=None):
+    """Починить origin во ВСЕХ копиях конфига туннеля на этой машине.
+
+    Чиним всё, что нашли, — какая копия ни заработала, origin будет верный.
+    Возвращает список переписанных путей (может быть пустым).
+    """
+    healed = []
+    for path in _all_config_copies(root, cfg_path):
+        try:
+            if os.path.isfile(path) and heal_localhost_origins(path):
+                healed.append(path)
+        except Exception as _ex:
+            _log.debug('named_tunnel.heal_all_origins(): подавлено: %s', _ex)
+    return healed
+
+
+def ensure_protocol_line(root, cfg_path, proto='http2'):
+    """Прописать top-level `protocol:` во все копии конфига туннеля.
+
+    cloudflared по умолчанию соединяется с Cloudflare по QUIC (UDP). На части
+    VDS UDP-путь до края нестабилен: туннель рвётся каждые ~20 секунд
+    («timeout: no recent network activity», «failed to run the datagram
+    handler»), перерегистрируется и домен флапает. `protocol: http2`
+    переводит соединение на TCP — стабильно на любой сети. Служба Windows
+    флага командной строки не получает, поэтому протокол пишем прямо
+    в конфиг. Уже существующую строку protocol: не трогаем — это осознанная
+    настройка. Возвращает список переписанных путей (может быть пустым).
+    """
+    import re
+
+    if proto not in ('http2', 'quic', 'auto'):
+        _log.debug('named_tunnel.ensure_protocol_line(): неизвестный протокол %r', proto)
+        return []
+    touched = []
+    for path in _all_config_copies(root, cfg_path):
+        try:
+            if not os.path.isfile(path):
+                continue
+            with open(path, 'r', encoding='utf-8', errors='replace') as fh:
+                text = fh.read()
+            if re.search(r'(?m)^protocol:\s*\S+', text):
+                continue  # протокол уже задан вручную — не трогаем
+            with open(path, 'w', encoding='utf-8') as fh:
+                fh.write(f'protocol: {proto}\n' + text)
+            touched.append(path)
+        except Exception as _ex:
+            _log.debug('named_tunnel.ensure_protocol_line(): подавлено: %s', _ex)
+    return touched

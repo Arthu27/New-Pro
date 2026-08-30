@@ -99,6 +99,91 @@ except Exception:
     _ok = False
 check(_ok, 'drop_stale_url: не падает, когда файла нет')
 
+# ── A2. heal_localhost_origins — Windows IPv6-грабли localhost → ::1 ────────
+print('\n[A2] heal_localhost_origins (localhost -> 127.0.0.1 в origin):')
+heal_root = os.path.join(_TMP, 'healroot')
+os.makedirs(os.path.join(heal_root, 'scripts'), exist_ok=True)
+heal_cfg = os.path.join(heal_root, 'scripts', 'config.yml')
+with open(heal_cfg, 'w', encoding='utf-8') as fh:
+    fh.write('tunnel: abc123\n'
+             'credentials-file: /home/o/.cloudflared/abc123.json\n'
+             '\n'
+             'ingress:\n'
+             '  - hostname: hakumods.xyz\n'
+             '    service: http://localhost:5001\n'
+             '  - hostname: www.hakumods.xyz\n'
+             '    service: http://localhost:5001\n'
+             '  - service: http_status:404\n')
+
+check(nt.heal_localhost_origins(heal_cfg) is True,
+      'heal_localhost_origins: переписал конфиг с localhost')
+_healed_text = open(heal_cfg, encoding='utf-8').read()
+check('service: http://127.0.0.1:5001' in _healed_text
+      and 'http://localhost:5001' not in _healed_text,
+      'heal_localhost_origins: все origin стали 127.0.0.1')
+check('- service: http_status:404' in _healed_text,
+      'heal_localhost_origins: http_status:404 не тронут')
+check(nt.heal_localhost_origins(heal_cfg) is False,
+      'heal_localhost_origins: повторный запуск ничего не меняет (idempotent)')
+check(nt.heal_localhost_origins(os.path.join(_TMP, 'no_such.yml')) is False,
+      'heal_localhost_origins: нет файла -> False, не падает')
+
+# Портативная копия в scripts/ тоже чинится скопом
+stale_portable = os.path.join(heal_root, 'scripts', 'config.yml')
+_heal_home = os.path.join(_TMP, 'healhome', '.cloudflared')
+os.makedirs(_heal_home, exist_ok=True)
+stale_home_cfg = os.path.join(_heal_home, 'config.yml')
+with open(stale_home_cfg, 'w', encoding='utf-8') as fh:
+    fh.write('tunnel: abc123\ningress:\n  - hostname: panel.hakumods.xyz\n'
+             '    service: http://localhost:5001\n')
+healed_paths = nt.heal_all_origins(heal_root, stale_home_cfg)
+check(len(healed_paths) >= 1 and all('127.0.0.1' in open(p, encoding='utf-8').read()
+                                     for p in healed_paths),
+      'heal_all_origins: починил все копии конфига сразу')
+# heal_all_origins не должен трогать чужие файлы и не падать без конфигов
+check(nt.heal_all_origins(os.path.join(_TMP, 'emptyroot')) == [],
+      'heal_all_origins: без конфигов -> пустой список')
+
+# ── A3. ensure_protocol_line — QUIC/UDP флапает на VDS, дефолт http2/TCP ────
+print('\n[A3] ensure_protocol_line (protocol: http2 в конфиг):')
+proto_root = os.path.join(_TMP, 'protoroot')
+os.makedirs(os.path.join(proto_root, 'scripts'), exist_ok=True)
+proto_cfg = os.path.join(proto_root, 'scripts', 'config.yml')
+with open(proto_cfg, 'w', encoding='utf-8') as fh:
+    fh.write('tunnel: abc123\n'
+             'credentials-file: /home/o/.cloudflared/abc123.json\n'
+             'ingress:\n'
+             '  - hostname: panel.hakumods.xyz\n'
+             '    service: http://127.0.0.1:5001\n'
+             '  - service: http_status:404\n')
+touched = nt.ensure_protocol_line(proto_root, proto_cfg, 'http2')
+check(proto_cfg in touched,
+      'ensure_protocol_line: прописал protocol в конфиг')
+_proto_text = open(proto_cfg, encoding='utf-8').read()
+check(_proto_text.startswith('protocol: http2\n'),
+      'ensure_protocol_line: protocol: http2 — первой строкой (top-level YAML)')
+check('tunnel: abc123' in _proto_text and 'service: http://127.0.0.1:5001' in _proto_text,
+      'ensure_protocol_line: остальной конфиг не тронут')
+check(nt.ensure_protocol_line(proto_root, proto_cfg, 'http2') == [],
+      'ensure_protocol_line: повторный запуск ничего не меняет (idempotent)')
+check(nt.ensure_protocol_line(proto_root, proto_cfg, 'quic') == [],
+      'ensure_protocol_line: чужую строку protocol: не перезаписывает')
+check(nt.ensure_protocol_line(proto_root, proto_cfg, 'bogus') == [],
+      'ensure_protocol_line: неизвестный протокол -> без изменений')
+check(nt.ensure_protocol_line(os.path.join(_TMP, 'emptyroot2'), None, 'http2') == [],
+      'ensure_protocol_line: без конфигов -> пустой список, не падает')
+# Все копии конфига (профиль + scripts) получают строку скопом
+_proto_home = os.path.join(_TMP, 'protohome', '.cloudflared')
+os.makedirs(_proto_home, exist_ok=True)
+_proto_home_cfg = os.path.join(_proto_home, 'config.yml')
+with open(_proto_home_cfg, 'w', encoding='utf-8') as fh:
+    fh.write('tunnel: abc123\ningress:\n  - service: http://127.0.0.1:5001\n')
+touched_all = nt.ensure_protocol_line(proto_root, _proto_home_cfg, 'http2')
+check(len(touched_all) >= 1
+      and all(open(p, encoding='utf-8').read().startswith('protocol: http2\n')
+              for p in touched_all),
+      'ensure_protocol_line: прописал protocol во ВСЕ копии конфига сразу')
+
 # ── B. main.py — статические проверки гейта ──────────────────────────────────
 print('\n[B] main.py гейт legacy quick-туннеля:')
 src = open(os.path.join(ROOT, 'main.py'), encoding='utf-8').read()
@@ -114,6 +199,22 @@ check('from services import named_tunnel' in src,
       'main.py использует services/named_tunnel')
 check('_nt.remember_url(root, pub)' in src,
       'сайдкар пишет постоянную ссылку панели в tunnel_url.txt')
+check('heal_all_origins' in src,
+      'main.py: перед запуском туннеля чинит origin localhost -> 127.0.0.1')
+check("TUNNEL_PROTOCOL" in src and "'--protocol', proto" in src,
+      'main.py: сайдкар named-туннеля запускается с --protocol (дефолт http2, '
+      'TUNNEL_PROTOCOL переопределяет) — QUIC/UDP флапает на VDS')
+check('ensure_protocol_line' in src,
+      'main.py: протокол прописывается и в конфиг (службе Windows флаг не передать)')
+check('TUNNEL_PROTOCOL' in open(os.path.join(ROOT, '.env.example'), encoding='utf-8').read(),
+      '.env.example документирует TUNNEL_PROTOCOL')
+check('"--url", "http://127.0.0.1:5001"' in src,
+      'main.py: quick-туннель идёт на 127.0.0.1, а не на localhost (IPv6 ::1)')
+_bat = open(os.path.join(ROOT, 'scripts', 'setup_panel_tunnel.bat'),
+            encoding='utf-8', errors='replace').read()
+check('service: http://127.0.0.1:%PANEL_PORT%' in _bat
+      and 'service: http://localhost:' not in _bat,
+      'setup_panel_tunnel.bat: ingress сразу пишется с 127.0.0.1')
 check('QUICK_TUNNEL' in open(os.path.join(ROOT, 'docs', 'PANEL-DOMAIN.md'), encoding='utf-8').read(),
       'docs/PANEL-DOMAIN.md описывает QUIСK-режим')
 
@@ -146,9 +247,13 @@ try:
     check(not os.path.exists(url_file_repo), 'без конфига ссылка не создаётся')
 
     # 2) Полный комплект: бинарник + конфиг — как после setup_panel_tunnel.bat.
+    # Фейковый cloudflared записывает свой argv в файл — так тест ДОКАЗЫВАЕТ,
+    # что сайдкар передал --protocol http2 (QUIC/UDP на VDS флапает).
+    args_file = os.path.join(scripts_dir, 'cloudflared_args.txt')
     with open(fake_bin, 'w', encoding='utf-8') as fh:
-        fh.write('#!/bin/sh\necho "fake cloudflared up"\nsleep 60\n')
-    created.append(fake_bin)
+        fh.write(f'#!/bin/sh\necho "$@" > {args_file}\n'
+                 'echo "fake cloudflared up"\nsleep 60\n')
+    created.extend([fake_bin, args_file])
     os.chmod(fake_bin, os.stat(fake_bin).st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     with open(fake_cfg, 'w', encoding='utf-8') as fh:
         fh.write('tunnel: test-id\n'
@@ -166,9 +271,20 @@ try:
     m._tunnel_proc = None
     m._start_tunnel_sidecar()
     check(m._tunnel_proc is not None, 'сайдкар запустил процесс туннеля')
+    # Рантайм-копия конфига (если вывелась) — тестовый мусор, уберём в finally.
+    created.append(os.path.join(scripts_dir, nt.RUNTIME_CONFIG))
+    _cfg_now = open(fake_cfg, encoding='utf-8').read()
+    check('service: http://127.0.0.1:5001' in _cfg_now
+          and 'http://localhost:5001' not in _cfg_now,
+          'сайдкар сам починил origin в scripts/config.yml (localhost -> 127.0.0.1)')
+    check(_cfg_now.startswith('protocol: http2\n'),
+          'сайдкар прописал protocol: http2 в конфиг (QUIC/UDP -> TCP)')
     time.sleep(1.0)
     check(m._tunnel_proc is not None and m._tunnel_proc.poll() is None,
           'процесс туннеля жив после запуска')
+    _args = open(args_file, encoding='utf-8').read() if os.path.exists(args_file) else ''
+    check('--protocol http2' in _args,
+          'cloudflared запущен с флагом --protocol http2 (дефолт, TCP)')
     check(os.path.isfile(url_file_repo)
           and open(url_file_repo, encoding='utf-8').read().strip() == 'https://hakumods.xyz',
           'tunnel_url.txt = постоянная ссылка https://hakumods.xyz')
@@ -177,6 +293,25 @@ try:
 
     m._stop_tunnel_sidecar()
     check(True, 'сайдкар корректно остановлен')
+
+    # 3) TUNNEL_PROTOCOL=quic переопределяет дефолт (вернуть старое поведение).
+    os.environ['TUNNEL_PROTOCOL'] = 'quic'
+    m._start_tunnel_sidecar()
+    time.sleep(1.0)
+    _args = open(args_file, encoding='utf-8').read() if os.path.exists(args_file) else ''
+    check('--protocol quic' in _args,
+          'TUNNEL_PROTOCOL=quic передаётся флагом --protocol quic')
+    m._stop_tunnel_sidecar()
+
+    # 4) Мусорное значение не ломает запуск — откат к http2.
+    os.environ['TUNNEL_PROTOCOL'] = 'bogus!!!'
+    m._start_tunnel_sidecar()
+    time.sleep(1.0)
+    _args = open(args_file, encoding='utf-8').read() if os.path.exists(args_file) else ''
+    check('--protocol http2' in _args,
+          'TUNNEL_PROTOCOL=мусор -> безопасный откат на --protocol http2')
+    m._stop_tunnel_sidecar()
+    os.environ.pop('TUNNEL_PROTOCOL', None)
 finally:
     try:
         m._stop_tunnel_sidecar()

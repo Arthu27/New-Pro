@@ -215,7 +215,8 @@ def register(ctx):
     def log_settings_page():
         return render_template('log_settings.html',
                                role=session.get('role'),
-                               username=session.get('username'))
+                               username=session.get('username'),
+                               main_guild_id=session.get('main_guild_id', ''))
 
     # ── API: лимиты ────────────────────────────────────────────────────
     @app.route('/api/guild/<guild_id>/staff-limits')

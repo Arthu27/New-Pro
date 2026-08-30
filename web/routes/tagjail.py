@@ -60,7 +60,12 @@ def register(ctx):
                     },
                     'jailed': [],
                     'guild': 'Главный сервер',
+                    'gid': str(active_guild_id() or ''),
                 })
+            # бот работает, но ког спит (профиль LEAN по умолчанию) —
+            # говорим правду и подсказываем, как вернуть модуль
+            if bot is not None and cog is None:
+                return jsonify({'ok': False, 'error': 'Модуль «Карцер» спит (вернуть: EXTRA_COGS=tag_jail в .env)'})
             return jsonify({'ok': False, 'error': 'Модуль офлайн (бот не запущен)'})
         c = cog.cfg(guild.id)
         jailed = []
@@ -155,6 +160,15 @@ def register(ctx):
         bot, cog, guild = _tagjail_ctx()
         if not cog or not guild:
             return jsonify({'ok': False, 'error': 'Модуль офлайн'}), 503
+        # Классические разрешения: освобождение — то же действие «Джейл»
+        # (настройки те же, что у команд и /modpanel).
+        import web.app as _app
+        from web.routes._common import viewer_member, acl_action_allowed
+        _member = viewer_member(_app.bot_instance, guild.id)
+        if not acl_action_allowed(guild.id, _member, 'jail'):
+            return jsonify({'ok': False,
+                            'error': 'Нет права: «Джейл» не разрешено вашей '
+                                     'роли (настройка — «Права команд»)'}), 403
         data = request.get_json(silent=True) or {}
         uid = str(data.get('user_id', '')).strip()
         if not uid.isdigit():

@@ -19,6 +19,144 @@ from logger import get_logger
 
 _log = get_logger("error_handler")
 
+
+# ════════════════════════════════════════════════════════════════════════
+# Зависания event-loop 6–10 сек (инциденты 29–30.08, продакшн Windows):
+# стек-монитор v2 честно говорил «виновник уже завершился» — сэмплы
+# падали в РАЗНЫЕ точки (TimerHandle.__init__ и прочие АЛЛОКАЦИИ).
+# Это почерк сборщика мусора: gen2-проход по куче в ~800 МБ идёт под GIL
+# секунды и запускается в случайных местах. Ниже три инструмента:
+# gc-проба (измеряет КАЖДУЮ сборку и называет её), gc-стабилизация
+# (лечит: freeze + редкие пороги) и asyncio-детектор медленных
+# callback'ов (именно ИМЯ callback'а, если виновник не GC).
+# ════════════════════════════════════════════════════════════════════════
+import logging
+_gc_probe_t0 = {}
+
+
+def _gc_probe(phase, info):
+    """Замер длительности КАЖДОЙ сборки GC (коллбек gc.callbacks).
+
+    Пауза ≥2 сек — CRITICAL с поколением и числом объектов: если
+    зависания event-loop совпадут с этими записями, виновник назван
+    окончательно (это GC), и лечится gc_stabilize() ниже.
+    """
+    try:
+        if phase == 'start':
+            _gc_probe_t0['t0'] = time.perf_counter()
+            return
+        t0 = _gc_probe_t0.pop('t0', None)
+        if t0 is None:
+            return
+        dt = time.perf_counter() - t0
+        if dt >= 2.0:
+            gen = info.get('generation') if isinstance(info, dict) else None
+            _log.critical(
+                'GC: СБОРКА ЗАНИМАЛА %.1f сек (поколение %s, объектов в треке '
+                'gen0: %s) — ВОТ источник зависаний event-loop; лечение: '
+                'gc.freeze + редкие пороги (см. gc_stabilize)',
+                dt, gen, gc.get_count()[0] if gc else '?')
+    except Exception as _ex:
+        _log.debug('gc-probe: %s', _ex)
+
+
+def gc_stabilize():
+    """Вылечить мультисекундные паузы GC: заморозить стартовый граф и
+    сделать сборки редкими (рецепт для долгоживущих asyncio-сервисов).
+
+    gc.collect() + gc.freeze() переносит всё, что накопилось к моменту
+    старта, в «постоянное» поколение — сборки его больше не обходят.
+    Порог 50000 (вместо 700) делает gen2-проходы в десятки раз реже.
+    """
+    try:
+        import gc
+        before = gc.get_count()
+        gc.collect()
+        gc.freeze()
+        gc.set_threshold(50_000, 50, 50)
+        _log.info('GC: стартовый граф заморожен (%s → сборки редкие, '
+                  'пороги 50000/50/50) — паузы сборки мусора больше не '
+                  'должны рвать event-loop', before)
+        return True
+    except Exception as _ex:
+        _log.warning('GC: стабилизировать не вышло: %s', _ex)
+        return False
+
+
+class _AsyncioSlowPromote(logging.Handler):
+    """Продвигает «Executing … took N seconds» из asyncio в CRITICAL.
+
+    Debug-режим asyncio сам меряет каждый callback; сообщение «took»
+    называет КОНКРЕТНЫЙ callback — закрывает слепоту стек-монитора
+    («виновник уже завершился»). Остальной DEBUG-шум asyncio глотаем,
+    WARNING и выше честно наверх.
+    """
+
+    def emit(self, record):
+        try:
+            msg = record.getMessage() or ''
+            if 'took' in msg and 'second' in msg:
+                _log.critical('EVENT-LOOP: МЕДЛЕННЫЙ CALLBACK — %s', msg)
+            elif record.levelno >= logging.WARNING:
+                logging.getLogger().handle(record)
+        except Exception as _ex:      # хендлер не должен ронять логирование
+            _log.debug('asyncio-slow-promote: %s', _ex)
+
+
+def install_loop_probes(loop):
+    """Включить детектор медленных callback'ов asyncio на данном цикле.
+
+    Порог 2 сек: ловим именно зависания, а не мелочь. Издержки
+    debug-режима — один perf_counter на callback (микросекунды).
+    """
+    try:
+        import gc as _gc
+        if _gc_probe not in getattr(_gc, 'callbacks', []):
+            _gc.callbacks.append(_gc_probe)
+    except Exception as _ex:
+        _log.debug('gc-probe: не поставить: %s', _ex)
+    try:
+        loop.set_debug(True)
+        loop.slow_callback_duration = 2.0
+        aio_log = logging.getLogger('asyncio')
+        if not any(isinstance(h, _AsyncioSlowPromote) for h in aio_log.handlers):
+            aio_log.addHandler(_AsyncioSlowPromote())
+        aio_log.setLevel(logging.DEBUG)
+        aio_log.propagate = False     # DEBUG-шум asyncio не льётся в консоль
+        _log.info('Пробы цикла включены: медленный callback ≥2с и сборка GC '
+                  '≥2с будут названы поимённо в CRITICAL')
+    except Exception as _ex:
+        _log.debug('loop-probes: %s', _ex)
+
+
+def environment_warnings(base_dir, py_version=None):
+    """Предупреждения о среде запуска (чистая функция — тестируется).
+
+    Продакшн-инцидент 30.08: бот работал из Downloads во ВЛОЖЕННОЙ папке
+    (New-Pro-…/New-Pro-…) на Python 3.14 — каждое чтение файла проходило
+    антивирус, зависания 6–10 сек. Возвращаем список строк-предупреждений.
+    """
+    out = []
+    base = str(base_dir or '')
+    low = base.lower().replace(chr(92), '/')
+    if 'downloads' in low:
+        out.append('бот запущен из папки ЗАГРУЗКИ (Downloads): Windows '
+                   'прогоняет каждый файл через антивирус — это главный '
+                   'подозреваемый зависаний. Перенесите папку бота в '
+                   'C:\Hakumo и добавьте её в исключения Defender.')
+    parts = [p for p in base.replace(chr(92), '/').split('/') if p]
+    if len(parts) >= 2 and parts[-1].lower() == parts[-2].lower():
+        out.append(f'бот лежит ВО ВЛОЖЕННОЙ папке (…/{parts[-1]}/'
+                   f'{parts[-2]}): похоже, архив распакован дважды. '
+                   'Перенесите содержимое на уровень выше — пути короче, '
+                   'ошибок меньше.')
+    ver = tuple(py_version or sys.version_info[:3])
+    if ver >= (3, 14):
+        out.append(f'Python {ver[0]}.{ver[1]}.{ver[2]}: discord.py '
+                   'тестировался на 3.12 — на свежих версиях встречаются '
+                   'сюрпризы. Поставьте Python 3.12 (бот полностью совместим).')
+    return out
+
 import asyncio
 import os
 import json
@@ -33,6 +171,7 @@ from discord import app_commands
 import traceback
 import sys
 import threading
+import gc
 from datetime import datetime
 from collections import deque
 
@@ -194,6 +333,13 @@ class ErrorHandler:
         self._lag_recent = 0.0
         self._spike_alert_at = 0.0
         self._tasks = []
+        # Пульс event-loop для потокового монитора стека (см. _start_stack_monitor):
+        # async-задача тикает каждые 0.5с; если пульс «замер» — поток в МОМЕНТ
+        # зависания снимает стек main-потока и называет виновника по имени.
+        self._loop_beat = time.monotonic()
+        self._stack_frozen = False
+        self._last_freeze_stack = ''   # последний снятый стек (для алерта)
+        self._start_stack_monitor()
 
         self._repeat = {}                          # дедуп повторных ошибок
         self._warn_seen = {}                       # дедуп warning'ов
@@ -347,9 +493,11 @@ class ErrorHandler:
 
         try:
             loop = asyncio.get_running_loop()
+            install_loop_probes(loop)   # GC-паузы и медленные callback'ы — поимённо
             self._tasks = [
                 loop.create_task(self._register_commands()),
                 loop.create_task(self._loop_watchdog_task()),
+                loop.create_task(self._loop_beat_task()),
                 loop.create_task(self._alert_flush_task()),
                 loop.create_task(self._health_log_task()),
                 loop.create_task(self._persist_task()),
@@ -771,6 +919,120 @@ class ErrorHandler:
     # ────────────────────────────────────────────────────────────
     # Watchdog event-loop
     # ────────────────────────────────────────────────────────────
+    async def _loop_beat_task(self):
+        """Пульс event-loop: тик каждые 0.5с для потокового монитора.
+
+        ВАЖНО: бьём и ДО готовности бота — иначе медленный старт
+        (ожидание гильдий на слабой сети) монитор посчитает зависанием,
+        хотя event-loop жив и отвечает.
+        """
+        while not self.bot.is_closed():
+            self._loop_beat = time.monotonic()
+            try:
+                await asyncio.wait_for(self.bot.wait_until_ready(), timeout=0.5)
+            except asyncio.TimeoutError:
+                # Бот ещё стартует — это норма, а не зависание; пульс выше бьёт.
+                _log.debug("loop-beat: бот ещё не готов (wait_until_ready), пульс продолжается")
+            except Exception:
+                await asyncio.sleep(0.5)
+
+    def _start_stack_monitor(self):
+        """Поток-свидетель: снимает стек ВИНОВНИКА в момент зависания.
+
+        Async-watchdog («EVENT-LOOP ЗАВИСАНИЕ: цикл не отвечал N сек»)
+        замечает проблему только ПОСЛЕ отвисания — когда стек виновника
+        уже вернулся. Этот поток живёт отдельно от цикла: пульс
+        (_loop_beat) не обновлялся дольше порога — значит цикл заблокирован
+        ПРЯМО СЕЙЧАС.
+
+        Версия 2 (инцидент 30.08.2026, продакшн Windows): одиночный сэмпл
+        ловил ГОНКУ — цикл уже отвисал, монитор успевал снять сам пульс
+        (wait_until_ready), и стек виновника терялся. Теперь:
+          * ТРИ сэмпла main-потока с интервалом 0.15с: настоящий
+            блокировщик сидит в одном кадре во всех трёх; гонка — нет;
+          * снимаются и ДРУГИЕ потоки (верхний кадр каждого): GIL может
+            держать тяжёлая работа в фоне (рендер карточек, sqlite,
+            requests, антивирус на диске);
+          * если все сэмплы разные — виновник уже завершился, и запись
+            честно об этом говорит (смотрите другие потоки).
+        """
+        main_tid = threading.main_thread().ident
+
+        def _sample_main():
+            frames = sys._current_frames()
+            frame = frames.get(main_tid)
+            if frame is None:
+                return '<main-поток недоступен>'
+            return ''.join(traceback.format_stack(frame))[-2000:]
+
+        def _sample_others():
+            """Верхний кадр каждого НЕ-main потока (кто держит GIL/диск)."""
+            out = []
+            try:
+                frames = sys._current_frames()
+                named = {t.ident: t.name for t in threading.enumerate()}
+                for tid, frame in frames.items():
+                    if tid == main_tid:
+                        continue
+                    lines = traceback.format_stack(frame)
+                    top = lines[-1].strip()[:140] if lines else '?'
+                    out.append(f'{named.get(tid, str(tid))}: {top}')
+            except Exception as _ex:
+                _log.debug("stack-monitor: снимок потоков: %s", _ex)
+            return out
+
+        def _worker():
+            while True:
+                time.sleep(1.0)
+                try:
+                    # Порог перечитываем на каждом тике: панель может менять
+                    # loop_lag_threshold на лету (анти-краш центр).
+                    threshold = float(self.config.get('loop_lag_threshold', 5.0)) + 1.0
+                    age = time.monotonic() - self._loop_beat
+                    if age > threshold and not self._stack_frozen:
+                        self._stack_frozen = True
+                        main_samples = []
+                        for _ in range(3):
+                            main_samples.append(_sample_main())
+                            time.sleep(0.15)
+                        # стабильный стек = встречается минимум в 2 сэмплах
+                        stable = main_samples[0]
+                        for cand in main_samples:
+                            if main_samples.count(cand) >= 2:
+                                stable = cand
+                                break
+                        unstable = main_samples.count(stable) < 2
+                        others = _sample_others()
+                        self._last_freeze_stack = stable
+                        msg = (f"EVENT-LOOP ЗАВИСАНИЕ {age:.1f} сек — "
+                               f"СТЕК ВИНОВНИКА (main-поток, прямо сейчас):\n"
+                               f"{stable}")
+                        if others:
+                            msg += ("\nДругие потоки в момент зависания:\n  "
+                                    + "\n  ".join(others[:12]))
+                        # Дёшево (счётчики, не обход кучи): если полных
+                        # сборок становится больше между зависаниями —
+                        # виновник GC, лечение уже стоит (gc_stabilize).
+                        try:
+                            _st = gc.get_stats()[-1]
+                            msg += (f"\nGC в момент зависания: счётчики "
+                                    f"{gc.get_count()}, полных сборок "
+                                    f"{_st['collections']}, собрано объектов "
+                                    f"{_st['collected']}.")
+                        except Exception as _ex:
+                            _log.debug("stack-monitor: gc-счётчики: %s", _ex)
+                        if unstable:
+                            msg += ("\n(стек менялся между сэмплами — виновник "
+                                    "уже завершился, смотрите другие потоки выше)")
+                        log.critical(msg)
+                    elif age < 1.0:
+                        self._stack_frozen = False
+                except Exception as _ex:
+                    _log.debug("stack-monitor: подавлено: %s", _ex)
+
+        threading.Thread(target=_worker, name='loop-stack-monitor',
+                         daemon=True).start()
+
     async def _loop_watchdog_task(self):
         await self.bot.wait_until_ready()
         await asyncio.sleep(30)
@@ -799,13 +1061,23 @@ class ErrorHandler:
             if drift > float(self.config.get('loop_lag_threshold', 5.0)):
                 if drift > self.stats.get('loop_lag_max', 0.0):
                     self.stats['loop_lag_max'] = round(drift, 2)
-                log.critical(f"EVENT-LOOP ЗАВИСАНИЕ: цикл не отвечал {drift:.1f} сек!")
+                log.critical(
+                    f"EVENT-LOOP ЗАВИСАНИЕ: цикл не отвечал {drift:.1f} сек! "
+                    "(виновника называет поток-монитор строкой "
+                    "«СТЕК ВИНОВНИКА» — она появляется В МОМЕНТ зависания)")
                 if time.time() - last_alert > 300:
                     last_alert = time.time()
+                    _stack_hint = ''
+                    if getattr(self, '_last_freeze_stack', ''):
+                        _stack_hint = ("\nСтек виновника (снят монитором "
+                                       "в момент зависания):\n```\n"
+                                       + self._last_freeze_stack[:900]
+                                       + "\n```")
                     self.queue_alert(
                         "Зависание event-loop",
                         f"Цикл не отвечал **{drift:.1f} сек** — команды и ивенты в это время стояли.\n"
-                        "Частая причина: тяжёлая синхронная операция (сеть/диск/CPU) в async-коде.",
+                        "Частая причина: тяжёлая синхронная операция (сеть/диск/CPU) в async-коде."
+                        + _stack_hint,
                     )
 
     # ────────────────────────────────────────────────────────────
