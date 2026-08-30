@@ -11,11 +11,27 @@
 
 from web.routes._common import (
     _log,
-    render_template, session, jsonify,
+    render_template, session, request, jsonify,
 )
 
-KIND_META = {'report': ('Репорт', 'fa-flag', 'danger'),
+KIND_META = {'card': ('Жалоба', 'fa-flag', 'danger'),
+             'report': ('Репорт', 'fa-flag', 'danger'),
              'appeal': ('Апелляция', 'fa-scale-balanced', 'info')}
+
+
+def _guild_channels_roles(gid):
+    """Списки текстовых каналов и ролей гильдии (для пикеров настройки)."""
+    import web.app as _app
+    bot = getattr(_app, 'bot_instance', None)
+    guild = bot.get_guild(int(gid)) if (bot and gid) else None
+    if guild is None:
+        return [], []
+    channels = [{'id': str(c.id), 'name': c.name}
+                for c in getattr(guild, 'text_channels', [])]
+    roles = [{'id': str(r.id), 'name': r.name}
+             for r in getattr(guild, 'roles', [])
+             if r.id != guild.id]
+    return channels, roles
 
 
 def queue_payload(gid, names=None):
@@ -90,3 +106,50 @@ def register(ctx):
         payload = queue_payload(gid)
         payload['success'] = True
         return jsonify(payload)
+
+    @app.route('/api/guild/<gid>/report-settings', methods=['GET', 'POST'])
+    @login_required
+    @role_required('admin')
+    def api_report_settings(gid):
+        """Канал репортов и роль модераторов — владелец выбирает в панели.
+
+        Хранится в data/reports_<gid>.json (тот же конфиг, что /report-setup).
+        """
+        from services import reports_core as RC
+
+        def _valid_id(x):
+            try:
+                return str(int(str(x).strip()))
+            except (TypeError, ValueError):
+                return ''
+
+        gid = active_guild_id()
+        if request.method == 'GET':
+            cfg = RC.load_cfg(gid)
+            channels, roles = _guild_channels_roles(gid)
+            return jsonify({'success': True,
+                            'channel_id': cfg.get('channel_id', ''),
+                            'mod_role_id': cfg.get('mod_role_id', ''),
+                            'expiry_days': cfg.get('expiry_days', 90),
+                            'channels': channels, 'roles': roles})
+
+        data = request.get_json(silent=True) or {}
+        cfg = RC.load_cfg(gid)
+        cid = _valid_id(data.get('channel_id'))
+        rid = _valid_id(data.get('mod_role_id'))
+        # пустая строка = «не задано»; валидируем, что канал/роль существуют
+        channels, roles = _guild_channels_roles(gid)
+        ch_ids = {c['id'] for c in channels}
+        role_ids = {r['id'] for r in roles}
+        if cid and ch_ids and cid not in ch_ids:
+            return jsonify({'success': False,
+                            'error': f'Канал {cid} не найден на сервере'}), 400
+        if rid and role_ids and rid not in role_ids:
+            return jsonify({'success': False,
+                            'error': f'Роль {rid} не найдена на сервере'}), 400
+        cfg['channel_id'] = cid
+        cfg['mod_role_id'] = rid
+        RC.save_cfg(gid, cfg)
+        return jsonify({'success': True,
+                        'channel_id': cid, 'mod_role_id': rid,
+                        'channels': channels, 'roles': roles})

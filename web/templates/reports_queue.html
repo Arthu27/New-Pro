@@ -14,6 +14,25 @@
   <div class="kpi"><div class="kpi-icon"><i class="fas fa-circle-notch fa-spin"></i></div><div class="kpi-copy"><div class="kpi-value">…</div><div class="kpi-label">Загрузка</div></div></div>
 </div>
 
+{% if role == 'admin' or role == 'owner' %}
+<div class="card" id="reportSetupCard" style="margin-bottom:14px">
+  <div class="bs-title" style="margin-bottom:6px"><i class="fas fa-sliders"></i> Настройки жалоб</div>
+  <p class="muted" style="margin:0 0 10px">Куда бот присылает карточки <b>/report</b> и какую роль тегает. Канал выбираете вы — если не задать, бот создаст закрытый <b>#модерация</b> сам.</p>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+    <div style="flex:1;min-width:220px">
+      <label class="muted" for="rsChannel">Канал для жалоб</label>
+      <select id="rsChannel" class="input" style="width:100%"><option value="">— не задан (создастся #модерация) —</option></select>
+    </div>
+    <div style="flex:1;min-width:220px">
+      <label class="muted" for="rsRole">Роль модераторов (тег)</label>
+      <select id="rsRole" class="input" style="width:100%"><option value="">— не задана —</option></select>
+    </div>
+    <button type="button" class="btn btn-primary" id="rsSave"><i class="fas fa-save"></i> Сохранить</button>
+  </div>
+  <div id="rsMsg" style="margin-top:8px"></div>
+</div>
+{% endif %}
+
 <div class="card">
   <div class="bs-title" style="margin-bottom:8px"><i class="fas fa-inbox"></i> Очередь</div>
   <div class="seg" id="rqChips">
@@ -77,7 +96,7 @@ function load() {
     $('rqKpis').innerHTML =
       kpi('fa-fire', s.open, 'открытых репортов', s.open ? 'tone-warn' : 'tone-ok') +
       kpi('fa-circle-check', s.closed_week, 'решено за 7 дней', 'tone-ok') +
-      kpi('fa-flag', s.total, 'всего тикетов', 'tone-info');
+      kpi('fa-flag', s.total, 'всего жалоб', 'tone-info');
     render();
   }).catch(function () {});
 }
@@ -91,6 +110,45 @@ document.addEventListener('click', function (e) {
   render();
 });
 
+// ── Настройки жалоб (канал + роль модераторов) ──────────────────────────
+var SETUP_API = '/api/guild/' + GID + '/report-settings';
+function setupMsg(text, ok) {
+  var el = $('rsMsg');
+  if (!el) return;
+  el.innerHTML = '<span class="badge ' + (ok ? 'ok' : 'tone-danger') + '">' + esc(text) + '</span>';
+}
+function loadSetup() {
+  if (!$('rsChannel')) return;
+  fetch(SETUP_API).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) return;
+    var ch = $('rsChannel'), ro = $('rsRole');
+    (d.channels || []).forEach(function (c) {
+      var o = document.createElement('option'); o.value = c.id; o.textContent = '#' + c.name; ch.appendChild(o);
+    });
+    (d.roles || []).forEach(function (r) {
+      var o = document.createElement('option'); o.value = r.id; o.textContent = r.name; ro.appendChild(o);
+    });
+    ch.value = d.channel_id || '';
+    ro.value = d.mod_role_id || '';
+  }).catch(function () {});
+}
+function saveSetup() {
+  if (!$('rsChannel')) return;
+  setupMsg('Сохранение…', true);
+  fetch(SETUP_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel_id: $('rsChannel').value, mod_role_id: $('rsRole').value })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (d.success) setupMsg('Сохранено. Новые жалобы пойдут в выбранный канал.', true);
+    else setupMsg(d.error || 'Не удалось сохранить', false);
+  }).catch(function () { setupMsg('Ошибка сети', false); });
+}
+document.addEventListener('click', function (e) {
+  if (e.target.closest('#rsSave')) saveSetup();
+});
+
+loadSetup();
 load();
 if (window.setLiveRefresh) window.setLiveRefresh(function () { load(); }, 1500);
 </script>

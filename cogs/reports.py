@@ -367,10 +367,12 @@ class CloseConfirmView(discord.ui.View):
 # ═══════════════════════════════════════════════════════════════════
 #  ЖАЛОБЫ КАРТОЧКОЙ В КАНАЛ МОДЕРАЦИИ (заказ владельца 2026-08-31)
 #  ─────────────────────────────────────────────────────────────────
-#  /report отправляет карточку (скрин/видео вложением) в закрытый
-#  канал модерации. Если канала нет — бот создаёт его сам. Под карточкой
-#  кнопки: Принять / Отклонить / Открыть разбор / Позвать модеров.
-#  Карточка тегает роль модераторов (из панели или /report-setup).
+#  /report отправляет карточку (скрин/видео вложением) в выбранный
+#  владельцем канал репортов (панель или /report-setup). Если канал не
+#  задан — бот создаёт закрытый #модерация как запасной вариант.
+#  Под карточкой кнопки: Принять / Отклонить / Открыть разбор.
+#  Карточка сразу тегает роль модераторов (отдельной кнопки-вызова нет —
+#  тег уходит автоматически при отправке жалобы).
 # ═══════════════════════════════════════════════════════════════════
 MOD_CHANNEL_NAME = 'модерация'
 
@@ -524,19 +526,6 @@ class ReportCardView(discord.ui.View):
             view=ReportPanelView())
         await interaction.followup.send(
             f'Ветка разбора создана: {thread.mention}', ephemeral=True)
-
-    @discord.ui.button(label='Позвать модеров', style=discord.ButtonStyle.secondary,
-                       emoji='📣', custom_id='rcard_call')
-    async def call_mods(self, interaction, button):
-        if not await self._mod_only(interaction):
-            return
-        role = _mod_role_from_cfg(interaction.guild)
-        ping = role.mention if role else ''
-        await interaction.response.send_message(
-            f'{ping} Нужен ещё модератор по этой жалобе — '
-            f'{interaction.user.mention}.',
-            allowed_mentions=discord.AllowedMentions(roles=True, users=True))
-
 
 # ═══════════════════════════════════════════════════════════════════
 #  КОГ
