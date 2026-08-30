@@ -89,6 +89,50 @@ def _install_requirements():
 
 _install_requirements()
 
+# ─── Кодировка вывода: принудительный UTF-8 ────────────────────────────
+# Инцидент с VDS (свежий Windows Server, русская локаль): консоль по
+# умолчанию cp1251/cp866. Бот печатает эмодзи (⚠ ✅ 🎵 …) и длинные
+# русские строки — на cp1251 print(...) бросает UnicodeEncodeError, и
+# процесс/окно вывода обрывается («после Anti-crash тишина, бот не
+# работает»). Файл лога и так пишется в utf-8, но stdout/stderr шли в
+# системной кодировке. Принудительно переоткрываем потоки в UTF-8 с
+# заменой непечатаемых символов (на Linux .reconfigure тоже валиден;
+# если атрибута нет — не падаем).
+for _stream_name in ("stdout", "stderr"):
+    try:
+        _stream = getattr(sys, _stream_name, None)
+        if _stream is not None and hasattr(_stream, "reconfigure"):
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception as _enc_ex:
+        sys.stderr.write(f"[!] не удалось переключить {_stream_name} в UTF-8: {_enc_ex}\n")
+
+
+# ─── Аварийный лог фатальных ошибок старта ────────────────────────────
+# На VDS окно .bat может закрыться/оборваться до того, как поднимется
+# основной логгер. Любая необработанная ошибка самого раннего старта
+# дописывается в logs/fatal_start.log — причина «не запускается» не теряется.
+def _fatal_log_hook(exc_type, exc_value, exc_tb):
+    try:
+        os.makedirs("logs", exist_ok=True)
+        import datetime as _dt
+        with open(os.path.join("logs", "fatal_start.log"), "a",
+                  encoding="utf-8") as _f:
+            _f.write(f"\n===== {_dt.datetime.now()} =====\n")
+            import traceback as _tb
+            _tb.print_exception(exc_type, exc_value, exc_tb, file=_f)
+    except Exception as _hook_ex:
+        sys.stderr.write(f"[!] не удалось записать fatal_start.log: {_hook_ex}\n")
+    # KeyboardInterrupt — обычный выход, не пугаем трейсбеком.
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_tb)
+        return
+    print("\n[ФАТАЛЬНО] Бот упал при старте. Подробности записаны в "
+          "logs/fatal_start.log\n", file=sys.stderr)
+    sys.__excepthook__(exc_type, exc_value, exc_tb)
+
+
+sys.excepthook = _fatal_log_hook
+
 import discord
 import warnings
 warnings.filterwarnings('ignore', category=ResourceWarning)
@@ -172,6 +216,17 @@ async def _memory_watchdog():
     except Exception:
         return
     minute = 0
+    # ВАЖНО (инцидент 30.08, VDS/Windows+антивирус): ПОЛНАЯ сборка
+    # (gc.collect() без поколения = gen2, обход всей кучи) на боевой
+    # машине занимала до 13.5 секунд замерзания event-loop. Watchdog
+    # раньше бил её сам, добавляя фризы к автоматическим. Теперь в
+    # горячем пути НИКОГДА нет полной сборки: делаем только дешёвые
+    # gen0/gen1 (молодой мусор, миллисекунды). Циклический мусор в
+    # старших поколениях соберётся редкой автоматической gen2 (пороги
+    # подняты в gc_stabilize до 50000/5000/5000 — на практике раз в
+    # часы), а постоянный рост памяти от неё не зависит (утечка — это
+    # не освобождаемые ссылки, их GC всё равно не чинит, про неё скажет
+    # сам watchdog ниже).
     while True:
         await asyncio.sleep(60)
         minute += 1
@@ -183,9 +238,18 @@ async def _memory_watchdog():
             mem_crit = 900
             if rss > mem_warn:
                 level = 'warn' if rss < mem_crit else 'critical'
-                log.warning('[ПАМЯТЬ] RSS %.0f МБ, потоков %d — %s (GC)',
-                            rss, threads, level)
-                gc.collect()
+                # Дешёвая частичная сборка: gen0 каждый тик, gen1 раз в
+                # 5 минут. Обе не обходят всю кучу — event-loop почти не
+                # стоит (никаких 10-секундных фризов как от gen2).
+                gen = 1 if minute % 5 == 0 else 0
+                try:
+                    gc.collect(gen)
+                except Exception as _gc_ex:
+                    log.debug('memory_watchdog: gen%d-сборка не удалась: %s', gen, _gc_ex)
+                log.warning('[ПАМЯТЬ] RSS %.0f МБ, потоков %d — %s '
+                            '(частичная сборка gen%d; полная в горячем '
+                            'пути отключена, чтобы не морозить event-loop)',
+                            rss, threads, level, gen)
             if rss > mem_crit:
                 _record_run('memory_high',
                             rss_mb=round(rss, 1), threads=threads)
@@ -1126,6 +1190,71 @@ async def main():
     except Exception as _e:
         print(f'[СБРОС] Чистый старт не выполнен: {_e}')
 
+    # ─── Предстартовая проверка настроек и соединений (preflight) ──
+    # Единая наглядная сводка: токен, владелец, серверы, БД, папки,
+    # порты, хардкод-ID и AI-ключи. Ошибки (error) критичны для работы,
+    # предупреждения (warn) — необязательные функции. Network-проверка
+    # добавится ниже, когда сделаем TCP-тест до Discord.
+    try:
+        from services import preflight as _pf
+        _facts = {}
+        # БД: реально ли открывается на запись (путь из Config.DB_PATH)
+        try:
+            import sqlite3 as _sqlite3
+            from config import Config as _Cfg
+            os.makedirs(os.path.dirname(_Cfg.DB_PATH), exist_ok=True)
+            _c = _sqlite3.connect(_Cfg.DB_PATH, timeout=5)
+            _c.execute("SELECT 1")
+            _c.close()
+            _facts['db_ok'] = True
+            _facts['db_path'] = os.path.relpath(_Cfg.DB_PATH) or 'data/bot.db'
+        except Exception as _dbex:
+            _facts['db_ok'] = False
+            _log.debug('preflight db: %s', _dbex)
+        # Папки данных/логов
+        try:
+            _need = [_BASE_DIR + '/data', _BASE_DIR + '/logs']
+            _facts['dirs_ok'] = all(os.path.isdir(d) or os.access(_BASE_DIR, os.W_OK)
+                                    for d in _need)
+            _facts['dirs'] = ['data', 'logs']
+        except Exception:
+            _facts['dirs_ok'] = True
+        # Порты панели/WS
+        try:
+            _facts['panel_port'] = int(os.environ.get('PORT', '') or 0) or 5001
+            _facts['ws_port'] = int(os.environ.get('WS_PORT', '') or 0) or 8765
+        except Exception as _port_ex:
+            log.debug('preflight: порты панели/WS не прочитаны: %s', _port_ex)
+        # Хардкод-ID из config.py (дефолты с сервера разработки)
+        try:
+            from config import Config as _Cfg2
+            _facts['hardcoded_ids'] = {
+                'LOG_CHANNEL_ID': _Cfg2.LOG_CHANNEL_ID,
+                'APPLY_CHANNEL_ID': _Cfg2.APPLY_CHANNEL_ID,
+                'REQUIRED_ROLE_ID': _Cfg2.REQUIRED_ROLE_ID,
+            }
+        except Exception:
+            _facts['hardcoded_ids'] = {}
+        # ffmpeg для музыки: проверяем тем же детектором, что и music_cog
+        try:
+            import shutil as _sh
+            _ff = (os.environ.get('FFMPEG_BINARY') or _sh.which('ffmpeg')
+                   or _sh.which('ffmpeg.exe'))
+            _facts['ffmpeg'] = _ff or False
+        except Exception:
+            _facts['ffmpeg'] = False
+        _results = _pf.run_checks(facts=_facts)
+        print("[ПРОВЕРКА] Предстартовая диагностика настроек:")
+        print(_pf.format_report(_results))
+        if _pf.count_errors(_results):
+            log.warning("Preflight: критичных замечаний — %d (см. [ОШИБКА] выше)",
+                        _pf.count_errors(_results))
+        if _pf.count_warns(_results):
+            log.info("Preflight: необязательных замечаний — %d (см. [!] выше)",
+                     _pf.count_warns(_results))
+    except Exception as _ex:
+        log.debug('preflight: %s', _ex)
+
     from web.app import app, set_bot_instance
     set_bot_instance(bot)
     _start_web_server(app)
@@ -1173,28 +1302,94 @@ async def main():
                 log.info(f"Команды выключены владельцем: {', '.join(_hid)}")
         except Exception as _ex:
             log.warning(f"Переключатели команд не применены: {_ex}")
+        # GC: к этому моменту загружены ВСЕ модули и построены их объекты —
+        # замораживаем стартовый граф и делаем сборки редкими СЕЙЧАС, до
+        # входа в Discord. Повторный gc_stabilize в on_ready — дешёвый
+        # no-op поверх (frozen уже учтён). Раньше первая стабилизация
+        # ждала on_ready, и тяжёлый стартовый граф успевал попасть под
+        # первые gen2-сборки (инцидент 30.08: паузы 2–9 сек на старте).
+        try:
+            from error_handler import gc_stabilize as _gc_stab
+            _gc_stab()
+        except Exception as _ex:
+            log.warning(f"GC-стабилизация после загрузки когов не удалась: {_ex}")
         _token = (os.getenv("TOKEN", "") or os.getenv("TОКEN", "")).strip()
         if not _token:
             print("[ОШИБКА] Токен не найден! Добавьте токен в .env файл (строка TOKEN=ваш_токен) "
                   "из https://discord.com/developers/applications")
             sys.exit(7)
+
+        # ─── Предстартовая проверка связи с Discord ──────────────────
+        # На VDS самая частая причина «бот молчит и не выходит в сеть» —
+        # закрытый исходящий 443, фаервол/блокировка провайдера или нужен
+        # прокси. Раньше бот просто бесконечно писал «Cannot connect to
+        # host discord.com», не объясняя причину. Делаем разовый TCP-тест
+        # до боевых хостов и сразу говорим, в чём дело.
+        async def _check_discord_reachable():
+            import socket
+            hosts = ("discord.com", "gateway.discord.gg")
+            ok = []
+            for host in hosts:
+                try:
+                    fut = asyncio.open_connection(host, 443)
+                    reader, writer = await asyncio.wait_for(fut, timeout=10)
+                    writer.close()
+                    try:
+                        await writer.wait_closed()
+                    except Exception:
+                        _ = 'сокет уже закрыт — неважно для TCP-проверки'
+                    ok.append(host)
+                except Exception:
+                    _ = f'{host} недоступен:443 — учтём в проверке ниже'
+            return ok
+
+        try:
+            _reachable = await _check_discord_reachable()
+        except Exception:
+            _reachable = ["discord.com"]  # не смогли проверить — не мешаем старту
+        if not _reachable:
+            print("[СЕТЬ] ⚠ НЕТ ДОСТУПА к Discord (discord.com:443 / gateway не отвечают).")
+            print("       Бот будет пытаться подключиться, но на этом VDS, похоже, "
+                  "закрыт исходящий порт 443 или адрес блокируется провайдером/фаерволом.")
+            print("       Что проверить на VDS:")
+            print("         1) исходящий TCP 443 открыт (брандмауэр Windows/ufw/iptables);")
+            print("         2) есть интернет: откройте https://discord.com в браузере сервера;")
+            print("         3) если Discord заблокирован у хостера — нужен VPN/прокси на сервере.")
+            _record_run('network_blocked', hosts='discord.com:443,gateway:443')
+            log.error("Предстартовая проверка: Discord недоступен с этого сервера "
+                      "(443 закрыт или блокировка) — нужен фаервол/VPN на VDS")
+        else:
+            print(f"[СЕТЬ] Доступ к Discord есть ({', '.join(_reachable)}:443)")
+
         # Anti-crash: автоперезапуск при сетевых сбоях, но с нарастающей паузой,
         # чтобы не долбить Discord во время сбоя (5 -> 10 -> 20 ... макс. 60 сек).
         _delay = 5
+        _conn_fails = 0
         while True:
             try:
                 print("[БОТ] Подключение к Discord...")
                 await bot.start(_token)
                 _delay = 5  # удачная сессия — сбросить паузу
+                _conn_fails = 0
             except discord.LoginFailure:
                 print("[ОШИБКА] Недействительный токен Discord! Исправьте TOKEN в .env — "
                       "перезапуск не поможет.")
                 sys.exit(7)
             except Exception as e:
-                print(f"[ОШИБКА] Бот отключился: {e}")
+                _conn_fails += 1
+                _emsg = str(e)
+                print(f"[ОШИБКА] Бот отключился: {_emsg}")
+                # Сетевая недоступность Discord — отдельный понятный совет
+                # (на VDS это фаервол/блокировка, а не баг бота).
+                if _conn_fails <= 3 and (
+                        "Cannot connect to host" in _emsg
+                        or "discord.com" in _emsg):
+                    print("[СЕТЬ] ⚠ Похоже, сервер НЕ МОЖЕТ достучаться до Discord.")
+                    print("       Проверьте на VDS: открыт ли исходящий порт 443, "
+                          "есть ли интернет и не блокирует ли Discord провайдер/фаервол.")
                 print(f"[БОТ] Автоперезапуск через {_delay} сек...")
                 _uptime = int(time.time() - _RUN_START_TS)
-                _record_run('reconnect', error=str(e)[:300],
+                _record_run('reconnect', error=_emsg[:300],
                             uptime_sec=_uptime, retry_in=_delay)
                 log.warning('Бот отключился после %dс аптайма: %s — '
                             'автопереподключение через %dс',

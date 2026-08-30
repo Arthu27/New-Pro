@@ -185,18 +185,35 @@ check(len(_root_cap) == 1 and 'socket.send()' in _root_cap[0],
 print('\n== install_loop_probes: цикл получает обе пробы ==')
 import asyncio as _aio
 import gc as _gc
+import os as _os
 
+# Боевой режим: ПОЛНЫЙ debug asyncio ВЫКЛЮЧЕН по умолчанию (его захват
+# source-traceback на каждый таймер давал паузы 6–10с на медленном
+# диске/антивирусе — инцидент 30.08). Пробы (gc.callbacks + хендлер +
+# stack-monitor) при этом ставятся всегда.
+_os.environ.pop('ASYNCIO_DEBUG', None)
 _loop = _aio.new_event_loop()
+_loop.set_debug(True)   # симулируем «debug уже был включён»
 _before_cb = len(_gc.callbacks)
 eh2.install_loop_probes(_loop)
-check(_loop.get_debug() is True and _loop.slow_callback_duration == 2.0,
-      'debug-режим включён, порог медленного callback = 2.0 сек')
+check(_loop.get_debug() is False,
+      'по умолчанию полный debug-режим asyncio ВЫКЛЮЧЕН (нет дорогих '
+      'source-traceback/linecache на каждый таймер)')
 check(eh2._gc_probe in _gc.callbacks,
-      'gc-проба зарегистрирована в gc.callbacks')
+      'gc-проба зарегистрирована в gc.callbacks (работает без debug)')
 _aio_log = _lg.getLogger('asyncio')
 check(any(isinstance(h, eh2._AsyncioSlowPromote) for h in _aio_log.handlers)
       and _aio_log.propagate is False,
       'хендлер промоции стоит, DEBUG-шум не утекает в консоль')
+
+# Флаг ASYNCIO_DEBUG=1 возвращает полный debug для глубокой отладки.
+_loop2 = _aio.new_event_loop()
+_os.environ['ASYNCIO_DEBUG'] = '1'
+eh2.install_loop_probes(_loop2)
+check(_loop2.get_debug() is True and _loop2.slow_callback_duration == 2.0,
+      'ASYNCIO_DEBUG=1 — полный debug включён, порог callback = 2.0 сек')
+_os.environ.pop('ASYNCIO_DEBUG', None)
+
 # повторный вызов не дублирует хендлеры и коллбеки
 _n_h = sum(isinstance(h, eh2._AsyncioSlowPromote) for h in _aio_log.handlers)
 eh2.install_loop_probes(_loop)
@@ -209,11 +226,13 @@ _aio_log.handlers = [h for h in _aio_log.handlers
 _aio_log.propagate = True
 _gc.callbacks.remove(eh2._gc_probe)
 _loop.close()
+_loop2.close()
 
 print('\n== gc_stabilize: паузы GC лечатся ==')
 _ok = eh2.gc_stabilize()
-check(_ok is True and _gc.get_threshold() == (50_000, 50, 50),
-      'стартовый граф заморожен, пороги 50000/50/50')
+check(_ok is True and _gc.get_threshold() == eh2.GC_THRESHOLDS
+      and eh2.GC_THRESHOLDS == (50_000, 5_000, 5_000),
+      'стартовый граф заморожен, пороги 50000/5000/5000 (автоген2 убран)')
 
 print('\n== environment_warnings: три ловушки среды запуска ==')
 _w = eh2.environment_warnings(

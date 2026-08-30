@@ -53,7 +53,7 @@ echo.
 echo [3/3] Starting bot...
 echo ============================================================
 echo.
-python main.py
+python -X utf8 main.py
 
 :: If bot crashed
 echo.

@@ -51,3 +51,35 @@ sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
 sudo mkswap /swapfile && sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
+
+## Бот не выходит в сеть на VDS (всё стартует, но «Cannot connect to host discord.com»)
+
+При старте бот сам делает TCP-проверку `discord.com:443` и `gateway.discord.gg:443`
+и пишет результат в лог:
+
+- `[СЕТЬ] Доступ к Discord есть (...)` — сеть в порядке, проблема в токене/правах;
+- `[СЕТЬ] НЕТ ДОСТУПА к Discord (...)` — сервер физически не достаёт Discord.
+
+Быстрая проверка прямо на VDS:
+
+```bash
+# Linux:
+curl -sS -o /dev/null -w '%{http_code}\n' https://discord.com/api/v10/gateway   # ждём 401
+# Windows VDS (PowerShell):
+Test-NetConnection discord.com -Port 443
+```
+
+Если соединения нет — Discord блокируется на уровне хостера/фаервола
+(частый случай для некоторых дата-центров). Лечение:
+
+1. открыть исходящий TCP **443** в брандмауэре VDS (`ufw allow out 443` /
+   правило в Windows Firewall / у провайдера в панели);
+2. если Discord заблокирован у хостера целиком — поднять на сервере VPN
+   или прокси (например, WireGuard к узлу с доступом) — дискорд-шлюз
+   пойдёт через него;
+3. убедиться, что у VDS вообще есть интернет и верные DNS
+   (`ping discord.com`, `nslookup discord.com`).
+
+Логи старта на Windows-сервере пишутся и в файл: запускайте через
+`start_bot.bat` (консоль копируется в `logs\start_console.log`), а фатальные
+ошибки самого раннего старта — в `logs\fatal_start.log`.

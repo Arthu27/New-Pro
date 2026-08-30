@@ -290,8 +290,43 @@ class MusicCog(commands.Cog):
     # ── движок воспроизведения ───────────────────────────────────────────
     @staticmethod
     def _ffmpeg_binary():
-        """ffmpeg для декодирования: FFMPEG_BINARY в .env или PATH."""
-        return os.environ.get('FFMPEG_BINARY') or shutil.which('ffmpeg') or None
+        """ffmpeg для декодирования: FFMPEG_BINARY в .env, PATH или типичные места.
+
+        На Windows VDS ffmpeg часто лежит рядом с ботом или в стандартных
+        папках, но не в PATH — раньше музыка молча не играла. Ищем и там.
+        """
+        # 1) явный путь из .env (может быть и директорией, и файлом)
+        env_path = os.environ.get('FFMPEG_BINARY')
+        if env_path:
+            p = env_path.strip().strip('"')
+            if os.path.isdir(p):
+                cand = os.path.join(p, 'ffmpeg.exe')
+                if os.path.isfile(cand):
+                    return cand
+            if os.path.isfile(p):
+                return p
+        # 2) системный PATH
+        found = shutil.which('ffmpeg')
+        if found:
+            return found
+        # 3) типичные места (Windows) — локально рядом с ботом и Program Files
+        _exe = 'ffmpeg.exe' if os.name == 'nt' else 'ffmpeg'
+        candidates = [
+            os.path.join(os.getcwd(), 'ffmpeg', 'bin', _exe),
+            os.path.join(os.getcwd(), 'bin', _exe),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                         'ffmpeg', 'bin', _exe),
+        ]
+        if os.name == 'nt':
+            for base in (os.environ.get('ProgramFiles', ''),
+                         os.environ.get('ProgramFiles(x86)', ''),
+                         r'C:\ffmpeg'):
+                if base:
+                    candidates.append(os.path.join(base, 'ffmpeg', 'bin', _exe))
+        for c in candidates:
+            if c and os.path.isfile(c):
+                return c
+        return None
 
     async def _resolve_stream(self, query: str):
         """yt-dlp: ссылка или поиск → (прямой аудио-url, название трека).
