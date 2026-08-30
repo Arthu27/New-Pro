@@ -511,6 +511,37 @@ def _norm_guild_id(raw):
 
 MAIN_GUILD_ID = _norm_guild_id(os.getenv('MAIN_GUILD_ID', ''))  # задаётся в .env; без него контекст берёт первый сервер бота
 
+
+def _panel_guild ():
+    """Сервер, которым управляет панель.
+
+    При заданном MAIN_GUILD_ID — строго он (бот может состоять в нескольких
+    серверах, но вход/подсказки/регистрация имеют смысл только для людей
+    основного сервера). Без MAIN_GUILD_ID (панель ещё не настроена) берём
+    первый сервер бота. Возвращает discord.Guild или None.
+    """
+    if not bot_instance :
+        return None
+    if MAIN_GUILD_ID :
+        try :
+            g =bot_instance .get_guild (int (MAIN_GUILD_ID ))
+        except (TypeError ,ValueError ):
+            g =None
+        return g
+    try :
+        return bot_instance .guilds [0 ]if bot_instance .guilds else None
+    except Exception :
+        return None
+
+
+def _is_bot_owner (discord_id )->bool :
+    """ID входит в список владельцев бота (OWNER_ID/OWNER_IDS из .env)?"""
+    try :
+        owners =_root_config .Config .all_owner_ids ()
+        return bool (owners )and int (discord_id )in owners
+    except Exception :
+        return False
+
 # Роли панели (от низшей к высшей). Куратор — старший модератор:
 # видит всё модерское + тикеты/сообщество, настраивается владельцем
 # так же, как модератор и администратор (доступ к меню, маппинг ролей).
@@ -1078,34 +1109,26 @@ def register ():
         member_info =None 
 
         async def find_member ():
-        # Сначала ищем в кэше всех серверов
-            for guild in bot_instance .guilds :
-                m =guild .get_member (int (discord_id ))
-                if m :
-                    return {'display_name':m .display_name ,'name':str (m ),'avatar':str (m .display_avatar .url )}
-                    # Если в кэше нет — тянем через API (по каждому серверу)
-            for guild in bot_instance .guilds :
-                try :
-                    m =await guild .fetch_member (int (discord_id ))
-                    if m :
-                        return {'display_name':m .display_name ,'name':str (m ),'avatar':str (m .display_avatar .url )}
-                except Exception as _ex:
-                    _log.debug("find_member(): подавлено: %s", _ex)
-                    continue 
-                    # Если ни на одном сервере не найден — fetch_user через Discord
+        # Ищем СТРОГО на основном сервере панели. Регистрация доступна только
+        # его участникам; раньше перебирались все сервера и в конце дёргался
+        # fetch_user — так доступ создавал себе человек не с нашего сервера.
+            panel_guild =_panel_guild ()
+            if panel_guild is None :
+                return None
             try :
-                user =await bot_instance .fetch_user (int (discord_id ))
-                if user :
-                    return {'display_name':user .display_name ,'name':str (user ),'avatar':str (user .display_avatar .url )}
+                m =await _resolve_guild_member_async (panel_guild ,int (discord_id ))
             except Exception as _ex:
                 _log.debug("find_member(): подавлено: %s", _ex)
+                m =None
+            if m and not getattr (m ,'bot',False ):
+                return {'display_name':m .display_name ,'name':str (m ),'avatar':str (m .display_avatar .url )}
             return None 
 
         import asyncio 
         member_info =asyncio .run_coroutine_threadsafe (find_member (),bot_instance .loop ).result (timeout =15 )
 
         if not member_info :
-            return render_template ('register.html',error ='Этот Discord ID не найден! Убедитесь, что Discord ID верный.',step =1 )
+            return render_template ('register.html',error ='Этот Discord ID не найден на основном сервере. Регистрация доступна только его участникам — проверьте ID и что вы на сервере.',step =1 )
 
         members_file ='data/members.json'
         if os .path .exists (members_file ):
@@ -3214,30 +3237,35 @@ def api_login_suggest ():
     suggestions =[]
     seen_ids =set ()
 
-    # 1. Live Discord bot members if online
-    if bot_instance :
-        for guild in bot_instance .guilds :
-            for m in guild .members :
-                if m .bot :continue 
-                if not query_clean or query_clean in m .name .lower ()or query_clean in m .display_name .lower ()or query_clean in str (m .id ):
-                    if m .id not in seen_ids :
-                        seen_ids .add (m .id )
-                        suggestions .append ({
-                        'id':str (m .id ),
-                        'name':m .name ,
-                        'display_name':m .display_name ,
-                        'avatar':str (m .display_avatar .url )if hasattr (m ,'display_avatar')else 'https://cdn.discordapp.com/embed/avatars/0.png'
-                        })
-                        if len (suggestions )>=12 :break 
-            if len (suggestions )>=12 :break 
+    # 1. Участники ТОЛЬКО основного сервера панели (MAIN_GUILD_ID).
+    # Раньше перебирались все сервера бота — в подсказках входа появлялись
+    # люди с других серверов, где состоит бот (заказ: «убери их»).
+    panel_guild =_panel_guild ()
+    if panel_guild is not None :
+        for m in panel_guild .members :
+            if m .bot :continue 
+            if not query_clean or query_clean in m .name .lower ()or query_clean in m .display_name .lower ()or query_clean in str (m .id ):
+                if m .id not in seen_ids :
+                    seen_ids .add (m .id )
+                    suggestions .append ({
+                    'id':str (m .id ),
+                    'name':m .name ,
+                    'display_name':m .display_name ,
+                    'avatar':str (m .display_avatar .url )if hasattr (m ,'display_avatar')else 'https://cdn.discordapp.com/embed/avatars/0.png'
+                    })
+                    if len (suggestions )>=12 :break 
 
             # 2. Offline / supplemental check from members.json
-    if len (suggestions )<12 and os .path .exists ('data/members.json'):
+    # 2. Офлайн-добор из members.json — но лишь тех, кто реально на главном
+    # сервере (живой кэш бота), чтобы не подсказывать посторонних.
+    if len (suggestions )<12 and os .path .exists ('data/members.json')and panel_guild is not None :
         try :
             with open ('data/members.json','r',encoding ='utf-8')as f :
                 mdata =json .load (f )
+            live_ids ={str (mm .id )for mm in panel_guild .members }
             for uid_str ,minfo in mdata .items ():
-                if uid_str in seen_ids :continue 
+                if uid_str in seen_ids :continue
+                if str (uid_str )not in live_ids :continue   # не на главном сервере — не показываем
                 mname =minfo .get ('display_name',minfo .get ('username',uid_str ))
                 if not query_clean or query_clean in mname .lower ()or query_clean in str (uid_str ):
                     seen_ids .add (uid_str )
@@ -3280,57 +3308,61 @@ def api_discord_check ():
     tests =[]
     discord_id =None 
     member_info =None 
-    user =None 
+    user =None
+    # Ищем СТРОГО на основном сервере панели. Люди с других серверов бота
+    # в панель попасть не должны (заказ: «в войти появляются люди не с
+    # основного сервера — убери их»).
+    panel_guild =_panel_guild ()
     try :
         if query .isdigit ()and 17 <=len (query )<=19 :
             discord_id =query 
-            for guild in bot_instance .guilds :
+            if panel_guild is not None :
                 try :
-                    m =_resolve_guild_member (guild ,discord_id )
+                    user =_resolve_guild_member (panel_guild ,discord_id )
                 except Exception as _ex:
                     _log.debug("api_discord_check(): подавлено: %s", _ex)
-                    m =None 
-                if m :
-                    user =m 
-                    break 
-            if not user :
+                    user =None
+            # Владелец бота (OWNER_ID) может ещё не состоять на сервере на
+            # этапе настройки — ему вход разрешён: тянем профиль напрямую.
+            if user is None and _is_bot_owner (discord_id ):
                 try :
-                    user =asyncio .run_coroutine_threadsafe (bot_instance .fetch_user (int (discord_id )),bot_instance .loop ).result (timeout =10 )
+                    user =asyncio .run_coroutine_threadsafe (
+                    bot_instance .fetch_user (int (discord_id )),bot_instance .loop ).result (timeout =10 )
                 except Exception as _ex:
-                    _log.debug("api_discord_check(): подавлено: %s", _ex)
+                    _log.debug("api_discord_check owner fetch: %s", _ex)
         else :
             uname =query .lstrip ('@').lower ()
-            for guild in bot_instance .guilds :
-                for m in guild .members :
+            if panel_guild is not None :
+                for m in panel_guild .members :
                     if m .name .lower ()==uname or m .display_name .lower ()==uname :
                         user =m 
                         discord_id =str (m .id )
-                        break 
-                if user :
-                    break 
+                        break
         if not user or not discord_id :
-            tests .append ({'name':'Поиск пользователя','status':'fail','detail':'Not found'})
-            return jsonify ({'success':False ,'tests':tests ,'error':'Пользователь не найден.'})
+            tests .append ({'name':'Поиск пользователя','status':'fail','detail':'Не найден на сервере'})
+            return jsonify ({'success':False ,'tests':tests ,'error':'Пользователь не найден на основном сервере. Вход в панель доступен только участникам этого сервера.'})
         member_info ={'display_name':getattr (user ,'display_name',str (user )),'name':str (user ),'avatar':str (user .display_avatar .url )if hasattr (user ,'display_avatar')else ''}
         tests .append ({'name':'Поиск пользователя','status':'ok','detail':member_info ['display_name']})
     except Exception as e :
         tests .append ({'name':'Поиск пользователя','status':'fail','detail':str (e )})
         return jsonify ({'success':False ,'tests':tests ,'error':str (e )})
+    # Жёсткая проверка членства: пользователь должен быть участником
+    # основного сервера. Единственное исключение — владелец бота (OWNER_ID),
+    # он управляет панелью даже не находясь на сервере.
     try :
-        in_guild =False 
-        guild_name =None 
-        for guild in bot_instance .guilds :
-            m =guild .get_member (int (discord_id ))
-            if m :
-                in_guild =True 
-                guild_name =guild .name 
-                break 
+        in_guild =(panel_guild is not None and _resolve_guild_member (panel_guild ,int (discord_id ))is not None )
+        is_owner =_is_bot_owner (discord_id )
         if in_guild :
-            tests .append ({'name':'Участник сервера','status':'ok','detail':guild_name })
+            tests .append ({'name':'Участник сервера','status':'ok','detail':getattr (panel_guild ,'name','')})
+        elif is_owner :
+            tests .append ({'name':'Участник сервера','status':'ok','detail':'Владелец бота'})
         else :
-            tests .append ({'name':'Участник сервера','status':'warn','detail':'Не найден на сервере'})
-    except Exception:
-        tests .append ({'name':'Участник сервера','status':'warn','detail':'Ошибка проверки'})
+            tests .append ({'name':'Участник сервера','status':'fail','detail':'Нет на основном сервере'})
+            return jsonify ({'success':False ,'tests':tests ,'error':'Вы не состоите на основном сервере панели. Доступ только для его участников.'})
+    except Exception as _ex:
+        _log.debug("api_discord_check membership: %s", _ex)
+        tests .append ({'name':'Участник сервера','status':'fail','detail':'Ошибка проверки'})
+        return jsonify ({'success':False ,'tests':tests ,'error':'Не удалось проверить членство на сервере. Попробуйте позже.'})
     try :
         is_bot =getattr (user ,'bot',False )
         if is_bot :
@@ -3723,20 +3755,20 @@ def api_global_search ():
 
     results =[]
 
-    # Участники
-    if bot_instance :
-        for guild in bot_instance .guilds :
-            for member in guild .members :
-                if q in member .display_name .lower ()or q in str (member .id ):
-                    results .append ({
-                    'type':'member',
-                    'icon':'',
-                    'title':member .display_name ,
-                    'subtitle':f'{guild.name} • ID: {member.id}',
-                    'url':f'/users?search={member.id}'
-                    })
-                    if len (results )>=5 :
-                        break 
+    # Участники — только основного сервера панели (не всех серверов бота).
+    _search_guild =_panel_guild ()
+    if _search_guild is not None :
+        for member in _search_guild .members :
+            if q in member .display_name .lower ()or q in str (member .id ):
+                results .append ({
+                'type':'member',
+                'icon':'',
+                'title':member .display_name ,
+                'subtitle':f'{_search_guild.name} • ID: {member.id}',
+                'url':f'/users?search={member.id}'
+                })
+                if len (results )>=5 :
+                    break
 
                         # Предупреждения
     warns_file ='data/warnings.json'
