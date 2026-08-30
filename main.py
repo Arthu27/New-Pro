@@ -507,10 +507,14 @@ def _start_tunnel_sidecar():
         return
 
     def _echo_tunnel_log():
+        # Инцидент 30.08: ~60 строк cloudflared за рестарт прятали
+        # сообщения бота. Показываем только значимое: ошибки, регистрации
+        # соединений, итог пре-чеков (см. services/startup_info.py).
+        from services.startup_info import tunnel_line_worth
         try:
             for line in _tunnel_proc.stdout:
                 line = (line or '').rstrip()
-                if line:
+                if line and tunnel_line_worth(line):
                     print(f'[ТУННЕЛЬ] {line}')
         except Exception as e:
             print(f'[ТУННЕЛЬ] Чтение лога: {e}')
@@ -984,6 +988,17 @@ async def load_cogs():
         log.warning(f"Слеш-меню почти полное ({len(_kept)}/100) — пора пересмотреть KEEP_SLASH")
 
 async def main():
+    # ПЕРВАЯ строка запуска — какой код вообще работает. Инцидент 30.08:
+    # /update со стандартным источником (main, без фиксов) молча откатил
+    # бота на старую версию — и в логе не было ни одного признака этого.
+    try:
+        from services.startup_info import version_stamp
+        _vs = version_stamp(os.path.abspath('.'))
+        print(f"[ВЕРСИЯ] Код: {_vs}")
+        _log.info("ВЕРСИЯ КОДА: %s", _vs)
+    except Exception as _ex:
+        _log.debug("version_stamp(): %s", _ex)
+
     # Предупреждения о среде: три главные причины «странных» зависаний
     # (инцидент 30.08: Downloads + вложенная папка + Python 3.14)
     try:
