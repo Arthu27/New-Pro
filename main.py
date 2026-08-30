@@ -859,6 +859,15 @@ async def on_ready():
             except Exception as _nse_ex:
                 _log.warning("on_ready(): не записали ошибку синка в sync_last.json: %s", _nse_ex)
         _synced = True
+        # Куча к этому моменту построена: замораживаем стартовый граф и
+        # делаем сборки редкими — мультисекундные паузы GC рвали цикл
+        # (инцидент 30.08: зависания 6–10 сек каждые ~3 мин, стек-монитор
+        # видел только «виновник уже завершился»).
+        try:
+            from error_handler import gc_stabilize
+            gc_stabilize()
+        except Exception as _ex:
+            _log.warning("on_ready(): GC-стабилизация не удалась: %s", _ex)
         bot.loop.create_task(_monitor_voice())
         # Если только что кончило самообновление (/update) — отчитаться в канал
         try:
@@ -975,6 +984,16 @@ async def load_cogs():
         log.warning(f"Слеш-меню почти полное ({len(_kept)}/100) — пора пересмотреть KEEP_SLASH")
 
 async def main():
+    # Предупреждения о среде: три главные причины «странных» зависаний
+    # (инцидент 30.08: Downloads + вложенная папка + Python 3.14)
+    try:
+        from error_handler import environment_warnings
+        for msg in environment_warnings(os.path.abspath('.')):
+            print(f"[СРЕДА] ⚠ {msg}")
+            _log.warning("СРЕДА: %s", msg)
+    except Exception as _ex:
+        _log.debug("environment_warnings(): %s", _ex)
+
     # Журнал жизненного цикла: старт (и предыдущая сессия видна в файле)
     try:
         first = True

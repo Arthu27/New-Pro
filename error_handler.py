@@ -19,6 +19,144 @@ from logger import get_logger
 
 _log = get_logger("error_handler")
 
+
+# ════════════════════════════════════════════════════════════════════════
+# Зависания event-loop 6–10 сек (инциденты 29–30.08, продакшн Windows):
+# стек-монитор v2 честно говорил «виновник уже завершился» — сэмплы
+# падали в РАЗНЫЕ точки (TimerHandle.__init__ и прочие АЛЛОКАЦИИ).
+# Это почерк сборщика мусора: gen2-проход по куче в ~800 МБ идёт под GIL
+# секунды и запускается в случайных местах. Ниже три инструмента:
+# gc-проба (измеряет КАЖДУЮ сборку и называет её), gc-стабилизация
+# (лечит: freeze + редкие пороги) и asyncio-детектор медленных
+# callback'ов (именно ИМЯ callback'а, если виновник не GC).
+# ════════════════════════════════════════════════════════════════════════
+import logging
+_gc_probe_t0 = {}
+
+
+def _gc_probe(phase, info):
+    """Замер длительности КАЖДОЙ сборки GC (коллбек gc.callbacks).
+
+    Пауза ≥2 сек — CRITICAL с поколением и числом объектов: если
+    зависания event-loop совпадут с этими записями, виновник назван
+    окончательно (это GC), и лечится gc_stabilize() ниже.
+    """
+    try:
+        if phase == 'start':
+            _gc_probe_t0['t0'] = time.perf_counter()
+            return
+        t0 = _gc_probe_t0.pop('t0', None)
+        if t0 is None:
+            return
+        dt = time.perf_counter() - t0
+        if dt >= 2.0:
+            gen = info.get('generation') if isinstance(info, dict) else None
+            _log.critical(
+                'GC: СБОРКА ЗАНИМАЛА %.1f сек (поколение %s, объектов в треке '
+                'gen0: %s) — ВОТ источник зависаний event-loop; лечение: '
+                'gc.freeze + редкие пороги (см. gc_stabilize)',
+                dt, gen, gc.get_count()[0] if gc else '?')
+    except Exception as _ex:
+        _log.debug('gc-probe: %s', _ex)
+
+
+def gc_stabilize():
+    """Вылечить мультисекундные паузы GC: заморозить стартовый граф и
+    сделать сборки редкими (рецепт для долгоживущих asyncio-сервисов).
+
+    gc.collect() + gc.freeze() переносит всё, что накопилось к моменту
+    старта, в «постоянное» поколение — сборки его больше не обходят.
+    Порог 50000 (вместо 700) делает gen2-проходы в десятки раз реже.
+    """
+    try:
+        import gc
+        before = gc.get_count()
+        gc.collect()
+        gc.freeze()
+        gc.set_threshold(50_000, 50, 50)
+        _log.info('GC: стартовый граф заморожен (%s → сборки редкие, '
+                  'пороги 50000/50/50) — паузы сборки мусора больше не '
+                  'должны рвать event-loop', before)
+        return True
+    except Exception as _ex:
+        _log.warning('GC: стабилизировать не вышло: %s', _ex)
+        return False
+
+
+class _AsyncioSlowPromote(logging.Handler):
+    """Продвигает «Executing … took N seconds» из asyncio в CRITICAL.
+
+    Debug-режим asyncio сам меряет каждый callback; сообщение «took»
+    называет КОНКРЕТНЫЙ callback — закрывает слепоту стек-монитора
+    («виновник уже завершился»). Остальной DEBUG-шум asyncio глотаем,
+    WARNING и выше честно наверх.
+    """
+
+    def emit(self, record):
+        try:
+            msg = record.getMessage() or ''
+            if 'took' in msg and 'second' in msg:
+                _log.critical('EVENT-LOOP: МЕДЛЕННЫЙ CALLBACK — %s', msg)
+            elif record.levelno >= logging.WARNING:
+                logging.getLogger().handle(record)
+        except Exception as _ex:      # хендлер не должен ронять логирование
+            _log.debug('asyncio-slow-promote: %s', _ex)
+
+
+def install_loop_probes(loop):
+    """Включить детектор медленных callback'ов asyncio на данном цикле.
+
+    Порог 2 сек: ловим именно зависания, а не мелочь. Издержки
+    debug-режима — один perf_counter на callback (микросекунды).
+    """
+    try:
+        import gc as _gc
+        if _gc_probe not in getattr(_gc, 'callbacks', []):
+            _gc.callbacks.append(_gc_probe)
+    except Exception as _ex:
+        _log.debug('gc-probe: не поставить: %s', _ex)
+    try:
+        loop.set_debug(True)
+        loop.slow_callback_duration = 2.0
+        aio_log = logging.getLogger('asyncio')
+        if not any(isinstance(h, _AsyncioSlowPromote) for h in aio_log.handlers):
+            aio_log.addHandler(_AsyncioSlowPromote())
+        aio_log.setLevel(logging.DEBUG)
+        aio_log.propagate = False     # DEBUG-шум asyncio не льётся в консоль
+        _log.info('Пробы цикла включены: медленный callback ≥2с и сборка GC '
+                  '≥2с будут названы поимённо в CRITICAL')
+    except Exception as _ex:
+        _log.debug('loop-probes: %s', _ex)
+
+
+def environment_warnings(base_dir, py_version=None):
+    """Предупреждения о среде запуска (чистая функция — тестируется).
+
+    Продакшн-инцидент 30.08: бот работал из Downloads во ВЛОЖЕННОЙ папке
+    (New-Pro-…/New-Pro-…) на Python 3.14 — каждое чтение файла проходило
+    антивирус, зависания 6–10 сек. Возвращаем список строк-предупреждений.
+    """
+    out = []
+    base = str(base_dir or '')
+    low = base.lower().replace(chr(92), '/')
+    if 'downloads' in low:
+        out.append('бот запущен из папки ЗАГРУЗКИ (Downloads): Windows '
+                   'прогоняет каждый файл через антивирус — это главный '
+                   'подозреваемый зависаний. Перенесите папку бота в '
+                   'C:\Hakumo и добавьте её в исключения Defender.')
+    parts = [p for p in base.replace(chr(92), '/').split('/') if p]
+    if len(parts) >= 2 and parts[-1].lower() == parts[-2].lower():
+        out.append(f'бот лежит ВО ВЛОЖЕННОЙ папке (…/{parts[-1]}/'
+                   f'{parts[-2]}): похоже, архив распакован дважды. '
+                   'Перенесите содержимое на уровень выше — пути короче, '
+                   'ошибок меньше.')
+    ver = tuple(py_version or sys.version_info[:3])
+    if ver >= (3, 14):
+        out.append(f'Python {ver[0]}.{ver[1]}.{ver[2]}: discord.py '
+                   'тестировался на 3.12 — на свежих версиях встречаются '
+                   'сюрпризы. Поставьте Python 3.12 (бот полностью совместим).')
+    return out
+
 import asyncio
 import os
 import json
@@ -33,6 +171,7 @@ from discord import app_commands
 import traceback
 import sys
 import threading
+import gc
 from datetime import datetime
 from collections import deque
 
@@ -354,6 +493,7 @@ class ErrorHandler:
 
         try:
             loop = asyncio.get_running_loop()
+            install_loop_probes(loop)   # GC-паузы и медленные callback'ы — поимённо
             self._tasks = [
                 loop.create_task(self._register_commands()),
                 loop.create_task(self._loop_watchdog_task()),
@@ -870,6 +1010,17 @@ class ErrorHandler:
                         if others:
                             msg += ("\nДругие потоки в момент зависания:\n  "
                                     + "\n  ".join(others[:12]))
+                        # Дёшево (счётчики, не обход кучи): если полных
+                        # сборок становится больше между зависаниями —
+                        # виновник GC, лечение уже стоит (gc_stabilize).
+                        try:
+                            _st = gc.get_stats()[-1]
+                            msg += (f"\nGC в момент зависания: счётчики "
+                                    f"{gc.get_count()}, полных сборок "
+                                    f"{_st['collections']}, собрано объектов "
+                                    f"{_st['collected']}.")
+                        except Exception as _ex:
+                            _log.debug("stack-monitor: gc-счётчики: %s", _ex)
                         if unstable:
                             msg += ("\n(стек менялся между сэмплами — виновник "
                                     "уже завершился, смотрите другие потоки выше)")
