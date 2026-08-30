@@ -143,6 +143,54 @@ def get_last_commit():
     return get_remote_commit()
 
 
+# ZIP-режим (без .git): версию установки знает МАРКЕР data/.update_sha —
+# его же пишет /update (services/self_update.note_applied_sha). Жалоба
+# 30.08 «опять так же, команды не удалились»: демон в ZIP-режиме вообще
+# не обновлял бота — git rev-parse без .git вечно возвращал None, и НИ
+# ОДИН фикс до владельца не доезжал. Теперь: remote из GitHub API,
+# local из маркера.
+ZIP_API_POLL_SEC = 300   # опрос API не чаще 5 мин (анонимный лимит 60/час)
+
+
+def get_local_zip_commit():
+    """Версия ZIP-установки: маркер data/.update_sha (None — неизвестна)."""
+    try:
+        with open(os.path.join(BOT_DIR, "data", ".update_sha"),
+                  encoding="utf-8") as f:
+            val = f.read().strip()
+            return val or None
+    except OSError:
+        return None
+
+
+def note_zip_commit(sha):
+    """Запомнить применённую версию (ZIP-режим) — иначе обновление по кругу."""
+    if not (sha or "").strip():
+        return
+    try:
+        os.makedirs(os.path.join(BOT_DIR, "data"), exist_ok=True)
+        with open(os.path.join(BOT_DIR, "data", ".update_sha"), "w",
+                  encoding="utf-8") as f:
+            f.write(sha.strip())
+    except OSError as e:
+        лог(f"[AUTO-UPDATE] Не записать маркер версии: {e}")
+
+
+def _archive_root(names):
+    """Корневой каталог архива GitHub ('Репозиторий-ветка/') или ''.
+
+    Префикс у архива СВОЙ для каждой ветки (New-Pro-arena-.../), раньше
+    были захардкожены старые имена — архив свежей ветки распаковывался
+    во вложенную папку, и бот продолжал работать на старых файлах.
+    """
+    if not names or "/" not in names[0]:
+        return ""
+    root = names[0].split("/")[0] + "/"
+    if all(n.startswith(root) for n in names):
+        return root
+    return ""
+
+
 def _find_bot_pids():
     """PID процессов main.py (кроме этого скрипта) — кроссплатформенно.
 
@@ -348,8 +396,11 @@ def download_and_extract():
     лог(f"[AUTO-UPDATE] ZIP загружен ({len(r.content)//1024} KB)")
 
     with zipfile.ZipFile(zip_path, 'r') as zf:
+        # корень архива выводим из самого архива (имя = репозиторий-ветка)
+        root = _archive_root(zf.namelist())
         for member in zf.infolist():
-            target = member.filename.replace("moebius-bot-main/", "", 1).replace("hakumo-bot-main/", "", 1)
+            target = member.filename[len(root):] if root and member.filename.startswith(root) else member.filename
+            target = target.replace("moebius-bot-main/", "", 1).replace("hakumo-bot-main/", "", 1)
             if not target:
                 continue
             # Защита от Zip Slip: путь в архиве не должен выводить за
@@ -404,6 +455,7 @@ def update_bot(reason="new_commit", remote_sha=None, local_sha=None):
         else:
             лог("[AUTO-UPDATE] .git не найден — обновляемся из ZIP-архива...")
             download_and_extract()
+            note_zip_commit(remote_sha)   # иначе на следующем круге снова «новое»
         time.sleep(2)
         start_bot()
         log_event("update_done", remote=remote_sha or "", local=local_sha or "")
@@ -455,22 +507,40 @@ def main():
             return
         time.sleep(5)
 
+    _is_git = os.path.isdir(os.path.join(BOT_DIR, ".git"))
+    if not _is_git:
+        лог("[AUTO-UPDATE] .git нет — ZIP-режим: версию смотрю в GitHub API "
+            f"и маркере data/.update_sha (опрос раз в {ZIP_API_POLL_SEC // 60} мин)")
+        log_event("zip_mode", poll_sec=ZIP_API_POLL_SEC)
+    _last_api_check = 0.0
+
     while True:
         try:
-            # git fetch yap, remote'daki son hash'i al
-            subprocess.run(["git", "fetch", "origin"], cwd=BOT_DIR, capture_output=True, timeout=30)
-            
-            # Remote HEAD hash'ini al
-            result = subprocess.run(
-                ["git", "rev-parse", f"origin/{UPDATE_BRANCH}"],
-                cwd=BOT_DIR, capture_output=True, text=True, timeout=10
-            )
-            remote_hash = result.stdout.strip() if result.returncode == 0 else None
+            remote_hash = None
+            if _is_git:
+                subprocess.run(["git", "fetch", "origin"], cwd=BOT_DIR,
+                               capture_output=True, timeout=30)
+                result = subprocess.run(
+                    ["git", "rev-parse", f"origin/{UPDATE_BRANCH}"],
+                    cwd=BOT_DIR, capture_output=True, text=True, timeout=10
+                )
+                remote_hash = result.stdout.strip() if result.returncode == 0 else None
+            else:
+                # ZIP-режим: git не работает — спрашиваем GitHub API.
+                # Реже, чем git-режим: анонимный лимит API — 60 запросов/час.
+                _now = time.time()
+                if _now - _last_api_check >= ZIP_API_POLL_SEC:
+                    _last_api_check = _now
+                    remote_hash = get_remote_commit()
+                    if remote_hash is None:
+                        лог("[AUTO-UPDATE] GitHub API не ответил — попробую "
+                            "через 5 минут (бот работает)")
 
             if remote_hash:
-                local_hash = get_local_commit() or ""
+                local_hash = (get_local_commit() if _is_git
+                              else get_local_zip_commit()) or ""
                 if remote_hash != local_hash:
-                    лог(f"[AUTO-UPDATE] Удалённый коммит отличается: {remote_hash[:8]} (local: {local_hash[:8]})")
+                    лог(f"[AUTO-UPDATE] Удалённый коммит отличается: {remote_hash[:8]} (local: {local_hash[:8] if local_hash else 'неизвестен'})")
                     # БЕЗОПАСНОСТЬ: обновление только по явному флагу владельца.
                     if not AUTO_UPDATE_ENABLED:
                         log_event("skipped_update", reason="auto_update_disabled",
@@ -478,12 +548,12 @@ def main():
                         лог("[AUTO-UPDATE] AUTO_UPDATE=0 — НЕ перезапускаю бота "
                             "(обновляйтесь командой /update или включите "
                             "AUTO_UPDATE=1 в .env)")
-                    elif _detect_branch() != UPDATE_BRANCH:
+                    elif _is_git and _detect_branch() != UPDATE_BRANCH:
                         log_event("skipped_update", reason="branch_mismatch",
                                   remote=remote_hash, local=local_hash)
                         лог("[AUTO-UPDATE] Рабочая ветка ≠ UPDATE_BRANCH — "
                             "обновление пропущено (reset на чужую ветку запрещён)")
-                    elif not _tree_is_clean():
+                    elif _is_git and not _tree_is_clean():
                         log_event("skipped_update", reason="dirty_tree",
                                   remote=remote_hash, local=local_hash)
                         лог("[AUTO-UPDATE] В рабочем дереве есть изменения — "

@@ -91,10 +91,8 @@ print('== B. Меню сжимается до 7 команд (настоящий
 
 
 class Recorder:
-    """HTTP-мок: пишет каждый bulk-upsert (как реальный Discord отвечает)."""
-
-    def __init__(self):
-        self.calls = []          # (scope, guild_id, [имена])
+    """HTTP-мок: bulk-upsert пишет журнал, fetch отвечает как Discord
+    (что отправили — то и «лежит»; fetch_override — застаревшее состояние)."""
 
     @staticmethod
     def _ok(app_id, payload):
@@ -106,14 +104,35 @@ class Recorder:
             out.append(d)
         return out
 
+    def __init__(self):
+        self.calls = []          # (scope, guild_id, [имена])
+        self.global_payload = []             # что «лежит в Discord»
+        self.guild_payload = {}              # {guild_id: payload}
+        self.fetch_override = {}             # {'global': [имена], 777: [имена]}
+                                             # симуляция ЗАСТАРЕВШЕГО Discord
+
     async def bulk_upsert_global_commands(self, app_id, payload=None):
         names = [p['name'] for p in (payload or [])]
         self.calls.append(('GLOBAL', None, names))
+        self.global_payload = [dict(p) for p in (payload or [])]
         return self._ok(app_id, payload)
 
     async def bulk_upsert_guild_commands(self, app_id, guild_id, payload=None):
         names = [p['name'] for p in (payload or [])]
         self.calls.append(('GUILD', guild_id, names))
+        self.guild_payload[guild_id] = [dict(p) for p in (payload or [])]
+        return self._ok(app_id, payload)
+
+    async def get_global_commands(self, app_id, *a, **kw):
+        names = self.fetch_override.get('global')
+        payload = ([{'name': n} for n in names] if names is not None
+                   else self.global_payload)      # names≠None: «Discord не обновился»
+        return self._ok(app_id, payload)
+
+    async def get_guild_commands(self, app_id, guild_id, *a, **kw):
+        names = self.fetch_override.get(guild_id)
+        payload = ([{'name': n} for n in names] if names is not None
+                   else self.guild_payload.get(guild_id, []))
         return self._ok(app_id, payload)
 
     def last(self, scope, gid=None):
@@ -209,8 +228,33 @@ async def _run_c():
     check(set(glob2) == {'modpanel', 'play', 'update', 'апелляция'}
           and set(guild2) == {'afk', 'afk-remove', 'ticket-panel'},
           'синк внутри apply_to_bot доставил те же списки в Discord')
+    with open('data/sync_last.json', encoding='utf-8') as fh:
+        verdict = json.load(fh).get('verify', '')
+    check(verdict.startswith('ок:'),
+          f'сверка с РЕАЛЬНЫМ Discord записана и чистая ({verdict})')
 
 asyncio.run(_run_c())
+
+# ─── C2. Discord «застрял» со старым мусором — сверка это ловит ────────
+print('== C2. Сверка ловит застаревшее меню (жалоба «не удалились, дубли») ==')
+bot3 = build_bot()
+
+async def _run_c2():
+    bot3.http.fetch_override[777] = ['afk', 'afk-remove', 'ticket-panel',
+                                     'backup', 'warnings', 'апелляция']
+    await MM.apply_to_bot(bot3)
+    with open('data/sync_last.json', encoding='utf-8') as fh:
+        verdict2 = json.load(fh).get('verify', '')
+    check(verdict2.startswith('РАСХОЖДЕНИЯ:'),
+          f'застаревший мусор пойман сверкой ({verdict2[:80]}…)')
+    check('лишние' in verdict2 and 'backup' in verdict2,
+          'сверка называет ЛИШНИЕ команды по именам')
+    check('дубли глобальных' in verdict2 and 'апелляция' in verdict2,
+          'сверка называет гильдейские КОПИИ глобальных (источник дублей)')
+    syncs = sum(1 for s_, g_, n_ in bot3.http.calls if s_ == 'GUILD' and n_)
+    check(syncs >= 2, f'при расхождении сделан ПОВТОРНЫЙ синк ({syncs} guild-вызовов)')
+
+asyncio.run(_run_c2())
 
 
 # ═══ D. Панель: эндпоинт, доступы, страница ══════════════════════════════
@@ -291,6 +335,13 @@ check(_env_reads == 2,
 check('full_menu_mode' in src_cr,
       'каталог спрашивает full_menu_mode (тумблер→.env, как бот)')
 check("'menu:'" in src_cr, 'ключ кэша каталога чувствителен к режиму меню')
+
+src_bs = open(os.path.join(ROOT, 'web', 'templates', 'bot_stats.html'),
+              encoding='utf-8').read()
+check('Проверка меню после сжатия' in src_bs and 'РАСХОЖДЕНИЯ' in src_bs,
+      'панель «Статистика» показывает итог сверки (ок/РАСХОЖДЕНИЯ)')
+check('failed-global-clear' in src_bs,
+      'панель честно предупреждает о неудавшейся глобальной очистке')
 
 src_cp = open(os.path.join(ROOT, 'web', 'routes', 'commands_panel.py'),
               encoding='utf-8').read()

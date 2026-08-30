@@ -295,8 +295,12 @@ check(not any(x[0] == 777 for x in b3.tree.synced),
       'при провале guild-sync в Discord ничего не ушло (меню без дублей)')
 
 
-class TreeGlobalFail(Tree):
-    """Глобальная очистка падает — guild-синк трогать нельзя (будут дубли)."""
+# 30.08: глобальная очистка теперь с РЕТРАЯМИ (жалоба «опять так же —
+# команды не удалились»: разовый обрыв убивал очистку одной попыткой,
+# и старое глобальное меню жило в Discord вечно). Новые контракты:
+# разовый сбой — лечится; упорный сбой — bail-out, как раньше.
+class TreeGlobalFailOnce(Tree):
+    """Глобальная очистка моргнула ОДИН раз — ретрай должен вытащить."""
 
     async def sync(self, guild=None):
         if guild is None and not hasattr(self, '_boom'):
@@ -306,12 +310,31 @@ class TreeGlobalFail(Tree):
 
 
 b4 = Bot()
-b4.tree = TreeGlobalFail()
+b4.tree = TreeGlobalFailOnce()
 r4 = asyncio.new_event_loop().run_until_complete(SF.full_sync(b4))
-check(r4 == [], 'провал глобальной очистки: bail-out, пустой результат')
-check(not any(x[0] == 777 for x in b4.tree.synced),
-      'guild-синк не тронут — старое глобальное меню осталось, дублей нет')
+check(r4 != [], 'разовый сбой глобальной очистки: РЕТРАЙ довёл синк до серверов')
+check(any(x[0] == 777 for x in b4.tree.synced),
+      'меню сервера обновлено (иначе стале-состояние живёт вечно)')
 check(any(c.name == 'warn' for c in b4.tree.get_commands(guild=None)),
+      'локальное дерево цело')
+
+
+class TreeGlobalFailHard(Tree):
+    """Глобальная очистка падает ВСЕГДА — guild-синк трогать нельзя (дубли)."""
+
+    async def sync(self, guild=None):
+        if guild is None:
+            raise RuntimeError('HTTP 400')
+        return await super().sync(guild)
+
+
+b5 = Bot()
+b5.tree = TreeGlobalFailHard()
+r5 = asyncio.new_event_loop().run_until_complete(SF.full_sync(b5))
+check(r5 == [], 'упорный провал очистки (3 попытки): bail-out, пустой результат')
+check(not any(x[0] == 777 for x in b5.tree.synced),
+      'guild-синк не тронут — старое глобальное меню осталось, дублей нет')
+check(any(c.name == 'warn' for c in b5.tree.get_commands(guild=None)),
       'локальное дерево собрано обратно после bail-out')
 
 # ═══ 3. Демки: имя вместо ID ══════════════════════════════════════════════

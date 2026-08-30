@@ -289,10 +289,20 @@
                 esc(ls.at) + ' · режим: ' + esc(ls.mode || '?') +
                 ' · целевые серверы: ' + esc((ls.targets || []).join(', ') || 'нет') +
                 ' · чужих очищено: ' + (ls.stray_cleaned || []).length + '</div>';
+        if (ls.mode === 'failed-global-clear') {
+          html += '<div class="hint error"><b>Глобальная очистка НЕ прошла</b>' +
+                  (ls.error ? ' — ' + esc(ls.error) : '') +
+                  '. Старое меню ещё живо в Discord: нажмите «Синхронизировать команды» ещё раз.</div>';
+        }
         if (ls.failed_guilds && ls.failed_guilds.length) {
           html += '<div class="hint error"><b>Этим серверам команды НЕ дошли:</b> ' +
                   esc((ls.failed_guilds || []).join(', ')) +
                   ' — все 3 попытки упали (сеть/rate limit). Нажмите «Синхронизировать команды» ещё раз.</div>';
+        }
+        if (ls.verify) {
+          var badVerify = String(ls.verify).indexOf('РАСХОЖДЕНИЯ') === 0;
+          html += '<div class="hint' + (badVerify ? ' error' : '') + '" style="margin-top:6px"><b>Проверка меню после сжатия:</b> ' +
+                  esc(ls.verify) + '</div>';
         }
       } else {
         html += '<div class="hint error" style="margin-top:6px"><b>Нового full_sync ещё НЕ БЫЛО</b> ' +

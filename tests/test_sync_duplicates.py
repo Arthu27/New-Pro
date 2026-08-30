@@ -57,6 +57,8 @@ class Recorder:
         self.calls = []          # (scope, guild_id, [имена])
         self.fail_guilds = False
         self.fail_first = 0      # упасть ровно столько РАЗ (сетевая моргнула)
+        self.fail_global = False      # глобальная очистка всегда падает
+        self.fail_first_global = 0    # глобальная очистка падает N раз подряд
 
     @staticmethod
     def _ok(app_id, payload):
@@ -73,6 +75,11 @@ class Recorder:
         return out
 
     async def bulk_upsert_global_commands(self, app_id, payload=None):
+        if self.fail_global:
+            raise RuntimeError('429 (мок: глобальный рейт-лимит)')
+        if self.fail_first_global > 0:
+            self.fail_first_global -= 1
+            raise RuntimeError('EOFError: сеть моргнула (мок: разовый сбой)')
         names = [p['name'] for p in (payload or [])]
         self.calls.append(('GLOBAL', None, names))
         return self._ok(app_id, payload)
@@ -237,7 +244,7 @@ async def main():
     # полный отказ сети: sync_last.json называет сервер, которому не доехало
     rec5.fail_guilds = True
     await SF.full_sync(bot5)
-    import json as _json
+    import json as _json  # noqa: F811 (используется и секцией G)
     with open(os.path.join(os.getcwd(), 'data', 'sync_last.json'),
               encoding='utf-8') as fh:
         sync_last = _json.load(fh)
@@ -245,6 +252,34 @@ async def main():
           f'sync_last.json называет упавший сервер ({sync_last.get("failed_guilds")})')
     check(sync_last.get('mode') == 'guilds' and sync_last.get('targets') == [777],
           'режим и цели записаны как раньше (обратная совместимость)')
+
+    # ═══ G. Глобальная очистка падает — ретраи спасают, откат честный ════
+    print('== G. Глобальная очистка: разовый сбой и полный отказ ==')
+    bot6 = build_bot()
+    rec6 = bot6.http
+    rec6.fail_first_global = 1             # первый GLOBAL-вызов падает
+    await SF.full_sync(bot6)
+    check(rec6.last('GUILD', 777) != [],
+          'разовый сбой глобальной очистки пережит РЕТРАЕМ — синк дошёл до серверов')
+    check(rec6.last('GLOBAL') == ['апелляция', 'update'],
+          'и глобальный список в итоге опубликован (keep_global)')
+    check(set(rec6.last('GLOBAL')) & set(rec6.last('GUILD', 777)) == set(),
+          'дублей нет')
+
+    bot7 = build_bot()
+    rec7 = bot7.http
+    rec7.fail_global = True                # Discord рейт-лимитит всё
+    rec7.calls.clear()
+    await SF.full_sync(bot7)
+    check(not any(s_ == 'GUILD' for s_, g_, n_ in rec7.calls),
+          'полный отказ очистки → guild-синки не тронуты (дублей не будет)')
+    with open(os.path.join(os.getcwd(), 'data', 'sync_last.json'),
+              encoding='utf-8') as fh:
+        sync_last7 = _json.load(fh)
+    check(sync_last7.get('mode') == 'failed-global-clear',
+          f'режим честно записан: failed-global-clear ({sync_last7.get("mode")})')
+    check(bool(sync_last7.get('error')),
+          f'причина сбоя записана в sync_last.json ({sync_last7.get("error")})')
 
     # ═══ E. Кнопка в панели больше не «висит» с таймаутом ══════════════════
     print('== E. Кнопка синка уходит фоном (исходники) ==')
