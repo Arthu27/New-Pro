@@ -803,12 +803,43 @@ class ErrorHandler:
         замечает проблему только ПОСЛЕ отвисания — когда стек виновника
         уже вернулся. Этот поток живёт отдельно от цикла: пульс
         (_loop_beat) не обновлялся дольше порога — значит цикл заблокирован
-        ПРЯМО СЕЙЧАС, и стек main-потока показывает, какой именно код
-        держит цикл (тяжёлая синхронная операция, CPU под GIL, диск…).
-        Следующее зависание станет диагностируемым: в логе будет
-        «СТЕК ВИНОВНИКА» с именем файла и строки.
+        ПРЯМО СЕЙЧАС.
+
+        Версия 2 (инцидент 30.08.2026, продакшн Windows): одиночный сэмпл
+        ловил ГОНКУ — цикл уже отвисал, монитор успевал снять сам пульс
+        (wait_until_ready), и стек виновника терялся. Теперь:
+          * ТРИ сэмпла main-потока с интервалом 0.15с: настоящий
+            блокировщик сидит в одном кадре во всех трёх; гонка — нет;
+          * снимаются и ДРУГИЕ потоки (верхний кадр каждого): GIL может
+            держать тяжёлая работа в фоне (рендер карточек, sqlite,
+            requests, антивирус на диске);
+          * если все сэмплы разные — виновник уже завершился, и запись
+            честно об этом говорит (смотрите другие потоки).
         """
         main_tid = threading.main_thread().ident
+
+        def _sample_main():
+            frames = sys._current_frames()
+            frame = frames.get(main_tid)
+            if frame is None:
+                return '<main-поток недоступен>'
+            return ''.join(traceback.format_stack(frame))[-2000:]
+
+        def _sample_others():
+            """Верхний кадр каждого НЕ-main потока (кто держит GIL/диск)."""
+            out = []
+            try:
+                frames = sys._current_frames()
+                named = {t.ident: t.name for t in threading.enumerate()}
+                for tid, frame in frames.items():
+                    if tid == main_tid:
+                        continue
+                    lines = traceback.format_stack(frame)
+                    top = lines[-1].strip()[:140] if lines else '?'
+                    out.append(f'{named.get(tid, str(tid))}: {top}')
+            except Exception as _ex:
+                _log.debug("stack-monitor: снимок потоков: %s", _ex)
+            return out
 
         def _worker():
             while True:
@@ -820,13 +851,29 @@ class ErrorHandler:
                     age = time.monotonic() - self._loop_beat
                     if age > threshold and not self._stack_frozen:
                         self._stack_frozen = True
-                        frames = sys._current_frames()
-                        stack = ''.join(traceback.format_stack(
-                            frames.get(main_tid)))[-3000:]
-                        self._last_freeze_stack = stack
-                        log.critical(
-                            "EVENT-LOOP ЗАВИСАНИЕ %.1f сек — СТЕК ВИНОВНИКА "
-                            "(main-поток, прямо сейчас):\n%s", age, stack)
+                        main_samples = []
+                        for _ in range(3):
+                            main_samples.append(_sample_main())
+                            time.sleep(0.15)
+                        # стабильный стек = встречается минимум в 2 сэмплах
+                        stable = main_samples[0]
+                        for cand in main_samples:
+                            if main_samples.count(cand) >= 2:
+                                stable = cand
+                                break
+                        unstable = main_samples.count(stable) < 2
+                        others = _sample_others()
+                        self._last_freeze_stack = stable
+                        msg = (f"EVENT-LOOP ЗАВИСАНИЕ {age:.1f} сек — "
+                               f"СТЕК ВИНОВНИКА (main-поток, прямо сейчас):\n"
+                               f"{stable}")
+                        if others:
+                            msg += ("\nДругие потоки в момент зависания:\n  "
+                                    + "\n  ".join(others[:12]))
+                        if unstable:
+                            msg += ("\n(стек менялся между сэмплами — виновник "
+                                    "уже завершился, смотрите другие потоки выше)")
+                        log.critical(msg)
                     elif age < 1.0:
                         self._stack_frozen = False
                 except Exception as _ex:
