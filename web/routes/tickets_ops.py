@@ -267,8 +267,11 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_ops_sla():
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         hours = request.args.get('h', DEFAULT_SLA_HOURS)
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         body = sla_snapshot(load_tickets(gid), sla_hours=hours)
         body['success'] = True
         body['sla_choices'] = list(SLA_CHOICES)
@@ -279,7 +282,10 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_ops_card(ticket_id):
-        card = ticket_card(load_tickets(int(ctx.active_guild_id())), ticket_id)
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
+        card = ticket_card(load_tickets(_gid), ticket_id)
         if card is None:
             return jsonify({'success': False, 'error': 'Тикет не найден.'}), 404
         card['success'] = True
@@ -289,11 +295,14 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_ops_bulk_close():
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
         ids = data.get('ids')
         if not isinstance(ids, list) or not ids:
             return jsonify({'success': False, 'error': 'Не выбраны тикеты.'}), 400
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         tickets = load_tickets(gid)
         closed, skipped = bulk_close(tickets, ids,
                                      by='panel:%s' % session.get('username'))
@@ -307,7 +316,10 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_ops_reopen(ticket_id):
-        gid = int(ctx.active_guild_id())
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
+        gid = _gid
         tickets = load_tickets(gid)
         if not reopen_ticket(tickets, ticket_id):
             return jsonify({'success': False,
@@ -319,8 +331,11 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_ops_note(ticket_id):
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         tickets = load_tickets(gid)
         ok, res = add_note(tickets, ticket_id, data.get('text'),
                            by='panel:%s' % session.get('username'))
@@ -334,8 +349,11 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_ops_assign(ticket_id):
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         tickets = load_tickets(gid)
         ok, err = assign_ticket(tickets, ticket_id, data.get('name'),
                                 by='panel:%s' % session.get('username'))
@@ -349,7 +367,10 @@ def register(ctx):
     @role_required('mod')
     def api_ops_export():
         """Плоская выгрузка всех тикетов сервера (идея #29)."""
-        gid = int(ctx.active_guild_id())
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
+        gid = _gid
         filename = 'tickets_%s_%s.csv' % (gid, datetime.now(timezone.utc).date().isoformat())
         return Response(
             '\ufeff' + tickets_csv(load_tickets(gid)),

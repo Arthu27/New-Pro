@@ -90,6 +90,9 @@ def register(ctx):
         """Добавить вопрос. Формат — тот же, что у /квиз добавить:
         либо spec 'Вопрос? | ответ1 ; ответ2', либо пара question+answers[],
         из которой spec собирается байт-в-байт перед вызовом функции кога."""
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
         spec = data.get('spec')
         if not spec:
@@ -99,7 +102,7 @@ def register(ctx):
             spec = '%s | %s' % (data.get('question') or '',
                                 ' ; '.join(a for a in (answers or []) if a))
         db = GuildData('quiz')
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         questions = db.get(gid, 'questions', []) or []
         item, err = Q.try_add_question(questions, spec,
                                        added_by='panel:%s' % session.get('username'))
@@ -115,9 +118,12 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_quiz_remove():
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
         db = GuildData('quiz')
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         questions = db.get(gid, 'questions', []) or []
         removed, err = Q.try_remove_question(questions, data.get('index'))
         if err:
@@ -134,7 +140,10 @@ def register(ctx):
     @role_required('admin')
     def api_quiz_reset():
         """Обнулить сезонный зачёт — тот же эффект, что у /квиз обнулить."""
-        gid = int(ctx.active_guild_id())
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
+        gid = _gid
         GuildData('quiz').set(gid, 'scores', {})
         import web.app as _app
         return jsonify(quiz_payload(gid, bot=_app.bot_instance))

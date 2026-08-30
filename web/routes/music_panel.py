@@ -171,7 +171,10 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_music_state():
-        gid = int(ctx.active_guild_id())
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
+        gid = _gid
         bot = _bot()
         if bot is None:
             import web.app as _app
@@ -198,23 +201,29 @@ def register(ctx):
     @role_required('admin')
     def api_music_control():
         """Транспорт: те же операции, что pause/resume/skip/shuffle/leave/volume."""
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
         action = str(data.get('action') or '')
         bot, cog, offline = _or_offline(ctx.active_guild_id())
         if offline:
             return jsonify(offline[0]), offline[1]
-        body, status = perform_music_action(bot, int(ctx.active_guild_id()), action, data)
+        body, status = perform_music_action(bot, _gid, action, data)
         return jsonify(body), status
 
     @app.route('/api/music/remove', methods=['POST'])
     @login_required
     @role_required('admin')
     def api_music_remove():
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
         bot, cog, offline = _or_offline(ctx.active_guild_id())
         if offline:
             return jsonify(offline[0]), offline[1]
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         queue = cog.get_queue(gid)
         ok, err, removed = remove_track(queue, data.get('index'))
         if not ok:

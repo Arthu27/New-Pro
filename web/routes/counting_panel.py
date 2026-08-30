@@ -82,13 +82,16 @@ def register(ctx):
     @role_required('admin')
     def api_counting_channel():
         """Включить считалку в канале — зеркало «/счёт канал» (свежий стейт)."""
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         import web.app as _app
         bot = _app.bot_instance
         if bot is None:
             return jsonify({'success': False,
                             'error': 'Бот офлайн — канал проверить не могу'}), 503
         data = request.get_json(silent=True) or {}
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         try:
             ch_id = int(data.get('channel_id'))
         except (TypeError, ValueError):
@@ -107,8 +110,11 @@ def register(ctx):
     @role_required('admin')
     def api_counting_off():
         """Выключить — зеркало «/счёт выкл» (рекорд и статистика сохраняются)."""
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         import web.app as _app
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         db = GuildData('counting')
         state = db.get(gid, 'state', C.empty_state()) or C.empty_state()
         state['channel_id'] = 0

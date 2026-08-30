@@ -678,6 +678,27 @@ class Ctx:
             return str(guilds[0].id)
         return configured
 
+    def active_guild_id_int(self):
+        """Активный сервер как int, или None — если сервера нет.
+
+        active_guild_id() отдаёт СТРОКУ и вполне законно возвращает пустую:
+        MAIN_GUILD_ID не задан в .env и бот ещё не подключился (или офлайн).
+        Роуты писали `int(ctx.active_guild_id())` в лоб — и на пустой строке
+        получали ValueError → HTTP 500 «Internal Server Error» вместо
+        внятного «сервер не выбран». Инцидент 30.08: страницы Магазин,
+        Музыка, Дуэли, Ачивки, Отчёт модерации, SLA/экспорт тикетов падали
+        с 500 при пустом MAIN_GUILD_ID — снаружи это «панель сломана».
+
+        Возвращает None вместо взрыва — вызывающий отдаёт 503 и подсказку.
+        """
+        raw = str(self.active_guild_id() or '').strip()
+        if not raw:
+            return None
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
+
     def _resolve_member_async(self, guild, user_id):
         """Async helper: get cached member or fetch from API."""
         member = guild.get_member(int(user_id))

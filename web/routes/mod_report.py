@@ -106,8 +106,11 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_mod_report():
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         days = request.args.get('days', 7)
-        body = mod_report(int(ctx.active_guild_id()), days=days)
+        body = mod_report(_gid, days=days)
         body['success'] = True
         return jsonify(body)
 
@@ -115,11 +118,14 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_mod_report_csv():
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         days = request.args.get('days', 7)
         filename = 'mod_report_%s_%s.csv' % (
             ctx.active_guild_id(), date.today().isoformat())
         return Response(
-            '\ufeff' + mod_report_csv(int(ctx.active_guild_id()), days=days),
+            '\ufeff' + mod_report_csv(_gid, days=days),
             mimetype='text/csv; charset=utf-8',
             headers={'Content-Disposition': f'attachment; filename="{filename}"'},
         )

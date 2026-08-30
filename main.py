@@ -197,11 +197,14 @@ async def _memory_watchdog():
         except Exception as _ex:
             log.debug('memory_watchdog(): подавлено: %s', _ex)
 
-# Стартовый фикс: очистка дублирующих эндпоинтов
-import subprocess as _sp, sys as _sys
-_fix = os.path.join(os.path.dirname(__file__), 'fix_dup.py')
-if os.path.exists(_fix):
-    _sp.run([_sys.executable, _fix], capture_output=True)
+# Раньше здесь при КАЖДОМ старте запускался внешний скрипт fix_dup.py
+# («очистка дублирующих эндпоинтов»). Сам скрипт удалён из репозитория
+# ещё в chore-коммите очистки, но вызов остался — молчаливый
+# subprocess.run с capture_output, который ничего не делал и ничего не
+# сообщал. Если бы файл вернулся (например, из старого бэкапа рядом с
+# ботом), он бы выполнился при запуске без единой строки в логе.
+# Убрано: дублей эндпоинтов нет (их стережёт tests/test_panel_no_500.py
+# и проверка роутов), а немой запуск постороннего кода на старте — риск.
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=Config.COMMAND_PREFIX, intents=intents, help_command=None)

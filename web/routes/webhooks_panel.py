@@ -104,6 +104,9 @@ def register(ctx):
     @role_required('admin')
     def api_webhooks_create():
         """Создать вебхук в канале — та же запись, что у /webhook создать."""
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         import web.app as _app
         bot = _app.bot_instance
         if bot is None:
@@ -116,7 +119,7 @@ def register(ctx):
             ch_id = int(data.get('channel_id'))
         except (TypeError, ValueError):
             return jsonify({'success': False, 'error': 'channel_id — число'}), 400
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         guild = bot.get_guild(gid)
         ch = guild.get_channel(ch_id) if guild else None
         if ch is None:
@@ -145,9 +148,12 @@ def register(ctx):
     @role_required('admin')
     def api_webhooks_delete():
         """Удалить: Discord-хук стирается по возможности, запись — всегда."""
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
         wid = str(data.get('webhook_id') or '')
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         hooks = load_hooks(gid)
         if wid not in hooks:
             return jsonify({'success': False, 'error': f'вебхук {wid} не найден'}), 404
@@ -176,6 +182,9 @@ def register(ctx):
     @role_required('admin')
     def api_webhooks_send():
         """Тестовое сообщение через вебхук (как /webhook отправить)."""
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         import web.app as _app
         bot = _app.bot_instance
         if bot is None:
@@ -185,7 +194,7 @@ def register(ctx):
         message = str(data.get('message') or '').strip()
         if not message:
             return jsonify({'success': False, 'error': 'пустое сообщение'}), 400
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         hooks = load_hooks(gid)
         wh = hooks.get(wid)
         if not wh:

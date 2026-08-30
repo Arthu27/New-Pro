@@ -92,12 +92,15 @@ def register(ctx):
     @role_required('admin')
     def api_reminders_cancel():
         """Отменить активное напоминание (чистая cancel_any кога)."""
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
         try:
             item_id = int(data.get('id'))
         except (TypeError, ValueError):
             return jsonify({'success': False, 'error': 'id — число из журнала'}), 400
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         db = GuildData('reminders')
         state = db.get(gid, 'state', R.empty_state())
         if not R.cancel_any(state, item_id):
@@ -114,12 +117,15 @@ def register(ctx):
     @role_required('admin')
     def api_reminders_restore():
         """Undo отмены: честный откат флага done (restore_item кога)."""
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
         try:
             item_id = int(data.get('id'))
         except (TypeError, ValueError):
             return jsonify({'success': False, 'error': 'id — число из журнала'}), 400
-        gid = int(ctx.active_guild_id())
+        gid = _gid
         db = GuildData('reminders')
         state = db.get(gid, 'state', R.empty_state())
         if not R.restore_item(state, item_id):

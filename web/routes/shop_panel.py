@@ -80,25 +80,31 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_shop_state():
-        return jsonify(shop_payload(int(ctx.active_guild_id())))
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
+        return jsonify(shop_payload(_gid))
 
     @app.route('/api/shop/upsert', methods=['POST'])
     @login_required
     @role_required('admin')
     def api_shop_upsert():
         """Создать/обновить кастомный предмет. Валидация — функцией кога."""
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
         name = data.get('name')
         card = {k: data.get(k) for k in _CARD_KEYS}
         ok, err = _shop.upsert_item(
-            int(ctx.active_guild_id()), name, card,
+            _gid, name, card,
             base=ITEM_DETAILS, rarities=list(RARITY_ORDER),
             categories=_categories(),
             by='panel:%s' % session.get('username'),
         )
         if not ok:
             return jsonify({'success': False, 'error': err}), 400
-        body = shop_payload(int(ctx.active_guild_id()))
+        body = shop_payload(_gid)
         body['saved'] = (name or '').strip().lower()
         return jsonify(body)
 
@@ -106,11 +112,14 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_shop_remove():
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
         data = request.get_json(silent=True) or {}
-        ok, err, removed = _shop.remove_item(int(ctx.active_guild_id()),
+        ok, err, removed = _shop.remove_item(_gid,
                                              data.get('name'))
         if not ok:
             return jsonify({'success': False, 'error': err}), 404
-        body = shop_payload(int(ctx.active_guild_id()))
+        body = shop_payload(_gid)
         body['removed'] = removed
         return jsonify(body)

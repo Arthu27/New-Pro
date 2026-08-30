@@ -98,5 +98,8 @@ def register(ctx):
     @role_required('mod')
     def api_duels_state():
         import web.app as _app
-        return jsonify(duels_payload(ctx.active_guild_id(),
+        _gid = ctx.active_guild_id_int()
+        if _gid is None:
+            return jsonify({'success': False, 'error': 'Сервер не выбран (задайте MAIN_GUILD_ID в .env или дождитесь подключения бота)'}), 503
+        return jsonify(duels_payload(_gid,
                                      bot=_app.bot_instance))
