@@ -143,7 +143,10 @@ def environment_warnings(base_dir, py_version=None):
         out.append('бот запущен из папки ЗАГРУЗКИ (Downloads): Windows '
                    'прогоняет каждый файл через антивирус — это главный '
                    'подозреваемый зависаний. Перенесите папку бота в '
-                   'C:\Hakumo и добавьте её в исключения Defender.')
+                   # r'' обязателен: в 'C:\Hakumo' последовательность \H
+                   # невалидна — Python 3.12+ печатает SyntaxWarning прямо
+                   # в консоль владельца, а дальше это станет ошибкой.
+                   r'C:\Hakumo и добавьте её в исключения Defender.')
     parts = [p for p in base.replace(chr(92), '/').split('/') if p]
     if len(parts) >= 2 and parts[-1].lower() == parts[-2].lower():
         out.append(f'бот лежит ВО ВЛОЖЕННОЙ папке (…/{parts[-1]}/'
