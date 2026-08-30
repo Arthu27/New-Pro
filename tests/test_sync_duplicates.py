@@ -56,12 +56,21 @@ class Recorder:
     def __init__(self):
         self.calls = []          # (scope, guild_id, [имена])
         self.fail_guilds = False
+        self.fail_first = 0      # упасть ровно столько РАЗ (сетевая моргнула)
 
     @staticmethod
     def _ok(app_id, payload):
-        # настоящий Discord возвращает команды с id/application_id
-        return [dict(p, id=9000 + i, application_id=app_id)
-                for i, p in enumerate(payload or [])]
+        # настоящий Discord возвращает команды с id/application_id — и с
+        # description даже у контекстных меню (пустой строкой). discord.py
+        # после upsert парсит ответ AppCommand(data=...) и требует эти поля:
+        # без этого синк «падал» уже ПОСЛЕ доставки команд в Discord.
+        out = []
+        for i, p in enumerate(payload or []):
+            d = dict(p, id=9000 + i, application_id=app_id)
+            d.setdefault('description', '')
+            d.setdefault('type', 1)
+            out.append(d)
+        return out
 
     async def bulk_upsert_global_commands(self, app_id, payload=None):
         names = [p['name'] for p in (payload or [])]
@@ -71,6 +80,9 @@ class Recorder:
     async def bulk_upsert_guild_commands(self, app_id, guild_id, payload=None):
         if self.fail_guilds:
             raise RuntimeError('429 Too Many Requests (мок: как Discord)')
+        if self.fail_first > 0:
+            self.fail_first -= 1
+            raise RuntimeError('EOFError: замерзание event-loop (мок: разовый сбой)')
         names = [p['name'] for p in (payload or [])]
         self.calls.append(('GUILD', guild_id, names))
         return self._ok(app_id, payload)
@@ -206,6 +218,33 @@ async def main():
     guild_on = rec4.last('GUILD', 777)
     check('play' in guild_on, '/play вернулся после включения')
     check(set(rec4.last('GLOBAL')) & set(guild_on) == set(), 'и снова ноль дублей')
+
+    # ═══ F. Разовый сбой — ретрай доводит команды до сервера ═══════════════
+    print('== F. Сеть моргнула один раз — ретрай спасает синк ==')
+    bot5 = build_bot()
+    rec5 = bot5.http
+    await SF.full_sync(bot5)                # успешный старт
+    rec5.fail_first = 1                     # первый guild-вызов падает
+    rec5.calls.clear()
+    await SF.full_sync(bot5)                # владелец снова жмёт синк
+    guild5 = rec5.last('GUILD', 777)
+    check(guild5 != [], 'после разового сбоя РЕТРАЙ доставил команды на сервер '
+                        '(иначе — старое меню из 33 команд)')
+    check(rec5.calls.count(('GUILD', 777, guild5)) == 1,
+          'вторая попытка записана ровно один раз (третья не понадобилась)')
+    check(set(rec5.last('GLOBAL')) & set(guild5) == set(), 'дублей нет')
+
+    # полный отказ сети: sync_last.json называет сервер, которому не доехало
+    rec5.fail_guilds = True
+    await SF.full_sync(bot5)
+    import json as _json
+    with open(os.path.join(os.getcwd(), 'data', 'sync_last.json'),
+              encoding='utf-8') as fh:
+        sync_last = _json.load(fh)
+    check(sync_last.get('failed_guilds') == [777],
+          f'sync_last.json называет упавший сервер ({sync_last.get("failed_guilds")})')
+    check(sync_last.get('mode') == 'guilds' and sync_last.get('targets') == [777],
+          'режим и цели записаны как раньше (обратная совместимость)')
 
     # ═══ E. Кнопка в панели больше не «висит» с таймаутом ══════════════════
     print('== E. Кнопка синка уходит фоном (исходники) ==')

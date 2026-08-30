@@ -142,7 +142,8 @@ async def _clean_stray_guilds(bot, tree, exclude_ids):
     return cleaned
 
 
-def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=(), commands=None):
+def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=(), commands=None,
+                    failed_guilds=()):
     """Метка последнего полного синка (диагностика в панели: data/sync_last.json)."""
     try:
         import json as _json
@@ -159,6 +160,10 @@ def _note_sync_done(bot, mode, targets_ids=(), stray_cleaned=(), commands=None):
                     'targets': [int(x or 0) for x in targets_ids],
                     'stray_cleaned': [int(x or 0) for x in stray_cleaned],
                 }
+                if failed_guilds:
+                    # каким серверам команды НЕ дошли (видно в панели,
+                    # жалоба 30.08: «на сервере 33 команды и две апелляции»)
+                    payload['failed_guilds'] = [int(x or 0) for x in failed_guilds]
                 if commands is not None:
                     payload['commands'] = int(commands)
                 with open(_os.path.join(base, 'data', 'sync_last.json'), 'w',
@@ -306,15 +311,33 @@ async def _full_sync_inner(bot):
         except Exception as e:
             _log.debug('copy_global_to(%s): %s', g.id, e)
 
-    # 3) по каждому серверу — синк без выключенных
+    # 3) по каждому серверу — синк без выключенных. С РЕТРАЯМИ: разовый
+    #    сбой сети/замерзание event-loop не должен оставлять сервер со
+    #    СТАРЫМ меню (жалоба 30.08: на сервере висели 33 команды и две
+    #    «апелляции» — последний успешный guild-синк был давно).
     out = []
     ok_guilds = 0
+    failed_guilds = []
     for g in targets:
-        try:
-            out.extend(await sync_tree(bot, guild=g))
+        _synced_guild = None
+        for _attempt in (1, 2, 3):
+            try:
+                _synced_guild = await sync_tree(bot, guild=g)
+                break
+            except Exception as e:
+                if _attempt < 3:
+                    _log.warning('sync(%s): попытка %d/3 не удалась (%s) — '
+                                 'повтор через 2с', getattr(g, 'id', g), _attempt, e)
+                    await asyncio.sleep(2)
+                else:
+                    _log.warning('sync(%s): все 3 попытки не удались (%s) — меню '
+                                 'сервера останется прежним до следующего синка',
+                                 getattr(g, 'id', g), e)
+        if _synced_guild is not None:
+            out.extend(_synced_guild)
             ok_guilds += 1
-        except Exception as e:
-            _log.warning('sync(%s): %s', g.id, e)
+        else:
+            failed_guilds.append(int(getattr(g, 'id', 0) or 0))
 
     # 4) «Чужие» серверы (бот состоит, но их нет в MAIN/EXTRA_GUILD_IDS):
     #    старые гильдовые копии там вечны, пока их не стереть пустым sync.
@@ -350,5 +373,5 @@ async def _full_sync_inner(bot):
                     _log.debug('вернуть после отката %s: %s', cmd.name, _e)
     _note_sync_done(bot, 'guilds',
                     [int(getattr(g, 'id', 0) or 0) for g in targets],
-                    cleaned, commands=len(out))
+                    cleaned, commands=len(out), failed_guilds=failed_guilds)
     return out
