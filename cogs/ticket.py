@@ -3538,25 +3538,11 @@ class Ticket (commands .Cog ):
         await interaction .response .send_message ("Панель тикетов успешно отправлена.",ephemeral =True )
 
 
-    @app_commands .command (name ="ticket-add",description ="Добавить пользователя в тикет")
-    @app_commands .checks .has_permissions (manage_channels =True )
-    async def ticket_add (self ,interaction :discord .Interaction ,user :discord .Member ):
-        await interaction .channel .set_permissions (user ,read_messages =True ,send_messages =True )
-        e =discord .Embed (
-        description =f"{user.mention} добавлен в канал поддержки.",
-        color =0x2ECC71 
-        )
-        await interaction .response .send_message (embed =e )
-
-    @app_commands .command (name ="ticket-remove",description ="Удалить пользователя из тикета")
-    @app_commands .checks .has_permissions (manage_channels =True )
-    async def ticket_cikar (self ,interaction :discord .Interaction ,user :discord .Member ):
-        await interaction .channel .set_permissions (user ,read_messages =False )
-        e =discord .Embed (
-        description =f" {user.mention} удалён из канала поддержки.",
-        color =0xE74C3C 
-        )
-        await interaction .response .send_message (embed =e )
+    # ticket-add / ticket-remove убраны из слеш-меню (заказ 2026-08-29):
+    # добавлять/убирать участников модератор должен КНОПКАМИ ➕/➖
+    # в меню самого тикета — TicketManageView приходит вместе с карточкой
+    # нового тикета автоматически (ниже по файлу). Отдельные команды
+    # дублировали меню и захламляли список «/».
 
 
 async def setup (bot ):

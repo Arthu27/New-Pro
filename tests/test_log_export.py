@@ -92,7 +92,8 @@ check(when_row[3] == 'Страж' and 'reason=спам' in when_row[5], 'кол�
 
 print('== 4. Имя файла ==')
 fn = lx.export_filename('Мой Сервер #/:D', now=NOW)
-check(fn == f'modlog_Мой_Сервер_D_{NOW.strftime("%Y-%m-%d")}.html', f'безопасное имя: {fn}')
+check(fn == f'modlog_Moy_Server_D_{NOW.strftime("%Y-%m-%d")}.html',
+      f'безопасное имя (транслит, ASCII): {fn}')
 
 print('== 5. Панель: /logs/export ==')
 appmod = importlib.import_module('web.app')
@@ -161,6 +162,22 @@ check(not hasattr(Logs, 'logs_export'), 'бот-команда /логи-экс�
 payload = lx.render_html(EVENTS[:2], guild_name='TestGuild', filters_desc='за 7 дней', generated_at=NOW)
 check(payload.startswith('<!DOCTYPE html>') and 'Предупреждение' in payload,
       'сервис рендера отчёта на месте (используется панелью)')
+
+print('== 7. Кириллица в имени файла роняла ответ (баг 29.08.2026) ==')
+# Content-Disposition обязан быть latin-1: русское имя гильдии в filename
+# вызывало UnicodeEncodeError уже на отправке заголовка — браузер висел
+# на бесконечной загрузке. Имя теперь транслитерируется в ASCII.
+for ru_name in ['Главный сервер', 'Сервер «Драконий Клык»!', 'ЫЫЫ']:
+    fn = lx.export_filename(ru_name)
+    check(fn.isascii(), f'имя файла ASCII для {ru_name!r}: {fn}')
+check(lx.export_filename('Главный сервер').startswith('modlog_Glavnyy_server_'),
+      'кириллица транслитерируется, а не выбрасывается')
+header_val = 'attachment; filename="%s"' % lx.export_filename('Главный сервер')
+try:
+    header_val.encode('latin-1')
+    check(True, 'Content-Disposition кодируется latin-1 без падения')
+except UnicodeEncodeError:
+    check(False, 'Content-Disposition кодируется latin-1 без падения')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

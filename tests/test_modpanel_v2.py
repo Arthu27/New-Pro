@@ -56,10 +56,10 @@ import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
 check(set(keep) == {'modpanel', 'play', 'апелляция', 'update',
                     'afk', 'afk-remove',
-                    'ticket-panel', 'ticket-add', 'ticket-remove'},
-      f'белый список слеш-меню = 9 команд (сейчас: {sorted(keep)})')
+                    'ticket-panel'},
+      f'белый список слеш-меню = 7 команд (сейчас: {sorted(keep)})')
 for name in ('modpanel', 'play', 'апелляция', 'update', 'afk', 'afk-remove',
-             'ticket-panel', 'ticket-add', 'ticket-remove'):
+             'ticket-panel'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
 
 # Урезанные из меню имена НЕ должны вернуться в KEEP_SLASH незаметно

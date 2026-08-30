@@ -1065,6 +1065,7 @@ function renderCharts(d) {
       _loaded = true;
       if ($id('anUpdated')) $id('anUpdated').textContent = 'Только что · ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
+      try { console.error('[analytics] load:', e && (e.stack || e.message || e)); } catch (logErr) {}
       var mb = $id('top-members'); if (mb) mb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Не удалось загрузить</p></div>';
       var cb = $id('top-channels'); if (cb) cb.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Не удалось загрузить</p></div>';
       if ($id('anUpdated')) $id('anUpdated').textContent = 'Ошибка синхронизации';

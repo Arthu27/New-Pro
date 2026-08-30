@@ -109,10 +109,15 @@ for gone in ('security', 'security-toggle', 'security-newaccount', 'scan-link',
              'backup', 'backup-list', 'staff-panel', 'my-application'):
     check(gone not in tree_names,
           f'guild-scoped {gone} не вернулся в меню (бюджет чистит и локальные команды)')
-# тикеты вернул владелец — они обязаны быть в меню (guild-scoped)
-for need in ('ticket-panel', 'ticket-add', 'ticket-remove'):
+# тикетная панель вернулась по заказу владельца — обязана быть в меню
+# (guild-scoped). ticket-add/ticket-remove убраны (заказ 2026-08-29
+# «должны быть в меню тикета»): их работа — кнопки ➕/➖ в TicketManageView.
+for need in ('ticket-panel',):
     check(need in tree_names,
           f'тикетная {need} в меню (заказ «вернуть тикеты» — бюджета ей нет)')
+for moved in ('ticket-add', 'ticket-remove'):
+    check(moved not in tree_names,
+          f'{moved} убрана из слеш-меню — теперь это кнопки в меню тикета')
 realized = [n for n in keep if n in tree_names]
 missing = sorted(set(keep) - set(tree_names))
 print(f'  KEEP-имена реально в меню: {len(realized)}/{len(keep)}; отсутствуют оффлайн: {missing}')

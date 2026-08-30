@@ -192,8 +192,10 @@ async def _full_sync_inner(bot):
         from config import Config
         for obj in Config.guild_objects():
             g = bot.get_guild(obj.id)
-            if g is not None:
-                targets.append(g)
+            # Гильдия может ещё не быть в кэше (холодный старт/переподключение) —
+            # Object(id) для guild-синка достаточно. Раньше пустой targets
+            # включал «глобальный режим» и стирал гильдовые меню на ровном месте.
+            targets.append(g if g is not None else obj)
     except Exception as e:
         _log.debug('targets(): %s', e)
 
@@ -295,17 +297,33 @@ async def _full_sync_inner(bot):
     cleaned = await _clean_stray_guilds(
         bot, tree, {int(getattr(g, 'id', 0) or 0) for g in targets})
 
-    # 5) Откат: все guild-синки упали — глобальное меню уже стёрто,
-    #    серверные не появились = пользователь видел бы ПУСТОЕ меню
-    #    («команды не работают»). Возвращаем глобальное меню в Discord,
-    #    до следующего рестарта дублей не будет, команды живы.
+    # 5) Откат: все guild-синки упали. Глобальный список в Discord УЖЕ
+    #    правильный (шаг 1 опубликовал только keep_global), а упавший
+    #    guild-синк НЕ трогает старый список сервера — меню живо.
+    #    Раньше здесь делали tree.sync() всем деревом: parked-команды
+    #    (контекстные меню и пр.) публикавались ГЛОБАЛЬНО поверх
+    #    гильдовых копий — и каждая команда появлялась ПО ДВАЖДЫ.
+    #    Теперь честно перепубликуем только keep_global (идемпотентно
+    #    с шагом 1 — дублей не бывает физически).
     if targets and ok_guilds == 0:
-        _log.error('ни один guild-синк не удался — возвращаю глобальное '
-                   'меню, чтобы команды не пропали из списка')
+        _log.error('ни один guild-синк не удался — глобальное меню '
+                   'оставляю как после шага 1 (только keep_global): '
+                   'гильдовые списки не тронуты, дублей не будет')
         try:
+            for cmd, _t in parked:
+                try:
+                    tree.remove_command(cmd.name, type=_t)
+                except Exception as _e:
+                    _log.debug('снять перед откатом %s: %s', cmd.name, _e)
             await tree.sync()
         except Exception as _e:
-            _log.error('откат глобального меню тоже не удался: %s', _e)
+            _log.error('перепубликация keep_global после сбоя: %s', _e)
+        finally:
+            for cmd, _t in parked:
+                try:
+                    tree.add_command(cmd)
+                except Exception as _e:
+                    _log.debug('вернуть после отката %s: %s', cmd.name, _e)
     _note_sync_done(bot, 'guilds',
                     [int(getattr(g, 'id', 0) or 0) for g in targets],
                     cleaned)

@@ -4554,7 +4554,13 @@ input[type="color"]:focus { box-shadow: 0 0 0 3px var(--ac-soft); }
   overflow: hidden;
   max-height: calc(100vh - 16px);
   padding-bottom: 6px;
+  /* пока дропдаун открыт, прокрутка не «проваливается» на страницу
+     за панелью (overscroll) и жесты по панели не тянут страницу */
+  overscroll-behavior: contain;
 }
+/* жест по полю поиска дропдауна не скроллит страницу сзади
+   (тап для фокуса работает как обычно) */
+.aes-panel .aes-search { touch-action: none; }
 .aes-panel.open { display: flex; animation: aesIn 0.16s var(--ease-out) both; }
 @keyframes aesIn {
   from { opacity: 0; transform: translateY(-4px) scale(0.98); }

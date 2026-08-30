@@ -194,6 +194,13 @@ class ErrorHandler:
         self._lag_recent = 0.0
         self._spike_alert_at = 0.0
         self._tasks = []
+        # Пульс event-loop для потокового монитора стека (см. _start_stack_monitor):
+        # async-задача тикает каждые 0.5с; если пульс «замер» — поток в МОМЕНТ
+        # зависания снимает стек main-потока и называет виновника по имени.
+        self._loop_beat = time.monotonic()
+        self._stack_frozen = False
+        self._last_freeze_stack = ''   # последний снятый стек (для алерта)
+        self._start_stack_monitor()
 
         self._repeat = {}                          # дедуп повторных ошибок
         self._warn_seen = {}                       # дедуп warning'ов
@@ -350,6 +357,7 @@ class ErrorHandler:
             self._tasks = [
                 loop.create_task(self._register_commands()),
                 loop.create_task(self._loop_watchdog_task()),
+                loop.create_task(self._loop_beat_task()),
                 loop.create_task(self._alert_flush_task()),
                 loop.create_task(self._health_log_task()),
                 loop.create_task(self._persist_task()),
@@ -771,6 +779,62 @@ class ErrorHandler:
     # ────────────────────────────────────────────────────────────
     # Watchdog event-loop
     # ────────────────────────────────────────────────────────────
+    async def _loop_beat_task(self):
+        """Пульс event-loop: тик каждые 0.5с для потокового монитора.
+
+        ВАЖНО: бьём и ДО готовности бота — иначе медленный старт
+        (ожидание гильдий на слабой сети) монитор посчитает зависанием,
+        хотя event-loop жив и отвечает.
+        """
+        while not self.bot.is_closed():
+            self._loop_beat = time.monotonic()
+            try:
+                await asyncio.wait_for(self.bot.wait_until_ready(), timeout=0.5)
+            except asyncio.TimeoutError:
+                # Бот ещё стартует — это норма, а не зависание; пульс выше бьёт.
+                _log.debug("loop-beat: бот ещё не готов (wait_until_ready), пульс продолжается")
+            except Exception:
+                await asyncio.sleep(0.5)
+
+    def _start_stack_monitor(self):
+        """Поток-свидетель: снимает стек ВИНОВНИКА в момент зависания.
+
+        Async-watchdog («EVENT-LOOP ЗАВИСАНИЕ: цикл не отвечал N сек»)
+        замечает проблему только ПОСЛЕ отвисания — когда стек виновника
+        уже вернулся. Этот поток живёт отдельно от цикла: пульс
+        (_loop_beat) не обновлялся дольше порога — значит цикл заблокирован
+        ПРЯМО СЕЙЧАС, и стек main-потока показывает, какой именно код
+        держит цикл (тяжёлая синхронная операция, CPU под GIL, диск…).
+        Следующее зависание станет диагностируемым: в логе будет
+        «СТЕК ВИНОВНИКА» с именем файла и строки.
+        """
+        main_tid = threading.main_thread().ident
+
+        def _worker():
+            while True:
+                time.sleep(1.0)
+                try:
+                    # Порог перечитываем на каждом тике: панель может менять
+                    # loop_lag_threshold на лету (анти-краш центр).
+                    threshold = float(self.config.get('loop_lag_threshold', 5.0)) + 1.0
+                    age = time.monotonic() - self._loop_beat
+                    if age > threshold and not self._stack_frozen:
+                        self._stack_frozen = True
+                        frames = sys._current_frames()
+                        stack = ''.join(traceback.format_stack(
+                            frames.get(main_tid)))[-3000:]
+                        self._last_freeze_stack = stack
+                        log.critical(
+                            "EVENT-LOOP ЗАВИСАНИЕ %.1f сек — СТЕК ВИНОВНИКА "
+                            "(main-поток, прямо сейчас):\n%s", age, stack)
+                    elif age < 1.0:
+                        self._stack_frozen = False
+                except Exception as _ex:
+                    _log.debug("stack-monitor: подавлено: %s", _ex)
+
+        threading.Thread(target=_worker, name='loop-stack-monitor',
+                         daemon=True).start()
+
     async def _loop_watchdog_task(self):
         await self.bot.wait_until_ready()
         await asyncio.sleep(30)
@@ -799,13 +863,23 @@ class ErrorHandler:
             if drift > float(self.config.get('loop_lag_threshold', 5.0)):
                 if drift > self.stats.get('loop_lag_max', 0.0):
                     self.stats['loop_lag_max'] = round(drift, 2)
-                log.critical(f"EVENT-LOOP ЗАВИСАНИЕ: цикл не отвечал {drift:.1f} сек!")
+                log.critical(
+                    f"EVENT-LOOP ЗАВИСАНИЕ: цикл не отвечал {drift:.1f} сек! "
+                    "(виновника называет поток-монитор строкой "
+                    "«СТЕК ВИНОВНИКА» — она появляется В МОМЕНТ зависания)")
                 if time.time() - last_alert > 300:
                     last_alert = time.time()
+                    _stack_hint = ''
+                    if getattr(self, '_last_freeze_stack', ''):
+                        _stack_hint = ("\nСтек виновника (снят монитором "
+                                       "в момент зависания):\n```\n"
+                                       + self._last_freeze_stack[:900]
+                                       + "\n```")
                     self.queue_alert(
                         "Зависание event-loop",
                         f"Цикл не отвечал **{drift:.1f} сек** — команды и ивенты в это время стояли.\n"
-                        "Частая причина: тяжёлая синхронная операция (сеть/диск/CPU) в async-коде.",
+                        "Частая причина: тяжёлая синхронная операция (сеть/диск/CPU) в async-коде."
+                        + _stack_hint,
                     )
 
     # ────────────────────────────────────────────────────────────

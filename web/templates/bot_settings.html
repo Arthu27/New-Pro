@@ -176,7 +176,7 @@
       .then(function (res) {
         if (res.s === 200 && res.d.ok) {
           out.className = 'bs-out show ok';
-          out.textContent = 'Готово: синхронизировано команд — ' + res.d.synced;
+          out.textContent = 'Синк запущен в фоне: секунда-другая — и команды на месте. Жать повторно не нужно.';
         } else {
           out.className = 'bs-out show err';
           out.textContent = '' + (res.d.error || 'ошибка');

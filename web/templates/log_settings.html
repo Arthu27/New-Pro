@@ -45,9 +45,10 @@
   var SAVING = false;
   var _lastRaw = null;
 
+  var MAIN_GID = '{{ main_guild_id }}';   /* ID гильдии из сессии — не хардкод 777 */
   function gid() {
-    var v = window.MAIN_GID || '';
-    if (!v) { try { v = localStorage.getItem('selected_guild') || '777'; } catch (e) { v = '777'; } }
+    var v = window.MAIN_GID || MAIN_GID || '';
+    if (!v) { try { v = localStorage.getItem('selected_guild') || ''; } catch (e) { v = ''; } }
     return v;
   }
 

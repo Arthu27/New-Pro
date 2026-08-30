@@ -355,8 +355,7 @@ class HelpMenu:
         menu.add_section(
             "Команды",
             "• `/ticket-panel` - Создать панель тикетов\n"
-            "• `/ticket-add` - Добавить пользователя\n"
-            "• `/ticket-remove` - Удалить пользователя\n"
+            "• Кнопки ➕/➖ в тикете - Добавить/удалить участника\n"
             "• `/ticket-ai-stats` - Статистика AI\n"
             "• `/ticket-feedback-stats` - Статистика отзывов"
         )

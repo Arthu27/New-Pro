@@ -46,11 +46,12 @@ print('== 1. Реестр команд (LEAN — боевой состав по 
 from services import command_registry as CR  # noqa: E402
 
 data = CR.catalog(force=True)
-# Заказ владельца 2026-08-28 «как можно меньше» + 2026-08-29 «верни тикеты»:
-# боевое слеш-меню — 9 команд (modpanel с варном внутри, play, апелляция,
-# update, afk/afk-remove и тикетные ticket-panel/add/remove).
-check(data['total'] == 9, f"lean: собрано {data['total']} живых команд (ровно 9)")
-check(data['slash'] == 9 and data['prefix'] == 0,
+# Заказ владельца 2026-08-28 «как можно меньше» + 2026-08-29 «верни тикеты»
+# и «ticket-add/remove — в меню тикета»: боевое слеш-меню — 7 команд
+# (modpanel с варном внутри, play, апелляция, update, afk/afk-remove
+# и ticket-panel; участников тикета добавляют кнопками ➕/➖).
+check(data['total'] == 7, f"lean: собрано {data['total']} живых команд (ровно 7)")
+check(data['slash'] == 7 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')

@@ -235,14 +235,23 @@ class FakeTree:
         return [1, 2, 3]
 
 
+import asyncio as _aio  # noqa: E402
+
+_not_running_loop = _aio.new_event_loop()
+
+
 class FakeBot2(FakeBot):
     tree = FakeTree()
+    loop = _not_running_loop
 
 
 set_bot_instance(FakeBot2())
 r = client.post('/api/bot-settings/sync', json={})
 d = r.get_json()
-check(r.status_code == 200 and d['ok'] and d['synced'] == 3, 'sync: живой бот → synced=3')
+# 2026-08-29: синк уходит ФОНОМ (раньше ждали 10 сек с таймаутом → ложное
+# «Синк упал» → повторные клики → rate limit → дубли команд в меню).
+check(r.status_code == 200 and d['ok'] and d.get('started'),
+      'sync: живой бот → синк запущен фоном (без ожидания и дублей)')
 set_bot_instance(FakeBot())
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')

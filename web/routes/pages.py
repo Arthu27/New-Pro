@@ -163,7 +163,7 @@ def register(ctx):
     @login_required 
     @role_required ('admin')
     def bulk_actions_page ():
-        return render_template ('bulk_actions.html',role =session .get ('role'),username =session .get ('username'))
+        return render_template ('bulk_actions.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =session .get ('main_guild_id',''))
 
 
     @app .route ('/invite-tracker')

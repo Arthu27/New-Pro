@@ -434,6 +434,34 @@ def _start_tunnel_sidecar():
     cfg = _nt.find_config(root)
     if not cfg:
         return  # туннель ещё не настраивали — работаем локально, не шумим
+    # Windows-грабли: «localhost» в origin резолвится в ::1 (IPv6), а панель
+    # слушает 0.0.0.0 (IPv4) → «dial tcp [::1]:5001: connectex: connection
+    # refused». Чиним все копии конфига ДО запуска туннеля/службы.
+    try:
+        _healed = _nt.heal_all_origins(root, cfg)
+    except Exception:
+        _healed = []
+    if _healed:
+        print('[ТУННЕЛЬ] Починил origin в конфиге: localhost -> 127.0.0.1 '
+              f'({len(_healed)} файл.) — панель слушает IPv4, '
+              'а localhost на Windows резолвится в IPv6 ::1')
+    # Протокол до края Cloudflare: QUIC (UDP, по умолчанию cloudflared) на
+    # капризных сетях VDS рвётся каждые ~20 секунд («timeout: no recent
+    # network activity», «failed to accept QUIC stream») и домен флапает.
+    # http2 (TCP) стабилен — потому он и дефолт. Вернуть QUIC: TUNNEL_PROTOCOL=quic.
+    proto = (os.environ.get('TUNNEL_PROTOCOL', '') or 'http2').strip().lower()
+    if proto not in ('http2', 'quic', 'auto'):
+        print(f'[ТУННЕЛЬ] TUNNEL_PROTOCOL={proto} не понял — использую http2.')
+        proto = 'http2'
+    try:
+        _prototuned = _nt.ensure_protocol_line(root, cfg, proto)
+    except Exception:
+        _prototuned = []
+    if _prototuned:
+        print(f'[ТУННЕЛЬ] Прописал protocol: {proto} в конфиг '
+              f'({len(_prototuned)} файл.) — QUIC/UDP нестабилен, '
+              'http2/TCP держит соединение; службе Windows флаг не передать, '
+              'потому пишем в конфиг.')
     pub = _nt.public_url(cfg)
     if pub:
         # Постоянную ссылку (https://домен) бот отправит в канал панели —
@@ -470,7 +498,7 @@ def _start_tunnel_sidecar():
     run_cfg = _nt.runtime_config(root, cfg)
     try:
         _tunnel_proc = subprocess.Popen(
-            [exe, '--config', run_cfg, 'tunnel', 'run'],
+            [exe, '--protocol', proto, '--config', run_cfg, 'tunnel', 'run'],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             bufsize=1, text=True, encoding='utf-8', errors='replace',
         )
@@ -714,7 +742,7 @@ def start_tunnel():
             cmd = [cf_path, "tunnel", "--no-autoupdate"]
             if proto != "auto":
                 cmd.extend(["--protocol", proto])
-            cmd.extend(["--url", "http://localhost:5001"])
+            cmd.extend(["--url", "http://127.0.0.1:5001"])
             proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

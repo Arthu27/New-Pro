@@ -285,9 +285,12 @@ b3.tree = TreeGuildFail()
 r3 = asyncio.new_event_loop().run_until_complete(SF.full_sync(b3))
 gl3 = [x for x in b3.tree.synced if x[0] == 'global']
 check(r3 == [], 'провал всех guild-синков: ничего не «выдано» в гильдии')
-check(len(gl3) == 2, 'глобальный sync вызван дважды: очистка + откат')
-check(gl3[1][1] and ('warn', 'chat') in gl3[1][1],
-      'откат вернул глобальное меню — команды не пропали из Discord')
+check(len(gl3) == 2, 'глобальный sync вызван дважды: очистка + перепубликация keep_global')
+# 2026-08-29: откат больше НЕ публикует «припаркованные» команды глобально —
+# именно так каждая команда становилась по две (глобальная копия поверх
+# гильдовой). Правильный откат повторяет payload шага 1: только keep_global.
+check(gl3[1][1] and ('warn', 'chat') not in gl3[1][1],
+      'откат опубликовал только keep_global — дублей физически не будет')
 check(not any(x[0] == 777 for x in b3.tree.synced),
       'при провале guild-sync в Discord ничего не ушло (меню без дублей)')
 

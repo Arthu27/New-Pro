@@ -20,15 +20,18 @@
   var _cache = {}; /* gid -> Promise({channels, roles, online}) */
 
   window.pickerLoad = function (gid) {
+    /* Пустой gid (модуль не сообщил гильдию) — не оставляем пикеры пустыми:
+       берём глобальные списки панели /api/channels и /api/roles. */
+    if (!gid) gid = '_main';
     if (!_cache[gid]) {
-      var chP = fetch('/api/guild/' + gid + '/channels')
+      var chP = fetch(gid === '_main' ? '/api/channels' : '/api/guild/' + gid + '/channels')
         .then(function (r) { return r.json(); })
         .then(function (d) {
           if (Array.isArray(d)) return { list: d, online: true };
           return { list: (d && d.channels) || [], online: false };
         })
         .catch(function () { return { list: [], online: false }; });
-      var roP = fetch('/api/guild/' + gid + '/roles')
+      var roP = fetch(gid === '_main' ? '/api/roles' : '/api/guild/' + gid + '/roles')
         .then(function (r) { return r.json(); })
         .then(function (d) { return Array.isArray(d) ? d : []; })
         .catch(function () { return []; });

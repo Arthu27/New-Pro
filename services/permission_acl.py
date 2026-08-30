@@ -53,7 +53,7 @@ COMMAND_CATEGORIES = {
                    "filter-words", "filter-toggle", "filter-test", "filter-ignore",
                    "reactionrole", "removereactionrole",
                    "replay", "ladder", "ladder-add", "ladder-remove", "ladder-test"],
-    "Тикеты": ["ticket-panel", "ticket-config", "ticket-add", "ticket-remove",
+    "Тикеты": ["ticket-panel", "ticket-config",
                 "ticket-auto-close", "ticket-ai-toggle", "ticket-ai-stats",
                 "ticket-force-escalate", "ticket-rate-limit-info", "ticket-reset-rate-limit",
                 "ticket-feedback-stats", "sla-status", "sla-info", "sla-create", "sla-breaches"],

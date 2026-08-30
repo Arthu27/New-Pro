@@ -127,7 +127,7 @@
      Esc и клик по фону закрывают -->
 <div class="pf-lb" id="pf-modal" role="dialog" aria-modal="true" aria-label="Просмотр доказательства">
   <div class="pf-lb-frame">
-    <img id="pf-modal-img" class="pf-lb-media" src="" alt="Демка">
+    <img id="pf-modal-img" class="pf-lb-media" alt="Демка">
     <video id="pf-modal-video" class="pf-lb-media" controls autoplay playsinline style="display:none"></video>
     <div class="pf-lb-bar">
       <div class="pf-lb-cap" id="pf-modal-cap"></div>
@@ -274,7 +274,7 @@
     v.load();
     v.style.display = 'none';
     $('pf-modal-img').style.display = '';
-    $('pf-modal-img').src = '';
+    $('pf-modal-img').removeAttribute('src');
     $('pf-modal').classList.remove('open');
   }
 

@@ -111,16 +111,20 @@ def register(ctx):
     @role_required('owner')
     def api_bot_settings_sync():
         import web.app as _app
+        import asyncio
         bot = _app.bot_instance
         tree = getattr(bot, 'tree', None) if bot is not None else None
         if tree is None:
             return jsonify({'ok': False, 'error': 'Бот офлайн — синхронизировать некому'}), 503
         try:
-            # выключенные команды («Команды вкл/выкл») в Discord не попадают —
-            # они исчезают из списка «/», а не отвечают «выключена» после ввода
+            # Синк уходит ФОНОМ и без ожидания ответа: full_sync ходит в
+            # Discord (глобальная очистка + синк каждой гильдии) и легко
+            # идёт дольше 10 секунд. Прежний «wait с таймаутом» показывал
+            # «Синк упал», хотя синк продолжался, — и повторные клики
+            # плодили вызовы до rate limit (дубли в меню). Лок внутри
+            # full_sync не пускает второй прогон параллельно.
             from services.sync_filtered import full_sync as _full_sync
-            synced = _run_async(_full_sync(bot))
-            n = len(synced) if isinstance(synced, (list, tuple)) else 0
-            return jsonify({'ok': True, 'synced': n})
+            asyncio.run_coroutine_threadsafe(_full_sync(bot), bot.loop)
+            return jsonify({'ok': True, 'started': True})
         except Exception as e:
-            return jsonify({'ok': False, 'error': f'Синк упал: {e}'}), 500
+            return jsonify({'ok': False, 'error': f'Синк не запустился: {e}'}), 500

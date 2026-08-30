@@ -5,6 +5,19 @@
 (function () {
   'use strict';
 
+  /* Объект, самосоздающий вложенные уровни при чтении — присваивания
+     вида Chart.defaults.font.family = 'Inter' всегда проходят. */
+  function _autoObj() {
+    return new Proxy({}, {
+      get: function (t, k) {
+        if (typeof k !== 'string') return undefined;
+        if (!(k in t)) t[k] = _autoObj();
+        return t[k];
+      },
+      set: function (t, k, v) { t[k] = v; return true; }
+    });
+  }
+
   function fmt(v) {
     var n = Number(v) || 0;
     var r = Math.abs(n - Math.round(n)) < 0.05 ? Math.round(n) : Math.round(n * 10) / 10;
@@ -64,7 +77,11 @@
   };
   NumChart.prototype.resize = function () {};
   NumChart.prototype.toBase64Image = function () { return ''; };
-  NumChart.defaults = {};
+  /* defaults — толерантная структура: страницы настраивают Chart.defaults
+     (color, font.family, plugins.legend…) — заглушка обязана принимать
+     любые вложенные присваивания, иначе страница падает целиком
+     (баг 29.08.2026: analytics вешался на font.family). */
+  NumChart.defaults = _autoObj();
   NumChart.register = function () {};
   NumChart.version = 'nums-1.0';
 

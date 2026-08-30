@@ -165,6 +165,267 @@ check(proc.returncode == 0,
       + (f' ({proc.stdout.strip()})' if proc.stdout.strip() else '')
       + (f' [{proc.stderr.strip()}]' if proc.stderr.strip() else ''))
 
+
+# ═══════════════════════════════════════════════════════════════════════
+# Регрессия «Каналы и маршруты»: дропдаун поверх плотных рядов.
+#
+# Три бага (все из жалоб на странице):
+#  1) click-guard «лечил» клик по опции открытого дропдауна и пробрасывал
+#     его на кнопку ПОД панелью — открывалась другая настройка, выбор не
+#     происходил;
+#  2) positionPanel занижала высоту панели (min(300,…)) — низ списка
+#     вылезал за экран, последние каналы были недостижимы;
+#  3) колесо/жест над панелью скроллили страницу сзади — панель
+#     закрывалась посреди выбора, страница «уезжала» под курсором.
+# ═══════════════════════════════════════════════════════════════════════
+print('\n== регрессия «Каналы и маршруты»: клики, позиционирование, скролл ==')
+
+CG_JS = open(os.path.join(ROOT, 'web', 'static', 'click-guard.js'), encoding='utf-8').read()
+STYLE_CSS = open(os.path.join(ROOT, 'web', 'static', 'style.css'), encoding='utf-8').read()
+
+check('[role="option"]' in CG_JS and '.aes-opt' in CG_JS,
+      'click-guard: опции дропдауна — интерактив (гарда не ворует их клики)')
+check('.aes-panel.open' in CG_JS,
+      'click-guard: открытая панель дропдауна — осмысленный оверлей (не «лечим»)')
+m = re.search(r'if \(sh > ch\) \{[^{}]*\}\s*e\.preventDefault\(\);', APP_JS)
+check(bool(m),
+      'колесо над открытой панелью всегда поглощается: страница за дропдауном не двигается')
+check('!doc.contains(currentOrig)) closePanel()' in APP_JS,
+      'панель закрывается, когда её select удалён из DOM (перерисовка страницы)')
+check(re.search(r'\.aes-panel \{[^}]*overscroll-behavior:\s*contain', STYLE_CSS, re.S) is not None,
+      'CSS: .aes-panel гасит скролл-цепочку (overscroll-behavior: contain)')
+check('.aes-panel .aes-search { touch-action: none; }' in STYLE_CSS,
+      'CSS: жест по полю поиска дропдауна не тянет страницу сзади')
+
+# ── Node-харнесс click-guard.js: реальное исполнение лечилки кликов ─────
+cg_harness = r"""
+const fs = require('fs');
+const src = fs.readFileSync(process.argv[2], 'utf8');  // node HARNESS TARGET
+
+// Мини-DOM: только то, что использует click-guard
+function matchesSimple(node, s) {
+  s = s.trim();
+  let notAttr = null;
+  const nm = s.match(/^(.*):not\(\[(\w+)\]\)$/);
+  if (nm) { s = nm[1]; notAttr = nm[2]; }
+  if (s[0] === '.') {
+    const classes = s.slice(1).split('.');
+    for (const c of classes) if (!node.classList.contains(c)) return false;
+  } else if (s[0] === '[') {
+    if (node.getAttribute(s.slice(1, -1)) === null) return false;
+  } else if (s[0] === '#') {
+    if (node.id !== s.slice(1)) return false;
+  } else if (node.tagName !== s.toUpperCase()) return false;
+  if (notAttr && node.getAttribute(notAttr) !== null) return false;
+  return true;
+}
+function matchesSel(node, sel) { return sel.split(',').some(s => matchesSimple(node, s)); }
+
+let clicks = [];
+let preventDefaultCalls = 0;
+function makeNode(tag, cls, role) {
+  const n = {
+    tagName: String(tag).toUpperCase(), className: cls || '', id: '',
+    attrs: role ? { role } : {}, disabled: false, parentNode: null, children: [],
+    classList: {
+      contains(c) { return (' ' + this._node.className + ' ').indexOf(' ' + c + ' ') !== -1; }
+    },
+    setAttribute(k, v) { this.attrs[k] = String(v); },
+    getAttribute(k) { return this.attrs[k] === undefined ? null : this.attrs[k]; },
+    closest(sel) { let p = this; while (p) { if (matchesSel(p, sel)) return p; p = p.parentNode; } return null; },
+    matches(sel) { return matchesSel(this, sel); },
+    click() { clicks.push(this); },
+    appendChild(c) { c.parentNode = this; this.children.push(c); return c; }
+  };
+  n.classList._node = n;
+  return n;
+}
+
+const panel = makeNode('div', 'aes-panel open');
+const list = makeNode('div', 'aes-list'); panel.appendChild(list);
+const opt = makeNode('div', 'aes-opt', 'option'); opt.attrs['data-v'] = '123'; list.appendChild(opt);
+const plainOpt = makeNode('div', 'aes-opt');           // без role (страховочный слой)
+const padding = makeNode('div', 'aes-pad'); list.appendChild(padding);
+
+const underlyingBtn = makeNode('button', 'chs-save');  // чужая кнопка ПОД панелью
+const underlyingLink = makeNode('a', 'nav-link'); underlyingLink.attrs['href'] = '/bot-settings';
+const overlayDiv = makeNode('div', 'ghost');           // невидимый «вор» кликов
+
+let openPanel = panel; // что возвращает querySelector для оверлеев (панель ОТКРЫТА)
+let stackAt = [];       // что лежит под точкой тапа
+const handlers = {};
+const fakeDoc = {
+  addEventListener(type, fn) { handlers[type] = fn; },
+  querySelector(sel) {
+    // overlayIntentional ищет открытые оверлеи; понимаем .aes-panel.open
+    if (sel.indexOf('.aes-panel.open') !== -1) return openPanel;
+    return null;
+  },
+  getElementById() { return null; },
+  elementsFromPoint() { return stackAt; }
+};
+const fakeWin = { console: { warn() {}, error: console.error.bind(console), log: console.log.bind(console) } };
+
+new Function('document', 'window', src)(fakeDoc, fakeWin);
+const h = handlers['pointerdown'];
+if (!h) { console.error('pointerdown-обработчик не зарегистрирован'); process.exit(1); }
+function tap(target, stack) {
+  clicks = []; preventDefaultCalls = 0;
+  stackAt = stack || [target];
+  h({ button: 0, target, clientX: 10, clientY: 10,
+      preventDefault() { preventDefaultCalls++; }, stopPropagation() {} });
+}
+
+// A) Панель открыта: тап по опции (role=option) — гарда НЕ вмешивается,
+//    клик уходит в выбор опции, а не на кнопку под панелью.
+tap(opt, [opt, list, panel, underlyingBtn]);
+if (clicks.length || preventDefaultCalls) { console.error('A: гарда вмешалась в клик по опции'); process.exit(1); }
+
+// A2) Панель открыта: опция без role — спасает слой «осмысленный оверлей».
+tap(plainOpt, [plainOpt, list, panel, underlyingLink]);
+if (clicks.length || preventDefaultCalls) { console.error('A2: гарда кликнула мимо опции'); process.exit(1); }
+
+// B) Панель открыта: тап по паддингу панели (не интерактив) — НЕ пробрасываем
+//    на кнопку под панелью: открытый дропдаун — осмысленное перекрытие.
+tap(padding, [padding, panel, underlyingBtn]);
+if (clicks.length || preventDefaultCalls) { console.error('B: гарда пробросила клик сквозь открытый дропдаун'); process.exit(1); }
+
+// C) Панель ЗАКРЫТА: гарда по-прежнему лечит — невидимый слой поверх кнопки.
+openPanel = null;
+tap(overlayDiv, [overlayDiv, underlyingBtn]);
+if (clicks.length !== 1 || clicks[0] !== underlyingBtn || !preventDefaultCalls) {
+  console.error('C: самолечение кликов сломано'); process.exit(1);
+}
+
+// D) Панель закрыта: честный тап по кнопке — без вмешательства.
+tap(underlyingBtn, [underlyingBtn]);
+if (clicks.length || preventDefaultCalls) { console.error('D: гарда мешает честному клику'); process.exit(1); }
+
+console.log('click-guard: OK — опции дропдауна не воруются, самолечение живо');
+"""
+
+_tmpdir = tempfile.mkdtemp(prefix='hakumo_cg_test_')
+_cg_path = os.path.join(_tmpdir, 'cg_harness.js')
+with open(_cg_path, 'w', encoding='utf-8') as fh:
+    fh.write(cg_harness)
+proc = subprocess.run(['node', _cg_path, os.path.join(ROOT, 'web', 'static', 'click-guard.js')],
+                      capture_output=True, text=True, timeout=60)
+check(proc.returncode == 0,
+      'харнесс Node: клики по опциям дропдауна не воруются гардой, самолечение живо'
+      + (f' ({proc.stdout.strip()})' if proc.stdout.strip() else '')
+      + (f' [{proc.stderr.strip()}]' if proc.stderr.strip() else ''))
+
+
+# ── Node-харнесс positionPanel: реальный код из app.js + сценарии экранов ─
+def _extract_fn(src, signature):
+    i = src.find(signature)
+    if i < 0:
+        return None
+    j = src.find('{', i)
+    depth, k = 0, j
+    while k < len(src):
+        if src[k] == '{':
+            depth += 1
+        elif src[k] == '}':
+            depth -= 1
+            if depth == 0:
+                return src[i:k + 1]
+        k += 1
+    return None
+
+
+_pp_src = _extract_fn(APP_JS, 'function positionPanel(btn)')
+check(_pp_src is not None, 'positionPanel найдена в app.js для харнесса')
+
+if _pp_src:
+    _pp_path = os.path.join(_tmpdir, 'position_panel.js')
+    with open(_pp_path, 'w', encoding='utf-8') as fh:
+        fh.write(_pp_src)
+    pp_harness = r"""
+const fs = require('fs');
+const fnSrc = fs.readFileSync(process.argv[2], 'utf8');  // node HARNESS TARGET
+const positionPanel = new Function('panel', 'listEl', 'win', 'btn', fnSrc + '\nreturn positionPanel(btn);');
+
+function run(vh, h, btnTop, btnBottom) {
+  const listEl = { style: {} };
+  // Высота панели = 100 (поиск/отступы) + высота списка. Как в проде:
+  // базовая высота списка живёт в CSS (max-height: min(52vh,320px)),
+  // а positionPanel ставит ИНЛАЙНОВЫЙ maxHeight только когда ужимает.
+  const panel = { style: {}, offsetWidth: 280, _list: listEl, _cssList: h - 100 };
+  Object.defineProperty(panel, 'offsetHeight', {
+    get() {
+      const inline = parseInt(this._list.style.maxHeight, 10);
+      return 100 + (isNaN(inline) ? this._cssList : inline);
+    },
+    configurable: true
+  });
+  const win = { innerHeight: vh, innerWidth: 1400 };
+  const btn = { getBoundingClientRect: () => ({ left: 100, top: btnTop, bottom: btnBottom, width: 260 }) };
+  positionPanel(panel, listEl, win, btn);
+  const top = parseFloat(panel.style.top);
+  const height = panel.offsetHeight;
+  return { top, height, bottom: top + height, listMax: listEl.style.maxHeight || '' };
+}
+
+function ok(name, cond, extra) {
+  if (!cond) { console.error(name + ' FAIL ' + JSON.stringify(extra)); process.exit(1); }
+}
+
+// 1) Обычный экран: панель открывается ВНИЗ и целиком влезает.
+let r = run(900, 400, 160, 200);
+ok('вниз влезает', r.top === 206 && r.bottom <= 892 && r.listMax === '', r);
+
+// 2) Репорт пользователя: «меню появляется СНИЗУ ВВЕРХ, а должно сверху вниз».
+//    Кнопка в нижней трети: целиком вниз не влезает (места 286, панели 420) —
+//    список УЖИМАЕТСЯ под свободное место, панель всё равно открывается ВНИЗ.
+r = run(800, 420, 460, 500);
+ok('вниз с ужиманием', r.top === 506 && r.listMax === '186px' && r.bottom <= 800, r);
+
+// 3) Вверх — только у самого края экрана (внизу не помещается даже минимум
+//    из ~3 опций): панель разворачивается вверх целиком.
+r = run(900, 400, 760, 800);
+ok('вверх у края', r.top === 354 && r.bottom <= 892 && r.listMax === '', r);
+
+// 4) Регрессия: середина экрана, панель не влезает ни вниз, ни вверх.
+//    Старый код (оценка min(300,…)) ставил top=346 и низ вылезал на 246px
+//    за экран — последние каналы были недостижимы. Теперь — вверх с ужиманием.
+r = run(500, 400, 300, 340);
+ok('впритык прижата', r.top >= 8 && r.bottom <= 500 && r.listMax === '186px', r);
+
+// 5) Крошечный экран/крупный зум: список ужимается, панель влезает целиком.
+r = run(300, 420, 110, 150);
+ok('малый экран', r.listMax === '184px' && r.top >= 8 && r.bottom <= 300, r);
+
+// 6) Направление «сверху вниз» — дефолт: инвариант по всем позициям/экранам
+//    (панель всегда в экране) + подсчёт на реальных экранах (>=640px):
+//    вниз открывается в разы чаще, вверх — только у нижней кромки.
+let flipped = 0, downs = 0;
+for (const vh of [640, 720, 800, 900, 1080]) {
+  for (let t = 40; t < vh - 40; t += 40) {
+    const x = run(vh, 400, t, t + 40);
+    if (x.top < 8 || x.bottom > vh) { console.error('вылезла: ' + JSON.stringify({vh, t, x})); process.exit(1); }
+    if (x.top >= t + 40) downs++; else flipped++;
+  }
+}
+ok('вниз — преобладает', downs > flipped * 2, { downs, flipped });
+console.log('positionPanel: OK — вниз по умолчанию, вверх только у края, всегда в экране (вниз ' + downs + ' / вверх ' + flipped + ')');
+"""
+    _pph_path = os.path.join(_tmpdir, 'pp_harness.js')
+    with open(_pph_path, 'w', encoding='utf-8') as fh:
+        fh.write(pp_harness)
+    proc = subprocess.run(['node', _pph_path, _pp_path],
+                          capture_output=True, text=True, timeout=60)
+    check(proc.returncode == 0,
+          'харнесс Node: панель дропдауна всегда целиком в экране (все вьюпорты)'
+          + (f' ({proc.stdout.strip()})' if proc.stdout.strip() else '')
+          + (f' [{proc.stderr.strip()}]' if proc.stderr.strip() else ''))
+
+try:
+    shutil.rmtree(_tmpdir, ignore_errors=True)
+except Exception:
+    pass
+
+
 print('== страницы с селектами рендерятся ==')
 from web.app import app as _flask_app  # noqa: E402
 
@@ -174,7 +435,7 @@ with client.session_transaction() as s:
     s['logged_in'] = True
     s['username'] = 'SelectTest'
     s['role'] = 'owner'
-for path in ('/analytics', '/channels', '/roles', '/mod-center'):
+for path in ('/analytics', '/channels', '/roles', '/mod-center', '/channel-settings'):
     r = client.get(path)
     check(r.status_code == 200, f'{path} → {r.status_code}')
 
