@@ -271,6 +271,25 @@ class FakeChannel:
         return self.name
 
 
+class _FakeMember:
+    """Лёгкий участник для кэша демо-гильдии (профиль памяти)."""
+
+    class _Avatar:
+        url = 'https://i.imgur.com/demo.png'
+
+    def __init__(self, uid):
+        self.id = uid
+        self.name = f'Участник {uid}'
+        self.display_name = self.name
+        self.bot = False
+        self.status = 'online' if uid % 5 else 'idle'
+        self.roles = []
+        self.avatar = None
+        self.display_avatar = self._Avatar()
+        self.mention = f'<@{uid}>'
+        self.joined_at = NOW - timedelta(days=uid % 90)
+
+
 class FakeGuild:
     id = GID
     name = 'Демо-сервер Hakumo'
@@ -288,6 +307,8 @@ class FakeGuild:
     def __init__(self):
         self.channels = [FakeChannel(777001, 'доказательства'), FakeChannel(777002, 'общий')]
         self.text_channels = self.channels
+        # лёгкий кэш участников: профиль памяти показывает живые числа
+        self.members = [_FakeMember(2000 + i) for i in range(128)]
         self.voice_channels = []
         self.stage_channels = []
         self.forums = []
@@ -295,7 +316,6 @@ class FakeGuild:
         self.roles = []
         self.emojis = []
         self.stickers = []
-        self.members = []
 
     def get_member(self, uid):
         return None
@@ -319,8 +339,31 @@ class FakeUser:
         return 'Hakumo#0'
 
 
+class _FakeDiagnosticsCog:
+    """Стаб кога Diagnostics: живой снимок здоровья для демо-витрины."""
+
+    def get_health_snapshot(self):
+        now = time.time()
+        return {
+            'healthy': True, 'uptime_sec': int(now % 86400),
+            'latency_ms': 12.4, 'guilds': 1, 'cogs_loaded': 24,
+            'threads': 5, 'last_error': None,
+        }
+
+
+class _FakeTempModCog:
+    """Стаб кога TempModeration: активных наказаний в демо нет."""
+
+    _mutes = {}
+    _bans = {}
+    _kicks = {}
+    _scheduled = []
+
+
 class FakeBot:
     """Минимальный суррогат discord.Client для панели."""
+
+    _COGS = {'Diagnostics': _FakeDiagnosticsCog, 'TempModeration': _FakeTempModCog}
 
     def __init__(self):
         self.guilds = [FakeGuild()]
@@ -329,6 +372,7 @@ class FakeBot:
         self.ws = None
         self.loop = None
         self.owner_id = 7
+        self._cog_instances = {name: cls() for name, cls in self._COGS.items()}
 
     def is_ready(self):
         return True
@@ -343,7 +387,7 @@ class FakeBot:
         return next((g for g in self.guilds if g.id == gid), None)
 
     def get_cog(self, name):
-        return None
+        return self._cog_instances.get(name)
 
     def get_channel(self, cid):
         return None

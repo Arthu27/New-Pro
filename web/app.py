@@ -3542,6 +3542,97 @@ def api_bot_gc ():
     'after':after ,
     })
 
+@app .route ('/api/bot/memory-profile',methods =['POST'])
+@login_required
+@role_required ('owner')
+def api_bot_memory_profile ():
+    """Профиль памяти: КУДА уходит RAM — кэш Discord или Python-объекты.
+
+    Жалоба 30.08.2026: RSS 1649,8 МБ на «Статистике бота» при пороге
+    критичности 900 МБ. Чтобы не гадать, считаем по полочкам: сколько
+    участников/каналов/ролей держит шлюз, сколько живых объектов Python
+    и какие типы их больше всего. GC до замера отделяет мусор от живого.
+    """
+    import gc
+    from collections import Counter
+    if not bot_instance and _demo_mode ():
+        return jsonify ({
+        'success':True ,'demo':True ,
+        'rss_mb':412.6 ,'rss_after_gc_mb':401.8 ,'threads':18 ,
+        'guilds':1 ,'members_cached':1247 ,'channels_cached':14 ,
+        'roles_cached':9 ,'voice_clients':0 ,'cogs':24 ,'extensions':24 ,
+        'objects_total':486311 ,
+        'top_types':[['builtins.dict',94210],['builtins.instance_method',61884],
+                     ['builtins.str',58472],['builtins.function',24106],
+                     ['discord.user.User',8312],['builtins.set',6128],
+                     ['builtins.list',5904],['builtins.tuple',5231],
+                     ['builtins.type',2140],['builtins.weakref',1987]],
+        'per_guild':[{'name':'Демо-сервер Hakumo','members':1247}],
+        'gc_generations':[{'collections':214,'collected':1894,'uncollectable':0},
+                          {'collections':37,'collected':5421,'uncollectable':0},
+                          {'collections':9,'collected':12837,'uncollectable':0}]
+        })
+    rss_before =0.0
+    threads =0
+    try :
+        import psutil as _ps ,os as _os
+        _proc =_ps .Process (_os .getpid ())
+        rss_before =_proc .memory_info ().rss /1024 /1024
+        threads =_proc .num_threads ()
+    except Exception as _ex:
+        _log .debug ("api_bot_memory_profile(): psutil: %s",_ex)
+    gc .collect ()
+    rss_after =rss_before
+    try :
+        import psutil as _ps ,os as _os
+        rss_after =_ps .Process (_os .getpid ()).memory_info ().rss /1024 /1024
+    except Exception as _ex:
+        _log .debug ("api_bot_memory_profile(): повторный замер: %s",_ex)
+    guilds =0 ;members =0 ;channels =0 ;roles =0 ;voice =0
+    per_guild =[]
+    cogs =0 ;extensions =0
+    if bot_instance :
+        try :
+            guilds =len (bot_instance .guilds )
+            for g in bot_instance .guilds :
+                _m =len (getattr (g ,'members',None )or [])
+                members +=_m
+                channels +=len (getattr (g ,'channels',None )or [])
+                roles +=len (getattr (g ,'roles',None )or [])
+                per_guild .append ({'name':str (getattr (g ,'name','?'))[:40],'members':_m })
+            per_guild =sorted (per_guild ,key =lambda x :-x ['members'])[:5]
+            voice =len (getattr (bot_instance ,'voice_clients',None )or [])
+            cogs =len (getattr (bot_instance ,'cogs',{})or {})
+            extensions =len (getattr (bot_instance ,'extensions',{})or {})
+        except Exception as _ex:
+            _log .debug ("api_bot_memory_profile(): кэш Discord: %s",_ex)
+    objects_total =0
+    top_types =[]
+    try :
+        _objs =gc .get_objects ()
+        objects_total =len (_objs )
+        _cnt =Counter ()
+        for _o in _objs :
+            _t =type (_o )
+            _cnt [f'{_t .__module__ }.{_t .__name__ }']+=1
+        top_types =[[k ,v ]for k ,v in _cnt .most_common (15 )]
+        del _objs ,_cnt
+    except Exception as _ex:
+        _log .debug ("api_bot_memory_profile(): подсчёт объектов: %s",_ex)
+    return jsonify ({
+    'success':True ,
+    'rss_mb':round (rss_before ,1 ),
+    'rss_after_gc_mb':round (rss_after ,1 ),
+    'threads':threads ,
+    'guilds':guilds ,'members_cached':members ,
+    'channels_cached':channels ,'roles_cached':roles ,
+    'voice_clients':voice ,'cogs':cogs ,'extensions':extensions ,
+    'objects_total':objects_total ,'top_types':top_types ,
+    'per_guild':per_guild ,
+    'gc_generations':[dict (g )for g in gc .get_stats ()]
+    })
+
+
 @app .route ('/api/bot/sync',methods =['POST'])
 @login_required 
 @role_required ('admin')

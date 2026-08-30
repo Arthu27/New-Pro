@@ -144,5 +144,90 @@ sh = open(os.path.join(ROOT, 'start.sh'), encoding='utf-8').read()
 check('logs/bot_restarts.log' in sh, 'каждый выход процесса пишется в журнал')
 check('data/run_log.json' in sh, 'подсказка на журнал run_log')
 
+print('== 6. Профиль памяти: панель показывает, КУДА уходит RAM ==')
+try:
+    _tmp_mem = tempfile.mkdtemp(prefix='hakumo_mem_')
+    _old_cwd = os.getcwd()
+    os.chdir(_tmp_mem)
+    os.makedirs('data', exist_ok=True)
+    os.environ['DB_PATH'] = os.path.join(_tmp_mem, 'data', 'bot.db')
+    os.environ.setdefault('PANEL_USER', 'admin')
+    os.environ.setdefault('PANEL_PASSWORD', 'test123')
+
+    class _Mem:
+        def __init__(s, status):
+            s.status = status
+        def __str__(s):
+            return 'online'
+
+    class _MemGuild:
+        id = 555
+        name = 'Тестовый'
+        members = [_Mem('online') for _ in range(120)]
+        channels = [object() for _ in range(7)]
+        roles = [object() for _ in range(4)]
+
+    class _MemBot:
+        guilds = [_MemGuild()]
+        user = None
+        latency = 0.02
+        voice_clients = []
+        cogs = {'a': 1, 'b': 2}
+        extensions = {'a': 1}
+        status = 'online'
+        def is_closed(s):
+            return False
+        def is_ready(s):
+            return True
+
+    from web.app import app as _app, set_bot_instance as _sbi
+    _sbi(_MemBot())
+    _c = _app.test_client()
+    r = _c.post('/api/bot/memory-profile')          # без логина — мимо
+    check(r.status_code in (301, 302, 403), 'профиль памяти закрыт от гостей')
+    with _c.session_transaction() as _sess:
+        _sess['logged_in'] = True
+        _sess['username'] = 'Owner'
+        _sess['role'] = 'owner'
+    r = _c.post('/api/bot/memory-profile')
+    d = r.get_json() or {}
+    check(r.status_code == 200 and d.get('success') is True, 'профиль снимается (200)')
+    check(d.get('members_cached') == 120 and d.get('guilds') == 1,
+          'кэш участников посчитан честно (120)')
+    check(d.get('channels_cached') == 7 and d.get('roles_cached') == 4,
+          'каналы и роли посчитаны')
+    check(isinstance(d.get('objects_total'), int) and d.get('objects_total', 0) > 1000,
+          f"живых объектов Python: {d.get('objects_total')}")
+    check(isinstance(d.get('top_types'), list) and len(d['top_types']) >= 5,
+          'топ типов объектов собран')
+    check(d.get('per_guild') and d['per_guild'][0]['members'] == 120,
+          'топ сервера по кэшу: кто ест память')
+    check(d.get('rss_mb', 0) > 10, f"RSS процесса виден: {d.get('rss_mb')} МБ")
+    check(d.get('rss_after_gc_mb') is not None, 'замер после GC отделяет мусор от живого')
+    # admin (не owner) — мимо: профиль тяжёлый, только владельцу
+    with _c.session_transaction() as _sess:
+        _sess['role'] = 'admin'
+    r = _c.post('/api/bot/memory-profile')
+    check(r.status_code == 403, 'профиль памяти — только owner')
+    # страница статистики: кнопка есть у owner, нет у простых
+    with _c.session_transaction() as _sess:
+        _sess['role'] = 'owner'
+    page = _c.get('/bot-stats').get_data(as_text=True)
+    check('memProfileBtn' in page, 'кнопка «Снять профиль» на странице статистики')
+    with _c.session_transaction() as _sess:
+        _sess['role'] = 'moderator'
+    page = _c.get('/bot-stats').get_data(as_text=True)
+    check('memProfileBtn' not in page, 'модератору кнопку не показываем')
+    _sbi(None)
+    os.chdir(_old_cwd)
+    shutil.rmtree(_tmp_mem, ignore_errors=True)
+except Exception as e:
+    check(False, f'профиль памяти: {e}')
+    try:
+        os.chdir(_old_cwd)
+        shutil.rmtree(_tmp_mem, ignore_errors=True)
+    except Exception:
+        pass
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

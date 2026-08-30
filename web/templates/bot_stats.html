@@ -2,6 +2,13 @@
 {% block title %}Статистика бота — Hakumo{% endblock %}
 {% block page_title %}Статистика бота{% endblock %}
 {% block content %}
+<style>
+.mem-profile .mem-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.mem-profile .mem-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line)}
+.mem-profile .mem-row b{white-space:nowrap}
+.mem-profile table.tbl.compact{width:100%;font-size:12px}
+@media (max-width:900px){.mem-profile .mem-cols{grid-template-columns:1fr}}
+</style>
 
 <div class="page-head">
   <div class="page-head-copy">
@@ -54,6 +61,17 @@
       <span class="badge neutral mono" id="ramNow">—</span></div>
     <div class="panel-body"><div class="chart-box" id="ramSpark"></div></div>
   </div>
+
+  {% if role == 'owner' %}
+  <div class="panel" id="memProfilePanel">
+    <div class="panel-head"><div><h2><i class="fas fa-magnifying-glass-chart"></i> Профиль памяти</h2>
+      <div class="sub">Куда уходит RAM: кэш Discord (участники, каналы) против Python-объектов. Замер ~2 сек, перед ним сборка мусора.</div></div>
+      <button type="button" id="memProfileBtn" class="btn"><i class="fas fa-gauge"></i> Снять профиль</button></div>
+    <div class="panel-body">
+      <div id="memProfileResult" class="hint" style="margin:0">Нажмите «Снять профиль» — увидите раскладку по полочкам. Если RAM выше 900 МБ — этот профиль покажет, кто виновник, и его можно прислать в поддержку одним текстом.</div>
+    </div>
+  </div>
+  {% endif %}
 
   {% if role == 'owner' or role == 'admin' %}
   <div class="panel">
@@ -151,6 +169,64 @@
       window.HakumoChart.sparkline($('ramSpark'), ramHist, { height: 104, pad: 34, color: ramTone(ramPct || ram), title: 'RAM, МБ', grid: true, labels: true, unit: ' МБ' });
     }
   }
+
+  function memRow(label, value) {
+    return '<div class="mem-row"><span>' + esc(label) + '</span><b>' + esc(value) + '</b></div>';
+  }
+
+  function renderMemProfile(d) {
+    var box = $('memProfileResult');
+    var rows = [
+      memRow('RSS процесса', Math.round(d.rss_mb) + ' МБ' + (d.rss_after_gc_mb != null ? ' · после GC ' + Math.round(d.rss_after_gc_mb) + ' МБ' : '')),
+      memRow('Потоков', String(d.threads || 0)),
+      memRow('Серверов · участников в кэше', (d.guilds || 0) + ' · ' + (d.members_cached || 0).toLocaleString('ru-RU')),
+      memRow('Каналов · ролей в кэше', (d.channels_cached || 0) + ' · ' + (d.roles_cached || 0)),
+      memRow('Голосовых сессий · когов', (d.voice_clients || 0) + ' · ' + (d.cogs || 0)),
+      memRow('Живых объектов Python', (d.objects_total || 0).toLocaleString('ru-RU'))
+    ].join('');
+    var guilds = (d.per_guild || []).map(function (g) {
+      return '<span class="badge neutral mono">' + esc(g.name) + ' — ' + (g.members || 0).toLocaleString('ru-RU') + '</span>';
+    }).join(' ');
+    var top = (d.top_types || []).slice(0, 8).map(function (t) {
+      return '<tr><td class="mono">' + esc(t[0]) + '</td><td>' + (t[1] || 0).toLocaleString('ru-RU') + '</td></tr>';
+    }).join('');
+    var verdict = (d.rss_mb || 0) > 900 ? '<div class="hint error">Выше критической отметки 900 МБ — сохраните этот профиль и перешлите в поддержку.</div>'
+                : (d.rss_mb || 0) > 700 ? '<div class="hint">Выше рабочей нормы 700 МБ — понаблюдайте за ростом на графике RAM.</div>'
+                : '<div class="hint">В пределах нормы (до 700 МБ).</div>';
+    box.className = '';
+    box.innerHTML =
+      '<div class="mem-profile">' +
+        '<div class="mem-cols">' +
+          '<div>' + rows + '</div>' +
+          '<div>' +
+            (guilds ? '<div class="kpi-label" style="margin-bottom:6px">Топ серверов по кэшу</div><div style="display:flex;flex-wrap:wrap;gap:6px">' + guilds + '</div>' : '') +
+            (top ? '<div class="kpi-label" style="margin:12px 0 6px">Python: типы объектов (шт.)</div>' +
+              '<table class="tbl compact"><thead><tr><th>тип</th><th>шт.</th></tr></thead><tbody>' + top + '</tbody></table>' : '') +
+          '</div>' +
+        '</div>' +
+        verdict +
+      '</div>';
+  }
+
+  $('memProfileBtn').addEventListener('click', async function () {
+    var btn = $('memProfileBtn');
+    var box = $('memProfileResult');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Считаю объекты…';
+    box.className = 'hint';
+    box.textContent = 'Снимаю профиль: сборка мусора и подсчёт живых объектов, пару секунд…';
+    try {
+      var r = await fetch('/api/bot/memory-profile', { method: 'POST' });
+      var d = await r.json();
+      if (r.ok && d.success) { renderMemProfile(d); }
+      else { box.className = 'hint error'; box.textContent = d.error || 'Профиль недоступен.'; }
+    } catch (e) {
+      box.className = 'hint error';
+      box.textContent = 'Не удалось снять профиль: ' + e;
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-gauge"></i> Снять профиль';
+  });
 
   function showStatus(msg, ok) {
     var el = $('restart-status');
