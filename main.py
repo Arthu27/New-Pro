@@ -843,26 +843,68 @@ async def on_resumed():
     _log.info("Соединение с Discord восстановлено (resume)")
 
 
+# Сколько ждём синк команд, прежде чем признать его зависшим. Обычный
+# синк укладывается в 1–5 секунд; 180с — с огромным запасом на ретраи
+# внутри full_sync (3 попытки × 2с паузы на каждый скоуп).
+SYNC_TIMEOUT_SEC = int((os.environ.get('SYNC_TIMEOUT_SEC', '') or '180').strip() or 180)
+
+
+async def _sync_commands_bg():
+    """Синк слеш-команд ФОНОМ, с таймаутом — не блокирует запуск бота.
+
+    Любой исход (успех, ошибка, зависание) не мешает боту работать:
+    статус, голос и веб-панель поднимаются независимо в on_ready.
+    """
+    from services.sync_filtered import full_sync as _full_sync
+    try:
+        _n = len(await asyncio.wait_for(_full_sync(bot), timeout=SYNC_TIMEOUT_SEC))
+        print(f'[СИНХРОНИЗАЦИЯ] Slash команды синхронизированы: {_n}')
+        _log.info('Синхронизация слеш-команд завершена: %s команд', _n)
+    except asyncio.TimeoutError:
+        print(f'[СИНХРОНИЗАЦИЯ] ⚠ Не уложилась в {SYNC_TIMEOUT_SEC}с — '
+              f'пропускаю. Бот РАБОТАЕТ, в Discord осталось прежнее меню '
+              f'команд. Причина обычно внешняя: rate limit Discord или сеть. '
+              f'Повторить вручную — кнопка «Синхронизировать» в веб-панели.')
+        _log.warning('Синк команд не уложился в %sс — бот продолжает работу '
+                     'со старым меню', SYNC_TIMEOUT_SEC)
+        try:
+            from services.sync_filtered import note_sync_error as _nse
+            _nse(bot, TimeoutError(f'таймаут {SYNC_TIMEOUT_SEC}с'),
+                 mode='on-ready-timeout')
+        except Exception as _nse_ex:
+            _log.debug('note_sync_error(timeout): %s', _nse_ex)
+    except Exception as e:
+        print(f'[СИНХРОНИЗАЦИЯ] Ошибка: {e} — бот продолжает работу')
+        # причину видно и в панели (sync_last.json), не только в консоли
+        try:
+            from services.sync_filtered import note_sync_error as _nse
+            _nse(bot, e, mode='on-ready-failed')
+        except Exception as _nse_ex:
+            _log.warning("on_ready(): не записали ошибку синка в sync_last.json: %s", _nse_ex)
+
+
 @bot.event
 async def on_ready():
     global _synced
     if not _synced:
+        _synced = True
         # Команды живут НА СЕРВЕРЕ (guild-команды): мгновенно появляются
         # и мгновенно исчезают при выключении в панели. Выключенные
         # («Команды вкл/выкл») в Discord вообще не попадают.
-        from services.sync_filtered import full_sync as _full_sync
-        try:
-            _n = len(await _full_sync(bot))
-            print(f'[СИНХРОНИЗАЦИЯ] Slash команды синхронизированы: {_n}')
-        except Exception as e:
-            print(f'[СИНХРОНИЗАЦИЯ] Ошибка: {e}')
-            # причину видно и в панели (sync_last.json), не только в консоли
-            try:
-                from services.sync_filtered import note_sync_error as _nse
-                _nse(bot, e, mode='on-ready-failed')
-            except Exception as _nse_ex:
-                _log.warning("on_ready(): не записали ошибку синка в sync_last.json: %s", _nse_ex)
-        _synced = True
+        #
+        # ВАЖНО (инцидент 30.08 «бот не включается»): синк уходит ФОНОВОЙ
+        # задачей и НЕ держит on_ready. Раньше здесь стояло `await
+        # full_sync(bot)` — а у синка нет своего таймаута: он ходит в
+        # Discord bulk-upsert'ами, и один залипший запрос (429 с длинным
+        # retry_after, моргнувшая сеть, туннель) вешал on_ready НАВСЕГДА.
+        # Всё, что идёт ниже, не выполнялось никогда: бот не выставлял
+        # статус (в Discord выглядел офлайн — «не включается»), не
+        # подключался к голосовому, и главное — не звал
+        # web.app.set_bot_instance(bot), поэтому веб-панель не видела бота.
+        # Логи при этом обрывались на строке фоновой задачи тикетов, будто
+        # «всё зависло». Теперь падение/зависание синка — это просто
+        # предупреждение в логе: бот остаётся живым и управляемым.
+        bot.loop.create_task(_sync_commands_bg())
         # Куча к этому моменту построена: замораживаем стартовый граф и
         # делаем сборки редкими — мультисекундные паузы GC рвали цикл
         # (инцидент 30.08: зависания 6–10 сек каждые ~3 мин, стек-монитор
@@ -899,24 +941,48 @@ async def on_ready():
         except Exception as _ex:
             _log.debug("on_ready(): подавлено: %s", _ex)
 
-    await bot.change_presence(
-        activity=discord.Activity(type=_activity_type, name=_activity_text),
-        status=_status
-    )
-    print(f"[ОК] Статус: {_status} | Активность: {_activity_text}")
+    # Каждый шаг ниже — В СВОЁМ try и с таймаутом: on_ready обязан дойти
+    # до конца (инцидент 30.08). Один зависший сетевой вызов не должен
+    # оставлять бота без статуса и — главное — без связи с веб-панелью.
+    try:
+        await asyncio.wait_for(bot.change_presence(
+            activity=discord.Activity(type=_activity_type, name=_activity_text),
+            status=_status
+        ), timeout=30)
+        print(f"[ОК] Статус: {_status} | Активность: {_activity_text}")
+    except asyncio.TimeoutError:
+        print("[СТАТУС] ⚠ Discord не ответил за 30с — статус не выставлен, "
+              "бот продолжает работу")
+        _log.warning("on_ready(): change_presence не уложился в 30с")
+    except Exception as _ex:
+        print(f"[СТАТУС] ⚠ Не удалось выставить статус: {_ex}")
+        _log.warning("on_ready(): change_presence: %s", _ex)
 
-    channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
-    if channel and isinstance(channel, discord.VoiceChannel):
-        vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
-        if not vc:
-            try:
-                await channel.connect(self_deaf=False)
-                print(f"[ОК] Подключен к голосовому каналу: {channel.name}")
-            except Exception as e:
-                print(f"[ОШИБКА] Ошибка подключения к голосу: {e}")
+    try:
+        channel = bot.get_channel(VOICE_CHANNEL_ID) if VOICE_CHANNEL_ID else None
+        if channel and isinstance(channel, discord.VoiceChannel):
+            vc = discord.utils.get(bot.voice_clients, guild=channel.guild)
+            if not vc:
+                try:
+                    await asyncio.wait_for(channel.connect(self_deaf=False),
+                                           timeout=60)
+                    print(f"[ОК] Подключен к голосовому каналу: {channel.name}")
+                except asyncio.TimeoutError:
+                    print("[ОШИБКА] Голосовой канал не ответил за 60с — пропускаю")
+                except Exception as e:
+                    print(f"[ОШИБКА] Ошибка подключения к голосу: {e}")
+    except Exception as _ex:
+        _log.warning("on_ready(): голосовое подключение: %s", _ex)
 
-    from web.app import set_bot_instance
-    set_bot_instance(bot)
+    # Связь с веб-панелью — САМОЕ ВАЖНОЕ в хвосте on_ready: без неё панель
+    # показывает «бот выключен», хотя он в сети. Держим отдельно и защищённо.
+    try:
+        from web.app import set_bot_instance
+        set_bot_instance(bot)
+        print("[ВЕБ] Панель подключена к боту")
+    except Exception as _ex:
+        print(f"[ВЕБ] ⚠ Панель не получила бота: {_ex}")
+        _log.error("on_ready(): set_bot_instance: %s", _ex)
 
     _tunnel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tunnel_url.txt")
     if not getattr(bot, '_panel_link_sent', False) and os.path.exists(_tunnel_path):
