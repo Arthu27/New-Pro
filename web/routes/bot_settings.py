@@ -56,8 +56,8 @@ def register(ctx):
                         'discord_version': _discord.__version__,
                         'prefix': Config.COMMAND_PREFIX,
                         'presence': {'status': cfg.get('status', 'online'),
-                                     'activity_type': cfg.get('activity_type', 'listening'),
-                                     'activity_text': cfg.get('activity_text', '.gg/Hakumo')}})
+                                     'activity_type': cfg.get('activity_type', 'watching'),
+                                     'activity_text': cfg.get('activity_text', 'Hakumo') or 'Hakumo'}})
 
 
     @app.route('/api/bot-settings/presence', methods=['POST'])

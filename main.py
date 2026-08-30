@@ -871,8 +871,8 @@ async def on_ready():
     import json as _j
     _cfg_file = 'data/bot_config.json'
     _status = discord.Status.online   # дефолт — зелёный: idle выглядел как «бот отключился»
-    _activity_type = discord.ActivityType.listening
-    _activity_text = '.gg/Hakumo'
+    _activity_type = discord.ActivityType.watching   # «Смотрит Hakumo» — заказ владельца 30.08
+    _activity_text = 'Hakumo'
     if os.path.exists(_cfg_file):
         try:
             with open(_cfg_file, encoding='utf-8') as _f:
@@ -880,8 +880,9 @@ async def on_ready():
             _status_map = {'online': discord.Status.online, 'idle': discord.Status.idle, 'dnd': discord.Status.dnd, 'invisible': discord.Status.invisible}
             _type_map = {'listening': discord.ActivityType.listening, 'playing': discord.ActivityType.playing, 'watching': discord.ActivityType.watching, 'competing': discord.ActivityType.competing}
             _status = _status_map.get(_cfg.get('status', 'online'), discord.Status.online)
-            _activity_type = _type_map.get(_cfg.get('activity_type', 'listening'), discord.ActivityType.listening)
-            _activity_text = _cfg.get('activity_text', '.gg/Hakumo')
+            _activity_type = _type_map.get(_cfg.get('activity_type', 'watching'), discord.ActivityType.watching)
+            # пустая строка в конфиге не должна оставлять бота без подписи
+            _activity_text = str(_cfg.get('activity_text', 'Hakumo') or '').strip()[:80] or 'Hakumo'
         except Exception as _ex:
             _log.debug("on_ready(): подавлено: %s", _ex)
 

@@ -99,6 +99,10 @@ check("async def _memory_watchdog" in mn and 'memory_high' in mn,
       'сторож памяти (RSS → GC → запись memory_high)')
 check("asyncio.create_task(_memory_watchdog())" in mn,
       'сторож запускается в main()')
+check('discord.ActivityType.watching' in mn and "_activity_text = 'Hakumo'" in mn,
+      'дефолт присутствия — «Смотрит Hakumo» (заказ владельца 30.08)')
+check("or 'Hakumo'" in mn,
+      'пустой текст активности не оставляет бота без подписи')
 
 print('== 4. auto_update.py: безопасность ==')
 import auto_update as AU  # noqa: E402

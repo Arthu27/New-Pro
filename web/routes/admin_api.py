@@ -368,8 +368,8 @@ def register(ctx):
         status_map ={'online':discord .Status .online ,'idle':discord .Status .idle ,'dnd':discord .Status .dnd ,'invisible':discord .Status .invisible }
         type_map ={'listening':discord .ActivityType .listening ,'playing':discord .ActivityType .playing ,'watching':discord .ActivityType .watching ,'competing':discord .ActivityType .competing }
         status =status_map .get (d .get ('status','online'),discord .Status .online )
-        atype =type_map .get (d .get ('activity_type','listening'),discord .ActivityType .listening )
-        atext =d .get ('activity_text','.gg/Hakumo')
+        atype =type_map .get (d .get ('activity_type','watching'),discord .ActivityType .watching )
+        atext =str (d .get ('activity_text','Hakumo')or '').strip ()[:80]or 'Hakumo'
         def _set ():
             _run_async (bot .change_presence (status =status ,activity =discord .Activity (type =atype ,name =atext )))
         asyncio .run_coroutine_threadsafe (_set (),bot .loop ).result (timeout =5 )
