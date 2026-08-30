@@ -484,7 +484,16 @@ class Security (commands .Cog ):
             except Exception as _ex:
                 _log.debug("_backup_guild(): подавлено: %s", _ex)
 
-    @app_commands .command (name ="backup",description ="Создать резервную копию настроек сервера")
+    # ВАЖНО (инцидент 30.08): имена были "backup" / "backup-list" и в лоб
+    # сталкивались с группой /backup из cogs/backup_cog.py. Итог зависел от
+    # .env: с пустым MAIN_GUILD_ID оба кога лезли в ГЛОБАЛЬНОЕ дерево и
+    # security.py падал на старте (CommandAlreadyRegistered: 'backup'), а с
+    # заданным MAIN_GUILD_ID падения не было, но одна и та же команда
+    # оказывалась и в глобальном, и в серверном меню — «каждая команда по
+    # две». Здесь снимок НАСТРОЕК сервера (роли/каналы в JSON), в backup_cog —
+    # архив data/: разные вещи, поэтому имена разведены по префиксу security-*
+    # (как у соседей /security-toggle и /security-newaccount).
+    @app_commands .command (name ="security-backup",description ="Снимок настроек сервера (роли и каналы)")
     @app_commands .checks .has_permissions (administrator =True )
     async def backup_now (self ,interaction :discord .Interaction ):
         await interaction .response .defer (ephemeral =True )
@@ -504,7 +513,7 @@ class Security (commands .Cog ):
         e .set_footer (text ="💾 Hakumo Backup • ежедневное авто-копирование активно")
         await interaction .followup .send (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="backup-list",description ="Показать список резервных копий")
+    @app_commands .command (name ="security-backup-list",description ="Список снимков настроек сервера")
     @app_commands .checks .has_permissions (administrator =True )
     async def backup_list (self ,interaction :discord .Interaction ):
         if not os .path .exists (BACKUP_DIR ):
@@ -516,7 +525,7 @@ class Security (commands .Cog ):
         ],reverse =True )
         e =discord .Embed (title ="💾 Резервные копии сервера",color =0x3498db ,timestamp =datetime .now (timezone .utc ))
         if not backups :
-            e .description ="Копий пока не найдено. Создайте копию командой `/backup`."
+            e .description ="Копий пока не найдено. Создайте копию командой `/security-backup`."
         else :
             e .description ="\n".join (f"• `{b}`"for b in backups )
         e .set_footer (text ="💾 Хранятся последние 7 копий")
