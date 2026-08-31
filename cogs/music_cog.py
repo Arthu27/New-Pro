@@ -290,43 +290,22 @@ class MusicCog(commands.Cog):
     # ── движок воспроизведения ───────────────────────────────────────────
     @staticmethod
     def _ffmpeg_binary():
-        """ffmpeg для декодирования: FFMPEG_BINARY в .env, PATH или типичные места.
+        """ffmpeg для декодирования: единый детектор services/ffmpeg_probe.
 
-        На Windows VDS ffmpeg часто лежит рядом с ботом или в стандартных
-        папках, но не в PATH — раньше музыка молча не играла. Ищем и там.
+        Ищет в FFMPEG_BINARY (.env), системном PATH и типичных местах
+        установки (Windows: winget/choco/scoop/Program Files/рядом с ботом;
+        Linux: /usr/bin, /usr/local/bin, /opt). Раньше на Windows VDS ffmpeg
+        часто лежал на диске, но не в PATH — музыка молча не играла.
         """
-        # 1) явный путь из .env (может быть и директорией, и файлом)
-        env_path = os.environ.get('FFMPEG_BINARY')
-        if env_path:
-            p = env_path.strip().strip('"')
-            if os.path.isdir(p):
-                cand = os.path.join(p, 'ffmpeg.exe')
-                if os.path.isfile(cand):
-                    return cand
-            if os.path.isfile(p):
-                return p
-        # 2) системный PATH
-        found = shutil.which('ffmpeg')
-        if found:
-            return found
-        # 3) типичные места (Windows) — локально рядом с ботом и Program Files
-        _exe = 'ffmpeg.exe' if os.name == 'nt' else 'ffmpeg'
-        candidates = [
-            os.path.join(os.getcwd(), 'ffmpeg', 'bin', _exe),
-            os.path.join(os.getcwd(), 'bin', _exe),
-            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                         'ffmpeg', 'bin', _exe),
-        ]
-        if os.name == 'nt':
-            for base in (os.environ.get('ProgramFiles', ''),
-                         os.environ.get('ProgramFiles(x86)', ''),
-                         r'C:\ffmpeg'):
-                if base:
-                    candidates.append(os.path.join(base, 'ffmpeg', 'bin', _exe))
-        for c in candidates:
-            if c and os.path.isfile(c):
-                return c
-        return None
+        try:
+            from services.ffmpeg_probe import find_ffmpeg
+            found = find_ffmpeg()   # .env (FFMPEG_BINARY) + PATH + типичные места
+            if found:
+                return found
+        except Exception as _ex:
+            log.debug('music: ffmpeg_probe недоступен (%s) — пробую PATH', _ex)
+        # запасной вариант — PATH (минимальные окружения/тесты)
+        return shutil.which('ffmpeg') or shutil.which('ffmpeg.exe')
 
     async def _resolve_stream(self, query: str):
         """yt-dlp: ссылка или поиск → (прямой аудио-url, название трека).
@@ -437,11 +416,21 @@ class MusicCog(commands.Cog):
             if self._ffmpeg_binary() is None:
                 # Без ffmpeg ничего не заиграет: очередь не трогаем,
                 # объясняем один раз и останавливаемся.
+                _is_win = os.name == 'nt'
+                if _is_win:
+                    hint = ('Поставь ffmpeg одним из способов:\n'
+                            '• winget: `winget install Gyan.FFmpeg` (потом перезапуск бота);\n'
+                            '• или скачай с gyan.dev/ffmpeg и распакуй `ffmpeg.exe` '
+                            'рядом с ботом в папку `bin/` или `ffmpeg/bin/`;\n'
+                            '• либо укажи путь в `.env`: `FFMPEG_BINARY=путь/к/ffmpeg.exe`.')
+                else:
+                    hint = ('Установи пакет ffmpeg (`sudo apt install ffmpeg` и т.п.) '
+                            'или укажи путь в `.env`: '
+                            '`FFMPEG_BINARY=путь/к/ffmpeg`.')
                 await self._announce(
                     guild, track, 'error', 'Нет ffmpeg',
-                    'На сервере не установлен **ffmpeg** — музыка не '
-                    'сможет играть. Поставь его или укажи путь в '
-                    '`.env`: `FFMPEG_BINARY=путь/к/ffmpeg`.')
+                    'Для музыки нужен **ffmpeg** (декодирует аудио), его не нашлось '
+                    'ни в PATH, ни в типичных папках.\n' + hint)
                 return False
 
             track['url'] = url

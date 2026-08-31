@@ -776,8 +776,12 @@ class Reports(commands.Cog):
         has = field != 'Нарушений не было'
         e = discord.Embed(title='Мои нарушения',
                           description=field, color=0x99AAB5)
-        await interaction.response.send_message(
-            embed=e, view=MyViolationsView() if has else None, ephemeral=True)
+        # ВАЖНО: discord.py send_message падает на view=None (ждёт MISSING),
+        # поэтому view передаём только когда реально есть.
+        kwargs = {'embed': e, 'ephemeral': True}
+        if has:
+            kwargs['view'] = MyViolationsView()
+        await interaction.response.send_message(**kwargs)
 
     @app_commands.command(name='report-setup',
                           description='Настроить систему репортов: канал + роль + права')

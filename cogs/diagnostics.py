@@ -460,11 +460,14 @@ class Diagnostics (commands .Cog ):
             return
         await interaction .response .defer (ephemeral =True )
         from services import self_update as SU
-        from config import Config as _Cfg
         bot_dir =os .path .dirname (os .path .dirname (os .path .abspath (__file__ )))
+        # Ветка обновления = та, на которой бот реально запущен (панель/.env
+        # могут переопределить). Раньше тут был захардкоженный main — и
+        # /update откатывал бота на старую ветку без фиксов.
+        _repo ,_branch =await asyncio .to_thread (SU ._source )
         edit =interaction .followup .edit_message
         msg =await interaction .followup .send (
-            f" Обновление: проверяю свежую версию ветки **{_Cfg.UPDATE_BRANCH}** из `{_Cfg.UPDATE_REPO}`…",wait =True )
+            f" Обновление: проверяю свежую версию ветки **{_branch}** из `{_repo}`…",wait =True )
         # ── 0. Уже свежий? Тогда не качаем и не перезапускаемся вообще.
         sha_remote =await asyncio .to_thread (SU .remote_sha )
         sha_local =await asyncio .to_thread (SU .local_sha ,bot_dir )
@@ -477,7 +480,7 @@ class Diagnostics (commands .Cog ):
         if git_tried :
             await edit (message_id =msg .id ,
                         content =" Обновляю через git — по сети идут только изменённые данные…")
-            ok ,err ,info =await asyncio .to_thread (SU .git_update ,bot_dir ,_Cfg .UPDATE_BRANCH )
+            ok ,err ,info =await asyncio .to_thread (SU .git_update ,bot_dir ,_branch )
             if ok :
                 if info .get ('up_to_date'):
                     await edit (message_id =msg .id ,
@@ -517,7 +520,7 @@ class Diagnostics (commands .Cog ):
                 sha =sha_remote or await asyncio .to_thread (SU .remote_sha )
                 ok ,err ,stats =await asyncio .to_thread (
                     SU .stage_update ,zip_path ,bot_dir ,root ,rel ,
-                    (interaction .channel_id or 0),(sha or ''),_Cfg .UPDATE_BRANCH )
+                    (interaction .channel_id or 0),(sha or ''),_branch )
                 if not ok :
                     await edit (message_id =msg .id ,content =f" Замена не удалась: {err }. Перезапуск не делаю.")
                     return

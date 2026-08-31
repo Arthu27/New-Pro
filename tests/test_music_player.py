@@ -251,7 +251,19 @@ for need in ('async def _resolve_stream', 'async def _play_next',
     check(need in src, f'в коге есть {need}')
 check('yt_dlp.YoutubeDL' in src or 'yt_dlp' in src,
       'движок использует yt-dlp (ссылки/названия)')
-check("'FFMPEG_BINARY'" in src, 'путь к ffmpeg настраивается через .env')
+# FFMPEG_BINARY читается единым детектором services/ffmpeg_probe
+# (его зовёт music_cog._ffmpeg_binary) — проверяем оба файла.
+_probe_src = open(os.path.join(ROOT, 'services', 'ffmpeg_probe.py'),
+                  encoding='utf-8').read() if False else ''
+try:
+    import os as _os
+    _probe_src = open(_os.path.join(_os.path.dirname(_os.path.dirname(
+        _os.path.abspath(__file__))), 'services', 'ffmpeg_probe.py'),
+        encoding='utf-8').read()
+except Exception:
+    _probe_src = ''
+check("'FFMPEG_BINARY'" in src or "'FFMPEG_BINARY'" in _probe_src,
+      'путь к ffmpeg настраивается через .env')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

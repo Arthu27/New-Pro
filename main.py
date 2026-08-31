@@ -1235,12 +1235,11 @@ async def main():
             }
         except Exception:
             _facts['hardcoded_ids'] = {}
-        # ffmpeg для музыки: проверяем тем же детектором, что и music_cog
+        # ffmpeg для музыки: единый детектор (PATH + .env + типичные
+        # места установки на Windows/Linux), тот же, что у music_cog.
         try:
-            import shutil as _sh
-            _ff = (os.environ.get('FFMPEG_BINARY') or _sh.which('ffmpeg')
-                   or _sh.which('ffmpeg.exe'))
-            _facts['ffmpeg'] = _ff or False
+            from services.ffmpeg_probe import find_ffmpeg
+            _facts['ffmpeg'] = find_ffmpeg() or False
         except Exception:
             _facts['ffmpeg'] = False
         _results = _pf.run_checks(facts=_facts)
