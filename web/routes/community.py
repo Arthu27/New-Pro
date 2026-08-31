@@ -119,18 +119,25 @@ def register(ctx):
 
         # Рост участников: реконструкция по реальным приходам/уходам.
         result['member_labels'] = result['daily_labels']
+        guild = None
         if bot:
             guild = bot.get_guild(int(guild_id))
-            mc = guild.member_count if guild else 0
-        else:
-            mc = 0
-        counts = [mc] * 7
+        mc = guild.member_count if guild else 0
+        counts = []
         try:
-            from web.routes.analytics_plus import member_flow
+            from web.routes.analytics_plus import member_flow, member_count_series
             flow = member_flow(guild_id, days=7)
-            if any(flow.get('joins')) or any(flow.get('leaves')):
-                counts = [max(0, mc - (sum(flow['joins'][i:]) - sum(flow['leaves'][i:])))
-                          for i in range(7)]
+            if mc:
+                # Бот на сервере — точка «сейчас» известна, восстанавливаем ряд.
+                counts = member_count_series(mc, flow, days=7)
+            else:
+                # Бот не в сети/нет гильдии: абсолютный состав неизвестен.
+                # Рисуем ЧЕСТНУЮ относительную динамику (0 = сегодня), а не
+                # выдуманные абсолютные числа — иначе линия «участников» врёт.
+                if any(flow.get('joins')) or any(flow.get('leaves')):
+                    rel = member_count_series(0, flow, days=7)
+                    base = rel[-1]
+                    counts = [v - base for v in rel]
         except Exception as ex:
             _log.debug('api_guild_analytics(): member_flow подавлено: %s', ex)
         result['member_counts'] = counts

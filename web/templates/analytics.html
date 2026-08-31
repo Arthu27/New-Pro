@@ -1018,6 +1018,9 @@ function renderCharts(d) {
   }
 
   var _anFp = '';
+  var _extrasLast = 0;   // когда в последний раз тянули доп-блоки (мс)
+  var _EXTRAS_TTL = 20000; // доп-блоки освежаем не чаще раза в 20 сек
+  var _manualRefresh = false; // нажата кнопка «Обновить» — форсим доп-блоки
   async function load() {
     if (_loading) return;
     _loading = true;
@@ -1028,8 +1031,13 @@ function renderCharts(d) {
       var res = await fetch('/api/guild/' + gid + '/analytics');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var d = await res.json();
-      /* Данные не изменились — ничего не перерисовываем:
-         «Самые активные» и графики не мигают, как при обновлении страницы */
+      /* Базовые цифры (сообщения/топы) не изменились — списки и графики
+         НЕ перерисовываем (без мигания). НО доп-блоки (теплокарта, поток,
+         неделя, рекорды, мод-нагрузка, войс, инвайты, детализация каналов)
+         грузятся отдельными запросами — их подтягиваем при первом заходе
+         и далее не чаще раза в _EXTRAS_TTL: раньше при неизменных базовых
+         данных они не запрашивались вовсе и могли навсегда остаться пустыми,
+         если первая попытка не успела/упала. */
       var fp = String(JSON.stringify({
         m: Array.isArray(d.top_members) ? d.top_members.slice(0, 10) : [],
         c: Array.isArray(d.top_channels) ? d.top_channels.slice(0, 10) : [],
@@ -1038,9 +1046,34 @@ function renderCharts(d) {
         ml: Array.isArray(d.member_labels) ? d.member_labels : [],
         mc: Array.isArray(d.member_counts) ? d.member_counts : []
       }) || '');
-      if (fp === _anFp && _loaded) return;
+      var baseUnchanged = (fp === _anFp && _loaded);
       _anFp = fp;
       if (refresh) { refresh.disabled = true; refresh.classList.add('busy'); }
+
+      // Доп-блоки: первый раз — всегда, дальше — по таймеру (или по кнопке).
+      var nowMs = Date.now();
+      var forceExtras = !_loaded || _manualRefresh;
+      _manualRefresh = false;
+      if (forceExtras || nowMs - _extrasLast > _EXTRAS_TTL) {
+        _extrasLast = nowMs;
+        var csvBtn = $id('anCsvBtn');
+        if (csvBtn) csvBtn.href = '/api/guild/' + gid + '/analytics.csv';
+        var csvFull = $id('anCsvFullBtn');
+        if (csvFull) csvFull.href = '/api/guild/' + gid + '/analytics_full.csv';
+        loadHeatmap(gid);
+        loadFlow(gid);
+        loadSummary(gid);
+        loadRecords(gid);
+        loadDrillChannels(gid);
+        loadExtras(gid);
+      }
+
+      if (baseUnchanged) {
+        // Базовые данные те же — списки/графики не трогаем, только метку времени.
+        if ($id('anUpdated')) $id('anUpdated').textContent = 'Обновлено · ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        return;
+      }
+
       if ($id('anUpdated')) $id('anUpdated').textContent = 'Синхронизация…';
       renderMembers(d.top_members || []);
       renderChannels(d.top_channels || []);
@@ -1052,16 +1085,6 @@ function renderCharts(d) {
       _topChannel = (d.top_channels || [])[0] || null;
       kpi('anKpiChannel', _topChannel ? '#' + _topChannel.name : '—', _topChannel ? num(_topChannel.messages) + ' сообщений в выборке' : 'Канальная активность не записана');
       updateCockpit();
-      loadHeatmap(gid);
-      loadFlow(gid);
-      loadSummary(gid);
-      loadRecords(gid);
-      loadDrillChannels(gid);
-      var csvBtn = $id('anCsvBtn');
-      if (csvBtn) csvBtn.href = '/api/guild/' + gid + '/analytics.csv';
-      var csvFull = $id('anCsvFullBtn');
-      if (csvFull) csvFull.href = '/api/guild/' + gid + '/analytics_full.csv';
-      loadExtras(gid);
       _loaded = true;
       if ($id('anUpdated')) $id('anUpdated').textContent = 'Только что · ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
@@ -1078,7 +1101,10 @@ function renderCharts(d) {
   // Auto-load on ready + live refresh (списки часто, графики реже)
   function start() {
     var refresh = $id('anRefresh');
-    if (refresh) refresh.addEventListener('click', load);
+    if (refresh) refresh.addEventListener('click', function () {
+      _manualRefresh = true;   // ручное обновление — тянем и доп-блоки
+      load();
+    });
     document.querySelectorAll('[data-an-lens]').forEach(function (button) {
       button.addEventListener('click', function () { setLens(button.getAttribute('data-an-lens'), true); });
     });
