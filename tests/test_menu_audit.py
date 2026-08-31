@@ -114,8 +114,8 @@ check(not _bad, f'render_template → файлы на месте ({_bad[:5]})')
 
 # ─── 7. конкурентность ───────────────────────────────────────────────────────
 print('== 7. Конкурентность: 8 потоков × 15 запросов ==')
-_targets = ['/dashboard', '/channels', '/api/stats', '/api/guilds', '/api/leveling/stats',
-            '/roles', '/automation', '/api/bot-stats', '/welcome', '/api/status-public']
+_targets = ['/dashboard', '/channels', '/api/stats', '/api/guilds', '/api/bot-stats',
+            '/roles', '/antifake', '/autofilter', '/welcome', '/api/status-public']
 errors = []
 lock = threading.Lock()
 

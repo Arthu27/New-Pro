@@ -28,7 +28,7 @@ MENU = [
         {'path': '/bot-stats', 'label': 'Статистика бота', 'icon': 'fa-robot'},
         {'path': '/server-health', 'label': 'Состояние', 'icon': 'fa-heartbeat'},
         {'path': '/ops-center', 'label': 'Оперативный центр', 'icon': 'fa-gauge-high'},
-        {'path': '/recap', 'label': 'Рекап канала', 'icon': 'fa-clock-rotate-left'},
+        
     ]},
     {'group': 'Модерация', 'key': 'mod', 'icon': 'fa-shield-halved', 'pages': [
         # Сводный штаб раздела.
@@ -49,12 +49,8 @@ MENU = [
         {'path': '/bulk-actions', 'label': 'Массовые операции', 'icon': 'fa-layer-group',
          'section': 'response', 'description': 'Пакетные роли, сообщения и действия с участниками',
          'access': 'Админ', 'min_role': 'admin', 'tone': 'critical'},
-        {'path': '/lockdown', 'label': 'Локдаун', 'icon': 'fa-house-lock',
-         'section': 'response', 'description': 'Экстренное закрытие каналов и контролируемый откат',
-         'access': 'Мод+', 'tone': 'critical'},
-        {'path': '/tagjail', 'label': 'Tag Jail', 'icon': 'fa-lock',
-         'section': 'response', 'description': 'Изоляция опасных тегов и возврат ролей',
-         'access': 'Админ', 'min_role': 'admin', 'tone': 'critical'},
+        
+        
 
         # Расследование: факты, доказательства и пересмотр решений.
         {'path': '/logs', 'label': 'Журнал модерации', 'icon': 'fa-clipboard-list',
@@ -82,9 +78,7 @@ MENU = [
         {'path': '/mod-control', 'label': 'Контроль команды', 'icon': 'fa-clipboard-check',
          'section': 'management', 'description': 'Очереди, заметки и контроль исполнения',
          'access': 'Мод+', 'tone': 'analytics'},
-        {'path': '/mod-report', 'label': 'Отчёты', 'icon': 'fa-chart-simple',
-         'section': 'management', 'description': 'Нагрузка, рецидивисты и выгрузка результатов',
-         'access': 'Мод+', 'tone': 'analytics'},
+        
         {'path': '/mod-insights', 'label': 'Аналитика рисков', 'icon': 'fa-user-shield',
          'section': 'management', 'description': 'Причины нарушений, тренды и рекомендации',
          'access': 'Мод+', 'tone': 'analytics'},
@@ -126,9 +120,9 @@ MENU = [
     ]},
     {'group': 'Роли', 'key': 'roles', 'icon': 'fa-user-tag', 'pages': [
         {'path': '/roles', 'label': 'Управление ролями', 'icon': 'fa-user-tag'},
-        {'path': '/autorole', 'label': 'Автороли', 'icon': 'fa-id-badge'},
+        
         {'path': '/color-roles', 'label': 'Цветовые роли', 'icon': 'fa-palette'},
-        {'path': '/reaction-roles', 'label': 'Роли по реакциям', 'icon': 'fa-smile'},
+        
     ]},
     {'group': 'Доступ', 'key': 'access', 'icon': 'fa-shield-alt', 'pages': [
         {'path': '/panel-access', 'label': 'Панели и роли', 'icon': 'fa-user-shield'},
@@ -137,19 +131,19 @@ MENU = [
     ]},
     {'group': 'Тикеты', 'key': 'tickets', 'icon': 'fa-ticket-alt', 'pages': [
         {'path': '/ai-tickets', 'label': 'AI-тикеты', 'icon': 'fa-ticket-alt'},
-        {'path': '/tickets-ops', 'label': 'Операции', 'icon': 'fa-gauge-high'},
+        
         {'path': '/ai_ticket_stats', 'label': 'Статистика', 'icon': 'fa-chart-pie'},
-        {'path': '/ticket-search', 'label': 'Поиск тикетов', 'icon': 'fa-magnifying-glass'},
-        {'path': '/transcripts', 'label': 'Транскрипты', 'icon': 'fa-file-lines'},
-        {'path': '/sla', 'label': 'SLA-контроль', 'icon': 'fa-handshake'},
+        
+        
+        
     ]},
     {'group': 'Бот', 'key': 'bot', 'icon': 'fa-robot', 'pages': [
         {'path': '/commands', 'label': 'Команды', 'icon': 'fa-terminal'},
-        {'path': '/custom-commands', 'label': 'Свои команды', 'icon': 'fa-code'},
+        
         {'path': '/send-command', 'label': 'Отправить', 'icon': 'fa-paper-plane'},
-        {'path': '/schedule', 'label': 'Расписание', 'icon': 'fa-calendar-alt'},
+        
         {'path': '/backups', 'label': 'Бэкапы', 'icon': 'fa-save'},
-        {'path': '/templates', 'label': 'Шаблоны', 'icon': 'fa-clone'},
+        
         {'path': '/konsol', 'label': 'Консоль', 'icon': 'fa-terminal'},
         {'path': '/cog-manager', 'label': 'Модули', 'icon': 'fa-cubes'},
     ]},
@@ -166,7 +160,7 @@ MENU = [
         {'path': '/welcome-editor', 'label': 'Приветствие', 'icon': 'fa-handshake'},
         {'path': '/rules-editor', 'label': 'Правила', 'icon': 'fa-scroll'},
         {'path': '/warn-config', 'label': 'Варны', 'icon': 'fa-exclamation'},
-        {'path': '/automation', 'label': 'Автоматика', 'icon': 'fa-wand-magic-sparkles'},
+        
         {'path': '/notifications', 'label': 'Уведомления', 'icon': 'fa-bell'},
         {'path': '/pagerduty', 'label': 'PagerDuty', 'icon': 'fa-tower-broadcast',
          'description': 'Тревоги PagerDuty красивыми карточками в Discord',
@@ -177,48 +171,48 @@ MENU = [
         {'path': '/log-settings', 'label': 'Логи сервера', 'icon': 'fa-list-check'},
     ]},
     {'group': 'Сообщество', 'key': 'community', 'icon': 'fa-gamepad', 'pages': [
-        {'path': '/economy', 'label': 'Экономика', 'icon': 'fa-coins'},
-        {'path': '/shop', 'label': 'Магазин', 'icon': 'fa-store'},
+        
+        
         {'path': '/music', 'label': 'Музыка', 'icon': 'fa-music'},
-        {'path': '/achievements', 'label': 'Ачивки', 'icon': 'fa-trophy'},
-        {'path': '/duels', 'label': 'Дуэли', 'icon': 'fa-shield-halved'},
-        {'path': '/fun', 'label': 'Развлечения', 'icon': 'fa-dice'},
-        {'path': '/leveling', 'label': 'Уровни', 'icon': 'fa-star'},
-        {'path': '/giveaway', 'label': 'Розыгрыши', 'icon': 'fa-gift'},
-        {'path': '/polls', 'label': 'Опросы', 'icon': 'fa-poll-h'},
-        {'path': '/suggestions', 'label': 'Предложения', 'icon': 'fa-lightbulb'},
-        {'path': '/starboard', 'label': 'Starboard', 'icon': 'fa-star'},
+        
+        
+        
+        
+        
+        
+        
+        
         {'path': '/voice-stats', 'label': 'Голосовая', 'icon': 'fa-microphone'},
-        {'path': '/duty-panel-web', 'label': 'Дежурства', 'icon': 'fa-user-clock'},
-        {'path': '/quiz', 'label': 'Квиз', 'icon': 'fa-brain'},
-        {'path': '/counting', 'label': 'Счёт', 'icon': 'fa-list-ol'},
-        {'path': '/crown', 'label': 'Зал корон', 'icon': 'fa-crown'},
-        {'path': '/karma', 'label': 'Карма', 'icon': 'fa-hand-holding-heart'},
-        {'path': '/birthdays', 'label': 'Дни рождения', 'icon': 'fa-cake-candles'},
-        {'path': '/social', 'label': 'События', 'icon': 'fa-calendar-days'},
-        {'path': '/anime-daily', 'label': 'Аниме дня', 'icon': 'fa-tv'},
-        {'path': '/tops', 'label': 'Топ сервера', 'icon': 'fa-ranking-star'},
-        {'path': '/join-to-create', 'label': 'Комнаты J2C', 'icon': 'fa-door-open'},
-        {'path': '/staff-rating', 'label': 'Оценки персонала', 'icon': 'fa-star-half-stroke'},
-        {'path': '/staff-shifts', 'label': 'Смены персонала', 'icon': 'fa-calendar-week'},
-        {'path': '/staff-stats', 'label': 'Активность персонала', 'icon': 'fa-chart-column'},
-        {'path': '/meetings', 'label': 'Собрания', 'icon': 'fa-people-group'},
-        {'path': '/leaderboards', 'label': 'Рейтинги', 'icon': 'fa-medal'},
-        {'path': '/gamification', 'label': 'Геймификация', 'icon': 'fa-trophy'},
-        {'path': '/scheduled-messages', 'label': 'Расписание', 'icon': 'fa-clock'},
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
     ]},
     {'group': 'Логи', 'key': 'logs', 'icon': 'fa-file-lines', 'pages': [
         {'path': '/chat', 'label': 'Чат', 'icon': 'fa-comments'},
         {'path': '/message-logs', 'label': 'Сообщения', 'icon': 'fa-comment-alt'},
         {'path': '/panel-logs', 'label': 'Панель', 'icon': 'fa-list'},
-        {'path': '/replay', 'label': 'Инцидент-лента', 'icon': 'fa-film'},
-        {'path': '/reports', 'label': 'Отчёты поддержки', 'icon': 'fa-chart-pie'},
-        {'path': '/archive', 'label': 'Архиватор', 'icon': 'fa-box-archive'},
+        
+        
+        
         {'path': '/backup', 'label': 'Бэкапы', 'icon': 'fa-database'},
     ]},
     {'group': 'Контент', 'key': 'content', 'icon': 'fa-palette', 'pages': [
-        {'path': '/custom-embeds', 'label': 'Embed-ы', 'icon': 'fa-palette'},
-        {'path': '/webhooks', 'label': 'Вебхуки', 'icon': 'fa-link'},
+        
+        
         {'path': '/channels', 'label': 'Каналы', 'icon': 'fa-hashtag'},
         {'path': '/announcements', 'label': 'Объявления', 'icon': 'fa-bullhorn'},
         # «Команда» (/execute-command) убрана из меню (заказ владельца:
@@ -227,19 +221,19 @@ MENU = [
     {'group': 'AI', 'key': 'ai', 'icon': 'fa-brain', 'pages': [
         {'path': '/ai-chat', 'label': 'AI Чат', 'icon': 'fa-comments'},
         {'path': '/ai-moderation', 'label': 'AI Модерация', 'icon': 'fa-robot'},
-        {'path': '/server-info', 'label': 'Инфо-база', 'icon': 'fa-circle-info'},
+        
     ]},
     {'group': 'Система', 'key': 'ops', 'icon': 'fa-server', 'pages': [
         {'path': '/bot-diagnostics', 'label': 'Диагностика', 'icon': 'fa-heartbeat'},
-        {'path': '/leveling-admin', 'label': 'Leveling', 'icon': 'fa-trophy'},
+        
         {'path': '/feature-flags', 'label': 'Флаги', 'icon': 'fa-flag'},
     ]},
     {'group': 'Утилиты', 'key': 'utility', 'icon': 'fa-toolbox', 'pages': [
         {'path': '/team-board', 'label': 'Доска команды', 'icon': 'fa-table-columns'},
         {'path': '/todo', 'label': 'Задачи', 'icon': 'fa-check-square'},
-        {'path': '/reminders', 'label': 'Напоминания', 'icon': 'fa-bell'},
+        
         {'path': '/spravka', 'label': 'Справка', 'icon': 'fa-question-circle'},
-        {'path': '/search', 'label': 'Поиск по серверу', 'icon': 'fa-magnifying-glass'},
+        
     ]},
 ]
 
@@ -258,19 +252,9 @@ MODERATION_SECTIONS = (
 
 _ROLE_LEVEL = {'uye': 0, 'mod': 1, 'curator': 2, 'admin': 3, 'owner': 4}
 
-# Достижения «пока что не нужны» (заказ владельца 2026-08-25): страница
-# «Ачивки» исчезает из меню, ког не грузится, команды не показываются.
-# Вернуть — ACHIEVEMENTS_ENABLED = True в cogs/achievements.py.
-HIDDEN_PATHS = []          # страницы, скрытые из меню выключенным модулем
-try:
-    from cogs.achievements import ACHIEVEMENTS_ENABLED as _ACHIEVEMENTS_ON
-except Exception:
-    _ACHIEVEMENTS_ON = True
-if not _ACHIEVEMENTS_ON:
-    HIDDEN_PATHS.append('/achievements')
-    for _grp in MENU:
-        _grp['pages'] = [p for p in _grp.get('pages', [])
-                         if p.get('path') != '/achievements']
+# Страницы, скрытые из меню выключенным модулем. После чистки выключенных
+# модулей таких страниц нет: их пункты удалены вместе с роутами и шаблонами.
+HIDDEN_PATHS = []
 
 
 # Defaults applied if a role has no stored config yet.
@@ -291,69 +275,19 @@ CONFIGURABLE = ('mod', 'curator', 'admin')
 # Страницы, работающие через Discord API напрямую (роли, каналы, бэкапы...),
 # в карту НЕ входят: они живы и без когов.
 PAGE_COGS = {
-    '/tickets-ops': ('ticket',),
-    '/reports': ('report_cog',),
-    '/archive': ('archive',),
-    '/server-info': ('server_info',),
-    '/search': ('search_cog',),
-    '/sla': ('sla_cog',),
-    '/economy': ('economy_cog',),
-    '/shop': ('economy_cog',),
     '/music': ('music_cog',),
-    '/achievements': ('achievements',),
-    '/duels': ('duels',),
-    '/fun': ('minigames', 'fun_cog'),
-    '/leveling': ('level_cog',),
-    '/leveling-admin': ('level_cog',),
-    '/giveaway': ('giveaway',),
-    '/polls': ('social',),
-    '/suggestions': ('social',),
-    '/starboard': ('starboard',),
     '/voice-stats': ('voice_tracker',),
-    '/duty-panel-web': ('duty',),
-    '/quiz': ('quiz',),
-    '/reminders': ('reminders',),
-    '/counting': ('counting',),
-    '/crown': ('weekly_crown',),
-    '/webhooks': ('webhooks',),
-    '/scheduled-messages': ('scheduler',),
-    '/schedule': ('scheduler',),
     '/afk-list': ('afk',),
-    '/reaction-roles': ('reaction_roles_cog',),
-    '/autorole': ('autorole_join', 'autorole_level'),
     '/ai-chat': ('ai_chat',),
-    '/custom-commands': ('custom_commands',),
-    '/custom-embeds': ('custom_embeds',),
     '/welcome-editor': ('welcome_cog',),
     '/staff-apps': ('staff_apply',),
-    # Автоматика живёт, пока жив хотя бы один её модуль (анти-альт/ночной
-    # режим в MOD_ONLY, приветствия и дайджест — в полном режиме).
-    '/automation': ('anti_alt', 'night_mode', 'welcome_pro', 'mod_digest',
-                    'server_stats', 'media_only', 'night_summary'),
-    '/karma': ('karma',),
-    '/birthdays': ('birthday',),
-    '/social': ('social',),
-    '/anime-daily': ('anime_daily',),
-    '/tops': ('leaderboard',),
-    '/join-to-create': ('join_to_create',),
-    '/staff-rating': ('staff_rating',),
-    '/recap': ('recap',),
     '/appeals': ('appeals',),
     '/mod-schedule': ('temp_moderation',),
     '/reports-queue': ('reports',),
-    '/lockdown': ('lockdown',),
-    '/staff-shifts': ('staff_shifts',),
-    '/staff-stats': ('staff_stats',),
     '/security': ('security',),
-    '/tagjail': ('tag_jail',),
     '/antifake': ('impersonation',),
     '/verify': ('age_verification',),
     '/ladder': ('ladder', 'warnings'),
-    '/replay': ('replay',),
-    '/meetings': ('meeting',),
-    '/leaderboards': ('leaderboard',),
-    '/templates': ('server_template',),
-    '/gamification': ('gamification_cog',),
 }
 
 
@@ -545,6 +479,10 @@ def panel_groups_for(role):
     cfg = _load().get(role, {}) if role != 'owner' else {}
     if not isinstance(cfg, dict):
         cfg = {}
+    # Страницы выключенных модулей (режим LEAN/MOD_ONLY/DISABLED_COGS) в меню
+    # не показываем вообще — владелец просил убрать всё, чем не пользуемся,
+    # чтобы не мешались «спящие» пункты и чипы «выкл».
+    off_paths = module_off_paths()
     allowed_groups = (cfg.get('groups') or DEFAULT_GROUPS.get(role, []))
     if role == 'owner':
         allowed_groups = [g['key'] for g in MENU]
@@ -560,6 +498,8 @@ def panel_groups_for(role):
         if group['key'] not in allowed_groups:
             continue
         pages = [page for page in group['pages'] if _role_can_open(role, page)]
+        if off_paths:
+            pages = [page for page in pages if page['path'] not in off_paths]
         if has_items_filter:
             pages = [page for page in pages if page['path'] in allowed_items]
         # глобальный лэйаут: скрытые страницы и свой порядок (для всех ролей)

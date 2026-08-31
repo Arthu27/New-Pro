@@ -32,7 +32,7 @@ def register(ctx):
         # Скрыть служебные файлы, чтобы не путать пользователя:
         #  - имена с '_' / __init__ — вспомогательные (не cog'и)
         #  - NON_COG — модули-помощники на диске, загружаемые через import, а не как cog
-        NON_COG ={'embed_utils','leveling_engagement'}
+        NON_COG ={'embed_utils','_card_style','icons'}
         all_cogs =[]
         _cogs_dir =os .path .join (_REPO_ROOT ,'cogs')
         for f in os .listdir (_cogs_dir ):

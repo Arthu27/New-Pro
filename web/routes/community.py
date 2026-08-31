@@ -410,104 +410,14 @@ def register(ctx):
         with open (f )as fp :return jsonify (json .load (fp ))
 
 
-    @app .route ('/api/guild/<guild_id>/suggestions')
-    @login_required 
-    @role_required ('mod')
-    def api_suggestions (guild_id ):
-        f =f'data/suggestions_{guild_id}.json'
-        if not os .path .exists (f ):return jsonify ([])
-        with open (f )as fp :return jsonify (list (json .load (fp ).values ()))
 
 
-    @app .route ('/api/guild/<guild_id>/suggestions/<sug_id>/review',methods =['POST'])
-    @login_required 
-    @role_required ('mod')
-    def api_review_suggestion (guild_id ,sug_id ):
-        f =f'data/suggestions_{guild_id}.json'
-        if not os .path .exists (f ):return jsonify ({'error':'Не найдено'})
-        with open (f )as fp :data =json .load (fp )
-        if sug_id in data :
-            data [sug_id ]['status']='approved'if request .get_json (silent =True ).get ('action')=='approve'else 'rejected'
-            with open (f ,'w')as fp :json .dump (data ,fp ,indent =2 )
-        return jsonify ({'success':True })
 
 
-    @app .route ('/api/guild/<guild_id>/suggestions/channel',methods =['POST'])
-    @login_required 
-    @role_required ('admin')
-    def api_suggestions_channel (guild_id ):
-        f =f'data/sug_settings_{guild_id}.json'
-        with open (f ,'w')as fp :json .dump (request .get_json (silent =True ),fp )
-        return jsonify ({'success':True })
 
 
-    @app .route ('/api/guild/<guild_id>/starboard')
-    @login_required 
-    @role_required ('mod')
-    def api_starboard (guild_id ):
-        import web .app as _app ;bot =_app .bot_instance 
-        f =f'data/starboard_{guild_id}.json'
-        if not os .path .exists (f ):return jsonify ([])
-
-        with open (f ,encoding ='utf-8')as fp :
-            data =json .load (fp )
-
-            # Подтягиваем детали сообщений от бота
-        result =[]
-        if bot :
-            guild =bot .get_guild (int (guild_id ))
-            if guild :
-                import asyncio 
-                for msg_id ,entry in data .items ():
-                    try :
-                    # Сообщение bul
-                        for channel in guild .text_channels :
-                            try :
-                                msg_future =asyncio .run_coroutine_threadsafe (
-                                channel .fetch_message (int (msg_id )),
-                                bot .loop 
-                                )
-                                msg =msg_future .result (timeout =2 )
-                                result .append ({
-                                'id':msg_id ,
-                                'count':entry .get ('stars',0 ),
-                                'content':msg .content [:200 ]if msg .content else '',
-                                'author':msg .author .display_name ,
-                                'channel':channel .name ,
-                                'jump_url':msg .jump_url ,
-                                'created_at':entry .get ('created_at','')
-                                })
-                                break 
-                            except Exception as _ex:
-                                _log.debug("api_starboard(): подавлено: %s", _ex)
-                                continue 
-                    except Exception:
-                    # Сообщение не найдено, только запись veriyi показать
-                        result .append ({
-                        'id':msg_id ,
-                        'count':entry .get ('stars',0 ),
-                        'content':'',
-                        'author':'?',
-                        'channel':'?',
-                        'jump_url':'',
-                        'created_at':entry .get ('created_at','')
-                        })
-
-                        # Yыldыz число по очередь
-        result .sort (key =lambda x :x ['count'],reverse =True )
-        return jsonify (result )
 
 
-    @app .route ('/api/guild/<guild_id>/starboard/settings',methods =['GET','POST'])
-    @login_required 
-    @role_required ('admin')
-    def api_starboard_settings (guild_id ):
-        f =f'data/starboard_settings_{guild_id}.json'
-        if request .method =='GET':
-            if not os .path .exists (f ):return jsonify ({'min_stars':3 })
-            with open (f )as fp :return jsonify (json .load (fp ))
-        with open (f ,'w')as fp :json .dump (request .get_json (silent =True ),fp )
-        return jsonify ({'success':True })
 
         # ── STAFF SHIFTS (виджет и редактор дежурств) ─────────────────────────────
     def _staff_shifts_payload (gid ):
@@ -578,85 +488,6 @@ def register(ctx):
         'current':current ,'next':nxt ,'today':today ,'all':all_rows ,
         'weekday':WEEKDAYS_RU [now .astimezone (tz ).weekday ()]}
 
-    @app .route ('/api/guild/<guild_id>/staff-shifts')
-    @login_required
-    @role_required ('mod')
-    def api_staff_shifts (guild_id ):
-        """Дежурства для виджета на дашборде: кто сейчас, кто следующий, смены сегодня,
-        плюс полная неделя (all) для редактора. Хранилище общее с когом /дежурства."""
-        try :
-            gid =int (guild_id )
-        except (TypeError ,ValueError ):
-            return jsonify ({'success':False ,'error':'Некорректный сервер'}),400
-        return jsonify (_staff_shifts_payload (gid ))
 
-    @app .route ('/api/guild/<guild_id>/staff-shifts/add',methods =['POST'])
-    @login_required
-    @role_required ('admin')
-    def api_staff_shifts_add (guild_id ):
-        """Назначить смену из панели. Валидация — та самая из кога (try_add_shift):
-        те же тексты ошибок, та же защита от дублей."""
-        from db import GuildData
-        from cogs .staff_shifts import try_add_shift
-        try :
-            gid =int (guild_id )
-        except (TypeError ,ValueError ):
-            return jsonify ({'success':False ,'error':'Некорректный сервер'}),400
-        data =request .get_json (silent =True )or {}
-        try :
-            user_id =int (str (data .get ('user_id')or '').strip ())
-            weekday =int (data .get ('weekday'))
-        except (TypeError ,ValueError ):
-            return jsonify ({'success':False ,'error':'user_id и weekday — числа (участника выбирают из списка)'}),400
-        start =str (data .get ('start')or '').strip ()
-        end =str (data .get ('end')or '').strip ()
-        db =GuildData ('staff_shifts')
-        shifts =db .get (gid ,'shifts',{})or {}
-        sid ,err =try_add_shift (shifts ,user_id ,weekday ,f'{start}-{end}',
-        added_by =f'panel:{session .get ("username","?")}')
-        if err :
-            return jsonify ({'success':False ,'error':err }),400
-        db .set (gid ,'shifts',shifts )
-        return jsonify (_staff_shifts_payload (gid ))
 
-    @app .route ('/api/guild/<guild_id>/staff-shifts/remove',methods =['POST'])
-    @login_required
-    @role_required ('admin')
-    def api_staff_shifts_remove (guild_id ):
-        from db import GuildData
-        try :
-            gid =int (guild_id )
-        except (TypeError ,ValueError ):
-            return jsonify ({'success':False ,'error':'Некорректный сервер'}),400
-        data =request .get_json (silent =True )or {}
-        shift_id =str (data .get ('shift_id')or '').strip ()
-        db =GuildData ('staff_shifts')
-        shifts =db .get (gid ,'shifts',{})or {}
-        if shift_id not in shifts :
-            return jsonify ({'success':False ,'error':f'Смена «{shift_id}» не найдена'}),404
-        shifts .pop (shift_id )
-        db .set (gid ,'shifts',shifts )
-        return jsonify (_staff_shifts_payload (gid ))
 
-    @app .route ('/api/guild/<guild_id>/staff-shifts/settings',methods =['POST'])
-    @login_required
-    @role_required ('admin')
-    def api_staff_shifts_settings (guild_id ):
-        """Часовой пояс расписания. Границы ровно как у /дежурства пояс (-12..+14)."""
-        from db import GuildData
-        try :
-            gid =int (guild_id )
-        except (TypeError ,ValueError ):
-            return jsonify ({'success':False ,'error':'Некорректный сервер'}),400
-        data =request .get_json (silent =True )or {}
-        try :
-            tz_offset =int (data .get ('tz_offset'))
-        except (TypeError ,ValueError ):
-            return jsonify ({'success':False ,'error':'Пояс: число от -12 до +14 (МСК = 3)'}),400
-        if not -12 <=tz_offset <=14 :
-            return jsonify ({'success':False ,'error':'Пояс: от -12 до +14 (МСК = 3)'}),400
-        db =GuildData ('staff_shifts')
-        settings =db .get (gid ,'settings',{})or {}
-        settings ['tz_offset']=tz_offset
-        db .set (gid ,'settings',settings )
-        return jsonify (_staff_shifts_payload (gid ))

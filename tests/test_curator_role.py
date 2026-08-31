@@ -291,7 +291,7 @@ check('/bulk-actions' not in mod_paths and '/tagjail' not in mod_paths,
       'админские страницы в мод-группе скрыты от куратора (403 не светится в меню)')
 
 c = make_client('curator')
-for path in ('/tickets-ops', '/leaderboards', '/warnings'):
+for path in ('/ai-tickets', '/reports-queue', '/warnings'):
     r = c.get(path)
     check(r.status_code == 200, f'куратор открывает {path}')
 r = c.get('/panel-menu')

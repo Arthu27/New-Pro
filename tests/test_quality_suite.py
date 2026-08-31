@@ -64,7 +64,7 @@ for path in files:
             unlabelled_icons.append(
                 (path.name, source.count('\n', 0, match.start()) + 1))
 
-check(len(files) >= 130, f'аудит охватывает все шаблоны ({len(files)})')
+check(len(files) >= 80, f'аудит охватывает все шаблоны ({len(files)})')
 check(not missing_alt, f'каждое изображение имеет alt ({missing_alt[:5] or "OK"})')
 check(not missing_type,
       f'каждая кнопка имеет явный безопасный type ({missing_type[:5] or "OK"})')
@@ -139,8 +139,8 @@ check(asset_js.status_code == 200 and b'fetchCachedJSON' in asset_js.data,
 
 pages = [page for group in panel_groups_for('owner') for page in group['pages']]
 paths = [page['path'] for page in pages]
-check(len(paths) == 126 and len(set(paths)) == 126,
-      f'owner-меню содержит 126 уникальные страницы ({len(paths)})')
+check(len(paths) == 77 and len(set(paths)) == 77,
+      f'owner-меню содержит 77 уникальных страниц ({len(paths)})')
 
 rendered = 0
 for route in paths:

@@ -83,7 +83,7 @@
 
 <script src="/static/pickers.js"></script>
 <script>
-var GID = '{{ guild_id }}';
+var GID = "{{ guild_id }}";
 attachMemberPicker(document.getElementById('ldUser'), { gid: GID, statusEl: document.getElementById('ldUserStatus') });
 var API = '/api/guild/' + GID + '/ladder';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};

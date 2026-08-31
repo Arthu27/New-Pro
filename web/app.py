@@ -3476,11 +3476,6 @@ def api_discord_login ():
     _log_login (member_info ['display_name'],live_role ,member_info ['avatar'],discord_id )
     return jsonify ({'success':True ,'redirect':'/'})
 
-@app .route ('/custom-embeds')
-@login_required 
-@role_required ('admin')
-def custom_embeds_page ():
-    return render_template ('custom_embeds.html',role =session .get ('role'),username =session .get ('username'))
 
 @app .route ('/api/send-embed',methods =['POST'])
 @login_required 
@@ -3771,8 +3766,15 @@ def api_bot_commands_audit ():
             except Exception as _ex:
                 out ['guilds'][f'{g .name } ({g .id })']=f'ошибка: {_ex }'
         return out
+    coro =do ()
     try :
-        result =asyncio .run_coroutine_threadsafe (do (),bot_instance .loop ).result (timeout =60 )
+        _loop =getattr (bot_instance ,'loop ',None )
+        if _loop is None :
+            # Фейковый бот без работающего event loop (тесты/демо) — корутину
+            # нельзя планировать, закрываем её сами, иначе RuntimeWarning.
+            coro .close ()
+            return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
+        result =asyncio .run_coroutine_threadsafe (coro ,_loop ).result (timeout =60 )
         return jsonify (result )
     except Exception as e :
         return jsonify ({'error':str (e )})
@@ -4084,10 +4086,7 @@ _ACTION_MAP = (
     (r'/temp-mod', 'Временные меры', 'fa-clock', '/temp-moderation'),
     (r'/ai-mod', 'Настроили AI-модерацию', 'fa-brain', '/ai-moderation'),
     (r'/autofilter', 'Настроили автофильтр', 'fa-filter', '/autofilter'),
-    (r'/automation', 'Изменили автоматизацию', 'fa-robot', '/automation'),
-    (r'/giveaway', 'Розыгрыши', 'fa-gift', '/giveaway'),
-    (r'/leveling', 'Настроили уровни', 'fa-ranking-star', '/leveling-admin'),
-    (r'/ticket', 'Тикеты', 'fa-ticket', '/ticket-search'),
+    (r'/antifake', 'Изменили защиту от фейков', 'fa-user-secret', '/antifake'),
     (r'/backup', 'Бэкапы', 'fa-box-archive', '/backups'),
     (r'/announcement', 'Объявления', 'fa-bullhorn', '/announcements'),
     (r'/webhook', 'Вебхуки', 'fa-link', '/webhooks'),

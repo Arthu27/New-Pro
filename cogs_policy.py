@@ -43,10 +43,6 @@ HELPER_COGS = frozenset({
     '_card_style.py',
     'embed_utils.py',
     'icons.py',
-    'leveling_engagement.py',
-    # CRUD-хранилище магазина: импортируют economy_cog и shop_panel,
-    # само по себе когом не является (setup нет и не нужен).
-    'economy_shop.py',
 })
 
 # ─── системные модули — живут всегда, даже в MOD_ONLY ─────────────────────
@@ -61,31 +57,22 @@ CORE_COGS = frozenset({
 # ─── модерация — ядро, которое остаётся в MOD_ONLY ────────────────────────
 MODERATION_COGS = frozenset({
     # наказания / кейсы / демки
-    'moderation.py', 'moderation_cog.py', 'advanced_mod.py',
-    'mod_case.py', 'mod_kit.py', 'mod_plus.py', 'mod_tools.py',
+    'moderation.py', 'moderation_cog.py',
+    'mod_plus.py',
     'warnings.py', 'temp_moderation.py', 'proof_cog.py',
     # автомод
-    'ai_moderation.py', 'auto_filter.py', 'proactive_mod.py',
+    'ai_moderation.py', 'auto_filter.py',
     # анти-рейд / безопасность / верификация
-    'antiraid.py', 'guardian.py', 'security.py', 'age_verification.py', 'tag_jail.py',
+    'antiraid.py', 'guardian.py', 'security.py', 'age_verification.py',
     'impersonation.py',
-    # verification.py — старая заглушка, заменена age_verification.py (в RETIRED_COGS)
-    # анти-альт / локдаун / ночной режим — аварийный арсенал
-    'anti_alt.py', 'lockdown.py', 'night_mode.py',
-    # модераторская разведка
-    'invite_tracker.py',
-    # контент-ограничения и анти-эвейд
-    'media_only.py', 'rejoin_roles.py',
+    # анти-альт — защита
+    'anti_alt.py',
     # репорты от пользователей
-    'report_cog.py', 'reports.py',
+    'reports.py',
     # журнал аудита (на него завязана веб-панель)
     'logs.py', 'log_menu.py',
-    # жалобы/обращения к модерам — единая система репортов /report
-    'reports.py',
-    # апелляции на баны + еженедельный мод-дайджест
-    'appeals.py', 'mod_digest.py',
-    # расписание дежурств стаффа с автонапоминаниями
-    'staff_shifts.py',
+    # апелляции на баны
+    'appeals.py',
 })
 
 # итоговый список MOD_ONLY
@@ -95,7 +82,6 @@ MOD_ONLY_COGS = CORE_COGS | MODERATION_COGS
 # Тикеты уже сидят в MODERATION_COGS (ticket.py, mod_report.py) — здесь
 # дополнение: SLA, набор команды и приём заявок.
 TICKET_COGS = frozenset({
-    'sla_cog.py',        # SLA тикетов
     'staff_apply.py',    # заявки в команду (веб-панель читает данные)
 })
 
@@ -206,7 +192,6 @@ def _parse_list(text):
 # репортов (reports.py, ТЗ 2026-08-26) при BOT_FULL=1: discord.py падает на
 # повторной регистрации команды. Новая система — канонична.
 RETIRED_COGS = frozenset({
-    'dm_report.py',
     # Тикет-система полностью снята с эксплуатации по решению владельца
     # (2026-08-31): её роль выполняет система репортов /report (жалоба →
     # закрытый канал модерации со скрином/видео, кнопками и тегом роли).
@@ -215,12 +200,6 @@ RETIRED_COGS = frozenset({
     # тикет-ядра продолжают его покрывать. Ког НЕ грузится ни в одном профиле —
     # ни /ticket-panel, ни панели/кнопки тикетов в Discord больше не появляются.
     'ticket.py',
-    # Старая заглушка верификации (только приветственное ЛС по флагу) заменена
-    # полноценным cogs/age_verification.py (2026-08-31): порог возраста аккаунта,
-    # карантинная роль, анкета в ЛС, модерация заявок кнопками. Файл оставлен на
-    # диске, но как extension не грузится ни в одном профиле — иначе два
-    # on_member_join конкурировали бы.
-    'verification.py',
 })
 
 

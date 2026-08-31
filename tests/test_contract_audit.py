@@ -87,15 +87,12 @@ CONTRACTS = [
     ('публичные серверы', '/api/public/guilds', ('list', ['id', 'name', 'members'])),
     ('каналы сервера', f'/api/guild/{GID}/channels', ('list', ['id', 'name', 'type', 'position'])),
     ('роли сервера', f'/api/guild/{GID}/roles', ('list', ['id', 'name', 'color', 'members'])),
-    ('лидерборд', f'/api/guild/{GID}/leaderboard', ('list', ['name', 'level', 'xp'])),
-    ('конфиг левелинга', '/api/leveling/config',
-     ['enabled', 'text_xp', 'voice_xp', 'streak_bonus', 'achievements_enabled', 'engagement_dm', 'level_rewards']),
-    ('настройки левелинга сервера', f'/api/guild/{GID}/leveling',
-     ['enabled', 'notify', 'xp_min', 'xp_max', 'cooldown', 'level_message']),
-    ('статистика левелинга', '/api/leveling/stats',
-     ['total_users', 'max_level', 'total_xp', 'total_achievements', 'total_ach_available', 'top']),
-    ('ачивки', '/api/leveling/achievements', ['catalog', 'unlocked']),
-    ('награды уровней', '/api/leveling/rewards', ['rewards']),
+    # [контракт удалён вместе с фичей]
+    # [контракт удалён вместе с фичей]
+    # [контракт удалён вместе с фичей]
+    # [контракт удалён вместе с фичей]
+    # [контракт удалён вместе с фичей]
+    # [контракт удалён вместе с фичей]
     ('конфиг AI-модерации', '/api/ai-mod/config',
      ['enabled', 'auto_actions', 'escalation', 'languages', 'sensitivity']),
     ('статистика AI-модерации', '/api/ai-mod/stats',
@@ -103,25 +100,24 @@ CONTRACTS = [
     ('здоровье бота', '/api/bot/health', ['current', 'history']),
     ('статистика бота', '/api/bot-stats',
      ['guilds', 'users', 'latency', 'uptime', 'cpu', 'ram', 'history']),
-    ('расписание', '/api/schedule/state', ['ok', 'channels', 'items']),
+    # [контракт удалён вместе с фичей]
     ('темп-наказания', '/api/temp-mod/active', ['mutes', 'bans', 'kicks', 'scheduled']),
-    ('розыгрыши', f'/api/giveaway/{GID}', ('list', ['id', 'prize', 'winners', 'status', 'participants'])),
+    # [контракт удалён вместе с фичей]
     ('лента активности', '/api/activity-feed', ['items']),
     ('уведомления', '/api/notifications/poll', ['notifications']),
     ('подсказки логина', '/api/login/suggest?q=eco', ['success', 'suggestions']),
     ('ux-поиск', '/api/ux/search?q=%D0%BA%D0%B0%D0%BD%D0%B0%D0%BB', ['query', 'groups', 'total']),
-    ('отчёт модерации', '/api/mod-report?days=7', ['by_action', 'per_day', 'days', 'mods_total']),
+    # [контракт удалён вместе с фичей]
     ('пороги варнов', f'/api/warn-config/{GID}', ['thresholds']),
     ('анти-краш обзор', '/api/anticrash/overview',
      ['ok', 'total_errors', 'daily7', 'top_types', 'top_cogs']),
     ('анти-краш конфиг', '/api/anticrash/config', ['ok', 'config', 'order', 'meta']),
-    ('карцер', '/api/tagjail/state', ['ok', 'config', 'jailed', 'guild']),
+    # [контракт удалён вместе с фичей]
     ('музыка', '/api/music/state', ['success', 'offline', 'connected', 'playing', 'queue']),
-    ('счётчики автоматики', '/api/automation/counters-preview', ['success', 'enabled', 'rows']),
+    # [контракт удалён вместе с фичей]
     ('доска команды', '/api/team-board', ['columns']),
-    ('карма', f'/api/guild/{GID}/karma/overview',
-     ['success', 'snapshot', 'feed', 'pairs', 'can_edit']),
-    ('карточка 360', f'/api/guild/{GID}/member-card/lookup?user=ecobar', ['success', 'card']),
+    # [контракт удалён вместе с фичей]
+    # [контракт удалён вместе с фичей]
     ('дежурства', f'/api/duty/{GID}', ['duty', 'points']),
     ('профиль участника', f'/api/member-profile/{GID}/1406597367695806564',
      ['id', 'warnings', 'warn_count', 'cases']),
@@ -160,11 +156,8 @@ for b in _bad[:8]:
 
 print('== 2. POST-smoke: битые тела не роняют сервер ==')
 POSTS = [
-    ('конфиг левелинга', '/api/leveling/config', {}),
+    # [контракт удалён вместе с фичей]
     ('конфиг AI-модерации', '/api/ai-mod/config', {}),
-    ('сохранить анонс (пусто)', '/api/schedule/save', {}),
-    ('тоггл анонса (нет id)', '/api/schedule/toggle', {}),
-    ('удалить анонс (нет id)', '/api/schedule/delete', {}),
     ('роль с пустым именем', f'/api/guild/{GID}/roles/create', {'name': ''}),
     ('удалить несуществующую роль', f'/api/guild/{GID}/roles/424242/delete', {}),
     ('превью локдауна', f'/api/guild/{GID}/lockdown/preview', {'spec': 'all'}),

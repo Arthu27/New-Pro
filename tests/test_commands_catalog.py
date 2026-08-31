@@ -66,17 +66,16 @@ check('Голосовые' not in labels,
 check('Экономика' not in labels and 'Уровни и карма' not in labels,
       'lean: спящие системы (экономика/уровни) честно не показываются')
 mods = data.get('modules') or {}
-check(mods.get('enabled') == 30 and mods.get('sleeping') == 76,
-      f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')} (ожидание 30/76)")
+check(mods.get('enabled') == 30 and mods.get('sleeping') == 7,
+      f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')} (ожидание 30/7)")
 
-print('== 1.1. Реестр в BOT_FULL (полный состав) ==')
-os.environ['BOT_FULL'] = '1'
-full = CR.catalog(force=True)
-check(full['total'] >= 250, f"full: собрано {full['total']} команд (≥250)")
-full_labels = [c['label'] for c in full['categories']]
-for need in ('Экономика', 'Уровни и карма', 'Игры и развлечения'):
-    check(need in full_labels, f'full: раздел «{need}» вернулся')
-os.environ.pop('BOT_FULL', None)
+print('== 1.1. Выключенные разделы физически удалены ==')
+# Экономика/уровни/игры больше не «спящие» — их файлы удалены с диска,
+# поэтому их нет в каталоге ни в каком режиме.
+import glob as _glob
+for gone_cog in ('cogs/economy_cog.py', 'cogs/level_cog.py',
+                 'cogs/fun_cog.py', 'cogs/minigames.py', 'cogs/giveaway.py'):
+    check(not os.path.exists(gone_cog), f'файл {gone_cog} удалён')
 data = CR.catalog(force=True)
 
 names = [c['name'] for c in data['commands']]
@@ -99,11 +98,13 @@ check(music['module'] == 'music_cog.py', 'модуль команды указа
 check(music['kind'] == 'slash' and music['aliases'] == [],
       'музыка переехала на слеш (алиасов у слеша нет)')
 
-sub = next((c for c in full['commands'] if c['kind'] == 'sub' and c['group']), None)
-check(sub is not None and ' ' in sub['name'],
-      f"подкоманды групп развёрнуты (в full: '{sub['name'] if sub else '?'}')")
-check(not any(c['kind'] == 'sub' for c in data['commands']),
+# Lean-профиль: слеш-меню курируемое и минимальное (~7 команд), групповые
+# подкоманды вычищены — в каталоге только корневые слеш-команды.
+sub = [c for c in data['commands'] if c['kind'] == 'sub' and c.get('group')]
+check(len(sub) == 0,
       'lean: групповые подкоманды вычищены из боевого меню')
+check(data['slash'] <= 12,
+      f'lean: слеш-меню курируемое и короткое ({data["slash"]} команд)')
 
 nodesc = sum(1 for c in data['commands'] if c['desc'] == 'Описание скоро появится')
 check(nodesc <= int(data['total'] * 0.15),
@@ -154,8 +155,8 @@ check(d['total'] == data['total'] and d['shown'] == d['total']
 check(d['slash'] > 0 and d['prefix'] == 0,
       'счётчики типов в ответе: слеш есть, префиксных — ноль')
 check(d.get('modules', {}).get('enabled') == 30
-      and d['modules']['sleeping'] == 76,
-      'в ответе — счётчик модулей (30 включено / 76 спит)')
+      and d['modules']['sleeping'] == 7,
+      'в ответе — счётчик модулей (30 включено / 7 спит)')
 
 r = client.get('/api/commands/catalog?q=play')
 d = r.get_json()
@@ -219,12 +220,11 @@ check('Экономика' not in field_names and 'Уровни и карма' n
       'спящие разделы (экономика/уровни) из /help убраны')
 check('Логи и аудит' not in field_names and 'AI ' not in field_names,
       'нет дублей пересекающихся с ACL разделов (Логи и аудит / AI)')
-# в полном составе спящие разделы возвращаются
-os.environ['BOT_FULL'] = '1'
-ov_full = HP.build_help_embed()
-check('Экономика' in ' | '.join(f.name for f in ov_full.fields),
-      'BOT_FULL=1: раздел «Экономика» вернулся в /help')
-os.environ.pop('BOT_FULL', None)
+# Выключенные разделы (экономика/уровни) физически удалены: их нет
+# в /help даже в полном составе — возвращать нечего.
+check('Экономика' not in field_names and 'Уровни и карма' not in field_names
+      and 'Игры и развлечения' not in field_names,
+      '/help не показывает удалённые разделы (экономика/уровни/игры)')
 # select-меню Discord: максимум 25 опций
 n_opts = 1 + len(HP._all_category_labels())
 check(n_opts <= 25, f'select-меню умещается в лимит Discord ({n_opts} ≤ 25)')

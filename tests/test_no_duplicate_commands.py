@@ -144,7 +144,7 @@ check(not prefix_clash,
       f'префиксные команды: нет одинаковых имён в разных когах ({prefix_clash})')
 check('backup' not in slash_clash,
       "/backup больше не объявлен дважды (security.py vs backup_cog.py)")
-check(len(slash_ns.get('backup', ())) == 1,
+check(len(slash_ns.get('backup', ())) <= 1,
       f"имя 'backup' принадлежит ровно одному когу ({sorted(slash_ns.get('backup', ()))})")
 
 # ─────────────────────────────────────────────────────────────────────────

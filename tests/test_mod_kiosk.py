@@ -52,8 +52,6 @@ check('kioskHisto' in TPL and 'renderHisto' in TPL,
       '24-часовая гистограмма мод-действий')
 check('kioskTop' in TPL and 'renderTop' in TPL,
       'топ дежурных сегодня')
-check('kioskDutyCountdown' in TPL and 'tickShiftTimer' in TPL and 'kShiftFill' in TPL,
-      'живой таймер смены с прогресс-баром')
 check("localStorage.setItem('hakumo_theme'" in TPL,
       'ночной режим через общий механизм темы панели')
 check('kiosk-flash' in TPL,
@@ -111,7 +109,7 @@ r = client.get('/mod-kiosk')
 check(r.status_code == 200, f'/mod-kiosk → {r.status_code}')
 _html = r.get_data(as_text=True)
 for marker in ('kiosk-sit', 'kiosk-pulse', 'kioskHisto', 'kioskTop',
-               'kioskDutyCountdown', 'kioskTheme', 'kkSpark'):
+               'kioskTheme', 'kkSpark'):
     check(marker in _html, f'готовый HTML содержит {marker}')
 
 print('\n== Node-харнесс: живое исполнение логики экрана ==')
@@ -182,7 +180,6 @@ function resetData() {
     risk: { risk: { edge: 1 } },
     tickets: [1, 2],
     threat: { threat_score: 70, threat_level: 'высокий' },
-    shifts: { current: { name: 'Артём', start: iso(3600000), end: iso(-7200000) } },
     logs: [
       { timestamp: iso(300000), action: 'ban', user_name: 'Гость', mod_name: 'Артём', reason: 'спам' },
       { timestamp: iso(320000), action: 'warn', user_name: 'Лена', mod_name: 'Артём', reason: 'флуд' },
@@ -206,7 +203,6 @@ function router(url, opts) {
   if (url.indexOf('/mod-control/overview') !== -1) return j(DATA.risk);
   if (url.indexOf('/tickets') !== -1) return j(DATA.tickets);
   if (url.indexOf('/threat-index') !== -1) return j(DATA.threat);
-  if (url.indexOf('/staff-shifts') !== -1) return j(DATA.shifts);
   if (url === '/api/logs') return j(DATA.logs);
   if (url === '/api/activity-feed') return j(DATA.feed);
   return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
@@ -271,12 +267,6 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   const iA = top.indexOf('Артём'), iS = top.indexOf('Соня');
   if (iA === -1 || iS === -1 || iA > iS) fail('порядок топа неверен (лидер должен быть первым)');
 
-  // 6) Таймер смены: смена идёт (1 из 3 часов) → «до конца смены», прогресс ≈ 33%
-  if (byId['kioskDutyCountdown'].textContent.indexOf('до конца смены') === -1)
-    fail('таймер до конца смены не показан: ' + byId['kioskDutyCountdown'].textContent);
-  const w = parseFloat(byId['kShiftFill'].style.width);
-  if (!(w > 30 && w < 40)) fail('прогресс смены должен быть ~33%, got ' + w);
-
   // 7) Лента событий панели
   if (byId['kioskActivity'].innerHTML.indexOf('Тикет закрыт') === -1) fail('лента событий пуста');
   if (byId['kioskActions'].innerHTML.indexOf('Артём') === -1) fail('мод-действия не отрисованы');
@@ -314,7 +304,7 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   keyHandlers[0]({ key: 'Escape', target: { tagName: 'DIV' } });
   if (win.location.href !== '/mod-center') fail('Esc не ведёт в штаб: ' + win.location.href);
 
-  console.log('OK: ситуация, пульс, дельты KPI, 24-часовая гистограмма, топ дежурных, таймер смены, ночной режим, клавиши');
+  console.log('OK: ситуация, пульс, дельты KPI, 24-часовая гистограмма, топ дежурных, ночной режим, клавиши');
 })().catch(e => { console.error('ИСКЛЮЧЕНИЕ: ' + (e && e.message)); process.exit(1); });
 """
 

@@ -63,14 +63,25 @@ check(sorted(set(NON_HELPERS) - set(LEAN_COGS)) == disabled,
       'lean: вся «веселуха» — в спящих')
 missing_lean = sorted(f for f in LEAN_COGS if f not in ALL_SET)
 check(missing_lean == [], f'LEAN_COGS: все файлы на диске {missing_lean}')
-for dead in ('economy_cog.py', 'level_cog.py', 'fun_cog.py', 'minigames.py',
+# Выключенные модули больше не прячутся в спящих — они физически удалены
+# с диска (по решению владельца: «удали сразу всех кого не используем»).
+for gone in ('economy_cog.py', 'level_cog.py', 'fun_cog.py', 'minigames.py',
              'giveaway.py', 'starboard.py', 'birthday.py', 'karma.py',
-             'achievements.py', 'duels.py', 'quiz.py', 'profile.py',
+             'duels.py', 'quiz.py', 'profile.py',
              'leaderboard.py', 'join_to_create.py', 'counting.py',
              'anime_daily.py', 'reminders.py', 'scheduler.py', 'triggers.py',
-             'events.py', 'meeting.py', 'reaction_roles_cog.py', 'autorole_join.py'):
-    assert dead in disabled, dead
-check(True, 'lean: экономика/игры/уровни/ивенты/соц-системы — спят')
+             'events.py', 'meeting.py', 'reaction_roles_cog.py',
+             'autorole_join.py', 'weekly_crown.py', 'economy_shop.py',
+             'leveling_engagement.py', 'social.py', 'polls.py',
+             'suggestions.py', 'tag_jail.py', 'sla_cog.py',
+             'lockdown.py', 'night_mode.py', 'media_only.py',
+             'rejoin_roles.py', 'report_cog.py', 'staff_shifts.py',
+             'verification.py', 'advanced_mod.py', 'mod_case.py',
+             'mod_kit.py', 'mod_tools.py', 'proactive_mod.py',
+             'dm_report.py', 'invite_tracker.py', 'mod_digest.py',
+             'server_template.py'):
+    assert gone not in ALL_SET, f'{gone} должна быть физически удалена с диска'
+check(True, 'lean: экономика/игры/уровни/ивенты/соц-системы — физически удалены')
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'temp_moderation.py', 'proof_cog.py', 'auto_filter.py',
              'antiraid.py', 'age_verification.py',
@@ -82,15 +93,15 @@ for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'afk.py', 'help.py', 'cog_manager.py'):
     assert keep in enabled, keep
 check(True, 'lean: модерация/репорты/музыка/AI/приветствие/логи/afk — живы')
-# Старая заглушка verification.py отправлена в покой — её заменил
+# Старая заглушка verification.py физически удалена — её заменил
 # полноценный age_verification.py (карантин + анкета молодых аккаунтов).
-assert 'verification.py' in disabled, 'verification.py должна быть retired'
+assert 'verification.py' not in ALL_SET, 'verification.py должна быть удалена'
 assert 'age_verification.py' in enabled, 'age_verification.py должна грузиться'
-check(True, 'lean: верификация — age_verification жив, старая заглушка спит')
-for asleep in ('tag_jail.py', 'sla_cog.py', 'mod_report.py',
-               'health.py', 'feature_flag_cog.py'):
-    assert asleep in disabled, asleep
-check(True, 'lean: tag_jail/sla/mod_report/health/flags — спят (чистка команд)')
+check(True, 'lean: верификация — age_verification жив, старая заглушка удалена')
+for gone in ('tag_jail.py', 'sla_cog.py', 'mod_report.py',
+             'health.py', 'feature_flag_cog.py'):
+    assert gone not in ALL_SET, f'{gone} должна быть удалена (чистка команд)'
+check(True, 'lean: tag_jail/sla/mod_report/health/flags — удалены (чистка команд)')
 for awake_shield in ('security.py', 'anti_alt.py', 'impersonation.py', 'ai_moderation.py'):
     assert awake_shield in enabled, awake_shield
 check(True, 'lean: ЩИТ проснулся — security/anti-alt/impersonation/ai-moderation в боевом профиле')
@@ -109,9 +120,9 @@ _NON_HELPERS_LIVE = sorted(set(NON_HELPERS) - RETIRED_COGS)
 check(enabled_f == _NON_HELPERS_LIVE
       and sorted(disabled_f) == sorted(set(NON_HELPERS) & RETIRED_COGS),
       'full: грузятся все коги кроме хелперов и покоящихся')
-check('dm_report.py' in RETIRED_COGS
+check('dm_report.py' not in ALL_SET
       and 'dm_report.py' not in enabled_f,
-      'покой: dm_report (/report-дубль) не грузится даже в full')
+      'удалён: dm_report (/report-дубль) больше нет на диске')
 check(not any(is_helper(f) for f in enabled_f), 'full: хелперы не загружаются никогда')
 
 print('\n== 4. Классификация модер-ядра здорова ==')
@@ -121,23 +132,29 @@ check(CORE_COGS <= MOD_ONLY_COGS and MODERATION_COGS <= MOD_ONLY_COGS and
       not (CORE_COGS & MODERATION_COGS),
       'списки: core+moderation = mod_only, пересечений нет')
 check(not (MOD_ONLY_COGS & HELPER_COGS), 'списки: хелперы не попали в mod_only')
-# известные внутренние зависимости ядра (get_cog) — обе стороны живы в MOD_ONLY
-for dep in ('warnings.py', 'tag_jail.py', 'impersonation.py', 'mod_kit.py',
-            'mod_tools.py', 'mod_case.py', 'auto_filter.py', 'reports.py',
-            'logs.py', 'proof_cog.py'):
-    assert dep in MOD_ONLY_COGS, dep
-check(True, 'ядро самодостаточно: warnings/tag_jail/impersonation/mod_*/reports/logs/proof — в списке')
+# внутренние зависимости ядра (get_cog) — живые стороны в MOD_ONLY.
+# tag_jail/mod_kit/mod_tools/mod_case физически удалены (чистка выключенных).
+for dep in ('warnings.py', 'impersonation.py', 'auto_filter.py', 'reports.py',
+            'logs.py', 'proof_cog.py', 'mod_plus.py', 'moderation_cog.py'):
+    assert dep in MOD_ONLY_COGS or dep in HELPER_COGS, dep
+for gone in ('tag_jail.py', 'mod_kit.py', 'mod_tools.py', 'mod_case.py'):
+    assert gone not in ALL_SET, f'{gone} должна быть удалена'
+check(True, 'ядро самодостаточно: warnings/impersonation/automod/reports/logs/proof — в списке')
 
 print('\n== 5. MOD_ONLY=1 — «только модерация» ==')
 enabled_m, disabled_m = select_cog_files(ALL_FILES, mod_only=True)
 check(set(enabled_m) == MOD_ONLY_COGS, 'mod_only: загружается ровно keep-лист')
 check(sorted(set(NON_HELPERS) - set(MOD_ONLY_COGS)) == disabled_m,
       'mod_only: всё остальное — в отключённых')
-for fun in ('economy_cog.py', 'music_cog.py', 'fun_cog.py', 'minigames.py',
-            'ai_chat.py', 'giveaway.py', 'level_cog.py', 'anime_daily.py',
-            'starboard.py', 'welcome_cog.py'):
-    assert fun in disabled_m, fun
-check(True, 'mod_only: экономика/музыка/игры/AI-чат/раздачи/левелинг — выключены')
+# Выключенные весёлые модули физически удалены с диска; в mod_only они
+# не фигурируют вовсе (ни в enabled, ни среди файлов).
+for fun in ('economy_cog.py', 'fun_cog.py', 'minigames.py',
+            'giveaway.py', 'level_cog.py', 'anime_daily.py', 'starboard.py'):
+    assert fun not in enabled_m and fun not in ALL_SET, fun
+# музыка/AI-чат/приветствие живут на диске, но в mod_only отключены
+for off_now in ('music_cog.py', 'ai_chat.py', 'welcome_cog.py', 'voice_commands.py'):
+    assert off_now in disabled_m, off_now
+check(True, 'mod_only: экономика/игры/раздачи/левелинг удалены; музыка/AI/приветствие — выключены')
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
              'antiraid.py', 'security.py', 'age_verification.py', 'auto_filter.py',
              'ai_moderation.py', 'reports.py', 'logs.py', 'proof_cog.py',
@@ -159,11 +176,15 @@ missing_core = sorted(f for f in CORE_ONLY_COGS if f not in ALL_SET)
 check(missing_core == [], f'CORE_ONLY_COGS: все файлы на диске {missing_core}')
 enabled_c, disabled_c = select_cog_files(ALL_FILES, core=True)
 check(set(enabled_c) == CORE_ONLY_COGS, 'core: загружается ровно keep-лист')
-for fun in ('economy_cog.py', 'music_cog.py', 'fun_cog.py', 'level_cog.py',
-            'giveaway.py', 'minigames.py', 'voice_commands.py', 'starboard.py'):
-    assert fun in disabled_c, fun
-check(True, 'core: экономика/музыка/игры/левелинг — выключены')
-for keep in ('moderation.py', 'reports.py', 'sla_cog.py', 'staff_apply.py',
+# Удалённые весёлые модули не существуют на диске вовсе; живые «несердцевинные»
+# (музыка/голос/приветствие) в core-режиме отключены.
+for gone in ('economy_cog.py', 'fun_cog.py', 'level_cog.py',
+             'giveaway.py', 'minigames.py', 'starboard.py'):
+    assert gone not in ALL_SET, gone
+for off_now in ('music_cog.py', 'voice_commands.py', 'welcome_cog.py'):
+    assert off_now in disabled_c, off_now
+check(True, 'core: экономика/игры/левелинг удалены; музыка/голос/приветствие выключены')
+for keep in ('moderation.py', 'reports.py', 'staff_apply.py',
              'logs.py', 'log_menu.py', 'ai_chat.py', 'ai_moderation.py',
              'help.py', 'cog_manager.py'):
     assert keep in enabled_c, keep
@@ -173,8 +194,8 @@ check(not set(enabled_c) & set(disabled_c)
       'core: разбиение без пересечений и потерь')
 
 print('\n== 6. DISABLED_COGS / EXTRA_COGS ==')
-e2, d2 = select_cog_files(ALL_FILES, full=True, disabled='Music_Cog.py, giveaway')
-check('music_cog.py' in d2 and 'giveaway.py' in d2 and
+e2, d2 = select_cog_files(ALL_FILES, full=True, disabled='Music_Cog.py, afk')
+check('music_cog.py' in d2 and 'afk.py' in d2 and
       len(e2) == len(NON_HELPERS) - 2 - len(RETIRED_COGS),
       'DISABLED_COGS: работает в полном режиме, имена нечувствительны к виду')
 e2l, d2l = select_cog_files(ALL_FILES, disabled='music_cog')
@@ -182,18 +203,18 @@ check('music_cog.py' in d2l and 'moderation.py' in e2l,
       'DISABLED_COGS: работает и поверх LEAN (выключает даже боевой модуль)')
 e3, d3 = select_cog_files(ALL_FILES, mod_only=True, disabled='logs,ticket.py')
 check('logs.py' in d3 and 'ticket.py' in d3,
-      'DISABLED_COGS: может выключить даже модер-модуль (приоритет над keep)')
-e4, d4 = select_cog_files(ALL_FILES, mod_only=True, extra='economy_cog, level_cog.py')
-check('economy_cog.py' in e4 and 'level_cog.py' in e4 and 'music_cog.py' in d4,
+      'DISABLED_COGS: может выключить даже модер-модуль/хелпер (приоритет над keep)')
+e4, d4 = select_cog_files(ALL_FILES, mod_only=True, extra='music_cog, welcome_cog.py')
+check('music_cog.py' in e4 and 'welcome_cog.py' in e4 and 'afk.py' in d4,
       'EXTRA_COGS: возвращает отдельные модули поверх MOD_ONLY')
 e5, _ = select_cog_files(ALL_FILES, mod_only=True, extra='_card_style,icons')
 check('_card_style.py' not in e5 and 'icons.py' not in e5,
       'EXTRA_COGS: хелпер силой не включить')
 
 print('\n== 7. Чтение из окружения ==')
-env = {'MOD_ONLY': '1', 'EXTRA_COGS': 'fun_cog', 'DISABLED_COGS': '  minigames  '}
+env = {'MOD_ONLY': '1', 'EXTRA_COGS': 'music_cog', 'DISABLED_COGS': '  afk  '}
 ee, de = select_from_environment(ALL_FILES, environ=env)
-check('fun_cog.py' in ee and 'minigames.py' in de and 'economy_cog.py' in de,
+check('music_cog.py' in ee and 'afk.py' in de and 'ai_chat.py' in de,
       'select_from_environment: MOD_ONLY+EXTRA+DISABLED работают вместе')
 ee2, de2 = select_from_environment(ALL_FILES, environ={})
 check(set(ee2) == LEAN_COGS and sorted(set(NON_HELPERS) - LEAN_COGS) == de2,
@@ -202,8 +223,8 @@ ee3, de3 = select_from_environment(ALL_FILES, environ={'BOT_FULL': '1'})
 check(ee3 == sorted(set(NON_HELPERS) - RETIRED_COGS)
       and de3 == sorted(set(NON_HELPERS) & RETIRED_COGS),
       'select_from_environment: BOT_FULL=1 -> полный состав (покой на месте)')
-ee4, de4 = select_from_environment(ALL_FILES, environ={'EXTRA_COGS': 'economy_cog, quiz'})
-check('economy_cog.py' in ee4 and 'quiz.py' in ee4 and 'fun_cog.py' in de4,
+ee4, de4 = select_from_environment(ALL_FILES, environ={'EXTRA_COGS': 'music_cog, welcome_cog'})
+check('music_cog.py' in ee4 and 'welcome_cog.py' in ee4,
       'select_from_environment: EXTRA_COGS точечно будит модули поверх LEAN')
 
 print('\n== 8. Интеграция с main.py ==')

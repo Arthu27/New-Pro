@@ -231,7 +231,7 @@ for role in ('uye', 'mod', 'admin', 'owner'):
 # ═══ 4. Отказ API — JSON, а не HTML ═════════════════════════════════════
 print('== API-отказы — JSON ==')
 c = make_client('mod')
-r = c.get('/api/role-permissions/1')  # owner-level API (по AST: role_required('owner'))
+r = c.get('/api/role-permissions/777')  # owner-level API (role_required('owner'))
 d = r.get_json(silent=True)
 check(r.status_code == 403 and isinstance(d, dict) and 'error' in d,
       'недостаточный уровень: API → 403 с {"error"} в JSON')

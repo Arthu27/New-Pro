@@ -128,7 +128,7 @@
 
 <script src="/static/pickers.js"></script>
 <script>
-var GID = '{{ guild_id }}';
+var GID = "{{ guild_id }}";
 attachMemberPicker(document.getElementById('afTestUid'), { gid: GID, statusEl: document.getElementById('afTestUidStatus') });
 var API = '/api/guild/' + GID + '/antifake';
 var CAN_EDIT = {{ 'true' if role in ('admin', 'owner') else 'false' }};
