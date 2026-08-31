@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Верификация · Модерация — Hakumo{% endblock %}
+{% block page_title %}Верификация{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div class="page-head-copy">
+    <div class="eyebrow">Защита <span class="sep">·</span> Верификация</div>
+    <h1>Верификация новых аккаунтов</h1>
+    <p class="lead">Участники со свежими Discord-аккаунтами получают карантинную роль и анкету. Модераторы подтверждают заявку кнопкой — и доступ открывается.</p>
+  </div>
+  <div class="page-head-actions">
+    <button type="button" class="btn" id="vfReload"><i class="fas fa-arrows-rotate"></i> Обновить</button>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi tone-info"><div class="kpi-icon"><i class="fas fa-shield-halved"></i></div><div class="kpi-copy"><div class="kpi-value" id="vfPillState">—</div><div class="kpi-label">Состояние</div></div></div>
+  <div class="kpi tone-warn"><div class="kpi-icon"><i class="fas fa-hourglass-half"></i></div><div class="kpi-copy"><div class="kpi-value" id="vfPillAge">—</div><div class="kpi-label">Порог возраста</div></div></div>
+  <div class="kpi tone-err"><div class="kpi-icon"><i class="fas fa-inbox"></i></div><div class="kpi-copy"><div class="kpi-value" id="vfPillWait">—</div><div class="kpi-label">Ждут решения</div></div></div>
+</div>
+
+<div class="grid-2" style="align-items:start">
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-sliders"></i> Настройки</h2>
+      <div class="sub">Порог возраста аккаунта, карантинная роль и каналы.</div></div></div>
+    <div class="panel-body">
+      <label class="form-group" style="flex-direction:row;align-items:center;gap:10px;margin-bottom:14px">
+        <input type="checkbox" id="vfEnabled" class="vf-switch" style="width:auto">
+        <span class="form-label" style="margin:0">Включить верификацию молодых аккаунтов</span>
+      </label>
+
+      <div class="form-row">
+        <label class="form-group"><span class="form-label">Порог возраста аккаунта (дней)</span>
+          <input class="form-input" id="vfMinAge" type="number" min="0" max="365" value="2"></label>
+        <label class="form-group"><span class="form-label">Срок карантина до авто-кика (дней, 0 — не кикать)</span>
+          <input class="form-input" id="vfKick" type="number" min="0" max="30" value="1"></label>
+      </div>
+      <div class="hint">Аккаунты моложе порога получают карантинную роль и анкету. По умолчанию — 2 дня.</div>
+
+      <div class="form-row" style="margin-top:12px">
+        <label class="form-group"><span class="form-label">Карантинная роль (без доступа)</span>
+          <select class="form-input" id="vfQRole"><option value="">— не выбрана —</option></select></label>
+        <label class="form-group"><span class="form-label">Роль участника (выдать после верификации)</span>
+          <select class="form-input" id="vfMRole"><option value="">— не выбрана —</option></select></label>
+      </div>
+      <div class="form-row">
+        <label class="form-group"><span class="form-label">Канал верификации (кнопка анкеты)</span>
+          <select class="form-input" id="vfVChan"><option value="">— не выбран —</option></select></label>
+        <label class="form-group"><span class="form-label">Канал заявок модераторам</span>
+          <select class="form-input" id="vfRChan"><option value="">— = канал верификации —</option></select></label>
+      </div>
+      <div class="hint">Канал верификации бот создаёт автоматически при <code>/verify-setup</code> в Discord, если он ещё не создан.</div>
+
+      <div class="row" style="margin-top:14px">
+        <button type="button" class="btn btn-primary" id="vfSave"><i class="fas fa-save"></i> Сохранить</button>
+      </div>
+      <div class="hint" id="vfMsg" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><div><h2><i class="fas fa-clipboard-check"></i> Заявки</h2>
+      <div class="sub">Участники на карантине и отправленные анкеты. Решения принимаются кнопками под анкетой в Discord.</div></div></div>
+    <div class="panel-body">
+      <div id="vfList">
+        <div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка…</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" style="margin-top:14px">
+  <div class="panel-head"><div><h2><i class="fas fa-circle-info"></i> Как это работает</h2></div></div>
+  <div class="panel-body">
+    <ol class="vf-flow" style="margin:0;padding-left:20px;line-height:1.9;color:var(--text-2)">
+      <li>Участник заходит на сервер. Если его Discord-аккаунт создан менее <b id="vfFlowAge">2</b> дн. назад — бот выдаёт карантинную роль и пишет красивое ЛС.</li>
+      <li>В ЛС участник получает инструкцию: нажать <b>«Заполнить анкету»</b> в канале верификации.</li>
+      <li>Бот в личных сообщениях задаёт 5 вопросов (имя, возраст, откуда узнал, правила, о себе).</li>
+      <li>Готовая анкета падает модераторам в канал заявок с кнопками <b>«Подтвердить»</b> / <b>«Отклонить»</b>.</li>
+      <li>При подтверждении карантин снимается, выдаётся роль участника; при отклонении участник кикается (с уведомлением в ЛС).</li>
+    </ol>
+    <div class="hint" style="margin-top:10px">Быстрая настройка в Discord: <code>/verify-setup</code> — бот сам создаст канал и карантинную роль при желании.</div>
+  </div>
+</div>
+
+<script src="/static/pickers.js"></script>
+<script>
+var GID = '{{ guild_id }}';
+var API = '/api/guild/' + GID + '/verify';
+var CAN_EDIT = {{ 'true' if role in ('admin', 'owner') else 'false' }};
+var ROLES = [], CHANNELS = [];
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function showMsg(ok, text) {
+  var m = $('vfMsg');
+  m.className = 'hint ' + (text ? (ok ? '' : 'error') : '');
+  m.textContent = text || '';
+}
+
+function fillSelect(selId, items, cur, prefix) {
+  var sel = $(selId);
+  var keepFirst = sel.querySelector('option');
+  var firstVal = keepFirst ? keepFirst.value : '';
+  var html = keepFirst ? keepFirst.outerHTML : '';
+  html += items.map(function (it) {
+    return '<option value="' + esc(it.id) + '"' + (String(cur) === String(it.id) ? ' selected' : '') + '>'
+      + prefix + esc(it.name) + '</option>';
+  }).join('');
+  sel.innerHTML = html;
+}
+
+function statusLabel(st) {
+  return ({
+    quarantine: '<span class="tag" style="background:rgba(217,119,6,.14);color:#d97706">Карантин</span>',
+    application: '<span class="tag" style="background:rgba(88,101,242,.14);color:#5865f2">Анкета на рассмотрении</span>',
+    approved: '<span class="tag" style="background:rgba(46,204,113,.14);color:#2ecc71">Одобрен</span>',
+    kicked: '<span class="tag" style="background:rgba(231,76,60,.14);color:#e74c3c">Кикнут</span>'
+  })[st] || esc(st);
+}
+
+function renderPending(list) {
+  var waiting = list.filter(function (p) { return p.status === 'quarantine' || p.status === 'application'; });
+  $('vfPillWait').textContent = waiting.length;
+  var box = $('vfList');
+  if (!list.length) {
+    box.innerHTML = '<div class="empty"><i class="fas fa-inbox"></i><span>Заявок пока нет — все участники верифицированы</span></div>';
+    return;
+  }
+  box.innerHTML = list.map(function (p) {
+    var when = p.quarantined_at ? new Date(p.quarantined_at * 1000).toLocaleString('ru-RU') : '';
+    var ans = '';
+    if (p.answers) {
+      ans = Object.keys(p.answers).map(function (k) {
+        return '<div style="margin-top:4px;color:var(--text-2)"><b>' + esc(k.toUpperCase()) + ':</b> ' + esc(p.answers[k]) + '</div>';
+      }).join('');
+    }
+    return '<div class="vf-card" style="border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin-bottom:10px;background:var(--surface)">'
+      + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      + '<b style="color:var(--text)">ID ' + esc(p.user_id) + '</b>' + statusLabel(p.status)
+      + '<span style="color:var(--text-3);font-size:11.5px;margin-left:auto">' + esc(when) + '</span></div>'
+      + ans + '</div>';
+  }).join('');
+}
+
+function render(cfg, pending) {
+  $('vfEnabled').checked = !!cfg.enabled;
+  $('vfMinAge').value = cfg.min_age_days;
+  $('vfKick').value = cfg.kick_after_days;
+  $('vfFlowAge').textContent = cfg.min_age_days;
+  $('vfPillState').textContent = cfg.enabled ? 'Включена' : 'Выключена';
+  $('vfPillAge').textContent = cfg.min_age_days + ' дн.';
+  fillSelect('vfQRole', ROLES, cfg.quarantine_role_id, '@');
+  fillSelect('vfMRole', ROLES, cfg.member_role_id, '@');
+  fillSelect('vfVChan', CHANNELS, cfg.verify_channel_id, '#');
+  fillSelect('vfRChan', CHANNELS, cfg.review_channel_id, '#');
+  renderPending(pending || []);
+  // селекты появились в DOM — превратить их в единый пикер (без дублей)
+  if (window.sshdAll) window.sshdAll(document);
+  // не-админ видит настройки, но не меняет их
+  ['vfEnabled','vfMinAge','vfKick','vfQRole','vfMRole','vfVChan','vfRChan','vfSave']
+    .forEach(function (id) { if ($(id)) $(id).disabled = !CAN_EDIT; });
+}
+
+function load() {
+  window.pickerLoad(GID).then(function (p) {
+    ROLES = p.roles || [];
+    CHANNELS = p.channels || [];
+    fetch(API + '/config').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.success) { showMsg(false, d.error || 'Не удалось загрузить конфиг'); return; }
+      render(d.config, d.pending);
+    }).catch(function () { showMsg(false, 'Сеть моргнула — попробуйте ещё раз'); });
+  });
+}
+
+function save() {
+  if (!CAN_EDIT) { showMsg(false, 'Настройки меняет только администратор'); return; }
+  var body = {
+    enabled: $('vfEnabled').checked,
+    min_age_days: Number($('vfMinAge').value),
+    kick_after_days: Number($('vfKick').value),
+    quarantine_role_id: $('vfQRole').value,
+    member_role_id: $('vfMRole').value,
+    verify_channel_id: $('vfVChan').value,
+    review_channel_id: $('vfRChan').value
+  };
+  fetch(API + '/config', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.success) { showMsg(false, d.error || 'Ошибка сохранения'); return; }
+    showMsg(true, 'Сохранено');
+    render(d.config, window._vfPending || []);
+  }).catch(function () { showMsg(false, 'Сеть моргнула — попробуйте ещё раз'); });
+}
+
+$('vfSave').addEventListener('click', save);
+$('vfReload').addEventListener('click', load);
+// кэшируем список заявок, чтобы перерисовка после сохранения его не теряла
+var _origRenderPending = renderPending;
+renderPending = function (l) { window._vfPending = l; _origRenderPending(l); };
+load();
+</script>
+{% endblock %}

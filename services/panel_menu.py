@@ -112,6 +112,9 @@ MENU = [
         {'path': '/antifake', 'label': 'Антифейк', 'icon': 'fa-user-secret',
          'section': 'protection', 'description': 'Поиск подделок профилей и impersonation',
          'access': 'Мод+', 'tone': 'security'},
+        {'path': '/verify', 'label': 'Верификация', 'icon': 'fa-clipboard-check',
+         'section': 'protection', 'description': 'Карантин и анкета для участников со свежими аккаунтами',
+         'access': 'Мод+', 'min_role': 'mod', 'tone': 'security'},
     ]},
     {'group': 'Участники', 'key': 'members', 'icon': 'fa-users', 'pages': [
         {'path': '/users', 'label': 'Пользователи', 'icon': 'fa-users'},
@@ -344,6 +347,7 @@ PAGE_COGS = {
     '/security': ('security',),
     '/tagjail': ('tag_jail',),
     '/antifake': ('impersonation',),
+    '/verify': ('age_verification',),
     '/ladder': ('ladder', 'warnings'),
     '/replay': ('replay',),
     '/meetings': ('meeting',),

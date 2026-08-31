@@ -136,4 +136,4 @@ if os.path.isdir('data') or os.path.isdir('cogs'):
     try:
         start()
     except Exception as _sx1:
-        _log.debug('подавлено: %s', _sx1)
+        _logger().debug('message_stats: автостарт подавлен: %s', _sx1)

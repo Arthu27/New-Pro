@@ -22,107 +22,120 @@ def register(ctx):
 
 
         # ── ANALYTICS API ─────────────────────────────────────────────────────────
+    @app.route('/api/guild/<guild_id>/analytics')
+    @login_required
+    def api_guild_analytics(guild_id):
+        import web.app as _app
+        bot = _app.bot_instance
+        import collections
+        import datetime as _dt
 
-    @app .route ('/api/guild/<guild_id>/analytics')
-    @login_required 
-    def api_guild_analytics (guild_id ):
-        import web .app as _app ;bot =_app .bot_instance 
-        import collections ,datetime as dt 
-
-        result ={
-        'top_members':[],'top_channels':[],
-        'daily_labels':[],'daily_messages':[],
-        'member_labels':[],'member_counts':[]
+        result = {
+            'top_members': [], 'top_channels': [],
+            'daily_labels': [], 'daily_messages': [],
+            'member_labels': [], 'member_counts': [],
         }
 
-        # audit_log.json'dan message статистика тянуть
-        audit_file ='data/audit_log.json'
-        member_msg_counts =collections .Counter ()
-        channel_msg_counts =collections .Counter ()
-        daily_counts =collections .Counter ()
+        member_msg_counts = collections.Counter()
+        channel_msg_counts = collections.Counter()
+        daily_counts = collections.Counter()
 
-        if os .path .exists (audit_file ):
-            try :
-                with open (audit_file ,'r',encoding ='utf-8')as fp :
-                    data =json .load (fp )
-            except Exception :
-                data ={}
-            events =data .get (guild_id ,[])
-            for ev in events :
-                action =(ev .get ('action')or '').lower ()
-                category =(ev .get ('category')or '').lower ()
-                if category =='message'and action =='message написано':
-                    name =ev .get ('user_name')or ev .get ('user_id','?')
-                    member_msg_counts [name ]+=1 
-                    ch =ev .get ('channel')or ev .get ('channel_name','?')
-                    channel_msg_counts [ch ]+=1 
-                    ts =ev .get ('timestamp','')
-                    if ts :
-                        try :
-                            day =ts [:10 ]
-                            daily_counts [day ]+=1 
-                        except Exception as _ex:
-                            _log.debug("api_guild_analytics(): подавлено: %s", _ex)
+        def _day_key(ts):
+            """ISO-таймстамп (чаще UTC, '...Z' или '+00:00') -> дата В ЛОКАЛЬНОМ
+            поясе сервера (ГГГГ-ММ-ДД). Раньше брали ts[:10] — это дата UTC, и
+            вечерние/ночные сообщения падали «не в тот день» относительно меток,
+            которые строятся по date.today() (локально)."""
+            if not ts:
+                return None
+            s = str(ts).strip().replace('Z', '+00:00')
+            try:
+                parsed = _dt.datetime.fromisoformat(s)
+            except (ValueError, TypeError):
+                return s[:10] if len(s) >= 10 else None
+            if parsed.tzinfo is not None:
+                parsed = parsed.astimezone()  # в локальный пояс сервера
+            return parsed.date().isoformat()
 
-                            # Если в audit_log нет сообщений — смотреть файл message_logs
-        msg_log_file =f'data/message_logs_{guild_id}.json'
-        if not member_msg_counts and os .path .exists (msg_log_file ):
-            with open (msg_log_file ,'r',encoding ='utf-8')as fp :
-                msgs =json .load (fp )
-            for m in msgs :
-                name =m .get ('author')or m .get ('user_name','?')
-                member_msg_counts [name ]+=1 
-                ch =m .get ('channel','?')
-                channel_msg_counts [ch ]+=1 
-                ts =m .get ('timestamp','')
-                if ts :
-                    try :
-                        daily_counts [ts [:10 ]]+=1 
-                    except Exception as _ex:
-                        _log.debug("api_guild_analytics(): подавлено: %s", _ex)
+        # Основной источник: message_logs_<gid>.json — его наполняет ког
+        # activity_stats -> services.message_stats (КАЖДОЕ сообщение, кроме
+        # ботов/вебхуков/ЛС). Полные и достоверные данные.
+        msg_log_file = f'data/message_logs_{guild_id}.json'
+        if os.path.exists(msg_log_file):
+            try:
+                with open(msg_log_file, 'r', encoding='utf-8') as fp:
+                    msgs = json.load(fp)
+            except Exception as ex:
+                msgs = []
+                _log.debug('analytics: не прочитать %s: %s', msg_log_file, ex)
+            for m in msgs:
+                if not isinstance(m, dict):
+                    continue
+                member_msg_counts[str(m.get('author') or m.get('user_name') or '?')] += 1
+                channel_msg_counts[str(m.get('channel') or '?')] += 1
+                day = _day_key(m.get('timestamp'))
+                if day:
+                    daily_counts[day] += 1
 
-        # Метки последних 7 дней
-        today =dt .date .today ()
-        labels =[(today -dt .timedelta (days =i )).isoformat ()for i in range (6 ,-1 ,-1 )]
-        result ['daily_labels']=[l [5 :]for l in labels ]# формат ММ-ДД
-        result ['daily_messages']=[daily_counts .get (l ,0 )for l in labels ]
+        # Дополнение из audit_log.json: событие «message написано» исторически
+        # почти не пишется (лог фиксирует удаления/правки). Если основного файла
+        # нет, а в старом аудите событие есть — учтём его (без двойного счёта).
+        if not member_msg_counts:
+            audit_file = 'data/audit_log.json'
+            if os.path.exists(audit_file):
+                try:
+                    with open(audit_file, 'r', encoding='utf-8') as fp:
+                        audit = json.load(fp)
+                except Exception as ex:
+                    audit = {}
+                    _log.debug('analytics: audit_log: %s', ex)
+                for ev in audit.get(str(guild_id), []):
+                    if not isinstance(ev, dict):
+                        continue
+                    action = (ev.get('action') or '').lower()
+                    category = (ev.get('category') or '').lower()
+                    if category == 'message' and action == 'message написано':
+                        member_msg_counts[str(ev.get('user_name') or ev.get('user_id') or '?')] += 1
+                        channel_msg_counts[str(ev.get('channel') or ev.get('channel_name') or '?')] += 1
+                        day = _day_key(ev.get('timestamp'))
+                        if day:
+                            daily_counts[day] += 1
 
-        # Топ участников
-        result ['top_members']=[
-        {'name':name ,'messages':count }
-        for name ,count in member_msg_counts .most_common (10 )
+        # Метки последних 7 дней (локальный пояс — тот же, что в _day_key)
+        today = _dt.date.today()
+        labels = [(today - _dt.timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
+        result['daily_labels'] = [l[5:] for l in labels]  # формат ММ-ДД
+        result['daily_messages'] = [daily_counts.get(l, 0) for l in labels]
+
+        result['top_members'] = [
+            {'name': name, 'messages': count}
+            for name, count in member_msg_counts.most_common(10)
+        ]
+        result['top_channels'] = [
+            {'name': ch, 'messages': count}
+            for ch, count in channel_msg_counts.most_common(10)
         ]
 
-        # Топ каналов
-        result ['top_channels']=[
-        {'name':ch ,'messages':count }
-        for ch ,count in channel_msg_counts .most_common (10 )
-        ]
+        # Демо-подстановка удалена (заказ владельца): только реальные данные.
 
-        # Демо-подстановка каналов удалена (заказ владельца 2026-08):
-        # аналитика показывает ТОЛЬКО реальные данные; пусто — честные
-        # нули и пустые состояния, никаких выдуманных цифр «из воздуха».
+        # Рост участников: реконструкция по реальным приходам/уходам.
+        result['member_labels'] = result['daily_labels']
+        if bot:
+            guild = bot.get_guild(int(guild_id))
+            mc = guild.member_count if guild else 0
+        else:
+            mc = 0
+        counts = [mc] * 7
+        try:
+            from web.routes.analytics_plus import member_flow
+            flow = member_flow(guild_id, days=7)
+            if any(flow.get('joins')) or any(flow.get('leaves')):
+                counts = [max(0, mc - (sum(flow['joins'][i:]) - sum(flow['leaves'][i:])))
+                          for i in range(7)]
+        except Exception as ex:
+            _log.debug('api_guild_analytics(): member_flow подавлено: %s', ex)
+        result['member_counts'] = counts
 
-        # Рост участников: реконструкция по реальным приходам/уходам
-        # (member_flow читает audit/message-логи). Истории нет — честная
-        # прямая линия на текущем составе, без выдуманного «+2 в день».
-        result ['member_labels']=result ['daily_labels']
-        if bot :
-            guild =bot .get_guild (int (guild_id ))
-            mc =guild .member_count if guild else 0 
-        else :
-            mc =0 
-        counts =[mc ]*7 
-        try :
-            from web .routes .analytics_plus import member_flow 
-            flow =member_flow (guild_id ,days =7 )
-            if any (flow .get ('joins'))or any (flow .get ('leaves')):
-                counts =[max (0 ,mc -(sum (flow ['joins'][i :])-sum (flow ['leaves'][i :])))for i in range (7 )]
-        except Exception as _ex :
-            _log .debug("api_guild_analytics(): member_flow подавлено: %s", _ex)
-        result ['member_counts']=counts 
-
-        return jsonify (result )
+        return jsonify(result)
 
 
         # ── HEALTH API ────────────────────────────────────────────────────────────

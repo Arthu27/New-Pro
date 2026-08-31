@@ -147,6 +147,7 @@ sel.options = [new Opt('', '— не выбрано —'), new Opt('1', '# об�
   new Opt('2', '# модераторы'), new Opt('3', '# новости')];
 sel.value = '2';
 form.appendChild(sel);
+document.body.appendChild(form);   // как в реальном DOM: форма лежит в body
 
 const ctl = window.sshdEnhance(sel, { search: true });
 ok('wrapper создан, нативный скрыт', sel._cls.has('sshd-src') && form.children[0]._cls.has('sshd'));
@@ -157,15 +158,15 @@ ok('ярлык = текущая опция', root.querySelectorAll('.sshd-lbl')[
 const btn = root.querySelectorAll('.sshd-btn')[0];
 btn.dispatchEvent({ type: 'click', preventDefault: function () {} });
 ok('открыто (class open + aria)', root._cls.has('open') && btn.getAttribute('aria-expanded') === 'true');
-let rows = root.querySelectorAll('.sshd-row');
+let rows = document.querySelectorAll('.sshd-row');
 ok('строки = все опции (4)', rows.length === 4);
 ok('выбранная подсвечена cur', rows.some(function (r) { return r._cls.has('cur') && r.getAttribute('data-v') === '2'; }));
 
 /* поиск фильтрует + текущий не пропадает */
-const ip = root.querySelectorAll('.sshd-search')[0];
+const ip = document.querySelectorAll('.sshd-search')[0];
 ip.value = 'ново';
 ip.dispatchEvent({ type: 'input' });
-rows = root.querySelectorAll('.sshd-row');
+rows = document.querySelectorAll('.sshd-row');
 ok('фильтр: # новости + текущая (2 строки)', rows.length === 2
    && rows.some(function (r) { return r.getAttribute('data-v') === '3'; })
    && rows.some(function (r) { return r.getAttribute('data-v') === '2'; }));
@@ -181,7 +182,7 @@ ok('ярлык обновлён', root.querySelectorAll('.sshd-lbl')[0].textCont
 
 /* 4. клавиатура: ArrowDown + Enter */
 btn.dispatchEvent({ type: 'click', preventDefault: function () {} });
-const pop = root.querySelectorAll('.sshd-pop')[0];
+const pop = document.querySelectorAll('.sshd-pop')[0];
 pop.dispatchEvent({ type: 'keydown', key: 'ArrowDown', preventDefault: function () {}, stopPropagation: function () {} });
 pop.dispatchEvent({ type: 'keydown', key: 'ArrowDown', preventDefault: function () {}, stopPropagation: function () {} });
 pop.dispatchEvent({ type: 'keydown', key: 'Enter', preventDefault: function () {}, stopPropagation: function () {} });
@@ -197,6 +198,7 @@ const s2 = wrap(new El('select')); s2.options = [new Opt('a', 'A'), new Opt('b',
 const s3 = wrap(new El('select')); s3.options = [new Opt('a', 'A')]; s3.setAttribute('multiple', '');
 const holder = wrap(new El('div'));
 holder.appendChild(s2); holder.appendChild(s3);
+document.body.appendChild(holder);
 window.sshdAll(holder);
 ok('sshdAll: обычный подхвачен, multiple пропущен',
    s2._cls.has('sshd-src') && !s3._cls.has('sshd-src'));

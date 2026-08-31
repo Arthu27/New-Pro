@@ -67,8 +67,9 @@ MODERATION_COGS = frozenset({
     # автомод
     'ai_moderation.py', 'auto_filter.py', 'proactive_mod.py',
     # анти-рейд / безопасность / верификация
-    'antiraid.py', 'guardian.py', 'security.py', 'verification.py', 'tag_jail.py',
+    'antiraid.py', 'guardian.py', 'security.py', 'age_verification.py', 'tag_jail.py',
     'impersonation.py',
+    # verification.py — старая заглушка, заменена age_verification.py (в RETIRED_COGS)
     # анти-альт / локдаун / ночной режим — аварийный арсенал
     'anti_alt.py', 'lockdown.py', 'night_mode.py',
     # модераторская разведка
@@ -124,8 +125,10 @@ CORE_ONLY_COGS = CORE_COGS | MODERATION_COGS | TICKET_COGS | AI_CHAT_COGS
 MOD_LEAN_COGS = frozenset({
     'moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
     'proof_cog.py', 'auto_filter.py',
-    'antiraid.py', 'guardian.py', 'verification.py',
+    'antiraid.py', 'guardian.py',
+    'age_verification.py',  # верификация молодых аккаунтов: карантин + анкета (заказ 31.08)
     'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
+    'activity_stats.py',   # сбор активности для страницы «Аналитика» (без команд)
     'afk.py',              # /afk + /afk-remove — пользователи просили
     # Щит по максимуму (заказ владельца «добавь все возможные для защиты»):
     # security (антиспам/фейки/сканер ссылок), anti_alt (свежие аккаунты),
@@ -212,6 +215,12 @@ RETIRED_COGS = frozenset({
     # тикет-ядра продолжают его покрывать. Ког НЕ грузится ни в одном профиле —
     # ни /ticket-panel, ни панели/кнопки тикетов в Discord больше не появляются.
     'ticket.py',
+    # Старая заглушка верификации (только приветственное ЛС по флагу) заменена
+    # полноценным cogs/age_verification.py (2026-08-31): порог возраста аккаунта,
+    # карантинная роль, анкета в ЛС, модерация заявок кнопками. Файл оставлен на
+    # диске, но как extension не грузится ни в одном профиле — иначе два
+    # on_member_join конкурировали бы.
+    'verification.py',
 })
 
 

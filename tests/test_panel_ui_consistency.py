@@ -79,20 +79,22 @@ if bad:
 else:
     check(checked > 30, f'все страницы меню ({checked}) — крошка «Группа · Подпись»')
 
-print('== 2. Всплывающие списки: в рамках экрана, закрытие при скролле ==')
+print('== 2. Всплывающие списки: в рамках экрана, следуют за полем ==')
 pick = open(os.path.join(ROOT, 'web', 'static', 'pickers.js'), encoding='utf-8').read()
 css = open(os.path.join(ROOT, 'web', 'static', 'style.css'), encoding='utf-8').read()
 
 check('function placePop' in pick and "classList.toggle('up'" in pick,
       'pickers: позиционирование .sshd вверх/вниз (placePop/up)')
-check('function scrollBounds' in pick and 'scroll' in pick and 'closePop()' in pick,
-      'pickers: .sshd учитывает прокручиваемый контейнер и закрывается при скролле')
+check("document.body.appendChild(pop)" in pick and 'sshd-pop-float' in pick,
+      'pickers: список монтируется в body (fixed) и не обрезается overflow панели')
+check('addEventListener(\'scroll\'' in pick and 'placePop' in pick,
+      'pickers: при прокрутке список переставляется к полю (клики не промахиваются)')
 check("list.style.maxHeight" in pick and 'maxHeight' in pick,
       'pickers: высота списка ограничена свободным местом')
 check('stopPropagation' in pick,
       'pickers: клик по строке не всплывает на страницу (мимо не попадёт)')
-check(".sshd.open .sshd-pop.up" in css and '.mpd.up' in css,
-      'css: классы «вверх» есть у .sshd-pop и .mpd')
+check('.sshd-pop.sshd-pop-float' in css and '.mpd.mpd-floating' in css,
+      'css: fixed-режим есть у .sshd-pop и .mpd')
 check("listBox.style.maxHeight" in pick,
       'pickers: высота списка людей ограничена свободным местом')
 

@@ -101,8 +101,8 @@ from services import panel_menu as PM  # noqa: E402
 
 pages = [p for g in PM.MENU for p in g['pages']]
 paths = [p['path'] for p in pages]
-check(len(paths) == 125 and len(set(paths)) == 125,
-      f'в меню 125 уникальные страницы ({len(paths)})')
+check(len(paths) == 126 and len(set(paths)) == 126,
+      f'в меню 126 уникальные страницы ({len(paths)})')
 groups = {g['key']: g for g in PM.MENU}
 check('settings' in groups, 'категория «Настройки» существует')
 sg = groups['settings']

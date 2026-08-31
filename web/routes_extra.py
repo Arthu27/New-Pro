@@ -119,6 +119,7 @@ from web.routes import (
     search_panel,
     fun_panel,
     antifake_panel,
+    verification_panel,
     staff_stats_panel,
     pagerduty_hook,
     mod_schedule,

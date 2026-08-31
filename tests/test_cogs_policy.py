@@ -73,7 +73,7 @@ for dead in ('economy_cog.py', 'level_cog.py', 'fun_cog.py', 'minigames.py',
 check(True, 'lean: экономика/игры/уровни/ивенты/соц-системы — спят')
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'temp_moderation.py', 'proof_cog.py', 'auto_filter.py',
-             'antiraid.py', 'verification.py',
+             'antiraid.py', 'age_verification.py',
              'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
              'staff_apply.py',
              'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
@@ -82,6 +82,11 @@ for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'afk.py', 'help.py', 'cog_manager.py'):
     assert keep in enabled, keep
 check(True, 'lean: модерация/репорты/музыка/AI/приветствие/логи/afk — живы')
+# Старая заглушка verification.py отправлена в покой — её заменил
+# полноценный age_verification.py (карантин + анкета молодых аккаунтов).
+assert 'verification.py' in disabled, 'verification.py должна быть retired'
+assert 'age_verification.py' in enabled, 'age_verification.py должна грузиться'
+check(True, 'lean: верификация — age_verification жив, старая заглушка спит')
 for asleep in ('tag_jail.py', 'sla_cog.py', 'mod_report.py',
                'health.py', 'feature_flag_cog.py'):
     assert asleep in disabled, asleep
@@ -134,7 +139,7 @@ for fun in ('economy_cog.py', 'music_cog.py', 'fun_cog.py', 'minigames.py',
     assert fun in disabled_m, fun
 check(True, 'mod_only: экономика/музыка/игры/AI-чат/раздачи/левелинг — выключены')
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
-             'antiraid.py', 'security.py', 'verification.py', 'auto_filter.py',
+             'antiraid.py', 'security.py', 'age_verification.py', 'auto_filter.py',
              'ai_moderation.py', 'reports.py', 'logs.py', 'proof_cog.py',
              'help.py', 'cog_manager.py'):
     assert keep in enabled_m, keep

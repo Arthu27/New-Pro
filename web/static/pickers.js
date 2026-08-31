@@ -18,6 +18,7 @@
 
   /* ── Живые списки сервера ─────────────────────────────── */
   var _cache = {}; /* gid -> Promise({channels, roles, online}) */
+  var _mpdPanels = []; /* все body-панели выбора участника (для закрытия чужих) */
 
   window.pickerLoad = function (gid) {
     /* Пустой gid (модуль не сообщил гильдию) — не оставляем пикеры пустыми:
@@ -151,10 +152,24 @@
      при выборе человека — ровно как нативный select). */
 
   function sshdEnhance(sel, opts) {
-    if (!sel || sel._sshd) return sel && sel._sshd;
+    if (!sel || sel._sshd) return sel && (sel._sshd ? sel._sshd._sshdCtl : null);
     opts = opts || {};
     var host = sel.parentNode;
     if (!host) return null;
+
+    /* Структурная защита от дублей (sel._sshd теряется при пересоздании
+       узла): если поле уже в .sshd или перед ним висит виджет — не строим
+       второй; пустую осиротевшую обёртку от прежнего узла сносим. */
+    if (host.classList && host.classList.contains('sshd') &&
+        host.querySelector('select.sshd-src') === sel) {
+      return sel._sshd ? sel._sshd._sshdCtl : null;
+    }
+    var prevSib = sel.previousElementSibling;
+    if (prevSib && prevSib.classList && prevSib.classList.contains('sshd')) {
+      var orphan = !prevSib.querySelector('select.sshd-src');
+      if (orphan && prevSib.parentNode) prevSib.parentNode.removeChild(prevSib);
+      else return prevSib._sshdCtl || null;
+    }
 
     var root = document.createElement('div');
     root.className = 'sshd';
@@ -192,9 +207,13 @@
     pop.appendChild(list);
 
     root.appendChild(btn);
-    root.appendChild(pop);
-    root.appendChild(sel);   // sel живёт внутри, невидим — источник истины
+    root.appendChild(sel);   // sel живёт внутри root, невидим — источник истины
     sel.classList.add('sshd-src');
+    /* Попап монтируем в <body> и позиционируем fixed по координатам кнопки:
+       панели формы имеют .panel{overflow:hidden}, и абсолютный список
+       внутри поля обрезался бы границей панели («уезжает/не видно/клики
+       мимо»). В body список ничем не клипуется и открывается в любую сторону. */
+    pop.classList.add('sshd-pop-float');
 
     var state = { open: false, active: -1 };
     sel._sshd = root;
@@ -206,47 +225,36 @@
        «выбирать невозможно» (клики попадают мимо). Считаем свободное
        место (и в прокручиваемом контейнере — его границы) и открываем
        ВВЕРХ или ограничиваем высоту списка. */
-    function scrollBounds(el) {
-      var n = el.parentNode;
-      while (n && n !== document.body && n.nodeType === 1) {
-        var o = getComputedStyle(n);
-        if (/(auto|scroll|overlay)/.test(o.overflowY || '')) {
-          return n.getBoundingClientRect();
-        }
-        n = n.parentNode;
-      }
-      return null;
-    }
     function placePop() {
       var r = btn.getBoundingClientRect();
-      var ph = pop.offsetHeight || 0;
-      var lim = scrollBounds(pop);
-      var vpBottom = window.innerHeight;
-      var vpTop = 0;
-      var below = (lim ? Math.min(vpBottom, lim.bottom) : vpBottom) - r.bottom - 12;
-      var above = r.top - (lim ? Math.max(vpTop, lim.top) : vpTop) - 12;
-      var up = below < Math.min(ph, 280) && above > below;
+      var vw = window.innerWidth, vh = window.innerHeight;
+      var w = r.width || 220;
+      var below = vh - r.bottom - 12, above = r.top - 12;
+      var up = below < 220 && above > below;
       root.classList.toggle('up', up);
-      var space = up ? above : below;
-      if (space < 120) space = 120;
-      var maxH = Math.max(120, Math.min(280, space));
-      list.style.maxHeight = maxH + 'px';
-      /* выбранный вариант — в видимость, чтобы не искать его скроллом */
-      var cur = list.querySelector('.sshd-row.cur');
-      if (cur) setTimeout(function () { cur.scrollIntoView({ block: 'nearest' }); }, 0);
+      pop.classList.toggle('sshd-pop-up', up);
+      var space = (up ? above : below);
+      list.style.maxHeight = Math.max(120, Math.min(280, space < 120 ? 120 : space)) + 'px';
+      pop.style.left = Math.min(Math.max(8, r.left), vw - w - 8) + 'px';
+      pop.style.width = w + 'px';
+      pop.style.top = up ? 'auto' : (r.bottom + 6) + 'px';
+      pop.style.bottom = up ? (vh - r.top + 6) + 'px' : 'auto';
+      var cur = list.querySelector('.sshd-row.cur'); // без подпрыгивания страницы
+      if (cur && list.scrollTop === 0 && cur.offsetTop > list.clientHeight) {
+        list.scrollTop = Math.max(0, cur.offsetTop - 8);
+      }
     }
 
-    /* прокрутка страницы/модалки при открытом списке не должна
-       оставлять «плавающий» список — клики по нему промахиваются.
-       Прокрутка ВНУТРИ самого списка не закрывает его. */
-    function closeOnScroll(e) {
+    /* Список в body+fixed: при прокрутке/ресайзе переставляем его к кнопке
+       (клики не промахиваются). Прокрутка внутри списка не двигает страницу. */
+    function moveOnScroll(e) {
       if (!state.open) return;
       var t = e && e.target;
       if (t && t.nodeType === 1 && (pop === t || pop.contains(t))) return;
-      closePop();
+      placePop();
     }
-    window.addEventListener('scroll', closeOnScroll, true);
-    window.addEventListener('resize', closeOnScroll, true);
+    window.addEventListener('scroll', moveOnScroll, true);
+    window.addEventListener('resize', moveOnScroll, true);
 
     function options() {
       return Array.prototype.slice.call(sel.options || []);
@@ -311,6 +319,8 @@
       if (state.open) return;
       state.open = true;
       root.classList.add('open');
+      // в body — чтобы не обрезалось overflow панели/модалки
+      if (pop.parentNode !== document.body) document.body.appendChild(pop);
       pop.hidden = false;
       btn.setAttribute('aria-expanded', 'true');
       q = '';
@@ -324,6 +334,11 @@
       root.classList.remove('open');
       btn.setAttribute('aria-expanded', 'false');
       pop.hidden = true;
+      if (pop.parentNode === document.body) {
+        var parent = pop.parentNode;
+        if (typeof pop.remove === 'function') pop.remove();
+        else if (parent && typeof parent.removeChild === 'function') parent.removeChild(pop);
+      }
     }
     function commit(v) {
       closePop();
@@ -335,9 +350,23 @@
       syncLabel();
     }
 
-    btn.addEventListener('click', function () { state.open ? closePop() : openPop(); });
+    // disabled нативного селекта -> кнопка пикера тоже заблокирована
+    function syncDisabled() {
+      var off = !!sel.disabled;
+      btn.disabled = off;
+      btn.classList.toggle('sshd-btn-disabled', off);
+      btn.setAttribute('aria-disabled', off ? 'true' : 'false');
+      if (off && state.open) closePop();
+    }
+    if (typeof MutationObserver === 'function') {
+      new MutationObserver(syncDisabled).observe(sel, { attributes: true, attributeFilter: ['disabled'] });
+    }
+    syncDisabled();
+
+    btn.addEventListener('click', function () { if (sel.disabled) return; state.open ? closePop() : openPop(); });
     btn.addEventListener('keydown', function (e) {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
+        if (sel.disabled) return;
         e.preventDefault(); openPop();
       }
     });
@@ -361,7 +390,7 @@
       }
     });
     document.addEventListener('mousedown', function (e) {
-      if (state.open && !root.contains(e.target)) closePop();
+      if (state.open && !root.contains(e.target) && !pop.contains(e.target)) closePop();
     });
     /* внешний код поменял select.value и dispatch'нул change — обновляем ярлык */
     sel.addEventListener('change', syncLabel);
@@ -375,9 +404,33 @@
      явно выключенных data-sshd-no); большие списки — с поиском. */
   window.sshdEnhance = sshdEnhance;
 
+  function _rm(n) { if (!n) return; if (typeof n.remove === 'function') n.remove(); else if (n.parentNode) n.parentNode.removeChild(n); }
+  function sshdPruneOrphans(scope) {
+    var root = scope || document;
+    if (!root.querySelectorAll) return;
+    /* Здоровая обёртка содержит живой select, прикреплённый к документу и
+       ссылающийся именно на неё (s._sshd === wrap). Иначе — осиротевший
+       дубль от innerHTML (пустая кнопка или обёртка с заменённым select). */
+    Array.prototype.forEach.call(root.querySelectorAll('.sshd'), function (wrap) {
+      var ok = false;
+      Array.prototype.forEach.call(wrap.querySelectorAll('select'), function (s) {
+        if (s._sshd === wrap && document.contains(s)) ok = true;
+      });
+      if (!ok) _rm(wrap);
+    });
+    /* бесхозный видимый попап в body (виджет закрыт/удалён, а список висит) */
+    if (scope === document || scope === document.body) {
+      Array.prototype.forEach.call(document.querySelectorAll('.sshd-pop-float'), function (p) {
+        if (!p.hidden && !document.querySelector('.sshd.open')) _rm(p);
+      });
+    }
+  }
+  window.sshdPruneOrphans = sshdPruneOrphans;
+
   function sshdAll(rootEl) {
     var scope = rootEl || document;
     if (!scope.querySelectorAll) return;
+    sshdPruneOrphans(scope === document ? document : scope);
     Array.prototype.forEach.call(
       scope.querySelectorAll('select:not([multiple]):not([data-sshd-no]):not(.sshd-src)'),
       function (sel) {
@@ -416,10 +469,6 @@
     var gid = opts.gid;
     var noneValue = opts.noneValue == null ? '' : String(opts.noneValue);
     var noneLabel = opts.noneLabel || '— не выбрано —';
-    /* opts.value: явное начальное значение (для селектов, созданных пустыми
-       и заполняемых хелпером — у пустого <select> собственного value нет) */
-
-    /* кастомный контрол (с поиском, если opts.search не false) */
     sshdEnhance(sel, { search: opts.search !== false,
                        searchPlaceholder: opts.searchPlaceholder });
 
@@ -429,7 +478,6 @@
     }
 
     function refreshCtl() {
-      /* совместимость с п.5-контрактом: повторный прогон видимых опций */
       if (sel._pickerSearchApply) sel._pickerSearchApply();
       if (sel._sshdCtl) sel._sshdCtl.refresh();
     }
@@ -483,9 +531,7 @@
     opts = opts || {};
     var gid = opts.gid;
     var statusEl = opts.statusEl || null;
-    /* идемпотентность: страницы после загрузки списка серверов вызывают
-       attachMemberPicker повторно (member_profile) — нельзя плодить
-       второй .mpd и дубли обработчиков: обновляем контекст и выходим */
+    /* повторный вызов на том же поле — обновляем контекст, без дублей */
     input._mpdSetCtx = function (o) {
       if (o && o.gid) gid = o.gid;
       if (o && o.statusEl) statusEl = o.statusEl;
@@ -552,33 +598,27 @@
       panel.appendChild(headEl);
       panel.appendChild(listBox);
       panel.appendChild(moreEl);
-      var host = input.parentNode;
-      if (host && getComputedStyle(host).position === 'static') host.style.position = 'relative';
-      host.appendChild(panel);
-      /* список людей не должен уходить за край экрана: открываем вверх
-         или ограничиваем высоту свободным местом (иначе «нашли — а
-         выбрать не получается» и клики уходят мимо) */
+      /* Попап в <body> с fixed-координатами — не обрезается overflow формы. */
+      panel.classList.add('mpd-floating');
+      document.body.appendChild(panel);
+      _mpdPanels.push(panel);
       function place() {
-        var r = input.getBoundingClientRect();
-        var ph = panel.offsetHeight || 0;
-        var lim = (function () {
-          var n = panel.parentNode;
-          while (n && n !== document.body && n.nodeType === 1) {
-            var o = getComputedStyle(n);
-            if (/(auto|scroll|overlay)/.test(o.overflowY || '')) return n.getBoundingClientRect();
-            n = n.parentNode;
-          }
-          return null;
-        })();
-        var below = (lim ? Math.min(window.innerHeight, lim.bottom) : window.innerHeight) - r.bottom - 12;
-        var above = r.top - (lim ? Math.max(0, lim.top) : 0) - 12;
-        var up = below < Math.min(ph, 300) && above > below;
+        if (panel.hidden) return;
+        var r = input.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight;
+        var w = Math.max(r.width, 240);
+        var below = vh - r.bottom - 12, above = r.top - 12;
+        var up = below < 220 && above > below; // вверх, только если внизу тесно
         panel.classList.toggle('up', up);
-        var space = up ? above : below;
-        if (space < 120) space = 120;
-        listBox.style.maxHeight = Math.max(120, Math.min(300, space)) + 'px';
+        panel.style.left = Math.min(Math.max(8, r.left), vw - w - 8) + 'px';
+        panel.style.width = w + 'px';
+        panel.style.top = up ? 'auto' : (r.bottom + 6) + 'px';
+        panel.style.bottom = up ? (vh - r.top + 6) + 'px' : 'auto';
+        var space = (up ? above : below);
+        listBox.style.maxHeight = Math.max(120, Math.min(300, space < 120 ? 120 : space)) + 'px';
       }
       panel._place = place;
+  // прокрутка/ресайз держат попап у поля; прокрутка внутри списка не закрывает
+      window.addEventListener('scroll', function () { if (!panel.hidden) place(); }, true);
       window.addEventListener('resize', function () { if (!panel.hidden) place(); }, true);
       document.addEventListener('mousedown', function (e) {
         if (panel.hidden) return;
@@ -586,14 +626,7 @@
         closePanel();
       });
     }
-    /* прокрутка страницы/контейнера закрывает список людей, но
-       прокрутка ВНУТРИ списка (listBox) — нет */
-    window.addEventListener('scroll', function (e) {
-      if (!panel || panel.hidden) return;
-      var t = e && e.target;
-      if (t && t.nodeType === 1 && (panel === t || panel.contains(t))) return;
-      closePanel();
-    }, true);
+    // прокрутка/ресайз двигают панель вместе с полем; закрытие — клик мимо/Esc
 
     function avatarHtml(m) {
       var av = String(m.avatar || '');
@@ -626,6 +659,9 @@
         });
         row.addEventListener('mousemove', function () { setActive(row); });
       });
+      // на страницах с несколькими полями (доказательства) открыта может
+      // быть только одна панель — гасим остальные
+      _mpdPanels.forEach(function (p) { if (p !== panel) p.hidden = true; });
       panel.hidden = false;
       input.setAttribute('aria-expanded', 'true');
       if (panel._place) setTimeout(panel._place, 0);

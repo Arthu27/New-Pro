@@ -49,8 +49,8 @@ data = CR.catalog(force=True)
 # Заказ владельца: боевое слеш-меню — минимум команд. Тикет-система снята
 # 2026-08-31, её роль выполняет /report (жалоба карточкой в канал модерации).
 # В меню: modpanel, play, апелляция, update, afk/afk-remove и report.
-check(data['total'] == 7, f"lean: собрано {data['total']} живых команд (ровно 7)")
-check(data['slash'] == 7 and data['prefix'] == 0,
+check(data['total'] == 8, f"lean: собрано {data['total']} живых команд (ровно 8)")
+check(data['slash'] == 8 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
@@ -66,8 +66,8 @@ check('Голосовые' not in labels,
 check('Экономика' not in labels and 'Уровни и карма' not in labels,
       'lean: спящие системы (экономика/уровни) честно не показываются')
 mods = data.get('modules') or {}
-check(mods.get('enabled') == 29 and mods.get('sleeping') == 76,
-      f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')}")
+check(mods.get('enabled') == 30 and mods.get('sleeping') == 76,
+      f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')} (ожидание 30/76)")
 
 print('== 1.1. Реестр в BOT_FULL (полный состав) ==')
 os.environ['BOT_FULL'] = '1'
@@ -153,9 +153,9 @@ check(d['total'] == data['total'] and d['shown'] == d['total']
       'без фильтров отдаётся весь lean-каталог (как в боте)')
 check(d['slash'] > 0 and d['prefix'] == 0,
       'счётчики типов в ответе: слеш есть, префиксных — ноль')
-check(d.get('modules', {}).get('enabled') == 29
+check(d.get('modules', {}).get('enabled') == 30
       and d['modules']['sleeping'] == 76,
-      'в ответе — счётчик модулей (29 включено / 76 спит)')
+      'в ответе — счётчик модулей (30 включено / 76 спит)')
 
 r = client.get('/api/commands/catalog?q=play')
 d = r.get_json()
