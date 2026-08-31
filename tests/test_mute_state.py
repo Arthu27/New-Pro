@@ -134,8 +134,110 @@ async def main():
     except Exception as e:
         check(f"хелперы безопасны без активного мута ({e})", False)
 
-    print(f"\n=== PASS {_passed} / FAIL {_failed} ===")
-    sys.exit(1 if _failed else 0)
+    print(f"[helpers] PASS {_passed} / FAIL {_failed}")
 
 
 asyncio.run(main())
+
+
+# ═══ Регресс через панель: timeout глушит чат+войс нативно, mute_chat — ролью ═══
+class PRole:
+    def __init__(self, rid, name):
+        self.id = rid; self.name = name; self.mention = f"<@&{rid}>"
+
+class PMember:
+    def __init__(self, uid):
+        self.id = uid; self.name = "BadGuy"; self.display_name = "BadGuy"
+        self.global_name = "BadGuy"; self.bot = False
+        self.roles = [PRole(5, "@everyone")]
+        _perms = type("P", (), {})
+        for a in ("administrator","manage_guild","manage_messages","moderate_members",
+                  "ban_members","kick_members","mute_members","deafen_members","manage_roles"):
+            setattr(_perms, a, False)
+        self.guild_permissions = _perms
+        self.top_role = PRole(9, "x")
+        self.voice = type("V", (), {"channel": None, "mute": False})()
+        self.display_avatar = type("A", (), {"url": "http://x/a.png"})()
+        self.timed_out_until = None
+        self.added = []; self.edits = []
+    def __str__(s): return "BadGuy"
+    async def timeout(s, until, reason=None):
+        s.timed_out_until = until
+    async def edit(s, **kw): s.edits.append(kw)
+    async def add_roles(s, *r, **k):
+        for x in r: s.added.append(x.id)
+    async def remove_roles(s, *r, **k):
+        ids = {getattr(x, "id", x) for x in r}
+        s.roles = [x for x in s.roles if x.id not in ids]
+    async def send(s, embed=None, **k): pass
+
+class PGuild:
+    def __init__(s):
+        s.id = 777; s.name = "T"; s.icon = None; s.owner_id = 1
+        s.channels = []; s.text_channels = []; s.roles = []
+        s.members = []
+        me = PMember(999999)
+        _bp = type("P", (), {})
+        for a in ("administrator","manage_roles","moderate_members","mute_members"):
+            setattr(_bp, a, True)
+        me.guild_permissions = _bp
+        me.top_role = PRole(999, "BotTop")
+        s.me = me
+    def get_role(s, rid): return next((r for r in s.roles if r.id == rid), None)
+    def get_member(s, uid): return next((m for m in s.members if m.id == uid), None)
+
+class PBot:
+    def __init__(s, g): s.guilds = [g]
+    def get_guild(s, gid): return s.guilds[0]
+    def get_cog(s, n): return None
+    def fetch_user(s, uid): return None
+
+
+async def panel_checks():
+    import cogs.moderation as M
+
+    # A. Мут-роль НЕ выбрана: timeout должен быть нативным (чат+войс),
+    #    а mute_chat — честный отказ (нельзя заглушить «только чат» без роли).
+    g = PGuild()
+    member = PMember(111000000000000900)
+    member.guild = g
+    g.members = [member]
+    cog = M.Moderation.__new__(M.Moderation)
+    cog.bot = PBot(g)
+    ok, text = await cog.apply_panel_action(g, member, "timeout", reason="x", amount="2ч", actor="Ivan")
+    check("A. timeout без роли → нативный member.timeout()",
+          ok and member.timed_out_until is not None)
+    check("A. timeout без роли НЕ вешает мут-роль (чат+войс одним состоянием)",
+          member.added == [])
+
+    ok2, text2 = await cog.apply_panel_action(g, member, "mute_chat", reason="x", amount="10", actor="Ivan")
+    check("A. mute_chat без роли → внятный отказ (а не таймаут «типа только чат»)",
+          (not ok2) and ("роль" in text2))
+
+    # B. Мут-роль ВЫБРАНА: timeout всё равно нативный (роль бы не заглушила голос),
+    #    а mute_chat выдаёт именно роль и НЕ трогает голос (нет timeout()).
+    g2 = PGuild()
+    g2.roles = [PRole(101, "Мут")]
+    import services.punish_roles as PR2
+    PR2.set_roles(777, mute=101)
+    m2 = PMember(111000000000000901); m2.guild = g2
+    g2.members = [m2]
+    cog2 = M.Moderation.__new__(M.Moderation)
+    cog2.bot = PBot(g2)
+    ok3, _ = await cog2.apply_panel_action(g2, m2, "timeout", reason="x", amount="1ч", actor="Ivan")
+    check("B. с мут-ролью timeout всё равно нативный (глушит и голос)",
+          ok3 and m2.timed_out_until is not None and 101 not in m2.added)
+
+    m3 = PMember(111000000000000902); m3.guild = g2
+    g2.members = [m3]
+    cog3 = M.Moderation.__new__(M.Moderation)
+    cog3.bot = PBot(g2)
+    ok4, _ = await cog3.apply_panel_action(g2, m3, "mute_chat", reason="x", amount="10", actor="Ivan")
+    check("B. mute_chat выдаёт мут-роль и НЕ ставит нативный таймаут (голос живёт)",
+          ok4 and 101 in m3.added and m3.timed_out_until is None)
+
+
+asyncio.run(panel_checks())
+
+print(f"\n=== PASS {_passed} / FAIL {_failed} ===")
+sys.exit(1 if _failed else 0)

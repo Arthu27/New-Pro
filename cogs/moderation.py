@@ -581,28 +581,49 @@ class Moderation (commands .Cog ):
                     else :
                         await interaction .response .send_message ("🛡 Кик отключён на этом сервере — используй мут или апелляцию.",ephemeral =True )
                     return 
-                elif action in ("timeout","mute_chat"):
-                    minutes =parse_duration_minutes (amount ,5 )
-                    # «Мут (чат+войс)» — это и есть таймаут Discord: он глушит
-                    # и текст, и голос ОДНИМ состоянием. Отдельная мут-роль
-                    # нужна только если владелец её сам выбрал в «Ролях
-                    # наказаний». В любом случае чистим ПРОТИВОПОЛОЖНОЕ
-                    # состояние (роль войс-мута / серверное заглушение),
-                    # чтобы на участнике не висело два мута сразу.
-                    await self._clear_voice_mute (guild ,user )
-                    _mrole =self ._punish_role (guild ,'mute')
-                    if _mrole is not None :
-                        await user .add_roles (_mrole ,reason =reason or 'мут')
-                        self ._remember_temp (guild ,user ,_mrole ,minutes *60 )
-                        msg =f"🔇 мут «{_mrole .name }» на {minutes } мин — снимется сама"
-                    else :
-                        until =datetime.now(timezone.utc)+timedelta (minutes =minutes )
-                        await user .timeout (until ,reason =reason )
-                        if action =="mute_chat":
-                            msg =f"🔇 чат закрыт на {minutes } мин"
-                        else :
-                            msg =f"🔇 чат и голос закрыты на {minutes } мин"
-                    await self._maybe_watchlist_after_mute (interaction ,user ,reason )
+                elif action == "timeout":
+                    # «Мут (чат + войс)» — это ОДНО нативное состояние Discord:
+                    # member.timeout() глушит И текст, И голос одновременно.
+                    # Роль так не умеет (роль закрывает только чат), поэтому
+                    # таймаут ВСЕГДА нативный — это и есть «за раз и чат, и войс».
+                    # Сначала снимаем любые отдельные мут-роли/серверное
+                    # заглушение, чтобы на участнике не осталось второго мута.
+                    minutes = parse_duration_minutes(amount, 5)
+                    minutes = max(1, min(minutes, 40320))  # потолок Discord — 28 дней
+                    try:
+                        from services import mute_state
+                        await mute_state.clear_all_mutes(guild, user)
+                    except Exception as _mse:
+                        log.debug(f'[MODPANEL] timeout clear all: {_mse}')
+                    until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+                    await user.timeout(until, reason=reason)
+                    msg = (f"🔇 таймаут на {human_duration(minutes)} "
+                           f"(~{minutes} мин) — закрыты и чат, и голос")
+                    await self._maybe_watchlist_after_mute(interaction, user, reason)
+                elif action == "mute_chat":
+                    # «Мут (только чат)» — закрываем ТОЛЬКО текст через мут-роль.
+                    # Нативный таймаут тут не подходит: он заглушил бы и голос.
+                    # Поэтому чат-мут работает мут-ролью; без роли честно просим
+                    # её настроить (а не выдаём таймаут с подписью «только чат»).
+                    _mrole = self._punish_role(guild, 'mute')
+                    if _mrole is None:
+                        await _respond(interaction, embed=error_embed(
+                            "Мут только чата работает через мут-роль, а она не выбрана. "
+                            "Настройте её: панель → «Настройки модерации» → роли наказаний. "
+                            "Если нужно заглушить и чат, и голос сразу — выберите «Мут (чат + войс)»."),
+                            ephemeral=True)
+                        return
+                    minutes = parse_duration_minutes(amount, 5)
+                    try:
+                        from services import mute_state
+                        await mute_state.clear_all_mutes(guild, user)
+                    except Exception as _mse:
+                        log.debug(f'[MODPANEL] mute_chat clear all: {_mse}')
+                    await user.add_roles(_mrole, reason=reason or 'мут чата')
+                    self._remember_temp(guild, user, _mrole, minutes * 60)
+                    msg = (f"🤐 чат закрыт на {human_duration(minutes)} "
+                           f"(роль «{_mrole.name}»); голос не тронут")
+                    await self._maybe_watchlist_after_mute(interaction, user, reason)
                 elif action =="vmute":
                     # Войс-мут — ТОЛЬКО микрофон, чат не трогаем. Снимаем
                     # нативный таймаут/чат-мут, если он стоял, чтобы не было
@@ -1064,9 +1085,9 @@ def _embed_text(e):
 MODPANEL_ACTIONS = [
     ("warn", "Варн (предупреждение)", "Официальный варн: в дело, участнику в ЛС", "warn"),
     ("ban", "Бан (апелляция)", "Не выгоняет: закроет каналы, оставит только канал апелляции", "ban"),
-    ("timeout", "Мут (чат + войс)", "Тишина сразу везде — и текст, и голос", "mute"),
-    ("mute_chat", "Мут (только чат)", "В чат писать нельзя, голос живёт", "mute"),
-    ("vmute", "Мут (только войс)", "Микрофон в офф, чат не трогаем", "mute"),
+    ("timeout", "Таймаут (чат + войс)", "Нативный таймаут Discord: одним действием закрыты и текст, и голос (до 28 дней)", "mute"),
+    ("mute_chat", "Мут (только чат)", "Закрывает только чат через мут-роль; голос работает", "mute"),
+    ("vmute", "Мут (только войс)", "Глушит микрофон; чат не трогается", "mute"),
     ("unban", "Снять апелляцию / разбан", "Вернуть доступ к каналам (по ID)", "unban"),
     ("clear", "Очистка сообщений", "Снести N последних сообщений в канале", "clear"),
     ("untimeout", "Размут (чат + войс)", "Снять таймаут — снова можно всё", "unmute"),
