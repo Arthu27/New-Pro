@@ -179,6 +179,30 @@ def _fire_panel_notification (event ,title ,body ):
         return {}
 
 
+def _live_publish (gid ,topic ):
+    """Толкнуть SSE-сигнал об изменении данных (живые обновления панели).
+
+    Никогда не прерывает основной обработчик — ошибка шины игнорируется.
+    """
+    try :
+        from services .live_bus import publish as _pub
+        _pub (gid ,topic )
+    except Exception as _ex :
+        try :
+            _log .debug ('live_publish %s/%s: %s' ,gid ,topic ,_ex )
+        except Exception :
+            pass
+
+
+def _live_publish_global (topic ):
+    """Глобальный SSE-сигнал (список серверов, тема и т.п.)."""
+    try :
+        from services .live_bus import publish_global as _pubg
+        _pubg (topic )
+    except Exception :
+        pass
+
+
 # ── Классические разрешения: одна точка для всех веб-роутов ──────────────
 def viewer_member(bot, gid):
     """Discord-мембер, под которым вошли в панель (session['discord_id']).

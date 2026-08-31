@@ -1115,7 +1115,11 @@ function renderCharts(d) {
     if (printButton) printButton.addEventListener('click', function () { window.print(); });
     load();
     if (window.setLiveRefresh) {
-      window.setLiveRefresh(load, 1500);
+      // Пуш-режим: аналитика обновляется, когда реально пришли новые
+      // сообщения/участники/войс/инвайты (SSE), а не каждые полторы секунды.
+      // 30с — лишь редкая подстраховка на случай, если SSE не поднялся.
+      window.setLiveRefresh(load, 30000,
+        ['g*:analytics', 'g*:members', 'g*:voice', 'g*:invites', 'g*:channels', 'g*:moderation']);
     } else {
       setInterval(load, 5000);
     }

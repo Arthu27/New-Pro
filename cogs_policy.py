@@ -50,6 +50,7 @@ CORE_COGS = frozenset({
     'help.py',             # /help индексирует только загруженные команды — полезен всегда
     'cog_manager.py',      # !module load/unload — чтобы вернуть модуль без рестарта
     'diagnostics.py',      # самодиагностика бота
+    'panel_live.py',       # живые пуши в панель (SSE): события Discord → обновление
     # feature_flag_cog.py и health.py убраны из боевого состава (лишние
     # команды в меню Дискорда). Вернуть: EXTRA_COGS=feature_flag_cog,health
 })

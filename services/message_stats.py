@@ -93,6 +93,14 @@ def flush_all():
             data = _load(gid)
             data.extend(batch)
             _atomic_write(_path(gid), data[-MAX_PER_GUILD:])
+            # Живой пуш в панель: сообщения записаны — Аналитика обновится
+            # сразу (а не по таймеру). Немного дебаунсим на стороне фронта
+            # (события коалесцируются), так что частые сообщения не штормят.
+            try:
+                from services.live_bus import publish
+                publish(gid, 'analytics')
+            except Exception:
+                pass
         except OSError as ex:
             _logger().warning('message_stats: запись %s не удалась: %s', gid, ex)
             # не теряем события — вернём в очередь

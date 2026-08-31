@@ -9,7 +9,7 @@
 Канал тревог настраивается на хабе «Каналы и маршруты» (guardian_channel).
 """
 from web.routes._common import (
-    _log, _fire_panel_notification,
+    _log, _fire_panel_notification, _live_publish,
     render_template, session, request, jsonify,
 )
 
@@ -249,6 +249,8 @@ def register(ctx):
             'guardian', 'Щит сервера: настройки обновлены',
             f'{who}: мера — {G.PUNISH_LABELS.get(cfg["punishment"], "?")}, '
             f'событий активно — {sum(1 for e in (cfg.get("events") or {}).values() if e.get("enabled"))}')
+        _live_publish(gid, 'guardian')   # живой пуш: страница Щита обновится сразу
+        _live_publish(gid, 'security')   # и Центр безопасности (он показывает статус Щита)
         return jsonify({'success': True, 'cfg': guardian_view(gid)})
 
     @app.route('/api/guild/<gid>/guardian/summary')

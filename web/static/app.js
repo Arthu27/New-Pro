@@ -283,11 +283,100 @@
     return false;
   };
 
-  window.setLiveRefresh = function (fn, ms) {
+  /* Живые обновления: задания бывают двух режимов.
+     • timer (как раньше) — опрос раз в e.ms;
+     • push  — обновляются ПУШЕМ через SSE (services/live_bus.py → /api/live),
+               когда бэкенд реально сообщил об изменении; таймер тут лишь редкая
+               подстраховка (e.safety, по умолчанию 30с), чтобы не опрашивать
+               вхолостую. Это и убирает нагрузку «по секундам».
+     topics — массив масок (поддержка '*'), например ['g*:channels', 'g*:guardian']. */
+  window.setLiveRefresh = function (fn, ms, topics) {
     if (typeof fn !== 'function') return;
-    liveFns.push({ fn: fn, ms: ms || 1500, last: 0 });
-    if (liveFns.length > 60) liveFns.shift();
+    var e = {
+      fn: fn,
+      ms: ms || 1500,
+      last: 0,
+      push: false,
+      safety: 30000,
+      topics: null,
+      pending: false
+    };
+    if (topics) {
+      e.push = true;
+      e.topics = (Array.isArray(topics) ? topics : [String(topics)]);
+      // режиму пуш даём стартовую задержку безопасности
+      e.ms = Math.max(e.ms || 1500, e.safety);
+    }
+    liveFns.push(e);
+    if (liveFns.length > 80) liveFns.shift();
+    return e;
   };
+
+  /* Простейший glob-матчер масок ('*' и '?') */
+  function globMatch(pattern, text) {
+    if (pattern === '*' || pattern === text) return true;
+    var rx = '^' + String(pattern).replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\?/g, '.').replace(/\*/g, '.*') + '$';
+    try { return new RegExp(rx).test(text); } catch (e) { return false; }
+  }
+
+  function jobMatches(e, topic) {
+    if (!e.topics) return false;
+    for (var i = 0; i < e.topics.length; i++) {
+      if (globMatch(e.topics[i], topic)) return true;
+    }
+    return false;
+  }
+
+  /* Слить пачку сигналов в один аккуратный прогон (rAF ~ кадр) */
+  function _schedulePushRun() {
+    if (livePaused || document.hidden) return;
+    if (_pushRaf) return;
+    _pushRaf = (window.requestAnimationFrame || function (f) { return setTimeout(f, 120); })(function () {
+      _pushRaf = 0;
+      var now = Date.now();
+      liveFns.forEach(function (e) {
+        if (e.push && e.pending) { e.pending = false; e.last = now; try { e.fn(); } catch (err) {} }
+      });
+    });
+  }
+  var _pushRaf = 0;
+
+  function _liveOnTick(topic) {
+    var hit = false;
+    liveFns.forEach(function (e) {
+      if (e.push && jobMatches(e, topic)) { e.pending = true; hit = true; }
+    });
+    if (hit) _schedulePushRun();
+  }
+
+  /* Один общий SSE-коннект на всю страницу. Если он не поднялся —
+     push-задания тихо живут на редкой страховке (e.safety). */
+  var _liveES = null, _liveESon = false;
+  function _liveConnect() {
+    if (_liveESon || typeof EventSource === 'undefined') return;
+    try {
+      var url = '/api/live?topics=*';
+      var es = new EventSource(url, { withCredentials: true });
+      _liveES = es; _liveESon = true;
+      es.addEventListener('tick', function (ev) {
+        var topic = '';
+        try { topic = (JSON.parse(ev.data || '{}') || {}).topic || ''; } catch (e) {}
+        if (topic) _liveOnTick(topic);
+      });
+      es.addEventListener('hello', function () {
+        // соединение (пере)открылось — могли пропустить сигнал, догоним всё
+        liveFns.forEach(function (e) { if (e.push) { e.pending = true; } });
+        _schedulePushRun();
+      });
+      es.onerror = function () {
+        // EventSource сам переподключится; тут ничего не спамим.
+        _liveESon = false;
+      };
+      es.onopen = function () { _liveESon = true; };
+    } catch (e) { _liveESon = false; }
+  }
+  window.__liveConnect = _liveConnect;
 
   setInterval(function () {
     if (livePaused) return;
@@ -298,7 +387,12 @@
     var now = Date.now();
     if (now < liveHoldUntil) return;
     liveFns.forEach(function (e) {
-      if (now - e.last >= e.ms) { e.last = now; try { e.fn(); } catch (err) {} }
+      // push-задания по короткому таймеру НЕ дёргаем — только по сигналу;
+      // их страховка срабатывает редко (e.ms у push = safety, ~30с).
+      if (now - e.last >= e.ms) {
+        e.last = now;
+        try { e.fn(); } catch (err) {}
+      }
     });
   }, 500);
 
@@ -1292,6 +1386,7 @@
     autoSearchInit();
     revealInit();
     wsInit();
+    if (window.__liveConnect) window.__liveConnect();
   });
 })();
 

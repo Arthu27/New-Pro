@@ -12,7 +12,7 @@
 изменение — admin+ (остальные просто видят, как настроено).
 """
 from web.routes._common import (
-    _log, _fire_panel_notification,
+    _log, _fire_panel_notification, _live_publish,
     render_template, session, request, jsonify,
     os, json,
 )
@@ -360,6 +360,7 @@ def register(ctx):
             _fire_panel_notification(
                 'channels', f'Маршрут очищен: {spec["label"]}',
                 f'{who}: вернули поведение по умолчанию')
+        _live_publish(gid, 'channels')   # живой пуш: маршруты/каналы обновились
         return jsonify({'success': True, 'key': key, 'channel_id': cid})
 
     @app.route('/api/staff-role-routes', methods=['GET'])

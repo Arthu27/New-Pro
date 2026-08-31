@@ -853,4 +853,9 @@ def register(ctx):
             lst .remove (target )
         g [key ]=lst
         _hidden_save (store )
+        try :
+            from services .live_bus import publish as _lpub
+            _lpub (str (guild_id ),'channels')
+        except Exception :
+            pass
         return jsonify ({'success':True ,'hidden':hidden ,'id':target ,'kind':kind })

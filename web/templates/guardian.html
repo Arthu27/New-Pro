@@ -773,10 +773,10 @@ async function gdLoad(live) {
   if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
 }
 
-/* live: состояние Щита синхронизируется само раз в 5 секунд (лёгкий запрос,
-   только конфиг) — перерисовываем ТОЛЬКО когда данные реально изменились.
-   Тяжёлые роли/участники приходят один раз в первом (не-live) ответе. */
-if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gdLoad(true); } catch (e) {} }, 5000);
+/* live: состояние Щита обновляется ПУШЕМ (SSE) — когда настройки реально
+   сохранили (панель) или бот записал инцидент. Тяжёлые роли/участники
+   приходят один раз в первом (не-live) ответе; таймер 30с — лишь подстраховка. */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gdLoad(true); } catch (e) {} }, 30000, ['g*:guardian', 'g*:security']);
 
 function collectPayload() {
   var events = {};
