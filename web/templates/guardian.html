@@ -735,7 +735,10 @@ var _gdLastRaw = null;
 
 async function gdLoad(live) {
   try {
-    var r = await fetch('/api/guild/' + GUILD_ID + '/guardian', { credentials: 'same-origin' });
+    // Живой опрос — лёгкий (?light=1): только конфиг, без сбора до 1000
+    // участников/ролей на каждый тик (это грузило бота и тормозило страницу).
+    var url = '/api/guild/' + GUILD_ID + '/guardian' + (live ? '?light=1' : '');
+    var r = await fetch(url, { credentials: 'same-origin' });
     var raw = await r.text();
     if (live) {
       if (raw === _gdLastRaw) return;                 /* тишина — DOM не трогаем */
@@ -748,8 +751,10 @@ async function gdLoad(live) {
     _gdLastRaw = raw;
     var d = JSON.parse(raw);
     if (d.success && d.cfg) {
-      G_ROLES = d.roles || G_ROLES;
-      G_MEMBERS = d.members || G_MEMBERS;
+      // Списки для пикеров приходят только в НЕ-lite ответе (первый заход);
+      // на live-опросе их не трогаем.
+      if (d.roles) G_ROLES = d.roles;
+      if (d.members) G_MEMBERS = d.members;
       CFG = d.cfg;
       EVENTS = d.cfg.events || [];
       PUNISHMENTS = d.cfg.punishments || [];
@@ -768,9 +773,10 @@ async function gdLoad(live) {
   if (window.renderSafe) window.renderSafe(renderAll); else renderAll();
 }
 
-/* live: состояние Щита синхронизируется само каждые 1.5 секунды —
-   но перерисовываем ТОЛЬКО когда данные реально изменились */
-if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gdLoad(true); } catch (e) {} }, 1500);
+/* live: состояние Щита синхронизируется само раз в 5 секунд (лёгкий запрос,
+   только конфиг) — перерисовываем ТОЛЬКО когда данные реально изменились.
+   Тяжёлые роли/участники приходят один раз в первом (не-live) ответе. */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { gdLoad(true); } catch (e) {} }, 5000);
 
 function collectPayload() {
   var events = {};

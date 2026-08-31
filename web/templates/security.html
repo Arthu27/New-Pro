@@ -227,7 +227,9 @@ $('scCsv').addEventListener('click', function (e) { e.preventDefault(); location
 
 loadOverview();
 
-  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadOverview(); } catch (e) {} }, 1500);
+  /* live: автообновление данных без перезагрузки. Состояние защит меняется
+     редко — опрашиваем раз в 5 сек, а не каждые 1.5 (раньше это вхолостую
+     грузило панель и бота). Изменения тумблеров и так видны сразу после клика. */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadOverview(); } catch (e) {} }, 5000);
 </script>
 {% endblock %}

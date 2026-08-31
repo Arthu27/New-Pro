@@ -541,6 +541,16 @@ check(d['cfg']['punishments'] and len(d['cfg']['punishments']) == 4,
       'API GET: 4 меры с русскими подписями')
 check('incidents' in d['cfg'] and 'resolved' in d['cfg'],
       'API GET: инциденты и резолвер имён на месте')
+check('roles' in d and 'members' in d,
+      'API GET (без light): роли и участники для пикеров в ответе')
+
+# Лёгкий live-опрос ?light=1 — только конфиг, без тяжёлых списков.
+rl = client.get(f'/api/guild/{GID}/guardian?light=1')
+dl = rl.get_json()
+check(rl.status_code == 200 and dl.get('success') is True,
+      'API GET ?light=1: живой опрос отвечает 200')
+check('roles' not in dl and 'members' not in dl and len(dl['cfg']['events']) == 11,
+      'API GET ?light=1: тяжёлые роли/участники не собираются (только конфиг)')
 
 bad = client.post(f'/api/guild/{GID}/guardian',
                   json={'punishment': 'yeet', 'events': {}})

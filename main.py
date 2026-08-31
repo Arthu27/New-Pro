@@ -1238,8 +1238,18 @@ async def main():
         # ffmpeg для музыки: единый детектор (PATH + .env + типичные
         # места установки на Windows/Linux), тот же, что у music_cog.
         try:
-            from services.ffmpeg_probe import find_ffmpeg
-            _facts['ffmpeg'] = find_ffmpeg() or False
+            from services.ffmpeg_probe import find_ffmpeg, ensure_ffmpeg
+            _ff = find_ffmpeg()
+            _facts['ffmpeg'] = _ff or False
+            if not _ff:
+                # Нет ffmpeg — бот сам докачает статический билд в ./bin
+                # в фоне (не задерживая вход в Discord). Работает при любом
+                # запуске, а не только через start.bat.
+                try:
+                    ensure_ffmpeg(blocking=False)
+                    print("[FFMPEG] ffmpeg не найден — качаю автоматически в фоне (в папку bin/)...")
+                except Exception as _ffex:
+                    log.debug('ffmpeg автоустановка: %s', _ffex)
         except Exception:
             _facts['ffmpeg'] = False
         _results = _pf.run_checks(facts=_facts)

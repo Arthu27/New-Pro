@@ -710,11 +710,22 @@ def register(ctx):
         if not guild :
             for g in bot .guilds :
                 if str (g .id )==str (guild_id ):
-                    guild =g 
-                    break 
+                    guild =g
+                    break
         if not guild :
             print (f'[WEB][WARN] /channels: guild {guild_id} не найден. Bot guilds: {[str(g.id) for g in bot.guilds]}')
             return jsonify ({'error':f'Сервер {guild_id} не найден — бот не состоит на нём','channels':[]})
+
+        # Короткий in-memory кэш живого списка: страницы настроек и опросы
+        # дёргают /channels часто, а пересборка с обходом каналов и подсчётом
+        # участников в голосовых — лишняя работа на каждый тик. 3 сек свежести
+        # достаточно (создал/удалил канал — подхватится почти сразу).
+        import time as _time
+        _now = _time.time()
+        _live = getattr(api_guild_channels, '_live_cache', {})
+        _hit = _live.get(str(guild_id))
+        if _hit and (_now - _hit[0]) < 3.0:
+            return jsonify(_hit[1])
 
         type_map ={
         _discord .ChannelType .text :'text',
@@ -787,6 +798,12 @@ def register(ctx):
 
         sorted_channels =sorted (channels_data ,key =lambda x :(x ['category_pos'],x ['position']))
         _annotate_hidden (guild_id ,sorted_channels )
+        # Кладём в короткий in-memory кэш (следующие 3 сек отдаём без пересборки).
+        try :
+            api_guild_channels ._live_cache =getattr (api_guild_channels ,'_live_cache',{})
+            api_guild_channels ._live_cache [str (guild_id )] =(_now ,sorted_channels )
+        except Exception :
+            pass
         # Запоминаем живой список: при кратком офлайне/перезапуске бота
         # пикеры каналов не пустуют и имена не превращаются в голые ID.
         try :

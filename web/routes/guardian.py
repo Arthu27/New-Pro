@@ -212,9 +212,17 @@ def register(ctx):
     def api_guardian(gid):
         gid = _gid(ctx) or _int_gid(gid)
         if request.method == 'GET':
-            return jsonify({'success': True, 'cfg': guardian_view(gid),
-                            'roles': _roles_for_pick(gid),
-                            'members': _members_for_pick(gid)})
+            # Тяжёлые списки (роли/участники) нужны только пикерам и почти не
+            # меняются. Частый live-опрос (каждые несколько секунд) ходит с
+            # ?light=1 и получает ТОЛЬКО конфиг — раньше каждый тик собирал до
+            # 1000 участников, чем грузил event-loop бота и тормозил страницу.
+            # Первый (без light) ответ приносит роли/участники для пикеров.
+            light = str(request.args.get('light', '')).lower() in ('1', 'true', 'yes')
+            body = {'success': True, 'cfg': guardian_view(gid)}
+            if not light:
+                body['roles'] = _roles_for_pick(gid)
+                body['members'] = _members_for_pick(gid)
+            return jsonify(body)
 
         # POST: принять витрину, нормализовать, сохранить (файл бота)
         data = request.get_json(silent=True)

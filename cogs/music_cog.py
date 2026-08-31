@@ -414,13 +414,30 @@ class MusicCog(commands.Cog):
                 await self._play_next(guild_id)
                 return True
             if self._ffmpeg_binary() is None:
-                # Без ffmpeg ничего не заиграет: очередь не трогаем,
-                # объясняем один раз и останавливаемся.
+                # ffmpeg нет — пробуем поставить автоматически (бот качает
+                # статический билд в ./bin). Ждём в фоне до ~90 сек.
+                _ff_path = None
+                try:
+                    from services.ffmpeg_probe import ensure_ffmpeg, install_status
+                    st = install_status()
+                    # Сообщаем о загрузке только если реально качаем (а не
+                    # повторяем /play после уже неудавшейся установки).
+                    if not st.get('done') and not st.get('running'):
+                        await self._announce(
+                            guild, track, 'info', 'Ставлю ffmpeg',
+                            'Для музыки нужен **ffmpeg** — не нашёлся, качаю '
+                            'автоматически (один раз, ~20–60 сек). Следующий трек '
+                            'уже заиграет без ожидания.')
+                    _ff_path = await asyncio.to_thread(ensure_ffmpeg, True)
+                except Exception as _ffex:
+                    log.debug('music: автоустановка ffmpeg: %s', _ffex)
+                    _ff_path = self._ffmpeg_binary()
+
+            if self._ffmpeg_binary() is None and not _ff_path:
+                # Не нашли и не смогли поставить — объясняем и останавливаемся.
                 _is_win = os.name == 'nt'
                 if _is_win:
-                    hint = ('Обычно достаточно перезапустить бота через `start.bat` '
-                            '(или `start_bot.bat`) — ffmpeg скачается и встанет сам.\n'
-                            'Если не встал — поставь вручную:\n'
+                    hint = ('Поставь вручную:\n'
                             '• winget: `winget install Gyan.FFmpeg` (потом перезапуск бота);\n'
                             '• или скачай с gyan.dev/ffmpeg и распакуй `ffmpeg.exe` '
                             'рядом с ботом в папку `bin/` или `ffmpeg/bin/`;\n'
@@ -431,8 +448,8 @@ class MusicCog(commands.Cog):
                             '`FFMPEG_BINARY=путь/к/ffmpeg`.')
                 await self._announce(
                     guild, track, 'error', 'Нет ffmpeg',
-                    'Для музыки нужен **ffmpeg** (декодирует аудио), его не нашлось '
-                    'ни в PATH, ни в типичных папках.\n' + hint)
+                    'Для музыки нужен **ffmpeg** (декодирует аудио). Автоустановка '
+                    'не удалась (нет доступа к сети или права на запись).\n' + hint)
                 return False
 
             track['url'] = url
