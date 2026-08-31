@@ -49,13 +49,12 @@ if not exist ".env" (
 echo [OK] Configuration found
 echo.
 
-:: FFmpeg (нужен музыке /play): если нет — скачается/установится сам
+:: FFmpeg (нужен музыке /play): если нет — скачается/установится сам.
+:: Вызов независим и не уронит запуск бота, даже если скрипт чего-то не смог.
 echo [FFmpeg] Checking ffmpeg...
-if exist "scripts\ensure_ffmpeg.bat" (
-    call "scripts\ensure_ffmpeg.bat"
-) else (
-    where ffmpeg >nul 2>&1 || echo [FFmpeg] WARN: ffmpeg not found and installer script missing - music (/play) will not work
-)
+if not exist "scripts\ensure_ffmpeg.bat" goto :ff_ok
+call "scripts\ensure_ffmpeg.bat"
+:ff_ok
 echo.
 
 :: Start bot

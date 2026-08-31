@@ -32,17 +32,12 @@ if not exist ".env" (
 echo [ОК] Конфигурация найдена (.env)
 echo Лог запуска пишется в файл: logs\start_console.log
 
-:: FFmpeg (нужен музыке /play): нет в системе — ставим/качаем автоматически
+:: FFmpeg (нужен музыке /play): нет в системе — ставим/качаем автоматически.
+:: Линейно, без вложенных скобок — надёжно на любой кодировке; не роняет запуск.
 echo [FFmpeg] Проверяю ffmpeg...
-where ffmpeg >nul 2>&1 && (
-    echo [FFmpeg] найден в PATH
-) || (
-    if exist "scripts\ensure_ffmpeg.bat" (
-        call "scripts\ensure_ffmpeg.bat"
-    ) else (
-        echo [FFmpeg] ВНИМАНИЕ: ffmpeg не найден, а установщик отсутствует — музыка /play не будет играть.
-    )
-)
+where ffmpeg >nul 2>&1
+if %errorlevel%==0 echo [FFmpeg] найден в PATH
+if %errorlevel% neq 0 call "scripts\ensure_ffmpeg.bat"
 echo.
 
 :: Авто-перезапуск при падении процесса (как на Linux в start.sh).
