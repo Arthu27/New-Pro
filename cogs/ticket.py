@@ -1261,10 +1261,18 @@ class StaffSummonView (discord .ui .View ):
             gp =member .guild_permissions
             if gp .manage_guild or gp .administrator or gp .manage_messages :
                 return True
-            cfg =ticket_notify_cfg (member .guild .id )
-            rid =cfg .get ('mod_role_id')
+            # Единый источник роли модераторов (жалобы/призыв/заявки — одно место).
+            from services.mod_role import get_mod_role_id
+            rid =get_mod_role_id (member .guild .id )
             if rid and any (str (r .id )==str (rid )for r in getattr (member ,'roles',[])or []):
                 return True
+            cfg =ticket_notify_cfg (member .guild .id )
+            # Легаси admin/owner-роли из старой панели призыва (если заданы)
+            if cfg .get ('admin_role_id') or cfg .get ('owner_role_id'):
+                for _k in ('admin_role_id','owner_role_id'):
+                    _rid =cfg .get (_k )
+                    if _rid and any (str (r .id )==str (_rid )for r in getattr (member ,'roles',[])or []):
+                        return True
             return bool (discord .utils .get (getattr (member ,'roles',[])or [],name =SUPPORT_ROLE_NAME ))
         except Exception :
             return False
@@ -2350,6 +2358,14 @@ class Ticket (commands .Cog ):
                 role =message .guild .get_role (int (admin_role_id ))
                 if role :
                     ping_mentions .append (role .mention )
+            # Роль модераторов — из ЕДИНОГО источника (настройка в «Жалобах»),
+            # а не только из локального ticket_notify-конфига.
+            try :
+                from services.mod_role import get_mod_role_id as _gmr
+                _unified_mrid =_gmr (message .guild .id )
+            except Exception :
+                _unified_mrid =None
+            mod_role_id =_unified_mrid or mod_role_id
             if mod_role_id :
                 role =message .guild .get_role (int (mod_role_id ))
                 if role :
@@ -3085,7 +3101,12 @@ class Ticket (commands .Cog ):
         if target is None :
             return False
         role =None
-        mrid =cfg .get ('mod_role_id')
+        # Единый источник роли модераторов (с фолбэком на старый конфиг призыва).
+        try :
+            from services.mod_role import get_mod_role_id as _gmr
+            mrid =_gmr (guild .id )or cfg .get ('mod_role_id')
+        except Exception :
+            mrid =cfg .get ('mod_role_id')
         if mrid :
             try :
                 role =guild .get_role (int (mrid ))
