@@ -583,13 +583,18 @@ class Moderation (commands .Cog ):
                     return 
                 elif action in ("timeout","mute_chat"):
                     minutes =parse_duration_minutes (amount ,5 )
-                    # Роль мута из панели главнее таймаута (заказ 2026-08-27):
-                    # владелец сам выбрал роль — бот выдаёт её и снимет по сроку
+                    # «Мут (чат+войс)» — это и есть таймаут Discord: он глушит
+                    # и текст, и голос ОДНИМ состоянием. Отдельная мут-роль
+                    # нужна только если владелец её сам выбрал в «Ролях
+                    # наказаний». В любом случае чистим ПРОТИВОПОЛОЖНОЕ
+                    # состояние (роль войс-мута / серверное заглушение),
+                    # чтобы на участнике не висело два мута сразу.
+                    await self._clear_voice_mute (guild ,user )
                     _mrole =self ._punish_role (guild ,'mute')
                     if _mrole is not None :
                         await user .add_roles (_mrole ,reason =reason or 'мут')
                         self ._remember_temp (guild ,user ,_mrole ,minutes *60 )
-                        msg =f"🔇 роль мута «{_mrole .name }» на {minutes } мин — снимется сама"
+                        msg =f"🔇 мут «{_mrole .name }» на {minutes } мин — снимется сама"
                     else :
                         until =datetime.now(timezone.utc)+timedelta (minutes =minutes )
                         await user .timeout (until ,reason =reason )
@@ -599,37 +604,51 @@ class Moderation (commands .Cog ):
                             msg =f"🔇 чат и голос закрыты на {minutes } мин"
                     await self._maybe_watchlist_after_mute (interaction ,user ,reason )
                 elif action =="vmute":
+                    # Войс-мут — ТОЛЬКО микрофон, чат не трогаем. Снимаем
+                    # нативный таймаут/чат-мут, если он стоял, чтобы не было
+                    # «двойного мута»: роль войс-мута глушит голос сама.
                     _vrole =self ._punish_role (guild ,'vmute')
+                    minutes =parse_duration_minutes (amount ,5 )
                     if _vrole is not None :
                         # роль войс-мута: работает и вне голоса, снимется по сроку
-                        minutes =parse_duration_minutes (amount ,5 )
+                        await self ._clear_chat_mute (guild ,user )
                         await user .add_roles (_vrole ,reason =reason or 'войс-мут')
                         self ._remember_temp (guild ,user ,_vrole ,minutes *60 )
-                        msg =f"🎙️ роль войс-мута «{_vrole .name }» на {minutes } мин"
+                        msg =f"🎙️ войс-мут «{_vrole .name }» на {minutes } мин"
                     else :
                         if not user .voice or not user .voice .channel :
                             await _respond (interaction ,
                             embed =error_embed ("Участник не в голосовом канале. Голосовой мьют невозможен."),
                             ephemeral =True )
                             return
-                        await user .edit (mute =True )
+                        # нативное серверное заглушение микрофона (без таймаута чата)
+                        await self ._clear_chat_mute (guild ,user )
+                        try :
+                            await user .edit (mute =True )
+                        except Exception as _ve :
+                            await _respond (interaction ,
+                            embed =error_embed (f"Не удалось заглушить микрофон: {_ve }"),
+                            ephemeral =True )
+                            return
                         msg ="🎙️ микрофон заглушён (войс-мут)"
                 elif action =="vunmute":
                     _vrole =self ._punish_role (guild ,'vmute')
                     if _vrole is not None :
                         await self ._drop_roles (guild ,user ,[_vrole ])
-                        msg =f"🎙️ роль войс-мута снята ({_vrole .name })"
+                        msg =f"🎙️ войс-мут снят ({_vrole .name })"
                     else :
-                        await user .edit (mute =False )
+                        try :
+                            await user .edit (mute =False )
+                        except Exception as _ve :
+                            log .debug (f'[MODPANEL] vunmute edit: {_ve}')
                         msg ="🎙️ микрофон включён"
-                else :  # untimeout
-                    _mrole =self ._punish_role (guild ,'mute')
-                    if _mrole is not None :
-                        await self ._drop_roles (guild ,user ,[_mrole ])
-                        msg =f"🔊 роль мута снята ({_mrole .name })"
-                    else :
-                        await user .timeout (None )
-                        msg ="🔊 мут снят (чат и голос открыты)"
+                else :  # untimeout — снимаем ЛЮБОЙ мут (чат+войс) разом
+                    try :
+                        from services import mute_state
+                        await mute_state .clear_all_mutes (guild ,user )
+                    except Exception as _mse :
+                        log .debug (f'[MODPANEL] untimeout clear all: {_mse}')
+                    msg ="🔊 мут снят (чат и голос)"
 
                 # Вспомогательные шаги: дело, DM, лог, уведомление панели.
                 # Каждый — в своём try: сбой побочного шага НЕ должен превращать
@@ -835,6 +854,24 @@ class Moderation (commands .Cog ):
         return ok ,text 
 
     # ── Роли наказаний (панель → «Настройки модерации») ─────────────────
+    async def _clear_voice_mute (self ,guild ,user ):
+        """Снять любое голосовое заглушение (роль войс-мута или нативный
+        server-mute), чтобы при чат-муте/таймауте не оставалось второго мута."""
+        try :
+            from services import mute_state
+            await mute_state .clear_voice_mute (guild ,user )
+        except Exception as _e :
+            log .debug (f'[MODPANEL] clear voice-mute: {_e}')
+
+    async def _clear_chat_mute (self ,guild ,user ):
+        """Снять нативный таймаут и чат-мут-роль, чтобы при войс-муте не
+        оставалось второго мута (войс-мут глушит только микрофон)."""
+        try :
+            from services import mute_state
+            await mute_state .clear_chat_mute (guild ,user )
+        except Exception as _e :
+            log .debug (f'[MODPANEL] clear chat-mute: {_e}')
+
     def _punish_role (self ,guild ,kind ):
         """discord.Role для наказания или None (не выбрана — работаем как раньше)."""
         try :

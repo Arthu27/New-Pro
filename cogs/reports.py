@@ -570,6 +570,11 @@ class Reports(commands.Cog):
                 hours = v.get('hours') or 24
                 until = datetime.now(timezone.utc) + timedelta(
                     minutes=1, hours=min(hours, 672))  # лимит Discord — 28 дней
+                try:  # таймаут глушит чат И голос — сначала снимаем отдельный войс-мут
+                    from services import mute_state
+                    await mute_state.clear_voice_mute(guild, member)
+                except Exception as _mse:
+                    _log.debug('вердикт mute: очистка войс-мута: %s', _mse)
                 await member.timeout(until, reason=reason)
                 applied = f'Мут до {until:%d.%m %H:%M} UTC.'
             elif v['kind'] == 'kick' and member:
