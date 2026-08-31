@@ -769,7 +769,7 @@ class Reports(commands.Cog):
                                 description=f'{user.mention} присоединился к рассмотрению.',
                                 color=0x5865F2))
 
-    @app_commands.command(name='my_violations', description='Мои нарушения')
+    @app_commands.command(name='my-violations', description='Мои нарушения')
     async def my_violations_slash(self, interaction):
         cfg = _cfg(interaction.guild_id)
         field = _violations_field(interaction.guild_id, interaction.user.id, cfg)
@@ -839,6 +839,12 @@ class Reports(commands.Cog):
         cfg['channel_id'] = str(channel.id)
         cfg['mod_role_id'] = str(mod_role.id)
         RC.save_cfg(interaction.guild_id, cfg)
+        # Единый источник роли модераторов: зеркалим во все системы.
+        try:
+            from services.mod_role import set_mod_role_id
+            set_mod_role_id(interaction.guild_id, mod_role.id)
+        except Exception as _mr:
+            _log.debug('report-setup: зеркалирование роли: %s', _mr)
         perms = channel.permissions_for(guild.me)
         e = discord.Embed(
             title='Система репортов настроена',

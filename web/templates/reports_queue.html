@@ -17,14 +17,14 @@
 {% if role == 'admin' or role == 'owner' %}
 <div class="card" id="reportSetupCard" style="margin-bottom:14px">
   <div class="bs-title" style="margin-bottom:6px"><i class="fas fa-sliders"></i> Настройки жалоб</div>
-  <p class="muted" style="margin:0 0 10px">Куда бот присылает карточки <b>/report</b> и какую роль тегает. Канал выбираете вы — если не задать, бот создаст закрытый <b>#модерация</b> сам.</p>
+  <p class="muted" style="margin:0 0 10px">Куда бот присылает карточки <b>/report</b> и какая роль считается модераторской. <b>Роль модераторов — единая для всего бота:</b> она применяется к жалобам, призыву модеров и заявкам в команду — настраивать в разных местах больше не нужно. Канал выбираете вы — если не задать, бот создаст закрытый <b>#модерация</b> сам.</p>
   <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
     <div style="flex:1;min-width:220px">
       <label class="muted" for="rsChannel">Канал для жалоб</label>
       <select id="rsChannel" class="input" style="width:100%"><option value="">— не задан (создастся #модерация) —</option></select>
     </div>
     <div style="flex:1;min-width:220px">
-      <label class="muted" for="rsRole">Роль модераторов (тег)</label>
+      <label class="muted" for="rsRole">Роль модераторов (единая для всего бота)</label>
       <select id="rsRole" class="input" style="width:100%"><option value="">— не задана —</option></select>
     </div>
     <button type="button" class="btn btn-primary" id="rsSave"><i class="fas fa-save"></i> Сохранить</button>

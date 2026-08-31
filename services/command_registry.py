@@ -267,9 +267,20 @@ def _scan():
         full_requested = (os.environ.get('BOT_FULL', '') or '').strip() not in ('', '0', 'false', 'False')
     if KEEP_SLASH and not full_requested:
         keep = set(KEEP_SLASH)
+        # Имена в KEEP_SLASH записаны как в @app_commands.command(name=...),
+        # а реестр нормализует имя (нижний регистр, «_» → «-»). Discord, в
+        # отличие от каталога, подчёркивания и дефисы НЕ различает при
+        # сравнении, поэтому сравниваем по обеим формам — иначе живая
+        # команда (my_violations) пропадала бы из каталога панели.
+        def _kept(c):
+            for cand in (c['bare'], c['name'],
+                         c['bare'].replace('-', '_'),
+                         c['name'].replace('-', '_')):
+                if cand in keep:
+                    return True
+            return False
         deduped = [c for c in deduped
-                   if c['kind'] == 'prefix'
-                   or c['bare'] in keep or c['name'] in keep]
+                   if c['kind'] == 'prefix' or _kept(c)]
     return deduped
 
 

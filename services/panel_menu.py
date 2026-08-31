@@ -156,7 +156,6 @@ MENU = [
         {'path': '/role-settings', 'label': 'Роли наказаний', 'icon': 'fa-user-tag'},
         {'path': '/channel-settings', 'label': 'Каналы и маршруты', 'icon': 'fa-route'},
         {'path': '/bot-settings', 'label': 'Бот', 'icon': 'fa-sliders-h'},
-        {'path': '/ticket-settings', 'label': 'Тикеты', 'icon': 'fa-ticket-alt'},
         {'path': '/welcome-editor', 'label': 'Приветствие', 'icon': 'fa-handshake'},
         {'path': '/rules-editor', 'label': 'Правила', 'icon': 'fa-scroll'},
         {'path': '/warn-config', 'label': 'Варны', 'icon': 'fa-exclamation'},

@@ -49,8 +49,8 @@ data = CR.catalog(force=True)
 # Заказ владельца: боевое слеш-меню — минимум команд. Тикет-система снята
 # 2026-08-31, её роль выполняет /report (жалоба карточкой в канал модерации).
 # В меню: modpanel, play, апелляция, update, afk/afk-remove и report.
-check(data['total'] == 8, f"lean: собрано {data['total']} живых команд (ровно 8)")
-check(data['slash'] == 8 and data['prefix'] == 0,
+check(data['total'] == 9, f"lean: собрано {data['total']} живых команд (ровно 9)")
+check(data['slash'] == 9 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')

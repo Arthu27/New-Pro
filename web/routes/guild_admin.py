@@ -699,6 +699,10 @@ def register(ctx):
                 {'id':'1014','name':'сцена','type':'stage','position':0,'category_id':'903','hidden':False},
                 ]
                 return jsonify (_annotate_hidden (guild_id ,_fallback ))
+            cached =_channels_offline_cache (guild_id )
+            if cached :
+                print (f'[WEB] /channels bot offline — отдаём кэш ({len(cached)} кан.)')
+                return jsonify (cached )
             print ('[WEB][WARN] /channels: bot is None')
             return jsonify ({'error':'Бот офлайн','channels':[]})
 
@@ -783,8 +787,31 @@ def register(ctx):
 
         sorted_channels =sorted (channels_data ,key =lambda x :(x ['category_pos'],x ['position']))
         _annotate_hidden (guild_id ,sorted_channels )
+        # Запоминаем живой список: при кратком офлайне/перезапуске бота
+        # пикеры каналов не пустуют и имена не превращаются в голые ID.
+        try :
+            os .makedirs ('data',exist_ok =True )
+            with open (f'data/panel_channels_cache_{guild_id}.json','w',encoding ='utf-8')as _cf :
+                json .dump ({'channels':sorted_channels },_cf ,ensure_ascii =False )
+        except Exception as _ce :
+            print (f'[WEB][WARN] channels cache save: {_ce}')
         print (f'[WEB] /channels guild={guild_id} returned {len(sorted_channels)} channels')
         return jsonify (sorted_channels )
+
+    def _channels_offline_cache (guild_id ):
+        """Последний известный список каналов (имена + id) при офлайн-боте."""
+        try :
+            p =f'data/panel_channels_cache_{guild_id}.json'
+            if os .path .exists (p ):
+                with open (p ,encoding ='utf-8')as fh :
+                    data =json .load (fh )
+                chans =data .get ('channels')if isinstance (data ,dict )else None
+                good =[c for c in (chans or [])if c .get ('id')and c .get ('name')]
+                if good :
+                    return good
+        except Exception as _ce :
+            print (f'[WEB][WARN] channels cache load: {_ce}')
+        return None
 
     # ── Владелец: скрыть канал/категорию из панели ─────────────────────────
     @app .route ('/api/guild/<guild_id>/channels-visibility',methods =['POST'])

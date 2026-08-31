@@ -126,10 +126,17 @@ def register(ctx):
         gid = active_guild_id()
         if request.method == 'GET':
             cfg = RC.load_cfg(gid)
+            # Показываем ЕДИНЫЙ источник роли модераторов (если в конфиге
+            # репортов пусто, подтянется значение из старых страниц).
+            try:
+                from services.mod_role import get_mod_role_id
+                unified_rid = get_mod_role_id(gid)
+            except Exception:
+                unified_rid = ''
             channels, roles = _guild_channels_roles(gid)
             return jsonify({'success': True,
                             'channel_id': cfg.get('channel_id', ''),
-                            'mod_role_id': cfg.get('mod_role_id', ''),
+                            'mod_role_id': cfg.get('mod_role_id') or unified_rid,
                             'expiry_days': cfg.get('expiry_days', 90),
                             'channels': channels, 'roles': roles})
 
@@ -150,6 +157,14 @@ def register(ctx):
         cfg['channel_id'] = cid
         cfg['mod_role_id'] = rid
         RC.save_cfg(gid, cfg)
+        # Единый источник роли модераторов: зеркалим выбор во все системы,
+        # которые исторически хранили свою роль (призыв модеров, заявки),
+        # чтобы «настроил тут — работает везде».
+        try:
+            from services.mod_role import set_mod_role_id
+            set_mod_role_id(gid, rid)
+        except Exception as _ex:
+            _log.debug('reports: зеркалирование роли модераторов: %s', _ex)
         return jsonify({'success': True,
                         'channel_id': cid, 'mod_role_id': rid,
                         'channels': channels, 'roles': roles})
