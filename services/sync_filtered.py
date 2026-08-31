@@ -50,6 +50,150 @@ def _is_disabled(name):
         return False
 
 
+# ── Таймауты и идемпотентность синка ───────────────────────────────────
+# Инцидент 31.08: стартовый синк зависал дольше 180с и сдавался, меню
+# оставалось старым. Причины: (1) каждый full_sync делал PUT-перезапись
+# глобально и по каждому серверу, даже если в Discord всё уже совпадает
+# (глобальные PUT жёстко лимитированы — 200/сутки, при лимите Discord
+# присылает огромный retry_after и discord.py молча ждёт); (2) один
+# залипший вызов блокировал весь прогон — таймаут был только снаружи.
+# Теперь: сверяемся с Discord дешёвым GET и пропускаем PUT при совпадении;
+# на каждый сетевой вызов — свой короткий таймаут (висяк не держит весь
+# синк); чистка чужих серверов ограничена по времени и объёму.
+SCOPE_TIMEOUT_SEC = 25      # один tree.sync / fetch_commands по скоупу
+STRAY_MAX_CLEAN = 10        # сколько «чужих» серверов чистим за один прогон
+STRAY_TIME_BUDGET_SEC = 30  # общий бюджет на чистку чужих серверов
+
+
+async def _gather_timeout(coro, timeout, what):
+    """Дождаться coro с таймаутом; по таймауту отменить и бросить TimeoutError."""
+    try:
+        return await asyncio.wait_for(coro, timeout=timeout)
+    except asyncio.TimeoutError:
+        _log.warning('sync: %s не уложилось в %sс — пропускаю скоуп '
+                     '(меню в Discord не тронуто, повтор позже)', what, timeout)
+        raise
+
+
+def _sig(cmd):
+    """Сигнатуры команды (frozenset строк) для сравнения «локально == Discord».
+
+    Для контекстного меню или одиночной слэш-команды — одна строка
+    (имя|тип|описание|число-параметров). Для слэш-группы — по строке на
+    каждую подкоманду (qualified-имя), без мутации объектов. Набор строк
+    уравнивает порядок и работает и у локальной команды, и у ответа
+    Discord API (AppCommand)."""
+    name = getattr(cmd, 'name', '') or ''
+    try:
+        ctype = int(getattr(cmd, 'type', 1)) or 1
+    except (TypeError, ValueError):
+        ctype = 1
+    if ctype != 1:                      # контекстные меню (user/message)
+        return frozenset({f'{name}|{ctype}||'})
+
+    def _row(c, qname):
+        desc = (getattr(c, 'description', '') or '').strip()
+        try:
+            npar = len(getattr(c, 'parameters', None) or [])
+        except Exception:
+            npar = 0
+        return f'{qname}|1|{desc}|{npar}'
+
+    out = set()
+
+    def _walk(c, prefix):
+        subs = getattr(c, 'commands', None)
+        if subs:                        # группа/подгруппа
+            for s in subs:
+                _walk(s, f'{prefix} {s.name}'.strip())
+        else:
+            out.add(_row(c, prefix))
+
+    _walk(cmd, str(name))
+    if not out:                         # одиночная слэш-команда
+        out.add(_row(cmd, str(name)))
+    return frozenset(out)
+
+
+async def _remote_sigs(tree, ctx):
+    """Сигнатуры команд, реально зарегистрированных в Discord по скоупу.
+
+    None — если не удалось прочитать (сеть): тогда вызывающий делает
+    обычный sync (не рискуем пропустить нужное обновление)."""
+    try:
+        if ctx is None:
+            fetched = await asyncio.wait_for(tree.fetch_commands(),
+                                             timeout=SCOPE_TIMEOUT_SEC)
+        else:
+            fetched = await asyncio.wait_for(tree.fetch_commands(guild=ctx),
+                                             timeout=SCOPE_TIMEOUT_SEC)
+    except asyncio.TimeoutError:
+        _log.warning('sync: чтение команд Discord (%s) зависло — '
+                     'будет обычный PUT', 'глобально' if ctx is None else ctx.id)
+        return None
+    except TypeError:
+        # минималистичные деревья/старый discord.py без fetch_commands
+        return None
+    except Exception as e:
+        _log.debug('sync: fetch_commands(%s): %s', ctx, e)
+        return None
+    out = set()
+    for c in (fetched or []):
+        out |= _sig(c)
+    return out
+
+
+def _local_sigs(tree, ctx):
+    """Сигнатуры команд локального дерева по скоупу (как их ждём в Discord)."""
+    try:
+        cmds = tree.get_commands(guild=ctx)
+    except TypeError:
+        cmds = tree.get_commands()
+    except Exception as e:
+        _log.debug('sync: get_commands(%s): %s', ctx, e)
+        cmds = []
+    out = set()
+    for c in cmds:
+        out |= _sig(c)
+    return out
+
+
+async def _push_sync(tree, ctx):
+    """tree.sync с таймаутом и идемпотентным пропуском.
+
+    Сначала дешёвый GET: если в Discord ровно то же дерево — PUT не шлём
+    (экономим суточный лимит глобальных команд и время; при исчерпании
+    лимита Discord держит соединение на минуты — раньше это и вешало
+    синк). Не удалось прочитать — делаем обычный PUT как раньше.
+
+    Возвращает (synced, put_done): synced — список команд (как tree.sync),
+    put_done=False означает «пропущено, уже совпадало»."""
+    where = 'глобально' if ctx is None else f'сервер {ctx.id}'
+    remote = await _remote_sigs(tree, ctx)
+    if remote is not None:
+        local = _local_sigs(tree, ctx)
+        if remote == local:
+            _log.info('sync: %s уже совпадает с Discord (%d команд) — PUT пропущен',
+                      where, len(local))
+            try:
+                cmds = tree.get_commands(guild=ctx)
+            except TypeError:
+                cmds = tree.get_commands()
+            return cmds, False
+    try:
+        try:
+            synced = await asyncio.wait_for(tree.sync(guild=ctx),
+                                            timeout=SCOPE_TIMEOUT_SEC)
+        except TypeError:                # минималистичные деревья без guild=
+            synced = await asyncio.wait_for(tree.sync(),
+                                            timeout=SCOPE_TIMEOUT_SEC)
+    except asyncio.TimeoutError:
+        _log.error('sync: %s не завершилось за %sс — отмена', where,
+                   SCOPE_TIMEOUT_SEC)
+        raise
+    return synced, True
+
+
 async def sync_tree(bot, guild=None):
     """tree.sync() без выключенных команд (контекст guild или глобально)."""
     import discord
@@ -97,10 +241,7 @@ async def sync_tree(bot, guild=None):
             except Exception as e:
                 _log.debug('remove_command(keep_global %s): %s', c.name, e)
     try:
-        try:
-            synced = await tree.sync(guild=ctx)
-        except TypeError:            # минималистичные деревья без параметра
-            synced = await tree.sync()
+        synced, _put = await _push_sync(tree, ctx)
     finally:
         for c in removed:          # назад в локальное дерево — панель видит все
             try:
@@ -121,22 +262,80 @@ async def _clean_stray_guilds(bot, tree, exclude_ids):
     никто никогда не трогал — вечные дубли. Пустой payload = очистка.
     Запускается и когда targets пуст (глобальный режим): гильдовые копии
     там вообще вне закона (именно так вечно жила вторая «апелляция»).
+
+    Раньше функция делала PUT (пустой sync) ПО КАЖДОМУ серверу подряд,
+    даже если там давно пусто — десятки синхронных HTTP подряд вешали
+    весь full_sync (инцидент «не уложился в 180с»). Теперь: параллельно
+    (GET) смотрим, где команды реально есть; чистим только такие и не
+    больше STRAY_MAX_CLEAN за прогон, с общим бюджетом времени —
+    остальное дочистят следующие запуски.
     """
+    import discord as _d
     cleaned = []
     try:
-        import discord as _d
         _exclude = {int(x or 0) for x in (exclude_ids or set())}
-        for g in list(getattr(bot, 'guilds', []) or []):
-            gid = int(getattr(g, 'id', 0) or 0)
-            if not gid or gid in _exclude:
-                continue
+        stray = [int(getattr(g, 'id', 0) or 0)
+                 for g in list(getattr(bot, 'guilds', []) or [])]
+        stray = [gid for gid in stray if gid and gid not in _exclude]
+        if not stray:
+            return cleaned
+
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + STRAY_TIME_BUDGET_SEC
+
+        async def _has_cmds(gid):
+            """Есть ли на чужом сервере зарегистрированные команды (GET)."""
+            if loop.time() > deadline:
+                return None
             try:
-                await tree.sync(guild=_d.Object(id=gid))   # локально пусто
+                fetched = await asyncio.wait_for(
+                    tree.fetch_commands(guild=_d.Object(id=gid)),
+                    timeout=SCOPE_TIMEOUT_SEC)
+                return bool(fetched)
+            except Exception as _e:
+                _log.debug('sync: проверка чужого сервера %s: %s', gid, _e)
+                return None
+
+        # параллельно (до 8 за раз) выясняем, где реально что-то висит
+        sem = asyncio.Semaphore(8)
+
+        async def _check(gid):
+            async with sem:
+                return gid, await _has_cmds(gid)
+
+        results = await asyncio.gather(*[_check(g) for g in stray],
+                                       return_exceptions=True)
+        dirty = []
+        for r in results:
+            if isinstance(r, Exception) or r is None:
+                continue
+            gid, has = r
+            if has:
+                dirty.append(gid)
+
+        for gid in dirty[:STRAY_MAX_CLEAN]:
+            if loop.time() > deadline:
+                _log.info('sync: бюджет чистки чужих серверов исчерпан — '
+                          '%d из них дочистятся следующим синком',
+                          len(dirty) - len(cleaned))
+                break
+            try:
+                await asyncio.wait_for(
+                    tree.sync(guild=_d.Object(id=gid)),
+                    timeout=SCOPE_TIMEOUT_SEC)   # локально пусто -> стирание
                 cleaned.append(gid)
                 _log.info('sync: сервер %s очищен от устаревших копий команд '
-                          '(нужны команды там — добавьте его в EXTRA_GUILD_IDS)', gid)
+                          '(нужны команды там — добавьте его в EXTRA_GUILD_IDS)',
+                          gid)
+            except asyncio.TimeoutError:
+                _log.warning('sync: очистка чужого сервера %s не уложилась '
+                             'в %sс — в следующий раз', gid, SCOPE_TIMEOUT_SEC)
             except Exception as _e:
                 _log.debug('sync: очистка чужого сервера %s: %s', gid, _e)
+        if len(dirty) > len(cleaned):
+            _log.info('sync: чужих серверов с командами %d, за прогон '
+                      'почищено %d (лимит/бюджет) — остаток позже',
+                      len(dirty), len(cleaned))
     except Exception as _e:
         _log.debug('sync: обход чужих серверов: %s', _e)
     return cleaned
@@ -277,13 +476,22 @@ async def _full_sync_inner(bot):
     _global_err = None
     for _attempt in (1, 2, 3):
         try:
-            await tree.sync()
+            # _push_sync сам сходит GET и пропустит PUT, если глобально уже
+            # ровно keep_global — это не тратит суточный лимит и не виснет.
+            await _push_sync(tree, None)
             _global_cleared = True
             break
         except TypeError as e:      # дерево без параметров — уже очищено выше
             _log.debug('tree.sync(): %s', e)
             _global_cleared = True
             break
+        except asyncio.TimeoutError as e:
+            _global_err = e
+            if _attempt < 3:
+                _log.warning('глобальная очистка: попытка %d/3 зависла '
+                             '(>%sс — rate limit/сеть) — повтор через 2с',
+                             _attempt, SCOPE_TIMEOUT_SEC)
+                await asyncio.sleep(2)
         except Exception as e:
             _global_err = e
             if _attempt < 3:
@@ -382,7 +590,11 @@ async def _full_sync_inner(bot):
                     tree.remove_command(cmd.name, type=_t)
                 except Exception as _e:
                     _log.debug('снять перед откатом %s: %s', cmd.name, _e)
-            await tree.sync()
+            await asyncio.wait_for(tree.sync(), timeout=SCOPE_TIMEOUT_SEC)
+        except asyncio.TimeoutError:
+            _log.error('перепубликация keep_global после сбоя зависла '
+                       '>%sс — оставляю как есть (дублей не добавляется)',
+                       SCOPE_TIMEOUT_SEC)
         except Exception as _e:
             _log.error('перепубликация keep_global после сбоя: %s', _e)
         finally:

@@ -122,6 +122,11 @@ class Tree:
                      Cmd('Войс-мут', 'user'), Cmd('Варн за сообщение', 'message')]
         self.guilds = {}
         self.synced = []
+        # «Состояние Discord» (отдельно от локального дерева): его видит
+        # fetch_commands и переписывает sync(). Изначально на чужом сервере
+        # 999 висит старая копия команд (полигон вечных дублей), а цели
+        # синка пусты — как на холодном старте.
+        self.remote = {'global': [], 777: [], 999: [Cmd('ban'), Cmd('апелляция')]}
 
     @staticmethod
     def _want(t):
@@ -130,6 +135,9 @@ class Tree:
 
     def get_commands(self, guild=None, type=None):
         box = self.glob if guild is None else self.guilds.get(guild.id, [])
+        if type is None:
+            # как настоящий discord.py: без type= отдаём ВСЕ типы
+            return list(box)
         want = self._want(type)
         return [c for c in box if c.ctype == want]
 
@@ -153,10 +161,19 @@ class Tree:
             if not any(x.name == c.name and x.ctype == c.ctype for x in box):
                 box.append(c)
 
+    async def fetch_commands(self, guild=None):
+        # как в discord.py: читаем РЕАЛЬНО зарегистрированное в Discord
+        # (self.remote), а не локальное дерево.
+        key = 'global' if guild is None else guild.id
+        return list(self.remote.get(key, []))
+
     async def sync(self, guild=None):
         if getattr(self, 'slow', False):      # симуляция сети — для теста гонки
             await asyncio.sleep(0.05)
         box = self.glob if guild is None else self.guilds.get(guild.id, [])
+        key = 'global' if guild is None else guild.id
+        # sync() публикует локальное дерево в Discord (перезапись remote)
+        self.remote[key] = list(box)
         self.synced.append(('global' if guild is None else guild.id,
                             [(c.name, c.ctype) for c in box]))
         return box
