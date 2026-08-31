@@ -650,8 +650,10 @@ check("{% extends \"base.html\" %}" in tpl and "{% block content %}" in tpl,
       'шаблон встроен в общий каркас')
 check('Кто может добавлять ботов' in tpl and 'gdWlBU' in tpl and 'gdWlBR' in tpl,
       'выделенный белый список ботоводов на странице')
-check('gdBotAct' in tpl and 'Мера для ботов-нарушителей' in tpl,
-      'селект меры для ботов-нарушителей на странице')
+check('gdBotAct' in tpl and 'Мера для бота-нарушителя' in tpl,
+      'селект меры для бота-нарушителя на странице')
+check(tpl.count('data-gd-pane=') == 4 and tpl.count('gd-tab-btn') >= 4,
+      'страница разбита на 4 понятные вкладки (анти-нюк/лимиты/белые списки/инциденты)')
 check('bot_whitelist_users' in tpl and 'bot_action' in tpl,
       'JS собирает и отдаёт бот-поля в API')
 

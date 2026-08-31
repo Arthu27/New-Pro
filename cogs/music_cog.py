@@ -418,7 +418,9 @@ class MusicCog(commands.Cog):
                 # объясняем один раз и останавливаемся.
                 _is_win = os.name == 'nt'
                 if _is_win:
-                    hint = ('Поставь ffmpeg одним из способов:\n'
+                    hint = ('Обычно достаточно перезапустить бота через `start.bat` '
+                            '(или `start_bot.bat`) — ffmpeg скачается и встанет сам.\n'
+                            'Если не встал — поставь вручную:\n'
                             '• winget: `winget install Gyan.FFmpeg` (потом перезапуск бота);\n'
                             '• или скачай с gyan.dev/ffmpeg и распакуй `ffmpeg.exe` '
                             'рядом с ботом в папку `bin/` или `ffmpeg/bin/`;\n'

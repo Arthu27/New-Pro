@@ -265,5 +265,33 @@ except Exception:
 check("'FFMPEG_BINARY'" in src or "'FFMPEG_BINARY'" in _probe_src,
       'путь к ffmpeg настраивается через .env')
 
+# ── Детектор находит локальную копию bin/ffmpeg (куда её кладёт
+#    авто-установщик scripts/ensure_ffmpeg.bat при запуске start.bat) ──
+import tempfile as _tf  # noqa: E402
+from services import ffmpeg_probe as _ffp  # noqa: E402
+_d = _tf.mkdtemp()
+_bin = _os.path.join(_d, 'bin')
+_os.makedirs(_bin, exist_ok=True)
+_exe = 'ffmpeg.exe' if _os.name == 'nt' else 'ffmpeg'
+open(_os.path.join(_bin, _exe), 'w').close()
+_cwd = _os.getcwd()
+_os.chdir(_d)
+try:
+    check(_ffp.find_ffmpeg() is not None,
+          'детектор подхватывает локальный bin/ffmpeg (авто-установка start.bat)')
+finally:
+    _os.chdir(_cwd)
+# авто-установщик присутствует и ссылается на winget/скачивание
+_bat = os.path.join(ROOT, 'scripts', 'ensure_ffmpeg.bat')
+_bat_src = open(_bat, encoding='utf-8').read() if os.path.exists(_bat) else ''
+check('Gyan.FFmpeg' in _bat_src and 'gyan.dev' in _bat_src and '%CD%\\bin' in _bat_src,
+      'ensure_ffmpeg.bat ставит ffmpeg через winget или скачивание в bin/')
+import re as _re_bat
+check(bool(_re_bat.search(r'%CD%\\bin', _bat_src)) or 'BIN=%CD%\\bin' in _bat_src,
+      'бат распаковывает ffmpeg в локальную папку bin рядом с ботом')
+check(os.path.exists(os.path.join(ROOT, 'start.bat'))
+      and 'ensure_ffmpeg' in open(os.path.join(ROOT, 'start.bat'), encoding='utf-8').read(),
+      'start.bat вызывает авто-установку ffmpeg')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
