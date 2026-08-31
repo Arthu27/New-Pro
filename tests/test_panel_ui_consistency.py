@@ -35,7 +35,7 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
-print('== 1. Крошки страниц = группа и подпись из меню ==')
+print('== 1. Крошка страницы = только раздел; название в <h1>, не дублируется ==')
 from services.panel_menu import MENU  # noqa: E402
 
 page_of = {}
@@ -66,18 +66,30 @@ for path, (group, label) in sorted(page_of.items()):
             continue
         fn = os.path.join(tpl_dir, cands[0])
     src = open(fn, encoding='utf-8').read()
-    m = re.search(r'eyebrow"[^>]*>\s*([^<]*?)\s*<span class="sep">·</span>\s*([^<]*?)\s*</div>', src)
-    if not m:
+    me = re.search(r'<div class="eyebrow">\s*([^<]*?)\s*</div>', src)
+    mh = re.search(r'<h1[^>]*>(.*?)</h1>', src, re.S)
+    if not me or not mh:
         continue
     checked += 1
-    a, b = m.group(1).strip(), m.group(2).strip()
-    if a != group or b != label:
-        bad.append((path, f'{group} · {label}', f'{a} · {b}'))
+    eyebrow = me.group(1).strip()
+    h1 = re.sub(r'<[^>]+>', '', mh.group(1))
+    h1 = re.sub(r'\s+', ' ', h1).strip()
+    # eyebrow показывает ТОЛЬКО раздел и совпадает с группой в меню.
+    if eyebrow != group:
+        bad.append((path, 'раздел «%s»' % group, 'eyebrow «%s»' % eyebrow))
+        continue
+    # в eyebrow больше НЕТ разделителя и названия страницы (это был дубль с <h1>).
+    if '·' in me.group(0) or label.lower() in eyebrow.lower():
+        bad.append((path, 'без повтора названия', 'eyebrow «%s»' % eyebrow))
+        continue
+    # у страницы есть осмысленный <h1>.
+    if not h1:
+        bad.append((path, 'непустой <h1>', 'пусто'))
 if bad:
     for path, want, got in bad:
-        check(False, f'{path}: меню «{want}», страница «{got}»')
+        check(False, f'{path}: ждём {want}, страница: {got}')
 else:
-    check(checked > 30, f'все страницы меню ({checked}) — крошка «Группа · Подпись»')
+    check(checked > 30, f'все страницы меню ({checked}) — eyebrow = раздел, название только в <h1>')
 
 print('== 2. Всплывающие списки: в рамках экрана, следуют за полем ==')
 pick = open(os.path.join(ROOT, 'web', 'static', 'pickers.js'), encoding='utf-8').read()
