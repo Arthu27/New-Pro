@@ -114,13 +114,54 @@ except Exception as ex:  # noqa: BLE001
     check(False, f'распаковка tar упала: {ex}')
 
 print('== 6. ensure_ffmpeg возвращает find_ffmpeg, если бинарь уже есть ==')
+fake_path = os.path.join(bindir, 'ffmpeg.exe')   # существует с теста 4
+FP.find_ffmpeg = lambda: fake_path               # noqa: E731
 FP._install_state.update({'done': False, 'running': False, 'ok': False, 'path': None})
-# Подкладываем фейковый ffmpeg в ./bin и форсим find через monkeypatch
-fake = os.path.join(_TMP, 'bin', 'ffmpeg.exe')
-FP.find_ffmpeg = lambda: fake  # noqa: E731
 r = FP.ensure_ffmpeg(blocking=False)
-check(r == fake and FP._install_state['ok'] is True,
-      'если ffmpeg уже найден — возвращаем его без установки')
+check(r == fake_path and FP._install_state['ok'] is True and FP._install_state['path'] == fake_path,
+      'если ffmpeg уже найден — возвращаем его без установки, состояние ok=True')
+FP.find_ffmpeg = lambda: None                    # noqa: E731 — дальше бинаря «нет»
+
+print('== 7. Падение фонового воркера не оставляет статус «running» навсегда ==')
+import time as _time  # noqa: E402
+FP2 = FP
+FP2.find_ffmpeg = lambda: None  # noqa: E731
+
+
+def _boom():
+    raise RuntimeError('сеть недоступна (подделка)')
+
+
+FP2._install_blocking = _boom
+FP2._install_state.update({'done': False, 'running': False, 'ok': False, 'path': None})
+res_bg = FP2.ensure_ffmpeg(blocking=False)   # стартует фоновый поток
+check(res_bg is None and FP2._install_state['running'] is True,
+      'фоновая установка стартовала (running=True, вернули None)')
+# Ждём завершения потока
+for _ in range(40):
+    if FP2._install_state['done']:
+        break
+    _time.sleep(0.1)
+st = FP2.install_status()
+check(st['done'] is True and st['running'] is False and st['ok'] is False,
+      'после падения воркера статус сошёлся: done=True, running=False, ok=False')
+
+print('== 8. После неудачи блокирующий вызов не качает снова (без зависания) ==')
+calls2 = {'n': 0}
+_orig = FP2._install_blocking
+
+
+def _count():
+    calls2['n'] += 1
+    return None
+
+
+FP2._install_blocking = _count
+# done уже стоит в True после теста 7 → сразу вернём path без сети
+rb = FP2.ensure_ffmpeg(blocking=True)
+check(rb is None and calls2['n'] == 0,
+      'повторный blocking после неудачи не лезет в сеть (вышли по done)')
+FP2._install_blocking = _orig
 
 print()
 print(f'=== PASS {PASS} / FAIL {FAIL} ===')

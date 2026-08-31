@@ -218,10 +218,18 @@ def _extract_ffmpeg(archive, bin_dir, is_windows):
 
 
 def _install_blocking():
-    """Скачать и распаковать ffmpeg в ./bin. Вернуть путь или None."""
-    is_windows = os.name == 'nt'
-    bin_dir = _bin_dir()
-    os.makedirs(bin_dir, exist_ok=True)
+    """Скачать и распаковать ffmpeg в ./bin. Вернуть путь или None.
+
+    Любая ошибка (нет сети, прав на запись, битый архив) → None, без
+    исключения наружу: вызывающий поток тогда корректно выставит done.
+    """
+    try:
+        is_windows = os.name == 'nt'
+        bin_dir = _bin_dir()
+        os.makedirs(bin_dir, exist_ok=True)
+    except Exception as _ex:                           # noqa: BLE001
+        log.warning('ffmpeg: не подготовить папку bin/: %s', _ex)
+        return None
     ext = '.zip' if is_windows else '.tar.xz'
     archive = os.path.join(bin_dir, 'ffmpeg_dl' + ext)
     urls = ([_URL_WIN, _URL_WIN_GYAN] if is_windows else [_URL_LINUX])
@@ -277,9 +285,11 @@ def ensure_ffmpeg(blocking=False):
                 return None
 
     if blocking:
-        # Если в фоне уже качает другой поток — дождемся завершения по статусу,
-        # не запуская второе скачивание.
-        while True:
+        # Если в фоне уже качает другой поток — дождёмся завершения по статусу,
+        # не запуская второе скачивание. Ждём не дольше 120 сек, чтобы /play
+        # не завис навсегда, если фоновый поток почему-то умер.
+        waited = 0.0
+        while waited < 120.0:
             with _install_lock:
                 st = dict(_install_state)
             if st.get('done'):
@@ -287,7 +297,16 @@ def ensure_ffmpeg(blocking=False):
             if not st.get('running'):
                 break   # никто не ставит и не done — ставим сами
             time.sleep(0.5)
+            waited += 0.5
+        if waited >= 120.0:
+            with _install_lock:
+                if _install_state.get('running') and not _install_state.get('done'):
+                    # Фоновый поток завис/умер — снимаем флаг, чтобы не залипнуть.
+                    _install_state.update(running=False, done=True, ok=False, path=None)
+            return None
         # Синхронная установка (мы вне event-loop — вызывается из to_thread).
+        with _install_lock:
+            _install_state['running'] = True
         path = _install_blocking()
         with _install_lock:
             _install_state.update(done=True, ok=bool(path), path=path, running=False)
@@ -301,7 +320,13 @@ def ensure_ffmpeg(blocking=False):
         _install_state['running'] = True
 
     def _worker():
-        path = _install_blocking()
+        # try/finally: даже при неожиданном исходе снимаем running, иначе
+        # блокирующие вызовы ждали бы «установку» вечно.
+        try:
+            path = _install_blocking()
+        except Exception as _ex:                    # noqa: BLE001 (подстраховка)
+            log.warning('ffmpeg: фоновая установка упала: %s', _ex)
+            path = None
         with _install_lock:
             _install_state['running'] = False
             _install_state['done'] = True
