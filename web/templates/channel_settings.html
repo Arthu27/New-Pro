@@ -73,11 +73,20 @@
 .chs-guide-steps{margin:10px 0 4px;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
 .chs-guide-steps li{display:flex;gap:10px;align-items:flex-start}
 .g-num{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-weight:800;background:var(--ac);color:#fff;margin-top:1px}
+.g-num.g-later{background:color-mix(in srgb, var(--ac) 22%, transparent);color:var(--ac)}
 .chs-guide-note{margin-top:11px;border:1px solid color-mix(in srgb, #16a34a 28%, transparent);background:color-mix(in srgb, #16a34a 8%, transparent);border-radius:10px;padding:9px 12px;display:flex;gap:9px;align-items:flex-start}
 .chs-guide-note i{color:#7bd88f;margin-top:2px}
 /* Номер шага в строке маршрута */
 .chs-step{flex:none;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:800;background:color-mix(in srgb, var(--ac) 16%, transparent);color:var(--ac);border:1px solid color-mix(in srgb, var(--ac) 30%, transparent)}
+/* Обязательный шаг (только канал апелляции) — красный */
+.chs-step.req{background:color-mix(in srgb, #f0b26b 20%, transparent);color:#f0b26b;border-color:color-mix(in srgb, #f0b26b 45%, transparent)}
+/* «Можно потом» — синий, но приглушённее обязательного */
+.chs-step.later{background:color-mix(in srgb, var(--ac) 12%, transparent);color:var(--ac);border-color:color-mix(in srgb, var(--ac) 25%, transparent)}
 .chs-step.opt{background:color-mix(in srgb, var(--text) 7%, transparent);color:var(--text-3);border-color:var(--line-2,transparent)}
+/* Подпись-плашка «обязательно» / «можно потом» */
+.chs-tag{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:6px;padding:2px 7px;margin-left:2px}
+.chs-tag.req{color:#f0b26b;background:color-mix(in srgb, #f0b26b 14%, transparent)}
+.chs-tag.later{color:var(--ac);background:color-mix(in srgb, var(--ac) 10%, transparent)}
 .chs-hint{display:block;margin-top:4px;font-size:11.5px;color:var(--ac);opacity:.92}
 .chs-hint i{margin-right:4px}
 </style>
@@ -85,22 +94,27 @@
 <details class="chs-guide" open>
   <summary>
     <span class="g-ico"><i class="fas fa-flag-checkered"></i></span>
-    <span>С чего начать: настрой 7 маршрутов по порядку — остальное можно оставить «Авто»</span>
+    <span>С чего начать: обязателен только <b style="color:#f0b26b">1 канал</b> — остальное можно настроить потом</span>
     <i class="fas fa-chevron-down g-chev"></i>
   </summary>
   <div class="chs-guide-body">
-    <p>Отдельные каналы под каждую функцию заводить <b>не нужно</b> — просто выбери в выпадающем списке уже существующий канал. Логи (категория «Логи») бот создаёт сам. Порядок ниже — это «боевой минимум», идём сверху вниз:</p>
+    <p>Спокойно: <b>обязательна настройка только одного маршрута</b> — <b style="color:#f0b26b">канала апелляции после бана</b> (шаг <span class="g-num" style="width:18px;height:18px;font-size:10px">1</span>), и то если пользуешься «баном» в /modpanel. У <b>всех остальных</b> есть значение по умолчанию: бот сам создаст лог-каналы или напишет в системный канал — ничего не сломается, настрой когда будет удобно.</p>
+    <p><b>Отдельные каналы плодить не нужно</b> — в каждой строке выбирай уже существующий канал из списка.</p>
+    <p style="margin-bottom:4px"><b style="color:#f0b26b"><i class="fas fa-triangle-exclamation"></i> Надо задать (1 шаг):</b></p>
     <ol class="chs-guide-steps">
-      <li><span class="g-num">1</span><span><b>Канал доказательств</b> — куда падают демки (фото/видео) к наказаниям. Без него наказания с доказательством не выдаются.</span></li>
-      <li><span class="g-num">2</span><span><b>Тревоги Щита сервера</b> — анти-нюк: кто что снёс/выдал. Можно указать тот же лог-канал модерации.</span></li>
-      <li><span class="g-num">3</span><span><b>Лог авто-защиты</b> — ссылки/спам/фейки. Тоже можно в лог-канал модерации.</span></li>
-      <li><span class="g-num">4</span><span><b>Канал апелляции после бана</b> — сюда попадает «забаненный» (его не выкидывает с сервера). Заведи один канал #апелляции.</span></li>
-      <li><span class="g-num">5</span><span><b>Канал апелляций (карточки)</b> — можно указать тот же #апелляции, отдельный не нужен.</span></li>
-      <li><span class="g-num">6</span><span><b>Канал заявок в команду</b> — заявки на хелпера/модератора. Один канал на все заявки.</span></li>
-      <li><span class="g-num">7</span><span><b>Канал приветствий</b> — обычно общий чат новичков.</span></li>
+      <li><span class="g-num">1</span><span><b>Канал апелляции после бана</b> — сюда попадает «забаненный» (с сервера его не выкидывает, просто закрываются каналы). Заведи один канал <code>#апелляции</code>. Без него «бан» из панели не сработает и сам об этом попросит — остальное работает и без настройки.</span></li>
     </ol>
-    <p>В каждой строке: выбери канал в списке → нажми галочку «Сохранить» (или отметь несколько и жми вверху <b>«Сохранить всё»</b>). Строки без номера — необязательные, их трогать не нужно, они работают по умолчанию.</p>
-    <div class="chs-guide-note"><i class="fas fa-circle-check"></i><span>После сохранения ничего перезапускать не надо — маршруты применяются сразу.</span></div>
+    <p style="margin:12px 0 4px"><b style="color:var(--ac)"><i class="fas fa-clock"></i> Можно потом — работает и по умолчанию:</b></p>
+    <ol class="chs-guide-steps chs-optional">
+      <li><span class="g-num g-later">2</span><span><b>Доказательства</b> — не задашь, бот создаст <code>#-доказательства</code> сам.</span></li>
+      <li><span class="g-num g-later">3</span><span><b>Апелляции (карточки)</b> — можно тот же <code>#апелляции</code>; иначе идут в системный канал.</span></li>
+      <li><span class="g-num g-later">4</span><span><b>Тревоги Щита</b> (анти-нюк) — уходят в лог-канал <code>-модерация</code>, бот создаёт его сам.</span></li>
+      <li><span class="g-num g-later">5</span><span><b>Лог авто-защиты</b> (ссылки/спам/фейки) — тоже пишет в <code>-модерация</code> автоматически.</span></li>
+      <li><span class="g-num g-later">6</span><span><b>Приветствия</b> — без настройки идут в системный канал.</span></li>
+      <li><span class="g-num g-later">7</span><span><b>Заявки в команду</b> — нужны, только когда откроешь набор.</span></li>
+    </ol>
+    <p>В каждой строке: выбери канал в списке → галочка «Сохранить» (или несколько строк и кнопка вверху <b>«Сохранить всё»</b>). Строки с «…» в самом низу — дополнительные, их трогать не нужно.</p>
+    <div class="chs-guide-note"><i class="fas fa-circle-check"></i><span>Ничего перезапускать не надо — маршруты применяются сразу, а не заданное просто работает по умолчанию.</span></div>
   </div>
 </details>
 
@@ -147,6 +161,7 @@ var CHS_ROUTES = {{ route_specs | tojson }}.map(function (s) {
   return { key: s.key, label: s.label, icon: s.icon, what: s.what,
            empty: s.empty, access: s.access, channel_id: 0,
            step: (s.step === null || s.step === undefined) ? null : s.step,
+           required: !!s.required,
            create_hint: s.create_hint || '' };
 });
 var CHS_CHANNELS = [];
@@ -221,9 +236,17 @@ function render() {
       : (r.channel_id ? String(r.channel_id) : '0');
     var cur = badgeHtml(r.key, PENDING.hasOwnProperty(r.key) ? undefined : r.channel_id);
     var isStep = (r.step !== null && r.step !== undefined);
-    var stepBadge = isStep
-      ? '<span class="chs-step" title="Шаг ' + r.step + ' — настрой со старта">' + r.step + '</span>'
-      : '<span class="chs-step opt" title="Необязательно — работает по умолчанию"><i class="fas fa-ellipsis-h"></i></span>';
+    var stepBadge, stepTag;
+    if (isStep && r.required) {
+      stepBadge = '<span class="chs-step req" title="Обязательно: без этого канала «бан» в /modpanel не сработает (остальное работает и так)">' + r.step + '</span>';
+      stepTag = '<span class="chs-tag req" title="Единственное, что надо задать для старта">Обязательно</span>';
+    } else if (isStep) {
+      stepBadge = '<span class="chs-step later" title="Шаг ' + r.step + ' — можно настроить потом, работает по умолчанию">' + r.step + '</span>';
+      stepTag = '<span class="chs-tag later" title="Работает и без настройки — задай, когда удобно">можно потом</span>';
+    } else {
+      stepBadge = '<span class="chs-step opt" title="Дополнительно — работает по умолчанию"><i class="fas fa-ellipsis-h"></i></span>';
+      stepTag = '';
+    }
     var hint = r.create_hint
       ? '<span class="chs-hint"><i class="fas fa-lightbulb"></i>' + esc(r.create_hint) + '</span>'
       : '';
@@ -238,7 +261,7 @@ function render() {
     var opts = '<option value="0"' + (value === '0' ? ' selected' : '') + '>— Авто (по умолчанию) —</option>' + chanOpts;
     return '<div class="chs-row">' +
       '<div class="chs-ico"><i class="fas ' + esc(r.icon || 'fa-route') + '"></i></div>' +
-      '<div><div class="chs-name">' + stepBadge + esc(r.label) + ' ' + cur +
+      '<div><div class="chs-name">' + stepBadge + esc(r.label) + stepTag + ' ' + cur +
         '<span class="chs-cur" title="Кто меняет этот маршрут"><i class="fas fa-user-lock"></i>' + esc(r.access || 'Админ') + '</span></div>' +
         '<div class="chs-what">' + esc(r.what || '') + hint + '</div>' +
         '<div class="chs-empty">' + esc(r.empty || '') + '</div></div>' +
@@ -362,6 +385,7 @@ function chsLoadRoutes() {
             what: live.what || r.what, empty: live.empty || r.empty,
             access: live.access || r.access,
             step: (live.step === null || live.step === undefined) ? r.step : live.step,
+            required: !!(live.required || r.required),
             create_hint: live.create_hint || r.create_hint || '',
             channel_id: live.channel_id || 0
           };

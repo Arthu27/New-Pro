@@ -198,6 +198,7 @@ def register(ctx):
             'empty': s['empty'],
             'access': s.get('access', 'Админ'),
             'step': s.get('step'),
+            'required': bool(s.get('required', False)),
             'create_hint': s.get('create_hint', ''),
         } for s in CHR.ROUTE_SPECS]
         return render_template('channel_settings.html',
@@ -227,6 +228,7 @@ def register(ctx):
                 'empty': spec['empty'],
                 'access': spec['access'],
                 'step': spec.get('step'),
+                'required': bool(spec.get('required', False)),
                 'create_hint': spec.get('create_hint', ''),
                 'channel_id': cid,
             })
