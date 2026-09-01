@@ -42,7 +42,13 @@ check('@echo off' in text, 'корректный бат-заголовок')
 
 print('== 2. Источник обновления — наша ветка ==')
 check('Arthu27/New-Pro' in text, 'репозиторий прошит верно')
-check('arena/01a03640-new-pro' in text, 'качается именно сессионная ветка')
+# Дефолт — main (туда мёржатся релизы); мёртвая arena-ветка старой сессии
+# больше НЕ прошита (2026-09-01: она тянула устаревший код).
+check('arena/01a' not in text, 'мёртвая сессионная ветка не зашита в скрипт')
+check('set "BRANCH=main"' in text, 'ветка по умолчанию — main (релизы)')
+# .env владельца уважается: UPDATE_REPO/UPDATE_BRANCH переопределяют дефолт.
+check('UPDATE_BRANCH' in text and 'UPDATE_REPO' in text,
+      'ветка/репозиторий берутся из .env, если заданы')
 check('codeload.github.com' in text, 'скачивание через официальный codeload')
 
 print('== 3. Безопасность данных — железо ==')

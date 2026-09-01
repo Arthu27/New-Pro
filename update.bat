@@ -22,7 +22,14 @@ title Hakumo Updater
 cd /d "%~dp0"
 
 set "REPO=Arthu27/New-Pro"
-set "BRANCH=arena/01a03640-new-pro"
+rem Vetka po umolchaniyu: main (tuda merzhatsya relizy). Ranshe tut byla
+rem myortvaya arena-vetka staroy sessii - obnovlenie kachalo ustarevshiy kod.
+rem Esli vladelec zadal UPDATE_REPO/UPDATE_BRANCH v .env - uvozhaem ih.
+set "BRANCH=main"
+if exist ".env" (
+    for /f "usebackq tokens=1,2 delims==" %%A in (`findstr /b /c:"UPDATE_REPO=" .env 2^>nul`) do set "REPO=%%B"
+    for /f "usebackq tokens=1,2 delims==" %%A in (`findstr /b /c:"UPDATE_BRANCH=" .env 2^>nul`) do set "BRANCH=%%B"
+)
 set "URL=https://codeload.github.com/%REPO%/zip/refs/heads/%BRANCH%"
 set "TMPZ=%TEMP%\hakumo_update.zip"
 set "TMPSRC=%TEMP%\hakumo_update_src"

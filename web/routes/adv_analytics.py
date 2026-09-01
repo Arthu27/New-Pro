@@ -227,25 +227,88 @@ def register(ctx):
     @app .route ('/api/analytics/export',methods =['POST'])
     @login_required 
     def api_analytics_export ():
-        """Экспорт отчета аналитики"""
-        from flask import Response 
+        """Экспорт отчёта аналитики — РЕАЛЬНЫЕ тикеты из data/ai_tickets_*.json
+        (раньше тут отдавалась захардкоженная заглушка с фейковыми строками
+        «01.01.2026,Вопрос…» — владелец получал выдуманный отчёт)."""
+        from flask import Response
+        import csv as _csv
+        import io as _io
+        from datetime import timedelta as _timedelta
 
-        data =request .get_json ()
+        data =request .get_json (silent =True )or {}
         format_type =data .get ('format','csv')
+        if format_type !='csv':
+            return jsonify ({'success':False ,'error':'Формат временно недоступен'}),501
 
-        # Placeholder для экспорта
-        if format_type =='csv':
-            content ="Дата,Категория,Статус,Время решения\n"
-            content +="01.01.2026,Вопрос,Закрыт,2.5\n"
-            content +="02.01.2026,Жалоба,Закрыт,4.0\n"
+        # Та же логика отбора, что в api_analytics_advanced: тикеты за
+        # период + фильтры по категории/модератору.
+        try :
+            period =int (data .get ('period',30 ))
+        except (TypeError ,ValueError ):
+            period =30
+        category_filter =str (data .get ('category','')or '')
+        moderator_filter =str (data .get ('moderator','')or '')
 
-            return Response (
-            content ,
-            mimetype ='text/csv',
+        def _aware (s ):
+            try :
+                dt =datetime .fromisoformat (str (s or '').replace ('Z','+00:00'))
+            except Exception :
+                return None
+            if dt .tzinfo is None :
+                dt =dt .replace (tzinfo =timezone .utc )
+            else :
+                dt =dt .astimezone (timezone .utc )
+            return dt
+
+        cutoff =datetime .now (timezone .utc )-_timedelta (days =period )
+        rows =[]
+        data_dir ='data'
+        if os .path .isdir (data_dir ):
+            for filename in os .listdir (data_dir ):
+                if not (filename .startswith ('ai_tickets_')and filename .endswith ('.json')):
+                    continue
+                try :
+                    with open (os .path .join (data_dir ,filename ),'r',encoding ='utf-8')as f :
+                        tickets =json .load (f )
+                except Exception as _ex:
+                    _log.debug("api_analytics_export(): %s: %s", filename, _ex)
+                    continue
+                for ticket_id ,ticket in (tickets or {}).items ():
+                    if not isinstance (ticket ,dict ):
+                        continue
+                    created =_aware (ticket .get ('created_at'))
+                    if created is None or created <cutoff :
+                        continue
+                    cat =str (ticket .get ('category','')or '')
+                    if category_filter and cat !=category_filter :
+                        continue
+                    closed_by =str (ticket .get ('closed_by','')or '')
+                    if moderator_filter and closed_by !=moderator_filter :
+                        continue
+                    closed =_aware (ticket .get ('closed_at'))
+                    hours =''
+                    if closed is not None and closed >=created :
+                        hours =round ((closed -created ).total_seconds ()/3600 ,1 )
+                    rows .append ([
+                        created .strftime ('%Y-%m-%d %H:%M'),
+                        ticket_id ,
+                        cat or '—',
+                        str (ticket .get ('status','')or '—'),
+                        closed_by or '—',
+                        hours ,
+                    ])
+
+        buf =_io .StringIO ()
+        buf .write ('\ufeff')  # utf-8-sig, чтобы Excel не ломал кириллицу
+        writer =_csv .writer (buf ,delimiter =';')
+        writer .writerow (['Дата создания','ID тикета','Категория','Статус','Модератор','Время решения, ч'])
+        writer .writerows (rows )
+
+        return Response (
+            buf .getvalue (),
+            mimetype ='text/csv; charset=utf-8',
             headers ={'Content-Disposition':'attachment; filename=analytics_report.csv'}
-            )
-
-        return jsonify ({'success':False ,'error':'Формат временно недоступен'}),501 
+        )
 
 
     @app .route ('/advanced-analytics')
