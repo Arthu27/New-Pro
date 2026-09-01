@@ -226,6 +226,53 @@ def note_zip_commit(sha):
         лог(f"[AUTO-UPDATE] Не записать маркер версии: {e}")
 
 
+def note_zip_branch(branch):
+    """Запомнить ветку, с которой распакован ZIP (data/.update_branch).
+
+    Критично для установок «скачал ZIP ветки без .git»: иначе демон и /update
+    не знают, откуда обновляться, и сваливаются на main (старый код без
+    фиксов). Та же логика, что в services/self_update.running_branch.
+    """
+    branch = (branch or "").strip()
+    if not branch:
+        return
+    try:
+        os.makedirs(os.path.join(BOT_DIR, "data"), exist_ok=True)
+        with open(os.path.join(BOT_DIR, "data", ".update_branch"), "w",
+                  encoding="utf-8") as f:
+            f.write(branch)
+    except OSError as e:
+        лог(f"[AUTO-UPDATE] Не записать маркер ветки: {e}")
+
+
+def running_branch_local():
+    """Ветка текущей установки БЕЗ git (ZIP), как self_update.running_branch:
+    1) маркер data/.update_branch (записан прошлой раскаткой);
+    2) имя папки дистрибутива «New-Pro-arena-01a05c7b-new-pro» →
+       ветка arena/01a05c7b-new-pro (в zip-имени слэши → дефисы);
+    3) '' — неизвестно.
+    """
+    try:
+        with open(os.path.join(BOT_DIR, "data", ".update_branch"),
+                  encoding="utf-8") as f:
+            name = f.read().strip()
+            if name:
+                return name
+    except OSError:
+        pass
+    try:
+        base = os.path.basename(os.path.abspath(BOT_DIR))
+        if base.lower().startswith("new-pro-") and len(base) > len("new-pro-"):
+            cand = base[len("New-Pro-"):]
+            if cand.lower().startswith("arena-"):
+                cand = "arena/" + cand[len("arena-"):]
+            if cand and cand != "main":
+                return cand
+    except Exception:
+        pass
+    return ""
+
+
 def _archive_root(names):
     """Корневой каталог архива GitHub ('Репозиторий-ветка/') или ''.
 
@@ -435,7 +482,8 @@ def _zip_target_ok(bot_dir, target_path):
 
 
 def download_and_extract():
-    """Скачать ZIP с GitHub и распаковать в BOT_DIR (fallback)"""
+    """Скачать ZIP с GitHub и распаковать в BOT_DIR (fallback)."""
+    _dl_branch = _source()[1]
     лог("[AUTO-UPDATE] Файлы загружаются...")
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     r = requests.get(_zip_url(), headers=headers, timeout=60)
@@ -475,6 +523,17 @@ def download_and_extract():
 
     os.remove(zip_path)
     лог("[AUTO-UPDATE] Файлы обновлены (ZIP)")
+
+    # Запоминаем ветку, с которой распаковались: установка без .git должна и
+    # дальше обновляться с ТОЙ ЖЕ ветки (иначе демон свалится на main со
+    # старым кодом). Источник — запрошенная ветка, иначе — имя папки архива.
+    try:
+        _mark_branch = _dl_branch or running_branch_local()
+        if _mark_branch and _mark_branch != "main":
+            note_zip_branch(_mark_branch)
+            лог(f"[AUTO-UPDATE] ветка установки зафиксирована: {_mark_branch}")
+    except Exception as _be:
+        лог(f"[AUTO-UPDATE] не удалось зафиксировать ветку: {_be}")
 
     # git-режим убирает неотслеживаемые хвосты через `git clean -fd`; в
     # ZIP-режиме этого шага нет — старые файлы вырезанных фич оставались бы
@@ -615,6 +674,20 @@ def main():
             "перехожу на ZIP-режим (обновление распаковкой архива, без git)")
         log_event("zip_mode_fallback", reason="git_binary_missing")
     if not _is_git:
+        # ZIP-установка без .git: ветку берём не из «main по умолчанию», а из
+        # самой установки — маркер data/.update_branch (после первой раскатки)
+        # или имя папки «New-Pro-arena-01a05c7b-new-pro». Так скачанный ZIP
+        # ветки продолжает обновляться с ЭТОЙ ЖЕ ветки, а не откатывается.
+        _auto_branch = running_branch_local()
+        if _auto_branch:
+            try:
+                sys.path.insert(0, BOT_DIR)
+                from services.update_source import set_source, get_repo
+                set_source(get_repo(), _auto_branch)
+                лог(f"[AUTO-UPDATE] ZIP-режим: ветка установки определена как {_auto_branch}")
+            except Exception as _ab:
+                os.environ["UPDATE_BRANCH"] = _auto_branch
+                лог(f"[AUTO-UPDATE] ZIP-режим: ветка из папки/маркера: {_auto_branch} ({_ab})")
         лог("[AUTO-UPDATE] ZIP-режим: версию смотрю в GitHub API "
             f"и маркере data/.update_sha (опрос раз в {ZIP_API_POLL_SEC // 60} мин)")
         log_event("zip_mode", poll_sec=ZIP_API_POLL_SEC)
@@ -623,6 +696,14 @@ def main():
     while True:
         try:
             _dyn_branch = _source()[1]
+            # ZIP-режим без явной настройки панели: ветка установки важнее main.
+            # Выставляем и UPDATE_BRANCH — это fallback _source(), если файл
+            # update_source.json недоступен (например, services/ не прочитались).
+            if not _is_git and (not _dyn_branch or _dyn_branch == "main"):
+                _auto = running_branch_local()
+                if _auto and _auto != "main":
+                    _dyn_branch = _auto
+                    os.environ["UPDATE_BRANCH"] = _auto
             remote_hash = None
             if _is_git:
                 _run_git(["fetch", "origin"], timeout=30)
