@@ -476,11 +476,52 @@ def download_and_extract():
     os.remove(zip_path)
     лог("[AUTO-UPDATE] Файлы обновлены (ZIP)")
 
+    # git-режим убирает неотслеживаемые хвосты через `git clean -fd`; в
+    # ZIP-режиме этого шага нет — старые файлы вырезанных фич оставались бы
+    # на диске. Сносим только заведомо мёртвый КОД (коги вырезанных систем):
+    # его не грузит ни один профиль cogs_policy, так что команды/дублям взяться
+    # неоткуда, а удаление гарантирует, что их не подхватит даже вручную.
+    # Данные (data/), .env, логи, venv — не трогаем.
+    _prune_dead_code()
+
     env_path = os.path.join(BOT_DIR, ".env")
     if not os.path.exists(env_path):
         with open(env_path, "w", encoding="utf-8") as f:
             f.write(ENV_CONTENT)
         лог("[AUTO-UPDATE] .env создано")
+
+
+# Код модулей, удалённых из боевого состава (вырезанные/снятые с эксплуатации
+# системы). Распространяется только на файлы когов в ZIP-режиме — чтобы старые
+# копии не оставались на машине после обновления архивом.
+_DEAD_COG_FILES = (
+    "cogs/ticket.py",          # тикет-система снята (RETired)
+    "cogs/counting.py",        # считалка
+    "cogs/starboard.py",       # доска славы
+    "cogs/tag_jail.py",        # tag jail
+    "cogs/staff_shifts.py",    # смены персонала
+    "cogs/night_report.py",    # ночные сводки
+    "cogs/mod_digest.py",      # дайджест модерации
+    "cogs/music.py",           # музыка /play снесена
+)
+
+
+def _prune_dead_code():
+    """Удалить файлы вырезанных модулей (ZIP-режим). Безопасно: их не грузят."""
+    removed = 0
+    for rel in _DEAD_COG_FILES:
+        fp = os.path.join(BOT_DIR, rel)
+        # не даём пути выйти за пределы BOT_DIR (тот же принцип, что Zip Slip)
+        if not _zip_target_ok(BOT_DIR, fp):
+            continue
+        try:
+            if os.path.isfile(fp):
+                os.remove(fp)
+                removed += 1
+        except OSError as e:
+            лог(f"[AUTO-UPDATE] не удалось убрать устаревший {rel}: {e}")
+    if removed:
+        лог(f"[AUTO-UPDATE] убрано устаревших модулей: {removed} шт (ZIP)")
 
 
 def update_bot(reason="new_commit", remote_sha=None, local_sha=None):
