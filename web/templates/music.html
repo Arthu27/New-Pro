@@ -184,6 +184,8 @@ async function muLoad() {
 }
 
 muLoad();
-if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(muLoad, 1500);
+// Музыка снята с эксплуатации: частый опрос не нужен — редкая подстраховка,
+// живые обновления идут пушем (если модуль когда-нибудь вернут).
+if (typeof window.setLiveRefresh === 'function') window.setLiveRefresh(muLoad, 30000, ['g*:music']);
 </script>
 {% endblock %}

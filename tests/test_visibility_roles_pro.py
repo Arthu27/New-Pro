@@ -167,9 +167,11 @@ files = ['moderation.py', 'reports.py', 'staff_apply.py',
 enabled, gone = select_cog_files(files, slim=True)
 sel = set(enabled)
 check({'moderation.py', 'reports.py', 'staff_apply.py',
-       'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
+       'voice_tracker.py',
        'help.py', 'logs.py', 'impersonation.py', 'ai_chat.py'} <= sel,
-      'BOT_SLIM: модерация, репорты, музыка, ядро и AI-чат загружены')
+      'BOT_SLIM: модерация, репорты, заявки, войс-статистика, ядро и AI-чат загружены')
+check('music_cog.py' not in sel and 'voice_commands.py' not in sel,
+      'BOT_SLIM: музыка (/play) снята и не возвращается даже в SLIM')
 
 # ═══ 6. Шаблоны ═══════════════════════════════════════════════════════
 print('== шаблоны ==')

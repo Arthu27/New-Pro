@@ -19,8 +19,11 @@
 фоновых потоков записи.
 """
 import fnmatch
+import logging
 import queue
 import threading
+
+log = logging.getLogger(__name__)
 
 _LOCK = threading.Condition()
 _SUBSCRIBERS = []          # список словарей {q: Queue, patterns: [...]}
@@ -84,10 +87,8 @@ def _emit(topic):
             except Exception:
                 dead.append(sub)
         for d in dead:
-            try:
+            if d in _SUBSCRIBERS:
                 _SUBSCRIBERS.remove(d)
-            except ValueError:
-                pass
         _LOCK.notify_all()
 
 
@@ -116,10 +117,8 @@ def subscribe(patterns, maxsize=_MAX_QUEUE):
 
     def _unsubscribe():
         with _LOCK:
-            try:
+            if sub in _SUBSCRIBERS:
                 _SUBSCRIBERS.remove(sub)
-            except ValueError:
-                pass
 
     return q, _unsubscribe
 

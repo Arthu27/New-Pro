@@ -99,8 +99,9 @@ def flush_all():
             try:
                 from services.live_bus import publish
                 publish(gid, 'analytics')
-            except Exception:
-                pass
+            except Exception as _live_ex:
+                _logger().debug('message_stats: live-пуш analytics для %s не ушёл: %s',
+                                gid, _live_ex)
         except OSError as ex:
             _logger().warning('message_stats: запись %s не удалась: %s', gid, ex)
             # не теряем события — вернём в очередь

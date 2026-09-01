@@ -290,7 +290,11 @@ function $(id) { return document.getElementById(id); }
   setActionType('mut');
   load();
   if (window.livePauseButton) window.livePauseButton($('tm-pause'));
-  setInterval(function () { if (!window.__modLivePaused) load(); }, 15000);
+  /* Список наказаний — пушем при модерационных событиях; таймер 60с лишь
+     подстраховка (а локальные таймеры обратного отсчёта остаются 1с — это
+     чистая отрисовка на клиенте, без запросов к серверу). */
+  setLiveRefresh(function () { if (!window.__modLivePaused) load(); }, 60000,
+                 ['g*:moderation', 'g*:modcenter', 'g*:logs']);
   setInterval(updateCountdowns, 1000);
 })();
 </script>

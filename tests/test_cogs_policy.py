@@ -58,9 +58,11 @@ check(env_flag('MISSING_FLAG', default=True) is True, 'env_flag: отсутст�
 
 print('\n== 3. Режим по умолчанию — LEAN (лёгкий боевой состав) ==')
 enabled, disabled = select_cog_files(ALL_FILES)
+# RETIRED-коги (тикеты, музыка) не грузятся ни в одном профиле — они в disabled.
 check(set(enabled) == LEAN_COGS, 'lean: без флагов грузится ровно боевой keep-лист')
-check(sorted(set(NON_HELPERS) - set(LEAN_COGS)) == disabled,
-      'lean: вся «веселуха» — в спящих')
+check(set(disabled) == set(NON_HELPERS) - set(enabled)
+      and not (set(enabled) & set(disabled)),
+      'lean: вся «веселуха» и снятые модули (музыка/тикеты) — в спящих, без пересечений')
 missing_lean = sorted(f for f in LEAN_COGS if f not in ALL_SET)
 check(missing_lean == [], f'LEAN_COGS: все файлы на диске {missing_lean}')
 # Выключенные модули больше не прячутся в спящих — они физически удалены
@@ -87,12 +89,15 @@ for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'antiraid.py', 'age_verification.py',
              'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
              'staff_apply.py',
-             'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
+             'voice_tracker.py',
              'ai_chat.py', 'ai_moderation.py',
              'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
              'afk.py', 'help.py', 'cog_manager.py'):
     assert keep in enabled, keep
-check(True, 'lean: модерация/репорты/музыка/AI/приветствие/логи/afk — живы')
+# Музыка (/play) снята с эксплуатации 2026-09-01: коги не грузятся ни в каком профиле.
+for retired_music in ('music_cog.py', 'voice_commands.py'):
+    assert retired_music in disabled, retired_music
+check(True, 'lean: модерация/репорты/AI/приветствие/логи/afk — живы; музыка снята')
 # Старая заглушка verification.py физически удалена — её заменил
 # полноценный age_verification.py (карантин + анкета молодых аккаунтов).
 assert 'verification.py' not in ALL_SET, 'verification.py должна быть удалена'
@@ -106,10 +111,12 @@ for awake_shield in ('security.py', 'anti_alt.py', 'impersonation.py', 'ai_moder
     assert awake_shield in enabled, awake_shield
 check(True, 'lean: ЩИТ проснулся — security/anti-alt/impersonation/ai-moderation в боевом профиле')
 check(not any(is_helper(f) for f in enabled), 'lean: хелперы не загружаются никогда')
+from cogs_policy import VOICE_STATS_COGS
 check(CORE_COGS <= LEAN_COGS and MOD_LEAN_COGS <= LEAN_COGS
-      and TICKET_LEAN_COGS <= LEAN_COGS and MUSIC_COGS <= LEAN_COGS
-      and AI_LEAN_COGS <= LEAN_COGS and WELCOME_LEAN_COGS <= LEAN_COGS,
-      'lean: состав = ядро + модерация + репорты + музыка + AI + приветствие')
+      and TICKET_LEAN_COGS <= LEAN_COGS and VOICE_STATS_COGS <= LEAN_COGS
+      and AI_LEAN_COGS <= LEAN_COGS and WELCOME_LEAN_COGS <= LEAN_COGS
+      and not (MUSIC_COGS - VOICE_STATS_COGS) & LEAN_COGS,
+      'lean: состав = ядро + модерация + репорты + войс-статистика + AI; музыка снята')
 check(not set(enabled) & set(disabled)
       and len(enabled) + len(disabled) == len(NON_HELPERS),
       'lean: разбиение без пересечений и потерь')
@@ -195,8 +202,9 @@ check(not set(enabled_c) & set(disabled_c)
 
 print('\n== 6. DISABLED_COGS / EXTRA_COGS ==')
 e2, d2 = select_cog_files(ALL_FILES, full=True, disabled='Music_Cog.py, afk')
+# music_cog уже в RETIRED (снят навсегда) — он в disabled и без флага; afk добавляется.
 check('music_cog.py' in d2 and 'afk.py' in d2 and
-      len(e2) == len(NON_HELPERS) - 2 - len(RETIRED_COGS),
+      len(e2) == len(NON_HELPERS) - len(RETIRED_COGS) - 1,
       'DISABLED_COGS: работает в полном режиме, имена нечувствительны к виду')
 e2l, d2l = select_cog_files(ALL_FILES, disabled='music_cog')
 check('music_cog.py' in d2l and 'moderation.py' in e2l,
@@ -204,28 +212,32 @@ check('music_cog.py' in d2l and 'moderation.py' in e2l,
 e3, d3 = select_cog_files(ALL_FILES, mod_only=True, disabled='logs,ticket.py')
 check('logs.py' in d3 and 'ticket.py' in d3,
       'DISABLED_COGS: может выключить даже модер-модуль/хелпер (приоритет над keep)')
-e4, d4 = select_cog_files(ALL_FILES, mod_only=True, extra='music_cog, welcome_cog.py')
-check('music_cog.py' in e4 and 'welcome_cog.py' in e4 and 'afk.py' in d4,
-      'EXTRA_COGS: возвращает отдельные модули поверх MOD_ONLY')
+# Музыка снята (RETIRED) — её не разбудить через EXTRA; проверяем на других спящих.
+e4, d4 = select_cog_files(ALL_FILES, mod_only=True, extra='welcome_cog.py, afk')
+check('welcome_cog.py' in e4 and 'afk.py' in e4 and 'ai_chat.py' in d4,
+      'EXTRA_COGS: возвращает отдельные живые модули поверх MOD_ONLY')
+e4m, d4m = select_cog_files(ALL_FILES, mod_only=True, extra='music_cog')
+check('music_cog.py' not in e4m and 'music_cog.py' in d4m,
+      'RETIRED-модуль (music_cog) не включается даже через EXTRA_COGS')
 e5, _ = select_cog_files(ALL_FILES, mod_only=True, extra='_card_style,icons')
 check('_card_style.py' not in e5 and 'icons.py' not in e5,
       'EXTRA_COGS: хелпер силой не включить')
 
 print('\n== 7. Чтение из окружения ==')
-env = {'MOD_ONLY': '1', 'EXTRA_COGS': 'music_cog', 'DISABLED_COGS': '  afk  '}
+env = {'MOD_ONLY': '1', 'EXTRA_COGS': 'welcome_cog', 'DISABLED_COGS': '  afk  '}
 ee, de = select_from_environment(ALL_FILES, environ=env)
-check('music_cog.py' in ee and 'afk.py' in de and 'ai_chat.py' in de,
+check('welcome_cog.py' in ee and 'afk.py' in de and 'ai_chat.py' in de,
       'select_from_environment: MOD_ONLY+EXTRA+DISABLED работают вместе')
 ee2, de2 = select_from_environment(ALL_FILES, environ={})
-check(set(ee2) == LEAN_COGS and sorted(set(NON_HELPERS) - LEAN_COGS) == de2,
+check(set(ee2) == LEAN_COGS and set(de2) == (set(NON_HELPERS) - LEAN_COGS),
       'select_from_environment: пустое окружение -> LEAN (лёгкий состав по умолчанию)')
 ee3, de3 = select_from_environment(ALL_FILES, environ={'BOT_FULL': '1'})
 check(ee3 == sorted(set(NON_HELPERS) - RETIRED_COGS)
       and de3 == sorted(set(NON_HELPERS) & RETIRED_COGS),
       'select_from_environment: BOT_FULL=1 -> полный состав (покой на месте)')
-ee4, de4 = select_from_environment(ALL_FILES, environ={'EXTRA_COGS': 'music_cog, welcome_cog'})
-check('music_cog.py' in ee4 and 'welcome_cog.py' in ee4,
-      'select_from_environment: EXTRA_COGS точечно будит модули поверх LEAN')
+ee4, de4 = select_from_environment(ALL_FILES, environ={'EXTRA_COGS': 'welcome_cog'})
+check('welcome_cog.py' in ee4 and 'music_cog.py' in de4,
+      'select_from_environment: EXTRA_COGS будит живой модуль; RETIRED (музыка) остаётся выкл')
 
 print('\n== 8. Интеграция с main.py ==')
 with open(os.path.join(_REPO, 'main.py'), encoding='utf-8') as fp:

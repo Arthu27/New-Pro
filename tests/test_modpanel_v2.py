@@ -46,21 +46,25 @@ cat = catalog(force=True)
 pref = [c['name'] for c in cat['commands'] if c['kind'] == 'prefix']
 check(cat.get('prefix', 1) == 0 and not pref,
       f'боевой состав без «!»-команд (осталось: {pref})')
-for name, kind in (('modpanel', 'slash'), ('play', 'slash'),
+for name, kind in (('modpanel', 'slash'), ('report', 'slash'),
                    ('апелляция', 'slash'), ('update', 'slash')):
     hit = next((c for c in cat['commands'] if c['name'] == name), None)
     check(hit is not None and hit['kind'] == kind,
           f'{name} — слеш-команда')
+# Музыка снята 2026-09-01 — /play больше нет в боевом составе
+check(not next((c for c in cat['commands'] if c['name'] == 'play'), None),
+      '/play снят — музыкальная система выведена из боевого состава')
 
 import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
-check(set(keep) == {'modpanel', 'play', 'апелляция', 'update',
+check(set(keep) == {'modpanel', 'апелляция', 'update',
                     'afk', 'afk-remove',
                     'report', 'my-violations', 'verify-setup'},
-      f'белый список слеш-меню = 9 команд (сейчас: {sorted(keep)})')
-for name in ('modpanel', 'play', 'апелляция', 'update', 'afk', 'afk-remove',
+      f'белый список слеш-меню = 8 команд (сейчас: {sorted(keep)})')
+for name in ('modpanel', 'апелляция', 'update', 'afk', 'afk-remove',
              'report', 'my-violations', 'verify-setup'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
+check('play' not in keep, '/play снят — музыка выведена из боевого состава')
 # Тикет-система снята 2026-08-31 — ticket-panel не должен вернуться
 check('ticket-panel' not in keep, 'ticket-panel снят — жалобы идут через /report')
 

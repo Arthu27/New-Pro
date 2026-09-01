@@ -724,8 +724,6 @@ function renderAll() {
   document.getElementById('gdPun').disabled = !CAN_EDIT;
   document.getElementById('gdBotAct').disabled = !CAN_EDIT;
   document.getElementById('gdSave').disabled = !CAN_EDIT;
-  var _s2 = document.getElementById('gdSave2');
-  if (_s2) _s2.disabled = !CAN_EDIT;
   var _sA = document.getElementById('gdSaveAnti');
   if (_sA) _sA.disabled = !CAN_EDIT;
   gdApplyTabs();   /* live-перерисовка не должна открывать чужие вкладки */
@@ -835,8 +833,6 @@ async function gdSave() {
 
 wlComboInit();
 document.getElementById('gdSave').addEventListener('click', gdSave);
-var _gdSave2 = document.getElementById('gdSave2');
-if (_gdSave2) _gdSave2.addEventListener('click', gdSave);
 var _gdSaveAnti = document.getElementById('gdSaveAnti');
 if (_gdSaveAnti) _gdSaveAnti.addEventListener('click', gdSave);
 document.getElementById('gdEvAllOn').addEventListener('click', function () { gdEvAll(true); });

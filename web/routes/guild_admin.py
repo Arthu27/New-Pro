@@ -719,11 +719,14 @@ def register(ctx):
         # Короткий in-memory кэш живого списка: страницы настроек и опросы
         # дёргают /channels часто, а пересборка с обходом каналов и подсчётом
         # участников в голосовых — лишняя работа на каждый тик. 3 сек свежести
-        # достаточно (создал/удалил канал — подхватится почти сразу).
+        # достаточно. В ключе — число каналов сервера: при создании/удалении
+        # канала состав меняется и кэш промахивается мгновенно (без ожидания
+        # TTL), при неизменном составе — попадает и экономит пересборку.
         import time as _time
         _now = _time.time()
         _live = getattr(api_guild_channels, '_live_cache', {})
-        _hit = _live.get(str(guild_id))
+        _ckey = (str(guild_id), len(getattr(guild, 'channels', []) or []))
+        _hit = _live.get(_ckey)
         if _hit and (_now - _hit[0]) < 3.0:
             return jsonify(_hit[1])
 
@@ -801,9 +804,13 @@ def register(ctx):
         # Кладём в короткий in-memory кэш (следующие 3 сек отдаём без пересборки).
         try :
             api_guild_channels ._live_cache =getattr (api_guild_channels ,'_live_cache',{})
-            api_guild_channels ._live_cache [str (guild_id )] =(_now ,sorted_channels )
-        except Exception :
-            pass
+            api_guild_channels ._live_cache [_ckey ] =(_now ,sorted_channels )
+            # Лёгкая уборка протухших ключей (разные числа каналов со временем),
+            # чтобы словарь не рос вечно.
+            for _k in [k for k ,v in api_guild_channels ._live_cache .items ()if _now -v [0 ] >30.0 ]:
+                api_guild_channels ._live_cache .pop (_k ,None )
+        except Exception as _cce :
+            print (f'[WEB][WARN] channels live-cache: {_cce}')
         # Запоминаем живой список: при кратком офлайне/перезапуске бота
         # пикеры каналов не пустуют и имена не превращаются в голые ID.
         try :
@@ -856,6 +863,6 @@ def register(ctx):
         try :
             from services .live_bus import publish as _lpub
             _lpub (str (guild_id ),'channels')
-        except Exception :
-            pass
+        except Exception as _live_ex :
+            print (f'[WEB][WARN] hidden-channel live-push: {_live_ex}')
         return jsonify ({'success':True ,'hidden':hidden ,'id':target ,'kind':kind })

@@ -453,7 +453,10 @@
   };
   loadConfig();
   loadStats();
-  setInterval(loadStats, 30000);
+  /* Статистика детекции обновляется пушем (события модерации/Щита),
+     таймер 60с — лишь подстраховка. */
+  setLiveRefresh(function(){ if(!document.hidden) loadStats(); }, 60000,
+                 ['g*:security', 'g*:moderation', 'dashboard']);
 })();
 </script>
 {% endblock %}

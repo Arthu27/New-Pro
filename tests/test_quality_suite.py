@@ -139,8 +139,11 @@ check(asset_js.status_code == 200 and b'fetchCachedJSON' in asset_js.data,
 
 pages = [page for group in panel_groups_for('owner') for page in group['pages']]
 paths = [page['path'] for page in pages]
-check(len(paths) == 76 and len(set(paths)) == 76,
-      f'owner-меню содержит 76 уникальных страниц ({len(paths)})')
+# 2026-09-01: музыка (/play) снята — пункт «Музыка» уходит из меню вместе
+# с выключенным music_cog (страница /music остаётся доступна по прямому URL
+# с пометкой «выключено», но спящие пункты в меню не показываем).
+check(len(paths) == 75 and len(set(paths)) == 75 and '/music' not in paths,
+      f'owner-меню содержит 75 уникальных страниц, музыка скрыта ({len(paths)})')
 
 rendered = 0
 for route in paths:

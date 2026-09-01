@@ -176,12 +176,12 @@ def build_bot():
     bot = Bot()
     tree = bot.tree
     tree.add_command(mk('modpanel', keep_global=True))
-    tree.add_command(mk('play', keep_global=True))
     tree.add_command(mk('update', keep_global=True))
     tree.add_command(mk('апелляция', keep_global=True))
     tree.add_command(mk('warnings'))                       # мусор: глобальный
     tree.add_command(mk('report'))                        # жалобы — в белом списке
     tree.add_command(mk('my-violations'))                 # мои нарушения — в белом
+    tree.add_command(mk('verify-setup'), guild=Object(777))  # верификация — в белом
     for n in ('afk', 'afk-remove', 'backup'):
         tree.add_command(mk(n), guild=Object(777))         # backup — мусор
     return bot
@@ -192,8 +192,8 @@ MM.set_full(False)
 
 bot1 = build_bot()
 kept, pruned = slash_budget.apply_slash_budget(bot1.tree)
-check(set(kept) == {'modpanel', 'play', 'update', 'апелляция',
-                    'report', 'my-violations',
+check(set(kept) == {'modpanel', 'update', 'апелляция',
+                    'report', 'my-violations', 'verify-setup',
                     'afk', 'afk-remove'},
       f'в дереве остались ровно кураторские 8 ({len(kept)})')
 check(set(pruned) == {'warnings', 'backup'},
@@ -204,9 +204,9 @@ from services import sync_filtered as SF  # noqa: E402
 async def _run_b():
     await SF.full_sync(bot1)
     glob, guild = bot1.http.last('GLOBAL'), bot1.http.last('GUILD', 777)
-    check(set(glob) == {'modpanel', 'play', 'update', 'апелляция'},
-          f'глобальный список = 4 keep_global ({sorted(glob)})')
-    check(set(guild) == {'afk', 'afk-remove', 'report', 'my-violations'},
+    check(set(glob) == {'modpanel', 'update', 'апелляция'},
+          f'глобальный список = 3 keep_global ({sorted(glob)})')
+    check(set(guild) == {'afk', 'afk-remove', 'report', 'my-violations', 'verify-setup'},
           f'сервер 777 = гильдовые + глобальные НЕ-keep ({sorted(guild)})')
     check(set(glob) & set(guild) == set(), 'глобаль∩гильдия пусто — дублей нет')
     check(bot1.http.last('GUILD', 888) == [], 'чужой сервер 888 очищен')
@@ -223,14 +223,14 @@ bot2 = build_bot()          # свежий бот с мусором, режим 
 async def _run_c():
     ok, kept2, pruned2 = await MM.apply_to_bot(bot2)
     check(ok is True, 'apply_to_bot отработал')
-    check(set(kept2) == {'modpanel', 'play', 'update', 'апелляция',
-                          'report', 'my-violations',
+    check(set(kept2) == {'modpanel', 'update', 'апелляция',
+                          'report', 'my-violations', 'verify-setup',
                           'afk', 'afk-remove'},
           'бюджет внутри apply_to_bot сжал дерево до 8')
     check(set(pruned2) == {'warnings', 'backup'}, 'мусор вынесен из меню')
     glob2, guild2 = bot2.http.last('GLOBAL'), bot2.http.last('GUILD', 777)
-    check(set(glob2) == {'modpanel', 'play', 'update', 'апелляция'}
-          and set(guild2) == {'afk', 'afk-remove', 'report', 'my-violations'},
+    check(set(glob2) == {'modpanel', 'update', 'апелляция'}
+          and set(guild2) == {'afk', 'afk-remove', 'report', 'my-violations', 'verify-setup'},
           'синк внутри apply_to_bot доставил те же списки в Discord')
     with open('data/sync_last.json', encoding='utf-8') as fh:
         verdict = json.load(fh).get('verify', '')

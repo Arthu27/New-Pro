@@ -290,22 +290,30 @@
                подстраховка (e.safety, по умолчанию 30с), чтобы не опрашивать
                вхолостую. Это и убирает нагрузку «по секундам».
      topics — массив масок (поддержка '*'), например ['g*:channels', 'g*:guardian']. */
+  /* Живые обновления. Любое задание работает в push-режиме: при изменении
+     данных на сервере бэк шлёт SSE-сигнал (services/live_bus.py → /api/live),
+     и страница обновляется сразу — без опроса по таймеру.
+     • topics заданы — задание обновляется ТОЛЬКО по своим топикам;
+     • topics нет (старые страницы) — ловит любое событие активного сервера
+       ('g*:*') и глобальные сигналы; таймер остаётся лишь редкой подстраховкой.
+     Опрос по таймеру в обоих случаях отступает на PUSH_SAFETY_MS, чтобы в
+     простое панель не молотила запросами (это и держит пинг бота низким). */
+  var PUSH_SAFETY_MS = 20000;   // подстраховка, если SSE не поднялся
   window.setLiveRefresh = function (fn, ms, topics) {
     if (typeof fn !== 'function') return;
     var e = {
       fn: fn,
-      ms: ms || 1500,
+      ms: Math.max(ms || 1500, PUSH_SAFETY_MS),
       last: 0,
-      push: false,
-      safety: 30000,
+      push: true,
       topics: null,
       pending: false
     };
     if (topics) {
-      e.push = true;
       e.topics = (Array.isArray(topics) ? topics : [String(topics)]);
-      // режиму пуш даём стартовую задержку безопасности
-      e.ms = Math.max(e.ms || 1500, e.safety);
+    } else {
+      // страница без явных топиков — обновляется по любому событию сервера
+      e.topics = ['g*:*', 'dashboard', 'global'];
     }
     liveFns.push(e);
     if (liveFns.length > 80) liveFns.shift();
@@ -868,8 +876,12 @@
       });
     }
 
-    // Сохранение пинга из /api/stats
+    // Сохранение пинга из /api/stats. Раньше опрос шёл каждые 3 сек с КАЖДОЙ
+    // открытой вкладки (а эндпоинт перебирает участников всех серверов) —
+    // теперь 15 сек и только на видимой вкладке; бэкенд вдобавок кэширует
+    // ответ на 5 сек. Пилюля пинга остаётся живой, нагрузка падает в разы.
     function trackPing() {
+      if (document.hidden) return;
       fetch('/api/stats', { guardSilent: true })
         .then(function (r) { return r.json(); })
         .then(function (d) {
@@ -880,7 +892,8 @@
         .catch(function () {});
     }
     trackPing();
-    setInterval(trackPing, 3000);
+    setInterval(trackPing, 15000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) trackPing(); });
     var tick = function () {
       var t = new Date().toLocaleTimeString('ru-RU');
       if (clock) clock.textContent = t;
@@ -1077,7 +1090,14 @@
     });
 
     loadNotifs();
-    setInterval(loadNotifs, 30000);
+    /* Колокольчик: новые уведомления прилетают пушем (топик notifications),
+       таймер 60с — лишь подстраховка. */
+    if (window.setLiveRefresh) {
+      window.setLiveRefresh(function () { if (!document.hidden) loadNotifs(); }, 60000,
+                            ['notifications', 'global']);
+    } else {
+      setInterval(loadNotifs, 30000);
+    }
   }
 
   function activityInit() {

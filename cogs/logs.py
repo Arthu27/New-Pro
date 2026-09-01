@@ -112,9 +112,31 @@ def _ensure_worker ():
         _audit_worker_thread =threading .Thread (target =_audit_worker ,daemon =True ,name ="audit-worker")
         _audit_worker_thread .start ()
 
+# Категория аудита → топики живых обновлений панели (services.live_bus).
+# Одно событие может затрагивать несколько страниц — поэтому список.
+# Какие топики панели дёрнуть при событии категории. 'logs' шлём всегда —
+# консоль (/konsol) показывает любые события и должна обновляться пушем.
+_CAT_TOPICS = {
+    'mod': ('moderation', 'security', 'modcenter', 'logs'),
+    'member': ('members', 'analytics', 'logs'),
+    'voice': ('voice', 'analytics', 'logs'),
+    'invite': ('invites', 'analytics', 'logs'),
+    'message': ('logs',),
+    'role': ('roles', 'members', 'logs'),
+    'channel': ('channels', 'logs'),
+}
+
+
 def save_event (guild_id ,category ,action ,details :dict ):
     if action =='Сообщение отправлено':
-        return 
+        return
+    # Живой пуш в панель: страницы обновятся сразу при событии, а не по таймеру.
+    try :
+        from services .live_bus import publish as _lp
+        for _t in _CAT_TOPICS .get (str (category ),('logs',)):
+            _lp (guild_id ,_t )
+    except Exception as _live_ex :
+        log .debug ('save_event live_publish: %s',_live_ex )
     _ensure_worker ()
     _audit_queue .put ({
     'guild_id':guild_id ,

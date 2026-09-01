@@ -149,6 +149,8 @@ function togglePause(){
 function clearView(){ LINES = []; renderAll(); }
 
 poll();
-setInterval(poll, 2500);
+/* Консоль: новые строки прилетают пушем (событие лога → топик logs), а не
+   опросом каждые 2.5с. Таймер 30с — только подстраховка связи. */
+setLiveRefresh(function(){ if(!paused) poll(); }, 30000, ['g*:logs']);
 </script>
 {% endblock %}

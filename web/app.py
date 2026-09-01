@@ -1386,6 +1386,13 @@ def _save_announcements (anns ):
     with open (tmp ,'w',encoding ='utf-8')as f :
         json .dump (anns ,f ,indent =2 ,ensure_ascii =False )
     os .replace (tmp ,_ANN_FILE )
+    # Живой пуш: лента объявлений изменилась — открытая страница /announcements
+    # обновится сразу, без опроса по таймеру.
+    try :
+        from services .live_bus import publish_global
+        publish_global ('announcements')
+    except Exception as _live_ex :
+        _log .debug ('_save_announcements live-push: %s',_live_ex )
 
 def _deliver_announcement_embed (guild_id ,channel_id ,title ,message ,author ):
     """Отправляет эмбед объявления в канал и ЖДЁТ результата (а не в никуда).
@@ -1663,9 +1670,29 @@ def _bot_connection_truth (bot ):
     return 'online',str (getattr (bot ,'status','online')or 'online')
 
 
+# Короткий кэш сводки /api/stats: виджет пинга опрашивает её постоянно
+# (и раньше — каждые 3 сек с КАЖДОЙ открытой вкладки), а подсчёт online
+# перебирает всех участников всех серверов. 5 секунд свежести достаточно
+# для индикатора; нагрузка на event-loop падает в разы. Ключ кэша включает
+# идентичность объекта бота и правдивый статус соединения — при смене
+# состояния (offline→starting→online) ответ не залипает.
+_STATS_CACHE = {'key': None, 'ts': 0.0, 'payload': None}
+
+
 @app .route ('/api/stats')
-@login_required 
+@login_required
 def api_stats ():
+    _truth_status = None
+    if bot_instance :
+        try :
+            _truth_status ,_ =_bot_connection_truth (bot_instance )
+        except Exception :
+            _truth_status = None
+    _cache_key =(id (bot_instance ),_truth_status )
+    _cache_age =_time .time () -_STATS_CACHE .get ('ts',0.0 )
+    if (_STATS_CACHE .get ('payload')is not None
+            and _STATS_CACHE .get ('key')==_cache_key and _cache_age <5.0 ):
+        return jsonify (_STATS_CACHE ['payload'])
     if not bot_instance :
         # демо: типичные счётчики (welcome и дашборд живые в превью)
         if _demo_mode ():
@@ -1700,14 +1727,18 @@ def api_stats ():
             lat_val = 0.0
 
     _status ,_presence =_bot_connection_truth (bot_instance )
-    return jsonify ({
+    _payload = {
     'guilds':guilds ,
     'users':users ,
     'online':online ,
     'latency':lat_val ,
     'status':_status ,        # online | starting | offline — правда о шлюзе
     'presence':_presence      # чем бот выглядит в Discord (idle выглядит «не в сети»)
-    })
+    }
+    _STATS_CACHE ['key'] =(id (bot_instance ),_status )
+    _STATS_CACHE ['ts'] =_time .time ()
+    _STATS_CACHE ['payload'] =_payload
+    return jsonify (_payload)
 
 @app .route ('/api/guilds')
 @login_required 

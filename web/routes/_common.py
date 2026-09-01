@@ -174,7 +174,15 @@ def _fire_panel_notification (event ,title ,body ):
     """Вызвать диспетчер уведомлений, не прерывая основной обработчик."""
     try :
         from services .notification_dispatcher import notify_event
-        return notify_event (event ,title ,body ,discord_sender =_notify_discord_sender )
+        _res =notify_event (event ,title ,body ,discord_sender =_notify_discord_sender )
+        # Живой пуш: колокольчик на всех открытых вкладках обновится сразу,
+        # без 30-секундного опроса.
+        try :
+            from services .live_bus import publish_global
+            publish_global ('notifications')
+        except Exception as _live_ex :
+            _log .debug ('notifications live-push: %s' ,_live_ex )
+        return _res
     except Exception :
         return {}
 
@@ -188,10 +196,7 @@ def _live_publish (gid ,topic ):
         from services .live_bus import publish as _pub
         _pub (gid ,topic )
     except Exception as _ex :
-        try :
-            _log .debug ('live_publish %s/%s: %s' ,gid ,topic ,_ex )
-        except Exception :
-            pass
+        _log .debug ('live_publish %s/%s: %s' ,gid ,topic ,_ex )
 
 
 def _live_publish_global (topic ):
@@ -199,8 +204,8 @@ def _live_publish_global (topic ):
     try :
         from services .live_bus import publish_global as _pubg
         _pubg (topic )
-    except Exception :
-        pass
+    except Exception as _ex :
+        _log .debug ('live_publish_global %s: %s' ,topic ,_ex )
 
 
 # ── Классические разрешения: одна точка для всех веб-роутов ──────────────

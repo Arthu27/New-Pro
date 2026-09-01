@@ -91,7 +91,7 @@ for marker, label in [
 
 print('== 4. Старые контракты доставки сохранены ==')
 for marker in ('ann-chip', 'data-retry', '/api/announcements/retry',
-               'redelivered_by', 'deliver_error', 'setInterval'):
+               'redelivered_by', 'deliver_error', 'setLiveRefresh'):
     check(marker in source, f'контракт {marker} на месте')
 
 print('== 5. Наглядное demo-preview ==')

@@ -1153,7 +1153,9 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
   bindPage();
   applyView();
   loadAnns(false);
-  setInterval(function () { if (!document.hidden) loadAnns(true); }, 30000);
+  /* Лента объявлений: пуш при изменениях ленты, таймер 60с — подстраховка. */
+  setLiveRefresh(function () { if (!document.hidden) loadAnns(true); }, 60000,
+                 ['announcements', 'global', 'dashboard']);
 })();
 </script>
 {% endblock %}

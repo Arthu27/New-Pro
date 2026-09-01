@@ -1239,17 +1239,32 @@ async def main():
         # места установки на Windows/Linux), тот же, что у music_cog.
         try:
             from services.ffmpeg_probe import find_ffmpeg, ensure_ffmpeg
+            # Музыка снята с эксплуатации (music_cog в RETIRED_COGS): ffmpeg в
+            # боевом составе не нужен — НЕ качаем его на старте (экономим сеть,
+            # диск и не трогаем вообще ничего). Проверяем факт лишь для отчёта.
+            import os as _os
+            _cogs = [f for f in _os.listdir('./cogs') if f.endswith('.py')]
+            try:
+                import cogs_policy as _cp
+                _enabled_cogs = set(_cp.select_from_environment(_cogs)[0])
+            except Exception:
+                _enabled_cogs = set(_cogs)
+            _music_on = ('music_cog.py' in _enabled_cogs
+                         or 'voice_commands.py' in _enabled_cogs)
             _ff = find_ffmpeg()
             _facts['ffmpeg'] = _ff or False
-            if not _ff:
-                # Нет ffmpeg — бот сам докачает статический билд в ./bin
-                # в фоне (не задерживая вход в Discord). Работает при любом
-                # запуске, а не только через start.bat.
+            if not _ff and _music_on:
+                # Музыка включена (BOT_FULL/EXTRA_COGS) — докачаем ffmpeg в фоне,
+                # не задерживая вход в Discord. Работает при любом запуске.
                 try:
                     ensure_ffmpeg(blocking=False)
                     print("[FFMPEG] ffmpeg не найден — качаю автоматически в фоне (в папку bin/)...")
                 except Exception as _ffex:
                     log.debug('ffmpeg автоустановка: %s', _ffex)
+            elif not _music_on:
+                # Музыка снята с эксплуатации — ffmpeg не нужен: убираем факт,
+                # чтобы preflight не печатал ни предупреждение, ни «музыка готова».
+                _facts.pop('ffmpeg', None)
         except Exception:
             _facts['ffmpeg'] = False
         _results = _pf.run_checks(facts=_facts)

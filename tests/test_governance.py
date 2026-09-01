@@ -342,9 +342,10 @@ for gone in ('economy_shop.py', 'economy_cog.py', 'tag_jail.py',
     check(gone not in en and gone not in dis and
           not os.path.exists(os.path.join(ROOT, 'cogs', gone)),
           f'{gone}: физически удалена, политика её не видит')
-check('moderation.py' in en and 'music_cog.py' in en and 'reports.py' in en
-      and 'afk.py' in en and 'ai_chat.py' in en,
-      'lean по умолчанию: модерация/музыка/репорты/AFK/AI живы')
+check('moderation.py' in en and 'reports.py' in en
+      and 'afk.py' in en and 'ai_chat.py' in en
+      and 'music_cog.py' not in en and 'voice_commands.py' not in en,
+      'lean по умолчанию: модерация/репорты/AFK/AI живы; музыка (/play) снята')
 check('security.py' in en and 'anti_alt.py' in en and 'impersonation.py' in en,
       'lean по умолчанию: ЩИТ в профиле — security/anti-alt/impersonation грузятся')
 

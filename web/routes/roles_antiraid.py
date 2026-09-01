@@ -4,7 +4,7 @@
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _process_action, _log, _live_publish,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
@@ -163,6 +163,10 @@ def register(ctx):
         'delete_protection','age_filter'):
             data [bkey ]=bool (data .get (bkey ,False ))
         with open (f ,'w')as fp :json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
+        # Живой пуш: ког antiraid в боте слушает шину и перечитает конфиг сразу,
+        # без ожидания 20-секундного watcher-тика.
+        _live_publish (guild_id ,'guardian')
+        _live_publish (guild_id ,'security')
         return jsonify ({'success':True })
 
 

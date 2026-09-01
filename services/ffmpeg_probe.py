@@ -212,8 +212,8 @@ def _extract_ffmpeg(archive, bin_dir, is_windows):
             fp = os.path.join(bin_dir, 'ffprobe')
             if os.path.isfile(fp):
                 os.chmod(fp, 0o755)
-        except OSError:
-            pass
+        except OSError as _cex:
+            log.debug('ffmpeg: chmod bin/ не удался: %s', _cex)
     return out
 
 
@@ -242,8 +242,8 @@ def _install_blocking():
             try:
                 if os.path.exists(archive):
                     os.remove(archive)
-            except OSError:
-                pass
+            except OSError as _dex:
+                log.debug('ffmpeg: не удалил архив после установки: %s', _dex)
             log.debug('ffmpeg: установлен в %s', path)
             return os.path.abspath(path)
         except Exception as ex:                       # noqa: BLE001
@@ -252,8 +252,8 @@ def _install_blocking():
             try:
                 if os.path.exists(archive):
                     os.remove(archive)
-            except OSError:
-                pass
+            except OSError as _dex:
+                log.debug('ffmpeg: не удалил битый архив: %s', _dex)
             continue
     log.warning('ffmpeg: автоустановка не удалась: %s', last_err)
     return None
