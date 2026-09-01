@@ -229,6 +229,7 @@
   }
   .cmd-pill i { font-size: 9px; }
   .cmd-pill-all { background: var(--surface-3); color: var(--text-2); border: 1px solid var(--line-2); }
+  .cmd-pill-none { background: var(--err-soft, rgba(239,68,68,.1)); color: var(--err, #e5484d); border: 1px dashed color-mix(in srgb, var(--err, #e5484d) 40%, transparent); }
   .cmd-pill-sel { background: var(--ac-soft); color: var(--ac); border: 1px solid var(--ac-line); }
   .cmd-pill-mix { background: var(--warn-soft); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
   .cmd-pill-other { background: var(--err-soft); color: var(--err); border: 1px solid color-mix(in srgb, var(--err) 30%, transparent); }
@@ -384,8 +385,9 @@ var openCats = {};
 var ACTION_META = {
   ban:      { icon: 'fa-ban',                tone: 0 },
   kick:     { icon: 'fa-user-slash',         tone: 1 },
-  mute:     { icon: 'fa-microphone-slash',   tone: 2 },
-  timeout:  { icon: 'fa-hourglass-half',     tone: 3 },
+  mute:     { icon: 'fa-comment-slash',       tone: 2 },
+  vmute:    { icon: 'fa-microphone-slash',   tone: 3 },
+  timeout:  { icon: 'fa-hourglass-half',     tone: 4 },
   warn:     { icon: 'fa-triangle-exclamation', tone: 4 },
   purge:    { icon: 'fa-broom',              tone: 5 },
   lockdown: { icon: 'fa-lock',               tone: 6 },
@@ -628,7 +630,9 @@ function renderCommands() {
 /* ── Классические разрешения (действия) ───────────────────── */
 function actionInfo(key) {
   var allowed = ACTION_ACL[key] || [];
-  var info = { allowed: allowed, label: 'Все роли', cls: 'all', allGranted: false, title: '' };
+  // Строгая модель: пустой список ролей = действие НЕ выдано никому (кнопка
+  // в /modpanel скрыта у всех, кроме владельца бота). Подсвечиваем это.
+  var info = { allowed: allowed, label: 'Никому не выдано', cls: 'none', allGranted: false, title: '' };
   if (!allowed.length) return info;
   var names = allowed.map(roleName);
   info.title = names.join(', ');
@@ -652,8 +656,9 @@ function renderActions() {
   var cards = keys.map(function (key) {
     var meta = ACTION_META[key] || { icon: 'fa-shield', tone: 7 };
     var info = actionInfo(key);
+    var _pillIcon = info.cls === 'none' ? 'fa-ban' : (info.cls === 'all' ? 'fa-globe' : 'fa-lock');
     var pill = '<span class="cmd-pill cmd-pill-' + info.cls + '"' + (info.title ? ' title="' + esc(info.title) + '"' : '') + '>'
-      + '<i class="fas ' + (info.cls === 'all' ? 'fa-globe' : 'fa-lock') + '"></i>' + esc(info.label) + '</span>';
+      + '<i class="fas ' + _pillIcon + '"></i>' + esc(info.label) + '</span>';
     var btn;
     if (!selectedRoleIds.length) {
       btn = '<button type="button" class="cmd-grant give" disabled><i class="fas fa-key"></i> Выберите роли</button>';
@@ -668,10 +673,10 @@ function renderActions() {
       + btn
       + '</div>';
   }).join('');
-  host.innerHTML = '<div class="acc-actions-head"><span class="t"><i class="fas fa-shield-halved"></i> Классические разрешения</span>'
-    + '<span class="hint">Только для команд бота — не меняет роли и права на сервере Discord</span></div>'
+  host.innerHTML = '<div class="acc-actions-head"><span class="t"><i class="fas fa-shield-halved"></i> Действия модерации (что разрешено роли)</span>'
+    + '<span class="hint">Только для бота — НЕ зависит от ролей и прав админа в Discord</span></div>'
     + '<div class="acc-info" style="margin-bottom:10px"><i class="fas fa-circle-info"></i>'
-    + '<span>Без «Бан» у модератора не будет кнопки «Бан» в карточке /modpanel. Все действия модерации выполняются через /modpanel; настройка касается только бота и не трогает разрешения ролей в Discord.</span></div>'
+    + '<span><b>По умолчанию действие не выдано никому</b> — отметьте роли слева и нажмите «Дать доступ». Тогда в карточке /modpanel у этих ролей появится соответствующая кнопка; кому не выдали — у той кнопки нет вовсе. «Мут чата» и «Войс-мут» — отдельные разрешения. Права администратора в Discord тут роли не играют: система своя.</span></div>'
     + '<div class="act-grid">' + cards + '</div>';
 }
 

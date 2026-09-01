@@ -236,7 +236,8 @@ def register(ctx):
     @role_required('owner')
     def api_role_permissions_action_set(guild_id):
         """Классические разрешения: установить роли для действия (бан/мут/…).
-        Пустой role_ids — снять правило (действие снова доступно всем)."""
+        Строгая модель: видит действие ТОЛЬКО роль из списка. Пустой role_ids —
+        снять правило, и тогда действие ЗАПРЕЩЕНО всем (default-deny)."""
         from services.permission_acl import ACTIONS, set_action_rule
         data = request.get_json(silent=True) or {}
         action = data.get('action', '').strip()

@@ -109,20 +109,24 @@ check(prefix_has_media(FakeCtx([Att(content_type='image/png')])) is True, 'пр�
 check(prefix_has_media(FakeCtx([Att(content_type='application/pdf')])) is False, 'префикс: pdf не считается')
 check(prefix_has_media(FakeCtx([])) is False, 'префикс: без вложений')
 
-print('== build_help_embed: фильтр по классическим разрешениям ==')
-# без правил — модерация видна всем
+print('== build_help_embed: фильтр по классическим разрешениям (строгая модель) ==')
+# По умолчанию (default-deny) модерация роли [1] НЕ видна — у неё нет ни
+# одного выданного действия. Даём роли 1 нужные действия — видно.
+set_action_rule(GID, 'ban', ['1'])
+set_action_rule(GID, 'warn', ['1'])
 e = build_help_embed(category_id=None, member=Member(roles=[1]), guild_id=GID)
 text_all = ''.join(f.value for f in e.fields)
-check('ban' in text_all and 'tempban' in text_all, 'без правил ban/tempban в справке')
+check('ban' in text_all and 'tempban' in text_all,
+      'с выданным «Бан» ban/tempban в справке')
 
-# правило «Бан» → ban/tempban/unban скрыты у роли без доступа
+# снимаем «Бан» у роли 1 → ban/tempban/unban скрыты
 set_action_rule(GID, 'ban', ['555'])
 e2 = build_help_embed(category_id=None, member=Member(roles=[1]), guild_id=GID)
 text_deny = ''.join(f.value for f in e2.fields)
 check('ban' not in text_deny or '`ban`' not in text_deny,
       'без роли на «Бан» команда ban скрыта из справки')
 check('`tempban`' not in text_deny, 'tempban скрыт (тоже бан)')
-check('warn' in text_deny, 'warn остаётся видимым (действие warn не закрыто)')
+check('warn' in text_deny, 'warn остаётся видимым (действие warn выдано роли 1)')
 # у роли с доступом — видно
 e3 = build_help_embed(category_id=None, member=Member(roles=[555]), guild_id=GID)
 text_allow = ''.join(f.value for f in e3.fields)

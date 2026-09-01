@@ -35,17 +35,18 @@ PANEL_ACTIONS = [
 _VALUE_SET = {a[0] for a in PANEL_ACTIONS}
 
 # Привязка действий панели к ACL «Права команд» (services/permission_acl.ACTIONS):
-# владелец может ограничить действие конкретными Discord-ролями. Пустое правило
-# в ACL = действие разрешено всем (поведение бота 1:1, см. check_action).
+# действие доступно роли, только если владелец ЯВНО разрешил его в панели.
+# Строгая модель (default-deny, Discord-права игнорируются) — 1:1 с ботом.
+# Чат-мут и войс-мут — РАЗНЫЕ разрешения.
 _ACTION_ACL = {
     'warn': 'warn',
     'timeout': 'timeout',
     'mute_chat': 'mute',
-    'vmute': 'mute',
+    'vmute': 'vmute',
     'ban': 'ban',
     'unban': 'ban',
     'untimeout': 'timeout',
-    'vunmute': 'mute',
+    'vunmute': 'vmute',
 }
 
 

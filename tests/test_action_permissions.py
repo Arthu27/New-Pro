@@ -60,30 +60,34 @@ check(ACTION_VALUES.get('ban') == 'ban' and ACTION_VALUES.get('timeout') == 'tim
       and ACTION_VALUES.get('clear') == 'purge',
       'значения опции action маппятся (ban/timeout/clear)')
 
-print('== check_action ==')
-check(check_action(GID, Member(roles=[1]), 'ban'), 'нет правила действия -> можно')
+print('== check_action (строгая модель: default-deny, Discord-права игнор) ==')
+check(not check_action(GID, Member(roles=[1]), 'ban'), 'нет правила действия -> ЗАПРЕТ (default-deny)')
 set_action_rule(GID, 'ban', ['555'])
 check(not check_action(GID, Member(roles=[1]), 'ban'), 'правило ban -> чужому нельзя')
 check(check_action(GID, Member(roles=[555]), 'ban'), 'роль 555 может банить')
-check(check_action(GID, Member(roles=[1], administrator=True), 'ban'), 'админ обходит правило')
+check(not check_action(GID, Member(roles=[1], administrator=True), 'ban'),
+      'Discord-админ НЕ обходит правило (права Discord не дают прав в боте)')
 check(check_action(GID, Member(bot=True), 'ban'), 'боты пропускаются')
-check(check_action(GID, Member(roles=[1]), 'kick'), 'другое действие не затронуто')
+check(not check_action(GID, Member(roles=[1]), 'kick'), 'другое действие (kick) тоже запрещено без правила')
 set_action_rule(GID, 'ban', [])
-check(check_action(GID, Member(roles=[1]), 'ban'), 'сняли правило -> снова можно')
+check(not check_action(GID, Member(roles=[1]), 'ban'), 'сняли правило -> снова ЗАПРЕТ (default-deny)')
 
 print('== has_access: слой действий поверх командного ACL ==')
 set_action_rule(GID, 'ban', ['555'])
 check(not has_access(GID, 'ban', Member(roles=[1])), 'действие ban блокирует команду ban')
 check(not has_access(GID, 'tempban', Member(roles=[1])), 'tempban тоже банит -> блокируется')
 check(has_access(GID, 'ban', Member(roles=[555])), 'роль 555 может')
-check(has_access(GID, 'warn', Member(roles=[1])), 'warn не затронут правилом ban')
+# warn — отдельное действие; без своего правила оно тоже запрещено (default-deny),
+# но НЕ правилом ban, а отсутствием разрешения warn.
 set_action_rule(GID, 'ban', [])
 
-# действие + категория: AND-семантика
+# действие + категория: AND-семантика. Командный ACL требует И роль категории
+# (10), И роль команды (20); действие ban требует свою разрешённую роль (20).
 set_rule(GID, 'Модерация', ['10'])
+set_rule(GID, 'ban', ['20'])
 set_action_rule(GID, 'ban', ['20'])
-check(not has_access(GID, 'ban', Member(roles=[10])), 'есть категория, нет действия -> нельзя')
-check(not has_access(GID, 'ban', Member(roles=[20])), 'есть действие, нет категории -> нельзя')
+check(not has_access(GID, 'ban', Member(roles=[10])), 'есть категория, нет роли команды/действия -> нельзя')
+check(not has_access(GID, 'ban', Member(roles=[20])), 'есть роль команды и действие, нет категории -> нельзя')
 check(has_access(GID, 'ban', Member(roles=[10, 20])), 'обе роли -> можно')
 save_acl(GID, {})
 set_action_rule(GID, 'ban', [])
@@ -173,19 +177,23 @@ inter2 = FakeInteraction('modpanel', Member(roles=[900]),
 ok2 = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter2))
 check(ok2 is True and inter2.response.kw is None, 'slash: своя роль проходит action=ban')
 
-# utility: action=clear (purge) без правила — открыто
+# utility: action=clear (purge) БЕЗ правила -> default-deny (запрещено)
 inter3 = FakeInteraction('utility', Member(roles=[1]),
                          {'name': 'utility', 'options': [{'name': 'action', 'value': 'clear', 'type': 3}]})
 ok3 = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter3))
-check(ok3 is True, 'slash: action=clear без правила открыто')
+check(ok3 is False, 'slash: action=clear без правила ЗАПРЕЩЁН (default-deny)')
 set_action_rule(GID, 'ban', [])
 
-# правило на действие purge блокирует action=clear
+# роль 900 с разрешением purge — action=clear проходит
 set_action_rule(GID, 'purge', ['900'])
-inter4 = FakeInteraction('utility', Member(roles=[1]),
+inter4 = FakeInteraction('utility', Member(roles=[900]),
                          {'name': 'utility', 'options': [{'name': 'action', 'value': 'clear', 'type': 3}]})
 ok4 = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter4))
-check(ok4 is False, 'slash: action=clear заблокирован правилом purge')
+check(ok4 is True, 'slash: роль с разрешением purge проходит action=clear')
+inter4b = FakeInteraction('utility', Member(roles=[1]),
+                          {'name': 'utility', 'options': [{'name': 'action', 'value': 'clear', 'type': 3}]})
+ok4b = asyncio.new_event_loop().run_until_complete(main._acl_slash_check(inter4b))
+check(ok4b is False, 'slash: чужая роль заблокирована правилом purge')
 set_action_rule(GID, 'purge', [])
 
 os.system('rm -rf data')

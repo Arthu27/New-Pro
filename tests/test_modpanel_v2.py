@@ -146,17 +146,38 @@ class _Member:
 
 
 g = _Guild(G)
+# Строгая модель: видно только то, что владелец РАЗРЕШИЛ роли в панели.
+# Discord-админ/владелец сервера прав не дают; владелец БОТА (OWNER_ID) — всё.
+import os as _os  # noqa: E402
+from services.permission_acl import set_action_rule, save_action_acl  # noqa: E402
+_os.environ['OWNER_ID'] = '1'   # член с id=1 — владелец бота, видит всё
+save_action_acl(G, {})
 check(actions_for_member(g, _Member(1, [])) == MODPANEL_ACTIONS,
-      'владелец сервера видит все действия')
+      'владелец БОТА (OWNER_ID) видит все действия')
+# Без единого разрешения модератор не видит ничего (default-deny).
+check(actions_for_member(g, _Member(77, [_Role(G), _Role(601)])) == [],
+      'модератор без выданных разрешений не видит ни одного действия')
+
+# Разрешаем ролям действия (как владелец в панели) — ЛИМИТЫ остаются вторым,
+# пересекающим фильтром: мут-роль (лимит на мут) + разрешения mute/vmute/timeout
+# видит мут-семейство; бан срезан лимитом мута.
+set_action_rule(G, 'mute', [601, 604])
+set_action_rule(G, 'vmute', [601, 604])
+set_action_rule(G, 'timeout', [601, 604])
+set_action_rule(G, 'ban', [601, 602])
+set_action_rule(G, 'purge', [603])
 m_mute = actions_for_member(g, _Member(7, [_Role(G), _Role(601)]))
 check([a[0] for a in m_mute] == ['timeout', 'mute_chat', 'vmute'],
-      f'мут-роль видит только муты: {[a[0] for a in m_mute]}')
+      f'мут-роль: лимит мута ∩ разрешения = только муты: {[a[0] for a in m_mute]}')
 m_ban = actions_for_member(g, _Member(8, [_Role(602)]))
-check([a[0] for a in m_ban] == ['ban'], 'бан-роль видит только бан')
+check([a[0] for a in m_ban] == ['ban'], f'бан-роль видит только бан: {[a[0] for a in m_ban]}')
 m_none = actions_for_member(g, _Member(9, [_Role(603)]))
 check([a[0] for a in m_none] == ['clear'], 'роль с окном чистки видит только чистку')
+# роль без настроек лимитов и БЕЗ разрешений — ничего (default-deny)
 m_free = actions_for_member(g, _Member(10, [_Role(699)]))
-check(m_free == MODPANEL_ACTIONS, 'роль без настроек — модер видит всё')
+check(m_free == [], 'роль без настроек и без разрешений — не видит ничего')
+save_action_acl(G, {})
+_os.environ.pop('OWNER_ID', None)
 
 print('== 4. «Бан» живьём: без канала — отказ, с каналом — изоляция ==')
 

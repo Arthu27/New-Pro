@@ -230,9 +230,10 @@ def viewer_member(bot, gid):
 def acl_action_allowed(gid, member, action_key):
     """«Классическое» разрешение действия (панель → Доступ → Права команд).
 
-    Правила нет — можно (как везде в permission_acl.check_action). member
-    None (доверенный вход) — можно. Сбой чтения БД — не режем (fail-open,
-    тот же принцип, что у самого permission_acl).
+    Строгая модель: member None (доверенный вход — владелец панели) — можно;
+    иначе решает check_action — по умолчанию ЗАПРЕТ, пока владелец не разрешит
+    ролью. Discord-права не учитываются. Сбой чтения БД — не открываем действие
+    (fail-close): лучше не показать кнопку, чем дать невыданное право.
     """
     if member is None:
         return True
@@ -241,7 +242,7 @@ def acl_action_allowed(gid, member, action_key):
         return bool(check_action(int(gid), member, action_key))
     except Exception as _ex:
         _log.debug('acl_action_allowed: %s', _ex)
-        return True
+        return False
 
 
 def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :

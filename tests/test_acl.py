@@ -47,21 +47,27 @@ check(_candidates('ticket sla create') == ['ticket-sla-create', 'ticket-sla', 't
       'три уровня -> цепочка предков')
 
 print('== has_access: база ==')
-check(has_access(GID, 'ban', Member(roles=[1])), 'нет правил -> всем можно')
-set_rule(GID, 'ban', ['555'])
-check(not has_access(GID, 'ban', Member(roles=[1])), 'правило ban -> чужому нельзя')
-check(has_access(GID, 'ban', Member(roles=[555])), 'правило ban -> роли 555 можно')
-check(has_access(GID, 'ban', Member(roles=[1], administrator=True)), 'админ обходит правило')
+# Строгая модель: команда ban выполняет действие «ban» (COMMAND_ACTIONS), а
+# действия по умолчанию ЗАПРЕЩЕНЫ (default-deny), пока роль не разрешена в
+# панели. Discord-админ права НЕ даёт (своя система доступа).
+from services.permission_acl import save_action_acl as _saa, check_action as _ca  # noqa: E402
+_saa(GID, {'ban': ['555']})
+check(not has_access(GID, 'ban', Member(roles=[1])), 'без разрешённой роли ban -> нельзя (default-deny)')
+check(has_access(GID, 'ban', Member(roles=[555])), 'разрешённая роль 555 может ban')
+check(not has_access(GID, 'ban', Member(roles=[1], administrator=True)),
+      'Discord-админ НЕ обходит правило (своя система, права Discord игнорируются)')
 check(has_access(GID, 'ban', Member(bot=True)), 'боты пропускаются')
-clear_rule(GID, 'ban')
-check(has_access(GID, 'ban', Member(roles=[1])), 'clear_rule -> снова всем можно')
+_saa(GID, {})
+check(not has_access(GID, 'ban', Member(roles=[1])),
+      'сняли разрешение -> снова нельзя (default-deny сохраняется)')
 
-print('== правило на категорию ==')
+print('== правило на категорию (командный ACL; действия разрешены отдельно) ==')
+_saa(GID, {'kick': ['777', '1']})          # действие kick разрешено ролям 777 и 1
 set_rule(GID, 'Модерация', ['777'])
-check(not has_access(GID, 'kick', Member(roles=[1])), 'категория Модерация закрыта (kick)')
+check(not has_access(GID, 'kick', Member(roles=[1])), 'категория Модерация закрыта для роли 1 (kick)')
 check(has_access(GID, 'kick', Member(roles=[777])), 'роль 777 может (kick)')
 check(has_access(GID, '8ball', Member(roles=[1])), 'другая категория не затронута (8ball)')
-save_acl(GID, {})
+save_acl(GID, {}); _saa(GID, {})
 
 print('== КЛЮЧЕВОЙ БАГ: сабкоманды групп ==')
 set_rule(GID, 'j2c', ['900'])
@@ -91,12 +97,16 @@ check(not has_access(GID, 'report stats', Member(roles=[1])),
 save_acl(GID, {})
 
 print('== несколько правил сразу (AND-семантика) ==')
+# Действие ban должно быть разрешено ролям (default-deny), и командный ACL —
+# категория и команда — пускает только при наличии обеих ролей.
+_saa(GID, {'ban': ['10', '20']})
 set_rule(GID, 'Модерация', ['10'])
 set_rule(GID, 'ban', ['20'])
 check(not has_access(GID, 'ban', Member(roles=[10])), 'есть роль категории, нет роли команды -> нельзя')
 check(not has_access(GID, 'ban', Member(roles=[20])), 'есть роль команды, нет роли категории -> нельзя')
 check(has_access(GID, 'ban', Member(roles=[10, 20])), 'обе роли -> можно')
 check(has_access(GID, 'ban', Member(roles=[10, 20, 99])), 'обе роли + лишняя -> можно')
+save_acl(GID, {}); _saa(GID, {})
 save_acl(GID, {})
 
 print('== roles_for_command ==')

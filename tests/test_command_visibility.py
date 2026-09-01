@@ -168,16 +168,21 @@ try:
 
     GID = _Guild.id
     member = _Member(4242, roles=[501])
-    # Правило «Мут разрешён только роли 999» → у роли 501 права на мут нет.
-    set_action_rule(GID, 'mute', [999])
+    # Строгая модель (default-deny): роли 501 явно разрешены бан/варн/очистка,
+    # а мут/войс-мут — только роли 999. Тогда карточки мута скрыты, остальные
+    # выданные — на месте.
+    from services.permission_acl import save_action_acl
+    save_action_acl(GID, {'ban': [501], 'warn': [501], 'purge': [501],
+                          'mute': [999], 'vmute': [999]})
     allowed = actions_for_member(_Guild(), member)
     actions = {a[0] for a in allowed}   # имена пунктов меню (value)
     check('mute_chat' not in actions and 'vmute' not in actions
-          and 'vunmute' not in actions,
-          '/modpanel: без права «Мут» карточки мута (чат/войс) и снятия не видны')
-    check('ban' in actions and 'warn' in actions and 'clear' in actions,
-          '/modpanel: невыданные действия не трогают остальные карточки')
-    set_action_rule(GID, 'mute', [])   # вернуть как было
+          and 'vunmute' not in actions and 'timeout' not in actions,
+          '/modpanel: без права «Мут/Войс-мут» карточки мута и снятия не видны')
+    check('ban' in actions and 'unban' in actions and 'warn' in actions
+          and 'clear' in actions,
+          '/modpanel: выданные действия (бан/варн/очистка) показываются, мут не задел их')
+    save_action_acl(GID, {})   # вернуть как было
 except Exception as ex:
     check(False, f'ACL карточек /modpanel: {ex}')
 

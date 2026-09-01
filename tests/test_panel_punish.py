@@ -316,20 +316,23 @@ check(r.status_code == 400 and 'Владельца' in (r.get_json().get('error'
       'владельца сервера наказать нельзя')
 wg.owner_id = 1
 
-print('== 8. ACL «Права команд»: действия по разрешённым ролям ==')
+print('== 8. ACL «Права команд»: действия по разрешённым ролям (строгая модель) ==')
 from services import permission_acl as PACL  # noqa: E402
 
-PACL.set_action_rule(777, 'ban', ['555'])   # «бан» — только роли 555
+# По умолчанию (default-deny) связанному Discord-модератору не выдано НИЧЕГО.
+# Сначала разрешаем роли 555 ВСЕ действия, чтобы проверить полный набор,
+# затем точечно снимаем бан.
+ALL_ACTS = ['warn', 'timeout', 'mute', 'vmute', 'ban', 'purge']
+for _a in ALL_ACTS:
+    PACL.set_action_rule(777, _a, ['555'])
 
-# статический вход без Discord-привязки — доверенный: весь набор
+# статический вход без Discord-привязки — доверенный (owner панели): весь набор
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
 check(d.get('success') and len(d.get('actions', [])) == 8 and
       d.get('hidden_by_acl') == 0, 'статический вход: полный набор (доверенный)')
 
-# вход через Discord-аккаунт: мембер без роли 555 — «бан» отрезан.
-# (_role_checked свежий — живой пересчёт роли из Discord пропускается,
-#  имитируем только что залогинившегося модератора)
+# вход через Discord-аккаунт с ролью 555 — все действия разрешены
 import time as _t  # noqa: E402
 
 with client.session_transaction() as sess:
@@ -340,32 +343,41 @@ with client.session_transaction() as sess:
     sess['discord_id'] = str(TID)
     sess['selected_guild'] = '777'
     sess['_role_checked'] = _t.time()
+wg.members[0].roles = [_Role(555)]
+CHR.set_route(777, 'ban_appeal_channel', 301)
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
 vals = [a.get('value') for a in d.get('actions', [])]
-# Правило «ban» режет оба: и сам бан, и unban — как у бота (unban → ban-ACL)
+check(d.get('success') and len(vals) == 8 and d.get('hidden_by_acl') == 0,
+      f'роль 555 со всеми разрешениями видит полный набор ({len(vals)})')
+
+# сняли «бан» у роли 555 → бан и разбан скрываются (unban → ban-ACL)
+PACL.set_action_rule(777, 'ban', [])
+r = client.get('/api/guild/777/punish/options')
+d = r.get_json()
+vals = [a.get('value') for a in d.get('actions', [])]
 check(d.get('success') and len(vals) == 6 and 'ban' not in vals and 'unban' not in vals,
-      f'связанный мод без роли: бан и разбан скрыты ({len(vals)} действий)')
+      f'без разрешения «Бан»: бан и разбан скрыты ({len(vals)} действий)')
 check(d.get('hidden_by_acl') == 2, 'hidden_by_acl честно говорит про два скрытых')
 
 r = client.post('/api/guild/777/punish', json={
     'user_id': str(TID), 'action': 'ban', 'reason': 'обход формы'})
 check(r.status_code == 403 and not r.get_json().get('success') and
       'Нет права' in (r.get_json().get('error') or ''),
-      'POST на отрезанное действие — 403 от ACL')
+      'POST на невыданное действие — 403 от ACL')
 
-# дали роль 555 — бан вернулся и выполняется
-wg.members[0].roles = [_Role(555)]
-CHR.set_route(777, 'ban_appeal_channel', 301)
+# вернули «бан» роли 555 — полный набор и бан выполняется
+PACL.set_action_rule(777, 'ban', ['555'])
 r = client.get('/api/guild/777/punish/options')
 d = r.get_json()
 check(len(d.get('actions', [])) == 8 and d.get('hidden_by_acl') == 0,
-      'с нужной ролью: полный набор')
+      'с разрешённой ролью: полный набор')
 r = client.post('/api/guild/777/punish', json={
     'user_id': str(TID), 'action': 'ban', 'reason': 'проверено'})
 check(r.status_code == 200 and r.get_json().get('success'),
       'POST бана с разрешённой ролью — успех')
 wg.members[0].roles = []
+PACL.clear_action_rules(777)
 
 # owner панели — всегда весь набор, хоть и без Discord-ролей
 with client.session_transaction() as sess:

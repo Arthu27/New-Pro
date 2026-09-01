@@ -98,8 +98,8 @@ _expected = {
     'timeout': 'timeout',
     'untimeout': 'timeout',
     'mute_chat': 'mute',
-    'vmute': 'mute',
-    'vunmute': 'mute',
+    'vmute': 'vmute',
+    'vunmute': 'vmute',
     'clear': 'purge',
 }
 for act, key in _expected.items():
@@ -110,75 +110,88 @@ for key in set(MODPANEL_ACL_KEYS.values()):
     check(key in ACTIONS, f'{key} существует в Классических разрешениях панели')
 check(MODPANEL_ACL_KEYS.get('warn') == 'warn' and MODPANEL_ACL_KEYS.get('clear') == 'purge',
       'варн и очистка тоже управляются категорией доступа')
+check(MODPANEL_ACL_KEYS.get('mute_chat') == 'mute'
+      and MODPANEL_ACL_KEYS.get('vmute') == 'vmute'
+      and MODPANEL_ACL_KEYS.get('vunmute') == 'vmute',
+      'чат-мут и войс-мут — РАЗНЫЕ разрешения')
 
-print('== 2. Правил нет — видно всё (ничего не сломали) ==')
-check([a[0] for a in actions_for_member(Guild(GID), m)] == BASE,
-      'модератор без правил видит все пункты')
+print('== 2. Строгая модель: без правил модератор не видит НИЧЕГО ==')
+# default-deny: модератор без явных разрешений — пусто; Discord-админ и
+# владелец СЕРВЕРА прав не дают; владелец БОТА видит всё.
+check([a[0] for a in actions_for_member(Guild(GID), m)] == [],
+      'модератор без правил НЕ видит ни одного пункта (default-deny)')
 g_own = Guild(GID, owner=OWNER)
-check([a[0] for a in actions_for_member(g_own, m_owner)] == BASE,
-      'владелец сервера видит все пункты')
-check([a[0] for a in actions_for_member(Guild(GID), m_admin)] == BASE,
-      'админ видит все пункты')
+check([a[0] for a in actions_for_member(g_own, m_owner)] == [],
+      'владелец СЕРВЕРА в Discord прав в боте не получает (своя система)')
+check([a[0] for a in actions_for_member(Guild(GID), m_admin)] == [],
+      'Discord-админ прав в боте не получает (default-deny)')
 check([a[0] for a in actions_for_member(Guild(GID), m_bot_owner)] == BASE,
-      'владелец бота видит все пункты')
+      'владелец БОТА (OWNER_ID) видит все пункты')
 
-print('== 3. Не ключил «Бан» — бана нет в /modpanel ==')
+print('== 3. Дал «Бан» роли 601 — у неё появляется бан/разбан, у других нет ==')
 set_action_rule(GID, 'ban', ['601'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
 check('ban' not in got and 'unban' not in got,
       f'без роли 601 бана/разбана нет: {got}')
-check('timeout' in got and 'mute_chat' in got and 'clear' in got,
-      'остальные наказания на месте')
+check(got == [], 'у роли 602 без единого разрешения пунктов нет вовсе')
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [601]))]
-check('ban' in got and 'unban' in got, 'роль с «Бан» видит бан и разбан')
-check([a[0] for a in actions_for_member(g_own, m_owner)] == BASE,
-      'владельца правило бана не касается')
-check([a[0] for a in actions_for_member(Guild(GID), m_admin)] == BASE,
-      'админа правило бана не касается')
+check('ban' in got and 'unban' in got and len(got) == 2,
+      f'роль с «Бан» видит ровно бан и разбан: {got}')
+check([a[0] for a in actions_for_member(g_own, m_owner)] == [],
+      'владельца сервера правило бана не касается в обратную сторону — он всё равно без прав')
+check([a[0] for a in actions_for_member(Guild(GID), m_admin)] == [],
+      'Discord-админ по-прежнему без бана')
 check([a[0] for a in actions_for_member(Guild(GID), m_bot_owner)] == BASE,
-      'владельца бота правило бана не касается')
+      'владельца бота правило не ограничивает')
 set_action_rule(GID, 'ban', [])
 
-print('== 4. Отдельные тумблеры: мут, таймаут, варн, очистка ==')
-set_action_rule(GID, 'mute', ['601'])
+print('== 4. Чат-мут и войс-мут — отдельные тумблеры ==')
+# Даём роли 602 ТОЛЬКО чат-мут: войс-мут и его снятие скрыты.
+set_action_rule(GID, 'mute', ['602'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check('mute_chat' not in got and 'vmute' not in got and 'vunmute' not in got,
-      f'без «Мут» нет мутов чата/войса и снятий: {got}')
-check('timeout' in got and 'untimeout' in got,
-      '«Таймаут» — отдельный тумблер, муты его не глушат')
-set_action_rule(GID, 'timeout', ['601'])
+check('mute_chat' in got, f'с «Мут чата» виден чат-мут: {got}')
+check('vmute' not in got and 'vunmute' not in got,
+      f'без «Войс-мут» войс-мута и его снятия нет: {got}')
+# Даём отдельно войс-мут — появляется он и его снятие, чат-мут не нужен.
+set_action_rule(GID, 'vmute', ['602'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
+check('vmute' in got and 'vunmute' in got and 'mute_chat' in got,
+      f'с обоими разрешениями видны и чат-, и войс-мут: {got}')
+# Таймаут — отдельный тумблер: без него таймаута нет даже при мутах.
 check('timeout' not in got and 'untimeout' not in got,
-      f'без «Таймаут» нет таймаута и снятия: {got}')
-check('ban' in got and 'warn' in got and 'clear' in got,
-      'остальные наказания на месте (муты и таймауты — скрыты своими тумблерами)')
-set_action_rule(GID, 'warn', ['601'])
-set_action_rule(GID, 'purge', ['601'])
+      'без «Таймаут» таймаута и его снятия нет')
+set_action_rule(GID, 'timeout', ['602'])
+set_action_rule(GID, 'warn', ['602'])
+set_action_rule(GID, 'purge', ['602'])
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check('warn' not in got and 'clear' not in got,
-      f'без «Варн»/«Очистка» их нет: {got}')
+check('timeout' in got and 'untimeout' in got and 'warn' in got and 'clear' in got,
+      f'с таймаутом/варном/очисткой они появляются: {got}')
 set_action_rule(GID, 'mute', [])
+set_action_rule(GID, 'vmute', [])
 set_action_rule(GID, 'timeout', [])
 set_action_rule(GID, 'warn', [])
 set_action_rule(GID, 'purge', [])
 
-print('== 5. Фильтры вместе: Лимиты команды + категория доступа ==')
+print('== 5. Фильтры вместе: Лимиты команды ∩ разрешения ==')
 from services import staff_limits as SL  # noqa: E402
-
+# Лимит мута у роли 602 оставляет из ВСЕХ действий только мут-семейство,
+# но в строгой модели видны лишь те, что ещё и РАЗРЕШЕНЫ.
 SL.set_role_limits(GID, 602, who='t', role_name='Мут-роль', mute=5)
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
-check(set(got) == {'timeout', 'mute_chat', 'vmute'},
-      f'лимит мута оставил только муты: {got}')
-set_action_rule(GID, 'ban', ['601'])
+check(got == [], f'лимит мута есть, но разрешений нет — пусто: {got}')
+# Даём роли 602 разрешения на мут и таймаут: лимит пропустит мут-семейство,
+# таймаут в лимит мута входит тоже (timeout — мут).
+set_action_rule(GID, 'mute', ['602'])
+set_action_rule(GID, 'vmute', ['602'])
+set_action_rule(GID, 'timeout', ['602'])
+set_action_rule(GID, 'ban', ['602'])   # лимит мута бан НЕ пропустит
 got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [602]))]
 check(set(got) == {'timeout', 'mute_chat', 'vmute'},
-      'оба фильтра вместе: мут-лимит и без бана — муты на месте')
-set_action_rule(GID, 'mute', ['601'])
-got = [a[0] for a in actions_for_member(Guild(GID), Member(100, [601, 602]))]
-check(set(got) == {'timeout', 'mute_chat', 'vmute'},
-      'роль с «Мут» в категории доступа всё равно ограничена лимитом мута')
+      f'лимит мута ∩ разрешения = только мут-семейство (бан срезан лимитом): {got}')
 set_action_rule(GID, 'ban', [])
 set_action_rule(GID, 'mute', [])
+set_action_rule(GID, 'vmute', [])
+set_action_rule(GID, 'timeout', [])
 SL.clear_role_limits(GID, 602, who='t')
 
 print('== 6. Защита на исполнении (меню открыто до смены прав) ==')

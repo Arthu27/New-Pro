@@ -126,10 +126,13 @@ COMMAND_ACTIONS = {
 }
 
 # значение опции action в slash-командах (/moderate, /utility) -> ключ действия.
+# Чат-мут и войс-мут — РАЗНЫЕ разрешения: vmute/vunmute проверяются отдельно
+# от чат-мута (требование владельца разделить их и в настройках, и в боте).
 ACTION_VALUES = {
     "ban": "ban", "unban": "ban", "softban": "ban",
     "kick": "kick",
-    "mute": "mute", "unmute": "mute", "vmute": "mute", "vunmute": "mute",
+    "mute": "mute", "unmute": "mute",
+    "vmute": "vmute", "vunmute": "vmute",
     "timeout": "timeout", "untimeout": "timeout",
     "warn": "warn",
     "clear": "purge", "purge": "purge",
@@ -275,38 +278,62 @@ def set_action_rule(guild_id: int, action: str, role_ids: list):
 
 
 def clear_action_rules(guild_id: int):
-    """Снять все ограничения действий (всё можно всем)."""
+    """Снять ВСЕ правила действий. В строгой модели это значит default-deny:
+    без единого разрешённого действия модераторы не видят в /modpanel ничего
+    (кроме владельца бота). Раньше означало «всё можно всем» — семантика
+    изменена по требованию владельца (права только те, что выданы явно)."""
     save_action_acl(guild_id, {})
 
 
 def allowed_roles_for_action(guild_id: int, action: str) -> list:
-    """Какие роли разрешены для действия (пусто = все)."""
+    """Какие роли разрешены для действия как СТРОКИ id.
+
+    Роли в БД могут храниться как int (прямой save_action_acl из тестов) или
+    как str (через панель) — нормализуем к строкам, иначе пересечение с ролями
+    участника (они сравниваются как str) давало бы ложный запрет.
+    """
     acl = load_action_acl(guild_id)
-    return acl.get(str(action), []) or []
+    return [str(r) for r in (acl.get(str(action), []) or [])]
+
+
+def _is_bot_owner(member) -> bool:
+    """Только ВЛАДЕЛЕЦ БОТА (OWNER_ID/OWNER_IDS из .env) имеет всё. Это НЕ
+    Discord-право и не роль сервера — это владелец самого бота. Discord-админ
+    или владелец сервера сюда НЕ попадают: у нас отдельная система прав, к
+    ролям/правам Discord она не привязана (требование владельца)."""
+    try:
+        from config import Config
+        return int(getattr(member, "id", 0) or 0) in Config.all_owner_ids()
+    except Exception as _ex:
+        log.debug(f'owner-скип ACL: {_ex}')
+        return False
 
 
 def check_action(guild_id: int, member, action: str) -> bool:
     """Может ли member выполнять действие action (бан/кик/мут/таймаут…).
 
-    Действие не привязано к команде: правило «ban» блокирует ЛЮБУЮ команду,
-    которая банит (ban, tempban, unban, /moderate action=ban…). По умолчанию
-    (правила нет) — можно. Админ/бот — всегда можно, панель (is_panel) —
-    отдельная авторизация, ролевые правила её не касаются.
+    СТРОГАЯ МОДЕЛЬ (требование владельца — «своя система, Discord не при чём»):
+      • бот/панель/владелец БОТА — можно;
+      • Discord-админ и владелец СЕРВЕРА прав НЕ дают (guild_permissions больше
+        не проверяются);
+      • по умолчанию действие ЗАПРЕЩЕНО: нужно явно разрешить его роли в панели
+        (Доступ → Права команд → Классические разрешения). Нет ни одной
+        разрешённой роли → действие недоступно (и кнопка в /modpanel скрыта).
+    Разрешённые роли хранятся в action_acl (namespace «action_acl», ключ —
+    действие). Панель (is_panel) авторизуется отдельно — ролевые правила её
+    не касаются.
     """
     if member is None or getattr(member, "bot", False) \
             or getattr(member, "is_panel", False):
         return True
-    if getattr(member, "guild_permissions", None) and member.guild_permissions.administrator:
+    if _is_bot_owner(member):
         return True
-    try:  # владелец бота — действия не проверяем
-        from config import Config
-        if int(getattr(member, "id", 0) or 0) in Config.all_owner_ids():
-            return True
-    except Exception as _ex:
-        log.debug(f'владелец-скип ACL: {_ex}')
+    # Discord-права (administrator/owner сервера) умышленно ИГНОРИРУЮТСЯ:
+    # разрешения выдаёт только владелец бота через панель.
     allowed = allowed_roles_for_action(guild_id, action)
     if not allowed:
-        return True
+        # нет явного правила → запрет (default-deny для действий модерации)
+        return False
     user_roles = {str(r.id) for r in getattr(member, "roles", [])}
     return bool(user_roles.intersection(set(allowed)))
 
@@ -348,16 +375,12 @@ def has_access(guild_id: int, command: str, member) -> bool:
     """
     if member is None or getattr(member, "bot", False):
         return True
-    if getattr(member, "guild_permissions", None) and member.guild_permissions.administrator:
+    # Discord-админ/владелец СЕРВЕРА умышленно НЕ даёт прав: система доступа
+    # собственная, к правам Discord не привязана (требование владельца).
+    # Владелец БОТА (OWNER_ID/OWNER_IDS из .env) — команды не проверяем вовсе:
+    # бот принадлежит ему, ограничения ролей его не касаются.
+    if _is_bot_owner(member):
         return True
-    # Владелец бота (OWNER_ID/OWNER_IDS) — команды не проверяем вовсе:
-    # бот принадлежит ему, ограничения ролей его не касаются
-    try:
-        from config import Config
-        if int(getattr(member, "id", 0) or 0) in Config.all_owner_ids():
-            return True
-    except Exception as _ex:
-        log.debug(f'владелец-скип ACL (вторая ветка): {_ex}')
 
     acl = load_acl(guild_id)
     user_roles = {str(r.id) for r in getattr(member, "roles", [])}
