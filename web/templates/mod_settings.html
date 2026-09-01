@@ -91,39 +91,23 @@
 
 <div class="ms-panel" style="margin-top:14px">
   <h3><i class="fas fa-user-tag"></i> Роли наказаний и апелляции</h3>
-  <div class="ms-sub">Наказания выдаются <b>ролями</b>: выберите, какая роль сервера за что отвечает.
-    Роль выбрана — мут/«бан» работают через неё и снимаются сами по сроку; не выбрана —
-    прежнее поведение (таймаут, изоляция). «Бан»-роль оставляет участника на сервере:
-    все каналы закрыты, открыт только канал апелляции.
+  <div class="ms-sub">Наказания выдаются <b>ролями</b>: роль выбрана — мут/«бан» работают через неё
+    и снимаются сами по сроку; не выбрана — прежнее поведение (таймаут, изоляция каналов).
+    «Бан»-роль оставляет участника на сервере: все каналы закрыты, открыт только канал апелляции.
     <span id="msBotWarn" class="ms-warn" style="display:none">Бот офлайн — списки ролей и каналов недоступны.</span>
   </div>
+  <a class="ms-link" href="/role-settings" style="margin:4px 0 12px;display:inline-flex">
+    <i class="fas fa-user-gear"></i> Роли наказаний и уровни варнов — на отдельной странице «Роли наказаний»
+  </a>
   <div class="ms-role-grid">
-    <div class="ms-role" data-ms-role="mute">
-      <div class="ms-role-name"><i class="fas fa-comment-slash"></i> Мут чата</div>
-      <select id="msRoleMute" aria-label="Роль мута чата"></select>
-      <div class="ms-role-hint">Пока роль на участнике — писать нельзя.</div>
-    </div>
-    <div class="ms-role" data-ms-role="vmute">
-      <div class="ms-role-name"><i class="fas fa-microphone-slash"></i> Войс-мут</div>
-      <select id="msRoleVmute" aria-label="Роль войс-мута"></select>
-      <div class="ms-role-hint">Работает и когда участник не в голосовом канале.</div>
-    </div>
-    <div class="ms-role" data-ms-role="ban">
-      <div class="ms-role-name"><i class="fas fa-gavel"></i> «Бан»</div>
-      <select id="msRoleBan" aria-label="Роль бана"></select>
-      <div class="ms-role-hint">Изоляция + канал апелляции. Требует настроенный канал апелляции (бан).</div>
-    </div>
     <div class="ms-role" data-ms-role="menu">
       <div class="ms-role-name"><i class="fas fa-scale-balanced"></i> Меню апелляций</div>
       <a href="/channel-settings" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ac);text-decoration:none;margin:6px 0;"><i class="fas fa-route"></i> Канал меню — в «Каналах и маршрутах»</a>
       <input type="hidden" id="msMenuChannel" value="0">
-      <div class="ms-role-hint">Постоянное меню «Подать апелляцию» — апелляция тредом, без ЛС боту. Кнопка справа опубликует меню в этот канал.</div>
+      <div class="ms-role-hint">Постоянное меню «Подать апелляцию» — апелляция тредом, без ЛС боту. Кнопка ниже опубликует меню в выбранный канал.</div>
     </div>
   </div>
   <div class="ms-savebar">
-    <button type="button" class="btn btn-primary" id="msSaveRoles" aria-label="Сохранить роли наказаний">
-      <i class="fas fa-floppy-disk"></i> Сохранить роли
-    </button>
     <button type="button" class="btn" id="msPublishMenu" aria-label="Опубликовать меню апелляций в канал" title="Опубликует (или обновит) меню в выбранном канале">
       <i class="fas fa-paper-plane"></i> Опубликовать меню апелляций
     </button>
@@ -149,24 +133,16 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
 function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }
 
 var WL = [];
-var ROLES = [];
-var CHANNELS = [];
-var PROLES = {};
 var MENU_CH = 0;
 
-function roleOptions(cur) {
-  var html = '<option value="0">— не выбрано (старое поведение) —</option>';
-  html += ROLES.map(function (r) {
-    return '<option value="' + esc(r.id) + '"' + (String(cur) === r.id ? ' selected' : '') + '>' + esc(r.name) + '</option>';
-  }).join('');
-  return html;
-}
+/* Роли наказаний (мут/войс-мут/бан/уровни варнов) настраиваются на
+   отдельной странице «Роли наказаний» (/role-settings) — здесь их
+   селектов больше нет, чтобы не было дублей настроек. Тут остаётся
+   только публикация меню апелляций. */
 
-function renderRoles() {
-  document.getElementById('msRoleMute').innerHTML = roleOptions(PROLES.mute || 0);
-  document.getElementById('msRoleVmute').innerHTML = roleOptions(PROLES.vmute || 0);
-  document.getElementById('msRoleBan').innerHTML = roleOptions(PROLES.ban || 0);
-  document.getElementById('msMenuChannel').value = MENU_CH ? String(MENU_CH) : '0';
+function renderMenu() {
+  var mc = document.getElementById('msMenuChannel');
+  if (mc) mc.value = MENU_CH ? String(MENU_CH) : '0';
 }
 
 
@@ -188,14 +164,11 @@ async function msLoad() {
     var d = await fetch('/api/guild/' + GUILD_ID + '/mod-settings', { credentials: 'same-origin' }).then(function (r) { return r.json(); });
     if (d.success && d.cfg) {
       WL = d.cfg.temp_whitelist || [];
-      ROLES = d.cfg.roles || [];
-      CHANNELS = d.cfg.channels || [];
-      PROLES = d.cfg.punish_roles || {};
       MENU_CH = d.cfg.appeal_menu_channel || 0;
       var warn = document.getElementById('msBotWarn');
       if (warn && d.cfg.bot_online === false) warn.style.display = 'inline-flex';
       renderWl();
-      renderRoles();
+      renderMenu();
     } else {
       toast(d.error || 'Не удалось загрузить настройки', false);
     }
@@ -205,15 +178,6 @@ async function msLoad() {
 async function msSave(part) {
   var body = {};
   if (part === 'wl') body.temp_whitelist = WL;
-  if (part === 'roles') {
-    body.punish_roles = {
-      /* id ролей/каналов — снежинки Discord: строки, не parseInt (>2^53 ломает) */
-      mute: document.getElementById('msRoleMute').value || '0',
-      vmute: document.getElementById('msRoleVmute').value || '0',
-      ban: document.getElementById('msRoleBan').value || '0'
-    };
-    /* канал меню апелляций не трогаем: он задаётся в «Каналах и маршрутах» */
-  }
   var r = await fetch('/api/guild/' + GUILD_ID + '/mod-settings', {
     method: 'POST', credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
@@ -222,12 +186,6 @@ async function msSave(part) {
   var d = await r.json().catch(function () { return {}; });
   if (r.ok && d.success && d.cfg) {
     WL = d.cfg.temp_whitelist || WL;
-    if (part === 'roles') {
-      PROLES = d.cfg.punish_roles || PROLES;
-      MENU_CH = d.cfg.appeal_menu_channel || 0;
-      renderRoles();
-      toast('Роли наказаний сохранены — бот уже применяет их', true);
-    }
     if (part === 'wl') {
       renderWl();
       toast('Исключения сохранены', true);
@@ -238,7 +196,6 @@ async function msSave(part) {
 }
 
 document.getElementById('msSaveWl').addEventListener('click', function () { msSave('wl'); });
-document.getElementById('msSaveRoles').addEventListener('click', function () { msSave('roles'); });
 document.getElementById('msPublishMenu').addEventListener('click', async function () {
   var btn = this;
   var ch = MENU_CH || document.getElementById('msMenuChannel').value;

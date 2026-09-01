@@ -727,8 +727,22 @@ def register(ctx):
         _live = getattr(api_guild_channels, '_live_cache', {})
         _ckey = (str(guild_id), len(getattr(guild, 'channels', []) or []))
         _hit = _live.get(_ckey)
-        if _hit and (_now - _hit[0]) < 3.0:
-            return jsonify(_hit[1])
+        # TTL поднят с 3 до 10с: настройки и пикеры опрашивают список часто,
+        # состав каналов меняется редко (а при создании/удалении сигнатура
+        # с числом каналов меняется → промах мгновенно, без ожидания TTL).
+        if _hit and (_now - _hit[0]) < 10.0:
+            _payload = _hit[1]
+            # ETag/304: повторный опрос с тем же составом отдаём без тела —
+            # селекты на страницах настроек не пересобирают ответ вхолостую.
+            _etag = '"ch%d-%d"' % (len(_payload), _ckey[1])
+            if _etag in request.headers.get('If-None-Match', ''):
+                from flask import Response as _Resp
+                return _Resp(status=304, headers={'ETag': _etag,
+                                                   'Cache-Control': 'no-cache'})
+            from flask import Response as _Resp
+            return _Resp(json.dumps(_payload, ensure_ascii=False),
+                         mimetype='application/json',
+                         headers={'ETag': _etag, 'Cache-Control': 'no-cache'})
 
         type_map ={
         _discord .ChannelType .text :'text',
@@ -807,10 +821,10 @@ def register(ctx):
             api_guild_channels ._live_cache [_ckey ] =(_now ,sorted_channels )
             # Лёгкая уборка протухших ключей (разные числа каналов со временем),
             # чтобы словарь не рос вечно.
-            for _k in [k for k ,v in api_guild_channels ._live_cache .items ()if _now -v [0 ] >30.0 ]:
+            for _k in [k for k ,v in api_guild_channels ._live_cache .items ()if _now -v [0 ] >60.0 ]:
                 api_guild_channels ._live_cache .pop (_k ,None )
         except Exception as _cce :
-            print (f'[WEB][WARN] channels live-cache: {_cce}')
+            _log .debug ('channels live-cache: %s',_cce )
         # Запоминаем живой список: при кратком офлайне/перезапуске бота
         # пикеры каналов не пустуют и имена не превращаются в голые ID.
         try :
@@ -818,9 +832,15 @@ def register(ctx):
             with open (f'data/panel_channels_cache_{guild_id}.json','w',encoding ='utf-8')as _cf :
                 json .dump ({'channels':sorted_channels },_cf ,ensure_ascii =False )
         except Exception as _ce :
-            print (f'[WEB][WARN] channels cache save: {_ce}')
-        print (f'[WEB] /channels guild={guild_id} returned {len(sorted_channels)} channels')
-        return jsonify (sorted_channels )
+            _log .debug ('channels cache save: %s',_ce )
+        _etag ='"ch%d-%d"' % (len (sorted_channels ),_ckey [1 ])
+        if _etag in request .headers .get ('If-None-Match',''):
+            from flask import Response as _Resp
+            return _Resp (status =304 ,headers ={'ETag':_etag ,'Cache-Control':'no-cache'})
+        from flask import Response as _Resp
+        return _Resp (json .dumps (sorted_channels ,ensure_ascii =False ),
+        mimetype ='application/json',
+        headers ={'ETag':_etag ,'Cache-Control':'no-cache'})
 
     def _channels_offline_cache (guild_id ):
         """Последний известный список каналов (имена + id) при офлайн-боте."""

@@ -211,11 +211,18 @@ def login_as(role):
 r = client.get('/mod-settings')
 check(r.status_code == 200, f'в демо /mod-settings открыта ({r.status_code})')
 body = r.get_data(as_text=True)
-check('Настройки модерации' in body and 'Лестница авто-наказаний' in body
+check('Настройки модерации' in body
       and 'Исключения временных мер' in body
       and '/ladder' in body and 'msSaveWl' in body
-      and 'msSaveRoles' in body and 'msSaveSteps' not in body,
-      'лестница ведёт на /ladder; на странице — исключения и роли со своими кнопками')
+      and 'msSaveSteps' not in body,
+      'лестница ведёт на /ladder; на странице — исключения (своя кнопка)')
+# Роли наказаний — ОДНО место: отдельная страница /role-settings, чтобы не
+# было дублей настроек. На /mod-settings их селектов и кнопки сохранения нет.
+check('msSaveRoles' not in body and 'msRoleMute' not in body
+      and '/role-settings' in body,
+      'роли наказаний не дублируются на /mod-settings — ушли на /role-settings')
+check('msPublishMenu' in body and 'Меню апелляций' in body,
+      'публикация меню апелляций осталась на /mod-settings (уникальная функция)')
 check('/channel-settings' in body and '/guardian' in body,
       'панель связей настроек модерации на месте')
 login_as('mod')

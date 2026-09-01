@@ -193,7 +193,9 @@ async function rsLoad() {
     if (!d.success) { toast(d.error || 'Не удалось загрузить настройки', false); return; }
     VIEW = d;
     ROLES = d.roles || [];
-    $('rsBotWarn').hidden = d.roles_count !== 0;
+    /* Офлайн показываем ТОЛЬКО если бот реально не поднят (d.bot_online=false),
+       а не по пустому списку: роли могут ещё догружаться при живом боте. */
+    $('rsBotWarn').hidden = d.bot_online !== false;
     $('rsDeletedWarn').hidden = !(d.unknown_roles > 0);
     var map = d.mapping || {};
     $('rsKinds').innerHTML = (d.kinds || []).map(function (k) {

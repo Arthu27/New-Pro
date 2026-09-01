@@ -18,6 +18,8 @@
 """
 import json
 import os
+import threading
+import time
 
 from web.routes._common import (
     _log, _fire_panel_notification,
@@ -28,6 +30,88 @@ from cogs import ladder as LD
 from cogs.warnings import load_warn_config
 from services import punish_roles as PR
 from services.channel_routes import get_route, set_route
+
+# Короткий in-memory кэш ролей/каналов сервера: эти списки дёргаются на
+# каждый опрос сразу несколькими страницами настроек (Роли наказаний,
+# Настройки модерации, Каналы, Доступ), а состав меняется редко. Кэш
+# убирает повторный обход гильдии и «долгую загрузку селектов»; сбрасывается
+# при изменении состава (число ролей/каналов изменилось) и по TTL.
+_GUILD_CACHE_LOCK = threading.Lock()
+_GUILD_LIST_CACHE = {}      # (gid, kind) -> (ts, payload, sig)
+_GUILD_LIST_TTL = 15.0      # сек: роли/каналы почти не меняются
+
+
+def bot_online():
+    """Факт: процесс бота поднят и видит гильдии. От списка ролей НЕ зависит
+    (раньше «Роли наказаний» считали офлайном по пустому/грузящемуся списку
+    ролей — отсюда ложное «Бот офлайн» при живом боте)."""
+    bot = _bot()
+    try:
+        return bool(bot and getattr(bot, 'guilds', None))
+    except Exception:
+        return False
+
+
+def _cached_guild_list(gid, kind):
+    """kind: 'roles' | 'channels' — список с кэшем по составу (число объектов)
+    и TTL. При изменении состава сигнатура меняется → мгновенный промах."""
+    bot = _bot()
+    if bot is None:
+        return []
+    try:
+        g = bot.get_guild(int(gid))
+    except (TypeError, ValueError):
+        return []
+    if g is None:
+        try:
+            g = next((x for x in bot.guilds if str(x.id) == str(gid)), None)
+        except Exception:
+            g = None
+    if g is None:
+        return []
+    if kind == 'roles':
+        sig = len(getattr(g, 'roles', []) or [])
+    else:
+        sig = len(getattr(g, 'channels', []) or [])
+    key = (int(gid), kind)
+    now = time.time()
+    with _GUILD_CACHE_LOCK:
+        hit = _GUILD_LIST_CACHE.get(key)
+        if hit and hit[2] == sig and (now - hit[0]) < _GUILD_LIST_TTL:
+            return hit[1]
+    payload = _build_guild_list(g, kind)
+    with _GUILD_CACHE_LOCK:
+        _GUILD_LIST_CACHE[key] = (now, payload, sig)
+        # лёгкая уборка протухшего
+        for k in [k for k, v in _GUILD_LIST_CACHE.items() if (now - v[0]) > 120.0]:
+            _GUILD_LIST_CACHE.pop(k, None)
+    return payload
+
+
+def invalidate_guild_lists(gid=None):
+    """Сбросить кэш ролей/каналов (после изменений на сервере)."""
+    with _GUILD_CACHE_LOCK:
+        if gid is None:
+            _GUILD_LIST_CACHE.clear()
+        else:
+            for k in [k for k in _GUILD_LIST_CACHE if k[0] == int(gid)]:
+                _GUILD_LIST_CACHE.pop(k, None)
+
+
+def _build_guild_list(g, kind):
+    if kind == 'roles':
+        out = []
+        for r in sorted(g.roles, key=lambda x: -x.position):
+            if r.is_default() or getattr(r, 'managed', False):
+                continue
+            out.append({'id': str(r.id), 'name': r.name,
+                        'color': '#%06x' % r.color.value if r.color else None})
+        return out
+    out = []
+    for ch in g.text_channels:
+        out.append({'id': str(ch.id), 'name': ch.name})
+    out.sort(key=lambda x: x['name'].lstrip('#').lower())
+    return out
 
 ACTIONS = ('mute', 'kick', 'ban')
 ACTION_LABELS = {'mute': 'Мут', 'kick': 'Кик', 'ban': 'Бан'}
@@ -167,41 +251,13 @@ def _bot():
 
 
 def guild_roles(gid):
-    """Роли сервера для селектов (без @everyone, управляемые бот хуже не трогаем)."""
-    bot = _bot()
-    if bot is None:
-        return []
-    try:
-        g = bot.get_guild(int(gid))
-    except (TypeError, ValueError):
-        return []
-    if g is None:
-        return []
-    out = []
-    for r in sorted(g.roles, key=lambda x: -x.position):
-        if r.is_default() or getattr(r, 'managed', False):
-            continue
-        out.append({'id': str(r.id), 'name': r.name,
-                    'color': '#%06x' % r.color.value if r.color else None})
-    return out
+    """Роли сервера для селектов (кэш 15с; без @everyone и managed)."""
+    return _cached_guild_list(gid, 'roles')
 
 
 def guild_channels(gid):
-    """Текстовые каналы сервера (для меню апелляций)."""
-    bot = _bot()
-    if bot is None:
-        return []
-    try:
-        g = bot.get_guild(int(gid))
-    except (TypeError, ValueError):
-        return []
-    if g is None:
-        return []
-    out = []
-    for ch in g.text_channels:
-        out.append({'id': str(ch.id), 'name': ch.name})
-    out.sort(key=lambda x: x['name'].lstrip('#').lower())
-    return out
+    """Текстовые каналы сервера (кэш 15с; для меню апелляций)."""
+    return _cached_guild_list(gid, 'channels')
 
 
 def roles_view(gid):

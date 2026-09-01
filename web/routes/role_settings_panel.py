@@ -19,7 +19,7 @@ from web.routes._common import jsonify
 
 from services import punish_roles as PR
 from web.routes._common import _fire_panel_notification, _log
-from web.routes.mod_settings import guild_roles
+from web.routes.mod_settings import guild_roles, bot_online
 
 _ID_RE = re.compile(r'^\d{1,22}$')
 
@@ -102,7 +102,9 @@ def settings_view(gid):
         'roles': available,
         'roles_count': len(available),
         'unknown_roles': unknown,
-        'bot_online': bool(available),
+        # Онлайн определяем по ФАКТУ бота, а не по списку ролей: при живом
+        # боте роли могли ещё не догрузиться — раньше это врало «Бот офлайн».
+        'bot_online': bot_online(),
     }
 
 
