@@ -39,16 +39,49 @@ BOT_LOG = os.path.join(BOT_DIR, "bot_output.log")
 EVENTS_LOG = os.path.join(BOT_DIR, "data", "auto_update_events.json")
 
 
+def _git_bin():
+    """Путь к исполняемому git или '' — если git не установлен/нет в PATH.
+
+    Раньше наличие git-режима определялось только папкой .git: скачанная с
+    GitHub ZIP-папка с распакованным .git (или машина без git в PATH) вела к
+    вызовам `git ...`, которые на Windows падали с [WinError 2]. Теперь
+    сперва проверяем сам бинарь — нет git, честно уходим в ZIP-режим.
+    """
+    import shutil
+    exe = shutil.which("git")
+    if exe:
+        return exe
+    # Типичные места установки git на Windows, если его нет в PATH
+    if os.name == "nt":
+        for cand in (
+            r"C:\Program Files\Git\cmd\git.exe",
+            r"C:\Program Files (x86)\Git\cmd\git.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Git\cmd\git.exe"),
+        ):
+            if cand and os.path.exists(cand):
+                return cand
+    return ""
+
+
+def _run_git(args, timeout=30):
+    """Запустить git, только если он реально есть. Иначе — None (без падения)."""
+    gbin = _git_bin()
+    if not gbin:
+        return None
+    try:
+        return subprocess.run([gbin] + list(args), cwd=BOT_DIR,
+                              capture_output=True, text=True, timeout=timeout)
+    except FileNotFoundError:
+        return None
+    except Exception:
+        return None
+
+
 def _detect_branch():
     """Рабочая ветка git-репозитория (или '' — не git/не получилось)."""
-    try:
-        r = subprocess.run(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=BOT_DIR, capture_output=True, text=True, timeout=10)
-        if r.returncode == 0:
-            return (r.stdout or "").strip()
-    except Exception:
-        pass
+    r = _run_git(["rev-parse", "--abbrev-ref", "HEAD"], timeout=10)
+    if r is not None and r.returncode == 0:
+        return (r.stdout or "").strip()
     return ""
 
 
@@ -148,16 +181,10 @@ def get_remote_commit():
 
 
 def get_local_commit():
-    """Local git repo'dan HEAD commit hash'ini al"""
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=BOT_DIR, capture_output=True, text=True, timeout=10
-        )
-        if result.returncode == 0:
-            return result.stdout.strip()
-    except Exception:
-        pass
+    """Local git repo'dan HEAD commit hash'ini al (None — git недоступен)."""
+    result = _run_git(["rev-parse", "HEAD"], timeout=10)
+    if result is not None and result.returncode == 0:
+        return result.stdout.strip()
     return None
 
 
@@ -345,24 +372,26 @@ def start_bot():
 
 
 def git_pull():
-    """Обновить репозиторий через git pull"""
+    """Обновить репозиторий через git pull (если git реально доступен)."""
     _branch = _source()[1]
+    if not _git_bin():
+        лог("[AUTO-UPDATE] git недоступен в PATH — обновляюсь через ZIP-архив")
+        download_and_extract()
+        return
     лог(f"[AUTO-UPDATE] Выполняется git pull ({_branch})...")
     try:
-        result = subprocess.run(
-            ["git", "pull", "origin", _branch],
-            cwd=BOT_DIR,
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
+        result = _run_git(["pull", "origin", _branch], timeout=60)
+        if result is None:
+            лог("[AUTO-UPDATE] git pull не запустился — обновляюсь через ZIP")
+            download_and_extract()
+            return
         лог(f"[AUTO-UPDATE] git pull stdout: {result.stdout.strip()}")
         if result.returncode != 0:
             лог(f"[AUTO-UPDATE] git pull stderr: {result.stderr.strip()}")
             # Conflict varsa force reset yap
             лог("[AUTO-UPDATE] Обнаружен конфликт, выполняется force reset...")
-            subprocess.run(["git", "fetch", "origin"], cwd=BOT_DIR, capture_output=True, timeout=30)
-            subprocess.run(["git", "reset", "--hard", f"origin/{_branch}"], cwd=BOT_DIR, capture_output=True, timeout=30)
+            _run_git(["fetch", "origin"], timeout=30)
+            _run_git(["reset", "--hard", f"origin/{_branch}"], timeout=30)
             лог(f"[AUTO-UPDATE] Force reset на origin/{_branch} завершено")
         else:
             лог("[AUTO-UPDATE] Файлы обновлены")
@@ -370,14 +399,13 @@ def git_pull():
         # ТОЛЬКО СВЕЖЕЕ: ничего лишнего помимо дерева origin/main —
         # убираем неотслеживаемые хвосты (бывшие модули, временные файлы).
         # Сохраняем: данные, логи, секреты, окружение, ручной контент.
-        clean_res = subprocess.run(
-            ["git", "clean", "-fd",
+        clean_res = _run_git(
+            ["clean", "-fd",
              "-e", "data/", "-e", "logs/", "-e", ".env", "-e", ".env.local",
              "-e", ".venv", "-e", "venv", "-e", "env", "-e", "node_modules",
              "-e", "bot_output.log", "-e", "last_commit.txt",
-             "-e", "UPDATE.bat", "-e", "config-local.py"],
-            cwd=BOT_DIR, capture_output=True, text=True, timeout=60)
-        cleaned = [x.strip() for x in clean_res.stdout.splitlines()
+             "-e", "UPDATE.bat", "-e", "config-local.py"], timeout=60)
+        cleaned = [x.strip() for x in (clean_res.stdout.splitlines() if clean_res else [])
                    if x.strip().startswith(('Removing', 'Удаляется', 'Удалён'))]
         if cleaned:
             лог(f"[AUTO-UPDATE] убрано устаревшего: {len(cleaned)} шт — только самое свежее")
@@ -472,12 +500,15 @@ def update_bot(reason="new_commit", remote_sha=None, local_sha=None):
     лог("[AUTO-UPDATE] === ОБНОВЛЕНИЕ НАЧАТО ===")
     try:
         kill_bot()
-        # Сначала пробуем git pull; если это не git-репозиторий — скачиваем ZIP
+        # git pull — только если есть и репозиторий .git, и сам бинарь git.
+        # Иначе (нет .git или git не установлен/нет в PATH) — ZIP-архив, это
+        # убирает [WinError 2] на машинах без git.
         git_dir = os.path.join(BOT_DIR, ".git")
-        if os.path.isdir(git_dir):
+        if os.path.isdir(git_dir) and _git_bin():
             git_pull()
         else:
-            лог("[AUTO-UPDATE] .git не найден — обновляемся из ZIP-архива...")
+            лог("[AUTO-UPDATE] git недоступен (.git нет или git не в PATH) — "
+                "обновляемся из ZIP-архива...")
             download_and_extract()
             note_zip_commit(remote_sha)   # иначе на следующем круге снова «новое»
         time.sleep(2)
@@ -494,14 +525,15 @@ def update_bot(reason="new_commit", remote_sha=None, local_sha=None):
 
 
 def _tree_is_clean():
-    """git status --porcelain пуст — только тогда обновлять (reset безопасен)."""
-    try:
-        r = subprocess.run(
-            ["git", "status", "--porcelain"],
-            cwd=BOT_DIR, capture_output=True, text=True, timeout=20)
-        return r.returncode == 0 and not (r.stdout or "").strip()
-    except Exception:
-        return False
+    """git status --porcelain пуст — только тогда обновлять (reset безопасен).
+
+    Если git недоступен (нет бинаря) — возвращаем True, т.к. в ZIP-режиме
+    reset --hard не используется вовсе (обновление идёт распаковкой архива).
+    """
+    r = _run_git(["status", "--porcelain"], timeout=20)
+    if r is None:
+        return True
+    return r.returncode == 0 and not (r.stdout or "").strip()
 
 
 def main():
@@ -531,9 +563,18 @@ def main():
             return
         time.sleep(5)
 
-    _is_git = os.path.isdir(os.path.join(BOT_DIR, ".git"))
+    # git-режим — только если есть И папка .git, И сам бинарь git в PATH.
+    # Скачанная ZIP-папка с распакованным .git на машине без git больше не
+    # роняет цикл с [WinError 2] — честно уходим в ZIP-режим.
+    _has_git_dir = os.path.isdir(os.path.join(BOT_DIR, ".git"))
+    _has_git_bin = bool(_git_bin())
+    _is_git = _has_git_dir and _has_git_bin
+    if _has_git_dir and not _has_git_bin:
+        лог("[AUTO-UPDATE] .git есть, но git не установлен/нет в PATH — "
+            "перехожу на ZIP-режим (обновление распаковкой архива, без git)")
+        log_event("zip_mode_fallback", reason="git_binary_missing")
     if not _is_git:
-        лог("[AUTO-UPDATE] .git нет — ZIP-режим: версию смотрю в GitHub API "
+        лог("[AUTO-UPDATE] ZIP-режим: версию смотрю в GitHub API "
             f"и маркере data/.update_sha (опрос раз в {ZIP_API_POLL_SEC // 60} мин)")
         log_event("zip_mode", poll_sec=ZIP_API_POLL_SEC)
     _last_api_check = 0.0
@@ -543,13 +584,9 @@ def main():
             _dyn_branch = _source()[1]
             remote_hash = None
             if _is_git:
-                subprocess.run(["git", "fetch", "origin"], cwd=BOT_DIR,
-                               capture_output=True, timeout=30)
-                result = subprocess.run(
-                    ["git", "rev-parse", f"origin/{_dyn_branch}"],
-                    cwd=BOT_DIR, capture_output=True, text=True, timeout=10
-                )
-                remote_hash = result.stdout.strip() if result.returncode == 0 else None
+                _run_git(["fetch", "origin"], timeout=30)
+                result = _run_git(["rev-parse", f"origin/{_dyn_branch}"], timeout=10)
+                remote_hash = result.stdout.strip() if (result is not None and result.returncode == 0) else None
             else:
                 # ZIP-режим: git не работает — спрашиваем GitHub API.
                 # Реже, чем git-режим: анонимный лимит API — 60 запросов/час.

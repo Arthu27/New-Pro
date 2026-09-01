@@ -50,6 +50,36 @@ def _is_disabled(name):
         return False
 
 
+# ── Жёсткий белый список команд, публикуемых в Discord ──────────────────
+# Заказ владельца: в меню «/» должно быть РОВНО шесть боевых команд —
+# никаких настроечных/служебных/setup-команд (вкл/выкл/канал/порог/module/
+# proof и пр.), даже для админа. Всё остальное управление — через /modpanel
+# и веб-панель. Команды из этого списка живут в Discord; всё прочее
+# снимается с дерева перед sync (и старые лишние копии затираются), но в
+# локальном дереве остаётся — панель и внутренние вызовы видят их.
+PUBLIC_COMMAND_WHITELIST = frozenset({
+    'modpanel',      # панель модерации — все действия отсюда
+    'апелляция',     # подать апелляцию (глобально, работает и в ЛС)
+    'update',        # обслуживание (только владелец)
+    'afk',           # отойти/вернуться
+    'report',        # жалоба на участника
+    'my-violations', # свои наказания
+})
+
+
+def _is_public(c):
+    """Публиковать ли команду в Discord (и имя, и контекстные меню)."""
+    try:
+        name = getattr(c, 'name', '') or ''
+    except Exception:
+        name = ''
+    return normalize_cmd(name) in {normalize_cmd(x) for x in PUBLIC_COMMAND_WHITELIST}
+
+
+def normalize_cmd(name):
+    return str(name or '').strip().lower()
+
+
 # ── Таймауты и идемпотентность синка ───────────────────────────────────
 # Инцидент 31.08: стартовый синк зависал дольше 180с и сдавался, меню
 # оставалось старым. Причины: (1) каждый full_sync делал PUT-перезапись
@@ -208,11 +238,38 @@ async def sync_tree(bot, guild=None):
     except Exception as e:
         _log.debug('get_commands(): %s', e)
         cmds = []
+    def _cmd_type(c):
+        # Явный тип для remove_command: у chat-команд в дереве c.type = None,
+        # а remove_command без type ищет только chat_input — контекстные меню
+        # (user/message) иначе не снимаются. discord.py матчит по имени enum
+        # ('chat_input'/'user'/'message'), поэтому возвращаем именно член
+        # AppCommandType (принимаем int, строку-имя или уже готовый enum).
+        t = getattr(c, 'type', None)
+        if isinstance(t, AppCommandType):
+            return t
+        if t in (None, '', 'chat', 'chat_input', 1):
+            return AppCommandType.chat_input
+        if t in ('user', 2):
+            return AppCommandType.user
+        if t in ('message', 3):
+            return AppCommandType.message
+        try:
+            return AppCommandType(t)
+        except (ValueError, TypeError):
+            try:
+                return AppCommandType[str(t)]
+            except Exception:
+                return AppCommandType.chat_input
+
     removed = []
     for c in cmds:
-        if _is_disabled(getattr(c, 'name', '')):
+        # Снимаем из публикации: (а) выключенные владельцем, либо
+        # (б) команды НЕ из белого списка — в Discord должны жить только
+        # шесть боевых команд (modpanel, апелляция, update, afk, report,
+        # my-violations); все служебные/настроечные команды не публикуются.
+        if _is_disabled(getattr(c, 'name', '')) or not _is_public(c):
             try:
-                tree.remove_command(c.name, guild=ctx)
+                tree.remove_command(c.name, guild=ctx, type=_cmd_type(c))
                 removed.append(c)
             except Exception as e:
                 _log.debug('remove_command(%s): %s', c.name, e)
@@ -249,7 +306,7 @@ async def sync_tree(bot, guild=None):
             except Exception as e:
                 _log.debug('add_command(%s) назад: %s', c.name, e)
     if removed:
-        _log.info('sync: скрыто выключенных команд — %d (%s)',
+        _log.info('sync: не публикуем (не в белом списке/выключены) — %d команд (%s)',
                   len(removed), ', '.join(c.name for c in removed))
     return synced
 

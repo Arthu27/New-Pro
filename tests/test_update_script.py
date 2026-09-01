@@ -86,10 +86,16 @@ import re as _re
 print('== Только самое свежее: git clean после pull ==')
 import os as _os
 _src = open(_os.path.join(ROOT, 'auto_update.py'), encoding='utf-8').read()
-check(_re.search(r'"git",\s*"clean",\s*"-fd"', _src) is not None,
-      'после обновления каталог приводится к свежей ветке (git clean -fd)')
+# git теперь зовётся через безопасный _run_git([...]) — без падения на
+# машинах без git (WinError 2): нет бинаря → ZIP-режим.
+check('"clean", "-fd"' in _src and '_run_git(' in _src,
+      'после обновления каталог приводится к свежей ветке (git clean -fd через _run_git)')
 check('-e", "data/"' in _src and '-e", ".env"' in _src,
       'данные и секреты в exclude-списке уборки')
+# Защита от [WinError 2]: git-режим только если бинарь реально доступен.
+check('def _git_bin' in _src and 'shutil.which' in _src and 'def _run_git' in _src,
+      'git вызывается только если найден (shutil.which), иначе ZIP-обновление')
+check('download_and_extract' in _src, 'при отсутствии git обновление идёт ZIP-архивом')
 check('только самое свежее' in _src or 'СВЕЖЕЕ' in _src,
       'логирование результатов чистки понятным языком')
 

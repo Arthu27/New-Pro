@@ -142,10 +142,13 @@ def build_bot(cold_cache=False):
     # глобальные (коги без guilds: appeals/diagnostics)
     tree.add_command(mk('апелляция', keep_global=True))
     tree.add_command(mk('update', keep_global=True))
+    # Контекстное меню НЕ в белом списке боевых команд — в Discord не публикуется.
     tree.add_command(ContextMenu(name='Варн за сообщение', callback=_msg_cb,
                                  type=AppCommandType.message))
-    # гильдовые (коги с guilds=Config.guild_objects())
-    for n in ('modpanel', 'play', 'afk', 'afk-remove', 'ticket-panel'):
+    # гильдовые (коги с guilds=Config.guild_objects()):
+    #   боевые (modpanel, afk, report) — публикуются;
+    #   служебные/вырезанные (play, afk-remove, ticket-panel) — снимаются с публикации.
+    for n in ('modpanel', 'play', 'afk', 'report', 'afk-remove', 'ticket-panel'):
         tree.add_command(mk(n), guild=Object(777))
     return bot
 
@@ -162,15 +165,27 @@ async def main():
     await SF.full_sync(bot)                    # кнопка «Синхронизировать»
     await asyncio.gather(SF.full_sync(bot), SF.full_sync(bot))   # двойной клик
     glob, guild = rec.last('GLOBAL'), rec.last('GUILD', 777)
-    check(glob == ['апелляция', 'update'],
-          f'глобальный список = только keep_global ({glob})')
+    # Глобально живут keep_global команды из белого списка (работают в ЛС):
+    # апелляция и update. Остальное — только гильдовое.
+    check(set(glob) == {'апелляция', 'update'},
+          f'глобальный список = keep_global из белого списка ({glob})')
+    check(set(glob) <= set(SF.PUBLIC_COMMAND_WHITELIST),
+          'глобально нет команд вне белого списка')
     check(set(glob) & set(guild) == set(),
           f'пересечение глобаль∩гильдия пустое — дублей нет ({sorted(set(glob) & set(guild))})')
-    check('Варн за сообщение' in guild and 'Варн за сообщение' not in glob,
-          'контекстное меню живёт ТОЛЬКО в гильдии (не в двух местах)')
+    # Белый список: в Discord публикуются ТОЛЬКО шесть боевых команд.
+    # Служебные/вырезанные (play, afk-remove, ticket-panel) и контекстные
+    # меню в боевом составе не публикуются вовсе.
+    _wl = set(SF.PUBLIC_COMMAND_WHITELIST)
+    check(set(guild) <= _wl,
+          f'в гильдии только команды белого списка, лишних нет ({sorted(set(guild) - _wl)})')
+    check({'modpanel', 'afk', 'report'} <= set(guild),
+          f'боевые гильдовые команды на месте ({guild})')
+    for _hidden in ('play', 'afk-remove', 'ticket-panel', 'Варн за сообщение'):
+        check(_hidden not in guild and _hidden not in glob,
+              f'«{_hidden}» не публикуется в Discord (не в белом списке)')
     check(rec.last('GUILD', 888) == [],
           'чужая гильдия 888 очищена от устаревших копий')
-    check('modpanel' in guild and 'play' in guild, 'гильдовые команды на месте')
 
     # ═══ B. Guild-синк падает (rate limit) — откат НЕ плодит дубли ═════════
     print('== B. Guild-синк упал (429) — откат без дублей ==')
@@ -215,16 +230,21 @@ async def main():
     bot4 = build_bot()
     rec4 = bot4.http
     await SF.full_sync(bot4)
-    CSW.set_disabled('play', True)
+    # Тумблер проверяем на БОЕВОЙ команде из белого списка (/report):
+    # небоевые вроде play и так не публикуются, их выключение не показательно.
+    CSW.set_disabled('report', True)
     await SF.full_sync(bot4)
     guild_off = rec4.last('GUILD', 777)
-    check('play' not in guild_off, '/play исчез из гильдии после выключения')
+    check('report' not in guild_off, '/report исчез из гильдии после выключения')
     check(set(rec4.last('GLOBAL')) & set(guild_off) == set(), 'дублей нет')
-    CSW.set_disabled('play', False)
+    CSW.set_disabled('report', False)
     await SF.full_sync(bot4)
     guild_on = rec4.last('GUILD', 777)
-    check('play' in guild_on, '/play вернулся после включения')
+    check('report' in guild_on, '/report вернулся после включения')
     check(set(rec4.last('GLOBAL')) & set(guild_on) == set(), 'и снова ноль дублей')
+    # небоевые команды не публикуются ни при каком положении тумблера
+    check('play' not in guild_on and 'ticket-panel' not in guild_on,
+          'служебные/вырезанные команды не попадают в Discord (белый список)')
 
     # ═══ F. Разовый сбой — ретрай доводит команды до сервера ═══════════════
     print('== F. Сеть моргнула один раз — ретрай спасает синк ==')
