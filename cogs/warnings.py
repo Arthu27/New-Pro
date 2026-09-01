@@ -322,6 +322,33 @@ class warnings(commands.Cog):
                 until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
                 await member.timeout(until, reason=f'Авто-наказание: {warn_count} предупреждений')
                 return f'Мут {minutes} мин'
+            elif action == 'vmute':
+                # Войс-мут — ОТДЕЛЬНО от чат-мута: глушим ТОЛЬКО микрофон.
+                # Чат-мут/таймаут не трогаем (и не снимаем — это другое ограничение).
+                vrid = PR.role_for(guild.id, 'vmute')
+                vrole = guild.get_role(vrid) if vrid else None
+                if vrole is not None:
+                    import time as _time
+                    await member.add_roles(vrole, reason=f'Авто: {warn_count} предупреждений (войс-мут)')
+                    PR.add_temp(guild.id, member.id, vrole.id,
+                                _time.time() + max(60, minutes * 60))
+                    # роль войс-мута сама глушит микрофон в голосовом канале
+                    try:
+                        voice = getattr(member, 'voice', None)
+                        if voice is not None and getattr(voice, 'channel', None) is not None \
+                                and not getattr(voice, 'mute', False):
+                            await member.edit(mute=True, reason=f'Авто войс-мут: {warn_count} предупреждений')
+                    except Exception as _ve:
+                        log.debug('авто войс-мут: server-mute: %s', _ve)
+                    return f'Войс-мут: роль «{vrole.name}» {minutes} мин'
+                # роли нет — нативный server-mute (работает, только если участник в голосе)
+                voice = getattr(member, 'voice', None)
+                if voice is not None and getattr(voice, 'channel', None) is not None:
+                    await member.edit(mute=True, reason=f'Авто войс-мут: {warn_count} предупреждений')
+                    return f'Войс-мут {minutes} мин'
+                # вне голоса нативный server-mute поставить нельзя — мягкий фоллбэк:
+                # ставим роль войс-мута не выйдет (её нет), сообщаем модерации
+                return 'Войс-мут: участник не в голосовом канале и роль войс-мута не назначена'
             elif action == 'kick':
                 await member.kick(reason=f'Авто-наказание: {warn_count} предупреждений')
                 return 'Кик'

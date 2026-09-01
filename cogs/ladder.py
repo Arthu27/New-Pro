@@ -32,7 +32,8 @@ def _fmt_step(step):
     act = step.get('action', 'mute')
     d = int(step.get('duration', 0) or 0)
     unit = step.get('unit', 'minute')
-    names = {'mute': 'мут', 'timeout': 'мут', 'kick': 'кик', 'ban': 'бан'}
+    names = {'mute': 'мут чата', 'timeout': 'мут чата', 'vmute': 'войс-мут',
+             'kick': 'кик', 'ban': 'бан'}
     a = names.get(act, act)
     if act == 'ban' and not d:
         return 'бан навсегда'
@@ -84,11 +85,12 @@ class Ladder(commands.Cog):
 
     @app_commands.command(name='ladder-add', description='Добавить ступень лестницы: через N варнов — действие')
     @app_commands.describe(count='Сколько варнов нужно для срабатывания',
-                           action='Действие: мут / кик / бан',
-                           duration='Длительность (для мута); 0 — бан навсегда',
+                           action='Действие: мут чата / войс-мут / кик / бан',
+                           duration='Длительность (для мута/войс-мута); 0 — бан навсегда',
                            unit='Единица времени')
     @app_commands.choices(action=[
-        app_commands.Choice(name='Мут', value='mute'),
+        app_commands.Choice(name='Мут чата', value='mute'),
+        app_commands.Choice(name='Войс-мут', value='vmute'),
         app_commands.Choice(name='Кик', value='kick'),
         app_commands.Choice(name='Бан', value='ban'),
     ], unit=[

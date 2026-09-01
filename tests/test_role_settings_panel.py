@@ -194,11 +194,13 @@ tpl = open(os.path.join(ROOT, 'web', 'templates', 'role_settings.html'),
 check('type="text"' not in tpl,
       'в шаблоне нет полей ручного текстового ввода — роли только селектами')
 import re as _re
-_no_steps = _re.sub(r'<input[^>]*rs(?:Step(?:Count|Dur)|LvlCount)[^>]*>', '', tpl, flags=_re.S)
+_no_steps = _re.sub(r'<input[^>]*rsLvlCount[^>]*>', '', tpl, flags=_re.S)
 check('type="number"' not in _no_steps,
-      'числовые поля — только ступени/уровень warn (не ID ролей)')
-check('rsStepAction' in tpl and 'warn-step' in tpl,
-      'настройки warn (авто-наказания по предупреждениям) на этой же странице')
+      'числовые поля — только номер уровня warn (не ID ролей)')
+# Действия за варны (мут/войс-мут/кик/бан) — на /ladder, здесь дубля НЕТ.
+check('rsStepAction' not in tpl and 'warn-step' not in tpl and 'rsStepAdd' not in tpl,
+      'ступени действий убраны со страницы ролей (единое место — /ladder)')
+check('href="/ladder"' in tpl, 'со страницы ролей есть ссылка на лестницу действий')
 check('rsLvlAdd' in tpl and 'warn-level' in tpl and 'data-lvl-del' in tpl,
       'уровни варнов добавляются и удаляются со страницы')
 check('rsInfo' in tpl, 'секция «каждое наказание — своя карточка» на месте')

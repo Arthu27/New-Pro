@@ -267,7 +267,7 @@ check(tw.get(str(GID)) == ['823456789012345678'],
 cfg2 = client.get(f'/api/guild/{GID}/mod-settings').get_json()['cfg']
 labels = [s['label'] for s in cfg2['steps']]
 check(len(cfg2['steps']) == 3
-      and labels == ['мут на 15 мин', 'кик', 'бан на 1 дн'],
+      and labels == ['мут чата на 15 мин', 'кик', 'бан на 1 дн'],
       f'подписи ступеней — как в команде бота ({labels})')
 from cogs import ladder as LD  # noqa: E402
 check(cfg2['steps'][0]['label'] == LD._fmt_step(wc['steps'][0]),

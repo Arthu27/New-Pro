@@ -797,16 +797,31 @@ code, .mono, .num, kbd { font-family: var(--mono); }
    дублирующий тайтл-бар не нужен. */
 .main-content:has(> .page-head) .navbar { display: none; }
 .page-head { margin-bottom: 20px; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+/* Базовый видимый цвет: если градиентный background-clip ниже не сработает
+   (старый движок, сломанная переменная темы и т.п.) — заголовок всё равно
+   читается сплошным цветом, а не «не виден, пока не выделишь мышью». */
+.page-head h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text, #16181d);
+  -webkit-text-fill-color: var(--text, #16181d);
+}
 @supports ((-webkit-background-clip: text) or (background-clip: text)) {
   .page-head h1 {
-    font-family: var(--font-display);
-    font-weight: 700;
-    letter-spacing: -0.015em;
-    background: linear-gradient(105deg, var(--text) 20%, var(--text) 38%, color-mix(in srgb, var(--ac) 82%, var(--text)) 50%, var(--text) 62%, var(--text) 90%);
+    /* Все стопы градиента НЕпрозрачные (var(--ac) подмешан к var(--text) с
+       запасным сплошным цветом) — заголовок виден всегда, даже если тема/
+       переменная не подгрузились: раньше в редком случае пустого --ac текст
+       становился прозрачным «до выделения мышью». */
+    background: linear-gradient(105deg,
+      var(--text, #16181d) 0%, var(--text, #16181d) 42%,
+      color-mix(in srgb, var(--ac, #5b8cff) 78%, var(--text, #16181d)) 50%,
+      var(--text, #16181d) 58%, var(--text, #16181d) 100%);
     background-size: 220% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    -webkit-text-fill-color: transparent;
   }
   .page-head h1:hover { animation: titleSheen 7s linear infinite; }
 }

@@ -46,12 +46,17 @@
         <div class="form-row">
           <label class="form-group"><span class="form-label">Варнов</span><input class="form-input" id="ldCount" type="number" min="1" value="3"></label>
           <label class="form-group"><span class="form-label">Действие</span>
-            <select class="form-input" id="ldAction"><option value="mute">Мьют</option><option value="kick">Кик</option><option value="ban">Бан</option></select></label>
+            <select class="form-input" id="ldAction">
+              <option value="mute">Мут чата (текст)</option>
+              <option value="vmute">Войс-мут (только микрофон)</option>
+              <option value="kick">Кик</option>
+              <option value="ban">Бан / изоляция</option>
+            </select></label>
         </div>
         <div class="form-row">
           <label class="form-group"><span class="form-label">Длительность</span><input class="form-input" id="ldDuration" type="number" min="0" value="0"></label>
           <label class="form-group"><span class="form-label">Единица</span>
-            <select class="form-input" id="ldUnit"><option value="m">минут</option><option value="h">часов</option><option value="d">дней</option></select></label>
+            <select class="form-input" id="ldUnit"><option value="minute">минут</option><option value="hour">часов</option><option value="day">дней</option></select></label>
         </div>
         <button type="button" class="btn btn-primary" id="ldAdd"><i class="fas fa-plus"></i> Добавить ступень</button>
         <div class="hint" id="ldAddMsg" style="margin-top:8px"></div>

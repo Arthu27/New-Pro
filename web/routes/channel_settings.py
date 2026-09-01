@@ -59,16 +59,33 @@ def _appeals_set(gid, cid):
     return True
 
 
+# Канал приветствий: бот (cogs/welcome_cog._panel_section) и редактор
+# приветствий (/welcome-editor → /welcome-settings) читают и пишут ОДИН файл
+# data/welcome_<gid>.json, секция 'welcome' → 'channel_id'. Раньше адаптер
+# «Каналы и маршруты» писал в другое хранилище (welcome_pro), из-за чего
+# выбор канала тут не совпадал с приветствиями — теперь пишем в тот же файл.
+def _welcome_path(gid):
+    return f'data/welcome_{gid}.json'
+
+
 def _welcome_get(gid):
-    st = GuildData('welcome_pro').get(gid, 'settings', {}) or {}
-    return int(st.get('channel_id') or 0)
+    try:
+        data = _json_load(_welcome_path(gid))
+        sec = data.get('welcome') if isinstance(data, dict) else None
+        return int((sec or {}).get('channel_id') or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _welcome_set(gid, cid):
-    db = GuildData('welcome_pro')
-    st = db.get(gid, 'settings', {}) or {}
-    st['channel_id'] = int(cid)
-    db.set(gid, 'settings', st)
+    path = _welcome_path(gid)
+    data = _json_load(path)
+    sec = data.get('welcome')
+    if not isinstance(sec, dict):
+        sec = {}
+    sec['channel_id'] = int(cid) or 0
+    data['welcome'] = sec
+    _json_save(path, data)
     return True
 
 

@@ -71,7 +71,8 @@ COMMAND_CATEGORIES = {
 ACTIONS = {
     "ban": "Бан (апелляция)",
     "kick": "Кик",
-    "mute": "Мут",
+    "mute": "Мут чата",
+    "vmute": "Войс-мут",
     "timeout": "Таймаут",
     "warn": "Варн",
     "purge": "Очистка сообщений",

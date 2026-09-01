@@ -42,26 +42,16 @@
 </div>
 
 <div class="rs-panel">
-  <h3><i class="fas fa-triangle-exclamation"></i> Настройки предупреждений (авто-наказания)</h3>
-  <div class="rs-sub">Накопил N предупреждений — бот сам выдаёт «мут / кик / бан» на выбранный срок.
-    Ступеней может быть несколько, действует последняя пройденная. Данные общие со страницей
-    «Лестница наказаний» — там эта же лестница рисуется картинкой.</div>
-  <div id="rsStepsList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
-  <div class="rs-step-add">
-    <input type="number" id="rsStepCount" min="1" max="100" placeholder="варнов" aria-label="Количество предупреждений"
-           style="width:92px">
-    <select id="rsStepAction" aria-label="Наказание за порог">
-      <option value="mute">Мут</option><option value="kick">Кик</option><option value="ban">Бан</option>
-    </select>
-    <input type="number" id="rsStepDur" min="0" max="10000" placeholder="срок" aria-label="Срок"
-           style="width:90px">
-    <select id="rsStepUnit" aria-label="Единицы срока">
-      <option value="minute">мин</option><option value="hour">час</option><option value="day">дн</option>
-    </select>
-    <button type="button" class="btn btn-sm" id="rsStepAdd"><i class="fas fa-plus"></i> Ступень</button>
-  </div>
-  <div class="rs-sub" style="margin:8px 0 0">Мут и бан ролью («Роли за наказания» выше) выигрывают у
-    нативного таймаута — они и будут применены, если назначены. Кик — без срока.</div>
+  <h3><i class="fas fa-stairs"></i> Действия за варны (мут / войс-мут / кик / бан)</h3>
+  <div class="rs-sub">Что бот <b>делает</b> при N предупреждениях — настраивается <b>в одном месте</b>,
+    на странице «Лестница наказаний» (там же — наглядная картинка-лестница и проверка «что будет участнику»).
+    Здесь дублирующего выбора нет, чтобы расхождений не возникало.</div>
+  <a class="btn btn-primary" href="/ladder" style="margin-top:10px;display:inline-flex;align-items:center;gap:8px">
+    <i class="fas fa-stairs"></i> Открыть лестницу наказаний
+  </a>
+  <div class="rs-sub" style="margin:10px 0 0">Мут чата и бан ролью (карточки выше) выигрывают у
+    нативного таймаута/бана — применятся они, если назначены. Войс-мут — отдельное действие
+    (глушит только микрофон), выбирается в лестнице отдельно от чат-мута.</div>
 </div>
 
 <div class="rs-panel">
@@ -81,7 +71,7 @@
 
 <div class="rs-savebar">
   <button type="button" class="btn btn-primary" id="rsSave"><i class="fas fa-save"></i> Сохранить всё</button>
-  <span class="rs-save-note">Применяется к обоим разделам разом. Значения общие с блоком «Роли наказаний» в настройках модерации.</span>
+  <span class="rs-save-note">Сохраняются только роли (виды наказаний и уровни варнов). Что бот делает при N варнах — на странице «Лестница наказаний».</span>
 </div>
 
 <style>
@@ -213,7 +203,6 @@ async function rsLoad() {
     lvlInp.max = d.warn_level_max || 100;
     $('rsLvlRange').textContent = 'Любой уровень от ' + (d.warn_level_min || 1) +
       ' до ' + (d.warn_level_max || 100) + ' предупреждений.';
-    rsRenderSteps(d.warn_steps || []);
     document.querySelectorAll('#rsKinds select, #rsLevels select').forEach(function (sel) {
       sel.addEventListener('change', refreshPills);
     });
@@ -249,54 +238,6 @@ async function rsSave() {
     btn.disabled = false;
   }
 }
-
-var rsSteps = [];
-var STEP_ACTION = { 'mute': 'Мут', 'kick': 'Кик', 'ban': 'Бан' };
-var STEP_UNIT = { 'minute': 'мин', 'hour': 'ч', 'day': 'д' };
-
-function rsRenderSteps(steps) {
-  rsSteps = steps.slice().sort(function (a, b) { return (a.count || 0) - (b.count || 0); });
-  if (!rsSteps.length) {
-    $('rsStepsList').innerHTML = '<div class="rs-sub" style="margin:0">Ступеней нет — бот только '
-      + 'записывает варны, авто-мер не выдаёт. Добавьте хотя бы «3 → мут 30 мин».</div>';
-    return;
-  }
-  $('rsStepsList').innerHTML = rsSteps.map(function (s) {
-    var lbl = STEP_ACTION[s.action] || s.action;
-    if (s.action !== 'kick' && s.duration) lbl += ' ' + s.duration + ' ' + (STEP_UNIT[s.unit] || s.unit);
-    return '<div class="rs-step"><span class="rs-lvl">' + esc(s.count) + '</span>' +
-      '<b>' + esc(lbl) + '</b><span>с {n} варна'.replace('{n}', esc(s.count)) + '</span>' +
-      '<button type="button" class="btn btn-sm btn-ghost" data-step-del="' + esc(s.count) + '" aria-label="Убрать ступень"><i class="fas fa-trash"></i></button></div>';
-  }).join('');
-}
-
-$('rsStepAdd').addEventListener('click', async function () {
-  var count = parseInt($('rsStepCount').value, 10) || 0;
-  var action = $('rsStepAction').value;
-  var dur = parseInt($('rsStepDur').value, 10);
-  if (isNaN(dur)) dur = action === 'kick' ? 0 : 10;
-  if (!count) { toast('Укажите, с какого количества варнов — например 3', false); return; }
-  try {
-    var d = await fetch('/api/guild/' + GUILD_ID + '/role-settings/warn-step', {
-      method: 'POST', credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ count: count, action: action, duration: dur, unit: $('rsStepUnit').value })
-    }).then(function (r) { return r.json(); });
-    if (d.success) { toast(d.message || 'Ступень сохранена', true); rsRenderSteps(d.warn_steps || []); }
-    else toast(d.error || 'Ошибка', false);
-  } catch (e) { toast('Сеть моргнула', false); }
-});
-
-document.addEventListener('click', async function (e) {
-  var del = e.target.closest('[data-step-del]');
-  if (!del) return;
-  try {
-    var d = await fetch('/api/guild/' + GUILD_ID + '/role-settings/warn-step/' + del.dataset.stepDel,
-      { method: 'DELETE', credentials: 'same-origin' }).then(function (r) { return r.json(); });
-    if (d.success) { toast(d.message || 'Ступень убрана', true); rsRenderSteps(d.warn_steps || []); }
-    else toast(d.error || 'Ошибка', false);
-  } catch (e2) { toast('Сеть моргнула', false); }
-});
 
 /* ── уровни варнов: добавляем и удаляем сами ─────────────────────── */
 $('rsLvlAdd').addEventListener('click', async function () {
