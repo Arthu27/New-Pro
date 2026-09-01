@@ -242,7 +242,8 @@ class Moderation (commands .Cog ):
         # только строка-подсказка и само выпадающее меню, без простыней.
         embed =discord .Embed (
         title ="🛡 Панель модерации",
-        description ="Выберите действие в меню ниже — укажете цель, срок и причину.",
+        description ="1) Выберите участника мышкой в первом меню (или впишете вручную), "
+                      "2) выберите действие во втором — цель, срок и причину можно поправить.",
         color =0x5865F2 )
         if interaction .guild .icon :
             embed .set_footer (text =interaction .guild .name )
@@ -1164,7 +1165,7 @@ def actions_for_member(guild, member):
 class ModActionSelect(discord.ui.Select):
     """Выбор действия модерации — только то, что доступно этому модератору."""
 
-    def __init__(self, cog, member=None, allowed=None):
+    def __init__(self, cog, member=None, allowed=None, target_select=None):
         acts = allowed if allowed is not None else MODPANEL_ACTIONS
         options = [discord.SelectOption(
                        label=label, value=value, description=desc,
@@ -1177,13 +1178,28 @@ class ModActionSelect(discord.ui.Select):
             max_values=1,
         )
         self.cog = cog
+        # ссылка на соседний селект участника (выбор мышкой) — не через
+        # read-only Item.view, а явным полем
+        self.target_select = target_select
 
     async def callback(self, interaction: discord.Interaction):
         action = self.values[0]
         # Защита на границе: доступ могли снять, пока меню было на экране
         if not await self.cog._ensure_action_acl(interaction, action):
             return
-        modal = ModActionModal(self.cog, action, guild=interaction.guild)
+        # Цель, выбранная мышкой в соседнем селекте участников (если есть) —
+        # подставляем в модалку заранее; модератор может и поправить руками.
+        prefill = ""
+        if action != "clear":
+            try:
+                _sel = getattr(self, "target_select", None)
+                _vals = list(getattr(_sel, "values", []) or [])
+                if _vals:
+                    prefill = str(_vals[0].id)
+            except Exception as _pe:
+                log.debug("modpanel prefill цели: %s", _pe)
+        modal = ModActionModal(self.cog, action, guild=interaction.guild,
+                               prefill_target=prefill)
         await interaction.response.send_modal(modal)
 
 
@@ -1200,7 +1216,7 @@ class ModActionModal(discord.ui.Modal):
     требование включено в панели.
     """
 
-    def __init__(self, cog, action, guild=None):
+    def __init__(self, cog, action, guild=None, prefill_target=""):
         self.cog = cog
         self.action = action
         titles = {
@@ -1217,9 +1233,11 @@ class ModActionModal(discord.ui.Modal):
         super().__init__(title=titles.get(action, "Модерация"))
 
         if action != "clear":
+            # prefill_target — ID участника, выбранного мышкой в селекте панели
             self.target = discord.ui.TextInput(
                 label="Цель (@ник, точное имя или ID)", required=True,
                 placeholder="@упоминание, ник или 15-22 цифры ID",
+                default=str(prefill_target or "") or None,
             )
             self.add_item(self.target)
         if action in ("timeout", "mute_chat", "vmute", "clear"):
@@ -1293,7 +1311,9 @@ class ModHelpButton(discord.ui.Button):
             color=0x5865F2)
         embed.add_field(
             name='🎯 Цель',
-            value='@упоминание, точное имя или ID — бот поймёт любой вариант.\n'
+            value='Проще всего — выбрать участника МЫШКОЙ в меню «Кого наказать?» '
+                  'вверху (цель подставится сама). Можно и вручную: @упоминание, '
+                  'точное имя или ID — бот поймёт любой вариант.\n'
                   'Не нашли участника? Скорее всего, он ушёл с сервера: ID работает и так.',
             inline=False)
         embed.add_field(
@@ -1313,12 +1333,49 @@ class ModHelpButton(discord.ui.Button):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
+class ModTargetSelect(discord.ui.UserSelect):
+    """Выбор участника МЫШКОЙ (вместо ручного ввода @ника/ID).
+
+    Discord не даёт класть селекты внутрь модалки, поэтому участник выбирается
+    здесь, в сообщении панели; выбранный ID подставляется в модалку действия
+    автоматически (руками можно поправить или оставить). Для «Очистки» цель
+    не нужна — селект можно игнорировать.
+    """
+
+    def __init__(self, cog):
+        super().__init__(
+            placeholder="🎯 Кого наказать? Выберите участника мышкой…",
+            min_values=1, max_values=1,
+        )
+        self.cog = cog
+
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            user = self.values[0] if self.values else None
+            name = getattr(user, "display_name", None) or str(getattr(user, "id", "?"))
+            await interaction.response.send_message(
+                f"🎯 Цель выбрана: **{name}** — теперь выберите действие в меню ниже "
+                f"(цель подставится сама). Можно и вписать вручную.",
+                ephemeral=True)
+        except Exception as _te:
+            log.debug("ModTargetSelect: %s", _te)
+            try:
+                await interaction.response.send_message("🎯 Цель выбрана.", ephemeral=True)
+            except Exception as _te2:
+                log.debug("ModTargetSelect fallback-ответ: %s", _te2)
+
+
 class ModPanelView(discord.ui.View):
-    """View панели: меню действий + кнопка-шпаргалка."""
+    """View панели: селект участника мышкой + меню действий + шпаргалка."""
 
     def __init__(self, cog, member=None, allowed=None):
         super().__init__(timeout=300)
-        self.add_item(ModActionSelect(cog, member, allowed))
+        # Сначала выбор участника мышкой, затем действие
+        self.target_select = ModTargetSelect(cog)
+        self.action_select = ModActionSelect(cog, member, allowed,
+                                             target_select=self.target_select)
+        self.add_item(self.target_select)
+        self.add_item(self.action_select)
         self.add_item(ModHelpButton())
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -1331,8 +1388,8 @@ class ModPanelView(discord.ui.View):
         дополнительно фильтруются (actions_for_member / _ensure_action_acl).
         """
         user = interaction.user
-        if getattr(user, 'guild_permissions', None) and user.guild_permissions.administrator:
-            return True
+        # Строгая модель: Discord-админ прав в боте НЕ даёт (своя система).
+        # Владелец бота (OWNER_ID) — всегда может (его has_access пропускает).
         try:
             from services.permission_acl import has_access
             guild = interaction.guild
@@ -1344,7 +1401,9 @@ class ModPanelView(discord.ui.View):
                     ephemeral=True)
                 return False
         except Exception as _ex:
-            log.debug('ModPanelView.interaction_check: ACL не прочитан (%s) — пускаю', _ex)
+            # Сбой чтения БД — не открываем панель молча (fail-close):
+            # конкретные действия всё равно перепроверяются при нажатии.
+            log.debug('ModPanelView.interaction_check: ACL не прочитан (%s)', _ex)
         return True
 
 

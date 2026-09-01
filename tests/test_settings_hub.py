@@ -238,7 +238,7 @@ check(r.status_code == 200 and d.get('success') is True
       and isinstance(d.get('cfg'), dict), 'API GET: конфиг отдан')
 cfg = d['cfg']
 check(cfg.get('max_steps') == MS.MAX_STEPS
-      and [a['key'] for a in cfg['actions']] == ['mute', 'kick', 'ban']
+      and [a['key'] for a in cfg['actions']] == ['mute', 'vmute', 'kick', 'ban']
       and [u['key'] for u in cfg['units']] == ['minute', 'hour', 'day'],
       'API GET: меры и единицы с русскими подписями')
 check(cfg.get('temp_whitelist') == saved_wl,

@@ -569,8 +569,8 @@ def register(ctx):
     @app .route ('/api/guild/<guild_id>/roles')
     @login_required 
     def api_guild_roles (guild_id ):
-        import web .app as _app 
-        bot =_app .bot_instance 
+        import web .app as _app
+        bot =_app .bot_instance
         if not bot :
             # демо: типичный набор ролей (пустой список = страница «не листается»)
             if _app ._demo_mode ():
@@ -578,9 +578,36 @@ def register(ctx):
             return jsonify ([])
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ([])
+        # Живой кэш + ETag/304 (как у каналов): состав ролей меняется редко,
+        # а настройки/пикеры опрашивают список часто. len(roles) в сигнатуре
+        # даёт мгновенный промах при создании/удалении роли.
+        def _rl_respond (_payload ,_sig ):
+            _etag ='"rl%d-%d"'%(len (_payload ),_sig )
+            if _etag in request .headers .get ('If-None-Match',''):
+                from flask import Response as _Resp
+                return _Resp (status =304 ,headers ={'ETag':_etag ,'Cache-Control':'no-cache'})
+            from flask import Response as _Resp
+            return _Resp (json .dumps (_payload ,ensure_ascii =False ),
+            mimetype ='application/json',
+            headers ={'ETag':_etag ,'Cache-Control':'no-cache'})
+        import time as _time
+        _now =_time .time ()
+        _live =getattr (api_guild_roles ,'_live_cache',{})
+        _ckey =(str (guild_id ),len (getattr (guild ,'roles',[])or []))
+        _hit =_live .get (_ckey )
+        if _hit and (_now -_hit [0 ])<10.0 :
+            return _rl_respond (_hit [1 ],_ckey [1 ])
         roles =[{'id':str (r .id ),'name':r .name ,'color':str (r .color ),'members':len (r .members )}
         for r in guild .roles if r .name !='@everyone']
-        return jsonify (sorted (roles ,key =lambda x :-x ['members']))
+        roles =sorted (roles ,key =lambda x :-x ['members'])
+        try :
+            api_guild_roles ._live_cache =getattr (api_guild_roles ,'_live_cache',{})
+            api_guild_roles ._live_cache [_ckey ]=(_now ,roles )
+            for _k in [k for k ,v in api_guild_roles ._live_cache .items ()if _now -v [0 ]>60.0 ]:
+                api_guild_roles ._live_cache .pop (_k ,None )
+        except Exception as _rce :
+            _log .debug ('roles live-cache: %s',_rce )
+        return _rl_respond (roles ,_ckey [1 ])
 
 
     @app .route ('/api/guild/<guild_id>/roles/create',methods =['POST'])
@@ -625,6 +652,7 @@ def register(ctx):
             await (guild .create_role (name =name ,color =color ,reason ='Создано через панель Hakumo'))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
+            api_guild_roles ._live_cache ={}# сброс кэша списка ролей
             return jsonify ({'success':True })
         except discord .Forbidden :
             return jsonify ({'error':'У меня нет прав создавать роли на этом сервере'}),403 
@@ -655,6 +683,7 @@ def register(ctx):
             role =guild .get_role (int (role_id ))
             if role :await (role .delete ())
         asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
+        api_guild_roles ._live_cache ={}# сброс кэша списка ролей
         return jsonify ({'success':True })
 
 

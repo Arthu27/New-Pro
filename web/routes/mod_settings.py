@@ -113,8 +113,8 @@ def _build_guild_list(g, kind):
     out.sort(key=lambda x: x['name'].lstrip('#').lower())
     return out
 
-ACTIONS = ('mute', 'kick', 'ban')
-ACTION_LABELS = {'mute': 'Мут', 'kick': 'Кик', 'ban': 'Бан'}
+ACTIONS = ('mute', 'vmute', 'kick', 'ban')
+ACTION_LABELS = {'mute': 'Мут чата', 'vmute': 'Войс-мут', 'kick': 'Кик', 'ban': 'Бан'}
 UNITS = (('minute', 'минут'), ('hour', 'часов'), ('day', 'дней'))
 TEMP_WHITELIST_PATH = 'data/temp_whitelist.json'
 MAX_STEPS = 20
