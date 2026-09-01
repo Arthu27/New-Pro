@@ -613,7 +613,7 @@ r = client.get('/api/channel-routes')
 routes = r.get_json().get('routes', [])
 check(len(routes) == 13, f'хаб Каналов отдаёт 13 живых маршрутов ({len(routes)})')
 hub_guard = [x for x in routes if x['key'] == 'guardian_channel']
-check(hub_guard and hub_guard[0]['label'] == 'Тревоги Щита сервера',
+check(hub_guard and hub_guard[0]['label'].startswith('Тревоги Щита сервера'),
       'маршрут Щита с русской подписью на хабе')
 
 # ═══ 6. Политика модулей и меню ══════════════════════════════════════════

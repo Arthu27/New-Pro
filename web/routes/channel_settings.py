@@ -197,6 +197,8 @@ def register(ctx):
             'what': s['what'],
             'empty': s['empty'],
             'access': s.get('access', 'Админ'),
+            'step': s.get('step'),
+            'create_hint': s.get('create_hint', ''),
         } for s in CHR.ROUTE_SPECS]
         return render_template('channel_settings.html',
                                role=session.get('role'),
@@ -224,6 +226,8 @@ def register(ctx):
                 'what': spec['what'],
                 'empty': spec['empty'],
                 'access': spec['access'],
+                'step': spec.get('step'),
+                'create_hint': spec.get('create_hint', ''),
                 'channel_id': cid,
             })
         return jsonify({'success': True, 'routes': out, 'gid': str(gid)})

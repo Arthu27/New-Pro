@@ -59,7 +59,50 @@
 .chs-info h3{margin:0 0 8px;font-size:13.5px;display:flex;align-items:center;gap:8px}
 .chs-info h3 i{color:var(--ac)}
 @media (max-width:860px){.chs-row{grid-template-columns:44px 1fr}.chs-edit{grid-column:1/-1}}
+
+/* ── Шпаргалка «С чего начать» ── */
+.chs-guide{margin-top:14px;border:1px solid color-mix(in srgb, var(--ac) 28%, transparent);background:color-mix(in srgb, var(--ac) 6%, var(--surface-2, transparent));border-radius:14px;overflow:hidden}
+.chs-guide>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:14px;font-weight:700;color:var(--text-1,#fff)}
+.chs-guide>summary::-webkit-details-marker{display:none}
+.chs-guide>summary .g-ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb, var(--ac) 15%, transparent);color:var(--ac);flex:none}
+.chs-guide>summary .g-chev{margin-left:auto;color:var(--text-3);transition:transform .2s}
+.chs-guide[open]>summary .g-chev{transform:rotate(180deg)}
+.chs-guide-body{padding:2px 16px 14px;font-size:12.8px;line-height:1.6;color:var(--text-2,color-mix(in srgb, var(--text) 75%, transparent))}
+.chs-guide-body p{margin:9px 0}
+.chs-guide-body b{color:var(--text-1,#fff)}
+.chs-guide-steps{margin:10px 0 4px;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.chs-guide-steps li{display:flex;gap:10px;align-items:flex-start}
+.g-num{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-weight:800;background:var(--ac);color:#fff;margin-top:1px}
+.chs-guide-note{margin-top:11px;border:1px solid color-mix(in srgb, #16a34a 28%, transparent);background:color-mix(in srgb, #16a34a 8%, transparent);border-radius:10px;padding:9px 12px;display:flex;gap:9px;align-items:flex-start}
+.chs-guide-note i{color:#7bd88f;margin-top:2px}
+/* Номер шага в строке маршрута */
+.chs-step{flex:none;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-size:12px;font-weight:800;background:color-mix(in srgb, var(--ac) 16%, transparent);color:var(--ac);border:1px solid color-mix(in srgb, var(--ac) 30%, transparent)}
+.chs-step.opt{background:color-mix(in srgb, var(--text) 7%, transparent);color:var(--text-3);border-color:var(--line-2,transparent)}
+.chs-hint{display:block;margin-top:4px;font-size:11.5px;color:var(--ac);opacity:.92}
+.chs-hint i{margin-right:4px}
 </style>
+
+<details class="chs-guide" open>
+  <summary>
+    <span class="g-ico"><i class="fas fa-flag-checkered"></i></span>
+    <span>С чего начать: настрой 7 маршрутов по порядку — остальное можно оставить «Авто»</span>
+    <i class="fas fa-chevron-down g-chev"></i>
+  </summary>
+  <div class="chs-guide-body">
+    <p>Отдельные каналы под каждую функцию заводить <b>не нужно</b> — просто выбери в выпадающем списке уже существующий канал. Логи (категория «Логи») бот создаёт сам. Порядок ниже — это «боевой минимум», идём сверху вниз:</p>
+    <ol class="chs-guide-steps">
+      <li><span class="g-num">1</span><span><b>Канал доказательств</b> — куда падают демки (фото/видео) к наказаниям. Без него наказания с доказательством не выдаются.</span></li>
+      <li><span class="g-num">2</span><span><b>Тревоги Щита сервера</b> — анти-нюк: кто что снёс/выдал. Можно указать тот же лог-канал модерации.</span></li>
+      <li><span class="g-num">3</span><span><b>Лог авто-защиты</b> — ссылки/спам/фейки. Тоже можно в лог-канал модерации.</span></li>
+      <li><span class="g-num">4</span><span><b>Канал апелляции после бана</b> — сюда попадает «забаненный» (его не выкидывает с сервера). Заведи один канал #апелляции.</span></li>
+      <li><span class="g-num">5</span><span><b>Канал апелляций (карточки)</b> — можно указать тот же #апелляции, отдельный не нужен.</span></li>
+      <li><span class="g-num">6</span><span><b>Канал заявок в команду</b> — заявки на хелпера/модератора. Один канал на все заявки.</span></li>
+      <li><span class="g-num">7</span><span><b>Канал приветствий</b> — обычно общий чат новичков.</span></li>
+    </ol>
+    <p>В каждой строке: выбери канал в списке → нажми галочку «Сохранить» (или отметь несколько и жми вверху <b>«Сохранить всё»</b>). Строки без номера — необязательные, их трогать не нужно, они работают по умолчанию.</p>
+    <div class="chs-guide-note"><i class="fas fa-circle-check"></i><span>После сохранения ничего перезапускать не надо — маршруты применяются сразу.</span></div>
+  </div>
+</details>
 
 <div class="chs-pendbar" id="chsPendBar">
   <span class="chs-pend-txt"><i class="fas fa-floppy-disk"></i>
@@ -102,7 +145,9 @@ function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').repla
    Сохранённые каналы (channel_id) приедут позже и подставятся в селекты. */
 var CHS_ROUTES = {{ route_specs | tojson }}.map(function (s) {
   return { key: s.key, label: s.label, icon: s.icon, what: s.what,
-           empty: s.empty, access: s.access, channel_id: 0 };
+           empty: s.empty, access: s.access, channel_id: 0,
+           step: (s.step === null || s.step === undefined) ? null : s.step,
+           create_hint: s.create_hint || '' };
 });
 var CHS_CHANNELS = [];
 var CHS_ROUTES_LOADED = false;
@@ -154,19 +199,34 @@ function updatePendingBar() {
     + ' ' + pluralRu(n, 'не сохранено', 'не сохранены', 'не сохранено');
 }
 
+function chsOrder(r) {
+  /* Боевой минимум (step 1..N) — сверху по порядку; необязательные (step=null) — в конец. */
+  return (r.step === null || r.step === undefined) ? (1000 + chsOrder._i++) : r.step;
+}
+chsOrder._i = 0;
+
 function render() {
   var box = document.getElementById('chsList');
   if (!CHS_ROUTES.length) {
     box.innerHTML = '<div class="empty-state"><i class="fas fa-route"></i><p>Не удалось загрузить маршруты</p></div>';
     return;
   }
-  box.innerHTML = CHS_ROUTES.map(function (r) {
+  chsOrder._i = 0;
+  var rows = CHS_ROUTES.slice().sort(function (a, b) { return chsOrder(a) - chsOrder(b); });
+  box.innerHTML = rows.map(function (r) {
     /* Что показать выбранным в селекте: несохранённый выбор важнее
        сохранённого значения — иначе перерисовка затирала бы его. */
     var value = PENDING.hasOwnProperty(r.key)
       ? String(PENDING[r.key])
       : (r.channel_id ? String(r.channel_id) : '0');
     var cur = badgeHtml(r.key, PENDING.hasOwnProperty(r.key) ? undefined : r.channel_id);
+    var isStep = (r.step !== null && r.step !== undefined);
+    var stepBadge = isStep
+      ? '<span class="chs-step" title="Шаг ' + r.step + ' — настрой со старта">' + r.step + '</span>'
+      : '<span class="chs-step opt" title="Необязательно — работает по умолчанию"><i class="fas fa-ellipsis-h"></i></span>';
+    var hint = r.create_hint
+      ? '<span class="chs-hint"><i class="fas fa-lightbulb"></i>' + esc(r.create_hint) + '</span>'
+      : '';
     /* Пока список каналов не пришёл — показываем «Загрузка…» вместо пустого
        селекта: видно, что данные грузятся, а не сломаны. */
     var chanOpts = CHS_CHANNELS.length
@@ -178,9 +238,9 @@ function render() {
     var opts = '<option value="0"' + (value === '0' ? ' selected' : '') + '>— Авто (по умолчанию) —</option>' + chanOpts;
     return '<div class="chs-row">' +
       '<div class="chs-ico"><i class="fas ' + esc(r.icon || 'fa-route') + '"></i></div>' +
-      '<div><div class="chs-name">' + esc(r.label) + ' ' + cur +
+      '<div><div class="chs-name">' + stepBadge + esc(r.label) + ' ' + cur +
         '<span class="chs-cur" title="Кто меняет этот маршрут"><i class="fas fa-user-lock"></i>' + esc(r.access || 'Админ') + '</span></div>' +
-        '<div class="chs-what">' + esc(r.what || '') + '</div>' +
+        '<div class="chs-what">' + esc(r.what || '') + hint + '</div>' +
         '<div class="chs-empty">' + esc(r.empty || '') + '</div></div>' +
       '<div class="chs-edit">' +
         '<select id="chs-' + esc(r.key) + '" aria-label="' + esc(r.label) + '"' + (CAN_EDIT ? '' : ' disabled') +
@@ -301,6 +361,8 @@ function chsLoadRoutes() {
             key: r.key, label: r.label, icon: r.icon,
             what: live.what || r.what, empty: live.empty || r.empty,
             access: live.access || r.access,
+            step: (live.step === null || live.step === undefined) ? r.step : live.step,
+            create_hint: live.create_hint || r.create_hint || '',
             channel_id: live.channel_id || 0
           };
         });
@@ -311,7 +373,10 @@ function chsLoadRoutes() {
             CHS_ROUTES.push({
               key: live.key, label: live.label || live.key, icon: live.icon || 'fa-route',
               what: live.what || '', empty: live.empty || '',
-              access: live.access || 'Админ', channel_id: live.channel_id || 0
+              access: live.access || 'Админ',
+              step: (live.step === null || live.step === undefined) ? null : live.step,
+              create_hint: live.create_hint || '',
+              channel_id: live.channel_id || 0
             });
           }
         });
