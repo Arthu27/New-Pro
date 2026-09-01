@@ -226,59 +226,14 @@ class Moderation (commands .Cog ):
             ephemeral =True )
             return 
         _u =interaction .user 
-        _has =lambda k :any (a [3 ]==k for a in allowed )
-        _groups =[]
-        if _has ('warn'):
-            _groups .append ('⚠️ варн — официальное предупреждение, пишется в дело и уходит в ЛС')
-        if _has ('mute'):
-            _groups .append ('🔇 муты — чат, войс или всё сразу')
-        if _has ('ban'):
-            _groups .append ('🚫 бан с апелляцией — участник остаётся на сервере')
-        if _has ('unban')or _has ('unmute'):
-            _groups .append ('🔓 снятия — размут, разбан, вернуть голос')
-        if _has ('clear'):
-            _groups .append ('🧹 чистка — снести N сообщений в канале')
+        # Компактная карточка: владелец просил «слишком много инфы» —
+        # только строка-подсказка и само выпадающее меню, без простыней.
         embed =discord .Embed (
         title ="🛡 Панель модерации",
-        description =(
-        "Личная панель: кроме вас её никто не видит.\n"
-        "Выберите действие в меню — бот спросит цель, срок и причину."
-        ),
-        color =0x5865F2 ,
-        timestamp =datetime .now (timezone .utc )
-        )
-        try :
-            if getattr (_u ,'display_avatar',None ):
-                embed .set_author (name =f"Модератор: {_u .display_name }",
-                icon_url =_u .display_avatar .url )
-        except Exception as _ex :
-            _log .debug (f'[MODPANEL] аватар модератора: {_ex}')
-        try :
-            if interaction .guild .icon :
-                embed .set_thumbnail (url =interaction .guild .icon .url )
-        except Exception as _ex :
-            _log .debug (f'[MODPANEL] иконка сервера: {_ex}')
-        embed .add_field (
-        name ="⚡ Как это работает",
-        value =("1️⃣ Выберите действие в меню ниже\n"
-        "2️⃣ Укажите цель — @ник, точное имя или ID\n"
-        "3️⃣ Причина — и наказание применится"),
-        inline =False )
-        embed .add_field (
-        name ="🎒 Что внутри",
-        value =("\n".join (_groups )or 'Меню действий ниже'),
-        inline =False )
-        embed .add_field (
-        name ="📜 Хорошая практика",
-        value =("Каждое действие пишется в дело и уходит участнику в ЛС. "
-        "Ссылка на доказательство спросится, если панель этого требует."),
-        inline =False )
+        description ="Выберите действие в меню ниже — укажете цель, срок и причину.",
+        color =0x5865F2 )
         if interaction .guild .icon :
-            embed .set_footer (text =f"{interaction.guild.name} · меню живёт 5 минут",icon_url =interaction .guild .icon .url )
-        else :
-            embed .set_footer (text =f"{interaction.guild.name} · меню живёт 5 минут")
-        # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
-        # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
+            embed .set_footer (text =interaction .guild .name )
         await _respond (interaction ,embed =embed ,view =ModPanelView (self ,interaction .user ,allowed ),ephemeral =True )
 
     def _parse_target_id (self ,target :str ):

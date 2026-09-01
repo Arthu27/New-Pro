@@ -120,7 +120,7 @@ MOD_LEAN_COGS = frozenset({
     'age_verification.py',  # верификация молодых аккаунтов: карантин + анкета (заказ 31.08)
     'appeals.py', 'reports.py', 'logs.py', 'log_menu.py',
     'activity_stats.py',   # сбор активности для страницы «Аналитика» (без команд)
-    'afk.py',              # /afk + /afk-remove — пользователи просили
+    'afk.py',              # /afk (выход авто при сообщении, /afk-remove убран)
     # Щит по максимуму (заказ владельца «добавь все возможные для защиты»):
     # security (антиспам/фейки/сканер ссылок), anti_alt (свежие аккаунты),
     # impersonation (маски под админов), ai_moderation (токсичность чата).

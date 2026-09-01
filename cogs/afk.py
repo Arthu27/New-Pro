@@ -108,42 +108,15 @@ class AFK (commands .Cog ):
             e .set_thumbnail (url ='attachment://afk_icon.png')
         else :
             e .set_thumbnail (url =interaction .user .display_avatar .url )
-        e .set_footer (text ="💤 Выход из AFK: /afk-remove")
+        e .set_footer (text ="💤 AFK спадёт сам, как только напишешь в чат")
         # Ответ видит только сам пользователь — чат не засоряется
         if icon :
             await interaction .response .send_message (embed =e ,file =icon ,ephemeral =True )
         else :
             await interaction .response .send_message (embed =e ,ephemeral =True )
 
-    @app_commands .command (name ="afk-remove",description ="Выйти из режима AFK")
-    async def afk_remove (self ,interaction :discord .Interaction ):
-        data =self ._get (interaction .guild_id ,interaction .user .id )
-        if not data :
-            await interaction .response .send_message ("Вы не в режиме AFK.",ephemeral =True )
-            return 
-        self ._remove (interaction .guild_id ,interaction .user .id )
-        # Убрать 💤 из ника
-        try :
-            nick =interaction .user .display_name 
-            if nick .startswith ("💤"):
-                await interaction .user .edit (nick =nick [2 :].strip ()or None )
-        except Exception as _ex:
-            _log.debug("afk_remove(): подавлено: %s", _ex)
-        # Показать накопившиеся упоминания
-        uid =interaction .user .id 
-        pending =_pending_mentions .pop (uid ,[])
-        if pending :
-            lines =[]
-            for p in pending [-10 :]:
-                lines .append (f"• **{p['from']}** — {p['guild']} #{p['channel']}\n  > {p['msg'][:100]}")
-            embed =discord .Embed (
-            title =f'👋 С возвращением! Тебя ждут {len(pending)} упоминаний',
-            description ='\n\n'.join (lines ),
-            color =0x57F287 
-            )
-            await interaction .response .send_message (embed =embed ,ephemeral =True )
-        else :
-            await interaction .response .send_message ('Режим AFK отключён! Никто тебя не упоминал.',ephemeral =True )
+    # Команды /afk-remove больше нет (2026-09-01): AFK снимается
+    # автоматически при первом же сообщении участника в чат — см. on_message.
 
     @commands .Cog .listener ()
     async def on_message (self ,message :discord .Message ):
@@ -167,6 +140,17 @@ class AFK (commands .Cog ):
             icon_url =message .author .display_avatar .url 
             )
             e .description =f"> **Длительность:** **{dur}**\n> Причина: *{afk_data['reason']}*"
+            # Накопившиеся упоминания показываем прямо при авто-снятии
+            # (отдельной команды /afk-remove больше нет — AFK спадает сам).
+            _pend =_pending_mentions .pop (uid ,[])
+            if _pend :
+                lines =[]
+                for p in _pend [-10 :]:
+                    lines .append (f"• **{p['from']}** — #{p['channel']}\n  > {p['msg'][:100]}")
+                e .add_field (
+                name =f"📬 Тебя упомянули {len(_pend)} раз",
+                value ="\n\n".join (lines )[:1024],
+                inline =False )
             await message .channel .send (embed =e ,delete_after =8 )
             # Убрать 💤 из ника
             try :

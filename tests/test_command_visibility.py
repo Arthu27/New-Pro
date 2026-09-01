@@ -100,18 +100,23 @@ def contexts_of(fn):
 ADMINISTRATOR = 1 << 3                   # бит administrator в Discord
 MODERATE_MEMBERS = 1 << 40               # бит moderate_members
 
-# ── /verify-setup: админ, не видна участникам ──────────────────────────
-print('== Видимость админских/сетап-команд ==')
+# ── Сетап-команды удалены из Discord: настройка — только через панель ──
+print('== Сетап-команды убраны из Discord (настройка в панели) ==')
 for modname, meth, label in (
     ('cogs.age_verification', 'verify_setup', '/verify-setup'),
     ('cogs.reports', 'report_setup_slash', '/report-setup'),
     ('cogs.reports', 'report_settings_slash', '/report-settings'),
+    ('cogs.afk', 'afk_remove', '/afk-remove'),
 ):
     fn = find_cog_callback(modname, meth)
-    check(fn is not None, f'{label}: команда определена')
-    if fn:
-        check(bool(perms_of(fn) & ADMINISTRATOR),
-              f'{label}: по умолчанию видна только админам (скрыта от участников)')
+    check(fn is None, f'{label}: слеш-команда не регистрируется (настройка в панели / AFK авто)')
+try:
+    import slash_budget
+    for gone in ('verify-setup', 'report-setup', 'report-settings', 'afk-remove'):
+        check(gone not in slash_budget.KEEP_SLASH,
+              f'{gone} нет в белом списке меню')
+except Exception as ex:
+    check(False, f'KEEP_SLASH: {ex}')
 
 # ── /modpanel: модерация, карточки по ACL ──────────────────────────────
 print('== /modpanel: видимость и карточки ==')

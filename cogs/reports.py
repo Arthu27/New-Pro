@@ -788,102 +788,10 @@ class Reports(commands.Cog):
             kwargs['view'] = MyViolationsView()
         await interaction.response.send_message(**kwargs)
 
-    @app_commands.command(name='report-setup',
-                          description='Настроить систему репортов: канал + роль + права')
-    @app_commands.describe(mod_role='Роль модераторов',
-                           channel='Канал веток (не указан — создам закрытый #репорты)')
-    @app_commands.default_permissions(administrator=True)
-    @app_commands.checks.has_permissions(administrator=True)
-    async def report_setup_slash(self, interaction,
-                                 mod_role: discord.Role,
-                                 channel: discord.TextChannel = None):
-        guild = interaction.guild
-        if channel is None:
-            # ТЗ 1.8: канал репортов видят только модераторы и менеджеры —
-            # создаём сразу с закрытыми правами, ничего руками делать не надо
-            over = {
-                guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                mod_role: discord.PermissionOverwrite(
-                    read_messages=True, send_messages=True,
-                    manage_threads=True, read_message_history=True),
-                guild.me: discord.PermissionOverwrite(
-                    read_messages=True, send_messages=True,
-                    manage_threads=True, create_private_threads=True,
-                    manage_messages=True, embed_links=True, attach_files=True,
-                    read_message_history=True),
-            }
-            try:
-                channel = await guild.create_text_channel(
-                    'репорты', overwrites=over,
-                    reason='Настройка системы репортов')
-            except Exception as ex:
-                return await interaction.response.send_message(
-                    f'Канал создать не вышло: {ex}. Укажите готовый канал '
-                    'параметром channel.', ephemeral=True)
-            made = True
-        else:
-            # существующий канал закрываем от @everyone и открываем модам
-            # (точечно, чужие оверрайты не трогаем)
-            try:
-                await channel.set_permissions(
-                    guild.default_role, read_messages=False,
-                    reason='Система репортов: канал только для модерации')
-                await channel.set_permissions(
-                    mod_role, read_messages=True, send_messages=True,
-                    manage_threads=True, read_message_history=True,
-                    reason='Система репортов')
-                await channel.set_permissions(
-                    guild.me, read_messages=True, send_messages=True,
-                    manage_threads=True, create_private_threads=True,
-                    manage_messages=True, embed_links=True, attach_files=True,
-                    read_message_history=True,
-                    reason='Система репортов')
-            except Exception as ex:
-                _log.warning('report-setup perms: %s', ex)
-            made = False
-        cfg = _cfg(interaction.guild_id)
-        cfg['channel_id'] = str(channel.id)
-        cfg['mod_role_id'] = str(mod_role.id)
-        RC.save_cfg(interaction.guild_id, cfg)
-        # Единый источник роли модераторов: зеркалим во все системы.
-        try:
-            from services.mod_role import set_mod_role_id
-            set_mod_role_id(interaction.guild_id, mod_role.id)
-        except Exception as _mr:
-            _log.debug('report-setup: зеркалирование роли: %s', _mr)
-        perms = channel.permissions_for(guild.me)
-        e = discord.Embed(
-            title='Система репортов настроена',
-            description=(f"Канал: {channel.mention}"
-                         f"{' · создан и закрыт от участников' if made else ' · права обновлены: только модерация'}\n"
-                         f"Роль модератора: {mod_role.mention}\n\n"
-                         f"Создание приватных веток: "
-                         f"{'ок' if perms.create_private_threads else 'НЕТ ПРАВА'} · "
-                         f"Управление ветками: "
-                         f"{'ок' if perms.manage_threads else 'НЕТ ПРАВА'}\n"
-                         f"Лестница рецидивов: " + ' → '.join(
-                             s['label'] for s in cfg['ladder']) +
-                         f"\nСрок давности: {cfg['expiry_days']} дн"),
-            color=0x2ECC71)
-        await interaction.response.send_message(embed=e, ephemeral=True)
-
-    @app_commands.command(name='report-settings',
-                          description='Настройки рецидивов репортов')
-    @app_commands.default_permissions(administrator=True)
-    @app_commands.checks.has_permissions(administrator=True)
-    async def report_settings_slash(self, interaction,
-                                    expiry_days: app_commands.Range[int, 1, 365] = None):
-        cfg = _cfg(interaction.guild_id)
-        if expiry_days:
-            cfg['expiry_days'] = expiry_days
-            RC.save_cfg(interaction.guild_id, cfg)
-        e = discord.Embed(
-            title='Настройки рецидивов',
-            description=('Лестница (по порядку нарушений):\n' + '\n'.join(
-                f"{s['n']}-е → {s['label']}" for s in cfg['ladder']) +
-                f"\nСрок давности: {cfg['expiry_days']} дн"),
-            color=0x5865F2)
-        await interaction.response.send_message(embed=e, ephemeral=True)
+    # Команды /report-setup и /report-settings удалены (2026-09-01):
+    # канал веток, роль модераторов и срок давности настраиваются в
+    # веб-панели (страница «Репорты», /api/guild/<gid>/report-settings).
+    # Слеш-команды в Discord больше не регистрируются.
 
     # ── фильтр слова ────────────────────────────────────────────────
     @commands.Cog.listener()

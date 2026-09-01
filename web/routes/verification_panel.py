@@ -128,3 +128,54 @@ def register(ctx):
                 cfg[key] = _as_id(body.get(key))
         save_cfg(gid, cfg)
         return jsonify({'success': True, 'config': cfg})
+
+    @app.route('/api/guild/<gid>/verify/publish', methods=['POST'])
+    @login_required
+    @role_required('admin')
+    def api_verify_publish(gid):
+        """Опубликовать кнопку анкеты в канале верификации.
+
+        Раньше это делала слеш-команда /verify-setup (удалена 2026-09-01 —
+        настройка переехала в панель). Шлём в настроенный verify_channel_id
+        карточку с persistent-view StartApplicationView.
+        """
+        import web.app as _app
+        bot = getattr(_app, 'bot_instance', None)
+        cfg = load_cfg(gid)
+        cid = cfg.get('verify_channel_id')
+        if not cid or not str(cid).isdigit():
+            return jsonify({'success': False,
+                            'error': 'Канал верификации не задан — сохраните настройки'}), 400
+        if not bot or not getattr(bot, 'loop', None):
+            return jsonify({'success': False,
+                            'error': 'Бот не в сети — кнопку опубликует бот после запуска'}), 503
+        try:
+            import discord as _discord
+            from cogs.age_verification import StartApplicationView
+
+            async def _post():
+                channel = bot.get_channel(int(cid))
+                if channel is None:
+                    channel = await bot.fetch_channel(int(cid))
+                if channel is None:
+                    return None
+                emb = _discord.Embed(
+                    title='Верификация участников',
+                    description=('Если у тебя **новый аккаунт**, доступ к серверу '
+                                 'временно ограничен. Нажми кнопку ниже и ответь на '
+                                 'несколько вопросов **в личных сообщениях бота** — '
+                                 'модераторы откроют доступ.'),
+                    color=0x5865F2)
+                msg = await channel.send(embed=emb, view=StartApplicationView())
+                return msg.id
+
+            import asyncio as _aio
+            msg_id = _aio.run_coroutine_threadsafe(_post(), bot.loop).result(timeout=15)
+            if not msg_id:
+                return jsonify({'success': False,
+                                'error': 'Канал не найден или бот не имеет к нему доступа'}), 404
+            return jsonify({'success': True, 'message_id': str(msg_id),
+                            'channel_id': str(cid)})
+        except Exception as ex:
+            _log.debug('verify publish(%s): %s', gid, ex)
+            return jsonify({'success': False, 'error': f'Не удалось опубликовать: {ex}'}), 500

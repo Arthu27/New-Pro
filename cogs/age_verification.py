@@ -519,82 +519,9 @@ class AgeVerification(commands.Cog):
             _log.warning('verify: некуда отправить анкету на %s: %s', guild.id, ex)
 
     # ── настройка в Discord ───────────────────────────────────────────
-    @app_commands.command(name='verify-setup',
-                          description='Настроить верификацию молодых аккаунтов')
-    @app_commands.describe(
-        min_age_days='Возраст аккаунта (дней), ниже которого нужна анкета (по умолч. 2)',
-        quarantine_role='Роль-ограничение для непроверенных (без доступа)',
-        member_role='Роль, которую выдать после верификации (роль участника)',
-        verify_channel='Канал с кнопкой анкеты (создам сам, если не указан)',
-        review_channel='Канал, куда падают анкеты модераторам',
-        enabled='Включить систему сразу?')
-    @app_commands.default_permissions(administrator=True)
-    @app_commands.checks.has_permissions(administrator=True)
-    async def verify_setup(self, interaction: discord.Interaction,
-                           min_age_days: app_commands.Range[int, 0, 365] = 2,
-                           quarantine_role: discord.Role = None,
-                           member_role: discord.Role = None,
-                           verify_channel: discord.TextChannel = None,
-                           review_channel: discord.TextChannel = None,
-                           enabled: bool = True):
-        await interaction.response.defer(ephemeral=True)
-        guild = interaction.guild
-        cfg = load_cfg(guild.id)
-        cfg['min_age_days'] = min_age_days
-        if quarantine_role:
-            cfg['quarantine_role_id'] = str(quarantine_role.id)
-        if member_role:
-            cfg['member_role_id'] = str(member_role.id)
-        if review_channel:
-            cfg['review_channel_id'] = str(review_channel.id)
-
-        # создать канал верификации, если не задан
-        if verify_channel is None:
-            over = {
-                guild.default_role: discord.PermissionOverwrite(
-                    view_channel=True, send_messages=False, read_messages=True),
-                guild.me: discord.PermissionOverwrite(
-                    view_channel=True, send_messages=True, manage_messages=True,
-                    embed_links=True, read_message_history=True),
-            }
-            qrole = guild.get_role(int(cfg['quarantine_role_id'])) if cfg.get('quarantine_role_id') else None
-            if qrole:
-                over[qrole] = discord.PermissionOverwrite(
-                    view_channel=True, send_messages=False, read_messages=True)
-            try:
-                verify_channel = await guild.create_text_channel(
-                    'верификация', overwrites=over,
-                    topic='Подтверди, что ты не бот: жми «Заполнить анкету»',
-                    reason='Система верификации: канал не задан — создан')
-            except Exception as ex:
-                return await interaction.followup.send(
-                    f'Не удалось создать канал верификации: {ex}. Укажи канал параметром.',
-                    ephemeral=True)
-        cfg['verify_channel_id'] = str(verify_channel.id)
-        cfg['enabled'] = enabled
-        save_cfg(guild.id, cfg)
-
-        # кнопка в канале верификации
-        try:
-            pin_embed = discord.Embed(
-                title='🛡️ Верификация участников',
-                description=('Если у тебя **новый аккаунт**, доступ к серверу '
-                            'временно ограничен. Нажми кнопку ниже и ответь на '
-                            'несколько вопросов **в личных сообщениях бота** — '
-                            'модераторы откроют доступ.'),
-                color=0x5865F2)
-            await verify_channel.send(embed=pin_embed, view=StartApplicationView())
-        except Exception as ex:
-            _log.warning('verify: кнопка в канале %s: %s', verify_channel.id, ex)
-
-        e = discord.Embed(title='Система верификации настроена', color=0x2ECC71)
-        e.add_field(name='Статус', value='🟢 Включена' if enabled else '⚪ Выключена', inline=False)
-        e.add_field(name='Порог возраста', value=f'{min_age_days} дн.', inline=True)
-        e.add_field(name='Канал анкеты', value=verify_channel.mention, inline=True)
-        e.add_field(name='Карантинная роль', value=quarantine_role.mention if quarantine_role else 'не задана', inline=True)
-        e.add_field(name='Роль участника', value=member_role.mention if member_role else 'не задана', inline=True)
-        e.add_field(name='Канал заявок модерам', value=review_channel.mention if review_channel else '= канал верификации', inline=True)
-        await interaction.followup.send(embed=e, ephemeral=True)
+    # Команда /verify-setup удалена (2026-09-01): верификация настраивается
+    # в веб-панели (страница «Верификация», /api/guild/<g>/verify/config).
+    # Слеш-команду больше не регистрируем — в меню участников/админов её нет.
 
 
 async def setup(bot):

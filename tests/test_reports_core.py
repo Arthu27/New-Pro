@@ -112,9 +112,13 @@ check('discord.Attachment' in src and 'proof_file' in src and 'to_file' in src,
       'доказательства — файлом сразу в ветку (не только ссылкой)')
 check('zlib' in open(os.path.join(ROOT, 'services', 'reports_core.py'),
                     encoding='utf-8').read(), 'ядро использует zlib')
-check('create_text_channel' in src and 'set_permissions' in src
-      and 'read_messages=False' in src,
-      'setup сам создаёт/закрывает канал: видно только модерации (ТЗ 1.8)')
+# Создание/закрытие канала репортов переехало из слеш-команды /report-setup
+# (удалена 2026-09-01) в веб-панель: /api/guild/<gid>/report-settings.
+_panel = open(os.path.join(ROOT, 'web', 'routes', 'reports_queue.py'),
+              encoding='utf-8').read()
+check('channel_id' in _panel and 'mod_role_id' in _panel
+      and '/report-settings' in _panel,
+      'канал/роль модерации настраиваются в панели (страница «Репорты»)')
 check("'reports.py'" in open(os.path.join(ROOT, 'cogs_policy.py'),
                             encoding='utf-8').read(),
       'ког в лёгком профиле — загрузится на бою')

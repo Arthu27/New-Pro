@@ -58,6 +58,7 @@ class FakeResp:
 class FakeUser:
     display_name = 'Тест'
     id = 42
+    bot = False
 
     class _Av:
         url = 'https://cdn.discordapp.com/x.png'
@@ -91,19 +92,55 @@ check(kw is not None and kw.get('ephemeral') is True,
 check('обед' in str(kw.get('embed').description) if kw.get('embed') else True,
       '/afk карточка с причиной на месте')
 
-inter2 = FakeInter()
-loop.run_until_complete(cog.afk_remove._callback(cog, inter2))
-check(inter2.response.kw is not None and inter2.response.kw.get('ephemeral') is True,
-      '/afk-remove (без упоминаний) — ephemeral')
-
+# /afk-remove удалена (2026-09-01): AFK снимается АВТОМАТИЧЕСКИ при первом
+# сообщении участника в чат. Проверяем именно авто-снятие через on_message,
+# включая показ накопившихся упоминаний.
 from cogs import afk as afk_mod
+
+
+class FakeChannel:
+    name = 'general'
+    sent = []
+
+    async def send(self, embed=None, delete_after=None, **kw):
+        FakeChannel.sent.append(embed)
+
+
+class FakeMessage:
+    def __init__(self):
+        self.author = FakeUser()
+        self.channel = FakeChannel()
+        self.guild = type('G', (), {'id': 777, 'name': 'G'})()
+        self.mentions = []
+        self.content = 'привет'
+        self.bot = False
+
+
+class FakeAfkUser(FakeUser):
+    display_name = 'Тест'
+
+
+cog._set(777, 42, 'обед')
+FakeChannel.sent = []
+msg = FakeMessage()
+loop.run_until_complete(cog.on_message(msg))
+check(not cog._get(777, 42), 'AFK снят автоматически после сообщения в чат')
+check(len(FakeChannel.sent) == 1 and 'вернулся из AFK' in (FakeChannel.sent[0].author.name or ''),
+      'авто-снятие публикует короткую карточку возвращения')
+
+# Накопившиеся упоминания показываются в карточке авто-снятия
 afk_mod._pending_mentions[42] = [{
     'from': 'Кто-то', 'guild': 'G', 'channel': 'general', 'msg': 'ты где?'}]
 cog._set(777, 42, 'обед')
-inter3 = FakeInter()
-loop.run_until_complete(cog.afk_remove._callback(cog, inter3))
-check(inter3.response.kw is not None and inter3.response.kw.get('ephemeral') is True,
-      '/afk-remove (со списком упоминаний) — ephemeral')
+FakeChannel.sent = []
+msg2 = FakeMessage()
+loop.run_until_complete(cog.on_message(msg2))
+emb = FakeChannel.sent[0] if FakeChannel.sent else None
+check(emb is not None and any('упомянули' in (f.name or '') for f in (emb.fields or [])),
+      'при авто-снятии показываются накопившиеся упоминания')
+# самой слеш-команды /afk-remove в коге больше нет
+check(not hasattr(cog, 'afk_remove') or not hasattr(getattr(cog, 'afk_remove', None), 'name'),
+      'команда /afk-remove удалена (выход авто)')
 
 # ── 2. Чат-контроля нет, должности две ───────────────────────────────
 print('== Должности: только Хелпер и Модератор ==')

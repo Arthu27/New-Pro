@@ -57,13 +57,16 @@ check(not next((c for c in cat['commands'] if c['name'] == 'play'), None),
 
 import slash_budget  # noqa: E402
 keep = slash_budget.KEEP_SLASH
+# Сетап-команды (verify-setup, report-setup/settings) убраны в панель,
+# /afk-remove удалён (AFK спадает авто) — в меню 6 команд (2026-09-01).
 check(set(keep) == {'modpanel', 'апелляция', 'update',
-                    'afk', 'afk-remove',
-                    'report', 'my-violations', 'verify-setup'},
-      f'белый список слеш-меню = 8 команд (сейчас: {sorted(keep)})')
-for name in ('modpanel', 'апелляция', 'update', 'afk', 'afk-remove',
-             'report', 'my-violations', 'verify-setup'):
+                    'afk', 'report', 'my-violations'},
+      f'белый список слеш-меню = 6 команд (сейчас: {sorted(keep)})')
+for name in ('modpanel', 'апелляция', 'update', 'afk',
+             'report', 'my-violations'):
     check(name in keep, f'{name} в KEEP_SLASH (иначе исчезнет из меню)')
+for gone in ('afk-remove', 'verify-setup', 'report-setup', 'report-settings'):
+    check(gone not in keep, f'{gone} убран из слеш-меню (настройка в панели/авто)')
 check('play' not in keep, '/play снят — музыка выведена из боевого состава')
 # Тикет-система снята 2026-08-31 — ticket-panel не должен вернуться
 check('ticket-panel' not in keep, 'ticket-panel снят — жалобы идут через /report')

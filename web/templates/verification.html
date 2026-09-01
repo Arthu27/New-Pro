@@ -50,10 +50,11 @@
         <label class="form-group"><span class="form-label">Канал заявок модераторам</span>
           <select class="form-input" id="vfRChan"><option value="">— = канал верификации —</option></select></label>
       </div>
-      <div class="hint">Канал верификации бот создаёт автоматически при <code>/verify-setup</code> в Discord, если он ещё не создан.</div>
+      <div class="hint">Укажите канал верификации и сохраните настройки, затем нажмите «Опубликовать кнопку» — бот отправит в канал карточку с кнопкой анкеты.</div>
 
       <div class="row" style="margin-top:14px">
         <button type="button" class="btn btn-primary" id="vfSave"><i class="fas fa-save"></i> Сохранить</button>
+        <button type="button" class="btn" id="vfPublish"><i class="fas fa-paper-plane"></i> Опубликовать кнопку</button>
       </div>
       <div class="hint" id="vfMsg" style="margin-top:8px"></div>
     </div>
@@ -159,7 +160,7 @@ function render(cfg, pending) {
   // селекты появились в DOM — превратить их в единый пикер (без дублей)
   if (window.sshdAll) window.sshdAll(document);
   // не-админ видит настройки, но не меняет их
-  ['vfEnabled','vfMinAge','vfKick','vfQRole','vfMRole','vfVChan','vfRChan','vfSave']
+  ['vfEnabled','vfMinAge','vfKick','vfQRole','vfMRole','vfVChan','vfRChan','vfSave','vfPublish']
     .forEach(function (id) { if ($(id)) $(id).disabled = !CAN_EDIT; });
 }
 
@@ -195,7 +196,24 @@ function save() {
   }).catch(function () { showMsg(false, 'Сеть моргнула — попробуйте ещё раз'); });
 }
 
+function publish() {
+  if (!CAN_EDIT) { showMsg(false, 'Публиковать может только администратор'); return; }
+  if (!$('vfVChan').value) { showMsg(false, 'Сначала выберите канал верификации и сохраните настройки'); return; }
+  var btn = $('vfPublish');
+  btn.disabled = true;
+  // на всякий случай сохраняем настройки перед публикацией
+  save();
+  fetch(API + '/publish', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    btn.disabled = false;
+    if (!d.success) { showMsg(false, d.error || 'Не удалось опубликовать'); return; }
+    showMsg(true, 'Кнопка анкеты опубликована в канале верификации');
+  }).catch(function () { btn.disabled = false; showMsg(false, 'Сеть моргнула — попробуйте ещё раз'); });
+}
+
 $('vfSave').addEventListener('click', save);
+$('vfPublish').addEventListener('click', publish);
 $('vfReload').addEventListener('click', load);
 // кэшируем список заявок, чтобы перерисовка после сохранения его не теряла
 var _origRenderPending = renderPending;

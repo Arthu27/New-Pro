@@ -49,10 +49,14 @@ data = CR.catalog(force=True)
 # Заказ владельца: боевое слеш-меню — минимум команд. Тикет-система снята
 # 2026-08-31, её роль выполняет /report (жалоба карточкой в канал модерации).
 # Музыка (/play) снята 2026-09-01 — бот модерационный.
-# В меню: modpanel, апелляция, update, afk/afk-remove, report, my-violations, verify-setup.
-check(data['total'] == 8, f"lean: собрано {data['total']} живых команд (ровно 8)")
-check(data['slash'] == 8 and data['prefix'] == 0,
+# В меню: modpanel, апелляция, update, afk, report, my-violations.
+# Сетап-команды убраны в панель, /afk-remove удалён (AFK спадает авто).
+check(data['total'] == 6, f"lean: собрано {data['total']} живых команд (ровно 6)")
+check(data['slash'] == 6 and data['prefix'] == 0,
       f"lean: слеш {data['slash']}, префиксных {data['prefix']} — «!»-команд больше нет")
+for gone in ('verify-setup', 'report-setup', 'report-settings', 'afk-remove'):
+    check(gone not in [c['name'] for c in data.get('commands', [])],
+          f'{gone} убран из боевого меню (настройка в панели/авто)')
 check(data['total'] == data['slash'] + data['subs'] + data['prefix'],
       'счётчики сходятся: total = slash + subs + prefix')
 labels = [c['label'] for c in data['categories']]
