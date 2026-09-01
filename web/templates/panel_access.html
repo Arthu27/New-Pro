@@ -348,7 +348,9 @@ function loadPA(){
 
 loadPA();
 
-/* live: доступ/права обновляются сами каждые 1.5 секунды (совпадение везде) */
-if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadVisibility(); loadPA(); } catch (e) {} }, 1500);
+/* live: обновляемся ПУШЕМ только когда доступ/маппинг ролей реально
+   изменились (сохранение на любой вкладке шлёт свой топик), а не на любое
+   событие сервера. Таймер — лишь редкая страховка (SSE не поднялся). */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadVisibility(); loadPA(); } catch (e) {} }, 30000, ['role_map', 'panel_visibility', 'g*:permissions']);
 </script>
 {% endblock %}

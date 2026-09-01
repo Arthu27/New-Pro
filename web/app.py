@@ -12,7 +12,7 @@ import random
 import string 
 import hashlib 
 import math 
-from flask import Flask ,render_template ,request ,session ,redirect ,url_for ,send_from_directory 
+from flask import Flask ,render_template ,request ,session ,redirect ,url_for ,send_from_directory ,Response 
 # jsonify ВСЕХ ответов панели — из web.routes._common: снежинки Discord
 # (>2^53) уходят клиенту строкой, иначе JS ломает цифры id.
 from web.routes._common import jsonify
@@ -3156,52 +3156,114 @@ def api_public_apply ():
 from web .routes_extra import register_extra_routes 
 register_extra_routes (app ,ROLES ,login_required ,role_required ,MAIN_GUILD_ID )
 
-# Роли Map API 
-@app .route ('/api/role-map')
-@login_required 
-@role_required ('admin')
-def api_get_role_map ():
-    """Получить сопоставление ролей + список ролей сервера"""
-    guild_roles =[]
-    if bot_instance :
-        gid =MAIN_GUILD_ID or (str (bot_instance .guilds [0 ].id )if bot_instance .guilds else None )
-        if gid :
-            guild =bot_instance .get_guild (int (gid ))
-            if guild :
-                for r in sorted (guild .roles ,key =lambda x :x .position ,reverse =True ):
-                    if r .name =='@everyone':
-                        continue 
-                    guild_roles .append ({
-                    'id':str (r .id ),
-                    'name':r .name ,
-                    'color':str (r .color ),
-                    'position':r .position ,
-                    'members':r .members .__len__ ()if hasattr (r .members ,'__len__')else 0 ,
+# Роли Map API
+# Раздел «Доступ» опрашивается SSE-страницей постоянно: готовый ответ
+# держим за короткий TTL и отдаём по ETag (304 без тела), а состав ролей
+# кэшируем отдельно — на крупном сервере подсчёт r.members на каждую роль
+# не повторяется на каждый опрос.
+import threading as _threading_rm
+import hashlib as _hashlib_rm
+_ROLE_MAP_LOCK = _threading_rm.Lock()
+_ROLE_MAP_CACHE = {'ts': 0.0, 'raw': None, 'etag': None}
+_ROLE_MAP_ROLES = {'ts': 0.0, 'roles': None}
+_ROLE_MAP_TTL = 5.0
+_ROLE_MAP_ROLES_TTL = 30.0
+
+
+def _role_map_guild_roles():
+    """Список ролей сервера для маппинга (TTL-кэш, без вложенных блокировок)."""
+    import time as _time
+    now = _time.time()
+    with _ROLE_MAP_LOCK:
+        hit = _ROLE_MAP_ROLES
+        if hit['roles'] is not None and now - hit['ts'] < _ROLE_MAP_ROLES_TTL:
+            return list(hit['roles'])
+    # промах кэша — собираем БЕЗ удержания лока (без вложенных блокировок)
+    guild_roles = []
+    if bot_instance:
+        gid = MAIN_GUILD_ID or (str(bot_instance.guilds[0].id)
+                                if bot_instance.guilds else None)
+        if gid:
+            guild = bot_instance.get_guild(int(gid))
+            if guild:
+                for r in sorted(guild.roles, key=lambda x: x.position,
+                                reverse=True):
+                    if r.name == '@everyone':
+                        continue
+                    guild_roles.append({
+                        'id': str(r.id),
+                        'name': r.name,
+                        'color': str(r.color),
+                        'position': r.position,
+                        'members': (r.members.__len__()
+                                    if hasattr(r.members, '__len__') else 0),
                     })
-    elif _demo_mode ():
+    elif _demo_mode():
         # демо-превью без бота: роли сервера из демо-набора —
         # страница «Панели и роли» живая и показывает маппинг,
         # включая роль Куратора (9013 → curator).
-        try :
-            from web .routes .guild_admin import _demo_roles_seed
-            for r in _demo_roles_seed ():
-                guild_roles .append ({
-                'id':str (r ['id']),
-                'name':r ['name'],
-                'color':r ['color'],
-                'position':int (r ['id'])if str (r ['id']).isdigit ()else 0 ,
-                'members':int (r .get ('members')or 0 ),
+        try:
+            from web.routes.guild_admin import _demo_roles_seed
+            for r in _demo_roles_seed():
+                guild_roles.append({
+                    'id': str(r['id']),
+                    'name': r['name'],
+                    'color': r['color'],
+                    'position': int(r['id']) if str(r['id']).isdigit() else 0,
+                    'members': int(r.get('members') or 0),
                 })
         except Exception as _ex:
-            _log.debug("api_get_role_map(): демо: %s", _ex )
-    role_map =dict (DISCORD_ROLE_MAP )
-    if _demo_mode ()and not role_map :
+            _log.debug("api_get_role_map(): демо: %s", _ex)
+    with _ROLE_MAP_LOCK:
+        _ROLE_MAP_ROLES['ts'] = now
+        _ROLE_MAP_ROLES['roles'] = list(guild_roles)
+    return guild_roles
+
+
+def _role_map_payload():
+    """Собрать {role_map, guild_roles}; роли — с TTL-кэшем."""
+    guild_roles = _role_map_guild_roles()
+    role_map = dict(DISCORD_ROLE_MAP)
+    if _demo_mode() and not role_map:
         # дефолтный демо-маппинг, пока владелец не поменял через панель
-        role_map ={'9001':'owner','9002':'admin','9003':'mod','9013':'curator'}
-    return jsonify ({
-    'role_map':role_map ,
-    'guild_roles':guild_roles ,
-    })
+        role_map = {'9001': 'owner', '9002': 'admin', '9003': 'mod', '9013': 'curator'}
+    return {'role_map': role_map, 'guild_roles': guild_roles}
+
+
+def _role_map_invalidate():
+    with _ROLE_MAP_LOCK:
+        _ROLE_MAP_CACHE.update({'ts': 0.0, 'raw': None, 'etag': None})
+        _ROLE_MAP_ROLES.update({'ts': 0.0, 'roles': None})
+    try:
+        from services.live_bus import publish_global
+        publish_global('role_map')
+    except Exception as _ex:
+        _log.debug("role_map SSE: %s", _ex)
+
+
+@app.route('/api/role-map')
+@login_required
+@role_required('admin')
+def api_get_role_map():
+    """Получить сопоставление ролей + список ролей сервера."""
+    import time as _time
+    now = _time.time()
+    with _ROLE_MAP_LOCK:
+        hit = _ROLE_MAP_CACHE
+        fresh = hit['raw'] is not None and now - hit['ts'] < _ROLE_MAP_TTL
+    if fresh:
+        raw, etag = hit['raw'], hit['etag']
+    else:
+        raw = json.dumps(_role_map_payload(), ensure_ascii=False,
+                         separators=(',', ':'))
+        etag = '"' + _hashlib_rm.md5(raw.encode('utf-8')).hexdigest() + '"'
+        with _ROLE_MAP_LOCK:
+            _ROLE_MAP_CACHE.update({'ts': now, 'raw': raw, 'etag': etag})
+    if etag in request.headers.get('If-None-Match', ''):
+        return Response(status=304,
+                        headers={'ETag': etag, 'Cache-Control': 'no-cache'})
+    return Response(raw, mimetype='application/json',
+                    headers={'ETag': etag, 'Cache-Control': 'no-cache'})
 
 @app .route ('/api/role-map',methods =['POST'])
 @login_required 
@@ -3218,8 +3280,9 @@ def api_set_role_map ():
     if panel_role =='uye':
         DISCORD_ROLE_MAP .pop (role_id ,None )
     else :
-        DISCORD_ROLE_MAP [role_id ]=panel_role 
+        DISCORD_ROLE_MAP [role_id ]=panel_role
     _save_role_map ()
+    _role_map_invalidate ()
     _log_panel_action ('ROLE_MAP_SET',f'{role_id} → {panel_role or "uye"}'if panel_role else f'{role_id} → uye')
     return jsonify ({'success':True })
 
@@ -3231,6 +3294,7 @@ def api_delete_role_map (role_id ):
     if role_id in DISCORD_ROLE_MAP :
         del DISCORD_ROLE_MAP [role_id ]
         _save_role_map ()
+        _role_map_invalidate ()
         _log_panel_action ('ROLE_MAP_DELETE',role_id )
     return jsonify ({'success':True })
 

@@ -806,7 +806,9 @@ document.getElementById('acc-body').addEventListener('keydown', function (e) {
 
 loadData();
 
-/* live: доступ/права обновляются сами каждые 1.5 секунды (совпадение везде) */
-if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadData(true); } catch (e) {} }, 1500);
+/* live: обновляемся ПУШЕМ только когда права реально изменились (сохранение
+   на этой/другой вкладке шлёт топик permissions), а не на любое событие
+   сервера. Таймер — лишь редкая страховка (SSE не поднялся). */
+if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadData(true); } catch (e) {} }, 30000, ['g*:permissions', 'role_map']);
 </script>
 {% endblock %}
