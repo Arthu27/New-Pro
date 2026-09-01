@@ -16,6 +16,6 @@ deep-translator==1.11.4
 aiohttp==3.14.3
 colorama==0.4.6
 requests==2.34.2
-yt-dlp==2026.7.4
+# yt-dlp убран: система музыки (/play) удалена (2026-09-01).
 websockets==17.0.1
 Pillow==12.3.0

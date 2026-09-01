@@ -12,7 +12,7 @@ sys.path.insert(0, _REPO)
 
 from cogs_policy import (
     CORE_COGS, HELPER_COGS, MODERATION_COGS, MOD_ONLY_COGS,
-    CORE_ONLY_COGS, TICKET_COGS, AI_CHAT_COGS, MUSIC_COGS, SLIM_COGS,
+    CORE_ONLY_COGS, TICKET_COGS, AI_CHAT_COGS, VOICE_STATS_COGS, SLIM_COGS,
     LEAN_COGS, MOD_LEAN_COGS, TICKET_LEAN_COGS, AI_LEAN_COGS, WELCOME_LEAN_COGS,
     RETIRED_COGS,
     env_flag, is_helper, select_cog_files, select_from_environment,
@@ -41,7 +41,7 @@ NON_HELPERS = sorted(f for f in ALL_FILES if f not in HELPER_COGS)
 
 
 print('\n== 1. Нормализация имён и парсинг списков ==')
-check(_norm_name('Music_Cog.py') == 'music_cog', '_norm_name: регистр и .py срезаются')
+check(_norm_name('Welcome_Cog.py') == 'welcome_cog', '_norm_name: регистр и .py срезаются')
 check(_norm_name(' cogs/Economy_COG ') == 'economy_cog', '_norm_name: путь и пробелы чистятся')
 check(_norm_name('cogs.fun_cog') == 'fun_cog', '_norm_name: префикс cogs. срезается')
 check(_parse_list('a, b.py ,C') == {'a', 'b', 'c'}, '_parse_list: запятые/пробелы/.py')
@@ -94,10 +94,11 @@ for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
              'welcome_cog.py', 'welcome_card.py', 'welcome_pro.py',
              'afk.py', 'help.py', 'cog_manager.py'):
     assert keep in enabled, keep
-# Музыка (/play) снята с эксплуатации 2026-09-01: коги не грузятся ни в каком профиле.
-for retired_music in ('music_cog.py', 'voice_commands.py'):
-    assert retired_music in disabled, retired_music
-check(True, 'lean: модерация/репорты/AI/приветствие/логи/afk — живы; музыка снята')
+# Музыка (/play) удалена из проекта 2026-09-01: файлов когов нет на диске,
+# в составе они не фигурируют (ни enabled, ни disabled).
+for gone_music in ('music_cog.py', 'voice_commands.py'):
+    assert gone_music not in enabled and gone_music not in ALL_SET, gone_music
+check(True, 'lean: модерация/репорты/AI/приветствие/логи/afk — живы; музыка удалена')
 # Старая заглушка verification.py физически удалена — её заменил
 # полноценный age_verification.py (карантин + анкета молодых аккаунтов).
 assert 'verification.py' not in ALL_SET, 'verification.py должна быть удалена'
@@ -111,12 +112,11 @@ for awake_shield in ('security.py', 'anti_alt.py', 'impersonation.py', 'ai_moder
     assert awake_shield in enabled, awake_shield
 check(True, 'lean: ЩИТ проснулся — security/anti-alt/impersonation/ai-moderation в боевом профиле')
 check(not any(is_helper(f) for f in enabled), 'lean: хелперы не загружаются никогда')
-from cogs_policy import VOICE_STATS_COGS
 check(CORE_COGS <= LEAN_COGS and MOD_LEAN_COGS <= LEAN_COGS
       and TICKET_LEAN_COGS <= LEAN_COGS and VOICE_STATS_COGS <= LEAN_COGS
       and AI_LEAN_COGS <= LEAN_COGS and WELCOME_LEAN_COGS <= LEAN_COGS
-      and not (MUSIC_COGS - VOICE_STATS_COGS) & LEAN_COGS,
-      'lean: состав = ядро + модерация + репорты + войс-статистика + AI; музыка снята')
+      and 'voice_tracker.py' in LEAN_COGS,
+      'lean: состав = ядро + модерация + репорты + войс-статистика + AI; музыка удалена')
 check(not set(enabled) & set(disabled)
       and len(enabled) + len(disabled) == len(NON_HELPERS),
       'lean: разбиение без пересечений и потерь')
@@ -158,10 +158,12 @@ check(sorted(set(NON_HELPERS) - set(MOD_ONLY_COGS)) == disabled_m,
 for fun in ('economy_cog.py', 'fun_cog.py', 'minigames.py',
             'giveaway.py', 'level_cog.py', 'anime_daily.py', 'starboard.py'):
     assert fun not in enabled_m and fun not in ALL_SET, fun
-# музыка/AI-чат/приветствие живут на диске, но в mod_only отключены
-for off_now in ('music_cog.py', 'ai_chat.py', 'welcome_cog.py', 'voice_commands.py'):
+# AI-чат/приветствие живут на диске, но в mod_only отключены; музыка удалена с диска.
+for off_now in ('ai_chat.py', 'welcome_cog.py'):
     assert off_now in disabled_m, off_now
-check(True, 'mod_only: экономика/игры/раздачи/левелинг удалены; музыка/AI/приветствие — выключены')
+for gone_music in ('music_cog.py', 'voice_commands.py'):
+    assert gone_music not in ALL_SET, gone_music
+check(True, 'mod_only: экономика/игры/раздачи/левелинг/музыка удалены; AI/приветствие — выключены')
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py', 'temp_moderation.py',
              'antiraid.py', 'security.py', 'age_verification.py', 'auto_filter.py',
              'ai_moderation.py', 'reports.py', 'logs.py', 'proof_cog.py',
@@ -176,21 +178,22 @@ print('\n== 5.5 BOT_CORE=1 — «модерация + репорты + логи 
 check(CORE_COGS <= CORE_ONLY_COGS and MODERATION_COGS <= CORE_ONLY_COGS
       and TICKET_COGS <= CORE_ONLY_COGS and AI_CHAT_COGS <= CORE_ONLY_COGS,
       'core: = ядро + модерация + репорты + AI-чат')
-check(not (MUSIC_COGS & CORE_ONLY_COGS), 'core: музыка выключена (не входит)')
-check('music_cog.py' not in CORE_ONLY_COGS and 'economy_cog.py' not in CORE_ONLY_COGS,
-      'core: экономика/музыка/веселуха выключены')
+check('voice_tracker.py' not in CORE_ONLY_COGS and 'music_cog.py' not in CORE_ONLY_COGS,
+      'core: музыка не входит в ядро (фича удалена)')
+check('economy_cog.py' not in CORE_ONLY_COGS,
+      'core: экономика/веселуха выключены')
 missing_core = sorted(f for f in CORE_ONLY_COGS if f not in ALL_SET)
 check(missing_core == [], f'CORE_ONLY_COGS: все файлы на диске {missing_core}')
 enabled_c, disabled_c = select_cog_files(ALL_FILES, core=True)
 check(set(enabled_c) == CORE_ONLY_COGS, 'core: загружается ровно keep-лист')
 # Удалённые весёлые модули не существуют на диске вовсе; живые «несердцевинные»
-# (музыка/голос/приветствие) в core-режиме отключены.
+# (приветствие) в core-режиме отключены; музыка удалена с диска.
 for gone in ('economy_cog.py', 'fun_cog.py', 'level_cog.py',
-             'giveaway.py', 'minigames.py', 'starboard.py'):
+             'giveaway.py', 'minigames.py', 'starboard.py',
+             'music_cog.py', 'voice_commands.py'):
     assert gone not in ALL_SET, gone
-for off_now in ('music_cog.py', 'voice_commands.py', 'welcome_cog.py'):
-    assert off_now in disabled_c, off_now
-check(True, 'core: экономика/игры/левелинг удалены; музыка/голос/приветствие выключены')
+assert 'welcome_cog.py' in disabled_c, 'welcome_cog.py'
+check(True, 'core: экономика/игры/левелинг/музыка удалены; приветствие выключено')
 for keep in ('moderation.py', 'reports.py', 'staff_apply.py',
              'logs.py', 'log_menu.py', 'ai_chat.py', 'ai_moderation.py',
              'help.py', 'cog_manager.py'):
@@ -201,24 +204,25 @@ check(not set(enabled_c) & set(disabled_c)
       'core: разбиение без пересечений и потерь')
 
 print('\n== 6. DISABLED_COGS / EXTRA_COGS ==')
-e2, d2 = select_cog_files(ALL_FILES, full=True, disabled='Music_Cog.py, afk')
-# music_cog уже в RETIRED (снят навсегда) — он в disabled и без флага; afk добавляется.
-check('music_cog.py' in d2 and 'afk.py' in d2 and
-      len(e2) == len(NON_HELPERS) - len(RETIRED_COGS) - 1,
+e2, d2 = select_cog_files(ALL_FILES, full=True, disabled='Welcome_Cog.py, afk')
+# welcome_cog жив в FULL — попадает в disabled по флагу; afk тоже выключается.
+check('welcome_cog.py' in d2 and 'afk.py' in d2 and
+      len(e2) == len(NON_HELPERS) - len(RETIRED_COGS) - 2,
       'DISABLED_COGS: работает в полном режиме, имена нечувствительны к виду')
-e2l, d2l = select_cog_files(ALL_FILES, disabled='music_cog')
-check('music_cog.py' in d2l and 'moderation.py' in e2l,
+e2l, d2l = select_cog_files(ALL_FILES, disabled='afk')
+check('afk.py' in d2l and 'moderation.py' in e2l,
       'DISABLED_COGS: работает и поверх LEAN (выключает даже боевой модуль)')
 e3, d3 = select_cog_files(ALL_FILES, mod_only=True, disabled='logs,ticket.py')
 check('logs.py' in d3 and 'ticket.py' in d3,
       'DISABLED_COGS: может выключить даже модер-модуль/хелпер (приоритет над keep)')
-# Музыка снята (RETIRED) — её не разбудить через EXTRA; проверяем на других спящих.
+# Удалённые модули (музыка) на диске отсутствуют — EXTRA их не возвращает;
+# проверяем точечный возврат на живых спящих модулях.
 e4, d4 = select_cog_files(ALL_FILES, mod_only=True, extra='welcome_cog.py, afk')
 check('welcome_cog.py' in e4 and 'afk.py' in e4 and 'ai_chat.py' in d4,
       'EXTRA_COGS: возвращает отдельные живые модули поверх MOD_ONLY')
 e4m, d4m = select_cog_files(ALL_FILES, mod_only=True, extra='music_cog')
-check('music_cog.py' not in e4m and 'music_cog.py' in d4m,
-      'RETIRED-модуль (music_cog) не включается даже через EXTRA_COGS')
+check('music_cog.py' not in e4m and 'music_cog.py' not in d4m,
+      'EXTRA_COGS: удалённый модуль (music_cog) не воскресает — файла нет')
 e5, _ = select_cog_files(ALL_FILES, mod_only=True, extra='_card_style,icons')
 check('_card_style.py' not in e5 and 'icons.py' not in e5,
       'EXTRA_COGS: хелпер силой не включить')
@@ -236,8 +240,8 @@ check(ee3 == sorted(set(NON_HELPERS) - RETIRED_COGS)
       and de3 == sorted(set(NON_HELPERS) & RETIRED_COGS),
       'select_from_environment: BOT_FULL=1 -> полный состав (покой на месте)')
 ee4, de4 = select_from_environment(ALL_FILES, environ={'EXTRA_COGS': 'welcome_cog'})
-check('welcome_cog.py' in ee4 and 'music_cog.py' in de4,
-      'select_from_environment: EXTRA_COGS будит живой модуль; RETIRED (музыка) остаётся выкл')
+check('welcome_cog.py' in ee4 and 'music_cog.py' not in de4 and 'music_cog.py' not in ee4,
+      'select_from_environment: EXTRA_COGS будит живой модуль; удалённая музыка не фигурирует')
 
 print('\n== 8. Интеграция с main.py ==')
 with open(os.path.join(_REPO, 'main.py'), encoding='utf-8') as fp:

@@ -219,7 +219,9 @@ PUBLIC_EXACT = {
     '/api/forgot-password', '/api/reset-password',           # восстановление доступа
 }
 PUBLIC_PREFIX = ('/static/', '/hooks/')                      # статика; webhook-токены
-PUBLIC_RE = re.compile(r'^/api/activity/music/(config|token|state|control)$')  # Discord OAuth
+# Discord Activity музыки снесена вместе с фичей (2026-09-01) — публичных
+# Bearer/OAuth-маршрутов не осталось.
+PUBLIC_RE = re.compile(r'(?!)')
 unprotected = []
 for p in walk_py('web'):
     src = read(p)
@@ -280,11 +282,11 @@ for rf in ('requirements.txt', 'requirements-panel.txt', 'requirements-test.txt'
             if line:
                 req_pkgs.add(re.split(r'[<>=!\[~]', line)[0].strip().lower())
 IMPORT_TO_PKG = {'discord': 'discord.py', 'PIL': 'Pillow', 'dotenv': 'python-dotenv',
-                 'yt_dlp': 'yt-dlp', 'flask_session': 'flask-session',
+                 'flask_session': 'flask-session',
                  'deep_translator': 'deep-translator', 'faster_whisper': 'faster-whisper'}
 # import-имя для проверки установки (обратное соответствие)
 PKG_TO_IMPORT = {'discord.py': 'discord', 'pillow': 'PIL', 'python-dotenv': 'dotenv',
-                 'yt-dlp': 'yt_dlp', 'flask-session': 'flask_session',
+                 'flask-session': 'flask_session',
                  'deep-translator': 'deep_translator', 'faster-whisper': 'faster_whisper',
                  'pynacl': 'nacl', 'discord-ext-voice-recv': 'discord.ext.voice_recv',
                  'pyyaml': 'yaml', 'psutil': 'psutil'}

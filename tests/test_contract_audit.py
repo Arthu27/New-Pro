@@ -112,8 +112,7 @@ CONTRACTS = [
     ('анти-краш обзор', '/api/anticrash/overview',
      ['ok', 'total_errors', 'daily7', 'top_types', 'top_cogs']),
     ('анти-краш конфиг', '/api/anticrash/config', ['ok', 'config', 'order', 'meta']),
-    # [контракт удалён вместе с фичей]
-    ('музыка', '/api/music/state', ['success', 'offline', 'connected', 'playing', 'queue']),
+    # [контракт удалён вместе с фичей: музыка снесена 2026-09-01]
     # [контракт удалён вместе с фичей]
     ('доска команды', '/api/team-board', ['columns']),
     # [контракт удалён вместе с фичей]

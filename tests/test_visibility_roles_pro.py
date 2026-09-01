@@ -161,7 +161,7 @@ check(r.status_code == 400, 'публикация без канала — 400')
 print('== BOT_SLIM ==')
 from cogs_policy import select_cog_files, SLIM_COGS  # noqa: E402
 files = ['moderation.py', 'reports.py', 'staff_apply.py',
-         'music_cog.py', 'voice_commands.py', 'voice_tracker.py',
+         'voice_tracker.py',
          'ai_chat.py', 'help.py',
          'logs.py', 'impersonation.py']
 enabled, gone = select_cog_files(files, slim=True)
@@ -170,8 +170,10 @@ check({'moderation.py', 'reports.py', 'staff_apply.py',
        'voice_tracker.py',
        'help.py', 'logs.py', 'impersonation.py', 'ai_chat.py'} <= sel,
       'BOT_SLIM: модерация, репорты, заявки, войс-статистика, ядро и AI-чат загружены')
-check('music_cog.py' not in sel and 'voice_commands.py' not in sel,
-      'BOT_SLIM: музыка (/play) снята и не возвращается даже в SLIM')
+import os as _os
+check(not _os.path.exists(os.path.join(ROOT, 'cogs', 'music_cog.py'))
+      and not _os.path.exists(os.path.join(ROOT, 'cogs', 'voice_commands.py')),
+      'BOT_SLIM: файлы музыки (music_cog/voice_commands) физически удалены')
 
 # ═══ 6. Шаблоны ═══════════════════════════════════════════════════════
 print('== шаблоны ==')

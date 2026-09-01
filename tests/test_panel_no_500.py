@@ -85,7 +85,7 @@ check(not broken, f'нет ответов 500 (сломано: {broken[:6]})')
 # именно те восемь, что падали в инциденте
 INCIDENT = [
     '/api/achievements/state', '/api/duels/state',
-    '/api/music/state', '/api/shop/state',
+    '/api/shop/state',
     '/api/mod-report', '/api/mod-report.csv',
     '/api/tickets-ops/sla', '/api/tickets-ops/export.csv',
 ]
@@ -160,21 +160,19 @@ with client2.session_transaction() as s:
     s['role'] = 'owner'
     s['username'] = 'owner'
 
-# Эндпоинты удалённых фич (achievements/duels/shop/mod-report/tickets-ops)
-# больше не существуют — честный 404, а не 500 и не «вечный сервер не выбран».
+# Эндпоинты удалённых фич (achievements/duels/shop/mod-report/tickets-ops/
+# музыка) больше не существуют — честный 404, а не 500 и не «вечный сервер
+# не выбран». Музыка снесена 2026-09-01 вместе с /api/music/*.
 DELETED_FEATURES = [
     '/api/achievements/state', '/api/duels/state', '/api/shop/state',
     '/api/mod-report', '/api/mod-report.csv',
     '/api/tickets-ops/sla', '/api/tickets-ops/export.csv',
+    '/api/music/state',
 ]
 for url in DELETED_FEATURES:
     code = client2.get(url).status_code
     check(code == 404,
           f'{url} → {code} (фича удалена — ждём ровный 404, не 500)')
-# музыка — живая фича; 503 когда бот офлайн это её собственная логика (не 500/404)
-code = client2.get('/api/music/state').status_code
-check(code in (200, 503),
-      f'/api/music/state → {code} (живая страница: 200 с ботом, 503 без него)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

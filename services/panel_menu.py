@@ -172,7 +172,6 @@ MENU = [
     {'group': 'Сообщество', 'key': 'community', 'icon': 'fa-gamepad', 'pages': [
         
         
-        {'path': '/music', 'label': 'Музыка', 'icon': 'fa-music'},
         
         
         
@@ -274,7 +273,6 @@ CONFIGURABLE = ('mod', 'curator', 'admin')
 # Страницы, работающие через Discord API напрямую (роли, каналы, бэкапы...),
 # в карту НЕ входят: они живы и без когов.
 PAGE_COGS = {
-    '/music': ('music_cog',),
     '/voice-stats': ('voice_tracker',),
     '/afk-list': ('afk',),
     '/ai-chat': ('ai_chat',),

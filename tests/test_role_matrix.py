@@ -75,9 +75,7 @@ PUBLIC = {
     'api_public_apply', 'api_public_guilds', 'public_apply',
     'api_status_public', 'status_public_page', 'api_voice_command',
     'favicon', 'health_check', 'static',
-    # Discord Activity: публичный OAuth/Bearer-флоу встроенного приложения
-    'activity_music_config', 'activity_music_token',
-    'activity_music_state', 'activity_music_control',
+    # Discord Activity музыки снесена вместе с фичей музыки (2026-09-01)
     # PagerDuty → Discord: сервер-сервер вебхук с токеном в URL (без сессии)
     'hook_pagerduty',
 }
@@ -186,9 +184,9 @@ guest_public_viol = []  # публичные должны открываться
 denied_viol = {r: [] for r in ROLES}    # роль ниже порога, но впустило
 allowed_viol = {r: [] for r in ROLES}   # роль ≥ порога, но не впустило
 
-# Discord Activity: авторизация — Bearer-токен OAuth2 (не сессия панели),
-# поэтому их не гоняем через сессионную матрицу ролей.
-BEARER_GET = {'/api/activity/music/config', '/api/activity/music/state'}
+# Discord Activity музыки удалена вместе с фичей (2026-09-01) — Bearer-эндпойнтов
+# не осталось; гоняем через сессионную матрицу все GET-правила.
+BEARER_GET = set()
 
 for path, ep in GET_RULES:
     info = DECOS.get(ep, {'login': False, 'role': None})

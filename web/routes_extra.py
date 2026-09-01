@@ -59,8 +59,6 @@ from web.routes import (
     theme,
     adv_analytics,
     ux,
-    music_panel,
-    music_activity,
     flags_panel,
     analytics_plus,
     mod_control,

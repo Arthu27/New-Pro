@@ -70,13 +70,9 @@ LEGACY_ROUTE_EMOJI = {
     'security_api.py', 'tasks_rules.py', 'tickets_admin.py',
 }
 # Публичные API без логина — осознанно (виджет статуса снаружи).
-# Discord Activity: авторизация — Bearer-токен OAuth2 из SDK, а не сессия панели.
+# Discord Activity музыки снесена вместе с фичей музыки (2026-09-01).
 PUBLIC_API = {
     ('status.py', '/api/status-public'),
-    ('music_activity.py', '/api/activity/music/config'),
-    ('music_activity.py', '/api/activity/music/token'),
-    ('music_activity.py', '/api/activity/music/state'),
-    ('music_activity.py', '/api/activity/music/control'),
 }
 
 MARATHON_MODULES = [
@@ -279,11 +275,11 @@ rules = {r.rule for r in appmod.app.url_map.iter_rules()}
 check(len(rules) > 300, f'роутов куча и собрались без коллизий ({len(rules)})')
 # Живые страницы в url_map
 for page in ('/reports-queue', '/antifake', '/verify', '/security',
-             '/warnings', '/music', '/ladder'):
+             '/warnings', '/ladder'):
     check(page in rules, f'страница {page} в url_map')
-# Выключенные страницы не воскресли
+# Выключенные страницы не воскресли (музыка снесена вместе с /play)
 for gone in ('/sla', '/fun', '/archive', '/server-info', '/staff-stats',
-             '/crown', '/shop', '/economy'):
+             '/crown', '/shop', '/economy', '/music'):
     check(gone not in rules, f'страница {gone} удалена (нет в url_map)')
 api_af = sorted(r for r in rules if '/antifake/' in r)
 check(len(api_af) >= 5, f'у /antifake живые API ({len(api_af)})')

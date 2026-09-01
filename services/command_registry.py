@@ -24,7 +24,7 @@ CATEGORIES = {
     'mod': {'label': 'Модерация', 'icon': 'fa-shield-halved'},
     'tickets': {'label': 'Тикеты', 'icon': 'fa-ticket'},
     'logs': {'label': 'Логи и аудит', 'icon': 'fa-scroll'},
-    'music': {'label': 'Музыка', 'icon': 'fa-music'},
+    # Категория «Музыка» удалена вместе с системой /play (2026-09-01).
     'voice': {'label': 'Голосовые', 'icon': 'fa-headset'},
     'economy': {'label': 'Экономика', 'icon': 'fa-coins'},
     'levels': {'label': 'Уровни и карма', 'icon': 'fa-arrow-trend-up'},
@@ -57,9 +57,8 @@ MODULE_CATEGORY = {
     'logs.py': 'logs', 'log_menu.py': 'logs', 'dm_logger.py': 'logs',
     'recap.py': 'logs', 'replay.py': 'logs', 'archive.py': 'logs',
     'backup_cog.py': 'logs',
-    # музыка и голос
-    'music_cog.py': 'music',
-    'voice_commands.py': 'voice', 'voice_tracker.py': 'voice',
+    # голос (музыка удалена 2026-09-01: music_cog.py/voice_commands.py снесены)
+    'voice_tracker.py': 'voice',
     'join_to_create.py': 'voice',
     # экономика
     'economy_cog.py': 'economy', 'economy_shop.py': 'economy',
