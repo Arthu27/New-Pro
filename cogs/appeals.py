@@ -1204,6 +1204,7 @@ class Appeals(commands.Cog):
     @app_commands.command(name='апелляция',
                           description='Обжаловать наказание — подаётся в ЛС боту',
                           extras={'keep_global': True})
+    @app_commands.allowed_contexts(guilds=False, dms=True, private_channels=True)
     @app_commands.describe(текст='Что произошло — до 500 символов; без текста откроется форма')
     async def cmd_appeal(self, interaction: discord.Interaction,
                          текст: str = ''):

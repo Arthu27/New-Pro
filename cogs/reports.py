@@ -792,6 +792,7 @@ class Reports(commands.Cog):
                           description='Настроить систему репортов: канал + роль + права')
     @app_commands.describe(mod_role='Роль модераторов',
                            channel='Канал веток (не указан — создам закрытый #репорты)')
+    @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     async def report_setup_slash(self, interaction,
                                  mod_role: discord.Role,
@@ -868,6 +869,7 @@ class Reports(commands.Cog):
 
     @app_commands.command(name='report-settings',
                           description='Настройки рецидивов репортов')
+    @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     async def report_settings_slash(self, interaction,
                                     expiry_days: app_commands.Range[int, 1, 365] = None):

@@ -452,6 +452,7 @@ class Diagnostics (commands .Cog ):
     @app_commands .command (name ="update",
                           description ="Обновить бота и перезапустить (только владелец бота, в ЛС)",
                           extras ={'keep_global':True })
+    @app_commands .default_permissions (administrator =True )
     @app_commands .allowed_contexts (guilds =False ,dms =True ,private_channels =True )
     async def update_cmd (self ,interaction :discord .Interaction ):
         """Полный цикл сам: скачать → проверить целостность → заменить файлы

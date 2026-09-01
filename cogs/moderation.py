@@ -212,6 +212,7 @@ class Moderation (commands .Cog ):
 
     #  /modpanel — панель модерации через select-меню════════════════════════════════════════════════════════════════
     @app_commands .command (name ="modpanel",description ="Панель модерации (выпадающее меню)")
+    @app_commands .default_permissions (moderate_members =True )
     @app_commands .checks .has_permissions (moderate_members =True )
     async def modpanel (self ,interaction ):
         # Роли решают, что видно: если у ролей модератора заданы свои лимиты,

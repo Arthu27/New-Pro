@@ -528,6 +528,7 @@ class AgeVerification(commands.Cog):
         verify_channel='Канал с кнопкой анкеты (создам сам, если не указан)',
         review_channel='Канал, куда падают анкеты модераторам',
         enabled='Включить систему сразу?')
+    @app_commands.default_permissions(administrator=True)
     @app_commands.checks.has_permissions(administrator=True)
     async def verify_setup(self, interaction: discord.Interaction,
                            min_age_days: app_commands.Range[int, 0, 365] = 2,
