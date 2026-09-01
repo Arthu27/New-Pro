@@ -214,7 +214,7 @@ grp = next(g for g in panel_menu.MENU if g['key'] == 'settings')
 paths = [p['path'] for p in grp['pages']]
 check('/role-settings' in paths, 'страница в категории «Настройки»')
 it = next(p for p in grp['pages'] if p['path'] == '/role-settings')
-check(it['label'] == 'Роли наказаний' and it['icon'].startswith('fa-'),
+check(it['label'] == 'Роли за наказания' and it['icon'].startswith('fa-'),
       'метка и FA-иконка')
 check(len(paths) == len(set(paths)), 'URL-ов дублей нет')
 

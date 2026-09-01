@@ -90,6 +90,88 @@ class Moderation (commands .Cog ):
         except Exception as _ex :
             log .debug (f'punish_roles_loop старт: {_ex}')
 
+    def _recent_mute_count(self, guild_id, user_id, hours: float = 48.0) -> int:
+        """Сколько мутов (таймаут/чат/войс) получил пользователь за окно.
+        Источник — data/mod_data.json (те же дела, что пишет save_case)."""
+        try:
+            filepath = 'data/mod_data.json'
+            if not os.path.exists(filepath):
+                return 0
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            cases = (data.get('cases') or {}).get(str(guild_id)) or []
+            horizon = datetime.now(timezone.utc).timestamp() - hours * 3600
+            n = 0
+            for c in cases:
+                if str(c.get('user_id')) != str(user_id):
+                    continue
+                if c.get('action') not in ('timeout', 'mute_chat', 'vmute'):
+                    continue
+                ts = c.get('timestamp')
+                if not ts:
+                    continue
+                try:
+                    when = datetime.fromisoformat(ts).timestamp()
+                except Exception as _te:
+                    log.debug(f"[MOD] _recent_mute_count bad ts {ts}: {_te}")
+                    continue
+                if when >= horizon:
+                    n += 1
+            return n
+        except Exception as e:
+            log.info(f"[MOD] _recent_mute_count: {e}")
+            return 0
+
+    async def _maybe_auto_warn(self, guild, user):
+        """Авто-варн от бота: 3 мута за 48 ч → 1 предупреждение.
+        Порог настраивается через mod-настройки (по умолчанию 3/48ч).
+        Не дублируем: если у пользователя уже есть авто-варн, поставленный
+        ПОСЛЕ его последнего мута — повторно не выдаём."""
+        try:
+            threshold = 3
+            window_h = 48.0
+            try:
+                _cfg_path = f'data/mod_autowarn_{guild.id}.json'
+                if os.path.exists(_cfg_path):
+                    with open(_cfg_path, 'r', encoding='utf-8') as _cf:
+                        _ac = json.load(_cf)
+                    threshold = int(_ac.get('mute_threshold', threshold))
+                    window_h = float(_ac.get('window_hours', window_h))
+            except Exception as _ce:
+                log.debug(f"[MOD] auto-warn cfg: {_ce}")
+
+            if self._recent_mute_count(guild.id, user.id, window_h) < threshold:
+                return
+
+            # Не дублировать уже выданный авто-варн после последнего мута.
+            warns_cog = self.bot.get_cog('warnings')
+            if warns_cog is None:
+                return
+            warns = warns_cog._get_warns(guild.id, user.id)
+            last_mute_ts = ''
+            try:
+                with open('data/mod_data.json', 'r', encoding='utf-8') as f:
+                    _md = json.load(f)
+                _cs = (_md.get('cases') or {}).get(str(guild.id)) or []
+                _mine = [c.get('timestamp', '') for c in _cs
+                         if str(c.get('user_id')) == str(user.id)
+                         and c.get('action') in ('timeout', 'mute_chat', 'vmute')]
+                last_mute_ts = max(_mine) if _mine else ''
+            except Exception as _me:
+                log.debug(f"[MOD] auto-warn last-mute scan: {_me}")
+            for w in warns:
+                if (w.get('mod_id') == str(self.bot.user.id)
+                        and 'автоматически' in (w.get('reason') or '').lower()
+                        and w.get('timestamp', '') >= last_mute_ts):
+                    return  # авто-варн за эту серию уже выдан
+
+            bot_member = guild.me
+            reason = (f'Автоматически: {threshold} мута за {window_h:.0f} ч '
+                      f'(правило рецидива). Выдано ботом.')
+            await warns_cog.add_warning(user, bot_member, reason)
+        except Exception as _aw_e:
+            log.info(f'[MOD] auto-warn: {_aw_e}')
+
     def save_case (self ,guild_id ,action ,user_id ,mod_id ,reason ):
         os .makedirs ('data',exist_ok =True )
         filepath ='data/mod_data.json'
@@ -673,6 +755,13 @@ class Moderation (commands .Cog ):
                     aux_errors .append ("лог-канал недоступен")
                     log .warning (f'[MODPANEL] send_log: {_log_e}')
 
+                # Авто-варн за серию мутов (3 за 48 ч) — выдаёт сам бот.
+                if action in ('timeout', 'mute_chat', 'vmute'):
+                    try :
+                        await self ._maybe_auto_warn (guild ,user )
+                    except Exception as _aw_e :
+                        log .info (f'[MODPANEL] auto-warn: {_aw_e}')
+
                 # Уведомление панели о действии модерации (веб/Discord/email — в фоне)
                 try :
                     from cogs .ticket import _notify_panel_ticket_event as _np
@@ -1056,16 +1145,19 @@ def _embed_text(e):
 # РАЗРЕШЕНИЯ при этом раздельные — их задаёт MODPANEL_ACL_KEYS ниже.
 # kick НАМЕРЕННО отсутствует: система кика отключена владельцем (см. обработку
 # action == "kick" — вежливый отказ). Не добавлять.
+# Порядок — для удобства (заказ владельца): варн → мут-семейство (таймаут,
+# чат-мут, войс-мут и их снятия) → ОЧИСТКА → бан/апелляция внизу (снятие бана
+# — следующим после бана).
 MODPANEL_ACTIONS = [
     ("warn", "Варн (предупреждение)", "Официальный варн: в дело, участнику в ЛС", "warn"),
-    ("ban", "Бан (апелляция)", "Не выгоняет: закроет каналы, оставит только канал апелляции", "ban"),
     ("timeout", "Таймаут (чат + войс)", "Нативный таймаут Discord: одним действием закрыты и текст, и голос (до 28 дней)", "mute"),
     ("mute_chat", "Мут (только чат)", "Закрывает только чат через мут-роль; голос работает", "mute"),
     ("vmute", "Мут (только войс)", "Глушит микрофон; чат не трогается", "mute"),
-    ("unban", "Снять апелляцию / разбан", "Вернуть доступ к каналам (по ID)", "unban"),
-    ("clear", "Очистка сообщений", "Снести N последних сообщений в канале", "clear"),
     ("untimeout", "Размут (чат + войс)", "Снять таймаут — снова можно всё", "unmute"),
     ("vunmute", "Размут (войс)", "Вернуть участнику голос", "unmute"),
+    ("clear", "Очистка сообщений", "Снести N последних сообщений в канале", "clear"),
+    ("ban", "Бан (апелляция)", "Не выгоняет: закроет каналы, оставит только канал апелляции", "ban"),
+    ("unban", "Снять апелляцию / разбан", "Вернуть доступ к каналам (по ID)", "unban"),
 ]
 
 # Эмодзи действий: меню панели живое, а не текстовое
@@ -1376,7 +1468,8 @@ class ModPanelView(discord.ui.View):
                                              target_select=self.target_select)
         self.add_item(self.target_select)
         self.add_item(self.action_select)
-        self.add_item(ModHelpButton())
+        # Кнопку-шпаргалку «Как это работает» убрали (заказ владельца — и так
+        # понятно; подсказка про выбор мышкой есть в тексте карточки).
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Меню действий /modpanel — доступ решает владелец через панель ролей.

@@ -152,8 +152,8 @@ MENU = [
     {'group': 'Настройки', 'key': 'settings', 'icon': 'fa-sliders', 'pages': [
         {'path': '/settings', 'label': 'Сервер', 'icon': 'fa-cog'},
         {'path': '/command-switches', 'label': 'Команды вкл/выкл', 'icon': 'fa-toggle-on'},
-        {'path': '/mod-settings', 'label': 'Модерация', 'icon': 'fa-hammer'},
-        {'path': '/role-settings', 'label': 'Роли наказаний', 'icon': 'fa-user-tag'},
+        {'path': '/mod-settings', 'label': 'Авто-наказания', 'icon': 'fa-hammer'},
+        {'path': '/role-settings', 'label': 'Роли за наказания', 'icon': 'fa-user-tag'},
         {'path': '/channel-settings', 'label': 'Каналы и маршруты', 'icon': 'fa-route'},
         {'path': '/bot-settings', 'label': 'Бот', 'icon': 'fa-sliders-h'},
         {'path': '/welcome-editor', 'label': 'Приветствие', 'icon': 'fa-handshake'},

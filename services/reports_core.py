@@ -155,6 +155,25 @@ def ticket_list(guild_id, limit: int = 200) -> list:
     return out
 
 
+def has_recent_open_report(guild_id, reporter_id, accused_id,
+                            window_sec=600) -> bool:
+    """КД на репорт: этот reporter уже подавал ОТКРЫТУЮ жалобу на того же
+    accused за последние window_sec сек (по умолчанию 10 минут). Повторную
+    жалобу на того же участника не плодим (заказ владельца: «чтобы команду
+    не использовали, когда уже 1 раз подали на одного и того же»)."""
+    edge = _now() - max(0, int(window_sec))
+    with db() as c:
+        row = c.execute(
+            """SELECT 1 FROM tickets
+               WHERE guild=? AND reporter_id=? AND accused_id=?
+                 AND created >= ?
+                 AND (closed IS NULL OR closed=0)
+               LIMIT 1""",
+            (str(guild_id), str(reporter_id), str(accused_id), edge)
+        ).fetchone()
+    return row is not None
+
+
 def ticket_stats(guild_id) -> dict:
     """Сводка очереди: открыто / закрыто за 7 дней / всего."""
     now = _now()

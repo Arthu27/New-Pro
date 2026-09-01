@@ -211,7 +211,7 @@ def login_as(role):
 r = client.get('/mod-settings')
 check(r.status_code == 200, f'в демо /mod-settings открыта ({r.status_code})')
 body = r.get_data(as_text=True)
-check('Настройки модерации' in body
+check('Авто-наказания' in body
       and 'Исключения временных мер' in body
       and '/ladder' in body and 'msSaveWl' in body
       and 'msSaveSteps' not in body,

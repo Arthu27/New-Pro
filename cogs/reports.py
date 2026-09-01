@@ -683,6 +683,19 @@ class Reports(commands.Cog):
 
         guild = interaction.guild
         cfg = _cfg(guild.id)
+
+        # КД на повторный репорт ОДНОГО И ТОГО ЖЕ участника: если открытая
+        # жалоба от этого пользователя на эту же цель уже есть (окно из cfg,
+        # по умолчанию 10 минут) — команду использовать нельзя (заказ владельца).
+        try:
+            _cd = int(cfg.get('reporter_target_cooldown_sec') or 600)
+        except (TypeError, ValueError):
+            _cd = 600
+        if RC.has_recent_open_report(guild.id, interaction.user.id, user.id, _cd):
+            return await interaction.followup.send(
+                'Ты уже подал жалобу на этого участника — повторно жаловаться '
+                'на него можно, когда модераторы разберут предыдущую (или '
+                'через несколько минут). Не дублируй репорт.', ephemeral=True)
         mod_role = _mod_role_from_cfg(guild)
 
         # Канал модерации: берём настроенный/по имени, иначе создаём закрытый.

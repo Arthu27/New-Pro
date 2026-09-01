@@ -62,6 +62,17 @@ t = RC.ticket_get(555)
 check(t['mode'] == 'turn' and t['word_id'] == '111' and t['witnesses'] == ['333'],
       'режим/слово пишутся, свидетель без дублей')
 
+# КД на повторный репорт ТОГО ЖЕ участника тем же жалующимся (открытый тикет)
+check(RC.has_recent_open_report(777, 111, 222, 600) is True,
+      'повторный открытый репорт на того же участника — блокируется (КД)')
+check(RC.has_recent_open_report(777, 111, 999, 600) is False,
+      'репорт на ДРУГОГО участника — не блокируется')
+check(RC.has_recent_open_report(777, 888, 222, 600) is False,
+      'репорт на того же участника от ДРУГОГО жалующегося — не блокируется')
+RC.ticket_set(555, closed=RC._now())
+check(RC.has_recent_open_report(777, 111, 222, 600) is False,
+      'закрытый (разобранный) репорт — КД снимается')
+
 print('== 3. Рецидивы ==')
 for _ in range(2):
     RC.add_violation(777, 222, 'warn', 0, 'тест', 555)
