@@ -6,13 +6,14 @@
   видят команду в подсказке «/» (default_member_permissions=administrator),
   в рантайме тоже только админ.
 • /report-setup, /report-settings — админская настройка репортов: то же.
-• /modpanel — панель модерации: НЕ несёт Discord default_permissions, потому
-  что доступ раздаёт владелец ролям через панель (Доступ → Права команд).
-  Раньше тут висело moderate_members — и выданная в панели роль всё равно
-  упиралась в запрет на стороне Discord («права не включаются»). Теперь
-  команда видна, а исполнять её разрешает ролевой ACL (has_access) и
-  фильтр карточек actions_for_member. Обычный участник без выданной роли
-  получает отказ в рантайме.
+• /modpanel — панель модерации: по умолчанию Discord прячет её от обычных
+  участников (default_member_permissions=moderate_members); видят только
+  роли с правом «Модерация участников». Владелец открывает команду нужным
+  ролям БЕЗ выдачи полного права: Настройки сервера → Интеграции → Hakumo
+  → /modpanel. Второй уровень — панель (Доступ → Права команд): ролевой
+  ACL решает, кто из видящих реально вызывает команду и какие действия
+  (бан/мут/варн) ему доступны. Жёсткого рантайм checks.has_permissions на
+  команде НЕТ — его нельзя переопределить ни панелью, ни Интеграциями.
 • /update — только владелец и только в ЛС бота (DM context + administrator).
 • /апелляция — подаётся в ЛС боту: на сервере команда в подсказке НЕ
   показывается (allowed_contexts guilds=False).
@@ -126,15 +127,17 @@ print('== /modpanel: видимость и карточки ==')
 fn = find_cog_callback('cogs.moderation', 'modpanel')
 check(fn is not None, '/modpanel определён')
 if fn:
-    # Доступ к /modpanel раздаётся ролям ЧЕРЕЗ ПАНЕЛЬ (ACL), а не Discord
-    # default_permissions: иначе выданная в панели роль упиралась бы в запрет
-    # Discord и «не включалась». default_permissions у команды быть не должно.
-    check(not perms_of(fn),
-          '/modpanel: без Discord default_permissions — доступ рулит панель ролей (ACL)')
+    # Жёсткий дефолт Discord: /modpanel скрыта от обычных участников (видна
+    # ролям с «Модерация участников»); владелец открывает её ролям через
+    # Настройки сервера → Интеграции. Это настраиваемый уровень видимости.
+    check(bool(perms_of(fn) & MODERATE_MEMBERS),
+          '/modpanel: по умолчанию скрыта Discord (moderate_members) — открывается через Интеграции')
+    # Рантайм checks.has_permissions запрещён намеренно: его не переопределить
+    # ни панелью, ни Интеграциями (именно он ломал выданные роли).
     cb = getattr(fn, 'callback', fn)
     check(not any('has_permissions' in (getattr(d, '__qualname__', '') or '')
                   for d in getattr(cb, '__commands_checks__', [])),
-          '/modpanel: без жёсткой checks.has_permissions (доступ через ACL)')
+          '/modpanel: без жёсткой checks.has_permissions (доступ рулит панель/Интеграции)')
 
 # actions_for_member реально режет карточки по Action ACL (войс-мут без прав)
 try:

@@ -36,6 +36,29 @@
   }
   .acc-info i { color: var(--ac); margin-top: 2px; }
 
+  /* Раскрывающаяся инструкция по доступу к командам (Интеграции Discord) */
+  .acc-guide summary {
+    list-style: none; cursor: pointer; display: flex; gap: 10px; align-items: flex-start;
+    font-size: var(--fs-md); color: var(--text);
+  }
+  .acc-guide summary::-webkit-details-marker { display: none; }
+  .acc-guide summary i { color: var(--ac); margin-top: 2px; }
+  .acc-guide[open] summary { margin-bottom: 4px; }
+  .acc-guide-body { margin-left: 26px; margin-top: 4px; }
+  .acc-guide-body p { margin: 7px 0; }
+  .acc-guide-body ol { margin: 7px 0; padding-left: 20px; }
+  .acc-guide-body ol li { margin: 4px 0; }
+  .acc-guide-body code {
+    background: var(--surface-3); padding: 1px 6px; border-radius: 6px;
+    font-size: .92em;
+  }
+  .acc-guide-note {
+    background: color-mix(in srgb, var(--ok, #16a34a) 9%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ok, #16a34a) 25%, transparent);
+    border-radius: var(--r); padding: 8px 12px; margin-top: 10px;
+  }
+  .acc-guide-note i { color: var(--ok, #16a34a); }
+
   .acc-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
   @media (max-width: 960px) { .acc-layout { grid-template-columns: 1fr; } }
 
@@ -284,6 +307,23 @@
     <i class="fas fa-circle-info"></i>
     <span><b>Как это работает.</b> Выберите роли слева. У каждой команды есть кнопка: <b>«Дать доступ»</b> — команда откроется выбранным ролям (остальные её потеряют), <b>«Снять доступ»</b> — вернёт команду всем. Статус-пилюля рядом показывает текущее состояние. Изменения применяются сразу.</span>
   </div>
+
+  <details class="acc-info acc-guide">
+    <summary><i class="fas fa-key"></i> <b>Выдали роль доступ, а команда не видна в «/»? Откройте её в Discord (2 минуты).</b></summary>
+    <div class="acc-guide-body">
+      <p>У модерационных команд <b>два уровня доступа</b>:</p>
+      <p>① <b>Видит ли команду</b> — решает Discord. По умолчанию <code>/modpanel</code> показывается только ролям с правом «Модерация участников», чтобы обычные участники её не видели. Это переключается в самом Discord.</p>
+      <p>② <b>Что можно вызвавшему</b> — решает эта страница (роли, действия бан/мут/варн).</p>
+      <p><b>Как открыть команду роли, у которой нет права «Модерация участников»</b> (без выдачи лишних прав):</p>
+      <ol>
+        <li>В Discord откройте <b>Настройки сервера</b> (шестерёнка рядом с именем сервера).</li>
+        <li>Раздел <b>Интеграции</b> → кликните на бота <b>Hakumo</b>.</li>
+        <li>Найдите команду <b>/modpanel</b> → <b>«Изменить»</b> (ограничения доступа).</li>
+        <li>Добавьте нужную роль в «Разрешить». Готово — команда появится у роли в «/», а что ей доступно внутри — рулится тут.</li>
+      </ol>
+      <p class="acc-guide-note"><i class="fas fa-bolt"></i> Быстрый путь: если роль и так должна модерировать — просто выдайте ей право «Модерация участников» (Настройки сервера → Роли), команда появится сама.</p>
+    </div>
+  </details>
 
   <div class="acc-layout">
     <aside class="acc-card acc-roles">
