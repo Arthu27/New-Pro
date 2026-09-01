@@ -211,9 +211,14 @@ class Moderation (commands .Cog ):
 
 
     #  /modpanel — панель модерации через select-меню════════════════════════════════════════════════════════════════
-    @app_commands .command (name ="modpanel",description ="Панель модерации (выпадающее меню)")
-    @app_commands .default_permissions (moderate_members =True )
-    @app_commands .checks .has_permissions (moderate_members =True )
+    @app_commands.command(name="modpanel", description="Панель модерации (выпадающее меню)")
+    # Доступ к /modpanel решает ВЛАДЕЛЕЦ через веб-панель (Доступ → Права
+    # команд): раньше тут висели default_permissions(moderate_members=True) и
+    # checks.has_permissions(moderate_members=True) — это запрещало команду на
+    # стороне самого Discord, и выданная в панели роль всё равно «не включала»
+    # доступ (Discord блокировал команду до панельной проверки ACL). Теперь
+    # команда видна всем, а выполнять её разрешает ролевой ACL (has_access в
+    # main.py) + actions_for_member ниже фильтрует действия по ролям.
     async def modpanel (self ,interaction ):
         # Роли решают, что видно: если у ролей модератора заданы свои лимиты,
         # в меню попадают ТОЛЬКО настроенные действия (владелец видит всё).
@@ -1299,12 +1304,29 @@ class ModPanelView(discord.ui.View):
         self.add_item(ModHelpButton())
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Панель модерации — только для модераторов (сообщение публичное)."""
-        if not interaction.user.guild_permissions.moderate_members:
-            await interaction.response.send_message(
-                embed=error_embed("Недостаточно прав: нужно право «Модерация участников»."),
-                ephemeral=True)
-            return False
+        """Меню действий /modpanel — доступ решает владелец через панель ролей.
+
+        Раньше тут жёстко требовалось Discord-право «Модерация участников» —
+        роль, которой владелец выдал /modpanel в панели (Доступ → Права
+        команд), всё равно упиралась в этот запрет. Теперь проверяем тот же
+        ролевой ACL, что и саму команду (has_access), а конкретные действия
+        дополнительно фильтруются (actions_for_member / _ensure_action_acl).
+        """
+        user = interaction.user
+        if getattr(user, 'guild_permissions', None) and user.guild_permissions.administrator:
+            return True
+        try:
+            from services.permission_acl import has_access
+            guild = interaction.guild
+            if guild and not has_access(guild.id, 'modpanel', user):
+                await interaction.response.send_message(
+                    embed=error_embed("Недостаточно прав: доступ к /modpanel "
+                                      "настраивает владелец (панель → Доступ → "
+                                      "Права команд)."),
+                    ephemeral=True)
+                return False
+        except Exception as _ex:
+            log.debug('ModPanelView.interaction_check: ACL не прочитан (%s) — пускаю', _ex)
         return True
 
 
