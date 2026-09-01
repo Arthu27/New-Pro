@@ -124,15 +124,9 @@ def run_checks(env=None, facts=None):
                                 "закрыт исходящий порт 443, фаервол или блокировка "
                                 "провайдера; нужен VPN/прокси на сервере"))
 
-    # ── 8.5 ffmpeg (нужен музыке) ───────────────────────────────
-    if facts.get("ffmpeg") is False:
-        out.append(dict(level="warn", key="FFMPEG",
-                        msg="ffmpeg не найден — музыка (/play) играть не будет. "
-                            "Установи ffmpeg и добавь в PATH, либо укажи путь в .env: "
-                            "FFMPEG_BINARY=путь/к/ffmpeg(.exe)"))
-    elif facts.get("ffmpeg"):
-        out.append(dict(level="ok", key="FFMPEG",
-                        msg=f"ffmpeg найден ({facts.get('ffmpeg')}) — музыка готова"))
+    # ── 8.5 ffmpeg — проверка удалена вместе с системой музыки /play
+    # (2026-09-01): боту ffmpeg больше не нужен (PCM-тишина и voice-recv
+    # работают без него).
 
     # ── 9. Опциональные функции ─────────────────────────────────
     ai_providers = {"MISTRAL_API_KEY": "Mistral", "OPENROUTER_API_KEY": "OpenRouter",
@@ -147,7 +141,7 @@ def run_checks(env=None, facts=None):
         out.append(dict(level="warn", key="AI",
                         msg="ни одного AI-ключа не задано — AI-чат недоступен "
                             "(провайдеры: " + ", ".join(ai_providers.values())
-                            + "). Не критично для модерации/тикетов/музыки"))
+                            + "). Не критично для модерации/тикетов"))
 
     return out
 

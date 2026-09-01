@@ -4,8 +4,9 @@
 FROM python:3.11-slim
 
 # Системные зависимости
+# ffmpeg убран из образа: система музыки /play снесена (2026-09-01),
+# оставшиеся голосовые функции (PCM-тишина, voice-recv) ffmpeg не используют.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
     git \
     curl \
     && rm -rf /var/lib/apt/lists/*

@@ -134,7 +134,7 @@ class _AnyMod(types.ModuleType):
         return cls
 for _m in ['flask_session', 'gunicorn', 'nacl', 'psutil', 'duckduckgo_search',
            'edge_tts', 'faster_whisper', 'voice_recv', 'deep_translator', 'colorama',
-           'requests', 'yt_dlp', 'websockets', 'PIL', 'Pillow', 'pyotp', 'qrcode']:
+           'requests', 'websockets', 'PIL', 'Pillow', 'pyotp', 'qrcode']:
     try:
         if importlib.util.find_spec(_m) is None:
             sys.modules[_m] = _AnyMod(_m)

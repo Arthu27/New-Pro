@@ -1619,7 +1619,7 @@ class AntiCrashCog(commands.Cog):
     @anticrash.command(name='reload-cog', aliases=['reload'])
     @commands.has_permissions(administrator=True)
     async def ac_reload(self, ctx, module: str = None):
-        """Перезагрузить модуль вручную: !anticrash reload-cog cogs.music_cog"""
+        """Перезагрузить модуль вручную: !anticrash reload-cog cogs.moderation_cog"""
         if not module:
             return await ctx.send("Формат: `!anticrash reload-cog cogs.<имя>`")
         try:
