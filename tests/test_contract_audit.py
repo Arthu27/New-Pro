@@ -108,7 +108,7 @@ CONTRACTS = [
     ('подсказки логина', '/api/login/suggest?q=eco', ['success', 'suggestions']),
     ('ux-поиск', '/api/ux/search?q=%D0%BA%D0%B0%D0%BD%D0%B0%D0%BB', ['query', 'groups', 'total']),
     # [контракт удалён вместе с фичей]
-    ('пороги варнов', f'/api/warn-config/{GID}', ['thresholds']),
+    ('лестница наказаний (пороги варнов)', f'/api/warn-config/{GID}', ['steps']),
     ('анти-краш обзор', '/api/anticrash/overview',
      ['ok', 'total_errors', 'daily7', 'top_types', 'top_cogs']),
     ('анти-краш конфиг', '/api/anticrash/config', ['ok', 'config', 'order', 'meta']),

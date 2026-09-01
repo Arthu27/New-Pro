@@ -230,7 +230,7 @@ check(by_key0['autofilter']['status'] == 'warn'
       and by_key0['autofilter']['detail'] == 'По умолчанию', 'автофильтр на дефолтах — заметка')
 check(by_key0['antiraid']['status'] == 'missing'
       and by_key0['audit_fresh']['status'] == 'missing', 'антирейд и журнал отсутствуют')
-check(by_key0['warn_steps']['link'] == '/warn-config'
+check(by_key0['warn_steps']['link'] == '/ladder'
       and by_key0['warn_reasons']['link'] == '/mod-control', 'ссылки ведут на настройку')
 
 jdump('data/autofilter_998.json', {'enabled': False})

@@ -59,8 +59,8 @@ from web.ai_knowledge import (build_panel_knowledge, build_setup_digest,  # noqa
                               build_setup_faq)
 
 faq_warn = build_setup_faq('как настроить варны')
-check('/warn-config' in faq_warn and '/mod-settings' in faq_warn,
-      'варны: гайд ведёт на /warn-config и /mod-settings')
+check('/ladder' in faq_warn and '/mod-settings' in faq_warn,
+      'варны: гайд ведёт на /ladder (лестница) и /mod-settings (исключения)')
 check('лестница' in faq_warn.lower() and 'по шагам' in faq_warn.lower(),
       'варны: гайд пошаговый и про лестницу наказаний')
 

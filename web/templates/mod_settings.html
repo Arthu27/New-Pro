@@ -63,26 +63,12 @@
 <div class="ms-cols">
   <div class="ms-panel">
     <h3><i class="fas fa-stairs"></i> Лестница авто-наказаний</h3>
-    <div class="ms-sub">Сколько варнов — какая мера прилетит автоматически. Кик и бан
-      каламбурят лестницу: бан навсегда, кик без длительности. Максимум
-      <span id="msMax">20</span> ступеней.</div>
-    <div class="ms-steps" id="msSteps">
-      <div class="sk-row"></div>
-      <div class="sk-row" style="width:74%"></div>
-    </div>
-    <div class="ms-add">
-      <input id="msNewCount" type="number" min="1" max="100" placeholder="Варнов" aria-label="Количество варнов для новой ступени">
-      <select id="msNewAction" aria-label="Мера для новой ступени"></select>
-      <input id="msNewDur" type="number" min="0" max="10000" placeholder="Срок" aria-label="Длительность для новой ступени">
-      <select id="msNewUnit" aria-label="Единица длительности"></select>
-      <button type="button" class="btn btn-primary" id="msAddStep" aria-label="Добавить ступень" title="Добавить ступень"><i class="fas fa-plus"></i></button>
-    </div>
-    <div class="ms-savebar">
-      <button type="button" class="btn btn-primary" id="msSaveSteps" aria-label="Сохранить лестницу">
-        <i class="fas fa-floppy-disk"></i> Сохранить лестницу
-      </button>
-      <span class="ms-save-note">Бот применит новые ступени сразу — команда /ladder покажет их же.</span>
-    </div>
+    <div class="ms-sub">Сколько варнов — какая мера прилетит автоматически (мут, кик,
+      бан по ступеням). Настраивается в одном месте — на странице «Лестница наказаний»,
+      там же статистика и моделирование.</div>
+    <a class="ms-link" href="/ladder" style="margin-top:12px">
+      <i class="fas fa-stairs"></i> Открыть лестницу наказаний
+    </a>
   </div>
 
   <div class="ms-panel">
@@ -129,8 +115,9 @@
     </div>
     <div class="ms-role" data-ms-role="menu">
       <div class="ms-role-name"><i class="fas fa-scale-balanced"></i> Меню апелляций</div>
-      <select id="msMenuChannel" aria-label="Канал меню апелляций"></select>
-      <div class="ms-role-hint">Постоянное меню «Подать апелляцию» — апелляция тредом, без ЛС боту.</div>
+      <a href="/channel-settings" style="display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ac);text-decoration:none;margin:6px 0;"><i class="fas fa-route"></i> Канал меню — в «Каналах и маршрутах»</a>
+      <input type="hidden" id="msMenuChannel" value="0">
+      <div class="ms-role-hint">Постоянное меню «Подать апелляцию» — апелляция тредом, без ЛС боту. Кнопка справа опубликует меню в этот канал.</div>
     </div>
   </div>
   <div class="ms-savebar">
@@ -161,11 +148,7 @@ var GUILD_ID = {{ (guild_id|string)|tojson }};
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function toast(msg, ok) { if (window.showToast) window.showToast(msg, ok); }
 
-var STEPS = [];
-var ACTIONS = [];
-var UNITS = [];
 var WL = [];
-var MAX_STEPS = 20;
 var ROLES = [];
 var CHANNELS = [];
 var PROLES = {};
@@ -179,62 +162,16 @@ function roleOptions(cur) {
   return html;
 }
 
-function channelOptions(cur) {
-  var html = '<option value="0">— не выбрано —</option>';
-  html += CHANNELS.map(function (c) {
-    return '<option value="' + esc(c.id) + '"' + (String(cur) === c.id ? ' selected' : '') + '>#' + esc(c.name) + '</option>';
-  }).join('');
-  return html;
-}
-
 function renderRoles() {
   document.getElementById('msRoleMute').innerHTML = roleOptions(PROLES.mute || 0);
   document.getElementById('msRoleVmute').innerHTML = roleOptions(PROLES.vmute || 0);
   document.getElementById('msRoleBan').innerHTML = roleOptions(PROLES.ban || 0);
-  document.getElementById('msMenuChannel').innerHTML = channelOptions(MENU_CH || 0);
+  document.getElementById('msMenuChannel').value = MENU_CH ? String(MENU_CH) : '0';
 }
 
 
-function actionLabel(key) {
-  var a = ACTIONS.find(function (x) { return x.key === key; });
-  return a ? a.label : key;
-}
-function unitLabel(key) {
-  var u = UNITS.find(function (x) { return x.key === key; });
-  return u ? u.label : key;
-}
-
-function renderSelects() {
-  document.getElementById('msNewAction').innerHTML = ACTIONS.map(function (a) {
-    return '<option value="' + esc(a.key) + '">' + esc(a.label) + '</option>';
-  }).join('');
-  document.getElementById('msNewUnit').innerHTML = UNITS.map(function (u) {
-    return '<option value="' + esc(u.key) + '">' + esc(u.label) + '</option>';
-  }).join('');
-}
-
-function renderSteps() {
-  var box = document.getElementById('msSteps');
-  if (!STEPS.length) {
-    box.innerHTML = '<div class="ms-empty"><i class="fas fa-circle-info"></i>Ступеней пока нет — авто-наказаний за варны не будет</div>';
-    return;
-  }
-  box.innerHTML = STEPS.map(function (st, i) {
-    var actOpts = ACTIONS.map(function (a) {
-      return '<option value="' + esc(a.key) + '"' + (a.key === st.action ? ' selected' : '') + '>' + esc(a.label) + '</option>';
-    }).join('');
-    var unitOpts = UNITS.map(function (u) {
-      return '<option value="' + esc(u.key) + '"' + (u.key === st.unit ? ' selected' : '') + '>' + esc(u.label) + '</option>';
-    }).join('');
-    return '<div class="ms-step">' +
-      '<div class="cnt">' + esc(st.count) + '</div>' +
-      '<select data-ms-step-action="' + i + '" aria-label="Мера для ступени">' + actOpts + '</select>' +
-      '<input data-ms-step-dur="' + i + '" type="number" min="0" max="10000" value="' + esc(st.duration) + '" aria-label="Длительность">' +
-      '<select data-ms-step-unit="' + i + '" aria-label="Единица длительности">' + unitOpts + '</select>' +
-      '<button type="button" class="ms-del" data-ms-step-del="' + i + '" aria-label="Удалить ступень" title="Удалить"><i class="fas fa-trash-can"></i></button>' +
-      '</div>';
-  }).join('');
-}
+/* Лестница авто-наказаний (ступени) настраивается на отдельной странице
+   «Лестница наказаний» (/ladder) — здесь её редактора больше нет. */
 
 function renderWl() {
   var box = document.getElementById('msWl');
@@ -246,38 +183,17 @@ function renderWl() {
     : '<div class="ms-empty"><i class="fas fa-circle-info"></i>Список пуст — временные меры действуют на всех не-администраторов</div>';
 }
 
-function syncFromDom() {
-  STEPS.forEach(function (st, i) {
-    var a = document.querySelector('[data-ms-step-action="' + i + '"]');
-    var d = document.querySelector('[data-ms-step-dur="' + i + '"]');
-    var u = document.querySelector('[data-ms-step-unit="' + i + '"]');
-    if (a) st.action = a.value;
-    if (d) st.duration = parseInt(d.value, 10) || 0;
-    if (u) st.unit = u.value;
-  });
-  if (STEPS.length) {
-    STEPS.forEach(function (st) { if (st.action === 'kick') st.duration = 0; });
-  }
-}
-
 async function msLoad() {
   try {
     var d = await fetch('/api/guild/' + GUILD_ID + '/mod-settings', { credentials: 'same-origin' }).then(function (r) { return r.json(); });
     if (d.success && d.cfg) {
-      STEPS = d.cfg.steps || [];
-      ACTIONS = d.cfg.actions || [];
-      UNITS = d.cfg.units || [];
       WL = d.cfg.temp_whitelist || [];
-      MAX_STEPS = d.cfg.max_steps || 20;
       ROLES = d.cfg.roles || [];
       CHANNELS = d.cfg.channels || [];
       PROLES = d.cfg.punish_roles || {};
       MENU_CH = d.cfg.appeal_menu_channel || 0;
-      document.getElementById('msMax').textContent = MAX_STEPS;
       var warn = document.getElementById('msBotWarn');
       if (warn && d.cfg.bot_online === false) warn.style.display = 'inline-flex';
-      renderSelects();
-      renderSteps();
       renderWl();
       renderRoles();
     } else {
@@ -287,9 +203,7 @@ async function msLoad() {
 }
 
 async function msSave(part) {
-  syncFromDom();
   var body = {};
-  if (part === 'steps') body.steps = STEPS;
   if (part === 'wl') body.temp_whitelist = WL;
   if (part === 'roles') {
     body.punish_roles = {
@@ -298,7 +212,7 @@ async function msSave(part) {
       vmute: document.getElementById('msRoleVmute').value || '0',
       ban: document.getElementById('msRoleBan').value || '0'
     };
-    body.appeal_menu_channel = document.getElementById('msMenuChannel').value || '0';
+    /* канал меню апелляций не трогаем: он задаётся в «Каналах и маршрутах» */
   }
   var r = await fetch('/api/guild/' + GUILD_ID + '/mod-settings', {
     method: 'POST', credentials: 'same-origin',
@@ -307,17 +221,12 @@ async function msSave(part) {
   });
   var d = await r.json().catch(function () { return {}; });
   if (r.ok && d.success && d.cfg) {
-    STEPS = d.cfg.steps || STEPS;
     WL = d.cfg.temp_whitelist || WL;
     if (part === 'roles') {
       PROLES = d.cfg.punish_roles || PROLES;
       MENU_CH = d.cfg.appeal_menu_channel || 0;
       renderRoles();
       toast('Роли наказаний сохранены — бот уже применяет их', true);
-    }
-    if (part === 'steps') {
-      renderSteps();
-      toast('Лестница сохранена — бот уже применяет её', true);
     }
     if (part === 'wl') {
       renderWl();
@@ -328,49 +237,13 @@ async function msSave(part) {
   }
 }
 
-document.getElementById('msAddStep').addEventListener('click', function () {
-  var countInp = document.getElementById('msNewCount');
-  var count = parseInt(countInp.value, 10);
-  if (!count || count < 1 || count > 100) {
-    toast('Сначала впишите число варнов (1-100) в поле «Варнов»', false);
-    countInp.focus();
-    countInp.style.borderColor = 'var(--err)';
-    countInp.style.boxShadow = '0 0 0 3px var(--err-soft)';
-    setTimeout(function () { countInp.style.borderColor = ''; countInp.style.boxShadow = ''; }, 1800);
-    return;
-  }
-  if (STEPS.some(function (s) { return s.count === count; })) { toast('Ступень на ' + count + ' варнов уже есть', false); return; }
-  if (STEPS.length >= MAX_STEPS) { toast('Максимум ' + MAX_STEPS + ' ступеней', false); return; }
-  syncFromDom();
-  STEPS.push({
-    count: count,
-    action: document.getElementById('msNewAction').value,
-    duration: parseInt(document.getElementById('msNewDur').value, 10) || 0,
-    unit: document.getElementById('msNewUnit').value
-  });
-  STEPS.sort(function (a, b) { return a.count - b.count; });
-  document.getElementById('msNewCount').value = '';
-  document.getElementById('msNewDur').value = '';
-  renderSteps();
-  toast('Ступень добавлена — сохраните лестницу', true);
-});
-
-document.getElementById('msSteps').addEventListener('click', function (e) {
-  var b = e.target.closest('[data-ms-step-del]');
-  if (!b) return;
-  syncFromDom();
-  STEPS.splice(parseInt(b.getAttribute('data-ms-step-del'), 10), 1);
-  renderSteps();
-  toast('Ступень удалена — сохраните лестницу', true);
-});
-
-document.getElementById('msSaveSteps').addEventListener('click', function () { msSave('steps'); });
 document.getElementById('msSaveWl').addEventListener('click', function () { msSave('wl'); });
 document.getElementById('msSaveRoles').addEventListener('click', function () { msSave('roles'); });
 document.getElementById('msPublishMenu').addEventListener('click', async function () {
   var btn = this;
-  var ch = document.getElementById('msMenuChannel').value;
-  if (!ch || ch === '0') { toast('Сначала выберите канал меню апелляций', false); return; }
+  var ch = MENU_CH || document.getElementById('msMenuChannel').value;
+  if (!ch || ch === '0' || ch === 0) { toast('Сначала задайте канал меню в разделе «Каналы и маршруты»', false); return; }
+  ch = String(ch);
   btn.disabled = true;
   try {
     var r = await fetch('/api/guild/' + GUILD_ID + '/mod-settings', {

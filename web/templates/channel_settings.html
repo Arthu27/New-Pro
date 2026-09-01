@@ -6,8 +6,9 @@
   <div class="page-head-copy">
     <div class="eyebrow"> Настройки </div>
     <h1>Каналы и маршруты</h1>
-    <p>Единое место, куда бот что пишет: доказательства, апелляции, приветствия, джейл-логи.
-       Назначение каналов для приветствий, логов, жалоб и других функций бота.</p>
+    <p>Единое место, куда бот что пишет: доказательства, апелляции, приветствия,
+       тревоги защиты и заявки в команду. Каждый канал настраивается только здесь —
+       на страницах самих функций дублирующих настроек нет.</p>
   </div>
   <div class="page-head-side">
     <span class="chs-access" title="Смотреть эту страницу могут все модераторы, менять маршруты — только администраторы">
@@ -97,8 +98,14 @@ var CAN_EDIT = {% if role == 'admin' or role == 'owner' %}true{% else %}false{% 
 
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-var CHS_ROUTES = [];
+/* Каркас маршрутов — сразу с сервера (метки/описания/иконки), до fetch.
+   Сохранённые каналы (channel_id) приедут позже и подставятся в селекты. */
+var CHS_ROUTES = {{ route_specs | tojson }}.map(function (s) {
+  return { key: s.key, label: s.label, icon: s.icon, what: s.what,
+           empty: s.empty, access: s.access, channel_id: 0 };
+});
 var CHS_CHANNELS = [];
+var CHS_ROUTES_LOADED = false;
 /* Несохранённые выборы: key -> channel_id. Раньше после сохранения ОДНОГО
    маршрута список перерисовывался целиком и молча ЗАТИРАЛ выборы в остальных
    строках («настроил пять, сохранил первый — остальные слетели»). Теперь
@@ -160,11 +167,15 @@ function render() {
       ? String(PENDING[r.key])
       : (r.channel_id ? String(r.channel_id) : '0');
     var cur = badgeHtml(r.key, PENDING.hasOwnProperty(r.key) ? undefined : r.channel_id);
-    var opts = '<option value="0"' + (value === '0' ? ' selected' : '') + '>— Авто (по умолчанию) —</option>' +
-      CHS_CHANNELS.map(function (c) {
-        var sel = String(c.id) === value ? ' selected' : '';
-        return '<option value="' + esc(c.id) + '"' + sel + '># ' + esc(c.name) + '</option>';
-      }).join('');
+    /* Пока список каналов не пришёл — показываем «Загрузка…» вместо пустого
+       селекта: видно, что данные грузятся, а не сломаны. */
+    var chanOpts = CHS_CHANNELS.length
+      ? CHS_CHANNELS.map(function (c) {
+          var sel = String(c.id) === value ? ' selected' : '';
+          return '<option value="' + esc(c.id) + '"' + sel + '># ' + esc(c.name) + '</option>';
+        }).join('')
+      : '<option disabled>' + (CHS_ROUTES_LOADED ? 'нет текстовых каналов' : 'Загрузка каналов…') + '</option>';
+    var opts = '<option value="0"' + (value === '0' ? ' selected' : '') + '>— Авто (по умолчанию) —</option>' + chanOpts;
     return '<div class="chs-row">' +
       '<div class="chs-ico"><i class="fas ' + esc(r.icon || 'fa-route') + '"></i></div>' +
       '<div><div class="chs-name">' + esc(r.label) + ' ' + cur +
@@ -262,20 +273,55 @@ window.addEventListener('beforeunload', function (e) {
   }
 });
 
-async function chsLoad() {
-  try {
-    var chans = await fetch('/api/channels').then(function (r) { return r.json(); });
-    CHS_CHANNELS = (Array.isArray(chans) ? chans : (chans.channels || [])).filter(function (c) {
-      return c && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5);
-    });
-  } catch (e) { CHS_CHANNELS = []; }
-  try {
-    var d = await fetch('/api/channel-routes').then(function (r) { return r.json(); });
-    if (d.success) CHS_ROUTES = d.routes || [];
-  } catch (e) { /* API Guard покажет */ }
-  if (window.renderSafe) window.renderSafe(render); else render();
+/* Каналы и маршруты грузим ПАРАЛЛЕЛЬНО (не последовательно): списки каналов
+   для выпадающих селектов появляются сразу, как только ответит /api/channels,
+   без ожидания настроек маршрутов. Маршруты дорисовываются по готовности. */
+function chsLoadChannels() {
+  return fetch('/api/channels').then(function (r) { return r.json(); })
+    .then(function (chans) {
+      CHS_CHANNELS = (Array.isArray(chans) ? chans : (chans.channels || [])).filter(function (c) {
+        return c && (c.type === 'text' || c.type === 'news' || c.type === 0 || c.type === 5);
+      });
+      if (window.renderSafe) window.renderSafe(render); else render();
+    })
+    .catch(function () { CHS_CHANNELS = []; });
 }
 
-chsLoad();
+function chsLoadRoutes() {
+  return fetch('/api/channel-routes').then(function (r) { return r.json(); })
+    .then(function (d) {
+      CHS_ROUTES_LOADED = true;
+      if (d.success && d.routes && d.routes.length) {
+        /* Подставляем сохранённые каналы в готовый каркас, сохраняя порядок
+           и метки из спецификаций (каркас уже отрисован мгновенно). */
+        CHS_ROUTES = CHS_ROUTES.map(function (r) {
+          var live = d.routes.find(function (x) { return x.key === r.key; });
+          if (!live) return r;
+          return {
+            key: r.key, label: r.label, icon: r.icon,
+            what: live.what || r.what, empty: live.empty || r.empty,
+            access: live.access || r.access,
+            channel_id: live.channel_id || 0
+          };
+        });
+        /* Если сервер по какой-то причине не знает часть скелетных ключей —
+           не теряем строку: добавляем живые маршруты, которых нет в каркасе. */
+        d.routes.forEach(function (live) {
+          if (!CHS_ROUTES.some(function (r) { return r.key === live.key; })) {
+            CHS_ROUTES.push({
+              key: live.key, label: live.label || live.key, icon: live.icon || 'fa-route',
+              what: live.what || '', empty: live.empty || '',
+              access: live.access || 'Админ', channel_id: live.channel_id || 0
+            });
+          }
+        });
+      }
+      if (window.renderSafe) window.renderSafe(render); else render();
+    })
+    .catch(function () { CHS_ROUTES_LOADED = true; });
+}
+
+chsLoadChannels();
+chsLoadRoutes();
 </script>
 {% endblock %}

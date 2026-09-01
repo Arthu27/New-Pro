@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Хаб настроек: группа «Настройки», лэйаут меню, /mod-settings, 14 маршрутов.
+"""Хаб настроек: группа «Настройки», лэйаут меню, /mod-settings, живые маршруты.
 
 Проверяем:
 - 14 маршрутов хаба каналов + запись/чтение новых шести адаптеров (считалка,
@@ -51,49 +51,46 @@ def check(ok, msg):
 
 GID = 987654321098765432
 
-# ═══ 1. Хаб каналов: 14 маршрутов, новые адаптеры ════════════════════════
-print('== хаб каналов: 20 маршрутов ==')
+# ═══ 1. Хаб каналов: только живые маршруты боевого состава ══════════════
+print('== хаб каналов: живые маршруты ==')
 from services import channel_routes as CHR  # noqa: E402
 from web.routes.channel_settings import ADAPTERS  # noqa: E402
 
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 20 and len(set(keys)) == 20,
-      f'20 уникальных маршрутов — 17 систем + 3 канала заявок ({len(keys)})')
-need = {'ban_appeal_channel',
-        'proof_channel', 'appeals_channel', 'welcome_channel', 'tagjail_channel',
+check(len(keys) == 13 and len(set(keys)) == 13,
+      f'13 уникальных живых маршрутов ({len(keys)})')
+need = {'ban_appeal_channel', 'appeal_menu_channel', 'pagerduty_channel',
+        'proof_channel', 'appeals_channel', 'welcome_channel',
         'guardian_channel', 'antiraid_channel', 'security_channel',
-        'anticrash_channel', 'counting_channel', 'starboard_channel',
-        'night_report_channel', 'mod_digest_channel',
-        'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel', 'shifts_channel',
-        'ticket_notify_channel', 'appeal_menu_channel', 'pagerduty_channel'}
-check(set(keys) == need, f'все системы на хабе ({len(need)})')
+        'anticrash_channel',
+        'staff_helper_channel', 'staff_moderator_channel', 'staff_apply_channel'}
+check(set(keys) == need, f'только живые системы на хабе ({len(need)})')
 check(set(ADAPTERS) == set(keys), 'у каждого маршрута есть адаптер')
 
-new_6 = {'counting_channel': 2004, 'starboard_channel': 2003,
-         'night_report_channel': 1004, 'mod_digest_channel': 4003,
-         'shifts_channel': 4002, 'ticket_notify_channel': 4005}
-for k, cid in new_6.items():
-    get, set_ = ADAPTERS[k]
-    check(set_(GID, cid) and get(GID) == cid, f'{k}: запись/чтение = {cid}')
+# Вырезанные/спящие фичи НЕ показываются на хабе каналов.
+dead = {'counting_channel', 'starboard_channel', 'night_report_channel',
+        'mod_digest_channel', 'shifts_channel', 'ticket_notify_channel',
+        'tagjail_channel'}
+check(not (dead & set(keys)), 'маршруты вырезанных фич убраны')
+check(not (dead & set(ADAPTERS)), 'адаптеры вырезанных фич убраны')
 
-sb = json.load(open(f'data/starboard_settings_{GID}.json', encoding='utf-8'))
-check(sb.get('channel_id') == 2003,
-      'зала славы: тот же файл, что читает ког starboard')
-ns = json.load(open('data/night_summary.json', encoding='utf-8'))
-check((ns.get(str(GID)) or {}).get('channel_id') == 1004,
-      'ночной итог: data/night_summary.json (файл кога)')
-tn = json.load(open(f'data/ticket_notify_{GID}.json', encoding='utf-8'))
-check(tn.get('notify_channel_id') == 4005,
-      'призыв тикетов: data/ticket_notify_{gid}.json (файл кога)')
-
+# Живые адаптеры пишут ровно в те хранилища, что читает бот.
 from db import GuildData  # noqa: E402
+ar_get, ar_set = ADAPTERS['antiraid_channel']
+check(ar_set(GID, 3007) and ar_get(GID) == 3007,
+      'анти-рейд: data/antiraid_<gid>.json alert_channel_id')
+ar_data = json.load(open(f'data/antiraid_{GID}.json', encoding='utf-8'))
+check(ar_data.get('alert_channel_id') == 3007,
+      'анти-рейд: тот же файл, что читает ког antiraid')
+ar_set(GID, 0)
 
-cnt = GuildData('counting').get(GID, 'state', {}) or {}
-check(cnt.get('channel_id') == 2004,
-      'считалка: GuildData(counting).state.channel_id')
-md = GuildData('mod_digest').get(GID, 'settings', {}) or {}
-check(md.get('channel_id') == 4003,
-      'дайджест модерации: GuildData(mod_digest).settings.channel_id')
+ap_get, ap_set = ADAPTERS['appeals_channel']
+check(ap_set(GID, 3008) and ap_get(GID) == 3008,
+      'апелляции: запись/чтение адаптера')
+ap = GuildData('appeals').get(GID, 'state', {}) or {}
+check(int(ap.get('log_channel_id') or 0) == 3008,
+      'апелляции: GuildData(appeals).state.log_channel_id')
+ap_set(GID, 0)
 
 # ═══ 2. Меню: категория «Настройки» ══════════════════════════════════════
 print('== меню: категория «Настройки» ==')
@@ -101,8 +98,10 @@ from services import panel_menu as PM  # noqa: E402
 
 pages = [p for g in PM.MENU for p in g['pages']]
 paths = [p['path'] for p in pages]
-check(len(paths) == 75 and len(set(paths)) == 75,
-      f'в меню 75 уникальных страниц ({len(paths)}); музыка удалена')
+check(len(paths) == 74 and len(set(paths)) == 74,
+      f'в меню 74 уникальных страниц ({len(paths)}); музыка и дубль варнов убраны')
+check('/warn-config' not in paths, 'дубль «Варны» (/warn-config) убран из меню')
+check('/ladder' in paths, 'каноническая «Лестница наказаний» в меню')
 groups = {g['key']: g for g in PM.MENU}
 check('settings' in groups, 'категория «Настройки» существует')
 sg = groups['settings']
@@ -111,7 +110,7 @@ check(sg['group'] == 'Настройки' and bool(sg.get('icon')),
 sp = [p['path'] for p in sg['pages']]
 want = ['/settings', '/command-switches', '/mod-settings', '/role-settings',
         '/channel-settings', '/bot-settings', '/welcome-editor',
-        '/rules-editor', '/warn-config', '/notifications',
+        '/rules-editor', '/notifications',
         '/pagerduty', '/theme-settings', '/theme-studio', '/anticrash',
         '/log-settings']
 check(sp == want, f'страницы категории в верном порядке ({len(sp)})')
@@ -214,8 +213,9 @@ check(r.status_code == 200, f'в демо /mod-settings открыта ({r.statu
 body = r.get_data(as_text=True)
 check('Настройки модерации' in body and 'Лестница авто-наказаний' in body
       and 'Исключения временных мер' in body
-      and 'msSaveSteps' in body and 'msSaveWl' in body,
-      'страница собрана: лестница + исключения + две кнопки сохранения')
+      and '/ladder' in body and 'msSaveWl' in body
+      and 'msSaveRoles' in body and 'msSaveSteps' not in body,
+      'лестница ведёт на /ladder; на странице — исключения и роли со своими кнопками')
 check('/channel-settings' in body and '/guardian' in body,
       'панель связей настроек модерации на месте')
 login_as('mod')

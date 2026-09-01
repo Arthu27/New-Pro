@@ -149,6 +149,10 @@ def register(ctx):
         data ['whitelist']=wl_clean [:500 ]
         # raid_action her zaman 'alert' — diгer deгerleri отклонить
         data ['raid_action']='alert'
+        # Канал тревоги настраивается в «Каналах и маршрутах» (тот же файл,
+        # ключ alert_channel_id): здесь его не принимаем, чтобы пустой POST
+        # со страницы анти-рейда не затёр выбранный канал.
+        data ['alert_channel_id']=existing .get ('alert_channel_id')
         # Numeric alanlarыn tipini koru
         try :
             data ['join_threshold']=max (2 ,min (50 ,int (data .get ('join_threshold',5 ))))

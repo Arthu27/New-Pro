@@ -463,9 +463,9 @@ gE._audit = [_aentry(9509, 7002)]
 run(cE.on_member_join(BotMember(7002, gE)))
 check(gE.kicked == [7002], 'а вот ЗАШЕДШИЙ чужой бот — кикнут (событие входа)')
 
-print('== хаб каналов: 17 маршрутов ==')
+print('== хаб каналов: живые маршруты ==')
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
-check(len(keys) == 20, f'маршрутов в спецификации (17 систем + 3 заявки): {len(keys)}')
+check(len(keys) == 13, f'маршрутов в спецификации (только живые системы): {len(keys)}')
 check('guardian_channel' in keys and 'antiraid_channel' in keys
       and 'security_channel' in keys and 'anticrash_channel' in keys,
       f'все маршруты защиты на хабе ({keys})')
@@ -611,7 +611,7 @@ check(r.status_code == 200 and ov.get('success') is True
 
 r = client.get('/api/channel-routes')
 routes = r.get_json().get('routes', [])
-check(len(routes) == 20, f'хаб Каналов отдаёт 20 маршрутов ({len(routes)})')
+check(len(routes) == 13, f'хаб Каналов отдаёт 13 живых маршрутов ({len(routes)})')
 hub_guard = [x for x in routes if x['key'] == 'guardian_channel']
 check(hub_guard and hub_guard[0]['label'] == 'Тревоги Щита сервера',
       'маршрут Щита с русской подписью на хабе')
@@ -631,7 +631,7 @@ check(paths.count('/guardian') == 1, 'Щит сервера — один пун�
 gd = [p for p in pages if p['path'] == '/guardian'][0]
 check(gd.get('section') == 'protection' and gd.get('min_role') == 'admin',
       'пункт в разделе «Защита» модерации, доступ Админ')
-check(len(paths) == 75, f'в меню 75 страниц ({len(paths)}); музыка удалена')
+check(len(paths) == 74, f'в меню 74 страницы ({len(paths)}); музыка удалена')
 
 from web import routes_extra as _re  # noqa: E402
 

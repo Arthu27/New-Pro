@@ -86,8 +86,13 @@ from services import channel_routes as CHR  # noqa: E402
 check(len(CHR.ROUTE_SPECS) >= 4, f'маршрутов в спецификации: {len(CHR.ROUTE_SPECS)}')
 keys = [s['key'] for s in CHR.ROUTE_SPECS]
 check('proof_channel' in keys and 'appeals_channel' in keys
-      and 'welcome_channel' in keys and 'tagjail_channel' in keys,
-      f'все 4 маршрута на месте {keys}')
+      and 'welcome_channel' in keys and 'guardian_channel' in keys,
+      f'ключевые живые маршруты на месте {keys}')
+# Вырезанные/спящие системы (тикеты, считалка, starboard, ночные сводки,
+# смены, tag jail) не показываются — маршрутов для них в спецификации нет.
+check('tagjail_channel' not in keys and 'ticket_notify_channel' not in keys
+      and 'counting_channel' not in keys and 'starboard_channel' not in keys,
+      'маршруты вырезанных фич убраны из хаба')
 check(CHR.get_route(GID, 'proof_channel') == 0, 'по умолчанию маршрут пуст (авто)')
 check(CHR.set_route(GID, 'proof_channel', 456789), 'маршрут записан')
 check(CHR.get_route(GID, 'proof_channel') == 456789, 'маршрут читается')
@@ -156,13 +161,16 @@ check(r.status_code == 200 and r.get_json().get('success'),
 check(CHR.get_route(GID, 'proof_channel') == 777111,
       'запись через API попала в хранилище бота')
 
+r = client.post('/api/channel-routes/guardian_channel',
+                data=json.dumps({'channel_id': '888222'}), content_type='application/json')
+check(r.status_code == 200 and CHR.get_route(GID, 'guardian_channel') == 888222,
+      'native-маршрут Щита пишется в data/channel_routes.json')
+CHR.set_route(GID, 'guardian_channel', 0)
+
+# Мёртвый маршрут вырезанной фичи больше не существует — 404.
 r = client.post('/api/channel-routes/tagjail_channel',
                 data=json.dumps({'channel_id': '888222'}), content_type='application/json')
-tj = json.load(open('data/tag_jail.json', encoding='utf-8')) \
-    if os.path.exists('data/tag_jail.json') else {}
-check(r.status_code == 200
-      and (tj.get(GID) or {}).get('log_channel_id') == 888222,
-      'маршрут tag jail пишется в конфиг кога')
+check(r.status_code == 404, 'маршрут tag jail удалён — запись даёт 404')
 
 r = client.post('/api/channel-routes/appeals_channel',
                 data=json.dumps({'channel_id': '999333'}), content_type='application/json')
@@ -237,7 +245,7 @@ print('== меню/роуты ==')
 from services.panel_menu import panel_groups_for  # noqa: E402
 paths = [p['path'] for g in panel_groups_for('owner') for p in g['pages']]
 check('/channel-settings' in paths, 'пункт «Каналы» в меню')
-check(len(paths) == 75, f'в меню 75 страниц ({len(paths)}); музыка удалена')
+check(len(paths) == 74, f'в меню 74 страницы ({len(paths)}); музыка и дубль варнов убраны')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

@@ -22,25 +22,24 @@ def register(ctx):
 
 
     @app .route ('/api/warn-config/<guild_id>',methods =['GET'])
-    @login_required 
+    @login_required
     @role_required ('admin')
     def api_warn_config_get (guild_id ):
-        f =f'data/warn_config_{guild_id}.json'
-        if not os .path .exists (f ):
-            return jsonify ({'thresholds':[{'count':3 ,'action':'timeout','duration':10 },{'count':5 ,'action':'ban','duration':0 }]})
-        with open (f ,encoding ='utf-8')as fp :
-            return jsonify (json .load (fp ))
+        # Канонический источник ступеней — «Лестница наказаний» (ladder_panel /
+        # cogs.warnings, ключ 'steps'). Старый формат 'thresholds' больше не пишем.
+        from web .routes import ladder_panel as LP
+        cfg =LP .load_cfg (str (guild_id ))
+        return jsonify ({'steps':LP .steps_of (cfg )})
 
 
     @app .route ('/api/warn-config/<guild_id>',methods =['POST'])
-    @login_required 
+    @login_required
     @role_required ('admin')
     def api_warn_config_save (guild_id ):
-        d =request .get_json (silent =True )or {}
-        os .makedirs ('data',exist_ok =True )
-        with open (f'data/warn_config_{guild_id}.json','w',encoding ='utf-8')as fp :
-            json .dump (d ,fp ,indent =2 ,ensure_ascii =False )
-        return jsonify ({'ok':True })
+        # Ступени настраиваются только на /ladder. Запись через старый эндпоинт
+        # запрещена, чтобы конфликтующий формат не перетирал 'steps'.
+        return jsonify ({'ok':False ,
+            'error':'Настройка ступеней переехала на страницу «Лестница наказаний» (/ladder)'}),409
 
 
     @app .route ('/api/duty/<guild_id>',methods =['GET'])

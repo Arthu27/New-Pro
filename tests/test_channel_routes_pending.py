@@ -64,6 +64,13 @@ if m:
     script = script.replace(
         "{% if role == 'admin' or role == 'owner' %}true{% else %}false{% endif %}",
         'true')
+    # Каркас маршрутов рендерится сервером через {{ route_specs | tojson }} —
+    # в Node-харнессе подставляем валидный JS-скелет (как реальный Flask).
+    script = re.sub(r'\{\{\s*route_specs\s*\|\s*tojson\s*\}\}',
+                    '[{"key":"proof_channel","label":"Доказательства","icon":"","what":"","empty":"","access":"Админ"},'
+                    '{"key":"appeals_channel","label":"Апелляции","icon":"","what":"","empty":"","access":"Админ"},'
+                    '{"key":"welcome_channel","label":"Приветствия","icon":"","what":"","empty":"","access":"Админ"}]',
+                    script)
 
     harness = r"""
 // Node-харнесс: исполняем настоящий JS страницы с DOM-стабами

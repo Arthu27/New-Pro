@@ -277,7 +277,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not uid :
                 return '❌ Пользователь ID не найден'
                 # AI asistan никогда автоматически warn не может отправить — только predlojenie предлагает
-            return f'⚠️ AI предлагает warn: выдать {uid} предупреждение за «{reason}». Подтвердите командой /moderate.'
+            return f'⚠️ AI предлагает warn: выдать {uid} предупреждение за «{reason}». Подтвердите через /modpanel.'
 
         elif action_type =='ban':
             reason =action_data .get ('reason','AI ban')
@@ -287,7 +287,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not member :
                 return '❌ Участник на сервере не найден'
                 # AI ban предложение — автоматически примен
-            return f'⚠️ AI ban предложение: {member.display_name} ({uid}) — Причина: "{reason}". Подтвердите командой /moderate ban.'
+            return f'⚠️ AI предлагает бан: {member.display_name} ({uid}) — Причина: "{reason}". Подтвердите через /modpanel.'
             return f'✅ Ban применено (user_id: {uid})'
 
         elif action_type =='kick':
@@ -298,7 +298,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not member :
                 return '❌ Участник на сервере не найден'
                 # AI kick предложение — автоматически примен
-            return f'⚠️ AI kick предложение: {member.display_name} ({uid}) — Причина: "{action_data.get("reason", "AI kick")}". Подтвердите командой /moderate kick.'
+            return f'⚠️ AI предлагает кик: {member.display_name} ({uid}) — Причина: "{action_data.get("reason", "AI kick")}". Подтвердите через /modpanel.'
 
         elif action_type =='dm':
             message =action_data .get ('message','')
@@ -319,7 +319,7 @@ def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
             if not member :
                 return '❌ Участник на сервере не найден'
                 # AI timeout предложение — автоматически примен
-            return f'⚠️ AI timeout предложение: {member.display_name} ({uid}) — {minutes} мин, причина: "{reason}". Подтвердите командой /moderate timeout.'
+            return f'⚠️ AI предлагает таймаут: {member.display_name} ({uid}) — {minutes} мин, причина: "{reason}". Подтвердите через /modpanel.'
 
         elif action_type =='add_role':
             role_id =str (action_data .get ('role_id',''))

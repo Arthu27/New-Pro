@@ -190,10 +190,12 @@ def register(ctx):
 
 
     @app .route ('/warn-config')
-    @login_required 
+    @login_required
     @role_required ('admin')
     def warn_config_page ():
-        return render_template ('warn_config.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id ())
+        # Настройка ступеней варнов живёт в одном месте — «Лестница наказаний».
+        # Старая страница с конфликтующим форматом закрыта: редирект туда же.
+        return redirect (url_for ('ladder_page'))
 
 
 

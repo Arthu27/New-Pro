@@ -141,8 +141,11 @@ pages = [page for group in panel_groups_for('owner') for page in group['pages']]
 paths = [page['path'] for page in pages]
 # 2026-09-01: система музыки (/play) удалена целиком — пункта «Музыка» в
 # меню нет и самой страницы /music не существует (роут снесён).
-check(len(paths) == 75 and len(set(paths)) == 75 and '/music' not in paths,
-      f'owner-меню: 75 уникальных страниц, музыки нет ({len(paths)})')
+# 2026-09-01: дубль «Варны» (/warn-config) из «Настроек» убран — ступени
+# настраиваются в одном месте, «Лестница наказаний» (/ladder); старый роут
+# оставлен редиректом, но пункта в меню больше нет.
+check(len(paths) == 74 and len(set(paths)) == 74 and '/music' not in paths,
+      f'owner-меню: 74 уникальных страниц, музыки нет ({len(paths)})')
 
 rendered = 0
 for route in paths:

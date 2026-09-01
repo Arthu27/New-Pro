@@ -255,20 +255,18 @@ def register(ctx):
         # ── WARN CONFIG API ───────────────────────────────────────────────────────
 
     @app .route ('/api/guild/<guild_id>/warn-config',methods =['GET','POST'])
-    @login_required 
+    @login_required
     @role_required ('admin')
     def api_warn_config (guild_id ):
-        f =f'data/warn_config_{guild_id}.json'
+        # Канонический писатель ступеней — «Лестница наказаний» (ladder_panel,
+        # ключ 'steps'). Сырую запись в файл здесь больше не делаем, чтобы
+        # формат 'thresholds' не перетирал боевой 'steps'.
+        from web .routes import ladder_panel as LP
         if request .method =='GET':
-            if not os .path .exists (f ):
-                return jsonify ({'steps':[]})
-            with open (f ,'r',encoding ='utf-8')as fp :
-                return jsonify (json .load (fp ))
-        data =request .get_json (silent =True )or {}
-        os .makedirs ('data',exist_ok =True )
-        with open (f ,'w',encoding ='utf-8')as fp :
-            json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
-        return jsonify ({'success':True })
+            cfg =LP .load_cfg (str (guild_id ))
+            return jsonify ({'steps':LP .steps_of (cfg )})
+        return jsonify ({'success':False ,
+            'error':'Настройка ступеней переехала на страницу «Лестница наказаний» (/ladder)'}),409
 
 
         # ── WARN DM НАСТРОЙКА ─────────────────────────────────────────────────────────

@@ -158,8 +158,6 @@ MENU = [
         {'path': '/bot-settings', 'label': 'Бот', 'icon': 'fa-sliders-h'},
         {'path': '/welcome-editor', 'label': 'Приветствие', 'icon': 'fa-handshake'},
         {'path': '/rules-editor', 'label': 'Правила', 'icon': 'fa-scroll'},
-        {'path': '/warn-config', 'label': 'Варны', 'icon': 'fa-exclamation'},
-        
         {'path': '/notifications', 'label': 'Уведомления', 'icon': 'fa-bell'},
         {'path': '/pagerduty', 'label': 'PagerDuty', 'icon': 'fa-tower-broadcast',
          'description': 'Тревоги PagerDuty красивыми карточками в Discord',
