@@ -5,9 +5,9 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Логи <span class="sep">·</span> Чат</div>
+    <div class="eyebrow"> Логи </div>
     <h1>Чат</h1>
-    <p class="lead">Живой обзор каналов и личных сообщений — пиши, отвечай и модерируй прямо из панели.</p>
+    <p class="lead">Обзор каналов и личных сообщений: ответы и модерация из панели.</p>
   </div>
   <div class="page-head-actions">
     <button type="button" class="btn" onclick="loadMessages()" title="Обновить сообщения"><i class="fas fa-sync-alt"></i> Обновить</button>
@@ -549,6 +549,148 @@
   .msg-group, .profs-popup.show, .lightbox.show, .chat-modal-box, .reply-bar, .etiket-popup { animation: none; }
   .unread-dot { animation: none; }
   .guild-icon, .ch-item, .member-item, .send-btn, .dm-btn, .profs-action-btn, .chat-modal-btn, .hdr-btn { transition: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ПОЛИРОВКА ЧАТА (визуальный проход поверх базовых стилей, JS не трогаем)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Общая поверхность: чуть мягче карточки и тени ── */
+.chat-wrap { gap: 14px; }
+.guild-bar, .chat-sidebar, .chat-main, .members-panel {
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 10px 30px -22px rgba(15,23,42,.35);
+}
+
+/* ── Гилд-бар: единый «рельс» как в Discord ── */
+.guild-bar { padding: 14px 8px; gap: 12px; }
+.guild-icon { width: 46px; height: 46px; border-radius: 16px; font-size: 14px; }
+.guild-icon.active { border-radius: 18px; }
+.guild-sep { width: 30px; opacity: .7; }
+
+/* ── Сайдбар: заголовок и пункты каналов ── */
+.sidebar-guild-name { padding: 16px 16px; font-size: 14.5px; letter-spacing: .01em; }
+.ch-item {
+  padding: 9px 11px; margin-bottom: 3px; border-radius: 10px;
+  font-weight: var(--fw-medium);
+}
+.ch-item.active {
+  background: linear-gradient(90deg, var(--ac-soft), color-mix(in srgb, var(--ac) 7%, transparent));
+  box-shadow: inset 3px 0 0 var(--ac);
+  border-radius: 6px 10px 10px 6px;
+}
+.ch-item .ch-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-section { font-weight: var(--fw-bold); letter-spacing: .09em; }
+.dm-search { padding: 10px 13px; border-radius: 10px; }
+
+/* ── Шапка чата ── */
+.chat-header { padding: 13px 18px; gap: 12px; backdrop-filter: blur(6px); }
+.chat-header-icon {
+  width: 38px; height: 38px; border-radius: 11px; font-size: 15px;
+  box-shadow: 0 6px 16px -6px var(--ac-glow);
+}
+.chat-header-name { font-size: 15.5px; letter-spacing: .01em; }
+.chat-header-topic {
+  max-width: 46%; padding: 5px 12px; border-radius: 20px;
+  font-weight: var(--fw-medium);
+}
+.hdr-btn { width: 36px; height: 36px; border-radius: 10px; }
+.chat-search { border-radius: 12px; padding: 7px 12px; }
+
+/* ── Лента сообщений: воздух и типографика ── */
+.chat-messages { padding: 18px 20px 8px; }
+.msg-group { padding: 8px 12px; margin: 1px 0; border-radius: 12px; }
+.msg-group:hover { background: color-mix(in srgb, var(--ac) 6%, transparent); }
+.msg-group.continued { padding: 2px 12px; }
+.msg-avatar, .msg-avatar-placeholder { width: 42px; height: 42px; }
+.msg-avatar-wrap { flex: 0 0 42px; }
+.msg-meta { gap: 9px; margin-bottom: 3px; }
+.msg-author { font-size: 14.5px; letter-spacing: .01em; }
+.msg-time { font-size: 11px; font-weight: var(--fw-medium); }
+.msg-content { font-size: 14px; line-height: 1.62; }
+.msg-content code {
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  padding: 1.5px 6px; border-radius: 6px; font-size: 12.5px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+.etiket, .msg-content .etiket {
+  padding: 1px 6px; border-radius: 6px; font-weight: var(--fw-semibold);
+  transition: background .15s;
+}
+.etiket:hover { background: color-mix(in srgb, var(--ac) 22%, transparent); }
+.bot-badge { padding: 2px 7px; border-radius: 20px; font-size: 9.5px; }
+.msg-reply-ref {
+  border-left-width: 3px; padding: 5px 12px; border-radius: 4px 8px 8px 4px;
+  margin-bottom: 6px; max-width: 70%;
+}
+.date-divider { margin: 20px 0 14px; }
+.date-divider span { padding: 4px 14px; font-size: 11.5px; border-radius: 20px; }
+
+/* ── Ховер-тулбар действий: аккуратная «пилюля» над сообщением ── */
+.msg-actions {
+  top: -14px; right: 14px; border-radius: 10px; padding: 4px; gap: 1px;
+  box-shadow: 0 8px 24px -8px rgba(15,23,42,.35);
+}
+.msg-act-btn { width: 30px; height: 30px; border-radius: 8px; font-size: 12.5px; }
+
+/* ── Вложения ── */
+.msg-img { max-width: min(460px, 100%); border-radius: 14px; }
+.msg-file { padding: 8px 14px; border-radius: 12px; font-size: 12.5px; }
+
+/* ── Композер: мягкое «поле» с внутренней обводкой при фокусе ── */
+.chat-input-wrap { padding: 12px 16px 14px; }
+.chat-input {
+  border-radius: 16px; padding: 13px 16px; font-size: 14px; min-height: 48px;
+  background: color-mix(in srgb, var(--bg) 70%, var(--surface));
+}
+.chat-input:focus {
+  box-shadow: 0 0 0 3px var(--ac-soft), 0 8px 24px -16px var(--ac-glow);
+}
+.send-btn { height: 48px; min-width: 48px; border-radius: 16px; font-size: 15px; }
+.dm-btn { height: 48px; border-radius: 16px; }
+.reply-bar { border-radius: 14px 14px 0 0; }
+.input-hint { margin-top: 9px; font-size: 11px; letter-spacing: .02em; }
+
+/* ── Панель участников ── */
+.members-panel-hdr { padding: 16px; font-size: 14px; }
+.member-item { padding: 7px 10px; border-radius: 10px; margin-bottom: 2px; }
+.member-item:hover { background: color-mix(in srgb, var(--ac) 6%, transparent); }
+.member-name { font-size: 13px; font-weight: var(--fw-medium); }
+.member-section { font-weight: var(--fw-bold); letter-spacing: .08em; }
+
+/* ── Пустое состояние — спокойный центр-плейсхолдер ── */
+.chat-empty i { font-size: 46px; opacity: .28; }
+.chat-empty { gap: 14px; }
+.chat-empty span { font-weight: var(--fw-semibold); font-size: 14.5px; }
+
+/* ── Кнопка «вниз» — мягче и крупнее ── */
+.scroll-down-btn { width: 44px; height: 44px; border-radius: 50%; bottom: 18px; right: 20px; }
+
+/* ── Профиль: баннер и аватар чуть премиальнее ── */
+.profs-popup { border-radius: 20px; }
+.profs-banner { height: 84px; }
+.profs-av, .profs-av-placeholder { width: 72px; height: 72px; margin-top: -46px; border-width: 4px; }
+.profs-action-btn { padding: 9px; border-radius: 11px; }
+
+/* ── Тосты/модалка — единый радиус ── */
+.chat-toast { border-radius: 16px; padding: 14px 24px; }
+.chat-modal-box { border-radius: 22px; }
+.chat-modal-btn { border-radius: 12px; padding: 11px 20px; }
+
+/* ── Скроллбары — тоньше и в тон теме ── */
+.chat-messages::-webkit-scrollbar { width: 9px; }
+.chat-messages::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 8px; border: 2px solid transparent; background-clip: padding-box;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text) 28%, transparent); background-clip: padding-box;
+}
+
+/* ── Микро-адаптив: на узких экранах композер не сжимается ── */
+@media (max-width: 820px) {
+  .chat-header-topic { display: none; }
+  .chat-messages { padding: 14px; }
 }
 </style>
 

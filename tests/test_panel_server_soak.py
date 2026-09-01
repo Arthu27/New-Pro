@@ -111,10 +111,10 @@ try:
     total = 0
     t0 = time.time()
     last_sample = t0
-    HOT = [ '/api/guild/777/member-card/suggest?q=%40',
+    HOT = [ '/api/member-search/777?q=a',
             '/health',
             '/static/pickers.js' ]
-    permitted = {200, 503}   # health оффлайн честно 503
+    permitted = {200, 403, 404, 503}   # 503 health оффлайн, 403 поиск для mod без бота
     while time.time() - t0 < 40:
         for path in HOT:
             req = urllib.request.Request(f'http://127.0.0.1:{PORT}{path}')

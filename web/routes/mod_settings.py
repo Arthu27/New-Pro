@@ -264,12 +264,14 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_mod_settings(gid):
+        # gid из URL — сервер, чьи правила и ACL применяются.
+        try:
+            acl_gid = int(str(gid))
+        except (TypeError, ValueError):
+            acl_gid = 0
         gid = _gid(ctx)
         if not gid:
-            try:
-                gid = int(gid)
-            except (TypeError, ValueError):
-                gid = 0
+            gid = acl_gid or 0
         if request.method == 'GET':
             return jsonify({'success': True, 'cfg': mod_view(gid)})
 
@@ -285,10 +287,10 @@ def register(ctx):
             import web.app as _app
             from web.routes._common import viewer_member, acl_action_allowed
             _bot = _app.bot_instance
-            _member = viewer_member(_bot, gid) if _bot is not None else None
+            _member = viewer_member(_bot, acl_gid) if _bot is not None else None
             for _st in (data.get('steps') or []):
                 _act = str(_st.get('action', 'mute') if isinstance(_st, dict) else 'mute').strip().lower()
-                if _act in ACTIONS and not acl_action_allowed(gid, _member, _act):
+                if _act in ACTIONS and not acl_action_allowed(acl_gid, _member, _act):
                     return jsonify({'success': False,
                                     'error': f'Нет права: ступень «{ACTION_LABELS.get(_act, _act)}» '
                                              'не разрешена вашей роли (настройка — '

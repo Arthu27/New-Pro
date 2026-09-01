@@ -434,7 +434,9 @@ class AppealView(discord.ui.View):
                         mod = self.cog.bot.get_cog('Moderation')
                         if mod is not None:
                             await mod._unisolate_member(guild, member)
-                            await member.timeout(None)
+                        # снимаем ЛЮБОЙ мут (нативный таймаут + роли чат/войс-мута)
+                        from services import mute_state
+                        await mute_state.clear_all_mutes(guild, member)
                     except Exception as _ex:
                         log.debug('appeals: снятие изоляции/таймаута: %s', _ex)
                 try:

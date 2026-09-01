@@ -5,9 +5,9 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Модерация <span class="sep">·</span> Временные меры</div>
+    <div class="eyebrow"> Модерация </div>
     <h1>Временные меры</h1>
-    <p class="lead">Мьюты и баны с точным сроком: каждый таймер под наблюдением, снятие — в один клик.</p>
+    <p class="lead">Временные муты и баны с точным сроком: таймеры и автоматическое снятие.</p>
   </div>
   <div class="page-head-actions">
     <button type="button" class="btn" id="refreshBtn"><i class="fas fa-arrows-rotate"></i> Обновить</button>
@@ -290,7 +290,11 @@ function $(id) { return document.getElementById(id); }
   setActionType('mut');
   load();
   if (window.livePauseButton) window.livePauseButton($('tm-pause'));
-  setInterval(function () { if (!window.__modLivePaused) load(); }, 15000);
+  /* Список наказаний — пушем при модерационных событиях; таймер 60с лишь
+     подстраховка (а локальные таймеры обратного отсчёта остаются 1с — это
+     чистая отрисовка на клиенте, без запросов к серверу). */
+  setLiveRefresh(function () { if (!window.__modLivePaused) load(); }, 60000,
+                 ['g*:moderation', 'g*:modcenter', 'g*:logs']);
   setInterval(updateCountdowns, 1000);
 })();
 </script>

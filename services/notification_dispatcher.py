@@ -285,6 +285,13 @@ def notify_event(event, title, body, link='', discord_sender=None):
                 channels['email'] = False
 
         _record_history(event, full_title, body, channels, link=link)
+        # Живой пуш в панель: колокольчик обновится сразу на всех вкладках
+        # (сюда события приходят и из бота, и из веб-роутов).
+        try:
+            from services.live_bus import publish_global
+            publish_global('notifications')
+        except Exception as _live_ex:
+            _log.debug("notify_event live-push: %s", _live_ex)
     except Exception as _ex:
         _log.debug("notify_event(): подавлено: %s", _ex)
     return channels

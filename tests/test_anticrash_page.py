@@ -149,7 +149,7 @@ check('CFG_GROUPS' in page and 'ac-cfg-group' in page, 'страница: гру
 check('ac-savebar' in page and 'Сохранить' in page, 'страница: липкая панель сохранения')
 check("/api/anticrash/overview" in page and "/api/anticrash/config" in page
       and "/api/anticrash/reset" in page, 'страница: дёргает все три API')
-check('setInterval(loadOverview, 5000)' in page, 'страница: live-обновление 5 сек')
+check('setLiveRefresh' in page and 'loadOverview' in page and 'g*:guardian' in page, 'страница: live-обновление пушем (SSE), таймер — подстраховка')
 check('document.hidden' in page, 'страница: пауза опроса в фоновой вкладке')
 check('{%' not in page and '{{' not in page,
       'страница: после рендера не осталось сырых Jinja-тегов')

@@ -66,7 +66,7 @@ def _walk(node):
 
 _walk(MENU)
 
-check(len(menu_paths) >= 100, f'меню содержит {len(menu_paths)} страниц')
+check(len(menu_paths) >= 60, f'меню содержит {len(menu_paths)} страниц')
 
 _bad = []
 for path in sorted(menu_paths):

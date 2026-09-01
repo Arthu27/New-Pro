@@ -215,19 +215,7 @@ pres = (r.get_json() or {}).get('presence', {})
 check(pres.get('status') == 'dnd' and pres.get('activity_text') == 'стражу за сервером',
       'presence: после «перезапуска» настройки не сбросились', str(pres))
 
-# automation server_stats: 3 счётчика — множественный выбор/список
-r = client.post('/api/automation/server_stats', json={
-    'enabled': True,
-    'channels': '111 | Участники: {members}\n222 | Каналы: {channels}\n333 | Онлайн: {online}'})
-aj = r.get_json() or {}
-check(r.status_code == 200 and aj.get('success'),
-      'automation: 3 счётчика приняты (200 ok)', str(aj)[:160])
-from db import GuildData  # noqa: E402
-
-stored = GuildData('server_stats').get(777, 'settings', {})
-counters = stored.get('channels') or {}
-check(isinstance(counters, dict) and set(map(str, counters.keys())) == {'111', '222', '333'},
-      'automation: все 3 счётчика сохранились, ни один не потерялся', str(counters))
+# automation server_stats — модуль удалён (выключенная автоматика счётчиков).
 
 
 print('== 3. Неверные аргументы: 400, понятная ошибка, файл цел ==')
@@ -244,9 +232,7 @@ with open(cfg_path, encoding='utf-8') as f:
     check(f.read() == before, 'presence: отказанный POST не тронул файл конфигурации')
 r = client.post('/api/bot-settings/presence', data='не-json', content_type='text/plain')
 check(r.status_code in (400, 415), 'presence: не-JSON тело → вежливый отказ, не 500')
-r = client.post('/api/automation/server_stats', data='не-json', content_type='text/plain')
-check(r.status_code == 400 and (r.get_json() or {}).get('success') is False,
-      'automation: не-JSON тело → 400 «ожидался JSON-объект»')
+# automation server_stats удалён — проверка не-JSON больше не нужна.
 
 
 print('== 4. Пустой сервер (нет каналов/ролей/участников) ==')
@@ -352,8 +338,7 @@ with mod_client.session_transaction() as s:
 r = mod_client.post('/api/bot-settings/presence', json={
     'status': 'online', 'activity_type': 'playing', 'activity_text': 'x'})
 check(r.status_code == 403, 'роль mod не может менять присутствие бота (owner-only)')
-r = mod_client.post('/api/automation/server_stats', json={'enabled': True})
-check(r.status_code == 403, 'роль mod не может править автоматику (admin-only)')
+# automation server_stats удалён — ролевой проверки больше нет.
 r = mod_client.post('/update' if False else '/api/bot-settings/sync', json={})
 check(r.status_code in (403, 404), 'mod не имеет доступа к sync-пульту')
 

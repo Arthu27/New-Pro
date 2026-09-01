@@ -237,7 +237,7 @@ print('== меню/роуты ==')
 from services.panel_menu import panel_groups_for  # noqa: E402
 paths = [p['path'] for g in panel_groups_for('owner') for p in g['pages']]
 check('/channel-settings' in paths, 'пункт «Каналы» в меню')
-check(len(paths) == 125, f'в меню 125 страниц ({len(paths)})')
+check(len(paths) == 75, f'в меню 75 страниц ({len(paths)}); музыка удалена')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

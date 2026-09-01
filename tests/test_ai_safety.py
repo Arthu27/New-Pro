@@ -86,7 +86,10 @@ check("actions .get ('warn')" not in tsrc, 'тикет не применяет �
 check('AI рекомендация' not in tsrc, 'кнопок «наказать по рекомендации ИИ» нет')
 check("_assign_role (message .guild ,actions" not in tsrc, 'ИИ не выдаёт роли')
 
-print('== 4. Отчёт модерации: только реальный журнал ==')
+print('== 4. Отчёт модерации убран вместе с модулем отчётов ==')
+# Модуль mod_report (и страница «Отчёты») удалён при чистке выключенных
+# модулей — AI-отчёт строился только на нём, поэтому endpoint снят целиком,
+# а не оставлен мёртвой заглушкой. Защита «ИИ не наказывает» покрыта секциями 1-3.
 appmod = importlib.import_module('web.app')
 appmod.app.config['TESTING'] = True
 client = appmod.app.test_client()
@@ -97,11 +100,7 @@ with client.session_transaction() as s:
     s['role'] = 'owner'
 
 resp = client.post('/api/ai/mod-report')
-body = resp.get_json()
-check(resp.status_code == 200 and body.get('ok'), 'endpoint отвечает')
-rep = body.get('report') or ''
-check('нет ни одного действия' in rep, 'пустой журнал → честный «нет данных»')
-check('17' not in rep, 'выдуманных цифр («17 случаев») больше нет')
+check(resp.status_code == 404, 'мёртвый /api/ai/mod-report снят (404), а не висит заглушкой')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

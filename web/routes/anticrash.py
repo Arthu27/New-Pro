@@ -4,7 +4,7 @@
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _process_action, _log, _live_publish,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
@@ -120,6 +120,7 @@ def register(ctx):
                 errors[k] = str(e)
         if errors:
             return jsonify({'ok': False, 'updated': updated, 'errors': errors}), 400
+        _live_publish(active_guild_id(), 'guardian')
         return jsonify({'ok': True, 'config': eh.config})
 
 
@@ -131,4 +132,5 @@ def register(ctx):
         if not eh:
             return jsonify({'ok': False, 'error': 'Обработчик офлайн'}), 503
         eh.reset_stats()
+        _live_publish(active_guild_id(), 'guardian')
         return jsonify({'ok': True})

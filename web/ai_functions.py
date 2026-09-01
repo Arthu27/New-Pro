@@ -31,6 +31,8 @@ class AIFunctions :
         'check_user_reputation':self .check_user_reputation ,
         'search_knowledge_base':self .search_knowledge_base ,
         'search_user_messages':self .search_user_messages ,
+        'get_weekly_activity':self .get_weekly_activity ,
+        'get_moderator_weekly':self .get_moderator_weekly ,
         }
 
     def get_available_functions (self )->str :
@@ -83,8 +85,22 @@ class AIFunctions :
     Пример: search_knowledge_base("как войти в панель")
 
 12. search_user_messages(user_id: str, query: str, limit: int = 5)
-    Поиск по сообщениям пользователя (архив, до 48 часов)
-    Пример: search_user_messages(user_id="123456789", query="mute")
+   Поиск по сообщениям пользователя (архив, до 48 часов)
+   Пример: search_user_messages(user_id="123456789", query="mute")
+
+13. get_weekly_activity(days: int = 7, limit: int = 15)
+   Активность участников за период: и сообщения в чате, и время в войсе.
+   Возвращает топ: у кого сколько сообщений и сколько времени в голосовых.
+   Пример: get_weekly_activity(days=7)
+
+14. get_moderator_weekly(days: int = 7)
+   Недельная статистика модераторов: мод-действия (баны/кики/муты/варны),
+   сообщения в чате и время в войсе — по каждому модератору.
+   Пример: get_moderator_weekly(days=7)
+
+ВАЖНО: для статистики активности/модераторов вызывай get_weekly_activity
+или get_moderator_weekly (НЕ выдумывай другие имена — search_channel_activity
+и подобные не существуют, используй get_weekly_activity).
 
 ФОРМАТ ВЫЗОВА ФУНКЦИИ:
 [FUNC:название_функции(параметр1=значение, параметр2=значение)]
@@ -110,6 +126,21 @@ class AIFunctions :
             func_name =func_call .split ('(')[0 ].strip ()
             params_str =func_call .split ('(')[1 ].rsplit (')',1 )[0 ].strip ()
 
+            # Алиасы: ИИ иногда зовёт функции «по смыслу» именами, которых
+            # нет в реестре (search_channel_activity, get_activity...).
+            # Мапим их на реальные функции вместо «функция не найдена».
+            _aliases = {
+                'search_channel_activity': 'get_weekly_activity',
+                'get_channel_activity': 'get_weekly_activity',
+                'channel_activity': 'get_weekly_activity',
+                'get_activity': 'get_weekly_activity',
+                'weekly_stats': 'get_weekly_activity',
+                'get_staff_stats': 'get_moderator_weekly',
+                'get_mod_stats': 'get_moderator_weekly',
+                'moderator_activity': 'get_moderator_weekly',
+            }
+            func_name = _aliases.get(func_name, func_name)
+
             # Отдельношtыrыyoruz parametri
             params ={}
             if params_str :
@@ -131,7 +162,16 @@ class AIFunctions :
 
                         # Чтяжелыйыyoruz funkciyu
             if func_name not in self .functions :
-                return f"Ошибка: funkciya {func_name} не найден"
+                # Подсказка ИИ: такой функции нет — даём список реальных,
+                # чтобы он не залипал на выдуманном имени.
+                _avail = ", ".join(sorted(self.functions.keys()))
+                _log.info("AI вызвал несуществующую функцию %s (доступны: %s)",
+                          func_name, _avail)
+                return (f"Ошибка: функция {func_name} не существует. "
+                        f"Доступные функции: {_avail}. "
+                        "Для статистики активности используй get_weekly_activity, "
+                        "для модераторов — get_moderator_weekly. "
+                        "Ответь пользователю на основе этого списка, не повторяй вызов.")
 
             result =await self .functions [func_name ](guild =guild ,**params )
             return str (result )
@@ -375,6 +415,163 @@ class AIFunctions :
             "• Внутренняя ошибка бота (проверьте логи на [AI-FUNC])\n\n"
             "Подробности в логах бота: ищите строки `[AI-FUNC]`."
             )
+
+    async def get_weekly_activity(self, guild: discord.Guild, days: int = 7,
+                                  limit: int = 15) -> str:
+        """Активность участников за период: сообщения в чате + время в войсе.
+
+        Сообщения — из services.mod_activity.message_counts (пишутся
+        on_message), войс — из cogs.voice_tracker (поле daily по дням).
+        """
+        try:
+            days = max(1, min(30, int(days or 7)))
+            limit = max(1, min(50, int(limit or 15)))
+            # ── сообщения за период ──
+            try:
+                from services.mod_activity import message_counts
+                msg = message_counts(guild.id, days=days)
+            except Exception as _ex:
+                _log.debug("get_weekly_activity: message_counts: %s", _ex)
+                msg = {}
+            # ── войс за период (сумма по последним `days` дням) ──
+            voice_sec = {}
+            voice_name = {}
+            try:
+                from cogs import voice_tracker as _vt
+                from datetime import date as _date, timedelta as _td
+                days_set = {str(_date.today() - _td(days=i)) for i in range(days)}
+                for uid, rec in _vt.voice_all(guild.id).items():
+                    daily = rec.get('daily') or {}
+                    secs = 0
+                    for d, v in daily.items():
+                        if d in days_set:
+                            try:
+                                secs += int(v or 0)
+                            except (TypeError, ValueError) as _ve:
+                                _log.debug("weekly voice: битое %r за %s: %s", v, d, _ve)
+                                secs += 0  # битое значение дня пропускаем
+                    if secs > 0:
+                        voice_sec[str(uid)] = secs
+                        voice_name[str(uid)] = rec.get('name') or uid
+            except Exception as _ex:
+                _log.debug("get_weekly_activity: voice: %s", _ex)
+
+            uids = set(msg) | set(voice_sec)
+            if not uids:
+                return (f"За последние {days} дн. активности не записано "
+                        "(бот только начал собирать статистику или сообщений/войса не было).")
+
+            rows = []
+            for uid in uids:
+                m = int(msg.get(uid, {}).get('messages', 0) or 0)
+                s = int(voice_sec.get(uid, 0) or 0)
+                name = (msg.get(uid, {}).get('name') or voice_name.get(uid)
+                        or uid)
+                rows.append((uid, str(name)[:24], m, s))
+            # сортируем по суммарной активности (сообщения + эквивалент в сек)
+            rows.sort(key=lambda r: (r[2] * 60 + r[3]), reverse=True)
+            top = rows[:limit]
+
+            def _fmt_voice(secs):
+                m_, s_ = divmod(secs, 60)
+                h_, m_ = divmod(m_, 60)
+                if h_:
+                    return f"{h_}ч {m_}м"
+                if m_:
+                    return f"{m_}м"
+                return f"{s_}с"
+
+            lines = [f"📊 Активность за {days} дн. (топ {len(top)}):"]
+            medals = ['🥇', '🥈', '🥉']
+            for i, (uid, name, m, s) in enumerate(top):
+                pref = medals[i] if i < 3 else f"`{i+1}.`"
+                parts = [f"**{name}**"]
+                parts.append(f"💬 {m} сообщ.")
+                if s:
+                    parts.append(f"🎙 {_fmt_voice(s)} в войсе")
+                lines.append(f"{pref} {' · '.join(parts)}")
+            lines.append("\nДанные собираются с момента работы бота; "
+                         "период раньше старта статистики не виден.")
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Ошибка при сборе активности: {e}"
+
+    async def get_moderator_weekly(self, guild: discord.Guild,
+                                   days: int = 7) -> str:
+        """Недельная статистика модераторов: действия + сообщения + войс."""
+        try:
+            days = max(1, min(30, int(days or 7)))
+            # мод-действия (бан/кик/мут/варн и т.п.) из cogs.staff_stats
+            try:
+                from cogs.staff_stats import collect_actions, summarize, _breakdown
+                actions = collect_actions(guild.id)
+                per = summarize(actions, days=days)
+            except Exception as _ex:
+                _log.debug("get_moderator_weekly: staff_stats: %s", _ex)
+                per = {}
+            # сообщения
+            try:
+                from services.mod_activity import message_counts
+                msg = message_counts(guild.id, days=days)
+            except Exception as _ex:
+                _log.debug("get_moderator_weekly: message_counts: %s", _ex)
+                msg = {}
+            # войс по дням
+            voice_sec = {}
+            try:
+                from cogs import voice_tracker as _vt
+                from datetime import date as _date, timedelta as _td
+                days_set = {str(_date.today() - _td(days=i)) for i in range(days)}
+                for uid, rec in _vt.voice_all(guild.id).items():
+                    daily = rec.get('daily') or {}
+                    secs = sum(int(daily.get(d, 0) or 0) for d in days_set)
+                    if secs > 0:
+                        voice_sec[str(uid)] = secs
+            except Exception as _ex:
+                _log.debug("get_moderator_weekly: voice: %s", _ex)
+
+            mod_ids = set(per)
+            # добавим тех, у кого есть мод-действия; имя берём из сервера
+            if not mod_ids:
+                return (f"За последние {days} дн. модераторских действий не "
+                        "записано (варны/муты/баны не выносились или бот недавно).")
+
+            def _name(uid):
+                mem = None
+                try:
+                    mem = guild.get_member(int(uid))
+                except (TypeError, ValueError) as _ne:
+                    _log.debug("moderator name: uid %r не парсится: %s", uid, _ne)
+                if mem is not None:
+                    return mem.display_name
+                return (msg.get(uid, {}).get('name') or uid)
+
+            rows = []
+            for uid in mod_ids:
+                ent = per.get(uid, {})
+                total = int(ent.get('total', 0) or 0)
+                breakdown = _breakdown(ent.get('by', {})) if ent.get('by') else '—'
+                m = int(msg.get(uid, {}).get('messages', 0) or 0)
+                s = int(voice_sec.get(uid, 0) or 0)
+                rows.append((uid, _name(uid), total, breakdown, m, s))
+            rows.sort(key=lambda r: r[2], reverse=True)
+
+            def _fmt_voice(secs):
+                m_, _ = divmod(secs, 60)
+                h_, m_ = divmod(m_, 60)
+                return f"{h_}ч {m_}м" if h_ else (f"{m_}м" if m_ else "0м")
+
+            medals = ['🥇', '🥈', '🥉']
+            lines = [f"🛡 Активность модераторов за {days} дн. ({len(rows)} чел.):"]
+            for i, (uid, name, total, breakdown, m, s) in enumerate(rows):
+                pref = medals[i] if i < 3 else f"`{i+1}.`"
+                lines.append(
+                    f"{pref} **{str(name)[:24]}** — действий: **{total}**\n"
+                    f"    {breakdown} · 💬 {m} сообщ."
+                    + (f" · 🎙 {_fmt_voice(s)} в войсе" if s else ""))
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Ошибка при сборе статистики модераторов: {e}"
 
     async def search_rules (self ,guild :discord .Guild ,query :str )->str :
         """Arama по правил сервер"""

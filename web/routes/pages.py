@@ -51,39 +51,14 @@ def register(ctx):
         main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/reaction-roles')
-    @login_required 
-    @role_required ('admin')
-    def reaction_roles_page ():
-        return render_template ('reaction_roles.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/giveaway')
-    @login_required 
-    @role_required ('admin')
-    def giveaway_page ():
-        return render_template ('giveaway.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id (),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/polls')
-    @login_required 
-    @role_required ('mod')
-    def polls_page ():
-        return render_template ('polls.html',role =session .get ('role'),username =session .get ('username'))
 
 
-    @app .route ('/autorole')
-    @login_required 
-    @role_required ('admin')
-    def autorole_page ():
-        return render_template ('autorole.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/leveling')
-    @login_required 
-    @role_required ('owner')
-    def leveling_page ():
-        return render_template ('leveling.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
     @app .route ('/ai-tickets')
@@ -130,26 +105,10 @@ def register(ctx):
         )
 
 
-    @app .route ('/economy')
-    @login_required 
-    @role_required ('admin')
-    def economy_page ():
-        return render_template ('economy.html',role =session .get ('role'),username =session .get ('username'))
 
 
-    @app .route ('/scheduled-messages')
-    @login_required 
-    @role_required ('owner')
-    def scheduled_messages_page ():
-        return render_template ('scheduled_messages.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/custom-commands')
-    @login_required 
-    @role_required ('owner')
-    def custom_commands_page ():
-        return render_template ('custom_commands.html',role =session .get ('role'),username =session .get ('username'),
-        main_guild_id =MAIN_GUILD_ID )
 
 
     @app .route ('/member-notes')
@@ -173,18 +132,8 @@ def register(ctx):
         return render_template ('invite_tracker.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/suggestions')
-    @login_required 
-    @role_required ('mod')
-    def suggestions_page ():
-        return render_template ('suggestions.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
-    @app .route ('/starboard')
-    @login_required 
-    @role_required ('mod')
-    def starboard_page ():
-        return render_template ('starboard.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
 
 
     @app .route ('/spravka')
@@ -217,11 +166,6 @@ def register(ctx):
         return render_template ('bot_diagnostics.html',role =session .get ('role'),username =session .get ('username'))
 
 
-    @app .route ('/leveling-admin')
-    @login_required 
-    @role_required ('admin')
-    def leveling_admin_page ():
-        return render_template ('leveling_admin.html',role =session .get ('role'),username =session .get ('username'))
 
 
     @app .route ('/ai-moderation')
@@ -252,11 +196,6 @@ def register(ctx):
         return render_template ('warn_config.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id ())
 
 
-    @app .route ('/duty-panel-web')
-    @login_required 
-    @role_required ('admin')
-    def duty_panel_web_page ():
-        return render_template ('duty_panel.html',role =session .get ('role'),username =session .get ('username'),guild_id =active_guild_id ())
 
 
     @app .route ('/member-search')

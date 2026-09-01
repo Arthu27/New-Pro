@@ -11,6 +11,15 @@ from web.routes._common import (
     os, json, time, math, discord, datetime, timezone, timedelta,
 )
 
+class _NoGuild (Exception ):
+    """Сервер не выбран (MAIN_GUILD_ID пуст и бот офлайн).
+
+    Не ошибка, а штатное состояние «данных ещё неоткуда взять»: отличаем
+    его от настоящих сбоев, чтобы не сорить трейсбеками в консоль
+    (инцидент 30.08: лог был полон «invalid literal for int() with base 10»).
+    """
+
+
 def _hidden_store ():
     path =os .path .join (_REPO_ROOT ,'data','hidden_channels.json')
     try :
@@ -294,12 +303,19 @@ def register(ctx):
                 print (f'[MOD-HISTORY] Ошибка чтения предупреждений: {_e}')
 
         # Имена вместо ID: цель и модератор резолвятся из карты имён гильдии.
+        # ВАЖНО: здесь нужен guild_id (сервер из запроса/MAIN_GUILD_ID), а НЕ
+        # gid — тот был переменной ЦИКЛА выше. Если ни один цикл не отработал
+        # (файлов mod_data.json/warnings.json ещё нет — чистая установка),
+        # имя gid вообще не определено, и весь блок падал с
+        # «cannot access local variable 'gid'» → имена не резолвились,
+        # в истории модерации вместо ников торчали голые ID.
+        _target_gid = str(guild_id or '')
         try :
             import web .app as _appm
-            _nm =_appm ._guild_name_map (gid )if gid else {}
+            _nm =_appm ._guild_name_map (_target_gid )if _target_gid else {}
             for _ev in all_events :
                 _gid =str (_ev .get ('guild_id')or '')
-                if _gid and _gid !=gid :
+                if _gid and _target_gid and _gid !=_target_gid :
                     continue 
                 _map =_nm
                 _uid =str (_ev .get ('target_id')or _ev .get ('user_id')or '').strip ()
@@ -413,12 +429,20 @@ def register(ctx):
         # 4. Сообщения и голос за неделю
         msg_map ={}
         voice_map ={}
+        # Сервер может быть НЕ выбран (MAIN_GUILD_ID пуст + бот офлайн) —
+        # тогда gid = '' и источники ниже падают на int(''). Это не ошибка
+        # данных, а «сервера ещё нет»: считаем метрики пустыми и не сорим
+        # трейсбеками в консоль (инцидент 30.08: лог полон
+        # «invalid literal for int() with base 10: ''»).
+        if gid :
+            try :
+                from services .mod_activity import message_counts as _mc
+                msg_map =_mc (gid ,days =7 )
+            except Exception as _ex :
+                print (f'[MOD-STATS] Ошибка счётчика сообщений: {_ex }')
         try :
-            from services .mod_activity import message_counts as _mc
-            msg_map =_mc (gid ,days =7 )
-        except Exception as _ex :
-            print (f'[MOD-STATS] Ошибка счётчика сообщений: {_ex }')
-        try :
+            if not gid :
+                raise _NoGuild ('сервер не выбран')
             from cogs .voice_tracker import voice_view as _vv
             vv =_vv (gid )
             users =vv .get ('users',{})if isinstance (vv ,dict )else {}
@@ -431,6 +455,9 @@ def register(ctx):
                     try :secs +=max (0 ,int (daily .get (dkey ,0 )or 0 ))
                     except Exception as _ex :_log.debug("api_mod_stats(): голосовой день %s: %s", dkey, _ex )
                 voice_map [str (uid )]={'name':rec .get ('name')or str (uid ),'seconds':secs ,'avatar':rec .get ('avatar')or ''}
+        except _NoGuild as _ex :
+            # сервер не выбран — голосовых метрик просто нет (не ошибка)
+            _log .debug ('api_mod_stats(): голос пропущен: %s',_ex )
         except Exception as _ex :
             print (f'[MOD-STATS] Ошибка голосового трекера: {_ex }')
 
@@ -672,6 +699,10 @@ def register(ctx):
                 {'id':'1014','name':'сцена','type':'stage','position':0,'category_id':'903','hidden':False},
                 ]
                 return jsonify (_annotate_hidden (guild_id ,_fallback ))
+            cached =_channels_offline_cache (guild_id )
+            if cached :
+                print (f'[WEB] /channels bot offline — отдаём кэш ({len(cached)} кан.)')
+                return jsonify (cached )
             print ('[WEB][WARN] /channels: bot is None')
             return jsonify ({'error':'Бот офлайн','channels':[]})
 
@@ -679,11 +710,25 @@ def register(ctx):
         if not guild :
             for g in bot .guilds :
                 if str (g .id )==str (guild_id ):
-                    guild =g 
-                    break 
+                    guild =g
+                    break
         if not guild :
             print (f'[WEB][WARN] /channels: guild {guild_id} не найден. Bot guilds: {[str(g.id) for g in bot.guilds]}')
             return jsonify ({'error':f'Сервер {guild_id} не найден — бот не состоит на нём','channels':[]})
+
+        # Короткий in-memory кэш живого списка: страницы настроек и опросы
+        # дёргают /channels часто, а пересборка с обходом каналов и подсчётом
+        # участников в голосовых — лишняя работа на каждый тик. 3 сек свежести
+        # достаточно. В ключе — число каналов сервера: при создании/удалении
+        # канала состав меняется и кэш промахивается мгновенно (без ожидания
+        # TTL), при неизменном составе — попадает и экономит пересборку.
+        import time as _time
+        _now = _time.time()
+        _live = getattr(api_guild_channels, '_live_cache', {})
+        _ckey = (str(guild_id), len(getattr(guild, 'channels', []) or []))
+        _hit = _live.get(_ckey)
+        if _hit and (_now - _hit[0]) < 3.0:
+            return jsonify(_hit[1])
 
         type_map ={
         _discord .ChannelType .text :'text',
@@ -756,8 +801,41 @@ def register(ctx):
 
         sorted_channels =sorted (channels_data ,key =lambda x :(x ['category_pos'],x ['position']))
         _annotate_hidden (guild_id ,sorted_channels )
+        # Кладём в короткий in-memory кэш (следующие 3 сек отдаём без пересборки).
+        try :
+            api_guild_channels ._live_cache =getattr (api_guild_channels ,'_live_cache',{})
+            api_guild_channels ._live_cache [_ckey ] =(_now ,sorted_channels )
+            # Лёгкая уборка протухших ключей (разные числа каналов со временем),
+            # чтобы словарь не рос вечно.
+            for _k in [k for k ,v in api_guild_channels ._live_cache .items ()if _now -v [0 ] >30.0 ]:
+                api_guild_channels ._live_cache .pop (_k ,None )
+        except Exception as _cce :
+            print (f'[WEB][WARN] channels live-cache: {_cce}')
+        # Запоминаем живой список: при кратком офлайне/перезапуске бота
+        # пикеры каналов не пустуют и имена не превращаются в голые ID.
+        try :
+            os .makedirs ('data',exist_ok =True )
+            with open (f'data/panel_channels_cache_{guild_id}.json','w',encoding ='utf-8')as _cf :
+                json .dump ({'channels':sorted_channels },_cf ,ensure_ascii =False )
+        except Exception as _ce :
+            print (f'[WEB][WARN] channels cache save: {_ce}')
         print (f'[WEB] /channels guild={guild_id} returned {len(sorted_channels)} channels')
         return jsonify (sorted_channels )
+
+    def _channels_offline_cache (guild_id ):
+        """Последний известный список каналов (имена + id) при офлайн-боте."""
+        try :
+            p =f'data/panel_channels_cache_{guild_id}.json'
+            if os .path .exists (p ):
+                with open (p ,encoding ='utf-8')as fh :
+                    data =json .load (fh )
+                chans =data .get ('channels')if isinstance (data ,dict )else None
+                good =[c for c in (chans or [])if c .get ('id')and c .get ('name')]
+                if good :
+                    return good
+        except Exception as _ce :
+            print (f'[WEB][WARN] channels cache load: {_ce}')
+        return None
 
     # ── Владелец: скрыть канал/категорию из панели ─────────────────────────
     @app .route ('/api/guild/<guild_id>/channels-visibility',methods =['POST'])
@@ -782,4 +860,9 @@ def register(ctx):
             lst .remove (target )
         g [key ]=lst
         _hidden_save (store )
+        try :
+            from services .live_bus import publish as _lpub
+            _lpub (str (guild_id ),'channels')
+        except Exception as _live_ex :
+            print (f'[WEB][WARN] hidden-channel live-push: {_live_ex}')
         return jsonify ({'success':True ,'hidden':hidden ,'id':target ,'kind':kind })

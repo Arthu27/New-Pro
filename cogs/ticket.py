@@ -375,7 +375,12 @@ class TicketCategorySelect (discord .ui .Select ):
         min_values =1 ,
         max_values =1 ,
         options =options ,
-        custom_id ="ticket_category_select"
+        # ВАЖНО: custom_id ОТЛИЧАЕТСЯ от селекта панели открытия тикета
+        # ("ticket_category_select" у TicketView ниже). Раньше оба меню
+        # имели один custom_id — discord.py при рестарте/гонке мог
+        # направить выбор не тому обработчику, и взаимодействие висло
+        # («Приложение Hakumo не ответило вовремя»).
+        custom_id ="ticket_category_inside"
         )
 
     async def callback (self ,interaction :discord .Interaction ):
@@ -448,22 +453,50 @@ class TicketView (discord .ui .View ):
     ]
     )
     async def category_select (self ,interaction :discord .Interaction ,select :discord .ui .Select ):
-        guild =interaction .guild 
-        category =select .values [0 ]
+        guild =interaction .guild
+        category =select .values [0 ] if select .values else 'general'
 
+        # НЕМЕДЛЕННО подтверждаем взаимодействие (ephemeral thinking):
+        # Discord ждёт ответа 3 секунды. Любая сетевая просадка или медленный
+        # вызов ниже (поиск канала, rate-limit с файлом, создание категории/
+        # канала) после этого уже НЕ дают «Приложение не ответило вовремя» —
+        # thinking-ответ виден сразу, дальнейшие ответы идут через followup.
+        try :
+            await interaction .response .defer (thinking =True ,ephemeral =True )
+        except Exception as _ack :
+            logger .warning (f"[Ticket] не удалось подтвердить выбор категории: {_ack}")
+
+        async def _say (embed ,**kw ):
+            """Ответ пользователю независимо от стадии взаимодействия."""
+            try :
+                if interaction .response .is_done ():
+                    await interaction .followup .send (embed =embed ,ephemeral =True ,**kw )
+                else :
+                    await interaction .response .send_message (embed =embed ,ephemeral =True ,**kw )
+            except Exception as _se :
+                logger .debug ("category_select _say: %s", _se )
+
+        try:
+            await self ._category_open_ticket (interaction ,guild ,category ,_say )
+        except discord .Forbidden as _fe :
+            logger .error (f"[Ticket] нет прав на создание тикета: {_fe}")
+            await _say (_ae ('warn','Не хватает прав бота',
+                'Бот не может создать канал/категорию тикета. Выдайте боту права '
+                '«Управление каналами» и роль выше обычных участников, затем попробуйте снова.'))
+        except Exception as _err :
+            logger .error (f"[Ticket] ошибка создания тикета: {_err}", exc_info =True )
+            await _say (_ae ('warn','Не удалось открыть тикет',
+                f'Произошла ошибка: {str(_err)[:200]}\nПопробуйте ещё раз или напишите модератору.'))
+
+    async def _category_open_ticket (self ,interaction ,guild ,category ,_say ):
         # На этом сервере система тикетов отключена
         if guild .id in TICKET_DISABLED_GUILDS :
-            await interaction .response .send_message (
-            embed =_ae ('warn','Система тикетов отключена','На этом сервере тикеты временно не принимаются.'),ephemeral =True 
-            )
-            return 
+            await _say (_ae ('warn','Система тикетов отключена','На этом сервере тикеты временно не принимаются.'))
+            return
 
         existing =discord .utils .get (guild .text_channels ,name =f"ticket-{interaction.user.name.lower()}")
         if existing :
-            await interaction .response .send_message (
-            embed =_ae ('ticket','У вас уже есть открытый тикет',f'Загляните сюда: {existing.mention}\nСначала закройте его — и сразу откроем новый.'),
-            ephemeral =True 
-            )
+            await _say (_ae ('ticket','У вас уже есть открытый тикет',f'Загляните сюда: {existing.mention}\nСначала закройте его — и сразу откроем новый.'))
             return 
 
             #  RATE LIMIT CHECK 
@@ -496,13 +529,15 @@ class TicketView (discord .ui .View ):
             f"**Осталось тикетов:** {rate_check.remaining}/{rate_check.limit} (за 24 часа)\n\n"
             )
             rl_embed .set_footer (text ="Защита от спама")
-            await interaction .response .send_message (embed =rl_embed ,ephemeral =True )
+            await _say (rl_embed )
             return 
 
-        await interaction .response .send_message (
-        embed =_ae ('ticket','Открываю тикет…','Пара секунд — готовлю отдельный канал.'),
-        ephemeral =True 
-        )
+        try :
+            await interaction .edit_original_response (
+            embed =_ae ('ticket','Открываю тикет…','Пара секунд — готовлю отдельный канал.')
+            )
+        except Exception as _oe :
+            logger .debug ("edit_original_response (открываю тикет): %s", _oe )
 
         category_group =discord .utils .get (guild .categories ,name =TICKET_CATEGORY_NAME )
         if not category_group :
@@ -545,7 +580,11 @@ class TicketView (discord .ui .View ):
         )
 
         # Отправить приветственное сообщение от AI
-        if self ._ai_enabled (channel .guild .id ):
+        # self здесь — TicketView; метод _ai_enabled живёт на коге Ticket,
+        # поэтому берём ког через клиента. Если кога нет — AI-ветку пропускаем.
+        _ticket_cog =interaction .client .get_cog ('Ticket') if getattr (interaction ,'client',None ) else None 
+        _ai_on =bool (_ticket_cog and _ticket_cog ._ai_enabled (channel .guild .id ))
+        if _ai_on :
             try :
                 from web .ai_helper import ai_ticket_greeting 
 
@@ -559,7 +598,7 @@ class TicketView (discord .ui .View ):
                 'staff_notified':False 
                 }
 
-                cog =interaction .client .get_cog ('Ticket')
+                cog =_ticket_cog 
                 if cog :
                 # If they chose complaint, set up the complaint flow right away
                     if category =='complaint':
@@ -1222,10 +1261,18 @@ class StaffSummonView (discord .ui .View ):
             gp =member .guild_permissions
             if gp .manage_guild or gp .administrator or gp .manage_messages :
                 return True
-            cfg =ticket_notify_cfg (member .guild .id )
-            rid =cfg .get ('mod_role_id')
+            # Единый источник роли модераторов (жалобы/призыв/заявки — одно место).
+            from services.mod_role import get_mod_role_id
+            rid =get_mod_role_id (member .guild .id )
             if rid and any (str (r .id )==str (rid )for r in getattr (member ,'roles',[])or []):
                 return True
+            cfg =ticket_notify_cfg (member .guild .id )
+            # Легаси admin/owner-роли из старой панели призыва (если заданы)
+            if cfg .get ('admin_role_id') or cfg .get ('owner_role_id'):
+                for _k in ('admin_role_id','owner_role_id'):
+                    _rid =cfg .get (_k )
+                    if _rid and any (str (r .id )==str (_rid )for r in getattr (member ,'roles',[])or []):
+                        return True
             return bool (discord .utils .get (getattr (member ,'roles',[])or [],name =SUPPORT_ROLE_NAME ))
         except Exception :
             return False
@@ -2311,6 +2358,14 @@ class Ticket (commands .Cog ):
                 role =message .guild .get_role (int (admin_role_id ))
                 if role :
                     ping_mentions .append (role .mention )
+            # Роль модераторов — из ЕДИНОГО источника (настройка в «Жалобах»),
+            # а не только из локального ticket_notify-конфига.
+            try :
+                from services.mod_role import get_mod_role_id as _gmr
+                _unified_mrid =_gmr (message .guild .id )
+            except Exception :
+                _unified_mrid =None
+            mod_role_id =_unified_mrid or mod_role_id
             if mod_role_id :
                 role =message .guild .get_role (int (mod_role_id ))
                 if role :
@@ -3046,7 +3101,12 @@ class Ticket (commands .Cog ):
         if target is None :
             return False
         role =None
-        mrid =cfg .get ('mod_role_id')
+        # Единый источник роли модераторов (с фолбэком на старый конфиг призыва).
+        try :
+            from services.mod_role import get_mod_role_id as _gmr
+            mrid =_gmr (guild .id )or cfg .get ('mod_role_id')
+        except Exception :
+            mrid =cfg .get ('mod_role_id')
         if mrid :
             try :
                 role =guild .get_role (int (mrid ))

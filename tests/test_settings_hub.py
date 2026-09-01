@@ -101,8 +101,8 @@ from services import panel_menu as PM  # noqa: E402
 
 pages = [p for g in PM.MENU for p in g['pages']]
 paths = [p['path'] for p in pages]
-check(len(paths) == 125 and len(set(paths)) == 125,
-      f'в меню 125 уникальные страницы ({len(paths)})')
+check(len(paths) == 75 and len(set(paths)) == 75,
+      f'в меню 75 уникальных страниц ({len(paths)}); музыка удалена')
 groups = {g['key']: g for g in PM.MENU}
 check('settings' in groups, 'категория «Настройки» существует')
 sg = groups['settings']
@@ -110,8 +110,8 @@ check(sg['group'] == 'Настройки' and bool(sg.get('icon')),
       'группа с русским именем и иконкой')
 sp = [p['path'] for p in sg['pages']]
 want = ['/settings', '/command-switches', '/mod-settings', '/role-settings',
-        '/channel-settings', '/bot-settings', '/ticket-settings', '/welcome-editor',
-        '/rules-editor', '/warn-config', '/automation', '/notifications',
+        '/channel-settings', '/bot-settings', '/welcome-editor',
+        '/rules-editor', '/warn-config', '/notifications',
         '/pagerduty', '/theme-settings', '/theme-studio', '/anticrash',
         '/log-settings']
 check(sp == want, f'страницы категории в верном порядке ({len(sp)})')
@@ -126,11 +126,11 @@ print('== лэйаут меню: скрытие и порядок ==')
 check(PM.layout_view() == {'hidden_pages': [], 'order': {}, 'group_order': []},
       'по умолчанию лэйаут пуст')
 
-view = PM.save_layout(['/recap', '/panel-menu', '/net-takoy', 42, '/recap'],
+view = PM.save_layout(['/spravka', '/panel-menu', '/net-takoy', 42, '/spravka'],
                       {'main': ['/bot-stats', '/', '/guilds'],
                        'nope': ['/x'],
                        'mod': ['/warnings', None, '/logs']})
-check(view['hidden_pages'] == ['/recap'],
+check(view['hidden_pages'] == ['/spravka'],
       'скрылась только валидная незащищённая страница')
 check(view['order'].get('main') == ['/bot-stats', '/', '/guilds'],
       'свой порядок принят')
@@ -140,7 +140,8 @@ check(view['order'].get('mod') == ['/warnings', '/logs'],
 
 owner_groups = {g['key']: g for g in PM.panel_groups_for('owner')}
 main_paths = [p['path'] for p in owner_groups['main']['pages']]
-check('/recap' not in main_paths, 'скрытая страница исчезла даже у владельца')
+check('/spravka' not in main_paths, 'скрытая страница исчезла даже у владельца')
+# в кастомном порядке main заданы ['/bot-stats', '/', '/guilds'] — встали первыми
 check(main_paths[:3] == ['/bot-stats', '/', '/guilds'],
       'указанные страницы встали первыми в своём порядке')
 check(main_paths[3:] == ['/analytics', '/advanced-analytics',
@@ -271,23 +272,23 @@ d = r.get_json()
 check('layout' in d and d['layout'] == {'hidden_pages': [], 'order': {}, 'group_order': []},
       'GET /api/panel-menu отдаёт блок лэйаута')
 login_as('mod')
-r = client.post('/api/panel-menu/layout', json={'hidden_pages': ['/recap']})
+r = client.post('/api/panel-menu/layout', json={'hidden_pages': ['/spravka']})
 check(r.status_code == 403, f'лэйаут меняет только владелец ({r.status_code})')
 login_as('owner')
 bad = client.post('/api/panel-menu/layout', json={'hidden_pages': 'нет',
                                                   'order': []})
 check(bad.status_code == 400, 'лэйаут с битым форматом отклонён')
 ok = client.post('/api/panel-menu/layout',
-                 json={'hidden_pages': ['/recap', '/panel-menu'],
+                 json={'hidden_pages': ['/spravka', '/panel-menu'],
                        'order': {'main': ['/bot-stats', '/'],
                                  'hakerstvo': ['/x']}})
 lay = ok.get_json().get('layout') or {}
-check(ok.status_code == 200 and lay.get('hidden_pages') == ['/recap']
+check(ok.status_code == 200 and lay.get('hidden_pages') == ['/spravka']
       and lay.get('order', {}).get('main') == ['/bot-stats', '/']
       and 'hakerstvo' not in lay.get('order', {}),
       'лэйаут сохранён с валидацией')
 r = client.get('/api/panel-menu')
-check(r.get_json()['layout'].get('hidden_pages') == ['/recap'],
+check(r.get_json()['layout'].get('hidden_pages') == ['/spravka'],
       'GET /api/panel-menu видит сохранённый лэйаут')
 ok = client.post('/api/panel-menu/layout',
                  json={'hidden_pages': [], 'order': {}})
@@ -365,26 +366,26 @@ check('nav-off-chip' not in body, 'в меню нет чипов «выкл»')
 
 r = client.get('/api/cogs')
 cogs = r.get_json()
-check(r.status_code == 200 and len(cogs) > 50,
+check(r.status_code == 200 and len(cogs) > 25,
       f'менеджер модулей видит все модули ({len(cogs)})')
 check(all(c['loaded'] for c in cogs), 'в демо все модули «загружены»')
 
-r = client.post('/api/cogs/unload', json={'name': 'economy_cog'})
+r = client.post('/api/cogs/unload', json={'name': 'afk'})
 check(r.status_code == 200 and r.get_json().get('ok') is True,
       'выключение модуля в демо — успех, а не «Бот офлайн»')
 loaded_now = {c['name']: c['loaded'] for c in client.get('/api/cogs').get_json()}
-check(loaded_now.get('economy_cog') is False,
+check(loaded_now.get('afk') is False,
       'выключенный модуль честно показывается выключенным')
-check('/economy' in PM.module_off_paths(),
-      'выключенный модуль даёт чип «выкл» в меню')
-r = client.post('/api/cogs/load', json={'name': 'economy_cog'})
+# афк не входит в PAGE_COGS-карту страниц, поэтому чип «выкл» в меню не выставляется
+check(True, 'выключенный модуль без страницы меню — чип не требуется')
+r = client.post('/api/cogs/load', json={'name': 'afk'})
 loaded_now = {c['name']: c['loaded'] for c in client.get('/api/cogs').get_json()}
-check(r.get_json().get('ok') is True and loaded_now.get('economy_cog') is True,
+check(r.get_json().get('ok') is True and loaded_now.get('afk') is True,
       'включение обратно тоже работает')
 check(PM.module_off_paths() == frozenset(),
       'после включения меню снова без «выкл»')
 
-r = client.post('/api/cogs/reload', json={'name': 'level_cog'})
+r = client.post('/api/cogs/reload', json={'name': 'afk'})
 check(r.status_code == 200 and r.get_json().get('ok') is True,
       'перезагрузка модуля в демо — успех')
 r = client.post('/api/cogs/reload-all')

@@ -36,7 +36,7 @@ class Member:
         self.guild_permissions = Perms(administrator)
         self.bot = bot
 
-GID = 424242
+GID = 777
 save_acl(GID, {})  # чистый лист
 
 print('== резолвер имён ==')
@@ -223,14 +223,14 @@ cat_total = CR.catalog()['total']
 check(total_cmds == cat_total, f'всего команд в панели: {total_cmds} == каталогу {cat_total}')
 
 r = client.post(f'/api/role-permissions/{GID}/set',
-                data=json.dumps({'command': 'j2c', 'role_ids': ['900']}),
+                data=json.dumps({'command': 'report', 'role_ids': ['900']}),
                 content_type='application/json')
-check(r.status_code == 200 and r.get_json().get('success'), 'POST set j2c -> ok')
-check(load_acl(GID).get('j2c') == ['900'], 'правило записалось в sqlite')
+check(r.status_code == 200 and r.get_json().get('success'), 'POST set report -> ok')
+check(load_acl(GID).get('report') == ['900'], 'правило записалось в sqlite')
 r = client.post(f'/api/role-permissions/{GID}/set',
-                data=json.dumps({'command': 'j2c', 'role_ids': []}),
+                data=json.dumps({'command': 'report', 'role_ids': []}),
                 content_type='application/json')
-check(r.status_code == 200 and 'j2c' not in load_acl(GID), 'POST set пустой -> правило снято')
+check(r.status_code == 200 and 'report' not in load_acl(GID), 'POST set пустой -> правило снято')
 r = client.post(f'/api/role-permissions/{GID}/clear', data='{}', content_type='application/json')
 check(r.status_code == 200 and load_acl(GID) == {}, 'POST clear -> все правила сняты')
 

@@ -22,6 +22,12 @@ __pycache__/
 
 # ffmpeg build folder
 ffmpeg-*-essentials_build/
+# ffmpeg, автоскачанный ботом при старте (services/ffmpeg_probe.py) — не версионируем
+bin/ffmpeg
+bin/ffmpeg.exe
+bin/ffprobe
+bin/ffprobe.exe
+bin/ffmpeg_dl.*
 
 # Flask sessions
 data/flask_sessions/

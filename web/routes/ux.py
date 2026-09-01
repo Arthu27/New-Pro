@@ -193,7 +193,7 @@ def search_triggers(guild_id, query, limit=SEARCH_LIMIT):
                 'type': 'trigger', 'icon': 'fa-bolt',
                 'title': str(it.get('trigger', '')),
                 'sub': 'автоответ №%s → %s' % (it.get('id'), str(it.get('response', ''))[:60]),
-                'href': '/automation#triggers-sec',
+                'href': '/antifake',
             })
         if len(out) >= limit:
             break

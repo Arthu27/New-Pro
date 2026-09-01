@@ -92,7 +92,7 @@ check('base_new.html' not in tpl_all and 'users_new' not in tpl_all,
 
 menu_src = open(os.path.join(ROOT, 'services/panel_menu.py'), encoding='utf-8').read()
 check("'/advanced-analytics'" in menu_src, 'меню: Про-аналитика подключена')
-check("'/ticket-search'" in menu_src, 'меню: Поиск тикетов подключён')
+check("'/reports-queue'" in menu_src, 'меню: очередь репортов подключена')
 check("'/theme-settings'" in menu_src, 'меню: Тема панели подключена')
 
 from web.app import app as _flask_app, set_bot_instance  # noqa: E402
@@ -119,7 +119,7 @@ with client.session_transaction() as s:
     s['username'] = 'HK'
     s['role'] = 'owner'
 
-for p in ('/advanced-analytics', '/theme-settings', '/ticket-search'):
+for p in ('/advanced-analytics', '/theme-settings', '/reports-queue'):
     r = client.get(p)
     page = r.get_data(as_text=True)
     check(r.status_code == 200 and '{%' not in page,

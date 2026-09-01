@@ -304,6 +304,13 @@ class warnings(commands.Cog):
             # таймаута/бана: владелец сам выбрал, какими роли наказывать.
             from services import punish_roles as PR
             if action in ('mute', 'timeout'):
+                # чат-мут/таймаут глушат чат (таймаут — ещё и голос): снимаем
+                # любой висящий отдельный войс-мут, чтобы не было двух ограничений
+                try:
+                    from services import mute_state
+                    await mute_state.clear_voice_mute(guild, member)
+                except Exception as _mse:
+                    log.debug('авто-мут: очистка войс-мута: %s', _mse)
                 rid = PR.role_for(guild.id, 'mute')
                 role = guild.get_role(rid) if rid else None
                 if role is not None:

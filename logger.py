@@ -81,8 +81,19 @@ def setup_logger(name: str = "bot", log_file: str = None, level: str = None) -> 
         datefmt="%Y-%m-%d %H:%M:%S"
     )
     
-    # Консольный хендлер
-    console = logging.StreamHandler(sys.stdout)
+    # Консольный хендлер. flush на каждой записи: при запуске через .bat/
+    # службу на VDS буфер stdout может копиться, и владелец видит
+    # «зависло на Anti-crash», хотя на деле дальше пошла ошибка, которую
+    # буфер не успел показать.
+    class _FlushStreamHandler(logging.StreamHandler):
+        def emit(self, record):
+            super().emit(record)
+            try:
+                self.flush()
+            except Exception:
+                pass
+
+    console = _FlushStreamHandler(sys.stdout)
     console.setLevel(logging.INFO)
     console.setFormatter(fmt)
     logger.addHandler(console)

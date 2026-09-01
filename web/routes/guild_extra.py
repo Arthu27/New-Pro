@@ -32,7 +32,7 @@ def register(ctx):
         # Скрыть служебные файлы, чтобы не путать пользователя:
         #  - имена с '_' / __init__ — вспомогательные (не cog'и)
         #  - NON_COG — модули-помощники на диске, загружаемые через import, а не как cog
-        NON_COG ={'embed_utils','leveling_engagement'}
+        NON_COG ={'embed_utils','_card_style','icons'}
         all_cogs =[]
         _cogs_dir =os .path .join (_REPO_ROOT ,'cogs')
         for f in os .listdir (_cogs_dir ):
@@ -224,51 +224,3 @@ def register(ctx):
             return jsonify ({'error':str (e )})
 
 
-            # ── TICKET PERMISSIONS API ─────────────────────────────────────────────────
-    @app .route ('/api/guild/<int:guild_id>/ticket-permissions')
-    @login_required 
-    def api_ticket_permissions_get (guild_id ):
-        """Получить настройки разрешений тикетов"""
-        cfg_path =f'data/ticket_permissions_{guild_id}.json'
-        default ={
-        'systems':{
-        'ai_enabled':True ,
-        'rate_limiter':True ,
-        'auto_close':True ,
-        'feedback':True ,
-        'progress_indicator':True ,
-        'complaint_system':True ,
-        },
-        'roles':{
-        'mod_roles':[],
-        'owner_roles':[],
-        }
-        }
-        try :
-            if os .path .exists (cfg_path ):
-                with open (cfg_path ,'r',encoding ='utf-8')as f :
-                    data =json .load (f )
-                return jsonify ({'success':True ,'config':data })
-            return jsonify ({'success':True ,'config':default })
-        except Exception as e :
-            return jsonify ({'success':False ,'error':str (e )}),500 
-
-
-    @app .route ('/api/guild/<int:guild_id>/ticket-permissions',methods =['POST'])
-    @login_required 
-    def api_ticket_permissions_set (guild_id ):
-        """Сохранить настройки разрешений тикетов"""
-        data =request .get_json ()
-        if not data :
-            return jsonify ({'success':False ,'error':'Нет данных'}),400 
-
-        cfg_path =f'data/ticket_permissions_{guild_id}.json'
-        try :
-            os .makedirs ('data',exist_ok =True )
-            tmp =cfg_path +'.tmp'
-            with open (tmp ,'w',encoding ='utf-8')as f :
-                json .dump (data ,f ,ensure_ascii =False ,indent =2 )
-            os .replace (tmp ,cfg_path )
-            return jsonify ({'success':True })
-        except Exception as e :
-            return jsonify ({'success':False ,'error':str (e )}),500 

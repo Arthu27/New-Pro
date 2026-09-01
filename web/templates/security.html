@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Защита <span class="sep">·</span> Центр безопасности</div>
+    <div class="eyebrow"> Защита </div>
     <h1>Центр безопасности</h1>
     <p class="lead">Сводный контур защиты: политики, лаборатория проверок и экспорт отчёта.</p>
   </div>
@@ -87,7 +87,7 @@
 </div>
 
 <script>
-var GID = '{{ guild_id }}';
+var GID = "{{ guild_id }}";
 var API = '/api/guild/' + GID + '/security-center';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};
 
@@ -227,7 +227,9 @@ $('scCsv').addEventListener('click', function (e) { e.preventDefault(); location
 
 loadOverview();
 
-  /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadOverview(); } catch (e) {} }, 1500);
+  /* live: автообновление данных без перезагрузки. Состояние защит меняется
+     редко — опрашиваем раз в 5 сек, а не каждые 1.5 (раньше это вхолостую
+     грузило панель и бота). Изменения тумблеров и так видны сразу после клика. */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadOverview(); } catch (e) {} }, 30000, ['g*:security', 'g*:guardian', 'g*:moderation']);
 </script>
 {% endblock %}

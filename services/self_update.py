@@ -59,6 +59,50 @@ def _utcnow_iso():
     return datetime.now(timezone.utc).isoformat(timespec='seconds')
 
 
+def running_branch(bot_dir):
+    """Ветка, на которой бот реально запущен (для самообновления).
+
+    Раньше /update всегда тянул захардкоженный `main`, даже когда бот
+    запущен с ветки-сессии (распакованный zip вида
+    «New-Pro-arena-01a05336-new-pro») — и обновление ОТКАТЫВАЛО бота на
+    старый main без фиксов. Теперь определяем ветку:
+      1) git-репозиторий → текущая ветка (git rev-parse);
+      2) не-репозиторий (распакованный zip) → маркер data/.update_branch,
+         записанный при прошлой раскатке, или имя папки дистрибутива;
+      3) неизвестно → None (вызывающий берёт main).
+    """
+    # 1) git
+    if is_git_repo(bot_dir):
+        r = _run_git(bot_dir, ['rev-parse', '--abbrev-ref', 'HEAD'], timeout=15)
+        if r is not None and r.returncode == 0:
+            name = (r.stdout or '').strip()
+            if name and name != 'HEAD':
+                return name
+    # 2) маркер после раскатки zip
+    try:
+        with open(os.path.join(bot_dir, 'data', '.update_branch'),
+                  encoding='utf-8') as f:
+            name = f.read().strip()
+            if name:
+                return name
+    except OSError as _ex:
+        log.debug('self_update: маркер ветки не прочитан: %s', _ex)
+    # 3) имя папки дистрибутива: «New-Pro-arena-01a05336-new-pro» → ветка
+    try:
+        base = os.path.basename(os.path.abspath(bot_dir))
+        low = base.lower()
+        if low.startswith('new-pro-') and len(low) > len('new-pro-'):
+            cand = base[len('New-Pro-'):]
+            # в zip-имени ветки слэши заменены дефисами у префикса arena/
+            if cand.lower().startswith('arena-'):
+                cand = 'arena/' + cand[len('arena-'):]
+            if cand and cand != 'main':
+                return cand
+    except Exception as _ex:
+        log.debug('self_update: определение ветки по папке: %s', _ex)
+    return None
+
+
 def marker_path(bot_dir):
     return os.path.join(bot_dir, 'data', 'update_pending.json')
 
@@ -161,16 +205,52 @@ def git_update(bot_dir, branch):
                         'files': files[:50]}
 
 
+def _bot_dir():
+    """Каталог бота: корень репозитория (на уровень выше services/)."""
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 def _source():
-    """Источник обновлений: панель (data/update_source.json) → .env.
-    Заказ 30.08: владелец сам ставит, откуда качать — без правки .env."""
+    """Источник обновлений (repo, branch).
+
+    Приоритет ветки: панель (data/update_source.json) → .env
+    (UPDATE_BRANCH) → АВТО ветка, на которой бот реально запущен
+    (running_branch) → main. Авто-определение чинит баг, когда /update
+    тянул захардкоженный main и откатывал фиксы с ветки-сессии.
+    Репозиторий всегда из панели/.env (дефолт Arthu27/New-Pro).
+    """
+    repo = None
+    branch = None
     try:
         from services import update_source
-        return update_source.get_repo(), update_source.get_branch()
+        repo = update_source.get_repo()
+        branch = update_source.get_branch()
     except Exception as _ex:
-        log.debug('self_update: update_source недоступен (%s) — .env', _ex)
-        from config import Config
-        return Config.UPDATE_REPO, Config.UPDATE_BRANCH
+        log.debug('self_update: update_source недоступен (%s)', _ex)
+
+    # .env, если панель ничего не задала
+    if not repo:
+        repo = (os.environ.get('UPDATE_REPO') or '').strip() or 'Arthu27/New-Pro'
+    env_branch = (os.environ.get('UPDATE_BRANCH') or '').strip()
+    if not branch:
+        branch = env_branch
+
+    # авто: ветка запущенного кода (git или маркер/имя папки)
+    if not branch or branch == 'main':
+        auto = None
+        try:
+            auto = running_branch(_bot_dir())
+        except Exception as _ex:
+            log.debug('self_update: running_branch: %s', _ex)
+        if auto and auto != 'main':
+            # .env явно НЕ просил main — тогда уважаем авто; если в .env
+            # жёстко вписан main, оставляем его (это сознательный выбор).
+            if branch != 'main' or not env_branch:
+                branch = auto
+
+    if not branch:
+        branch = 'main'
+    return repo, branch
 
 
 def remote_sha():
@@ -414,6 +494,15 @@ def stage_update(zip_path, bot_dir, root, rel_names, channel_id=0, sha='', branc
         }
         with open(marker_path(bot_dir), 'w', encoding='utf-8') as f:
             json.dump(marker, f, ensure_ascii=False)
+        # запомнить ветку для не-git копии: следующий /update возьмёт её
+        # же (а не захардкоженный main) — фикс «обновление откатывает фиксы».
+        if branch:
+            try:
+                with open(os.path.join(bot_dir, 'data', '.update_branch'),
+                          'w', encoding='utf-8') as f:
+                    f.write(str(branch).strip())
+            except OSError as _ex:
+                log.debug('self_update: .update_branch: %s', _ex)
         log.info('self_update: изменено %s файлов (без изменений %s), '
                  'устаревших убрано %s (пропущено служебных %s)',
                  copied, unchanged, removed, skipped)

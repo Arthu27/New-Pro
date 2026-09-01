@@ -283,11 +283,108 @@
     return false;
   };
 
-  window.setLiveRefresh = function (fn, ms) {
+  /* Живые обновления: задания бывают двух режимов.
+     • timer (как раньше) — опрос раз в e.ms;
+     • push  — обновляются ПУШЕМ через SSE (services/live_bus.py → /api/live),
+               когда бэкенд реально сообщил об изменении; таймер тут лишь редкая
+               подстраховка (e.safety, по умолчанию 30с), чтобы не опрашивать
+               вхолостую. Это и убирает нагрузку «по секундам».
+     topics — массив масок (поддержка '*'), например ['g*:channels', 'g*:guardian']. */
+  /* Живые обновления. Любое задание работает в push-режиме: при изменении
+     данных на сервере бэк шлёт SSE-сигнал (services/live_bus.py → /api/live),
+     и страница обновляется сразу — без опроса по таймеру.
+     • topics заданы — задание обновляется ТОЛЬКО по своим топикам;
+     • topics нет (старые страницы) — ловит любое событие активного сервера
+       ('g*:*') и глобальные сигналы; таймер остаётся лишь редкой подстраховкой.
+     Опрос по таймеру в обоих случаях отступает на PUSH_SAFETY_MS, чтобы в
+     простое панель не молотила запросами (это и держит пинг бота низким). */
+  var PUSH_SAFETY_MS = 20000;   // подстраховка, если SSE не поднялся
+  window.setLiveRefresh = function (fn, ms, topics) {
     if (typeof fn !== 'function') return;
-    liveFns.push({ fn: fn, ms: ms || 1500, last: 0 });
-    if (liveFns.length > 60) liveFns.shift();
+    var e = {
+      fn: fn,
+      ms: Math.max(ms || 1500, PUSH_SAFETY_MS),
+      last: 0,
+      push: true,
+      topics: null,
+      pending: false
+    };
+    if (topics) {
+      e.topics = (Array.isArray(topics) ? topics : [String(topics)]);
+    } else {
+      // страница без явных топиков — обновляется по любому событию сервера
+      e.topics = ['g*:*', 'dashboard', 'global'];
+    }
+    liveFns.push(e);
+    if (liveFns.length > 80) liveFns.shift();
+    return e;
   };
+
+  /* Простейший glob-матчер масок ('*' и '?') */
+  function globMatch(pattern, text) {
+    if (pattern === '*' || pattern === text) return true;
+    var rx = '^' + String(pattern).replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\?/g, '.').replace(/\*/g, '.*') + '$';
+    try { return new RegExp(rx).test(text); } catch (e) { return false; }
+  }
+
+  function jobMatches(e, topic) {
+    if (!e.topics) return false;
+    for (var i = 0; i < e.topics.length; i++) {
+      if (globMatch(e.topics[i], topic)) return true;
+    }
+    return false;
+  }
+
+  /* Слить пачку сигналов в один аккуратный прогон (rAF ~ кадр) */
+  function _schedulePushRun() {
+    if (livePaused || document.hidden) return;
+    if (_pushRaf) return;
+    _pushRaf = (window.requestAnimationFrame || function (f) { return setTimeout(f, 120); })(function () {
+      _pushRaf = 0;
+      var now = Date.now();
+      liveFns.forEach(function (e) {
+        if (e.push && e.pending) { e.pending = false; e.last = now; try { e.fn(); } catch (err) {} }
+      });
+    });
+  }
+  var _pushRaf = 0;
+
+  function _liveOnTick(topic) {
+    var hit = false;
+    liveFns.forEach(function (e) {
+      if (e.push && jobMatches(e, topic)) { e.pending = true; hit = true; }
+    });
+    if (hit) _schedulePushRun();
+  }
+
+  /* Один общий SSE-коннект на всю страницу. Если он не поднялся —
+     push-задания тихо живут на редкой страховке (e.safety). */
+  var _liveES = null, _liveESon = false;
+  function _liveConnect() {
+    if (_liveESon || typeof EventSource === 'undefined') return;
+    try {
+      var url = '/api/live?topics=*';
+      var es = new EventSource(url, { withCredentials: true });
+      _liveES = es; _liveESon = true;
+      es.addEventListener('tick', function (ev) {
+        var topic = '';
+        try { topic = (JSON.parse(ev.data || '{}') || {}).topic || ''; } catch (e) {}
+        if (topic) _liveOnTick(topic);
+      });
+      es.addEventListener('hello', function () {
+        // соединение (пере)открылось — могли пропустить сигнал, догоним всё
+        liveFns.forEach(function (e) { if (e.push) { e.pending = true; } });
+        _schedulePushRun();
+      });
+      es.onerror = function () {
+        // EventSource сам переподключится; тут ничего не спамим.
+        _liveESon = false;
+      };
+      es.onopen = function () { _liveESon = true; };
+    } catch (e) { _liveESon = false; }
+  }
+  window.__liveConnect = _liveConnect;
 
   setInterval(function () {
     if (livePaused) return;
@@ -298,7 +395,12 @@
     var now = Date.now();
     if (now < liveHoldUntil) return;
     liveFns.forEach(function (e) {
-      if (now - e.last >= e.ms) { e.last = now; try { e.fn(); } catch (err) {} }
+      // push-задания по короткому таймеру НЕ дёргаем — только по сигналу;
+      // их страховка срабатывает редко (e.ms у push = safety, ~30с).
+      if (now - e.last >= e.ms) {
+        e.last = now;
+        try { e.fn(); } catch (err) {}
+      }
     });
   }, 500);
 
@@ -774,8 +876,12 @@
       });
     }
 
-    // Сохранение пинга из /api/stats
+    // Сохранение пинга из /api/stats. Раньше опрос шёл каждые 3 сек с КАЖДОЙ
+    // открытой вкладки (а эндпоинт перебирает участников всех серверов) —
+    // теперь 15 сек и только на видимой вкладке; бэкенд вдобавок кэширует
+    // ответ на 5 сек. Пилюля пинга остаётся живой, нагрузка падает в разы.
     function trackPing() {
+      if (document.hidden) return;
       fetch('/api/stats', { guardSilent: true })
         .then(function (r) { return r.json(); })
         .then(function (d) {
@@ -786,7 +892,8 @@
         .catch(function () {});
     }
     trackPing();
-    setInterval(trackPing, 3000);
+    setInterval(trackPing, 15000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) trackPing(); });
     var tick = function () {
       var t = new Date().toLocaleTimeString('ru-RU');
       if (clock) clock.textContent = t;
@@ -983,7 +1090,14 @@
     });
 
     loadNotifs();
-    setInterval(loadNotifs, 30000);
+    /* Колокольчик: новые уведомления прилетают пушем (топик notifications),
+       таймер 60с — лишь подстраховка. */
+    if (window.setLiveRefresh) {
+      window.setLiveRefresh(function () { if (!document.hidden) loadNotifs(); }, 60000,
+                            ['notifications', 'global']);
+    } else {
+      setInterval(loadNotifs, 30000);
+    }
   }
 
   function activityInit() {
@@ -1292,6 +1406,7 @@
     autoSearchInit();
     revealInit();
     wsInit();
+    if (window.__liveConnect) window.__liveConnect();
   });
 })();
 

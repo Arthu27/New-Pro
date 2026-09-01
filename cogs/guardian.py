@@ -204,6 +204,14 @@ def load_cfg(guild_id):
 def save_cfg(guild_id, cfg):
     cfg = guardian_normalize(cfg)
     _js_save(DATA_FILE.format(guild_id=guild_id), cfg, log=_log)
+    # Живой пуш в панель: настройки Щита/инциденты изменились — страница
+    # Щита и Центр безопасности обновятся сразу, без опроса по таймеру.
+    try:
+        from services.live_bus import publish
+        publish(guild_id, 'guardian')
+        publish(guild_id, 'security')
+    except Exception as _ex:
+        _log.debug('guardian live_publish: %s', _ex)
     return cfg
 
 

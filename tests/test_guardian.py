@@ -541,6 +541,16 @@ check(d['cfg']['punishments'] and len(d['cfg']['punishments']) == 4,
       'API GET: 4 меры с русскими подписями')
 check('incidents' in d['cfg'] and 'resolved' in d['cfg'],
       'API GET: инциденты и резолвер имён на месте')
+check('roles' in d and 'members' in d,
+      'API GET (без light): роли и участники для пикеров в ответе')
+
+# Лёгкий live-опрос ?light=1 — только конфиг, без тяжёлых списков.
+rl = client.get(f'/api/guild/{GID}/guardian?light=1')
+dl = rl.get_json()
+check(rl.status_code == 200 and dl.get('success') is True,
+      'API GET ?light=1: живой опрос отвечает 200')
+check('roles' not in dl and 'members' not in dl and len(dl['cfg']['events']) == 11,
+      'API GET ?light=1: тяжёлые роли/участники не собираются (только конфиг)')
 
 bad = client.post(f'/api/guild/{GID}/guardian',
                   json={'punishment': 'yeet', 'events': {}})
@@ -621,7 +631,7 @@ check(paths.count('/guardian') == 1, 'Щит сервера — один пун�
 gd = [p for p in pages if p['path'] == '/guardian'][0]
 check(gd.get('section') == 'protection' and gd.get('min_role') == 'admin',
       'пункт в разделе «Защита» модерации, доступ Админ')
-check(len(paths) == 125, f'в меню 125 страниц ({len(paths)})')
+check(len(paths) == 75, f'в меню 75 страниц ({len(paths)}); музыка удалена')
 
 from web import routes_extra as _re  # noqa: E402
 
@@ -650,8 +660,10 @@ check("{% extends \"base.html\" %}" in tpl and "{% block content %}" in tpl,
       'шаблон встроен в общий каркас')
 check('Кто может добавлять ботов' in tpl and 'gdWlBU' in tpl and 'gdWlBR' in tpl,
       'выделенный белый список ботоводов на странице')
-check('gdBotAct' in tpl and 'Мера для ботов-нарушителей' in tpl,
-      'селект меры для ботов-нарушителей на странице')
+check('gdBotAct' in tpl and 'Мера для бота-нарушителя' in tpl,
+      'селект меры для бота-нарушителя на странице')
+check(tpl.count('data-gd-pane=') == 4 and tpl.count('gd-tab-btn') >= 4,
+      'страница разбита на 4 понятные вкладки (анти-нюк/лимиты/белые списки/инциденты)')
 check('bot_whitelist_users' in tpl and 'bot_action' in tpl,
       'JS собирает и отдаёт бот-поля в API')
 

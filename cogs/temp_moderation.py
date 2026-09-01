@@ -339,6 +339,11 @@ class TempModeration(commands.Cog):
                 try:
                     if action == "mute":
                         if member:
+                            try:  # таймаут глушит чат И голос — снимаем отдельный войс-мут
+                                from services import mute_state
+                                await mute_state.clear_voice_mute(guild, member)
+                            except Exception as _mse:
+                                log.debug('[TempMod] очистка войс-мута: %s', _mse)
                             until = datetime.now(timezone.utc) + timedelta(seconds=duration)
                             await member.timeout(until, reason=reason)
                             self._mutes.setdefault(entry["guild_id"], {})[entry["user_id"]] = {

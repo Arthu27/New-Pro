@@ -184,7 +184,7 @@ with c.session_transaction() as s:
     s["role"] = "owner"
 ok = True
 for url in ("/guardian", "/mod-settings", "/pagerduty", "/role-settings",
-            "/temp-moderation", "/proofs", "/automation"):
+            "/temp-moderation", "/proofs", "/antifake"):
     r = c.get(url)
     body = r.get_data(as_text=True)
     quoted = ('var GUILD_ID = "1484574976580391345";' in body
@@ -203,7 +203,7 @@ print("PAGES_OK")
 out = subprocess.run([sys.executable, '-c', code], capture_output=True,
                      text=True, timeout=300)
 check('PAGES_OK' in out.stdout,
-      'guardian/mod-settings/pagerduty/role-settings/temp-mod/proofs/automation: id строкой')
+      'guardian/mod-settings/pagerduty/role-settings/temp-mod/proofs/antifake: id строкой')
 if out.returncode != 0 or 'PAGES_OK' not in out.stdout:
     print(out.stdout[-600:], out.stderr[-600:])
 

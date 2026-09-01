@@ -24,10 +24,12 @@ def register(ctx):
         # ── НОВЫЙ SAYFALAR ─────────────────────────────────────────────────────────
 
     @app .route ('/ticket-settings')
-    @login_required 
+    @login_required
     @role_required ('admin')
     def ticket_settings_page ():
-        return render_template ('ticket_settings.html',role =session .get ('role'),username =session .get ('username'))
+        # Система тикетов снята владельцем (жалобы идут через /report).
+        # Роль модераторов и каналы настраиваются в «Жалобах» — туда и ведём.
+        return redirect ('/reports')
 
 
     @app .route ('/automod-settings')

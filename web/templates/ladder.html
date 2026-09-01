@@ -5,7 +5,7 @@
 
 <div class="page-head">
   <div class="page-head-copy">
-    <div class="eyebrow">Модерация <span class="sep">·</span> Лестница наказаний</div>
+    <div class="eyebrow"> Модерация </div>
     <h1>Лестница наказаний</h1>
     <p class="lead">Единая мера для одинаковых нарушений: ступени эскалации с понятными сроками.</p>
   </div>
@@ -83,7 +83,7 @@
 
 <script src="/static/pickers.js"></script>
 <script>
-var GID = '{{ guild_id }}';
+var GID = "{{ guild_id }}";
 attachMemberPicker(document.getElementById('ldUser'), { gid: GID, statusEl: document.getElementById('ldUserStatus') });
 var API = '/api/guild/' + GID + '/ladder';
 var CAN_EDIT = {{ 'true' if can_edit else 'false' }};

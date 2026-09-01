@@ -54,38 +54,59 @@ def _read_audit(guild_id):
 def load_message_events(guild_id):
     """События сообщений сервера: [(автор, канал, datetime|None)].
 
-    Порядок источников 1:1 с базовой аналитикой: audit_log, а если там
-    сообщений нет — message_logs_<gid>.json.
+    Объединяем ОБА источника, а не выбираем один:
+      • data/message_logs_<gid>.json — основной полный поток (его ведёт ког
+        activity_stats на КАЖДОЕ сообщение, не ботов/вебхуков/ЛС);
+      • audit_log.json (category=message, 'message написано') — редкое
+        историческое дополнение.
+    Раньше был фолбэк «audit, а если он не пуст — message_logs не читаем»:
+    одного старого audit-сообщения хватало, чтобы весь message_logs
+    (тысячи реальных сообщений) проигнорировался, и heatmap/недельная
+    сводка/рекорды/детализация каналов выходили пустыми.
     """
     gid = str(guild_id)
     events = []
+
+    # 1) Основной источник — message_logs (полные реальные данные).
+    log_file = f'data/message_logs_{gid}.json'
+    if os.path.exists(log_file):
+        try:
+            with open(log_file, 'r', encoding='utf-8') as fh:
+                msgs = json.load(fh)
+        except (OSError, json.JSONDecodeError) as _ex:
+            _log.debug("analytics_plus: message_logs не прочитан: %s", _ex)
+            msgs = []
+        for m in msgs or []:
+            if not isinstance(m, dict):
+                continue
+            author = m.get('author') or m.get('user_name') or m.get('user_id')
+            if not author:
+                continue
+            events.append((
+                str(author),
+                str(m.get('channel') or m.get('channel_name') or '?'),
+                _parse_ts(m.get('timestamp')),
+            ))
+
+    # 2) Дополнение из audit_log (message-события). Дедуплицируем по ключу
+    #    (автор, канал, дата-время до секунды), чтобы не задвоить совпадения.
+    seen = {(str(a), str(c), d.isoformat() if d else None) for a, c, d in events}
     for ev in _read_audit(gid):
         if (ev.get('category') or '').lower() != 'message':
             continue
         if (ev.get('action') or '').lower() != 'message написано':
             continue
-        events.append((
-            ev.get('user_name') or ev.get('user_id', '?'),
-            ev.get('channel') or ev.get('channel_name', '?'),
-            _parse_ts(ev.get('timestamp')),
-        ))
-    if not events:
-        log_file = f'data/message_logs_{gid}.json'
-        if os.path.exists(log_file):
-            try:
-                with open(log_file, 'r', encoding='utf-8') as fh:
-                    msgs = json.load(fh)
-            except (OSError, json.JSONDecodeError) as _ex:
-                _log.debug("analytics_plus: message_logs не прочитан: %s", _ex)
-                msgs = []
-            for m in msgs or []:
-                if not isinstance(m, dict):
-                    continue
-                events.append((
-                    m.get('author') or m.get('user_name', '?'),
-                    m.get('channel', '?'),
-                    _parse_ts(m.get('timestamp')),
-                ))
+        author = ev.get('user_name') or ev.get('user_id')
+        if not author:
+            continue
+        dt = _parse_ts(ev.get('timestamp'))
+        key = (str(author), str(ev.get('channel') or ev.get('channel_name') or '?'),
+               dt.isoformat() if dt else None)
+        if key in seen:
+            continue
+        seen.add(key)
+        events.append((str(author), key[1], dt))
+
     return events
 
 
@@ -270,6 +291,32 @@ def member_flow(guild_id, days=14):
         'left_total': left_total,
         'net': joined_total - left_total,
     }
+
+
+def member_count_series(current_count, flow, days=None):
+    """Ряд «число участников на конец каждого дня» по реальным приходам/уходам.
+
+    current_count — члены сервера СЕЙЧАС (после всех событий окна), это
+    последняя точка (сегодня). Идём назад по дням: если в день i пришло
+    joins[i] и ушло leaves[i], то на конец предыдущего дня было
+    count[i-1] = count[i] - joins[i] + leaves[i].
+
+    Раньше community.py считал одной формулой со срезом joins[i:]/leaves[i:],
+    что давало сдвиг на день (событие дня i относилось к дню i-1) и рисовало
+    линию роста неверно.
+    """
+    joins = flow.get('joins') or []
+    leaves = flow.get('leaves') or []
+    n = days or len(joins) or len(leaves) or 7
+    if len(joins) < n:
+        joins = joins + [0] * (n - len(joins))
+    if len(leaves) < n:
+        leaves = leaves + [0] * (n - len(leaves))
+    counts = [0] * n
+    counts[n - 1] = max(0, int(current_count or 0))
+    for i in range(n - 1, 0, -1):
+        counts[i - 1] = max(0, counts[i] - int(joins[i] or 0) + int(leaves[i] or 0))
+    return counts
 
 
 def channel_drill(events, name, days=30):

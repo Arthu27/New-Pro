@@ -109,7 +109,6 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       <span class="live-chip" id="chipBot"><span class="dot"></span> бот: проверка…</span>
       <span class="live-chip" id="chipThreat"><i class="fas fa-shield-halved"></i> угрозы: —</span>
       <span class="live-chip" id="chipMod"><i class="fas fa-gavel"></i> действий за 7 дн: —</span>
-      <span class="live-chip" id="chipShift"><i class="fas fa-user-clock"></i> смен: —</span>
     </div>
   </div>
 </div>
@@ -211,7 +210,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   <a class="cc-tile" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Автофильтр</b><small>Слова, ссылки, флуд</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   <a class="cc-tile tone-warn" href="/antiraid"><span class="cc-ico"><i class="fas fa-shield-virus"></i></span><span><b>Анти-рейд</b><small>Защита от волн входов</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   <a class="cc-tile tone-err" href="/mod-center"><span class="cc-ico"><i class="fas fa-shield-halved"></i></span><span><b>Центр модерации</b><small>Сводный штаб раздела</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
-  <a class="cc-tile tone-info" href="/mod-report"><span class="cc-ico"><i class="fas fa-chart-simple"></i></span><span><b>Отчёты</b><small>Нагрузка команды</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  <a class="cc-tile tone-info" href="/ladder"><span class="cc-ico"><i class="fas fa-layer-group"></i></span><span><b>Лестница наказаний</b><small>Эскалация мер</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
 </div>
 
 <!-- KPI -->
@@ -328,7 +327,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   <div class="panel">
     <div class="panel-head">
       <div><h2><i class="fas fa-chart-area"></i> Активность модерации</h2><div class="sub">Действия команды за последние 7 дней.</div></div>
-      <a class="btn-link" href="/mod-report" style="margin-left:auto">Отчёт <i class="fas fa-arrow-right"></i></a>
+      <a class="btn-link" href="/mod-insights" style="margin-left:auto">Аналитика <i class="fas fa-arrow-right"></i></a>
     </div>
     <div class="panel-body">
       <div class="chart-box" id="modArea"></div>
@@ -389,48 +388,6 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       <button type="button" class="btn btn-primary" id="btnSendNotif" style="align-self:flex-end"><i class="fas fa-paper-plane"></i> Отправить</button>
     </div>
     <div class="hint" id="notif-result" style="margin-top:8px"></div>
-  </div>
-</div>
-{% endif %}
-
-{% if role != 'uye' %}
-<!-- Дежурства -->
-<div class="panel" id="shiftBox" data-widget="shifts" style="margin-top:14px">
-  <div class="panel-head">
-    <div><h2><i class="fas fa-user-clock"></i> Дежурства</h2><div class="sub">Кто на смене сейчас и что запланировано.</div></div>
-    <a class="btn-link" href="/staff-shifts" style="margin-left:auto">Смены <i class="fas fa-arrow-right"></i></a>
-    <span class="hint" id="shiftTz"></span>
-  </div>
-  <div class="panel-body">
-    <div class="shift-now-row" id="shiftNow">
-      <span class="shift-dot"></span>
-      <div style="flex:1;min-width:0"><div class="sk-line" style="width:52%"></div><div class="sk-line" style="width:34%"></div></div>
-    </div>
-    <div class="shift-today-row" id="shiftToday"><span class="sk-chip"></span><span class="sk-chip"></span><span class="sk-chip" style="width:72px"></span></div>
-    <div class="wgrid" id="shiftWeek"></div>
-    {% if role == 'admin' or role == 'owner' %}
-    <details class="shift-manage" id="shiftManage" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
-      <summary style="cursor:pointer;font-weight:600;font-size:var(--fs-md);color:var(--ac)"><i class="fas fa-pen-to-square"></i> Управлять расписанием</summary>
-      <div id="shiftEditList" style="margin-top:10px"></div>
-      <div class="shift-add-row" style="margin-top:10px">
-        <input type="text" class="form-input sh-member" id="shMember" list="shMemberList" placeholder="Модератор (поиск)…" autocomplete="off" aria-label="Модератор" style="flex:1;min-width:170px">
-        <datalist id="shMemberList"></datalist>
-        <select class="form-input" id="shWeekday" aria-label="День недели" style="width:auto">
-          <option value="0">пн</option><option value="1">вт</option><option value="2">ср</option>
-          <option value="3">чт</option><option value="4">пт</option><option value="5" selected>сб</option><option value="6">вс</option>
-        </select>
-        <input type="text" class="form-input sh-time" id="shStart" placeholder="18:00" aria-label="Начало" style="width:82px">
-        <span style="color:var(--text-3)">–</span>
-        <input type="text" class="form-input sh-time" id="shEnd" placeholder="22:00" aria-label="Конец" style="width:82px">
-        <button type="button" class="btn" onclick="shiftAdd()" title="Добавить смену"><i class="fas fa-plus"></i></button>
-      </div>
-      <div class="shift-tz-row" style="margin-top:10px">Пояс расписания:
-        <select class="form-input" id="shTz" aria-label="Часовой пояс" style="width:auto"></select>
-        <button type="button" class="btn" onclick="shiftTzSave()" title="Сохранить пояс"><i class="fas fa-check"></i></button>
-        <span class="hint" id="shiftMsg" style="margin-left:6px"></span>
-      </div>
-    </details>
-    {% endif %}
   </div>
 </div>
 {% endif %}
@@ -647,29 +604,35 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     } catch (e) { /* графики опциональны */ }
   }
 
-  /* Топ модераторов + рецидивисты (из отчёта) */
+  /* Топ модераторов за 7 дней — считается из живого журнала действий. */
   var _leadersFp = '';
   async function loadModLeaders() {
     try {
-      var d = await fetch('/api/mod-report?days=7').then(function (r) { return r.json(); });
-      if (!d.success) return;
-      var fp = JSON.stringify(d.per_mod || []) + '|' + JSON.stringify(d.recidivists || []);
-      if (fp === _leadersFp) return;  // отчёт тот же — топ не перерисовываем
+      var logs = await window.fetchCachedJSON('/api/logs').catch(function () { return []; });
+      if (!Array.isArray(logs)) logs = [];
+      var cutoff = Date.now() - 7 * 86400000;
+      var counts = {};
+      logs.forEach(function (l) {
+        var t = l && l.timestamp ? new Date(l.timestamp).getTime() : 0;
+        if (t && t < cutoff) return;
+        var who = l.moderator || l.mod_name || l.staff || '';
+        if (!who) return;
+        counts[who] = (counts[who] || 0) + 1;
+      });
+      var perMod = Object.keys(counts).map(function (k) { return [k, counts[k]]; })
+        .sort(function (a, b) { return b[1] - a[1]; }).slice(0, 6);
+      var fp = JSON.stringify(perMod);
+      if (fp === _leadersFp) return;
       _leadersFp = fp;
-      if (window.HakumoChart && d.per_mod.length) {
-        window.HakumoChart.vbars($('modTop'), d.per_mod.map(function (m, i) {
+      if (window.HakumoChart && perMod.length) {
+        window.HakumoChart.vbars($('modTop'), perMod.map(function (m) {
           return { label: m[0], value: m[1] };
         }), { limit: 6 });
       }
       var rec = $('modRec');
       if (rec) {
-        if (d.recidivists && d.recidivists.length) {
-          rec.innerHTML = '<div class="chip-row">' + d.recidivists.slice(0, 6).map(function (r) {
-            return '<span class="chip danger"><i class="fas fa-repeat"></i> ' + esc(r.name) + ' · ' + r.count + '</span>';
-          }).join('') + '</div>';
-        } else {
-          rec.innerHTML = '<span class="hint">рецидивистов нет</span>';
-        }
+        var total = perMod.reduce(function (s, m) { return s + m[1]; }, 0);
+        rec.innerHTML = '<span class="hint"><i class="fas fa-gavel"></i> действий команды за 7 дней: ' + total + '</span>';
       }
     } catch (e) { /* опционально */ }
   }
@@ -1296,175 +1259,6 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     });
   }
 
-  /* ── Мини-расписание недели ──────────────────────────── */
-  var WEEK_DAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
-  function renderShiftWeek(d) {
-    var box = $('shiftWeek');
-    if (!box) return;
-    var all = d.all || [];
-    if (!all.length) { box.innerHTML = ''; return; }
-    box.innerHTML = WEEK_DAYS.map(function (day, wd) {
-      var shifts = all.filter(function (s) { return Number(s.weekday) === wd; });
-      return '<div class="wday">' +
-        '<span class="wday-lbl">' + day + '</span>' +
-        (shifts.length
-          ? shifts.map(function (s) {
-              return '<span class="wday-chip" title="' + esc(s.name) + '">' + esc(s.start) + '–' + esc(s.end) + ' <b>' + esc(s.name) + '</b></span>';
-            }).join('')
-          : '<span class="wday-empty">—</span>') +
-        '</div>';
-    }).join('');
-  }
-
-  /* ── Дежурства ───────────────────────────────────────── */
-  var SHIFT_EMPTY_HINT = {% if role == 'admin' or role == 'owner' %}'добавьте первую смену в редакторе ниже'{% else %}'задайте смены командой /дежурства'{% endif %};
-
-  function fmtLeft(iso) {
-    var ms = new Date(iso).getTime() - Date.now();
-    if (ms <= 0) return '0 мин';
-    var h = Math.floor(ms / 3600000), m = Math.floor(ms % 3600000 / 60000);
-    return h ? h + ' ч ' + m + ' мин' : m + ' мин';
-  }
-
-  async function loadShifts() {
-    var nowBox = $('shiftNow');
-    var todayBox = $('shiftToday');
-    if (!nowBox || !todayBox) return;
-    try {
-      var guilds = await window.fetchCachedJSON('/api/guilds');
-      if (!Array.isArray(guilds) || !guilds.length) return;
-      var main = '{{ main_guild_id }}';
-      var g = null;
-      for (var i = 0; i < guilds.length; i++) {
-        if (String(guilds[i].id) === String(main)) { g = guilds[i]; break; }
-      }
-      if (!g) g = guilds[0];
-      if (!g) return;
-      window._shiftGid = g.id;
-      var d = await fetch('/api/guild/' + g.id + '/staff-shifts').then(function (r) { return r.json(); });
-      if (!d.success) throw new Error(d.error || 'API');
-      var tzEl = $('shiftTz');
-      if (tzEl) tzEl.textContent = 'UTC+' + d.tz_offset + ' · ' + (d.weekday || '');
-      if (d.current) {
-        nowBox.innerHTML = '<span class="shift-dot on"></span>' +
-          '<div><div class="shift-now-txt">Сейчас на смене: <b>' + esc(d.current.name) + '</b></div>' +
-          '<div class="shift-now-sub">' + esc(d.current.start) + '–' + esc(d.current.end) + ' · до конца смены <span class="mono">' + fmtLeft(d.current.ends_at) + '</span></div></div>';
-      } else {
-        nowBox.innerHTML = '<span class="shift-dot"></span>' +
-          '<div><div class="shift-now-txt">Сейчас никто не дежурит</div>' +
-          (d.next ? '<div class="shift-now-sub">Ближайшая: ' + esc(d.next.weekday) + ' ' + esc(d.next.start) + ' — ' + esc(d.next.name) + '</div>'
-                  : '<div class="shift-now-sub">Расписание пусто — ' + SHIFT_EMPTY_HINT + '</div>') +
-          '</div>';
-      }
-      todayBox.innerHTML = (d.today || []).map(function (s) {
-        return '<span class="shift-chip' + (s.active ? ' on' : '') + '">' +
-          '<span class="t">' + esc(s.start) + '–' + esc(s.end) + '</span> ' + esc(s.name) + '</span>';
-      }).join('');
-      window._shiftData = d;
-      var chip = $('chipShift');
-      if (chip) chip.innerHTML = '<i class="fas fa-user-clock"></i> смен: ' + (d.all ? d.all.length : 0);
-      renderShiftEditor(d);
-      renderShiftWeek(d);
-    } catch (e) {
-      nowBox.innerHTML = '<span class="shift-dot"></span><div class="shift-now-txt">Не удалось загрузить дежурства</div>';
-    }
-  }
-
-  function renderShiftEditor(d) {
-    var list = $('shiftEditList');
-    if (!list) return;
-    list.innerHTML = (d.all || []).map(function (s) {
-      return '<div class="shift-edit-row"><span class="shift-edit-day">' + esc(s.weekday_ru) + '</span>' +
-        '<span class="shift-edit-name">' + esc(s.name) + '</span>' +
-        '<span class="shift-edit-time">' + esc(s.start) + '–' + esc(s.end) + '</span>' +
-        '<button type="button" class="btn btn-sm btn-ghost" onclick="shiftRemove(\'' + esc(s.id) + '\')" title="Убрать смену"><i class="fas fa-xmark" style="color:var(--err)"></i></button></div>';
-    }).join('') || '<div class="hint" style="padding:4px 0">Смен пока нет — добавьте первую ниже.</div>';
-    var tzSel = $('shTz');
-    if (tzSel && !tzSel.dataset.ready) {
-      var opts = '';
-      for (var off = -12; off <= 14; off++) opts += '<option value="' + off + '">UTC' + (off >= 0 ? '+' : '') + off + '</option>';
-      tzSel.innerHTML = opts;
-      tzSel.dataset.ready = '1';
-    }
-    if (tzSel) tzSel.value = String(d.tz_offset);
-  }
-
-  var shiftMemberTimer = null;
-  function bindShiftEditor() {
-    var inp = $('shMember');
-    if (!inp) return;
-    inp.addEventListener('input', function () {
-      clearTimeout(shiftMemberTimer);
-      shiftMemberTimer = setTimeout(async function () {
-        var q = inp.value.trim();
-        var dl = $('shMemberList');
-        if (q.length < 2 || !dl || !window._shiftGid) return;
-        try {
-          var r = await fetch('/api/member-search/' + window._shiftGid + '?q=' + encodeURIComponent(q));
-          var arr = await r.json();
-          if (!Array.isArray(arr)) return;
-          dl.innerHTML = arr.map(function (m) {
-            return '<option value="' + esc(m.display_name) + ' · ' + esc(m.id) + '"></option>';
-          }).join('');
-        } catch (e) { /* подсказки опциональны */ }
-      }, 250);
-    });
-  }
-
-  function shiftMsgOk(text) {
-    var el = $('shiftMsg');
-    if (!el) return;
-    el.textContent = text || '';
-    if (text) setTimeout(function () { el.textContent = ''; }, 3000);
-  }
-
-  async function shiftAdd() {
-    var raw = $('shMember').value.trim();
-    var m = /·\s*(\d+)\s*$/.exec(raw);
-    if (!m) { shiftMsgOk('Выберите модератора из подсказок'); return; }
-    var r = await fetch('/api/guild/' + window._shiftGid + '/staff-shifts/add', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: m[1], weekday: $('shWeekday').value, start: $('shStart').value, end: $('shEnd').value })
-    });
-    var d = await r.json();
-    if (r.ok && d.success) {
-      $('shMember').value = ''; $('shStart').value = ''; $('shEnd').value = '';
-      shiftMsgOk('Смена добавлена');
-      loadShifts();
-    }
-  }
-
-  async function shiftRemove(sid) {
-    var gone = ((window._shiftData && window._shiftData.all) || []).filter(function (x) { return x.id === sid; })[0];
-    var r = await fetch('/api/guild/' + window._shiftGid + '/staff-shifts/remove', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ shift_id: sid })
-    });
-    var d = await r.json();
-    if (r.ok && d.success) {
-      shiftMsgOk('Убрано');
-      loadShifts();
-      if (gone && typeof window.uxUndo === 'function') {
-        window.uxUndo('Смена ' + (gone.name || '') + ' (' + gone.weekday_ru + ' ' + gone.start + '–' + gone.end + ') убрана', async function () {
-          await fetch('/api/guild/' + window._shiftGid + '/staff-shifts/add', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: String(gone.user_id), weekday: gone.weekday, start: gone.start, end: gone.end })
-          });
-          loadShifts();
-        });
-      }
-    }
-  }
-
-  async function shiftTzSave() {
-    var r = await fetch('/api/guild/' + window._shiftGid + '/staff-shifts/settings', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tz_offset: $('shTz').value })
-    });
-    var d = await r.json();
-    if (r.ok && d.success) { shiftMsgOk('Пояс сохранён'); loadShifts(); }
-  }
-
   /* Настройки виджетов биндятся первыми — даже если какой-то
      загрузчик данных упадёт, кнопка останется рабочей */
   try { widgetSettingsInit(); } catch (e) { console.error('widgetSettingsInit', e); }
@@ -1472,7 +1266,7 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   [
     loadGuildInfo, loadStats, loadModCharts, loadModLeaders, loadQuickStats,
     loadRecentActivity, loadLoginLog, loadThreatIndex, loadHealth,
-    loadAnnChannels, loadShifts, bindShiftEditor, loadPulse
+    loadAnnChannels, loadPulse
   ].forEach(function (fn) {
     try { fn(); } catch (e) { console.error('dashboard init:', fn && fn.name, e); }
   });
@@ -1481,11 +1275,9 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
   if (window.tiltCards) window.tiltCards(document, '.kpi, .stat-box, .cc-tile');
   if (window.setLiveRefresh) {
     window.setLiveRefresh(function () { loadStats(); loadModCharts(); loadModLeaders(); loadQuickStats(); loadRecentActivity(); loadThreatIndex(); loadHealth(); }, 1500);
-    window.setLiveRefresh(loadShifts, 1500);
     window.setLiveRefresh(loadPulse, 1500);
   } else {
     setInterval(loadStats, 2500);
-    setInterval(loadShifts, 30000);
     setInterval(loadPulse, 5000);
   }
   /* inline onclick из разметки: экспортируем редактирование смен,

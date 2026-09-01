@@ -42,7 +42,7 @@ class Member:
         self.guild_permissions = Perms(administrator)
         self.bot = bot
 
-GID = 424242
+GID = 777
 save_acl(GID, {})
 save_action_acl(GID, {})
 

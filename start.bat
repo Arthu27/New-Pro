@@ -49,11 +49,19 @@ if not exist ".env" (
 echo [OK] Configuration found
 echo.
 
+:: FFmpeg (нужен музыке /play): если нет — скачается/установится сам.
+:: Вызов независим и не уронит запуск бота, даже если скрипт чего-то не смог.
+echo [FFmpeg] Checking ffmpeg...
+if not exist "scripts\ensure_ffmpeg.bat" goto :ff_ok
+call "scripts\ensure_ffmpeg.bat"
+:ff_ok
+echo.
+
 :: Start bot
 echo [3/3] Starting bot...
 echo ============================================================
 echo.
-python main.py
+python -X utf8 main.py
 
 :: If bot crashed
 echo.

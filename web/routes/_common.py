@@ -174,9 +174,38 @@ def _fire_panel_notification (event ,title ,body ):
     """Вызвать диспетчер уведомлений, не прерывая основной обработчик."""
     try :
         from services .notification_dispatcher import notify_event
-        return notify_event (event ,title ,body ,discord_sender =_notify_discord_sender )
+        _res =notify_event (event ,title ,body ,discord_sender =_notify_discord_sender )
+        # Живой пуш: колокольчик на всех открытых вкладках обновится сразу,
+        # без 30-секундного опроса.
+        try :
+            from services .live_bus import publish_global
+            publish_global ('notifications')
+        except Exception as _live_ex :
+            _log .debug ('notifications live-push: %s' ,_live_ex )
+        return _res
     except Exception :
         return {}
+
+
+def _live_publish (gid ,topic ):
+    """Толкнуть SSE-сигнал об изменении данных (живые обновления панели).
+
+    Никогда не прерывает основной обработчик — ошибка шины игнорируется.
+    """
+    try :
+        from services .live_bus import publish as _pub
+        _pub (gid ,topic )
+    except Exception as _ex :
+        _log .debug ('live_publish %s/%s: %s' ,gid ,topic ,_ex )
+
+
+def _live_publish_global (topic ):
+    """Глобальный SSE-сигнал (список серверов, тема и т.п.)."""
+    try :
+        from services .live_bus import publish_global as _pubg
+        _pubg (topic )
+    except Exception as _ex :
+        _log .debug ('live_publish_global %s: %s' ,topic ,_ex )
 
 
 # ── Классические разрешения: одна точка для всех веб-роутов ──────────────
@@ -677,6 +706,27 @@ class Ctx:
         if guilds:
             return str(guilds[0].id)
         return configured
+
+    def active_guild_id_int(self):
+        """Активный сервер как int, или None — если сервера нет.
+
+        active_guild_id() отдаёт СТРОКУ и вполне законно возвращает пустую:
+        MAIN_GUILD_ID не задан в .env и бот ещё не подключился (или офлайн).
+        Роуты писали `int(ctx.active_guild_id())` в лоб — и на пустой строке
+        получали ValueError → HTTP 500 «Internal Server Error» вместо
+        внятного «сервер не выбран». Инцидент 30.08: страницы Магазин,
+        Музыка, Дуэли, Ачивки, Отчёт модерации, SLA/экспорт тикетов падали
+        с 500 при пустом MAIN_GUILD_ID — снаружи это «панель сломана».
+
+        Возвращает None вместо взрыва — вызывающий отдаёт 503 и подсказку.
+        """
+        raw = str(self.active_guild_id() or '').strip()
+        if not raw:
+            return None
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return None
 
     def _resolve_member_async(self, guild, user_id):
         """Async helper: get cached member or fetch from API."""
