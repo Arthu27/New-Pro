@@ -52,10 +52,19 @@ def check(ok, msg):
 print('== кнопки: главная/сплэш/ошибки/версии ==')
 dash = open(os.path.join(ROOT, 'web', 'templates', 'dashboard.html'),
             encoding='utf-8').read()
-check('window.shiftAdd = shiftAdd;' in dash
-      and 'window.shiftRemove = shiftRemove;' in dash
-      and 'window.shiftTzSave = shiftTzSave;' in dash,
-      'главная: inline-обработчики смен экспортированы (кнопки живы)')
+# «Мёртвые» кнопки лечатся экспортом window.X = X, но только если X реально
+# определён в файле. Висячий экспорт несуществующей функции бросает
+# ReferenceError при загрузке (ловилось живым аудитом: shiftAdd is not defined).
+# Поэтому караулим обратное: в главной нет самоссылок window.X = X без
+# определения X — ни одной «мёртвой» кнопки.
+_dangling = []
+for m in re.finditer(r'window\.([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\1\s*;', dash):
+    name = m.group(1)
+    if not re.search(r'(function\s+%s\s*\(|(const|let|var)\s+%s\s*=)' % (name, name), dash):
+        _dangling.append(name)
+check(not _dangling,
+      'главная: нет висячих экспортов window.X = X без определения (кнопки живы)'
+      + (f' — найдено: {_dangling}' if _dangling else ''))
 
 base = open(os.path.join(ROOT, 'web', 'templates', 'base.html'),
             encoding='utf-8').read()

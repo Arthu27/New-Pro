@@ -122,6 +122,40 @@ def register(ctx):
             'avatar':m .get ('avatar',''),
         }
 
+    def _local_suggest (gid ,q ,offset ,limit ):
+        """Локальный fallback для пикера: карта имён data/member_names_<gid>.json
+        (+ демо в демо-режиме). Используется, когда бот подключён, но сервера или
+        участников в его кэше нет (обрыв гейтвея, рестарт, нет intent) — чтобы
+        страницы панели НЕ ломались 404 и показывали известные имена."""
+        from web .routes ._common import name_map_for ,demo_members_search as _dms
+        try :
+            nm =name_map_for (str (gid ))
+        except Exception :
+            nm ={}
+        pool =[{'user_id':str (u ),'name':n ,'bot':False ,'avatar':''}
+               for u ,n in sorted (nm .items (),key =lambda kv :str (kv [1 ]).lower ())]
+        if _app_demo ():
+            pool +=[_pick_demo_item (m )for m in _dms ('',limit =500 )]
+        qq =str (q or '').strip ().lower ()
+        if qq :
+            pool =[p for p in pool
+                   if qq in p ['name'].lower ()or qq in p ['user_id']]
+        # дедуп по user_id (имя-карта и демо могут пересечься)
+        seen =set ();uniq =[]
+        for p in pool :
+            if p ['user_id']in seen :
+                continue
+            seen .add (p ['user_id']);uniq .append (p )
+        return {'items':uniq [offset :offset +limit ],
+                'has_more':len (uniq )>=offset +limit }
+
+    def _app_demo ():
+        try :
+            import web .app as _am
+            return _am ._demo_mode ()
+        except Exception :
+            return False
+
     @app .route ('/api/guild/<guild_id>/member-card/suggest',methods =['GET'])
     @login_required
     @role_required ('uye')
@@ -130,9 +164,9 @@ def register(ctx):
         temp_moderation и т.д.). q — имя/ник/часть ID; offset — для «показать
         ещё». Без q отдаём первых участников кэша. Формат: {items:[...],has_more}.
 
-        Если по точному ID в кэше пусто — пробуем догрузить участника с
-        Discord (fetch_member): так в списке появляются и те, кого ещё нет в
-        локальном листе. Сетевой вызов идёт через _resolve_member_async."""
+        Никогда не отдаёт 404 для «своего» сервера: без бота — демо/имена,
+        с ботом, но без сервера/участников в кэше — локальная карта имён.
+        Точный ID, которого нет в кэше, догружается с Discord (fetch_member)."""
         try :
             limit =max (1 ,min (50 ,int (request .args .get ('limit',25 )or 25 )))
         except (TypeError ,ValueError ):
@@ -151,9 +185,10 @@ def register(ctx):
             return jsonify ({'items':items ,'has_more':len (demo )>=offset +limit })
 
         gid =int (guild_id )if str (guild_id ).isdigit ()else 0
-        guild =bot .get_guild (gid )
-        if not guild :
-            return jsonify ({'error':'Сервер не найден: проверьте выбор сервера на панели.','items':[]}),404
+        guild =bot .get_guild (gid )if gid else None
+        # Бот подключён, но сервера в кэше нет — не 404, а локальные имена.
+        if guild is None or not guild .members :
+            return jsonify (_local_suggest (gid ,q ,offset ,limit ))
 
         if q :
             window =limit +offset

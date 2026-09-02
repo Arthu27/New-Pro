@@ -1281,11 +1281,9 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     setInterval(loadStats, 2500);
     setInterval(loadPulse, 5000);
   }
-  /* inline onclick из разметки: экспортируем редактирование смен,
-     иначе кнопки «смены» на главной молча умирали (ReferenceError) */
-  window.shiftAdd = shiftAdd;
-  window.shiftRemove = shiftRemove;
-  window.shiftTzSave = shiftTzSave;
+  /* Редактирование смен (shiftAdd/shiftRemove/shiftTzSave) вынесено на страницу
+     дежурств — на главной этих кнопок нет, а экспорт несуществующих функций
+     бросал ReferenceError при загрузке (ловилось живым аудитом). */
 })();
 </script>
 {% endblock %}

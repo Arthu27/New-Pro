@@ -12,6 +12,7 @@
 Запуск: python3 tests/test_member_picker_sync.py
 """
 import asyncio
+import json
 import os
 import sys
 import tempfile
@@ -142,6 +143,57 @@ async def _t():
 
 
 asyncio.run(_t())
+
+
+# ── 3. Боевой режим: бот подключён, но сервера/кэша нет — НЕ 404 ──────────
+# Регрессия на «GET /api/guild/<id>/member-card/suggest · HTTP 404 я везде»:
+# раньше при подключённом боте и отсутствующем в кэше сервере роут отдавал 404
+# и ломал все пикеры. Теперь — 200 с локальной картой имён.
+class _NoGuildBot:
+    guilds = []
+    def get_guild(self, gid): return None
+
+class _EmptyGuildBot:
+    guilds = []
+    def get_guild(self, gid):
+        class _G:
+            members = []
+        return _G()
+
+_names_file = os.path.join(ROOT, 'data', f'member_names_{GID}.json')
+_orig_names = None
+if os.path.exists(_names_file):
+    with open(_names_file, encoding='utf-8') as f:
+        _orig_names = f.read()
+with open(_names_file, 'w', encoding='utf-8') as f:
+    json.dump({'111': 'Arthur', '222': 'Nika'}, f)
+
+_old_bot = A.bot_instance
+try:
+    A.bot_instance = _NoGuildBot()
+    r = c.get(f'/api/guild/{GID}/member-card/suggest')
+    check(r.status_code == 200, 'бот есть, сервера нет в кэше → 200 (не 404)', r.status_code)
+    items = (r.get_json() or {}).get('items', [])
+    check(any(i.get('name') == 'Arthur' for i in items),
+          'fallback отдаёт имена из локальной карты')
+
+    r = c.get(f'/api/guild/{GID}/member-card/suggest?q=arth')
+    check(r.status_code == 200 and (r.get_json() or {}).get('items'),
+          'fallback с q=arth находит Arthur')
+
+    A.bot_instance = _EmptyGuildBot()
+    r = c.get(f'/api/guild/{GID}/member-card/suggest')
+    check(r.status_code == 200, 'бот есть, кэш участников пуст → 200 (не 404)', r.status_code)
+finally:
+    A.bot_instance = _old_bot
+    try:
+        if _orig_names is not None:
+            with open(_names_file, 'w', encoding='utf-8') as f:
+                f.write(_orig_names)
+        else:
+            os.remove(_names_file)
+    except OSError:
+        pass
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
