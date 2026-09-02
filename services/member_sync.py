@@ -21,6 +21,7 @@
 через Intents.all()). Отдельных команд не добавляет.
 """
 import asyncio
+import time
 
 from logger import get_logger
 
@@ -34,18 +35,76 @@ CHUNK_TIMEOUT_SEC = 60.0
 # фиксированные 60 с на таком объёме не хватает, докачка обрывалась и
 # начиналась заново каждый тик — список участников никогда не становился
 # полным. Масштабируем потолок по числу участников.
-CHUNK_SEC_PER_1K = 8.0
-CHUNK_TIMEOUT_MAX_SEC = 600.0
+# Сколько секунд ждём БЕЗ прогресса, прежде чем сдаться. Важен не размер
+# сервера, а скорость отдачи Discord: пока пачки прибывают — ждём хоть час.
+CHUNK_STALL_SEC = 60.0
+# Как часто смотрим, прибавилось ли людей в кэше.
+CHUNK_POLL_SEC = 0.5
+# Страховка от зависшего корутина (не предел состава сервера): даже если
+# пачки идут бесконечно, дольше этого не сидим в одной итерации.
+CHUNK_HARD_MAX_SEC = 6 * 3600.0
 
 
 def _chunk_timeout(guild) -> float:
-    """Сколько секунд даём на докачку: 60 с минимум, +8 с на каждую 1000 людей."""
+    """Сколько секунд допустимо сидеть БЕЗ прогресса.
+
+    Раньше это был потолок на ВСЮ докачку, масштабированный по числу
+    участников (и с жёстким максимумом 600 с). На растущем сервере любой
+    такой максимум однажды становился тесным: докачка обрывалась по
+    таймауту, уже полученные пачки выбрасывались и всё начиналось заново
+    каждый тик — состав никогда не становился полным. Теперь потолок
+    снят, а сдаёмся мы только по отсутствию прогресса.
+    """
+    return float(CHUNK_STALL_SEC)
+
+
+async def _await_chunk(guild, coro) -> str:
+    """Дождаться докачки, пока есть прогресс.
+
+    Возвращает 'ok' | 'stall' | 'unsupported'. В отличие от
+    asyncio.wait_for(всё_сразу) здесь не выбрасывается уже полученное:
+    как только люди перестали прибывать — выходим, а частичный состав
+    сохраняет вызывающий код.
+    """
     try:
-        total = int(getattr(guild, "member_count", 0) or 0)
-    except (TypeError, ValueError):
-        total = 0
-    scaled = CHUNK_TIMEOUT_SEC + (total / 1000.0) * CHUNK_SEC_PER_1K
-    return min(max(scaled, CHUNK_TIMEOUT_SEC), CHUNK_TIMEOUT_MAX_SEC)
+        task = asyncio.create_task(coro)
+    except TypeError:
+        return "unsupported"
+
+    last = len(guild.members)
+    now = time.monotonic()
+    last_growth = now
+    started = now
+    try:
+        while not task.done():
+            await asyncio.sleep(CHUNK_POLL_SEC)
+            count = len(guild.members)
+            if count != last:
+                last = count
+                last_growth = time.monotonic()
+            elif time.monotonic() - last_growth > _chunk_timeout(guild):
+                task.cancel()
+                return "stall"
+            elif time.monotonic() - started > CHUNK_HARD_MAX_SEC:
+                task.cancel()
+                return "stall"
+    except asyncio.CancelledError:
+        task.cancel()
+        raise
+    # Корутин мог завершиться с ошибкой (gateway 500, обрыв сокета). Без этой
+    # проверки «done» выглядело бы как успешная докачка: исключение осталось
+    # бы непросмотренным, а код отрапортовал «участников в кэше N -> N».
+    if task.cancelled():
+        return "stall"
+    try:
+        exc = task.exception()
+    except asyncio.CancelledError:
+        return "stall"
+    if exc is not None:
+        if isinstance(exc, TypeError):
+            return "unsupported"
+        return "error"
+    return "ok"
 
 _task = None
 _started = False
@@ -62,32 +121,50 @@ async def _sync_guild(guild) -> bool:
             return False
 
         # Догружаем пачками через gateway (respect-рейтлимиты внутри discord.py).
+        # Ждём ПО ПРОГРЕССУ: пока люди прибывают, докачка не обрывается —
+        # потолка по размеру сервера нет.
         coro = guild.chunk(cache=True)
-        timeout = _chunk_timeout(guild)
         try:
-            await asyncio.wait_for(coro, timeout=timeout)
-        except asyncio.TimeoutError:
-            _log.debug("member_sync: chunk guild=%s таймаут (%.0fс, людей %s), попробую позже",
-                       guild.id, timeout, total or "?")
-            return False
+            state = await _await_chunk(guild, coro)
         except TypeError:
             # Старые/урезанные сборки discord.py без chunk() — тихо пропускаем.
             _log.debug("member_sync: guild.chunk недоступна для guild=%s", guild.id)
             return False
 
+        if state == "unsupported":
+            _log.debug("member_sync: guild.chunk недоступна для guild=%s", guild.id)
+            return False
+
         new_cached = len(guild.members)
+
+        async def _persist(partial: bool) -> None:
+            """Состав — в файл. partial=True, когда докачка ещё не закончена."""
+            try:
+                from services import member_store as MS
+                n = MS.upsert_many(guild.id, guild.members)
+                await MS.aflush(guild.id)
+                _log.info("member_sync: guild=%s состав%s сохранён в файл (%s участников)",
+                          guild.id, " частично" if partial else "", n)
+            except Exception as _ex:
+                _log.debug("member_sync: сохранить состав %s: %s", guild.id, _ex)
+
+        if state != "ok":
+            # Пачки встали или докачка упала. Раньше здесь всё выбрасывалось
+            # и докачка начиналась с нуля — на большом сервере состав никогда
+            # не становился полным. Теперь частичный прогресс сохраняется,
+            # и следующий тик продолжает с того, что уже есть.
+            await _persist(partial=True)
+            why = "докачка упала" if state == "error" else "докачка встала"
+            _log.debug("member_sync: guild=%s %s (%s в кэше из %s) — "
+                       "продолжу позже, прогресс сохранён",
+                       guild.id, why, new_cached, total or "?")
+            return False
+
         _log.info("member_sync: guild=%s участников в кэше %s -> %s (всего %s)",
                   guild.id, cached, new_cached, total or "?")
         # Дочитали — сразу сохраняем состав в файл: панель берёт список
         # оттуда мгновенно и не ждёт повторной докачки кэша.
-        try:
-            from services import member_store as MS
-            n = MS.upsert_many(guild.id, guild.members)
-            await MS.aflush(guild.id)
-            _log.info("member_sync: guild=%s состав сохранён в файл (%s участников)",
-                      guild.id, n)
-        except Exception as _ex:
-            _log.debug("member_sync: сохранить состав %s: %s", guild.id, _ex)
+        await _persist(partial=False)
         return True
     except Exception as _ex:  # сеть/правы/прочее — не ядро, ждём следующий тик
         _log.debug("member_sync: guild=%s ошибка: %s", getattr(guild, "id", "?"), _ex)

@@ -1889,10 +1889,12 @@ def api_guild_members (guild_id ):
         except (TypeError ,ValueError ):
             guild =None
 
-            # Пагинация: ?limit=1000 (по умолчанию), потолок 100 000.
-        # Искусственного обрыва списка больше нет: на серверах 20 000+
-        # участников страница добирает всех пачками, а один запрос может
-        # забрать сразу весь состав, если фронт попросил.
+            # Пагинация: ?limit=1000 (по умолчанию), БЕЗ потолка.
+        # Владелец растит сервер: 20 000 участников — это не предел, поэтому
+        # искусственного обрыва списка нет вообще. Лимит ограничен только
+        # реальным размером состава — сколько людей на сервере, столько и
+        # отдадим одним запросом. Срез cached[offset:offset+limit] на
+        # «безумный» limit не падает, Python просто отдаст остаток списка.
         try :
             limit =int (request .args .get ('limit',1000 ))
         except (TypeError ,ValueError ):
@@ -1901,7 +1903,7 @@ def api_guild_members (guild_id ):
             offset =int (request .args .get ('offset',0 ))
         except (TypeError ,ValueError ):
             offset =0 
-        limit =max (1 ,min (limit ,100000 ))
+        limit =max (1 ,limit )
         offset =max (0 ,offset )
 
         # Состав участников живёт В ФАЙЛЕ (services/member_store.py): бот

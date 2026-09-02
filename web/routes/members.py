@@ -186,6 +186,33 @@ def register(ctx):
 
         gid =int (guild_id )if str (guild_id ).isdigit ()else 0
         guild =bot .get_guild (gid )if gid else None
+
+        # Сначала — ПОЛНЫЙ состав из файла (services/member_store.py), а не
+        # живой кэш discord.py. На большом сервере кэш наполняется постепенно,
+        # и участник, которого там ещё нет, просто не находился; а при офлайн
+        # боте пикер скатывался к карте имён. Файл бот правит событийно, так
+        # что это самый полный и всегда доступный источник.
+        window =limit +offset
+        rows =[]
+        stored_total =0
+        if gid :
+            try :
+                from services import member_store as MS
+                stored_total =MS .count (gid )
+                if stored_total :
+                    rows =(MS .find (gid ,q ,limit =window )if q
+                           else MS .snapshot (gid ,offset ,limit ))
+            except Exception as _ex :
+                _log .debug ('member-card suggest: хранилище состава: %s',_ex )
+        if rows :
+            if q :
+                total =len (rows )
+                items =[_pick_demo_item (r )for r in rows [offset :offset +limit ]]
+            else :
+                total =stored_total
+                items =[_pick_demo_item (r )for r in rows ]
+            return jsonify ({'items':items ,'has_more':total >=offset +limit })
+
         # Бот подключён, но сервера в кэше нет — не 404, а локальные имена.
         if guild is None or not guild .members :
             return jsonify (_local_suggest (gid ,q ,offset ,limit ))

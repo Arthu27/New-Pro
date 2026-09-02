@@ -164,16 +164,18 @@ r = client.get(f'/api/guild/{GID}/members')
 check(r.headers.get('X-Limit') == '1000',
       f"дефолт limit={r.headers.get('X-Limit')} (было 50 — страница рвалась на 500)")
 check(len(r.get_json()) == 1000, 'без параметров приходит 1000 человек')
-# Потолка в 5000 больше нет: весь сервер в 20 000 человек отдаётся ОДНИМ
-# запросом, если фронтенд его попросил. Жёсткий предел 100000 — страховка
-# от «limit=999999999», а не ограничение состава.
+# Потолка нет ВООБЩЕ: владелец растит сервер, 20 000 — это не предел.
+# Весь состав отдаётся одним запросом, а «безумный» limit просто вернёт
+# остаток списка — срез в Python за пределы не падает.
 r = page(0, limit=TOTAL)
 check(r.headers.get('X-Limit') == str(TOTAL),
       f"запросили весь сервер: X-Limit={r.headers.get('X-Limit')} (было 5000)")
 check(len(r.get_json()) == TOTAL, f'одним запросом пришли все {TOTAL} человек')
 r = page(0, limit=99999999)
-check(r.headers.get('X-Limit') == '100000',
-      f"страховка от абсурдного limit={r.headers.get('X-Limit')} (просили 99999999)")
+check(r.headers.get('X-Limit') == '99999999',
+      f"лимит НЕ обрезается: X-Limit={r.headers.get('X-Limit')} (просили 99999999)")
+check(len(r.get_json()) == TOTAL,
+      f'лишний limit не ломает ответ — отдан весь состав ({len(r.get_json())})')
 
 print('== 4. неполный кэш виден снаружи ==')
 set_guild(_members[:3000], TOTAL, False)

@@ -119,6 +119,27 @@ class FakeGuild:
         self._chunked = True
 
 
+class GrowingGuild(FakeGuild):
+    """Гильдия, у которой состав прибывает постепенно — как настоящая докачка.
+
+    Нужна, чтобы проверить главное свойство: пока люди приходят, докачка не
+    обрывается, сколько бы всего людей ни было на сервере.
+    """
+
+    def __init__(self, gid, total, step, delay):
+        super().__init__(gid, cached=0, total=total)
+        self._step = step
+        self._delay = delay
+
+    async def chunk(self, cache=True):
+        self.chunk_calls += 1
+        while len(self.members) < self.member_count:
+            await asyncio.sleep(self._delay)
+            self.members = list(range(min(len(self.members) + self._step,
+                                          self.member_count)))
+        self._chunked = True
+
+
 async def _t():
     g_ok = FakeGuild(1, cached=100, total=100, chunked=True)
     w = await MS._sync_guild(g_ok)
@@ -134,22 +155,34 @@ async def _t():
     w = await MS._sync_guild(g_fail)
     check(w is False, 'sync: ошибка chunk переживается (не падаем)')
 
-    old = MS.CHUNK_TIMEOUT_SEC
-    MS.CHUNK_TIMEOUT_SEC = 0.2
+    # Порог теперь — не «потолок на всю докачку», а время БЕЗ прогресса.
+    old_stall, old_poll = MS.CHUNK_STALL_SEC, MS.CHUNK_POLL_SEC
+    MS.CHUNK_STALL_SEC = 0.3
+    MS.CHUNK_POLL_SEC = 0.05
+
     g_slow = FakeGuild(4, cached=1, total=50, chunked=False, slow=True)
     w = await MS._sync_guild(g_slow)
-    check(w is False, 'sync: медленный chunk упирается в таймаут, не висим')
-    MS.CHUNK_TIMEOUT_SEC = old
+    check(w is False, 'sync: люди перестали прибывать — сдаёмся, не висим')
 
-    # Большой сервер: фиксированных 60 с на 20 000 людей не хватало — докачка
-    # обрывалась и начиналась заново каждый тик, список так и не становился полным.
-    check(MS._chunk_timeout(FakeGuild(5, cached=0, total=0)) == MS.CHUNK_TIMEOUT_SEC,
-          'таймаут: маленький сервер — базовые 60 с')
-    t20k = MS._chunk_timeout(FakeGuild(6, cached=0, total=20000))
-    check(t20k > MS.CHUNK_TIMEOUT_SEC * 3,
-          f'таймаут: 20 000 людей — {t20k:.0f} с (больше базовых 60 с)')
-    check(MS._chunk_timeout(FakeGuild(7, cached=0, total=500000)) == MS.CHUNK_TIMEOUT_MAX_SEC,
-          'таймаут: потолок не уезжает в бесконечность')
+    # Главное: пока пачки прибывают, докачка НЕ обрывается. Общая длительность
+    # (2.4 с) в разы больше порога «без прогресса» (0.3 с) — старый потолок
+    # здесь оборвал бы докачку и выбросил уже полученные пачки.
+    g_grow = GrowingGuild(8, total=120000, step=1000, delay=0.02)
+    w = await MS._sync_guild(g_grow)
+    check(w is True and len(g_grow.members) == 120000,
+          f'sync: 120 000 людей докачаны до конца, прогресс не потерян '
+          f'(в кэше {len(g_grow.members)})')
+
+    MS.CHUNK_STALL_SEC, MS.CHUNK_POLL_SEC = old_stall, old_poll
+
+    # Потолка по размеру сервера больше нет: ожидание зависит только от того,
+    # прибывают ли люди, а не от того, сколько их на сервере.
+    t0 = MS._chunk_timeout(FakeGuild(5, cached=0, total=0))
+    check(t0 == MS.CHUNK_STALL_SEC,
+          f'порог «без прогресса»: {t0:.0f} с')
+    t_big = MS._chunk_timeout(FakeGuild(7, cached=0, total=500000))
+    check(t_big == t0,
+          'порог не зависит от размера сервера — потолка по составу нет')
 
 
 asyncio.run(_t())
