@@ -1134,11 +1134,10 @@ class Logs (commands .Cog ):
 
         # 4б) Авто-настройка welcome-конфига, если каналы ещё не заданы
         try :
+            from services.async_io import load_json_async ,save_json_async
             wcfg_path =f'data/welcome_{guild.id}.json'
-            wcfg ={}
-            if os .path .exists (wcfg_path ):
-                with open (wcfg_path ,'r',encoding ='utf-8')as f :
-                    wcfg =json .load (f )
+            # файловый I/O — в рабочем потоке (не блокируем event loop)
+            wcfg =await load_json_async (wcfg_path ,{},log =log )or {}
             changed =False
             w_cfg =wcfg .setdefault ('welcome',{})
             if not w_cfg .get ('channel_id'):
@@ -1149,11 +1148,9 @@ class Logs (commands .Cog ):
                 l_cfg ['channel_id']=str (welcome_ch .id )
                 changed =True
             if changed :
-                os .makedirs ('data',exist_ok =True )
-                with open (wcfg_path ,'w',encoding ='utf-8')as f :
-                    json .dump (wcfg ,f ,ensure_ascii =False ,indent =2 )
+                await save_json_async (wcfg_path ,wcfg ,log =log )
         except Exception as _wc_err :
-            log .info (f'[SETUP-LOGS] welcome-config: {_wc_err}')
+            log .debug ('[SETUP-LOGS] welcome-config: %s',_wc_err )
 
         # 4в) Проверка доставки — шлём тестовый embed в каждый лог-канал
         delivery_ok =[]
@@ -1236,10 +1233,11 @@ class Logs (commands .Cog ):
 
         # Приветствие сообщение
         try :
+            from services.async_io import load_json_async
             wcfg_path =f'data/welcome_{member.guild.id}.json'
-            if os .path .exists (wcfg_path ):
-                with open (wcfg_path ,'r',encoding ='utf-8')as f :
-                    wcfg =json .load (f )
+            # чтение конфига — в рабочем потоке (не морозим event loop)
+            wcfg =await load_json_async (wcfg_path ,None ,log =log )
+            if wcfg :
                 w =wcfg .get ('welcome',{})
                 if w .get ('channel_id'):
                     wch =member .guild .get_channel (int (w ['channel_id']))
@@ -1301,10 +1299,10 @@ class Logs (commands .Cog ):
 
         # Прощальное сообщение
         try :
+            from services.async_io import load_json_async
             wcfg_path =f'data/welcome_{member.guild.id}.json'
-            if os .path .exists (wcfg_path ):
-                with open (wcfg_path ,'r',encoding ='utf-8')as f :
-                    wcfg =json .load (f )
+            wcfg =await load_json_async (wcfg_path ,None ,log =log )
+            if wcfg :
                 lv =wcfg .get ('leave',{})
                 if lv .get ('channel_id'):
                     lch =member .guild .get_channel (int (lv ['channel_id']))
@@ -1496,14 +1494,12 @@ class Logs (commands .Cog ):
                 })
                 # Сохран в mod_data.json
                 try :
-                    os .makedirs ('data',exist_ok =True )
+                    from services.async_io import load_json_async ,save_json_async
                     _f ='data/mod_data.json'
-                    _d ={'cases':{}}
-                    if os .path .exists (_f ):
-                        with open (_f ,'r',encoding ='utf-8')as fp :
-                            _loaded =json .load (fp )
-                        if isinstance (_loaded ,dict ):
-                            _d =_loaded
+                    # чтение/запись файла — в рабочем потоке (event loop не встаёт)
+                    _d =await load_json_async (_f ,{'cases':{}},log =log )or {'cases':{}}
+                    if not isinstance (_d ,dict ):
+                        _d ={'cases':{}}
                     _d .setdefault ('cases',{})
                     _gid =str (before .guild .id )
                     _d ['cases'].setdefault (_gid ,[])
@@ -1515,10 +1511,9 @@ class Logs (commands .Cog ):
                     'reason':'С Discord',
                     'timestamp':datetime .datetime .now (datetime .timezone .utc ).isoformat ()
                     })
-                    with open (_f ,'w',encoding ='utf-8')as fp :
-                        json .dump (_d ,fp ,indent =2 ,ensure_ascii =False )
+                    await save_json_async (_f ,_d ,log =log )
                 except Exception as _e :
-                    log .info (f'[LOGS] Ошибка запись mute: {_e}')
+                    log .debug ('[LOGS] запись mute: %s',_e )
                 # Эмбед мута в -модерация: кто, причина, до какого времени
                 try :
                     _to_mod =await _audit_actor (before .guild ,discord .AuditLogAction .member_update ,target_id =after .id ,window =15 ,retries =1 )
@@ -1611,8 +1606,16 @@ class Logs (commands .Cog ):
             oldest =list (_msg_cache .keys ())[:2500 ]
             for k in oldest :
                 del _msg_cache [k ]
-                # Также сохранить в data/message_log_<guild_id>.json (для AI поиска)
-        self ._save_message_log (message .guild .id ,msg_data )
+                # Также сохранить в data/message_log_<guild_id>.json (для AI поиска).
+        # Чтение+запись JSON на КАЖДОМ сообщении морозили event loop —
+        # уводим в рабочий поток (запись атомарная, порядок не критичен:
+        # журнал только дозаписывается, потеря одной строки не страшна).
+        try :
+            import asyncio as _aio
+            _aio .get_running_loop ().run_in_executor (
+                None ,self ._save_message_log ,message .guild .id ,msg_data )
+        except Exception as _ex :
+            log .debug ('[LOG] message_log в поток: %s',_ex )
 
     def _save_message_log (self ,guild_id :int ,msg_data :dict ):
         """Сохранить сообщение в per-guild JSON-log (для AI-поиска)."""
@@ -2125,14 +2128,10 @@ class Logs (commands .Cog ):
             # DISCORD AUDIT LOG SYNC 
 
     async def _sync_discord_audit_log (self ):
+        from services.async_io import load_json_async
+        # оба конфига читаем в рабочем потоке (event loop не блокируется)
         seen_file ='data/audit_seen.json'
-        seen ={}
-        if os .path .exists (seen_file ):
-            try :
-                with open (seen_file ,'r',encoding ='utf-8')as f :
-                    seen =json .load (f )
-            except Exception as _ex:
-                log.debug("_sync_discord_audit_log(): подавлено: %s", _ex)
+        seen =await load_json_async (seen_file ,{},log =log )or {}
 
         action_map ={
         discord .AuditLogAction .ban :('mod','Бан'),
@@ -2156,13 +2155,7 @@ class Logs (commands .Cog ):
         }
 
         cache_file ='data/discord_audit_cache.json'
-        cache ={}
-        if os .path .exists (cache_file ):
-            try :
-                with open (cache_file ,'r',encoding ='utf-8')as f :
-                    cache =json .load (f )
-            except Exception as _ex:
-                log.debug("_sync_discord_audit_log(): подавлено: %s", _ex)
+        cache =await load_json_async (cache_file ,{},log =log )or {}
 
         audit_errors =[]
         # Панель живёт одним сервером (MAIN_GUILD_ID): аудит чужих гильдий
@@ -2255,20 +2248,19 @@ class Logs (commands .Cog ):
             if len (cache [gid ])>1000 :
                 cache [gid ]=cache [gid ][-1000 :]
 
+        # запись обоих файлов — в рабочих потоках (event loop не блокируется)
+        from services.async_io import save_json_async
         try :
-            os .makedirs ('data',exist_ok =True )
-            with open (cache_file ,'w',encoding ='utf-8')as f :
-                json .dump (cache ,f ,ensure_ascii =False ,indent =2 )
+            await save_json_async (cache_file ,cache ,log =log )
         except Exception as e :
-            log .info (f'[LOGS] Ошибка запись kesa: {e}')
+            log .debug ('[LOGS] запись cache: %s',e )
 
         try :
-            with open (seen_file ,'w',encoding ='utf-8')as f :
-                json .dump (seen ,f )
+            await save_json_async (seen_file ,seen ,log =log )
         except Exception as _ex:
             log.debug("_sync_discord_audit_log(): подавлено: %s", _ex)
 
-        return audit_errors 
+        return audit_errors
 
     @commands .Cog .listener ()
     async def on_ready (self ):

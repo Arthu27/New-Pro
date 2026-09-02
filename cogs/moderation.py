@@ -131,10 +131,10 @@ class Moderation (commands .Cog ):
             threshold = 3
             window_h = 48.0
             try:
+                from services.async_io import load_json_async
                 _cfg_path = f'data/mod_autowarn_{guild.id}.json'
-                if os.path.exists(_cfg_path):
-                    with open(_cfg_path, 'r', encoding='utf-8') as _cf:
-                        _ac = json.load(_cf)
+                _ac = await load_json_async(_cfg_path, None, log=log)
+                if _ac:
                     threshold = int(_ac.get('mute_threshold', threshold))
                     window_h = float(_ac.get('window_hours', window_h))
             except Exception as _ce:
@@ -150,8 +150,8 @@ class Moderation (commands .Cog ):
             warns = warns_cog._get_warns(guild.id, user.id)
             last_mute_ts = ''
             try:
-                with open('data/mod_data.json', 'r', encoding='utf-8') as f:
-                    _md = json.load(f)
+                from services.async_io import load_json_async
+                _md = await load_json_async('data/mod_data.json', {}, log=log) or {}
                 _cs = (_md.get('cases') or {}).get(str(guild.id)) or []
                 _mine = [c.get('timestamp', '') for c in _cs
                          if str(c.get('user_id')) == str(user.id)
@@ -228,9 +228,11 @@ class Moderation (commands .Cog ):
             return 
         flag_file ='data/mod_notify.json'
         try :
-            enabled =json .load (open (flag_file ,encoding ='utf-8')).get ('enabled',False )if os .path .exists (flag_file )else False 
+            from services.async_io import load_json_async
+            _flag =await load_json_async (flag_file ,{},log =log )or {}
+            enabled =bool (_flag .get ('enabled',False ))
         except Exception :
-            enabled =False 
+            enabled =False
         if not enabled :
             return 
         try :
@@ -752,7 +754,10 @@ class Moderation (commands .Cog ):
                 except Exception as _slr :
                     log .debug (f'[STAFF_LIMIT] rec: {_slr}')
                 try :
-                    case_id =self .save_case (guild .id ,action ,user .id ,interaction .user .id ,reason )
+                    import asyncio as _aio_sc
+                    # запись дела (файл) — в рабочем потоке, без блокировки loop
+                    case_id =await _aio_sc .to_thread (
+                        self .save_case ,guild .id ,action ,user .id ,interaction .user .id ,reason )
                 except Exception as _case_e :
                     case_id =0
                     aux_errors .append ("дело не записано")
@@ -834,7 +839,9 @@ class Moderation (commands .Cog ):
                     unban_done =True
                 except Exception as _ub_ex :
                     log .debug (f'unban: {_ub_ex}')
-                case_id =self .save_case (guild .id ,"unban",uid ,interaction .user .id ,reason )
+                import asyncio as _aio_sc2
+                case_id =await _aio_sc2 .to_thread (
+                    self .save_case ,guild .id ,"unban",uid ,interaction .user .id ,reason )
                 try :
                     from services .staff_limits import record_hit as _sl_rec
                     _sl_rec (guild .id ,interaction .user .id ,'unban',1 )
@@ -1055,23 +1062,18 @@ class Moderation (commands .Cog ):
         """
         try :
             import datetime as _dt
-            # 1) Считаем мьюты пользователя
-            os .makedirs ('data',exist_ok =True )
+            from services.async_io import load_json_async ,save_json_async
+            # 1) Считаем мьюты пользователя (чтение файла — в потоке)
             mod_file ='data/mod_data.json'
             mute_count =0
-            if os .path .exists (mod_file ):
-                with open (mod_file ,'r',encoding ='utf-8')as f :
-                    data =json .load (f )
-                cases =data .get ('cases',{}).get (str (interaction .guild .id ),[])
-                for c in cases :
-                    if str (c .get ('user_id',''))==str (user .id )and c .get ('action')in ('timeout','mute_chat','vmute'):
-                        mute_count +=1
+            data =await load_json_async (mod_file ,{},log =log )or {}
+            cases =data .get ('cases',{}).get (str (interaction .guild .id ),[])
+            for c in cases :
+                if str (c .get ('user_id',''))==str (user .id )and c .get ('action')in ('timeout','mute_chat','vmute'):
+                    mute_count +=1
             # 2) Добавляем в watchlist (advanced_mod) на 1 неделю
             adv_file ='data/mod_advanced_data.json'
-            adv ={}
-            if os .path .exists (adv_file ):
-                with open (adv_file ,'r',encoding ='utf-8')as f :
-                    adv =json .load (f )
+            adv =await load_json_async (adv_file ,{},log =log )or {}
             adv .setdefault ('watchlist',{})
             gid =str (interaction .guild .id )
             adv ['watchlist'].setdefault (gid ,{})
@@ -1083,10 +1085,9 @@ class Moderation (commands .Cog ):
                 "until":until ,
                 "auto":True ,
             }
-            with open (adv_file ,'w',encoding ='utf-8')as f :
-                json .dump (adv ,f ,indent =2 ,ensure_ascii =False )
+            await save_json_async (adv_file ,adv ,log =log )
         except Exception as ex :
-            log .warning (f"[watchlist auto] {ex}")
+            log .debug ("[watchlist auto] %s",ex )
 
 
 # ═══════════════════════════════════════════════════════════════════

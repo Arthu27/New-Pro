@@ -1044,19 +1044,16 @@ class AIChat (commands .Cog ):
         mod_notify_off =['выключи уведомления модерации','уведомления модерации выкл',
         'не присылай наказания','выключи оповещения о наказаниях']
         if any (t in cn for t in [self ._norm (x )for x in mod_notify_ac ]):
-            import json as _j 
-            os .makedirs ('data',exist_ok =True )
-            with open ('data/mod_notify.json','w',encoding ='utf-8')as f :
-                _j .dump ({'enabled':True },f )
+            # запись на диск — в рабочий поток (не морозим event loop)
+            from services.async_io import save_json_async
+            await save_json_async ('data/mod_notify.json',{'enabled':True },log =log )
             await message .channel .send (' Уведомления включены — действия модерации будут приходить в ЛС.')
-            return True 
+            return True
         if any (t in cn for t in [self ._norm (x )for x in mod_notify_off ]):
-            import json as _j 
-            os .makedirs ('data',exist_ok =True )
-            with open ('data/mod_notify.json','w',encoding ='utf-8')as f :
-                _j .dump ({'enabled':False },f )
+            from services.async_io import save_json_async
+            await save_json_async ('data/mod_notify.json',{'enabled':False },log =log )
             await message .channel .send (' Уведомления модерации отключены.')
-            return True 
+            return True
 
             # ни один обработчик не сработал — обычный разговор с AI
         return False 
@@ -1243,10 +1240,11 @@ class AIChat (commands .Cog ):
         # DM log'a сохранить (входящее сообщение логгер DMLogger'a записывает,
         # здесь только bot cevabы сохранить, чтобы не дублировать)
             try :
-                import json as _j ,os as _os ,datetime as _dt3 
-                _os .makedirs ('data',exist_ok =True )
+                import datetime as _dt3
+                from services.async_io import load_json_async ,save_json_async
                 _f ='data/dm_log.json'
-                _d =_j .load (open (_f ,encoding ='utf-8'))if _os .path .exists (_f )else {}
+                # чтение/запись файла — в рабочем потоке (event loop не встаёт)
+                _d =await load_json_async (_f ,{},log =log )or {}
                 uid =str (message .author .id )
                 if uid not in _d or not isinstance (_d [uid ],list ):
                     _d [uid ]=[]
@@ -1259,10 +1257,9 @@ class AIChat (commands .Cog ):
                 })
                 # держим максимум 200 сообщений
                 _d [uid ]=_d [uid ][-200 :]
-                with open (_f ,'w',encoding ='utf-8')as fp :
-                    _j .dump (_d ,fp ,ensure_ascii =False ,indent =2 )
+                await save_json_async (_f ,_d ,log =log )
             except Exception as _le :
-                log .info (f'[DM LOG] Ошибка: {_le}')
+                log .debug ('[DM LOG] подавлено: %s',_le )
             await message .channel .send (answer )
         else :
             chunks =_split_long (answer )

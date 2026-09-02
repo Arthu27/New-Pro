@@ -307,8 +307,9 @@ class TempModeration(commands.Cog):
         # тик — иначе запланированное из панели увидело бы выполнение только
         # после рестарта бота, а отмена из панели не сработала бы вовсе.
         try:
-            with open(self._scheduled_file(), "r", encoding="utf-8") as f:
-                disk = json.load(f)
+            # перечитывание файла раз в 30с — в рабочем потоке (event loop не встаёт)
+            from services.async_io import load_json_async
+            disk = await load_json_async(self._scheduled_file(), [], log=log)
             if isinstance(disk, list):
                 mem = {str(e.get("id")): e for e in self._scheduled
                        if isinstance(e, dict)}

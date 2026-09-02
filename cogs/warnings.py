@@ -449,13 +449,11 @@ class warnings(commands.Cog):
         await _log_warn_to_channel (guild ,user ,interaction .user ,reason ,warn_id ,total )
 
         # DM пользователю
-        import json, os
+        # чтение кастомного текста DM — в рабочем потоке (файл не блокирует loop)
+        from services.async_io import load_json_async
         dm_file = f'data/warn_dm_{guild.id}.json'
-        custom_dm = None
-        if os.path.exists(dm_file):
-            with open(dm_file, 'r', encoding='utf-8') as df:
-                dm_cfg = json.load(df)
-            custom_dm = dm_cfg.get('message')
+        dm_cfg = await load_json_async(dm_file, {}, log=_log) or {}
+        custom_dm = dm_cfg.get('message')
 
         if custom_dm:
             msg = custom_dm.replace('{user}', user.display_name).replace('{reason}', reason or 'Не указана').replace('{mod}', interaction.user.display_name).replace('{сервер}', guild.name)

@@ -469,20 +469,24 @@ class Security (commands .Cog ):
         for c in guild .categories 
         ],
         }
-        path =os .path .join (BACKUP_DIR ,f'backup_{guild.id}_{timestamp}.json')
-        with open (path ,'w',encoding ='utf-8')as f :
-            json .dump (backup ,f ,indent =2 ,ensure_ascii =False )
-
-            # Старый yedaddri clear (son 7 tane tut)
-        all_backups =sorted ([
-        x for x in os .listdir (BACKUP_DIR )
-        if x .startswith (f'backup_{guild.id}_')
-        ])
-        for old in all_backups [:-7 ]:
-            try :
-                os .remove (os .path .join (BACKUP_DIR ,old ))
-            except Exception as _ex:
-                _log.debug("_backup_guild(): подавлено: %s", _ex)
+        # запись файла и чистка старых бэкапов — в рабочем потоке
+        # (open/json.dump/listdir/remove не должны морозить event loop)
+        import asyncio as _aio_b
+        def _write_and_prune ():
+            path =os .path .join (BACKUP_DIR ,f'backup_{guild.id}_{timestamp}.json')
+            with open (path ,'w',encoding ='utf-8')as f :
+                json .dump (backup ,f ,indent =2 ,ensure_ascii =False )
+            # Старые бэкапы подчищаем (оставляем последние 7)
+            all_backups =sorted ([
+            x for x in os .listdir (BACKUP_DIR )
+            if x .startswith (f'backup_{guild.id}_')
+            ])
+            for old in all_backups [:-7 ]:
+                try :
+                    os .remove (os .path .join (BACKUP_DIR ,old ))
+                except Exception as _ex:
+                    _log.debug("_backup_guild(): подавлено: %s", _ex)
+        await _aio_b .to_thread (_write_and_prune )
 
     # ВАЖНО (инцидент 30.08): имена были "backup" / "backup-list" и в лоб
     # сталкивались с группой /backup из cogs/backup_cog.py. Итог зависел от

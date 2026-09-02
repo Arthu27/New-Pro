@@ -198,8 +198,9 @@ class StaffProfileSelect(discord.ui.UserSelect):
         cutoff = time.time() - days * 86400
         received = {}
         try:
-            with open('data/mod_data.json', 'r', encoding='utf-8') as f:
-                md = json.load(f)
+            # чтение файла наказаний — в рабочем потоке (не блокируем loop)
+            from services.async_io import load_json_async
+            md = await load_json_async('data/mod_data.json', {}, log=_log) or {}
             for c in md.get('cases', {}).get(str(self._guild.id), []):
                 if (str(c.get('user_id')) == str(member.id)
                         and _parse_ts(c.get('timestamp')) >= cutoff):
@@ -229,7 +230,10 @@ class StaffProfileSelect(discord.ui.UserSelect):
                     value=_breakdown(all_by) if all_by else "—",
                     inline=False)
         # Действия, которые участник сам совершил как модератор (если он стафф).
-        actions = collect_actions(self._guild.id)
+        # collect_actions читает файлы и sqlite — уводим в рабочий поток,
+        # чтобы не блокировать event loop при показе профиля.
+        import asyncio as _aio_s
+        actions = await _aio_s.to_thread(collect_actions, self._guild.id)
         mine = summarize(actions, days).get(str(member.id), {})
         if mine.get('total'):
             e.add_field(name=f"Его действия как модератора ({mine['total']})",
@@ -259,7 +263,9 @@ class StaffStats(commands.Cog):
     async def staff_stats(self, interaction: discord.Interaction, модератор: discord.Member = None, дней: int = 30):
         guild = interaction.guild
         дней = max(1, min(дней, 365))
-        actions = collect_actions(guild.id)
+        # сбор действий (файлы + sqlite) — в рабочем потоке (event loop не встаёт)
+        import asyncio as _aio_s
+        actions = await _aio_s.to_thread(collect_actions, guild.id)
 
         e = discord.Embed(color=GOLD, timestamp=datetime.now(timezone.utc))
 

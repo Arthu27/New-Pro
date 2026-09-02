@@ -2340,12 +2340,13 @@ class Ticket (commands .Cog ):
             owner_role_id =None 
 
             try :
-                if os .path .exists (cfg_path ):
-                    with open (cfg_path ,'r',encoding ='utf-8')as f :
-                        cfg =json .load (f )
-                        admin_role_id =cfg .get ('admin_role_id')
-                        mod_role_id =cfg .get ('mod_role_id')
-                        owner_role_id =cfg .get ('owner_role_id')
+                # чтение конфига ролей — в рабочем потоке (event loop не встаёт)
+                from services.async_io import load_json_async
+                cfg =await load_json_async (cfg_path ,None ,log =log )
+                if cfg :
+                    admin_role_id =cfg .get ('admin_role_id')
+                    mod_role_id =cfg .get ('mod_role_id')
+                    owner_role_id =cfg .get ('owner_role_id')
             except Exception as _ex:
                 log.debug("on_message(): подавлено: %s", _ex)
 
@@ -3387,12 +3388,14 @@ class Ticket (commands .Cog ):
         log .info (f'[TICKET-NOTIFY] target={target} ({getattr(target, "id", "?")}) reason={reason[:80] if reason else "(пусто)"}')
         log .info (f'[TICKET-NOTIFY] source_channel={getattr(source_channel, "id", "?")} moderator={getattr(moderator, "id", "?")}')
 
-        notify_ch_id =None 
+        notify_ch_id =None
         cfg_path =f'data/ticket_notify_{guild.id}.json'
         try :
-            if os .path .exists (cfg_path ):
-                with open (cfg_path ,'r',encoding ='utf-8')as f :
-                    notify_ch_id =(json .load (f )or {}).get ('notify_channel_id')
+            # чтение конфига уведомлений — в рабочем потоке (без блокировки loop)
+            from services.async_io import load_json_async
+            _tcfg =await load_json_async (cfg_path ,None ,log =log )
+            if _tcfg :
+                notify_ch_id =(_tcfg or {}).get ('notify_channel_id')
                 log .info (f'[TICKET-NOTIFY] Конфиг найден: notify_ch_id={notify_ch_id}')
             else :
                 log .info (f'[TICKET-NOTIFY] Конфиг НЕ найден: {cfg_path}')

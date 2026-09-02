@@ -990,23 +990,23 @@ async def on_ready():
             _log.debug("on_ready(): announce_pending: %s", _ex)
     print(f"[ОК] {bot.user} активен | {len(bot.guilds)} серверов")
 
-    import json as _j
     _cfg_file = 'data/bot_config.json'
     _status = discord.Status.online   # дефолт — зелёный: idle выглядел как «бот отключился»
     _activity_type = discord.ActivityType.watching   # «Смотрит Hakumo» — заказ владельца 30.08
     _activity_text = 'Hakumo'
-    if os.path.exists(_cfg_file):
-        try:
-            with open(_cfg_file, encoding='utf-8') as _f:
-                _cfg = _j.load(_f)
+    try:
+        # чтение конфига статуса — в рабочем потоке (не блокируем event loop)
+        from services.async_io import load_json_async as _lj
+        _cfg = await _lj(_cfg_file, {}, log=_log) or {}
+        if _cfg:
             _status_map = {'online': discord.Status.online, 'idle': discord.Status.idle, 'dnd': discord.Status.dnd, 'invisible': discord.Status.invisible}
             _type_map = {'listening': discord.ActivityType.listening, 'playing': discord.ActivityType.playing, 'watching': discord.ActivityType.watching, 'competing': discord.ActivityType.competing}
             _status = _status_map.get(_cfg.get('status', 'online'), discord.Status.online)
             _activity_type = _type_map.get(_cfg.get('activity_type', 'watching'), discord.ActivityType.watching)
             # пустая строка в конфиге не должна оставлять бота без подписи
             _activity_text = str(_cfg.get('activity_text', 'Hakumo') or '').strip()[:80] or 'Hakumo'
-        except Exception as _ex:
-            _log.debug("on_ready(): подавлено: %s", _ex)
+    except Exception as _ex:
+        _log.debug("on_ready(): подавлено: %s", _ex)
 
     # Каждый шаг ниже — В СВОЁМ try и с таймаутом: on_ready обязан дойти
     # до конца (инцидент 30.08). Один зависший сетевой вызов не должен
@@ -1082,8 +1082,10 @@ async def on_ready():
     _tunnel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tunnel_url.txt")
     if not getattr(bot, '_panel_link_sent', False) and os.path.exists(_tunnel_path):
         try:
-            with open(_tunnel_path, "r", encoding="utf-8") as _f:
-                _url = _f.read().strip()
+            # чтение файла со ссылкой — в рабочем потоке (event loop не встаёт)
+            import asyncio as _aio_t
+            _url = (await _aio_t.to_thread(
+                lambda: open(_tunnel_path, "r", encoding="utf-8").read())).strip()
             if _url:
                 await send_panel_link(_url)
                 bot._panel_link_sent = True
