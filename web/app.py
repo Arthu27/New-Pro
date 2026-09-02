@@ -3329,6 +3329,20 @@ def api_get_role_map():
     return Response(raw, mimetype='application/json',
                     headers={'ETag': etag, 'Cache-Control': 'no-cache'})
 
+def _role_map_notify ():
+    """Пнуть открытые страницы по SSE после правки карты ролей.
+
+    «Панели и роли» и «Права команд» подписаны на топик role_map, но его
+    никто не публиковал — правка доезжала до соседней вкладки только по
+    страховочному таймеру (30 с).
+    """
+    try :
+        from services .live_bus import publish_global
+        publish_global ('role_map')
+    except Exception as _ex :
+        _log .debug ("role_map SSE-сигнал не отправлен: %s",_ex )
+
+
 @app .route ('/api/role-map',methods =['POST'])
 @login_required 
 @role_required ('admin')
@@ -3347,6 +3361,7 @@ def api_set_role_map ():
         DISCORD_ROLE_MAP [role_id ]=panel_role
     _save_role_map ()
     _role_map_invalidate ()
+    _role_map_notify ()
     _log_panel_action ('ROLE_MAP_SET',f'{role_id} → {panel_role or "uye"}'if panel_role else f'{role_id} → uye')
     return jsonify ({'success':True })
 
@@ -3359,6 +3374,7 @@ def api_delete_role_map (role_id ):
         del DISCORD_ROLE_MAP [role_id ]
         _save_role_map ()
         _role_map_invalidate ()
+        _role_map_notify ()
         _log_panel_action ('ROLE_MAP_DELETE',role_id )
     return jsonify ({'success':True })
 
@@ -4054,19 +4070,8 @@ def api_voice_command ():
         return jsonify ({'error':str (e )}),500 
 
 
-if __name__ =='__main__':
-    # Панель отдельным процессом (python web/app.py) — без бота; для
-    # «панель видит бота» запускай main.py (встроенный сервер).
-    _p_port =int (os .environ .get ('PANEL_PORT','')or 0 )
-    if not _p_port:
-        try :
-            from config import Config
-            _p_port =int (getattr (Config ,'PORT',0 )or 0 )
-        except Exception :
-            _p_port =0
-    app .run (host ='0.0.0.0',port =(_p_port or 5000 ),debug =False ,threaded =True )
 
-    # Parola Sыfыrlama (login страница для) 
+# Восстановление пароля: коды для страницы входа
 import random as _random 
 _reset_codes ={}# {discord_id: {code, expires}}
 
@@ -4578,3 +4583,23 @@ if WEBSOCKET_ENABLED :
     except Exception as e :
         print (f'[WebSocket] Ошибка инициализации: {e}')
         WEBSOCKET_ENABLED =False 
+
+
+
+# Запуск панели отдельным процессом — ОБЯЗАТЕЛЬНО в самом конце файла.
+# Раньше этот блок стоял в середине, app.run() блокировал импорт, и все
+# маршруты ниже (/api/forgot-password, /api/reset-password,
+# /api/notifications/poll, /api/activity-feed) не регистрировались:
+# «python web/app.py» отвечал на них 404. Через main.py (бот поднимает
+# панель сам) __name__ != "__main__", поэтому там они работали.
+if __name__ =='__main__':
+    # Панель отдельным процессом (python web/app.py) — без бота; для
+    # «панель видит бота» запускай main.py (встроенный сервер).
+    _p_port =int (os .environ .get ('PANEL_PORT','')or 0 )
+    if not _p_port:
+        try :
+            from config import Config
+            _p_port =int (getattr (Config ,'PORT',0 )or 0 )
+        except Exception :
+            _p_port =0
+    app .run (host ='0.0.0.0',port =(_p_port or 5000 ),debug =False ,threaded =True )

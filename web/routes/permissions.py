@@ -91,6 +91,16 @@ def _invalidate_perm_cache(gid):
         _log.debug("permissions SSE-сигнал не отправлен: %s", _ex)
 
 
+def _gid(guild_id):
+    """int(id сервера) или None. Без него int('не-число') ронял обработчик
+    с трейсбеком (глобальный guard MAIN_GUILD_ID ловит такое только когда
+    MAIN_GUILD_ID задан)."""
+    try:
+        return int(guild_id)
+    except (TypeError, ValueError):
+        return None
+
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -186,9 +196,11 @@ def register(ctx):
         а клиенту по ETag отдаём 304 (без тела) — опрос «не изменилось»
         стоит миллисекунды и не пересчитывает роли/каталог/ACL.
         """
+        gid = _gid(guild_id)
+        if gid is None:
+            return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import (all_categories, ACTIONS,
                                             load_action_acl, effective_acl)
-        gid = int(guild_id)
         now = time.time()
 
         with _perm_cache_lock:
@@ -244,13 +256,16 @@ def register(ctx):
         """Классические разрешения: установить роли для действия (бан/мут/…).
         Строгая модель: видит действие ТОЛЬКО роль из списка. Пустой role_ids —
         снять правило, и тогда действие ЗАПРЕЩЕНО всем (default-deny)."""
+        gid = _gid(guild_id)
+        if gid is None:
+            return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import ACTIONS, set_action_rule
         data = request.get_json(silent=True) or {}
         action = data.get('action', '').strip()
         role_ids = data.get('role_ids', []) or []
         if action not in ACTIONS:
             return jsonify({'success': False, 'error': 'Неизвестное действие'}), 400
-        set_action_rule(int(guild_id), action, [str(r) for r in role_ids])
+        set_action_rule(gid, action, [str(r) for r in role_ids])
         _invalidate_perm_cache(guild_id)
         return jsonify({'success': True, 'action': action, 'role_ids': role_ids})
 
@@ -259,8 +274,11 @@ def register(ctx):
     @role_required('owner')
     def api_role_permissions_actions_clear(guild_id):
         """Снять все классические ограничения (все действия доступны всем)."""
+        gid = _gid(guild_id)
+        if gid is None:
+            return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import clear_action_rules
-        clear_action_rules(int(guild_id))
+        clear_action_rules(gid)
         _invalidate_perm_cache(guild_id)
         return jsonify({'success': True})
 
@@ -269,6 +287,9 @@ def register(ctx):
     @role_required('owner')
     def api_role_permissions_set(guild_id):
         """Установить роли для команды/категории."""
+        gid = _gid(guild_id)
+        if gid is None:
+            return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import (set_rule, clear_rule, load_acl,
                                             save_acl, materialize_category,
                                             all_categories)
@@ -282,15 +303,15 @@ def register(ctx):
         # пересекалась с категорийным ограничением (иначе «выдал — а не дал»)
         for cat, cmds in all_categories().items():
             if command in cmds:
-                acl = load_acl(int(guild_id))
+                acl = load_acl(gid)
                 if cat in acl:
                     materialize_category(acl, cat)
-                    save_acl(int(guild_id), acl)
+                    save_acl(gid, acl)
                 break
         if role_ids:
-            set_rule(int(guild_id), command, [str(r) for r in role_ids])
+            set_rule(gid, command, [str(r) for r in role_ids])
         else:
-            clear_rule(int(guild_id), command)
+            clear_rule(gid, command)
         _invalidate_perm_cache(guild_id)
         return jsonify({'success': True})
 
@@ -299,8 +320,11 @@ def register(ctx):
     @role_required('owner')
     def api_role_permissions_clear(guild_id):
         """Сбросить все ограничения (всё доступно всем)."""
+        gid = _gid(guild_id)
+        if gid is None:
+            return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import save_acl
-        save_acl(int(guild_id), {})
+        save_acl(gid, {})
         _invalidate_perm_cache(guild_id)
         return jsonify({'success': True})
 
@@ -309,6 +333,9 @@ def register(ctx):
     @role_required('owner')
     def api_role_permissions_preset(guild_id):
         """Применить пресет: moderator / admin / member / everyone."""
+        gid = _gid(guild_id)
+        if gid is None:
+            return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import all_categories, save_acl
         data = request.get_json(silent=True) or {}
         preset = data.get('preset', '')
@@ -328,7 +355,7 @@ def register(ctx):
             if cat in cats_by_preset:
                 acl[cat] = role_ids
                 materialize_category(acl, cat)  # правило на КАЖДУЮ команду
-        save_acl(int(guild_id), acl)
+        save_acl(gid, acl)
         _invalidate_perm_cache(guild_id)
         return jsonify({'success': True, 'preset': preset})
 
@@ -337,17 +364,20 @@ def register(ctx):
     @role_required('owner')
     def api_role_permissions_category_everyone(guild_id):
         """Открыть категорию для всех: снять ограничения с категории и всех её команд."""
+        gid = _gid(guild_id)
+        if gid is None:
+            return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import all_categories, load_acl, save_acl
         data = request.get_json(silent=True) or {}
         category = data.get('category', '').strip()
         if not category:
             return jsonify({'success': False, 'error': 'Не указана категория'}), 400
         cmds = all_categories().get(category, [])
-        acl = load_acl(int(guild_id))
+        acl = load_acl(gid)
         acl.pop(category, None)   # снять ограничение с категории
         for c in cmds:
             acl.pop(c, None)      # снять ограничение с каждой команды
-        save_acl(int(guild_id), acl)
+        save_acl(gid, acl)
         _invalidate_perm_cache(guild_id)
         return jsonify({'success': True, 'category': category,
                         'commands_cleared': len(cmds)})
@@ -357,6 +387,9 @@ def register(ctx):
     @role_required('owner')
     def api_role_permissions_category_assign(guild_id):
         """Топливо: назначить несколько ролей сразу на целую категорию (все её команды)."""
+        gid = _gid(guild_id)
+        if gid is None:
+            return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import (load_acl, save_acl,
                                             materialize_category, all_categories)
         data = request.get_json(silent=True) or {}
@@ -367,7 +400,7 @@ def register(ctx):
         # ЖИВОЙ каталог (как на странице) + legacy: раньше искали только в
         # статическом списке, названия не совпадали — «Дать ролям» писал пусто
         cmds = all_categories().get(category, [])
-        acl = load_acl(int(guild_id))
+        acl = load_acl(gid)
         materialize_category(acl, category)
         if role_ids:
             for c in cmds:
@@ -375,7 +408,7 @@ def register(ctx):
         else:
             for c in cmds:
                 acl.pop(c, None)
-        save_acl(int(guild_id), acl)
+        save_acl(gid, acl)
         _invalidate_perm_cache(guild_id)
         return jsonify({'success': True, 'category': category,
                         'role_ids': role_ids, 'commands': len(cmds)})
