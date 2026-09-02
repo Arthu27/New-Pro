@@ -3049,6 +3049,7 @@
     cv.id = 'fx-confetti';
     doc.body.appendChild(cv);
     var ctx = cv.getContext('2d');
+    if (!ctx) { cv.remove(); return; }   /* нет 2d-контекста — иначе каждый кадр падает */
     var W = cv.width = win.innerWidth;
     var H = cv.height = win.innerHeight;
     var parts = [];

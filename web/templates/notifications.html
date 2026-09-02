@@ -43,26 +43,6 @@
     <div>
       <h3 style="margin-top: 0;">События для уведомлений</h3>
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-ticket-open" checked style="width: 20px; height: 20px;">
-          <span>Новый тикет открыт</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-ticket-message" checked style="width: 20px; height: 20px;">
-          <span>Новое сообщение в тикете</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-ticket-close" checked style="width: 20px; height: 20px;">
-          <span>Тикет закрыт</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-priority-change" style="width: 20px; height: 20px;">
-          <span>Изменение приоритета</span>
-        </label>
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-          <input type="checkbox" id="event-assignment" style="width: 20px; height: 20px;">
-          <span>Назначение тикета</span>
-        </label>
         <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">Модерация и заявки</div>
         <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
           <input type="checkbox" id="event-warn" checked style="width: 20px; height: 20px;">
@@ -75,6 +55,14 @@
         <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
           <input type="checkbox" id="event-staff-apply" checked style="width: 20px; height: 20px;">
           <span>Новая заявка в персонал</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-appeal-new" checked style="width: 20px; height: 20px;">
+          <span>Новая апелляция</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <input type="checkbox" id="event-report-new" checked style="width: 20px; height: 20px;">
+          <span>Новый репорт от участника</span>
         </label>
         <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 6px; letter-spacing: 1px; text-transform: uppercase;">Панельные правки</div>
         <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
@@ -201,14 +189,11 @@ async function loadNotificationSettings() {
       document.getElementById('notify-email').checked = settings.email_enabled || false;
 
       // События
-      document.getElementById('event-ticket-open').checked = settings.event_ticket_open || false;
-      document.getElementById('event-ticket-message').checked = settings.event_ticket_message || false;
-      document.getElementById('event-ticket-close').checked = settings.event_ticket_close || false;
-      document.getElementById('event-priority-change').checked = settings.event_priority_change || false;
-      document.getElementById('event-assignment').checked = settings.event_assignment || false;
       document.getElementById('event-warn').checked = settings.event_warn !== false;
       document.getElementById('event-mod-action').checked = settings.event_mod_action !== false;
       document.getElementById('event-staff-apply').checked = settings.event_staff_apply !== false;
+      document.getElementById('event-appeal-new').checked = settings.event_appeal_new !== false;
+      document.getElementById('event-report-new').checked = settings.event_report_new !== false;
       document.getElementById('event-karma').checked = settings.event_karma !== false;
       document.getElementById('event-birthdays').checked = settings.event_birthdays !== false;
       document.getElementById('event-social').checked = settings.event_social !== false;
@@ -344,14 +329,11 @@ async function saveNotificationSettings() {
     web_enabled: document.getElementById('notify-web').checked,
     discord_enabled: document.getElementById('notify-discord').checked,
     email_enabled: document.getElementById('notify-email').checked,
-    event_ticket_open: document.getElementById('event-ticket-open').checked,
-    event_ticket_message: document.getElementById('event-ticket-message').checked,
-    event_ticket_close: document.getElementById('event-ticket-close').checked,
-    event_priority_change: document.getElementById('event-priority-change').checked,
-    event_assignment: document.getElementById('event-assignment').checked,
     event_warn: document.getElementById('event-warn').checked,
     event_mod_action: document.getElementById('event-mod-action').checked,
     event_staff_apply: document.getElementById('event-staff-apply').checked,
+    event_appeal_new: document.getElementById('event-appeal-new').checked,
+    event_report_new: document.getElementById('event-report-new').checked,
     event_karma: document.getElementById('event-karma').checked,
     event_birthdays: document.getElementById('event-birthdays').checked,
     event_social: document.getElementById('event-social').checked,
