@@ -219,18 +219,20 @@ r = client.get(f'/api/role-permissions/{GID}')
 body = r.get_json()
 check(r.status_code == 200 and body.get('success'), f'GET категории -> {r.status_code}')
 cats = body.get('categories', {})
-# категории = ЖИВОЙ каталог бота (не хардкод): призраков удалённых команд нет
-from services import command_registry as CR
-from services.permission_acl import command_categories as live_cats
-live = live_cats()
-check(cats == live, 'категории панели = живой каталог бота (1:1)')
+# Страница «Права команд» отдаёт ПОЛНЫЙ список команд (all_categories):
+# живые видимые slash + реальные префиксные/мод-команды (staff-stats и т.п.),
+# чтобы владелец мог разрешить ЛЮБУЮ рабочую команду, а не только 6 в «/».
+from services.permission_acl import all_categories as full_cats
+full = full_cats()
+check(cats == full, 'категории панели = полный каталог команд (all_categories)')
 check('Модерация' in cats and 'modpanel' in cats.get('Модерация', []),
       'категория Модерация содержит живую команду modpanel')
-check('ban' not in cats.get('Модерация', []) and 'kick' not in cats.get('Модерация', []),
-      'удалённые ban/kick НЕ показываются как призраки')
+# Новая команда статистики видна в правах (жалоба владельца: её не было)
+check('staff-stats' in cats.get('Модерация', []),
+      'команда staff-stats (статистика) присутствует в правах команд')
+check('ban' in cats.get('Модерация', []), 'реальная команда ban присутствует для настройки')
 total_cmds = sum(len(v) for v in cats.values())
-cat_total = CR.catalog()['total']
-check(total_cmds == cat_total, f'всего команд в панели: {total_cmds} == каталогу {cat_total}')
+check(total_cmds >= 40, f'полный каталог отдаёт много команд для настройки: {total_cmds}')
 
 r = client.post(f'/api/role-permissions/{GID}/set',
                 data=json.dumps({'command': 'report', 'role_ids': ['900']}),

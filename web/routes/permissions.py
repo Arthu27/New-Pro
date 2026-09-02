@@ -186,7 +186,7 @@ def register(ctx):
         а клиенту по ETag отдаём 304 (без тела) — опрос «не изменилось»
         стоит миллисекунды и не пересчитывает роли/каталог/ACL.
         """
-        from services.permission_acl import (command_categories, ACTIONS,
+        from services.permission_acl import (all_categories, ACTIONS,
                                             load_action_acl, effective_acl)
         gid = int(guild_id)
         now = time.time()
@@ -215,7 +215,13 @@ def register(ctx):
         payload = {
             'success': True,
             'roles': roles,
-            'categories': command_categories(),
+            # ПОЛНЫЙ список команд (живой каталог видимых slash + реальные
+            # префиксные/мод-команды вроде staff-stats): страница «Права
+            # команд» должна давать разрешить ЛЮБУЮ рабочую команду, а не
+            # только 6 видимых в «/» slash (заказ владельца — новая команда
+            # статистики не отображалась). Призраков удалённых тут нет —
+            # список статически сверен с реальными когами.
+            'categories': all_categories(),
             'acl': effective_acl(gid),
             'actions': ACTIONS,
             'action_acl': load_action_acl(gid),
@@ -265,7 +271,7 @@ def register(ctx):
         """Установить роли для команды/категории."""
         from services.permission_acl import (set_rule, clear_rule, load_acl,
                                             save_acl, materialize_category,
-                                            command_categories)
+                                            all_categories)
         data = request.get_json(silent=True) or {}
         command = data.get('command', '').strip()
         role_ids = data.get('role_ids', []) or []
@@ -274,7 +280,7 @@ def register(ctx):
         # у команды может быть правило на КАТЕГОРИЮ — разворачиваем его в
         # явные правила на команды категории, чтобы правка одной команды не
         # пересекалась с категорийным ограничением (иначе «выдал — а не дал»)
-        for cat, cmds in command_categories().items():
+        for cat, cmds in all_categories().items():
             if command in cmds:
                 acl = load_acl(int(guild_id))
                 if cat in acl:

@@ -213,7 +213,11 @@ class _M:
     class _P: administrator = False
     guild_permissions = _P(); bot = False
     def __init__(self, rid): self.roles = [type('R', (), {'id': rid})()]
-some_cmd = live_cmds[0] if live_cmds else 'help'
+# Для проверки именно КОМАНДНОГО ACL берём команду без отдельного
+# «классического» action-гейта (ban/mute/warn…), иначе нужен ещё action_acl.
+from services.permission_acl import COMMAND_ACTIONS as _CA
+_action_free = [c for c in live_cmds if c not in _CA]
+some_cmd = (_action_free or live_cmds or ['help'])[0]
 some_role = (acl.get(some_cmd) or ['9001'])[0]
 check(has_access(777, some_cmd, _M(some_role)) is True,
       f'выданная роль реально проходит has_access ({some_cmd})')

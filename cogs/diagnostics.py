@@ -90,8 +90,80 @@ class Diagnostics (commands .Cog ):
         self .repair_count =defaultdict (int )
         self .alert_dm_sent ={}
         self .watching =True 
+        # Кэш тяжёлой статистики psutil: open_files() на Windows делает
+        # os.stat() по каждому хэндлу и МОРОЗИТ event loop на секунды
+        # (поймали зависание шлюза 6.9с). Дёргаем не чаще раза в 5 минут.
+        self ._open_files_cache =None 
+        self ._open_files_ts =0.0 
         # Start monitoring
         self .health_monitor .start ()
+
+    # ── Системная статистика psutil (БЕЗ риска заморозить event loop) ──────
+    def _collect_sys_stats_sync (self ):
+        """Синхронно собрать метрики процесса. КАЖДОЕ поле изолировано:
+        сбой/медленный вызов одной метрики не роняет остальные и не отдаёт
+        мусор. open_files() троттлится (дорогой на Windows)."""
+        stats ={"memory_mb":0.0 ,"cpu_percent":0.0 ,"threads":0 ,"open_files":0 }
+        try :
+            proc =psutil .Process ()
+        except Exception as _ex :
+            log .debug ("sys_stats: Process(): %s" ,_ex )
+            return stats 
+        try :
+            stats ["memory_mb"]=round (proc .memory_info ().rss /1024 /1024 ,1 )
+        except Exception as _ex :
+            log .debug ("sys_stats: memory_info: %s" ,_ex )
+        try :
+            stats ["cpu_percent"]=round (proc .cpu_percent (interval =None ),1 )
+        except Exception as _ex :
+            log .debug ("sys_stats: cpu_percent: %s" ,_ex )
+        try :
+            stats ["threads"]=proc .num_threads ()
+        except Exception as _ex :
+            log .debug ("sys_stats: num_threads: %s" ,_ex )
+        # open_files — самый дорогой вызов (на Windows сканирует хэндлы и
+        # stat-ит пути): не чаще раза в 5 минут, при ошибке отдаём 0.
+        try :
+            now =time .time ()
+            if self ._open_files_cache is None or now -self ._open_files_ts >=300 :
+                self ._open_files_cache =len (proc .open_files ())
+                self ._open_files_ts =now 
+            stats ["open_files"]=self ._open_files_cache 
+        except Exception as _ex :
+            log .debug ("sys_stats: open_files: %s" ,_ex )
+            stats ["open_files"]=0 
+        return stats 
+
+    async def get_health_snapshot_async(self):
+        """Полный снимок здоровья БЕЗ блокировки event loop.
+
+        Тяжёлый psutil (особенно open_files на Windows) и сбор метрик бота
+        уходят в рабочий поток; у потока есть таймаут — даже если системный
+        вызов завис, шлюз Discord не встанет: вернём лёгкий снимок без psutil.
+        """
+        loop = asyncio.get_event_loop()
+        try:
+            fut = loop.run_in_executor(None, self.get_health_snapshot)
+            return await asyncio.wait_for(fut, timeout=4.0)
+        except Exception as _ex:
+            log.debug("get_health_snapshot_async: %s", _ex)
+            return self.get_health_snapshot_fast()
+
+    def get_health_snapshot_fast(self):
+        """Лёгкий снимок без psutil (фоллбэк, если системный сбор завис)."""
+        lat =getattr (self .bot ,"latency" ,None )
+        lat_ms =round (lat *1000 ,1 )if lat is not None and math .isfinite (lat )else 0.0 
+        return {
+        "timestamp":time .time (),"uptime_sec":time .time ()-self .start_time ,
+        "guilds":len (self .bot .guilds )if self .bot else 0 ,
+        "users":sum (g .member_count or 0 for g in self .bot .guilds )if self .bot else 0 ,
+        "cogs_loaded":len (self .bot .cogs )if self .bot else 0 ,
+        "commands":len (self .bot .commands )if self .bot else 0 ,
+        "latency_ms":lat_ms ,
+        "errors_last_min":sum (1 for e in self .error_log if time .time ()-e ["ts"]<60 ),
+        "is_ws_connected":False ,"memory_mb":0.0 ,"cpu_percent":0.0 ,
+        "threads":0 ,"open_files":0 ,
+        }
 
     def cog_unload (self ):
         self .health_monitor .cancel ()
@@ -132,7 +204,9 @@ class Diagnostics (commands .Cog ):
     async def health_monitor (self ):
         """Run every minute, check vitals, trigger repairs if needed"""
         try :
-            health =self .get_health_snapshot ()
+            # ВАЖНО: снимок уходит в рабочий поток (psutil/open_files на
+            # Windows морозит event loop шлюза). Таймаут внутри async-версии.
+            health =await self .get_health_snapshot_async ()
             # Persist
             self .perf_history .append (health )
             try :
@@ -188,16 +262,16 @@ class Diagnostics (commands .Cog ):
         "errors_last_min":sum (1 for e in self .error_log if time .time ()-e ["ts"]<60 ),
         "is_ws_connected":is_connected ,
         }
-        # System resources
+        # System resources — собираем в отдельном хелпере (каждое поле
+        # изолировано, open_files троттлится), чтобы синхронный сбой/залипание
+        # psutil не ронял снимок и не отдавал мусор.
         try :
-            process =psutil .Process ()
-            snapshot ["memory_mb"]=round (process .memory_info ().rss /1024 /1024 ,1 )
-            snapshot ["cpu_percent"]=round (process .cpu_percent (interval =None ),1 )
-            snapshot ["threads"]=process .num_threads ()
-            snapshot ["open_files"]=len (process .open_files ())
+            snapshot .update (self ._collect_sys_stats_sync ())
         except Exception :
             snapshot ["memory_mb"]=0 
             snapshot ["cpu_percent"]=0 
+            snapshot ["threads"]=0 
+            snapshot ["open_files"]=0 
         return snapshot 
 
         # AUTO-REPAIR 
@@ -321,7 +395,7 @@ class Diagnostics (commands .Cog ):
     async def health_cmd (self ,interaction :discord .Interaction ):
         """Показать текущее здоровье бота: нагрузку, память и статус"""
         ctx =InterCtx (interaction )
-        h =self .get_health_snapshot ()
+        h =await self .get_health_snapshot_async ()
         embed =discord .Embed (title =" Bot Health",color =self ._health_color (h ))
         # Status indicator
         status_emoji ="🟢"if h ["latency_ms"]<300 and h ["memory_mb"]<700 else "🟡"if h ["latency_ms"]<800 and h ["memory_mb"]<1000 else ""
@@ -363,7 +437,7 @@ class Diagnostics (commands .Cog ):
         if mode =="errors":
             await self ._diag_errors (ctx ,сколько )
             return 
-        h =self .get_health_snapshot ()
+        h =await self .get_health_snapshot_async ()
         issues =[]
         if h ["memory_mb"]>THRESHOLDS ["memory_mb"]["warn"]:
             issues .append (f" Высокая память: {h['memory_mb']}MB (порог {THRESHOLDS['memory_mb']['warn']}MB)")
@@ -467,6 +541,28 @@ class Diagnostics (commands .Cog ):
         # /update откатывал бота на старую ветку без фиксов.
         _repo ,_branch =await asyncio .to_thread (SU ._source )
         edit =interaction .followup .edit_message
+        # ── Windows: старая консоль закрывается СРАЗУ, обновление и запуск
+        # идут в ОТДЕЛЬНОМ новом окне (update_silent.bat: гасит этот процесс,
+        # тянет код git->zip, ставит зависимости, поднимает свежую консоль).
+        if sys .platform .startswith ('win'):
+            updater =os .path .join (bot_dir ,'update_silent.bat')
+            try :
+                import subprocess as _sp
+                _sp .Popen (
+                ['cmd','/c','start','"Hakumo Updater"','cmd','/k',updater ,
+                str (os .getpid ()),str (_branch or 'main')],
+                cwd =bot_dir ,close_fds =True ,
+                creationflags =getattr (_sp ,'CREATE_NEW_CONSOLE' ,0 )or 0 )
+            except Exception as _ue :
+                await interaction .followup .send (
+                f" Не удалось запустить обновлятор: {_ue }. Запусти update.bat вручную.",ephemeral =True )
+                return
+            await interaction .followup .send (
+                " Обновление запущено в отдельном окне. Эта консоль сейчас "
+                "закроется, после скачивания бот сам откроется в новом окне и "
+                "отчитается. Данные и .env не трогаются.",ephemeral =True )
+            await asyncio .sleep (2 )
+            os ._exit (0 )
         msg =await interaction .followup .send (
             f" Обновление: проверяю свежую версию ветки **{_branch}** из `{_repo}`…",wait =True )
         # ── 0. Уже свежий? Тогда не качаем и не перезапускаемся вообще.
