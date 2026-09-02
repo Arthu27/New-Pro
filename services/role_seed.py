@@ -66,7 +66,7 @@ def apply_role_seed(force=False):
     Никогда не бросает исключение наружу: сид не должен ронять старт.
     """
     report = {'applied': False, 'role_map_added': [], 'ban_role': False,
-              'reason': ''}
+              'action_acl_actions': 0, 'action_acl_roles': [], 'reason': ''}
     try:
         # Демо/превью/тесты — не сеем (иначе боевые роли осели бы в фейковых
         # данных витрины и тестовых временных каталогах).
@@ -102,7 +102,48 @@ def apply_role_seed(force=False):
         if report['role_map_added']:
             _write_json(ROLE_MAP_PATH, role_map)
 
-        # 2) punish_roles: роль бана для главного сервера (если не задана).
+        # 2) action ACL: дефолтные разрешения действий для ролей персонала.
+        # Строгая модель permission_acl — default-deny: на чистом сервере без
+        # правил варн/мут/бан заблокированы («варны не работают»). Засеиваем
+        # все действия ролям указанных тиров (mod/curator/admin). Только
+        # ДОПИСЫВАЕМ роли к уже существующим спискам: ручные запреты владельца
+        # в панели не трогаем, пустые правила (явный запрет) не перетираем.
+        action_tiers = [str(t).strip() for t in
+                        ((seed.get('action_default') or {}).get('tiers') or [])]
+        action_tiers = [t for t in action_tiers if t in ('mod', 'curator', 'admin', 'owner')]
+        if action_tiers:
+            try:
+                from services.permission_acl import ACTIONS, load_action_acl, save_action_acl
+                # Роли сидовых тиров (из итоговой role_map — её уже дополнили выше).
+                seed_role_ids = [rid for rid, tier in role_map.items()
+                                 if tier in action_tiers]
+                gid = _main_guild_id()
+                if seed_role_ids and gid:
+                    acl = load_action_acl(gid)
+                    if not isinstance(acl, dict):
+                        acl = {}
+                    changed = 0
+                    for action in ACTIONS:
+                        # Задаём дефолт ТОЛЬКО там, где правила ещё нет вообще.
+                        # Пустой список = default-deny («не настроено» → чиним).
+                        # Если владелец уже задал свой список (сузил до админа
+                        # или, наоборот, расширил) — НЕ трогаем: любое ручное
+                        # правило неприкосновенно, иначе сид бы отменял запреты.
+                        cur = acl.get(action)
+                        if isinstance(cur, list) and cur:
+                            continue
+                        acl[action] = list(seed_role_ids)
+                        changed += 1
+                    if changed:
+                        save_action_acl(gid, acl)
+                    report['action_acl_actions'] = changed
+                    report['action_acl_roles'] = seed_role_ids
+                elif seed_role_ids and not gid:
+                    _log.debug('action ACL пропущен: боевой MAIN_GUILD_ID не задан')
+            except Exception as _ex:
+                _log.warning('role_seed action ACL: %s', _ex)
+
+        # 3) punish_roles: роль бана для главного сервера (если не задана).
         ban_role = int((seed.get('punish_roles') or {}).get('ban') or 0)
         gid = _main_guild_id()
         if ban_role and gid:
@@ -134,8 +175,9 @@ def apply_role_seed(force=False):
 
         report['applied'] = True
         report['reason'] = 'ok'
-        _log.info('role_seed v%s применён: role_map +%s, ban_role=%s',
-                  version, report['role_map_added'], report['ban_role'])
+        _log.info('role_seed v%s применён: role_map +%s, ban_role=%s, action_acl=%s действий ролям %s',
+                  version, report['role_map_added'], report['ban_role'],
+                  report['action_acl_actions'], report['action_acl_roles'])
     except Exception as _ex:
         report['reason'] = f'error: {_ex}'
         _log.warning('apply_role_seed: %s', _ex)

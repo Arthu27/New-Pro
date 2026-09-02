@@ -143,11 +143,16 @@
 </div>
 <div class="quick-cmd-suggest" id="quickCmdSuggest" style="display:none;margin:-6px 0 14px"></div>
 
-<!-- Быстрые действия -->
+<!-- Быстрые действия: плитки фильтруются по тиру — закрытое ролью не показываем,
+     чтобы мод/куратор не видели админский Анти-рейд (его страница отдаёт 403). -->
+{% set _lvl = {'uye':0,'mod':1,'curator':2,'admin':3,'owner':4} %}
+{% set _role_lvl = _lvl.get(panel_role or role or 'uye', 0) %}
 <div class="cc-quick" style="margin-bottom:14px">
   <a class="cc-tile tone-info" href="/temp-moderation"><span class="cc-ico"><i class="fas fa-clock"></i></span><span><b>Новая мера</b><small>Мьют или бан с таймером</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   <a class="cc-tile tone-warn" href="/warnings"><span class="cc-ico"><i class="fas fa-triangle-exclamation"></i></span><span><b>Выдать варн</b><small>Очередь предупреждений</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  {% if _role_lvl >= 3 %}
   <a class="cc-tile tone-err" href="/antiraid"><span class="cc-ico"><i class="fas fa-shield-virus"></i></span><span><b>Анти-рейд</b><small>Экстренная защита от волн</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
+  {% endif %}
   <a class="cc-tile" href="/antifake"><span class="cc-ico"><i class="fas fa-user-secret"></i></span><span><b>Скан профиля</b><small>Проверка на подделку</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   <a class="cc-tile tone-info" href="/autofilter"><span class="cc-ico"><i class="fas fa-filter"></i></span><span><b>Проверить текст</b><small>Тест автофильтра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>
   <a class="cc-tile tone-ok" href="/appeals"><span class="cc-ico"><i class="fas fa-scale-balanced"></i></span><span><b>Апелляции</b><small>Очередь пересмотра</small></span><i class="fas fa-arrow-right cc-arrow"></i></a>

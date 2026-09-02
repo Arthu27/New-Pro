@@ -2755,14 +2755,19 @@
 
     var wrap = doc.createElement('div');
     wrap.className = 'fab';
+    // min_role: пункты только для админа+ скрыты от мода/куратора (страница
+    // всё равно отдала бы 403 — не показываем ведущую в никуда ссылку).
+    var FAB_LEVELS = { uye: 0, mod: 1, curator: 2, admin: 3, owner: 4 };
+    var fabRole = (host.getAttribute('data-panel-role') || 'uye');
+    var fabLvl = FAB_LEVELS[fabRole] != null ? FAB_LEVELS[fabRole] : 0;
     var items = [
-      { icon: 'fa-clock', label: 'Новая мера', href: '/temp-moderation', tone: 'tone-info' },
-      { icon: 'fa-triangle-exclamation', label: 'Выдать варн', href: '/warnings', tone: 'tone-warn' },
-      { icon: 'fa-table-columns', label: 'Задача команде', href: '/team-board', tone: '' },
-      { icon: 'fa-house-lock', label: 'Локдаун', href: '/lockdown', tone: 'tone-err' },
-      { icon: 'fa-user-secret', label: 'Скан профиля', href: '/antifake', tone: '' },
-      { icon: 'fa-palette', label: 'Студия темы', href: '/theme-studio', tone: 'tone-ok' }
-    ];
+      { icon: 'fa-clock', label: 'Новая мера', href: '/temp-moderation', tone: 'tone-info', min: 1 },
+      { icon: 'fa-triangle-exclamation', label: 'Выдать варн', href: '/warnings', tone: 'tone-warn', min: 1 },
+      { icon: 'fa-table-columns', label: 'Задача команде', href: '/team-board', tone: '', min: 1 },
+      { icon: 'fa-house-lock', label: 'Локдаун', href: '/lockdown', tone: 'tone-err', min: 3 },
+      { icon: 'fa-user-secret', label: 'Скан профиля', href: '/antifake', tone: '', min: 1 },
+      { icon: 'fa-palette', label: 'Студия темы', href: '/theme-studio', tone: 'tone-ok', min: 0 }
+    ].filter(function (it) { return fabLvl >= (it.min || 0); });
     wrap.innerHTML = items.map(function (it) {
       return '<a class="fab-item ' + it.tone + '" href="' + esc0(it.href) + '">' +
         '<span class="ico"><i class="fas ' + it.icon + '"></i></span>' + esc0(it.label) + '</a>';
