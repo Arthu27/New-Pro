@@ -184,22 +184,38 @@ class Diagnostics (commands .Cog ):
         "traceback":"".join (traceback .format_exception (type (error ),error ,error .__traceback__ ))[-1000 :],
         }
         self .error_log .append (entry )
-        self .cog_perf [ctx .command .cog_name if ctx .command and hasattr (ctx .command ,'cog_name')else "unknown"]["errors"]+=1 
-        # Persist
+        self .cog_perf [ctx .command .cog_name if ctx .command and hasattr (ctx .command ,'cog_name')else "unknown"]["errors"]+=1
+        # Persist — дисковый I/O уводим в поток, чтобы не морозить loop.
         try :
-            f =f"{DATA_DIR}/error_log.json"
-            log =[]
-            if os .path .exists (f ):
-                with open (f ,"r",encoding ="utf-8")as fp :
-                    log =json .load (fp )
-            log .append (entry )
-            log =log [-1000 :]
-            with open (f ,"w",encoding ="utf-8")as fp :
-                json .dump (log ,fp ,ensure_ascii =False ,indent =2 )
+            await asyncio .to_thread (self ._persist_error_sync ,entry )
         except Exception as _ex:
             _log.debug("on_command_error(): подавлено: %s", _ex)
 
-            # HEALTH MONITORING TASK 
+    def _persist_error_sync (self ,entry ):# noqa: N802
+        """Дозапись ошибки в data/error_log.json (синхронный дисковый I/O).
+
+        Вызывается только через asyncio.to_thread — файловый open/json на
+        Windows под антивирусом может дать задержку, его нельзя делать в
+        event loop'е."""
+        f =f"{DATA_DIR}/error_log.json"
+        log =[]
+        if os .path .exists (f ):
+            with open (f ,"r",encoding ="utf-8")as fp :
+                log =json .load (fp )
+        log .append (entry )
+        log =log [-1000 :]
+        with open (f ,"w",encoding ="utf-8")as fp :
+            json .dump (log ,fp ,ensure_ascii =False ,indent =2 )
+
+    def _persist_health_sync (self ,payload ):# noqa: N802
+        """Запись снимка здоровья в data/bot_health.json (синхронный I/O).
+
+        Зовётся только через asyncio.to_thread из health_monitor, чтобы
+        дисковая запись раз в минуту не блокировала event loop."""
+        with open (f"{DATA_DIR}/bot_health.json","w",encoding ="utf-8")as fp :
+            json .dump (payload ,fp ,ensure_ascii =False ,indent =2 )
+
+            # HEALTH MONITORING TASK
     @tasks .loop (minutes =1 )
     async def health_monitor (self ):
         """Run every minute, check vitals, trigger repairs if needed"""
@@ -209,16 +225,17 @@ class Diagnostics (commands .Cog ):
             health =await self .get_health_snapshot_async ()
             # Persist
             self .perf_history .append (health )
+            payload ={
+            "current":health ,
+            "history":list (self .perf_history ),
+            "error_log":list (self .error_log )[-50 :],
+            "cog_perf":dict (self .cog_perf ),
+            "repair_count":dict (self .repair_count ),
+            "uptime_sec":time .time ()-self .start_time ,
+            }
+            # Запись на диск — в рабочий поток (открытие/дамп не морозят loop).
             try :
-                with open (f"{DATA_DIR}/bot_health.json","w",encoding ="utf-8")as fp :
-                    json .dump ({
-                    "current":health ,
-                    "history":list (self .perf_history ),
-                    "error_log":list (self .error_log )[-50 :],
-                    "cog_perf":dict (self .cog_perf ),
-                    "repair_count":dict (self .repair_count ),
-                    "uptime_sec":time .time ()-self .start_time ,
-                    },fp ,ensure_ascii =False ,indent =2 )
+                await asyncio .to_thread (self ._persist_health_sync ,payload )
             except Exception as _ex:
                 _log.debug("health_monitor(): подавлено: %s", _ex)
                 # Auto-repair
@@ -343,44 +360,82 @@ class Diagnostics (commands .Cog ):
         except Exception as _ex:
             _log.debug("_notify_admin(): подавлено: %s", _ex)
 
-            # HOT-RELOAD 
+    def _scan_cogs_sync (self ,cog_name =None ):# noqa: N802
+        """Синхронная (дисковая) часть hot-reload'а: список модулей, чтение и
+        хэш файлов, сравнение с кэшем. Файловый I/O и hashlib МОРОЗЯТ event
+        loop, поэтому вызывается только через asyncio.to_thread.
+
+        Возвращает (reload_list, failed, updates):
+          reload_list — имена модулей, чьё содержимое изменилось (или
+                        указанный явно модуль — его перезагружаем всегда);
+          failed      — [(модуль, причина), ...] по ненайденным/нечитаемым;
+          updates     — [(модуль, new_hash), ...] — новые хэши для кэша.
+        """
+        if cog_name :
+            cogs_to_check =[cog_name ]
+        else :
+            try :
+                cogs_to_check =[f [:-3 ]for f in os .listdir ("cogs")
+                                if f .endswith (".py")and f !="__init__.py"]
+            except Exception as _ex :# нет каталога/нет прав — не роняем команду
+                _log .debug ("hotreload: listdir cogs: %s" ,_ex )
+                return [],[(None ,f"не удалось прочитать каталог cogs: {_ex}")],[]
+        reload_list =[]
+        failed =[]
+        updates =[]
+        for cog in cogs_to_check :
+            filepath =f"cogs/{cog}.py"
+            if not os .path .exists (filepath ):
+                failed .append ((cog ,"файл не найден"))
+                continue
+            try :
+                with open (filepath ,"rb")as f :
+                    new_hash =hashlib .md5 (f .read ()).hexdigest ()
+            except Exception as _ex :# не читается/нет прав — в ошибки, не в цикл
+                _log .debug ("hotreload: hash %s: %s" ,filepath ,_ex )
+                failed .append ((cog ,f"не удалось прочитать файл: {_ex}"))
+                continue
+            old_hash =self .cog_hash_cache .get (cog )
+            updates .append ((cog ,new_hash ))
+            # Явно указанный модуль перезагружаем всегда; иначе — только
+            # при реальном изменении содержимого.
+            if cog_name or old_hash !=new_hash :
+                reload_list .append (cog )
+        return reload_list ,failed ,updates
+
+            # HOT-RELOAD
     @app_commands .command (name ="hotreload",description ="Горячая перезагрузка модулей (владелец бота)")
     @app_commands .describe (модуль ="Имя модуля без .py — не указано, все изменённые")
     @app_commands .default_permissions (administrator =True )
     async def hotreload (self ,interaction :discord .Interaction ,модуль :str =None ):
-        """Горячая перезагрузка одного или всех модулей по времени изменения файлов"""
+        """Горячая перезагрузка одного или всех модулей по содержимому файлов.
+
+        Дисковый скан (listdir/open/hashlib) уходит в рабочий поток — шлюз
+        Discord не встаёт, даже если антивирус/диск держат файл; в корутине
+        остаётся только сама перезагрузка расширений (она async)."""
         if not await _owner_only (interaction ):
-            return 
+            return
         ctx =InterCtx (interaction )
-        cog_name =модуль 
-        if cog_name :
-            cogs_to_check =[cog_name ]
-        else :
-            cogs_to_check =[f [:-3 ]for f in os .listdir ("cogs")if f .endswith (".py")and f !="__init__.py"]
+        cog_name =модуль
+        # Весь файловый I/O и хэширование — в потоке, БЕЗ блокировки loop'а.
+        reload_list ,failed ,updates =await asyncio .to_thread (
+            self ._scan_cogs_sync ,cog_name )
+        # Кэш хэшей обновляем тем, что реально прочитали с диска.
+        for _cog ,_h in updates :
+            self .cog_hash_cache [_cog ]=_h
         reloaded =[]
-        failed =[]
-        for cog in cogs_to_check :
-            filepath =f"cogs/{cog}.py"
-            if not os .path .exists (filepath ):
-                failed .append (f"{cog}: заметок found")
-                continue 
+        failed_txt =[f"{c}: {why}"for c ,why in failed ]
+        for cog in reload_list :
+            ext =f"cogs.{cog}"
             try :
-            # Compute file hash
-                with open (filepath ,"rb")as f :
-                    new_hash =hashlib .md5 (f .read ()).hexdigest ()
-                old_hash =self .cog_hash_cache .get (cog )
-                self .cog_hash_cache [cog ]=new_hash 
-                if old_hash ==new_hash :
-                    continue # no change
-                    # File changed — reload
-                ext =f"cogs.{cog}"
                 if ext in self .bot .extensions :
                     await self .bot .reload_extension (ext )
                 else :
                     await self .bot .load_extension (ext )
                 reloaded .append (cog )
             except Exception as e :
-                failed .append (f"{cog}: {e}")
+                failed_txt .append (f"{cog}: {e}")
+        failed =failed_txt
         embed =discord .Embed (title =" Hot Reload",color =0x00FF7F if not failed else 0xFBBF24 )
         if reloaded :
             embed .add_field (name =" Перезагружены",value =", ".join (reloaded )or "—",inline =False )
