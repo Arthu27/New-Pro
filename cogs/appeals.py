@@ -796,13 +796,16 @@ class Appeals(commands.Cog):
             return 'история наказаний недоступна'
 
     async def _fire_panel_event(self, item):
-        """Событие «новая апелляция» в колокольчик панели (веб)."""
+        """Событие «новая апелляция» в колокольчик панели (веб).
+
+        notify_event делает синхронный HTTP (webhook) и запись файла —
+        уводим в рабочий поток, чтобы не блокировать event loop."""
         try:
+            import asyncio as _asyncio
             from services.notification_dispatcher import notify_event
-            notify_event(
-                'appeal_new', None,
-                f'#{item["id"]} от **{item["user_name"]}**: '
-                f'{item["text"][:120]}')
+            _body = (f'#{item["id"]} от **{item["user_name"]}**: '
+                     f'{item["text"][:120]}')
+            await _asyncio.to_thread(notify_event, 'appeal_new', None, _body)
         except Exception as _ex:
             log.debug('appeals: событие колокольчика: %s', _ex)
 

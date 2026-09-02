@@ -29,10 +29,22 @@ _word_hint_ts = {}
 
 
 def _fire_new_event(event, body):
-    """Событие в колокольчик панели (веб). fail-safe: уведомления — не ядро."""
+    """Событие в колокольчик панели (веб). fail-safe: уведомления — не ядро.
+
+    notify_event делает синхронный HTTP (webhook) и запись файла; вызывается
+    из async-команд, поэтому тяжёлую часть уводим в рабочий поток — без
+    блокировки event loop."""
     try:
+        import asyncio as _asyncio
         from services.notification_dispatcher import notify_event
-        notify_event(event, None, body)
+        try:
+            _asyncio.get_running_loop()
+        except RuntimeError:
+            # нет активного loop'а (вызов из синхронного кода) — шлём напрямую
+            notify_event(event, None, body)
+        else:
+            _asyncio.get_running_loop().run_in_executor(
+                None, lambda: notify_event(event, None, body))
     except Exception as _ex:
         _log.debug('reports: событие %s: %s', event, _ex)
 
