@@ -39,9 +39,11 @@ ADM_R = '1189999426631122964'
 STAFF = [MOD_R, CUR_R, ADM_R]
 
 SEED = {
-    "version": 2,
+    "version": 3,
     "role_map": {MOD_R: "mod", CUR_R: "curator", ADM_R: "admin"},
-    "punish_roles": {"ban": 1083106265422643251},
+    "punish_roles": {"ban": 1083106265422643251,
+                     "mute": 943510457833095208,
+                     "vmute": 943510458621632522},
     "action_default": {"tiers": ["mod", "curator", "admin"]},
 }
 with open('config/role_seed.json', 'w', encoding='utf-8') as fh:
@@ -70,6 +72,13 @@ rm = json.load(open('data/role_map.json', encoding='utf-8'))
 check(rm.get(MOD_R) == 'mod', 'мод-роль в role_map')
 check(rm.get(ADM_R) == 'admin', 'админ-роль в role_map')
 check(os.path.exists(f'data/.role_seed.v{SEED["version"]}'), 'маркер версии поставлен')
+
+# роли наказаний (ban/mute/vmute) легли под гильдию
+pr = json.load(open('data/punish_roles.json', encoding='utf-8'))
+proles = pr.get(str(GID), {}).get('roles', {})
+check(proles.get('ban') == 1083106265422643251, 'роль бана засеяна')
+check(proles.get('mute') == 943510457833095208, 'роль чат-мута засеяна')
+check(proles.get('vmute') == 943510458621632522, 'роль войс-мута засеяна')
 
 from services.permission_acl import ACTIONS, load_action_acl, check_action  # noqa: E402
 acl = load_action_acl(GID)
@@ -118,7 +127,15 @@ check([str(r) for r in acl2['warn']] == [str(ADM_R)],
 check(set(STAFF) <= set(acl2.get('ban', [])),
       'нетронутые дефолты других действий на месте')
 
-print('== 5. демо-режим ничего не сеет ==')
+print('== 5. override guild_id (on_ready) сеет даже без MAIN_GUILD_ID ==')
+config.Config.MAIN_GUILD_ID = 0
+rep_ov = RS.apply_role_seed(force=True, guild_id=GID)
+ov = json.load(open('data/punish_roles.json', encoding='utf-8')).get(str(GID), {}).get('roles', {})
+check(ov.get('ban') == 1083106265422643251, 'punish-роли применены по override gid')
+check(load_action_acl(GID).get('mute') is not None, 'action_acl применён по override gid')
+config.Config.MAIN_GUILD_ID = GID
+
+print('== 6. демо-режим ничего не сеет ==')
 os.environ['DEMO_MODE'] = '1'
 shutil.rmtree('data', ignore_errors=True)
 os.makedirs('data', exist_ok=True)

@@ -38,8 +38,8 @@ rem --- 2. Обновляем код: git (дельты), при неудаче 
 echo [2/4] Обновляю код (git -> запасной архив)...
 python -c "import sys,os;sys.path.insert(0,os.getcwd());from services import self_update as SU;b=os.getcwd();ok,err,info=SU.git_update(b,'%BRANCH%');print('  git:',('обновлено' if ok else 'не вышел'),err or '');sys.exit(0 if ok else 1)"
 if errorlevel 1 (
-    echo   git не сработал - качаю архив ветки...
-    call update.bat /norestart
+    echo   git не сработал - качаю архив ветки и кладу только изменённое...
+    python "scripts\silent_zip_update.py" %BRANCH%
 )
 
 rem --- 3. Зависимости (тихо) ---------------------------------------

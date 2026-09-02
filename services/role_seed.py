@@ -46,27 +46,45 @@ def _write_json(path, data):
     os.replace(tmp, path)
 
 
-def _main_guild_id():
-    """Боевой MAIN_GUILD_ID из окружения (0/демо-фейк → None)."""
+_DEMO_GUILD = 987654321098765432
+
+
+def _main_guild_id(override=None):
+    """Боевой guild_id: явный override (от on_ready бота) → Config.MAIN_GUILD_ID.
+
+    0/демо-фейк → None. override полезен, когда .env ещё без MAIN_GUILD_ID, но
+    бот уже подключился к серверу в on_ready — тогда punish-роли и action_acl
+    применяются к реальной гильдии, а не пропускаются.
+    """
+    gid = 0
     try:
-        from config import Config
-        gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
-        # демо-витрина использует заведомо фейковый id — не сеем туда
-        if gid and gid != 987654321098765432:
-            return gid
-    except Exception as _ex:
-        _log.debug('main_guild_id: %s', _ex)
+        gid = int(override or 0)
+    except (TypeError, ValueError):
+        gid = 0
+    if not gid:
+        try:
+            from config import Config
+            gid = int(getattr(Config, 'MAIN_GUILD_ID', 0) or 0)
+        except Exception as _ex:
+            _log.debug('main_guild_id: %s', _ex)
+            gid = 0
+    # демо-витрина использует заведомо фейковый id — не сеем туда
+    if gid and gid != _DEMO_GUILD:
+        return gid
     return None
 
 
-def apply_role_seed(force=False):
+def apply_role_seed(force=False, guild_id=None):
     """Применить сид. Возвращает короткий отчёт-словарь (для логов/тестов).
 
     force=True — игнорировать маркер версии (для тестов/ручного прогона).
+    guild_id — явный боевой gid (on_ready бота передаёт реальную гильдию,
+    даже если MAIN_GUILD_ID в .env ещё не прописан).
     Никогда не бросает исключение наружу: сид не должен ронять старт.
     """
     report = {'applied': False, 'role_map_added': [], 'ban_role': False,
-              'action_acl_actions': 0, 'action_acl_roles': [], 'reason': ''}
+              'punish_added': [], 'action_acl_actions': 0,
+              'action_acl_roles': [], 'reason': ''}
     try:
         # Демо/превью/тесты — не сеем (иначе боевые роли осели бы в фейковых
         # данных витрины и тестовых временных каталогах).
@@ -117,7 +135,7 @@ def apply_role_seed(force=False):
                 # Роли сидовых тиров (из итоговой role_map — её уже дополнили выше).
                 seed_role_ids = [rid for rid, tier in role_map.items()
                                  if tier in action_tiers]
-                gid = _main_guild_id()
+                gid = _main_guild_id(guild_id)
                 if seed_role_ids and gid:
                     acl = load_action_acl(gid)
                     if not isinstance(acl, dict):
@@ -143,10 +161,12 @@ def apply_role_seed(force=False):
             except Exception as _ex:
                 _log.warning('role_seed action ACL: %s', _ex)
 
-        # 3) punish_roles: роль бана для главного сервера (если не задана).
-        ban_role = int((seed.get('punish_roles') or {}).get('ban') or 0)
-        gid = _main_guild_id()
-        if ban_role and gid:
+        # 3) punish_roles: роли наказаний (ban/mute/vmute) для главного
+        # сервера. Каждую роль ставим ТОЛЬКО если она ещё не задана — ручной
+        # выбор владельца в панели («Роли за наказания») неприкосновенен.
+        punish_seed = seed.get('punish_roles') or {}
+        gid = _main_guild_id(guild_id)
+        if punish_seed and gid:
             punish = _read_json(PUNISH_PATH, {})
             if not isinstance(punish, dict):
                 punish = {}
@@ -156,14 +176,22 @@ def apply_role_seed(force=False):
             roles = row.get('roles')
             if not isinstance(roles, dict):
                 roles = {}
-            if not int(roles.get('ban') or 0):
-                roles['ban'] = ban_role
+            added = []
+            for kind in ('ban', 'mute', 'vmute'):
+                rid = int(punish_seed.get(kind) or 0)
+                if rid and not int(roles.get(kind) or 0):
+                    roles[kind] = rid
+                    added.append(kind)
+            if added:
                 row['roles'] = roles
+                # сохраняем сопутствующую структуру (warn_levels/temps), если была
                 punish[str(gid)] = row
                 _write_json(PUNISH_PATH, punish)
-                report['ban_role'] = True
-        elif ban_role and not gid:
-            _log.debug('punish ban-role пропущен: боевой MAIN_GUILD_ID не задан')
+                report['punish_added'] = added
+                if 'ban' in added:
+                    report['ban_role'] = True
+        elif punish_seed and not gid:
+            _log.debug('punish-роли пропущены: боевой MAIN_GUILD_ID не задан')
 
         # маркер версии — прогон сделан
         try:
@@ -175,8 +203,8 @@ def apply_role_seed(force=False):
 
         report['applied'] = True
         report['reason'] = 'ok'
-        _log.info('role_seed v%s применён: role_map +%s, ban_role=%s, action_acl=%s действий ролям %s',
-                  version, report['role_map_added'], report['ban_role'],
+        _log.info('role_seed v%s применён: role_map +%s, punish=%s, action_acl=%s действий ролям %s',
+                  version, report['role_map_added'], report['punish_added'],
                   report['action_acl_actions'], report['action_acl_roles'])
     except Exception as _ex:
         report['reason'] = f'error: {_ex}'
