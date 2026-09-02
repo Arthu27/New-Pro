@@ -53,10 +53,10 @@
     </div>
     <div class="row"><label>Статус</label>
       <select id="bs-status" aria-label="Статус бота">
-        <option value="online">Online</option>
-        <option value="idle">Idle</option>
-        <option value="dnd">DND</option>
-        <option value="invisible">Invisible</option>
+        <option value="online">В сети</option>
+        <option value="idle">Не активен</option>
+        <option value="dnd">Не беспокоить</option>
+        <option value="invisible">Невидимка</option>
       </select>
     </div>
     <div class="row"><label>Активность</label>
@@ -179,6 +179,12 @@
       activity_type: $('bs-activity').value,
       activity_text: $('bs-text').value
     };
+    // Кнопка держится занятой, пока идёт запрос: иначе её можно нажать
+    // несколько раз подряд и не понять, сохранилось ли что-нибудь.
+    var btn = $('bs-save'), was = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохраняю…'; }
+    $('bs-live').textContent = '';
+    function done() { if (btn) { btn.disabled = false; btn.innerHTML = was; } }
     fetch('/api/bot-settings/presence', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -190,7 +196,7 @@
         } else {
           toast('' + ((res.d.errors || [res.d.error] || ['ошибка']).join(' · ')), false);
         }
-      }).catch(function () { toast('Сеть недоступна', false); });
+      }).catch(function () { toast('Сеть недоступна', false); }).then(done);
   }
 
   /* ── Источник обновлений ─────────────────────────────────── */

@@ -82,7 +82,7 @@
       <input type="text" id="cm-search-input" placeholder="Поиск модуля..." oninput="render()" aria-label="Поиск модуля...">
     </div>
     <span class="spacer"></span>
-    <button type="button" class="cm-btn cm-btn-blue" onclick="reloadAll()"><i class="fas fa-sync"></i> Обновить всё</button>
+    <button type="button" id="cm-reload-all" class="cm-btn cm-btn-blue" onclick="reloadAll()"><i class="fas fa-sync"></i> Обновить всё</button>
   </div>
 
   <div class="cm-grid" id="cm-grid"></div>
@@ -144,11 +144,24 @@ async function reloadCog(name){
 }
 
 async function reloadAll(){
+  // Раньше ответ сервера читался и выбрасывался: панель писала «Все модули
+  // обновлены» даже когда бот офлайн и сервер вернул {error: «Бот офлайн…»},
+  // а catch(e){} глушил сетевую ошибку вовсе. Теперь — как в reloadCog:
+  // проверяем ok, показываем настоящую ошибку, кнопку держим занятой.
+  var btn = document.getElementById('cm-reload-all');
+  var was = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обновляю…'; }
   try {
-    await fetch('/api/cogs/reload-all', {method:'POST'}).then(r=>r.json());
-    if(window.showToast) window.showToast('Все модули обновлены', true);
-    loadCogs();
-  } catch(e){}
+    var r = await fetch('/api/cogs/reload-all', {method:'POST'}).then(r=>r.json());
+    if (r.ok) {
+      var n = (r.results || []).length;
+      if(window.showToast) window.showToast(n ? ('Обновлено модулей: ' + n) : 'Все модули обновлены', true);
+      loadCogs();
+    } else {
+      if(window.showToast) window.showToast(r.error || 'Не удалось обновить модули', false);
+    }
+  } catch(e){ if(window.showToast) window.showToast('Ошибка соединения', false); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = was; } }
 }
 
 loadCogs();

@@ -187,6 +187,41 @@ def _demo_mode ():
     """
     return demo_mode_active (bot_connected =bot_instance is not None )
 
+
+def _demo_counts ():
+    """Реальные числа демо-витрины: (участников, в сети, каналов, ролей).
+
+    Раньше в заглушках было зашито 1247/213/16/24 — витрина показывала
+    «1247 участников», а /users перечислял 9 настоящих демо-людей;
+    каналов в демо 18, а счётчик говорил 16. Цифры теперь берутся из тех
+    же файлов, что и сами страницы, поэтому счётчики и списки не спорят.
+    """
+    total ,online ,channels ,roles =1 ,1 ,0 ,0
+    try :
+        from web .routes ._common import DEMO_MEMBERS
+        total =len (DEMO_MEMBERS )or 1
+        online =sum (1 for m in DEMO_MEMBERS
+                     if str (m .get ('status')or '').lower ()in ('online','idle','dnd'))
+        online =online or max (1 ,total //3 )
+    except Exception as _ex :
+        _log .debug ("_demo_counts(): участники: %s",_ex )
+    try :
+        with open ('data/demo_channels.json',encoding ='utf-8')as _f :
+            _ch =json .load (_f )
+        channels =len (_ch )if isinstance (_ch ,list )else len (_ch .get ('channels',[]))
+    except Exception as _ex :
+        _log .debug ("_demo_counts(): каналы: %s",_ex )
+    try :
+        import glob as _glob
+        for _p in _glob .glob ('data/demo_roles_*.json'):
+            with open (_p ,encoding ='utf-8')as _f :
+                _rl =json .load (_f )
+            roles =len (_rl )if isinstance (_rl ,list )else len (_rl .get ('roles',[]))
+            break
+    except Exception as _ex :
+        _log .debug ("_demo_counts(): роли: %s",_ex )
+    return total ,online ,channels ,roles
+
 @app .context_processor
 def inject_demo_mode ():
     return {'demo_mode':_demo_mode ()}
@@ -1708,8 +1743,8 @@ def api_stats ():
         if _demo_mode ():
             return jsonify ({
             'guilds':1 ,
-            'users':1247 ,
-            'online':213 ,
+            'users':_demo_counts ()[0] ,
+            'online':_demo_counts ()[1] ,
             'latency':round (12 + (_time .time ()*10 %19 ),2 ),
             'status':'online'
             })
@@ -1763,12 +1798,12 @@ def api_guilds ():
             # дефолт 777, иначе селекторы получали сервер с id='' и ломались.
             'id':str (MAIN_GUILD_ID or '777'),
             'name':'Главный сервер',
-            'members':1247 ,
+            'members':_demo_counts ()[0] ,
             'icon':None ,
             'owner_id':'987430047889637426',
-            'online':213 ,
-            'channels':16 ,
-            'roles':24 ,
+            'online':_demo_counts ()[1] ,
+            'channels':_demo_counts ()[2] ,
+            'roles':_demo_counts ()[3] ,
             'boost':7 ,
             }])
         return jsonify ([])
@@ -3093,7 +3128,7 @@ def api_public_guilds ():
     if not bot_instance :
         # демо: сервер для публичной анкеты (иначе «Сервер не найден»)
         if _demo_mode ():
-            return jsonify ([{'id':str (MAIN_GUILD_ID or '777'),'name':'Главный сервер','icon':None ,'members':1247 }])
+            return jsonify ([{'id':str (MAIN_GUILD_ID or '777'),'name':'Главный сервер','icon':None ,'members':_demo_counts ()[0] }])
         return jsonify ([])
     guilds =[{'id':str (g .id ),'name':g .name ,
     'icon':str (g .icon .url )if g .icon else None ,
@@ -3779,7 +3814,7 @@ def api_bot_memory_profile ():
         return jsonify ({
         'success':True ,'demo':True ,
         'rss_mb':412.6 ,'rss_after_gc_mb':401.8 ,'threads':18 ,
-        'guilds':1 ,'members_cached':1247 ,'channels_cached':14 ,
+        'guilds':1 ,'members_cached':_demo_counts ()[0] ,'channels_cached':14 ,
         'roles_cached':9 ,'voice_clients':0 ,'cogs':24 ,'extensions':24 ,
         'objects_total':486311 ,
         'top_types':[['builtins.dict',94210],['builtins.instance_method',61884],
@@ -3787,7 +3822,7 @@ def api_bot_memory_profile ():
                      ['discord.user.User',8312],['builtins.set',6128],
                      ['builtins.list',5904],['builtins.tuple',5231],
                      ['builtins.type',2140],['builtins.weakref',1987]],
-        'per_guild':[{'name':'Демо-сервер Hakumo','members':1247}],
+        'per_guild':[{'name':'Демо-сервер Hakumo','members':_demo_counts ()[0]}],
         'gc_generations':[{'collections':214,'collected':1894,'uncollectable':0},
                           {'collections':37,'collected':5421,'uncollectable':0},
                           {'collections':9,'collected':12837,'uncollectable':0}]
