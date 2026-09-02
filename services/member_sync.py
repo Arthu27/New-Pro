@@ -78,6 +78,16 @@ async def _sync_guild(guild) -> bool:
         new_cached = len(guild.members)
         _log.info("member_sync: guild=%s участников в кэше %s -> %s (всего %s)",
                   guild.id, cached, new_cached, total or "?")
+        # Дочитали — сразу сохраняем состав в файл: панель берёт список
+        # оттуда мгновенно и не ждёт повторной докачки кэша.
+        try:
+            from services import member_store as MS
+            n = MS.upsert_many(guild.id, guild.members)
+            await MS.aflush(guild.id)
+            _log.info("member_sync: guild=%s состав сохранён в файл (%s участников)",
+                      guild.id, n)
+        except Exception as _ex:
+            _log.debug("member_sync: сохранить состав %s: %s", guild.id, _ex)
         return True
     except Exception as _ex:  # сеть/правы/прочее — не ядро, ждём следующий тик
         _log.debug("member_sync: guild=%s ошибка: %s", getattr(guild, "id", "?"), _ex)

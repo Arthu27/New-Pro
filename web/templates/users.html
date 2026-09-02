@@ -817,13 +817,16 @@
   function start() {
     bind(); loadGuilds();
     if (window.setLiveRefresh) {
+      /* Только по событию «изменился состав» (топик members): бот пушит его,
+         когда кто-то вошёл/вышел/сменил роль. Опрос по таймеру здесь не нужен
+         и вреден — на сервере 20 000+ людей перечитывать список каждые
+         несколько секунд значит молотить сервер вхолостую. Таймер оставлен
+         редкой страховкой на случай, если SSE не поднялся (5 минут). */
       window.setLiveRefresh(function () {
         /* во время клика список не трогаем — иначе нажатие «уезжает» */
         if (performance.now() - lastListPointerDown < 350) return;
         loadMembers(true);
-      }, 1500);
-    } else {
-      setInterval(function () { loadMembers(true); }, 30000);
+      }, 300000, ['members']);
     }
   }
   if (document.readyState === 'loading') {

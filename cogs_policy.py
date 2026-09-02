@@ -54,6 +54,8 @@ CORE_COGS = frozenset({
     'cog_manager.py',      # !module load/unload — чтобы вернуть модуль без рестарта
     'diagnostics.py',      # самодиагностика бота
     'panel_live.py',       # живые пуши в панель (SSE): события Discord → обновление
+    'member_store_sync.py',  # состав участников в data/members_<gid>.json: панель
+                             # читает файл мгновенно, бот правит его по событиям
     # feature_flag_cog.py и health.py убраны из боевого состава (лишние
     # команды в меню Дискорда). Вернуть: EXTRA_COGS=feature_flag_cog,health
 })

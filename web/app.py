@@ -1853,6 +1853,12 @@ def api_set_nick (guild_id ,member_id ):
 
 @app .route ('/api/guild/<guild_id>/members')
 @login_required 
+# Состав сервера — данные не публичные (ники, роли, даты входа, статусы).
+# Раньше здесь была только авторизация: страница /users закрыта ролью admin,
+# но любой залогиненный (включая низшую роль uye) забирал весь список
+# запросом к API напрямую. Порог = mod, потому что этот же список читают
+# /member-notes (mod) и /chat (owner); ниже mod — 403.
+@role_required ('mod')
 def api_guild_members (guild_id ):
     if not bot_instance :
         # демо-предпросмотр без бота: отдаём демо-участников —
@@ -1877,14 +1883,16 @@ def api_guild_members (guild_id ):
         return jsonify ([])
 
     try :
-        guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
-        if not guild :
-            return jsonify ([])
+        guild =None
+        try :
+            guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
+        except (TypeError ,ValueError ):
+            guild =None
 
-            # Пагинация: ?limit=1000 (по умолчанию), потолок 5000.
-        # Потолок поднят с 500: на серверах 20 000+ участников страница
-        # физически не могла показать дальше первых 500 человек — теперь
-        # фронт добирает список пачками, пока не дойдёт до конца.
+            # Пагинация: ?limit=1000 (по умолчанию), потолок 100 000.
+        # Искусственного обрыва списка больше нет: на серверах 20 000+
+        # участников страница добирает всех пачками, а один запрос может
+        # забрать сразу весь состав, если фронт попросил.
         try :
             limit =int (request .args .get ('limit',1000 ))
         except (TypeError ,ValueError ):
@@ -1893,30 +1901,52 @@ def api_guild_members (guild_id ):
             offset =int (request .args .get ('offset',0 ))
         except (TypeError ,ValueError ):
             offset =0 
-        limit =max (1 ,min (limit ,5000 ))
+        limit =max (1 ,min (limit ,100000 ))
         offset =max (0 ,offset )
 
-        # Кэш 10 с — не перебирать guild.members повторно для того же ответа
-        cache_key =('members',int (guild_id ),guild .member_count )
+        # Состав участников живёт В ФАЙЛЕ (services/member_store.py): бот
+        # сохраняет его и правит событийно (вошёл/вышел), поэтому панель
+        # отдаёт список мгновенно и не выкачивает гильдию заново. Живой кэш
+        # discord.py нужен только для статуса «в сети» здесь и сейчас.
+        from services import member_store as MS
+        store_total =MS .count (guild_id )
+        live_members =list (getattr (guild ,'members',[])or [])if guild else []
+        # Кэш 10 с — не пересобирать ПОЛНЫЙ список для каждой страницы:
+        # ключ без offset/limit, иначе каждая пачка заново разворачивала бы
+        # все 20 000 участников (O(n²) на пагинации).
+        cache_key =('members',str (guild_id ),store_total ,len (live_members ))
         cached =_store ._cache .get (cache_key ,ttl =10.0 )
         if cached is None :
-            cached =[]
-            for m in list (guild .members ):
-                created_at =discord .utils .snowflake_time (m .id )
-                cached .append ({
-                'id':str (m .id ),
-                'name':m .name ,
-                'display_name':m .display_name ,
-                'discriminator':m .discriminator ,
-                'avatar':str (m .display_avatar .url ),
-                'joined_at':m .joined_at .isoformat ()if m .joined_at else None ,
-                'created_at':created_at .replace (tzinfo =timezone .utc ).isoformat (),
-                'roles':[{'name':r .name ,'color':str (r .color )}for r in m .roles [1 :]],
-                'bot':m .bot ,
-                'status':str (m .status )if hasattr (m ,'status')else 'offline',
-                'nick':m .nick ,
-                'top_role':m .top_role .name if m .top_role else None ,
-                })
+            if store_total :
+                rows =MS .snapshot (guild_id )
+                live_by_id ={str (m .id ):m for m in live_members }
+                for row in rows :
+                    lm =live_by_id .get (row ['id'])
+                    if lm is not None :
+                        row ['status']=str (getattr (lm ,'status','')or row .get ('status','offline'))
+                cached =rows
+            elif live_members :
+                # Файл ещё не засеян (первый запуск) — берём живой кэш,
+                # а member_sync сохранит состав в файл сразу после докачки.
+                cached =[]
+                for m in live_members :
+                    created_at =discord .utils .snowflake_time (m .id )
+                    cached .append ({
+                    'id':str (m .id ),
+                    'name':m .name ,
+                    'display_name':m .display_name ,
+                    'discriminator':m .discriminator ,
+                    'avatar':str (m .display_avatar .url ),
+                    'joined_at':m .joined_at .isoformat ()if m .joined_at else None ,
+                    'created_at':created_at .replace (tzinfo =timezone .utc ).isoformat (),
+                    'roles':[{'name':r .name ,'color':str (r .color )}for r in m .roles [1 :]],
+                    'bot':m .bot ,
+                    'status':str (m .status )if hasattr (m ,'status')else 'offline',
+                    'nick':m .nick ,
+                    'top_role':m .top_role .name if m .top_role else None ,
+                    })
+            else :
+                cached =[]
             _store ._cache .set (cache_key ,cached ,ttl =10.0 )
 
             # Чтобы вернуть общее количество через метаданные пагинации, добавляем
@@ -1931,12 +1961,20 @@ def api_guild_members (guild_id ):
         # На больших серверах кэш наполняется фоново (services/member_sync.py),
         # поэтому панель честно показывает «загружено N из M», а не выдаёт
         # частичный список за полный.
+        # Сколько людей на сервере ПО ДИСКОРДУ и сколько мы реально отдаём.
+        # Состав теперь живёт в файле (services/member_store.py), поэтому
+        # список полный даже когда бот не в сети или кэш гильдии не наполнен.
         try :
-            resp .headers ['X-Guild-Count']=str (int (getattr (guild ,'member_count',0 )or 0 ))
+            _gc =int (getattr (guild ,'member_count',0 )or 0 )
         except (TypeError ,ValueError ):
-            resp .headers ['X-Guild-Count']='0'
+            _gc =0 
+        if not _gc :
+            _gc =store_total 
+        resp .headers ['X-Guild-Count']=str (_gc )
         resp .headers ['X-Cached-Count']=str (total )
-        resp .headers ['X-Chunked']='1' if getattr (guild ,'chunked',False )else '0'
+        resp .headers ['X-Stored-Count']=str (store_total )
+        resp .headers ['X-Stored-At']=str (MS .saved_at (guild_id ))
+        resp .headers ['X-Chunked']='1' if (getattr (guild ,'chunked',False )or store_total )else '0'
         return resp 
     except Exception as e :
         print (f"Ошибка списка участников: {e}")

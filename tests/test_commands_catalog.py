@@ -71,8 +71,10 @@ check('Голосовые' not in labels,
 check('Экономика' not in labels and 'Уровни и карма' not in labels,
       'lean: спящие системы (экономика/уровни) честно не показываются')
 mods = data.get('modules') or {}
-check(mods.get('enabled') == 29 and mods.get('sleeping') == 7,
-      f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')} (ожидание 29/7)")
+# 30: в лёгком профиле 30 файлов модулей. Событийные коги без команд
+# (panel_live, member_store_sync) считаются модулями наравне с остальными.
+check(mods.get('enabled') == 30 and mods.get('sleeping') == 7,
+      f"lean: модулей включено {mods.get('enabled')}, спит {mods.get('sleeping')} (ожидание 30/7)")
 
 print('== 1.1. Выключенные разделы физически удалены ==')
 # Экономика/уровни/игры больше не «спящие» — их файлы удалены с диска,
@@ -149,9 +151,9 @@ check(d['total'] == data['total'] and d['shown'] == d['total']
       'без фильтров отдаётся весь lean-каталог (как в боте)')
 check(d['slash'] > 0 and d['prefix'] == 0,
       'счётчики типов в ответе: слеш есть, префиксных — ноль')
-check(d.get('modules', {}).get('enabled') == 29
+check(d.get('modules', {}).get('enabled') == 30
       and d['modules']['sleeping'] == 7,
-      'в ответе — счётчик модулей (29 включено / 7 спит)')
+      'в ответе — счётчик модулей (30 включено / 7 спит)')
 
 r = client.get('/api/commands/catalog?q=report')
 d = r.get_json()
