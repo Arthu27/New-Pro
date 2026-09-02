@@ -112,6 +112,16 @@ function fillSelect(selId, items, cur, prefix) {
   sel.innerHTML = html;
 }
 
+/* В оба канала верификации бот ПИШЕТ (embed с кнопкой анкеты и заявки
+   модераторам), поэтому голосовые каналы и категории предлагать нельзя —
+   раньше в список попадали все 18 каналов подряд, включая «Общий войс»
+   и категорию «Модерация», куда отправить сообщение невозможно. */
+function textChannels() {
+  return (CHANNELS || []).filter(function (c) {
+    return c && (c.type === 'text' || c.type === 'news' || c.news);
+  });
+}
+
 function statusLabel(st) {
   return ({
     quarantine: '<span class="tag" style="background:rgba(217,119,6,.14);color:#d97706">Карантин</span>',
@@ -154,8 +164,8 @@ function render(cfg, pending) {
   $('vfPillAge').textContent = cfg.min_age_days + ' дн.';
   fillSelect('vfQRole', ROLES, cfg.quarantine_role_id, '@');
   fillSelect('vfMRole', ROLES, cfg.member_role_id, '@');
-  fillSelect('vfVChan', CHANNELS, cfg.verify_channel_id, '#');
-  fillSelect('vfRChan', CHANNELS, cfg.review_channel_id, '#');
+  fillSelect('vfVChan', textChannels(), cfg.verify_channel_id, '#');
+  fillSelect('vfRChan', textChannels(), cfg.review_channel_id, '#');
   renderPending(pending || []);
   // селекты появились в DOM — превратить их в единый пикер (без дублей)
   if (window.sshdAll) window.sshdAll(document);
