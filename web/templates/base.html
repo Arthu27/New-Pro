@@ -41,6 +41,20 @@
     (function () {
       'use strict';
       var W = window;
+      /* ── Ранний прогрев списков сервера ───────────────────────────
+         Каналы и роли начинают грузиться в момент парсинга body, а не когда
+         очередь дойдёт до страничного скрипта в конце — пикеры и селекты
+         получают данные практически к первому кадру («сразу и везде»).
+         pickers.js переиспользует эти Promise, не дёргая сеть повторно.
+         login.html не наследует base — на странице входа прогрева нет. */
+      if (!W.__warmLists && W.fetch) {
+        W.__warmLists = {
+          channels: W.fetch('/api/channels', { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); }).catch(function () { return null; }),
+          roles: W.fetch('/api/roles', { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); }).catch(function () { return null; })
+        };
+      }
       function simpleJSON(url, opts) {
         var init = opts || {};
         return W.fetch(url, init).then(function (r) {
