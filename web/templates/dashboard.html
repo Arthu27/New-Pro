@@ -952,24 +952,26 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
     var sel = $('ann-channel');
     if (!sel) return;
     try {
-      var guilds = await window.fetchCachedJSON('/api/guilds');
-      if (!Array.isArray(guilds) || !guilds.length) return;
+      /* Главный сервер известен из шаблона — каналы тянем сразу, не дожидаясь
+         /api/guilds (два запроса шли друг за другом, селект доезжал к ~1,5 с). */
       var main = '{{ main_guild_id }}';
+      var chansP = window.fetchCachedJSON('/api/guild/' + main + '/channels');
+      var guilds = await window.fetchCachedJSON('/api/guilds');
+      var list = Array.isArray(guilds) ? guilds : [];
       var g = null;
-      for (var i = 0; i < guilds.length; i++) {
-        if (String(guilds[i].id) === String(main)) { g = guilds[i]; break; }
+      for (var i = 0; i < list.length; i++) {
+        if (String(list[i].id) === String(main)) { g = list[i]; break; }
       }
-      if (!g) g = guilds[0];
-      if (!g) return;
-      var data = await window.fetchCachedJSON('/api/guild/' + g.id + '/channels');
+      if (!g) g = list[0];
+      var data = await chansP.catch(function () { return []; });
       var channels = Array.isArray(data) ? data : (data.channels || []);
+      var gid = g ? g.id : main;
+      var html = [];
       channels.filter(function (c) { return c.type === 'text'; }).forEach(function (c) {
-        var opt = document.createElement('option');
-        opt.value = c.id;
-        opt.dataset.guild = g.id;
-        opt.textContent = '#' + c.name;
-        sel.appendChild(opt);
+        html.push('<option value="' + esc(String(c.id)) + '" data-guild="' + esc(String(gid)) + '">#' +
+          esc(c.name) + '</option>');
       });
+      sel.insertAdjacentHTML('beforeend', html.join(''));
     } catch (e) { /* остаётся только лента панели */ }
   }
 

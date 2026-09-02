@@ -200,8 +200,18 @@ def register(ctx):
         }
         ]
 
+        # Кого можно выбрать в фильтре «Модератор»: все, кто реально закрывал
+        # тикеты (closed_by), без учёта периода и фильтров — иначе при смене
+        # периода имя пропадало бы из списка и фильтр «срывался».
+        moderator_names =sorted ({
+        str (t .get ('closed_by')or '').strip ()
+        for t in all_tickets
+        if str (t .get ('closed_by')or '').strip ()
+        })
+
         return jsonify ({
         'success':True ,
+        'moderators':moderator_names ,
         'stats':{
         'total_tickets':total_tickets ,
         'avg_resolution_time':avg_resolution_time ,

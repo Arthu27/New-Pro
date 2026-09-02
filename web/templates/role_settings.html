@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Роли наказаний — Панель Hakumo{% endblock %}
+{% block title %}Роли наказаний — Hakumo{% endblock %}
 {% block page_title %}Роли наказаний{% endblock %}
 {% block content %}
 <div class="page-head">
@@ -19,7 +19,8 @@
 
 <div id="rsBotWarn" class="rs-warnbar" hidden>
   <i class="fas fa-triangle-exclamation"></i>
-  <span>Бот офлайн — список ролей сервера недоступен, сохранять нельзя. Настройки вернутся, когда бот включится.</span>
+  <span id="rsBotWarnLive">Бот офлайн — список ролей сервера недоступен, сохранять нельзя. Настройки вернутся, когда бот включится.</span>
+  <span id="rsBotWarnDemo" hidden>Бот офлайн — в превью показан демо-набор ролей, сохранять нельзя. На живом сервере список подтянется, когда бот включится.</span>
 </div>
 
 <div id="rsDeletedWarn" class="rs-warnbar" hidden>

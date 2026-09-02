@@ -52,23 +52,50 @@ def bot_online():
         return False
 
 
+def _demo_guild_list(gid, kind):
+    """Демо-состав ролей/каналов — тот же источник, что у /api/roles,
+    /api/channels и всех остальных пикеров (guild_channels_roles).
+
+    Без него в демо-превью селект «Ролей за наказания» оставался с одной
+    строкой «— не выдавать —», хотя рядом /api/roles честно отдавал 13 ролей.
+    В боевом режиме (бот поднят) сюда не заходим: там пустой список — сигнал
+    «сохранять нельзя», и подменять его демо-ролями опасно.
+    """
+    try:
+        import web.app as _app
+        if not _app._demo_mode():
+            return []
+        from web.routes.guild_admin import guild_channels_roles
+        channels, roles = guild_channels_roles(gid)
+    except Exception as exc:
+        _log.debug("_demo_guild_list(): подавлено: %s", exc)
+        return []
+    if kind == 'roles':
+        return [{'id': str(r.get('id') or ''), 'name': r.get('name') or '',
+                 'color': r.get('color')} for r in roles if r.get('id')]
+    return [{'id': str(c.get('id') or ''), 'name': c.get('name') or ''}
+            for c in channels if c.get('id')]
+
+
 def _cached_guild_list(gid, kind):
     """kind: 'roles' | 'channels' — список с кэшем по составу (число объектов)
     и TTL. При изменении состава сигнатура меняется → мгновенный промах."""
     bot = _bot()
-    if bot is None:
-        return []
-    try:
-        g = bot.get_guild(int(gid))
-    except (TypeError, ValueError):
-        return []
-    if g is None:
+    g = None
+    if bot is not None:
         try:
-            g = next((x for x in bot.guilds if str(x.id) == str(gid)), None)
-        except Exception:
+            g = bot.get_guild(int(gid))
+        except (TypeError, ValueError):
             g = None
+        if g is None:
+            try:
+                g = next((x for x in bot.guilds if str(x.id) == str(gid)), None)
+            except Exception:
+                g = None
     if g is None:
-        return []
+        # живой гильдии нет: в демо отдаём демо-состав (иначе селект мёртв),
+        # в бою — пустой список, как и раньше (save_settings его отклонит).
+        return _demo_guild_list(gid, kind)
     if kind == 'roles':
         sig = len(getattr(g, 'roles', []) or [])
     else:

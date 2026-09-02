@@ -74,6 +74,11 @@ def register(ctx):
             return jsonify ({'error':'Выберите канал панели'}),400 
         if not clean :
             return jsonify ({'error':'Сначала добавьте хотя бы один цвет'}),400 
+        if not ch_id .isdigit ():
+            # int(ch_id) внутри корутины давал «invalid literal for int()»
+            return jsonify ({'error':'Неверный ID канала'}),400 
+        if not str (guild_id ).isdigit ():
+            return jsonify ({'error':'Неверный ID сервера'}),400 
         f =f'data/color_roles_{guild_id}.json'
         os .makedirs ('data',exist_ok =True )
         with open (f ,'w',encoding ='utf-8')as fp :json .dump (clean ,fp ,indent =2 ,ensure_ascii =False )
@@ -81,7 +86,9 @@ def register(ctx):
             if _app ._demo_mode ():
                 _fire_panel_notification ('color_roles',f"Цветные роли опубликованы: {len (clean )} цветов",f"Канал {ch_id } · демо-режим")
                 return jsonify ({'success':True ,'demo':True ,'message':f"Демо-режим: {len (clean )} цветов готовы — при живом боте роли создадутся в Discord"})
-            return jsonify ({'error':'Бот офлайн — публикация недоступна'})
+            return jsonify ({'error':'Бот офлайн — публикация недоступна'}),503 
+
+        failed =[]
 
         async def send ():
             guild =bot .get_guild (int (guild_id ))
@@ -100,7 +107,10 @@ def register(ctx):
                     try :
                         await guild .create_role (name =f"Цвет · {c['name']}",color =discord .Color (int (color_hex ,16 )))
                     except Exception as _ex :
+                        # раньше проглатывали молча и всё равно рапортовали
+                        # «Опубликовано цветов: N», хотя роли не создались
                         _log.debug("send(): роль %s: %s", c['name'], _ex )
+                        failed .append (c ['name'])
             desc ='\n'.join ([f"{c.get('emoji')or '🎨'} **{c['name']}** — `{c['hex']}`"for c in clean ])
             embed =discord .Embed (title ="Цветные роли",description =desc +"\n\nЧтобы получить нужный цвет, используйте команду `/color`!",color =0xdc143c )
             await ch .send (embed =embed )
@@ -113,6 +123,11 @@ def register(ctx):
                 msg ='Discord запретил отправку: у бота нет прав на этот канал'
             return jsonify ({'error':f"Не удалось опубликовать: {msg }"[:200 ]}),502 
         _fire_panel_notification ('color_roles',f"Цветные роли опубликованы: {len (clean )} цветов",f"Канал {ch_id }")
+        _live_publish (guild_id ,'roles')
+        if failed :
+            return jsonify ({'success':True ,'partial':True ,'message':
+                f"Панель отправлена, но не удалось создать роли: {', '.join (failed )}. "
+                'Проверьте право «Управлять ролями» и место моей роли в иерархии'})
         return jsonify ({'success':True ,'message':f"Опубликовано цветов: {len (clean )}"})
 
 

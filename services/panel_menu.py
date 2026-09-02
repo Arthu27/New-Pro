@@ -121,7 +121,7 @@ MENU = [
     {'group': 'Роли', 'key': 'roles', 'icon': 'fa-user-tag', 'pages': [
         {'path': '/roles', 'label': 'Управление ролями', 'icon': 'fa-user-tag'},
         
-        {'path': '/color-roles', 'label': 'Цветовые роли', 'icon': 'fa-palette'},
+        {'path': '/color-roles', 'label': 'Цветные роли', 'icon': 'fa-palette'},
         
     ]},
     {'group': 'Доступ', 'key': 'access', 'icon': 'fa-shield-alt', 'pages': [

@@ -4,7 +4,7 @@
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
-    _process_action, _log,
+    _live_publish, _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
@@ -630,6 +630,18 @@ def register(ctx):
         return jsonify ({'success':True ,'guild_id':str (gid ),'generated_at':now .isoformat (),'kpis':kpis ,'rows':final })
 
 
+    def _roles_cache_drop (guild_id ):
+        """Сбросить живой кэш списка ролей ТОЛЬКО этого сервера.
+
+        Раньше после создания/удаления роли обнуляли весь кэш целиком — и
+        следующий запрос по каждому остальному серверу шёл мимо кэша.
+        """
+        live =getattr (api_guild_roles ,'_live_cache',None )
+        if not isinstance (live ,dict ):
+            return
+        for k in [k for k in live if str (k [0 ])==str (guild_id )]:
+            live .pop (k ,None )
+
     @app .route ('/api/roles')
     @login_required 
     def api_roles_default ():
@@ -709,6 +721,10 @@ def register(ctx):
         name =(data .get ('name')or '').strip ()
         if not name :
             return jsonify ({'error':'Требуется название роли'}),400 
+        if len (name )>100 :
+            # Discord режет имена ролей на 100 символах и отвечает на это
+            # невнятной 400 — говорим по-человечески сами
+            return jsonify ({'error':'Название роли длиннее 100 символов — Discord такое не принимает'}),400 
         if not bot :
             # демо: роль создаётся в локальном хранилище превью
             if _app ._demo_mode ():
@@ -741,12 +757,15 @@ def register(ctx):
             await (guild .create_role (name =name ,color =color ,reason ='Создано через панель Hakumo'))
         try :
             asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
-            api_guild_roles ._live_cache ={}# сброс кэша списка ролей
+            _roles_cache_drop (guild_id )
+            _live_publish (gid ,'roles')
             return jsonify ({'success':True })
         except discord .Forbidden :
             return jsonify ({'error':'У меня нет прав создавать роли на этом сервере'}),403 
         except discord .HTTPException as e :
             return jsonify ({'error':f'Ошибка Discord: {e}'}),500 
+        except TimeoutError :
+            return jsonify ({'error':'Discord не ответил за 10 секунд — попробуйте ещё раз'}),504 
         except Exception as e :
             return jsonify ({'error':str (e )}),500 
 
@@ -766,13 +785,44 @@ def register(ctx):
                     return jsonify ({'error':'Роль не найдена'}),404 
                 _demo_roles_store (guild_id ,kept )
                 return jsonify ({'success':True })
-            return jsonify ({'error':'Бот офлайн'})
+            return jsonify ({'error':'Бот офлайн'}),503 
+        try :
+            gid =int (guild_id )
+        except (TypeError ,ValueError ):
+            return jsonify ({'error':'Неверный ID сервера'}),400 
+        if not str (role_id ).isdigit ():
+            # было int(role_id) без проверки → 500 с трейсбеком на «/delete»
+            return jsonify ({'error':'Неверный ID роли'}),400 
+        guild =resolve_guild (guild_id )
+        if guild is None :
+            return jsonify ({'error':f'Бот не состоит на этом сервере (id={guild_id})'}),404 
+        role =guild .get_role (int (role_id ))
+        if role is None :
+            # раньше роль «не найдена» тоже считалась успехом: панель писала
+            # «Роль удалена», а роль оставалась на сервере
+            return jsonify ({'error':'Роль не найдена — возможно, её уже удалили'}),404 
+        if int (role .id )==int (guild .id ):
+            # то же самое, что role.is_default(), но не требует метода
+            # (discord.Role.is_default — это ровно id == guild.id)
+            return jsonify ({'error':'Роль @everyone удалить нельзя'}),400 
+        if getattr (role ,'managed',False ):
+            return jsonify ({'error':'Эту роль выдаёт интеграция (бот или подписка) — Discord не даёт её удалить'}),403 
+
         async def do ():
-            guild =bot .get_guild (int (guild_id ))
-            role =guild .get_role (int (role_id ))
-            if role :await (role .delete ())
-        asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
-        api_guild_roles ._live_cache ={}# сброс кэша списка ролей
+            await role .delete (reason ='Удалено через панель Hakumo')
+
+        try :
+            asyncio .run_coroutine_threadsafe (do (),bot .loop ).result (timeout =10 )
+        except discord .Forbidden :
+            return jsonify ({'error':'У меня нет прав удалить эту роль: она стоит выше моей в иерархии'}),403 
+        except discord .HTTPException as e :
+            return jsonify ({'error':f'Ошибка Discord: {e}'}),500 
+        except TimeoutError :
+            return jsonify ({'error':'Discord не ответил за 10 секунд — попробуйте ещё раз'}),504 
+        except Exception as e :
+            return jsonify ({'error':str (e )}),500 
+        _roles_cache_drop (guild_id )
+        _live_publish (gid ,'roles')
         return jsonify ({'success':True })
 
 

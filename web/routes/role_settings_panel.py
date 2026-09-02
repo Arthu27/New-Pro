@@ -94,6 +94,9 @@ def settings_view(gid):
         'mapping': mapping,
         'roles': available,
         'roles_count': len(available),
+        # список есть, а бота нет — значит показан демо-набор (превью),
+        # а не роли живого сервера; текст предупреждения это учитывает
+        'roles_from_demo': bool(available) and not bot_online(),
         'unknown_roles': unknown,
         # Онлайн определяем по ФАКТУ бота, а не по списку ролей: при живом
         # боте роли могли ещё не догрузиться — раньше это врало «Бот офлайн».

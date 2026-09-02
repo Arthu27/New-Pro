@@ -204,6 +204,26 @@
 
 let ticketsTrendChart, categoryChart, moderatorChart, resolutionTimeChart;
 
+/* Фильтр «Модератор» раньше не заполнялся вообще: в нём навсегда оставалась
+   одна строка «Все модераторы», хотя бэкенд параметр moderator понимает.
+   Список приходит в ответе (все, кто закрывал тикеты); выбор сохраняем. */
+function fillModeratorFilter(names) {
+  const sel = document.getElementById('moderatorFilter');
+  if (!sel || !Array.isArray(names)) return;
+  const esc = (s) => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  const sig = names.join('\u0001');
+  if (sel.dataset.sig !== sig) {
+    const keep = sel.value;
+    sel.innerHTML = '<option value="">Все модераторы</option>' + names
+      .map((n) => '<option value="' + esc(n) + '">' + esc(n) + '</option>')
+      .join('');
+    sel.dataset.sig = sig;
+    if (keep && names.indexOf(keep) >= 0) sel.value = keep;
+  }
+}
+
 async function loadAnalytics() {
   const period = document.getElementById('periodFilter').value;
   const category = document.getElementById('categoryFilter').value;
@@ -226,6 +246,7 @@ async function loadAnalytics() {
     const data = await response.json();
 
     if (data.success) {
+      fillModeratorFilter(data.moderators);
       updateStats(data.stats);
       updateCharts(data.charts);
       updateInsights(data.insights);
@@ -459,6 +480,9 @@ async function exportReport(format) {
 document.addEventListener('DOMContentLoaded', loadAnalytics);
 
   /* live: автообновление данных без перезагрузки (заказ владельца: «100%») */
-  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadAnalytics(); } catch (e) {} }, 1500);
+  /* Обновление по событию (топик analytics шлёт бот при новых участниках,
+     приглашениях и сообщениях). 1500 мс без топиков молча превращались
+     в опрос каждые 20 секунд; 5 минут — страховка без SSE. */
+  if (window.setLiveRefresh) window.setLiveRefresh(function () { try { loadAnalytics(); } catch (e) {} }, 300000, ['analytics']);
 </script>
 {% endblock %}
