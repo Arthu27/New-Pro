@@ -750,7 +750,7 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
     from datetime import datetime 
     from collections import Counter 
 
-    # Penalty dosyasыnы загрузить
+    # Загружаем историю наказаний
     penalty_file ='data/ticket_penalties.json'
     penalties ={}
     if os .path .exists (penalty_file ):
@@ -776,19 +776,19 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
 
     reason_counter =Counter (reasons )
 
-    # Взаимный нарушение, фейковый жалоба число
+    # Взаимные нарушения и фейковые жалобы — считаем их доли
     mutual_violations =reason_counter .get ('взаимный мат/оскорбление',0 )
     fake_complaints =reason_counter .get ('фейковый жалоба + правило нарушение',0 )
     single_violations =total_penalties -mutual_violations -fake_complaints 
 
-    # Oranlar
+    # Доли (в процентах от всех наказаний)
     total =total_penalties if total_penalties >0 else 1 
     mutual_rate =round ((mutual_violations /total )*100 ,1 )
     fake_rate =round ((fake_complaints /total )*100 ,1 )
     single_rate =round ((single_violations /total )*100 ,1 )
     no_violation_rate =max (0 ,100 -mutual_rate -fake_rate -single_rate )
 
-    # En очень наказание alan userlar
+    # Участники с наибольшим числом наказаний
     top_offenders =[]
     for user_id ,user_penalties in guild_penalties .items ():
         if isinstance (user_penalties ,list ):
@@ -834,11 +834,11 @@ def calculate_ai_ticket_stats (guild_id :int )->dict :
     'mutual_rate':mutual_rate ,
     'fake_rate':fake_rate ,
     'no_violation_rate':no_violation_rate ,
-    'avg_confidence':75 ,# Placeholder - gerчek hesaplama для AI response'larы saklamak gerek
-    'high_confidence_count':int (total_penalties *0.8 ),# Tahmini
-    'low_confidence_count':int (total_penalties *0.2 ),# Tahmini
-    'appeal_rate':5 ,# Placeholder
-    'appeal_success_rate':30 ,# Placeholder
+    'avg_confidence':75 ,# Заглушка: честный расчёт появится, когда начнём копить уверенность из ответов ИИ
+    'high_confidence_count':int (total_penalties *0.8 ),# Оценка
+    'low_confidence_count':int (total_penalties *0.2 ),# Оценка
+    'appeal_rate':5 ,# Заглушка
+    'appeal_success_rate':30 ,# Заглушка
     'top_offenders':top_offenders ,
     'penalty_reasons':penalty_reasons 
     }

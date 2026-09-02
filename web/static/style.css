@@ -2317,6 +2317,14 @@ a.feed-item:hover .feed-item-title { color: var(--ac); }
 @media (max-width: 860px) {
   .stat-grid,.donut-grid,.quick-grid{grid-template-columns:1fr !important}
   .topbar .nav-icon-btn, .mobile-menu { min-width:42px; min-height:42px; }
+  /* Крупные тач-кнопки (42px) в одну строку уже не влезают: без переноса
+     топбар вылезал за экран и у всей панели появлялся горизонтальный скролл
+     (проверено на 768px — все страницы модерации). Переносим строки вместо
+     скролла: высота топбара становится автоматической. */
+  .topbar { height: auto; min-height: var(--topbar-h); flex-wrap: wrap;
+            padding-top: 8px; padding-bottom: 8px; }
+  .topbar .crumbs { min-width: 0; }
+  .navbar-right { flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
   .shift-edit-row{grid-template-columns:auto 1fr auto !important}
 }
 @media (max-width: 720px) {

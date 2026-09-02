@@ -268,4 +268,4 @@ def register(ctx):
             'raw':data 
             })
         except Exception as e :
-            return jsonify ({'error':f'Неверный dosya: {str(e)}'})
+            return jsonify ({'error':f'Неверный файл: {str(e)}'})

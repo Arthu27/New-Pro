@@ -106,7 +106,7 @@ def cached_read_json (path ,ttl =5.0 ,default =None ):
 
 
 def invalidate_path (path ):
-    """Belirli bir dosya ile ilgili cache girdilerini очистить."""
+    """Убрать из кэша все записи, относящиеся к этому файлу."""
     abspath =os .path .abspath (path )
     with _cache ._lock :
         for k in list (_cache ._d .keys ()):
@@ -116,7 +116,7 @@ def invalidate_path (path ):
 
                 # ── ETag helpers (saf, Flask'siz) ─────────────────────────────────────────────
 def make_etag (payload ):
-    """Слабый (weak) ETag создать. JSON dump etmeden быстрый sekilde."""
+    """Слабый (weak) ETag: считается быстро, без сериализации JSON."""
     try :
         h =hashlib .md5 ()
         if isinstance (payload ,(list ,tuple )):

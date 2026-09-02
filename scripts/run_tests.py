@@ -26,10 +26,23 @@ def find_tests():
         if f.startswith('test_') and f.endswith('.py'))
 
 
+# Переменные окружения, которые боевой/демо-запуск панели мог оставить в шелле.
+# Если их не снять, регрессия читает чужой MAIN_GUILD_ID/DEMO_MODE и краснеет
+# (наблюдено вживую: прогон с DOTENV_PATH=config/panel_preview.env дал ~40 падений,
+# без него — зелёный). Тесты сами выставляют то, что им нужно.
+_AMBIENT = {'DOTENV_PATH', 'DEMO_MODE', 'DEMO_FORCE', 'MAIN_GUILD_ID', 'TOKEN',
+            'WEB_BEHIND_PROXY', 'MOD_ONLY', 'DISABLED_COGS', 'BOT_SLIM',
+            'PANEL_USER', 'PANEL_PASSWORD', 'SECRET_KEY', 'DB_PATH'}
+
+
+def _clean_env():
+    return {k: v for k, v in os.environ.items() if k not in _AMBIENT}
+
+
 def run_one(path):
     started = time.time()
     proc = subprocess.run(
-        [sys.executable, path], cwd=ROOT,
+        [sys.executable, path], cwd=ROOT, env=_clean_env(),
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=600)
     out = proc.stdout.decode('utf-8', errors='replace')
     passed = failed = None

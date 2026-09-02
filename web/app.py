@@ -74,7 +74,7 @@ def _force_https_public():
         return None
     return redirect ('https://'+host +request .full_path .rstrip ('?'),code =301)
 
-# Производительность: atomic yazma, TTL cache, toplu (batch) log flusher
+# Производительность: атомарная запись, TTL-кэш, пакетный (batch) флашер логов
 from web import _store # noqa: E402
 from web .demo_mode import demo_mode_active # noqa: E402
 from services .audit_labels import human_action # noqa: E402
@@ -2715,11 +2715,12 @@ def api_staff_apps ():
 def api_review_staff_app (app_id ):
     apps_file ='data/staff_apps.json'
     if not os .path .exists (apps_file ):
-        return jsonify ({'error':'Файл заявок отсутствует'})
+        # Честный 404: заявки нет вовсе, а не «запрос прошёл, но ничего не вышло»
+        return jsonify ({'error':'Файл заявок отсутствует'}),404
     with open (apps_file ,'r',encoding ='utf-8')as f :
         data =json .load (f )
     if app_id not in data :
-        return jsonify ({'error':'Заявка не найдена'})
+        return jsonify ({'error':'Заявка не найдена'}),404
     if not _record_on_main_guild (data [app_id ]):
         return jsonify ({'error':'Эта заявка с другого сервера — здесь её рассматривать нельзя.'}),404
     req =request .get_json (silent =True )or {}
