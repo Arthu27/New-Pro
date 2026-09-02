@@ -148,6 +148,68 @@ def _roles_path(gid):
     return f'data/staff_limit_roles_{int(gid)}.json'
 
 
+# ── Тиры персонала по ролям (заказ владельца 2026-09-02) ──────────────
+# Роли персонала настраиваются в панели «Настройки → Панели и роли»
+# (data/role_map.json): role_id → 'mod' | 'curator' | 'admin' | 'owner'.
+# staff_limits читает ТОТ ЖЕ файл и по нему назначает тировые дефолты —
+# отдельные роли «модер/куратор/админ» заводить не нужно.
+ROLE_MAP_PATH = 'data/role_map.json'
+
+# Порядок старшинства: больший индекс — больше прав (мягче лимиты).
+TIER_ORDER = ('mod', 'curator', 'admin', 'owner')
+
+# Тировые дефолты за окно (день). Цифры из переписки владельца с Sabotash:
+# бан — модер 1 / куратор 3 / админ 5; размут — модер 3 / куратор 5 / админ 5;
+# мут/таймаут — симметрично; очистка — 10 сообщений. Владелец поднимает
+# пер-рольно через панель; глобальные и пер-рольные оверрайды ВАЖНЕЕ этих.
+TIER_DEFAULT_LIMITS = {
+    'mod':     {'ban': 1, 'unmute': 3, 'mute': 3, 'clear': 10},
+    'curator': {'ban': 3, 'unmute': 5, 'mute': 5, 'clear': 10},
+    'admin':   {'ban': 5, 'unmute': 5, 'mute': 5, 'clear': 10},
+    'owner':   {},   # владелец не ограничен
+}
+
+
+def _role_tier_map(guild_id=None):
+    """{role_id(str): tier} из data/role_map.json (та же настройка, что в
+    панели «Панели и роли»). Сбой чтения — пустой словарь (не мешаем)."""
+    try:
+        data = _load_json(ROLE_MAP_PATH, {})
+        if not isinstance(data, dict):
+            return {}
+        return {str(rid): str(tier) for rid, tier in data.items()
+                if str(tier) in TIER_ORDER}
+    except Exception:
+        return {}
+
+
+def tier_for_roles(role_ids):
+    """Старший тир из набора ролей участника: 'owner' > 'admin' > 'curator'
+    > 'mod' > None (роль не помечена как стафф — действует общий дефолт)."""
+    tmap = _role_tier_map()
+    best = None
+    best_i = -1
+    for rid in role_ids or ():
+        tier = tmap.get(str(rid))
+        if tier and TIER_ORDER.index(tier) > best_i:
+            best, best_i = tier, TIER_ORDER.index(tier)
+    return best
+
+
+def _tier_defaults(role_ids):
+    """Лимиты старшего тира участника (или {} если стафф-ролей нет).
+
+    Для owner возвращаем ЯВНЫЕ нули по всем действиям — владелец не
+    ограничен ничем (0 = без лимита), и это перекрывает модераторский
+    базовый дефолт."""
+    tier = tier_for_roles(role_ids)
+    if not tier:
+        return {}
+    if tier == 'owner':
+        return {k: 0 for k in DEFAULT_LIMITS}
+    return dict(TIER_DEFAULT_LIMITS.get(tier) or {})
+
+
 def _load_json(path, default):
     if not os.path.exists(path):
         return default
@@ -736,6 +798,10 @@ def effective_limits(guild_id, role_ids=()):
     """
     lim = dict(get_limits(guild_id))
     win = dict(get_windows(guild_id))
+    # Тировые дефолты (модер/куратор/админ из data/role_map.json) ВАЖНЕЕ
+    # общих модераторских дефолтов: куратору 3 бана, админу 5 и т.д.
+    for _k, _v in _tier_defaults(role_ids).items():
+        lim[_k] = _v
     overrides = get_role_overrides(guild_id)
     best = {}          # ключ → (лимит, окно) — лучший из СВОИХ лимитов ролей
     for rid in role_ids or ():

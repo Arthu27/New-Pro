@@ -156,9 +156,9 @@ def ticket_list(guild_id, limit: int = 200) -> list:
 
 
 def has_recent_open_report(guild_id, reporter_id, accused_id,
-                            window_sec=600) -> bool:
+                            window_sec=86400) -> bool:
     """КД на репорт: этот reporter уже подавал ОТКРЫТУЮ жалобу на того же
-    accused за последние window_sec сек (по умолчанию 10 минут). Повторную
+    accused за последние window_sec сек (по умолчанию 1 день). Повторную
     жалобу на того же участника не плодим (заказ владельца: «чтобы команду
     не использовали, когда уже 1 раз подали на одного и того же»)."""
     edge = _now() - max(0, int(window_sec))

@@ -686,11 +686,11 @@ class Reports(commands.Cog):
 
         # КД на повторный репорт ОДНОГО И ТОГО ЖЕ участника: если открытая
         # жалоба от этого пользователя на эту же цель уже есть (окно из cfg,
-        # по умолчанию 10 минут) — команду использовать нельзя (заказ владельца).
+        # по умолчанию 1 день) — команду использовать нельзя (заказ владельца).
         try:
-            _cd = int(cfg.get('reporter_target_cooldown_sec') or 600)
+            _cd = int(cfg.get('reporter_target_cooldown_sec') or 86400)
         except (TypeError, ValueError):
-            _cd = 600
+            _cd = 86400
         if RC.has_recent_open_report(guild.id, interaction.user.id, user.id, _cd):
             return await interaction.followup.send(
                 'Ты уже подал жалобу на этого участника — повторно жаловаться '

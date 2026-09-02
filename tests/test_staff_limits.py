@@ -148,6 +148,41 @@ for _ in range(11):
 check(ok_a is False and '10' in (last_text or ''),
       f'check_action: 11-й бан сверх лимита роли 10 запрещён ({last_text})')
 
+print('== 9. Тиры персонала из data/role_map.json (модер/куратор/админ) ==')
+# role_map.json: роль → tier (та же настройка, что «Панели и роли»).
+import json as _json
+_rmap = {
+    '1001': 'mod',      # роль модератора
+    '1002': 'curator',  # роль куратора
+    '1003': 'admin',    # роль администратора
+    '1004': 'owner',    # роль владельца
+}
+with open(os.path.join(_TMP, 'role_map.json'), 'w', encoding='utf-8') as _rf:
+    _json.dump(_rmap, _rf)
+SL.ROLE_MAP_PATH = os.path.join(_TMP, 'role_map.json')
+
+check(SL.tier_for_roles([1001]) == 'mod', 'роль 1001 → тир mod')
+check(SL.tier_for_roles([1002]) == 'curator', 'роль 1002 → тир curator')
+check(SL.tier_for_roles([1003]) == 'admin', 'роль 1003 → тир admin')
+check(SL.tier_for_roles([1003, 1001]) == 'admin', 'несколько ролей → старший тир')
+check(SL.tier_for_roles([9999]) is None, 'немаркированная роль → тир нет')
+
+# Дефолты по тиру: бан 1/3/5, размут 3/5/5.
+GT = 777099
+_lm_mod, _ = SL.effective_limits(GT, [1001])
+_lm_cur, _ = SL.effective_limits(GT, [1002])
+_lm_adm, _ = SL.effective_limits(GT, [1003])
+_lm_own, _ = SL.effective_limits(GT, [1004])
+check(_lm_mod['ban'] == 1 and _lm_cur['ban'] == 3 and _lm_adm['ban'] == 5,
+      f'бан по тирам: модер {_lm_mod["ban"]} / куратор {_lm_cur["ban"]} / админ {_lm_adm["ban"]}')
+check(_lm_mod['unmute'] == 3 and _lm_cur['unmute'] == 5 and _lm_adm['unmute'] == 5,
+      'размут по тирам: модер 3 / куратор 5 / админ 5')
+check(_lm_own.get('ban', 0) == 0, 'владелец — без лимита на бан')
+# Пер-рольный оверрайд важнее тирового дефолта.
+SL.set_role_limits(GT, 1002, who='Куратор', ban=9)
+_lm_cur2, _ = SL.effective_limits(GT, [1002])
+check(_lm_cur2['ban'] == 9, 'пер-рольный оверрайд (9) перебивает тировый дефолт (3)')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

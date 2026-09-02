@@ -138,12 +138,13 @@ MENU = [
         
     ]},
     {'group': 'Бот', 'key': 'bot', 'icon': 'fa-robot', 'pages': [
+        {'path': '/bot-settings', 'label': 'Настройки бота', 'icon': 'fa-sliders-h'},
         {'path': '/commands', 'label': 'Команды', 'icon': 'fa-terminal'},
-        
+
         {'path': '/send-command', 'label': 'Отправить', 'icon': 'fa-paper-plane'},
-        
+
         {'path': '/backups', 'label': 'Бэкапы', 'icon': 'fa-save'},
-        
+
         {'path': '/konsol', 'label': 'Консоль', 'icon': 'fa-terminal'},
         {'path': '/cog-manager', 'label': 'Модули', 'icon': 'fa-cubes'},
     ]},
@@ -155,7 +156,8 @@ MENU = [
         {'path': '/mod-settings', 'label': 'Авто-наказания', 'icon': 'fa-hammer'},
         {'path': '/role-settings', 'label': 'Роли за наказания', 'icon': 'fa-user-tag'},
         {'path': '/channel-settings', 'label': 'Каналы и маршруты', 'icon': 'fa-route'},
-        {'path': '/bot-settings', 'label': 'Бот', 'icon': 'fa-sliders-h'},
+        # «Настройки бота» (/bot-settings) переехали в группу «Бот» —
+        # там им логичное место (команды, консоль, модули, бэкапы).
         {'path': '/welcome-editor', 'label': 'Приветствие', 'icon': 'fa-handshake'},
         {'path': '/rules-editor', 'label': 'Правила', 'icon': 'fa-scroll'},
         {'path': '/notifications', 'label': 'Уведомления', 'icon': 'fa-bell'},
@@ -201,10 +203,9 @@ MENU = [
         {'path': '/chat', 'label': 'Чат', 'icon': 'fa-comments'},
         {'path': '/message-logs', 'label': 'Сообщения', 'icon': 'fa-comment-alt'},
         {'path': '/panel-logs', 'label': 'Панель', 'icon': 'fa-list'},
-        
-        
-        
-        {'path': '/backup', 'label': 'Бэкапы', 'icon': 'fa-database'},
+        # «Бэкапы» здесь убраны (дубль) — единственный пункт живёт в
+        # группе «Бот» (/backups). Страница /backup осталась рабочей по
+        # прямой ссылке/редиректу (ведёт на /backups).
     ]},
     {'group': 'Контент', 'key': 'content', 'icon': 'fa-palette', 'pages': [
         

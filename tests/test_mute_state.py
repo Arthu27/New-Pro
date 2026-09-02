@@ -214,19 +214,20 @@ async def panel_checks():
     check("A. mute_chat без роли → внятный отказ (а не таймаут «типа только чат»)",
           (not ok2) and ("роль" in text2))
 
-    # B. Мут-роль ВЫБРАНА: timeout всё равно нативный (роль бы не заглушила голос),
-    #    а mute_chat выдаёт именно роль и НЕ трогает голос (нет timeout()).
+    # B. Роли ВЫБРАНЫ: timeout — нативный (глушит и голос) И, по заказу
+    #    владельца, ДОПОЛНИТЕЛЬНО выдаёт сразу обе роли — мут чата (101)
+    #    и мут войса (102). mute_chat выдаёт роль чата и НЕ трогает голос.
     g2 = PGuild()
-    g2.roles = [PRole(101, "Мут")]
+    g2.roles = [PRole(101, "Мут"), PRole(102, "Войс-мут")]
     import services.punish_roles as PR2
-    PR2.set_roles(777, mute=101)
+    PR2.set_roles(777, mute=101, vmute=102)
     m2 = PMember(111000000000000901); m2.guild = g2
     g2.members = [m2]
     cog2 = M.Moderation.__new__(M.Moderation)
     cog2.bot = PBot(g2)
     ok3, _ = await cog2.apply_panel_action(g2, m2, "timeout", reason="x", amount="1ч", actor="Ivan")
-    check("B. с мут-ролью timeout всё равно нативный (глушит и голос)",
-          ok3 and m2.timed_out_until is not None and 101 not in m2.added)
+    check("B. timeout нативный (глушит голос) И выдаёт обе роли — чат 101 + войс 102",
+          ok3 and m2.timed_out_until is not None and 101 in m2.added and 102 in m2.added)
 
     m3 = PMember(111000000000000902); m3.guild = g2
     g2.members = [m3]

@@ -5,7 +5,8 @@
 - 14 маршрутов хаба каналов + запись/чтение новых шести адаптеров (считалка,
   зала славы, ночной итог, дайджест модерации, смены, призыв тикетов) —
   через те же файлы и хранилища, что читает бот;
-- категорию «Настройки» в меню и её 17 страниц в верном порядке;
+- категорию «Настройки» в меню и её 13 страниц в верном порядке
+  (/bot-settings переехал в раздел «Бот»);
 - сервис лэйаута меню: валидацию, защиту /panel-menu, скрытие и порядок
   (применяется и к владельцу), API лэйаута с валидацией формата;
 - страницу /mod-settings и её API: лестницу авто-наказаний (нормализация,
@@ -98,8 +99,8 @@ from services import panel_menu as PM  # noqa: E402
 
 pages = [p for g in PM.MENU for p in g['pages']]
 paths = [p['path'] for p in pages]
-check(len(paths) == 74 and len(set(paths)) == 74,
-      f'в меню 74 уникальных страниц ({len(paths)}); музыка и дубль варнов убраны')
+check(len(paths) == 73 and len(set(paths)) == 73,
+      f'в меню 73 уникальных страниц ({len(paths)}); музыка/варны/дубль бэкапов убраны')
 check('/warn-config' not in paths, 'дубль «Варны» (/warn-config) убран из меню')
 check('/ladder' in paths, 'каноническая «Лестница наказаний» в меню')
 groups = {g['key']: g for g in PM.MENU}
@@ -108,12 +109,17 @@ sg = groups['settings']
 check(sg['group'] == 'Настройки' and bool(sg.get('icon')),
       'группа с русским именем и иконкой')
 sp = [p['path'] for p in sg['pages']]
+# /bot-settings переехал в раздел «Бот» (там его логичное место) —
+# в категории «Настройки» его больше нет.
 want = ['/settings', '/command-switches', '/mod-settings', '/role-settings',
-        '/channel-settings', '/bot-settings', '/welcome-editor',
+        '/channel-settings', '/welcome-editor',
         '/rules-editor', '/notifications',
         '/pagerduty', '/theme-settings', '/theme-studio', '/anticrash',
         '/log-settings']
 check(sp == want, f'страницы категории в верном порядке ({len(sp)})')
+# /bot-settings теперь в группе «Бот»
+bg = [p['path'] for p in groups['bot']['pages']]
+check('/bot-settings' in bg, '«Настройки бота» переехали в раздел «Бот»')
 gkeys = [g['key'] for g in PM.MENU]
 check(gkeys.index('settings') == gkeys.index('bot') + 1,
       '«Настройки» сразу после раздела «Бот»')

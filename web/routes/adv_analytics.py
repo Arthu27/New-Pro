@@ -23,14 +23,18 @@ def register(ctx):
 
 
         # ── ADVANCED ANALYTICS API ──────────────────────────────────────────────────
-    @app .route ('/api/analytics/advanced',methods =['POST'])
-    @login_required 
+    @app .route ('/api/analytics/advanced',methods =['GET','POST'])
+    @login_required
     def api_analytics_advanced ():
-        """Получить расширенную аналитику"""
-        import json 
-        import os 
-        from datetime import datetime ,timedelta ,timezone 
-        from collections import Counter ,defaultdict 
+        """Получить расширенную аналитику.
+
+        Чтение данных — это GET (query: period/category/moderator). POST
+        оставлен для совместимости со старой фронт-страницей (она шлёт JSON
+        в теле); оба пути дают одинаковый ответ."""
+        import json
+        import os
+        from datetime import datetime ,timedelta ,timezone
+        from collections import Counter ,defaultdict
 
         def _aware (s ):
             # ISO-метка -> aware-UTC. Naive считаем UTC (так пишут тикеты).
@@ -39,17 +43,23 @@ def register(ctx):
             try :
                 dt =datetime .fromisoformat (str (s or '').replace ('Z','+00:00'))
             except Exception :
-                return None 
+                return None
             if dt .tzinfo is None :
                 dt =dt .replace (tzinfo =timezone .utc )
             else :
                 dt =dt .astimezone (timezone .utc )
-            return dt 
+            return dt
 
-        data =request .get_json ()
-        period =int (data .get ('period',30 ))
-        category_filter =data .get ('category','')
-        moderator_filter =data .get ('moderator','')
+        if request .method == 'POST':
+            data = request .get_json (silent =True ) or {}
+        else :
+            data = request .args
+        try :
+            period = int (data .get ('period',30 ) or 30 )
+        except (TypeError ,ValueError ):
+            period = 30
+        category_filter = data .get ('category','') or ''
+        moderator_filter = data .get ('moderator','') or ''
 
         # Загрузить данные тикетов
         data_dir ='data'

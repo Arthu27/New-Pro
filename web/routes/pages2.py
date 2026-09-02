@@ -54,10 +54,12 @@ def register(ctx):
 
 
     @app .route ('/backup')
-    @login_required 
+    @login_required
     @role_required ('owner')
     def backup_page ():
-        return render_template ('backup.html',role =session .get ('role'),username =session .get ('username'))
+        # Старый пункт «Бэкапы» в «Логах» дублировал рабочий раздел.
+        # Ведём на единственный живой раздел бэкапов в группе «Бот».
+        return redirect ('/backups')
 
 
     @app .route ('/panel-logs')

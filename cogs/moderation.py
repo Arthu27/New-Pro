@@ -648,8 +648,23 @@ class Moderation (commands .Cog ):
                         log.debug(f'[MODPANEL] timeout clear all: {_mse}')
                     until = datetime.now(timezone.utc) + timedelta(minutes=minutes)
                     await user.timeout(until, reason=reason)
+                    # Заказ владельца: при ТАЙМАУТЕ бот дополнительно выдаёт
+                    # СРАЗУ ДВЕ роли — мут чата и мут войса (на тот же срок).
+                    # Нативный таймаут и роли снимаются по времени согласованно.
+                    _extra_roles = []
+                    for _kind in ('mute', 'vmute'):
+                        try:
+                            _r = self._punish_role(guild, _kind)
+                            if _r is not None and _r not in user.roles:
+                                await user.add_roles(_r, reason=reason or 'таймаут')
+                                self._remember_temp(guild, user, _r, minutes * 60)
+                                _extra_roles.append(_r.name)
+                        except Exception as _tre:
+                            log.debug(f'[MODPANEL] timeout доп.роль {_kind}: {_tre}')
                     msg = (f"🔇 таймаут на {human_duration(minutes)} "
                            f"(~{minutes} мин) — закрыты и чат, и голос")
+                    if _extra_roles:
+                        msg += " · роли: " + ", ".join(f"«{n}»" for n in _extra_roles)
                     await self._maybe_watchlist_after_mute(interaction, user, reason)
                 elif action == "mute_chat":
                     # «Мут (только чат)» — закрываем ТОЛЬКО текст через мут-роль.
