@@ -795,6 +795,16 @@ def _save_role_map ():
     except Exception as _ex:
         _log.debug("_save_role_map(): подавлено: %s", _ex)
 
+# Стартовые роли из config/role_seed.json — применяем ОДИН раз при старте
+# панели (роли персонала и роль бана заданы до выкатки), затем грузим карту.
+try:
+    from services.role_seed import apply_role_seed as _apply_role_seed
+    _seed_rep = _apply_role_seed()
+    if _seed_rep.get('applied') and _seed_rep.get('role_map_added'):
+        print(f"[РОЛИ] Применён стартовый сид ролей: {_seed_rep['role_map_added']}")
+except Exception as _seed_ex:
+    _log.debug("role_seed при старте панели: %s", _seed_ex)
+
 _load_role_map ()
 
 def _get_role_from_discord (discord_id :str )->str :

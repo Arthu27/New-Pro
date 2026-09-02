@@ -1041,6 +1041,18 @@ async def on_ready():
     except Exception as _ex:
         _log.warning("on_ready(): голосовое подключение: %s", _ex)
 
+    # Стартовые роли из config/role_seed.json — применяем один раз при старте
+    # бота (роли персонала для уровней/лимитов + роль бана), чтобы выкатка
+    # на VPS сразу подняла настройки владельца. Панель делает то же у себя.
+    try:
+        from services.role_seed import apply_role_seed
+        _rep = apply_role_seed()
+        if _rep.get("applied") and (_rep.get("role_map_added") or _rep.get("ban_role")):
+            print(f"[РОЛИ] Сид применён: роли {_rep.get('role_map_added')}, "
+                  f"роль бана: {_rep.get('ban_role')}")
+    except Exception as _ex:
+        _log.debug("on_ready(): role_seed: %s", _ex)
+
     # Связь с веб-панелью — САМОЕ ВАЖНОЕ в хвосте on_ready: без неё панель
     # показывает «бот выключен», хотя он в сети. Держим отдельно и защищённо.
     try:
