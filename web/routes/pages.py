@@ -3,13 +3,12 @@
 
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 def register(ctx):
     app = ctx.app
@@ -53,56 +52,6 @@ def register(ctx):
 
 
 
-
-
-
-
-
-
-
-
-    @app .route ('/ai-tickets')
-    @login_required 
-    @role_required ('mod')
-    def ai_tickets_page ():
-        """Показать диалоги AI-тикетов"""
-        try :
-            guild_id =int (session .get ('guild_id',MAIN_GUILD_ID )or 0 )
-        except (TypeError ,ValueError ):
-            guild_id =0 
-        tickets_data =_load_ai_tickets (guild_id )if guild_id else {}
-
-        # Bot instance'dan channel информация al
-        import web .app as _app ;bot =_app .bot_instance 
-        tickets_list =[]
-
-        for channel_id ,ticket in tickets_data .items ():
-            try :
-                guild =bot .get_guild (int (guild_id ))
-                channel =guild .get_channel (int (channel_id ))if guild else None 
-                user =guild .get_member (ticket ['user_id'])if guild and ticket .get ('user_id')else None 
-
-                tickets_list .append ({
-                'channel_id':channel_id ,
-                'channel_name':channel .name if channel else f"ticket-{channel_id}",
-                'user_name':user .display_name if user else 'Неизвестно',
-                'user_id':ticket .get ('user_id'),
-                'status':ticket .get ('status','unknown'),
-                'category':ticket .get ('category','общий'),
-                'ai_message_count':ticket .get ('ai_message_count',0 ),
-                'history':ticket .get ('history',[]),
-                'escalated_at':ticket .get ('escalated_at'),
-                'staff_notified':ticket .get ('staff_notified',False )
-                })
-            except Exception as _ex:
-                _log.debug("ai_tickets_page(): подавлено: %s", _ex)
-
-        return render_template (
-        'ai_tickets.html',
-        role =session .get ('role'),
-        username =session .get ('username'),
-        tickets =tickets_list 
-        )
 
 
 

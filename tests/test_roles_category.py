@@ -222,22 +222,15 @@ check(d.get('roles_from_demo') is True,
       'помечено, что показан демо-набор (баннер не врёт про «список недоступен»)')
 check(len(d.get('levels', [])) >= 0 and d.get('success'), 'ответ успешный')
 
-print('== 9. Про-аналитика: фильтр «Модератор» есть из чего собрать ==')
-tk = 'data/ai_tickets_probe_roles.json'
-tk_bk = _backup(tk)
-with open(tk, 'w', encoding='utf-8') as f:
-    json.dump({'1': {'created_at': '2026-08-30T10:00:00+00:00', 'status': 'closed',
-                     'category': 'Жалоба', 'closed_by': 'ivan.mod'},
-               '2': {'created_at': '2026-08-31T10:00:00+00:00', 'status': 'closed',
-                     'category': 'Вопрос', 'closed_by': 'olga.mod'},
-               '3': {'created_at': '2026-08-31T11:00:00+00:00', 'status': 'open',
-                     'category': 'Вопрос', 'closed_by': ''}}, f)
-d = client.get('/api/analytics/advanced?period=365').get_json() or {}
-mods = d.get('moderators') or []
-check('ivan.mod' in mods and 'olga.mod' in mods,
-      f'в ответе список модераторов {mods} (раньше поля не было — селект пустой)')
-check('' not in mods, 'пустые closed_by в список не попали')
-_restore(tk, tk_bk)
+print('== 9. Про-аналитика удалена вместе с тикетами ==')
+# /advanced-analytics целиком читала data/ai_tickets_*.json — данные
+# тикет-системы, снятой владельцем. Фильтр «Модератор» починить успели,
+# но сама страница ушла: проверяем, что следов не осталось.
+check(client.get('/advanced-analytics').status_code == 404,
+      '/advanced-analytics больше не обслуживается')
+check(client.get('/api/analytics/advanced?period=365').status_code == 404,
+      '/api/analytics/advanced удалён вместе со страницей')
+
 
 print('== 10. Публикация цветных ролей: кривой id канала не проходит ==')
 use_bot([])

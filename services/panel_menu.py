@@ -24,7 +24,6 @@ MENU = [
         {'path': '/', 'label': 'Обзор сервера', 'icon': 'fa-home'},
         {'path': '/guilds', 'label': 'Серверы', 'icon': 'fa-server'},
         {'path': '/analytics', 'label': 'Аналитика', 'icon': 'fa-chart-line'},
-        {'path': '/advanced-analytics', 'label': 'Про-аналитика', 'icon': 'fa-chart-pie'},
         {'path': '/bot-stats', 'label': 'Статистика бота', 'icon': 'fa-robot'},
         {'path': '/server-health', 'label': 'Состояние', 'icon': 'fa-heartbeat'},
         {'path': '/ops-center', 'label': 'Оперативный центр', 'icon': 'fa-gauge-high'},
@@ -128,14 +127,6 @@ MENU = [
         {'path': '/panel-access', 'label': 'Панели и роли', 'icon': 'fa-user-shield'},
         {'path': '/panel-menu', 'label': 'Меню панели', 'icon': 'fa-bars'},
         {'path': '/role-permissions', 'label': 'Права команд', 'icon': 'fa-user-lock'},
-    ]},
-    {'group': 'Тикеты', 'key': 'tickets', 'icon': 'fa-ticket-alt', 'pages': [
-        {'path': '/ai-tickets', 'label': 'AI-тикеты', 'icon': 'fa-ticket-alt'},
-        
-        {'path': '/ai_ticket_stats', 'label': 'Статистика', 'icon': 'fa-chart-pie'},
-        
-        
-        
     ]},
     {'group': 'Бот', 'key': 'bot', 'icon': 'fa-robot', 'pages': [
         {'path': '/bot-settings', 'label': 'Настройки бота', 'icon': 'fa-sliders-h'},

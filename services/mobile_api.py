@@ -165,15 +165,10 @@ class MobileAPIClient:
         """Поиск статей"""
         return self._request('GET', '/api/knowledge-base/search', params={'q': query})
     
-    # STATISTICS 
-    
-    def get_dashboard_stats(self) -> Dict[str, Any]:
-        """Получить статистику дашборда"""
-        return self._request('GET', '/api/dashboard/stats')
-    
-    def get_analytics(self, period: int = 30) -> Dict[str, Any]:
-        """Получить аналитику"""
-        return self._request('GET', '/api/analytics/advanced', params={'period': period})
+    # STATISTICS
+    # get_dashboard_stats / get_analytics удалены: оба ходили в тикетную
+    # статистику (/api/dashboard/stats и /api/analytics/advanced), а
+    # тикет-система снята владельцем — её роль выполняет /report.
     
     # PUSH NOTIFICATIONS 
     

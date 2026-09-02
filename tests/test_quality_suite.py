@@ -144,8 +144,8 @@ paths = [page['path'] for page in pages]
 # 2026-09-01: дубль «Варны» (/warn-config) из «Настроек» убран — ступени
 # настраиваются в одном месте, «Лестница наказаний» (/ladder); старый роут
 # оставлен редиректом, но пункта в меню больше нет.
-check(len(paths) == 73 and len(set(paths)) == 73 and '/music' not in paths,
-      f'owner-меню: 73 уникальных страниц, музыки нет ({len(paths)})')
+check(len(paths) == 70 and len(set(paths)) == 70 and '/music' not in paths,
+      f'owner-меню: 70 уникальных страниц, музыки и тикетов нет ({len(paths)})')
 
 rendered = 0
 for route in paths:

@@ -15,11 +15,10 @@ import types as _types
 
 from web.routes._common import (  # noqa: F401  (реэкспорт для совместимости)
     Ctx, _REPO_ROOT, _run_async, _fetch_channel_msgs_async,
-    _fetch_channel_msgs_sync, _load_ai_tickets, _notify_discord_sender,
+    _fetch_channel_msgs_sync, _notify_discord_sender,
     _fire_panel_notification, _process_action,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats,
-)
+    ms_normalize_warn, ms_normalize_case)
 from web.routes import (
     pages_core,
     anticrash,
@@ -53,11 +52,9 @@ from web.routes import (
     guild_extra,
     permissions,
     dashboard,
-    ticket_tags,
     user_profile,
     notifications,
     theme,
-    adv_analytics,
     ux,
     flags_panel,
     analytics_plus,
@@ -77,8 +74,7 @@ from web.routes import (
     pagerduty_hook,
     mod_schedule,
     reports_queue,
-    live_sse,
-)
+    live_sse)
 
 _MODULES = tuple(
     _obj for _obj in globals().values()

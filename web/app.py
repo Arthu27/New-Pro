@@ -30,7 +30,7 @@ from datetime import timedelta
 
 # WebSocket импорты
 try :
-    from web .websocket_server import start_websocket_thread ,notify_ticket_created ,notify_ticket_updated ,notify_stats_updated 
+    from web .websocket_server import start_websocket_thread ,notify_stats_updated 
     WEBSOCKET_ENABLED =True 
 except ImportError :
     WEBSOCKET_ENABLED =False 
@@ -1036,7 +1036,7 @@ def login ():
             session ['username']=username 
             session ['role']=USERS [username ]['role']
             # Реальному входу тоже нужен выбранный сервер — раньше его
-            # ставил только демо-логин, и страницы вроде /ai_ticket_stats
+            # ставил только демо-логин, и страница уходила в редирект
             # вечно редиректили на выбор сервера.
             session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
             session .modified =True 
@@ -2590,21 +2590,6 @@ def api_execute_command ():
                         with open (warns_file ,'w',encoding ='utf-8')as wf :
                             json .dump (warns ,wf ,ensure_ascii =False )
                         _store .invalidate_path (warns_file )
-            elif command =='ticket_panel':
-                from cogs .ticket import TicketView 
-                ch =guild .get_channel (int (data .get ('channel_id',0 )))
-                if not ch :
-                    ch =guild .text_channels [0 ]
-                from cogs .embed_utils import _divider 
-                e =discord .Embed (title =" ПОДДЕРЖКА СИСТЕМА",color =0x5865F2 )
-                e .description =(
-                "```ansi\n\u001b[1;34m Hakumo ПОДДЕРЖКА СИСТЕМА \u001b[0m\n```\n"
-                f"{_divider()}\n\n"
-                "Возникла проблема? Нажми кнопку ниже!\n\n"
-                f"{_divider()}"
-                )
-                e .set_footer (text =f"{guild.name} • Поддержка Система",icon_url =guild .icon .url if guild .icon else None )
-                await ch .send (embed =e ,view =TicketView ())
             elif command in ('текст','zar','rastgele'):
                 pass # Развлекательные команды выполняются в Discord, панель только запускает
                 # Jail kategorisi, канал ve роль создать
@@ -4507,23 +4492,6 @@ def api_activity_feed ():
     except Exception as _ex:
         _log.debug("api_activity_feed(): подавлено: %s", _ex)
 
-    # 4) Тикеты (ai_tickets_*.json)
-    try:
-        for fn in os.listdir('data'):
-            if fn.startswith('ai_tickets_') and fn.endswith('.json'):
-                with open(os.path.join('data', fn), 'r', encoding='utf-8') as fp:
-                    data = json.load(fp)
-                for tid, tk in data.items():
-                    ts = 0
-                    try:
-                        ts = _epoch_from_ts (tk .get ('created_at'))
-                    except Exception:
-                        ts = 0
-                    push('fa-ticket', 'Тикет: '+ (tk.get('category') or 'общий'),
-                         tk.get('user_name'), tk.get('description','')[:80], ts, 'ticket', link='/ticket-search')
-    except Exception as _ex:
-        _log.debug("api_activity_feed(): подавлено: %s", _ex)
-
     # 5) Панель-логи (POST-действия) — broadcast-события пропускаем:
     # они уже попадают из истории уведомлений (источник 6) с иконками и ссылками
     try:
@@ -4548,9 +4516,8 @@ def api_activity_feed ():
     # 6) События диспетчера уведомлений (история с иконками и ссылками)
     try:
         f = 'data/notification_history.json'
-        _ev_type = {'ticket_open':'ticket','ticket_message':'ticket','ticket_close':'ticket',
-                    'priority_change':'ticket','assignment':'ticket','warn':'warn',
-                    'mod_action':'mod','staff_apply':'panel','test':'system'}
+        _ev_type = {'warn':'warn', 'mod_action':'mod', 'staff_apply':'panel',
+                    'test':'system'}
         if os.path.exists(f):
             with open(f, 'r', encoding='utf-8') as fp:
                 hist = json.load(fp)

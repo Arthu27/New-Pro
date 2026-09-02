@@ -58,11 +58,12 @@ check(env_flag('MISSING_FLAG', default=True) is True, 'env_flag: отсутст�
 
 print('\n== 3. Режим по умолчанию — LEAN (лёгкий боевой состав) ==')
 enabled, disabled = select_cog_files(ALL_FILES)
-# RETIRED-коги (тикеты, музыка) не грузятся ни в одном профиле — они в disabled.
+# Снятые с эксплуатации коги (тикеты, музыка) удалены с диска целиком —
+# RETIRED_COGS пуст: «на покое, но на диске» больше никто не лежит.
 check(set(enabled) == LEAN_COGS, 'lean: без флагов грузится ровно боевой keep-лист')
 check(set(disabled) == set(NON_HELPERS) - set(enabled)
       and not (set(enabled) & set(disabled)),
-      'lean: вся «веселуха» и снятые модули (музыка/тикеты) — в спящих, без пересечений')
+      'lean: вся «веселуха» в спящих, без пересечений')
 missing_lean = sorted(f for f in LEAN_COGS if f not in ALL_SET)
 check(missing_lean == [], f'LEAN_COGS: все файлы на диске {missing_lean}')
 # Выключенные модули больше не прячутся в спящих — они физически удалены
@@ -81,7 +82,7 @@ for gone in ('economy_cog.py', 'level_cog.py', 'fun_cog.py', 'minigames.py',
              'verification.py', 'advanced_mod.py', 'mod_case.py',
              'mod_kit.py', 'mod_tools.py', 'proactive_mod.py',
              'dm_report.py', 'invite_tracker.py', 'mod_digest.py',
-             'server_template.py'):
+             'server_template.py', 'ticket.py'):
     assert gone not in ALL_SET, f'{gone} должна быть физически удалена с диска'
 check(True, 'lean: экономика/игры/уровни/ивенты/соц-системы — физически удалены')
 for keep in ('moderation.py', 'moderation_cog.py', 'warnings.py',
@@ -212,8 +213,8 @@ check('welcome_cog.py' in d2 and 'afk.py' in d2 and
 e2l, d2l = select_cog_files(ALL_FILES, disabled='afk')
 check('afk.py' in d2l and 'moderation.py' in e2l,
       'DISABLED_COGS: работает и поверх LEAN (выключает даже боевой модуль)')
-e3, d3 = select_cog_files(ALL_FILES, mod_only=True, disabled='logs,ticket.py')
-check('logs.py' in d3 and 'ticket.py' in d3,
+e3, d3 = select_cog_files(ALL_FILES, mod_only=True, disabled='logs,appeals')
+check('logs.py' in d3 and 'appeals.py' in d3,
       'DISABLED_COGS: может выключить даже модер-модуль/хелпер (приоритет над keep)')
 # Удалённые модули (музыка) на диске отсутствуют — EXTRA их не возвращает;
 # проверяем точечный возврат на живых спящих модулях.

@@ -438,7 +438,7 @@ class warnings(commands.Cog):
 
         # Уведомление панели о варне (веб/Discord/email — в фоне)
         try:
-            from cogs.ticket import _notify_panel_ticket_event as _np
+            from services.panel_notify import notify_panel_event as _np
             _np(interaction, 'warn',
                 f"Предупреждение: {user.display_name}",
                 f"Модератор: {interaction.user.display_name} · Всего: {total} · Причина: {reason or 'Не указана'}")

@@ -99,8 +99,8 @@ from services import panel_menu as PM  # noqa: E402
 
 pages = [p for g in PM.MENU for p in g['pages']]
 paths = [p['path'] for p in pages]
-check(len(paths) == 73 and len(set(paths)) == 73,
-      f'в меню 73 уникальных страниц ({len(paths)}); музыка/варны/дубль бэкапов убраны')
+check(len(paths) == 70 and len(set(paths)) == 70,
+      f'в меню 70 уникальных страниц ({len(paths)}); музыка/тикеты/варны/дубль бэкапов убраны')
 check('/warn-config' not in paths, 'дубль «Варны» (/warn-config) убран из меню')
 check('/ladder' in paths, 'каноническая «Лестница наказаний» в меню')
 groups = {g['key']: g for g in PM.MENU}
@@ -149,7 +149,7 @@ check('/spravka' not in main_paths, 'скрытая страница исчез�
 # в кастомном порядке main заданы ['/bot-stats', '/', '/guilds'] — встали первыми
 check(main_paths[:3] == ['/bot-stats', '/', '/guilds'],
       'указанные страницы встали первыми в своём порядке')
-check(main_paths[3:] == ['/analytics', '/advanced-analytics',
+check(main_paths[3:] == ['/analytics',
                          '/server-health', '/ops-center'],
       'остальные страницы остались в исходном порядке (стабильность)')
 acc_paths = [p['path'] for p in owner_groups['access']['pages']]

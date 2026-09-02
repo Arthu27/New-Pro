@@ -25,7 +25,6 @@ class AIFunctions :
         'check_message_history':self .check_message_history ,
         'search_rules':self .search_rules ,
         'get_server_stats':self .get_server_stats ,
-        'get_ticket_history':self .get_ticket_history ,
         'remember_fact':self .remember_fact ,
         'recall_facts':self .recall_facts ,
         'check_user_reputation':self .check_user_reputation ,
@@ -63,10 +62,6 @@ class AIFunctions :
 6. get_server_stats()
    Получить статистику сервера (участники, онлайн, каналы)
    Пример: get_server_stats()
-
-7. get_ticket_history(user_id: int)
-   Получить историю тикетов пользователя
-   Пример: get_ticket_history(123456789)
 
 8. remember_fact(user_id: int, fact: str)
    Запомнить важный факт о пользователе
@@ -620,35 +615,6 @@ class AIFunctions :
         except Exception as e :
             return f"Ошибка: {str(e)}"
 
-    async def get_ticket_history (self ,guild :discord .Guild ,user_id :int )->str :
-        """Получить историю тикетов"""
-        try :
-            ticket_file =f"data/tickets_{guild.id}.json"
-            if not os .path .exists (ticket_file ):
-                return f"У <@{user_id}> нет истории тикетов."
-
-            with open (ticket_file ,'r',encoding ='utf-8')as f :
-                tickets_data =json .load (f )
-
-            user_tickets =[
-            t for t in tickets_data .get ('tickets',[])
-            if t .get ('user_id')==user_id 
-            ]
-
-            if not user_tickets :
-                return f"У <@{user_id}> нет тикетов."
-
-            result =f"Ticketlar <@{user_id}> ({len(user_tickets)}):\n"
-            for ticket in user_tickets [-5 :]:# В конец 5
-                status =ticket .get ('status','?')
-                category =ticket .get ('category','?')
-                created =ticket .get ('created_at','?')[:10 ]
-                result +=f"- {category} ({status}) — {created}\n"
-
-            return result 
-        except Exception as e :
-            return f"Ошибка: {str(e)}"
-
     async def remember_fact (self ,guild :discord .Guild ,user_id :int ,fact :str )->str :
         """Zapomnit fakt о у пользователя"""
         try :
@@ -709,19 +675,17 @@ class AIFunctions :
         try :
             warnings_text =await self .get_user_warnings (guild ,user_id )
             info_text =await self .get_user_info (guild ,user_id )
-            tickets_text =await self .get_ticket_history (guild ,user_id )
 
             return (
             f"=== REPUTACIYa <@{user_id}> ===\n\n"
             f"{info_text}\n\n"
-            f"{warnings_text}\n\n"
-            f"{tickets_text}"
+            f"{warnings_text}"
             )
         except Exception as e :
             return f"Ошибка: {str(e)}"
 
     async def search_knowledge_base (self ,guild :discord .Guild ,query :str )->str :
-        """Arama по tabanda информация сервер (правила, FAQ, ticketlar, notlar)"""
+        """Поиск по базе знаний сервера (правила, FAQ, заметки)"""
         try :
             from web .ai_rag import get_knowledge_base 
 

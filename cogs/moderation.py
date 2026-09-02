@@ -784,7 +784,7 @@ class Moderation (commands .Cog ):
 
                 # Уведомление панели о действии модерации (веб/Discord/email — в фоне)
                 try :
-                    from cogs .ticket import _notify_panel_ticket_event as _np
+                    from services .panel_notify import notify_panel_event as _np
                     _label ={"ban":"Апелляция","kick":"Кик","timeout":"Таймаут","mute_chat":"Мут чата","vmute":"Войс-мут","vunmute":"Войс-мут снят","untimeout":"Мут снят"}.get (action ,action )
                     _np (interaction ,'mod_action',
                     f"{_label }: {user .display_name }",
@@ -857,7 +857,7 @@ class Moderation (commands .Cog ):
                 await self .send_log (guild ,confirm )
                 # Уведомление панели (веб/Discord/email — в фоне)
                 try :
-                    from cogs .ticket import _notify_panel_ticket_event as _np
+                    from services .panel_notify import notify_panel_event as _np
                     _np (interaction ,'mod_action',
                     f"Разбан/снятие апелляции: {_who }",
                     f"Модератор: {interaction .user .display_name } · Дело #{case_id}")

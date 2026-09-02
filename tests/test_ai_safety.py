@@ -80,11 +80,12 @@ check('временный мут (timeout)' not in src, 'советов «при
 check('НЕ выдумывай' in src, 'в системном промпте запрет выдумывать факты')
 
 print('== 3. Тикетный поток не наказывает ==')
-tsrc = open(os.path.join(ROOT, 'cogs', 'ticket.py'), encoding='utf-8').read()
-check("actions .get ('jail')" not in tsrc, 'тикет не применяет тюрьму по команде ИИ')
-check("actions .get ('warn')" not in tsrc, 'тикет не применяет варн по команде ИИ')
-check('AI рекомендация' not in tsrc, 'кнопок «наказать по рекомендации ИИ» нет')
-check("_assign_role (message .guild ,actions" not in tsrc, 'ИИ не выдаёт роли')
+# Тикет-система удалена целиком (решение владельца: cogs/ticket.py, страницы
+# /ai-tickets и /ai_ticket_stats, «Про-аналитика»). Проверять нечего —
+# защита «ИИ не наказывает» покрыта секциями 1, 2 и 4.
+check(not os.path.exists(os.path.join(ROOT, 'cogs', 'ticket.py')),
+      'cogs/ticket.py физически удалён — тикетный поток ИИ исчез вместе с ним')
+
 
 print('== 4. Отчёт модерации убран вместе с модулем отчётов ==')
 # Модуль mod_report (и страница «Отчёты») удалён при чистке выключенных

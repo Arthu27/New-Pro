@@ -6,13 +6,12 @@ import threading
 
 from web.routes._common import (
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
-    _load_ai_tickets, _notify_discord_sender, _fire_panel_notification,
+    _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
     render_template, session, redirect, url_for, request, jsonify, Response,
-    os, json, time, math, discord, datetime, timezone,
-)
+    os, json, time, math, discord, datetime, timezone)
 
 # ── Кэш раздела «Доступ» (права команд) ────────────────────────────────────
 # Список ролей сервера и ACL не меняются каждую секунду, но страница живёт
@@ -121,8 +120,7 @@ def register(ctx):
             'role_permissions.html',
             role=session.get('role'),
             username=session.get('username'),
-            guild_id=active_guild_id(),
-        )
+            guild_id=active_guild_id())
 
     @app.route('/api/panel/visibility', methods=['GET', 'POST'])
     @login_required
@@ -170,8 +168,7 @@ def register(ctx):
             'panel_access.html',
             role=session.get('role'),
             username=session.get('username'),
-            guild_id=active_guild_id(),
-        )
+            guild_id=active_guild_id())
 
     @app.route('/panel-menu')
     @login_required
@@ -183,8 +180,7 @@ def register(ctx):
             'panel_menu.html',
             role=session.get('role'),
             username=session.get('username'),
-            guild_id=active_guild_id(),
-        )
+            guild_id=active_guild_id())
 
     @app.route('/api/role-permissions/<guild_id>')
     @login_required

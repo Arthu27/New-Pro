@@ -638,7 +638,7 @@ check(paths.count('/guardian') == 1, 'Щит сервера — один пун�
 gd = [p for p in pages if p['path'] == '/guardian'][0]
 check(gd.get('section') == 'protection' and gd.get('min_role') == 'admin',
       'пункт в разделе «Защита» модерации, доступ Админ')
-check(len(paths) == 73, f'в меню 73 страницы ({len(paths)}); музыка удалена, дубль бэкапов убран')
+check(len(paths) == 70, f'в меню 70 страниц ({len(paths)}); музыка и тикеты удалены, дубль бэкапов убран')
 
 from web import routes_extra as _re  # noqa: E402
 
