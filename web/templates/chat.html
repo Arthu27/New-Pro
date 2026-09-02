@@ -1287,10 +1287,16 @@ async function deleteMsg(msgId) {
   });
 }
 async function doDeleteMsg(msgId) {
+  // Ответ раньше не читался, а catch(e){} глушил сетевой сбой: список
+  // перезагружался в любом случае, и удаление выглядело успешным даже
+  // когда Discord его не дал (нет прав, сообщения уже нет, таймаут —
+  // сервер отвечает 404 «Канал не найден» или 500 с текстом ошибки).
   try {
-    await fetch('/api/chat/' + _activeGuildId + '/' + _channelId + '/delete/' + msgId, {method:'POST'});
-    _lastMsgId = null; loadMessages();
-  } catch(e) {}
+    var r = await fetch('/api/chat/' + _activeGuildId + '/' + _channelId + '/delete/' + msgId, {method:'POST'});
+    var d = await r.json();
+    if (r.status === 200 && d.ok) { _lastMsgId = null; loadMessages(); }
+    else toast('Не удалось удалить сообщение: ' + (d.error || ('ошибка ' + r.status)), false);
+  } catch(e) { toast('Ошибка сети — сообщение не удалено', false); }
 }
 
 // ── DM ────────────────────────────────────────────────────────────────────

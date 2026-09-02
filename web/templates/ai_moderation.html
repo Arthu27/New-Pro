@@ -244,22 +244,22 @@
     <div class="aimod-severity-grid">
       <div class="severity-card" data-sev="mild" onclick="toggleSev('mild')">
         <div class="sev-icon"><i class="fas fa-triangle-exclamation"></i></div>
-        <div class="sev-name">Mild</div>
+        <div class="sev-name">Лёгкое</div>
         <div class="sev-desc">Варн · Оскорбления</div>
       </div>
       <div class="severity-card" data-sev="moderate" onclick="toggleSev('moderate')">
         <div class="sev-icon"><i class="fas fa-comment-slash"></i></div>
-        <div class="sev-name">Moderate</div>
+        <div class="sev-name">Среднее</div>
         <div class="sev-desc">Мут 10м · Угрозы</div>
       </div>
       <div class="severity-card" data-sev="severe" onclick="toggleSev('severe')">
         <div class="sev-icon"><i class="fas fa-ban"></i></div>
-        <div class="sev-name">Severe</div>
+        <div class="sev-name">Тяжёлое</div>
         <div class="sev-desc">Бан · Терроризм</div>
       </div>
       <div class="severity-card" data-sev="discrimination" onclick="toggleSev('discrimination')">
         <div class="sev-icon"><i class="fas fa-ban"></i></div>
-        <div class="sev-name">Discrimination</div>
+        <div class="sev-name">Дискриминация</div>
         <div class="sev-desc">Мут 60м · Дискриминация</div>
       </div>
     </div>
@@ -389,9 +389,22 @@
   }
   // Save config
   function saveConfig(patch) {
+    // Раньше статус и тело ответа выбрасывались: при сбое запроса
+    // переключатель просто откатывался на прежнее значение без единого
+    // слова — выглядело как «кнопка не работает». Теперь ошибка видна.
     return fetch('/api/ai-mod/config', {
       method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(patch)
-    }).then(r => r.json());
+    }).then(r => r.json().then(d => ({s: r.status, d: d}))).then(function (res) {
+      if (res.s === 200 && res.d && res.d.ok !== false && !res.d.error) return res.d;
+      var msg = (res.d && res.d.error) || ('Не удалось сохранить (' + res.s + ')');
+      if (window.showToast) window.showToast('' + msg, false);
+      throw new Error(msg);
+    }).catch(function (e) {
+      if (window.showToast && e && e.message && !/Не удалось|ошибка/i.test(e.message)) {
+        window.showToast('Сеть недоступна — настройки не сохранены', false);
+      }
+      throw e;
+    });
   }
   window.toggleMaster = function() {
     const el = document.getElementById('masterSwitch');

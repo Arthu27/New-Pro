@@ -68,7 +68,7 @@
       <div class="diag-vital-status"></div>
     </div>
     <div class="diag-vital-val" id="memVal">—</div>
-    <div class="diag-vital-unit">RAM (MB)</div>
+    <div class="diag-vital-unit">ОЗУ (МБ)</div>
     <div class="diag-vital-thresh" id="memThresh">Варн: 400 · Crit: 700</div>
   </div>
   <div class="diag-vital" id="vital-cpu">
@@ -86,7 +86,7 @@
       <div class="diag-vital-status"></div>
     </div>
     <div class="diag-vital-val" id="latVal">—</div>
-    <div class="diag-vital-unit">Ping (ms)</div>
+    <div class="diag-vital-unit">Пинг (мс)</div>
     <div class="diag-vital-thresh" id="latThresh">Варн: 300 · Crit: 800</div>
   </div>
   <div class="diag-vital" id="vital-err">
@@ -108,12 +108,12 @@
       <span id="botOnlineBadge" class="badge badge-ok">ОНЛАЙН</span>
     </div>
     <div class="dash-box-body" >
-      <div class="kv"><div class="kv-key">Uptime</div><div class="kv-val" id="uptimeVal">—</div></div>
-      <div class="kv"><div class="kv-key">Guilds</div><div class="kv-val" id="guildsVal">—</div></div>
-      <div class="kv"><div class="kv-key">Users</div><div class="kv-val" id="usersVal">—</div></div>
-      <div class="kv"><div class="kv-key">Cogs Loaded</div><div class="kv-val" id="cogsVal">—</div></div>
-      <div class="kv"><div class="kv-key">Commands</div><div class="kv-val" id="cmdsVal">—</div></div>
-      <div class="kv"><div class="kv-key">Threads</div><div class="kv-val" id="threadsVal">—</div></div>
+      <div class="kv"><div class="kv-key">Аптайм</div><div class="kv-val" id="uptimeVal">—</div></div>
+      <div class="kv"><div class="kv-key">Серверов</div><div class="kv-val" id="guildsVal">—</div></div>
+      <div class="kv"><div class="kv-key">Участников</div><div class="kv-val" id="usersVal">—</div></div>
+      <div class="kv"><div class="kv-key">Модулей загружено</div><div class="kv-val" id="cogsVal">—</div></div>
+      <div class="kv"><div class="kv-key">Команд</div><div class="kv-val" id="cmdsVal">—</div></div>
+      <div class="kv"><div class="kv-key">Потоков</div><div class="kv-val" id="threadsVal">—</div></div>
     </div>
   </div>
 
@@ -136,17 +136,17 @@
   <div class="dash-box-body" >
     <div class="diag-action">
       <div class="icon"><i class="fas fa-fire"></i></div>
-      <div class="text">Hot Reload Cogs
-        <small>Перезагрузить все cog'ы, чьи файлы изменились с последней загрузки</small>
+      <div class="text">Перезагрузка кода
+        <small>Перезагрузить все модули, чьи файлы изменились с последней загрузки</small>
       </div>
-      <button type="button" onclick="hotReload()">Reload</button>
+      <button type="button" onclick="hotReload()">Перезагрузить код</button>
     </div>
     <div class="diag-action warn">
       <div class="icon"><i class="fas fa-broom"></i></div>
-      <div class="text">Garbage Collect
-        <small>Принудительная очистка памяти Python (освобождает ~50-200MB)</small>
+      <div class="text">Сборка мусора
+        <small>Принудительная очистка памяти Python (освобождает ~50–200 МБ)</small>
       </div>
-      <button type="button" onclick="gc()">GC</button>
+      <button type="button" onclick="gc()">Собрать</button>
     </div>
     <div class="diag-action">
       <div class="icon"><i class="fas fa-search"></i></div>
@@ -160,7 +160,7 @@
       <div class="text">Перезагрузить весь бот
         <small><i class="fas fa-triangle-exclamation"></i> Прервёт работу бота на ~5-15 секунд. Только для критических случаев.</small>
       </div>
-      <button type="button" onclick="confirmRestart()">Restart</button>
+      <button type="button" onclick="confirmRestart()">Перезапустить</button>
     </div>
   </div>
 </div>
@@ -252,35 +252,52 @@
     if (h > 0) return h + 'ч ' + m + 'м';
     return m + 'м';
   }
+  /* Все четыре действия ниже раньше показывали успех, не глядя на ответ,
+     и не имели .catch(): при офлайн-боте /api/bot/hot-reload честно
+     отвечает 503 {error: «Бот офлайн — запусти его через start.bat»},
+     а панель писала зелёное «Hot reload...» → «Нет изменений».
+     Теперь проверяем success/error и ловим сетевой сбой. */
+  function postAction(url, ok, fail) {
+    fetch(url, {method:'POST'})
+      .then(function (r) { return r.json().then(function (d) { return {s: r.status, d: d}; }); })
+      .then(function (res) {
+        var d = res.d || {};
+        if (res.s === 200 && d.success !== false && !d.error) ok(d);
+        else fail(d.error || ('Ошибка сервера (' + res.s + ')'));
+      })
+      .catch(function () { fail('Ошибка соединения'); });
+  }
+
   window.hotReload = function() {
-    showToast('Hot reload...', true);
-    fetch('/api/bot/hot-reload', {method:'POST'}).then(r => r.json()).then(d => {
-      if (d.reloaded && d.reloaded.length) showToast('Перезагружено: ' + d.reloaded.join(', '), true);
-      else showToast('Нет изменений', true);
-      load();
-    });
+    showToast('Перезагружаю код…', true);
+    postAction('/api/bot/hot-reload',
+      function (d) {
+        if (d.reloaded && d.reloaded.length) showToast('Перезагружено: ' + d.reloaded.join(', '), true);
+        else showToast('Изменений в коде нет', true);
+        load();
+      },
+      function (err) { showToast('' + err, false); load(); });
   };
   window.gc = function() {
-    fetch('/api/bot/gc', {method:'POST'}).then(r => r.json()).then(d => {
-      showToast('GC: собрано ' + d.collected + ' объектов', true);
-      load();
-    });
+    postAction('/api/bot/gc',
+      function (d) { showToast('Сборка мусора: освобождено ' + (d.collected != null ? d.collected : 0) + ' объектов', true); load(); },
+      function (err) { showToast('' + err, false); });
   };
   window.diagnose = function() {
-    fetch('/api/bot/diagnose', {method:'POST'}).then(r => r.json()).then(d => {
-      if (d.issues && d.issues.length) {
-        showToast('' + d.issues.length + ' проблем обнаружено', false);
-      } else {
-        showToast('Всё в порядке', true);
-      }
-      load();
-    });
+    showToast('Проверяю бота…', true);
+    postAction('/api/bot/diagnose',
+      function (d) {
+        if (d.issues && d.issues.length) showToast('Обнаружено проблем: ' + d.issues.length, false);
+        else showToast('Всё в порядке', true);
+        load();
+      },
+      function (err) { showToast('' + err, false); });
   };
   window.confirmRestart = function() {
     window.askConfirm('Перезагрузка бота', 'Точно перезагрузить весь бот? Это прервёт работу на 5–15 секунд.', function () {
-      fetch('/api/bot/restart', {method:'POST'}).then(r => r.json()).then(d => {
-        showToast('Бот перезагружается...', true);
-      });
+      postAction('/api/bot/restart',
+        function () { showToast('Бот перезагружается…', true); load(); },
+        function (err) { showToast('' + err, false); });
     }, { icon_fa: 'fa-arrows-rotate', okText: 'Перезапустить', danger: true });
   };
   function loadErrors() {
