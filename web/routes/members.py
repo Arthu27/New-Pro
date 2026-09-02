@@ -7,6 +7,7 @@ from web.routes._common import (
     _process_action, _log, viewer_member, acl_action_allowed,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
     ms_normalize_warn, ms_normalize_case, calculate_ai_ticket_stats, _REPO_ROOT,
+    demo_members_search, demo_member_payload,
     render_template, session, redirect, url_for, request, jsonify, Response,
     os, json, time, math, discord, datetime, timezone,
 )
@@ -100,6 +101,80 @@ def register(ctx):
             'reason':info .get ('reason',''),'added_by':info .get ('added_by',''),
             'timestamp':info .get ('timestamp','')})
         return jsonify (result )
+
+
+    def _pick_member_item (m ):
+        """Элемент для member-picker'а панели: {user_id, name, bot, avatar}."""
+        p =ms_member_payload (m )
+        return {
+            'user_id':p .get ('id')or str (getattr (m ,'id','')),
+            'name':p .get ('display_name')or p .get ('name')or str (getattr (m ,'id','')),
+            'bot':bool (p .get ('is_bot')or getattr (m ,'bot',False )),
+            'avatar':p .get ('avatar')or '',
+        }
+
+    def _pick_demo_item (m ):
+        """Тот же формат для демо-участника (dict из DEMO_MEMBERS)."""
+        return {
+            'user_id':str (m .get ('id','')),
+            'name':m .get ('display_name')or m .get ('name',''),
+            'bot':bool (m .get ('bot',False )),
+            'avatar':m .get ('avatar',''),
+        }
+
+    @app .route ('/api/guild/<guild_id>/member-card/suggest',methods =['GET'])
+    @login_required
+    @role_required ('uye')
+    def api_member_card_suggest (guild_id ):
+        """Подсказки участника для пикеров панели (antifake, ladder, proofs,
+        temp_moderation и т.д.). q — имя/ник/часть ID; offset — для «показать
+        ещё». Без q отдаём первых участников кэша. Формат: {items:[...],has_more}.
+
+        Если по точному ID в кэше пусто — пробуем догрузить участника с
+        Discord (fetch_member): так в списке появляются и те, кого ещё нет в
+        локальном листе. Сетевой вызов идёт через _resolve_member_async."""
+        try :
+            limit =max (1 ,min (50 ,int (request .args .get ('limit',25 )or 25 )))
+        except (TypeError ,ValueError ):
+            limit =25
+        try :
+            offset =max (0 ,int (request .args .get ('offset',0 )or 0 ))
+        except (TypeError ,ValueError ):
+            offset =0
+        q =ms_normalize_query (request .args .get ('q',''))
+
+        import web .app as _app ;bot =_app .bot_instance
+        # Нет бота (демо/превью) — отдаём демо-участников, чтобы пикер не 404.
+        if not bot :
+            demo =demo_members_search (q ,limit =limit +offset )
+            items =[_pick_demo_item (m )for m in demo [offset :offset +limit ]]
+            return jsonify ({'items':items ,'has_more':len (demo )>=offset +limit })
+
+        gid =int (guild_id )if str (guild_id ).isdigit ()else 0
+        guild =bot .get_guild (gid )
+        if not guild :
+            return jsonify ({'error':'Сервер не найден: проверьте выбор сервера на панели.','items':[]}),404
+
+        if q :
+            window =limit +offset
+            matches =ms_search_members (guild .members ,q ,limit =window )
+            # Точный/частичный ID, но в кэше участника нет — догружаем с Discord.
+            if not matches and q .isdigit ()and offset ==0 :
+                try :
+                    fetched =_resolve_member_async (guild ,int (q ))
+                    if fetched is not None :
+                        matches =[fetched ]
+                except Exception as _ex :
+                    _log .debug ('member-card suggest fetch %s: %s',q ,_ex )
+            total =len (matches )
+            items =[_pick_member_item (m )for m in matches [offset :offset +limit ]]
+        else :
+            # Без запроса — стартовый список из кэша (по порядку).
+            all_members =list (guild .members )
+            total =len (all_members )
+            items =[_pick_member_item (m )for m in all_members [offset :offset +limit ]]
+
+        return jsonify ({'items':items ,'has_more':total >=offset +limit })
 
 
     @app .route ('/api/member-search/<guild_id>',methods =['GET'])

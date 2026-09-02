@@ -982,6 +982,13 @@ async def on_ready():
         except Exception as _ex:
             _log.warning("on_ready(): GC-стабилизация не удалась: %s", _ex)
         bot.loop.create_task(_monitor_voice())
+        # Фоновая дозагрузка участников в кэш (раз в 20с, по одной гильдии) —
+        # чтобы поиск/пикеры/профили панели видели и тех, кого «нет в листе».
+        try:
+            from services.member_sync import start_member_sync
+            start_member_sync(bot)
+        except Exception as _ex:
+            _log.debug("on_ready(): member_sync: %s", _ex)
         # Если только что кончило самообновление (/update) — отчитаться в канал
         try:
             from services import self_update as _SU
