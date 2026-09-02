@@ -76,6 +76,7 @@ ROUTE_SPECS = [
     },
     {
         'key': 'guardian_channel',
+        'hidden_from_hub': True,  # дублирует категорию логов в «Логи сервера» (/log-settings) — в хабе не показываем
         'label': 'Тревоги Щита сервера (анти-нюк)',
         'icon': 'fa-shield-heart',
         'kind': 'native',
@@ -89,6 +90,7 @@ ROUTE_SPECS = [
     },
     {
         'key': 'security_channel',
+        'hidden_from_hub': True,  # дублирует категорию логов в «Логи сервера» (/log-settings) — в хабе не показываем
         'label': 'Лог авто-защиты (ссылки/спам/фейки)',
         'icon': 'fa-user-secret',
         'kind': 'security',
@@ -142,6 +144,7 @@ ROUTE_SPECS = [
     },
     {
         'key': 'antiraid_channel',
+        'hidden_from_hub': True,  # дублирует категорию логов в «Логи сервера» (/log-settings) — в хабе не показываем
         'label': 'Алерты анти-рейда',
         'icon': 'fa-shield-virus',
         'kind': 'antiraid',
@@ -155,6 +158,7 @@ ROUTE_SPECS = [
     },
     {
         'key': 'anticrash_channel',
+        'hidden_from_hub': True,  # дублирует категорию логов в «Логи сервера» (/log-settings) — в хабе не показываем
         'label': 'Сводки анти-краша',
         'icon': 'fa-life-ring',
         'kind': 'anticrash',

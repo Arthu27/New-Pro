@@ -611,10 +611,17 @@ check(r.status_code == 200 and ov.get('success') is True
 
 r = client.get('/api/channel-routes')
 routes = r.get_json().get('routes', [])
-check(len(routes) == 13, f'хаб Каналов отдаёт 13 живых маршрутов ({len(routes)})')
-hub_guard = [x for x in routes if x['key'] == 'guardian_channel']
-check(hub_guard and hub_guard[0]['label'].startswith('Тревоги Щита сервера'),
-      'маршрут Щита с русской подписью на хабе')
+# 4 лог-алерт маршрута (guardian/security/antiraid/anticrash) скрыты с хаба —
+# они дублируют категории «Логи сервера»; бот их по-прежнему читает.
+hub_keys = [x['key'] for x in routes]
+check(len(routes) == 9, f'хаб Каналов отдаёт 9 видимых маршрутов ({len(routes)})')
+check('guardian_channel' not in hub_keys and 'security_channel' not in hub_keys
+      and 'antiraid_channel' not in hub_keys and 'anticrash_channel' not in hub_keys,
+      'лог-алерты Щита/защиты/рейда/краша убраны с хаба (дублируют «Логи сервера»)')
+# но сам маршрут жив в ROUTE_SPECS и адаптере (бот читает канал по-прежнему)
+check('guardian_channel' in CHR.native_keys()
+      and ADAPTERS.get('guardian_channel') is not None,
+      'маршрут Щита остаётся рабочим (адаптер/бот), просто скрыт с хаба')
 
 # ═══ 6. Политика модулей и меню ══════════════════════════════════════════
 print('== политика и меню ==')

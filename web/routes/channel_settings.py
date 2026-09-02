@@ -217,7 +217,7 @@ def register(ctx):
             'step': s.get('step'),
             'required': bool(s.get('required', False)),
             'create_hint': s.get('create_hint', ''),
-        } for s in CHR.ROUTE_SPECS]
+        } for s in CHR.ROUTE_SPECS if not s.get('hidden_from_hub')]
         return render_template('channel_settings.html',
                                role=session.get('role'),
                                username=session.get('username'),
@@ -230,6 +230,10 @@ def register(ctx):
         gid = _active_gid(ctx)
         out = []
         for spec in CHR.ROUTE_SPECS:
+            if spec.get('hidden_from_hub'):
+                # дублирующие лог-маршруты настраиваются в «Логи сервера» —
+                # в хабе каналов их не показываем (бот их по-прежнему читает)
+                continue
             get_fn = ADAPTERS[spec['key']][0]
             try:
                 cid = int(get_fn(gid, spec['key']) if spec['kind'] == 'native'

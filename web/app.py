@@ -4185,22 +4185,169 @@ _ACTION_MAP = (
     (r'/backup', 'Бэкапы', 'fa-box-archive', '/backups'),
     (r'/announcement', 'Объявления', 'fa-bullhorn', '/announcements'),
     (r'/webhook', 'Вебхуки', 'fa-link', '/webhooks'),
-    (r'/ban|/kick|/mute', 'Мод-действие', 'fa-gavel', '/logs'),
+    (r'/ban_appeal_channel', 'Канал апелляции после бана', 'fa-user-lock', '/channel-settings'),
+    (r'/proof_channel', 'Канал доказательств', 'fa-folder-open', '/channel-settings'),
+    (r'/welcome_channel', 'Канал приветствий', 'fa-hand-sparkles', '/channel-settings'),
+    (r'/appeals_channel', 'Канал апелляций', 'fa-scale-balanced', '/channel-settings'),
+    (r'/staff_apply_channel', 'Канал заявок в команду', 'fa-file-signature', '/channel-settings'),
+    (r'/welcome-channel|/welcome-card', 'Приветствие новичков', 'fa-handshake', '/welcome-editor'),
+    (r'/staff-apps|staff_apps', 'Заявка в команду', 'fa-file-signature', '/staff-apps'),
+    (r'/verify/', 'Настроили верификацию', 'fa-clipboard-check', '/verify'),
+    (r'/pagerduty', 'Настроили PagerDuty', 'fa-tower-broadcast', '/pagerduty'),
+    (r'/feature-flags', 'Флаги функций', 'fa-flag', '/feature-flags'),
+    (r'/commands', 'Команды бота', 'fa-terminal', '/commands'),
+    (r'/cog-manager|reload', 'Управление модулями', 'fa-cubes', '/cog-manager'),
+    (r'/bot/restart', 'Перезапустили бота', 'fa-rotate', '/bot-settings'),
+    (r'/bot/sync', 'Синхронизировали команды', 'fa-arrows-rotate', '/bot-settings'),
+    (r'/bot/gc', 'Очистили память бота', 'fa-broom', '/bot-settings'),
+    (r'/bot/diagnose', 'Диагностика бота', 'fa-stethoscope', '/bot-settings'),
+    (r'/bot-settings', 'Настройки бота', 'fa-sliders-h', '/bot-settings'),
+    (r'/log-settings', 'Настроили логи сервера', 'fa-list-check', '/log-settings'),
+    (r'/log-cards', 'Карточки логов', 'fa-id-card', '/log-settings'),
+    (r'/report', 'Настройки репортов', 'fa-flag', '/reports-queue'),
+    (r'/staff-limits', 'Лимиты персонала', 'fa-shield-halved', '/guardian'),
+    (r'/verify', 'Верификация', 'fa-clipboard-check', '/verify'),
+    (r'/anticrash', 'Анти-краш', 'fa-life-ring', '/anticrash'),
+    (r'/antiraid', 'Анти-рейд', 'fa-shield-virus', '/antiraid'),
+    (r'/mod-settings|/ladder', 'Авто-наказания', 'fa-hammer', '/ladder'),
+    (r'/role-settings', 'Роли за наказания', 'fa-user-tag', '/role-settings'),
+    (r'/send-embed', 'Отправили эмбед', 'fa-paper-plane', '/send-command'),
+    (r'/send-message', 'Отправили сообщение', 'fa-paper-plane', '/send-command'),
+    (r'/ban|/kick|/mute|/punish', 'Наказание участника', 'fa-gavel', '/logs'),
 )
 
 
+# Сегменты путей → человеческие названия (для путей, которых нет в точечной
+# карте выше). Последний содержательный сегмент превращаем в русское слово,
+# чтобы в журнале/ленте не светилось сырое «api … settings».
+_SEGMENT_NAMES = {
+    'settings': 'настройки', 'config': 'настройки', 'save': 'сохранение',
+    'log-settings': 'настройки логов', 'log-cards': 'карточки логов',
+    'mod-settings': 'настройки модерации', 'role-settings': 'роли наказаний',
+    'report-settings': 'настройки репортов', 'bot-settings': 'настройки бота',
+    'channel-routes': 'маршруты каналов', 'channel-settings': 'настройки каналов',
+    'staff-limits': 'лимиты персонала', 'guardian': 'щит сервера',
+    'antiraid': 'анти-рейд', 'anticrash': 'анти-краш', 'antifake': 'антифейк',
+    'autofilter': 'автофильтр', 'verify': 'верификация', 'welcome-card': 'карточка приветствия',
+    'pagerduty': 'тревоги PagerDuty', 'feature-flags': 'флаги функций',
+    'commands': 'команды', 'switch': 'переключатель команд', 'switches': 'переключатели команд',
+    'menu-mode': 'режим меню', 'ladder': 'лестница наказаний',
+    'punish': 'наказание', 'appeals': 'апелляции', 'reports': 'репорты',
+    'reports-queue': 'очередь репортов', 'warnings': 'предупреждения',
+    'warn-level': 'роль за уровень варнов', 'mod-schedule': 'расписание наказаний',
+    'mod-control': 'контроль команды', 'mod-insights': 'аналитика рисков',
+    'security-center': 'центр безопасности', 'role': 'роль', 'roles': 'роли',
+    'role-map': 'карта ролей', 'role-permissions': 'права ролей',
+    'members': 'участники', 'member': 'участник', 'nick': 'ник участника',
+    'channels': 'каналы', 'announcements': 'объявления', 'announcement': 'объявление',
+    'backups': 'бэкапы', 'backup': 'бэкап', 'webhook': 'вебхук', 'webhooks': 'вебхуки',
+    'presence': 'статус бота', 'sync': 'синхронизация команд', 'restart': 'перезапуск бота',
+    'diagnose': 'диагностика', 'gc': 'очистка памяти', 'memory-profile': 'профиль памяти',
+    'commands-audit': 'аудит команд', 'update-source': 'обновление источника',
+    'visibility': 'видимость', 'toggle': 'переключение', 'state': 'состояние',
+    'status': 'статус', 'overview': 'обзор', 'summary': 'сводка', 'threshold': 'порог',
+    'protect': 'защита участника', 'unprotect': 'снятие защиты', 'action': 'действие',
+    'strikes': 'нарушения фейк-защиты', 'lab': 'проверка', 'test': 'тест',
+    'cooldown': 'кулдаун', 'add': 'добавление', 'remove': 'удаление',
+    'create': 'создание', 'delete': 'удаление', 'reset': 'сброс', 'clear': 'очистка',
+    'claim': 'взято в работу', 'resolve': 'решение', 'export': 'экспорт',
+    'upload': 'загрузка', 'appearance': 'оформление', 'preview': 'предпросмотр',
+    'publish': 'публикация', 'rollout': 'выкатка', 'amnesty': 'амнистия',
+    'reasons': 'причины', 'dossier': 'досье', 'scan': 'сканирование',
+    'newaccount': 'молодые аккаунты', 'fake-score': 'оценка фейка',
+    'spam-sim': 'симуляция спама', 'protection-reset': 'сброс защиты',
+    'custom': 'отчёт', 'weekly': 'недельный отчёт', 'generate': 'генерация отчёта',
+    'view': 'просмотр', 'records': 'записи', 'revert': 'откат', 'changes': 'журнал изменений',
+    'analytics': 'аналитика', 'advanced': 'расширенная аналитика',
+    'heatmap': 'тепловая карта', 'invite-leaders': 'приглашения', 'member-flow': 'приток участников',
+    'mod-load': 'нагрузка модерации', 'voice-pulse': 'голосовая активность',
+    'week-summary': 'итоги недели', 'channel-drill': 'разбор по каналам',
+    'switch-bulk': 'массовое переключение', 'catalog': 'каталог команд',
+    'leave-guild': 'выход с сервера', 'send-message': 'отправка сообщения',
+    'send-embed': 'отправка эмбеда', 'execute-command': 'выполнение команды',
+    'change-password': 'смена пароля', 'add-member': 'добавление участника',
+    'my-token': 'токен входа', 'tunnel-url': 'адрес туннеля',
+    'panel-menu': 'настройка меню панели', 'layout': 'раскладка меню',
+    'voice-command': 'голосовая команда', 'forgot-password': 'сброс пароля',
+    'reset-password': 'новый пароль', 'discord-login': 'вход через Discord',
+    'discord-check': 'проверка Discord', 'login': 'вход', 'logout': 'выход',
+    'notifications': 'уведомления', 'activity-feed': 'лента активности',
+    'panel-logs': 'журнал панели', 'sidebar': 'сайдбар', 'search': 'поиск',
+}
+
+
+def _human_fallback_title(method, path):
+    """Человеческое название для пути, которого нет в точечной карте.
+
+    Берём последние осмысленные сегменты (отбрасываем api/guild/<id>/числа)
+    и переводим словарём; глагол подбираем по методу (DELETE → «удалили»,
+    POST → «изменили/создали»). Никаких сырых '/api/...' в журнале."""
+    raw_segs = [s for s in str(path or '').split('/') if s]
+    segs = []
+    for s in raw_segs:
+        if s in ('api', 'guild'):
+            continue
+        if s.isdigit():          # id сервера/пользователя
+            continue
+        segs.append(s)
+    # известные составные сегменты переводим целиком (до разбиения по дефису)
+    _known = {
+        'ban_appeal_channel': 'канал апелляции', 'proof_channel': 'канал доказательств',
+        'appeals_channel': 'канал апелляций', 'welcome_channel': 'канал приветствий',
+        'staff_apply_channel': 'канал заявок', 'appeal_menu_channel': 'меню апелляций',
+        'guardian_channel': 'тревоги щита', 'security_channel': 'лог авто-защиты',
+        'antiraid_channel': 'алерты анти-рейда', 'anticrash_channel': 'сводки анти-краша',
+        'pagerduty_channel': 'канал PagerDuty', 'log_settings': 'настройки логов',
+        'role_settings': 'роли наказаний', 'mod_settings': 'настройки модерации',
+        'staff_limits': 'лимиты персонала', 'bot_settings': 'настройки бота',
+        'feature_flags': 'флаги функций', 'panel_menu': 'меню панели',
+        'channel_routes': 'маршруты каналов', 'message_logs': 'логи сообщений',
+        'send_message': 'отправка сообщения', 'send_embed': 'отправка эмбеда',
+        'execute_command': 'выполнение команды', 'memory_profile': 'профиль памяти',
+        'commands_audit': 'аудит команд', 'change_password': 'смена пароля',
+        'forgot_password': 'запрос сброса пароля', 'reset_password': 'сброс пароля',
+        'discord_login': 'вход через Discord', 'discord_check': 'проверка Discord',
+        'activity_feed': 'лента активности', 'panel_logs': 'журнал панели',
+        'leave_guild': 'выход с сервера', 'add_member': 'добавление участника',
+        'my_token': 'токен входа', 'tunnel_url': 'адрес туннеля', 'my_applications': 'мои заявки',
+        'my_notifications': 'уведомления', 'login_suggest': 'подсказки входа',
+        'role_map': 'карта ролей', 'role_permissions': 'права ролей',
+        'staff_apps': 'заявки в команду', 'voice_command': 'голосовая команда',
+    }
+    segs = [_known.get(s.lower(), s) for s in segs]
+    # имя действия — последний сегмент, контекст — предыдущий (если есть)
+    name = ''
+    context = ''
+    if segs:
+        last = segs[-1].lower()
+        name = _SEGMENT_NAMES.get(last, last.replace('-', ' ').replace('_', ' '))
+        if len(segs) >= 2:
+            prev = segs[-2].lower()
+            context = _SEGMENT_NAMES.get(prev, prev.replace('-', ' ').replace('_', ' '))
+    verb = {'DELETE': 'Удалили', 'POST': 'Изменили', 'PUT': 'Изменили',
+            'PATCH': 'Изменили', 'GET': 'Открыли'}.get(str(method or '').upper(), 'Действие')
+    if context and name and name != context:
+        title = f'{verb}: {context} — {name}'
+    elif name:
+        title = f'{verb}: {name}'
+    else:
+        title = 'Действие в панели'
+    return title
+
+
 def _human_panel_action(action):
-    """«POST /api/guild/123/roles/create» → ('Дали роль', 'fa-user-plus', '/roles')."""
-    a = str(action or '')
-    method = a.split(' ', 1)[0]
+    """«POST /api/guild/123/roles/create» → ('Дали роль', 'fa-user-plus', '/roles').
+
+    Сначала точечная карта известных действий; если пути там нет — собираем
+    понятное название из сегментов (без сырого '/api/...')."""
+    a = str(action or '').strip()
+    method = a.split(' ', 1)[0] if ' ' in a else ''
     path = a.split(' ', 1)[1] if ' ' in a else a
     for pat, title, icon, link in _ACTION_MAP:
         if _re.search(pat, path):
             return title, icon, link
-    seg = path.rstrip('/').split('/')[-1].replace('-', ' ').replace('_', ' ').strip()
-    if seg:
-        return 'Изменили: ' + seg, 'fa-sliders', '/panel-logs'
-    return 'Действие в панели', 'fa-sliders', '/panel-logs'
+    title = _human_fallback_title(method, path)
+    return title, 'fa-sliders', '/panel-logs'
 
 
 @app .route ('/api/activity-feed')

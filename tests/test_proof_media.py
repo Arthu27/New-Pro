@@ -152,7 +152,13 @@ d = r.get_json()
 check(r.status_code == 200 and d.get('success') and len(d.get('routes') or []) >= 4,
       'API маршрутов отдаёт все системы')
 rkeys = [x['key'] for x in d['routes']]
-check(set(keys) <= set(rkeys), f'API содержит все ключи {rkeys}')
+# 4 лог-алерт маршрута скрыты с хаба (дублируют «Логи сервера») — сравниваем
+# только видимые спецификации; сами скрытые маршруты остаются рабочими.
+visible = [s['key'] for s in CHR.ROUTE_SPECS if not s.get('hidden_from_hub')]
+check(set(visible) <= set(rkeys), f'API содержит все видимые ключи {rkeys}')
+check(not ({'guardian_channel', 'security_channel',
+            'antiraid_channel', 'anticrash_channel'} & set(rkeys)),
+      'лог-алерты защиты не дублируются на хабе каналов')
 
 r = client.post('/api/channel-routes/proof_channel',
                 data=json.dumps({'channel_id': '777111'}), content_type='application/json')
