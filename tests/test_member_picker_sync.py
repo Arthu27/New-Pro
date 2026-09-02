@@ -141,6 +141,16 @@ async def _t():
     check(w is False, 'sync: медленный chunk упирается в таймаут, не висим')
     MS.CHUNK_TIMEOUT_SEC = old
 
+    # Большой сервер: фиксированных 60 с на 20 000 людей не хватало — докачка
+    # обрывалась и начиналась заново каждый тик, список так и не становился полным.
+    check(MS._chunk_timeout(FakeGuild(5, cached=0, total=0)) == MS.CHUNK_TIMEOUT_SEC,
+          'таймаут: маленький сервер — базовые 60 с')
+    t20k = MS._chunk_timeout(FakeGuild(6, cached=0, total=20000))
+    check(t20k > MS.CHUNK_TIMEOUT_SEC * 3,
+          f'таймаут: 20 000 людей — {t20k:.0f} с (больше базовых 60 с)')
+    check(MS._chunk_timeout(FakeGuild(7, cached=0, total=500000)) == MS.CHUNK_TIMEOUT_MAX_SEC,
+          'таймаут: потолок не уезжает в бесконечность')
+
 
 asyncio.run(_t())
 

@@ -30,6 +30,22 @@ SYNC_INTERVAL_SEC = 20.0
 # Одна итерация не должна висеть вечно: discord.py сам пагинирует, но ставим
 # разумный потолок на докачку одной гильдии.
 CHUNK_TIMEOUT_SEC = 60.0
+# Большой сервер (20 000+ людей) Discord отдаёт пачками по ~1000 человек:
+# фиксированные 60 с на таком объёме не хватает, докачка обрывалась и
+# начиналась заново каждый тик — список участников никогда не становился
+# полным. Масштабируем потолок по числу участников.
+CHUNK_SEC_PER_1K = 8.0
+CHUNK_TIMEOUT_MAX_SEC = 600.0
+
+
+def _chunk_timeout(guild) -> float:
+    """Сколько секунд даём на докачку: 60 с минимум, +8 с на каждую 1000 людей."""
+    try:
+        total = int(getattr(guild, "member_count", 0) or 0)
+    except (TypeError, ValueError):
+        total = 0
+    scaled = CHUNK_TIMEOUT_SEC + (total / 1000.0) * CHUNK_SEC_PER_1K
+    return min(max(scaled, CHUNK_TIMEOUT_SEC), CHUNK_TIMEOUT_MAX_SEC)
 
 _task = None
 _started = False
@@ -47,11 +63,12 @@ async def _sync_guild(guild) -> bool:
 
         # Догружаем пачками через gateway (respect-рейтлимиты внутри discord.py).
         coro = guild.chunk(cache=True)
+        timeout = _chunk_timeout(guild)
         try:
-            await asyncio.wait_for(coro, timeout=CHUNK_TIMEOUT_SEC)
+            await asyncio.wait_for(coro, timeout=timeout)
         except asyncio.TimeoutError:
-            _log.debug("member_sync: chunk guild=%s таймаут (%sс), попробую позже",
-                       guild.id, CHUNK_TIMEOUT_SEC)
+            _log.debug("member_sync: chunk guild=%s таймаут (%.0fс, людей %s), попробую позже",
+                       guild.id, timeout, total or "?")
             return False
         except TypeError:
             # Старые/урезанные сборки discord.py без chunk() — тихо пропускаем.

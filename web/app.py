@@ -1881,16 +1881,19 @@ def api_guild_members (guild_id ):
         if not guild :
             return jsonify ([])
 
-            # Pagination: ?limit=50 (default), max 500
+            # Пагинация: ?limit=1000 (по умолчанию), потолок 5000.
+        # Потолок поднят с 500: на серверах 20 000+ участников страница
+        # физически не могла показать дальше первых 500 человек — теперь
+        # фронт добирает список пачками, пока не дойдёт до конца.
         try :
-            limit =int (request .args .get ('limit',50 ))
+            limit =int (request .args .get ('limit',1000 ))
         except (TypeError ,ValueError ):
-            limit =50 
+            limit =1000 
         try :
             offset =int (request .args .get ('offset',0 ))
         except (TypeError ,ValueError ):
             offset =0 
-        limit =max (1 ,min (limit ,500 ))
+        limit =max (1 ,min (limit ,5000 ))
         offset =max (0 ,offset )
 
         # Кэш 10 с — не перебирать guild.members повторно для того же ответа
@@ -1924,6 +1927,16 @@ def api_guild_members (guild_id ):
         resp .headers ['X-Total-Count']=str (total )
         resp .headers ['X-Limit']=str (limit )
         resp .headers ['X-Offset']=str (offset )
+        # Сколько людей на сервере ПО ДИСКОРДУ и сколько бот уже держит в кэше.
+        # На больших серверах кэш наполняется фоново (services/member_sync.py),
+        # поэтому панель честно показывает «загружено N из M», а не выдаёт
+        # частичный список за полный.
+        try :
+            resp .headers ['X-Guild-Count']=str (int (getattr (guild ,'member_count',0 )or 0 ))
+        except (TypeError ,ValueError ):
+            resp .headers ['X-Guild-Count']='0'
+        resp .headers ['X-Cached-Count']=str (total )
+        resp .headers ['X-Chunked']='1' if getattr (guild ,'chunked',False )else '0'
         return resp 
     except Exception as e :
         print (f"Ошибка списка участников: {e}")

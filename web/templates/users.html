@@ -228,17 +228,58 @@
   }
 
   var _membersFp = '';
+  var _loadToken = 0;      /* гонка: старый цикл не дописывает список нового сервера */
+  var _guildTotal = 0;     /* сколько людей на сервере по Discord */
+  var _membersLoading = false;
+
+  function fmtN(n) { return Number(n || 0).toLocaleString('ru-RU'); }
+
+  /* Добираем участников пачками: первая рисуется сразу (список виден
+     мгновенно), остальные подтягиваются фоном — на 20 000+ людей один
+     ответ на всех был бы и долгим, и неподъёмным для вкладки. */
   async function loadMembers(live) {
     var guildId = $('guild-select').value;
     if (!guildId) {
+      _loadToken++;
       $('members-list').innerHTML = '<div class="empty"><i class="fas fa-user-friends"></i><span>Выберите сервер для просмотра участников</span></div>';
       return;
     }
-    if (!live) $('members-list').innerHTML = '<div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div>';
+    var token = ++_loadToken;
+    if (!live) {
+      $('members-list').innerHTML = '<div class="empty"><i class="fas fa-circle-notch fa-spin"></i><span>Загрузка...</span></div>';
+    }
+    var PAGE = 2000;
     try {
-      var res = await fetch('/api/guild/' + guildId + '/members?limit=500');
-      var data = await res.json();
-      allMembers = Array.isArray(data) ? data : (data.members || []);
+      var acc = [], offset = 0, total = 0, first = true;
+      for (;;) {
+        var res = await fetch('/api/guild/' + guildId + '/members?limit=' + PAGE + '&offset=' + offset);
+        if (token !== _loadToken) return;   /* выбрали другой сервер — бросаем */
+        var data = await res.json();
+        var batch = Array.isArray(data) ? data : (data.members || []);
+        total = parseInt(res.headers.get('X-Total-Count') || '0', 10) || 0;
+        _guildTotal = parseInt(res.headers.get('X-Guild-Count') || '0', 10) || total;
+        _membersLoading = offset + batch.length < total;
+        if (batch.length) {
+          acc = acc.concat(batch);
+          offset += batch.length;
+          allMembers = acc;
+          renderStats();
+          /* Полный фильтр+сортировка на КАЖДОЙ пачке — это O(n²): на 20 000
+             людей список загружался десятки секунд. Во время добора только
+             рисуем первую пачку и обновляем счётчики; финальный проход —
+             один, когда список целиком на руках. */
+          if (first) {
+            first = false;
+            rebuildRoleFilter();
+            applyView();
+          } else {
+            $('member-count').textContent = fmtN(acc.length) + ' чел. (загрузка…)';
+          }
+        }
+        if (!batch.length || offset >= total) break;
+      }
+      if (token !== _loadToken) return;
+      _membersLoading = false;
       var fp = allMembers.length + '|' + (allMembers[0] ? String(allMembers[0].id || allMembers[0].name || '').slice(0, 60) : '');
       if (live && fp === _membersFp) return;   /* данные не изменились — список не трогаем */
       _membersFp = fp;
@@ -246,6 +287,7 @@
       rebuildRoleFilter();
       applyView();
     } catch (e) {
+      if (token !== _loadToken) return;
       $('members-list').innerHTML = '<div class="empty"><i class="fas fa-triangle-exclamation"></i><span>Не удалось загрузить: ' + esc(e.message) + '</span></div>';
     }
   }
@@ -263,8 +305,13 @@
       if (m.bot) bots++;
       if (m.joined_at && Date.parse(m.joined_at) >= weekAgo) fresh++;
     });
+    /* «Всего» — честное число с сервера: пока список добирается пачками,
+       видно, сколько уже загружено и сколько ещё впереди. */
+    var totalLabel = (_guildTotal && _guildTotal > total)
+      ? fmtN(total) + ' / ' + fmtN(_guildTotal) + (_membersLoading ? '…' : '')
+      : fmtN(_guildTotal || total);
     $('uStats').innerHTML =
-      statChip('fa-users', 'Всего:', total) +
+      statChip('fa-users', 'Всего:', totalLabel) +
       statChip('fa-signal', 'В сети:', on) +
       statChip('fa-user-plus', 'Новые за 7 дн:', fresh) +
       (bots ? statChip('fa-robot', 'Ботов:', bots) : '');
@@ -322,47 +369,84 @@
         return sortKey === 'created_new' ? d : -d;
       });
     }
-    $('member-count').textContent = list.length === allMembers.length
-      ? allMembers.length + ' чел.'
-      : list.length + ' из ' + allMembers.length;
+    $('member-count').textContent = (list.length === allMembers.length
+      ? fmtN(allMembers.length) + ' чел.'
+      : fmtN(list.length) + ' из ' + fmtN(allMembers.length)) +
+      (_membersLoading ? ' (загрузка…)' : '');
     renderMembers(list);
   }
 
+  /* ── Дозированный рендер: на сервере 20 000+ людей, и 20 000 карточек
+     в DOM — это мертвая вкладка. Рисуем окном по WINDOW_STEP и добираем
+     по мере прокрутки; поиск/фильтры работают по всему загруженному списку. ── */
+  var _view = [];
+  var _rendered = 0;
+  var WINDOW_STEP = 240;
+
+  function cardHtml(m) {
+    var sc = statusClass[m.status] || 'offline';
+    var tags = '';
+    var top = m.top_role;
+    if (top) {
+      var color = '';
+      var rr = (m.roles || []).filter(function (r) { return r && r.name === top; })[0];
+      if (rr && rr.color && String(rr.color).charAt(0) === '#') color = String(rr.color);
+      tags += '<span class="u-tag"><span class="dot"' + (color ? ' style="background:' + esc(color) + '"' : '') + '></span>' + esc(top) + '</span>';
+    }
+    if (m.joined_at) {
+      tags += '<span class="u-tag"><i class="fas fa-right-to-bracket"></i>' + esc(new Date(m.joined_at).toLocaleDateString('ru-RU')) + '</span>';
+    }
+    return '<div class="member-card" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Карточка 360°: ' + esc(m.display_name || m.name) + '">' +
+      '<div class="av-wrap">' +
+        '<img alt="" loading="lazy" class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
+        '<span class="status-dot ' + sc + '"></span>' +
+      '</div>' +
+      '<div class="member-meta">' +
+        '<div class="member-name">' + esc(m.display_name || m.name) +
+          (m.bot ? ' <span class="badge neutral u-bot">BOT</span>' : '') + '</div>' +
+        '<div class="member-username">@' + esc(m.name) + '</div>' +
+        (tags ? '<div class="u-tags">' + tags + '</div>' : '') +
+      '</div>' +
+      '<i class="fas fa-chevron-right u-go" aria-hidden="true"></i>' +
+    '</div>';
+  }
+
+  function moreNote(on, text) {
+    var el = document.getElementById('members-more');
+    if (!el) return;
+    el.hidden = !on;
+    if (on && text) el.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i><span>' + esc(text) + '</span>';
+  }
+
+  function appendMembers() {
+    var grid = document.getElementById('members-grid');
+    if (!grid) return;
+    if (_rendered >= _view.length) { moreNote(false); return; }
+    var slice = _view.slice(_rendered, _rendered + WINDOW_STEP);
+    grid.insertAdjacentHTML('beforeend', slice.map(cardHtml).join(''));
+    _rendered += slice.length;
+    moreNote(_rendered < _view.length,
+             'Показано ' + _rendered.toLocaleString('ru-RU') + ' из ' + _view.length.toLocaleString('ru-RU') + ' — прокрутите вниз');
+  }
+
   function renderMembers(members) {
-    if (!members.length) {
+    _view = members || [];
+    _rendered = 0;
+    if (!_view.length) {
       $('members-list').innerHTML = '<div class="empty"><i class="fas fa-user-slash"></i><span>Участники не найдены</span></div>';
       return;
     }
-    var html = '';
-    members.forEach(function (m) {
-      var sc = statusClass[m.status] || 'offline';
-      var tags = '';
-      var top = m.top_role;
-      if (top) {
-        var color = '';
-        var rr = (m.roles || []).filter(function (r) { return r && r.name === top; })[0];
-        if (rr && rr.color && String(rr.color).charAt(0) === '#') color = String(rr.color);
-        tags += '<span class="u-tag"><span class="dot"' + (color ? ' style="background:' + esc(color) + '"' : '') + '></span>' + esc(top) + '</span>';
-      }
-      if (m.joined_at) {
-        tags += '<span class="u-tag"><i class="fas fa-right-to-bracket"></i>' + esc(new Date(m.joined_at).toLocaleDateString('ru-RU')) + '</span>';
-      }
-      html += '<div class="member-card" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Карточка 360°: ' + esc(m.display_name || m.name) + '">' +
-        '<div class="av-wrap">' +
-          '<img alt="" class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-          '<span class="status-dot ' + sc + '"></span>' +
-        '</div>' +
-        '<div class="member-meta">' +
-          '<div class="member-name">' + esc(m.display_name || m.name) +
-            (m.bot ? ' <span class="badge neutral u-bot">BOT</span>' : '') + '</div>' +
-          '<div class="member-username">@' + esc(m.name) + '</div>' +
-          (tags ? '<div class="u-tags">' + tags + '</div>' : '') +
-        '</div>' +
-        '<i class="fas fa-chevron-right u-go" aria-hidden="true"></i>' +
-      '</div>';
-    });
-    $('members-list').innerHTML = '<div class="members-grid">' + html + '</div>';
+    $('members-list').innerHTML = '<div class="members-grid" id="members-grid"></div>' +
+      '<div class="empty" id="members-more" hidden></div>';
+    appendMembers();
   }
+
+  /* Добираем карточки у нижнего края экрана (страница скроллится целиком). */
+  window.addEventListener('scroll', function () {
+    if (_rendered >= _view.length) return;
+    if (window.innerHeight + window.scrollY < document.body.offsetHeight - 900) return;
+    appendMembers();
+  }, { passive: true });
 
   /* ── Перетаскиваемое окно «Карточка 360°» ────────────────────────
      Клик по участнику открывает досье из /api/guild/<gid>/member-card/lookup
