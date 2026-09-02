@@ -79,20 +79,37 @@ async function init() {
 async function searchMember() {
   var q = document.getElementById('search-id').value.trim();
   if(!q || !selectedGuild) return;
-  var r = await fetch('/api/guild/'+selectedGuild+'/members');
-  var members = await r.json();
-  var found = members.find(function(m){
-    return m.id===q || m.name.toLowerCase().includes(q.toLowerCase()) || m.display_name.toLowerCase().includes(q.toLowerCase());
-  });
+  /* Раньше здесь тянулся ВЕСЬ список участников (/members без limit — это
+     первые 1000 человек) и поиск шёл по нему прямо в браузере. На сервере
+     крупнее тысячи любой участник дальше первой тысячи отвечал «Участник не
+     найден», хотя он есть. Теперь спрашиваем серверный поиск: он идёт по
+     полному составу из файла (services/member_store.py) и работает даже
+     когда кэш discord.py ещё не наполнен или бот не в сети. */
+  var r = await fetch('/api/guild/'+selectedGuild+'/member-card/suggest?q='+encodeURIComponent(q)+'&limit=25');
+  if(!r.ok) { showToast('Не удалось выполнить поиск.', false); return; }
+  var data = await r.json();
+  var items = (data && data.items) || [];
+  var ql = q.toLowerCase();
+  var found = null;
+  /* Точное совпадение важнее частичного: сначала ID, затем имя целиком. */
+  for (var i=0; i<items.length; i++) {
+    if (String(items[i].user_id) === q) { found = items[i]; break; }
+  }
+  if (!found) {
+    for (var j=0; j<items.length; j++) {
+      if (String(items[j].name || '').toLowerCase() === ql) { found = items[j]; break; }
+    }
+  }
+  if (!found && items.length) found = items[0];
   if(!found) { showToast('Участник не найден.', false); return; }
-  currentMemberId = found.id;
+  currentMemberId = String(found.user_id);
   var _av = document.getElementById('res-avatar');
   if (found.avatar) { _av.removeAttribute('src'); _av.src = found.avatar; }
   else { _av.removeAttribute('src'); }
-  document.getElementById('res-name').textContent = found.display_name;
-  document.getElementById('res-id').textContent = found.id;
+  document.getElementById('res-name').textContent = found.name || String(found.user_id);
+  document.getElementById('res-id').textContent = String(found.user_id);
   document.getElementById('member-result').style.display = 'block';
-  loadNotes(found.id);
+  loadNotes(currentMemberId);
 }
 
 async function loadNotes(id) {

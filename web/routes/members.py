@@ -68,7 +68,8 @@ def register(ctx):
         if not afk_cog :return jsonify ([])
         guild_afk =afk_cog ._afk .get (str (guild_id ),{})
         result =[]
-        guild =bot .get_guild (int (guild_id ))
+        # int() на нечисловом id давал 500; остальные роуты панели так не делают.
+        guild =bot .get_guild (int (guild_id ))if str (guild_id ).isdigit ()else None 
         for uid ,data in guild_afk .items ():
             member =guild .get_member (int (uid ))if guild else None 
             result .append ({
@@ -85,11 +86,25 @@ def register(ctx):
     @login_required 
     @role_required ('mod')
     def api_watchlist (guild_id ):
-        f ='data/mod_data.json'
-        if not os .path .exists (f ):return jsonify ([])
-        with open (f ,encoding ='utf-8')as fp :
-            data =json .load (fp )
-        wl =data .get ('watchlist',{}).get (guild_id ,{})
+        # Канонический файл — data/mod_advanced_data.json: туда пишет бот
+        # (cogs/moderation.py, _maybe_watchlist_after_mute при 2+ мьютах).
+        # Раньше панель читала data/mod_data.json, где ключ watchlist не
+        # создаёт никто, — страница «Наблюдение» была пуста ВСЕГДА, даже когда
+        # фигуранты реально есть. mod_data.json оставлен запасным, чтобы
+        # старые записи не потерялись.
+        wl ={}
+        for f in ('data/mod_advanced_data.json','data/mod_data.json'):
+            if not os .path .exists (f ):continue 
+            try :
+                with open (f ,encoding ='utf-8')as fp :
+                    data =json .load (fp )
+            except Exception as _ex :
+                _log .debug ('watchlist: не читается %s: %s',f ,_ex )
+                continue 
+            node =(data .get ('watchlist')or {}).get (str (guild_id ))or {}
+            if node :
+                wl =node 
+                break 
         result =[]
         try :
             from web .routes ._common import name_map_for
@@ -97,9 +112,10 @@ def register(ctx):
         except Exception as _ex :
             _nm ={}
         for uid ,info in wl .items ():
+            if not isinstance (info ,dict ):continue 
             result .append ({'id':uid ,'name':_nm .get (uid )or info .get ('name')or uid ,
             'reason':info .get ('reason',''),'added_by':info .get ('added_by',''),
-            'timestamp':info .get ('timestamp','')})
+            'timestamp':info .get ('timestamp',''),'until':info .get ('until')})
         return jsonify (result )
 
 

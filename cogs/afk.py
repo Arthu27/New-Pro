@@ -1,5 +1,7 @@
 """AFK-система — /afk с причиной, уведомляет при упоминании"""
 
+import asyncio
+
 from logger import get_logger
 
 _log = get_logger("afk")
@@ -48,12 +50,53 @@ def _afk_file ():
 # Хранение упоминаний, пришедших во время AFK — {user_id: [{from, msg, channel, guild, time}]}
 _pending_mentions :dict ={}
 
+# Состояние AFK живёт в файле: раньше оно было только в памяти, поэтому после
+# любого рестарта бота список обнулялся и страница панели «AFK список»
+# показывала пусто, хотя люди реально стояли в AFK.
+AFK_STATE_FILE ='data/afk_state.json'
+
 
 class AFK (commands .Cog ):
     def __init__ (self ,bot ):
         self .bot =bot 
         # {guild_id: {user_id: {"reason": str, "since": datetime, "owner_mode": bool}}}
         self ._afk :dict ={}
+        self ._dirty =False 
+
+    async def cog_load (self ):
+        """Восстановить AFK-список из файла при старте бота."""
+        try :
+            from services .async_io import load_json_async
+            data =await load_json_async (AFK_STATE_FILE ,{},log =_log )or {}
+            raw =(data .get ('afk')or {})if isinstance (data ,dict )else {}
+            self ._afk ={str (g ):dict (v )for g ,v in raw .items ()if isinstance (v ,dict )}
+            if self ._afk :
+                _log .debug ("[afk] восстановлено из файла: %s сервер(ов)",len (self ._afk ))
+        except Exception as ex :
+            _log .debug ("[afk] загрузка состояния: %s",ex )
+
+    def _mark_dirty (self ):
+        """Пометить изменение и уйти на сохранение в фоне.
+
+        Запись НЕ синхронная: по правилу репозитория (services/async_io)
+        блокировать гейтвей-цикл нельзя, поэтому сохраняем задачей.
+        """
+        self ._dirty =True 
+        try :
+            asyncio .get_running_loop ().create_task (self ._flush ())
+        except RuntimeError as ex :
+            # Нет активного цикла (вызов вне async) — сохраним в следующий раз.
+            _log .debug ("[afk] отложенное сохранение недоступно: %s",ex )
+
+    async def _flush (self ):
+        if not self ._dirty :
+            return 
+        self ._dirty =False 
+        try :
+            from services .async_io import save_json_async
+            await save_json_async (AFK_STATE_FILE ,{'afk':self ._afk },log =_log )
+        except Exception as ex :
+            _log .debug ("[afk] сохранение состояния: %s",ex )
 
     def _set (self ,guild_id ,user_id ,reason ,owner_mode =False ):
         self ._afk .setdefault (str (guild_id ),{})[str (user_id )]={
@@ -61,12 +104,14 @@ class AFK (commands .Cog ):
         "since":datetime .now (timezone .utc ).isoformat (),
         "owner_mode":owner_mode 
         }
+        self ._mark_dirty ()
 
     def _get (self ,guild_id ,user_id ):
         return self ._afk .get (str (guild_id ),{}).get (str (user_id ))
 
     def _remove (self ,guild_id ,user_id ):
         self ._afk .get (str (guild_id ),{}).pop (str (user_id ),None )
+        self ._mark_dirty ()
 
     def _is_afk_anywhere (self ,user_id ):
         """Есть ли пользователь в AFK на каком-либо сервере?"""

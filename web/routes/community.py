@@ -11,6 +11,27 @@ from web.routes._common import (
     os, json, time, math, discord, datetime, timezone,
 )
 
+def _norm_join (rec ):
+    """Привести запись о вступлении к полям, которые рисует страница.
+
+    Файл data/invite_joins_<gid>.json исторически писался в виде
+    {user, inviter, timestamp}, а шаблон /invite-tracker ждёт
+    {name, avatar, invite_code, joined_at} — из-за этого карточки
+    «Недавние вступления» выходили без имени и без времени.
+    Принимаем оба формата, чтобы старые записи тоже показывались.
+    """
+    if not isinstance (rec ,dict ):
+        return {}
+    return {
+        'name':rec .get ('name')or rec .get ('display_name')or rec .get ('user')or '',
+        'avatar':rec .get ('avatar')or '',
+        'inviter':rec .get ('inviter')or '',
+        'invite_code':rec .get ('invite_code')or rec .get ('code')or '',
+        'joined_at':rec .get ('joined_at')or rec .get ('timestamp')or '',
+        'user_id':str (rec .get ('user_id')or rec .get ('id')or ''),
+    }
+
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -347,7 +368,7 @@ def register(ctx):
         # Подтягиваем живые данные приглашений от бота
         if bot :
             import asyncio 
-            guild =bot .get_guild (int (guild_id ))
+            guild =bot .get_guild (int (guild_id ))if str (guild_id ).isdigit ()else None 
             if guild :
                 try :
                     invites_future =asyncio .run_coroutine_threadsafe (guild .invites (),bot .loop )
@@ -380,15 +401,25 @@ def register(ctx):
                     # JSON dosyasыndan Вход история oku
         joins_file =f'data/invite_joins_{guild_id}.json'
         if os .path .exists (joins_file ):
-            with open (joins_file ,'r',encoding ='utf-8')as fp :
-                joins_data =json .load (fp )
+            try :
+                with open (joins_file ,'r',encoding ='utf-8')as fp :
+                    joins_data =json .load (fp )
+            except Exception as _ex :
+                _log .debug ('invite-tracker: битый %s: %s',joins_file ,_ex )
+                joins_data =[]
+            if not isinstance (joins_data ,list ):joins_data =[]
             result ['total_joins']=len (joins_data )
-            result ['recent_joins']=list (reversed (joins_data [-50 :]))
+            result ['recent_joins']=list (reversed ([_norm_join (j )for j in joins_data [-50 :]]))
             # Ayrыlmalarы da say
             leaves_file =f'data/invite_leaves_{guild_id}.json'
             if os .path .exists (leaves_file ):
-                with open (leaves_file ,'r',encoding ='utf-8')as fp :
-                    leaves_data =json .load (fp )
+                try :
+                    with open (leaves_file ,'r',encoding ='utf-8')as fp :
+                        leaves_data =json .load (fp )
+                except Exception as _ex :
+                    _log .debug ('invite-tracker: битый %s: %s',leaves_file ,_ex )
+                    leaves_data =[]
+                if not isinstance (leaves_data ,list ):leaves_data =[]
                 result ['total_leaves']=len (leaves_data )
                 # Liderboard'a ayrыlmalarы add
                 for leave in leaves_data :

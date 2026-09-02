@@ -72,7 +72,10 @@ async function loadAFK(gid) {
 
 function start() {
   loadAFK(_guildId);
-  if (window.setLiveRefresh) window.setLiveRefresh(function(){ loadAFK(_guildId); }, 1500);
+  /* live: AFK-список меняется, когда кто-то заходит/выходит из войса или
+     выходит с сервера — топики voice и members. Опрос по таймеру убран:
+     5 минут остаются страховкой на случай, если SSE не поднялся. */
+  if (window.setLiveRefresh) window.setLiveRefresh(function(){ loadAFK(_guildId); }, 300000, ['voice', 'members']);
   else setInterval(function(){ loadAFK(_guildId); }, 30000);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

@@ -157,7 +157,10 @@ function start() {
     if (!sel.value && MAIN_GID) sel.value = MAIN_GID;
     loadInvites();
   });
-  if (window.setLiveRefresh) window.setLiveRefresh(loadInvites, 1500);
+  /* live: по событию «создан/удалён инвайт» (топик invites — его шлёт бот
+     в on_invite_create), а не опросом каждые полторы секунды. Таймер
+     5 минут — страховка, если SSE не поднялся. */
+  if (window.setLiveRefresh) window.setLiveRefresh(loadInvites, 300000, ['invites']);
   else setInterval(loadInvites, 30000);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

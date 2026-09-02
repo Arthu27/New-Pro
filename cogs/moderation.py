@@ -1086,6 +1086,14 @@ class Moderation (commands .Cog ):
                 "auto":True ,
             }
             await save_json_async (adv_file ,adv ,log =log )
+            # Панель «Наблюдение» обновляется по событию, а не опросом по
+            # таймеру: без этой публикации страница не узнает о новом
+            # фигуранте, пока её не откроют заново.
+            try :
+                from services import live_bus
+                live_bus .publish (interaction .guild .id ,'watchlist')
+            except Exception as _ex :
+                log .debug ("[watchlist auto] live_bus: %s",_ex )
         except Exception as ex :
             log .debug ("[watchlist auto] %s",ex )
 
