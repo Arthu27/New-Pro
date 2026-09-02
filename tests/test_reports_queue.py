@@ -135,6 +135,76 @@ check('/reports-queue' in paths, 'пункт меню «Репорты» зар�
 check(PM.PAGE_COGS.get('/reports-queue') == ('reports',),
       'страница привязана к когу репортов')
 
+print('== 5. списки каналов/ролей для пикеров настройки ==')
+# Баг: пикеры «Канал для жалоб» и «Роль модераторов» оставались с одной
+# строкой «— не задан —», потому что _guild_channels_roles() знал только
+# bot.get_guild() и при промахе молча отдавал ([], []). Проверяем все ветки.
+from web.routes.guild_admin import guild_channels_roles, resolve_guild  # noqa: E402
+
+
+class _FakeChan:
+    def __init__(self, cid, name):
+        self.id = cid
+        self.name = name
+
+
+class _FakeRole:
+    def __init__(self, rid, name):
+        self.id = rid
+        self.name = name
+
+
+class _FakeGuild:
+    def __init__(self, gid):
+        self.id = gid
+        self.text_channels = [_FakeChan(11, 'живой-канал')]
+        self.roles = [_FakeRole(gid, '@everyone'), _FakeRole(22, 'Живая роль')]
+
+
+class _FakeBot:
+    """get_guild() промахивается — как в бою, когда кэш гильдий не наполнен."""
+
+    def __init__(self, guilds):
+        self.guilds = guilds
+
+    def get_guild(self, gid):
+        return None
+
+
+_saved_bot = getattr(appmod, 'bot_instance', None)
+try:
+    appmod.bot_instance = None
+    ch, ro = guild_channels_roles('777')
+    check(len(ch) > 0 and len(ro) > 0,
+          f'бота нет: списки не пустые ({len(ch)} кан. / {len(ro)} ролей)')
+
+    # БОЕВОЙ режим: бот есть, но гильдии в кэше нет — раньше давало ([], [])
+    appmod.bot_instance = _FakeBot([])
+    ch, ro = guild_channels_roles('793336829280780331')
+    check(len(ch) > 0 and len(ro) > 0,
+          f'бот есть, гильдии в кэше нет: списки не пустые ({len(ch)}/{len(ro)})')
+
+    # get_guild() промахнулся, но гильдия есть в bot.guilds — находим по str(id)
+    live = _FakeGuild(793336829280780331)
+    appmod.bot_instance = _FakeBot([live])
+    check(resolve_guild('793336829280780331') is live,
+          'resolve_guild находит гильдию обходом bot.guilds')
+    ch, ro = guild_channels_roles('793336829280780331')
+    check([c['name'] for c in ch] == ['живой-канал'],
+          'живая гильдия: каналы с сервера')
+    check([r['name'] for r in ro] == ['Живая роль'],
+          'живая гильдия: роль @everyone исключена')
+
+    # эндпоинт отдаёт те же списки в JSON (пикер на странице заполнится)
+    appmod.bot_instance = _FakeBot([])
+    login('owner')  # /report-settings закрыт для mod (нужен admin+)
+    r = client.get('/api/guild/777/report-settings').get_json()
+    check(r.get('success') and len(r.get('channels') or []) > 0
+          and len(r.get('roles') or []) > 0,
+          'report-settings: channels/roles не пустые')
+finally:
+    appmod.bot_instance = _saved_bot
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

@@ -20,18 +20,15 @@ KIND_META = {'card': ('Жалоба', 'fa-flag', 'danger'),
 
 
 def _guild_channels_roles(gid):
-    """Списки текстовых каналов и ролей гильдии (для пикеров настройки)."""
-    import web.app as _app
-    bot = getattr(_app, 'bot_instance', None)
-    guild = bot.get_guild(int(gid)) if (bot and gid) else None
-    if guild is None:
-        return [], []
-    channels = [{'id': str(c.id), 'name': c.name}
-                for c in getattr(guild, 'text_channels', [])]
-    roles = [{'id': str(r.id), 'name': r.name}
-             for r in getattr(guild, 'roles', [])
-             if r.id != guild.id]
-    return channels, roles
+    """Списки текстовых каналов и ролей гильдии (для пикеров настройки).
+
+    Делегируем общему резолверу: раньше здесь был только bot.get_guild(),
+    который в бою регулярно промахивается (кэш гильдий ещё не наполнен),
+    и пикеры «Канал для жалоб»/«Роль модераторов» оставались с одной
+    строкой «— не задан —», хотя /api/channels те же данные отдавал.
+    """
+    from web.routes.guild_admin import guild_channels_roles
+    return guild_channels_roles(gid)
 
 
 def queue_payload(gid, names=None):

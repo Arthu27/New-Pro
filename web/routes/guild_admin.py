@@ -88,6 +88,95 @@ def _annotate_hidden (guild_id ,channels ):
     return channels
 
 
+def _demo_channels_seed ():
+    """Встроенная демо-структура каналов (тот же состав, что data/demo_channels.json)."""
+    return [
+        {'id':'1001','name':'правила','type':'text','position':0,'category_id':'900','hidden':False},
+        {'id':'1002','name':'новости','type':'text','position':1,'category_id':'900','hidden':False},
+        {'id':'1003','name':'FAQ','type':'text','position':2,'category_id':'900','hidden':False},
+        {'id':'1015','name':'журнал-модерации','type':'forum','position':0,'category_id':'900','hidden':False},
+        {'id':'1004','name':'флудилка','type':'text','position':0,'category_id':'901','hidden':False},
+        {'id':'1005','name':'мемы','type':'text','position':1,'category_id':'901','hidden':False},
+        {'id':'1006','name':'музыка-чат','type':'text','position':2,'category_id':'901','hidden':False},
+        {'id':'1007','name':'предложения','type':'text','position':0,'category_id':'902','hidden':False},
+        {'id':'1008','name':'розыгрыши','type':'text','position':1,'category_id':'902','hidden':False},
+        {'id':'1010','name':'варны','type':'text','position':2,'category_id':'902','hidden':False},
+        {'id':'1016','name':'анонс-бота','type':'text','position':3,'category_id':'902','hidden':False},
+        {'id':'1017','name':'рекруты','type':'text','position':4,'category_id':'902','hidden':False},
+        {'id':'1018','name':'стата-недель','type':'text','position':5,'category_id':'902','hidden':False},
+        {'id':'1009','name':'тикет-логи','type':'text','position':6,'category_id':'902','hidden':False},
+        {'id':'1011','name':'общий-голос-1','type':'voice','position':0,'category_id':'903','hidden':False},
+        {'id':'1012','name':'общий-голос-2','type':'voice','position':1,'category_id':'903','hidden':False},
+        {'id':'1013','name':'афк','type':'voice','position':2,'category_id':'903','hidden':False},
+        {'id':'1014','name':'сцена','type':'stage','position':0,'category_id':'903','hidden':False},
+    ]
+
+
+def _demo_channels_sort (demo ):
+    """Порядок категорий/позиций — как в живом списке каналов."""
+    return sorted (demo ,key =lambda x :((9999 if (x .get ('category_pos')is None or x .get ('category_pos')<0 )else x .get ('category_pos',0 )),x .get ('position',0 ),x .get ('name','')))
+
+
+def demo_channels_list (guild_id ):
+    """Демо-каналы: data/demo_channels.json, а если не засеян — встроенный список."""
+    demo_file =os .path .join (_REPO_ROOT ,'data','demo_channels.json')
+    if os .path .exists (demo_file ):
+        try :
+            with open (demo_file ,'r',encoding ='utf-8')as fp :
+                demo =json .load (fp )
+            if isinstance (demo ,list )and demo :
+                return _demo_channels_sort (demo )
+        except Exception as _ex :
+            _log.debug ("demo_channels_list(): подавлено: %s", _ex)
+    return _demo_channels_sort (_demo_channels_seed ())
+
+
+def resolve_guild (guild_id ):
+    """Живая гильдия бота или None.
+
+    Тот же порядок, что у /api/channels: get_guild(int), затем обход
+    bot.guilds по str(id). Один только get_guild в бою регулярно промахивается
+    (кэш гильдий ещё не наполнен) — отсюда «пустые» селекты на живом сервере.
+    """
+    import web .app as _app
+    bot =getattr (_app ,'bot_instance',None )
+    if not bot or not guild_id :
+        return None
+    guild =None
+    try :
+        guild =bot .get_guild (int (guild_id ))
+    except (TypeError ,ValueError ):
+        guild =None
+    if guild is None :
+        for g in getattr (bot ,'guilds',[])or []:
+            if str (getattr (g ,'id',''))==str (guild_id ):
+                guild =g
+                break
+    return guild
+
+
+def guild_channels_roles (guild_id ):
+    """(текстовые каналы, роли) гильдии для пикеров настроек.
+
+    Живой гильдии нет — отдаём демо-состав (тот же, что /api/channels и
+    /api/roles), иначе пикер остаётся с одной строкой «— не задан —».
+    """
+    guild =resolve_guild (guild_id )
+    if guild is not None :
+        channels =[{'id':str (c .id ),'name':c .name }
+                   for c in getattr (guild ,'text_channels',[])or []]
+        roles =[{'id':str (r .id ),'name':r .name }
+                for r in getattr (guild ,'roles',[])or []
+                if r .id !=guild .id ]
+        return channels ,roles
+    channels =[{'id':str (c .get ('id','')),'name':c .get ('name','')}
+              for c in demo_channels_list (guild_id )
+              if c .get ('type')=='text']
+    roles =[{'id':str (r .get ('id','')),'name':r .get ('name','')}
+            for r in _demo_roles_load (guild_id )]
+    return channels ,roles
+
+
 def register(ctx):
     app = ctx.app
     ROLES = ctx.ROLES
@@ -707,27 +796,7 @@ def register(ctx):
                 # Демо-структура не засеяна — отдаём полный встроенный список
                 # (тот же состав, что жил в data/demo_channels.json), чтобы
                 # селекты каналов и чат не пустовали в превью.
-                _fallback =[
-                {'id':'1001','name':'правила','type':'text','position':0,'category_id':'900','hidden':False},
-                {'id':'1002','name':'новости','type':'text','position':1,'category_id':'900','hidden':False},
-                {'id':'1003','name':'FAQ','type':'text','position':2,'category_id':'900','hidden':False},
-                {'id':'1015','name':'журнал-модерации','type':'forum','position':0,'category_id':'900','hidden':False},
-                {'id':'1004','name':'флудилка','type':'text','position':0,'category_id':'901','hidden':False},
-                {'id':'1005','name':'мемы','type':'text','position':1,'category_id':'901','hidden':False},
-                {'id':'1006','name':'музыка-чат','type':'text','position':2,'category_id':'901','hidden':False},
-                {'id':'1007','name':'предложения','type':'text','position':0,'category_id':'902','hidden':False},
-                {'id':'1008','name':'розыгрыши','type':'text','position':1,'category_id':'902','hidden':False},
-                {'id':'1010','name':'варны','type':'text','position':2,'category_id':'902','hidden':False},
-                {'id':'1016','name':'анонс-бота','type':'text','position':3,'category_id':'902','hidden':False},
-                {'id':'1017','name':'рекруты','type':'text','position':4,'category_id':'902','hidden':False},
-                {'id':'1018','name':'стата-недель','type':'text','position':5,'category_id':'902','hidden':False},
-                {'id':'1009','name':'тикет-логи','type':'text','position':6,'category_id':'902','hidden':False},
-                {'id':'1011','name':'общий-голос-1','type':'voice','position':0,'category_id':'903','hidden':False},
-                {'id':'1012','name':'общий-голос-2','type':'voice','position':1,'category_id':'903','hidden':False},
-                {'id':'1013','name':'афк','type':'voice','position':2,'category_id':'903','hidden':False},
-                {'id':'1014','name':'сцена','type':'stage','position':0,'category_id':'903','hidden':False},
-                ]
-                return jsonify (_annotate_hidden (guild_id ,_fallback ))
+                return jsonify (_annotate_hidden (guild_id ,_demo_channels_seed ()))
             cached =_channels_offline_cache (guild_id )
             if cached :
                 print (f'[WEB] /channels bot offline — отдаём кэш ({len(cached)} кан.)')
