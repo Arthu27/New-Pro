@@ -1210,14 +1210,9 @@ def login ():
             _log_login (username ,'owner',None ,None )
             return redirect (url_for ('index'))
 
-            # Вход участника по паролю ОТКЛЮЧЁН (заказ владельца 2026-09):
-            # пароль остаётся только у владельца панели (USERS). Участники
-            # входят через «Discord PIN» — бот шлёт код в ЛС Discord, поэтому
-            # в чужой аккаунт не войти даже со знанием Discord ID и пароля
-            # (код уходит настоящему владельцу), а без роли на сервере доступ
-            # не даётся (роль проверяется живьём на шаге PIN). Текст один и
-            # для верного, и для неверного пароля — чтобы не светить,
-            # угадан ли пароль.
+            # Вход участника по паролю. Логин — Discord ID ЛИБО ник/тег
+            # (display_name/@username): владельца аккаунта система находит
+            # сама, поэтому войти можно и по нику, и по ID.
         members_file ='data/members.json'
         members ={}
         if os .path .exists (members_file ):
@@ -1226,28 +1221,73 @@ def login ():
                     members =json .load (f )
             except Exception as _mex :
                 _log .debug ('login members: %s',_mex )
-        if username in members :
-            if not _pw_matches (members [username ].get ('password'),password ):
+        discord_id =_resolve_member_key (members ,username )
+        if discord_id :
+            if not _pw_matches (members [discord_id ].get ('password'),password ):
                 _throttle_failed_login (username )
-            return render_template (
-                'login.html',
-                error ='Вход участника по паролю закрыт. Открой вкладку '
-                       '«Discord PIN» — бот пришлёт код в ЛС Discord '
-                       'и проверит роль.')
+                return render_template ('login.html',error ='Неверное имя пользователя или пароль!')
+            # БЕЗОПАСНОСТЬ: роль берём ТОЛЬКО живьём из Discord — если роль
+            # сняли или человека нет на сервере, он не войдёт, даже зная
+            # пароль. Так «без прав вход невозможен» держится на сервере.
+            live_role =_get_role_from_discord (discord_id )
+            if live_role =='uye':
+                return render_template (
+                    'login.html',
+                    error ='Доступа к панели нет: для входа нужна роль '
+                           'модератора на сервере Discord.')
+            members [discord_id ]['role']=live_role 
+            with open (members_file ,'w',encoding ='utf-8')as f :
+                json .dump (members ,f ,indent =2 ,ensure_ascii =False )
+            session .permanent =True 
+            session ['logged_in']=True 
+            session ['username']=members [discord_id ]['display_name']
+            session ['role']=live_role 
+            session ['discord_id']=discord_id 
+            # тот же выбранный сервер, что и у входа владельца
+            session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
+            session .modified =True 
+            _save_login_token (discord_id ,live_role )
+            _log_login (
+            members [discord_id ]['display_name'],
+            live_role ,
+            members [discord_id ].get ('avatar'),
+            discord_id 
+            )
+            return redirect (url_for ('index'))
 
         _throttle_failed_login (username )
         return render_template ('login.html',error ='Неверное имя пользователя или пароль!')
     return render_template ('login.html')
 
 
+def _resolve_member_key (members ,login ):
+    """Найти ключ (Discord ID) в members.json по логину.
+
+    Логином может быть сам Discord ID или ник/тег участника (display_name,
+    name, @username). Сравнение по нику — без учёта регистра и ведущего '@'.
+    Возвращает Discord ID (ключ словаря) или None.
+    """
+    if not login :
+        return None
+    login =str (login ).strip ()
+    if login in members :
+        return login
+    q =login .lstrip ('@').lower ()
+    for key ,rec in members .items ():
+        for field in ('display_name','name','username'):
+            val =str (rec .get (field )or '').strip ().lower ()
+            if val ==q :
+                return key
+    return None
+
+
 @app.route('/api/login-probe', methods=['POST'])
 def api_login_probe():
     """Пред-проверка для экрана «Проверяем доступ» на странице входа.
 
-    Повторяет ровно ту же логику, что и POST /login (владелец — по USERS),
-    но НЕ создаёт сессию и не делает редирект. Участники входят только
-    через «Discord PIN» (код в ЛС владельцу Discord-аккаунта + живая
-    проверка роли на сервере), пароль для них закрыт — см. /api/discord-login.
+    Повторяет ровно ту же логику, что и POST /login (владелец — по USERS,
+    участник — по members.json, логин по Discord ID или нику) + ЖИВАЯ
+    проверка роли в Discord. Сессию не создаёт, редирект не делает.
     Клиент входа показывает шаги оверлея, на шаге «Проверяем роль и доступ»
     вызывает этот эндпоинт и только при success=True отправляет настоящую
     форму. Тексты ошибок — те же, что у формы входа, поэтому оверлей и
@@ -1264,11 +1304,8 @@ def api_login_probe():
             USERS[username].get('password_hash'), password):
         return jsonify({'success': True,
                         'role': USERS[username].get('role', 'owner')})
-    # Участники входят ТОЛЬКО через «Discord PIN» (вкладка на странице):
-    # код уходит в ЛС настоящему владельцу Discord-аккаунта, а роль
-    # проверяется живьём. Вход участника по паролю закрыт — даже зная
-    # чужой Discord ID и пароль, в чужой аккаунт не войти. Отвечаем
-    # одинаково на любой пароль, чтобы не светить, угадан ли он.
+    # Участник: логин — Discord ID или ник, пароль из members.json.
+    # Роль — ТОЛЬКО живьём из Discord (как в POST /login).
     members_file = 'data/members.json'
     members = {}
     if os.path.exists(members_file):
@@ -1278,12 +1315,18 @@ def api_login_probe():
         except Exception as _mex:
             _log.debug('login-probe: members: %s', _mex)
             members = {}
-    if username in members:
-        if not _pw_matches(members[username].get('password'), password):
+    discord_id = _resolve_member_key(members, username)
+    if discord_id:
+        if not _pw_matches(members[discord_id].get('password'), password):
             _throttle_failed_login(username)
-        return jsonify({'success': False, 'error':
-                        'Вход участника по паролю закрыт. Участники входят '
-                        'через «Discord PIN» — код придёт в ЛС Discord.'})
+            return jsonify({'success': False,
+                            'error': 'Неверное имя пользователя или пароль!'})
+        live_role = _get_role_from_discord(discord_id)
+        if live_role == 'uye':
+            return jsonify({'success': False, 'error':
+                            'Доступа к панели нет: для входа нужна роль '
+                            'модератора на сервере Discord.'})
+        return jsonify({'success': True, 'role': live_role})
     _throttle_failed_login(username)
     return jsonify({'success': False,
                     'error': 'Неверное имя пользователя или пароль!'})
@@ -1331,20 +1374,17 @@ def register ():
             del PENDING_VERIFICATIONS [discord_id ]
             return redirect (url_for ('login')+'?success=1')
 
-            # Шаг 1: проверка формы. Discord ID обязателен. Пароль больше не
-            # требуется для регистрации: участники входят по коду из Discord
-            # (вкладка «Discord PIN»), а не по паролю. Если пароль всё же
-            # прислали (старая форма/API) — проверяем и храним как резерв.
-        if not discord_id :
-            return render_template ('register.html',error ='Укажи Discord ID!',step =1 )
+            # Шаг 1: проверка формы. Discord ID обязателен, пароль — тоже:
+            # вход в панель у всех по паролю (участник — по своему Discord ID
+            # или нику + паролю, роль проверяется живьём из Discord).
+        if not discord_id or not password :
+            return render_template ('register.html',error ='Заполните все поля!',step =1 )
         if not discord_id .isdigit ()or not (17 <=len (discord_id )<=19 ):
             return render_template ('register.html',error ='Неверный Discord ID!',step =1 )
-        if password :
-            if password !=password2 :
-                return render_template ('register.html',error ='Пароли не совпадают!',step =1 )
-            if len (password )<6 :
-                return render_template ('register.html',error ='Пароль должен быть не короче 6 символов!',step =1 )
-        _stored_pw =_hash_pw (password )if password else ''
+        if password !=password2 :
+            return render_template ('register.html',error ='Пароли не совпадают!',step =1 )
+        if len (password )<6 :
+            return render_template ('register.html',error ='Пароль должен быть не короче 6 символов!',step =1 )
 
         if not bot_instance :
             return render_template ('register.html',error ='Бот сейчас офлайн, попробуйте позже.',step =1 )
@@ -1383,7 +1423,7 @@ def register ():
 
                 # DM с проверка kodu отправить
         code =''.join (random .choices (string .digits ,k =6 ))
-        PENDING_VERIFICATIONS [discord_id ]={'code':code ,'password':_stored_pw ,'member_info':member_info }
+        PENDING_VERIFICATIONS [discord_id ]={'code':code ,'password':_hash_pw (password ),'member_info':member_info }
 
         async def send_dm ():
             try :
@@ -4315,18 +4355,19 @@ _reset_codes ={}# {discord_id: {code, expires}}
 @app .route ('/api/forgot-password',methods =['POST'])
 def api_forgot_password ():
     data =request .get_json (silent =True )or {}
-    discord_id =str (data .get ('discord_id','')).strip ()
-    if not discord_id :
-        return jsonify ({'error':'Требуется Discord ID'})
+    query =str (data .get ('discord_id','')or data .get ('query','')).strip ()
+    if not query :
+        return jsonify ({'error':'Укажи Discord ID или ник'})
 
-        # Проверяем запись участника
+        # Проверяем запись участника: по Discord ID или по нику/тегу
     members_file ='data/members.json'
     if not os .path .exists (members_file ):
         return jsonify ({'error':'Запись участника не найдена'})
     with open (members_file ,'r',encoding ='utf-8')as f :
         members =json .load (f )
-    if discord_id not in members :
-        return jsonify ({'error':'Bu По Discord ID запись hesap нет'})
+    discord_id =_resolve_member_key (members ,query )
+    if not discord_id :
+        return jsonify ({'error':'Участник с таким Discord ID или ником не найден'})
 
         # 6 haneli kod юret
     code =''.join ([str (_random .randint (0 ,9 ))for _ in range (6 )])
@@ -4346,7 +4387,7 @@ def api_forgot_password ():
         )
     try :
         asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop ).result (timeout =10 )
-        return jsonify ({'success':True })
+        return jsonify ({'success':True ,'discord_id':discord_id })
     except Exception as e :
         return jsonify ({'error':f'DM не отправлено: {e}'})
 

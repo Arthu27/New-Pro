@@ -3,684 +3,526 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Вход в панель управления Hakumo — по паролю или PIN-коду.">
+  <meta name="description" content="Вход в панель управления Hakumo — по Discord ID или нику и паролю.">
   <title>Вход — Hakumo</title>
   <link rel="icon" href="/static/favicon.ico">
-      <style>
-      /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
-         первый кадр никогда не белый. */
-      html { background: #0f1013; color-scheme: dark; }
-      body { background: transparent; margin: 0; }
-    </style>
+  <style>
+    /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
+       первый кадр никогда не белый. */
+    html { background: #0f1013; color-scheme: dark; }
+    body { background: transparent; margin: 0; }
+  </style>
 <!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
          только разобрав fonts.css и all.subset.css, и они встают в конец
-         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains,
-         820 мс до последнего шрифта). crossorigin обязателен даже для своего
-         домена, иначе preload не сопоставится с реальным запросом шрифта. -->
+         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains). -->
 <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
-  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
-  <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
+<link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
   <style>
-    /* ═══ ЛОГИН — чёрное премиум-издание для участников ═══
-       Плавающие лейблы: подпись живёт ВНУТРИ поля и всплывает наверх
-       при фокусе или вводе — никаких «говняных» надписей над полями. */
+    /* ═══ ВХОД — единая центрированная карточка ═══
+       Логин: Discord ID или ник (@user) + пароль. Пароль — у всех
+       (владелец и участники), роль проверяется живьём из Discord.
+       «Забыли пароль?» — код в ЛС Discord (сброс пароля). */
     :root {
       --bg: #05060a;
-      --surface: #0d1019;
-      --surface2: #121624;
-      --surface3: #181d2b;
-      --line: rgba(255,255,255,.07);
-      --line2: rgba(255,255,255,.12);
-      --text: #e8ecf6;
-      --text2: #9aa3ba;
-      --text3: #767f99;
+      --surface: #0e1120;
+      --surface2: #151a2e;
+      --line: rgba(255,255,255,.08);
+      --line2: rgba(255,255,255,.14);
+      --text: #eef1fa;
+      --text2: #a6aec9;
+      --text3: #6f7896;
       --ac: #4f46e5;
       --ac2: #7c3aed;
       --ac3: #22d3ee;
-      --ac-grad: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #22d3ee);
-      --ac-soft: rgba(79, 70, 229, .16);
-      --ok: #16a34a;
-      --err: #dc2626;
-      --warn: #f59e0b;
+      --ac-grad: linear-gradient(135deg, #4f46e5, #7c3aed 60%, #22d3ee);
+      --ac-soft: rgba(99, 102, 241, .16);
+      --ok: #4ade80;
+      --err: #f87171;
+      --warn: #fbbf24;
       --ease: cubic-bezier(.34, 1.3, .64, 1);
-      --shadow: 0 30px 70px -30px rgba(0, 0, 0, .9);
     }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
-      body {
+    body {
       margin: 0;
       background: var(--bg);
       color: var(--text);
       font-family: 'Inter', -apple-system, sans-serif;
-      overflow-x: hidden;
       display: flex; flex-direction: column;
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
     /* ── Фоновые слои ── */
-    .bg-fx { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-    .bg-fx .orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5; }
-    .orb1 { width: 520px; height: 520px; left: -140px; top: -160px; background: radial-gradient(circle, rgba(79, 70, 229, .4), transparent 65%); animation: orbDrift 14s ease-in-out infinite alternate; }
-    @keyframes orbDrift { from { transform: translate(0, 0) scale(1); } to { transform: translate(40px, 30px) scale(1.08); } }
+    .bg-fx { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .bg-fx .glow {
+      position: absolute; border-radius: 50%;
+      filter: blur(110px);
+    }
+    .glow-a {
+      position: absolute; width: 560px; height: 560px; left: -180px; top: -220px;
+      background: radial-gradient(circle, rgba(79, 70, 229, .30), transparent 65%);
+      animation: driftA 16s ease-in-out infinite alternate;
+    }
+    .glow-b {
+      position: absolute; width: 480px; height: 480px; right: -160px; bottom: -200px;
+      background: radial-gradient(circle, rgba(34, 211, 238, .14), transparent 65%);
+      animation: driftB 18s ease-in-out infinite alternate;
+    }
+    .glow-c {
+      position: absolute; width: 420px; height: 420px; left: 38%; top: -260px;
+      background: radial-gradient(circle, rgba(124, 58, 237, .22), transparent 65%);
+      animation: driftA 22s ease-in-out infinite alternate-reverse;
+    }
+    @keyframes driftA { from { transform: translate(0, 0) scale(1); } to { transform: translate(46px, 34px) scale(1.1); } }
+    @keyframes driftB { from { transform: translate(0, 0) scale(1); } to { transform: translate(-40px, -28px) scale(1.07); } }
     .bg-grid {
       position: fixed; inset: 0; pointer-events: none; z-index: 0;
       background-image:
-        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-      background-size: 44px 44px;
-      mask-image: radial-gradient(ellipse 80% 65% at 50% 40%, #000 30%, transparent 75%);
-      -webkit-mask-image: radial-gradient(ellipse 80% 65% at 50% 40%, #000 30%, transparent 75%);
+        linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+      background-size: 46px 46px;
+      mask-image: radial-gradient(ellipse 75% 60% at 50% 42%, #000 25%, transparent 78%);
+      -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 42%, #000 25%, transparent 78%);
     }
-    .lg-glow {
-      position: fixed; left: 50%; top: -260px; transform: translateX(-50%);
-      width: 900px; height: 460px; pointer-events: none; z-index: 0;
-      background: radial-gradient(closest-side, rgba(124, 58, 237, .28), transparent);
-    }
-    .lg-aurora {
-      position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
-    }
-    .lg-aurora i { position: absolute; border-radius: 50%; }
-    .lg-aurora i:nth-child(1) {
-      width: 560px; height: 560px; left: -150px; top: -170px;
-      background: radial-gradient(circle, rgba(99, 102, 241, .11), transparent 65%);
-      animation: lgAurora 12s ease-in-out infinite alternate;
-    }
-    .lg-aurora i:nth-child(2) {
-      width: 500px; height: 500px; right: -130px; bottom: -160px;
-      background: radial-gradient(circle, rgba(34, 211, 238, .09), transparent 65%);
-      animation: lgAurora 14s ease-in-out infinite alternate-reverse;
-    }
-    @keyframes lgAurora { from { opacity: .4; } to { opacity: .9; } }
-
-    /* ── Назад ── */
-    .lg-back {
-      position: fixed; top: 22px; left: 26px; z-index: 30;
-      display: inline-flex; align-items: center; gap: 8px;
-      color: var(--text2); text-decoration: none;
-      font-size: 12.5px; font-weight: 600;
-      padding: 9px 14px; border-radius: 11px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.08);
-      transition: color .15s, border-color .15s, background .15s;
-    }
-    .lg-back:hover { color: var(--text); border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.07); }
 
     /* ── Сцена ── */
-    .lg-stage {
+    .auth-page {
       position: relative; z-index: 10;
-      width: 100%; max-width: 680px;
-      margin: auto;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 84px 20px 30px;
+      flex: 1;
+      padding: 64px 18px 40px;
     }
-    .lg-card-zone { position: relative; width: min(880px, 100%); }
 
     /* ── Медальон дракона ── */
-    .lg-dragon-stage {
-      position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%);
-      width: 128px; height: 128px; z-index: 5; pointer-events: none;
+    .emblem {
+      position: relative;
+      width: 96px; height: 96px;
+      margin: 0 auto 18px;
       display: flex; align-items: center; justify-content: center;
     }
-    .lg-dragon-stage .ring {
+    .emblem .ring {
       position: absolute; inset: 0; border-radius: 50%;
-      border: 1px solid rgba(124, 58, 237, .35);
-      animation: lgSpin 18s linear infinite;
+      border: 1px solid rgba(124, 58, 237, .45);
+      animation: spin 22s linear infinite;
     }
-    @keyframes lgSpin { to { transform: rotate(360deg); } }
-    .lg-dragon-stage .tile {
-      width: 84px; height: 84px; border-radius: 24px;
-      background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
-      border: 1px solid rgba(255,255,255,.1);
-      box-shadow: 0 16px 40px -12px rgba(79, 70, 229, .55), inset 0 1px 0 rgba(255,255,255,.08);
+    .emblem .ring::before,
+    .emblem .ring::after {
+      content: ''; position: absolute;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--ac3);
+      box-shadow: 0 0 12px rgba(34, 211, 238, .8);
+      top: -5px; left: calc(50% - 4px);
+    }
+    .emblem .ring::after { top: auto; bottom: -5px; background: var(--ac2); box-shadow: 0 0 12px rgba(124,58,237,.8); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .emblem .tile {
+      width: 72px; height: 72px; border-radius: 22px;
+      background: radial-gradient(circle at 50% 32%, #1c2240, #0a0d1c);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 18px 44px -14px rgba(79, 70, 229, .65), inset 0 1px 0 rgba(255,255,255,.09);
       display: flex; align-items: center; justify-content: center;
-      position: relative; z-index: 2;
+      overflow: hidden;
     }
-    .lg-dragon-stage .tile img { width: 74%; height: 74%; object-fit: contain; }
-    .lg-dragon-stage .tile::after {
-      content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-      background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.16) 45%, transparent 60%);
-      animation: lgGloss 5.5s ease-in-out infinite;
+    .emblem .tile::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(115deg, transparent 32%, rgba(255,255,255,.18) 46%, transparent 60%);
+      transform: translateX(-120%);
+      animation: gloss 6s ease-in-out infinite;
+      border-radius: 22px;
     }
-    @keyframes lgGloss { 0%, 55% { transform: translateX(-110%); } 85%, 100% { transform: translateX(110%); } }
-    .dragon-live { animation: dragonBreath 4.6s ease-in-out infinite; }
-    @keyframes dragonBreath {
-      0%, 100% { transform: scale(1); }
-      42% { transform: scale(1.045); }
-      58% { transform: scale(1.045); }
-    }
-    .lg-dragon-stage .floor {
-      animation: lgFloor 4.6s ease-in-out infinite;
-    }
-    @keyframes lgFloor { 0%,100% { transform: translateX(-50%) scaleX(.85); opacity: .55; } 50% { transform: translateX(-50%) scaleX(1.1); opacity: 1; } }
-    .lg-dragon-stage .floor {
-      position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
-      width: 110px; height: 14px; border-radius: 50%;
-      background: radial-gradient(closest-side, rgba(79, 70, 229, .4), transparent);
-    }
+    @keyframes gloss { 0%, 58% { transform: translateX(-120%); } 92%, 100% { transform: translateX(120%); } }
+    .emblem img { width: 74%; height: 74%; object-fit: contain; position: relative; z-index: 1; animation: breath 5s ease-in-out infinite; }
+    @keyframes breath { 0%, 100% { transform: scale(1); } 44% { transform: scale(1.05); } 58% { transform: scale(1.05); } }
 
     /* ── Карточка ── */
     .auth-card {
+      width: min(440px, 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 34%), rgba(13, 16, 29, .92);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      padding: 30px 32px 24px;
+      box-shadow: 0 34px 80px -32px rgba(0,0,0,.85);
       position: relative;
-      width: min(960px, 100%);
-      margin: auto;
-      border-radius: 24px;
-      background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 30%), rgba(13, 16, 25, .88);
-      border: 1px solid rgba(255,255,255,.08);
-      box-shadow: var(--shadow);
-      overflow: hidden;
     }
     .auth-card::after {
       content: ''; position: absolute; inset: 0; border-radius: inherit;
-      padding: 1px; pointer-events: none;
-      background: conic-gradient(from 180deg, transparent 0deg, rgba(124, 58, 237, .7) 60deg, rgba(34, 211, 238, .6) 120deg, transparent 200deg);
+      padding: 1px;
+      background: conic-gradient(from 210deg, transparent 0deg, rgba(124, 58, 237, .5) 70deg, rgba(34, 211, 238, .45) 130deg, transparent 210deg);
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
-      opacity: 0; transition: opacity .35s;
+      opacity: 0; transition: opacity .35s; pointer-events: none;
     }
     .auth-card:hover::after { opacity: 1; }
-    .auth-main { display: flex; padding: 66px 38px 32px; }
 
-    /* ── Левая часть: бренд ── */
-    .auth-side { flex: 0 0 46%; padding-right: 38px; border-right: 1px solid rgba(255,255,255,.06); }
-    .auth-side .brand { display: flex; align-items: center; flex-wrap: wrap; gap: 11px 11px; }
-    .auth-side .brand > div { min-width: 0; }
-    .auth-side .brand .ico {
-      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
-      background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
-      border: 1px solid rgba(255,255,255,.1);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .auth-side .brand .ico img { width: 72%; height: 72%; object-fit: contain; }
-    .auth-side .brand b {
+    .auth-card h1 {
+      margin: 0 0 6px;
+      text-align: center;
       font-family: var(--font-display, 'Unbounded', sans-serif);
-      font-size: 16px; letter-spacing: .12em;
+      font-size: 22px; font-weight: 800; letter-spacing: .01em;
     }
-    .auth-side .brand > div > span { display: block; font-size: 10px; color: var(--text3); letter-spacing: .14em; text-transform: uppercase; margin-top: 2px; }
-    .member-chip {
-      margin-left: auto; flex-shrink: 0;
-      font-size: 9.5px; font-weight: 800; letter-spacing: .12em;
-      color: #a5b4fc;
-      border: 1px solid rgba(124, 58, 237, .45);
-      background: rgba(124, 58, 237, .14);
-      border-radius: 99px; padding: 5px 10px;
+    .auth-sub {
+      text-align: center;
+      font-size: 13px; color: var(--text2);
+      margin: 0 0 22px; line-height: 1.5;
     }
-    .auth-side h1 {
-      margin: 20px 0 10px;
-      font-family: var(--font-display, 'Unbounded', sans-serif);
-      font-size: 25px; font-weight: 800; line-height: 1.26;
-      letter-spacing: -.01em;
-    }
-    .auth-side h1 .grad {
-      background: linear-gradient(120deg, #818cf8, #a78bfa 40%, #22d3ee 75%, #818cf8);
-      background-size: 220% 100%;
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent; color: transparent;
-      animation: lgGradFlow 7s linear infinite;
-    }
-    @keyframes lgGradFlow { to { background-position: 220% 0; } }
-    .auth-side .lead { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text2); }
 
-    /* ── Правая часть: форма ── */
-    .mobile-brand { display: none; }
-    .auth-form-side { flex: 1; max-width: 470px; padding-left: 42px; min-width: 0; }
-
-    /* Табы — сегментированный переключатель */
-    .tabs {
-      position: relative; display: flex;
-      gap: 26px;
-      border-bottom: 1px solid rgba(255, 255, 255, .07);
-      margin-bottom: 24px;
-    }
-    .tab-slider {
-      position: absolute; bottom: -1px; left: 0;
-      height: 2px; width: 0; border-radius: 99px;
-      background: var(--ac-grad);
-      box-shadow: 0 0 10px rgba(124, 58, 237, .6);
-      pointer-events: none;
-      transition: left .35s cubic-bezier(.34, 1.3, .64, 1),
-                  width .35s cubic-bezier(.34, 1.3, .64, 1);
-    }
-    .tab-slider::after {
-      content: ''; position: absolute; inset: 0; border-radius: inherit;
-      background: var(--ac-grad); filter: blur(7px);
-      opacity: .55; transition: opacity .3s;
-    }
-    .tab-slider.moving::after { opacity: .95; }
-    .tab-btn {
-      position: relative; z-index: 1;
-      display: inline-flex; align-items: center; gap: 8px;
-      background: transparent; border: none;
-      color: var(--text3);
-      font-size: 13.5px; font-weight: 600; font-family: inherit; cursor: pointer;
-      padding: 0 2px 13px;
-      transition: color .15s;
-    }
-    .tab-btn:hover { color: var(--text2); }
-    .tab-btn.active { color: #c7d2fe; }
-    .tab-btn.active i { animation: tabIconPop .35s var(--ease) both; }
-    @keyframes tabIconPop { 0% { transform: scale(.7); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
-    .tab-btn:focus-visible { outline: 2px solid var(--ac3); outline-offset: 3px; border-radius: 4px; }
-    @keyframes tabFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-    #tabPass, #tabPin { animation: tabFade .28s var(--ease) both; }
-    #tabPass.tab-out-l, #tabPin.tab-out-l { animation: tabOutL .16s var(--ease) forwards; }
-    #tabPass.tab-out-r, #tabPin.tab-out-r { animation: tabOutR .16s var(--ease) forwards; }
-    #tabPass.tab-in-r,  #tabPin.tab-in-r  { animation: tabInR .3s var(--ease) both; }
-    #tabPass.tab-in-l,  #tabPin.tab-in-l  { animation: tabInL .3s var(--ease) both; }
-    @keyframes tabOutL { to { opacity: 0; transform: translateX(-18px); } }
-    @keyframes tabOutR { to { opacity: 0; transform: translateX(18px); } }
-    @keyframes tabInR { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
-    @keyframes tabInL { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
-    #step1.step-out, #step2.step-out { animation: tabOutL .16s var(--ease) forwards; }
-    #step1.step-in, #step2.step-in { animation: tabInR .3s var(--ease) both; }
-
-    /* ── Поля с плавающими лейблами ── */
-    .auth-field { position: relative; margin-bottom: 16px; }
-    .auth-field .lbl {
-      position: absolute; left: 12px; top: 14px; z-index: 2;
-      font-size: 13.5px; color: var(--text3);
-      padding: 2px 8px; border-radius: 7px;
-      pointer-events: none; white-space: nowrap;
-      transform-origin: left center;
-      transition: transform .18s var(--ease), font-size .18s, color .18s, top .18s, left .18s, background .18s;
-    }
-    .auth-field.filled .lbl, .auth-field.focused .lbl {
-      transform: translateY(-22px);
-      font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
-      color: #a5b4fc;
-      background: linear-gradient(90deg, rgba(79, 70, 229, .9), rgba(124, 58, 237, .9));
-      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    }
-    .auth-field input {
-      width: 100%; height: 52px;
-      padding: 14px 15px;
-      background: rgba(255, 255, 255, .035);
-      border: 1px solid rgba(255, 255, 255, .09);
-      border-radius: 13px;
-      font-size: 14.5px; font-family: inherit; color: var(--text);
-      caret-color: var(--ac3);
-      transition: border-color .15s, box-shadow .18s, background .15s;
-    }
-    .auth-field input::placeholder { color: transparent; }
-    .auth-field input:hover { border-color: rgba(255, 255, 255, .16); }
-    .auth-field input:focus {
-      outline: none; border-color: var(--ac);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, .2), 0 10px 24px -12px rgba(79, 70, 229, .4);
-      background: rgba(79, 70, 229, .06);
-    }
-    input:-webkit-autofill,
-    input:-webkit-autofill:hover,
-    input:-webkit-autofill:focus {
-      -webkit-box-shadow: 0 0 0 60px #121624 inset;
-      -webkit-text-fill-color: #e8ecf6;
-      caret-color: #22d3ee;
-    }
-    .auth-field .f-ico {
-      position: absolute; right: 14px; bottom: 15px;
-      width: 18px; height: 18px; display: grid; place-items: center;
-      color: var(--text3); font-size: 13px; pointer-events: none;
-      transition: color .15s;
-    }
-    .auth-field.focused .f-ico { color: #a5b4fc; }
-    .auth-field.has-ico input { padding-right: 42px; }
-    .auth-field .cap-hint {
-      position: absolute; top: 100%; right: 4px; margin-top: 5px;
-      font-size: 10.5px; font-weight: 700; letter-spacing: .03em;
-      color: #fbbf24; opacity: 0; transition: opacity .15s; pointer-events: none;
-    }
-    .auth-field .eye {
-      position: absolute; right: 8px; bottom: 7px;
-      width: 34px; height: 34px; display: grid; place-items: center;
-      background: transparent; border: none; border-radius: 9px;
-      color: var(--text3); font-size: 13px; cursor: pointer;
-      transition: color .15s, background .15s;
-    }
-    .auth-field .eye:hover { color: #a5b4fc; background: rgba(79, 70, 229, .14); }
-    .auth-field .eye[aria-pressed="true"] { color: var(--ac3); }
-    .auth-field.has-eye input { padding-right: 50px; }
-    .auth-field.has-eye .f-ico { right: 46px; }
-
-    /* ── Ошибки ── */
-    .auth-error {
-      background: rgba(248, 113, 113, .1); border: 1px solid rgba(248, 113, 113, .3);
-      color: var(--err); border-radius: 11px; padding: 9px 13px;
-      font-size: 12px; margin-bottom: 14px; display: none;
+    /* ── Плашки ── */
+    .auth-ok, .auth-error {
+      display: none;
+      align-items: flex-start; gap: 9px;
+      border-radius: 12px; padding: 10px 13px;
+      font-size: 12.5px; line-height: 1.5;
+      margin-bottom: 16px;
     }
     .auth-ok {
-      display: flex; align-items: flex-start; gap: 9px;
-      background: rgba(74, 222, 128, .1); border: 1px solid rgba(74, 222, 128, .3);
-      color: var(--ok); border-radius: 11px; padding: 10px 13px;
-      font-size: 12px; line-height: 1.5; margin-bottom: 14px;
+      background: rgba(74, 222, 128, .09);
+      border: 1px solid rgba(74, 222, 128, .28);
+      color: #bbf7d0;
     }
-    .auth-ok i { margin-top: 1px; }
-    .auth-error.shake { animation: errShake .4s ease; }
-    @keyframes errShake {
+    .auth-ok b { font-weight: 700; }
+    .auth-error {
+      background: rgba(248, 113, 113, .09);
+      border: 1px solid rgba(248, 113, 113, .26);
+      color: #fecaca;
+    }
+    .auth-ok i { color: var(--ok); margin-top: 2px; }
+    .auth-error i { color: var(--err); margin-top: 2px; }
+    .auth-ok.show, .auth-error.show, .auth-ok[style*="display:block"], .auth-error[style*="display:block"] { display: flex; }
+    .auth-error.shake { animation: shake .4s ease; }
+    @keyframes shake {
       10%, 90% { transform: translateX(-1px); }
       20%, 80% { transform: translateX(2px); }
       30%, 50%, 70% { transform: translateX(-3px); }
       40%, 60% { transform: translateX(3px); }
     }
-    .step-hint { font-size: 12px; padding: 2px 2px 0; min-height: 18px; }
 
-    /* ── Шаги PIN ── */
-    .auth-title { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 5px; }
-    .auth-title .n {
-      width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
-      background: var(--ac-grad); color: #fff;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 11.5px; font-weight: 800;
-      box-shadow: 0 4px 12px -3px rgba(124, 58, 237, .6);
+    /* ── Поля с плавающими лейблами ── */
+    .field { position: relative; margin-bottom: 15px; }
+    .field .lbl {
+      position: absolute; left: 14px; top: 15px; z-index: 2;
+      font-size: 13.5px; color: var(--text3);
+      padding: 2px 8px; border-radius: 7px;
+      pointer-events: none; white-space: nowrap;
+      transition: transform .18s var(--ease), font-size .18s, color .18s, background .18s;
     }
-    .auth-sub { font-size: 12px; color: var(--text3); margin-bottom: 14px; }
-    .pin-box { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; }
-    .pin-box input {
-      width: 44px; height: 54px; text-align: center;
-      font-size: 19px; font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
-      border: 1px solid rgba(255, 255, 255, .09); border-radius: 12px;
-      background: rgba(255, 255, 255, .035); color: var(--text);
-      transition: border-color .15s, box-shadow .2s;
+    .field.filled .lbl, .field.focused .lbl {
+      transform: translateY(-23px);
+      font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+      color: var(--ac3);
+      background: rgba(10, 13, 28, .94);
+      border: 1px solid var(--line);
     }
-    .pin-box input:focus { outline: none; border-color: var(--ac); box-shadow: 0 0 0 3px rgba(79, 70, 229, .18); }
-    .pin-box input.has {
-      animation: digitPop .22s var(--ease);
-      border-color: var(--ac3);
-      box-shadow: 0 0 0 3px rgba(34, 211, 238, .16), 0 8px 18px -8px rgba(34, 211, 238, .45);
+    .field input {
+      width: 100%; height: 52px;
+      background: rgba(255,255,255,.035);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0 46px 0 44px;
+      color: var(--text);
+      font: inherit; font-size: 14.5px;
+      outline: none;
+      transition: border-color .18s, background .18s, box-shadow .18s;
     }
-    @keyframes digitPop { 0% { transform: scale(1); } 40% { transform: scale(1.09); } 100% { transform: scale(1); } }
+    .field input:focus {
+      border-color: rgba(124, 58, 237, .65);
+      background: rgba(255,255,255,.05);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, .16);
+    }
+    .field .f-ico {
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      color: var(--text3); font-size: 15px; z-index: 1;
+      transition: color .18s;
+    }
+    .field.focused .f-ico { color: var(--ac3); }
+    .field .eye {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      width: 36px; height: 36px; border: none; border-radius: 10px;
+      background: transparent; color: var(--text3); cursor: pointer;
+      font-size: 14px; transition: color .15s, background .15s;
+    }
+    .field .eye:hover { color: var(--text); background: rgba(255,255,255,.06); }
+    .cap-hint {
+      position: absolute; right: 52px; top: 50%; transform: translateY(-50%);
+      font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--warn);
+      opacity: 0; pointer-events: none;
+      text-transform: uppercase;
+    }
+    .field-hint {
+      font-size: 11.5px; color: var(--text3);
+      margin: -6px 0 14px 4px; line-height: 1.45;
+    }
+    .field-hint b { color: var(--text2); font-weight: 600; }
 
-    /* ── Кнопка ── */
+    /* ── Автоподсказка (поиск по нику) ── */
+    .autocomplete-popup {
+      position: absolute; left: 0; right: 0; top: calc(100% - 4px);
+      z-index: 40; display: none;
+      background: #12162a;
+      border: 1px solid var(--line2);
+      border-radius: 14px;
+      box-shadow: 0 24px 50px -18px rgba(0,0,0,.8);
+      overflow: hidden;
+      padding: 6px;
+    }
+    .autocomplete-popup.open { display: block; }
+    .autocomplete-popup .item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: 10px;
+      cursor: pointer;
+    }
+    .autocomplete-popup .item:hover, .autocomplete-popup .item.hl { background: rgba(255,255,255,.06); }
+    .autocomplete-popup .a-ava {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--ac), var(--ac2));
+      font-weight: 800; font-size: 14px; color: #fff; overflow: hidden;
+    }
+    .autocomplete-popup .a-ava img { width: 100%; height: 100%; object-fit: cover; }
+    .autocomplete-popup .a-copy { min-width: 0; }
+    .autocomplete-popup .a-copy b { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .autocomplete-popup .a-copy small { color: var(--text3); font-size: 10.5px; }
+
+    /* ── Кнопки ── */
     .auth-btn {
-      width: 100%; height: 54px; margin-top: 6px;
-      background: var(--ac-grad); color: #fff;
+      width: 100%; height: 52px;
+      background: var(--ac-grad);
+      color: #fff;
       border: none; border-radius: 14px;
-      font-size: 14.5px; font-weight: 800; letter-spacing: .01em;
+      font-size: 14.5px; font-weight: 800; letter-spacing: .02em;
       font-family: inherit; cursor: pointer;
       display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-      box-shadow: 0 8px 22px -8px rgba(124, 58, 237, .6), inset 0 1px 0 rgba(255,255,255,.25);
-      position: relative; overflow: hidden;
-      transition: box-shadow .2s, filter .2s;
+      box-shadow: 0 12px 28px -10px rgba(124, 58, 237, .7), inset 0 1px 0 rgba(255,255,255,.28);
+      margin-top: 4px;
+      transition: filter .18s, transform .1s, box-shadow .18s;
     }
-    .auth-btn::after {
-      content: ''; position: absolute; top: 0; left: -80%; width: 45%; height: 100%;
-      background: linear-gradient(100deg, transparent, rgba(255,255,255,.28), transparent);
-      transform: skewX(-20deg);
-      transition: left .55s ease;
+    .auth-btn:hover { filter: brightness(1.1); }
+    .auth-btn:active { transform: translateY(1px) scale(.995); }
+    .auth-btn:disabled { opacity: .6; cursor: default; filter: none; }
+    .auth-btn .spin { animation: rot 1s linear infinite; }
+    @keyframes rot { to { transform: rotate(360deg); } }
+    .ghost-btn {
+      width: 100%; height: 46px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--line);
+      color: var(--text2);
+      border-radius: 13px;
+      font: inherit; font-size: 13px; font-weight: 700;
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      transition: color .15s, border-color .15s, background .15s;
     }
-    .auth-btn:hover::after { left: 130%; }
-    .auth-btn:hover { filter: brightness(1.06); box-shadow: 0 12px 28px -8px rgba(124, 58, 237, .75); }
-    .auth-btn.loading { pointer-events: none; opacity: .85; }
-    .auth-btn .spin { animation: lgSpin 0.8s linear infinite; }
+    .ghost-btn:hover { color: var(--text); border-color: var(--line2); background: rgba(255,255,255,.07); }
 
-    /* ── Статус бота ── */
-    .auth-status {
-      display: flex; align-items: center; gap: 9px; justify-content: center;
-      margin-top: 16px; font-size: 11.5px; color: var(--text3);
-    }
-    .auth-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
-    .auth-status .dot.off { background: var(--err); box-shadow: 0 0 8px var(--err); }
-
-    /* ── Футер карточки ── */
+    /* ── Второстепенное ── */
     .auth-foot {
-      text-align: center; margin-top: 18px; padding-top: 16px;
-      border-top: 1px solid rgba(255,255,255,.06);
+      margin-top: 18px;
+      text-align: center;
+      font-size: 12px; color: var(--text3); line-height: 1.9;
+    }
+    .auth-foot a {
+      color: #a5b4fc; text-decoration: none; font-weight: 600;
+      transition: color .15s;
+    }
+    .auth-foot a:hover { color: #c7d2fe; text-decoration: underline; }
+    .auth-foot .dot-sep { opacity: .5; margin: 0 4px; }
+    .auth-status {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 18px;
       font-size: 12px; color: var(--text3);
     }
-    .auth-foot a { color: #a5b4fc; text-decoration: none; font-weight: 600; }
-    .auth-foot a:hover { color: #c7d2fe; }
+    .auth-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px rgba(74,222,128,.7); }
+    .auth-status .dot.off { background: var(--text3); box-shadow: none; }
 
-    /* ── Автодополнение ── */
-    .autocomplete-popup {
-      position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 40;
-      background: var(--surface2);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 13px; overflow: hidden;
-      box-shadow: 0 20px 44px -14px rgba(0,0,0,.8);
-      display: none;
+    .page-foot {
+      margin-top: auto;
+      padding: 18px 0 22px;
+      text-align: center;
+      font-size: 11px; color: var(--text3); letter-spacing: .06em;
     }
-    .autocomplete-popup.open { display: block; animation: popIn .2s var(--ease) both; }
-    @keyframes popIn { from { opacity: 0; transform: translateY(-5px) scale(.99); } to { opacity: 1; transform: none; } }
-    .autocomplete-popup .item {
-      display: flex; align-items: center; gap: 11px;
-      padding: 10px 13px; cursor: pointer;
-      border-bottom: 1px solid rgba(255,255,255,.05);
-      transition: background .12s;
+
+    /* ── Блок «Забыли пароль» ── */
+    .forgot-row { display: flex; justify-content: flex-end; margin: -2px 0 12px; }
+    .forgot-link {
+      background: none; border: none; padding: 2px 4px;
+      font: inherit; font-size: 12.5px; font-weight: 600;
+      color: #a5b4fc; cursor: pointer;
+      transition: color .15s;
     }
-    .autocomplete-popup .item:last-child { border-bottom: none; }
-    .autocomplete-popup .item:hover, .autocomplete-popup .item.hl { background: rgba(79, 70, 229, .14); }
-    .autocomplete-popup .a-ava {
-      position: relative; width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    .forgot-link:hover { color: #c7d2fe; text-decoration: underline; }
+    .fr-title {
+      display: flex; align-items: center; gap: 8px;
+      font-weight: 800; font-size: 14px; margin: 0 0 4px;
+    }
+    .fr-title .n {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
       background: var(--ac-soft); color: #a5b4fc;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 800; overflow: hidden;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800;
     }
-    .autocomplete-popup .item .a-ava img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    .autocomplete-popup .a-copy { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-    .autocomplete-popup .a-copy b { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .autocomplete-popup .a-copy small { font-size: 10.5px; color: var(--text3); }
+    .fr-sub { font-size: 12px; color: var(--text2); margin: 0 0 14px; line-height: 1.5; }
+    .fr-err { font-size: 12px; color: var(--err); margin: 8px 2px 0; min-height: 0; }
+    .fr-ok { font-size: 12px; color: #bbf7d0; margin: 8px 2px 0; line-height: 1.5; }
+    .fr-hint { font-size: 11.5px; color: var(--text3); margin: 8px 2px 0; line-height: 1.5; }
+    .pin-inline { letter-spacing: .3em; font-weight: 800; font-size: 15px; text-align: center; padding: 0 16px; }
 
-    .lg-foot-note {
-      margin-top: 20px; font-size: 10px; letter-spacing: .22em;
-      color: var(--text3); text-transform: uppercase; font-weight: 700;
-    }
-
-    /* ── Въезд карточки ── */
-    .auth-card, .auth-side, .auth-main { animation: slideSide .6s var(--ease) both; }
-    @keyframes slideSide { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
-
-    /* ── Экран «Проверяем доступ» ── */
-    .lead.trust { margin-top: 14px; font-size: 12.5px; display: flex; gap: 8px; align-items: center; }
-    .lead.trust i { color: var(--ac3); font-size: 12px; flex: none; }
-
+    /* ── Оверлей «Проверяем доступ» ── */
     .auth-check {
       position: fixed; inset: 0; z-index: 100;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(5, 6, 10, .78);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      animation: chkFade .22s ease both;
+      background: rgba(4, 5, 10, .86);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 20px;
     }
-    /* hidden-атрибут обязан прятать оверлей: display:flex из класса выше
-       перебивал бы встроенное [hidden]{display:none}, и экран «Проверяем
-       доступ» висел бы поверх формы с первого кадра. */
     .auth-check[hidden] { display: none; }
-    @keyframes chkFade { from { opacity: 0; } to { opacity: 1; } }
     .auth-check-card {
-      width: min(400px, calc(100vw - 40px));
-      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 30%), #0d1019;
-      border: 1px solid rgba(255,255,255,.09);
+      width: min(400px, 100%);
+      background: #0d1020;
+      border: 1px solid var(--line);
       border-radius: 22px;
-      box-shadow: 0 40px 90px -30px rgba(0,0,0,.9), 0 0 60px -20px rgba(79,70,229,.5);
-      padding: 34px 30px 28px;
+      padding: 30px 28px 24px;
       text-align: center;
+      box-shadow: 0 40px 90px -30px rgba(0,0,0,.9);
     }
-    .auth-check-card .logo {
-      width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 16px;
-      background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
-      border: 1px solid rgba(255,255,255,.1);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 10px 26px -10px rgba(79,70,229,.7);
-    }
-    .auth-check-card .logo img { width: 68%; height: 68%; object-fit: contain; }
-    .auth-check-card h3 { margin: 0 0 4px; font-family: var(--font-display, 'Unbounded', sans-serif); font-size: 15px; letter-spacing: .02em; }
-    .auth-check-card .sub { margin: 0 0 20px; font-size: 12px; color: var(--text3); }
-    .auth-steps { list-style: none; margin: 0; padding: 0; text-align: left; display: grid; gap: 6px; }
+    .auth-check-card .logo { width: 58px; height: 58px; margin: 0 auto 14px; }
+    .auth-check-card .logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 14px rgba(124,58,237,.5)); }
+    .auth-check-card h3 { margin: 0 0 6px; font-family: var(--font-display, 'Unbounded', sans-serif); font-size: 17px; font-weight: 800; }
+    .auth-check-card .sub { margin: 0 0 18px; font-size: 12.5px; color: var(--text2); }
+    .auth-steps { list-style: none; margin: 0; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 4px; }
     .auth-steps li {
       display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-radius: 13px;
-      background: rgba(255,255,255,.02); border: 1px solid transparent;
-      color: var(--text3); font-size: 13px;
-      opacity: .5; transition: opacity .2s, border-color .2s, background .2s;
+      padding: 9px 10px; border-radius: 12px;
+      font-size: 13px; color: var(--text3);
     }
-    .auth-steps li .s-ico {
-      width: 26px; height: 26px; flex: none; border-radius: 9px;
-      display: grid; place-items: center; font-size: 11px;
-      background: rgba(255,255,255,.06); color: var(--text3);
-      transition: background .2s, color .2s;
+    .auth-steps li.on { color: var(--text); background: rgba(255,255,255,.03); }
+    .auth-steps li.done { color: var(--text2); }
+    .auth-steps li.err { color: var(--err); }
+    .auth-steps .s-ico {
+      width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,.05);
+      font-size: 11px;
     }
-    .auth-steps li.on { opacity: 1; color: var(--text2); }
-    .auth-steps li.on .s-ico { background: rgba(79,70,229,.2); color: #a5b4fc; }
-    .auth-steps li.on .s-ico .spin { animation: lgSpin .8s linear infinite; }
-    .auth-steps li.done { opacity: 1; color: var(--text); border-color: rgba(74,222,128,.16); background: rgba(74,222,128,.05); }
-    .auth-steps li.done .s-ico { background: rgba(74,222,128,.16); color: var(--ok); }
-    .auth-steps li.err { opacity: 1; color: var(--text); border-color: rgba(248,113,113,.2); background: rgba(248,113,113,.06); }
-    .auth-steps li.err .s-ico { background: rgba(248,113,113,.18); color: var(--err); }
-    .auth-check-err {
-      margin-top: 14px; padding: 10px 12px; border-radius: 12px;
-      background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25);
-      color: var(--err); font-size: 12px; text-align: left; display: none;
-    }
+    .auth-steps li.on .s-ico { background: var(--ac-soft); color: #a5b4fc; }
+    .auth-steps li.done .s-ico { background: rgba(74,222,128,.15); color: var(--ok); }
+    .auth-steps li.err .s-ico { background: rgba(248,113,113,.15); color: var(--err); }
+    .auth-check-err { display: none; margin-top: 14px; font-size: 12.5px; color: #fecaca; background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.22); border-radius: 11px; padding: 9px 12px; line-height: 1.5; text-align: left; }
     .auth-check-err.show { display: block; }
-    .auth-check .retry {
-      margin-top: 14px; width: 100%; height: 44px;
-      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-      color: var(--text); border-radius: 12px; font-family: inherit;
-      font-size: 13px; font-weight: 700; cursor: pointer; display: none;
-      align-items: center; justify-content: center; gap: 8px;
-    }
-    .auth-check .retry.show { display: flex; }
-    .auth-check .retry:hover { border-color: var(--ac); color: #c7d2fe; }
+    .retry { display: none; margin: 16px auto 0; }
+    .retry.show { display: inline-flex; }
+    .retry { align-items: center; justify-content: center; gap: 8px; background: none; border: 1px solid var(--line2); color: var(--text2); font: inherit; font-size: 12.5px; font-weight: 700; border-radius: 11px; padding: 9px 16px; cursor: pointer; transition: color .15s, border-color .15s; }
+    .retry:hover { color: var(--text); border-color: var(--text3); }
 
-    /* ── Адаптив ── */
-    @media (max-width: 760px) {
-      .lg-stage { padding: 76px 14px 24px; }
-      .auth-card { padding-top: 40px; }
-      .auth-main { flex-direction: column; padding: 0 22px 24px; }
-      .auth-side { flex: none; padding: 0 0 18px; border-right: none; border-bottom: 1px solid rgba(255,255,255,.06); }
-      .auth-side h1 { font-size: 21px; margin-top: 18px; }
-      .auth-side .lead { font-size: 12.5px; }
-      .auth-form-side { padding: 18px 0 0; }
-      .member-chip { margin-left: 8px; }
+    @media (max-width: 520px) {
+      .auth-page { padding: 40px 14px 26px; }
+      .auth-card { padding: 26px 20px 20px; }
+      .emblem { transform: scale(.9); margin-bottom: 12px; }
     }
-
-    /* ── Reduced motion: все новые анимации выключены ── */
     @media (prefers-reduced-motion: reduce) {
-      .orb1, .lg-aurora i { animation: none; }
-      .lg-dragon-stage .ring { animation: none; }
-      .auth-side h1 .grad { animation: none; }
-      .dragon-live, .lg-dragon-stage .floor, .lg-dragon-stage .tile::after { animation: none; }
-      .auth-card, .auth-side, .auth-main { animation: none; }
-      #tabPass, #tabPin { animation: none; }
-      .tab-out-l, .tab-out-r, .tab-in-r, .tab-in-l,
-      #step1.step-out, #step2.step-out, #step1.step-in, #step2.step-in { animation: none; }
-      .tab-slider { transition: none; }
-      .autocomplete-popup.open { animation: none; }
-      .auth-error.shake { animation: none; }
-      .pin-box input.has { animation: none; }
-      .auth-field .lbl { transition: none; }
-      .auth-btn::after { transition: none; }
-      .auth-card, .auth-side, .auth-main { transform: none !important; }
+      .glow-a, .glow-b, .glow-c, .emblem .ring, .emblem .tile::after, .emblem img { animation: none !important; }
+      .auth-btn .spin { animation-duration: 2s; }
     }
   </style>
 </head>
 <body>
-  <a class="lg-back" href="/welcome"><i class="fas fa-arrow-left"></i> На главную</a>
-  <div class="lg-glow" aria-hidden="true"></div>
-  <div class="lg-aurora" aria-hidden="true"><i></i><i></i></div>
   <div class="bg-fx" aria-hidden="true">
-    <span class="orb orb1"></span>
+    <i class="glow glow-a"></i><i class="glow glow-b"></i><i class="glow glow-c"></i>
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
 
-  <main class="lg-stage">
-    <div class="lg-card-zone">
-      <!-- Медальон: эмблема над карточкой -->
-      <div class="lg-dragon-stage" aria-hidden="true">
-        <div class="ring"></div>
-        <div class="tile"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></div>
-        <div class="floor"></div>
-      </div>
-
-      <div class="auth-card">
-        <div class="auth-main">
-          <section class="auth-side">
-            <div class="brand">
-              <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo"></span>
-              <div><b>HAKUMO</b><span>панель управления</span></div>
-              <span class="member-chip"><i class="fas fa-user-check"></i> доступ участника</span>
-            </div>
-            <h1>С возвращением</h1>
-            <p class="lead">Войди в панель — профиль, заявки, обращения и события снова под рукой.</p>
-            <p class="lead trust"><i class="fas fa-shield-halved"></i> Вход проверяется по твоей роли на сервере — чужие сюда не пройдут.</p>
-          </section>
-
-          <div class="auth-form-side">
-            <div class="mobile-brand">
-              <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo"></span>
-              <b>HAKUMO</b>
-            </div>
-
-            {% if request.args.get('success') %}
-            <div class="auth-ok" id="regOkNote" role="status"><i class="fas fa-circle-check"></i><span>Доступ создан! Теперь войди через <b>Discord PIN</b> — бот пришлёт код в твои личные сообщения Discord.</span></div>
-            {% endif %}
-
-            <div class="tabs">
-              <span class="tab-slider" id="tabSlider" aria-hidden="true"></span>
-              <button type="button" class="tab-btn active" id="tabBtnPass" data-auth-tab="pass"><i class="fas fa-key"></i> Пароль</button>
-              <button type="button" class="tab-btn" id="tabBtnPin" data-auth-tab="pin"><i class="fas fa-shield-halved"></i> Discord PIN</button>
-            </div>
-
-            <!-- Вход по паролю -->
-            <div id="tabPass">
-              <div class="auth-error" id="passError" {% if error %}style="display:block"{% endif %}>{{ error|e }}</div>
-              <form method="POST" action="/login" autocomplete="off">
-                <div class="auth-field has-ico" data-float>
-                  <label class="lbl" for="passUsername">Логин</label>
-                  <i class="fas fa-user f-ico" aria-hidden="true"></i>
-                  <input type="text" name="username" id="passUsername" placeholder="Логин" required autocomplete="off" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Логин">
-                  <div class="autocomplete-popup" id="passPopup"></div>
-                </div>
-                <div class="auth-field has-ico has-eye" data-float>
-                  <label class="lbl" for="passPassword">Пароль</label>
-                  <i class="fas fa-lock f-ico" aria-hidden="true"></i>
-                  <input type="password" name="password" id="passPassword" placeholder="Пароль" required aria-label="Пароль">
-                  <button type="button" class="eye" id="passEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
-                  <span class="cap-hint" id="capHint">Caps Lock включён</span>
-                </div>
-                <div class="auth-sub" style="margin:2px 2px 10px;display:flex;gap:7px;align-items:flex-start"><i class="fas fa-info-circle" style="margin-top:2px"></i><span>Пароль — только для владельца панели. Участники входят через <b>Discord PIN</b>.</span></div>
-                <button type="submit" class="auth-btn" id="passSubmitBtn"><i class="fas fa-arrow-right"></i> Войти</button>
-              </form>
-            </div>
-
-            <!-- Вход по Discord PIN -->
-            <div id="tabPin" style="display:none">
-              <div class="auth-error" id="pinError"></div>
-              <div id="step1">
-                <div class="auth-title"><span class="n">1</span> Найди аккаунт</div>
-                <div class="auth-sub">Введи ID или @username, привязанный к панели.</div>
-                <div class="auth-field has-ico" data-float>
-                  <label class="lbl" for="discordQuery">Discord</label>
-                  <i class="fab fa-discord f-ico" aria-hidden="true"></i>
-                  <input type="text" id="discordQuery" placeholder="Discord" autocomplete="off" oninput="showSuggest(this, 'pinPopup')" onfocus="showSuggest(this, 'pinPopup')" aria-label="Discord">
-                  <div class="autocomplete-popup" id="pinPopup"></div>
-                </div>
-                <button type="button" class="auth-btn" id="pinCheckBtn"><i class="fas fa-magnifying-glass"></i> Проверить</button>
-                <div class="step-hint" id="step1-error" style="color:var(--err)"></div>
-              </div>
-              <div id="step2" style="display:none">
-                <div class="auth-title"><span class="n">2</span> Введи PIN</div>
-                <div class="auth-sub" id="step2-who">Введи 6 цифр, которые ты получил от бота.</div>
-                <div class="pin-box" id="pinBox"></div>
-                <button type="button" class="auth-btn" id="pinConfirmBtn"><i class="fas fa-arrow-right"></i> Подтвердить</button>
-                <div class="step-hint" id="step2-error" style="color:var(--err)"></div>
-              </div>
-            </div>
-
-            <div class="auth-status" id="authStatus" hidden>
-              <span class="dot" id="statusDot"></span><span id="statusText"></span>
-            </div>
-
-            <div class="auth-foot">Первый раз здесь? <a href="/register">Создай доступ</a> · Хочешь в команду — <a href="/member-apply">подай заявку</a></div>
-          </div>
-        </div>
-      </div>
+  <main class="auth-page">
+    <div class="emblem" aria-hidden="true">
+      <span class="ring"></span>
+      <span class="tile"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></span>
     </div>
 
-    <div class="lg-foot-note">Hakumo — панель управления сервером</div>
+    <section class="auth-card" aria-label="Вход в панель">
+      <h1>Вход</h1>
+      <p class="auth-sub">Панель управления сервером Hakumo</p>
+
+      {% if request.args.get('success') %}
+      <div class="auth-ok show" id="regOkNote" role="status"><i class="fas fa-circle-check"></i><span>Доступ создан! Теперь войди: логин — твой <b>Discord ID или ник</b>, пароль — тот, что ты указал при регистрации.</span></div>
+      {% endif %}
+
+      <!-- Форма входа -->
+      <div id="passPane">
+        <div class="auth-error" id="passError" {% if error %}style="display:block"{% endif %} role="alert"><i class="fas fa-circle-exclamation"></i><span>{{ error|e }}</span></div>
+        <form method="POST" action="/login" autocomplete="off" id="passForm">
+          <div class="field has-ico" data-float>
+            <label class="lbl" for="passUsername">Discord ID или ник</label>
+            <i class="fab fa-discord f-ico" aria-hidden="true"></i>
+            <input type="text" name="username" id="passUsername" placeholder="Discord ID или ник" required autocomplete="username" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Discord ID или ник">
+            <div class="autocomplete-popup" id="passPopup"></div>
+          </div>
+          <div class="field-hint">Например <b>@alex</b> или цифровой <b>Discord ID</b> — кто ты на сервере.</div>
+          <div class="field has-ico has-eye" data-float>
+            <label class="lbl" for="passPassword">Пароль</label>
+            <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+            <input type="password" name="password" id="passPassword" placeholder="Пароль" required autocomplete="current-password" aria-label="Пароль">
+            <button type="button" class="eye" id="passEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+            <span class="cap-hint" id="capHint">Caps Lock включён</span>
+          </div>
+          <div class="forgot-row">
+            <button type="button" class="forgot-link" id="forgotToggle"><i class="fas fa-key" style="margin-right:4px"></i>Забыл пароль?</button>
+          </div>
+          <button type="submit" class="auth-btn" id="passSubmitBtn"><i class="fas fa-right-to-bracket"></i> Войти</button>
+        </form>
+      </div>
+
+      <!-- Восстановление пароля: код в ЛС Discord -->
+      <div id="forgotPane" hidden>
+        <p class="fr-title"><span class="n">1</span> Запросить код</p>
+        <p class="fr-sub">Укажи Discord ID или ник — бот пришлёт <b>6 цифр</b> в твои личные сообщения Discord.</p>
+        <div class="fr-err" id="frErr1"></div>
+        <div class="field has-ico" data-float>
+          <label class="lbl" for="frQuery">Discord ID или ник</label>
+          <i class="fab fa-discord f-ico" aria-hidden="true"></i>
+          <input type="text" id="frQuery" placeholder="Discord ID или ник" autocomplete="off" aria-label="Discord ID или ник для восстановления пароля">
+        </div>
+        <button type="button" class="auth-btn" id="frSendBtn"><i class="fas fa-paper-plane"></i> Отправить код</button>
+
+        <div id="frStep2" hidden>
+          <p class="fr-title" style="margin-top:20px"><span class="n">2</span> Новый пароль</p>
+          <p class="fr-sub">Введи код из Discord и задай новый пароль.</p>
+          <div class="fr-err" id="frErr2"></div>
+          <div class="field" data-float>
+            <label class="lbl" for="frCode">Код из Discord</label>
+            <input type="text" id="frCode" class="pin-inline" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" aria-label="Код из Discord">
+          </div>
+          <div class="field has-ico has-eye" data-float>
+            <label class="lbl" for="frNewPass">Новый пароль</label>
+            <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+            <input type="password" id="frNewPass" placeholder="Новый пароль" minlength="6" autocomplete="new-password" aria-label="Новый пароль">
+            <button type="button" class="eye" id="frNewEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+          </div>
+          <div class="field has-ico has-eye" data-float>
+            <label class="lbl" for="frNewPass2">Повтори пароль</label>
+            <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+            <input type="password" id="frNewPass2" placeholder="Повтори пароль" minlength="6" autocomplete="new-password" aria-label="Повторите новый пароль">
+            <button type="button" class="eye" id="frNewEye2" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+          </div>
+          <button type="button" class="auth-btn" id="frSaveBtn"><i class="fas fa-check"></i> Сохранить пароль</button>
+          <div class="fr-hint">После сброса войди с новым паролем на этой же странице.</div>
+        </div>
+
+        <button type="button" class="ghost-btn" id="frBackBtn" style="margin-top:16px"><i class="fas fa-arrow-left"></i> Назад ко входу</button>
+      </div>
+
+      <div class="auth-foot" id="footLinks">
+        <span id="authStatus" hidden><span class="dot" id="statusDot"></span><span id="statusText"></span></span>
+        <div>Первый раз здесь? <a href="/register">Создай доступ</a><span class="dot-sep">·</span>Хочешь в команду? <a href="/member-apply">Подай заявку</a></div>
+      </div>
+    </section>
+
+    <p class="page-foot">Hakumo — панель управления сервером</p>
   </main>
 
   <!-- Экран «Проверяем доступ»: показывается на время входа -->
@@ -690,10 +532,9 @@
       <h3>Проверяем доступ</h3>
       <p class="sub" id="authCheckSub">Связываемся с Discord и проверяем роль…</p>
       <ol class="auth-steps" id="authSteps">
-        <li data-step="1"><span class="s-ico"><i class="fas fa-magnifying-glass"></i></span><span>Находим аккаунт</span></li>
-        <li data-step="2"><span class="s-ico"><i class="fas fa-plug"></i></span><span>Связываемся с Discord</span></li>
-        <li data-step="3"><span class="s-ico"><i class="fas fa-shield-halved"></i></span><span>Проверяем роль и доступ</span></li>
-        <li data-step="4"><span class="s-ico"><i class="fas fa-right-to-bracket"></i></span><span id="authStep4Txt">Входим в панель</span></li>
+        <li data-step="1"><span class="s-ico"></span><span>Находим аккаунт</span></li>
+        <li data-step="2"><span class="s-ico"></span><span>Проверяем роль и доступ</span></li>
+        <li data-step="3"><span class="s-ico"></span><span>Входим в панель</span></li>
       </ol>
       <div class="auth-check-err" id="authCheckErr"></div>
       <button type="button" class="retry" id="authCheckRetry"><i class="fas fa-rotate-left"></i> Попробовать снова</button>
@@ -703,119 +544,66 @@
 <script>
 (function () {
   'use strict';
-  var _discordId = null;
-  var _pin = '';
-
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-  /* Кнопки: спиннер при загрузке (login не подключает app.js — свой помощник) */
-  var _btnIcons = {};
-  window.qualitySetLoading = window.qualitySetLoading || function (btn, loading) {
-    if (!btn) return;
-    if (loading) {
-      if (!_btnIcons[btn.id]) _btnIcons[btn.id] = btn.querySelector('i');
-      btn.classList.add('loading');
-      var ic = btn.querySelector('i');
-      if (ic) ic.className = 'fas fa-circle-notch spin';
-    } else {
-      btn.classList.remove('loading');
-      var saved = _btnIcons[btn.id];
-      var cur = btn.querySelector('i');
-      if (cur) cur.remove();
-      if (saved) btn.insertBefore(saved, btn.firstChild);
-    }
-  };
-
   function showError(boxId, text) {
     var el = $(boxId);
+    if (!el) return;
     if (text) {
       el.textContent = text;
-      el.style.display = '';
+      el.style.display = 'flex';
       el.classList.remove('shake');
-      void el.offsetWidth; /* перезапуск анимации тряски */
+      void el.offsetWidth;
       el.classList.add('shake');
-    } else el.style.display = 'none';
+    } else {
+      el.style.display = 'none';
+    }
   }
 
-  /* ── Плавающие лейблы: .filled/.focused ── */
+  /* ── Плавающие лейблы ── */
   document.querySelectorAll('[data-float]').forEach(function (field) {
     var inp = field.querySelector('input');
     if (!inp) return;
-    function sync() {
-      field.classList.toggle('filled', !!inp.value);
-    }
+    function sync() { field.classList.toggle('filled', !!inp.value); }
     inp.addEventListener('input', sync);
     inp.addEventListener('blur', function () { field.classList.remove('focused'); sync(); });
     inp.addEventListener('focus', function () { field.classList.add('focused'); });
     sync();
   });
 
-  /* ── Глазик показа пароля ── */
-  var passEye = $('passEye');
-  if (passEye) {
-    passEye.addEventListener('click', function () {
-      var inp = $('passPassword');
+  /* ── Глазики паролей ── */
+  function bindEye(btnId, inpId) {
+    var btn = $(btnId), inp = $(inpId);
+    if (!btn || !inp) return;
+    btn.addEventListener('click', function () {
       var show = inp.type === 'password';
       inp.type = show ? 'text' : 'password';
-      passEye.setAttribute('aria-pressed', show ? 'true' : 'false');
-      passEye.title = show ? 'Скрыть пароль' : 'Показать пароль';
-      passEye.querySelector('i').className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+      btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+      btn.title = show ? 'Скрыть пароль' : 'Показать пароль';
+      var ic = btn.querySelector('i');
+      if (ic) ic.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
       inp.focus();
     });
   }
+  bindEye('passEye', 'passPassword');
+  bindEye('frNewEye', 'frNewPass');
+  bindEye('frNewEye2', 'frNewPass2');
 
-  /* Табы: пружинный слайдер-индикатор + направленный слайд содержимого */
-  function placeSlider(btn) {
-    var s = $('tabSlider');
-    if (!s || !btn) return;
-    s.style.left = btn.offsetLeft + 'px';
-    s.style.width = btn.offsetWidth + 'px';
-  }
-  var _curTab = 'pass';
-  function switchTab(tab, btn) {
-    if (tab === _curTab) return;
-    var dirRight = tab === 'pin';      /* движение вправо: старый уходит влево */
-    var oldPanel = _curTab === 'pass' ? $('tabPass') : $('tabPin');
-    var newPanel = tab === 'pass' ? $('tabPass') : $('tabPin');
-    _curTab = tab;
-    document.querySelectorAll('[data-auth-tab]').forEach(function (b) { b.classList.toggle('active', b === btn); });
-    // placeSlider читает offsetLeft/offsetWidth. Если звать его сразу после
-    // смены классов, браузер вынужден пересчитать layout синхронно — это и есть
-    // «forced reflow» из отчёта Lighthouse. Чтение откладываем на кадр: запись
-    // и чтение разносятся, layout считается один раз в обычном порядке.
-    requestAnimationFrame(function () { placeSlider(btn); });
-    var s = $('tabSlider');
-    if (s) { s.classList.add('moving'); setTimeout(function () { s.classList.remove('moving'); }, 400); }
-    oldPanel.classList.add(dirRight ? 'tab-out-l' : 'tab-out-r');
-    setTimeout(function () {
-      oldPanel.classList.remove('tab-out-l', 'tab-out-r');
-      oldPanel.style.display = 'none';
-      newPanel.style.display = '';
-      newPanel.classList.add(dirRight ? 'tab-in-r' : 'tab-in-l');
-      setTimeout(function () { newPanel.classList.remove('tab-in-r', 'tab-in-l'); }, 320);
-    }, 180);
-  }
-  document.querySelectorAll('[data-auth-tab]').forEach(function (btn) {
-    btn.addEventListener('click', function () { switchTab(btn.dataset.authTab, btn); });
-  });
-  placeSlider(document.querySelector('[data-auth-tab].active'));
-  window.addEventListener('resize', function () { placeSlider(document.querySelector('[data-auth-tab].active')); });
+  /* ── Caps Lock ── */
+  (function () {
+    var pw = $('passPassword'), hint = $('capHint');
+    if (!pw || !hint) return;
+    function capState(e) {
+      var on = !!(e.getModifierState && e.getModifierState('CapsLock'));
+      hint.style.opacity = on ? '1' : '0';
+    }
+    pw.addEventListener('keydown', capState);
+    pw.addEventListener('keyup', capState);
+    pw.addEventListener('blur', function () { hint.style.opacity = '0'; });
+  })();
 
-  /* Шаг 1 → Шаг 2 PIN: направленный слайд */
-  function pinGoStep2() {
-    var a = $('step1'), b = $('step2');
-    a.classList.add('step-out');
-    setTimeout(function () {
-      a.classList.remove('step-out');
-      a.style.display = 'none';
-      b.style.display = '';
-      b.classList.add('step-in');
-      setTimeout(function () { b.classList.remove('step-in'); }, 320);
-    }, 180);
-  }
-
-  /* Живой статус бота (пульсирующая точка + пинг) */
+  /* ── Живой статус бота ── */
   (function () {
     var row = $('authStatus');
     if (!row) return;
@@ -832,203 +620,20 @@
             (g === 1 ? 'сервер' : (g >= 2 && g <= 4 ? 'сервера' : 'серверов'));
         } else {
           dot.classList.add('off');
-          txt.textContent = 'Бот офлайн · вход доступен, статус обновится';
+          txt.textContent = 'Бот офлайн · вход по паролю и роли вернётся, когда бот подключится';
         }
       })
       .catch(function () {});
   })();
 
-  /* Caps Lock: подсказка у пароля */
-  (function () {
-    var pw = $('passPassword'), hint = $('capHint');
-    if (!pw || !hint) return;
-    function capState(e) {
-      var on = !!(e.getModifierState && e.getModifierState('CapsLock'));
-      hint.style.opacity = on ? '1' : '0';
-    }
-    pw.addEventListener('keydown', capState);
-    pw.addEventListener('keyup', capState);
-    pw.addEventListener('blur', function () { hint.style.opacity = '0'; });
-  })();
-
-  /* Экран «Проверяем доступ»: шаги при входе */
-  var accessCheck = {
-    steps: [],
-    stepN: 0,
-    finishCb: null,
-    flow: '',
-    gate: null,   /* шаг «Проверяем роль и доступ»: настоящая проверка (ok, err) */
-    start: function (flow, onFinish) {
-      var ov = $('authCheck');
-      this.flow = flow || '';
-      this.finishCb = onFinish || null;
-      this.gate = null;
-      this.steps = Array.prototype.slice.call(document.querySelectorAll('#authSteps li'));
-      if (!ov || !this.steps.length) {
-        if (this.finishCb) this.finishCb();
-        return;
-      }
-      ov.hidden = false;
-      var err = $('authCheckErr'), retry = $('authCheckRetry');
-      if (err) err.classList.remove('show');
-      if (retry) retry.classList.remove('show');
-      var sub = $('authCheckSub');
-      if (sub) sub.textContent = 'Связываемся с Discord и проверяем роль…';
-      var t4 = $('authStep4Txt');
-      if (t4) t4.textContent = 'Входим в панель';
-      this.stepN = 0;
-      this.steps.forEach(function (s) { s.classList.remove('on', 'done', 'err'); });
-      this.tick();
-    },
-    tick: function () {
-      var self = this;
-      if (self.stepN < 3) {
-        var cur = self.steps[self.stepN];
-        cur.classList.add('on');
-        var ico = cur.querySelector('.s-ico');
-        ico.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
-        var markDone = function () {
-          cur.classList.remove('on');
-          cur.classList.add('done');
-          ico.innerHTML = '<i class="fas fa-check"></i>';
-          self.stepN++;
-          self.tick();
-        };
-        /* Шаг «Проверяем роль и доступ» (индекс 2): если задан gate —
-           это НАСТОЯЩАЯ проверка на сервере: ждём её ответ, а не таймер.
-           Ошибка показывает причину прямо в оверлее + кнопку retry. */
-        if (self.stepN === 2 && typeof self.gate === 'function') {
-          self.gate(markDone, function (text) {
-            cur.classList.remove('on');
-            cur.classList.add('err');
-            ico.innerHTML = '<i class="fas fa-xmark"></i>';
-            var sub = $('authCheckSub');
-            if (sub) sub.textContent = 'Не получилось войти.';
-            var err = $('authCheckErr');
-            if (err) {
-              err.textContent = text || 'Что-то пошло не так — попробуйте ещё раз.';
-              err.classList.add('show');
-            }
-            var retry = $('authCheckRetry');
-            if (retry) retry.classList.add('show');
-          });
-        } else {
-          setTimeout(markDone, self.stepN === 2 ? 500 : 430);
-        }
-      } else {
-        var last = self.steps[3];
-        last.classList.add('on');
-        var lico = last.querySelector('.s-ico');
-        lico.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
-        setTimeout(function () {
-          if (self.finishCb) self.finishCb();
-        }, 380);
-      }
-    },
-    ok: function () {
-      var last = this.steps[3];
-      if (!last) return;
-      last.classList.remove('on');
-      last.classList.add('done');
-      var lico = last.querySelector('.s-ico');
-      if (lico) lico.innerHTML = '<i class="fas fa-check"></i>';
-      var t4 = $('authStep4Txt');
-      if (t4) t4.textContent = 'Готово';
-      var sub = $('authCheckSub');
-      if (sub) sub.textContent = 'Вход выполнен — открываем панель.';
-      this.close();
-    },
-    fail: function (text) {
-      var last = this.steps[3];
-      if (!last) return;
-      last.classList.remove('on');
-      last.classList.add('err');
-      var lico = last.querySelector('.s-ico');
-      if (lico) lico.innerHTML = '<i class="fas fa-xmark"></i>';
-      var sub = $('authCheckSub');
-      if (sub) sub.textContent = 'Не получилось войти.';
-      var err = $('authCheckErr');
-      if (err) {
-        err.textContent = text || 'Что-то пошло не так — попробуйте ещё раз.';
-        err.classList.add('show');
-      }
-      var retry = $('authCheckRetry');
-      if (retry) retry.classList.add('show');
-    },
-    close: function () {
-      var self = this;
-      setTimeout(function () {
-        var ov = $('authCheck');
-        if (ov) ov.hidden = true;
-        void self;
-      }, 550);
-    }
-  };
-  var retryBtn = $('authCheckRetry');
-  if (retryBtn) {
-    /* «Попробовать снова» возвращает на форму без перезагрузки страницы */
-    retryBtn.addEventListener('click', function () {
-      accessCheck.close();
-      if (accessCheck.flow === 'pass') {
-        var f = document.querySelector('form[action="/login"]');
-        if (f) delete f.dataset.sent;
-        var first = $('passUsername');
-        if (first) first.focus();
-      } else {
-        var btn = $('pinConfirmBtn');
-        if (btn) btn.focus();
-      }
-    });
-  }
-
-  /* Вход по паролю: оверлей идёт по шагам, а на шаге «Проверяем роль и
-     доступ» реально спрашивает сервер (/api/login-probe): тот проверяет
-     пароль и — для участника — ЖИВУЮ роль в Discord. Только после успеха
-     отправляется настоящая форма; ошибка видна в оверлее с кнопкой
-     «Попробовать снова». Так проверка не может «висеть» без результата. */
-  var passForm = document.querySelector('form[action="/login"]');
-  if (passForm) {
-    passForm.addEventListener('submit', function (e) {
-      if (passForm.dataset.sent) { e.preventDefault(); return; }
-      if (!passForm.checkValidity()) return;   /* браузер сам подсветит пустое */
-      e.preventDefault();
-      passForm.dataset.sent = '1';
-      accessCheck.gate = function (ok, err) {
-        var u = $('passUsername'), p = $('passPassword');
-        var body;
-        try {
-          body = JSON.stringify({
-            username: (u ? u.value : '').trim(),
-            password: p ? p.value : ''
-          });
-        } catch (ex) {
-          err('Не удалось прочитать форму — попробуйте ещё раз.');
-          return;
-        }
-        fetch('/api/login-probe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: body
-        }).then(function (r) {
-          return r.json().catch(function () { return null; });
-        }).then(function (d) {
-          if (d && d.success) ok();
-          else err((d && d.error) || 'Что-то пошло не так — попробуйте ещё раз.');
-        }).catch(function () {
-          err('Сеть недоступна — проверьте соединение.');
-        });
-      };
-      accessCheck.start('pass', function () { passForm.submit(); });
-    });
-  }
-
+  /* ── Подсказки «кто ты на сервере» ── */
   var suggestTimer = null;
   window.showSuggest = function (input, popupId) {
-    /* после выбора участника один показ подавляется —
-       иначе focus-события вытаскивали попап обратно */
     if (window.__lgSuggestBlock) { window.__lgSuggestBlock = false; return; }
     var popup = $(popupId);
+    if (!popup) return;
     var q = (input.value || '').trim().replace(/^@/, '');
+    if (/^\d{17,19}$/.test(q)) { popup.classList.remove('open'); return; }
     if (q.length < 2) { popup.classList.remove('open'); return; }
     clearTimeout(suggestTimer);
     suggestTimer = setTimeout(function () {
@@ -1038,7 +643,6 @@
           var items = Array.isArray(d) ? d : (d.suggestions || []);
           if (!items.length) { popup.classList.remove('open'); return; }
           popup.innerHTML = items.slice(0, 6).map(function (s) {
-            /* API отдаёт name/display_name/id — мапим надёжно */
             var label = s.display_name || s.username || s.name || '';
             var uid = s.discord_id || s.id || '';
             var uname = s.username || s.name || '';
@@ -1053,29 +657,24 @@
             it.addEventListener('click', function (ev) {
               ev.preventDefault();
               ev.stopPropagation();
-              /* Блок СРАЗУ: никакой input/focus-событие не откроет попап заново */
               window.__lgSuggestBlock = true;
               input.value = it.dataset.user || it.dataset.id || input.value;
-              /* плавающий лейбл синхронизируем вручную — без dispatch, чтобы
-                 oninput=showSuggest не сработал повторно */
               var fld = input.closest('[data-float]');
               if (fld) fld.classList.toggle('filled', !!input.value);
               popup.classList.remove('open');
-              /* НЕ зовём input.focus(): у поля стоит onfocus=showSuggest,
-                 и попап тут же вылезал бы снова. Фокус сразу на пароль. */
-              if (input.id === 'passUsername') {
-                var pw = $('passPassword');
-                if (pw) pw.focus();
-              }
+              var pw = $('passPassword');
+              if (pw) pw.focus();
             });
           });
         })
         .catch(function () { popup.classList.remove('open'); });
     }, 220);
   };
-  function bindPopupKeys(input, popupId) {
+  (function () {
+    var input = $('passUsername');
+    if (!input) return;
     input.addEventListener('keydown', function (e) {
-      var popup = $(popupId);
+      var popup = $('passPopup');
       if (!popup.classList.contains('open')) return;
       var items = Array.prototype.slice.call(popup.querySelectorAll('.item'));
       var hl = popup.querySelector('.item.hl');
@@ -1099,99 +698,236 @@
         popup.classList.remove('open');
       }
     });
-  }
-  bindPopupKeys($('passUsername'), 'passPopup');
-  bindPopupKeys($('discordQuery'), 'pinPopup');
-  document.addEventListener('click', function (e) {
-    ['passPopup', 'pinPopup'].forEach(function (id) {
-      var popup = $(id);
-      if (popup && popup.classList.contains('open') && !popup.contains(e.target) &&
-          e.target !== $('passUsername') && e.target !== $('discordQuery')) {
+    document.addEventListener('click', function (e) {
+      var popup = $('passPopup');
+      if (popup && popup.classList.contains('open') && !popup.contains(e.target) && e.target !== input) {
         popup.classList.remove('open');
       }
     });
-  });
+  })();
 
-  /* PIN: шаг 1 — найти аккаунт */
-  $('pinCheckBtn').addEventListener('click', function () {
-    var btn = $('pinCheckBtn');
-    var q = ($('discordQuery').value || '').trim();
-    showError('step1-error', '');
-    if (!q) { showError('step1-error', 'Введи ID или @username'); return; }
-    window.qualitySetLoading(btn, true);
-    fetch('/api/discord-check', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: q })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      window.qualitySetLoading(btn, false);
-      if (d.success) {
-        _discordId = d.discord_id;
-        $('step2-who').textContent = 'Введи 6 цифр, которые ты получил от бота' + (d.display_name ? ' (' + d.display_name + ')' : '') + '.';
-        pinGoStep2();
-        buildPinBox();
-      } else {
-        showError('step1-error', d.error || 'Аккаунт не найден');
-      }
-    }).catch(function () { window.qualitySetLoading(btn, false); showError('step1-error', 'Сеть недоступна'); });
-  });
-
-  function buildPinBox() {
-    var box = $('pinBox');
-    box.innerHTML = '';
-    _pin = '';
-    for (var i = 0; i < 6; i++) {
-      var inp = document.createElement('input');
-      inp.type = 'text';
-      inp.maxLength = 1;
-      inp.inputMode = 'numeric';
-      inp.autocomplete = 'off';
-      inp.dataset.i = i;
-      box.appendChild(inp);
-      inp.addEventListener('input', function () {
-        this.value = this.value.replace(/\D/g, '');
-        var idx = parseInt(this.dataset.i, 10);
-        if (this.value) {
-          this.classList.remove('has');
-          void this.offsetWidth; /* перезапуск анимации */
-          this.classList.add('has');
-        } else {
-          this.classList.remove('has');
+  /* ── Оверлей «Проверяем доступ»: шаги + настоящая проверка (login-probe) ── */
+  var accessCheck = {
+    gate: null,
+    start: function (onFinish) {
+      var ov = $('authCheck');
+      this.gate = null;
+      if (!ov) { if (onFinish) onFinish(); return; }
+      var err = $('authCheckErr'), retry = $('authCheckRetry');
+      if (err) err.classList.remove('show');
+      if (retry) retry.classList.remove('show');
+      var sub = $('authCheckSub');
+      if (sub) sub.textContent = 'Связываемся с Discord и проверяем роль…';
+      var steps = Array.prototype.slice.call(document.querySelectorAll('#authSteps li'));
+      ov.hidden = false;
+      var self = this;
+      function tick(n) {
+        if (n >= steps.length) {
+          if (self.gateDone) self.gateDone();
+          else if (onFinish) onFinish();
+          return;
         }
-        if (this.value && idx < 5) box.children[idx + 1].focus();
-        _pin = Array.prototype.map.call(box.children, function (c) { return c.value; }).join('');
-        if (_pin.length === 6) $('pinConfirmBtn').focus();
-      });
-      inp.addEventListener('keydown', function (e) {
-        var idx = parseInt(this.dataset.i, 10);
-        if (e.key === 'Backspace' && !this.value && idx > 0) box.children[idx - 1].focus();
-      });
+        var cur = steps[n];
+        cur.classList.add('on');
+        var ico = cur.querySelector('.s-ico');
+        ico.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
+        var done = function () {
+          cur.classList.remove('on');
+          cur.classList.add('done');
+          ico.innerHTML = '<i class="fas fa-check"></i>';
+          tick(n + 1);
+        };
+        if (n === 1 && typeof self.gate === 'function') {
+          self.gate(done, function (text) {
+            cur.classList.remove('on');
+            cur.classList.add('err');
+            ico.innerHTML = '<i class="fas fa-xmark"></i>';
+            var s2 = $('authCheckSub');
+            if (s2) s2.textContent = 'Не получилось войти.';
+            var eb = $('authCheckErr');
+            if (eb) {
+              eb.textContent = text || 'Что-то пошло не так — попробуйте ещё раз.';
+              eb.classList.add('show');
+            }
+            var rt = $('authCheckRetry');
+            if (rt) rt.classList.add('show');
+          });
+        } else {
+          setTimeout(done, n === 0 ? 500 : 420);
+        }
+      }
+      this.gateDone = null;
+      this.steps = steps;
+      tick(0);
+    },
+    fail: function (text) {
+      var last = this.steps[this.steps.length - 1];
+      if (!last) return;
+      last.classList.remove('on');
+      last.classList.add('err');
+      var lico = last.querySelector('.s-ico');
+      if (lico) lico.innerHTML = '<i class="fas fa-xmark"></i>';
+      var sub = $('authCheckSub');
+      if (sub) sub.textContent = 'Не получилось войти.';
+      var err = $('authCheckErr');
+      if (err) {
+        err.textContent = text || 'Что-то пошло не так — попробуйте ещё раз.';
+        err.classList.add('show');
+      }
+      var retry = $('authCheckRetry');
+      if (retry) retry.classList.add('show');
+    },
+    close: function () {
+      var ov = $('authCheck');
+      if (ov) ov.hidden = true;
     }
-    box.children[0].focus();
+  };
+
+  var retryBtn = $('authCheckRetry');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', function () {
+      accessCheck.close();
+      var f = $('passForm');
+      if (f) delete f.dataset.sent;
+      var first = $('passUsername');
+      if (first) first.focus();
+    });
   }
 
-  /* PIN: шаг 2 — вход с экраном «Проверяем доступ» */
-  $('pinConfirmBtn').addEventListener('click', function () {
-    showError('step2-error', '');
-    if (_pin.length !== 6) { showError('step2-error', 'Введи 6 цифр'); return; }
-    var btn = $('pinConfirmBtn');
-    /* сам запрос уходит в момент, когда шаги проверки дошли до «входа» */
-    accessCheck.start('pin', function () {
-      fetch('/api/discord-login', {
+  /* Вход по паролю: на шаге «Проверяем роль и доступ» спрашиваем сервер
+     (/api/login-probe), и только при success отправляем настоящую форму. */
+  var passForm = $('passForm');
+  if (passForm) {
+    passForm.addEventListener('submit', function (e) {
+      if (passForm.dataset.sent) { e.preventDefault(); return; }
+      if (!passForm.checkValidity()) return;
+      e.preventDefault();
+      passForm.dataset.sent = '1';
+      accessCheck.gate = function (ok, err) {
+        var u = $('passUsername'), p = $('passPassword');
+        fetch('/api/login-probe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: (u ? u.value : '').trim(), password: p ? p.value : '' })
+        }).then(function (r) {
+          return r.json().catch(function () { return null; });
+        }).then(function (d) {
+          if (d && d.success) ok();
+          else err((d && d.error) || 'Что-то пошло не так — попробуйте ещё раз.');
+        }).catch(function () {
+          err('Сеть недоступна — проверьте соединение.');
+        });
+      };
+      accessCheck.gateDone = function () { passForm.submit(); };
+      accessCheck.start(function () { passForm.submit(); });
+    });
+  }
+
+  /* ── «Забыли пароль?»: код в ЛС Discord → новый пароль ── */
+  var _frId = null;
+  var forgotPane = $('forgotPane');
+  var passPane = $('passPane');
+  var forgotToggle = $('forgotToggle');
+  if (forgotToggle && forgotPane && passPane) {
+    function pane(showForgot) {
+      passPane.style.display = showForgot ? 'none' : '';
+      forgotPane.hidden = !showForgot;
+      if (showForgot) { var f = $('frQuery'); if (f) f.focus(); }
+    }
+    forgotToggle.addEventListener('click', function () { pane(true); });
+    var frBack = $('frBackBtn');
+    if (frBack) frBack.addEventListener('click', function () { pane(false); });
+  }
+
+  function setLoading(btn, loading) {
+    if (!btn) return;
+    var ic = btn.querySelector('i');
+    if (loading) {
+      btn.dataset.orig = ic ? ic.className : '';
+      if (ic) ic.className = 'fas fa-circle-notch spin';
+      btn.disabled = true;
+    } else {
+      if (ic) ic.className = btn.dataset.orig || 'fas fa-circle-notch';
+      btn.disabled = false;
+    }
+  }
+
+  var frSend = $('frSendBtn');
+  if (frSend) {
+    frSend.addEventListener('click', function () {
+      showError('frErr1', '');
+      var q = ($('frQuery').value || '').trim();
+      if (!q) { showError('frErr1', 'Укажи Discord ID или ник.'); return; }
+      setLoading(frSend, true);
+      fetch('/api/forgot-password', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discord_id: _discordId, pin: _pin })
+        body: JSON.stringify({ discord_id: q })
       }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d.success) {
-          accessCheck.ok();
-          var dest = d.redirect || '/';
-          setTimeout(function () { window.location.href = dest; }, 850);
+        setLoading(frSend, false);
+        if (d && d.success) {
+          _frId = d.discord_id;
+          $('frStep2').hidden = false;
+          var c = $('frCode');
+          if (c) c.focus();
         } else {
-          accessCheck.fail(d.error || 'Неверный PIN — попробуйте ещё раз');
+          showError('frErr1', (d && d.error) || 'Не удалось отправить код.');
         }
       }).catch(function () {
-        accessCheck.fail('Сеть недоступна — проверьте соединение');
+        setLoading(frSend, false);
+        showError('frErr1', 'Сеть недоступна — попробуйте ещё раз.');
       });
     });
-  });
+  }
+
+  var frSave = $('frSaveBtn');
+  if (frSave) {
+    frSave.addEventListener('click', function () {
+      showError('frErr2', '');
+      var code = ($('frCode').value || '').trim();
+      var np1 = ($('frNewPass').value || '');
+      var np2 = ($('frNewPass2').value || '');
+      if (code.length !== 6) { showError('frErr2', 'Введи 6 цифр из Discord.'); return; }
+      if (np1.length < 6) { showError('frErr2', 'Пароль должен быть не короче 6 символов.'); return; }
+      if (np1 !== np2) { showError('frErr2', 'Пароли не совпадают.'); return; }
+      if (!_frId) { showError('frErr2', 'Сначала отправь код — повтори запрос.'); return; }
+      setLoading(frSave, true);
+      fetch('/api/reset-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discord_id: _frId, code: code, new_password: np1 })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        setLoading(frSave, false);
+        if (d && d.success) {
+          var f = $('passForm');
+          setTimeout(function () {
+            pane(false);
+            var errBox = $('passError');
+            if (errBox) {
+              errBox.querySelector('span').textContent = '';
+              errBox.style.display = 'none';
+            }
+            var okNote = $('regOkNote');
+            if (okNote) {
+              okNote.style.display = 'flex';
+              okNote.querySelector('span').innerHTML = 'Пароль обновлён! Войди с новым паролем.';
+            } else {
+              var head = document.createElement('div');
+              head.id = 'regOkNote';
+              head.className = 'auth-ok show';
+              head.setAttribute('role', 'status');
+              head.innerHTML = '<i class="fas fa-circle-check"></i><span>Пароль обновлён! Войди с новым паролем.</span>';
+              var paneEl = $('passPane');
+              if (paneEl) paneEl.insertBefore(head, paneEl.firstChild);
+            }
+          }, 600);
+        } else {
+          showError('frErr2', (d && d.error) || 'Не удалось сменить пароль.');
+        }
+      }).catch(function () {
+        setLoading(frSave, false);
+        showError('frErr2', 'Сеть недоступна — попробуйте ещё раз.');
+      });
+    });
+  }
 })();
 </script>
 </body>

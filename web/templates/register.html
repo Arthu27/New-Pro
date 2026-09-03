@@ -3,52 +3,47 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Регистрация в панели управления Hakumo — по Discord ID с подтверждением через личные сообщения.">
+  <meta name="description" content="Регистрация в панели управления Hakumo — Discord ID или ник + пароль, подтверждение кодом в личных сообщениях Discord.">
   <title>Регистрация — Hakumo</title>
   <link rel="icon" href="/static/favicon.ico">
-      <style>
-      /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
-         первый кадр никогда не белый. */
-      html { background: #0f1013; color-scheme: dark; }
-      body { background: transparent; margin: 0; }
-    </style>
+  <style>
+    /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
+       первый кадр никогда не белый. */
+    html { background: #0f1013; color-scheme: dark; }
+    body { background: transparent; margin: 0; }
+  </style>
 <!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
          только разобрав fonts.css и all.subset.css, и они встают в конец
-         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains,
-         820 мс до последнего шрифта). crossorigin обязателен даже для своего
-         домена, иначе preload не сопоставится с реальным запросом шрифта. -->
+         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains). -->
 <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
-  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
-  <link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
+<link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
+<link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
   <style>
-    /* ═══ РЕГИСТРАЦИЯ — чёрное премиум-издание (единый стиль с /login) ═══
-       Плавающие лейблы живут ВНУТРИ поля и всплывают при фокусе/вводе.
-       Флоу: Discord ID → код в ЛС от бота → доступ создан; вход дальше
-       по «Discord PIN» (код каждый раз уходит в ЛС владельцу аккаунта). */
+    /* ═══ РЕГИСТРАЦИЯ — единая центрированная карточка (общий стиль с /login) ═══
+       Флоу: Discord ID (или ник) + пароль → код в ЛС Discord → доступ создан.
+       Потом вход по паролю, роль проверяется живьём из Discord. */
     :root {
       --bg: #05060a;
-      --surface: #0d1019;
-      --surface2: #121624;
-      --surface3: #181d2b;
-      --line: rgba(255,255,255,.07);
-      --line2: rgba(255,255,255,.12);
-      --text: #e8ecf6;
-      --text2: #9aa3ba;
-      --text3: #767f99;
+      --surface: #0e1120;
+      --surface2: #151a2e;
+      --line: rgba(255,255,255,.08);
+      --line2: rgba(255,255,255,.14);
+      --text: #eef1fa;
+      --text2: #a6aec9;
+      --text3: #6f7896;
       --ac: #4f46e5;
       --ac2: #7c3aed;
       --ac3: #22d3ee;
-      --ac-grad: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #22d3ee);
-      --ac-soft: rgba(79, 70, 229, .16);
-      --ok: #16a34a;
-      --err: #dc2626;
-      --warn: #f59e0b;
+      --ac-grad: linear-gradient(135deg, #4f46e5, #7c3aed 60%, #22d3ee);
+      --ac-soft: rgba(99, 102, 241, .16);
+      --ok: #4ade80;
+      --err: #f87171;
+      --warn: #fbbf24;
       --ease: cubic-bezier(.34, 1.3, .64, 1);
-      --shadow: 0 30px 70px -30px rgba(0, 0, 0, .9);
     }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -57,491 +52,387 @@
       background: var(--bg);
       color: var(--text);
       font-family: 'Inter', -apple-system, sans-serif;
-      overflow-x: hidden;
       display: flex; flex-direction: column;
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
-    /* ── Фоновые слои ── */
-    .bg-fx { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-    .bg-fx .orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5; }
-    .orb1 { width: 520px; height: 520px; left: -140px; top: -160px; background: radial-gradient(circle, rgba(79, 70, 229, .4), transparent 65%); animation: orbDrift 14s ease-in-out infinite alternate; }
-    @keyframes orbDrift { from { transform: translate(0, 0) scale(1); } to { transform: translate(40px, 30px) scale(1.08); } }
+    .bg-fx { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .bg-fx .glow { position: absolute; border-radius: 50%; filter: blur(110px); }
+    .glow-a { position: absolute; width: 560px; height: 560px; left: -180px; top: -220px; background: radial-gradient(circle, rgba(79, 70, 229, .30), transparent 65%); animation: driftA 16s ease-in-out infinite alternate; }
+    .glow-b { position: absolute; width: 480px; height: 480px; right: -160px; bottom: -200px; background: radial-gradient(circle, rgba(34, 211, 238, .14), transparent 65%); animation: driftB 18s ease-in-out infinite alternate; }
+    .glow-c { position: absolute; width: 420px; height: 420px; left: 38%; top: -260px; background: radial-gradient(circle, rgba(124, 58, 237, .22), transparent 65%); animation: driftA 22s ease-in-out infinite alternate-reverse; }
+    @keyframes driftA { from { transform: translate(0, 0) scale(1); } to { transform: translate(46px, 34px) scale(1.1); } }
+    @keyframes driftB { from { transform: translate(0, 0) scale(1); } to { transform: translate(-40px, -28px) scale(1.07); } }
     .bg-grid {
       position: fixed; inset: 0; pointer-events: none; z-index: 0;
       background-image:
-        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-      background-size: 44px 44px;
-      mask-image: radial-gradient(ellipse 80% 65% at 50% 40%, #000 30%, transparent 75%);
-      -webkit-mask-image: radial-gradient(ellipse 80% 65% at 50% 40%, #000 30%, transparent 75%);
+        linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+      background-size: 46px 46px;
+      mask-image: radial-gradient(ellipse 75% 60% at 50% 42%, #000 25%, transparent 78%);
+      -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 42%, #000 25%, transparent 78%);
     }
-    .lg-glow {
-      position: fixed; left: 50%; top: -260px; transform: translateX(-50%);
-      width: 900px; height: 460px; pointer-events: none; z-index: 0;
-      background: radial-gradient(closest-side, rgba(124, 58, 237, .28), transparent);
-    }
-    .lg-aurora { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
-    .lg-aurora i { position: absolute; border-radius: 50%; }
-    .lg-aurora i:nth-child(1) {
-      width: 560px; height: 560px; left: -150px; top: -170px;
-      background: radial-gradient(circle, rgba(99, 102, 241, .11), transparent 65%);
-      animation: lgAurora 12s ease-in-out infinite alternate;
-    }
-    .lg-aurora i:nth-child(2) {
-      width: 500px; height: 500px; right: -130px; bottom: -160px;
-      background: radial-gradient(circle, rgba(34, 211, 238, .09), transparent 65%);
-      animation: lgAurora 14s ease-in-out infinite alternate-reverse;
-    }
-    @keyframes lgAurora { from { opacity: .4; } to { opacity: .9; } }
 
-    /* ── Назад ── */
-    .lg-back {
-      position: fixed; top: 22px; left: 26px; z-index: 30;
-      display: inline-flex; align-items: center; gap: 8px;
-      color: var(--text2); text-decoration: none;
-      font-size: 12.5px; font-weight: 600;
-      padding: 9px 14px; border-radius: 11px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.08);
-      transition: color .15s, border-color .15s, background .15s;
-    }
-    .lg-back:hover { color: var(--text); border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.07); }
-
-    /* ── Сцена ── */
-    .lg-stage {
+    .auth-page {
       position: relative; z-index: 10;
-      width: 100%; max-width: 720px;
-      margin: auto;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 88px 20px 26px;
-      min-height: 100vh;
+      flex: 1;
+      padding: 64px 18px 40px;
     }
-    .lg-card-zone { position: relative; width: min(880px, 100%); }
 
-    /* ── Медальон дракона ── */
-    .lg-dragon-stage {
-      position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%);
-      width: 128px; height: 128px; z-index: 5; pointer-events: none;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .lg-dragon-stage .ring {
-      position: absolute; inset: 0; border-radius: 50%;
-      border: 1px solid rgba(124, 58, 237, .35);
-      animation: lgSpin 18s linear infinite;
-    }
-    @keyframes lgSpin { to { transform: rotate(360deg); } }
-    .lg-dragon-stage .tile {
-      width: 84px; height: 84px; border-radius: 24px;
-      background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
-      border: 1px solid rgba(255,255,255,.1);
-      box-shadow: 0 16px 40px -12px rgba(79, 70, 229, .55), inset 0 1px 0 rgba(255,255,255,.08);
-      display: flex; align-items: center; justify-content: center;
-      position: relative; z-index: 2;
-    }
-    .lg-dragon-stage .tile img { width: 74%; height: 74%; object-fit: contain; }
-    .lg-dragon-stage .tile::after {
-      content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-      background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.16) 45%, transparent 60%);
-      animation: lgGloss 5.5s ease-in-out infinite;
-    }
-    @keyframes lgGloss { 0%, 55% { transform: translateX(-110%); } 85%, 100% { transform: translateX(110%); } }
-    .dragon-live { animation: dragonBreath 4.6s ease-in-out infinite; }
-    @keyframes dragonBreath {
-      0%, 100% { transform: scale(1); }
-      42% { transform: scale(1.045); }
-      58% { transform: scale(1.045); }
-    }
-    .lg-dragon-stage .floor {
-      position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
-      width: 110px; height: 14px; border-radius: 50%;
-      background: radial-gradient(closest-side, rgba(79, 70, 229, .4), transparent);
-      animation: lgFloor 4.6s ease-in-out infinite;
-    }
-    @keyframes lgFloor { 0%,100% { transform: translateX(-50%) scaleX(.85); opacity: .55; } 50% { transform: translateX(-50%) scaleX(1.1); opacity: 1; } }
-
-    /* ── Карточка ── */
-    .auth-card {
+    .emblem {
       position: relative;
-      width: min(880px, 100%);
-      margin: auto;
-      border-radius: 24px;
-      background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 30%), rgba(13, 16, 25, .88);
-      border: 1px solid rgba(255,255,255,.08);
-      box-shadow: var(--shadow);
+      width: 96px; height: 96px;
+      margin: 0 auto 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .emblem .ring {
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 1px solid rgba(124, 58, 237, .45);
+      animation: spin 22s linear infinite;
+    }
+    .emblem .ring::before,
+    .emblem .ring::after {
+      content: ''; position: absolute;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--ac3);
+      box-shadow: 0 0 12px rgba(34, 211, 238, .8);
+      top: -5px; left: calc(50% - 4px);
+    }
+    .emblem .ring::after { top: auto; bottom: -5px; background: var(--ac2); box-shadow: 0 0 12px rgba(124,58,237,.8); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .emblem .tile {
+      width: 72px; height: 72px; border-radius: 22px;
+      background: radial-gradient(circle at 50% 32%, #1c2240, #0a0d1c);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 18px 44px -14px rgba(79, 70, 229, .65), inset 0 1px 0 rgba(255,255,255,.09);
+      display: flex; align-items: center; justify-content: center;
       overflow: hidden;
+    }
+    .emblem .tile::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(115deg, transparent 32%, rgba(255,255,255,.18) 46%, transparent 60%);
+      transform: translateX(-120%);
+      animation: gloss 6s ease-in-out infinite;
+      border-radius: 22px;
+    }
+    @keyframes gloss { 0%, 58% { transform: translateX(-120%); } 92%, 100% { transform: translateX(120%); } }
+    .emblem img { width: 74%; height: 74%; object-fit: contain; position: relative; z-index: 1; animation: breath 5s ease-in-out infinite; }
+    @keyframes breath { 0%, 100% { transform: scale(1); } 44% { transform: scale(1.05); } 58% { transform: scale(1.05); } }
+
+    .auth-card {
+      width: min(480px, 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 34%), rgba(13, 16, 29, .92);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      padding: 30px 32px 24px;
+      box-shadow: 0 34px 80px -32px rgba(0,0,0,.85);
+      position: relative;
     }
     .auth-card::after {
       content: ''; position: absolute; inset: 0; border-radius: inherit;
-      padding: 1px; pointer-events: none;
-      background: conic-gradient(from 180deg, transparent 0deg, rgba(124, 58, 237, .7) 60deg, rgba(34, 211, 238, .6) 120deg, transparent 200deg);
+      padding: 1px;
+      background: conic-gradient(from 210deg, transparent 0deg, rgba(124, 58, 237, .5) 70deg, rgba(34, 211, 238, .45) 130deg, transparent 210deg);
       -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
       -webkit-mask-composite: xor;
       mask-composite: exclude;
-      opacity: 0; transition: opacity .35s;
+      opacity: 0; transition: opacity .35s; pointer-events: none;
     }
     .auth-card:hover::after { opacity: 1; }
-    .auth-main { display: flex; padding: 66px 38px 30px; }
 
-    /* ── Левая часть: бренд ── */
-    .auth-side { flex: 0 0 46%; padding-right: 38px; border-right: 1px solid rgba(255,255,255,.06); }
-    .auth-side .brand { display: flex; align-items: center; flex-wrap: wrap; gap: 11px; }
-    .auth-side .brand > div { min-width: 0; }
-    .auth-side .brand .ico {
-      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
-      background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
-      border: 1px solid rgba(255,255,255,.1);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .auth-side .brand .ico img { width: 72%; height: 72%; object-fit: contain; }
-    .auth-side .brand b {
+    .auth-card h1 {
+      margin: 0 0 6px;
+      text-align: center;
       font-family: var(--font-display, 'Unbounded', sans-serif);
-      font-size: 16px; letter-spacing: .12em;
+      font-size: 22px; font-weight: 800; letter-spacing: .01em;
     }
-    .auth-side .brand > div > span { display: block; font-size: 10px; color: var(--text3); letter-spacing: .14em; text-transform: uppercase; margin-top: 2px; }
-    .member-chip {
-      margin-left: auto; flex-shrink: 0;
-      font-size: 9.5px; font-weight: 800; letter-spacing: .12em;
-      color: #a5b4fc;
-      border: 1px solid rgba(124, 58, 237, .45);
-      background: rgba(124, 58, 237, .14);
-      border-radius: 99px; padding: 5px 10px;
-    }
-    .auth-side h1 {
-      margin: 20px 0 10px;
-      font-family: var(--font-display, 'Unbounded', sans-serif);
-      font-size: 25px; font-weight: 800; line-height: 1.26;
-      letter-spacing: -.01em;
-    }
-    .auth-side .lead { margin: 0; font-size: 14px; line-height: 1.6; color: var(--text2); }
-    .lead.trust { margin-top: 14px; font-size: 12.5px; display: flex; gap: 8px; align-items: flex-start; }
-    .lead.trust i { color: var(--ac3); font-size: 12px; flex: none; margin-top: 2px; }
-
-    /* ── Правая часть: форма ── */
-    .mobile-brand { display: none; }
-    .auth-form-side { flex: 1; max-width: 470px; padding-left: 42px; min-width: 0; }
-    .lg-foot-note {
-      margin-top: 20px; font-size: 10px; letter-spacing: .22em;
-      color: var(--text3); text-transform: uppercase; font-weight: 700;
+    .auth-sub {
+      text-align: center;
+      font-size: 13px; color: var(--text2);
+      margin: 0 0 22px; line-height: 1.5;
     }
 
-    /* Индикатор шагов: 1 Данные → 2 Код */
-    .rg-steps { display: flex; align-items: center; margin-bottom: 22px; }
-    .rg-step { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text3); }
-    .rg-step .n {
-      width: 26px; height: 26px; border-radius: 9px; flex: none;
-      display: grid; place-items: center;
-      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08);
-      font-size: 12px; font-weight: 800; font-family: 'JetBrains Mono', monospace;
-      transition: all .2s var(--ease);
+    .auth-ok, .auth-error {
+      display: none;
+      align-items: flex-start; gap: 9px;
+      border-radius: 12px; padding: 10px 13px;
+      font-size: 12.5px; line-height: 1.5;
+      margin-bottom: 16px;
     }
-    .rg-step.on { color: #c7d2fe; }
-    .rg-step.on .n { background: var(--ac-soft); border-color: rgba(124, 58, 237, .55); color: #a5b4fc; box-shadow: 0 0 0 3px rgba(124,58,237,.14); }
-    .rg-step.done { color: var(--text2); }
-    .rg-step.done .n { background: rgba(74,222,128,.16); border-color: rgba(74,222,128,.3); color: var(--ok); }
-    .rg-line { flex: 1; height: 2px; margin: 0 12px; border-radius: 2px; background: rgba(255,255,255,.08); position: relative; overflow: hidden; }
-    .rg-line.done::after { content: ''; position: absolute; inset: 0; background: var(--ac-grad); transform-origin: left; animation: rgLine .5s var(--ease) both; }
-    @keyframes rgLine { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .auth-ok {
+      background: rgba(74, 222, 128, .09);
+      border: 1px solid rgba(74, 222, 128, .28);
+      color: #bbf7d0;
+    }
+    .auth-ok i { color: var(--ok); margin-top: 2px; }
+    .auth-ok.show { display: flex; }
+    .auth-error {
+      background: rgba(248, 113, 113, .09);
+      border: 1px solid rgba(248, 113, 113, .26);
+      color: #fecaca;
+    }
+    .auth-error i { color: var(--err); margin-top: 2px; }
+    .auth-error.show, .auth-error[style*="display:block"] { display: flex; }
+    .auth-error.shake { animation: shake .4s ease; }
+    @keyframes shake {
+      10%, 90% { transform: translateX(-1px); }
+      20%, 80% { transform: translateX(2px); }
+      30%, 50%, 70% { transform: translateX(-3px); }
+      40%, 60% { transform: translateX(3px); }
+    }
 
-    /* ── Поля с плавающими лейблами ── */
-    .auth-field { position: relative; margin-bottom: 16px; }
-    .auth-field .lbl {
-      position: absolute; left: 12px; top: 14px; z-index: 2;
+    .field { position: relative; margin-bottom: 15px; }
+    .field .lbl {
+      position: absolute; left: 14px; top: 15px; z-index: 2;
       font-size: 13.5px; color: var(--text3);
       padding: 2px 8px; border-radius: 7px;
       pointer-events: none; white-space: nowrap;
-      transform-origin: left center;
-      transition: transform .18s var(--ease), font-size .18s, color .18s, top .18s, left .18s;
+      transition: transform .18s var(--ease), font-size .18s, color .18s, background .18s;
     }
-    .auth-field.filled .lbl, .auth-field.focused .lbl {
-      transform: translateY(-22px);
-      font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
-      color: #a5b4fc;
-      background: linear-gradient(90deg, rgba(79, 70, 229, .9), rgba(124, 58, 237, .9));
-      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    .field.filled .lbl, .field.focused .lbl {
+      transform: translateY(-23px);
+      font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+      color: var(--ac3);
+      background: rgba(10, 13, 28, .94);
+      border: 1px solid var(--line);
     }
-    .auth-field input {
+    .field input {
       width: 100%; height: 52px;
-      padding: 14px 15px;
-      background: rgba(255, 255, 255, .035);
-      border: 1px solid rgba(255, 255, 255, .09);
-      border-radius: 13px;
-      font-size: 14.5px; font-family: inherit; color: var(--text);
-      caret-color: var(--ac3);
-      transition: border-color .15s, box-shadow .18s, background .15s;
+      background: rgba(255,255,255,.035);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0 46px 0 44px;
+      color: var(--text);
+      font: inherit; font-size: 14.5px;
+      outline: none;
+      transition: border-color .18s, background .18s, box-shadow .18s;
     }
-    .auth-field input::placeholder { color: transparent; }
-    .auth-field input:hover { border-color: rgba(255, 255, 255, .16); }
-    .auth-field input:focus {
-      outline: none; border-color: var(--ac);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, .2), 0 10px 24px -12px rgba(79, 70, 229, .4);
-      background: rgba(79, 70, 229, .06);
+    .field input.code-input { text-align: center; letter-spacing: .4em; font-weight: 800; font-size: 16px; padding: 0 16px; }
+    .field input:focus {
+      border-color: rgba(124, 58, 237, .65);
+      background: rgba(255,255,255,.05);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, .16);
     }
-    .auth-field.has-ico input { padding-left: 44px; }
-    .auth-field .f-ico {
-      position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
-      color: var(--text3); font-size: 14px; z-index: 1; pointer-events: none;
-      transition: color .15s;
+    .field .f-ico {
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      color: var(--text3); font-size: 15px; z-index: 1;
+      transition: color .18s;
     }
-    .auth-field.focused .f-ico { color: var(--ac3); }
-    .auth-field.has-eye input { padding-right: 46px; }
-    .auth-field .eye {
+    .field.focused .f-ico { color: var(--ac3); }
+    .field .eye {
       position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-      width: 34px; height: 34px; border: none; background: transparent; border-radius: 10px;
-      color: var(--text3); cursor: pointer; font-size: 14px;
-      display: grid; place-items: center;
-      transition: color .15s, background .15s;
+      width: 36px; height: 36px; border: none; border-radius: 10px;
+      background: transparent; color: var(--text3); cursor: pointer;
+      font-size: 14px; transition: color .15s, background .15s;
     }
-    .auth-field .eye:hover { color: var(--text); background: rgba(255,255,255,.05); }
-    .f-hint { font-size: 11.5px; color: var(--text3); margin: -8px 0 14px 2px; line-height: 1.5; }
-    .f-hint b { color: var(--text2); font-weight: 600; }
+    .field .eye:hover { color: var(--text); background: rgba(255,255,255,.06); }
     .cap-hint {
-      position: absolute; right: 46px; top: 50%; transform: translateY(-50%);
-      font-size: 9.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
-      color: var(--warn); opacity: 0; pointer-events: none;
-      transition: opacity .15s;
+      position: absolute; right: 52px; top: 50%; transform: translateY(-50%);
+      font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--warn);
+      opacity: 0; pointer-events: none; text-transform: uppercase;
     }
+    .field-hint {
+      font-size: 11.5px; color: var(--text3);
+      margin: -6px 0 14px 4px; line-height: 1.45;
+    }
+    .field-hint b { color: var(--text2); font-weight: 600; }
+    .step-note {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 12px; color: var(--text3); line-height: 1.55;
+      margin: -4px 0 14px 2px;
+    }
+    .step-note i { color: var(--ac3); margin-top: 2px; font-size: 12px; }
+    .step-note b { color: var(--text2); font-weight: 600; }
 
-    /* Код подтверждения — крупный моноширинный */
-    .code-input {
-      text-align: center !important; letter-spacing: 10px !important; text-indent: 10px;
-      font-size: 24px !important; font-weight: 800;
-      font-family: 'JetBrains Mono', monospace !important;
-      padding-left: 15px !important;
-    }
-    .code-note { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text3); line-height: 1.55; margin: -6px 0 16px 2px; }
-    .code-note i { color: var(--ac3); margin-top: 2px; font-size: 11px; }
-    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); text-decoration: none; margin-top: 12px; transition: color .15s; }
-    .back-link:hover { color: var(--text); }
-
-    /* ── Ошибка / успех ── */
-    .auth-error {
-      display: none; align-items: flex-start; gap: 9px;
-      margin-bottom: 16px; padding: 10px 13px;
-      background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25);
-      border-radius: 12px; color: var(--err); font-size: 12.5px; line-height: 1.5;
-    }
-    .auth-error.show { display: flex; }
-    .auth-error i { margin-top: 2px; }
-    .auth-ok {
-      display: flex; align-items: flex-start; gap: 9px;
-      margin-bottom: 16px; padding: 10px 13px;
-      background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.3);
-      border-radius: 12px; color: var(--ok); font-size: 12.5px; line-height: 1.5;
-    }
-    .auth-ok i { margin-top: 2px; }
-
-    /* ── Кнопка ── */
-    .auth-btn {
-      width: 100%; height: 52px; margin-top: 4px;
-      background: var(--ac-grad); color: #fff; border: none;
-      border-radius: 13px; font-family: inherit;
-      font-size: 14.5px; font-weight: 800; letter-spacing: .02em;
-      cursor: pointer; position: relative; overflow: hidden;
-      display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-      box-shadow: 0 14px 30px -12px rgba(124, 58, 237, .65);
-      transition: transform .15s, box-shadow .2s, opacity .15s;
-    }
-    .auth-btn::after {
-      content: ''; position: absolute; top: 0; left: -80%; width: 45%; height: 100%;
-      background: linear-gradient(100deg, transparent, rgba(255,255,255,.3), transparent);
-      transform: skewX(-20deg); transition: left .55s ease;
-    }
-    .auth-btn:hover { box-shadow: 0 18px 36px -12px rgba(124, 58, 237, .8); }
-    .auth-btn:hover::after { left: 135%; }
-    .auth-btn:active { transform: translateY(1px); }
-    .auth-btn:disabled { opacity: .65; cursor: wait; }
-    .auth-foot { margin-top: 16px; font-size: 13px; color: var(--text3); }
-    .auth-foot a { color: var(--ac3); text-decoration: none; font-weight: 600; }
-    .auth-foot a:hover { text-decoration: underline; }
-
-    /* ── Подсказки (выбор себя по нику) ── */
     .autocomplete-popup {
-      position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20;
-      background: var(--surface2); border: 1px solid rgba(255,255,255,.1);
-      border-radius: 14px; box-shadow: 0 20px 50px -18px rgba(0,0,0,.85);
-      max-height: 240px; overflow: auto; display: none;
+      position: absolute; left: 0; right: 0; top: calc(100% - 4px);
+      z-index: 40; display: none;
+      background: #12162a;
+      border: 1px solid var(--line2);
+      border-radius: 14px;
+      box-shadow: 0 24px 50px -18px rgba(0,0,0,.8);
+      overflow: hidden;
       padding: 6px;
     }
-    .autocomplete-popup.open { display: block; animation: popIn .16s var(--ease) both; }
-    @keyframes popIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .autocomplete-popup.open { display: block; }
     .autocomplete-popup .item {
       display: flex; align-items: center; gap: 10px;
       padding: 8px 10px; border-radius: 10px; cursor: pointer;
-      transition: background .12s;
     }
     .autocomplete-popup .item:hover, .autocomplete-popup .item.hl { background: rgba(255,255,255,.06); }
-    .autocomplete-popup .item .a-ava {
-      width: 30px; height: 30px; border-radius: 9px; flex: none;
-      background: var(--ac-soft); color: #a5b4fc;
-      display: grid; place-items: center; font-size: 12px; font-weight: 800;
-      position: relative; overflow: hidden;
+    .autocomplete-popup .a-ava {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--ac), var(--ac2));
+      font-weight: 800; font-size: 14px; color: #fff; overflow: hidden;
     }
-    .autocomplete-popup .item .a-ava img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    .autocomplete-popup .a-copy { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-    .autocomplete-popup .a-copy b { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .autocomplete-popup .a-copy small { font-size: 10.5px; color: var(--text3); }
+    .autocomplete-popup .a-ava img { width: 100%; height: 100%; object-fit: cover; }
+    .autocomplete-popup .a-copy { min-width: 0; }
+    .autocomplete-popup .a-copy b { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .autocomplete-popup .a-copy small { color: var(--text3); font-size: 10.5px; }
 
-    /* ── Экран «Связываемся с Discord» ── */
+    .auth-btn {
+      width: 100%; height: 52px;
+      background: var(--ac-grad);
+      color: #fff;
+      border: none; border-radius: 14px;
+      font-size: 14.5px; font-weight: 800; letter-spacing: .02em;
+      font-family: inherit; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      box-shadow: 0 12px 28px -10px rgba(124, 58, 237, .7), inset 0 1px 0 rgba(255,255,255,.28);
+      margin-top: 4px;
+      transition: filter .18s, transform .1s;
+    }
+    .auth-btn:hover { filter: brightness(1.1); }
+    .auth-btn:active { transform: translateY(1px) scale(.995); }
+    .auth-btn .spin { animation: rot 1s linear infinite; }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    .auth-foot {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 12px; color: var(--text3); line-height: 1.9;
+    }
+    .auth-foot a { color: #a5b4fc; text-decoration: none; font-weight: 600; transition: color .15s; }
+    .auth-foot a:hover { color: #c7d2fe; text-decoration: underline; }
+    .auth-foot .dot-sep { opacity: .5; margin: 0 4px; }
+
+    .page-foot {
+      margin-top: auto;
+      padding: 18px 0 22px;
+      text-align: center;
+      font-size: 11px; color: var(--text3); letter-spacing: .06em;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 16px;
+      color: var(--text3); text-decoration: none;
+      font-size: 12.5px; font-weight: 600;
+      transition: color .15s;
+    }
+    .back-link:hover { color: var(--text2); }
+
     .auth-check {
       position: fixed; inset: 0; z-index: 100;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(5, 6, 10, .78);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      animation: chkFade .22s ease both;
+      background: rgba(4, 5, 10, .86);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 20px;
     }
-    /* hidden-атрибут обязан прятать оверлей (см. /login: display:flex
-       класса перебивал бы [hidden]{display:none}). */
     .auth-check[hidden] { display: none; }
-    @keyframes chkFade { from { opacity: 0; } to { opacity: 1; } }
     .auth-check-card {
-      width: min(400px, calc(100vw - 40px));
-      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 30%), #0d1019;
-      border: 1px solid rgba(255,255,255,.09);
+      width: min(400px, 100%);
+      background: #0d1020;
+      border: 1px solid var(--line);
       border-radius: 22px;
-      box-shadow: 0 40px 90px -30px rgba(0,0,0,.9), 0 0 60px -20px rgba(79,70,229,.5);
-      padding: 34px 30px 28px;
+      padding: 30px 28px 24px;
       text-align: center;
+      box-shadow: 0 40px 90px -30px rgba(0,0,0,.9);
     }
-    .auth-check-card .logo {
-      width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 16px;
-      background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
-      border: 1px solid rgba(255,255,255,.1);
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 10px 26px -10px rgba(79,70,229,.7);
-    }
-    .auth-check-card .logo img { width: 68%; height: 68%; object-fit: contain; }
-    .auth-check-card h3 { margin: 0 0 4px; font-family: var(--font-display, 'Unbounded', sans-serif); font-size: 15px; letter-spacing: .02em; }
-    .auth-check-card .sub { margin: 0 0 20px; font-size: 12px; color: var(--text3); }
-    .auth-steps { list-style: none; margin: 0; padding: 0; text-align: left; display: grid; gap: 6px; }
+    .auth-check-card .logo { width: 58px; height: 58px; margin: 0 auto 14px; }
+    .auth-check-card .logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 14px rgba(124,58,237,.5)); }
+    .auth-check-card h3 { margin: 0 0 6px; font-family: var(--font-display, 'Unbounded', sans-serif); font-size: 17px; font-weight: 800; }
+    .auth-check-card .sub { margin: 0 0 18px; font-size: 12.5px; color: var(--text2); }
+    .auth-steps { list-style: none; margin: 0; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 4px; }
     .auth-steps li {
       display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-radius: 13px;
-      background: rgba(255,255,255,.02); border: 1px solid transparent;
-      color: var(--text3); font-size: 13px;
-      opacity: .5; transition: opacity .2s, border-color .2s, background .2s;
+      padding: 9px 10px; border-radius: 12px;
+      font-size: 13px; color: var(--text3);
     }
-    .auth-steps li .s-ico {
-      width: 26px; height: 26px; flex: none; border-radius: 9px;
-      display: grid; place-items: center; font-size: 11px;
-      background: rgba(255,255,255,.06); color: var(--text3);
-      transition: background .2s, color .2s;
+    .auth-steps li.on { color: var(--text); background: rgba(255,255,255,.03); }
+    .auth-steps li.done { color: var(--text2); }
+    .auth-steps .s-ico {
+      width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,.05);
+      font-size: 11px;
     }
-    .auth-steps li.on { opacity: 1; color: var(--text2); }
-    .auth-steps li.on .s-ico { background: rgba(79,70,229,.2); color: #a5b4fc; }
-    .auth-steps li.on .s-ico .spin { animation: lgSpin .8s linear infinite; }
-    .auth-steps li.done { opacity: 1; color: var(--text); border-color: rgba(74,222,128,.16); background: rgba(74,222,128,.05); }
-    .auth-steps li.done .s-ico { background: rgba(74,222,128,.16); color: var(--ok); }
+    .auth-steps li.on .s-ico { background: var(--ac-soft); color: #a5b4fc; }
+    .auth-steps li.done .s-ico { background: rgba(74,222,128,.15); color: var(--ok); }
 
-    /* ── Адаптив ── */
-    @media (max-width: 760px) {
-      .lg-stage { padding: 76px 14px 24px; }
-      .auth-card { padding-top: 40px; }
-      .auth-main { flex-direction: column; padding: 0 22px 24px; }
-      .auth-side { flex: none; padding: 0 0 18px; border-right: none; border-bottom: 1px solid rgba(255,255,255,.06); }
-      .auth-side h1 { font-size: 21px; margin-top: 18px; }
-      .auth-side .lead { font-size: 12.5px; }
-      .auth-form-side { padding: 18px 0 0; }
-      .member-chip { margin-left: 8px; }
+    @media (max-width: 540px) {
+      .auth-page { padding: 40px 14px 26px; }
+      .auth-card { padding: 26px 20px 20px; }
+      .emblem { transform: scale(.9); margin-bottom: 12px; }
     }
-
-    /* ── Reduced motion ── */
     @media (prefers-reduced-motion: reduce) {
-      .orb1, .lg-aurora i { animation: none; }
-      .lg-dragon-stage .ring { animation: none; }
-      .dragon-live, .lg-dragon-stage .floor, .lg-dragon-stage .tile::after { animation: none; }
-      .auth-card { animation: none; }
-      .rg-line.done::after { animation: none; transform: scaleX(1); }
-      .auth-btn::after { transition: none; }
+      .glow-a, .glow-b, .glow-c, .emblem .ring, .emblem .tile::after, .emblem img { animation: none !important; }
     }
   </style>
 </head>
 <body>
-  <a class="lg-back" href="/welcome"><i class="fas fa-arrow-left"></i> На главную</a>
-  <div class="lg-glow" aria-hidden="true"></div>
-  <div class="lg-aurora" aria-hidden="true"><i></i><i></i></div>
   <div class="bg-fx" aria-hidden="true">
-    <span class="orb orb1"></span>
+    <i class="glow glow-a"></i><i class="glow glow-b"></i><i class="glow glow-c"></i>
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
 
-  <main class="lg-stage">
-    <div class="lg-card-zone">
-      <!-- Медальон: эмблема над карточкой -->
-      <div class="lg-dragon-stage" aria-hidden="true">
-        <div class="ring"></div>
-        <div class="tile"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></div>
-        <div class="floor"></div>
-      </div>
-
-      <div class="auth-card">
-        <div class="auth-main">
-          <section class="auth-side">
-            <div class="brand">
-              <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo"></span>
-              <div><b>HAKUMO</b><span>панель управления</span></div>
-              <span class="member-chip"><i class="fas fa-user-plus"></i> создание доступа</span>
-            </div>
-            <h1>Создай доступ</h1>
-            <p class="lead">Регистрация для участников сервера. После входа откроются профиль, заявки, обращения и события.</p>
-            <p class="lead trust"><i class="fas fa-shield-halved"></i> Бот проверит твой Discord ID на основном сервере и пришлёт код в личные сообщения — чужой здесь не зарегистрируется.</p>
-          </section>
-
-          <div class="auth-form-side">
-            <div class="mobile-brand">
-              <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo"></span>
-              <b>HAKUMO</b>
-            </div>
-
-            <div class="rg-steps" aria-hidden="true">
-              <span class="rg-step {% if step == 2 %}done{% else %}on{% endif %}"><span class="n">{% if step == 2 %}<i class="fas fa-check"></i>{% else %}1{% endif %}</span><span>Данные</span></span>
-              <span class="rg-line {% if step == 2 %}done{% endif %}"></span>
-              <span class="rg-step {% if step == 2 %}on{% endif %}"><span class="n">2</span><span>Код</span></span>
-            </div>
-
-            {% if step == 2 %}
-            <!-- Шаг 2: код подтверждения -->
-            <div class="auth-error {% if error %}show{% endif %}" id="regError2" role="alert">
-              <i class="fas fa-circle-exclamation"></i><span>{% if error %}{{ error }}{% endif %}</span>
-            </div>
-            <form method="POST" action="/register" autocomplete="off" id="regForm2">
-              <input type="hidden" name="step" value="2">
-              <input type="hidden" name="discord_id" value="{{ discord_id }}">
-              <div class="auth-field filled focused" data-float>
-                <label class="lbl" for="code">Код из Discord</label>
-                <input type="text" name="code" id="code" class="code-input" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" autofocus required aria-label="Код подтверждения из Discord">
-              </div>
-              <div class="code-note"><i class="fas fa-envelope"></i><span>Бот отправил <b>6 цифр</b> в личные сообщения Discord. Код действует <b>10 минут</b>.</span></div>
-              <button type="submit" class="auth-btn" id="regBtn2"><i class="fas fa-arrow-right"></i> Создать доступ</button>
-            </form>
-            <a class="back-link" href="/register"><i class="fas fa-arrow-left"></i> Начать заново</a>
-            {% else %}
-            <!-- Шаг 1: данные -->
-            <div class="auth-error {% if error %}show{% endif %}" id="regError1" role="alert">
-              <i class="fas fa-circle-exclamation"></i><span>{% if error %}{{ error }}{% endif %}</span>
-            </div>
-            <form method="POST" action="/register" autocomplete="off" id="regForm1">
-              <input type="hidden" name="step" value="1">
-              <div class="auth-field has-ico" data-float>
-                <label class="lbl" for="discord_id">Discord ID</label>
-                <i class="fab fa-discord f-ico" aria-hidden="true"></i>
-                <input type="text" name="discord_id" id="discord_id" placeholder="Discord ID" required aria-label="Discord ID" oninput="rgSuggest(this)" onfocus="rgSuggest(this)">
-                <div class="autocomplete-popup" id="regPopup"></div>
-              </div>
-              <div class="f-hint">Не знаешь свой ID? Начни печатать <b>ник</b> — выбери себя из списка, ID подставится сам.</div>
-              <div class="code-note" style="margin:0 0 16px 2px"><i class="fas fa-shield-halved"></i><span>Пароль для входа не нужен: участники входят по <b>коду из Discord</b> (вкладка «Discord PIN» на странице входа). Здесь код пришлём один раз — для создания доступа.</span></div>
-              <button type="submit" class="auth-btn" id="regBtn1"><i class="fas fa-paper-plane"></i> Получить код</button>
-            </form>
-            {% endif %}
-
-            <div class="auth-foot">Уже есть доступ? <a href="/login">Войти</a> · Хочешь в команду — <a href="/member-apply">подай заявку</a></div>
-          </div>
-        </div>
-      </div>
+  <main class="auth-page">
+    <div class="emblem" aria-hidden="true">
+      <span class="ring"></span>
+      <span class="tile"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></span>
     </div>
 
-    <div class="lg-foot-note">Hakumo — панель управления сервером</div>
+    <section class="auth-card" aria-label="Регистрация в панели">
+      <h1>Создать доступ</h1>
+      <p class="auth-sub">Панель управления сервером Hakumo</p>
+
+      {% if step == 2 %}
+      <!-- Шаг 2: код подтверждения -->
+      <div class="auth-error {% if error %}show{% endif %}" id="regError2" role="alert">
+        <i class="fas fa-circle-exclamation"></i><span>{% if error %}{{ error }}{% endif %}</span>
+      </div>
+      <form method="POST" action="/register" autocomplete="off" id="regForm2">
+        <input type="hidden" name="step" value="2">
+        <input type="hidden" name="discord_id" value="{{ discord_id }}">
+        <div class="field filled focused" data-float>
+          <label class="lbl" for="code">Код из Discord</label>
+          <input type="text" name="code" id="code" class="code-input" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" autofocus required aria-label="Код подтверждения из Discord">
+        </div>
+        <div class="step-note"><i class="fas fa-envelope"></i><span>Бот отправил <b>6 цифр</b> в личные сообщения Discord. Код действует <b>10 минут</b>.</span></div>
+        <button type="submit" class="auth-btn" id="regBtn2"><i class="fas fa-user-plus"></i> Создать доступ</button>
+      </form>
+      <a class="back-link" href="/register"><i class="fas fa-arrow-left"></i> Начать заново</a>
+      {% else %}
+      <!-- Шаг 1: данные -->
+      <div class="auth-error {% if error %}show{% endif %}" id="regError1" role="alert">
+        <i class="fas fa-circle-exclamation"></i><span>{% if error %}{{ error }}{% endif %}</span>
+      </div>
+      <form method="POST" action="/register" autocomplete="off" id="regForm1">
+        <input type="hidden" name="step" value="1">
+        <div class="field has-ico" data-float>
+          <label class="lbl" for="discord_id">Discord ID или ник</label>
+          <i class="fab fa-discord f-ico" aria-hidden="true"></i>
+          <input type="text" name="discord_id" id="discord_id" placeholder="Discord ID или ник" required aria-label="Discord ID" oninput="rgSuggest(this)" onfocus="rgSuggest(this)">
+          <div class="autocomplete-popup" id="regPopup"></div>
+        </div>
+        <div class="field-hint">Не знаешь свой Discord ID? Начни печатать <b>ник</b> — выбери себя из списка, ID подставится сам.</div>
+        <div class="field has-ico has-eye" data-float>
+          <label class="lbl" for="pass1">Пароль</label>
+          <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+          <input type="password" name="password" id="pass1" placeholder="Пароль" minlength="6" required aria-label="Пароль">
+          <button type="button" class="eye" id="pass1Eye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+          <span class="cap-hint" id="capHint1">Caps Lock включён</span>
+        </div>
+        <div class="field has-ico has-eye" data-float>
+          <label class="lbl" for="pass2">Повтори пароль</label>
+          <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+          <input type="password" name="password2" id="pass2" placeholder="Повтори пароль" minlength="6" required aria-label="Повторите пароль">
+          <button type="button" class="eye" id="pass2Eye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+          <span class="cap-hint" id="capHint2">Caps Lock включён</span>
+        </div>
+        <button type="submit" class="auth-btn" id="regBtn1"><i class="fas fa-paper-plane"></i> Получить код</button>
+      </form>
+      {% endif %}
+
+      <div class="auth-foot">
+        Уже есть доступ? <a href="/login">Войти</a><span class="dot-sep">·</span>Хочешь в команду? <a href="/member-apply">Подай заявку</a>
+      </div>
+    </section>
+
+    <p class="page-foot">Hakumo — панель управления сервером</p>
   </main>
 
   <!-- Экран «Связываемся с Discord» на время запроса -->
@@ -570,6 +461,38 @@
     inp.addEventListener('focus', function () { field.classList.add('focused'); });
     sync();
   });
+
+  /* ── Глазики паролей ── */
+  function bindEye(btnId, inpId) {
+    var btn = $(btnId), inp = $(inpId);
+    if (!btn || !inp) return;
+    btn.addEventListener('click', function () {
+      var show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+      btn.title = show ? 'Скрыть пароль' : 'Показать пароль';
+      var ic = btn.querySelector('i');
+      if (ic) ic.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+      inp.focus();
+    });
+  }
+  bindEye('pass1Eye', 'pass1');
+  bindEye('pass2Eye', 'pass2');
+
+  /* ── Caps Lock у полей пароля ── */
+  function bindCaps(inpId, hintId) {
+    var pw = $(inpId), hint = $(hintId);
+    if (!pw || !hint) return;
+    function capState(e) {
+      var on = !!(e.getModifierState && e.getModifierState('CapsLock'));
+      hint.style.opacity = on ? '1' : '0';
+    }
+    pw.addEventListener('keydown', capState);
+    pw.addEventListener('keyup', capState);
+    pw.addEventListener('blur', function () { hint.style.opacity = '0'; });
+  }
+  bindCaps('pass1', 'capHint1');
+  bindCaps('pass2', 'capHint2');
 
   /* ── Выбор себя по нику (подставляет Discord ID) ── */
   var suggestTimer = null;
@@ -653,29 +576,21 @@
     });
   })();
 
-  /* ── Оверлей «Связываемся с Discord»: шаги перед отправкой формы ── */
+  /* ── Оверлей «Связываемся с Discord» ── */
   var regCheck = {
-    steps: [],
-    stepN: 0,
-    finishCb: null,
     start: function (stepsTexts, onFinish) {
       var ov = $('regCheck');
-      this.finishCb = onFinish || null;
       var list = $('regSteps');
-      if (!ov || !list) { if (this.finishCb) this.finishCb(); return; }
-      list.innerHTML = stepsTexts.map(function (t, i) {
+      if (!ov || !list) { if (onFinish) onFinish(); return; }
+      list.innerHTML = stepsTexts.map(function (t) {
         return '<li><span class="s-ico"></span><span>' + esc(t) + '</span></li>';
       }).join('');
-      this.steps = Array.prototype.slice.call(list.children);
-      this.stepN = 0;
+      var steps = Array.prototype.slice.call(list.children);
       ov.hidden = false;
-      this.tick();
-    },
-    tick: function () {
-      var self = this;
-      if (!self.steps.length) { if (self.finishCb) self.finishCb(); return; }
-      if (self.stepN < self.steps.length) {
-        var cur = self.steps[self.stepN];
+      var n = 0;
+      (function tick() {
+        if (n >= steps.length) { setTimeout(function () { if (onFinish) onFinish(); }, 240); return; }
+        var cur = steps[n];
         cur.classList.add('on');
         var ico = cur.querySelector('.s-ico');
         ico.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
@@ -683,16 +598,24 @@
           cur.classList.remove('on');
           cur.classList.add('done');
           ico.innerHTML = '<i class="fas fa-check"></i>';
-          self.stepN++;
-          if (self.stepN >= self.steps.length) {
-            setTimeout(function () { if (self.finishCb) self.finishCb(); }, 260);
-          } else {
-            self.tick();
-          }
-        }, 460);
-      }
+          n++;
+          tick();
+        }, 440);
+      })();
     }
   };
+
+  function setError(id, text) {
+    var box = $(id);
+    if (!box) return;
+    if (text) {
+      box.querySelector('span').textContent = text;
+      box.classList.add('show');
+    } else {
+      box.classList.remove('show');
+      box.querySelector('span').textContent = '';
+    }
+  }
 
   /* Шаг 1: показать шаги → отправить форму (сервер ищет участника и шлёт код) */
   var form1 = $('regForm1');
@@ -700,6 +623,12 @@
     form1.addEventListener('submit', function (e) {
       if (form1.dataset.sent) { e.preventDefault(); return; }
       if (!form1.checkValidity()) return;   /* браузер подсветит пустое */
+      var p1 = $('pass1'), p2 = $('pass2');
+      if (p1 && p2 && p1.value !== p2.value) {
+        setError('regError1', 'Пароли не совпадают.');
+        e.preventDefault();
+        return;
+      }
       e.preventDefault();
       form1.dataset.sent = '1';
       regCheck.start(['Находим аккаунт на сервере', 'Связываемся с Discord', 'Отправляем код в ЛС'],
