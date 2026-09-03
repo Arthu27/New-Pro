@@ -477,6 +477,10 @@
       backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
       animation: chkFade .22s ease both;
     }
+    /* hidden-атрибут обязан прятать оверлей: display:flex из класса выше
+       перебивал бы встроенное [hidden]{display:none}, и экран «Проверяем
+       доступ» висел бы поверх формы с первого кадра. */
+    .auth-check[hidden] { display: none; }
     @keyframes chkFade { from { opacity: 0; } to { opacity: 1; } }
     .auth-check-card {
       width: min(400px, calc(100vw - 40px));
