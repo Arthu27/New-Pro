@@ -6,7 +6,7 @@ from web.routes._common import (
     _notify_discord_sender, _fire_panel_notification,
     _live_publish, _process_action, _log,
     ms_normalize_query, ms_member_match, ms_search_members, ms_member_payload,
-    ms_normalize_warn, ms_normalize_case, _REPO_ROOT,
+    ms_normalize_warn, ms_normalize_case, _REPO_ROOT, role_member_counts,
     render_template, session, redirect, url_for, request, jsonify, Response,
     os, json, time, math, discord, datetime, timezone, timedelta)
 
@@ -697,7 +697,14 @@ def register(ctx):
         _hit =_live .get (_ckey )
         if _hit and (_now -_hit [0 ])<10.0 :
             return _rl_respond (_hit [1 ],_ckey [1 ])
-        roles =[{'id':str (r .id ),'name':r .name ,'color':str (r .color ),'members':len (r .members )}
+        # Число участников в роли — одним проходом по составу сервера.
+        # Было len(r.members) на каждую роль, а Role.members в discord.py
+        # копирует и фильтрует ВЕСЬ список участников (discord/role.py:415) —
+        # на 250 ролях и 20 000 участников это 5 млн итераций и [SLOW] 2.95 с
+        # в логе, из-за чего туннель рвал соединение (context canceled).
+        _counts =role_member_counts (guild )
+        roles =[{'id':str (r .id ),'name':r .name ,'color':str (r .color ),
+        'members':_counts .get (r .id ,0 )}
         for r in guild .roles if r .name !='@everyone']
         roles =sorted (roles ,key =lambda x :-x ['members'])
         try :

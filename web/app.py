@@ -15,7 +15,7 @@ import math
 from flask import Flask ,render_template ,request ,session ,redirect ,url_for ,send_from_directory ,Response ,g 
 # jsonify ВСЕХ ответов панели — из web.routes._common: снежинки Discord
 # (>2^53) уходят клиенту строкой, иначе JS ломает цифры id.
-from web.routes._common import jsonify
+from web.routes._common import jsonify ,role_member_counts
 import discord 
 from discord .ext import commands 
 import asyncio 
@@ -3342,6 +3342,7 @@ def _role_map_guild_roles():
         if gid:
             guild = bot_instance.get_guild(int(gid))
             if guild:
+                _rm_counts = role_member_counts(guild)
                 for r in sorted(guild.roles, key=lambda x: x.position,
                                 reverse=True):
                     if r.name == '@everyone':
@@ -3351,8 +3352,8 @@ def _role_map_guild_roles():
                         'name': r.name,
                         'color': str(r.color),
                         'position': r.position,
-                        'members': (r.members.__len__()
-                                    if hasattr(r.members, '__len__') else 0),
+                        # тем же одним проходом — см. role_member_counts
+                        'members': _rm_counts.get(r.id, 0),
                     })
     elif _demo_mode():
         # демо-превью без бота: роли сервера из демо-набора —

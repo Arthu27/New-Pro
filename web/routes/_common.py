@@ -731,3 +731,35 @@ class Ctx:
 
 
 
+
+
+def role_member_counts(guild):
+    """Число участников в каждой роли за ОДИН проход по составу сервера.
+
+    Role.members в discord.py каждый раз копирует список всех участников и
+    фильтрует его (discord/role.py:415-420):
+
+        all_members = list(self.guild._members.values())
+        return [member for member in all_members if member._roles.has(role_id)]
+
+    Поэтому len(r.members) в цикле по ролям — это O(роли × участники): на
+    20 000 участников и 250 ролей получается 5 млн итераций плюс 250 копий
+    списка на 20 000 элементов. Замер в бою: [SLOW] GET /api/roles — 2.95 с.
+    Один проход по участникам с подсчётом по их ролям даёт те же числа за
+    O(участники + назначения).
+    """
+    counts = {}
+    try:
+        members = guild.members
+    except Exception:
+        return counts
+    for m in members:
+        try:
+            member_roles = m.roles
+        except Exception:
+            # участник без читаемых ролей (частичный кэш, гонка при выходе) —
+            # считаем его без ролей, а не роняем весь подсчёт
+            member_roles = ()
+        for r in member_roles:
+            counts[r.id] = counts.get(r.id, 0) + 1
+    return counts
