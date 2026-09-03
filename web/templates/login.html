@@ -351,6 +351,13 @@
       color: var(--err); border-radius: 11px; padding: 9px 13px;
       font-size: 12px; margin-bottom: 14px; display: none;
     }
+    .auth-ok {
+      display: flex; align-items: flex-start; gap: 9px;
+      background: rgba(74, 222, 128, .1); border: 1px solid rgba(74, 222, 128, .3);
+      color: var(--ok); border-radius: 11px; padding: 10px 13px;
+      font-size: 12px; line-height: 1.5; margin-bottom: 14px;
+    }
+    .auth-ok i { margin-top: 1px; }
     .auth-error.shake { animation: errShake .4s ease; }
     @keyframes errShake {
       10%, 90% { transform: translateX(-1px); }
@@ -615,6 +622,9 @@
 
             <!-- Вход по паролю -->
             <div id="tabPass">
+              {% if request.args.get('success') %}
+              <div class="auth-ok" id="regOkNote" role="status"><i class="fas fa-circle-check"></i><span>Доступ создан! Теперь войди: логин — твой Discord ID, пароль — тот, что ты придумал при регистрации.</span></div>
+              {% endif %}
               <div class="auth-error" id="passError" {% if error %}style="display:block"{% endif %}>{{ error|e }}</div>
               <form method="POST" action="/login" autocomplete="off">
                 <div class="auth-field has-ico" data-float>
