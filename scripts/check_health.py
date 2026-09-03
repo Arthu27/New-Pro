@@ -217,6 +217,9 @@ PUBLIC_EXACT = {
     '/api/discord-login',                                    # вход по PIN (своя auth)
     '/api/voice-command',                                    # голос: свой shared-secret
     '/api/forgot-password', '/api/reset-password',           # восстановление доступа
+    '/.well-known/security.txt',                             # RFC 9116: публичный
+                                                              # по смыслу, его ищут
+                                                              # без доступа в панель
 }
 PUBLIC_PREFIX = ('/static/', '/hooks/')                      # статика; webhook-токены
 # Discord Activity музыки снесена вместе с фичей (2026-09-01) — публичных

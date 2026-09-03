@@ -52,6 +52,11 @@ if "%DEMO%"=="1" (
     set DOTENV_PATH=config\panel_preview.env
 ) else (
     echo [3/4] Демо-посев пропущен (боевой режим — только реальные данные).
+    REM Панель работает за Cloudflare Tunnel: включает редирект http->https
+    REM и заголовок HSTS в web/app.py. Без этого internet.nl показывает
+    REM «HTTPS redirect: no» и «HSTS: None». Для локалки не нужно — там
+    REM редирект и так отключён проверкой хоста на localhost/127.0.0.1.
+    set WEB_BEHIND_PROXY=1
     if not exist .env (
         echo.
         echo [ВНИМАНИЕ] .env не найден — панель не знает ни токена, ни твоего сервера.

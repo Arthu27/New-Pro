@@ -78,6 +78,9 @@ PUBLIC = {
     # Discord Activity музыки снесена вместе с фичей музыки (2026-09-01)
     # PagerDuty → Discord: сервер-сервер вебхук с токеном в URL (без сессии)
     'hook_pagerduty',
+    # RFC 9116: security.txt обязан быть доступен без авторизации — его ищут
+    # исследователи, у которых по определению нет доступа в панель.
+    'security_txt',
 }
 public_actual = {k for k, v in DECOS.items() if not v['login']} | {'static'}
 check(public_actual == PUBLIC,

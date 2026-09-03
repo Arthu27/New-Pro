@@ -58,7 +58,17 @@ if (_os .environ .get ('WEB_BEHIND_PROXY','')or '').strip ().lower ()in ('1','tr
 
 
 def _behind_proxy ():
-    return (_os .environ .get ('WEB_BEHIND_PROXY','')or '').strip ().lower ()in ('1','true','yes','on')
+    # WEB_BEHIND_PROXY=1 ставит scripts/setup_panel_tunnel.bat в .env, но только
+    # если нашёл .env — иначе просит дописать руками, и тогда http->https и HSTS
+    # молча не включаются (internet.nl: «redirect: no», «HSTS: None»). Поэтому
+    # дополнительно определяем Cloudflare по заголовку CF-RAY: его добавляет сам
+    # Cloudflare на каждый запрос, так что работа не зависит от .env.
+    if (_os .environ .get ('WEB_BEHIND_PROXY','')or '').strip ().lower ()in ('1','true','yes','on'):
+        return True
+    try :
+        return bool (request .headers .get ('CF-RAY'))
+    except Exception :
+        return False
 
 
 @app .before_request
@@ -505,6 +515,16 @@ def after_request (response ):
         # Это админ-панель (доверенные пользователи), поэтому inline JS/eval допустим.
         # Все скрипты/стили/шрифты вендорены локально → 'self', внешние домены
         # остались только для Discord-аватарок (img-src https:) и API/WS (connect-src).
+    # За прокси (бой) — строгая политика: connect-src только 'self' плюс wss:
+    # live-канал живёт на отдельном порту, а другой порт — это другой origin,
+    # поэтому 'self' его не покрывает. Внешних fetch с фронта нет (все идут на
+    # /api/...), так что голые схемы https:/http:/ws: из политики убраны —
+    # internet.nl отдельно ругается на «'http:' scheme» и на «'https:' without
+    # a specific main domain». Локально live-канал идёт по ws: — там они нужны.
+    _strict =_behind_proxy ()
+    _connect =("'self' wss:" if _strict else "'self' https: wss: ws: http:")
+    _img =("'self' data: https://*.discordapp.com https://*.discordapp.net "
+           "https://discord.com" if _strict else "'self' data: https:")
     if not response .headers .get ('Content-Security-Policy'):
         csp =(
         "default-src 'self'; "
@@ -513,8 +533,10 @@ def after_request (response ):
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; "
         "style-src 'self' 'unsafe-inline'; "
         "font-src 'self' data:; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https: wss: ws: http:; "
+        "img-src " +_img +"; "
+        "connect-src " +_connect +"; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
         "frame-ancestors 'self'"
         )
         response .headers ['Content-Security-Policy']=csp 
@@ -532,8 +554,10 @@ def after_request (response ):
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; "
         "style-src 'self' 'unsafe-inline'; "
         "font-src 'self' data:; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self' https: wss: ws: http:; "
+        "img-src " +_img +"; "
+        "connect-src " +_connect +"; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
         "frame-ancestors https://discord.com https://*.discord.com https://discordapp.com"
         )
 
@@ -982,6 +1006,33 @@ def favicon ():
         return '',204 # No Content
     return send_from_directory (os .path .join (app .root_path ,'static'),
     'favicon.ico',mimetype ='image/vnd.microsoft.icon')
+
+# security.txt (RFC 9116): internet.nl требует файл в /.well-known/security.txt
+# с полями Contact и Expires. Без него исследователю, нашедшему уязвимость,
+# некуда написать. Файл публичный — без @login_required.
+# Контакт берётся из SECURITY_CONTACT в .env (почта вида mailto:you@example.com
+# или страница с формой); по умолчанию — сам сайт, чтобы файл был валидным
+# даже до настройки.
+@app .route ('/.well-known/security.txt')
+def security_txt ():
+    import datetime as _dt
+    contact =( _os .environ .get ('SECURITY_CONTACT','')or '').strip ()
+    host =(request .host or 'hakumods.xyz')
+    if not contact :
+        contact ='https://'+host +'/'
+    # Expires обязан быть в будущем и не дальше года — считаем от текущей даты,
+    # иначе файл через год станет «протухшим» и проверка снова упадёт.
+    expires =(_dt .datetime .now (_dt .timezone .utc )+_dt .timedelta (days =330 )
+              ).strftime ('%Y-%m-%dT%H:%M:%S.000Z')
+    body =(
+    'Contact: '+contact +'\n'
+    'Expires: '+expires +'\n'
+    'Preferred-Languages: ru, en\n'
+    'Canonical: https://'+host +'/.well-known/security.txt\n'
+    )
+    return Response (body ,mimetype ='text/plain',
+                     headers ={'Cache-Control':'public, max-age=3600'})
+
 
 @app .route ('/health')
 def health_check ():
