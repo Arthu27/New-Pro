@@ -166,3 +166,6 @@ scripts/cloudflared.exe
 scripts/config.yml
 scripts/tunnel-creds.json
 scripts/.hakumo_tunnel_runtime.yml
+
+# Зависимости node (jsdom для локальных проверок фронтов)
+node_modules/

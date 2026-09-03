@@ -63,7 +63,7 @@
   <div class="page-head-copy">
     <div class="eyebrow"> Участники </div>
     <h1>Пользователи</h1>
-    <p class="lead">Все участники сервера: поиск, фильтры по ролям и статусу, сортировка. Клик по участнику — карточка 360° в перетаскиваемом окне.</p>
+    <p class="lead">Все участники сервера: поиск, фильтры по ролям и статусу, сортировка. Клик по участнику — окно с его апелляциями и наказаниями.</p>
   </div>
 </div>
 
@@ -104,97 +104,61 @@
   </div>
   <div class="panel-foot">
     <span class="empty-tip" style="padding:6px 0 0"><i class="fas fa-arrows-up-down-left-right"></i>
-      Клик по участнику открывает «Карточку 360°» — тащите окно за верхнюю панель, ставьте куда удобно.</span>
+      Клик по участнику открывает окно с апелляциями и наказаниями — тащите его за верхнюю панель, ставьте куда удобно.</span>
   </div>
 </div>
 
-<!-- Перетаскиваемое окно «Карточка 360°» -->
+<!-- Перетаскиваемое окно карточки участника: апелляции и наказания -->
 <link rel="stylesheet" href="/static/member_card.css?v={{ static_v('member_card.css') }}">
-<div class="mcf-win" id="mcWin" style="display:none" role="dialog" aria-label="Карточка участника 360°">
+<div class="mcf-win" id="mcWin" style="display:none" role="dialog" aria-label="Карточка участника">
   <div class="mcf-head" id="mcWinHead">
     <i class="fas fa-grip-vertical mcf-grip" aria-hidden="true"></i>
     <div class="mcf-ava" id="mcWinAva"><i class="fas fa-user"></i></div>
     <div class="mcf-title">
       <b id="mcWinName">Участник</b>
-      <small id="mcWinHint">Карточка 360° · тащите за шапку, чтобы двигать</small>
+      <small id="mcWinHint">тащите за шапку, чтобы двигать</small>
     </div>
     <div class="mcf-head-tools">
-      <a class="mcf-btn" id="mcWinCsv" href="#" title="Выгрузить досье в CSV" aria-label="Выгрузить досье в CSV"><i class="fas fa-file-csv"></i></a>
       <button type="button" class="mcf-btn" id="mcWinClose" title="Закрыть" aria-label="Закрыть"><i class="fas fa-xmark"></i></button>
     </div>
   </div>
   <div class="mcf-body">
-    <div class="mcf-load" id="mcWinLoad" style="display:none"><i class="fas fa-circle-notch fa-spin"></i> Собираем досье...</div>
-    <div class="mcf-err" id="mcWinErr" style="display:none"></div>
+    <!-- Быстрые чипы из данных списка: статус, даты, роли. -->
     <div class="mcf-extras" id="mcWinExtras"></div>
-    <div id="mcWinCard" style="display:none">
-      <div class="mc-kpis" id="mcKpis"></div>
-      <div class="mc-grid">
-        <div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-id-card-clip"></i> Профиль</h3>
-            <div class="mc-sub">Уровень и опыт — те же числа, что рисует /profile бота.</div>
-            <div id="mcProfile"></div>
-          </div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-chart-line"></i> Активность и ранги</h3>
-            <div class="mc-sub">Места в топах — по формуле бота: вне списка = позиция за последним.</div>
-            <div id="mcActivity"></div>
-          </div>
-        </div>
-        <div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-hand-holding-heart"></i> Репутация</h3>
-            <div class="mc-sub">Карма и журнал благодарностей (бот хранит последние 200 записей).</div>
-            <div id="mcKarma"></div>
-          </div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-triangle-exclamation"></i> Предупреждения</h3>
-            <div class="mc-sub">Свежие варны из зеркала модерации (новые сверху).</div>
-            <div id="mcWarns"></div>
-          </div>
-          <div class="mc-panel" id="mcAppealsPanel" hidden>
-            <h3><i class="fas fa-scale-balanced"></i> Апелляции</h3>
-            <div class="mc-sub" id="mcAppealsSub">Обжалования этого участника.</div>
-            <div id="mcAppeals"></div>
-          </div>
-          <div class="mc-panel" id="mcPunishPanel">
-            <h3><i class="fas fa-gavel"></i> Наказание</h3>
-            <div class="mc-sub">Показаны только действия, разрешённые вашей роли в «Правах команд». Пишется в дела и логи от «Панель: ваш логин».</div>
-            <div id="mcPunish">
-              <div class="pn-empty" id="pnEmpty" hidden></div>
-              <div id="pnForm">
-                <div class="pn-grid" id="pnGrid" role="radiogroup" aria-label="Действие наказания"></div>
-                <div id="pnDurBlock" hidden>
-                  <div class="pn-lbl"><span>Срок</span><span class="pn-cnt">мин · часы · дни</span></div>
-                  <div class="pn-presets" id="pnPresets" aria-label="Быстрый выбор срока"></div>
-                  <input id="pnDur" placeholder="или своё: 45м, 2ч, 1д…" maxlength="40" aria-label="Срок наказания">
-                </div>
-                <div class="pn-lbl"><span>Причина</span><span class="pn-cnt" id="pnReasonCnt">0/500</span></div>
-                <input id="pnReason" placeholder="За что? (необязательно)" maxlength="500" aria-label="Причина наказания">
-                <button type="button" class="btn" id="pnGo" style="width:100%;margin-top:10px" disabled><i class="fas fa-bolt"></i> Применить</button>
-                <div class="pn-hint" id="pnHint" hidden><i class="fas fa-circle-info"></i><span id="pnHintText"></span></div>
-                <div id="pnMsg" class="empty-tip" style="padding:6px 0 0"></div>
-              </div>
-            </div>
-          </div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-cake-candles"></i> События</h3>
-            <div class="mc-sub">День рождения по грубой формуле бота и дата входа, если бот онлайн.</div>
-            <div id="mcEvents"></div>
-          </div>
-          <div class="mc-panel">
-            <h3><i class="fas fa-arrow-up-right-from-square"></i> Быстрые переходы</h3>
-            <div class="mc-sub">Профильные разделы панели для этого участника.</div>
-            <div class="mc-links" id="mcLinks"></div>
-          </div>
-        </div>
-      </div>
+    <!-- Досье 360° (уровни, карма, экономика, дни рождения, CSV-выгрузка)
+         снято: коги karma.py, birthday.py, leveling, economy_cog.py и
+         gamification_cog.py удалены по решению владельца, таблицы levels
+         в bot.db нет, а эндпоинтов member-card/lookup и member-card/export
+         никогда не было — окно вечно показывало «Сеть моргнула».
+         Оставлено только то, что работает: апелляции и наказания. -->
+    <div class="mc-panel" id="mcAppealsPanel" hidden>
+    <h3><i class="fas fa-scale-balanced"></i> Апелляции</h3>
+    <div class="mc-sub" id="mcAppealsSub">Обжалования этого участника.</div>
+    <div id="mcAppeals"></div>
+    </div>
+    <div class="mc-panel" id="mcPunishPanel">
+    <h3><i class="fas fa-gavel"></i> Наказание</h3>
+    <div class="mc-sub">Показаны только действия, разрешённые вашей роли в «Правах команд». Пишется в дела и логи от «Панель: ваш логин».</div>
+    <div id="mcPunish">
+    <div class="pn-empty" id="pnEmpty" hidden></div>
+    <div id="pnForm">
+    <div class="pn-grid" id="pnGrid" role="radiogroup" aria-label="Действие наказания"></div>
+    <div id="pnDurBlock" hidden>
+    <div class="pn-lbl"><span>Срок</span><span class="pn-cnt">мин · часы · дни</span></div>
+    <div class="pn-presets" id="pnPresets" aria-label="Быстрый выбор срока"></div>
+    <input id="pnDur" placeholder="или своё: 45м, 2ч, 1д…" maxlength="40" aria-label="Срок наказания">
+    </div>
+    <div class="pn-lbl"><span>Причина</span><span class="pn-cnt" id="pnReasonCnt">0/500</span></div>
+    <input id="pnReason" placeholder="За что? (необязательно)" maxlength="500" aria-label="Причина наказания">
+    <button type="button" class="btn" id="pnGo" style="width:100%;margin-top:10px" disabled><i class="fas fa-bolt"></i> Применить</button>
+    <div class="pn-hint" id="pnHint" hidden><i class="fas fa-circle-info"></i><span id="pnHintText"></span></div>
+    <div id="pnMsg" class="empty-tip" style="padding:6px 0 0"></div>
+    </div>
+    </div>
     </div>
   </div>
 </div>
 
-<script src="/static/member_card.js?v={{ static_v('member_card.js') }}"></script>
 <script>
 (function () {
   'use strict';
@@ -396,7 +360,7 @@
     if (m.joined_at) {
       tags += '<span class="u-tag"><i class="fas fa-right-to-bracket"></i>' + esc(new Date(m.joined_at).toLocaleDateString('ru-RU')) + '</span>';
     }
-    return '<div class="member-card" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Карточка 360°: ' + esc(m.display_name || m.name) + '">' +
+    return '<div class="member-card" data-id="' + esc(m.id) + '" role="button" tabindex="0" aria-label="Карточка участника: ' + esc(m.display_name || m.name) + '">' +
       '<div class="av-wrap">' +
         '<img alt="" loading="lazy" class="av" src="' + esc(m.avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
         '<span class="status-dot ' + sc + '"></span>' +
@@ -448,10 +412,9 @@
     appendMembers();
   }, { passive: true });
 
-  /* ── Перетаскиваемое окно «Карточка 360°» ────────────────────────
-     Клик по участнику открывает досье из /api/guild/<gid>/member-card/lookup
-     (та же сборка, что и на странице /member-card). Окно тащится за шапку. */
-  var winReq = 0;   /* защита от гонок: старый ответ не затирает новый клик */
+  /* ── Перетаскиваемое окно карточки участника ─────────────────────
+     Клик по участнику открывает окно с его апелляциями и наказаниями.
+     Окно тащится за шапку. */
 
   function placeWin() {
     var win = $('mcWin');
@@ -472,7 +435,6 @@
 
   function closeWin() {
     $('mcWin').style.display = 'none';
-    winReq++;
   }
 
   function chip(icon, label, val) {
@@ -497,7 +459,6 @@
     $('mcWinAva').innerHTML = ava;
     $('mcWinName').textContent = m.display_name || m.name;
     $('mcWinHint').textContent = '@' + (m.name || '') + ' · ' + st + ' · ID ' + m.id;
-    $('mcWinCsv').href = '/api/guild/' + $('guild-select').value + '/member-card/export?user=' + encodeURIComponent(String(m.id));
 
     /* наказания: привязка к открытому участнику */
     pnUid = String(m.id);
@@ -515,32 +476,7 @@
       (m.top_role ? chip('fa-crown', 'Высшая:', m.top_role) : '');
     $('mcWinExtras').innerHTML = extras;
 
-    /* досье 360° — тот же API и тот же рендер, что на странице /member-card */
-    var req = ++winReq;
-    $('mcWinLoad').style.display = 'flex';
-    $('mcWinErr').style.display = 'none';
-    $('mcWinCard').style.display = 'none';
     openWin();
-    var gid = $('guild-select').value;
-    fetch('/api/guild/' + gid + '/member-card/lookup?user=' + encodeURIComponent(String(m.id))).then(function (r) {
-      return r.json().then(function (d) { return { status: r.status, d: d }; });
-    }).then(function (res) {
-      if (req !== winReq) return;   /* пользователь уже кликнул другого */
-      $('mcWinLoad').style.display = 'none';
-      if (!res.d.success || !res.d.card) {
-        $('mcWinErr').textContent = res.d.error || 'Не удалось собрать досье';
-        $('mcWinErr').style.display = '';
-        return;
-      }
-      $('mcWinErr').style.display = 'none';
-      $('mcWinCard').style.display = '';
-      window.MemberCard.renderCard(res.d.card);
-    }).catch(function () {
-      if (req !== winReq) return;
-      $('mcWinLoad').style.display = 'none';
-      $('mcWinErr').textContent = 'Сеть моргнула — попробуйте кликнуть ещё раз';
-      $('mcWinErr').style.display = '';
-    });
   }
 
   /* ── Наказания из карточки (тот же путь, что /modpanel) ──
@@ -782,7 +718,7 @@
       var wantedId = card ? card.getAttribute('data-id') : pressedMemberId;
       if (wantedId) showDetail(wantedId);
     });
-    /* карточка с клавиатуры: Enter/пробел — то же окно 360° */
+    /* карточка с клавиатуры: Enter/пробел — то же окно */
     $('members-list').addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
       var card = e.target.closest('.member-card');
