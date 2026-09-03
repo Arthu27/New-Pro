@@ -82,6 +82,15 @@ for sel, label in [
 ]:
     check_no_clip('web/templates/chat.html', sel, label)
 
+print('== dashboard/login: имена в лентах и автокомплите ==')
+for path, sel, label in [
+    ('web/templates/dashboard.html', '.ma-name', 'имя участника в ленте (dashboard)'),
+    ('web/templates/dashboard.html', '.ma-mod', 'модератор в ленте (dashboard)'),
+    ('web/templates/login.html', '.a-copy b', 'имя в автокомплите входа'),
+    ('web/templates/register.html', '.a-copy b', 'имя в автокомплите регистрации'),
+]:
+    check_no_clip(path, sel, label)
+
 print('== страничные списки ==')
 for path, sel, label in [
     ('web/templates/role_permissions.html', '.role-name', 'имя роли (роли-права)'),
