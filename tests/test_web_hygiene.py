@@ -130,5 +130,47 @@ for dirpath, _, files in os.walk(STATIC_DIR):
 check(biggest[1] <= 4_000_000, f'самый большой файл {biggest[0]}: {biggest[1]} байт (кап 4МБ)')
 check(total <= 12_000_000, f'вся статика {count} файлов: {total} байт (кап 12МБ)')
 
+
+# ─── CSP: домен веб-аналитики Cloudflare разрешён ────────────────────────────
+# Регресс на жалобу владельца: консоль браузера писала
+# «Loading the script 'https://static.cloudflareinsights.com/beacon.min.js'
+# violates ... script-src 'self' 'unsafe-inline' 'unsafe-eval'» — Cloudflare
+# сам вставляет beacon, а политика его не пускала.
+print('== CSP: beacon Cloudflare Insights разрешён ==')
+_r = client.get('/welcome')
+_csp = _r.headers.get('Content-Security-Policy', '')
+check('https://static.cloudflareinsights.com' in _csp,
+      'script-src пускает static.cloudflareinsights.com (иначе консоль краснеет)')
+check("script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com" in _csp,
+      'script-src собран целиком: self + inline/eval + beacon')
+
+# ─── Версия сборки видна в панели ────────────────────────────────────────────
+# Заказ владельца: после обновления непонятно, применилось ли оно. Номер
+# коммита отдаёт /api/build-info и показывает сайдбар.
+print('== Версия сборки видна и совпадает с git ==')
+import subprocess
+_git = subprocess.run(['git', '-C', ROOT, 'rev-parse', 'HEAD'],
+                      capture_output=True, text=True)
+_head = (_git.stdout or '').strip()
+_bi = appmod._BUILD_INFO
+check(bool(_bi.get('sha')), f'версия сборки определена: {(_bi.get("sha") or "")[:7]}')
+if _head:
+    check(_bi.get('sha') == _head,
+          f'сборка = HEAD репозитория ({_head[:7]})')
+with client.session_transaction() as _s:
+    _s['logged_in'] = True
+    _s['username'] = 'probe'
+    _s['role'] = 'owner'
+_r2 = client.get('/api/build-info')
+_d2 = _r2.get_json() or {}
+check(_r2.status_code == 200 and _d2.get('success') is True,
+      f'/api/build-info отвечает ({_r2.status_code})')
+check(len(_d2.get('short') or '') == 7 and _d2.get('sha', '').startswith(_d2.get('short', '\0')),
+      f'отдаёт короткий и полный sha: {_d2.get("short")}')
+_html = client.get('/', follow_redirects=True).get_data(as_text=True)
+check('id="sysBuild"' in _html, 'в сайдбаре есть строка «Сборка»')
+check((_d2.get('short') or '\0') in _html,
+      f'в сайдбаре показан тот же коммит {_d2.get("short")}')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)

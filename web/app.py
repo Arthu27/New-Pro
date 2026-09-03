@@ -232,6 +232,25 @@ def _demo_counts ():
         _log .debug ("_demo_counts(): роли: %s",_ex )
     return total ,online ,channels ,roles
 
+# Версия сборки: считаем ОДИН раз при старте. За жизнь процесса код не
+# меняется (обновление перезапускает процесс), а дёргать git на каждый
+# запрос — значит замедлять каждую страницу.
+_BUILD_INFO ={'sha':None ,'branch':None }
+try :
+    from services import self_update as _SU
+    _bot_root =os .path .dirname (os .path .dirname (os .path .abspath (__file__ )))
+    _BUILD_INFO ['sha']=_SU .local_sha (_bot_root )
+    _BUILD_INFO ['branch']=_SU .running_branch (_bot_root )
+except Exception as _bi_ex:
+    _log .debug ('build info недоступна: %s',_bi_ex )
+
+
+@app .context_processor
+def inject_build_info ():
+    _sha =_BUILD_INFO .get ('sha')or ''
+    return {'build_sha':_sha [:7 ],'build_branch':_BUILD_INFO .get ('branch')or ''}
+
+
 @app .context_processor
 def inject_demo_mode ():
     return {'demo_mode':_demo_mode ()}
@@ -3487,6 +3506,18 @@ def api_delete_role_map (role_id ):
     return jsonify ({'success':True })
 
 # ── Panel menu visibility (sidebar categories & rooms per panel) ──
+# ── Версия сборки панели ────────────────────────────────────────────────
+# Заказ владельца: после обновления непонятно, применилось ли оно —
+# ошибки из старой версии выглядели как «не починили». Номер коммита виден
+# в сайдбаре и отдаётся здесь, чтобы сверять с ремоутом.
+@app .route ('/api/build-info')
+@login_required 
+def api_build_info ():
+    sha =_BUILD_INFO .get ('sha')or ''
+    return jsonify ({'success':True ,'sha':sha ,'short':sha [:7 ],
+                    'branch':_BUILD_INFO .get ('branch')or ''})
+
+
 @app .route ('/api/panel-menu')
 @login_required
 @role_required ('owner')

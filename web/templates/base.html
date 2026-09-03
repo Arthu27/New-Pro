@@ -238,6 +238,11 @@
                         <span class="sys-label">Сессия</span>
                         <span class="sys-val mono" id="sysSession">00:00:00</span>
                     </div>
+                    <div class="sys-status-row" title="Коммит панели: {{ build_sha or 'неизвестен' }}{% if build_branch %} · ветка {{ build_branch }}{% endif %}. Сверяется с последним запушенным — если не совпадает, обновление не применилось.">
+                        <i class="fas fa-code-commit sys-ico"></i>
+                        <span class="sys-label">Сборка</span>
+                        <span class="sys-val mono" id="sysBuild">{{ build_sha or '—' }}</span>
+                    </div>
                     <div class="sys-status-row">
                         <i class="fas fa-clock sys-ico"></i>
                         <span class="sys-label">Время</span>
