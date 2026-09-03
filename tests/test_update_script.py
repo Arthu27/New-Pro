@@ -9,6 +9,7 @@ update.bat докладывает свежий код поверх папки б
 
 Запуск: python3 tests/test_update_script.py
 """
+import io
 import os
 import shutil
 import sys
@@ -98,6 +99,30 @@ check('def _git_bin' in _src and 'shutil.which' in _src and 'def _run_git' in _s
 check('download_and_extract' in _src, 'при отсутствии git обновление идёт ZIP-архивом')
 check('только самое свежее' in _src or 'СВЕЖЕЕ' in _src,
       'логирование результатов чистки понятным языком')
+
+# ── /update в боте: запуск update_silent.bat из cogs/diagnostics.py ───────
+# Раньше команда собиралась СПИСКОМ: ['cmd','/c','start','"Hakumo Updater"', ...].
+# Python прогоняет список через subprocess.list2cmdline и экранирует кавычки
+# заголовка в \"Hakumo Updater\". cmd обратное экранирование не понимает, и
+# Windows отвечала «Windows cannot find '...'». Теперь строка собирается
+# вручную — кавычки доходят до cmd нетронутыми.
+_diag = io.open(os.path.join(ROOT, 'cogs', 'diagnostics.py'),
+                encoding='utf-8').read()
+check('start "Hakumo Updater" cmd /k' in _diag,
+      'заголовок окна обновлятора собирается строкой, а не списком')
+check("['cmd','/c','start'" not in _diag,
+      'списка аргументов cmd/start больше нет (именно он ломал кавычки)')
+check('/k "%s"' in _diag,
+      'путь к update_silent.bat экранирован кавычками — папка с пробелом не сломает запуск')
+check("[^A-Za-z0-9._/-]" in _diag,
+      'имя ветки очищается от спецсимволов перед подстановкой в cmd')
+
+# Сам механизм поломки — чтобы тест падал по делу, а не «текст не тот».
+import subprocess as _sp_chk
+_broken = _sp_chk.list2cmdline(['cmd', '/c', 'start', '"Hakumo Updater"',
+                                'cmd', '/k', r'C:\b\update_silent.bat'])
+check(r'\"' in _broken,
+      'list2cmdline действительно экранирует кавычки заголовка (почему список не годится)')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

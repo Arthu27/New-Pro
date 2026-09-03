@@ -603,9 +603,18 @@ class Diagnostics (commands .Cog ):
             updater =os .path .join (bot_dir ,'update_silent.bat')
             try :
                 import subprocess as _sp
+                # Командная строка собирается СТРОКОЙ, а не списком: Python
+                # прогоняет список через list2cmdline и экранирует кавычки
+                # заголовка в "\"Hakumo Updater\"". cmd обратное экранирование
+                # не понимает, разбирал это как заголовок \"\" плюс команду
+                # Hakumo — отсюда «Windows cannot find '...'». В .bat-файлах
+                # тот же start "Заголовок" cmd /k ... работает как раз потому,
+                # что там кавычки никто не экранирует.
+                import re as _re_br
+                _br = _re_br.sub(r'[^A-Za-z0-9._/-]', '', str(_branch or 'main')) or 'main'
                 _sp .Popen (
-                ['cmd','/c','start','"Hakumo Updater"','cmd','/k',updater ,
-                str (os .getpid ()),str (_branch or 'main')],
+                'cmd /c start "Hakumo Updater" cmd /k "%s" %d %s'
+                % (updater ,os .getpid (),_br ),
                 cwd =bot_dir ,close_fds =True ,
                 creationflags =getattr (_sp ,'CREATE_NEW_CONSOLE' ,0 )or 0 )
             except Exception as _ue :
