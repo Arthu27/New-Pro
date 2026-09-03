@@ -503,7 +503,7 @@ code, .mono, .num, kbd { font-family: var(--mono); }
 }
 .nav-link:hover i { color: var(--ac); }
 @media (prefers-reduced-motion: reduce) { .nav-link i { transition: color 0.12s; } }
-.nav-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-link span { overflow-wrap: anywhere; white-space: normal; line-height: 1.3; }
 .nav-link.active {
   background: linear-gradient(90deg, var(--ac-soft), color-mix(in srgb, var(--ac-soft) 30%, transparent));
   color: var(--ac);

@@ -904,10 +904,29 @@ var CAN_MANAGE = {{ 'true' if can_manage else 'false' }};
       channels = channels.filter(function (channel) {
         return channel.type === 'text' || channel.type === 'news' || channel.news;
       });
-      select.innerHTML = channels.length ? '<option value="">Выберите канал…</option>' + channels.map(function (channel) {
-        return '<option value="' + esc(channel.id) + '">#' + esc(channel.name) + '</option>';
-      }).join('') : '<option value="">Текстовые каналы не найдены</option>';
-      select.disabled = !channels.length;
+      /* Дублей быть не должно: один канал — один пункт (защита от повторов
+         id), а чтобы похожие имена из разных категорий не путались —
+         группируем по категориям и подсказываем полное имя по наведению. */
+      var seen = {}, byCat = {};
+      channels.forEach(function (channel) {
+        if (seen[channel.id]) return;
+        seen[channel.id] = true;
+        var cat = (channel.category || '').trim() || 'Без категории';
+        (byCat[cat] = byCat[cat] || []).push(channel);
+      });
+      if (!channels.length || !Object.keys(byCat).length) {
+        select.innerHTML = '<option value="">Текстовые каналы не найдены</option>';
+      } else {
+        var html = '<option value="">Выберите канал…</option>';
+        Object.keys(byCat).forEach(function (cat) {
+          html += '<optgroup label="' + esc(cat) + '">' + byCat[cat].map(function (channel) {
+            return '<option value="' + esc(channel.id) + '" title="#' + esc(channel.name) +
+              ' · ' + esc(cat) + '">#' + esc(channel.name) + '</option>';
+          }).join('') + '</optgroup>';
+        });
+        select.innerHTML = html;
+      }
+      select.disabled = !channels.length || !Object.keys(byCat).length;
     } catch (error) {
       select.innerHTML = '<option value="">Не удалось загрузить</option>';
       setFormResult(false, 'Не удалось получить каналы сервера.');

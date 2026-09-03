@@ -966,12 +966,27 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       var data = await chansP.catch(function () { return []; });
       var channels = Array.isArray(data) ? data : (data.channels || []);
       var gid = g ? g.id : main;
-      var html = [];
-      channels.filter(function (c) { return c.type === 'text'; }).forEach(function (c) {
-        html.push('<option value="' + esc(String(c.id)) + '" data-guild="' + esc(String(gid)) + '">#' +
-          esc(c.name) + '</option>');
+      /* Защита от дублей: повторный вызов не должен дублировать пункты —
+         гасим всё, кроме первого статичного «Только в ленте панели». */
+      var phText = sel.options[0] ? sel.options[0].text : '';
+      sel.innerHTML = '<option value="">' + esc(phText) + '</option>';
+      var seen = {}, byCat = {};
+      channels.filter(function (c) { return c.type === 'text' && !seen[c.id]; })
+        .forEach(function (c) {
+          seen[c.id] = true;
+          var cat = (c.category || '').trim() || 'Без категории';
+          (byCat[cat] = byCat[cat] || []).push(c);
+        });
+      var html = '';
+      Object.keys(byCat).forEach(function (cat) {
+        html += '<optgroup label="' + esc(cat) + '">';
+        byCat[cat].forEach(function (c) {
+          html += '<option value="' + esc(String(c.id)) + '" data-guild="' + esc(String(gid)) +
+            '" title="#' + esc(c.name) + ' · ' + esc(cat) + '">#' + esc(c.name) + '</option>';
+        });
+        html += '</optgroup>';
       });
-      sel.insertAdjacentHTML('beforeend', html.join(''));
+      sel.insertAdjacentHTML('beforeend', html);
     } catch (e) { /* остаётся только лента панели */ }
   }
 

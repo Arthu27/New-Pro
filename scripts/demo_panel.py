@@ -266,6 +266,13 @@ class FakeChannel:
         self.id = cid
         self.name = name
         self.mention = f'#{name}'
+        # Реальный discord.ChannelType.text, чтобы /channels и пикеры каналов
+        # в демо-превью отдавали живой список (без типа канал выпадал из
+        # фильтра type == 'text' и селекты объявлений/чата пустовали).
+        import discord as _discord
+        self.type = _discord.ChannelType.text
+        self.category = None
+        self.position = 0
 
     def __str__(self):
         return self.name

@@ -71,6 +71,29 @@ def _demo_roles_store (guild_id ,roles ):
         _log.debug("_demo_roles_store(): подавлено: %s", _ex)
 
 
+def _dedupe_channels (channels ):
+    """Один канал — один пункт в любом списке/селекте панели.
+
+    Все пикеры каналов (объявления, настройки, чат и т.д.) берут данные
+    из /api/guild/<gid>/channels. Если источник вернул канал дважды
+    (повтор id в кэше/демо-данных), в селекте появляются «2 одинаковых
+    выбора». Здесь оставляем только первый экземпляр каждого id.
+    """
+    if not isinstance (channels ,list ):
+        return channels or []
+    seen =set ()
+    out =[]
+    for c in channels :
+        if not isinstance (c ,dict ):
+            continue
+        cid =c .get ('id')
+        if cid is None or cid in seen :
+            continue
+        seen .add (cid )
+        out .append (c )
+    return out
+
+
 def _hidden_save (store ):
     path =os .path .join (_REPO_ROOT ,'data','hidden_channels.json')
     with open (path ,'w',encoding ='utf-8')as fp :
@@ -173,7 +196,9 @@ def guild_channels_roles (guild_id ):
         roles =[{'id':str (r .id ),'name':r .name }
                 for r in getattr (guild ,'roles',[])or []
                 if r .id !=guild .id ]
-        return channels ,roles
+        # Общий резолвер питает пикеры многих страниц (репорты, логи и т.д.):
+        # дубли id в кэше гильдии = «2 одинаковых выбора» в селектах.
+        return _dedupe_channels (channels ),_dedupe_channels (roles )
     # Панель отдельным процессом от бота: снимки, которые бот пишет в data/
     # (services.bot_bridge) — реальные роли и текстовые каналы сервера.
     from services import bot_bridge as _bb
@@ -184,13 +209,13 @@ def guild_channels_roles (guild_id ):
         roles =[{'id':r ['id'],'name':r ['name']}
                 for r in (_bb .read_roles (guild_id )or [])
                 if not r .get ('managed')and str (r .get ('id',''))!=str (guild_id )]
-        return channels ,roles
+        return _dedupe_channels (channels ),_dedupe_channels (roles )
     channels =[{'id':str (c .get ('id','')),'name':c .get ('name','')}
               for c in demo_channels_list (guild_id )
               if c .get ('type')=='text']
     roles =[{'id':str (r .get ('id','')),'name':r .get ('name','')}
             for r in _demo_roles_load (guild_id )]
-    return channels ,roles
+    return _dedupe_channels (channels ),_dedupe_channels (roles )
 
 
 def register(ctx):
@@ -872,17 +897,17 @@ def register(ctx):
                         with open (demo_file ,'r',encoding ='utf-8')as fp :
                             demo =json .load (fp )
                         demo =sorted (demo ,key =lambda x :((9999 if (x .get ('category_pos')is None or x .get ('category_pos')<0 )else x .get ('category_pos',0 )),x .get ('position',0 ),x .get ('name','')))
-                        return jsonify (_annotate_hidden (guild_id ,demo ))
+                        return jsonify (_annotate_hidden (guild_id ,_dedupe_channels (demo )))
                     except Exception as e :
                         print (f'[WEB][WARN] /channels: demo_channels.json ошибка: {e}')
                 # Демо-структура не засеяна — отдаём полный встроенный список
                 # (тот же состав, что жил в data/demo_channels.json), чтобы
                 # селекты каналов и чат не пустовали в превью.
-                return jsonify (_annotate_hidden (guild_id ,_demo_channels_seed ()))
+                return jsonify (_annotate_hidden (guild_id ,_dedupe_channels (_demo_channels_seed ())))
             cached =_channels_offline_cache (guild_id )
             if cached :
                 print (f'[WEB] /channels bot offline — отдаём кэш ({len(cached)} кан.)')
-                return jsonify (cached )
+                return jsonify (_dedupe_channels (cached ))
             print ('[WEB][WARN] /channels: bot is None')
             return jsonify ({'error':'Бот офлайн','channels':[]})
 
@@ -1003,8 +1028,11 @@ def register(ctx):
                 print (f'[WEB][WARN] channels: канал {getattr(c, "id", "?")} пропущен: {e}')
 
         sorted_channels =sorted (channels_data ,key =lambda x :(x ['category_pos'],x ['position']))
+        # Защита от дублей на источнике (см. _dedupe_channels): все пикеры
+        # каналов берут список отсюда — дублей в селектах быть не должно.
+        sorted_channels =_dedupe_channels (sorted_channels )
         _annotate_hidden (guild_id ,sorted_channels )
-        # Кладём в короткий in-memory кэш (следующие 3 сек отдаём без пересборки).
+        # Кладём в короткий in-memory кэш (следующие 10 сек отдаём без пересборки).
         try :
             api_guild_channels ._live_cache =getattr (api_guild_channels ,'_live_cache',{})
             api_guild_channels ._live_cache [_ckey ] =(_now ,sorted_channels )
