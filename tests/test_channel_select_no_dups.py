@@ -61,6 +61,14 @@ check(GA._dedupe_channels(None) == [] and GA._dedupe_channels([]) == [],
 check(GA._dedupe_channels([{'id': '1', 'name': 'a'}]) == [{'id': '1', 'name': 'a'}],
       'без дублей список не меняется')
 
+print('== _dedupe_by_id: обобщённый дедуп (каналы, роли) ==')
+check(GA._dedupe_by_id([{'id': 'a'}, {'id': 'a'}, {'id': 'b'}]) == [{'id': 'a'}, {'id': 'b'}],
+      '_dedupe_by_id убирает повтор id, порядок сохранён')
+check(GA._dedupe_by_id(None) == [] and GA._dedupe_by_id([{'x': 1}]) == [],
+      '_dedupe_by_id: пустые/без-id входы безопасны')
+check(GA._dedupe_channels([{'id': '1'}, {'id': '1'}]) == GA._dedupe_by_id([{'id': '1'}, {'id': '1'}]),
+      'канальная специализация повторяет обобщённый дедуп')
+
 print('== guild_channels_roles: общий резолвер пикеров (репорты, логи…) ==')
 ch, roles = GA.guild_channels_roles('nope-no-such-guild')
 ids = [c['id'] for c in ch]

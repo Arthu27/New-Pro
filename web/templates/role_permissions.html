@@ -133,7 +133,7 @@
     border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
     box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--text) 5%, transparent);
   }
-  .role-name { flex: 1; min-width: 0; font-size: var(--fs-md); font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .role-name { flex: 1; min-width: 0; font-size: var(--fs-md); font-weight: 600; color: var(--text); white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
   .role-members { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-xs); color: var(--text-3); }
   .role-empty { padding: 22px 8px; text-align: center; font-size: var(--fs-sm); color: var(--text-3); }
   .role-empty i { display: block; font-size: 20px; margin-bottom: 8px; color: var(--line-3); }
@@ -220,7 +220,7 @@
   }
   .cmd-card.on { border-color: color-mix(in srgb, var(--ac) 45%, transparent); background: color-mix(in srgb, var(--ac) 5%, transparent); }
   .cmd-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .cmd-name { flex: 1; min-width: 0; font-family: var(--mono); font-size: var(--fs-sm); color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cmd-name { flex: 1; min-width: 0; font-family: var(--mono); font-size: var(--fs-sm); color: var(--text-2); white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
   .cmd-card.on .cmd-name { color: var(--ac); font-weight: 600; }
   .cmd-pill {
     display: inline-flex; align-items: center; gap: 5px;
@@ -266,7 +266,7 @@
     display: grid; place-items: center; font-size: 13px;
     color: var(--tone); background: color-mix(in srgb, var(--tone) 13%, transparent);
   }
-  .act-name { flex: 1; min-width: 0; font-size: var(--fs-md); font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .act-name { flex: 1; min-width: 0; font-size: var(--fs-md); font-weight: 700; color: var(--text); white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 
   .acc-empty { text-align: center; padding: 46px 20px; color: var(--text-3); }
   .acc-empty-ico {

@@ -71,27 +71,32 @@ def _demo_roles_store (guild_id ,roles ):
         _log.debug("_demo_roles_store(): подавлено: %s", _ex)
 
 
-def _dedupe_channels (channels ):
-    """Один канал — один пункт в любом списке/селекте панели.
+def _dedupe_by_id (items ):
+    """Один id — один пункт в любом списке/селекте панели.
 
-    Все пикеры каналов (объявления, настройки, чат и т.д.) берут данные
-    из /api/guild/<gid>/channels. Если источник вернул канал дважды
-    (повтор id в кэше/демо-данных), в селекте появляются «2 одинаковых
-    выбора». Здесь оставляем только первый экземпляр каждого id.
+    Всеми пикерами каналов (объявления, настройки, чат) и ролей (репорты,
+    логи, доступы) правят списки из API. Если источник вернул запись
+    дважды (повтор id в кэше/демо-данных), в селекте появляются
+    «2 одинаковых выбора». Оставляем только первый экземпляр каждого id.
     """
-    if not isinstance (channels ,list ):
-        return channels or []
+    if not isinstance (items ,list ):
+        return items or []
     seen =set ()
     out =[]
-    for c in channels :
-        if not isinstance (c ,dict ):
+    for it in items :
+        if not isinstance (it ,dict ):
             continue
-        cid =c .get ('id')
-        if cid is None or cid in seen :
+        iid =it .get ('id')
+        if iid is None or iid in seen :
             continue
-        seen .add (cid )
-        out .append (c )
+        seen .add (iid )
+        out .append (it )
     return out
+
+
+def _dedupe_channels (channels ):
+    """см. _dedupe_by_id — специализация для каналов (историческое имя)."""
+    return _dedupe_by_id (channels )
 
 
 def _hidden_save (store ):
@@ -716,7 +721,7 @@ def register(ctx):
         if not bot :
             # демо: типичный набор ролей (пустой список = страница «не листается»)
             if _app ._demo_mode ():
-                return jsonify (sorted (_demo_roles_load (guild_id ),key =lambda x :-x ['members']))
+                return jsonify (_dedupe_by_id (sorted (_demo_roles_load (guild_id ),key =lambda x :-x ['members'])))
             # панель отдельным процессом, бот жив по пульсу: реальные роли из
             # снимка (id/имя/цвет) — пикеры «роль сервера» по всей панели живые.
             from services import bot_bridge as _bb
@@ -725,7 +730,7 @@ def register(ctx):
                         'color':r .get ('color')or '','members':0}
                        for r in (_bb .read_roles (guild_id )or [])
                        if r .get ('id')]
-                return jsonify (rows)
+                return jsonify (_dedupe_by_id (rows))
             return jsonify ([])
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ([])
@@ -757,7 +762,7 @@ def register(ctx):
         roles =[{'id':str (r .id ),'name':r .name ,'color':str (r .color ),
         'members':_counts .get (r .id ,0 )}
         for r in guild .roles if r .name !='@everyone']
-        roles =sorted (roles ,key =lambda x :-x ['members'])
+        roles =_dedupe_by_id (sorted (roles ,key =lambda x :-x ['members']))
         try :
             api_guild_roles ._live_cache =getattr (api_guild_roles ,'_live_cache',{})
             api_guild_roles ._live_cache [_ckey ]=(_now ,roles )
