@@ -601,6 +601,58 @@ class Diagnostics (commands .Cog ):
         # тянет код git->zip, ставит зависимости, поднимает свежую консоль).
         if sys .platform .startswith ('win'):
             updater =os .path .join (bot_dir ,'update_silent.bat')
+            # Заказ владельца: «не выключайся, пока не скачается новая
+            # версия». Поэтому качаем и проверяем ЗДЕСЬ, пока бот жив, и
+            # уходим на перезапуск только с готовым архивом на руках. При
+            # любой ошибке сети/архива бот ПРОДОЛЖАЕТ РАБОТАТЬ на текущем
+            # коде — раньше он гас сразу, и при неудачном скачивании
+            # владелец оставался и без бота, и без обновления.
+            pmsg =await interaction .followup .send (
+                f" Скачиваю новую версию ветки **{_branch}**. Бот остаётся "
+                "в сети, пока архив не скачается и не пройдёт проверку…",wait =True )
+            SU .clear_pending (bot_dir )
+            _sha_r =await asyncio .to_thread (SU .remote_sha )
+            _sha_l =await asyncio .to_thread (SU .local_sha ,bot_dir )
+            if _sha_r and _sha_l and _sha_r ==_sha_l :
+                await edit (message_id =pmsg .id ,
+                            content =(f" Уже самая свежая версия (`{_sha_r [:7 ]}`) — "
+                                       "качать нечего, перезапуск не делаю."))
+                return
+            _tmp =tempfile .mkdtemp (prefix ='hakumo_dl_')
+            try :
+                ok ,err ,zip_path =await asyncio .to_thread (SU .download_zip ,_tmp )
+                if not ok :
+                    await edit (message_id =pmsg .id ,
+                                content =(f" Не вышло скачать новую версию: {err }. "
+                                          "**Бот продолжает работать** на текущем коде, "
+                                          "перезапуска не было."))
+                    return
+                await edit (message_id =pmsg .id ,
+                            content =" Скачано. Проверяю целостность архива…")
+                ok ,err ,meta =await asyncio .to_thread (SU .verify_zip ,zip_path )
+                if not ok :
+                    await edit (message_id =pmsg .id ,
+                                content =(f" Архив не прошёл проверку: {err }. "
+                                          "**Бот продолжает работать**, ничего не трогал."))
+                    return
+                _pairs ,root ,rel =meta
+                ok ,err =await asyncio .to_thread (SU .verify_python ,zip_path ,root )
+                if not ok :
+                    await edit (message_id =pmsg .id ,
+                                content =(f" Новая версия не собирается: {err }. "
+                                          "**Бот продолжает работать** на старом коде."))
+                    return
+                ok ,err =await asyncio .to_thread (
+                    SU .save_pending ,bot_dir ,zip_path ,root ,rel ,
+                    _sha_r or '',_branch )
+                if not ok :
+                    await edit (message_id =pmsg .id ,
+                                content =(f" Не удалось отложить архив: {err }. "
+                                          "**Бот продолжает работать**."))
+                    return
+            finally :
+                shutil .rmtree (_tmp ,ignore_errors =True )
+            # Всё скачано и проверено — теперь можно уходить на перезапуск.
             try :
                 import subprocess as _sp
                 # Командная строка собирается СТРОКОЙ, а не списком: Python
@@ -627,13 +679,15 @@ class Diagnostics (commands .Cog ):
                 cwd =bot_dir ,close_fds =True ,
                 creationflags =getattr (_sp ,'CREATE_NEW_CONSOLE' ,0 )or 0 )
             except Exception as _ue :
-                await interaction .followup .send (
-                f" Не удалось запустить обновлятор: {_ue }. Запусти update.bat вручную.",ephemeral =True )
+                SU .clear_pending (bot_dir )
+                await edit (message_id =pmsg .id ,
+                            content =(f" Не удалось запустить обновлятор: {_ue }. "
+                                      "**Бот продолжает работать.** Запусти update.bat вручную."))
                 return
-            await interaction .followup .send (
-                " Обновление запущено в отдельном окне. Эта консоль сейчас "
-                "закроется, после скачивания бот сам откроется в новом окне и "
-                "отчитается. Данные и .env не трогаются.",ephemeral =True )
+            await edit (message_id =pmsg .id ,
+                        content =(" Новая версия скачана и проверена. Перезапускаюсь — "
+                                  "обновлятор применит её в отдельном окне и поднимет бота. "
+                                  "Данные и .env не трогаются."))
             await asyncio .sleep (2 )
             os ._exit (0 )
         msg =await interaction .followup .send (

@@ -101,6 +101,10 @@ if exist requirements.txt (
 rem Snimaem metku obnovleniya (ee stavit bot pered zapuskom update_silent.bat).
 rem Bez etogo start_bot.bat reshil by, chto obnovlenie eshchyo idyot, i ne podnyal by bota.
 if exist "data\.updating" del /q "data\.updating" >nul 2>&1
+rem Zaodno ubiraem otkladnoy arkhiv: etot skript kachaet sam, a staryy
+rem fayl ot proshlogo zapuska obnovlyator primenil by vmesto svezhego.
+if exist "data\.update_pending.zip" del /q "data\.update_pending.zip" >nul 2>&1
+if exist "data\.update_pending.json" del /q "data\.update_pending.json" >nul 2>&1
 
 if /i "%~1"=="/norestart" (
     echo [5/5] Gotovo. Perezapuska propushchen ^(/norestart^).

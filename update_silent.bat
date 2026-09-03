@@ -55,14 +55,26 @@ goto waitdead
 :waitdone
 echo   Процесс остановлен, файлы свободны.
 
-rem --- 2. Обновляем код: git (дельты), при неудаче - zip -----------
-echo [2/4] Обновляю код (git -> запасной архив)...
+rem --- 2. Обновляем код ---------------------------------------------
+rem Основной путь: бот УЖЕ скачал и проверил архив до выключения (заказ
+rem владельца - не гаснуть, пока новая версия не скачана). Тогда просто
+rem применяем готовое. Запасной - git, потом скачивание самим: он нужен
+rem для ручного запуска update_silent.bat / update.bat, когда бот архив
+rem не готовил.
+if exist "data\.update_pending.zip" (
+    echo [2/4] Применяю архив, который бот скачал до перезапуска...
+    python "scripts\silent_zip_update.py" --pending %BRANCH%
+    if errorlevel 1 set "FAILED=готовый архив не применился"
+    goto deps
+)
+echo [2/4] Готового архива нет - обновляю код (git -> запасной архив)...
 python -c "import sys,os;sys.path.insert(0,os.getcwd());from services import self_update as SU;b=os.getcwd();ok,err,info=SU.git_update(b,'%BRANCH%');print('  git:',('обновлено' if ok else 'не вышел'),err or '');sys.exit(0 if ok else 1)"
 if errorlevel 1 (
     echo   git не сработал - качаю архив ветки и кладу только изменённое...
     python "scripts\silent_zip_update.py" %BRANCH%
     if errorlevel 1 set "FAILED=код не обновился - ни git, ни архив не сработали"
 )
+:deps
 
 rem --- 3. Зависимости (тихо) ---------------------------------------
 echo [3/4] Проверяю зависимости...

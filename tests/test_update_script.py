@@ -209,6 +209,80 @@ _old = time.time() - 20 * 60
 os.utime(_p, (_old, _old))
 check(_mark_rc() == 1, 'метка протухла (20 минут) -> перезапуск разрешён')
 
+
+# ── Бот НЕ гаснет, пока новая версия не скачана ───────────────────────────
+# Заказ владельца: «не выключайся, пока не скачается версия». Значит в
+# Windows-ветке /update скачивание и проверка идут ДО запуска обновлятора и
+# ДО os._exit, а при неудаче бот остаётся работать.
+print('== бот не выключается, пока архив не скачан ==')
+DIAG = os.path.join(ROOT, 'cogs', 'diagnostics.py')
+_dsrc = io.open(DIAG, encoding='utf-8').read()
+_w0 = _dsrc.index("if sys .platform .startswith ('win'):")
+_w1 = _dsrc.index('os ._exit (0 )', _w0)
+_win = _dsrc[_w0:_w1]
+_i_dl = _win.index('download_zip')
+_i_vz = _win.index('verify_zip')
+_i_vp = _win.index('verify_python')
+_i_sp = _win.index('save_pending')
+_i_pop = _win.index('Popen')
+check(_i_dl < _i_vz < _i_vp < _i_sp < _i_pop,
+      'порядок: скачать -> проверить архив -> проверить код -> отложить -> запустить обновлятор')
+check(_win.index('clear_pending') < _i_dl,
+      'старый отложенный архив убирают до нового скачивания')
+check(_win.count('return') >= 4,
+      f'на ошибках ветка выходит без перезапуска (return: {_win.count("return")})')
+check('Бот продолжает работать' in _win,
+      'владельцу прямо говорят, что бот остался в сети')
+check(_win.index('remote_sha') < _i_dl,
+      'сверка версий идёт до скачивания — лишнего трафика нет')
+
+# ── Обновлятор применяет готовый архив ───────────────────────────────────
+print('== update_silent.bat применяет готовый архив ==')
+_sbat = io.open(os.path.join(ROOT, 'update_silent.bat'), encoding='utf-8').read()
+check('if exist "data\\.update_pending.zip"' in _sbat,
+      'обновлятор ищет архив, скачанный ботом')
+check(_sbat.index('.update_pending.zip') < _sbat.index('git_update'),
+      'готовый архив проверяют РАНЬШЕ, чем git/скачивание')
+check('--pending' in _sbat, 'готовый архив применяют в режиме --pending')
+check(':deps' in _sbat and _sbat.count('goto deps') == 1,
+      'после готового архива переход сразу к зависимостям')
+check('rem --- 3.' in _sbat and 'rem --- 4.' in _sbat,
+      'шаги зависимостей и запуска на месте')
+
+_szu = io.open(os.path.join(ROOT, 'scripts', 'silent_zip_update.py'), encoding='utf-8').read()
+check("'--pending' in sys.argv" in _szu and 'load_pending' in _szu,
+      'silent_zip_update.py умеет режим --pending')
+check('download_and_apply' in _szu and 'def main' in _szu,
+      'запасной путь (скачать самим) сохранён для ручного запуска')
+
+_ubat = io.open(BAT, encoding='utf-8').read()
+check('.update_pending.zip' in _ubat,
+      'ручной update.bat убирает протухший отложенный архив')
+
+# ── Отложенный архив: настоящий прогон ───────────────────────────────────
+print('== отложенный архив: save -> load -> порча -> clear ==')
+from services import self_update as SU  # noqa: E402
+
+_pdir = tempfile.mkdtemp(prefix='pending_')
+_pzip = os.path.join(_pdir, 'src.zip')
+import zipfile as _zf  # noqa: E402
+
+with _zf.ZipFile(_pzip, 'w') as _z:
+    _z.writestr('repo-x/main.py', 'print(1)\n')
+    _z.writestr('repo-x/config.py', 'x=1\n')
+    _z.writestr('repo-x/web/app.py', 'y=2\n')
+_ok, _err = SU.save_pending(_pdir, _pzip, 'repo-x', 'repo-x', 'deadbeef', 'main')
+check(_ok, f'save_pending сохранил архив ({_err})')
+_z2, _r2, _l2 = SU.load_pending(_pdir)
+check(bool(_z2) and _r2 == 'repo-x', 'load_pending вернул архив и корень')
+with open(_z2, 'ab') as _f:
+    _f.write(b'garbage')
+check(SU.load_pending(_pdir)[0] is None,
+      'битый/недокачанный архив отклоняется по контрольной сумме')
+SU.clear_pending(_pdir)
+check(SU.load_pending(_pdir)[0] is None, 'после clear_pending архива нет')
+shutil.rmtree(_pdir, ignore_errors=True)
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

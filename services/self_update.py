@@ -159,6 +159,82 @@ def note_applied_sha(bot_dir, sha):
         log.debug('self_update: note_applied_sha: %s', _ex)
 
 
+# ── Отложенный архив ──────────────────────────────────────────────────────
+# Заказ владельца: «не выключайся, пока не скачается новая версия». Значит
+# бот обязан скачать и проверить архив САМ, оставаясь живым, и только потом
+# уходить на перезапуск. Скачанное кладём рядом с данными — обновлятор
+# применит готовое, а если скачивание не удалось, бот просто продолжит
+# работать на текущем коде.
+PENDING_ZIP = os.path.join('data', '.update_pending.zip')
+PENDING_META = os.path.join('data', '.update_pending.json')
+
+
+def pending_paths(bot_dir):
+    """Абсолютные пути отложенного архива и его описания."""
+    return (os.path.join(bot_dir, PENDING_ZIP),
+            os.path.join(bot_dir, PENDING_META))
+
+
+def save_pending(bot_dir, zip_path, root, rel, sha, branch):
+    """Отложить проверенный архив до перезапуска. Возвращает (ok, err)."""
+    dst, meta_path = pending_paths(bot_dir)
+    try:
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copyfile(zip_path, dst)
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump({'root': root, 'rel': rel, 'sha': sha or '',
+                       'branch': branch or '', 'size': os.path.getsize(dst),
+                       'sha256': file_sha256(dst)}, f, ensure_ascii=False)
+        return True, None
+    except OSError as ex:
+        log.warning('self_update: save_pending: %s', ex)
+        return False, f'не удалось отложить архив: {ex}'
+
+
+def load_pending(bot_dir):
+    """Взять отложенный архив. Возвращает (zip_path, root, rel) или (None,)*3.
+
+    Архив принимается только если совпала контрольная сумма из описания —
+    иначе обновлятор раскатал бы недокачанный или подменённый файл.
+    """
+    src, meta_path = pending_paths(bot_dir)
+    if not os.path.isfile(src) or not os.path.isfile(meta_path):
+        return None, None, None
+    try:
+        with open(meta_path, encoding='utf-8') as f:
+            meta = json.load(f)
+    except (OSError, json.JSONDecodeError, ValueError) as ex:
+        log.warning('self_update: load_pending: описание не читается: %s', ex)
+        return None, None, None
+    want = str(meta.get('sha256') or '')
+    if not want or file_sha256(src) != want:
+        log.warning('self_update: load_pending: контрольная сумма не сошлась')
+        return None, None, None
+    return src, meta.get('root'), meta.get('rel')
+
+
+def clear_pending(bot_dir):
+    """Убрать отложенный архив после применения (или после отказа)."""
+    for p in pending_paths(bot_dir):
+        try:
+            if os.path.exists(p):
+                os.remove(p)
+        except OSError as ex:
+            log.debug('self_update: clear_pending %s: %s', p, ex)
+
+
+def file_sha256(path):
+    """Контрольная сумма файла (для проверки отложенного архива)."""
+    h = hashlib.sha256()
+    try:
+        with open(path, 'rb') as f:
+            for chunk in iter(lambda: f.read(1024 * 256), b''):
+                h.update(chunk)
+    except OSError:
+        return ''
+    return h.hexdigest()
+
+
 def git_update(bot_dir, branch):
     """Обновить через git: по сети идут только дельты объектов, а не весь бот.
 
