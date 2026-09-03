@@ -173,7 +173,10 @@ def main():
         before, after = os.path.getsize(src), os.path.getsize(dst)
         saved.append((font, len(names), before, after))
 
-    out = '\n'.join(faces) + '\n' + '\n'.join(
+    # Вывод минифицируем: правила и так компактные (их режем из уже сжатого
+    # all.min.css), а перевод строки между ними — лишние байты на каждом
+    # запросе. Lighthouse считает это «unminified CSS».
+    out = ''.join(faces) + ''.join(
         '%s{%s}' % (s, b) for s, b in keep_sel)
     io.open(CSS_OUT, 'w', encoding='utf-8').write(out)
 

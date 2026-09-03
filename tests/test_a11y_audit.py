@@ -232,5 +232,61 @@ appjs = open(os.path.join(ROOT, 'web', 'static', 'app.js'), encoding='utf-8').re
 check('prefers-reduced-motion' in appjs or 'reducedMotion' in appjs,
       'app.js учитывает reduced-motion')
 
+
+# ─── 9. Ориентир <main> на каждой самостоятельной странице ──────────────────
+# Lighthouse/axe: «landmark-one-main» — без <main> читалкам экрана не за что
+# зацепиться. Заказ владельца: «проверишь каждую комнату панель везде».
+print('== 9. Ориентир <main> на самостоятельных страницах ==')
+_bad = []
+for f in _tpls:
+    src = open(os.path.join(TPL_DIR, f), encoding='utf-8').read()
+    if '<html' not in src.lower():
+        continue
+    n_open = len(re.findall(r'<main[\s>]', src, re.I))
+    n_close = len(re.findall(r'</main\s*>', src, re.I))
+    if n_open == 0:
+        _bad.append(f'{f}: нет <main>')
+    elif n_open != n_close:
+        _bad.append(f'{f}: <main> {n_open} vs </main> {n_close}')
+check(not _bad, f'страниц без <main>: {len(_bad)} ({_bad[:3]})')
+
+# ─── 10. Контраст текста: WCAG AA 4.5:1 ─────────────────────────────────────
+# axe «color-contrast»: футер лендинга рисовался --text3 #5f6880 по #05060a —
+# 3,64:1, мелкий текст не читался. Та же переменная была в пяти шаблонах.
+print('== 10. Контраст текста WCAG AA ==')
+
+def _lum(hexcol):
+    h = hexcol.lstrip('#')
+    if len(h) == 3:
+        h = ''.join(c * 2 for c in h)
+    ch = []
+    for k in (0, 2, 4):
+        c = int(h[k:k + 2], 16) / 255.0
+        ch.append(c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4)
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+
+def _ratio(a, b):
+    la, lb = _lum(a), _lum(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+_bad = []
+_checked = 0
+for f in _tpls:
+    src = open(os.path.join(TPL_DIR, f), encoding='utf-8').read()
+    m_bg = re.search(r'--bg\s*:\s*(#[0-9a-fA-F]{3,6})', src)
+    if not m_bg:
+        continue
+    bg = m_bg.group(1)
+    for var in ('--text', '--text2', '--text3'):
+        m = re.search(re.escape(var) + r'\s*:\s*(#[0-9a-fA-F]{3,6})', src)
+        if not m:
+            continue
+        _checked += 1
+        r = _ratio(m.group(1), bg)
+        if r < 4.5:
+            _bad.append('%s %s %s на %s = %.2f:1' % (f, var, m.group(1), bg, r))
+check(not _bad, f'пар текст/фон проверено {_checked}, ниже 4.5:1 — {len(_bad)} ({_bad[:3]})')
+check(_checked >= 10, f'проверили {_checked} пар — выборка не вырожденная')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 sys.exit(1 if FAIL else 0)
