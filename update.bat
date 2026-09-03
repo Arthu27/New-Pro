@@ -98,6 +98,10 @@ if exist requirements.txt (
     if errorlevel 1 echo [PREDUPREZHDENIE] pip zavershilsya s oshibkoy -- smotri vyvod vyshe.
 )
 
+rem Snimaem metku obnovleniya (ee stavit bot pered zapuskom update_silent.bat).
+rem Bez etogo start_bot.bat reshil by, chto obnovlenie eshchyo idyot, i ne podnyal by bota.
+if exist "data\.updating" del /q "data\.updating" >nul 2>&1
+
 if /i "%~1"=="/norestart" (
     echo [5/5] Gotovo. Perezapuska propushchen ^(/norestart^).
     goto :ok

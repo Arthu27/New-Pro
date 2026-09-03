@@ -40,6 +40,16 @@ echo.
 :: только если упал сам процесс. Код выхода 7 = неверный токен (чинить .env).
 if not exist "logs" mkdir "logs"
 :runloop
+rem Если прямо сейчас идёт обновление (бот поставил метку перед запуском
+rem обновлятора) - старый процесс НЕ воскрешаем: иначе он поднимется
+rem посреди замены файлов и обновление сорвётся. Метка старше 15 минут
+rem считается протухшей (обновлятор мог упасть) - тогда перезапускаем.
+python -c "import os,sys,time;p=os.path.join('data','.updating');sys.exit(0 if os.path.exists(p) and time.time()-os.path.getmtime(p)<900 else 1)" >nul 2>&1
+if not errorlevel 1 (
+    echo [ОБНОВЛЕНИЕ] Идёт обновление бота - старый процесс не перезапускается.
+    echo Это окно можно закрыть.
+    exit /b 0
+)
 echo [%date% %time%] === Запуск бота === >> "logs\start_console.log"
 python -X utf8 main.py >> "logs\start_console.log" 2>&1
 set EXITCODE=%ERRORLEVEL%

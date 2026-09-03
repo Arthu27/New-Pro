@@ -612,6 +612,15 @@ class Diagnostics (commands .Cog ):
                 # что там кавычки никто не экранирует.
                 import re as _re_br
                 _br = _re_br.sub(r'[^A-Za-z0-9._/-]', '', str(_branch or 'main')) or 'main'
+                # Метка «идёт обновление». Без неё старый start_bot.bat
+                # через 5 секунд воскрешал процесс посреди замены файлов —
+                # бот поднимался на старом коде, а обновление срывалось.
+                try :
+                    os .makedirs (os .path .join (bot_dir ,'data'),exist_ok =True )
+                    with open (os .path .join (bot_dir ,'data','.updating'),'w',encoding ='utf-8')as _uf :
+                        _uf .write ('%d %s' % (os .getpid (),_br ))
+                except OSError as _me :
+                    _log .warning ('/update: метку обновления не поставить: %s',_me )
                 _sp .Popen (
                 'cmd /c start "Hakumo Updater" cmd /k "%s" %d %s'
                 % (updater ,os .getpid (),_br ),

@@ -14,6 +14,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 
 _TMP = tempfile.mkdtemp(prefix='hakumo_upd_test_')
 os.chdir(_TMP)
@@ -123,6 +124,90 @@ _broken = _sp_chk.list2cmdline(['cmd', '/c', 'start', '"Hakumo Updater"',
                                 'cmd', '/k', r'C:\b\update_silent.bat'])
 check(r'\"' in _broken,
       'list2cmdline действительно экранирует кавычки заголовка (почему список не годится)')
+
+
+# ── Обновлятор не должен «убить себя» и обязан поднять бота обратно ──────
+# Заказ владельца: «бот сразу выключает себя и не может обновиться — надо,
+# чтобы после обновления выключился и включился обратно».
+print('== update_silent.bat: порядок «остановить -> обновить -> поднять» ==')
+_sil = io.open(os.path.join(ROOT, 'update_silent.bat'), encoding='utf-8').read()
+_sbot = io.open(os.path.join(ROOT, 'start_bot.bat'), encoding='utf-8').read()
+
+# Смотрим ТОЛЬКО на сами команды taskkill (в поясняющих комментариях /T
+# упомянут как раз чтобы объяснить, почему его больше нет).
+_tk = [l.strip() for l in _sil.replace('\r\n', '\n').split('\n')
+       if l.strip().lower().startswith('taskkill')]
+check(bool(_tk), 'в обновляторе есть команда taskkill')
+check(all('/T' not in c for c in _tk),
+      'taskkill БЕЗ /T: обновлятор запущен из процесса бота, и /T глушил его самого')
+check('taskkill /PID %OLD_PID% /F' in _sil,
+      'старый процесс бота всё равно гасится по PID')
+
+_i_kill = _sil.index('taskkill')
+_i_git = _sil.index('git_update')
+_i_start = _sil.index('start "Hakumo Bot"')
+check(_i_kill < _i_git < _i_start,
+      'порядок верный: сначала остановить, потом обновить, поднять в самом конце')
+
+check(':waitdead' in _sil and 'tasklist /FI "PID eq %OLD_PID%"' in _sil,
+      'обновлятор ждёт, пока процесс отпустит файлы (иначе замена молча не выходила)')
+
+check('data\\.updating' in _sil and 'del /q "data\\.updating"' in _sil,
+      'метку обновления снимает обновлятор перед стартом свежей версии')
+check(_sil.index('del /q "data\\.updating"') < _i_start,
+      'метка снимается ДО запуска бота, а не после')
+
+check('set "FAILED=' in _sil and 'if not "%FAILED%"==""' in _sil,
+      'при неудаче обновления окно остаётся открытым с объяснением')
+# Перезапуск обязан быть всегда: между обновлением и стартом нет выхода из bat.
+_between = _sil[_i_git:_i_start]
+check('exit /b' not in _between,
+      'между обновлением и запуском бота нет выхода - бот поднимается всегда')
+
+print('== start_bot.bat не воскрешает бота посреди обновления ==')
+check('.updating' in _sbot and ':runloop' in _sbot,
+      'в цикле перезапуска start_bot.bat есть проверка метки обновления')
+_i_loop = _sbot.index(':runloop')
+_i_mark = _sbot.index('.updating')
+_i_py = _sbot.index('main.py', _i_loop)
+check(_i_loop < _i_mark < _i_py,
+      'метка проверяется до запуска main.py, а не после')
+check('900' in _sbot,
+      'метка старше 15 минут считается протухшей - бот поднимется даже если обновлятор упал')
+
+print('== метку ставит сам бот перед запуском обновлятора ==')
+_i_mark_py = _diag.index("'.updating'")
+_i_popen = _diag.index('_sp .Popen (')
+check(0 < _i_mark_py < _i_popen,
+      'cogs/diagnostics.py пишет data/.updating ДО запуска update_silent.bat')
+
+_upd = io.open(os.path.join(ROOT, 'update.bat'), encoding='utf-8').read()
+check('data\\.updating' in _upd,
+      'ручной update.bat тоже снимает метку (иначе start_bot.bat не поднимет бота)')
+
+print('== логика возраста метки (настоящий прогон однострочника) ==')
+import subprocess
+_ONE = ('import os,sys,time;p=os.path.join("data",".updating");'
+        'sys.exit(0 if os.path.exists(p) and time.time()-os.path.getmtime(p)<900 else 1)')
+_d = os.path.join(_TMP, 'mark_probe')
+os.makedirs(os.path.join(_d, 'data'), exist_ok=True)
+
+
+def _mark_rc():
+    return subprocess.run([sys.executable, '-c', _ONE], cwd=_d,
+                          capture_output=True).returncode
+
+
+_p = os.path.join(_d, 'data', '.updating')
+if os.path.exists(_p):
+    os.remove(_p)
+check(_mark_rc() == 1, 'метки нет -> перезапуск разрешён (код 1)')
+with open(_p, 'w', encoding='utf-8') as _f:
+    _f.write('1234 main')
+check(_mark_rc() == 0, 'свежая метка -> старый процесс НЕ воскрешаем (код 0)')
+_old = time.time() - 20 * 60
+os.utime(_p, (_old, _old))
+check(_mark_rc() == 1, 'метка протухла (20 минут) -> перезапуск разрешён')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
