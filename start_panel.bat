@@ -14,9 +14,9 @@ if /i "%~1"=="--demo" set DEMO=1
 
 echo ============================================================
 if "%DEMO%"=="1" (
-    echo   HAKUMO - ВЕБ-ПАНЕЛЬ (ДЕМО-превью: данные выдуманные!)
+    echo   HAKUMO - ВЕБ-ПАНЕЛЬ ^(ДЕМО-превью: данные выдуманные!^)
 ) else (
-    echo   HAKUMO - ВЕБ-ПАНЕЛЬ (боевой режим, настройки из .env)
+    echo   HAKUMO - ВЕБ-ПАНЕЛЬ ^(боевой режим, настройки из .env^)
 )
 echo ============================================================
 echo.
@@ -45,13 +45,13 @@ echo [2/4] Устанавливаю зависимости (только для 
 .venv\Scripts\python -m pip install -r requirements-panel.txt --quiet
 
 if "%DEMO%"=="1" (
-    echo [3/4] Готовлю демо-данные (выдуманный сервер, участники, логи)...
+    echo [3/4] Готовлю демо-данные ^(выдуманный сервер, участники, логи^)...
     set DEMO_MODE=1
     .venv\Scripts\python scripts\seed_demo_panel.py
     REM Панель читает пресет превью вместо боевого .env (config.py: DOTENV_PATH)
     set DOTENV_PATH=config\panel_preview.env
 ) else (
-    echo [3/4] Демо-посев пропущен (боевой режим — только реальные данные).
+    echo [3/4] Демо-посев пропущен ^(боевой режим — только реальные данные^).
     REM Панель работает за Cloudflare Tunnel: включает редирект http->https
     REM и заголовок HSTS в web/app.py. Без этого internet.nl показывает
     REM «HTTPS redirect: no» и «HSTS: None». Для локалки не нужно — там
@@ -60,8 +60,8 @@ if "%DEMO%"=="1" (
     if not exist .env (
         echo.
         echo [ВНИМАНИЕ] .env не найден — панель не знает ни токена, ни твоего сервера.
-        echo            1) Скопируй шаблон:  copy .env.example .env
-        echo            2) Заполни TOKEN и MAIN_GUILD_ID (ID твоего сервера).
+        echo            1^) Скопируй шаблон:  copy .env.example .env
+        echo            2^) Заполни TOKEN и MAIN_GUILD_ID ^(ID твоего сервера^).
         echo            Просто посмотреть витрину:  start_panel.bat demo
         echo.
     )
@@ -74,7 +74,7 @@ if "%DEMO%"=="1" (
     echo     Логин:  owner
     echo     Пароль: preview123
 ) else (
-    echo     Логин/пароль: из .env (PANEL_USER / PANEL_PASSWORD)
+    echo     Логин/пароль: из .env ^(PANEL_USER / PANEL_PASSWORD^)
 )
 echo     Остановить: Ctrl+C или закрыть окно
 echo.

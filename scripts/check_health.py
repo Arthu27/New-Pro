@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Глубокий аудит «идеальности» Hakumo — нет даже мелких проблем.
+r"""Глубокий аудит «идеальности» Hakumo — нет даже мелких проблем.
 
 Запуск:  python3 scripts/check_health.py        (Linux/macOS)
          python scripts\check_health.py         (Windows VDS)

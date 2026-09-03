@@ -36,7 +36,7 @@ rem БЕЗ /T. Обновлятор запущен из процесса бот�
 rem в том же дереве: taskkill /T глушил это самое окно, обновление
 rem обрывалось на первом шаге, а бот уже был мёртв.
 if not "%OLD_PID%"=="" (
-    echo [1/4] Останавливаю текущий процесс бота (PID %OLD_PID%)...
+    echo [1/4] Останавливаю текущий процесс бота ^(PID %OLD_PID%^)...
     taskkill /PID %OLD_PID% /F >nul 2>&1
 )
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" | Where-Object { $_.CommandLine -match 'main\.py' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }" >nul 2>&1

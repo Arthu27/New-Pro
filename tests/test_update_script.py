@@ -349,6 +349,60 @@ for _dp, _dn, _fn in os.walk(ROOT):
 check(not _bad_crlf, f'.bat/.cmd без CRLF: {len(_bad_crlf)} ({_bad_crlf})')
 check(_n_bat >= 6, f'проверено .bat/.cmd во всём репозитории: {_n_bat}')
 
+# ── «Голые» скобки в тексте команд внутри if/else-блоков ─────────────────
+# cmd закрывает блок первой НЕЭКРАНИРОВАННОЙ «)» в строке команды (echo и
+# т.п.) — вложенные if/else и кавычки он понимает, а текст после echo — нет.
+# «)» в echo внутри блока обрывает блок, остаток строки валится ошибкой
+# «… was unexpected at this time»: так update_silent.bat падал на [1/4] —
+# код не применялся, бот не поднимался. Скобки в тексте экранируют ^( ^).
+print('== в .bat/.cmd нет «голых» ) внутри if/else-блоков ==')
+_bad_paren = []
+for _dp, _dn, _fn in os.walk(ROOT):
+    _dn[:] = [d for d in _dn if d not in
+              ('.venv', 'venv', 'node_modules', '.git', '__pycache__',
+               'dist', '.arena', '.mypy_cache', '.pytest_cache')]
+    for _name in sorted(_fn):
+        if not _name.endswith(('.bat', '.cmd')):
+            continue
+        _path = os.path.join(_dp, _name)
+        _lines = io.open(_path, encoding='utf-8').read().splitlines()
+        _depth = 0
+        for _ln, _line in enumerate(_lines, 1):
+            _s = _line.strip()
+            _low = _s.lower()
+            if not _s or _low.startswith(('rem', '::')) or _low.startswith('for '):
+                continue
+            if _depth == 0:
+                if _s.endswith('(') and (_low.startswith(('if ', 'else'))
+                                         or ') else' in _low):
+                    _depth = 1
+                continue
+            # внутри блока
+            if _s.startswith(')'):
+                _rest = _s[1:].strip().lower()
+                _depth -= 1
+                if _rest.startswith('else') and _rest.endswith('('):
+                    _depth += 1
+                continue
+            if _s.endswith('(') and _low.startswith(('if ', 'else')):
+                _depth += 1
+                continue
+            # «голую» ) ищем вне кавычек и вне ^-экранирования
+            _in_q = False
+            _prev = ''
+            for _ch in _line:
+                if _prev != '^' and _ch == '"':
+                    _in_q = not _in_q
+                elif not _in_q and _prev != '^' and _ch == ')':
+                    _bad_paren.append('%s:%d: %s'
+                                      % (os.path.relpath(_path, ROOT), _ln,
+                                         _s[:80]))
+                    break
+                _prev = _ch
+check(not _bad_paren,
+      'нет «голых» ) в тексте команд внутри блоков'
+      + (f' ({"; ".join(_bad_paren[:4])})' if _bad_paren else ' — все блоки чистые'))
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)

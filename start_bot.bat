@@ -57,7 +57,7 @@ echo.
 echo [%date% %time%] Бот остановился (код %EXITCODE%). >> "logs\start_console.log"
 if "%EXITCODE%"=="7" (
     echo.
-    echo [ОШИБКА] Неверный токен Discord (код 7).
+    echo [ОШИБКА] Неверный токен Discord ^(код 7^).
     echo Откройте .env и исправьте строку TOKEN=... — перезапуск не поможет.
     echo Подробности: logs\start_console.log
     echo.
