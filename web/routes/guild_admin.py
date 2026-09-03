@@ -931,7 +931,16 @@ def register(ctx):
                         stage =True 
                     if c .type ==discord .ChannelType .forum :
                         forum =True 
-                if hasattr (c ,'members'):
+                # «Подключено» имеет смысл только для голосового канала —
+                # сколько людей сейчас в нём сидит. Раньше c.members звали у
+                # КАЖДОГО канала, а в discord.py у текстового канала members —
+                # это «все, кто канал видит»: [m for m in guild.members if
+                # permissions_for(m).read_messages] (discord/channel.py:419).
+                # На сервере в 20 000 участников это 20 000 проверок прав на
+                # КАЖДЫЙ текстовый канал — десятки секунд на один /api/channels.
+                # У голосового members берётся из guild._voice_states
+                # (discord/channel.py:1132) и стоит копейки.
+                if ch_type in ('voice', 'stage'):
                     try :
                         connected =len ([m for m in c .members if not getattr (m ,'bot',False )])
                     except Exception :
