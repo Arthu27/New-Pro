@@ -45,6 +45,55 @@ def register(ctx):
                 'updated': datetime.now(timezone.utc).isoformat(),
             })
         bot = _app.bot_instance
+        # Панель отдельным процессом от бота: публичная статус-страница
+        # показывает правду по пульсу бота (data/bot_state.json).
+        if bot is None:
+            try:
+                from services import bot_bridge as _bb
+                _st = _bb.read_state()
+                _s = _bb.state_status(_st)
+                if _s in ('online', 'starting'):
+                    _guilds = _bb.guild_ids(_st)
+                    _users_cached = 0
+                    for _g in (_st.get('guilds') or []):
+                        try:
+                            _users_cached += int(_g.get('member_count') or 0)
+                        except Exception as _mcex:
+                            _log.debug('status-public member_count: %s', _mcex)
+                    _uptime_sec = 0
+                    try:
+                        _rlp = os.path.join(_REPO_ROOT, 'data', 'run_log.json')
+                        if os.path.exists(_rlp):
+                            with open(_rlp, encoding='utf-8') as _rf:
+                                _rows = json.load(_rf)
+                            for _row in _rows or []:
+                                if _row.get('event') == 'start' and _row.get('ts'):
+                                    _started = datetime.fromisoformat(_row['ts'])
+                                    _uptime_sec = max(
+                                        0, int((datetime.now(timezone.utc)
+                                                - _started).total_seconds()))
+                                    break
+                    except Exception as _uex:
+                        _log.debug('status-public uptime: %s', _uex)
+                    _h, _m, _s2 = (_uptime_sec // 3600,
+                                   (_uptime_sec % 3600) // 60, _uptime_sec % 60)
+                    _days = _uptime_sec // 86400
+                    _up_human = (f'{_days}д {_h % 24}ч {_m}м' if _days
+                                 else f'{_h}ч {_m}м {_s2}с')
+                    return jsonify({
+                        'ok': True,
+                        'online': _s == 'online',
+                        'latency_ms': _st.get('latency_ms') or 0,
+                        'guilds': len(_guilds),
+                        'users_cached': _users_cached,
+                        'uptime_sec': _uptime_sec,
+                        'uptime_human': _up_human,
+                        'version': '2.0',
+                        'remote': True,
+                        'updated': datetime.now(timezone.utc).isoformat(),
+                    })
+            except Exception as _sex:
+                _log.debug('status-public: remote bridge: %s', _sex)
         online = False
         latency_ms = 0
         guilds = 0

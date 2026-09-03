@@ -482,7 +482,22 @@ def after_request (response ):
         if response .is_json :
             _d =response .get_json (silent =True )
             if isinstance (_d ,dict )and _d .get ('error')=='Бот офлайн':
-                _d ['error']='Бот офлайн — запусти его через start.bat и попробуй ещё раз'
+                # Бот может быть ЖИВ, но панель запущена отдельным процессом
+                # (start_panel + start_bot / gunicorn / VDS): действие требует
+                # бота в этом процессе. Это не «бот выключен» — объясняем точно.
+                _remote_alive =False
+                if bot_instance is None :
+                    try :
+                        from services import bot_bridge as _bb
+                        _remote_alive =_bb .state_status ()=='online'
+                    except Exception :
+                        _remote_alive =False
+                if _remote_alive :
+                    _d ['error']=('Бот работает, но панель запущена отдельным '
+                                  'процессом — действие выполняется только при '
+                                  'запуске панели вместе с ботом (start.bat / start.sh)')
+                else :
+                    _d ['error']='Бот офлайн — запусти его через start.bat и попробуй ещё раз'
                 response .set_data (json .dumps (_d ,ensure_ascii =False ))
     except Exception as _ex:
         _log .debug ("after_request(): офлайн-подсказка подавлена: %s",_ex )
@@ -1091,6 +1106,22 @@ def health_check ():
             'latency':round (12 + (_time .time ()*10 %19 ),2 ),
             'timestamp':datetime .now (timezone.utc).isoformat ()
             }),200 
+        # Панель отдельным процессом от бота: здоровье по пульсу бота
+        # (data/bot_state.json) — мониторинг не врёт «degraded», когда бот жив.
+        try :
+            from services import bot_bridge as _bb
+            _st =_bb .read_state ()
+            if _bb .state_status (_st )=='online':
+                return jsonify ({
+                'status':'healthy',
+                'bot':'ready',
+                'guilds':len (_bb .guild_ids (_st )),
+                'latency':_st .get ('latency_ms')or 0 ,
+                'remote':True ,
+                'timestamp':datetime .now (timezone.utc).isoformat ()
+                }),200 
+        except Exception as _hex :
+            _log .debug ('health: remote bridge: %s',_hex )
         return jsonify ({
         'status':'degraded',
         'bot':'connecting',
@@ -1854,6 +1885,34 @@ def api_stats ():
             'latency':round (12 + (_time .time ()*10 %19 ),2 ),
             'status':'online'
             })
+        # Панель отдельным процессом от бота: правда — из пульса бота
+        # (data/bot_state.json, services.bot_bridge). Раньше тут всегда был
+        # «offline», хотя бот работал — шапка/дашборд/диагностика врали.
+        try :
+            from services import bot_bridge as _bb
+            _st =_bb .read_state ()
+            _st_status =_bb .state_status (_st )
+            if _st_status in ('online','starting'):
+                _guilds =_bb .guild_ids (_st )
+                _users =0
+                for _g in (_st .get ('guilds')or []):
+                    try :
+                        _users +=int (_g .get ('member_count')or 0 )
+                    except Exception as _mcex :
+                        _log .debug ('api_stats(): member_count: %s',_mcex )
+                return jsonify ({
+                'guilds':len (_guilds ),
+                'users':_users ,
+                # presences (сколько участников «в сети») из пульса не видны —
+                # их знает только живой кэш бота; 0 честнее, чем выдумывать.
+                'online':0 ,
+                'latency':_st .get ('latency_ms')or 0 ,
+                'status':_st_status ,
+                'presence':'online' if _st_status =='online'else 'offline',
+                'remote':True
+                })
+        except Exception as _sex :
+            _log .debug ('api_stats(): remote bridge: %s',_sex )
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.',
         'status':'offline','presence':'offline'})
 

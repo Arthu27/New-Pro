@@ -157,8 +157,14 @@ def resolve_guild (guild_id ):
 def guild_channels_roles (guild_id ):
     """(текстовые каналы, роли) гильдии для пикеров настроек.
 
-    Живой гильдии нет — отдаём демо-состав (тот же, что /api/channels и
-    /api/roles), иначе пикер остаётся с одной строкой «— не задан —».
+    Порядок источников:
+    1) живая гильдия бота в этом процессе;
+    2) бот в ОТДЕЛЬНОМ процессе — реальные снимки из моста
+       (data/bot_roles_<gid>.json + panel_channels_cache_<gid>.json);
+    3) иначе — известный состав-плейсхолдер (тот же, что /api/channels и
+       /api/roles): живой гильдии нет, а пикер обязан оставаться живым
+       (историческое поведение — селект с одной строкой «— не задан —»
+       выглядел сломанным при холодном кэше гильдий).
     """
     guild =resolve_guild (guild_id )
     if guild is not None :
@@ -167,6 +173,17 @@ def guild_channels_roles (guild_id ):
         roles =[{'id':str (r .id ),'name':r .name }
                 for r in getattr (guild ,'roles',[])or []
                 if r .id !=guild .id ]
+        return channels ,roles
+    # Панель отдельным процессом от бота: снимки, которые бот пишет в data/
+    # (services.bot_bridge) — реальные роли и текстовые каналы сервера.
+    from services import bot_bridge as _bb
+    if _bb .bot_alive_for (guild_id ):
+        channels =[{'id':str (c .get ('id','')),'name':c .get ('name','')}
+                  for c in (_bb .read_channels (guild_id )or [])
+                  if c .get ('type')=='text']
+        roles =[{'id':r ['id'],'name':r ['name']}
+                for r in (_bb .read_roles (guild_id )or [])
+                if not r .get ('managed')and str (r .get ('id',''))!=str (guild_id )]
         return channels ,roles
     channels =[{'id':str (c .get ('id','')),'name':c .get ('name','')}
               for c in demo_channels_list (guild_id )
@@ -675,6 +692,15 @@ def register(ctx):
             # демо: типичный набор ролей (пустой список = страница «не листается»)
             if _app ._demo_mode ():
                 return jsonify (sorted (_demo_roles_load (guild_id ),key =lambda x :-x ['members']))
+            # панель отдельным процессом, бот жив по пульсу: реальные роли из
+            # снимка (id/имя/цвет) — пикеры «роль сервера» по всей панели живые.
+            from services import bot_bridge as _bb
+            if _bb .bot_alive_for (guild_id ):
+                rows =[{'id':r .get ('id'),'name':r .get ('name'),
+                        'color':r .get ('color')or '','members':0}
+                       for r in (_bb .read_roles (guild_id )or [])
+                       if r .get ('id')]
+                return jsonify (rows)
             return jsonify ([])
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ([])

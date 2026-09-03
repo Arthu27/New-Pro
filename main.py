@@ -1204,6 +1204,68 @@ async def load_cogs():
     if len(_kept) >= slash_budget.WARN_AT:
         log.warning(f"Слеш-меню почти полное ({len(_kept)}/100) — пора пересмотреть KEEP_SLASH")
 
+async def _bridge_loop(bot):
+    """Пульс бота для веб-панели, работающей ОТДЕЛЬНЫМ процессом.
+
+    Раз в ~5 секунд пишет data/bot_state.json (статус, пинг, гильдии) и
+    обновляет дисковый снимок ролей data/bot_roles_<gid>.json — только когда
+    роли реально изменились. Панель читает эти файлы из любого процесса
+    (services/bot_bridge): без моста отдельная панель (start_panel, gunicorn,
+    VDS) всегда видела bot_instance=None и писала «Бот офлайн», даже когда
+    бот работал. Файлы крошечные, диск не дёргается.
+    """
+    from services import bot_bridge as _bb
+    while True:
+        try:
+            if bot is None:
+                _bb.write_state('offline')
+            else:
+                try:
+                    closed = bool(bot.is_closed())
+                except Exception:
+                    closed = False
+                if closed:
+                    _bb.write_state('offline')
+                    await asyncio.sleep(5)
+                    continue
+                guilds = list(getattr(bot, 'guilds', None) or [])
+                if guilds and bot.is_ready():
+                    lat_ms = None
+                    try:
+                        _lat = getattr(bot, 'latency', None)
+                        if _lat is not None:
+                            lat_ms = round(float(_lat) * 1000, 1)
+                    except Exception:
+                        lat_ms = None
+                    _bb.write_state(
+                        'online', latency_ms=lat_ms,
+                        guilds=[{'id': str(g.id),
+                                 'name': str(getattr(g, 'name', '') or ''),
+                                 'member_count': int(getattr(g, 'member_count', 0) or 0)}
+                                for g in guilds])
+                    # Роли и каналы меняются редко: снимки пишутся по сигнатуре
+                    # (только реальные изменения) — диск не дёргается.
+                    for g in guilds:
+                        try:
+                            _bb.write_roles(g.id,
+                                            getattr(g, 'roles', None) or [])
+                            _bb.write_channels(g.id,
+                                               getattr(g, 'channels', None) or [])
+                        except Exception as _r_ex:
+                            log.debug('_bridge_loop: роли/каналы %s: %s',
+                                      g.id, _r_ex)
+                else:
+                    _bb.write_state(
+                        'starting',
+                        guilds=[{'id': str(g.id),
+                                 'name': str(getattr(g, 'name', '') or ''),
+                                 'member_count': int(getattr(g, 'member_count', 0) or 0)}
+                                for g in guilds])
+        except Exception as _ex:
+            log.debug('_bridge_loop: %s', _ex)
+        await asyncio.sleep(5)
+
+
 async def main():
     # ПЕРВАЯ строка запуска — какой код вообще работает. Инцидент 30.08:
     # /update со стандартным источником (main, без фиксов) молча откатил
@@ -1321,6 +1383,13 @@ async def main():
 
     from web.app import app, set_bot_instance
     set_bot_instance(bot)
+    # Пульс состояния бота → data/bot_state.json + снимки ролей: чтобы
+    # панель, запущенная отдельным процессом (start_panel, gunicorn, VDS),
+    # видела «бот онлайн» и живые роли, а не вечное «Бот офлайн».
+    try:
+        asyncio.create_task(_bridge_loop(bot))
+    except Exception as _ex:
+        log.debug('main(): bridge loop: %s', _ex)
     _start_web_server(app)
     print("[ВЕБ] Веб панель: http://localhost:5001")
     _start_tunnel_sidecar()

@@ -18,9 +18,8 @@
 </div>
 
 <div id="rsBotWarn" class="rs-warnbar" hidden>
-  <i class="fas fa-triangle-exclamation"></i>
-  <span id="rsBotWarnLive">Бот офлайн — список ролей сервера недоступен, сохранять нельзя. Настройки вернутся, когда бот включится.</span>
-  <span id="rsBotWarnDemo" hidden>Бот офлайн — в превью показан демо-набор ролей, сохранять нельзя. На живом сервере список подтянется, когда бот включится.</span>
+  <i class="fas fa-circle-info" id="rsWarnIcon"></i>
+  <span id="rsBotWarnText"></span>
 </div>
 
 <div id="rsDeletedWarn" class="rs-warnbar" hidden>
@@ -177,37 +176,76 @@ function refreshPills() {
   });
 }
 
+function rsWarn(d) {
+  /* Полоса-статус сверху: честно объясняет, почему список ролей пуст/живой.
+     Случаи: демо-превью, бот подключается, бот офлайн, бот не видит сервер,
+     роли ещё догружаются. Пусто — бот онлайн и роли на месте. */
+  var bar = $('rsBotWarn');
+  var text = '';
+  var icon = 'fa-circle-info';
+  if (d.roles_source === 'demo') {
+    text = 'Это превью без живого Discord: показан демо-набор ролей. Сохранение идёт только в демо-данные превью — на реальном сервере список подтянется сам, когда запустишь бота (start.bat / start.sh).';
+  } else if (d.bot_state === 'starting' && !d.roles_count) {
+    text = 'Бот подключается к Discord — список ролей сервера появится через несколько секунд. Сохранить можно будет сразу после подключения.';
+    icon = 'fa-triangle-exclamation';
+  } else if (!d.bot_online && !d.roles_count) {
+    text = 'Бот офлайн — список ролей сервера недоступен, сохранять нельзя. Настройки вернутся, когда бот включится (start.bat / start.sh).';
+    icon = 'fa-triangle-exclamation';
+  } else if (d.bot_online && !d.bot_guild_ok) {
+    text = 'Бот не видит этот сервер — проверь MAIN_GUILD_ID в .env и пригласи бота на сервер. Пока роли недоступны, сохранять нельзя.';
+    icon = 'fa-triangle-exclamation';
+  } else if (d.bot_online && !d.roles_count) {
+    text = 'Роли сервера ещё загружаются ботом — обнови страницу через несколько секунд.';
+  }
+  if (!text) { bar.hidden = true; return; }
+  $('rsBotWarnText').textContent = text;
+  $('rsWarnIcon').className = 'fas ' + icon;
+  bar.hidden = false;
+}
+
+function rsCanSave(d) {
+  /* Живой бот и роли на месте (или снимок бота с диска) — сохраняем.
+     Демо-превью — тоже (пишем только в демо-данные, без Discord). */
+  if (d.roles_source === 'demo') return true;
+  return d.bot_online && d.roles_count > 0;
+}
+
+function rsRender(d) {
+  VIEW = d;
+  ROLES = d.roles || [];
+  rsWarn(d);
+  $('rsDeletedWarn').hidden = !(d.unknown_roles > 0);
+  var map = d.mapping || {};
+  $('rsKinds').innerHTML = (d.kinds || []).map(function (k) {
+    return rsCard(k, map[k.key] || '0');
+  }).join('');
+  $('rsLevels').innerHTML = (d.levels || []).map(function (k) {
+    return rsCard(k, map[k.key] || '0');
+  }).join('');
+  $('rsInfo').innerHTML = (d.punish_info || []).map(function (k) {
+    return '<div class="rs-role rs-info"><div class="rs-role-name"><i class="fas ' + k.icon + '"></i> ' +
+      esc(k.label) + '</div><div class="rs-role-hint">' + esc(k.hint) + '</div></div>';
+  }).join('');
+  var lvlInp = $('rsLvlCount');
+  lvlInp.min = d.warn_level_min || 1;
+  lvlInp.max = d.warn_level_max || 100;
+  $('rsLvlRange').textContent = 'Любой уровень от ' + (d.warn_level_min || 1) +
+    ' до ' + (d.warn_level_max || 100) + ' предупреждений.';
+  document.querySelectorAll('#rsKinds select, #rsLevels select').forEach(function (sel) {
+    sel.addEventListener('change', refreshPills);
+  });
+  refreshPills();
+  var sb = $('rsSave');
+  sb.disabled = !rsCanSave(d);
+  sb.title = sb.disabled ? 'Сохранить можно, когда бот онлайн и роли сервера загружены' : '';
+}
+
 async function rsLoad() {
   try {
     var d = await fetch('/api/guild/' + GUILD_ID + '/role-settings', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); });
     if (!d.success) { toast(d.error || 'Не удалось загрузить настройки', false); return; }
-    VIEW = d;
-    ROLES = d.roles || [];
-    /* Офлайн показываем ТОЛЬКО если бот реально не поднят (d.bot_online=false),
-       а не по пустому списку: роли могут ещё догружаться при живом боте. */
-    $('rsBotWarn').hidden = d.bot_online !== false;
-    $('rsDeletedWarn').hidden = !(d.unknown_roles > 0);
-    var map = d.mapping || {};
-    $('rsKinds').innerHTML = (d.kinds || []).map(function (k) {
-      return rsCard(k, map[k.key] || '0');
-    }).join('');
-    $('rsLevels').innerHTML = (d.levels || []).map(function (k) {
-      return rsCard(k, map[k.key] || '0');
-    }).join('');
-    $('rsInfo').innerHTML = (d.punish_info || []).map(function (k) {
-      return '<div class="rs-role rs-info"><div class="rs-role-name"><i class="fas ' + k.icon + '"></i> ' +
-        esc(k.label) + '</div><div class="rs-role-hint">' + esc(k.hint) + '</div></div>';
-    }).join('');
-    var lvlInp = $('rsLvlCount');
-    lvlInp.min = d.warn_level_min || 1;
-    lvlInp.max = d.warn_level_max || 100;
-    $('rsLvlRange').textContent = 'Любой уровень от ' + (d.warn_level_min || 1) +
-      ' до ' + (d.warn_level_max || 100) + ' предупреждений.';
-    document.querySelectorAll('#rsKinds select, #rsLevels select').forEach(function (sel) {
-      sel.addEventListener('change', refreshPills);
-    });
-    refreshPills();
+    rsRender(d);
   } catch (e) {
     toast('Ошибка сети', false);
   }
@@ -227,17 +265,18 @@ async function rsSave() {
       body: JSON.stringify({ mapping: mapping })
     }).then(function (r) { return r.json(); });
     if (d.success) {
-      toast(d.message || 'Роли наказаний сохранены', true);
-      VIEW = d; ROLES = d.roles || ROLES;
-      rsLoad();
-    } else {
-      toast(d.error || 'Ошибка сохранения', false);
+      toast(d.demo
+        ? 'Сохранено в демо-данные превью (живой Discord не нужен)'
+        : (d.message || 'Роли наказаний сохранены'), true);
+      /* Ответ POST — уже полное view: не дёргаем сервер вторым GET. */
+      rsRender(d);
+      return;
     }
+    toast(d.error || 'Ошибка сохранения', false);
   } catch (e) {
     toast('Сеть моргнула — попробуйте ещё раз', false);
-  } finally {
-    btn.disabled = false;
   }
+  btn.disabled = false;
 }
 
 /* ── уровни варнов: добавляем и удаляем сами ─────────────────────── */

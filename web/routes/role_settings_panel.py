@@ -19,7 +19,8 @@ from web.routes._common import jsonify
 
 from services import punish_roles as PR
 from web.routes._common import _fire_panel_notification, _log
-from web.routes.mod_settings import guild_roles, bot_online
+from web.routes.mod_settings import (guild_roles, bot_state,
+                                     bot_sees_guild, live_guild)
 
 _ID_RE = re.compile(r'^\d{1,22}$')
 
@@ -83,6 +84,21 @@ def settings_view(gid):
         mapping[k] = sid
         if available and sid not in avail_ids:
             unknown += 1
+    st = bot_state()            # 'online' | 'starting' | 'offline'
+    online = st == 'online'
+    guild_ok = bot_sees_guild(gid)
+    import web.app as _app
+    demo_on = bool(_app._demo_mode())
+    # Откуда пришли роли: живой кэш бота / снимок бота на диске (панель
+    # отдельным процессом) / демо-набор превью. Пусто — бота нет и ролей нет.
+    source = ''
+    if available:
+        if demo_on:
+            source = 'demo'
+        elif live_guild(gid) is not None:
+            source = 'live'
+        else:
+            source = 'disk'
     return {
         'success': True,
         'kinds': kinds_view(),
@@ -94,13 +110,17 @@ def settings_view(gid):
         'mapping': mapping,
         'roles': available,
         'roles_count': len(available),
-        # список есть, а бота нет — значит показан демо-набор (превью),
-        # а не роли живого сервера; текст предупреждения это учитывает
-        'roles_from_demo': bool(available) and not bot_online(),
+        # список есть, а бота в процессе нет — демо/снимок, а не живой кэш
+        'roles_from_demo': source == 'demo',
+        'roles_source': source,
+        'demo': demo_on,
         'unknown_roles': unknown,
-        # Онлайн определяем по ФАКТУ бота, а не по списку ролей: при живом
-        # боте роли могли ещё не догрузиться — раньше это врало «Бот офлайн».
-        'bot_online': bot_online(),
+        # Онлайн определяем по ФАКТУ бота (в процессе или по свежему пульсу),
+        # а не по списку ролей: при живом боте роли могли ещё не догрузиться —
+        # раньше это врало «Бот офлайн».
+        'bot_online': online,
+        'bot_state': st,
+        'bot_guild_ok': guild_ok,
     }
 
 

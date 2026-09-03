@@ -66,6 +66,7 @@ def clean_demo_data():
             f'data/rules_{gid}.json', f'data/xp_{gid}.json',
             f'data/leveling_{gid}.json', f'data/antiraid_{gid}.json',
             f'data/security_{gid}.json', f'data/guardian_{gid}.json',
+            f'data/bot_roles_{gid}.json',   # снимки ролей моста (services/bot_bridge)
         ]
     gid_files += ['data/demo_channels.json', 'data/demo_cog_states.json']
     for path in gid_files:
