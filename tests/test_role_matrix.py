@@ -72,6 +72,7 @@ PUBLIC = {
     'index', 'welcome_page', 'login', 'logout', 'register',
     'api_forgot_password', 'api_reset_password', 'api_discord_login',
     'api_discord_check', 'api_check_member', 'api_login_suggest',
+    'api_login_probe',
     'api_public_apply', 'api_public_guilds', 'public_apply',
     'api_status_public', 'status_public_page', 'api_voice_command',
     'favicon', 'health_check', 'static',

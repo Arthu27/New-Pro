@@ -845,10 +845,12 @@
     stepN: 0,
     finishCb: null,
     flow: '',
+    gate: null,   /* шаг «Проверяем роль и доступ»: настоящая проверка (ok, err) */
     start: function (flow, onFinish) {
       var ov = $('authCheck');
       this.flow = flow || '';
       this.finishCb = onFinish || null;
+      this.gate = null;
       this.steps = Array.prototype.slice.call(document.querySelectorAll('#authSteps li'));
       if (!ov || !this.steps.length) {
         if (this.finishCb) this.finishCb();
@@ -873,13 +875,34 @@
         cur.classList.add('on');
         var ico = cur.querySelector('.s-ico');
         ico.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
-        setTimeout(function () {
+        var markDone = function () {
           cur.classList.remove('on');
           cur.classList.add('done');
           ico.innerHTML = '<i class="fas fa-check"></i>';
           self.stepN++;
           self.tick();
-        }, self.stepN === 2 ? 500 : 430);
+        };
+        /* Шаг «Проверяем роль и доступ» (индекс 2): если задан gate —
+           это НАСТОЯЩАЯ проверка на сервере: ждём её ответ, а не таймер.
+           Ошибка показывает причину прямо в оверлее + кнопку retry. */
+        if (self.stepN === 2 && typeof self.gate === 'function') {
+          self.gate(markDone, function (text) {
+            cur.classList.remove('on');
+            cur.classList.add('err');
+            ico.innerHTML = '<i class="fas fa-xmark"></i>';
+            var sub = $('authCheckSub');
+            if (sub) sub.textContent = 'Не получилось войти.';
+            var err = $('authCheckErr');
+            if (err) {
+              err.textContent = text || 'Что-то пошло не так — попробуйте ещё раз.';
+              err.classList.add('show');
+            }
+            var retry = $('authCheckRetry');
+            if (retry) retry.classList.add('show');
+          });
+        } else {
+          setTimeout(markDone, self.stepN === 2 ? 500 : 430);
+        }
       } else {
         var last = self.steps[3];
         last.classList.add('on');
@@ -946,7 +969,11 @@
     });
   }
 
-  /* Вход по паролю: показываем проверку, затем отправляем форму */
+  /* Вход по паролю: оверлей идёт по шагам, а на шаге «Проверяем роль и
+     доступ» реально спрашивает сервер (/api/login-probe): тот проверяет
+     пароль и — для участника — ЖИВУЮ роль в Discord. Только после успеха
+     отправляется настоящая форма; ошибка видна в оверлее с кнопкой
+     «Попробовать снова». Так проверка не может «висеть» без результата. */
   var passForm = document.querySelector('form[action="/login"]');
   if (passForm) {
     passForm.addEventListener('submit', function (e) {
@@ -954,6 +981,31 @@
       if (!passForm.checkValidity()) return;   /* браузер сам подсветит пустое */
       e.preventDefault();
       passForm.dataset.sent = '1';
+      accessCheck.gate = function (ok, err) {
+        var u = $('passUsername'), p = $('passPassword');
+        var body;
+        try {
+          body = JSON.stringify({
+            username: (u ? u.value : '').trim(),
+            password: p ? p.value : ''
+          });
+        } catch (ex) {
+          err('Не удалось прочитать форму — попробуйте ещё раз.');
+          return;
+        }
+        fetch('/api/login-probe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: body
+        }).then(function (r) {
+          return r.json().catch(function () { return null; });
+        }).then(function (d) {
+          if (d && d.success) ok();
+          else err((d && d.error) || 'Что-то пошло не так — попробуйте ещё раз.');
+        }).catch(function () {
+          err('Сеть недоступна — проверьте соединение.');
+        });
+      };
       accessCheck.start('pass', function () { passForm.submit(); });
     });
   }

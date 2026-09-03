@@ -1259,6 +1259,52 @@ def login ():
         return render_template ('login.html',error ='Неверное имя пользователя или пароль!')
     return render_template ('login.html')
 
+
+@app.route('/api/login-probe', methods=['POST'])
+def api_login_probe():
+    """Пред-проверка для экрана «Проверяем доступ» на странице входа.
+
+    Повторяет ровно ту же логику, что и POST /login (владелец — по USERS,
+    участник — по members.json + ЖИВАЯ роль из Discord), но НЕ создаёт
+    сессию и не делает редирект. Клиент входа показывает шаги оверлея,
+    на шаге «Проверяем роль и доступ» вызывает этот эндпоинт и только при
+    success=True отправляет настоящую форму. Тексты ошибок — те же, что
+    у формы входа, поэтому оверлей и форма никогда не спорят.
+    """
+    data = request.get_json(silent=True) or {}
+    username = str(data.get('username') or '').strip()
+    password = str(data.get('password') or '')
+    if not username or not password:
+        return jsonify({'success': False,
+                        'error': 'Заполни логин и пароль.'})
+    # Владелец панели (USERS): вход по паролю, Discord-роль не нужна.
+    if username in USERS and _pw_matches(
+            USERS[username].get('password_hash'), password):
+        return jsonify({'success': True,
+                        'role': USERS[username].get('role', 'owner')})
+    # Участник: Discord ID в members.json + пароль. Роль берём ТОЛЬКО
+    # живьём из Discord — как в POST /login (защита от устаревших ролей).
+    members_file = 'data/members.json'
+    members = {}
+    if os.path.exists(members_file):
+        try:
+            with open(members_file, 'r', encoding='utf-8') as _f:
+                members = json.load(_f)
+        except Exception as _mex:
+            _log.debug('login-probe: members: %s', _mex)
+            members = {}
+    if username in members and _pw_matches(
+            members[username].get('password'), password):
+        live_role = _get_role_from_discord(username)
+        if live_role == 'uye':
+            return jsonify({'success': False, 'error':
+                            'Пароль верный, но доступа к панели нет: '
+                            'нужна роль модератора на сервере.'})
+        return jsonify({'success': True, 'role': live_role})
+    _throttle_failed_login(username)
+    return jsonify({'success': False,
+                    'error': 'Неверное имя пользователя или пароль!'})
+
     # Geчici проверка kodlarы {discord_id: {code, data}}
 PENDING_VERIFICATIONS ={}
 

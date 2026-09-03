@@ -270,6 +270,22 @@ d = r.get_json(silent=True) or {}
 check(r.status_code == 404 and 'другого сервера' in (d.get('error') or ''),
       'рассмотрение заявки чужого сервера запрещено (404)', f'→ {r.status_code} {d.get("error")}')
 
+# /api/login-probe — настоящий шаг «Проверяем роль и доступ» в оверлее входа:
+# повторяет логику POST /login (владелец по USERS), но без сессии.
+r = client.post('/api/login-probe', json={'username': 'owner', 'password': 'demo-pass'})
+d = r.get_json(silent=True) or {}
+check(r.status_code == 200 and d.get('success') is True,
+      'probe: верный пароль владельца — проверка проходит', f'→ {r.status_code} {d}')
+r = client.post('/api/login-probe', json={'username': 'owner', 'password': 'wrong-pass'})
+d = r.get_json(silent=True) or {}
+check(r.status_code == 200 and d.get('success') is False
+      and 'Неверное' in (d.get('error') or ''),
+      'probe: неверный пароль — ошибка как у формы входа', f'→ {d.get("error")}')
+r = client.post('/api/login-probe', json={'username': '', 'password': ''})
+d = r.get_json(silent=True) or {}
+check(d.get('success') is False and (d.get('error') or '').strip() != '',
+      'probe: пустые поля — понятная ошибка', f'→ {d.get("error")}')
+
 try:
     os.remove('data/staff_apps.json')
 except OSError:
