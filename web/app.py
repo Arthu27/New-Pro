@@ -12,7 +12,7 @@ import random
 import string 
 import hashlib 
 import math 
-from flask import Flask ,render_template ,request ,session ,redirect ,url_for ,send_from_directory ,Response 
+from flask import Flask ,render_template ,request ,session ,redirect ,url_for ,send_from_directory ,Response ,g 
 # jsonify ВСЕХ ответов панели — из web.routes._common: снежинки Discord
 # (>2^53) уходят клиенту строкой, иначе JS ломает цифры id.
 from web.routes._common import jsonify
@@ -275,6 +275,9 @@ def inject_build_commit ():
 
 @app .before_request 
 def before_request ():
+    # Замер длительности запроса: медленные видны в логе сразу, с путём и
+    # временем. Без этого «панель тормозит» невозможно разобрать по фактам.
+    g ._req_started =_time .time ()
     # Демо-режим: автоматический вход владельцем без логина и пароля.
     # Авторизация при этом не удаляется — она просто не требуется, пока
     # поднят флаг DEMO_MODE=1.
@@ -421,8 +424,22 @@ _ETAG_PATHS =(
 )
 
 
+# Порог «медленного» запроса в лог. SSE (/api/live) держится открытым
+# всегда — его не измеряем, иначе лог будет состоять из него одного.
+_SLOW_REQUEST_S = 1.0
+
+
 @app .after_request 
 def after_request (response ):
+    try :
+        _t0 =getattr (g ,'_req_started',None )
+        if _t0 and request .path !='/api/live':
+            _dt =_time .time ()-_t0
+            if _dt >=_SLOW_REQUEST_S :
+                _log .warning ('[SLOW] %s %s — %.2f с (статус %s)',
+                               request .method ,request .path ,_dt ,response .status_code )
+    except Exception as _ex :
+        _log .debug ('after_request(): замер времени подавлен: %s',_ex )
     # HSTS за туннелем: браузер запоминает, что домен — только https.
     try :
         if _behind_proxy ()and request .headers .get ('X-Forwarded-Proto','')=='https':

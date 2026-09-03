@@ -82,8 +82,6 @@ class WebSocketClient {
             const data = JSON.parse(event.data);
             
             switch (data.type) {
-                case 'ticket_update': this.emit('ticket_update', data); break;
-                case 'new_ticket': this.emit('new_ticket', data); break;
                 case 'stats_update': this.emit('stats_update', data); break;
                 case 'notification': this.emit('notification', data); break;
                 case 'typing': this.emit('typing', data); break;

@@ -1199,11 +1199,6 @@
       ws.on('connected', function () {
         try { ws.sendPresence('online'); } catch (e) {}
       });
-      ws.on('ticket_update', function (d) { if (typeof window.handleTicketUpdate === 'function') window.handleTicketUpdate(d); });
-      ws.on('new_ticket', function (d) {
-        window.showToast('Новый тикет создан', true);
-        if (typeof window.handleNewTicket === 'function') window.handleNewTicket(d);
-      });
       ws.on('stats_update', function (d) {
         if (typeof window.handleStatsUpdate === 'function') window.handleStatsUpdate(d);
         try { doc.dispatchEvent(new CustomEvent('hakumo:live', { detail: d || {} })); } catch (e) {}
@@ -3408,20 +3403,24 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  /* Ключи — ровно те, что живут в services/panel_menu.py. Раньше здесь
+     были tickets/fun/leveling/economy/admin (таких разделов нет) и не было
+     семи настоящих — у них показывалась общая заглушка «Раздел … панели». */
   var GROUP_LEADS = {
     main: 'Главный обзор сервера и ключевые показатели.',
     mod: 'Инструменты модерации: реагирование, расследование, защита и команда.',
+    protection: 'Защита сервера: рейды, антиспам и автоматические меры.',
     members: 'Работа с участниками: профили, поиск, заметки и наблюдение.',
     roles: 'Роли и права: управление, автоматизация и выдача.',
     access: 'Доступы: кто видит какие разделы панели.',
-    tickets: 'Тикеты и обращения: очереди, ответы и SLA.',
-    fun: 'Развлечения и игровые механики сервера.',
-    leveling: 'Уровни, опыт и карьерные системы.',
-    economy: 'Экономика: валюта, магазины и награды.',
-    admin: 'Администрирование сервера и бота.',
-    logs: 'Журналы, история и расследования.',
+    bot: 'Бот: присутствие, команды, бэкапы и модули.',
     settings: 'Настройки панели и сервера.',
-    other: 'Дополнительные инструменты панели Hakumo.'
+    community: 'Активность сообщества: голос и общение.',
+    logs: 'Журналы, история и расследования.',
+    content: 'Контент: каналы и объявления для участников.',
+    ai: 'ИИ-помощники: чат и автоматическая модерация.',
+    ops: 'Состояние системы: диагностика и флаги функций.',
+    utility: 'Вспомогательные инструменты: команда, задачи и справка.'
   };
 
   function pageHeadAuto() {
