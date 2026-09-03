@@ -137,10 +137,10 @@
   <div class="bs-title"><i class="fas fa-history"></i> Последние уведомления <span id="notifTotal" style="font-weight: 400; font-size: 12px; color: var(--text-muted);"></span></div>
   <div id="notifDelivery" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center;"></div>
   <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
-    <select id="notifFilterEvent" class="form-input" style="max-width: 260px;" onchange="loadNotificationHistory()">
+    <select id="notifFilterEvent" class="form-input" aria-label="Фильтр по событию" style="max-width: 260px;" onchange="loadNotificationHistory()">
       <option value="">Все события</option>
     </select>
-    <select id="notifFilterOutcome" class="form-input" style="max-width: 200px;" onchange="loadNotificationHistory()">
+    <select id="notifFilterOutcome" class="form-input" aria-label="Фильтр по результату доставки" style="max-width: 200px;" onchange="loadNotificationHistory()">
       <option value="">Любой результат</option>
       <option value="ok">Хоть один канал доставил</option>
       <option value="fail">Есть упавший канал</option>

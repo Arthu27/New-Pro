@@ -59,29 +59,38 @@ for f in _tpls:
             _bad.append(f'{f}: {t[:60]}')
 check(not _bad, f'{len(_tpls)} шаблонов, img без alt: {len(_bad)} ({_bad[:3]})')
 
-# ─── 2. input: доступное имя ─────────────────────────────────────────────────
-print('== 2. У каждого <input> есть доступное имя ==')
+# ─── 2. input/select/textarea: доступное имя ─────────────────────────────────
+# Правило axe «label» покрывает все поля форм — не только <input>, но и
+# <select> и <textarea>. Поле имеет имя, если есть aria-label/aria-labelledby/
+# title (для input — ещё placeholder), label[for=id] или оборачивающий <label>.
+print('== 2. У каждого <input>/<select>/<textarea> есть доступное имя ==')
 _SKIP_TYPES = ('hidden', 'submit', 'button', 'reset', 'image')
 _bad = []
 for f in _tpls:
     body = _strip_scripts(open(os.path.join(TPL_DIR, f), encoding='utf-8').read())
     labels = set(re.findall(r'<label\b[^>]*for\s*=\s*["\']([^"\']+)["\']', body, re.I))
-    for t in re.findall(r'<input\b[^>]*>', body, flags=re.I | re.S):
-        tm = re.search(r'type\s*=\s*["\']([^"\']+)', t, re.I)
-        if tm and tm.group(1).lower() in _SKIP_TYPES:
-            continue
-        if re.search(r'\b(aria-label|placeholder|aria-labelledby|title)\s*=', t, re.I):
-            continue
-        idm = re.search(r'\bid\s*=\s*["\']([^"\']+)["\']', t, re.I)
-        if idm and idm.group(1) in labels:
-            continue
-        idx = body.find(t)
-        before = body[:idx]
-        opens = len(re.findall(r'<label\b', before, re.I)) - len(re.findall(r'</label>', before, re.I))
-        if opens > 0:  # оборачивающий <label>
-            continue
-        _bad.append(f'{f}: {t[:60]}')
-check(not _bad, f'{len(_tpls)} шаблонов, input без имени: {len(_bad)} ({_bad[:3]})')
+    for tag, pat in (('input', r'<input\b[^>]*>'),
+                     ('select', r'<select\b[^>]*>'),
+                     ('textarea', r'<textarea\b[^>]*>')):
+        for t in re.findall(pat, body, flags=re.I | re.S):
+            if tag == 'input':
+                tm = re.search(r'type\s*=\s*["\']([^"\']+)', t, re.I)
+                if tm and tm.group(1).lower() in _SKIP_TYPES:
+                    continue
+            name_attrs = (r'\b(aria-label|aria-labelledby|title)\s*='
+                          + (r'|placeholder\s*=' if tag != 'select' else ''))
+            if re.search(name_attrs, t, re.I):
+                continue
+            idm = re.search(r'\bid\s*=\s*["\']([^"\']+)["\']', t, re.I)
+            if idm and idm.group(1) in labels:
+                continue
+            idx = body.find(t)
+            before = body[:idx]
+            opens = len(re.findall(r'<label\b', before, re.I)) - len(re.findall(r'</label>', before, re.I))
+            if opens > 0:  # оборачивающий <label>
+                continue
+            _bad.append(f'{f}: {tag} {t[:50]}')
+check(not _bad, f'{len(_tpls)} шаблонов, поля без имени: {len(_bad)} ({_bad[:3]})')
 
 # ─── 3. button: доступное имя ────────────────────────────────────────────────
 print('== 3. У каждой <button> есть имя ==')

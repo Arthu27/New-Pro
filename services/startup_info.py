@@ -33,14 +33,28 @@ _TUNNEL_KEEP = (
     'connection terminated',    # обрыв соединения
 )
 
+# Шум, который НЕ показываем, даже если попал в список выше.
+# «failed to serve incoming request … context canceled» cloudflared пишет,
+# когда БРАУЗЕР отменил запрос: перезагрузка/закрытие вкладки, переключение
+# в фоновый режим (EventSource-стрим /api/live рвётся). Это штатное
+# поведение, а не поломка тунделя — такие строки сыпались пачками при
+# каждом клике по панели и пугали владельца. Настоящие ошибки
+# (dial timeout, connection refused, 5xx от origin) остаются видны.
+_TUNNEL_DROP = (
+    'context canceled',
+)
+
 
 def tunnel_line_worth(line):
     """ True — строку лога cloudflared стоит показать владельцу.
 
-    Регистр не важен; пустые строки отбрасываются.
+    Регистр не важен; пустые строки отбрасываются. Сначала гасим
+    заведомый шум, потом смотрим значимость.
     """
     low = (line or '').strip().lower()
     if not low:
+        return False
+    if any(k in low for k in _TUNNEL_DROP):
         return False
     return any(k in low for k in _TUNNEL_KEEP)
 

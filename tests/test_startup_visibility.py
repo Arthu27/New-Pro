@@ -73,6 +73,12 @@ _drop = [
     'details="DNS Resolved successfully" status=pass',
     '',
     '   ',
+    # «context canceled» — браузер отменил запрос (перезагрузка вкладки,
+    # фоновый режим, обрыв SSE). Штатный шум, а не поломка туннеля:
+    # сыпался при каждом клике по панели и пугал владельца.
+    '2026-09-03T16:38:01Z ERR failed to serve incoming request error="Failed '
+    'to proxy HTTP: context canceled"',
+    '2026-09-03T16:38:02Z ERR Failed to proxy HTTP: context canceled',
 ]
 _noise = 0
 for ln in _drop:

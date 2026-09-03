@@ -87,7 +87,7 @@
       <div class="rep-sub">Как /report-custom: период в днях и один из трёх типов — tickets, sla, performance.</div>
       <div class="rep-row">
         <input class="rep-inp" id="repDays" type="number" min="1" max="3650" value="30" placeholder="дней">
-        <select class="rep-sel" id="repType">
+        <select class="rep-sel" id="repType" aria-label="Тип отчёта">
           <option value="tickets">tickets</option>
           <option value="sla">sla</option>
           <option value="performance">performance</option>
@@ -117,9 +117,9 @@
         </div>
         <div class="rep-chips" id="repMetrics"></div>
         <div class="rep-row">
-          <select class="rep-sel" id="repFStatus"><option value="">статус: любой</option><option value="open">open</option><option value="closed">closed</option></select>
-          <select class="rep-sel" id="repFCat"><option value="">категория: любая</option><option value="support">support</option><option value="billing">billing</option><option value="other">other</option></select>
-          <select class="rep-sel" id="repFPrio"><option value="">приоритет: любой</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option><option value="critical">critical</option></select>
+          <select class="rep-sel" id="repFStatus" aria-label="Фильтр: статус"><option value="">статус: любой</option><option value="open">open</option><option value="closed">closed</option></select>
+          <select class="rep-sel" id="repFCat" aria-label="Фильтр: категория"><option value="">категория: любая</option><option value="support">support</option><option value="billing">billing</option><option value="other">other</option></select>
+          <select class="rep-sel" id="repFPrio" aria-label="Фильтр: приоритет"><option value="">приоритет: любой</option><option value="high">high</option><option value="medium">medium</option><option value="low">low</option><option value="critical">critical</option></select>
           <button type="button" class="rep-btn" id="repCreate"><i class="fas fa-floppy-disk"></i> Сохранить</button>
         </div>
       </div>
