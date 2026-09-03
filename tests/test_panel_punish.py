@@ -12,6 +12,7 @@ Discord-аккаунт модератора (options — фильтр, POST — 
 """
 import asyncio
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -394,8 +395,14 @@ check(len((r.get_json() or {}).get('actions', [])) == 8,
 
 print('== 9. Шаблон «Пользователи»: форма без доказательств, новая разметка ==')
 _utpl = open(os.path.join(ROOT, 'web', 'templates', 'users.html'), encoding='utf-8').read()
-check('pnProof' not in _utpl and 'proof' not in _utpl.lower(),
-      'в форме нет ни поля, ни логики доказательств')
+# Панель доказательств НЕ СПРАШИВАЕТ: ни поля ввода, ни id pnProof.
+# Показывать уже приложенное доказательство из варна/дела можно — это чтение
+# чужой записи, а не запрос нового файла у модератора.
+check('pnProof' not in _utpl, 'в форме наказания нет поля доказательств')
+check(not re.search(r'<(?:input|textarea|select)[^>]*proof', _utpl, re.I),
+      'панель не спрашивает доказательств ни в одном поле ввода')
+check(_utpl.lower().count('proof') == 4,
+      'proof встречается только при чтении варнов и дел (4 места, все в выводе)')
 check('id="pnGrid"' in _utpl and 'id="pnPresets"' in _utpl and 'id="pnReasonCnt"' in _utpl,
       'новая форма: сетка действий, пресеты срока, счётчик причины')
 check('id="uStats"' in _utpl and 'id="uRole"' in _utpl and 'id="uSort"' in _utpl and
