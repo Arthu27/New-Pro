@@ -38,32 +38,17 @@ log = get_logger("cmd_acl")
 # Набор урезан до ядра: модерация, тикеты, логи и AI — остальные модули
 # (экономика, уровни, развлечения, музыка и т.д.) не управляются здесь.
 COMMAND_CATEGORIES = {
-    "Модерация": ["ban", "kick", "unban", "warn", "warnings", "unwarn", "clearwarns",
-                   "mute", "unmute", "clear", "slowmode", "lock", "unlock",
-                   "moderate", "modpanel", "temp-mute", "temp-unmute", "tempban",
-                   "temp-unban", "tempkick", "vmute", "vunmute", "schedule", "unschedule",
-                   "schedule-add", "schedule-list", "schedule-remove", "schedule-test",
-                   "schedule-toggle", "pw", "history", "case", "cases", "note", "notes",
-                   "watchlist", "banlist", "massrole", "modstats",
-                   "mod-stats", "activemods", "modwhitelist", "tempmod", "voice-status",
-                   "role", "utility", "report-panel",
-                   "weekly-report", "report-setup", "report-role-add", "report-role-remove",
-                   "meeting", "meeting-role-add", "meeting-role-remove", "staff-stats",
-                   "filter", "filter-status", "filter-add", "filter-remove",
-                   "filter-words", "filter-toggle", "filter-test", "filter-ignore",
-                   "reactionrole", "removereactionrole",
-                   "replay", "ladder", "ladder-add", "ladder-remove", "ladder-test"],
-    "Жалобы": ["report", "my-violations", "my-violations-history",
-                "report-panel", "report-settings", "report-setup",
-                "report-role-add", "report-role-remove",
-                "witness", "ticket-panel", "ticket-config",
-                "ticket-auto-close", "ticket-ai-toggle", "ticket-ai-stats",
-                "ticket-force-escalate", "ticket-rate-limit-info", "ticket-reset-rate-limit",
-                "ticket-feedback-stats", "sla-status", "sla-info", "sla-create", "sla-breaches"],
-    "Логи": ["logs", "modlogs", "logmenu", "setup-logs", "logs-setup", "logs-center"],
-    "AI-система": ["aimod", "aimod-escalate", "aimod-fp", "aimod-languages",
-                    "aimod-logchannel", "aimod-sensitivity", "aimod-stats", "aimod-test",
-                    "aimod-whitelist", "proactive-stats"],
+    # Запасной список: используется, только если живой реестр
+    # services.command_registry недоступен. Урезан до имён, которые
+    # проверены на реальной загрузке когов (36 модулей, BOT_FULL):
+    # бан/кик/мут — это действия внутри /modpanel, а не отдельные
+    # команды, а ticket-*/sla-*/schedule-*/filter-*/aimod-* удалены
+    # вместе со своими когами.
+    "Модерация": ["modpanel", "unwarn", "warnings"],
+    "Жалобы": ["report", "my-violations", "witness"],
+    "Логи": ["logs-setup"],
+    "Служебные": ["ladder", "ladder-add", "ladder-remove", "ladder-test",
+                  "staff-stats"],
 }
 
 # ─── Классические разрешения (действия) ────────────────────────────────────
@@ -171,14 +156,19 @@ def command_categories():
 
 
 def all_categories():
-    """Живые категории + legacy (правила на старые продолжают работать)."""
-    merged = {k: list(v) for k, v in COMMAND_CATEGORIES.items()}
-    for k, v in command_categories().items():
-        bucket = merged.setdefault(k, [])
-        for name in v:
-            if name not in bucket:
-                bucket.append(name)
-    return merged
+    """Каталог для панели «Права команд» — ТОЛЬКО живые команды.
+
+    Раньше сюда домешивался жёсткий COMMAND_CATEGORIES «чтобы правила
+    на старые продолжали работать», но из 104 имён того списка у бота
+    реально существуют только 12: панель показывала 92 команды-призрака
+    (ticket-*, sla-*, ban/kick/mute как отдельные команды, schedule-*,
+    filter-*, aimod-* …). Правило на несуществующую команду inert и до,
+    и после — показывать его значит только путать владельца.
+    Источник — services.command_registry: он сканирует включённые
+    модули и живые команды, а при своей недоступности сам откатывается
+    на COMMAND_CATEGORIES (уже урезанный до проверенных имён).
+    """
+    return {k: list(v) for k, v in command_categories().items()}
 
 
 def load_acl(guild_id: int) -> dict:

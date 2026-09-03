@@ -202,8 +202,11 @@ print('== 5. /help показывает все ЖИВЫЕ разделы ==')
 import cogs.help as HP  # noqa: E402
 ov = HP.build_help_embed()
 field_names = ' | '.join(f.name for f in ov.fields)
-for need in ('Система', 'Модерация', 'Жалобы'):
-    check(need in field_names, f'/help overview содержит раздел «{need}»')
+from services.permission_acl import all_categories as _live_cats
+# Разделы справки = живые разделы каталога бота. «Жалобы» больше нет:
+# репорты живут в «Модерации», отдельного такого раздела не осталось.
+for need in sorted(_live_cats()):
+    check(need in field_names, f'/help overview содержит живой раздел «{need}»')
 check('Музыка' not in field_names,
       'раздел «Музыка» убран из /help (музыка снята с эксплуатации 2026-09-01)')
 check('Голосовые' not in field_names,
@@ -235,8 +238,9 @@ check('**0**' in _mdesc
 # ACL-фильтрация ядра не сломана
 e_mod = HP.build_help_embed(category_id='Модерация')
 mod_text = ' '.join(f.value for f in e_mod.fields)
-check('`ban`' in mod_text and '`tempban`' in mod_text,
-      'мод-ядро справки прежнее (ban/tempban на месте)')
+_mod_cmd = next(iter(_live_cats().get('Модерация', [])), 'modpanel')
+check('`%s`' % _mod_cmd in mod_text,
+      f'мод-ядро справки на месте (живая команда {_mod_cmd})')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)

@@ -17,7 +17,7 @@ config.Config.DB_PATH = os.path.abspath('data/bot.db')  # изолированн
 
 from services.permission_acl import (_candidates, has_access, roles_for_command,
                                      set_rule, clear_rule, load_acl, save_acl,
-                                     COMMAND_CATEGORIES)
+                                     COMMAND_CATEGORIES, all_categories)
 
 PASS = 0; FAIL = 0
 def check(ok, msg):
@@ -62,10 +62,16 @@ check(not has_access(GID, 'ban', Member(roles=[1])),
       'сняли разрешение -> снова нельзя (default-deny сохраняется)')
 
 print('== правило на категорию (командный ACL; действия разрешены отдельно) ==')
+# Команду берём из ЖИВОГО каталога: ban/kick — это действия внутри
+# /modpanel, а не отдельные команды. Раньше проверка висела на имени-
+# призраке и «проходила» лишь потому, что призрак лежал в категории.
 _saa(GID, {'kick': ['777', '1']})          # действие kick разрешено ролям 777 и 1
+_CAT_CMD = next(iter(all_categories().get('Модерация', [])), 'modpanel')
 set_rule(GID, 'Модерация', ['777'])
-check(not has_access(GID, 'kick', Member(roles=[1])), 'категория Модерация закрыта для роли 1 (kick)')
-check(has_access(GID, 'kick', Member(roles=[777])), 'роль 777 может (kick)')
+check(not has_access(GID, _CAT_CMD, Member(roles=[1])),
+      f'категория Модерация закрыта для роли 1 ({_CAT_CMD})')
+check(has_access(GID, _CAT_CMD, Member(roles=[777])),
+      f'роль 777 может ({_CAT_CMD})')
 check(has_access(GID, '8ball', Member(roles=[1])), 'другая категория не затронута (8ball)')
 save_acl(GID, {}); _saa(GID, {})
 
@@ -97,15 +103,15 @@ check(not has_access(GID, 'report stats', Member(roles=[1])),
 save_acl(GID, {})
 
 print('== несколько правил сразу (AND-семантика) ==')
-# Действие ban должно быть разрешено ролям (default-deny), и командный ACL —
-# категория и команда — пускает только при наличии обеих ролей.
-_saa(GID, {'ban': ['10', '20']})
+# Командный ACL: категория И команда — пускает только при наличии обеих
+# ролей. Команда — из живого каталога (ban отдельной командой не бывает).
+_CAT2 = next(iter(all_categories().get('Модерация', [])), 'modpanel')
 set_rule(GID, 'Модерация', ['10'])
-set_rule(GID, 'ban', ['20'])
-check(not has_access(GID, 'ban', Member(roles=[10])), 'есть роль категории, нет роли команды -> нельзя')
-check(not has_access(GID, 'ban', Member(roles=[20])), 'есть роль команды, нет роли категории -> нельзя')
-check(has_access(GID, 'ban', Member(roles=[10, 20])), 'обе роли -> можно')
-check(has_access(GID, 'ban', Member(roles=[10, 20, 99])), 'обе роли + лишняя -> можно')
+set_rule(GID, _CAT2, ['20'])
+check(not has_access(GID, _CAT2, Member(roles=[10])), 'есть роль категории, нет роли команды -> нельзя')
+check(not has_access(GID, _CAT2, Member(roles=[20])), 'есть роль команды, нет роли категории -> нельзя')
+check(has_access(GID, _CAT2, Member(roles=[10, 20])), 'обе роли -> можно')
+check(has_access(GID, _CAT2, Member(roles=[10, 20, 99])), 'обе роли + лишняя -> можно')
 save_acl(GID, {}); _saa(GID, {})
 save_acl(GID, {})
 
@@ -227,12 +233,24 @@ full = full_cats()
 check(cats == full, 'категории панели = полный каталог команд (all_categories)')
 check('Модерация' in cats and 'modpanel' in cats.get('Модерация', []),
       'категория Модерация содержит живую команду modpanel')
-# Новая команда статистики видна в правах (жалоба владельца: её не было)
-check('staff-stats' in cats.get('Модерация', []),
-      'команда staff-stats (статистика) присутствует в правах команд')
-check('ban' in cats.get('Модерация', []), 'реальная команда ban присутствует для настройки')
+# Команда статистики видна в правах, если её модуль вообще загружен
+# (жалоба владельца: её не было). В лёгком профиле модуль спит — тогда
+# честно не показываем: несуществующую команду разрешать нечего.
+from services.command_registry import catalog as _reg_cat
+_live = {c['name'] for c in _reg_cat().get('commands', [])}
+if 'staff-stats' in _live:
+    check(any('staff-stats' in v for v in cats.values()),
+          'команда staff-stats (статистика) присутствует в правах команд')
+else:
+    check(not any('staff-stats' in v for v in cats.values()),
+          'staff-stats не показан: модуль спит в этом профиле')
+# ban — это ДЕЙСТВИЕ (внутри /modpanel action=ban): настраивается в блоке
+# «Действия», а не в каталоге команд.
+check('ban' in (body.get('actions') or {}),
+      'действие «ban» настраивается в блоке действий панели')
 total_cmds = sum(len(v) for v in cats.values())
-check(total_cmds >= 40, f'полный каталог отдаёт много команд для настройки: {total_cmds}')
+check(total_cmds > 0 and total_cmds == sum(len(v) for v in full.values()),
+      f'каталог = живые команды бота ({total_cmds} шт.; сколько их — решает профиль модулей)')
 
 r = client.post(f'/api/role-permissions/{GID}/set',
                 data=json.dumps({'command': 'report', 'role_ids': ['900']}),

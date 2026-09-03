@@ -953,9 +953,11 @@ def login_required (f ):
     def decorated_function (*args ,**kwargs ):
         if 'logged_in'not in session :
             return redirect (url_for ('login'))
-            # Каждые 5 минут обновлять роль из Discord (кроме владельца)
+            # Каждые 5 минут обновлять роль из Discord — ВСЕХ, включая
+            # владельца: доступ обязан зависеть от живых ролей сервера, а
+            # не от того, что когда-то записали в сессию или members.json.
         discord_id =session .get ('discord_id')
-        if discord_id and session .get ('role')!='owner':
+        if discord_id :
             import time as _t 
             last_check =session .get ('_role_checked',0 )
             # Бот офлайн — НЕ понижаем роль по живым данным Discord (иначе
@@ -963,8 +965,15 @@ def login_required (f ):
             _bot_online =bool (bot_instance and getattr (bot_instance ,'guilds',None ))
             if _bot_online and _t .time ()-last_check >300 :# 5 минут
                 live_role =_get_role_from_discord (discord_id )
-                session ['role']=live_role 
                 session ['_role_checked']=_t .time ()
+                # Роли больше нет (человек вышел с сервера или роли сняли)
+                # — сессию гасим: без роли в панели делать нечего.
+                if live_role =='uye':
+                    session .clear ()
+                    if request .path .startswith ('/api/'):
+                        return jsonify ({'success':False ,'error':'Доступ к панели потерян: на сервере нет роли модератора.'}),403
+                    return redirect (url_for ('login'))
+                session ['role']=live_role 
                 # также обновить members.json
                 members_file ='data/members.json'
                 if os .path .exists (members_file ):
@@ -1164,15 +1173,21 @@ def login ():
                     members [username ]['password']=_hash_pw (password )
                     with open (members_file ,'w',encoding ='utf-8')as f :
                         json .dump (members ,f ,indent =2 ,ensure_ascii =False )
-                # members.json'da owner varsa Discord контроль yapma — роль koru
-                stored_role =members [discord_id ].get ('role','uye')
-                if stored_role =='owner':
-                    live_role ='owner'
-                else :
-                    live_role =_get_role_from_discord (discord_id )
-                    members [discord_id ]['role']=live_role 
-                    with open (members_file ,'w',encoding ='utf-8')as f :
-                        json .dump (members ,f ,indent =2 ,ensure_ascii =False )
+                # БЕЗОПАСНОСТЬ: роль берём ТОЛЬКО живьём из Discord.
+                # Раньше сохранённое role=='owner' в members.json
+                # отменяло проверку Discord — и любой, кого однажды
+                # записали владельцем, заходил в панель по паролю, даже
+                # если его давно нет на сервере и ролей у него нет.
+                live_role =_get_role_from_discord (discord_id )
+                if live_role =='uye':
+                    _throttle_failed_login (username )
+                    return render_template (
+                        'login.html',
+                        error ='Пароль верный, но доступа к панели нет: '
+                              'нужна роль модератора на сервере.')
+                members [discord_id ]['role']=live_role 
+                with open (members_file ,'w',encoding ='utf-8')as f :
+                    json .dump (members ,f ,indent =2 ,ensure_ascii =False )
                 session .permanent =True 
                 session ['logged_in']=True 
                 session ['username']=members [discord_id ]['display_name']
@@ -3729,11 +3744,16 @@ def api_discord_login ():
         members [discord_id ]={'display_name':member_info ['display_name'],'name':member_info ['name'],'avatar':member_info ['avatar'],'role':live_role ,'password':'','registered_at':datetime.now(timezone.utc).isoformat ()}
         with open (members_file ,'w',encoding ='utf-8')as f :
             json .dump (members ,f ,indent =2 ,ensure_ascii =False )
-    stored_role =members [discord_id ].get ('role','uye')
-    if stored_role =='owner':
-        live_role ='owner'
-    else :
-        live_role =_get_role_from_discord (discord_id )
+    # БЕЗОПАСНОСТЬ: роль берём ТОЛЬКО живьём из Discord. Раньше
+    # сохранённое role=='owner' в members.json отменяло проверку — и
+    # любой, кого однажды записали владельцем, входил по PIN, даже если
+    # его давно нет на сервере и ролей у него нет.
+    live_role =_get_role_from_discord (discord_id )
+    if live_role =='uye':
+        return jsonify ({'success':False ,'error':'PIN верный, но доступа к панели нет: нужна роль модератора на сервере.'})
+    members [discord_id ]['role']=live_role 
+    with open (members_file ,'w',encoding ='utf-8')as f :
+        json .dump (members ,f ,indent =2 ,ensure_ascii =False )
     session .permanent =True 
     session ['logged_in']=True 
     session ['username']=member_info ['display_name']

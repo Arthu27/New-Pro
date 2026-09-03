@@ -23,7 +23,8 @@ config.Config.DB_PATH = os.path.abspath('data/bot.db')  # изолированн
 from services.permission_acl import (check_action, has_access, set_action_rule,
                                      clear_action_rules, load_action_acl, save_action_acl,
                                      set_rule, save_acl,
-                                     ACTIONS, COMMAND_ACTIONS, ACTION_VALUES)
+                                     ACTIONS, COMMAND_ACTIONS, ACTION_VALUES,
+                                     all_categories)
 
 PASS = 0; FAIL = 0
 def check(ok, msg):
@@ -81,14 +82,16 @@ check(has_access(GID, 'ban', Member(roles=[555])), 'роль 555 может')
 # но НЕ правилом ban, а отсутствием разрешения warn.
 set_action_rule(GID, 'ban', [])
 
-# действие + категория: AND-семантика. Командный ACL требует И роль категории
-# (10), И роль команды (20); действие ban требует свою разрешённую роль (20).
+# действие + категория: AND-семантика. Командный ACL требует И роль
+# категории (10), И роль команды (20). Команда — из живого каталога:
+# ban/kick это действия (/modpanel action=…), а не отдельные команды.
+_CAT2 = next(iter(all_categories().get('Модерация', [])), 'modpanel')
 set_rule(GID, 'Модерация', ['10'])
-set_rule(GID, 'ban', ['20'])
+set_rule(GID, _CAT2, ['20'])
 set_action_rule(GID, 'ban', ['20'])
-check(not has_access(GID, 'ban', Member(roles=[10])), 'есть категория, нет роли команды/действия -> нельзя')
-check(not has_access(GID, 'ban', Member(roles=[20])), 'есть роль команды и действие, нет категории -> нельзя')
-check(has_access(GID, 'ban', Member(roles=[10, 20])), 'обе роли -> можно')
+check(not has_access(GID, _CAT2, Member(roles=[10])), 'есть категория, нет роли команды -> нельзя')
+check(not has_access(GID, _CAT2, Member(roles=[20])), 'есть роль команды, нет категории -> нельзя')
+check(has_access(GID, _CAT2, Member(roles=[10, 20])), 'обе роли -> можно')
 save_acl(GID, {})
 set_action_rule(GID, 'ban', [])
 

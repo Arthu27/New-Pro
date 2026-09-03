@@ -50,9 +50,11 @@ MODULE_CATEGORY = {
     'impersonation.py': 'mod', 'anti_alt.py': 'mod', 'lockdown.py': 'mod',
     'night_mode.py': 'mod', 'media_only.py': 'mod', 'rejoin_roles.py': 'mod',
     'report_cog.py': 'mod', 'dm_report.py': 'mod', 'appeals.py': 'mod',
+    'reports.py': 'mod',   # репорты/жалобы: файл живой, а report_cog.py нет
     'ladder.py': 'mod', 'ab_cog.py': 'mod',
-    # тикеты и поддержка
-    'ticket.py': 'tickets', 'sla_cog.py': 'tickets', 'staff_apply.py': 'tickets',
+    # поддержка и команда (тикет-система удалена: ticket.py/sla_cog.py снесены;
+    # а заявки в команду — это не тикеты, им место в «События и команда»)
+    'staff_apply.py': 'events',
     # логи, аудит, архивы
     'logs.py': 'logs', 'log_menu.py': 'logs', 'dm_logger.py': 'logs',
     'recap.py': 'logs', 'replay.py': 'logs', 'archive.py': 'logs',

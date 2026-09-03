@@ -31,22 +31,27 @@ def check(cond, label, extra=''):
         print(f'  FAIL: {label} {extra}')
 
 
-def client_with(role):
-    """Тест-клиент с готовой сессией нужной роли."""
+def client_with(role, discord_id='424242'):
+    """Тест-клиент с готовой сессией нужной роли.
+
+    discord_id важен: login_required раз в 5 минут пересчитывает роль
+    ЖИВЬЁМ из Discord — владельцев это тоже касается. Владелец фейковой
+    гильдии ниже имеет id 42, поэтому owner-сессии берём именно его.
+    """
     import web.app as A
     c = A.app.test_client()
     with c.session_transaction() as sess:
         sess['logged_in'] = True
         sess['username'] = f'test-{role}'
         sess['role'] = role
-        sess['discord_id'] = '424242'
+        sess['discord_id'] = discord_id
     return c
 
 
 GID = '777'
 
 print('== Владелец: разделы «Доступ» целиком ==')
-own = client_with('owner')
+own = client_with('owner', '42')
 
 r = own.get('/role-permissions')
 check(r.status_code == 200 and 'Права команд'.lower() in r.get_data(as_text=True).lower() or r.status_code == 200,
@@ -177,7 +182,7 @@ guild.roles = [NS(id='9001', name='Модераторы', color='0', position=1,
 # (регресс «даёт не все»: выдача писала только категории, а живые категории
 #  вообще не находились в статическом списке — правила не записывались)
 from services.permission_acl import load_acl, all_categories, has_access
-c0 = client_with('owner')
+c0 = client_with('owner', '42')
 r = c0.post('/api/role-permissions/777/preset',
             json={'preset': 'all', 'role_ids': ['9001']})
 d = r.get_json() or {}

@@ -397,14 +397,23 @@ var ACTION_META = {
 };
 
 var CAT_META = {
-  'Модерация':             { icon: 'fa-shield-halved',      tone: 0 },
-  'Экономика':             { icon: 'fa-coins',              tone: 1 },
-  'Уровни':                { icon: 'fa-ranking-star',       tone: 2 },
-  'Тикеты':                { icon: 'fa-ticket',             tone: 3 },
-  'Развлечения':           { icon: 'fa-gamepad',            tone: 4 },
-  'Сервер':                { icon: 'fa-server',             tone: 5 },
-  'Приглашения/Участники': { icon: 'fa-user-plus',          tone: 6 },
-  'Служебные':             { icon: 'fa-screwdriver-wrench', tone: 7 }
+  /* Подписи разделов — ровно как в services/command_registry.CATEGORIES.
+     Иконки проверены по подмножеству FontAwesome (all.subset.css). */
+  'Модерация':           { icon: 'fa-shield-halved',      tone: 0 },
+  'Тикеты':              { icon: 'fa-ticket',             tone: 1 },
+  'Логи и аудит':        { icon: 'fa-scroll',             tone: 2 },
+  'Голосовые':           { icon: 'fa-microphone',         tone: 3 },
+  'Экономика':           { icon: 'fa-coins',              tone: 4 },
+  'Уровни и карма':     { icon: 'fa-ranking-star',       tone: 5 },
+  'Игры и развлечения':  { icon: 'fa-gamepad',            tone: 6 },
+  'Профили и соц.':      { icon: 'fa-id-card',            tone: 7 },
+  'Инфо и поиск':        { icon: 'fa-magnifying-glass',   tone: 0 },
+  'Автоматизация':       { icon: 'fa-robot',              tone: 1 },
+  'AI':                  { icon: 'fa-brain',              tone: 2 },
+  'События и команда':   { icon: 'fa-calendar-days',      tone: 3 },
+  'Приветствие и вход':  { icon: 'fa-door-open',          tone: 4 },
+  'Система':             { icon: 'fa-cog',                tone: 5 },
+  'Прочее':              { icon: 'fa-ellipsis',           tone: 6 }
 };
 
 function esc(s) {

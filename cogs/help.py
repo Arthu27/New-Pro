@@ -34,7 +34,8 @@ FONT_R = os.path.join(FONTS, 'Regular.ttf')
 # Текстовый формат справки: без картинок, с фильтром по правам.
 # Команды, к которым у участника нет доступа (в т.ч. классические
 # разрешения на действия), скрываются из справки.
-from services.permission_acl import COMMAND_CATEGORIES, has_access as _acl_has_access
+from services.permission_acl import (COMMAND_CATEGORIES, all_categories,
+                                    has_access as _acl_has_access)
 
 _HELP_TITLE = 'Команды бота'
 _HELP_COLOR = 0x4F46E5
@@ -100,8 +101,9 @@ def _registry_extra_categories():
 
 
 def _all_category_labels():
-    """Порядок разделов справки: ACL-ядро + дополнительные из каталога."""
-    return list(COMMAND_CATEGORIES) + list(_registry_extra_categories())
+    """Порядок разделов справки — живой каталог бота (без призраков)."""
+    live = all_categories()
+    return list(live) + [c for c in _registry_extra_categories() if c not in live]
 
 
 def _plural_cmds(n):
@@ -122,7 +124,7 @@ def _visible_categories(guild_id, member):
     """
     groups = {}
     covered = set()
-    for cat, cmds in COMMAND_CATEGORIES.items():
+    for cat, cmds in all_categories().items():
         visible = []
         for cmd in cmds:
             covered.add(cmd)
@@ -552,7 +554,7 @@ class HelpSelect(discord.ui.Select):
             )
         ]
         for cat in _all_category_labels():
-            cmds = COMMAND_CATEGORIES.get(cat) or _registry_extra_categories().get(cat) or []
+            cmds = (all_categories().get(cat) or _registry_extra_categories().get(cat) or [])
             blurb = _HELP_BLURB.get(cat, f'Команды раздела «{cat}»')
             desc = f'{len(cmds)} {_plural_cmds(len(cmds))} · {blurb}'[:100]
             options.append(

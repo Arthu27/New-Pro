@@ -20,7 +20,9 @@ os.makedirs('data', exist_ok=True)
 import config
 config.Config.DB_PATH = os.path.abspath('data/bot.db')
 
-from services.permission_acl import save_acl, save_action_acl, set_action_rule
+from services.permission_acl import (save_acl, save_action_acl,
+                                     set_action_rule, set_rule,
+                                     all_categories)
 from cogs.proof_cog import is_media_attachment, require_proof, prefix_has_media
 from cogs.help import build_help_embed
 
@@ -110,27 +112,30 @@ check(prefix_has_media(FakeCtx([Att(content_type='application/pdf')])) is False,
 check(prefix_has_media(FakeCtx([])) is False, 'префикс: без вложений')
 
 print('== build_help_embed: фильтр по классическим разрешениям (строгая модель) ==')
-# По умолчанию (default-deny) модерация роли [1] НЕ видна — у неё нет ни
-# одного выданного действия. Даём роли 1 нужные действия — видно.
-set_action_rule(GID, 'ban', ['1'])
-set_action_rule(GID, 'warn', ['1'])
+# Проверяем на ЖИВОЙ команде из каталога: ban/tempban/warn — это действия
+# внутри /modpanel, отдельных таких команд у бота нет, и проверка на них
+# проходила «ни о чём» (имени просто не было в справке).
+_cmd = next(iter(all_categories().get('Модерация', [])), 'modpanel')
+set_rule(GID, _cmd, ['1'])          # доступ только роли 1
 e = build_help_embed(category_id=None, member=Member(roles=[1]), guild_id=GID)
 text_all = ''.join(f.value for f in e.fields)
-check('ban' in text_all and 'tempban' in text_all,
-      'с выданным «Бан» ban/tempban в справке')
+check('`%s`' % _cmd in text_all, f'с правом на команду {_cmd} она видна в справке')
 
-# снимаем «Бан» у роли 1 → ban/tempban/unban скрыты
-set_action_rule(GID, 'ban', ['555'])
+# отдаём право другой роли -> у роли 1 команда пропадает из справки
+set_rule(GID, _cmd, ['555'])
 e2 = build_help_embed(category_id=None, member=Member(roles=[1]), guild_id=GID)
 text_deny = ''.join(f.value for f in e2.fields)
-check('ban' not in text_deny or '`ban`' not in text_deny,
-      'без роли на «Бан» команда ban скрыта из справки')
-check('`tempban`' not in text_deny, 'tempban скрыт (тоже бан)')
-check('warn' in text_deny, 'warn остаётся видимым (действие warn выдано роли 1)')
+check('`%s`' % _cmd not in text_deny, f'без права команда {_cmd} скрыта из справки')
 # у роли с доступом — видно
 e3 = build_help_embed(category_id=None, member=Member(roles=[555]), guild_id=GID)
 text_allow = ''.join(f.value for f in e3.fields)
-check('`ban`' in text_allow, 'с ролями на «Бан» ban снова в справке')
+check('`%s`' % _cmd in text_allow, f'с ролями на {_cmd} команда снова в справке')
+# правило на одну команду не задевает соседнюю из другого раздела
+_other = next((c for k, v in all_categories().items() if k != 'Модерация'
+               for c in v), 'afk')
+check('`%s`' % _other in text_allow,
+      f'соседняя команда {_other} правилом на {_cmd} не задета')
+save_acl(GID, {})
 
 # одна категория
 e4 = build_help_embed(category_id='Тикеты', member=Member(roles=[1]), guild_id=GID)
