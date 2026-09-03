@@ -176,17 +176,26 @@ def pending_paths(bot_dir):
 
 
 def save_pending(bot_dir, zip_path, root, rel, sha, branch):
-    """Отложить проверенный архив до перезапуска. Возвращает (ok, err)."""
+    """Отложить проверенный архив до перезапуска. Возвращает (ok, err).
+
+    rel приходит из verify_zip МНОЖЕСТВОМ относительных путей — в JSON его
+    писать нельзя («Object of type set is not JSON serializable»), поэтому
+    кладём отсортированным списком и возвращаем обратно множеством.
+    """
     dst, meta_path = pending_paths(bot_dir)
+    try:
+        rel_list = sorted(rel) if rel else []
+    except TypeError:
+        rel_list = []
     try:
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copyfile(zip_path, dst)
         with open(meta_path, 'w', encoding='utf-8') as f:
-            json.dump({'root': root, 'rel': rel, 'sha': sha or '',
+            json.dump({'root': root or '', 'rel': rel_list, 'sha': sha or '',
                        'branch': branch or '', 'size': os.path.getsize(dst),
                        'sha256': file_sha256(dst)}, f, ensure_ascii=False)
         return True, None
-    except OSError as ex:
+    except (OSError, TypeError, ValueError) as ex:
         log.warning('self_update: save_pending: %s', ex)
         return False, f'не удалось отложить архив: {ex}'
 
@@ -210,7 +219,10 @@ def load_pending(bot_dir):
     if not want or file_sha256(src) != want:
         log.warning('self_update: load_pending: контрольная сумма не сошлась')
         return None, None, None
-    return src, meta.get('root'), meta.get('rel')
+    rel = meta.get('rel')
+    # обратно — множеством: именно так его отдаёт verify_zip
+    rel_set = set(rel) if isinstance(rel, (list, tuple, set)) else set()
+    return src, meta.get('root'), rel_set
 
 
 def clear_pending(bot_dir):

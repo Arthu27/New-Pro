@@ -263,18 +263,57 @@ check('.update_pending.zip' in _ubat,
 print('== отложенный архив: save -> load -> порча -> clear ==')
 from services import self_update as SU  # noqa: E402
 
+# Значения берём из НАСТОЯЩЕГО verify_zip, а не придумываем: прежняя версия
+# проверки передавала save_pending строку вместо множества rel — и пропустила
+# падение «Object of type set is not JSON serializable» на боевой машине.
 _pdir = tempfile.mkdtemp(prefix='pending_')
 _pzip = os.path.join(_pdir, 'src.zip')
 import zipfile as _zf  # noqa: E402
 
 with _zf.ZipFile(_pzip, 'w') as _z:
-    _z.writestr('repo-x/main.py', 'print(1)\n')
-    _z.writestr('repo-x/config.py', 'x=1\n')
-    _z.writestr('repo-x/web/app.py', 'y=2\n')
-_ok, _err = SU.save_pending(_pdir, _pzip, 'repo-x', 'repo-x', 'deadbeef', 'main')
-check(_ok, f'save_pending сохранил архив ({_err})')
+    _z.writestr('repo-x/main.py', 'NEW MAIN\n')
+    _z.writestr('repo-x/config.py', 'NEW CONFIG\n')
+    _z.writestr('repo-x/web/app.py', 'NEW APP\n')
+    _z.writestr('repo-x/cogs/fresh.py', '# new\n')
+_vok, _verr, _vmeta = SU.verify_zip(_pzip)
+check(_vok, f'verify_zip принял архив ({_verr})')
+_vnames, _vroot, _vrel = _vmeta
+check(isinstance(_vrel, set), f'verify_zip отдаёт rel множеством ({type(_vrel).__name__})')
+check(_vroot.endswith('/'), f'корень архива с косой чертой: {_vroot!r}')
+
+_ok, _err = SU.save_pending(_pdir, _pzip, _vroot, _vrel, 'deadbeef', 'main')
+check(_ok, f'save_pending пережил множество rel ({_err})')
 _z2, _r2, _l2 = SU.load_pending(_pdir)
-check(bool(_z2) and _r2 == 'repo-x', 'load_pending вернул архив и корень')
+check(bool(_z2) and _r2 == _vroot, f'load_pending вернул тот же корень {_r2!r}')
+check(_l2 == _vrel, 'load_pending вернул rel тем же множеством путей')
+import json as _json  # noqa: E402
+_2, _mp = SU.pending_paths(_pdir)
+_meta = _json.load(open(_mp, encoding='utf-8'))
+check(isinstance(_meta.get('rel'), list), 'в описании rel лежит списком (JSON-совместимо)')
+
+# и главное — отложенный архив реально раскатывается
+_bot = os.path.join(_pdir, 'bot')
+os.makedirs(os.path.join(_bot, 'web'))
+os.makedirs(os.path.join(_bot, 'data'))
+for _f, _t in (('main.py', 'OLD'), ('config.py', 'OLD'), ('web/app.py', 'OLD'),
+               ('.env', 'SECRET=1'), ('data/bot.db', 'db')):
+    with open(os.path.join(_bot, _f), 'w', encoding='utf-8') as _fh:
+        _fh.write(_t)
+_sok, _serr, _stats = SU.stage_update(_z2, _bot, _r2, _l2, 0, 'deadbeef', 'main')
+check(_sok, f'stage_update применил отложенный архив ({_serr})')
+check(_stats.get('copied') == 4, f"обновлено файлов: {_stats.get('copied')}")
+
+
+def _read(_p):
+    _fp = os.path.join(_bot, _p)
+    return open(_fp, encoding='utf-8').read().strip() if os.path.exists(_fp) else None
+
+
+check(_read('main.py') == 'NEW MAIN', 'main.py заменён на новый')
+check(_read('cogs/fresh.py') == '# new', 'новый файл добавлен')
+check(_read('.env') == 'SECRET=1', '.env не тронут')
+check(_read('data/bot.db') == 'db', 'data/bot.db не тронута')
+
 with open(_z2, 'ab') as _f:
     _f.write(b'garbage')
 check(SU.load_pending(_pdir)[0] is None,
