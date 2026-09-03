@@ -157,7 +157,7 @@ def main():
         fam, w = fam_weight[font]
         faces.append(
             '@font-face{font-family:"%s";font-style:normal;font-weight:%d;'
-            'font-display:block;src:url(../webfonts/%s.subset.woff2) format("woff2")}'
+            'font-display:swap;src:url(../webfonts/%s.subset.woff2) format("woff2")}'
             % (fam, w, font))
 
     # ── шрифты: подмножество глифов ─────────────────────────────────────

@@ -508,7 +508,9 @@ def after_request (response ):
     if not response .headers .get ('Content-Security-Policy'):
         csp =(
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        # Cloudflare Web Analytics подставляет beacon.min.js со своего
+        # домена — без него в консоли ошибка CSP, а статистика не собирается.
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; "
         "style-src 'self' 'unsafe-inline'; "
         "font-src 'self' data:; "
         "img-src 'self' data: https:; "
@@ -525,7 +527,9 @@ def after_request (response ):
         response .headers .pop ('X-Frame-Options',None )
         response .headers ['Content-Security-Policy']=(
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        # Cloudflare Web Analytics подставляет beacon.min.js со своего
+        # домена — без него в консоли ошибка CSP, а статистика не собирается.
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; "
         "style-src 'self' 'unsafe-inline'; "
         "font-src 'self' data:; "
         "img-src 'self' data: https:; "

@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Вход в панель управления Hakumo — по паролю или PIN-коду.">
   <title>Вход — Hakumo</title>
   <link rel="icon" href="/static/favicon.ico">
       <style>
@@ -570,7 +571,7 @@
         <div class="ring2"></div>
         <div class="orbits"><i></i><i></i><i></i></div>
         <div class="dragon-smoke"><span></span><span></span><span></span></div>
-        <div class="tile"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt=""></div>
+        <div class="tile"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></div>
         <div class="floor"></div>
       </div>
 
@@ -578,7 +579,7 @@
         <div class="auth-main">
           <section class="auth-side">
             <div class="brand">
-              <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo"></span>
+              <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo"></span>
               <div><b>HAKUMO</b><span>панель управления</span></div>
               <span class="member-chip">MEMBER EDITION</span>
             </div>
@@ -588,7 +589,7 @@
 
           <div class="auth-form-side">
             <div class="mobile-brand">
-              <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.png" alt="Hakumo"></span>
+              <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo"></span>
               <b>HAKUMO</b>
             </div>
 
@@ -828,7 +829,11 @@
     var newPanel = tab === 'pass' ? $('tabPass') : $('tabPin');
     _curTab = tab;
     document.querySelectorAll('[data-auth-tab]').forEach(function (b) { b.classList.toggle('active', b === btn); });
-    placeSlider(btn);
+    // placeSlider читает offsetLeft/offsetWidth. Если звать его сразу после
+    // смены классов, браузер вынужден пересчитать layout синхронно — это и есть
+    // «forced reflow» из отчёта Lighthouse. Чтение откладываем на кадр: запись
+    // и чтение разносятся, layout считается один раз в обычном порядке.
+    requestAnimationFrame(function () { placeSlider(btn); });
     var s = $('tabSlider');
     if (s) { s.classList.add('moving'); setTimeout(function () { s.classList.remove('moving'); }, 400); }
     oldPanel.classList.add(dirRight ? 'tab-out-l' : 'tab-out-r');
