@@ -71,12 +71,30 @@
   .u-kpi-txt b { display: block; font-size: 17px; line-height: 1.15; color: var(--text-1); font-weight: var(--fw-semibold); }
   .u-kpi-txt span { display: block; font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap;
                     overflow: hidden; text-overflow: ellipsis; }
-  /* ── быстрые действия на карточке участника ── */
-  .u-mini { display: none; gap: 4px; margin-left: 6px; flex: none; }
-  .member-card:hover .u-mini, .member-card:focus-within .u-mini { display: inline-flex; }
-  .u-mini button { border: 1px solid var(--line); background: var(--surface-2); color: var(--text-3); width: 24px; height: 24px;
+  /* ── быстрые действия на карточке участника ──
+     Кнопки — ОВЕРЛЕЙ (position:absolute): раньше они встраивались в поток
+     (display:none → inline-flex) и отнимали ~55px у текста — теги (роль +
+     дата) переносились на лишнюю строку, карточка росла в высоту, и весь
+     ряд сетки «выдвигался» вниз. Теперь появление кнопок ничего не
+     сдвигает: геометрия карточки при наведении не меняется. */
+  .members-grid .member-card { position: relative; }
+  .member-card:hover .u-go, .member-card:focus-within .u-go { opacity: 0; }
+  .u-mini {
+    position: absolute; right: 8px; top: 50%;
+    transform: translateY(-50%);
+    display: flex; gap: 3px; padding: 3px;
+    background: var(--surface);            /* непрозрачная подложка — текст не просвечивает */
+    border: 1px solid var(--line-2);
+    border-radius: 10px;
+    box-shadow: var(--shadow-2);
+    visibility: hidden; opacity: 0;
+    transition: opacity .15s, visibility .15s;
+    z-index: 2;
+  }
+  .member-card:hover .u-mini, .member-card:focus-within .u-mini { visibility: visible; opacity: 1; }
+  .u-mini button { border: 0; background: none; color: var(--text-3); width: 22px; height: 22px;
                    border-radius: 7px; cursor: pointer; font-size: 11px; display: grid; place-items: center; transition: .15s; }
-  .u-mini button:hover { border-color: var(--ac); color: var(--ac); }
+  .u-mini button:hover { background: var(--surface-3); color: var(--ac); }
   /* ── вкладки окна участника ── */
   .mcf-tabs { display: flex; gap: 2px; padding: 0 10px; border-bottom: 1px solid var(--line);
               background: var(--surface-2); overflow-x: auto; scrollbar-width: thin; }
