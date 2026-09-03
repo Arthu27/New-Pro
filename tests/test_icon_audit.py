@@ -35,7 +35,10 @@ def check(ok, msg):
         print(f'  FAIL: {msg}')
 
 
-FA_CSS = os.path.join(ROOT, 'web', 'static', 'vendor', 'fontawesome', 'css', 'all.min.css')
+# Проверяем именно all.subset.css: шаблоны подключают подмножество
+# (scripts/subset_fontawesome.py), полный all.min.css в панель не отдаётся.
+# Синхронность подмножества с исходниками сторожит test_fontawesome_subset.py.
+FA_CSS = os.path.join(ROOT, 'web', 'static', 'vendor', 'fontawesome', 'css', 'all.subset.css')
 css = open(FA_CSS, encoding='utf-8').read()
 DEFINED = set(re.findall(r'\.(fa-[a-z0-9-]+)', css))
 
@@ -49,7 +52,14 @@ _sources = [s for s in _sources if 'vendor' not in s]
 used = set()
 for f in _sources:
     src = open(f, encoding='utf-8').read()
-    used |= set(re.findall(r'fa-[a-z0-9-]+', src))
+    for m in re.finditer(r'fa-[a-z0-9-]+', src):
+        tok = m.group(0)
+        # fa-solid-900.woff2 — имя файла шрифта из preload/url(), а не иконка
+        # между именем и расширением может стоять «.subset»
+        if re.match(r'(?:\.[a-z0-9-]+)*\.(?:woff2?|ttf|otf|eot|svg)\b',
+                    src[m.end():]):
+            continue
+        used.add(tok)
 
 # конкатенации: 'fa-arrow-' + 'up' / 'fa-arrow-' + (n>=0 ? 'up' : 'down') —
 # токен-префикс, пропускаем; полные имена из таких выражений уже валидны

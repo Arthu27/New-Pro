@@ -80,8 +80,8 @@ check("'JetBrains Mono', monospace" not in TPL,
 #  и без fontawesome → все иконки пустыми квадратами)
 check('/static/vendor/fonts/fonts.css' in TPL,
       'подключён веб-шрифт панели (fonts.css: Inter, JetBrains Mono)')
-check('/static/vendor/fontawesome/css/all.min.css' in TPL,
-      'подключён FontAwesome — иконки не пустые квадраты')
+check('/static/vendor/fontawesome/css/all.subset.css' in TPL,
+      'подключён FontAwesome (подмножество) — иконки не пустые квадраты')
 # 2) системно: ни в одном шаблоне правило с селектором body не сбрасывает
 #    гарнитуру в inherit/serif — иначе страница выпадает из шрифта панели
 _bad_body_font = []

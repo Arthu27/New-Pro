@@ -289,7 +289,9 @@ PKG_TO_IMPORT = {'discord.py': 'discord', 'pillow': 'PIL', 'python-dotenv': 'dot
                  'flask-session': 'flask_session',
                  'deep-translator': 'deep_translator', 'faster-whisper': 'faster_whisper',
                  'pynacl': 'nacl', 'discord-ext-voice-recv': 'discord.ext.voice_recv',
-                 'pyyaml': 'yaml', 'psutil': 'psutil'}
+                 'pyyaml': 'yaml', 'psutil': 'psutil',
+                 # pip-имя со строчной, import-имя с заглавной — как у Pillow
+                 'fonttools': 'fontTools'}
 not_installed = []
 for pkg in sorted(req_pkgs):
     top = PKG_TO_IMPORT.get(pkg, pkg.replace('-', '_'))
