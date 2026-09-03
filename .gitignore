@@ -169,3 +169,6 @@ scripts/.hakumo_tunnel_runtime.yml
 
 # Зависимости node (jsdom для локальных проверок фронтов)
 node_modules/
+
+# Локальные стенды и черновики агента
+.arena/
