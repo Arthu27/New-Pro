@@ -27,7 +27,8 @@
   <style>
     /* ═══ РЕГИСТРАЦИЯ — чёрное премиум-издание (единый стиль с /login) ═══
        Плавающие лейблы живут ВНУТРИ поля и всплывают при фокусе/вводе.
-       Флоу не меняется: Discord ID → код в ЛС от бота → пароль. */
+       Флоу: Discord ID → код в ЛС от бота → доступ создан; вход дальше
+       по «Discord PIN» (код каждый раз уходит в ЛС владельцу аккаунта). */
     :root {
       --bg: #05060a;
       --surface: #0d1019;
@@ -507,7 +508,6 @@
             <form method="POST" action="/register" autocomplete="off" id="regForm2">
               <input type="hidden" name="step" value="2">
               <input type="hidden" name="discord_id" value="{{ discord_id }}">
-              <input type="hidden" name="password" value="{{ password }}">
               <div class="auth-field filled focused" data-float>
                 <label class="lbl" for="code">Код из Discord</label>
                 <input type="text" name="code" id="code" class="code-input" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" autofocus required aria-label="Код подтверждения из Discord">
@@ -530,20 +530,7 @@
                 <div class="autocomplete-popup" id="regPopup"></div>
               </div>
               <div class="f-hint">Не знаешь свой ID? Начни печатать <b>ник</b> — выбери себя из списка, ID подставится сам.</div>
-              <div class="auth-field has-ico has-eye" data-float>
-                <label class="lbl" for="pass1">Пароль</label>
-                <i class="fas fa-lock f-ico" aria-hidden="true"></i>
-                <input type="password" name="password" id="pass1" placeholder="Пароль" minlength="6" required aria-label="Пароль">
-                <button type="button" class="eye" id="pass1Eye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
-                <span class="cap-hint" id="capHint1">Caps Lock</span>
-              </div>
-              <div class="auth-field has-ico has-eye" data-float>
-                <label class="lbl" for="pass2">Повтори пароль</label>
-                <i class="fas fa-lock f-ico" aria-hidden="true"></i>
-                <input type="password" name="password2" id="pass2" placeholder="Повтори пароль" minlength="6" required aria-label="Повторите пароль">
-                <button type="button" class="eye" id="pass2Eye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
-                <span class="cap-hint" id="capHint2">Caps Lock</span>
-              </div>
+              <div class="code-note" style="margin:0 0 16px 2px"><i class="fas fa-shield-halved"></i><span>Пароль для входа не нужен: участники входят по <b>коду из Discord</b> (вкладка «Discord PIN» на странице входа). Здесь код пришлём один раз — для создания доступа.</span></div>
               <button type="submit" class="auth-btn" id="regBtn1"><i class="fas fa-paper-plane"></i> Получить код</button>
             </form>
             {% endif %}
@@ -584,38 +571,6 @@
     sync();
   });
 
-  /* ── Глазики паролей ── */
-  function bindEye(btnId, inpId) {
-    var btn = $(btnId), inp = $(inpId);
-    if (!btn || !inp) return;
-    btn.addEventListener('click', function () {
-      var show = inp.type === 'password';
-      inp.type = show ? 'text' : 'password';
-      btn.setAttribute('aria-pressed', show ? 'true' : 'false');
-      btn.title = show ? 'Скрыть пароль' : 'Показать пароль';
-      var ic = btn.querySelector('i');
-      if (ic) ic.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
-      inp.focus();
-    });
-  }
-  bindEye('pass1Eye', 'pass1');
-  bindEye('pass2Eye', 'pass2');
-
-  /* ── Caps Lock у полей пароля ── */
-  function bindCaps(inpId, hintId) {
-    var pw = $(inpId), hint = $(hintId);
-    if (!pw || !hint) return;
-    function capState(e) {
-      var on = !!(e.getModifierState && e.getModifierState('CapsLock'));
-      hint.style.opacity = on ? '1' : '0';
-    }
-    pw.addEventListener('keydown', capState);
-    pw.addEventListener('keyup', capState);
-    pw.addEventListener('blur', function () { hint.style.opacity = '0'; });
-  }
-  bindCaps('pass1', 'capHint1');
-  bindCaps('pass2', 'capHint2');
-
   /* ── Выбор себя по нику (подставляет Discord ID) ── */
   var suggestTimer = null;
   var __rgSuggestBlock = false;
@@ -653,8 +608,8 @@
               var fld = input.closest('[data-float]');
               if (fld) fld.classList.add('filled');
               popup.classList.remove('open');
-              var p1 = $('pass1');
-              if (p1) p1.focus();
+              var btn1 = $('regBtn1');
+              if (btn1) btn1.focus();
             });
           });
         })
@@ -745,18 +700,6 @@
     form1.addEventListener('submit', function (e) {
       if (form1.dataset.sent) { e.preventDefault(); return; }
       if (!form1.checkValidity()) return;   /* браузер подсветит пустое */
-      var p1 = $('pass1'), p2 = $('pass2');
-      if (p1 && p2 && p1.value !== p2.value) {
-        var errBox = $('regError1');
-        var dg = document.getElementById('discord_id');
-        if (errBox) {
-          errBox.classList.add('show');
-          errBox.querySelector('span').textContent = 'Пароли не совпадают.';
-        }
-        if (dg) dg.focus();
-        e.preventDefault();
-        return;
-      }
       e.preventDefault();
       form1.dataset.sent = '1';
       regCheck.start(['Находим аккаунт на сервере', 'Связываемся с Discord', 'Отправляем код в ЛС'],

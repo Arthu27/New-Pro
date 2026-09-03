@@ -614,6 +614,10 @@
               <b>HAKUMO</b>
             </div>
 
+            {% if request.args.get('success') %}
+            <div class="auth-ok" id="regOkNote" role="status"><i class="fas fa-circle-check"></i><span>Доступ создан! Теперь войди через <b>Discord PIN</b> — бот пришлёт код в твои личные сообщения Discord.</span></div>
+            {% endif %}
+
             <div class="tabs">
               <span class="tab-slider" id="tabSlider" aria-hidden="true"></span>
               <button type="button" class="tab-btn active" id="tabBtnPass" data-auth-tab="pass"><i class="fas fa-key"></i> Пароль</button>
@@ -622,9 +626,6 @@
 
             <!-- Вход по паролю -->
             <div id="tabPass">
-              {% if request.args.get('success') %}
-              <div class="auth-ok" id="regOkNote" role="status"><i class="fas fa-circle-check"></i><span>Доступ создан! Теперь войди: логин — твой Discord ID, пароль — тот, что ты придумал при регистрации.</span></div>
-              {% endif %}
               <div class="auth-error" id="passError" {% if error %}style="display:block"{% endif %}>{{ error|e }}</div>
               <form method="POST" action="/login" autocomplete="off">
                 <div class="auth-field has-ico" data-float>
@@ -640,6 +641,7 @@
                   <button type="button" class="eye" id="passEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
                   <span class="cap-hint" id="capHint">Caps Lock включён</span>
                 </div>
+                <div class="auth-sub" style="margin:2px 2px 10px;display:flex;gap:7px;align-items:flex-start"><i class="fas fa-info-circle" style="margin-top:2px"></i><span>Пароль — только для владельца панели. Участники входят через <b>Discord PIN</b>.</span></div>
                 <button type="submit" class="auth-btn" id="passSubmitBtn"><i class="fas fa-arrow-right"></i> Войти</button>
               </form>
             </div>
