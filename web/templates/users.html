@@ -43,6 +43,8 @@
   .pn-act[data-kind=danger] > i { color: var(--err); }
   .pn-act.sel { border-color: var(--ac); box-shadow: 0 0 0 2px var(--ac-soft); background: var(--surface-3); }
   .pn-act.sel[data-kind=danger] { border-color: var(--err); box-shadow: 0 0 0 2px var(--err-soft); }
+  .pn-act:disabled { opacity: .5; cursor: not-allowed; }
+  .pn-act:disabled:hover { border-color: var(--line); transform: none; box-shadow: none; }
   .pn-lbl { display: flex; justify-content: space-between; align-items: baseline;
             font-size: var(--fs-sm); color: var(--text-3); font-weight: var(--fw-medium); margin: 12px 0 6px; }
   .pn-cnt { font-size: var(--fs-xs); color: var(--text-4); font-weight: 400; }
@@ -634,6 +636,11 @@
   var pnSel = '';
   var pnUid = '';
   var pnArm = 0;   /* до какого момента «взведён» бан (двойной клик) */
+  /* «Лимиты команды» (Щит сервера → Лимиты) для вошедшего модератора:
+     options отдаёт pnLimits {действие: {limit, used, left, window}} и
+     pnLimitExempt (true — владелец/доверенный вход, лимитов нет). */
+  var pnLimits = {};
+  var pnLimitExempt = true;
 
   var PN_META = {
     warn:      { icon: 'fa-triangle-exclamation', kind: 'neg',    sub: 'запись в дело' },
@@ -702,12 +709,14 @@
 
   function pnLoad() {
     var gid = $('guild-select').value;
-    if (!gid) return;
-    fetch('/api/guild/' + gid + '/punish/options', { credentials: 'same-origin' })
+    if (!gid) return Promise.resolve();
+    return fetch('/api/guild/' + gid + '/punish/options', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         pnOpts = d && d.success ? d : null;
         pnActions = pnOpts ? (pnOpts.actions || []) : [];
+        pnLimits = (pnOpts && pnOpts.limits) || {};
+        pnLimitExempt = !!(pnOpts && pnOpts.limit_exempt);
         pnRenderForm();
       }).catch(function () {});
   }
@@ -726,10 +735,28 @@
     $('pnEmpty').hidden = true;
     grid.innerHTML = pnActions.map(function (a) {
       var meta = pnActionMeta(a.value);
-      return '<button type="button" class="pn-act" role="radio" aria-checked="false" data-v="' + esc(a.value) + '" data-kind="' + meta.kind + '">' +
+      /* остаток по «Лимитам команды» — виден на кнопке; исчерпанное
+         действие отключается (сервер всё равно отклонит — это подсказка) */
+      var sub = meta.sub;
+      var lim = pnLimits[a.value];
+      var atLimit = false;
+      if (lim && !pnLimitExempt) {
+        if (typeof lim.left === 'number' && lim.left <= 0) {
+          atLimit = true;
+          sub = sub + ' · лимит исчерпан';
+        } else if (lim.left < lim.limit) {
+          sub = sub + ' · осталось ' + lim.left;
+        } else {
+          sub = sub + ' · лимит ' + lim.limit + ' за ' + lim.window;
+        }
+      }
+      return '<button type="button" class="pn-act" role="radio" aria-checked="false"' +
+        (atLimit ? ' disabled' : '') +
+        ' data-v="' + esc(a.value) + '" data-kind="' + meta.kind + '"' +
+        (atLimit ? ' title="Лимит исчерпан — действие недоступно до обновления окна"' : '') + '>' +
         '<i class="fas ' + meta.icon + '" aria-hidden="true"></i>' +
         '<span><span class="t">' + esc(a.label) + '</span>' +
-        '<span class="s">' + esc(meta.sub) + '</span></span></button>';
+        '<span class="s">' + esc(sub) + '</span></span></button>';
     }).join('');
     /* быстрые пресеты срока */
     $('pnPresets').innerHTML = PN_PRESETS.map(function (p) {
@@ -752,12 +779,18 @@
     var meta = {};
     pnActions.forEach(function (a) { if (a.value === pnSel) meta = a; });
     $('pnDurBlock').hidden = !meta.duration;
+    var limSel = pnLimits[pnSel];
+    var limOut = limSel && !pnLimitExempt &&
+                 typeof limSel.left === 'number' && limSel.left <= 0;
     var btn = $('pnGo');
-    btn.disabled = !pnSel || (pnOpts && !pnOpts.bot_online);
+    btn.disabled = !pnSel || (pnOpts && !pnOpts.bot_online) || !!limOut;
     btn.classList.remove('armed');
     btn.innerHTML = '<i class="fas fa-bolt"></i> Применить';
     var msg = '';
-    if (pnSel === 'ban' && pnOpts && !pnOpts.ban_ready) {
+    if (limOut) {
+      msg = 'Лимит исчерпан: ' + limSel.limit + ' за ' + limSel.window +
+            ' — действие снова станет доступно после обновления окна.';
+    } else if (pnSel === 'ban' && pnOpts && !pnOpts.ban_ready) {
       msg = '«Бан» пока не работает: не выбран канал апелляции. Панель → Каналы и маршруты → «Канал апелляции (бан)».';
     }
     $('pnMsg').textContent = msg;
@@ -805,9 +838,19 @@
     }).then(function (r) { return r.json(); }).then(function (d) {
       btn.disabled = false;
       var t = d.message || d.error || 'Готово';
-      $('pnMsg').textContent = t;
-      $('pnMsg').style.color = d.success ? '' : 'var(--err)';
-      if (d.success) { pnSelect(''); pnResetForm(); }
+      if (d.success) {
+        /* действие ушло в счётчик — сначала обновим остатки лимитов,
+           потом покажем результат (иначе перерисовка его сотрёт) */
+        pnSelect('');
+        pnResetForm();
+        pnLoad().then(function () {
+          $('pnMsg').textContent = t;
+          $('pnMsg').style.color = '';
+        });
+      } else {
+        $('pnMsg').textContent = t;
+        $('pnMsg').style.color = 'var(--err)';
+      }
     }).catch(function () {
       btn.disabled = false;
       $('pnMsg').textContent = 'Сеть моргнула — попробуйте ещё раз';

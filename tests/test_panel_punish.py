@@ -416,6 +416,72 @@ with client.session_transaction() as sess:
 r = client.get('/api/guild/777/punish/options')
 check(r.status_code in (301, 302, 401, 403), 'гостю закрыто')
 
+print('== 10. «Лимиты команды» действуют и в карточке «Пользователи» ==')
+# Изолируем счётчики гильдии 777 от предыдущих секций
+for _pth in (SL._cnt_path(777), SL._cfg_path(777), SL._roles_path(777)):
+    try:
+        if os.path.exists(_pth):
+            os.remove(_pth)
+    except OSError:
+        pass
+SL.set_limits(777, ban=1)
+PACL.set_action_rule(777, 'ban', ['555'])
+
+# вход через Discord-аккаунт с ролью 555 (не владелец)
+with client.session_transaction() as sess:
+    sess.clear()
+    sess['logged_in'] = True
+    sess['username'] = 'QuotaMod'
+    sess['role'] = 'mod'
+    sess['discord_id'] = str(TID)
+    sess['selected_guild'] = '777'
+    sess['_role_checked'] = _t.time()
+wg.members[0].roles = [_Role(555)]
+
+# options честно показывает лимит и остаток (а не «для галочки»)
+r = client.get('/api/guild/777/punish/options')
+d = r.get_json()
+lim = (d.get('limits') or {}).get('ban')
+check(d.get('limit_exempt') is False,
+      'вход через Discord: limit_exempt=false — лимиты показаны')
+check(lim and lim.get('limit') == 1 and lim.get('left') == 1,
+      f'options: бан — лимит 1, осталось 1 (получено {lim})')
+check('ban' in [a.get('value') for a in d.get('actions', [])],
+      'бан доступен по правам роли')
+
+# расходуем единственную выдачу за окно — счётчик вырос
+SL.record_hit(777, TID, 'ban', 1)
+d2 = client.get('/api/guild/777/punish/options').get_json()
+lim2 = (d2.get('limits') or {}).get('ban')
+check(lim2 and lim2.get('used') == 1 and lim2.get('left') == 0,
+      f'после выдачи options показывает used=1, left=0 ({lim2})')
+
+# вторая выдача за окно — сервер отказывает, а не «даёт бесконечно»
+r = client.post('/api/guild/777/punish', json={
+    'user_id': str(TID), 'action': 'ban', 'reason': 'вторая за день'})
+d3 = r.get_json()
+check(not d3.get('success') and 'Лимит' in (d3.get('error') or ''),
+      f'вторая выдача отклонена лимитом ({d3.get("error", "")[:80]})')
+
+# доверенный вход (владелец панели) — лимиты не режут (как в Discord-командах)
+with client.session_transaction() as sess:
+    sess.clear()
+    sess['logged_in'] = True
+    sess['username'] = 'StaticBoss'
+    sess['role'] = 'owner'
+    sess['selected_guild'] = '777'
+r = client.post('/api/guild/777/punish', json={
+    'user_id': str(TID), 'action': 'ban', 'reason': 'владелец не ограничен'})
+check(bool((r.get_json() or {}).get('success')),
+      'владелец панели лимитами не режется')
+
+# шаблон понимает лимиты: остатки на кнопках, исчерпанное отключается
+_utpl10 = open(os.path.join(ROOT, 'web', 'templates', 'users.html'),
+               encoding='utf-8').read()
+check('pnLimits' in _utpl10 and 'pnLimitExempt' in _utpl10 and
+      'лимит исчерпан' in _utpl10,
+      'шаблон: лимиты и остатки в форме наказания понятны интерфейсу')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)
