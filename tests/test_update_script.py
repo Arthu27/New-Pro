@@ -330,17 +330,24 @@ shutil.rmtree(_pdir, ignore_errors=True)
 # reset_server_data.bat (0 CRLF) и start_panel.bat (5 CRLF на 89 строк).
 print('== все .bat в CRLF ==')
 _bad_crlf = []
-for _name in sorted(os.listdir(ROOT)):
-    if not _name.endswith('.bat'):
-        continue
-    _raw = open(os.path.join(ROOT, _name), 'rb').read()
-    _crlf = _raw.count(b'\r\n')
-    _lone = _raw.replace(b'\r\n', b'').count(b'\n')
-    if _lone:
-        _bad_crlf.append(f'{_name}: {_lone} одиночных LF при {_crlf} CRLF')
-check(not _bad_crlf, f'.bat без CRLF: {len(_bad_crlf)} ({_bad_crlf})')
-_n_bat = len([n for n in os.listdir(ROOT) if n.endswith('.bat')])
-check(_n_bat >= 5, f'проверено .bat в корне: {_n_bat}')
+_n_bat = 0
+for _dp, _dn, _fn in os.walk(ROOT):
+    _dn[:] = [d for d in _dn if d not in
+              ('.venv', 'venv', 'node_modules', '.git', '__pycache__',
+               'dist', '.arena', '.mypy_cache', '.pytest_cache')]
+    for _name in sorted(_fn):
+        if not _name.endswith(('.bat', '.cmd')):
+            continue
+        _n_bat += 1
+        _raw = open(os.path.join(_dp, _name), 'rb').read()
+        _crlf = _raw.count(b'\r\n')
+        _lone = _raw.replace(b'\r\n', b'').count(b'\n')
+        if _lone:
+            _bad_crlf.append('%s: %d одиночных LF при %d CRLF'
+                             % (os.path.relpath(os.path.join(_dp, _name), ROOT),
+                                _lone, _crlf))
+check(not _bad_crlf, f'.bat/.cmd без CRLF: {len(_bad_crlf)} ({_bad_crlf})')
+check(_n_bat >= 6, f'проверено .bat/.cmd во всём репозитории: {_n_bat}')
 
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
