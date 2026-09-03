@@ -61,11 +61,6 @@
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
     }
-    body::after {
-      content: ''; position: fixed; inset: 0; z-index: 1; pointer-events: none;
-      opacity: .045;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23g)'/></svg>");
-    }
 
     /* ── Фоновые слои ── */
     .bg-fx { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
@@ -81,7 +76,6 @@
       mask-image: radial-gradient(ellipse 80% 65% at 50% 40%, #000 30%, transparent 75%);
       -webkit-mask-image: radial-gradient(ellipse 80% 65% at 50% 40%, #000 30%, transparent 75%);
     }
-    #lg-stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
     .lg-glow {
       position: fixed; left: 50%; top: -260px; transform: translateX(-50%);
       width: 900px; height: 460px; pointer-events: none; z-index: 0;
@@ -137,20 +131,7 @@
       border: 1px solid rgba(124, 58, 237, .35);
       animation: lgSpin 18s linear infinite;
     }
-    .lg-dragon-stage .ring2 {
-      position: absolute; inset: 14px; border-radius: 50%;
-      border: 1px dashed rgba(34, 211, 238, .3);
-      animation: lgSpin 26s linear infinite reverse;
-    }
     @keyframes lgSpin { to { transform: rotate(360deg); } }
-    .lg-dragon-stage .orbits { position: absolute; inset: 0; }
-    .lg-dragon-stage .orbits i {
-      position: absolute; width: 6px; height: 6px; border-radius: 50%;
-      background: var(--ac3); box-shadow: 0 0 10px var(--ac3);
-    }
-    .lg-dragon-stage .orbits i:nth-child(1) { left: 50%; top: -3px; }
-    .lg-dragon-stage .orbits i:nth-child(2) { right: 6px; bottom: 26px; background: #a5b4fc; box-shadow: 0 0 10px #a5b4fc; }
-    .lg-dragon-stage .orbits i:nth-child(3) { left: 6px; bottom: 26px; }
     .lg-dragon-stage .tile {
       width: 84px; height: 84px; border-radius: 24px;
       background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
@@ -176,14 +157,6 @@
       animation: lgFloor 4.6s ease-in-out infinite;
     }
     @keyframes lgFloor { 0%,100% { transform: translateX(-50%) scaleX(.85); opacity: .55; } 50% { transform: translateX(-50%) scaleX(1.1); opacity: 1; } }
-    .lg-dragon-stage .dragon-smoke span {
-      position: absolute; bottom: -8px; left: 50%; width: 6px; height: 6px;
-      border-radius: 50%; background: rgba(165, 180, 252, .5);
-      animation: dragonSmoke 3s ease-out infinite;
-    }
-    .lg-dragon-stage .dragon-smoke span:nth-child(2) { animation-delay: 1s; left: calc(50% - 12px); }
-    .lg-dragon-stage .dragon-smoke span:nth-child(3) { animation-delay: 2s; left: calc(50% + 12px); }
-    @keyframes dragonSmoke { from { opacity: .6; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-26px) scale(.4); } }
     .lg-dragon-stage .floor {
       position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%);
       width: 110px; height: 14px; border-radius: 50%;
@@ -484,41 +457,82 @@
     .autocomplete-popup .a-copy b { font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .autocomplete-popup .a-copy small { font-size: 10.5px; color: var(--text3); }
 
-    /* ── Фичи участников ── */
-    .auth-feats {
-      list-style: none; margin: 22px 0 0; padding: 0;
-      display: flex; flex-wrap: wrap; gap: 9px; justify-content: center;
-      max-width: 880px;
-    }
-    .auth-feats li {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-size: 12.5px; color: var(--text2);
-      background: rgba(255, 255, 255, .05);
-      border: 1px solid rgba(255,255,255,.07);
-      border-radius: 99px; padding: 10px 16px;
-      animation: featIn .5s var(--ease) both;
-    }
-    .auth-feats li i { color: var(--ac3); font-size: 12.5px; transition: color .15s; }
-    .auth-feats li:hover i {
-      background: var(--ac-grad);
-      -webkit-background-clip: text; background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .auth-feats li:nth-child(1) { animation-delay: .05s; }
-    .auth-feats li:nth-child(2) { animation-delay: .12s; }
-    .auth-feats li:nth-child(3) { animation-delay: .19s; }
-    .auth-feats li:nth-child(4) { animation-delay: .26s; }
-    .auth-feats li:nth-child(5) { animation-delay: .33s; }
-    .auth-feats li:nth-child(6) { animation-delay: .4s; }
-    @keyframes featIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
     .lg-foot-note {
       margin-top: 20px; font-size: 10px; letter-spacing: .22em;
       color: var(--text3); text-transform: uppercase; font-weight: 700;
     }
 
     /* ── Въезд карточки ── */
-    .auth-card, .auth-side, .auth-main, .auth-feats li { animation: slideSide .6s var(--ease) both; }
+    .auth-card, .auth-side, .auth-main { animation: slideSide .6s var(--ease) both; }
     @keyframes slideSide { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+
+    /* ── Экран «Проверяем доступ» ── */
+    .lead.trust { margin-top: 14px; font-size: 12.5px; display: flex; gap: 8px; align-items: center; }
+    .lead.trust i { color: var(--ac3); font-size: 12px; flex: none; }
+
+    .auth-check {
+      position: fixed; inset: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(5, 6, 10, .78);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      animation: chkFade .22s ease both;
+    }
+    @keyframes chkFade { from { opacity: 0; } to { opacity: 1; } }
+    .auth-check-card {
+      width: min(400px, calc(100vw - 40px));
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 30%), #0d1019;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 22px;
+      box-shadow: 0 40px 90px -30px rgba(0,0,0,.9), 0 0 60px -20px rgba(79,70,229,.5);
+      padding: 34px 30px 28px;
+      text-align: center;
+    }
+    .auth-check-card .logo {
+      width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 16px;
+      background: radial-gradient(circle at 50% 35%, #1a1f33, #0b0e18);
+      border: 1px solid rgba(255,255,255,.1);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 10px 26px -10px rgba(79,70,229,.7);
+    }
+    .auth-check-card .logo img { width: 68%; height: 68%; object-fit: contain; }
+    .auth-check-card h3 { margin: 0 0 4px; font-family: var(--font-display, 'Unbounded', sans-serif); font-size: 15px; letter-spacing: .02em; }
+    .auth-check-card .sub { margin: 0 0 20px; font-size: 12px; color: var(--text3); }
+    .auth-steps { list-style: none; margin: 0; padding: 0; text-align: left; display: grid; gap: 6px; }
+    .auth-steps li {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px; border-radius: 13px;
+      background: rgba(255,255,255,.02); border: 1px solid transparent;
+      color: var(--text3); font-size: 13px;
+      opacity: .5; transition: opacity .2s, border-color .2s, background .2s;
+    }
+    .auth-steps li .s-ico {
+      width: 26px; height: 26px; flex: none; border-radius: 9px;
+      display: grid; place-items: center; font-size: 11px;
+      background: rgba(255,255,255,.06); color: var(--text3);
+      transition: background .2s, color .2s;
+    }
+    .auth-steps li.on { opacity: 1; color: var(--text2); }
+    .auth-steps li.on .s-ico { background: rgba(79,70,229,.2); color: #a5b4fc; }
+    .auth-steps li.on .s-ico .spin { animation: lgSpin .8s linear infinite; }
+    .auth-steps li.done { opacity: 1; color: var(--text); border-color: rgba(74,222,128,.16); background: rgba(74,222,128,.05); }
+    .auth-steps li.done .s-ico { background: rgba(74,222,128,.16); color: var(--ok); }
+    .auth-steps li.err { opacity: 1; color: var(--text); border-color: rgba(248,113,113,.2); background: rgba(248,113,113,.06); }
+    .auth-steps li.err .s-ico { background: rgba(248,113,113,.18); color: var(--err); }
+    .auth-check-err {
+      margin-top: 14px; padding: 10px 12px; border-radius: 12px;
+      background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25);
+      color: var(--err); font-size: 12px; text-align: left; display: none;
+    }
+    .auth-check-err.show { display: block; }
+    .auth-check .retry {
+      margin-top: 14px; width: 100%; height: 44px;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+      color: var(--text); border-radius: 12px; font-family: inherit;
+      font-size: 13px; font-weight: 700; cursor: pointer; display: none;
+      align-items: center; justify-content: center; gap: 8px;
+    }
+    .auth-check .retry.show { display: flex; }
+    .auth-check .retry:hover { border-color: var(--ac); color: #c7d2fe; }
 
     /* ── Адаптив ── */
     @media (max-width: 760px) {
@@ -535,11 +549,10 @@
     /* ── Reduced motion: все новые анимации выключены ── */
     @media (prefers-reduced-motion: reduce) {
       .orb1, .lg-aurora i { animation: none; }
-      .lg-dragon-stage .ring, .lg-dragon-stage .ring2 { animation: none; }
-      .dragon-smoke span { animation: none; opacity: 0; }
+      .lg-dragon-stage .ring { animation: none; }
       .auth-side h1 .grad { animation: none; }
       .dragon-live, .lg-dragon-stage .floor, .lg-dragon-stage .tile::after { animation: none; }
-      .auth-card, .auth-side, .auth-main, .auth-feats li { animation: none; }
+      .auth-card, .auth-side, .auth-main { animation: none; }
       #tabPass, #tabPin { animation: none; }
       .tab-out-l, .tab-out-r, .tab-in-r, .tab-in-l,
       #step1.step-out, #step2.step-out, #step1.step-in, #step2.step-in { animation: none; }
@@ -549,7 +562,7 @@
       .pin-box input.has { animation: none; }
       .auth-field .lbl { transition: none; }
       .auth-btn::after { transition: none; }
-      .auth-card, .auth-side, .auth-main, .auth-feats li { transform: none !important; }
+      .auth-card, .auth-side, .auth-main { transform: none !important; }
     }
   </style>
 </head>
@@ -561,16 +574,12 @@
     <span class="orb orb1"></span>
   </div>
   <div class="bg-grid" aria-hidden="true"></div>
-  <canvas id="lg-stars" aria-hidden="true"></canvas>
 
   <main class="lg-stage">
     <div class="lg-card-zone">
-      <!-- Медальон дракона: парит над кромкой карточки -->
+      <!-- Медальон: эмблема над карточкой -->
       <div class="lg-dragon-stage" aria-hidden="true">
         <div class="ring"></div>
-        <div class="ring2"></div>
-        <div class="orbits"><i></i><i></i><i></i></div>
-        <div class="dragon-smoke"><span></span><span></span><span></span></div>
         <div class="tile"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></div>
         <div class="floor"></div>
       </div>
@@ -581,10 +590,11 @@
             <div class="brand">
               <span class="ico"><img class="dragon-live" src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt="Hakumo"></span>
               <div><b>HAKUMO</b><span>панель управления</span></div>
-              <span class="member-chip">MEMBER EDITION</span>
+              <span class="member-chip"><i class="fas fa-user-check"></i> доступ участника</span>
             </div>
-            <h1>Твой сервер — <span class="grad">твоя жизнь</span></h1>
-            <p class="lead">Вход в панель: профиль, заявки, обращения, уровни и события.</p>
+            <h1>С возвращением</h1>
+            <p class="lead">Войди в панель — профиль, заявки, обращения и события снова под рукой.</p>
+            <p class="lead trust"><i class="fas fa-shield-halved"></i> Вход проверяется по твоей роли на сервере — чужие сюда не пройдут.</p>
           </section>
 
           <div class="auth-form-side">
@@ -654,101 +664,26 @@
       </div>
     </div>
 
-    <!-- Фичи для участников -->
-    <ul class="auth-feats">
-      <li><i class="fas fa-user"></i> Твой профиль и роли</li>
-      <li><i class="fas fa-id-card-clip"></i> Карточка 360°</li>
-      <li><i class="fas fa-file-signature"></i> Заявки в команду</li>
-      <li><i class="fas fa-ticket"></i> Обращения без потерь</li>
-      <li><i class="fas fa-ranking-star"></i> Уровни и награды</li>
-      <li><i class="fas fa-calendar-days"></i> События сервера</li>
-    </ul>
-
-    <div class="lg-foot-note">HAKUMO · MEMBER EDITION · v3.0</div>
+    <div class="lg-foot-note">Hakumo — панель управления сервером</div>
   </main>
 
-<script>
-/* ── Звёздный фон логина (лёгкий canvas, 60 fps, редкие метеоры) ── */
-(function () {
-  'use strict';
-  var cv = document.getElementById('lg-stars');
-  if (!cv) return;
-  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduced) return;
-  var ctx = cv.getContext('2d');
-  if (!ctx) return; /* браузер без canvas 2d — просто не рисуем звёзды */
-  var W, H, stars = [];
-  var last = 0;
-  function resize() {
-    W = cv.width = window.innerWidth;
-    H = cv.height = window.innerHeight;
-    stars = [];
-    var n = Math.min(60, Math.floor(W * H / 22000));
-    for (var i = 0; i < n; i++) {
-      stars.push({
-        x: Math.random() * W, y: Math.random() * H,
-        r: Math.random() * 1.1 + 0.3,
-        p: Math.random() * Math.PI * 2,
-        s: 0.4 + Math.random() * 0.9
-      });
-    }
-  }
-  var meteor = null, meteorNext = 3600;
-  var target = 16, ema = 16;   /* адаптивно: 60 fps, на слабых машинах — 30 fps */
-  function step(now) {
-    requestAnimationFrame(step);
-    if (document.hidden) return;
-    var dt = now - last;
-    if (dt < target) return;
-    last = now;
-    ema = ema * .94 + Math.min(dt, 48) * .06;
-    target = ema > 30 ? 34 : 16;
-    ctx.clearRect(0, 0, W, H);
-    /* редкая падающая звезда */
-    if (!meteor && now > meteorNext) {
-      meteor = {
-        x: 120 + Math.random() * Math.max(80, W - 240),
-        y: 50 + Math.random() * H * 0.3,
-        vx: 5.5 + Math.random() * 3,
-        vy: 2.6 + Math.random() * 1.6,
-        life: 0
-      };
-    }
-    if (meteor) {
-      meteor.life++;
-      meteor.x += meteor.vx; meteor.y += meteor.vy;
-      var tail = 14;
-      var mg = ctx.createLinearGradient(
-        meteor.x, meteor.y,
-        meteor.x - meteor.vx * tail, meteor.y - meteor.vy * tail
-      );
-      mg.addColorStop(0, 'rgba(196, 181, 253, .95)');
-      mg.addColorStop(1, 'rgba(196, 181, 253, 0)');
-      ctx.strokeStyle = mg;
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.moveTo(meteor.x, meteor.y);
-      ctx.lineTo(meteor.x - meteor.vx * tail, meteor.y - meteor.vy * tail);
-      ctx.stroke();
-      if (meteor.life > 52 || meteor.y > H) {
-        meteor = null;
-        meteorNext = now + 4800 + Math.random() * 6000;
-      }
-    }
-    for (var i = 0; i < stars.length; i++) {
-      var st = stars[i];
-      var a = 0.22 + 0.5 * (0.5 + 0.5 * Math.sin(st.p + now * 0.001 * st.s));
-      ctx.beginPath();
-      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(200, 210, 255, ' + a.toFixed(2) + ')';
-      ctx.fill();
-    }
-  }
-  resize();
-  window.addEventListener('resize', resize, { passive: true });
-  requestAnimationFrame(step);
-})();
-</script>
+  <!-- Экран «Проверяем доступ»: показывается на время входа -->
+  <div class="auth-check" id="authCheck" hidden>
+    <div class="auth-check-card" role="status" aria-live="polite">
+      <div class="logo"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></div>
+      <h3>Проверяем доступ</h3>
+      <p class="sub" id="authCheckSub">Связываемся с Discord и проверяем роль…</p>
+      <ol class="auth-steps" id="authSteps">
+        <li data-step="1"><span class="s-ico"><i class="fas fa-magnifying-glass"></i></span><span>Находим аккаунт</span></li>
+        <li data-step="2"><span class="s-ico"><i class="fas fa-plug"></i></span><span>Связываемся с Discord</span></li>
+        <li data-step="3"><span class="s-ico"><i class="fas fa-shield-halved"></i></span><span>Проверяем роль и доступ</span></li>
+        <li data-step="4"><span class="s-ico"><i class="fas fa-right-to-bracket"></i></span><span id="authStep4Txt">Входим в панель</span></li>
+      </ol>
+      <div class="auth-check-err" id="authCheckErr"></div>
+      <button type="button" class="retry" id="authCheckRetry"><i class="fas fa-rotate-left"></i> Попробовать снова</button>
+    </div>
+  </div>
+
 <script>
 (function () {
   'use strict';
@@ -900,32 +835,125 @@
     pw.addEventListener('blur', function () { hint.style.opacity = '0'; });
   })();
 
-  /* 3D-наклон карточки (мягкий, rAF, только точный указатель, еле заметный) */
-  (function () {
-    if (!window.matchMedia || !window.matchMedia('(pointer: fine)').matches) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    var card = document.querySelector('.auth-card');
-    if (!card || !('requestAnimationFrame' in window)) return;
-    var rx = 0, ry = 0, tx = 0, ty = 0, raf = null;
-    function tick() {
-      raf = null;
-      rx += (tx - rx) * .12;
-      ry += (ty - ry) * .12;
-      card.style.transform = 'perspective(1100px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg)';
+  /* Экран «Проверяем доступ»: шаги при входе */
+  var accessCheck = {
+    steps: [],
+    stepN: 0,
+    finishCb: null,
+    flow: '',
+    start: function (flow, onFinish) {
+      var ov = $('authCheck');
+      this.flow = flow || '';
+      this.finishCb = onFinish || null;
+      this.steps = Array.prototype.slice.call(document.querySelectorAll('#authSteps li'));
+      if (!ov || !this.steps.length) {
+        if (this.finishCb) this.finishCb();
+        return;
+      }
+      ov.hidden = false;
+      var err = $('authCheckErr'), retry = $('authCheckRetry');
+      if (err) err.classList.remove('show');
+      if (retry) retry.classList.remove('show');
+      var sub = $('authCheckSub');
+      if (sub) sub.textContent = 'Связываемся с Discord и проверяем роль…';
+      var t4 = $('authStep4Txt');
+      if (t4) t4.textContent = 'Входим в панель';
+      this.stepN = 0;
+      this.steps.forEach(function (s) { s.classList.remove('on', 'done', 'err'); });
+      this.tick();
+    },
+    tick: function () {
+      var self = this;
+      if (self.stepN < 3) {
+        var cur = self.steps[self.stepN];
+        cur.classList.add('on');
+        var ico = cur.querySelector('.s-ico');
+        ico.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
+        setTimeout(function () {
+          cur.classList.remove('on');
+          cur.classList.add('done');
+          ico.innerHTML = '<i class="fas fa-check"></i>';
+          self.stepN++;
+          self.tick();
+        }, self.stepN === 2 ? 500 : 430);
+      } else {
+        var last = self.steps[3];
+        last.classList.add('on');
+        var lico = last.querySelector('.s-ico');
+        lico.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
+        setTimeout(function () {
+          if (self.finishCb) self.finishCb();
+        }, 380);
+      }
+    },
+    ok: function () {
+      var last = this.steps[3];
+      if (!last) return;
+      last.classList.remove('on');
+      last.classList.add('done');
+      var lico = last.querySelector('.s-ico');
+      if (lico) lico.innerHTML = '<i class="fas fa-check"></i>';
+      var t4 = $('authStep4Txt');
+      if (t4) t4.textContent = 'Готово';
+      var sub = $('authCheckSub');
+      if (sub) sub.textContent = 'Вход выполнен — открываем панель.';
+      this.close();
+    },
+    fail: function (text) {
+      var last = this.steps[3];
+      if (!last) return;
+      last.classList.remove('on');
+      last.classList.add('err');
+      var lico = last.querySelector('.s-ico');
+      if (lico) lico.innerHTML = '<i class="fas fa-xmark"></i>';
+      var sub = $('authCheckSub');
+      if (sub) sub.textContent = 'Не получилось войти.';
+      var err = $('authCheckErr');
+      if (err) {
+        err.textContent = text || 'Что-то пошло не так — попробуйте ещё раз.';
+        err.classList.add('show');
+      }
+      var retry = $('authCheckRetry');
+      if (retry) retry.classList.add('show');
+    },
+    close: function () {
+      var self = this;
+      setTimeout(function () {
+        var ov = $('authCheck');
+        if (ov) ov.hidden = true;
+        void self;
+      }, 550);
     }
-    card.addEventListener('mousemove', function (e) {
-      var r = card.getBoundingClientRect();
-      tx = ((e.clientY - r.top) / r.height - .5) * -2.4;
-      ty = ((e.clientX - r.left) / r.width - .5) * 2.4;
-      if (!raf) raf = requestAnimationFrame(tick);
+  };
+  var retryBtn = $('authCheckRetry');
+  if (retryBtn) {
+    /* «Попробовать снова» возвращает на форму без перезагрузки страницы */
+    retryBtn.addEventListener('click', function () {
+      accessCheck.close();
+      if (accessCheck.flow === 'pass') {
+        var f = document.querySelector('form[action="/login"]');
+        if (f) delete f.dataset.sent;
+        var first = $('passUsername');
+        if (first) first.focus();
+      } else {
+        var btn = $('pinConfirmBtn');
+        if (btn) btn.focus();
+      }
     });
-    card.addEventListener('mouseleave', function () {
-      tx = 0; ty = 0;
-      if (!raf) raf = requestAnimationFrame(tick);
-    });
-  })();
+  }
 
-  /* Автодополнение логинов (с клавиатурной навигацией) */
+  /* Вход по паролю: показываем проверку, затем отправляем форму */
+  var passForm = document.querySelector('form[action="/login"]');
+  if (passForm) {
+    passForm.addEventListener('submit', function (e) {
+      if (passForm.dataset.sent) { e.preventDefault(); return; }
+      if (!passForm.checkValidity()) return;   /* браузер сам подсветит пустое */
+      e.preventDefault();
+      passForm.dataset.sent = '1';
+      accessCheck.start('pass', function () { passForm.submit(); });
+    });
+  }
+
   var suggestTimer = null;
   window.showSuggest = function (input, popupId) {
     /* после выбора участника один показ подавляется —
@@ -1073,23 +1101,28 @@
     box.children[0].focus();
   }
 
-  /* PIN: шаг 2 */
+  /* PIN: шаг 2 — вход с экраном «Проверяем доступ» */
   $('pinConfirmBtn').addEventListener('click', function () {
     showError('step2-error', '');
     if (_pin.length !== 6) { showError('step2-error', 'Введи 6 цифр'); return; }
     var btn = $('pinConfirmBtn');
-    window.qualitySetLoading(btn, true);
-    fetch('/api/discord-login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discord_id: _discordId, pin: _pin })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      window.qualitySetLoading(btn, false);
-      if (d.success) {
-        window.location.href = d.redirect || '/';
-      } else {
-        showError('step2-error', d.error || 'Неверный PIN');
-      }
-    }).catch(function () { window.qualitySetLoading(btn, false); showError('step2-error', 'Сеть недоступна'); });
+    /* сам запрос уходит в момент, когда шаги проверки дошли до «входа» */
+    accessCheck.start('pin', function () {
+      fetch('/api/discord-login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discord_id: _discordId, pin: _pin })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.success) {
+          accessCheck.ok();
+          var dest = d.redirect || '/';
+          setTimeout(function () { window.location.href = dest; }, 850);
+        } else {
+          accessCheck.fail(d.error || 'Неверный PIN — попробуйте ещё раз');
+        }
+      }).catch(function () {
+        accessCheck.fail('Сеть недоступна — проверьте соединение');
+      });
+    });
   });
 })();
 </script>
