@@ -923,6 +923,38 @@ async def _sync_commands_bg():
     статус, голос и веб-панель поднимаются независимо в on_ready.
     """
     from services.sync_filtered import full_sync as _full_sync
+    # Честно пишем, КУДА команды попадают. Жалоба «у создателя бота не
+    # грузятся команды» почти всегда про одно из двух: команды гильдовые и
+    # живут только на MAIN_GUILD_ID/EXTRA_GUILD_IDS (на прочих серверах бот
+    # их стирает), либо меню в лёгком составе и в нём всего несколько имён.
+    # Без этой строки причину видно только в data/sync_last.json.
+    try:
+        from config import Config as _Cfg
+        _ids = [o.id for o in _Cfg.guild_objects()]
+    except Exception as _cfg_ex:
+        _ids = []
+        _log.debug('цели синка не определить: %s', _cfg_ex)
+    try:
+        import slash_budget as _sb
+        _full_menu = _sb.full_menu_mode()
+    except Exception:
+        _full_menu = False
+    _where = ', '.join(str(i) for i in _ids) or 'ГЛОБАЛЬНО (Discord показывает с задержкой до часа)'
+    print(f'[СИНХРОНИЗАЦИЯ] Режим меню: '
+          f'{"полный (BOT_FULL=1)" if _full_menu else "лёгкий (кураторский список)"}; '
+          f'команды ставим на: {_where}')
+    if _ids:
+        _log.info('Команды регистрируются гильдовыми на серверах: %s — там они '
+                  'видны сразу. На остальных серверах бот их стирает; нужно '
+                  'там меню — добавьте сервер в EXTRA_GUILD_IDS в .env', _where)
+    else:
+        _log.info('MAIN_GUILD_ID не задан — команды регистрируются глобально, '
+                  'Discord показывает их с задержкой до часа')
+    if not _full_menu:
+        _log.info('Меню в лёгком составе: в Discord видно только кураторский '
+                  'список, /update при этом живёт в ЛС бота. Полный состав — '
+                  'BOT_FULL=1 в .env или кнопка «Вернуть все» на странице '
+                  '«Команды» панели')
     try:
         _n = len(await asyncio.wait_for(_full_sync(bot), timeout=SYNC_TIMEOUT_SEC))
         print(f'[СИНХРОНИЗАЦИЯ] Slash команды синхронизированы: {_n}')
