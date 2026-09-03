@@ -322,6 +322,26 @@ SU.clear_pending(_pdir)
 check(SU.load_pending(_pdir)[0] is None, 'после clear_pending архива нет')
 shutil.rmtree(_pdir, ignore_errors=True)
 
+
+# ── Все .bat обязаны быть в CRLF ─────────────────────────────────────────
+# .gitattributes задаёт «*.bat -text» — git переводы строк не правит, на
+# Windows уходит ровно то, что в репозитории. Файл с LF cmd.exe обычно
+# терпит, но на многострочных блоках if (...) спотыкается. Так лежали
+# reset_server_data.bat (0 CRLF) и start_panel.bat (5 CRLF на 89 строк).
+print('== все .bat в CRLF ==')
+_bad_crlf = []
+for _name in sorted(os.listdir(ROOT)):
+    if not _name.endswith('.bat'):
+        continue
+    _raw = open(os.path.join(ROOT, _name), 'rb').read()
+    _crlf = _raw.count(b'\r\n')
+    _lone = _raw.replace(b'\r\n', b'').count(b'\n')
+    if _lone:
+        _bad_crlf.append(f'{_name}: {_lone} одиночных LF при {_crlf} CRLF')
+check(not _bad_crlf, f'.bat без CRLF: {len(_bad_crlf)} ({_bad_crlf})')
+_n_bat = len([n for n in os.listdir(ROOT) if n.endswith('.bat')])
+check(_n_bat >= 5, f'проверено .bat в корне: {_n_bat}')
+
 print(f'\n=== PASS {PASS} / FAIL {FAIL} ===')
 shutil.rmtree(_TMP, ignore_errors=True)
 sys.exit(1 if FAIL else 0)
