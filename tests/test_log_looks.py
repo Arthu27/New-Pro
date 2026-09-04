@@ -37,6 +37,8 @@ from services import welcome_card_gen as WCG
 _LC_DIR = os.path.join(_TMP, 'data')
 LC.log_cards_cfg_path = lambda gid: os.path.join(_LC_DIR, f'log_cards_{gid}.json')
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 PASS = 0
 FAIL = 0
 
@@ -78,6 +80,21 @@ check(loaded['theme_by_cat'] == {'message': 'ocean'}, 'сохранённые о
 saved2 = LC.save_log_cards_cfg('777', {'theme': 'hakumo'})
 check(saved2['theme_by_cat'] == LC.DEFAULT_THEME_BY_CAT, 'пустой theme_by_cat → снова дефолтные образы')
 
+# ── 3b. Категория «Наказания»: варны и авто-наказания — отдельный канал ─────
+check('punish' in [k for k, _, _ in LS.LOG_CATEGORIES], 'log_settings: категория punish')
+check('punish' in LC.CATEGORY_STYLES, 'карточки: стиль НАКАЗАНИЯ')
+check(LC.DEFAULT_THEME_BY_CAT.get('punish') == 'crimson', 'образ наказаний — Багровый неон')
+png = LC.render_log_card('punish', 'Авто-наказание',
+                         [('Участник', 'GhostBlade'), ('Варнов всего', '3'),
+                          ('Применено', 'Мут: роль «Наказан» 60 мин')],
+                         cat_name='Наказания', theme='crimson', fmt='jpeg')
+check(bool(png) and len(png) > 20000, 'карточка наказания рендерится в crimson', len(png or ''))
+# warnings.py: варны и авто-наказания идут в канал «наказания»
+_ws = open(os.path.join(ROOT, 'cogs', 'warnings.py'), encoding='utf-8').read()
+check("ensure_log_channel(guild,'наказания')" in _ws.replace(' ', ''),
+      'варны логируются в канал «наказания»')
+check('_log_punish_to_channel' in _ws, 'авто-наказание логируется отдельно в «наказания»')
+
 # ── 4. Маршрут канала «Никнеймы» ────────────────────────────────────────────
 LS.set_log_settings('777', channels={'nick': '1379190715426410726'})
 check(str(LS.target_channel_id('777', 'nick')) == '1379190715426410726',
@@ -88,10 +105,12 @@ LS.set_log_settings('777', channels={'member': '1379191035300675784',
                                      'voice': '1379190587579961466',
                                      'mod': '1518751543329951904',
                                      'role': '1518751543329951904',
-                                     'automod': '1518751543329951904'})
+                                     'automod': '1518751543329951904',
+                                     'punish': '1545468739221327942'})
 want = {'nick': 1379190715426410726, 'member': 1379191035300675784,
         'message': 1379190295723511949, 'voice': 1379190587579961466,
-        'mod': 1518751543329951904, 'role': 1518751543329951904}
+        'mod': 1518751543329951904, 'role': 1518751543329951904,
+        'punish': 1545468739221327942}
 for k, v in want.items():
     check(str(LS.target_channel_id('777', k)) == str(v), f'маршрут {k} → {v}')
 

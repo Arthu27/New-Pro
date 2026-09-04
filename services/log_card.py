@@ -104,7 +104,7 @@ LOG_CARD_THEMES = {
 # «Разными образами» (заказ владельца): каждой категории логов — свой образ
 # по умолчанию. Владелец может перекрыть любую в панели (Логи → оформление).
 DEFAULT_THEME_BY_CAT = {
-    'mod': 'hakumo', 'automod': 'crimson', 'message': 'ocean',
+    'mod': 'hakumo', 'automod': 'crimson', 'punish': 'crimson', 'message': 'ocean',
     'voice': 'violet', 'member': 'forest', 'nick': 'sakura',
     'role': 'aurora', 'channel': 'steel', 'invite': 'aurora',
     'сервер': 'hakumo', 'guild': 'hakumo', 'ticket': 'ocean',
@@ -334,6 +334,11 @@ CATEGORY_STYLES = {
         'tag': '✦ HAKUMO · ДОКАЗАТЕЛЬСТВА',
         'glow_color': (200, 120, 255),
         'type': 'member',
+    },
+    'punish': {
+        'tag': '✦ HAKUMO · НАКАЗАНИЯ',
+        'glow_color': (255, 110, 60),
+        'type': 'mod',
     },
     'message': {
         'tag': '✦ HAKUMO · АУДИТ СООБЩЕНИЙ',

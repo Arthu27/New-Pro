@@ -22,6 +22,7 @@ CATEGORIES ={
 'mod':{'label':'Модерация','emoji':'🛡','color':0xE74C3C ,'channel':'модерация'},
 'member':{'label':'Участники','emoji':'👋','color':0x2ECC71 ,'channel':'участники'},
 'nick':{'label':'Никнеймы','emoji':'🏷','color':0x9B59B6 ,'channel':'участники'},
+'punish':{'label':'Наказания','emoji':'⚖','color':0xE67E22 ,'channel':'наказания'},
 'message':{'label':'Сообщения','emoji':'💬','color':0x3498DB ,'channel':'сообщения'},
 'role':{'label':'Роли','emoji':'🎭','color':0x9B59B6 ,'channel':'сервер'},
 'channel':{'label':'Каналы','emoji':'🗂','color':0xF39C12 ,'channel':'сервер'},
@@ -121,6 +122,7 @@ _CAT_TOPICS = {
     'mod': ('moderation', 'security', 'modcenter', 'logs'),
     'member': ('members', 'analytics', 'logs'),
     'nick': ('members', 'logs'),
+    'punish': ('moderation', 'logs'),
     'voice': ('voice', 'analytics', 'logs'),
     'invite': ('invites', 'analytics', 'logs'),
     'message': ('logs',),
@@ -155,6 +157,7 @@ LOG_CHANNELS ={
 'модерация':'🛡・модерация',
 'moderasyon':'🛡・модерация',  # legacy alias (старые серверы)
 'участники':'👋・участники',
+'наказания':'⚖・наказания',
 'сообщения':'💬・сообщения',
 'голос':'🔊・голос',
 'ses':'🔊・голос',  # legacy alias
@@ -172,6 +175,7 @@ LEGACY_CHANNEL_NAMES ={
 '💬・сообщения':['-сообщения','message-log','сообщения-лог'],
 '👋・участники':['-участники','member-log','участники-лог'],
 '🔊・голос':['-ses','voice-log','ses-log','-голос'],
+'⚖・наказания':['-наказания','punish-log','варны','варны-лог'],
 '📋・сервер':['-сервер','server-log','hakumo-logs','сервер-лог'],
 '📸・доказательства':['-доказательства','proof-log','proofs','demki','демки'],
 }
@@ -179,7 +183,7 @@ LEGACY_CHANNEL_NAMES ={
 
 def log_category_display (category :str ='сервер'):
     """Красивое имя лог-канала категории (то, что видят участники)."""
-    category ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick',
+    category ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick','наказания':'punish',
     'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
     'каналы':'channel'}.get (category ,category )
     ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
@@ -194,7 +198,7 @@ def _configured_log_channel (guild ,category ):
     """
     try :
         from services .log_settings import target_channel_id
-        _cat ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick',
+        _cat ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick','наказания':'punish',
         'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
         'каналы':'channel'}.get (category ,category )
         _cid =target_channel_id (guild .id ,_cat )
@@ -274,7 +278,7 @@ async def ensure_log_channel (guild ,category :str ='сервер'):
             except Exception as _rn:
                 log .debug (f'[LOGS] переименование пропущено: {_rn}')
         return ch
-    category ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick',
+    category ={'модерация':'mod','moderasyon':'mod','участники':'member','никнеймы':'nick','наказания':'punish',
     'сообщения':'message','голос':'voice','ses':'voice','роли':'role',
     'каналы':'channel'}.get (category ,category )
     ch_name =CATEGORIES .get (category ,{}).get ('channel','сервер')
@@ -502,6 +506,7 @@ _LOG_META = {
     'mod':     ('🛡️', 0xE74C3C, 'Модерация'),
     'member':  ('👋', 0xC8922A, 'Участники'),
     'nick':    ('🏷️', 0x9B59B6, 'Никнеймы'),
+    'punish':  ('⚖️', 0xE67E22, 'Наказания'),
     'message': ('💬', 0x3498DB, 'Сообщения'),
     'voice':   ('🔊', 0x1ABC9C, 'Войс'),
     'channel': ('🗂️', 0xE67E22, 'Каналы'),

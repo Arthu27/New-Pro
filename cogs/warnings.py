@@ -164,16 +164,17 @@ def duration_to_minutes(duration, unit):
     return duration
 
 
-async def _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total ):
-    """Записать варн в Discord-канал логов (-модерация → mod-log → …).
+async def _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total ,punishment_result=None ):
+    """Записать варн в канал «Наказания» (⚖・наказания → -модерация → …).
 
-    Раньше варн уходил только пользователю в DM и в файл — в лог-канале
-    сервера его не было видно вообще («логи не работают»).
+    Заказ владельца: варны и наказания по варнам — отдельным каналом,
+    не вперемешку с остальной модерацией. Канал не выбран в панели —
+    система сама вернётся к поиску по имени/наследию.
     Fail-safe: любые ошибки глушим, варн уже сохранён.
     """
     try :
         from cogs .logs import ensure_log_channel ,_safe_send
-        ch =await ensure_log_channel (guild ,'модерация')
+        ch =await ensure_log_channel (guild ,'наказания')
         if not ch :
             return
         e =discord .Embed (color =0xE74C3C ,timestamp =datetime .now (timezone .utc ))
@@ -183,11 +184,39 @@ async def _log_warn_to_channel (guild ,user ,moderator ,reason ,warn_id ,total )
         f"Варн: **#{warn_id}** · Всего: **{total}**\n"
         f"Модератор: **{moderator.display_name}**\n"
         f"Причина: {reason or 'Не указана'}"
+        + (f"\n\n⚖️ Авто-наказание: **{punishment_result}**" if punishment_result else "")
         )
         e .set_footer (text =f"{guild.name}")
         await _safe_send (ch ,embed =e )
     except Exception as _ex:
         _log.debug("_log_warn_to_channel(): подавлено: %s", _ex)
+
+
+async def _log_punish_to_channel (guild ,user ,punishment_result ,total ):
+    """Отдельная запись об авто-наказании по варнам (⚖・наказания).
+
+    Лестница сработала — персонал видит это в канале наказаний сразу,
+    даже если сам варн писался другим путём (панель/AI/реакция).
+    Fail-safe: ошибки глушим.
+    """
+    if not punishment_result :
+        return
+    try :
+        from cogs .logs import ensure_log_channel ,_safe_send
+        ch =await ensure_log_channel (guild ,'наказания')
+        if not ch :
+            return
+        e =discord .Embed (color =0xE67E22 ,timestamp =datetime .now (timezone .utc ))
+        e .description =(
+        "## Авто-наказание\n"
+        f"**{user.display_name}** · `{user.id}`\n\n"
+        f"Варнов всего: **{total}**\n"
+        f"Применено: **{punishment_result}**"
+        )
+        e .set_footer (text =f"{guild.name}")
+        await _safe_send (ch ,embed =e )
+    except Exception as _ex:
+        _log.debug("_log_punish_to_channel(): подавлено: %s", _ex)
 
 
 class warnings(commands.Cog):
@@ -479,6 +508,8 @@ class warnings(commands.Cog):
         except Exception as _pun_e:
             log.warning(f"[WARN] Авто-наказание не применено: {_pun_e}")
             punishment_result = None
+        if punishment_result:
+            await _log_punish_to_channel(guild, user, punishment_result, total)
         return warn_id, total, punishment_result
 
     # ── /warnings ────────────────────────────────────────────────────────
@@ -535,6 +566,24 @@ class warnings(commands.Cog):
 
         # сняли варн — уровень упал: пересчитать роль уровня (снять/выдать)
         await self._sync_warn_level_roles(interaction.guild, user, total)
+
+        # Канал «Наказания»: снятие варна тоже туда (полная картина по варнам)
+        try:
+            from cogs.logs import ensure_log_channel, _safe_send
+            _uch = await ensure_log_channel(interaction.guild, 'наказания')
+            if _uch:
+                _ue = discord.Embed(color=0x2ECC71, timestamp=datetime.now(timezone.utc))
+                _ue.description = (
+                    "## Предупреждение снято\n"
+                    f"**{user.display_name}** · `{user.id}`\n\n"
+                    f"Снято: **#{removed.get('id')}** — {removed.get('reason', 'Не указана')}\n"
+                    f"Осталось: **{total}**\n"
+                    f"Модератор: {interaction.user.mention}"
+                )
+                _ue.set_footer(text=f"{interaction.guild.name}")
+                await _safe_send(_uch, embed=_ue)
+        except Exception as _ulog_e:
+            log.debug(f"[WARNS] лог снятия: {_ulog_e}")
 
         e = discord.Embed(color=discord.Color.dark_grey(), timestamp=datetime.now(timezone.utc))
         e.description = (
@@ -616,7 +665,9 @@ class warnings(commands.Cog):
             _log.debug("add_warning(): подавлено: %s", _ex)
 
         try:
-            await self.apply_warn_punishment(guild, user, total)
+            _pun_res = await self.apply_warn_punishment(guild, user, total)
+            if _pun_res:
+                await _log_punish_to_channel(guild, user, _pun_res, total)
         except Exception as _pun_e:
             log.warning(f"[WARN] Авто-наказание не применено: {_pun_e}")
         return warn_id, total
