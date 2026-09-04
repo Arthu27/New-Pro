@@ -46,9 +46,13 @@ RED = 0xE74C3C
 # больше этого размера бот не сможет перезалить файл (лимит Discord без Nitro)
 MAX_REUPLOAD_BYTES = 8 * 1024 * 1024
 
-ACTIONS = ('варн', 'мут', 'таймаут', 'кик', 'бан', 'разбан', 'тихий мут')
+# «таймаут» в выборе НЕТ: мут в боте — это и есть нативный таймаут Discord,
+# два пункта на одно действие = дубликат выбора (багрепорт владельца).
+# «тихий мут» — отдельная фича (скрытие сообщений), остаётся.
+ACTIONS = ('варн', 'мут', 'кик', 'бан', 'разбан', 'тихий мут')
 ACTION_COLORS = {
-    'варн': GOLD, 'мут': 0xE67E22, 'таймаут': 0xE67E22, 'кик': 0xE74C3C,
+    'варн': GOLD, 'мут': 0xE67E22, 'таймаут': 0xE67E22,  # таймаут — старые записи
+    'кик': 0xE74C3C,
     'бан': RED, 'разбан': GREEN, 'тихий мут': PURPLE,
 }
 IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp')
@@ -459,7 +463,6 @@ class ProofCog(commands.Cog):
     @app_commands.choices(action=[
         app_commands.Choice(name='варн', value='варн'),
         app_commands.Choice(name='мут', value='мут'),
-        app_commands.Choice(name='таймаут', value='таймаут'),
         app_commands.Choice(name='кик', value='кик'),
         app_commands.Choice(name='бан', value='бан'),
         app_commands.Choice(name='разбан', value='разбан'),

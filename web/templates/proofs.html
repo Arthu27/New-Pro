@@ -43,7 +43,7 @@
         Наказание
         <select id="pf-action" aria-label="Наказание">
           <option>варн</option><option>мут</option><option>тихий мут</option>
-          <option>таймаут</option><option>кик</option><option>бан</option><option>разбан</option>
+          <option>кик</option><option>бан</option><option>разбан</option>
         </select>
       </label>
       <label class="field-label" style="flex-direction:column;align-items:stretch;gap:5px;font-weight:600;flex-basis:240px">
@@ -161,6 +161,13 @@
 
   var TONE = { 'варн': 'tone-warning', 'мут': 'tone-warning', 'тихий мут': 'neutral', 'таймаут': 'tone-warning', 'кик': 'tone-warning', 'бан': 'danger', 'разбан': 'ok' };
 
+  /* «таймаут» и «мут» — одно наказание (мут = нативный таймаут Discord):
+     старые записи показываем как «мут», чтобы в фильтре не было дублей. */
+  function _act(a) {
+    a = (a || '').toLowerCase();
+    return a === 'таймаут' ? 'мут' : a;
+  }
+
   function fmt(ts) {
     if (!ts) return '—';
     var d = new Date(ts);
@@ -187,7 +194,7 @@
   function renderChips() {
     var acts = [];
     all.forEach(function (it) {
-      var a = (it.action || '').toLowerCase();
+      var a = _act(it.action);
       if (a && acts.indexOf(a) === -1) acts.push(a);
     });
     var box = $('pf-chips');
@@ -239,7 +246,7 @@
     var q = $('pf-q').value.trim();
     var items = all.filter(function (it) {
       var okType = (mtype === 'all') || (it.media && it.media.kind === mtype);
-      return matches(it, q) && okType && (!chip || (it.action || '').toLowerCase() === chip) && inPeriod(it.set_at);
+      return matches(it, q) && okType && (!chip || _act(it.action) === chip) && inPeriod(it.set_at);
     });
     $('pf-count').textContent = items.length === all.length ? String(all.length) : (items.length + ' из ' + all.length);
     var grid = $('pf-grid');
@@ -249,11 +256,11 @@
       return;
     }
     grid.innerHTML = items.map(function (it) {
-      var tone = TONE[(it.action || '').toLowerCase()] || 'neutral';
+      var tone = TONE[_act(it.action)] || 'neutral';
       return '<div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">' +
         mediaBlock(it) +
         '<div style="padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1">' +
-          '<div class="row"><span class="badge ' + tone + '">' + esc(it.action || '—') + '</span>' + mediaBadge(it) +
+          '<div class="row"><span class="badge ' + tone + '">' + esc(_act(it.action) || '—') + '</span>' + mediaBadge(it) +
             '<span class="mono muted" style="font-size:11px">#' + esc(it.id) + '</span></div>' +
           '<div class="feed-item-title" style="cursor:pointer" data-q="' + esc(it.user_name || '') + '" title="Показать все демки этого участника">' + esc(it.user_name || '—') + ' <span class="id-pill">' + esc(it.user_id || '') + '</span></div>' +
           '<div class="feed-item-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(it.reason || '') + '">' + esc(it.reason || '—') + '</div>' +
