@@ -700,6 +700,10 @@ class Ctx:
             return configured
         if guilds:
             return str(guilds[0].id)
+        # Демо-витрина без MAIN_GUILD_ID: отдаём демо-сервер 777, иначе
+        # шаблоны строили битый /api/guild//channels и селекты пустовали.
+        if not configured and _app._demo_mode():
+            return '777'
         return configured
 
     def active_guild_id_int(self):

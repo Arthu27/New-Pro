@@ -3424,6 +3424,12 @@ def inject_guild_id ():
         gid =configured if any (str (g .id )==configured for g in guilds )else str (guilds [0 ].id )
     else :
         gid =configured 
+    # Демо-витрина: без MAIN_GUILD_ID шаблоны получали ПУСТУЮ строку и
+    # строили битый URL /api/guild//channels → селекты каналов на 8+
+    # страницах (обзор, объявления, приветствия, верификация…) пустовали.
+    # Отдаём демо-сервер 777 — тот же id, что и в /api/guilds.
+    if not gid and _demo_mode ():
+        gid ='777'
     return {'main_guild_id':gid ,'MAIN_GUILD_ID':gid }
 
 @app .context_processor
@@ -5133,7 +5139,34 @@ def api_activity_feed ():
 
     # Сортировка — новые сверху
     items.sort(key=lambda x: x.get('ts') or 0, reverse=True)
-    return jsonify({'items': items[:80]})
+
+    # Сворачиваем ПОВТОРЫ: «Вход в панель — owner» пять раз подряд выглядит
+    # как дубликат (владелец: «в обзоре сервера дубликат»). Одинаковые
+    # (title+user) события в окне 15 минут склеиваем в одно с пометкой
+    # «ещё N раз за 15 мин» — лента читаемая, данные не теряются.
+    _W =900  # 15 минут
+    merged =[]
+    for it in items:
+        ts =it .get ('ts')or 0
+        hit =None
+        for m in merged :
+            if (m .get ('title')==it .get ('title')and m .get ('user')==it .get ('user')
+                    and (m ['_newest']-ts )<=_W ):
+                hit =m
+                break
+        if hit is not None :
+            hit ['_count']+=1
+            hit ['_newest']=max (hit ['_newest'],ts )
+        else :
+            merged .append (dict (it ,_count =1 ,_newest =ts ))
+    for m in merged :
+        n =m .pop ('_count')
+        m .pop ('_newest',None )
+        if n >1 :
+            _extra =f'ещё {n -1} раз за 15 мин'
+            m ['detail']=(m .get ('detail')+' · ' if m .get ('detail')else '')+_extra
+
+    return jsonify({'items': merged[:80]})
 
 
     # WebSocket Server Initialization 

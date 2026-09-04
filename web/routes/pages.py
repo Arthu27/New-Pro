@@ -47,7 +47,7 @@ def register(ctx):
     @role_required ('admin')
     def welcome_editor_page ():
         return render_template ('welcome_editor.html',role =session .get ('role'),username =session .get ('username'),
-        main_guild_id =MAIN_GUILD_ID )
+        main_guild_id =active_guild_id ())
 
 
 

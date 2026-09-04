@@ -93,7 +93,7 @@ def register(ctx):
     @login_required 
     @role_required ('owner')
     def color_roles_page ():
-        return render_template ('color_roles.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =MAIN_GUILD_ID )
+        return render_template ('color_roles.html',role =session .get ('role'),username =session .get ('username'),main_guild_id =active_guild_id ())
 
 
     @app .route ('/rules-editor')
