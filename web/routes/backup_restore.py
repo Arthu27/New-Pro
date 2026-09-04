@@ -119,7 +119,9 @@ def register(ctx):
                 with open (bf ,encoding ='utf-8')as fp :backups =json .load (fp )
             except Exception :
                 return jsonify ({'error':'Файл резервной копии повреждён'})
-            backup_data =next ((b for b in backups if b .get ('id')==backup_id ),None )
+            if not isinstance (backups ,list ):
+                return jsonify ({'error':'Файл резервной копии повреждён'})
+            backup_data =next ((b for b in backups if isinstance (b ,dict )and b .get ('id')==backup_id ),None )
             if not backup_data :return jsonify ({'error':'Резервная копия не найдена'})
 
         result ={'roles_created':0 ,'channels_created':0 ,'errors':[]}
@@ -168,7 +170,22 @@ def register(ctx):
                     except Exception as e :
                         result ['errors'].append (f"Канал '{ch_data['name']}': {str(e)}")
 
-        asyncio .run_coroutine_threadsafe (do_restore (),bot .loop ).result (timeout =120 )
+        # do_restore — синхронная (внутри _run_async на каждый вызов Discord),
+        # поэтому её нельзя загонять в event-loop бота: гоняем в отдельном потоке.
+        _restore_err = {}
+        def _restore_runner ():
+            try :
+                do_restore ()
+            except Exception as _e :
+                _restore_err ['e'] = str (_e)
+        import threading as _th
+        _restore_t = _th .Thread (target =_restore_runner ,daemon =True )
+        _restore_t .start ()
+        _restore_t .join (timeout =120 )
+        if _restore_t .is_alive ():
+            return jsonify ({'error':'Восстановление не завершилось за 120 с'}),504
+        if _restore_err :
+            return jsonify ({'error':_restore_err ['e']}),500
         return jsonify ({'success':True ,'result':result })
 
 
