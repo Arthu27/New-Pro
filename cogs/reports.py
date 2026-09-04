@@ -807,6 +807,27 @@ class Reports(commands.Cog):
                 'прав (просмотр/отправка/вложения). Выдайте их роли бота.',
                 ephemeral=True)
 
+        # Вложение-доказательство → в АРХИВ демок и канал доказательств
+        # (заказ владельца 2026-09-04: «доказательство от /report» идёт
+        # в канал доказательств). Тот же конвейер, что у /warn и /moderate:
+        # перезалив в #-доказательства + вечная копия в панели. Падение
+        # этого шага жалобу НЕ ломает — она уже доставлена.
+        if proof_file is not None:
+            _pc = self.bot.get_cog('ProofCog')
+            if _pc is not None:
+                try:
+                    _ok, _entry, _pnote = await _pc._create_and_post(
+                        guild, interaction.user, user, 'репорт',
+                        reason[:300], attachment=proof_file)
+                    if _ok:
+                        proof_bits.append(
+                            f'Демка #{_entry["id"]} записана в '
+                            f'<#{_entry.get("channel_id")}>')
+                    elif _pnote:
+                        proof_bits.append(f'Демка #{_entry["id"]}: {_pnote}')
+                except Exception as _pex:
+                    _log.warning('report → proof: %s', _pex)
+
         # Привязываем запись жалобы к сообщению-карточке (id сообщения = ключ).
         RC.ticket_create(guild.id, card.id, interaction.user.id, user.id,
                          kind='card')
@@ -815,6 +836,8 @@ class Reports(commands.Cog):
                         f'{interaction.user.display_name}: {reason[:120]}')
 
         note = f'Жалоба отправлена модерации: {ch.mention}.'
+        if proof_file is not None and proof_bits and 'записана в' in proof_bits[-1]:
+            note += ' Доказательство сохранено в канал доказательств.'
         if created:
             note += ' Канал модерации создан автоматически.'
         if not mod_role:
