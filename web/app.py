@@ -4182,6 +4182,11 @@ def api_discord_login ():
     if _t .time ()>entry ['expires']:
         del _login_pins [discord_id ]
         return jsonify ({'success':False ,'error':'Срок действия PIN-кода истек. Пожалуйста, отправьте новый код.'})
+    # перебор PIN невозможен: после 5 неверных вводов код сгорает
+    entry ['attempts']=int (entry .get ('attempts',0 ))+1
+    if entry ['attempts']>5 :
+        del _login_pins [discord_id ]
+        return jsonify ({'success':False ,'error':'Слишком много неверных PIN-кодов. Отправьте новый код.'})
     if entry ['code']!=pin :
         return jsonify ({'success':False ,'error':'Введен неверный PIN-код.'})
     member_info =entry ['member_info']
