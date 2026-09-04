@@ -131,17 +131,35 @@ json.dump({
 
 client = A.app.test_client()
 
+# Новое устройство: после пароля панель требует код из ЛС Discord
+# («чей аккаунт» — вторая проверка). ЛС замокаем и код извлечём из эмбеда.
+_dm_sent = {}
+A._send_discord_dm = lambda did, mk: (_dm_sent.__setitem__(did, mk()), (True, ''))[1]
+
+
+def _code_for(did):
+    return _dm_sent[did].description.split('```fix')[1].split('```')[0].strip()
+
+
 print('== вход участника по Discord ID ==')
 r = client.post('/login', data={'username': str(UID_MOD), 'password': 'alicepass1'})
+check(r.status_code == 200 and 'name="step" value="code"' in r.get_data(as_text=True),
+      'верный пароль по ID -> шаг «код из ЛС Discord»', f'→ {r.status_code}')
+check(str(UID_MOD) in _dm_sent, 'код реально отправлен в ЛС alice')
+r = client.post('/login', data={'step': 'code', 'discord_id': str(UID_MOD),
+                                'code': _code_for(str(UID_MOD)),
+                                'username': str(UID_MOD)})
 check(r.status_code == 302 and 'login' not in r.headers.get('Location', ''),
-      'верный пароль по ID -> редирект в панель', f'→ {r.status_code} {r.headers.get("Location")}')
+      'верный код -> редирект в панель', f'→ {r.status_code} {r.headers.get("Location")}')
 with client.session_transaction() as s:
     check(s.get('logged_in') is True and s.get('discord_id') == str(UID_MOD)
           and s.get('username') == 'alice' and s.get('role') != 'uye',
           'сессия: discord_id/display_name/роль установлены из Discord')
 
-print('== вход по нику (без ID) ==')
+print('== вход по нику (без ID) — доверенное устройство, без кода ==')
+_trust_tok = list(A._trusted_store_read().keys())[0]
 c2 = A.app.test_client()
+c2.set_cookie('panel_device', _trust_tok)
 r = c2.post('/login', data={'username': 'alice', 'password': 'alicepass1'})
 check(r.status_code == 302, 'вход по нику (@alice без @ тоже) -> редирект',
       f'→ {r.status_code} {r.headers.get("Location")}')
@@ -160,10 +178,18 @@ check(r.status_code == 200 and 'Неверное имя пользователя
       'неверный пароль -> «Неверное имя пользователя»')
 
 print('== /api/login-probe зеркалит вход ==')
-r = client.post('/api/login-probe', json={'username': str(UID_MOD), 'password': 'alicepass1'})
+# свежий клиент = новое устройство без доверенной cookie
+_probe = A.app.test_client()
+r = _probe.post('/api/login-probe', json={'username': str(UID_MOD), 'password': 'alicepass1'})
 d = r.get_json(silent=True) or {}
 check(d.get('success') is True and d.get('role') not in (None, 'uye'),
       'probe: верный пароль участника -> success+роль', f'→ {d}')
+check(d.get('needs_code') is True,
+      'probe: новому устройству нужен код из ЛС (needs_code)', f'→ {d}')
+r = client.post('/api/login-probe', json={'username': str(UID_MOD), 'password': 'alicepass1'})
+d = r.get_json(silent=True) or {}
+check(d.get('success') is True and d.get('needs_code') is False,
+      'probe: доверенное устройство — код не нужен', f'→ {d}')
 r = client.post('/api/login-probe', json={'username': 'bob', 'password': 'bobpass111'})
 d = r.get_json(silent=True) or {}
 check(d.get('success') is False and 'нет' in (d.get('error') or ''),

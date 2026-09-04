@@ -352,7 +352,7 @@ def before_request ():
                 _log.debug("before_request(): подавлено: %s", _ex)
 
     # Panel Log 
-def _log_login (username ,role ,avatar ,discord_id ):
+def _log_login (username ,role ,avatar ,discord_id ,method ='пароль'):
     """Запоминает пользователей, вошедших в панель."""
     try :
         os .makedirs ('data',exist_ok =True )
@@ -375,6 +375,7 @@ def _log_login (username ,role ,avatar ,discord_id ):
         'role':role ,
         'avatar':avatar ,
         'discord_id':discord_id ,
+        'method':method ,
         'guild_name':guild_name ,
         'guild_icon':guild_icon ,
         'ip':request .remote_addr ,
@@ -997,7 +998,12 @@ def login_required (f ):
             # Бот офлайн — НЕ понижаем роль по живым данным Discord (иначе
             # пока бот перезапускается, админы панели падают до «Участника»)
             _bot_online =bool (bot_instance and getattr (bot_instance ,'guilds',None ))
-            if _bot_online and _t .time ()-last_check >300 :# 5 минут
+            # Частота живой перепроверки: страницы — раз в 5 минут, а ЛЮБОЕ
+            # действие (POST/DELETE и т.п.) — раз в минуту. Так модер, вышедший
+            # с сервера, теряет доступ не «когда-нибудь», а до первого же
+            # серьёзного действия: сессия гасится до выполнения запроса.
+            _ttl =60 if request .method in ('POST','PUT','PATCH','DELETE')else 300
+            if _bot_online and _t .time ()-last_check >_ttl :
                 live_role =_get_role_from_discord (discord_id )
                 session ['_role_checked']=_t .time ()
                 # Роли больше нет (человек вышел с сервера или роли сняли)
@@ -1155,6 +1161,134 @@ def index ():
 def member_apply_page ():
     return render_template ('member_apply.html',role =session .get ('role'),username =session .get ('username'))
 
+# ── Подтверждение входа кодом из ЛС Discord («чей аккаунт» — вторая проверка) ──
+# Сценарий владельца: кто-то узнал чужой пароль. Пароль сам по себе больше
+# не впускает на НОВОМ устройстве: бот присылает 6-значный код в ЛС
+# Discord-аккаунта, и вход завершит только тот, кто им владеет.
+# На доверенном устройстве (cookie + список на диске, 30 дней) код не
+# спрашиваем. Владельца панели (owner) это не касается — его вход
+# защищён отдельной записью и живой перепроверкой OWNER_ID.
+_login_dm_codes ={}      # discord_id -> {'code','expires','attempts','member_info','resends':[ts]}
+_TRUST_DEVICE_FILE ='data/trusted_devices.json'
+_TRUST_DEVICE_COOKIE ='panel_device'
+_TRUST_DEVICE_TTL =30 *24 *3600   # 30 дней
+
+def _login_confirm_enabled ():
+    """Выключатель второй проверки (PANEL_LOGIN_CONFIRM=0 — только пароль)."""
+    return (os .environ .get ('PANEL_LOGIN_CONFIRM','1')or '1') .strip () !='0'
+
+def _trusted_store_read ():
+    try :
+        data =_store .read_json (_TRUST_DEVICE_FILE ,default ={})
+        return data if isinstance (data ,dict )else {}
+    except Exception :
+        return {}
+
+def _trusted_store_write (store ):
+    try :
+        os .makedirs ('data',exist_ok =True )
+        _store .atomic_write_json (_TRUST_DEVICE_FILE ,store )
+    except Exception as _tex :
+        _log .debug ('trusted_devices write: %s',_tex )
+
+def _device_trusted (discord_id ):
+    """Это устройство уже подтверждало вход этого Discord-аккаунта?"""
+    tok =(request .cookies .get (_TRUST_DEVICE_COOKIE )or '').strip ()
+    if not tok :
+        return False
+    rec =_trusted_store_read () .get (tok )
+    if not rec or str (rec .get ('discord_id',''))!=str (discord_id ):
+        return False
+    try :
+        age =_time .time ()-float (rec .get ('created_at',0 ))
+        if age >_TRUST_DEVICE_TTL :
+            return False
+    except Exception :
+        return False
+    return True
+
+def _mark_device_trusted (resp ,discord_id ):
+    """Пометить текущее устройство доверенным (cookie + запись на диске)."""
+    import secrets as _secrets
+    tok =_secrets .token_urlsafe (32 )
+    store =_trusted_store_read ()
+    # уборка протухших записей, чтобы файл не рос вечно
+    store ={t :r for t ,r in store .items ()
+            if _time .time ()-float (r .get ('created_at',0 ))<=_TRUST_DEVICE_TTL }
+    store [tok ]={'discord_id':str (discord_id ),
+                  'created_at':round (_time .time (),1 ),
+                  'ip':(request .remote_addr or '')[:64 ]}
+    _trusted_store_write (store )
+    try :
+        resp .set_cookie (_TRUST_DEVICE_COOKIE ,tok ,max_age =_TRUST_DEVICE_TTL ,
+                          httponly =True ,samesite ='Lax',secure =request .is_secure )
+    except Exception as _cex :
+        _log .debug ('trust cookie: %s',_cex )
+    return resp
+
+def _send_discord_dm (discord_id ,make_embed ):
+    """Отправить ЛС через бота. Возвращает (ok, текст ошибки)."""
+    if not bot_instance :
+        return False ,'Бот сейчас офлайн — подтверждение недоступно, попробуйте позже.'
+    async def _go ():
+        user =await bot_instance .fetch_user (int (discord_id ))
+        await user .send (embed =make_embed ())
+    try :
+        asyncio .run_coroutine_threadsafe (_go (),bot_instance .loop ) .result (timeout =10 )
+        return True ,''
+    except Exception as _dex :
+        _log .debug ('login DM: %s',_dex )
+        return False ,('Не удалось отправить код в ЛС Discord: '
+                       'личные сообщения закрыты или бот заблокирован. '
+                       'Откройте ЛС от участников сервера и попробуйте снова.')
+
+def _issue_login_code (discord_id ,member_info ):
+    """Создать и отослать код подтверждения входа. (ok, ошибка)."""
+    now =_time .time ()
+    entry =_login_dm_codes .get (discord_id )or {}
+    resends =[t for t in entry .get ('resends',[])if now -t <600 ]
+    if len (resends )>=3 :
+        wait =int (600 -(now -resends [0 ]))
+        return False ,f'Слишком много кодов подряд. Повторите через ~{max (wait //60 ,1)} мин.'
+    resends .append (now )
+    code =''.join ([str (_random .randint (0 ,9 ))for _ in range (6 )])
+    _login_dm_codes [discord_id ]={'code':code ,'expires':now +600 ,
+                                   'attempts':0 ,'member_info':member_info ,
+                                   'resends':resends }
+    # уборка истёкших записей
+    for _k in [k for k ,v in _login_dm_codes .items ()if v .get ('expires',0 )<now ]:
+        _login_dm_codes .pop (_k ,None )
+    display =member_info .get ('display_name','')
+    def _embed ():
+        e =discord .Embed (title ='Hakumo Panel — подтверждение входа',
+                           color =0xc8922a ,
+                           timestamp =datetime .now (timezone .utc ))
+        e .description =(f"Кто-то вошёл в панель под аккаунтом **{display}**.\n\n"
+                         f"Код подтверждения:\n```fix\n{code}\n```\n"
+                         "Действителен 10 минут. Никому его не передавайте.")
+        e .set_footer (text ='Если это были не вы — срочно смените пароль («Забыли пароль?»).')
+        return e
+    return _send_discord_dm (discord_id ,_embed )
+
+def _check_login_code (discord_id ,code ):
+    """Проверить код подтверждения. ('ok'|'bad'|'expired'|'locked')."""
+    entry =_login_dm_codes .get (discord_id )
+    if not entry :
+        return 'expired'
+    if _time .time ()>entry .get ('expires',0 ):
+        _login_dm_codes .pop (discord_id ,None )
+        return 'expired'
+    entry ['attempts']=int (entry .get ('attempts',0 ))+1
+    if entry ['attempts']>5 :
+        _login_dm_codes .pop (discord_id ,None )
+        return 'locked'
+    if str (code )!=str (entry .get ('code','')):
+        return 'bad'
+    member_info =entry .get ('member_info')or {}
+    _login_dm_codes .pop (discord_id ,None )
+    return member_info
+
+
 @app .route ('/login',methods =['GET','POST'])
 def login ():
 # Автоматический вход по токену — БЕЗОПАСНОСТЬ: по умолчанию ВЫКЛЮЧЕНО.
@@ -1183,6 +1317,7 @@ def login ():
                     _token_ok =True 
                 if not _token_ok :
                     return redirect (url_for ('login'))
+                session .clear ()   # анти-fixation: новая сессия на новый вход
                 session .permanent =True 
                 session ['logged_in']=True 
                 session ['username']=t ['username']
@@ -1194,20 +1329,92 @@ def login ():
         username =request .form .get ('username')
         password =request .form .get ('password')
 
+        # Шаг 2 входа: код подтверждения из ЛС Discord (участник + новое
+        # устройство). Пароль уже проверён на шаге 1 — завершаем вход тем,
+        # кто владеет Discord-аккаунтом.
+        if request .form .get ('step')=='code':
+            discord_id =str (request .form .get ('discord_id','')) .strip ()
+            code =str (request .form .get ('code','')) .strip ()
+            if not discord_id .isdigit ()or not code :
+                return render_template ('login.html',
+                    error ='Введите код из личных сообщений Discord.')
+            _res =_check_login_code (discord_id ,code )
+            if _res =='expired':
+                return render_template ('login.html',
+                    error ='Код истёк или не запрашивался. Войдите заново.')
+            if _res =='locked':
+                _throttle_failed_login (username or discord_id )
+                return render_template ('login.html',
+                    error ='Слишком много неверных кодов. Запросите новый — войдите заново.')
+            if _res =='bad':
+                return render_template ('login.html',
+                    error ='Неверный код. Проверьте личные сообщения Discord.',
+                    code_step ={'discord_id':discord_id ,'username':username or ''})
+            # Код верный — финальная ЖИВАЯ проверка роли прямо перед входом
+            live_role =_get_role_from_discord (discord_id )
+            if live_role =='uye':
+                return render_template ('login.html',
+                    error ='Доступа к панели нет: для входа нужна роль '
+                           'модератора на сервере Discord.')
+            members_file ='data/members.json'
+            display_name =(_res .get ('display_name')if isinstance (_res ,dict )else '')or username or discord_id
+            try :
+                if os .path .exists (members_file ):
+                    with open (members_file ,'r',encoding ='utf-8')as f :
+                        members =json .load (f )
+                    if discord_id in members :
+                        members [discord_id ]['role']=live_role
+                        display_name =members [discord_id ] .get ('display_name')or display_name
+                        with open (members_file ,'w',encoding ='utf-8')as f :
+                            json .dump (members ,f ,indent =2 ,ensure_ascii =False )
+            except Exception as _cex :
+                _log .debug ('login code step members: %s',_cex )
+            session .clear ()   # анти-fixation: новая сессия на новый вход
+            session .permanent =True
+            session ['logged_in']=True
+            session ['username']=display_name
+            session ['role']=live_role
+            session ['discord_id']=discord_id
+            session ['_role_checked']=_time .time ()
+            session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None
+            session .modified =True
+            _save_login_token (discord_id ,live_role )
+            _log_login (display_name ,live_role ,(_res .get ('avatar')if isinstance (_res ,dict )else None ),discord_id ,method ='password+код Discord')
+            resp =redirect (url_for ('index'))
+            return _mark_device_trusted (resp ,discord_id )
+
         # Только зафиксированный пользователь-владелец
         # Сравнение через _pw_matches: хэш солёный (scrypt), == не подходит
         if username in USERS and _pw_matches (USERS [username ].get ('password_hash'),password ):
-            session .permanent =True 
-            session ['logged_in']=True 
-            session ['username']=username 
+            # Привязываем сессию владельца к живому Discord ID (OWNER_ID):
+            # login_required теперь перепроверяет и его — если список владельцев
+            # бота меняется, доступ в панель меняется вместе с ним.
+            _owner_did =''
+            try :
+                _owners =sorted (_root_config .Config .all_owner_ids ())
+                if _owners :
+                    _owner_did =str (_owners [0 ])
+                else :
+                    _g =_panel_guild ()
+                    if _g is not None and getattr (_g ,'owner_id',None ):
+                        _owner_did =str (_g .owner_id )
+            except Exception as _oex :
+                _log .debug ('owner bind: %s',_oex )
+            session .clear ()   # анти-fixation: новая сессия на новый вход
+            session .permanent =True
+            session ['logged_in']=True
+            session ['username']=username
             session ['role']=USERS [username ]['role']
+            if _owner_did :
+                session ['discord_id']=_owner_did
             # Реальному входу тоже нужен выбранный сервер — раньше его
             # ставил только демо-логин, и страница уходила в редирект
             # вечно редиректили на выбор сервера.
-            session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
-            session .modified =True 
+            session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None
+            session ['_role_checked']=_time .time ()
+            session .modified =True
             _save_login_token (username ,USERS [username ]['role'])
-            _log_login (username ,'owner',None ,None )
+            _log_login (username ,'owner',None ,_owner_did or None )
             return redirect (url_for ('index'))
 
             # Вход участника по паролю. Логин — Discord ID ЛИБО ник/тег
@@ -1235,9 +1442,24 @@ def login ():
                     'login.html',
                     error ='Доступа к панели нет: для входа нужна роль '
                            'модератора на сервере Discord.')
+            # ВТОРАЯ ПРОВЕРКА «ЧЕЙ АККАУНТ»: на новом устройстве пароля
+            # мало — бот шлёт код в ЛС Discord, вход завершит только
+            # владелец аккаунта. Доверенное устройство (30 дней) код не
+            # спрашивает; выключается PANEL_LOGIN_CONFIRM=0.
+            if _login_confirm_enabled ()and not _device_trusted (discord_id ):
+                _ok ,_err =_issue_login_code (discord_id ,members [discord_id ])
+                if not _ok :
+                    return render_template ('login.html',error =_err)
+                _hint =(members [discord_id ].get ('display_name')or username or '')
+                return render_template (
+                    'login.html',
+                    code_step ={'discord_id':discord_id ,'username':username or ''},
+                    info =f'Код подтверждения отправлен в личные сообщения Discord ({_hint}). '
+                          'Введите его, чтобы войти.')
             members [discord_id ]['role']=live_role 
             with open (members_file ,'w',encoding ='utf-8')as f :
                 json .dump (members ,f ,indent =2 ,ensure_ascii =False )
+            session .clear ()   # анти-fixation: новая сессия на новый вход
             session .permanent =True 
             session ['logged_in']=True 
             session ['username']=members [discord_id ]['display_name']
@@ -1245,15 +1467,19 @@ def login ():
             session ['discord_id']=discord_id 
             # тот же выбранный сервер, что и у входа владельца
             session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
+            session ['_role_checked']=_time .time ()
             session .modified =True 
             _save_login_token (discord_id ,live_role )
             _log_login (
             members [discord_id ]['display_name'],
             live_role ,
             members [discord_id ].get ('avatar'),
-            discord_id 
+            discord_id ,
+            method ='пароль' if _login_confirm_enabled () else 'пароль (без подтверждения)'
             )
-            return redirect (url_for ('index'))
+            resp =redirect (url_for ('index'))
+            # это устройство теперь доверенное — код больше не спрашиваем
+            return _mark_device_trusted (resp ,discord_id )
 
         _throttle_failed_login (username )
         return render_template ('login.html',error ='Неверное имя пользователя или пароль!')
@@ -1326,7 +1552,15 @@ def api_login_probe():
             return jsonify({'success': False, 'error':
                             'Доступа к панели нет: для входа нужна роль '
                             'модератора на сервере Discord.'})
-        return jsonify({'success': True, 'role': live_role})
+        # Новое устройство → после формы понадобится код из ЛС Discord
+        # (вторая проверка «чей аккаунт»). Код здесь НЕ шлём: его отправит
+        # сам POST /login после повторной проверки пароля и роли.
+        _need_code = bool(_login_confirm_enabled()
+                          and not _device_trusted(discord_id))
+        return jsonify({'success': True, 'role': live_role,
+                        'needs_code': _need_code,
+                        'discord_id': discord_id,
+                        'display_name': members[discord_id].get('display_name', '')})
     _throttle_failed_login(username)
     return jsonify({'success': False,
                     'error': 'Неверное имя пользователя или пароль!'})
@@ -1348,6 +1582,19 @@ def register ():
             if discord_id not in PENDING_VERIFICATIONS :
                 return render_template ('register.html',error ='Время проверки истекло, попробуйте снова.',step =1 )
             pv =PENDING_VERIFICATIONS [discord_id ]
+            # Код живёт 10 минут — просроченные записи удаляем
+            if _time .time ()-float (pv .get ('created_at',0 ))>600 :
+                PENDING_VERIFICATIONS .pop (discord_id ,None )
+                return render_template ('register.html',error ='Код истёк (10 минут). Запросите новый.',step =1 )
+            # Участник мог выйти с сервера между шагами — перепроверяем ЖИВЬЁМ
+            try :
+                _pg =_panel_guild ()
+                _still =_pg is not None and _resolve_guild_member (_pg ,int (discord_id ))is not None
+            except Exception :
+                _still =False
+            if not _still and not _is_bot_owner (discord_id ):
+                PENDING_VERIFICATIONS .pop (discord_id ,None )
+                return render_template ('register.html',error ='Вас нет на основном сервере — регистрация отменена.',step =1 )
             if pv ['code']!=code :
                 return render_template ('register.html',error ='Неверный код!',step =2 ,
                 discord_id =discord_id ,password =pv ['password'])
@@ -1423,7 +1670,7 @@ def register ():
 
                 # DM с проверка kodu отправить
         code =''.join (random .choices (string .digits ,k =6 ))
-        PENDING_VERIFICATIONS [discord_id ]={'code':code ,'password':_hash_pw (password ),'member_info':member_info }
+        PENDING_VERIFICATIONS [discord_id ]={'code':code ,'password':_hash_pw (password ),'member_info':member_info ,'created_at':_time .time ()}
 
         async def send_dm ():
             try :
@@ -3862,6 +4109,25 @@ def api_discord_check ():
             tests .append ({'name':'Возраст аккаунта','status':'ok','detail':f'{age_days} дн.'})
     except Exception:
         tests .append ({'name':'Возраст аккаунта','status':'warn','detail':'Неизвестно'})
+    # ЖИВАЯ проверка роли ДО отправки PIN: без роли модератора код даже
+    # не уходит (и чужие люди не дёргают бота ЛС-спамом). Владельцу бота —
+    # исключение, как и везде во входе.
+    live_role =_get_role_from_discord (discord_id )
+    if live_role =='uye'and not _is_bot_owner (discord_id ):
+        tests .append ({'name':'Роль модератора','status':'fail','detail':'Роли нет'})
+        return jsonify ({'success':False ,'tests':tests ,'error':
+                         'Доступа к панели нет: для входа нужна роль модератора на сервере Discord.'})
+    tests .append ({'name':'Роль модератора','status':'ok','detail':'Есть'})
+    # Лимит отправок PIN: не чаще 3 раз за 10 минут на аккаунт
+    import time as _tt
+    _pin_hist =[t for t in getattr (api_discord_check ,'_pin_sends',{}) .get (discord_id ,[])if _tt .time ()-t <600 ]
+    if len (_pin_hist )>=3 :
+        tests .append ({'name':'Отправка PIN-кода','status':'fail','detail':'Лимит'})
+        return jsonify ({'success':False ,'tests':tests ,'error':
+                         'Слишком много кодов подряд. Подождите ~10 минут.'})
+    _pin_all =getattr (api_discord_check ,'_pin_sends',{})
+    _pin_all [discord_id ]=_pin_hist +[_tt .time ()]
+    api_discord_check ._pin_sends =_pin_all
     try :
         code =''.join (random .choices (string .digits ,k =6 ))
         import time as _t 
@@ -3918,15 +4184,21 @@ def api_discord_login ():
     members [discord_id ]['role']=live_role 
     with open (members_file ,'w',encoding ='utf-8')as f :
         json .dump (members ,f ,indent =2 ,ensure_ascii =False )
+    session .clear ()   # анти-fixation: новая сессия на новый вход
     session .permanent =True 
     session ['logged_in']=True 
     session ['username']=member_info ['display_name']
     session ['role']=live_role 
     session ['discord_id']=discord_id 
+    session ['_role_checked']=_time .time ()
+    session ['selected_guild']=str (MAIN_GUILD_ID )if MAIN_GUILD_ID else None 
     session .modified =True 
     _save_login_token (discord_id ,live_role )
-    _log_login (member_info ['display_name'],live_role ,member_info ['avatar'],discord_id )
-    return jsonify ({'success':True ,'redirect':'/'})
+    _log_login (member_info ['display_name'],live_role ,member_info ['avatar'],discord_id ,method ='вход через Discord (PIN)')
+    # Discord-PIN — самая сильная проверка: устройство сразу доверенное
+    from flask import jsonify as _jf
+    resp =_jf ({'success':True ,'redirect':'/'})
+    return _mark_device_trusted (resp ,discord_id )
 
 
 @app .route ('/api/send-embed',methods =['POST'])
@@ -4411,6 +4683,11 @@ def api_reset_password ():
     if _time .time ()>entry ['expires']:
         del _reset_codes [discord_id ]
         return jsonify ({'error':'Срок действия кода истёк, запросите новый'})
+    # перебор кода невозможен: после 5 неверных вводов код сгорает
+    entry ['attempts']=int (entry .get ('attempts',0 ))+1
+    if entry ['attempts']>5 :
+        del _reset_codes [discord_id ]
+        return jsonify ({'error':'Слишком много неверных кодов. Запросите новый'})
     if entry ['code']!=code :
         return jsonify ({'error':'Неверный код'})
 

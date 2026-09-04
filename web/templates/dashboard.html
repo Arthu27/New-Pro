@@ -833,10 +833,12 @@ a.pulse-item:hover .feed-item-title{color:var(--ac)}
       box.innerHTML = logs.slice(0, 15).map(function (l) {
         var t = fmtDate(l.timestamp);
         var avatar = l.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+        var method = l.method ? '<div class="feed-item-time">' + esc(t) + ' · ' + esc(l.method) + '</div>'
+                              : '<div class="feed-item-time">' + esc(t) + '</div>';
         return '<div class="feed-item" style="border-bottom:1px solid var(--line)">' +
           '<img alt="" src="' + esc(avatar) + '" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'" style="width:30px;height:30px;border-radius:50%;flex:0 0 30px">' +
           '<div style="min-width:0;flex:1"><div class="feed-item-title">' + esc(l.username) + '</div>' +
-          '<div class="feed-item-time">' + esc(t) + '</div></div>' +
+          method + '</div>' +
           '<span class="badge ' + (roleTones[l.roles || l.role] || 'neutral') + '">' + esc(((l.roles || l.role) || '').toUpperCase()) + '</span></div>';
       }).join('');
     } catch (e) { /* пропускаем */ }

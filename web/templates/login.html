@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Вход в панель управления Hakumo — по Discord ID или нику и паролю.">
+  <meta name="description" content="Вход в панель управления Hakumo — через Discord с живой проверкой роли или по паролю.">
   <title>Вход — Hakumo</title>
   <link rel="icon" href="/static/favicon.ico">
   <style>
@@ -18,6 +18,43 @@
 <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
 <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
 <link rel="stylesheet" href="/static/auth.css?v={{ static_v('auth.css') }}">
+<style>
+/* ─── Локальные компоненты страницы входа ─────────────────────────────── */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:rgba(255,255,255,.04);
+  border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:18px}
+.seg button{appearance:none;border:0;background:transparent;color:var(--muted);font:inherit;
+  font-size:12.5px;font-weight:600;padding:8px 10px;border-radius:7px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:7px;transition:color .15s,background .15s}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:linear-gradient(135deg,#c8922a,#a87716);color:#fff;
+  box-shadow:0 2px 10px rgba(200,146,42,.25)}
+.divider-or{display:flex;align-items:center;gap:12px;color:var(--faint);
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.14em;margin:16px 0}
+.divider-or::before,.divider-or::after{content:'';flex:1;height:1px;background:var(--line)}
+.check-list{display:flex;flex-direction:column;gap:7px;margin:14px 0 4px}
+.check-item{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);
+  padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.02);
+  animation:ci-in .25s ease both}
+@keyframes ci-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.check-item .ci-ico{width:18px;text-align:center;flex:none}
+.check-item.ok .ci-ico{color:#34d399}
+.check-item.fail .ci-ico{color:#f87171}
+.check-item.warn .ci-ico{color:#fbbf24}
+.check-item.fail{border-color:rgba(248,113,113,.25)}
+.check-item b{color:var(--text);font-weight:600}
+.check-item .ci-detail{margin-left:auto;color:var(--faint);font-size:11px;max-width:45%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pin-6{letter-spacing:.45em;text-align:center;font-size:17px!important;font-weight:700}
+.method-note{display:flex;gap:9px;align-items:flex-start;font-size:11.5px;color:var(--faint);
+  line-height:1.45;margin:-4px 0 14px}
+.method-note i{margin-top:2px;color:#a5b4fc}
+.code-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.code-head .dh-ico{width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center;
+  background:rgba(200,146,42,.12);color:#c8922a;border:1px solid rgba(200,146,42,.3)}
+.code-head h2{margin:0;font-size:16px}
+.code-sub{font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+.back-row{margin-top:12px;display:flex;justify-content:center}
+</style>
 </head>
 <body>
   <div class="bg-grid" aria-hidden="true"></div>
@@ -39,10 +76,92 @@
         {% if request.args.get('success') %}
         <div class="notice ok show" id="regOkNote" role="status"><i class="fas fa-circle-check"></i><span>Доступ создан! Теперь войди: логин — твой <b>Discord ID или ник</b>, пароль — тот, что ты указал при регистрации.</span></div>
         {% endif %}
+        {% if error %}
+        <div class="notice err show" id="passError" style="display:flex" role="alert"><i class="fas fa-circle-exclamation"></i><span>{{ error|e }}</span></div>
+        {% endif %}
+        {% if info %}
+        <div class="notice ok show" role="status"><i class="fab fa-discord"></i><span>{{ info|e }}</span></div>
+        {% endif %}
 
-        <!-- Вход по паролю -->
-        <div id="passPane">
-          <div class="notice err {% if error %}show{% endif %}" id="passError" {% if error %}style="display:flex"{% endif %} role="alert"><i class="fas fa-circle-exclamation"></i><span>{{ error|e }}</span></div>
+{% if code_step %}
+        <!-- ─── Шаг 2 входа по паролю: код подтверждения из ЛС Discord ─── -->
+        <div class="code-head">
+          <span class="dh-ico" aria-hidden="true"><i class="fab fa-discord"></i></span>
+          <h2>Подтверди вход</h2>
+        </div>
+        <p class="code-sub">Мы отправили <b>6-значный код</b> в личные сообщения Discord
+          (<b>{{ (code_step.username or 'твой аккаунт')|e }}</b>).
+          Так панель проверяет, что входишь именно ты — даже если пароль кто-то узнал.</p>
+        <form method="POST" action="/login" autocomplete="off" id="codeForm" novalidate>
+          <input type="hidden" name="step" value="code">
+          <input type="hidden" name="discord_id" value="{{ code_step.discord_id|e }}">
+          <input type="hidden" name="username" value="{{ code_step.username|e }}">
+          <div class="f-group">
+            <label for="loginCode">Код из личных сообщений Discord</label>
+            <div class="input-wrap has-ico">
+              <i class="fas fa-shield-halved f-ico" aria-hidden="true"></i>
+              <input type="text" name="code" id="loginCode" class="pin-6" placeholder="______"
+                     maxlength="6" inputmode="numeric" autocomplete="one-time-code" autofocus
+                     required aria-label="Код подтверждения из личных сообщений Discord">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" id="codeSubmitBtn" style="width:100%">
+            <i class="fas fa-right-to-bracket"></i> Войти в панель</button>
+        </form>
+        <div class="back-row">
+          <a class="btn btn-ghost" href="/login" style="text-decoration:none">
+            <i class="fas fa-arrow-left"></i> Начать вход заново</a>
+        </div>
+
+{% else %}
+        <!-- ─── Выбор способа входа ─── -->
+        <div class="seg" role="tablist" aria-label="Способ входа">
+          <button type="button" id="segDiscord" class="on" role="tab" aria-selected="true" aria-controls="dsPane">
+            <i class="fab fa-discord" aria-hidden="true"></i>Через Discord</button>
+          <button type="button" id="segPass" role="tab" aria-selected="false" aria-controls="passPane">
+            <i class="fas fa-key" aria-hidden="true"></i>По паролю</button>
+        </div>
+
+        <!-- ─── Способ 1: вход через Discord (PIN в личные сообщения) ─── -->
+        <div id="dsPane" role="tabpanel" aria-label="Вход через Discord">
+          <div class="method-note">
+            <i class="fas fa-shield-halved" aria-hidden="true"></i>
+            <span>Самый надёжный способ: панель <b>живьём</b> проверит сервер и роль,
+              а код подтвердит, что аккаунт твой. Пароль не нужен.</span>
+          </div>
+          <div class="f-group">
+            <label for="dsQuery">Discord ID или ник</label>
+            <div class="input-wrap has-ico">
+              <i class="fab fa-discord f-ico" aria-hidden="true"></i>
+              <input type="text" id="dsQuery" placeholder="например @alex или Discord ID"
+                     autocomplete="off" aria-label="Discord ID или ник для входа через Discord">
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" id="dsCheckBtn" style="width:100%">
+            <i class="fas fa-shield-halved"></i> Проверить доступ</button>
+
+          <div class="check-list" id="dsChecks" hidden aria-live="polite"></div>
+
+          <div id="dsPinStep" hidden>
+            <div class="f-group" style="margin-top:14px">
+              <label for="dsPin">Код из личных сообщений Discord</label>
+              <div class="input-wrap has-ico">
+                <i class="fas fa-envelope f-ico" aria-hidden="true"></i>
+                <input type="text" id="dsPin" class="pin-6" placeholder="______" maxlength="6"
+                       inputmode="numeric" autocomplete="one-time-code"
+                       aria-label="PIN-код из личных сообщений Discord">
+              </div>
+              <p class="hint">Код действует <b>5 минут</b>. Вошли не вы? Никому не сообщайте код.</p>
+            </div>
+            <button type="button" class="btn btn-primary" id="dsLoginBtn" style="width:100%">
+              <i class="fas fa-right-to-bracket"></i> Войти в панель</button>
+          </div>
+        </div>
+
+        <div class="divider-or" aria-hidden="true">или</div>
+
+        <!-- ─── Способ 2: вход по паролю ─── -->
+        <div id="passPane" hidden role="tabpanel" aria-label="Вход по паролю">
           <form method="POST" action="/login" autocomplete="off" id="passForm" novalidate>
             <div class="f-group">
               <label for="passUsername">Discord ID или ник</label>
@@ -61,64 +180,67 @@
                 <button type="button" class="eye" id="passEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
                 <span class="cap-hint" id="capHint">Caps Lock</span>
               </div>
+              <p class="hint">На новом устройстве пришлём <b>код в ЛС Discord</b> — так в панель
+                войдёшь только ты, даже если пароль узнали.</p>
             </div>
 
             <div class="row-between">
               <button type="button" class="link-btn" id="forgotToggle"><i class="fas fa-key" style="margin-right:4px"></i>Забыл пароль?</button>
             </div>
 
-            <button type="submit" class="btn btn-primary" id="passSubmitBtn"><i class="fas fa-right-to-bracket"></i> Войти</button>
+            <button type="submit" class="btn btn-primary" id="passSubmitBtn" style="width:100%"><i class="fas fa-right-to-bracket"></i> Войти</button>
           </form>
+
+          <!-- Восстановление пароля: код в ЛС Discord -->
+          <div id="forgotPane" hidden>
+            <div class="form-head">
+              <h2>Забыли пароль?</h2>
+              <p>Бот пришлёт код в твои личные сообщения Discord.</p>
+            </div>
+            <div class="fp-err" id="frErr1"></div>
+            <div class="f-group">
+              <label for="frQuery">Discord ID или ник</label>
+              <div class="input-wrap has-ico">
+                <i class="fab fa-discord f-ico" aria-hidden="true"></i>
+                <input type="text" id="frQuery" placeholder="например @alex или Discord ID" autocomplete="off" aria-label="Discord ID или ник для восстановления пароля">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="frSendBtn"><i class="fas fa-paper-plane"></i> Отправить код</button>
+
+            <div id="frStep2" hidden>
+              <p class="fp-title" style="margin-top:20px"><span class="n">2</span> Новый пароль</p>
+              <p class="fp-sub">Введи код из Discord и задай новый пароль.</p>
+              <div class="fp-err" id="frErr2"></div>
+              <div class="f-group">
+                <label for="frCode">Код из Discord</label>
+                <div class="input-wrap">
+                  <input type="text" id="frCode" class="pin-inline" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" aria-label="Код из Discord">
+                </div>
+              </div>
+              <div class="f-group">
+                <label for="frNewPass">Новый пароль</label>
+                <div class="input-wrap has-ico has-eye">
+                  <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+                  <input type="password" id="frNewPass" placeholder="Минимум 6 символов" minlength="6" autocomplete="new-password" aria-label="Новый пароль">
+                  <button type="button" class="eye" id="frNewEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+                </div>
+              </div>
+              <div class="f-group">
+                <label for="frNewPass2">Повтори пароль</label>
+                <div class="input-wrap has-ico has-eye">
+                  <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+                  <input type="password" id="frNewPass2" placeholder="Ещё раз" minlength="6" autocomplete="new-password" aria-label="Повторите новый пароль">
+                  <button type="button" class="eye" id="frNewEye2" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+                </div>
+              </div>
+              <button type="button" class="btn btn-primary" id="frSaveBtn"><i class="fas fa-check"></i> Сохранить пароль</button>
+              <p class="fp-hint show" id="frHint">После сброса войди с новым паролем на этой же странице.</p>
+            </div>
+
+            <button type="button" class="btn btn-ghost" id="frBackBtn" style="margin-top:14px"><i class="fas fa-arrow-left"></i> Назад ко входу</button>
+          </div>
         </div>
-
-        <!-- Восстановление пароля: код в ЛС Discord -->
-        <div id="forgotPane" hidden>
-          <div class="form-head">
-            <h2>Забыли пароль?</h2>
-            <p>Бот пришлёт код в твои личные сообщения Discord.</p>
-          </div>
-          <div class="fp-err" id="frErr1"></div>
-          <div class="f-group">
-            <label for="frQuery">Discord ID или ник</label>
-            <div class="input-wrap has-ico">
-              <i class="fab fa-discord f-ico" aria-hidden="true"></i>
-              <input type="text" id="frQuery" placeholder="например @alex или Discord ID" autocomplete="off" aria-label="Discord ID или ник для восстановления пароля">
-            </div>
-          </div>
-          <button type="button" class="btn btn-primary" id="frSendBtn"><i class="fas fa-paper-plane"></i> Отправить код</button>
-
-          <div id="frStep2" hidden>
-            <p class="fp-title" style="margin-top:20px"><span class="n">2</span> Новый пароль</p>
-            <p class="fp-sub">Введи код из Discord и задай новый пароль.</p>
-            <div class="fp-err" id="frErr2"></div>
-            <div class="f-group">
-              <label for="frCode">Код из Discord</label>
-              <div class="input-wrap">
-                <input type="text" id="frCode" class="pin-inline" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" aria-label="Код из Discord">
-              </div>
-            </div>
-            <div class="f-group">
-              <label for="frNewPass">Новый пароль</label>
-              <div class="input-wrap has-ico has-eye">
-                <i class="fas fa-lock f-ico" aria-hidden="true"></i>
-                <input type="password" id="frNewPass" placeholder="Минимум 6 символов" minlength="6" autocomplete="new-password" aria-label="Новый пароль">
-                <button type="button" class="eye" id="frNewEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
-              </div>
-            </div>
-            <div class="f-group">
-              <label for="frNewPass2">Повтори пароль</label>
-              <div class="input-wrap has-ico has-eye">
-                <i class="fas fa-lock f-ico" aria-hidden="true"></i>
-                <input type="password" id="frNewPass2" placeholder="Ещё раз" minlength="6" autocomplete="new-password" aria-label="Повторите новый пароль">
-                <button type="button" class="eye" id="frNewEye2" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
-              </div>
-            </div>
-            <button type="button" class="btn btn-primary" id="frSaveBtn"><i class="fas fa-check"></i> Сохранить пароль</button>
-            <p class="fp-hint show" id="frHint">После сброса войди с новым паролем на этой же странице.</p>
-          </div>
-
-          <button type="button" class="btn btn-ghost" id="frBackBtn" style="margin-top:14px"><i class="fas fa-arrow-left"></i> Назад ко входу</button>
-        </div>
+{% endif %}
       </div>
 
       <footer class="card-foot">
@@ -138,7 +260,7 @@
       <h3>Проверяем доступ</h3>
       <p class="sub" id="authCheckSub">Связываемся с Discord и проверяем роль…</p>
       <ol class="auth-steps" id="authSteps">
-        <li data-step="1"><span class="s-ico"></span><span>Находим аккаунт</span></li>
+        <li data-step="1"><span class="s-ico"></span><span>Находим аккаунт на сервере</span></li>
         <li data-step="2"><span class="s-ico"></span><span>Проверяем роль и доступ</span></li>
         <li data-step="3"><span class="s-ico"></span><span>Входим в панель</span></li>
       </ol>
@@ -166,6 +288,23 @@
       el.style.display = 'none';
     }
   }
+
+  /* ── Переключатель способа входа ── */
+  (function () {
+    var segD = $('segDiscord'), segP = $('segPass');
+    if (!segD || !segP) return;
+    function pick(useDiscord) {
+      segD.classList.toggle('on', useDiscord);
+      segP.classList.toggle('on', !useDiscord);
+      segD.setAttribute('aria-selected', useDiscord ? 'true' : 'false');
+      segP.setAttribute('aria-selected', useDiscord ? 'false' : 'true');
+      var dp = $('dsPane'), pp = $('passPane');
+      if (dp) dp.hidden = !useDiscord;
+      if (pp) pp.hidden = useDiscord;
+    }
+    segD.addEventListener('click', function () { pick(true); });
+    segP.addEventListener('click', function () { pick(false); });
+  })();
 
   /* ── Глазики паролей ── */
   function bindEye(btnId, inpId) {
@@ -215,10 +354,85 @@
             (g === 1 ? 'сервер' : (g >= 2 && g <= 4 ? 'сервера' : 'серверов'));
         } else {
           dot.classList.add('off');
-          txt.textContent = 'Бот офлайн · вход по роли вернётся, когда бот подключится';
+          txt.textContent = 'Бот офлайн · вход вернётся, когда бот подключится';
         }
       })
       .catch(function () {});
+  })();
+
+  /* ══ Способ 1: вход через Discord — живой чек-лист + PIN ══ */
+  (function () {
+    var btn = $('dsCheckBtn'), pinStep = $('dsPinStep'), list = $('dsChecks');
+    if (!btn) return;
+    var dsId = null;
+
+    function renderChecks(tests) {
+      list.hidden = false;
+      list.innerHTML = (tests || []).map(function (t) {
+        var ico = t.status === 'ok' ? 'fa-check' : (t.status === 'warn' ? 'fa-triangle-exclamation' : 'fa-xmark');
+        return '<div class="check-item ' + esc(t.status || 'warn') + '">' +
+          '<span class="ci-ico"><i class="fas ' + ico + '" aria-hidden="true"></i></span>' +
+          '<span><b>' + esc(t.name || '') + '</b></span>' +
+          '<span class="ci-detail">' + esc(t.detail || '') + '</span></div>';
+      }).join('');
+    }
+
+    btn.addEventListener('click', function () {
+      var q = ($('dsQuery').value || '').trim();
+      if (!q) { renderChecks([{ name: 'Данные', status: 'fail', detail: 'введи ID или ник' }]); return; }
+      btn.disabled = true;
+      var ic0 = btn.querySelector('i'); var orig = ic0 ? ic0.className : '';
+      if (ic0) ic0.className = 'fas fa-circle-notch spin';
+      pinStep.hidden = true;
+      fetch('/api/discord-check', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        btn.disabled = false;
+        if (ic0) ic0.className = orig;
+        renderChecks((d && d.tests) || []);
+        if (d && d.success && d.discord_id) {
+          dsId = d.discord_id;
+          pinStep.hidden = false;
+          var pin = $('dsPin');
+          if (pin) pin.focus();
+        }
+      }).catch(function () {
+        btn.disabled = false;
+        if (ic0) ic0.className = orig;
+        renderChecks([{ name: 'Сеть', status: 'fail', detail: 'нет связи с панелью' }]);
+      });
+    });
+    $('dsQuery').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
+
+    var loginBtn = $('dsLoginBtn');
+    if (loginBtn) {
+      loginBtn.addEventListener('click', function () {
+        var pin = ($('dsPin').value || '').trim();
+        if (!dsId) return;
+        if (pin.length !== 6) { showError('passError', 'Введи 6 цифр из личных сообщений Discord.'); return; }
+        loginBtn.disabled = true;
+        var ic0 = loginBtn.querySelector('i'); var orig = ic0 ? ic0.className : '';
+        if (ic0) ic0.className = 'fas fa-circle-notch spin';
+        fetch('/api/discord-login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ discord_id: dsId, pin: pin })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d && d.success && d.redirect) {
+            window.location.href = d.redirect;
+          } else {
+            loginBtn.disabled = false;
+            if (ic0) ic0.className = orig;
+            showError('passError', (d && d.error) || 'Не удалось войти.');
+          }
+        }).catch(function () {
+          loginBtn.disabled = false;
+          if (ic0) ic0.className = orig;
+          showError('passError', 'Сеть недоступна — попробуйте ещё раз.');
+        });
+      });
+      $('dsPin').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); loginBtn.click(); } });
+    }
   })();
 
   /* ── Автоподсказка логина (поиск себя по нику) ──
@@ -410,7 +624,8 @@
   }
 
   /* Вход по паролю: на шаге «Проверяем роль и доступ» спрашиваем сервер
-     (/api/login-probe), и только при success отправляем настоящую форму. */
+     (/api/login-probe). Если сервер ответил needs_code — показываем шаг
+     «Код из ЛС Discord» вместо отправки формы. */
   var passForm = $('passForm');
   if (passForm) {
     passForm.addEventListener('submit', function (e) {
@@ -431,6 +646,13 @@
         }).then(function (r) {
           return r.json().catch(function () { return null; });
         }).then(function (d) {
+          if (d && d.success && d.needs_code) {
+            // Пароль и роль проверены — теперь код из ЛС Discord
+            passForm.dataset.sent = '';
+            accessCheck.close();
+            showCodeStep(d.discord_id || '', u ? u.value : '');
+            return;
+          }
           if (d && d.success) ok();
           else err((d && d.error) || 'Что-то пошло не так — попробуйте ещё раз.');
         }).catch(function () {
@@ -442,6 +664,35 @@
     });
   }
 
+  /* Шаг «Код из ЛС Discord» после верного пароля на новом устройстве */
+  function showCodeStep(discordId, username) {
+    var pane = $('passPane');
+    if (!pane) { return; }
+    pane.innerHTML =
+      '<div class="code-head">' +
+      '<span class="dh-ico" aria-hidden="true"><i class="fab fa-discord"></i></span>' +
+      '<h2>Подтверди вход</h2></div>' +
+      '<p class="code-sub">Пароль и роль проверены. Мы отправили <b>6-значный код</b> в личные ' +
+      'сообщения Discord (<b>' + esc(username) + '</b>) — подтвердите, что аккаунт ваш.</p>' +
+      '<form method="POST" action="/login" autocomplete="off">' +
+      '<input type="hidden" name="step" value="code">' +
+      '<input type="hidden" name="discord_id" value="' + esc(discordId) + '">' +
+      '<input type="hidden" name="username" value="' + esc(username) + '">' +
+      '<div class="f-group">' +
+      '<label for="jsCode">Код из личных сообщений Discord</label>' +
+      '<div class="input-wrap has-ico">' +
+      '<i class="fas fa-shield-halved f-ico" aria-hidden="true"></i>' +
+      '<input type="text" name="code" id="jsCode" class="pin-6" placeholder="______" maxlength="6" ' +
+      'inputmode="numeric" autocomplete="one-time-code" autofocus required ' +
+      'aria-label="Код подтверждения из личных сообщений Discord"></div></div>' +
+      '<button type="submit" class="btn btn-primary" style="width:100%">' +
+      '<i class="fas fa-right-to-bracket"></i> Войти в панель</button></form>' +
+      '<div class="back-row"><a class="btn btn-ghost" href="/login" style="text-decoration:none">' +
+      '<i class="fas fa-arrow-left"></i> Начать вход заново</a></div>';
+    var inp = $('jsCode');
+    if (inp) inp.focus();
+  }
+
   /* ── «Забыли пароль?»: код в ЛС Discord → новый пароль ── */
   var _frId = null;
   var forgotPane = $('forgotPane');
@@ -449,7 +700,8 @@
   var forgotToggle = $('forgotToggle');
   if (forgotToggle && forgotPane && passPane) {
     function pane(showForgot) {
-      passPane.style.display = showForgot ? 'none' : '';
+      var form = $('passForm');
+      if (form) form.style.display = showForgot ? 'none' : '';
       forgotPane.hidden = !showForgot;
       if (showForgot) { var f = $('frQuery'); if (f) f.focus(); }
     }

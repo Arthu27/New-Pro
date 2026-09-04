@@ -72,6 +72,7 @@ def _member(uid, name, gid, bot=False):
     m.bot = bot
     m.display_avatar = _Avatar()
     m.guild_id = gid
+    m.roles = []   # живая проверка роли читает member.roles
 
     async def _send(*a, **k):
         return None
@@ -79,12 +80,25 @@ def _member(uid, name, gid, bot=False):
     return m
 
 
+def _mod_perms():
+    # PIN-вход теперь только у.staff: без роли модератора код не отправляется
+    return NS(administrator=False, ban_members=True, kick_members=True,
+              manage_guild=False, manage_messages=False, manage_channels=False)
+
+
 alice = _member(UID_ALICE, 'alice', MAIN_ID)      # свой сервер
+alice.guild_permissions = _mod_perms()
 bob = _member(UID_BOB, 'bob_local', MAIN_ID)    # свой сервер
+bob.guild_permissions = _mod_perms()
+# свой, но БЕЗ роли модератора — PIN не получит (заказ владельца: реальный лимит по ролям)
+bob_norole = _member(240000000000000003, 'bob_norole', MAIN_ID)
+bob_norole.guild_permissions = NS(administrator=False, ban_members=False,
+                                  kick_members=False, manage_guild=False,
+                                  manage_messages=False, manage_channels=False)
 mallory = _member(UID_MALLORY, 'mallory_foreign', FOREIGN_ID)  # чужой сервер
 eve = _member(UID_EVE, 'eve_foreign', FOREIGN_ID)          # чужой сервер
 
-main_guild = NS(id=MAIN_ID, name='Основной', members=[alice, bob],
+main_guild = NS(id=MAIN_ID, name='Основной', members=[alice, bob, bob_norole],
                 owner_id=UID_ALICE)
 foreign_guild = NS(id=FOREIGN_ID, name='Чужой', members=[mallory, eve],
                    owner_id=2001)
@@ -194,11 +208,18 @@ r = client.post('/api/discord-check', json={'query': 'mallory_foreign'})
 d = r.get_json(silent=True) or {}
 check(d.get('success') is False, 'чужой по нику — запрещён', f'→ {d.get("error")}')
 
-# свой по ID должен пройти проверки вплоть до отправки PIN (DM замокан в _FakeBot)
+# свой МОДЕРАТОР по ID проходит проверки вплоть до отправки PIN (DM замокан в _FakeBot)
 r = client.post('/api/discord-check', json={'query': str(UID_BOB)})
 d = r.get_json(silent=True) or {}
 check(d.get('success') is True and str(d.get('discord_id')) == str(UID_BOB),
-      'свой участник (bob) — допущен к PIN', f'→ {d.get("success")} {d.get("error")}')
+      'свой модератор (bob) — допущен к PIN', f'→ {d.get("success")} {d.get("error")}')
+
+# свой, но БЕЗ роли модератора: PIN не отправляется (реальный лимит по ролям)
+r = client.post('/api/discord-check', json={'query': 'bob_norole'})
+d = r.get_json(silent=True) or {}
+check(d.get('success') is False and 'роль модератора' in (d.get('error') or ''),
+      'свой без роли — PIN не отправляется, отказ про роль',
+      f'→ {d.get("success")} {d.get("error")}')
 
 # Владелец бота, которого ещё НЕТ на сервере (этап настройки), — вход разрешён:
 # профиль тянется через fetch_user, а проверка членства делает исключение.

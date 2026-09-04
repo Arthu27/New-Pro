@@ -50,7 +50,11 @@ async function loadChannels(selId) {
   var data = await r.json();
   var chs = Array.isArray(data) ? data : (data.channels || []);
   var sel = document.getElementById(selId);
-  sel.innerHTML = chs.filter(function(c){return c.type==='text';}).map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>';}).join('');
+  sel.innerHTML = chs.filter(function(c){return c.type==='text';}).map(function(c){
+    var nm = c.name || c.id;   /* без имени показываем хотя бы ID */
+    return '<option value="'+String(c.id).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')+'">#'
+      + String(nm).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')+'</option>';
+  }).join('');
 }
 
 async function loadRoles(selId) {
@@ -60,7 +64,11 @@ async function loadRoles(selId) {
   var roles = await r.json();
   if (!Array.isArray(roles)) roles = [];
   var sel = document.getElementById(selId);
-  sel.innerHTML = roles.map(function(ro){return '<option value="'+ro.id+'">'+ro.name+'</option>';}).join('');
+  sel.innerHTML = roles.map(function(ro){
+    var nm = ro.name || ro.id;
+    return '<option value="'+String(ro.id).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')+'">'
+      + String(nm).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')+'</option>';
+  }).join('');
 }
 
 function openCmd(cmd) {
