@@ -341,6 +341,32 @@ def _source():
     return repo, branch
 
 
+def _update_token():
+    """Токен GitHub для обновлений ИЗ ПРИВАТНОГО репозитория.
+
+    Приватный репозиторий анонимно отдаёт 404 (и на codeload, и на API) —
+    чтобы качать обновления, нужен токен с доступом на чтение содержимого.
+    Читаем из окружения/.env (бот грузит .env при старте): GITHUB_TOKEN
+    (историческое имя, общее с AI через GitHub Models), UPDATE_TOKEN
+    (отдельный, только для обновлений) или GH_TOKEN. Публичному
+    репозиторию токен не нужен — запросы идут анонимно.
+    """
+    for _k in ('GITHUB_TOKEN', 'UPDATE_TOKEN', 'GH_TOKEN'):
+        _v = (os.environ.get(_k) or '').strip()
+        if _v:
+            return _v
+    return ''
+
+
+def _api_headers(token=None):
+    """Заголовки для запросов к api.github.com (Accept + токен, если есть)."""
+    h = {'Accept': 'application/vnd.github+json'}
+    token = _update_token() if token is None else (token or '')
+    if token:
+        h['Authorization'] = 'token ' + token
+    return h
+
+
 def remote_sha():
     """HEAD ветки на GitHub (для отчёта). None — если API не ответил."""
     try:
@@ -348,7 +374,7 @@ def remote_sha():
         _repo, _branch = _source()
         url = 'https://api.github.com/repos/{}/commits/{}'.format(
             _repo, _branch)
-        r = requests.get(url, timeout=10, headers={'Accept': 'application/vnd.github+json'})
+        r = requests.get(url, timeout=10, headers=_api_headers())
         if r.status_code == 200:
             return str(r.json().get('sha') or '') or None
         log.debug('self_update: remote_sha http %s', r.status_code)
@@ -358,24 +384,65 @@ def remote_sha():
 
 
 def zip_url():
+    """Публичная ссылка codeload на zip ветки (только для public-репозитория).
+
+    У приватного репозитория эта ссылка без токена отдаёт 404 — качайте
+    через download_zip(), он сам выберет авторизованный api.zipball.
+    """
     _repo, _branch = _source()
     return 'https://codeload.github.com/{}/zip/refs/heads/{}'.format(
         _repo, _branch)
 
 
+def zipball_url():
+    """Авторизованная ссылка api.github.com на zip ветки (приватный репозиторий).
+
+    GitHub отвечает 302 на подписанную codeload-ссылку; requests идёт за
+    редиректом сам. Без токена у приватного репозитория — 404.
+    """
+    _repo, _branch = _source()
+    return 'https://api.github.com/repos/{}/zipball/{}'.format(
+        _repo, _branch)
+
+
 def download_zip(dest_dir):
-    """Скачать zip ветки в dest_dir/update.zip. Возвращает (ok, err, path)."""
+    """Скачать zip ветки в dest_dir/update.zip. Возвращает (ok, err, path).
+
+    Публичный репозиторий — codeload анонимно. Приватный — api.zipball с
+    токеном из .env (GITHUB_TOKEN / UPDATE_TOKEN / GH_TOKEN): без токена
+    GitHub отвечает 404, и мы честно подсказываем, что нужно добавить.
+    """
     try:
         import requests
     except ImportError:
         return False, 'нет библиотеки requests — обновление недоступно', None
-    url = zip_url()
+    token = _update_token()
+    if token:
+        url = zipball_url()
+        headers = _api_headers(token)
+    else:
+        url = zip_url()
+        headers = None
     path = os.path.join(dest_dir, 'update.zip')
     total = 0
     try:
-        with requests.get(url, stream=True, timeout=(10, 120)) as r:
+        with requests.get(url, stream=True, timeout=(10, 120),
+                          headers=headers) as r:
             if r.status_code != 200:
-                return False, f'GitHub ответил {r.status_code} — репозиторий или ветка недоступны', None
+                # 404 у приватного репозитория без токена GitHub отдаёт
+                # нарочно (чтобы не светить существование репозитория) —
+                # подсказываем владельцу, что делать.
+                if not token and r.status_code == 404:
+                    hint = (' Репозиторий приватный? Добавьте GITHUB_TOKEN '
+                            '(или UPDATE_TOKEN) с доступом на чтение кода '
+                            'в .env и повторите /update.')
+                elif token and r.status_code in (401, 403):
+                    hint = (' GITHUB_TOKEN не подходит: нужен токен с '
+                            'доступом на чтение содержимого репозитория.')
+                else:
+                    hint = ''
+                return False, (f'GitHub ответил {r.status_code} — репозиторий '
+                               f'или ветка недоступны.{hint}'), None
             with open(path, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=1024 * 256):
                     if not chunk:

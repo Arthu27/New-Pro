@@ -29,7 +29,22 @@ def _load_dotenv():
 
 _load_dotenv()
 
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+def _update_token():
+    """Токен GitHub для доступа к ПРИВАТНОМУ репозиторию (чтение кода).
+
+    Приватный репозиторий анонимно отдаёт 404 — без токена обновление
+    невозможно. Читаем из .env/окружения: GITHUB_TOKEN (историческое имя),
+    UPDATE_TOKEN (отдельный, только для обновлений) или GH_TOKEN.
+    Публичному репозиторию токен не нужен — запросы идут анонимно.
+    """
+    for _k in ("GITHUB_TOKEN", "UPDATE_TOKEN", "GH_TOKEN"):
+        _v = (os.getenv(_k) or "").strip()
+        if _v:
+            return _v
+    return ""
+
+
+GITHUB_TOKEN = _update_token()
 
 # Автоматически определить директорию скрипта (VSCode workspace)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -115,8 +130,24 @@ def _repo_api():
 
 
 def _zip_url():
+    """Публичная ссылка на zip ветки (github.com/codeload, только public)."""
     repo, branch = _source()
     return f"https://github.com/{repo}/archive/refs/heads/{branch}.zip"
+
+
+def _zipball_url():
+    """Авторизованная ссылка api.github.com на zip ветки (приватный репозиторий)."""
+    repo, branch = _source()
+    return f"https://api.github.com/repos/{repo}/zipball/{branch}"
+
+
+def _api_headers():
+    """Заголовки для api.github.com: Accept + Authorization, если есть токен."""
+    h = {"Accept": "application/vnd.github+json"}
+    token = _update_token()
+    if token:
+        h["Authorization"] = "token " + token
+    return h
 
 # АВТООБНОВЛЕНИЕ — только по явному флагу AUTO_UPDATE=1/true/yes.
 # По умолчанию ВЫКЛЮЧЕНО: демон лишь присматривает за живым процессом
@@ -171,7 +202,7 @@ def log_event(event, **extra):
 def get_remote_commit():
     """GitHub API'den son commit hash'ini al"""
     try:
-        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        headers = _api_headers()
         r = requests.get(_repo_api(), headers=headers, timeout=10)
         if r.status_code == 200:
             return r.json()["sha"]
@@ -485,9 +516,23 @@ def download_and_extract():
     """Скачать ZIP с GitHub и распаковать в BOT_DIR (fallback)."""
     _dl_branch = _source()[1]
     лог("[AUTO-UPDATE] Файлы загружаются...")
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-    r = requests.get(_zip_url(), headers=headers, timeout=60)
+    token = _update_token()
+    if token:
+        url = _zipball_url()          # приватный репозиторий — только с токеном
+        headers = _api_headers()
+    else:
+        url = _zip_url()              # публичный — анонимно
+        headers = None
+    r = requests.get(url, headers=headers, timeout=60)
     if r.status_code != 200:
+        if not token and r.status_code == 404:
+            raise Exception("Ошибка загрузки HTTP 404 — репозиторий приватный? "
+                            "Добавьте GITHUB_TOKEN (или UPDATE_TOKEN) с доступом "
+                            "на чтение кода в .env и повторите обновление")
+        if token and r.status_code in (401, 403):
+            raise Exception("Ошибка загрузки HTTP %d — GITHUB_TOKEN не подходит: "
+                            "нужен токен с доступом на чтение содержимого "
+                            "репозитория" % r.status_code)
         raise Exception(f"Ошибка загрузки HTTP {r.status_code}")
 
     zip_path = os.path.join(BOT_DIR, "hakumo-update.zip")
