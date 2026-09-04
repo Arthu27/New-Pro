@@ -85,6 +85,7 @@
         <div class="notice err {% if error %}show{% endif %}" id="regError1" role="alert"><i class="fas fa-circle-exclamation"></i><span>{% if error %}{{ error }}{% endif %}</span></div>
         <form method="POST" action="/register" autocomplete="off" id="regForm1" novalidate>
           <input type="hidden" name="step" value="1">
+          <input type="hidden" name="resolved_id" id="resolved_id" value="">
           <div class="f-group">
             <label for="discord_id">Discord ID или ник</label>
             <div class="input-wrap has-ico">
@@ -184,6 +185,9 @@
   var __rgSuggestBlock = false;
   window.rgSuggest = function (input) {
     if (__rgSuggestBlock) { __rgSuggestBlock = false; return; }
+    /* человек правит имя руками — ранее выбранный ID больше не действует */
+    var ridEl = document.getElementById('resolved_id');
+    if (ridEl && ridEl.value) ridEl.value = '';
     var popup = $('regPopup');
     if (!popup) return;
     var q = (input.value || '').trim().replace(/^@/, '');
@@ -219,9 +223,12 @@
               ev.preventDefault();
               ev.stopPropagation();
               __rgSuggestBlock = true;
-              /* полный ник в поле (не ID): сервер сам разыменовывает ник —
-                 раньше подставлялся ID и выглядело, будто ник «не влез» */
+              /* полный ник в поле для человека + ID в скрытом поле для
+                 сервера: регистрацию нельзя сломать ни частичным именем,
+                 ни его точным написанием (жалоба владельца 2026-09-05) */
               input.value = it.dataset.user || it.dataset.id || input.value;
+              var rid = document.getElementById('resolved_id');
+              if (rid) rid.value = it.dataset.id || '';
               popup.classList.remove('open');
               var btn1 = $('regBtn1');
               if (btn1) btn1.focus();

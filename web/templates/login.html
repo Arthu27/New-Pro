@@ -165,6 +165,7 @@
         <!-- ─── Способ 1: вход по паролю ─── -->
         <div id="passPane" role="tabpanel" aria-label="Вход по паролю">
           <form method="POST" action="/login" autocomplete="off" id="passForm" novalidate>
+            <input type="hidden" name="resolved_id" id="resolved_id" value="">
             <div class="f-group">
               <label for="passUsername">Discord ID или ник</label>
               <div class="input-wrap has-ico">
@@ -451,6 +452,9 @@
   var suggestSeq = 0;
   window.showSuggest = function (input, popupId, focusSel) {
     if (window.__lgSuggestBlock) { window.__lgSuggestBlock = false; return; }
+    /* человек правит имя руками — ранее выбранный из подсказок ID сбрасывается */
+    var ridEl = document.getElementById('resolved_id');
+    if (ridEl && ridEl.value) ridEl.value = '';
     var popup = $(popupId);
     if (!popup) return;
     var q = (input.value || '').trim().replace(/^@/, '');
@@ -487,6 +491,8 @@
               ev.stopPropagation();
               window.__lgSuggestBlock = true;
               input.value = it.dataset.user || it.dataset.id || input.value;
+              var rid = document.getElementById('resolved_id');
+              if (rid) rid.value = it.dataset.id || '';
               popup.classList.remove('open');
               var nf = focusSel ? document.querySelector(focusSel) : $('passPassword');
               if (nf) nf.focus();

@@ -1429,6 +1429,22 @@ def login ():
             except Exception as _mex :
                 _log .debug ('login members: %s',_mex )
         discord_id =_resolve_member_key (members ,username )
+        if not discord_id :
+            # Человек выбрал СЕБЯ из подсказок → точный ID в скрытом поле;
+            # либо имя введено не полностью — принимаем уникальное начало
+            # ника среди зарегистрированных (та же логика, что в
+            # регистрации; жалоба владельца 2026-09-05).
+            _rid =str (request .form .get ('resolved_id','')or '').strip ()
+            if _rid .isdigit ()and _rid in members :
+                discord_id =_rid
+            else :
+                _q =username .lstrip ('@').lower ()
+                if _q and not _q .isdigit () :
+                    _hits =[k for k ,rec in members .items ()
+                            if any (str (rec .get (fld )or '').strip ().lower ().startswith (_q)
+                                    for fld in ('display_name','name','username'))]
+                    if len (_hits )==1 :
+                        discord_id =_hits [0 ]
         if discord_id :
             if not _pw_matches (members [discord_id ].get ('password'),password ):
                 _throttle_failed_login (username )
@@ -1545,15 +1561,29 @@ def _resolve_nick_anywhere (nick ):
         from services import member_store as _MS
         _gid =str (MAIN_GUILD_ID or (getattr (_pg ,'id','')if _pg is not None else '')or '')
         if _gid :
-            _rows =_MS .find (_gid ,nick ,limit =12 )or []
+            _rows =[r for r in (_MS .find (_gid ,nick ,limit =12 )or [])
+                    if not r .get ('bot')]
             _exact =[r for r in _rows
-                     if not r .get ('bot')
-                     and (str (r .get ('display_name')or '').lower ()==nick .lower ()
-                          or str (r .get ('name')or '').lower ()==nick .lower ())]
+                     if (str (r .get ('display_name')or '').lower ()==nick .lower ()
+                         or str (r .get ('name')or '').lower ()==nick .lower ())]
             if len (_exact )==1 :
                 return str (_exact [0 ].get ('id'))
             if len (_exact )>1 :
                 return _exact
+            # Имя введено НЕ ПОЛНОСТЬЮ («Анна» вместо «Анна Киселёва») —
+            # это жалоба владельца 2026-09-05: подсказки человека находят,
+            # а регистрация по точному совпадению — нет. Если по началу
+            # имени кандидат РОВНО ОДИН — принимаем его; если несколько —
+            # вернём список (форма попросит выбрать себя из подсказок).
+            if _rows and nick :
+                _q =nick .lower ()
+                _pref =[r for r in _rows
+                        if (str (r .get ('display_name')or '').lower ().startswith (_q)
+                            or str (r .get ('name')or '').lower ().startswith (_q))]
+                if len (_pref )==1 :
+                    return str (_pref [0 ].get ('id'))
+                if len (_pref )>1 :
+                    return _pref
     except Exception as _ex :
         _log .debug ('nick→member_store: %s',_ex )
     return None
@@ -1575,6 +1605,14 @@ def register ():
         discord_id =request .form .get ('discord_id','').strip ()
         password =request .form .get ('password','').strip ()
         password2 =request .form .get ('password2','').strip ()
+        # Человек выбрал СЕБЯ из подсказок? Тогда ID уже известен точно —
+        # никакие вариации написания имени больше не могут помешать
+        # (жалоба владельца 2026-09-05: «пишет имя не полностью, панель
+        # находит, но при регистрации говорит, что не нашла»).
+        _rid =request .form .get ('resolved_id','').strip ()
+        if (not discord_id .isdigit ()and _rid .isdigit ()
+        and 17 <=len (_rid )<=19 ):
+            discord_id =_rid
 
         # ADIM 2: Kod проверка
         if step =='2':
