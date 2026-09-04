@@ -15,7 +15,7 @@ import math
 from flask import Flask ,render_template ,request ,session ,redirect ,url_for ,send_from_directory ,Response ,g 
 # jsonify ВСЕХ ответов панели — из web.routes._common: снежинки Discord
 # (>2^53) уходят клиенту строкой, иначе JS ломает цифры id.
-from web.routes._common import jsonify ,role_member_counts
+from web.routes._common import jsonify ,role_member_counts, _safe_json_obj
 import discord 
 from discord .ext import commands 
 import asyncio 
@@ -1519,7 +1519,7 @@ def api_login_probe():
     форму. Тексты ошибок — те же, что у формы входа, поэтому оверлей и
     форма никогда не спорят.
     """
-    data = request.get_json(silent=True) or {}
+    data = _safe_json_obj()
     username = str(data.get('username') or '').strip()
     password = str(data.get('password') or '')
     if not username or not password:
@@ -1733,7 +1733,7 @@ def logout ():
 def api_add_member ():
     if ROLES .get (session .get ('role'),-1 )<ROLES .get ('admin',999 ):
         return jsonify ({'error':'Нет доступа'}),403 
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     discord_id =str (data .get ('discord_id','')).strip ()
     password =data .get ('password','').strip ()
     display_name =data .get ('display_name',discord_id )
@@ -1929,7 +1929,7 @@ def api_announcements ():
 def api_send_notification ():
     if ROLES .get (session .get ('role'),-1 )<ROLES .get ('mod',999 ):
         return jsonify ({'error':'Нет доступа'}),403 
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     discord_id =str (data .get ('discord_id','')).strip ()
     message =data .get ('message','').strip ()
     title =data .get ('title','Уведомление').strip ()
@@ -1978,7 +1978,7 @@ def api_send_notification ():
 def api_send_announcement ():
     if ROLES .get (session .get ('role'),-1 )<ROLES .get ('mod',999 ):
         return jsonify ({'error':'Нет доступа'}),403 
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     title =data .get ('title','').strip ()
     message =data .get ('message','').strip ()
     if not title or not message :
@@ -2024,7 +2024,7 @@ def api_announcements_retry ():
     Ошибка снова честно возвращается (нест-200) — API Guard сам покажет тост."""
     if ROLES .get (session .get ('role'),-1 )<ROLES .get ('mod',999 ):
         return jsonify ({'error':'Нет доступа'}),403
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     ann_id =str (data .get ('id')or '').strip ()
     if not ann_id :
         return jsonify ({'error':'Не указан id объявления'}),400
@@ -2332,7 +2332,7 @@ def api_guilds ():
 def api_leave_guild ():
     if not bot_instance :
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'}),503 
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     guild_id =data .get ('guild_id')
     if not guild_id :
         return jsonify ({'error':'Требуется guild_id'}),400 
@@ -2354,7 +2354,7 @@ def api_leave_guild ():
 def api_set_nick (guild_id ,member_id ):
     if not bot_instance :
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'}),503 
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     nick =data .get ('nick','')
     try :
         guild =discord .utils .get (bot_instance .guilds ,id =int (guild_id ))
@@ -2777,9 +2777,12 @@ def api_ban ():
     if not bot_instance :
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
 
-    data =request .get_json (silent =True )or {}
-    guild_id =int (data .get ('guild_id'))
-    user_id =int (data .get ('user_id'))
+    data =_safe_json_obj()
+    try :
+        guild_id =int (data .get ('guild_id'))
+        user_id =int (data .get ('user_id'))
+    except (TypeError ,ValueError ):
+        return jsonify ({'error':'Нужны целые guild_id и user_id'}),400
     reason =data .get ('reason','Бан через веб-панель')
 
     try :
@@ -2804,9 +2807,12 @@ def api_kick ():
     if not bot_instance :
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
 
-    data =request .get_json (silent =True )or {}
-    guild_id =int (data .get ('guild_id'))
-    user_id =int (data .get ('user_id'))
+    data =_safe_json_obj()
+    try :
+        guild_id =int (data .get ('guild_id'))
+        user_id =int (data .get ('user_id'))
+    except (TypeError ,ValueError ):
+        return jsonify ({'error':'Нужны целые guild_id и user_id'}),400
     reason =data .get ('reason','Кик через веб-панель')
 
     try :
@@ -2830,7 +2836,7 @@ def api_kick ():
 @login_required 
 @role_required ('mod')
 def api_warn ():
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     guild_id =data .get ('guild_id')
     user_id =data .get ('user_id')
     reason =(data .get ('reason')or 'Предупреждение через веб-панель').strip ()or 'Причина не указана'
@@ -2920,7 +2926,7 @@ def api_execute_command ():
     if not bot_instance :
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
 
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     command =data .get ('command')
     guild_id =data .get ('guild_id')
 
@@ -3204,7 +3210,7 @@ def api_send_message ():
     if not bot_instance :
         return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
 
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     guild_id =data .get ('guild_id')
     channel_id =data .get ('channel_id')
     message =(data .get ('message')or '').strip ()
@@ -3282,7 +3288,7 @@ def api_review_staff_app (app_id ):
         return jsonify ({'error':'Заявка не найдена'}),404
     if not _record_on_main_guild (data [app_id ]):
         return jsonify ({'error':'Эта заявка с другого сервера — здесь её рассматривать нельзя.'}),404
-    req =request .get_json (silent =True )or {}
+    req =_safe_json_obj()
     action =req .get ('action')# 'approve' or 'reject'
     note =req .get ('note','')
     data [app_id ]['status']='approved'if action =='approve'else 'rejected'
@@ -3497,7 +3503,7 @@ def api_change_password ():
     # Только Arthur или пользователь с owner-ролью
     if username !='Arthur'and session .get ('role')!='owner':
         return jsonify ({'error':'Нет доступа'}),403 
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     target =data .get ('target','').strip ()  # чей пароль меняем
     new_pass =data .get ('new_password','').strip ()
     if not target or not new_pass or len (new_pass )<4 :
@@ -3578,7 +3584,7 @@ def api_check_member ():
         if _demo_mode ():
             # демо-предпросмотр без бота: принимаем любой валидный ID,
             # чтобы форму заявки можно было проверить целиком
-            data =request .get_json (silent =True )or {}
+            data =_safe_json_obj()
             uid =str (data .get ('user_id','')).strip ()
             if not uid .isdigit ()or not (17 <=len (uid )<=20 ):
                 return jsonify ({'found':False ,'error':'Введи корректный Discord ID (17–20 цифр).'})
@@ -3590,7 +3596,7 @@ def api_check_member ():
         'found':False ,
         'error':'Бот ещё не готов, повторите попытку через несколько секунд.'
         })
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     guild_id =str (data .get ('guild_id',''))
     user_id =str (data .get ('user_id',''))
     if not guild_id or not user_id :
@@ -3630,7 +3636,7 @@ def api_public_guilds ():
 
 @app .route ('/api/public/apply',methods =['POST'])
 def api_public_apply ():
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     # Принимаем ключи формы обеих версий: 'почему'/'why', 'активен'/'activity'
     if 'почему'not in data and data .get ('why'):
         data ['почему']=data ['why']
@@ -3863,7 +3869,7 @@ def api_set_role_map ():
     """Добавить/изменить сопоставление роли.
     panel_role: 'uye' | 'mod' | 'curator' | 'admin' | 'owner'  (uye = снять сопоставление, авто-определение)
     """
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     role_id =str (data .get ('role_id','')).strip ()
     panel_role =data .get ('panel_role','').strip ()
     if not role_id or panel_role not in ('mod','curator','admin','owner','uye'):
@@ -3925,7 +3931,7 @@ def api_panel_menu_get ():
 def api_panel_menu_set ():
     """Save per-panel visibility: {role: {groups:[...], items:[...]}}."""
     from services .panel_menu import get_config ,save_config ,CONFIGURABLE
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     role =str (data .get ('role','')).strip ()
     if role not in CONFIGURABLE :
         return jsonify ({'success':False ,'error':'Неверная роль'}),400
@@ -3949,7 +3955,7 @@ def api_panel_menu_layout ():
     ко всем панелям (и к владельцу). /panel-menu скрыть нельзя.
     """
     from services .panel_menu import save_layout
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     hp =data .get ('hidden_pages',[])
     od =data .get ('order',{})
     go =data .get ('group_order',[])
@@ -3964,7 +3970,7 @@ _login_pins ={}
 
 @app .route ('/api/login/suggest',methods =['GET','POST'])
 def api_login_suggest ():
-    query =(request .args .get ('q')or (request .get_json (silent =True )or {}).get ('q','')or '').strip ()
+    query =(request .args .get ('q')or (_safe_json_obj()).get ('q','')or '').strip ()
     query_clean =query .lstrip ('@').lower ()
 
     suggestions =[]
@@ -4034,7 +4040,7 @@ def api_login_suggest ():
 def api_discord_check ():
     if not bot_instance :
         return jsonify ({'success':False ,'error':'Бот Discord сейчас не в сети или не подключен.','tests':[]})
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     query =str (data .get ('query','')).strip ()
     if not query :
         return jsonify ({'success':False ,'error':'Пожалуйста, введите корректный Discord ID или @имя пользователя.','tests':[]})
@@ -4176,7 +4182,7 @@ def api_discord_check ():
 
 @app .route ('/api/discord-login',methods =['POST'])
 def api_discord_login ():
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     discord_id =str (data .get ('discord_id','')).strip ()
     pin =str (data .get ('pin','')).strip ()
     if not discord_id or not pin :
@@ -4240,7 +4246,7 @@ def api_discord_login ():
 @role_required ('admin')
 def api_send_embed ():
     if not bot_instance :return jsonify ({'error':'Бот Discord сейчас не в сети или не подключен.'})
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     guild_id =int (data .get ('guild_id',0 ))
     channel_id =int (data .get ('channel_id',0 ))
     title =data .get ('title','')
@@ -4613,7 +4619,7 @@ VOICE_SECRET =os .getenv ('VOICE_SECRET','Hakumo-voice-2024')
 @app .route ('/api/voice-command',methods =['POST'])
 def api_voice_command ():
     """Обработать голосовые команды от voice_listener.py"""
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     if not data or data .get ('secret')!=VOICE_SECRET :
         return jsonify ({'error':'Не авторизован'}),401 
     command =data .get ('command','').strip ()
@@ -4660,7 +4666,7 @@ _reset_codes ={}# {discord_id: {code, expires}}
 
 @app .route ('/api/forgot-password',methods =['POST'])
 def api_forgot_password ():
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     query =str (data .get ('discord_id','')or data .get ('query','')).strip ()
     if not query :
         return jsonify ({'error':'Укажи Discord ID или ник'})
@@ -4701,7 +4707,7 @@ def api_forgot_password ():
 @app .route ('/api/reset-password',methods =['POST'])
 def api_reset_password ():
     import time as _time 
-    data =request .get_json (silent =True )or {}
+    data =_safe_json_obj()
     discord_id =str (data .get ('discord_id','')).strip ()
     code =str (data .get ('code','')).strip ()
     new_pass =str (data .get ('new_password','')).strip ()

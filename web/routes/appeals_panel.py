@@ -26,6 +26,7 @@ fmt_card_text (строчка карточки в очереди — как в /
 from datetime import datetime, timezone
 
 from web.routes._common import (
+    _safe_json_obj,
     _log, _run_async,
     render_template, session, request, jsonify, Response,
     discord,
@@ -409,7 +410,7 @@ def register(ctx):
     def api_appeals_appearance(gid):
         """Оформление карточки апелляции: авто-картинка (тема), свой URL или off."""
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         ap = ABC.normalize_appearance(data)
         url = ap['url']
         if ap['mode'] == 'url' and url:
@@ -437,7 +438,7 @@ def register(ctx):
         """«Правила подачи»: кулдаун после отказа, порог напоминаний о висящих,
         обязательный комментарий при отказе, шаблоны причин отказа."""
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
 
         def _clamp_hours(value, lo, hi, fallback):
             try:
@@ -553,7 +554,7 @@ def register(ctx):
     def api_appeals_resolve(gid):
         import web.app as appmod
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         raw_id = str(data.get('appeal_id') or '').strip()
         if not raw_id.isdigit():
             return jsonify({'success': False,
@@ -594,7 +595,7 @@ def register(ctx):
     def api_appeals_claim(gid):
         """Взять апелляцию в работу из панели / снять с себя (повтор)."""
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         raw_id = str(data.get('appeal_id') or '').strip()
         if not raw_id.isdigit():
             return jsonify({'success': False,
@@ -629,7 +630,7 @@ def register(ctx):
     def api_appeals_channel(gid):
         import web.app as appmod
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         state = _state(gid)
         ok, err, cid = set_log_channel(state, data.get('channel_id'))
         if not ok:

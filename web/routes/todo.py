@@ -2,6 +2,7 @@
 """Список задач команды (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -34,7 +35,7 @@ def register(ctx):
     @role_required('owner')
     def api_todo_add():
         from services.panel_todo import add_task
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         try:
             task = add_task(data.get('text'), session.get('username'))
         except ValueError as e:
@@ -47,7 +48,7 @@ def register(ctx):
     @role_required('owner')
     def api_todo_toggle():
         from services.panel_todo import toggle_task
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         if not toggle_task(data.get('id')):
             return jsonify({'ok': False, 'error': 'Задача не найдена'}), 404
         return jsonify({'ok': True})
@@ -58,7 +59,7 @@ def register(ctx):
     @role_required('owner')
     def api_todo_delete():
         from services.panel_todo import delete_task
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         if not delete_task(data.get('id')):
             return jsonify({'ok': False, 'error': 'Задача не найдена'}), 404
         return jsonify({'ok': True})

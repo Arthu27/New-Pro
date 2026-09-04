@@ -2,6 +2,7 @@
 """Данные участников: варны, дежурства, AFK, профили, дни рождения (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, viewer_member, acl_action_allowed,
@@ -336,7 +337,7 @@ def register(ctx):
         if not str (user_id ).isdigit ():
             return jsonify ({'error':'Некорректный ID участника.'}),400 
         import web .app as _app ;bot =_app .bot_instance 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         reason =(d .get ('reason')or '').strip ()or 'Не указана'
         proof =(d .get ('proof')or '').strip ()[:800]
         if proof and not proof .startswith (('http://','https://')):
@@ -419,7 +420,7 @@ def register(ctx):
         if not str (user_id ).isdigit ():
             return jsonify ({'error':'Некорректный ID участника.'}),400 
         import web .app as _app ;bot =_app .bot_instance 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         reason =(d .get ('reason')or '').strip ()or 'Не указана'
         proof =(d .get ('proof')or '').strip ()[:800]
         if proof and not proof .startswith (('http://','https://')):
@@ -565,7 +566,7 @@ def register(ctx):
                 if m .get ('username')==username :
                     discord_id =uid ;break 
         if not discord_id :return jsonify ({'error':'Пользователь не найден'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         day ,month ,year =d .get ('day'),d .get ('month'),d .get ('year')
         if not day or not month :return jsonify ({'error':'День и месяц обязательны'}),400 
         os .makedirs ('data',exist_ok =True )

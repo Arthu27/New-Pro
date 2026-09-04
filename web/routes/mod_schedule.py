@@ -19,6 +19,7 @@ import tempfile
 import time
 
 from web.routes._common import (
+    _safe_json_obj,
     _log,
     render_template, session, request, jsonify,
 )
@@ -203,7 +204,7 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_mod_schedule_create(gid):
-        entry, err = _validate_new(request.get_json(silent=True) or {})
+        entry, err = _validate_new(_safe_json_obj())
         if err:
             return jsonify({'success': False, 'error': err}), 400
         # Классические разрешения (Доступ → Права команд): не дал роли
@@ -246,7 +247,7 @@ def register(ctx):
     @role_required('mod')
     def api_mod_schedule_cancel(gid):
         gid = active_guild_id()
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         sid = str(data.get('id') or '').strip()
         if not sid:
             return jsonify({'success': False, 'error': 'Нужен id записи'}), 400

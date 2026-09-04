@@ -23,6 +23,7 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 from web.routes._common import (
+    _safe_json_obj,
     _log,
     render_template, session, request, jsonify, Response,
 )
@@ -475,7 +476,7 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_sec_toggle(gid):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         feat = data.get('feature')
         keys = {k for k, _ in FEATURES}
         if feat in keys:
@@ -502,7 +503,7 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_sec_newaccount(gid):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         ok, err, payload = set_newaccount(gid, data.get('days'), data.get('action'))
         if not ok:
             return jsonify({'success': False, 'error': err}), 400
@@ -513,7 +514,7 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_sec_scan(gid):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         text = str(data.get('text') or '').strip()
         if not text:
             return jsonify({'success': False, 'error': 'Пустой текст — нечего сканировать'}), 400
@@ -523,7 +524,7 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_sec_fake(gid):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         ok, err, payload = fake_account_preview(
             data.get('age_days'), data.get('name'), _load(gid),
             avatar_default=bool(data.get('avatar_default', True)))
@@ -535,7 +536,7 @@ def register(ctx):
     @login_required
     @role_required('mod')
     def api_sec_spam(gid):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         ok, err, payload = spam_simulate(data.get('content'), data.get('times'))
         if not ok:
             return jsonify({'success': False, 'error': err}), 400

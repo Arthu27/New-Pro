@@ -2,6 +2,7 @@
 """Публичный статус и консоль/логи (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -173,7 +174,7 @@ def register(ctx):
     @role_required('mod')
     def api_team_board_add():
         from services.team_board import add_task
-        payload = request.get_json(silent=True) or {}
+        payload = _safe_json_obj()
         task, err = add_task(
             title=payload.get('title', ''),
             status=payload.get('status', 'todo'),
@@ -192,7 +193,7 @@ def register(ctx):
     @role_required('mod')
     def api_team_board_patch(task_id):
         from services.team_board import update_task
-        patch = request.get_json(silent=True) or {}
+        patch = _safe_json_obj()
         task, err = update_task(task_id, patch)
         if err:
             return jsonify({'ok': False, 'error': err}), 400
@@ -215,7 +216,7 @@ def register(ctx):
     @role_required('mod')
     def api_team_board_reorder():
         from services.team_board import reorder
-        payload = request.get_json(silent=True) or {}
+        payload = _safe_json_obj()
         ok, err = reorder(payload.get('columns', {}))
         if err:
             return jsonify({'ok': False, 'error': err}), 400

@@ -2,6 +2,7 @@
 """Бэкапы: создание/скачивание/восстановление + логи сообщений (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -28,7 +29,7 @@ def register(ctx):
         if not bot :return jsonify ({'error':'Бот офлайн'})
         guild =bot .get_guild (int (guild_id ))
         if not guild :return jsonify ({'error':'Сервер не найден'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         backup ={'guild_name':guild .name ,'guild_id':str (guild .id ),
         'created_at':datetime.now(timezone.utc).replace(tzinfo=None).strftime ('%Y-%m-%d %H:%M'),'size':'0 KB'}
         if data .get ('role'):
@@ -111,7 +112,7 @@ def register(ctx):
             except Exception :
                 return jsonify ({'error':'Неверный JSON-файл'})
         else :
-            data =request .get_json (silent =True )or {}
+            data =_safe_json_obj()
             backup_id =data .get ('backup_id')
             bf ='data/backups.json'
             if not os .path .exists (bf ):return jsonify ({'error':'Резервная копия не найдена'})

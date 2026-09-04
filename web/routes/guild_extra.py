@@ -2,6 +2,7 @@
 """Коги, события, вебхуки, права тикетов (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -186,7 +187,7 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord as _discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         wh_id =data .get ('webhook_id')
         message =data .get ('message','')
         username =data .get ('username','Hakumo')

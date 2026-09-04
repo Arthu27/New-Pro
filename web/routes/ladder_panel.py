@@ -16,6 +16,7 @@ data/warnings.json, что смотрит мод-контроль.
 Чтение — mod+; ступени меняет admin+ (командам нужен manage_guild).
 """
 from web.routes._common import (
+    _safe_json_obj,
     _log,
     render_template, session, request, jsonify, Response,
 )
@@ -186,7 +187,7 @@ def register(ctx):
     def api_ladder_cooldown(gid):
         """Пороги авто-остывания статуса нарушителя (services/freshness)."""
         from services import freshness as FSH
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         cfg, err = FSH.save_cooldown_config(
             gid, data.get('warm_days'), data.get('cold_days'))
         if err:
@@ -229,7 +230,7 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_ladder_add(gid):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         # Классические разрешения: ступень «бан» требует права «Бан» и т.д. —
         # настройки те же, что в /modpanel, «Пользователях» и планировщике.
         _act = str(data.get('action') or '').strip().lower()
@@ -253,7 +254,7 @@ def register(ctx):
     @role_required('admin')
     def api_ladder_remove(gid):
         ok, err, payload = remove_flow(
-            gid, (request.get_json(silent=True) or {}).get('count'))
+            gid, (_safe_json_obj()).get('count'))
         if not ok:
             return jsonify({'success': False, 'error': err}), 400
         return jsonify({'success': True, **payload})

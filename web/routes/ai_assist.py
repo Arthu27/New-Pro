@@ -2,6 +2,7 @@
 """AI-ассистент: стрим, анонсы, эмбеды (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -27,7 +28,7 @@ def register(ctx):
     @role_required ('mod')
     def api_ai_stream ():
         from web .ai_helper import ai_assistant 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         message =d .get ('message','').strip ()
         if not message :
             return jsonify ({'error':'Сообщение пусто'}),400 
@@ -54,7 +55,7 @@ def register(ctx):
     @role_required ('mod')
     def api_ai_assistant ():
         from web .ai_helper import ai_assistant 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         message =d .get ('message','').strip ()
         if not message :
             return jsonify ({'error':'Сообщение пусто'}),400 
@@ -88,7 +89,7 @@ def register(ctx):
     @role_required ('admin')
     def api_ai_announcement ():
         from web .ai_helper import _call_text 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         topic =d .get ('topic','Общее объявление')
         tone =d .get ('tone','официальный')
         prompt = (
@@ -108,7 +109,7 @@ def register(ctx):
     @role_required ('admin')
     def api_ai_embed ():
         from web .ai_helper import _call_text 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         prompt =d .get ('prompt','Правила сервера embedi')
         messages =[
         {"role":"system","content":"Ты ассистент-дизайнер Discord-эмбедов. Придумай подходящие теме заголовок и описание эмбеда."},

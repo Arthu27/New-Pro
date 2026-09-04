@@ -2,6 +2,7 @@
 """Автофильтр чата (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -67,7 +68,7 @@ def register(ctx):
         gid = _autofilter_gid()
         if not gid:
             return jsonify({'ok': False, 'error': 'Сервер не выбран'}), 503
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         # Страховка от сброса настроек: POST без НИ ОДНОГО известного
         # ключа (мусор/частичный запрос) раньше молча сохранял ДЕФОЛТЫ
         # поверх боевого конфига. Теперь отклоняем.
@@ -89,7 +90,7 @@ def register(ctx):
         gid = _autofilter_gid()
         if not gid:
             return jsonify({'ok': False, 'error': 'Сервер не выбран'}), 503
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         text = str(data.get('text') or '')[:500]
         return jsonify({'ok': True,
                         'violations': classify_message(load_config(gid), text)})

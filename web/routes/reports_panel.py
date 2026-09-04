@@ -27,6 +27,7 @@ data/custom_reports.json — файл общий.
 from datetime import datetime, timedelta
 
 from web.routes._common import (
+    _safe_json_obj,
     _log,
     render_template, session, request, jsonify, Response,
 )
@@ -228,7 +229,7 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_reports_create(gid):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         ok, err, payload = create_flow(data.get('name'), data.get('metrics'),
                                        data.get('filters'))
         if not ok:
@@ -239,7 +240,7 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_reports_generate(gid):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         ok, err, payload = generate_flow(data.get('report_id'),
                                          data.get('days'))
         if not ok:
@@ -251,7 +252,7 @@ def register(ctx):
     @role_required('admin')
     def api_reports_delete(gid):
         ok, err, payload = delete_flow(
-            (request.get_json(silent=True) or {}).get('report_id'))
+            (_safe_json_obj()).get('report_id'))
         if not ok:
             return jsonify({'success': False, 'error': err}), 400
         return jsonify({'success': True, **payload})

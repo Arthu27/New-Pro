@@ -2,6 +2,7 @@
 """Настройки бота (presence, sync) (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -78,7 +79,7 @@ def register(ctx):
     def api_bot_settings_presence():
         import web.app as _app
         import discord as _discord
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         status = str(data.get('status', ''))
         activity_type = str(data.get('activity_type', ''))
         activity_text = ' '.join(str(data.get('activity_text', '') or '').split())[:80]
@@ -170,7 +171,7 @@ def register(ctx):
                 _log.debug('update-source GET: %s', _ex)
             return jsonify(payload)
 
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         repo = str(data.get('repo') or '').strip()
         branch = str(data.get('branch') or '').strip()
         ok, error, (new_repo, new_branch) = US.set_source(repo, branch)

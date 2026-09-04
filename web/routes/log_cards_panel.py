@@ -9,6 +9,7 @@ PNG-пример, чтобы владелец видел результат до
 Чтение — mod+, запись — admin+ (как канал апелляций и редактор правил).
 """
 from web.routes._common import (
+    _safe_json_obj,
     _log, render_template, session, request, jsonify, Response,
 )
 
@@ -42,7 +43,7 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_log_cards_settings_post(gid):
-        cfg = LC.save_log_cards_cfg(gid, request.get_json(silent=True) or {})
+        cfg = LC.save_log_cards_cfg(gid, _safe_json_obj())
         _log.info('log-cards: %s обновил оформление на %s: %s',
                   session.get('username', '?'), gid, cfg)
         theme_lbl = LC.LOG_CARD_THEMES.get(cfg['theme'], {}).get('label', cfg['theme'])

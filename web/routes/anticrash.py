@@ -2,6 +2,7 @@
 """Анти-краш центр (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, _live_publish,
@@ -108,7 +109,7 @@ def register(ctx):
                 'order': list(DEFAULT_CONFIG.keys()),
                 'meta': {k: {'label': v[0], 'desc': v[1], 'type': v[2]} for k, v in CONFIG_META.items()},
             })
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         updated, errors = {}, {}
         for k, v in data.items():
             try:

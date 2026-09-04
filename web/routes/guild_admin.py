@@ -2,6 +2,7 @@
 """Админка гильдии: роли, каналы, инфо, мод-история (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _live_publish, _process_action, _log,
@@ -823,7 +824,7 @@ def register(ctx):
     def api_create_role (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         name =(data .get ('name')or '').strip ()
         if not name :
             return jsonify ({'error':'Требуется название роли'}),400 
@@ -1128,7 +1129,7 @@ def register(ctx):
     @login_required
     @role_required ('owner')
     def api_channels_visibility (guild_id ):
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         target =str (data .get ('id')or '').strip ()
         kind =str (data .get ('kind')or 'channel')
         hidden =bool (data .get ('hidden'))

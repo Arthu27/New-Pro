@@ -2,6 +2,7 @@
 """Таск-трекер сервера + правила (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -33,7 +34,7 @@ def register(ctx):
     @login_required 
     @role_required ('mod')
     def api_create_task ():
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         title =(data .get ('title')or '').strip ()
         if not title :return jsonify ({'error':'Укажите название задачи'}),400 
         f ='data/tasks.json'
@@ -57,7 +58,7 @@ def register(ctx):
         if not os .path .exists (f ):return jsonify ({'error':'Не найдено'})
         with open (f )as fp :tasks =json .load (fp )
         if task_id in tasks :
-            tasks [task_id ].update (request .get_json (silent =True )or {})
+            tasks [task_id ].update (_safe_json_obj())
             with open (f ,'w')as fp :json .dump (tasks ,fp ,indent =2 )
         return jsonify ({'success':True })
 
@@ -194,7 +195,7 @@ def register(ctx):
         meta =_load_rules_meta (guild_id )
         if request .method =='GET':
             return jsonify ({'success':True ,'meta':meta })
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         if 'title'in data :
             meta ['title']=str (data ['title']or '').strip ()[:200 ]or 'Правила сервера'
         if 'intro'in data :
@@ -247,7 +248,7 @@ def register(ctx):
     def api_publish_rules (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         ch_id =str (data .get ('channel_id')or '').strip ()
         raw =data .get ('rules')
         if raw is None :

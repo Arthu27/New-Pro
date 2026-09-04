@@ -233,6 +233,16 @@ def acl_action_allowed(gid, member, action_key):
         return False
 
 
+def _safe_json_obj():
+    """request JSON строго как dict.
+
+    Список/строка/мусор в теле → {} (robust-режим): без этого
+    `data.get(...)` на не-dict ронял маршрут в 500 вместо вежливого 400.
+    """
+    d = request.get_json(silent=True)
+    return d if isinstance(d, dict) else {}
+
+
 def _process_action (answer :str ,bot ,guild_id :str ,session_obj )->str :
     """Обрабатывает блок <action> из ответа AI и возвращает текст результата."""
     import re as _re ,asyncio as _asyncio ,os as _os 

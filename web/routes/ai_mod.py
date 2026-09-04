@@ -2,6 +2,7 @@
 """AI-модерация API (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, _live_publish,
@@ -40,7 +41,7 @@ def register(ctx):
             guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
             if request .method =='POST':
                 cfg =demo_cog .load_config (guild_id )
-                patch =request .get_json (silent =True )or {}
+                patch =_safe_json_obj()
                 for k ,v in patch .items ():
                     if isinstance (v ,dict )and k in cfg :
                         cfg [k ].update (v )
@@ -59,7 +60,7 @@ def register(ctx):
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         if request .method =='POST':
             cfg =cog .load_config (guild_id )
-            patch =request .get_json (silent =True )or {}
+            patch =_safe_json_obj()
             for k ,v in patch .items ():
                 if isinstance (v ,dict )and k in cfg :
                     cfg [k ].update (v )
@@ -116,7 +117,7 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         demo_cog =_demo_cog ()
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         text =str (d .get ('text')or '')
         if demo_cog is not None :
             cfg =demo_cog .load_config (guild_id )

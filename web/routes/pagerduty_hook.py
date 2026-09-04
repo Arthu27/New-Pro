@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 import discord
 
 from web.routes._common import (
+    _safe_json_obj,
     _log, _run_async, _fire_panel_notification,
     render_template, session, request, jsonify,
 )
@@ -239,7 +240,7 @@ def register(ctx):
                 'history_stats': PD.history_stats(gid),
             })
 
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         who = session.get('username', '?')
         if 'channel_id' in data:
             try:

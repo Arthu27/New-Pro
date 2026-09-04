@@ -14,6 +14,7 @@ import re
 from flask import has_request_context
 
 from web.routes._common import (
+    _safe_json_obj,
     _log,
     render_template, session, request, jsonify,
 )
@@ -85,7 +86,7 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_flags_create():
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         key, err = _validate_key(data.get('key'))
         if err:
             return jsonify({'success': False, 'error': err}), 400
@@ -113,7 +114,7 @@ def register(ctx):
     @role_required('admin')
     def api_flags_toggle():
         """Включить/выключить — те же enable_flag/disable_flag, что у slash-команд."""
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         key, err = _validate_key(data.get('key'))
         if err:
             return jsonify({'success': False, 'error': err}), 400
@@ -129,7 +130,7 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_flags_rollout():
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         key, err = _validate_key(data.get('key'))
         if err:
             return jsonify({'success': False, 'error': err}), 400
@@ -152,7 +153,7 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_flags_delete():
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         key, err = _validate_key(data.get('key'))
         if err:
             return jsonify({'success': False, 'error': err}), 400

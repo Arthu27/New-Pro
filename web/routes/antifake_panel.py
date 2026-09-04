@@ -17,6 +17,7 @@ import time
 from datetime import datetime, timezone
 
 from web.routes._common import (
+    _safe_json_obj,
     render_template, session, request, jsonify, Response,
 )
 
@@ -469,7 +470,7 @@ def register(ctx):
         return appmod.bot_instance
 
     def _json():
-        return request.get_json(silent=True) or {}
+        return _safe_json_obj()
 
     def _reply(result):
         ok, err, code, payload = result

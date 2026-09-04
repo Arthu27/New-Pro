@@ -2,6 +2,7 @@
 """Цветные роли, антирейд, rejoin, бейджи (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, _live_publish,
@@ -35,7 +36,7 @@ def register(ctx):
         import web .app as _appm
         if _appm .ROLES .get (session .get ('role'),-1 )<_appm .ROLES .get ('admin',2 ):
             return jsonify ({'error':'Нет доступа'}),403 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         colors =data .get ('colors')if isinstance (data .get ('colors'),list )else []
         clean =[]
         for c in colors :
@@ -57,7 +58,7 @@ def register(ctx):
     def api_publish_color_roles (guild_id ):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         ch_id =str (data .get ('channel_id')or '').strip ()
         colors =data .get ('colors')if isinstance (data .get ('colors'),list )else []
         import re as _re 
@@ -138,7 +139,7 @@ def register(ctx):
         if request .method =='GET':
             if not os .path .exists (f ):return jsonify ({'whitelist':[],'recent_events':[]})
             with open (f )as fp :return jsonify (json .load (fp ))
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         existing ={}
         if os .path .exists (f ):
             with open (f )as fp :existing =json .load (fp )
@@ -208,7 +209,7 @@ def register(ctx):
             d .setdefault ('leave_log',[])
             return jsonify (d )
 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         enabled =bool (data .get ('enabled',False ))
         # tracked_role_ids: принимать только числовые строки, макс 50
         raw_ids =data .get ('tracked_role_ids',[])

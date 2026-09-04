@@ -9,6 +9,7 @@ PNG-пример, чтобы владелец видел результат до
 Чтение — mod+, запись — admin+ (как оформление апелляций и лог-карточек).
 """
 from web.routes._common import (
+    _safe_json_obj,
     _log, render_template, session, request, jsonify, Response,
 )
 
@@ -45,7 +46,7 @@ def register(ctx):
     @role_required('admin')
     def api_welcome_card_appearance_post(gid):
         """Оформление карточки приветствия: авто (тема), свой URL или off."""
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         # Режим 'file' сохраняет ранее загруженный фон: клиент шлёт только
         # mode/theme/url, имя файла не перетираем пустой строкой
         cur = WCG.get_appearance(gid)

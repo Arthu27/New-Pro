@@ -2,6 +2,7 @@
 """Бэкапы + смена пароля (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -120,7 +121,7 @@ def register(ctx):
     def api_user_change_password ():
         from web .app import USERS 
         import json as _json 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         old_pass =data .get ('old_password','').strip ()
         new_pass =data .get ('new_password','').strip ()
 

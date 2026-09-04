@@ -16,6 +16,7 @@ Discord-ролям, то входящему через Discord-аккаунт м
 готовности «бана» (канал апелляции) и «бот онлайн».
 """
 from web.routes._common import (
+    _safe_json_obj,
     _log, _run_async, _fire_panel_notification,
     render_template, session, request, jsonify,
     os, json,
@@ -218,7 +219,7 @@ def register(ctx):
         if cog is None:
             return jsonify({'success': False,
                             'error': 'Модуль модерации не загружен'}), 404
-        d = request.get_json(silent=True) or {}
+        d = _safe_json_obj()
         action = str(d.get('action') or '').strip()
         if action not in _VALUE_SET:
             return jsonify({'success': False, 'error': 'Неизвестное действие'}), 400

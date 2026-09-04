@@ -2,6 +2,7 @@
 """Настройки фич сервера (welcome/autorole/leveling/economy/polls/etc) (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -39,7 +40,7 @@ def register(ctx):
 
                 # POST request
         try :
-            data =request .get_json (silent =True )or {}
+            data =_safe_json_obj()
             if not data :
                 return jsonify ({'error':'Данные не переданы'})
 

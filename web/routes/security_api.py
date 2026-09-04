@@ -2,6 +2,7 @@
 """Индекс угроз и локдаун (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -104,7 +105,7 @@ def register(ctx):
     @role_required ('admin')
     def api_toggle_lockdown ():
         import json as _json 
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         guild_id =str (data .get ('guild_id',MAIN_GUILD_ID ))
         lockdown_file =f'data/lockdown_{guild_id}.json'
         os .makedirs ('data',exist_ok =True )

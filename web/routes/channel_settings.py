@@ -15,6 +15,7 @@
 изменение — admin+ (остальные просто видят, как настроено).
 """
 from web.routes._common import (
+    _safe_json_obj,
     _log, _fire_panel_notification, _live_publish,
     render_template, session, request, jsonify,
     os, json,
@@ -262,7 +263,7 @@ def register(ctx):
         spec = CHR.spec_for(key)
         if spec is None:
             return jsonify({'success': False, 'error': 'Такого маршрута нет'}), 404
-        payload = request.get_json(silent=True) or {}
+        payload = _safe_json_obj()
         raw = str(payload.get('channel_id') or '').strip()
         if raw and not raw.isdigit():
             return jsonify({'success': False,
@@ -345,7 +346,7 @@ def register(ctx):
         spec = next((sp for sp in _SR.ROLE_SPECS if sp['key'] == key), None)
         if spec is None:
             return jsonify({'success': False, 'error': 'Такой настройки нет'}), 404
-        payload = request.get_json(silent=True) or {}
+        payload = _safe_json_obj()
         raw = str(payload.get('role_id') or '').strip()
         if raw and not raw.isdigit():
             return jsonify({'success': False,

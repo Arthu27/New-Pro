@@ -10,6 +10,7 @@
 """
 
 from web.routes._common import (
+    _safe_json_obj,
     _log,
     render_template, session, request, jsonify,
 )
@@ -137,7 +138,7 @@ def register(ctx):
                             'expiry_days': cfg.get('expiry_days', 90),
                             'channels': channels, 'roles': roles})
 
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         cfg = RC.load_cfg(gid)
         cid = _valid_id(data.get('channel_id'))
         rid = _valid_id(data.get('mod_role_id'))

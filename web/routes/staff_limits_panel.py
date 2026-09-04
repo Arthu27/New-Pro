@@ -8,6 +8,7 @@
 каким разрешено СОЗДАВАТЬ канал самим (по умолчанию — никаким).
 """
 from web.routes._common import (
+    _safe_json_obj,
     _log, render_template, session, request, jsonify, redirect,
 )
 
@@ -248,7 +249,7 @@ def register(ctx):
     @login_required
     @role_required('owner')
     def api_staff_limits_set(guild_id):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         limits = data.get('limits')
         if (not isinstance(limits, dict) and not isinstance(data.get('windows'), dict)
                 and not isinstance(data.get('durations'), dict)):
@@ -281,7 +282,7 @@ def register(ctx):
     @login_required
     @role_required('owner')
     def api_staff_limits_role_set(guild_id):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         role_id = str(data.get('role_id') or '').strip()
         limits = data.get('limits')
         if not role_id or (not isinstance(limits, dict)
@@ -325,7 +326,7 @@ def register(ctx):
     @login_required
     @role_required('owner')
     def api_staff_limits_role_delete(guild_id):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         role_id = str(data.get('role_id') or '').strip()
         if not role_id:
             return jsonify({'success': False, 'error': 'Не указана роль'}), 400
@@ -348,7 +349,7 @@ def register(ctx):
     @login_required
     @role_required('owner')
     def api_staff_limits_revert(guild_id):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         cid = str(data.get('id') or '').strip()
         if not cid:
             return jsonify({'success': False,
@@ -378,7 +379,7 @@ def register(ctx):
     @login_required
     @role_required('owner')
     def api_log_settings_set(guild_id):
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         settings = LS.set_log_settings(guild_id,
                                        enabled=data.get('enabled'),
                                        autocreate=data.get('autocreate'),

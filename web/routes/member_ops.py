@@ -2,6 +2,7 @@
 """Массовые операции и заметки по участникам (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, viewer_member, acl_action_allowed,
@@ -69,7 +70,7 @@ def register(ctx):
                         avatar =str (m .display_avatar .url )
                         break 
             data [member_id ]={'name':name ,'avatar':avatar ,'notes':[]}
-        note ={'id':str (int (datetime.now(timezone.utc).timestamp ())),'text':request .get_json (silent =True ).get ('text',''),
+        note ={'id':str (int (datetime.now(timezone.utc).timestamp ())),'text':_safe_json_obj().get ('text',''),
         'author':session .get ('username'),'created_at':datetime.now(timezone.utc).isoformat ()}
         data [member_id ]['notes'].append (note )
         with open (f ,'w',encoding ='utf-8')as fp :json .dump (data ,fp ,indent =2 ,ensure_ascii =False )
@@ -99,12 +100,14 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         result ={'count':0 }
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'purge'):
             return jsonify({'error': 'Нет права: «Очистка сообщений» не разрешено вашей роли (настройка — «Права команд»)'}), 403
 
+        _need =[k for k in ('channel_id',) if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         async def do ():
             ch =bot .get_channel (int (data ['channel_id']))
             if ch :
@@ -121,12 +124,16 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
+        _need =[k for k in ('target_role', 'action_role', 'action') if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         result ={'count':0 }
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'roles'):
             return jsonify({'error': 'Нет права: «Роли» не разрешено вашей роли (настройка — «Права команд»)'}), 403
 
+        _need =[k for k in ('target_role', 'action_role', 'action') if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             target_role =guild .get_role (int (data ['target_role']))
@@ -150,7 +157,9 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
+        _need =[k for k in ('role_id', 'message') if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         result ={'count':0 }
         async def do ():
             guild =bot .get_guild (int (guild_id ))
@@ -176,12 +185,14 @@ def register(ctx):
         import asyncio ,discord 
         from datetime import timedelta 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         result ={'count':0 }
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'mute'):
             return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
 
+        _need =[k for k in ('role_id',) if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
@@ -204,12 +215,14 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         result ={'count':0 }
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'kick'):
             return jsonify({'error': 'Нет права: «Кик» не разрешено вашей роли (настройка — «Права команд»)'}), 403
 
+        _need =[k for k in ('role_id',) if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
@@ -231,12 +244,14 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio ,discord 
         if not bot :return jsonify ({'error':'Бот офлайн'})
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         result ={'count':0 }
         _acl_m = viewer_member(bot, int(guild_id))
         if not acl_action_allowed(int(guild_id), _acl_m, 'ban'):
             return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
 
+        _need =[k for k in ('role_id',) if not str (data .get (k ,'')or '' ).strip ()]
+        if _need :return jsonify ({'error':'Не указано: '+', '.join (_need )}),400 
         async def do ():
             guild =bot .get_guild (int (guild_id ))
             role =guild .get_role (int (data ['role_id']))
@@ -280,7 +295,7 @@ def register(ctx):
                 return jsonify ({'message':''})
             with open (f ,'r',encoding ='utf-8')as fp :
                 return jsonify (json .load (fp ))
-        data =request .get_json (silent =True )or {}
+        data =_safe_json_obj()
         os .makedirs ('data',exist_ok =True )
         with open (f ,'w',encoding ='utf-8')as fp :
             json .dump ({'message':data .get ('message','')},fp ,ensure_ascii =False )

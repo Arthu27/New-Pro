@@ -5,6 +5,7 @@ import hashlib
 import threading
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log,
@@ -140,7 +141,7 @@ def register(ctx):
             _log.debug("api_panel_visibility(): подавлено: %s", _ex)
         if request.method == 'GET':
             return jsonify({'success': True, 'visibility': cur})
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         changed = False
         for k in defaults:
             v = str(data.get(k, cur[k]) or '').strip()
@@ -256,7 +257,7 @@ def register(ctx):
         if gid is None:
             return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import ACTIONS, set_action_rule
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         action = data.get('action', '').strip()
         role_ids = data.get('role_ids', []) or []
         if action not in ACTIONS:
@@ -289,7 +290,7 @@ def register(ctx):
         from services.permission_acl import (set_rule, clear_rule, load_acl,
                                             save_acl, materialize_category,
                                             all_categories)
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         command = data.get('command', '').strip()
         role_ids = data.get('role_ids', []) or []
         if not command:
@@ -333,7 +334,7 @@ def register(ctx):
         if gid is None:
             return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import all_categories, save_acl
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         preset = data.get('preset', '')
         role_ids = [str(r) for r in (data.get('role_ids', []) or [])]
         if not role_ids:
@@ -364,7 +365,7 @@ def register(ctx):
         if gid is None:
             return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import all_categories, load_acl, save_acl
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         category = data.get('category', '').strip()
         if not category:
             return jsonify({'success': False, 'error': 'Не указана категория'}), 400
@@ -388,7 +389,7 @@ def register(ctx):
             return jsonify({'success': False, 'error': 'Неверный ID сервера'}), 400
         from services.permission_acl import (load_acl, save_acl,
                                             materialize_category, all_categories)
-        data = request.get_json(silent=True) or {}
+        data = _safe_json_obj()
         category = data.get('category', '').strip()
         role_ids = [str(r) for r in (data.get('role_ids', []) or [])]
         if not category:

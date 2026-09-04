@@ -18,6 +18,9 @@ from logger import get_logger
 _log = get_logger('verify_panel')
 
 
+from web.routes._common import _safe_json_obj
+
+
 def load_cfg(gid):
     import json as _json
     import os
@@ -102,7 +105,7 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_verify_save(gid):
-        body = request.get_json(silent=True) or {}
+        body = _safe_json_obj()
         cfg = load_cfg(gid)
 
         def _as_id(v):

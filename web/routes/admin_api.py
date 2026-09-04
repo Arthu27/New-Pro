@@ -2,6 +2,7 @@
 """Управление ботом: health, temp-mod, коги (вырезано из routes_extra.py — нарезка аудита, поведение 1:1)."""
 
 from web.routes._common import (
+    _safe_json_obj,
     _run_async, _fetch_channel_msgs_async, _fetch_channel_msgs_sync,
     _notify_discord_sender, _fire_panel_notification,
     _process_action, _log, _live_publish, viewer_member, acl_action_allowed,
@@ -169,7 +170,7 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         sec =parse_duration (d .get ('duration','1h'))
         if not sec :
             return jsonify ({'error':'Неверный формат времени'}),400 
@@ -213,7 +214,7 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         sec =parse_duration (d .get ('duration','1d'))
         if not sec :
             return jsonify ({'error':'Неверный формат'}),400 
@@ -253,7 +254,7 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         sec =parse_duration (d .get ('duration','5m'))
         if not sec :
             return jsonify ({'error':'Неверный формат'}),400 
@@ -293,12 +294,14 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         user_id =d .get ('user_id','').strip ('<@!>')
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
         _acl_m = viewer_member(bot, guild.id if guild else None)
         if not acl_action_allowed(guild.id if guild else 0, _acl_m, 'mute'):
             return jsonify({'error': 'Нет права: «Мут» не разрешено вашей роли (настройка — «Права команд»)'}), 403
+        if not user_id .isdigit ():
+            return jsonify ({'error':'Неверный ID пользователя'}),400
         member =guild .get_member (int (user_id ))
         if member and member .is_timed_out ():
             try :
@@ -322,7 +325,7 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         user_id =d .get ('user_id','').strip ('<@!>')
         guild =bot .get_guild (int (session .get ('selected_guild')or MAIN_GUILD_ID ))
         _acl_m = viewer_member(bot, guild.id if guild else None)
@@ -350,7 +353,7 @@ def register(ctx):
         cog =bot .get_cog ('TempModeration')
         if not cog :
             return jsonify ({'error':'Модуль не загружен'}),404 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         eid =d .get ('id','')
         cog ._scheduled =[s for s in cog ._scheduled if s ['id']!=eid ]
         cog ._save ('_scheduled',cog ._scheduled_file ())
@@ -369,14 +372,17 @@ def register(ctx):
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
         if not bot :return jsonify ({'error':'Бот офлайн'}),503 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         status_map ={'online':discord .Status .online ,'idle':discord .Status .idle ,'dnd':discord .Status .dnd ,'invisible':discord .Status .invisible }
         type_map ={'listening':discord .ActivityType .listening ,'playing':discord .ActivityType .playing ,'watching':discord .ActivityType .watching ,'competing':discord .ActivityType .competing }
         status =status_map .get (d .get ('status','online'),discord .Status .online )
         atype =type_map .get (d .get ('activity_type','watching'),discord .ActivityType .watching )
         atext =str (d .get ('activity_text','Hakumo')or '').strip ()[:80]or 'Hakumo'
-        def _set ():
-            _run_async (bot .change_presence (status =status ,activity =discord .Activity (type =atype ,name =atext )))
+        async def _set ():
+            # change_presence — корутина discord.py; мы уже на лупе бота,
+            # лишний _run_async здесь невозможен (а sync-функцию вообще
+            # нельзя запускать как корутину — был вечный 500).
+            await (bot .change_presence (status =status ,activity =discord .Activity (type =atype ,name =atext )))
         asyncio .run_coroutine_threadsafe (_set (),bot .loop ).result (timeout =5 )
         # Сохраняем в конфиг — бот вспомнит это и после перезапуска
         os .makedirs ('data',exist_ok =True )
@@ -399,7 +405,7 @@ def register(ctx):
     @login_required 
     @role_required ('owner')
     def api_bot_prefix ():
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         prefix =d .get ('prefix','!').strip ()
         if not prefix :return jsonify ({'error':'Пустой префикс'}),400 
         if len (prefix )>10 :return jsonify ({'error':'префикс слишком длинный'}),400 
@@ -427,7 +433,7 @@ def register(ctx):
     def api_cog_load ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         name =(d .get ('name')or d .get ('cog')or '').strip ()
         if not bot :
             if _app ._demo_mode ()and name :
@@ -468,7 +474,7 @@ def register(ctx):
     def api_cog_unload ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         name =(d .get ('name')or d .get ('cog')or '').strip ()
         if not bot :
             if _app ._demo_mode ()and name :
@@ -496,7 +502,7 @@ def register(ctx):
     def api_cog_reload ():
         import web .app as _app ;bot =_app .bot_instance 
         import asyncio 
-        d =request .get_json (silent =True )or {}
+        d =_safe_json_obj()
         name =(d .get ('name')or d .get ('cog')or '').strip ()
         if not bot :
             if _app ._demo_mode ()and name :
