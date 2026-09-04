@@ -182,7 +182,7 @@ def register(ctx):
             # Resolve user
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
-            member =_run_async (_resolve_member_async (guild ,int (user_id )))
+            member =_resolve_member_async (guild ,int (user_id ))
         except Exception :
             return jsonify ({'error':'Пользователь не найден'}),404 
         if not member :
@@ -223,7 +223,7 @@ def register(ctx):
             return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
-            member =_run_async (_resolve_member_async (guild ,int (user_id )))
+            member =_resolve_member_async (guild ,int (user_id ))
         except Exception :
             return jsonify ({'error':'Пользователь не найден'}),404 
         if not member :
@@ -263,7 +263,7 @@ def register(ctx):
             return jsonify({'error': 'Нет права: «Кик» не разрешено вашей роли (настройка — «Права команд»)'}), 403
         user_id =d .get ('user_id','').strip ('<@!>')
         try :
-            member =_run_async (_resolve_member_async (guild ,int (user_id )))
+            member =_resolve_member_async (guild ,int (user_id ))
         except Exception :
             return jsonify ({'error':'Пользователь не найден'}),404 
         if not member :

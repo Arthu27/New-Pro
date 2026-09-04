@@ -353,7 +353,7 @@ def register(ctx):
             return jsonify({'error': 'Нет права: «Варн» не разрешено вашей роли (настройка — «Права команд»)'}), 403
 
         try :
-            member =_run_async (_resolve_member_async (guild ,int (user_id )))
+            member =_resolve_member_async (guild ,int (user_id ))
         except Exception :
             member =None 
         if not member :
@@ -436,7 +436,7 @@ def register(ctx):
             return jsonify({'error': 'Нет права: «Бан» не разрешено вашей роли (настройка — «Права команд»)'}), 403
 
         try :
-            member =_run_async (_resolve_member_async (guild ,int (user_id )))
+            member =_resolve_member_async (guild ,int (user_id ))
         except Exception :
             member =None 
         if not member :

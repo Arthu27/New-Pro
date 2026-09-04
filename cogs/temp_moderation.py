@@ -47,10 +47,10 @@ PRESETS = [
 ]
 
 # Парсинг времени: 1h, 30m, 1d, 1д, 30мин, 1час, 1день, etc.
-TIME_REGEX = re.compile(r'(\d+)\s*(s|sec|secs|second|seconds|м|мин|min|mins|minute|minutes|ч|час|часа|часов|h|hr|hrs|hour|hours|д|день|дня|дней|d|day|days|w|week|weeks|нед|неделя|недели|недель|мес|месяц|месяца|месяцев|mo|month|months)\b', re.IGNORECASE)
+TIME_REGEX = re.compile(r'(\d+)\s*(s|sec|secs|second|seconds|m|м|мин|min|mins|minute|minutes|ч|час|часа|часов|h|hr|hrs|hour|hours|д|день|дня|дней|d|day|days|w|week|weeks|нед|неделя|недели|недель|мес|месяц|месяца|месяцев|mo|month|months)\b', re.IGNORECASE)
 
 TIME_ALIASES = {
-    's': 1, 'sec': 1, 'secs': 1, 'second': 1, 'seconds': 1,
+    's': 1, 'sec': 1, 'secs': 1, 'second': 1, 'seconds': 1, 'm': 60,
     'м': 60, 'мин': 60, 'min': 60, 'mins': 60, 'minute': 60, 'minutes': 60,
     'ч': 3600, 'час': 3600, 'часа': 3600, 'часов': 3600, 'h': 3600, 'hr': 3600, 'hrs': 3600, 'hour': 3600, 'hours': 3600,
     'д': 86400, 'день': 86400, 'дня': 86400, 'дней': 86400, 'd': 86400, 'day': 86400, 'days': 86400,
