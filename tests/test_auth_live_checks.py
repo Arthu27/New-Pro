@@ -250,16 +250,21 @@ r = A.app.test_client().post('/register', data={
     'password': 'x', 'password2': 'x'})
 check('истёк' in r.get_data(as_text=True), 'код регистрации протухает (10 минут)')
 
-print('== 10. login-probe честно говорит о коде (needs_code) ==')
+print('== 10. Вход без двойной проверки: /api/login-probe удалён ==')
 A.bot_instance = NS(guilds=[guild],
                     get_guild=lambda gid: guild if gid == 777 else None,
-                    loop=None, latency=0.05)   # без лупа: probe DM не шлёт
+                    loop=None, latency=0.05)   # без лупа: DM не шлёт
 r = A.app.test_client().post('/api/login-probe',
                              json={'username': '555', 'password': 'secret123'})
-d = r.get_json(silent=True) or {}
-check(d.get('success') is True and d.get('needs_code') is True,
-      'новое устройство → probe требует код', f'→ {d}')
-check(d.get('role') == 'mod', 'probe подтвердил живую роль')
+check(r.status_code == 404,
+      '/api/login-probe больше нет (проверка ОДНА — в POST /login)',
+      f'→ {r.status_code}')
+# Новое устройство → POST /login сам показывает шаг кода из ЛС Discord
+_r2 = A.app.test_client().post('/login',
+                               data={'username': '555', 'password': 'secret123'})
+check('Код подтверждения отправлен' in _r2.get_data(as_text=True),
+      'новое устройство → POST /login сам просит код из ЛС',
+      f'→ {_r2.status_code}')
 
 print('== 11а. Возраст аккаунта реально вычисляется (регресс «Неизвестно») ==')
 # в сценарии 8 чек-лист уже получен: проверяем строку возраста

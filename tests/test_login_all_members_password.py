@@ -4,13 +4,12 @@
 Заказ владельца (2026-09): «почему только owner может заходить через пароль?
 сделай нормально, чтобы все могли зайти через пароль». При этом без роли на
 сервере вход невозможен даже с верным паролем — роль проверяется живьём
-из Discord при каждом входе (POST /login и /api/login-probe). Регистрация
+из Discord при каждом входе (POST /login). Регистрация
 снова требует пароль (он нужен для входа), а «забыли пароль» работает по
 коду в ЛС Discord.
 
 Под проверкой:
   POST /login              — участник по Discord ID и по нику, uye отклонён
-  POST /api/login-probe    — зеркалит логин без сессии
   POST /register           — шаг 1 требует пароль (длина/совпадение)
   POST /api/forgot-password — поиск по нику/ID, код уходит в Discord
 
@@ -177,23 +176,20 @@ r = client.post('/login', data={'username': str(UID_MOD), 'password': 'nope-nope
 check(r.status_code == 200 and 'Неверное имя пользователя' in r.get_data(as_text=True),
       'неверный пароль -> «Неверное имя пользователя»')
 
-print('== /api/login-probe зеркалит вход ==')
-# свежий клиент = новое устройство без доверенной cookie
-_probe = A.app.test_client()
-r = _probe.post('/api/login-probe', json={'username': str(UID_MOD), 'password': 'alicepass1'})
-d = r.get_json(silent=True) or {}
-check(d.get('success') is True and d.get('role') not in (None, 'uye'),
-      'probe: верный пароль участника -> success+роль', f'→ {d}')
-check(d.get('needs_code') is True,
-      'probe: новому устройству нужен код из ЛС (needs_code)', f'→ {d}')
+print('== /api/login-probe удалён: вход без двойной проверки ==')
+# 2026-09-04: проба дублировала POST /login (пароль+роль дважды) —
+# «крутится, скажет окей, потом пароль не верный». Проверяем отсутствие.
 r = client.post('/api/login-probe', json={'username': str(UID_MOD), 'password': 'alicepass1'})
-d = r.get_json(silent=True) or {}
-check(d.get('success') is True and d.get('needs_code') is False,
-      'probe: доверенное устройство — код не нужен', f'→ {d}')
-r = client.post('/api/login-probe', json={'username': 'bob', 'password': 'bobpass111'})
-d = r.get_json(silent=True) or {}
-check(d.get('success') is False and 'нет' in (d.get('error') or ''),
-      'probe: uye -> false с объяснением', f'→ {d}')
+check(r.status_code == 404, 'probe-эндпоинта больше нет', f'→ {r.status_code}')
+# Доверенное устройство (cookie у client) входит без кода — редирект в панель
+r = client.post('/login', data={'username': str(UID_MOD), 'password': 'alicepass1'})
+check(r.status_code == 302, 'доверенное устройство: вход сразу, без кода',
+      f'→ {r.status_code}')
+# Роль сняли (uye) → POST /login не пускает с тем же текстом, что и раньше
+r = client.post('/login', data={'username': 'bob', 'password': 'bobpass111'})
+_body = r.get_data(as_text=True)
+check(r.status_code == 200 and 'Доступа к панели нет' in _body,
+      'uye: вход закрыт с понятным объяснением', f'→ {r.status_code}')
 
 print('== /register: пароль снова обязателен ==')
 r = client.post('/register', data={'step': '1', 'discord_id': str(UID_MOD),

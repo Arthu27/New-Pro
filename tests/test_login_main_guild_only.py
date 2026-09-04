@@ -291,21 +291,19 @@ d = r.get_json(silent=True) or {}
 check(r.status_code == 404 and 'другого сервера' in (d.get('error') or ''),
       'рассмотрение заявки чужого сервера запрещено (404)', f'→ {r.status_code} {d.get("error")}')
 
-# /api/login-probe — настоящий шаг «Проверяем роль и доступ» в оверлее входа:
-# повторяет логику POST /login (владелец по USERS), но без сессии.
-r = client.post('/api/login-probe', json={'username': 'owner', 'password': 'demo-pass'})
-d = r.get_json(silent=True) or {}
-check(r.status_code == 200 and d.get('success') is True,
-      'probe: верный пароль владельца — проверка проходит', f'→ {r.status_code} {d}')
-r = client.post('/api/login-probe', json={'username': 'owner', 'password': 'wrong-pass'})
-d = r.get_json(silent=True) or {}
-check(r.status_code == 200 and d.get('success') is False
-      and 'Неверное' in (d.get('error') or ''),
-      'probe: неверный пароль — ошибка как у формы входа', f'→ {d.get("error")}')
-r = client.post('/api/login-probe', json={'username': '', 'password': ''})
-d = r.get_json(silent=True) or {}
-check(d.get('success') is False and (d.get('error') or '').strip() != '',
-      'probe: пустые поля — понятная ошибка', f'→ {d.get("error")}')
+# 2026-09-04: /api/login-probe удалён (дублировал POST /login — «проверки
+# кружатся»). Эквивалентные проверки — через сам POST /login:
+r = client.post('/login', data={'username': 'owner', 'password': 'demo-pass'})
+check(r.status_code == 302,
+      'верный пароль владельца — вход проходит', f'→ {r.status_code}')
+r = client.post('/login', data={'username': 'owner', 'password': 'wrong-pass'})
+check(r.status_code == 200 and 'Неверное' in r.get_data(as_text=True),
+      'неверный пароль — ошибка как у формы входа')
+r = client.post('/login', data={'username': '', 'password': ''})
+check(r.status_code == 200 and 'Неверное' in r.get_data(as_text=True),
+      'пустые поля — вход не проходит')
+r = client.get('/api/login-probe')
+check(r.status_code == 404, 'probe-эндпоинта больше нет', f'→ {r.status_code}')
 
 try:
     os.remove('data/staff_apps.json')

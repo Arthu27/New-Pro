@@ -214,7 +214,6 @@ PUBLIC_EXACT = {
     '/api/public/guilds', '/api/public/apply',               # публичная анкета
     '/api/login/suggest', '/api/discord-check',              # подсказки логина и
                                                               # публичная проверка Discord
-    '/api/login-probe',                                      # пред-проверка экрана
                                                               # «Проверяем доступ» (своя auth)
     '/api/discord-login',                                    # вход по PIN (своя auth)
     '/api/voice-command',                                    # голос: свой shared-secret

@@ -1507,65 +1507,13 @@ def _resolve_member_key (members ,login ):
     return None
 
 
-@app.route('/api/login-probe', methods=['POST'])
-def api_login_probe():
-    """Пред-проверка для экрана «Проверяем доступ» на странице входа.
+# /api/login-probe УДАЛЁН (2026-09-04, заказ владельца: «чтобы проверки
+# просто так не кружились»): проба дублировала POST /login целиком —
+# пароль и живая роль проверялись ДВАЖДЫ, а оверлей входа показывал
+# «всё окей» до настоящей проверки. Теперь проверка ОДНА — в POST /login:
+# оверлей на странице входа просто крутится, пока она идёт.
 
-    Повторяет ровно ту же логику, что и POST /login (владелец — по USERS,
-    участник — по members.json, логин по Discord ID или нику) + ЖИВАЯ
-    проверка роли в Discord. Сессию не создаёт, редирект не делает.
-    Клиент входа показывает шаги оверлея, на шаге «Проверяем роль и доступ»
-    вызывает этот эндпоинт и только при success=True отправляет настоящую
-    форму. Тексты ошибок — те же, что у формы входа, поэтому оверлей и
-    форма никогда не спорят.
-    """
-    data = _safe_json_obj()
-    username = str(data.get('username') or '').strip()
-    password = str(data.get('password') or '')
-    if not username or not password:
-        return jsonify({'success': False,
-                        'error': 'Заполни логин и пароль.'})
-    # Владелец панели (USERS): вход по паролю, Discord-роль не нужна.
-    if username in USERS and _pw_matches(
-            USERS[username].get('password_hash'), password):
-        return jsonify({'success': True,
-                        'role': USERS[username].get('role', 'owner')})
-    # Участник: логин — Discord ID или ник, пароль из members.json.
-    # Роль — ТОЛЬКО живьём из Discord (как в POST /login).
-    members_file = 'data/members.json'
-    members = {}
-    if os.path.exists(members_file):
-        try:
-            with open(members_file, 'r', encoding='utf-8') as _f:
-                members = json.load(_f)
-        except Exception as _mex:
-            _log.debug('login-probe: members: %s', _mex)
-            members = {}
-    discord_id = _resolve_member_key(members, username)
-    if discord_id:
-        if not _pw_matches(members[discord_id].get('password'), password):
-            _throttle_failed_login(username)
-            return jsonify({'success': False,
-                            'error': 'Неверное имя пользователя или пароль!'})
-        live_role = _get_role_from_discord(discord_id)
-        if live_role == 'uye':
-            return jsonify({'success': False, 'error':
-                            'Доступа к панели нет: для входа нужна роль '
-                            'модератора на сервере Discord.'})
-        # Новое устройство → после формы понадобится код из ЛС Discord
-        # (вторая проверка «чей аккаунт»). Код здесь НЕ шлём: его отправит
-        # сам POST /login после повторной проверки пароля и роли.
-        _need_code = bool(_login_confirm_enabled()
-                          and not _device_trusted(discord_id))
-        return jsonify({'success': True, 'role': live_role,
-                        'needs_code': _need_code,
-                        'discord_id': discord_id,
-                        'display_name': members[discord_id].get('display_name', '')})
-    _throttle_failed_login(username)
-    return jsonify({'success': False,
-                    'error': 'Неверное имя пользователя или пароль!'})
-
-    # Временные коды проверки {discord_id: {code, data}}
+# Временные коды проверки {discord_id: {code, data}}
 PENDING_VERIFICATIONS ={}
 
 @app .route ('/register',methods =['GET','POST'])

@@ -544,76 +544,41 @@
   attachSuggest('passUsername', 'passPopup');
   attachSuggest('dsQuery', 'dsPopup');
 
-  /* ── Оверлей «Проверяем доступ»: шаги + настоящая проверка (login-probe) ── */
+  /* ── Оверлей «Проверяем доступ»: ЧЕСТНАЯ индикация ОДНОЙ проверки ──
+     Заказ владельца (2026-09-04): «чтобы проверки просто так не кружились».
+     Раньше здесь была предварительная проба (/api/login-probe), которая
+     дублировала POST /login целиком (пароль + роль проверялись дважды),
+     а оверлей показывал «всё окей» ДО настоящей проверки — из-за рассинхрона
+     выходило «сказало окей, потом пароль не верный». Теперь проб нет:
+     форма отправляется ОДИН раз, оверлей просто крутится, пока идёт
+     настоящая проверка (пароль → роль → при необходимости код из ЛС).
+     Успех/ошибку рендерит сам POST /login (новой страницей). */
   var accessCheck = {
-    gate: null,
-    start: function (onFinish) {
+    start: function () {
       var ov = $('authCheck');
-      this.gate = null;
-      if (!ov) { if (onFinish) onFinish(); return; }
-      var err = $('authCheckErr'), retry = $('authCheckRetry');
-      if (err) err.classList.remove('show');
-      if (retry) retry.classList.remove('show');
-      var sub = $('authCheckSub');
-      if (sub) sub.textContent = 'Связываемся с Discord и проверяем роль…';
+      if (!ov) { return; }
       var steps = Array.prototype.slice.call(document.querySelectorAll('#authSteps li'));
       ov.hidden = false;
-      var self = this;
-      function tick(n) {
-        if (n >= steps.length) {
-          if (self.gateDone) self.gateDone();
-          else if (onFinish) onFinish();
-          return;
-        }
+      function mark(n, spinning) {
         var cur = steps[n];
-        cur.classList.add('on');
+        if (!cur) return;
         var ico = cur.querySelector('.s-ico');
-        ico.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
-        var done = function () {
+        if (spinning) {
+          cur.classList.add('on');
+          if (ico) ico.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
+        } else {
           cur.classList.remove('on');
           cur.classList.add('done');
-          ico.innerHTML = '<i class="fas fa-check"></i>';
-          tick(n + 1);
-        };
-        if (n === 1 && typeof self.gate === 'function') {
-          self.gate(done, function (text) {
-            cur.classList.remove('on');
-            cur.classList.add('err');
-            ico.innerHTML = '<i class="fas fa-xmark"></i>';
-            var s2 = $('authCheckSub');
-            if (s2) s2.textContent = 'Не получилось войти.';
-            var eb = $('authCheckErr');
-            if (eb) {
-              eb.textContent = text || 'Что-то пошло не так — попробуйте ещё раз.';
-              eb.classList.add('show');
-            }
-            var rt = $('authCheckRetry');
-            if (rt) rt.classList.add('show');
-          });
-        } else {
-          setTimeout(done, n === 0 ? 500 : 420);
+          if (ico) ico.innerHTML = '<i class="fas fa-check"></i>';
         }
       }
-      this.gateDone = null;
-      this.steps = steps;
-      tick(0);
-    },
-    fail: function (text) {
-      var last = this.steps[this.steps.length - 1];
-      if (!last) return;
-      last.classList.remove('on');
-      last.classList.add('err');
-      var lico = last.querySelector('.s-ico');
-      if (lico) lico.innerHTML = '<i class="fas fa-xmark"></i>';
-      var sub = $('authCheckSub');
-      if (sub) sub.textContent = 'Не получилось войти.';
-      var err = $('authCheckErr');
-      if (err) {
-        err.textContent = text || 'Что-то пошло не так — попробуйте ещё раз.';
-        err.classList.add('show');
-      }
-      var retry = $('authCheckRetry');
-      if (retry) retry.classList.add('show');
+      mark(0, true);
+      setTimeout(function () {
+        mark(0, false);
+        mark(1, true);            // «Проверяем роль и доступ» — до ответа сервера
+        var f = $('passForm');
+        if (f) { delete f.dataset.sent; f.submit(); }   // ОДНА настоящая проверка
+      }, 250);
     },
     close: function () {
       var ov = $('authCheck');
@@ -621,85 +586,20 @@
     }
   };
 
-  var retryBtn = $('authCheckRetry');
-  if (retryBtn) {
-    retryBtn.addEventListener('click', function () {
-      accessCheck.close();
-      var f = $('passForm');
-      if (f) delete f.dataset.sent;
-      var first = $('passUsername');
-      if (first) first.focus();
-    });
-  }
-
-  /* Вход по паролю: на шаге «Проверяем роль и доступ» спрашиваем сервер
-     (/api/login-probe). Если сервер ответил needs_code — показываем шаг
-     «Код из ЛС Discord» вместо отправки формы. */
   var passForm = $('passForm');
   if (passForm) {
     passForm.addEventListener('submit', function (e) {
       if (passForm.dataset.sent) { e.preventDefault(); return; }
-      e.preventDefault();
       var u = $('passUsername'), p = $('passPassword');
       if (!u || !u.value.trim() || !p || !p.value) {
+        e.preventDefault();
         showError('passError', 'Заполни логин и пароль.');
         if (u && (!u.value.trim())) u.focus(); else if (p) p.focus();
         return;
       }
       passForm.dataset.sent = '1';
-      accessCheck.gate = function (ok, err) {
-        fetch('/api/login-probe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: (u ? u.value : '').trim(), password: p ? p.value : '' })
-        }).then(function (r) {
-          return r.json().catch(function () { return null; });
-        }).then(function (d) {
-          if (d && d.success && d.needs_code) {
-            // Пароль и роль проверены — теперь код из ЛС Discord
-            passForm.dataset.sent = '';
-            accessCheck.close();
-            showCodeStep(d.discord_id || '', u ? u.value : '');
-            return;
-          }
-          if (d && d.success) ok();
-          else err((d && d.error) || 'Что-то пошло не так — попробуйте ещё раз.');
-        }).catch(function () {
-          err('Сеть недоступна — проверьте соединение.');
-        });
-      };
-      accessCheck.gateDone = function () { passForm.submit(); };
-      accessCheck.start(function () { passForm.submit(); });
+      accessCheck.start();        // крутится ровно столько, сколько идёт проверка
     });
-  }
-
-  /* Шаг «Код из ЛС Discord» после верного пароля на новом устройстве */
-  function showCodeStep(discordId, username) {
-    var pane = $('passPane');
-    if (!pane) { return; }
-    pane.innerHTML =
-      '<div class="code-head">' +
-      '<span class="dh-ico" aria-hidden="true"><i class="fab fa-discord"></i></span>' +
-      '<h2>Подтверди вход</h2></div>' +
-      '<p class="code-sub">Пароль и роль проверены. Мы отправили <b>6-значный код</b> в личные ' +
-      'сообщения Discord (<b>' + esc(username) + '</b>) — подтвердите, что аккаунт ваш.</p>' +
-      '<form method="POST" action="/login" autocomplete="off">' +
-      '<input type="hidden" name="step" value="code">' +
-      '<input type="hidden" name="discord_id" value="' + esc(discordId) + '">' +
-      '<input type="hidden" name="username" value="' + esc(username) + '">' +
-      '<div class="f-group">' +
-      '<label for="jsCode">Код из личных сообщений Discord</label>' +
-      '<div class="input-wrap has-ico">' +
-      '<i class="fas fa-shield-halved f-ico" aria-hidden="true"></i>' +
-      '<input type="text" name="code" id="jsCode" class="pin-6" placeholder="______" maxlength="6" ' +
-      'inputmode="numeric" autocomplete="one-time-code" autofocus required ' +
-      'aria-label="Код подтверждения из личных сообщений Discord"></div></div>' +
-      '<button type="submit" class="btn btn-primary" style="width:100%">' +
-      '<i class="fas fa-right-to-bracket"></i> Войти в панель</button></form>' +
-      '<div class="back-row"><a class="btn btn-ghost" href="/login" style="text-decoration:none">' +
-      '<i class="fas fa-arrow-left"></i> Начать вход заново</a></div>';
-    var inp = $('jsCode');
-    if (inp) inp.focus();
   }
 
   /* ── «Забыли пароль?»: код в ЛС Discord → новый пароль ── */
