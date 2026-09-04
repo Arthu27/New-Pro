@@ -9,6 +9,7 @@ import config as _root_config  # noqa: F401
 _log = get_logger("app")
 
 import random 
+import re 
 import string 
 import hashlib 
 import math 
@@ -1536,7 +1537,12 @@ def _resolve_nick_anywhere (nick ):
     intents.members — раньше на этом регистрация обрывалась.
     Возвращает ID строкой, список кандидатов (ник неуникален) или None.
     """
-    nick =str (nick or '').strip ().lstrip ('@')
+    nick =str (nick or '').strip ()
+    # Discord-тег <@id> / <@!id> → сразу ID (человек тегнул себя в поле)
+    _tag =re .match (r'^<@!?(\d{17,19})>$',nick )
+    if _tag :
+        return _tag .group (1 )
+    nick =nick .lstrip ('@')
     if not nick :
         return None
     # 1) уже регистрировавшиеся
@@ -1612,6 +1618,12 @@ def register ():
         # никакие вариации написания имени больше не могут помешать
         # (жалоба владельца 2026-09-05: «пишет имя не полностью, панель
         # находит, но при регистрации говорит, что не нашла»).
+        # Человек мог ТЕГНУТЬ себя (<@id>) прямо в поле — Discord-тег
+        # превращаем в ID: жалоба владельца 2026-09-05 «тегнула — бот не
+        # поправил и сказал, что не нашёл».
+        _tag =re .match (r'^<@!?(\d{17,19})>$',discord_id )
+        if _tag :
+            discord_id =_tag .group (1 )
         _rid =request .form .get ('resolved_id','').strip ()
         if (not discord_id .isdigit ()and _rid .isdigit ()
         and 17 <=len (_rid )<=19 ):

@@ -246,6 +246,21 @@ c2 = appmod.PENDING_VERIFICATIONS.get(BID, {}).get('code', m2.group(1) if m2 els
 r = post_step2(BID, c2)
 check(r.status_code in (302, 303), 'Анна П. зарегистрировалась по resolved_id')
 
+print('== 7б. ТЕГ <@id> в поле (владелица тегнула себя) ==')
+TAG = '<@3003000000000000103>'   # Борис — ещё не зарегистрирован (шаг 10)
+r = post_step1(TAG)
+h = r.get_data(as_text=True)
+check('name="code"' in h and 'Не нашёл' not in h,
+      'тег <@id> в поле — регистрация принимает, шаг 2 открыт', page_error(h))
+check(len(ANNA2.dms) >= 1, 'код ушёл по ID из тега')
+TAGID = appmod.PENDING_VERIFICATIONS and [
+    k for k in appmod.PENDING_VERIFICATIONS if k.isdigit() and k not in
+    ('3001000000000000101', '3002000000000000102', '3003000000000000103')] or []
+if TAGID:
+    tc = appmod.PENDING_VERIFICATIONS[TAGID[0]]['code']
+    r = post_step2(TAGID[0], tc)
+    check(r.status_code in (302, 303), 'регистрация по тегу завершена')
+
 print('== 8. Несуществующее имя → «Не нашёл» ==')
 r = post_step1('Такого-Нет')
 h = r.get_data(as_text=True)
