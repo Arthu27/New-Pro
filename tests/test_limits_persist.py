@@ -73,14 +73,17 @@ from services import staff_limits as SL  # noqa: E402
 
 print('== 1. Новые единые лимиты «у всех» ==')
 for rid, label in ((MOD_ROLE, 'Модер'), (CUR_ROLE, 'Куратор'),
-                   (ADM_ROLE, 'Админ'), (OWN_ROLE, 'Тир владельца')):
+                   (ADM_ROLE, 'Админ')):
     lim, _win = SL.effective_limits(GID, [rid])
     check(lim['warn'] == 1 and lim['clear'] == 10,
           f'{label}: варн 1/день, чистка 10 сообщений/день',
           f'→ warn={lim["warn"]} clear={lim["clear"]}')
 lim, _ = SL.effective_limits(GID, [OWN_ROLE])
-check(lim['ban'] == 0 and lim['mute'] == 0,
-      'тир владельца по остальным действиям — без ограничений (0 = нет лимита)')
+check(all(lim[k] == 0 for k in ('warn', 'mute', 'unmute', 'ban',
+                                'unban', 'clear')),
+      'тир владельца: ВСЁ без лимитов, включая варны и чистку '
+      '(владелец 2026-09-05: «у владельца без лимит надо сделать все»)',
+      f'→ {lim}')
 
 print('== 2. Наберём расходку: 1 варн + 10 чисток (куратор) ==')
 ok, _ = SL.check_action(_G(), _M(UID, CUR_ROLE), 'warn')
