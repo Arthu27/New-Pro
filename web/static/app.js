@@ -747,12 +747,12 @@
         }
       });
     });
-    // Подгруппы (раздел модерации): активную раскрываем сразу
+    // Подгруппы (раздел модерации и защиты): пункты ВИДНЫ сразу —
+    // «весь состав меню на виду» (заказ владельца). Клик сворачивает.
     Array.prototype.forEach.call(nav.querySelectorAll('.nav-subgroup'), function (sub) {
       var btn = sub.querySelector('.nav-subgroup-title');
       if (!btn) return;
-      if (sub.classList.contains('has-active')) sub.classList.add('open');
-      btn.addEventListener('click', function () { sub.classList.toggle('open'); });
+      btn.addEventListener('click', function () { sub.classList.toggle('closed'); });
     });
     // Поиск-фильтр по меню: подсветка совпадений, авто-раскрытие групп,
     // счётчик у группы, «ничего не найдено», Esc и хоткей «/»

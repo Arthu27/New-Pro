@@ -490,6 +490,12 @@ import re as _ms_re
 
 # ── Демо-участники (когда бот офлайн: поиск, @-пикер, подсказки) ─────────
 DEMO_MEMBERS = [
+    # Владелец демо-сервера (owner_id=7): панель входит под ним, поэтому
+    # он обязан быть виден среди участников (списки, поиск, @-пикеры).
+    {'id': '7', 'name': 'owner.hakumo', 'display_name': 'Владелец',
+     'avatar': 'https://cdn.discordapp.com/embed/avatars/0.png', 'status': 'online',
+     'roles': [{'name': 'Владелец', 'color': '#f59e0b'}],
+     'joined_at': '2025-10-01T09:00:00+00:00'},
     {'id': '1001', 'name': 'sonya.staff', 'display_name': 'Sonya',
      'avatar': 'https://cdn.discordapp.com/embed/avatars/1.png', 'status': 'online',
      'roles': [{'name': 'Куратор', 'color': '#22d3ee'}], 'joined_at': '2025-11-02T10:00:00+00:00'},
