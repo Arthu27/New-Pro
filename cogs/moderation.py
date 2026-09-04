@@ -326,8 +326,8 @@ class Moderation (commands .Cog ):
         # только строка-подсказка и само выпадающее меню, без простыней.
         embed =discord .Embed (
         title ="🛡 Панель модерации",
-        description ="1) Выберите участника мышкой в первом меню (или впишете вручную), "
-                      "2) выберите действие во втором — цель, срок и причину можно поправить.",
+        description ="1) Выберите участника мышкой в первом меню, "
+                      "2) выберите действие во втором — останется вписать срок и причину.",
         color =0x5865F2 )
         if interaction .guild .icon :
             embed .set_footer (text =interaction .guild .name )
@@ -416,8 +416,11 @@ class Moderation (commands .Cog ):
                 log .debug (f'_unisolate_member(): {ch}: {_ex}')
 
     # ── Почему Forbidden: иерархия ролей / владелец сервера / право бота ──
+    # «ban» здесь НЕ Discord-бан: участник остаётся на сервере, бот выдаёт
+    # роль бана и закрывает каналы — право «Бан участников» боту НЕ нужно
+    # (жалоба владельца 2026-09-04). Нужны роль и канал, отсюда manage_roles.
     _NEED_PERMS = {
-        'ban': ('ban_members', 'Бан участников'),
+        'ban': ('manage_roles', 'Управление ролями (роль бана и доступ к каналу апелляции)'),
         'kick': ('kick_members', 'Выгонять участников'),
         'timeout': ('moderate_members', 'Модерация участников (таймаут)'),
         'mute_chat': ('manage_roles', 'Управление ролями (мут-роль)'),
@@ -1348,12 +1351,15 @@ class ModActionModal(discord.ui.Modal):
         }
         super().__init__(title=titles.get(action, "Модерация"))
 
-        if action != "clear":
-            # prefill_target — ID участника, выбранного мышкой в селекте панели
+        # Цель, выбранная мышкой в панели, приходит как fixed_target_id —
+        # поле ввода НИКА в модалку не ставим вовсе (жалоба владельца:
+        # «выбрал участника — просит ник ещё раз, убери»). Поле остаётся
+        # только для ручного пути (ник/ID вписываются руками).
+        self.fixed_target_id = str(prefill_target or "").strip() or None
+        if action != "clear" and not self.fixed_target_id:
             self.target = discord.ui.TextInput(
                 label="Цель (@ник, точное имя или ID)", required=True,
                 placeholder="@упоминание, ник или 15-22 цифры ID",
-                default=str(prefill_target or "") or None,
             )
             self.add_item(self.target)
         if action in ("timeout", "mute_chat", "vmute", "clear"):
@@ -1401,10 +1407,11 @@ class ModActionModal(discord.ui.Modal):
         _a = getattr(self, 'amount', None)
         _p = getattr(self, 'proof', None)
         _reason = (self.reason.value or "").strip() or "Не указана"
+        _target_value = self.fixed_target_id or ((_t.value or "").strip() if _t else "")
         await self.cog._execute_mod_action(
             interaction,
             self.action,
-            (_t.value or "").strip() if _t else "",
+            _target_value,
             _reason,
             (_a.value or "").strip() if _a else "5",
             proof_link=(_p.value or "").strip() if _p else "",
@@ -1427,10 +1434,9 @@ class ModHelpButton(discord.ui.Button):
             color=0x5865F2)
         embed.add_field(
             name='🎯 Цель',
-            value='Проще всего — выбрать участника МЫШКОЙ в меню «Кого наказать?» '
-                  'вверху (цель подставится сама). Можно и вручную: @упоминание, '
-                  'точное имя или ID — бот поймёт любой вариант.\n'
-                  'Не нашли участника? Скорее всего, он ушёл с сервера: ID работает и так.',
+            value='Выберите участника МЫШКОЙ в меню «Кого наказать?» — при выборе '
+                  'действия бот НЕ попросит ник второй раз. Участник ушёл с сервера? '
+                  'Он останется в списке выбора: подойдёт и его ID.',
             inline=False)
         embed.add_field(
             name='⏱ Срок',
@@ -1470,8 +1476,8 @@ class ModTargetSelect(discord.ui.UserSelect):
             user = self.values[0] if self.values else None
             name = getattr(user, "display_name", None) or str(getattr(user, "id", "?"))
             await interaction.response.send_message(
-                f"🎯 Цель выбрана: **{name}** — теперь выберите действие в меню ниже "
-                f"(цель подставится сама). Можно и вписать вручную.",
+                f"🎯 Цель: **{name}** — теперь выберите действие в меню ниже, "
+                f"ник второй раз спрашивать не будем.",
                 ephemeral=True)
         except Exception as _te:
             log.debug("ModTargetSelect: %s", _te)

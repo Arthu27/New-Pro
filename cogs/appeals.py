@@ -334,10 +334,17 @@ class AppealView(discord.ui.View):
 
     async def _claim(self, interaction):
         """Взять апелляцию в работу / снять с себя (повторный клик)."""
-        if not interaction.user.guild_permissions.manage_guild:
-            await interaction.response.send_message(
-                'Нужно право «Управление сервером».', ephemeral=True)
-            return
+        # Права решает владелец (панель → Права команд → «Бан»), Discord-права
+        # не при чём — та же строгая модель, что у /modpanel.
+        try:
+            from services.permission_acl import check_action as _acl
+            if not _acl(self.guild_id, interaction.user, 'ban'):
+                await interaction.response.send_message(
+                    'Апелляции тебе не дал владелец (панель → Доступ → '
+                    'Права команд → Классические разрешения).', ephemeral=True)
+                return
+        except Exception as _ex:
+            log.debug('appeals claim acl: %s', _ex)
         gid = self.guild_id
         state = self.cog._load(gid)
         item = get_appeal(state, self.appeal_id)
@@ -385,25 +392,19 @@ class AppealView(discord.ui.View):
         return _cb
 
     async def _resolve(self, interaction, accept):
-        if not interaction.user.guild_permissions.manage_guild:
-            await interaction.response.send_message(
-                ' Нужно право «Управление сервером».', ephemeral=True)
-            return
+        # Права решает владелец (панель → Права команд → «Бан»), а не
+        # Discord-права: «своя система, Discord не при чём» (строгая модель
+        # permission_acl). Одно действие «Бан» открывает и решение апелляций.
         gid = self.guild_id
-        # Принятие апелляции = разбан/снятие изоляции — то же действие
-        # «Бан», что у /unban в /modpanel: не дал владельцу — не принять.
-        if accept:
-            try:
-                from services.permission_acl import check_action
-                guild = interaction.guild
-                if not check_action(guild.id, interaction.user, 'ban'):
-                    await interaction.response.send_message(
-                        '🚫 «Принять апелляцию» тебе не дал владелец (панель → '
-                        'Доступ → Права команд → Классические разрешения).',
-                        ephemeral=True)
-                    return
-            except Exception as _ex:
-                log.debug('appeals: acl accept: %s', _ex)
+        try:
+            from services.permission_acl import check_action
+            if not check_action(gid, interaction.user, 'ban'):
+                await interaction.response.send_message(
+                    '🚫 Апелляции тебе не дал владелец (панель → Доступ → '
+                    'Права команд → Классические разрешения).', ephemeral=True)
+                return
+        except Exception as _ex:
+            log.debug('appeals: acl resolve: %s', _ex)
             # Лимиты стаффа: «разбан» считается как unban (та же расходка,
             # что у /unban в панельной карточке наказаний).
             try:
