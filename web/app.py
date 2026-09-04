@@ -5140,31 +5140,27 @@ def api_activity_feed ():
     # Сортировка — новые сверху
     items.sort(key=lambda x: x.get('ts') or 0, reverse=True)
 
-    # Сворачиваем ПОВТОРЫ: «Вход в панель — owner» пять раз подряд выглядит
-    # как дубликат (владелец: «в обзоре сервера дубликат»). Одинаковые
-    # (title+user) события в окне 15 минут склеиваем в одно с пометкой
-    # «ещё N раз за 15 мин» — лента читаемая, данные не теряются.
-    _W =900  # 15 минут
+    # Сворачиваем ПОВТОРЫ: «Вход в панель — owner» несколько раз в ленте
+    # выглядит как дубликат (владелец: «в обзоре сервера дубликат»).
+    # Одинаковые (title+user) события склеиваем в одно — новое сверху,
+    # с пометкой «ещё N раз» (без окна: два визуально одинаковых пункта
+    # в топ-5 пульса, пусть даже через час, глаз воспринимает как баг).
+    # Полная история — на странице Журнал (/logs).
     merged =[]
     for it in items:
-        ts =it .get ('ts')or 0
         hit =None
         for m in merged :
-            if (m .get ('title')==it .get ('title')and m .get ('user')==it .get ('user')
-                    and (m ['_newest']-ts )<=_W ):
+            if (m .get ('title')==it .get ('title')and m .get ('user')==it .get ('user')):
                 hit =m
                 break
         if hit is not None :
             hit ['_count']+=1
-            hit ['_newest']=max (hit ['_newest'],ts )
         else :
-            merged .append (dict (it ,_count =1 ,_newest =ts ))
+            merged .append (dict (it ,_count =1 ))
     for m in merged :
         n =m .pop ('_count')
-        m .pop ('_newest',None )
         if n >1 :
-            _extra =f'ещё {n -1} раз за 15 мин'
-            m ['detail']=(m .get ('detail')+' · ' if m .get ('detail')else '')+_extra
+            m ['detail']=(m .get ('detail')+' · ' if m .get ('detail')else '')+f'ещё {n -1} раз'
 
     return jsonify({'items': merged[:80]})
 

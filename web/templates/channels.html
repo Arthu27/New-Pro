@@ -517,9 +517,9 @@ textarea.field-input{resize:vertical;min-height:52px}
     var h = '';
     h += '<span class="ch-meta-item"><i class="fas fa-list-ol"></i> Позиция <b>' + c.position + '</b></span>';
     if (t === 'voice' || t === 'stage') {
-      h += '<span class="ch-meta-item"><i class="fas fa-signal"></i> <b>' + c.bitrate + '</b> kbps</span>';
+      h += '<span class="ch-meta-item"><i class="fas fa-signal"></i> <b>' + (c.bitrate || 0) + '</b> kbps</span>';
       if (c.user_limit > 0) h += '<span class="ch-meta-item"><i class="fas fa-users"></i> <b>' + c.user_limit + '</b> лимит</span>';
-      h += '<span class="ch-meta-item"><i class="fas fa-headset"></i> <b>' + c.connected + '</b> в голосе</span>';
+      h += '<span class="ch-meta-item"><i class="fas fa-headset"></i> <b>' + (c.connected || 0) + '</b> в голосе</span>';
     }
     h += '<span class="ch-meta-item"><i class="fas fa-calendar"></i> ' + fmtDate(c.created_at) + '</span>';
     return h;
@@ -696,9 +696,9 @@ textarea.field-input{resize:vertical;min-height:52px}
     grid += item('NSFW', c.nsfw ? 'Да' : 'Нет');
     if (t === 'text' || t === 'news' || t === 'forum') grid += item('Медленный режим', c.slowmode > 0 ? c.slowmode + ' сек.' : 'Выкл.');
     if (isVoice) {
-      grid += item('Битрейт', c.bitrate + ' kbps');
+      grid += item('Битрейт', (c.bitrate || 0) + ' kbps');
       grid += item('Лимит', c.user_limit > 0 ? c.user_limit : 'Без лимита');
-      grid += item('В голосе', String(c.connected));
+      grid += item('В голосе', String(c.connected || 0));
     }
     $('ch-detail-grid').innerHTML = grid;
     if (c.topic) {

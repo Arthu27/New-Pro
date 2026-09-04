@@ -118,24 +118,24 @@ def _annotate_hidden (guild_id ,channels ):
 def _demo_channels_seed ():
     """Встроенная демо-структура каналов (тот же состав, что data/demo_channels.json)."""
     return [
-        {'id':'1001','name':'правила','type':'text','position':0,'category_id':'900','hidden':False},
-        {'id':'1002','name':'новости','type':'text','position':1,'category_id':'900','hidden':False},
-        {'id':'1003','name':'FAQ','type':'text','position':2,'category_id':'900','hidden':False},
-        {'id':'1015','name':'журнал-модерации','type':'forum','position':0,'category_id':'900','hidden':False},
-        {'id':'1004','name':'флудилка','type':'text','position':0,'category_id':'901','hidden':False},
-        {'id':'1005','name':'мемы','type':'text','position':1,'category_id':'901','hidden':False},
-        {'id':'1006','name':'музыка-чат','type':'text','position':2,'category_id':'901','hidden':False},
-        {'id':'1007','name':'предложения','type':'text','position':0,'category_id':'902','hidden':False},
-        {'id':'1008','name':'розыгрыши','type':'text','position':1,'category_id':'902','hidden':False},
-        {'id':'1010','name':'варны','type':'text','position':2,'category_id':'902','hidden':False},
-        {'id':'1016','name':'анонс-бота','type':'text','position':3,'category_id':'902','hidden':False},
-        {'id':'1017','name':'рекруты','type':'text','position':4,'category_id':'902','hidden':False},
-        {'id':'1018','name':'стата-недель','type':'text','position':5,'category_id':'902','hidden':False},
-        {'id':'1009','name':'тикет-логи','type':'text','position':6,'category_id':'902','hidden':False},
-        {'id':'1011','name':'общий-голос-1','type':'voice','position':0,'category_id':'903','hidden':False},
-        {'id':'1012','name':'общий-голос-2','type':'voice','position':1,'category_id':'903','hidden':False},
-        {'id':'1013','name':'афк','type':'voice','position':2,'category_id':'903','hidden':False},
-        {'id':'1014','name':'сцена','type':'stage','position':0,'category_id':'903','hidden':False},
+        {'id':'1001','name':'правила','type':'text','position':0,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
+        {'id':'1002','name':'новости','type':'text','position':1,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
+        {'id':'1003','name':'FAQ','type':'text','position':2,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
+        {'id':'1015','name':'журнал-модерации','type':'forum','position':0,'category':'ИНФОРМАЦИЯ','category_id':'900','hidden':False},
+        {'id':'1004','name':'флудилка','type':'text','position':0,'category':'ОБЩЕНИЕ','category_id':'901','hidden':False},
+        {'id':'1005','name':'мемы','type':'text','position':1,'category':'ОБЩЕНИЕ','category_id':'901','hidden':False},
+        {'id':'1006','name':'музыка-чат','type':'text','position':2,'category':'ОБЩЕНИЕ','category_id':'901','hidden':False},
+        {'id':'1007','name':'предложения','type':'text','position':0,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1008','name':'розыгрыши','type':'text','position':1,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1010','name':'варны','type':'text','position':2,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1016','name':'анонс-бота','type':'text','position':3,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1017','name':'рекруты','type':'text','position':4,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1018','name':'стата-недель','type':'text','position':5,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1009','name':'тикет-логи','type':'text','position':6,'category':'РАЗНОЕ','category_id':'902','hidden':False},
+        {'id':'1011','name':'общий-голос-1','type':'voice','position':0,'category':'ГОЛОСОВЫЕ','category_id':'903','bitrate':64,'user_limit':0,'hidden':False},
+        {'id':'1012','name':'общий-голос-2','type':'voice','position':1,'category':'ГОЛОСОВЫЕ','category_id':'903','bitrate':64,'user_limit':0,'hidden':False},
+        {'id':'1013','name':'афк','type':'voice','position':2,'category':'ГОЛОСОВЫЕ','category_id':'903','bitrate':32,'user_limit':99,'hidden':False},
+        {'id':'1014','name':'сцена','type':'stage','position':0,'category':'ГОЛОСОВЫЕ','category_id':'903','bitrate':128,'user_limit':0,'hidden':False},
         # Сами КАТЕГОРИИ — это тоже каналы (type category): без них на
         # странице «Каналы» пустуют селекты «Категория» (создание/правка).
         {'id':'900','name':'ИНФОРМАЦИЯ','type':'category','position':0,'category_id':None,'category_pos':-1,'hidden':False},
@@ -150,6 +150,36 @@ def _demo_channels_sort (demo ):
     return sorted (demo ,key =lambda x :((9999 if (x .get ('category_pos')is None or x .get ('category_pos')<0 )else x .get ('category_pos',0 )),x .get ('position',0 ),x .get ('name','')))
 
 
+def _fill_category_names (rows ):
+    """Проставить 'category' (ИМЯ категории) по category_id, где имени нет.
+
+    Живой /api/channels всегда отдаёт имя категории; демо-структура и
+    старые data/demo_channels.json содержали только category_id — из-за
+    этого страница «Каналы» показывала «undefined» вместо категории,
+    группы категорий пустовали («В этой категории пока нет каналов»),
+    а все каналы сваливались в «Без категории».
+    """
+    if not isinstance (rows ,list ):
+        return rows
+    by_id ={}
+    for r in rows :
+        if isinstance (r ,dict )and r .get ('type')=='category'and r .get ('id'):
+            by_id [str (r ['id'])]=r .get ('name')or ''
+    for r in rows :
+        if isinstance (r ,dict )and not r .get ('category')and r .get ('category_id'):
+            r ['category']=by_id .get (str (r ['category_id']))or None
+        # Демо-сид и старые data/demo_channels.json не содержали числовых
+        # полей — страница «Каналы» показывала «undefined kbps» у голосовых.
+        if isinstance (r ,dict ):
+            for k in ('bitrate','connected','slowmode','user_limit','position'):
+                if not isinstance (r .get (k),(int ,float )):
+                    r [k]=0
+            r .setdefault ('topic','')
+            for k in ('nsfw','news','stage','forum','hidden'):
+                r .setdefault (k ,False )
+    return rows
+
+
 def demo_channels_list (guild_id ):
     """Демо-каналы: data/demo_channels.json, а если не засеян — встроенный список."""
     demo_file =os .path .join (_REPO_ROOT ,'data','demo_channels.json')
@@ -158,10 +188,10 @@ def demo_channels_list (guild_id ):
             with open (demo_file ,'r',encoding ='utf-8')as fp :
                 demo =json .load (fp )
             if isinstance (demo ,list )and demo :
-                return _demo_channels_sort (demo )
+                return _demo_channels_sort (_fill_category_names (demo ))
         except Exception as _ex :
             _log.debug ("demo_channels_list(): подавлено: %s", _ex)
-    return _demo_channels_sort (_demo_channels_seed ())
+    return _demo_channels_sort (_fill_category_names (_demo_channels_seed ()))
 
 
 def resolve_guild (guild_id ):
@@ -916,13 +946,13 @@ def register(ctx):
                         with open (demo_file ,'r',encoding ='utf-8')as fp :
                             demo =json .load (fp )
                         demo =sorted (demo ,key =lambda x :((9999 if (x .get ('category_pos')is None or x .get ('category_pos')<0 )else x .get ('category_pos',0 )),x .get ('position',0 ),x .get ('name','')))
-                        return jsonify (_annotate_hidden (guild_id ,_dedupe_channels (demo )))
+                        return jsonify (_annotate_hidden (guild_id ,_dedupe_channels (_fill_category_names (demo ))))
                     except Exception as e :
                         print (f'[WEB][WARN] /channels: demo_channels.json ошибка: {e}')
                 # Демо-структура не засеяна — отдаём полный встроенный список
                 # (тот же состав, что жил в data/demo_channels.json), чтобы
                 # селекты каналов и чат не пустовали в превью.
-                return jsonify (_annotate_hidden (guild_id ,_dedupe_channels (_demo_channels_seed ())))
+                return jsonify (_annotate_hidden (guild_id ,_dedupe_channels (_fill_category_names (_demo_channels_seed ()))))
             cached =_channels_offline_cache (guild_id )
             if cached :
                 print (f'[WEB] /channels bot offline — отдаём кэш ({len(cached)} кан.)')
