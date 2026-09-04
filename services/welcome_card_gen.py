@@ -395,7 +395,7 @@ def render_welcome_card(member_name, guild_name, count, avatar_bytes=None,
 
         img = img.resize((W, H), Image.LANCZOS)
         buf = io.BytesIO()
-        img.save(buf, format='PNG', optimize=True)
+        img.save(buf, format='PNG')
         return buf.getvalue()
     except Exception:
         # Последняя линия обороны: минимальная читаемая карта.

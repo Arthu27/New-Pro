@@ -236,7 +236,7 @@ def render_replay_card(title, subtitle, events, now_str=''):
                brand, font=_font(24, True), fill=GOLD_BRIGHT)
 
         buf = io.BytesIO()
-        img.convert('RGB').save(buf, 'PNG', optimize=True)
+        img.convert('RGB').save(buf, 'PNG')
         return buf.getvalue()
     except Exception:
         return None

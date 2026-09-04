@@ -224,7 +224,7 @@ def render_ladder_card(steps, guild_name=''):
                brand, font=_font(24, True), fill=GOLD_BRIGHT)
 
         buf = io.BytesIO()
-        img.convert('RGB').save(buf, 'PNG', optimize=True)
+        img.convert('RGB').save(buf, 'PNG')
         return buf.getvalue()
     except Exception:
         return None

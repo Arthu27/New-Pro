@@ -630,7 +630,7 @@ def render_log_card(category, title, rows, color=0xC8922A, cat_name='',
         # меньше — Discord быстрее грузит. Качество 90 — артефактов нет.
         # fmt='png' остаётся для превью панели (эндпоинт .../preview.png).
         if str(fmt).lower() == 'png':
-            img.convert('RGB').save(buf, 'PNG', optimize=True)
+            img.convert('RGB').save(buf, 'PNG')
         else:
             img.convert('RGB').save(buf, 'JPEG', quality=90, optimize=False)
         return buf.getvalue()

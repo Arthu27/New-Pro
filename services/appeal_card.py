@@ -201,7 +201,7 @@ def render_appeal_card(*, appeal_id, user_name, text, link=None,
 
         out = canvas.resize((W, H), Image.Resampling.LANCZOS).convert('RGB')
         buf = io.BytesIO()
-        out.save(buf, format='PNG', optimize=True)
+        out.save(buf, format='PNG')
         return buf.getvalue()
     except Exception:
         return None

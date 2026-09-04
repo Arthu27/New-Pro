@@ -190,7 +190,7 @@ def render_rules_banner(*, title, text, index=1, total=1, accent='4f46e5',
     if return_image:
         return out
     buf = io.BytesIO()
-    out.save(buf, format='PNG', optimize=True)
+    out.save(buf, format='PNG')
     return buf.getvalue()
 
 
