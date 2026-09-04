@@ -271,8 +271,13 @@ async def _resolve_async(g, uid):
     return _nick_member if int(uid) == 777888999 else None
 
 
+_sent9 = []
+
+
 async def _fetch_user9(uid):
-    return NS(id=int(uid), send=None)
+    async def _send(embed=None, **kw):
+        _sent9.append(embed)
+    return NS(id=int(uid), send=_send)
 A._resolve_guild_member_async = _resolve_async
 A._panel_guild = lambda: _nick_guild
 A.bot_instance = NS(guilds=[_nick_guild], get_guild=lambda gid: _nick_guild,

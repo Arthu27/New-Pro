@@ -1774,7 +1774,11 @@ def register ():
                 e .set_footer (text ="Hakumo Panel • Доверие Запись Система")
                 await user .send (embed =e )
             except Exception as ex :
-                print (f"DM не отправлено: {ex}")
+                # НЕ глотаем: wrapper ниже обязан узнать о неудаче и честно
+                # сказать человеку открыть личку (раньше писали «код отправлен»,
+                # а он не приходил при закрытых ЛС)
+                _log .debug (f"register DM: {ex}")
+                raise
 
         try :
             _fut =asyncio .run_coroutine_threadsafe (send_dm (),bot_instance .loop )
