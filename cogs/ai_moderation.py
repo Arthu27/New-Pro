@@ -183,6 +183,7 @@ class AIModeration (commands .Cog ):
         # DETECTION 
     def detect_toxic (self ,text ,languages ,sensitivity ):
         """Return list of (severity, matched_pattern) tuples"""
+        text =str (text or '')   # None/число из JSON не должны ронять детектор
         text_lower =text .lower ()
         matches =[]
         # Check each severity

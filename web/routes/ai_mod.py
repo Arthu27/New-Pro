@@ -117,7 +117,7 @@ def register(ctx):
         demo_cog =_demo_cog ()
         guild_id =str (session .get ('selected_guild')or MAIN_GUILD_ID )
         d =request .get_json (silent =True )or {}
-        text =d .get ('text','')
+        text =str (d .get ('text')or '')
         if demo_cog is not None :
             cfg =demo_cog .load_config (guild_id )
             matches =demo_cog .detect_toxic (text ,cfg .get ('languages',['ru','tr','en']),cfg .get ('sensitivity',0.7 ))

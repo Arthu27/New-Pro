@@ -29,9 +29,15 @@ def register(ctx):
         bot = _app.bot_instance
         try:
             guilds = getattr(bot, 'guilds', None) or []
-            return str(guilds[0].id) if guilds else ''
-        except Exception:
-            return ''
+            if guilds:
+                return str(guilds[0].id)
+        except Exception as _ex:
+            _log.debug('_autofilter_gid(): бот без guilds: %s', _ex)
+        # Демо-витрина без MAIN_GUILD_ID: конфиг автофильтра не должен
+        # «не выбираться» — тот же демо-сервер 777, что в /api/guilds.
+        if _app._demo_mode():
+            return '777'
+        return ''
 
 
     @app.route('/autofilter')
@@ -57,11 +63,17 @@ def register(ctx):
     @login_required
     @role_required('admin')
     def api_autofilter_save():
-        from cogs.auto_filter import validate_config, save_config
+        from cogs.auto_filter import validate_config, save_config, FILTER_NAMES
         gid = _autofilter_gid()
         if not gid:
             return jsonify({'ok': False, 'error': 'Сервер не выбран'}), 503
         data = request.get_json(silent=True) or {}
+        # Страховка от сброса настроек: POST без НИ ОДНОГО известного
+        # ключа (мусор/частичный запрос) раньше молча сохранял ДЕФОЛТЫ
+        # поверх боевого конфига. Теперь отклоняем.
+        if not any(k in data for k in FILTER_NAMES):
+            return jsonify({'ok': False,
+                            'error': 'Конфиг пуст: отклонено, чтобы не сбросить настройки'}), 400
         cfg, errors = validate_config(data)
         if errors:
             return jsonify({'ok': False, 'errors': errors}), 400

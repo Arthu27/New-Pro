@@ -35,7 +35,7 @@ def register(ctx):
                     return jsonify (json .load (fp ))
             except Exception as e :
                 print (f'[WEB][ERR] welcome-settings GET error: {e}')
-                return jsonify ({'error':str (e )})
+                return jsonify ({'error':str (e )}),500
 
                 # POST request
         try :
@@ -50,7 +50,7 @@ def register(ctx):
 
             t =data .pop ('type',None )
             if not t :
-                return jsonify ({'error':'Тип заметок не указан'})
+                return jsonify ({'error':'Тип заметок не указан'}),400
 
             settings [t ]=data 
             with open (f ,'w',encoding ='utf-8')as fp :
@@ -59,7 +59,7 @@ def register(ctx):
             return jsonify ({'success':True })
         except Exception as e :
             print (f'[WEB][ERR] welcome-settings POST error: {e}')
-            return jsonify ({'error':str (e )})
+            return jsonify ({'error':str (e )}),500
 
 
 
