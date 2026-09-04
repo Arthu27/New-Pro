@@ -261,6 +261,34 @@ check(d.get('success') is True and d.get('needs_code') is True,
       'новое устройство → probe требует код', f'→ {d}')
 check(d.get('role') == 'mod', 'probe подтвердил живую роль')
 
+print('== 11а. Возраст аккаунта реально вычисляется (регресс «Неизвестно») ==')
+# в сценарии 8 чек-лист уже получен: проверяем строку возраста
+r = A.app.test_client().post('/api/discord-check', json={'query': 'user555'})
+d = r.get_json(silent=True) or {}
+_age = next((t for t in d.get('tests', []) if t.get('name') == 'Возраст аккаунта'), {})
+check(_age.get('status') == 'ok' and 'Неизвестно' not in (_age.get('detail') or ''),
+      'возраст аккаунта вычислен, а не «Неизвестно»', f'→ {_age}')
+check(('дн.' in (_age.get('detail') or '')) or ('мес.' in (_age.get('detail') or '')),
+      'возраст показан по-человечески', f'→ {_age.get("detail")}')
+
+print('== 11б. Ник не в кэше бота — ищем в members.json, проверяем fetch ==')
+_empty = NS(id=777, owner_id=42, name='Hakumo Test', get_member=lambda uid: None, members=[])
+_saved_bot = A.bot_instance
+_saved_res = A._resolve_guild_member
+A.bot_instance = NS(guilds=[_empty], get_guild=lambda gid: _empty if gid == 777 else None,
+                    loop=loop, latency=0.05, fetch_user=fake_fetch)
+A._resolve_guild_member = lambda g, uid: GUILD_MEMBERS.get(uid)  # «fetch_member»
+getattr(A.api_discord_check, '_pin_sends', {}).pop('555', None)  # сброс лимита
+try:
+    r = A.app.test_client().post('/api/discord-check', json={'query': 'user555'})
+    d = r.get_json(silent=True) or {}
+    check(d.get('success') is True and d.get('discord_id') == '555',
+          'ник найден через members.json + fetch, бот-кэш пустой не мешает',
+          f'→ {d.get("success")} {d.get("error")}')
+finally:
+    A.bot_instance = _saved_bot
+    A._resolve_guild_member = _saved_res
+
 print('== 11. Страницы входа/регистрации ==')
 r = A.app.test_client().get('/login')
 page = r.get_data(as_text=True)

@@ -4065,6 +4065,23 @@ def api_discord_check ():
                         user =m 
                         discord_id =str (m .id )
                         break
+            # Кэш участников может быть ПУСТ (у бота выключен intents.members) —
+            # тогда по нику ищем среди ЗАРЕГИСТРИРОВАННЫХ (members.json), а
+            # членство на сервере проверяем прямым fetch_member по ID.
+            if user is None :
+                try :
+                    _members_file ='data/members.json'
+                    if os .path .exists (_members_file ):
+                        with open (_members_file ,'r',encoding ='utf-8')as _mf :
+                            _members =json .load (_mf )
+                        _did =_resolve_member_key (_members ,query )
+                        if _did and panel_guild is not None :
+                            _m =_resolve_guild_member (panel_guild ,int (_did ))
+                            if _m is not None and not getattr (_m ,'bot',False ):
+                                user =_m
+                                discord_id =str (_did)
+                except Exception as _nfx :
+                    _log .debug ('discord-check nick fallback: %s',_nfx)
         if not user or not discord_id :
             tests .append ({'name':'Поиск пользователя','status':'fail','detail':'Не найден на сервере'})
             return jsonify ({'success':False ,'tests':tests ,'error':'Пользователь не найден на основном сервере. Вход в панель доступен только участникам этого сервера.'})
@@ -4101,12 +4118,18 @@ def api_discord_check ():
         tests .append ({'name':'Проверка на бота','status':'warn','detail':'Ошибка проверки'})
     try :
         created =discord .utils .snowflake_time (int (discord_id ))
-        age_days =(datetime.now(timezone.utc).replace(tzinfo=None)-created ).days 
+        # discord.py 2.7+ возвращает datetime С таймзоной (раньше был наивный):
+        # смешение наивного и aware давало TypeError — и у КАЖДОГО
+        # показывалось «Неизвестно». Приводим к UTC явно.
+        if created .tzinfo is None :
+            created =created .replace (tzinfo =timezone .utc )
+        age_days =(datetime .now (timezone .utc )-created ) .days 
         if age_days <7 :
-            tests .append ({'name':'Возраст аккаунта','status':'fail','detail':f'{age_days} дн. (слишком новый)'})
+            tests .append ({'name':'Возраст аккаунта','status':'fail','detail':f'{age_days} дн. — слишком новый'})
             return jsonify ({'success':False ,'tests':tests ,'error':'Вход запрещен: аккаунт зарегистрирован менее 7 дней назад.'})
-        else :
-            tests .append ({'name':'Возраст аккаунта','status':'ok','detail':f'{age_days} дн.'})
+        _years ,_rest =divmod (age_days ,365 )
+        _age_txt =(f'{_years} г. {_rest //30 } мес.' if _years else f'{age_days} дн.')
+        tests .append ({'name':'Возраст аккаунта','status':'ok','detail':_age_txt})
     except Exception:
         tests .append ({'name':'Возраст аккаунта','status':'warn','detail':'Неизвестно'})
     # ЖИВАЯ проверка роли ДО отправки PIN: без роли модератора код даже

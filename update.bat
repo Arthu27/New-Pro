@@ -123,9 +123,29 @@ if /i "%~1"=="/norestart" (
 )
 
 echo [5/5] Perezapuskayu bota...
+rem Snachala zakryvaem OKNA start_bot.bat: ikh cikl avtoperezapuska
+rem voskreshal python srazu posle nashego starta - poluchalos DVA bota,
+rem kotorye dralis za odin shlyuz Discord (ot syuda "restart ne vishel").
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process -Filter \"Name='cmd.exe'\" | Where-Object { $_.CommandLine -match 'start_bot\.bat' } | ForEach-Object { Write-Host ('  Zakryvayu staroe okno bota, PID ' + $_.ProcessId); Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" | Where-Object { $_.CommandLine -match 'main\.py' } | ForEach-Object { Write-Host ('  Ostanavlivayu PID ' + $_.ProcessId); Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
 timeout /t 2 /nobreak >nul
-start "Hakumo Bot" cmd /k python main.py
+if exist start_bot.bat (
+    start "Hakumo Bot" cmd /k start_bot.bat
+) else (
+    start "Hakumo Bot" cmd /k python main.py
+)
+echo   Zhdu podema processa - do 30 sekund...
+set /a TRIES=0
+:waitup
+timeout /t 3 /nobreak >nul
+set /a TRIES+=1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" | Where-Object { $_.CommandLine -match 'main\.py' }) { exit 0 } else { exit 1 }" >nul 2>&1
+if not errorlevel 1 goto upok
+if %TRIES% LSS 10 goto waitup
+echo   [VNIMANIE] Process bota NE podnyalsya. Smotri okno bota i logs\start_console.log
+goto :ok
+:upok
+echo   [OK] Bot podnyalsya - rabotaet v novom okne. Log: logs\start_console.log
 
 :ok
 echo.

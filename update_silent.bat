@@ -91,11 +91,39 @@ if exist start_bot.bat (
     start "Hakumo Bot" cmd /k python main.py
 )
 
+rem --- 5. Проверяем, что бот реально поднялся -----------------------
+rem Окно бота выглядит «тихим»: весь вывод python пишет в
+rem logs\start_console.log. Дожидаемся процесса main.py и честно
+rem докладываем результат, а при неудаче показываем хвост лога.
+echo Проверяю, что процесс бота поднялся - до 30 секунд...
+set /a TRIES=0
+:waitbot
+timeout /t 3 /nobreak >nul
+set /a TRIES+=1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-CimInstance Win32_Process -Filter \"Name='python.exe' or Name='pythonw.exe'\" | Where-Object { $_.CommandLine -match 'main\.py' }) { exit 0 } else { exit 1 }" >nul 2>&1
+if not errorlevel 1 goto botup
+if %TRIES% LSS 10 goto waitbot
 echo.
+echo ВНИМАНИЕ: процесс бота НЕ поднялся за 30 секунд.
+if exist "logs\start_console.log" (
+    echo Последние строки logs\start_console.log:
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-Content 'logs\start_console.log' -Tail 12"
+    echo.
+    echo Частые причины: не долетела зависимость из requirements,
+    echo неверный TOKEN в .env или занятый порт панели.
+    set "FAILED=бот не поднялся — смотрите лог выше"
+    goto final
+)
+:botup
+echo.
+echo БОТ ПОДНЯТ и работает. Окно бота может выглядеть тихо:
+echo весь вывод пишется в logs\start_console.log, а не на экран.
+
+echo.
+:final
 if not "%FAILED%"=="" (
     echo ВНИМАНИЕ: %FAILED%.
-    echo Бот всё равно запущен на том коде, что есть сейчас.
-    echo Это окно останется открытым - прочитайте ошибку выше.
+    echo Подробности - в сообщениях выше.
     exit /b 1
 )
 echo Готово - бот поднимается в новом окне и отчитается в Discord.

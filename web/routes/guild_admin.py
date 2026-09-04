@@ -691,23 +691,31 @@ def register(ctx):
     @app .route ('/api/roles')
     @login_required 
     def api_roles_default ():
-        if not MAIN_GUILD_ID :
+        import web .app as _app
+        _gid =MAIN_GUILD_ID or ('777'if _app ._demo_mode ()else 0 )
+        if not _gid :
             return jsonify ({'error':'Сервер не выбран (задайте MAIN_GUILD_ID в .env)'}),503 
-        return api_guild_roles (str (MAIN_GUILD_ID ))
+        return api_guild_roles (str (_gid ))
 
 
     @app .route ('/api/channels')
     @login_required 
     def api_channels_default ():
-        if not MAIN_GUILD_ID :
+        # Демо-витрина без MAIN_GUILD_ID показывает демо-сервер 777, а не 503:
+        # пикеры каналов на страницах настроек не должны пустовать.
+        import web .app as _app
+        _gid =MAIN_GUILD_ID or ('777'if _app ._demo_mode ()else 0 )
+        if not _gid :
             return jsonify ({'error':'Сервер не выбран (задайте MAIN_GUILD_ID в .env)'}),503 
-        return api_guild_channels (str (MAIN_GUILD_ID ))
+        return api_guild_channels (str (_gid ))
 
 
     @app .route ('/api/members')
     @login_required 
     def api_members_default ():
-        if not MAIN_GUILD_ID :
+        import web .app as _app
+        _gid =MAIN_GUILD_ID or ('777'if _app ._demo_mode ()else 0 )
+        if not _gid :
             return jsonify ({'error':'Сервер не выбран (задайте MAIN_GUILD_ID в .env)'}),503 
         from web .app import api_guild_members 
         return api_guild_members (str (MAIN_GUILD_ID ))
