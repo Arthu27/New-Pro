@@ -143,7 +143,7 @@ check(not ok and '404' in err and 'GITHUB_TOKEN' in err,
       'ошибка объясняет: репозиторий приватный → добавьте GITHUB_TOKEN',
       f'→ {err}')
 
-print('== 401/403 с токеном — понятная подсказка про доступы ==')
+print('== 404/403 с токеном — понятные подсказки ==')
 os.environ['GITHUB_TOKEN'] = 'bad-token'
 sys.modules['requests'] = types.SimpleNamespace(
     get=lambda *a, **k: _FakeResp(status=403))
@@ -153,7 +153,24 @@ finally:
     sys.modules['requests'] = _real
 check(not ok and '403' in err and 'не подходит' in err,
       'битый токен объясняется без намёков', f'→ {err}')
+sys.modules['requests'] = types.SimpleNamespace(
+    get=lambda *a, **k: _FakeResp(status=404))
+try:
+    ok, err, _ = SU.download_zip(_TMP)
+finally:
+    sys.modules['requests'] = _real
+check(not ok and '404' in err and 'Contents: Read-only' in err,
+      '404 при заданном токене: подсказка проверить права токена', f'→ {err}')
+check('источник:' in err and 'токен задан' in err,
+      'в ошибке виден источник и наличие токена', f'→ {err}')
 os.environ.pop('GITHUB_TOKEN')
+sys.modules['requests'] = types.SimpleNamespace(
+    get=lambda *a, **k: _FakeResp(status=404))
+try:
+    ok, err, _ = SU.download_zip(_TMP)
+finally:
+    sys.modules['requests'] = _real
+check('токен НЕ задан' in err, 'без токена ошибка честно говорит: токен НЕ задан')
 
 # ─── демон auto_update.py — тот же выбор URL ────────────────────────────
 print('== Демон auto_update (тот же принцип) ==')

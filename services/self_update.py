@@ -423,6 +423,11 @@ def download_zip(dest_dir):
     else:
         url = zip_url()
         headers = None
+    # источник и «есть ли токен» попадают в текст ошибки — сразу видно,
+    # откуда качали и почему GitHub ответил отказом
+    _repo, _branch = _source()
+    _token_note = 'токен задан' if token else 'токен НЕ задан'
+    _src_suffix = f' [источник: {_repo} @ {_branch}; {_token_note}]'
     path = os.path.join(dest_dir, 'update.zip')
     total = 0
     try:
@@ -436,13 +441,17 @@ def download_zip(dest_dir):
                     hint = (' Репозиторий приватный? Добавьте GITHUB_TOKEN '
                             '(или UPDATE_TOKEN) с доступом на чтение кода '
                             'в .env и повторите /update.')
+                elif token and r.status_code == 404:
+                    hint = (' Токен задан, но GitHub отвечает 404: проверьте, '
+                            'что у токена есть права Contents: Read-only именно '
+                            'на этот репозиторий, и что ветка существует.')
                 elif token and r.status_code in (401, 403):
                     hint = (' GITHUB_TOKEN не подходит: нужен токен с '
                             'доступом на чтение содержимого репозитория.')
                 else:
                     hint = ''
                 return False, (f'GitHub ответил {r.status_code} — репозиторий '
-                               f'или ветка недоступны.{hint}'), None
+                               f'или ветка недоступны.{hint}{_src_suffix}'), None
             with open(path, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=1024 * 256):
                     if not chunk:
