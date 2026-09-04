@@ -151,7 +151,7 @@ with c2.session_transaction() as s:
 print('== роль есть только у настоящих прав: uye не пускаем ==')
 r = client.post('/login', data={'username': str(UID_UEYE), 'password': 'bobpass111'})
 html = r.get_data(as_text=True)
-check(r.status_code == 200 and 'auth-error' in html and 'Доступа к панели нет' in html,
+check(r.status_code == 200 and 'notice err' in html and 'Доступа к панели нет' in html,
       'uye с ВЕРНЫМ паролем -> «Доступа к панели нет»', f'→ {r.status_code}')
 
 print('== неверный пароль ==')

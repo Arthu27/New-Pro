@@ -7,519 +7,126 @@
   <title>Вход — Hakumo</title>
   <link rel="icon" href="/static/favicon.ico">
   <style>
-    /* П.5 — критическая сцена: тёмный фон ДО прихода style.css,
-       первый кадр никогда не белый. */
-    html { background: #0f1013; color-scheme: dark; }
+    /* Критическая сцена: тёмный фон ДО прихода auth.css — первый кадр не белый. */
+    html { background: #05060a; color-scheme: dark; }
     body { background: transparent; margin: 0; }
   </style>
-<!-- Критические шрифты — preload-ом: без него браузер узнаёт о них,
-         только разобрав fonts.css и all.subset.css, и они встают в конец
-         цепочки HTML → CSS → woff2 (Lighthouse: critical request chains). -->
 <link rel="preload" href="/static/vendor/fontawesome/webfonts/fa-solid-900.subset.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/static/vendor/fonts/unbounded-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/vendor/fonts/fonts.css">
 <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.subset.css">
-<link rel="stylesheet" href="/static/style.css?v={{ static_v('style.css') }}">
-  <style>
-    /* ═══ ВХОД — единая центрированная карточка ═══
-       Логин: Discord ID или ник (@user) + пароль. Пароль — у всех
-       (владелец и участники), роль проверяется живьём из Discord.
-       «Забыли пароль?» — код в ЛС Discord (сброс пароля). */
-    :root {
-      --bg: #05060a;
-      --surface: #0e1120;
-      --surface2: #151a2e;
-      --line: rgba(255,255,255,.08);
-      --line2: rgba(255,255,255,.14);
-      --text: #eef1fa;
-      --text2: #a6aec9;
-      --text3: #6f7896;
-      --ac: #4f46e5;
-      --ac2: #7c3aed;
-      --ac3: #22d3ee;
-      --ac-grad: linear-gradient(135deg, #4f46e5, #7c3aed 60%, #22d3ee);
-      --ac-soft: rgba(99, 102, 241, .16);
-      --ok: #4ade80;
-      --err: #f87171;
-      --warn: #fbbf24;
-      --ease: cubic-bezier(.34, 1.3, .64, 1);
-    }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', -apple-system, sans-serif;
-      display: flex; flex-direction: column;
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
-    }
-
-    /* ── Фоновые слои ── */
-    .bg-fx { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
-    .bg-fx .glow {
-      position: absolute; border-radius: 50%;
-      filter: blur(110px);
-    }
-    .glow-a {
-      position: absolute; width: 560px; height: 560px; left: -180px; top: -220px;
-      background: radial-gradient(circle, rgba(79, 70, 229, .30), transparent 65%);
-      animation: driftA 16s ease-in-out infinite alternate;
-    }
-    .glow-b {
-      position: absolute; width: 480px; height: 480px; right: -160px; bottom: -200px;
-      background: radial-gradient(circle, rgba(34, 211, 238, .14), transparent 65%);
-      animation: driftB 18s ease-in-out infinite alternate;
-    }
-    .glow-c {
-      position: absolute; width: 420px; height: 420px; left: 38%; top: -260px;
-      background: radial-gradient(circle, rgba(124, 58, 237, .22), transparent 65%);
-      animation: driftA 22s ease-in-out infinite alternate-reverse;
-    }
-    @keyframes driftA { from { transform: translate(0, 0) scale(1); } to { transform: translate(46px, 34px) scale(1.1); } }
-    @keyframes driftB { from { transform: translate(0, 0) scale(1); } to { transform: translate(-40px, -28px) scale(1.07); } }
-    .bg-grid {
-      position: fixed; inset: 0; pointer-events: none; z-index: 0;
-      background-image:
-        linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
-      background-size: 46px 46px;
-      mask-image: radial-gradient(ellipse 75% 60% at 50% 42%, #000 25%, transparent 78%);
-      -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 42%, #000 25%, transparent 78%);
-    }
-
-    /* ── Сцена ── */
-    .auth-page {
-      position: relative; z-index: 10;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      flex: 1;
-      padding: 64px 18px 40px;
-    }
-
-    /* ── Медальон дракона ── */
-    .emblem {
-      position: relative;
-      width: 96px; height: 96px;
-      margin: 0 auto 18px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .emblem .ring {
-      position: absolute; inset: 0; border-radius: 50%;
-      border: 1px solid rgba(124, 58, 237, .45);
-      animation: spin 22s linear infinite;
-    }
-    .emblem .ring::before,
-    .emblem .ring::after {
-      content: ''; position: absolute;
-      width: 9px; height: 9px; border-radius: 50%;
-      background: var(--ac3);
-      box-shadow: 0 0 12px rgba(34, 211, 238, .8);
-      top: -5px; left: calc(50% - 4px);
-    }
-    .emblem .ring::after { top: auto; bottom: -5px; background: var(--ac2); box-shadow: 0 0 12px rgba(124,58,237,.8); }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .emblem .tile {
-      width: 72px; height: 72px; border-radius: 22px;
-      background: radial-gradient(circle at 50% 32%, #1c2240, #0a0d1c);
-      border: 1px solid rgba(255,255,255,.12);
-      box-shadow: 0 18px 44px -14px rgba(79, 70, 229, .65), inset 0 1px 0 rgba(255,255,255,.09);
-      display: flex; align-items: center; justify-content: center;
-      overflow: hidden;
-    }
-    .emblem .tile::after {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(115deg, transparent 32%, rgba(255,255,255,.18) 46%, transparent 60%);
-      transform: translateX(-120%);
-      animation: gloss 6s ease-in-out infinite;
-      border-radius: 22px;
-    }
-    @keyframes gloss { 0%, 58% { transform: translateX(-120%); } 92%, 100% { transform: translateX(120%); } }
-    .emblem img { width: 74%; height: 74%; object-fit: contain; position: relative; z-index: 1; animation: breath 5s ease-in-out infinite; }
-    @keyframes breath { 0%, 100% { transform: scale(1); } 44% { transform: scale(1.05); } 58% { transform: scale(1.05); } }
-
-    /* ── Карточка ── */
-    .auth-card {
-      width: min(440px, 100%);
-      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 34%), rgba(13, 16, 29, .92);
-      border: 1px solid var(--line);
-      border-radius: 26px;
-      padding: 30px 32px 24px;
-      box-shadow: 0 34px 80px -32px rgba(0,0,0,.85);
-      position: relative;
-    }
-    .auth-card::after {
-      content: ''; position: absolute; inset: 0; border-radius: inherit;
-      padding: 1px;
-      background: conic-gradient(from 210deg, transparent 0deg, rgba(124, 58, 237, .5) 70deg, rgba(34, 211, 238, .45) 130deg, transparent 210deg);
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      opacity: 0; transition: opacity .35s; pointer-events: none;
-    }
-    .auth-card:hover::after { opacity: 1; }
-
-    .auth-card h1 {
-      margin: 0 0 6px;
-      text-align: center;
-      font-family: var(--font-display, 'Unbounded', sans-serif);
-      font-size: 22px; font-weight: 800; letter-spacing: .01em;
-    }
-    .auth-sub {
-      text-align: center;
-      font-size: 13px; color: var(--text2);
-      margin: 0 0 22px; line-height: 1.5;
-    }
-
-    /* ── Плашки ── */
-    .auth-ok, .auth-error {
-      display: none;
-      align-items: flex-start; gap: 9px;
-      border-radius: 12px; padding: 10px 13px;
-      font-size: 12.5px; line-height: 1.5;
-      margin-bottom: 16px;
-    }
-    .auth-ok {
-      background: rgba(74, 222, 128, .09);
-      border: 1px solid rgba(74, 222, 128, .28);
-      color: #bbf7d0;
-    }
-    .auth-ok b { font-weight: 700; }
-    .auth-error {
-      background: rgba(248, 113, 113, .09);
-      border: 1px solid rgba(248, 113, 113, .26);
-      color: #fecaca;
-    }
-    .auth-ok i { color: var(--ok); margin-top: 2px; }
-    .auth-error i { color: var(--err); margin-top: 2px; }
-    .auth-ok.show, .auth-error.show, .auth-ok[style*="display:block"], .auth-error[style*="display:block"] { display: flex; }
-    .auth-error.shake { animation: shake .4s ease; }
-    @keyframes shake {
-      10%, 90% { transform: translateX(-1px); }
-      20%, 80% { transform: translateX(2px); }
-      30%, 50%, 70% { transform: translateX(-3px); }
-      40%, 60% { transform: translateX(3px); }
-    }
-
-    /* ── Поля с плавающими лейблами ── */
-    .field { position: relative; margin-bottom: 15px; }
-    .field .lbl {
-      position: absolute; left: 14px; top: 15px; z-index: 2;
-      font-size: 13.5px; color: var(--text3);
-      padding: 2px 8px; border-radius: 7px;
-      pointer-events: none; white-space: nowrap;
-      transition: transform .18s var(--ease), font-size .18s, color .18s, background .18s;
-    }
-    .field.filled .lbl, .field.focused .lbl {
-      transform: translateY(-23px);
-      font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
-      color: var(--ac3);
-      background: rgba(10, 13, 28, .94);
-      border: 1px solid var(--line);
-    }
-    .field input {
-      width: 100%; height: 52px;
-      background: rgba(255,255,255,.035);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 0 46px 0 44px;
-      color: var(--text);
-      font: inherit; font-size: 14.5px;
-      outline: none;
-      transition: border-color .18s, background .18s, box-shadow .18s;
-    }
-    .field input:focus {
-      border-color: rgba(124, 58, 237, .65);
-      background: rgba(255,255,255,.05);
-      box-shadow: 0 0 0 4px rgba(99, 102, 241, .16);
-    }
-    .field .f-ico {
-      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
-      color: var(--text3); font-size: 15px; z-index: 1;
-      transition: color .18s;
-    }
-    .field.focused .f-ico { color: var(--ac3); }
-    .field .eye {
-      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-      width: 36px; height: 36px; border: none; border-radius: 10px;
-      background: transparent; color: var(--text3); cursor: pointer;
-      font-size: 14px; transition: color .15s, background .15s;
-    }
-    .field .eye:hover { color: var(--text); background: rgba(255,255,255,.06); }
-    .cap-hint {
-      position: absolute; right: 52px; top: 50%; transform: translateY(-50%);
-      font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--warn);
-      opacity: 0; pointer-events: none;
-      text-transform: uppercase;
-    }
-    .field-hint {
-      font-size: 11.5px; color: var(--text3);
-      margin: -6px 0 14px 4px; line-height: 1.45;
-    }
-    .field-hint b { color: var(--text2); font-weight: 600; }
-
-    /* ── Автоподсказка (поиск по нику) ── */
-    .autocomplete-popup {
-      position: absolute; left: 0; right: 0; top: calc(100% - 4px);
-      z-index: 40; display: none;
-      background: #12162a;
-      border: 1px solid var(--line2);
-      border-radius: 14px;
-      box-shadow: 0 24px 50px -18px rgba(0,0,0,.8);
-      overflow: hidden;
-      padding: 6px;
-    }
-    .autocomplete-popup.open { display: block; }
-    .autocomplete-popup .item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 8px 10px; border-radius: 10px;
-      cursor: pointer;
-    }
-    .autocomplete-popup .item:hover, .autocomplete-popup .item.hl { background: rgba(255,255,255,.06); }
-    .autocomplete-popup .a-ava {
-      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, var(--ac), var(--ac2));
-      font-weight: 800; font-size: 14px; color: #fff; overflow: hidden;
-    }
-    .autocomplete-popup .a-ava img { width: 100%; height: 100%; object-fit: cover; }
-    .autocomplete-popup .a-copy { min-width: 0; }
-    .autocomplete-popup .a-copy b { display: block; font-size: 13px; font-weight: 600; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
-    .autocomplete-popup .a-copy small { color: var(--text3); font-size: 10.5px; }
-
-    /* ── Кнопки ── */
-    .auth-btn {
-      width: 100%; height: 52px;
-      background: var(--ac-grad);
-      color: #fff;
-      border: none; border-radius: 14px;
-      font-size: 14.5px; font-weight: 800; letter-spacing: .02em;
-      font-family: inherit; cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-      box-shadow: 0 12px 28px -10px rgba(124, 58, 237, .7), inset 0 1px 0 rgba(255,255,255,.28);
-      margin-top: 4px;
-      transition: filter .18s, transform .1s, box-shadow .18s;
-    }
-    .auth-btn:hover { filter: brightness(1.1); }
-    .auth-btn:active { transform: translateY(1px) scale(.995); }
-    .auth-btn:disabled { opacity: .6; cursor: default; filter: none; }
-    .auth-btn .spin { animation: rot 1s linear infinite; }
-    @keyframes rot { to { transform: rotate(360deg); } }
-    .ghost-btn {
-      width: 100%; height: 46px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid var(--line);
-      color: var(--text2);
-      border-radius: 13px;
-      font: inherit; font-size: 13px; font-weight: 700;
-      cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      transition: color .15s, border-color .15s, background .15s;
-    }
-    .ghost-btn:hover { color: var(--text); border-color: var(--line2); background: rgba(255,255,255,.07); }
-
-    /* ── Второстепенное ── */
-    .auth-foot {
-      margin-top: 18px;
-      text-align: center;
-      font-size: 12px; color: var(--text3); line-height: 1.9;
-    }
-    .auth-foot a {
-      color: #a5b4fc; text-decoration: none; font-weight: 600;
-      transition: color .15s;
-    }
-    .auth-foot a:hover { color: #c7d2fe; text-decoration: underline; }
-    .auth-foot .dot-sep { opacity: .5; margin: 0 4px; }
-    .auth-status {
-      display: inline-flex; align-items: center; gap: 8px;
-      margin-top: 18px;
-      font-size: 12px; color: var(--text3);
-    }
-    .auth-status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px rgba(74,222,128,.7); }
-    .auth-status .dot.off { background: var(--text3); box-shadow: none; }
-
-    .page-foot {
-      margin-top: auto;
-      padding: 18px 0 22px;
-      text-align: center;
-      font-size: 11px; color: var(--text3); letter-spacing: .06em;
-    }
-
-    /* ── Блок «Забыли пароль» ── */
-    .forgot-row { display: flex; justify-content: flex-end; margin: -2px 0 12px; }
-    .forgot-link {
-      background: none; border: none; padding: 2px 4px;
-      font: inherit; font-size: 12.5px; font-weight: 600;
-      color: #a5b4fc; cursor: pointer;
-      transition: color .15s;
-    }
-    .forgot-link:hover { color: #c7d2fe; text-decoration: underline; }
-    .fr-title {
-      display: flex; align-items: center; gap: 8px;
-      font-weight: 800; font-size: 14px; margin: 0 0 4px;
-    }
-    .fr-title .n {
-      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
-      background: var(--ac-soft); color: #a5b4fc;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 800;
-    }
-    .fr-sub { font-size: 12px; color: var(--text2); margin: 0 0 14px; line-height: 1.5; }
-    .fr-err { font-size: 12px; color: var(--err); margin: 8px 2px 0; min-height: 0; }
-    .fr-ok { font-size: 12px; color: #bbf7d0; margin: 8px 2px 0; line-height: 1.5; }
-    .fr-hint { font-size: 11.5px; color: var(--text3); margin: 8px 2px 0; line-height: 1.5; }
-    .pin-inline { letter-spacing: .3em; font-weight: 800; font-size: 15px; text-align: center; padding: 0 16px; }
-
-    /* ── Оверлей «Проверяем доступ» ── */
-    .auth-check {
-      position: fixed; inset: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(4, 5, 10, .86);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      padding: 20px;
-    }
-    .auth-check[hidden] { display: none; }
-    .auth-check-card {
-      width: min(400px, 100%);
-      background: #0d1020;
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 30px 28px 24px;
-      text-align: center;
-      box-shadow: 0 40px 90px -30px rgba(0,0,0,.9);
-    }
-    .auth-check-card .logo { width: 58px; height: 58px; margin: 0 auto 14px; }
-    .auth-check-card .logo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 14px rgba(124,58,237,.5)); }
-    .auth-check-card h3 { margin: 0 0 6px; font-family: var(--font-display, 'Unbounded', sans-serif); font-size: 17px; font-weight: 800; }
-    .auth-check-card .sub { margin: 0 0 18px; font-size: 12.5px; color: var(--text2); }
-    .auth-steps { list-style: none; margin: 0; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 4px; }
-    .auth-steps li {
-      display: flex; align-items: center; gap: 12px;
-      padding: 9px 10px; border-radius: 12px;
-      font-size: 13px; color: var(--text3);
-    }
-    .auth-steps li.on { color: var(--text); background: rgba(255,255,255,.03); }
-    .auth-steps li.done { color: var(--text2); }
-    .auth-steps li.err { color: var(--err); }
-    .auth-steps .s-ico {
-      width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(255,255,255,.05);
-      font-size: 11px;
-    }
-    .auth-steps li.on .s-ico { background: var(--ac-soft); color: #a5b4fc; }
-    .auth-steps li.done .s-ico { background: rgba(74,222,128,.15); color: var(--ok); }
-    .auth-steps li.err .s-ico { background: rgba(248,113,113,.15); color: var(--err); }
-    .auth-check-err { display: none; margin-top: 14px; font-size: 12.5px; color: #fecaca; background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.22); border-radius: 11px; padding: 9px 12px; line-height: 1.5; text-align: left; }
-    .auth-check-err.show { display: block; }
-    .retry { display: none; margin: 16px auto 0; }
-    .retry.show { display: inline-flex; }
-    .retry { align-items: center; justify-content: center; gap: 8px; background: none; border: 1px solid var(--line2); color: var(--text2); font: inherit; font-size: 12.5px; font-weight: 700; border-radius: 11px; padding: 9px 16px; cursor: pointer; transition: color .15s, border-color .15s; }
-    .retry:hover { color: var(--text); border-color: var(--text3); }
-
-    @media (max-width: 520px) {
-      .auth-page { padding: 40px 14px 26px; }
-      .auth-card { padding: 26px 20px 20px; }
-      .emblem { transform: scale(.9); margin-bottom: 12px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .glow-a, .glow-b, .glow-c, .emblem .ring, .emblem .tile::after, .emblem img { animation: none !important; }
-      .auth-btn .spin { animation-duration: 2s; }
-    }
-  </style>
+<link rel="stylesheet" href="/static/auth.css?v={{ static_v('auth.css') }}">
 </head>
 <body>
-  <div class="bg-fx" aria-hidden="true">
-    <i class="glow glow-a"></i><i class="glow glow-b"></i><i class="glow glow-c"></i>
-  </div>
   <div class="bg-grid" aria-hidden="true"></div>
 
-  <main class="auth-page">
-    <div class="emblem" aria-hidden="true">
-      <span class="ring"></span>
-      <span class="tile"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></span>
-    </div>
+  <main class="auth-wrap">
+    <header class="brand">
+      <div class="logo"><img src="/static/brand/emblem-dragon.webp" srcset="/static/brand/emblem-dragon-128.webp 1x, /static/brand/emblem-dragon.webp 2x" alt=""></div>
+      <h1>Hakumo</h1>
+      <p>Панель управления сервером</p>
+    </header>
 
-    <section class="auth-card" aria-label="Вход в панель">
-      <h1>Вход</h1>
-      <p class="auth-sub">Панель управления сервером Hakumo</p>
+    <section class="card" aria-label="Вход в панель">
+      <nav class="tabs" aria-label="Разделы авторизации">
+        <a class="tab active" href="/login" aria-current="page">Вход</a>
+        <a class="tab" href="/register">Создать доступ</a>
+      </nav>
 
-      {% if request.args.get('success') %}
-      <div class="auth-ok show" id="regOkNote" role="status"><i class="fas fa-circle-check"></i><span>Доступ создан! Теперь войди: логин — твой <b>Discord ID или ник</b>, пароль — тот, что ты указал при регистрации.</span></div>
-      {% endif %}
+      <div class="card-body">
+        {% if request.args.get('success') %}
+        <div class="notice ok show" id="regOkNote" role="status"><i class="fas fa-circle-check"></i><span>Доступ создан! Теперь войди: логин — твой <b>Discord ID или ник</b>, пароль — тот, что ты указал при регистрации.</span></div>
+        {% endif %}
 
-      <!-- Форма входа -->
-      <div id="passPane">
-        <div class="auth-error" id="passError" {% if error %}style="display:block"{% endif %} role="alert"><i class="fas fa-circle-exclamation"></i><span>{{ error|e }}</span></div>
-        <form method="POST" action="/login" autocomplete="off" id="passForm">
-          <div class="field has-ico" data-float>
-            <label class="lbl" for="passUsername">Discord ID или ник</label>
-            <i class="fab fa-discord f-ico" aria-hidden="true"></i>
-            <input type="text" name="username" id="passUsername" placeholder="Discord ID или ник" required autocomplete="username" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Discord ID или ник">
-            <div class="autocomplete-popup" id="passPopup"></div>
-          </div>
-          <div class="field-hint">Например <b>@alex</b> или цифровой <b>Discord ID</b> — кто ты на сервере.</div>
-          <div class="field has-ico has-eye" data-float>
-            <label class="lbl" for="passPassword">Пароль</label>
-            <i class="fas fa-lock f-ico" aria-hidden="true"></i>
-            <input type="password" name="password" id="passPassword" placeholder="Пароль" required autocomplete="current-password" aria-label="Пароль">
-            <button type="button" class="eye" id="passEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
-            <span class="cap-hint" id="capHint">Caps Lock включён</span>
-          </div>
-          <div class="forgot-row">
-            <button type="button" class="forgot-link" id="forgotToggle"><i class="fas fa-key" style="margin-right:4px"></i>Забыл пароль?</button>
-          </div>
-          <button type="submit" class="auth-btn" id="passSubmitBtn"><i class="fas fa-right-to-bracket"></i> Войти</button>
-        </form>
-      </div>
+        <!-- Вход по паролю -->
+        <div id="passPane">
+          <div class="notice err {% if error %}show{% endif %}" id="passError" {% if error %}style="display:flex"{% endif %} role="alert"><i class="fas fa-circle-exclamation"></i><span>{{ error|e }}</span></div>
+          <form method="POST" action="/login" autocomplete="off" id="passForm" novalidate>
+            <div class="f-group">
+              <label for="passUsername">Discord ID или ник</label>
+              <div class="input-wrap has-ico">
+                <i class="fab fa-discord f-ico" aria-hidden="true"></i>
+                <input type="text" name="username" id="passUsername" placeholder="например @alex или Discord ID" required autocomplete="username" oninput="showSuggest(this, 'passPopup')" onfocus="showSuggest(this, 'passPopup')" aria-label="Discord ID или ник">
+                <div class="autocomplete-popup" id="passPopup"></div>
+              </div>
+              <p class="hint">Кто ты на сервере: найди себя в списке или вставь свой <b>Discord ID</b>.</p>
+            </div>
 
-      <!-- Восстановление пароля: код в ЛС Discord -->
-      <div id="forgotPane" hidden>
-        <p class="fr-title"><span class="n">1</span> Запросить код</p>
-        <p class="fr-sub">Укажи Discord ID или ник — бот пришлёт <b>6 цифр</b> в твои личные сообщения Discord.</p>
-        <div class="fr-err" id="frErr1"></div>
-        <div class="field has-ico" data-float>
-          <label class="lbl" for="frQuery">Discord ID или ник</label>
-          <i class="fab fa-discord f-ico" aria-hidden="true"></i>
-          <input type="text" id="frQuery" placeholder="Discord ID или ник" autocomplete="off" aria-label="Discord ID или ник для восстановления пароля">
-        </div>
-        <button type="button" class="auth-btn" id="frSendBtn"><i class="fas fa-paper-plane"></i> Отправить код</button>
+            <div class="f-group">
+              <label for="passPassword">Пароль</label>
+              <div class="input-wrap has-ico has-eye">
+                <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+                <input type="password" name="password" id="passPassword" placeholder="Твой пароль" required autocomplete="current-password" aria-label="Пароль">
+                <button type="button" class="eye" id="passEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+                <span class="cap-hint" id="capHint">Caps Lock</span>
+              </div>
+            </div>
 
-        <div id="frStep2" hidden>
-          <p class="fr-title" style="margin-top:20px"><span class="n">2</span> Новый пароль</p>
-          <p class="fr-sub">Введи код из Discord и задай новый пароль.</p>
-          <div class="fr-err" id="frErr2"></div>
-          <div class="field" data-float>
-            <label class="lbl" for="frCode">Код из Discord</label>
-            <input type="text" id="frCode" class="pin-inline" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" aria-label="Код из Discord">
-          </div>
-          <div class="field has-ico has-eye" data-float>
-            <label class="lbl" for="frNewPass">Новый пароль</label>
-            <i class="fas fa-lock f-ico" aria-hidden="true"></i>
-            <input type="password" id="frNewPass" placeholder="Новый пароль" minlength="6" autocomplete="new-password" aria-label="Новый пароль">
-            <button type="button" class="eye" id="frNewEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
-          </div>
-          <div class="field has-ico has-eye" data-float>
-            <label class="lbl" for="frNewPass2">Повтори пароль</label>
-            <i class="fas fa-lock f-ico" aria-hidden="true"></i>
-            <input type="password" id="frNewPass2" placeholder="Повтори пароль" minlength="6" autocomplete="new-password" aria-label="Повторите новый пароль">
-            <button type="button" class="eye" id="frNewEye2" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
-          </div>
-          <button type="button" class="auth-btn" id="frSaveBtn"><i class="fas fa-check"></i> Сохранить пароль</button>
-          <div class="fr-hint">После сброса войди с новым паролем на этой же странице.</div>
+            <div class="row-between">
+              <button type="button" class="link-btn" id="forgotToggle"><i class="fas fa-key" style="margin-right:4px"></i>Забыл пароль?</button>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="passSubmitBtn"><i class="fas fa-right-to-bracket"></i> Войти</button>
+          </form>
         </div>
 
-        <button type="button" class="ghost-btn" id="frBackBtn" style="margin-top:16px"><i class="fas fa-arrow-left"></i> Назад ко входу</button>
+        <!-- Восстановление пароля: код в ЛС Discord -->
+        <div id="forgotPane" hidden>
+          <div class="form-head">
+            <h2>Забыли пароль?</h2>
+            <p>Бот пришлёт код в твои личные сообщения Discord.</p>
+          </div>
+          <div class="fp-err" id="frErr1"></div>
+          <div class="f-group">
+            <label for="frQuery">Discord ID или ник</label>
+            <div class="input-wrap has-ico">
+              <i class="fab fa-discord f-ico" aria-hidden="true"></i>
+              <input type="text" id="frQuery" placeholder="например @alex или Discord ID" autocomplete="off" aria-label="Discord ID или ник для восстановления пароля">
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" id="frSendBtn"><i class="fas fa-paper-plane"></i> Отправить код</button>
+
+          <div id="frStep2" hidden>
+            <p class="fp-title" style="margin-top:20px"><span class="n">2</span> Новый пароль</p>
+            <p class="fp-sub">Введи код из Discord и задай новый пароль.</p>
+            <div class="fp-err" id="frErr2"></div>
+            <div class="f-group">
+              <label for="frCode">Код из Discord</label>
+              <div class="input-wrap">
+                <input type="text" id="frCode" class="pin-inline" placeholder="______" maxlength="6" inputmode="numeric" autocomplete="one-time-code" aria-label="Код из Discord">
+              </div>
+            </div>
+            <div class="f-group">
+              <label for="frNewPass">Новый пароль</label>
+              <div class="input-wrap has-ico has-eye">
+                <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+                <input type="password" id="frNewPass" placeholder="Минимум 6 символов" minlength="6" autocomplete="new-password" aria-label="Новый пароль">
+                <button type="button" class="eye" id="frNewEye" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+              </div>
+            </div>
+            <div class="f-group">
+              <label for="frNewPass2">Повтори пароль</label>
+              <div class="input-wrap has-ico has-eye">
+                <i class="fas fa-lock f-ico" aria-hidden="true"></i>
+                <input type="password" id="frNewPass2" placeholder="Ещё раз" minlength="6" autocomplete="new-password" aria-label="Повторите новый пароль">
+                <button type="button" class="eye" id="frNewEye2" aria-label="Показать пароль" aria-pressed="false" title="Показать пароль"><i class="fas fa-eye"></i></button>
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="frSaveBtn"><i class="fas fa-check"></i> Сохранить пароль</button>
+            <p class="fp-hint show" id="frHint">После сброса войди с новым паролем на этой же странице.</p>
+          </div>
+
+          <button type="button" class="btn btn-ghost" id="frBackBtn" style="margin-top:14px"><i class="fas fa-arrow-left"></i> Назад ко входу</button>
+        </div>
       </div>
 
-      <div class="auth-foot" id="footLinks">
-        <span id="authStatus" hidden><span class="dot" id="statusDot"></span><span id="statusText"></span></span>
-        <div>Первый раз здесь? <a href="/register">Создай доступ</a><span class="dot-sep">·</span>Хочешь в команду? <a href="/member-apply">Подай заявку</a></div>
-      </div>
+      <footer class="card-foot">
+        <span>Хочешь в команду? <a href="/member-apply">Подай заявку</a></span>
+        <span class="dot-sep">·</span>
+        <span id="authStatus" class="bot-status" hidden><span class="dot" id="statusDot"></span><span id="statusText"></span></span>
+      </footer>
     </section>
 
     <p class="page-foot">Hakumo — панель управления сервером</p>
@@ -545,7 +152,7 @@
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
-  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;'); }
 
   function showError(boxId, text) {
     var el = $(boxId);
@@ -560,17 +167,6 @@
       el.style.display = 'none';
     }
   }
-
-  /* ── Плавающие лейблы ── */
-  document.querySelectorAll('[data-float]').forEach(function (field) {
-    var inp = field.querySelector('input');
-    if (!inp) return;
-    function sync() { field.classList.toggle('filled', !!inp.value); }
-    inp.addEventListener('input', sync);
-    inp.addEventListener('blur', function () { field.classList.remove('focused'); sync(); });
-    inp.addEventListener('focus', function () { field.classList.add('focused'); });
-    sync();
-  });
 
   /* ── Глазики паролей ── */
   function bindEye(btnId, inpId) {
@@ -620,26 +216,40 @@
             (g === 1 ? 'сервер' : (g >= 2 && g <= 4 ? 'сервера' : 'серверов'));
         } else {
           dot.classList.add('off');
-          txt.textContent = 'Бот офлайн · вход по паролю и роли вернётся, когда бот подключится';
+          txt.textContent = 'Бот офлайн · вход по роли вернётся, когда бот подключится';
         }
       })
       .catch(function () {});
   })();
 
-  /* ── Подсказки «кто ты на сервере» ── */
+  /* ── Подсказки «кто ты на сервере» ──
+     Правила (жалоба владельца: «написал ник, пошёл писать пароль —
+     а участники всё ещё на экране»):
+       * список живёт ТОЛЬКО пока фокус в поле логина: Tab/клик в другое
+         поле сразу его гасит, даже без клика по странице;
+       * запоздавший ответ сервера не «воскрешает» подсказку после того,
+         как фокус ушёл (гонка таймера с вводом пароля). */
   var suggestTimer = null;
+  var suggestSeq = 0;
   window.showSuggest = function (input, popupId) {
     if (window.__lgSuggestBlock) { window.__lgSuggestBlock = false; return; }
     var popup = $(popupId);
     if (!popup) return;
     var q = (input.value || '').trim().replace(/^@/, '');
+    if (document.activeElement !== input) { popup.classList.remove('open'); return; }
     if (/^\d{17,19}$/.test(q)) { popup.classList.remove('open'); return; }
     if (q.length < 2) { popup.classList.remove('open'); return; }
     clearTimeout(suggestTimer);
+    var seq = ++suggestSeq;
     suggestTimer = setTimeout(function () {
       fetch('/api/login/suggest?q=' + encodeURIComponent(q))
         .then(function (r) { return r.json(); })
         .then(function (d) {
+          if (seq !== suggestSeq) return;            // запрос устарел
+          if (document.activeElement !== input) {    // фокус ушёл — не показывать
+            popup.classList.remove('open');
+            return;
+          }
           var items = Array.isArray(d) ? d : (d.suggestions || []);
           if (!items.length) { popup.classList.remove('open'); return; }
           popup.innerHTML = items.slice(0, 6).map(function (s) {
@@ -659,8 +269,6 @@
               ev.stopPropagation();
               window.__lgSuggestBlock = true;
               input.value = it.dataset.user || it.dataset.id || input.value;
-              var fld = input.closest('[data-float]');
-              if (fld) fld.classList.toggle('filled', !!input.value);
               popup.classList.remove('open');
               var pw = $('passPassword');
               if (pw) pw.focus();
@@ -676,6 +284,7 @@
     input.addEventListener('keydown', function (e) {
       var popup = $('passPopup');
       if (!popup.classList.contains('open')) return;
+      if (e.key === 'Tab') { popup.classList.remove('open'); suggestSeq++; return; }
       var items = Array.prototype.slice.call(popup.querySelectorAll('.item'));
       var hl = popup.querySelector('.item.hl');
       var idx = hl ? items.indexOf(hl) : -1;
@@ -703,6 +312,14 @@
       if (popup && popup.classList.contains('open') && !popup.contains(e.target) && e.target !== input) {
         popup.classList.remove('open');
       }
+    });
+    // Фокус ушёл из логина (Tab, клик в пароль, в forgot-панель) — подсказка
+    // гаснет сразу и не вернётся по запоздавшему ответу сервера.
+    input.addEventListener('blur', function () {
+      clearTimeout(suggestTimer);
+      suggestSeq++;
+      var popup = $('passPopup');
+      if (popup) popup.classList.remove('open');
     });
   })();
 
@@ -800,11 +417,15 @@
   if (passForm) {
     passForm.addEventListener('submit', function (e) {
       if (passForm.dataset.sent) { e.preventDefault(); return; }
-      if (!passForm.checkValidity()) return;
       e.preventDefault();
+      var u = $('passUsername'), p = $('passPassword');
+      if (!u || !u.value.trim() || !p || !p.value) {
+        showError('passError', 'Заполни логин и пароль.');
+        if (u && (!u.value.trim())) u.focus(); else if (p) p.focus();
+        return;
+      }
       passForm.dataset.sent = '1';
       accessCheck.gate = function (ok, err) {
-        var u = $('passUsername'), p = $('passPassword');
         fetch('/api/login-probe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -912,7 +533,7 @@
             } else {
               var head = document.createElement('div');
               head.id = 'regOkNote';
-              head.className = 'auth-ok show';
+              head.className = 'notice ok show';
               head.setAttribute('role', 'status');
               head.innerHTML = '<i class="fas fa-circle-check"></i><span>Пароль обновлён! Войди с новым паролем.</span>';
               var paneEl = $('passPane');

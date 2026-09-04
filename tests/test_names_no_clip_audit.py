@@ -82,14 +82,19 @@ for sel, label in [
 ]:
     check_no_clip('web/templates/chat.html', sel, label)
 
-print('== dashboard/login: имена в лентах и автокомплите ==')
+print('== dashboard: имена в лентах; login/register: автокомплит ==')
 for path, sel, label in [
     ('web/templates/dashboard.html', '.ma-name', 'имя участника в ленте (dashboard)'),
     ('web/templates/dashboard.html', '.ma-mod', 'модератор в ленте (dashboard)'),
-    ('web/templates/login.html', '.a-copy b', 'имя в автокомплите входа'),
-    ('web/templates/register.html', '.a-copy b', 'имя в автокомплите регистрации'),
+    ('web/static/auth.css', '.autocomplete-popup .a-copy b', 'имя в автокомплите входа/регистрации'),
 ]:
     check_no_clip(path, sel, label)
+
+# Автокомплит входа и регистрации обязан подключать общий auth.css (там правило).
+for tpl in ('login.html', 'register.html'):
+    t = open(os.path.join(ROOT, 'web', 'templates', tpl), encoding='utf-8').read()
+    check('auth.css' in t,
+          f'{tpl} подключает auth.css (правила автокомплита)')
 
 print('== страничные списки ==')
 for path, sel, label in [

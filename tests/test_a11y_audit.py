@@ -280,8 +280,13 @@ def _ratio(a, b):
 
 _bad = []
 _checked = 0
+# auth.css делит токены между /login и /register (общий файл стилей) —
+# его тоже проверяем, иначе выборка «прохудится» при переносе :root из шаблона.
+_css_srcs = [('web/static/auth.css', os.path.join(ROOT, 'web', 'static', 'auth.css'))]
 for f in _tpls:
-    src = open(os.path.join(TPL_DIR, f), encoding='utf-8').read()
+    _css_srcs.append((f, os.path.join(TPL_DIR, f)))
+for f, full in _css_srcs:
+    src = open(full, encoding='utf-8').read()
     m_bg = re.search(r'--bg\s*:\s*(#[0-9a-fA-F]{3,6})', src)
     if not m_bg:
         continue
